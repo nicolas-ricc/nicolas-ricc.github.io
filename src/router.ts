@@ -7,9 +7,7 @@ export function zoneFromPath(pathname: string, base: string = BASE): ZoneId | nu
   const clean = pathname.split(/[?#]/)[0] ?? "";
   if (!clean.startsWith(base)) return null; // fuera del prefijo no es nuestro
   const rest = clean.slice(base.length);
-  const first = rest.split("/").filter(Boolean)[0];
-  if (!first) return null;
-  return ZONES.find((z) => z.path === first)?.id ?? null;
+  return ZONES.find((z) => rest === z.path || rest.startsWith(`${z.path}/`))?.id ?? null;
 }
 
 export function pathForZone(id: ZoneId | null, base: string = BASE): string {

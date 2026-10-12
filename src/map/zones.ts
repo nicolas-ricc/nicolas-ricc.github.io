@@ -7,16 +7,16 @@ export type Accent = "cyan" | "amber" | "magenta";
 export interface ZoneDef {
   id: ZoneId;
   name: string;
-  /** Segmento de URL de la zona. `blog` no puede usar /blog/: ahí vive el blog Hugo. */
+  /** Ruta de la zona bajo la base, sin barras. Van bajo `area/` para no chocar con /blog/, que es el blog Hugo. */
   path: string;
   accent: Accent;
 }
 
 /** Las tres zonas en orden de tab. La geografía (qué punto es de qué zona) vive en geo.ts (worldZoneAt). */
 export const ZONES: readonly ZoneDef[] = [
-  { id: "portfolio", name: "Portfolio", path: "portfolio", accent: "cyan" },
-  { id: "cv", name: "Resume", path: "cv", accent: "amber" },
-  { id: "blog", name: "Blog", path: "escritos", accent: "magenta" },
+  { id: "portfolio", name: "Portfolio", path: "area/portfolio", accent: "cyan" },
+  { id: "cv", name: "Resume", path: "area/resume", accent: "amber" },
+  { id: "blog", name: "Blog", path: "area/blog", accent: "magenta" },
 ];
 
 export function zoneById(id: ZoneId): ZoneDef {

@@ -13,7 +13,7 @@ Contenido editable en `content/*.json`. Diseño en `docs/superpowers/specs/`, pl
 
 ## Mundo isométrico
 
-El sitio (la raíz de myxomatosis.xyz; la zona Blog vive en `/escritos/` porque `/blog/` es el blog Hugo) muestra el mundo isométrico completo: motor puro en
+El sitio (la raíz de myxomatosis.xyz; las zonas viven bajo `/area/` porque `/blog/` es el blog Hugo) muestra el mundo isométrico completo: motor puro en
 `src/iso/`, terreno compartido en `src/scenes/terrain.ts`, escenas en
 `src/scenes/`, incluidas `factory.ts` (fábrica de Portfolio), `district.ts`
 (distrito moderno de Resume) y `sea.ts` (punta, faro y barcos de Blog). El
