@@ -13,7 +13,7 @@ Contenido editable en `content/*.json`. Diseño en `docs/superpowers/specs/`, pl
 
 ## Mundo isométrico
 
-El sitio (`/map/`) muestra el mundo isométrico completo: motor puro en
+El sitio (la raíz de myxomatosis.xyz; la zona Blog vive en `/escritos/` porque `/blog/` es el blog Hugo) muestra el mundo isométrico completo: motor puro en
 `src/iso/`, terreno compartido en `src/scenes/terrain.ts`, escenas en
 `src/scenes/`, incluidas `factory.ts` (fábrica de Portfolio), `district.ts`
 (distrito moderno de Resume) y `sea.ts` (punta, faro y barcos de Blog). El
@@ -34,12 +34,12 @@ zona) y `view.ts` (cámara pura: `coverView`, `zoneView`, `clampToBleed`,
 `unproject`). El sitio encuadra con `coverView(host)` (el aspecto real del
 `#canvas-host`), no con `coverFrame(16/9)` como el laboratorio.
 
-`npm run dev` y abrir `/map/lab/world.html` para el laboratorio: páginas
+`npm run dev` y abrir `/lab/world.html` para el laboratorio: páginas
 finas (`src/lab/page.ts`) que importan `assembleWorld`/`buildStage` de
 `src/world/` y agregan `Application`, teclas y el log de rendimiento.
-`/map/lab/portfolio.html` muestra solo el astillero; `/map/lab/resume.html`
+`/lab/portfolio.html` muestra solo el astillero; `/lab/resume.html`
 muestra la ciudad de oficinas más el astillero, encuadrados en Resume;
-`/map/lab/blog.html` muestra la punta, el faro, la fosa y los barcos,
+`/lab/blog.html` muestra la punta, el faro, la fosa y los barcos,
 encuadrados en Blog. Teclas `0`..`3` encuadran mundo, Portfolio, Resume y
 Blog; `4` encuadra con `coverFrame(16/9)`; `5` rota el foco del velo entre
 apagado, Portfolio, Resume y Blog. Las teclas encuadran; no recortan: al

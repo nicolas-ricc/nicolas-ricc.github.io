@@ -3,15 +3,15 @@ import { mergeBlogFeed, parseRss } from "./blog-feed";
 import type { ZoneContent } from "./types";
 
 const rss = `<?xml version="1.0"?><rss><channel><title>Myxomatosis</title>
-<item><title>Rawls como puente</title><link>https://myxomatosis.xyz/temas/rawls/</link><pubDate>Tue, 08 Sep 2026 23:41:00 +0000</pubDate></item>
-<item><title>A palabras &amp; necias</title><link>https://myxomatosis.xyz/temas/necias/</link><pubDate>Mon, 01 Jun 2026 10:00:00 +0000</pubDate></item>
+<item><title>Rawls como puente</title><link>https://myxomatosis.xyz/blog/rawls/</link><pubDate>Tue, 08 Sep 2026 23:41:00 +0000</pubDate></item>
+<item><title>A palabras &amp; necias</title><link>https://myxomatosis.xyz/blog/necias/</link><pubDate>Mon, 01 Jun 2026 10:00:00 +0000</pubDate></item>
 </channel></rss>`;
 
 describe("parseRss", () => {
   it("extrae items con fecha ISO y entidades decodificadas", () => {
     expect(parseRss(rss)).toEqual([
-      { title: "Rawls como puente", url: "https://myxomatosis.xyz/temas/rawls/", date: "2026-09-08" },
-      { title: "A palabras & necias", url: "https://myxomatosis.xyz/temas/necias/", date: "2026-06-01" },
+      { title: "Rawls como puente", url: "https://myxomatosis.xyz/blog/rawls/", date: "2026-09-08" },
+      { title: "A palabras & necias", url: "https://myxomatosis.xyz/blog/necias/", date: "2026-06-01" },
     ]);
   });
   it("devuelve vacío si no hay items", () => {

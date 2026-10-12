@@ -8,7 +8,9 @@ describe("zones", () => {
   });
   it("cada zona tiene nombre y acento propios", () => {
     expect(new Set(ZONES.map((z) => z.accent)).size).toBe(3);
-    expect(zoneById("cv")).toEqual({ id: "cv", name: "Resume", accent: "amber" });
+    expect(zoneById("cv")).toEqual({ id: "cv", name: "Resume", path: "cv", accent: "amber" });
+    expect(new Set(ZONES.map((z) => z.path)).size).toBe(3);
+    expect(ZONES.map((z) => z.path)).not.toContain("blog"); // /blog/ es el Hugo
   });
   it("una zona desconocida tira", () => {
     expect(() => zoneById("x" as never)).toThrow(/desconocida/);

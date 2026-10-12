@@ -6,8 +6,7 @@
     {
       "subtitulo": "Secciones",
       "items": [
-        { "titulo": "Temas", "descripcion": "Ensayos largos.", "links": [{ "label": "myxomatosis.xyz/temas", "url": "https://myxomatosis.xyz/temas/" }] },
-        { "titulo": "Portada", "links": [{ "label": "myxomatosis.xyz", "url": "https://myxomatosis.xyz/" }] }
+        { "titulo": "Portada", "descripcion": "Ensayos largos.", "links": [{ "label": "myxomatosis.xyz/blog", "url": "https://myxomatosis.xyz/blog/" }] }
       ]
     }
   ]

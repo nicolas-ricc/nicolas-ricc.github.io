@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  base: "/map/", // se sirve como project site bajo myxomatosis.xyz/map/
+  base: "/", // user site: la raíz de myxomatosis.xyz (el blog Hugo vive en /blog/)
   build: { target: "es2022", sourcemap: false },
   server: {
     // Por defecto Vite escucha sólo en [::1] y `tailscale serve` proxea a

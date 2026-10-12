@@ -11,8 +11,8 @@ const feed = JSON.parse(readFileSync("content/blog.generated.json", "utf8")) as 
 for (const z of ZONES) {
   let content = JSON.parse(readFileSync(`content/${z.id}.json`, "utf8")) as ZoneContent;
   if (z.id === "blog") content = mergeBlogFeed(content, feed.items);
-  mkdirSync(`dist/${z.id}`, { recursive: true });
-  writeFileSync(`dist/${z.id}/index.html`, injectZone(index, z.id, z.name, renderContent(content)));
-  console.log(`prerender: /${z.id}/`);
+  mkdirSync(`dist/${z.path}`, { recursive: true });
+  writeFileSync(`dist/${z.path}/index.html`, injectZone(index, z.id, z.name, renderContent(content)));
+  console.log(`prerender: /${z.path}/`);
 }
 copyFileSync("dist/index.html", "dist/404.html"); // GitHub Pages: rutas desconocidas cargan el mapa

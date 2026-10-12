@@ -1,6 +1,6 @@
-import { ZONE_IDS, type ZoneId } from "./map/zones";
+import { ZONES, zoneById, type ZoneId } from "./map/zones";
 
-/** Prefijo bajo el que vive el sitio (Vite lo toma de `base`): "/map/" en producción. */
+/** Prefijo bajo el que vive el sitio (Vite lo toma de `base`): "/" en producción. */
 export const BASE = import.meta.env.BASE_URL;
 
 export function zoneFromPath(pathname: string, base: string = BASE): ZoneId | null {
@@ -9,9 +9,9 @@ export function zoneFromPath(pathname: string, base: string = BASE): ZoneId | nu
   const rest = clean.slice(base.length);
   const first = rest.split("/").filter(Boolean)[0];
   if (!first) return null;
-  return (ZONE_IDS as readonly string[]).includes(first) ? (first as ZoneId) : null;
+  return ZONES.find((z) => z.path === first)?.id ?? null;
 }
 
 export function pathForZone(id: ZoneId | null, base: string = BASE): string {
-  return id ? `${base}${id}/` : base;
+  return id ? `${base}${zoneById(id).path}/` : base;
 }

@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { parseRss } from "../src/content/blog-feed";
 
-const FEED_URL = "https://myxomatosis.xyz/index.xml";
+const FEED_URL = "https://myxomatosis.xyz/blog/index.xml";
 const OUT = "content/blog.generated.json";
 
 async function main(): Promise<void> {
