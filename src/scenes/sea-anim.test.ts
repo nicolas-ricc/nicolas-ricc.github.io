@@ -155,6 +155,9 @@ describe("neones", () => {
     const rs = dots(a.neon(), "cyan").map((d) => d.r);
     for (const r of rs) { expect(r).toBeGreaterThanOrEqual(0.3); expect(r).toBeLessThanOrEqual(0.6); }
     expect(new Set(rs).size).toBeGreaterThan(1);
+    const peak = (xs: number[]) => xs.indexOf(Math.max(...xs));
+    a.tick(4 * NEON_STEP_MS);
+    expect(peak(dots(a.neon(), "cyan").map((d) => d.r))).not.toBe(peak(rs)); // la cresta se corrió: la onda viaja
     a.tick(KEEPER_SIGN_MS);
     expect(sign(a.neon()).color).toBe("magenta");
     a.tick(KEEPER_SIGN_MS);

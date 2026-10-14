@@ -86,7 +86,8 @@ describe("sea", () => {
     expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(2, 6);
     expect(Math.max(...zs) - Math.min(...zs)).toBeCloseTo(1, 6);
     expect(Math.min(...zs)).toBeCloseTo(z + 4, 6); // apoyado en el alero
-    for (const y of ys) expect(y).toBeCloseTo(KEEPER.y + 6.02, 6); // cara sur
+    for (const y of ys) expect(y).toBeCloseTo(KEEPER.y + 6.42, 6); // frente de la caja, en la cara sur
+    expect(s.solids.some((x) => x.kind === "prism" && x.mat === "steel" && x.at.y === KEEPER.y + 6 && x.at.z <= z + 4 && x.at.z + x.h >= z + 5 && x.at.x <= Math.min(...xs) && x.at.x + x.w >= Math.max(...xs))).toBe(true); // caja oscura detrás
     expect(s.accents).toHaveLength(2); // los acentos estáticos no cambian
   });
 
