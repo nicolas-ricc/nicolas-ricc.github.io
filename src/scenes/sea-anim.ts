@@ -8,8 +8,10 @@ import { ship as buildShip, wake, type ShipKind } from "./ships";
 /**
  * Blog animado, sin Pixi: tres barcos que salen de la bahía, rodean la punta
  * por el este, cruzan la fosa y se desvanecen en el sangrado, sus estelas y
- * luces, el haz del faro y las dos boyas, más los neones de la punta: la galería corre al revés del haz, la costa ondula y el cartel del farero alterna. El agua en sí (repartida por
- * profundidad en `terrain.ts`) no es asunto de acá: la anima `water-animator.ts`. Spec §7.
+ * luces, el haz del faro y las dos boyas, más los neones de la punta: la
+ * galería corre al revés del haz, la costa ondula y el cartel del farero
+ * alterna. El agua en sí (repartida por profundidad en `terrain.ts`) no es
+ * asunto de acá: la anima `water-animator.ts`. Spec §7.
  */
 // Nace en (326, -24), no más al oeste ni al sur: en la bahía el barco tiene max.y < 24 y quedaría detrás (isBehind por y) de los
 // galpones del muelle de alistamiento (x 304..324, y ≥ 24) y de su selva (x 332..340, y ≥ 26) si se superpusiera con ellos en pantalla.
