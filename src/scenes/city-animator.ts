@@ -3,13 +3,14 @@ import type { AnimLayer, Animator } from "./animator";
 import type { CityScene } from "./city";
 import { createCityAnim } from "./city-anim";
 
-/** Adapta las tres animaciones de la ciudad al contrato `Animator`. Todas son capas de acentos. */
+/** Adapta las cuatro animaciones de la ciudad al contrato `Animator`. Todas son capas de acentos. */
 export function cityAnimator(scene: CityScene, rng: Rng, opts: { reducedMotion: boolean }): Animator {
   const anim = createCityAnim(scene.tower, scene.neon, rng, opts);
   const layers: Record<string, () => AnimLayer> = {
     "city.lit": () => ({ kind: "accent", accents: anim.lit() }),
     "city.papers": () => ({ kind: "accent", accents: anim.papers() }),
     "city.antenna": () => ({ kind: "accent", accents: [anim.antenna()] }),
+    "city.neon": () => ({ kind: "accent", accents: anim.neon() }),
   };
   return {
     ids: Object.keys(layers),
@@ -20,6 +21,7 @@ export function cityAnimator(scene: CityScene, rng: Rng, opts: { reducedMotion: 
       if (c.lit) out.add("city.lit");
       if (c.papers) out.add("city.papers");
       if (c.antenna) out.add("city.antenna");
+      if (c.neon) out.add("city.neon");
       return out;
     },
   };
