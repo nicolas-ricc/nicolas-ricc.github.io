@@ -19,7 +19,6 @@ export function attachBloom(opts: { app: BloomApp; stage: Pick<Stage, "bloom" | 
     if (log) console.info(`[${prefix}] bloom forzado por URL: ${force}`);
     return { tick() {} };
   }
-  // alguien ya eligió un modo a mano antes de adjuntar: no se pisa ni se mide
   if (stage.bloom !== "off") return { tick() {} };
   stage.setBloom("on");
   const budget = createBloomBudget();

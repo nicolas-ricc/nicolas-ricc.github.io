@@ -2,9 +2,9 @@ import { Application } from "pixi.js";
 import type { WorldZone } from "../map/geo";
 import { ISO_COLORS } from "../map/palette-iso";
 import { assembleWorld } from "../world/assemble";
-import { coverFrame, fitTransform, type Frame, zoneFrame } from "../world/frame";
 import { scheduleIdle } from "../world/bloom";
 import { attachBloom, type BloomProbe } from "../world/bloom-runtime";
+import { coverFrame, fitTransform, type Frame, zoneFrame } from "../world/frame";
 import { type BloomMode, buildStage } from "../world/stage";
 import { WORLD_ZONES } from "../world/veil";
 
