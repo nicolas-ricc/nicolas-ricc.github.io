@@ -53,4 +53,15 @@ look, `src/map/palette-iso.ts`. Specs en `docs/superpowers/specs/`
 `2026-09-14-mundo-2-fabrica-distrito-blog-design.md`,
 `2026-09-15-margenes-urbanos-design.md`,
 `2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md`,
-`2026-09-15-reintegracion-mundo-iso-design.md`).
+`2026-09-15-reintegracion-mundo-iso-design.md`,
+`2026-10-14-cyberpunk-crepusculo-neones-bloom-design.md`).
+
+El bloom de las luces no entra en el primer dibujo: el sitio y el lab lo
+activan después, en una tarea diferida (`attachBloom`,
+`src/world/bloom-runtime.ts`), y miden 60 frames. Si el promedio de tick
+más render supera 15 ms, lo quitan y dejan un halo más grande en los
+puntos de luz (`fallback`). En desarrollo la decisión se loguea, por
+ejemplo `[mapa] bloom: promedio 9.9 ms en 60 frames (tick 6.4 + render
+3.5), presupuesto 15 ms → activo` (con prefijo `[lab]` en el
+laboratorio). En el lab, `?bloom=` fuerza el modo sin medir y `6` lo
+rota.
