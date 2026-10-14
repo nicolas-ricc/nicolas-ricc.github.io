@@ -13,9 +13,8 @@ import { HALO_BASE, HALO_FALLBACK } from "./frame";
 import { BLOOM_FILTER, buildStage, nextHalo } from "./stage";
 
 const build = (reducedMotion = true) => { const { scene, animators } = assembleWorld(undefined, { reducedMotion }); return buildStage(scene, animators); };
-const kids = (c: Container) => c.children;
-const accentSlotOf = (c: Container) => kids(c)[kids(c).length - 1] as Container;
-const bloomSlotOf = (c: Container) => kids(c).find((k) => (k.filters as readonly unknown[] | null)?.some((f) => (f as { options?: unknown }).options === BLOOM_FILTER)) as Container | undefined;
+const accentSlotOf = (c: Container) => c.children[c.children.length - 1] as Container;
+const bloomSlotOf = (c: Container) => c.children.find((k) => (k.filters as readonly unknown[] | null)?.some((f) => (f as { options?: unknown }).options === BLOOM_FILTER)) as Container | undefined;
 const fills = (c: Container) => accentSlotOf(c).children.reduce((n, g) => n + (g as Graphics).context.instructions.length, 0);
 
 describe("nextHalo", () => {
@@ -30,7 +29,7 @@ describe("modos de bloom del Stage", () => {
   it("buildStage arranca en off, sin bloomSlot ni filtros sobre los acentos", () => {
     const s = build();
     expect(s.bloom).toBe("off");
-    expect(kids(s.container)).toHaveLength(9);
+    expect(s.container.children).toHaveLength(9);
     expect(bloomSlotOf(s.container)).toBeUndefined();
     expect(accentSlotOf(s.container).filters ?? []).toHaveLength(0);
   });
@@ -42,7 +41,7 @@ describe("modos de bloom del Stage", () => {
     expect(s.bloom).toBe("on");
     const bloom = bloomSlotOf(s.container)!;
     expect(bloom).toBeDefined();
-    expect(kids(s.container).indexOf(bloom)).toBe(kids(s.container).indexOf(accentSlot) - 1);
+    expect(s.container.children.indexOf(bloom)).toBe(s.container.children.indexOf(accentSlot) - 1);
     expect(bloom.blendMode).toBe("add");
     expect(bloom.filters).toHaveLength(1);
     // la última pasada del blur compone con el blendMode del filtro, no con el del contenedor
@@ -57,13 +56,13 @@ describe("modos de bloom del Stage", () => {
     s.setBloom("on");
     const first = bloomSlotOf(s.container);
     s.setBloom("on");
-    expect(kids(s.container)).toHaveLength(10);
+    expect(s.container.children).toHaveLength(10);
     s.setBloom("off");
     expect(bloomSlotOf(s.container)).toBeUndefined();
-    expect(kids(s.container)).toHaveLength(9);
+    expect(s.container.children).toHaveLength(9);
     s.setBloom("on");
     expect(bloomSlotOf(s.container)).toBe(first);
-    expect(kids(s.container)).toHaveLength(10);
+    expect(s.container.children).toHaveLength(10);
   });
 
   it("fallback quita el bloomSlot y redibuja los dot con el halo grande; off los devuelve al de hoy", () => {
@@ -76,7 +75,7 @@ describe("modos de bloom del Stage", () => {
     expect(fills(s.container)).toBeGreaterThan(base);
     s.setBloom("off");
     expect(fills(s.container)).toBe(base);
-    s.setBloom("fallback"); // off → fallback directo
+    s.setBloom("fallback");
     expect(fills(s.container)).toBeGreaterThan(base);
   });
 

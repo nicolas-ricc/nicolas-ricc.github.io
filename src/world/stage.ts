@@ -124,7 +124,6 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage
     for (const z of WORLD_ZONES) veils[z].alpha = current[z].veil;
     for (const e of accents) { e.g.alpha = e.base * (e.zone ? current[e.zone].accents : 1); if (e.mirror) e.mirror.alpha = e.g.alpha; }
   };
-  // espejos de los acentos que comparten contexto con el original, bajo un filtro de desenfoque aditivo
   const buildBloomSlot = (): Container => {
     const slot = new Container();
     slot.blendMode = "add";
