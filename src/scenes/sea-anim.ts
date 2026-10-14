@@ -2,12 +2,13 @@ import type { Accent } from "../iso/accent";
 import { polyline, v3, type Vec2, type Vec3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import type { SeaScene } from "./sea";
+import { chase, flip, pulse } from "./neon";
 import { ship as buildShip, wake, type ShipKind } from "./ships";
 
 /**
  * Blog animado, sin Pixi: tres barcos que salen de la bahía, rodean la punta
  * por el este, cruzan la fosa y se desvanecen en el sangrado, sus estelas y
- * luces, el haz del faro y las dos boyas. El agua en sí (repartida por
+ * luces, el haz del faro y las dos boyas, más los neones de la punta: la galería corre al revés del haz, la costa ondula y el cartel del farero alterna. El agua en sí (repartida por
  * profundidad en `terrain.ts`) no es asunto de acá: la anima `water-animator.ts`. Spec §7.
  */
 // Nace en (326, -24), no más al oeste ni al sur: en la bahía el barco tiene max.y < 24 y quedaría detrás (isBehind por y) de los
@@ -31,6 +32,8 @@ export const SHIPS: readonly { kind: ShipKind; speed: number; phase: number }[] 
 export const FADE_U = 30, TURN_U = 20;
 export const BEAM_PERIOD_MS = 8000, BEAM_LEN = 24, BEAM_INNER = 12, BEAM_HALF = (7 * Math.PI) / 180;
 export const BUOY_PERIOD_MS = 2000;
+export const NEON_STEP_MS = 200, COAST_PERIOD_MS = 3000, KEEPER_SIGN_MS = 4000;
+const GALLERY_R_DOT = 0.45, GALLERY_LIT = 2;
 
 // Lancha de la feria: hace la lanzadera entre la punta del muelle de la feria (`fair.ts`, bahía
 // norte) y la orilla de la bahía frente al muelle de graneles. Los tres puntos están en agua
@@ -73,7 +76,7 @@ export function routeAt(dist: number): { x: number; y: number; heading: number }
 }
 
 export interface ShipFrame { solids: Solid[]; lights: Accent[]; wake: Solid[]; alpha: number }
-export interface SeaChanges { ships: boolean; beam: boolean; buoys: boolean; ferry: boolean }
+export interface SeaChanges { ships: boolean; beam: boolean; buoys: boolean; ferry: boolean; neon: boolean }
 export interface SeaAnim {
   ship(k: number): ShipFrame;
   dist(k: number): number;
@@ -81,11 +84,12 @@ export interface SeaAnim {
   beam(): Accent[];
   buoys(): Accent[];
   ferry(): ShipFrame;
+  neon(): Accent[];
   tick(dtMs: number): SeaChanges;
 }
 
 export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean }): SeaAnim {
-  let clock = 0, buoyStep = 0;
+  let clock = 0, buoyStep = 0, neonStep = 0;
   const L = routeLength();
   const dists = SHIPS.map((s) => s.phase * L);
   const alphaAt = (d: number): number => Math.max(0, Math.min(1, d / FADE_U, (L - d) / FADE_U));
@@ -118,6 +122,17 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
 
   const buoyOn = (k: number): boolean => Math.floor((clock + k * (BUOY_PERIOD_MS / 2)) / (BUOY_PERIOD_MS / 2)) % 2 === 0;
 
+  /** Galería, costa y cartel. Paso 0 (y reduced motion) = estado fijo encendido; la galería corre al revés del haz. */
+  const neon = (): Accent[] => {
+    const { gallery, coast, keeperSign } = scene.neon, at = neonStep * NEON_STEP_MS;
+    const on = chase(gallery.length, -neonStep, GALLERY_LIT);
+    return [
+      ...gallery.filter((_, k) => on[k]).map((p): Accent => ({ kind: "dot", at: p, r: GALLERY_R_DOT, color: "magenta" })),
+      ...coast.map((p, k): Accent => ({ kind: "dot", at: p, r: 0.3 + 0.3 * (neonStep === 0 ? 1 : pulse(at, COAST_PERIOD_MS, k / coast.length)), color: "cyan" })),
+      { ...keeperSign, color: flip(Math.floor(at / KEEPER_SIGN_MS), "cyan", "magenta") },
+    ];
+  };
+
   return {
     ship: shipFrame,
     dist: (k) => dists[k]!,
@@ -125,11 +140,12 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
     beam: () => [wedge(BEAM_LEN, "magentaBleed", 0.5), wedge(BEAM_INNER, "magenta", 0.6)],
     buoys: () => scene.buoys.flatMap((b, k) => (buoyOn(k) ? [{ kind: "dot" as const, at: v3(b.x, b.y, b.z + 0.3), r: 0.8, color: "magentaMid" as const }] : [])),
     ferry: ferryFrame,
+    neon,
     tick(dtMs) {
-      const none: SeaChanges = { ships: false, beam: false, buoys: false, ferry: false };
+      const none: SeaChanges = { ships: false, beam: false, buoys: false, ferry: false, neon: false };
       if (opts.reducedMotion || dtMs <= 0) return none;
       clock += dtMs;
-      const c: SeaChanges = { ships: true, beam: true, buoys: false, ferry: false };
+      const c: SeaChanges = { ships: true, beam: true, buoys: false, ferry: false, neon: false };
       for (let k = 0; k < SHIPS.length; k++) { dists[k] = dists[k]! + (SHIPS[k]!.speed * dtMs) / 1000; if (dists[k]! >= L) dists[k] = dists[k]! - L; }
       const bs = Math.floor(clock / (BUOY_PERIOD_MS / 2));
       if (bs !== buoyStep) { buoyStep = bs; c.buoys = true; }
@@ -139,6 +155,8 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
         if (ferryDist >= ferryLen) { ferryDist = ferryLen; ferryDir = -1; ferryPause = FERRY_PAUSE_MS; }
         else if (ferryDist <= 0) { ferryDist = 0; ferryDir = 1; ferryPause = FERRY_PAUSE_MS; }
       }
+      const ns = Math.floor(clock / NEON_STEP_MS);
+      if (ns !== neonStep) { neonStep = ns; c.neon = true; }
       return c;
     },
   };
