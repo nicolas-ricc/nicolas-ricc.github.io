@@ -7,7 +7,7 @@
 
 ## 1. Problema
 
-La paleta actual es un atardecer bajo y el mundo se lee con poco carácter nocturno. La historia #11 lo lleva a un crepúsculo tardío más oscuro, con neones celestes y rosas animados en Resume (ciudad y distrito tecnológico), Blog (punta, faro, casa del farero y costa) y la feria, y con un bloom sobre las luces que se carga en diferido, después del primer dibujo, y que cae a un halo barato si el presupuesto de tiempo no alcanza. El primer dibujo ya está fuera de su objetivo (≈ 260 ms frente a 200 ms); esta historia no lo repara, solo no lo empeora.
+La paleta actual es un atardecer bajo y el mundo se lee con poco carácter nocturno. La historia #11 lo lleva a un crepúsculo tardío más oscuro, con neones celestes y rosas animados en Resume (ciudad y distrito tecnológico), Blog (punta, faro, casa del farero y costa) y la feria, y con un bloom sobre las luces que se carga en diferido, después del primer dibujo, y que cae a un halo barato si el presupuesto de tiempo no alcanza. El primer dibujo en el sitio ya está fuera de su objetivo (223.6 ms frente a 200 ms; en el lab son 164.5 ms, dentro del objetivo); el issue citaba ≈ 260 ms, de una medición anterior (spec 2026-09-15, antes de la fusión de celdas). Esta historia no lo repara, solo no lo empeora.
 
 ## 2. Decisiones
 
@@ -31,7 +31,7 @@ Chrome headless vía CDP con `agent-browser`, sin GPU, DPR 2, viewport 1600×900
 
 - **Primer dibujo, lab: 164.5 ms** (primera carga: 315.4 ms).
 - **Primer dibujo, sitio (`/`): 223.6 ms** (primera carga: 224.8 ms).
-- **Peor redibujo en 5 s, lab, cinco lecturas:** 12.00, 9.80, 10.10, 8.50 y 21.00 ms. El 21.00 ms es un valor atípico.
+- **Peor redibujo en 5 s, lab, cinco lecturas:** 12.00, 9.80, 10.10, 8.50 y 21.00 ms. El 21.00 ms es un valor atípico: es cerca del doble de las otras cuatro lecturas, que van de 8.5 a 12 ms.
 - **Peor redibujo en 5 s, sitio (`/`), cinco lecturas:** 91.00, 8.70, 31.90, 18.60 y 12.40 ms. El 91.00 ms es la primera lectura tras la carga. Se midió con la pestaña en primer plano y moviendo el puntero cada 2 s durante unos 60 s.
 - **gzip total del JS: 179 435 bytes** en 10 archivos (index 104 799, Geometry 31 406, RenderTargetSystem 21 594, browserAll 11 084, init 4 814, BufferResource 2 859, canvasUtils 2 038, CanvasPool 450, getTextureBatchBindGroup 303, webworkerAll 88).
 
@@ -52,7 +52,7 @@ Líneas de consola crudas:
 [info] [mapa] peor redibujo en 5 s: 12.40 ms
 ```
 
-Capturas del estado previo (lab, mismo viewport):
+Capturas del estado previo, tomadas en el lab a 1600×900 con DPR 2 (los PNG son de 3200×1800):
 
 ![mundo](assets/2026-10-14-cyberpunk/antes-mundo.png)
 ![portfolio](assets/2026-10-14-cyberpunk/antes-portfolio.png)
