@@ -42,7 +42,8 @@ muestra la ciudad de oficinas más el astillero, encuadrados en Resume;
 `/lab/blog.html` muestra la punta, el faro, la fosa y los barcos,
 encuadrados en Blog. Teclas `0`..`3` encuadran mundo, Portfolio, Resume y
 Blog; `4` encuadra con `coverFrame(16/9)`; `5` rota el foco del velo entre
-apagado, Portfolio, Resume y Blog. Las teclas encuadran; no recortan: al
+apagado, Portfolio, Resume y Blog; `6` rota el bloom de las luces entre
+`off`, `on` y `fallback`; `?bloom=on|off|fallback` lo fuerza al cargar. Las teclas encuadran; no recortan: al
 enfocar una zona las vecinas asoman por el borde. No entra en el build de
 producción. Para cambiar una escena, editar su lista de sólidos; para el
 look, `src/map/palette-iso.ts`. Specs en `docs/superpowers/specs/`
