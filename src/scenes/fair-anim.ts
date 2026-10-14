@@ -1,6 +1,6 @@
 import type { Accent } from "../iso/accent";
 import { wheelPoint, type Solid } from "../iso/solids";
-import { DROP, WHEEL, coasterAt, coasterLength, dropSolids, trainSolids, wheelSolid, type FairScene } from "./fair";
+import { DROP, LIFT_SEGMENTS, WHEEL, coasterAt, coasterLength, dropSolids, trainSolids, wheelSolid, type FairScene } from "./fair";
 
 /**
  * La feria en movimiento, sin Pixi: la vuelta al mundo gira (una vuelta cada
@@ -10,7 +10,8 @@ import { DROP, WHEEL, coasterAt, coasterLength, dropSolids, trainSolids, wheelSo
  * tren en la estación, góndola abajo, cuatro luces fijas, cartel magenta.
  */
 export const WHEEL_PERIOD_MS = 40000, WHEEL_STEP_MS = 250, WHEEL_LIGHT_STEP_MS = 150, WHEEL_LIT = 4;
-export const TRAIN_SPEED = 9, TRAIN_LIFT_SPEED = 3, LIFT_SEGMENTS = 6;
+export const TRAIN_SPEED = 9, TRAIN_LIFT_SPEED = 3;
+export { LIFT_SEGMENTS };
 export const DROP_CYCLE_MS = 8000, DROP_STEP_MS = 100, DROP_RISE_MS = 6000, DROP_HOLD_MS = 1000, DROP_FALL_MS = 600;
 export const SIGN_ALT_MS = 500;
 
