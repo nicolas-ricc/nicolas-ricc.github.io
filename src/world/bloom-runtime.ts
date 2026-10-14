@@ -9,7 +9,8 @@ interface BloomApp { renderer: { runners: { prerender: SystemRunner; postrender:
 
 /**
  * Activa el bloom y mide 60 frames: tick (lo pasa el llamador) + render (`postrender − prerender`).
- * Si el promedio supera el presupuesto pasa a `fallback`. Con `force` aplica ese modo y no mide.
+ * Si el promedio supera el presupuesto pasa a `fallback`. Con `force` aplica ese modo y no mide;
+ * si el `Stage` ya no está en `off` (cambio a mano), lo respeta y tampoco mide.
  */
 export function attachBloom(opts: { app: BloomApp; stage: Pick<Stage, "bloom" | "setBloom">; log: boolean; prefix: string; force?: BloomMode | null }): BloomProbe {
   const { app, stage, log, prefix, force } = opts;
@@ -18,6 +19,8 @@ export function attachBloom(opts: { app: BloomApp; stage: Pick<Stage, "bloom" | 
     if (log) console.info(`[${prefix}] bloom forzado por URL: ${force}`);
     return { tick() {} };
   }
+  // alguien ya eligió un modo a mano antes de adjuntar: no se pisa ni se mide
+  if (stage.bloom !== "off") return { tick() {} };
   stage.setBloom("on");
   const budget = createBloomBudget();
   const { prerender, postrender } = app.renderer.runners;
@@ -30,7 +33,7 @@ export function attachBloom(opts: { app: BloomApp; stage: Pick<Stage, "bloom" | 
       if (!v) return;
       // quitar dentro de `emit` salta al listener siguiente y rompe el loop del runner: se difiere
       queueMicrotask(() => { prerender.remove(pre); postrender.remove(post); });
-      // la tecla 6 del lab pudo cambiar el modo durante la medición: no se pisa
+      // si el modo cambió a mano durante la medición, no se pisa
       if (stage.bloom === "on") stage.setBloom(v.mode);
       if (log) console.info(`[${prefix}] bloom: ${formatBloomVerdict(v, BLOOM_BUDGET_MS)}`);
     },

@@ -100,4 +100,16 @@ describe("attachBloom", () => {
     for (let i = 0; i < 60; i++) frame(app, probe, 20, 20);
     expect(stage.setBloom).toHaveBeenCalledOnce();
   });
+
+  it("si el modo cambió a mano antes de adjuntar, no lo pisa ni mide", () => {
+    const { app, stage, info } = setup();
+    stage.setBloom("fallback");
+    stage.setBloom.mockClear();
+    const probe = attachBloom({ app, stage, log: true, prefix: "lab" });
+    expect(stage.setBloom).not.toHaveBeenCalled();
+    expect(app.renderer.runners.prerender.items).toHaveLength(0);
+    for (let i = 0; i < 60; i++) frame(app, probe, 1, 1);
+    expect(stage.bloom).toBe("fallback");
+    expect(info).not.toHaveBeenCalled();
+  });
 });

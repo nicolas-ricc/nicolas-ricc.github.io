@@ -65,7 +65,7 @@ Mismo método que el "Antes" (Chrome headless vía CDP con `agent-browser`, sin 
 
 - **Modo que quedó:** `on` en el lab y en el sitio. El promedio fue de 9.5–9.9 ms en las cinco líneas `bloom:` (tick 6.2–6.4 + render 3.1–3.5) contra 15 ms; el veredicto llega unos 15 s después de la carga, porque en el headless los 60 frames tardan en acumularse.
 - **Primer dibujo, lab:** segunda carga 176.5 ms después contra 167.4 ms antes (+5.4 %, fuera del 5 % del protocolo). Se repitió con diez segundas cargas por lado, intercaladas. Antes: 167.4, 167.9, 170.6, 173.6, 170.8, 178.3, 238.6, 174.8, 169.8 y 250.0 ms, mediana 172.2 ms. Después: 176.5, 178.6, 170.9, 172.9, 173.1, 174.3, 174.0, 168.6, 170.6 y 172.5 ms, mediana 173.0 ms (+0.5 %, dentro del ruido). Los 238.6 y 250.0 ms del baseline son valores atípicos.
-- **Primer dibujo, sitio (`/`):** segunda carga 206.4 ms después contra 216.5 ms antes. Antes (tres lecturas): 216.5, 221.6 y 211.7 ms, mediana 216.5 ms. Después (cinco lecturas): 206.4, 219.9, 213.7, 214.3 y 216.3 ms, mediana 214.3 ms. Igual o mejor. Sigue fuera del objetivo de 200 ms de la spec 2026-09-15, como antes de #18.
+- **Primer dibujo, sitio (`/`):** segunda carga 206.4 ms después contra 216.5 ms antes. Antes (tres lecturas): 216.5, 221.6 y 211.7 ms, mediana 216.5 ms. Después (cinco lecturas): 206.4, 219.9, 213.7, 214.3 y 216.3 ms, mediana 214.3 ms. Después tiene dos lecturas más que antes; con solo las tres primeras (206.4, 219.9 y 213.7 ms) la mediana es 213.7 ms, también mejor. Igual o mejor. Sigue fuera del objetivo de 200 ms de la spec 2026-09-15, como antes de #18.
 - **Peor redibujo en 5 s, lab, cinco lecturas:** 18.40, 15.80, 8.50, 15.40 y 9.00 ms (una sexta, 17.00 ms, llegó después).
 - **Peor redibujo en 5 s, sitio (`/`), cinco lecturas:** 22.80, 21.70, 10.00, 22.20 y 11.20 ms. Medido con puntero moviéndose cada 2 s sobre unos 90 s.
 - **gzip total del JS: 183 900 bytes** en 10 archivos, contra 179 435 antes (+4 465 bytes, +2.5 %), todo en el chunk principal: index 109 264 (antes 104 799); los otros nueve archivos no cambian (Geometry 31 406, RenderTargetSystem 21 594, browserAll 11 084, init 4 814, BufferResource 2 859, canvasUtils 2 038, CanvasPool 450, getTextureBatchBindGroup 303, webworkerAll 88). Ese aumento reúne paleta, neones, bloom y su medición (#12–#18).
@@ -73,7 +73,7 @@ Mismo método que el "Antes" (Chrome headless vía CDP con `agent-browser`, sin 
 Líneas de consola crudas, todas las lecturas (copiadas tal cual de `agent-browser console`; las ráfagas van en el orden en que se tomaron):
 
 ```
-# baseline #18 (worktree previo), lab: segunda carga y tres más; luego tres tandas de tres
+# baseline #18 (worktree previo), lab: segunda carga y tres más; luego tres tandas de dos
 [info] [lab] primer dibujo: 167.4 ms, 32387 polígonos estáticos
 [info] [lab] primer dibujo: 167.9 ms, 32387 polígonos estáticos
 [info] [lab] primer dibujo: 170.6 ms, 32387 polígonos estáticos
