@@ -28,7 +28,17 @@
   `(397.5, 99.5) (403, 101.5) (408, 104) (411.5, 108.5) (413, 114.5) (413, 120.5) (412, 126.5) (408.5, 131.5)`.
 - **Sentido del chase.** El haz gira con ángulo creciente (`beamAngle` crece con `clock`) y `chase(n, step, lit)` enciende `(k − step) mod n < lit`, que con `k` creciente = ángulo creciente avanza en el mismo sentido que el haz. Se usa `chase(8, −step, 2)` (el módulo de `chase` ya es no negativo).
 - **Frame 0.** Mientras `neonStep === 0` (o con reduced motion): galería `chase(8, 0, 2)` (luces 0 y 1), costa con `pulse = 1` (`r = 0.6` en todas), cartel `cyan`. Desde el paso 1 corren chase, onda y flip. Así frame 0 = estado de reduced motion, como en `tech-anim.ts`.
-- **Cartel del farero.** La casa es un prisma `8 × 6 × 4` con techo a dos aguas (cumbrera a lo largo de x, `w ≥ d`). El cartel es un `poly` vertical en la cara sur (`y = KEEPER.y + 6.02`, mismo plano que la ventana), centrado en x (`KEEPER.x + 3 .. KEEPER.x + 5`), del alero (`z + 4`) a `z + 5`: apoyado en el techo, del lado sur. Sin caja de fondo (el `sign()` de tech pone un prisma oscuro; acá el issue pide solo el `poly`, y un sólido nuevo cambiaría el conteo y el orden de profundidad de la punta). Color base `cyan`, `alpha: 1`.
+- **Cartel del farero.** La casa es un prisma `8 × 6 × 4` con techo a dos aguas (cumbrera a lo largo de x, `w ≥ d`). El cartel es un `poly` vertical en la cara sur (`y = KEEPER.y + 6.02`, mismo plano que la ventana), centrado en x (`KEEPER.x + 3 .. KEEPER.x + 5`), del alero (`z + 4`) a `z + 5`: apoyado en el techo, del lado sur. Sin caja de fondo: el issue tipa `keeperSign: Accent` (solo el `poly`), y un prisma sobre un techo a dos aguas agrega un caso de orden de profundidad sin necesidad. No se superpone con la ventana (x 375..376.2, z+1..z+2). Color base `cyan`, `alpha: 1`.
+
+## Assumptions
+
+Decisiones sin fuente escrita, tomadas acá (van también a la descripción del PR):
+
+1. **"Radio del fuste" = último tambor (2.2)**, el que está a la altura de la galería; radio de las luces 2.7, sobre la baranda. Rechazado: tambor base (3.2 → 3.7), que dejaría las luces flotando fuera de la plataforma de la galería (r = 3).
+2. **Balizas de costa sobre el agua**, a ~12.8 u de la punta: la regla del issue ("correrlo al este: el test lo exige") gana sobre "sobre tierra", porque toda la punta y su orilla son `portfolio` (`src/map/geo.ts:76-80`, `SHORE_W = 12` en `geo.ts:63`). Rechazado: puntos sobre la punta, que fallan el test que el issue exige.
+3. **Cartel sin caja de fondo**: solo el `poly`, como tipa el issue. Rechazado: copiar la caja oscura de `sign()` en `tech.ts`.
+4. **Frame 0 de la costa a pleno (`pulse = 1`)**: el contrato común dice frame 0 = estado de reduced motion, y ese estado tiene la costa en `pulse = 1`; mismo patrón que `tech-anim.ts:42-43`. Rechazado: aplicar la fórmula de onda también en el paso 0, que haría frame 0 ≠ reduced motion.
+5. **Idioma**: comentarios y títulos de tests en español, identificadores en inglés, como el resto de `src/scenes/` (no hay regla escrita; se sigue el archivo vecino).
 
 ## Review Focus
 
@@ -286,3 +296,29 @@ En `assemble.test.ts`, junto al test de `tech.neon` y con el mismo estilo:
 - [ ] **Step 1:** `npm run dev -- --host --port 5173` y abrir `http://localhost:5173/lab/world.html` con `agent-browser`; tecla `3` encuadra Blog. Verificar a ojo: anillo magenta en la galería del faro, hilera cian al este de la punta, cartel sobre la casa del farero.
 - [ ] **Step 2:** Captura a pantalla completa guardada en la ruta de arriba; con `?speed=0.2` y una segunda captura unos segundos después, confirmar que el anillo y el cartel cambiaron.
 - [ ] **Step 3: Commit** `git commit -m "docs(#15): captura del lab con Blog enfocado"`
+
+## Grilling
+
+Una ronda (la revisión no cambió tareas ni costuras: se corrigió la justificación del cartel y se agregó `## Assumptions`). 17 preguntas. Griller: `fable`.
+
+| # | Fuente | Respuesta |
+| --- | --- | --- |
+| 1 | ISSUE | "frame 0 = todo encendido y quieto; con `reducedMotion: true` … las funciones de capa devuelven ese estado fijo" + "`reducedMotion`: … costa en `pulse = 1`"; CODE `src/scenes/tech-anim.ts:42-43` usa la misma regla de paso 0. Supuesto 4. |
+| 2 | CODE | `src/map/geo.ts:63` (`SHORE_W = 12`), `geo.ts:76-80` (`worldZoneAt`). Los ocho puntos se evaluaron con `worldZoneAt`, `distToHeadland` y `terrainAt` por script (`tsx`) al planear: todos `blog`, `sea`, distancia 12.75..13.0. La deriva la detecta el test de Task 1. |
+| 3 | ISSUE | "verificar que `worldZoneAt` de cada punto sea `blog`; si algún punto cayera en Portfolio, correrlo al este: el test lo exige". Supuesto 2. |
+| 4 | CODE | `sea-anim.ts` `beamAngle` = `(clock % BEAM_PERIOD_MS)/BEAM_PERIOD_MS·2π`, creciente; `neon.ts` `chase` = `(((k − step) % n) + n) % n < lit`. La proyección `sx = x − y, sy = (x + y)/2` (`geo.ts`, comentario de `coverQuad`) tiene determinante 1 > 0: conserva la orientación, así que opuesto en mundo = opuesto en pantalla. |
+| 5 | CODE | `clock` es el acumulado de `createSeaAnim`; `tick` devuelve todo `false` si `dtMs <= 0` o reduced motion. La secuencia de determinismo incluye 1000, 5000 y 7000 ms (saltos de muchos pasos). |
+| 6 | CODE | Acentos dibujados con blend `add` en el slot de acentos del `Stage`, sobre los sólidos (`src/world/stage.ts:62-108`). Ventana x 375..376.2, z+1..z+2; cartel x 375..377, z+4..z+5: no se tocan. |
+| 7 | ISSUE | "`keeperSign: Accent` … cartel `poly` `cyan` (alto 1 u, ancho 2 u) … como `sign()`". La afirmación sobre un conteo de sólidos era falsa (`sea.test.ts:18` usa `≥ 80`) y se corrigió. Supuesto 3. |
+| 8 | ISSUE + NO SOURCE | "2 u por debajo de `lantern.z`, radio = radio del fuste + 0.5 (tomar las medidas de `lighthouse`)"; qué tambor es "el fuste" no está escrito. Supuesto 1. |
+| 9 | CODE | `AccentColor` es un tipo cerrado (`src/map/palette-iso.ts:74-75`): un `"cyann"` no compila. |
+| 10 | CODE | `src/lab/page.ts:53-57` multiplica `deltaMS · speed` antes de `stage.tick`; el animador solo suma el `dt` que recibe. |
+| 11 | CODE | `src/world/stage.ts:96-108`: cada capa `accent` de un animador entra en `accents` con la zona del animador y su alpha se multiplica por `current[zona].accents`, que sigue a `focusAlphas`. |
+| 12 | ISSUE | "cuantizado al mismo paso de 200 ms". El test es determinista (reloj fijo en 200 ms), no puede ser inestable. |
+| 13 | ISSUE | "Captura del lab con la zona enfocada adjunta al PR (en el cuerpo, o commiteada bajo `docs/superpowers/specs/assets/2026-10-14-cyberpunk/`)". Nombre según CODE `13-tech-neon-resume.png` en esa carpeta. |
+| 14 | CODE | `tsconfig.json` no activa `noUnused*`; cada task deja la suite en verde (un campo sin consumidor es válido). |
+| 15 | CODE | `src/scenes/neon.ts:8-20`: `pulse(clockMs, periodMs, phase = 0): number`, `chase(n, step, lit): boolean[]`, `flip<T>(step, a, b): T`. |
+| 16 | CODE | `grep SeaChanges` solo encuentra `sea-anim.ts` y el literal de `sea-anim.test.ts:113`, ya en el plan. |
+| 17 | NO SOURCE | Supuesto 5. |
+
+Por fuente: ISSUE 6 (dos combinados con CODE), CODE 10, NO SOURCE 2 (ambos supuestos técnicos). Ambigüedades de spec: 0. Issues abiertos: ninguno.
