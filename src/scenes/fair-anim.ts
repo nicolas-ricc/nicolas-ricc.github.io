@@ -17,9 +17,8 @@ import { DROP, LIFT_SEGMENTS, WHEEL, coasterAt, coasterLength, dropSolids, train
  */
 export const WHEEL_PERIOD_MS = 40000, WHEEL_STEP_MS = 250, WHEEL_LIGHT_STEP_MS = 150, WHEEL_LIT = 4;
 export const TRAIN_SPEED = 9, TRAIN_LIFT_SPEED = 3;
-export { LIFT_SEGMENTS };
 export const DROP_CYCLE_MS = 8000, DROP_STEP_MS = 100, DROP_RISE_MS = 6000, DROP_HOLD_MS = 1000, DROP_FALL_MS = 600;
-export const SIGN_ALT_MS = 500, NEON_STEP_MS = 200;
+export const SIGN_ALT_MS = 500, NEON_STEP_MS = 200, NEON_R = 0.35, NEON_OFF_R = 0.25;
 
 export interface FairChanges { wheel: boolean; lights: boolean; train: boolean; drop: boolean; signs: boolean; neon: boolean }
 export interface FairAnim { wheel(): Solid[]; wheelLights(): Accent[]; train(): Solid[]; drop(): Solid[]; signs(): Accent[]; neon(): Accent[]; angle(): number; trainDist(): number; dropZ(): number; tick(dtMs: number): FairChanges }
@@ -42,7 +41,7 @@ export function createFairAnim(scene: FairScene, opts: { reducedMotion: boolean 
   const angle = () => (opts.reducedMotion ? 0 : (2 * Math.PI * ((wheelStep * WHEEL_STEP_MS) % WHEEL_PERIOD_MS)) / WHEEL_PERIOD_MS);
   const dropZ = () => base + (top - base) * (opts.reducedMotion ? 0 : dropEase(clock));
   // Luces corredizas sobre una lista de puntos: `lit` encendidas, avanzando un lugar por paso.
-  const run = (pts: Vec3[], lit: number, color: (k: number) => AccentColor): Accent[] => chase(pts.length, neonStep, lit).flatMap((o, k) => (o ? [{ kind: "dot" as const, at: pts[k]!, r: 0.35, color: color(k) }] : []));
+  const run = (pts: Vec3[], lit: number, color: (k: number) => AccentColor): Accent[] => chase(pts.length, neonStep, lit).flatMap((o, k) => (o ? [{ kind: "dot" as const, at: pts[k]!, r: NEON_R, color: color(k) }] : []));
   return {
     wheel: () => [wheelSolid(angle())],
     wheelLights: () => Array.from({ length: WHEEL.sides }, (_, k) => k).filter((k) => (k + lightStep) % WHEEL.sides < WHEEL_LIT).map((k) => { const p = wheelPoint(scene.wheelAxis, angle() + (2 * Math.PI * (k + 0.5)) / WHEEL.sides, WHEEL.r - 0.6); return { kind: "dot" as const, at: p, r: 0.4, color: "magenta" as const }; }),
@@ -50,11 +49,14 @@ export function createFairAnim(scene: FairScene, opts: { reducedMotion: boolean 
     drop: () => dropSolids(dropZ()),
     signs: () => [scene.arcadeSigns[signStep % 2]!],
     // La columna se enciende (magenta) por debajo de la góndola; por encima queda en reposo (magentaBleed).
-    neon: () => [
-      ...run(scene.neon.marquee, 4, (k) => flip(k, "cyan", "magenta")),
-      ...run(scene.neon.lift, 2, () => "cyanMid"),
-      ...scene.neon.column.map((at) => (at.z <= dropZ() ? { kind: "dot" as const, at, r: 0.35, color: "magenta" as const } : { kind: "dot" as const, at, r: 0.25, color: "magentaBleed" as const })),
-    ],
+    neon: () => {
+      const z = dropZ();
+      return [
+        ...run(scene.neon.marquee, 4, (k) => flip(k, "cyan", "magenta")),
+        ...run(scene.neon.lift, 2, () => "cyanMid"),
+        ...scene.neon.column.map((at) => (at.z <= z ? { kind: "dot" as const, at, r: NEON_R, color: "magenta" as const } : { kind: "dot" as const, at, r: NEON_OFF_R, color: "magentaBleed" as const })),
+      ];
+    },
     angle, trainDist: () => dist, dropZ,
     tick(dtMs) {
       const c: FairChanges = { wheel: false, lights: false, train: false, drop: false, signs: false, neon: false };

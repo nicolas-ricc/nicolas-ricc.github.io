@@ -93,6 +93,11 @@ describe("fair-anim neon", () => {
       a.tick(NEON_STEP_MS);
     }
   });
+  it("la columna se redibuja con cada paso de la góndola, aunque no cambie el paso de neón", () => {
+    const a = createFairAnim(fair(createRng(7)), { reducedMotion: false });
+    const c = a.tick(100);
+    expect(c.drop).toBe(true); expect(c.neon).toBe(true);
+  });
   it("la subida corre hacia arriba con dos luces cyanMid", () => {
     const s = fair(createRng(7)), a = createFairAnim(s, { reducedMotion: false });
     const idx = () => on(s.neon.lift, a.neon()).map((d) => s.neon.lift.findIndex((p) => p.x === d.at.x && p.y === d.at.y && p.z === d.at.z)).sort((x, y) => x - y);

@@ -28,6 +28,8 @@ export const BOARDWALK_W = 8;
 export const CAROUSEL = { x: 178, y: -212 } as const;
 export const ARCADE = { x: 96, y: -192 } as const;
 export const BUMPER = { x: 130, y: -194 } as const;
+/** Cartel ámbar del portal (cara sur): la marquesina de neón se alinea con él. */
+const GATE_SIGN = { x0: 86.5, x1: 93.5, y: -177.98, z0: 6.1, z1: 7 } as const;
 export const FAIR_MATS: readonly Material[] = ["deck", "whitewash", "rust", "steel", "copper", "stone", "concrete", "plaza", "paving", "sand", "rail", "glass", "hull", "leaf", "leafDark"];
 const BOOTH_MATS: readonly Material[] = ["whitewash", "rust", "copper"];
 const WATER_Z = -1;
@@ -147,10 +149,10 @@ function carousel(out: Solid[], accents: Accent[]): void {
 
 /** Neones: marquesina sobre el cartel del portal, una luz por vértice de la subida, columna al sur de la torre. */
 function neon(drop: { at: Vec3; h: number }): FairScene["neon"] {
-  const path = coasterPath(), z0 = drop.at.z + 2, z1 = drop.h - 2;
+  const z0 = drop.at.z + 2, z1 = drop.h - 2;
   return {
-    marquee: Array.from({ length: 8 }, (_, k) => v3(86.5 + k, -177.98 - 0.02, 7.6)),
-    lift: path.slice(0, LIFT_SEGMENTS + 1).map((p) => v3(p.x, p.y, p.z + 0.8)),
+    marquee: Array.from({ length: 8 }, (_, k) => v3(GATE_SIGN.x0 + (k * (GATE_SIGN.x1 - GATE_SIGN.x0)) / 7, GATE_SIGN.y - 0.02, 7.6)),
+    lift: COASTER_PATH.slice(0, LIFT_SEGMENTS + 1).map((p) => v3(p.x, p.y, p.z + 0.8)),
     column: Array.from({ length: 6 }, (_, k) => v3(DROP.x, DROP.y + 0.8, z0 + (k * (z1 - z0)) / 5)),
   };
 }
@@ -201,7 +203,7 @@ function beach(out: Solid[], rng: Rng): void {
 function gate(out: Solid[], accents: Accent[]): void {
   for (const x of [86, 93]) out.push(prism(x, -179.5, 0, 1.5, 1.5, 6, "stone"));
   out.push(prism(85.75, -179.5, 6, 9, 1.5, 1, "copper"));
-  accents.push(sign(86.5, 93.5, -177.98, 6.1, 7, "amber"));
+  accents.push(sign(GATE_SIGN.x0, GATE_SIGN.x1, GATE_SIGN.y, GATE_SIGN.z0, GATE_SIGN.z1, "amber"));
   for (const [y0, y1] of [[FAIR.y0 + 8, -182], [-172, FAIR.y1]] as const) if (y1 > y0) out.push(prism(FAIR.x0, y0, 0, 0.3, y1 - y0, 1.2, "steel"));
 }
 
