@@ -15,7 +15,9 @@ describe("fondo de página = cielo del canvas", () => {
   it("encuentra las páginas del lab", () => expect(labs.length).toBeGreaterThanOrEqual(4));
   for (const page of labs) {
     it(`background de lab/${page}`, () => {
-      expect(read(`lab/${page}`).match(/background:\s*(#[0-9a-fA-F]{6})/)?.[1]?.toLowerCase()).toBe(sky);
+      const hexes = [...read(`lab/${page}`).matchAll(/background:\s*(#[0-9a-fA-F]{6})/g)].map((m) => m[1]!.toLowerCase());
+      expect(hexes.length).toBeGreaterThan(0);
+      expect(hexes.every((h) => h === sky)).toBe(true);
     });
   }
 });
