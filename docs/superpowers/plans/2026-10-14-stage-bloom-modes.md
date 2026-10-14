@@ -15,7 +15,7 @@
 - No se agrega `pixi-filters` ni ninguna dependencia nueva.
 - `buildStage` deja `bloom === "off"` y no crea `bloomSlot` ni filtros sobre los acentos: el primer dibujo no cambia ni en trabajo ni en capas.
 - `bloomSlot` va **justo debajo** de `accentSlot` (encima de los velos); `blendMode = "add"`; `filters = [new BlurFilter(BLOOM_FILTER)]`.
-- Parámetros iniciales `BLOOM_FILTER = { strength: 6, quality: 2, resolution: 0.5 }`, exportado desde `stage.ts`. Los finales se anotan en el PR.
+- Parámetros iniciales `BLOOM_FILTER = { strength: 6, quality: 2, resolution: 0.5, blendMode: "add" }`, exportado desde `stage.ts` y pasado **por referencia** a `new BlurFilter(BLOOM_FILTER)`: cualquier ajuste (incluido `padding`) se hace editando `BLOOM_FILTER`, no esparciéndolo. Los finales se anotan en el PR. (`blendMode: "add"` en el filtro: la última pasada del `BlurFilter` compone con `this.blendMode`, que por defecto es `"normal"`; el `"add"` del `Container` solo llega a sus hijos dentro de la textura del filtro.)
 - `HALO_BASE = [{ k: 2.2, alpha: 0.18 }]`, `HALO_FALLBACK = [{ k: 2.2, alpha: 0.18 }, { k: 4.5, alpha: 0.1 }]`. `off` y `on` usan `HALO_BASE`.
 - Transiciones `off → on`, `on → off`, `on → fallback`, `off → fallback`, `fallback → off`; `setBloom(modo actual)` no hace nada.
 - Logs del lab solo bajo `import.meta.env.DEV`, con prefijo `[lab] `.
@@ -126,13 +126,13 @@ export function drawAccents(g: Graphics, accents: Accent[], halo: HaloStyle = HA
 - Consumes (Task 1): `HaloStyle`, `HALO_BASE`, `HALO_FALLBACK`, `drawAccents(g, accents, halo)` de `./frame`.
 - Produces:
   - `export type BloomMode = "off" | "on" | "fallback"`
-  - `export const BLOOM_FILTER = { strength: 6, quality: 2, resolution: 0.5 }` (objeto `as const` o tipado; se pasa a `new BlurFilter(BLOOM_FILTER)`)
+  - `export const BLOOM_FILTER: BlurFilterOptions = { strength: 6, quality: 2, resolution: 0.5, blendMode: "add" }` (se pasa tal cual a `new BlurFilter(BLOOM_FILTER)`)
   - `export function nextHalo(mode: BloomMode): HaloStyle` → `HALO_FALLBACK` en `fallback`, `HALO_BASE` en el resto
   - `Stage` gana `readonly bloom: BloomMode` (getter) y `setBloom(mode: BloomMode): void`
 
 **Diseño:**
 - Guardar los acentos estáticos de cada zona junto a su `Graphics` para poder redibujarlos: `AccentGraphics` gana `draw: () => void` (estáticos: `() => drawAccents(g, byZone[z], halo)`; animados: el mismo closure de `redraw` de la capa). El closure lee una variable `let halo: HaloStyle = HALO_BASE` del `Stage`, así los redibujos de los animadores usan el halo vigente.
-- `let bloomSlot: Container | null = null` y `let mirrors: Graphics[] = []`. En el primer `setBloom("on")`: `bloomSlot = new Container(); bloomSlot.blendMode = "add"; bloomSlot.filters = [new BlurFilter(BLOOM_FILTER)];` y por cada entrada de `accents` un `new Graphics({ context: e.g.context })` con `blendMode = "add"`, agregado a `bloomSlot`, y guardado como `e.mirror`. Luego `container.addChildAt(bloomSlot, container.getChildIndex(accentSlot))`. Llamadas siguientes a `on` reinsertan el mismo `bloomSlot`.
+- `let bloomSlot: Container | null = null`; los espejos viven solo en `e.mirror` (fuente de verdad para `applyAlphas`). En el primer `setBloom("on")`: `bloomSlot = new Container(); bloomSlot.blendMode = "add"; bloomSlot.filters = [new BlurFilter(BLOOM_FILTER)];` y por cada entrada de `accents` un `new Graphics({ context: e.g.context })` con `blendMode = "add"`, agregado a `bloomSlot`, y guardado como `e.mirror`. Luego `container.addChildAt(bloomSlot, container.getChildIndex(accentSlot))`. Llamadas siguientes a `on` reinsertan el mismo `bloomSlot`. `buildBloomSlot()` asigna `bloomSlot` y lo devuelve. Transiciones no listadas en la issue (`fallback → on`) usan el mismo camino genérico.
 - `off`/`fallback`: `bloomSlot?.removeFromParent()`.
 - Si `nextHalo(mode) !== halo`: actualizar `halo` y llamar `e.draw()` para todas las entradas.
 - `applyAlphas`: además de `e.g.alpha = …`, `if (e.mirror) e.mirror.alpha = e.g.alpha`. Llamar `applyAlphas()` al final de `setBloom` para que los espejos nazcan con el alpha correcto.
@@ -253,13 +253,13 @@ Expected: FAIL — `BLOOM_FILTER`/`nextHalo` no exportados, `setBloom` no existe
 - [ ] **Step 3: Write minimal implementation** en `src/world/stage.ts` siguiendo el **Diseño** de arriba. Esqueleto de las piezas nuevas:
 
 ```ts
-import { AlphaFilter, BlurFilter, Container, Graphics } from "pixi.js";
+import { AlphaFilter, BlurFilter, type BlurFilterOptions, Container, Graphics } from "pixi.js";
 import { HALO_BASE, HALO_FALLBACK, drawAccents, drawLayer, type HaloStyle } from "./frame";
 
 export type BloomMode = "off" | "on" | "fallback";
 
 /** Parámetros del BlurFilter del bloom; el lab los imprime. */
-export const BLOOM_FILTER = { strength: 6, quality: 2, resolution: 0.5 };
+export const BLOOM_FILTER: BlurFilterOptions = { strength: 6, quality: 2, resolution: 0.5, blendMode: "add" };
 
 /** `fallback` no tiene filtro: compensa con un halo más grande en cada luz. */
 export function nextHalo(mode: BloomMode): HaloStyle {
@@ -284,9 +284,10 @@ y en el objeto devuelto:
     get bloom() { return bloom; },
     setBloom(mode) {
       if (mode === bloom) return;
-      bloom = mode;
+      // el slot se arma antes de cambiar el modo: si el filtro fallara, el Stage sigue en el modo anterior
       if (mode === "on") container.addChildAt(bloomSlot ?? buildBloomSlot(), container.getChildIndex(accentSlot));
       else bloomSlot?.removeFromParent();
+      bloom = mode;
       const h = nextHalo(mode);
       if (h !== halo) { halo = h; for (const e of accents) e.draw(); }
       applyAlphas();
@@ -394,3 +395,22 @@ Actualizar el doc-comment de `bootWorldPage` (tecla 6, `?bloom=`), el `aria-labe
 - [ ] **Step 3:** si el blur se ve recortado en los bordes, ajustar `padding` del filtro; si se lee como desenfoque de escena en vez de halo, ajustar `strength`/`quality`. Anotar valores finales.
 - [ ] **Step 4:** medir `primer dibujo` (segunda carga) y `peor redibujo en 5 s` (5 lecturas) en `/lab/world.html` y `/lab/world.html?bloom=on`, y lo mismo en la base (`origin/feature/11-cyberpunk-neon`) para la comparación de `off`.
 - [ ] **Step 5:** commit de capturas `docs(#17): capturas de los modos de bloom`; números y parámetros finales van al PR.
+
+## Assumptions
+
+Decisiones técnicas sin fuente escrita, tomadas acá (van al PR):
+
+1. **`blendMode: "add"` también en el `BlurFilter`**, no solo en el `bloomSlot`. La última pasada del blur compone con el `blendMode` del filtro (`node_modules/pixi.js/lib/filters/defaults/blur/BlurFilter.mjs`, `apply`: `this.blurYFilter.blendMode = this.blendMode`), y su valor por defecto es `"normal"` (`lib/filters/Filter.mjs:81`). Se descartó dejar solo el `"add"` del contenedor, porque ese modo solo afecta cómo se dibujan los espejos dentro de la textura del filtro.
+2. **El `bloomSlot` se arma antes de cambiar `bloom`.** Si `new BlurFilter` fallara, el `Stage` queda en el modo anterior y un `setBloom("on")` posterior lo reintenta. Se descartó asignar primero, que dejaba `bloom === "on"` sin slot.
+3. **`fallback → on` pasa por el mismo camino genérico** aunque la issue no lo lista. La rotación de la tecla 6 no lo alcanza, pero no hay razón para prohibirlo.
+4. **`?bloom=` se aplica en un `requestAnimationFrame`.** Si alguien aprieta `6` antes de ese frame, el modo de la URL gana. Se descartó bloquear la tecla: es una herramienta de revisión del lab.
+5. **Test de `stage.ts` con `vi.mock` de `AlphaFilter`/`BlurFilter`** (stub que guarda sus opciones), con `Graphics`/`Container` reales. Comprobado en esta sesión: con los filtros reales `buildStage` falla en node (`GlProgram`); con el stub, `buildStage` + `tick` corren. El setter de `filters` solo guarda el arreglo (`lib/scene/container/container-mixins/effectsMixin.mjs:59-73`). Se descartó cubrir solo lo puro, la alternativa mínima que admite la issue.
+6. **Sin `destroy` del `bloomSlot` al quitarlo.** `Stage` no tiene `destroy` hoy (`src/world/stage.ts:12-17`) y el slot se reutiliza en el siguiente `on`.
+
+## Grilling
+
+- Rondas: 1 (las revisiones no agregaron ni quitaron tareas ni movieron la costura).
+- Preguntas: 18.
+- Fuentes: ISSUE 4 (Q2, Q8, Q11 junto con el código, Q15), CODE 12 (Q1, Q3, Q4, Q5, Q6, Q7, Q11, Q13, Q16, Q17, Q18, más la verificación de Q10), NO SOURCE → supuesto técnico 5 (Q7 la parte del blend, Q9, Q12, Q14, Q10). Ambigüedades de spec: 0. Fuera de alcance: 0.
+- Supuestos: los 6 de arriba.
+- Issues abiertas: ninguna.
