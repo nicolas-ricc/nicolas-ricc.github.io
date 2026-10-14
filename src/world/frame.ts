@@ -55,7 +55,7 @@ export type HaloStyle = readonly { k: number; alpha: number }[];
 
 export const HALO_BASE: HaloStyle = [{ k: 2.2, alpha: 0.18 }];
 /** Sin filtro de bloom: un segundo disco más grande y más tenue hace de resplandor barato. */
-export const HALO_FALLBACK: HaloStyle = [{ k: 2.2, alpha: 0.18 }, { k: 4.5, alpha: 0.1 }];
+export const HALO_FALLBACK: HaloStyle = [...HALO_BASE, { k: 4.5, alpha: 0.1 }];
 
 export function drawAccents(g: Graphics, accents: Accent[], halo: HaloStyle = HALO_BASE): void {
   g.clear();

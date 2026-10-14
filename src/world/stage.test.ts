@@ -44,6 +44,9 @@ describe("modos de bloom del Stage", () => {
     expect(bloom).toBeDefined();
     expect(kids(s.container).indexOf(bloom)).toBe(kids(s.container).indexOf(accentSlot) - 1);
     expect(bloom.blendMode).toBe("add");
+    expect(bloom.filters).toHaveLength(1);
+    // la última pasada del blur compone con el blendMode del filtro, no con el del contenedor
+    expect(BLOOM_FILTER.blendMode).toBe("add");
     expect(bloom.children).toHaveLength(accentSlot.children.length);
     bloom.children.forEach((m, i) => expect((m as Graphics).context).toBe((accentSlot.children[i] as Graphics).context));
     expect(accentSlot.filters ?? []).toHaveLength(0);

@@ -11,7 +11,7 @@ import { WORLD_ZONES, accentZone, focusAlphas, veilPolygons } from "./veil";
 
 export type BloomMode = "off" | "on" | "fallback";
 
-/** Parámetros del BlurFilter del bloom; el lab los imprime. */
+/** Parámetros del BlurFilter del bloom; exportados para que el log del lab los imprima (#18). */
 export const BLOOM_FILTER: BlurFilterOptions = { strength: 6, quality: 2, resolution: 0.5, blendMode: "add" };
 
 /** `fallback` no tiene filtro: compensa con un halo más grande en cada luz. */
