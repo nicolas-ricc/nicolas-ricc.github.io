@@ -32,10 +32,19 @@ export function maxDistrictHeight(b: Rect): number {
   return overlaps(screenBounds(box), screenBounds(LIT)) && isBehind(LIT, box) ? FRONT_CAP_H : MAX_DISTRICT_H;
 }
 
+export const SIGN_MIN_H = 12;
+
+/** Cartel de neón en la cara sur, a media altura: 1.6 u de alto, 1 u de margen a cada lado, 0.4 u delante de la pared. */
+function facadeSign(signs: Accent[], rng: Rng, x: number, southY: number, w: number, h: number): void {
+  if (h < SIGN_MIN_H) return;
+  const y = southY + 0.4, z0 = PLINTH_H + h / 2 - 0.8, z1 = z0 + 1.6;
+  signs.push({ kind: "poly", pts: [v3(x + 1, y, z0), v3(x + w - 1, y, z0), v3(x + w - 1, y, z1), v3(x + 1, y, z1)], color: rng.chance(0.5) ? "cyan" : "magenta", alpha: 1 });
+}
+
 type Type = "glass" | "classic" | "campus";
 const pickType = (rng: Rng): Type => { const r = rng.next(); return r < 0.4 ? "glass" : r < 0.7 ? "classic" : "campus"; };
 
-function glassTower(out: Solid[], accents: Accent[], rng: Rng, x: number, y: number, w: number, d: number, maxH: number): void {
+function glassTower(out: Solid[], accents: Accent[], signs: Accent[], rng: Rng, x: number, y: number, w: number, d: number, maxH: number): void {
   const h = maxH < 16 ? maxH : rng.int(16, maxH);
   const bw = rng.int(12, 14), bd = rng.int(10, 12);
   const bx = x + (w - bw) / 2, by = y + (d - bd) / 2;
@@ -59,9 +68,10 @@ function glassTower(out: Solid[], accents: Accent[], rng: Rng, x: number, y: num
     for (let k = 0, n = rng.int(3, 5); k < n; k++) out.push({ kind: "cone", at: v3(bx + ins + 1.5 + rng.next() * (bw - 2 * ins - 3), by + ins + 1.5 + rng.next() * (bd - 2 * ins - 3), z + 0.3), r: 1, h: 2, mat: "leaf" });
   }
   if (h >= 20) accents.push({ kind: "dot", at: v3(bx + bw - ins, by + ins, z + 0.5), r: 0.5, color: "amberMid" }); // baliza
+  facadeSign(signs, rng, bx, by + bd, bw, h);
 }
 
-function classic(out: Solid[], accents: Accent[], rng: Rng, x: number, y: number, w: number, d: number, maxH: number): void {
+function classic(out: Solid[], accents: Accent[], signs: Accent[], rng: Rng, x: number, y: number, w: number, d: number, maxH: number): void {
   const h = maxH < 12 ? maxH : rng.int(12, maxH);
   const bw = rng.int(14, 17), bd = rng.int(11, 13);
   const bx = x + (w - bw) / 2, by = y + (d - bd) / 2;
@@ -77,6 +87,7 @@ function classic(out: Solid[], accents: Accent[], rng: Rng, x: number, y: number
   else { out.push(prism(bx + 2, by + 2, top + 1, bw - 4, bd - 4, 2, "stone")); out.push(prism(bx + 5, by + 4, top + 3, bw - 10, bd - 8, 1.5, "stone")); } // corona escalonada
   const cz = top - fh / 2, cx = bx + bw / 2, cy = by + bd + 0.02; // reloj en la cara sur, último piso
   accents.push({ kind: "poly", pts: Array.from({ length: 8 }, (_, i) => { const a = (i / 8) * Math.PI * 2; return v3(cx + 1.2 * Math.cos(a), cy, cz + 1.2 * Math.sin(a)); }), color: "amberBleed", alpha: 0.9 });
+  facadeSign(signs, rng, bx, by + bd, bw, h);
 }
 
 function constructionSite(out: Solid[], accents: Accent[], x: number, y: number, w: number, d: number): void {
@@ -91,12 +102,12 @@ function constructionSite(out: Solid[], accents: Accent[], x: number, y: number,
   out.push(prism(x + 0.5, y + d - 3, PLINTH_H, 6, 2.4, 2.4, "rust"), prism(x + 7, y + d - 3, PLINTH_H, 6, 2.4, 2.4, "rust")); // contenedores de obra
 }
 
-export function districtBlock(solids: Solid[], ground: Solid[], accents: Accent[], rng: Rng, b: Block, maxH: number): void {
+export function districtBlock(solids: Solid[], ground: Solid[], accents: Accent[], signs: Accent[], rng: Rng, b: Block, maxH: number): void {
   const ix = b.x + SIDEWALK, iy = b.y + SIDEWALK, iw = b.w - 2 * SIDEWALK, id = b.d - 2 * SIDEWALK;
   if (b.kind === "site") { solids.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving")); constructionSite(solids, accents, ix, iy, iw, id); return; }
   const type = pickType(rng);
   if (type === "campus") { campus(solids, ground, accents, rng, b, ix, iy, iw, id); return; }
   solids.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
-  if (type === "glass") glassTower(solids, accents, rng, ix, iy, iw, id, Math.min(maxH, MAX_DISTRICT_H));
-  else classic(solids, accents, rng, ix, iy, iw, id, Math.min(maxH, MAX_CLASSIC_H));
+  if (type === "glass") glassTower(solids, accents, signs, rng, ix, iy, iw, id, Math.min(maxH, MAX_DISTRICT_H));
+  else classic(solids, accents, signs, rng, ix, iy, iw, id, Math.min(maxH, MAX_CLASSIC_H));
 }
