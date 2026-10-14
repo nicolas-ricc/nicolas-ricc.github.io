@@ -3,6 +3,8 @@ import type { WorldZone } from "../map/geo";
 import { ISO_COLORS } from "../map/palette-iso";
 import { assembleWorld } from "../world/assemble";
 import { coverFrame, fitTransform, type Frame, zoneFrame } from "../world/frame";
+import { scheduleIdle } from "../world/bloom";
+import { attachBloom, type BloomProbe } from "../world/bloom-runtime";
 import { type BloomMode, buildStage } from "../world/stage";
 import { WORLD_ZONES } from "../world/veil";
 
@@ -24,7 +26,7 @@ export function nextBloomMode(mode: BloomMode): BloomMode {
  * Una página del laboratorio: el mundo (o algunas zonas), sus animadores y el
  * encuadre inicial. Teclas 0..3 encuadran mundo, Portfolio, Resume y Blog; 4
  * el cover 16:9; 5 rota el foco (velo) entre ninguno, Portfolio, Resume y Blog;
- * 6 rota el bloom entre off, on y fallback (`?bloom=on|off|fallback` lo fuerza al cargar).
+ * 6 rota el bloom entre off, on y fallback (`?bloom=on|off|fallback` lo fuerza al cargar; sin parámetro se mide y decide solo).
  */
 export function bootWorldPage(zones: readonly WorldZone[] | undefined, frame: Frame): void {
   const host = document.getElementById("lab-host") as HTMLDivElement;
@@ -43,9 +45,6 @@ export function bootWorldPage(zones: readonly WorldZone[] | undefined, frame: Fr
     const stage = buildStage(scene, animators);
     app.stage.addChild(stage.container);
     if (log) console.info(`[lab] primer dibujo: ${(performance.now() - t0).toFixed(1)} ms, ${stage.staticCount} polígonos estáticos`);
-    // ?bloom= se aplica después del primer dibujo, para no cambiar su medida
-    const forced = bloomFromSearch(location.search);
-    if (forced) requestAnimationFrame(() => { stage.setBloom(forced); if (log) console.info(`[lab] bloom forzado por URL: ${forced}`); });
 
     let current = frame;
     const fit = (): void => {
@@ -56,6 +55,9 @@ export function bootWorldPage(zones: readonly WorldZone[] | undefined, frame: Fr
       stage.container.scale.set(f.scale);
     };
     fit();
+    // diferido igual que el sitio; ?bloom= fuerza el modo y no mide
+    let bloom: BloomProbe | null = null;
+    scheduleIdle(() => { bloom = attachBloom({ app, stage, log, prefix: "lab", force: bloomFromSearch(location.search) }); });
     app.renderer.on("resize", fit);
     const focusCycle: (WorldZone | null)[] = [null, ...WORLD_ZONES];
     let focusIdx = 0;
@@ -73,6 +75,7 @@ export function bootWorldPage(zones: readonly WorldZone[] | undefined, frame: Fr
       const t = performance.now();
       stage.tick(ticker.deltaMS * speed);
       const dt = performance.now() - t;
+      bloom?.tick(dt);
       worst = Math.max(worst, dt);
       since += ticker.deltaMS;
       if (log && since > 5000) { console.info(`[lab] peor redibujo en 5 s: ${worst.toFixed(2)} ms`); worst = 0; since = 0; }
