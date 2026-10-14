@@ -6,6 +6,7 @@ import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
 import { AVENUE, BOULEVARD, BRIDGE, CITY_EDGE, COLLAPSED, ROWS, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_RING, FALLEN_BLOCK, MALECON, PLAZA, TOWER, WEST_QUAY, blocks, estuaryEast, inBlock, inCrater } from "./city-grid";
 import { MAX_BUILDING_H, PLINTH_H, TOWER_H, city, type CityScene } from "./city";
+import { zoneRng } from "./world";
 
 const scene = (): CityScene => city(createRng(7), createRng(8));
 const all = (s: CityScene): Solid[] => [...s.ground, ...s.solids];
@@ -205,5 +206,20 @@ describe("city", () => {
     const s = scene();
     expect(s.ground.some((g) => g.kind === "strip" && g.mat === "paving" && g.path[0]!.x <= CITY_EDGE.west && Math.abs(g.path[0]!.y - (BOULEVARD.y0 - 0.3)) < 0.01)).toBe(true);
     expect(s.solids.some((x) => x.kind === "prism" && x.mat === "paving" && x.at.x === MALECON.x0 && x.at.y + x.d >= MALECON.y1)).toBe(true);
+  });
+
+  it("neon: ≥ 6 carteles coplanares en y y una luz sobre cada farol del malecón", () => {
+    const worldCity = city(zoneRng(7, "cv"), zoneRng(7, "cv", 1)); // la semilla real del mundo (SEED de assemble.ts)
+    expect(worldCity.neon.signs.length).toBeGreaterThanOrEqual(6);
+    const c = scene();
+    expect(c.neon.signs.length).toBeGreaterThanOrEqual(6);
+    for (const s of [...c.neon.signs, ...worldCity.neon.signs]) {
+      if (s.kind !== "poly") throw new Error("cartel no poly");
+      expect(s.pts).toHaveLength(4);
+      expect(new Set(s.pts.map((p) => p.y)).size).toBe(1);
+    }
+    const bulbs = c.accents.filter((a) => a.kind === "dot" && a.color === "amber" && a.at.x === MALECON.x1 - 3 + 0.3);
+    expect(c.neon.malecon).toHaveLength(8);
+    for (const p of c.neon.malecon) expect(bulbs.some((b) => b.kind === "dot" && b.at.x === p.x && b.at.y === p.y && b.at.z + 0.4 === p.z)).toBe(true);
   });
 });

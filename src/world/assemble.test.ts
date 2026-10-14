@@ -31,4 +31,12 @@ describe("assembleWorld", () => {
     expect(focusAlphas("portfolio").cv.accents).toBe(ACCENT_DIM);
     expect(a!.tick(1000).size).toBe(0);
   });
+  it("la capa city.neon vive en un animador de Resume y se atenúa con el velo", () => {
+    const { animators } = assembleWorld(undefined, { reducedMotion: true });
+    const a = animators.find((x) => x.ids.includes("city.neon"));
+    expect(a?.zone).toBe("cv");
+    expect(focusAlphas("blog").cv.accents).toBe(ACCENT_DIM);
+    expect(focusAlphas("portfolio").cv.accents).toBe(ACCENT_DIM);
+    expect(a!.tick(1000).size).toBe(0);
+  });
 });

@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { createRng } from "../map/seed";
 import { city } from "./city";
-import { ANTENNA_STEP_MS, PAPER_RANGE, createCityAnim } from "./city-anim";
+import { ANTENNA_STEP_MS, MALECON_STEP_MS, NEON_STEP_MS, PAPER_RANGE, createCityAnim } from "./city-anim";
 
 const setup = (reducedMotion = false) => {
-  const tower = city(createRng(7), createRng(8)).tower;
-  return { tower, anim: createCityAnim(tower, createRng(3), { reducedMotion }) };
+  const scene = city(createRng(7), createRng(8));
+  return { scene, tower: scene.tower, anim: createCityAnim(scene.tower, scene.neon, createRng(3), { reducedMotion }) };
 };
+const lights = (a: Accent[]) => a.filter((x) => x.kind === "dot");
+const signsOf = (a: Accent[]) => a.filter((x) => x.kind === "poly");
 const dot = (a: Accent): Extract<Accent, { kind: "dot" }> => { if (a.kind !== "dot") throw new Error("se esperaba dot"); return a; };
 
 describe("city-anim", () => {
@@ -76,8 +78,66 @@ describe("city-anim", () => {
   it("con reduced-motion nada cambia", () => {
     const { tower, anim } = setup(true);
     const before = JSON.stringify(anim.papers());
-    for (let t = 0; t < 5000; t += 33) expect(anim.tick(33)).toEqual({ lit: false, papers: false, antenna: false });
+    for (let t = 0; t < 5000; t += 33) expect(anim.tick(33)).toEqual({ lit: false, papers: false, antenna: false, neon: false });
     expect(anim.lit()).toEqual(tower.litWindows);
     expect(JSON.stringify(anim.papers())).toBe(before); // el reguero queda congelado donde arrancó
+  });
+
+  it("neon frame 0: carteles en su color inicial y todas las luces del malecón; solo cian/magenta", () => {
+    const { scene, anim } = setup();
+    expect(signsOf(anim.neon())).toEqual(scene.neon.signs);
+    expect(lights(anim.neon()).map((d) => d.kind === "dot" && d.at)).toEqual(scene.neon.malecon);
+    for (const d of lights(anim.neon())) if (d.kind === "dot") { expect(d.color).toBe("cyanMid"); expect(d.r).toBe(0.35); }
+    for (const x of anim.neon()) expect(x.color).toMatch(/^(cyan|magenta)/);
+  });
+
+  it("neon con reduced-motion: tick no reporta y la capa queda en el frame 0", () => {
+    const { anim } = setup(true);
+    const f0 = anim.neon();
+    expect(anim.tick(1000).neon).toBe(false);
+    expect(anim.neon()).toEqual(f0);
+  });
+
+  it("el malecón corre: desde el paso 1 hay exactamente 2 luces encendidas y cambian por paso", () => {
+    const { anim } = setup();
+    expect(anim.tick(MALECON_STEP_MS).neon).toBe(true);
+    const a = lights(anim.neon());
+    expect(a).toHaveLength(2);
+    anim.tick(MALECON_STEP_MS);
+    expect(lights(anim.neon())).toHaveLength(2);
+    expect(lights(anim.neon())).not.toEqual(a);
+  });
+
+  it("carteles: hay eventos; un cambio de color persiste y un apagón apaga un solo cartel", () => {
+    const { scene, anim } = setup();
+    const n = scene.neon.signs.length, mag = (a: Accent[]) => signsOf(a).filter((s) => s.color === "magenta").length;
+    let colorChanged = false, blinked = false;
+    for (let t = 0; t < 20000; t += 50) {
+      anim.tick(50);
+      const s = signsOf(anim.neon());
+      if (s.length < n) { blinked = true; expect(n - s.length).toBe(1); }
+      if (s.length === n && mag(s) !== mag(scene.neon.signs)) colorChanged = true;
+    }
+    expect(colorChanged || blinked).toBe(true);
+    expect(signsOf(anim.neon()).length).toBeGreaterThanOrEqual(n - 1);
+  });
+
+  it("un apagón vuelve en el paso siguiente con el mismo color", () => {
+    const { scene, anim } = setup();
+    const n = scene.neon.signs.length;
+    let before = signsOf(anim.neon()), found = false;
+    for (let t = 0; t < 120000 && !found; t += 50) {
+      anim.tick(50);
+      const s = signsOf(anim.neon());
+      if (s.length === n - 1) {
+        found = true;
+        let back = s;
+        for (let k = 0; k < 4 && back.length < n; k++) { anim.tick(50); back = signsOf(anim.neon()); }
+        expect(back.length).toBe(n);
+        expect(back).toEqual(before);
+        expect(4 * 50).toBeGreaterThan(NEON_STEP_MS);
+      } else before = s;
+    }
+    expect(found).toBe(true);
   });
 });
