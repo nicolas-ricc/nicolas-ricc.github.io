@@ -4,7 +4,7 @@ import { bounds, isFlat, type Solid } from "../iso/solids";
 import { worldZoneAt } from "../map/geo";
 import type { Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
-import { COASTER_PROFILE, DROP, FAIR_MATS, PIER, WHEEL, coasterPath, dropSolids, fair, trainSolids, wheelSolid } from "./fair";
+import { COASTER_PROFILE, DROP, FAIR_MATS, LIFT_SEGMENTS, PIER, WHEEL, coasterPath, dropSolids, fair, trainSolids, wheelSolid } from "./fair";
 import { FAIR, bayShoreX, bayWater, fairAt } from "./sprawl-grid";
 import { bleedTerrainAt } from "./terrain";
 
@@ -82,5 +82,20 @@ describe("fair", () => {
 
   it("todo el suelo de la feria es arena", () => {
     for (const [x, y] of [[100, -294], [150, -214], [200, -264], [120, -174]] as const) expect(bleedTerrainAt(x, y)).toBe("fair");
+  });
+  it("neon: marquesina de 8 sobre el cartel del portal, subida de LIFT_SEGMENTS + 1, columna de 6 al sur de la torre", () => {
+    const s = scene();
+    expect(s.neon.marquee).toHaveLength(8);
+    expect(s.neon.marquee.map((p) => p.x)).toEqual([86.5, 87.5, 88.5, 89.5, 90.5, 91.5, 92.5, 93.5]);
+    for (const p of s.neon.marquee) { expect(p.y).toBeCloseTo(-178, 9); expect(p.z).toBe(7.6); }
+    const path = coasterPath();
+    expect(s.neon.lift).toHaveLength(LIFT_SEGMENTS + 1);
+    s.neon.lift.forEach((p, k) => expect(p).toEqual({ x: path[k]!.x, y: path[k]!.y, z: path[k]!.z + 0.8 }));
+    expect(s.neon.column).toHaveLength(6);
+    expect(s.neon.column[0]!.z).toBeCloseTo(s.drop.at.z + 2, 9);
+    expect(s.neon.column[5]!.z).toBeCloseTo(s.drop.h - 2, 9);
+    const steps = s.neon.column.slice(1).map((p, k) => p.z - s.neon.column[k]!.z);
+    for (const d of steps) expect(d).toBeCloseTo(steps[0]!, 9);
+    for (const p of s.neon.column) { expect(p.x).toBe(DROP.x); expect(p.y).toBe(DROP.y + 0.8); }
   });
 });
