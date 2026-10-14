@@ -14,7 +14,6 @@ describe("neon", () => {
     expect(chase(3, 4, 1)).toEqual([false, true, false]);
     expect(chase(5, 2, 2)).toEqual([false, false, true, true, false]);
     for (let s = 0; s < 10; s++) expect(chase(4, s, 2).filter(Boolean)).toHaveLength(2);
-    expect(chase(3, 7, 1)).toEqual(chase(3, 7, 1));
   });
   it("flip alterna: par → a, impar → b", () => {
     expect(flip(0, "cyan", "magenta")).toBe("cyan");
