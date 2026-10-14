@@ -20,7 +20,7 @@ import { GREEN_BELT, REACH, SUBURB_COLS, suburbBlocks, type SprawlBlock } from "
  * Spec: docs/superpowers/specs/2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md §3.
  */
 export interface Tower { box: Solid & { kind: "prism" }; facade: Facade }
-export interface TechScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; towers: Tower[]; signs: Accent[]; telecom: Vec3 }
+export interface TechScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; towers: Tower[]; signs: Accent[]; telecom: Vec3; neon: { crowns: Accent[]; mastRing: Vec3[] } }
 
 export const TOWER_D = 60, CAMPUS_D = 160;
 export const MAX_TECH_H = 20;
@@ -51,8 +51,14 @@ function sign(out: Solid[], x: number, y: number, z: number, w: number, h: numbe
   return { kind: "poly", pts: [v3(x + 0.3, y + 0.42, z + 0.2), v3(x + w - 0.3, y + 0.42, z + 0.2), v3(x + w - 0.3, y + 0.42, z + h - 0.2), v3(x + 0.3, y + 0.42, z + h - 0.2)], color: "amber", alpha: 1 };
 }
 
+/** Corona de neón: franja en la cara sur del cuerpo superior, pegada al borde de arriba; cian en torres pares, magenta en impares. */
+function crown(k: number, x: number, y: number, top: number, w: number): Accent {
+  const x0 = x + 0.4, x1 = x + w - 0.4, z0 = top - 0.6;
+  return { kind: "poly", pts: [v3(x0, y, z0), v3(x1, y, z0), v3(x1, y, top), v3(x0, y, top)], color: k % 2 === 0 ? "cyan" : "magenta", alpha: 1 };
+}
+
 /** Torre de muro cortina en uno o dos cuerpos, con helipuerto o terraza verde y cartel de azotea. */
-function tower(out: Solid[], accents: Accent[], signs: Accent[], towers: Tower[], rng: Rng, b: SprawlBlock): void {
+function tower(out: Solid[], accents: Accent[], signs: Accent[], crowns: Accent[], towers: Tower[], rng: Rng, b: SprawlBlock): void {
   out.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
   const h = rng.int(12, MAX_TECH_H - 2), bw = rng.int(12, 16), bd = rng.int(10, 13);
   const bx = b.x + (b.w - bw) / 2, by = b.y + (b.d - bd) / 2;
@@ -60,6 +66,7 @@ function tower(out: Solid[], accents: Accent[], signs: Accent[], towers: Tower[]
   const tiers = th0Full >= 12 && rng.chance(0.5) ? 2 : 1, th0 = tiers === 2 ? th0Full : h;
   const facade: Facade = { floors: Math.max(2, Math.round(th0 / 3)), cols: Math.max(2, Math.round(bw / 2.5)), window: CURTAIN_WINDOW, base: "glass" };
   const box = prism(bx, by, PLINTH_H, bw, bd, th0, "curtain", { facade });
+  const k = towers.length;
   out.push(box); towers.push({ box, facade });
   out.push(prism(bx - 0.3, by - 0.3, PLINTH_H + th0, bw + 0.6, bd + 0.6, 0.3, "officeDark"));
   let z = PLINTH_H + th0 + 0.3, tw = bw, td = bd, tx = bx, ty = by;
@@ -72,6 +79,7 @@ function tower(out: Solid[], accents: Accent[], signs: Accent[], towers: Tower[]
   if (rng.chance(0.5)) { out.push({ kind: "cylinder", at: v3(tx + tw / 2, ty + td / 2, z), r: 2.5, h: 0.3, mat: "paving", sides: 8 }); accents.push({ kind: "dot", at: v3(tx + tw / 2, ty + td / 2, z + 0.3), r: 0.6, color: "amberMid" }); }
   else { out.push(prism(tx + 0.5, ty + 0.5, z, tw - 1, td - 1, 0.3, "leafDark")); for (let k = 0, n = rng.int(1, 3); k < n; k++) out.push({ kind: "cone", at: v3(tx + 1.5 + rng.next() * (tw - 3), ty + 1.5 + rng.next() * (td - 3), z + 0.3), r: 1, h: 2, mat: "leaf" }); }
   signs.push(sign(out, tx + tw / 2 - 3, ty + td - 0.4, z, 6, 1.6)); // cartel de azotea en el borde sur
+  crowns.push(crown(k, tx, ty + td + 0.02, z - 0.3, tw));
   if (h >= 18) accents.push({ kind: "dot", at: v3(tx + tw, ty, z + 0.5), r: 0.5, color: "amberMid" });
   if (rng.chance(0.5)) lamp(out, accents, b.x + b.w - 1, b.y - 1.5, 0);
 }
@@ -160,11 +168,11 @@ function quay(solids: Solid[]): void {
 }
 
 export function tech(rng: Rng): TechScene {
-  const ground: Solid[] = [], solids: Solid[] = [], accents: Accent[] = [], towers: Tower[] = [], signs: Accent[] = [];
+  const ground: Solid[] = [], solids: Solid[] = [], accents: Accent[] = [], towers: Tower[] = [], signs: Accent[] = [], crowns: Accent[] = [];
   let telecomTop = v3(TELECOM.x, TELECOM.y, 0);
   for (const b of suburbBlocks()) {
     switch (pickKind(rng, b)) {
-      case "tower": tower(solids, accents, signs, towers, rng, b); break;
+      case "tower": tower(solids, accents, signs, crowns, towers, rng, b); break;
       case "campus": { const ix = b.x + SIDEWALK, iy = b.y + SIDEWALK; campus(solids, ground, accents, rng, b, ix, iy, b.w - 2 * SIDEWALK, b.d - 2 * SIDEWALK); break; }
       case "atrium": atrium(solids, ground, signs, rng, b); break;
       case "lab": lab(solids, rng, b); break;
@@ -177,5 +185,5 @@ export function tech(rng: Rng): TechScene {
   avenue(ground, solids, accents);
   quay(solids);
   jungle(solids, rng, { x0: -238, x1: WORLD.x0 - 2, y0: ZONE_SPLIT_Y + 2, y1: GREEN_BELT.y1 - 2 }, 2);
-  return { ground, solids, accents, towers, signs, telecom: telecomTop };
+  return { ground, solids, accents, towers, signs, telecom: telecomTop, neon: { crowns, mastRing: [3, 6, 9].map((dz) => v3(telecomTop.x, telecomTop.y + 0.6, telecomTop.z - dz)) } };
 }

@@ -14,18 +14,22 @@ import { FAIR, bayShoreX, bayWater, fairAt } from "./sprawl-grid";
  * de la torre) las arma el animador con los builders puros de acá.
  * Spec: docs/superpowers/specs/2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md §4.3.
  */
-export interface FairScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; wheelAxis: Vec3; drop: { at: Vec3; h: number }; arcadeSigns: [Accent, Accent] }
+export interface FairScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; wheelAxis: Vec3; drop: { at: Vec3; h: number }; neon: { marquee: Vec3[]; lift: Vec3[]; column: Vec3[] }; arcadeSigns: [Accent, Accent] }
 
 /** En la playa del sureste, entre el carrusel y el paseo de madera: 20 u de radio para que se lea desde el cover. Posición elegida para que nada estático quede delante de ella en pantalla (la regla del test). */
 export const WHEEL = { x: 216, y: -204, r: 20, hub: 23, sides: 20 } as const;
 export const COASTER = { x0: 94, x1: 156, y0: -226, y1: -196 } as const;
 export const COASTER_PROFILE: readonly number[] = [4, 6, 8, 10, 12, 14, 13, 9, 5, 4, 6, 9, 12, 10, 6, 4, 5, 8, 11, 8, 5, 4, 4, 4];
+/** Tramos del circuito que son la subida (lenta) del tren: los usan las luces de la subida y el animador. */
+export const LIFT_SEGMENTS = 6;
 export const DROP = { x: 150, y: -264, h: 24 } as const;
 export const PIER = { y: -246, d: 10, len: 46 } as const;
 export const BOARDWALK_W = 8;
 export const CAROUSEL = { x: 178, y: -212 } as const;
 export const ARCADE = { x: 96, y: -192 } as const;
 export const BUMPER = { x: 130, y: -194 } as const;
+/** Cartel ámbar del portal (cara sur): la marquesina de neón se alinea con él. */
+const GATE_SIGN = { x0: 86.5, x1: 93.5, y: -177.98, z0: 6.1, z1: 7 } as const;
 export const FAIR_MATS: readonly Material[] = ["deck", "whitewash", "rust", "steel", "copper", "stone", "concrete", "plaza", "paving", "sand", "rail", "glass", "hull", "leaf", "leafDark"];
 const BOOTH_MATS: readonly Material[] = ["whitewash", "rust", "copper"];
 const WATER_Z = -1;
@@ -143,6 +147,15 @@ function carousel(out: Solid[], accents: Accent[]): void {
   out.push(cone(x, y, 3.6, 7, 3, "whitewash", 12), cone(x, y, 6.6, 1.2, 1.5, "copper", 8));
 }
 
+function neon(drop: { at: Vec3; h: number }): FairScene["neon"] {
+  const z0 = drop.at.z + 2, z1 = drop.h - 2;
+  return {
+    marquee: Array.from({ length: 8 }, (_, k) => v3(GATE_SIGN.x0 + (k * (GATE_SIGN.x1 - GATE_SIGN.x0)) / 7, GATE_SIGN.y - 0.02, 7.6)),
+    lift: COASTER_PATH.slice(0, LIFT_SEGMENTS + 1).map((p) => v3(p.x, p.y, p.z + 0.8)),
+    column: Array.from({ length: 6 }, (_, k) => v3(DROP.x, DROP.y + 0.8, z0 + (k * (z1 - z0)) / 5)),
+  };
+}
+
 function dropTower(out: Solid[], accents: Accent[]): void {
   out.push(prism(DROP.x - 2, DROP.y - 2, 0, 4, 4, 0.6, "concrete"), prism(DROP.x - 0.5, DROP.y - 0.5, 0.6, 1, 1, DROP.h, "steel"));
   accents.push(dot(DROP.x, DROP.y, DROP.h + 0.8, 0.8, "cyan"));
@@ -189,7 +202,7 @@ function beach(out: Solid[], rng: Rng): void {
 function gate(out: Solid[], accents: Accent[]): void {
   for (const x of [86, 93]) out.push(prism(x, -179.5, 0, 1.5, 1.5, 6, "stone"));
   out.push(prism(85.75, -179.5, 6, 9, 1.5, 1, "copper"));
-  accents.push(sign(86.5, 93.5, -177.98, 6.1, 7, "amber"));
+  accents.push(sign(GATE_SIGN.x0, GATE_SIGN.x1, GATE_SIGN.y, GATE_SIGN.z0, GATE_SIGN.z1, "amber"));
   for (const [y0, y1] of [[FAIR.y0 + 8, -182], [-172, FAIR.y1]] as const) if (y1 > y0) out.push(prism(FAIR.x0, y0, 0, 0.3, y1 - y0, 1.2, "steel"));
 }
 
@@ -206,5 +219,6 @@ export function fair(rng: Rng): FairScene {
   bumperCars(solids, accents);
   beach(solids, rng);
   gate(solids, accents);
-  return { ground: [], solids, accents, wheelAxis: v3(WHEEL.x, WHEEL.y, WHEEL.hub), drop: { at: v3(DROP.x, DROP.y, 1), h: DROP.h }, arcadeSigns };
+  const drop = { at: v3(DROP.x, DROP.y, 1), h: DROP.h };
+  return { ground: [], solids, accents, wheelAxis: v3(WHEEL.x, WHEEL.y, WHEEL.hub), drop, neon: neon(drop), arcadeSigns };
 }

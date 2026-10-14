@@ -1,9 +1,11 @@
+import { Graphics } from "pixi.js";
 import { describe, expect, it } from "vitest";
+import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
 import { project } from "../iso/project";
 import type { RenderItem } from "../iso/render-list";
 import { BLEED, WORLD } from "../map/geo";
-import { coverFrame, fitTransform, zoneFrame } from "./frame";
+import { HALO_BASE, HALO_FALLBACK, type HaloStyle, coverFrame, drawAccents, fitTransform, zoneFrame } from "./frame";
 
 describe("fitTransform", () => {
   it("escala para que el bounding box entre con margen y quede centrado", () => {
@@ -59,5 +61,29 @@ describe("coverFrame", () => {
       expect(s).toBeGreaterThanOrEqual(-1e-9); expect(s).toBeLessThanOrEqual(1 + 1e-9);
       expect(t).toBeGreaterThanOrEqual(-1e-9); expect(t).toBeLessThanOrEqual(1 + 1e-9);
     }
+  });
+});
+
+describe("halo de los acentos", () => {
+  const dot: Accent = { kind: "dot", at: v3(0, 0, 0), r: 1, color: "cyan" };
+  const poly: Accent = { kind: "poly", pts: [v3(0, 0, 0), v3(1, 0, 0), v3(1, 1, 0)], color: "magenta" };
+  const fills = (accents: Accent[], halo?: HaloStyle): number => { const g = new Graphics(); drawAccents(g, accents, halo); return g.context.instructions.length; };
+
+  it("el fallback suma un disco más grande y más tenue que el base", () => {
+    expect(HALO_FALLBACK.length).toBeGreaterThan(HALO_BASE.length);
+    const maxK = (h: HaloStyle): number => Math.max(...h.map((d) => d.k));
+    const big = HALO_FALLBACK.find((d) => d.k === maxK(HALO_FALLBACK))!;
+    expect(big.k).toBeGreaterThan(maxK(HALO_BASE));
+    expect(big.alpha).toBeLessThan(Math.min(...HALO_BASE.map((d) => d.alpha)));
+  });
+  it("por defecto dibuja el halo de hoy: un disco más el punto", () => {
+    expect(fills([dot])).toBe(2);
+    expect(fills([dot], HALO_BASE)).toBe(2);
+  });
+  it("cada disco del halo es un relleno más por dot", () => {
+    expect(fills([dot], HALO_FALLBACK)).toBe(HALO_FALLBACK.length + 1);
+  });
+  it("los poly no llevan halo", () => {
+    expect(fills([poly], HALO_FALLBACK)).toBe(1);
   });
 });

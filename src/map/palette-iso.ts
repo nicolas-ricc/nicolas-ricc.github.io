@@ -15,46 +15,49 @@
  * cielo: más clara y apenas más cálida, sigue siendo agua). El sol no se refleja en la cara del
  * agua sino en `glint` (coral del atardecer, regla de ciudad/costa), que solo pintan los destellos
  * chicos de `water-anim.ts`. `hullBlue` sigue la regla de ciudad/costa.
+ * Crepúsculo tardío: los tonos de arriba, `sky` y `shadow` son los de `palette-base.ts` × 0.7
+ * por canal (`DARKEN`); los acentos no se oscurecen, así los neones destacan sobre la escena.
+ * Para ajustar, editar la base y correr `npm run palette`, que imprime los literales a pegar acá.
  */
 export const ISO_TONES = {
-  slab:      { top: 0x9a7f62, lit: 0x81613e, shade: 0x3d3942, up: 0xb89268, down: 0x82705e },
-  concrete:  { top: 0xb08f72, lit: 0x926d4b, shade: 0x474049, up: 0xd1a47a, down: 0x957e6c },
-  rust:      { top: 0x8c4a26, lit: 0x763811, shade: 0x372127, up: 0xa95725, down: 0x754129 },
-  steel:     { top: 0x6f7280, lit: 0x605755, shade: 0x2a3350, up: 0x888489, down: 0x5c6479 },
-  road:      { top: 0x4f4a52, lit: 0x483832, shade: 0x1c213b, up: 0x645756, down: 0x404150 },
-  rail:      { top: 0xb8a68c, lit: 0x987e5e, shade: 0x4b4b55, up: 0xdabe97, down: 0x9c9283 },
-  shallow:   { top: 0x2f7f86, lit: 0x1a4c6b, shade: 0x133550, up: 0x3b8f8f, down: 0x256b81 }, // orillas, bajíos, ríos: turquesa sobre arena
-  water:     { top: 0x225f6c, lit: 0x133956, shade: 0x0e2841, up: 0x2b6c73, down: 0x1b5068 }, // bahía, estuario, mar cerca de la costa
-  waterDeep: { top: 0x183f56, lit: 0x0d2645, shade: 0x0a1a34, up: 0x20485c, down: 0x133553 }, // mar abierto
-  hullBlue:  { top: 0x2f4a6e, lit: 0x273744, shade: 0x131f42, up: 0x375370, down: 0x284167 }, // obra muerta de los barcos
-  leaf:      { top: 0x3f6a33, lit: 0x3c511b, shade: 0x14302d, up: 0x537b33, down: 0x315d35 },
-  leafDark:  { top: 0x2a4a27, lit: 0x2c3812, shade: 0x0b2128, up: 0x3b5726, down: 0x1f412a },
-  rock:      { top: 0x6b5f55, lit: 0x5d4835, shade: 0x282b3c, up: 0x846e59, down: 0x585453 },
-  sand:      { top: 0xa88f6a, lit: 0x8c6d45, shade: 0x444046, up: 0xc8a471, down: 0x8e7e65 },
-  hull:      { top: 0x6e3323, lit: 0x60270f, shade: 0x2a1726, up: 0x873d21, down: 0x5b2d27 },
-  deck:      { top: 0x9c7f5a, lit: 0x836138, shade: 0x3e393f, up: 0xbb925f, down: 0x837057 },
-  brick:     { top: 0x8a4a3a, lit: 0x713724, shade: 0x371f23, up: 0xa0533b, down: 0x774137 }, // fábrica: ladrillo cálido
+  slab:      { top: 0x6c5945, lit: 0x5a442b, shade: 0x2b282e, up: 0x816649, down: 0x5b4e42 },
+  concrete:  { top: 0x7b6450, lit: 0x664c35, shade: 0x322d33, up: 0x927355, down: 0x68584c },
+  rust:      { top: 0x62341b, lit: 0x53270c, shade: 0x27171b, up: 0x763d1a, down: 0x522e1d },
+  steel:     { top: 0x4e505a, lit: 0x433d3b, shade: 0x1d2438, up: 0x5f5c60, down: 0x404655 },
+  road:      { top: 0x373439, lit: 0x322723, shade: 0x141729, up: 0x463d3c, down: 0x2d2e38 },
+  rail:      { top: 0x817462, lit: 0x6a5842, shade: 0x35353b, up: 0x99856a, down: 0x6d665c },
+  shallow:   { top: 0x21595e, lit: 0x12354b, shade: 0x0d2538, up: 0x296464, down: 0x1a4b5a }, // orillas, bajíos, ríos: turquesa sobre arena
+  water:     { top: 0x18434c, lit: 0x0d283c, shade: 0x0a1c2e, up: 0x1e4c51, down: 0x133849 }, // bahía, estuario, mar cerca de la costa
+  waterDeep: { top: 0x112c3c, lit: 0x091b30, shade: 0x071224, up: 0x163240, down: 0x0d253a }, // mar abierto
+  hullBlue:  { top: 0x21344d, lit: 0x1b2730, shade: 0x0d162e, up: 0x273a4e, down: 0x1c2e48 }, // obra muerta de los barcos
+  leaf:      { top: 0x2c4a24, lit: 0x2a3913, shade: 0x0e221f, up: 0x3a5624, down: 0x224125 },
+  leafDark:  { top: 0x1d341b, lit: 0x1f270d, shade: 0x08171c, up: 0x293d1b, down: 0x162e1d },
+  rock:      { top: 0x4b433b, lit: 0x413225, shade: 0x1c1e2a, up: 0x5c4d3e, down: 0x3e3b3a },
+  sand:      { top: 0x76644a, lit: 0x624c30, shade: 0x302d31, up: 0x8c734f, down: 0x635847 },
+  hull:      { top: 0x4d2419, lit: 0x431b0b, shade: 0x1d101b, up: 0x5f2b17, down: 0x401f1b },
+  deck:      { top: 0x6d593f, lit: 0x5c4427, shade: 0x2b282c, up: 0x836643, down: 0x5c4e3d },
+  brick:     { top: 0x613429, lit: 0x4f2719, shade: 0x271619, up: 0x703a29, down: 0x532e27 }, // fábrica: ladrillo cálido
   // Resume: ciudad de oficinas (gris violeta frío contra el ocre cálido del astillero)
-  office:    { top: 0x8a8296, lit: 0x71605d, shade: 0x37375a, up: 0xa09299, down: 0x77728d },
-  officeDark:{ top: 0x5e586c, lit: 0x4d4143, shade: 0x262541, up: 0x6d636e, down: 0x514d66 },
-  glass:     { top: 0x2e3a4e, lit: 0x262b30, shade: 0x12182f, up: 0x354150, down: 0x283349 },
-  asphalt:   { top: 0x45434d, lit: 0x393230, shade: 0x1c1c2e, up: 0x504b4f, down: 0x3b3b48 },
-  paving:    { top: 0x8f8a84, lit: 0x756652, shade: 0x393a4f, up: 0xa69b87, down: 0x7b797c },
-  plaza:     { top: 0x7c767e, lit: 0x66574e, shade: 0x32324c, up: 0x908481, down: 0x6b6876 },
+  office:    { top: 0x615b69, lit: 0x4f4341, shade: 0x27273f, up: 0x70666b, down: 0x535063 },
+  officeDark:{ top: 0x423e4c, lit: 0x362e2f, shade: 0x1b1a2e, up: 0x4c454d, down: 0x393647 },
+  glass:     { top: 0x202937, lit: 0x1b1e22, shade: 0x0d1121, up: 0x252e38, down: 0x1c2433 },
+  asphalt:   { top: 0x302f36, lit: 0x282322, shade: 0x141420, up: 0x383537, down: 0x292932 },
+  paving:    { top: 0x64615c, lit: 0x524739, shade: 0x282937, up: 0x746d5f, down: 0x565557 },
+  plaza:     { top: 0x575358, lit: 0x473d37, shade: 0x232335, up: 0x655c5a, down: 0x4b4953 },
   // Resume, distrito moderno: muro cortina, piedra clásica, cobre de cubierta
-  curtain:   { top: 0x3d6b7a, lit: 0x324f4c, shade: 0x182d49, up: 0x47787c, down: 0x345e73 },
-  stone:     { top: 0xb5a48a, lit: 0x947956, shade: 0x484553, up: 0xd2b88d, down: 0x9c9082 },
-  copper:    { top: 0x4f8a78, lit: 0x41664a, shade: 0x203a48, up: 0x5c9b7a, down: 0x447971 },
+  curtain:   { top: 0x2b4b55, lit: 0x233735, shade: 0x111f33, up: 0x325457, down: 0x244251 },
+  stone:     { top: 0x7f7361, lit: 0x68553c, shade: 0x32303a, up: 0x938163, down: 0x6d655b },
+  copper:    { top: 0x376154, lit: 0x2e4734, shade: 0x162932, up: 0x406d55, down: 0x30554f },
   // Blog: faro y espuma
-  whitewash: { top: 0xd6cfbf, lit: 0xaf9976, shade: 0x565773, up: 0xf8e8c3, down: 0xb8b6b4 },
-  foam:      { top: 0xc4d3d6, lit: 0xa19c85, shade: 0x4e5980, up: 0xe3ecda, down: 0xa9bac9 },
-  abyss:     { top: 0x0f2740, lit: 0x081733, shade: 0x061026, up: 0x152e45, down: 0x0c213d }, // fosa
-  glint:     { top: 0xf58c5a, lit: 0xc96838, shade: 0x623b36, up: 0xffc496, down: 0xd37b55 }, // destellos del sol en el agua: coral del atardecer, solo en formas chicas
+  whitewash: { top: 0x969186, lit: 0x7a6b53, shade: 0x3c3d51, up: 0xaea289, down: 0x817f7e },
+  foam:      { top: 0x899496, lit: 0x716d5d, shade: 0x373e5a, up: 0x9fa599, down: 0x76828d },
+  abyss:     { top: 0x0b1b2d, lit: 0x061024, shade: 0x040b1b, up: 0x0f2030, down: 0x08172b }, // fosa
+  glint:     { top: 0xac623f, lit: 0x8d4927, shade: 0x452926, up: 0xb38969, down: 0x94563b }, // destellos del sol en el agua: coral del atardecer, solo en formas chicas
 } as const;
 
 export const ISO_COLORS = {
-  shadow: 0x2a1a3a,
-  sky: 0x171423,
+  shadow: 0x1d1229,
+  sky: 0x100e19,
   cyan: 0x7cf5ff,
   cyanMid: 0x27b3c9,
   cyanBleed: 0x134a52,

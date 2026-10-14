@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 
 const SRC = new URL("../", import.meta.url).pathname; // src/
 
-/** palette-iso.ts define los colores; seed.ts usa 0x6d2b79f5, la constante de mulberry32. */
-const EXEMPT = new Set(["map/palette-iso.ts", "map/seed.ts"]);
+/** palette-iso.ts define los colores; palette-base.ts guarda el atlas previo al oscurecimiento; seed.ts usa 0x6d2b79f5, la constante de mulberry32. */
+const EXEMPT = new Set(["map/palette-iso.ts", "map/palette-base.ts", "map/seed.ts"]);
 
 function sourceFiles(dir: string, out: string[] = []): string[] {
   for (const e of readdirSync(dir, { withFileTypes: true })) {

@@ -16,6 +16,8 @@ import { pathForZone, zoneFromPath } from "./router";
 import { LANDMARKS } from "./scenes/world";
 import { showMap, showZone } from "./views";
 import { assembleWorld } from "./world/assemble";
+import { scheduleIdle } from "./world/bloom";
+import { attachBloom, type BloomProbe } from "./world/bloom-runtime";
 import { buildStage } from "./world/stage";
 import { coverView, pointerToWorld, zoneView, type View } from "./world/view";
 
@@ -131,12 +133,15 @@ async function boot(): Promise<void> {
   document.addEventListener("visibilitychange", () => { if (document.hidden) app.ticker.stop(); else app.ticker.start(); });
 
   let worst = 0, since = 0;
+  let bloom: BloomProbe | null = null;
   app.ticker.add((ticker) => {
     camera.tick(performance.now());
     const t = performance.now();
     stage.tick(ticker.deltaMS);
+    const dt = performance.now() - t;
+    bloom?.tick(dt);
     if (log) {
-      worst = Math.max(worst, performance.now() - t);
+      worst = Math.max(worst, dt);
       since += ticker.deltaMS;
       if (since > 5000) { console.info(`[mapa] peor redibujo en 5 s: ${worst.toFixed(2)} ms`); worst = 0; since = 0; }
     }
@@ -147,6 +152,8 @@ async function boot(): Promise<void> {
   const root = document.documentElement;
   root.classList.add("no-anim");
   render(current, false);
+  // el bloom entra en una tarea diferida: el primer dibujo se sirve sin filtro
+  scheduleIdle(() => { bloom = attachBloom({ app, stage, log, prefix: "mapa" }); });
   // Los rótulos estaban ocultos (ver #zonas a en style.css) hasta este primer
   // jumpTo, que ya los colocó sobre su landmark: recién ahora se muestran.
   root.classList.add("mapa-listo");

@@ -67,4 +67,23 @@ describe("tech", () => {
     expect(s.solids.some((x) => x.kind === "prism" && x.mat === "plaza" && x.at.z === -1 && x.d > 200)).toBe(true);
     expect(s.solids.filter((x) => x.kind === "prism" && x.mat === "leafDark" && x.h === 0.3 && x.w === 24).length).toBeGreaterThanOrEqual(5);
   });
+
+  it("neones: una corona por torre en su cara sur bajo la cornisa, a la altura del cartel; tres luces en el mástil", () => {
+    const s = scene();
+    expect(s.neon.crowns).toHaveLength(s.towers.length);
+    s.neon.crowns.forEach((c, k) => {
+      expect(c).toMatchObject({ kind: "poly", color: k % 2 === 0 ? "cyan" : "magenta", alpha: 1 });
+      if (c.kind !== "poly") return;
+      const ys = new Set(c.pts.map((p) => p.y)), zs = c.pts.map((p) => p.z), xs = c.pts.map((p) => p.x);
+      expect(ys.size).toBe(1);
+      const y = c.pts[0]!.y, top = Math.max(...zs), x0 = Math.min(...xs), x1 = Math.max(...xs);
+      expect(top - Math.min(...zs)).toBeCloseTo(0.6);
+      // misma y que el cartel de azotea de su torre (centrado sobre la torre)
+      expect(s.signs.some((a) => a.kind === "poly" && Math.abs(a.pts[0]!.y - y) < 1e-9 && Math.abs((a.pts[0]!.x + a.pts[1]!.x) / 2 - (x0 + x1) / 2) < 1e-9)).toBe(true);
+      // pegada al borde superior del cuerpo de muro cortina sobre el que va el cartel, 0.4 adentro por lado
+      const body = s.solids.find((x) => x.kind === "prism" && x.mat === "curtain" && Math.abs(x.at.z + x.h - top) < 1e-9 && Math.abs(x.at.y + x.d + 0.02 - y) < 1e-9 && Math.abs(x.at.x + 0.4 - x0) < 1e-9 && Math.abs(x.at.x + x.w - 0.4 - x1) < 1e-9);
+      expect(body).toBeDefined();
+    });
+    expect(s.neon.mastRing).toEqual([3, 6, 9].map((dz) => ({ x: s.telecom.x, y: s.telecom.y + 0.6, z: s.telecom.z - dz })));
+  });
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { assembleWorld } from "./assemble";
+import { ACCENT_DIM, focusAlphas } from "./veil";
 
 describe("assembleWorld", () => {
   it("el mundo entero trae los siete animadores, cada uno con su zona; el agua no tiene zona", () => {
@@ -21,5 +22,37 @@ describe("assembleWorld", () => {
     const { animators } = assembleWorld(["portfolio"], { reducedMotion: true });
     expect(new Set(animators.map((a) => a.zone))).toEqual(new Set([null, "portfolio"]));
     expect(animators.filter((a) => a.zone === "portfolio")).toHaveLength(2); // sin la feria (vive en el sangrado)
+  });
+  it("la capa tech.neon vive en un animador de Resume y se atenúa con el velo", () => {
+    const { animators } = assembleWorld(undefined, { reducedMotion: true });
+    const a = animators.find((x) => x.ids.includes("tech.neon"));
+    expect(a?.zone).toBe("cv");
+    expect(focusAlphas("blog").cv.accents).toBe(ACCENT_DIM);
+    expect(focusAlphas("portfolio").cv.accents).toBe(ACCENT_DIM);
+    expect(a!.tick(1000).size).toBe(0);
+  });
+  it("la capa city.neon vive en un animador de Resume y se atenúa con el velo", () => {
+    const { animators } = assembleWorld(undefined, { reducedMotion: true });
+    const a = animators.find((x) => x.ids.includes("city.neon"));
+    expect(a?.zone).toBe("cv");
+    expect(focusAlphas("blog").cv.accents).toBe(ACCENT_DIM);
+    expect(focusAlphas("portfolio").cv.accents).toBe(ACCENT_DIM);
+    expect(a!.tick(1000).size).toBe(0);
+  });
+  it("la capa sea.neon vive en un animador de Blog y se atenúa con el velo", () => {
+    const { animators } = assembleWorld(undefined, { reducedMotion: true });
+    const a = animators.find((x) => x.ids.includes("sea.neon"));
+    expect(a?.zone).toBe("blog");
+    expect(focusAlphas("cv").blog.accents).toBe(ACCENT_DIM);
+    expect(focusAlphas("portfolio").blog.accents).toBe(ACCENT_DIM);
+    expect(a!.tick(1000).size).toBe(0);
+  });
+  it("la capa fair.neon vive en el animador de la feria, en Portfolio, y se atenúa con su velo", () => {
+    const { animators } = assembleWorld(undefined, { reducedMotion: true });
+    const a = animators.find((x) => x.ids.includes("fair.neon"));
+    expect(a?.zone).toBe("portfolio");
+    expect(focusAlphas("cv").portfolio.accents).toBe(ACCENT_DIM);
+    expect(focusAlphas("blog").portfolio.accents).toBe(ACCENT_DIM);
+    expect(a!.tick(1000).size).toBe(0);
   });
 });

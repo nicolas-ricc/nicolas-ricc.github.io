@@ -1,5 +1,5 @@
 import type { Accent } from "../iso/accent";
-import { v3 } from "../iso/geometry";
+import { v3, type Vec3 } from "../iso/geometry";
 import type { Facade } from "../iso/facade";
 import type { Solid, Tri } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
@@ -41,9 +41,12 @@ export function tiles(rng: Rng, r: Rect, z: number, mat: Material, tone: (rng: R
   return { kind: "ground", mat, tris };
 }
 
-export function lamp(solids: Solid[], accents: Accent[], x: number, y: number, z: number): void {
+/** Farol: poste más bombillo ámbar. Devuelve dónde quedó el bombillo. */
+export function lamp(solids: Solid[], accents: Accent[], x: number, y: number, z: number): Vec3 {
+  const bulb = v3(x + 0.3, y + 0.3, z + 5);
   solids.push(prism(x, y, z, 0.6, 0.6, 5, "steel"));
-  accents.push({ kind: "dot", at: v3(x + 0.3, y + 0.3, z + 5), r: 0.6, color: "amber" });
+  accents.push({ kind: "dot", at: bulb, r: 0.6, color: "amber" });
+  return bulb;
 }
 
 /** Tres edificios bajos en U alrededor de un patio verde; el suelo de la manzana es selva, con zócalos sueltos bajo cada edificio (esquema de las manzanas devoradas). */
