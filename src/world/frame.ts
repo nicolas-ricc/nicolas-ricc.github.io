@@ -50,12 +50,19 @@ export function drawLayer(g: Graphics, items: RenderItem[], layer: Layer): void 
   for (const it of items) if (it.layer === layer) g.poly(it.pts, true).fill(it.color);
 }
 
-export function drawAccents(g: Graphics, accents: Accent[]): void {
+/** Discos translúcidos alrededor de cada luz `dot`: radio `r × k`, alpha propia. */
+export type HaloStyle = readonly { k: number; alpha: number }[];
+
+export const HALO_BASE: HaloStyle = [{ k: 2.2, alpha: 0.18 }];
+/** Sin filtro de bloom: un segundo disco más grande y más tenue hace de resplandor barato. */
+export const HALO_FALLBACK: HaloStyle = [...HALO_BASE, { k: 4.5, alpha: 0.1 }];
+
+export function drawAccents(g: Graphics, accents: Accent[], halo: HaloStyle = HALO_BASE): void {
   g.clear();
   for (const a of accents) {
     const it = accentItem(a);
     if (it.kind === "dot") {
-      g.circle(it.x, it.y, it.r * 2.2).fill({ color: it.color, alpha: 0.18 }); // halo
+      for (const h of halo) g.circle(it.x, it.y, it.r * h.k).fill({ color: it.color, alpha: h.alpha });
       g.circle(it.x, it.y, it.r).fill(it.color);
     } else {
       g.poly(it.pts, true).fill({ color: it.color, alpha: it.alpha });
