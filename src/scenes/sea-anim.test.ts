@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { depthAt } from "./depth-map";
+import type { Accent } from "../iso/accent";
 import { isBehind, overlaps, screenBounds } from "../iso/depth";
 import { v3 } from "../iso/geometry";
 import { bounds, isFlat } from "../iso/solids";
 import { WORLD } from "../map/geo";
-import { BEAM_PERIOD_MS, FADE_U, FERRY_PAUSE_MS, FERRY_ROUTE, FERRY_SPEED, ROUTE, SHIPS, createSeaAnim, routeAt, routeLength } from "./sea-anim";
+import { BEAM_PERIOD_MS, FADE_U, KEEPER_SIGN_MS, NEON_STEP_MS, FERRY_PAUSE_MS, FERRY_ROUTE, FERRY_SPEED, ROUTE, SHIPS, createSeaAnim, routeAt, routeLength } from "./sea-anim";
 import { ship } from "./ships";
 import { bleedTerrainAt, terrainAt } from "./terrain";
 import { world } from "./world";
@@ -110,7 +111,7 @@ describe("mar, haz y boyas", () => {
     expect(a.beam()).toHaveLength(2);
     const r = setup(true).a;
     expect(Math.abs(angle(r.beam()))).toBeLessThan(0.2);
-    expect(r.tick(500)).toEqual({ ships: false, beam: false, buoys: false, ferry: false });
+    expect(r.tick(500)).toEqual({ ships: false, beam: false, buoys: false, ferry: false, neon: false });
   });
   it("las boyas parpadean desfasadas: nunca las dos apagadas, cada una encendida la mitad del período", () => {
     const { a } = setup();
@@ -123,5 +124,40 @@ describe("mar, haz y boyas", () => {
       a.tick(50);
     }
     expect(on0).toBe(20); expect(on1).toBe(20);
+  });
+});
+
+describe("neones", () => {
+  const dots = (xs: Accent[], color: string) => xs.filter((x): x is Extract<Accent, { kind: "dot" }> => x.kind === "dot" && x.color === color);
+  const sign = (xs: Accent[]) => xs.find((x) => x.kind === "poly")!;
+
+  it("frame 0 = estado de reduced motion: dos luces de galería, costa a pleno, cartel cian; solo cian/magenta", () => {
+    const { w, a } = setup(), r = setup(true).a;
+    const n0 = a.neon();
+    expect(n0).toEqual(r.neon());
+    expect(dots(n0, "magenta").map((d) => d.at)).toEqual([w.sea!.neon.gallery[0], w.sea!.neon.gallery[1]]);
+    for (const d of dots(n0, "magenta")) expect(d.r).toBe(0.45);
+    expect(dots(n0, "cyan").map((d) => d.r)).toEqual(w.sea!.neon.coast.map(() => 0.6));
+    expect(sign(n0).color).toBe("cyan");
+    for (const x of n0) expect(x.color).toMatch(/^(cyan|magenta)/);
+  });
+
+  it("la galería corre al revés del haz, un lugar por paso de 200 ms", () => {
+    const { w, a } = setup();
+    expect(a.tick(NEON_STEP_MS).neon).toBe(true);
+    expect(dots(a.neon(), "magenta").map((d) => d.at)).toEqual([w.sea!.neon.gallery[0], w.sea!.neon.gallery[7]]);
+    expect(a.tick(NEON_STEP_MS / 2).neon).toBe(false); // dentro del mismo paso: nada que redibujar
+  });
+
+  it("la costa es una onda que viaja y el cartel alterna cian/magenta cada 4 s", () => {
+    const { a } = setup();
+    a.tick(NEON_STEP_MS);
+    const rs = dots(a.neon(), "cyan").map((d) => d.r);
+    for (const r of rs) { expect(r).toBeGreaterThanOrEqual(0.3); expect(r).toBeLessThanOrEqual(0.6); }
+    expect(new Set(rs).size).toBeGreaterThan(1);
+    a.tick(KEEPER_SIGN_MS);
+    expect(sign(a.neon()).color).toBe("magenta");
+    a.tick(KEEPER_SIGN_MS);
+    expect(sign(a.neon()).color).toBe("cyan");
   });
 });

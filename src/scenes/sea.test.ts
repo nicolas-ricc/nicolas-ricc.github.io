@@ -4,7 +4,7 @@ import { bounds, isFlat, type Solid } from "../iso/solids";
 import { ZONE_SPLIT_X, inHeadland, worldZoneAt } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
-import { BUOYS, KEEPER, LIGHTHOUSE, WRECK, WRECK_BUOY, sea, type SeaScene } from "./sea";
+import { BUOYS, COAST, COAST_Z, GALLERY_R, KEEPER, LIGHTHOUSE, WRECK, WRECK_BUOY, sea, type SeaScene } from "./sea";
 import { headlandZ, terrainAt } from "./terrain";
 
 const scene = (): SeaScene => sea(createRng(7));
@@ -59,6 +59,35 @@ describe("sea", () => {
     expect(wreck.kind === "hull" && wreck.heading).toBe(WRECK.heading);
     expect(wreck.at).toEqual({ x: WRECK.x, y: WRECK.y, z: -3 });
     for (const x of s.solids) if (x.kind === "cylinder" || x.kind === "hull") if (bounds(x).min.x > ZONE_SPLIT_X + 60) expect(water.has(terrainAt(x.at.x, x.at.y))).toBe(true);
+  });
+
+  it("neones: galería de ocho luces alrededor del fuste, balizas de costa en Blog y cartel cian del farero", () => {
+    const s = scene();
+    const { gallery, coast, keeperSign } = s.neon;
+    expect(gallery).toHaveLength(8);
+    for (const p of gallery) {
+      expect(p.z).toBeCloseTo(s.lantern.z - 2, 6);
+      expect(Math.abs(Math.hypot(p.x - LIGHTHOUSE.x, p.y - LIGHTHOUSE.y) - GALLERY_R)).toBeLessThan(1e-6);
+    }
+    expect(GALLERY_R).toBeCloseTo(2.2 + 0.5, 6); // último tambor + 0.5
+    expect(coast.length).toBeGreaterThanOrEqual(6); expect(coast.length).toBeLessThanOrEqual(10);
+    expect(coast).toEqual(COAST.map((p) => ({ x: p.x, y: p.y, z: COAST_Z })));
+    expect(COAST_Z).toBe(1.2);
+    coast.forEach((p, k) => {
+      expect(worldZoneAt(p.x, p.y)).toBe("blog");
+      expect(p.x).toBeGreaterThan(LIGHTHOUSE.x);
+      if (k > 0) { const d = Math.hypot(p.x - coast[k - 1]!.x, p.y - coast[k - 1]!.y); expect(d).toBeGreaterThan(5); expect(d).toBeLessThan(7); }
+    });
+    const z = headlandZ(KEEPER.x + 4);
+    expect(keeperSign.kind).toBe("poly");
+    if (keeperSign.kind !== "poly") return;
+    expect(keeperSign.color).toBe("cyan");
+    const xs = keeperSign.pts.map((p) => p.x), ys = keeperSign.pts.map((p) => p.y), zs = keeperSign.pts.map((p) => p.z);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(2, 6);
+    expect(Math.max(...zs) - Math.min(...zs)).toBeCloseTo(1, 6);
+    expect(Math.min(...zs)).toBeCloseTo(z + 4, 6); // apoyado en el alero
+    for (const y of ys) expect(y).toBeCloseTo(KEEPER.y + 6.02, 6); // cara sur
+    expect(s.accents).toHaveLength(2); // los acentos estáticos no cambian
   });
 
   it("todo el render usa colores del atlas", () => {
