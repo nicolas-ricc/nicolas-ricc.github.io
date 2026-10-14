@@ -66,6 +66,7 @@ function tower(out: Solid[], accents: Accent[], signs: Accent[], crowns: Accent[
   const tiers = th0Full >= 12 && rng.chance(0.5) ? 2 : 1, th0 = tiers === 2 ? th0Full : h;
   const facade: Facade = { floors: Math.max(2, Math.round(th0 / 3)), cols: Math.max(2, Math.round(bw / 2.5)), window: CURTAIN_WINDOW, base: "glass" };
   const box = prism(bx, by, PLINTH_H, bw, bd, th0, "curtain", { facade });
+  const k = towers.length;
   out.push(box); towers.push({ box, facade });
   out.push(prism(bx - 0.3, by - 0.3, PLINTH_H + th0, bw + 0.6, bd + 0.6, 0.3, "officeDark"));
   let z = PLINTH_H + th0 + 0.3, tw = bw, td = bd, tx = bx, ty = by;
@@ -78,7 +79,7 @@ function tower(out: Solid[], accents: Accent[], signs: Accent[], crowns: Accent[
   if (rng.chance(0.5)) { out.push({ kind: "cylinder", at: v3(tx + tw / 2, ty + td / 2, z), r: 2.5, h: 0.3, mat: "paving", sides: 8 }); accents.push({ kind: "dot", at: v3(tx + tw / 2, ty + td / 2, z + 0.3), r: 0.6, color: "amberMid" }); }
   else { out.push(prism(tx + 0.5, ty + 0.5, z, tw - 1, td - 1, 0.3, "leafDark")); for (let k = 0, n = rng.int(1, 3); k < n; k++) out.push({ kind: "cone", at: v3(tx + 1.5 + rng.next() * (tw - 3), ty + 1.5 + rng.next() * (td - 3), z + 0.3), r: 1, h: 2, mat: "leaf" }); }
   signs.push(sign(out, tx + tw / 2 - 3, ty + td - 0.4, z, 6, 1.6)); // cartel de azotea en el borde sur
-  crowns.push(crown(towers.length - 1, tx, ty + td + 0.02, z - 0.3, tw));
+  crowns.push(crown(k, tx, ty + td + 0.02, z - 0.3, tw));
   if (h >= 18) accents.push({ kind: "dot", at: v3(tx + tw, ty, z + 0.5), r: 0.5, color: "amberMid" });
   if (rng.chance(0.5)) lamp(out, accents, b.x + b.w - 1, b.y - 1.5, 0);
 }

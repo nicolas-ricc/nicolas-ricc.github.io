@@ -39,7 +39,7 @@ export function createTechAnim(scene: TechScene, rng: Rng, opts: { reducedMotion
     telecom: () => ({ kind: "dot", at: v3(scene.telecom.x, scene.telecom.y, scene.telecom.z), r: TELECOM_R + TELECOM_PULSE * (1 + Math.sin(clock / TELECOM_PERIOD)), color: "amber" }),
     neon: () => {
       const n = scene.neon.crowns.length, at = neonStep * NEON_STEP_MS;
-      const crowns = scene.neon.crowns.map((c, k): Accent => (c.kind === "poly" ? { ...c, color: colors[k]!, alpha: opts.reducedMotion || neonStep === 0 ? 1 : CROWN_ALPHA[0] + (1 - CROWN_ALPHA[0]) * pulse(at, CROWN_PERIOD_MS, k / n) } : c));
+      const crowns = scene.neon.crowns.map((c, k): Accent => (c.kind === "poly" ? { ...c, color: colors[k]!, alpha: opts.reducedMotion || neonStep === 0 ? CROWN_ALPHA[1] : CROWN_ALPHA[0] + (CROWN_ALPHA[1] - CROWN_ALPHA[0]) * pulse(at, CROWN_PERIOD_MS, k / n) } : { ...c, color: colors[k]! }));
       const on = ringStep === 0 ? scene.neon.mastRing.map(() => true) : chase(scene.neon.mastRing.length, ringStep, 1); // paso 0 = frame 0: todo encendido, como con reduced motion
       return [...crowns, ...scene.neon.mastRing.filter((_, k) => on[k]).map((p): Accent => ({ kind: "dot", at: p, r: RING_R, color: "magentaMid" }))];
     },

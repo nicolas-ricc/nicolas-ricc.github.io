@@ -4,7 +4,7 @@
  * paso. Sin estado: todo deriva del reloj o del paso que pasa el animador.
  */
 
-/** Pulso 0..1 cuantizado: 1 en fase 0 (frame 0 encendido). */
+/** Pulso 0..1: 1 en fase 0 (frame 0 encendido). Lo cuantiza el animador, que le pasa un reloj por pasos. */
 export function pulse(clockMs: number, periodMs: number, phase = 0): number {
   return 0.5 + 0.5 * Math.cos(2 * Math.PI * (clockMs / periodMs + phase));
 }
