@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { Accent } from "../iso/accent";
 import { screenBounds, overlaps, isBehind } from "../iso/depth";
 import { v3 } from "../iso/geometry";
 import { bounds, isFlat, type Solid } from "../iso/solids";
@@ -14,10 +15,10 @@ const inRect = (s: Solid, r: { x: number; y: number; w: number; d: number }) => 
 const DISTRICT_MATS: readonly Material[] = ["paving", "curtain", "stone", "copper", "office", "officeDark", "glass", "leaf", "leafDark", "steel", "rust"];
 
 function build() {
-  const solids: Solid[] = [], ground: Solid[] = [], accents = [] as Parameters<typeof districtBlock>[2];
+  const solids: Solid[] = [], ground: Solid[] = [], accents: Accent[] = [], signs: Accent[] = [];
   const rng = createRng(7);
-  for (const b of DISTRICT) districtBlock(solids, ground, accents, rng, b, maxDistrictHeight(b));
-  return { solids, ground, accents };
+  for (const b of DISTRICT) districtBlock(solids, ground, accents, signs, rng, b, maxDistrictHeight(b));
+  return { solids, ground, accents, signs };
 }
 
 describe("district", () => {
@@ -61,5 +62,22 @@ describe("district", () => {
     const colors = allIsoColors();
     for (const i of buildRenderList([...ground, ...solids])) expect(colors.has(i.color)).toBe(true);
     expect(solids.filter((s) => !isFlat(s)).length).toBeGreaterThan(150);
+  });
+
+  it("carteles de neón: uno por edificio ≥ 12 u, cian o magenta, plano en y, 0.4 u delante de la cara sur", () => {
+    const { solids, signs } = build();
+    expect(signs.length).toBeGreaterThan(0);
+    for (const s of signs) {
+      if (s.kind !== "poly") throw new Error("cartel no poly");
+      expect(s.pts).toHaveLength(4);
+      expect(new Set(s.pts.map((p) => p.y)).size).toBe(1);
+      expect(["cyan", "magenta"]).toContain(s.color);
+      const y = s.pts[0]!.y, zs = s.pts.map((p) => p.z), xs = s.pts.map((p) => p.x);
+      expect(Math.max(...zs) - Math.min(...zs)).toBeCloseTo(1.6, 6);
+      const wall = solids.find((w) => w.kind === "prism" && !!w.facade && (w.mat === "curtain" || w.mat === "stone") && w.at.z === PLINTH_H
+        && Math.abs(w.at.y + w.d + 0.4 - y) < 1e-6 && Math.abs(w.at.x + 1 - Math.min(...xs)) < 1e-6 && Math.abs(w.at.x + w.w - 1 - Math.max(...xs)) < 1e-6
+        && Math.min(...zs) >= w.at.z && Math.max(...zs) <= w.at.z + w.h);
+      expect(wall).toBeDefined();
+    }
   });
 });

@@ -28,6 +28,7 @@ export interface CityScene {
   solids: Solid[];
   accents: Accent[]; // faroles y derrame de luz; las ventanas encendidas y la antena las anima city-anim
   tower: { litWindows: Accent[]; antenna: Vec3; paperWindow: Vec3 };
+  neon: { signs: Accent[]; malecon: Vec3[] }; // carteles del distrito y luces del malecón; los anima city-anim
 }
 
 // ---------------------------------------------------------------- edificios
@@ -276,7 +277,7 @@ function westQuay(solids: Solid[]): void {
   for (const y of [192, 201]) solids.push({ kind: "cylinder", at: v3(x0 + 3, y, 0.6), r: 0.4, h: 0.8, mat: "rust", sides: 6 });
 }
 
-function malecon(solids: Solid[], accents: Accent[]): void {
+function malecon(solids: Solid[], accents: Accent[]): Vec3[] {
   const { x0, x1, y0, y1, z } = MALECON, w = x1 - x0, stairsY = 227;
   solids.push(prism(x0, y0, -1, w, stairsY - y0, z + 1, "paving"), prism(x0, stairsY + 6, -1, w, y1 - stairsY - 6, z + 1, "paving"));
   solids.push({ kind: "ramp", at: v3(x1 - 6, stairsY, -1), w: 6, d: 6, h: z + 1, mat: "paving", dir: "e" }); // escalera, hacia adentro de la zona
@@ -284,8 +285,9 @@ function malecon(solids: Solid[], accents: Accent[]): void {
   solids.push(prism(x1 - 1.5, y0, z, 1.5, stairsY - y0, 0.8, "paving"), prism(x1 - 1.5, stairsY + 6, z, 1.5, y1 - stairsY - 6, 0.8, "paving")); // parapeto
   for (const y of [170, 200, 245, 258]) solids.push(prism(x0 + 2, y, z, 2, 0.6, 0.5, "paving")); // bancos
   // faroles cada 12 u; el tramo nuevo del distrito (266..326) no comparte ninguno con el viejo
-  for (const y of [180, 210, 250, 272, 284, 296, 308, 320]) lamp(solids, accents, x1 - 3, y, z);
+  const bulbs = [180, 210, 250, 272, 284, 296, 308, 320].map((y) => lamp(solids, accents, x1 - 3, y, z));
   for (const y of [stairsY - 1.5, stairsY + 6.5]) solids.push({ kind: "cylinder", at: v3(x1 - 3, y, z), r: 0.4, h: 0.8, mat: "rust", sides: 6 });
+  return bulbs.map((b) => v3(b.x, b.y, b.z + 0.4));
 }
 
 // ---------------------------------------------------------------- derrumbe, cráteres, selva, autos
@@ -355,19 +357,19 @@ function cars(solids: Solid[], rng: Rng): void {
 // ---------------------------------------------------------------- escena
 
 export function city(rng: Rng, districtRng: Rng): CityScene {
-  const ground: Solid[] = [], solids: Solid[] = [], accents: Accent[] = [];
+  const ground: Solid[] = [], solids: Solid[] = [], accents: Accent[] = [], signs: Accent[] = [];
   const tallPending = new Set<Block["bank"]>(["west", "east"]);
   for (const b of blocks()) if (b.kind === "block") block(solids, ground, rng, b, maxHeightFor(b), tallPending);
   const tower = plazaAndTower(solids, ground, accents, rng);
-  for (const b of blocks()) if (b.kind === "district" || b.kind === "site") districtBlock(solids, ground, accents, districtRng, b, maxDistrictHeight(b));
+  for (const b of blocks()) if (b.kind === "district" || b.kind === "site") districtBlock(solids, ground, accents, signs, districtRng, b, maxDistrictHeight(b));
   lanes(ground);
   avenue(ground, solids);
   streetFurniture(solids, accents);
   bridge(solids, accents);
   westQuay(solids);
-  malecon(solids, accents);
+  const maleconLights = malecon(solids, accents);
   collapsed(solids, rng);
   greenery(solids, rng);
   cars(solids, rng);
-  return { ground, solids, accents, tower };
+  return { ground, solids, accents, tower, neon: { signs, malecon: maleconLights } };
 }
