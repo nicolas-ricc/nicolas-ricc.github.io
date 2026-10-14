@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { assembleWorld } from "./assemble";
+import { ACCENT_DIM, focusAlphas } from "./veil";
 
 describe("assembleWorld", () => {
   it("el mundo entero trae los siete animadores, cada uno con su zona; el agua no tiene zona", () => {
@@ -21,5 +22,13 @@ describe("assembleWorld", () => {
     const { animators } = assembleWorld(["portfolio"], { reducedMotion: true });
     expect(new Set(animators.map((a) => a.zone))).toEqual(new Set([null, "portfolio"]));
     expect(animators.filter((a) => a.zone === "portfolio")).toHaveLength(2); // sin la feria (vive en el sangrado)
+  });
+  it("la capa tech.neon vive en un animador de Resume y se atenúa con el velo", () => {
+    const { animators } = assembleWorld(undefined, { reducedMotion: true });
+    const a = animators.find((x) => x.ids.includes("tech.neon"));
+    expect(a?.zone).toBe("cv");
+    expect(focusAlphas("blog").cv.accents).toBe(ACCENT_DIM);
+    expect(focusAlphas("portfolio").cv.accents).toBe(ACCENT_DIM);
+    expect(a!.tick(1000).size).toBe(0);
   });
 });
