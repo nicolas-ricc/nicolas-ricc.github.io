@@ -281,3 +281,19 @@ it("la capa fair.neon vive en el animador de la feria, en Portfolio, y se atenú
 - [ ] **Step 5: commit** `feat(#16): capa fair.neon en el animador de la feria`.
 
 - [ ] **Step 6 (orquestador, no implementador): captura.** `npm run dev -- --host --port 5173`, `agent-browser` a `http://localhost:5173/lab/world.html` (base `/map/` si la raíz no responde), tecla `1` (Portfolio), captura a `docs/superpowers/specs/assets/2026-10-14-cyberpunk/16-fair-neon-portfolio.png`. Commit `docs(#16): captura del lab con Portfolio enfocado`.
+
+## Assumptions
+
+- Frame 0 / reduced motion = paso 0 del chase (4 + 2 luces). Fuente: el issue lo fija ("`reducedMotion`: paso 0 (cuatro luces de marquesina y dos de subida encendidas)"). Alternativa descartada: todas encendidas como #13/#14.
+- La sexta luz de la columna (z 22) nunca se enciende porque la góndola llega a 21 (`fair-anim.ts`, `top = DROP.h - 3`). Se aplica la regla literal del issue (`z ≤ dropZ()`, columna hasta `drop.h − 2`). Alternativa descartada: acortar la columna o comparar con la cima de la góndola (contradice números explícitos del issue).
+- Las luces encendidas de la columna usan `r = 0.35` (el issue solo fija `0.25` para las del resto). Alternativa descartada: `0.4` de `wheelLights`; se eligió la de la marquesina, el neón hermano en la misma capa.
+- La columna lee `dropZ()` en el momento del redibujo. Como `fair.neon` se reporta en todo paso de la góndola (100 ms), queda alineada con la góndola dibujada; en un paso de neón sin paso de góndola puede adelantarse a lo sumo 100 ms de subida (≤ 0.34 u), invisible. Alternativa descartada: cuantizar `dropZ` aparte (más estado sin efecto visible).
+- "Subida" = vértices `0..LIFT_SEGMENTS` de `coasterPath()`, tal cual el issue ("un punto por vértice de los primeros `LIFT_SEGMENTS` tramos"); "ascendente" = el chase avanza en el sentido del recorrido del tren. El último vértice (z 13) ya es el inicio de la bajada; se respeta el conteo del issue.
+- Marquesina y subida omiten las luces apagadas (precedente `wheelLights` en `fair-anim.ts` y el malecón de #14); la columna dibuja sus seis puntos porque el issue da color a todas ("el resto en `magentaBleed`").
+
+## Grilling
+
+- Rondas: 1 (respuestas sin cambios estructurales: solo se sumaron supuestos).
+- Preguntas: 16. Fuentes: ISSUE 6, CODE 15, DOC 0, NO SOURCE 3 (varias respuestas citan más de una fuente).
+- NO SOURCE → supuestos técnicos (arriba): radio de las luces encendidas de la columna (Q13), desfase continuo de `dropZ` entre pasos (Q5), luz superior de la columna nunca encendida (Q1: los números son del issue; la consecuencia se declara).
+- Ambigüedades de spec: ninguna. Issues abiertos: ninguno.
