@@ -32,6 +32,13 @@
 4. **Guard de Portfolio frágil por orden:** contar por color, no por posición, para que reordenar acentos dentro de una escena no rompa el test y sí lo rompa agregar o cambiar un color. Task 5.
 5. **El script no debe escribir archivos:** solo stdout. Task 2 verifica que la función de formato es pura y el bloque principal solo hace `console.log`.
 
+## Assumptions
+
+- **Fondos fuera de `style.css` y `lab/*.html`:** no hay otros. `index.html`, `public/`, `scripts/prerender.ts` y `src/world/stage.ts` no declaran `background` ni `theme-color` (grep al grillar); el canvas toma `ISO_COLORS.sky` por referencia (`src/main.ts:37`, `src/lab/page.ts:25`). Alternativa descartada: un test que recorra todo HTML/CSS del repo.
+- **Baseline persistido en el commit de la Task 1** además de `.scratch/baseline-12.md`. Alternativa descartada: commitear `.scratch/`.
+- **Rollback del pegado:** `git checkout -- src/map/palette-iso.ts` y repegar desde `npm run palette`. Alternativa descartada: verificación por conteo con `grep -c` (frágil: cuenta líneas, no patrones).
+- **Tolerancia ±1 por canal** en el test contra `darken` la fija el issue; el test de formato de la Task 2 compara texto exacto y atrapa errores de tipeo que el ±1 dejaría pasar.
+
 ---
 
 ### Task 1: Baseline "antes" (medidas y capturas, sin cambios de código)
@@ -86,9 +93,10 @@ Anotar el total en bytes y la lista de archivos.
 
 - [ ] **Step 6: Commit de las capturas**
 
+`.scratch/` es local; para que el baseline sobreviva a un cambio de máquina, el cuerpo del commit lleva los números y las líneas de consola crudas (`git commit -F` con un archivo que tenga título y cuerpo).
 ```bash
 git add docs/superpowers/specs/assets/2026-10-14-cyberpunk/
-git commit -m "docs(#12): capturas antes del crepúsculo tardío"
+git commit -F .scratch/commit-baseline-12.txt   # título: docs(#12): capturas y baseline antes del crepúsculo tardío
 ```
 
 ---
@@ -293,7 +301,7 @@ Agregar al final del comentario de encabezado (antes de `*/`):
 
 Run: `npx vitest run src/map/ scripts/darken-palette.test.ts`
 Expected: PASS todo, incluido `lo impreso es lo que está pegado en palette-iso.ts` de la Task 2.
-Run: `npm run palette > /tmp/pal.txt; grep -F -f <(grep '0x' /tmp/pal.txt | sed 's/^ *//; s/,$//') -c src/map/palette-iso.ts` → `32` (30 materiales + shadow + sky).
+Si el pegado queda a medias (sesión cortada, test rojo sin causa clara), no reconciliar a ojo: `git checkout -- src/map/palette-iso.ts`, volver a correr `npm run palette` y pegar de nuevo. El test `lo impreso es lo que está pegado` es el diff autoritativo.
 Run: `npm test && npm run typecheck` → verde (los umbrales de agua/glint siguen pasando; no se tocan).
 
 - [ ] **Step 5: Commit**
@@ -452,3 +460,28 @@ git commit -m "docs(#12): spec cyberpunk con decisiones y baseline"
 - `npm test` y `npm run typecheck` verdes.
 - Abrir `/lab/world.html` (mismo viewport): el mundo se ve más oscuro, los acentos igual de vivos, y el fondo de la página tiene el mismo color que el cielo del canvas (el borde del canvas no se nota).
 - `npm run palette` y comparar con lo pegado (lo cubre el test de la Task 2).
+
+## Grilling
+
+Una ronda (los cambios al plan fueron menores: un paso de verificación reemplazado, una nota de rollback, el baseline en el cuerpo del commit). 18 preguntas: ISSUE 8, CODE 10, DOC 0, NO SOURCE 0 (resueltas como supuestos técnicos arriba, sin ambigüedad de spec ni fuera de alcance). Ningún issue abierto.
+
+| # | Respuesta |
+| --- | --- |
+| 1 | CODE: `src/map/palette-iso.ts:21-50`. Las 30 líneas usan `padEnd(11)` y el orden `top, lit, shade, up, down`; la línea 39 es `officeDark:{ top: 0x5e586c, …` sin espacio. Los comentarios van después de `},`, así que la línea generada sin `,` final es una subcadena. |
+| 2 | ISSUE §6: "`src/style.css`: `--bg` pasa al nuevo `sky`. Los cuatro `lab/*.html` … Buscar con grep otros `#171423`/`171423` en `index.html`, `public/` y `scripts/`". CODE: no hay `background`/`theme-color` en `index.html`, `public/`, `scripts/prerender.ts` ni `src/world/stage.ts`. El canvas toma `ISO_COLORS.sky` (`src/main.ts:37`, `src/lab/page.ts:25`). |
+| 3 | ISSUE §5: "si fallan por el reescalado, multiplicar esos umbrales por 0.7". La corrida fue un pegado temporal con `Math.round` por canal, revertido: 419/419. Si fallan en la Task 3, la instrucción del issue manda escalarlos. |
+| 4 | CODE: `palette-iso.ts` tiene 30 líneas `mat: {`. El paso `grep -c` se eliminó; manda el test de la Task 2. |
+| 5 | CODE: `palette-iso.ts:73-80` exporta `Material`, `ACCENT_COLORS` (en ese orden, fijado por `palette-iso.test.ts`) y `TONE_LADDER = ["shade","lit","down","top","up"]`. Son los cinco tonos y el orden no importa para el bucle. |
+| 6 | CODE: `src/iso/accent.ts:7-8`. `color: AccentColor` es una clave string. `src/scenes/world.ts:19-33` declara `shipyard`/`factory`/`hinterland` como `… | null` con `accents: Accent[]`. Los conteos salen de `world(7)` medido al planificar. |
+| 7 | ISSUE criterio: "Spec creada con decisiones, baseline (números y líneas crudas) y las cuatro capturas 'antes'"; §1: "El headless de siempre es Chrome vía CDP con `agent-browser`, sin GPU". El log sale de `src/lab/page.ts:32` sin importar el backend. |
+| 8 | CODE: `vitest.config.ts` incluye `scripts/**/*.test.ts`; `tsconfig.json` incluye `scripts` y `types: ["node"]`. Hay precedente: `scripts/inject.test.ts`. |
+| 9 | CODE: probado con `npx tsx`. `process.argv[1]` es la ruta del script y la guarda da `true`; bajo Vitest `argv[1]` es el binario de vitest, así que no imprime. |
+| 10 | CODE: `src/map/palette-guard.test.ts:14` excluye `*.test.ts`. |
+| 11 | CODE: cada `lab/*.html` tiene un solo `background:` (línea 9). |
+| 12 | ISSUE §6 y criterio: "`--bg` de `style.css` y el `background` inline de `lab/*.html` igualan el nuevo `sky`". |
+| 13 | ISSUE §7: "Crear `docs/superpowers/specs/2026-10-14-cyberpunk-…-design.md`". Comentario de nicolas-ricc en #11: "spec … creada por el primer hijo … y cerrada por el último". Los hijos se integran en serie sobre `feature/11-cyberpunk-neon`. |
+| 14 | Supuesto técnico (Assumptions): `git checkout -- src/map/palette-iso.ts` y repegar. |
+| 15 | ISSUE criterio: "vale `BASE × 0.7` por canal (±1)". El test exacto de la Task 2 atrapa los typos. Los dos tests miden cosas distintas: fidelidad al factor y fidelidad a la salida del script. |
+| 16 | Supuesto técnico (Assumptions): el baseline va en el cuerpo del commit de la Task 1. |
+| 17 | CODE: `git branch -r` lista `origin/feature/11-cyberpunk-neon`, y la rama `agent/12-paleta-crepusculo` salió de ahí (comentario Stage 0 en #12). |
+| 18 | ISSUE §7: pide la spec en `docs/superpowers/specs/`. El repo no tiene `CONTEXT.md` ni `docs/adr/`; README.md: "Diseño en `docs/superpowers/specs/`". |
