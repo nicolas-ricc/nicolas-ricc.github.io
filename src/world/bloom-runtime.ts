@@ -28,8 +28,8 @@ export function attachBloom(opts: { app: BloomApp; stage: Pick<Stage, "bloom" | 
       const v = budget.sample({ tickMs: pendingTick, renderMs: performance.now() - t0 });
       pendingTick = 0;
       if (!v) return;
-      prerender.remove(pre);
-      postrender.remove(post);
+      // quitar dentro de `emit` salta al listener siguiente y rompe el loop del runner: se difiere
+      queueMicrotask(() => { prerender.remove(pre); postrender.remove(post); });
       // la tecla 6 del lab pudo cambiar el modo durante la medición: no se pisa
       if (stage.bloom === "on") stage.setBloom(v.mode);
       if (log) console.info(`[${prefix}] bloom: ${formatBloomVerdict(v, BLOOM_BUDGET_MS)}`);

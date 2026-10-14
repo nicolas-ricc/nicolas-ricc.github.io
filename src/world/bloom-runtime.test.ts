@@ -46,15 +46,27 @@ describe("attachBloom", () => {
     expect(info).toHaveBeenCalledWith("[lab] bloom: promedio 16.0 ms en 60 frames (tick 6.0 + render 10.0), presupuesto 15 ms → fallback");
   });
 
-  it("se descuelga de los runners tras el veredicto: una sola decisión", () => {
+  it("se descuelga de los runners tras el veredicto: una sola decisión", async () => {
     const { app, stage } = setup();
     const probe = attachBloom({ app, stage, log: false, prefix: "mapa" });
     for (let i = 0; i < 60; i++) frame(app, probe, 6, 10);
+    await Promise.resolve();
     expect(app.renderer.runners.prerender.items).toHaveLength(0);
     expect(app.renderer.runners.postrender.items).toHaveLength(0);
     stage.setBloom.mockClear();
     for (let i = 0; i < 120; i++) frame(app, probe, 1, 1);
     expect(stage.setBloom).not.toHaveBeenCalled();
+  });
+
+  it("descolgarse no rompe a otro listener de postrender agregado después", async () => {
+    const { app, stage } = setup();
+    const probe = attachBloom({ app, stage, log: false, prefix: "mapa" });
+    const third = { postrender: vi.fn() };
+    app.renderer.runners.postrender.add(third);
+    expect(() => { for (let i = 0; i < 60; i++) frame(app, probe, 1, 1); }).not.toThrow();
+    expect(third.postrender).toHaveBeenCalledTimes(60);
+    await Promise.resolve();
+    expect(app.renderer.runners.postrender.items).toEqual([third]);
   });
 
   it("un render sin tick previo cuenta tick 0, no el del frame anterior", () => {
