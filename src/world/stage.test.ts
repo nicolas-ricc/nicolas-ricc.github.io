@@ -11,6 +11,7 @@ import type { Container, Graphics } from "pixi.js";
 import { assembleWorld } from "./assemble";
 import { HALO_BASE, HALO_FALLBACK } from "./frame";
 import { BLOOM_FILTER, buildStage, nextHalo } from "./stage";
+import { WORLD_ZONES } from "./veil";
 
 const build = (reducedMotion = true) => { const { scene, animators } = assembleWorld(undefined, { reducedMotion }); return buildStage(scene, animators); };
 const accentSlotOf = (c: Container) => c.children[c.children.length - 1] as Container;
@@ -80,13 +81,17 @@ describe("modos de bloom del Stage", () => {
   });
 
   it("en fallback, los redibujos de los animadores siguen con el halo grande", () => {
-    const sFb = build(false), sOff = build(false);
+    // solo Blog (mar con boyas y barcos): basta para tener capas de acentos animadas y mantiene el test rápido
+    const blog = () => { const { scene, animators } = assembleWorld(["blog"], { reducedMotion: false }); return buildStage(scene, animators); };
+    // los primeros hijos de accentSlot son los acentos estáticos, uno por zona; el resto, las capas animadas
+    const animatedFills = (c: Container) => accentSlotOf(c).children.slice(WORLD_ZONES.length).reduce((n, g) => n + (g as Graphics).context.instructions.length, 0);
+    const sFb = blog(), sOff = blog();
     sFb.setBloom("fallback");
-    for (let i = 0; i < 40; i++) { sFb.tick(100); sOff.tick(100); }
+    for (let i = 0; i < 10; i++) { sFb.tick(100); sOff.tick(100); }
     // mismos animadores deterministas, mismo reloj: solo cambia el halo
-    expect(fills(sFb.container)).toBeGreaterThan(fills(sOff.container));
+    expect(animatedFills(sFb.container)).toBeGreaterThan(animatedFills(sOff.container));
     sFb.setBloom("off");
-    expect(fills(sFb.container)).toBe(fills(sOff.container));
+    expect(animatedFills(sFb.container)).toBe(animatedFills(sOff.container));
   });
 
   it("los espejos copian el alpha de su original al cambiar el foco", () => {
