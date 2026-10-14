@@ -14,6 +14,7 @@
     "validate": "tsx scripts/validate-content.ts",
     "feed": "tsx scripts/fetch-blog-feed.ts",
     "prerender": "tsx scripts/prerender.ts",
+    "palette": "tsx scripts/darken-palette.ts",
     "prebuild": "npm run validate && npm run feed",
     "predev": "npm run feed"
   },
