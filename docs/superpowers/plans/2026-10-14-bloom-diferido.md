@@ -416,3 +416,15 @@ Esta tarea no tiene test automatizado: es evidencia. Headless de siempre: Chrome
 - [ ] **Step 8: README** — en "Mundo isométrico", un párrafo: el bloom de las luces se activa solo tras el primer dibujo (sitio y lab), se mide 60 frames y cae a `fallback` si el promedio de tick + render supera 15 ms; en desarrollo lo loguea `bloom: …` (ejemplo de línea); en el lab `?bloom=` lo fuerza sin medir y `6` lo rota. Sumar la spec nueva a la lista de specs.
 - [ ] **Step 9: Verificar** — `npm test` y `npm run typecheck` en verde.
 - [ ] **Step 10: Commit** — `git add docs README.md && git commit -m "docs(#18): medidas, capturas y cierre de la spec cyberpunk"`
+
+## Assumptions
+
+- **Protocolo de "igual o mejor" en `primer dibujo`** (Task 4). La issue no fija umbral. Se mide la segunda carga, como el baseline de la spec, en la misma máquina antes (worktree de `origin/feature/11-cyberpunk-neon`) y después; si la diferencia cae dentro del ruido (después peor por menos de 5 %), se repiten tres segundas cargas por lado y se comparan medianas. Se anotan todas las lecturas crudas. Alternativa descartada: una sola lectura por lado, frágil ante el ruido del headless sin GPU.
+- **Guard del veredicto: "el modo sigue en `on`"** (Task 2, Review Focus 3). Si la tecla `6` del lab cambia el modo durante la medición y vuelve a `on`, el veredicto se aplica igual. Alternativa descartada: una bandera de "cambio manual" en el `Stage`, que agrega estado a una API compartida con el sitio por un caso exclusivo del lab.
+
+## Grilling
+
+- Rondas: 1 (las revisiones no cambiaron pasos ni costuras: solo se agregaron supuestos).
+- Preguntas: 18. Fuentes: ISSUE 6 (1, 2, 3, 5, 8, 17), CODE 10 (4, 6, 7, 10, 11, 12, 13, 15, 16, 18), DOC 0, NO SOURCE 2 (9, 14 → supuestos técnicos).
+- Respuestas clave: el warm-up cuenta ("Se acumulan **60 frames** desde que el bloom está activo"); `render` es `postrender − prerender` por la issue; la `Application` renderiza cada frame del ticker con `UPDATE_PRIORITY.LOW` (`pixi.js/lib/app/TickerPlugin.mjs:28`) y `ticker.add` usa `NORMAL` por defecto (`Ticker.mjs:187`), así `probe.tick` precede al `prerender` del mismo frame; los runners `prerender`/`postrender` viven en `AbstractRenderer` (común a WebGL y WebGPU, `AbstractRenderer.mjs:101-105`); `bloomFromSearch` devuelve `null` sin parámetro o con valor inválido (`src/lab/page.test.ts:11-14`); un veredicto `fallback` en el headless sin GPU es un resultado válido ("indicar en la spec qué modo quedó").
+- Issues abiertas: ninguna.
