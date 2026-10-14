@@ -39,4 +39,12 @@ describe("assembleWorld", () => {
     expect(focusAlphas("portfolio").cv.accents).toBe(ACCENT_DIM);
     expect(a!.tick(1000).size).toBe(0);
   });
+  it("la capa sea.neon vive en un animador de Blog y se atenúa con el velo", () => {
+    const { animators } = assembleWorld(undefined, { reducedMotion: true });
+    const a = animators.find((x) => x.ids.includes("sea.neon"));
+    expect(a?.zone).toBe("blog");
+    expect(focusAlphas("cv").blog.accents).toBe(ACCENT_DIM);
+    expect(focusAlphas("portfolio").blog.accents).toBe(ACCENT_DIM);
+    expect(a!.tick(1000).size).toBe(0);
+  });
 });

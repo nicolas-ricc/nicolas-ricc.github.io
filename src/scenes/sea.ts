@@ -12,7 +12,7 @@ import { headlandZ, terrainAt } from "./terrain";
  * boya (landmark del Blog). Los barcos y el mar animado están en sea-anim.ts.
  * Spec §7.
  */
-export interface SeaScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; lantern: Vec3; buoys: Vec3[] }
+export interface SeaScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; lantern: Vec3; buoys: Vec3[]; neon: { gallery: Vec3[]; coast: Vec3[]; keeperSign: Accent } }
 
 export const LIGHTHOUSE = { x: 396, y: 118, z: 7 } as const;
 export const KEEPER = { x: 372, y: 108 } as const;
@@ -21,6 +21,14 @@ export const WRECK_BUOY = { x: 470, y: 160 } as const;
 export const WRECK = { x: 462, y: 150, heading: Math.PI / 6 } as const;
 const WATER_Z = -1;
 const DRUMS = 6, DRUM_H = 4, DRUM_R0 = 3.2, DRUM_STEP = 0.2, GALLERY_H = 0.6, LANTERN_H = 3, CAP_H = 2;
+/** Galería de neón y postes de la baranda: último tambor + 0.5. Las luces van a la altura de la plataforma (lantern.z − 2). */
+export const GALLERY_R = DRUM_R0 - (DRUMS - 1) * DRUM_STEP + 0.5;
+/**
+ * Balizas de costa: arco a ~12.8 u de la punta, de NE a SE por el este. La punta y su orilla
+ * (12 u) son Portfolio para `worldZoneAt`; a esta distancia ya es Blog (lo fija sea.test.ts).
+ */
+export const COAST: readonly Vec2[] = [{ x: 397.5, y: 99.5 }, { x: 403, y: 101.5 }, { x: 408, y: 104 }, { x: 411.5, y: 108.5 }, { x: 413, y: 114.5 }, { x: 413, y: 120.5 }, { x: 412, y: 126.5 }, { x: 408.5, y: 131.5 }];
+export const COAST_Z = 1.2;
 const REEF_CELLS = 20, BOULDERS = 20; // dos conos por celda de arrecife: hasta 40
 
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material, roof?: "gable"): Solid => (roof ? { kind: "prism", at: v3(x, y, z), w, d, h, mat, roof } : { kind: "prism", at: v3(x, y, z), w, d, h, mat });
@@ -31,7 +39,7 @@ function lighthouse(out: Solid[]): Vec3 {
   let z = LIGHTHOUSE.z;
   for (let i = 0; i < DRUMS; i++) { out.push(cyl(x, y, z, DRUM_R0 - i * DRUM_STEP, DRUM_H, i % 2 === 0 ? "whitewash" : "rust")); z += DRUM_H; }
   out.push(cyl(x, y, z, 3, GALLERY_H, "steel")); z += GALLERY_H;
-  for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; out.push(prism(x + 2.7 * Math.cos(a) - 0.15, y + 2.7 * Math.sin(a) - 0.15, z, 0.3, 0.3, 1.2, "steel")); }
+  for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; out.push(prism(x + GALLERY_R * Math.cos(a) - 0.15, y + GALLERY_R * Math.sin(a) - 0.15, z, 0.3, 0.3, 1.2, "steel")); }
   out.push(cyl(x, y, z, 1.6, LANTERN_H, "glass", 8));
   const lantern = v3(x, y, z + LANTERN_H / 2);
   z += LANTERN_H;
@@ -39,11 +47,17 @@ function lighthouse(out: Solid[]): Vec3 {
   return lantern;
 }
 
-function keeperHouse(out: Solid[], accents: Accent[]): void {
+function keeperHouse(out: Solid[], accents: Accent[]): Accent {
   const z = headlandZ(KEEPER.x + 4);
   out.push(prism(KEEPER.x, KEEPER.y, z, 8, 6, 4, "whitewash", "gable"));
   const wx = KEEPER.x + 3, wy = KEEPER.y + 6.02; // ventana en la cara sur
   accents.push({ kind: "poly", pts: [v3(wx, wy, z + 1), v3(wx + 1.2, wy, z + 1), v3(wx + 1.2, wy, z + 2), v3(wx, wy, z + 2)], color: "magentaBleed", alpha: 0.9 });
+  // Cartel 2 × 1 en la cara sur, apoyado en el alero, sobre una caja oscura como `sign()` en tech.ts: sin ella el blend
+  // aditivo contra el techo encalado se lee blanco y no se ve el cambio de color.
+  const sx = KEEPER.x + 3, sy = KEEPER.y + 6;
+  out.push(prism(sx - 0.2, sy, z + 3.8, 2.4, 0.4, 1.4, "steel"));
+  const fy = sy + 0.42;
+  return { kind: "poly", pts: [v3(sx, fy, z + 4), v3(sx + 2, fy, z + 4), v3(sx + 2, fy, z + 5), v3(sx, fy, z + 5)], color: "cyan", alpha: 1 };
 }
 
 /** Sendero de roca de la escollera al faro: diez tramos, cada uno a la altura de la punta en su centro (la punta sube de 1 a 7). */
@@ -97,9 +111,10 @@ function buoysAndWreck(out: Solid[], ground: Solid[], accents: Accent[]): Vec3[]
 export function sea(rng: Rng): SeaScene {
   const ground: Solid[] = [], solids: Solid[] = [], accents: Accent[] = [];
   const lantern = lighthouse(solids);
-  keeperHouse(solids, accents);
+  const keeperSign = keeperHouse(solids, accents);
   path(ground);
   rocks(solids, rng);
   const buoys = buoysAndWreck(solids, ground, accents);
-  return { ground, solids, accents, lantern, buoys };
+  const gallery = Array.from({ length: 8 }, (_, k) => { const a = (k / 8) * Math.PI * 2; return v3(LIGHTHOUSE.x + GALLERY_R * Math.cos(a), LIGHTHOUSE.y + GALLERY_R * Math.sin(a), lantern.z - 2); });
+  return { ground, solids, accents, lantern, buoys, neon: { gallery, coast: COAST.map((p) => v3(p.x, p.y, COAST_Z)), keeperSign } };
 }
