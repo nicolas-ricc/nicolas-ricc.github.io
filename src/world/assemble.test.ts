@@ -47,4 +47,12 @@ describe("assembleWorld", () => {
     expect(focusAlphas("portfolio").blog.accents).toBe(ACCENT_DIM);
     expect(a!.tick(1000).size).toBe(0);
   });
+  it("la capa fair.neon vive en el animador de la feria, en Portfolio, y se atenúa con su velo", () => {
+    const { animators } = assembleWorld(undefined, { reducedMotion: true });
+    const a = animators.find((x) => x.ids.includes("fair.neon"));
+    expect(a?.zone).toBe("portfolio");
+    expect(focusAlphas("cv").portfolio.accents).toBe(ACCENT_DIM);
+    expect(focusAlphas("blog").portfolio.accents).toBe(ACCENT_DIM);
+    expect(a!.tick(1000).size).toBe(0);
+  });
 });

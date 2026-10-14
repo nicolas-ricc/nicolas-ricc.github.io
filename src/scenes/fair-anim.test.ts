@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import type { Accent } from "../iso/accent";
+import type { Vec3 } from "../iso/geometry";
 import { bounds, wheelPoint } from "../iso/solids";
 import { createRng } from "../map/seed";
 import { DROP, WHEEL, coasterAt, coasterLength, fair } from "./fair";
-import { DROP_CYCLE_MS, WHEEL_LIGHT_STEP_MS, WHEEL_PERIOD_MS, WHEEL_STEP_MS, createFairAnim } from "./fair-anim";
+import { DROP_CYCLE_MS, DROP_RISE_MS, NEON_STEP_MS, WHEEL_LIGHT_STEP_MS, WHEEL_PERIOD_MS, WHEEL_STEP_MS, createFairAnim } from "./fair-anim";
 
 const setup = (reducedMotion = false) => createFairAnim(fair(createRng(7)), { reducedMotion });
 
@@ -57,7 +59,56 @@ describe("fair-anim", () => {
     const a = setup();
     const s0 = a.signs()[0]!.color; a.tick(500); expect(a.signs()[0]!.color).not.toBe(s0);
     const r = setup(true);
-    expect(r.tick(1000)).toEqual({ wheel: false, lights: false, train: false, drop: false, signs: false });
+    expect(r.tick(1000)).toEqual({ wheel: false, lights: false, train: false, drop: false, signs: false, neon: false });
     expect(r.wheelLights()).toHaveLength(4); expect(r.angle()).toBe(0);
+  });
+});
+
+const dots = (a: Accent[]) => a.flatMap((x) => (x.kind === "dot" ? [x] : []));
+const on = (pts: Vec3[], a: Accent[]) => dots(a).filter((d) => pts.some((p) => p.x === d.at.x && p.y === d.at.y && p.z === d.at.z));
+
+describe("fair-anim neon", () => {
+  it("frame 0 y reduced motion: 4 de marquesina, 2 de subida, columna entera en magentaBleed; solo cyan/magenta", () => {
+    const s = fair(createRng(7)), a = createFairAnim(s, { reducedMotion: false }), r = createFairAnim(s, { reducedMotion: true });
+    const f0 = a.neon();
+    expect(on(s.neon.marquee, f0)).toHaveLength(4);
+    expect(on(s.neon.lift, f0)).toHaveLength(2);
+    expect(on(s.neon.column, f0).map((d) => [d.color, d.r])).toEqual(Array(6).fill(["magentaBleed", 0.25]));
+    for (const x of f0) expect(x.color).toMatch(/^(cyan|magenta)/);
+    expect(r.neon()).toEqual(f0);
+    expect(r.tick(1000).neon).toBe(false);
+    expect(r.neon()).toEqual(f0);
+  });
+  it("la marquesina corre cada 200 ms y cada posición conserva su color (par cyan, impar magenta)", () => {
+    const s = fair(createRng(7)), a = createFairAnim(s, { reducedMotion: false });
+    const m0 = on(s.neon.marquee, a.neon());
+    expect(a.tick(NEON_STEP_MS).neon).toBe(true);
+    const m1 = on(s.neon.marquee, a.neon());
+    expect(m1).toHaveLength(4); expect(m1).not.toEqual(m0);
+    for (let t = 0; t < 16; t++) {
+      for (const d of on(s.neon.marquee, a.neon())) {
+        const k = s.neon.marquee.findIndex((p) => p.x === d.at.x);
+        expect(d.color).toBe(k % 2 === 0 ? "cyan" : "magenta"); expect(d.r).toBe(0.35);
+      }
+      a.tick(NEON_STEP_MS);
+    }
+  });
+  it("la subida corre hacia arriba con dos luces cyanMid", () => {
+    const s = fair(createRng(7)), a = createFairAnim(s, { reducedMotion: false });
+    const idx = () => on(s.neon.lift, a.neon()).map((d) => s.neon.lift.findIndex((p) => p.x === d.at.x && p.y === d.at.y && p.z === d.at.z)).sort((x, y) => x - y);
+    expect(idx()).toEqual([0, 1]);
+    a.tick(NEON_STEP_MS); expect(idx()).toEqual([1, 2]);
+    for (const d of on(s.neon.lift, a.neon())) expect(d.color).toBe("cyanMid");
+  });
+  it("la columna sube con la góndola: en la cima las cinco de abajo en magenta, en la base ninguna", () => {
+    const s = fair(createRng(7)), a = createFairAnim(s, { reducedMotion: false });
+    for (let t = 0; t < DROP_RISE_MS + 500; t += 100) a.tick(100);
+    // la góndola llega a DROP.h − 3 = 21 y la última luz está en drop.h − 2 = 22: nunca se enciende
+    expect(on(s.neon.column, a.neon()).map((d) => d.color)).toEqual([...Array(5).fill("magenta"), "magentaBleed"]);
+    for (let t = 0; t < DROP_CYCLE_MS - DROP_RISE_MS - 500 + 100; t += 100) a.tick(100);
+    expect(on(s.neon.column, a.neon()).every((d) => d.color === "magentaBleed")).toBe(true);
+    const b = createFairAnim(s, { reducedMotion: false });
+    for (let t = 0; t < DROP_RISE_MS / 2; t += 100) b.tick(100);
+    expect(new Set(on(s.neon.column, b.neon()).map((d) => d.color))).toEqual(new Set(["magenta", "magentaBleed"]));
   });
 });
