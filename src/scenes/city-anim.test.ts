@@ -8,8 +8,9 @@ const setup = (reducedMotion = false) => {
   const scene = city(createRng(7), createRng(8));
   return { scene, tower: scene.tower, anim: createCityAnim(scene.tower, scene.neon, createRng(3), { reducedMotion }) };
 };
-const lights = (a: Accent[]) => a.filter((x) => x.kind === "dot");
-const signsOf = (a: Accent[]) => a.filter((x) => x.kind === "poly");
+type Kind<K> = Extract<Accent, { kind: K }>;
+const lights = (a: Accent[]) => a.filter((x): x is Kind<"dot"> => x.kind === "dot");
+const signsOf = (a: Accent[]) => a.filter((x): x is Kind<"poly"> => x.kind === "poly");
 const dot = (a: Accent): Extract<Accent, { kind: "dot" }> => { if (a.kind !== "dot") throw new Error("se esperaba dot"); return a; };
 
 describe("city-anim", () => {
@@ -86,8 +87,8 @@ describe("city-anim", () => {
   it("neon frame 0: carteles en su color inicial y todas las luces del malecón; solo cian/magenta", () => {
     const { scene, anim } = setup();
     expect(signsOf(anim.neon())).toEqual(scene.neon.signs);
-    expect(lights(anim.neon()).map((d) => d.kind === "dot" && d.at)).toEqual(scene.neon.malecon);
-    for (const d of lights(anim.neon())) if (d.kind === "dot") { expect(d.color).toBe("cyanMid"); expect(d.r).toBe(0.35); }
+    expect(lights(anim.neon()).map((d) => d.at)).toEqual(scene.neon.malecon);
+    for (const d of lights(anim.neon())) { expect(d.color).toBe("cyanMid"); expect(d.r).toBe(0.35); }
     for (const x of anim.neon()) expect(x.color).toMatch(/^(cyan|magenta)/);
   });
 

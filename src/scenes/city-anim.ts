@@ -85,8 +85,7 @@ export function createCityAnim(tower: CityScene["tower"], neon: CityScene["neon"
     neon: () => {
       const on = signs.filter((s) => s.offUntil <= clock).map((s) => ({ ...s.a, color: s.color }));
       const lit = maleconStep === 0 ? null : chase(neon.malecon.length, maleconStep, 2);
-      const lights: Accent[] = [];
-      neon.malecon.forEach((at, k) => { if (!lit || lit[k]) lights.push({ kind: "dot", at, r: MALECON_R, color: "cyanMid" }); });
+      const lights = neon.malecon.filter((_, k) => !lit || lit[k]).map((at): Accent => ({ kind: "dot", at, r: MALECON_R, color: "cyanMid" }));
       return [...on, ...lights];
     },
     tick(dtMs) {
@@ -115,8 +114,8 @@ export function createCityAnim(tower: CityScene["tower"], neon: CityScene["neon"
         signTimer = rng.int(SIGN_GAP_MS[0], SIGN_GAP_MS[1]);
         c.neon = true; // un cambio de color o un apagón siempre se ve (SIGN_GAP_MS ≥ 3000 > NEON_STEP_MS)
       }
-      const ms = Math.floor(clock / MALECON_STEP_MS);
-      if (ms !== maleconStep) { maleconStep = ms; c.neon = true; }
+      const mStep = Math.floor(clock / MALECON_STEP_MS);
+      if (mStep !== maleconStep) { maleconStep = mStep; c.neon = true; }
       return c;
     },
   };
