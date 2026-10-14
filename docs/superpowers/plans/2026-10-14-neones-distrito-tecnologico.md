@@ -166,7 +166,7 @@ function crown(k: number, x: number, y: number, top: number, w: number): Accent 
 }
 ```
 
-    En `tower()`: `crowns.push(crown(towers.length - 1, tx, ty + td + 0.02, z - 0.3, tw));` (antes de dibujar el helipuerto, cuando `z` ya es el tope + cornisa).
+    En `tower()`: `crowns.push(crown(towers.length - 1, tx, ty + td + 0.02, z - 0.3, tw));` (junto al `signs.push(sign(...))` de `tech.ts:74`; `z` es ahí el tope del último cuerpo más su cornisa de 0.3, `tech.ts:64-71`, y el helipuerto no lo cambia).
   - `tech()` arma `crowns` y `mastRing = [3, 6, 9].map((dz) => v3(telecomTop.x, telecomTop.y + 0.6, telecomTop.z - dz))` y devuelve `neon: { crowns, mastRing }`.
 - [ ] **Step 4:** test en verde; el test de determinismo de `tech.test.ts` sigue verde; `npm run typecheck`.
 - [ ] **Step 5:** commit `feat(#13): coronas de neón por torre y anillo del mástil en el distrito tecnológico`.
@@ -315,3 +315,38 @@ function crown(k: number, x: number, y: number, top: number, w: number): Accent 
 - [ ] **Step 1:** `npm run dev -- --host --port 5173` y abrir `http://localhost:5173/lab/world.html?speed=0.2` con `agent-browser` (viewport 1600×900, DPR 2), tecla `2` (Resume) y `5` dos veces (foco en Resume).
 - [ ] **Step 2:** verificar a ojo que las coronas se ven sobre el borde sur de las torres, que hay cian y magenta, y que el anillo del mástil se ve; con `prefers-reduced-motion` emulado, encendidas y quietas.
 - [ ] **Step 3:** captura y commit `docs(#13): captura del lab con Resume enfocado`.
+
+## Assumptions
+
+Decisiones técnicas sin fuente escrita, declaradas para el PR:
+
+1. **Frame 0 = estado de reduced motion.** Paso de corona 0 → alpha 1 en todas; paso de anillo 0 → las tres luces. Desde el paso 1 corren el pulso desfasado y el chase; el salto a 150 ms de alpha 1 a `0.45 + 0.55·pulse(150, 2400, k/n)` es aceptado. Alternativa rechazada: `pulse` desfasado y `chase(3, 0, 1)` desde el frame 0 (contradice "frame 0 encendido" y el estado fijo de reduced motion que pide el issue).
+2. **Tick grande: un cambio de color como máximo por tick** (`if`, no `while`), igual que el parpadeo de ventanas (`tech-anim.ts:36`). Alternativa rechazada: recuperar los cambios perdidos con `while`.
+3. **El cambio de color se guarda por corona en un arreglo `colors`**, no con `flip`: `flip` se crea porque el issue fija la API compartida, y lo usan los hijos #14..#16. Alternativa rechazada: un contador de cambios por corona más `flip`, que agrega estado sin ganar nada.
+4. **Orden del rng:** el estado nuevo (`flipTimer`) se crea después de `lit` y `blinkTimer`, así el frame 0 de las ventanas no cambia; la secuencia posterior de ventanas sí cambia (sigue siendo determinista). Ningún test fija resultados concretos del rng (`tech-anim.test.ts` solo comprueba que algo cambió).
+5. **Criterio de la revisión visual (Task 5):** pasa si, con Resume enfocado, se ven franjas cian y magenta en el borde sur de las torres y al menos una luz magenta en el mástil, y con reduced motion emulado dos capturas separadas por 2 s son iguales.
+
+## Grilling
+
+Una ronda (el plan no cambió de forma sustancial: sin tasks nuevas ni otro corte), 18 preguntas: 9 ISSUE, 14 CODE (varias con las dos), 0 DOC (el repo no tiene CLAUDE.md, CONTEXT.md ni `docs/adr/`), 4 NO SOURCE resueltas como supuestos técnicos (1, 2, 3, 5 de arriba). Ninguna ambigüedad de spec, ningún issue nuevo.
+
+Respuestas:
+
+1. Criterios: Task 1 → "Qué hacer" 1 (ISSUE: "Crear `src/scenes/neon.ts` con la API del contexto común (`pulse`, `chase`, `flip`) y `neon.test.ts`"); Task 2 → "Qué hacer" 2 y 5; Task 3 → "Qué hacer" 3 y criterios 1, 2; Task 4 → "Qué hacer" 4 y criterios 2, 3, 4, 5; Task 5 → ISSUE: "Captura del lab con la zona enfocada adjunta al PR (en el cuerpo, o commiteada bajo `docs/superpowers/specs/assets/2026-10-14-cyberpunk/`)". `flip` lo exige la API: ISSUE: "crearlo con esta API exacta". Supuesto 3.
+2. CODE: `src/scenes/tech-anim.ts:33` — `if (opts.reducedMotion || dtMs <= 0 || scene.towers.length === 0) return c;` está antes de todo el código del tick; el código nuevo va después y no necesita guard propio.
+3. CODE: `src/scenes/tech-anim.test.ts` y `tech-animator.test.ts` solo comprueban que las ventanas cambian (`not.toBe(before)`) y los ids; no fijan resultados del rng. Supuesto 4.
+4. CODE: `tech-anim.ts:25` (`let clock = 0`, acumulado en el tick); `src/map/seed.ts` `int: (min, max) => min + Math.floor(next() * (max - min + 1))`, inclusivo. Con 0 torres el tick sale en la línea 33 antes de llegar al `rng.int(0, -1)`.
+5. CODE: `tech-anim.ts:33` cubre el tick; en `neon()` el `map` sobre un arreglo vacío no evalúa `k / n`. El anillo sigue saliendo (3 dots).
+6. CODE: `tech.ts:63` (`towers.push` del primer cuerpo, antes de la corona, así `towers.length - 1` es el índice de esa torre); `tech.ts:64` cornisa de 0.3; `tech.ts:66-70` el segundo cuerpo es `curtain` y suma su cornisa a `z`. En los dos casos el cuerpo superior es `curtain` con tope `z − 0.3`.
+7. CODE: `tech.ts:51` — vértices `x + 0.3` y `x + w − 0.3` en ese orden, `y + 0.42`; `tech.ts:74` lo llama con `y = ty + td − 0.4`, `x = tx + tw/2 − 3`, `w = 6`. Las igualdades valen por construcción, no por la semilla.
+8. CODE: `src/iso/accent.ts:6-8` — `dot { at, r, color }` y `poly { pts, color, alpha? }`; `src/map/palette-iso.ts:71-72` — `AccentColor` y `ACCENT_COLORS` incluyen las seis variantes cian/magenta.
+9. CODE: `grep TechScene src` → solo `src/scenes/world.ts:31,70,73`, que recibe el valor de `tech()`, no construye literales.
+10. CODE: `src/world/stage.ts:91-98` — toda capa `accent` de un animador entra en `accents` con `zone: a.zone`; `stage.ts:108` multiplica su alpha por `current[e.zone].accents`. La capa nueva pasa por ese camino sin cambios; el criterio del issue pide exactamente el test de `assemble` + `focusAlphas` (ISSUE: "contiene un animador cuyos `ids` incluyen la capa nueva y cuya `zone` es la que corresponde (y por lo tanto `focusAlphas(otraZona)[zona].accents === ACCENT_DIM`)"). No hay tests de `stage.ts` (vitest corre en `node`, `vitest.config.ts:4`).
+11. CODE: `tech-animator.ts:15` — `ids: Object.keys(layers)`, orden de inserción; el test existente ordena con `.sort()` antes de comparar (`tech-animator.test.ts:8`), así que la posición no importa.
+12. CODE: `tech-anim.ts:36` usa `if`. Supuesto 2.
+13. ISSUE: "cuantizada a `NEON_STEP_MS = 150`" y "frame 0 = todo encendido y quieto ... cuantiza cada animación a un paso ... y marca cambios solo cuando el paso cambia". La función `pulse` es continua; la cuantización la hace el animador al pasarle `neonStep * NEON_STEP_MS`. El docstring "cuantizado" es literal del issue y se conserva.
+14. ISSUE: bloque "Helper compartido `src/scenes/neon.ts` ... con esta API exacta", con `phase` en ciclos (`clock/period + phase`). `lit > n` enciende todas por construcción de `(k − step) mod n < lit`.
+15. Supuesto 1.
+16. CODE: `tech-anim.test.ts:6` — `tech(createRng(7))`, `createRng(3)` fijos. Tras un cambio el timer se reinicia a ≥ 6000 ms; 58 ticks de 100 ms bajan 5800 ms, no alcanza a dispararse otro cambio con cualquier semilla.
+17. ISSUE (ver 1) autoriza commitear la captura en esa carpeta. `?speed=` y las teclas: CODE `src/lab/page.ts:9` (`"2": "cv"`), `:49` (tecla `5` rota `[null, portfolio, cv, blog]`, dos pulsaciones = `cv`), `:53` (`speed`). Criterio: supuesto 5.
+18. No existen `CONTEXT.md` ni `docs/adr/` en el repo (`ls` en la raíz); no hay glosario que actualizar.
