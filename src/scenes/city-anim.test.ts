@@ -122,22 +122,23 @@ describe("city-anim", () => {
     expect(signsOf(anim.neon()).length).toBeGreaterThanOrEqual(n - 1);
   });
 
-  it("un apagón vuelve en el paso siguiente con el mismo color", () => {
+  it("un apagón dura un paso entero y el cartel vuelve con el mismo color", () => {
     const { scene, anim } = setup();
-    const n = scene.neon.signs.length;
-    let before = signsOf(anim.neon()), found = false;
-    for (let t = 0; t < 120000 && !found; t += 50) {
-      anim.tick(50);
+    const n = scene.neon.signs.length, dt = 10;
+    let before = signsOf(anim.neon()), offMs = 0, blinks = 0;
+    for (let t = 0; t < 120000; t += dt) {
+      anim.tick(dt);
       const s = signsOf(anim.neon());
-      if (s.length === n - 1) {
-        found = true;
-        let back = s;
-        for (let k = 0; k < 4 && back.length < n; k++) { anim.tick(50); back = signsOf(anim.neon()); }
-        expect(back.length).toBe(n);
-        expect(back).toEqual(before);
-        expect(4 * 50).toBeGreaterThan(NEON_STEP_MS);
-      } else before = s;
+      if (s.length === n - 1) offMs += dt;
+      else if (offMs > 0) {
+        blinks++;
+        expect(offMs).toBeGreaterThanOrEqual(NEON_STEP_MS); // un paso entero, no un frame
+        expect(offMs).toBeLessThanOrEqual(NEON_STEP_MS + dt);
+        expect(s).toEqual(before);
+        offMs = 0;
+      }
+      if (s.length === n) before = s;
     }
-    expect(found).toBe(true);
+    expect(blinks).toBeGreaterThan(0);
   });
 });

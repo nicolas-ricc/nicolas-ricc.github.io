@@ -285,10 +285,9 @@ function malecon(solids: Solid[], accents: Accent[]): Vec3[] {
   solids.push(prism(x1 - 1.5, y0, z, 1.5, stairsY - y0, 0.8, "paving"), prism(x1 - 1.5, stairsY + 6, z, 1.5, y1 - stairsY - 6, 0.8, "paving")); // parapeto
   for (const y of [170, 200, 245, 258]) solids.push(prism(x0 + 2, y, z, 2, 0.6, 0.5, "paving")); // bancos
   // faroles cada 12 u; el tramo nuevo del distrito (266..326) no comparte ninguno con el viejo
-  const ys = [180, 210, 250, 272, 284, 296, 308, 320];
-  for (const y of ys) lamp(solids, accents, x1 - 3, y, z);
+  const bulbs = [180, 210, 250, 272, 284, 296, 308, 320].map((y) => lamp(solids, accents, x1 - 3, y, z));
   for (const y of [stairsY - 1.5, stairsY + 6.5]) solids.push({ kind: "cylinder", at: v3(x1 - 3, y, z), r: 0.4, h: 0.8, mat: "rust", sides: 6 });
-  return ys.map((y) => v3(x1 - 3 + 0.3, y + 0.3, z + 5 + 0.4));
+  return bulbs.map((b) => v3(b.x, b.y, b.z + 0.4));
 }
 
 // ---------------------------------------------------------------- derrumbe, cráteres, selva, autos

@@ -23,7 +23,7 @@ export const PAPER_FADE_FROM = 2 / 3; // fracción de PAPER_RANGE donde empieza 
 export const PAPER_LIFT = 0.15; // z que gana por unidad recorrida (el viento lo levanta)
 export const PAPER_SIDE = 1.5; // desvío lateral máximo, perpendicular a la deriva
 export const PAPER_SIDE_RAMP = 5; // en cuántas unidades entra del todo el desvío
-export const NEON_STEP_MS = 150; // un apagón de cartel dura hasta el siguiente borde de este paso
+export const NEON_STEP_MS = 150; // lo que dura un apagón de cartel
 export const SIGN_GAP_MS: [number, number] = [3000, 7000];
 export const MALECON_STEP_MS = 250;
 export const MALECON_R = 0.35;
@@ -83,7 +83,7 @@ export function createCityAnim(tower: CityScene["tower"], neon: CityScene["neon"
     papers: () => papers.map(paperAt),
     antenna: () => ({ kind: "dot", at: tower.antenna, r: antennaR(), color: "amberMid" }),
     neon: () => {
-      const on = signs.filter((s) => s.offUntil < 0 || s.offUntil <= clock).map((s) => ({ ...s.a, color: s.color }));
+      const on = signs.filter((s) => s.offUntil <= clock).map((s) => ({ ...s.a, color: s.color }));
       const lit = maleconStep === 0 ? null : chase(neon.malecon.length, maleconStep, 2);
       const lights: Accent[] = [];
       neon.malecon.forEach((at, k) => { if (!lit || lit[k]) lights.push({ kind: "dot", at, r: MALECON_R, color: "cyanMid" }); });
@@ -111,7 +111,7 @@ export function createCityAnim(tower: CityScene["tower"], neon: CityScene["neon"
       if (signTimer <= 0 && signs.length > 0) {
         const s = signs[rng.int(0, signs.length - 1)]!;
         if (rng.chance(0.5)) s.color = s.color === "cyan" ? "magenta" : "cyan";
-        else if (s.offUntil < 0) s.offUntil = (Math.floor(clock / NEON_STEP_MS) + 1) * NEON_STEP_MS;
+        else if (s.offUntil < 0) s.offUntil = clock + NEON_STEP_MS;
         signTimer = rng.int(SIGN_GAP_MS[0], SIGN_GAP_MS[1]);
         c.neon = true; // un cambio de color o un apagón siempre se ve (SIGN_GAP_MS ≥ 3000 > NEON_STEP_MS)
       }

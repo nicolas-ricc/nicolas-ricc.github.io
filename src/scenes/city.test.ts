@@ -6,6 +6,7 @@ import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
 import { AVENUE, BOULEVARD, BRIDGE, CITY_EDGE, COLLAPSED, ROWS, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_RING, FALLEN_BLOCK, MALECON, PLAZA, TOWER, WEST_QUAY, blocks, estuaryEast, inBlock, inCrater } from "./city-grid";
 import { MAX_BUILDING_H, PLINTH_H, TOWER_H, city, type CityScene } from "./city";
+import { SEED } from "../world/assemble";
 import { zoneRng } from "./world";
 
 const scene = (): CityScene => city(createRng(7), createRng(8));
@@ -209,7 +210,7 @@ describe("city", () => {
   });
 
   it("neon: ≥ 6 carteles coplanares en y y una luz sobre cada farol del malecón", () => {
-    const worldCity = city(zoneRng(7, "cv"), zoneRng(7, "cv", 1)); // la semilla real del mundo (SEED de assemble.ts)
+    const worldCity = city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1)); // la semilla real del mundo
     expect(worldCity.neon.signs.length).toBeGreaterThanOrEqual(6);
     const c = scene();
     expect(c.neon.signs.length).toBeGreaterThanOrEqual(6);
