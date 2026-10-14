@@ -147,7 +147,6 @@ function carousel(out: Solid[], accents: Accent[]): void {
   out.push(cone(x, y, 3.6, 7, 3, "whitewash", 12), cone(x, y, 6.6, 1.2, 1.5, "copper", 8));
 }
 
-/** Neones: marquesina sobre el cartel del portal, una luz por vértice de la subida, columna al sur de la torre. */
 function neon(drop: { at: Vec3; h: number }): FairScene["neon"] {
   const z0 = drop.at.z + 2, z1 = drop.h - 2;
   return {

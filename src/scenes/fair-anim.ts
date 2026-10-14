@@ -40,7 +40,6 @@ export function createFairAnim(scene: FairScene, opts: { reducedMotion: boolean 
   // continuo se adelantarían hasta un paso entero y quedarían fuera de la llanta dibujada.
   const angle = () => (opts.reducedMotion ? 0 : (2 * Math.PI * ((wheelStep * WHEEL_STEP_MS) % WHEEL_PERIOD_MS)) / WHEEL_PERIOD_MS);
   const dropZ = () => base + (top - base) * (opts.reducedMotion ? 0 : dropEase(clock));
-  // Luces corredizas sobre una lista de puntos: `lit` encendidas, avanzando un lugar por paso.
   const run = (pts: Vec3[], lit: number, color: (k: number) => AccentColor): Accent[] => chase(pts.length, neonStep, lit).flatMap((o, k) => (o ? [{ kind: "dot" as const, at: pts[k]!, r: NEON_R, color: color(k) }] : []));
   return {
     wheel: () => [wheelSolid(angle())],
