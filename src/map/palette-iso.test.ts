@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ACCENT_COLORS, ISO_COLORS, ISO_TONES, TONE_LADDER, allIsoColors, stepTone, toneColor, type Material } from "./palette-iso";
+import { BASE_SHADOW, BASE_SKY, BASE_TONES, DARKEN, darken } from "./palette-base";
 
 const lum = (c: number): number => ((c >> 16) & 255) * 0.3 + ((c >> 8) & 255) * 0.59 + (c & 255) * 0.11;
 
@@ -73,5 +74,24 @@ describe("paleta isométrica", () => {
       expect(lum(ISO_COLORS[base])).toBeGreaterThan(lum(ISO_COLORS[`${base}Mid`]));
       expect(lum(ISO_COLORS[`${base}Mid`])).toBeGreaterThan(lum(ISO_COLORS[`${base}Bleed`]));
     }
+  });
+});
+
+const channelsClose = (a: number, b: number) => {
+  for (const s of [16, 8, 0]) expect(Math.abs(((a >> s) & 255) - ((b >> s) & 255))).toBeLessThanOrEqual(1);
+};
+
+describe("crepúsculo tardío", () => {
+  it("cada tono, sky y shadow valen la base × DARKEN por canal (±1)", () => {
+    expect(Object.keys(ISO_TONES)).toEqual(Object.keys(BASE_TONES));
+    for (const mat of Object.keys(BASE_TONES) as Material[]) {
+      for (const tone of TONE_LADDER) channelsClose(ISO_TONES[mat][tone], darken(BASE_TONES[mat][tone], DARKEN));
+    }
+    channelsClose(ISO_COLORS.shadow, darken(BASE_SHADOW, DARKEN));
+    channelsClose(ISO_COLORS.sky, darken(BASE_SKY, DARKEN));
+  });
+
+  it("los nueve acentos no se oscurecen", () => {
+    expect(ACCENT_COLORS.map((c) => ISO_COLORS[c])).toEqual([0x7cf5ff, 0x27b3c9, 0x134a52, 0xffc457, 0xd08a1e, 0x5a3d14, 0xff5ee0, 0xc42a9d, 0x54173f]);
   });
 });
