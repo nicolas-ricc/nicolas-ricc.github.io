@@ -36,7 +36,7 @@
 
 1. **Frame 0 = reduced motion.** `neon()` antes de cualquier `tick` es igual a `scene.neon.signs` más un punto por farol; con `reducedMotion: true` es igual tras `tick(1000)`. Test en `city-anim.test.ts`.
 2. **El cambio de color persiste y el parpadeo vuelve.** Tras un evento de color, el conteo de magenta difiere ±1 del inicial y se mantiene; tras un apagón, el cartel vuelve con su color en el paso siguiente. Test en `city-anim.test.ts` recorriendo ticks de 50 ms.
-3. **Determinismo con ticks de distinto tamaño.** Dos animadores iguales con la misma secuencia de `tick` dan capas `toEqual`. Test en `city-animator.test.ts`.
+3. **Determinismo.** Dos animadores iguales con la misma secuencia de `tick` (de tamaños mezclados) dan capas `toEqual`. No se exige independencia del tamaño de tick: el parpadeo existente del piso tampoco la tiene (`blinkTimer = nextGap()` descarta el sobrante). Test en `city-animator.test.ts`.
 4. **Carteles bien pegados a su edificio.** Cada cartel tiene un prisma `curtain` o `stone` con fachada cuya cara sur está 0.4 u detrás y cuyo rango z contiene el cartel. Test en `district.test.ts`.
 5. **Velo.** `city.neon` cae en un animador `zone: "cv"`; `focusAlphas("blog").cv.accents === ACCENT_DIM`. Test en `assemble.test.ts`.
 
@@ -109,7 +109,7 @@ it("neon: ≥ 6 carteles coplanares en y y una luz sobre cada farol del malecón
 });
 ```
 
-(Importar `MALECON` de `./city-grid` si no está importado; si `createRng(7), createRng(8)` da menos de 6 carteles, probar también con la semilla del mundo: `zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1)` como en `world.ts`. El issue exige ≥ 6 con la geometría real.)
+(Importar `MALECON` de `./city-grid` si no está importado. El conteo `≥ 6` se mide además con la semilla real del mundo, en un segundo `expect`: `city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1))` como en `src/scenes/world.ts:62`; ambos tienen que dar ≥ 6. Las semillas son fijas, no se buscan en un loop.)
 
 - [ ] **Step 2:** `npx vitest run src/scenes/district.test.ts src/scenes/city.test.ts` → FAIL (`neon` no existe, `signs` vacío).
 
@@ -190,7 +190,7 @@ it("carteles: hay eventos dentro de 7 s; los cambios de color persisten y los ap
 });
 ```
 
-Más un test de apagón que vuelve: avanzar en ticks de 50 ms hasta ver `signsOf(...).length === n - 1`; los siguientes ≤ 4 ticks de 50 ms (≤ 200 ms > `NEON_STEP_MS`) devuelven `n` carteles con el mismo color que tenía antes. Usar una semilla para la que haya un apagón dentro de 60 s (probar 3; si no, buscar en un loop de semillas dentro del test).
+Más un test de apagón que vuelve: avanzar en ticks de 50 ms hasta ver `signsOf(...).length === n - 1`; los siguientes ≤ 4 ticks de 50 ms (≤ 200 ms > `NEON_STEP_MS`) devuelven `n` carteles con el mismo color que tenía antes. Semilla fija `createRng(3)` y horizonte de 120 s; si con esa semilla no hay apagón en 120 s, el implementador elige otra semilla fija (a mano, una sola vez) y la deja escrita con un comentario. Nada de loops de semillas en el test.
 
 Actualizar los tests existentes para la firma nueva y el `NONE` con `neon: false`.
 
@@ -218,7 +218,7 @@ if (signTimer <= 0 && signs.length > 0) {
   if (rng.chance(0.5)) s.color = s.color === "cyan" ? "magenta" : "cyan";
   else if (s.offUntil < 0) s.offUntil = (Math.floor(clock / NEON_STEP_MS) + 1) * NEON_STEP_MS;
   signTimer = rng.int(SIGN_GAP_MS[0], SIGN_GAP_MS[1]);
-  c.neon = true;
+  c.neon = true; // un cambio de color o un apagón siempre se ve (el caso "ya apagado" no ocurre: SIGN_GAP_MS ≥ 3000 > NEON_STEP_MS)
 }
 const ms = Math.floor(clock / MALECON_STEP_MS);
 if (ms !== maleconStep) { maleconStep = ms; c.neon = true; }
@@ -289,3 +289,20 @@ it("la capa city.neon vive en un animador de Resume y se atenúa con el velo", (
 - [ ] **Step 5: commit** `feat(#14): capa city.neon en el animador de la ciudad`.
 
 - [ ] **Step 6 (orquestador, no implementador): captura.** `npm run dev -- --host --port 5173`, `agent-browser` a `http://localhost:5173/lab/world.html`, tecla `2` (Resume), captura a `docs/superpowers/specs/assets/2026-10-14-cyberpunk/city-neon-resume.png`. Commit `docs(#14): captura del lab con Resume enfocado`.
+
+## Assumptions
+
+- Edificio con cartel = torre de vidrio o clásico (`h ≥ 12`); campus (6..8 u) y obra quedan fuera. Alternativa descartada: carteles también en campus (no alcanzan los 12 u que pide el issue).
+- Luz del malecón en la posición del bombillo + 0.4 en z. Alternativa descartada: base del poste + 0.4 (quedaría a ras del suelo, tapada por el poste).
+- La tirada del color va al final de cada edificio que califica. Alternativa descartada: un `rng` aparte para no reacomodar el distrito (el issue fija `districtRng.chance(0.5)`).
+- Frame 0 del chase con todas las luces encendidas (molde de #13). Alternativa descartada: `chase(n, 0, 2)` en frame 0 (viola "frame 0 = todo encendido").
+- El apagón termina en el borde del siguiente paso de 150 ms. Alternativa descartada: duración exacta de 150 ms desde el evento (no cuantizada, rompe el patrón "cambios solo cuando cambia el paso").
+- Firma `createCityAnim(tower, neon, rng, opts)`, una de las dos que propone el issue.
+- No se exige independencia del tamaño de tick (igual que el parpadeo del piso existente).
+
+## Grilling
+
+- Rondas: 1 (los cambios fueron locales; ninguna tarea agregada ni quitada).
+- Preguntas: 16. Fuentes: ISSUE 9, CODE 12, DOC 1, NO SOURCE 4 (algunas respuestas citan más de una fuente).
+- NO SOURCE → supuestos técnicos (todos en `## Assumptions`): independencia del tamaño de tick (Q4), loops de semillas reemplazados por semillas fijas (Q11), reporte de cambio en el evento (Q12), rollback de commits intermedios (Q14: es una rama de PR, se revierte el commit; la tarea 1 sola no rompe nada porque la escena gana un campo que nadie lee todavía).
+- Ambigüedades de spec: ninguna. Issues abiertos: ninguno.
