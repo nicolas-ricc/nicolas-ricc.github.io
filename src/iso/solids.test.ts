@@ -1,9 +1,21 @@
 // src/iso/solids.test.ts
 import { describe, expect, it } from "vitest";
 import { v3 } from "./geometry";
-import { bounds, isFlat, tessellate, tessellateAll, type Solid } from "./solids";
+import { bounds, GABLE_RATIO, isFlat, tessellate, tessellateAll, type Solid } from "./solids";
 
 const prism: Solid = { kind: "prism", at: v3(0, 0, 0), w: 2, d: 3, h: 4, mat: "concrete" };
+
+/** Punto en polígono por paridad de cruces (2D). */
+function inside(p: { x: number; y: number }, poly: { x: number; y: number }[]): boolean {
+  let hit = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const a = poly[i]!, b = poly[j]!;
+    if (a.y > p.y !== b.y > p.y && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x) hit = !hit;
+  }
+  return hit;
+}
+
+const mean = (pts: { x: number; y: number }[], k: "x" | "y"): number => pts.reduce((a, p) => a + p[k], 0) / pts.length;
 
 describe("tessellate", () => {
   it("un prisma emite 6 caras en total y 3 visibles: techo, sur, este", () => {
@@ -184,5 +196,128 @@ describe("wheel", () => {
     const top1 = tessellateAll({ ...w, angle: Math.PI / 16 }).filter((f) => f.mat === "rust").flatMap((f) => f.pts).sort((p, q) => q.z - p.z)[0]!;
     expect(Math.hypot(top0.x - top1.x, top0.y - top1.y)).toBeGreaterThan(1);
     expect(tessellate(w).filter((f) => f.mat === "steel").length).toBe(33); // mira a la cámara: nada se descarta
+  });
+});
+
+describe("orientación por sentido de giro", () => {
+  it("poly cóncavo (L): cada pared apunta hacia afuera en los dos sentidos de giro", () => {
+    const L = [{ x: 0, y: 0 }, { x: 6, y: 0 }, { x: 6, y: 2 }, { x: 2, y: 2 }, { x: 2, y: 6 }, { x: 0, y: 6 }];
+    for (const footprint of [L, [...L].reverse()]) {
+      const walls = tessellateAll({ kind: "poly", footprint, z: 0, h: 3, mat: "concrete" }).filter((f) => Math.abs(f.normal.z) < 1e-6);
+      expect(walls).toHaveLength(6);
+      for (const f of walls) {
+        expect(Math.hypot(f.normal.x, f.normal.y)).toBeCloseTo(1, 9);
+        const cx = mean(f.pts, "x"), cy = mean(f.pts, "y");
+        expect(inside({ x: cx + 0.1 * f.normal.x, y: cy + 0.1 * f.normal.y }, L)).toBe(false);
+      }
+    }
+  });
+
+  it("una huella ya canónica no se invierte: la pared i va de footprint[i] a footprint[i+1]", () => {
+    const fp = [{ x: 0, y: 0 }, { x: 6, y: 0 }, { x: 8, y: 3 }, { x: 4, y: 6 }, { x: 0, y: 4 }];
+    const walls = tessellateAll({ kind: "poly", footprint: fp, z: 0, h: 3, mat: "rock" }).slice(2);
+    walls.forEach((f, i) => {
+      expect({ x: f.pts[0]!.x, y: f.pts[0]!.y }).toEqual(fp[i]);
+      expect({ x: f.pts[1]!.x, y: f.pts[1]!.y }).toEqual(fp[(i + 1) % fp.length]);
+    });
+  });
+});
+
+describe("tone", () => {
+  it("tone: 1 suma una unidad al toneOffset de todas las caras, también las de fachada y del techo escalonado", () => {
+    const cases: Solid[] = [prism, { ...prism, facade: { floors: 2, cols: 2 } }, { ...prism, w: 10, d: 10, roof: "step" }];
+    for (const s of cases) {
+      const plain = tessellateAll(s), toned = tessellateAll({ ...s, tone: 1 });
+      expect(toned).toHaveLength(plain.length);
+      toned.forEach((f, i) => expect(f.toneOffset).toBe(plain[i]!.toneOffset + 1));
+    }
+    expect(tessellateAll({ ...prism, facade: { floors: 2, cols: 2 } }).some((f) => f.mat === "glass")).toBe(true);
+  });
+});
+
+describe("hip", () => {
+  const hipOf = (w: number, d: number): Solid => ({ kind: "prism", at: v3(1, 2, 3), w, d, h: 4, mat: "concrete", roof: "hip" });
+  const slopes = (s: Solid) => tessellateAll(s).filter((f) => f.normal.z > 0.3 && f.normal.z < 0.997);
+
+  it("techo a cuatro aguas: 9 caras, cuatro faldones inclinados, cumbrera a h·(1 + GABLE_RATIO)", () => {
+    for (const s of [hipOf(10, 6), hipOf(6, 10)]) {
+      expect(tessellateAll(s)).toHaveLength(9);
+      expect(slopes(s)).toHaveLength(4);
+      expect(bounds(s).max.z).toBeCloseTo(3 + 4 * (1 + GABLE_RATIO), 9);
+    }
+    expect(bounds(hipOf(6, 10))).toEqual({ min: { x: 1, y: 2, z: 3 }, max: { x: 7, y: 12, z: expect.closeTo(3 + 4 * (1 + GABLE_RATIO), 9) } });
+  });
+
+  it("hip con w === d: la cumbrera es un punto y ninguna normal es NaN", () => {
+    const all = tessellateAll(hipOf(6, 6));
+    expect(all).toHaveLength(9);
+    for (const f of all) expect([f.normal.x, f.normal.y, f.normal.z].every(Number.isFinite)).toBe(true);
+    expect(slopes(hipOf(6, 6))).toHaveLength(4);
+  });
+});
+
+describe("dome", () => {
+  const d: Solid = { kind: "dome", at: v3(10, 20, 2), r: 4, h: 3, mat: "concrete" };
+
+  it("cúpula 12×3: 37 caras, laterales sin mirar al suelo, base hacia abajo y descartada", () => {
+    const all = tessellateAll(d);
+    expect(all).toHaveLength(37);
+    const base = all.filter((f) => f.pts.every((p) => p.z === 2));
+    expect(base).toHaveLength(1);
+    expect(base[0]!.normal.z).toBeLessThan(0);
+    for (const f of all.filter((f) => f !== base[0])) expect(f.normal.z).toBeGreaterThanOrEqual(0);
+    expect(all.filter((f) => f.pts.length === 3)).toHaveLength(12);
+    expect(bounds(d).max.z).toBeCloseTo(5, 9);
+    const inset = 4 * Math.cos(Math.PI / 12); // `regular` deja caras planas a los cuatro vientos
+    expect(bounds(d).min).toEqual({ x: expect.closeTo(10 - inset, 9), y: expect.closeTo(20 - inset, 9), z: 2 });
+    expect(tessellate(d).some((f) => f.normal.z < 0)).toBe(false);
+  });
+
+  it("sides y rings configurables", () => {
+    expect(tessellateAll({ ...d, sides: 16, rings: 4 })).toHaveLength(65);
+  });
+
+  it("cúpula chata y cúpula alta: toda lateral mira hacia arriba y hacia afuera del eje", () => {
+    for (const [r, h] of [[10, 1], [1, 10]] as const) {
+      const s: Solid = { kind: "dome", at: v3(0, 0, 0), r, h, mat: "concrete", rings: 4 };
+      for (const f of tessellateAll(s).slice(1)) {
+        expect(f.normal.z).toBeGreaterThanOrEqual(0);
+        expect(f.normal.x * mean(f.pts, "x") + f.normal.y * mean(f.pts, "y")).toBeGreaterThan(0);
+      }
+    }
+  });
+});
+
+describe("vault", () => {
+  const vx: Solid = { kind: "vault", at: v3(0, 0, 1), len: 12, w: 6, h: 3, axis: "x", mat: "concrete" };
+
+  it("bóveda de 6 segmentos: 9 caras, hastiales verticales y opuestos, franjas hacia arriba, base hacia abajo", () => {
+    const all = tessellateAll(vx);
+    expect(all).toHaveLength(9);
+    const gables = all.filter((f) => Math.abs(f.normal.z) < 1e-6);
+    expect(gables).toHaveLength(2);
+    expect(gables[0]!.normal.x + gables[1]!.normal.x).toBeCloseTo(0, 9);
+    expect(Math.abs(gables[0]!.normal.x)).toBeCloseTo(1, 9);
+    expect(gables.every((g) => g.pts.length === 7)).toBe(true);
+    expect(all.filter((f) => f.normal.z < -1e-6)).toHaveLength(1);
+    expect(all.filter((f) => f.normal.z > 1e-6)).toHaveLength(6);
+    expect(bounds(vx)).toEqual({ min: { x: 0, y: 0, z: 1 }, max: { x: 12, y: expect.closeTo(6, 9), z: expect.closeTo(4, 9) } });
+  });
+
+  it("bóveda chata y bóveda alta: toda franja mira hacia arriba y hacia afuera del eje", () => {
+    for (const [w, h] of [[10, 1], [2, 10]] as const) {
+      const strips = tessellateAll({ kind: "vault", at: v3(0, 0, 0), len: 8, w, h, axis: "x", mat: "concrete" }).filter((f) => f.normal.z > 1e-6);
+      expect(strips).toHaveLength(6);
+      for (const f of strips) {
+        const off = mean(f.pts, "y") - w / 2;
+        if (Math.abs(off) > 1e-9) expect(f.normal.y * off).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("axis y intercambia las extensiones de la AABB", () => {
+    const b = bounds({ ...vx, axis: "y" });
+    expect(b.max.x).toBeCloseTo(6, 9);
+    expect(b.max.y).toBeCloseTo(12, 9);
   });
 });
