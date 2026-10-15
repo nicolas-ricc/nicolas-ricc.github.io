@@ -80,8 +80,7 @@ export function facadeFaces(wall: Face, f: Facade): Face[] {
     if (i === 0 && f.base === "portico") out.push(mk(patch(wall, 0.05, 0.95, z0, z0 + fh * 0.8), wall.mat, -2));
     if (i === 0 && f.base === "arcade") {
       out.push(mk(patch(wall, 0, 1, z0, z0 + fh * PILLAR_H), wall.mat, -1)); // pilares: los arcos se pintan encima
-      const rev = wall.pts[0]!.x > wall.pts[1]!.x; // los arcos salen en orden creciente de x, vaya la pared hacia donde vaya
-      for (let k = 0; k < f.cols; k++) out.push(mk(arch(wall, f, rev ? f.cols - 1 - k : k, z0, fh), wall.mat, -2));
+      for (let k = 0; k < f.cols; k++) out.push(mk(arch(wall, f, k, z0, fh), wall.mat, -2));
     }
     for (const w of windowPatches(wall, f, i)) out.push(mk(w, "glass", 0));
     out.push(mk(patch(wall, 0, 1, z0 + fh - SLAB_H, z0 + fh), wall.mat, -1)); // losa

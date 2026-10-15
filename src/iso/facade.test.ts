@@ -138,11 +138,13 @@ describe("arcada", () => {
 
   it("arcos de 0.7 del ancho de columna, centrados en su columna", () => {
     const cw = 4 / 3;
-    arches.forEach((a, k) => {
+    // la base de la pared sur va de x 4 a 0: las columnas se cuentan a lo largo de la base, así que se comparan los centros ordenados
+    const centers = arches.map((a) => {
       const xs = a.pts.map((p) => p.x);
       expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(0.7 * cw);
-      expect((Math.max(...xs) + Math.min(...xs)) / 2).toBeCloseTo((k + 0.5) * cw);
-    });
+      return (Math.max(...xs) + Math.min(...xs)) / 2;
+    }).sort((a, b) => a - b);
+    centers.forEach((c, k) => expect(c).toBeCloseTo((k + 0.5) * cw));
   });
 
   it("pilares a −1 emitidos antes de los arcos, después de la banda; sin ventanas en el piso 0", () => {
