@@ -116,6 +116,7 @@ describe("city", () => {
     const s = scene();
     const strips = s.ground.filter((g) => g.kind === "strip");
     expect(strips.length).toBeGreaterThan(60);
+    expect(strips.length).toBeLessThanOrEqual(150);
     expect(strips.every((g) => g.kind === "strip" && g.mat === "paving" && g.z > 0 && g.z < 0.1)).toBe(true);
     // ninguna raya pisa el estuario (el suelo se dibuja encima del agua): el anillo este se corta donde entra el agua
     for (const g of strips) if (g.kind === "strip") for (const p of g.path) expect(p.x <= QUAY_X || p.x > estuaryEast(p.y)).toBe(true);
@@ -205,7 +206,8 @@ describe("city", () => {
 
   it("la avenida llega al borde oeste nuevo y el malecón baja hasta 326", () => {
     const s = scene();
-    expect(s.ground.some((g) => g.kind === "strip" && g.mat === "paving" && g.path[0]!.x <= CITY_EDGE.west && Math.abs(g.path[0]!.y - (BOULEVARD.y0 - 0.3)) < 0.01)).toBe(true);
+    const carriageways = [(AVENUE.y0 + BOULEVARD.y0) / 2, (BOULEVARD.y1 + AVENUE.y1) / 2];
+    expect(s.ground.some((g) => g.kind === "strip" && g.mat === "paving" && g.width === 0.4 && g.path[0]!.x <= CITY_EDGE.west + 4 && carriageways.includes(g.path[0]!.y))).toBe(true);
     expect(s.solids.some((x) => x.kind === "prism" && x.mat === "paving" && x.at.x === MALECON.x0 && x.at.y + x.d >= MALECON.y1)).toBe(true);
   });
 
