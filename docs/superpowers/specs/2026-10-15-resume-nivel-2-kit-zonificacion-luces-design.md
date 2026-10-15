@@ -4,7 +4,8 @@
 **Estado:** aprobada en conversación; pendiente de plan
 **Antecede:** `2026-09-14-resume-ciudad-design.md` (grilla, piezas fijas, rulings),
 `2026-09-14-mundo-2-fabrica-distrito-blog-design.md` §6 (distrito),
-`2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md` §3 (tecnológico).
+`2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md` §3 (tecnológico),
+`2026-10-14-cyberpunk-crepusculo-neones-bloom-design.md` (paleta ×0.7, neones, bloom).
 **Alcance:** la zona Resume dentro del contenido (`x −54..344`, `y 158..324`):
 ciudad vieja, distrito moderno y las piezas fijas (puente, malecón, muelle
 oeste, derrumbe, plaza). El motor puro (`src/iso/`) y la paleta. El distrito
@@ -27,9 +28,11 @@ El análisis de escena de 2026-10-14 sobre Resume encontró:
    por manzana con pesos globales: no hay barrios, no hay nodos salvo la plaza,
    y las cabeceras del puente están vacías. Según Lynch: bordes e hito bien;
    sendas secundarias, nodos y barrios flojos.
-4. **Luces.** Un solo piso encendido en la torre, faroles ámbar y charcos. Las
-   ventanas comunes son `glass` oscuro; no hay luz cálida o fría por edificio ni
-   nada a nivel de calle.
+4. **Luces.** Un piso encendido en la torre, faroles ámbar, charcos, y desde la
+   historia #11 carteles cian y magenta a media altura en las torres del
+   distrito (`facadeSign`, h ≥ 12) y luces animadas en el malecón. Las
+   ventanas comunes siguen siendo `glass` oscuro: no hay luz cálida o fría
+   por ventana ni nada a nivel de calle.
 5. **Kit.** No existe: `prism`, `tiles`, `lamp`, `campus`, `towerCrane` y
    `jungle` son las únicas piezas con función. Bolardo, auto, helipuerto,
    terraza verde y cartel están duplicados inline en dos o tres archivos con
@@ -49,6 +52,7 @@ El análisis de escena de 2026-10-14 sobre Resume encontró:
 | Cálido / frío | Lo decide el barrio y el material: oficinas y muro cortina frías, residencial, bares y clásicos cálidas, el centro mezclado |
 | Alcance | Ciudad vieja + distrito moderno + piezas fijas rehechas. Tecnológico después |
 | Texturas | Siguen sin existir. Todo polígono plano con color de la paleta |
+| Lo que ya hay de #11 | Se conserva: paleta ×0.7 vía `palette-base.ts` + `npm run palette`, bloom diferido, carteles de fachada del distrito y luces del malecón, helper `neon.ts` (`pulse`, `chase`, `flip`), guarda de acentos de Portfolio. El kit absorbe `facadeSign` como prop `sign`; las nuevas capas animadas usan `neon.ts` |
 | Presupuesto | Ver §9. Sube, pero medido y con tope |
 
 ### Alternativas descartadas
@@ -127,9 +131,11 @@ deep, shade, dim, lit, down, top, up, pale, glow
 top up`) por la normal; `toneOffset` y `tone` se mueven por los nueve. Todo
 material recibe las nueve entradas, agua incluida (así `water-anim` no cambia).
 
-Los cuatro tonos nuevos se generan con la regla por canal de cada familia y se
-pegan como literales (regla del palette-guard), con un script
-`scripts/palette-iso.ts` commiteado que los imprime:
+Los cuatro tonos nuevos se definen sobre `BASE_TONES` de `palette-base.ts`
+(la paleta sin oscurecer) con la regla de abajo, y `scripts/darken-palette.ts`
+(`npm run palette`) los oscurece ×0.7 junto con los cinco de siempre e imprime
+los literales que se pegan en `palette-iso.ts`. El test existente "base ×
+DARKEN por canal (±1)" cubre los nueve. La regla, aplicada sobre la base:
 
 | Tono | Regla |
 |---|---|
@@ -147,21 +153,24 @@ Materiales nuevos, exclusivos de Resume:
 | `marble` | blanco cálido `0xcfc4b0` | cívico: palacio, teatro, biblioteca |
 | `awning` | verde botella `0x3a5a4a` | toldos de bares y kioscos |
 
-Los tonos finales se generan con la regla "ciudad y costa" y se pegan como
-literales; el test de paleta exige luminancia monótona a lo largo de la
-escalera para cada material.
+Los `top` de arriba son valores de **base** (sin oscurecer); sus cinco tonos
+salen con la regla "ciudad y costa", los cuatro nuevos con la de arriba, y el
+script los oscurece ×0.7. El test de paleta exige luminancia monótona a lo
+largo de la escalera para cada material.
 
-Acentos nuevos en `ISO_COLORS`:
+Acentos nuevos en `ISO_COLORS` (los acentos no se oscurecen, como los nueve
+existentes; `portfolio-accents.test.ts` no cambia porque Portfolio no los usa):
 
 | Acento | Color | Uso |
 |---|---|---|
 | `windowWarm` | `0xffd9a0` | ventana encendida cálida |
 | `windowCool` | `0xa8d8ff` | ventana encendida fría |
 
-Los neones usan `amber`, `magenta` y `cyan` con sus `Mid` y `Bleed`.
-**Excepción explícita** a la regla "acentos por zona" (como la feria): solo
-dentro del barrio de bares y solo a nivel de calle. Fuera de ese barrio Resume
-sigue siendo ámbar más las dos ventanas.
+Los neones usan `amber`, `magenta` y `cyan` con sus `Mid` y `Bleed`, que la
+historia #11 ya habilitó en Resume. La regla nueva es de **altura y lugar**:
+los neones a nivel de calle (z < 4) existen solo en el barrio de bares; los
+carteles de fachada a media altura del distrito (#11) y los de azotea siguen
+donde están, como prop `sign` del kit.
 
 ## 5. Kit (`src/kit/`)
 
@@ -229,8 +238,9 @@ Una función por prop, una medida por rol. Reemplaza todas las copias inline.
 
 `lab/kit.html` + `src/lab/kit.ts`: todas las recetas sobre lotes de 24×18 en
 una grilla de 30×24, una fila por archivo de formas, con el estilo de su barrio
-por defecto. Teclas: `s` cambia el seed, `1..4` cambia el estilo. Es la página
-de QA del kit y la referencia visual para las otras zonas.
+por defecto. Teclas: `s` cambia el seed, `1..4` cambia el estilo. Fondo
+`#100e19` como el resto del lab. Es la página de QA del kit y la referencia
+visual para las otras zonas.
 
 ## 6. Zonificación (`src/city/zoning.ts`)
 
@@ -305,7 +315,9 @@ de las paredes visibles: la luz de los faroles del edificio.
 
 ### Animación
 
-`city-anim.ts` conserva parpadeo del piso encendido, papeles y antena, y suma:
+`city-anim.ts` conserva parpadeo del piso encendido, papeles, antena, los
+carteles del distrito y las luces del malecón de #11, y suma (con los helpers
+de `neon.ts`):
 
 - **Ventanas que cambian**: cada 300..900 ms una ventana del centro o del
   residencial se prende o se apaga (la política mantiene el porcentaje ±5).
@@ -373,18 +385,26 @@ Sobre el kit; mismas huellas que hoy.
 Medido en el mismo headless de Mundo 3 (Chrome vía CDP, sin GPU, DPR 2) sobre
 `lab/world.html` y `lab/resume.html`.
 
+Las cifras de "hoy" son las del cierre de #18 (2026-10-14), con el bloom
+activo.
+
 | Métrica | Hoy | Tope |
 |---|---|---|
 | Sólidos elevados de Resume (contenido) | 960 | 2 200 |
 | `strip` de Resume | 663 | 150 |
-| Polígonos estáticos del mundo | ≈ 25 300 | 42 000 |
-| Acentos estáticos de Resume | 76 | 900 |
-| Primer dibujo caliente `world.html` | 115–130 ms | 220 ms |
-| Peor redibujo | 5–10 ms | 15 ms |
+| Polígonos estáticos del mundo | 32 387 | 46 000 |
+| Acentos estáticos de Resume | ≈ 90 | 900 |
+| Primer dibujo caliente, lab `world.html` (mediana de 10) | 173 ms | 230 ms |
+| Primer dibujo caliente, sitio `/` (mediana de 5) | 214 ms | 270 ms |
+| Peor redibujo en 5 s, lab | 8–18 ms | 22 ms |
+| Bloom: promedio tick + render en 60 frames | 9.5–9.9 ms | ≤ 15 ms (debe seguir en `on`) |
 
-Si el primer dibujo supera el tope, se recorta primero `rings` de las cúpulas
-(4 → 3) y `sides` de los cilindros (16 → 12), después el porcentaje de
-ventanas encendidas; nunca la cantidad de recetas.
+Si el primer dibujo supera el tope o el bloom cae a `fallback`, se recorta
+primero `rings` de las cúpulas (4 → 3) y `sides` de los cilindros (16 → 12),
+después el porcentaje de ventanas encendidas; nunca la cantidad de recetas.
+Las ventanas encendidas estáticas van a las `Graphics` estáticas de acentos
+por zona (no se redibujan por tick) para que el costo caiga en el primer
+dibujo y no en el presupuesto del bloom.
 
 ## 10. Orden de implementación
 
