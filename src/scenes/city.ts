@@ -160,7 +160,7 @@ function plazaAndTower(solids: Solid[], ground: Solid[], accents: Accent[], rng:
   for (const [dx, dy] of [[-1.5, -1.5], [TOWER.w + 1.5, -1.5], [TOWER.w + 1.5, TOWER.d + 1.5], [-1.5, TOWER.d + 1.5]] as const) solids.push({ kind: "cone", at: v3(TOWER.x + dx, TOWER.y + dy, 0.05), r: 2.5, h: 6, mat: "leaf" });
   solids.push(prism(TOWER.x - 0.6, TOWER.y - 0.6, 0, 0.6, 0.6, 12, "leaf"), prism(TOWER.x + TOWER.w, TOWER.y + TOWER.d, 0, 0.6, 0.6, 12, "leaf"));
   // ventanas del piso encendido, solo en las paredes que mira la cámara (este y sur)
-  const walls = tessellate(tower).filter((f) => isWall(f) && f.mat === "officeDark" && f.toneOffset === 0);
+  const walls = tessellate({ ...tower, facade: undefined }).filter((f) => isWall(f) && f.mat === "officeDark" && f.toneOffset === 0);
   const litWindows = facadeAccents(walls, facade, "amber");
   const east = walls.find((f) => f.normal.x > 0.5)!;
   const paperWindow = centroid(windowPatches(east, facade, facade.litFloor!)[facade.cols - 1]!);

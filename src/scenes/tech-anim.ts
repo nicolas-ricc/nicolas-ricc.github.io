@@ -25,7 +25,7 @@ export interface TechAnimChanges { windows: boolean; signs: boolean; telecom: bo
 export interface TechAnim { windows(): Accent[]; signs(): Accent[]; telecom(): Accent; neon(): Accent[]; tick(dtMs: number): TechAnimChanges }
 
 export function createTechAnim(scene: TechScene, rng: Rng, opts: { reducedMotion: boolean }): TechAnim {
-  const walls = scene.towers.map((t) => tessellate(t.box).filter((f) => Math.abs(f.normal.z) < 1e-6 && f.mat === "curtain" && f.toneOffset === 0)); // paredes visibles, sin las caras de fachada
+  const walls = scene.towers.map((t) => tessellate({ ...t.box, facade: undefined }).filter((f) => Math.abs(f.normal.z) < 1e-6 && f.mat === "curtain" && f.toneOffset === 0)); // paredes visibles del sólido sin fachada (la fachada agrega bandas con el mismo tono)
   const lit: (number | null)[] = scene.towers.map((t) => rng.int(1, t.facade.floors - 1));
   const nextGap = () => rng.int(TECH_BLINK_GAP_MS[0], TECH_BLINK_GAP_MS[1]);
   let clock = 0, blinkTimer = nextGap(), signStep = 0, telecomStep = 0;

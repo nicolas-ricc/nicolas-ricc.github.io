@@ -70,7 +70,5 @@ export function facadeFaces(wall: Face, f: Facade): Face[] {
 /** Las ventanas del piso encendido, como polígonos de luz sobre las paredes dadas (usar las visibles). */
 export function facadeAccents(walls: Face[], f: Facade, color: AccentColor): Accent[] {
   if (f.litFloor === undefined) return [];
-  const key = (w: Face) => `${w.pts[0]!.x},${w.pts[0]!.y},${w.pts[1]!.x},${w.pts[1]!.y}`, seen = new Set<string>();
-  walls = walls.filter((w) => !seen.has(key(w)) && !!seen.add(key(w))); // la banda del piso 0 comparte base y tono con la pared: queda la primera
   return walls.flatMap((wall) => windowPatches(wall, f, f.litFloor!).map((pts): Accent => ({ kind: "poly", pts, color })));
 }
