@@ -80,7 +80,8 @@ describe("fachada", () => {
 
   it("el piso encendido sale como acentos poligonales, uno por ventana visible", () => {
     const f: Facade = { floors: 3, cols: 2, litFloor: 1 };
-    const walls = tessellate({ ...tower, facade: f }).filter(isWall).filter((x) => x.toneOffset === 0 && x.mat === "office");
+    // las bandas de la fachada comparten tono con la pared: las paredes salen del sólido sin fachada
+    const walls = tessellate({ ...tower, facade: undefined }).filter(isWall).filter((x) => x.toneOffset === 0 && x.mat === "office");
     const acc = facadeAccents(walls, f, "amber");
     expect(acc).toHaveLength(4);
     for (const a of acc) {
