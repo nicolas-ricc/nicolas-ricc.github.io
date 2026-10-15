@@ -172,7 +172,7 @@ después, cualquier zona.
 
 ```ts
 interface Lot { x: number; y: number; w: number; d: number; z: number; open: Side[] }  // open: lados con frente abierto (avenida, agua, plaza)
-interface Style { mat: Material; trim: Material; roof: Material; tone: number; floorH: number; window: WindowColor }
+interface Style { mat: Material; trim: Material; roof: Material; tone: number; floorH: number; window: "windowWarm" | "windowCool" }
 interface Window { pts: Vec3[]; floor: number; wall: Vec3 /* normal */; building: number }
 interface Slot { pts: Vec3[]; wall: Vec3; kind: "neon" | "sign" }
 interface Piece { solids: Solid[]; accents: Accent[]; windows: Window[]; slots: Slot[]; landmarkTop?: Vec3 }
@@ -243,11 +243,11 @@ de luces.
 
 | Barrio | Manzanas | Carácter | Catálogo (peso) | Estilo | Luces |
 |---|---|---|---|---|---|
-| **Centro** | cols `72..162` × filas `188, 242`; cols `42, 162..186` × fila `218` | financiero alrededor de la plaza y la avenida | podio+torre 30, déco 20, chaflán 20, clásico 15, torre cilíndrica 15 | `office`/`officeDark`/`stone`/`curtain`, `tone` −1..+1 | 45 % encendidas, 70 % frías |
+| **Centro** | `72, 188`; cols `72..162` × fila `242`; `42, 218` | financiero alrededor de la plaza y la avenida | podio+torre 30, déco 20, chaflán 20, clásico 15, torre cilíndrica 15 | `office`/`officeDark`/`stone`/`curtain`, `tone` −1..+1 | 45 % encendidas, 70 % frías |
 | **Bares (muelle)** | cols `102, 132, 162` × filas `164, 188` | locales con bares, terrazas al agua | hilera de locales 50, galería 20, patio bajo 20, O baja 10 | `plaster`/`officeDark`/`terracotta`/`awning` | 70 % encendidas, 90 % cálidas; neones en frentes abiertos |
 | **Residencial de patios** | cols `−48..66` × filas `164..260` menos distrito y centro | manzanas cerradas con patio, techos de teja | patio residencial 40, O 20, U 15, casas en hilera 15, ruina devorada 10 | `plaster`/`stone`/`terracotta` | 55 % encendidas, 95 % cálidas |
 | **Cívico** | plaza; `72, 218` (teatro); `162, 218` (palacio cívico); `42, 242` (biblioteca) | nodo principal | fijos | `marble`/`stone`/`copper` | fachadas bañadas (`amberBleed` poly en planta baja), 30 % frías |
-| **Ribera este** | cols `280, 310` × filas `164..242` | ciudad vieja devorada, mercado frente al puente | mercado fijo en `280, 188`; resto: clásico 30, L con torre 30, ruina devorada 40 | `office`/`officeDark` | 25 % encendidas, mezcla |
+| **Ribera este** | cols `280, 310` × filas `164..242`, menos el derrumbe (`COLLAPSED`) | ciudad vieja devorada, mercado frente al puente | mercado fijo en `280, 188`; resto: clásico 30, L con torre 30, ruina devorada 40 | `office`/`officeDark` | 25 % encendidas, mezcla |
 | **Distrito moderno** | `DISTRICT_COLS`/`DISTRICT_ROWS` | como hoy, sobre el kit | torre de vidrio 30, gemelas 20, clásico 20, campus 20, cilíndrica 10; obra fija en `SITE` | `curtain`/`stone`/`copper` | 40 % encendidas, 85 % frías |
 
 Piezas singulares fijas, además de las de la tabla: **estación** en `−18, 188`
