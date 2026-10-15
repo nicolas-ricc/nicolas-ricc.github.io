@@ -1,22 +1,25 @@
 // src/iso/solids.ts
 import type { Material, Tone } from "../map/palette-iso";
 import { facadeFaces, isWall, type Facade } from "./facade";
-import { centroid, dot, polygonNormal, type Vec2, type Vec3, v3 } from "./geometry";
+import { centroid, dot, normalize, polygonNormal, type Vec2, type Vec3, v3 } from "./geometry";
 import { shadeTone } from "./light";
 import { VIEW_DIR } from "./project";
 
 export interface Tri { pts: [Vec3, Vec3, Vec3]; toneOffset?: number; baseTone?: number }
 
-export type Solid =
-  | { kind: "prism"; at: Vec3; w: number; d: number; h: number; mat: Material; roof?: "flat" | "gable" | "step"; facade?: Facade }
+export type Solid = (
+  | { kind: "prism"; at: Vec3; w: number; d: number; h: number; mat: Material; roof?: "flat" | "gable" | "step" | "hip"; facade?: Facade }
   | { kind: "poly"; footprint: Vec2[]; z: number; h: number; mat: Material; facade?: Facade }
   | { kind: "ramp"; at: Vec3; w: number; d: number; h: number; mat: Material; dir: RampDir }
   | { kind: "cylinder"; at: Vec3; r: number; h: number; mat: Material; sides?: number }
   | { kind: "cone"; at: Vec3; r: number; h: number; mat: Material; sides?: number }
+  | { kind: "dome"; at: Vec3; r: number; h: number; mat: Material; sides?: number; rings?: number }
+  | { kind: "vault"; at: Vec3; len: number; w: number; h: number; axis: "x" | "y"; mat: Material; segments?: number }
   | { kind: "hull"; at: Vec3; len: number; beam: number; h: number; mat: Material; topMat?: Material; heading?: number; sheer?: number }
   | { kind: "strip"; path: Vec2[]; width: number; z: number; mat: Material }
   | { kind: "ground"; tris: Tri[]; mat: Material }
-  | { kind: "wheel"; at: Vec3; r: number; width: number; mat: Material; sides: number; angle: number; gondolas?: { mat: Material; w: number; d: number; h: number } };
+  | { kind: "wheel"; at: Vec3; r: number; width: number; mat: Material; sides: number; angle: number; gondolas?: { mat: Material; w: number; d: number; h: number } }
+) & { tone?: number /* entero, −2..+2 */ };
 
 /** Hacia dónde baja la rampa: "e" tiene el borde alto al oeste, "s" lo tiene al norte. */
 export type RampDir = "e" | "w" | "n" | "s";
@@ -39,15 +42,28 @@ function face(pts: Vec3[], mat: Material, c: Vec3, toneOffset = 0): Face {
   return { pts, normal, mat, tone: shadeTone(normal), toneOffset };
 }
 
-/** Prisma recto sobre una huella poligonal: techo, base y un cuadrilátero por lado. */
+/** Doble del área con signo (shoelace). Positiva en el orden canónico de `rect()`: norte, este, sur, oeste. */
+function signedArea2(pts: Vec2[]): number {
+  let a = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i]!, q = pts[(i + 1) % pts.length]!;
+    a += p.x * q.y - q.x * p.y;
+  }
+  return a;
+}
+
+/**
+ * Prisma recto sobre una huella poligonal: techo, base y un cuadrilátero por lado.
+ * Las paredes se orientan por el sentido de giro (sirve para huellas cóncavas):
+ * la huella se lleva al orden canónico y la normal de `a→b` es `(dy, −dx)`.
+ */
 function extrude(footprint: Vec2[], z0: number, h: number, mat: Material): Face[] {
-  const top = footprint.map((p) => v3(p.x, p.y, z0 + h));
-  const bottom = footprint.map((p) => v3(p.x, p.y, z0));
-  const c = centroid([...top, ...bottom]);
-  const out = [face(top, mat, c), face(bottom, mat, c)];
-  for (let i = 0; i < footprint.length; i++) {
-    const a = footprint[i]!, b = footprint[(i + 1) % footprint.length]!;
-    out.push(face([v3(a.x, a.y, z0), v3(b.x, b.y, z0), v3(b.x, b.y, z0 + h), v3(a.x, a.y, z0 + h)], mat, c));
+  const fp = signedArea2(footprint) < 0 ? [...footprint].reverse() : footprint;
+  const mk = (pts: Vec3[], normal: Vec3): Face => ({ pts, normal, mat, tone: shadeTone(normal), toneOffset: 0 });
+  const out = [mk(fp.map((p) => v3(p.x, p.y, z0 + h)), v3(0, 0, 1)), mk(fp.map((p) => v3(p.x, p.y, z0)), v3(0, 0, -1))];
+  for (let i = 0; i < fp.length; i++) {
+    const a = fp[i]!, b = fp[(i + 1) % fp.length]!;
+    out.push(mk([v3(a.x, a.y, z0), v3(b.x, b.y, z0), v3(b.x, b.y, z0 + h), v3(a.x, a.y, z0 + h)], normalize(v3(b.y - a.y, a.x - b.x, 0))));
   }
   return out;
 }
@@ -61,6 +77,23 @@ function regular(cx: number, cy: number, r: number, sides: number): Vec2[] {
     pts.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
   }
   return pts;
+}
+
+/** Techo a cuatro aguas: paredes hasta el alero y cumbrera por el eje largo, acortada min(w, d)/2 en cada punta. */
+function hip(at: Vec3, w: number, d: number, h: number, mat: Material): Face[] {
+  const { x, y, z } = at;
+  const eave = z + h, ridge = eave + h * GABLE_RATIO, i = Math.min(w, d) / 2;
+  const c = v3(x + w / 2, y + d / 2, z + h / 2);
+  const f = (pts: Vec3[]) => face(pts, mat, c);
+  const nw = v3(x, y, eave), ne = v3(x + w, y, eave), se = v3(x + w, y + d, eave), sw = v3(x, y + d, eave);
+  const box = extrude(rect(x, y, w, d), z, h, mat).slice(1); // base y paredes, sin el techo plano
+  if (w >= d) {
+    const r0 = v3(x + i, y + d / 2, ridge), r1 = v3(x + w - i, y + d / 2, ridge);
+    const top = w === d ? [r0] : [r1, r0]; // con w === d la cumbrera es un punto y los faldones largos quedan triángulos
+    return [...box, f([nw, ne, ...top]), f([sw, se, ...top]), f([nw, sw, r0]), f([ne, se, r1])];
+  }
+  const r0 = v3(x + w / 2, y + i, ridge), r1 = v3(x + w / 2, y + d - i, ridge);
+  return [...box, f([nw, sw, r1, r0]), f([ne, se, r1, r0]), f([nw, ne, r0]), f([sw, se, r1])];
 }
 
 function gable(at: Vec3, w: number, d: number, h: number, mat: Material): Face[] {
@@ -126,6 +159,41 @@ function cone(at: Vec3, r: number, h: number, sides: number, mat: Material): Fac
     const a = base[i]!, b = base[(i + 1) % sides]!;
     out.push(face([v3(a.x, a.y, at.z), v3(b.x, b.y, at.z), apex], mat, c));
   }
+  return out;
+}
+
+/** Cúpula: anillos a ángulo polar creciente (radio r·cos φ, altura h·sin φ), cuadriláteros entre anillos y triángulos al ápice. */
+function dome(at: Vec3, r: number, h: number, sides: number, rings: number, mat: Material): Face[] {
+  const ring = (k: number): Vec3[] => {
+    const phi = (k / rings) * (Math.PI / 2), z = at.z + h * Math.sin(phi);
+    return regular(at.x, at.y, r * Math.cos(phi), sides).map((p) => v3(p.x, p.y, z));
+  };
+  const apex = v3(at.x, at.y, at.z + h);
+  const c = v3(at.x, at.y, at.z + h / 3); // con el centro a nivel de la base, la base no se podría orientar
+  const out = [face(ring(0), mat, c)];
+  for (let k = 0; k < rings; k++) {
+    const lo = ring(k), hi = k < rings - 1 ? ring(k + 1) : null;
+    for (let i = 0; i < sides; i++) {
+      const j = (i + 1) % sides;
+      out.push(face(hi ? [lo[i]!, lo[j]!, hi[j]!, hi[i]!] : [lo[i]!, lo[j]!, apex], mat, c));
+    }
+  }
+  return out;
+}
+
+/** Bóveda de cañón: medio óvalo (semiancho w/2, alto h) en franjas a lo largo del eje, dos hastiales y la base. `at` es la esquina NO. */
+function vault(s: Solid & { kind: "vault" }): Face[] {
+  const { at, len, w, h, mat } = s, n = s.segments ?? 6;
+  // u a lo largo del eje, v a lo ancho; el último punto del arco cierra exacto (sin(π) no es 0)
+  const P = (u: number, j: number): Vec3 => {
+    const t = (j / n) * Math.PI, v = j === n ? w : (w / 2) * (1 - Math.cos(t)), z = j === n ? at.z : at.z + h * Math.sin(t);
+    return s.axis === "x" ? v3(at.x + u, at.y + v, z) : v3(at.x + v, at.y + u, z);
+  };
+  // con el centro a nivel de la base, la base no se podría orientar
+  const mid = s.axis === "x" ? v3(at.x + len / 2, at.y + w / 2, at.z + h / 3) : v3(at.x + w / 2, at.y + len / 2, at.z + h / 3);
+  const arc = (u: number) => Array.from({ length: n + 1 }, (_, j) => P(u, j));
+  const out = [face([P(0, 0), P(len, 0), P(len, n), P(0, n)], mat, mid), face(arc(0), mat, mid), face(arc(len), mat, mid)];
+  for (let j = 0; j < n; j++) out.push(face([P(0, j), P(len, j), P(len, j + 1), P(0, j + 1)], mat, mid));
   return out;
 }
 
@@ -218,10 +286,11 @@ function wheel(s: Solid & { kind: "wheel" }): Face[] {
   return out;
 }
 
-export function tessellateAll(s: Solid): Face[] {
+function facesOf(s: Solid): Face[] {
   switch (s.kind) {
     case "prism": {
       if (s.roof === "gable") return gable(s.at, s.w, s.d, s.h, s.mat);
+      if (s.roof === "hip") return hip(s.at, s.w, s.d, s.h, s.mat);
       const raw = extrude(rect(s.at.x, s.at.y, s.w, s.d), s.at.z, s.h, s.mat);
       const box = s.facade ? raw.flatMap((f) => (isWall(f) ? [f, ...facadeFaces(f, s.facade!)] : [f])) : raw;
       if (s.roof !== "step") return box;
@@ -232,11 +301,19 @@ export function tessellateAll(s: Solid): Face[] {
     case "ramp": return ramp(s.at, s.w, s.d, s.h, s.dir, s.mat);
     case "cylinder": return extrude(regular(s.at.x, s.at.y, s.r, s.sides ?? 8), s.at.z, s.h, s.mat);
     case "cone": return cone(s.at, s.r, s.h, s.sides ?? 6, s.mat);
+    case "dome": return dome(s.at, s.r, s.h, s.sides ?? 12, s.rings ?? 3, s.mat);
+    case "vault": return vault(s);
     case "hull": return hull(s);
     case "strip": return strip(s.path, s.width, s.z, s.mat);
     case "ground": return ground(s.tris, s.mat);
     case "wheel": return wheel(s);
   }
+}
+
+/** Caras del sólido; `tone` desplaza el toneOffset de todas. */
+export function tessellateAll(s: Solid): Face[] {
+  const faces = facesOf(s), t = s.tone ?? 0;
+  return t === 0 ? faces : faces.map((f) => ({ ...f, toneOffset: f.toneOffset + t }));
 }
 
 /** Solo lo que mira a la cámara. Suelo y franjas se emiten enteros. */
