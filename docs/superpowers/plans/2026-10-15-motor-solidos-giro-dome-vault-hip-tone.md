@@ -72,6 +72,15 @@ it("poly cóncavo (L): cada pared apunta hacia afuera en los dos sentidos de gir
     }
   }
 });
+
+it("una huella ya canónica no se invierte: la pared i va de footprint[i] a footprint[i+1]", () => {
+  const fp = [{ x: 0, y: 0 }, { x: 6, y: 0 }, { x: 8, y: 3 }, { x: 4, y: 6 }, { x: 0, y: 4 }];
+  const walls = tessellateAll({ kind: "poly", footprint: fp, z: 0, h: 3, mat: "rock" }).slice(2);
+  walls.forEach((f, i) => {
+    expect({ x: f.pts[0]!.x, y: f.pts[0]!.y }).toEqual(fp[i]);
+    expect({ x: f.pts[1]!.x, y: f.pts[1]!.y }).toEqual(fp[(i + 1) % fp.length]);
+  });
+});
 ```
 
 - [ ] **Step 2: Correr y ver que falla**
@@ -239,6 +248,16 @@ describe("dome", () => {
   it("sides y rings configurables", () => {
     expect(tessellateAll({ ...d, sides: 16, rings: 4 })).toHaveLength(65);
   });
+  it("cúpula chata y cúpula alta: toda lateral mira hacia arriba y hacia afuera del eje", () => {
+    for (const [r, h] of [[10, 1], [1, 10]] as const) {
+      const s: Solid = { kind: "dome", at: v3(0, 0, 0), r, h, mat: "concrete", rings: 4 };
+      for (const f of tessellateAll(s).slice(1)) {
+        const cx = f.pts.reduce((a, p) => a + p.x, 0) / f.pts.length, cy = f.pts.reduce((a, p) => a + p.y, 0) / f.pts.length;
+        expect(f.normal.z).toBeGreaterThanOrEqual(0);
+        expect(f.normal.x * cx + f.normal.y * cy).toBeGreaterThan(0);
+      }
+    }
+  });
 });
 ```
 
@@ -298,6 +317,16 @@ describe("vault", () => {
     expect(all.filter((f) => f.normal.z > 1e-6)).toHaveLength(6);
     expect(bounds(vx)).toEqual({ min: { x: 0, y: 0, z: 1 }, max: { x: 12, y: expect.closeTo(6, 9), z: expect.closeTo(4, 9) } });
   });
+  it("bóveda chata y bóveda alta: toda franja mira hacia arriba y hacia afuera del eje", () => {
+    for (const [w, h] of [[10, 1], [2, 10]] as const) {
+      const all = tessellateAll({ kind: "vault", at: v3(0, 0, 0), len: 8, w, h, axis: "x", mat: "concrete" });
+      for (const f of all.filter((f) => f.normal.z > 1e-6)) {
+        const cy = f.pts.reduce((a, p) => a + p.y, 0) / f.pts.length;
+        if (Math.abs(cy - w / 2) > 1e-9) expect(f.normal.y * (cy - w / 2)).toBeGreaterThan(0);
+      }
+      expect(all.filter((f) => f.normal.z > 1e-6)).toHaveLength(6);
+    }
+  });
   it("axis y intercambia las extensiones de la AABB", () => {
     const b = bounds({ ...vx, axis: "y" });
     expect(b.max.x).toBeCloseTo(6, 9); expect(b.max.y).toBeCloseTo(12, 9);
@@ -335,3 +364,19 @@ Variante: `| { kind: "vault"; at: Vec3; len: number; w: number; h: number; axis:
 ### Task 6: Verificación visual de `lab/world.html`
 
 No toca código. Con `npm run dev -- --host --port 5173`, capturar `/lab/world.html` a 1600×900 en la rama base (antes) y en esta rama (después) y comparar (se esperan idénticas o con diferencias de píxel sueltas). El script de `agent-browser` vive en `.scratch/evals-37.md`. La captura "después" va al PR.
+
+## Assumptions
+
+- **Centro de orientación a `at.z + h/3` en `dome` y `vault`** (el issue dice `at` / `z = at.z`). Alternativa descartada: centro a `at.z`, con el que la base (centroide igual al centro) queda con normal al azar y el test del propio issue ("la base con `normal.z < 0`") no se podría garantizar. Las laterales se prueban con proporciones extremas (chata y alta).
+- **Hastial de `vault` = arco de `segments + 1` puntos**, sin repetir las esquinas de la base (el arco ya empieza y termina en ellas). Alternativa descartada: `segments + 3` puntos con vértices duplicados.
+- **Orden de tareas 1 → 5 obligatorio**: la tarea 3 inserta en `facesOf`, que crea la tarea 2. Cada tarea es un commit propio; revertir una obliga a revertir las siguientes.
+- **Verificación visual** (Task 6): captura "antes" desde un `git worktree` de `origin/feature/35-resume-nivel-2` y "después" desde esta rama, ambas a 1600×900 tras la carga. Se aprueba si la comparación lado a lado no muestra diferencias de geometría ni de tono; las animadas (agua, rueda, neones) no cuentan.
+- **Sin `CONTEXT.md` ni ADR**: el repo no tiene ninguno (`docs/` solo contiene `superpowers/`), y el issue limita el cambio a `solids.ts` y sus tests.
+
+## Grilling
+
+- Rondas: 1 (los cambios fueron dos tests agregados y esta sección; no cambió ninguna tarea ni la costura).
+- Preguntas: 16.
+- Fuentes: ISSUE 7, CODE 13, DOC 0, NO SOURCE 4 (todas supuestos técnicos; ninguna ambigüedad de spec, ningún fuera de alcance).
+- Supuestos: los cinco de `## Assumptions`.
+- Issues abiertos: ninguno.
