@@ -29,6 +29,30 @@ function dashes(out: Solid[], from: Vec2, to: Vec2): void {
   }
 }
 
+const SAMPLE = 0.5;
+
+/**
+ * Línea central continua de 0.3 a lo largo de una calle N-S o E-O: un `strip`
+ * de dos puntos por trozo sin cráteres ni plaza. Los extremos del segmento se
+ * conservan; un trozo de menos de 1 no se pinta.
+ */
+function centerLine(out: Solid[], from: Vec2, to: Vec2): void {
+  const len = Math.hypot(to.x - from.x, to.y - from.y), ux = (to.x - from.x) / len, uy = (to.y - from.y) / len;
+  const at = (s: number): Vec2 => ({ x: from.x + ux * s, y: from.y + uy * s });
+  let start: number | undefined, last = 0;
+  const flush = (): void => {
+    if (start !== undefined && last - start >= 1) out.push(strip([at(start), at(last)], 0.3, "paving"));
+    start = undefined;
+  };
+  for (let i = 0; ; i++) {
+    const s = Math.min(i * SAMPLE, len), p = at(s);
+    if (inCrater(p.x, p.y) || inPlaza(p.x, p.y)) flush();
+    else { start ??= s; last = s; }
+    if (s === len) break;
+  }
+  flush();
+}
+
 export const inPlaza = (x: number, y: number): boolean => x >= PLAZA.x && x < PLAZA.x + PLAZA.w && y >= PLAZA.y && y < PLAZA.y + PLAZA.d;
 const inQuayWall = (x: number): boolean => x >= WEST_QUAY.x0 && x <= WEST_QUAY.x1;
 /** Apoya cada poste en el suelo real de abajo: baldosa de la plaza, zócalo de manzana o asfalto. */
@@ -38,18 +62,22 @@ const WEST_LANE_X = WEST_COLS.map((x) => x + BLOCK_W + STREET / 2);             
 const EAST_LANE_X = [EAST_RING.x0 + STREET / 2, EAST_COLS[0] + BLOCK_W + STREET / 2]; // 273, 307
 const LANE_X = [...WEST_LANE_X, ...EAST_LANE_X];
 
-/** Carriles discontinuos de las calles N-S y E-O (sin la avenida, que tiene línea continua). */
+/**
+ * Calles N-S y E-O: línea central continua de 0.3 en las calles comunes y carril
+ * discontinuo solo en el anillo este (sin la avenida, que tiene su propia línea).
+ */
 function lanes(ground: Solid[]): void {
   for (const cx of LANE_X) {
-    dashes(ground, { x: cx, y: CITY_EDGE.north }, { x: cx, y: AVENUE.y0 });
+    const line = cx === EAST_RING.x0 + STREET / 2 ? dashes : centerLine; // el anillo este conserva los carriles discontinuos
+    line(ground, { x: cx, y: CITY_EDGE.north }, { x: cx, y: AVENUE.y0 });
     // al sur de la avenida el anillo este se corta donde entra el estuario, y no pasa de donde la ribera este se vuelve selva: el suelo se dibuja encima del agua
     const yEnd = cx > QUAY_X ? Math.min(DISTRICT_BANK_Y, estuaryReaches(cx) - 1) : CITY_EDGE.south;
-    if (yEnd > AVENUE.y1 + 3) dashes(ground, { x: cx, y: AVENUE.y1 }, { x: cx, y: yEnd });
+    if (yEnd > AVENUE.y1 + 3) line(ground, { x: cx, y: AVENUE.y1 }, { x: cx, y: yEnd });
   }
   const rowsY = [CITY_EDGE.north + STREET / 2, ...ROWS.slice(1).map((y) => y - STREET / 2), CITY_EDGE.south - 2].filter((y) => y < AVENUE.y0 || y > AVENUE.y1); // 161, 185, 239, 269, 299, 322 (la calle sur es de 4)
   for (const cy of rowsY) {
-    dashes(ground, { x: CITY_EDGE.west, y: cy }, { x: WEST_QUAY.x0, y: cy });
-    if (cy < DISTRICT_ROWS[0] - STREET) dashes(ground, { x: Math.max(EAST_RING.x0, Math.ceil(estuaryEast(cy)) + 1), y: cy }, { x: MALECON.x0, y: cy }); // arranca en tierra; al sur del distrito la ribera este es selva
+    centerLine(ground, { x: CITY_EDGE.west, y: cy }, { x: WEST_QUAY.x0, y: cy });
+    if (cy < DISTRICT_ROWS[0] - STREET) centerLine(ground, { x: Math.max(EAST_RING.x0, Math.ceil(estuaryEast(cy)) + 1), y: cy }, { x: MALECON.x0, y: cy }); // arranca en tierra; al sur del distrito la ribera este es selva
   }
 }
 
