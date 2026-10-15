@@ -132,8 +132,8 @@ describe("arcada", () => {
   it("un arco por columna, cada uno un polígono de 9 puntos: 2 de la base del rectángulo y los 7 del semicírculo de 6 segmentos", () => {
     expect(arches).toHaveLength(3);
     // las dos esquinas superiores del rectángulo son los extremos del semicírculo: 4 − 2 + 7 = 9
-    for (const a of arches) expect(a.pts).toHaveLength(2 + ARCH_SEGMENTS + 1);
     for (const a of arches) {
+      expect(a.pts).toHaveLength(2 + ARCH_SEGMENTS + 1);
       expect(a.mat).toBe("office");
       expect(Math.min(...a.pts.map((p) => p.z))).toBeCloseTo(0);
       expect(Math.max(...a.pts.map((p) => p.z))).toBeCloseTo(fh * 0.8);
