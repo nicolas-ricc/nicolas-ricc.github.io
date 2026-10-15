@@ -11,7 +11,7 @@ export type Solid = (
   | { kind: "prism"; at: Vec3; w: number; d: number; h: number; mat: Material; roof?: "flat" | "gable" | "step" | "hip"; facade?: Facade }
   | { kind: "poly"; footprint: Vec2[]; z: number; h: number; mat: Material; facade?: Facade }
   | { kind: "ramp"; at: Vec3; w: number; d: number; h: number; mat: Material; dir: RampDir }
-  | { kind: "cylinder"; at: Vec3; r: number; h: number; mat: Material; sides?: number }
+  | { kind: "cylinder"; at: Vec3; r: number; h: number; mat: Material; sides?: number; facade?: Facade }
   | { kind: "cone"; at: Vec3; r: number; h: number; mat: Material; sides?: number }
   | { kind: "dome"; at: Vec3; r: number; h: number; mat: Material; sides?: number; rings?: number }
   | { kind: "vault"; at: Vec3; len: number; w: number; h: number; axis: "x" | "y"; mat: Material; segments?: number }
@@ -286,20 +286,23 @@ function wheel(s: Solid & { kind: "wheel" }): Face[] {
   return out;
 }
 
+/** Inserta las caras de fachada detrás de cada pared, así se pintan encima. */
+const withFacade = (faces: Face[], f?: Facade): Face[] => (f ? faces.flatMap((x) => (isWall(x) ? [x, ...facadeFaces(x, f)] : [x])) : faces);
+
 function facesOf(s: Solid): Face[] {
   switch (s.kind) {
     case "prism": {
       if (s.roof === "gable") return gable(s.at, s.w, s.d, s.h, s.mat);
       if (s.roof === "hip") return hip(s.at, s.w, s.d, s.h, s.mat);
       const raw = extrude(rect(s.at.x, s.at.y, s.w, s.d), s.at.z, s.h, s.mat);
-      const box = s.facade ? raw.flatMap((f) => (isWall(f) ? [f, ...facadeFaces(f, s.facade!)] : [f])) : raw;
+      const box = withFacade(raw, s.facade);
       if (s.roof !== "step") return box;
       const ix = s.w * STEP_INSET, iy = s.d * STEP_INSET;
       return [...box, ...extrude(rect(s.at.x + ix, s.at.y + iy, s.w - 2 * ix, s.d - 2 * iy), s.at.z + s.h, s.h * STEP_RATIO, s.mat)];
     }
-    case "poly": { const raw = extrude(s.footprint, s.z, s.h, s.mat); return s.facade ? raw.flatMap((f) => (isWall(f) ? [f, ...facadeFaces(f, s.facade!)] : [f])) : raw; }
+    case "poly": return withFacade(extrude(s.footprint, s.z, s.h, s.mat), s.facade);
     case "ramp": return ramp(s.at, s.w, s.d, s.h, s.dir, s.mat);
-    case "cylinder": return extrude(regular(s.at.x, s.at.y, s.r, s.sides ?? 8), s.at.z, s.h, s.mat);
+    case "cylinder": return withFacade(extrude(regular(s.at.x, s.at.y, s.r, s.sides ?? 8), s.at.z, s.h, s.mat), s.facade);
     case "cone": return cone(s.at, s.r, s.h, s.sides ?? 6, s.mat);
     case "dome": return dome(s.at, s.r, s.h, s.sides ?? 12, s.rings ?? 3, s.mat);
     case "vault": return vault(s);
@@ -320,6 +323,11 @@ export function tessellateAll(s: Solid): Face[] {
 export function tessellate(s: Solid): Face[] {
   const all = tessellateAll(s);
   return isFlat(s) ? all : all.filter((f) => dot(f.normal, VIEW_DIR) > 0);
+}
+
+/** Paredes visibles del sólido sin las caras de su fachada: las bandas comparten material y tono con la pared. */
+export function visibleWalls(s: Solid): Face[] {
+  return tessellate("facade" in s ? { ...s, facade: undefined } : s).filter(isWall);
 }
 
 export interface Bounds { min: Vec3; max: Vec3 }
