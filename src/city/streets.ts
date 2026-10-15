@@ -14,10 +14,10 @@ import { PLINTH_H, lamp, prism } from "../scenes/city-pieces";
 
 const strip = (path: Vec2[], width: number, mat: Material): Solid => ({ kind: "strip", path, width, z: 0.02, mat });
 
-const DASH = 5, GAP = 5;
+const DASH = 5, GAP = 5; // 4/4 pasaba de 150 strip contando los del distrito
 
 /**
- * Carril discontinuo (tramo 5, hueco 5; 4/4 pasaba de 150 con los strips del distrito) a lo largo de una calle N-S (x fijo) o
+ * Carril discontinuo (tramo 5, hueco 5) a lo largo de una calle N-S (x fijo) o
  * E-O (y fijo). Un tramo con cualquiera de sus dos puntas dentro de un cráter
  * no se pinta: el suelo se dibuja encima del pozo.
  */
@@ -60,8 +60,9 @@ const inQuayWall = (x: number): boolean => x >= WEST_QUAY.x0 && x <= WEST_QUAY.x
 /** Apoya cada poste en el suelo real de abajo: baldosa de la plaza, zócalo de manzana o asfalto. */
 export const postZ = (x: number, y: number): number => (inPlaza(x, y) ? 0.05 : inBlock(x, y) ? PLINTH_H : 0);
 
-const WEST_LANE_X = WEST_COLS.map((x) => x + BLOCK_W + STREET / 2);              // centros de las calles N-S del oeste (39..189)
-const EAST_LANE_X = [EAST_RING.x0 + STREET / 2, EAST_COLS[0] + BLOCK_W + STREET / 2]; // 273, 307
+const WEST_LANE_X = WEST_COLS.map((x) => x + BLOCK_W + STREET / 2);              // centros de las calles N-S del oeste (-21..189)
+const RING_X = EAST_RING.x0 + STREET / 2;                                        // 273
+const EAST_LANE_X = [RING_X, EAST_COLS[0] + BLOCK_W + STREET / 2];               // 273, 307
 const LANE_X = [...WEST_LANE_X, ...EAST_LANE_X];
 
 /**
@@ -70,7 +71,7 @@ const LANE_X = [...WEST_LANE_X, ...EAST_LANE_X];
  */
 function lanes(ground: Solid[]): void {
   for (const cx of LANE_X) {
-    const line = cx === EAST_RING.x0 + STREET / 2 ? dashes : centerLine; // el anillo este conserva los carriles discontinuos
+    const line = cx === RING_X ? dashes : centerLine; // el anillo este conserva los carriles discontinuos
     line(ground, { x: cx, y: CITY_EDGE.north }, { x: cx, y: AVENUE.y0 });
     // al sur de la avenida el anillo este se corta donde entra el estuario, y no pasa de donde la ribera este se vuelve selva: el suelo se dibuja encima del agua
     const yEnd = cx > QUAY_X ? Math.min(DISTRICT_BANK_Y, estuaryReaches(cx) - 1) : CITY_EDGE.south;
@@ -89,7 +90,7 @@ function avenue(ground: Solid[], solids: Solid[]): void {
     for (const y of [(AVENUE.y0 + BOULEVARD.y0) / 2, (BOULEVARD.y1 + AVENUE.y1) / 2]) dashes(ground, { x: x0, y }, { x: x1, y });
   }
   for (const cx of LANE_X) {
-    if (cx === EAST_RING.x0 + STREET / 2) continue; // la senda cebra bajo el tablero del puente no se pinta
+    if (cx === RING_X) continue; // la senda cebra bajo el tablero del puente no se pinta
     for (const x of [cx - 1.6, cx, cx + 1.6]) ground.push(strip([{ x, y: AVENUE.y0 }, { x, y: AVENUE.y1 }], 0.8, "paving"));
   }
   for (const x of [...WEST_COLS, ...EAST_COLS]) {
