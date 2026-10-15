@@ -70,6 +70,13 @@ export function windowPatches(wall: Face, f: Facade, floor: number): Vec3[][] {
   return out;
 }
 
+/** Las ventanas de la fachada con su piso: la planta baja solo si no tiene `base` (la vidriera no es ventana). */
+export function facadeWindows(wall: Face, f: Facade): { pts: Vec3[]; floor: number }[] {
+  const out: { pts: Vec3[]; floor: number }[] = [];
+  for (let floor = f.base ? 1 : 0; floor < f.floors; floor++) for (const pts of windowPatches(wall, f, floor)) out.push({ pts, floor });
+  return out;
+}
+
 export function facadeFaces(wall: Face, f: Facade): Face[] {
   const fh = floorHeight(wall, f), zb = wall.pts[0]!.z;
   const mk = (pts: Vec3[], mat: Material, toneOffset: number): Face => ({ pts, normal: wall.normal, mat, tone: wall.tone, toneOffset });
