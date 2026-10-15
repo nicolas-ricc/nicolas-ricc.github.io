@@ -14,6 +14,7 @@ export type Solid = (
   | { kind: "cylinder"; at: Vec3; r: number; h: number; mat: Material; sides?: number }
   | { kind: "cone"; at: Vec3; r: number; h: number; mat: Material; sides?: number }
   | { kind: "dome"; at: Vec3; r: number; h: number; mat: Material; sides?: number; rings?: number }
+  | { kind: "vault"; at: Vec3; len: number; w: number; h: number; axis: "x" | "y"; mat: Material; segments?: number }
   | { kind: "hull"; at: Vec3; len: number; beam: number; h: number; mat: Material; topMat?: Material; heading?: number; sheer?: number }
   | { kind: "strip"; path: Vec2[]; width: number; z: number; mat: Material }
   | { kind: "ground"; tris: Tri[]; mat: Material }
@@ -179,6 +180,22 @@ function dome(at: Vec3, r: number, h: number, sides: number, rings: number, mat:
   return out;
 }
 
+/** Bóveda de cañón: medio óvalo (semiancho w/2, alto h) en franjas a lo largo del eje, dos hastiales y la base. `at` es la esquina NO. */
+function vault(s: Solid & { kind: "vault" }): Face[] {
+  const { at, len, w, h, mat } = s, n = s.segments ?? 6;
+  // u a lo largo del eje, v a lo ancho; el último punto del arco cierra exacto (sin(π) no es 0)
+  const P = (u: number, j: number): Vec3 => {
+    const t = (j / n) * Math.PI, v = j === n ? w : (w / 2) * (1 - Math.cos(t)), z = j === n ? at.z : at.z + h * Math.sin(t);
+    return s.axis === "x" ? v3(at.x + u, at.y + v, z) : v3(at.x + v, at.y + u, z);
+  };
+  // con el centro a nivel de la base, la base no se podría orientar
+  const mid = s.axis === "x" ? v3(at.x + len / 2, at.y + w / 2, at.z + h / 3) : v3(at.x + w / 2, at.y + len / 2, at.z + h / 3);
+  const arc = (u: number) => Array.from({ length: n + 1 }, (_, j) => P(u, j));
+  const out = [face([P(0, 0), P(len, 0), P(len, n), P(0, n)], mat, mid), face(arc(0), mat, mid), face(arc(len), mat, mid)];
+  for (let j = 0; j < n; j++) out.push(face([P(0, j), P(len, j), P(len, j + 1), P(0, j + 1)], mat, mid));
+  return out;
+}
+
 export const HULL_WATERLINE = 0.2, HULL_SHEER = 0.25, KEEL_BEAM = 0.7;
 /** Anillo de cubierta en fracciones de eslora/manga: popa redondeada, manga máxima al 57 %, proa en punta. Sentido horario visto desde arriba. */
 export const DECK_RING: readonly Vec2[] = [
@@ -284,6 +301,7 @@ function facesOf(s: Solid): Face[] {
     case "cylinder": return extrude(regular(s.at.x, s.at.y, s.r, s.sides ?? 8), s.at.z, s.h, s.mat);
     case "cone": return cone(s.at, s.r, s.h, s.sides ?? 6, s.mat);
     case "dome": return dome(s.at, s.r, s.h, s.sides ?? 12, s.rings ?? 3, s.mat);
+    case "vault": return vault(s);
     case "hull": return hull(s);
     case "strip": return strip(s.path, s.width, s.z, s.mat);
     case "ground": return ground(s.tris, s.mat);
