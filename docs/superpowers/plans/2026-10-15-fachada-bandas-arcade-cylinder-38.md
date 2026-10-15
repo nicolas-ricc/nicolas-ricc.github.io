@@ -28,6 +28,14 @@
 - **Semicírculo en coordenadas de pared:** semiancho horizontal = `0.35 · cw` (mitad del ancho de arco `0.7 · cw`), semialto = `fh · 0.35` (de `0.45 fh` a `0.8 fh`). Es un semióvalo en mundo; con columnas de ancho distinto de `0.7 · fh` no es un círculo exacto. Se acepta: el issue fija ambos extremos.
 - **Bandas y `tone` del sólido se suman:** una banda `+2` en un sólido con `tone: +2` pide `+4`; `stepTone` clampea, no hay que hacer nada.
 
+## Assumptions
+
+- **`withFacade` también en `prism` y `poly`.** El issue limita `solids.ts` al `tessellateAll` "para `cylinder`"; el helper solo extrae el `flatMap` que hoy está inline en `prism` (`solids.ts:303`) y `poly` (`solids.ts:308`) sin cambiar su salida (lo fijan los tests existentes de `facade.test.ts` y `solids.test.ts` "poly con facade"). Alternativa descartada: copiar el `flatMap` por tercera vez en `cylinder`.
+- **Arco de 9 puntos** (ver "Decisiones"): mismo polígono visible que 11 con dos vértices duplicados; se elige sin duplicados.
+- **Escalera de cinco tonos:** hasta que #36 traiga los nueve tonos, `stepTone` clampea en `shade`/`up` (`palette-iso.ts:80-83`), así que sobre una pared `lit` pilares (−1) y arcos (−2) caen ambos en `shade`. Se mantienen los offsets que fija el issue; el color final lo resuelve la paleta de #36.
+- **Sin validación de `floors`/`cols`** (0, no enteros): `Facade` es entrada interna de recetas con literales; con `floors: 0` o `cols: 0` los bucles no emiten nada, como hoy.
+- **Presupuesto de polígonos:** las bandas suman una cara por piso y pared visible; el presupuesto de la spec §9 se mide en el cierre (#49), no acá.
+
 ## Review Focus
 
 1. **Fachada de 1 piso** (`floors: 1`): una sola banda a `0`; con `base`, ninguna ventana. Test en Task 1 (banda) y Task 4 (`facadeWindows` vacío con base y 1 piso).
@@ -205,6 +213,7 @@ describe("arcada", () => {
     expect(faces.findIndex((x) => x.toneOffset === -2)).toBe(2);
     expect(faces.filter((x) => x.mat === "glass")).toHaveLength(3); // solo el piso 1
     expect(windowPatches(wall, f, 0)).toEqual([]);
+    expect(facadeAccents([wall], { ...f, litFloor: 0 }, "amber")).toEqual([]); // como el pórtico: el piso 0 no tiene ventanas que encender
   });
 
   it("ningún polígono sale de la pared ni de su piso", () => {
@@ -447,3 +456,32 @@ git commit -m "feat(#38): facadeWindows devuelve las ventanas con su piso"
 - [ ] **Step 2:** Si hubo ajustes, commit `test(#38): escenas con bandas de fachada`.
 
 La verificación visual (captura de `lab/resume.html` con el gradiente en las torres) la hace el pipeline después del flujo, con `agent-browser` y el script de `.scratch/evals-38.md`; no es una tarea de código.
+
+## Grilling
+
+Una ronda (los cambios fueron menores: un `expect` en Task 2 y la sección Assumptions). 16 preguntas del griller.
+
+| # | Respuesta | Fuente |
+|---|---|---|
+| 1 | `withFacade` en `prism`/`poly` | NO SOURCE → assumption (sección Assumptions); `CODE: src/iso/solids.ts:303,308` — los dos `flatMap` inline |
+| 2 | Caras de un sólido se pintan en orden de lista | `CODE: src/iso/render-list.ts:38` — `for (const s of sortByDepth(raised)) for (const f of tessellate(s))`: se ordenan sólidos, no caras |
+| 3 | Rectángulo rematado por el semicírculo | `ISSUE: "rectángulo desde z0 hasta z0 + fh · 0.45, rematado por un semicírculo de 6 segmentos (7 puntos)"` — 9 vs 11 es assumption |
+| 4 | Criterios: Tasks 1–4 → "Bandas…; arcade; cylinder; facadeWindows"; Task 5 → "npm test y npm run typecheck"; la captura la hace la etapa de verificación visual. `lab/resume.html` dibuja la ciudad con torres con fachada | `ISSUE: "captura de lab/resume.html mostrando el gradiente por altura en las torres"`; `CODE: src/scenes/city.test.ts:69` — torre con `facade { floors: 8, cols: 4, litFloor: 5, base: "portico" }` |
+| 5 | Orden de vértices de pared | `CODE: src/iso/solids.ts:58-70` — `extrude` lleva la huella al orden canónico y emite `[a z0, b z0, b z0+h, a z0+h]`; `cylinder` y `poly` pasan por `extrude` |
+| 6 | Normal copiada | `CODE: src/iso/facade.ts:47` — `mk` usa `normal: wall.normal`; `tessellate` filtra por `f.normal` (`solids.ts:321`) |
+| 7 | Ventana relativa | `CODE: src/iso/facade.ts:15-16` — `WINDOW_W = 0.5` fracción del ancho de columna; siempre dentro de la pared |
+| 8 | 2..3 pisos | `ISSUE: "con floors 2..3, 0 en el piso 0 y +1 en los demás; con 1 piso, 0"` |
+| 9 | Clamp | `CODE: src/map/palette-iso.ts:80-83` — `stepTone` clampea a `TONE_LADDER` de 5; pilares y arcos pueden fundirse en `shade` hasta #36 → assumption |
+| 10 | Pórtico estricto | `CODE: src/iso/facade.ts:51` — `i === 0 && f.base === "portico"` |
+| 11 | `facadeAccents` con arcade y `litFloor: 0` | `CODE: src/iso/facade.ts:63-66` — usa `windowPatches(…, litFloor)` → `[]`; se agregó el `expect` en Task 2 |
+| 12 | Vidriera no es ventana | `ISSUE: "nunca la vidriera ni la banda de pórtico/arcada"`; el test de conteo cubre `glass` |
+| 13 | `cols`/`floors` 0 | NO SOURCE → assumption (sin validación, entrada interna) |
+| 14 | Escenas y presupuesto | `CODE:` grep de `facade|toneOffset` en `src/scenes/*.test.ts`: solo miran `s.facade` del sólido (city 53/69/82, district 36-77, tech 41, fair 50, hinterland 68, ships 28-51); `ISSUE (#35, nicolas-ricc): "#49 Cierre: presupuesto, capturas…"` |
+| 15 | Fixture y floats | `CODE: src/iso/facade.test.ts:6` — `tower` `h 6, floors 3, cols 2`; `src/iso/facade.ts:14` — `SLAB_H = 0.3`; `extrude` es puro y determinista |
+| 16 | Ajustar conteos de escena | `ISSUE: "si alguno cuenta caras o toneOffset de fachada, ajustarlo documentando por qué"` |
+
+Por fuente: ISSUE 4, CODE 10, NO SOURCE 2 (ambas technical assumptions). Spec ambiguities: 0. Issues abiertos: ninguno.
+
+Assumptions: `withFacade` compartido; arco de 9 puntos; escalera de cinco tonos hasta #36; sin validación de `floors`/`cols`; presupuesto medido en #49.
+
+Resultado: `ok`.
