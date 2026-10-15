@@ -8,7 +8,7 @@ import { VIEW_DIR } from "./project";
 export interface Tri { pts: [Vec3, Vec3, Vec3]; toneOffset?: number; baseTone?: number }
 
 export type Solid = (
-  | { kind: "prism"; at: Vec3; w: number; d: number; h: number; mat: Material; roof?: "flat" | "gable" | "step"; facade?: Facade }
+  | { kind: "prism"; at: Vec3; w: number; d: number; h: number; mat: Material; roof?: "flat" | "gable" | "step" | "hip"; facade?: Facade }
   | { kind: "poly"; footprint: Vec2[]; z: number; h: number; mat: Material; facade?: Facade }
   | { kind: "ramp"; at: Vec3; w: number; d: number; h: number; mat: Material; dir: RampDir }
   | { kind: "cylinder"; at: Vec3; r: number; h: number; mat: Material; sides?: number }
@@ -75,6 +75,22 @@ function regular(cx: number, cy: number, r: number, sides: number): Vec2[] {
     pts.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
   }
   return pts;
+}
+
+/** Techo a cuatro aguas: paredes hasta el alero y cumbrera por el eje largo, acortada min(w, d)/2 en cada punta. */
+function hip(at: Vec3, w: number, d: number, h: number, mat: Material): Face[] {
+  const { x, y, z } = at;
+  const eave = z + h, ridge = eave + h * GABLE_RATIO, i = Math.min(w, d) / 2;
+  const c = v3(x + w / 2, y + d / 2, z + h / 2);
+  const f = (pts: Vec3[]) => face(pts, mat, c);
+  const nw = v3(x, y, eave), ne = v3(x + w, y, eave), se = v3(x + w, y + d, eave), sw = v3(x, y + d, eave);
+  const box = extrude(rect(x, y, w, d), z, h, mat).slice(1); // base y paredes, sin el techo plano
+  if (w >= d) {
+    const r0 = v3(x + i, y + d / 2, ridge), r1 = v3(x + w - i, y + d / 2, ridge);
+    return [...box, f([nw, ne, r1, r0]), f([sw, se, r1, r0]), f([nw, sw, r0]), f([ne, se, r1])];
+  }
+  const r0 = v3(x + w / 2, y + i, ridge), r1 = v3(x + w / 2, y + d - i, ridge);
+  return [...box, f([nw, sw, r1, r0]), f([ne, se, r1, r0]), f([nw, ne, r0]), f([sw, se, r1])];
 }
 
 function gable(at: Vec3, w: number, d: number, h: number, mat: Material): Face[] {
@@ -236,6 +252,7 @@ function facesOf(s: Solid): Face[] {
   switch (s.kind) {
     case "prism": {
       if (s.roof === "gable") return gable(s.at, s.w, s.d, s.h, s.mat);
+      if (s.roof === "hip") return hip(s.at, s.w, s.d, s.h, s.mat);
       const raw = extrude(rect(s.at.x, s.at.y, s.w, s.d), s.at.z, s.h, s.mat);
       const box = s.facade ? raw.flatMap((f) => (isWall(f) ? [f, ...facadeFaces(f, s.facade!)] : [f])) : raw;
       if (s.roof !== "step") return box;
