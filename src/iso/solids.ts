@@ -1,7 +1,7 @@
 // src/iso/solids.ts
 import type { Material, Tone } from "../map/palette-iso";
 import { facadeFaces, isWall, type Facade } from "./facade";
-import { centroid, dot, polygonNormal, type Vec2, type Vec3, v3 } from "./geometry";
+import { centroid, dot, normalize, polygonNormal, type Vec2, type Vec3, v3 } from "./geometry";
 import { shadeTone } from "./light";
 import { VIEW_DIR } from "./project";
 
@@ -39,15 +39,28 @@ function face(pts: Vec3[], mat: Material, c: Vec3, toneOffset = 0): Face {
   return { pts, normal, mat, tone: shadeTone(normal), toneOffset };
 }
 
-/** Prisma recto sobre una huella poligonal: techo, base y un cuadrilátero por lado. */
+/** Doble del área con signo (shoelace). Positiva en el orden canónico de `rect()`: norte, este, sur, oeste. */
+function signedArea2(pts: Vec2[]): number {
+  let a = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i]!, q = pts[(i + 1) % pts.length]!;
+    a += p.x * q.y - q.x * p.y;
+  }
+  return a;
+}
+
+/**
+ * Prisma recto sobre una huella poligonal: techo, base y un cuadrilátero por lado.
+ * Las paredes se orientan por el sentido de giro (sirve para huellas cóncavas):
+ * la huella se lleva al orden canónico y la normal de `a→b` es `(dy, −dx)`.
+ */
 function extrude(footprint: Vec2[], z0: number, h: number, mat: Material): Face[] {
-  const top = footprint.map((p) => v3(p.x, p.y, z0 + h));
-  const bottom = footprint.map((p) => v3(p.x, p.y, z0));
-  const c = centroid([...top, ...bottom]);
-  const out = [face(top, mat, c), face(bottom, mat, c)];
-  for (let i = 0; i < footprint.length; i++) {
-    const a = footprint[i]!, b = footprint[(i + 1) % footprint.length]!;
-    out.push(face([v3(a.x, a.y, z0), v3(b.x, b.y, z0), v3(b.x, b.y, z0 + h), v3(a.x, a.y, z0 + h)], mat, c));
+  const fp = signedArea2(footprint) < 0 ? [...footprint].reverse() : footprint;
+  const mk = (pts: Vec3[], normal: Vec3): Face => ({ pts, normal, mat, tone: shadeTone(normal), toneOffset: 0 });
+  const out = [mk(fp.map((p) => v3(p.x, p.y, z0 + h)), v3(0, 0, 1)), mk(fp.map((p) => v3(p.x, p.y, z0)), v3(0, 0, -1))];
+  for (let i = 0; i < fp.length; i++) {
+    const a = fp[i]!, b = fp[(i + 1) % fp.length]!;
+    out.push(mk([v3(a.x, a.y, z0), v3(b.x, b.y, z0), v3(b.x, b.y, z0 + h), v3(a.x, a.y, z0 + h)], normalize(v3(b.y - a.y, a.x - b.x, 0))));
   }
   return out;
 }
