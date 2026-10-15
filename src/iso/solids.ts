@@ -13,6 +13,7 @@ export type Solid = (
   | { kind: "ramp"; at: Vec3; w: number; d: number; h: number; mat: Material; dir: RampDir }
   | { kind: "cylinder"; at: Vec3; r: number; h: number; mat: Material; sides?: number }
   | { kind: "cone"; at: Vec3; r: number; h: number; mat: Material; sides?: number }
+  | { kind: "dome"; at: Vec3; r: number; h: number; mat: Material; sides?: number; rings?: number }
   | { kind: "hull"; at: Vec3; len: number; beam: number; h: number; mat: Material; topMat?: Material; heading?: number; sheer?: number }
   | { kind: "strip"; path: Vec2[]; width: number; z: number; mat: Material }
   | { kind: "ground"; tris: Tri[]; mat: Material }
@@ -159,6 +160,25 @@ function cone(at: Vec3, r: number, h: number, sides: number, mat: Material): Fac
   return out;
 }
 
+/** Cúpula: anillos a ángulo polar creciente (radio r·cos φ, altura h·sin φ), cuadriláteros entre anillos y triángulos al ápice. */
+function dome(at: Vec3, r: number, h: number, sides: number, rings: number, mat: Material): Face[] {
+  const ring = (k: number): Vec3[] => {
+    const phi = (k / rings) * (Math.PI / 2), z = at.z + h * Math.sin(phi);
+    return regular(at.x, at.y, r * Math.cos(phi), sides).map((p) => v3(p.x, p.y, z));
+  };
+  const apex = v3(at.x, at.y, at.z + h);
+  const c = v3(at.x, at.y, at.z + h / 3); // con el centro a nivel de la base, la base no se podría orientar
+  const out = [face(ring(0), mat, c)];
+  for (let k = 0; k < rings; k++) {
+    const lo = ring(k), hi = k < rings - 1 ? ring(k + 1) : null;
+    for (let i = 0; i < sides; i++) {
+      const j = (i + 1) % sides;
+      out.push(face(hi ? [lo[i]!, lo[j]!, hi[j]!, hi[i]!] : [lo[i]!, lo[j]!, apex], mat, c));
+    }
+  }
+  return out;
+}
+
 export const HULL_WATERLINE = 0.2, HULL_SHEER = 0.25, KEEL_BEAM = 0.7;
 /** Anillo de cubierta en fracciones de eslora/manga: popa redondeada, manga máxima al 57 %, proa en punta. Sentido horario visto desde arriba. */
 export const DECK_RING: readonly Vec2[] = [
@@ -263,6 +283,7 @@ function facesOf(s: Solid): Face[] {
     case "ramp": return ramp(s.at, s.w, s.d, s.h, s.dir, s.mat);
     case "cylinder": return extrude(regular(s.at.x, s.at.y, s.r, s.sides ?? 8), s.at.z, s.h, s.mat);
     case "cone": return cone(s.at, s.r, s.h, s.sides ?? 6, s.mat);
+    case "dome": return dome(s.at, s.r, s.h, s.sides ?? 12, s.rings ?? 3, s.mat);
     case "hull": return hull(s);
     case "strip": return strip(s.path, s.width, s.z, s.mat);
     case "ground": return ground(s.tris, s.mat);
