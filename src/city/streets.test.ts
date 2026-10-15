@@ -64,7 +64,7 @@ describe("streets", () => {
     const dashes = ofWidth(0.4);
     expect(dashes.length).toBeGreaterThan(0);
     for (const s of dashes) {
-      expect(length(s)).toBeCloseTo(4, 6);
+      expect(length(s)).toBeCloseTo(5, 6);
       const onAvenue = isHorizontal(s) && CARRIAGEWAYS.includes(s.path[0]!.y);
       const onRing = isVertical(s) && s.path[0]!.x === RING_X;
       expect(onAvenue || onRing).toBe(true);

@@ -14,10 +14,10 @@ import { PLINTH_H, lamp, prism } from "../scenes/city-pieces";
 
 const strip = (path: Vec2[], width: number, mat: Material): Solid => ({ kind: "strip", path, width, z: 0.02, mat });
 
-const DASH = 4, GAP = 6;
+const DASH = 5, GAP = 5;
 
 /**
- * Carril discontinuo (tramo 4, hueco 6) a lo largo de una calle N-S (x fijo) o
+ * Carril discontinuo (tramo 5, hueco 5; 4/4 pasaba de 150 con los strips del distrito) a lo largo de una calle N-S (x fijo) o
  * E-O (y fijo). Un tramo con cualquiera de sus dos puntas dentro de un cráter
  * no se pinta: el suelo se dibuja encima del pozo.
  */
