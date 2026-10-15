@@ -7,14 +7,19 @@ import type { Face } from "./solids";
  * Fachada procedural de un prisma: pisos iguales, `cols` ventanas por piso,
  * una losa oscura arriba de cada piso. Cada piso lleva debajo una banda de
  * pared cuyo tono sube con la altura (`bands: false` la apaga). La planta baja
- * puede ser vidriera (una banda de vidrio) o pórtico (banda muy oscura). Las
+ * puede ser vidriera (una banda de vidrio) pórtico (banda muy oscura) o arcada (arcos oscuros sobre pilares). Las
  * caras salen coplanares a la pared, después de ella, así se pintan encima.
  */
-export interface Facade { floors: number; cols: number; litFloor?: number; base?: "glass" | "portico"; window?: { w: number; h: number }; bands?: false }
+export interface Facade { floors: number; cols: number; litFloor?: number; base?: "glass" | "portico" | "arcade"; window?: { w: number; h: number }; bands?: false }
 
 export const SLAB_H = 0.3;
 const WINDOW_W = 0.5; // fracción del ancho de columna
 const WINDOW_H = 0.5; // fracción de la altura del piso
+export const ARCH_SEGMENTS = 6;
+const ARCH_W = 0.7; // fracción del ancho de columna
+const ARCH_SPRING = 0.45; // arranque del arco, fracción de la altura del piso
+const ARCH_TOP = 0.8; // clave del arco
+const PILLAR_H = 0.85; // banda de pilares
 
 export function isWall(f: Face): boolean {
   return Math.abs(f.normal.z) < 1e-6;
@@ -37,13 +42,25 @@ export function bandTone(floor: number, floors: number): number {
   return floors >= 2 && floor > 0 ? 1 : 0;
 }
 
+/** Arco de medio punto en la columna k: base del rectángulo y el semicírculo de derecha a izquierda (sus extremos son las esquinas superiores). */
+function arch(wall: Face, f: Facade, k: number, z0: number, fh: number): Vec3[] {
+  const cw = 1 / f.cols, sc = (k + 0.5) * cw, hw = (ARCH_W * cw) / 2;
+  const zs = z0 + fh * ARCH_SPRING, rz = fh * (ARCH_TOP - ARCH_SPRING);
+  const pts = [at(wall, sc - hw, z0), at(wall, sc + hw, z0)];
+  for (let j = 0; j <= ARCH_SEGMENTS; j++) {
+    const t = (j / ARCH_SEGMENTS) * Math.PI;
+    pts.push(at(wall, sc + hw * Math.cos(t), zs + rz * Math.sin(t)));
+  }
+  return pts;
+}
+
 const floorHeight = (wall: Face, f: Facade): number => (wall.pts[2]!.z - wall.pts[0]!.z) / f.floors;
 
 /** Ventanas de un piso (0 = planta baja). Con `base`, el piso 0 tiene una sola banda o ninguna. */
 export function windowPatches(wall: Face, f: Facade, floor: number): Vec3[][] {
   const fh = floorHeight(wall, f), z0 = wall.pts[0]!.z + floor * fh;
   if (floor === 0 && f.base === "glass") return [patch(wall, 0.08, 0.92, z0 + fh * 0.15, z0 + fh * 0.8)];
-  if (floor === 0 && f.base === "portico") return [];
+  if (floor === 0 && (f.base === "portico" || f.base === "arcade")) return [];
   const ww = f.window?.w ?? WINDOW_W, wh = f.window?.h ?? WINDOW_H;
   const out: Vec3[][] = [];
   for (let k = 0; k < f.cols; k++) {
@@ -61,6 +78,11 @@ export function facadeFaces(wall: Face, f: Facade): Face[] {
     const z0 = zb + i * fh;
     if (f.bands !== false) out.push(mk(patch(wall, 0, 1, z0, z0 + fh), wall.mat, bandTone(i, f.floors)));
     if (i === 0 && f.base === "portico") out.push(mk(patch(wall, 0.05, 0.95, z0, z0 + fh * 0.8), wall.mat, -2));
+    if (i === 0 && f.base === "arcade") {
+      out.push(mk(patch(wall, 0, 1, z0, z0 + fh * PILLAR_H), wall.mat, -1)); // pilares: los arcos se pintan encima
+      const rev = wall.pts[0]!.x > wall.pts[1]!.x; // los arcos salen en orden creciente de x, vaya la pared hacia donde vaya
+      for (let k = 0; k < f.cols; k++) out.push(mk(arch(wall, f, rev ? f.cols - 1 - k : k, z0, fh), wall.mat, -2));
+    }
     for (const w of windowPatches(wall, f, i)) out.push(mk(w, "glass", 0));
     out.push(mk(patch(wall, 0, 1, z0 + fh - SLAB_H, z0 + fh), wall.mat, -1)); // losa
   }
