@@ -248,11 +248,22 @@ describe("hip", () => {
     expect(bounds(hipOf(6, 10))).toEqual({ min: { x: 1, y: 2, z: 3 }, max: { x: 7, y: 12, z: expect.closeTo(3 + 4 * (1 + GABLE_RATIO), 9) } });
   });
 
+  it("hip: la cumbrera va por el eje largo con largo |w − d| y cada faldón mira a su lado", () => {
+    for (const [s, axis] of [[hipOf(10, 6), "x"], [hipOf(6, 10), "y"]] as const) {
+      const ridge = tessellateAll(s).flatMap((f) => f.pts).filter((p) => p.z > 3 + 4 + 1e-9);
+      const along = ridge.map((p) => (axis === "x" ? p.x : p.y));
+      expect(Math.max(...along) - Math.min(...along)).toBeCloseTo(4, 9);
+      const dirs = slopes(s).map((f) => [Math.sign(Math.round(f.normal.x * 1e6)), Math.sign(Math.round(f.normal.y * 1e6))].join()).sort();
+      expect(dirs).toEqual(["-1,0", "0,-1", "0,1", "1,0"]);
+    }
+  });
+
   it("hip con w === d: la cumbrera es un punto y ninguna normal es NaN", () => {
     const all = tessellateAll(hipOf(6, 6));
     expect(all).toHaveLength(9);
     for (const f of all) expect([f.normal.x, f.normal.y, f.normal.z].every(Number.isFinite)).toBe(true);
     expect(slopes(hipOf(6, 6))).toHaveLength(4);
+    expect(slopes(hipOf(6, 6)).every((f) => f.pts.length === 3)).toBe(true); // los faldones largos quedan triángulos
   });
 });
 
@@ -319,5 +330,7 @@ describe("vault", () => {
     const b = bounds({ ...vx, axis: "y" });
     expect(b.max.x).toBeCloseTo(6, 9);
     expect(b.max.y).toBeCloseTo(12, 9);
+    const gables = tessellateAll({ ...vx, axis: "y" }).filter((f) => Math.abs(f.normal.z) < 1e-6);
+    expect(gables.map((g) => [g.normal.x, g.normal.y]).sort((a, b) => a[1]! - b[1]!)).toEqual([[expect.closeTo(0, 9), -1], [expect.closeTo(0, 9), 1]]);
   });
 });

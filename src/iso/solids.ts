@@ -19,7 +19,7 @@ export type Solid = (
   | { kind: "strip"; path: Vec2[]; width: number; z: number; mat: Material }
   | { kind: "ground"; tris: Tri[]; mat: Material }
   | { kind: "wheel"; at: Vec3; r: number; width: number; mat: Material; sides: number; angle: number; gondolas?: { mat: Material; w: number; d: number; h: number } }
-) & { tone?: number };
+) & { tone?: number /* entero, −2..+2 */ };
 
 /** Hacia dónde baja la rampa: "e" tiene el borde alto al oeste, "s" lo tiene al norte. */
 export type RampDir = "e" | "w" | "n" | "s";
@@ -89,7 +89,8 @@ function hip(at: Vec3, w: number, d: number, h: number, mat: Material): Face[] {
   const box = extrude(rect(x, y, w, d), z, h, mat).slice(1); // base y paredes, sin el techo plano
   if (w >= d) {
     const r0 = v3(x + i, y + d / 2, ridge), r1 = v3(x + w - i, y + d / 2, ridge);
-    return [...box, f([nw, ne, r1, r0]), f([sw, se, r1, r0]), f([nw, sw, r0]), f([ne, se, r1])];
+    const top = w === d ? [r0] : [r1, r0]; // con w === d la cumbrera es un punto y los faldones largos quedan triángulos
+    return [...box, f([nw, ne, ...top]), f([sw, se, ...top]), f([nw, sw, r0]), f([ne, se, r1])];
   }
   const r0 = v3(x + w / 2, y + i, ridge), r1 = v3(x + w / 2, y + d - i, ridge);
   return [...box, f([nw, sw, r1, r0]), f([ne, se, r1, r0]), f([nw, ne, r0]), f([sw, se, r1])];
