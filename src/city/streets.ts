@@ -7,22 +7,24 @@ import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, DISTRICT_BANK_Y, DISTRICT_ROWS, 
 import { PLINTH_H, lamp, prism } from "../scenes/city-pieces";
 
 /**
- * Calles de Resume: carriles discontinuos, avenida con doble línea y sendas,
+ * Calles de Resume: carriles, avenida con carriles discontinuos y cebras,
  * boulevard arbolado y mobiliario de la avenida.
  * Spec: docs/superpowers/specs/2026-10-15-resume-nivel-2-kit-zonificacion-luces-design.md §6 "Calles".
  */
 
 const strip = (path: Vec2[], width: number, mat: Material): Solid => ({ kind: "strip", path, width, z: 0.02, mat });
 
+const DASH = 4, GAP = 6;
+
 /**
- * Carril discontinuo (tramo 3, hueco 2) a lo largo de una calle N-S (x fijo) o
+ * Carril discontinuo (tramo 4, hueco 6) a lo largo de una calle N-S (x fijo) o
  * E-O (y fijo). Un tramo con cualquiera de sus dos puntas dentro de un cráter
  * no se pinta: el suelo se dibuja encima del pozo.
  */
 function dashes(out: Solid[], from: Vec2, to: Vec2): void {
   const len = Math.hypot(to.x - from.x, to.y - from.y), ux = (to.x - from.x) / len, uy = (to.y - from.y) / len;
-  for (let s = 0; s + 3 <= len; s += 5) {
-    const p0 = { x: from.x + ux * s, y: from.y + uy * s }, p1 = { x: from.x + ux * (s + 3), y: from.y + uy * (s + 3) };
+  for (let s = 0; s + DASH <= len; s += DASH + GAP) {
+    const p0 = { x: from.x + ux * s, y: from.y + uy * s }, p1 = { x: from.x + ux * (s + DASH), y: from.y + uy * (s + DASH) };
     if (inCrater(p0.x, p0.y) || inCrater(p1.x, p1.y)) continue;
     if (inPlaza(p0.x, p0.y) || inPlaza(p1.x, p1.y)) continue; // la plaza se dibuja antes que las calles: una raya ahí le pintaría encima
     out.push(strip([p0, p1], 0.4, "paving"));
@@ -81,15 +83,14 @@ function lanes(ground: Solid[]): void {
   }
 }
 
-/** Avenida: doble línea continua a cada lado del boulevard, sendas en cada cruce y el boulevard arbolado por tramo de manzana. */
+/** Avenida: carriles discontinuos en cada calzada (el boulevard no lleva línea), cebras de 3 strips en cada cruce y el boulevard arbolado por tramo de manzana. */
 function avenue(ground: Solid[], solids: Solid[]): void {
   for (const [x0, x1] of [[CITY_EDGE.west, WEST_QUAY.x0], [EAST_RING.x1, MALECON.x0]] as const) {
-    ground.push(strip([{ x: x0, y: BOULEVARD.y0 - 0.3 }, { x: x1, y: BOULEVARD.y0 - 0.3 }], 0.4, "paving"));
-    ground.push(strip([{ x: x0, y: BOULEVARD.y1 + 0.3 }, { x: x1, y: BOULEVARD.y1 + 0.3 }], 0.4, "paving"));
+    for (const y of [(AVENUE.y0 + BOULEVARD.y0) / 2, (BOULEVARD.y1 + AVENUE.y1) / 2]) dashes(ground, { x: x0, y }, { x: x1, y });
   }
   for (const cx of LANE_X) {
     if (cx === EAST_RING.x0 + STREET / 2) continue; // la senda cebra bajo el tablero del puente no se pinta
-    for (let k = -2; k <= 2; k++) ground.push(strip([{ x: cx + k, y: AVENUE.y0 }, { x: cx + k, y: AVENUE.y1 }], 0.5, "paving"));
+    for (const x of [cx - 1.6, cx, cx + 1.6]) ground.push(strip([{ x, y: AVENUE.y0 }, { x, y: AVENUE.y1 }], 0.8, "paving"));
   }
   for (const x of [...WEST_COLS, ...EAST_COLS]) {
     const x0 = x === EAST_COLS[0] ? x + 3 : x;                                  // el primer tramo este roza la rampa del puente (276..282)
