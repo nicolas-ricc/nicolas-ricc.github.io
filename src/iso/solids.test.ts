@@ -5,7 +5,6 @@ import { bounds, GABLE_RATIO, isFlat, tessellate, tessellateAll, type Solid } fr
 
 const prism: Solid = { kind: "prism", at: v3(0, 0, 0), w: 2, d: 3, h: 4, mat: "concrete" };
 
-/** Punto en polígono por paridad de cruces (2D). */
 function inside(p: { x: number; y: number }, poly: { x: number; y: number }[]): boolean {
   let hit = false;
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
