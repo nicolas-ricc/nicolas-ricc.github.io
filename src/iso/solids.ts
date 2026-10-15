@@ -325,6 +325,11 @@ export function tessellate(s: Solid): Face[] {
   return isFlat(s) ? all : all.filter((f) => dot(f.normal, VIEW_DIR) > 0);
 }
 
+/** Paredes visibles del sólido sin las caras de su fachada: las bandas comparten material y tono con la pared. */
+export function visibleWalls(s: Solid): Face[] {
+  return tessellate("facade" in s ? { ...s, facade: undefined } : s).filter(isWall);
+}
+
 export interface Bounds { min: Vec3; max: Vec3 }
 
 /** Caja de alineación de eje que contiene todos los vértices del sólido. */

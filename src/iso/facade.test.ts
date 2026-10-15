@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ARCH_SEGMENTS, bandTone, facadeAccents, facadeFaces, facadeWindows, isWall, windowPatches, type Facade } from "./facade";
 import { v3 } from "./geometry";
-import { tessellate, tessellateAll, type Face, type Solid } from "./solids";
+import { tessellate, tessellateAll, visibleWalls, type Face, type Solid } from "./solids";
 
 const tower: Solid & { kind: "prism" } = { kind: "prism", at: v3(0, 0, 0), w: 4, d: 4, h: 6, mat: "office", facade: { floors: 3, cols: 2 } };
 const zspan = (f: Face) => Math.max(...f.pts.map((p) => p.z)) - Math.min(...f.pts.map((p) => p.z));
@@ -80,8 +80,7 @@ describe("fachada", () => {
 
   it("el piso encendido sale como acentos poligonales, uno por ventana visible", () => {
     const f: Facade = { floors: 3, cols: 2, litFloor: 1 };
-    // las bandas de la fachada comparten tono con la pared: las paredes salen del sólido sin fachada
-    const walls = tessellate({ ...tower, facade: undefined }).filter(isWall).filter((x) => x.toneOffset === 0 && x.mat === "office");
+    const walls = visibleWalls(tower);
     const acc = facadeAccents(walls, f, "amber");
     expect(acc).toHaveLength(4);
     for (const a of acc) {
@@ -107,6 +106,13 @@ describe("fachada", () => {
     expect(width(wide)).toBeCloseTo(0.85 * 2, 6);
     expect(width(normal)).toBeCloseTo(0.5 * 2, 6);
     expect(height(wide)).toBeCloseTo(0.8 * 2, 6);
+  });
+
+  it("visibleWalls: solo las paredes que miran a la cámara, sin bandas ni ventanas de la fachada", () => {
+    const walls = visibleWalls(tower);
+    expect(walls).toHaveLength(2);
+    expect(walls.every((w) => isWall(w) && w.mat === "office" && zspan(w) === tower.h)).toBe(true);
+    expect(visibleWalls({ kind: "cylinder", at: v3(0, 0, 0), r: 4, h: 6, mat: "office", sides: 12, facade: { floors: 3, cols: 1 } }).every((w) => zspan(w) === 6)).toBe(true);
   });
 
   it("isWall: normal horizontal", () => {
@@ -138,17 +144,16 @@ describe("arcada", () => {
 
   it("arcos de 0.7 del ancho de columna, centrados en su columna", () => {
     const cw = 4 / 3;
-    // la base de la pared sur va de x 4 a 0: las columnas se cuentan a lo largo de la base, así que se comparan los centros ordenados
-    const centers = arches.map((a) => {
+    // la base de la pared sur va de x 4 a 0 y las columnas se cuentan a lo largo de la base: el arco k está en x = 4 − (k + 0.5)·cw
+    arches.forEach((a, k) => {
       const xs = a.pts.map((p) => p.x);
       expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(0.7 * cw);
-      return (Math.max(...xs) + Math.min(...xs)) / 2;
-    }).sort((a, b) => a - b);
-    centers.forEach((c, k) => expect(c).toBeCloseTo((k + 0.5) * cw));
+      expect((Math.max(...xs) + Math.min(...xs)) / 2).toBeCloseTo(4 - (k + 0.5) * cw);
+    });
   });
 
   it("pilares a −1 emitidos antes de los arcos, después de la banda; sin ventanas en el piso 0", () => {
-    const iPillar = faces.findIndex((x) => x.toneOffset === -1 && Math.max(...x.pts.map((p) => p.z)) === fh * 0.85);
+    const iPillar = faces.findIndex((x) => x.toneOffset === -1 && Math.abs(Math.max(...x.pts.map((p) => p.z)) - fh * 0.85) < 1e-9);
     expect(iPillar).toBe(1); // 0 es la banda del piso
     expect(faces.findIndex((x) => x.toneOffset === -2)).toBe(2);
     expect(faces.filter((x) => x.mat === "glass")).toHaveLength(3); // solo el piso 1

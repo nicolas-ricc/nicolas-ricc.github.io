@@ -4,11 +4,12 @@ import { v3, type Vec3 } from "./geometry";
 import type { Face } from "./solids";
 
 /**
- * Fachada procedural de un prisma: pisos iguales, `cols` ventanas por piso,
- * una losa oscura arriba de cada piso. Cada piso lleva debajo una banda de
- * pared cuyo tono sube con la altura (`bands: false` la apaga). La planta baja
- * puede ser vidriera (una banda de vidrio) pórtico (banda muy oscura) o arcada (arcos oscuros sobre pilares). Las
- * caras salen coplanares a la pared, después de ella, así se pintan encima.
+ * Fachada procedural de un sólido extruido (prism, poly, cylinder): pisos
+ * iguales, `cols` ventanas por piso, una losa oscura arriba de cada piso. Cada
+ * piso lleva debajo una banda de pared cuyo tono sube con la altura
+ * (`bands: false` la apaga). La planta baja puede ser vidriera (una banda de
+ * vidrio), pórtico (banda muy oscura) o arcada (arcos oscuros sobre pilares).
+ * Las caras salen coplanares a la pared, después de ella, así se pintan encima.
  */
 export interface Facade { floors: number; cols: number; litFloor?: number; base?: "glass" | "portico" | "arcade"; window?: { w: number; h: number }; bands?: false }
 
@@ -73,7 +74,9 @@ export function windowPatches(wall: Face, f: Facade, floor: number): Vec3[][] {
 /** Las ventanas de la fachada con su piso: la planta baja solo si no tiene `base` (la vidriera no es ventana). */
 export function facadeWindows(wall: Face, f: Facade): { pts: Vec3[]; floor: number }[] {
   const out: { pts: Vec3[]; floor: number }[] = [];
-  for (let floor = f.base ? 1 : 0; floor < f.floors; floor++) for (const pts of windowPatches(wall, f, floor)) out.push({ pts, floor });
+  for (let floor = f.base ? 1 : 0; floor < f.floors; floor++) {
+    for (const pts of windowPatches(wall, f, floor)) out.push({ pts, floor });
+  }
   return out;
 }
 
