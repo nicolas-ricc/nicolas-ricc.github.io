@@ -7,7 +7,7 @@ import { VIEW_DIR } from "./project";
 
 export interface Tri { pts: [Vec3, Vec3, Vec3]; toneOffset?: number; baseTone?: number }
 
-export type Solid =
+export type Solid = (
   | { kind: "prism"; at: Vec3; w: number; d: number; h: number; mat: Material; roof?: "flat" | "gable" | "step"; facade?: Facade }
   | { kind: "poly"; footprint: Vec2[]; z: number; h: number; mat: Material; facade?: Facade }
   | { kind: "ramp"; at: Vec3; w: number; d: number; h: number; mat: Material; dir: RampDir }
@@ -16,7 +16,8 @@ export type Solid =
   | { kind: "hull"; at: Vec3; len: number; beam: number; h: number; mat: Material; topMat?: Material; heading?: number; sheer?: number }
   | { kind: "strip"; path: Vec2[]; width: number; z: number; mat: Material }
   | { kind: "ground"; tris: Tri[]; mat: Material }
-  | { kind: "wheel"; at: Vec3; r: number; width: number; mat: Material; sides: number; angle: number; gondolas?: { mat: Material; w: number; d: number; h: number } };
+  | { kind: "wheel"; at: Vec3; r: number; width: number; mat: Material; sides: number; angle: number; gondolas?: { mat: Material; w: number; d: number; h: number } }
+) & { tone?: number };
 
 /** Hacia dónde baja la rampa: "e" tiene el borde alto al oeste, "s" lo tiene al norte. */
 export type RampDir = "e" | "w" | "n" | "s";
@@ -231,7 +232,7 @@ function wheel(s: Solid & { kind: "wheel" }): Face[] {
   return out;
 }
 
-export function tessellateAll(s: Solid): Face[] {
+function facesOf(s: Solid): Face[] {
   switch (s.kind) {
     case "prism": {
       if (s.roof === "gable") return gable(s.at, s.w, s.d, s.h, s.mat);
@@ -250,6 +251,12 @@ export function tessellateAll(s: Solid): Face[] {
     case "ground": return ground(s.tris, s.mat);
     case "wheel": return wheel(s);
   }
+}
+
+/** Caras del sólido; `tone` desplaza el toneOffset de todas. */
+export function tessellateAll(s: Solid): Face[] {
+  const faces = facesOf(s), t = s.tone ?? 0;
+  return t === 0 ? faces : faces.map((f) => ({ ...f, toneOffset: f.toneOffset + t }));
 }
 
 /** Solo lo que mira a la cámara. Suelo y franjas se emiten enteros. */
