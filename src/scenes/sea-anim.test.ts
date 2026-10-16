@@ -113,6 +113,17 @@ describe("mar, haz y boyas", () => {
     expect(Math.abs(angle(r.beam()))).toBeLessThan(0.2);
     expect(r.tick(500)).toEqual({ ships: false, beam: false, buoys: false, ferry: false, neon: false });
   });
+  it("el haz es luz cálida: las dos cuñas son de la familia ámbar, ninguna magenta, en todo el giro y con reduced-motion", () => {
+    for (const reduced of [false, true]) {
+      const { a } = setup(reduced);
+      for (let t = 0; t < BEAM_PERIOD_MS; t += BEAM_PERIOD_MS / 4) {
+        const b = a.beam();
+        expect(b.map((x) => x.color)).toEqual(["amberBleed", "amber"]);
+        for (const x of b) { expect(x.color).toMatch(/^amber/); expect(x.color).not.toMatch(/^magenta/); }
+        a.tick(BEAM_PERIOD_MS / 4);
+      }
+    }
+  });
   it("las boyas parpadean desfasadas: nunca las dos apagadas, cada una encendida la mitad del período", () => {
     const { a } = setup();
     let on0 = 0, on1 = 0;
