@@ -17,11 +17,11 @@ export type ShipKind = "cargo" | "tug" | "barge" | "ferry";
 export interface ShipSpec { len: number; beam: number; h: number; sheer: number; topMat: Material }
 export const SHIP_SPECS: Record<ShipKind, ShipSpec> = {
   cargo: { len: 60, beam: 10, h: 5, sheer: 0.25, topMat: "hullBlue" },
-  tug: { len: 18, beam: 6, h: 3, sheer: 0.35, topMat: "hullBlue" },
+  tug: { len: 19, beam: 7, h: 2.2, sheer: 0.3, topMat: "hullBlue" },
   barge: { len: 40, beam: 8, h: 1.2, sheer: 0, topMat: "rust" },
   ferry: { len: 26, beam: 7, h: 3, sheer: 0.2, topMat: "whitewash" },
 };
-export const SHIP_MATS: readonly Material[] = ["hull", "hullBlue", "whitewash", "steel", "rust", "deck", "glass"];
+export const SHIP_MATS: readonly Material[] = ["hull", "hullBlue", "whitewash", "steel", "rust", "deck", "glass", "asphalt"];
 const WATER_Z = -1, WAKE_Z = -0.95;
 const BRIDGE: Facade = { floors: 1, cols: 3, window: { w: 0.5, h: 0.5 } };
 
@@ -65,7 +65,7 @@ function tug(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void {
   solids.push(k.box(5, -1.75, 4, 3.5, deck, 2.6, "whitewash", { floors: 1, cols: 3, base: "glass" }), k.box(4.8, -1.95, 4.4, 3.9, deck + 2.6, 0.3, "steel"));
   solids.push(k.cyl(3.5, 0, deck, 0.9, 2.5, "rust"));
   solids.push(k.box(9.5, -0.15, 0.3, 0.3, deck + 2.9, 3.5, "steel"));
-  for (const dx of [4, 8, 12]) for (const dy of [-2.9, 2.9]) solids.push(k.cyl(dx, dy, deck - 0.6, 0.45, 0.9, "rust")); // defensas
+  for (const dx of [4, 8, 12]) for (const dy of [-2.9, 2.9]) solids.push(k.cyl(dx, dy, deck - 0.6, 0.45, 0.9, "asphalt")); // defensas
   solids.push(k.cyl(1.5, 0, deck, 0.4, 0.8, "steel")); // bita
   solids.push(k.box(16.5, -0.3, 1, 0.6, deck + 0.4, 0.6, "rust")); // pudding de proa
   lights.push(k.dot(9.65, 0, deck + 6.6, 0.7, "magentaMid"), k.dot(12, -3, deck + 0.4, 0.4, "magenta"), k.dot(12, 3, deck + 0.4, 0.4, "cyanMid"));
