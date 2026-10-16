@@ -8,10 +8,10 @@ import { ship as buildShip, wake, type ShipKind } from "./ships";
 /**
  * Blog animado, sin Pixi: tres barcos que salen de la bahía, rodean la punta
  * por el este, cruzan la fosa y se desvanecen en el sangrado, sus estelas y
- * luces, el haz del faro y las dos boyas, más los neones de la punta: la
- * galería corre al revés del haz, la costa ondula y el cartel del farero
- * alterna. El agua en sí (repartida por profundidad en `terrain.ts`) no es
- * asunto de acá: la anima `water-animator.ts`. Spec §7.
+ * luces, el haz ámbar del faro (luz cálida, no neón) y las dos boyas, más
+ * los neones de la punta: la galería corre al revés del haz, la costa ondula
+ * y el cartel del farero alterna. El agua en sí (repartida por profundidad
+ * en `terrain.ts`) no es asunto de acá: la anima `water-animator.ts`. Spec §7.
  */
 // Nace en (326, -24), no más al oeste ni al sur: en la bahía el barco tiene max.y < 24 y quedaría detrás (isBehind por y) de los
 // galpones del muelle de alistamiento (x 304..324, y ≥ 24) y de su selva (x 332..340, y ≥ 26) si se superpusiera con ellos en pantalla.
@@ -139,7 +139,7 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
     ship: shipFrame,
     dist: (k) => dists[k]!,
     alphaAt,
-    beam: () => [wedge(BEAM_LEN, "magentaBleed", 0.5), wedge(BEAM_INNER, "magenta", 0.6)],
+    beam: () => [wedge(BEAM_LEN, "amberBleed", 0.5), wedge(BEAM_INNER, "amber", 0.6)],
     buoys: () => scene.buoys.flatMap((b, k) => (buoyOn(k) ? [{ kind: "dot" as const, at: v3(b.x, b.y, b.z + 0.3), r: 0.8, color: "magentaMid" as const }] : [])),
     ferry: ferryFrame,
     neon,
