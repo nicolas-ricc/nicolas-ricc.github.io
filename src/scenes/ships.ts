@@ -60,6 +60,9 @@ function cargo(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void 
   solids.push(k.box(8, -0.2, 0.4, 0.4, deck + 5.9, 2.1, "steel"), k.box(8, -1.5, 0.4, 3, deck + 7, 0.25, "steel")); // mástil de radar y cruceta
   lights.push(k.dot(8.2, 0, deck + 8.2, 0.7, "magentaMid"), k.dot(10, -5, deck + 5.2, 0.4, "magenta"), k.dot(10, 5, deck + 5.2, 0.4, "cyanMid"));
   lights.push(k.poly([[10.52, -4.6, deck + 4.9], [10.52, 4.6, deck + 4.9], [10.52, 4.6, deck + 5.5], [10.52, -4.6, deck + 5.5]], "magentaBleed", 0.8)); // ventanas del puente encendidas, cara de proa
+  solids.push(k.box(14, -3.4, 34, 6.8, deck, 1, "rust")); // brazola de la bodega
+  for (let i = 0; i < 3; i++) solids.push(k.box(14.2 + i * 11.2, -3.2, 11, 6.4, deck + 1, 0.3, "steel")); // tapas de escotilla
+  solids.push(k.box(12.5, -3.2, 0.5, 0.5, deck, 2.5, "steel"), k.box(12.5, 2.7, 0.5, 0.5, deck, 2.5, "steel"), k.box(12.4, -3.5, 1, 7, deck + 2.5, 0.3, "steel")); // pórtico de tapas, estacionado a proa de la casa
 }
 
 function tug(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void {
