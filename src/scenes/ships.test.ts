@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bounds, isFlat, type Solid } from "../iso/solids";
+import { bounds, isFlat, tessellateAll, type Solid } from "../iso/solids";
 import { SHIP_MATS, SHIP_SPECS, ship, shipAt, wake, type ShipKind } from "./ships";
 
 const KINDS: ShipKind[] = ["cargo", "tug", "barge", "ferry"];
@@ -33,17 +33,6 @@ describe("ships", () => {
     }
     expect(shipAt("barge", { x: 0, y: 0 }, 0)).toEqual({ x: -10, y: 0 });
     expect(shipAt("cargo", { x: 0, y: 0 }, 0)).toEqual({ x: -30, y: 0 });
-  });
-  it("carguero: tres escotillas, superestructura con ventanas, chimenea con tapa, dos grúas; proa según heading", () => {
-    const s = ship("cargo", { x: 0, y: 0 }, 0);
-    expect(s.solids.filter((x) => x.kind === "poly" && x.mat === "rust" && x.h === 1.2)).toHaveLength(3);
-    expect(s.solids.filter((x) => x.kind === "poly" && x.facade).length).toBeGreaterThanOrEqual(4);
-    expect(s.solids.filter((x) => x.kind === "cylinder")).toHaveLength(2);
-    expect(s.solids.filter((x) => x.kind === "poly" && x.mat === "steel" && x.h === 8)).toHaveLength(2); // kingposts
-    expect(s.solids.filter((x) => x.kind === "poly" && x.mat === "hullBlue" && x.h === 0.8)).toHaveLength(2); // amurada
-    expect(s.lights.slice(0, 3).map((l) => l.color)).toEqual(["magentaMid", "magenta", "cyanMid"]);
-    const south = ship("cargo", { x: 100, y: 100 }, Math.PI / 2);
-    expect(Math.max(...south.solids.map((x) => bounds(x).max.y))).toBeCloseTo(160, 6);
   });
   it("remolcador: casco del ASD Tug 2810 (28.7 × 10.4 m → 19 × 7 u) con goma asphalt entre los materiales", () => {
     expect(SHIP_SPECS.tug).toEqual({ len: 19, beam: 7, h: 2.2, sheer: 0.3, topMat: "hullBlue" });
@@ -165,5 +154,73 @@ describe("barge: empujador de tres cubiertas con barcaza tolva Jumbo", () => {
     expect(s.lights.filter((l) => l.color === "amber")).toHaveLength(2);
     expect(s.lights.some((l) => l.kind === "poly" && l.color === "magentaBleed")).toBe(true);
     expect(s.lights.length).toBeLessThanOrEqual(8);
+  });
+});
+
+describe("carguero (Damen Combi Freighter 3850)", () => {
+  const s = ship("cargo", { x: 0, y: 0 }, 0);
+  it("casa y puente a popa: las piezas con fachada quedan en el último tercio; puente con alerones a la manga; escapes detrás del puente; nada por encima de z 13", () => {
+    const faced = s.solids.filter((x) => x.kind === "poly" && x.facade);
+    expect(faced.length).toBeGreaterThanOrEqual(4);
+    for (const x of faced) expect(bounds(x).max.x).toBeLessThanOrEqual(60 / 3);
+    const bridge = bounds(faced.find((x) => x.kind === "poly" && x.facade?.base === "glass")!);
+    expect(bridge.min.y).toBeCloseTo(-5, 6); expect(bridge.max.y).toBeCloseTo(5, 6);
+    const stacks = s.solids.filter((x) => x.kind === "cylinder" && bounds(x).max.x <= bridge.min.x);
+    expect(stacks).toHaveLength(2);
+    expect(Math.max(...s.solids.map((x) => bounds(x).max.z))).toBeLessThanOrEqual(13);
+    expect(s.lights.slice(0, 3).map((l) => l.color)).toEqual(["magentaMid", "magenta", "cyanMid"]);
+    expect(s.lights.some((l) => l.kind === "poly" && l.color === "magentaBleed")).toBe(true);
+    const south = ship("cargo", { x: 100, y: 100 }, Math.PI / 2);
+    expect(Math.max(...south.solids.map((x) => bounds(x).max.y))).toBeCloseTo(160, 6);
+  });
+  it("bodega única: brazola rust larga con tres tapas planas encima, entre la casa y el castillo", () => {
+    const coaming = s.solids.filter((x) => x.kind === "poly" && x.mat === "rust" && x.h === 1);
+    expect(coaming).toHaveLength(1);
+    const cb = bounds(coaming[0]!);
+    expect(cb.max.x - cb.min.x).toBeGreaterThanOrEqual(30); expect(cb.min.x).toBeGreaterThanOrEqual(12); expect(cb.max.x).toBeLessThanOrEqual(50);
+    const covers = s.solids.filter((x) => x.kind === "poly" && x.mat === "steel" && Math.abs(x.z - cb.max.z) < 1e-6);
+    expect(covers).toHaveLength(3);
+    for (const c of covers) { const b = bounds(c); expect(b.min.x).toBeGreaterThanOrEqual(cb.min.x); expect(b.max.x).toBeLessThanOrEqual(cb.max.x); expect(b.max.z - b.min.z).toBeLessThanOrEqual(0.5); }
+  });
+  it("dos grúas en babor: pedestal, cabina y pluma de tres tramos subiendo a 45° hacia proa", () => {
+    const pedestals = s.solids.flatMap((x) => (x.kind === "cylinder" && x.r === 0.5 && x.h === 3 ? [x] : []));
+    expect(pedestals).toHaveLength(2);
+    const steps = s.solids.filter((x) => x.kind === "poly" && x.mat === "steel" && x.h === 0.7).map((x) => bounds(x));
+    expect(steps).toHaveLength(6);
+    for (const p of pedestals) {
+      expect(p.at.y).toBeLessThan(-3.4); expect(p.at.z).toBeCloseTo(4, 6);
+      const boom = steps.filter((b) => b.min.x > p.at.x && b.min.x < p.at.x + 6).sort((a, b) => a.min.x - b.min.x);
+      expect(boom).toHaveLength(3);
+      for (const b of boom) expect(b.max.y).toBeLessThan(0);
+      for (let i = 1; i < 3; i++) {
+        const dx = boom[i]!.min.x - boom[i - 1]!.min.x, dz = boom[i]!.min.z - boom[i - 1]!.min.z;
+        expect(dz).toBeGreaterThan(0); expect(dz).toBeCloseTo(dx, 6);
+      }
+    }
+  });
+  it("proa: castillo con mástil, molinete y dos bitas; ancla asomando a estribor; amurada en las dos bandas de la casa al castillo", () => {
+    const forecastle = s.solids.filter((x) => x.kind === "poly" && x.mat === "steel" && x.h === 1.6);
+    expect(forecastle).toHaveLength(1); expect(bounds(forecastle[0]!).min.x).toBeGreaterThanOrEqual(48);
+    expect(s.solids.filter((x) => x.kind === "cylinder" && x.r === 0.3)).toHaveLength(2); // bitas
+    expect(s.solids.filter((x) => x.kind === "cylinder" && x.r === 0.6)).toHaveLength(1); // molinete
+    const anchor = s.solids.filter((x) => x.kind === "poly" && x.mat === "steel" && bounds(x).min.x >= 54);
+    expect(anchor).toHaveLength(1); expect(bounds(anchor[0]!).max.y).toBeGreaterThan(1.79);
+    const rails = s.solids.filter((x) => x.kind === "poly" && x.mat === "hullBlue" && x.h === 0.8).map((x) => bounds(x));
+    expect(rails).toHaveLength(4);
+    for (const side of [rails.filter((b) => b.max.y < 0), rails.filter((b) => b.min.y > 0)]) {
+      expect(side).toHaveLength(2);
+      expect(Math.min(...side.map((b) => b.min.x))).toBeLessThanOrEqual(12); expect(Math.max(...side.map((b) => b.max.x))).toBeGreaterThanOrEqual(50);
+    }
+    expect(s.lights.filter((l) => l.color === "magentaMid")).toHaveLength(2); // tope de popa y de proa
+  });
+  it("con cualquier rumbo, todas las piezas quedan en el círculo de la eslora y por debajo de z 13; presupuesto 40 / 8", () => {
+    for (const h of [0, Math.PI / 2, 2.3, -0.7]) {
+      const r = ship("cargo", { x: 0, y: 0 }, h), cx = 30 * Math.cos(h), cy = 30 * Math.sin(h);
+      expect(r.solids.length).toBeLessThanOrEqual(40); expect(r.lights.length).toBeLessThanOrEqual(8);
+      for (const x of r.solids) for (const f of tessellateAll(x)) for (const p of f.pts) {
+        expect(Math.hypot(p.x - cx, p.y - cy)).toBeLessThanOrEqual(Math.hypot(30, 5) + 0.01);
+        expect(p.z).toBeLessThanOrEqual(13);
+      }
+    }
   });
 });
