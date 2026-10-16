@@ -63,6 +63,10 @@ function cargo(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void 
   solids.push(k.box(14, -3.4, 34, 6.8, deck, 1, "rust")); // brazola de la bodega
   for (let i = 0; i < 3; i++) solids.push(k.box(14.2 + i * 11.2, -3.2, 11, 6.4, deck + 1, 0.3, "steel")); // tapas de escotilla
   solids.push(k.box(12.5, -3.2, 0.5, 0.5, deck, 2.5, "steel"), k.box(12.5, 2.7, 0.5, 0.5, deck, 2.5, "steel"), k.box(12.4, -3.5, 1, 7, deck + 2.5, 0.3, "steel")); // pórtico de tapas, estacionado a proa de la casa
+  for (const dx of [25.3, 36.5]) { // grúas de cubierta en babor: pedestal, cabina y pluma escalonada a 45° hacia proa
+    solids.push(k.cyl(dx, -3.9, deck, 0.5, 3, "steel"), k.box(dx - 0.6, -4.5, 1.2, 1.2, deck + 3, 1, "whitewash"));
+    for (let i = 0; i < 3; i++) solids.push(k.box(dx + 0.6 + 1.5 * i, -4.1, 1.8, 0.4, deck + 3.5 + 1.5 * i, 0.7, "steel"));
+  }
 }
 
 function tug(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void {
