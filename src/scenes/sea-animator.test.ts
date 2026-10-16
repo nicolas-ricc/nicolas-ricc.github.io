@@ -8,7 +8,7 @@ describe("seaAnimator", () => {
     const a = seaAnimator(w.sea!, { reducedMotion: false });
     expect(a.ids).toEqual(expect.arrayContaining(["sea.ship0", "sea.wake2", "sea.lights1", "sea.beam", "sea.buoys", "sea.ferry", "sea.ferryWake", "sea.ferryLights", "sea.neon"]));
     expect(a.layer("sea.ship0").kind).toBe("solid");
-    expect(a.layer("sea.wake0")).toMatchObject({ kind: "water", alpha: 0 }); // fase 0: en la bahía, aún invisible: no hace falta redibujarlo
+    expect(a.layer("sea.wake0")).toMatchObject({ kind: "water", alpha: 0 }); // fase 0: en el fondeadero, aún invisible: no hace falta redibujarlo
     const ids = a.tick(100);
     expect(ids.has("sea.ship0")).toBe(true); expect(ids.has("sea.beam")).toBe(true);
     const r = seaAnimator(w.sea!, { reducedMotion: true });

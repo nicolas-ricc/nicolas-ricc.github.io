@@ -7,8 +7,8 @@ import type { Material } from "../map/palette-iso";
 /**
  * Flota: casco lofteado (`hull` con obra muerta `topMat` y arrufo) más
  * superestructuras como `poly` con huella rotada y fachada (ventanas),
- * chimeneas y mástiles como cilindros y cajas. Popa en `at`, sobre el agua
- * (z −1). Luces: mástil magentaMid, babor magenta, estribor cyanMid; la
+ * chimeneas y mástiles como cilindros y cajas. Popa en `at` (`shipAt` lo
+ * deriva del centro de la unidad), sobre el agua (z −1). Luces: mástil magentaMid, babor magenta, estribor cyanMid; la
  * lancha de la feria suma una ámbar. `wake` arma la estela de espuma.
  */
 export type ShipKind = "cargo" | "tug" | "barge" | "ferry";
@@ -99,6 +99,15 @@ export function ship(kind: ShipKind, at: Vec2, heading: number): { solids: Solid
   return { solids, lights };
 }
 
+/** Popa de la unidad en coordenadas locales: el empujador va 10 u detrás de la barcaza. */
+const sternOf = (kind: ShipKind): number => (kind === "barge" ? -10 : 0);
+
+/** `at` de popa para que el punto medio de la unidad completa (empujador incluido) caiga en `center`. */
+export function shipAt(kind: ShipKind, center: Vec2, heading: number): Vec2 {
+  const half = (SHIP_SPECS[kind].len + sternOf(kind)) / 2;
+  return { x: center.x - half * Math.cos(heading), y: center.y - half * Math.sin(heading) };
+}
+
 /** Estela: ola de proa (2, más clara), V de 6 triángulos finos por banda desde el 80 % de la eslora hacia atrás, remolino de popa (3). 17 triángulos a z −0.95. */
 export function wake(kind: ShipKind, at: Vec2, heading: number): Tri[] {
   const { len, beam } = SHIP_SPECS[kind], half = beam / 2;
@@ -106,7 +115,7 @@ export function wake(kind: ShipKind, at: Vec2, heading: number): Tri[] {
   const p = (dx: number, dy: number) => v3(at.x + dx * c - dy * s, at.y + dx * s + dy * c, WAKE_Z);
   const tri = (a: [number, number], b: [number, number], d: [number, number], toneOffset = 0): Tri => ({ pts: [p(...a), p(...b), p(...d)], toneOffset });
   const out: Tri[] = [tri([len, 0], [len - 3, -half - 1.2], [len - 3, -half], 1), tri([len, 0], [len - 3, half], [len - 3, half + 1.2], 1)];
-  const spread = Math.tan((12 * Math.PI) / 180), stern = kind === "barge" ? -10 : 0, tail = stern - 0.4 * len;
+  const spread = Math.tan((12 * Math.PI) / 180), stern = sternOf(kind), tail = stern - 0.4 * len;
   for (const side of [-1, 1]) for (let i = 0; i < 6; i++) {
     const x0 = len * 0.8 - ((len * 0.8 - tail) * i) / 6, x1 = len * 0.8 - ((len * 0.8 - tail) * (i + 1)) / 6;
     const y0 = side * (half + (len * 0.8 - x0) * spread), y1 = side * (half + (len * 0.8 - x1) * spread);
