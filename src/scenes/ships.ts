@@ -9,8 +9,9 @@ import type { Material } from "../map/palette-iso";
  * superestructuras como `poly` con huella rotada y fachada (ventanas),
  * chimeneas y mástiles como cilindros y cajas. Popa en `at` (`shipAt` lo
  * deriva del centro de la unidad), sobre el agua (z −1). Luces: mástil magentaMid, babor magenta, estribor cyanMid; la
- * lancha de la feria suma una ámbar. `wake` arma la estela de espuma.
- * `barge` reproduce un empujador fluvial de tres cubiertas (tipo *Steel Trader*) empujando una barcaza tolva Jumbo Mississippi; ver `docs/superpowers/specs/2026-10-16-barcos-referencia.md`.
+ * lancha de la feria suma una ámbar y el empujador dos proyectores ámbar. `wake` arma la estela de espuma.
+ * `barge` reproduce un empujador fluvial de tres cubiertas (tipo *Steel Trader*) empujando una barcaza
+ * tolva Jumbo Mississippi; ver `docs/superpowers/specs/2026-10-16-barcos-referencia.md`.
  */
 export type ShipKind = "cargo" | "tug" | "barge" | "ferry";
 export interface ShipSpec { len: number; beam: number; h: number; sheer: number; topMat: Material }
@@ -91,9 +92,9 @@ function barge(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void 
   solids.push(k.box(-3.9, -0.125, 0.25, 0.25, pDeck + 4.95, 2.6, "steel"), k.box(-5.4, -0.5, 0.8, 1, pDeck + 4.95, 0.5, "steel")); // mástil y radar
   solids.push(k.box(-14, 0.6, 4.2, 1.5, pDeck + 1.55, 0.5, "steel")); // bote
   solids.push(k.box(-17.4, -2.6, 9, 0.1, pDeck + 1.55, 0.4, "steel"), k.box(-17.4, 2.5, 9, 0.1, pDeck + 1.55, 0.4, "steel")); // barandas
-  lights.push(k.dot(-3.775, 0, 8.3, 0.7, "magentaMid"), k.dot(-2.3, -2.15, 5, 0.4, "magenta"), k.dot(-2.3, 2.15, 5, 0.4, "cyanMid"));
-  lights.push(k.dot(-2.3, -1.7, 5.85, 0.35, "amber"), k.dot(-2.3, 1.7, 5.85, 0.35, "amber")); // proyectores
-  lights.push(k.poly([[-2.08, -1.6, 4.1], [-2.08, 1.6, 4.1], [-2.08, 1.6, 5.2], [-2.08, -1.6, 5.2]], "magentaBleed", 0.8)); // ventanas encendidas de la timonera
+  lights.push(k.dot(-3.775, 0, pDeck + 7.65, 0.7, "magentaMid"), k.dot(-2.3, -2.15, pDeck + 4.35, 0.4, "magenta"), k.dot(-2.3, 2.15, pDeck + 4.35, 0.4, "cyanMid"));
+  lights.push(k.dot(-2.3, -1.7, pDeck + 5.2, 0.35, "amber"), k.dot(-2.3, 1.7, pDeck + 5.2, 0.35, "amber")); // proyectores
+  lights.push(k.poly([[-2.08, -1.6, pDeck + 3.45], [-2.08, 1.6, pDeck + 3.45], [-2.08, 1.6, pDeck + 4.55], [-2.08, -1.6, pDeck + 4.55]], "magentaBleed", 0.8)); // ventanas encendidas de la timonera
 }
 
 function ferry(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void {
