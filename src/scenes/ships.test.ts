@@ -185,7 +185,7 @@ describe("carguero (Damen Combi Freighter 3850)", () => {
   it("dos grúas en babor: pedestal, cabina y pluma de tres tramos subiendo a 45° hacia proa", () => {
     const pedestals = s.solids.flatMap((x) => (x.kind === "cylinder" && x.r === 0.5 && x.h === 3 ? [x] : []));
     expect(pedestals).toHaveLength(2);
-    const steps = s.solids.filter((x) => x.kind === "poly" && x.mat === "steel" && x.h === 0.7).map((x) => bounds(x));
+    const steps = s.solids.filter((x) => x.kind === "poly" && x.mat === "steel" && x.h === 1.5).map((x) => bounds(x));
     expect(steps).toHaveLength(6);
     for (const p of pedestals) {
       expect(p.at.y).toBeLessThan(-3.4); expect(p.at.z).toBeCloseTo(4, 6);
@@ -195,6 +195,7 @@ describe("carguero (Damen Combi Freighter 3850)", () => {
       for (let i = 1; i < 3; i++) {
         const dx = boom[i]!.min.x - boom[i - 1]!.min.x, dz = boom[i]!.min.z - boom[i - 1]!.min.z;
         expect(dz).toBeGreaterThan(0); expect(dz).toBeCloseTo(dx, 6);
+        expect(boom[i]!.min.z).toBeCloseTo(boom[i - 1]!.max.z, 6);
       }
     }
   });

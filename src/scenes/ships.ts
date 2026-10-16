@@ -67,7 +67,7 @@ function cargo(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void 
   solids.push(k.box(12.5, -3.2, 0.5, 0.5, deck, 2.5, "steel"), k.box(12.5, 2.7, 0.5, 0.5, deck, 2.5, "steel"), k.box(12.4, -3.5, 1, 7, deck + 2.5, 0.3, "steel")); // pórtico de tapas, estacionado a proa de la casa
   for (const dx of [25.3, 36.5]) { // grúas de cubierta en babor: pedestal, cabina y pluma escalonada a 45° hacia proa
     solids.push(k.cyl(dx, -3.9, deck, 0.5, 3, "steel"), k.box(dx - 0.6, -4.5, 1.2, 1.2, deck + 3, 1, "whitewash"));
-    for (let i = 0; i < 3; i++) solids.push(k.box(dx + 0.6 + 1.5 * i, -4.1, 1.8, 0.4, deck + 3.5 + 1.5 * i, 0.7, "steel"));
+    for (let i = 0; i < 3; i++) solids.push(k.box(dx + 0.6 + 1.5 * i, -4.1, 1.8, 0.4, deck + 3.5 + 1.5 * i, 1.5, "steel"));
   }
   solids.push(k.box(50, -2.1, 4, 4.2, deck, 1.6, "steel")); // castillo de proa
   solids.push(k.box(52, -0.2, 0.4, 0.4, deck + 1.6, 5.4, "steel"), k.box(52.05, -1.5, 0.3, 3, deck + 5.5, 0.25, "steel")); // mástil de proa y cruceta
