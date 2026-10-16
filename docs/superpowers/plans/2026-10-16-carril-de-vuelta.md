@@ -58,7 +58,7 @@
 ```ts
 import { convexHull, v3, type Vec2 } from "../iso/geometry";
 import { project } from "../iso/project";
-import { bounds, hullRings, isFlat } from "../iso/solids";
+import { bounds, hullRings, isFlat } from "../iso/solids"; // isFlat ya lo usa el test de la lancha
 
 const inWorld = (x: number, y: number) => x >= WORLD.x0 && x <= WORLD.x1 && y >= WORLD.y0 && y <= WORLD.y1;
 
@@ -111,6 +111,18 @@ describe("dos carriles", () => {
     for (let d = 0; d <= Lo; d += 4) {
       const p = laneAt("out", d), s = silhouette(p, p.heading);
       for (const b of backs) if (d + (Lb - b.d) >= 200) expect(intersects(s, b.s)).toBe(false);
+    }
+  });
+
+  it("giro en el fondeadero: con el carguero centrado en BERTH, ningún rumbo entre el de llegada y el de salida lo deja detrás de un sólido estático", () => {
+    const statics = world(7).solids.map((s) => ({ b: bounds(s), sb: screenBounds(bounds(s)) }));
+    const arrive = laneAt("back", laneLength("back")).heading, leave = laneAt("out", 0).heading;
+    let d = leave - arrive; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; // arco corto
+    for (let t = 0; t <= 1; t += 0.02) {
+      const h = arrive + d * t, parts = ship("cargo", shipAt("cargo", BERTH, h), h).solids.map(bounds);
+      const sb = { min: { x: Math.min(...parts.map((b) => b.min.x)), y: Math.min(...parts.map((b) => b.min.y)), z: -1 }, max: { x: Math.max(...parts.map((b) => b.max.x)), y: Math.max(...parts.map((b) => b.max.y)), z: 13 } };
+      const scr = screenBounds(sb);
+      for (const s of statics) if (overlaps(scr, s.sb)) expect(isBehind(sb, s.b)).toBe(false);
     }
   });
 
@@ -389,3 +401,22 @@ Reescribir el comentario de cabecera (JSDoc de arriba) para describir: los dos c
 
 - `npm test`, `npm run typecheck`, `npm run build`.
 - Lab: `npm run dev -- --host --port 5173`, `/lab/blog.html?speed=10`, tecla `4`: al menos un barco yendo y uno volviendo, cruzándose sin superponerse; el que llega fondea, gira y vuelve a salir (script `agent-browser` de la etapa de evals).
+
+## Assumptions
+
+Decisiones técnicas sin fuente escrita, tomadas en el grilling (van a la descripción del PR):
+
+- `dtMs` negativo o 0 no avanza el reloj (guarda existente `if (opts.reducedMotion || dtMs <= 0) return none;`, `sea-anim.ts:156`). `NaN` no se blinda: el único llamador es `stage.tick(ticker.deltaMS * speed)` (`src/lab/page.ts:76` y el stage del sitio), y `deltaMS` de Pixi es finito. Alternativa rechazada: `Number.isFinite` en `tick` (defensa sobre un camino interno confiable).
+- Barco fondeado sin estela (`wake: []`). Alternativa rechazada: conservar la V de estela con el barco quieto. `stage.ts:90,102` ya admite una capa `water` vacía (la de `offscreen` la exige el issue).
+- `state(k).dist` es `L_out` en `offscreen` y `L_back` en `berth`. Alternativa rechazada: ms transcurridos en la pausa (mezclaría unidades en el mismo campo).
+- `routeAt`/`routeLength`/`SeaAnim.dist`/`SeaAnim.alphaAt(dist)` se reemplazan en lugar de convivir con la API nueva. Alternativa rechazada: mantener alias (dos nombres para lo mismo).
+- La no superposición en pantalla se mide con la silueta convexa del casco (anillo de cubierta a z −1 y z 13), exactamente como lo define el issue; mástiles y estela no entran (la silueta a z 13 ya cubre la altura de la caja de alineación).
+- El commit intermedio de la Task 1 deja el repo en verde: el ciclo de un solo carril sigue funcionando sobre `laneAt("out", …)`.
+
+## Grilling
+
+- Rondas: 1 (la revisión agregó un test, no cambió la estructura; no hizo falta segunda ronda).
+- Preguntas: 15. Fuentes: ISSUE 7, CODE 13, DOC 1, NO SOURCE 4 (varias respuestas citan más de una fuente).
+- Supuestos técnicos: los 6 de `## Assumptions`.
+- Ambigüedades de spec: 0. Issues abiertos fuera de alcance: 0.
+- Cambio al plan: test nuevo en la Task 1, "giro en el fondeadero … ningún rumbo … detrás de un sólido estático" (pregunta 4). Sondeado antes de escribirlo: 0 contactos en 51 rumbos.
