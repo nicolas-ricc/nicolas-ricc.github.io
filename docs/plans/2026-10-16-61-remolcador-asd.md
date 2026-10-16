@@ -28,7 +28,7 @@
 2. Piezas que flotan o se hunden en la cubierta con arrufo (la cubierta sube a proa: z ≈ 1.4 en x 15.2) → guinche, bitas de proa y amurada arrancan en z 1.4 según el documento; se revisa en la captura.
 3. Superposición con otros barcos o sólidos estáticos por crecer de 18 × 6 a 19 × 7 → las rutas se validaron con la caja del carguero (60 × 10 × z 13); el suite de `sea-anim.test.ts` debe seguir verde sin tocarlo.
 4. Defensas que se salen de la manga más de lo permitido (rieles en |y| 3.2–3.5 con media manga 3.5) → cubierto por el test de caja (margen 2).
-5. Coste de dibujo con 27 sólidos (antes 13) y bloom → medición del log del lab con los tres barcos a la vista.
+5. Coste de dibujo con 25 sólidos (antes 13) y bloom → medición del log del lab con los tres barcos a la vista.
 
 ---
 
@@ -56,7 +56,7 @@
 | cilindros de esquina de popa | `k.cyl(0.9, ±1.7, 1, 0.45, 0.9, "asphalt")` |
 | luces | tope `k.dot(11.35, 0, 10, 0.7, "magentaMid")`, babor `k.dot(12, -2.1, 5.15, 0.4, "magenta")`, estribor `k.dot(12, 2.1, 5.15, 0.4, "cyanMid")`, proyectores `k.dot(12.95, ±1.45, 5.5, 0.35, "amber")`, ventanas `k.poly([[13.22, -1.7, 3.2], [13.22, 1.7, 3.2], [13.22, 1.7, 4.5], [13.22, -1.7, 4.5]], "magentaBleed", 0.8)` |
 
-Total: casco + 26 piezas = 27 sólidos; 6 luces. La grúa opcional de popa a babor del documento no se modela (queda oculta con rumbo 0 y no está en todas las unidades). Las balsas no están en la lista del documento: las pide el issue ("dos botes/balsas en el techo").
+Total: casco + 24 piezas = 25 sólidos; 6 luces. La grúa opcional de popa a babor del documento no se modela (queda oculta con rumbo 0 y no está en todas las unidades). Las balsas no están en la lista del documento: las pide el issue ("dos botes/balsas en el techo").
 
 ---
 
@@ -141,7 +141,7 @@ it("remolcador ASD 2810: timonera de vidrio a proa de la mitad sobre una caseta 
 
 **Interfaces:**
 - Consumes: Task 2 (`tug()` con superestructura).
-- Produces: `tug()` final, 27 sólidos y 6 luces.
+- Produces: `tug()` final, 25 sólidos y 6 luces.
 
 - [ ] **Step 1: Write the failing test.**
 
@@ -178,7 +178,7 @@ it("remolcador ASD 2810: guinche y bitas a proa, pudding macizo en la roda, defe
 ## Assumptions
 
 - **A1. Leve hundimiento a proa.** Las piezas apoyadas en `deck` (1.2) delante de x ≈ 10.45 quedan un poco hundidas en la cubierta con arrufo (la caseta, como mucho 0.13 u en x 14.2; la bita de popa, 0.07 u en x 2.5, por el realce de popa de `sheerAt`). Una pieza hundida no se ve; una que flota sí. Por eso solo las piezas de proa (guinche, bitas, amurada) suben a z 1.4, como dice el documento de referencia. Alternativa rechazada: un test de "base sobre la cubierta con arrufo en su x". Habría que reimplementar `sheerAt` en el test, y la cubierta plana `-1 + h` es la regla que ya usa el suite.
-- **A2. Presupuesto de dibujo en este runner.** Con el remolcador viejo (antes de tocar código) el log `[lab] peor redibujo en 5 s` ya marca 20–36 ms con bloom y 34–83 ms con `?bloom=off` en el Chromium headless del runner, que tiene CPU compartida y ruido alto. El tope de 15 ms no se puede verificar acá. El PR compara antes y después en el mismo runner como señal de que no hay regresión y deja el tope de 15 ms como verificación manual. El presupuesto que sí se puede ensayar es el de sólidos y luces (27 ≤ 40, 6 ≤ 8, en el test). La medición final de la historia es de #65.
+- **A2. Presupuesto de dibujo en este runner.** Con el remolcador viejo (antes de tocar código) el log `[lab] peor redibujo en 5 s` ya marca 20–36 ms con bloom y 34–83 ms con `?bloom=off` en el Chromium headless del runner, que tiene CPU compartida y ruido alto. El tope de 15 ms no se puede verificar acá. El PR compara antes y después en el mismo runner como señal de que no hay regresión y deja el tope de 15 ms como verificación manual. El presupuesto que sí se puede ensayar es el de sólidos y luces (25 ≤ 40, 6 ≤ 8, en el test). La medición final de la historia es de #65.
 - **A3. Captura reproducible.** La página de cerca vive en `.scratch/shot.html` + `.scratch/shot.ts`, sin versionar (excluida en `.git/info/exclude`). Arma el mundo, avanza el reloj hasta 20 s después de que el remolcador llega al fondeadero y aplica zoom 8 sobre `BERTH`. Las dos capturas salen de ahí.
 - **A4. Sin grúa de popa.** Es opcional en el documento y no está en "Qué hacer" del issue.
 
