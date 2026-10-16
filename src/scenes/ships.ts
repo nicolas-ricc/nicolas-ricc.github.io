@@ -7,8 +7,8 @@ import type { Material } from "../map/palette-iso";
 /**
  * Flota: casco lofteado (`hull` con obra muerta `topMat` y arrufo) más
  * superestructuras como `poly` con huella rotada y fachada (ventanas),
- * chimeneas y mástiles como cilindros y cajas. Popa en `at` (`shipAt` lo deriva del centro de la unidad), sobre el agua
- * (z −1). Luces: mástil magentaMid, babor magenta, estribor cyanMid; la
+ * chimeneas y mástiles como cilindros y cajas. Popa en `at` (`shipAt` lo
+ * deriva del centro de la unidad), sobre el agua (z −1). Luces: mástil magentaMid, babor magenta, estribor cyanMid; la
  * lancha de la feria suma una ámbar. `wake` arma la estela de espuma.
  */
 export type ShipKind = "cargo" | "tug" | "barge" | "ferry";

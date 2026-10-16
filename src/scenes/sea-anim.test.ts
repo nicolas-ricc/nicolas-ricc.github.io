@@ -21,7 +21,7 @@ describe("ruta", () => {
     const end = LANE_OUT[LANE_OUT.length - 1]!;
     expect(inCoverQuad(end.x, end.y)).toBe(false);
     const L = routeLength();
-    expect(L).toBeCloseTo(783, 0);
+    expect(Math.abs(L - 783)).toBeLessThan(5); // ≈ 783.45; holgura para mover vértices hasta 2 u
     const inWorld = (x: number, y: number) => x >= WORLD.x0 && x <= WORLD.x1 && y >= WORLD.y0 && y <= WORLD.y1;
     let crossedAbyss = false;
     for (let d = 0; d <= L; d += 1) {

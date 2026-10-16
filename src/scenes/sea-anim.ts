@@ -17,9 +17,9 @@ import { ship as buildShip, shipAt, wake, type ShipKind } from "./ships";
 // Carril de ida: el camino del CENTRO del casco (ver `shipAt` en ships.ts), así los tres tamaños
 // de barco comparten el mismo fondeadero en vez de que cada uno arranque con la popa en otro lado.
 //
-// Fondea en BERTH (362, -2), en la bocana: 36 u al sudeste de la vieja popa (326, -24), para que el
-// barco pueda girar sin pisar la selva de x < 344 y para quedar a y ≥ 24 de los galpones del muelle
-// de alistamiento, sin quedar detrás de ellos en pantalla. No hay muelle: el barco aparece ahí.
+// Fondea en BERTH (362, -2), en la bocana: 36 u al este y 22 al sur de la vieja popa (326, -24), para
+// que el barco pueda girar sin pisar la selva (x 332..340, y ≥ 50) ni quedar detrás en pantalla de los
+// galpones del muelle de alistamiento (x 304..324, y ≥ 24). No hay muelle: el barco aparece ahí.
 //
 // Sale casi al este (tramo hasta (500, 20)) porque la caja de alineación del test de profundidad
 // (60 u de eslora, z -1..13) es mucho más ancha en pantalla que la silueta cuando la proa va en
@@ -36,7 +36,7 @@ import { ship as buildShip, shipAt, wake, type ShipKind } from "./ships";
 export const LANE_OUT: readonly Readonly<Vec2>[] = [{ x: 362, y: -2 }, { x: 500, y: 20 }, { x: 515, y: 120 }, { x: 520, y: 180 }, { x: 480, y: 290 }, { x: 420, y: 470 }, { x: 376, y: 640 }];
 export const BERTH: Readonly<Vec2> = LANE_OUT[0]!;
 export const SHIPS: readonly { kind: ShipKind; phase: number }[] = [{ kind: "cargo", phase: 0 }, { kind: "tug", phase: 1 / 3 }, { kind: "barge", phase: 2 / 3 }];
-// Convoy: con velocidades distintas un barco alcanza al de adelante en el mismo carril y se superponen.
+// Velocidad única: con velocidades distintas un barco alcanzaría al de adelante en el mismo carril y se superpondrían.
 export const LANE_SPEED = 1.2;
 export const FADE_U = 30, TURN_U = 20;
 export const BEAM_PERIOD_MS = 8000, BEAM_LEN = 24, BEAM_INNER = 12, BEAM_HALF = (7 * Math.PI) / 180;
