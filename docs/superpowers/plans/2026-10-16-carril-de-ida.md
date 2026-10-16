@@ -39,18 +39,15 @@
 **Interfaces:**
 - Produces: `export function shipAt(kind: ShipKind, center: Vec2, heading: number): Vec2` — devuelve el `at` (popa de la barcaza / casco) tal que el punto medio de la unidad completa cae en `center`. Unidad = `[stern, len]` en coordenadas locales, con `stern = -10` para `barge` (empujador) y `0` para el resto; `at = center − ((len + stern)/2)·(cos h, sin h)`. Para `barge` hoy: `(40 − 10)/2 = 15`. La misma constante de popa del empujador la usa `wake()` (hoy `kind === "barge" ? -10 : 0`): extraerla a un helper local `sternOf(kind)` y usarla en ambos.
 
-- [ ] **Step 1: Test que falla** (agregar a `describe("ships")` en `ships.test.ts`, importando `shipAt`)
+- [ ] **Step 1: Test que falla** (agregar a `describe("ships")` en `ships.test.ts`; `KINDS`, `SHIP_SPECS` y `bounds` ya están importados en `ships.test.ts:2-5`, sumar `shipAt` al import de `./ships`)
 
 ```ts
   it("shipAt: el centro de la unidad (barcaza + empujador incluido) cae en el punto pedido, para cualquier rumbo", () => {
     for (const kind of KINDS) for (const h of [0, Math.PI / 2, 2.3, -0.7]) {
       const c = { x: 400, y: 100 }, at = shipAt(kind, c, h);
-      const xs = ship(kind, at, h).solids.flatMap((s) => { const b = bounds(s); return [b.min, b.max]; });
-      // proyectar sobre el eje del barco: los extremos de la unidad quedan simétricos respecto del centro
-      const along = xs.map((p) => (p.x - c.x) * Math.cos(h) + (p.y - c.y) * Math.sin(h));
-      const stern = kind === "barge" ? -10 : 0, len = SHIP_SPECS[kind].len;
-      expect(Math.hypot(at.x - c.x, at.y - c.y)).toBeCloseTo((len + stern) / 2, 6);
-      expect(Math.abs(Math.max(...along) + Math.min(...along))).toBeLessThan(5); // la unidad entera queda centrada (margen de la caja rotada)
+      // extremos de la unidad = popa y proa de cada casco (en barge: empujador y barcaza), proyectados sobre el eje del barco
+      const along = ship(kind, at, h).solids.flatMap((s) => (s.kind === "hull" ? [0, s.len].map((dx) => (s.at.x + dx * Math.cos(h) - c.x) * Math.cos(h) + (s.at.y + dx * Math.sin(h) - c.y) * Math.sin(h)) : []));
+      expect(Math.max(...along) + Math.min(...along)).toBeCloseTo(0, 6);
     }
     expect(shipAt("barge", { x: 0, y: 0 }, 0)).toEqual({ x: -15, y: 0 });
     expect(shipAt("cargo", { x: 0, y: 0 }, 0)).toEqual({ x: -30, y: 0 });
@@ -84,7 +81,7 @@ y en `wake()` reemplazar `stern = kind === "barge" ? -10 : 0` por `stern = stern
 
 **Interfaces:**
 - Consumes: `shipAt` (Task 1).
-- Produces: `export const LANE_OUT: readonly Vec2[]`, `export const BERTH: Vec2` (mismo objeto que `LANE_OUT[0]` o igual en valor), `routeAt(dist)` devuelve el **centro** del casco sobre `LANE_OUT` (misma firma `{ x, y, heading }`), `routeLength()` = largo de `LANE_OUT`. `ROUTE` desaparece.
+- Produces: `export const LANE_OUT: readonly Readonly<Vec2>[]`, `export const BERTH: Readonly<Vec2>` (el mismo objeto que `LANE_OUT[0]`; `Readonly` impide moverlo por error), `routeAt(dist)` devuelve el **centro** del casco sobre `LANE_OUT` (misma firma `{ x, y, heading }`), `routeLength()` = largo de `LANE_OUT`. `ROUTE` desaparece.
 
 - [ ] **Step 1: Tests que fallan** — reemplazar los dos tests de `describe("ruta")`:
 
@@ -143,11 +140,11 @@ Imports a sumar: `inCoverQuad, worldZoneAt` de `../map/geo`; `BERTH, LANE_OUT` d
   - Reemplazar `ROUTE` y su comentario largo por `LANE_OUT` y `BERTH`:
 
 ```ts
-export const LANE_OUT: readonly Vec2[] = [{ x: 362, y: -2 }, { x: 500, y: 20 }, { x: 515, y: 120 }, { x: 520, y: 180 }, { x: 480, y: 290 }, { x: 420, y: 470 }, { x: 376, y: 640 }];
-export const BERTH: Vec2 = LANE_OUT[0]!;
+export const LANE_OUT: readonly Readonly<Vec2>[] = [{ x: 362, y: -2 }, { x: 500, y: 20 }, { x: 515, y: 120 }, { x: 520, y: 180 }, { x: 480, y: 290 }, { x: 420, y: 470 }, { x: 376, y: 640 }];
+export const BERTH: Readonly<Vec2> = LANE_OUT[0]!;
 ```
 
-  - `const route = polyline(LANE_OUT);` (verificar que `polyline` acepta `readonly Vec2[]`; si no, `[...LANE_OUT]`).
+  - `const route = polyline(LANE_OUT);` (`polyline(pts: readonly (Vec2 | Vec3)[])` en `src/iso/geometry.ts:70` acepta el arreglo readonly y copia los puntos).
   - `shipFrame`: `const p = routeAt(dists[k]!), kind = SHIPS[k]!.kind, at = shipAt(kind, p, p.heading);` y usar `at` en `buildShip(kind, at, p.heading)` y `wake(kind, at, p.heading)`.
   - Comentario largo nuevo sobre `LANE_OUT` (prosa en castellano, mismo tono que hoy), que explique: (a) es el camino del **centro** del casco (`shipAt`), así los tres tamaños comparten el fondeadero; (b) fondeadero en (362, −2), la bocana, 36 u al SE de la vieja popa (326, −24) para que el barco pueda girar sin pisar la selva de x < 344, y ≥ 24 ni quedar detrás de los galpones del muelle de alistamiento; no hay muelle; (c) sale **casi al este** (tramo a (500, 20)) porque la caja de alineación del test de profundidad (60 u de eslora, z −1..13) es mucho más ancha en pantalla que la silueta cuando la proa va en diagonal, y una salida diagonal da falsos positivos de `isBehind` con la boya (420, 80) y el arrecife (≈ 405, 111); casi horizontal la caja es angosta en y; (d) baja por **x ≥ 500 hasta y 180** para rodear la boya y el pecio por el este, lejos de la punta (Portfolio), en agua de Blog y cruzando la fosa; (e) recién al sur de y 180 vira al sur-suroeste porque abajo-izquierda en pantalla es +y, levemente −x; (f) **termina fuera del cover 16:9** (376, 640) para que el barco no se desvanezca a la vista; el desvanecido ocurre en el sangrado. Validado contra agua, `depthAt ≥ 6`, `worldZoneAt === "blog"` para x ≥ 380, `isBehind` con la caja del carguero y `coverQuad(16/9)`: no mover vértices más de 2 u sin revalidar.
   - Docstring del módulo: "tres barcos que zarpan del fondeadero de la bocana, rodean la boya y el pecio por el este, cruzan la fosa y salen del cover por abajo-izquierda".
@@ -212,3 +209,28 @@ y en `tick`: `dists[k] = dists[k]! + (LANE_SPEED * dtMs) / 1000;` (el wrap `>= L
 
 - `npm test`, `npm run typecheck`, `npm run build`.
 - Lab: `npm run dev -- --host --port 5173`, `/lab/blog.html?speed=10`, tecla `4` (cover) y `3` (Blog): los barcos salen de la bocana, bajan a abajo-izquierda y salen del encuadre por abajo; la lancha de la feria sigue igual.
+
+## Assumptions
+
+- **Centro de `barge`** = punto medio de la unidad completa `[at − 10, at + 40]`, o sea `at + 15`, no `at + len/2` con `len = 50` como dice literalmente el issue (que daría `at + 25` y dejaría el convoy 10 u corrido a proa). Fuente de la intención: decisión 9 del plan de #57 ("para `barge` el centro es el de la unidad completa"). Alternativa rechazada: `len/2` con `len = 50`.
+- **`BERTH` tipado `Readonly<Vec2>`** y `LANE_OUT` como `readonly Readonly<Vec2>[]`, para que nadie mueva el primer vértice mutando el fondeadero. Alternativa rechazada: `Object.freeze` (el repo no lo usa en constantes de ruta).
+- **Test de `shipAt` exacto** sobre los extremos de los cascos (`hull.at` y `hull.at + len`), no sobre las cajas alineadas de todos los sólidos (que no son simétricas al rotar). Alternativa rechazada: margen de 5 u sin derivar.
+- **Commits por tarea**; si una tarea falla a mitad, `git checkout -- src/scenes` vuelve al commit de la anterior.
+
+## Grilling
+
+- Rondas: 1 (los cambios fueron locales al test de la Task 1 y a tipos; sin pasos agregados ni costuras nuevas, no hizo falta una segunda).
+- Preguntas: 18. Fuentes: ISSUE 7 (1, 2, 13, 14, 18 y parte de 10, 12), CODE 10 (3, 4, 7, 9, 10, 11, 12, 15, 16, más 2 vía sonda), NO SOURCE 4 → supuestos técnicos (5, 6, 8, 17).
+  - 1: los tres criterios de #63 se cubren con las Tasks 2 (ruta en agua de Blog, salida por abajo-izquierda, tests de ruta) y 3 (velocidad única); `FERRY_ROUTE` no se toca y su test queda.
+  - 2: ISSUE "Validada por el planner contra agua, `depthAt ≥ 6`, `worldZoneAt === "blog"` para x ≥ 380, `isBehind` con la caja del carguero y `coverQuad(16/9)`"; además, sonda re-corrida en la etapa 1 (comentario de la etapa 1 en #63): largo 783.45, profundidad mínima 39.9, cero violaciones.
+  - 3: `depthAt` (`src/scenes/depth-map.ts:33-39`) cubre contenido + sangrado y devuelve 0 fuera de la grilla; `bleedTerrainAt` (`src/scenes/terrain-classify.ts:61-67`) trata `y > WORLD.y1` al este de `ZONE_SPLIT_X`; `worldZoneAt` (`src/map/geo.ts:76-80`) es aritmética pura.
+  - 4: `inCoverQuad(x, y, aspect = 16 / 9, margin = 0)` en `src/map/geo.ts:54`.
+  - 9: `shipFrame` siempre arma `wake: [{ kind: "ground", ... }]`, un único elemento (`src/scenes/sea-anim.ts`, `shipFrame`).
+  - 10: el test viejo de `barcos` usa `routeLength()` (no un largo fijo) y `speed` sigue existiendo hasta la Task 3; `sea-animator.test.ts` espera alpha 0 en dist 0, que sigue valiendo.
+  - 11/15: `ROUTE` y `SHIPS[k].speed` solo se usan en `sea-anim.ts` y `sea-anim.test.ts`; `sea-animator.ts:18,27` usa `SHIPS` solo por índice.
+  - 12: selva `cluster(332, 340, 50, 94, 6)` en `src/scenes/shipyard.ts:216`; el test de `isBehind` muestrea desde d = 0 cada 4 u, incluido el tramo del fondeadero.
+  - 13: ISSUE "con la caja del carguero posicionada por `shipAt("cargo", p, heading)` (z −1..13)".
+  - 14: ISSUE "Velocidad única `LANE_SPEED = 1.2` para los tres barcos"; hoy 1.2 / 2 / 0.8.
+  - 18: ISSUE, criterio 1 y "Verificación general"; la etapa 3 lo convierte en un guion de `agent-browser`.
+- Supuestos: los cuatro de `## Assumptions`.
+- Issues abiertos: ninguno (ninguna pregunta quedó fuera de alcance).
