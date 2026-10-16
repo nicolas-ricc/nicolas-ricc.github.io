@@ -68,9 +68,13 @@ function tug(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void {
   solids.push(k.box(11.2, -0.15, 0.3, 0.3, deck + 3.75, 4.9, "steel"), k.box(11.1, -1.3, 0.25, 2.6, deck + 6.7, 0.2, "steel"), k.box(10.9, -0.8, 0.3, 1.6, deck + 5, 0.2, "steel")); // mástil, cruceta y radar
   solids.push(k.box(12.7, -1.7, 0.5, 0.5, deck + 3.75, 0.5, "steel"), k.box(12.7, 1.2, 0.5, 0.5, deck + 3.75, 0.5, "steel")); // proyectores
   for (const dy of [-1.4, 1.4]) solids.push(k.cyl(10, dy, deck + 3.75, 0.35, 0.5, "whitewash")); // balsas salvavidas en el techo
-  for (const dx of [4, 8, 12]) for (const dy of [-2.9, 2.9]) solids.push(k.cyl(dx, dy, deck - 0.6, 0.45, 0.9, "asphalt")); // defensas (provisorio, Task 3)
-  solids.push(k.cyl(1.5, 0, deck, 0.4, 0.8, "steel")); // bita (provisorio, Task 3)
-  solids.push(k.box(16.5, -0.3, 1, 0.6, deck + 0.4, 0.6, "rust")); // pudding de proa (provisorio, Task 3)
+  solids.push(k.cyl(15.2, 0, 1.4, 0.6, 0.9, "steel")); // guinche de proa
+  for (const dy of [-1.4, 1.4]) solids.push(k.cyl(15.2, dy, 1.4, 0.25, 0.5, "steel")); // bitas de proa
+  solids.push(k.cyl(2.5, 0, deck, 0.35, 0.6, "steel")); // bita de popa
+  for (const dy of [-2.35, 2.1]) solids.push(k.box(14.4, dy, 1, 0.25, 1.4, 0.8, "hullBlue")); // amurada de proa
+  solids.push(k.box(16.2, -2, 1.8, 4, 0.9, 1, "asphalt"), k.box(18, -0.8, 1, 1.6, 0.9, 1, "asphalt")); // pudding ancho y punta (la punta es la roda)
+  for (const dy of [-3.5, 3.2]) solids.push(k.box(4.2, dy, 7, 0.3, 0.2, 0.5, "asphalt")); // rieles de defensa
+  for (const dy of [-1.7, 1.7]) solids.push(k.cyl(0.9, dy, 1, 0.45, 0.9, "asphalt")); // cilindros de esquina de popa
   lights.push(k.dot(11.35, 0, 10, 0.7, "magentaMid"), k.dot(12, -2.1, 5.15, 0.4, "magenta"), k.dot(12, 2.1, 5.15, 0.4, "cyanMid"), k.dot(12.95, -1.45, 5.5, 0.35, "amber"), k.dot(12.95, 1.45, 5.5, 0.35, "amber"));
   lights.push(k.poly([[13.22, -1.7, 3.2], [13.22, 1.7, 3.2], [13.22, 1.7, 4.5], [13.22, -1.7, 4.5]], "magentaBleed", 0.8)); // ventanas de la timonera encendidas, cara de proa
 }
