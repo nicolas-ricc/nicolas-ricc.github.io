@@ -1,16 +1,21 @@
 import type { Accent } from "../iso/accent";
-import { polyline, v3, type Vec2, type Vec3 } from "../iso/geometry";
+import { polyline, v3, type Polyline, type Vec2, type Vec3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import type { SeaScene } from "./sea";
 import { chase, flip, pulse } from "./neon";
 import { ship as buildShip, shipAt, wake, type ShipKind } from "./ships";
 
 /**
- * Blog animado, sin Pixi: tres barcos que zarpan del fondeadero de la bocana,
- * rodean la boya y el pecio por el este, cruzan la fosa y salen del cover por
- * abajo-izquierda, sus estelas y luces, el haz ámbar del faro (luz cálida, no
- * neón) y las dos boyas, más los neones de la punta: la galería corre al revés
- * del haz, la costa ondula y el cartel del farero alterna. El agua en sí
+ * Blog animado, sin Pixi: tres barcos con ciclo propio, sus estelas y luces, el haz
+ * ámbar del faro (luz cálida, no neón) y las dos boyas, más los neones de la punta:
+ * la galería corre al revés del haz, la costa ondula y el cartel del farero alterna.
+ *
+ * Dos carriles: la ida (`LANE_OUT`) zarpa del fondeadero `BERTH` de la bocana, rodea la
+ * boya y el pecio por el este y sale del cover por abajo-izquierda; la vuelta (`LANE_BACK`,
+ * ~56 u al este de la ida) entra desde abajo y llega al fondeadero por el noreste. En
+ * `BERTH` el barco se queda `BERTH_MS` y gira en el lugar entre los 8 y 16 s, del rumbo de
+ * llegada al de salida. Cada barco rota `out → offscreen (OFF_MS) → back → berth`, con la
+ * misma velocidad y el barco k en la fase k·T/3 del período T = `CYCLE_MS` (≈ 1477 s). El agua en sí
  * (repartida por profundidad en `terrain.ts`) no es asunto de acá: la anima
  * `water-animator.ts`. Spec §7.
  */
@@ -35,10 +40,17 @@ import { ship as buildShip, shipAt, wake, type ShipKind } from "./ships";
 // 2 u sin revalidar.
 export const LANE_OUT: readonly Readonly<Vec2>[] = [{ x: 362, y: -2 }, { x: 500, y: 20 }, { x: 515, y: 120 }, { x: 520, y: 180 }, { x: 480, y: 290 }, { x: 420, y: 470 }, { x: 376, y: 640 }];
 export const BERTH: Readonly<Vec2> = LANE_OUT[0]!;
+// Carril de vuelta, en el sentido de marcha (mar → fondeadero): corre ~56 u al este del de ida y entra
+// al fondeadero desde el noreste, por encima de la salida, sin cruzarla. Validado igual que la ida
+// (agua, `depthAt` ≥ 6, Blog para x ≥ 380, `isBehind`, primer punto fuera del cover) y además con las
+// siluetas de dos cargueros, uno por carril, que no se tocan en pantalla fuera de los 200 u (sumando
+// distancias) más cercanos al fondeadero: no mover vértices más de 2 u sin revalidar.
+export const LANE_BACK: readonly Readonly<Vec2>[] = [{ x: 430, y: 655 }, { x: 471, y: 487 }, { x: 533, y: 309 }, { x: 575, y: 199 }, { x: 571, y: 114 }, { x: 562, y: 13 }, { x: 552, y: -50 }, { x: 400, y: -50 }, { x: 362, y: -2 }];
 export const SHIPS: readonly { kind: ShipKind; phase: number }[] = [{ kind: "cargo", phase: 0 }, { kind: "tug", phase: 1 / 3 }, { kind: "barge", phase: 2 / 3 }];
 // Velocidad única: con velocidades distintas un barco alcanzaría al de adelante en el mismo carril y se superpondrían.
 export const LANE_SPEED = 1.2;
 export const FADE_U = 30, TURN_U = 20;
+export const OFF_MS = 15000, BERTH_MS = 24000, BERTH_TURN_MS = { from: 8000, to: 16000 } as const;
 export const BEAM_PERIOD_MS = 8000, BEAM_LEN = 24, BEAM_INNER = 12, BEAM_HALF = (7 * Math.PI) / 180;
 export const BUOY_PERIOD_MS = 2000;
 export const NEON_STEP_MS = 200, COAST_PERIOD_MS = 3000, KEEPER_SIGN_MS = 4000;
@@ -69,14 +81,15 @@ const GALLERY_R_DOT = 0.45, GALLERY_LIT = 2;
 export const FERRY_ROUTE: readonly Vec2[] = [{ x: 279, y: -252 }, { x: 290, y: -212 }, { x: 241, y: -84 }];
 export const FERRY_SPEED = 3, FERRY_PAUSE_MS = 4000;
 
-const route = polyline(LANE_OUT);
-export const routeLength = (): number => route.length;
+export type Lane = "out" | "back";
+const lanes: Record<Lane, Polyline> = { out: polyline(LANE_OUT), back: polyline(LANE_BACK) };
+export const laneLength = (lane: Lane): number => lanes[lane].length;
 
 const lerpAngle = (a: number, b: number, t: number): number => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return a + d * t; };
 
-/** Punto y rumbo a `dist` unidades del inicio; el rumbo se interpola en los TURN_U alrededor de cada vértice. */
-export function routeAt(dist: number): { x: number; y: number; heading: number } {
-  const p = route.at(dist), seg = route.segs, i = p.seg, s = seg[i]!;
+/** Punto y rumbo a `dist` unidades del inicio del carril; el rumbo se interpola en los TURN_U alrededor de cada vértice. */
+export function laneAt(lane: Lane, dist: number): { x: number; y: number; heading: number } {
+  const route = lanes[lane], p = route.at(dist), seg = route.segs, i = p.seg, s = seg[i]!;
   const local = Math.hypot(p.x - s.a.x, p.y - s.a.y); // lo andado dentro del tramo: `at` no devuelve la acumulada
   let heading = s.heading;
   if (local < TURN_U / 2 && i > 0) heading = lerpAngle(seg[i - 1]!.heading, s.heading, 0.5 + local / TURN_U);
@@ -84,12 +97,37 @@ export function routeAt(dist: number): { x: number; y: number; heading: number }
   return { x: p.x, y: p.y, heading };
 }
 
+export type ShipLane = Lane | "offscreen" | "berth";
+export interface ShipState { lane: ShipLane; dist: number; heading: number }
+
+const OUT_MS = (laneLength("out") / LANE_SPEED) * 1000, BACK_MS = (laneLength("back") / LANE_SPEED) * 1000;
+export const CYCLE_MS = OUT_MS + OFF_MS + BACK_MS + BERTH_MS;
+const OUT_END_HEADING = laneAt("out", laneLength("out")).heading, ARRIVE_HEADING = laneAt("back", laneLength("back")).heading, LEAVE_HEADING = laneAt("out", 0).heading;
+
+/** Estado de un barco a `ms` del inicio de su ciclo (`0 ≤ ms < CYCLE_MS`): ida, fuera de cámara, vuelta, fondeado. */
+export function shipStateAt(ms: number): ShipState {
+  if (ms < OUT_MS) { const dist = (ms / 1000) * LANE_SPEED; return { lane: "out", dist, heading: laneAt("out", dist).heading }; }
+  ms -= OUT_MS;
+  if (ms < OFF_MS) return { lane: "offscreen", dist: laneLength("out"), heading: OUT_END_HEADING };
+  ms -= OFF_MS;
+  if (ms < BACK_MS) { const dist = (ms / 1000) * LANE_SPEED; return { lane: "back", dist, heading: laneAt("back", dist).heading }; }
+  ms -= BACK_MS;
+  const turn = Math.max(0, Math.min(1, (ms - BERTH_TURN_MS.from) / (BERTH_TURN_MS.to - BERTH_TURN_MS.from)));
+  return { lane: "berth", dist: laneLength("back"), heading: lerpAngle(ARRIVE_HEADING, LEAVE_HEADING, turn) };
+}
+
+/** Desvanecido solo en el extremo de mar de cada carril; en el fondeadero, a pleno. */
+export function alphaAt(lane: ShipLane, dist: number): number {
+  if (lane === "out") return Math.max(0, Math.min(1, (laneLength("out") - dist) / FADE_U));
+  if (lane === "back") return Math.max(0, Math.min(1, dist / FADE_U));
+  return lane === "berth" ? 1 : 0;
+}
+
 export interface ShipFrame { solids: Solid[]; lights: Accent[]; wake: Solid[]; alpha: number }
 export interface SeaChanges { ships: boolean; beam: boolean; buoys: boolean; ferry: boolean; neon: boolean }
 export interface SeaAnim {
   ship(k: number): ShipFrame;
-  dist(k: number): number;
-  alphaAt(dist: number): number;
+  state(k: number): ShipState;
   beam(): Accent[];
   buoys(): Accent[];
   ferry(): ShipFrame;
@@ -99,9 +137,8 @@ export interface SeaAnim {
 
 export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean }): SeaAnim {
   let clock = 0, buoyStep = 0, neonStep = 0;
-  const L = routeLength();
-  const dists = SHIPS.map((s) => s.phase * L);
-  const alphaAt = (d: number): number => Math.max(0, Math.min(1, d / FADE_U, (L - d) / FADE_U));
+  const cycle = SHIPS.map((s) => s.phase * CYCLE_MS);
+  const states = cycle.map(shipStateAt);
 
   // La lancha camina FERRY_ROUTE sin suavizado de giro en los vértices (a diferencia de los barcos,
   // dobla en el momento): el rumbo es el del tramo actual, invertido cuando vuelve. `polyline.at` ya
@@ -117,11 +154,13 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
   };
 
   const shipFrame = (k: number): ShipFrame => {
-    const p = routeAt(dists[k]!), alpha = alphaAt(dists[k]!);
-    const kind = SHIPS[k]!.kind, at = shipAt(kind, p, p.heading);
-    const built = buildShip(kind, at, p.heading);
-    const wakeTris = wake(kind, at, p.heading);
-    return { solids: built.solids, lights: built.lights, wake: [{ kind: "ground", mat: "foam", tris: wakeTris }], alpha };
+    const s = states[k]!;
+    if (s.lane === "offscreen") return { solids: [], lights: [], wake: [], alpha: 0 };
+    const p = s.lane === "berth" ? BERTH : laneAt(s.lane, s.dist);
+    const kind = SHIPS[k]!.kind, at = shipAt(kind, p, s.heading);
+    const built = buildShip(kind, at, s.heading);
+    const wakeTris = s.lane === "berth" ? [] : [{ kind: "ground" as const, mat: "foam" as const, tris: wake(kind, at, s.heading) }];
+    return { solids: built.solids, lights: built.lights, wake: wakeTris, alpha: alphaAt(s.lane, s.dist) };
   };
 
   const beamAngle = (): number => (opts.reducedMotion ? 0 : ((clock % BEAM_PERIOD_MS) / BEAM_PERIOD_MS) * Math.PI * 2);
@@ -145,8 +184,7 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
 
   return {
     ship: shipFrame,
-    dist: (k) => dists[k]!,
-    alphaAt,
+    state: (k) => states[k]!,
     beam: () => [wedge(BEAM_LEN, "amberBleed", 0.5), wedge(BEAM_INNER, "amber", 0.6)],
     buoys: () => scene.buoys.flatMap((b, k) => (buoyOn(k) ? [{ kind: "dot" as const, at: v3(b.x, b.y, b.z + 0.3), r: 0.8, color: "magentaMid" as const }] : [])),
     ferry: ferryFrame,
@@ -156,7 +194,7 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
       if (opts.reducedMotion || dtMs <= 0) return none;
       clock += dtMs;
       const c: SeaChanges = { ships: true, beam: true, buoys: false, ferry: false, neon: false };
-      for (let k = 0; k < SHIPS.length; k++) { dists[k] = dists[k]! + (LANE_SPEED * dtMs) / 1000; if (dists[k]! >= L) dists[k] = dists[k]! - L; }
+      for (let k = 0; k < SHIPS.length; k++) { cycle[k] = (cycle[k]! + dtMs) % CYCLE_MS; states[k] = shipStateAt(cycle[k]!); }
       const bs = Math.floor(clock / (BUOY_PERIOD_MS / 2));
       if (bs !== buoyStep) { buoyStep = bs; c.buoys = true; }
       if (ferryPause > 0) ferryPause -= dtMs;
