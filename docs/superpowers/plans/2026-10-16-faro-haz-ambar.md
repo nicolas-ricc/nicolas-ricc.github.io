@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, Vitest (`npm test`), `tsc` (`npm run typecheck`), Vite (`npm run build`, `npm run dev`), PixiJS (lab), `agent-browser` para la captura.
 
-**Spec:** issue #58 (hijo de #57; decisión 16 del plan de #57: `amberBleed` cuña larga alpha 0.5, `amber` cuña corta alpha 0.6, nada más cambia).
+**Spec:** issue #58 (hijo de #57; decisión 16 del comentario de plan en el issue #57, no está en el repo: `amberBleed` cuña larga alpha 0.5, `amber` cuña corta alpha 0.6, nada más cambia).
 
 ## Global Constraints
 

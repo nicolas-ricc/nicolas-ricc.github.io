@@ -127,7 +127,7 @@ Capas, de abajo hacia arriba:
 |---|---|---|---|---|
 | `portfolio` | Portfolio | Torre de containers apilados con grúa oxidada encima, taller con chispas, al pie del muelle de un astillero | Cian, soldadura parpadeando | "Acá se construyen cosas", con chatarra. La grúa se mueve sola |
 | `cv` | Resume | Torre de oficinas hundida en la selva, un solo piso con luz, papeles volando por la ventana | Ámbar de tubo | El único que sigue yendo a la oficina. Sin carteles: el único texto del mapa son los nombres de zona y el cartel con el nombre del sitio |
-| `blog` | Blog | Faro sobre un promontorio rocoso en la costa, casa del farero, haz magenta que gira | Magenta neón | Emitir al vacío. Es la "salida" del mapa: luz que guía hacia afuera |
+| `blog` | Blog | Faro sobre un promontorio rocoso en la costa, casa del farero, haz ámbar cálido que gira | Magenta neón | Emitir al vacío. Es la "salida" del mapa: luz que guía hacia afuera |
 
 Cada zona: polígono en coordenadas del lienzo, posición del landmark, cartel
 con el nombre en fuente bitmap. **Los tres polígonos cubren el lienzo entero**
