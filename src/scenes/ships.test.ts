@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bounds, isFlat } from "../iso/solids";
-import { SHIP_MATS, SHIP_SPECS, ship, wake, type ShipKind } from "./ships";
+import { SHIP_MATS, SHIP_SPECS, ship, shipAt, wake, type ShipKind } from "./ships";
 
 const KINDS: ShipKind[] = ["cargo", "tug", "barge", "ferry"];
 
@@ -21,6 +21,16 @@ describe("ships", () => {
         expect(isFlat(x)).toBe(false);
       }
     }
+  });
+  it("shipAt: el centro de la unidad (barcaza + empujador incluido) cae en el punto pedido, para cualquier rumbo", () => {
+    for (const kind of KINDS) for (const h of [0, Math.PI / 2, 2.3, -0.7]) {
+      const c = { x: 400, y: 100 }, at = shipAt(kind, c, h);
+      // extremos de la unidad = popa y proa de cada casco (en barge: empujador y barcaza), proyectados sobre el eje del barco
+      const along = ship(kind, at, h).solids.flatMap((s) => (s.kind === "hull" ? [0, s.len].map((dx) => (s.at.x + dx * Math.cos(h) - c.x) * Math.cos(h) + (s.at.y + dx * Math.sin(h) - c.y) * Math.sin(h)) : []));
+      expect(Math.max(...along) + Math.min(...along)).toBeCloseTo(0, 6);
+    }
+    expect(shipAt("barge", { x: 0, y: 0 }, 0)).toEqual({ x: -15, y: 0 });
+    expect(shipAt("cargo", { x: 0, y: 0 }, 0)).toEqual({ x: -30, y: 0 });
   });
   it("carguero: tres escotillas, superestructura con ventanas, chimenea con tapa, dos grúas; proa según heading", () => {
     const s = ship("cargo", { x: 0, y: 0 }, 0);

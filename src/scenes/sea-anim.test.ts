@@ -4,9 +4,9 @@ import type { Accent } from "../iso/accent";
 import { isBehind, overlaps, screenBounds } from "../iso/depth";
 import { v3 } from "../iso/geometry";
 import { bounds, isFlat } from "../iso/solids";
-import { WORLD } from "../map/geo";
-import { BEAM_PERIOD_MS, FADE_U, FERRY_PAUSE_MS, FERRY_ROUTE, FERRY_SPEED, KEEPER_SIGN_MS, NEON_STEP_MS, ROUTE, SHIPS, createSeaAnim, routeAt, routeLength } from "./sea-anim";
-import { ship } from "./ships";
+import { WORLD, inCoverQuad, worldZoneAt } from "../map/geo";
+import { BEAM_PERIOD_MS, BERTH, FADE_U, FERRY_PAUSE_MS, FERRY_ROUTE, FERRY_SPEED, KEEPER_SIGN_MS, LANE_OUT, LANE_SPEED, NEON_STEP_MS, SHIPS, createSeaAnim, routeAt, routeLength } from "./sea-anim";
+import { ship, shipAt } from "./ships";
 import { bleedTerrainAt, terrainAt } from "./terrain";
 import { world } from "./world";
 
@@ -14,54 +14,73 @@ const WATER = new Set(["water", "sea", "shore", "abyss"]);
 const setup = (reducedMotion = false) => { const w = world(7); return { w, a: createSeaAnim(w.sea!, { reducedMotion }) }; };
 
 describe("ruta", () => {
-  it("nace en la bahía, rodea la punta por el este (x > 430 cerca de y 118), cruza la fosa y termina en el sangrado, siempre sobre agua", () => {
-    expect(ROUTE[0]).toEqual({ x: 326, y: -24 });
-    expect(ROUTE[ROUTE.length - 1]!.x).toBeGreaterThan(WORLD.x1);
+  it("LANE_OUT nace en BERTH (dentro del cover) y termina fuera del cover; agua, profundidad ≥ 6, Blog para x ≥ 380, cruza la fosa", () => {
+    expect(LANE_OUT[0]).toEqual(BERTH);
+    expect(BERTH).toEqual({ x: 362, y: -2 });
+    expect(inCoverQuad(BERTH.x, BERTH.y)).toBe(true);
+    const end = LANE_OUT[LANE_OUT.length - 1]!;
+    expect(inCoverQuad(end.x, end.y)).toBe(false);
     const L = routeLength();
+    expect(L).toBeCloseTo(783, 0);
+    const inWorld = (x: number, y: number) => x >= WORLD.x0 && x <= WORLD.x1 && y >= WORLD.y0 && y <= WORLD.y1;
     let crossedAbyss = false;
     for (let d = 0; d <= L; d += 1) {
       const p = routeAt(d);
-      const t = p.x > WORLD.x1 ? bleedTerrainAt(p.x, p.y) : terrainAt(p.x, p.y);
+      const t = inWorld(p.x, p.y) ? terrainAt(p.x, p.y) : bleedTerrainAt(p.x, p.y);
       expect(WATER.has(t)).toBe(true);
+      expect(depthAt(p.x, p.y)).toBeGreaterThanOrEqual(6);
+      if (p.x >= 380) expect(worldZoneAt(p.x, p.y)).toBe("blog");
       if (t === "abyss") crossedAbyss = true;
-      if (Math.abs(p.y - 118) < 40) expect(p.x).toBeGreaterThan(430);
     }
     expect(crossedAbyss).toBe(true);
-    expect(routeAt(0).heading).toBeCloseTo(Math.atan2(34, 24), 6);
+    expect(routeAt(0).heading).toBeCloseTo(Math.atan2(22, 138), 6); // sale casi al este por la bocana
   });
 
-  it("ningún punto de la ruta queda detrás de un sólido estático que se le superponga en pantalla", () => {
+  it("ningún punto del carril queda detrás de un sólido estático que se le superponga en pantalla", () => {
     const w = world(7);
     const statics = w.solids.map((s) => ({ b: bounds(s), sb: screenBounds(bounds(s)) }));
     for (let d = 0; d <= routeLength(); d += 4) {
       const p = routeAt(d);
-      const parts = ship("cargo", p, p.heading).solids.map(bounds);
+      const parts = ship("cargo", shipAt("cargo", p, p.heading), p.heading).solids.map(bounds);
       const sb = { min: { x: Math.min(...parts.map((b) => b.min.x)), y: Math.min(...parts.map((b) => b.min.y)), z: -1 }, max: { x: Math.max(...parts.map((b) => b.max.x)), y: Math.max(...parts.map((b) => b.max.y)), z: 13 } };
       const scr = screenBounds(sb);
       for (const s of statics) if (overlaps(scr, s.sb)) expect(isBehind(sb, s.b)).toBe(false);
     }
   });
+
+  it("el barco se dibuja centrado en el carril: el casco nace en shipAt(kind, routeAt(d))", () => {
+    const { a } = setup();
+    for (const k of [0, 1, 2]) {
+      const p = routeAt(a.dist(k)), at = shipAt(SHIPS[k]!.kind, p, p.heading);
+      const hull = a.ship(k).solids.find((s) => s.kind === "hull")!;
+      expect(hull.kind === "hull" && hull.at.x).toBeCloseTo(at.x, 6);
+      expect(hull.kind === "hull" && hull.at.y).toBeCloseTo(at.y, 6);
+    }
+  });
 });
 
 describe("barcos", () => {
-  it("tres barcos con velocidades y fases distintas; alpha 0 en el inicio y el final, 1 en el medio; cada uno vuelve tras un ciclo", () => {
+  it("tres barcos a la misma velocidad con fases 0, ⅓, ⅔; alpha en [0, 1]; el barco 0 vuelve al inicio tras L/LANE_SPEED segundos", () => {
     const { a } = setup();
-    expect(SHIPS.map((s) => s.speed)).toEqual([1.2, 2, 0.8]);
+    expect(LANE_SPEED).toBe(1.2);
+    expect(SHIPS.map((s) => s.kind)).toEqual(["cargo", "tug", "barge"]);
+    expect(SHIPS.map((s) => s.phase)).toEqual([0, 1 / 3, 2 / 3]);
+    for (const s of SHIPS) expect(Object.keys(s).sort()).toEqual(["kind", "phase"]);
     const L = routeLength();
     expect([0, 1, 2].map((k) => a.dist(k))).toEqual(SHIPS.map((s) => s.phase * L));
-    const cycleMs = (L / SHIPS[0]!.speed) * 1000, n = Math.round(cycleMs / 100), dt = cycleMs / n;
+    const cycleMs = (L / LANE_SPEED) * 1000, n = Math.round(cycleMs / 100), dt = cycleMs / n;
     let seenMid = false;
     for (let i = 0; i < n; i++) {
       a.tick(dt);
-      const s0 = a.ship(0);
-      if (s0.alpha === 1) seenMid = true;
-      expect(s0.alpha).toBeGreaterThanOrEqual(0); expect(s0.alpha).toBeLessThanOrEqual(1);
-      expect(s0.wake.length).toBe(1);
+      for (const k of [0, 1, 2]) { const s = a.ship(k); expect(s.alpha).toBeGreaterThanOrEqual(0); expect(s.alpha).toBeLessThanOrEqual(1); expect(s.wake.length).toBe(1); }
+      if (a.ship(0).alpha === 1) seenMid = true;
+      const ds = [0, 1, 2].map((k) => a.dist(k)); // velocidad única: la separación en el carril no cambia
+      expect(((ds[1]! - ds[0]! + L) % L) / L).toBeCloseTo(1 / 3, 6);
     }
     expect(seenMid).toBe(true);
     const d0 = a.dist(0);
-    expect(Math.min(d0, L - d0)).toBeLessThan(1e-6); // el carguero (fase 0) volvió al inicio tras su ciclo
-    expect(Math.abs(a.dist(1) - SHIPS[1]!.phase * L)).toBeGreaterThan(1); // el remolcador, con otra velocidad, no
+    expect(Math.min(d0, L - d0)).toBeLessThan(1e-6);
+    expect(Math.abs(a.dist(1) - L / 3)).toBeLessThan(1e-6); // un ciclo entero: todos vuelven a su fase
   });
   it("alpha exactamente 0 al final de la ruta y 1 fuera de las bandas de bruma", () => {
     const { a } = setup();
