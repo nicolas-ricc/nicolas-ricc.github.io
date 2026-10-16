@@ -65,7 +65,9 @@ function tug(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void {
   solids.push(k.box(8.2, -2.2, 6, 4.4, deck, 1.7, "whitewash", { floors: 1, cols: 3 })); // caseta
   solids.push(k.box(9.7, -1.9, 3.5, 3.8, deck + 1.7, 1.9, "whitewash", { floors: 1, cols: 4, base: "glass" }), k.box(9.5, -2.1, 3.9, 4.2, deck + 3.6, 0.15, "steel")); // timonera panorámica y su techo
   for (const dy of [-1.9, 1.9]) solids.push(k.cyl(8.5, dy, deck + 1.7, 0.3, 2.7, "steel")); // chimeneas laterales
-  solids.push(k.box(11.2, -0.15, 0.3, 0.3, deck + 3.75, 4.9, "steel"), k.box(11.1, -1.3, 0.25, 2.6, deck + 6.7, 0.2, "steel"), k.box(10.9, -0.8, 0.3, 1.6, deck + 5, 0.2, "steel")); // mástil, cruceta y radar
+  solids.push(k.box(11.2, -0.15, 0.3, 0.3, deck + 3.75, 4.9, "steel")); // mástil
+  solids.push(k.box(11.1, -1.3, 0.25, 2.6, deck + 6.7, 0.2, "steel")); // cruceta
+  solids.push(k.box(10.9, -0.8, 0.3, 1.6, deck + 5, 0.2, "steel")); // radar
   solids.push(k.box(12.7, -1.7, 0.5, 0.5, deck + 3.75, 0.5, "steel"), k.box(12.7, 1.2, 0.5, 0.5, deck + 3.75, 0.5, "steel")); // proyectores
   for (const dy of [-1.4, 1.4]) solids.push(k.cyl(10, dy, deck + 3.75, 0.35, 0.5, "whitewash")); // balsas salvavidas en el techo
   solids.push(k.cyl(15.2, 0, 1.4, 0.6, 0.9, "steel")); // guinche de proa
