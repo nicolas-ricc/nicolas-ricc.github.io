@@ -16,9 +16,9 @@ describe("ships", () => {
         const b = bounds(x);
         expect(b.min.x).toBeGreaterThanOrEqual(x0 - 2); expect(b.max.x).toBeLessThanOrEqual(100 + spec.len + 2);
         expect(b.min.y).toBeGreaterThanOrEqual(100 - spec.beam / 2 - 2); expect(b.max.y).toBeLessThanOrEqual(100 + spec.beam / 2 + 2);
-        // las defensas cuelgan del costado; en barge, los bloques que cuadran los cascos (tope ≤ cubierta del empujador) bajan al agua
+        // la goma (defensas, pudding) cuelga del costado; en barge, los bloques que cuadran los cascos (tope ≤ cubierta del empujador) bajan al agua
         const filler = kind === "barge" && b.max.z <= 0.66;
-        if (x.kind !== "hull" && !filler && !(x.kind === "cylinder" && x.r === 0.45)) expect(b.min.z).toBeGreaterThanOrEqual(-1 + spec.h - 0.01);
+        if (x.kind !== "hull" && !filler && x.mat !== "asphalt") expect(b.min.z).toBeGreaterThanOrEqual(-1 + spec.h - 0.01);
         expect(SHIP_MATS).toContain(x.mat);
         expect(isFlat(x)).toBe(false);
       }
@@ -45,10 +45,49 @@ describe("ships", () => {
     const south = ship("cargo", { x: 100, y: 100 }, Math.PI / 2);
     expect(Math.max(...south.solids.map((x) => bounds(x).max.y))).toBeCloseTo(160, 6);
   });
-  it("remolcador con defensas y timonera; lancha de dos cubiertas", () => {
-    const tug = ship("tug", { x: 0, y: 0 }, 0);
-    expect(tug.solids.filter((x) => x.kind === "cylinder" && x.r === 0.45)).toHaveLength(6);
-    expect(tug.solids.some((x) => x.kind === "poly" && x.mat === "whitewash" && x.facade?.base === "glass")).toBe(true);
+  it("remolcador: casco del ASD Tug 2810 (28.7 × 10.4 m → 19 × 7 u) con goma asphalt entre los materiales", () => {
+    expect(SHIP_SPECS.tug).toEqual({ len: 19, beam: 7, h: 2.2, sheer: 0.3, topMat: "hullBlue" });
+    expect(SHIP_MATS).toContain("asphalt");
+  });
+  it("remolcador ASD 2810: timonera de vidrio a proa de la mitad sobre una caseta más ancha, dos chimeneas laterales detrás, mástil como punto más alto (≤ z 13), dos balsas en el techo", () => {
+    const s = ship("tug", { x: 0, y: 0 }, 0);
+    const polys = s.solids.filter((x) => x.kind === "poly");
+    const wheel = polys.find((x) => x.facade?.base === "glass")!;
+    const house = polys.find((x) => x.mat === "whitewash" && x.facade && x.facade.base !== "glass")!;
+    const wb = bounds(wheel), hb = bounds(house);
+    expect(wheel.mat).toBe("whitewash");
+    expect(wb.min.x).toBeGreaterThan(SHIP_SPECS.tug.len / 2); // a proa de la mitad
+    expect(wb.min.z).toBeCloseTo(hb.max.z, 6); // apoyada sobre la caseta
+    expect(hb.max.y - hb.min.y).toBeGreaterThan(wb.max.y - wb.min.y); // caseta más ancha
+    const stacks = s.solids.filter((x) => x.kind === "cylinder" && x.mat === "steel" && x.h === 2.7);
+    expect(stacks).toHaveLength(2);
+    expect(stacks.map((x) => Math.sign(bounds(x).min.y + bounds(x).max.y)).sort()).toEqual([-1, 1]); // una por banda
+    for (const c of stacks) expect(bounds(c).max.x).toBeLessThanOrEqual(wb.min.x); // detrás de la timonera
+    const top = Math.max(...s.solids.map((x) => bounds(x).max.z));
+    expect(top).toBeLessThanOrEqual(13);
+    expect(top).toBeGreaterThan(wb.max.z + 3); // el mástil sobresale de la timonera
+    const rafts = s.solids.filter((x) => x.kind === "cylinder" && x.mat === "whitewash");
+    expect(rafts).toHaveLength(2);
+    for (const r of rafts) expect(bounds(r).min.z).toBeGreaterThanOrEqual(wb.max.z);
+    expect(s.lights.slice(0, 3).map((l) => l.color)).toEqual(["magentaMid", "magenta", "cyanMid"]);
+    expect(s.lights.some((l) => l.kind === "poly" && l.color === "magentaBleed")).toBe(true);
+  });
+  it("remolcador ASD 2810: guinche y bitas a proa, pudding macizo en la roda, defensas en ambas bandas, proa y esquinas de popa; rota con el rumbo", () => {
+    const s = ship("tug", { x: 0, y: 0 }, 0), { len, beam } = SHIP_SPECS.tug;
+    const rubber = s.solids.filter((x) => x.mat === "asphalt").map(bounds);
+    expect(rubber.some((b) => b.min.y <= -beam / 2 && b.max.x - b.min.x >= 5)).toBe(true); // riel de babor
+    expect(rubber.some((b) => b.max.y >= beam / 2 && b.max.x - b.min.x >= 5)).toBe(true); // riel de estribor
+    expect(rubber.filter((b) => b.max.x >= len - 1)).not.toHaveLength(0); // pudding en la roda
+    expect(rubber.filter((b) => b.max.x <= 2)).toHaveLength(2); // cilindros de esquina de popa
+    const winch = s.solids.find((x) => x.kind === "cylinder" && x.mat === "steel" && x.r === 0.6)!;
+    expect(bounds(winch).min.x).toBeGreaterThan(14); // a proa de la caseta
+    expect(s.solids.filter((x) => x.kind === "cylinder" && x.mat === "steel" && x.h <= 0.6).length).toBeGreaterThanOrEqual(3); // bitas
+    expect(s.solids.filter((x) => x.kind === "poly" && x.mat === "hullBlue")).toHaveLength(2); // amurada de proa
+    expect(s.solids.length).toBeLessThanOrEqual(40); expect(s.lights.length).toBeLessThanOrEqual(8);
+    const south = ship("tug", { x: 100, y: 100 }, Math.PI / 2);
+    expect(Math.max(...south.solids.map((x) => bounds(x).max.y))).toBeCloseTo(100 + len, 6); // la punta del pudding es la roda
+  });
+  it("lancha de dos cubiertas", () => {
     const ferry = ship("ferry", { x: 0, y: 0 }, 0);
     expect(ferry.solids.filter((x) => x.kind === "poly" && x.mat === "whitewash" && x.facade)).toHaveLength(2);
     expect(ferry.lights.some((l) => l.color === "amber")).toBe(true);
