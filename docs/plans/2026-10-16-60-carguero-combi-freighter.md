@@ -324,3 +324,24 @@ git commit -m "feat(#60): castillo de proa, ancla y amurada del carguero"
 git add docs/superpowers/specs/assets/57-barcos/cargo-despues.png
 git commit -m "docs(#60): captura del carguero Combi Freighter en el lab"
 ```
+
+## Assumptions
+
+Decisiones técnicas sin fuente escrita, tomadas en la revisión del plan (van también a la descripción del PR):
+
+1. **Pluma de las grúas en tres cajas escalonadas a 45°.** El issue sugiere "`poly` con puntos a distinta z o una caja fina rotada". El `poly` sólido extruye una huella 2D (`src/iso/solids.ts:12`), así que no puede inclinarse, y el `poly` de acento es una luz: brilla, se suma al bloom y cuenta contra las 8 luces. Se descartó agregar un sólido inclinado nuevo al pipeline iso, que comparte todo el mapa; el issue mismo dice que los sólidos inclinados no existen.
+2. **Piezas de proa con base en `deck` (z 4) aunque el arrufo levanta la cubierta a ~4.5 en x 50 y ~4.8 en x 55.** La parte enterrada queda dentro del casco. El castillo asoma 1.1 en vez de 1.6, y el ancla queda en el costado de estribor justo bajo el borde de la cubierta. Así se cumple la regla del test general (base ≥ cubierta) sin ampliar sus excepciones. Alternativa descartada: calcular la cubierta con arrufo por pieza, que agrega un helper con una sola llamada.
+3. **Pieza `plate` en el kit** para la amurada de la proa, en vez de cajas rectangulares que se saldrían del casco donde se afina. El contorno de la cubierta es lineal entre los puntos de `DECK_RING` (`src/iso/solids.ts:134-137`: de (0.57, 0.5) a (0.86, 0.3)), así que una placa recta de (34.2, ±5) a (50, ±3.18) sigue el borde exacto. El sentido de los vértices no importa: `face()` orienta la normal hacia afuera del centro (`src/iso/solids.ts:35-40`).
+4. **Las piezas se identifican en los tests por material y medida** (`rust`/`h 1`, `steel`/`h 0.7`, cilindros por radio), como hace el test actual del carguero (`ships.test.ts`, kingposts `h === 8`). Las medidas elegidas no chocan entre tareas.
+5. **No va la fila de contenedores sobre las tapas.** El issue la da como opcional. Sin ella, el carguero queda en 38 sólidos, con margen dentro de los 40.
+6. **Rollback por tarea.** Cada tarea es un commit que deja la suite en verde; revertir la tarea 4 deja un carguero sin proa ni amurada, pero válido.
+7. **La captura `cargo-antes.png`** se toma en la etapa de evals del pipeline (antes del primer commit de código) con `agent-browser` sobre `/lab/blog.html`, y entra en el commit `test(#60): evals`.
+
+## Grilling
+
+- Rondas: 1 (el plan no cambió de forma sustancial: se sumaron supuestos y notas, sin tareas nuevas).
+- Preguntas: 20. Fuentes: ISSUE 6 (1, 7, 15, 16, 17, 18), CODE 17 (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 19, 20), DOC 1 (17: spec mundo-3 §presupuesto). Algunas preguntas tienen más de una fuente.
+- Supuestos técnicos: 7 (sección anterior).
+- Ambigüedades de spec: 0.
+- Fuera de alcance: 1 (pregunta 20; ver abajo).
+- Issues abiertos: ninguno. La pregunta 20 (¿documentar `plate` en CONTEXT.md/ADR?) no aplica: el repo no tiene CONTEXT.md ni docs/adr, y `plate` es una pieza interna de `ships.ts` (la interfaz `Kit` no se exporta).
