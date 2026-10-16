@@ -54,7 +54,7 @@ for (const kind of Object.keys(BOX) as (keyof typeof BOX)[]) {
         expect(c).toHaveLength(4);
         expect(ANGLES).toContain(c[0]);
         expect(c[1]).not.toBe("");
-        expect(c[2]).toMatch(/^<?https:\/\/\S+$/);
+        expect(c[2]).toMatch(/^https:\/\/\S+$/);
         expect(c[3]!.length).toBeGreaterThan(10);
       }
       for (const a of ANGLES) expect(cells.map((c) => c[0])).toContain(a);
@@ -81,6 +81,7 @@ for (const kind of Object.keys(BOX) as (keyof typeof BOX)[]) {
       const items = [...sub(get(), "Piezas sugeridas \\(por importancia\\)").matchAll(/^\d+\. `(\w+)` · `(\w+)` — \S/gm)].map((m) => ({ solid: m[1]!, name: m[2]! }));
       const solids = items.filter((i) => SOLIDS.includes(i.solid)), lights = items.filter((i) => LIGHTS.includes(i.solid));
       expect(solids.length + lights.length).toBe(items.length);
+      expect(items[0]?.solid).toBe("hull");
       expect(solids.length).toBeGreaterThanOrEqual(8);
       expect(solids.length).toBeLessThanOrEqual(40);
       expect(lights.length).toBeLessThanOrEqual(8);
