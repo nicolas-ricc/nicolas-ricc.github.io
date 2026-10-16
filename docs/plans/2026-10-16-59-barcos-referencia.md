@@ -73,6 +73,11 @@ Cada estilo es una sección `## \`<kind>\` — <nombre>` con, en este orden:
 **Interfaces:**
 - Produces: secciones `## Escala y caja`, `## Kit y materiales`, `## Decisiones` y los encabezados vacíos de los tres estilos con el formato fijo, para que las tareas 2–4 solo llenen su sección.
 
+- [ ] **Step 0 (etapa de evals, antes de implementar):** escribir `src/scenes/ships-reference.test.ts`. Lee el Markdown con `readFileSync(new URL("../../docs/superpowers/specs/2026-10-16-barcos-referencia.md", import.meta.url))` (mismo patrón que `src/lab/lab-excluded.test.ts:4`) e importa `ISO_TONES` y `ACCENT_COLORS` de `src/map/palette-iso.ts`. Bloques `describe`:
+  - `marco`: el archivo existe; no contiene `![`; tiene `## Escala y caja`, `## Kit y materiales`, `## Decisiones`; "Decisiones" menciona `cargo`, `tug` y `barge`; los encabezados de los tres estilos existen (`/^## `cargo` — /m`, etc.).
+  - `cargo`, `tug`, `barge` (uno por estilo, cortando el texto entre su `## ` y el siguiente `## `): líneas `**Astillero/clase:**`, `**Eslora:**`, `**Manga:**`, `**Altura sobre el agua:**`; tabla `### Fotos` con ≥ 5 filas cuya primera celda está en la lista cerrada de ángulos, los cinco ángulos presentes, ≥ 5 URLs `https://` distintas y celda "Qué se ve" no vacía; `### Rasgos de silueta` con ≥ 6 viñetas; línea `**Caja en mapa:**` igual a `60 × 10 u` / `19 × 7 u` / `40 × 8 u + empujador 20 × 7 u`, eslora total ≤ 60 y manga ≤ 10; `**Altura máx.:** z = N` con N ≤ 13 (inclusivo); `### Piezas sugeridas` con ítems `<n>. \`<sólido>\` · \`<nombre>\` — ...`, sólido en `hull|box|cyl|dot|poly|prism|cone`; para `dot`/`poly` el nombre está en `ACCENT_COLORS` y cuentan como luces (≤ 8, incluye `magentaMid`, `magenta`, `cyanMid`); para el resto el nombre es clave de `ISO_TONES` y cuentan como sólidos (≤ 40, para `barge` el conjunto barcaza + empujador).
+  - Verificación del test mismo: corre en rojo con el documento ausente y, en un borrador local de una sección de juguete, en verde (no se commitea el borrador).
+  - En la misma etapa, `.scratch/check-links-59.sh` (`.scratch/` en `.git/info/exclude`): extrae las URLs del documento y hace `curl -sIL -A "Mozilla/5.0"` a cada una; imprime código por URL; 403 de MarineTraffic/ShipSpotting se reportan como "bloqueado por el sitio", no como roto.
 - [ ] **Step 1:** Correr `npx vitest run src/scenes/ships-reference.test.ts -t marco`; esperado FAIL (`ENOENT`).
 - [ ] **Step 2:** Escribir el marco: propósito y enlace a #57; "Escala y caja" (1 u ≈ 1.5 m, caja 60 × 10 × z 13, agua z −1, objetivos por barco, proyección `xs = x − y`, `ys = (x + y)/2 − 1.4·z` para saber qué caras se ven: proa hacia +x muestra estribor y popa en el lab); "Kit y materiales" (firmas del `Kit`, que `box` es un `poly` sólido con fachada opcional, que `kit.poly` es un acento y no un sólido, que `prism`/`cone` existen en `solids.ts` pero el kit no los expone, materiales que hoy usan los barcos y otros de la paleta aprovechables: `deck`, `glass`, `steel`, `rust`, `whitewash`, `hull`, `hullBlue`, `concrete`, `copper`, `foam`); "Decisiones" con las tres elecciones heredadas de #57.
 - [ ] **Step 3:** `npx vitest run src/scenes/ships-reference.test.ts -t marco` → PASS.
@@ -118,8 +123,26 @@ Cada estilo es una sección `## \`<kind>\` — <nombre>` con, en este orden:
 - Produces: sección completa que lee #62. La caja en mapa es `40 × 8 u + empujador 20 × 7 u` (60 u en total).
 
 - [ ] **Step 1:** `npx vitest run src/scenes/ships-reference.test.ts -t barge` → FAIL.
-- [ ] **Step 2:** Investigar: empujadores fluviales de tres cubiertas (~30 m) del Mississippi o de la Hidrovía Paraná–Paraguay y barcazas tolva Jumbo (195 × 35 ft ≈ 60 × 12 m) con tapas abovedadas; cinco ángulos para el empujador y al menos perfil/cenital para la barcaza.
+- [ ] **Step 2:** Investigar: empujadores fluviales de tres cubiertas (~30 m) del Mississippi o de la Hidrovía Paraná–Paraguay y barcazas tolva Jumbo (195 × 35 ft ≈ 60 × 12 m) con tapas abovedadas. El convoy es **un** estilo con **una** tabla de fotos: entre todas sus filas (empujador, barcaza o el conjunto) cubren los cinco ángulos; la columna "Buque" dice qué se ve.
 - [ ] **Step 3:** Escribir datos (dos líneas: barcaza y empujador), fotos, rasgos (proa cuadrada con "rake", tapas abovedadas, pechos de empuje, torre de tres niveles con timonera arriba, chimeneas gemelas detrás, cables de amarre), traducción, piezas para el conjunto (≤ 40 sólidos entre los dos).
 - [ ] **Step 4:** `npx vitest run src/scenes/ships-reference.test.ts -t barge` → PASS.
 - [ ] **Step 5:** `npm test && npm run typecheck` → verde; correr `.scratch/check-links-59.sh` y anotar el resultado.
 - [ ] **Step 6:** Commit `docs(#59): referencia del empujador y la barcaza Jumbo`.
+
+## Assumptions
+
+- El conjunto de materiales es `ISO_TONES` (`src/map/palette-iso.ts:22`): `ISO_MATERIALS`, que nombra el issue, no existe. Alternativa descartada: exigir solo los siete de `SHIP_MATS`; el issue y #57 (decisión 3) permiten "cualquier `Material` ya existente".
+- El guard del documento vive en `src/scenes/ships-reference.test.ts`, junto a `ships.test.ts`: `vitest.config.ts` solo incluye `src/**/*.test.ts` y `scripts/**/*.test.ts`. Alternativa descartada: `scripts/`, que guarda scripts de build, no tests de escenas.
+- La lista de piezas puede recetar `prism`/`cone` (el issue los nombra como "sólidos disponibles"), pero el documento marca que el `Kit` no los expone y que agregar el helper corresponde al hijo que lo use (#60–#62). Alternativa descartada: prohibirlos.
+- El presupuesto de `barge` (≤ 40 sólidos, ≤ 8 luces) es del conjunto barcaza + empujador: hoy `barge` es un solo `ShipKind` que dibuja ambos (`src/scenes/ships.ts`, función `barge`).
+- Las tareas 2–4 no se commitean con su test en rojo: si no hay fotos de un estilo se usa una clase hermana (el issue lo permite) antes de abrir el PR; no se usa `.skip`.
+- Las fotos de ShipSpotting/MarineTraffic se enlazan, nunca se copian; se prefieren Commons y el fabricante (orden del issue). Sin regla de licencias en el repo.
+- Las verificaciones de que cada foto muestra el buque y ángulo declarados son manuales (lectura de la página por quien escribe el documento y por el revisor); van al PR como verificación manual.
+- La investigación usa la API de Wikimedia Commons y lecturas directas de páginas: Exa y Firecrawl no están disponibles en este runner.
+
+## Grilling
+
+- Rondas: 1 (los cambios agregaron detalle a pasos existentes, sin cambiar el corte de tareas).
+- Preguntas: 18. Fuentes: ISSUE 5, CODE 7, DOC 0, NO SOURCE 6 (todas supuestos técnicos; ninguna ambigüedad de spec; ninguna fuera de alcance).
+- Supuestos: los de la sección anterior.
+- Issues abiertos: ninguno.
