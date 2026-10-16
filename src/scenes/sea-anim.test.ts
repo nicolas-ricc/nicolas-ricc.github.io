@@ -6,7 +6,7 @@ import { convexHull, v3, type Vec2 } from "../iso/geometry";
 import { project } from "../iso/project";
 import { bounds, hullRings, isFlat } from "../iso/solids";
 import { WORLD, inCoverQuad, worldZoneAt } from "../map/geo";
-import { BEAM_PERIOD_MS, BERTH, BERTH_MS, BERTH_TURN_MS, CYCLE_MS, FADE_U, FERRY_PAUSE_MS, FERRY_ROUTE, FERRY_SPEED, KEEPER_SIGN_MS, LANE_BACK, LANE_OUT, LANE_SPEED, NEON_STEP_MS, OFF_MS, SHIPS, alphaAt, createSeaAnim, laneAt, laneLength, type Lane } from "./sea-anim";
+import { BEAM_PERIOD_MS, BERTH, BERTH_MS, BERTH_TURN_MS, CYCLE_MS, FADE_U, FERRY_PAUSE_MS, FERRY_ROUTE, FERRY_SPEED, KEEPER_SIGN_MS, LANE_BACK, LANE_OUT, LANE_SPEED, NEON_STEP_MS, OFF_MS, SHIPS, alphaAt, createSeaAnim, laneAt, laneLength } from "./sea-anim";
 import { ship, shipAt } from "./ships";
 import { bleedTerrainAt, terrainAt } from "./terrain";
 import { world } from "./world";
@@ -51,7 +51,9 @@ describe("ruta", () => {
   it("el barco se dibuja centrado en el carril: el casco nace en shipAt(kind, laneAt(lane, d))", () => {
     const { a } = setup();
     for (const k of [0, 1, 2]) {
-      const s = a.state(k), p = laneAt(s.lane as Lane, s.dist), at = shipAt(SHIPS[k]!.kind, p, s.heading);
+      const s = a.state(k);
+      if (s.lane !== "out" && s.lane !== "back") throw new Error(`barco ${k} fuera de los carriles en el frame 0: ${s.lane}`);
+      const p = laneAt(s.lane, s.dist), at = shipAt(SHIPS[k]!.kind, p, s.heading);
       const hull = a.ship(k).solids.find((s) => s.kind === "hull")!;
       expect(hull.kind === "hull" && hull.at.x).toBeCloseTo(at.x, 6);
       expect(hull.kind === "hull" && hull.at.y).toBeCloseTo(at.y, 6);
@@ -196,10 +198,8 @@ describe("barcos", () => {
     expect(s0[0]).toMatchObject({ lane: "out", dist: 0 }); // zarpando
     expect(s0[1]!.lane).toBe("out"); expect(s0[1]!.dist).toBeGreaterThan(Lo / 2); // lejos en la ida
     expect(s0[2]!.lane).toBe("back"); expect(s0[2]!.dist).toBeGreaterThan(Lb / 4); expect(s0[2]!.dist).toBeLessThan((3 * Lb) / 4); // a mitad de la vuelta
-    const n = Math.round(CYCLE_MS / 1000), dt = CYCLE_MS / n;
-    for (let i = 0; i < n; i++) a.tick(dt);
-    a.tick(1); // la suma en coma flotante puede quedar un pelo antes de CYCLE_MS (fondeado): 1 ms más lo pasa a la ida
-    for (const k of [0, 1, 2]) { const s = a.state(k); expect(s.lane).toBe(s0[k]!.lane); expect(s.dist).toBeCloseTo(s0[k]!.dist, 2); }
+    a.tick(CYCLE_MS);
+    for (const k of [0, 1, 2]) { const s = a.state(k); expect(s.lane).toBe(s0[k]!.lane); expect(s.dist).toBeCloseTo(s0[k]!.dist, 6); }
   });
 
   it("alpha: 1 en el fondeadero, 0 en los extremos de mar, 1 a FADE_U de ellos; offscreen 0", () => {

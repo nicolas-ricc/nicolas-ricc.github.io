@@ -50,7 +50,7 @@ export const SHIPS: readonly { kind: ShipKind; phase: number }[] = [{ kind: "car
 // Velocidad única: con velocidades distintas un barco alcanzaría al de adelante en el mismo carril y se superpondrían.
 export const LANE_SPEED = 1.2;
 export const FADE_U = 30, TURN_U = 20;
-export const OFF_MS = 15000, BERTH_MS = 24000, BERTH_TURN_MS = { from: 8000, to: 16000 };
+export const OFF_MS = 15000, BERTH_MS = 24000, BERTH_TURN_MS = { from: 8000, to: 16000 } as const;
 export const BEAM_PERIOD_MS = 8000, BEAM_LEN = 24, BEAM_INNER = 12, BEAM_HALF = (7 * Math.PI) / 180;
 export const BUOY_PERIOD_MS = 2000;
 export const NEON_STEP_MS = 200, COAST_PERIOD_MS = 3000, KEEPER_SIGN_MS = 4000;
@@ -102,17 +102,18 @@ export interface ShipState { lane: ShipLane; dist: number; heading: number }
 
 const OUT_MS = (laneLength("out") / LANE_SPEED) * 1000, BACK_MS = (laneLength("back") / LANE_SPEED) * 1000;
 export const CYCLE_MS = OUT_MS + OFF_MS + BACK_MS + BERTH_MS;
+const OUT_END_HEADING = laneAt("out", laneLength("out")).heading, ARRIVE_HEADING = laneAt("back", laneLength("back")).heading, LEAVE_HEADING = laneAt("out", 0).heading;
 
 /** Estado de un barco a `ms` del inicio de su ciclo (`0 ≤ ms < CYCLE_MS`): ida, fuera de cámara, vuelta, fondeado. */
 export function shipStateAt(ms: number): ShipState {
   if (ms < OUT_MS) { const dist = (ms / 1000) * LANE_SPEED; return { lane: "out", dist, heading: laneAt("out", dist).heading }; }
   ms -= OUT_MS;
-  if (ms < OFF_MS) return { lane: "offscreen", dist: laneLength("out"), heading: laneAt("out", laneLength("out")).heading };
+  if (ms < OFF_MS) return { lane: "offscreen", dist: laneLength("out"), heading: OUT_END_HEADING };
   ms -= OFF_MS;
   if (ms < BACK_MS) { const dist = (ms / 1000) * LANE_SPEED; return { lane: "back", dist, heading: laneAt("back", dist).heading }; }
   ms -= BACK_MS;
   const turn = Math.max(0, Math.min(1, (ms - BERTH_TURN_MS.from) / (BERTH_TURN_MS.to - BERTH_TURN_MS.from)));
-  return { lane: "berth", dist: laneLength("back"), heading: lerpAngle(laneAt("back", laneLength("back")).heading, laneAt("out", 0).heading, turn) };
+  return { lane: "berth", dist: laneLength("back"), heading: lerpAngle(ARRIVE_HEADING, LEAVE_HEADING, turn) };
 }
 
 /** Desvanecido solo en el extremo de mar de cada carril; en el fondeadero, a pleno. */
