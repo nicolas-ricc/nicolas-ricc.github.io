@@ -59,7 +59,9 @@ const depthKey = (b: Bounds, vx?: number, vy?: number): number =>
  * El sheer levanta la caja del casco por encima de su cubierta, así que una pieza
  * apoyada en ella (base en la cubierta de crujía, dentro del casco en planta) se
  * superpone en los tres ejes y la clave de profundidad sola la manda antes del
- * casco si cae en su mitad lejana. Aquí el casco siempre va antes.
+ * casco si cae en su mitad lejana. Aquí el casco siempre va antes. Se mide contra la
+ * cubierta de crujía (sin arrufo): una pieza con base más baja, sobre la proa o la popa
+ * levantadas, no entra en la regla.
  */
 function restsOnHull(hull: Solid, other: Solid, hb: Bounds, ob: Bounds): boolean {
   if (hull.kind !== "hull" || other.kind === "hull") return false;
@@ -80,6 +82,8 @@ function restsOnHull(hull: Solid, other: Solid, hb: Bounds, ob: Bounds): boolean
  * convexos los separa un plano x=c (o y=c, z=c) de ese marco, el del lado lejano de la vista no tapa al
  * otro. La pantalla sigue en el mundo; el desempate (`depthKey`) usa el marco, porque en el mundo
  * una pieza girada empata mal y el corte de ciclos suelta relaciones de verdad.
+ *
+ * La regla del casco (`restsOnHull`) vale con cualquier rumbo, también en las escenas estáticas.
  */
 export function sortByDepth(solids: Solid[], heading = 0): Solid[] {
   const n = solids.length;

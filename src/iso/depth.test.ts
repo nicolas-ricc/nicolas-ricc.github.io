@@ -86,19 +86,16 @@ describe("sortByDepth con cascos", () => {
   const deck = -1 + 5;
 
   it("una pieza apoyada en la cubierta de un casco se dibuja después del casco, aunque quede en la mitad lejana", () => {
-    const hb = bounds(hull);
     for (const heading of [0, Math.PI / 2, Math.PI, -Math.PI / 2, 2.3]) {
       const h: Solid = { ...hull, heading } as Solid;
-      const c = { x: (hb.min.x + hb.max.x) / 2, y: (hb.min.y + hb.max.y) / 2 };
-      const hb2 = bounds(h);
-      // casetas sobre la cubierta en cada extremo del casco
-      const pieces = [
-        box(hb2.min.x + 1, c.y - 1, deck, 2, 2, 3),
-        box(hb2.max.x - 3, c.y - 1, deck, 2, 2, 3),
-        box(c.x - 1, hb2.min.y + 1, deck, 2, 2, 3),
-        box(c.x - 1, hb2.max.y - 3, deck, 2, 2, 3),
-      ];
-      const order = sortByDepth([...pieces, h]);
+      const c = Math.cos(heading), s = Math.sin(heading);
+      // casetas sobre la cubierta en cada extremo y en cada banda, en el marco del casco
+      const onDeck = (x0: number, y0: number, w: number, d: number): Solid => ({
+        kind: "poly", z: deck, h: 3, mat: "steel",
+        footprint: [[x0, y0], [x0 + w, y0], [x0 + w, y0 + d], [x0, y0 + d]].map(([x, y]) => ({ x: x! * c - y! * s, y: x! * s + y! * c })),
+      });
+      const pieces = [onDeck(2, -1, 2, 2), onDeck(14, -1, 2, 2), onDeck(9, -2.5, 2, 1), onDeck(9, 1.5, 2, 1)];
+      const order = sortByDepth([...pieces, h], heading);
       const hullAt = order.indexOf(h);
       for (const p of pieces) expect(order.indexOf(p)).toBeGreaterThan(hullAt);
     }
