@@ -174,3 +174,37 @@ it("remolcador ASD 2810: guinche y bitas a proa, pudding macizo en la roda, defe
 - Captura de cerca `tug-despues.png` con la misma página de `.scratch/` que tomó `tug-antes.png` (zoom 8 sobre el fondeadero, remolcador 20 s después de llegar).
 - `/lab/blog.html` (tecla `3`, `?speed=` para tener los tres barcos a la vista): copiar `[lab] peor redibujo en 5 s` (≤ 15 ms) de la consola.
 - `npm run build` en verde.
+
+## Assumptions
+
+- **A1. Leve hundimiento a proa.** Las piezas apoyadas en `deck` (1.2) delante de x ≈ 10.45 quedan un poco hundidas en la cubierta con arrufo (la caseta, como mucho 0.13 u en x 14.2; la bita de popa, 0.07 u en x 2.5, por el realce de popa de `sheerAt`). Una pieza hundida no se ve; una que flota sí. Por eso solo las piezas de proa (guinche, bitas, amurada) suben a z 1.4, como dice el documento de referencia. Alternativa rechazada: un test de "base sobre la cubierta con arrufo en su x". Habría que reimplementar `sheerAt` en el test, y la cubierta plana `-1 + h` es la regla que ya usa el suite.
+- **A2. Presupuesto de dibujo en este runner.** Con el remolcador viejo (antes de tocar código) el log `[lab] peor redibujo en 5 s` ya marca 20–36 ms con bloom y 34–83 ms con `?bloom=off` en el Chromium headless del runner, que tiene CPU compartida y ruido alto. El tope de 15 ms no se puede verificar acá. El PR compara antes y después en el mismo runner como señal de que no hay regresión y deja el tope de 15 ms como verificación manual. El presupuesto que sí se puede ensayar es el de sólidos y luces (27 ≤ 40, 6 ≤ 8, en el test). La medición final de la historia es de #65.
+- **A3. Captura reproducible.** La página de cerca vive en `.scratch/shot.html` + `.scratch/shot.ts`, sin versionar (excluida en `.git/info/exclude`). Arma el mundo, avanza el reloj hasta 20 s después de que el remolcador llega al fondeadero y aplica zoom 8 sobre `BERTH`. Las dos capturas salen de ahí.
+- **A4. Sin grúa de popa.** Es opcional en el documento y no está en "Qué hacer" del issue.
+
+## Grilling
+
+- Rondas: 1 (el plan no cambió de forma sustancial: solo se agregaron supuestos).
+- Preguntas: 17. Respuestas: ISSUE 5, CODE 10, DOC 1, NO SOURCE 3 → supuestos técnicos (A1, A2, A3). La pregunta 17 (CLAUDE.md, CONTEXT.md, ADR) se contestó con CODE: no existen en el repo.
+- Supuestos: A1–A4 (A4 está respaldado por el issue y el documento).
+- Issues abiertos: ninguno. El presupuesto de dibujo de toda la historia ya es de #65.
+
+| # | Fuente | Respuesta |
+| --- | --- | --- |
+| 1 | CODE `src/scenes/ships.ts` (docstring "Popa en `at`", `kit.local`: `y = at.y + dx·sin h + …`; `shipAt` deriva la popa del centro) | `ship()` ancla en la popa y las rutas pasan el centro por `shipAt`. Con h = π/2, x local va a +y. Es el mismo patrón del test del carguero (`ships.test.ts`, "south"). |
+| 2 | CODE `src/iso/facade.ts:12,34` | `Facade.base?: "glass" \| "portico"`; con `glass`, el piso 0 es una sola banda de vidrio. Ya existe. |
+| 3 | CODE `ships.ts` `kit().box`: huella `local(dx,dy)…local(dx+w,dy+d)` | `(dx, dy)` es la esquina mínima. Los rieles van de x 4.2 a 11.2, así que no entran en el filtro `max.x ≤ 2`. |
+| 4 | CODE `ships.test.ts` (último `it`) | Solo verifica la cantidad (17), `toneOffset`, z −0.95 y `x ≤ len`, que es relativo a `SHIP_SPECS`. |
+| 5 | CODE `sea-anim.test.ts:45,69,74-78` | La validación usa la caja del carguero hasta z 13; no hay dimensiones del remolcador fijas en el código. `sea-animator.test.ts` solo fija los ids (`:196`). |
+| 6 | CODE `palette-iso.ts:44,72`; `ships.ts` (`Kit` tipado con `Material`) | `asphalt` existe; `mat: Material` sale de `ISO_TONES`. `SHIP_MATS` solo lo usa `ships.test.ts:20`. Agregarlo no tiene efecto en el render. |
+| 7 | ISSUE "Presupuesto: ≤ 40 sólidos y ≤ 8 luces por barco. Si `ships.test.ts` todavía fija ≤ 30 / ≤ 6, subirlo a 40 / 8 (decisión de la historia)." | Lo pide el issue. |
+| 8 | CODE `ships.test.ts:2` (`bounds` de `../iso/solids`), `:39-41` (`x.kind === "poly" && x.mat … x.h`, `x.facade?.base`) | Todo existe hoy. |
+| 9 | CODE `ships.test.ts` "remolcador con defensas…" | Cuenta 6 cilindros con r 0.45 y una `poly` `whitewash` con fachada `glass`; no mira el material, así que pasar a `asphalt` no lo rompe. |
+| 10 | NO SOURCE → A1 | — |
+| 11 | CODE `ships.test.ts:8-23` | Solo recorre `s.solids`; las luces no entran en la caja. |
+| 12 | ISSUE "dos botes/balsas en el techo"; "Qué hacer" no menciona grúa; "mástil con luces sobre la timonera" | Las balsas las pide el issue y la grúa no. El radar y la cruceta son el mástil del documento (piezas 11 y 12). |
+| 13 | CODE `ships.ts` `kit.hull` → `kind: "hull"`, `topMat` es un campo del casco | En el remolcador nuevo, solo los dos tramos de amurada son `poly` `hullBlue`. |
+| 14 | CODE (el `tug` viejo en `ships.ts`) | Estado intermedio: 21 sólidos. El pudding viejo va de x 16.5 a 17.5 y las defensas llegan a \|y\| 3.35, dentro de 19 + 2 y 3.5 + 2. |
+| 15 | NO SOURCE → A2, A3 | Medido: 20–36 ms (bloom activo), 34–83 ms (`?bloom=off`). "Etapa 4" es la implementación del pipeline. |
+| 16 | DOC `docs/superpowers/specs/2026-10-16-barcos-referencia.md`, pieza 29: "ventanas encendidas, cara de proa de la timonera"; ISSUE "ventanas encendidas como `poly` `magentaBleed`" | Solo la cara de proa, como el carguero. |
+| 17 | CODE (raíz del repo: no hay CLAUDE.md, CONTEXT.md ni `docs/adr/`) | La convención vive en el docstring del kit y en la spec de la historia. |
