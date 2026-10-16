@@ -80,3 +80,34 @@ describe("sortByDepth con barrido", () => {
     expect(sortByDepth(solids)).toEqual(sortByDepthNaive(solids));
   });
 });
+
+describe("sortByDepth con cascos", () => {
+  const hull: Solid = { kind: "hull", at: v3(0, 0, -1), len: 20, beam: 6, h: 5, mat: "steel", heading: 0, sheer: 1.25 };
+  const deck = -1 + 5;
+
+  it("una pieza apoyada en la cubierta de un casco se dibuja después del casco, aunque quede en la mitad lejana", () => {
+    const hb = bounds(hull);
+    for (const heading of [0, Math.PI / 2, Math.PI, -Math.PI / 2, 2.3]) {
+      const h: Solid = { ...hull, heading } as Solid;
+      const c = { x: (hb.min.x + hb.max.x) / 2, y: (hb.min.y + hb.max.y) / 2 };
+      const hb2 = bounds(h);
+      // casetas sobre la cubierta en cada extremo del casco
+      const pieces = [
+        box(hb2.min.x + 1, c.y - 1, deck, 2, 2, 3),
+        box(hb2.max.x - 3, c.y - 1, deck, 2, 2, 3),
+        box(c.x - 1, hb2.min.y + 1, deck, 2, 2, 3),
+        box(c.x - 1, hb2.max.y - 3, deck, 2, 2, 3),
+      ];
+      const order = sortByDepth([...pieces, h]);
+      const hullAt = order.indexOf(h);
+      for (const p of pieces) expect(order.indexOf(p)).toBeGreaterThan(hullAt);
+    }
+  });
+
+  it("una pieza que no está sobre la cubierta conserva el orden de siempre", () => {
+    const hb = bounds(hull);
+    const behind = box(2, hb.min.y - 4, 0, 3, 3, 2); // al norte del casco, base z 0
+    const order = sortByDepth([hull, behind]);
+    expect(order.indexOf(behind)).toBeLessThan(order.indexOf(hull));
+  });
+});

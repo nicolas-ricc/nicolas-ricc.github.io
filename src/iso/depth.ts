@@ -27,6 +27,18 @@ export function isBehind(a: Bounds, b: Bounds): boolean {
 const depthKey = (b: Bounds): number => b.min.x + b.max.x + b.min.y + b.max.y + (b.min.z + b.max.z) * 0.5;
 
 /**
+ * El sheer levanta la caja del casco por encima de su cubierta, así que una pieza
+ * apoyada en ella (base en la cubierta de crujía, dentro del casco en planta) se
+ * superpone en los tres ejes y la clave de profundidad sola la manda antes del
+ * casco si cae en su mitad lejana. Aquí el casco siempre va antes.
+ */
+function restsOnHull(hull: Solid, other: Solid, hb: Bounds, ob: Bounds): boolean {
+  if (hull.kind !== "hull" || other.kind === "hull") return false;
+  return ob.min.z >= hull.at.z + hull.h - EPS
+    && ob.min.x < hb.max.x && hb.min.x < ob.max.x && ob.min.y < hb.max.y && hb.min.y < ob.max.y;
+}
+
+/**
  * Orden painter topológico: para cada par que se superpone en pantalla, el que
  * está detrás se dibuja antes. Si los dos se ven "detrás" del otro (esquinas
  * diagonales), decide la suma de coordenadas. Ciclos: se cortan y siguen.
@@ -49,7 +61,9 @@ export function sortByDepth(solids: Solid[]): Solid[] {
       if (!(sp.minY < sq.maxY && sq.minY < sp.maxY)) continue;
       const i = Math.min(p, q), j = Math.max(p, q);
       const ij = isBehind(bs[i]!, bs[j]!), ji = isBehind(bs[j]!, bs[i]!);
-      if (ij === ji) { if (keys[i]! <= keys[j]!) before[j]!.push(i); else before[i]!.push(j); }
+      if (restsOnHull(solids[i]!, solids[j]!, bs[i]!, bs[j]!)) before[j]!.push(i);
+      else if (restsOnHull(solids[j]!, solids[i]!, bs[j]!, bs[i]!)) before[i]!.push(j);
+      else if (ij === ji) { if (keys[i]! <= keys[j]!) before[j]!.push(i); else before[i]!.push(j); }
       else if (ij) before[j]!.push(i);
       else before[i]!.push(j);
     }
