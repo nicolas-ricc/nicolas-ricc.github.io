@@ -112,7 +112,9 @@ describe("barcos-referencia: cierre y medición (#65)", () => {
     else if (over > 0) expect(sec).toMatch(/mayoría/);
   });
   it("tiene una subsección de desvíos respecto del plan de #57", () => {
-    expect(close()).toMatch(/^### Desvíos/m);
+    const desvios = close().slice(close().search(/^### Desvíos/m));
+    expect(desvios).toMatch(/^### Desvíos/m);
+    for (const child of ["#60", "#61", "#62", "#63"]) expect(desvios).toMatch(new RegExp(`^- \\*\\*.*${child}`, "m"));
   });
   it("capturas del checklist: antes/después por barco, faro y cover con ida y vuelta", () => {
     const dir = new URL("../../docs/superpowers/specs/assets/57-barcos/", import.meta.url);
