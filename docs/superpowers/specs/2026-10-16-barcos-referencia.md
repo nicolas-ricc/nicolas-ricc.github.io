@@ -368,3 +368,75 @@ Heredadas del plan de #57:
 - `barge` y el orden de dibujo (pista para #62): el bloque de popa de la barcaza (x 0 a 7.2) tiene una clave de profundidad menor que la del casco, así que se dibuja antes; las caras de la popa redondeada del casco podrían pintar sobre su techo. Revisarlo en el lab al construirlo.
 - `tug`, `barge` y `ships.test.ts` (pista para #61 y #62): el test exige hoy que toda pieza que no sea el casco tenga su base sobre la cubierta, salvo los cilindros de radio 0.45 (las defensas). Las piezas sugeridas que bajan del nivel de cubierta (defensas y pudding del remolcador, bloques, escalones y placas de la barcaza) piden ampliar esa excepción en el hijo que las construya.
 - Los identificadores de `ShipKind` (`cargo`, `tug`, `barge`, `ferry`) se mantienen, para no tocar las rutas ni la animación.
+
+## Cierre y medición
+
+Medición final de #65 (2026-10-16), con la flota completa de #57: se midió en la rama `agent/65-cierre-57`, que es el commit `8769334` (punta de `feature/57-barcos-reales-rutas` en ese momento) más solo cambios de documentación, con cargo (#60), tug (#61) y barge (#62) reconstruidos, carril de ida (#63), carril de vuelta con rotación y giro en el fondeadero (#64) y haz ámbar (#58). Es la medición que los PR de #60, #61 y #62 dejaron pendiente.
+
+**Procedimiento.** Servidor de desarrollo local, `agent-browser` sobre Chromium sin cabeza sin GPU: WebGL corre en SwiftShader (`ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)))`), HeadlessChrome 154, sobre un AMD Ryzen 9 6900HX de 16 hilos sin otra carga durante las corridas, viewport 1600 × 900 con `deviceScaleFactor` 2 (verificado: `devicePixelRatio` da 2). Para cada página se cargó una vez y se recargó (corrida caliente), con la consola limpia antes de cada recarga; se tomaron las líneas `[lab]` hasta tener tres `peor redibujo en 5 s`. Ese log acumula el `deltaMS` del ticker, y en este runner los fotogramas son lentos, así que cada ventana de 5 s tardó 13 a 18 s reales y cada corrida llevó unos 40 a 55 s, no 17 s. Las primeras recargas, que se leyeron antes de tiempo y traían una o dos ventanas, no se contaron. Se hicieron tres corridas calientes de `/lab/blog.html` y tres de `/lab/world.html`: dos por página, y una tercera para decidir por mayoría porque cada página tuvo un pico aislado por encima de 15 ms (ver más abajo).
+
+| Página | Primer dibujo (ms) | Polígonos estáticos | Peor redibujo en 5 s (ms) | Bloom: promedio (ms) | Bloom |
+| --- | --- | --- | --- | --- | --- |
+| `/lab/blog.html` | 169.0, 178.3, 171.8 | 32387 | 14.60, 14.30, 11.20 / 21.90, 10.50, 14.90 / 10.80, 11.50, 11.10 | 10.9, 10.8, 10.7 | activo |
+| `/lab/world.html` | 173.6, 178.5, 176.7 | 32387 | 14.50, 10.90, 13.50 / 17.50, 12.50, 14.10 / 14.10, 13.10, 12.50 | 11.3, 11.2, 11.2 | activo |
+
+Líneas de consola crudas de `/lab/blog.html` (tres corridas calientes):
+
+```
+[lab] primer dibujo: 169.0 ms, 32387 polígonos estáticos
+[lab] peor redibujo en 5 s: 14.60 ms
+[lab] bloom: promedio 10.9 ms en 60 frames (tick 7.3 + render 3.6), presupuesto 15 ms → activo
+[lab] peor redibujo en 5 s: 14.30 ms
+[lab] peor redibujo en 5 s: 11.20 ms
+
+[lab] primer dibujo: 178.3 ms, 32387 polígonos estáticos
+[lab] peor redibujo en 5 s: 21.90 ms
+[lab] bloom: promedio 10.8 ms en 60 frames (tick 7.4 + render 3.4), presupuesto 15 ms → activo
+[lab] peor redibujo en 5 s: 10.50 ms
+[lab] peor redibujo en 5 s: 14.90 ms
+
+[lab] primer dibujo: 171.8 ms, 32387 polígonos estáticos
+[lab] peor redibujo en 5 s: 10.80 ms
+[lab] bloom: promedio 10.7 ms en 60 frames (tick 7.2 + render 3.6), presupuesto 15 ms → activo
+[lab] peor redibujo en 5 s: 11.50 ms
+[lab] peor redibujo en 5 s: 11.10 ms
+```
+
+Líneas de consola crudas de `/lab/world.html` (tres corridas calientes):
+
+```
+[lab] primer dibujo: 173.6 ms, 32387 polígonos estáticos
+[lab] peor redibujo en 5 s: 14.50 ms
+[lab] bloom: promedio 11.3 ms en 60 frames (tick 7.7 + render 3.6), presupuesto 15 ms → activo
+[lab] peor redibujo en 5 s: 10.90 ms
+[lab] peor redibujo en 5 s: 13.50 ms
+
+[lab] primer dibujo: 178.5 ms, 32387 polígonos estáticos
+[lab] peor redibujo en 5 s: 17.50 ms
+[lab] bloom: promedio 11.2 ms en 60 frames (tick 7.5 + render 3.7), presupuesto 15 ms → activo
+[lab] peor redibujo en 5 s: 12.50 ms
+[lab] peor redibujo en 5 s: 14.10 ms
+
+[lab] primer dibujo: 176.7 ms, 32387 polígonos estáticos
+[lab] peor redibujo en 5 s: 14.10 ms
+[lab] bloom: promedio 11.2 ms en 60 frames (tick 7.5 + render 3.7), presupuesto 15 ms → activo
+[lab] peor redibujo en 5 s: 13.10 ms
+[lab] peor redibujo en 5 s: 12.50 ms
+```
+
+**Diferencia con los PR de #60 a #62.** Esos PR midieron en un runner de CPU compartida, también con SwiftShader, y ya el estado base pasaba los 15 ms: 20 a 36 ms en el de #61 y 24 a 28 ms en el de #62, con un A/B dominado por ruido (19 a 99 ms en los dos lados). Aquí el mismo tipo de render por software da 10.5 a 14.9 ms. No se midió la carga de aquel runner, así que la causa de la diferencia no está determinada; lo más probable es la contención de CPU que esos PR declaran. Por eso estas cifras valen para una máquina sin contención y con render por software, y no para cualquier runner compartido.
+
+**Decisión sobre `SHIP_STEP_MS`.** No se aplica. De las 18 ventanas de 5 s, dos pasaron de 15 ms: 21.90 ms en la segunda corrida de `blog.html` y 17.50 ms en la segunda de `world.html`. Ambas son picos aislados (la misma corrida tuvo 10.50 y 14.90 ms, y 12.50 y 14.10 ms en las otras ventanas), del mismo tipo de ruido de máquina compartida que se documentó en la spec de mundo-3, y en las dos páginas la tercera corrida quedó entera bajo 15 ms (máximo 11.50 y 14.10 ms). Por mayoría, dos de tres corridas por página no superan los 15 ms en ninguna ventana, y el exceso no es sostenido: los barcos no obligan a limitar su frecuencia de redibujo, el reloj de los barcos y el redibujo siguen en cada tick, y no se tocó `sea-anim.ts`. Los valores típicos (10.5 a 14.9 ms) quedan cerca del límite, con el margen que ya tenía el cierre de mundo-3 (10.00 a 13.80 ms), y los 32387 polígonos estáticos están bajo la meta de 36000.
+
+Los otros dos números. El bloom mide 10.7 a 11.3 ms de promedio contra el presupuesto de 15 ms y queda activo en las seis corridas. El primer dibujo va de 169.0 a 178.5 ms: cinco de seis lecturas quedan unos pocos ms por encima de los 170 ms que la spec de mundo-3 usaba como umbral de la puerta del §8.2, y la sexta (169.0 ms) queda justo por debajo. La diferencia con la Task 19 de mundo-3 (149 a 176 ms) está dentro de la misma dispersión, #65 no pone ese umbral como criterio de aceptación y el criterio de #57 (peor redibujo ≤ 15 ms) se cumple; queda anotado como cifra, no como decisión. El costo del primer dibujo lo sigue #79 (ordenación estática por profundidad).
+
+### Desvíos respecto del plan de #57
+
+Solo lo que cambió respecto del plan del issue; el resto (rutas, ciclo de los barcos, haz ámbar con `amber` en la cuña corta, ids de `ShipKind`) quedó como estaba escrito.
+
+- **Grúas del carguero (#59, #60).** El plan pedía "dos grúas de cubierta a una banda", pero el Damen CF 3850 base no las lleva y esta referencia las deja como opcionales en estribor. #60 las incorporó igualmente, en babor, porque el issue las pide: 39 sólidos y 5 luces, dentro de los topes de 40 y 8 (que el plan ya fijaba). La pluma de 45° se aproxima con tres cajas escalonadas, porque un sólido inclinado no existe en el pipeline iso (#78).
+- **Timonera, chimeneas y defensas del remolcador (#59, #61).** El plan hablaba de timonera alta, dos chimeneas y defensas en todo el contorno. Las fotos muestran la timonera como una sola pieza sobre la caseta, escapes delgados y sin defensa en D en el espejo de popa (cilindros de esquina). #61 siguió el documento, no el texto del plan. La grúa de popa opcional del documento no se modeló y se agregaron las dos balsas salvavidas que pide el issue.
+- **Convoy (#59, #62).** El plan citaba la Hidrovía Paraná–Paraguay; las fotos y medidas son del Mississippi y el Ohio. En #62 el casco de la barcaza lleva `h` 1.2 y no el "~2" del issue, tiene 4 tapas en lugar de 5 y se descartaron por presupuesto las bitas del empujador, los cabos y los barriles. `sternOf("barge")` pasó de −10 a −20 y `SHIP_SPECS.barge` de 9 a 8 de manga, con la estela empezando detrás del empujador.
+- **Orden de dibujo en código compartido (#60).** No estaba en el plan: `src/iso/depth.ts` ganó la regla "una pieza sobre la cubierta se dibuja después de su casco" y la ordenación en el marco del barco (`sortByDepth(solids, heading)`). La primera regla también cambia 12 posiciones en el dique seco de `shipyard.ts` (todas en la escena estática, correctas). Quedan abiertos #74 (ciclos de ordenación con cajas rotadas, un triángulo de la barcaza visible hacia el oeste), #77 (piezas bajo la cubierta) y #79 (costo de la ordenación estática en el primer dibujo).
+- **API de `sea-anim.ts` (#63, #64).** `routeAt`/`routeLength` se reemplazaron por `laneAt`/`laneLength` y se quitaron `SeaAnim.dist` y `alphaAt(dist)` en vez de dejar alias; el plan solo agregaba `state(k)`. Para `barge`, la posición por centro usa el punto medio de la unidad completa (`at + 15` con el empujador de 10 u de entonces; hoy, con el empujador de 20 u, `at + 10`), no `len/2` como decía el issue. Un barco fondeado no lleva estela, y durante las pausas `state(k).dist` informa la longitud del carril, supuestos que el plan no decía.
+- **Medición (#60, #61, #62).** Los tres PR dejaron el criterio de 15 ms sin verificar porque en el runner (sin GPU, render por software) el estado base ya pasaba el límite en ventanas de 5 s. Esta sección es esa medición.

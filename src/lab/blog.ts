@@ -1,4 +1,4 @@
 import { bootWorldPage } from "./page";
 
-// El mundo entero: los barcos nacen en la bahía del astillero y rodean la punta, que clickea Portfolio.
+// El mundo entero en Blog: los barcos salen del fondeadero de la bocana por el carril de ida hacia abajo-izquierda y vuelven por el otro.
 bootWorldPage(undefined, "blog");

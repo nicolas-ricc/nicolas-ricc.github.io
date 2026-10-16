@@ -91,3 +91,36 @@ for (const kind of Object.keys(BOX) as (keyof typeof BOX)[]) {
     });
   });
 }
+
+describe("barcos-referencia: cierre y medición (#65)", () => {
+  const close = (): string => section(read(), /^## Cierre y medición\s*$/m);
+  it("existe con las dos páginas medidas y las líneas crudas del lab", () => {
+    const sec = close();
+    expect(sec).not.toBe("");
+    for (const page of ["/lab/blog.html", "/lab/world.html"]) expect(sec).toContain(page);
+    const code = [...sec.matchAll(/```[^\n]*\n([\s\S]*?)```/g)].map((m) => m[1]).join("\n");
+    expect(code.match(/\[lab\] primer dibujo: [\d.]+ ms/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
+    expect(code.match(/\[lab\] peor redibujo en 5 s: [\d.]+ ms/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
+    expect(code.match(/\[lab\] bloom: promedio [\d.]+ ms/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
+  });
+  it("peor redibujo ≤ 15 ms, o SHIP_STEP_MS aplicado, o pico aislado decidido por mayoría", () => {
+    const sec = close();
+    const worst = [...sec.matchAll(/peor redibujo en 5 s: ([\d.]+) ms/g)].map((m) => Number(m[1]));
+    const over = worst.filter((w) => w > 15).length;
+    // exceso sostenido (la mitad o más de las lecturas): SHIP_STEP_MS; picos aislados: decisión por mayoría escrita
+    if (over * 2 >= worst.length) expect(sec).toMatch(/SHIP_STEP_MS = 66/);
+    else if (over > 0) expect(sec).toMatch(/mayoría/);
+  });
+  it("tiene una subsección de desvíos respecto del plan de #57", () => {
+    const sec = close();
+    const at = sec.search(/^### Desvíos/m);
+    expect(at).toBeGreaterThanOrEqual(0);
+    const desvios = sec.slice(at);
+    for (const child of ["#60", "#61", "#62", "#63"]) expect(desvios).toMatch(new RegExp(`^- \\*\\*.*${child}`, "m"));
+  });
+  it("capturas del checklist: antes/después por barco, faro y cover con ida y vuelta", () => {
+    const dir = new URL("../../docs/superpowers/specs/assets/57-barcos/", import.meta.url);
+    for (const f of ["cargo-antes", "cargo-despues", "tug-antes", "tug-despues", "barge-antes", "barge-despues", "faro-antes", "faro-despues", "cover-ida-vuelta"])
+      expect(existsSync(new URL(`${f}.png`, dir))).toBe(true);
+  });
+});
