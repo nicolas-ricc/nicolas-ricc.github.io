@@ -1,5 +1,5 @@
 import type { Accent } from "../iso/accent";
-import { polyline, v3, type Vec2, type Vec3 } from "../iso/geometry";
+import { polyline, v3, type Polyline, type Vec2, type Vec3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import type { SeaScene } from "./sea";
 import { chase, flip, pulse } from "./neon";
@@ -35,6 +35,12 @@ import { ship as buildShip, shipAt, wake, type ShipKind } from "./ships";
 // 2 u sin revalidar.
 export const LANE_OUT: readonly Readonly<Vec2>[] = [{ x: 362, y: -2 }, { x: 500, y: 20 }, { x: 515, y: 120 }, { x: 520, y: 180 }, { x: 480, y: 290 }, { x: 420, y: 470 }, { x: 376, y: 640 }];
 export const BERTH: Readonly<Vec2> = LANE_OUT[0]!;
+// Carril de vuelta, en el sentido de marcha (mar → fondeadero): corre ~56 u al este del de ida y entra
+// al fondeadero desde el noreste, por encima de la salida, sin cruzarla. Validado igual que la ida
+// (agua, `depthAt` ≥ 6, Blog para x ≥ 380, `isBehind`, primer punto fuera del cover) y además con las
+// siluetas de dos cargueros, uno por carril, que no se tocan en pantalla fuera de los 200 u (sumando
+// distancias) más cercanos al fondeadero: no mover vértices más de 2 u sin revalidar.
+export const LANE_BACK: readonly Readonly<Vec2>[] = [{ x: 430, y: 655 }, { x: 471, y: 487 }, { x: 533, y: 309 }, { x: 575, y: 199 }, { x: 571, y: 114 }, { x: 562, y: 13 }, { x: 552, y: -50 }, { x: 400, y: -50 }, { x: 362, y: -2 }];
 export const SHIPS: readonly { kind: ShipKind; phase: number }[] = [{ kind: "cargo", phase: 0 }, { kind: "tug", phase: 1 / 3 }, { kind: "barge", phase: 2 / 3 }];
 // Velocidad única: con velocidades distintas un barco alcanzaría al de adelante en el mismo carril y se superpondrían.
 export const LANE_SPEED = 1.2;
@@ -69,14 +75,15 @@ const GALLERY_R_DOT = 0.45, GALLERY_LIT = 2;
 export const FERRY_ROUTE: readonly Vec2[] = [{ x: 279, y: -252 }, { x: 290, y: -212 }, { x: 241, y: -84 }];
 export const FERRY_SPEED = 3, FERRY_PAUSE_MS = 4000;
 
-const route = polyline(LANE_OUT);
-export const routeLength = (): number => route.length;
+export type Lane = "out" | "back";
+const lanes: Record<Lane, Polyline> = { out: polyline(LANE_OUT), back: polyline(LANE_BACK) };
+export const laneLength = (lane: Lane): number => lanes[lane].length;
 
 const lerpAngle = (a: number, b: number, t: number): number => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return a + d * t; };
 
-/** Punto y rumbo a `dist` unidades del inicio; el rumbo se interpola en los TURN_U alrededor de cada vértice. */
-export function routeAt(dist: number): { x: number; y: number; heading: number } {
-  const p = route.at(dist), seg = route.segs, i = p.seg, s = seg[i]!;
+/** Punto y rumbo a `dist` unidades del inicio del carril; el rumbo se interpola en los TURN_U alrededor de cada vértice. */
+export function laneAt(lane: Lane, dist: number): { x: number; y: number; heading: number } {
+  const route = lanes[lane], p = route.at(dist), seg = route.segs, i = p.seg, s = seg[i]!;
   const local = Math.hypot(p.x - s.a.x, p.y - s.a.y); // lo andado dentro del tramo: `at` no devuelve la acumulada
   let heading = s.heading;
   if (local < TURN_U / 2 && i > 0) heading = lerpAngle(seg[i - 1]!.heading, s.heading, 0.5 + local / TURN_U);
@@ -99,7 +106,7 @@ export interface SeaAnim {
 
 export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean }): SeaAnim {
   let clock = 0, buoyStep = 0, neonStep = 0;
-  const L = routeLength();
+  const L = laneLength("out");
   const dists = SHIPS.map((s) => s.phase * L);
   const alphaAt = (d: number): number => Math.max(0, Math.min(1, d / FADE_U, (L - d) / FADE_U));
 
@@ -117,7 +124,7 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
   };
 
   const shipFrame = (k: number): ShipFrame => {
-    const p = routeAt(dists[k]!), alpha = alphaAt(dists[k]!);
+    const p = laneAt("out", dists[k]!), alpha = alphaAt(dists[k]!);
     const kind = SHIPS[k]!.kind, at = shipAt(kind, p, p.heading);
     const built = buildShip(kind, at, p.heading);
     const wakeTris = wake(kind, at, p.heading);
