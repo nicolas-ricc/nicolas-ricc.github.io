@@ -40,6 +40,27 @@
 4. Piezas que asomen por encima de la caja (mástil, luces) → test: `max z ≤ 13` para los cuatro tipos.
 5. Presupuesto de dibujo con los tres barcos → medición `[lab] peor redibujo en 5 s` en el lab (no unitaria).
 
+## Criterios de aceptación → tareas
+
+| Criterio de #62 | Dónde se cumple |
+| --- | --- |
+| En `/lab/blog.html` se reconoce un convoy fluvial (barcaza tolva con tapas abovedadas adelante, empujador de tres cubiertas atrás); capturas antes/después en el PR | Tasks 1–3 (geometría) + paso "Captura antes" (etapa de evals) + "Verificación en el lab" (captura después); el reconocimiento a ojo es verificación manual en el PR |
+| `ships.test.ts` actualizado: barcaza sin contenedores con tapas abovedadas, empujador de 20 u con torre de tres niveles y dos pechos; estela de 17 triángulos detrás del empujador; ≤ 40 sólidos, ≤ 8 luces; caja (eslora total 60) y materiales | Task 1 (caja, estela, presupuesto, sin contenedores), Task 2 (tapas), Task 3 (torre, pechos, luces) |
+| `[lab] peor redibujo en 5 s` ≤ 15 ms, pegado en el PR | "Verificación en el lab"; línea base medida junto con la captura "antes" |
+
+## Assumptions
+
+- `h` 1.2 en vez del "~2" del issue: el issue manda leer primero el documento de referencia, que fija 1.2 y deriva de ahí todas las cotas. Ningún criterio de aceptación depende de `h`. Alternativa descartada: h 2 (obliga a recalcular todas las cotas del documento sin ganancia de silueta).
+- Excepción del test de caja por umbral de altura (`max.z ≤ 0.66`) y no por lista de piezas: el test no tiene identidad de pieza; un umbral en la cubierta del empujador captura exactamente las piezas que rellenan casco. Alternativa descartada: marcar las piezas con un campo extra en `Solid` (cambia un tipo compartido por todo el mapa).
+- La casilla del nivel 1 apoya en z 0.65 (documento: "z 0.65 a 2.2"), 0.05 sobre la cubierta del casco (0.6), igual que los bloques de la barcaza; evita caras coplanares. El hueco no se ve en el iso a esa escala (1 px ≈ 1 u).
+- Si en el lab la popa redonda del casco de la barcaza pinta sobre el bloque de popa, se resuelve en la etapa 4 (subir el tope del bloque o reordenar `push`), con 2 sólidos de margen (38/40).
+- Si el peor redibujo supera 15 ms, se recortan primero radar, bote y barandas (piezas de menor prioridad del documento), sin tocar silueta (pechos, torre, chimeneas, tapas).
+- Commits intermedios con tests en rojo: el pipeline commitea los evals antes de implementar; el PR se mergea con squash solo con CI verde (`.github/workflows/deploy.yml` corre typecheck, test y build en cada PR).
+
+### Captura "antes" (etapa de evals, antes de tocar `ships.ts`)
+
+- `npm run dev -- --host --port 5173`; `agent-browser` a `http://localhost:5173/lab/blog.html?speed=10`, tecla `3`, esperar al convoy (`barge` es el barco 2, fase 2/3) y capturar `docs/superpowers/specs/assets/57-barcos/barge-antes.png`. Anotar el `[lab] peor redibujo en 5 s` de línea base. Se commitea con los evals (`test(#62): evals`). Convención de carpeta como `assets/58-faro/`.
+
 ---
 
 ### Task 1: Unidad del convoy (casco de barcaza, empujador, popa en −20, cuadrado de cascos)
@@ -81,7 +102,7 @@ describe("barge: empujador de tres cubiertas con barcaza tolva Jumbo", () => {
     expect(hulls[1]).toMatchObject({ at: { x: -20, y: 0, z: -1 }, len: 20, beam: 7, h: 1.6, sheer: 0 });
     expect(Math.min(...b.map((x) => x.min.x))).toBeCloseTo(-20, 6); expect(Math.max(...b.map((x) => x.max.x))).toBeCloseTo(40, 6);
     expect(Math.max(...b.map((x) => Math.max(-x.min.y, x.max.y)))).toBeLessThanOrEqual(4 + 1e-9);
-    expect(s.solids.some((x) => x.kind === "poly" && x.h === 2.6)).toBe(false);
+    expect(s.solids.some((x, i) => x.kind === "poly" && b[i]!.min.x >= 0 && x.h >= 2)).toBe(false); // sin contenedores sobre la barcaza
   });
   it("proa de la barcaza cuadrada hasta el cabezal (rake) y proa del empujador cuadrada", () => {
     expect(b.some((x) => x.max.x > 40 - 1e-6 && Math.abs(x.max.z - 0.25) < 1e-6 && x.max.y - x.min.y > 7.9)).toBe(true);
@@ -272,3 +293,11 @@ Docstring del módulo: agregar una línea "`barge` reproduce un empujador fluvia
 - Testeros de brazola agregados (brazola perimetral).
 - Bitas en las cuatro esquinas de la barcaza; sin bitas de empujador, cabos ni barriles.
 - Barandas agregadas (las pide el issue).
+
+## Grilling
+
+- Rondas: 1 (el plan no cambió de forma sustancial: se corrigió un test, se agregó el paso de la captura "antes", la tabla de criterios y las suposiciones).
+- Preguntas: 18. Fuentes: ISSUE 6 (2, 3, 4, 12, 13, 16), CODE 11 (1, 5, 8, 9, 10, 11, 14, 17, 18, y 2 con `sea-anim.test.ts:44`), DOC 1 (6, documento de referencia, "Decisiones"), NO SOURCE → suposición técnica 5 (3, 6, 7, 14, 15).
+- Hallazgo corregido: el assert "sin contenedores" (`h === 2.6`) chocaba con el mástil (`h` 2.6); ahora mira solo piezas de la barcaza (x ≥ 0) con `h ≥ 2`.
+- Suposiciones: ver "Assumptions".
+- Issues abiertos: ninguno (no hubo preguntas fuera de alcance ni ambigüedades de spec).
