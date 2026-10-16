@@ -81,7 +81,79 @@ La lancha de la feria (`ferry`) suma una `amber`. Los `magentaBleed` translúcid
 
 ## `cargo` — Damen Combi Freighter 3850
 
-Sección a completar en la tarea 2 del plan.
+- **Astillero/clase:** Damen Shipyards (Bergum, Países Bajos; los cascos actuales se construyen en Asia), Combi Freighter 3850, carguero multipropósito de cabotaje con una sola bodega de caja, sin grúas propias en el diseño base y casa a popa. Ficha del fabricante: https://www.damen.com/vessels/cargo/multi-purpose-cargo-vessels/combi-freighter-3850
+- **Eslora:** 89.75 m · **Manga:** 12.50 m · **Altura sobre el agua:** ~22 m (estimada a ojo desde las fotos: cubierta principal a ~4.5 m del agua, casa de cuatro niveles con puente más palo de radar, ~15.5 m sobre cubierta; el fabricante no publica el calado aéreo) · **Calado:** 5.48 m · **Bodega:** 62.5 × 10.1 m, 8.4 m de alto, 5250 m³ · **Porte:** 3800 t · **Velocidad:** 11.8 kn
+- **Caja en mapa:** 60 × 10 u · **Altura máx.:** z = 12
+
+### Fotos
+
+Los buques son gemelos de la clase: están todos bajo `Category:Damen Combi Freighter 3850` de Commons (por IMO). La foto de *Birgit G.* en Bilbao lo dice en su descripción ("Damen Combi Freighter 3850 Birgit G."). Para los demás buques se confirmó la pertenencia por la categoría de IMO. No encontré en Commons una foto aérea (dron) de esta clase; la "cenital" es la toma más alta que existe, desde un muelle elevado.
+
+| Ángulo | Buque | Enlace | Qué se ve |
+| --- | --- | --- | --- |
+| perfil | Birgit G. (IMO 9536064) | https://commons.wikimedia.org/wiki/File:9536064_Birgit_G_2010.jpg | Perfil casi puro de babor en el Korsfjorden, navegando. Casa y puente a popa con el puente en el nivel más alto, bodega larga y lisa con tapas, mástil blanco en la proa, casco azul con obra viva rojiza. Sirve para medir proporciones: la casa ocupa ~17 % de la eslora y la bodega ~70 %. |
+| proa | Tucana (IMO 9455674) | https://commons.wikimedia.org/wiki/File:Tucana_ship_R05.jpg | Proa de frente, amarrado en el puerto de Brujas. Se ven la roda alta, los dos huecos de las anclas con óxido, la línea blanca de la amurada, el castillo bajo con el mástil de proa y, al fondo, la casa de popa con el puente. La casa queda centrada y muy por encima de la proa. |
+| popa | Eems Dart (IMO 9195640) | https://commons.wikimedia.org/wiki/File:Eems_Dart_-_IMO_9195640_leaving_Berendrechtsluis,_Port_of_Antwerp_pic4.JPG | Popa y casa de frente, en la esclusa de Berendrecht. Tres niveles de casa más el puente, escaleras exteriores, bote salvavidas naranja con pescante en estribor, dos escapes sobre el techo con la chapa de la naviera, mástil de radar y la boca de la bodega con su coaming rojo detrás. |
+| tres cuartos | Tucana (IMO 9455674) | https://commons.wikimedia.org/wiki/File:Tucana_%28IMO_9455674%29_River_Mersey.jpg | Tres cuartos de proa por babor, navegando con ola de proa. Se lee todo el conjunto: proa en V con castillo y mástil, tapas grises planas sobre un coaming rojo, pórtico delante de la casa, casa blanca con puente de techo rojo, domo y mástil de radar. |
+| cenital | Birgit G. (IMO 9536064) | https://commons.wikimedia.org/wiki/File:Birgit_G._%28IMO_9536064%29_Bilbao_2022.jpg | Toma alta (unos 40° sobre el horizonte, desde una cota elevada del puerto de Bilbao) de la popa y el costado de babor, amarrado. Deja ver el techo de la casa, el pórtico con las tapas de bodega apiladas, el coaming rojo y la cubierta, además de los niveles de la casa y los pasamanos. Es lo más parecido a una vista desde arriba que hay para esta clase. |
+| tres cuartos | Eems Dart (IMO 9195640) | https://commons.wikimedia.org/wiki/File:Eems_Dart_-_IMO_9195640_leaving_Berendrechtsluis,_Port_of_Antwerp_pic5.JPG | Tres cuartos de popa por estribor, navegando. Muestra el largo de la bodega con su coaming rojo y la barandilla azul de la amurada, la casa con el pórtico delante, el bote en estribor y el castillo gris con el mástil de proa muy chico al fondo. Útil para la proporción popa-proa. |
+| proa | Eems Dart (IMO 9195640) | https://commons.wikimedia.org/wiki/File:Eems_Dart_-_IMO_9195640_leaving_Berendrechtsluis,_Port_of_Antwerp_pic1.JPG | Tres cuartos de proa por babor, entrando en la esclusa. La roda alta y el castillo gris con el mástil de proa, la línea de amurada blanca y la casa de popa con puente y mástil. Sirve para ver la altura de la casa contra la del castillo. |
+
+### Rasgos de silueta
+
+- Casa de popa de tres niveles blancos más un puente que sobresale con alerones a ambos lados; es lo que da la silueta y ocupa solo el 15-17 % final de la eslora.
+- Puente con techo azul o rojo (según el armador), baranda perimetral, mástil de radar con cruceta y un domo o antena blanca; en el techo de la casa van uno o dos escapes cortos (no hay chimenea alta).
+- Una sola bodega larga (62.5 m, ~70 % de la eslora) con coaming rojizo elevado y tapas grises planas; no hay grúas de cubierta en la clase base. Algunas versiones traen una grúa de provisiones o de popa, pero no es el rasgo típico.
+- Pórtico de acero con pasarela delante de la casa, a la altura del primer nivel, donde se estiban las tapas de bodega cuando se abre.
+- Castillo de proa bajo y gris con una baranda, y un mástil blanco con cruceta detrás; la roda es alta y en V, con dos escobenes con óxido.
+- Casco azul de obra muerta con una línea blanca en el borde de la amurada y obra viva roja o marrón; la amurada de la bodega es una barandilla de tubos azul, no una chapa cerrada.
+- Bote salvavidas naranja con pescante amarillo en estribor, a la altura del segundo nivel de la casa, y los cabos de amarre en pasacables en proa y popa.
+- Bulbo de proa bajo el agua: no se ve, pero la roda tiene mucha curva y la ola de proa sale más adelante del casco.
+
+### Traducción a la escala del mapa
+
+- **Casco:** 60 × 10 u, `h` 5, arrufo 0.25. La manga real es 12.5 m (8.3 u); se estira a 10 u para llenar la caja. La cubierta queda en z = 4 (5 u sobre el agua, 7.5 m; real ~4.5 m, se exagera para que el casco se lea con la proyección).
+- **Altura:** el calado aéreo real (~22 m) excede los 21 m que entran en z = 13, así que las alturas sobre la cubierta se comprimen. Real sobre cubierta ~15.5 m; en el mapa ~8 u (z 4 a z 12). Factor ≈ 0.77 sobre la escala de 1.5 m/u (cada u de altura sobre la cubierta vale ~1.9 m).
+- **Casa (x 3 a 12):** tres niveles de 1.4 u (z 4 a 8.2), cada uno un poco más angosto (huella 9 × 7, 8 × 5.4, 7 × 4.8 u); puente en x 6.5 a 10.5, 8 u de ancho con alerones (y ±4), z 8.2 a 9.7; techo en z 9.7 a 9.9.
+- **Bodega (x 14 a 52):** 38 u (real 41.7 u; se acorta para dejar sitio a la casa y al castillo), 6.8 u de ancho (hueco real 10.1 m = 6.7 u), coaming rojo de 1 u (z 4 a 5) con tres tapas grises encima (z 5 a 5.3).
+- **Pórtico (x 12.5 a 13.5):** dos patas de 0.5 × 0.5 u en y ±3, 2.5 u de alto, con una pasarela arriba (z 6.5 a 6.8).
+- **Castillo (x 53 a 57):** bloque gris de 1.6 u de alto (z 4 a 5.6), mástil de proa 5.4 u (z 5.6 a 11) con cruceta en z 9.5, cabrestante en la proa.
+- **Mástil de radar:** sobre el techo del puente, 2.1 u (z 9.9 a 12), cruceta en z 11. Es el punto más alto: z = 12.
+- **Amurada:** barandilla azul de 0.8 u en ambos bordes, x 12 a 38, que es el tramo recto de la cubierta. Más allá la cubierta se afina (popa redondeada y proa en punta) y la barandilla no cabe.
+- **Lados visibles:** con rumbo 0 se ven la cubierta, la proa (+x) y el costado de estribor; la popa con la casa queda de espaldas, así que su techo y sus costados pesan más que su cara de popa. Detallar primero el puente y la casa (a popa) y la bodega con sus tapas; el castillo de proa pesa poco.
+- **Luces:** tope sobre el mástil de radar (x 8, z 11.6), babor y estribor en los alerones (y ±4, z 9.2), segunda luz de tope en el mástil de proa y ventanas encendidas en la cara de proa del puente (x 10.52).
+
+### Piezas sugeridas (por importancia)
+
+1. `hull` · `hullBlue` — casco 60 × 10, h 5, arrufo 0.25
+2. `box` · `whitewash` — casa, nivel 1: dx 3, dy −3.5, w 9, d 7, z 4, h 1.4, fachada 1 piso y 4 columnas
+3. `box` · `whitewash` — casa, nivel 2: dx 3.5, dy −2.7, w 8, d 5.4, z 5.4, h 1.4, fachada 1 piso y 4 columnas
+4. `box` · `whitewash` — casa, nivel 3: dx 4, dy −2.4, w 7, d 4.8, z 6.8, h 1.4, fachada 1 piso y 3 columnas
+5. `box` · `whitewash` — puente con alerones: dx 6.5, dy −4, w 4, d 8, z 8.2, h 1.5, fachada de 1 piso con `base: "glass"` y 4 columnas
+6. `box` · `rust` — coaming de la bodega: dx 14, dy −3.4, w 38, d 6.8, z 4, h 1
+7. `box` · `slab` — tapa 1: dx 14.2, dy −3.2, w 12.4, d 6.4, z 5, h 0.3
+8. `box` · `slab` — tapa 2: dx 26.8, dy −3.2, w 12.4, d 6.4, z 5, h 0.3
+9. `box` · `slab` — tapa 3: dx 39.4, dy −3.2, w 12.4, d 6.4, z 5, h 0.3
+10. `box` · `slab` — castillo de proa: dx 53, dy −3, w 4, d 6, z 4, h 1.6
+11. `box` · `steel` — mástil de radar: dx 8, dy −0.2, w 0.4, d 0.4, z 9.9, h 2.1
+12. `box` · `steel` — cruceta del mástil de radar: dx 7.5, dy −1.5, w 0.4, d 3, z 11, h 0.25
+13. `box` · `steel` — techo del puente: dx 6.3, dy −4.2, w 4.4, d 8.4, z 9.7, h 0.2
+14. `cyl` · `steel` — escape de babor: dx 4.8, dy −1, z 8.2, r 0.5, h 1.8
+15. `cyl` · `steel` — escape de estribor: dx 4.8, dy 1, z 8.2, r 0.5, h 1.8
+16. `box` · `rust` — bote salvavidas naranja: dx 6, dy 2.8, w 3, d 0.9, z 5.4, h 0.9
+17. `box` · `steel` — pata de babor del pórtico: dx 12.5, dy −3.2, w 0.5, d 0.5, z 4, h 2.5
+18. `box` · `steel` — pata de estribor del pórtico: dx 12.5, dy 2.7, w 0.5, d 0.5, z 4, h 2.5
+19. `box` · `steel` — pasarela del pórtico: dx 12.4, dy −3.5, w 1, d 7, z 6.5, h 0.3
+20. `box` · `steel` — mástil de proa: dx 52, dy −0.2, w 0.4, d 0.4, z 5.6, h 5.4
+21. `box` · `steel` — cruceta del mástil de proa: dx 51.6, dy −1.5, w 0.3, d 3, z 9.5, h 0.25
+22. `cyl` · `steel` — cabrestante: dx 55, dy 0, z 5.6, r 0.6, h 0.6
+23. `box` · `hullBlue` — barandilla de babor: dx 12, dy −5, w 26, d 0.3, z 4, h 0.8
+24. `box` · `hullBlue` — barandilla de estribor: dx 12, dy 4.7, w 26, d 0.3, z 4, h 0.8
+25. `dot` · `magentaMid` — luz de tope: dx 8, dy 0, z 11.6, r 0.7
+26. `dot` · `magenta` — luz de babor en el alerón: dx 10, dy −4, z 9.2, r 0.4
+27. `dot` · `cyanMid` — luz de estribor en el alerón: dx 10, dy 4, z 9.2, r 0.4
+28. `dot` · `magentaMid` — luz de tope de proa, en el mástil: dx 52.2, dy 0, z 10.7, r 0.5
+29. `poly` · `magentaBleed` — ventanas encendidas del puente, cara de proa: puntos (10.52, −3.6, 8.9), (10.52, 3.6, 8.9), (10.52, 3.6, 9.5), (10.52, −3.6, 9.5), alfa 0.8
 
 ## `tug` — Damen ASD Tug 2810
 
@@ -98,4 +170,5 @@ Heredadas del plan de #57:
 - `cargo` pasa a ser el Damen Combi Freighter 3850 y reemplaza al carguero genérico actual.
 - `tug` pasa a ser el Damen ASD Tug 2810.
 - `barge` pasa a ser un empujador fluvial con una barcaza tolva Jumbo del Mississippi. La barcaza va por delante y el empujador queda apoyado contra su popa, como en la operación real.
+- `cargo`: fotos de *Birgit G.* (IMO 9536064), *Tucana* (IMO 9455674) y *Eems Dart* (IMO 9195640), todos de la categoría de Commons `Damen Combi Freighter 3850` (gemelos, sin sustituir de clase; no se encontró una foto aérea, la cenital es una toma alta desde el muelle). Compresiones para la caja: manga 12.5 m a 10 u (×1.2), bodega de 41.7 u a 38 u, alturas sobre cubierta ×0.77 para no pasar de z = 12; no se modelan bulbo ni anclas.
 - Los identificadores de `ShipKind` (`cargo`, `tug`, `barge`, `ferry`) se mantienen, para no tocar las rutas ni la animación.
