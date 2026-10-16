@@ -35,7 +35,9 @@ import { ship as buildShip, shipAt, wake, type ShipKind } from "./ships";
 // 2 u sin revalidar.
 export const LANE_OUT: readonly Readonly<Vec2>[] = [{ x: 362, y: -2 }, { x: 500, y: 20 }, { x: 515, y: 120 }, { x: 520, y: 180 }, { x: 480, y: 290 }, { x: 420, y: 470 }, { x: 376, y: 640 }];
 export const BERTH: Readonly<Vec2> = LANE_OUT[0]!;
-export const SHIPS: readonly { kind: ShipKind; speed: number; phase: number }[] = [{ kind: "cargo", speed: 1.2, phase: 0 }, { kind: "tug", speed: 2, phase: 0.4 }, { kind: "barge", speed: 0.8, phase: 0.75 }];
+export const SHIPS: readonly { kind: ShipKind; phase: number }[] = [{ kind: "cargo", phase: 0 }, { kind: "tug", phase: 1 / 3 }, { kind: "barge", phase: 2 / 3 }];
+// Convoy: con velocidades distintas un barco alcanza al de adelante en el mismo carril y se superponen.
+export const LANE_SPEED = 1.2;
 export const FADE_U = 30, TURN_U = 20;
 export const BEAM_PERIOD_MS = 8000, BEAM_LEN = 24, BEAM_INNER = 12, BEAM_HALF = (7 * Math.PI) / 180;
 export const BUOY_PERIOD_MS = 2000;
@@ -154,7 +156,7 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
       if (opts.reducedMotion || dtMs <= 0) return none;
       clock += dtMs;
       const c: SeaChanges = { ships: true, beam: true, buoys: false, ferry: false, neon: false };
-      for (let k = 0; k < SHIPS.length; k++) { dists[k] = dists[k]! + (SHIPS[k]!.speed * dtMs) / 1000; if (dists[k]! >= L) dists[k] = dists[k]! - L; }
+      for (let k = 0; k < SHIPS.length; k++) { dists[k] = dists[k]! + (LANE_SPEED * dtMs) / 1000; if (dists[k]! >= L) dists[k] = dists[k]! - L; }
       const bs = Math.floor(clock / (BUOY_PERIOD_MS / 2));
       if (bs !== buoyStep) { buoyStep = bs; c.buoys = true; }
       if (ferryPause > 0) ferryPause -= dtMs;
