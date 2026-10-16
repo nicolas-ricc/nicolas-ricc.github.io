@@ -63,6 +63,14 @@ describe("ruta", () => {
 
 const inWorld = (x: number, y: number) => x >= WORLD.x0 && x <= WORLD.x1 && y >= WORLD.y0 && y <= WORLD.y1;
 
+type Static = { b: ReturnType<typeof bounds>; sb: ReturnType<typeof screenBounds> };
+const expectNotBehind = (statics: Static[], p: { x: number; y: number }, heading: number): void => {
+  const parts = ship("cargo", shipAt("cargo", p, heading), heading).solids.map(bounds);
+  const sb = { min: { x: Math.min(...parts.map((b) => b.min.x)), y: Math.min(...parts.map((b) => b.min.y)), z: -1 }, max: { x: Math.max(...parts.map((b) => b.max.x)), y: Math.max(...parts.map((b) => b.max.y)), z: 13 } };
+  const scr = screenBounds(sb);
+  for (const s of statics) if (overlaps(scr, s.sb)) expect(isBehind(sb, s.b)).toBe(false);
+};
+
 /** Silueta convexa en pantalla de un carguero centrado en `p`: anillo de cubierta proyectado a z −1 y z 13. */
 const silhouette = (p: { x: number; y: number }, heading: number): Vec2[] => {
   const hull = ship("cargo", shipAt("cargo", p, heading), heading).solids.find((s) => s.kind === "hull")!;
@@ -98,10 +106,7 @@ describe("dos carriles", () => {
     const statics = world(7).solids.map((s) => ({ b: bounds(s), sb: screenBounds(bounds(s)) }));
     for (let d = 0; d <= laneLength("back"); d += 4) {
       const p = laneAt("back", d);
-      const parts = ship("cargo", shipAt("cargo", p, p.heading), p.heading).solids.map(bounds);
-      const sb = { min: { x: Math.min(...parts.map((b) => b.min.x)), y: Math.min(...parts.map((b) => b.min.y)), z: -1 }, max: { x: Math.max(...parts.map((b) => b.max.x)), y: Math.max(...parts.map((b) => b.max.y)), z: 13 } };
-      const scr = screenBounds(sb);
-      for (const s of statics) if (overlaps(scr, s.sb)) expect(isBehind(sb, s.b)).toBe(false);
+      expectNotBehind(statics, p, p.heading);
     }
   });
 
@@ -120,10 +125,7 @@ describe("dos carriles", () => {
     const arrive = laneAt("back", laneLength("back")).heading, leave = laneAt("out", 0).heading;
     let d = leave - arrive; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; // arco corto
     for (let t = 0; t <= 1; t += 0.02) {
-      const h = arrive + d * t, parts = ship("cargo", shipAt("cargo", BERTH, h), h).solids.map(bounds);
-      const sb = { min: { x: Math.min(...parts.map((b) => b.min.x)), y: Math.min(...parts.map((b) => b.min.y)), z: -1 }, max: { x: Math.max(...parts.map((b) => b.max.x)), y: Math.max(...parts.map((b) => b.max.y)), z: 13 } };
-      const scr = screenBounds(sb);
-      for (const s of statics) if (overlaps(scr, s.sb)) expect(isBehind(sb, s.b)).toBe(false);
+      expectNotBehind(statics, BERTH, arrive + d * t);
     }
   });
 
@@ -138,6 +140,7 @@ describe("dos carriles", () => {
     expect(laneAt("back", Lb).heading).toBeCloseTo(last, 6);
     expect(laneAt("back", 0).heading).toBeCloseTo(Math.atan2(487 - 655, 471 - 430), 6);
   });
+
   it("cerca del fondeadero nunca coinciden dos barcos: LANE_SPEED · (T/3 − BERTH_MS) ≥ 200 u", () => {
     expect((LANE_SPEED * (CYCLE_MS / 3 - BERTH_MS)) / 1000).toBeGreaterThanOrEqual(200);
   });
