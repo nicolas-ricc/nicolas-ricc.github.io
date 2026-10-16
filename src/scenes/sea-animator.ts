@@ -14,7 +14,7 @@ export function seaAnimator(scene: SeaScene, opts: { reducedMotion: boolean }): 
     "sea.ferryLights": () => { const f = anim.ferry(); return { kind: "accent", accents: f.lights }; },
   };
   SHIPS.forEach((_, k) => {
-    layers[`sea.ship${k}`] = () => { const f = anim.ship(k); return { kind: "solid", solids: f.solids, alpha: f.alpha }; };
+    layers[`sea.ship${k}`] = () => { const f = anim.ship(k); return { kind: "solid", solids: f.solids, alpha: f.alpha, heading: f.heading }; };
     layers[`sea.wake${k}`] = () => { const f = anim.ship(k); return { kind: "water", water: f.wake, alpha: f.alpha }; };
     layers[`sea.lights${k}`] = () => { const f = anim.ship(k); return { kind: "accent", accents: f.lights, alpha: f.alpha }; };
   });
