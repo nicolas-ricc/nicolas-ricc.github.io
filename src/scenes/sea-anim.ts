@@ -3,33 +3,38 @@ import { polyline, v3, type Vec2, type Vec3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import type { SeaScene } from "./sea";
 import { chase, flip, pulse } from "./neon";
-import { ship as buildShip, wake, type ShipKind } from "./ships";
+import { ship as buildShip, shipAt, wake, type ShipKind } from "./ships";
 
 /**
- * Blog animado, sin Pixi: tres barcos que salen de la bahía, rodean la punta
- * por el este, cruzan la fosa y se desvanecen en el sangrado, sus estelas y
- * luces, el haz ámbar del faro (luz cálida, no neón) y las dos boyas, más
- * los neones de la punta: la galería corre al revés del haz, la costa ondula
- * y el cartel del farero alterna. El agua en sí (repartida por profundidad
- * en `terrain.ts`) no es asunto de acá: la anima `water-animator.ts`. Spec §7.
+ * Blog animado, sin Pixi: tres barcos que zarpan del fondeadero de la bocana,
+ * rodean la boya y el pecio por el este, cruzan la fosa y salen del cover por
+ * abajo-izquierda, sus estelas y luces, el haz ámbar del faro (luz cálida, no
+ * neón) y las dos boyas, más los neones de la punta: la galería corre al revés
+ * del haz, la costa ondula y el cartel del farero alterna. El agua en sí
+ * (repartida por profundidad en `terrain.ts`) no es asunto de acá: la anima
+ * `water-animator.ts`. Spec §7.
  */
-// Nace en (326, -24), no más al oeste ni al sur: en la bahía el barco tiene max.y < 24 y quedaría detrás (isBehind por y) de los
-// galpones del muelle de alistamiento (x 304..324, y ≥ 24) y de su selva (x 332..340, y ≥ 26) si se superpusiera con ellos en pantalla.
+// Carril de ida: el camino del CENTRO del casco (ver `shipAt` en ships.ts), así los tres tamaños
+// de barco comparten el mismo fondeadero en vez de que cada uno arranque con la popa en otro lado.
 //
-// Desvío de la Task 6 respecto del trazado original de la brief: el carguero mide 60 u de eslora, y su
-// caja de alineación (la que usa el test de profundidad) es mucho más ancha en pantalla que su silueta
-// real cuando la proa apunta en diagonal (35°..55°). Un trazado que sale de la bahía en diagonal directa
-// hacia el este de la punta cruza en pantalla, en algún tramo, la boya BUOYS[0] (420,80) o el arrecife
-// (conos de roca cerca de 405,111) aunque el barco esté a decenas de unidades de distancia en el mundo:
-// son falsos positivos del bounding-box del test, no una superposición real, y no hay forma de
-// evitarlos cambiando iso/depth.ts (fuera del alcance de esta tarea). La salida se aplanó (tramo
-// (350,10)→(500,20), casi puro este) para que el barco, casi horizontal en ese tramo, tenga una caja
-// angosta en y y no la levante por encima de la boya ni del arrecife; recién gira hacia el sur en
-// x ≥ 500, lejos de ambos. El resto del trazado (fosa y pecio) también se corrió al este por la misma
-// razón. Ver el informe de la Task 6 para el detalle (además se corrió `cluster(332,340,26,94,6)` a
-// `cluster(332,340,50,94,6)` en shipyard.ts: un árbol de esa selva quedaba en el mismo tipo de conflicto
-// con la salida de la bahía, y ROUTE[0] y el heading inicial están fijados por el test, sin margen).
-export const ROUTE: Vec2[] = [{ x: 326, y: -24 }, { x: 350, y: 10 }, { x: 500, y: 20 }, { x: 510, y: 118 }, { x: 520, y: 172 }, { x: 545, y: 224 }, { x: 610, y: 260 }];
+// Fondea en BERTH (362, -2), en la bocana: 36 u al sudeste de la vieja popa (326, -24), para que el
+// barco pueda girar sin pisar la selva de x < 344 y para quedar a y ≥ 24 de los galpones del muelle
+// de alistamiento, sin quedar detrás de ellos en pantalla. No hay muelle: el barco aparece ahí.
+//
+// Sale casi al este (tramo hasta (500, 20)) porque la caja de alineación del test de profundidad
+// (60 u de eslora, z -1..13) es mucho más ancha en pantalla que la silueta cuando la proa va en
+// diagonal, y una salida diagonal da falsos positivos de `isBehind` con la boya (420, 80) y el
+// arrecife (≈ 405, 111); casi horizontal, la caja es angosta en y. Después baja por x ≥ 500 hasta
+// y 180 para rodear la boya y el pecio por el este, lejos de la punta (Portfolio), en agua de Blog
+// y cruzando la fosa. Recién al sur de y 180 vira al sur-suroeste, porque abajo-izquierda en
+// pantalla es +y, levemente -x.
+//
+// Termina fuera del cover 16:9 (376, 640) para que el barco no se desvanezca a la vista: el
+// desvanecido ocurre en el sangrado. Validado contra agua, `depthAt` ≥ 6, `worldZoneAt === "blog"`
+// para x ≥ 380, `isBehind` con la caja del carguero y `coverQuad(16/9)`: no mover vértices más de
+// 2 u sin revalidar.
+export const LANE_OUT: readonly Readonly<Vec2>[] = [{ x: 362, y: -2 }, { x: 500, y: 20 }, { x: 515, y: 120 }, { x: 520, y: 180 }, { x: 480, y: 290 }, { x: 420, y: 470 }, { x: 376, y: 640 }];
+export const BERTH: Readonly<Vec2> = LANE_OUT[0]!;
 export const SHIPS: readonly { kind: ShipKind; speed: number; phase: number }[] = [{ kind: "cargo", speed: 1.2, phase: 0 }, { kind: "tug", speed: 2, phase: 0.4 }, { kind: "barge", speed: 0.8, phase: 0.75 }];
 export const FADE_U = 30, TURN_U = 20;
 export const BEAM_PERIOD_MS = 8000, BEAM_LEN = 24, BEAM_INNER = 12, BEAM_HALF = (7 * Math.PI) / 180;
@@ -62,7 +67,7 @@ const GALLERY_R_DOT = 0.45, GALLERY_LIT = 2;
 export const FERRY_ROUTE: readonly Vec2[] = [{ x: 279, y: -252 }, { x: 290, y: -212 }, { x: 241, y: -84 }];
 export const FERRY_SPEED = 3, FERRY_PAUSE_MS = 4000;
 
-const route = polyline(ROUTE);
+const route = polyline(LANE_OUT);
 export const routeLength = (): number => route.length;
 
 const lerpAngle = (a: number, b: number, t: number): number => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return a + d * t; };
@@ -111,8 +116,9 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
 
   const shipFrame = (k: number): ShipFrame => {
     const p = routeAt(dists[k]!), alpha = alphaAt(dists[k]!);
-    const built = buildShip(SHIPS[k]!.kind, p, p.heading);
-    const wakeTris = wake(SHIPS[k]!.kind, p, p.heading);
+    const kind = SHIPS[k]!.kind, at = shipAt(kind, p, p.heading);
+    const built = buildShip(kind, at, p.heading);
+    const wakeTris = wake(kind, at, p.heading);
     return { solids: built.solids, lights: built.lights, wake: [{ kind: "ground", mat: "foam", tris: wakeTris }], alpha };
   };
 
