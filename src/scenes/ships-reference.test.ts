@@ -13,7 +13,6 @@ const ANGLES = ["perfil", "proa", "popa", "tres cuartos", "cenital"];
 const SOLIDS = ["hull", "box", "cyl", "prism", "cone"], LIGHTS = ["dot", "poly"];
 const BOX: Record<"cargo" | "tug" | "barge", string> = { cargo: "60 × 10 u", tug: "19 × 7 u", barge: "40 × 8 u + empujador 20 × 7 u" };
 
-/** Texto entre `## <encabezado>` y el siguiente `## `. */
 function section(md: string, head: RegExp): string {
   const m = md.match(head);
   if (!m || m.index === undefined) return "";
@@ -68,13 +67,14 @@ for (const kind of Object.keys(BOX) as (keyof typeof BOX)[]) {
     it("caja en mapa y altura máxima dentro de los límites de las rutas", () => {
       const sec = get();
       const box = sec.match(/\*\*Caja en mapa:\*\*\s*([^·\n]+?)\s*(·|$)/m);
-      expect(box?.[1]).toBe(BOX[kind]);
-      const dims = [...box![1]!.matchAll(/(\d+(?:\.\d+)?) × (\d+(?:\.\d+)?)/g)].map((m) => [Number(m[1]), Number(m[2])] as const);
+      const boxText = box?.[1] ?? "";
+      expect(boxText).toBe(BOX[kind]);
+      const dims = [...boxText.matchAll(/(\d+(?:\.\d+)?) × (\d+(?:\.\d+)?)/g)].map((m) => [Number(m[1]), Number(m[2])] as const);
       expect(dims.reduce((s, [l]) => s + l, 0)).toBeLessThanOrEqual(60);
       for (const [, b] of dims) expect(b).toBeLessThanOrEqual(10);
       const z = sec.match(/\*\*Altura máx\.:\*\*\s*z = (-?\d+(?:\.\d+)?)/);
       expect(z).not.toBeNull();
-      expect(Number(z![1])).toBeLessThanOrEqual(13);
+      expect(Number(z?.[1])).toBeLessThanOrEqual(13);
     });
 
     it("piezas: sólidos del kit con materiales de la paleta (≤ 40), luces con acentos (≤ 8, con las tres de navegación)", () => {
