@@ -74,6 +74,11 @@ function barge(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void 
   solids.push(k.box(0, -4, 7.2, 8, -0.9, 1.15, "rust"), k.box(22.8, -4, 13.6, 8, -0.9, 1.15, "rust"));
   solids.push(k.box(36.4, -4, 2, 8, -0.5, 0.75, "rust"), k.box(38.4, -4, 1.6, 8, -0.1, 0.35, "rust"));
   solids.push(k.box(0, -4, 36.4, 0.15, -0.9, 1.15, "rust"), k.box(0, 3.85, 36.4, 0.15, -0.9, 1.15, "rust"));
+  const deck = WATER_Z + spec.h, top = deck + 0.05; // tope de los bloques que cuadran el casco
+  solids.push(k.box(3, -3.6, 31.2, 0.4, top, 0.9, "rust"), k.box(3, 3.2, 31.2, 0.4, top, 0.9, "rust")); // brazola: bandas
+  solids.push(k.box(3, -3.2, 0.4, 6.4, top, 0.9, "rust"), k.box(33.8, -3.2, 0.4, 6.4, top, 0.9, "rust")); // y testeros
+  for (let i = 0; i < 4; i++) solids.push(k.box(3.2 + i * 7.7, -3.6, 7.5, 7.2, top + 0.9, 0.4, "steel"), k.box(3.55 + i * 7.7, -2.2, 6.8, 4.4, top + 1.3, 0.3, "steel")); // tapas abovedadas en dos escalones
+  for (const dx of [1.5, 35.5]) for (const dy of [-2.8, 2.8]) solids.push(k.cyl(dx, dy, top, 0.3, 0.5, "steel")); // bitas
   // empujador pegado a la popa, con proa cuadrada
   solids.push(k.hull(-20, 20, 7, 1.6, 0, "hullBlue"), k.box(-5.5, -3.5, 5.5, 7, -0.9, 1.55, "hullBlue"));
 }
