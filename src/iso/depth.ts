@@ -34,20 +34,22 @@ function isBehindView(a: Bounds, b: Bounds, vx: number, vy: number): boolean {
     || a.max.z <= b.min.z + EPS;
 }
 
-/** Cajas del sólido en el marco girado `heading` (vértices girados −heading alrededor del origen; z igual). */
-function frameBounds(s: Solid, heading: number): Bounds {
-  if (heading === 0) return bounds(s);
+/** Cajas del sólido en el mundo y en el marco girado `heading` (vértices girados −heading; z igual), con una sola teselación. */
+function worldAndFrameBounds(s: Solid, heading: number): { world: Bounds; frame: Bounds } {
   const c = Math.cos(heading), sn = Math.sin(heading);
-  const min = v3(Infinity, Infinity, Infinity), max = v3(-Infinity, -Infinity, -Infinity);
+  const wmin = v3(Infinity, Infinity, Infinity), wmax = v3(-Infinity, -Infinity, -Infinity);
+  const fmin = v3(Infinity, Infinity, Infinity), fmax = v3(-Infinity, -Infinity, -Infinity);
   for (const f of tessellateAll(s)) for (const p of f.pts) {
     const x = p.x * c + p.y * sn, y = -p.x * sn + p.y * c;
-    min.x = Math.min(min.x, x); min.y = Math.min(min.y, y); min.z = Math.min(min.z, p.z);
-    max.x = Math.max(max.x, x); max.y = Math.max(max.y, y); max.z = Math.max(max.z, p.z);
+    wmin.x = Math.min(wmin.x, p.x); wmin.y = Math.min(wmin.y, p.y); wmin.z = Math.min(wmin.z, p.z);
+    wmax.x = Math.max(wmax.x, p.x); wmax.y = Math.max(wmax.y, p.y); wmax.z = Math.max(wmax.z, p.z);
+    fmin.x = Math.min(fmin.x, x); fmin.y = Math.min(fmin.y, y); fmin.z = wmin.z;
+    fmax.x = Math.max(fmax.x, x); fmax.y = Math.max(fmax.y, y); fmax.z = wmax.z;
   }
-  return { min, max };
+  return { world: { min: wmin, max: wmax }, frame: { min: fmin, max: fmax } };
 }
 
-/** Sin giro es la suma de coordenadas de siempre; girado, pesa cada eje del marco por la vista. */
+/** Sin giro es la suma de coordenadas de siempre; girado es la misma fórmula expresada en el marco (cada eje pesado por la vista), como en el prototipo medido. */
 const depthKey = (b: Bounds, vx?: number, vy?: number): number =>
   vx === undefined || vy === undefined
     ? b.min.x + b.max.x + b.min.y + b.max.y + (b.min.z + b.max.z) * 0.5
@@ -81,8 +83,9 @@ function restsOnHull(hull: Solid, other: Solid, hb: Bounds, ob: Bounds): boolean
  */
 export function sortByDepth(solids: Solid[], heading = 0): Solid[] {
   const n = solids.length;
-  const wb = solids.map(bounds);
-  const bs = heading === 0 ? wb : solids.map((s) => frameBounds(s, heading));
+  let wb: Bounds[], bs: Bounds[];
+  if (heading === 0) wb = bs = solids.map(bounds);
+  else { const both = solids.map((s) => worldAndFrameBounds(s, heading)); wb = both.map((x) => x.world); bs = both.map((x) => x.frame); }
   const c = Math.cos(heading), sn = Math.sin(heading);
   const vx = VIEW_DIR.x * c + VIEW_DIR.y * sn, vy = -VIEW_DIR.x * sn + VIEW_DIR.y * c;
   const sbs = wb.map(screenBounds);

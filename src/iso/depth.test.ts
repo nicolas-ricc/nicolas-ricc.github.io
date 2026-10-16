@@ -130,7 +130,7 @@ describe("sortByDepth en el marco del barco", () => {
   });
 
   it("tres niveles de casa y puente a rumbo 100 grados: cada pieza se dibuja después de la que tiene debajo", () => {
-    // Medidas locales (x, y, ancho, largo, z, alto) de una caseta, su ala de puente y una barandilla del carguero.
+    // Medidas locales (x, y, ancho, largo, z, alto) de una caseta, su ala de puente y una barandilla; esta no se afirma, pero sin ella el orden viejo acierta por casualidad.
     const specs = [[5, -2.4, 6.5, 4.8, 6.8, 1.4], [6.5, -5, 4, 10, 8.2, 1.5], [12.4, -3.5, 1, 7, 6.5, 0.3]] as const;
     const h = (100 * Math.PI) / 180;
     const pieces = specs.map(([x, y, w, d, z, hz]) => rotBox(h, x, y, w, d, z, hz));
@@ -144,7 +144,7 @@ describe("sortByDepth en el marco del barco", () => {
     const rng = createRng(5);
     const solids: Solid[] = [];
     for (let i = 0; i < 60; i++) solids.push(box(rng.int(0, 60), rng.int(0, 40), rng.chance(0.1) ? -3 : 0, rng.int(1, 12), rng.int(1, 12), rng.int(1, 20)));
-    expect(sortByDepth(solids, 0)).toEqual(sortByDepth(solids));
+    expect(sortByDepth(solids, 0)).toEqual(sortByDepthNaive(solids));
     expect(sortByDepth(solids)).toEqual(sortByDepthNaive(solids));
   });
 });
