@@ -119,3 +119,31 @@ git commit -m "feat(#58): haz del faro en la familia ámbar"
 git add docs/superpowers/specs/assets/58-faro/
 git commit -m "docs(#58): captura del faro con haz ámbar"
 ```
+
+## Assumptions
+
+- **Who picks `amber` vs `amberMid`, and how.** The orchestrator looks at the `?bloom=on` capture. The inner wedge stays `amber` unless it reads as white or burnt: no amber hue left at the centre of the cone. The choice is recorded in the PR, as the issue asks, and in the stage-4 comment on #58. Rejected alternative: an automatic pixel threshold, because the renderer is Pixi on WebGL and no test seam reads pixels.
+- **If the choice is `amberMid`, it goes in its own commit,** `fix(#58): amberMid en la cuña corta`, after Task 1. It is not amended into Task 1 and not mixed into the `docs(#58)` captures commit. Rejected alternative: amending, which rewrites a task the reviewer already approved.
+- **The keeper's window has no color test.** It lives in `src/scenes/sea.ts`. The guarantee that it does not change is that `sea.ts` stays out of the diff (`git diff --stat origin/feature/57-barcos-reales-rutas` must not list it). Rejected alternative: adding a test for the window, which the issue does not ask for.
+- **Dev server lifecycle in Task 2.** Start it in the background with its log written to `.scratch/`. Before capturing, check that the URL answers with `curl -sf`. Stop the process when Task 2 ends. Each PNG is opened and looked at before it is committed. If one is blank or does not show the lighthouse, the capture is repeated rather than committed.
+- **The grep in Task 1 Step 4 widens** to `grep -rn "magentaBleed\|\"magenta\"" src --include=*.test.ts`. That catches assertions that do not mention "beam" or "haz" on the same line. The repo has no snapshots: `toMatchSnapshot` returns no results in `src`.
+
+## Grilling
+
+- Rounds: 1. The plan did not change substantially: no steps added or removed and no change of seam, only clarifications. A second round was not needed.
+- Questions: 16. Answers by source: ISSUE 4 (1, 9 partial, 2, 13), CODE 10 (3, 4, 5, 6, 7, 8, 12, 13, 15, 16), DOC 0 (the repo has no CLAUDE.md, CONTEXT.md or ADRs), NO SOURCE resolved as technical assumptions 4 (9, 10, 11, 14).
+- Key answers:
+  - Q1, ISSUE #58: "`beam()` pasa a `wedge(BEAM_LEN, "amberBleed", 0.5)` y `wedge(BEAM_INNER, "amber", 0.6)`" and "Test que fija los colores del haz en la familia `amber`". The spec is #58. The #57 plan (decision 16) agrees with it.
+  - Q2, ISSUE #58: "**Rama base:** `feature/57-barcos-reales-rutas`". The branch was created with `git checkout -b agent/58-faro-ambar origin/feature/57-barcos-reales-rutas` (stage-0 comment).
+  - Q3, CODE `src/iso/accent.ts:7-8`: `color: AccentColor`. `src/map/palette-iso.ts:64-66` and `:74-75` define `AccentColor` = keys of `ISO_COLORS` except shadow and sky, which includes amber, amberMid and amberBleed. They were introduced in 5a7cfe2.
+  - Q4, CODE `src/scenes/sea-anim.ts:35` exports `BEAM_PERIOD_MS`, and `sea-anim.test.ts:8` already imports it.
+  - Q5, CODE `src/scenes/sea-anim.ts:142`: `wedge(BEAM_LEN, "magentaBleed", 0.5), wedge(BEAM_INNER, "magenta", 0.6)`.
+  - Q6, CODE `src/scenes/sea-anim.ts:120-123`: `wedge` returns `color` as the key. Resolution to a number happens later in `src/iso/accent.ts:17-19` (`ISO_COLORS[a.color]`). The test compares strings.
+  - Q7, CODE `sea-anim.test.ts:134-142` ("frame 0 = estado de reduced motion…") asserts over `a.neon()` only: gallery, coast and sign, not the beam. `sea-animator.test.ts:17-21` asserts over the `sea.neon` layer only.
+  - Q8, CODE: `magentaBleed|"magenta"` in `*.test.ts` only matches palette, city, district and fair. Nothing touches the beam.
+  - Q13, CODE `src/lab/page.ts:11,15-18` and README.md:42-46 (keys `0`..`3`, `3` = Blog, `?bloom=`).
+  - Q15, CODE `src/scenes/sea-anim.ts:119` (`reducedMotion ? 0`) and `:148` (`tick` returns `none` under reduced motion). With `reduced = true` all four reads are expected to be equal. The test checks that the color does not depend on the clock in either mode.
+  - Q16, CODE `package.json`: `typecheck` = `tsc --noEmit`. There is no prettier or eslint config, so line width is a matter of style only.
+  - Q12, CODE: PNG captures already live in `docs/superpowers/specs/assets/2026-10-14-cyberpunk/`. The #57 plan (decision 6) uses `docs/superpowers/specs/assets/57-barcos/`. There is no `.gitattributes`.
+- Issues opened: none. Nothing was out of scope and there was no spec ambiguity.
+- Result: ok.
