@@ -16,7 +16,7 @@ export interface ShipSpec { len: number; beam: number; h: number; sheer: number;
 export const SHIP_SPECS: Record<ShipKind, ShipSpec> = {
   cargo: { len: 60, beam: 10, h: 5, sheer: 0.25, topMat: "hullBlue" },
   tug: { len: 18, beam: 6, h: 3, sheer: 0.35, topMat: "hullBlue" },
-  barge: { len: 40, beam: 9, h: 2, sheer: 0, topMat: "rust" },
+  barge: { len: 40, beam: 8, h: 1.2, sheer: 0, topMat: "rust" },
   ferry: { len: 26, beam: 7, h: 3, sheer: 0.2, topMat: "whitewash" },
 };
 export const SHIP_MATS: readonly Material[] = ["hull", "hullBlue", "whitewash", "steel", "rust", "deck", "glass"];
@@ -70,15 +70,12 @@ function tug(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void {
 }
 
 function barge(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void {
-  const deck = WATER_Z + spec.h;
-  for (let i = 0; i < 5; i++) for (const dy of [-2.6, 0.2]) {
-    solids.push(k.box(4 + i * 7, dy, 6, 2.4, deck, 2.6, (i + (dy > 0 ? 1 : 0)) % 2 === 0 ? "rust" : "steel"));
-    if (i >= 1 && i <= 3) solids.push(k.box(4 + i * 7, dy, 6, 2.4, deck + 2.6, 2.6, (i + (dy > 0 ? 0 : 1)) % 2 === 0 ? "rust" : "steel"));
-  }
-  solids.push(k.hull(-10, 10, 5, 2.6, 0.2, "hullBlue")); // empujador pegado a la popa
-  const pDeck = WATER_Z + 2.6;
-  solids.push(k.box(-6, -1.3, 2.6, 2.6, pDeck, 3, "whitewash", { floors: 1, cols: 2, base: "glass" }), k.cyl(-7.5, 0, pDeck, 0.6, 1.8, "rust"));
-  lights.push(k.dot(-4.7, 0, pDeck + 3.3, 0.7, "magentaMid"), k.dot(-6, -2.5, pDeck, 0.4, "magenta"), k.dot(-6, 2.5, pDeck, 0.4, "cyanMid"));
+  // barcaza: el anillo fijo del casco tiene popa redonda y proa en punta; cajas que lo cuadran, rake en dos escalones y placas que tapan la muesca de la flotación
+  solids.push(k.box(0, -4, 7.2, 8, -0.9, 1.15, "rust"), k.box(22.8, -4, 13.6, 8, -0.9, 1.15, "rust"));
+  solids.push(k.box(36.4, -4, 2, 8, -0.5, 0.75, "rust"), k.box(38.4, -4, 1.6, 8, -0.1, 0.35, "rust"));
+  solids.push(k.box(0, -4, 36.4, 0.15, -0.9, 1.15, "rust"), k.box(0, 3.85, 36.4, 0.15, -0.9, 1.15, "rust"));
+  // empujador pegado a la popa, con proa cuadrada
+  solids.push(k.hull(-20, 20, 7, 1.6, 0, "hullBlue"), k.box(-5.5, -3.5, 5.5, 7, -0.9, 1.55, "hullBlue"));
 }
 
 function ferry(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void {
@@ -99,8 +96,8 @@ export function ship(kind: ShipKind, at: Vec2, heading: number): { solids: Solid
   return { solids, lights };
 }
 
-/** Popa de la unidad en coordenadas locales: el empujador va 10 u detrás de la barcaza. */
-const sternOf = (kind: ShipKind): number => (kind === "barge" ? -10 : 0);
+/** Popa de la unidad en coordenadas locales: el empujador va 20 u detrás de la barcaza. */
+const sternOf = (kind: ShipKind): number => (kind === "barge" ? -20 : 0);
 
 /** `at` de popa para que el punto medio de la unidad completa (empujador incluido) caiga en `center`. */
 export function shipAt(kind: ShipKind, center: Vec2, heading: number): Vec2 {
