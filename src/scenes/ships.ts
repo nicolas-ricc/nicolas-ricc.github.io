@@ -10,8 +10,9 @@ import type { Material } from "../map/palette-iso";
  * chimeneas y mástiles como cilindros y cajas. Popa en `at` (`shipAt` lo
  * deriva del centro de la unidad), sobre el agua (z −1). Luces: mástil magentaMid, babor magenta, estribor cyanMid; la
  * lancha de la feria suma una ámbar; el empujador y el remolcador, dos proyectores ámbar. `wake` arma la estela de espuma.
- * `tug` reproduce al Damen ASD Tug 2810 y `barge` un empujador fluvial de tres cubiertas (tipo *Steel Trader*)
- * empujando una barcaza tolva Jumbo Mississippi; ver `docs/superpowers/specs/2026-10-16-barcos-referencia.md`.
+ * `cargo` reproduce al Damen Combi Freighter 3850 (casa y puente a popa, bodega con tapas, dos grúas en babor), `tug` al
+ * Damen ASD Tug 2810 y `barge` un empujador fluvial de tres cubiertas (tipo *Steel Trader*) empujando una barcaza tolva
+ * Jumbo Mississippi; ver `docs/superpowers/specs/2026-10-16-barcos-referencia.md`.
  */
 export type ShipKind = "cargo" | "tug" | "barge" | "ferry";
 export interface ShipSpec { len: number; beam: number; h: number; sheer: number; topMat: Material }
@@ -23,11 +24,11 @@ export const SHIP_SPECS: Record<ShipKind, ShipSpec> = {
 };
 export const SHIP_MATS: readonly Material[] = ["hull", "hullBlue", "whitewash", "steel", "rust", "deck", "glass", "asphalt"];
 const WATER_Z = -1, WAKE_Z = -0.95;
-const BRIDGE: Facade = { floors: 1, cols: 3, window: { w: 0.5, h: 0.5 } };
 
 interface Kit {
   hull: (dx: number, len: number, beam: number, h: number, sheer: number, topMat: Material) => Solid;
   box: (dx: number, dy: number, w: number, d: number, z: number, h: number, mat: Material, facade?: Facade) => Solid;
+  plate: (pts: [number, number][], z: number, h: number, mat: Material) => Solid;
   cyl: (dx: number, dy: number, z: number, r: number, h: number, mat: Material) => Solid;
   dot: (dx: number, dy: number, z: number, r: number, color: Accent["color"]) => Accent;
   poly: (pts: [number, number, number][], color: Accent["color"], alpha: number) => Accent;
@@ -40,6 +41,7 @@ function kit(at: Vec2, heading: number): Kit {
   return {
     hull: (dx, len, beam, h, sheer, topMat) => { const p = local(dx, 0); return { kind: "hull", at: v3(p.x, p.y, WATER_Z), len, beam, h, mat: "hull", topMat, heading, sheer }; },
     box: (dx, dy, w, d, z, h, mat, facade) => ({ kind: "poly", footprint: [local(dx, dy), local(dx + w, dy), local(dx + w, dy + d), local(dx, dy + d)], z, h, mat, ...(facade ? { facade } : {}) }),
+    plate: (pts, z, h, mat) => ({ kind: "poly", footprint: pts.map(([dx, dy]) => local(dx, dy)), z, h, mat }),
     cyl: (dx, dy, z, r, h, mat) => { const p = local(dx, dy); return { kind: "cylinder", at: v3(p.x, p.y, z), r, h, mat, sides: 8 }; },
     dot: (dx, dy, z, r, color) => { const p = local(dx, dy); return { kind: "dot", at: v3(p.x, p.y, z), r, color }; },
     poly: (pts, color, alpha) => ({ kind: "poly", pts: pts.map(([dx, dy, z]) => { const p = local(dx, dy); return v3(p.x, p.y, z); }), color, alpha }),
@@ -48,16 +50,35 @@ function kit(at: Vec2, heading: number): Kit {
 
 function cargo(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void {
   const deck = WATER_Z + spec.h;
-  for (const dx of [8, 18, 28]) solids.push(k.box(dx, -3, 9, 6, deck, 1.2, "rust")); // escotillas
-  solids.push(k.box(54, -3.5, 6, 7, deck, 1.2, "hullBlue")); // castillo de proa
-  solids.push(k.box(40, -4, 10, 8, deck, 2.4, "whitewash", BRIDGE), k.box(40.5, -3.5, 9, 7, deck + 2.4, 2.4, "whitewash", BRIDGE), k.box(41, -3, 8, 6, deck + 4.8, 2.4, "whitewash", BRIDGE));
-  solids.push(k.box(46, -6, 4, 12, deck + 7.2, 2.2, "whitewash", { floors: 1, cols: 4, base: "glass" })); // puente con alerones
-  solids.push(k.cyl(43, 0, deck + 7.2, 1.4, 4, "rust"), k.cyl(43, 0, deck + 11.2, 1.6, 0.6, "steel")); // chimenea y tapa
-  solids.push(k.box(56, -0.2, 0.4, 0.4, deck + 1.2, 7, "steel"), k.box(54.5, -0.15, 3, 0.3, deck + 7.5, 0.3, "steel")); // mástil y cruceta
-  for (const dx of [16, 36]) { solids.push(k.box(dx, 3.2, 0.8, 0.8, deck, 8, "steel")); solids.push(k.box(dx + 0.8, 3.3, 7, 0.6, deck + 6.5, 0.6, "steel")); } // grúas de cubierta
-  solids.push(k.box(11, -5, 23, 0.3, deck, 0.8, "hullBlue"), k.box(11, 4.7, 23, 0.3, deck, 0.8, "hullBlue")); // amurada sobre el tramo recto de la cubierta
-  lights.push(k.dot(56.2, 0, deck + 8.5, 0.7, "magentaMid"), k.dot(46, -6, deck + 9.4, 0.4, "magenta"), k.dot(46, 6, deck + 9.4, 0.4, "cyanMid"));
-  lights.push(k.poly([[50.02, -5, deck + 7.6], [50.02, 5, deck + 7.6], [50.02, 5, deck + 8.8], [50.02, -5, deck + 8.8]], "magentaBleed", 0.8)); // ventanas del puente encendidas, cara de proa
+  solids.push( // casa de popa: tres niveles que se angostan, puente con alerones a toda la manga
+    k.box(4.5, -3.5, 7.5, 7, deck, 1.4, "whitewash", { floors: 1, cols: 4 }),
+    k.box(4.7, -2.7, 7, 5.4, deck + 1.4, 1.4, "whitewash", { floors: 1, cols: 4 }),
+    k.box(5, -2.4, 6.5, 4.8, deck + 2.8, 1.4, "whitewash", { floors: 1, cols: 3 }),
+    k.box(6.5, -5, 4, 10, deck + 4.2, 1.5, "whitewash", { floors: 1, cols: 4, base: "glass" }),
+    k.box(6.3, -5.1, 4.4, 10.2, deck + 5.7, 0.2, "steel"), // techo del puente
+  );
+  solids.push(k.cyl(5.8, -1, deck + 4.2, 0.5, 1.8, "steel"), k.cyl(5.8, 1, deck + 4.2, 0.5, 1.8, "steel")); // escapes detrás del puente
+  solids.push(k.box(6, -3.6, 3, 0.9, deck + 1.4, 0.9, "rust")); // bote salvavidas en babor
+  solids.push(k.box(8, -0.2, 0.4, 0.4, deck + 5.9, 2.1, "steel"), k.box(8, -1.5, 0.4, 3, deck + 7, 0.25, "steel")); // mástil de radar y cruceta
+  lights.push(k.dot(8.2, 0, deck + 8.2, 0.7, "magentaMid"), k.dot(10, -5, deck + 5.2, 0.4, "magenta"), k.dot(10, 5, deck + 5.2, 0.4, "cyanMid"));
+  lights.push(k.poly([[10.52, -4.6, deck + 4.9], [10.52, 4.6, deck + 4.9], [10.52, 4.6, deck + 5.5], [10.52, -4.6, deck + 5.5]], "magentaBleed", 0.8)); // ventanas del puente encendidas, cara de proa
+  solids.push(k.box(14, -3.4, 34, 6.8, deck, 1, "rust")); // brazola de la bodega
+  for (let i = 0; i < 3; i++) solids.push(k.box(14.2 + i * 11.2, -3.2, 11, 6.4, deck + 1, 0.3, "steel")); // tapas de escotilla
+  solids.push(k.box(12.5, -3.2, 0.5, 0.5, deck, 2.5, "steel"), k.box(12.5, 2.7, 0.5, 0.5, deck, 2.5, "steel"), k.box(12.4, -3.5, 1, 7, deck + 2.5, 0.3, "steel")); // pórtico de tapas, estacionado a proa de la casa
+  for (const dx of [25.3, 36.5]) { // grúas de cubierta en babor: pedestal, cabina y pluma escalonada a 45° hacia proa
+    solids.push(k.cyl(dx, -3.9, deck, 0.5, 3, "steel"), k.box(dx - 0.6, -4.5, 1.2, 1.2, deck + 3, 1, "whitewash"));
+    for (let i = 0; i < 3; i++) solids.push(k.box(dx + 0.6 + 1.5 * i, -4.1, 1.8, 0.4, deck + 3.5 + 1.5 * i, 1.5, "steel"));
+  }
+  solids.push(k.box(50, -2.1, 4, 4.2, deck, 1.6, "steel")); // castillo de proa
+  solids.push(k.box(52, -0.2, 0.4, 0.4, deck + 1.6, 5.4, "steel"), k.box(52.05, -1.5, 0.3, 3, deck + 5.5, 0.25, "steel")); // mástil de proa y cruceta
+  solids.push(k.cyl(50.9, 0, deck + 1.6, 0.6, 0.6, "steel"), k.cyl(53.3, -1.2, deck + 1.6, 0.3, 0.5, "steel"), k.cyl(53.3, 1.2, deck + 1.6, 0.3, 0.5, "steel")); // molinete y bitas
+  solids.push(k.box(54.6, 1.6, 0.8, 0.5, deck, 0.8, "steel")); // ancla en el escobén de estribor, bajo el arrufo de la proa
+  solids.push(k.box(12, -5, 22.2, 0.3, deck, 0.8, "hullBlue"), k.box(12, 4.7, 22.2, 0.3, deck, 0.8, "hullBlue")); // amurada en el tramo recto
+  solids.push( // amurada que sigue el afinamiento de la proa hasta el castillo
+    k.plate([[34.2, -5], [50, -3.18], [50, -2.88], [34.2, -4.7]], deck, 0.8, "hullBlue"),
+    k.plate([[34.2, 4.7], [50, 2.88], [50, 3.18], [34.2, 5]], deck, 0.8, "hullBlue"),
+  );
+  lights.push(k.dot(52.2, 0, deck + 6.7, 0.5, "magentaMid")); // tope de proa
 }
 
 function tug(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void {

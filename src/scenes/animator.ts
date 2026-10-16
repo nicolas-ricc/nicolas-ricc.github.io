@@ -7,7 +7,8 @@ import type { Solid } from "../iso/solids";
  * agua) y `tick` dice cuáles hay que redibujar.
  */
 export type AnimLayer =
-  | { kind: "solid"; solids: Solid[]; alpha?: number }
+  // `heading`: marco en que los sólidos están alineados, para ordenar por profundidad
+  | { kind: "solid"; solids: Solid[]; alpha?: number; heading?: number }
   | { kind: "accent"; accents: Accent[]; alpha?: number }
   | { kind: "water"; water: Solid[]; alpha?: number };
 

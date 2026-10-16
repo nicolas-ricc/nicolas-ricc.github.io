@@ -123,7 +123,7 @@ export function alphaAt(lane: ShipLane, dist: number): number {
   return lane === "berth" ? 1 : 0;
 }
 
-export interface ShipFrame { solids: Solid[]; lights: Accent[]; wake: Solid[]; alpha: number }
+export interface ShipFrame { solids: Solid[]; lights: Accent[]; wake: Solid[]; alpha: number; heading?: number }
 export interface SeaChanges { ships: boolean; beam: boolean; buoys: boolean; ferry: boolean; neon: boolean }
 export interface SeaAnim {
   ship(k: number): ShipFrame;
@@ -160,7 +160,7 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
     const kind = SHIPS[k]!.kind, at = shipAt(kind, p, s.heading);
     const built = buildShip(kind, at, s.heading);
     const wakeTris = s.lane === "berth" ? [] : [{ kind: "ground" as const, mat: "foam" as const, tris: wake(kind, at, s.heading) }];
-    return { solids: built.solids, lights: built.lights, wake: wakeTris, alpha: alphaAt(s.lane, s.dist) };
+    return { solids: built.solids, lights: built.lights, wake: wakeTris, alpha: alphaAt(s.lane, s.dist), heading: s.heading };
   };
 
   const beamAngle = (): number => (opts.reducedMotion ? 0 : ((clock % BEAM_PERIOD_MS) / BEAM_PERIOD_MS) * Math.PI * 2);
