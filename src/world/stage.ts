@@ -103,7 +103,7 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage
     } else if (kind === "solid") {
       const gs = new Graphics(), gc = new Graphics(), g = new Graphics();
       shadowSlot.addChild(gs); coreSlot.addChild(gc); solidSlot.addChild(g);
-      redraw.set(id, () => { const l = a.layer(id) as AnimLayer & { kind: "solid" }; const items = buildRenderList(l.solids); drawLayer(gs, items, "shadow"); drawLayer(gc, items, "shadowCore"); drawLayer(g, items, "solid"); const al = l.alpha ?? 1; gs.alpha = gc.alpha = g.alpha = al; });
+      redraw.set(id, () => { const l = a.layer(id) as AnimLayer & { kind: "solid" }; const items = buildRenderList(l.solids, l.heading); drawLayer(gs, items, "shadow"); drawLayer(gc, items, "shadowCore"); drawLayer(g, items, "solid"); const al = l.alpha ?? 1; gs.alpha = gc.alpha = g.alpha = al; });
     } else {
       const g = new Graphics();
       g.blendMode = "add";

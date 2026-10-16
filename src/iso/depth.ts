@@ -1,6 +1,6 @@
 import { v3 } from "./geometry";
-import { project } from "./project";
-import { bounds, type Bounds, type Solid } from "./solids";
+import { VIEW_DIR, project } from "./project";
+import { bounds, tessellateAll, type Bounds, type Solid } from "./solids";
 
 const EPS = 1e-6;
 
@@ -24,7 +24,34 @@ export function isBehind(a: Bounds, b: Bounds): boolean {
   return a.max.x <= b.min.x + EPS || a.max.y <= b.min.y + EPS || a.max.z <= b.min.z + EPS;
 }
 
-const depthKey = (b: Bounds): number => b.min.x + b.max.x + b.min.y + b.max.y + (b.min.z + b.max.z) * 0.5;
+/**
+ * `a` está detrás de `b` con la vista expresada en un marco girado (`vx`, `vy`): en cada eje horizontal
+ * el lado lejano es el que mira contra la componente de la vista. Con `vx`, `vy` > 0 es `isBehind`.
+ */
+function isBehindView(a: Bounds, b: Bounds, vx: number, vy: number): boolean {
+  return (vx > 0 ? a.max.x <= b.min.x + EPS : a.min.x >= b.max.x - EPS)
+    || (vy > 0 ? a.max.y <= b.min.y + EPS : a.min.y >= b.max.y - EPS)
+    || a.max.z <= b.min.z + EPS;
+}
+
+/** Cajas del sólido en el marco girado `heading` (vértices girados −heading alrededor del origen; z igual). */
+function frameBounds(s: Solid, heading: number): Bounds {
+  if (heading === 0) return bounds(s);
+  const c = Math.cos(heading), sn = Math.sin(heading);
+  const min = v3(Infinity, Infinity, Infinity), max = v3(-Infinity, -Infinity, -Infinity);
+  for (const f of tessellateAll(s)) for (const p of f.pts) {
+    const x = p.x * c + p.y * sn, y = -p.x * sn + p.y * c;
+    min.x = Math.min(min.x, x); min.y = Math.min(min.y, y); min.z = Math.min(min.z, p.z);
+    max.x = Math.max(max.x, x); max.y = Math.max(max.y, y); max.z = Math.max(max.z, p.z);
+  }
+  return { min, max };
+}
+
+/** Sin giro es la suma de coordenadas de siempre; girado, pesa cada eje del marco por la vista. */
+const depthKey = (b: Bounds, vx?: number, vy?: number): number =>
+  vx === undefined || vy === undefined
+    ? b.min.x + b.max.x + b.min.y + b.max.y + (b.min.z + b.max.z) * 0.5
+    : (vx * (b.min.x + b.max.x) + vy * (b.min.y + b.max.y)) / VIEW_DIR.x + (b.min.z + b.max.z) * 0.5;
 
 /**
  * El sheer levanta la caja del casco por encima de su cubierta, así que una pieza
@@ -45,12 +72,21 @@ function restsOnHull(hull: Solid, other: Solid, hb: Bounds, ob: Bounds): boolean
  * Los pares se buscan con un barrido por x de pantalla (solo se comparan cajas
  * cuyos rangos en x se cruzan) y cada lista `before` se ordena ascendente:
  * el resultado es el mismo que comparando todos los pares en orden de índice.
+ *
+ * `heading` es el marco en que los sólidos están alineados con los ejes (el rumbo de un barco). La caja
+ * alineada al mundo de una pieza girada se infla y casi nunca separa; en su propio marco sí. Si dos
+ * convexos los separa un plano x=c (o y=c, z=c) de ese marco, el del lado lejano de la vista no tapa al
+ * otro. La pantalla sigue en el mundo; el desempate (`depthKey`) usa el marco, porque en el mundo
+ * una pieza girada empata mal y el corte de ciclos suelta relaciones de verdad.
  */
-export function sortByDepth(solids: Solid[]): Solid[] {
+export function sortByDepth(solids: Solid[], heading = 0): Solid[] {
   const n = solids.length;
-  const bs = solids.map(bounds);
-  const sbs = bs.map(screenBounds);
-  const keys = bs.map(depthKey);
+  const wb = solids.map(bounds);
+  const bs = heading === 0 ? wb : solids.map((s) => frameBounds(s, heading));
+  const c = Math.cos(heading), sn = Math.sin(heading);
+  const vx = VIEW_DIR.x * c + VIEW_DIR.y * sn, vy = -VIEW_DIR.x * sn + VIEW_DIR.y * c;
+  const sbs = wb.map(screenBounds);
+  const keys = heading === 0 ? bs.map((b) => depthKey(b)) : bs.map((b) => depthKey(b, vx, vy));
   const before: number[][] = Array.from({ length: n }, () => []); // before[i] = índices que van antes de i
   const byX = solids.map((_, i) => i).sort((a, b) => sbs[a]!.minX - sbs[b]!.minX);
   for (let a = 0; a < n; a++) {
@@ -60,9 +96,11 @@ export function sortByDepth(solids: Solid[]): Solid[] {
       if (sq.minX >= sp.maxX) break;
       if (!(sp.minY < sq.maxY && sq.minY < sp.maxY)) continue;
       const i = Math.min(p, q), j = Math.max(p, q);
-      const ij = isBehind(bs[i]!, bs[j]!), ji = isBehind(bs[j]!, bs[i]!);
+      const ij = isBehindView(bs[i]!, bs[j]!, vx, vy), ji = isBehindView(bs[j]!, bs[i]!, vx, vy);
       if (restsOnHull(solids[i]!, solids[j]!, bs[i]!, bs[j]!)) before[j]!.push(i);
       else if (restsOnHull(solids[j]!, solids[i]!, bs[j]!, bs[i]!)) before[i]!.push(j);
+      // En el marco girado, si los separan dos planos a la vez ninguno tapa al otro: no hay relación que imponer.
+      else if (ij && ji && heading !== 0) continue;
       else if (ij === ji) { if (keys[i]! <= keys[j]!) before[j]!.push(i); else before[i]!.push(j); }
       else if (ij) before[j]!.push(i);
       else before[i]!.push(j);

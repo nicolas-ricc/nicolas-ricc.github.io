@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LANE_SPEED, laneLength } from "./sea-anim";
+import { LANE_SPEED, SHIPS, createSeaAnim, laneLength } from "./sea-anim";
 import { seaAnimator } from "./sea-animator";
 import { world } from "./world";
 
@@ -32,6 +32,19 @@ describe("seaAnimator", () => {
     const ids = a.tick(1000);
     expect(ids.has("sea.ship0")).toBe(true); expect(ids.has("sea.wake0")).toBe(true); expect(ids.has("sea.lights0")).toBe(true);
     expect(a.layer("sea.ship0")).toEqual({ kind: "solid", solids: [], alpha: 0 });
+  });
+  it("las capas de los barcos llevan el rumbo del barco para ordenar en su marco; la lancha no", () => {
+    const sea = world(7).sea!, a = seaAnimator(sea, { reducedMotion: false }), ref = createSeaAnim(sea, { reducedMotion: false });
+    let seen = 0;
+    for (let k = 0; k < SHIPS.length; k++) {
+      const l = a.layer(`sea.ship${k}`), st = ref.state(k);
+      expect(l.kind).toBe("solid");
+      if (l.kind === "solid" && st.lane !== "offscreen") { expect(l.heading).toBe(st.heading); seen++; }
+    }
+    expect(seen).toBeGreaterThan(0);
+    const f = a.layer("sea.ferry");
+    expect(f.kind).toBe("solid");
+    if (f.kind === "solid") expect(f.heading).toBeUndefined();
   });
   it("mismo seed → misma secuencia", () => {
     const mk = () => seaAnimator(world(7).sea!, { reducedMotion: false });
