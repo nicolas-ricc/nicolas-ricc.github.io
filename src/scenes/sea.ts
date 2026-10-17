@@ -17,9 +17,13 @@ export interface SeaScene { ground: Solid[]; solids: Solid[]; accents: Accent[];
 
 export const LIGHTHOUSE = { x: 396, y: 118, z: 7 } as const;
 export const KEEPER = { x: 372, y: 108 } as const;
-export const BUOYS: readonly Vec2[] = [{ x: 420, y: 80 }, { x: 430, y: 160 }];
-export const WRECK_BUOY = { x: 470, y: 160 } as const;
-export const WRECK = { x: 462, y: 150, heading: Math.PI / 6 } as const;
+// Reubicados en #87: la ida pasaba por la boya vieja (420, 80) y un barco al oeste o norte de un sólido
+// que se le superpone en pantalla queda detrás. Las boyas marcan el bajo al sur de la punta, al oeste de
+// la ida (35 y 40 u del carril: los barcos pasan por delante). El pecio sigue en la fosa (su popa queda
+// ~16 u al este del talud, `abyssX(262)` ≈ 474), 30 u al este de la vuelta; ningún barco lo tapa ni es tapado.
+export const BUOYS: readonly Vec2[] = [{ x: 398, y: 150 }, { x: 392, y: 200 }];
+export const WRECK_BUOY = { x: 498, y: 272 } as const;
+export const WRECK = { x: 490, y: 262, heading: Math.PI / 6 } as const;
 const WATER_Z = -1;
 const DRUMS = 6, DRUM_H = 4, DRUM_R0 = 3.2, DRUM_STEP = 0.2, GALLERY_H = 0.6, LANTERN_H = 3, CAP_H = 2;
 /** Galería de neón y postes de la baranda: último tambor + 0.5. Las luces van a la altura de la plataforma (lantern.z − 2). */

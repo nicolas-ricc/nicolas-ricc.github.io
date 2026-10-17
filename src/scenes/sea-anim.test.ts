@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { depthAt } from "./depth-map";
 import type { Accent } from "../iso/accent";
 import { isBehind, overlaps, screenBounds } from "../iso/depth";
-import { convexHull, v3, type Vec2 } from "../iso/geometry";
+import { convexHull, polyline, v3, type Vec2 } from "../iso/geometry";
 import { project } from "../iso/project";
 import { bounds, hullRings, isFlat, type Bounds, type Solid } from "../iso/solids";
 import { WORLD, inCoverQuad, worldZoneAt } from "../map/geo";
-import { BEAM_PERIOD_MS, BERTH, BERTH_MS, BERTH_TURN_MS, CYCLE_MS, FADE_U, FERRY_PAUSE_MS, FERRY_ROUTE, FERRY_SPEED, KEEPER_SIGN_MS, LANE_BACK, LANE_OUT, LANE_SPEED, NEON_STEP_MS, OFF_MS, SHIPS, alphaAt, createSeaAnim, laneAt, laneLength } from "./sea-anim";
+import { BEAM_PERIOD_MS, CYCLE_MS, FADE_U, FERRY_PAUSE_MS, FERRY_ROUTE, FERRY_SPEED, KEEPER_SIGN_MS, LANE_BACK, LANE_OUT, LANE_SPEED, NEON_STEP_MS, OFF_MS, PORT_MS, SHIPS, alphaAt, createSeaAnim, laneAt, laneLength } from "./sea-anim";
 import { SHIP_SPECS, ship, shipAt } from "./ships";
 import { bleedTerrainAt, terrainAt } from "./terrain";
 import { world } from "./world";
@@ -39,25 +39,22 @@ const expectNotBehind = (statics: Static[], p: { x: number; y: number }, heading
 const setup = (reducedMotion = false) => { const w = world(7); return { w, a: createSeaAnim(w.sea!, { reducedMotion }) }; };
 
 describe("ruta", () => {
-  it("LANE_OUT nace en BERTH (dentro del cover) y termina fuera del cover; agua, profundidad ≥ 6, Blog para x ≥ 380, cruza la fosa", () => {
-    expect(LANE_OUT[0]).toEqual(BERTH);
-    expect(BERTH).toEqual({ x: 232, y: 50 });
-    expect(inCoverQuad(BERTH.x, BERTH.y)).toBe(true);
+  it("LANE_OUT nace en la bocana (362, −16), dentro del cover, y termina fuera; agua, profundidad ≥ 6, Blog para x ≥ 380; el fade de mar cae en el sangrado", () => {
+    expect(LANE_OUT[0]).toEqual({ x: 362, y: -16 });
+    expect(inCoverQuad(362, -16)).toBe(true);
     const end = LANE_OUT[LANE_OUT.length - 1]!;
     expect(inCoverQuad(end.x, end.y)).toBe(false);
     const L = laneLength("out");
-    expect(Math.abs(L - 955)).toBeLessThan(5); // ≈ 955.4; holgura para mover vértices hasta 2 u
-    let crossedAbyss = false;
+    expect(Math.abs(L - 687.9)).toBeLessThan(5); // holgura para mover vértices hasta 2 u
     for (let d = 0; d <= L; d += 1) {
       const p = laneAt("out", d);
       const t = inWorld(p.x, p.y) ? terrainAt(p.x, p.y) : bleedTerrainAt(p.x, p.y);
       expect(WATER.has(t)).toBe(true);
       expect(depthAt(p.x, p.y)).toBeGreaterThanOrEqual(6);
       if (p.x >= 380) expect(worldZoneAt(p.x, p.y)).toBe("blog");
-      if (t === "abyss") crossedAbyss = true;
+      expect(inCoverQuad(p.x, p.y)).toBe(L - d > FADE_U); // a pleno siempre a la vista; el fade de mar, nunca
     }
-    expect(crossedAbyss).toBe(true);
-    expect(laneAt("out", 0).heading).toBeCloseTo(Math.atan2(-58, 24), 6); // zarpa de la dársena hacia el nornoreste
+    expect(laneAt("out", 0).heading).toBeCloseTo(Math.atan2(56, 36), 6); // sale de la bocana hacia el sursureste
   });
 
   it("ningún punto del carril queda detrás de un sólido estático que se le superponga en pantalla", () => {
@@ -91,18 +88,20 @@ const silhouette = (p: { x: number; y: number }, heading: number): Vec2[] => {
 };
 
 describe("dos carriles", () => {
-  it("LANE_BACK nace fuera del cover y termina en BERTH; agua, profundidad ≥ 6, Blog para x ≥ 380", () => {
-    expect(LANE_BACK[0]).toEqual({ x: 430, y: 655 });
-    expect(inCoverQuad(430, 655)).toBe(false);
-    expect(LANE_BACK[LANE_BACK.length - 1]).toEqual(BERTH);
+  it("LANE_BACK nace fuera del cover y termina en la bocana (397, −39); agua, profundidad ≥ 6, Blog para x ≥ 380; el fade de mar cae en el sangrado", () => {
+    expect(LANE_BACK[0]).toEqual({ x: 424, y: 600 });
+    expect(inCoverQuad(424, 600)).toBe(false);
+    expect(LANE_BACK[LANE_BACK.length - 1]).toEqual({ x: 397, y: -39 });
+    expect(inCoverQuad(397, -39)).toBe(true);
     const L = laneLength("back");
-    expect(Math.abs(L - 1164)).toBeLessThan(5); // ≈ 1164.3; holgura para mover vértices hasta 2 u
+    expect(Math.abs(L - 664.9)).toBeLessThan(5); // holgura para mover vértices hasta 2 u
     for (let d = 0; d <= L; d += 1) {
       const p = laneAt("back", d);
       const t = inWorld(p.x, p.y) ? terrainAt(p.x, p.y) : bleedTerrainAt(p.x, p.y);
       expect(WATER.has(t)).toBe(true);
       expect(depthAt(p.x, p.y)).toBeGreaterThanOrEqual(6);
       if (p.x >= 380) expect(worldZoneAt(p.x, p.y)).toBe("blog");
+      expect(inCoverQuad(p.x, p.y)).toBe(d > FADE_U);
     }
   });
 
@@ -114,22 +113,21 @@ describe("dos carriles", () => {
     }
   });
 
-  it("separación: dos cargueros, uno en cada carril, no se tocan en pantalla salvo cerca del fondeadero (d_out + (L_back − d_back) < 200)", () => {
+  it("separación: dos cargueros, uno en cada carril, nunca se tocan en pantalla", () => {
     const Lo = laneLength("out"), Lb = laneLength("back");
-    const backs = [] as { d: number; s: Vec2[] }[];
-    for (let d = 0; d <= Lb; d += 4) { const p = laneAt("back", d); backs.push({ d, s: silhouette(p, p.heading) }); }
+    const backs = [] as Vec2[][];
+    for (let d = 0; d <= Lb; d += 4) { const p = laneAt("back", d); backs.push(silhouette(p, p.heading)); }
     for (let d = 0; d <= Lo; d += 4) {
       const p = laneAt("out", d), s = silhouette(p, p.heading);
-      for (const b of backs) if (d + (Lb - b.d) >= 200) expect(intersects(s, b.s)).toBe(false);
+      for (const b of backs) expect(intersects(s, b)).toBe(false);
     }
   });
 
-  it("giro en el fondeadero: con el carguero centrado en BERTH, ningún rumbo entre el de llegada y el de salida lo deja detrás de un sólido estático", () => {
-    const statics = staticsOf(world(7).solids);
-    const arrive = laneAt("back", laneLength("back")).heading, leave = laneAt("out", 0).heading;
-    let d = leave - arrive; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; // arco corto
-    for (let t = 0; t <= 1; t += 0.02) {
-      expectNotBehind(statics, BERTH, arrive + d * t);
+  it("la lancha pasa a más de 20 u de los dos carriles", () => {
+    const ferry = polyline(FERRY_ROUTE);
+    for (const lane of ["out", "back"] as const) for (let d = 0; d <= laneLength(lane); d += 2) {
+      const p = laneAt(lane, d);
+      for (let f = 0; f <= ferry.length; f += 2) { const q = ferry.at(f); expect(Math.hypot(p.x - q.x, p.y - q.y)).toBeGreaterThan(20); }
     }
   });
 
@@ -140,56 +138,55 @@ describe("dos carriles", () => {
   });
 
   it("laneAt('back') interpola el rumbo en los vértices y en el extremo llega con el rumbo del último tramo", () => {
-    const Lb = laneLength("back"), last = Math.atan2(50 - -14, 232 - 212);
+    const Lb = laneLength("back"), last = Math.atan2(-39 - 18, 397 - 434);
     expect(laneAt("back", Lb).heading).toBeCloseTo(last, 6);
-    expect(laneAt("back", 0).heading).toBeCloseTo(Math.atan2(487 - 655, 471 - 430), 6);
+    expect(laneAt("back", 0).heading).toBeCloseTo(Math.atan2(237 - 600, 462 - 424), 6);
   });
 
-  it("cerca del fondeadero nunca coinciden dos barcos: LANE_SPEED · (T/3 − BERTH_MS) ≥ 200 u", () => {
-    expect((LANE_SPEED * (CYCLE_MS / 3 - BERTH_MS)) / 1000).toBeGreaterThanOrEqual(200);
-  });
-
-  it("cobertura: en 2·T, siempre uno en out y uno en back, nunca dos en berth, cada barco recorre out → offscreen → back → berth en orden, y dos en el mismo carril distan ≥ 100 u", () => {
+  it("cobertura: en 2·T, siempre uno en out y uno en back (y uno a pleno en cada uno), cada barco recorre out → offscreen → back → offscreen en orden, y dos en el mismo carril distan ≥ 100 u", () => {
     const { a } = setup();
-    const ORDER = ["out", "offscreen", "back", "berth"] as const;
-    const prev = [0, 1, 2].map((k) => a.state(k).lane), seen: string[][] = [[], [], []];
+    const ORDER = ["out", "offscreen", "back", "offscreen"] as const;
+    const step = [0, 1, 2].map((k) => ORDER.indexOf(a.state(k).lane as (typeof ORDER)[number])), seen: string[][] = [[], [], []];
     for (let t = 0; t < 2 * CYCLE_MS; t += 997) {
       a.tick(997);
       const ss = [0, 1, 2].map((k) => a.state(k));
       expect(ss.some((s) => s.lane === "out")).toBe(true);
       expect(ss.some((s) => s.lane === "back")).toBe(true);
-      expect(ss.filter((s) => s.lane === "berth").length).toBeLessThanOrEqual(1);
+      expect(ss.some((s) => s.lane === "out" && alphaAt("out", s.dist) === 1)).toBe(true);
+      expect(ss.some((s) => s.lane === "back" && alphaAt("back", s.dist) === 1)).toBe(true);
       ss.forEach((s, k) => {
-        if (s.lane !== prev[k]) { expect(s.lane).toBe(ORDER[(ORDER.indexOf(prev[k]!) + 1) % 4]); seen[k]!.push(s.lane); prev[k] = s.lane; }
+        if (s.lane !== ORDER[step[k]!]) { step[k] = (step[k]! + 1) % 4; expect(s.lane).toBe(ORDER[step[k]!]); seen[k]!.push(`${step[k]}`); }
       });
       for (const lane of ["out", "back"] as const) {
         const ds = ss.filter((s) => s.lane === lane).map((s) => s.dist);
         if (ds.length === 2) expect(Math.abs(ds[0]! - ds[1]!)).toBeGreaterThanOrEqual(100);
       }
     }
-    for (const k of [0, 1, 2]) for (const lane of ORDER) expect(seen[k]).toContain(lane);
+    for (const k of [0, 1, 2]) for (const i of [0, 1, 2, 3]) expect(seen[k]).toContain(`${i}`);
   });
 
-  it("giro en el fondeadero: el centro no se mueve y el rumbo pasa del de llegada al de salida por el arco corto, entre los 8 s y los 16 s", () => {
+  it("entrar a puerto: al terminar la vuelta pasa PORT_MS fuera de cámara y reaparece en la bocana, desvanecido", () => {
     const { a } = setup();
     const Lo = laneLength("out"), Lb = laneLength("back");
-    const arrive = laneAt("back", Lb).heading, leave = laneAt("out", 0).heading;
-    a.tick(((Lo + Lb) / LANE_SPEED) * 1000 + OFF_MS + 1); // barco 0 recién fondeado
-    const hullAt = () => { const h = a.ship(0).solids.find((s) => s.kind === "hull")!; if (h.kind !== "hull") throw new Error(); return h; };
-    for (let t = 1; t < BERTH_MS; t += 250) {
-      const s = a.state(0), h = hullAt(), want = shipAt("cargo", BERTH, s.heading);
-      expect(s.lane).toBe("berth");
-      expect(h.at.x).toBeCloseTo(want.x, 6); expect(h.at.y).toBeCloseTo(want.y, 6); // centro fijo en BERTH
-      expect(a.ship(0).wake).toEqual([]); // fondeado: sin estela
-      if (t < BERTH_TURN_MS.from) expect(s.heading).toBeCloseTo(arrive, 6);
-      if (t > BERTH_TURN_MS.to) expect(s.heading).toBeCloseTo(leave, 6);
-      const lo = Math.min(arrive, leave), hi = Math.max(arrive, leave); // arco corto: nunca sale de [salida, llegada]
-      expect(s.heading).toBeGreaterThanOrEqual(lo - 1e-9); expect(s.heading).toBeLessThanOrEqual(hi + 1e-9);
-      a.tick(250);
-    }
-    a.tick(1000); // zarpa
+    a.tick(((Lo + Lb) / LANE_SPEED) * 1000 + OFF_MS + 1); // barco 0 recién llegado a la bocana
+    expect(a.state(0)).toMatchObject({ lane: "offscreen", dist: Lb });
+    expect(a.ship(0)).toEqual({ solids: [], lights: [], wake: [], alpha: 0 });
+    a.tick(PORT_MS - 2);
+    expect(a.state(0).lane).toBe("offscreen");
+    a.tick(2);
     expect(a.state(0).lane).toBe("out");
-    expect(a.state(0).heading).toBeCloseTo(Math.atan2(-58, 24), 6); // rumbo del primer tramo de LANE_OUT
+    expect(a.state(0).dist).toBeLessThan(0.01);
+    expect(a.state(0).heading).toBeCloseTo(Math.atan2(56, 36), 6); // rumbo del primer tramo de LANE_OUT
+    expect(a.ship(0).alpha).toBeLessThan(0.01);
+  });
+
+  it("un dt grande cruza la vuelta y PORT_MS de una vez: cae 6 u dentro de la ida siguiente", () => {
+    const { a } = setup();
+    const Lo = laneLength("out"), Lb = laneLength("back");
+    a.tick((Lo / LANE_SPEED) * 1000 + OFF_MS);
+    a.tick((Lb / LANE_SPEED) * 1000 + PORT_MS + 5000);
+    expect(a.state(0).lane).toBe("out");
+    expect(a.state(0).dist).toBeCloseTo(5 * LANE_SPEED, 6);
   });
 });
 
@@ -200,24 +197,27 @@ describe("barcos", () => {
     expect(SHIPS.map((s) => s.kind)).toEqual(["cargo", "tug", "barge"]);
     expect(SHIPS.map((s) => s.phase)).toEqual([0, 1 / 3, 2 / 3]);
     const Lo = laneLength("out"), Lb = laneLength("back");
-    expect(CYCLE_MS).toBeCloseTo(((Lo + Lb) / LANE_SPEED) * 1000 + OFF_MS + BERTH_MS, 6);
+    expect(CYCLE_MS).toBeCloseTo(((Lo + Lb) / LANE_SPEED) * 1000 + OFF_MS + PORT_MS, 6);
     const s0 = [0, 1, 2].map((k) => a.state(k));
-    expect(s0[0]).toMatchObject({ lane: "out", dist: 0 }); // zarpando
+    expect(s0[0]).toMatchObject({ lane: "out", dist: 0 }); // zarpando de la bocana
     expect(s0[1]!.lane).toBe("out"); expect(s0[1]!.dist).toBeGreaterThan(Lo / 2); // lejos en la ida
     expect(s0[2]!.lane).toBe("back"); expect(s0[2]!.dist).toBeGreaterThan(Lb / 4); expect(s0[2]!.dist).toBeLessThan((3 * Lb) / 4); // a mitad de la vuelta
     a.tick(CYCLE_MS);
     for (const k of [0, 1, 2]) { const s = a.state(k); expect(s.lane).toBe(s0[k]!.lane); expect(s.dist).toBeCloseTo(s0[k]!.dist, 6); }
   });
 
-  it("alpha: 1 en el fondeadero, 0 en los extremos de mar, 1 a FADE_U de ellos; offscreen 0", () => {
+  it("alpha: 0 en los dos extremos de cada carril, 1 a FADE_U de ellos; offscreen 0", () => {
     const Lo = laneLength("out"), Lb = laneLength("back");
-    expect(alphaAt("out", 0)).toBe(1);
-    expect(alphaAt("out", Lo)).toBe(0);
+    expect(alphaAt("out", 0)).toBe(0);
+    expect(alphaAt("out", FADE_U / 2)).toBeCloseTo(0.5, 6);
+    expect(alphaAt("out", FADE_U)).toBe(1);
+    expect(alphaAt("out", Lo / 2)).toBe(1);
     expect(alphaAt("out", Lo - FADE_U)).toBe(1);
+    expect(alphaAt("out", Lo)).toBe(0);
     expect(alphaAt("back", 0)).toBe(0);
     expect(alphaAt("back", FADE_U)).toBe(1);
-    expect(alphaAt("back", Lb)).toBe(1);
-    expect(alphaAt("berth", Lb)).toBe(1);
+    expect(alphaAt("back", Lb - FADE_U)).toBe(1);
+    expect(alphaAt("back", Lb)).toBe(0);
     expect(alphaAt("offscreen", Lo)).toBe(0);
   });
 
@@ -302,8 +302,8 @@ describe("mar, haz y boyas", () => {
     for (let t = 0; t < 2000; t += 50) {
       const b = a.buoys();
       expect(b.length).toBeGreaterThanOrEqual(1);
-      on0 += b.some((d) => d.kind === "dot" && d.at.x === 420) ? 1 : 0;
-      on1 += b.some((d) => d.kind === "dot" && d.at.x === 430) ? 1 : 0;
+      on0 += b.some((d) => d.kind === "dot" && d.at.x === 398) ? 1 : 0;
+      on1 += b.some((d) => d.kind === "dot" && d.at.x === 392) ? 1 : 0;
       a.tick(50);
     }
     expect(on0).toBe(20); expect(on1).toBe(20);
