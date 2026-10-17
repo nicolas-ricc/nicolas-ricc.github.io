@@ -9,6 +9,17 @@ const FRAME_H = 30; // alto de referencia para que entren los landmarks
 
 export type Frame = WorldZone | "all" | "cover";
 
+/** Caja de mundo en x/y; z no cuenta. */
+export interface Box { x0: number; y0: number; x1: number; y1: number }
+
+/** Caja de mundo proyectada, como RenderItem para fitTransform: `h` en la esquina norte (la que sube en pantalla), las otras tres a z 0. */
+export function boxFrame(box: Box, h = FRAME_H): RenderItem[] {
+  const { x0, y0, x1, y1 } = box;
+  const pts: number[] = [];
+  for (const [x, y, z] of [[x0, y0, h], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0]] as const) { const p = project(v3(x, y, z)); pts.push(p.x, p.y); }
+  return [{ layer: "ground", pts, color: 0 }];
+}
+
 /** Caja de una zona (o del mundo) proyectada, como un RenderItem para fitTransform. `cover` es el rectángulo 16:9 inscripto en el rombo del sangrado. */
 export function zoneFrame(frame: Frame): RenderItem[] {
   if (frame === "cover") return coverFrame(16 / 9);
@@ -20,17 +31,6 @@ export function zoneFrame(frame: Frame): RenderItem[] {
   }[frame];
   const [x0, y0, x1, y1] = box as [number, number, number, number];
   return boxFrame({ x0, y0, x1, y1 });
-}
-
-/** Caja de mundo en x/y; z no cuenta. */
-export interface Box { x0: number; y0: number; x1: number; y1: number }
-
-/** Caja de mundo proyectada, como RenderItem para fitTransform: `h` en la esquina norte (la que sube en pantalla), las otras tres a z 0. */
-export function boxFrame(box: Box, h = FRAME_H): RenderItem[] {
-  const { x0, y0, x1, y1 } = box;
-  const pts: number[] = [];
-  for (const [x, y, z] of [[x0, y0, h], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0]] as const) { const p = project(v3(x, y, z)); pts.push(p.x, p.y); }
-  return [{ layer: "ground", pts, color: 0 }];
 }
 
 /** Rectángulo cover 16:9 (`coverQuad` de geo.ts) proyectado, como RenderItem para fitTransform. */

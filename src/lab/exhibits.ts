@@ -45,5 +45,6 @@ export function pickExhibit(hash: string, list: readonly Exhibit[] = EXHIBITS): 
 /** Vecino en el orden del índice, dando la vuelta en los extremos. */
 export function stepExhibit(id: string, delta: 1 | -1, list: readonly Exhibit[] = EXHIBITS): Exhibit {
   const i = list.findIndex((e) => e.id === id);
+  if (i < 0) return list[0]!;
   return list[(i + delta + list.length) % list.length]!;
 }

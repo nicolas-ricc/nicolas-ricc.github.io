@@ -32,7 +32,7 @@ export function cropSolid(s: Solid, box: Box): Solid | null {
 // el stage reconoce el agua reclamada por identidad: terreno y reclamos tienen que recortar al mismo objeto
 const memo = new WeakMap<Box, WeakMap<Solid, Solid | null>>();
 
-/** `cropSolid` memoizado por (caja, sólido), para el terreno y los reclamos. Las capas animadas no: mutan sus sólidos. */
+/** `cropSolid` memoizado por (caja, sólido), para el terreno y los reclamos. Las capas animadas no: mutan sus sólidos. La caja se compara por identidad: `cropScene` y `cropAnimators` tienen que recibir el mismo objeto. */
 export function cropShared(s: Solid, box: Box): Solid | null {
   let m = memo.get(box);
   if (!m) memo.set(box, (m = new WeakMap()));

@@ -50,7 +50,8 @@ async function boot(): Promise<void> {
   const show = (e: Exhibit): void => {
     if (e.kind !== "region") return; // en este hijo EXHIBITS solo tiene regiones; las piezas llegan con #94
     const mode = stage?.bloom ?? "off";
-    stage?.container.destroy({ children: true });
+    // sin `context: true` los GraphicsContext de cada Graphics sobreviven hasta el GC de Pixi
+    stage?.container.destroy({ children: true, context: true });
     const t0 = performance.now();
     // la misma caja a ambos: el memo del recorte se indexa por identidad de Box
     stage = buildStage(cropScene(scene, e.box), cropAnimators(animators, e.box));
@@ -67,18 +68,19 @@ async function boot(): Promise<void> {
   const fromHash = (): void => {
     const e = pickExhibit(location.hash);
     if (location.hash !== `#${e.id}`) history.replaceState(null, "", `#${e.id}`);
-    show(e);
+    if (e !== current) show(e);
   };
   fromHash();
   window.addEventListener("hashchange", fromHash);
   app.renderer.on("resize", fit);
-  // diferido como en page.ts, sobre el primer stage; los siguientes heredan el modo en show()
+  // diferido como en page.ts; los stages siguientes heredan el modo en show()
   // attachBloom guarda el stage y aplica el veredicto más tarde: se le pasa el vigente, no el primero (que se destruye al cambiar)
   const live = { get bloom() { return stage!.bloom; }, setBloom(m: BloomMode) { stage!.setBloom(m); } };
   scheduleIdle(() => { bloom = attachBloom({ app, stage: live, log, prefix: "storybook", force: bloomFromSearch(location.search) }); });
 
   const NEXT = new Set(["ArrowRight", "ArrowDown", "j"]), PREV = new Set(["ArrowLeft", "ArrowUp", "k"]);
   window.addEventListener("keydown", (ev) => {
+    if (ev.altKey || ev.ctrlKey || ev.metaKey) return; // Alt/Cmd + flecha es atrás/adelante del navegador
     if (current && (NEXT.has(ev.key) || PREV.has(ev.key))) { ev.preventDefault(); location.hash = stepExhibit(current.id, NEXT.has(ev.key) ? 1 : -1).id; }
     if (ev.key === "6" && stage) { stage.setBloom(nextBloomMode(stage.bloom)); if (log) console.info(`[storybook] bloom: ${stage.bloom}`); }
   });

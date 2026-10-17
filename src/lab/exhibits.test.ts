@@ -47,4 +47,8 @@ describe("selección por hash", () => {
     expect(stepExhibit(first!.id, -1)).toBe(last);
     expect(stepExhibit(last.id, 1)).toBe(first);
   });
+  it("con un id desconocido las flechas van al primero", () => {
+    expect(stepExhibit("nada", 1)).toBe(first);
+    expect(stepExhibit("nada", -1)).toBe(first);
+  });
 });
