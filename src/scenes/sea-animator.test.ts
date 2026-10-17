@@ -9,7 +9,7 @@ describe("seaAnimator", () => {
     const a = seaAnimator(w.sea!, { reducedMotion: false });
     expect(a.ids).toEqual(expect.arrayContaining(["sea.ship0", "sea.wake2", "sea.lights1", "sea.beam", "sea.buoys", "sea.ferry", "sea.ferryWake", "sea.ferryLights", "sea.neon"]));
     expect(a.layer("sea.ship0").kind).toBe("solid");
-    expect(a.layer("sea.wake0")).toMatchObject({ kind: "water", alpha: 1 }); // fase 0: zarpando del fondeadero, a la vista
+    expect(a.layer("sea.wake0")).toMatchObject({ kind: "water", alpha: 0 }); // fase 0: zarpa en la bocana, desvanecido
     expect(a.layer("sea.ship2")).toMatchObject({ kind: "solid", alpha: 1 }); // fase ⅔: a mitad de la vuelta
     const ids = a.tick(100);
     expect(ids.has("sea.ship0")).toBe(true); expect(ids.has("sea.beam")).toBe(true);
