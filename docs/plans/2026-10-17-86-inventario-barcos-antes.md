@@ -23,9 +23,20 @@
 - La misma tabla va en la descripción del PR (contra `feature/85-barcos-semirrecta`).
 - Docs en castellano rioplatense, prosa sobria como el resto de `docs/superpowers/specs/`.
 
+## Criterios de aceptación del issue (transcriptos)
+
+- [ ] `docs/superpowers/specs/2026-10-17-barcos-inventario.md` existe, con la tabla de todos los conjuntos (los ocho de arriba más los que aparezcan), conteos y enlaces a las capturas. → Task 3
+- [ ] Las capturas `antes-*.png` listadas existen en `docs/superpowers/specs/assets/85-barcos/` y se ven (abrirlas con la herramienta de lectura de imágenes para comprobarlo). → Tasks 1–2
+- [ ] El time-lapse muestra el recorrido completo de ida y vuelta de los barcos (se distingue el bucle alrededor de la punta). → Task 2
+- [ ] Conteos por frame de `rendering.capture().totals` anotados en el doc. → Task 1 (medición), Task 3 (doc)
+- [ ] Ningún archivo bajo `src/` cambia. `npm test` y `npm run typecheck` siguen verdes. → todas
+- [ ] PR contra `feature/85-barcos-semirrecta` con la tabla del inventario en la descripción. → stage 8 del pipeline
+
+Los ocho conjuntos de la tabla del issue: `cargo`/`tug`/`barge`; `ferry` (lancha colectiva); pecio partido; boyas de canal; casco en construcción (quilla y cuadernas); casco entero en grada 2; casco en el dique seco; botes del muelle de la feria. La boya del pecio sale del grep y es la novena fila.
+
 ## Review Focus
 
-- **Time-lapse negro o vacío:** Pixi WebGL con `preserveDrawingBuffer: false` devuelve un buffer en blanco a `drawImage` fuera del frame; un PNG oscuro uniforme pasaría por "existe". Esperado: el test exige que el PNG tenga dimensiones del canvas (≥ 1600×900) y el implementador lo abre con Read y confirma que se ven las trazas.
+- **Time-lapse negro o vacío:** Pixi WebGL con `preserveDrawingBuffer: false` devuelve un buffer en blanco a `drawImage` fuera del frame; un PNG oscuro uniforme pasaría por "existe". Esperado: el test exige que el PNG tenga las mismas dimensiones que `antes-cover.png` y ancho ≥ 3200 y el implementador lo abre con Read y confirma que se ven las trazas.
 - **Ciclo incompleto:** si el headless corre a pocos FPS, `?speed=40` durante 45 s reales no cubre los 1805 s simulados. Esperado: medir el reloj simulado (sumar `deltaMS·speed` o comparar `state` antes/después) y extender la captura hasta cubrir ≥ 1 ciclo; anotar duración real y simulada en el doc.
 - **Conjunto omitido:** la tabla del issue tiene ocho filas; un grep incompleto deja fuera, p. ej., la boya del pecio o el bote salvavidas de los kits. Esperado: el doc lista todo `kind: "hull"`, boyas, botes y lanchas de `src/scenes/*.ts`; el test exige las ocho filas por nombre y el implementador agrega las que encuentre.
 - **Conteos de un solo instante:** el issue pide `totals` en al menos dos instantes. Esperado: dos (o más) bloques de `totals` en el doc, con el estado de los barcos en cada instante; el test exige al menos dos apariciones de `"sprites"`/`"graphics"` o una tabla con dos filas de conteo.
@@ -35,7 +46,18 @@
 
 ## Datos ya medidos (para el doc)
 
-Con `npx tsx` sobre `src/scenes/sea-anim.ts` (estado de `origin/feature/85-barcos-semirrecta` = `main` 9dc191c):
+Con `npx tsx .scratch/cycle.ts` (sea-anim.ts no importa Pixi ni DOM, tsx lo carga sin navegador). Script:
+
+```ts
+import { CYCLE_MS, OFF_MS, BERTH_MS, laneLength, LANE_SPEED, shipStateAt, SHIPS } from "../src/scenes/sea-anim";
+const OUT = laneLength("out")/LANE_SPEED*1000, BACK = laneLength("back")/LANE_SPEED*1000;
+console.log({CYCLE_MS, OUT, BACK, OFF_MS, BERTH_MS, out: laneLength("out"), back: laneLength("back")});
+const combos = new Map<string, number>();
+for (let t=0;t<CYCLE_MS;t+=100){ const key = SHIPS.map(s=>shipStateAt((t+s.phase*CYCLE_MS)%CYCLE_MS).lane).join(","); combos.set(key,(combos.get(key)??0)+100); }
+for (const [k,v] of combos) console.log(k, (v/1000).toFixed(1)+"s", (100*v/CYCLE_MS).toFixed(1)+"%");
+```
+
+Resultado (estado de `origin/feature/85-barcos-semirrecta` = `main` 9dc191c):
 
 - `CYCLE_MS` = 1 805 380 ms (≈ 1805 s). `OUT_MS` ≈ 796 168 ms (carril de ida 955.4 u a 1.2 u/s), `OFF_MS` 15 000, `BACK_MS` ≈ 970 212 ms (vuelta 1164.3 u), `BERTH_MS` 24 000 (giro en el lugar entre 8 y 16 s).
 - Fases 0, ⅓, ⅔. Combinaciones de estados de los 3 barcos a lo largo de un ciclo (muestreo cada 100 ms):
@@ -53,7 +75,7 @@ Es decir: siempre hay 2 o 3 barcos en pantalla en algún carril; 3 instancias po
 
 - Create: `docs/superpowers/specs/2026-10-17-barcos-inventario.md` — el inventario (Task 3).
 - Create: `docs/superpowers/specs/assets/85-barcos/antes-{cover,darsena,pecio,lancha,feria-botes}.png` (Task 1), `antes-recorrido.png` (Task 2).
-- Create (stage 3, ya en la rama antes de las tareas): `scripts/barcos-inventario.test.ts` — eval que comprueba doc y capturas.
+- Create (stage 3 del pipeline, commit `test(#86): evals`, antes de la Task 1): `scripts/barcos-inventario.test.ts` — eval que comprueba doc y capturas. Lee las dimensiones de cada PNG de la cabecera IHDR (bytes 16–23) con `Buffer` de Node, sin dependencias nuevas. Exige: firma PNG válida, `antes-recorrido.png` con las mismas dimensiones que `antes-cover.png` y ancho ≥ 3200 (viewport 1600 a 2x), las ocho filas del issue por nombre (se admiten más), frontmatter, al menos dos filas de conteo con `sprites` y `graphics`, cada `assets/85-barcos/*.png` citado existe, y la sección "Después" con el texto literal.
 - Modify: `README.md` — agregar el doc nuevo a la lista de specs (Task 3).
 - Scratch, no versionado: `.scratch/` (en `.git/info/exclude`), `.superpowers/` (gitignored).
 
@@ -283,3 +305,23 @@ Expected: todo PASS. Además: `git diff --stat origin/feature/85-barcos-semirrec
 git add docs/superpowers/specs/2026-10-17-barcos-inventario.md README.md
 git commit -m "docs(#86): inventario de los conjuntos de barcos antes de #85"
 ```
+
+## Assumptions
+
+Decisiones técnicas tomadas en la revisión del plan (stage 2); cualquier alternativa razonable cumple el issue.
+
+1. **Eval en `scripts/` y no en `src/`.** El issue prohíbe cambiar `src/`; `vitest.config.ts:4` incluye `scripts/**/*.test.ts`, así que `npm test` lo corre. Alternativa descartada: un script de verificación fuera de la suite.
+2. **`renderer.render(stage)` extra en el time-lapse.** Los animadores avanzan solo en `stage.tick(ticker.deltaMS * speed)` dentro del ticker (`src/lab/page.ts:76`); un `render` adicional redibuja el mismo estado y no adelanta barcos. Los conteos de la Task 1 se toman en una carga de página sin el intervalo del time-lapse, para que `renderTime` no se contamine. Alternativa descartada: engancharse a `app.ticker` (la página no publica `app`).
+3. **Saturación del `lighten`.** Si el fondo acumulado no deja distinguir las trazas, componer la diferencia contra el primer cuadro (`difference` respecto del cuadro 0, luego `lighten`) y documentarlo como variante del método. Alternativa descartada: bajar la exposición (no hay control en el lab).
+4. **Estado de los barcos por instante.** La página no expone `state(k)`; en la tabla de conteos se describe qué barcos se ven y en qué tramo, leído de la captura del mismo instante. Alternativa descartada: instrumentar `src/` (prohibido).
+5. **Encuadres reproducibles.** El doc registra, por cada captura de detalle, la terna `(x, y, s)` de mundo y escala usada (y la tecla para cover), para que #88 repita el mismo encuadre. La proyección es `src/iso/project.ts:15`; el encuadre manual persiste hasta la próxima tecla o `resize`, que llaman a `fit()` (`src/lab/page.ts:49-57,62`).
+6. **Datos crudos en `.scratch/86-conteos.md`.** Todas las tareas corren en el mismo checkout `/work` (subagentes sin worktree aislado), así que la Task 3 lo lee de ahí; todo lo que importa termina en el doc versionado.
+7. **Botes de la feria.** El rng de la feria es `zoneRng` (`src/scenes/world.ts:46`), determinista; si el conteo en código y el de la captura difieren, manda la captura y el doc lo dice.
+8. **Si la Task 2 no logra el time-lapse** con A, B ni la variante 3, se para en esa tarea y se documenta en el issue; los commits de la Task 1 son solo docs y no hace falta revertirlos.
+9. **PNG en git.** Precedente: `docs/superpowers/specs/assets/83-darsena/*.png` (2.5 MB) y `2026-10-14-cyberpunk/` (21 MB) están versionados sin LFS; el issue pide esa ruta.
+
+## Grilling
+
+- Rondas: 1 (las respuestas agregaron precisiones y supuestos, no cambiaron tareas ni el corte).
+- Preguntas: 18. Fuentes: ISSUE 5 (2, 3, 12, 17, 18 en parte), CODE 9 (4, 7, 8, 9, 10, 14, 15, 16-commits, 17-precedente), DOC 1 (5: `CLAUDE.md`, `set viewport 1600 900 2  # capturas legibles (2x)`), NO SOURCE → supuesto técnico 9 (supuestos 1–9 arriba). Ninguna ambigüedad de spec, nada fuera de alcance.
+- Issues abiertos: ninguno.
