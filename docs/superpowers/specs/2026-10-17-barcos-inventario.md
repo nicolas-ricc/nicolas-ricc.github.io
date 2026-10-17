@@ -3,7 +3,7 @@
 **Fecha:** 2026-10-17
 **Estado:** "antes" completo; "después" pendiente (#88)
 **Issues:** #85 (regresión de los barcos), #86 (este inventario). Lo completa el hijo de verificación de #85.
-**Alcance:** inventario verificado en código y en el sitio de todos los conjuntos de assets de barco, tal como están antes de #85 (`main` 9dc191c, igual a `feature/85-barcos-semirrecta`), con capturas y conteos por frame. No cambia código.
+**Alcance:** inventario verificado en código y en el sitio de todos los conjuntos de assets de barco, tal como están antes de #85 (`main` 9dc191c, que era la base de `feature/85-barcos-semirrecta` antes de #87; las referencias a código de este documento son a ese commit), con capturas y conteos por frame. No cambia código.
 
 Las capturas viven en `assets/85-barcos/`. Cada una se tomó con agent-browser, viewport 1600 × 900 a 2x (PNG de 3200 × 1800), sin cambiar nada de `src/`.
 
