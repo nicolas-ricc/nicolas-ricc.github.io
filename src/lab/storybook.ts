@@ -58,7 +58,6 @@ async function boot(): Promise<void> {
       stage = buildStage(cropScene(scene, e.box), cropAnimators(animators, e.box));
       frame = { box: e.box, h: e.h };
     } else {
-      // pieza: armada en el origen sobre su pad, sin terreno ni animadores
       const piece = pieceScene(e.build, e.pad);
       stage = buildStage(piece, []);
       frame = solidsBox([...piece.ground, ...piece.solids]);
