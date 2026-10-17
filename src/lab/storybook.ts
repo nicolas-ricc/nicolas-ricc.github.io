@@ -5,7 +5,7 @@ import { assembleWorld, type ZonedAnimator } from "../world/assemble";
 import { scheduleIdle } from "../world/bloom";
 import { attachBloom, type BloomProbe } from "../world/bloom-runtime";
 import { type Box, boxFrame, fitTransform } from "../world/frame";
-import { type BloomMode, buildStage, type Stage } from "../world/stage";
+import { type BloomMode, buildStage, type Stage, type StageLayer } from "../world/stage";
 import { cropAnimators, cropScene, pieceScene, type Readout, readout, solidsBox } from "./crop";
 import { EXHIBITS, type Exhibit, GROUPS, pickExhibit, stepExhibit } from "./exhibits";
 import { bloomFromSearch, nextBloomMode } from "./page";
@@ -14,7 +14,8 @@ import { bloomFromSearch, nextBloomMode } from "./page";
  * Storybook de estructuras: un exhibit a la vez, recortado del mundo por su
  * caja o armado solo en el origen (piezas). El hash elige el exhibit; flechas
  * y j/k solo escriben el hash. 6 rota el bloom; ?bloom= lo fuerza y ?speed=
- * escala el reloj, como en page.ts.
+ * escala el reloj, como en page.ts. g, h y a ocultan o muestran suelo, sombras
+ * y acentos (con el bloom) y se recuerdan entre exhibits.
  */
 const host = document.getElementById("lab-host") as HTMLDivElement;
 const nav = document.getElementById("exhibits") as HTMLElement;
@@ -58,6 +59,8 @@ function renderReadout(r: Readout): void {
   panel.replaceChildren(dl);
 }
 
+const LAYER_KEY: Record<string, StageLayer> = { g: "ground", h: "shadow", a: "accents" };
+
 void boot();
 
 async function boot(): Promise<void> {
@@ -68,6 +71,7 @@ async function boot(): Promise<void> {
 
   let stage: Stage | null = null, current: Exhibit | null = null, bloom: BloomProbe | null = null;
   let frame: { box: Box; h?: number } | null = null;
+  const layers: Record<StageLayer, boolean> = { ground: true, shadow: true, accents: true };
   const fit = (): void => {
     if (!stage || !frame) return;
     const f = fitTransform(boxFrame(frame.box, frame.h), host.clientWidth, host.clientHeight);
@@ -92,6 +96,7 @@ async function boot(): Promise<void> {
       frame = solidsBox([...piece.ground, ...piece.solids]);
     }
     app.stage.addChild(stage.container);
+    for (const l of Object.keys(layers) as StageLayer[]) stage.setLayer(l, layers[l]);
     if (log) console.info(`[storybook] ${e.id}: primer dibujo ${(performance.now() - t0).toFixed(1)} ms, ${stage.staticCount} polígonos estáticos`);
     renderReadout(readout(...src));
     stage.setBloom(mode);
@@ -119,6 +124,8 @@ async function boot(): Promise<void> {
   window.addEventListener("keydown", (ev) => {
     if (ev.altKey || ev.ctrlKey || ev.metaKey) return; // Alt/Cmd + flecha es atrás/adelante del navegador
     if (current && (NEXT.has(ev.key) || PREV.has(ev.key))) { ev.preventDefault(); location.hash = stepExhibit(current.id, NEXT.has(ev.key) ? 1 : -1).id; }
+    const layer = LAYER_KEY[ev.key];
+    if (layer && stage && !ev.repeat) { layers[layer] = !layers[layer]; stage.setLayer(layer, layers[layer]); if (log) console.info(`[storybook] ${layer}: ${layers[layer] ? "visible" : "oculto"}`); }
     if (ev.key === "6" && stage) { stage.setBloom(nextBloomMode(stage.bloom)); if (log) console.info(`[storybook] bloom: ${stage.bloom}`); }
   });
 

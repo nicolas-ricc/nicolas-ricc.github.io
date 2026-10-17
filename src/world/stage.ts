@@ -19,12 +19,16 @@ export function nextHalo(mode: BloomMode): HaloStyle {
   return mode === "fallback" ? HALO_FALLBACK : HALO_BASE;
 }
 
+export type StageLayer = "ground" | "shadow" | "accents";
+
 export interface Stage {
   container: Container;
   staticCount: number;
   readonly bloom: BloomMode;
   setFocus(zone: WorldZone | null): void;
   setBloom(mode: BloomMode): void;
+  /** Solo para el laboratorio: cambia `visible` de los contenedores de una capa; el sitio no lo llama. */
+  setLayer(layer: StageLayer, visible: boolean): void;
   tick(dtMs: number): void;
 }
 
@@ -40,10 +44,11 @@ interface AccentGraphics { g: Graphics; zone: WorldZone | null; base: number; dr
  * estáticos (uno por zona) y una Graphics por capa de acentos animada.
  * El bloom es perezoso: arranca en `off`, sin `bloomSlot`; el primer `setBloom("on")`
  * lo arma (espejos de los acentos con filtro) y lo inserta justo debajo de `accentSlot`.
+ * Un `bloomSlot` armado después de `setLayer("accents", false)` nace oculto.
  */
 export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage {
   const container = new Container();
-  let bloom: BloomMode = "off", halo: HaloStyle = HALO_BASE, bloomSlot: Container | null = null;
+  let bloom: BloomMode = "off", halo: HaloStyle = HALO_BASE, bloomSlot: Container | null = null, accentsVisible = true;
   const gBleed = new Graphics(), gGround = new Graphics(), gShadow = new Graphics(), gCore = new Graphics(), gSolid = new Graphics();
   const waterSlot = new Container(), shadowSlot = new Container(), coreSlot = new Container(), solidSlot = new Container(), veilSlot = new Container(), accentSlot = new Container();
   // cada banda de sombra es una unión: el filtro aplica el alpha al conjunto,
@@ -127,6 +132,7 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage
   const buildBloomSlot = (): Container => {
     const slot = new Container();
     slot.blendMode = "add";
+    slot.visible = accentsVisible;
     slot.filters = [new BlurFilter(BLOOM_FILTER)];
     for (const e of accents) {
       const m = new Graphics({ context: e.g.context });
@@ -151,6 +157,14 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage
       const h = nextHalo(mode);
       if (h !== halo) { halo = h; for (const e of accents) e.draw(); }
       applyAlphas();
+    },
+    setLayer(layer, visible) {
+      if (layer === "ground") gBleed.visible = waterSlot.visible = gGround.visible = visible;
+      else if (layer === "shadow") shadowSlot.visible = coreSlot.visible = visible;
+      else {
+        accentsVisible = accentSlot.visible = visible;
+        if (bloomSlot) bloomSlot.visible = visible;
+      }
     },
     tick(dtMs) {
       for (const a of animators) for (const id of a.tick(dtMs)) redraw.get(id)?.();
