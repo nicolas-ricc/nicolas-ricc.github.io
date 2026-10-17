@@ -36,7 +36,6 @@ for (const g of GROUPS) {
 
 const n1 = (x: number): string => x.toFixed(1);
 
-/** Vuelca la lectura de un exhibit al aside, reemplazando la anterior. */
 function renderReadout(r: Readout): void {
   const b = r.box;
   const rows: [string, string][] = [

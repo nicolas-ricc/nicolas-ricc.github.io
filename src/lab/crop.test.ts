@@ -191,8 +191,8 @@ describe("readout", () => {
     const min = v3(Math.min(...bs.map((b) => b.min.x)), Math.min(...bs.map((b) => b.min.y)), Math.min(...bs.map((b) => b.min.z)));
     const max = v3(Math.max(...bs.map((b) => b.max.x)), Math.max(...bs.map((b) => b.max.y)), Math.max(...bs.map((b) => b.max.z)));
     expect(r.box).toEqual({ min, max, w: max.x - min.x, d: max.y - min.y, h: max.z - min.z });
-    expect(r.box!.min.x).toBe(-2);
-    expect(r.box!.max.z).toBe(8);
+    expect(r.box?.min.x).toBe(-2);
+    expect(r.box?.max.z).toBe(8);
   });
   it("materiales de mat y topMat, ordenados y sin repetidos", () => {
     expect(r.materials).toEqual(["brick", "concrete", "hullBlue", "paving", "steel"]);
