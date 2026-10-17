@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
-import type { Solid } from "../iso/solids";
+import type { Solid, Tri } from "../iso/solids";
 import type { WorldScene } from "../scenes/world";
 import type { ZonedAnimator } from "../world/assemble";
 import { cropAccents, cropAnimators, cropScene, cropShared, overlaps } from "./crop";
 
 const box = { x0: 0, y0: 0, x1: 10, y1: 10 };
 const prism = (x: number, y: number, w = 2): Solid => ({ kind: "prism", at: v3(x, y, 0), w, d: w, h: 3, mat: "concrete" });
-const tri = (x: number, y: number) => ({ pts: [v3(x, y, 0), v3(x + 1, y, 0), v3(x, y + 1, 0)] as [ReturnType<typeof v3>, ReturnType<typeof v3>, ReturnType<typeof v3>] });
+const tri = (x: number, y: number): Tri => ({ pts: [v3(x, y, 0), v3(x + 1, y, 0), v3(x, y + 1, 0)] });
 
 describe("overlaps", () => {
   it("una caja que toca el borde solapa; una separada no", () => {

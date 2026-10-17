@@ -19,7 +19,6 @@ const nav = document.getElementById("exhibits") as HTMLElement;
 const log = import.meta.env.DEV;
 const { scene, animators } = assembleWorld(undefined, { reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches });
 
-// índice agrupado por zona, en el orden del catálogo
 for (const zone of new Set(EXHIBITS.map((e) => e.zone))) {
   const h = document.createElement("h2");
   h.textContent = ZONE_TITLE[zone];
