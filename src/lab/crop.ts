@@ -1,8 +1,8 @@
 import type { Accent } from "../iso/accent";
 import { v3, type Vec3 } from "../iso/geometry";
 import { bounds, type Bounds, type Solid, type Tri } from "../iso/solids";
-import type { AnimLayer } from "../scenes/animator";
 import type { Material } from "../map/palette-iso";
+import type { AnimLayer } from "../scenes/animator";
 import type { WorldScene } from "../scenes/world";
 import type { ZonedAnimator } from "../world/assemble";
 import type { Box } from "../world/frame";
