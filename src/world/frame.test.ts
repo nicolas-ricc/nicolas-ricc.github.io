@@ -5,7 +5,7 @@ import { v3 } from "../iso/geometry";
 import { project } from "../iso/project";
 import type { RenderItem } from "../iso/render-list";
 import { BLEED, WORLD } from "../map/geo";
-import { HALO_BASE, HALO_FALLBACK, type HaloStyle, coverFrame, drawAccents, fitTransform, zoneFrame } from "./frame";
+import { HALO_BASE, HALO_FALLBACK, type HaloStyle, boxFrame, coverFrame, drawAccents, fitTransform, zoneFrame } from "./frame";
 
 describe("fitTransform", () => {
   it("escala para que el bounding box entre con margen y quede centrado", () => {
@@ -33,6 +33,21 @@ describe("zoneFrame", () => {
   it("all cubre el mundo", () => {
     const [it] = zoneFrame("all");
     expect(Math.max(...it!.pts.filter((_, i) => i % 2 === 0))).toBe(630);
+  });
+});
+
+describe("boxFrame", () => {
+  it("proyecta las cuatro esquinas de la caja y la norte lleva h", () => {
+    const [it] = boxFrame({ x0: 10, y0: 20, x1: 30, y1: 50 }, 12);
+    expect(it!.pts).toHaveLength(8);
+    const n = project(v3(10, 20, 12));
+    expect(it!.pts.slice(0, 2)).toEqual([n.x, n.y]);
+    const rest = [[30, 20], [30, 50], [10, 50]].flatMap(([x, y]) => { const p = project(v3(x!, y!, 0)); return [p.x, p.y]; });
+    expect(it!.pts.slice(2)).toEqual(rest);
+  });
+  it("sin h usa el alto de referencia de zoneFrame", () => {
+    const [a] = boxFrame({ x0: WORLD.x0, y0: WORLD.y0, x1: WORLD.x1, y1: WORLD.y1 });
+    expect(a!.pts).toEqual(zoneFrame("all")[0]!.pts);
   });
 });
 
