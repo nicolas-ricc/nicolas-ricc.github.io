@@ -44,7 +44,7 @@ interface AccentGraphics { g: Graphics; zone: WorldZone | null; base: number; dr
  * estáticos (uno por zona) y una Graphics por capa de acentos animada.
  * El bloom es perezoso: arranca en `off`, sin `bloomSlot`; el primer `setBloom("on")`
  * lo arma (espejos de los acentos con filtro) y lo inserta justo debajo de `accentSlot`.
- * `setLayer` (solo el lab) oculta capas cambiando `visible`; un `bloomSlot` armado después nace con la visibilidad de los acentos.
+ * Un `bloomSlot` armado después de `setLayer("accents", false)` nace oculto.
  */
 export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage {
   const container = new Container();
