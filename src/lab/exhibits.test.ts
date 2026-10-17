@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import type { Accent } from "../iso/accent";
+import type { Solid } from "../iso/solids";
 import { BLEED, WORLD } from "../map/geo";
 import { assembleWorld } from "../world/assemble";
 import { cropAnimators, cropScene } from "./crop";
@@ -50,5 +52,32 @@ describe("selección por hash", () => {
   it("con un id desconocido las flechas van al primero", () => {
     expect(stepExhibit("nada", 1)).toBe(first);
     expect(stepExhibit("nada", -1)).toBe(first);
+  });
+});
+
+const pieces = EXHIBITS.flatMap((e) => (e.kind === "piece" ? [e] : []));
+
+describe("exhibits de pieza", () => {
+  it("las ocho piezas, cada una en su zona", () => {
+    expect(Object.fromEntries(pieces.map((e) => [e.id, e.zone]))).toEqual({
+      "grua-torre": "portfolio", farol: "portfolio",
+      campus: "cv", selva: "cv",
+      carguero: "blog", remolcador: "blog", convoy: "blog", lancha: "blog",
+    });
+  });
+  it("cada pieza emite al menos un sólido", () => {
+    for (const e of pieces) {
+      const out: Solid[] = [], accents: Accent[] = [];
+      e.build(out, accents);
+      expect(out.length, e.id).toBeGreaterThan(0);
+    }
+  });
+  it("armar dos veces la misma pieza da lo mismo", () => {
+    for (const e of pieces) {
+      const a: Solid[] = [], b: Solid[] = [], aa: Accent[] = [], ba: Accent[] = [];
+      e.build(a, aa); e.build(b, ba);
+      expect(b, e.id).toEqual(a);
+      expect(ba, e.id).toEqual(aa);
+    }
   });
 });
