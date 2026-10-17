@@ -62,6 +62,7 @@ describe("documento del inventario de barcos (#86)", () => {
   it("documento: describe el método del time-lapse y deja pendiente la sección Después", () => {
     expect(doc()).toMatch(/^## M[eé]todo del time-lapse/m);
     expect(doc()).toMatch(/^## Antes/m);
+    // #88 completa la sección Después y reemplaza esta aserción.
     expect(doc()).toMatch(/^## Despu[eé]s\s+pendiente: lo completa el hijo de verificación de #85/m);
   });
 });
