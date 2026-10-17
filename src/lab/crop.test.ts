@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
-import type { Solid, Tri } from "../iso/solids";
+import { bounds, type Solid, type Tri } from "../iso/solids";
 import type { WorldScene } from "../scenes/world";
 import type { ZonedAnimator } from "../world/assemble";
-import { cropAccents, cropAnimators, cropScene, cropShared, overlaps } from "./crop";
+import { cropAccents, cropAnimators, cropScene, cropShared, overlaps, pieceScene, solidsBox } from "./crop";
 
 const box = { x0: 0, y0: 0, x1: 10, y1: 10 };
 const prism = (x: number, y: number, w = 2): Solid => ({ kind: "prism", at: v3(x, y, 0), w, d: w, h: 3, mat: "concrete" });
@@ -102,5 +102,54 @@ describe("cropAnimators", () => {
   });
   it("descarta el animador sin contenido inicial en la caja", () => {
     expect(cropAnimators([toy(30)], box)).toEqual([]);
+  });
+});
+
+describe("pieceScene", () => {
+  const lamp: Accent = { kind: "dot", at: v3(1, 1, 6), r: 1, color: "amber" };
+  const scene = pieceScene((out, accents) => { out.push(prism(-1, -1), prism(6, 0)); accents.push(lamp); });
+
+  it("sin terreno, subescenas en null y landmarks en el origen", () => {
+    expect(scene.terrain.ground).toEqual([]);
+    expect(scene.terrain.bleed).toEqual([]);
+    expect(scene.terrain.water).toEqual([]);
+    expect(scene.terrain.foam).toMatchObject({ kind: "ground", mat: "foam", tris: [] });
+    for (const k of ["shipyard", "city", "factory", "sea", "hinterland", "tech", "fair"] as const) expect(scene[k]).toBeNull();
+    for (const p of Object.values(scene.landmarks)) expect(p).toEqual(v3(0, 0, 0));
+  });
+  it("los sólidos y acentos de build, y un pad de paving de 1 u centrado en el origen", () => {
+    expect(scene.solids).toEqual([prism(-1, -1), prism(6, 0)]);
+    expect(scene.accents).toEqual([lamp]);
+    expect(scene.ground).toHaveLength(1);
+    // malla plana: se pinta en la capa de suelo, debajo de sombras y sólidos
+    expect(scene.ground[0]).toMatchObject({ kind: "ground", mat: "paving" });
+    const { min, max } = bounds(scene.ground[0]!);
+    expect(max.x - min.x).toBeCloseTo(max.y - min.y);
+    expect(min.x + max.x).toBeCloseTo(0);
+    expect(min.y + max.y).toBeCloseTo(0);
+    expect(max.z).toBe(0); // cara de arriba al nivel de las piezas de tierra
+    expect(max.z - min.z).toBe(1);
+  });
+  it("el pad contiene a una pieza descentrada", () => {
+    const b = bounds(scene.ground[0]!);
+    for (const s of scene.solids) {
+      const sb = bounds(s);
+      expect(b.min.x).toBeLessThan(sb.min.x); expect(b.max.x).toBeGreaterThan(sb.max.x);
+      expect(b.min.y).toBeLessThan(sb.min.y); expect(b.max.y).toBeGreaterThan(sb.max.y);
+    }
+  });
+  it("un barco a z −1 va sobre agua y el pad no le tapa el casco", () => {
+    const boat: Solid = { kind: "prism", at: v3(-2, -1, -1), w: 4, d: 2, h: 2, mat: "hull" };
+    const s = pieceScene((out) => { out.push(boat); }, "water");
+    expect(s.ground[0]).toMatchObject({ kind: "ground", mat: "water" });
+    expect(bounds(s.ground[0]!).max.z).toBe(-1);
+  });
+});
+
+describe("solidsBox", () => {
+  it("caja en x/y de todos los sólidos y h el z más alto", () => {
+    const { box, h } = solidsBox([prism(-3, 1), prism(4, -2, 4)]);
+    expect(box).toEqual({ x0: -3, y0: -2, x1: 8, y1: 3 });
+    expect(h).toBe(3);
   });
 });
