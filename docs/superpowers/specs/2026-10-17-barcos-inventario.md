@@ -3,18 +3,18 @@
 **Fecha:** 2026-10-17
 **Estado:** "antes" completo; "después" pendiente (#88)
 **Issues:** #85 (regresión de los barcos), #86 (este inventario). Lo completa el hijo de verificación de #85.
-**Alcance:** inventario verificado en código y en el sitio de todos los conjuntos de assets de barco, tal como están antes de #85, con capturas y conteos por frame. No cambia código.
+**Alcance:** inventario verificado en código y en el sitio de todos los conjuntos de assets de barco, tal como están antes de #85 (`main` 9dc191c, igual a `feature/85-barcos-semirrecta`), con capturas y conteos por frame. No cambia código.
 
 Las capturas viven en `assets/85-barcos/`. Cada una se tomó con agent-browser, viewport 1600 × 900 a 2x (PNG de 3200 × 1800), sin cambiar nada de `src/`.
 
 ## Inventario
 
-La tabla sale de `grep -n 'kind: "hull"\|boya\|bote\|lancha\|buoy\|wreck' src/scenes/*.ts` y de las capturas. "Correcto" es la lectura visual del conjunto en la captura: casco, superestructura, luces y estela completos, sin tapar ni superponerse mal. Los botes salvavidas y las balsas que llevan los kits de `ships.ts` (bote salvavidas del carguero en `ships.ts:62`, bote del remolcador en `ships.ts:125`) son piezas del barco, no un conjunto aparte, y se cuentan en la fila del barco.
+La tabla sale de `grep -n 'kind: "hull"\|boya\|bote\|lancha\|buoy\|wreck' src/scenes/*.ts` y de las capturas. "Correcto" es la lectura visual del conjunto en la captura: casco, superestructura, luces y estela completos, sin tapar ni superponerse mal, y con el fade solo en el sangrado y no a la vista. Los botes salvavidas y las balsas que llevan los kits de `ships.ts` (bote salvavidas del carguero en `ships.ts:62`, bote del remolcador en `ships.ts:125`) son piezas del barco, no un conjunto aparte, y se cuentan en la fila del barco.
 
 | Conjunto | Archivo | Instancias simultáneas | Instancias por ciclo | Dónde | Animación | Correcto |
 |---|---|---|---|---|---|---|
-| `cargo`, `tug`, `barge` (carguero, remolcador solo, empujador con barcaza) | `src/scenes/ships.ts` (kits), `src/scenes/sea-anim.ts` (`SHIPS`, `shipStateAt`) | 3 barcos, 2 o 3 a la vista según la fase (ver el ciclo) | 3 (uno por fase 0, 1/3, 2/3) | Carril de ida y de vuelta sobre la bahía y el mar abierto; zarpe y atraque en la dársena del astillero | Se mueven por los carriles, con estela de espuma y luces (rosa de tope, verde y azul de costado). No se anima el casco ni los botes salvavidas | sí, sin tapados ni solapes en los encuadres: [antes-cover](assets/85-barcos/antes-cover.png) |
-| `ferry` (lancha colectiva) | `src/scenes/ships.ts`, `src/scenes/sea-anim.ts` (`FERRY_ROUTE`) | 1 | 1 | Entre el muelle de la feria y el de graneles, parando 4 s en cada punta | Camina `FERRY_ROUTE` sin suavizado de giro; estela corta y luces. La cabina no se anima | sí: [antes-lancha](assets/85-barcos/antes-lancha.png) |
+| `cargo`, `tug`, `barge` (carguero, remolcador solo, empujador con barcaza) | `src/scenes/ships.ts` (kits), `src/scenes/sea-anim.ts` (`SHIPS`, `shipStateAt`) | 3 barcos, 2 o 3 a la vista según la fase (ver el ciclo) | 3 (uno por fase 0, 1/3, 2/3) (ver Ciclo de los barcos) | Carril de ida y de vuelta sobre la bahía y el mar abierto; zarpe y atraque en la dársena del astillero | Se mueven por los carriles, con estela de espuma y luces (rosa de tope, verde y azul de costado). Desvanecido (`alphaAt`) solo en los últimos 30 u (`FADE_U`) del extremo de mar de cada carril, a pleno en el fondeadero. Pausa de 24 s (`BERTH_MS`) en `BERTH` con giro en el lugar entre los 8 y 16 s (`BERTH_TURN_MS`). No se anima el casco ni los botes salvavidas | sí, sin tapados ni solapes en los encuadres. Fade: en código alpha < 1 solo dentro de `FADE_U` del extremo de mar de cada carril, que cae fuera del cover, en (376, 640) a la ida y (430, 655) a la vuelta. En [antes-recorrido](assets/85-barcos/antes-recorrido.png) las estelas llegan al borde inferior izquierdo del cover a pleno brillo: el fade no se ve en el cover, ocurre en el sangrado. [antes-cover](assets/85-barcos/antes-cover.png) |
+| `ferry` (lancha colectiva) | `src/scenes/ships.ts`, `src/scenes/sea-anim.ts` (`FERRY_ROUTE`) | 1 | 1 | Entre el muelle de la feria y el de graneles, parando 4 s en cada punta | Camina `FERRY_ROUTE` sin suavizado de giro; estela corta y luces. Sin fade (alpha 1, `sea-anim.ts:159`). La cabina no se anima | sí: [antes-lancha](assets/85-barcos/antes-lancha.png) |
 | pecio partido | `src/scenes/sea.ts` (`wreck()`) | 1 (dos mitades visibles: proa y casa de popa) | 1 (estático) | Fosa, junto a la boya del pecio | Nada: sin luces ni estela; solo los anillos de espuma del agua | sí, como pecio: [antes-pecio](assets/85-barcos/antes-pecio.png) |
 | boya del pecio | `src/scenes/sea.ts` (`buoysAndWreck()`, `WRECK_BUOY`) | 1 | 1 (estática) | Pegada a la casa de popa del pecio | Cilindro `steel` con luz fija `magentaMid` y anillo de espuma; no parpadea | sí: [antes-pecio](assets/85-barcos/antes-pecio.png) |
 | boyas de canal (2) | `src/scenes/sea.ts` (`BUOYS`, `buoysAndWreck()`) | 2, en (420, 80) y (430, 160) | 2 (estáticas) | Canal, al oeste del pecio | Luz rosa que parpadea desfasada (`sea-anim.ts`, `buoyOn`): nunca las dos apagadas. El cilindro no se mueve | sí: [antes-pecio](assets/85-barcos/antes-pecio.png), una encendida y la otra apagada |
@@ -75,8 +75,8 @@ Se tomaron con la extensión PixiJS DevTools 2.3.1 en agent-browser (HeadlessChr
 Observaciones:
 
 - `drawCalls` dio 0 en todas las capturas: en headless no es fiable. Valen `totals` e `instructions`.
-- Los barcos son `Graphics`: no suman sprites ni meshes. Los totales no cambian aunque se muevan; el mundo estático está cacheado en pocos objetos.
-- Los totales no son constantes: 9/105/3/63 (containers/graphics/filters/instrucciones) en las filas 1 a 4 y 8/82/2/53 en las demás. La causa no está verificada. La hipótesis es el bloom diferido (`scheduleIdle`/`attachBloom`), que sumaría un filtro y los objetos del bloom cuando no se activó todavía. En el lab, el primer conteo de esta sesión dio 9/105/3/63 y unos 40 s después, en la misma carga, 8/82/2/53, de modo que depende del momento de la carga y del modo del bloom y no de la página. El renderTime de 4,70 ms de la fila 5 es un pico aislado.
+- Los barcos son `Graphics`: no suman sprites ni meshes. Los totales no cambian con el movimiento de los barcos, aunque sí entre estados del bloom; el mundo estático está cacheado en pocos objetos.
+- Los totales no son constantes: 9/105/3/63 (containers/graphics/filters/instrucciones) en las filas 1 a 4 y 8/82/2/53 en las demás. La causa no está verificada. La hipótesis es el bloom diferido (`scheduleIdle`/`attachBloom`), que sumaría un filtro y los objetos del bloom cuando no se activó todavía. En el lab, el primer conteo de esta sesión dio 9/105/3/63 y unos 40 s después, en la misma carga, 8/82/2/53, de modo que parece depender del momento de la carga y del modo del bloom, no de la página (sin verificar). El renderTime de 4,70 ms de la fila 5 es un pico aislado.
 - El estado por barco entre instantes no se puede leer: la página no expone `state(k)`. Cerca del cover, el carguero (el barco que sale del astillero) está junto al fondeadero; no se afirma nada de los tramos entre un instante y otro.
 
 ## Método del time-lapse
@@ -107,7 +107,7 @@ requestAnimationFrame(loop); return 'ok'; })()
 
 ![time-lapse del recorrido viejo](assets/85-barcos/antes-recorrido.png)
 
-El recorrido viejo, tal como queda en el time-lapse: el barco sale de la dársena del astillero, sube por la bahía, sale por la bocana y rodea la punta por el este (x ≥ 500). Después vira al SSW hacia la esquina inferior izquierda del cover y sale de pantalla. La vuelta entra por abajo, sube por el lado este y cruza la bahía hacia el norte. Se ven los tres barcos con ida y vuelta, que es lo que pide el ciclo de 1805 s.
+El recorrido viejo, tal como queda en el time-lapse: el barco sale de la dársena del astillero, sube por la bahía, sale por la bocana y rodea la punta por el este (x ≥ 500). Después vira al SSW hacia la esquina inferior izquierda del cover y sale de pantalla. La vuelta entra por abajo, sube por el lado este y cruza la bahía hacia el norte. Se ven los tres barcos con ida y vuelta, el time-lapse cubre 1,41 ciclos, así que cada barco hace al menos una ida y una vuelta completas.
 
 ### Capturas por conjunto y encuadres
 
