@@ -17,7 +17,7 @@
 - Cajas desde constantes exportadas donde existan; donde la constante es privada (gradas, dársena, pórtico, subestación, cinta, y además muelle de la feria, calle de faroles, naves, torre de enfriamiento de la fábrica) la caja va a mano y el test la vigila.
 - Si una estructura no se puede aislar sin cortar a otra, se elige la caja que mejor la muestra y se anota en un comentario de la entrada; **no se cambian las escenas**.
 - Comentarios y nombres de tests en castellano; tests al lado del módulo. Sin dependencias nuevas. Commits `feat(#93): …`.
-- `npm test` y `npm run typecheck` en verde; `lab/world.html` no cambia (no se toca nada fuera de `src/lab/`).
+- `npm test` y `npm run typecheck` en verde; `lab/world.html` no cambia: el código que se toca vive solo en `src/lab/` (fuera de ahí solo entran las capturas en `docs/superpowers/specs/assets/93-storybook/`).
 
 ## Decisiones técnicas (declaradas)
 
@@ -26,10 +26,11 @@
 3. **"Sin vecinos que la tapen" medible.** Ningún sólido estático que el recorte conserva sin estar entero dentro de la caja (un vecino cortado por el borde) puede subir más que `h`. Se excluyen los `kind: "ground"` (mallas de piso). Las capas animadas quedan fuera: se mueven.
 4. **El animado se exige solo a los cuatro exhibits de #92** (`chimeneas`, `noria`, `torre`, `faro`): el resto de las regiones son estáticas (tanques, silos) y el issue solo pide un sólido.
 5. **Margen `M = 3`**, como #92, salvo donde un vecino obliga a ajustar un lado (comentado en la entrada).
-6. **Casos que no se pueden aislar** (anotados en la entrada): la grúa pórtico monta sobre las gradas y queda dentro de "gradas"; la grúa torre del desvío queda dentro de "playa de camiones"; la torre de oficinas está en el centro de la plaza. "Cinta" muestra el codo del portón este (el tramo E-O cruza la playa de camiones y la grúa); "malecón" muestra el tramo de la escalera (el malecón entero mide 168 u); "boyas" encuadra la boya norte (las dos están a 80 u y son iguales); "alta tensión" toma las tres primeras torres; "torres" las dos torres de la fila `ROWS[1]`.
+6. **Casos que no se pueden aislar** (anotados en la entrada): la grúa pórtico monta sobre las gradas y queda dentro de "gradas"; la grúa torre del desvío queda dentro de "playa de camiones" y de "cinta" (la cinta corre 93 u por la playa de camiones); la torre de oficinas está en el centro de la plaza. El issue pide "la estructura completa", así que las estructuras largas van enteras aunque encuadren finas: el malecón (168 u), la línea de alta tensión (8 torres, 336 u), las dos boyas. "Torres" toma las dos torres de la fila `ROWS[1]` (el distrito tiene decenas: es un ejemplo del tipo, no una estructura única).
 7. **`torre` pasa de `h: TOWER_H + 6` a `TOWER_H + 8`**: la antena llega a z 37.9 y el test de encuadre lo exige.
-8. **Dársena** es el fondeadero del astillero (`BERTH` en `sea-anim.ts`, #83), frente al muelle `QUAY_X`, no el dique seco.
-9. **Capturas en el PR**: una región por grupo, guardadas en `docs/superpowers/specs/assets/93-storybook/` (como hizo #92) y enlazadas por SHA.
+8. **Dársena** es el fondeadero del astillero (`BERTH` en `sea-anim.ts`, #83), frente al muelle `QUAY_X`, no el dique seco: la spec §3 pone la dársena entre las constantes privadas, y el dique seco tiene la constante exportada `DOCK` (`src/map/geo.ts:142`); `sea-anim.ts:25` llama "dársena del astillero" al fondeadero.
+9. **Piezas de #94.** Las piezas también llevan `group`: el de su fila en la tabla de la spec §3 (grúa torre y farol en `astillero`, campus y selva en `ciudad`, barcos en `mar`), y van dentro del bloque de su grupo para que el test de contigüidad siga en verde. El test de catálogo solo cuenta regiones.
+10. **Capturas en el PR**: una región por grupo, guardadas en `docs/superpowers/specs/assets/93-storybook/` (como hizo #92) y enlazadas por SHA.
 
 ## Review Focus
 
@@ -229,8 +230,8 @@ for (const g of GROUPS) {
   { id: "playa-camiones", title: "Playa de camiones", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: 17, y0: -15, x1: 113, y1: 2 }, h: 22 },
   { id: "playa-vias", title: "Playa de vías", zone: "portfolio", group: "fabrica", kind: "region",
     box: { x0: RAIL_YARD_X[0] - 4, y0: 40, x1: -4, y1: 100 }, h: 10 }, // vías, vagones y acopios de mineral
-  // a mano: el codo del portón este (x 121); el tramo E-O sigue 90 u al oeste por la playa de camiones y la grúa
-  { id: "cinta", title: "Cinta transportadora", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: 98, y0: -15, x1: 125, y1: 4 }, h: 9 },
+  // a mano: del portón este (x 121, y −20) al patio de material (x 30, y 1..3); la grúa torre del desvío queda adentro y manda en h
+  { id: "cinta", title: "Cinta transportadora", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: 28, y0: -15, x1: 125, y1: 4 }, h: 22 },
   // astillero: las constantes de shipyard.ts son privadas, las cajas van a mano
   // gradas x 110..QUAY_X, y 36..72; el pórtico (x 150) monta sobre ellas y queda adentro
   { id: "gradas", title: "Gradas", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 108, y0: 33, x1: QUAY_X + 2, y1: 75 }, h: 28 },
@@ -250,7 +251,7 @@ for (const g of GROUPS) {
 
 **Files:** Modify `src/lab/exhibits.ts`. Test: `-t "grupo hinterland|grupo feria"`.
 
-**Interfaces:** imports nuevos: `CONTAINER_YARD, COOLING, POWER, PYLON_H, PYLON_STEP, PYLON_X0, PYLON_Y, SILOS, STACKS_N, TANKS` de `../scenes/hinterland`; `ARCADE, BUMPER, CAROUSEL, COASTER, DROP, PIER` (más `WHEEL`, ya importado) de `../scenes/fair`.
+**Interfaces:** imports nuevos: `CONTAINER_YARD, COOLING, POWER, PYLON_H, PYLON_N, PYLON_STEP, PYLON_X0, PYLON_Y, SILOS, STACKS_N, TANKS` de `../scenes/hinterland`; `ARCADE, BUMPER, CAROUSEL, COASTER, DROP, PIER` (más `WHEEL`, ya importado) de `../scenes/fair`.
 
 - [ ] **Step 1:** test → FAIL.
 - [ ] **Step 2:** grupos `hinterland` y `feria` (la entrada `noria` existente pasa a ser la primera de `feria`):
@@ -265,9 +266,9 @@ for (const g of GROUPS) {
   { id: "silos", title: "Silos", zone: "portfolio", group: "hinterland", kind: "region",
     box: { x0: SILOS.x0 - SILOS.r - M, y0: SILOS.y0 - SILOS.r - M, x1: SILOS.x0 + (SILOS.cols - 1) * SILOS.step + SILOS.r + M, y1: SILOS.y0 + (SILOS.rows - 1) * SILOS.step + SILOS.r + M },
     h: SILOS.h + 4 }, // elevador de granos h + 3
-  // las tres primeras torres: la línea entera cruza 336 u
+  // la línea entera, 336 u: encuadra fina; la montaña rusa y los autitos quedan cortados por el borde sur, más bajos
   { id: "alta-tension", title: "Línea de alta tensión", zone: "portfolio", group: "hinterland", kind: "region",
-    box: { x0: PYLON_X0 - 4, y0: PYLON_Y - 4, x1: PYLON_X0 + 2 * PYLON_STEP + 4, y1: PYLON_Y + 4 }, h: PYLON_H + 2 },
+    box: { x0: PYLON_X0 - 4, y0: PYLON_Y - 4, x1: PYLON_X0 + (PYLON_N - 1) * PYLON_STEP + 4, y1: PYLON_Y + 4 }, h: PYLON_H + 2 },
   // las grúas de la playa van de y0 − 4 a la última fila + 6
   { id: "playa-contenedores", title: "Playa de contenedores", zone: "portfolio", group: "hinterland", kind: "region",
     box: { x0: CONTAINER_YARD.x0 - M, y0: CONTAINER_YARD.y0 - 4 - M, x1: CONTAINER_YARD.x1 + M, y1: CONTAINER_YARD.y0 + (CONTAINER_YARD.rows - 1) * CONTAINER_YARD.rowStep + 6 + M }, h: 13 },
@@ -314,9 +315,9 @@ con `const tanksX = TANKS.map((t) => t.x), tanksY = TANKS.map((t) => t.y);` junt
   // de rampa a rampa; al oeste y al este pegado a las manzanas vecinas (edificios hasta 10.7), al norte los árboles de la ribera
   { id: "puente", title: "Puente", zone: "cv", group: "ciudad", kind: "region",
     box: { x0: WEST_COLS[WEST_COLS.length - 1] + BLOCK_W + 0.5, y0: BRIDGE.y0 - 1, x1: EAST_COLS[0] + 1, y1: BRIDGE.y1 + M }, h: 8 },
-  // el tramo de la escalera (y 227): el malecón entero mide 168 u; al oeste pegado, la selva de la ribera
+  // entero, 168 u: encuadra fino. Al oeste pegado y al norte 2 u adentro: los árboles de la selva del cinturón (hasta 8.4) quedan afuera
   { id: "malecon", title: "Malecón", zone: "cv", group: "ciudad", kind: "region",
-    box: { x0: MALECON.x0 - 1, y0: 200, x1: MALECON.x1 + M, y1: 262 }, h: 7 },
+    box: { x0: MALECON.x0 - 1, y0: MALECON.y0 + 2, x1: MALECON.x1 + M, y1: MALECON.y1 + M }, h: 7 },
   // la losa caída llega a x − 16; al sur pegado, la selva
   { id: "manzana-derrumbada", title: "Manzana derrumbada", zone: "cv", group: "ciudad", kind: "region",
     box: { x0: COLLAPSED.x - 16 - M, y0: COLLAPSED.y - M, x1: COLLAPSED.x + COLLAPSED.w + M, y1: COLLAPSED.y + COLLAPSED.d + 1 }, h: 6 },
@@ -351,9 +352,9 @@ con `const tanksX = TANKS.map((t) => t.x), tanksY = TANKS.map((t) => t.y);` junt
   // la casa es 8 × 6 (privado en sea.ts)
   { id: "casa-farero", title: "Casa del farero", zone: "blog", group: "mar", kind: "region",
     box: { x0: KEEPER.x - M, y0: KEEPER.y - M, x1: KEEPER.x + 8 + M, y1: KEEPER.y + 6 + M }, h: 13 }, // sobre la punta, z ≈ 7
-  // la boya norte: las dos son iguales y están a 80 u, juntas quedarían diminutas
+  // las dos boyas, a 80 u una de otra: encuadra fino. Al oeste 5 u: las rocas de la punta (z 7) quedan afuera
   { id: "boyas", title: "Boyas", zone: "blog", group: "mar", kind: "region",
-    box: { x0: BUOYS[0]!.x - 8, y0: BUOYS[0]!.y - 8, x1: BUOYS[0]!.x + 8, y1: BUOYS[0]!.y + 8 }, h: 4 },
+    box: { x0: BUOYS[0]!.x - 5, y0: BUOYS[0]!.y - 5, x1: BUOYS[1]!.x + 5, y1: BUOYS[1]!.y + 5 }, h: 4 },
   // el casco mide 40 u a 30°: llega a (497, 170); la boya del pecio queda adentro
   { id: "pecio", title: "Pecio", zone: "blog", group: "mar", kind: "region",
     box: { x0: WRECK.x - 5, y0: WRECK.y - 5, x1: WRECK.x + 38, y1: WRECK.y + 26 }, h: 9 },
@@ -364,6 +365,34 @@ con `const tanksX = TANKS.map((t) => t.x), tanksY = TANKS.map((t) => t.y);` junt
 
 ### Task 6: verificación visual (sin código salvo ajustes)
 
-- [ ] `npm run dev -- --host --port 5173`; correr `.scratch/evals-93.md` con agent-browser (viewport 1600 900 2): el índice muestra los siete grupos en orden con sus 38 entradas; cada exhibit dibuja algo; una captura por grupo (`planta`, `gradas`, `central-termica`, `montana-rusa`, `puente`, `arena`, `pecio`) en `docs/superpowers/specs/assets/93-storybook/`.
+- [ ] `npm run dev -- --host --port 5173`; correr `.scratch/evals-93.md` (lo escribe la etapa de evals del pipeline, antes de la Task 1; no se versiona) con agent-browser (viewport 1600 900 2): el índice muestra los siete grupos en orden con sus 38 entradas; cada exhibit dibuja algo; una captura por grupo (`planta`, `gradas`, `central-termica`, `montana-rusa`, `puente`, `arena`, `pecio`) en `docs/superpowers/specs/assets/93-storybook/`.
 - [ ] `lab/world.html` sigue dibujando igual (no se tocó nada fuera de `src/lab/`).
 - [ ] Si una caja se ve mal (estructura cortada, vecino que tapa), ajustarla con su comentario, volver a correr el test. Commit `feat(#93): capturas del catálogo`.
+
+## Criterios de aceptación → tareas
+
+- "`exhibits.test.ts`: ids únicos y con el patrón; cada región dentro del mundo más sangrado; contra `world(SEED)` cada región recorta al menos un sólido" → código de test compartido (etapa de evals); verde al cerrar la Task 5.
+- "Todas las regiones de la tabla presentes; captura de una región por zona en el PR" → tests `grupo …` (Tasks 2–5) y capturas (Task 6).
+- "`npm test` y `npm run typecheck` en verde" → Task 5 Step 3 y Task 6.
+- "Cada una encuadra bien (`h` según su altura real) y muestra la estructura completa sin vecinos que la tapen" → tests de encuadre y vecinos (Tasks 2–5) y la revisión visual de la Task 6.
+
+## Assumptions
+
+Decididas en la revisión del plan, sin fuente escrita; cualquier opción razonable cumple el issue.
+
+1. **Commits intermedios en rojo.** Las tareas 2–4 hacen commit con los `grupo …` de las tareas siguientes todavía en rojo. El pipeline pide commitear primero los tests de evals fallando, y CI solo corre sobre el PR (rama entera). Alternativa descartada: marcar con `it.skip` los grupos pendientes y quitarlo tarea por tarea, que agrega pasos y no cambia el resultado.
+2. **Reubicación privada no detectada.** Si una estructura privada se muda y la caja vieja encuadra otra cosa no vacía de altura parecida, ningún test lo nota: se acepta como no testeado, cubierto por la revisión visual. Alternativa descartada: fijar un conteo exacto de sólidos por región, que se rompe con cualquier retoque legítimo de la escena.
+3. **Encuadre de animados con el estado inicial.** `measure` ve solo los sólidos iniciales de las capas animadas. Las bocanadas de humo arrancan repartidas a lo largo de `PUFF_RANGE` (`factory-anim.ts:25`), así que el estado inicial ya llega a la altura máxima, y la rueda de la noria también.
+4. **Estructuras largas enteras** (malecón, alta tensión, boyas, cinta). Alternativa descartada: un tramo representativo, que encuadra más grande pero no "muestra la estructura completa".
+
+## Grilling
+
+- Rounds: 1 (the revision changed four boxes and some wording, not the steps or the seam, so there was no second round).
+- Questions: 17. By source: ISSUE 3 (1, 2 via "estructura completa", 16), CODE 11 (3, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15), DOC 1 (17, spec §3 table), NO SOURCE 3 (10, 11, and part of 2), all technical assumptions.
+- Plan changes:
+  - The conveyor, pylon line, malecón and buoys are now shown whole ("muestra la estructura completa", issue #93).
+  - Global Constraint reworded: only screenshots go outside `src/lab/`.
+  - Added the #94 pieces-group note, the AC → task map, and a source for the dársena decision.
+- Assumptions: see `## Assumptions` (1 red intermediate commits, 2 private relocation not detected, 3 animated framing from the initial state, 4 long structures whole).
+- Issues opened: none.
+- Status: ok.
