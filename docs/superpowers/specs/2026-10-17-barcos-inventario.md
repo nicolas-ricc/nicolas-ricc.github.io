@@ -227,7 +227,7 @@ El mismo método de encuadre que en "Antes" (posición `(800 − (x − y)·s, 4
 
 Lectura de cada una:
 
-- Pecio: se ven las dos mitades y la boya rosa pegada. El barco de la vuelta, a 330 u en (458, 271), pasa unas 32 u al oeste del pecio (490, 262), sin solaparse en pantalla (su profundidad x + y = 729 es menor que la del pecio, 752; un barco al oeste de un sólido con el que se solapara quedaría detrás, así que lo que importa es que no se solapen): cerca, pero sin solape. No se afirma un margen amplio.
+- Pecio: se ven las dos mitades y la boya rosa pegada. El barco de la vuelta, a 330 u en (458, 271), pasa unas 32 u al oeste del pecio (490, 262), sin solaparse en pantalla: cerca, pero sin solape, y sin margen amplio.
 - Boyas: el carguero de la ida, a 204 u en (436, 167), pasa por delante, al este, sin tapar ni pisar. A la par, en la misma y, va el empujador de la vuelta, a 436 u en (478, 168), a pleno: es el único instante capturado con dos barcos de carriles opuestos en la curva al este de la punta, y las dos siluetas no se tocan. La boya (392, 200) se ve encendida. La boya norte (398, 150) se ve apagada: es la fase del parpadeo (se encienden desfasadas, nunca las dos apagadas), no un defecto.
 - Lancha: un bote con estela junto a la costa de la feria, lejos de los carriles. La lancha es una sola instancia y se ve completa en el encuadre.
 - Gradas: grada 1 con quilla y cuadernas, grada 2 con casco entero y el dique seco abajo a la izquierda, bajo el pórtico. Ningún barco de fondeadero ni girando en el agua.

@@ -71,7 +71,6 @@ const AFTER = ["despues-recorrido", ...[1, 2, 3, 4, 5, 6].map((n) => `despues-co
 const after = (): string => doc().slice(doc().search(/^## Despu[eé]s/m));
 const LANE_WORD = { out: "ida", back: "vuelta", offscreen: "fuera" } as const;
 
-/** El texto de una subsección `### …` de "Después", hasta la siguiente subsección. */
 function subsection(title: RegExp): string {
   const start = after().search(title);
   if (start < 0) return "";
@@ -81,7 +80,6 @@ function subsection(title: RegExp): string {
 
 const cells = (row: string): string[] => row.split("|").slice(1, -1).map((c) => c.trim());
 
-/** Las filas de la tabla de `### Capturas instantáneas`, como celdas. */
 function snapshotRows(): string[][] {
   return subsection(/^### Capturas instant[aá]neas/m).split("\n").filter((l) => /^\|.*despues-cover-\d\.png/.test(l)).map(cells);
 }
@@ -112,8 +110,8 @@ describe("documento del inventario, después (#88)", () => {
   });
 
   it("capturas instantáneas: seis, separadas ≥ T/6, con lo anotado igual a shipStateAt y ≥ 1 a pleno en cada carril", () => {
-    const header = subsection(/^### Capturas instant[aá]neas/m).split("\n").find((l) => l.startsWith("| Captura"));
-    expect(cells(header ?? "").slice(2, 5)).toEqual(SHIPS.map((s) => s.kind));
+    const header = subsection(/^### Capturas instant[aá]neas/m).split("\n").find((l) => l.startsWith("| Captura")) ?? "";
+    expect(cells(header).slice(2, 5)).toEqual(SHIPS.map((s) => s.kind));
     const rows = snapshotRows();
     expect(rows).toHaveLength(6);
     const times = rows.map((r) => Number(r[1]) * 1000);
