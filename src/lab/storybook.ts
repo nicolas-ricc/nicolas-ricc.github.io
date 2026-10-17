@@ -3,15 +3,15 @@ import { ISO_COLORS } from "../map/palette-iso";
 import { assembleWorld } from "../world/assemble";
 import { scheduleIdle } from "../world/bloom";
 import { attachBloom, type BloomProbe } from "../world/bloom-runtime";
-import { boxFrame, fitTransform } from "../world/frame";
+import { type Box, boxFrame, fitTransform } from "../world/frame";
 import { type BloomMode, buildStage, type Stage } from "../world/stage";
-import { cropAnimators, cropScene } from "./crop";
+import { cropAnimators, cropScene, pieceScene, solidsBox } from "./crop";
 import { EXHIBITS, type Exhibit, ZONE_TITLE, pickExhibit, stepExhibit } from "./exhibits";
 import { bloomFromSearch, nextBloomMode } from "./page";
 
 /**
  * Storybook de estructuras: un exhibit a la vez, recortado del mundo por su
- * caja. El hash elige el exhibit; flechas y j/k solo escriben el hash. 6 rota
+ * caja o armado solo en el origen (piezas). El hash elige el exhibit; flechas y j/k solo escriben el hash. 6 rota
  * el bloom; ?bloom= lo fuerza y ?speed= escala el reloj, como en page.ts.
  */
 const host = document.getElementById("lab-host") as HTMLDivElement;
@@ -40,20 +40,28 @@ async function boot(): Promise<void> {
   app.ticker.maxFPS = 30;
 
   let stage: Stage | null = null, current: Exhibit | null = null, bloom: BloomProbe | null = null;
+  let frame: { box: Box; h?: number } | null = null;
   const fit = (): void => {
-    if (!stage || !current || current.kind !== "region") return;
-    const f = fitTransform(boxFrame(current.box, current.h), host.clientWidth, host.clientHeight);
+    if (!stage || !frame) return;
+    const f = fitTransform(boxFrame(frame.box, frame.h), host.clientWidth, host.clientHeight);
     stage.container.position.set(f.x, f.y);
     stage.container.scale.set(f.scale);
   };
   const show = (e: Exhibit): void => {
-    if (e.kind !== "region") return; // en este hijo EXHIBITS solo tiene regiones; las piezas llegan con #94
     const mode = stage?.bloom ?? "off";
     // sin `context: true` los GraphicsContext de cada Graphics sobreviven hasta el GC de Pixi
     stage?.container.destroy({ children: true, context: true });
     const t0 = performance.now();
-    // la misma caja a ambos: el memo del recorte se indexa por identidad de Box
-    stage = buildStage(cropScene(scene, e.box), cropAnimators(animators, e.box));
+    if (e.kind === "region") {
+      // la misma caja a ambos: el memo del recorte se indexa por identidad de Box
+      stage = buildStage(cropScene(scene, e.box), cropAnimators(animators, e.box));
+      frame = { box: e.box, h: e.h };
+    } else {
+      // pieza: armada en el origen sobre su pad, sin terreno ni animadores
+      const piece = pieceScene(e.build, e.pad);
+      stage = buildStage(piece, []);
+      frame = solidsBox([...piece.ground, ...piece.solids]);
+    }
     app.stage.addChild(stage.container);
     if (log) console.info(`[storybook] ${e.id}: primer dibujo ${(performance.now() - t0).toFixed(1)} ms, ${stage.staticCount} polígonos estáticos`);
     stage.setBloom(mode);
