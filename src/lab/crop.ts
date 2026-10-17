@@ -1,8 +1,8 @@
 import type { Accent } from "../iso/accent";
 import { v3, type Vec3 } from "../iso/geometry";
-import { bounds, type Bounds, type Solid, type Tri } from "../iso/solids";
-import type { Material } from "../map/palette-iso";
-import type { AnimLayer } from "../scenes/animator";
+import { bounds, type Bounds, type Solid, type Tri, tessellate } from "../iso/solids";
+import type { AccentColor, Material } from "../map/palette-iso";
+import type { Animator, AnimLayer } from "../scenes/animator";
 import type { WorldScene } from "../scenes/world";
 import type { ZonedAnimator } from "../world/assemble";
 import type { Box } from "../world/frame";
@@ -130,5 +130,44 @@ export function pieceScene(build: (out: Solid[], accents: Accent[]) => void, pad
     accents,
     landmarks: { portfolio: origin, cv: origin, blog: origin },
     shipyard: null, city: null, factory: null, sea: null, hinterland: null, tech: null, fair: null,
+  };
+}
+
+export interface Readout {
+  solids: number;
+  faces: number;
+  accents: number;
+  box: { min: Vec3; max: Vec3; w: number; d: number; h: number } | null;
+  materials: Material[];
+  accentColors: AccentColor[];
+}
+
+/**
+ * Lo que el panel del storybook cuenta de un exhibit: suelo y sólidos de la
+ * escena más el estado actual de las capas `solid` y `accent` de los
+ * animadores. El terreno y las capas de agua no cuentan.
+ */
+export function readout(scene: WorldScene, animators: readonly Animator[]): Readout {
+  const layers = animators.flatMap((a) => a.ids.map((id) => a.layer(id)));
+  const solids = [...scene.ground, ...scene.solids, ...layers.flatMap((l) => (l.kind === "solid" ? l.solids : []))];
+  const accents = [...scene.accents, ...layers.flatMap((l) => (l.kind === "accent" ? l.accents : []))];
+  const mats = new Set<Material>();
+  const min = v3(Infinity, Infinity, Infinity), max = v3(-Infinity, -Infinity, -Infinity);
+  let faces = 0;
+  for (const s of solids) {
+    faces += tessellate(s).length;
+    mats.add(s.mat);
+    if (s.kind === "hull" && s.topMat) mats.add(s.topMat);
+    const b = bounds(s);
+    min.x = Math.min(min.x, b.min.x); min.y = Math.min(min.y, b.min.y); min.z = Math.min(min.z, b.min.z);
+    max.x = Math.max(max.x, b.max.x); max.y = Math.max(max.y, b.max.y); max.z = Math.max(max.z, b.max.z);
+  }
+  return {
+    solids: solids.length,
+    faces,
+    accents: accents.length,
+    box: solids.length ? { min, max, w: max.x - min.x, d: max.y - min.y, h: max.z - min.z } : null,
+    materials: [...mats].sort(),
+    accentColors: [...new Set(accents.map((a) => a.color))].sort(),
   };
 }
