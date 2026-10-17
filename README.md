@@ -18,11 +18,10 @@ El sitio (la raíz de myxomatosis.xyz; las zonas viven bajo `/area/` porque `/bl
 `src/scenes/`, incluidas `factory.ts` (fábrica de Portfolio), `district.ts`
 (distrito moderno de Resume) y `sea.ts` (punta, faro y barcos de Blog). Los
 tres barcos (Damen Combi Freighter 3850, Damen ASD Tug 2810 y un empujador
-fluvial con barcaza Jumbo) comparten el fondeadero de la dársena del astillero
-(`BERTH`, frente a las gradas) y recorren dos carriles: `LANE_OUT` sube la
-bahía, cruza la bocana y baja hacia abajo-izquierda de la pantalla hasta salir
-del cover, y `LANE_BACK` vuelve por la bahía al fondeadero; cada barco rota por
-ambos y gira en el lugar al fondear. La lancha de la feria es una lancha
+fluvial con barcaza Jumbo) aparecen en la bocana y recorren dos carriles
+semirrectos: `LANE_OUT` baja hacia abajo-izquierda de la pantalla hasta salir
+del cover y `LANE_BACK` vuelve a la bocana, donde se desvanecen ("entran a
+puerto"); no fondean ni giran en el lugar. La lancha de la feria es una lancha
 colectiva del Tigre y el pecio de la fosa, un costero partido en dos. El
 mundo tiene origen en `(-60, -60)` y un sangrado de terreno alrededor de todo
 el contenido, para que la cámara *cover* nunca muestre cielo; sobre el
@@ -62,7 +61,8 @@ look, `src/map/palette-iso.ts`. Specs en `docs/superpowers/specs/`
 `2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md`,
 `2026-09-15-reintegracion-mundo-iso-design.md`,
 `2026-10-14-cyberpunk-crepusculo-neones-bloom-design.md`,
-`2026-10-16-barcos-referencia.md`).
+`2026-10-16-barcos-referencia.md`,
+`2026-10-17-barcos-inventario.md`).
 
 El bloom de las luces no entra en el primer dibujo: el sitio y el lab lo
 activan después, en una tarea diferida (`attachBloom`,
