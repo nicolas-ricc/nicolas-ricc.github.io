@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { CYCLE_MS, SHIPS, alphaAt, shipStateAt } from "../src/scenes/sea-anim";
 
 // Inventario "antes" de los barcos (#86): el documento y sus capturas.
 const SPECS = new URL("../docs/superpowers/specs/", import.meta.url);
@@ -59,10 +60,88 @@ describe("documento del inventario de barcos (#86)", () => {
     for (const name of [...SNAPSHOTS, "antes-recorrido"]) expect(cited).toContain(`${name}.png`);
   });
 
-  it("documento: describe el método del time-lapse y deja pendiente la sección Después", () => {
+  it("documento: describe el método del time-lapse y la sección Antes", () => {
     expect(doc()).toMatch(/^## M[eé]todo del time-lapse/m);
     expect(doc()).toMatch(/^## Antes/m);
-    // #88 completa la sección Después y reemplaza esta aserción.
-    expect(doc()).toMatch(/^## Despu[eé]s\s+pendiente: lo completa el hijo de verificación de #85/m);
+  });
+});
+
+// Verificación "después" de los carriles nuevos (#88): capturas, y lo anotado en el documento contra shipStateAt.
+const AFTER = ["despues-recorrido", ...[1, 2, 3, 4, 5, 6].map((n) => `despues-cover-${n}`), "despues-pecio", "despues-boyas", "despues-lancha", "despues-gradas", "despues-feria-botes", "despues-feria-botes-ancho"];
+const after = (): string => doc().slice(doc().search(/^## Despu[eé]s/m));
+const LANE_WORD = { out: "ida", back: "vuelta", offscreen: "fuera" } as const;
+
+function subsection(title: RegExp): string {
+  const start = after().search(title);
+  if (start < 0) return "";
+  const sub = after().slice(start), next = sub.indexOf("\n### ", 4);
+  return sub.slice(0, next < 0 ? undefined : next);
+}
+
+const cells = (row: string): string[] => row.split("|").slice(1, -1).map((c) => c.trim());
+
+function snapshotRows(): string[][] {
+  return subsection(/^### Capturas instant[aá]neas/m).split("\n").filter((l) => /^\|.*despues-cover-\d\.png/.test(l)).map(cells);
+}
+
+describe("capturas después de los barcos (#88)", () => {
+  it.each(AFTER)("capturas: %s.png existe y es un PNG a 2x", (name) => {
+    const file = new URL(`${name}.png`, ASSETS);
+    expect(existsSync(file)).toBe(true);
+    expect(pngSize(file)?.w).toBeGreaterThanOrEqual(3200);
+  });
+
+  it("time-lapse: despues-recorrido.png tiene el tamaño del cover", () => {
+    expect(pngSize(new URL("despues-recorrido.png", ASSETS))).toEqual(pngSize(new URL("antes-cover.png", ASSETS)));
+  });
+});
+
+describe("documento del inventario, después (#88)", () => {
+  it("documento: la sección Después está completa y el estado ya no dice pendiente", () => {
+    expect(doc()).toMatch(/^## Despu[eé]s/m);
+    expect(doc()).not.toMatch(/pendiente: lo completa el hijo/);
+    expect(doc()).toMatch(/^\*\*Estado:\*\*(?!.*pendiente)/m);
+  });
+
+  it("documento: cita todas las capturas después y cada una existe", () => {
+    const cited = [...after().matchAll(/assets\/85-barcos\/([\w-]+\.png)/g)].map((m) => m[1]!);
+    for (const name of cited) expect(existsSync(new URL(name, ASSETS)), name).toBe(true);
+    for (const name of AFTER) expect(cited).toContain(`${name}.png`);
+  });
+
+  it("capturas instantáneas: seis, separadas ≥ T/6, con lo anotado igual a shipStateAt y ≥ 1 a pleno en cada carril", () => {
+    const header = subsection(/^### Capturas instant[aá]neas/m).split("\n").find((l) => l.startsWith("| Captura")) ?? "";
+    expect(cells(header).slice(2, 5)).toEqual(SHIPS.map((s) => s.kind));
+    const rows = snapshotRows();
+    expect(rows).toHaveLength(6);
+    const times = rows.map((r) => Number(r[1]) * 1000);
+    for (const t of times) expect(Number.isFinite(t)).toBe(true);
+    for (let i = 1; i < times.length; i++) expect(times[i]! - times[i - 1]!).toBeGreaterThanOrEqual(CYCLE_MS / 6);
+    rows.forEach((r, i) => {
+      const full: Record<"out" | "back", string[]> = { out: [], back: [] };
+      SHIPS.forEach((s, k) => {
+        const st = shipStateAt((s.phase * CYCLE_MS + times[i]!) % CYCLE_MS);
+        expect(r[2 + k], `${r[0]} ${s.kind}`).toMatch(new RegExp(`^${LANE_WORD[st.lane]}\\b`));
+        if (st.lane !== "offscreen" && alphaAt(st.lane, st.dist) === 1) full[st.lane].push(s.kind);
+      });
+      const listed = (cell: string): string[] => [...cell.matchAll(/`(\w+)`/g)].map((m) => m[1]!).sort();
+      expect(full.out.length, `${r[0]} yendo`).toBeGreaterThanOrEqual(1);
+      expect(full.back.length, `${r[0]} volviendo`).toBeGreaterThanOrEqual(1);
+      expect(listed(r[5]!), `${r[0]} yendo`).toEqual(full.out.sort());
+      expect(listed(r[6]!), `${r[0]} volviendo`).toEqual(full.back.sort());
+    });
+  });
+
+  it("documento: conteos de DevTools después en al menos dos instantes", () => {
+    const lines = after().split("\n");
+    const header = lines.findIndex((l) => l.startsWith("|") && /sprites/.test(l) && /graphics/.test(l));
+    expect(header).toBeGreaterThanOrEqual(0);
+    const end = lines.findIndex((l, i) => i > header && !l.startsWith("|"));
+    expect(lines.slice(header + 2, end < 0 ? undefined : end).filter((r) => /\d/.test(r)).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("documento: lista las desviaciones respecto de #85", () => {
+    const deviations = subsection(/^### Desviaciones/m);
+    for (const re of [/fondeadero/, /42 u/, /boyas/, /pecio/, /fosa/]) expect(deviations).toMatch(re);
   });
 });
