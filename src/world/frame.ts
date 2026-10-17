@@ -5,7 +5,7 @@ import { project } from "../iso/project";
 import type { Layer, RenderItem } from "../iso/render-list";
 import { WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, coverQuad, type WorldZone } from "../map/geo";
 
-const FRAME_H = 30; // alto de referencia para que entren los landmarks
+export const FRAME_H = 30; // alto de referencia para que entren los landmarks
 
 export type Frame = WorldZone | "all" | "cover";
 
