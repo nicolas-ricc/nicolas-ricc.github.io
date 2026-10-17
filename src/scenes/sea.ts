@@ -19,8 +19,8 @@ export const LIGHTHOUSE = { x: 396, y: 118, z: 7 } as const;
 export const KEEPER = { x: 372, y: 108 } as const;
 // Reubicados en #87: la ida pasaba por la boya vieja (420, 80) y un barco al oeste o norte de un sólido
 // que se le superpone en pantalla queda detrás. Las boyas marcan el bajo al sur de la punta, al oeste de
-// la ida (34 u del carril: los barcos pasan por delante). El pecio sigue en la fosa (el talud
-// `abyssX(262)` ≈ 473 pasa por su popa), 35 u al este de la vuelta; ningún barco lo tapa ni es tapado.
+// la ida (35 y 40 u del carril: los barcos pasan por delante). El pecio sigue en la fosa (su popa queda
+// ~16 u al este del talud, `abyssX(262)` ≈ 474), 30 u al este de la vuelta; ningún barco lo tapa ni es tapado.
 export const BUOYS: readonly Vec2[] = [{ x: 398, y: 150 }, { x: 392, y: 200 }];
 export const WRECK_BUOY = { x: 498, y: 272 } as const;
 export const WRECK = { x: 490, y: 262, heading: Math.PI / 6 } as const;

@@ -10,10 +10,10 @@ import { ship as buildShip, shipAt, wake, type ShipKind } from "./ships";
  * ámbar del faro (luz cálida, no neón) y las dos boyas, más los neones de la punta:
  * la galería corre al revés del haz, la costa ondula y el cartel del farero alterna.
  *
- * Dos carriles semirrectos entre la bocana (362, −16) y la esquina inferior izquierda del cover: la ida
- * (`LANE_OUT`) nace en la bocana, bordea la punta por el este y baja al sur-suroeste hasta salir del
- * cover; la vuelta (`LANE_BACK`) entra desde abajo-izquierda, sube 42 u al este de la ida y termina en
- * la bocana. Los barcos aparecen y se desvanecen ahí mismo (fade de `FADE_U` en las dos puntas), sin
+ * Dos carriles semirrectos entre la bocana y la esquina inferior izquierda del cover: la ida (`LANE_OUT`)
+ * nace en la bocana (362, −16), bordea la punta por el este y baja al sur-suroeste hasta salir del cover;
+ * la vuelta (`LANE_BACK`) entra desde abajo-izquierda, sube 42 u al este de la ida y termina en la bocana
+ * (397, −39). Los barcos aparecen y se desvanecen ahí mismo (fade de `FADE_U` en las dos puntas), sin
  * recorrido por la bahía ni giro en el lugar. Cada barco rota `out → offscreen (OFF_MS) → back →
  * offscreen (PORT_MS, "entra a puerto")` con la misma velocidad y el barco k en la fase k·T/3 del
  * período T = `CYCLE_MS` (≈ 1172 s). El agua en sí (repartida por profundidad en `terrain.ts`) no es
@@ -24,7 +24,7 @@ import { ship as buildShip, shipAt, wake, type ShipKind } from "./ships";
 // sursureste (en pantalla, abajo y apenas a la izquierda). Bordea la punta del faro por el este a
 // ~25 u de su orilla: la punta y su orilla de 12 u son Portfolio y los conos del arrecife de la cara
 // norte (x 397..404, y 109..111) obligan a pasar por x ≥ 424 en y ≈ 86. Giros suaves de 6°, 7°, 22°,
-// 13° y 3° en pantalla; desde (420, 232) corre recto 420 u hasta salir del cover.
+// 13°, 3° y 5° en pantalla; desde (420, 232) corre recto 420 u hasta salir del cover.
 //
 // El extremo de mar (377, 647) está puesto para que el borde del cover 16:9 caiga a `FADE_U` del
 // final: ese fade ocurre en el sangrado. El de la bocana sí se ve, a propósito. Validado contra agua,
