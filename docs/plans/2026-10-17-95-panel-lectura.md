@@ -234,7 +234,7 @@ function renderReadout(r: Readout): void {
     } else {
       const piece = pieceScene(e.build, e.pad);
       src = [piece, []];
-      stage = buildStage(piece, []);
+      stage = buildStage(...src);
       frame = solidsBox([...piece.ground, ...piece.solids]);
     }
     app.stage.addChild(stage.container);
@@ -253,7 +253,7 @@ function renderReadout(r: Readout): void {
       #readout dd { margin: 0.1rem 0 0; font-variant-numeric: tabular-nums; }
 ```
 
-- [ ] **Step 3: correr la verificación** — `npm test`, `npm run typecheck` y el script `.scratch/evals-95.md` con agent-browser. Expected: todo en verde; captura del panel en `docs/superpowers/specs/assets/95-storybook/`.
+- [ ] **Step 3: correr la verificación** — `npm test`, `npm run typecheck` y el script `.scratch/evals-95.md` con agent-browser. Expected: todo en verde; captura del panel (agent-browser `set viewport 1600 900 2`, como pide `CLAUDE.md`) en `docs/superpowers/specs/assets/95-storybook/`, como hicieron #92 y #94 (`docs/superpowers/specs/assets/92-storybook/`, `94-storybook/`).
 
 - [ ] **Step 4: commit**
 
@@ -261,3 +261,35 @@ function renderReadout(r: Readout): void {
 git add src/lab/storybook.ts lab/storybook.html docs/superpowers/specs/assets/95-storybook
 git commit -m "feat(#95): panel de lectura en el storybook"
 ```
+
+## Assumptions
+
+- **A1. "Iniciales" = estado al entrar al exhibit.** Los animadores del mundo se arman una vez y son compartidos (`storybook.ts`: `assembleWorld` al nivel del módulo); `cropAnimators` ya llama "estado inicial" al que tienen al recortar (`crop.ts:85-91`). Descartado: reconstruir el mundo o reiniciar los animadores para leer el estado previo a todo tick (costo de `assembleWorld` por exhibit, y el issue no lo pide).
+- **A2. Error en `buildStage`.** Si `show()` tira, el panel queda con el exhibit anterior, igual que el canvas hoy (`storybook.ts` no maneja errores en `show()`). Descartado: limpiar el panel antes de armar el stage (agrega un estado intermedio sin pedido del issue).
+- **A3. Costo de `tessellate` por exhibit.** Sin presupuesto en el issue ni en la spec. Se acepta: `buildStage` ya teselea los mismos sólidos una vez (`src/iso/render-list.ts:30,38`), así que la lectura cuesta del orden del primer dibujo, una vez por exhibit. Descartado: reutilizar las caras del stage (exige cambiar `buildStage`, que la historia deja sin cambios).
+- **A4. `buildStage(...src)` en ambas ramas** de `show()`, para que el stage y la lectura reciban por construcción los mismos objetos.
+
+## Grilling
+
+Una ronda (el plan no cambió de forma sustancial: solo A4 y la nota de viewport). 18 preguntas.
+
+1. ISSUE: "el `<aside>` de la derecha muestra: sólidos, caras, acentos, caja (min y max en x, y, z) con ancho, fondo y alto en u, la lista ordenada de materiales usados y la lista ordenada de colores de acento". Criterios: `crop.test.ts` → Task 1; "El panel cambia al cambiar de exhibit; captura con el panel visible en el PR" → Task 2 + etapa de PR; `npm test`/`typecheck` → ambas tareas. Ninguno queda sin tarea.
+2. ISSUE: "cuenta `ground` + `solids` más los sólidos iniciales de las capas `solid` animadas". DOC: spec §7, tabla: "Sólidos | `scene.ground.length + scene.solids.length` más los sólidos iniciales de las capas animadas". Ninguno nombra `terrain` ni capas `water`; el test lo fija.
+3. ISSUE: "Se recalcula solo al cambiar de exhibit, nunca por tick". CODE: `src/lab/crop.ts:85-91` — `cropAnimators` usa el mismo estado "inicial" al recortar. NO SOURCE para "antes de todo tick" → A1.
+4. CODE: `src/world/assemble.ts:16` — `ZonedAnimator = Animator & { zone }`; `src/lab/crop.ts:85-91` — el `layer` envuelto devuelve `cropLayer(a.layer(id), box)`; `crop.test.ts` "las capas devuelven solo lo que cae adentro".
+5. CODE: `src/iso/solids.ts:242-246` — "Solo lo que mira a la cámara"; `src/iso/render-list.ts:30,38` — el stage dibuja `tessellate(s)`, así que las caras de `deck` y góndolas ya están en ese conteo.
+6. ISSUE: "materiales de `mat` y `topMat`". Se sigue literal.
+7. CODE: `src/lab/crop.test.ts:1-11` — `prism` (`mat: "concrete"`), `tri`, `v3`, `bounds`, `pieceScene` definidos o importados. CODE: `src/map/palette-iso.ts` `ISO_TONES` incluye `foam`, `paving`, `hullBlue`, `steel`, `brick`, `concrete`.
+8. CODE: `src/lab/crop.ts:2,4` importan `Vec3` y `Material`; `src/map/palette-iso.ts:74` exporta `type AccentColor`.
+9. CODE: `src/map/palette-iso.ts:72-74` — uniones de literales `string`; `.sort()` sin comparador tipa. Orden UTF-16 por primer carácter: b < c < h < p < s; a < c < m.
+10. CODE: `src/scenes/animator.ts:9-13` — `AnimLayer` con exactamente `solid` (`solids`), `accent` (`accents`), `water` (`water: Solid[]`).
+11. CODE: `src/lab/crop.ts:111-133` — `pieceScene` pone el pad en `ground`. `buildStage(...src)` en ambas ramas → A4.
+12. NO SOURCE → A2.
+13. Pipeline: la etapa 3 (evals) escribe los tests de Task 1 y `.scratch/evals-95.md` antes de implementar; Task 2 Step 1 corre ese script.
+14. DOC: `CLAUDE.md` — "agent-browser set viewport 1600 900 2". Precedente: `docs/superpowers/specs/assets/92-storybook/` y `94-storybook/` (planes de #92/#94, decisión 8).
+15. CODE: `src/map/palette-guard.test.ts:5` — recorre solo `src/`; no lee `lab/*.html`. CODE: `lab/storybook.html` — `#exhibits h2 { … opacity: 0.6 … }`.
+16. CODE: `src/lab/storybook.ts` `show()` — `t0 = performance.now()` antes de armar y el `console.info` del primer dibujo; `renderReadout` va después de esa línea.
+17. ISSUE de #93: test de no-vacío por región; CODE: `src/lab/crop.ts:111-133` — toda pieza lleva pad. Ningún exhibit da cero sólidos; `box: null` queda como defensa de la función pura (test).
+18. NO SOURCE → A3.
+
+Fuentes: ISSUE 5, CODE 13, DOC 2, NO SOURCE 3 (las tres, supuestos técnicos A1–A3). Ambigüedades de spec: ninguna. Issues abiertos: ninguno.
