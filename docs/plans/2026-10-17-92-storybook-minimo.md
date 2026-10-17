@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - `src/lab/crop.ts` y `src/lab/exhibits.ts` no importan Pixi; `src/iso/` no importa Pixi.
-- Todo color sale de `src/map/palette-iso.ts` (`palette-guard.test.ts`); `Math.random` prohibido. Único hex permitido: `#100e19` en el `<style>` del html, como `lab/world.html`.
+- Todo color de `src/**/*.ts` sale de `src/map/palette-iso.ts` (`palette-guard.test.ts`); `Math.random` prohibido. El `<style>` de `lab/storybook.html` puede llevar colores CSS, como `lab/world.html`.
 - Comentarios y nombres de tests en castellano; tests Vitest al lado del módulo.
 - Sin dependencias nuevas. Commits `feat(#92): …`.
 - `lab/storybook.html`: `<meta name="robots" content="noindex" />` y `src="/src/lab/storybook.ts"`; fondo `#100e19`; `aria-label` con las teclas.
@@ -23,19 +23,23 @@
 ## Decisiones técnicas (declaradas)
 
 1. **Terreno por triángulo.** `terrain.ground` son seis mallas `ground` que cubren el mundo entero y `terrain.water`/`foam` igual: filtrarlas por `bounds` del sólido entero conservaría todo el terreno. Los sólidos `kind: "ground"` se recortan por triángulo (se conserva cada triángulo entero cuya caja solapa; nunca se corta un triángulo); si no queda ninguno el sólido se descarta. El resto de los sólidos se conserva entero o se descarta por `overlaps(bounds(s), box)`. `foam`, campo obligatorio, queda como `ground` sin triángulos cuando no solapa.
-2. **Identidad de los reclamos.** El runtime excluye del agua estática los cuerpos reclamados por identidad (`Set`). `cropSolid` memoiza por `(box, solid)` en `WeakMap`s, así `cropScene` y `cropAnimators` con la misma caja devuelven el mismo objeto recortado para `terrain.water[i]` y su reclamo.
+2. **Identidad de los reclamos.** El runtime excluye del agua estática los cuerpos reclamados por identidad (`Set`, `src/world/stage.ts:90-93`). `cropSolid` (puro, sin memo) se usa en las capas animadas; `cropShared` lo envuelve con memo por `(box, solid)` en `WeakMap`s y se usa **solo** para `terrain.*` en `cropScene` y para `claims` en `cropAnimators`, así `terrain.water[i]` recortado y su reclamo son el mismo objeto. Las capas animadas no se memoizan: `water-anim.ts:113` reasigna `glintSolids[k].tris` en el mismo objeto en cada paso, y un memo por identidad devolvería destellos viejos.
 3. **`Box` vive en `src/world/frame.ts`** (lo consume `boxFrame`; `src/world/` no importa de `src/lab/`). `exhibits.ts` y `crop.ts` lo importan de ahí.
 4. **Chimeneas:** la caja se estira al norte `PUFF_RANGE` (28 u, `factory-anim.ts`) para que la columna de humo no se corte a los 3 u de la boca.
 5. **Navegación circular:** desde el último, “siguiente” va al primero y viceversa.
-6. **Hash:** se decodifica con `decodeURIComponent` y se ignora el `#` inicial; desconocido o vacío → primer exhibit y `history.replaceState` corrige el hash sin agregar entrada al historial.
+6. **Hash:** se decodifica con `decodeURIComponent` (un `URIError` por hash mal formado cuenta como desconocido) y se ignora el `#` inicial; desconocido o vacío → primer exhibit y `history.replaceState` corrige el hash sin agregar entrada al historial.
+7. **Bloom tras cambiar de exhibit.** `attachBloom` guarda el `stage` que recibe y aplica el veredicto diferido con `stage.setBloom` (`bloom-runtime.ts:39`). La página le pasa un adaptador `{ get bloom(), setBloom(m) }` que delega en el stage vigente, así el veredicto nunca toca un contenedor destruido.
+8. **`zoneFrame` delega en `boxFrame`.** El issue pide `boxFrame` "al lado de `zoneFrame`"; delegar evita duplicar la proyección. Los tests existentes de `zoneFrame` (`frame.test.ts`, describe `zoneFrame`) más uno nuevo que compara `boxFrame(WORLD)` con `zoneFrame("all")` garantizan que el sitio no cambia.
+9. **Colores del html.** `palette-guard.test.ts` solo revisa `0x[0-9a-fA-F]{6}` en `src/**/*.ts` (no tests); el `<style>` de `lab/*.html` queda fuera, como el `#100e19` de `lab/world.html`.
 
 ## Review Focus
 
 1. Hash desconocido, vacío, sólo `#` o con mayúsculas → primer exhibit y hash corregido (test en Task 4, `pickExhibit`).
 2. Flecha en el último/primer exhibit → da la vuelta, no se queda ni explota (test en Task 4, `stepExhibit`).
 3. Una caja donde el agua reclamada por el animador queda recortada: el agua no se pinta dos veces (estática + animada) — misma identidad entre `cropScene` y `cropAnimators` (test en Task 3).
-4. Un animador cuya capa animada luego sale de la caja (humo, barcos): por tick `layer(id)` filtra, no devuelve sólidos de afuera (test en Task 3, tras `tick`).
+4. Un animador cuya capa animada luego sale de la caja (humo, barcos) o que reasigna el contenido del mismo objeto (destellos del agua): por tick `layer(id)` filtra de nuevo, sin memo (tests en Task 3: tras `tick`, y con un sólido `ground` mutado en el lugar).
 5. Cambiar de exhibit varias veces no acumula stages en `app.stage` (verificación con agent-browser en Task 5: `stage.children.length === 1` tras tres cambios).
+6. Hash mal formado (`#%E0%A4%A`) → primer exhibit, sin excepción (test en Task 4).
 
 ---
 
@@ -97,7 +101,8 @@ y en `zoneFrame`, tras calcular `[x0, y0, x1, y1]`: `return boxFrame({ x0, y0, x
 - Consumes: `Box` de `../world/frame`; `bounds`, `Bounds`, `Solid`, `Tri` de `../iso/solids`; `Accent` de `../iso/accent`; `WorldScene` de `../scenes/world`.
 - Produces:
   - `export function overlaps(b: Bounds, box: Box): boolean` — solape cerrado en x e y (tocar el borde cuenta); z no cuenta.
-  - `export function cropSolid(s: Solid, box: Box): Solid | null` — memoizado por `(box, s)`.
+  - `export function cropSolid(s: Solid, box: Box): Solid | null` — puro, sin memo.
+  - `export function cropShared(s: Solid, box: Box): Solid | null` — `cropSolid` memoizado por `(box, s)`; solo para terreno y reclamos.
   - `export function cropSolids(solids: readonly Solid[], box: Box): Solid[]`
   - `export function cropAccents(accents: readonly Accent[], box: Box): Accent[]` — `dot` por `at`, `poly` por cualquier vértice dentro de la caja (bordes incluidos).
   - `export function cropScene(scene: WorldScene, box: Box): WorldScene`
@@ -110,7 +115,7 @@ import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import type { WorldScene } from "../scenes/world";
-import { cropAccents, cropScene, cropSolid, overlaps } from "./crop";
+import { cropAccents, cropScene, cropShared, overlaps } from "./crop";
 
 const box = { x0: 0, y0: 0, x1: 10, y1: 10 };
 const prism = (x: number, y: number, w = 2): Solid => ({ kind: "prism", at: v3(x, y, 0), w, d: w, h: 3, mat: "concrete" });
@@ -150,7 +155,7 @@ describe("cropScene", () => {
     expect(out.terrain.foam).toMatchObject({ kind: "ground", mat: "foam", tris: [] });
   });
   it("el mismo sólido y la misma caja devuelven el mismo recorte", () => {
-    expect(cropSolid(water, box)).toBe(out.terrain.water[0]);
+    expect(cropShared(water, box)).toBe(out.terrain.water[0]);
   });
 });
 
@@ -184,13 +189,10 @@ export function overlaps(b: Bounds, box: Box): boolean {
 
 const inside = (p: Vec3, box: Box): boolean => p.x >= box.x0 && p.x <= box.x1 && p.y >= box.y0 && p.y <= box.y1;
 
-function triOverlaps(t: Tri, box: Box): boolean {
-  const xs = t.pts.map((p) => p.x), ys = t.pts.map((p) => p.y);
-  return Math.min(...xs) <= box.x1 && Math.max(...xs) >= box.x0 && Math.min(...ys) <= box.y1 && Math.max(...ys) >= box.y0;
+// sin arrays intermedios: corre por tick sobre las bandas de agua del mundo entero
+function triOverlaps({ pts: [a, b, c] }: Tri, box: Box): boolean {
+  return Math.min(a.x, b.x, c.x) <= box.x1 && Math.max(a.x, b.x, c.x) >= box.x0 && Math.min(a.y, b.y, c.y) <= box.y1 && Math.max(a.y, b.y, c.y) >= box.y0;
 }
-
-// mismo (caja, sólido) → mismo objeto: el stage reconoce el agua reclamada por identidad
-const memo = new WeakMap<Box, WeakMap<Solid, Solid | null>>();
 
 /**
  * Un sólido dentro de la caja: entero si solapa, `null` si no. Las mallas
@@ -198,20 +200,24 @@ const memo = new WeakMap<Box, WeakMap<Solid, Solid | null>>();
  * triángulo, sin cortar ninguno.
  */
 export function cropSolid(s: Solid, box: Box): Solid | null {
-  let m = memo.get(box);
-  if (!m) memo.set(box, (m = new WeakMap()));
-  if (m.has(s)) return m.get(s)!;
-  let out: Solid | null;
-  if (s.kind === "ground") {
-    const tris = s.tris.filter((t) => triOverlaps(t, box));
-    out = tris.length === s.tris.length ? s : tris.length ? { ...s, tris } : null;
-  } else out = overlaps(bounds(s), box) ? s : null;
-  m.set(s, out);
-  return out;
+  if (s.kind !== "ground") return overlaps(bounds(s), box) ? s : null;
+  const tris = s.tris.filter((t) => triOverlaps(t, box));
+  return tris.length === s.tris.length ? s : tris.length ? { ...s, tris } : null;
 }
 
-export function cropSolids(solids: readonly Solid[], box: Box): Solid[] {
-  return solids.flatMap((s) => cropSolid(s, box) ?? []);
+// el stage reconoce el agua reclamada por identidad: terreno y reclamos tienen que recortar al mismo objeto
+const memo = new WeakMap<Box, WeakMap<Solid, Solid | null>>();
+
+/** `cropSolid` memoizado por (caja, sólido), para el terreno y los reclamos. Las capas animadas no: mutan sus sólidos. */
+export function cropShared(s: Solid, box: Box): Solid | null {
+  let m = memo.get(box);
+  if (!m) memo.set(box, (m = new WeakMap()));
+  if (!m.has(s)) m.set(s, cropSolid(s, box));
+  return m.get(s)!;
+}
+
+export function cropSolids(solids: readonly Solid[], box: Box, crop = cropSolid): Solid[] {
+  return solids.flatMap((s) => crop(s, box) ?? []);
 }
 
 export function cropAccents(accents: readonly Accent[], box: Box): Accent[] {
@@ -224,10 +230,10 @@ export function cropScene(scene: WorldScene, box: Box): WorldScene {
   return {
     ...scene,
     terrain: {
-      ground: cropSolids(terrain.ground, box),
-      bleed: cropSolids(terrain.bleed, box),
-      water: cropSolids(terrain.water, box),
-      foam: cropSolid(terrain.foam, box) ?? { kind: "ground", mat: "foam", tris: [] },
+      ground: cropSolids(terrain.ground, box, cropShared),
+      bleed: cropSolids(terrain.bleed, box, cropShared),
+      water: cropSolids(terrain.water, box, cropShared),
+      foam: cropShared(terrain.foam, box) ?? { kind: "ground", mat: "foam", tris: [] },
     },
     ground: cropSolids(scene.ground, box),
     solids: cropSolids(scene.solids, box),
@@ -236,7 +242,7 @@ export function cropScene(scene: WorldScene, box: Box): WorldScene {
 }
 ```
 
-Nota: la espuma vacía también debe memoizarse para que la reclame el animador: si `cropSolid(terrain.foam)` es `null`, el reclamo también es `null` y se descarta; la espuma vacía no se dibuja de todas formas.
+Nota: si `cropShared(terrain.foam)` es `null`, el reclamo también es `null` y se descarta; la espuma vacía de reemplazo no tiene triángulos y no dibuja nada aunque quede como agua estática.
 - [ ] **Step 4:** `npx vitest run src/lab/crop.test.ts` → PASS; `npm run typecheck` → limpio.
 - [ ] **Step 5:** `git add src/lab/crop.ts src/lab/crop.test.ts && git commit -m "feat(#92): recorte de la escena por caja de mundo"`
 
@@ -247,7 +253,7 @@ Nota: la espuma vacía también debe memoizarse para que la reclame el animador:
 - Test: `src/lab/crop.test.ts`
 
 **Interfaces:**
-- Consumes: `cropSolid`, `cropSolids`, `cropAccents` (Task 2); `ZonedAnimator` de `../world/assemble`; `AnimLayer` de `../scenes/animator`.
+- Consumes: `cropShared`, `cropSolids`, `cropAccents` (Task 2); `ZonedAnimator` de `../world/assemble`; `AnimLayer` de `../scenes/animator`.
 - Produces: `export function cropAnimators(animators: readonly ZonedAnimator[], box: Box): ZonedAnimator[]`.
 
 - [ ] **Step 1: tests que fallan** (agregar a `crop.test.ts`; importar `cropAnimators`, `type ZonedAnimator` de `../world/assemble`):
@@ -285,8 +291,15 @@ describe("cropAnimators", () => {
     const water: Solid = { kind: "ground", mat: "water", tris: [tri(1, 1), tri(50, 50)] };
     const far: Solid = { kind: "ground", mat: "water", tris: [tri(50, 50)] };
     const [a] = cropAnimators([toy(1, [water, far])], box);
-    expect(a!.claims).toEqual([cropSolid(water, box)]);
-    expect(a!.claims![0]).toBe(cropSolid(water, box));
+    expect(a!.claims).toEqual([cropShared(water, box)]);
+    expect(a!.claims![0]).toBe(cropShared(water, box));
+  });
+  it("una capa que reasigna los triángulos del mismo sólido se recorta de nuevo en cada llamada", () => {
+    const glint: Solid & { kind: "ground" } = { kind: "ground", mat: "glint", tris: [tri(1, 1)] };
+    const a0: ZonedAnimator = { zone: null, ids: ["g"], layer: () => ({ kind: "water", water: [glint] }), tick: () => new Set(["g"]) };
+    const [a] = cropAnimators([a0], box);
+    glint.tris = [tri(2, 2), tri(60, 60)];
+    expect(a!.layer("g")).toMatchObject({ water: [{ tris: [tri(2, 2)] }] });
   });
   it("descarta el animador sin contenido inicial en la caja", () => {
     expect(cropAnimators([toy(30)], box)).toEqual([]);
@@ -315,12 +328,12 @@ export function cropAnimators(animators: readonly ZonedAnimator[], box: Box): Zo
   return animators.flatMap((a) => {
     const layer = (id: string): AnimLayer => cropLayer(a.layer(id), box);
     if (a.ids.every((id) => isEmpty(layer(id)))) return [];
-    return [{ zone: a.zone, ids: a.ids, claims: a.claims && cropSolids(a.claims, box), layer, tick: (dt: number) => a.tick(dt) }];
+    return [{ zone: a.zone, ids: a.ids, claims: a.claims && cropSolids(a.claims, box, cropShared), layer, tick: (dt: number) => a.tick(dt) }];
   });
 }
 ```
 
-Nota: el resultado no debe conservar `claims: undefined` como clave si el original no la tenía sólo si eso rompe un test; `buildStage` usa `a.claims ?? []`.
+Nota: `claims` puede quedar `undefined` (el tsconfig no activa `exactOptionalPropertyTypes`); `buildStage` usa `a.claims ?? []` (`stage.ts:90`).
 - [ ] **Step 4:** `npx vitest run src/lab/crop.test.ts` → PASS; `npm run typecheck` limpio.
 - [ ] **Step 5:** `git add src/lab/crop.ts src/lab/crop.test.ts && git commit -m "feat(#92): animadores recortados por caja"`
 
@@ -335,7 +348,7 @@ Nota: el resultado no debe conservar `claims: undefined` como clave si el origin
 - Produces:
   - `export type Exhibit = { id: string; title: string; zone: WorldZone } & ({ kind: "region"; box: Box; h?: number } | { kind: "piece"; build: (out: Solid[], accents: Accent[]) => void })`
   - `export const EXHIBITS: readonly Exhibit[]` (en este hijo solo `region`; orden del índice: chimeneas, noria, torre, faro)
-  - `export function pickExhibit(hash: string, list?: readonly Exhibit[]): Exhibit` — `#` inicial opcional, `decodeURIComponent`; desconocido → `list[0]`.
+  - `export function pickExhibit(hash: string, list?: readonly Exhibit[]): Exhibit` — `#` inicial opcional, `decodeURIComponent` (mal formado = desconocido); desconocido → `list[0]`.
   - `export function stepExhibit(id: string, delta: 1 | -1, list?: readonly Exhibit[]): Exhibit` — circular.
   - `export const ZONE_TITLE: Record<WorldZone, string>` = `{ portfolio: "Portfolio", cv: "Resume", blog: "Blog" }` para el índice.
 
@@ -383,7 +396,7 @@ describe("selección por hash", () => {
     expect(pickExhibit(second!.id)).toBe(second);
   });
   it("vacío, solo # o desconocido → el primero", () => {
-    for (const h of ["", "#", "#nada", `#${second!.id.toUpperCase()}`]) expect(pickExhibit(h)).toBe(first);
+    for (const h of ["", "#", "#nada", "#%E0%A4%A", `#${second!.id.toUpperCase()}`]) expect(pickExhibit(h)).toBe(first);
   });
   it("las flechas dan la vuelta en los extremos", () => {
     const last = EXHIBITS[EXHIBITS.length - 1]!;
@@ -436,7 +449,8 @@ export const EXHIBITS: readonly Exhibit[] = [
 
 /** El exhibit del hash (`#id` o `id`); vacío o desconocido, el primero. */
 export function pickExhibit(hash: string, list: readonly Exhibit[] = EXHIBITS): Exhibit {
-  const id = decodeURIComponent(hash.replace(/^#/, ""));
+  let id: string;
+  try { id = decodeURIComponent(hash.replace(/^#/, "")); } catch { id = ""; } // %-escape roto: como desconocido
   return list.find((e) => e.id === id) ?? list[0]!;
 }
 
@@ -503,7 +517,7 @@ import { assembleWorld } from "../world/assemble";
 import { scheduleIdle } from "../world/bloom";
 import { attachBloom, type BloomProbe } from "../world/bloom-runtime";
 import { boxFrame, fitTransform } from "../world/frame";
-import { buildStage, type Stage } from "../world/stage";
+import { type BloomMode, buildStage, type Stage } from "../world/stage";
 import { cropAnimators, cropScene } from "./crop";
 import { EXHIBITS, type Exhibit, ZONE_TITLE, pickExhibit, stepExhibit } from "./exhibits";
 import { bloomFromSearch, nextBloomMode } from "./page";
@@ -547,7 +561,7 @@ async function boot(): Promise<void> {
     stage.container.scale.set(f.scale);
   };
   const show = (e: Exhibit): void => {
-    if (e.kind !== "region") return; // las piezas llegan en el hijo 3 (#94)
+    if (e.kind !== "region") return; // en este hijo EXHIBITS solo tiene regiones; las piezas llegan con #94
     const mode = stage?.bloom ?? "off";
     stage?.container.destroy({ children: true });
     const t0 = performance.now();
@@ -568,7 +582,9 @@ async function boot(): Promise<void> {
   window.addEventListener("hashchange", fromHash);
   app.renderer.on("resize", fit);
   // diferido como en page.ts, sobre el primer stage; los siguientes heredan el modo en show()
-  scheduleIdle(() => { if (stage) bloom = attachBloom({ app, stage, log, prefix: "storybook", force: bloomFromSearch(location.search) }); });
+  // attachBloom guarda el stage y aplica el veredicto más tarde: se le pasa el vigente, no el primero (que se destruye al cambiar)
+  const live = { get bloom() { return stage!.bloom; }, setBloom(m: BloomMode) { stage!.setBloom(m); } };
+  scheduleIdle(() => { bloom = attachBloom({ app, stage: live, log, prefix: "storybook", force: bloomFromSearch(location.search) }); });
 
   const NEXT = new Set(["ArrowRight", "ArrowDown", "j"]), PREV = new Set(["ArrowLeft", "ArrowUp", "k"]);
   window.addEventListener("keydown", (ev) => {
@@ -591,11 +607,42 @@ async function boot(): Promise<void> {
 }
 ```
 
-Detalles a respetar: `aria-current="page"` solo en el enlace del exhibit actual (escribirlo claro: `if (a.dataset.id === e.id) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");`). La medición del bloom (`attachBloom`) queda atada al primer stage; si el usuario cambia de exhibit durante la medición, el veredicto se aplica a un stage destruido: aceptado (el siguiente cambio hereda `stage.bloom`, que sigue en `on`). `npm run typecheck` limpio.
+Detalles a respetar: `aria-current="page"` solo en el enlace del exhibit actual (escribirlo claro: `if (a.dataset.id === e.id) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");`). El adaptador `live` hace que el veredicto del bloom caiga sobre el stage vigente aunque se haya cambiado de exhibit durante la medición. `npm run typecheck` limpio.
 - [ ] **Step 4:** `npm test` y `npm run typecheck` → verdes.
-- [ ] **Step 5: verificación visual** — `npm run dev -- --host --port 5173` y agent-browser (viewport 1600 900 2) sobre `http://localhost:5173/map/lab/storybook.html`: ver `.scratch/evals-92.md`. Capturas de dos exhibits para el PR. Confirmar que `lab/world.html` se ve igual que en `main`.
+- [ ] **Step 5: verificación visual** — `npm run dev -- --host --port 5173` y agent-browser (viewport 1600 900 2) sobre `http://localhost:5173/lab/storybook.html` (`vite.config.ts` tiene `base: "/"`; si responde 404 probar `/map/lab/storybook.html` como dice `CLAUDE.md`): ver `.scratch/evals-92.md`. Capturas de dos exhibits para el PR. Confirmar que `lab/world.html` se ve igual que en `main`.
 - [ ] **Step 6:** `git add lab/storybook.html src/lab/storybook.ts src/lab/lab-excluded.test.ts && git commit -m "feat(#92): página del storybook con índice, hash y flechas"`
 
 ## Fuera de alcance (otros hijos de #91)
 
 Catálogo completo y test de no-vacío del catálogo entero (#93), exhibits de pieza y `pieceScene` (#94), lectura y `readout` (#95), `setLayer` y teclas `g`/`h`/`a` (#96), README y estado de la spec (#97).
+
+## Assumptions
+
+Decisiones técnicas sin fuente escrita, tomadas y declaradas (van a la descripción del PR):
+
+- Terreno recortado por triángulo (alternativa descartada: por `bounds` del sólido entero, que conserva todo el terreno del mundo).
+- Memo solo para terreno y reclamos (`cropShared`); capas animadas sin memo (alternativa descartada: memo general, que devuelve destellos viejos).
+- Adaptador `live` para `attachBloom` (alternativa descartada: volver a llamar `attachBloom` por exhibit, que remediría y la spec dice "sin volver a medir").
+- `URIError` del hash = hash desconocido (alternativa descartada: dejar propagar la excepción en `hashchange`).
+- Navegación circular en los extremos (alternativa descartada: quedarse quieto).
+- `Box` en `src/world/frame.ts` (alternativa descartada: en `exhibits.ts`, que haría importar `src/lab/` desde `src/world/`).
+
+## Grilling
+
+Dos rondas (griller `fable`), 16 + 16 preguntas.
+
+**Ronda 1.** Fuentes: ISSUE 4, CODE 10, DOC 1, NO SOURCE 3 (todas técnicas). Cambios: memo partido en `cropSolid`/`cropShared` (`water-anim.ts:113` reasigna `glintSolids[k].tris` en el mismo objeto); adaptador `live` para `attachBloom` (`bloom-runtime.ts:15,39` guarda el stage y aplica el veredicto después); `URIError` del hash como desconocido; restricción de colores precisada (`palette-guard.test.ts` mira solo `0x…` en `src/**/*.ts`); URL del dev server con `base: "/"` (`vite.config.ts:4`).
+
+**Ronda 2.** Fuentes: ISSUE 3, CODE 11, DOC 1, NO SOURCE 1 (técnica: coste por tick del recorte del agua → `triOverlaps` sin arrays; solo se recortan las capas que `tick` marca, una banda de seis cada 150 ms, `water-anim.ts:128-130`). Respuestas clave:
+- Criterios de #92 → tareas: archivos y `lab-excluded` (T5), `crop.test.ts` (T2–T3), `frame.test.ts` (T1), cuatro regiones animadas (T4 + capturas T5), `npm test`/`typecheck` (todas).
+- Variante `piece` del tipo: ISSUE "tipo `Exhibit` con `kind: "region"` … y `kind: "piece"` (`build`); en este hijo solo entradas `region`".
+- Descarte de animadores sin contenido inicial: spec §4 "Si ninguna capa del animador tiene contenido dentro de la caja en su estado inicial, el animador se descarta". En el faro sobrevive el animador del mar por `sea.beam` (`sea-animator.ts:9`); los barcos se filtran por tick.
+- Humo con contenido inicial: `factory-anim.ts:9-10,26` (bocanadas escalonadas en el frame 0); deriva `NNE = { x: 0.45, y: -0.893 }` (`factory-anim.ts:18`); `PUFF_LIFT` es z por unidad recorrida (`factory-anim.ts:14`).
+- `buildStage` no muta sólidos: arma listas nuevas (`render-list.ts` `buildRenderList`); `drawLayer` con lista vacía no dibuja; la espuma vacía no llega a `bounds`.
+- `Stage` no registra listeners ni texturas propias: el filtro del bloom vive en `bloomSlot`, hijo del contenedor (`stage.ts:122-160`); `container.destroy({ children: true })` lo libera.
+- `AnimLayer` tiene tres variantes (`animator.ts:9-13`); `ZonedAnimator = Animator & { zone: WorldZone | null }` (`assemble.ts:16`), `claims?: readonly Solid[]` (`animator.ts:17`).
+- `assembleWorld(zones | undefined, { reducedMotion })` (`assemble.ts:22`) ya corre bajo Vitest en `assemble.test.ts`; `BLEED = { x, y }` (`geo.ts:28`).
+- Comandos: `.factory/config.toml` `test = "npm test"`, `lint = "npm run typecheck"`.
+- `zoneFrame` tras delegar: lo fijan los tests existentes de mínimos/máximos exactos (`frame.test.ts` describe `zoneFrame`) y `coverFrame` contiene a `zoneFrame("all")`.
+
+Supuestos: ver `## Assumptions`. Issues abiertos: ninguno.
