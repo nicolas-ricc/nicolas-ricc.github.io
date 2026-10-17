@@ -20,10 +20,10 @@
 
 ## Decisiones técnicas (declaradas)
 
-1. **Los textos se vigilan con tests.** `docs.test.ts` ya lee el README y exige frases de la flota. Se le suma un `describe` del storybook: el README nombra `/lab/storybook.html`, el hash, cada tecla y los dos parámetros, y lista la spec entre las specs; la spec no dice "sin implementar", dice "implementado" y tiene una sección `## Desvíos`.
+1. **Los textos se vigilan con tests.** `docs.test.ts` ya lee el README y exige frases de la flota. Se le suma un `describe` del storybook: el README nombra `/lab/storybook.html`, el hash, cada tecla y los dos parámetros, y lista la spec entre las specs; la spec no dice "sin implementar", dice "implementado" y tiene una sección `## 10. Desvíos` (la spec termina hoy en §9).
 2. **URL del lab.** El README usa `/lab/storybook.html`, como el resto de sus enlaces al lab. `vite.config.ts` tiene `base: "/"`, así que `/map/lab/...` (lo que dice `CLAUDE.md`) cae en el sitio. Ese desajuste es #99; no se toca acá.
 3. **Teclas en el README.** El issue pide `←`/`→`; el código también acepta `↑`/`↓` y `j`/`k` (`storybook.ts`, `NEXT`/`PREV`). La línea dice "flechas o `j`/`k`" y el test exige `←`, `→`, `j` y `k`.
-4. **Ubicación de la línea.** Va en el párrafo del laboratorio del README, después de la frase de `?bloom=` y antes de "Las teclas encuadran; no recortan". La spec del storybook se suma a la lista de specs del mismo párrafo.
+4. **Ubicación de la línea.** Párrafo propio, justo después del párrafo del laboratorio del README (sigue siendo la sección del lab): así el test no hereda `6` ni `?bloom=` de la frase de `world.html`. La spec del storybook se suma a la lista de specs del párrafo del laboratorio.
 5. **Desvíos de la spec.** Se toman de las "Decisiones técnicas" de los planes `docs/plans/2026-10-17-9{2..6}-*.md`, ya mergeados. Se anotan solo los que cambian algo que la spec afirma: el recorte del terreno por triángulo, el memo de los reclamos, `Box` en `frame.ts`, `group`/`GROUPS`, `pad` y la forma del pad, la caja de las chimeneas, los casos que no se aíslan (grúa pórtico, grúa torre del desvío, torre en la plaza), la dársena como fondeadero, `shipAt` en vez de `ship`, `zoneFrame` delegando en `boxFrame`, el encuadre de las piezas con `solidsBox`, y la medición con los acentos ocultos.
 6. **Exhibits capturados.** Uno animado por zona: `#chimeneas` (Portfolio, humo), `#torre` (Resume, luces de la torre) y `#faro` (Blog, haz del faro). Son tres de los cuatro que #93 exige animados. La pieza es `#grua-torre`. Más `lab/world.html`. Se captura con `?bloom=off`, para no depender de la medición diferida en headless.
 7. **"Se ve igual que antes".** Este issue no toca código de runtime, así que `lab/world.html` no puede cambiar. Igual se verifica con evidencia: se comparan los `totals` de `rendering.capture()` (PixiJS DevTools) en esta rama y en `origin/main` (un worktree aparte, otro puerto), y las dos capturas se miran a ojo. En el PR va solo la de esta rama.
@@ -31,11 +31,22 @@
 
 ## Review Focus
 
-1. Un test que pasa con un README que solo nombra las teclas en otra sección: el test exige que todas aparezcan en el mismo párrafo que `/lab/storybook.html` (Task 1).
+1. Un test que pasa con un README que solo nombra las teclas en otra frase: el test exige que todas aparezcan en el párrafo propio de `/lab/storybook.html`, que no es el de `world.html` (Task 1).
 2. Una spec cuyo encabezado sigue diciendo "sin implementar" aunque haya una sección de desvíos: el test exige las dos cosas (Task 2).
 3. Una captura tomada antes de que el exhibit termine de dibujar, o con el hash corregido a otro exhibit: el script espera y lee `location.hash` y el `aria-current` del índice antes de capturar (Task 3).
 4. Una captura a 1x: el script fija `set viewport 1600 900 2` y verifica que el PNG mida 3200×1800 (Task 3).
 5. Un desvío anotado que contradice el código de `main`: cada desvío cita el archivo o el plan de donde sale (Task 2).
+
+## Assumptions
+
+Decididas en la revisión del plan (etapa 2), sin fuente escrita que las fije:
+
+- **Mismos totals en world.html.** #115 ya comparó `rendering.capture()` entre su rama y `main` y dio igual (82 graphics / 49 instrucciones). Si acá difieren, se repite la captura dos veces en cada servidor. Si la diferencia sigue y viene solo de capas animadas (sprites del humo, barcos), se anota en el PR y se decide por la comparación visual. Alternativa descartada: exigir igualdad estricta y bloquear.
+- **Dos dev servers.** `vite.config.ts` en `origin/main` y en la rama es el mismo archivo (este issue no lo toca). El de main se levanta con `--port 5174 --strictPort`, para fallar en vez de saltar de puerto. Alternativa descartada: capturar main primero con un solo servidor y después cambiar de rama (deja el árbol a mitad de camino si algo falla).
+- **2x real.** `agent-browser set viewport 1600 900 2` ya dio PNGs de 3200×1800 en #93..#96 (`assets/9x-storybook/*.png`). `file` lo confirma por captura; las capturas son del viewport, no de la página entera.
+- **Links por SHA.** GitHub mantiene los commits de un PR mergeado por squash (refs `pull/N/head`). El link de #93 (`48a5030…/planta.png?raw=true`) responde 200 hoy.
+- **Commits.** Los tests van en el commit `test(#97): evals` de la etapa 3, todos juntos y en rojo, como manda el pipeline. Los cambios de texto van en commits `docs(#97): …`. Entre la etapa 3 y la 4 la suite está en rojo a propósito. Alternativa descartada: un commit test+docs por tarea.
+- **Teclas extra.** El README nombra `j`/`k`, además de `←`/`→`, porque la spec §6 los lista ("`→`/`↓`/`j` siguiente, `←`/`↑`/`k` anterior") y `storybook.ts` (`NEXT`/`PREV`) los implementa.
 
 ---
 
@@ -53,16 +64,17 @@
 
 ```ts
 describe("documentación del storybook (#97)", () => {
-  // el párrafo del laboratorio: empieza en "abrir `/lab/world.html`" y termina en la línea en blanco
-  const lab = readme.split(/\n\s*\n/).find((p) => p.includes("/lab/world.html") && p.includes("/lab/storybook.html")) ?? "";
-  it("README describe /lab/storybook.html en el párrafo del laboratorio", () => {
-    expect(lab).toContain("/lab/storybook.html");
-    expect(lab).toMatch(/hash/);
+  // párrafo propio, para que las teclas no se hereden de la frase de world.html (que ya nombra `6` y ?bloom=)
+  const story = readme.split(/\n\s*\n/).find((p) => p.includes("/lab/storybook.html")) ?? "";
+  it("README describe /lab/storybook.html y el hash en un párrafo propio", () => {
+    expect(story).toMatch(/hash/);
+    expect(story).not.toContain("/lab/world.html");
   });
   it("README nombra las teclas y los parámetros del storybook", () => {
-    for (const k of ["←", "→", "`j`", "`k`", "`g`", "`h`", "`a`", "`6`", "?bloom=", "?speed="]) expect(lab).toContain(k);
+    for (const k of ["←", "→", "`j`", "`k`", "`g`", "`h`", "`a`", "`6`", "?bloom=", "?speed="]) expect(story).toContain(k);
   });
-  it("README lista la spec del storybook entre las specs", () => {
+  it("README lista la spec del storybook entre las specs del laboratorio", () => {
+    const lab = readme.split(/\n\s*\n/).find((p) => p.includes("/lab/world.html")) ?? "";
     expect(lab).toContain("2026-10-17-storybook-estructuras-design.md");
   });
 });
@@ -71,9 +83,9 @@ describe("documentación del storybook (#97)", () => {
 - [ ] **Step 2: correr y ver que falla**
 
 Run: `npx vitest run src/lab/docs.test.ts`
-Expected: FAIL en los tres `it` del storybook (`lab` vacío).
+Expected: FAIL en los tres `it` del storybook (`story` vacío; la spec no está en la lista).
 
-- [ ] **Step 3: editar el README.** En el párrafo del laboratorio, después de "…`?bloom=on|off|fallback` lo fuerza al cargar." insertar:
+- [ ] **Step 3: editar el README.** Insertar un párrafo nuevo (separado por líneas en blanco) inmediatamente después del párrafo del laboratorio (el que termina en `` `2026-10-17-barcos-inventario.md`). ``) y antes del párrafo "El bloom de las luces no entra en el primer dibujo…":
 
 ```markdown
 `/lab/storybook.html` es el storybook de estructuras: muestra un edificio o
@@ -121,7 +133,7 @@ describe("estado de la spec del storybook (#97)", () => {
     expect(estado).not.toMatch(/sin implementar/);
   });
   it("la spec anota sus desvíos", () => {
-    expect(spec).toMatch(/^## \d+\. Desvíos/m);
+    expect(spec).toMatch(/^## 10\. Desvíos$/m);
   });
 });
 ```
@@ -178,3 +190,11 @@ git commit -m "docs(#97): la spec del storybook pasa a implementada con sus desv
 git add docs/superpowers/specs/assets/97-storybook
 git commit -m "docs(#97): capturas de cierre del storybook"
 ```
+
+## Grilling
+
+- Rondas: 1. La revisión corrigió el test del README y fijó el número de sección, sin agregar ni quitar tareas: no hizo falta una segunda.
+- Preguntas: 18. Por fuente: CODE 9 (1, 2, 3, 4, 7, 8, 10, 12, 16), ISSUE 2 (9, 11), DOC 1 (CLAUDE.md, para 17), NO SOURCE 6, todas supuestos técnicos (5, 6, 13, 14, 15, 18).
+- Correcciones: el test del README busca el párrafo propio del storybook. Antes heredaba `6` y `?bloom=` de la frase de `world.html` (pregunta 2). La sección de desvíos es `## 10. Desvíos` y el test la exige con ese número; la spec termina en §9 (pregunta 4).
+- Supuestos: los de `## Assumptions`.
+- Issues abiertos: ninguno. El desajuste `/map/` contra `/` (pregunta 12) ya es #99.
