@@ -127,7 +127,7 @@ La posición de `antes-cover` se verificó también en el lab real a 1600 × 900
 
 ## Después
 
-Las capturas "después" se tomaron en el lab real, `http://localhost:5173/lab/world.html`, con agent-browser, PixiJS DevTools 2.3.1 y el ticker detenido con el método A del "antes" (método del time-lapse), a 1600 × 900 a 2x (PNG de 3200 × 1800). Las del "antes" salieron en su mayoría del sitio, no del lab; el encuadre cover es el mismo (contenedor en (625,63; 157,14), escala 1,4904), así que son comparables. La discrepancia de base de URL (`CLAUDE.md` dice `/map/` y `vite.config.ts` fija `/`) está registrada en #101. La cota del reloj inicial de los animadores antes de enganchar el ticker fue de 13,0 s reales en el time-lapse, 5,9 s en las instantáneas y 7,0 s en las de conjunto, muy por debajo de los 25 s que el margen de las capturas tolera.
+Las capturas "después" se tomaron en el lab real, `http://localhost:5173/lab/world.html`, con agent-browser, PixiJS DevTools 2.3.1 y el ticker detenido con el método A del "antes" (método del time-lapse), a 1600 × 900 a 2x (PNG de 3200 × 1800). Las del "antes" salieron en su mayoría del sitio, no del lab; el encuadre cover es el mismo (contenedor en (625,63; 157,14), escala 1,4904), así que son comparables. La discrepancia de base de URL (`CLAUDE.md` dice `/map/` y `vite.config.ts` fija `/`) está registrada en #99. La cota del reloj inicial de los animadores antes de enganchar el ticker fue de 13,0 s reales en el time-lapse, 5,9 s en las instantáneas y 7,0 s en las de conjunto, muy por debajo de los 25 s que el margen de las capturas tolera.
 
 ![time-lapse del recorrido nuevo](assets/85-barcos/despues-recorrido.png)
 
@@ -143,7 +143,7 @@ Las capturas "después" se tomaron en el lab real, `http://localhost:5173/lab/wo
 | casco en construcción (grada 1) | 1 | 1 (estático) | Ninguna | sí: [despues-gradas](assets/85-barcos/despues-gradas.png) |
 | casco entero en grada 2 | 1 | 1 (estático) | Ninguna | sí: [despues-gradas](assets/85-barcos/despues-gradas.png) |
 | casco en el dique seco | 1 | 1 (estático) | Ninguna | sí: [despues-gradas](assets/85-barcos/despues-gradas.png) |
-| botes del muelle de la feria | 4 | 4 (estáticos) | Ninguna | parcial, el bote 3 sigue enterrado (defecto de #86, sin cambios): [despues-feria-botes](assets/85-barcos/despues-feria-botes.png) |
+| botes del muelle de la feria | 4 | 4 (estáticos) | Ninguna | parcial, el bote 3 sigue enterrado (defecto de #86, sin cambios; derivado a #98): [despues-feria-botes](assets/85-barcos/despues-feria-botes.png) |
 
 Los tres barcos son los de siempre; cambió la ruta. La ida (`LANE_OUT`) sale de la bocana en (362, −16), bordea la punta del faro por el este y corre recta hasta salir del cover; la vuelta (`LANE_BACK`) es la misma curva 42 u al este, invertida, y termina en la bocana (397, −39).
 
@@ -221,7 +221,7 @@ Lectura de cada una:
 - Boyas: el carguero de la ida, a 204 u en (436, 167), pasa por delante, al este, sin tapar ni pisar. La boya (392, 200) se ve encendida. La boya norte (398, 150) se ve apagada: es la fase del parpadeo (se encienden desfasadas, nunca las dos apagadas), no un defecto.
 - Lancha: un bote con estela junto a la costa de la feria, lejos de los carriles. La lancha es una sola instancia y se ve completa en el encuadre.
 - Gradas: grada 1 con quilla y cuadernas, grada 2 con casco entero y el dique seco abajo a la izquierda, bajo el pórtico. Ningún barco de fondeadero ni girando en el agua.
-- Botes de la feria: con el mismo encuadre que el "antes" (s = 11), igual que entonces solo se ve claro el bote 4. Una vista exploratoria con s = 7, no commiteada, mostró los botes 1, 2 y 4; el bote 3, en (247, −228), sigue enterrado en el entarimado del muelle. Es un defecto previo hallado por #86, no causado por #85.
+- Botes de la feria: con el mismo encuadre que el "antes" (s = 11), igual que entonces solo se ve claro el bote 4. Una vista exploratoria con s = 7, no commiteada, mostró los botes 1, 2 y 4; el bote 3, en (247, −228), sigue enterrado en el entarimado del muelle. Es un defecto previo hallado por #86, no causado por #85, derivado a #98.
 
 ### Conteos por frame
 
@@ -247,7 +247,7 @@ Ninguno nuevo. Se miró: los 18 estados de las seis instantáneas (ningún barco
 
 Quedan dos observaciones que no son defectos de #85:
 
-- El bote 3 de la feria, en (247, −228), sigue enterrado en el entarimado del muelle: defecto previo hallado por #86, sin cambios, no derivado a una issue nueva.
+- El bote 3 de la feria, en (247, −228), sigue enterrado en el entarimado del muelle: defecto previo hallado por #86, sin cambios; derivado a #98.
 - La boya norte (398, 150) apagada en `despues-boyas` es la fase del parpadeo.
 
 Límite de lo verificado: no se vio un instante con dos barcos de carriles opuestos en la curva, así que la ausencia de solape visual se apoya en la prueba de `sea-anim.test.ts` y no en una captura. El barco de la vuelta pasa a unas 32 u del pecio: cerca, pero al oeste y sin solaparse en pantalla.
@@ -261,5 +261,5 @@ Límite de lo verificado: no se vio un instante con dos barcos de carriles opues
 | pecio y boya del pecio | (462, 150) y su boya | (490, 262) y (498, 272); la vuelta pasa al oeste sin solaparse en pantalla | [antes-pecio](assets/85-barcos/antes-pecio.png) | [despues-pecio](assets/85-barcos/despues-pecio.png) |
 | boyas de canal | (420, 80) y (430, 160) | (398, 150) y (392, 200) | [antes-pecio](assets/85-barcos/antes-pecio.png) | [despues-boyas](assets/85-barcos/despues-boyas.png) |
 | gradas 1 y 2, dique seco | correctos | correctos | [antes-darsena](assets/85-barcos/antes-darsena.png) | [despues-gradas](assets/85-barcos/despues-gradas.png) |
-| botes de la feria | el bote 3 enterrado | igual (defecto de #86) | [antes-feria-botes](assets/85-barcos/antes-feria-botes.png) | [despues-feria-botes](assets/85-barcos/despues-feria-botes.png) |
+| botes de la feria | el bote 3 enterrado | igual (defecto de #86, derivado a #98) | [antes-feria-botes](assets/85-barcos/antes-feria-botes.png) | [despues-feria-botes](assets/85-barcos/despues-feria-botes.png) |
 | conteos por frame | 8/82/0/2/53 y 9/105/0/3/63 | 9/105/0/3/59 y 9/105/0/3/63 | tabla "Conteos por frame" | tabla "Conteos por frame" de Después |
