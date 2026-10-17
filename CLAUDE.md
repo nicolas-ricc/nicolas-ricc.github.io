@@ -47,7 +47,8 @@ directamente. En una captura headless `drawCalls` salió 0 con 63
 instrucciones: fiarse de `totals` e `instructions`, no de ese número.
 `window.__PIXI_DEVTOOLS__` trae además `{ renderer, stage, version, extensions }`.
 
-Para reinstalarla (otra máquina, contenedor de factory):
+En el contenedor de factory la instala `.factory/setup.sh` (paso opcional, no
+falla el run). Para reinstalarla a mano en otra máquina:
 
     mkdir -p /tmp/pixidev && cd /tmp/pixidev
     gh release download v2.3.1 -R pixijs/devtools -p chrome.zip
