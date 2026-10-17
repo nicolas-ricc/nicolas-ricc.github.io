@@ -1,7 +1,9 @@
 import type { Accent } from "../iso/accent";
 import type { Vec3 } from "../iso/geometry";
 import { bounds, type Bounds, type Solid, type Tri } from "../iso/solids";
+import type { AnimLayer } from "../scenes/animator";
 import type { WorldScene } from "../scenes/world";
+import type { ZonedAnimator } from "../world/assemble";
 import type { Box } from "../world/frame";
 
 /** Solape en x e y, bordes incluidos; z no cuenta. */
@@ -61,4 +63,25 @@ export function cropScene(scene: WorldScene, box: Box): WorldScene {
     solids: cropSolids(scene.solids, box),
     accents: cropAccents(scene.accents, box),
   };
+}
+
+function cropLayer(l: AnimLayer, box: Box): AnimLayer {
+  if (l.kind === "solid") return { ...l, solids: cropSolids(l.solids, box) };
+  if (l.kind === "accent") return { ...l, accents: cropAccents(l.accents, box) };
+  return { ...l, water: cropSolids(l.water, box) };
+}
+
+const isEmpty = (l: AnimLayer): boolean => (l.kind === "solid" ? l.solids : l.kind === "accent" ? l.accents : l.water).length === 0;
+
+/**
+ * Cada animador envuelto: mismos ids, zona y tick; `layer` y `claims` filtrados
+ * con las reglas de `cropScene`. Se descarta el que no tiene nada en la caja en
+ * su estado inicial (no hace falta tickear el mar entero para mirar una chimenea).
+ */
+export function cropAnimators(animators: readonly ZonedAnimator[], box: Box): ZonedAnimator[] {
+  return animators.flatMap((a) => {
+    const layer = (id: string): AnimLayer => cropLayer(a.layer(id), box);
+    if (a.ids.every((id) => isEmpty(layer(id)))) return [];
+    return [{ zone: a.zone, ids: a.ids, claims: a.claims && cropSolids(a.claims, box, cropShared), layer, tick: (dt: number) => a.tick(dt) }];
+  });
 }
