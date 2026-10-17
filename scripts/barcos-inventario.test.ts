@@ -67,18 +67,23 @@ describe("documento del inventario de barcos (#86)", () => {
 });
 
 // Verificación "después" de los carriles nuevos (#88): capturas, y lo anotado en el documento contra shipStateAt.
-const AFTER = ["despues-recorrido", ...[1, 2, 3, 4, 5, 6].map((n) => `despues-cover-${n}`), "despues-pecio", "despues-boyas", "despues-lancha", "despues-gradas", "despues-feria-botes"];
+const AFTER = ["despues-recorrido", ...[1, 2, 3, 4, 5, 6].map((n) => `despues-cover-${n}`), "despues-pecio", "despues-boyas", "despues-lancha", "despues-gradas", "despues-feria-botes", "despues-feria-botes-ancho"];
 const after = (): string => doc().slice(doc().search(/^## Despu[eé]s/m));
 const LANE_WORD = { out: "ida", back: "vuelta", offscreen: "fuera" } as const;
 
+/** El texto de una subsección `### …` de "Después", hasta la siguiente subsección. */
+function subsection(title: RegExp): string {
+  const start = after().search(title);
+  if (start < 0) return "";
+  const sub = after().slice(start), next = sub.indexOf("\n### ", 4);
+  return sub.slice(0, next < 0 ? undefined : next);
+}
+
+const cells = (row: string): string[] => row.split("|").slice(1, -1).map((c) => c.trim());
+
 /** Las filas de la tabla de `### Capturas instantáneas`, como celdas. */
 function snapshotRows(): string[][] {
-  const start = after().search(/^### Capturas instant[aá]neas/m);
-  if (start < 0) return [];
-  const sub = after().slice(start), next = sub.indexOf("\n#", 4);
-  return sub.slice(0, next < 0 ? undefined : next).split("\n")
-    .filter((l) => /^\|.*despues-cover-\d\.png/.test(l))
-    .map((l) => l.split("|").slice(1, -1).map((c) => c.trim()));
+  return subsection(/^### Capturas instant[aá]neas/m).split("\n").filter((l) => /^\|.*despues-cover-\d\.png/.test(l)).map(cells);
 }
 
 describe("capturas después de los barcos (#88)", () => {
@@ -107,6 +112,8 @@ describe("documento del inventario, después (#88)", () => {
   });
 
   it("capturas instantáneas: seis, separadas ≥ T/6, con lo anotado igual a shipStateAt y ≥ 1 a pleno en cada carril", () => {
+    const header = subsection(/^### Capturas instant[aá]neas/m).split("\n").find((l) => l.startsWith("| Captura"));
+    expect(cells(header ?? "").slice(2, 5)).toEqual(SHIPS.map((s) => s.kind));
     const rows = snapshotRows();
     expect(rows).toHaveLength(6);
     const times = rows.map((r) => Number(r[1]) * 1000);
@@ -136,6 +143,7 @@ describe("documento del inventario, después (#88)", () => {
   });
 
   it("documento: lista las desviaciones respecto de #85", () => {
-    for (const re of [/fondeadero/, /42 u/, /boyas/, /pecio/, /fosa/]) expect(after()).toMatch(re);
+    const deviations = subsection(/^### Desviaciones/m);
+    for (const re of [/fondeadero/, /42 u/, /boyas/, /pecio/, /fosa/]) expect(deviations).toMatch(re);
   });
 });

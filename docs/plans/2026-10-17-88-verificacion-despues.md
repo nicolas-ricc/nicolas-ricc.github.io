@@ -289,12 +289,12 @@ Una captura con un barco detrás de un sólido, pisando boya/pecio/punta, un sol
   - `alphaAt` = `Math.max(0, Math.min(1, dist/FADE_U, (L − dist)/FADE_U))` da exactamente 1 a pleno, y es el alpha que usa el frame del barco (`shipFrame`).
   - `maxFPS = 30`: `src/lab/page.ts:42`, así que `_minElapsedMS` ≠ 0. El render de `Application` se registra con `UPDATE_PRIORITY.LOW` (`node_modules/pixi.js/lib/app/TickerPlugin.mjs:28`), y el listener de `page.ts` (prioridad normal) queda antes: `_head.next`. El gancho lo comprueba con el código fuente del listener.
   - `fit()` solo corre en `keydown` y en `resize` del renderer: `src/lab/page.ts:61-66`, y es inmediato.
-  - `base: "/"`: `vite.config.ts:4`. `CLAUDE.md` está desactualizado (`/map/`); #86 lo documentó en "Método del time-lapse". Su corrección queda fuera de alcance → #101.
+  - `base: "/"`: `vite.config.ts:4`. `CLAUDE.md` está desactualizado (`/map/`); #86 lo documentó en "Método del time-lapse". Su corrección queda fuera de alcance → #101 (duplicado de #99).
   - "Un barco de cada tipo": ISSUE: "y una del cover con un barco de cada tipo (`cargo`, `tug`, `barge`) a la vista si el reloj lo permite".
   - Cuatro capturas comparativas: ISSUE: "junto con `antes-cover.png`/`despues-cover-1.png` y `antes-recorrido.png`/`despues-recorrido.png`".
   - Los helpers `doc()`, `pngSize()`, `ASSETS` y la aserción `pendiente: lo completa el hijo de verificación de #85`: `scripts/barcos-inventario.test.ts`. Los conteos "antes" (containers/graphics/sprites/filters/instrucciones/renderTime) están en la tabla "Conteos por frame" del documento del inventario. `.superpowers/` está en `.gitignore`.
   - Validación de vértices: comentario de `LANE_OUT` en `sea-anim.ts` ("No mover vértices más de 2 u sin revalidar") y `sea-anim.test.ts:116` ("separación: dos cargueros, uno en cada carril, nunca se tocan en pantalla").
 - Supuestos técnicos: los de "Assumptions" (agenda, captura de tipos, gancho, filas del test, imágenes del PR, `DT`, capturas con el ticker detenido).
 - Ambigüedades de spec: ninguna.
-- Issues abiertas: #101 (CLAUDE.md dice base `/map/` y `vite.config.ts` fija `/`).
+- Issues abiertas: #101 (CLAUDE.md dice base `/map/` y `vite.config.ts` fija `/`), cerrada después como duplicado de #99, que ya lo registraba.
 - Estado: ok.

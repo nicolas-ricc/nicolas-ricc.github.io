@@ -1,4 +1,4 @@
-# Inventario de los conjuntos de barcos (antes de #85)
+# Inventario de los conjuntos de barcos (antes y después de #85)
 
 **Fecha:** 2026-10-17
 **Estado:** "antes" y "después" completos
@@ -129,8 +129,6 @@ La posición de `antes-cover` se verificó también en el lab real a 1600 × 900
 
 Las capturas "después" se tomaron en el lab real, `http://localhost:5173/lab/world.html`, con agent-browser, PixiJS DevTools 2.3.1 y el ticker detenido con el método A del "antes" (método del time-lapse), a 1600 × 900 a 2x (PNG de 3200 × 1800). Las del "antes" salieron en su mayoría del sitio, no del lab; el encuadre cover es el mismo (contenedor en (625,63; 157,14), escala 1,4904), así que son comparables. La discrepancia de base de URL (`CLAUDE.md` dice `/map/` y `vite.config.ts` fija `/`) está registrada en #99. La cota del reloj inicial de los animadores antes de enganchar el ticker fue de 13,0 s reales en el time-lapse, 5,9 s en las instantáneas y 7,0 s en las de conjunto, muy por debajo de los 25 s que el margen de las capturas tolera.
 
-![time-lapse del recorrido nuevo](assets/85-barcos/despues-recorrido.png)
-
 ### Inventario después
 
 | Conjunto | Instancias simultáneas | Instancias por ciclo | Animación | Correcto |
@@ -143,7 +141,7 @@ Las capturas "después" se tomaron en el lab real, `http://localhost:5173/lab/wo
 | casco en construcción (grada 1) | 1 | 1 (estático) | Ninguna | sí: [despues-gradas](assets/85-barcos/despues-gradas.png) |
 | casco entero en grada 2 | 1 | 1 (estático) | Ninguna | sí: [despues-gradas](assets/85-barcos/despues-gradas.png) |
 | casco en el dique seco | 1 | 1 (estático) | Ninguna | sí: [despues-gradas](assets/85-barcos/despues-gradas.png) |
-| botes del muelle de la feria | 4 | 4 (estáticos) | Ninguna | parcial, el bote 3 sigue enterrado (defecto de #86, sin cambios; derivado a #98): [despues-feria-botes](assets/85-barcos/despues-feria-botes.png) |
+| botes del muelle de la feria | 4 | 4 (estáticos) | Ninguna | parcial, el bote 3 sigue enterrado (defecto de #86, sin cambios; derivado a #98); los botes 1, 2 y 4 se ven en su lugar: [despues-feria-botes](assets/85-barcos/despues-feria-botes.png), [despues-feria-botes-ancho](assets/85-barcos/despues-feria-botes-ancho.png) |
 
 Los tres barcos son los de siempre; cambió la ruta. La ida (`LANE_OUT`) sale de la bocana en (362, −16), bordea la punta del faro por el este y corre recta hasta salir del cover; la vuelta (`LANE_BACK`) es la misma curva 42 u al este, invertida, y termina en la bocana (397, −39).
 
@@ -190,7 +188,7 @@ Los dos pares comparativos del issue: `antes-cover.png` contra [despues-cover-1]
 
 ### Capturas instantáneas
 
-Seis capturas del cover con el ticker detenido, separadas 196 s (T/6 = 195,4 s). Los estados salen de `shipStateAt((fase·CYCLE_MS + t) % CYCLE_MS)` y de `npx tsx .scratch/88-estado.ts <t>`; la distancia es la recorrida a lo largo del carril. En todas las capturas los tres barcos están a alpha 1, a 55 s o más de un borde de estado o de fade. "Yendo" y "Volviendo" listan los barcos a alpha 1 en cada carril. Las 18 posiciones en pantalla vistas coinciden con las proyectadas (error de unos 15 px sobre 2000).
+Seis capturas del cover con el ticker detenido, separadas 196 s (T/6 = 195,4 s). Los estados salen de `shipStateAt((fase·CYCLE_MS + t) % CYCLE_MS)`, con el script de abajo; la distancia es la recorrida a lo largo del carril. En todas las capturas los tres barcos están a alpha 1, a 55 s o más de un borde de estado o de fade. "Yendo" y "Volviendo" listan los barcos a alpha 1 en cada carril. Las 18 posiciones en pantalla vistas coinciden con las proyectadas (error de unos 15 px sobre 2000).
 
 | Captura | t simulado (s) | cargo | tug | barge | Yendo | Volviendo |
 |---|---|---|---|---|---|---|
@@ -201,7 +199,18 @@ Seis capturas del cover con el ticker detenido, separadas 196 s (T/6 = 195,4 s).
 | [despues-cover-5](assets/85-barcos/despues-cover-5.png) | 866 | vuelta 333 u | ida 101 u | ida 570 u | `tug`, `barge` | `cargo` |
 | [despues-cover-6](assets/85-barcos/despues-cover-6.png) | 1062 | vuelta 568 u | ida 337 u | vuelta 100 u | `tug` | `cargo`, `barge` |
 
-Lo que se ve: en todas, los barcos que van hacia el mar (proa abajo a la izquierda) siguen el carril de ida y los que vuelven (proa arriba a la derecha) el de vuelta, completos, con casco, superestructura, luces y estela, sin tapar nada ni pisar boya, pecio, punta ni lancha. La captura 1 muestra los tres tipos a pleno, así que hace de captura "un barco de cada tipo" que pide el issue. El remolcador es chico a escala cover pero legible. En ninguna captura hay dos barcos de carriles opuestos en el tramo de la curva al este de la punta; los más cercanos (ida a 98 a 100 u contra vuelta a 566 u) quedan a unos 110 px de pantalla.
+Lo que se ve: en todas, los barcos que van hacia el mar (proa abajo a la izquierda) siguen el carril de ida y los que vuelven (proa arriba a la derecha) el de vuelta, completos, con casco, superestructura, luces y estela, sin tapar nada ni pisar boya, pecio, punta ni lancha. La captura 1 muestra los tres tipos a pleno, así que hace de captura "un barco de cada tipo" que pide el issue. El remolcador es chico a escala cover pero legible. En ninguna de estas seis hay dos barcos de carriles opuestos en el tramo de la curva al este de la punta; los más cercanos (ida a 98 a 100 u contra vuelta a 566 u) quedan a unos 110 px de pantalla. La captura de las boyas (abajo) sí muestra dos barcos a la par en la curva.
+
+```ts
+// .scratch/88-estado.ts, se corre con: npx tsx .scratch/88-estado.ts <t en s>
+import { CYCLE_MS, SHIPS, alphaAt, laneAt, shipStateAt } from "../src/scenes/sea-anim";
+const t = Number(process.argv[2]) * 1000;
+for (const s of SHIPS) {
+  const st = shipStateAt((s.phase * CYCLE_MS + t) % CYCLE_MS);
+  const p = st.lane === "offscreen" ? null : laneAt(st.lane, st.dist);
+  console.log(s.kind, st.lane, st.dist.toFixed(0), "α", st.lane === "offscreen" ? 0 : alphaAt(st.lane, st.dist).toFixed(2), p && `(${p.x.toFixed(0)}, ${p.y.toFixed(0)})`, "rumbo", ((st.heading * 180) / Math.PI).toFixed(0));
+}
+```
 
 ### Capturas por conjunto
 
@@ -210,18 +219,19 @@ El mismo método de encuadre que en "Antes" (posición `(800 − (x − y)·s, 4
 | Captura | x | y | s | Posición del contenedor | t simulado (s) | Conjuntos |
 |---|---|---|---|---|---|---|
 | [despues-pecio](assets/85-barcos/despues-pecio.png) | 470 | 262 | 5 | (−240; −1380) | 82 | pecio, boya del pecio, barco de la vuelta |
-| [despues-boyas](assets/85-barcos/despues-boyas.png) | 410 | 175 | 5 | (−375; −1012,5) | 170 | boyas de canal, barco de la ida |
+| [despues-boyas](assets/85-barcos/despues-boyas.png) | 410 | 175 | 5 | (−375; −1012,5) | 170 | boyas de canal, barco de la ida y barco de la vuelta a la par |
 | [despues-lancha](assets/85-barcos/despues-lancha.png) | 262 | −160 | 3,5 | (−677; 271,5) | 170 | lancha |
 | [despues-gradas](assets/85-barcos/despues-gradas.png) | 185 | 48 | 4 | (252; −16) | 170 | gradas 1 y 2, dique seco |
-| [despues-feria-botes](assets/85-barcos/despues-feria-botes.png) | 236,5 | −241,5 | 11 | (−4458; 477,5) | 170 | botes de la feria |
+| [despues-feria-botes](assets/85-barcos/despues-feria-botes.png) | 236,5 | −241,5 | 11 | (−4458; 477,5) | 170 | botes de la feria (encuadre del "antes") |
+| [despues-feria-botes-ancho](assets/85-barcos/despues-feria-botes-ancho.png) | 250 | −242 | 7 | (−2644; 422) | 170 | los cuatro lugares de los botes de la feria |
 
 Lectura de cada una:
 
 - Pecio: se ven las dos mitades y la boya rosa pegada. El barco de la vuelta, a 330 u en (458, 271), pasa unas 32 u al oeste del pecio (490, 262), sin solaparse en pantalla (su profundidad x + y = 729 es menor que la del pecio, 752; un barco al oeste de un sólido con el que se solapara quedaría detrás, así que lo que importa es que no se solapen): cerca, pero sin solape. No se afirma un margen amplio.
-- Boyas: el carguero de la ida, a 204 u en (436, 167), pasa por delante, al este, sin tapar ni pisar. La boya (392, 200) se ve encendida. La boya norte (398, 150) se ve apagada: es la fase del parpadeo (se encienden desfasadas, nunca las dos apagadas), no un defecto.
+- Boyas: el carguero de la ida, a 204 u en (436, 167), pasa por delante, al este, sin tapar ni pisar. A la par, en la misma y, va el empujador de la vuelta, a 436 u en (478, 168), a pleno: es el único instante capturado con dos barcos de carriles opuestos en la curva al este de la punta, y las dos siluetas no se tocan. La boya (392, 200) se ve encendida. La boya norte (398, 150) se ve apagada: es la fase del parpadeo (se encienden desfasadas, nunca las dos apagadas), no un defecto.
 - Lancha: un bote con estela junto a la costa de la feria, lejos de los carriles. La lancha es una sola instancia y se ve completa en el encuadre.
 - Gradas: grada 1 con quilla y cuadernas, grada 2 con casco entero y el dique seco abajo a la izquierda, bajo el pórtico. Ningún barco de fondeadero ni girando en el agua.
-- Botes de la feria: con el mismo encuadre que el "antes" (s = 11), igual que entonces solo se ve claro el bote 4. Una vista exploratoria con s = 7, no commiteada, mostró los botes 1, 2 y 4; el bote 3, en (247, −228), sigue enterrado en el entarimado del muelle. Es un defecto previo hallado por #86, no causado por #85, derivado a #98.
+- Botes de la feria: con el mismo encuadre que el "antes" (s = 11), igual que entonces solo se ve claro el bote 4. El encuadre ancho (s = 7) abarca los cuatro lugares (`bayShoreX(y) − 9`, y = −284, −256, −228, −200): se ven los botes 1 (206, −284), 2 (210, −256) y 4 (268, −200) como elipses claras sobre la arena; el bote 3, en (247, −228), sigue enterrado en el entarimado del muelle. Es un defecto previo hallado por #86, no causado por #85, derivado a #98.
 
 ### Conteos por frame
 
@@ -243,14 +253,14 @@ Contra el "antes" (8/82/0/2/53 y 9/105/0/3/63, en containers/graphics/sprites/fi
 
 ### Defectos encontrados
 
-Ninguno nuevo. Se miró: los 18 estados de las seis instantáneas (ningún barco detrás de un sólido ni sobre boya, pecio, punta o lancha, todos a alpha 1 en el carril que dice la tabla), los cinco encuadres por conjunto, el time-lapse (sin bucle ni tramos fuera de los carriles; las trazas anchas se ven juntas en la curva, y que los barcos no se superponen lo sostienen `sea-anim.test.ts` ("separación: dos cargueros…") y las seis capturas) y los conteos.
+Ninguno nuevo. Se miró: los 18 estados de las seis instantáneas (ningún barco detrás de un sólido ni sobre boya, pecio, punta o lancha, todos a alpha 1 en el carril que dice la tabla), los seis encuadres por conjunto, el time-lapse (sin bucle ni tramos fuera de los carriles; las trazas anchas se ven juntas en la curva, y que los barcos no se superponen lo sostienen `sea-anim.test.ts` ("separación: dos cargueros…") y las seis capturas) y los conteos.
 
 Quedan dos observaciones que no son defectos de #85:
 
 - El bote 3 de la feria, en (247, −228), sigue enterrado en el entarimado del muelle: defecto previo hallado por #86, sin cambios; derivado a #98.
 - La boya norte (398, 150) apagada en `despues-boyas` es la fase del parpadeo.
 
-Límite de lo verificado: no se vio un instante con dos barcos de carriles opuestos en la curva, así que la ausencia de solape visual se apoya en la prueba de `sea-anim.test.ts` y no en una captura. El barco de la vuelta pasa a unas 32 u del pecio: cerca, pero al oeste y sin solaparse en pantalla.
+Límite de lo verificado: hay un solo instante capturado con dos barcos de carriles opuestos a la par en la curva, `despues-boyas` (t = 170 s, carguero de ida en (436, 167) y empujador de vuelta en (478, 168)), y ahí no se tocan; para el resto de los pares, la ausencia de solape se apoya en la prueba de `sea-anim.test.ts`. El barco de la vuelta pasa a unas 32 u del pecio: cerca, pero al oeste y sin solaparse en pantalla.
 
 ### Tabla final antes y después
 
@@ -261,5 +271,5 @@ Límite de lo verificado: no se vio un instante con dos barcos de carriles opues
 | pecio y boya del pecio | (462, 150) y su boya | (490, 262) y (498, 272); la vuelta pasa al oeste sin solaparse en pantalla | [antes-pecio](assets/85-barcos/antes-pecio.png) | [despues-pecio](assets/85-barcos/despues-pecio.png) |
 | boyas de canal | (420, 80) y (430, 160) | (398, 150) y (392, 200) | [antes-pecio](assets/85-barcos/antes-pecio.png) | [despues-boyas](assets/85-barcos/despues-boyas.png) |
 | gradas 1 y 2, dique seco | correctos | correctos | [antes-darsena](assets/85-barcos/antes-darsena.png) | [despues-gradas](assets/85-barcos/despues-gradas.png) |
-| botes de la feria | el bote 3 enterrado | igual (defecto de #86, derivado a #98) | [antes-feria-botes](assets/85-barcos/antes-feria-botes.png) | [despues-feria-botes](assets/85-barcos/despues-feria-botes.png) |
+| botes de la feria | el bote 3 enterrado | igual (defecto de #86, derivado a #98) | [antes-feria-botes](assets/85-barcos/antes-feria-botes.png) | [despues-feria-botes](assets/85-barcos/despues-feria-botes.png), [despues-feria-botes-ancho](assets/85-barcos/despues-feria-botes-ancho.png) |
 | conteos por frame | 8/82/0/2/53 y 9/105/0/3/63 | 9/105/0/3/59 y 9/105/0/3/63 | tabla "Conteos por frame" | tabla "Conteos por frame" de Después |
