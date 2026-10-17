@@ -1,7 +1,7 @@
 # Storybook de estructuras — diseño
 
 **Fecha:** 2026-10-17
-**Estado:** diseño aprobado, sin implementar
+**Estado:** implementado (#92..#97, historia #91); desvíos en §10
 **Alcance:** una página del laboratorio que muestra cada tipo de edificio y
 estructura del mundo isométrico aislado del resto, con su animación, para
 estudiarlo y retocarlo de a uno. No cambia el aspecto del sitio ni el de las
@@ -205,3 +205,19 @@ objeto; la página solo lo vuelca a HTML.
 3. `exhibits.ts` con el catálogo y su test de no-vacío.
 4. Página: html, `storybook.ts`, teclas, lectura, bloom.
 5. Cierre: capturas, línea en el README del lab, estado de esta spec.
+
+## 10. Desvíos
+
+Lo que la implementación hizo distinto de lo escrito arriba, con su origen.
+
+- §3 decía que `Box` se declaraba en `exhibits.ts`. Vive en `src/world/frame.ts`, porque lo consume `boxFrame` y `src/world/` no importa de `src/lab/` (#92).
+- §3 definía el exhibit con `zone`. Lleva además `group`, uno de los siete de `GROUPS` (una fila de la tabla cada uno), porque `WorldZone` tiene solo tres valores y el índice agrupa en siete (#93).
+- §3 armaba las piezas con `ship("cargo", {x:0,y:0}, 0)` y un pad de `paving` fijo. Las piezas llevan `pad?: Material` (los barcos, `water`) y los barcos se arman con `ship(kind, shipAt(kind, {x:0,y:0}, 0), 0)`, para que el punto medio de la unidad completa (empujador incluido) caiga en el origen (#94).
+- §3 prometía una estructura por exhibit. Hay casos que no se aíslan: la grúa pórtico queda también dentro de "gradas", la grúa torre del desvío dentro de "playa de camiones" y de "cinta", y la torre de oficinas en el centro de la "plaza". Las estructuras largas (malecón, línea de alta tensión, boyas) van enteras aunque encuadren finas. La "dársena" es el agua entre el muelle (`QUAY_X`) y la escollera, desde la bocana (`MOUTH_Y`), no el dique seco `DOCK`; el plan de #93 la llamaba fondeadero `BERTH`, constante que ya no existe desde #87. La caja de las chimeneas se estira al norte `PUFF_RANGE` para que el humo no se corte (#92, #93).
+- §4 decía que `cropScene` filtra `terrain.ground`, `terrain.water` y `terrain.bleed` por `overlaps(bounds(s), box)`. El terreno (`kind: "ground"`) se recorta por triángulo, no por la caja del sólido entero, porque las seis mallas cubren el mundo y se conservarían enteras. Un triángulo nunca se corta (#92).
+- §4 no mencionaba memoización. `terrain.*` y `claims` pasan por un memo por `(box, sólido)` (`cropShared`), porque el runtime excluye el agua reclamada por identidad. Las capas animadas no se memoizan, porque mutan sus sólidos (#92).
+- §4 firmaba `pieceScene(build)` con un pad de 1 u de espesor. Es `pieceScene(build, pad = "paving")` y el pad es una malla `ground` (tapa más las caras este y sur), no un prisma, para que se pinte antes que las sombras. Su lado sale de la caja de la pieza con un margen de 3 u, y la tapa queda en `Math.floor(min z)` (#94).
+- §6 decía que la caja de una `piece` sale de `bounds` de sus sólidos y que `boxFrame` va al lado de `zoneFrame`. `zoneFrame` además delega en `boxFrame`, y las piezas se encuadran con `solidsBox` de sus sólidos, pad incluido (#92, #94).
+- §6 no preveía el orden entre los conmutadores de capa y la medición del bloom. Si los acentos se apagan antes de la medición diferida del bloom, se mide con el bloom oculto. Se acepta, sin lógica extra: es una página de lab y `?bloom=` fija el modo (#96).
+- §8 sitúa la página bajo la base del sitio. Se sirve en `/lab/storybook.html`, no en `/map/lab/…`, porque `vite.config.ts` fija `base: "/"`; `CLAUDE.md` sigue diciendo `/map/` (#99).
+- §8 pedía capturas de cuatro exhibits. Las de cierre están en `docs/superpowers/specs/assets/97-storybook/` (`chimeneas`, `torre`, `faro`, `grua-torre`, `world`) y se tomaron con `?bloom=off` para no depender de la medición diferida en headless (#97).
