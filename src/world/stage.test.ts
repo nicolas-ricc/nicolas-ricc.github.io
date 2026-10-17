@@ -104,3 +104,55 @@ describe("modos de bloom del Stage", () => {
     bloom.children.forEach((m, i) => expect(m.alpha).toBeCloseTo(accentSlot.children[i]!.alpha));
   });
 });
+
+describe("setLayer", () => {
+  // índices sin bloom: 0 sangrado, 1 agua, 2 suelo, 3 banda, 4 núcleo, 5 sólidos, 6 sólidos animados, 7 velos, 8 acentos
+  const LAYER_IDX = { ground: [0, 1, 2], shadow: [3, 4], accents: [8] } as const;
+  const visibles = (c: Container) => c.children.map((k) => k.visible);
+
+  it.each(Object.entries(LAYER_IDX))("%s oculta solo sus contenedores y vuelve a mostrarlos", (layer, idx) => {
+    const s = build();
+    s.setLayer(layer as keyof typeof LAYER_IDX, false);
+    visibles(s.container).forEach((v, i) => expect(v).toBe(!(idx as readonly number[]).includes(i)));
+    s.setLayer(layer as keyof typeof LAYER_IDX, true);
+    expect(visibles(s.container).every(Boolean)).toBe(true);
+  });
+
+  it("con las tres capas ocultas siguen visibles los sólidos y los velos", () => {
+    const s = build();
+    for (const l of ["ground", "shadow", "accents"] as const) s.setLayer(l, false);
+    expect(visibles(s.container)).toEqual([false, false, false, false, false, true, true, true, false]);
+  });
+
+  it("el bloomSlot sigue a los acentos si ya existe", () => {
+    const s = build();
+    s.setBloom("on");
+    s.setLayer("accents", false);
+    expect(bloomSlotOf(s.container)!.visible).toBe(false);
+    s.setLayer("accents", true);
+    expect(bloomSlotOf(s.container)!.visible).toBe(true);
+  });
+
+  it("un bloomSlot armado con los acentos ocultos nace oculto", () => {
+    const s = build();
+    s.setLayer("accents", false);
+    s.setBloom("on");
+    expect(bloomSlotOf(s.container)!.visible).toBe(false);
+  });
+
+  it("el bloomSlot fuera del container también sigue a los acentos (on → fallback → on)", () => {
+    const s = build();
+    s.setBloom("on");
+    s.setBloom("fallback");
+    s.setLayer("accents", false);
+    s.setBloom("on");
+    expect(bloomSlotOf(s.container)!.visible).toBe(false);
+  });
+
+  it("setLayer no cambia la cantidad de hijos ni el modo de bloom", () => {
+    const s = build();
+    for (const l of ["ground", "shadow", "accents"] as const) s.setLayer(l, false);
+    expect(s.container.children).toHaveLength(9);
+    expect(s.bloom).toBe("off");
+  });
+});
