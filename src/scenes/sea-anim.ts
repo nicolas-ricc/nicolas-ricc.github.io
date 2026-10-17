@@ -10,42 +10,48 @@ import { ship as buildShip, shipAt, wake, type ShipKind } from "./ships";
  * ámbar del faro (luz cálida, no neón) y las dos boyas, más los neones de la punta:
  * la galería corre al revés del haz, la costa ondula y el cartel del farero alterna.
  *
- * Dos carriles: la ida (`LANE_OUT`) zarpa del fondeadero `BERTH` de la bocana, rodea la
- * boya y el pecio por el este y sale del cover por abajo-izquierda; la vuelta (`LANE_BACK`,
- * ~56 u al este de la ida) entra desde abajo y llega al fondeadero por el noreste. En
- * `BERTH` el barco se queda `BERTH_MS` y gira en el lugar entre los 8 y 16 s, del rumbo de
- * llegada al de salida. Cada barco rota `out → offscreen (OFF_MS) → back → berth`, con la
- * misma velocidad y el barco k en la fase k·T/3 del período T = `CYCLE_MS` (≈ 1477 s). El agua en sí
- * (repartida por profundidad en `terrain.ts`) no es asunto de acá: la anima
- * `water-animator.ts`. Spec §7.
+ * Dos carriles: la ida (`LANE_OUT`) zarpa del fondeadero `BERTH` de la dársena del astillero, sube
+ * la bahía hasta la bocana, rodea la boya y el pecio por el este y sale del cover por abajo-izquierda;
+ * la vuelta (`LANE_BACK`) entra desde abajo, llega a la bocana por el noreste, cruza la bahía al norte
+ * de la salida y baja pegada al muelle hasta el mismo fondeadero. En `BERTH` el barco se queda
+ * `BERTH_MS` y gira en el lugar entre los 8 y 16 s, del rumbo de llegada al de salida. Cada barco rota
+ * `out → offscreen (OFF_MS) → back → berth`, con la misma velocidad y el barco k en la fase k·T/3 del
+ * período T = `CYCLE_MS` (≈ 1805 s). El agua en sí (repartida por profundidad en `terrain.ts`) no es
+ * asunto de acá: la anima `water-animator.ts`. Spec §7; puerto de salida decidido en #83.
  */
 // Carril de ida: el camino del CENTRO del casco (ver `shipAt` en ships.ts), así los tres tamaños
 // de barco comparten el mismo fondeadero en vez de que cada uno arranque con la popa en otro lado.
 //
-// Fondea en BERTH (362, -2), en la bocana: 36 u al este y 22 al sur de la vieja popa (326, -24), para
-// que el barco pueda girar sin pisar la selva (x 332..340, y ≥ 50) ni quedar detrás en pantalla de los
-// galpones del muelle de alistamiento (x 304..324, y ≥ 24). No hay muelle: el barco aparece ahí.
+// Fondea en BERTH (232, 50), en la dársena del astillero (#83): frente a las gradas, entre el muelle
+// (`QUAY_X` 198..202) y la escollera de la orilla este (conos de roca desde x ≈ 271). El carguero gira en
+// el lugar con radio 30.4 (media eslora y media manga), así que el centro tiene que quedar a más de 30 u
+// del muelle y de la escollera: 232 deja 29.6 u al muelle (la proa no lo pisa en ningún rumbo del arco
+// corto, que pasa por el este) y 39 u a la escollera.
 //
-// Sale casi al este (tramo hasta (500, 20)) porque la caja de alineación del test de profundidad
-// (60 u de eslora, z -1..13) es mucho más ancha en pantalla que la silueta cuando la proa va en
-// diagonal, y una salida diagonal da falsos positivos de `isBehind` con la boya (420, 80) y el
-// arrecife (≈ 405, 111); casi horizontal, la caja es angosta en y. Después baja por x ≥ 500 hasta
-// y 180 para rodear la boya y el pecio por el este, lejos de la punta (Portfolio), en agua de Blog
-// y cruzando la fosa. Recién al sur de y 180 vira al sur-suroeste, porque abajo-izquierda en
-// pantalla es +y, levemente -x.
+// La única salida al mar es la bocana (`MOUTH_Y` en geo.ts): el río al sur de la dársena lo cierra el
+// muelle de la ciudad. Sale hacia el nornoreste (tramo hasta (256, −8)), cruza la bahía casi al este
+// por y ≈ −8..−16 para pasar al norte de los galpones del muelle de alistamiento (x 304..324, y ≥ 24),
+// que de otro modo la taparían en pantalla, y toma la bocana en (362, −16). Desde ahí baja por x ≥ 500
+// hasta y 180 para rodear la boya y el pecio por el este, lejos de la punta (Portfolio), en agua de Blog
+// y cruzando la fosa. Recién al sur de y 180 vira al sur-suroeste, porque abajo-izquierda en pantalla
+// es +y, levemente -x. Ese tramo es el validado en #63 y no se movió.
 //
 // Termina fuera del cover 16:9 (376, 640) para que el barco no se desvanezca a la vista: el
 // desvanecido ocurre en el sangrado. Validado contra agua, `depthAt` ≥ 6, `worldZoneAt === "blog"`
-// para x ≥ 380, `isBehind` con la caja del carguero y `coverQuad(16/9)`: no mover vértices más de
-// 2 u sin revalidar.
-export const LANE_OUT: readonly Readonly<Vec2>[] = [{ x: 362, y: -2 }, { x: 500, y: 20 }, { x: 515, y: 120 }, { x: 520, y: 180 }, { x: 480, y: 290 }, { x: 420, y: 470 }, { x: 376, y: 640 }];
+// para x ≥ 380, oclusión por sólidos estáticos (hexágono proyectado de la caja del carguero contra el de
+// cada sólido, ver sea-anim.test.ts) y `coverQuad(16/9)`: no mover vértices más de 2 u sin revalidar.
+export const LANE_OUT: readonly Readonly<Vec2>[] = [{ x: 232, y: 50 }, { x: 256, y: -8 }, { x: 362, y: -16 }, { x: 500, y: 20 }, { x: 515, y: 120 }, { x: 520, y: 180 }, { x: 480, y: 290 }, { x: 420, y: 470 }, { x: 376, y: 640 }];
 export const BERTH: Readonly<Vec2> = LANE_OUT[0]!;
-// Carril de vuelta, en el sentido de marcha (mar → fondeadero): corre ~56 u al este del de ida y entra
-// al fondeadero desde el noreste, por encima de la salida, sin cruzarla. Validado igual que la ida
-// (agua, `depthAt` ≥ 6, Blog para x ≥ 380, `isBehind`, primer punto fuera del cover) y además con las
-// siluetas de dos cargueros, uno por carril, que no se tocan en pantalla fuera de los 200 u (sumando
-// distancias) más cercanos al fondeadero: no mover vértices más de 2 u sin revalidar.
-export const LANE_BACK: readonly Readonly<Vec2>[] = [{ x: 430, y: 655 }, { x: 471, y: 487 }, { x: 533, y: 309 }, { x: 575, y: 199 }, { x: 571, y: 114 }, { x: 562, y: 13 }, { x: 552, y: -50 }, { x: 400, y: -50 }, { x: 362, y: -2 }];
+// Carril de vuelta, en el sentido de marcha (mar → fondeadero): el tramo de mar corre ~56 u al este del
+// de ida y llega a la bocana por el noreste, por encima de la salida; cruza la bahía por y ≈ −50..−70,
+// al norte del tramo de salida y sin cruzarlo (la ida va por el lado este de la dársena y la vuelta por
+// el del muelle, así las dos polilíneas no se cortan), dobla al sur en (242, −60) —la proa del carguero
+// con rumbo oeste queda a 30 u del centro, por eso no se dobla más cerca del muelle— y baja por x ≈ 212
+// hasta el fondeadero. El extremo sur de la lancha (`FERRY_ROUTE`, (241, −84)) queda 24 u al norte del
+// cruce. Validado igual que la ida y además con las siluetas de dos cargueros, uno por carril, que no
+// se tocan en pantalla fuera de los 200 u (sumando distancias) más cercanos al fondeadero: no mover
+// vértices más de 2 u sin revalidar.
+export const LANE_BACK: readonly Readonly<Vec2>[] = [{ x: 430, y: 655 }, { x: 471, y: 487 }, { x: 533, y: 309 }, { x: 575, y: 199 }, { x: 571, y: 114 }, { x: 562, y: 13 }, { x: 552, y: -50 }, { x: 400, y: -50 }, { x: 300, y: -70 }, { x: 242, y: -60 }, { x: 212, y: -14 }, { x: 232, y: 50 }];
 export const SHIPS: readonly { kind: ShipKind; phase: number }[] = [{ kind: "cargo", phase: 0 }, { kind: "tug", phase: 1 / 3 }, { kind: "barge", phase: 2 / 3 }];
 // Velocidad única: con velocidades distintas un barco alcanzaría al de adelante en el mismo carril y se superpondrían.
 export const LANE_SPEED = 1.2;

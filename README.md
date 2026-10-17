@@ -18,10 +18,12 @@ El sitio (la raíz de myxomatosis.xyz; las zonas viven bajo `/area/` porque `/bl
 `src/scenes/`, incluidas `factory.ts` (fábrica de Portfolio), `district.ts`
 (distrito moderno de Resume) y `sea.ts` (punta, faro y barcos de Blog). Los
 tres barcos (Damen Combi Freighter 3850, Damen ASD Tug 2810 y un empujador
-fluvial con barcaza Jumbo) comparten el fondeadero de la bocana de la bahía
-(`BERTH`) y recorren dos carriles: `LANE_OUT` zarpa hacia abajo-izquierda de
-la pantalla hasta salir del cover y `LANE_BACK` vuelve al fondeadero; cada
-barco rota por ambos y gira en el lugar al fondear. El
+fluvial con barcaza Jumbo) comparten el fondeadero de la dársena del astillero
+(`BERTH`, frente a las gradas) y recorren dos carriles: `LANE_OUT` sube la
+bahía, cruza la bocana y baja hacia abajo-izquierda de la pantalla hasta salir
+del cover, y `LANE_BACK` vuelve por la bahía al fondeadero; cada barco rota por
+ambos y gira en el lugar al fondear. La lancha de la feria es una lancha
+colectiva del Tigre y el pecio de la fosa, un costero partido en dos. El
 mundo tiene origen en `(-60, -60)` y un sangrado de terreno alrededor de todo
 el contenido, para que la cámara *cover* nunca muestre cielo; sobre el
 sangrado viven los márgenes construidos, `hinterland.ts` (industria de

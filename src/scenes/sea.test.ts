@@ -55,9 +55,20 @@ describe("sea", () => {
     expect(s.solids.some((x) => x.kind === "cylinder" && x.mat === "steel" && x.at.x === WRECK_BUOY.x)).toBe(true);
     expect(s.accents).toEqual([{ kind: "poly", pts: expect.any(Array), color: "magentaBleed", alpha: expect.any(Number) }, { kind: "dot", at: { x: WRECK_BUOY.x, y: WRECK_BUOY.y, z: 1 }, r: 1, color: "magentaMid" }]);
     expect(s.ground.some((g) => g.kind === "ground" && g.mat === "foam" && g.tris.length === 8)).toBe(true);
-    const wreck = s.solids.find((x) => x.kind === "hull")!;
-    expect(wreck.kind === "hull" && wreck.heading).toBe(WRECK.heading);
-    expect(wreck.at).toEqual({ x: WRECK.x, y: WRECK.y, z: -3 });
+    // pecio (#83): sin casco entero a flote; asoman la proa (cuña de óxido con cubierta) y la casa de popa (caseta con ventanas, chimenea, mástil), todo sobre el agua
+    expect(s.solids.some((x) => x.kind === "hull")).toBe(false);
+    const near = (x: Solid) => { const b = bounds(x); return Math.hypot((b.min.x + b.max.x) / 2 - WRECK.x, (b.min.y + b.max.y) / 2 - WRECK.y) < 45; };
+    const parts = s.solids.filter(near);
+    expect(parts.filter((x) => x.kind === "poly" && x.mat === "hull" && x.footprint.length === 5)).toHaveLength(1); // cuña de proa, obra viva
+    expect(parts.filter((x) => x.kind === "poly" && x.mat === "rust" && x.footprint.length === 5)).toHaveLength(1); // y su franja oxidada de obra muerta
+    expect(s.ground.filter((g) => g.kind === "ground" && g.mat === "foam" && g.tris.length === 8).length).toBeGreaterThanOrEqual(3); // espuma: boya, proa y popa del pecio
+    expect(parts.filter((x) => x.kind === "poly" && x.mat === "whitewash" && x.facade)).toHaveLength(2); // caseta de popa
+    expect(parts.some((x) => x.kind === "cylinder" && x.mat === "rust" && x.h > 2)).toBe(true); // chimenea
+    expect(parts.some((x) => x.kind === "poly" && x.mat === "steel" && x.h >= 4)).toBe(true); // mástil
+    for (const x of parts) expect(bounds(x).min.z).toBeGreaterThanOrEqual(-1); // nada bajo el agua
+    const bow = parts.find((x) => x.kind === "poly" && x.mat === "hull" && x.footprint.length === 5)!, house = parts.find((x) => x.kind === "poly" && x.mat === "whitewash" && x.facade)!;
+    const bb = bounds(bow), hb = bounds(house);
+    expect(Math.hypot((bb.min.x + bb.max.x) / 2 - (hb.min.x + hb.max.x) / 2, (bb.min.y + bb.max.y) / 2 - (hb.min.y + hb.max.y) / 2)).toBeGreaterThan(20); // partido en dos: el centro está hundido
     for (const x of s.solids) if (x.kind === "cylinder" || x.kind === "hull") if (bounds(x).min.x > ZONE_SPLIT_X + 60) expect(water.has(terrainAt(x.at.x, x.at.y))).toBe(true);
   });
 
