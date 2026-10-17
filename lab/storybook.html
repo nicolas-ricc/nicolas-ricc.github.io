@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Lab: Storybook de estructuras</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #100e19; /* = ISO_COLORS.sky en src/map/palette-iso.ts */ color: #d8d4e8; font: 14px/1.4 system-ui, sans-serif; }
+      body { display: grid; grid-template-columns: 14rem 1fr 16rem; }
+      #exhibits { overflow-y: auto; padding: 1rem; }
+      #exhibits h2 { font-size: 0.8rem; text-transform: uppercase; opacity: 0.6; margin: 1rem 0 0.3rem; }
+      #exhibits ul { list-style: none; margin: 0; padding: 0; }
+      #exhibits a { color: inherit; text-decoration: none; display: block; padding: 0.15rem 0.4rem; border-radius: 3px; }
+      #exhibits a[aria-current="page"] { background: rgba(255, 255, 255, 0.12); }
+      #lab-host { min-width: 0; height: 100%; }
+      #lab-host canvas { display: block; }
+      #readout { padding: 1rem; }
+    </style>
+  </head>
+  <body>
+    <nav id="exhibits" aria-label="Exhibits"></nav>
+    <div id="lab-host" aria-label="Storybook de estructuras: un exhibit a la vez. Flechas o j/k cambian de exhibit. Tecla 6 rota el bloom: off, on, fallback."></div>
+    <aside id="readout" aria-label="Lectura del exhibit"></aside>
+    <script type="module" src="/src/lab/storybook.ts"></script>
+  </body>
+</html>
