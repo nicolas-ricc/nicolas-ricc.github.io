@@ -61,7 +61,8 @@ look, `src/map/palette-iso.ts`. Specs en `docs/superpowers/specs/`
 `2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md`,
 `2026-09-15-reintegracion-mundo-iso-design.md`,
 `2026-10-14-cyberpunk-crepusculo-neones-bloom-design.md`,
-`2026-10-16-barcos-referencia.md`).
+`2026-10-16-barcos-referencia.md`,
+`2026-10-17-barcos-inventario.md`).
 
 El bloom de las luces no entra en el primer dibujo: el sitio y el lab lo
 activan después, en una tarea diferida (`attachBloom`,
