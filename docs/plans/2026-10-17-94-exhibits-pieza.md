@@ -21,7 +21,7 @@
 
 ## Decisiones técnicas (declaradas)
 
-1. **Pad.** `pieceScene(build, pad = "paving")`: un prisma cuadrado de 1 u de espesor centrado en el origen, de lado `2 · (r + PAD_M)` con `r` el máximo de `|x|`/`|y|` sobre `bounds` de los sólidos de `build` y `PAD_M = 3` (el mismo margen que las regiones). Así cubre la pieza aunque no esté perfectamente centrada. La cara de arriba queda en `Math.floor(min z)` de los sólidos: 0 para las piezas de tierra, −1 para los barcos (el casco arranca en `WATER_Z = -1`, `ships.ts:27`), así el pad no tapa la obra viva.
+1. **Pad.** `pieceScene(build, pad = "paving")`: un pad cuadrado de 1 u de espesor centrado en el origen. No es un `prism`: `buildRenderList` pinta todo lo plano (`ground`, `strip`) en la capa de suelo, antes que las sombras y los sólidos, y un prisma va a la capa sólida (`render-list.ts:23-39`), así que su tapa taparía el suelo del campus y todas las sombras. El pad es una malla `ground` con la tapa (2 triángulos) y las dos caras laterales que ve la cámara, este y sur (4 triángulos; la cámara mira desde +x+y, `depth.ts` `isBehind`): se pinta primero, en orden de inserción, y lo demás encima. Su lado es de lado `2 · (r + PAD_M)` con `r` el máximo de `|x|`/`|y|` sobre `bounds` de los sólidos de `build` y `PAD_M = 3` (el mismo margen que las regiones). Así cubre la pieza aunque no esté perfectamente centrada. La cara de arriba queda en `Math.floor(min z)` de los sólidos: 0 para las piezas de tierra, −1 para los barcos (el casco arranca en `WATER_Z = -1`, `ships.ts:27`), así el pad no tapa la obra viva.
 2. **Pad de agua para los barcos.** El issue deja elegir `water` para los barcos "si se ve mejor; decidirlo en la captura". El exhibit de pieza lleva `pad?: Material`; los cuatro barcos arrancan con `"water"`. Si en la captura de la Task 3 el agua se ve peor que el `paving`, se cambia a `paving` en `exhibits.ts` y se anota en el PR.
 3. **Piezas centradas en el origen.** Barcos con `shipAt(kind, {x:0,y:0}, 0)` (el punto medio de la unidad, empujador incluido, cae en el origen); grúa torre con `at: {x:-8,y:0}` (pluma 24 al este y contrapluma 8 al oeste: −16..16); farol en `(-0.3, -0.3)`; campus de 21×15 con esquina en `(-10.5, -7.5)` sobre la manzana `{x:-12.5, y:-9.5, w:25, d:19}`; selva de 14 conos sobre `{x0:-12, x1:12, y0:-12, y1:12}` con base a z 0.
 4. **Campus emite su suelo a `out`.** `campus(out, ground, …)` separa suelo (baldosas `leafDark`, sendas) y sólidos; `build(out, accents)` tiene un solo arreglo, así que se le pasa `out` dos veces. `buildStage` ya mezcla `terrain.ground`, `scene.ground` y `scene.solids` en una sola lista ordenada (`stage.ts:59`), así que no cambia el dibujo.
@@ -51,7 +51,7 @@
   - `export function pieceScene(build: (out: Solid[], accents: Accent[]) => void, pad: Material = "paving"): WorldScene`
   - `export function solidsBox(solids: readonly Solid[]): { box: Box; h: number }`
 
-- [ ] **Step 1: tests que fallan** (los escribe la etapa de evals; verificar que estén) — agregar a `crop.test.ts` (importar `pieceScene`, `solidsBox` y `bounds` de `../iso/solids`):
+- [ ] **Step 1: tests que fallan** (los escribe la etapa de evals; verificar que estén) — agregar a `crop.test.ts` (importar `pieceScene`, `solidsBox` y `bounds` de `../iso/solids`, `isFlat` no hace falta: se mira `kind`):
 
 ```ts
 describe("pieceScene", () => {
@@ -70,12 +70,14 @@ describe("pieceScene", () => {
     expect(scene.solids).toEqual([prism(-1, -1), prism(6, 0)]);
     expect(scene.accents).toEqual([lamp]);
     expect(scene.ground).toHaveLength(1);
-    const pad = scene.ground[0] as Solid & { kind: "prism" };
-    expect(pad).toMatchObject({ kind: "prism", mat: "paving", h: 1 });
-    expect(pad.w).toBe(pad.d);
-    expect(pad.at.x + pad.w / 2).toBeCloseTo(0);
-    expect(pad.at.y + pad.d / 2).toBeCloseTo(0);
-    expect(pad.at.z + pad.h).toBe(0); // cara de arriba al nivel de las piezas de tierra
+    // malla plana: se pinta en la capa de suelo, debajo de sombras y sólidos
+    expect(scene.ground[0]).toMatchObject({ kind: "ground", mat: "paving" });
+    const { min, max } = bounds(scene.ground[0]!);
+    expect(max.x - min.x).toBeCloseTo(max.y - min.y);
+    expect(min.x + max.x).toBeCloseTo(0);
+    expect(min.y + max.y).toBeCloseTo(0);
+    expect(max.z).toBe(0); // cara de arriba al nivel de las piezas de tierra
+    expect(max.z - min.z).toBe(1);
   });
   it("el pad contiene a una pieza descentrada", () => {
     const b = bounds(scene.ground[0]!);
@@ -86,11 +88,10 @@ describe("pieceScene", () => {
     }
   });
   it("un barco a z −1 va sobre agua y el pad no le tapa el casco", () => {
-    const boat = { kind: "prism", at: v3(-2, -1, -1), w: 4, d: 2, h: 2, mat: "hull" } as Solid;
+    const boat: Solid = { kind: "prism", at: v3(-2, -1, -1), w: 4, d: 2, h: 2, mat: "hull" };
     const s = pieceScene((out) => { out.push(boat); }, "water");
-    const pad = s.ground[0] as Solid & { kind: "prism" };
-    expect(pad.mat).toBe("water");
-    expect(pad.at.z + pad.h).toBe(-1);
+    expect(s.ground[0]).toMatchObject({ kind: "ground", mat: "water" });
+    expect(bounds(s.ground[0]!).max.z).toBe(-1);
   });
 });
 
@@ -139,11 +140,15 @@ export function pieceScene(build: (out: Solid[], accents: Accent[]) => void, pad
     r = Math.max(r, -min.x, max.x, -min.y, max.y);
     floor = Math.min(floor, min.z);
   }
-  const half = r + PAD_M, top = Math.floor(floor);
+  const h = r + PAD_M, top = Math.floor(floor);
+  // tapa y las dos caras que ve la cámara (este, sur), con la normal hacia afuera
+  const nw = v3(-h, -h, top), ne = v3(h, -h, top), se = v3(h, h, top), sw = v3(-h, h, top);
+  const neB = v3(h, -h, top - 1), seB = v3(h, h, top - 1), swB = v3(-h, h, top - 1);
+  const quad = (a: Vec3, b: Vec3, c: Vec3, d: Vec3): Tri[] => [{ pts: [a, b, c] }, { pts: [a, c, d] }];
   const origin = v3(0, 0, 0);
   return {
     terrain: { ground: [], bleed: [], water: [], foam: { kind: "ground", mat: "foam", tris: [] } },
-    ground: [{ kind: "prism", at: v3(-half, -half, top - 1), w: 2 * half, d: 2 * half, h: 1, mat: pad }],
+    ground: [{ kind: "ground", mat: pad, tris: [...quad(nw, ne, se, sw), ...quad(ne, neB, seB, se), ...quad(sw, se, seB, swB)] }],
     solids,
     accents,
     landmarks: { portfolio: origin, cv: origin, blog: origin },
@@ -151,6 +156,8 @@ export function pieceScene(build: (out: Solid[], accents: Accent[]) => void, pad
   };
 }
 ```
+
+(Imports: `v3` y el tipo `Vec3` de `../iso/geometry`. La orientación de las caras laterales la decide la normal de cada triángulo: `ground()` en `solids.ts:180-186` da vuelta las normales con z < 0 y sombrea con `shadeTone`; si una cara lateral sale con el tono equivocado en la captura de la Task 3, invertir el orden de sus vértices.)
 
 - [ ] **Step 4:** `npx vitest run src/lab/crop.test.ts` → PASS; `npm run typecheck` limpio.
 - [ ] **Step 5:** `git add src/lab/crop.ts src/lab/crop.test.ts && git commit -m "feat(#94): pieceScene y solidsBox"`
@@ -202,7 +209,7 @@ describe("exhibits de pieza", () => {
 
 - [ ] **Step 2:** `npx vitest run src/lab/exhibits.test.ts` → FAIL (no hay piezas).
 - [ ] **Step 3: implementación** — en `exhibits.ts`:
-  - el tipo: `| { kind: "piece"; build: (out: Solid[], accents: Accent[]) => void; pad?: Material }` (y el comentario del tipo menciona el pad).
+  - el tipo: la variante `piece` ya existe (`exhibits.ts:11-14`, `{ kind: "piece"; build: (out: Solid[], accents: Accent[]) => void }`); se le agrega `pad?: Material` y el comentario del tipo menciona el pad.
   - imports: `createRng, SEED` de `../map/seed`; `Material` de `../map/palette-iso`; `campus, lamp` de `../scenes/city-pieces`; `jungle` de `../scenes/flora`; `towerCrane` de `../scenes/pieces`; `ship, shipAt, type ShipKind` de `../scenes/ships`.
   - helper:
 
@@ -274,4 +281,33 @@ Catálogo completo de regiones (#93), lectura y `readout` (#95), `setLayer` y te
 
 ## Assumptions
 
-Decisiones técnicas sin fuente escrita, tomadas y declaradas (van a la descripción del PR): pad de lado `2·(r+3)` con la cara de arriba en `floor(min z)`; `pad?: Material` por exhibit con agua para los barcos; posiciones fijas que centran cada pieza en el origen; campus con su suelo en `out`; `createRng(SEED)` dentro de cada `build`; encuadre con el pad incluido.
+Decisiones técnicas sin fuente escrita, tomadas y declaradas (van a la descripción del PR):
+
+- Pad como malla `ground` (tapa + caras este y sur) en vez de prisma (alternativa descartada: `prism`, que va a la capa sólida y tapa el suelo del campus y las sombras, `render-list.ts:23-39`).
+- `build` vacío: no hay comportamiento especificado; el test de catálogo "cada pieza emite al menos un sólido" es la guarda (alternativa descartada: un pad por defecto para un build vacío, que escondería una pieza rota).
+- El pad de agua vs `paving` lo decide el agente con la captura (el issue dice "decidirlo en la captura"); si cambia, el cambio va en el commit de la Task 3 y se anota en el PR.
+- Las piezas van detrás de todas las regiones de su zona; si #93 mergea antes y el rebase choca en `EXHIBITS`, se conservan sus regiones y las piezas quedan al final de cada zona.
+- Encuadre: `boxFrame` pone las esquinas no norte a z 0 (`frame.ts:15`); con el pad de los barcos en −2..−1 el margen de `fitTransform` absorbe esas 2 u, verificado en la captura.
+- El chequeo `app.stage.children.length === 1` no lo pide el issue: es una verificación barata de que el cambio de exhibit no deja stages, como en #92.
+- Resto: pad de lado `2·(r+3)` con la cara de arriba en `floor(min z)`; `pad?: Material` por exhibit con agua para los barcos; posiciones fijas que centran cada pieza en el origen; campus con su suelo en `out`; `createRng(SEED)` dentro de cada `build`; encuadre con el pad incluido.
+
+## Grilling
+
+Una ronda (griller `fable`), 18 preguntas. La revisión cambió la implementación del pad dentro de la Task 1 sin agregar ni quitar pasos ni mover costuras: no hubo segunda ronda.
+
+Fuentes: ISSUE 3, CODE 12, DOC 1, NO SOURCE 2 (técnicas). Respuestas clave:
+- Criterios → tareas (Q1). ISSUE: "`exhibits.test.ts`: cada pieza emite al menos un sólido" → T2; "`crop.test.ts`: `pieceScene` devuelve un `WorldScene` con el pad y los sólidos de `build`, sin terreno" → T1; "Ocho piezas listadas y visibles; captura del convoy y de la grúa torre en el PR" → T2 + T3; "`npm test` y `npm run typecheck` en verde" → todas. PNGs commiteados: precedente del PR #104 (#92), que enlaza `docs/superpowers/specs/assets/92-storybook/*.png?raw=true`.
+- Firmas (Q2, Q13). CODE: `city-pieces.ts:45` `lamp(solids, accents, x, y, z)`; `city-pieces.ts:53` `campus(out, ground, accents, rng, r: Rect, x, y, w, d)`; `flora.ts:19` `jungle(out, rng, area, n, z = 0.4, rails?)`; `pieces.ts:11,17` `TowerCrane { at, z?, mastH, jibLen, dir: "e" | "w", light }`, contrapluma de 8 u (`pieces.ts:23`: `prism(s > 0 ? x - 8 : x, …, 8, …)`); `ships.ts:152` `ship(kind, at, heading): { solids, lights }`; `ships.ts:160-164` `shipAt` pone "el punto medio de la unidad completa (empujador incluido)" en `center`.
+- Variante `piece` e índice (Q3). CODE: `exhibits.ts:11-14` ya declara `{ kind: "piece"; build }`; `storybook.ts:22-32` lista todo `EXHIBITS` agrupado por zona en orden de aparición; `show()` hace `return` para lo que no es región (único salteo).
+- `WorldScene` y lo que lee el stage (Q4). CODE: `world.ts:19-33` (siete subescenas `| null`, `landmarks: Record<WorldZone, Vec3>`); `stage.ts:57-93` solo lee `terrain.*`, `ground`, `solids`, `accents`; la espuma sin triángulos ya la usa `cropScene` (`crop.ts:61`).
+- `bounds` (Q5). CODE: `solids.ts:221-238` `tessellateAll` cubre todos los `kind`, `ground` incluido.
+- Orden de pintado (Q6) → **cambio**: `render-list.ts:23-39` pinta lo plano antes que sombras y sólidos; el pad pasó de prisma a malla `ground`.
+- Barco a ras del agua (Q9). CODE: `ships.ts:27,43` el casco arranca en `WATER_Z = -1`, el nivel del agua del mundo: el pad con la tapa en −1 reproduce el mundo.
+- Determinismo y Pixi (Q11). CODE: sin `Math.random` ni `Date.now` en `city-pieces.ts`, `flora.ts`, `pieces.ts`, `ships.ts` (grep); `pixi-free.test.ts:6` cubre `src/iso` y `src/scenes`. `src/lab/crop.ts` y `exhibits.ts` sin Pixi: DOC issue "`crop.ts` y `exhibits.ts` no" (pueden usar Pixi), lo vigila la revisión.
+- Destrucción antes de armar (Q15). CODE: `storybook.ts` `show()` destruye el stage anterior antes de `buildStage`.
+- Materiales (Q16). CODE: `palette-iso.ts:30,34,37,53` `water`, `leafDark`, `hull`, `foam`; el test del barco dejó el `as Solid` por una anotación de tipo.
+- Bundle del sitio (Q18). CODE: `lab-excluded.test.ts:17` "vite.config no agrega el laboratorio al build".
+- Script de navegador (Q14). `.scratch/evals-94.md` se escribe en la etapa de evals y no se commitea; como dice `CLAUDE.md` ("fiarse de `totals` e `instructions`, no de ese número"), se afirma `totals.graphics > 0` e `instructions.length > 0`, no `drawCalls`.
+- NO SOURCE (técnicas, en `## Assumptions`): `build` vacío (Q7); quién decide agua vs `paving` y en qué commit (Q10). Q8 (encuadre con piso en −1), Q12 (orden frente a #93) y Q17 (recaptura si cambia el código: las capturas se toman al final de la Task 3, después de cualquier ajuste) también quedaron como supuestos.
+
+Issues abiertos: ninguno. Ambigüedades de spec: ninguna.
