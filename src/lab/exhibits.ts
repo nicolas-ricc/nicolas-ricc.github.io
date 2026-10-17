@@ -5,7 +5,7 @@ import { TOWER, TOWER_H } from "../scenes/city-grid";
 import { STACK_BASE_H, STACKS } from "../scenes/factory";
 import { PUFF_LIFT, PUFF_RANGE } from "../scenes/factory-anim";
 import { WHEEL } from "../scenes/fair";
-import { LIGHTHOUSE } from "../scenes/sea";
+import { DRUM_R0, LIGHTHOUSE } from "../scenes/sea";
 import type { Box } from "../world/frame";
 
 /** Una estructura para mirar sola: una caja sobre el mundo real o una pieza reubicable armada en el origen. */
@@ -31,7 +31,8 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "torre", title: "Torre de la ciudad", zone: "cv", kind: "region",
     box: { x0: TOWER.x - M, y0: TOWER.y - M, x1: TOWER.x + TOWER.w + M, y1: TOWER.y + TOWER.d + M }, h: TOWER_H + 6 },
   { id: "faro", title: "Faro", zone: "blog", kind: "region",
-    box: { x0: LIGHTHOUSE.x - 8, y0: LIGHTHOUSE.y - 8, x1: LIGHTHOUSE.x + 8, y1: LIGHTHOUSE.y + 8 }, h: LIGHTHOUSE.z + 32 },
+    box: { x0: LIGHTHOUSE.x - DRUM_R0 - M, y0: LIGHTHOUSE.y - DRUM_R0 - M, x1: LIGHTHOUSE.x + DRUM_R0 + M, y1: LIGHTHOUSE.y + DRUM_R0 + M },
+    h: LIGHTHOUSE.z + 32 }, // tambores + linterna + tapa (≈ 37)
 ];
 
 /** El exhibit del hash (`#id` o `id`); vacío o desconocido, el primero. */

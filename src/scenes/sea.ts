@@ -21,7 +21,8 @@ export const BUOYS: readonly Vec2[] = [{ x: 420, y: 80 }, { x: 430, y: 160 }];
 export const WRECK_BUOY = { x: 470, y: 160 } as const;
 export const WRECK = { x: 462, y: 150, heading: Math.PI / 6 } as const;
 const WATER_Z = -1;
-const DRUMS = 6, DRUM_H = 4, DRUM_R0 = 3.2, DRUM_STEP = 0.2, GALLERY_H = 0.6, LANTERN_H = 3, CAP_H = 2;
+export const DRUM_R0 = 3.2;
+const DRUMS = 6, DRUM_H = 4, DRUM_STEP = 0.2, GALLERY_H = 0.6, LANTERN_H = 3, CAP_H = 2;
 /** Galería de neón y postes de la baranda: último tambor + 0.5. Las luces van a la altura de la plataforma (lantern.z − 2). */
 export const GALLERY_R = DRUM_R0 - (DRUMS - 1) * DRUM_STEP + 0.5;
 /**
