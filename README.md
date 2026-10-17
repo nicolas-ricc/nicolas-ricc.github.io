@@ -62,7 +62,17 @@ look, `src/map/palette-iso.ts`. Specs en `docs/superpowers/specs/`
 `2026-09-15-reintegracion-mundo-iso-design.md`,
 `2026-10-14-cyberpunk-crepusculo-neones-bloom-design.md`,
 `2026-10-16-barcos-referencia.md`,
-`2026-10-17-barcos-inventario.md`).
+`2026-10-17-barcos-inventario.md`,
+`2026-10-17-storybook-estructuras-design.md`).
+
+`/lab/storybook.html` es el storybook de estructuras: muestra un edificio o
+estructura a la vez, recortado del mundo por su caja (o armado solo en el
+origen, para las piezas reubicables como barcos y grúa torre), con su
+animación y un panel de lectura (sólidos, caras, acentos, caja, materiales).
+El hash de la URL elige el exhibit (`#faro`); flechas (`←`/`→`) o `j`/`k`
+pasan al siguiente o al anterior; `g`, `h` y `a` ocultan o muestran suelo,
+sombras y acentos; `6` rota el bloom, `?bloom=` lo fuerza y `?speed=` escala
+el reloj de las animaciones.
 
 El bloom de las luces no entra en el primer dibujo: el sitio y el lab lo
 activan después, en una tarea diferida (`attachBloom`,
