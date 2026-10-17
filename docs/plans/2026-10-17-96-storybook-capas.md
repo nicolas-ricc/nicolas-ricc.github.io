@@ -179,9 +179,10 @@ No hay test unitario: `storybook.ts` es un script de página (DOM + `Application
 
 ```ts
     const layer = LAYER_KEY[ev.key];
-    if (layer && stage) { layers[layer] = !layers[layer]; stage.setLayer(layer, layers[layer]); if (log) console.info(`[storybook] ${layer}: ${layers[layer] ? "visible" : "oculto"}`); }
+    if (layer && stage && !ev.repeat) { layers[layer] = !layers[layer]; stage.setLayer(layer, layers[layer]); if (log) console.info(`[storybook] ${layer}: ${layers[layer] ? "visible" : "oculto"}`); }
 ```
 
+  - `!ev.repeat`: mantener pulsada la tecla no hace parpadear la capa (supuesto A3).
   - actualizar el comentario de cabecera: "g, h y a ocultan o muestran suelo, sombras y acentos (con el bloom) y se recuerdan entre exhibits."
 
 - [ ] **Step 2: html.** En `lab/storybook.html`, el `aria-label` de `#lab-host` pasa a: `Storybook de estructuras: un exhibit a la vez. Flechas o j/k cambian de exhibit. Teclas g, h y a ocultan o muestran suelo, sombras y acentos. Tecla 6 rota el bloom: off, on, fallback.`
@@ -199,3 +200,40 @@ Expected: PASS.
 git add src/lab/storybook.ts lab/storybook.html docs/superpowers/specs/assets/96-storybook/
 git commit -m "feat(#96): teclas g, h y a en el storybook, recordadas entre exhibits"
 ```
+
+---
+
+## Assumptions
+
+Decisiones técnicas tomadas en la revisión del plan, sin fuente escrita; van al PR.
+
+- **A1. Visibilidad del bloomSlot.** `setBloom` (`stage.ts:146-154`) solo hace `addChildAt`/`removeFromParent` y nunca escribe `visible`; `buildBloomSlot` (`stage.ts:128-138`) arma el slot una sola vez. Con `slot.visible = accentsVisible` al crearlo y `setLayer` escribiendo en el slot aunque esté desmontado, ningún camino vuelve a ponerlo en `true`. Alternativa descartada: reaplicar la visibilidad dentro de `setBloom` en cada `on` (dos lugares que escriben lo mismo).
+- **A2. Medición con acentos ocultos.** Si `attachBloom` corre con los acentos apagados, mide un bloom oculto. Se acepta sin lógica extra (página de lab; `?bloom=` fija el modo). Alternativa descartada: diferir la medición hasta que los acentos estén visibles.
+- **A3. Autorrepetición.** `g`/`h`/`a` ignoran `ev.repeat` (el handler actual no lo filtra, `storybook.ts:89-93`). Alternativa descartada: conmutar en cada repetición (parpadeo).
+- **A4. Minúsculas.** Solo `g`/`h`/`a` en minúscula, como `j`/`k` en `NEXT`/`PREV` (`storybook.ts:88`); Shift o Bloq Mayús no conmutan. Alternativa descartada: aceptar también mayúsculas o `ev.code`.
+- **A5. Sin test unitario de las teclas.** El conmutador queda en `storybook.ts` (una línea por tecla); la verificación es agent-browser con capturas commiteadas. Alternativa descartada: un helper puro en `page.ts`, un módulo de la página del mundo que no tiene estas teclas.
+- **A6. "Se ve igual que antes".** `lab/world.html` y el sitio se comparan contra `main` con `rendering.capture().totals` de PixiJS DevTools (mismos conteos) y captura a ojo. Alternativa descartada: diff de píxeles (el agua y los barcos animan; dos capturas nunca coinciden).
+
+## Grilling
+
+- Rondas: 1 (el plan no cambió de forma sustancial: un filtro `!ev.repeat` y supuestos declarados). Griller: `fable`.
+- Preguntas: 16. Respuestas: CODE 9, ISSUE 3, DOC 1 (spec), sin fuente 6 → supuestos técnicos A1–A6 (A1 también tiene CODE). Ambigüedades de spec: 0. Fuera de alcance: 0.
+
+| # | Respuesta |
+|---|-----------|
+| 1 | CODE: `src/world/stage.ts:146-154` — `setBloom` solo monta/desmonta; nadie escribe `bloomSlot.visible`. Step 3 lo escribe al crear (`accentsVisible`) y en `setLayer`, montado o no. → A1 |
+| 2 | ISSUE: "`stage.test.ts`: `setLayer` cambia `visible` …" → Task 1; "Teclas `g`/`h`/`a`/`6` y `?bloom=`/`?speed=` funcionan; captura de un exhibit sin suelo ni sombras en el PR" → Task 2 Step 4 + decisión 8; "`lab/world.html` y el sitio se ven igual que antes" → Task 2 Step 4 + A6; "`npm test` y `npm run typecheck` en verde" → Task 1 Step 4 y Task 2 Step 3. `6`/`?bloom=`/`?speed=` ya existen (`storybook.ts:86-96`); se verifican en el navegador. |
+| 3 | CODE: `stage.ts:55` agrega los nueve hijos en ese orden, incondicionalmente (`waterSlot` se crea en `:50`); `stage.test.ts` ya aserta `toHaveLength(9)` y que `accentSlot` es el último. `build()` arma el mundo entero (`assembleWorld(undefined, …)`), no una región. |
+| 4 | CODE: `stage.ts:105` — `shadowSlot.addChild(gs); coreSlot.addChild(gc); solidSlot.addChild(g)`. |
+| 5 | CODE: `stage.ts:101` (`waterSlot.addChild(g)` para capas `water`); `tick` (`:155-163`) y `applyAlphas` (`:124-127`) solo escriben `alpha`, nunca `visible`. |
+| 6 | CODE: `storybook.ts:85` — `live.setBloom` delega en `stage.setBloom`; el slot que arma `buildBloomSlot` nace con `accentsVisible` (A1), sin depender del orden de `show()`. |
+| 7 | Sin fuente → A2. |
+| 8 | CODE: `stage.test.ts` define `build()` y `bloomSlotOf(c)` (busca entre los hijos del container). El test "on → fallback → on" vuelve a montar el slot antes de asertar, así que `bloomSlotOf` lo encuentra. Los tests los escribe la etapa 3 del pipeline. |
+| 9 | CODE: `storybook.ts:89-93` no filtra `ev.repeat` → A3. |
+| 10 | CODE: `storybook.ts:79-80` — `fromHash()` (y por ende `show()`) corre antes de registrar el `keydown` (`:89`), así que `stage` siempre existe en el handler; `log` está en `storybook.ts:20`. |
+| 11 | Sin fuente → A5. |
+| 12 | Sin fuente → A6; las capturas se commitean en `docs/superpowers/specs/assets/96-storybook/`. |
+| 13 | DOC: spec §6 (`2026-10-17-storybook-estructuras-design.md:150-151`) — "`g` suelo, `h` sombras, `a` acentos (conmutan y se recuerdan entre exhibits)". El handler actual no usa `h` ni `a` (`storybook.ts:88-93`). |
+| 14 | No hay `CONTEXT.md` ni `docs/adr/` en el repo. ISSUE: "El sitio no lo llama: nada cambia fuera del lab." `src/main.ts:45` es el único consumidor del sitio y no se toca. |
+| 15 | Cada task es un commit propio; si Task 2 falla, la etapa de implementación lo reintenta o lo documenta en el PR. `setLayer` sin consumidor no rompe nada (no lo llama nadie). Capturas: agent-browser en esta máquina (CLAUDE.md). |
+| 16 | Sin fuente → A4. |
