@@ -6,6 +6,8 @@
 
 **Architecture:** Dos cortes en `src/scenes/sea-anim.ts`: primero la máquina de estados del ciclo (se quita `berth`, se agrega el segundo `offscreen` de `PORT_MS`, fade en las dos puntas de cada carril), con los carriles viejos todavía en su lugar; después la geometría (vértices nuevos de `LANE_OUT`/`LANE_BACK` y estáticos de `src/scenes/sea.ts`), con los tests de ruta reescritos y los comentarios/README al día. Todos los valores numéricos vienen del issue, ya validados por el planner con el validador tsx.
 
+**Criterios de aceptación → tareas:** valores de `LANE_OUT`/`LANE_BACK`/`BUOYS`/`WRECK`/`WRECK_BUOY` → Task 2; `BERTH*`/`berth` eliminados y `PORT_MS` exportado → Task 1; validador en /tmp con cero violaciones → Task 2 Step 1/4; `npm test` + typecheck y cobertura de `sea-anim.test.ts` → Tasks 1 y 2; comprobación visual en `lab/world.html?speed=20` → Task 3; comentarios y README → Task 1 Step 3 (ciclo) y Task 2 Steps 5-6; PR contra `feature/85-barcos-semirrecta` con el porqué de los 42 u → etapa de PR del pipeline.
+
 **Tech Stack:** TypeScript, Vitest (`npm test`), `tsc` (`npm run typecheck`), `tsx` para el validador, PixiJS 8 y `agent-browser` para la comprobación visual.
 
 **Spec:** issue #87 (cuerpo y criterios de aceptación), con el ticket padre #85 y su comentario de plan como contexto.
@@ -236,7 +238,7 @@ export function alphaAt(lane: ShipLane, dist: number): number {
   });
 ```
 
-  (`polyline` se importa de `../iso/geometry`.) El test "laneAt('back') interpola…" pasa a: último tramo `Math.atan2(-39 - 18, 397 - 434)` y primero `Math.atan2(237 - 600, 462 - 424)`. Los dos tests `expectNotBehind` quedan tal cual. El test de las boyas busca `d.at.x === 398` y `392`. El aserto `expect(a.state(0).heading).toBeCloseTo(Math.atan2(56, 36), 6)` se agrega al test "entrar a puerto" de la Task 1 tras la reaparición.
+  (`polyline` se importa de `../iso/geometry`.) Las líneas `let crossedAbyss`, `if (t === "abyss") crossedAbyss = true;` y `expect(crossedAbyss).toBe(true)` desaparecen con el test viejo (decisión 6 del issue). El test "laneAt('back') interpola…" pasa a: último tramo `Math.atan2(-39 - 18, 397 - 434)` y primero `Math.atan2(237 - 600, 462 - 424)`. Los dos tests `expectNotBehind` quedan tal cual. El test de las boyas busca `d.at.x === 398` y `392`. El aserto `expect(a.state(0).heading).toBeCloseTo(Math.atan2(56, 36), 6)` se agrega al test "entrar a puerto" de la Task 1 tras la reaparición.
 
 - [ ] **Step 3: Correr y ver que fallan.** `npx vitest run src/scenes/sea-anim.test.ts` → FAIL (vértices viejos).
 
@@ -244,7 +246,7 @@ export function alphaAt(lane: ShipLane, dist: number): number {
 
 - [ ] **Step 5: Comentarios.** Reescribir en `sea-anim.ts` la cabecera del módulo (ruta y ciclo), el comentario de `LANE_OUT` (sale de la bocana al sursureste, bordea la punta por el este a ~25 u de su orilla porque los conos del arrecife de la cara norte obligan a x ≥ 424 en y ≈ 86; giros suaves; recto 420 u desde (420, 232); extremo de mar puesto para que el borde del cover caiga a `FADE_U`; fade de la bocana a la vista; validaciones; no mover más de 2 u) y el de `LANE_BACK` (misma curva 42 u al este, invertida; por qué 42 y no ~30: con 30 y 36 u dos cargueros a la par se superponen en pantalla, 42 es el mínimo sin solape; la lancha queda lejos). En `sea.ts`: cabecera y comentario del pecio/boyas (por qué se movieron: la ida pasaba por la boya vieja y un barco al oeste o norte de un sólido que se le superpone en pantalla queda detrás; las boyas marcan el bajo al sur de la punta, al oeste de la ida; el pecio sigue en la fosa, el talud `abyssX(262)` ≈ 473 pasa por su popa, 35 u al este de la vuelta).
 
-- [ ] **Step 6: README y lab.** README (~19-25): los tres barcos aparecen en la bocana y recorren dos carriles paralelos, `LANE_OUT` baja hacia abajo-izquierda hasta salir del cover y `LANE_BACK` vuelve a la bocana, donde se desvanecen ("entran a puerto"); sin fondeadero. `src/lab/blog.ts:3`: misma idea en una línea. `src/lab/docs.test.ts`: el primer test pasa a exigir `/bocana/`, `/dos carriles/`, `/abajo-izquierda/`; el de recorridos viejos agrega `fondeadero|dársena del astillero` a la lista prohibida para README y lab; el último exige `/bocana/` y `/abajo-izquierda/` en el lab.
+- [ ] **Step 6: README y lab.** README (~19-25): los tres barcos aparecen en la bocana y recorren dos carriles paralelos, `LANE_OUT` baja hacia abajo-izquierda hasta salir del cover y `LANE_BACK` vuelve a la bocana, donde se desvanecen ("entran a puerto"); sin mencionar el fondeadero. `src/lab/blog.ts:3`: misma idea en una línea. `src/lab/docs.test.ts`: el primer test pasa a exigir `/bocana/`, `/dos carriles/`, `/abajo-izquierda/`; el de recorridos viejos agrega `fondeadero|BERTH` a la lista prohibida para README y lab (por eso el README dice "no fondean", nunca la palabra "fondeadero"); el último exige `/bocana/` y `/abajo-izquierda/` en el lab.
 
 - [ ] **Step 7: Correr todo.** `npm test` y `npm run typecheck` → PASS. `grep -n -i "fondead\|dársena\|BERTH" src/scenes/sea-anim.ts src/scenes/sea.ts README.md src/lab/blog.ts` no debe describir el fondeadero como vigente.
 
@@ -257,3 +259,34 @@ export function alphaAt(lane: ShipLane, dist: number): number {
 - [ ] **Step 1:** `npm run dev -- --host --port 5173` y el script `.scratch/evals-87.md` (agent-browser, `http://localhost:5173/map/lab/world.html?speed=20`, tecla `4`, 3-4 capturas separadas en el tiempo).
 - [ ] **Step 2:** En cada captura: un barco bajando a abajo-izquierda y otro subiendo a la bocana, sin bucles ni oclusión por la punta, boyas o pecio. Estado de los barcos leído con `__PIXI_DEVTOOLS_WRAPPER__` / capas si hace falta.
 - [ ] **Step 3:** Las capturas van adjuntas al PR (subidas como comentario/asset), no al repo.
+
+## Assumptions
+
+- **Transición en la Task 1** (carriles viejos con el ciclo nuevo): con `Lo ≈ 955`, `Lb ≈ 1164` (valores de los tests actuales), T ≈ 1810 s; la ida a pleno dura (955 − 60)/1.2 ≈ 746 s y la vuelta ≈ 920 s, ambas > T/3 ≈ 603 s, y dos barcos en el mismo carril distan T/3 · 1.2 ≈ 724 u. El test de cobertura nuevo pasa con ambos juegos de carriles. Alternativa descartada: una sola tarea para ciclo y geometría (no permite rechazar una sin la otra). El commit intermedio no llega solo a `main`: el PR va contra la rama de la historia y se mezcla con squash.
+- **Docs test:** se prohíbe `fondeadero|BERTH` en README y lab en vez de pedir "sin fondeadero" literal. Alternativa descartada: exigir la frase "sin fondeadero" (choca con la prohibición).
+- **`src/lab/blog.ts` y `src/lab/docs.test.ts`** se tocan aunque el issue no los nombre: el test de docs exige hoy la frase "fondeadero de la dársena del astillero" en el README, que el issue manda reescribir.
+- **`.scratch/evals-87.md`** se crea en la etapa de evals del pipeline y `.scratch/` va a `.git/info/exclude` en ese momento.
+
+## Grilling
+
+- Rondas: 1 (los cambios fueron correcciones puntuales, no un corte distinto). Preguntas: 17. Griller: `fable`.
+- Fuentes: ISSUE 7 (1, 3, 7, 11, 12, 13, 16), CODE 9 (5, 6, 8, 9, 10, 14, 15, 17, 13), DOC 1 (17: CLAUDE.md), NO SOURCE → technical assumption 3 (2, 4, 17-parcial). Ninguna ambigüedad de spec, ningún fuera de alcance.
+- Respuestas:
+  1. ISSUE, "Criterios de aceptación" (mapeo agregado arriba); `PORT_MS`: ISSUE "Exportar `PORT_MS`"; Task 3: ISSUE "Comprobación visual mínima en `http://localhost:5173/map/lab/world.html?speed=20`".
+  2. Contradicción real del plan; corregida (assumption "Docs test").
+  3. ISSUE trae el validador completo en `<details>` (terreno, `depthAt`, zona, cover con fade, oclusión, lancha, solape de siluetas); salida registrada en el comentario de la etapa 1 (`✔ sin violaciones`).
+  4. Cálculo en Assumptions, con CODE `src/scenes/sea-anim.test.ts` (largos 955 / 1164).
+  5. CODE `src/scenes/sea-anim.ts:203` — `cycle[k] = (cycle[k]! + dtMs) % CYCLE_MS`: módulo, sin clamp.
+  6. CODE `src/scenes/sea-anim.ts:164` — offscreen devuelve exactamente `{ solids: [], lights: [], wake: [], alpha: 0 }`.
+  7. ISSUE: "`inCoverQuad` verdadero para todo punto a más de `FADE_U` del extremo de mar y falso para los últimos `FADE_U`" y "`LANE_OUT[0]` es la bocana `(362, −16)` … su último punto `(397, −39)`"; el validador comprueba esa misma igualdad cada 1 u. Mover un vértice exige revalidar y actualizar el test (Global Constraints).
+  8. CODE `src/map/geo.ts:19,28` — `WORLD` (−60..570, −60..336) y `BLEED` (342, 378): el sangrado llega a y = 714; los tests ya usan `bleedTerrainAt` fuera de `WORLD`.
+  9. CODE `src/scenes/sea-anim.test.ts` — `staticsOf(world(7).solids)`: toma todos los sólidos de la escena (incluye los de `sea.ts`, construidos desde `BUOYS`/`WRECK`), cada 4 u, sin mirar alpha.
+  10. CODE `src/scenes/sea.test.ts:51-64` — compara contra `BUOYS`, `WRECK_BUOY`, `WRECK` importados; la fosa la afirma ISSUE ("el talud `abyssX(262)` ≈ 473 pasa por su popa"), CODE `src/map/geo.ts:66`.
+  11. CODE `src/scenes/sea-anim.test.ts:50-59`; ISSUE decisión 6 "Dejar de exigir que la ida cruce la fosa (`crossedAbyss` en el test)"; borrado explícito agregado a Task 2 Step 2.
+  12. ISSUE decisión 4: "con 30 y con 36 u de separación lateral dos cargueros a la par se superponen en pantalla (el validador lo detecta); 42 u es el mínimo probado"; muestreo de 4 u igual al test actual (CODE `sea-anim.test.ts`, test de separación) y al validador.
+  13. CODE `src/scenes/sea-animator.ts:18` — `sea.wake${k}` siempre se emite con `alpha: f.alpha`; ISSUE "fase 0 (`sea.wake0`) ahora tiene alpha 0".
+  14. CODE `src/scenes/sea-anim.ts:203` — los estados se recalculan con `shipStateAt` puro; no hay suavizado. Review Focus 1 se mantiene como guarda de regresión.
+  15. CODE `src/scenes/sea-anim.ts:91` (`lanes`) y `:109` (`OUT_MS`, `BACK_MS` = `laneLength / LANE_SPEED * 1000`), ambos después de `LANE_OUT`/`LANE_BACK` (`:43`, `:54`).
+  16. ISSUE: "PR contra `feature/85-barcos-semirrecta`"; el merge del pipeline es squash (ver Assumptions).
+  17. CODE `src/lab/page.ts:11` (tecla `4` = cover) y `:71-72` (`?speed=`); DOC CLAUDE.md (agent-browser); `.scratch/` en Assumptions.
+- Issues abiertos: ninguno.
