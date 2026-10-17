@@ -9,7 +9,8 @@ import { headlandZ, terrainAt } from "./terrain";
 /**
  * Blog, parte estática: la punta de roca con el faro y la casa del farero
  * (clickean Portfolio), el arrecife, dos boyas, y en la fosa el pecio con su
- * boya (landmark del Blog). Los barcos y el mar animado están en sea-anim.ts.
+ * boya (landmark del Blog): un costero partido en dos del que asoman la proa y
+ * la casa de popa. Los barcos y el mar animado están en sea-anim.ts.
  * Spec §7.
  */
 export interface SeaScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; lantern: Vec3; buoys: Vec3[]; neon: { gallery: Vec3[]; coast: Vec3[]; keeperSign: Accent } }
@@ -102,10 +103,45 @@ function buoysAndWreck(out: Solid[], ground: Solid[], accents: Accent[]): Vec3[]
     return { pts: [v3(WRECK_BUOY.x + r0 * Math.cos(a0), WRECK_BUOY.y + r0 * Math.sin(a0), -0.95), v3(WRECK_BUOY.x + r1 * Math.cos(a0), WRECK_BUOY.y + r1 * Math.sin(a0), -0.95), v3(WRECK_BUOY.x + r1 * Math.cos(a1), WRECK_BUOY.y + r1 * Math.sin(a1), -0.95)] };
   });
   ground.push({ kind: "ground", mat: "foam", tris: ring });
-  out.push({ kind: "hull", at: v3(WRECK.x, WRECK.y, -3), len: 40, beam: 8, h: 4, mat: "hull", topMat: "rust", heading: WRECK.heading }); // asoma 1 u
-  const mx = WRECK.x + 20 * Math.cos(WRECK.heading), my = WRECK.y + 20 * Math.sin(WRECK.heading);
-  out.push(prism(mx - 0.3, my - 0.3, 0, 0.6, 0.6, 6, "rust")); // mástil
+  wreck(out, ground);
   return bases;
+}
+
+/**
+ * Pecio (#83): un costero de 40 u partido en dos y hundido de popa en el talud de la fosa. El centro del
+ * casco está bajo el agua; asoman la proa (una cuña oxidada con su cubierta y la bita) y la casa de popa
+ * (banda de casco oxidada, caseta encalada con ventanas, chimenea y mástil). Coordenadas locales como
+ * en el kit de ships.ts: x de popa (0) a proa (`WRECK_LEN`), y a estribor, giradas por `WRECK.heading`.
+ * Las piezas quedan todas por encima del agua (z ≥ −1): el motor dibuja los sólidos sobre el agua, así
+ * que un casco "hundido" entero se vería a flote.
+ */
+const WRECK_LEN = 40;
+function wreck(out: Solid[], ground: Solid[]): void {
+  const c = Math.cos(WRECK.heading), s = Math.sin(WRECK.heading);
+  const local = (dx: number, dy: number): Vec2 => ({ x: WRECK.x + dx * c - dy * s, y: WRECK.y + dx * s + dy * c });
+  const plate = (pts: [number, number][], z: number, h: number, mat: Material, facade?: { floors: number; cols: number }): Solid => ({ kind: "poly", footprint: pts.map(([dx, dy]) => local(dx, dy)), z, h, mat, ...(facade ? { facade } : {}) });
+  const foam = (dx: number, dy: number, r0: number, r1: number): void => {
+    const o = local(dx, dy);
+    ground.push({ kind: "ground", mat: "foam", tris: Array.from({ length: 8 }, (_, k): { pts: [Vec3, Vec3, Vec3] } => {
+      const a0 = (k / 8) * Math.PI * 2, a1 = ((k + 1) / 8) * Math.PI * 2;
+      return { pts: [v3(o.x + r0 * Math.cos(a0), o.y + r0 * Math.sin(a0), -0.95), v3(o.x + r1 * Math.cos(a0), o.y + r1 * Math.sin(a0), -0.95), v3(o.x + r1 * Math.cos(a1), o.y + r1 * Math.sin(a1), -0.95)] };
+    }) });
+  };
+  // proa: cuña con obra viva oscura, franja oxidada de obra muerta, cubierta de madera y la bita; el agua lame alrededor
+  const bow: [number, number][] = [[27, -3.6], [37, -2.4], [WRECK_LEN, 0], [37, 2.4], [27, 3.6]];
+  out.push(plate(bow, WATER_Z, 0.8, "hull"), plate(bow, WATER_Z + 0.8, 0.9, "rust"));
+  out.push(plate([[28, -2.8], [36.5, -1.9], [39, 0], [36.5, 1.9], [28, 2.8]], WATER_Z + 1.7, 0.2, "deck"));
+  const bitt = local(36, 0);
+  out.push(cyl(bitt.x, bitt.y, WATER_Z + 1.9, 0.4, 0.5, "steel", 6));
+  foam(33, 0, 5.5, 6.8);
+  // popa: banda de casco oxidada que asoma, caseta de dos niveles con ventanas, chimenea y mástil
+  out.push(plate([[3, -3.6], [12, -3.6], [12, 3.6], [3, 3.6]], WATER_Z, 1, "rust"));
+  out.push(plate([[4, -3], [11, -3], [11, 3], [4, 3]], WATER_Z + 1, 1.5, "whitewash", { floors: 1, cols: 4 }));
+  out.push(plate([[6, -2.2], [10.5, -2.2], [10.5, 2.2], [6, 2.2]], WATER_Z + 2.5, 1.3, "whitewash", { floors: 1, cols: 3 }));
+  const funnel = local(5, 0);
+  out.push(cyl(funnel.x, funnel.y, WATER_Z + 2.5, 0.7, 2.2, "rust", 8));
+  out.push({ kind: "poly", footprint: [local(9.8, -0.25), local(10.2, -0.25), local(10.2, 0.25), local(9.8, 0.25)], z: WATER_Z + 3.8, h: 4.5, mat: "steel" }); // mástil sobre la caseta
+  foam(7.5, 0, 5.5, 6.8);
 }
 
 export function sea(rng: Rng): SeaScene {

@@ -5,20 +5,24 @@ const ROOT = new URL("../../", import.meta.url).pathname;
 const readme = readFileSync(`${ROOT}README.md`, "utf8");
 const blogLab = readFileSync(`${ROOT}src/lab/blog.ts`, "utf8");
 
-describe("documentación de la flota (#65)", () => {
-  it("README describe el fondeadero de la bocana, los dos carriles y la salida por abajo-izquierda", () => {
-    expect(readme).toMatch(/fondeadero de la bocana/);
+describe("documentación de la flota (#65, #83)", () => {
+  it("README describe el fondeadero de la dársena del astillero, los dos carriles y la salida por abajo-izquierda", () => {
+    expect(readme).toMatch(/fondeadero de la dársena del astillero/);
     expect(readme).toMatch(/dos carriles/);
     expect(readme).toMatch(/abajo-izquierda/);
   });
   it("README lista el documento de referencia de barcos entre las specs", () => {
     expect(readme).toContain("2026-10-16-barcos-referencia.md");
   });
-  it("ni README ni el lab de Blog describen el recorrido viejo", () => {
-    for (const txt of [readme, blogLab]) expect(txt).not.toMatch(/nacen en la bahía|rodean la punta/);
+  it("ni README ni el lab de Blog describen los recorridos viejos", () => {
+    for (const txt of [readme, blogLab]) expect(txt).not.toMatch(/nacen en la bahía|rodean la punta|fondeadero de la bocana/);
   });
-  it("el comentario del lab de Blog describe fondeadero y carriles", () => {
-    expect(blogLab).toMatch(/fondeadero/);
+  it("README nombra la lancha colectiva y el pecio partido", () => {
+    expect(readme).toMatch(/lancha\s+colectiva/);
+    expect(readme).toMatch(/pecio/);
+  });
+  it("el comentario del lab de Blog describe la dársena y los carriles", () => {
+    expect(blogLab).toMatch(/dársena/);
     expect(blogLab).toMatch(/abajo-izquierda/);
   });
 });

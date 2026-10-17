@@ -11,8 +11,9 @@ import type { Material } from "../map/palette-iso";
  * deriva del centro de la unidad), sobre el agua (z −1). Luces: mástil magentaMid, babor magenta, estribor cyanMid; la
  * lancha de la feria suma una ámbar; el empujador y el remolcador, dos proyectores ámbar. `wake` arma la estela de espuma.
  * `cargo` reproduce al Damen Combi Freighter 3850 (casa y puente a popa, bodega con tapas, dos grúas en babor), `tug` al
- * Damen ASD Tug 2810 y `barge` un empujador fluvial de tres cubiertas (tipo *Steel Trader*) empujando una barcaza tolva
- * Jumbo Mississippi; ver `docs/superpowers/specs/2026-10-16-barcos-referencia.md`.
+ * Damen ASD Tug 2810, `barge` un empujador fluvial de tres cubiertas (tipo *Steel Trader*) empujando una barcaza tolva
+ * Jumbo Mississippi y `ferry` una lancha colectiva del delta del Paraná (Tigre), de madera barnizada; ver
+ * `docs/superpowers/specs/2026-10-16-barcos-referencia.md`.
  */
 export type ShipKind = "cargo" | "tug" | "barge" | "ferry";
 export interface ShipSpec { len: number; beam: number; h: number; sheer: number; topMat: Material }
@@ -20,7 +21,7 @@ export const SHIP_SPECS: Record<ShipKind, ShipSpec> = {
   cargo: { len: 60, beam: 10, h: 5, sheer: 0.25, topMat: "hullBlue" },
   tug: { len: 19, beam: 7, h: 2.2, sheer: 0.3, topMat: "hullBlue" },
   barge: { len: 40, beam: 8, h: 1.2, sheer: 0, topMat: "rust" },
-  ferry: { len: 26, beam: 7, h: 3, sheer: 0.2, topMat: "whitewash" },
+  ferry: { len: 15, beam: 4, h: 1.2, sheer: 0.3, topMat: "deck" },
 };
 export const SHIP_MATS: readonly Material[] = ["hull", "hullBlue", "whitewash", "steel", "rust", "deck", "glass", "asphalt"];
 const WATER_Z = -1, WAKE_Z = -0.95;
@@ -129,11 +130,21 @@ function barge(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void 
 }
 
 function ferry(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void {
+  // Lancha colectiva del Tigre: casco bajo de madera barnizada (`deck` como obra muerta), cabina larga de ventanas corridas
+  // que ocupa dos tercios de la eslora, toldilla clara que sobresale, timonera en el extremo de proa de la misma cabina,
+  // popa abierta con baranda y asta de bandera, defensas de goma colgadas del costado.
   const deck = WATER_Z + spec.h;
-  solids.push(k.box(3, -3, 20, 6, deck, 2.4, "whitewash", { floors: 1, cols: 6, base: "glass" }));
-  solids.push(k.box(6, -2.5, 12, 5, deck + 2.4, 2.2, "whitewash", { floors: 1, cols: 4, base: "glass" }));
-  solids.push(k.cyl(8, 0, deck + 4.6, 0.7, 2, "rust"), k.box(15, -0.15, 0.3, 0.3, deck + 4.6, 3, "steel"));
-  lights.push(k.dot(15.15, 0, deck + 7.8, 0.7, "magentaMid"), k.dot(22, -3, deck, 0.4, "magenta"), k.dot(22, 3, deck, 0.4, "cyanMid"), k.dot(15.15, 0, deck + 6.8, 0.9, "amber"));
+  solids.push(k.box(3.5, -1.7, 10, 3.4, deck, 1.5, "deck", { floors: 1, cols: 8, base: "glass" })); // cabina de pasajeros, ventanas corridas
+  solids.push(k.box(3.1, -2, 10.8, 4, deck + 1.5, 0.15, "whitewash")); // toldilla, con alero
+  solids.push(k.box(12.1, -0.9, 1.4, 1.8, deck + 1.65, 0.4, "whitewash")); // casquete de la timonera sobre la toldilla
+  solids.push(k.box(11.3, -1.2, 1, 2.4, deck + 1.65, 0.3, "rust")); // bolsos y cajones sobre el techo, a proa
+  solids.push(k.box(0.8, -1.9, 2.7, 0.15, deck, 0.5, "deck"), k.box(0.8, 1.75, 2.7, 0.15, deck, 0.5, "deck")); // barandas de la popa abierta
+  solids.push(k.box(1.2, -0.1, 0.2, 0.2, deck, 1.6, "steel")); // asta de bandera en la popa
+  solids.push(k.box(12.6, -0.1, 0.2, 0.2, deck + 2.05, 1.4, "steel")); // mástil corto sobre la timonera
+  solids.push(k.cyl(13.9, 0, deck, 0.3, 0.3, "steel")); // bita de proa
+  for (const dx of [5, 8.5, 12]) solids.push(k.cyl(dx, 2.05, deck - 0.4, 0.22, 0.5, "asphalt")); // defensas de goma en estribor, la banda que se ve
+  lights.push(k.dot(12.7, 0, deck + 3.6, 0.55, "magentaMid"), k.dot(13.4, -1.3, deck + 1.3, 0.3, "magenta"), k.dot(13.4, 1.3, deck + 1.3, 0.3, "cyanMid"), k.dot(1.3, 0, deck + 1.7, 0.5, "amber"));
+  lights.push(k.poly([[4, 1.72, deck + 0.5], [13.3, 1.72, deck + 0.5], [13.3, 1.72, deck + 1.3], [4, 1.72, deck + 1.3]], "amberBleed", 0.55)); // ventanas de la cabina encendidas, costado de estribor
 }
 
 const BUILD: Record<ShipKind, (k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]) => void> = { cargo, tug, barge, ferry };

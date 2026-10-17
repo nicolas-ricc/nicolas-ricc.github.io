@@ -11,7 +11,7 @@ const DOC = new URL("../../docs/superpowers/specs/2026-10-16-barcos-referencia.m
 const read = (): string => readFileSync(DOC, "utf8");
 const ANGLES = ["perfil", "proa", "popa", "tres cuartos", "cenital"];
 const SOLIDS = ["hull", "box", "cyl", "prism", "cone"], LIGHTS = ["dot", "poly"];
-const BOX: Record<"cargo" | "tug" | "barge", string> = { cargo: "60 × 10 u", tug: "19 × 7 u", barge: "40 × 8 u + empujador 20 × 7 u" };
+const BOX: Record<"cargo" | "tug" | "barge" | "ferry", string> = { cargo: "60 × 10 u", tug: "19 × 7 u", barge: "40 × 8 u + empujador 20 × 7 u", ferry: "15 × 4 u" };
 
 function section(md: string, head: RegExp): string {
   const m = md.match(head);

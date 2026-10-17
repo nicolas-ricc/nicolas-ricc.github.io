@@ -347,6 +347,68 @@ Coordenadas locales: la popa de la barcaza está en x = 0, la barcaza va de x 0 
 45. `dot` · `amber` — proyector de estribor encendido: dx −2.3, dy 1.7, z 5.85, r 0.35
 46. `poly` · `magentaBleed` — ventanas encendidas, cara de proa de la timonera: puntos (−2.08, −1.6, 4.1), (−2.08, 1.6, 4.1), (−2.08, 1.6, 5.2), (−2.08, −1.6, 5.2), alfa 0.8
 
+## `ferry` — Lancha colectiva del delta del Paraná (Tigre)
+
+- **Astillero/clase:** lanchas colectivas del delta del Paraná, el transporte público fluvial que zarpa de la Estación Fluvial de Tigre: cascos de madera (viraró, lapacho o caoba) barnizada, construidos por los astilleros del Tigre (Parodi, Claude, Claude-Palmisciano) sobre un diseño de los años 1940 que las líneas Interisleña, Líneas Delta y Jilguero siguen operando. Fuentes: https://es.wikipedia.org/wiki/Lanchas_colectivas_del_delta_del_Paran%C3%A1 (ficha de la clase) y https://vitomartin.com/lcdd/embarcacion/colectivas/page/2/ (fichas por lancha, con eslora, manga y puntal de los cascos de 1938 a 1948).
+- **Eslora:** ~20 m (las fichas históricas van de 14.4 a 18.3 m; las actuales de Interisleña rondan los 20) · **Manga:** ~4 m (3.3 a 3.6 m en las fichas) · **Altura sobre el agua:** ~3 m hasta el techo de la cabina (estimada a ojo desde las fotos de perfil, con la escala dada por la eslora; el asta y el mástil de luces suben ~1.5 m más) · **Puntal:** 1.05 a 1.7 m · **Calado:** ~1 m · **Capacidad:** ~90 pasajeros
+- **Caja en mapa:** 15 × 4 u · **Altura máx.:** z = 4
+
+### Fotos
+
+Todas de la categoría de Commons `Paraná Delta Commuter Boats`; son lanchas de distintas líneas (Interisleña, Delta, Jilguero) con la misma silueta. Se miraron una por una para fijar el ángulo.
+
+| Ángulo | Buque | Enlace | Qué se ve |
+| --- | --- | --- | --- |
+| perfil | lancha de Interisleña en el río Luján | https://commons.wikimedia.org/wiki/File:Wooden_Commuter_Boat_Paran%C3%A1_Delta.jpg | Perfil casi puro, navegando con la proa a la izquierda. Casco bajo barnizado con la línea de flotación roja, cabina larga de ventanas corridas que ocupa unos dos tercios de la eslora, timonera en el extremo de proa de la misma cabina, techo claro corrido de una pieza, popa abierta con baranda y asta de bandera, proa corta. Es la foto para medir proporciones. |
+| proa | lancha entrando a Tigre | https://commons.wikimedia.org/wiki/File:Tigre_passenger_boat.jpg | Tres cuartos de proa muy cerrado, casi de frente, navegando. Se ve la roda vertical barnizada, el parabrisas de la timonera con el conductor, el techo claro con los bultos y la hilera de ventanas abiertas de la banda de estribor. |
+| popa | lanchas amarradas en la Estación Fluvial | https://commons.wikimedia.org/wiki/File:Water_Bus_Station_in_Tigre.jpg | Popa desde el muelle y algo desde arriba: el espejo de popa redondeado, la cubierta de popa abierta y baja con su baranda, la puerta trasera de la cabina y el techo con los bultos de los pasajeros. |
+| tres cuartos | Nilda Alicia (Interisleña) | https://commons.wikimedia.org/wiki/File:Lancha_Colectiva_del_Delta_del_Paran%C3%A1.jpg | Tres cuartos de popa por babor, navegando y lleno de pasajeros. La popa abierta con la baranda y la bandera, la cabina con las ventanas corridas y el techo claro que sobresale como alero, el casco barnizado con la línea roja. |
+| tres cuartos | Miss Paraná (Interisleña) frente a la Estación Fluvial | https://commons.wikimedia.org/wiki/File:J34_896_R%C3%ADo_Tigre,_MS_Miss_Paran%C3%A1.jpg | Tres cuartos de proa por estribor, de cerca. Casco de madera barnizada, salvavidas en la banda, cabina de ventanas corridas con la timonera adelante, techo blanco con alero y el mástil corto con las luces sobre la timonera. |
+| cenital | lanchas de Líneas Delta amarradas | https://commons.wikimedia.org/wiki/File:Lanchas_colectivas.jpg | Toma alta desde el muelle sobre los techos: la toldilla ocre de una pieza con el casquete de la timonera adelante, las astas y los bultos sobre el techo, la popa abierta con la baranda y, en la lancha de atrás, la proa corta. Es lo más parecido a una vista desde arriba. |
+
+### Rasgos de silueta
+
+- Casco bajo y fino de madera barnizada (relación eslora/manga ≈ 5), con la línea de flotación roja o cobre y la roda vertical; el francobordo es de menos de un metro.
+- Una sola cabina de pasajeros que ocupa unos dos tercios de la eslora, con ventanas corridas (una hilera continua que se abre) en las dos bandas y la timonera integrada en su extremo de proa, con el parabrisas apenas más alto.
+- Techo (toldilla) de una pieza, blanco u ocre, que sobresale como alero por los costados y la popa; encima viajan bultos, bicicletas y bolsos.
+- Cubierta de popa abierta y baja, con baranda perimetral y el asta de la bandera; es por donde se embarca.
+- Proa corta y despejada, con una bita y el salvavidas colgado en la banda.
+- Mástil corto con la luz de tope sobre la timonera; luces de navegación en los costados de la cabina.
+- Defensas de goma colgadas del costado, a la altura de la cabina, para amarrar de costado en los muelles de madera.
+- Estela corta y ancha: navega a 8-10 nudos con un motor diésel de seis cilindros.
+
+### Traducción a la escala del mapa
+
+- **Casco:** 15 × 4 u (20 m son 13.3 u y 4 m son 2.7 u; la manga se ensancha ×1.5 para que la cabina se lea, como el empujador de `barge`). `h` 1.2, arrufo 0.3: la cubierta queda en z = 0.2 (1.2 u sobre el agua; real ~0.8 m, exagerada como en los otros barcos). La obra muerta usa `deck` (madera barnizada), no `whitewash`.
+- **Altura:** nada que comprimir: el mástil termina en z ≈ 3.65 y la luz de tope en z 3.8; tope de la caja z = 4.
+- **Cabina (x 3.5 a 13.5):** 10 × 3.4 u (dos tercios de la eslora), de z 0.2 a 1.7, en `deck` con fachada de un piso y 8 columnas sobre `base: "glass"`, que es la banda de ventanas corridas.
+- **Toldilla (x 3.1 a 13.9):** placa `whitewash` de 10.8 × 4 u y 0.15 de alto sobre la cabina, 0.4 u más larga y 0.6 más ancha: el alero. Encima, el casquete de la timonera (1.4 × 1.8 u, 0.4 de alto, a proa) y los bultos (`rust`, 1 × 2.4 u).
+- **Popa abierta (x 0 a 3.5):** dos barandas de 2.7 u en `deck` pegadas a los bordes y el asta de bandera (0.2 × 0.2 u, 1.6 de alto) en x 1.2.
+- **Proa (x 13.5 a 15):** bita de acero en x 13.9.
+- **Defensas:** tres cilindros `asphalt` de radio 0.22 colgados de la banda de estribor (la que ve la cámara con rumbo 0), con la base por debajo de la cubierta.
+- **Luces:** tope `magentaMid` sobre el mástil (x 12.7, z 3.8), babor `magenta` y estribor `cyanMid` en las esquinas de proa de la cabina (x 13.4, y ±1.3, z 1.5), un farol `amber` en la popa abierta (x 1.3, z 1.9) y las ventanas de estribor encendidas en `amberBleed` (luz cálida de cabina, no neón).
+
+### Piezas sugeridas (por importancia)
+
+1. `hull` · `deck` — casco 15 × 4, h 1.2, arrufo 0.3
+2. `box` · `deck` — cabina de pasajeros: dx 3.5, dy −1.7, w 10, d 3.4, z 0.2, h 1.5, fachada 1 piso y 8 columnas con `base: "glass"`
+3. `box` · `whitewash` — toldilla con alero: dx 3.1, dy −2, w 10.8, d 4, z 1.7, h 0.15
+4. `box` · `whitewash` — casquete de la timonera: dx 12.1, dy −0.9, w 1.4, d 1.8, z 1.85, h 0.4
+5. `box` · `rust` — bultos sobre el techo: dx 11.3, dy −1.2, w 1, d 2.4, z 1.85, h 0.3
+6. `box` · `deck` — baranda de babor de la popa abierta: dx 0.8, dy −1.9, w 2.7, d 0.15, z 0.2, h 0.5
+7. `box` · `deck` — baranda de estribor de la popa abierta: dx 0.8, dy 1.75, w 2.7, d 0.15, z 0.2, h 0.5
+8. `box` · `steel` — asta de bandera: dx 1.2, dy −0.1, w 0.2, d 0.2, z 0.2, h 1.6
+9. `box` · `steel` — mástil sobre la timonera: dx 12.6, dy −0.1, w 0.2, d 0.2, z 2.25, h 1.4
+10. `cyl` · `steel` — bita de proa: dx 13.9, dy 0, z 0.2, r 0.3, h 0.3
+11. `cyl` · `asphalt` — defensa 1: dx 5, dy 2.05, z −0.2, r 0.22, h 0.5
+12. `cyl` · `asphalt` — defensa 2: dx 8.5, dy 2.05, z −0.2, r 0.22, h 0.5
+13. `cyl` · `asphalt` — defensa 3: dx 12, dy 2.05, z −0.2, r 0.22, h 0.5
+14. `dot` · `magentaMid` — luz de tope: dx 12.7, dy 0, z 3.8, r 0.55
+15. `dot` · `magenta` — luz de babor: dx 13.4, dy −1.3, z 1.5, r 0.3
+16. `dot` · `cyanMid` — luz de estribor: dx 13.4, dy 1.3, z 1.5, r 0.3
+17. `dot` · `amber` — farol de popa: dx 1.3, dy 0, z 1.9, r 0.5
+18. `poly` · `amberBleed` — ventanas de estribor encendidas: puntos (4, 1.72, 0.7), (13.3, 1.72, 0.7), (13.3, 1.72, 1.5), (4, 1.72, 1.5), alfa 0.55
+
 ## Decisiones
 
 Heredadas del plan de #57:
@@ -368,6 +430,8 @@ Heredadas del plan de #57:
 - `barge` y el orden de dibujo (pista para #62): el bloque de popa de la barcaza (x 0 a 7.2) tiene una clave de profundidad menor que la del casco, así que se dibuja antes; las caras de la popa redondeada del casco podrían pintar sobre su techo. Revisarlo en el lab al construirlo.
 - `tug`, `barge` y `ships.test.ts` (pista para #61 y #62): el test exige hoy que toda pieza que no sea el casco tenga su base sobre la cubierta, salvo los cilindros de radio 0.45 (las defensas). Las piezas sugeridas que bajan del nivel de cubierta (defensas y pudding del remolcador, bloques, escalones y placas de la barcaza) piden ampliar esa excepción en el hijo que las construya.
 - Los identificadores de `ShipKind` (`cargo`, `tug`, `barge`, `ferry`) se mantienen, para no tocar las rutas ni la animación.
+- `ferry` (#83): la lancha de la feria, que #57 dejó fuera de alcance, pasa a ser una lancha colectiva del delta del Paraná, porque el mapa es rioplatense y es la lancha de pasajeros de madera reconocible de la región; las fotos son de Commons (`Paraná Delta Commuter Boats`), de varias líneas con la misma silueta. Compresiones: la manga se ensancha ×1.5 (2.7 → 4 u); la eslora (13.3 u) sube a 15 para que la cabina tenga ocho ventanas legibles. Con dos cubiertas blancas (la lancha vieja) no se parecía a nada del río; ahora es una cubierta de madera con toldilla. `FERRY_ROUTE`, `FERRY_SPEED` y la pausa no cambian.
+- Pecio (#83): el casco liso `hull` a z −3 se leía como un barco a flote (el motor dibuja los sólidos sobre el agua, así que la parte "hundida" se veía igual). Ahora es un costero partido en dos del que asoman la proa (cuña de obra viva con franja oxidada, cubierta y bita) y la casa de popa (banda de casco, caseta de dos niveles con ventanas, chimenea y mástil), con espuma alrededor de las dos partes. Vive en `sea.ts`, no en el kit.
 
 ## Cierre y medición
 
@@ -430,6 +494,29 @@ Líneas de consola crudas de `/lab/world.html` (tres corridas calientes):
 
 Los otros dos números. El bloom mide 10.7 a 11.3 ms de promedio contra el presupuesto de 15 ms y queda activo en las seis corridas. El primer dibujo va de 169.0 a 178.5 ms: cinco de seis lecturas quedan unos pocos ms por encima de los 170 ms que la spec de mundo-3 usaba como umbral de la puerta del §8.2, y la sexta (169.0 ms) queda justo por debajo. La diferencia con la Task 19 de mundo-3 (149 a 176 ms) está dentro de la misma dispersión, #65 no pone ese umbral como criterio de aceptación y el criterio de #57 (peor redibujo ≤ 15 ms) se cumple; queda anotado como cifra, no como decisión. El costo del primer dibujo lo sigue #79 (ordenación estática por profundidad).
 
+### Medición de #83 (dársena, pecio y lancha)
+
+Mismo procedimiento (Chrome headless vía `agent-browser`, DPR 2, ventana 1600×900, corridas calientes, 2026-10-16) con los carriles desde la dársena, el pecio partido y la lancha colectiva. Las dos páginas quedan dentro del presupuesto de 15 ms de peor redibujo y el bloom sigue activo; `SHIP_STEP_MS` no hace falta.
+
+```
+/lab/blog.html
+[lab] primer dibujo: 175.2 ms, 32447 polígonos estáticos
+[lab] peor redibujo en 5 s: 12.60 ms
+[lab] bloom: promedio 10.0 ms en 60 frames (tick 6.2 + render 3.8), presupuesto 15 ms → activo
+[lab] primer dibujo: 164.1 ms, 32447 polígonos estáticos
+[lab] peor redibujo en 5 s: 12.40 ms
+[lab] bloom: promedio 9.9 ms en 60 frames (tick 6.1 + render 3.8), presupuesto 15 ms → activo
+/lab/world.html
+[lab] primer dibujo: 166.7 ms, 32447 polígonos estáticos
+[lab] peor redibujo en 5 s: 11.40 ms
+[lab] bloom: promedio 10.1 ms en 60 frames (tick 6.3 + render 3.9), presupuesto 15 ms → activo
+[lab] primer dibujo: 168.3 ms, 32447 polígonos estáticos
+[lab] peor redibujo en 5 s: 11.20 ms
+[lab] bloom: promedio 10.2 ms en 60 frames (tick 6.4 + render 3.9), presupuesto 15 ms → activo
+```
+
+Capturas en `assets/83-darsena/`: `antes-cover.png` y `antes-recorrido.png` (fondeadero en la bocana, time-lapse del recorrido viejo), `despues-recorrido.png` (time-lapse nuevo), `despues-darsena.png`, `despues-pecio.png` y `despues-lancha.png`.
+
 ### Desvíos respecto del plan de #57
 
 Solo lo que cambió respecto del plan del issue; el resto (rutas, ciclo de los barcos, haz ámbar con `amber` en la cuña corta, ids de `ShipKind`) quedó como estaba escrito.
@@ -439,4 +526,5 @@ Solo lo que cambió respecto del plan del issue; el resto (rutas, ciclo de los b
 - **Convoy (#59, #62).** El plan citaba la Hidrovía Paraná–Paraguay; las fotos y medidas son del Mississippi y el Ohio. En #62 el casco de la barcaza lleva `h` 1.2 y no el "~2" del issue, tiene 4 tapas en lugar de 5 y se descartaron por presupuesto las bitas del empujador, los cabos y los barriles. `sternOf("barge")` pasó de −10 a −20 y `SHIP_SPECS.barge` de 9 a 8 de manga, con la estela empezando detrás del empujador.
 - **Orden de dibujo en código compartido (#60).** No estaba en el plan: `src/iso/depth.ts` ganó la regla "una pieza sobre la cubierta se dibuja después de su casco" y la ordenación en el marco del barco (`sortByDepth(solids, heading)`). La primera regla también cambia 12 posiciones en el dique seco de `shipyard.ts` (todas en la escena estática, correctas). Quedan abiertos #74 (ciclos de ordenación con cajas rotadas, un triángulo de la barcaza visible hacia el oeste), #77 (piezas bajo la cubierta) y #79 (costo de la ordenación estática en el primer dibujo).
 - **API de `sea-anim.ts` (#63, #64).** `routeAt`/`routeLength` se reemplazaron por `laneAt`/`laneLength` y se quitaron `SeaAnim.dist` y `alphaAt(dist)` en vez de dejar alias; el plan solo agregaba `state(k)`. Para `barge`, la posición por centro usa el punto medio de la unidad completa (`at + 15` con el empujador de 10 u de entonces; hoy, con el empujador de 20 u, `at + 10`), no `len/2` como decía el issue. Un barco fondeado no lleva estela, y durante las pausas `state(k).dist` informa la longitud del carril, supuestos que el plan no decía.
+- **Puerto de salida (#63, #64, revisado en #83).** El plan pedía zarpar del muelle de la bahía o del astillero; #63 puso el fondeadero en la bocana (362, −2), sin muelle, y la ida salía casi al este. En #83 el fondeadero pasa a la dársena del astillero (232, 50), frente a las gradas: la ida sube la bahía, cruza la bocana en (362, −16) y sigue el tramo validado; la vuelta cruza la bahía al norte de la salida (y −50..−70) y baja por el lado del muelle. Los tests de oclusión comparan hexágonos proyectados en vez de rectángulos envolventes, porque el rectángulo de un carguero con rumbo norte daba falsos positivos con la escollera de la dársena a 35 u.
 - **Medición (#60, #61, #62).** Los tres PR dejaron el criterio de 15 ms sin verificar porque en el runner (sin GPU, render por software) el estado base ya pasaba el límite en ventanas de 5 s. Esta sección es esa medición.

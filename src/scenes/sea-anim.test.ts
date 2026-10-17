@@ -4,25 +4,49 @@ import type { Accent } from "../iso/accent";
 import { isBehind, overlaps, screenBounds } from "../iso/depth";
 import { convexHull, v3, type Vec2 } from "../iso/geometry";
 import { project } from "../iso/project";
-import { bounds, hullRings, isFlat } from "../iso/solids";
+import { bounds, hullRings, isFlat, type Bounds, type Solid } from "../iso/solids";
 import { WORLD, inCoverQuad, worldZoneAt } from "../map/geo";
 import { BEAM_PERIOD_MS, BERTH, BERTH_MS, BERTH_TURN_MS, CYCLE_MS, FADE_U, FERRY_PAUSE_MS, FERRY_ROUTE, FERRY_SPEED, KEEPER_SIGN_MS, LANE_BACK, LANE_OUT, LANE_SPEED, NEON_STEP_MS, OFF_MS, SHIPS, alphaAt, createSeaAnim, laneAt, laneLength } from "./sea-anim";
-import { ship, shipAt } from "./ships";
+import { SHIP_SPECS, ship, shipAt } from "./ships";
 import { bleedTerrainAt, terrainAt } from "./terrain";
 import { world } from "./world";
 
 const WATER = new Set(["water", "sea", "shore", "abyss"]);
+/** SAT entre dos polígonos convexos: se intersecan si ningún eje (normal de un lado) los separa. */
+const intersects = (a: Vec2[], b: Vec2[]): boolean => {
+  const axes = [a, b].flatMap((poly) => poly.map((p, i) => { const q = poly[(i + 1) % poly.length]!; return { x: p.y - q.y, y: q.x - p.x }; }));
+  return axes.every((n) => {
+    const pa = a.map((p) => p.x * n.x + p.y * n.y), pb = b.map((p) => p.x * n.x + p.y * n.y);
+    return Math.max(...pa) >= Math.min(...pb) && Math.max(...pb) >= Math.min(...pa);
+  });
+};
+/**
+ * Hexágono en pantalla de una caja del mundo (envolvente convexa de sus ocho vértices proyectados). El rectángulo
+ * de `screenBounds` lo envuelve con mucho aire cuando la caja es larga en diagonal (un carguero con rumbo norte): daba
+ * falsos positivos de oclusión con la escollera de la dársena, a 35 u del barco (#83). Dos cajas se superponen en
+ * pantalla si se cortan sus hexágonos.
+ */
+const screenHull = (b: Bounds): Vec2[] => { const pts: Vec2[] = []; for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) pts.push(project(v3(x, y, z))); return convexHull(pts); };
+type Static = { b: Bounds; sb: ReturnType<typeof screenBounds>; sh: Vec2[] };
+const staticsOf = (solids: Solid[]): Static[] => solids.map((s) => { const b = bounds(s); return { b, sb: screenBounds(b), sh: screenHull(b) }; });
+/** Caja de alineación del carguero centrado en `p` (z −1..13) y comprobación de que ningún sólido estático que se le superponga en pantalla lo tapa. */
+const expectNotBehind = (statics: Static[], p: { x: number; y: number }, heading: number): void => {
+  const parts = ship("cargo", shipAt("cargo", p, heading), heading).solids.map(bounds);
+  const sb: Bounds = { min: v3(Math.min(...parts.map((b) => b.min.x)), Math.min(...parts.map((b) => b.min.y)), -1), max: v3(Math.max(...parts.map((b) => b.max.x)), Math.max(...parts.map((b) => b.max.y)), 13) };
+  const scr = screenBounds(sb), sh = screenHull(sb);
+  for (const s of statics) if (overlaps(scr, s.sb) && intersects(sh, s.sh)) expect(isBehind(sb, s.b)).toBe(false);
+};
 const setup = (reducedMotion = false) => { const w = world(7); return { w, a: createSeaAnim(w.sea!, { reducedMotion }) }; };
 
 describe("ruta", () => {
   it("LANE_OUT nace en BERTH (dentro del cover) y termina fuera del cover; agua, profundidad ≥ 6, Blog para x ≥ 380, cruza la fosa", () => {
     expect(LANE_OUT[0]).toEqual(BERTH);
-    expect(BERTH).toEqual({ x: 362, y: -2 });
+    expect(BERTH).toEqual({ x: 232, y: 50 });
     expect(inCoverQuad(BERTH.x, BERTH.y)).toBe(true);
     const end = LANE_OUT[LANE_OUT.length - 1]!;
     expect(inCoverQuad(end.x, end.y)).toBe(false);
     const L = laneLength("out");
-    expect(Math.abs(L - 783)).toBeLessThan(5); // ≈ 783.45; holgura para mover vértices hasta 2 u
+    expect(Math.abs(L - 955)).toBeLessThan(5); // ≈ 955.4; holgura para mover vértices hasta 2 u
     let crossedAbyss = false;
     for (let d = 0; d <= L; d += 1) {
       const p = laneAt("out", d);
@@ -33,18 +57,14 @@ describe("ruta", () => {
       if (t === "abyss") crossedAbyss = true;
     }
     expect(crossedAbyss).toBe(true);
-    expect(laneAt("out", 0).heading).toBeCloseTo(Math.atan2(22, 138), 6); // sale casi al este por la bocana
+    expect(laneAt("out", 0).heading).toBeCloseTo(Math.atan2(-58, 24), 6); // zarpa de la dársena hacia el nornoreste
   });
 
   it("ningún punto del carril queda detrás de un sólido estático que se le superponga en pantalla", () => {
-    const w = world(7);
-    const statics = w.solids.map((s) => ({ b: bounds(s), sb: screenBounds(bounds(s)) }));
+    const statics = staticsOf(world(7).solids);
     for (let d = 0; d <= laneLength("out"); d += 4) {
       const p = laneAt("out", d);
-      const parts = ship("cargo", shipAt("cargo", p, p.heading), p.heading).solids.map(bounds);
-      const sb = { min: { x: Math.min(...parts.map((b) => b.min.x)), y: Math.min(...parts.map((b) => b.min.y)), z: -1 }, max: { x: Math.max(...parts.map((b) => b.max.x)), y: Math.max(...parts.map((b) => b.max.y)), z: 13 } };
-      const scr = screenBounds(sb);
-      for (const s of statics) if (overlaps(scr, s.sb)) expect(isBehind(sb, s.b)).toBe(false);
+      expectNotBehind(statics, p, p.heading);
     }
   });
 
@@ -63,27 +83,11 @@ describe("ruta", () => {
 
 const inWorld = (x: number, y: number) => x >= WORLD.x0 && x <= WORLD.x1 && y >= WORLD.y0 && y <= WORLD.y1;
 
-type Static = { b: ReturnType<typeof bounds>; sb: ReturnType<typeof screenBounds> };
-const expectNotBehind = (statics: Static[], p: { x: number; y: number }, heading: number): void => {
-  const parts = ship("cargo", shipAt("cargo", p, heading), heading).solids.map(bounds);
-  const sb = { min: { x: Math.min(...parts.map((b) => b.min.x)), y: Math.min(...parts.map((b) => b.min.y)), z: -1 }, max: { x: Math.max(...parts.map((b) => b.max.x)), y: Math.max(...parts.map((b) => b.max.y)), z: 13 } };
-  const scr = screenBounds(sb);
-  for (const s of statics) if (overlaps(scr, s.sb)) expect(isBehind(sb, s.b)).toBe(false);
-};
-
 /** Silueta convexa en pantalla de un carguero centrado en `p`: anillo de cubierta proyectado a z −1 y z 13. */
 const silhouette = (p: { x: number; y: number }, heading: number): Vec2[] => {
   const hull = ship("cargo", shipAt("cargo", p, heading), heading).solids.find((s) => s.kind === "hull")!;
   if (hull.kind !== "hull") throw new Error("sin casco");
   return convexHull(hullRings(hull).deck.flatMap((q) => [project(v3(q.x, q.y, -1)), project(v3(q.x, q.y, 13))]));
-};
-/** SAT entre dos polígonos convexos: se intersecan si ningún eje (normal de un lado) los separa. */
-const intersects = (a: Vec2[], b: Vec2[]): boolean => {
-  const axes = [a, b].flatMap((poly) => poly.map((p, i) => { const q = poly[(i + 1) % poly.length]!; return { x: p.y - q.y, y: q.x - p.x }; }));
-  return axes.every((n) => {
-    const pa = a.map((p) => p.x * n.x + p.y * n.y), pb = b.map((p) => p.x * n.x + p.y * n.y);
-    return Math.max(...pa) >= Math.min(...pb) && Math.max(...pb) >= Math.min(...pa);
-  });
 };
 
 describe("dos carriles", () => {
@@ -92,7 +96,7 @@ describe("dos carriles", () => {
     expect(inCoverQuad(430, 655)).toBe(false);
     expect(LANE_BACK[LANE_BACK.length - 1]).toEqual(BERTH);
     const L = laneLength("back");
-    expect(Math.abs(L - 943)).toBeLessThan(5); // ≈ 942.67; holgura para mover vértices hasta 2 u
+    expect(Math.abs(L - 1164)).toBeLessThan(5); // ≈ 1164.3; holgura para mover vértices hasta 2 u
     for (let d = 0; d <= L; d += 1) {
       const p = laneAt("back", d);
       const t = inWorld(p.x, p.y) ? terrainAt(p.x, p.y) : bleedTerrainAt(p.x, p.y);
@@ -103,7 +107,7 @@ describe("dos carriles", () => {
   });
 
   it("ningún punto de LANE_BACK queda detrás de un sólido estático que se le superponga en pantalla", () => {
-    const statics = world(7).solids.map((s) => ({ b: bounds(s), sb: screenBounds(bounds(s)) }));
+    const statics = staticsOf(world(7).solids);
     for (let d = 0; d <= laneLength("back"); d += 4) {
       const p = laneAt("back", d);
       expectNotBehind(statics, p, p.heading);
@@ -121,7 +125,7 @@ describe("dos carriles", () => {
   });
 
   it("giro en el fondeadero: con el carguero centrado en BERTH, ningún rumbo entre el de llegada y el de salida lo deja detrás de un sólido estático", () => {
-    const statics = world(7).solids.map((s) => ({ b: bounds(s), sb: screenBounds(bounds(s)) }));
+    const statics = staticsOf(world(7).solids);
     const arrive = laneAt("back", laneLength("back")).heading, leave = laneAt("out", 0).heading;
     let d = leave - arrive; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; // arco corto
     for (let t = 0; t <= 1; t += 0.02) {
@@ -136,7 +140,7 @@ describe("dos carriles", () => {
   });
 
   it("laneAt('back') interpola el rumbo en los vértices y en el extremo llega con el rumbo del último tramo", () => {
-    const Lb = laneLength("back"), last = Math.atan2(-2 - -50, 362 - 400);
+    const Lb = laneLength("back"), last = Math.atan2(50 - -14, 232 - 212);
     expect(laneAt("back", Lb).heading).toBeCloseTo(last, 6);
     expect(laneAt("back", 0).heading).toBeCloseTo(Math.atan2(487 - 655, 471 - 430), 6);
   });
@@ -185,7 +189,7 @@ describe("dos carriles", () => {
     }
     a.tick(1000); // zarpa
     expect(a.state(0).lane).toBe("out");
-    expect(a.state(0).heading).toBeCloseTo(Math.atan2(22, 138), 6); // rumbo del primer tramo de LANE_OUT
+    expect(a.state(0).heading).toBeCloseTo(Math.atan2(-58, 24), 6); // rumbo del primer tramo de LANE_OUT
   });
 });
 
@@ -260,7 +264,7 @@ describe("lancha de la feria", () => {
       const a = fpts[i]!, b = fpts[i + 1]!;
       for (let t = 0; t <= 1; t += 0.05) {
         const p = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
-        const box = bounds({ kind: "hull", at: v3(p.x, p.y, -1), len: 26, beam: 7, h: 3, mat: "hull" });
+        const box = bounds({ kind: "hull", at: v3(p.x, p.y, -1), len: SHIP_SPECS.ferry.len, beam: SHIP_SPECS.ferry.beam, h: SHIP_SPECS.ferry.h, mat: "hull" });
         for (const s of statics) { const sb = bounds(s); if (overlaps(screenBounds(box), screenBounds(sb))) expect(isBehind(box, sb)).toBe(false); }
       }
     }

@@ -76,10 +76,26 @@ describe("ships", () => {
     const south = ship("tug", { x: 100, y: 100 }, Math.PI / 2);
     expect(Math.max(...south.solids.map((x) => bounds(x).max.y))).toBeCloseTo(100 + len, 6); // la punta del pudding es la roda
   });
-  it("lancha de dos cubiertas", () => {
-    const ferry = ship("ferry", { x: 0, y: 0 }, 0);
-    expect(ferry.solids.filter((x) => x.kind === "poly" && x.mat === "whitewash" && x.facade)).toHaveLength(2);
+  it("lancha colectiva del Tigre: casco de madera de 15 × 4 u, una sola cabina de ventanas corridas de dos tercios de la eslora, toldilla clara con alero, popa abierta y defensas; nada por encima de z 5", () => {
+    expect(SHIP_SPECS.ferry).toEqual({ len: 15, beam: 4, h: 1.2, sheer: 0.3, topMat: "deck" });
+    const ferry = ship("ferry", { x: 0, y: 0 }, 0), { len } = SHIP_SPECS.ferry;
+    const cabins = ferry.solids.filter((x) => x.kind === "poly" && x.facade);
+    expect(cabins).toHaveLength(1);
+    const cabin = cabins[0]!, cb = bounds(cabin);
+    expect(cabin.mat).toBe("deck"); // madera barnizada, no superestructura blanca
+    expect(cabin.kind === "poly" && cabin.facade?.base).toBe("glass");
+    expect(cb.max.x - cb.min.x).toBeGreaterThanOrEqual(len * 0.6);
+    expect(cb.min.x).toBeGreaterThanOrEqual(3); // popa abierta detrás de la cabina
+    const roof = ferry.solids.find((x) => x.kind === "poly" && x.mat === "whitewash" && Math.abs(bounds(x).min.z - cb.max.z) < 1e-6)!;
+    const rb = bounds(roof);
+    expect(rb.min.x).toBeLessThan(cb.min.x); expect(rb.max.x).toBeGreaterThan(cb.max.x); // alero
+    expect(rb.min.y).toBeLessThan(cb.min.y); expect(rb.max.y).toBeGreaterThan(cb.max.y);
+    expect(ferry.solids.filter((x) => x.mat === "asphalt")).toHaveLength(3); // defensas
+    expect(ferry.solids.filter((x) => x.kind === "poly" && x.mat === "deck" && !x.facade)).toHaveLength(2); // barandas de popa
+    expect(Math.max(...ferry.solids.map((x) => bounds(x).max.z))).toBeLessThanOrEqual(5);
+    expect(ferry.lights.slice(0, 3).map((l) => l.color)).toEqual(["magentaMid", "magenta", "cyanMid"]);
     expect(ferry.lights.some((l) => l.color === "amber")).toBe(true);
+    expect(ferry.lights.some((l) => l.kind === "poly" && l.color === "amberBleed")).toBe(true); // ventanas encendidas, cálidas y no neón
   });
   it("la estela son 17 triángulos detrás y a los lados del casco, con la ola de proa más clara", () => {
     for (const kind of KINDS) {
