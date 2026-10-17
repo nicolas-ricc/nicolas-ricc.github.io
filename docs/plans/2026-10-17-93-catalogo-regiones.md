@@ -396,3 +396,11 @@ Decididas en la revisión del plan, sin fuente escrita; cualquier opción razona
 - Assumptions: see `## Assumptions` (1 red intermediate commits, 2 private relocation not detected, 3 animated framing from the initial state, 4 long structures whole).
 - Issues opened: none.
 - Status: ok.
+
+## Rebase onto #87 and #94
+
+While this branch was open, `main` merged #94 (piece exhibits) and #87 (semi-straight lanes with no anchorage, buoys and wreck moved). The branch was rebuilt on top of `origin/main`:
+- The eight pieces carry the `group` of their row in the spec §3 table and sit inside that group's block.
+- `boyas` takes its box from the min/max of `BUOYS`, because the buoys moved to (398, 150) and (392, 200).
+- `pecio` still derives from `WRECK`.
+- `darsena` no longer has a ship at the anchorage, so `h` drops from 12 to 5 (the lamp at the corner). It still shows the quay, the bollards and the riprap.

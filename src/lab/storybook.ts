@@ -6,7 +6,7 @@ import { attachBloom, type BloomProbe } from "../world/bloom-runtime";
 import { type Box, boxFrame, fitTransform } from "../world/frame";
 import { type BloomMode, buildStage, type Stage } from "../world/stage";
 import { cropAnimators, cropScene, pieceScene, solidsBox } from "./crop";
-import { EXHIBITS, type Exhibit, ZONE_TITLE, pickExhibit, stepExhibit } from "./exhibits";
+import { EXHIBITS, type Exhibit, GROUPS, pickExhibit, stepExhibit } from "./exhibits";
 import { bloomFromSearch, nextBloomMode } from "./page";
 
 /**
@@ -20,11 +20,11 @@ const nav = document.getElementById("exhibits") as HTMLElement;
 const log = import.meta.env.DEV;
 const { scene, animators } = assembleWorld(undefined, { reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches });
 
-for (const zone of new Set(EXHIBITS.map((e) => e.zone))) {
+for (const g of GROUPS) {
   const h = document.createElement("h2");
-  h.textContent = ZONE_TITLE[zone];
+  h.textContent = g.title;
   const ul = document.createElement("ul");
-  for (const e of EXHIBITS.filter((x) => x.zone === zone)) {
+  for (const e of EXHIBITS.filter((x) => x.group === g.id)) {
     const a = document.createElement("a");
     a.href = `#${e.id}`; a.textContent = e.title; a.dataset.id = e.id;
     const li = document.createElement("li"); li.appendChild(a); ul.appendChild(li);
@@ -68,7 +68,7 @@ async function boot(): Promise<void> {
     current = e;
     fit();
     for (const a of nav.querySelectorAll<HTMLAnchorElement>("a")) {
-      if (a.dataset.id === e.id) a.setAttribute("aria-current", "page");
+      if (a.dataset.id === e.id) { a.setAttribute("aria-current", "page"); a.scrollIntoView({ block: "nearest" }); } // el índice no entra entero en la columna
       else a.removeAttribute("aria-current");
     }
   };
