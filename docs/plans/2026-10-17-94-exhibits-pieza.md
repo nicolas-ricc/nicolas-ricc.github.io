@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - `src/lab/crop.ts` y `src/lab/exhibits.ts` no importan Pixi.
-- Todo color sale de `src/map/palette-iso.ts` (`palette-guard.test.ts`); `Math.random` prohibido: el rng de campus y selva sale de `createRng(SEED)` (`src/map/seed.ts`).
+- Todo color sale de `src/map/palette-iso.ts` (`palette-guard.test.ts`); `Math.random` prohibido: el rng de campus y selva sale de `createRng` (`src/map/seed.ts`) con `SEED` (`src/world/assemble.ts`).
 - Comentarios y nombres de tests en castellano; tests Vitest al lado del módulo; sin Pixi en tests.
 - Sin dependencias nuevas. Commits `feat(#94): …`.
 - `buildStage` sin cambios; `lab/world.html` y el sitio no cambian.
@@ -210,7 +210,7 @@ describe("exhibits de pieza", () => {
 - [ ] **Step 2:** `npx vitest run src/lab/exhibits.test.ts` → FAIL (no hay piezas).
 - [ ] **Step 3: implementación** — en `exhibits.ts`:
   - el tipo: la variante `piece` ya existe (`exhibits.ts:11-14`, `{ kind: "piece"; build: (out: Solid[], accents: Accent[]) => void }`); se le agrega `pad?: Material` y el comentario del tipo menciona el pad.
-  - imports: `createRng, SEED` de `../map/seed`; `Material` de `../map/palette-iso`; `campus, lamp` de `../scenes/city-pieces`; `jungle` de `../scenes/flora`; `towerCrane` de `../scenes/pieces`; `ship, shipAt, type ShipKind` de `../scenes/ships`.
+  - imports: `createRng` de `../map/seed`, `SEED` de `../world/assemble`; `Material` de `../map/palette-iso`; `campus, lamp` de `../scenes/city-pieces`; `jungle` de `../scenes/flora`; `towerCrane` de `../scenes/pieces`; `ship, shipAt, type ShipKind` de `../scenes/ships`.
   - helper:
 
 ```ts
