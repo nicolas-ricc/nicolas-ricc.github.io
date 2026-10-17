@@ -1,11 +1,12 @@
 import { Application } from "pixi.js";
 import { ISO_COLORS } from "../map/palette-iso";
-import { assembleWorld } from "../world/assemble";
+import type { WorldScene } from "../scenes/world";
+import { assembleWorld, type ZonedAnimator } from "../world/assemble";
 import { scheduleIdle } from "../world/bloom";
 import { attachBloom, type BloomProbe } from "../world/bloom-runtime";
 import { type Box, boxFrame, fitTransform } from "../world/frame";
 import { type BloomMode, buildStage, type Stage } from "../world/stage";
-import { cropAnimators, cropScene, pieceScene, solidsBox } from "./crop";
+import { cropAnimators, cropScene, pieceScene, type Readout, readout, solidsBox } from "./crop";
 import { EXHIBITS, type Exhibit, GROUPS, pickExhibit, stepExhibit } from "./exhibits";
 import { bloomFromSearch, nextBloomMode } from "./page";
 
@@ -17,6 +18,7 @@ import { bloomFromSearch, nextBloomMode } from "./page";
  */
 const host = document.getElementById("lab-host") as HTMLDivElement;
 const nav = document.getElementById("exhibits") as HTMLElement;
+const panel = document.getElementById("readout") as HTMLElement;
 const log = import.meta.env.DEV;
 const { scene, animators } = assembleWorld(undefined, { reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches });
 
@@ -30,6 +32,30 @@ for (const g of GROUPS) {
     const li = document.createElement("li"); li.appendChild(a); ul.appendChild(li);
   }
   nav.append(h, ul);
+}
+
+const n1 = (x: number): string => x.toFixed(1);
+
+function renderReadout(r: Readout): void {
+  const b = r.box;
+  const rows: [string, string][] = [
+    ["Sólidos", String(r.solids)],
+    ["Caras", String(r.faces)],
+    ["Acentos", String(r.accents)],
+    ["Caja x", b ? `${n1(b.min.x)} … ${n1(b.max.x)}` : "—"],
+    ["Caja y", b ? `${n1(b.min.y)} … ${n1(b.max.y)}` : "—"],
+    ["Caja z", b ? `${n1(b.min.z)} … ${n1(b.max.z)}` : "—"],
+    ["Ancho × fondo × alto", b ? `${n1(b.w)} × ${n1(b.d)} × ${n1(b.h)} u` : "—"],
+    ["Materiales", r.materials.join(", ") || "—"],
+    ["Colores de acento", r.accentColors.join(", ") || "—"],
+  ];
+  const dl = document.createElement("dl");
+  for (const [k, v] of rows) {
+    const dt = document.createElement("dt"), dd = document.createElement("dd");
+    dt.textContent = k; dd.textContent = v;
+    dl.append(dt, dd);
+  }
+  panel.replaceChildren(dl);
 }
 
 void boot();
@@ -53,17 +79,21 @@ async function boot(): Promise<void> {
     // sin `context: true` los GraphicsContext de cada Graphics sobreviven hasta el GC de Pixi
     stage?.container.destroy({ children: true, context: true });
     const t0 = performance.now();
+    let src: [WorldScene, ZonedAnimator[]];
     if (e.kind === "region") {
       // la misma caja a ambos: el memo del recorte se indexa por identidad de Box
-      stage = buildStage(cropScene(scene, e.box), cropAnimators(animators, e.box));
+      src = [cropScene(scene, e.box), cropAnimators(animators, e.box)];
+      stage = buildStage(...src);
       frame = { box: e.box, h: e.h };
     } else {
       const piece = pieceScene(e.build, e.pad);
-      stage = buildStage(piece, []);
+      src = [piece, []];
+      stage = buildStage(...src);
       frame = solidsBox([...piece.ground, ...piece.solids]);
     }
     app.stage.addChild(stage.container);
     if (log) console.info(`[storybook] ${e.id}: primer dibujo ${(performance.now() - t0).toFixed(1)} ms, ${stage.staticCount} polígonos estáticos`);
+    renderReadout(readout(...src));
     stage.setBloom(mode);
     current = e;
     fit();

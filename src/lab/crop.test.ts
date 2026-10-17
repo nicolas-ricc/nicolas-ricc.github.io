@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
-import { bounds, type Solid, type Tri } from "../iso/solids";
+import { bounds, type Solid, type Tri, tessellate } from "../iso/solids";
+import type { Animator } from "../scenes/animator";
 import type { WorldScene } from "../scenes/world";
 import type { ZonedAnimator } from "../world/assemble";
-import { cropAccents, cropAnimators, cropScene, cropShared, overlaps, pieceScene, solidsBox } from "./crop";
+import { cropAccents, cropAnimators, cropScene, cropShared, overlaps, pieceScene, readout, solidsBox } from "./crop";
 
 const box = { x0: 0, y0: 0, x1: 10, y1: 10 };
 const prism = (x: number, y: number, w = 2): Solid => ({ kind: "prism", at: v3(x, y, 0), w, d: w, h: 3, mat: "concrete" });
@@ -151,5 +152,56 @@ describe("solidsBox", () => {
     const { box, h } = solidsBox([prism(-3, 1), prism(4, -2, 4)]);
     expect(box).toEqual({ x0: -3, y0: -2, x1: 8, y1: 3 });
     expect(h).toBe(3);
+  });
+});
+
+describe("readout", () => {
+  const hull: Solid = { kind: "hull", at: v3(5, 5, -1), len: 6, beam: 2, h: 2, mat: "hullBlue", topMat: "steel" };
+  const pad: Solid = { kind: "ground", mat: "paving", tris: [tri(0, 0)] };
+  const scene = {
+    ...pieceScene(() => {}),
+    terrain: { ground: [prism(100, 100)], bleed: [], water: [], foam: { kind: "ground", mat: "foam", tris: [] } },
+    ground: [pad],
+    solids: [prism(1, 1), hull],
+    accents: [{ kind: "dot", at: v3(1, 1, 3), r: 1, color: "cyan" }, { kind: "poly", pts: [v3(0, 0, 0)], color: "amber" }],
+  } as WorldScene;
+  const anim: Animator = {
+    ids: ["s", "a", "w"],
+    layer: (id) => id === "s"
+      ? { kind: "solid", solids: [{ kind: "prism", at: v3(-2, 0, 0), w: 1, d: 1, h: 8, mat: "brick" }] }
+      : id === "a"
+        ? { kind: "accent", accents: [{ kind: "dot", at: v3(0, 0, 9), r: 1, color: "cyan" }, { kind: "dot", at: v3(0, 0, 9), r: 1, color: "magenta" }] }
+        : { kind: "water", water: [prism(50, 50)] },
+    tick: () => new Set(),
+  };
+  const r = readout(scene, [anim]);
+  const all = [pad, prism(1, 1), hull, ...(anim.layer("s") as { solids: Solid[] }).solids];
+
+  it("cuenta suelo, sólidos y capas sólidas animadas; ni terreno ni agua", () => {
+    expect(r.solids).toBe(4);
+  });
+  it("las caras son las de tessellate sobre los mismos sólidos", () => {
+    expect(r.faces).toBe(all.reduce((n, s) => n + tessellate(s).length, 0));
+  });
+  it("cuenta acentos estáticos más los de capas de acentos", () => {
+    expect(r.accents).toBe(4);
+  });
+  it("la caja abarca los bounds de todos los sólidos, con ancho, fondo y alto", () => {
+    const bs = all.map(bounds);
+    const min = v3(Math.min(...bs.map((b) => b.min.x)), Math.min(...bs.map((b) => b.min.y)), Math.min(...bs.map((b) => b.min.z)));
+    const max = v3(Math.max(...bs.map((b) => b.max.x)), Math.max(...bs.map((b) => b.max.y)), Math.max(...bs.map((b) => b.max.z)));
+    expect(r.box).toEqual({ min, max, w: max.x - min.x, d: max.y - min.y, h: max.z - min.z });
+    expect(r.box?.min.x).toBe(-2);
+    expect(r.box?.max.z).toBe(8);
+  });
+  it("materiales de mat y topMat, ordenados y sin repetidos", () => {
+    expect(r.materials).toEqual(["brick", "concrete", "hullBlue", "paving", "steel"]);
+  });
+  it("colores de acento ordenados y sin repetidos", () => {
+    expect(r.accentColors).toEqual(["amber", "cyan", "magenta"]);
+  });
+  it("una escena sin sólidos ni animadores da caja nula y listas vacías", () => {
+    const empty = { ...scene, ground: [], solids: [], accents: [] } as WorldScene;
+    expect(readout(empty, [])).toEqual({ solids: 0, faces: 0, accents: 0, box: null, materials: [], accentColors: [] });
   });
 });
