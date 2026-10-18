@@ -8,7 +8,7 @@ import { chase } from "./neon";
  * Las animaciones de la ciudad, sin Pixi y con estado propio: el piso
  * encendido parpadea (se apaga un tick cada 4..9 s), papeles salen volando de
  * una ventana hacia el NNE, la luz de la antena pulsa y los neones del distrito
- * cambian: un cartel cada 3..7 s cambia de color o se apaga un paso, y dos luces
+ * cambian: un cartel cada 3..7 s (de tiempo de pared) cambia de color o se apaga un paso, y dos luces
  * corren por el malecón. Frame 0 = todo quieto y encendido; con reduced-motion
  * se queda ahí.
  */
@@ -25,6 +25,7 @@ export const PAPER_SIDE = 1.5; // desvío lateral máximo, perpendicular a la de
 export const PAPER_SIDE_RAMP = 5; // en cuántas unidades entra del todo el desvío
 export const NEON_STEP_MS = 150; // lo que dura un apagón de cartel
 export const SIGN_GAP_MS: [number, number] = [3000, 7000];
+const SEED_MAX = 2 ** 32 - 1; // semilla de un Rng derivado (sin literal 0x…: el guard de paleta lo tomaría por color)
 export const MALECON_STEP_MS = 250;
 export const MALECON_R = 0.35;
 const ANTENNA_BASE_R = 0.8, ANTENNA_PULSE_R = 0.3, ANTENNA_PERIOD = 1200; // r = 0.8 + 0.3·(1 + sin(t / 1200))
@@ -39,7 +40,7 @@ const NONE: CityAnimChanges = { lit: false, papers: false, antenna: false, neon:
 export function createCityAnim(tower: CityScene["tower"], neon: CityScene["neon"], rng: Rng, opts: { reducedMotion: boolean }): CityAnim {
   const w = tower.paperWindow;
   // flujo propio: compartir `rng` con los papeles haría que la pausa sorteada dependa del troceo
-  const blinkRng = createRng(rng.int(0, 0xffffffff));
+  const blinkRng = createRng(rng.int(0, SEED_MAX));
   const nextGap = (): number => blinkRng.int(BLINK_GAP_MS[0], BLINK_GAP_MS[1]);
 
   let clock = 0;
@@ -64,7 +65,8 @@ export function createCityAnim(tower: CityScene["tower"], neon: CityScene["neon"
   });
   // neones: van después del estado de los papeles para no reordenar sus tiradas
   const signs = neon.signs.map((a) => ({ a, color: a.color, offUntil: -1 }));
-  let signTimer = rng.int(SIGN_GAP_MS[0], SIGN_GAP_MS[1]);
+  const signRng = createRng(rng.int(0, SEED_MAX)); // flujo propio, por lo mismo que blinkRng
+  let signTimer = signRng.int(SIGN_GAP_MS[0], SIGN_GAP_MS[1]);
   let maleconStep = 0;
   let blinks = 0, signEvents = 0; // disparos desde la construcción, para fired()
 
@@ -112,11 +114,11 @@ export function createCityAnim(tower: CityScene["tower"], neon: CityScene["neon"
 
       for (const s of signs) if (s.offUntil >= 0 && clock >= s.offUntil) { s.offUntil = -1; c.neon = true; } // vuelve el tubo
       signTimer -= dtMs;
-      if (signTimer <= 0 && signs.length > 0) {
-        const s = signs[rng.int(0, signs.length - 1)]!;
-        if (rng.chance(0.5)) s.color = s.color === "cyan" ? "magenta" : "cyan";
+      while (signTimer <= 0 && signs.length > 0) { // un tick largo puede traer varios eventos
+        const s = signs[signRng.int(0, signs.length - 1)]!;
+        if (signRng.chance(0.5)) s.color = s.color === "cyan" ? "magenta" : "cyan";
         else if (s.offUntil < 0) s.offUntil = clock + NEON_STEP_MS;
-        signTimer = rng.int(SIGN_GAP_MS[0], SIGN_GAP_MS[1]);
+        signTimer += signRng.int(SIGN_GAP_MS[0], SIGN_GAP_MS[1]);
         signEvents++;
         c.neon = true; // un cambio de color o un apagón siempre se ve (SIGN_GAP_MS ≥ 3000 > NEON_STEP_MS)
       }
