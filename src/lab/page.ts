@@ -23,7 +23,7 @@ export function bloomFromSearch(search: string): BloomMode | null {
 export function speedFromSearch(search: string): number {
   const v = new URLSearchParams(search).get("speed")?.trim();
   const n = v ? Number(v) : NaN;
-  return Number.isFinite(n) && n >= 0 ? n + 0 : 1;
+  return Number.isFinite(n) && n >= 0 ? n + 0 : 1; // + 0 vuelve -0 en 0
 }
 
 export function nextBloomMode(mode: BloomMode): BloomMode {
