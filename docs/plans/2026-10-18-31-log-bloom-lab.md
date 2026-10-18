@@ -21,16 +21,22 @@
 ## Decisiones técnicas (declaradas)
 
 1. **Tests sobre el fuente.** Ninguno de los dos cambios se ve en una salida que un test unitario pueda observar: uno es texto de consola detrás de `import.meta.env.DEV` y un keydown, el otro es estado local de un closure del ticker. Extraer helpers solo para poder testearlos sería abstracción especulativa con un único sitio de uso. Los criterios del issue ya son greps, así que los tests leen `src/lab/page.ts` y `lab/world.html`.
-2. **`storybook.ts` queda afuera.** `src/lab/storybook.ts` tiene los mismos dos patrones con el prefijo `[storybook]`. El issue nombra solo `src/lab/page.ts`, y el grep del criterio 1 busca `[lab]`. Va a un follow-up.
+2. **`storybook.ts` queda afuera.** `src/lab/storybook.ts` tiene los mismos dos patrones con el prefijo `[storybook]`. El issue nombra solo `src/lab/page.ts`, y el grep del criterio 1 busca `[lab]`. Va al follow-up #132.
 3. **La ayuda de teclas no cambia.** El comentario y el `aria-label` describen qué hace la tecla, no el texto que loguea. Siguen siendo correctos, y un test lo deja fijado.
 
 ## Review Focus
 
 1. Que el texto nuevo no contenga `bloom:` (por ejemplo `bloom a mano:` sí; `bloom: a mano` no), porque un filtro por `bloom:` lo volvería a mezclar con el veredicto. Lo cubre el test de la Task 1, que busca la subcadena `bloom:` en todo `console.info` de `page.ts`.
-2. Que el modo logueado sea el nuevo (después de `setBloom`) y no el anterior. Se conserva el orden actual; lo revisa el reviewer, porque el test no lo distingue.
+2. Que el modo logueado sea el nuevo (después de `setBloom`) y no el anterior. Lo cubre el `toContain` de la Task 1, que incluye la llamada a `setBloom` antes del log.
 3. Que con `log` falso el ticker siga llamando `stage.tick` y `bloom?.tick(dt)`: sin eso se rompe la medición del bloom. Lo cubre el test de la Task 2, que exige `bloom?.tick(dt)` antes y fuera del `if (log)`.
 4. Que el reseteo `worst = 0; since = 0` quede dentro del mismo `if (log)`. Lo cubre el test de la Task 2.
 5. Que la ayuda de teclas siga nombrando la tecla 6 y sus tres modos. Lo cubre el test de la Task 1.
+
+## Assumptions
+
+- **El criterio 1 quiere cero líneas en `src/lab/`.** El veredicto medido se arma en `src/world/bloom-runtime.ts:37` con `` `[${prefix}] bloom: …` ``, así que `grep '\[lab\] bloom:' src/lab/` nunca lo encuentra literal. Leer "muestra solo el veredicto medido" como "no muestra nada que no sea el veredicto" da cero resultados. La alternativa descartada era mover el literal del veredicto a `src/lab/` para que el grep devuelva una línea. Eso cambia código fuera de alcance ("el formato del veredicto medido") y no le aporta nada al usuario.
+- **Tests sobre el fuente en vez de un spy de `console.info`.** Se descartó correr `bootWorldPage` en Vitest. El entorno es `node` (`vitest.config.ts`), sin `document` ni `matchMedia`, y `bootWorldPage` llama a `document.getElementById` y `new Application().init` (`src/lab/page.ts:32-40`).
+- **Ritmo de commits.** En la etapa 3 del pipeline se commitean los tests rojos (`test(#31): evals`) y en la 4 cada task (`fix(#31): …`). La PR entra a `main` con squash, así que `main` nunca ve el rojo.
 
 ---
 
@@ -54,7 +60,7 @@ describe("logs del lab (#31)", () => {
   it("la tecla 6 no usa el prefijo bloom: del veredicto medido", () => {
     const infos = pageSrc.match(/console\.info\(`[^`]*`\)/g) ?? [];
     expect(infos.filter((l) => l.includes("bloom:"))).toEqual([]);
-    expect(pageSrc).toContain("console.info(`[lab] bloom a mano: ${stage.bloom}`)");
+    expect(pageSrc).toContain("stage.setBloom(nextBloomMode(stage.bloom)); if (log) console.info(`[lab] bloom a mano: ${stage.bloom}`);");
   });
   it("la ayuda de teclas sigue describiendo la tecla 6", () => {
     expect(pageSrc).toMatch(/6 rota el bloom entre off, on y fallback/);
@@ -65,7 +71,7 @@ describe("logs del lab (#31)", () => {
 
 - [ ] **Step 2:** `npx vitest run src/lab/page.test.ts`. Esperado: FALLA el primer test (encuentra `[lab] bloom: ${stage.bloom}`). El segundo pasa.
 - [ ] **Step 3: implementación.** En `src/lab/page.ts:68` cambiar `` console.info(`[lab] bloom: ${stage.bloom}`) `` por `` console.info(`[lab] bloom a mano: ${stage.bloom}`) ``.
-- [ ] **Step 4:** `npx vitest run src/lab/page.test.ts` en verde, y `grep -n '\[lab\] bloom:' src/lab/` sin resultados.
+- [ ] **Step 4:** `npx vitest run src/lab/page.test.ts` y `npm run typecheck` en verde, y `grep -n '\[lab\] bloom:' src/lab/` sin resultados.
 - [ ] **Step 5:** commit `fix(#31): la tecla 6 del lab loguea "bloom a mano"`.
 
 ### Task 2: peor redibujo solo con log
@@ -99,3 +105,11 @@ describe("logs del lab (#31)", () => {
 
 - [ ] **Step 4:** `npm test` y `npm run typecheck` en verde.
 - [ ] **Step 5:** commit `fix(#31): el ticker del lab acumula el peor redibujo solo con log`.
+
+## Grilling
+
+- Rondas: 1 (los cambios de la ronda no movieron ningún seam ni sumaron tasks). Griller: `fable`.
+- Preguntas: 16. Fuentes: ISSUE 3, CODE 11, DOC 1, sin fuente 4 (los cuatro son supuestos técnicos; ninguno es ambigüedad de spec).
+- Supuestos: los de `## Assumptions`, más que el regex de la Task 2 sigue el formato a mano del repo. No hay Prettier ni ESLint.
+- Cambios al plan: el `toContain` de la Task 1 ahora incluye `setBloom` antes del log (Review Focus 2), y el typecheck también corre en la Task 1.
+- Issues abiertos: #132 (el mismo arreglo en `src/lab/storybook.ts`).
