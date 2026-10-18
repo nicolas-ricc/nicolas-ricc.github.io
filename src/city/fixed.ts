@@ -77,13 +77,11 @@ export function bridge(solids: Solid[], accents: Accent[]): void {
     solids.push(...stoneArch(a, y0, span, d, z, (s) => z - r + (r - ARCH_KEY) * s));
   }
   solids.push(prism(WEST_QUAY.x0, y0, 0.6, WEST_QUAY.x1 - WEST_QUAY.x0, d, z - 0.6, "plaza")); // estribo (0.6, el tope del muelle): el tablero apoya, no flota
-  // balaustrada entre obeliscos: postes cada 3 o menos de punta a punta y un pasamanos encima
   const run = x1 - x0 - 2 * OBELISK, posts = Math.ceil((run - 0.3) / POST_STEP), step = (run - 0.3) / posts;
   for (const ry of [y0, y1 - 0.3]) {
     for (let i = 0; i <= posts; i++) solids.push(prism(x0 + OBELISK + i * step, ry, top, 0.3, 0.3, 0.9, "stone"));
     solids.push(prism(x0 + OBELISK, ry + 0.05, top + 0.9, run, 0.2, 0.2, "stone"));
   }
-  // obeliscos en las cuatro esquinas del tablero, con remate piramidal y una luz ámbar encima
   for (const ox of [x0, x1 - OBELISK]) for (const oy of [y0, y1 - OBELISK]) {
     const cx = ox + OBELISK / 2, cy = oy + OBELISK / 2;
     solids.push(prism(ox, oy, top, OBELISK, OBELISK, 4, "stone"), { kind: "cone", at: v3(cx, cy, top + 4), r: 0.6, h: 1, mat: "stone", sides: 4 });
