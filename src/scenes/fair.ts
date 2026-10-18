@@ -243,7 +243,7 @@ export function fair(rng: Rng): FairScene {
   const arcadeSigns = arcade(solids);
   booths(solids, accents);
   bumperCars(solids, accents);
-  beach(solids, rng);
+  beach(solids, rng); // después de los sólidos estáticos: los botes buscan lugar libre entre ellos
   gate(solids, accents);
   const drop = { at: v3(DROP.x, DROP.y, 1), h: DROP.h };
   return { ground: [], solids, accents, wheelAxis: v3(WHEEL.x, WHEEL.y, WHEEL.hub), drop, neon: neon(drop), arcadeSigns };

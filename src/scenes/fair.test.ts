@@ -103,8 +103,8 @@ describe("fair", () => {
 });
 
 describe("botes varados de la playa (#98)", () => {
-  // La escena de los tests, la del sitio y 40 seeds más: el rumbo de cada bote sale del rng y cambia su planta.
-  const scenes = [fair(createRng(7)), fair(zoneRng(SEED, "portfolio", 3)), ...Array.from({ length: 40 }, (_, i) => fair(createRng(i + 1)))];
+  // La escena de los tests, la del sitio y 40 seeds más (8..47, sin repetir el 7): el rumbo de cada bote sale del rng y cambia su planta.
+  const scenes = [fair(createRng(7)), fair(zoneRng(SEED, "portfolio", 3)), ...Array.from({ length: 40 }, (_, i) => fair(createRng(i + 8)))];
   const hulls = (s: ReturnType<typeof fair>) => s.solids.filter((x): x is Solid & { kind: "hull" } => x.kind === "hull");
   /** Las plantas (cajas en x e y) se tocan si se solapan con interior no vacío. */
   const touch = (a: Bounds, b: Bounds) => a.min.x < b.max.x && b.min.x < a.max.x && a.min.y < b.max.y && b.min.y < a.max.y;
