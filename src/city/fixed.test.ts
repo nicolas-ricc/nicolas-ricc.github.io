@@ -282,8 +282,8 @@ describe("plazaAndTower", () => {
 
   it("lo nuevo no pasa de 5 ni se solapa con bancos, faroles, cordón ni torre", () => {
     const { solids } = built();
-    const fountain = solids.filter((s) => s.mat === "marble"), kiosks = solids.filter((s) => s.mat === "terracotta" || kiosksOf(solids).includes(s as Solid & { kind: "prism" }));
-    const fresh = [...fountain, ...kiosks];
+    const kioskBodies = new Set<Solid>(kiosksOf(solids));
+    const fresh = solids.filter((s) => s.mat === "marble" || s.mat === "terracotta" || kioskBodies.has(s));
     expect(fresh.length).toBe(2 + 4);
     const rest = solids.filter((s) => !fresh.includes(s)).map(bounds);
     for (const s of fresh) {
