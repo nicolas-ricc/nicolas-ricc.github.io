@@ -3,7 +3,7 @@ import type { Accent } from "../iso/accent";
 import { centroid, v3 } from "../iso/geometry";
 import { bounds, type Solid } from "../iso/solids";
 import { createRng } from "../map/seed";
-import { antenna, awning, beacon, bench, bollard, car, chair, container, dockCrane, fence, fountain, garland, helipad, kiosk, lamp, machineRoom, neon, patioTree, puddle, roofShrub, rooftopGarden, sign, solarPanel, streetTree, table, trafficLight, waterTank } from "./props";
+import { antenna, awning, beacon, bench, bollard, car, chair, clock, container, dockCrane, fence, fountain, garland, helipad, kiosk, lamp, machineRoom, neon, patioTree, puddle, roofShrub, rooftopGarden, sign, solarPanel, streetTree, table, trafficLight, waterTank } from "./props";
 
 const AT = v3(10, 20, 0.3);
 const size = (s: Solid) => { const b = bounds(s); return [b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z].map((n) => Math.round(n * 100) / 100); };
@@ -60,6 +60,25 @@ describe("props", () => {
     if (a.kind !== "poly") throw new Error("cartel no poly");
     expect(a.color).toBe("amber");
     expect(new Set(a.pts.map((p) => p.y))).toEqual(new Set([AT.y + 0.42]));
+  });
+
+  it("cartel mirando al este: caja de 0.4 en x, w a lo largo de y, panel coplanar en x delante de la caja", () => {
+    const s = sign(AT, 4, 1.2, "e");
+    expect(only(s.solids)).toMatchObject({ kind: "prism", at: AT, w: 0.4, d: 4, h: 1.2, mat: "officeDark" });
+    const a = s.accents[0]!;
+    if (a.kind !== "poly") throw new Error("cartel no poly");
+    expect(new Set(a.pts.map((p) => p.x))).toEqual(new Set([AT.x + 0.42]));
+    expect(Math.min(...a.pts.map((p) => p.y))).toBeCloseTo(AT.y + 0.3, 9);
+    expect(Math.max(...a.pts.map((p) => p.y))).toBeCloseTo(AT.y + 4 - 0.3, 9);
+  });
+
+  it("reloj: octógono amberBleed alpha 0.9 de radio 1.2, 0.02 delante de la cara sur", () => {
+    const c = clock(5, 10, 3);
+    if (c.kind !== "poly") throw new Error("reloj no poly");
+    expect(c).toMatchObject({ color: "amberBleed", alpha: 0.9 });
+    expect(c.pts).toHaveLength(8);
+    expect(new Set(c.pts.map((p) => p.y))).toEqual(new Set([10.02]));
+    for (const p of c.pts) expect(Math.hypot(p.x - 5, p.z - 3)).toBeCloseTo(1.2, 9);
   });
 
   it("neón: dos polys, halo Bleed 1.3× el frente y detrás de él (más al oeste y al norte)", () => {
