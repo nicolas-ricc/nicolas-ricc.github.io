@@ -235,3 +235,36 @@ Expected: PASS los tres.
 git add src/lab/storybook.ts src/lab/storybook.test.ts
 git commit -m "fix(#102): storybook recycles stages through Stage.destroy"
 ```
+
+## Assumptions
+
+Decididas en el grilling, sin fuente directa. Cualquier opción razonable cumple el issue.
+
+1. **`tick` también es no-op tras `destroy()`.** El brief nombra solo `setBloom`, `setLayer` y `setFocus`. `tick` se agrega porque el ticker del storybook llama `stage.tick` en cada frame (`src/lab/storybook.ts:136-139`), y redibujar Graphics ya destruidas lanzaría. Alternativa rechazada: dejar `tick` sin guarda y confiar en que `show()` reemplaza `stage` en la misma tarea síncrona.
+2. **`BlurFilter.destroy()` no destruye sus dos pasadas internas** (`blurXFilter` y `blurYFilter`, `node_modules/pixi.js/lib/filters/defaults/blur/BlurFilter.mjs:26-27`). No las destruye porque no sobrescribe `destroy`. El stage llama al `destroy()` público del filtro y no toca esas pasadas: son internas de Pixi, y sus programas están cacheados y compartidos (`Shader.destroy(destroyPrograms = false)`). Alternativa rechazada: destruir `blurXFilter` y `blurYFilter` a mano, que acopla el stage a la implementación interna de Pixi.
+3. **El script de agent-browser (`.scratch/evals-102.md`) no se versiona** y no es un gate de CI. Lo corre la etapa de implementación con el dev server levantado. Lo que cubre (Review Focus 5) va al PR como verificación hecha.
+4. **El commit de tests en rojo (`test(#102): evals`) queda en la rama.** CI (`.github/workflows/deploy.yml:26-28`) corre sobre la cabeza del PR, que se mergea con squash. Hay un precedente en el historial: `a30a61e test(#21): …`.
+
+## Grilling
+
+Una ronda, 17 preguntas. El plan solo sumó `## Assumptions` y no cambió de forma sustancial, así que no hizo falta una segunda ronda.
+
+Por tipo de fuente:
+- ISSUE: 2 (Q4: brief "Tras `destroy()`, llamar a `setBloom`/`setLayer`/`setFocus` no lanza (no-op)", más `tick` como assumption 1; Q8: el brief pide que el storybook llame a `stage.destroy()`).
+- CODE: 12.
+  - Q1: `stage.test.ts:3-8` solo reemplaza los filtros, y `Container`/`Graphics` son los reales.
+  - Q2: `effectsMixin.mjs:77-79`, donde `get filters` devuelve `_filterEffect?.filters`, y `Container.mjs:1143` lo pone en null. `destroy` no toca los filtros de los hijos.
+  - Q3: `stage.ts:62` fija el orden de los hijos, `stage.test.ts:107` lo documenta, y en `on` el `bloomSlot` entra en el índice 8 (`getChildIndex(accentSlot)`), así que no mueve el 3 ni el 4.
+  - Q5: `Graphics.mjs:146-150` solo destruye el contexto si es `_ownedContext` o si `options.context === true`, y `buildBloomSlot` corre una sola vez (`bloomSlot ?? buildBloomSlot()`, `stage.ts:154`).
+  - Q6: `Container.mjs:1138-1140`, donde `removeChildren` y `removeFromParent` pasan antes de iterar `oldChildren`.
+  - Q7: `destroy()` es síncrono, así que no hay un render entre las dos llamadas.
+  - Q10: `storybook.ts:72`, `let stage: Stage | null`.
+  - Q11: `storybook.ts:84` es el único `destroy` del archivo.
+  - Q12: los filtros se crean inline en `stage.ts:58-59` y `:136`, no se exportan, y `HaloStyle` no es un filtro.
+  - Q14: con solo la Task 1 aplicada, el storybook se comporta como hoy.
+  - Q15: `Shader.mjs:155-157` es idempotente (`_destroyed`), y `bloomSlot` se arma una sola vez.
+  - Q16: ningún `toEqual` sobre filtros. `bloomSlotOf` compara `options` por identidad.
+- DOC: 1 (Q17: no existen `CONTEXT.md` ni `docs/adr/`).
+- NO SOURCE: 3 (Q9 y Q13 son las assumptions 3 y 4, y la nota sobre `BlurFilter` es la assumption 2).
+
+Issues abiertos: ninguno. No hubo ambigüedades de spec.
