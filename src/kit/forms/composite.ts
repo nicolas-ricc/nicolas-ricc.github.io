@@ -3,7 +3,7 @@ import type { Facade } from "../../iso/facade";
 import type { Rng } from "../../map/seed";
 import { prism } from "../../scenes/city-pieces";
 import { RECIPE_MAX_H, addBuilding, emptyPiece, shiftTone, southSign } from "../piece";
-import { ANTENNA_H, MACHINE_ROOM_H, WATER_TANK_H, antenna, machineRoom, waterTank } from "../props";
+import { ANTENNA_H, MACHINE_ROOM_H, WATER_TANK_H, antenna, beacon, machineRoom, waterTank } from "../props";
 import { CORNICE_H, cornice, offsetFootprint } from "../roofs";
 import type { Lot, Piece, RecipeDef, Side, Style } from "../types";
 
@@ -114,9 +114,36 @@ export function chamfer(lot: Lot, rng: Rng, style: Style): Piece {
   return p;
 }
 
+const L_ARM = 8;
+
+/** L de seis vértices en orden canónico, brazos de ancho `arm` al norte y al oeste: el hueco queda al sureste, hacia la cámara. */
+export const lFootprint = (x: number, y: number, w: number, d: number, arm: number): Vec2[] => [
+  { x, y }, { x: x + w, y }, { x: x + w, y: y + arm }, { x: x + arm, y: y + arm }, { x: x + arm, y: y + d }, { x, y: y + d },
+];
+
+/**
+ * L con torre: ala baja en L con fachada y cornisa; torre de L_ARM × L_ARM
+ * apoyada sobre el codo, a ras de las caras del hueco. El hueco queda vacío
+ * (regla de profundidad); por eso la cornisa son dos losas, una por brazo, y
+ * no un poly agrandado, que sería cóncavo y tendría al ala en su hueco.
+ */
+export function lTower(lot: Lot, rng: Rng, style: Style): Piece {
+  const p = emptyPiece(), { x, y, w, d, z } = lot;
+  const wh = rng.int(5, 7), wf: Facade = { floors: floors(wh, style), cols: 3 };
+  addBuilding(p, { kind: "poly", footprint: lFootprint(x, y, w, d, L_ARM), z, h: wh, mat: style.mat, facade: wf, tone: style.tone }, wf);
+  const top = z + wh;
+  p.solids.push(prism(x - 0.5, y - 0.5, top, w + 1, L_ARM + 0.5, CORNICE_H, style.trim), prism(x - 0.5, y + L_ARM, top, L_ARM + 0.5, d - L_ARM + 0.5, CORNICE_H, style.trim));
+  const total = Math.min(rng.int(12, 16), cap(lot)), th = total - wh - CORNICE_H;
+  const tf: Facade = { floors: floors(th, style), cols: 3 };
+  addBuilding(p, prism(x, y, top + CORNICE_H, L_ARM, L_ARM, th, style.mat, { facade: tf, tone: shiftTone(style.tone, 1) }), tf);
+  p.accents.push(...beacon(v3(x + L_ARM / 2, y + L_ARM / 2, z + total)).accents);
+  return p;
+}
+
 export const COMPOSITE: readonly RecipeDef[] = [
   { name: "podiumTower", recipe: podiumTower, family: "composite" },
   { name: "twinTowers", recipe: twinTowers, family: "composite" },
   { name: "decoStepped", recipe: decoStepped, family: "composite" },
   { name: "chamfer", recipe: chamfer, family: "composite" },
+  { name: "lTower", recipe: lTower, family: "composite" },
 ];
