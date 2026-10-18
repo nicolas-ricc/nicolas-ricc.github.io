@@ -159,7 +159,6 @@ describe("setLayer", () => {
 
 describe("destroy", () => {
   type Stub = { destroyed: boolean };
-  const shadowFilters = (c: Container) => [c.children[3]!, c.children[4]!].flatMap((k) => k.filters as unknown as Stub[]);
 
   it("destruye el bloomSlot creado por on aunque el modo actual sea off, y libera su filtro", () => {
     const s = build();
@@ -176,7 +175,7 @@ describe("destroy", () => {
   it("destruye el árbol con sus contextos y los filtros de sombra", () => {
     const s = build();
     const accent = accentSlotOf(s.container).children[0] as Graphics, ctx = accent.context;
-    const alphas = shadowFilters(s.container);
+    const alphas = [s.container.children[3]!, s.container.children[4]!].flatMap((k) => k.filters as unknown as Stub[]);
     s.destroy();
     expect(s.container.destroyed).toBe(true);
     expect(accent.destroyed).toBe(true);

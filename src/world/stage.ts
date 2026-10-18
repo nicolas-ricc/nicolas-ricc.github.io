@@ -47,7 +47,6 @@ interface AccentGraphics { g: Graphics; zone: WorldZone | null; base: number; dr
  * El bloom es perezoso: arranca en `off`, sin `bloomSlot`; el primer `setBloom("on")`
  * lo arma (espejos de los acentos con filtro) y lo inserta justo debajo de `accentSlot`.
  * Un `bloomSlot` armado después de `setLayer("accents", false)` nace oculto.
- * `destroy()` libera también el `bloomSlot` separado del árbol (#102).
  */
 export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage {
   const container = new Container();
