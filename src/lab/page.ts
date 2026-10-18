@@ -76,9 +76,11 @@ export function bootWorldPage(zones: readonly WorldZone[] | undefined, frame: Fr
       stage.tick(ticker.deltaMS * speed);
       const dt = performance.now() - t;
       bloom?.tick(dt);
-      worst = Math.max(worst, dt);
-      since += ticker.deltaMS;
-      if (log && since > 5000) { console.info(`[lab] peor redibujo en 5 s: ${worst.toFixed(2)} ms`); worst = 0; since = 0; }
+      if (log) {
+        worst = Math.max(worst, dt);
+        since += ticker.deltaMS;
+        if (since > 5000) { console.info(`[lab] peor redibujo en 5 s: ${worst.toFixed(2)} ms`); worst = 0; since = 0; }
+      }
     });
   }
 }
