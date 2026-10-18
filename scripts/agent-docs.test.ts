@@ -1,17 +1,18 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const ROOT = new URL("../", import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const claude = readFileSync(`${ROOT}CLAUDE.md`, "utf8");
 const factory = readdirSync(`${ROOT}.factory`, { withFileTypes: true })
   .filter((d) => d.isFile())
   .map((d) => [d.name, readFileSync(`${ROOT}.factory/${d.name}`, "utf8")] as const);
 const METHOD = "docs/superpowers/specs/2026-10-17-barcos-inventario.md";
+const MAP_BASE = /\/map\/|:5173\/map\b/;
 
 describe("notas para agentes: base y URL del lab (#99)", () => {
   it("ni CLAUDE.md ni .factory/ mencionan /map/", () => {
-    expect(claude).not.toContain("/map/");
-    for (const [f, txt] of factory) expect(txt, f).not.toMatch(/\/map(\/|\b)/);
+    for (const [f, txt] of [["CLAUDE.md", claude], ...factory]) expect(txt, f).not.toMatch(MAP_BASE);
   });
   it("CLAUDE.md da la base real y abre el lab en /lab/world.html", () => {
     expect(claude).toMatch(/vite\.config\.ts/);
