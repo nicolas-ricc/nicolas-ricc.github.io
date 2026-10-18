@@ -117,6 +117,7 @@ y actualizar el comentario de `CityScene.accents` (las animables y el neón que 
   - frame 0: `windows()` igual a `lights.windows.filter(animable && on)` mapeadas a `{ kind: "poly", pts, color, alpha: WINDOW_ALPHA }`.
   - 60 s con ticks de 100 ms: ≥ 40 ticks con `c.windows`; en todo tick `|encendidas − objetivo| ≤ max(1, round(0.05·n))`; todo `pts` devuelto está entre los `pts` de las animables.
   - escena sintética con `lights.windows = []`: `windows()` vacío y nunca `c.windows` en 10 s.
+  - escenas sintéticas con una sola ventana animable (encendida) y con dos (apagadas): en 10 s la cantidad encendida nunca sale de `objetivo ± 1` y no hay excepción.
   - `reducedMotion`: `windows()` = frame 0 y `tick` = `NONE` (con `windows: false`).
   - mismo rng → mismas capas tras los mismos ticks (incluye `dt` 5000).
   - el test de reduced-motion existente compara contra el `NONE` con `windows: false` y `neon: false`.
@@ -188,3 +189,17 @@ if (street) {
 - [ ] `npm test` y `npm run typecheck` verdes.
 - [ ] `npm run dev -- --host --port 5173`; `lab/resume.html?speed=0.3` con agent-browser: ventanas que cambian y neón que titila (captura para el PR).
 - [ ] Commit `docs(#46): …`.
+
+## Assumptions
+
+- **Orden de tiradas dentro de `tick`:** ventanas y después titileo, al final del tick (después del malecón), igual que en el constructor. Alternativa descartada: intercalarlas antes de los carteles (cambiaría la secuencia de carteles desde el primer tick).
+- **Ticks grandes:** a lo sumo un evento de ventanas y un titileo por tick (`if`, no `while`), como ya hacen los carteles (`city-anim.ts`). Con `dt ≥ NEON_STEP_MS` un mismo tick puede cerrar un titileo y abrir el siguiente; el test de duración usa `dt = 10`. Alternativa descartada: recuperar eventos perdidos con `while`.
+- **Halo y frente por posición:** el titileo toca los dos primeros acentos del `StreetNeon` (orden de `neon()` en `src/kit/props.ts:78`, halo y después frente), y el test de la tarea 4 fija ese contrato (frente y halo a 0.3, charco sin cambios). Alternativa descartada: clasificarlos por color o alfa.
+- **Verificación visual:** time-lapse con `deltaMS` fijo sobre el listener del ticker (método de CLAUDE.md), porque en headless `?speed=0.3` rinde ~0.06 s simulados por segundo real. Alternativa descartada: captura en vivo.
+- **Posición de la tirada de `flicker`:** ningún test fija la secuencia de tiradas de `lights()` contra una línea base; queda garantizada por el código (última tirada antes del `return`) y por el review. Alternativa descartada: un snapshot nuevo de `lights()`.
+
+## Grilling
+
+- Rondas: 1 (los cambios al plan no fueron sustanciales: un test sintético más y supuestos).
+- Preguntas: 19. Fuentes: CODE 15, ISSUE 4 (algunas con ambas), NO SOURCE 4 → todas supuestos técnicos (arriba).
+- Ambigüedades de spec: ninguna. Issues abiertos: ninguno.
