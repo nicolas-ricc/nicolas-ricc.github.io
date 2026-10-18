@@ -1,7 +1,8 @@
 # mapa — notas para agentes
 
 Leer también `README.md` (arquitectura, scripts) y `.factory/config.toml`
-(comandos de test, typecheck y dev server). Base del sitio: `/map/`.
+(comandos de test, typecheck y dev server). El sitio se sirve en la raíz `/`
+(`base: "/"` en `vite.config.ts`); las páginas del lab, en `/lab/<página>.html`.
 
 ## PixiJS DevTools en agent-browser
 
@@ -17,7 +18,7 @@ a forzar headless por `--args`:
     export AGENT_BROWSER_SESSION=pixi            # sesión aparte, opcional
     agent-browser set viewport 1600 900 2         # capturas legibles (2x)
     agent-browser --extension ~/.agent-browser/extensions/pixijs-devtools/ext \
-      --args "--headless=new" open http://localhost:5173/map/lab/world.html
+      --args "--headless=new" open http://localhost:5173/lab/world.html
 
 El panel visual de la extensión no se ve desde la CLI; lo útil para un agente
 es la API que inyecta en la página, consultable con `agent-browser eval`.

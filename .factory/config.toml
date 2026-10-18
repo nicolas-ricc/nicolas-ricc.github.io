@@ -4,7 +4,8 @@
 test = "npm test"
 # No linter is configured; the repo's only static gate is the typecheck CI runs.
 lint = "npm run typecheck"
-# The site is served under base /map/ (vite.config.ts): open http://localhost:5173/map/.
+# The site is served at the root (base "/" in vite.config.ts): open http://localhost:5173/;
+# lab pages are at http://localhost:5173/lab/<page>.html.
 # --host overrides the 127.0.0.1 bind in vite.config.ts so a browser outside the
 # container can reach it. `predev` regenerates content/blog.generated.json first.
 dev_server = "npm run dev -- --host --port 5173"
