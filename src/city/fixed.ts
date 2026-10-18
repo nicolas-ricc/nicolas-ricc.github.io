@@ -121,6 +121,8 @@ export function collapsed(solids: Solid[], rng: Rng): void {
   // la losa grande del edificio caído, más dos cascotes; las tres enteras en agua (x + w < estuaryEast) y al oeste del labio de la rampa
   for (const [x, y, z, w, d] of [[c.x - 14, c.y + 8, -0.9, 8, 6], [c.x - 12, c.y + 1, -0.5, 4, 3], [c.x - 16, c.y + 16, -0.7, 3, 4]] as const) solids.push(prism(x, y, z, w, d, 1.2, "officeDark"));
   solids.push(prism(FALLEN_BLOCK.x, FALLEN_BLOCK.y, 0, FALLEN_BLOCK.w, FALLEN_BLOCK.d, 1, "officeDark")); // el cuarto, caído en la calle frente al malecón (el agua frente al malecón es zona Blog)
+  // fragmento de cúpula caído: casquete hundido en el agua, al sur de la losa grande (el (x − 9, y + 12) del issue cae dentro de ella)
+  solids.push({ kind: "dome", at: v3(c.x - 9.5, c.y + 17.5, -0.9), r: 3, h: 1.3, mat: "officeDark", sides: 8, rings: 2, tone: -1 });
 }
 
 /**
