@@ -1,6 +1,6 @@
 import type { Accent } from "../iso/accent";
 import { polyline, v3, type PolyPoint, type Vec2, type Vec3 } from "../iso/geometry";
-import type { Solid } from "../iso/solids";
+import { bounds, type Bounds, type Solid } from "../iso/solids";
 import type { AccentColor, Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { FAIR, bayShoreX, bayWater, fairAt } from "./sprawl-grid";
@@ -188,6 +188,31 @@ function bumperCars(out: Solid[], accents: Accent[]): void {
   for (let i = 0; i < 6; i++) accents.push(dot(x + 2 + (i % 3) * 5, y + 2.5 + Math.floor(i / 3) * 5, 3.6, 0.4, "cyan"));
 }
 
+/** Plantas (cajas en x e y) que se solapan con interior no vacío. */
+const touch = (a: Bounds, b: Bounds): boolean => a.min.x < b.max.x && b.min.x < a.max.x && a.min.y < b.max.y && b.min.y < a.max.y;
+/** Caja entera sobre la arena de la feria: sus bordes este y oeste, cada 0,5 u en y. `fairAt` ya excluye la bahía, y la orilla no es monótona (en y −276..−268 baja a 211 y vuelve a subir), así que no alcanza con las esquinas. */
+const onSand = (b: Bounds): boolean => {
+  for (let y = b.min.y; ; y = Math.min(y + 0.5, b.max.y)) { if (!fairAt(b.min.x, y) || !fairAt(b.max.x, y)) return false; if (y === b.max.y) return true; }
+};
+
+/**
+ * Bote varado cerca de `y0`: recorre la orilla (dy 0, +1, −1 … ±14) y, en cada y, de 9 a 6 u del agua, hasta que el
+ * casco queda entero sobre la arena de la feria (`onSand`) y su planta no toca la de nada de `taken`. A 9 u del agua cae dentro
+ * del paseo de madera (de 16 a 8 u de la orilla) salvo donde la orilla se corre, por eso se acerca al agua antes de
+ * alejarse en y. `null` si no hay lugar.
+ */
+function boatAt(y0: number, heading: number, taken: readonly Bounds[]): Solid | null {
+  for (let i = 0; i <= 28; i++) {
+    const y = y0 + (i % 2 ? (i + 1) / 2 : -i / 2);
+    for (const back of [9, 8, 7, 6]) {
+      const hull: Solid = { kind: "hull", at: v3(bayShoreX(y) - back, y, 0), len: 5, beam: 1.8, h: 0.8, mat: "whitewash", heading, sheer: 0.3 };
+      const b = bounds(hull);
+      if (onSand(b) && taken.every((t) => !touch(t, b))) return hull;
+    }
+  }
+  return null;
+}
+
 function beach(out: Solid[], rng: Rng): void {
   let placed = 0, tries = 0;
   while (placed < 12 && tries++ < 200) {
@@ -196,7 +221,8 @@ function beach(out: Solid[], rng: Rng): void {
     out.push(prism(x - 0.12, y - 0.12, 0, 0.25, 0.25, 2, "steel"), cone(x, y, 2, 1.6, 0.7, rng.chance(0.5) ? "whitewash" : "rust", 8));
     placed++;
   }
-  for (let k = 0; k < 4; k++) { const y = -284 + k * 28, x = bayShoreX(y) - 9; if (fairAt(x, y)) out.push({ kind: "hull", at: v3(x, y, 0), len: 5, beam: 1.8, h: 0.8, mat: "whitewash", heading: rng.next() * Math.PI, sheer: 0.3 }); }
+  const taken = out.map(bounds);
+  for (let k = 0; k < 4; k++) { const hull = boatAt(-284 + k * 28, rng.next() * Math.PI, taken); if (hull) { out.push(hull); taken.push(bounds(hull)); } }
 }
 
 function gate(out: Solid[], accents: Accent[]): void {
