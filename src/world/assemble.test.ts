@@ -35,6 +35,7 @@ describe("assembleWorld", () => {
     const { animators } = assembleWorld(undefined, { reducedMotion: true });
     const a = animators.find((x) => x.ids.includes("city.neon"));
     expect(a?.zone).toBe("cv");
+    expect(a!.ids).toContain("city.windows");
     expect(focusAlphas("blog").cv.accents).toBe(ACCENT_DIM);
     expect(focusAlphas("portfolio").cv.accents).toBe(ACCENT_DIM);
     expect(a!.tick(1000).size).toBe(0);

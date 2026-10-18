@@ -27,7 +27,7 @@ export interface PlacedPiece { placed: Placed; piece: Piece; solidOffset: number
 export interface CityScene {
   ground: Solid[];   // baldosas de la plaza, suelo de manzanas devoradas, carriles
   solids: Solid[];
-  accents: Accent[]; // faroles, derrame de luz, ventanas encendidas, neones de bares y fachadas bañadas de lights(); el piso encendido de la torre y la antena los anima city-anim
+  accents: Accent[]; // faroles, derrame de luz, ventanas encendidas fijas, neones de bares y fachadas bañadas de lights(); las ventanas animables, el neón que titila (lights().flicker), el piso encendido de la torre y la antena los anima city-anim
   tower: TowerLights;
   neon: { signs: Accent[]; malecon: Vec3[] }; // carteles del distrito y luces del malecón; los anima city-anim
   placed: PlacedPiece[];
@@ -59,8 +59,8 @@ export function city(rng: Rng, districtRng: Rng, lightsRng: Rng): CityScene {
   greenery(solids, rng);
   cars(solids, rng);
   const lit = lights({ solids, placed }, lightsRng);
-  for (const w of lit.windows) if (w.on) accents.push({ kind: "poly", pts: w.window.pts, color: w.color, alpha: WINDOW_ALPHA });
-  for (const n of lit.neons) accents.push(...n.accents);
+  for (const w of lit.windows) if (w.on && !w.animable) accents.push({ kind: "poly", pts: w.window.pts, color: w.color, alpha: WINDOW_ALPHA });
+  lit.neons.forEach((n, i) => { if (i !== lit.flicker) accents.push(...n.accents); });
   accents.push(...lit.bathed);
   return { ground, solids, accents, tower, neon: { signs, malecon: maleconLights }, placed, lights: lit };
 }

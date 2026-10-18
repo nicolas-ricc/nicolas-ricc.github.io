@@ -16,7 +16,7 @@ import { CATALOGUE, type Barrio } from "./zoning";
  */
 export interface LitWindow { window: Window; owner: number; color: "windowWarm" | "windowCool"; on: boolean; animable: boolean }
 export interface StreetNeon { accents: Accent[]; color: "amber" | "magenta" | "cyan"; owner: number; slot: Slot }
-export interface CityLights { windows: LitWindow[]; neons: StreetNeon[]; bathed: Accent[]; counts: Record<Barrio, { candidates: number; on: number; warm: number }> }
+export interface CityLights { windows: LitWindow[]; neons: StreetNeon[]; flicker: number | null; bathed: Accent[]; counts: Record<Barrio, { candidates: number; on: number; warm: number }> }
 
 export const MAX_ANIMABLE = 40;
 export const MAX_NEONS = 24;
@@ -112,7 +112,8 @@ export function lights(scene: Pick<CityScene, "solids" | "placed">, rng: Rng): C
     return { accents: [...neonAccents(slot.pts, color), ...puddle(c.x + slot.wall.x, c.y + slot.wall.y, `${color}Bleed`, scene.placed[owner]!.placed.lot.z)], color, owner, slot };
   });
 
-  return { windows, neons, bathed: bathed(scene.placed), counts };
+  const flicker = neons.length > 0 ? rng.int(0, neons.length - 1) : null;
+  return { windows, neons, flicker, bathed: bathed(scene.placed), counts };
 }
 
 /** Banda de planta baja de cada pared del cívico, corrida 0.05 hacia afuera. */

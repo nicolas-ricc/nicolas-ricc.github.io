@@ -121,9 +121,17 @@ for (const [name, make, isWorld] of SEEDS) {
       });
     });
 
-    it("las ventanas encendidas, los neones y el bañado van a scene.accents", () => {
-      for (const w of l.windows.filter((x) => x.on)) expect(s.accents).toContainEqual({ kind: "poly", pts: w.window.pts, color: w.color, alpha: WINDOW_ALPHA });
-      for (const n of l.neons) for (const a of n.accents) expect(s.accents).toContain(a);
+    it("flicker es un índice válido de neons (o null sin neones) y el neón elegido está en bares", () => {
+      if (l.neons.length === 0) { expect(l.flicker).toBeNull(); return; }
+      expect(Number.isInteger(l.flicker)).toBe(true);
+      expect(l.flicker!).toBeGreaterThanOrEqual(0);
+      expect(l.flicker!).toBeLessThan(l.neons.length);
+      expect(s.placed[l.neons[l.flicker!]!.owner]!.placed.barrio).toBe("bares");
+    });
+
+    it("las ventanas encendidas estáticas, los neones salvo el que titila y el bañado van a scene.accents", () => {
+      for (const w of l.windows.filter((x) => x.on && !x.animable)) expect(s.accents).toContainEqual({ kind: "poly", pts: w.window.pts, color: w.color, alpha: WINDOW_ALPHA });
+      l.neons.forEach((n, i) => { if (i !== l.flicker) for (const a of n.accents) expect(s.accents).toContain(a); });
       for (const a of l.bathed) expect(s.accents).toContain(a);
       const off = new Set(l.windows.filter((x) => !x.on).map((x) => x.window.pts));
       expect(s.accents.some((a) => a.kind === "poly" && off.has(a.pts))).toBe(false);
@@ -174,6 +182,7 @@ describe("lights (escenas sintéticas)", () => {
     const l = lights({ solids: a.solids, placed: [placedAt("residencial", a, 0)] }, createRng(1));
     expect(l.windows).toHaveLength(1);
     expect(l.counts.residencial.candidates).toBe(1);
+    expect(l.flicker).toBeNull(); // sin bares no hay neón que titile
     for (const b of BARRIOS) if (b !== "residencial") expect(l.counts[b]).toEqual({ candidates: 0, on: 0, warm: 0 });
   });
 
