@@ -45,21 +45,23 @@ export function createTechAnim(scene: TechScene, rng: Rng, opts: { reducedMotion
     },
     tick(dtMs) {
       const c: TechAnimChanges = { windows: false, signs: false, telecom: false, neon: false };
-      if (opts.reducedMotion || dtMs <= 0 || scene.towers.length === 0) return c;
+      if (opts.reducedMotion || dtMs <= 0) return c;
       clock += dtMs;
       blinkTimer -= dtMs;
       if (blinkTimer <= 0) {
         blinkTimer = nextGap();
-        const k = rng.int(0, scene.towers.length - 1), floors = scene.towers[k]!.facade.floors;
-        const old = lit[k];
-        if (rng.chance(0.3)) lit[k] = null;
-        else { let nv = rng.int(1, floors - 1); if (nv === old && floors > 2) nv = nv === floors - 1 ? nv - 1 : nv + 1; lit[k] = nv; } // siempre cambia el piso si hay más de una opción
-        c.windows = true;
+        if (scene.towers.length > 0) { // sin torres no hay a quién sortear; las demás capas siguen
+          const k = rng.int(0, scene.towers.length - 1), floors = scene.towers[k]!.facade.floors;
+          const old = lit[k];
+          if (rng.chance(0.3)) lit[k] = null;
+          else { let nv = rng.int(1, floors - 1); if (nv === old && floors > 2) nv = nv === floors - 1 ? nv - 1 : nv + 1; lit[k] = nv; } // siempre cambia el piso si hay más de una opción
+          c.windows = true;
+        }
       }
       const ss = Math.floor(clock / SIGN_STEP_MS); if (ss !== signStep) { signStep = ss; c.signs = true; }
       const ts = Math.floor(clock / TELECOM_STEP_MS); if (ts !== telecomStep) { telecomStep = ts; c.telecom = true; }
       flipTimer -= dtMs;
-      if (flipTimer <= 0) { flipTimer = nextFlip(); const k = rng.int(0, colors.length - 1); colors[k] = colors[k] === "cyan" ? "magenta" : "cyan"; c.neon = true; }
+      if (flipTimer <= 0) { flipTimer = nextFlip(); if (colors.length > 0) { const k = rng.int(0, colors.length - 1); colors[k] = colors[k] === "cyan" ? "magenta" : "cyan"; c.neon = true; } }
       const ns = Math.floor(clock / NEON_STEP_MS); if (ns !== neonStep) { neonStep = ns; c.neon = true; }
       const rs = Math.floor(clock / RING_STEP_MS); if (rs !== ringStep) { ringStep = rs; c.neon = true; }
       return c;
