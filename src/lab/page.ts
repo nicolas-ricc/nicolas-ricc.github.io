@@ -65,7 +65,7 @@ export function bootWorldPage(zones: readonly WorldZone[] | undefined, frame: Fr
       const z = KEY_ZONE[e.key];
       if (z) { current = z; fit(); }
       if (e.key === "5") { focusIdx = (focusIdx + 1) % focusCycle.length; stage.setFocus(focusCycle[focusIdx]!); }
-      if (e.key === "6") { stage.setBloom(nextBloomMode(stage.bloom)); if (log) console.info(`[lab] bloom: ${stage.bloom}`); }
+      if (e.key === "6") { stage.setBloom(nextBloomMode(stage.bloom)); if (log) console.info(`[lab] bloom a mano: ${stage.bloom}`); }
     });
 
     // ?speed=0.1 ralentiza el reloj de los animadores (revisión de materiales en cámara lenta); solo el laboratorio.
