@@ -35,6 +35,10 @@ sitio y el laboratorio: `stage.ts` (capas, velos y luces por zona),
 zona) y `view.ts` (cámara pura: `coverView`, `zoneView`, `clampToBleed`,
 `unproject`). El sitio encuadra con `coverView(host)` (el aspecto real del
 `#canvas-host`), no con `coverFrame(16/9)` como el laboratorio.
+En Resume, `city-anim.ts` suma la capa `city.windows` (hasta 40 ventanas del
+centro y el residencial que se prenden y apagan manteniendo el porcentaje
+±5 %) y, dentro de `city.neon`, el neón de un bar del muelle que titila; el
+resto de las ventanas y neones va a los acentos estáticos.
 
 `npm run dev` y abrir `/lab/world.html` para el laboratorio: páginas
 finas (`src/lab/page.ts`) que importan `assembleWorld`/`buildStage` de
