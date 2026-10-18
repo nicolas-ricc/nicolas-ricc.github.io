@@ -1,10 +1,10 @@
 import type { Accent } from "../iso/accent";
 import { facadeAccents, windowPatches, type Facade } from "../iso/facade";
 import { centroid, v3, type Vec2, type Vec3 } from "../iso/geometry";
-import { visibleWalls, type Solid } from "../iso/solids";
+import { bounds, visibleWalls, type Solid } from "../iso/solids";
 import type { Rng } from "../map/seed";
 import { QUAY_X, WORLD, ZONE_SPLIT_Y } from "../map/geo";
-import { AVENUE, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_RING, FALLEN_BLOCK, LIT_FLOOR, MALECON, PLAZA, ROWS, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, inCrater } from "../scenes/city-grid";
+import { AVENUE, BLOCK_W, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_RING, FALLEN_BLOCK, LIT_FLOOR, MALECON, PLAZA, ROWS, SIDEWALK, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, inCrater } from "../scenes/city-grid";
 import { jungle } from "../scenes/flora";
 import { CAR, awning, bench, bollard, car, chair, dockCrane, fountain, garland, kiosk, lamp, place, puddle, stoneArch, table } from "../kit/props";
 import { PLINTH_H, plazaTone, prism, tiles } from "../scenes/city-pieces";
@@ -102,9 +102,13 @@ export function westQuay(solids: Solid[], accents: Accent[]): void {
   for (let y = 160; y <= 202; y += 6) if (y !== 196) solids.push(...bollard(v3(192.5, y, 0.6))); // 196 es la escalera (194..200)
   solids.push(...dockCrane(v3(195, 202, 0.6), "e"));
   // terrazas en la calle del muelle (x 186..192), frente a las dos manzanas de bares de la columna 162 (y0 164 y 188)
+  // el toldo va contra la pared del lote (x 184.5: la vereda de la manzana queda por delante), a la altura de los
+  // toldos de las vidrieras; si la receta de la manzana ya puso uno a esa altura, la mesa comparte el suyo
+  const shopAwnings = solids.filter((s) => s.mat === "awning").map(bounds);
   for (const y0 of [164, 188]) for (const y of [y0 + 3, y0 + 9, y0 + 15]) {
     solids.push(...table(v3(188.5, y, 0)), ...chair(v3(187.5, y + 0.25, 0)), ...chair(v3(190, y + 0.25, 0)));
-    solids.push(...awning(v3(186, y - 1, 2.2), 3, "e")); // toldo contra la pared del lote
+    const own = awning(v3(162 + BLOCK_W - SIDEWALK, y - 1, 2.3), 3, "e"), b = bounds(own[0]!);
+    if (!shopAwnings.some((o) => o.min.x < b.max.x && o.max.x > b.min.x && o.min.y < b.max.y && o.max.y > b.min.y && o.min.z < b.max.z && o.max.z > b.min.z)) solids.push(...own);
   }
   for (let y = 164; y <= 200; y += 6) solids.push(prism(191, y, 0, 0.3, 0.3, 3, "steel")); // postes de la guirnalda
   accents.push(...garland([v3(191.15, 164.15, 3), v3(191.15, 200.15, 3)]));

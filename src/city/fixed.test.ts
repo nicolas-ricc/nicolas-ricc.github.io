@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
 import { bounds, type Bounds, type Solid } from "../iso/solids";
-import { dockCrane } from "../kit/props";
+import { awning, dockCrane } from "../kit/props";
 import { createRng } from "../map/seed";
-import { AVENUE, BRIDGE, COLLAPSED, EAST_RING, MALECON, PLAZA, STREET, TOWER, WEST_QUAY, blocks, estuaryEast } from "../scenes/city-grid";
+import { AVENUE, BLOCK_W, BRIDGE, COLLAPSED, EAST_RING, MALECON, PLAZA, SIDEWALK, STREET, TOWER, WEST_QUAY, blocks, estuaryEast } from "../scenes/city-grid";
 import { plazaTone, tiles } from "../scenes/city-pieces";
 import { bridge, collapsed, malecon, plazaAndTower, westQuay } from "./fixed";
 
@@ -209,7 +209,7 @@ describe("westQuay", () => {
     const chairs = prisms(solids).filter((s) => s.mat === "paving" && s.w === 0.5 && s.d === 0.5 && s.h === 0.5);
     expect(tables.length).toBeGreaterThanOrEqual(6);
     expect(chairs.length).toBeGreaterThanOrEqual(12);
-    const terrace = solids.filter((s) => bounds(s).max.x <= x0 + EPS);
+    const terrace = solids.filter((s) => bounds(s).max.x <= x0 + EPS && s.mat !== "awning"); // los toldos cuelgan de la pared del lote, sobre la vereda de la manzana
     expect(terrace.length).toBeGreaterThanOrEqual(tables.length + chairs.length);
     for (const s of terrace) {
       const b = bounds(s);
@@ -219,15 +219,23 @@ describe("westQuay", () => {
     }
   });
 
-  it("toldos contra la pared del lote, mirando a la calle, y una guirnalda entre postes", () => {
+  it("toldos contra la pared del lote (x 184.5, la vereda de 1.5 por dentro de la manzana), mirando a la calle, y una guirnalda entre postes", () => {
     const { solids, accents } = built();
     const awnings = solids.filter((s) => s.kind === "ramp" && s.mat === "awning");
     expect(awnings.length).toBeGreaterThanOrEqual(6);
-    for (const a of awnings) expect(a.kind === "ramp" && a.dir === "e" && a.at.x === 186).toBe(true);
+    for (const a of awnings) expect(a.kind === "ramp" && a.dir === "e" && a.at.x === 162 + BLOCK_W - SIDEWALK).toBe(true);
     const posts = prisms(solids).filter((s) => s.mat === "steel" && s.w === 0.3 && s.d === 0.3 && s.h === 3);
     expect(posts.length).toBeGreaterThanOrEqual(2);
     const lights = dots(accents).filter((a) => a.color === "amber" && a.r === 0.25 && a.at.x >= 186 && a.at.x <= x0 && a.at.y < AVENUE.y0);
     expect(lights.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it("una mesa frente a una vidriera que ya trae toldo no suma otro encima", () => {
+    const solids: Solid[] = [...awning(v3(184.5, 166, 2.3), 5, "e")], accents: Accent[] = [];
+    westQuay(solids, accents);
+    const awnings = solids.filter((s) => s.kind === "ramp" && s.mat === "awning");
+    expect(awnings).toHaveLength(6); // el de la vidriera más cinco de las seis mesas
+    expect(overlapping(awnings)).toEqual([]);
   });
 
   it("ningún sólido del muelle se solapa en caja con otro", () => {
