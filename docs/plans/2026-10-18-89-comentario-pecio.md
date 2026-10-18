@@ -95,7 +95,7 @@ git commit -m "test(#89): evals"
 - Consumes: los tests de la Task 1.
 - Produces: nada que otra tarea use.
 
-- [ ] **Step 1: Reemplazar las dos primeras líneas del docstring**
+- [x] **Step 1: Reemplazar las dos primeras líneas del docstring**
 
 De:
 
@@ -115,17 +115,17 @@ a:
 
 El test busca `16 u al este del talud` en una sola línea: un corte de línea dentro de esa frase lo rompe.
 
-- [ ] **Step 2: Correr los tests del pecio**
+- [x] **Step 2: Correr los tests del pecio**
 
 Run: `npx vitest run src/scenes/sea.test.ts`
 Expected: PASS, todos.
 
-- [ ] **Step 3: Suite completa, typecheck y diff solo de comentario**
+- [x] **Step 3: Suite completa, typecheck y diff solo de comentario**
 
 Run: `npm test && npm run typecheck && git diff origin/main -- src/scenes/sea.ts | grep '^[-+][^-+]' | grep -v '^[-+] \*'`
 Expected: tests y typecheck en verde; el último `grep` no imprime nada.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/scenes/sea.ts
