@@ -159,7 +159,7 @@
 
 ## Assumptions
 
-- **Encuadre más chico.** El storybook encaja `solidsBox` de pad y sólidos (`storybook.ts:96`). Con el pad nuevo la grúa se ve a la mitad de escala (pad de 38 u a ~92 u de ancho). Ningún criterio fija la escala de la pieza en el cuadro; el brief pide que la sombra caiga sobre el pad, y verla entera obliga a encuadrarla. Alternativa descartada: recortar el pad al cuadro anterior, que deja la sombra afuera.
+- **Encuadre más chico.** El storybook encaja `solidsBox` de pad y sólidos (`storybook.ts:96`). Con el pad nuevo la grúa se ve a la mitad de escala (pad de 38 u a ~89 u de ancho). Ningún criterio fija la escala de la pieza en el cuadro; el brief pide que la sombra caiga sobre el pad, y verla entera obliga a encuadrarla. Alternativa descartada: recortar el pad al cuadro anterior, que deja la sombra afuera.
 - **Rectángulo con el cuadrado `±r` de base** (Decisión 1). Alternativa descartada: caja ajustada a huella y sombra sin el cuadrado, que mueve también los bordes oeste, norte y sur de piezas descentradas y cambia todos los pads sin necesidad.
 - **Desplazamiento del pad de agua.** `Z_SCALE = 1.4` (`src/iso/project.ts`): el pad de agua a z −1 se dibuja 1.4 u de pantalla más abajo que la sombra a z 0. Visto sobre el pad, la sombra se corre hacia x− e y− hasta 2.8 u de `x + y`, que caben en `PAD_M = 3` por los bordes oeste y norte. La banda "suave" es el mismo polígono completo con alpha (`stage.ts:58`), no un difuminado más ancho.
 - **`build` vacío.** Con `build` vacío, `top` sale `Infinity`. Es así desde antes, ningún exhibit lo usa y el bucle nuevo no lo cambia. Queda como está.
