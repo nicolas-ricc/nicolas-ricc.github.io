@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { RECIPES } from "../kit/index";
+import { STYLES } from "../kit/styles";
+import { createRng } from "../map/seed";
 import { PLINTH_H } from "../scenes/city-pieces";
 import { KIT_LOT, KIT_STEP, kitScene } from "./kit-scene";
 
@@ -14,9 +16,13 @@ describe("escena del lab del kit", () => {
     });
   });
 
-  it("los lotes de receta sin ground (vidrio, clásico, obra) llevan un zócalo prisma paving de 24×18×PLINTH_H en su origen", () => {
+  it("los lotes de receta sin ground llevan un zócalo prisma paving de 24×18×PLINTH_H en su origen", () => {
     const { solids, lots } = kitScene(7, "centro");
-    for (const l of lots.filter((q) => q.name !== "campus")) {
+    // mismo lote y rng que kitScene: algunas recetas traen ground según el seed (courtyardO)
+    const hasGround = (i: number): boolean => RECIPES[i]!.recipe({ x: lots[i]!.x, y: lots[i]!.y, w: KIT_LOT.w, d: KIT_LOT.d, z: PLINTH_H, open: ["s", "e"], maxH: 24 }, createRng(7 * 1000 + i), STYLES.centro).ground.length > 0;
+    const plain = lots.filter((_, i) => !hasGround(i));
+    expect(plain.length).toBeLessThan(lots.length); // campus y eatenRuin traen ground
+    for (const l of plain) {
       const plinth = solids.find((s) => s.kind === "prism" && s.mat === "paving" && s.at.x === l.x && s.at.y === l.y && s.at.z === 0);
       expect(plinth, l.name).toMatchObject({ w: KIT_LOT.w, d: KIT_LOT.d, h: PLINTH_H });
     }
