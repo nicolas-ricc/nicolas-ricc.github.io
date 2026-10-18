@@ -26,9 +26,9 @@ const pageSrc = readFileSync(`${ROOT}src/lab/page.ts`, "utf8");
 
 describe("logs del lab (#31)", () => {
   it("la tecla 6 no usa el prefijo bloom: del veredicto medido", () => {
-    const infos = pageSrc.match(/console\.info\(`[^`]*`\)/g) ?? [];
-    expect(infos.filter((l) => l.includes("bloom:"))).toEqual([]);
-    expect(pageSrc).toContain("stage.setBloom(nextBloomMode(stage.bloom)); if (log) console.info(`[lab] bloom a mano: ${stage.bloom}`);");
+    const logs = pageSrc.match(/console\.\w+\(\s*([`"'])[\s\S]*?\1/g) ?? [];
+    expect(logs.filter((l) => l.includes("bloom:"))).toEqual([]);
+    expect(pageSrc).toMatch(/stage\.setBloom\(nextBloomMode\(stage\.bloom\)\);\s*if \(log\) console\.info\(`\[lab\] bloom a mano: \$\{stage\.bloom\}`\)/);
   });
   it("la ayuda de teclas sigue describiendo la tecla 6", () => {
     expect(pageSrc).toMatch(/6 rota el bloom entre off, on y fallback/);
