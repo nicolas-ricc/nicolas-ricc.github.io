@@ -416,7 +416,7 @@ Chrome headless vía CDP con `agent-browser` 0.27.0 (Chrome 154, `swiftshader-we
 
 Primera pasada (descartada). Se midió con páginas headless abiertas que se fueron acumulando; el proceso GPU de swiftshader llevó el load average a 23-39. En esas condiciones el bloom del sitio cayó a `fallback` (28.2, 28.5 y 22.8 ms), el primer dibujo del sitio dio mediana 364.1 ms y el peor redibujo del lab 12.5-40.4 ms (mediana 23.7). El baseline medido en esa misma sesión también falló: 328.6 ms de primer dibujo en el sitio, 13.5-45.6 ms de peor redibujo en el lab y bloom del lab en `fallback` (19.0 ms) en una de sus dos cargas. Es decir, la máquina saturada, no el cambio, rompía los topes. Esas lecturas no se publican como "Medido".
 
-Segunda pasada (la que vale). Se repitió con el navegador cerrado (`agent-browser close`) entre cargas y esperando a que el load average bajara de 6 antes de cada lectura; cada lectura lleva anotada su línea de load average. Los pares de primer dibujo se alternaron después/baseline. Con ese protocolo el baseline vuelve a dar su "hoy" de §9 (bloom 9.0-9.4 ms, activo).
+Pasadas limpias (las que valen): una segunda pasada para el sitio y las dos primeras cargas largas del lab, y una tercera tanda para los diez pares de primer dibujo del lab y su tercera carga larga. Se repitió con el navegador cerrado (`agent-browser close`) entre cargas y esperando a que el load average bajara de 6 antes de cada lectura; cada lectura lleva anotada su línea de load average. Los pares de primer dibujo se alternaron después/baseline. Con ese protocolo el baseline vuelve a dar su "hoy" de §9 (bloom 9.0-9.4 ms, activo).
 
 ### Conteos (`src/scenes/city-budget.test.ts`)
 
@@ -439,7 +439,7 @@ Recortes aplicados: ninguno. Todos los topes se cumplieron, así que no se tocó
 
 Modo de bloom de la máquina: `on` (activo) en el lab y en el sitio, y en las cinco capturas del lab.
 
-Medianas. Lab, después: 156.8 157.0 157.2 157.4 158.6 160.5 160.9 162.8 164.2 169.2, mediana 159.6 ms. Lab, baseline: 160.3 163.5 164.3 166.4 167.8 167.9 168.3 168.8 172.5 175.0, mediana 167.9 ms. Sitio, después: 221.9 225.6 226.9 233.0 236.9, mediana 226.9 ms. Sitio, baseline: 212.8 214.9 215.9 221.0 251.2, mediana 215.9 ms. El sitio queda 11 ms (5 %) por encima del baseline y 43 ms por debajo del tope; el lab queda 8 ms por debajo del baseline. En el sitio el peor redibujo (no tiene tope en §9) fue de 8.5 a 13.4 ms, contra 9.1 a 13.2 ms del baseline.
+Medianas. Lab, después: 156.8 157.0 157.2 157.4 158.6 160.5 160.9 162.8 164.2 169.2, mediana 159.6 ms. Lab, baseline: 160.3 163.5 164.3 166.4 167.8 167.9 168.3 168.8 172.5 175.0, mediana 167.9 ms. Sitio, después: 221.9 225.6 226.9 233.0 236.9, mediana 226.9 ms. Sitio, baseline: 212.8 214.9 215.9 221.0 251.2, mediana 215.9 ms. El sitio queda 11 ms (5 %) por encima del baseline y 43 ms por debajo del tope; el lab queda 8 ms por debajo del baseline. En el sitio el peor redibujo (no tiene tope en §9) fue de 8.5 a 14.1 ms, contra 8.8 a 13.2 ms del baseline, sobre todas las ventanas de las tres cargas largas de cada lado.
 
 ### gzip del bundle JS (`gzip -9`, bytes)
 
@@ -459,10 +459,12 @@ Medianas. Lab, después: 156.8 157.0 157.2 157.4 158.6 160.5 160.9 162.8 164.2 1
 
 +12 561 bytes (+6.8 %), todo en el chunk principal (`index`). Los nombres con hash cambian entre builds; los demás archivos son idénticos en bytes.
 
-### Lecturas crudas de la pasada limpia
+### Lecturas crudas de las pasadas limpias
+
+Copiadas tal cual de `agent-browser console`, en el orden en que se tomaron, con todas las ventanas de peor redibujo y las cargas largas del baseline. Cada carga lleva antes su línea de load average.
 
 ```
-# lab/world.html, primer dibujo, pares (2 después :5173, 2 baseline :5174), segundas cargas
+# lab/world.html primer dibujo, pares (2 después :5173, 2 baseline :5174, ...), segundas cargas, líneas completas
 -- despues-par-1 load average: 2.17, 3.09, 7.33
 [info] [lab] primer dibujo: 158.6 ms, 35542 polígonos estáticos
 [info] [lab] primer dibujo: 157.0 ms, 35542 polígonos estáticos
@@ -493,24 +495,7 @@ Medianas. Lab, después: 156.8 157.0 157.2 157.4 158.6 160.5 160.9 162.8 164.2 1
 -- base-par-5 load average: 5.95, 4.52, 7.22
 [info] [lab] primer dibujo: 175.0 ms, 32387 polígonos estáticos
 [info] [lab] primer dibujo: 163.5 ms, 32387 polígonos estáticos
-
-# lab/world.html después, carga larga (3 cargas limpias)
--- lab-long-despues-1 load average: 0.36, 1.72, 7.81
-[info] [lab] primer dibujo: 162.8 ms, 35542 polígonos estáticos
-[info] [lab] peor redibujo en 5 s: 10.10 ms
-[info] [lab] bloom: promedio 8.8 ms en 60 frames (tick 5.7 + render 3.2), presupuesto 15 ms → activo
-[info] [lab] peor redibujo en 5 s: 12.30 ms
-[info] [lab] peor redibujo en 5 s: 12.20 ms
-[info] [lab] peor redibujo en 5 s: 10.00 ms
-[info] [lab] peor redibujo en 5 s: 11.50 ms
--- lab-long-despues-2 load average: 4.77, 2.82, 7.87
-[info] [lab] primer dibujo: 164.6 ms, 35542 polígonos estáticos
-[info] [lab] peor redibujo en 5 s: 9.20 ms
-[info] [lab] bloom: promedio 8.9 ms en 60 frames (tick 5.6 + render 3.3), presupuesto 15 ms → activo
-[info] [lab] peor redibujo en 5 s: 9.00 ms
-[info] [lab] peor redibujo en 5 s: 11.30 ms
-[info] [lab] peor redibujo en 5 s: 12.60 ms
-[info] [lab] peor redibujo en 5 s: 8.60 ms
+# lab/world.html carga larga después, 3ª carga limpia
 -- lab-long-despues-3 load average: 5.01, 4.61, 7.13
 [info] [lab] primer dibujo: 156.8 ms, 35542 polígonos estáticos
 [info] [lab] peor redibujo en 5 s: 10.60 ms
@@ -519,8 +504,7 @@ Medianas. Lab, después: 156.8 157.0 157.2 157.4 158.6 160.5 160.9 162.8 164.2 1
 [info] [lab] peor redibujo en 5 s: 8.70 ms
 [info] [lab] peor redibujo en 5 s: 8.80 ms
 [info] [lab] peor redibujo en 5 s: 11.10 ms
-
-# sitio /, primer dibujo, alternando después :5173 / baseline :5174
+# sitio / primer dibujo, alternando A B A B (después :5173 / baseline :5174)
 -- site-despues-1 load average: 2.12, 15.49, 21.81
 [info] [mapa] primer dibujo: 226.9 ms, 35542 polígonos estáticos
 -- site-base-1 load average: 2.02, 15.03, 21.59
@@ -541,8 +525,7 @@ Medianas. Lab, después: 156.8 157.0 157.2 157.4 158.6 160.5 160.9 162.8 164.2 1
 [info] [mapa] primer dibujo: 236.9 ms, 35542 polígonos estáticos
 -- site-base-5 load average: 5.34, 11.21, 18.95
 [info] [mapa] primer dibujo: 214.9 ms, 32387 polígonos estáticos
-
-# sitio / después, carga larga (3 cargas limpias; la primera de cada una incluye el primer dibujo)
+# sitio / carga larga (3 después + 3 baseline alternadas, puntero movido; el primer dibujo de cada una va en su bloque)
 -- site-long-despues-1 load average: 5.73, 10.89, 18.64
 [info] [mapa] primer dibujo: 227.5 ms, 35542 polígonos estáticos
 [info] [mapa] peor redibujo en 5 s: 11.60 ms
@@ -551,6 +534,22 @@ Medianas. Lab, después: 156.8 157.0 157.2 157.4 158.6 160.5 160.9 162.8 164.2 1
 [info] [mapa] peor redibujo en 5 s: 8.80 ms
 [info] [mapa] peor redibujo en 5 s: 13.40 ms
 [info] [mapa] peor redibujo en 5 s: 9.70 ms
+[info] [mapa] peor redibujo en 5 s: 9.20 ms
+[info] [mapa] peor redibujo en 5 s: 12.50 ms
+[info] [mapa] peor redibujo en 5 s: 9.70 ms
+[info] [mapa] peor redibujo en 5 s: 8.50 ms
+-- site-long-base-1 load average: 5.47, 9.83, 17.38
+[info] [mapa] primer dibujo: 213.9 ms, 32387 polígonos estáticos
+[info] [mapa] peor redibujo en 5 s: 10.60 ms
+[info] [mapa] bloom: promedio 9.3 ms en 60 frames (tick 6.1 + render 3.1), presupuesto 15 ms → activo
+[info] [mapa] peor redibujo en 5 s: 10.00 ms
+[info] [mapa] peor redibujo en 5 s: 12.20 ms
+[info] [mapa] peor redibujo en 5 s: 11.20 ms
+[info] [mapa] peor redibujo en 5 s: 9.10 ms
+[info] [mapa] peor redibujo en 5 s: 10.00 ms
+[info] [mapa] peor redibujo en 5 s: 10.20 ms
+[info] [mapa] peor redibujo en 5 s: 12.70 ms
+[info] [mapa] peor redibujo en 5 s: 10.00 ms
 -- site-long-despues-2 load average: 4.72, 8.95, 16.23
 [info] [mapa] primer dibujo: 220.3 ms, 35542 polígonos estáticos
 [info] [mapa] peor redibujo en 5 s: 11.80 ms
@@ -559,6 +558,22 @@ Medianas. Lab, después: 156.8 157.0 157.2 157.4 158.6 160.5 160.9 162.8 164.2 1
 [info] [mapa] peor redibujo en 5 s: 11.60 ms
 [info] [mapa] peor redibujo en 5 s: 9.90 ms
 [info] [mapa] peor redibujo en 5 s: 12.90 ms
+[info] [mapa] peor redibujo en 5 s: 8.60 ms
+[info] [mapa] peor redibujo en 5 s: 8.70 ms
+[info] [mapa] peor redibujo en 5 s: 11.30 ms
+[info] [mapa] peor redibujo en 5 s: 8.90 ms
+-- site-long-base-2 load average: 5.63, 8.81, 15.42
+[info] [mapa] primer dibujo: 220.5 ms, 32387 polígonos estáticos
+[info] [mapa] peor redibujo en 5 s: 10.50 ms
+[info] [mapa] bloom: promedio 9.4 ms en 60 frames (tick 6.3 + render 3.1), presupuesto 15 ms → activo
+[info] [mapa] peor redibujo en 5 s: 10.40 ms
+[info] [mapa] peor redibujo en 5 s: 11.40 ms
+[info] [mapa] peor redibujo en 5 s: 10.20 ms
+[info] [mapa] peor redibujo en 5 s: 8.80 ms
+[info] [mapa] peor redibujo en 5 s: 10.80 ms
+[info] [mapa] peor redibujo en 5 s: 9.90 ms
+[info] [mapa] peor redibujo en 5 s: 9.60 ms
+[info] [mapa] peor redibujo en 5 s: 9.60 ms
 -- site-long-despues-3 load average: 5.64, 8.47, 14.56
 [info] [mapa] primer dibujo: 221.1 ms, 35542 polígonos estáticos
 [info] [mapa] peor redibujo en 5 s: 10.90 ms
@@ -567,13 +582,42 @@ Medianas. Lab, después: 156.8 157.0 157.2 157.4 158.6 160.5 160.9 162.8 164.2 1
 [info] [mapa] peor redibujo en 5 s: 10.90 ms
 [info] [mapa] peor redibujo en 5 s: 11.00 ms
 [info] [mapa] peor redibujo en 5 s: 10.50 ms
+[info] [mapa] peor redibujo en 5 s: 9.70 ms
+[info] [mapa] peor redibujo en 5 s: 10.70 ms
+[info] [mapa] peor redibujo en 5 s: 11.10 ms
+[info] [mapa] peor redibujo en 5 s: 14.10 ms
+-- site-long-base-3 load average: 5.96, 8.59, 13.95
+[info] [mapa] primer dibujo: 222.1 ms, 32387 polígonos estáticos
+[info] [mapa] peor redibujo en 5 s: 11.20 ms
+[info] [mapa] bloom: promedio 9.0 ms en 60 frames (tick 6.1 + render 2.9), presupuesto 15 ms → activo
+[info] [mapa] peor redibujo en 5 s: 12.30 ms
+[info] [mapa] peor redibujo en 5 s: 13.20 ms
+[info] [mapa] peor redibujo en 5 s: 10.00 ms
+[info] [mapa] peor redibujo en 5 s: 9.80 ms
+# lab/world.html carga larga después (2 cargas limpias)
+-- lab-long-despues-1 load average: 0.36, 1.72, 7.81
+[info] [lab] primer dibujo: 162.8 ms, 35542 polígonos estáticos
+[info] [lab] peor redibujo en 5 s: 10.10 ms
+[info] [lab] bloom: promedio 8.8 ms en 60 frames (tick 5.7 + render 3.2), presupuesto 15 ms → activo
+[info] [lab] peor redibujo en 5 s: 12.30 ms
+[info] [lab] peor redibujo en 5 s: 12.20 ms
+[info] [lab] peor redibujo en 5 s: 10.00 ms
+[info] [lab] peor redibujo en 5 s: 11.50 ms
+-- lab-long-despues-2 load average: 4.77, 2.82, 7.87
+[info] [lab] primer dibujo: 164.6 ms, 35542 polígonos estáticos
+[info] [lab] peor redibujo en 5 s: 9.20 ms
+[info] [lab] bloom: promedio 8.9 ms en 60 frames (tick 5.6 + render 3.3), presupuesto 15 ms → activo
+[info] [lab] peor redibujo en 5 s: 9.00 ms
+[info] [lab] peor redibujo en 5 s: 11.30 ms
+[info] [lab] peor redibujo en 5 s: 12.60 ms
+[info] [lab] peor redibujo en 5 s: 8.60 ms
 ```
 
-Del baseline, en la pasada limpia, el sitio dio bloom 9.3, 9.4 y 9.0 ms (activo) y peor redibujo de 8.8 a 13.2 ms. La mediana del sitio sale de las cinco lecturas de `primer dibujo` alternadas de arriba (la de `site-long-*` es otra carga y no entra en la mediana).
+Del baseline, en la pasada limpia, el sitio dio bloom 9.3, 9.4 y 9.0 ms (activo). La mediana del sitio sale de las cinco lecturas de `primer dibujo` alternadas de arriba (la de `site-long-*` es otra carga y no entra en la mediana).
 
 ### Capturas
 
-Todas a 1600×900 con DPR 2 (PNG de 3200×1800), segunda carga, con el modo de bloom por defecto de la máquina (`activo`: 2.8, 9.5, 2.6, 9.0 y 2.1 ms en las cinco del lab; el kit no tiene bloom). Las "antes" salen del worktree de `dd8566d` en `:5174`. El lab no tiene zoom propio: `despues-resume-zoom.png` se hizo con el gancho de PixiJS DevTools, escalando `stage` ×6.1 y centrándolo en el barrio de bares.
+Todas a 1600×900 con DPR 2 (PNG de 3200×1800), segunda carga, con el modo de bloom por defecto de la máquina (`activo`: 2.8, 9.5, 2.6, 9.0 y 1.9 ms en las cinco del lab; el kit no tiene bloom). Las "antes" salen del worktree de `dd8566d` en `:5174`. El lab no tiene zoom propio: `despues-resume-zoom.png` se hizo con el gancho de PixiJS DevTools, escalando el contenedor del mundo (`stage.children[0]`) ×2.5, a escala 6.1, y centrándolo en el barrio de bares.
 
 Antes (Resume en `lab/resume.html`, mundo en `lab/world.html` con la tecla `0`):
 

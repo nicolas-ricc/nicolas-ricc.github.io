@@ -54,9 +54,10 @@ Las teclas encuadran; no recortan: al enfocar una zona las vecinas asoman
 por el borde. `/lab/kit.html` muestra todas las recetas del kit
 (`src/kit/`) sobre una grilla, una fila por familia (`modern`, `courtyard`,
 `lowrise`, `composite`, `curved` y `landmarks`, ver `src/kit/forms/`); tecla
-`s` cambia el seed y `1..4` el estilo (centro, bares, residencial, cívico). No entra en el build de
-producción. Para cambiar una escena, editar su lista de sólidos; para el
-look, `src/map/palette-iso.ts`. Specs en `docs/superpowers/specs/`
+`s` cambia el seed y `1..4` el estilo (centro, bares, residencial,
+cívico). No entra en el build de producción. Para cambiar una escena,
+editar su lista de sólidos; para el look, `src/map/palette-iso.ts`.
+Specs en `docs/superpowers/specs/`
 (`2026-09-13-portfolio-isometrico-design.md`, `2026-09-14-mundo-isometrico-design.md`,
 `2026-09-14-resume-ciudad-design.md`,
 `2026-09-14-mundo-2-fabrica-distrito-blog-design.md`,
