@@ -4,10 +4,9 @@ import { buildRenderList } from "../iso/render-list";
 import { bounds, type Solid } from "../iso/solids";
 import { QUAY_X, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
-import { createRng } from "../map/seed";
+import { createRng, SEED } from "../map/seed";
 import { AVENUE, BOULEVARD, BRIDGE, CITY_EDGE, COLLAPSED, ROWS, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_RING, FALLEN_BLOCK, MALECON, PLAZA, TOWER, WEST_QUAY, blocks, estuaryEast, inBlock, inCrater } from "./city-grid";
 import { MAX_BUILDING_H, PLINTH_H, TOWER_H, city, type CityScene } from "./city";
-import { SEED } from "../world/assemble";
 import { zoneRng } from "./world";
 
 const scene = (): CityScene => city(createRng(7), createRng(8));

@@ -2,7 +2,7 @@ import type { Accent } from "../iso/accent";
 import type { Solid } from "../iso/solids";
 import { MOUTH_Y, QUAY_X, type WorldZone } from "../map/geo";
 import type { Material } from "../map/palette-iso";
-import { createRng } from "../map/seed";
+import { createRng, SEED } from "../map/seed";
 import { BLOCK_D, BLOCK_W, BRIDGE, COLLAPSED, DISTRICT_COLS, DISTRICT_ROWS, EAST_COLS, MALECON, PLAZA, ROWS, SITE, TOWER, TOWER_H, WEST_COLS } from "../scenes/city-grid";
 import { campus, lamp } from "../scenes/city-pieces";
 import { PLANT, RAIL_YARD_X, STACK_BASE_H, STACKS } from "../scenes/factory";
@@ -15,7 +15,6 @@ import { BUOYS, DRUM_R0, KEEPER, LIGHTHOUSE, WRECK } from "../scenes/sea";
 import { ship, shipAt, type ShipKind } from "../scenes/ships";
 import { SUBURB_COLS } from "../scenes/sprawl-grid";
 import { ARENA, AUDITORIUM, TELECOM } from "../scenes/tech";
-import { SEED } from "../world/assemble";
 import type { Box } from "../world/frame";
 
 export type GroupId = "fabrica" | "astillero" | "hinterland" | "feria" | "ciudad" | "tecnologico" | "mar";
