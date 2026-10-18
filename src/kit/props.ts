@@ -147,6 +147,21 @@ export function garland(path: Vec3[], step = 1.5): Accent[] {
   return out;
 }
 
+/** Losas de un arco escalonado de piedra. */
+export const ARCH_SLABS = 6;
+
+/**
+ * Arco escalonado de piedra a lo largo de x: `ARCH_SLABS` losas verticales `stone` de
+ * igual ancho y `d − 0.4` de fondo centradas en `y..y+d`, del borde inferior `bottom(s)`
+ * hasta `zTop`; `s = sin(π·(k + 0.5)/ARCH_SLABS)` es chico en los extremos y casi 1 en el centro.
+ */
+export function stoneArch(x: number, y: number, w: number, d: number, zTop: number, bottom: (s: number) => number): Solid[] {
+  return Array.from({ length: ARCH_SLABS }, (_, k) => {
+    const z = bottom(Math.sin((Math.PI * (k + 0.5)) / ARCH_SLABS));
+    return prism(x + (k * w) / ARCH_SLABS, y + 0.2, z, w / ARCH_SLABS, d - 0.4, zTop - z, "stone");
+  });
+}
+
 /** Grúa chica de muelle: mástil y pluma hacia el agua (`dir`). */
 export function dockCrane(at: Vec3, dir: "e" | "w"): Solid[] {
   const jibX = dir === "e" ? at.x : at.x + 1 - 6;

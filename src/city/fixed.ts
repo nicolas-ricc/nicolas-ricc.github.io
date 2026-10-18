@@ -1,12 +1,12 @@
 import type { Accent } from "../iso/accent";
 import { facadeAccents, windowPatches, type Facade } from "../iso/facade";
-import { centroid, v3, type Vec3 } from "../iso/geometry";
+import { centroid, v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { visibleWalls, type Solid } from "../iso/solids";
 import type { Rng } from "../map/seed";
 import { QUAY_X, WORLD, ZONE_SPLIT_Y } from "../map/geo";
 import { AVENUE, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_RING, FALLEN_BLOCK, LIT_FLOOR, MALECON, PLAZA, ROWS, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, inCrater } from "../scenes/city-grid";
 import { jungle } from "../scenes/flora";
-import { CAR, bench, bollard, car, lamp, place, puddle } from "../kit/props";
+import { CAR, bench, bollard, car, lamp, place, puddle, stoneArch } from "../kit/props";
 import { PLINTH_H, plazaTone, prism, tiles } from "../scenes/city-pieces";
 
 // ---------------------------------------------------------------- plaza y torre
@@ -52,17 +52,41 @@ export function plazaAndTower(solids: Solid[], ground: Solid[], accents: Accent[
 
 // ---------------------------------------------------------------- puente, muelle oeste y malecón
 
+/** Pilas del puente de la avenida: tres en el agua cada 21 desde `BRIDGE.x0` y una bajo la cabecera este. */
+const BRIDGE_PIERS = [213, 234, 255, 274] as const;
+const OBELISK = 1.2, POST_STEP = 3; // lado del obelisco y paso máximo entre postes de la balaustrada
+const ARCH_KEY = 0.4; // losa que queda en la clave del arco, como en el puente peatonal
+
+/** Pila con tajamar centrada en `cx`: hexágono de 2 en x que pasa 1 al norte y al sur del tablero, en punta. */
+function cutwater(cx: number, y0: number, y1: number, z: number): Solid {
+  const footprint: Vec2[] = [{ x: cx, y: y0 - 1 }, { x: cx + 1, y: y0 }, { x: cx + 1, y: y1 }, { x: cx, y: y1 + 1 }, { x: cx - 1, y: y1 }, { x: cx - 1, y: y0 }];
+  return { kind: "poly", footprint, z: -1, h: z + 1, mat: "stone" };
+}
+
 export function bridge(solids: Solid[], accents: Accent[]): void {
   const { x0, x1, y0, y1, z, deckH } = BRIDGE;
   const top = z + deckH, d = y1 - y0;
   solids.push(prism(x0, y0, z, x1 - x0, d, deckH, "asphalt"));
   solids.push({ kind: "ramp", at: v3(x0 - STREET, y0, 0), w: STREET, d, h: top, mat: "asphalt", dir: "w" });
   solids.push({ kind: "ramp", at: v3(x1, y0, 0), w: STREET, d, h: top, mat: "asphalt", dir: "e" });
-  for (let x = x0 + 18; x < x1; x += 18) solids.push(prism(x - 1, y0, -1, 2, d, z + 1, "plaza")); // pilotes: 210, 228, 246, 264
+  for (const cx of BRIDGE_PIERS) solids.push(cutwater(cx, y0, y1, z));
+  // tres arcos entre pilas: arrancan en z − r (nunca bajo z −1) y suben hacia la clave, como el puente peatonal.
+  // La fórmula literal del issue (z − r·s) colgaba las losas más largas en el centro: un arco invertido.
+  for (let i = 0; i < BRIDGE_PIERS.length - 1; i++) {
+    const a = BRIDGE_PIERS[i]! + 1, span = BRIDGE_PIERS[i + 1]! - 1 - a, r = Math.min(span / 2, z + 1);
+    solids.push(...stoneArch(a, y0, span, d, z, (s) => z - r + (r - ARCH_KEY) * s));
+  }
   solids.push(prism(WEST_QUAY.x0, y0, 0.6, WEST_QUAY.x1 - WEST_QUAY.x0, d, z - 0.6, "plaza")); // estribo (0.6, el tope del muelle): el tablero apoya, no flota
-  solids.push(prism(x0, y0, top, x1 - x0, 0.3, 0.8, "officeDark"), prism(x0, y1 - 0.3, top, x1 - x0, 0.3, 0.8, "officeDark")); // barandas
-  place(solids, accents, lamp(v3(x0 + 30, y0 + 0.4, top)));
-  place(solids, accents, lamp(v3(x1 - 30, y1 - 1, top)));
+  const run = x1 - x0 - 2 * OBELISK, posts = Math.ceil((run - 0.3) / POST_STEP), step = (run - 0.3) / posts;
+  for (const ry of [y0, y1 - 0.3]) {
+    for (let i = 0; i <= posts; i++) solids.push(prism(x0 + OBELISK + i * step, ry, top, 0.3, 0.3, 0.9, "stone"));
+    solids.push(prism(x0 + OBELISK, ry + 0.05, top + 0.9, run, 0.2, 0.2, "stone"));
+  }
+  for (const ox of [x0, x1 - OBELISK]) for (const oy of [y0, y1 - OBELISK]) {
+    const cx = ox + OBELISK / 2, cy = oy + OBELISK / 2;
+    solids.push(prism(ox, oy, top, OBELISK, OBELISK, 4, "stone"), { kind: "cone", at: v3(cx, cy, top + 4), r: 0.6, h: 1, mat: "stone", sides: 4 });
+    accents.push({ kind: "dot", at: v3(cx, cy, top + 5.3), r: 0.6, color: "amber" });
+  }
   solids.push(...car(v3(x0 + 40, y0 + 1.5, top), "steel"), ...car(v3(x0 + 58, y1 - 3, top), "rust")); // autos detenidos
 }
 
@@ -97,6 +121,8 @@ export function collapsed(solids: Solid[], rng: Rng): void {
   // la losa grande del edificio caído, más dos cascotes; las tres enteras en agua (x + w < estuaryEast) y al oeste del labio de la rampa
   for (const [x, y, z, w, d] of [[c.x - 14, c.y + 8, -0.9, 8, 6], [c.x - 12, c.y + 1, -0.5, 4, 3], [c.x - 16, c.y + 16, -0.7, 3, 4]] as const) solids.push(prism(x, y, z, w, d, 1.2, "officeDark"));
   solids.push(prism(FALLEN_BLOCK.x, FALLEN_BLOCK.y, 0, FALLEN_BLOCK.w, FALLEN_BLOCK.d, 1, "officeDark")); // el cuarto, caído en la calle frente al malecón (el agua frente al malecón es zona Blog)
+  // fragmento de cúpula caído: casquete hundido en el agua, al sur de la losa grande (el (x − 9, y + 12) del issue cae dentro de ella)
+  solids.push({ kind: "dome", at: v3(c.x - 9.5, c.y + 17.5, -0.9), r: 3, h: 1.3, mat: "officeDark", sides: 8, rings: 2, tone: -1 });
 }
 
 /**

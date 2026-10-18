@@ -188,6 +188,19 @@ describe("kit: familia landmarks", () => {
     }
   });
 
+  it("puente: cada losa arranca donde la ponía la construcción de hoy, con 0.2 de retiro y d − 0.4 de fondo", () => {
+    const lot = { ...LOT, x: 0, y: 0, w: 54, d: 5, z: -1 }, s = slabs(recipe("footbridge")(lot, createRng(1), STYLES.ribera), lot);
+    const span = (54 - 4 * 1.2) / 3;
+    expect(s).toHaveLength(18);
+    s.forEach((q, n) => {
+      const i = Math.floor(n / 6), k = n % 6;
+      expect(q.at.x).toBeCloseTo(1.2 + i * (span + 1.2) + (k * span) / 6, 9);
+      expect(q.w).toBeCloseTo(span / 6, 9);
+      expect(q.at.y).toBeCloseTo(0.2, 9);
+      expect(q.d).toBeCloseTo(4.6, 9);
+    });
+  });
+
   it("puente: el borde inferior de las losas es un arco derecho, simétrico en cada vano y más alto en la clave", () => {
     for (const [w, d] of [[54, 5], [40, 4], [60, 6]] as const) {
       const lot = { ...LOT, x: 0, y: 0, w, d, z: -1 }, s = slabs(recipe("footbridge")(lot, createRng(1), STYLES.ribera), lot);

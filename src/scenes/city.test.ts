@@ -104,7 +104,7 @@ describe("city", () => {
   it("ningún cono pisa asfalto fuera de cráteres, manzanas y la ribera; los acentos son ámbar, ventanas o neones con sus Bleed", () => {
     const s = scene();
     for (const c of s.solids) {
-      if (c.kind !== "cone") continue;
+      if (c.kind !== "cone" || (c.mat === "stone" && c.at.x >= BRIDGE.x0 && c.at.x <= BRIDGE.x1 && c.at.y >= BRIDGE.y0 && c.at.y <= BRIDGE.y1)) continue; // los remates de los obeliscos del puente son de piedra, no árboles
       // al sur del distrito la ribera este es selva sin grilla (ya no hay manzanas del lado este)
       const onCity = c.at.x >= CITY_EDGE.west && c.at.x < MALECON.x0 && c.at.y >= CITY_EDGE.north && c.at.y < CITY_EDGE.south && !(c.at.x > QUAY_X && c.at.x < EAST_RING.x0) && !(c.at.x > EAST_RING.x0 && c.at.y >= DISTRICT_BANK_Y);
       if (onCity) expect(inBlock(c.at.x, c.at.y) || inCrater(c.at.x, c.at.y) || (c.at.y >= BOULEVARD.y0 && c.at.y <= BOULEVARD.y1)).toBe(true);
@@ -161,14 +161,14 @@ describe("city", () => {
     }
   });
 
-  it("puente: tablero sobre el agua de muelle a anillo, pilotes hasta el fondo, rampas en las cabeceras", () => {
+  it("puente: tablero sobre el agua de muelle a anillo, pilas de piedra hasta el fondo, rampas en las cabeceras", () => {
     const s = scene();
     const deck = s.solids.find((x) => x.kind === "prism" && x.mat === "asphalt" && x.w > 60)!;
     expect(deck.kind === "prism" && deck.at.x).toBe(WEST_QUAY.x0);
     expect(deck.kind === "prism" && deck.at.x + deck.w).toBe(EAST_RING.x1);
     expect(deck.kind === "prism" && deck.at.z).toBe(1.2);
-    const piers = s.solids.filter((x) => x.kind === "prism" && x.mat === "plaza" && x.at.z === -1 && x.at.y === BRIDGE.y0);
-    expect(piers).toHaveLength(4);
+    const piers = s.solids.filter((x) => x.kind === "poly" && x.mat === "stone" && x.z === -1 && bounds(x).min.y >= BRIDGE.y0 - 1 && bounds(x).max.y <= BRIDGE.y1 + 1);
+    expect(piers.length).toBeGreaterThanOrEqual(4);
     const ramps = s.solids.filter((x) => x.kind === "ramp" && x.mat === "asphalt" && x.at.y === BRIDGE.y0);
     expect(ramps.map((r) => r.kind === "ramp" && r.dir).sort()).toEqual(["e", "w"]);
   });

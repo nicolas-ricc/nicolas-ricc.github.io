@@ -3,7 +3,7 @@ import type { Rng } from "../../map/seed";
 import { prism, tiles } from "../../scenes/city-pieces";
 import type { Facade } from "../../iso/facade";
 import { addBuilding, emptyPiece, fitToCap } from "../piece";
-import { beacon, clock, garland, lamp, patioTree, place, sign } from "../props";
+import { beacon, clock, garland, lamp, patioTree, place, sign, stoneArch } from "../props";
 import { hipRoof, pyramid } from "../roofs";
 import type { Lot, Piece, RecipeDef, Side, Style } from "../types";
 
@@ -170,7 +170,7 @@ export function waterTower(lot: Lot, _rng: Rng, style: Style): Piece {
   return fitToCap(p, lot);
 }
 
-const DECK_Z = 2.2, DECK_H = 0.4, PIER_W = 1.2, SLABS = 6, ARCH_RING = 0.4, POST_STEP = 3;
+const DECK_Z = 2.2, DECK_H = 0.4, PIER_W = 1.2, ARCH_RING = 0.4, POST_STEP = 3;
 
 /**
  * Puente peatonal a lo largo de x (lote ≥ 40 × 4..6): tablero sobre tres arcos
@@ -183,10 +183,7 @@ export function footbridge(lot: Lot, _rng: Rng, _style: Style): Piece {
   p.solids.push(prism(x, y + 0.5, deck, w, d - 1, DECK_H, "stone"));
   const span = (w - 4 * PIER_W) / 3, rise = DECK_Z - ARCH_RING;
   for (let i = 0; i < 4; i++) p.solids.push(prism(x + i * (span + PIER_W), y, z, PIER_W, d, DECK_Z, "stone"));
-  for (let i = 0; i < 3; i++) for (let k = 0; k < SLABS; k++) {
-    const sz = z + rise * Math.sin((Math.PI * (k + 0.5)) / SLABS);
-    p.solids.push(prism(x + PIER_W + i * (span + PIER_W) + (k * span) / SLABS, y + 0.2, sz, span / SLABS, d - 0.4, deck - sz, "stone"));
-  }
+  for (let i = 0; i < 3; i++) p.solids.push(...stoneArch(x + PIER_W + i * (span + PIER_W), y, span, d, deck, (s) => z + rise * s));
   const top = deck + DECK_H;
   const posts = Math.ceil((w - 0.3) / POST_STEP), step = (w - 0.3) / posts; // de punta a punta, cada 3 o menos
   for (const ry of [y + 0.5, y + d - 0.8]) for (let i = 0; i <= posts; i++) p.solids.push(prism(x + i * step, ry, top, 0.3, 0.3, 1, "steel"));
