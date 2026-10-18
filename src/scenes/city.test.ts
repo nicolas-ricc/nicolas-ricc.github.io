@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildRenderList } from "../iso/render-list";
 import { bounds, type Solid } from "../iso/solids";
@@ -222,5 +223,11 @@ describe("city", () => {
     const bulbs = c.accents.filter((a) => a.kind === "dot" && a.color === "amber" && a.at.x === MALECON.x1 - 3 + 0.3);
     expect(c.neon.malecon).toHaveLength(8);
     for (const p of c.neon.malecon) expect(bulbs.some((b) => b.kind === "dot" && b.at.x === p.x && b.at.y === p.y && b.at.z + 0.4 === p.z)).toBe(true);
+  });
+});
+
+describe("imports de city.ts (#50)", () => {
+  it("no importa brokenTone, que no usa", () => {
+    expect(readFileSync(new URL("./city.ts", import.meta.url), "utf8")).not.toMatch(/brokenTone/);
   });
 });
