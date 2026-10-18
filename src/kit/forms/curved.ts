@@ -1,9 +1,11 @@
 import { v3 } from "../../iso/geometry";
 import type { Facade } from "../../iso/facade";
+import { GABLE_RATIO } from "../../iso/solids";
 import type { Rng } from "../../map/seed";
-import { RECIPE_MAX_H, addBuilding, emptyPiece } from "../piece";
+import { prism } from "../../scenes/city-pieces";
+import { RECIPE_MAX_H, addBuilding, emptyPiece, shiftTone } from "../piece";
 import { HELIPAD_H, helipad, place } from "../props";
-import { CORNICE_H, domeRoof } from "../roofs";
+import { CORNICE_H, domeRoof, hipRoof } from "../roofs";
 import type { Lot, Piece, RecipeDef, Style } from "../types";
 
 /** Familia `curved` (spec §5, issue #41): cilindros, cúpulas y bóvedas. Alturas topadas en min(lot.maxH, 18) contando los remates. */
@@ -35,7 +37,38 @@ export function rotunda(lot: Lot, rng: Rng, style: Style): Piece {
   return p;
 }
 
+const NAVE_D = 9, NAVE_H = 5, VAULT_H = 3, AISLE_H = 3;
+
+/** Nave abovedada a lo largo del lado largo, con arcada, y dos naves laterales bajas al norte y al sur (cada una con su arcada: la de la nave queda detrás). */
+export function vaultedHall(lot: Lot, _rng: Rng, style: Style): Piece {
+  const p = emptyPiece(), { x, y, w, d, z } = lot;
+  const bx = x + 1, len = w - 2, by = y + (d - NAVE_D) / 2, nh = Math.min(NAVE_H, cap(lot) - VAULT_H);
+  const f: Facade = { floors: floors(nh, style), cols: Math.max(2, Math.round(len / 3)), base: "arcade" };
+  addBuilding(p, prism(bx, by, z, len, NAVE_D, nh, style.mat, { facade: f, tone: style.tone }), f);
+  p.solids.push({ kind: "vault", at: v3(bx, by, z + nh), len, w: NAVE_D, h: VAULT_H, axis: "x", mat: style.roof, segments: 6 });
+  const ad = Math.min(3, (d - NAVE_D) / 2), af: Facade = { floors: 1, cols: f.cols, base: "arcade" };
+  for (const ay of [by - ad, by + NAVE_D]) addBuilding(p, prism(bx, ay, z, len, ad, AISLE_H, style.mat, { facade: af, tone: style.tone }), af);
+  return p;
+}
+
+const ARCADE_H = 3, HIP_H = 1.5 * (1 + GABLE_RATIO);
+
+/** Galería: planta baja con arcada de 3 y dos pisos encima (dos sólidos: los pisos de una fachada son iguales), techo a cuatro aguas. */
+export function gallery(lot: Lot, rng: Rng, style: Style): Piece {
+  const p = emptyPiece(), { x, y, w, d, z } = lot;
+  const bx = x + 1, by = y + 1, bw = w - 2, bd = d - 2, tone = shiftTone(style.tone, 1);
+  const fh = Math.min(style.floorH, (cap(lot) - ARCADE_H - HIP_H) / 2);
+  const gf: Facade = { floors: 1, cols: Math.max(2, Math.round(bw / 3)), base: "arcade" };
+  addBuilding(p, prism(bx, by, z, bw, bd, ARCADE_H, style.mat, { facade: gf, tone }), gf);
+  const uf: Facade = { floors: 2, cols: rng.int(4, 5) };
+  addBuilding(p, prism(bx, by, z + ARCADE_H, bw, bd, 2 * fh, style.mat, { facade: uf, tone }), uf);
+  p.solids.push(...hipRoof({ x: bx, y: by, w: bw, d: bd, z: z + ARCADE_H + 2 * fh }, style.roof));
+  return p;
+}
+
 export const CURVED: readonly RecipeDef[] = [
   { name: "cylinderTower", recipe: cylinderTower, family: "curved" },
   { name: "rotunda", recipe: rotunda, family: "curved" },
+  { name: "vaultedHall", recipe: vaultedHall, family: "curved" },
+  { name: "gallery", recipe: gallery, family: "curved" },
 ];
