@@ -10,7 +10,8 @@ import { chase } from "./neon";
  * encendido parpadea (se apaga un tick cada 4..9 s), papeles salen volando de
  * una ventana hacia el NNE, la luz de la antena pulsa y los neones del distrito
  * cambian: un cartel cada 3..7 s cambia de color o se apaga un paso, y dos luces
- * corren por el malecón. Frame 0 = todo quieto y encendido; con reduced-motion
+ * corren por el malecón. Además, ventanas de los edificios se prenden y se
+ * apagan, y un neón de calle del muelle titila. Frame 0 = todo quieto y encendido; con reduced-motion
  * se queda ahí.
  */
 export const BLINK_GAP_MS: [number, number] = [4000, 9000];
@@ -28,6 +29,8 @@ export const NEON_STEP_MS = 150; // lo que dura un apagón de cartel
 export const SIGN_GAP_MS: [number, number] = [3000, 7000];
 export const MALECON_STEP_MS = 250;
 export const WINDOW_GAP_MS: [number, number] = [300, 900]; // entre un cambio de ventana y el siguiente
+export const FLICKER_GAP_MS: [number, number] = [1000, 3000]; // entre un titileo del neón de calle y el siguiente
+export const FLICKER_ALPHA = 0.3; // halo y frente del neón de calle mientras titila
 export const MALECON_R = 0.35;
 const ANTENNA_BASE_R = 0.8, ANTENNA_PULSE_R = 0.3, ANTENNA_PERIOD = 1200; // r = 0.8 + 0.3·(1 + sin(t / 1200))
 const NNE = { x: 0.45, y: -0.893 }; // unidad: nor-noreste (y crece al sur); en pantalla sube a la derecha
@@ -71,6 +74,10 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
   const wins = scene.lights.windows.filter((x) => x.animable).map((x) => ({ w: x, on: x.on }));
   const target = wins.filter((x) => x.on).length, tol = Math.max(1, Math.round(0.05 * wins.length));
   let windowTimer = rng.int(WINDOW_GAP_MS[0], WINDOW_GAP_MS[1]);
+  // neón de calle: después de las ventanas para no reordenar sus tiradas
+  const street = scene.lights.flicker === null ? null : scene.lights.neons[scene.lights.flicker]!;
+  let flickerTimer = street ? rng.int(FLICKER_GAP_MS[0], FLICKER_GAP_MS[1]) : 0;
+  let flickerUntil = -1;
 
   const paperAt = (p: Paper): Accent => {
     const lateral = p.side * Math.min(1, p.dist / PAPER_SIDE_RAMP);
@@ -93,7 +100,9 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
       const on = signs.filter((s) => s.offUntil <= clock).map((s) => ({ ...s.a, color: s.color }));
       const lit = maleconStep === 0 ? null : chase(neon.malecon.length, maleconStep, 2);
       const lights = neon.malecon.filter((_, k) => !lit || lit[k]).map((at): Accent => ({ kind: "dot", at, r: MALECON_R, color: "cyanMid" }));
-      return [...on, ...lights];
+      const dim = flickerUntil > clock; // halo y frente (los dos primeros); el charco no cambia
+      const st = street ? street.accents.map((a, k): Accent => (dim && k < 2 && a.kind === "poly" ? { ...a, alpha: FLICKER_ALPHA } : a)) : [];
+      return [...on, ...lights, ...st];
     },
     windows: () => wins.filter((x) => x.on).map(({ w: lw }): Accent => ({ kind: "poly", pts: lw.window.pts, color: lw.color, alpha: WINDOW_ALPHA })),
     tick(dtMs) {
@@ -134,6 +143,13 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
         x.on = !x.on;
         windowTimer = rng.int(WINDOW_GAP_MS[0], WINDOW_GAP_MS[1]);
         c.windows = true;
+      }
+
+      // neón de calle: titila un paso (FLICKER_GAP_MS ≥ 1000 > NEON_STEP_MS: un titileo no pisa al siguiente)
+      if (street) {
+        if (flickerUntil >= 0 && clock >= flickerUntil) { flickerUntil = -1; c.neon = true; }
+        flickerTimer -= dtMs;
+        if (flickerTimer <= 0) { flickerUntil = clock + NEON_STEP_MS; flickerTimer = rng.int(FLICKER_GAP_MS[0], FLICKER_GAP_MS[1]); c.neon = true; }
       }
       return c;
     },
