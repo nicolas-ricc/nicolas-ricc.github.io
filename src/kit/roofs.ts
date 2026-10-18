@@ -1,5 +1,5 @@
 import { v3 } from "../iso/geometry";
-import { STEP_INSET, type Solid } from "../iso/solids";
+import { GABLE_RATIO, STEP_INSET, type Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { prism } from "../scenes/city-pieces";
@@ -13,7 +13,12 @@ import { rooftopGarden } from "./props";
  */
 export interface Footprint { x: number; y: number; w: number; d: number; z: number }
 
-export const cornice = (f: Footprint, mat: Material): Solid[] => [prism(f.x - 0.5, f.y - 0.5, f.z, f.w + 1, f.d + 1, 0.4, mat)];
+export const CORNICE_H = 0.4;
+const HIP_EAVE = 1.5;
+/** Alto total de `hipRoof`: el alero más la cumbrera, que sube `GABLE_RATIO` del alero. */
+export const HIP_ROOF_H = HIP_EAVE * (1 + GABLE_RATIO);
+
+export const cornice = (f: Footprint, mat: Material): Solid[] => [prism(f.x - 0.5, f.y - 0.5, f.z, f.w + 1, f.d + 1, CORNICE_H, mat)];
 
 /** Huella del segundo nivel de un techo escalonado de alto `h` (el mismo retranqueo que `roof: "step"`). */
 export function stepTop(f: Footprint, h: number): Footprint {
@@ -29,7 +34,7 @@ export function stepRoof(f: Footprint, h: number, mat: Material): Solid[] {
 export const gableRoof = (f: Footprint, h: number, mat: Material): Solid[] => [prism(f.x, f.y, f.z, f.w, f.d, h, mat, { roof: "gable" })];
 
 /** Cubierta a cuatro aguas de 1.5 con 0.5 de vuelo. */
-export const hipRoof = (f: Footprint, mat: Material): Solid[] => [prism(f.x - 0.5, f.y - 0.5, f.z, f.w + 1, f.d + 1, 1.5, mat, { roof: "hip" })];
+export const hipRoof = (f: Footprint, mat: Material): Solid[] => [prism(f.x - 0.5, f.y - 0.5, f.z, f.w + 1, f.d + 1, HIP_EAVE, mat, { roof: "hip" })];
 
 /** Terraza verde a 0.5 del borde. */
 export const greenRoof = (f: Footprint, rng: Rng): Solid[] => rooftopGarden(v3(f.x + 0.5, f.y + 0.5, f.z), f.w - 1, f.d - 1, rng);

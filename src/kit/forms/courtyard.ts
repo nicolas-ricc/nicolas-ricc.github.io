@@ -1,12 +1,11 @@
 import { v3 } from "../../iso/geometry";
 import type { Facade } from "../../iso/facade";
-import { GABLE_RATIO } from "../../iso/solids";
 import type { Rng } from "../../map/seed";
 import type { Rect } from "../../scenes/city-grid";
 import { prism, tiles } from "../../scenes/city-pieces";
 import { RECIPE_MAX_H, addBuilding, emptyPiece } from "../piece";
 import { bench, patioTree } from "../props";
-import { cornice, hipRoof } from "../roofs";
+import { CORNICE_H, HIP_ROOF_H, cornice, hipRoof } from "../roofs";
 import type { Lot, Piece, RecipeDef, Side, Style } from "../types";
 
 /**
@@ -14,8 +13,7 @@ import type { Lot, Piece, RecipeDef, Side, Style } from "../types";
  * C de dos patios y patio residencial de techos a cuatro aguas). Cada receta
  * publica su patio en `Piece.courtyard`. Spec §5 y §6.
  */
-const CORNICE_H = 0.4, PASSAGE = 3;
-const HIP_H = 1.5 * (1 + GABLE_RATIO); // hipRoof: alero de 1.5 más cumbrera (h * GABLE_RATIO) sobre él
+const PASSAGE = 3;
 
 /** Alas de ancho `t` sobre `r` en los lados pedidos: norte y sur a lo ancho, este y oeste entre ellas. Prismas disjuntos, nunca un anillo. */
 export function ring(r: Rect, t: number, sides: readonly Side[]) {
@@ -30,10 +28,11 @@ export function ring(r: Rect, t: number, sides: readonly Side[]) {
   return { wings, patio: { x: x0, y: y0, w: x1 - x0, d: y1 - y0 } };
 }
 
-/** Ala con fachada de `style.mat` y cornisa; `flush` deja la cornisa sin vuelo de ese lado (borde del pasaje). */
-function wing(p: Piece, r: Rect, z: number, h: number, cols: number, style: Style, flush?: "e" | "w"): void {
+/** Ala con fachada de `style.mat` y cornisa, o `hipRoof` de `style.roof` con `hip`; `flush` deja la cornisa sin vuelo de ese lado (borde del pasaje). */
+function wing(p: Piece, r: Rect, z: number, h: number, cols: number, style: Style, { hip = false, flush }: { hip?: boolean; flush?: "e" | "w" } = {}): void {
   const facade: Facade = { floors: Math.max(1, Math.round(h / style.floorH)), cols };
   addBuilding(p, prism(r.x, r.y, z, r.w, r.d, h, style.mat, { facade, tone: style.tone }), facade);
+  if (hip) { p.solids.push(...hipRoof({ ...r, z: z + h }, style.roof)); return; }
   const f = { x: r.x + (flush === "w" ? 0.5 : 0), y: r.y, w: r.w - (flush ? 0.5 : 0), d: r.d, z: z + h };
   p.solids.push(...cornice(f, style.trim));
 }
@@ -51,8 +50,8 @@ export function courtyardO(lot: Lot, rng: Rng, style: Style): Piece {
     const cols = rng.int(3, 4);
     if (side !== "s") { wing(p, rect, lot.z, h, cols, style); continue; }
     const half = (rect.w - PASSAGE) / 2; // pasaje centrado: el fondo es el patio
-    wing(p, { ...rect, w: half }, lot.z, h, cols, style, "e");
-    wing(p, { ...rect, x: rect.x + half + PASSAGE, w: half }, lot.z, h, cols, style, "w");
+    wing(p, { ...rect, w: half }, lot.z, h, cols, style, { flush: "e" });
+    wing(p, { ...rect, x: rect.x + half + PASSAGE, w: half }, lot.z, h, cols, style, { flush: "w" });
   }
   if (rng.chance(0.5)) p.ground.push(tiles(rng, patio, lot.z + 0.05, "paving"));
   else { p.solids.push(prism(patio.x, patio.y, lot.z, patio.w, patio.d, 0.3, "leafDark")); patioTrees(p, rng, patio, rng.int(2, 3), lot.z + 0.3); }
@@ -65,8 +64,13 @@ export function courtyardU(lot: Lot, rng: Rng, style: Style): Piece {
   const h = Math.min(rng.int(6, 10), Math.floor(cap - CORNICE_H));
   const { wings, patio } = ring(lot, 5, (["n", "s", "w", "e"] as const).filter((s) => s !== open));
   for (const { rect } of wings) wing(p, rect, lot.z, h, rng.int(3, 4), style);
-  patioTrees(p, rng, patio, 2, lot.z);
-  p.solids.push(...bench(v3(patio.x + patio.w / 2 - 1, patio.y + patio.d / 2 - 0.3, lot.z)));
+  // banco en el centro y un árbol a cada lado, partiendo el patio por su eje largo, así ningún árbol cae sobre el banco
+  const cx = patio.x + patio.w / 2, cy = patio.y + patio.d / 2;
+  const halves: Rect[] = patio.w >= patio.d
+    ? [{ ...patio, w: patio.w / 2 - 1 }, { ...patio, x: cx + 1, w: patio.w / 2 - 1 }]
+    : [{ ...patio, d: patio.d / 2 - 0.3 }, { ...patio, y: cy + 0.3, d: patio.d / 2 - 0.3 }];
+  for (const half of halves) patioTrees(p, rng, half, 1, lot.z);
+  p.solids.push(...bench(v3(cx - 1, cy - 0.3, lot.z)));
   p.courtyard = patio;
   return p;
 }
@@ -85,15 +89,9 @@ export function courtyardC(lot: Lot, rng: Rng, style: Style): Piece {
 
 export function patioResidential(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), cap = Math.min(lot.maxH, RECIPE_MAX_H);
-  const h = Math.min(rng.int(6, 9), Math.floor(cap - HIP_H));
-  // anillo sobre el lote transpuesto: las alas este/oeste toman toda la profundidad y las de n/s lo que sobra, así todas conservan 4.5 de ancho aun en lotes de 12
-  const tr = (r: Rect): Rect => ({ x: r.y, y: r.x, w: r.d, d: r.w });
-  const ringT = ring(tr(lot), 4.5, ["n", "s", "w", "e"]), patio = tr(ringT.patio);
-  for (const r of ringT.wings.map((w) => tr(w.rect))) {
-    const facade: Facade = { floors: Math.max(1, Math.round(h / style.floorH)), cols: rng.int(2, 3) };
-    addBuilding(p, prism(r.x, r.y, lot.z, r.w, r.d, h, style.mat, { facade, tone: style.tone }), facade);
-    p.solids.push(...hipRoof({ ...r, z: lot.z + h }, style.roof));
-  }
+  const h = Math.min(rng.int(6, 9), Math.floor(cap - HIP_ROOF_H));
+  const { wings, patio } = ring(lot, 4.5, ["n", "s", "w", "e"]);
+  for (const { rect } of wings) wing(p, rect, lot.z, h, rng.int(2, 3), style, { hip: true });
   patioTrees(p, rng, patio, rng.int(2, 4), lot.z);
   p.courtyard = patio;
   return p;

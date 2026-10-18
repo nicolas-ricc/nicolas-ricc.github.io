@@ -1,13 +1,13 @@
 import { v3, type Vec2, type Vec3 } from "../../iso/geometry";
 import type { Facade } from "../../iso/facade";
-import { GABLE_RATIO, type Solid } from "../../iso/solids";
+import type { Solid } from "../../iso/solids";
 import type { Rng } from "../../map/seed";
 import type { Rect } from "../../scenes/city-grid";
 import { PLINTH_H, prism, tiles } from "../../scenes/city-pieces";
 import { jungle } from "../../scenes/flora";
 import { RECIPE_MAX_H, addBuilding, emptyPiece } from "../piece";
 import { awning, patioTree } from "../props";
-import { cornice, hipRoof } from "../roofs";
+import { HIP_ROOF_H, cornice, hipRoof } from "../roofs";
 import type { Lot, Piece, RecipeDef, Side, Slot, Style } from "../types";
 
 /**
@@ -15,7 +15,6 @@ import type { Lot, Piece, RecipeDef, Side, Slot, Style } from "../types";
  * jardín trasero y la manzana devorada por la selva. Spec §5 y §6.
  */
 const SHOP_MIN = 4, SHOP_MAX = 6, SHOP_BACK = 3, NEON_Z0 = 2.4, NEON_H = 1.2, AWNING_Z = 2;
-const HIP_H = 1.5 * (1 + GABLE_RATIO); // hipRoof: alero de 1.5 más cumbrera (h * GABLE_RATIO) sobre él
 
 const alongX = (side: Side): boolean => side === "n" || side === "s";
 export const frontLen = (lot: Lot, side: Side): number => (alongX(side) ? lot.w : lot.d);
@@ -70,6 +69,9 @@ function shopWidths(rng: Rng, len: number): number[] {
   return ws;
 }
 
+/** El techo con el tono de su cuerpo (`prism` omite el tono 0). */
+const toned = (solids: Solid[], tone: number): Solid[] => (tone ? solids.map((q) => ({ ...q, tone })) : solids);
+
 /** El local de esquina hacia `second`: el último si `second` está al final del eje del frente, el primero al principio, ninguno si es el lado opuesto. */
 function cornerLocal(front: Side, second: Side, n: number): number | undefined {
   if (alongX(front) === alongX(second)) return undefined;
@@ -80,16 +82,17 @@ export function shopRow(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), cap = Math.min(lot.maxH, RECIPE_MAX_H), front = lot.open[0] ?? "s", second = lot.open[1];
   const ws = shopWidths(rng, frontLen(lot, front));
   const corner = second ? cornerLocal(front, second, ws.length) : undefined;
+  const neons = lot.open.length > 0; // sin frente abierto: sur sin neones
   let s0 = 0;
   ws.forEach((lw, k) => {
     const r = frontRect(lot, front, s0, s0 + lw, SHOP_BACK); s0 += lw;
-    const floors = Math.min(rng.int(2, 3), Math.max(1, Math.floor((cap - HIP_H) / style.floorH))), h = floors * style.floorH;
-    const facade: Facade = { floors, cols: Math.max(1, Math.round(lw / 2.5)), base: "glass" };
-    addBuilding(p, prism(r.x, r.y, lot.z, r.w, r.d, h, style.mat, { facade, tone: style.tone + rng.int(-1, 1) }), facade);
+    const floors = Math.min(rng.int(2, 3), Math.max(1, Math.floor((cap - HIP_ROOF_H) / style.floorH))), h = floors * style.floorH;
+    const facade: Facade = { floors, cols: Math.max(1, Math.round(lw / 2.5)), base: "glass" }, tone = style.tone + rng.int(-1, 1);
+    addBuilding(p, prism(r.x, r.y, lot.z, r.w, r.d, h, style.mat, { facade, tone }), facade);
     const roof = { ...r, z: lot.z + h };
-    p.solids.push(...(rng.chance(0.5) ? hipRoof(roof, style.roof) : cornice(roof, style.trim)));
+    p.solids.push(...toned(rng.chance(0.5) ? hipRoof(roof, style.roof) : cornice(roof, style.trim), tone));
     p.solids.push(...shopAwning(r, front, lw - 1, lot.z));
-    if (lot.open.length === 0) return; // sin frente abierto: sur sin neones
+    if (!neons) return;
     p.slots.push(neonSlot(r, front, lw - 1, lot.z, k));
     if (k === corner) p.slots.push(neonSlot(r, second!, lw - 1, lot.z, k));
   });
@@ -113,7 +116,7 @@ export function rowHouses(lot: Lot, rng: Rng, style: Style): Piece {
   const n = Math.min(rng.int(4, 5), Math.floor(len / 4));
   const ws = Array.from({ length: n }, () => rng.int(4, 5));
   for (let i = n - 1, sum = ws.reduce((a, b) => a + b, 0); sum > len && i >= 0; i--) if (ws[i] === 5) { ws[i] = 4; sum--; }
-  const floors = 2 * style.floorH + HIP_H <= cap ? 2 : 1, h = floors * style.floorH;
+  const floors = 2 * style.floorH + HIP_ROOF_H <= cap ? 2 : 1, h = floors * style.floorH;
   const facade: Facade = { floors, cols: 1, base: "portico" }; // la puerta: planta baja oscura
   let s = (len - ws.reduce((a, b) => a + b, 0)) / 2;
   const starts: number[] = [];
@@ -121,7 +124,7 @@ export function rowHouses(lot: Lot, rng: Rng, style: Style): Piece {
     starts.push(s);
     const r = frontRect(lot, front, s, s + hw, HOUSE_BACK), tone = style.tone + rng.int(-1, 1);
     addBuilding(p, prism(r.x, r.y, lot.z, r.w, r.d, h, style.mat, { facade, tone }), facade);
-    p.solids.push(...hipRoof({ ...r, z: lot.z + h }, style.roof).map((q) => (tone ? { ...q, tone } : q)));
+    p.solids.push(...toned(hipRoof({ ...r, z: lot.z + h }, style.roof), tone));
     s += hw;
   }
   for (let j = 0; j + 1 < n; j += 2) {

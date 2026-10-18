@@ -43,11 +43,29 @@ describe("kit: familia lowrise", () => {
       for (const seed of SEEDS) expect(shopRow([], seed).slots).toEqual([]);
     });
 
-    it("con open s y e el local de la esquina publica además un slot hacia el este", () => {
+    it("con open s y e el local de la esquina (el último) publica además un slot hacia el este", () => {
       for (const seed of SEEDS) {
-        const east = shopRow(["s", "e"], seed).slots.filter((s) => s.side === "e");
-        expect(east.length).toBeGreaterThanOrEqual(1);
-        for (const s of east) for (const q of s.pts) expect(Math.abs(q.x - (LOT.x + LOT.w))).toBeLessThanOrEqual(TOL);
+        const slots = shopRow(["s", "e"], seed).slots, east = slots.filter((s) => s.side === "e");
+        expect(east).toHaveLength(1);
+        expect(east[0]!.local).toBe(Math.max(...slots.map((s) => s.local)));
+        for (const q of east[0]!.pts) expect(Math.abs(q.x - (LOT.x + LOT.w))).toBeLessThanOrEqual(TOL);
+      }
+    });
+
+    it("con frente norte u oeste los slots van sobre esa pared, con su normal", () => {
+      for (const seed of SEEDS) {
+        for (const s of shopRow(["n"], seed).slots) { expect(s).toMatchObject({ side: "n", wall: { x: 0, y: -1, z: 0 } }); for (const q of s.pts) expect(Math.abs(q.y - LOT.y)).toBeLessThanOrEqual(TOL); }
+        for (const s of shopRow(["w"], seed).slots) { expect(s).toMatchObject({ side: "w", wall: { x: -1, y: 0, z: 0 } }); for (const q of s.pts) expect(Math.abs(q.x - LOT.x)).toBeLessThanOrEqual(TOL); }
+      }
+    });
+
+    it("el techo de cada local lleva el tono de su cuerpo", () => {
+      for (const seed of SEEDS) {
+        const p = shopRow(["s"], seed, LOT), shops = faced(p);
+        for (const s of shops) {
+          const b = bounds(s), roof = p.solids.find((q) => q.kind === "prism" && q !== s && Math.abs(q.at.z - b.max.z) < TOL && q.at.x < b.max.x && q.at.x + q.w > b.min.x && Math.abs(q.at.x + q.w / 2 - (b.min.x + b.max.x) / 2) < TOL);
+          expect(roof?.tone ?? 0).toBe(s.tone ?? 0);
+        }
       }
     });
 
@@ -103,6 +121,30 @@ describe("kit: familia lowrise", () => {
         expect(p.solids.filter((s) => s.kind === "prism" && s.roof === "hip" && s.mat === "terracotta")).toHaveLength(houses.length);
         expect(cones(p)).toHaveLength(Math.floor(houses.length / 2));
         expect(p.slots).toEqual([]);
+      }
+    });
+
+    it("en el lote mínimo y con frente norte u oeste las casas siguen siendo 4..5 de 4..5 pegadas al frente, con el jardín atrás", () => {
+      const lot: Lot = { x: 0, y: 0, w: 16, d: 12, z: 0, open: [], maxH: 24 };
+      for (const open of [["s"], ["n"], ["w"]] as Side[][]) for (const seed of SEEDS) {
+        const p = recipe("rowHouses")({ ...lot, open }, createRng(seed), STYLES.residencial), houses = faced(p).map(bounds);
+        const front = open[0]!, alongX = front !== "w";
+        expect(houses.length).toBeGreaterThanOrEqual(alongX ? 4 : 3); // un frente de 12 solo admite 3
+        for (const b of houses) {
+          const w = alongX ? b.max.x - b.min.x : b.max.y - b.min.y;
+          expect(w).toBeGreaterThanOrEqual(4 - TOL);
+          expect(w).toBeLessThanOrEqual(5 + TOL);
+          const edge = { s: b.max.y === lot.y + lot.d, n: b.min.y === lot.y, w: b.min.x === lot.x }[front as "s" | "n" | "w"];
+          expect(edge).toBe(true);
+        }
+        for (const t of cones(p)) { const c = bounds(t); expect(houses.some((b) => c.min.x < b.max.x && c.max.x > b.min.x && c.min.y < b.max.y && c.max.y > b.min.y)).toBe(false); }
+      }
+    });
+
+    it("el techo de cada casa lleva el tono de su cuerpo", () => {
+      for (const seed of SEEDS) {
+        const p = recipe("rowHouses")(LOT, createRng(seed), STYLES.residencial), houses = faced(p), roofs = p.solids.filter((s) => s.kind === "prism" && s.roof === "hip");
+        houses.forEach((h, i) => expect(roofs[i]!.tone ?? 0).toBe(h.tone ?? 0));
       }
     });
   });

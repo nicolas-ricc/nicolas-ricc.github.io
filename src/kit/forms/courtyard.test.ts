@@ -94,7 +94,9 @@ describe("kit: familia courtyard", () => {
       const edge = { s: c.y + c.d === lot.y + lot.d, n: c.y === lot.y, e: c.x + c.w === lot.x + lot.w, w: c.x === lot.x }[side];
       expect(edge).toBe(true);
       expect(cones(p)).toHaveLength(2);
-      expect(p.solids.filter(isBench)).toHaveLength(1);
+      const benches = p.solids.filter(isBench);
+      expect(benches).toHaveLength(1);
+      for (const c of cones(p)) expect(overlapsXY(bounds(c), bounds(benches[0]!))).toBe(false); // ningún árbol sobre el banco
     }
   });
 
@@ -109,7 +111,7 @@ describe("kit: familia courtyard", () => {
     runs("patioResidential", (p) => {
       const ws = wings(p);
       expect(ws).toHaveLength(4);
-      for (const w of ws) { const b = bounds(w); expect(Math.min(b.max.x - b.min.x, b.max.y - b.min.y)).toBeCloseTo(4.5, 6); expect(w.mat).toBe("plaster"); }
+      for (const w of ws) { const b = bounds(w); expect(Math.abs(b.max.x - b.min.x - 4.5) < TOL || Math.abs(b.max.y - b.min.y - 4.5) < TOL).toBe(true); expect(w.mat).toBe("plaster"); } // el ancho del ala (su lado corto o, en lotes chicos, el que cruza el anillo)
       expect(p.solids.filter((s) => s.kind === "prism" && s.roof === "hip" && s.mat === "terracotta")).toHaveLength(4);
       expect(cones(p).length).toBeGreaterThanOrEqual(2);
       expect(cones(p).length).toBeLessThanOrEqual(4);
