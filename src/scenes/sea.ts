@@ -27,8 +27,15 @@ export const WRECK = { x: 490, y: 262, heading: Math.PI / 6 } as const;
 const WATER_Z = -1;
 export const DRUM_R0 = 3.2;
 const DRUMS = 6, DRUM_H = 4, DRUM_STEP = 0.2, GALLERY_H = 0.6, LANTERN_H = 3, CAP_H = 2;
+const DRUM_TOP_R = DRUM_R0 - (DRUMS - 1) * DRUM_STEP;
 /** Galería de neón y postes de la baranda: último tambor + 0.5. Las luces van a la altura de la plataforma (lantern.z − 2). */
-export const GALLERY_R = DRUM_R0 - (DRUMS - 1) * DRUM_STEP + 0.5;
+export const GALLERY_R = DRUM_TOP_R + 0.5;
+/** Sección y altura de los postes de la baranda: medidas propias, no siguen al fuste. */
+export const POST_W = 0.3, POST_H = 1.2;
+/** El disco sobresale media sección de poste por fuera de la baranda. */
+export const GALLERY_DECK_R = GALLERY_R + POST_W;
+/** Linterna retranqueada respecto del último tambor; la tapa la cubre con un alero de 0.2. */
+export const LANTERN_R = DRUM_TOP_R - 0.6, CAP_R = LANTERN_R + 0.2;
 /**
  * Balizas de costa: arco a ~12.8 u de la punta, de NE a SE por el este. La punta y su orilla
  * (12 u) son Portfolio para `worldZoneAt`; a esta distancia ya es Blog (lo fija sea.test.ts).
@@ -44,12 +51,12 @@ function lighthouse(out: Solid[]): Vec3 {
   const { x, y } = LIGHTHOUSE;
   let z = LIGHTHOUSE.z;
   for (let i = 0; i < DRUMS; i++) { out.push(cyl(x, y, z, DRUM_R0 - i * DRUM_STEP, DRUM_H, i % 2 === 0 ? "whitewash" : "rust")); z += DRUM_H; }
-  out.push(cyl(x, y, z, 3, GALLERY_H, "steel")); z += GALLERY_H;
-  for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; out.push(prism(x + GALLERY_R * Math.cos(a) - 0.15, y + GALLERY_R * Math.sin(a) - 0.15, z, 0.3, 0.3, 1.2, "steel")); }
-  out.push(cyl(x, y, z, 1.6, LANTERN_H, "glass", 8));
+  out.push(cyl(x, y, z, GALLERY_DECK_R, GALLERY_H, "steel")); z += GALLERY_H;
+  for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; out.push(prism(x + GALLERY_R * Math.cos(a) - POST_W / 2, y + GALLERY_R * Math.sin(a) - POST_W / 2, z, POST_W, POST_W, POST_H, "steel")); }
+  out.push(cyl(x, y, z, LANTERN_R, LANTERN_H, "glass", 8));
   const lantern = v3(x, y, z + LANTERN_H / 2);
   z += LANTERN_H;
-  out.push({ kind: "cone", at: v3(x, y, z), r: 1.8, h: CAP_H, mat: "steel", sides: 8 });
+  out.push({ kind: "cone", at: v3(x, y, z), r: CAP_R, h: CAP_H, mat: "steel", sides: 8 });
   return lantern;
 }
 
