@@ -1,12 +1,15 @@
 import { pathToFileURL } from "node:url";
-import { BASE_SHADOW, BASE_SKY, BASE_TONES, DARKEN, darken } from "../src/map/palette-base";
+import { BASE_SHADOW, BASE_SKY, BASE_TONES, DARKEN, darken, extendLadder } from "../src/map/palette-base";
 
+const NINE = ["deep", "shade", "dim", "lit", "down", "top", "up", "pale", "glow"] as const;
 const hex = (c: number) => `0x${darken(c, DARKEN).toString(16).padStart(6, "0")}`;
 
 /** Literales del atlas oscurecido, listos para pegar en src/map/palette-iso.ts. */
 export function paletteLiterals(): { tones: string[]; shadow: string; sky: string; css: string } {
-  const tones = Object.entries(BASE_TONES).map(([mat, t]) =>
-    `  ${`${mat}:`.padEnd(11)}{ top: ${hex(t.top)}, lit: ${hex(t.lit)}, shade: ${hex(t.shade)}, up: ${hex(t.up)}, down: ${hex(t.down)} },`);
+  const tones = Object.entries(BASE_TONES).map(([mat, t]) => {
+    const n = extendLadder(t);
+    return `  ${`${mat}:`.padEnd(11)}{ ${NINE.map((k) => `${k}: ${hex(n[k])}`).join(", ")} },`;
+  });
   return {
     tones,
     shadow: `  shadow: ${hex(BASE_SHADOW)},`,

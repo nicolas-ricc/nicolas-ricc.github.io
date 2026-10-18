@@ -32,6 +32,11 @@ export const BASE_TONES = {
   foam:      { top: 0xc4d3d6, lit: 0xa19c85, shade: 0x4e5980, up: 0xe3ecda, down: 0xa9bac9 },
   abyss:     { top: 0x0f2740, lit: 0x081733, shade: 0x061026, up: 0x152e45, down: 0x0c213d },
   glint:     { top: 0xf58c5a, lit: 0xc96838, shade: 0x623b36, up: 0xffc496, down: 0xd37b55 },
+  // Resume nivel 2: cityLadder(top) pegado como literal
+  plaster:   { top: 0xb89a86, lit: 0x977253, shade: 0x4a4150, up: 0xd5ac89, down: 0x9e887e },
+  terracotta:{ top: 0x9a5a3c, lit: 0x7e4325, shade: 0x3e2624, up: 0xb3653d, down: 0x844f38 },
+  marble:    { top: 0xcfc4b0, lit: 0xaa916d, shade: 0x53526a, up: 0xf0dcb4, down: 0xb2aca5 },
+  awning:    { top: 0x3a5a4a, lit: 0x30432e, shade: 0x17262c, up: 0x43654b, down: 0x324f46 },
 } as const;
 
 export const BASE_SHADOW = 0x2a1a3a;
@@ -41,4 +46,29 @@ export const BASE_SKY = 0x171423;
 export function darken(color: number, factor: number): number {
   const ch = (shift: number) => Math.round(((color >> shift) & 255) * factor);
   return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+}
+
+export type FiveTones = { top: number; lit: number; shade: number; up: number; down: number };
+export type NineTones = FiveTones & { deep: number; dim: number; pale: number; glow: number };
+
+type Rgb = readonly [number, number, number];
+/** Cada canal RGB × su factor, redondeado y saturado a 255. */
+const scale = (c: number, [r, g, b]: Rgb): number => {
+  const ch = (shift: number, f: number) => Math.min(255, Math.round(((c >> shift) & 255) * f));
+  return (ch(16, r) << 16) | (ch(8, g) << 8) | ch(0, b);
+};
+const mean = (a: number, b: number): number => {
+  const ch = (shift: number) => Math.round((((a >> shift) & 255) + ((b >> shift) & 255)) / 2);
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+};
+
+/** Regla "ciudad y costa" (ver encabezado de palette-iso.ts) a partir del `top` base. */
+export function cityLadder(top: number): FiveTones {
+  return { top, lit: scale(top, [0.82, 0.74, 0.62]), shade: scale(top, [0.40, 0.42, 0.60]), up: scale(top, [1.16, 1.12, 1.02]), down: scale(top, [0.86, 0.88, 0.94]) };
+}
+
+/** Los cinco tonos más deep, dim, pale y glow: la escalera de nueve. */
+export function extendLadder(t: FiveTones): NineTones {
+  const glow = scale(t.up, [1.12, 1.08, 1.02]);
+  return { ...t, deep: scale(t.shade, [0.70, 0.72, 0.80]), dim: mean(t.shade, t.lit), pale: mean(t.up, glow), glow };
 }
