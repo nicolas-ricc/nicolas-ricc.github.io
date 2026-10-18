@@ -15,11 +15,11 @@
 - Criterio 1: un test comprueba que `tick(7000)` y siete `tick(1000)` con la misma semilla dejan los mismos contadores de disparos para pisos y neones.
 - Criterio 2: los tests existentes de la animación de la ciudad siguen en verde (`src/scenes/city-anim.test.ts`, `src/scenes/city-animator.test.ts`). Si un valor esperado cambia por la nueva semántica, se documenta en el test.
 - Criterio 3: `npm test` y `npm run typecheck` en verde.
-- No cambian `BLINK_GAP_MS`, `SIGN_GAP_MS`, `NEON_STEP_MS` ni ninguna otra constante. Tests y comentarios en castellano, como el resto del archivo. Commits `test(#23): …` / `fix(#23): …`.
+- No cambian `BLINK_GAP_MS`, `SIGN_GAP_MS`, `NEON_STEP_MS` ni ninguna otra constante. Tests y comentarios en castellano, como el resto del archivo. Commits `feat(#23): …` / `test(#23): …` / `fix(#23): …`, el estilo de `git log`.
 
 ## Decisiones técnicas (declaradas)
 
-1. **Un `Rng` por temporizador.** Se crean con `createRng(rng.int(0, 0xffffffff))` en el mismo punto donde hoy se sortea el primer intervalo de cada uno: `blinkRng` en lugar de la primera llamada a `nextGap()`, y `signRng` en lugar del primer `rng.int(SIGN_GAP_MS…)`. El `rng` compartido queda para los papeles. Medido en un prototipo, sobre 200 semillas: con el `while` solo y el `rng` compartido, `tick(60000)` frente a 60×`tick(1000)` difería en 175. Con flujos propios, 0 diferencias a 60000/1000, 60000/33 y 600000/7. Cambian las tiradas concretas de la semilla 3, pero ningún test existente fija valores sorteados: todos comprueban invariantes (rangos, conteos mínimos, igualdad entre dos instancias con la misma semilla).
+1. **Un `Rng` por temporizador.** Se crean con `createRng(rng.int(0, 0xffffffff))` en el mismo punto donde hoy se sortea el primer intervalo de cada uno: `blinkRng` en lugar de la primera llamada a `nextGap()`, y `signRng` en lugar del primer `rng.int(SIGN_GAP_MS…)`. El `rng` compartido queda para los papeles. Medido en un prototipo, sobre 200 semillas: con el `while` solo y el `rng` compartido, `tick(60000)` frente a 60×`tick(1000)` difería en 175. Con flujos propios, 0 diferencias a 60000/1000, 60000/33 y 600000/7. `Rng.int` consume exactamente un `next()` (`src/map/seed.ts`), así que cada reemplazo gasta las mismas tiradas del `rng` compartido en el mismo orden: los papeles y el frame 0 quedan idénticos. Cambian las tiradas de los temporizadores, pero ningún test existente fija valores sorteados: todos comprueban invariantes (rangos, conteos mínimos, igualdad entre dos instancias con la misma semilla).
 2. **El cartel elegido y la moneda de color/apagón también salen de `signRng`.** Si no, el intervalo siguiente dependería del orden respecto de los papeles.
 3. **Parpadeo.** El tick que vuelve a encender ya no repone el temporizador: la pausa cuenta desde el instante del disparo (tiempo de pared), no desde el tick que reenciende. El tick resta siempre `dtMs`, y el `while` puede volver a apagar en el mismo tick que reencendió si el tick es mayor que lo que quedaba de pausa (solo con ticks ≥ 4000 ms). Visualmente sigue siendo "un tick apagado"; con ticks normales nunca hay dos seguidos.
 4. **`fired()`.** `CityAnim` gana `fired(): { lit: number; neon: number }`: disparos del parpadeo y eventos de carteles desde la construcción. Es la forma observable de los "contadores de disparos" del criterio 1 sin espiar el `rng`. `cityAnimator` no la usa, y el contrato `Animator` no cambia.
@@ -29,7 +29,7 @@
 
 ## Review Focus
 
-1. Pestaña dormida, `tick(600000)`: termina, dispara muchos eventos (≈ 600000 / 6500 parpadeos) y queda igual que 600 `tick(1000)`. Test en Tasks 2 y 3.
+1. Tick muy largo, `tick(600000)` (en la app Pixi recorta `deltaMS` a 100 ms y `main.ts:133` para el ticker con la pestaña oculta, pero el lab multiplica por `?speed=`, y el issue pide que un tick largo dispare varios eventos): termina, dispara muchos eventos (≈ 600000 / 6500 parpadeos) y queda igual que 600 `tick(1000)`. Test en Tasks 2 y 3.
 2. Escena sin carteles (`signs: []`): un tick largo no se cuelga y `fired().neon` queda en 0. Test en la Task 3.
 3. Reduced motion o `dtMs <= 0`: `fired()` queda en `{ lit: 0, neon: 0 }`. Test en la Task 1.
 4. Después de un tick largo que apaga el piso, el siguiente tick corto lo reenciende: test en la Task 2.
@@ -119,9 +119,14 @@ git commit -m "feat(#23): contadores de disparos en city-anim"
 
 **Interfaces:**
 - Consumes: `CityAnim.fired()` (Task 1), `createRng` de `../map/seed`, `BLINK_GAP_MS`.
-- Produces: helper de test `troceado(dts: number[])`, que la Task 3 reutiliza:
+- Produces: helper de test `troceado(dts: number[], seed = 3)` (misma escena que `setup()`), que la Task 3 reutiliza:
   ```ts
-  const troceado = (dts: number[]) => { const { anim } = setup(); for (const dt of dts) anim.tick(dt); return anim; };
+  const troceado = (dts: number[], seed = 3) => {
+  const scene = city(createRng(7), createRng(8));
+  const anim = createCityAnim(scene.tower, scene.neon, createRng(seed), { reducedMotion: false });
+  for (const dt of dts) anim.tick(dt);
+  return anim;
+};
   ```
 
 - [ ] **Step 1: tests que fallan**
@@ -129,7 +134,12 @@ git commit -m "feat(#23): contadores de disparos en city-anim"
 Después de `setup` en el test:
 
 ```ts
-const troceado = (dts: number[]) => { const { anim } = setup(); for (const dt of dts) anim.tick(dt); return anim; };
+const troceado = (dts: number[], seed = 3) => {
+  const scene = city(createRng(7), createRng(8));
+  const anim = createCityAnim(scene.tower, scene.neon, createRng(seed), { reducedMotion: false });
+  for (const dt of dts) anim.tick(dt);
+  return anim;
+};
 const veces = (n: number, dt: number) => Array.from({ length: n }, () => dt);
 ```
 
@@ -212,7 +222,9 @@ Importar `SIGN_GAP_MS` desde `./city-anim`. Dentro del `describe`:
 
 ```ts
   it("tick(7000) y siete tick(1000) con la misma semilla dejan los mismos contadores de pisos y neones", () => {
-    expect(troceado([7000]).fired()).toEqual(troceado(veces(7, 1000)).fired());
+    // con la semilla 3 sola el caso ya da igual con el código viejo (0 apagones, 1 evento): se barren
+    // 50 semillas, que con el reinicio viejo difieren en ~40 % de los casos
+    for (let seed = 0; seed < 50; seed++) expect(troceado([7000], seed).fired()).toEqual(troceado(veces(7, 1000), seed).fired());
   });
 
   it("carteles: 60 s o 10 min de una vez disparan lo mismo que troceados", () => {
@@ -243,7 +255,7 @@ La comparación de colores vale porque, con `signRng` propio, los mismos eventos
 - [ ] **Step 2: correr y ver que fallan**
 
 Run: `npx vitest run src/scenes/city-anim.test.ts`
-Expected: FAIL en las comparaciones de 60 s, 10 min y troceo irregular.
+Expected: FAIL en el barrido de semillas del criterio 1, en las comparaciones de 60 s y 10 min y en el troceo irregular.
 
 - [ ] **Step 3: implementación**
 
@@ -281,3 +293,18 @@ Expected: PASS, toda la suite y el typecheck.
 git add src/scenes/city-anim.ts src/scenes/city-anim.test.ts
 git commit -m "fix(#23): los carteles de neón arrastran el exceso del tick"
 ```
+
+## Assumptions
+
+- `fired()` como método público de `CityAnim` (descartado: espiar el `rng` en el test, que mide un detalle de implementación; o deducir disparos de `lit()`/`neon()`, que no ven varios disparos dentro de un tick).
+- Flujos `Rng` propios por temporizador (descartado: `rng` compartido, que deja el intervalo sorteado dependiente del troceo por el reciclado de los papeles).
+- El test del criterio 1 barre 50 semillas, además de la 3 (descartado: solo la semilla 3, que con el código viejo ya da igual y no ejercita el arreglo).
+- dt enteros en los tests; con dt fraccionario el error de coma flotante no se compensa (descartado: cuantizar el reloj).
+- Dos ticks apagados seguidos solo con ticks ≥ 4000 ms, aceptado como efecto de la semántica de tiempo de pared (el test existente usa 33 ms y no cambia).
+
+## Grilling
+
+- Rondas: 1 (los cambios de la revisión no agregan ni quitan pasos ni cambian la costura: se amplía un test y se precisan textos).
+- Preguntas: 16. Fuentes: ISSUE 4, CODE 10, DOC 0, NO SOURCE 2 (supuestos técnicos: preguntas 9 y 16).
+- Supuestos: los de `## Assumptions`.
+- Issues abiertos: #124 (reciclado de papeles en city-anim) y #125 (temporizadores de tech-anim y shipyard-anim).
