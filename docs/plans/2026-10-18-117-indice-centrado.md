@@ -170,7 +170,7 @@ Fuentes: ISSUE 4, CODE 9, DOC 1, NO SOURCE 6 (técnicas: A1–A6). Ambigüedades
 8. Layout en la carga con hash. CODE: `src/lab/storybook.ts:27-37`, el índice se arma al evaluar el módulo. `show()` corre dentro de `boot()`, después de `await app.init(...)` (`:69`), así que el `nav` ya tiene layout.
 9. Eje horizontal. NO SOURCE → A3.
 10. Vecinas legibles. ISSUE: "con vecinas legibles arriba y abajo" (brief). NO SOURCE sobre cómo verificarlo → A2.
-11. Orden del catálogo y `faro`. CODE: `src/lab/exhibits.ts:147`, `faro` abre el último grupo ("Blog: mar") y quedan 57 entradas antes y después. Con 900 px de alto queda bajo el pliegue; el plan ya prevé otro exhibit del grupo si no queda al ras.
+11. Orden del catálogo y `faro`. CODE: `src/lab/exhibits.ts:147`, `faro` abre el último grupo ("Blog: mar"): es la entrada 39 de 46, con siete grupos de títulos encima. Con 900 px de alto queda bajo el pliegue, y el plan ya prevé otro exhibit del grupo si no queda al ras.
 12. `blog.generated.json`. CODE: `.gitignore:4`, ignorado; lo genera `npm run feed`, que corre como `predev` (`package.json:15,19`). `npx vite` no pasa por `predev`, por eso se copia.
 13. `?bloom=off`. DOC: `README.md:52`, "`?bloom=on|off|fallback` lo fuerza al cargar". `docs/superpowers/specs/2026-10-17-storybook-estructuras-design.md:223`: las capturas de #97 se tomaron con `?bloom=off`, y se mantiene para que sean comparables.
 14. `scroll-behavior`. CODE: `lab/storybook.html:8-22`, no hay `scroll-behavior`, así que el desplazamiento es instantáneo.
