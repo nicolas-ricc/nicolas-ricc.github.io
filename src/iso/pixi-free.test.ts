@@ -23,7 +23,7 @@ describe("guard de motor sin Pixi", () => {
 
   for (const file of files) {
     // src/iso y src/scenes son el motor puro: no deben depender del runtime de render (Pixi).
-    it(`${relative(ROOT, file)} no importa pixi.js`, () => {
+    it(`${relative(ROOT, file)} no importa Pixi`, () => {
       expect(readFileSync(file, "utf8")).not.toMatch(/from "pixi\.js"/);
     });
   }
