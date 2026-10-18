@@ -31,13 +31,7 @@ const top = (solids: readonly Solid[]): number => Math.max(0, ...solids.map((s) 
 const TURN_STEPS = 32;
 const HALO_K = Math.max(...HALO_BASE.map((h) => h.k)); // el disco más grande que dibuja `drawAccents` alrededor de un punto
 
-/**
- * Altura de caja que hace falta para que los acentos de la estructura no se salgan por arriba del cuadro:
- * se mide en pantalla contra el vértice norte de `boxFrame`. Cuentan los estáticos y los animados en su
- * estado inicial y a lo largo de una vuelta del haz, sobre un mundo nuevo para que la medida no dependa del
- * orden del catálogo; un acento es de la estructura si su centro (o el primer vértice, de donde nace el haz)
- * cae en la caja.
- */
+/** Altura que piden los acentos de la estructura (medida en pantalla contra el vértice norte de `boxFrame`), estáticos y animados a lo largo de una vuelta del haz; mundo nuevo para no depender del orden del catálogo. */
 function accentReach(box: Box): number {
   const north = (box.x0 + box.y0) / 2;
   const own = (a: Accent): boolean => { const p = a.kind === "dot" ? a.at : a.pts[0]!; return p.x >= box.x0 && p.x <= box.x1 && p.y >= box.y0 && p.y <= box.y1; };
