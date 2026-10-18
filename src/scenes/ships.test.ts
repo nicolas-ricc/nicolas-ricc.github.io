@@ -246,7 +246,7 @@ describe("carguero (Damen Combi Freighter 3850)", () => {
 describe("eslora del empujador (#68)", () => {
   it("sternOf deriva la popa de PUSHER_LEN, sin literales propios", () => {
     const src = readFileSync(new URL("./ships.ts", import.meta.url), "utf8");
-    const barge = src.match(/^const sternOf = .*kind === "barge" \? ([^:]+):/m)?.[1];
+    const barge = src.match(/^const sternOf = [\s\S]*?kind === "barge" \? ([^:]+):/m)?.[1];
     expect(barge?.trim()).toBe("-PUSHER_LEN");
   });
   it("la casilla larga, las barandas y el bote quedan donde estaban, referidos a la popa del empujador en −20", () => {
