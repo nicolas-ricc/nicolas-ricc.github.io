@@ -5,7 +5,7 @@ import { bounds, isFlat, type Solid } from "../iso/solids";
 import { ZONE_SPLIT_X, abyssX, inHeadland, worldZoneAt } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
-import { BUOYS, CAP_R, COAST, COAST_Z, GALLERY_DECK_R, GALLERY_R, KEEPER, LANTERN_R, LIGHTHOUSE, POST_H, POST_W, WRECK, WRECK_BUOY, sea, type SeaScene } from "./sea";
+import { BUOYS, CAP_R, COAST, COAST_Z, GALLERY_DECK_R, GALLERY_R, KEEPER, LANTERN_R, LANTERN_Z, LIGHTHOUSE, POST_H, POST_W, WRECK, WRECK_BUOY, sea, type SeaScene } from "./sea";
 import { headlandZ, terrainAt } from "./terrain";
 
 const scene = (): SeaScene => sea(createRng(7));
@@ -34,6 +34,7 @@ describe("sea", () => {
     const top = Math.max(...s.solids.filter((x) => Math.abs(bounds(x).min.x - (LIGHTHOUSE.x - 3.2)) < 4 && Math.abs(bounds(x).min.y - (LIGHTHOUSE.y - 3.2)) < 4).map((x) => bounds(x).max.z));
     expect(top - LIGHTHOUSE.z).toBeCloseTo(29.6, 1);
     expect(s.lantern.z).toBeCloseTo(LIGHTHOUSE.z + 24 + 0.6 + 1.5, 6);
+    expect(s.lantern.z).toBe(LANTERN_Z);
     expect(worldZoneAt(LIGHTHOUSE.x, LIGHTHOUSE.y)).toBe("portfolio"); // el faro clickea Portfolio
   });
 

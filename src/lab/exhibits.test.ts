@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
+import { project, Z_SCALE } from "../iso/project";
 import { bounds, type Solid } from "../iso/solids";
 import { BLEED, WORLD } from "../map/geo";
+import { BEAM_PERIOD_MS } from "../scenes/sea-anim";
 import { assembleWorld } from "../world/assemble";
-import { type Box, FRAME_H } from "../world/frame";
+import { type Box, FRAME_H, HALO_BASE } from "../world/frame";
 import { cropAnimators, cropScene } from "./crop";
 import { EXHIBITS, GROUPS, type GroupId, pickExhibit, stepExhibit } from "./exhibits";
 
@@ -26,8 +28,27 @@ const { scene, animators } = assembleWorld(undefined, { reducedMotion: false });
 const within = (s: Solid, b: Box): boolean => { const r = bounds(s); return r.min.x >= b.x0 && r.max.x <= b.x1 && r.min.y >= b.y0 && r.max.y <= b.y1; };
 const top = (solids: readonly Solid[]): number => Math.max(0, ...solids.map((s) => bounds(s).max.z));
 
-/** Alturas de lo que la caja recorta: estático adentro, estático + capas animadas adentro, y el vecino cortado más alto. */
-function measure(box: Box): { inside: number; withAnim: number; neighbour: number } {
+const TURN_STEPS = 32;
+const HALO_K = Math.max(...HALO_BASE.map((h) => h.k)); // el disco más grande que dibuja `drawAccents` alrededor de un punto
+
+/** Altura que piden los acentos de la estructura (medida en pantalla contra el vértice norte de `boxFrame`), estáticos y animados a lo largo de una vuelta del haz; mundo nuevo para no depender del orden del catálogo. */
+function accentReach(box: Box): number {
+  const north = (box.x0 + box.y0) / 2;
+  const own = (a: Accent): boolean => { const p = a.kind === "dot" ? a.at : a.pts[0]!; return p.x >= box.x0 && p.x <= box.x1 && p.y >= box.y0 && p.y <= box.y1; };
+  const reach = (accents: readonly Accent[]): number => Math.max(0, ...accents.filter(own).flatMap((a) =>
+    a.kind === "dot" ? [(north - project(a.at).y + a.r * HALO_K) / Z_SCALE] : a.pts.map((p) => (north - project(p).y) / Z_SCALE)));
+  const sweep = assembleWorld(undefined, { reducedMotion: false });
+  const anims = cropAnimators(sweep.animators, box);
+  let max = reach(cropScene(sweep.scene, box).accents);
+  for (let k = 0; k < TURN_STEPS; k++) {
+    for (const a of anims) for (const id of a.ids) { const l = a.layer(id); if (l.kind === "accent") max = Math.max(max, reach(l.accents)); }
+    for (const a of anims) a.tick(BEAM_PERIOD_MS / TURN_STEPS);
+  }
+  return max;
+}
+
+/** Alturas de lo que la caja recorta: estático adentro, estático + capas animadas adentro, el vecino cortado más alto y lo que piden los acentos. */
+function measure(box: Box): { inside: number; withAnim: number; neighbour: number; accents: number } {
   const cs = cropScene(scene, box);
   const fixed = [...cs.ground, ...cs.solids];
   const anim = cropAnimators(animators, box).flatMap((a) => a.ids.flatMap((id) => { const l = a.layer(id); return l.kind === "solid" ? l.solids : []; }));
@@ -36,6 +57,7 @@ function measure(box: Box): { inside: number; withAnim: number; neighbour: numbe
     inside,
     withAnim: Math.max(inside, top(anim.filter((s) => within(s, box)))),
     neighbour: top(fixed.filter((s) => s.kind !== "ground" && !within(s, box))),
+    accents: accentReach(box),
   };
 }
 
@@ -74,11 +96,11 @@ describe("catálogo de exhibits", () => {
     it("no-vacío: contra el mundo real cada región recorta al menos un sólido", () => {
       for (const e of mine) expect(cropScene(scene, e.box).solids.length, e.id).toBeGreaterThan(0);
     });
-    it("encuadre: h cubre la estructura y no sobra más de SLACK", () => {
+    it("encuadre: h cubre la estructura y sus acentos y no sobra más de SLACK", () => {
       for (const e of mine) {
         const h = e.h ?? FRAME_H, m = measured.get(e)!;
-        expect(h, e.id).toBeGreaterThanOrEqual(m.inside);
-        expect(h, e.id).toBeLessThanOrEqual(m.withAnim + SLACK);
+        expect(h, e.id).toBeGreaterThanOrEqual(Math.max(m.inside, m.accents));
+        expect(h, e.id).toBeLessThanOrEqual(Math.max(m.withAnim, m.accents) + SLACK);
       }
     });
     it("vecinos: ningún sólido cortado por el borde sube más que h", () => {

@@ -27,6 +27,8 @@ export const WRECK = { x: 490, y: 262, heading: Math.PI / 6 } as const;
 const WATER_Z = -1;
 export const DRUM_R0 = 3.2;
 const DRUMS = 6, DRUM_H = 4, DRUM_STEP = 0.2, GALLERY_H = 0.6, LANTERN_H = 3, CAP_H = 2;
+/** Centro de la linterna, de donde nace el haz (sea-anim.ts). */
+export const LANTERN_Z = LIGHTHOUSE.z + DRUMS * DRUM_H + GALLERY_H + LANTERN_H / 2;
 const DRUM_TOP_R = DRUM_R0 - (DRUMS - 1) * DRUM_STEP;
 /** Galería de neón y postes de la baranda: último tambor + 0.5. Las luces van a la altura de la plataforma (lantern.z − 2). */
 export const GALLERY_R = DRUM_TOP_R + 0.5;
@@ -54,7 +56,7 @@ function lighthouse(out: Solid[]): Vec3 {
   out.push(cyl(x, y, z, GALLERY_DECK_R, GALLERY_H, "steel")); z += GALLERY_H;
   for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; out.push(prism(x + GALLERY_R * Math.cos(a) - POST_W / 2, y + GALLERY_R * Math.sin(a) - POST_W / 2, z, POST_W, POST_W, POST_H, "steel")); }
   out.push(cyl(x, y, z, LANTERN_R, LANTERN_H, "glass", 8));
-  const lantern = v3(x, y, z + LANTERN_H / 2);
+  const lantern = v3(x, y, LANTERN_Z);
   z += LANTERN_H;
   out.push({ kind: "cone", at: v3(x, y, z), r: CAP_R, h: CAP_H, mat: "steel", sides: 8 });
   return lantern;
