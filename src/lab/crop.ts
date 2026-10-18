@@ -1,5 +1,6 @@
 import type { Accent } from "../iso/accent";
 import { v3, type Vec3 } from "../iso/geometry";
+import { shadowPolygon } from "../iso/light";
 import { bounds, type Bounds, type Solid, type Tri, tessellate } from "../iso/solids";
 import type { AccentColor, Material } from "../map/palette-iso";
 import type { Animator, AnimLayer } from "../scenes/animator";
@@ -104,7 +105,8 @@ export function solidsBox(solids: readonly Solid[]): { box: Box; h: number } {
 
 /**
  * Una pieza sola: lo que emite `build`, armado en el origen, sobre un pad
- * cuadrado de 1 u de espesor centrado en el origen que la cubre con margen.
+ * de 1 u de espesor que la cubre con margen, ella y la sombra que proyecta
+ * (con el proyector del motor: el pad queda descentrado hacia donde cae la sombra).
  * La cara de arriba del pad va al piso de la pieza (−1 para los barcos, que
  * flotan en `WATER_Z`). Sin terreno ni subescenas: el stage no las lee.
  */
@@ -117,10 +119,17 @@ export function pieceScene(build: (out: Solid[], accents: Accent[]) => void, pad
     r = Math.max(r, -min.x, max.x, -min.y, max.y);
     floor = Math.min(floor, min.z);
   }
-  const h = r + PAD_M, top = Math.floor(floor);
+  // la sombra cae al ENE y llega a ~3 veces la altura: el pad la cubre entera, aunque quede descentrado
+  let x0 = -r, y0 = -r, x1 = r, y1 = r;
+  for (const s of solids) for (const p of shadowPolygon(s) ?? []) {
+    x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y);
+    x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y);
+  }
+  x0 -= PAD_M; y0 -= PAD_M; x1 += PAD_M; y1 += PAD_M;
+  const top = Math.floor(floor);
   // tapa y las dos caras que ve la cámara (este, sur), con la normal hacia afuera
-  const nw = v3(-h, -h, top), ne = v3(h, -h, top), se = v3(h, h, top), sw = v3(-h, h, top);
-  const neB = v3(h, -h, top - 1), seB = v3(h, h, top - 1), swB = v3(-h, h, top - 1);
+  const nw = v3(x0, y0, top), ne = v3(x1, y0, top), se = v3(x1, y1, top), sw = v3(x0, y1, top);
+  const neB = v3(x1, y0, top - 1), seB = v3(x1, y1, top - 1), swB = v3(x0, y1, top - 1);
   const quad = (a: Vec3, b: Vec3, c: Vec3, d: Vec3): Tri[] => [{ pts: [a, b, c] }, { pts: [a, c, d] }];
   const origin = v3(0, 0, 0);
   return {
