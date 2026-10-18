@@ -4,7 +4,7 @@
 
 **Goal:** que `beam()` en `src/scenes/sea-anim.ts` calcule `beamAngle()` una sola vez y pase ese ángulo a las dos llamadas a `wedge`, en lugar de que cada `wedge` lo calcule por su cuenta.
 
-**Architecture:** es un cambio local dentro de `createSeaAnim`, en `src/scenes/sea-anim.ts:156-159` y `:178`. `wedge` pasa a recibir el ángulo como primer parámetro, `(a: number, len, color, alpha)`, y deja de llamar a `beamAngle()`. `beam` pasa de ser una flecha de expresión a una con cuerpo: hace `const a = beamAngle()` y arma las dos cuñas con ese `a`. `beamAngle` queda tal cual. La interfaz pública `SeaAnim.beam(): Accent[]` no cambia, y la salida tampoco: los dos valores ya eran iguales porque `clock` no se mueve entre las dos llamadas.
+**Architecture:** es un cambio local dentro de `createSeaAnim`, en `src/scenes/sea-anim.ts:157-160` (`wedge`; `beamAngle` está en `:156`) y `:178`. `wedge` pasa a recibir el ángulo como primer parámetro, `(a: number, len, color, alpha)`, y deja de llamar a `beamAngle()`. `beam` pasa de ser una flecha de expresión a una con cuerpo: hace `const a = beamAngle()` y arma las dos cuñas con ese `a`. `beamAngle` queda tal cual. La interfaz pública `SeaAnim.beam(): Accent[]` no cambia, y la salida tampoco: los dos valores ya eran iguales porque `clock` no se mueve entre las dos llamadas.
 
 **Tech Stack:** TypeScript y Vitest (`readFileSync` sobre el fuente, igual que `src/scenes/city.test.ts:231`).
 
@@ -16,7 +16,7 @@
 - Criterio 2: los tests existentes de la animación del mar siguen en verde sin cambios de valores esperados.
 - Criterio 3: `npm run typecheck` en verde.
 - No se tocan `BEAM_LEN`, `BEAM_INNER`, `BEAM_HALF`, `BEAM_PERIOD_MS`, los colores (`"amberBleed"`, `"amber"`) ni los alfas (`0.5`, `0.6`).
-- Tests, comentarios y mensajes en castellano. Commits `test(#66): …` y `refactor(#66): …`.
+- Tests, comentarios y mensajes de los tests en castellano. Commits `test(#66): …` y `refactor(#66): …`, en inglés como los más recientes (`004f160`, `bfe221f`).
 
 ## Decisiones técnicas (declaradas)
 
@@ -38,7 +38,7 @@
 ### Task 1: `beam()` calcula el ángulo una vez y se lo pasa a `wedge`
 
 **Files:**
-- Modify: `src/scenes/sea-anim.ts:157-159` (`wedge`) y `:178` (`beam`)
+- Modify: `src/scenes/sea-anim.ts:157-160` (`wedge`) y `:178` (`beam`)
 - Test: `src/scenes/sea-anim.test.ts`
 
 **Interfaces:**
@@ -59,24 +59,34 @@ describe("haz: un solo ángulo por frame (#66)", () => {
   });
   it("beam() llama una sola vez a beamAngle() y pasa el ángulo a las dos cuñas", () => {
     expect(src.match(/beamAngle\(\)/g)).toHaveLength(1);
-    expect(src).toMatch(/beam: \(\) => \{\s*const a = beamAngle\(\);/);
+    expect(src).toMatch(/beam: \(\) => \{\s*const \w+ = beamAngle\(\);/);
   });
   it("las dos cuñas comparten rotación en todo el giro, con sus largos y alfas", () => {
     const { a } = setup();
-    const axis = (x: Accent) => { if (x.kind !== "poly") throw new Error(); const [o, p, q] = x.pts as [Vec3, Vec3, Vec3]; return { dir: Math.atan2((p.y + q.y) / 2 - o.y, (p.x + q.x) / 2 - o.x), len: Math.hypot(p.x - o.x, p.y - o.y) }; };
+    // Dirección como vector unitario y no como atan2: en a = π la y del punto medio es ~0 y el signo puede saltar entre +π y −π.
+    const axis = (x: Accent) => {
+      if (x.kind !== "poly") throw new Error();
+      expect(x.pts).toHaveLength(3);
+      const o = x.pts[0]!, p = x.pts[1]!, q = x.pts[2]!;
+      const mx = (p.x + q.x) / 2 - o.x, my = (p.y + q.y) / 2 - o.y, m = Math.hypot(mx, my);
+      return { ux: mx / m, uy: my / m, len: Math.hypot(p.x - o.x, p.y - o.y) };
+    };
     for (let t = 0; t < BEAM_PERIOD_MS; t += BEAM_PERIOD_MS / 4) {
-      const [outer, inner] = a.beam() as [Accent, Accent];
-      expect(axis(inner).dir).toBeCloseTo(axis(outer).dir, 9);
-      expect(axis(outer).len).toBeCloseTo(BEAM_LEN, 9);
-      expect(axis(inner).len).toBeCloseTo(BEAM_INNER, 9);
-      expect([outer.alpha, inner.alpha]).toEqual([0.5, 0.6]);
+      const [outer, inner] = a.beam().map(axis);
+      expect(inner!.ux).toBeCloseTo(outer!.ux, 9);
+      expect(inner!.uy).toBeCloseTo(outer!.uy, 9);
+      expect(outer!.len).toBeCloseTo(BEAM_LEN, 9);
+      expect(inner!.len).toBeCloseTo(BEAM_INNER, 9);
+      expect(a.beam().map((x) => x.alpha)).toEqual([0.5, 0.6]);
       a.tick(BEAM_PERIOD_MS / 4);
     }
   });
 });
 ```
 
-Agregar `BEAM_INNER` y `BEAM_LEN` al import de `./sea-anim` (ya están exportados en `sea-anim.ts:47`) y `type Vec3` al import de `../iso/geometry`. `setup` ya existe en el archivo (`sea-anim.test.ts:39`).
+Agregar `BEAM_INNER` y `BEAM_LEN` al import de `./sea-anim` (ya están exportados en `sea-anim.ts:47`). `Accent` ya está importado (`sea-anim.test.ts:3`) y `setup` ya existe (`sea-anim.test.ts:39`, reduced motion apagado por defecto).
+
+Los Steps 1 y 2 los hace la etapa 3 del pipeline, que commitea los tests en rojo como `test(#66): evals`.
 
 - [ ] **Step 2: Run tests to verify they fail**
 
@@ -116,3 +126,18 @@ El test rojo ya se commiteó en la etapa 3 del pipeline (`test(#66): evals`). Ac
 git add src/scenes/sea-anim.ts
 git commit -m "refactor(#66): beam() computes the beam angle once and passes it to both wedges"
 ```
+
+## Assumptions
+
+1. **Unidad de "por tick".** `sea-animator.ts:9` llama a `anim.beam()` una vez cada vez que se redibuja la capa `sea.beam`, y `sea-animator.ts:28` la marca sucia una vez por `tick` con `c.beam`. Por eso "una vez por `beam()`" equivale a "una vez por tick". Alternativa descartada: cachear el ángulo en `tick()`. Cambia dónde vive el estado y el issue no lo pide.
+2. **Test sobre el fuente, sin exportar internos.** Ningún documento lo prohíbe ni lo exige. Se elige no ensanchar la API pública de `sea-anim.ts` solo para un test. Alternativa descartada: exportar `beamAngle`/`wedge` o inyectar el reloj.
+3. **Nombre de la variable libre.** El regex acepta cualquier identificador (`const \w+ = beamAngle()`), así que renombrar `a` no rompe el test. Lo que sí fija es que el ángulo se calcule al abrir el cuerpo de `beam`.
+4. **Formato.** El repo no tiene formateador (`package.json` sin prettier/eslint/biome). El regex de `wedge` se apoya en el `\n  };\n` de cierre (`sea-anim.ts:160`), y el cuerpo, a cuatro espacios, no lo contiene. Si el formato cambia, el test falla en rojo. No pasa en verde en silencio.
+5. **Red de comportamiento.** La dirección se compara como vector unitario y no con `atan2`, para evitar el salto ±π en a = π (t = BEAM_PERIOD_MS/2).
+
+## Grilling
+
+- Rondas: 1. Preguntas: 14 (griller: fable).
+- Fuentes: CODE 11 (`sea-anim.ts:47,156-160,178`, `sea-animator.ts:9,28`, `sea-anim.test.ts:3,39`, `iso/geometry.ts:2`, `iso/accent.ts:8`, `package.json`, `git log`), ISSUE 2 (criterios del Agent Brief), DOC 0, NO SOURCE 4 → supuestos técnicos 1-3 y 5. Ambigüedades de spec: 0. Fuera de alcance: 0.
+- Cambios al plan: el test de rotación usa vectores unitarios (pregunta 3), el regex de `beam` acepta cualquier nombre (7), se aclaró que los Steps 1-2 corren en la etapa 3 (1, 14), se corrigieron los números de línea (13) y se quitó `Vec3`/`as` del test (9, 10).
+- Issues abiertos: ninguno.
