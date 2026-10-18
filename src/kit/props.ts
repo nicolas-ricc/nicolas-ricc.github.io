@@ -78,19 +78,19 @@ export function neon(pts: Vec3[], color: "amber" | "cyan" | "magenta"): Accent[]
   return [{ kind: "poly", pts: halo, color: `${color}Bleed`, alpha: 0.6 }, { kind: "poly", pts, color, alpha: 1 }];
 }
 
-const PUDDLE_ALPHA = 0.25;
+const PUDDLE_ALPHA = 0.25, FOUNTAIN_ALPHA = 0.35; // la fuente no se confunde con los dos charcos de la torre
 const PUDDLE_RADII = [2.5, 1.8, 1.2] as const;
 
 /**
  * Charco de luz: tres octógonos planos concéntricos de radio decreciente. Proyectados
  * se ven como elipses achatadas y, con poco alfa y superpuestos, el borde se deshace.
  */
-export function puddle(x: number, y: number, bleed: AccentColor, z = 0.12): Accent[] {
+export function puddle(x: number, y: number, bleed: AccentColor, z = 0.12, alpha = PUDDLE_ALPHA): Accent[] {
   return PUDDLE_RADII.map((r) => ({
     kind: "poly",
     pts: Array.from({ length: 8 }, (_, i) => { const a = ((i + 0.5) / 8) * Math.PI * 2; return v3(x + r * Math.cos(a), y + r * Math.sin(a), z); }),
     color: bleed,
-    alpha: PUDDLE_ALPHA,
+    alpha,
   }));
 }
 
@@ -99,7 +99,7 @@ export function fountain(at: Vec3): Lit {
   const water = at.z + 0.6;
   return {
     solids: [{ kind: "cylinder", at, r: 3, h: 0.6, mat: "marble", sides: 12 }, { kind: "cylinder", at: v3(at.x, at.y, water), r: 0.6, h: 1.5, mat: "marble", sides: 8 }],
-    accents: puddle(at.x, at.y, "amberBleed", water),
+    accents: puddle(at.x, at.y, "amberBleed", water, FOUNTAIN_ALPHA),
   };
 }
 
