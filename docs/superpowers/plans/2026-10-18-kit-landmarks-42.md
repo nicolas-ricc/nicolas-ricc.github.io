@@ -37,6 +37,16 @@
 11. **Materiales**: los que el issue fija van literales (`steel`, `copper`, `marble`, `stone`); el resto sale del estilo: cuerpos `style.mat` con `tone: style.tone`, bóvedas, cúpulas y techos `style.roof`, cornisas, marquesinas y escalinatas `style.trim`. `rng` solo lo usa la biblioteca (baldosas); las demás ignoran `rng` (como `constructionSite`).
 12. **Lab**: lote propio de `LAB_LOTS` centrado en su celda (x: si es más angosto que 24; y: siempre). Zócalo `paving` del tamaño del lote propio. Una entrada con `z` propia (el puente, `z −1`) va sin zócalo. El puente es la última receta de su fila, así ocupa dos celdas sin correr a nadie.
 
+## Assumptions
+
+Respuestas sin fuente escrita de la revisión del plan, decididas como técnicas (cualquier opción razonable cumple el issue). Van también en el PR.
+
+- **Lotes de la familia**: toda receta salvo torre y puente se diseña para lotes de 21×15 o mayores (el issue: "lote útil 21×15 salvo donde se indica"; el genérico corre 21×15 y 24×18, `src/kit/kit.test.ts:11-14`). Con menos fondo, mercado (`side < 3`) y estación (`half ≤ 0`) no tienen sentido; no se valida ni se degrada. Descartada: recetas que se adaptan a cualquier lote (ningún lote menor llega: la spec §6 los pone en manzanas fijas).
+- **Desvíos de medidas del issue** (decisiones 3, 5, 8): cada uno lo fuerza una regla explícita del issue (todo dentro del lote +0.8, nada bajo `lot.z`); se elige el cambio que conserva las demás medidas literales. Descartadas: achicar el tambor del teatro para que mire al sur (cambia r 6.5); naves laterales que salen del lote; la fórmula literal del arco (slabs bajo `lot.z`, arco colgado).
+- **`fitToCap` achata en lugar de recortar o fallar**: ninguna manzana landmark tiene tope bajo en la spec §6 (teatro `72, 218`, palacio `162, 218`, biblioteca `42, 242`; el tope 10 es para `row 3, x 96..162`), pero el contrato genérico corre `maxH 10` (`src/kit/kit.test.ts`, "con maxH 10"). Achatar conserva la composición; los acentos se achatan con la pieza (el reloj queda elíptico): aceptado para un caso que hoy no llega. Descartadas: recortar sólidos (rompe cúpulas), tirar error (rompe el contrato genérico), eximir a landmarks (contradice el test genérico del issue).
+- **Tests de evals primero**: los tests de todas las tasks se escriben y commitean en rojo antes de implementar (`test(#42): evals`); cada task los pone en verde. Si el trabajo se corta a mitad, la rama queda con tests en rojo de las tasks pendientes y nada roto de lo existente.
+- **Puente en el lab sin agua**: el lab no dibuja agua ni suelo bajo z 0 (`src/lab/kit-scene.ts`: solo zócalos `paving`); las pilas bajan a z −1 sobre el fondo. Descartado: pintar agua en el lab (no lo pide el issue).
+
 ## Review Focus
 
 1. **Manzana topada** (`maxH` < alto natural, p. ej. 10): toda receta achatada sigue dentro del tope y `landmarkTop` sigue siendo el punto más alto. Cubierto por el test genérico con `maxH 10` (Task 2 en adelante) y el de `landmarkTop` con `maxH 10` (Tasks 2–5).
@@ -119,6 +129,26 @@ describe("fitToCap", () => {
 ```
 
 Y `clock` en el import de `props.test.ts`.
+
+En `src/kit/kit.test.ts` (bloque `modern`), fijar el reloj de `classic` para que la mudanza a `props.clock` quede verificada:
+
+```ts
+  it("clásico: el reloj es un octógono amberBleed alpha 0.9 de radio 1.2, 0.02 delante de la cara sur del cuerpo", () => {
+    for (const seed of SEEDS) {
+      const p = recipe("classic")(LOTS[0]!, createRng(seed), STYLES.distrito);
+      const body = p.solids.find((s) => s.kind === "prism" && !!s.facade)!;
+      const c = p.accents.find((a) => a.kind === "poly" && a.color === "amberBleed");
+      if (!c || c.kind !== "poly" || body.kind !== "prism") throw new Error("sin reloj");
+      expect(c.alpha).toBe(0.9);
+      expect(c.pts).toHaveLength(8);
+      for (const q of c.pts) expect(q.y).toBeCloseTo(body.at.y + body.d + 0.02, 9);
+      const cx = body.at.x + body.w / 2, cz = c.pts[0]!.z;
+      for (const q of c.pts) expect(Math.hypot(q.x - cx, q.z - cz)).toBeCloseTo(1.2, 9);
+    }
+  });
+```
+
+(este pasa antes y después del cambio: es la red de la refactorización).
 
 - [ ] **Step 2: Correr y ver que fallan.** `npx vitest run src/kit/props.test.ts src/kit/piece.test.ts` → FAIL (`clock`/`fitToCap` no existen; el cartel "e" tiene medidas del sur).
 
@@ -272,6 +302,12 @@ con, arriba del archivo:
 const slabs = (p: Piece, lot: Lot) => p.solids.filter((s): s is Solid & { kind: "prism" } => s.kind === "prism" && s.mat === "stone" && Math.abs(s.d - (lot.d - 0.4)) < EPS).sort((a, b) => a.at.x - b.at.x);
 ```
 
+El test "con lot.z = 0.3 …" pasa a desplazar desde el `z` del lote (con el puente, `z −1`, el lote fijo en 0.3 desplazaría 1.3):
+
+```ts
+          const up = def.recipe({ ...lot, z: lot.z + 0.3 }, createRng(seed), STYLES.centro);
+```
+
 - [ ] **Step 2: Correr y ver que fallan.** `npx vitest run src/kit` → FAIL (`LAB_LOTS` no exportado, recetas desconocidas).
 
 - [ ] **Step 3: Implementar** `src/kit/forms/landmarks.ts`:
@@ -351,7 +387,7 @@ export const LAB_LOTS: Readonly<Record<string, { w: number; d: number; z?: numbe
 
 (el resto de `index.ts` igual).
 
-- [ ] **Step 4: Correr.** `npx vitest run src/kit src/lab` → verdes los tests de torre, puente y el genérico; los de recetas de Tasks 3–5 siguen en rojo. `src/lab/kit-scene.test.ts` puede fallar en el zócalo de los lotes propios hasta Task 6 (esperado). `npm run typecheck` verde.
+- [ ] **Step 4: Correr.** `npx vitest run src/kit src/lab` → verdes los tests de torre, puente y el genérico; los de recetas de Tasks 3–5 siguen en rojo. En `src/lab/kit-scene.test.ts` el test del zócalo modificado en evals sigue verde (excluye las recetas de `LAB_LOTS`); solo los dos tests nuevos de lotes propios siguen en rojo hasta Task 6. `npm run typecheck` verde.
 
 - [ ] **Step 5: Commit.** `git add src/kit && git commit -m "feat(#42): torre de agua y puente peatonal, LAB_LOTS y registro de landmarks"`
 
@@ -747,3 +783,11 @@ y en el docstring de `kitScene` sumar: "Las recetas de `LAB_LOTS` van en su lote
 - [ ] **Step 5: Verificación visual.** `npm run dev -- --host --port 5173`, abrir `http://localhost:5173/map/lab/kit.html`, tecla `4` (estilo `civico`), captura 1600×900 de la fila `landmarks` (script `.scratch/evals-42.md`).
 
 - [ ] **Step 6: Commit.** `git commit -am "feat(#42): fila landmarks del lab con lotes propios"`
+
+## Grilling
+
+- Rondas: 1 (los cambios fueron menores: un test de red para el reloj, el desplazamiento del test genérico desde `lot.z`, una corrección de redacción).
+- Preguntas: 18. Fuentes: ISSUE 5 (1, 2 parcial, 13, 18, 10), CODE 11 (3, 5, 6, 7, 9, 14, 15, 16, 17, 10, 8), DOC 1 (11, spec §6), NO SOURCE → supuesto técnico 5 (2, 4, 11, 12, 17).
+- Hallazgos que cambiaron el plan: 8 (no había test que fijara el reloj de `classic`: agregado), 10 (el test de desplazamiento fijaba `z: 0.3` y con el puente en `z −1` desplazaría 1.3: pasa a `lot.z + 0.3`), 15 (redacción del estado de `kit-scene.test.ts` entre tasks).
+- Supuestos: los cinco de `## Assumptions`.
+- Issues abiertos: ninguno.
