@@ -77,6 +77,14 @@ describe("kit: familia lowrise", () => {
         expect(widths.reduce((a, b) => a + b, 0)).toBeCloseTo(LOT.w, 6);
       }
     });
+    it("en un frente de 26 los locales siguen midiendo 4..6 y suman el frente", () => {
+      const lot: Lot = { x: 1.5, y: 1.5, w: 26, d: 15, z: 0, open: ["s"], maxH: 24 };
+      for (const seed of SEEDS) {
+        const widths = faced(shopRow(["s"], seed, lot)).map((s) => { const b = bounds(s); return b.max.x - b.min.x; });
+        for (const w of widths) { expect(w).toBeGreaterThanOrEqual(4 - TOL); expect(w).toBeLessThanOrEqual(6 + TOL); }
+        expect(widths.reduce((a, b) => a + b, 0)).toBeCloseTo(26, 6);
+      }
+    });
   });
 
   describe("rowHouses", () => {

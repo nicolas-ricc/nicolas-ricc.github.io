@@ -58,7 +58,7 @@ function shopAwning(r: Rect, side: Side, len: number, z: number): Solid[] {
 
 /** Anchos de `n` locales que suman `len` (decisión 5). */
 function shopWidths(rng: Rng, len: number): number[] {
-  const n = Math.min(rng.int(4, 5), Math.floor(len / SHOP_MIN));
+  const n = Math.max(Math.min(rng.int(4, 5), Math.floor(len / SHOP_MIN)), Math.min(5, Math.ceil(len / SHOP_MAX)));
   const ws = Array.from({ length: n }, () => SHOP_MIN);
   let rest = len - n * SHOP_MIN;
   while (rest > 1e-9) {
@@ -95,7 +95,6 @@ export function shopRow(lot: Lot, rng: Rng, style: Style): Piece {
   });
   return p;
 }
-
 
 const HOUSE_BACK = 5; // jardín trasero
 
