@@ -29,7 +29,7 @@
 
 ---
 
-### Task 1: `cityLadder`, `extendLadder` y los cuatro materiales base
+### Task 1: `cityLadder` y `extendLadder`
 
 **Files:**
 - Modify: `src/map/palette-base.ts`
@@ -41,7 +41,6 @@
   - `export type NineTones = FiveTones & { deep: number; dim: number; pale: number; glow: number }`
   - `export function cityLadder(top: number): FiveTones`
   - `export function extendLadder(t: FiveTones): NineTones`
-  - `BASE_TONES.plaster|terracotta|marble|awning` (al final del objeto).
 
 - [ ] **Step 1: tests que fallan** en `palette-base.test.ts`:
 
@@ -81,13 +80,6 @@ describe("escaleras", () => {
     expect(n.glow).toBeLessThanOrEqual(0xffffff);
   });
 
-  it("los cuatro materiales de Resume nivel 2 salen de cityLadder", () => {
-    const tops = { plaster: 0xb89a86, terracotta: 0x9a5a3c, marble: 0xcfc4b0, awning: 0x3a5a4a } as const;
-    for (const [m, top] of Object.entries(tops) as [keyof typeof tops, number][]) {
-      const want = cityLadder(top);
-      for (const k of ["top", "lit", "shade", "up", "down"] as const) near(BASE_TONES[m][k], want[k]);
-    }
-  });
 });
 ```
 
@@ -121,30 +113,18 @@ export function extendLadder(t: FiveTones): NineTones {
 }
 ```
 
-Y al final de `BASE_TONES` (literales de `cityLadder`, ya calculados):
-
-```ts
-  // Resume nivel 2: cityLadder(top) pegado como literal
-  plaster:   { top: 0xb89a86, lit: 0x977253, shade: 0x4a4150, up: 0xd5ac89, down: 0x9e887e },
-  terracotta:{ top: 0x9a5a3c, lit: 0x7e4325, shade: 0x3e2624, up: 0xb3653d, down: 0x844f38 },
-  marble:    { top: 0xcfc4b0, lit: 0xaa916d, shade: 0x53526a, up: 0xf0dcb4, down: 0xb2aca5 },
-  awning:    { top: 0x3a5a4a, lit: 0x30432e, shade: 0x17262c, up: 0x43654b, down: 0x324f46 },
-```
-
-Agregar materiales a `BASE_TONES` rompe "crepúsculo tardío" (`Object.keys(ISO_TONES)` ≠ `Object.keys(BASE_TONES)`) y "lo impreso es lo que está pegado" hasta que Task 2 pega el atlas: Task 1 deja verde `palette-base.test.ts` y typecheck; el resto de la suite vuelve a verde en Task 2. Correr `npm test` igual y confirmar que solo fallan esos dos tests.
-
-- [ ] **Step 4:** `npx vitest run src/map/palette-base.test.ts` → PASS.
-- [ ] **Step 5:** commit `feat(#36): cityLadder, extendLadder y materiales base de Resume nivel 2`.
+- [ ] **Step 4:** `npm test` y `npm run typecheck` → verde (Task 1 no cambia ningún color).
+- [ ] **Step 5:** commit `feat(#36): cityLadder y extendLadder`.
 
 ### Task 2: escalera de nueve en `palette-iso.ts` y en el script
 
 **Files:**
-- Modify: `src/map/palette-iso.ts`, `scripts/darken-palette.ts`, `docs/superpowers/specs/2026-10-15-resume-nivel-2-kit-zonificacion-luces-design.md` (línea de `pale` en §4)
-- Test: `src/map/palette-iso.test.ts`, `scripts/darken-palette.test.ts`
+- Modify: `src/map/palette-base.ts` (cuatro materiales), `src/map/palette-iso.ts`, `scripts/darken-palette.ts`, `docs/superpowers/specs/2026-10-15-resume-nivel-2-kit-zonificacion-luces-design.md` (línea de `pale` en §4)
+- Test: `src/map/palette-iso.test.ts`, `src/map/palette-base.test.ts`, `scripts/darken-palette.test.ts`
 
 **Interfaces:**
-- Consumes: `extendLadder`, `BASE_TONES` (Task 1).
-- Produces: `type Tone = "deep" | "shade" | "dim" | "lit" | "down" | "top" | "up" | "pale" | "glow"`; `TONE_LADDER` de nueve; `ISO_TONES[mat]` con las nueve claves.
+- Consumes: `cityLadder`, `extendLadder`, `BASE_TONES` (Task 1).
+- Produces: `BASE_TONES.plaster|terracotta|marble|awning` (al final del objeto); `type Tone = "deep" | "shade" | "dim" | "lit" | "down" | "top" | "up" | "pale" | "glow"`; `TONE_LADDER` de nueve; `ISO_TONES[mat]` con las nueve claves.
 
 - [ ] **Step 1: tests que fallan.** En `palette-iso.test.ts`:
   - "cada material tiene cinco tonos ordenados" → "cada material tiene los nueve tonos, con luminancia estrictamente creciente":
@@ -156,6 +136,16 @@ Agregar materiales a `BASE_TONES` rompe "crepúsculo tardío" (`Object.keys(ISO_
     ```
   - `stepTone`: `expect(TONE_LADDER).toEqual(["deep", "shade", "dim", "lit", "down", "top", "up", "pale", "glow"])`; `stepTone("top", 1) === "up"`, `stepTone("top", -1) === "down"`, `stepTone("shade", -1) === "deep"`, `stepTone("up", 1) === "pale"`, `stepTone("glow", 1) === "glow"`, `stepTone("deep", -3) === "deep"`, `stepTone("lit", -1) === "dim"`, `stepTone("lit", 0) === "lit"`.
   - "materiales exclusivos de ciudad y costa": lista + `"plaster", "terracotta", "marble", "awning"`, claves esperadas = `[...TONE_LADDER].sort()`; ídem `hullBlue` en el test del agua.
+  - En `palette-base.test.ts`, dentro de `describe("escaleras")` (±1 por canal, como pide el issue):
+    ```ts
+    it("los cuatro materiales de Resume nivel 2 salen de cityLadder", () => {
+      const tops = { plaster: 0xb89a86, terracotta: 0x9a5a3c, marble: 0xcfc4b0, awning: 0x3a5a4a } as const;
+      for (const [m, top] of Object.entries(tops) as [keyof typeof tops, number][]) {
+        const want = cityLadder(top);
+        for (const k of ["top", "lit", "shade", "up", "down"] as const) near(BASE_TONES[m][k], want[k]);
+      }
+    });
+    ```
   - "crepúsculo tardío": `for (const tone of TONE_LADDER) channelsClose(ISO_TONES[mat][tone], darken(extendLadder(BASE_TONES[mat])[tone], DARKEN));`
   
   En `scripts/darken-palette.test.ts`: la primera línea esperada pasa a ser la de nueve claves del formato `  slab:      { deep: 0x…, shade: 0x…, dim: 0x…, lit: 0x…, down: 0x…, top: 0x…, up: 0x…, pale: 0x…, glow: 0x… },` (el valor exacto se copia de la salida de `npm run palette` tras el Step 3), y un test nuevo: cada línea trae las nueve claves en orden:
@@ -164,6 +154,15 @@ Agregar materiales a `BASE_TONES` rompe "crepúsculo tardío" (`Object.keys(ISO_
     ```
 - [ ] **Step 2:** `npx vitest run src/map scripts` → FAIL.
 - [ ] **Step 3: implementación.**
+  - `palette-base.ts`: al final de `BASE_TONES` (literales de `cityLadder`, ya calculados):
+
+```ts
+  // Resume nivel 2: cityLadder(top) pegado como literal
+  plaster:   { top: 0xb89a86, lit: 0x977253, shade: 0x4a4150, up: 0xd5ac89, down: 0x9e887e },
+  terracotta:{ top: 0x9a5a3c, lit: 0x7e4325, shade: 0x3e2624, up: 0xb3653d, down: 0x844f38 },
+  marble:    { top: 0xcfc4b0, lit: 0xaa916d, shade: 0x53526a, up: 0xf0dcb4, down: 0xb2aca5 },
+  awning:    { top: 0x3a5a4a, lit: 0x30432e, shade: 0x17262c, up: 0x43654b, down: 0x324f46 },
+```
   - `scripts/darken-palette.ts`: `const NINE = ["deep", "shade", "dim", "lit", "down", "top", "up", "pale", "glow"] as const;` y cada línea: `` `  ${`${mat}:`.padEnd(11)}{ ${NINE.map((k) => `${k}: ${hex(n[k])}`).join(", ")} },` `` con `n = extendLadder(t)`. (No importa `TONE_LADDER` de `palette-iso.ts` para que el script dependa solo de la base.)
   - `npm run palette` y reemplazar el cuerpo de `ISO_TONES` por la salida, conservando los comentarios de sección y de fin de línea existentes (agua, Resume, Blog, `glint`) y agregando `// Resume nivel 2: residencial, cubiertas, cívico, toldos` antes de `plaster`.
   - `Tone` y `TONE_LADDER` de nueve (orden de arriba). `stepTone`, `toneColor`, `allIsoColors` no cambian.
@@ -191,3 +190,16 @@ Agregar materiales a `BASE_TONES` rompe "crepúsculo tardío" (`Object.keys(ISO_
 
 - `npm test`, `npm run typecheck`.
 - `npm run dev -- --host --port 5173`, abrir `http://localhost:5173/map/lab/resume.html` y capturar: igual que en la base salvo matices en pórticos y losas (offsets −1/−2 desde `shade`/`lit`).
+
+## Assumptions
+
+- Los cuatro materiales nuevos entran a `BASE_TONES` en Task 2 (junto con el pegado del atlas) y no en Task 1, para que cada commit deje la suite en verde. Alternativa rechazada: agregarlos en Task 1 y tolerar dos tests en rojo hasta Task 2.
+- La decisión A se registra editando la fila `pale` de spec §4, como pidió el humano en #36; no se crea ADR (el repo no tiene `docs/adr/`). Alternativa rechazada: ADR nuevo.
+- `darken-palette.ts` define su propia lista de nueve claves en vez de importar `TONE_LADDER`, para que el script dependa solo de `palette-base.ts` como hoy. Alternativa rechazada: importar `TONE_LADDER` de `palette-iso.ts`.
+
+## Grilling
+
+- Rondas: 1. Preguntas: 16 (griller: fable).
+- Fuentes: ISSUE 8, CODE 7, DOC 0, NO SOURCE 1 (supuesto técnico: Q4, mover materiales a Task 2).
+- Supuestos: ver `## Assumptions`.
+- Issues abiertos: ninguno. Q1 (consumidores de los tonos y materiales nuevos) queda fuera por texto del issue: "Es independiente del resto: no toca `src/iso/` ni las escenas"; los usan los hermanos de #35.
