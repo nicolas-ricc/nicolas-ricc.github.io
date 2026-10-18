@@ -1,5 +1,6 @@
 import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
+import { WINDOW_ALPHA } from "../city/lights";
 import type { Rng } from "../map/seed";
 import type { CityScene } from "./city";
 import { chase } from "./neon";
@@ -26,17 +27,19 @@ export const PAPER_SIDE_RAMP = 5; // en cuántas unidades entra del todo el desv
 export const NEON_STEP_MS = 150; // lo que dura un apagón de cartel
 export const SIGN_GAP_MS: [number, number] = [3000, 7000];
 export const MALECON_STEP_MS = 250;
+export const WINDOW_GAP_MS: [number, number] = [300, 900]; // entre un cambio de ventana y el siguiente
 export const MALECON_R = 0.35;
 const ANTENNA_BASE_R = 0.8, ANTENNA_PULSE_R = 0.3, ANTENNA_PERIOD = 1200; // r = 0.8 + 0.3·(1 + sin(t / 1200))
 const NNE = { x: 0.45, y: -0.893 }; // unidad: nor-noreste (y crece al sur); en pantalla sube a la derecha
 const PERP = { x: -NNE.y, y: NNE.x }; // perpendicular a la deriva: abre el abanico
 
-export interface CityAnimChanges { lit: boolean; papers: boolean; antenna: boolean; neon: boolean }
-export interface CityAnim { lit(): Accent[]; papers(): Accent[]; antenna(): Accent; neon(): Accent[]; tick(dtMs: number): CityAnimChanges }
+export interface CityAnimChanges { lit: boolean; papers: boolean; antenna: boolean; neon: boolean; windows: boolean }
+export interface CityAnim { lit(): Accent[]; papers(): Accent[]; antenna(): Accent; neon(): Accent[]; windows(): Accent[]; tick(dtMs: number): CityAnimChanges }
 
-const NONE: CityAnimChanges = { lit: false, papers: false, antenna: false, neon: false };
+const NONE: CityAnimChanges = { lit: false, papers: false, antenna: false, neon: false, windows: false };
 
-export function createCityAnim(tower: CityScene["tower"], neon: CityScene["neon"], rng: Rng, opts: { reducedMotion: boolean }): CityAnim {
+export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights">, rng: Rng, opts: { reducedMotion: boolean }): CityAnim {
+  const { tower, neon } = scene;
   const w = tower.paperWindow;
   const nextGap = (): number => rng.int(BLINK_GAP_MS[0], BLINK_GAP_MS[1]);
 
@@ -64,6 +67,10 @@ export function createCityAnim(tower: CityScene["tower"], neon: CityScene["neon"
   const signs = neon.signs.map((a) => ({ a, color: a.color, offUntil: -1 }));
   let signTimer = rng.int(SIGN_GAP_MS[0], SIGN_GAP_MS[1]);
   let maleconStep = 0;
+  // ventanas: después de papeles y carteles para no reordenar sus tiradas
+  const wins = scene.lights.windows.filter((x) => x.animable).map((x) => ({ w: x, on: x.on }));
+  const target = wins.filter((x) => x.on).length, tol = Math.max(1, Math.round(0.05 * wins.length));
+  let windowTimer = rng.int(WINDOW_GAP_MS[0], WINDOW_GAP_MS[1]);
 
   const paperAt = (p: Paper): Accent => {
     const lateral = p.side * Math.min(1, p.dist / PAPER_SIDE_RAMP);
@@ -88,10 +95,11 @@ export function createCityAnim(tower: CityScene["tower"], neon: CityScene["neon"
       const lights = neon.malecon.filter((_, k) => !lit || lit[k]).map((at): Accent => ({ kind: "dot", at, r: MALECON_R, color: "cyanMid" }));
       return [...on, ...lights];
     },
+    windows: () => wins.filter((x) => x.on).map(({ w: lw }): Accent => ({ kind: "poly", pts: lw.window.pts, color: lw.color, alpha: WINDOW_ALPHA })),
     tick(dtMs) {
       if (opts.reducedMotion || dtMs <= 0) return NONE;
       clock += dtMs;
-      const c: CityAnimChanges = { lit: false, papers: true, antenna: false, neon: false };
+      const c: CityAnimChanges = { lit: false, papers: true, antenna: false, neon: false, windows: false };
 
       // parpadeo: un tick apagado, después una pausa nueva
       if (off) { off = false; blinkTimer = nextGap(); c.lit = true; }
@@ -116,6 +124,17 @@ export function createCityAnim(tower: CityScene["tower"], neon: CityScene["neon"
       }
       const mStep = Math.floor(clock / MALECON_STEP_MS);
       if (mStep !== maleconStep) { maleconStep = mStep; c.neon = true; }
+
+      // ventanas: una se prende o se apaga; si eso saca la cuenta de la banda, cambia una del otro estado
+      windowTimer -= dtMs;
+      if (windowTimer <= 0 && wins.length > 0) {
+        let x = wins[rng.int(0, wins.length - 1)]!;
+        const lit = wins.filter((y) => y.on).length;
+        if (Math.abs(lit + (x.on ? -1 : 1) - target) > tol) { const other = wins.filter((y) => y.on !== x.on); x = other[rng.int(0, other.length - 1)]!; }
+        x.on = !x.on;
+        windowTimer = rng.int(WINDOW_GAP_MS[0], WINDOW_GAP_MS[1]);
+        c.windows = true;
+      }
       return c;
     },
   };
