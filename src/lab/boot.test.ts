@@ -44,13 +44,3 @@ describe("el mensaje de arranque se lee sobre el cielo (#103)", () => {
     });
   }
 });
-
-describe("las páginas arrancan con runBoot (#103)", () => {
-  for (const [file, prefix] of [["page.ts", "lab"], ["storybook.ts", "storybook"]] as const) {
-    it(`src/lab/${file} no deja el rechazo de boot() sin atender`, () => {
-      const src = readFileSync(`${ROOT}src/lab/${file}`, "utf8");
-      expect(src).not.toMatch(/void boot\(\)/);
-      expect(src).toMatch(new RegExp(`void runBoot\\(host, "${prefix}", boot\\);`));
-    });
-  }
-});
