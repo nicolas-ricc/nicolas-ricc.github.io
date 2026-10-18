@@ -1,10 +1,11 @@
+import { COMPOSITE } from "./forms/composite";
 import { MODERN } from "./forms/modern";
 import { COURTYARD } from "./forms/courtyard";
 import { LOWRISE } from "./forms/lowrise";
 import type { Recipe, RecipeDef } from "./types";
 
 /** Todas las recetas del kit. Cada familia nueva agrega su línea; el test genérico (kit.test.ts) la cubre al registrarse. */
-export const RECIPES: readonly RecipeDef[] = [...MODERN, ...COURTYARD, ...LOWRISE];
+export const RECIPES: readonly RecipeDef[] = [...MODERN, ...COURTYARD, ...LOWRISE, ...COMPOSITE];
 
 export function recipe(name: string): Recipe {
   const def = RECIPES.find((r) => r.name === name);
