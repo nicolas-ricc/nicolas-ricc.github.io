@@ -45,6 +45,6 @@ export function districtBlock(solids: Solid[], ground: Solid[], accents: Accent[
   solids.push(...piece.solids);
   ground.push(...piece.ground);
   accents.push(...piece.accents);
-  // el cartel consume el rng después de la receta, así la secuencia no depende de cuántos slots haya
+  // el cartel consume el rng después de la receta, así las tiradas de la receta no dependen de cuántos slots haya
   for (const s of piece.slots) signs.push({ kind: "poly", pts: s.pts, color: rng.chance(0.5) ? "cyan" : "magenta", alpha: 1 });
 }
