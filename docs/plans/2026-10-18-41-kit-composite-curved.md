@@ -699,3 +699,41 @@ Nota: el test del galería asume `STYLES.civico.tone === 0` ⇒ `tone: 1`.
 ### Verificación visual (al cierre, no es task de subagente)
 
 `npm run dev -- --host --port 5173`, abrir `http://localhost:5173/map/lab/kit.html`: dos filas nuevas (`composite` con 5 lotes, `curved` con 4). Capturas a 1600×900 con estilo `centro` (tecla 1) y `civico` (tecla 4), adjuntas al PR.
+
+## Assumptions
+
+Decididas como técnicas en la revisión del plan (sin fuente escrita; cualquier opción razonable cumple el issue):
+
+- **Brazo de la L = 8 (issue: 7).** El issue pide a la vez "torre 8×8 en la esquina interior de la L" y "El hueco de la L queda **vacío**", y el contrato genérico prohíbe todo sólido en el hueco de un `poly` cóncavo. Con brazo 7 la torre de 8 entra 1 al hueco (falla el test del issue) o sobresale 1 al vacío por detrás (una lonja flotante visible en la cara sur). Descartadas: torre 7×7 (cambia la medida del elemento dominante) y brazo 9 con retranqueo (más lejos del issue).
+- **Cornisa de la L en dos losas** en lugar de un `poly` agrandado: el issue manda `offsetFootprint` solo para la cornisa del **chaflán** ("el vuelo de la cornisa de un poly se hace con un poly igual agrandado 0.5"), que es convexo y lo usa. En la L un poly agrandado es cóncavo y el ala cae en su hueco. Descartada: L sin cornisa (el issue la pide).
+- **Oráculo tolerante al borde.** El ray casting de `inPoly` da "afuera" en el vértice reflejo; sin la corrección, ningún sólido puede quedar a ras de las caras del hueco. Es una corrección del oráculo (un punto del borde pertenece a la huella), no del contrato; el caso "cono dentro del hueco ⇒ intruso" queda igual. Descartado: un épsilon mágico en la receta (cornisa 0.001 más corta).
+- **Torre del podio muy baja con `maxH 10`** (p. ej. 0.5 de cuerpo con podio 6 y tanque): se acepta; `maxH 10` es una guarda que hoy ninguna manzana pide (`src/scenes/district.ts:18-30`). Descartado: bajar también el podio (consume rng distinto según el tope).
+- **Regla de la esquina del chaflán** (Decisión 4): el issue dice "hacia el lado `open[0]` (si no hay, la esquina SE)"; un lado tiene dos esquinas y la elección de la que mira a la otra calle abierta, o a la cámara, es técnica. Las caras visibles son las de normal `x > 0` o `y > 0` (`src/kit/piece.ts` `addBuilding`).
+- **Granularidad de reversión**: un commit por task, cada uno verde; las exportaciones nuevas de Task 1 sin uso solo existen entre commits de este mismo PR.
+
+## Grilling
+
+Rounds: 1 (the plan did not change its seams; only `## Assumptions` was added). Questions: 18.
+
+| # | Answer |
+|---|---|
+| 1 | ISSUE: "si algo acá contradice la spec, acá se anota como decisión de implementación" + "El hueco de la L queda **vacío** (regla de profundidad)" + "torre 8×8 en la esquina interior de la L". The issue's own numbers conflict with its own emptiness rule ⇒ NO SOURCE for the resolution ⇒ technical assumption (see Assumptions). No acceptance criterion is lost: the criteria are "nueve recetas registradas", the lab rows/captures, and green tests. |
+| 2 | ISSUE criteria: "Nueve recetas registradas; `lab/kit.html` muestra dos filas nuevas (captura con estilo `centro` y otra con `civico`)" and "Tests nuevos y el genérico en verde". Registration: Tasks 2–6. Rows: CODE `src/lab/kit-scene.ts:20-33` builds one row per family from `RECIPES`, pinned by `src/lab/kit-scene.test.ts:7-15`. Captures: manual verification (stage 4 browser run, listed in PR). |
+| 3 | CODE `src/kit/piece.ts:5` — `RECIPE_MAX_H = 18`. |
+| 4 | CODE `src/kit/types.ts:25` — `family: "modern" \| "courtyard" \| "composite" \| "curved" \| "lowrise" \| "landmarks"`. Rows: `src/lab/kit-scene.ts:21-24` (`families = [...new Set(RECIPES.map(r => r.family))]`). |
+| 5 | CODE `src/kit/kit.test.ts:33-49` — 5×5 grid over each other solid's AABB (i, j = 0..4). For `lTower` the cornice slabs' and tower's grid points with `y = arm` (x > arm) or `x = arm` (y > arm) lie on the hole faces; the slabs' outer overhang points lie outside the hull. Handled by `onEdge` (Task 1). |
+| 6 | CODE `src/kit/piece.ts:10-19` — `addBuilding` uses `visibleWalls` and skips `normal.x <= 1e-9 && normal.y <= 1e-9`; CODE `src/iso/solids.ts:305` cylinder → `extrude` + `withFacade`; `extrude` normals are `normalize(...)` (`solids.ts:57-60`), unit length. |
+| 7 | CODE `src/iso/facade.ts:62-67` — `windowPatches` returns `[]` for floor 0 with `portico`/`arcade`; `facadeWindows` starts at floor 1 when `base` is set (`facade.ts:73-78`). Floor height is `wall height / floors` (`facade.ts:56`), so `floors·floorH` never exceeds `h`; column width is a fraction of the wall (`facade.ts:69-72`), any wall width works. |
+| 8 | Generic CODE `src/kit/kit.test.ts:103-108` runs every registered recipe with `maxH: 10`. Tiny tower: technical assumption (see Assumptions). |
+| 9 | CODE `src/map/seed.ts:19` — `int: (min, max) => min + Math.floor(next() * (max - min + 1))`, inclusive both ends, works with negative `min`. |
+| 10 | CODE `src/scenes/city-pieces.ts:1-6,19-25` — imports only `iso`, `map`, `city-grid` (no Pixi); `prism(x, y, z, w, d, h, mat, extra)`. CODE `src/kit/roofs.ts` `hipRoof` = prism h 1.5 `roof: "hip"`; ridge `eave + h·GABLE_RATIO` at `src/iso/solids.ts:95-97` ⇒ `HIP_H = 1.5·(1 + GABLE_RATIO)` uses the same exported constant. |
+| 11 | CODE `src/kit/roofs.ts` `domeRoof` → `{ kind: "dome", r: min(w,d)/2, h, sides: 12, rings: 3 }`; `src/kit/props.ts` `antenna` r 0.2 h 4, `beacon` dot `amberMid`, `helipad` returns `Lit`, `place(solids, accents, lit)` is exported. |
+| 12 | CODE `src/kit/types.ts:15` — `Lot { x, y, w, d, z, open: Side[], maxH }`. CODE `src/kit/kit.test.ts:11-16` — lots with `maxH: 24`, styles `centro, bares, residencial, civico`; `maxH: 10` variant at `:103`. |
+| 13 | CODE `src/scenes/district.ts:18,26-30` — `FRONT_CAP_H = 10`, the lowest cap; tests of `vaultedHall` use `maxH 24`, so `nh = 5`. |
+| 14 | CODE `src/iso/solids.ts:10-21` — all those fields exist; `bounds()` (`:336-343`) iterates `tessellateAll`, which includes `vault` (`:236-250`, `axis` handled in `P`). |
+| 15 | CODE `src/scenes/district.test.ts` and `src/kit/kit.test.ts` "familia modern" tests pin sign geometry (`toMatchObject` on `kind/side/local/wall`, 4 coplanar points); `southSign` is moved verbatim (pure move), so output is identical by construction. |
+| 16 | CODE `src/kit/piece.ts:10` — camera-facing walls are `normal.x > 0` or `normal.y > 0` (also spec §5: "normal con componente `+x` o `+y`"). Tie-break: technical assumption. |
+| 17 | NO SOURCE ⇒ technical assumption: one commit per task, all in one PR. |
+| 18 | CODE `src/lab/kit.ts:13` — `KEY_STYLE = { "1": "centro", …, "4": "civico" }`; rows have any length (`kit-scene.ts:22` places by index in family). |
+
+Per source: ISSUE 2, CODE 16, DOC 0, NO SOURCE 4 (all technical assumptions; 0 spec ambiguities; 0 out of scope). Issues opened: none.
