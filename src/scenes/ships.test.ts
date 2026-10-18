@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { bounds, isFlat, tessellateAll, type Solid } from "../iso/solids";
 import { SHIP_MATS, SHIP_SPECS, ship, shipAt, wake, type ShipKind } from "./ships";
@@ -239,5 +240,26 @@ describe("carguero (Damen Combi Freighter 3850)", () => {
         expect(p.z).toBeLessThanOrEqual(13);
       }
     }
+  });
+});
+
+describe("eslora del empujador (#68)", () => {
+  it("sternOf deriva la popa de PUSHER_LEN, sin literales propios", () => {
+    const src = readFileSync(new URL("./ships.ts", import.meta.url), "utf8");
+    const barge = src.match(/^const sternOf = [\s\S]*?kind === "barge" \? ([^:]+):/m)?.[1];
+    expect(barge?.trim()).toBe("-PUSHER_LEN");
+  });
+  it("la casilla larga, las barandas y el bote quedan donde estaban, referidos a la popa del empujador en −20", () => {
+    const s = ship("barge", { x: 0, y: 0 }, 0);
+    const pick = (mat: string, z: number, h: number) =>
+      s.solids.filter((x) => x.kind === "poly" && x.mat === mat && Math.abs(x.z - z) < 1e-9 && Math.abs(x.h - h) < 1e-9).map(bounds);
+    const pDeck = -1 + 1.6 + 0.05;
+    const [house] = pick("whitewash", pDeck, 1.55).filter((b) => b.min.x < -10);
+    expect(house!.min.x).toBe(-17.5); expect(house!.max.x).toBeCloseTo(-1.6, 9);
+    const rails = pick("steel", pDeck + 1.55, 0.4);
+    expect(rails).toHaveLength(2);
+    for (const r of rails) { expect(r.min.x).toBe(-17.4); expect(r.max.x).toBeCloseTo(-8.4, 9); }
+    const [boat] = pick("steel", pDeck + 1.55, 0.5);
+    expect(boat!.min.x).toBe(-14); expect(boat!.max.x).toBeCloseTo(-9.8, 9);
   });
 });

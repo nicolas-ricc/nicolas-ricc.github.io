@@ -25,6 +25,7 @@ export const SHIP_SPECS: Record<ShipKind, ShipSpec> = {
 };
 export const SHIP_MATS: readonly Material[] = ["hull", "hullBlue", "whitewash", "steel", "rust", "deck", "glass", "asphalt"];
 const WATER_Z = -1, WAKE_Z = -0.95;
+const PUSHER_LEN = 20; // eslora del empujador, que va detrás de la barcaza con la proa en x 0
 
 interface Kit {
   hull: (dx: number, len: number, beam: number, h: number, sheer: number, topMat: Material) => Solid;
@@ -114,16 +115,17 @@ function barge(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void 
   for (let i = 0; i < 4; i++) solids.push(k.box(3.2 + i * 7.7, -3.6, 7.5, 7.2, top + 0.9, 0.4, "steel"), k.box(3.55 + i * 7.7, -2.2, 6.8, 4.4, top + 1.3, 0.3, "steel")); // tapas abovedadas en dos escalones
   for (const dx of [1.5, 35.5]) for (const dy of [-2.8, 2.8]) solids.push(k.cyl(dx, dy, top, 0.3, 0.5, "steel")); // bitas
   // empujador pegado a la popa, con proa cuadrada
-  solids.push(k.hull(-20, 20, 7, 1.6, 0, "hullBlue"), k.box(-5.5, -3.5, 5.5, 7, -0.9, 1.55, "hullBlue"));
+  const stern = -PUSHER_LEN, house = stern + 2.5;
+  solids.push(k.hull(stern, PUSHER_LEN, 7, 1.6, 0, "hullBlue"), k.box(-5.5, -3.5, 5.5, 7, -0.9, 1.55, "hullBlue"));
   const pDeck = WATER_Z + 1.6 + 0.05; // tope del bloque de proa del empujador
   solids.push(k.box(-1.2, -3, 1.2, 1.2, pDeck, 1.6, "whitewash"), k.box(-1.2, 1.8, 1.2, 1.2, pDeck, 1.6, "whitewash")); // pechos de empuje, sobre la barcaza
-  solids.push(k.box(-17.5, -2.6, 15.9, 5.2, pDeck, 1.55, "whitewash", { floors: 1, cols: 10 })); // nivel 1, la casilla larga
+  solids.push(k.box(house, -2.6, -1.6 - house, 5.2, pDeck, 1.55, "whitewash", { floors: 1, cols: 10 })); // nivel 1, la casilla larga, de la popa a la torre
   solids.push(k.box(-6.2, -2.3, 4.6, 4.6, pDeck + 1.55, 1.55, "whitewash", { floors: 1, cols: 4 })); // nivel 2
   solids.push(k.box(-5.7, -2, 3.6, 4, pDeck + 3.1, 1.7, "whitewash", { floors: 1, cols: 4, base: "glass" }), k.box(-5.9, -2.2, 4, 4.4, pDeck + 4.8, 0.15, "steel")); // timonera y techo
   solids.push(k.cyl(-7.4, -1.3, pDeck + 1.55, 0.8, 1.5, "whitewash"), k.cyl(-7.4, 1.3, pDeck + 1.55, 0.8, 1.5, "whitewash")); // chimeneas gemelas, una por banda
   solids.push(k.box(-3.9, -0.125, 0.25, 0.25, pDeck + 4.95, 2.6, "steel"), k.box(-5.4, -0.5, 0.8, 1, pDeck + 4.95, 0.5, "steel")); // mástil y radar
-  solids.push(k.box(-14, 0.6, 4.2, 1.5, pDeck + 1.55, 0.5, "steel")); // bote
-  solids.push(k.box(-17.4, -2.6, 9, 0.1, pDeck + 1.55, 0.4, "steel"), k.box(-17.4, 2.5, 9, 0.1, pDeck + 1.55, 0.4, "steel")); // barandas
+  solids.push(k.box(stern + 6, 0.6, 4.2, 1.5, pDeck + 1.55, 0.5, "steel")); // bote
+  solids.push(k.box(stern + 2.6, -2.6, 9, 0.1, pDeck + 1.55, 0.4, "steel"), k.box(stern + 2.6, 2.5, 9, 0.1, pDeck + 1.55, 0.4, "steel")); // barandas
   lights.push(k.dot(-3.775, 0, pDeck + 7.65, 0.7, "magentaMid"), k.dot(-2.3, -2.15, pDeck + 4.35, 0.4, "magenta"), k.dot(-2.3, 2.15, pDeck + 4.35, 0.4, "cyanMid"));
   lights.push(k.dot(-2.3, -1.7, pDeck + 5.2, 0.35, "amber"), k.dot(-2.3, 1.7, pDeck + 5.2, 0.35, "amber")); // proyectores
   lights.push(k.poly([[-2.08, -1.6, pDeck + 3.45], [-2.08, 1.6, pDeck + 3.45], [-2.08, 1.6, pDeck + 4.55], [-2.08, -1.6, pDeck + 4.55]], "magentaBleed", 0.8)); // ventanas encendidas de la timonera
@@ -157,8 +159,8 @@ export function ship(kind: ShipKind, at: Vec2, heading: number): { solids: Solid
   return { solids, lights };
 }
 
-/** Popa de la unidad en coordenadas locales: el empujador va 20 u detrás de la barcaza. */
-const sternOf = (kind: ShipKind): number => (kind === "barge" ? -20 : 0);
+/** Popa de la unidad en coordenadas locales: el empujador va `PUSHER_LEN` detrás de la barcaza. */
+const sternOf = (kind: ShipKind): number => (kind === "barge" ? -PUSHER_LEN : 0);
 
 /** `at` de popa para que el punto medio de la unidad completa (empujador incluido) caiga en `center`. */
 export function shipAt(kind: ShipKind, center: Vec2, heading: number): Vec2 {
