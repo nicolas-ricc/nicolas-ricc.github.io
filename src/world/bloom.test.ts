@@ -73,14 +73,14 @@ describe("scheduleIdle", () => {
   });
   it("sin requestIdleCallback, espera un frame pintado: rAF y después setTimeout 0 (#32)", () => {
     vi.stubGlobal("requestIdleCallback", undefined);
-    let frame: FrameRequestCallback | undefined;
-    vi.stubGlobal("requestAnimationFrame", vi.fn((cb: FrameRequestCallback) => { frame = cb; return 1; }));
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal("requestAnimationFrame", vi.fn((cb: FrameRequestCallback) => frames.push(cb)));
     vi.useFakeTimers();
     const fn = vi.fn();
     scheduleIdle(fn);
     vi.advanceTimersByTime(0);
     expect(fn).not.toHaveBeenCalled();
-    frame!(0);
+    frames.shift()?.(0);
     expect(fn).not.toHaveBeenCalled();
     vi.advanceTimersByTime(0);
     expect(fn).toHaveBeenCalledOnce();
