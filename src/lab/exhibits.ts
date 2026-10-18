@@ -1,4 +1,5 @@
 import type { Accent } from "../iso/accent";
+import { Z_SCALE } from "../iso/project";
 import type { Solid } from "../iso/solids";
 import { MOUTH_Y, QUAY_X, type WorldZone } from "../map/geo";
 import type { Material } from "../map/palette-iso";
@@ -11,7 +12,8 @@ import { ARCADE, BUMPER, CAROUSEL, COASTER, DROP, PIER, WHEEL } from "../scenes/
 import { jungle } from "../scenes/flora";
 import { CONTAINER_YARD, COOLING, POWER, PYLON_H, PYLON_N, PYLON_STEP, PYLON_X0, PYLON_Y, SILOS, STACKS_N, TANKS } from "../scenes/hinterland";
 import { towerCrane } from "../scenes/pieces";
-import { BUOYS, DRUM_R0, KEEPER, LIGHTHOUSE, WRECK } from "../scenes/sea";
+import { BUOYS, DRUM_R0, KEEPER, LANTERN_Z, LIGHTHOUSE, WRECK } from "../scenes/sea";
+import { BEAM_LEN } from "../scenes/sea-anim";
 import { ship, shipAt, type ShipKind } from "../scenes/ships";
 import { SUBURB_COLS } from "../scenes/sprawl-grid";
 import { ARENA, AUDITORIUM, TELECOM } from "../scenes/tech";
@@ -144,9 +146,10 @@ export const EXHIBITS: readonly Exhibit[] = [
   // las dos torres de la fila ROWS[1], columnas SUBURB_COLS[1] y [0]; la altura sale del rng: el test la vigila
   { id: "torres", title: "Torres del distrito tecnológico", zone: "cv", group: "tecnologico", kind: "region",
     box: { x0: SUBURB_COLS[1] - M, y0: ROWS[1] - M, x1: SUBURB_COLS[0] + BLOCK_W + M, y1: ROWS[1] + BLOCK_D + M }, h: 22 },
+  // el haz nace en la linterna y gira: apuntando al norte su punta sube BEAM_LEN/√2 en pantalla, y el vértice norte de la caja ya está DRUM_R0 + M más arriba que el faro
   { id: "faro", title: "Faro", zone: "blog", group: "mar", kind: "region",
     box: { x0: LIGHTHOUSE.x - DRUM_R0 - M, y0: LIGHTHOUSE.y - DRUM_R0 - M, x1: LIGHTHOUSE.x + DRUM_R0 + M, y1: LIGHTHOUSE.y + DRUM_R0 + M },
-    h: LIGHTHOUSE.z + 32 }, // tambores + linterna + tapa (≈ 37)
+    h: LANTERN_Z + (BEAM_LEN * Math.SQRT1_2 - DRUM_R0 - M) / Z_SCALE },
   // la casa es 8 × 6 (privado en sea.ts)
   { id: "casa-farero", title: "Casa del farero", zone: "blog", group: "mar", kind: "region",
     box: { x0: KEEPER.x - M, y0: KEEPER.y - M, x1: KEEPER.x + 8 + M, y1: KEEPER.y + 6 + M }, h: 13 }, // sobre la punta, z ≈ 7
