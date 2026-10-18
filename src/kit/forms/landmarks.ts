@@ -1,9 +1,9 @@
 import { v3, type Vec2 } from "../../iso/geometry";
 import type { Rng } from "../../map/seed";
-import { prism } from "../../scenes/city-pieces";
+import { prism, tiles } from "../../scenes/city-pieces";
 import type { Facade } from "../../iso/facade";
 import { addBuilding, emptyPiece, fitToCap } from "../piece";
-import { beacon, clock, garland, lamp, place, sign } from "../props";
+import { beacon, clock, garland, lamp, patioTree, place, sign } from "../props";
 import { hipRoof, pyramid } from "../roofs";
 import type { Lot, Piece, RecipeDef, Side, Style } from "../types";
 
@@ -129,6 +129,37 @@ export function civicPalace(lot: Lot, _rng: Rng, style: Style): Piece {
   return fitToCap(p, lot);
 }
 
+const WING = 5, PORTICO_D = 3;
+
+/**
+ * Biblioteca: galería en U (alas oeste, norte y este) alrededor de un patio con
+ * baldosas y dos árboles, cerrada al sur por un pórtico bajo. La cornisa vuela
+ * solo hacia afuera: el patio queda libre.
+ */
+export function library(lot: Lot, rng: Rng, style: Style): Piece {
+  const p = emptyPiece(), { x, y, w, d, z } = lot;
+  const wing = (wx: number, wy: number, ww: number, wd: number): void => {
+    const f: Facade = { floors: 2, cols: Math.max(2, Math.round(Math.max(ww, wd) / 3)), base: "arcade" };
+    addBuilding(p, prism(wx, wy, z, ww, wd, 7, "marble", { facade: f, tone: style.tone }), f);
+  };
+  wing(x, y, w, WING);
+  wing(x, y + WING, WING, d - WING);
+  wing(x + w - WING, y + WING, WING, d - WING);
+  p.solids.push(
+    prism(x - 0.5, y - 0.5, z + 7, w + 1, WING + 0.5, 0.4, style.trim),
+    prism(x - 0.5, y + WING, z + 7, WING + 0.5, d - WING + 0.5, 0.4, style.trim),
+    prism(x + w - WING, y + WING, z + 7, WING + 0.5, d - WING + 0.5, 0.4, style.trim),
+  );
+  const portico: Facade = { floors: 1, cols: 3, base: "portico" };
+  addBuilding(p, prism(x + WING, y + d - PORTICO_D, z, w - 2 * WING, PORTICO_D, 4, "marble", { facade: portico, tone: style.tone }), portico);
+  const court = { x: x + WING, y: y + WING, w: w - 2 * WING, d: d - WING - PORTICO_D };
+  p.ground.push(tiles(rng, court, z + 0.05, "paving"));
+  for (const f of [1 / 3, 2 / 3]) p.solids.push(...patioTree(v3(court.x + court.w * f, court.y + court.d / 2, z + 0.05)));
+  p.courtyard = court;
+  p.landmarkTop = v3(x + w / 2, y + WING / 2, z + 7.4);
+  return fitToCap(p, lot);
+}
+
 /** Torre de agua ornamental para un lote chico (≥ 5×5): cuatro patas, tanque, cúpula y baliza. */
 export function waterTower(lot: Lot, _rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { z } = lot, cx = lot.x + lot.w / 2, cy = lot.y + lot.d / 2;
@@ -168,6 +199,7 @@ export const LANDMARKS: readonly RecipeDef[] = [
   { name: "station", recipe: station, family: "landmarks", landmark: true },
   { name: "theatre", recipe: theatre, family: "landmarks", landmark: true },
   { name: "civicPalace", recipe: civicPalace, family: "landmarks", landmark: true },
+  { name: "library", recipe: library, family: "landmarks", landmark: true },
   { name: "waterTower", recipe: waterTower, family: "landmarks", landmark: true },
   { name: "footbridge", recipe: footbridge, family: "landmarks", landmark: true },
 ];
