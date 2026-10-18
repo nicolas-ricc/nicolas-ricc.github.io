@@ -83,14 +83,15 @@ describe("zoning", () => {
   it("bares son exactamente las seis manzanas del muelle", () => { /* {102,132,162} × {164,188} */ });
   it("residencial, centro, cívico, ribera y distrito según la tabla", () => { /* conjuntos exactos del issue; plaza cívico; derrumbe ribera */ });
   it("los fijos están donde dice la tabla y existen en el kit", () => { /* station (-18,188), market (280,188), theatre (72,218), civicPalace (162,218), library (42,242), constructionSite en SITE, patioResidential en (12,164); RECIPES los tiene */ });
+  it("assign pone cada fijo en su manzana y toda manzana cívica que no es la plaza es fija", () => { /* salida de assign, no la constante */ });
   it("catálogos: pesos del issue, recetas registradas y política de luces", () => { /* centro podiumTower 30 ...; on/warm */ });
   it("maxHeightFor topa a 10 la fila frente a la torre", () => { /* (102,242), (132,242) → 10; (72,242) → 18; con top 24 → 24 */ });
-  it("maxDistrictHeight conserva la guarda del piso encendido", () => { /* manzana TOWER.x+20,TOWER.y+20 → 10; SITE → MAX_DISTRICT_H */ });
+  it("maxDistrictHeight conserva la guarda del piso encendido", () => { /* manzana TOWER.x+20,TOWER.y+20 → 10; SITE → MAX_DISTRICT_H; sobre blocks() solo (132,242) baja de 24 */ });
   it("open: avenida, muelle, ribera y plaza", () => { /* (102,188) ["s"]; (162,164) ["e"]; (162,188) ["s","e"]; (102,242) ["n"]; (72,218) contiene "e" */ });
   it("assign es determinístico, salta plaza y derrumbe, y arma lotes con vereda, zócalo y tope", () => { /* ... */ });
   it("con la semilla del mundo se usan ≥ 14 recetas distintas", () => { /* zoneRng(SEED,"cv"), zoneRng(SEED,"cv",1) */ });
-  it("el residencial no repite receta en manzanas adyacentes", () => { /* semilla del mundo y seeds 1..20 */ });
-  it("lotes de la torre de agua y el puente peatonal", () => { /* waterTowerLot centrado, lado ≥ 5; FOOTBRIDGE_LOT de 198 a ceil(estuaryEast(176))+1 */ });
+  it("el residencial no repite receta en manzanas adyacentes", () => { /* semilla del mundo y createRng(7)/createRng(8), las de la escena */ });
+  it("lotes de la torre de agua y el puente peatonal", () => { /* waterTowerLot centrado en el patio (el centro cae dentro; con patio < 5 se acepta el roce), lado ≥ 5; FOOTBRIDGE_LOT de 198 a ceil(estuaryEast(176))+1 */ });
 });
 ```
 
@@ -209,7 +210,7 @@ export const FOOTBRIDGE_LOT: Lot = { x: WEST_QUAY.x1, y: 174, w: Math.ceil(estua
   - Fila frente a la torre ≤ 10 (igual que hoy).
   - Autos: una sola medida (`CAR.w × CAR.d × 1.2`).
   - `placed`: uno por manzana no plaza/derrumbe, `solidOffset` apunta al primer sólido de su pieza (`scene.solids[o] === piece.solids[0]`), barrios y recetas iguales a `assign` con los mismos seeds.
-  - Torre de agua dentro del patio de `(12, 164)`; puente peatonal con tablero `stone` en `y 174..178` entre 198 y la ribera.
+  - Torre de agua centrada en el patio de `(12, 164)` (`placed[].piece.courtyard`); puente peatonal con tablero `stone` en `y 174..178` entre 198 y la ribera.
   - Carteles del distrito: pasan los de `district.test.ts` (plano en y, 1.6 de alto, `cyan`/`magenta`, alpha 1).
   - `strip ≤ 150` (ya está).
 - [ ] **Step 2:** `npx vitest run src/scenes/city.test.ts` → FAIL.
@@ -240,3 +241,19 @@ export function city(rng: Rng, districtRng: Rng): CityScene {
 ### Verificación visual (stage 4, después de Task 3)
 
 `npm run dev -- --host --port 5173`, `agent-browser` sobre `http://localhost:5173/map/lab/resume.html`, tecla `2`, captura 1600×900 a `docs/superpowers/specs/assets/2026-10-15-resume-nivel-2/44-resume-barrios.png`. Script en `.scratch/evals-44.md`.
+
+## Assumptions
+
+Decididas en el grilling (sin fuente escrita; cualquier opción cumple el issue):
+
+- `pick` sobre un catálogo vacío tira error en vez de devolver una receta por defecto: las tres manzanas cívicas que no son la plaza son fijas y un test lo exige (alternativa descartada: catálogo cívico de reserva).
+- El test "el residencial no repite en adyacentes" corre sobre las semillas que la escena usa (mundo y 7/8), no sobre un barrido: con "tomar la última" tras cinco reintentos la propiedad no está garantizada para toda semilla (alternativa descartada: reintentar sin tope).
+- El refactor de Task 2 se verifica comparando `JSON.stringify(city(createRng(7), createRng(8)))` antes y después en el commit; el resultado se anota en el mensaje del commit (alternativa descartada: snapshot comiteado, que se rompería en Task 3).
+- La captura de la vista de barrios se comitea en `docs/superpowers/specs/assets/2026-10-15-resume-nivel-2/` para poder enlazarla desde el PR; `.scratch/` va a `.git/info/exclude`.
+
+## Grilling
+
+- Rondas: 1 (el plan no cambió de forma sustancial: se agregaron tests y precisiones, no pasos ni costuras).
+- Preguntas: 18. Fuentes: ISSUE 9, CODE 7, NO SOURCE 4 (supuestos técnicos de arriba). Spec ambiguity: 0. Fuera de alcance: 0.
+- Verificado con código: `maxDistrictHeight` sobre `blocks()` solo baja de 24 en `(132, 242)`, que ya topa a 10 por `maxHeightFor`; `blocks()` da 55 manzanas (53 sin plaza ni derrumbe); `district.ts` solo lo importa `city.ts` (y lo nombran comentarios en `composite.ts`, `modern.ts`, `city-grid.ts` y el README).
+- Issues abiertos: ninguno.
