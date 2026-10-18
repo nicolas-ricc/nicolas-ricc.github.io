@@ -49,7 +49,7 @@
 - Consumes: `abyssX` de `../map/geo`, `terrainAt` de `./terrain`, `WRECK` y `sea` de `./sea`, `bounds` de `../iso/solids`.
 - Produces: `describe("pecio: comentario y posición (#89)")`, que la Task 2 hace pasar.
 
-- [ ] **Step 1: Escribir los tests**
+- [x] **Step 1: Escribir los tests**
 
 Agregar `import { readFileSync } from "node:fs";` como primera línea, sumar `abyssX` al import de `../map/geo` (`scene`, `bounds`, `Solid`, `terrainAt` y `WRECK` ya están en `sea.test.ts:3-10`), y al final del archivo:
 
@@ -74,12 +74,12 @@ describe("pecio: comentario y posición (#89)", () => {
 });
 ```
 
-- [ ] **Step 2: Correr y ver el primero fallar y el segundo pasar**
+- [x] **Step 2: Correr y ver el primero fallar y el segundo pasar**
 
 Run: `npx vitest run src/scenes/sea.test.ts -t "#89"`
 Expected: el test del docstring FALLA (`hundido en la fosa` no aparece); la guarda PASA.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/scenes/sea.test.ts
