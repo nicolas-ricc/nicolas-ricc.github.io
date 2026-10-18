@@ -11,6 +11,8 @@ const scene = (): SeaScene => sea(createRng(7));
 const SEA_MATS: readonly Material[] = ["rock", "whitewash", "rust", "steel", "glass", "hull", "deck", "foam", "leaf", "leafDark"];
 const water = new Set(["water", "sea", "shore", "abyss", "reef"]);
 type Cyl = Extract<Solid, { kind: "cylinder" }>;
+type Prism = Extract<Solid, { kind: "prism" }>;
+type Cone = Extract<Solid, { kind: "cone" }>;
 
 describe("sea", () => {
   it("es determinística, trae ≥ 80 sólidos elevados y usa solo materiales del Blog o compartidos", () => {
@@ -36,9 +38,9 @@ describe("sea", () => {
   it("galería del faro: disco y postes con medidas nombradas, sin mover un bit (#27)", () => {
     const s = scene();
     expect([GALLERY_R, GALLERY_DECK_R, POST_W, POST_H]).toEqual([2.7, 3, 0.3, 1.2]);
-    const deck = s.solids.filter((x): x is Cyl => x.kind === "cylinder" && x.mat === "steel" && x.h === 0.6 && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y);
+    const deck = s.solids.filter((x): x is Cyl => x.kind === "cylinder" && x.mat === "steel" && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y);
     expect(deck.map((d) => d.r)).toEqual([GALLERY_DECK_R]);
-    const posts = s.solids.filter((x): x is Extract<Solid, { kind: "prism" }> => x.kind === "prism" && x.mat === "steel" && x.w === POST_W && x.d === POST_W && x.h === POST_H);
+    const posts = s.solids.filter((x): x is Prism => x.kind === "prism" && x.mat === "steel" && x.w === POST_W && x.d === POST_W && x.h === POST_H && Math.hypot(x.at.x - LIGHTHOUSE.x, x.at.y - LIGHTHOUSE.y) < GALLERY_DECK_R);
     expect(posts).toHaveLength(8);
     for (const p of posts) expect(Math.hypot(p.at.x + POST_W / 2 - LIGHTHOUSE.x, p.at.y + POST_W / 2 - LIGHTHOUSE.y)).toBeCloseTo(GALLERY_R, 9);
   });
@@ -48,7 +50,7 @@ describe("sea", () => {
     expect([LANTERN_R, CAP_R]).toEqual([1.6, 1.8]);
     const glass = s.solids.filter((x): x is Cyl => x.kind === "cylinder" && x.mat === "glass" && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y);
     expect(glass.map((g) => g.r)).toEqual([LANTERN_R]);
-    const cap = s.solids.filter((x): x is Extract<Solid, { kind: "cone" }> => x.kind === "cone" && x.mat === "steel" && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y);
+    const cap = s.solids.filter((x): x is Cone => x.kind === "cone" && x.mat === "steel" && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y);
     expect(cap.map((c) => c.r)).toEqual([CAP_R]);
   });
 

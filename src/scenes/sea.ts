@@ -30,6 +30,7 @@ const DRUMS = 6, DRUM_H = 4, DRUM_STEP = 0.2, GALLERY_H = 0.6, LANTERN_H = 3, CA
 const DRUM_TOP_R = DRUM_R0 - (DRUMS - 1) * DRUM_STEP;
 /** Galería de neón y postes de la baranda: último tambor + 0.5. Las luces van a la altura de la plataforma (lantern.z − 2). */
 export const GALLERY_R = DRUM_TOP_R + 0.5;
+/** Sección y altura de los postes de la baranda: medidas propias, no siguen al fuste. */
 export const POST_W = 0.3, POST_H = 1.2;
 /** El disco sobresale media sección de poste por fuera de la baranda. */
 export const GALLERY_DECK_R = GALLERY_R + POST_W;
