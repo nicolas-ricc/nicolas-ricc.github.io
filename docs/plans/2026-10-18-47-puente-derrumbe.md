@@ -31,11 +31,11 @@
 
 ## Review Focus
 
-- El orden de pintado: los obeliscos y los postes se apoyan sobre el tablero; nada entra por debajo del tablero salvo pilas y losas, que viven dentro de `y0 − 1 .. y1 + 1` → cubierto por el test de contención de Task 2 y 3.
+- El orden de pintado (`sortByDepth`, `src/iso/depth.ts`, por caja AABB): los obeliscos y los postes se apoyan sobre el tablero; pilas y losas viven debajo, dentro de `y0 − 1 .. y1 + 1`. El test de contención solo cubre x/y; el orden real se verifica en la captura de `lab/resume.html` (guion de la etapa 3).
 - Las luces de los obeliscos tienen que seguir pasando el test de faroles de `city.test.ts` (`onAvenue`: `AVENUE.y0 − 3 .. AVENUE.y1 + 3` = 203..221; los `dot` quedan en `y 207.6` y `216.4`) → Task 3 corre ese test.
-- `footbridge` no puede cambiar ni un número al pasar a `stoneArch` → Task 1 compara la salida contra la construcción de hoy.
+- `footbridge` no puede cambiar ni un número al pasar a `stoneArch` → Task 1 suma a `landmarks.test.ts` un test que fija `x`, `y + 0.2`, `d − 0.4` y ancho de cada losa con la fórmula de hoy.
 - La cúpula no puede pisar los bloques hundidos ni salir del agua; una lectura de bordes por centro en lugar de por caja la dejaría tocando → Task 4 usa `bounds()` y `r`.
-- El rng del derrumbe: agregar la cúpula no puede consumir rng → Task 4 compara las cajas de los sólidos previos con los de hoy usando la misma semilla (test de determinismo de `city.test.ts` y comparación del prefijo).
+- El rng del derrumbe: agregar la cúpula no puede consumir rng → Task 4 compara el estado del rng después de `collapsed` con el de un rng que solo hizo `int(2, 3)`.
 
 ---
 
@@ -70,7 +70,24 @@ describe("stoneArch", () => {
 });
 ```
 
-El puente peatonal ya tiene su red en `src/kit/forms/landmarks.test.ts` ("puente en 54×5 a z −1 …", "puente: el borde inferior de las losas es un arco derecho …"): cuatro pilas, 18 losas, simetría por vano y clave más alta. Esos tests no se tocan y tienen que seguir en verde después del refactor; no se duplican.
+El puente peatonal ya tiene su red en `src/kit/forms/landmarks.test.ts` ("puente en 54×5 a z −1 …", "puente: el borde inferior de las losas es un arco derecho …"): cuatro pilas, 18 losas, simetría por vano y clave más alta. Esos tests no se tocan y tienen que seguir en verde después del refactor. Ninguno fija la posición en planta de las losas, así que se suma uno (usa `LOT`, `slabs`, `recipe`, `EPS` del archivo):
+
+```ts
+it("puente: cada losa arranca donde la ponía la construcción de hoy, con 0.2 de retiro y d − 0.4 de fondo", () => {
+  const lot = { ...LOT, x: 0, y: 0, w: 54, d: 5, z: -1 }, s = slabs(recipe("footbridge")(lot, createRng(1), STYLES.ribera), lot);
+  const span = (54 - 4 * 1.2) / 3;
+  s.forEach((q, n) => {
+    if (q.kind !== "prism") throw new Error("losa no prisma");
+    const i = Math.floor(n / 6), k = n % 6;
+    expect(q.at.x).toBeCloseTo(1.2 + i * (span + 1.2) + (k * span) / 6, 9);
+    expect(q.w).toBeCloseTo(span / 6, 9);
+    expect(q.at.y).toBeCloseTo(0.2, 9);
+    expect(q.d).toBeCloseTo(4.6, 9);
+  });
+});
+```
+
+(Si `slabs` no devuelve las losas ordenadas por x, ordenarlas antes.)
 
 - [ ] **Step 2:** `npx vitest run src/kit/props.test.ts` → FAIL (`stoneArch` no existe).
 
@@ -312,7 +329,10 @@ describe("collapsed", () => {
 
   it("la cúpula no consume rng: el resto del derrumbe es el de siempre", () => {
     const rest = built().filter((s) => s.kind !== "dome");
-    expect(rest).toHaveLength(7); // rampa, plataforma, ruina, tres bloques hundidos, bloque en la calle
+    expect(rest).toHaveLength(7); // rampa, plataforma, ruina, tres bloques hundidos, bloque en la calle (fixed.ts, collapsed de hoy)
+    const a = createRng(3), b = createRng(3);
+    collapsed([], a); b.int(2, 3); // la única tirada de hoy: el alto de la ruina
+    expect(a.next()).toBe(b.next());
   });
 });
 ```
@@ -335,3 +355,21 @@ solids.push({ kind: "dome", at: v3(c.x - 9.5, c.y + 17.5, -0.9), r: 3, h: 1.3, m
 
 - `npm test` y `npm run typecheck` en verde.
 - `npm run dev -- --host --port 5173`; abrir `/lab/resume.html` en agent-browser a 1600×900 DPR 2; acercar al puente (y 207..217, x 192..276) y al derrumbe (x 260..304, y 242..263); captura para el PR. Guion en `.scratch/evals-47.md`.
+
+## Assumptions
+
+Supuestos técnicos declarados en la revisión del plan (van a la descripción del PR):
+
+1. **Posición de la cúpula** (decisión 6). El issue da `at = (COLLAPSED.x − 9, COLLAPSED.y + 12, −0.9)` y, en la misma frase y en su test, "sin tocar los tres bloques hundidos"; ese `at` cae dentro de la losa `266..274 × 250..256` (`src/city/fixed.ts:96`). Gana la condición que el issue vuelve test; la cúpula se corre lo mínimo para cumplirla: `(270.5, 259.5, −0.9)`. Descartado: apoyarla contra la losa (rompe el test del issue) o mover la losa (el issue pide el derrumbe "igual que hoy").
+2. **Pilas en sus centros** (decisión 1). `x = 213, 234, 255, 274` son centros del hexágono (2 de ancho, puntas al norte y al sur, simétrico en x). Descartado: esquinas oeste (el hexágono no tiene esquina en x = 213 natural y correría el tajamar 1 al este).
+3. **Arcos entre pilas, no entre apoyos.** El issue dice "Entre pilas, el arco" y pide 18 losas (tres arcos); los apoyos de cabecera incluyen el estribo, que no es pila. El vano estribo → 213 queda sin arco. Descartado: cuatro arcos (24 losas, contra el test del issue).
+4. **Firma de `stoneArch`.** El issue sugiere `stoneArches(x0, x1, y, d, zTop, zBase, spans)`; con un `zBase` fijo no se pueden expresar los dos perfiles (el peatonal sube hacia la clave, el de la avenida baja según la fórmula del issue). Se usa `stoneArch(x, y, w, d, zTop, bottom)` por vano. Descartado: un flag de perfil.
+5. **Perfil del arco de la avenida**: la fórmula del issue al pie de la letra (decisión 2), con su test ("las losas centrales de cada vano bajan más que las de los extremos").
+6. **Postes "cada 3"**: repartidos de punta a punta con paso ≤ 3 entre obeliscos, como el puente peatonal (`src/kit/forms/landmarks.ts:191`).
+
+## Grilling
+
+- Rondas: 1 (los cambios no movieron ninguna costura ni agregaron tareas: dos tests más y una línea del Review Focus corregida).
+- Preguntas: 16. Fuentes: ISSUE 7, CODE 13, DOC 2 (varias respuestas citan más de una); NO SOURCE 4 (1, 2-centros, 13, 14-paso), todas supuestos técnicos.
+- Supuestos: los seis de "Assumptions".
+- Issues abiertos: ninguno.
