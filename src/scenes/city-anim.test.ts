@@ -190,8 +190,8 @@ describe("city-anim", () => {
   });
 
   it("tick(7000) y siete tick(1000) con la misma semilla dejan los mismos contadores de pisos y neones", () => {
-    // con la semilla 3 sola el caso ya da igual con el código viejo (0 apagones, 1 evento): se barren
-    // 50 semillas, que con el reinicio viejo difieren en ~40 % de los casos
+    // en 7 s cada temporizador dispara a lo sumo una vez (pausas ≥ 4000 y ≥ 3000 ms), así que este caso
+    // también daba igual con el reinicio viejo; los de 60 s y 10 min son los que lo distinguen
     for (let seed = 0; seed < 50; seed++) expect(troceado([7000], seed).fired()).toEqual(troceado(veces(7, 1000), seed).fired());
   });
 
