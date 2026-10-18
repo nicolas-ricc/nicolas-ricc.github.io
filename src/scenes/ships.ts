@@ -25,6 +25,7 @@ export const SHIP_SPECS: Record<ShipKind, ShipSpec> = {
 };
 export const SHIP_MATS: readonly Material[] = ["hull", "hullBlue", "whitewash", "steel", "rust", "deck", "glass", "asphalt"];
 const WATER_Z = -1, WAKE_Z = -0.95;
+const PUSHER_LEN = 20; // eslora del empujador, que va detrás de la barcaza con la proa en x 0
 
 interface Kit {
   hull: (dx: number, len: number, beam: number, h: number, sheer: number, topMat: Material) => Solid;
@@ -114,7 +115,7 @@ function barge(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void 
   for (let i = 0; i < 4; i++) solids.push(k.box(3.2 + i * 7.7, -3.6, 7.5, 7.2, top + 0.9, 0.4, "steel"), k.box(3.55 + i * 7.7, -2.2, 6.8, 4.4, top + 1.3, 0.3, "steel")); // tapas abovedadas en dos escalones
   for (const dx of [1.5, 35.5]) for (const dy of [-2.8, 2.8]) solids.push(k.cyl(dx, dy, top, 0.3, 0.5, "steel")); // bitas
   // empujador pegado a la popa, con proa cuadrada
-  solids.push(k.hull(-20, 20, 7, 1.6, 0, "hullBlue"), k.box(-5.5, -3.5, 5.5, 7, -0.9, 1.55, "hullBlue"));
+  solids.push(k.hull(-PUSHER_LEN, PUSHER_LEN, 7, 1.6, 0, "hullBlue"), k.box(-5.5, -3.5, 5.5, 7, -0.9, 1.55, "hullBlue"));
   const pDeck = WATER_Z + 1.6 + 0.05; // tope del bloque de proa del empujador
   solids.push(k.box(-1.2, -3, 1.2, 1.2, pDeck, 1.6, "whitewash"), k.box(-1.2, 1.8, 1.2, 1.2, pDeck, 1.6, "whitewash")); // pechos de empuje, sobre la barcaza
   solids.push(k.box(-17.5, -2.6, 15.9, 5.2, pDeck, 1.55, "whitewash", { floors: 1, cols: 10 })); // nivel 1, la casilla larga
@@ -157,8 +158,8 @@ export function ship(kind: ShipKind, at: Vec2, heading: number): { solids: Solid
   return { solids, lights };
 }
 
-/** Popa de la unidad en coordenadas locales: el empujador va 20 u detrás de la barcaza. */
-const sternOf = (kind: ShipKind): number => (kind === "barge" ? -20 : 0);
+/** Popa de la unidad en coordenadas locales: el empujador va `PUSHER_LEN` detrás de la barcaza. */
+const sternOf = (kind: ShipKind): number => (kind === "barge" ? -PUSHER_LEN : 0);
 
 /** `at` de popa para que el punto medio de la unidad completa (empujador incluido) caiga en `center`. */
 export function shipAt(kind: ShipKind, center: Vec2, heading: number): Vec2 {
