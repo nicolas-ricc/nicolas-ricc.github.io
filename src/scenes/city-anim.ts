@@ -32,7 +32,7 @@ const NNE = { x: 0.45, y: -0.893 }; // unidad: nor-noreste (y crece al sur); en 
 const PERP = { x: -NNE.y, y: NNE.x }; // perpendicular a la deriva: abre el abanico
 
 export interface CityAnimChanges { lit: boolean; papers: boolean; antenna: boolean; neon: boolean }
-export interface CityAnim { lit(): Accent[]; papers(): Accent[]; antenna(): Accent; neon(): Accent[]; tick(dtMs: number): CityAnimChanges }
+export interface CityAnim { lit(): Accent[]; papers(): Accent[]; antenna(): Accent; neon(): Accent[]; tick(dtMs: number): CityAnimChanges; fired(): { lit: number; neon: number } }
 
 const NONE: CityAnimChanges = { lit: false, papers: false, antenna: false, neon: false };
 
@@ -64,6 +64,7 @@ export function createCityAnim(tower: CityScene["tower"], neon: CityScene["neon"
   const signs = neon.signs.map((a) => ({ a, color: a.color, offUntil: -1 }));
   let signTimer = rng.int(SIGN_GAP_MS[0], SIGN_GAP_MS[1]);
   let maleconStep = 0;
+  let blinks = 0, signEvents = 0; // disparos desde la construcción, para fired()
 
   const paperAt = (p: Paper): Accent => {
     const lateral = p.side * Math.min(1, p.dist / PAPER_SIDE_RAMP);
@@ -88,6 +89,7 @@ export function createCityAnim(tower: CityScene["tower"], neon: CityScene["neon"
       const lights = neon.malecon.filter((_, k) => !lit || lit[k]).map((at): Accent => ({ kind: "dot", at, r: MALECON_R, color: "cyanMid" }));
       return [...on, ...lights];
     },
+    fired: () => ({ lit: blinks, neon: signEvents }),
     tick(dtMs) {
       if (opts.reducedMotion || dtMs <= 0) return NONE;
       clock += dtMs;
@@ -95,7 +97,7 @@ export function createCityAnim(tower: CityScene["tower"], neon: CityScene["neon"
 
       // parpadeo: un tick apagado, después una pausa nueva
       if (off) { off = false; blinkTimer = nextGap(); c.lit = true; }
-      else { blinkTimer -= dtMs; if (blinkTimer <= 0) { off = true; c.lit = true; } }
+      else { blinkTimer -= dtMs; if (blinkTimer <= 0) { off = true; blinks++; c.lit = true; } }
 
       for (const p of papers) {
         p.dist += PAPER_SPEED * p.speed * dtMs;
@@ -112,6 +114,7 @@ export function createCityAnim(tower: CityScene["tower"], neon: CityScene["neon"
         if (rng.chance(0.5)) s.color = s.color === "cyan" ? "magenta" : "cyan";
         else if (s.offUntil < 0) s.offUntil = clock + NEON_STEP_MS;
         signTimer = rng.int(SIGN_GAP_MS[0], SIGN_GAP_MS[1]);
+        signEvents++;
         c.neon = true; // un cambio de color o un apagón siempre se ve (SIGN_GAP_MS ≥ 3000 > NEON_STEP_MS)
       }
       const mStep = Math.floor(clock / MALECON_STEP_MS);
