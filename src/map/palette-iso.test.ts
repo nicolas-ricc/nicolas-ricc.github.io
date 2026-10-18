@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ACCENT_COLORS, ISO_COLORS, ISO_TONES, TONE_LADDER, allIsoColors, stepTone, toneColor, type Material } from "./palette-iso";
+import { ACCENT_COLORS, ISO_COLORS, ISO_TONES, TONE_LADDER, allIsoColors, stepTone, toneColor, type AccentColor, type Material } from "./palette-iso";
 import { BASE_SHADOW, BASE_SKY, BASE_TONES, DARKEN, darken } from "./palette-base";
 
 const lum = (c: number): number => ((c >> 16) & 255) * 0.3 + ((c >> 8) & 255) * 0.59 + (c & 255) * 0.11;
@@ -102,6 +102,15 @@ describe("paleta isométrica", () => {
       expect(lum(ISO_COLORS[base])).toBeGreaterThan(lum(ISO_COLORS[`${base}Mid`]));
       expect(lum(ISO_COLORS[`${base}Mid`])).toBeGreaterThan(lum(ISO_COLORS[`${base}Bleed`]));
     }
+  });
+
+  it("ink, el texto de las páginas del lab, está en la paleta y no es un acento", () => {
+    expect(ISO_COLORS.ink).toBe(0xd8d4e8);
+    expect(allIsoColors().has(ISO_COLORS.ink)).toBe(true);
+    expect(ACCENT_COLORS).not.toContain("ink");
+    // @ts-expect-error ink no es un color de acento
+    const accent: AccentColor = "ink";
+    expect(accent).toBe("ink");
   });
 });
 
