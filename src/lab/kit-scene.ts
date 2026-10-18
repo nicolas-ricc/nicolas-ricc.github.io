@@ -16,7 +16,7 @@ export const KIT_STEP = { x: 30, y: 24 } as const;
  * salvo la que trae `ground` propio (el campus), que va a z 0 sin zócalo
  * (un prisma taparía su suelo, que se pinta antes que todo sólido).
  * Las recetas de `LAB_LOTS` van en su lote, centrado en la celda; la que trae `z` propia
- * (el puente, sobre el agua) va sin zócalo.
+ * (el puente, que en la ciudad apoya en el agua) va sin zócalo.
  * Cada lote tiene su rng, así la receta puede llamarse dos veces igual.
  */
 export function kitScene(seed: number, style: StyleId): { solids: Solid[]; accents: Accent[]; lots: { x: number; y: number; name: string }[] } {

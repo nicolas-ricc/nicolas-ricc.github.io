@@ -38,7 +38,8 @@ export const shiftTone = (t: number, k: number): number => Math.max(-2, Math.min
 /**
  * Si la pieza pasa el tope `min(lot.maxH, LANDMARK_MAX_H)`, la achata en z
  * (relativa a `lot.z`) para que entre justa: un landmark de medidas fijas
- * respeta así una manzana topada. Las normales no cambian.
+ * respeta así una manzana topada. Las normales no cambian, ni las medidas
+ * que no son alturas (el radio de `wheel`, el arrufo de `hull`).
  */
 export function fitToCap(p: Piece, lot: Lot): Piece {
   const cap = Math.min(lot.maxH, LANDMARK_MAX_H);

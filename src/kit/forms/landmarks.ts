@@ -107,7 +107,7 @@ function chamfered(x0: number, y0: number, x1: number, y1: number, c: number, o 
 
 /**
  * Palacio cívico: cuerpo con chaflán en la esquina SE, cornisa pesada, cubierta
- * a cuatro aguas perimetral en cuatro alas que no se tocan y, en el hueco del
+ * a cuatro aguas perimetral en cuatro alas que no se pisan y, en el hueco del
  * medio, cúpula sobre tambor. Escalinata al sur con un farol a cada lado.
  */
 export function civicPalace(lot: Lot, _rng: Rng, style: Style): Piece {
@@ -188,7 +188,8 @@ export function footbridge(lot: Lot, _rng: Rng, _style: Style): Piece {
     p.solids.push(prism(x + PIER_W + i * (span + PIER_W) + (k * span) / SLABS, y + 0.2, sz, span / SLABS, d - 0.4, deck - sz, "stone"));
   }
   const top = deck + DECK_H;
-  for (const ry of [y + 0.5, y + d - 0.8]) for (let i = 0; i <= Math.floor((w - 0.3) / POST_STEP); i++) p.solids.push(prism(x + i * POST_STEP, ry, top, 0.3, 0.3, 1, "steel"));
+  const posts = Math.ceil((w - 0.3) / POST_STEP), step = (w - 0.3) / posts; // de punta a punta, cada 3 o menos
+  for (const ry of [y + 0.5, y + d - 0.8]) for (let i = 0; i <= posts; i++) p.solids.push(prism(x + i * step, ry, top, 0.3, 0.3, 1, "steel"));
   p.accents.push(...garland([v3(x, y + d - 0.65, deck + 1.2), v3(x + w, y + d - 0.65, deck + 1.2)]));
   p.landmarkTop = v3(x + w / 2, y + d / 2, top + 1);
   return fitToCap(p, lot);

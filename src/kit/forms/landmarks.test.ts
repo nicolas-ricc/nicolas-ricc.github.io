@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { bounds, type Solid } from "../../iso/solids";
 import { createRng } from "../../map/seed";
-import { RECIPES, recipe } from "../index";
+import { LAB_LOTS, RECIPES, recipe } from "../index";
 import { STYLES } from "../styles";
 import type { Lot, Piece } from "../types";
 
@@ -13,8 +13,11 @@ const SEEDS = Array.from({ length: 10 }, (_, i) => i + 1);
 const EPS = 1e-9;
 
 const top = (p: Piece): number => Math.max(...[...p.solids, ...p.ground].map((s) => bounds(s).max.z));
-/** Lote de prueba de cada receta: la torre de agua y el puente tienen el suyo. */
-const lotFor = (name: string): Lot => (name === "waterTower" ? { ...LOT, w: 6, d: 6 } : name === "footbridge" ? { ...LOT, w: 54, d: 5, z: -1 } : LOT);
+/** Lote de prueba de cada receta: la torre de agua y el puente tienen el suyo (LAB_LOTS). */
+const lotFor = (name: string): Lot => {
+  const own = LAB_LOTS[name];
+  return own ? { ...LOT, w: own.w, d: own.d, z: own.z ?? LOT.z } : LOT;
+};
 /** Losas de arco del puente (las únicas piedras de fondo d − 0.4), de oeste a este. */
 const slabs = (p: Piece, lot: Lot) =>
   p.solids.filter((s): s is Solid & { kind: "prism" } => s.kind === "prism" && s.mat === "stone" && Math.abs(s.d - (lot.d - 0.4)) < EPS).sort((a, b) => a.at.x - b.at.x);
@@ -31,6 +34,17 @@ describe("kit: familia landmarks", () => {
       const p = def.recipe({ ...lotFor(def.name), maxH }, createRng(seed), STYLES[id]);
       expect(p.landmarkTop, def.name).toBeDefined();
       expect(Math.abs(p.landmarkTop!.z - top(p)), def.name).toBeLessThanOrEqual(1e-6);
+    }
+  });
+
+  it("ningún par de sólidos de una receta se interpenetra (sortByDepth ordena por caja)", () => {
+    for (const def of RECIPES.filter((r) => r.family === "landmarks")) for (const lot of LAB_LOTS[def.name] ? [lotFor(def.name)] : [LOT, LAB]) {
+      const boxes = recipe(def.name)(lot, createRng(1), STYLES.civico).solids.map(bounds);
+      for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i]!, b = boxes[j]!;
+        const inside = (["x", "y", "z"] as const).every((k) => Math.min(a.max[k], b.max[k]) - Math.max(a.min[k], b.min[k]) > 1e-6);
+        expect(inside, `${def.name}: sólidos ${i} y ${j}`).toBe(false);
+      }
     }
   });
 
@@ -159,6 +173,19 @@ describe("kit: familia landmarks", () => {
     expect(top(p)).toBeLessThanOrEqual(lot.z + 4 + EPS);
     expect(p.accents.length).toBeGreaterThan(0);
     expect(p.accents.every((a) => a.kind === "dot" && Math.abs(a.at.z - 2.4) < EPS && Math.abs(a.at.y - 4.35) < EPS)).toBe(true);
+  });
+
+  it("puente: postes de baranda repartidos de punta a punta en los dos bordes", () => {
+    for (const w of [40, 54, 60]) {
+      const lot = { ...LOT, x: 0, y: 0, w, d: 5, z: -1 }, p = recipe("footbridge")(lot, createRng(1), STYLES.ribera);
+      const posts = p.solids.filter((s): s is Solid & { kind: "prism" } => s.kind === "prism" && s.mat === "steel" && s.w === 0.3 && s.h === 1);
+      for (const ry of new Set(posts.map((q) => q.at.y))) {
+        const xs = posts.filter((q) => q.at.y === ry).map((q) => q.at.x).sort((a, b) => a - b);
+        expect(xs[0]).toBeCloseTo(0, 9);
+        expect(xs[xs.length - 1]! + 0.3).toBeCloseTo(w, 9);
+        for (let i = 1; i < xs.length; i++) expect(xs[i]! - xs[i - 1]!).toBeLessThanOrEqual(3 + 1e-9);
+      }
+    }
   });
 
   it("puente: el borde inferior de las losas es un arco derecho, simétrico en cada vano y más alto en la clave", () => {
