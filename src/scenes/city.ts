@@ -6,6 +6,7 @@ import { recipe } from "../kit";
 import { STYLES } from "../kit/styles";
 import type { Piece } from "../kit/types";
 import { prism, PLINTH_H } from "./city-pieces";
+import { lights, WINDOW_ALPHA, type CityLights } from "../city/lights";
 import { streets } from "../city/streets";
 import { bridge, collapsed, cars, greenery, malecon, plazaAndTower, westQuay, type TowerLights } from "../city/fixed";
 import { FOOTBRIDGE_LOT, NO_PLINTH, WATER_TOWER_BLOCK, assign, waterTowerLot, type Placed } from "../city/zoning";
@@ -26,13 +27,14 @@ export interface PlacedPiece { placed: Placed; piece: Piece; solidOffset: number
 export interface CityScene {
   ground: Solid[];   // baldosas de la plaza, suelo de manzanas devoradas, carriles
   solids: Solid[];
-  accents: Accent[]; // faroles y derrame de luz; las ventanas encendidas y la antena las anima city-anim
+  accents: Accent[]; // faroles, derrame de luz, ventanas encendidas de lights(), neones de bares y fachadas bañadas; las ventanas encendidas del tramo anterior y la antena las anima city-anim
   tower: TowerLights;
   neon: { signs: Accent[]; malecon: Vec3[] }; // carteles del distrito y luces del malecón; los anima city-anim
   placed: PlacedPiece[];
+  lights: CityLights;
 }
 
-export function city(rng: Rng, districtRng: Rng): CityScene {
+export function city(rng: Rng, districtRng: Rng, lightsRng: Rng): CityScene {
   const ground: Solid[] = [], solids: Solid[] = [], accents: Accent[] = [], signs: Accent[] = [], placed: PlacedPiece[] = [];
   const add = (piece: Piece): void => { solids.push(...piece.solids); ground.push(...piece.ground); accents.push(...piece.accents); };
   for (const p of assign(rng, districtRng)) {
@@ -56,5 +58,9 @@ export function city(rng: Rng, districtRng: Rng): CityScene {
   collapsed(solids, rng);
   greenery(solids, rng);
   cars(solids, rng);
-  return { ground, solids, accents, tower, neon: { signs, malecon: maleconLights }, placed };
+  const lit = lights({ solids, placed }, lightsRng);
+  for (const w of lit.windows) if (w.on) accents.push({ kind: "poly", pts: w.window.pts, color: w.color, alpha: WINDOW_ALPHA });
+  for (const n of lit.neons) accents.push(...n.accents);
+  accents.push(...lit.bathed);
+  return { ground, solids, accents, tower, neon: { signs, malecon: maleconLights }, placed, lights: lit };
 }

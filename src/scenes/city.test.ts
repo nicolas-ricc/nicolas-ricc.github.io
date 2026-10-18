@@ -144,8 +144,9 @@ describe("city", () => {
       if (!g.path.some((p) => p.x > EAST_RING.x0)) continue;
       for (const p of g.path) expect(p.y <= DISTRICT_BANK_Y || (p.y >= AVENUE.y0 && p.y <= AVENUE.y1)).toBe(true);
     }
-    // los dos charcos de luz sí caen enteros dentro de la plaza (alpha 0.25: el reloj y el cartel del distrito también son amberBleed, con otro alpha)
-    const spills = s.accents.filter((a) => a.kind === "poly" && a.color === "amberBleed" && a.alpha === 0.25);
+    // los dos charcos de luz sí caen enteros dentro de la plaza (alpha 0.25: el reloj y el cartel del distrito también son amberBleed, con otro alpha; se excluyen los charcos de neones de bares)
+    const neonAccents = new Set(s.lights.neons.flatMap((n) => n.accents)); // los neones de bares ámbar también dejan un charco (otro lugar: ante su pared)
+    const spills = s.accents.filter((a) => a.kind === "poly" && a.color === "amberBleed" && a.alpha === 0.25 && !neonAccents.has(a));
     expect(spills.length).toBeGreaterThanOrEqual(2);
     for (const sp of spills) if (sp.kind === "poly") for (const p of sp.pts) expect(inPlaza(p.x, p.y)).toBe(true);
     const boulevard = s.solids.filter((x) => x.kind === "prism" && x.mat === "leafDark" && x.at.z === 0); // no la terraza verde de una torre de vidrio del distrito

@@ -42,7 +42,7 @@ export const LANDMARKS: Record<WorldZone, Vec3> = {
   blog: v3(470, 160, 0),
 };
 
-/** Rng por zona y parte (0 = escena principal, 1 = escena secundaria: fábrica, distrito; 2 = margen: hinterland, distrito tecnológico). Retocar una no reordena las otras. */
+/** Rng por zona y parte (0 = escena principal, 1 = escena secundaria: fábrica, distrito; 2 = margen: hinterland, distrito tecnológico; 3 = luces de la ciudad). Retocar una no reordena las otras. */
 export function zoneRng(seed: number, zone: WorldZone, part = 0): Rng {
   return createRng(seed * 31 + ZONE_INDEX[zone] + 16 * part);
 }
@@ -59,7 +59,7 @@ export function world(seed: number, opts: { zones?: readonly WorldZone[] } = {})
     for (const sc of [sy, fa]) { ground.push(...sc.ground); solids.push(...sc.solids); accents.push(...sc.accents); }
   }
   if (zones.includes("cv")) {
-    ct = city(zoneRng(seed, "cv"), zoneRng(seed, "cv", 1));
+    ct = city(zoneRng(seed, "cv"), zoneRng(seed, "cv", 1), zoneRng(seed, "cv", 3));
     ground.push(...ct.ground); solids.push(...ct.solids); accents.push(...ct.accents);
   }
   let se: SeaScene | null = null;
