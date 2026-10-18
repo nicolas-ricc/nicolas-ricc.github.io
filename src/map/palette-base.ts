@@ -42,3 +42,29 @@ export function darken(color: number, factor: number): number {
   const ch = (shift: number) => Math.round(((color >> shift) & 255) * factor);
   return (ch(16) << 16) | (ch(8) << 8) | ch(0);
 }
+
+export type FiveTones = { top: number; lit: number; shade: number; up: number; down: number };
+export type NineTones = FiveTones & { deep: number; dim: number; pale: number; glow: number };
+
+type Rgb = readonly [number, number, number];
+/** Cada canal RGB × su factor, redondeado y saturado a 255. */
+const scale = (c: number, [r, g, b]: Rgb): number => {
+  const ch = (shift: number, f: number) => Math.min(255, Math.round(((c >> shift) & 255) * f));
+  return (ch(16, r) << 16) | (ch(8, g) << 8) | ch(0, b);
+};
+/** Promedio canal a canal, redondeado. */
+const mean = (a: number, b: number): number => {
+  const ch = (shift: number) => Math.round((((a >> shift) & 255) + ((b >> shift) & 255)) / 2);
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+};
+
+/** Regla "ciudad y costa" (ver encabezado de palette-iso.ts) a partir del `top` base. */
+export function cityLadder(top: number): FiveTones {
+  return { top, lit: scale(top, [0.82, 0.74, 0.62]), shade: scale(top, [0.40, 0.42, 0.60]), up: scale(top, [1.16, 1.12, 1.02]), down: scale(top, [0.86, 0.88, 0.94]) };
+}
+
+/** Los cinco tonos más deep, dim, pale y glow: la escalera de nueve. */
+export function extendLadder(t: FiveTones): NineTones {
+  const glow = scale(t.up, [1.12, 1.08, 1.02]);
+  return { ...t, deep: scale(t.shade, [0.70, 0.72, 0.80]), dim: mean(t.shade, t.lit), pale: mean(t.up, glow), glow };
+}
