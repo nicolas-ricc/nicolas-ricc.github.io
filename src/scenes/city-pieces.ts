@@ -7,7 +7,7 @@ import type { Rect } from "./city-grid";
 
 /**
  * Piezas de bajo nivel compartidas por la ciudad vieja (city.ts) y el
- * distrito moderno (district.ts): el prisma con techo/fachada opcional, el
+ * distrito moderno (src/city/zoning.ts): el prisma con techo/fachada opcional, el
  * suelo facetado de baldosas; las props y las recetas viven en `src/kit/`.
  */
 export const TILE = 6; // baldosa de la plaza y del suelo devorado

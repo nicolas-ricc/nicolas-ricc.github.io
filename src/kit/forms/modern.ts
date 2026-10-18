@@ -13,7 +13,7 @@ import type { Lot, Piece, RecipeDef, Style } from "../types";
  * Familia `modern`: las cuatro piezas del distrito moderno de Resume (torre de
  * vidrio en cuerpos escalonados, clásico de piedra con cornisa pesada, campus
  * de startups con patio verde y obra en construcción), mudadas desde
- * district.ts. Spec §5 y §6.
+ * src/city/zoning.ts. Spec §5 y §6.
  */
 export const MAX_CLASSIC_H = 18;
 const CURTAIN_WINDOW = { w: 0.85, h: 0.8 } as const;
