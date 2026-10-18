@@ -8,9 +8,9 @@ import { chase } from "./neon";
  * Las animaciones de la ciudad, sin Pixi y con estado propio: el piso
  * encendido parpadea (se apaga un tick cada 4..9 s), papeles salen volando de
  * una ventana hacia el NNE, la luz de la antena pulsa y los neones del distrito
- * cambian: un cartel cada 3..7 s (de tiempo de pared) cambia de color o se apaga un paso, y dos luces
- * corren por el malecón. Frame 0 = todo quieto y encendido; con reduced-motion
- * se queda ahí.
+ * cambian: un cartel cada 3..7 s cambia de color o se apaga un paso, y dos luces
+ * corren por el malecón. Las pausas se miden en tiempo de pared, no en ticks.
+ * Frame 0 = todo quieto y encendido; con reduced-motion se queda ahí.
  */
 export const BLINK_GAP_MS: [number, number] = [4000, 9000];
 export const PAPER_SPEED = 4 / 1000; // u por ms
@@ -25,9 +25,9 @@ export const PAPER_SIDE = 1.5; // desvío lateral máximo, perpendicular a la de
 export const PAPER_SIDE_RAMP = 5; // en cuántas unidades entra del todo el desvío
 export const NEON_STEP_MS = 150; // lo que dura un apagón de cartel
 export const SIGN_GAP_MS: [number, number] = [3000, 7000];
-const SEED_MAX = 2 ** 32 - 1; // semilla de un Rng derivado (sin literal 0x…: el guard de paleta lo tomaría por color)
 export const MALECON_STEP_MS = 250;
 export const MALECON_R = 0.35;
+const SEED_MAX = 2 ** 32 - 1; // semilla de un Rng derivado (sin literal 0x…: el guard de paleta lo tomaría por color)
 const ANTENNA_BASE_R = 0.8, ANTENNA_PULSE_R = 0.3, ANTENNA_PERIOD = 1200; // r = 0.8 + 0.3·(1 + sin(t / 1200))
 const NNE = { x: 0.45, y: -0.893 }; // unidad: nor-noreste (y crece al sur); en pantalla sube a la derecha
 const PERP = { x: -NNE.y, y: NNE.x }; // perpendicular a la deriva: abre el abanico
@@ -95,11 +95,12 @@ export function createCityAnim(tower: CityScene["tower"], neon: CityScene["neon"
     },
     fired: () => ({ lit: blinks, neon: signEvents }),
     tick(dtMs) {
-      if (opts.reducedMotion || dtMs <= 0) return NONE;
+      if (opts.reducedMotion || !Number.isFinite(dtMs) || dtMs <= 0) return NONE; // NaN o Infinity colgarían los while
       clock += dtMs;
       const c: CityAnimChanges = { lit: false, papers: true, antenna: false, neon: false };
 
-      // parpadeo: un tick apagado; la pausa siguiente cuenta desde el disparo, y un tick largo puede disparar varios
+      // parpadeo: un tick apagado (dos seguidos solo con ticks ≥ 4 s); la pausa siguiente cuenta desde el
+      // disparo, y un tick largo puede disparar varios
       if (off) { off = false; c.lit = true; }
       blinkTimer -= dtMs;
       while (blinkTimer <= 0) { blinkTimer += nextGap(); blinks++; off = true; c.lit = true; }

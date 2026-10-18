@@ -159,12 +159,16 @@ describe("city-anim", () => {
     expect(anim.fired().neon).toBeLessThanOrEqual(60000 / 3000);
   });
 
-  it("fired no cuenta nada con reduced-motion ni con dt <= 0", () => {
+  it("fired no cuenta nada con reduced-motion, con dt <= 0 ni con dt no finito", () => {
     const quieto = setup(true).anim;
     quieto.tick(60000);
     expect(quieto.fired()).toEqual({ lit: 0, neon: 0 });
     const { anim } = setup();
     anim.tick(0); anim.tick(-5000);
+    expect(anim.fired()).toEqual({ lit: 0, neon: 0 });
+    // ?speed=Infinity en el lab llega acá: sin el guard, el while no terminaría
+    expect(anim.tick(Infinity)).toEqual({ lit: false, papers: false, antenna: false, neon: false });
+    expect(anim.tick(NaN)).toEqual({ lit: false, papers: false, antenna: false, neon: false });
     expect(anim.fired()).toEqual({ lit: 0, neon: 0 });
   });
 
