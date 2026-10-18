@@ -7,6 +7,7 @@ import { attachBloom, type BloomProbe } from "../world/bloom-runtime";
 import { coverFrame, fitTransform, type Frame, zoneFrame } from "../world/frame";
 import { type BloomMode, buildStage } from "../world/stage";
 import { WORLD_ZONES } from "../world/veil";
+import { runBoot } from "./boot";
 
 const KEY_ZONE: Record<string, Frame> = { "0": "all", "1": "portfolio", "2": "cv", "3": "blog", "4": "cover" };
 
@@ -33,7 +34,7 @@ export function bootWorldPage(zones: readonly WorldZone[] | undefined, frame: Fr
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const log = import.meta.env.DEV;
   const { scene, animators } = assembleWorld(zones, { reducedMotion });
-  void boot();
+  void runBoot(host, "lab", boot);
 
   async function boot(): Promise<void> {
     const app = new Application();
