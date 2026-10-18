@@ -52,7 +52,14 @@
 
 **Interfaces:**
 - Consumes: la constante `ROOT` ya definida en `src/lab/docs.test.ts:4`.
-- Produces: el `describe("specs viejas de los barcos (#69)", () => {
+- Produces: el `describe("specs viejas de los barcos (#69)")`, que la Task 2 hace pasar para la spec de fábrica.
+
+- [ ] **Step 1: Escribir el test que falla**
+
+Agregar al final de `src/lab/docs.test.ts`:
+
+```ts
+describe("specs viejas de los barcos (#69)", () => {
   // `ROUTE` con comilla delante, para no contar `FERRY_ROUTE`
   const OLD = /`ROUTE`|1\.2 \/ 2 \/ 0\.8/;
   const NOTE = "*Desvío: reemplazado por los carriles semirrectos de #87 (`LANE_OUT` / `LANE_BACK`) y la velocidad única `LANE_SPEED = 1.2` de #63, con fases 0, 1/3 y 2/3; ver `2026-10-16-barcos-referencia.md` y `2026-10-17-barcos-inventario.md`. Lo que sigue queda como registro.*";
@@ -60,8 +67,8 @@
   for (const [name, count] of Object.entries(specs)) {
     const spec = readFileSync(`${ROOT}docs/superpowers/specs/${name}`, "utf8");
     // la nota se corta en varias líneas como el resto de la spec: se compara con los espacios colapsados
-    const items = spec.split(/\n(?=- |\s*\n)/).filter((item) => OLD.test(item)).map((item) => item.replace(/\s+/g, " "));
-    it(`${name}: cada viñeta con ROUTE o las velocidades por barco empieza con la nota de desvío`, () => {
+    const items = spec.split(/\n(?=- |\s*\n)/).map((item) => item.replace(/\s+/g, " ")).filter((item) => OLD.test(item));
+    it(`${name}: cada viñeta con ROUTE o las velocidades por barco lleva la nota de desvío antes de la mención`, () => {
       expect(items).toHaveLength(count);
       for (const item of items) {
         expect(item).toContain(NOTE);

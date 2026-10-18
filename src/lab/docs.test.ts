@@ -63,8 +63,8 @@ describe("specs viejas de los barcos (#69)", () => {
   for (const [name, count] of Object.entries(specs)) {
     const spec = readFileSync(`${ROOT}docs/superpowers/specs/${name}`, "utf8");
     // la nota se corta en varias líneas como el resto de la spec: se compara con los espacios colapsados
-    const items = spec.split(/\n(?=- |\s*\n)/).filter((item) => OLD.test(item)).map((item) => item.replace(/\s+/g, " "));
-    it(`${name}: cada viñeta con ROUTE o las velocidades por barco empieza con la nota de desvío`, () => {
+    const items = spec.split(/\n(?=- |\s*\n)/).map((item) => item.replace(/\s+/g, " ")).filter((item) => OLD.test(item));
+    it(`${name}: cada viñeta con ROUTE o las velocidades por barco lleva la nota de desvío antes de la mención`, () => {
       expect(items).toHaveLength(count);
       for (const item of items) {
         expect(item).toContain(NOTE);
