@@ -1,6 +1,6 @@
-import { v3 } from "../iso/geometry";
+import { v3, type Vec3 } from "../iso/geometry";
 import { facadeWindows, type Facade } from "../iso/facade";
-import { visibleWalls, type Solid } from "../iso/solids";
+import { bounds, visibleWalls, type Solid } from "../iso/solids";
 import type { Lot, Piece, Slot, Style } from "./types";
 
 /** Tope de altura sobre `lot.z` de una receta común y de una `landmark`. */
@@ -34,3 +34,35 @@ export function southSign(x: number, southY: number, w: number, z0: number): Slo
 
 /** Tono desplazado `k` y recortado al rango de `Solid.tone` (−2..+2). */
 export const shiftTone = (t: number, k: number): number => Math.max(-2, Math.min(2, t + k));
+
+/**
+ * Si la pieza pasa el tope `min(lot.maxH, LANDMARK_MAX_H)`, la achata en z
+ * (relativa a `lot.z`) para que entre justa: un landmark de medidas fijas
+ * respeta así una manzana topada. Las normales no cambian, ni las medidas
+ * que no son alturas (el radio de `wheel`, el arrufo de `hull`).
+ */
+export function fitToCap(p: Piece, lot: Lot): Piece {
+  const cap = Math.min(lot.maxH, LANDMARK_MAX_H);
+  const top = Math.max(...[...p.solids, ...p.ground].map((s) => bounds(s).max.z)) - lot.z;
+  if (top <= cap) return p;
+  const k = cap / top, z = (n: number): number => lot.z + (n - lot.z) * k, P = (q: Vec3): Vec3 => v3(q.x, q.y, z(q.z));
+  const solid = (s: Solid): Solid => {
+    switch (s.kind) {
+      case "poly": return { ...s, z: z(s.z), h: s.h * k };
+      case "strip": return { ...s, z: z(s.z) };
+      case "ground": return { ...s, tris: s.tris.map((t) => ({ ...t, pts: [P(t.pts[0]), P(t.pts[1]), P(t.pts[2])] })) };
+      case "wheel": return { ...s, at: P(s.at) };
+      default: return { ...s, at: P(s.at), h: s.h * k };
+    }
+  };
+  return {
+    ...p,
+    solids: p.solids.map(solid),
+    ground: p.ground.map(solid),
+    accents: p.accents.map((a) => (a.kind === "dot" ? { ...a, at: P(a.at) } : { ...a, pts: a.pts.map(P) })),
+    windows: p.windows.map((w) => ({ ...w, pts: w.pts.map(P) })),
+    walls: p.walls.map((w) => ({ ...w, pts: w.pts.map(P), floorH: w.floorH * k })),
+    slots: p.slots.map((s) => ({ ...s, pts: s.pts.map(P) })),
+    ...(p.landmarkTop ? { landmarkTop: P(p.landmarkTop) } : {}),
+  };
+}

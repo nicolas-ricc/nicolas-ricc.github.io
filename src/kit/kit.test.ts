@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { convexHull, type Vec2 } from "../iso/geometry";
 import { bounds, type Solid } from "../iso/solids";
 import { createRng } from "../map/seed";
-import { RECIPES, recipe } from "./index";
+import { LAB_LOTS, RECIPES, recipe } from "./index";
 import { LANDMARK_MAX_H, RECIPE_MAX_H } from "./piece";
 import { STYLES } from "./styles";
 import type { Lot, Piece } from "./types";
@@ -12,6 +12,11 @@ const LOTS: Lot[] = [
   { x: 1.5, y: 1.5, w: 21, d: 15, z: 0, open: ["s"], maxH: 24 },
   { x: 0, y: 0, w: 24, d: 18, z: 0, open: ["s", "e"], maxH: 24 },
 ];
+/** Los lotes del contrato: los de la ciudad y el lab, o el lote propio de LAB_LOTS en esas dos posiciones. */
+const lotsFor = (name: string): Lot[] => {
+  const own = LAB_LOTS[name];
+  return own ? LOTS.map((l) => ({ ...l, w: own.w, d: own.d, z: own.z ?? 0 })) : LOTS;
+};
 const STYLE_IDS = ["centro", "bares", "residencial", "civico"] as const;
 const SEEDS = Array.from({ length: 20 }, (_, i) => i + 1);
 const EPS = 1e-9;
@@ -91,7 +96,7 @@ describe("kit: contrato de toda receta registrada", () => {
     describe(def.name, () => {
       const cap = (lot: Lot) => Math.min(lot.maxH, def.landmark ? LANDMARK_MAX_H : RECIPE_MAX_H);
       const runs = (fn: (p: Piece, lot: Lot) => void) => {
-        for (const lot of LOTS) for (const id of STYLE_IDS) for (const seed of SEEDS) fn(def.recipe(lot, createRng(seed), STYLES[id]), lot);
+        for (const lot of lotsFor(def.name)) for (const id of STYLE_IDS) for (const seed of SEEDS) fn(def.recipe(lot, createRng(seed), STYLES[id]), lot);
       };
 
       it("todo sólido dentro del lote + 0.8, nada bajo lot.z, altura dentro del tope", () => {
@@ -109,13 +114,13 @@ describe("kit: contrato de toda receta registrada", () => {
       });
 
       it("es determinista", () => {
-        for (const lot of LOTS) for (const id of STYLE_IDS) for (const seed of SEEDS) {
+        for (const lot of lotsFor(def.name)) for (const id of STYLE_IDS) for (const seed of SEEDS) {
           expect(JSON.stringify(def.recipe(lot, createRng(seed), STYLES[id]))).toBe(JSON.stringify(def.recipe(lot, createRng(seed), STYLES[id])));
         }
       });
 
       it("con maxH 10 (la manzana frente al piso encendido) también respeta el tope", () => {
-        for (const base of LOTS) for (const id of STYLE_IDS) for (const seed of SEEDS) {
+        for (const base of lotsFor(def.name)) for (const id of STYLE_IDS) for (const seed of SEEDS) {
           const lot = { ...base, maxH: 10 }, p = def.recipe(lot, createRng(seed), STYLES[id]);
           for (const s of [...p.solids, ...p.ground]) expect(bounds(s).max.z).toBeLessThanOrEqual(lot.z + cap(lot) + EPS);
         }
@@ -146,9 +151,9 @@ describe("kit: contrato de toda receta registrada", () => {
       });
 
       it("con lot.z = 0.3 la salida es la de lot.z = 0 desplazada 0.3 en z", () => {
-        for (const lot of LOTS) for (const seed of SEEDS.slice(0, 5)) {
+        for (const lot of lotsFor(def.name)) for (const seed of SEEDS.slice(0, 5)) {
           const base = def.recipe(lot, createRng(seed), STYLES.centro);
-          const up = def.recipe({ ...lot, z: 0.3 }, createRng(seed), STYLES.centro);
+          const up = def.recipe({ ...lot, z: lot.z + 0.3 }, createRng(seed), STYLES.centro);
           expect(rounded(up)).toBe(rounded(shiftZ(base, 0.3)));
         }
       });
@@ -191,6 +196,20 @@ describe("kit: familia modern", () => {
     }
     // con un tope bajo no hay cartel: el cuerpo no llega a 12
     expect(recipe("classic")({ ...lot, maxH: 15 }, createRng(1), STYLES.distrito).slots).toEqual([]);
+  });
+
+  it("clásico: el reloj es un octógono amberBleed alpha 0.9 de radio 1.2, 0.02 delante de la cara sur del cuerpo", () => {
+    for (const seed of SEEDS) {
+      const p = recipe("classic")(LOTS[0]!, createRng(seed), STYLES.distrito);
+      const body = p.solids.find((s) => s.kind === "prism" && !!s.facade)!;
+      const c = p.accents.find((a) => a.kind === "poly" && a.color === "amberBleed");
+      if (!c || c.kind !== "poly" || body.kind !== "prism") throw new Error("sin reloj");
+      expect(c.alpha).toBe(0.9);
+      expect(c.pts).toHaveLength(8);
+      for (const q of c.pts) expect(q.y).toBeCloseTo(body.at.y + body.d + 0.02, 9);
+      const cx = body.at.x + body.w / 2, cz = c.pts[0]!.z;
+      for (const q of c.pts) expect(Math.hypot(q.x - cx, q.z - cz)).toBeCloseTo(1.2, 9);
+    }
   });
 
   it("el estilo pone cornisas y techo: trim y roof del estilo, tone en los cuerpos con fachada", () => {
