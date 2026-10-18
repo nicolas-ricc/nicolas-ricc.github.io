@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
+import { SHADOW_CORE_H, shadowPolygon } from "../iso/light";
 import { bounds, type Solid, type Tri, tessellate } from "../iso/solids";
 import type { Animator } from "../scenes/animator";
 import type { WorldScene } from "../scenes/world";
 import type { ZonedAnimator } from "../world/assemble";
 import { cropAccents, cropAnimators, cropScene, cropShared, overlaps, pieceScene, readout, solidsBox } from "./crop";
+import { EXHIBITS } from "./exhibits";
 
 const box = { x0: 0, y0: 0, x1: 10, y1: 10 };
 const prism = (x: number, y: number, w = 2): Solid => ({ kind: "prism", at: v3(x, y, 0), w, d: w, h: 3, mat: "concrete" });
@@ -118,18 +120,40 @@ describe("pieceScene", () => {
     for (const k of ["shipyard", "city", "factory", "sea", "hinterland", "tech", "fair"] as const) expect(scene[k]).toBeNull();
     for (const p of Object.values(scene.landmarks)) expect(p).toEqual(v3(0, 0, 0));
   });
-  it("los sólidos y acentos de build, y un pad de paving de 1 u centrado en el origen", () => {
+  it("los sólidos y acentos de build, y un pad de paving de 1 u que cubre la pieza y su sombra", () => {
     expect(scene.solids).toEqual([prism(-1, -1), prism(6, 0)]);
     expect(scene.accents).toEqual([lamp]);
     expect(scene.ground).toHaveLength(1);
     // malla plana: se pinta en la capa de suelo, debajo de sombras y sólidos
     expect(scene.ground[0]).toMatchObject({ kind: "ground", mat: "paving" });
     const { min, max } = bounds(scene.ground[0]!);
-    expect(max.x - min.x).toBeCloseTo(max.y - min.y);
-    expect(min.x + max.x).toBeCloseTo(0);
-    expect(min.y + max.y).toBeCloseTo(0);
+    // la pieza llega a ±8: oeste, norte y sur como antes, ±(8 + 3)
+    expect(min.x).toBeCloseTo(-11);
+    expect(min.y).toBeCloseTo(-11);
+    expect(max.y).toBeCloseTo(11);
+    // la sombra cae al este: el pad llega hasta su punta más el margen
+    const tip = Math.max(...scene.solids.flatMap((s) => (shadowPolygon(s) ?? []).map((p) => p.x)));
+    expect(tip).toBeGreaterThan(8);
+    expect(max.x).toBeCloseTo(tip + 3);
     expect(max.z).toBe(0); // cara de arriba al nivel de las piezas de tierra
     expect(max.z - min.z).toBe(1);
+  });
+  it("una pieza sin sombra conserva el pad cuadrado centrado", () => {
+    const flat: Solid = { kind: "ground", mat: "concrete", tris: [{ pts: [v3(-2, -2, 0), v3(4, -2, 0), v3(-2, 4, 0)] }] };
+    const { min, max } = bounds(pieceScene((out) => { out.push(flat); }).ground[0]!);
+    expect([min.x, min.y, max.x, max.y]).toEqual([-7, -7, 7, 7]);
+  });
+  it("la sombra de cada pieza del catálogo cae sobre el pad", () => {
+    const out: string[] = [];
+    for (const e of EXHIBITS) {
+      if (e.kind !== "piece") continue;
+      const s = pieceScene(e.build, e.pad);
+      const { min, max } = bounds(s.ground[0]!);
+      for (const so of s.solids) for (const p of [...shadowPolygon(so) ?? [], ...shadowPolygon(so, SHADOW_CORE_H) ?? []]) {
+        if (p.x < min.x || p.x > max.x || p.y < min.y || p.y > max.y) out.push(e.id);
+      }
+    }
+    expect([...new Set(out)]).toEqual([]);
   });
   it("el pad contiene a una pieza descentrada", () => {
     const b = bounds(scene.ground[0]!);
