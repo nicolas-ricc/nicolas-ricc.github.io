@@ -104,7 +104,7 @@ describe("city", () => {
   it("ningún cono pisa asfalto fuera de cráteres, manzanas y la ribera; los acentos son ámbar, ventanas o neones con sus Bleed", () => {
     const s = scene();
     for (const c of s.solids) {
-      if (c.kind !== "cone") continue;
+      if (c.kind !== "cone" || c.mat === "stone") continue; // los remates de los obeliscos del puente son de piedra, no árboles
       // al sur del distrito la ribera este es selva sin grilla (ya no hay manzanas del lado este)
       const onCity = c.at.x >= CITY_EDGE.west && c.at.x < MALECON.x0 && c.at.y >= CITY_EDGE.north && c.at.y < CITY_EDGE.south && !(c.at.x > QUAY_X && c.at.x < EAST_RING.x0) && !(c.at.x > EAST_RING.x0 && c.at.y >= DISTRICT_BANK_Y);
       if (onCity) expect(inBlock(c.at.x, c.at.y) || inCrater(c.at.x, c.at.y) || (c.at.y >= BOULEVARD.y0 && c.at.y <= BOULEVARD.y1)).toBe(true);
