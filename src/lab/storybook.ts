@@ -9,13 +9,13 @@ import { type BloomMode, buildStage, type Stage, type StageLayer } from "../worl
 import { runBoot } from "./boot";
 import { cropAnimators, cropScene, pieceScene, type Readout, readout, solidsBox } from "./crop";
 import { EXHIBITS, type Exhibit, GROUPS, pickExhibit, stepExhibit } from "./exhibits";
-import { bloomFromSearch, nextBloomMode } from "./page";
+import { bloomFromSearch, nextBloomMode, speedFromSearch } from "./page";
 
 /**
  * Storybook de estructuras: un exhibit a la vez, recortado del mundo por su
  * caja o armado solo en el origen (piezas). El hash elige el exhibit; flechas
  * y j/k solo escriben el hash. 6 rota el bloom; ?bloom= lo fuerza y ?speed=
- * escala el reloj, como en page.ts. g, h y a ocultan o muestran suelo, sombras
+ * escala el reloj (?speed=0 lo congela), como en page.ts. g, h y a ocultan o muestran suelo, sombras
  * y acentos (con el bloom) y se recuerdan entre exhibits.
  */
 const host = document.getElementById("lab-host") as HTMLDivElement;
@@ -129,7 +129,7 @@ async function boot(): Promise<void> {
     if (ev.key === "6" && stage) { stage.setBloom(nextBloomMode(stage.bloom)); if (log) console.info(`[storybook] bloom: ${stage.bloom}`); }
   });
 
-  const speed = Number(new URLSearchParams(location.search).get("speed")) || 1;
+  const speed = speedFromSearch(location.search);
   let worst = 0, since = 0;
   app.ticker.add((ticker) => {
     if (!stage) return;
