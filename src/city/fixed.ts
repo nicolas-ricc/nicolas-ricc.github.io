@@ -6,7 +6,7 @@ import type { Rng } from "../map/seed";
 import { QUAY_X, WORLD, ZONE_SPLIT_Y } from "../map/geo";
 import { AVENUE, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_RING, FALLEN_BLOCK, LIT_FLOOR, MALECON, PLAZA, ROWS, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, inCrater } from "../scenes/city-grid";
 import { jungle } from "../scenes/flora";
-import { CAR, bench, bollard, car, lamp, place, puddle, stoneArch } from "../kit/props";
+import { CAR, bench, bollard, car, fountain, kiosk, lamp, place, puddle, stoneArch } from "../kit/props";
 import { PLINTH_H, plazaTone, prism, tiles } from "../scenes/city-pieces";
 
 // ---------------------------------------------------------------- plaza y torre
@@ -45,6 +45,9 @@ export function plazaAndTower(solids: Solid[], ground: Solid[], accents: Accent[
   // solo derrame estirado hacia el este.
   for (const [x, y] of [[TOWER.x + TOWER.w + 6.5, TOWER.y + 2], [TOWER.x + TOWER.w + 9, TOWER.y + 4]] as const) accents.push(...puddle(x, y, "amberBleed"));
   for (const [x, y] of [[PLAZA.x + 4, PLAZA.y + 3], [PLAZA.x + PLAZA.w - 6, PLAZA.y + 3], [PLAZA.x + 4, PLAZA.y + PLAZA.d - 4.2], [PLAZA.x + PLAZA.w - 6, PLAZA.y + PLAZA.d - 4.2]] as const) solids.push(...bench(v3(x, y, 0.05)));
+  place(solids, accents, fountain(v3(150, 227, 0.05)));
+  // kioscos en las esquinas norte, justo por dentro del cordón, para no pisar los bancos
+  for (const x of [PLAZA.x + 1.4, PLAZA.x + PLAZA.w - 3.4]) solids.push(...kiosk(v3(x, PLAZA.y + 1.4, 0.05)));
   place(solids, accents, lamp(v3(PLAZA.x + 2, PLAZA.y + PLAZA.d / 2, 0.05)));
   place(solids, accents, lamp(v3(PLAZA.x + PLAZA.w - 2.6, PLAZA.y + PLAZA.d / 2, 0.05)));
   return { litWindows, antenna: v3(mast.x, mast.y, mast.z + 5), paperWindow };
