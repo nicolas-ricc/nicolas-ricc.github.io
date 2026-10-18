@@ -44,6 +44,7 @@ describe("SEED (#105)", () => {
   it("es 7", () => {
     expect(SEED).toBe(7);
   });
+  // estos tres solo usaban el ensamblador por la semilla: ni siquiera lo nombran
   it.each(["src/lab/exhibits.ts", "src/scenes/city.test.ts", "src/scenes/fair.test.ts"])("%s la importa de map/seed y no del ensamblador", (path) => {
     const src = source(path);
     expect(src).toMatch(/import \{[^}]*\bSEED\b[^}]*\} from "\.\.\/map\/seed";/);
