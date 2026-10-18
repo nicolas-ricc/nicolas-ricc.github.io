@@ -47,13 +47,26 @@ export function awning(at: Vec3, len: number, dir: RampDir): Solid[] {
 
 export const kiosk = (at: Vec3): Solid[] => [prism(at.x, at.y, at.z, 2, 2, 2.4, "officeDark"), prism(at.x, at.y, at.z + 2.4, 2, 2, 0.8, "terracotta", { roof: "hip" })];
 
-/** Cartel: caja oscura de 0.4 de fondo y el panel ámbar 0.02 delante de su cara sur. */
-export function sign(at: Vec3, w: number, h: number): Lit {
-  const y = at.y + 0.42, z0 = at.z + 0.2, z1 = at.z + h - 0.2;
+/** Cartel: caja oscura de 0.4 de fondo y el panel ámbar 0.02 delante de su cara sur (o este, con `face: "e"`, y `w` a lo largo de y). */
+export function sign(at: Vec3, w: number, h: number, face: "s" | "e" = "s"): Lit {
+  const z0 = at.z + 0.2, z1 = at.z + h - 0.2;
+  if (face === "e") {
+    const x = at.x + 0.42;
+    return {
+      solids: [prism(at.x, at.y, at.z, 0.4, w, h, "officeDark")],
+      accents: [{ kind: "poly", pts: [v3(x, at.y + 0.3, z0), v3(x, at.y + w - 0.3, z0), v3(x, at.y + w - 0.3, z1), v3(x, at.y + 0.3, z1)], color: "amber", alpha: 1 }],
+    };
+  }
+  const y = at.y + 0.42;
   return {
     solids: [prism(at.x, at.y, at.z, w, 0.4, h, "officeDark")],
     accents: [{ kind: "poly", pts: [v3(at.x + 0.3, y, z0), v3(at.x + w - 0.3, y, z0), v3(at.x + w - 0.3, y, z1), v3(at.x + 0.3, y, z1)], color: "amber", alpha: 1 }],
   };
+}
+
+/** Reloj: octógono `amberBleed` de radio 1.2 centrado en (cx, cz), 0.02 delante de una cara sur en `southY`. */
+export function clock(cx: number, southY: number, cz: number): Accent {
+  return { kind: "poly", pts: Array.from({ length: 8 }, (_, i) => { const a = (i / 8) * Math.PI * 2; return v3(cx + 1.2 * Math.cos(a), southY + 0.02, cz + 1.2 * Math.sin(a)); }), color: "amberBleed", alpha: 0.9 };
 }
 
 const NEON_HALO = 1.3, NEON_BACK = 0.05;
