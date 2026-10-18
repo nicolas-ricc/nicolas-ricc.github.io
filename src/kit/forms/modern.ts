@@ -2,9 +2,10 @@ import { v3 } from "../../iso/geometry";
 import type { Facade } from "../../iso/facade";
 import { GABLE_RATIO } from "../../iso/solids";
 import type { Rng } from "../../map/seed";
-import { prism } from "../../scenes/city-pieces";
+import { PLINTH_H, prism, tiles } from "../../scenes/city-pieces";
+import { towerCrane } from "../../scenes/pieces";
 import { LANDMARK_MAX_H, addBuilding, emptyPiece } from "../piece";
-import { beacon, helipad } from "../props";
+import { beacon, container, fence, helipad, sign, table } from "../props";
 import { gableRoof, greenRoof } from "../roofs";
 import type { Lot, Piece, RecipeDef, Slot, Style } from "../types";
 
@@ -85,7 +86,50 @@ export function classic(lot: Lot, rng: Rng, style: Style): Piece {
   return p;
 }
 
+/** Tres edificios bajos en U alrededor de un patio verde; el suelo del lote es selva, con zócalos sueltos bajo cada edificio. */
+export function campus(lot: Lot, rng: Rng, style: Style): Piece {
+  const p = emptyPiece(), { x, y, w, d, z } = lot;
+  p.ground.push(tiles(rng, lot, z + 0.05, "leafDark"));
+  const bldg = (bx: number, by: number, bw: number, bd: number, h: number): number => {
+    p.solids.push(prism(bx, by, z, bw, bd, PLINTH_H, "paving"));
+    const facade: Facade = { floors: Math.max(2, Math.round(h / 3)), cols: Math.max(2, Math.round(bw / 4)), base: "glass" };
+    addBuilding(p, prism(bx + 0.5, by + 0.5, z + PLINTH_H, bw - 1, bd - 1, h, "office", { facade, tone: style.tone }), facade);
+    p.solids.push(prism(bx, by, z + PLINTH_H + h, bw, bd, 0.4, style.trim));
+    return z + PLINTH_H + h + 0.4;
+  };
+  const topN = bldg(x, y, w, 5, rng.int(6, 8));
+  bldg(x, y + 6, 6, d - 6, rng.int(6, 8));
+  bldg(x + w - 6, y + 6, 6, d - 6, rng.int(6, 8));
+  const px0 = x + 6, px1 = x + w - 6, py0 = y + 6, py1 = y + d; // patio
+  for (let k = 0, n = rng.int(4, 6); k < n; k++) p.solids.push({ kind: "cone", at: v3(px0 + 1.5 + rng.next() * (px1 - px0 - 3), py0 + 1.5 + rng.next() * (py1 - py0 - 3), z + 0.05), r: 1 + rng.next() * 0.5, h: 2 + rng.next(), mat: "leaf" });
+  p.ground.push({ kind: "strip", path: [{ x: (px0 + px1) / 2, y: y + 5 }, { x: (px0 + px1) / 2, y: py1 }], width: 1, z: z + 0.08, mat: "paving" });
+  p.ground.push({ kind: "strip", path: [{ x: px0, y: (py0 + py1) / 2 }, { x: px1, y: (py0 + py1) / 2 }], width: 1, z: z + 0.08, mat: "paving" });
+  for (const [dx, dy] of [[1, 1], [px1 - px0 - 2, 1], [1, py1 - py0 - 2], [px1 - px0 - 2, py1 - py0 - 2]] as const) p.solids.push(...table(v3(px0 + dx, py0 + dy, z + 0.05)));
+  const s = sign(v3(x + w / 2 - 2, y + 4.1, topN), 4, 1.2); // sobre el borde sur del techo del edificio norte
+  p.solids.push(...s.solids);
+  p.accents.push(...s.accents);
+  return p;
+}
+
+/** Obra: losas a medio hacer sobre columnas, núcleo, grúa torre, luces de obra, cerco y contenedores. */
+export function constructionSite(lot: Lot, _rng: Rng, _style: Style): Piece {
+  const p = emptyPiece(), { x, y, w, d, z } = lot;
+  const sx = x + 2, sy = y + 1.5, sw = 16, sd = 12;
+  for (let k = 1; k <= 5; k++) p.solids.push(prism(sx, sy, z + 3 * k - 0.3, k === 5 ? 8 : sw, sd, 0.3, "paving")); // losas; la última a medio hacer
+  for (const [cx, cy] of [[0, 0], [8, 0], [16, 0], [0, 12], [8, 12], [16, 12]] as const) p.solids.push(prism(sx + cx - 0.3, sy + cy - 0.3, z, 0.6, 0.6, 15, "steel"));
+  p.solids.push(prism(sx + 6, sy + 4, z, 4, 4, 16, "officeDark")); // núcleo
+  // mástil a 8 del borde este: la contrapluma (8) termina en el borde del lote y la pluma (13) en el borde oeste
+  const mast = { x: x + w - 8, y: y + d - 2 };
+  towerCrane(p.solids, p.accents, { at: mast, z, mastH: 22, jibLen: 13, dir: "w", light: "amber" });
+  for (const dx of [2, 6, 10]) p.accents.push({ kind: "dot", at: v3(sx + dx, sy + 6, z + 15.3), r: 0.5, color: "amber" }); // luces de obra
+  p.solids.push(...fence(v3(x, y, z), w, d), ...container(v3(x + 0.5, y + d - 3, z)), ...container(v3(x + 7, y + d - 3, z)));
+  p.landmarkTop = v3(mast.x, mast.y, z + 22);
+  return p;
+}
+
 export const MODERN: RecipeDef[] = [
   { name: "glassTower", recipe: glassTower, family: "modern", landmark: true },
   { name: "classic", recipe: classic, family: "modern", landmark: true },
+  { name: "campus", recipe: campus, family: "modern" },
+  { name: "constructionSite", recipe: constructionSite, family: "modern", landmark: true },
 ];
