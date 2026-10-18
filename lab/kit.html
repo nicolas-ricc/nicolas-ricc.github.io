@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Lab: kit de formas</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #100e19; /* = ISO_COLORS.sky en src/map/palette-iso.ts */ }
+      #lab-host { width: 100%; height: 100%; }
+      #lab-host canvas { display: block; }
+    </style>
+  </head>
+  <body>
+    <div id="lab-host" aria-label="Kit de formas: todas las recetas del registro, una fila por familia. Tecla s cambia el seed; 1..4 cambian el estilo (centro, bares, residencial, cívico)."></div>
+    <script type="module" src="/src/lab/kit.ts"></script>
+  </body>
+</html>

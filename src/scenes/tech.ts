@@ -6,7 +6,10 @@ import type { Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { WORLD, ZONE_SPLIT_Y } from "../map/geo";
 import { BLOCK_W, BOULEVARD, CITY_EDGE, SIDEWALK, WEST_QUAY } from "./city-grid";
-import { PLINTH_H, brokenTone, campus, lamp, plazaTone, prism, tiles } from "./city-pieces";
+import { campus } from "../kit/forms/modern";
+import { beacon, bollard, lamp, place, sign, streetTree } from "../kit/props";
+import { STYLES } from "../kit/styles";
+import { PLINTH_H, brokenTone, plazaTone, prism, tiles } from "./city-pieces";
 import { jungle } from "./flora";
 import { GREEN_BELT, REACH, SUBURB_COLS, suburbBlocks, type SprawlBlock } from "./sprawl-grid";
 
@@ -45,12 +48,6 @@ function pickKind(rng: Rng, b: SprawlBlock): Kind {
   return "lab";
 }
 
-/** Cartel luminoso: caja oscura con un poly ámbar en su cara sur. Devuelve el acento para animarlo. */
-function sign(out: Solid[], x: number, y: number, z: number, w: number, h: number): Accent {
-  out.push(prism(x, y, z, w, 0.4, h, "officeDark"));
-  return { kind: "poly", pts: [v3(x + 0.3, y + 0.42, z + 0.2), v3(x + w - 0.3, y + 0.42, z + 0.2), v3(x + w - 0.3, y + 0.42, z + h - 0.2), v3(x + 0.3, y + 0.42, z + h - 0.2)], color: "amber", alpha: 1 };
-}
-
 /** Corona de neón: franja en la cara sur del cuerpo superior, pegada al borde de arriba; cian en torres pares, magenta en impares. */
 function crown(k: number, x: number, y: number, top: number, w: number): Accent {
   const x0 = x + 0.4, x1 = x + w - 0.4, z0 = top - 0.6;
@@ -78,10 +75,10 @@ function tower(out: Solid[], accents: Accent[], signs: Accent[], crowns: Accent[
   }
   if (rng.chance(0.5)) { out.push({ kind: "cylinder", at: v3(tx + tw / 2, ty + td / 2, z), r: 2.5, h: 0.3, mat: "paving", sides: 8 }); accents.push({ kind: "dot", at: v3(tx + tw / 2, ty + td / 2, z + 0.3), r: 0.6, color: "amberMid" }); }
   else { out.push(prism(tx + 0.5, ty + 0.5, z, tw - 1, td - 1, 0.3, "leafDark")); for (let k = 0, n = rng.int(1, 3); k < n; k++) out.push({ kind: "cone", at: v3(tx + 1.5 + rng.next() * (tw - 3), ty + 1.5 + rng.next() * (td - 3), z + 0.3), r: 1, h: 2, mat: "leaf" }); }
-  signs.push(sign(out, tx + tw / 2 - 3, ty + td - 0.4, z, 6, 1.6)); // cartel de azotea en el borde sur
+  place(out, signs, sign(v3(tx + tw / 2 - 3, ty + td - 0.4, z), 6, 1.6)); // cartel de azotea en el borde sur
   crowns.push(crown(k, tx, ty + td + 0.02, z - 0.3, tw));
-  if (h >= 18) accents.push({ kind: "dot", at: v3(tx + tw, ty, z + 0.5), r: 0.5, color: "amberMid" });
-  if (rng.chance(0.5)) lamp(out, accents, b.x + b.w - 1, b.y - 1.5, 0);
+  if (h >= 18) accents.push(...beacon(v3(tx + tw, ty, z + 0.5)).accents);
+  if (rng.chance(0.5)) place(out, accents, lamp(v3(b.x + b.w - 1, b.y - 1.5, 0)));
 }
 
 /** Atrio: dos losas de muro cortina unidas por un atrio de vidrio más bajo, sobre una plaza de baldosas con cartel de pie. */
@@ -94,7 +91,7 @@ function atrium(out: Solid[], ground: Solid[], signs: Accent[], rng: Rng, b: Spr
   out.push(prism(ix + 9, iy + 1, PLINTH_H, 3, 11, 4, "glass", { facade: { floors: 1, cols: 1, base: "glass" } }));
   for (const [dx, dy] of [[2, 15], [19, 15], [8, 16], [13, 16]] as const) out.push({ kind: "cone", at: v3(b.x + dx, b.y + dy, 0.05), r: 1.1, h: 2.5, mat: "leaf" });
   out.push(prism(b.x + b.w - 5, b.y + b.d - 3, 0.05, 0.4, 0.4, 2, "officeDark"));
-  signs.push(sign(out, b.x + b.w - 6.3, b.y + b.d - 3, 2.05, 3, 1.2)); // cartel de pie
+  place(out, signs, sign(v3(b.x + b.w - 6.3, b.y + b.d - 3, 2.05), 3, 1.2)); // cartel de pie
 }
 
 /** Nave de laboratorio o centro de datos: banda de vidrio por pared, equipos en el techo, campo solar y estacionamiento. */
@@ -146,7 +143,7 @@ function auditorium(out: Solid[], signs: Accent[], b: SprawlBlock): void {
   out.push({ kind: "cone", at: v3(cx, cy, PLINTH_H + 8), r: 8.5, h: 2.5, mat: "copper", sides: 12 });
   for (const dx of [-4, 4]) out.push(prism(cx + dx - 0.3, b.y + b.d - 2.3, PLINTH_H, 0.6, 0.6, 3, "steel"));
   out.push(prism(cx - 5, b.y + b.d - 4, PLINTH_H + 3, 10, 3, 0.4, "officeDark"));
-  signs.push(sign(out, cx - 3, b.y + b.d - 1.4, PLINTH_H + 3.4, 6, 1.2));
+  place(out, signs, sign(v3(cx - 3, b.y + b.d - 1.4, PLINTH_H + 3.4), 6, 1.2));
 }
 
 /** La avenida del distrito sigue hacia el oeste: cordones, cantero central con árboles y faroles. */
@@ -155,8 +152,8 @@ function avenue(ground: Solid[], solids: Solid[], accents: Accent[]): void {
   for (const y of [BOULEVARD.y0 - 0.3, BOULEVARD.y1 + 0.3]) ground.push(strip([{ x: x0, y }, { x: x1, y }], 0.4, 0.05, "paving"));
   for (const x of SUBURB_COLS) {
     solids.push(prism(x, BOULEVARD.y0, 0, BLOCK_W, BOULEVARD.y1 - BOULEVARD.y0, 0.3, "leafDark"));
-    for (const dx of [12]) solids.push({ kind: "cone", at: v3(x + dx, BOULEVARD.y0 + 2, 0.3), r: 1.5, h: 4, mat: "leaf" });
-    lamp(solids, accents, x + 12, BOULEVARD.y0 - 5.3, 0);
+    for (const dx of [12]) solids.push(...streetTree(v3(x + dx, BOULEVARD.y0 + 2, 0.3)));
+    place(solids, accents, lamp(v3(x + 12, BOULEVARD.y0 - 5.3, 0)));
   }
 }
 
@@ -164,7 +161,7 @@ function avenue(ground: Solid[], solids: Solid[], accents: Accent[]): void {
 function quay(solids: Solid[]): void {
   const { x0, x1 } = WEST_QUAY;
   solids.push(prism(x0, CITY_EDGE.south, -1, x1 - x0, WORLD.y1 + REACH.s - CITY_EDGE.south, 1.6, "plaza"));
-  for (let y = CITY_EDGE.south + 8; y < WORLD.y1 + REACH.s; y += 24) solids.push({ kind: "cylinder", at: v3(x0 + 3, y, 0.6), r: 0.4, h: 0.8, mat: "rust", sides: 6 });
+  for (let y = CITY_EDGE.south + 8; y < WORLD.y1 + REACH.s; y += 24) solids.push(...bollard(v3(x0 + 3, y, 0.6)));
 }
 
 export function tech(rng: Rng): TechScene {
@@ -173,7 +170,11 @@ export function tech(rng: Rng): TechScene {
   for (const b of suburbBlocks()) {
     switch (pickKind(rng, b)) {
       case "tower": tower(solids, accents, signs, crowns, towers, rng, b); break;
-      case "campus": { const ix = b.x + SIDEWALK, iy = b.y + SIDEWALK; campus(solids, ground, accents, rng, b, ix, iy, b.w - 2 * SIDEWALK, b.d - 2 * SIDEWALK); break; }
+      case "campus": {
+        const p = campus({ x: b.x + SIDEWALK, y: b.y + SIDEWALK, w: b.w - 2 * SIDEWALK, d: b.d - 2 * SIDEWALK, z: 0, open: [], maxH: MAX_TECH_H }, rng, STYLES.distrito);
+        solids.push(...p.solids); ground.push(...p.ground); accents.push(...p.accents);
+        break;
+      }
       case "atrium": atrium(solids, ground, signs, rng, b); break;
       case "lab": lab(solids, rng, b); break;
       case "park": park(solids, ground, rng, b); break;

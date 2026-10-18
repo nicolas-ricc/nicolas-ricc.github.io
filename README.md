@@ -45,7 +45,9 @@ Blog; `4` encuadra con `coverFrame(16/9)`; `5` rota el foco del velo entre
 apagado, Portfolio, Resume y Blog; `6` rota el bloom de las luces entre
 `off`, `on` y `fallback`; `?bloom=on|off|fallback` lo fuerza al cargar.
 Las teclas encuadran; no recortan: al enfocar una zona las vecinas asoman
-por el borde. No entra en el build de
+por el borde. `/lab/kit.html` muestra todas las recetas del kit
+(`src/kit/`), una fila por familia; tecla `s` cambia el seed y `1..4` el
+estilo (centro, bares, residencial, cívico). No entra en el build de
 producción. Para cambiar una escena, editar su lista de sólidos; para el
 look, `src/map/palette-iso.ts`. Specs en `docs/superpowers/specs/`
 (`2026-09-13-portfolio-isometrico-design.md`, `2026-09-14-mundo-isometrico-design.md`,
