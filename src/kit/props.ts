@@ -12,6 +12,9 @@ import { prism } from "../scenes/city-pieces";
  */
 export type Lit = { solids: Solid[]; accents: Accent[] };
 
+/** Vuelca un prop con luz en las listas de sólidos y acentos de destino. */
+export function place(solids: Solid[], accents: Accent[], lit: Lit): void { solids.push(...lit.solids); accents.push(...lit.accents); }
+
 /** Farol: poste más bombillo ámbar; `bulb` es dónde quedó el bombillo. */
 export function lamp(at: Vec3): Lit & { bulb: Vec3 } {
   const bulb = v3(at.x + 0.3, at.y + 0.3, at.z + 5);
@@ -21,7 +24,9 @@ export function lamp(at: Vec3): Lit & { bulb: Vec3 } {
 /** Semáforo apagado: poste y caja oscura. */
 export const trafficLight = (at: Vec3): Solid[] => [prism(at.x, at.y, at.z, 0.3, 0.3, 4, "steel"), prism(at.x - 0.1, at.y - 0.1, at.z + 4, 0.5, 0.5, 1.2, "officeDark")];
 
-export const car = (at: Vec3, mat: "steel" | "rust"): Solid[] => [prism(at.x, at.y, at.z, 3, 1.5, 1.2, mat)];
+/** La medida del auto: la usan `car()` y quien reserva lugar para uno. */
+export const CAR = { w: 3, d: 1.5 } as const;
+export const car = (at: Vec3, mat: "steel" | "rust"): Solid[] => [prism(at.x, at.y, at.z, CAR.w, CAR.d, 1.2, mat)];
 export const bench = (at: Vec3): Solid[] => [prism(at.x, at.y, at.z, 2, 0.6, 0.5, "paving")];
 export const table = (at: Vec3): Solid[] => [prism(at.x, at.y, at.z, 1, 1, 0.7, "paving")];
 export const chair = (at: Vec3): Solid[] => [prism(at.x, at.y, at.z, 0.5, 0.5, 0.5, "paving")];

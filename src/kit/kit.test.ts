@@ -93,8 +93,15 @@ describe("kit: contrato de toda receta registrada", () => {
       });
 
       it("es determinista", () => {
-        for (const lot of LOTS) for (const seed of SEEDS) {
-          expect(JSON.stringify(def.recipe(lot, createRng(seed), STYLES.centro))).toBe(JSON.stringify(def.recipe(lot, createRng(seed), STYLES.centro)));
+        for (const lot of LOTS) for (const id of STYLE_IDS) for (const seed of SEEDS) {
+          expect(JSON.stringify(def.recipe(lot, createRng(seed), STYLES[id]))).toBe(JSON.stringify(def.recipe(lot, createRng(seed), STYLES[id])));
+        }
+      });
+
+      it("con maxH 10 (la manzana frente al piso encendido) también respeta el tope", () => {
+        for (const base of LOTS) for (const id of STYLE_IDS) for (const seed of SEEDS) {
+          const lot = { ...base, maxH: 10 }, p = def.recipe(lot, createRng(seed), STYLES[id]);
+          for (const s of [...p.solids, ...p.ground]) expect(bounds(s).max.z).toBeLessThanOrEqual(lot.z + cap(lot) + EPS);
         }
       });
 

@@ -7,7 +7,7 @@ import type { Rng } from "../map/seed";
 import { QUAY_X, WORLD, ZONE_SPLIT_Y } from "../map/geo";
 import { AVENUE, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_RING, FALLEN_BLOCK, LIT_FLOOR, MALECON, PLAZA, ROWS, SIDEWALK, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, inCrater, type Block } from "./city-grid";
 import { jungle } from "./flora";
-import { antenna, bench, bollard, car, lamp, machineRoom, puddle, roofShrub, waterTank } from "../kit/props";
+import { CAR, antenna, bench, bollard, car, lamp, machineRoom, place, puddle, roofShrub, waterTank } from "../kit/props";
 import { cornice, stepTop } from "../kit/roofs";
 import { PLINTH_H, brokenTone, plazaTone, prism, tiles } from "./city-pieces";
 import { streets } from "../city/streets";
@@ -121,7 +121,6 @@ function block(solids: Solid[], ground: Solid[], rng: Rng, b: Block, maxH: numbe
 const maxHeightFor = (b: Block): number => (b.row === 3 && b.x >= 96 && b.x + b.w <= 162 ? 10 : MAX_BUILDING_H);
 
 /** Vuelca una prop con luz en las listas de la escena. */
-const place = (solids: Solid[], accents: Accent[], p: { solids: Solid[]; accents: Accent[] }): void => { solids.push(...p.solids); accents.push(...p.accents); };
 
 // ---------------------------------------------------------------- plaza y torre
 
@@ -253,8 +252,8 @@ function cars(solids: Solid[], rng: Rng): void {
       if (y >= AVENUE.y0 - 2 && y <= AVENUE.y1) continue;      // la avenida no tiene autos en el cordón
       if (inCrater(x + 1.5, y + 0.75) || CRATERS.some((c) => Math.hypot(x + 1.5 - c.x, y + 0.75 - c.y) <= c.r + 2)) continue;
       if (x > QUAY_X && x <= estuaryEast(y) + 1) continue;    // sobre el estuario no hay vereda donde dejar un auto
-      if (rectsOverlap(x, y, 3, 1.5, FALLEN_BLOCK.x, FALLEN_BLOCK.y, FALLEN_BLOCK.w, FALLEN_BLOCK.d)) continue;
-      if (placed.some((p) => rectsOverlap(x, y, 3, 1.5, p.x, p.y, 3, 1.5, 1))) continue; // ningún auto pisa a otro, con 1 u de margen
+      if (rectsOverlap(x, y, CAR.w, CAR.d, FALLEN_BLOCK.x, FALLEN_BLOCK.y, FALLEN_BLOCK.w, FALLEN_BLOCK.d)) continue;
+      if (placed.some((p) => rectsOverlap(x, y, CAR.w, CAR.d, p.x, p.y, CAR.w, CAR.d, 1))) continue; // ningún auto pisa a otro, con 1 u de margen
       placed.push({ x, y });
       solids.push(...car(v3(x, y, 0), rng.chance(0.6) ? "steel" : "rust"));
     }

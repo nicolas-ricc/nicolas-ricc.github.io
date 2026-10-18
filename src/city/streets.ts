@@ -4,7 +4,7 @@ import type { Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
 import { QUAY_X } from "../map/geo";
 import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_COLS, EAST_RING, MALECON, PLAZA, ROWS, STREET, WEST_COLS, WEST_QUAY, estuaryEast, estuaryReaches, inBlock, inCrater } from "../scenes/city-grid";
-import { lamp, streetTree, trafficLight } from "../kit/props";
+import { lamp, place, streetTree, trafficLight } from "../kit/props";
 import { PLINTH_H, prism } from "../scenes/city-pieces";
 
 /**
@@ -105,7 +105,7 @@ function avenue(ground: Solid[], solids: Solid[]): void {
 /** Faroles cada 12 u sobre la vereda norte de la avenida, en el tramo `[x0, x1]`. */
 function lampRow(solids: Solid[], accents: Accent[], [x0, x1]: readonly [number, number]): void {
   const y = AVENUE.y0 - 1.3;
-  for (let x = x0 + 6; x < x1 - 6; x += 12) { const l = lamp(v3(x, y, postZ(x, y))); solids.push(...l.solids); accents.push(...l.accents); }
+  for (let x = x0 + 6; x < x1 - 6; x += 12) place(solids, accents, lamp(v3(x, y, postZ(x, y))));
 }
 
 /** Semáforos apagados en las esquinas de la avenida y faroles sobre su vereda norte. */

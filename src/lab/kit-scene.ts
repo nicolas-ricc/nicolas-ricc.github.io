@@ -3,31 +3,33 @@ import type { Solid } from "../iso/solids";
 import { createRng } from "../map/seed";
 import { RECIPES } from "../kit/index";
 import { STYLES } from "../kit/styles";
-import type { StyleId } from "../kit/types";
-import { PLINTH_H } from "../scenes/city-pieces";
+import type { Lot, StyleId } from "../kit/types";
+import { PLINTH_H, prism } from "../scenes/city-pieces";
 
 /** Lote de cada receta en el lab y paso de la grilla. */
 export const KIT_LOT = { w: 24, d: 18 } as const;
 export const KIT_STEP = { x: 30, y: 24 } as const;
 
 /**
- * Todas las recetas del registro sobre lotes con zócalo, una fila por familia
- * en el orden del registro, con un solo rng para toda la escena.
- * Zócalo plano: un prisma taparía el suelo de la receta, que se pinta antes
- * que todo sólido; la losa `ground` va antes del suelo de su receta.
+ * Todas las recetas del registro, una fila por familia en el orden del registro.
+ * Como en la ciudad: la receta va sobre un zócalo prisma paving de PLINTH_H,
+ * salvo la que trae `ground` propio (el campus), que va a z 0 sin zócalo
+ * (un prisma taparía su suelo, que se pinta antes que todo sólido).
+ * Cada lote tiene su rng, así la receta puede llamarse dos veces igual.
  */
 export function kitScene(seed: number, style: StyleId): { solids: Solid[]; accents: Accent[]; lots: { x: number; y: number; name: string }[] } {
-  const rng = createRng(seed), families = [...new Set(RECIPES.map((r) => r.family))];
+  const families = [...new Set(RECIPES.map((r) => r.family))];
   const ground: Solid[] = [], solids: Solid[] = [], accents: Accent[] = [], lots: { x: number; y: number; name: string }[] = [];
-  for (const def of RECIPES) {
+  RECIPES.forEach((def, i) => {
     const x = RECIPES.filter((r) => r.family === def.family).indexOf(def) * KIT_STEP.x, y = families.indexOf(def.family) * KIT_STEP.y;
-    const [a, b, c, d] = [{ x, y }, { x: x + KIT_LOT.w, y }, { x: x + KIT_LOT.w, y: y + KIT_LOT.d }, { x, y: y + KIT_LOT.d }].map((q) => ({ ...q, z: PLINTH_H }));
-    ground.push({ kind: "ground", mat: "paving", tris: [{ pts: [a!, b!, c!] }, { pts: [a!, c!, d!] }] });
-    const p = def.recipe({ x, y, w: KIT_LOT.w, d: KIT_LOT.d, z: PLINTH_H, open: ["s", "e"], maxH: 24 }, rng, STYLES[style]);
+    const lot = { x, y, w: KIT_LOT.w, d: KIT_LOT.d, z: PLINTH_H, open: ["s", "e"] as Lot["open"], maxH: 24 };
+    let p = def.recipe(lot, createRng(seed * 1000 + i), STYLES[style]);
+    if (p.ground.length > 0) p = def.recipe({ ...lot, z: 0 }, createRng(seed * 1000 + i), STYLES[style]);
+    else solids.push(prism(x, y, 0, KIT_LOT.w, KIT_LOT.d, PLINTH_H, "paving"));
     ground.push(...p.ground);
     solids.push(...p.solids);
     accents.push(...p.accents);
     lots.push({ x, y, name: def.name });
-  }
+  });
   return { solids: [...ground, ...solids], accents, lots };
 }

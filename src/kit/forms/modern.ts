@@ -28,20 +28,25 @@ function southSign(x: number, southY: number, w: number, z0: number): Slot {
 const tierHeights = (h: number, tiers: number): number[] => (tiers === 3 ? [0.6, 0.3, 0.1] : [0.7, 0.3]).map((s) => Math.max(3, Math.round(h * s)));
 const GLASS_CROWN = 2.3; // terraza verde: losa 0.3 + cono 2 (el helipuerto es más bajo)
 
-/** Altura pedida más alta que entra en `cap` con el peor reparto en cuerpos (2 o 3, cada uno con su losa de 0.3) y la terraza. */
-function glassMaxH(cap: number): number {
+/** Si el cuerpo pedido `h` con `tiers` cuerpos (cada uno con su losa de 0.3) y la terraza entra en `cap`. */
+const glassFits = (h: number, tiers: number, cap: number): boolean => tierHeights(h, tiers).reduce((a, b) => a + b, 0) + 0.3 * tiers + GLASS_CROWN <= cap;
+
+/** Altura pedida más alta que entra en `cap` con cualquiera de los repartos posibles. */
+function glassMaxH(cap: number, tiers: readonly number[]): number {
   let h = Math.floor(cap);
-  while (h > 3 && [2, 3].some((t) => tierHeights(h, t).reduce((a, b) => a + b, 0) + 0.3 * t + GLASS_CROWN > cap)) h--;
+  while (h > 3 && tiers.some((t) => !glassFits(h, t, cap))) h--;
   return h;
 }
 
 export function glassTower(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d } = lot;
-  const hMax = glassMaxH(Math.min(lot.maxH, LANDMARK_MAX_H));
+  const cap = Math.min(lot.maxH, LANDMARK_MAX_H), threeFit = glassFits(3, 3, cap);
+  const hMax = glassMaxH(cap, threeFit ? [2, 3] : [2]);
   const h = hMax < 16 ? hMax : rng.int(16, hMax);
   const bw = rng.int(12, 14), bd = rng.int(10, 12);
   const bx = x + (w - bw) / 2, by = y + (d - bd) / 2;
-  const tiers = rng.int(2, 3);
+  const drawn = rng.int(2, 3);
+  const tiers = threeFit ? drawn : 2; // con un tope bajo tres cuerpos de mínimo 3 no entran: se fuerza a dos, el rng se consume igual
   const insets = [0, 2, 4];
   let z = lot.z;
   tierHeights(h, tiers).forEach((th, t) => {
@@ -111,23 +116,24 @@ export function campus(lot: Lot, rng: Rng, style: Style): Piece {
   return p;
 }
 
-/** Obra: losas a medio hacer sobre columnas, núcleo, grúa torre, luces de obra, cerco y contenedores. */
+/** Obra: losas a medio hacer sobre columnas, núcleo, grúa torre, luces de obra, cerco y contenedores. Ignora `style` y `rng` a propósito (materiales fijos de obra). */
 export function constructionSite(lot: Lot, _rng: Rng, _style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;
+  const cap = Math.min(lot.maxH, LANDMARK_MAX_H);
   const sx = x + 2, sy = y + 1.5, sw = 16, sd = 12;
-  for (let k = 1; k <= 5; k++) p.solids.push(prism(sx, sy, z + 3 * k - 0.3, k === 5 ? 8 : sw, sd, 0.3, "paving")); // losas; la última a medio hacer
-  for (const [cx, cy] of [[0, 0], [8, 0], [16, 0], [0, 12], [8, 12], [16, 12]] as const) p.solids.push(prism(sx + cx - 0.3, sy + cy - 0.3, z, 0.6, 0.6, 15, "steel"));
-  p.solids.push(prism(sx + 6, sy + 4, z, 4, 4, 16, "officeDark")); // núcleo
+  for (let k = 1; k <= 5 && 3 * k <= cap; k++) p.solids.push(prism(sx, sy, z + 3 * k - 0.3, k === 5 ? 8 : sw, sd, 0.3, "paving")); // losas; la última a medio hacer
+  for (const [cx, cy] of [[0, 0], [8, 0], [16, 0], [0, 12], [8, 12], [16, 12]] as const) p.solids.push(prism(sx + cx - 0.3, sy + cy - 0.3, z, 0.6, 0.6, Math.min(15, cap), "steel"));
+  p.solids.push(prism(sx + 6, sy + 4, z, 4, 4, Math.min(16, cap), "officeDark")); // núcleo
   // mástil a 8 del borde este: la contrapluma (8) termina en el borde del lote y la pluma (13) en el borde oeste
   const mast = { x: x + w - 8, y: y + d - 2 };
-  towerCrane(p.solids, p.accents, { at: mast, z, mastH: 22, jibLen: 13, dir: "w", light: "amber" });
-  for (const dx of [2, 6, 10]) p.accents.push({ kind: "dot", at: v3(sx + dx, sy + 6, z + 15.3), r: 0.5, color: "amber" }); // luces de obra
+  towerCrane(p.solids, p.accents, { at: mast, z, mastH: Math.min(22, cap), jibLen: 13, dir: "w", light: "amber" });
+  for (const dx of [2, 6, 10]) p.accents.push({ kind: "dot", at: v3(sx + dx, sy + 6, z + Math.min(15, cap) + 0.3), r: 0.5, color: "amber" }); // luces de obra
   p.solids.push(...fence(v3(x, y, z), w, d), ...container(v3(x + 0.5, y + d - 3, z)), ...container(v3(x + 7, y + d - 3, z)));
-  p.landmarkTop = v3(mast.x, mast.y, z + 22);
+  p.landmarkTop = v3(mast.x, mast.y, z + Math.min(22, cap));
   return p;
 }
 
-export const MODERN: RecipeDef[] = [
+export const MODERN: readonly RecipeDef[] = [
   { name: "glassTower", recipe: glassTower, family: "modern", landmark: true },
   { name: "classic", recipe: classic, family: "modern", landmark: true },
   { name: "campus", recipe: campus, family: "modern" },
