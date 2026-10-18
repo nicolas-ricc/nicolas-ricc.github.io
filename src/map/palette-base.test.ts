@@ -35,7 +35,8 @@ describe("escaleras", () => {
   });
 
   it("cityLadder satura a 255", () => {
-    expect(cityLadder(0xf0f0f0).up).toBe(0xffffff);
+    // rojo y verde saturan a 255; el azul (0xf0 × 1.02 = 244,8) no
+    expect(cityLadder(0xf0f0f0).up).toBe(0xfffff5);
   });
 
   it("extendLadder agrega deep, dim, pale y glow (pale entre up y glow)", () => {
