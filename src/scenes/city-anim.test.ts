@@ -166,7 +166,7 @@ describe("city-anim", () => {
     const { anim } = setup();
     anim.tick(0); anim.tick(-5000);
     expect(anim.fired()).toEqual({ lit: 0, neon: 0 });
-    // ?speed=Infinity en el lab llega acá: sin el guard, el while no terminaría
+    // sin el guard, un dt infinito no terminaría el while (el lab ya lo descarta en speedFromSearch)
     expect(anim.tick(Infinity)).toEqual({ lit: false, papers: false, antenna: false, neon: false });
     expect(anim.tick(NaN)).toEqual({ lit: false, papers: false, antenna: false, neon: false });
     expect(anim.fired()).toEqual({ lit: 0, neon: 0 });
