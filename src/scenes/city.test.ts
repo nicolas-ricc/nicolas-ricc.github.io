@@ -12,7 +12,7 @@ import { FIXED, FOOTBRIDGE_LOT, MAX_BUILDING_H, WATER_TOWER_BLOCK, assign } from
 import { SEED } from "../world/assemble";
 import { zoneRng } from "./world";
 
-const scene = (): CityScene => city(createRng(7), createRng(8));
+const scene = (): CityScene => city(createRng(7), createRng(8), createRng(9));
 const all = (s: CityScene): Solid[] => [...s.ground, ...s.solids];
 const inRect = (b: { min: { x: number; y: number }; max: { x: number; y: number } }, r: { x: number; y: number; w: number; d: number }) =>
   b.min.x >= r.x - 1e-6 && b.max.x <= r.x + r.w + 1e-6 && b.min.y >= r.y - 1e-6 && b.max.y <= r.y + r.d + 1e-6;
@@ -38,8 +38,8 @@ const CITY_MATS: readonly Material[] = ["office", "officeDark", "glass", "asphal
 
 describe("city", () => {
   it("es determinística por seed", () => {
-    expect(JSON.stringify(city(createRng(7), createRng(8)))).toBe(JSON.stringify(city(createRng(7), createRng(8))));
-    expect(JSON.stringify(city(createRng(7), createRng(8)))).not.toBe(JSON.stringify(city(createRng(8), createRng(8))));
+    expect(JSON.stringify(city(createRng(7), createRng(8), createRng(9)))).toBe(JSON.stringify(city(createRng(7), createRng(8), createRng(9))));
+    expect(JSON.stringify(city(createRng(7), createRng(8), createRng(9)))).not.toBe(JSON.stringify(city(createRng(8), createRng(8), createRng(9))));
   });
 
   it("todo cae en la zona Resume salvo la selva del cinturón, y usa solo materiales de la ciudad", () => {
@@ -101,7 +101,7 @@ describe("city", () => {
     expect(s.ground.filter((g) => g.kind === "ground" && g.mat === "leafDark").length).toBeGreaterThanOrEqual(3);
   });
 
-  it("ningún cono pisa asfalto fuera de cráteres, manzanas y la ribera; los acentos son ámbar", () => {
+  it("ningún cono pisa asfalto fuera de cráteres, manzanas y la ribera; los acentos son ámbar, ventanas o neones con sus Bleed", () => {
     const s = scene();
     for (const c of s.solids) {
       if (c.kind !== "cone") continue;
@@ -110,7 +110,16 @@ describe("city", () => {
       if (onCity) expect(inBlock(c.at.x, c.at.y) || inCrater(c.at.x, c.at.y) || (c.at.y >= BOULEVARD.y0 && c.at.y <= BOULEVARD.y1)).toBe(true);
     }
     expect(s.accents.length).toBeGreaterThan(6);
-    expect(s.accents.every((a) => a.color.startsWith("amber"))).toBe(true);
+    const NEON = ["magenta", "magentaBleed", "cyan", "cyanBleed"];
+    expect(s.accents.every((a) => a.color.startsWith("amber") || a.color === "windowWarm" || a.color === "windowCool" || NEON.includes(a.color))).toBe(true);
+    expect(s.accents.filter((a) => a.color === "windowWarm" || a.color === "windowCool").length).toBeGreaterThanOrEqual(100);
+  });
+
+  it("el rng de las luces no cambia la ciudad, solo sus luces", () => {
+    const a = city(createRng(7), createRng(8), createRng(9)), b = city(createRng(7), createRng(8), createRng(10));
+    expect(JSON.stringify(b.solids)).toBe(JSON.stringify(a.solids));
+    expect(JSON.stringify(b.ground)).toBe(JSON.stringify(a.ground));
+    expect(JSON.stringify(b.lights)).not.toBe(JSON.stringify(a.lights));
   });
 
   it("todo el render usa colores del atlas", () => {
@@ -135,8 +144,9 @@ describe("city", () => {
       if (!g.path.some((p) => p.x > EAST_RING.x0)) continue;
       for (const p of g.path) expect(p.y <= DISTRICT_BANK_Y || (p.y >= AVENUE.y0 && p.y <= AVENUE.y1)).toBe(true);
     }
-    // los dos charcos de luz sí caen enteros dentro de la plaza (alpha 0.25: el reloj y el cartel del distrito también son amberBleed, con otro alpha)
-    const spills = s.accents.filter((a) => a.kind === "poly" && a.color === "amberBleed" && a.alpha === 0.25);
+    // los dos charcos de luz sí caen enteros dentro de la plaza (alpha 0.25: el reloj y el cartel del distrito también son amberBleed, con otro alpha; los neones de bares ámbar también dejan un charco, ante su pared)
+    const neonAccents = new Set(s.lights.neons.flatMap((n) => n.accents));
+    const spills = s.accents.filter((a) => a.kind === "poly" && a.color === "amberBleed" && a.alpha === 0.25 && !neonAccents.has(a));
     expect(spills.length).toBeGreaterThanOrEqual(2);
     for (const sp of spills) if (sp.kind === "poly") for (const p of sp.pts) expect(inPlaza(p.x, p.y)).toBe(true);
     const boulevard = s.solids.filter((x) => x.kind === "prism" && x.mat === "leafDark" && x.at.z === 0); // no la terraza verde de una torre de vidrio del distrito
@@ -220,7 +230,7 @@ describe("city", () => {
   });
 
   it("neon: ≥ 6 carteles coplanares en y y una luz sobre cada farol del malecón", () => {
-    const worldCity = city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1)); // la semilla real del mundo
+    const worldCity = city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3)); // la semilla real del mundo
     expect(worldCity.neon.signs.length).toBeGreaterThanOrEqual(6);
     const c = scene();
     expect(c.neon.signs.length).toBeGreaterThanOrEqual(6);

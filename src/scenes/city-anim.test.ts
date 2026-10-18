@@ -5,7 +5,7 @@ import { city } from "./city";
 import { ANTENNA_STEP_MS, MALECON_STEP_MS, NEON_STEP_MS, PAPER_RANGE, createCityAnim } from "./city-anim";
 
 const setup = (reducedMotion = false) => {
-  const scene = city(createRng(7), createRng(8));
+  const scene = city(createRng(7), createRng(8), createRng(9));
   return { scene, tower: scene.tower, anim: createCityAnim(scene.tower, scene.neon, createRng(3), { reducedMotion }) };
 };
 type Kind<K> = Extract<Accent, { kind: K }>;

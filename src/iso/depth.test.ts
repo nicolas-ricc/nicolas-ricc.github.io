@@ -1,12 +1,53 @@
 import { describe, expect, it } from "vitest";
 import { v3 } from "./geometry";
-import { isBehind, overlaps, screenBounds, sortByDepth } from "./depth";
+import { hides, hullsOverlap, isBehind, overlaps, screenBounds, screenHull, sortByDepth } from "./depth";
 import { createRng } from "../map/seed";
 import { bounds, type Solid } from "./solids";
 
 const box = (x: number, y: number, z: number, w = 2, d = 2, h = 2): Solid => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat: "steel" });
 
 describe("depth", () => {
+  it("screenHull: una caja proyecta un hexágono dentro de su caja de pantalla", () => {
+    const b = { min: v3(0, 0, 0), max: v3(4, 2, 3) };
+    const h = screenHull(b), sb = screenBounds(b);
+    expect(h).toHaveLength(6);
+    for (const p of h) {
+      expect(p.x).toBeGreaterThanOrEqual(sb.minX - 1e-9); expect(p.x).toBeLessThanOrEqual(sb.maxX + 1e-9);
+      expect(p.y).toBeGreaterThanOrEqual(sb.minY - 1e-9); expect(p.y).toBeLessThanOrEqual(sb.maxY + 1e-9);
+    }
+  });
+
+  it("hullsOverlap: tocarse en un borde no cuenta", () => {
+    const sq = (x: number) => [{ x, y: 0 }, { x: x + 1, y: 0 }, { x: x + 1, y: 1 }, { x, y: 1 }];
+    expect(hullsOverlap(sq(0), sq(0.5))).toBe(true);
+    expect(hullsOverlap(sq(0), sq(1))).toBe(false);
+  });
+
+  it("hides: la torre de la plaza tapa el neón de la avenida pero no lo que cae en el rincón vacío de su caja de pantalla", () => {
+    // casos medidos en la semilla del mundo: neón del frente sur de (102, 188) y torre de la plaza
+    const neon = { min: v3(103.95, 204.45, 2.65), max: v3(107.05, 204.55, 3.95) };
+    const tower = { min: v3(121, 220, 0), max: v3(137, 234, 30) };
+    expect(hides(neon, tower)).toBe(true);
+    const corner = { min: v3(119.5, 230.5, 32.5), max: v3(120, 231, 33) }; // al oeste y alto: rincón noroeste de la caja de pantalla
+    expect(overlaps(screenBounds(corner), screenBounds(tower))).toBe(true);
+    expect(isBehind(corner, tower)).toBe(true);
+    expect(hides(corner, tower)).toBe(false);
+  });
+
+  it("hides: un techo con vuelo encima no tapa la ventana de abajo de la cara sur", () => {
+    const win = { min: v3(16, 169.95, 1), max: v3(21.4, 170.05, 2.6) };
+    const roof = { min: v3(13, 165, 6.3), max: v3(35, 170.5, 8.32) };
+    expect(isBehind(win, roof)).toBe(true);
+    expect(overlaps(screenBounds(win), screenBounds(roof))).toBe(true);
+    expect(hides(win, roof)).toBe(false);
+  });
+
+  it("hides: lo de adelante no queda tapado por lo de atrás", () => {
+    const front = { min: v3(10, 10, 0), max: v3(12, 12, 5) }, back = { min: v3(0, 0, 0), max: v3(8, 8, 20) };
+    expect(hides(front, back)).toBe(false);
+    expect(hides(back, front)).toBe(true);
+  });
+
   it("screenBounds proyecta las 8 esquinas", () => {
     const sb = screenBounds(bounds(box(0, 0, 0, 2, 2, 2)));
     expect(sb).toEqual({ minX: -2, minY: -2.8, maxX: 2, maxY: 2 });
