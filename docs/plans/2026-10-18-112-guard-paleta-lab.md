@@ -181,7 +181,7 @@ Pegar la línea del FAIL en el informe de la tarea: es la evidencia del criterio
 - [ ] **Step 4: Actualizar solo el comentario CSS** de la línea 9 (idéntica en las cinco páginas). Las declaraciones y su orden no cambian:
 
 ```bash
-sed -i 's|/\* = ISO_COLORS.sky en src/map/palette-iso.ts \*/|/* = ISO_COLORS.sky; el color de abajo es ISO_COLORS.ink (src/map/palette-iso.ts); lo vigila palette-guard.test.ts */|' lab/*.html
+sed -i 's|/\* = ISO_COLORS.sky en src/map/palette-iso.ts \*/|/* = ISO_COLORS.sky; el color que sigue es ISO_COLORS.ink (src/map/palette-iso.ts); lo vigila palette-guard.test.ts */|' lab/*.html
 ```
 
 - [ ] **Step 5: Full suite and typecheck**
