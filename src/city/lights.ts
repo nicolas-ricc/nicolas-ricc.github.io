@@ -34,7 +34,7 @@ export function lightBox(pts: Vec3[]): Bounds {
 interface Target { box: Bounds; sb: ScreenBounds; hull: Vec2[]; own: number }
 const target = (pts: Vec3[], own: number): Target => { const box = lightBox(pts); return { box, sb: screenBounds(box), hull: screenHull(box), own }; };
 
-/** Cajas de los sólidos con su caja y su silueta en pantalla, calculadas una vez. */
+/** Caja, límites y silueta en pantalla de cada sólido, calculados una vez. */
 interface Boxes { boxes: Bounds[]; sbs: ScreenBounds[]; hulls: Vec2[][] }
 
 /** Barrido por `minX` de pantalla: `true` si algún sólido distinto del propio tapa el objetivo. Equivale a probar todos los pares. */
@@ -67,7 +67,6 @@ export function lights(scene: Pick<CityScene, "solids" | "placed">, rng: Rng): C
   const barrios = Object.keys(CATALOGUE) as Barrio[];
   const counts = Object.fromEntries(barrios.map((b) => [b, { candidates: 0, on: 0, warm: 0 }])) as CityLights["counts"];
 
-  // Ventanas no ocultas, en orden de recorrido.
   const cands: { window: Window; owner: number }[] = [], ts: Target[] = [];
   scene.placed.forEach((p, owner) => p.piece.windows.forEach((window) => { cands.push({ window, owner }); ts.push(target(window.pts, p.solidOffset + window.building)); }));
   const hid = occluded(ts, solids);

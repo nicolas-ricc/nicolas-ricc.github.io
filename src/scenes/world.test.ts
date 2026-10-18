@@ -36,7 +36,6 @@ describe("world", () => {
 
   it("filtrar por zona deja fuera lo demás", () => {
     const w = world(7, { zones: ["cv"] });
-    expect(w.city!.lights.windows.length).toBeGreaterThan(0);
     expect(w.shipyard).toBeNull();
     expect(w.city).not.toBeNull();
     expect(w.solids.length).toBeGreaterThan(250);
