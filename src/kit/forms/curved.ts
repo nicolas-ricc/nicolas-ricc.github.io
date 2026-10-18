@@ -1,11 +1,10 @@
 import { v3 } from "../../iso/geometry";
 import type { Facade } from "../../iso/facade";
-import { GABLE_RATIO } from "../../iso/solids";
 import type { Rng } from "../../map/seed";
 import { prism } from "../../scenes/city-pieces";
 import { addBuilding, emptyPiece, floorsFor, recipeCap, shiftTone } from "../piece";
 import { HELIPAD_H, helipad, place } from "../props";
-import { CORNICE_H, domeRoof, hipRoof } from "../roofs";
+import { CORNICE_H, HIP_ROOF_H, domeRoof, hipRoof } from "../roofs";
 import type { Lot, Piece, RecipeDef, Style } from "../types";
 
 /** Familia `curved` (spec §5, issue #41): cilindros, cúpulas y bóvedas. Alturas topadas en min(lot.maxH, 18) contando los remates. */
@@ -56,13 +55,13 @@ export function vaultedHall(lot: Lot, _rng: Rng, style: Style): Piece {
   return p;
 }
 
-const ARCADE_H = 3, HIP_H = 1.5 * (1 + GABLE_RATIO);
+const ARCADE_H = 3;
 
 /** Galería: planta baja con arcada de 3 y dos pisos encima (dos sólidos: los pisos de una fachada son iguales), techo a cuatro aguas. */
 export function gallery(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;
   const bx = x + 1, by = y + 1, bw = w - 2, bd = d - 2, tone = shiftTone(style.tone, 1);
-  const fh = Math.min(style.floorH, (recipeCap(lot) - ARCADE_H - HIP_H) / 2);
+  const fh = Math.min(style.floorH, (recipeCap(lot) - ARCADE_H - HIP_ROOF_H) / 2);
   const gf: Facade = { floors: 1, cols: Math.max(2, Math.round(bw / 3)), base: "arcade" };
   addBuilding(p, prism(bx, by, z, bw, bd, ARCADE_H, style.mat, { facade: gf, tone }), gf);
   const uf: Facade = { floors: 2, cols: rng.int(4, 5) };
