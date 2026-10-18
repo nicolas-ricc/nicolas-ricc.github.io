@@ -7,7 +7,7 @@ import { BEAM_PERIOD_MS } from "../scenes/sea-anim";
 import { assembleWorld } from "../world/assemble";
 import { type Box, FRAME_H, HALO_BASE } from "../world/frame";
 import { cropAnimators, cropScene } from "./crop";
-import { EXHIBITS, GROUPS, type GroupId, pickExhibit, stepExhibit } from "./exhibits";
+import { EXHIBITS, GROUPS, type GroupId, outOfView, pickExhibit, stepExhibit } from "./exhibits";
 
 const regions = EXHIBITS.flatMap((e) => (e.kind === "region" ? [e] : []));
 
@@ -154,5 +154,28 @@ describe("exhibits de pieza", () => {
       expect(b, e.id).toEqual(a);
       expect(ba, e.id).toEqual(aa);
     }
+  });
+});
+
+describe("entrada del índice fuera de la vista (#117)", () => {
+  const view = { top: 0, bottom: 900 };
+  it("entera dentro, o al ras de un borde, no está fuera", () => {
+    expect(outOfView({ top: 100, bottom: 122 }, view)).toBe(false);
+    expect(outOfView({ top: 0, bottom: 22 }, view)).toBe(false);
+    expect(outOfView({ top: 878, bottom: 900 }, view)).toBe(false);
+  });
+  it("cortada por un borde está fuera", () => {
+    expect(outOfView({ top: 890, bottom: 912 }, view)).toBe(true);
+    expect(outOfView({ top: -10, bottom: 12 }, view)).toBe(true);
+  });
+  it("del todo arriba o abajo está fuera", () => {
+    expect(outOfView({ top: 1200, bottom: 1222 }, view)).toBe(true);
+    expect(outOfView({ top: -300, bottom: -278 }, view)).toBe(true);
+  });
+  it("la vista no tiene por qué empezar en 0", () => {
+    const low = { top: 100, bottom: 600 };
+    expect(outOfView({ top: 50, bottom: 72 }, low)).toBe(true);
+    expect(outOfView({ top: 100, bottom: 122 }, low)).toBe(false);
+    expect(outOfView({ top: 590, bottom: 612 }, low)).toBe(true);
   });
 });

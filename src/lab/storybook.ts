@@ -8,7 +8,7 @@ import { type Box, boxFrame, fitTransform } from "../world/frame";
 import { type BloomMode, buildStage, type Stage, type StageLayer } from "../world/stage";
 import { runBoot } from "./boot";
 import { cropAnimators, cropScene, pieceScene, type Readout, readout, solidsBox } from "./crop";
-import { EXHIBITS, type Exhibit, GROUPS, pickExhibit, stepExhibit } from "./exhibits";
+import { EXHIBITS, type Exhibit, GROUPS, outOfView, pickExhibit, stepExhibit } from "./exhibits";
 import { bloomFromSearch, nextBloomMode, speedFromSearch } from "./page";
 
 /**
@@ -103,8 +103,11 @@ async function boot(): Promise<void> {
     current = e;
     fit();
     for (const a of nav.querySelectorAll<HTMLAnchorElement>("a")) {
-      if (a.dataset.id === e.id) { a.setAttribute("aria-current", "page"); a.scrollIntoView({ block: "nearest" }); } // el índice no entra entero en la columna
-      else a.removeAttribute("aria-current");
+      if (a.dataset.id === e.id) {
+        a.setAttribute("aria-current", "page");
+        // el índice no entra entero en la columna: centrada, con vecinas legibles; si ya se ve, quieta
+        if (outOfView(a.getBoundingClientRect(), nav.getBoundingClientRect())) a.scrollIntoView({ block: "center" });
+      } else a.removeAttribute("aria-current");
     }
   };
   const fromHash = (): void => {
