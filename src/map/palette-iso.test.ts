@@ -1,17 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { ACCENT_COLORS, ISO_COLORS, ISO_TONES, TONE_LADDER, allIsoColors, stepTone, toneColor, type Material } from "./palette-iso";
-import { BASE_SHADOW, BASE_SKY, BASE_TONES, DARKEN, darken } from "./palette-base";
+import { BASE_SHADOW, BASE_SKY, BASE_TONES, DARKEN, darken, extendLadder } from "./palette-base";
 
 const lum = (c: number): number => ((c >> 16) & 255) * 0.3 + ((c >> 8) & 255) * 0.59 + (c & 255) * 0.11;
 
 describe("paleta isométrica", () => {
-  it("cada material tiene cinco tonos ordenados de oscuro a claro", () => {
+  it("cada material tiene los nueve tonos, con luminancia estrictamente creciente", () => {
     for (const mat of Object.keys(ISO_TONES) as Material[]) {
-      const t = ISO_TONES[mat];
-      expect(lum(t.shade)).toBeLessThan(lum(t.lit));
-      expect(lum(t.lit)).toBeLessThan(lum(t.down));
-      expect(lum(t.down)).toBeLessThan(lum(t.top));
-      expect(lum(t.top)).toBeLessThan(lum(t.up));
+      expect(Object.keys(ISO_TONES[mat]).sort()).toEqual([...TONE_LADDER].sort());
+      for (let i = 1; i < TONE_LADDER.length; i++) {
+        expect(lum(ISO_TONES[mat][TONE_LADDER[i]!])).toBeGreaterThan(lum(ISO_TONES[mat][TONE_LADDER[i - 1]!]));
+      }
     }
   });
 
@@ -23,12 +22,15 @@ describe("paleta isométrica", () => {
     }
   });
 
-  it("stepTone sube y baja por la escalera y se clampea", () => {
-    expect(TONE_LADDER).toEqual(["shade", "lit", "down", "top", "up"]);
+  it("stepTone sube y baja por la escalera de nueve y se clampea", () => {
+    expect(TONE_LADDER).toEqual(["deep", "shade", "dim", "lit", "down", "top", "up", "pale", "glow"]);
     expect(stepTone("top", 1)).toBe("up");
     expect(stepTone("top", -1)).toBe("down");
-    expect(stepTone("up", 3)).toBe("up");
-    expect(stepTone("shade", -1)).toBe("shade");
+    expect(stepTone("shade", -1)).toBe("deep");
+    expect(stepTone("lit", -1)).toBe("dim");
+    expect(stepTone("up", 1)).toBe("pale");
+    expect(stepTone("glow", 1)).toBe("glow");
+    expect(stepTone("deep", -3)).toBe("deep");
     expect(stepTone("lit", 0)).toBe("lit");
   });
 
@@ -41,8 +43,8 @@ describe("paleta isométrica", () => {
   });
 
   it("materiales exclusivos de ciudad y costa", () => {
-    for (const m of ["office", "officeDark", "glass", "asphalt", "paving", "plaza", "curtain", "stone", "copper", "whitewash", "foam", "abyss"] as const) {
-      expect(Object.keys(ISO_TONES[m]).sort()).toEqual(["down", "lit", "shade", "top", "up"]);
+    for (const m of ["office", "officeDark", "glass", "asphalt", "paving", "plaza", "curtain", "stone", "copper", "whitewash", "foam", "abyss", "plaster", "terracotta", "marble", "awning"] as const) {
+      expect(Object.keys(ISO_TONES[m]).sort()).toEqual([...TONE_LADDER].sort());
     }
   });
 
@@ -62,11 +64,11 @@ describe("paleta isométrica", () => {
       expect(lum(ISO_TONES[m].lit)).toBeLessThan(lum(ISO_TONES[m].down));
       expect(lum(ISO_TONES[m].down)).toBeLessThan(lum(ISO_TONES[m].top));
     }
-    expect(Object.keys(ISO_TONES.hullBlue).sort()).toEqual(["down", "lit", "shade", "top", "up"]);
+    expect(Object.keys(ISO_TONES.hullBlue).sort()).toEqual([...TONE_LADDER].sort());
   });
 
   it("tríadas de acento por zona: cian, ámbar y magenta, todas en el atlas", () => {
-    expect(ACCENT_COLORS).toEqual(["cyan", "cyanMid", "cyanBleed", "amber", "amberMid", "amberBleed", "magenta", "magentaMid", "magentaBleed"]);
+    expect(ACCENT_COLORS).toEqual(["cyan", "cyanMid", "cyanBleed", "amber", "amberMid", "amberBleed", "magenta", "magentaMid", "magentaBleed", "windowWarm", "windowCool"]);
     const all = allIsoColors();
     for (const c of ACCENT_COLORS) expect(all.has(ISO_COLORS[c])).toBe(true);
     // el núcleo es más claro que el medio y el medio que el sangrado
@@ -82,16 +84,17 @@ const channelsClose = (a: number, b: number) => {
 };
 
 describe("crepúsculo tardío", () => {
-  it("cada tono, sky y shadow valen la base × DARKEN por canal (±1)", () => {
+  it("los nueve tonos, sky y shadow valen la base extendida × DARKEN por canal (±1)", () => {
     expect(Object.keys(ISO_TONES)).toEqual(Object.keys(BASE_TONES));
     for (const mat of Object.keys(BASE_TONES) as Material[]) {
-      for (const tone of TONE_LADDER) channelsClose(ISO_TONES[mat][tone], darken(BASE_TONES[mat][tone], DARKEN));
+      const ladder = extendLadder(BASE_TONES[mat]);
+      for (const tone of TONE_LADDER) channelsClose(ISO_TONES[mat][tone], darken(ladder[tone], DARKEN));
     }
     channelsClose(ISO_COLORS.shadow, darken(BASE_SHADOW, DARKEN));
     channelsClose(ISO_COLORS.sky, darken(BASE_SKY, DARKEN));
   });
 
-  it("los nueve acentos no se oscurecen", () => {
-    expect(ACCENT_COLORS.map((c) => ISO_COLORS[c])).toEqual([0x7cf5ff, 0x27b3c9, 0x134a52, 0xffc457, 0xd08a1e, 0x5a3d14, 0xff5ee0, 0xc42a9d, 0x54173f]);
+  it("los once acentos no se oscurecen", () => {
+    expect(ACCENT_COLORS.map((c) => ISO_COLORS[c])).toEqual([0x7cf5ff, 0x27b3c9, 0x134a52, 0xffc457, 0xd08a1e, 0x5a3d14, 0xff5ee0, 0xc42a9d, 0x54173f, 0xffd9a0, 0xa8d8ff]);
   });
 });
