@@ -55,15 +55,15 @@
 **Interfaces:**
 - Produces: `export const LANTERN_Z: number` en `src/scenes/sea.ts` (= 33.1).
 
-- [ ] **Step 1: test que falla.** En `sea.test.ts`, importar `LANTERN_Z` y en el test "faro: seis tambores…" agregar, junto a la línea de `s.lantern.z`:
+- [x] **Step 1: test que falla.** En `sea.test.ts`, importar `LANTERN_Z` y en el test "faro: seis tambores…" agregar, junto a la línea de `s.lantern.z`:
 
 ```ts
     expect(s.lantern.z).toBe(LANTERN_Z); // de acá nace el haz: el encuadre del storybook la usa (#116)
 ```
 
-- [ ] **Step 2:** `npx vitest run src/scenes/sea.test.ts` → falla (`LANTERN_Z` no existe; `npm run typecheck` también).
+- [x] **Step 2:** `npx vitest run src/scenes/sea.test.ts` → falla (`LANTERN_Z` no existe; `npm run typecheck` también).
 
-- [ ] **Step 3: implementación.** Debajo de la línea de `DRUMS, DRUM_H, …` en `sea.ts`:
+- [x] **Step 3: implementación.** Debajo de la línea de `DRUMS, DRUM_H, …` en `sea.ts`:
 
 ```ts
 /** Centro de la linterna, de donde nace el haz (sea-anim.ts). */
@@ -72,9 +72,9 @@ export const LANTERN_Z = LIGHTHOUSE.z + DRUMS * DRUM_H + GALLERY_H + LANTERN_H /
 
 Y en `lighthouse()` `const lantern = v3(x, y, LANTERN_Z);` en lugar de `v3(x, y, z + LANTERN_H / 2)`.
 
-- [ ] **Step 4:** `npx vitest run src/scenes/sea.test.ts` y `npm run typecheck` en verde.
+- [x] **Step 4:** `npx vitest run src/scenes/sea.test.ts` y `npm run typecheck` en verde.
 
-- [ ] **Step 5:** `git commit -m "refactor(#116): LANTERN_Z names the lantern height"`
+- [x] **Step 5:** `git commit -m "refactor(#116): LANTERN_Z names the lantern height"`
 
 ### Task 2: el encuadre cuenta acentos y el faro deja entrar el haz
 
@@ -85,7 +85,7 @@ Y en `lighthouse()` `const lantern = v3(x, y, LANTERN_Z);` en lugar de `v3(x, y,
 **Interfaces:**
 - Consumes: `LANTERN_Z` (tarea 1), `BEAM_LEN`, `BEAM_PERIOD_MS` de `src/scenes/sea-anim.ts`, `project`, `Z_SCALE` de `src/iso/project.ts`.
 
-- [ ] **Step 1: test que falla.** En `exhibits.test.ts`:
+- [x] **Step 1: test que falla.** En `exhibits.test.ts`:
 
 ```ts
 // un mundo aparte para barrer la vuelta del haz sin mover los animadores de `measure`
@@ -120,9 +120,9 @@ function accentReach(box: Box): number {
     });
 ```
 
-- [ ] **Step 2:** `npx vitest run src/lab/exhibits.test.ts` → falla solo `grupo mar › encuadre` con `faro` (≈ 40.76 > 39).
+- [x] **Step 2:** `npx vitest run src/lab/exhibits.test.ts` → falla solo `grupo mar › encuadre` con `faro` (≈ 40.76 > 39).
 
-- [ ] **Step 3: implementación.** En `exhibits.ts` importar `Z_SCALE` de `../iso/project`, `BEAM_LEN` de `../scenes/sea-anim` y `LANTERN_Z` de `../scenes/sea`, y la entrada `faro`:
+- [x] **Step 3: implementación.** En `exhibits.ts` importar `Z_SCALE` de `../iso/project`, `BEAM_LEN` de `../scenes/sea-anim` y `LANTERN_Z` de `../scenes/sea`, y la entrada `faro`:
 
 ```ts
   // el haz nace en la linterna y gira: apuntando al norte su punta sube BEAM_LEN/√2 en pantalla, y el vértice norte de la caja ya está DRUM_R0 + M más arriba que el faro
@@ -131,9 +131,9 @@ function accentReach(box: Box): number {
     h: LANTERN_Z + (BEAM_LEN * Math.SQRT1_2 - DRUM_R0 - M) / Z_SCALE },
 ```
 
-- [ ] **Step 4:** `npx vitest run src/lab/exhibits.test.ts` en verde (las 38 regiones); `npm test`, `npm run typecheck`.
+- [x] **Step 4:** `npx vitest run src/lab/exhibits.test.ts` en verde (las 38 regiones); `npm test`, `npm run typecheck`.
 
-- [ ] **Step 5:** commits separados: el test (`test(#116): frame test counts accents over a beam turn`) y el arreglo (`fix(#116): faro frame height covers the beam tip`).
+- [x] **Step 5:** commits separados: el test (`test(#116): frame test counts accents over a beam turn`) y el arreglo (`fix(#116): faro frame height covers the beam tip`).
 
 ### Task 3: captura del faro con el haz al norte
 
@@ -141,10 +141,10 @@ function accentReach(box: Box): number {
 - Create: `docs/superpowers/specs/assets/97-storybook/faro-haz.png`
 - Modify: `docs/superpowers/specs/2026-10-17-storybook-estructuras-design.md` (línea de capturas de cierre, §223)
 
-- [ ] **Step 1:** `npm run dev -- --host --port 5173`; con agent-browser (viewport 1600×900×2) abrir `http://localhost:5173/lab/storybook.html?bloom=off#faro`.
-- [ ] **Step 2:** detener el ticker de Pixi (`window.__PIXI_DEVTOOLS_WRAPPER__` da el renderer y el stage; la app se alcanza con el gancho de devtools) y avanzar el reloj con pasos fijos de 100 ms hasta 5000 ms (ángulo 225°), como en el método del time-lapse de CLAUDE.md. Verificar en pantalla que la punta queda dentro del canvas; repetir en 0, 2000, 4000 y 6000 ms.
-- [ ] **Step 3:** guardar la captura de 5000 ms como `faro-haz.png` y sumar una frase a la spec: "`faro-haz.png`: el haz al norte con el encuadre de #116".
-- [ ] **Step 4:** `git commit -m "docs(#116): faro capture with the beam pointing north"`
+- [x] **Step 1:** `npm run dev -- --host --port 5173`; con agent-browser (viewport 1600×900×2) abrir `http://localhost:5173/lab/storybook.html?bloom=off#faro`.
+- [x] **Step 2:** detener el ticker de Pixi (`window.__PIXI_DEVTOOLS_WRAPPER__` da el renderer y el stage; la app se alcanza con el gancho de devtools) y avanzar el reloj con pasos fijos de 100 ms hasta 5000 ms (ángulo 225°), como en el método del time-lapse de CLAUDE.md. Verificar en pantalla que la punta queda dentro del canvas; repetir en 0, 2000, 4000 y 6000 ms.
+- [x] **Step 3:** guardar la captura de 5000 ms como `faro-haz.png` y sumar una frase a la spec: "`faro-haz.png`: el haz al norte con el encuadre de #116".
+- [x] **Step 4:** `git commit -m "docs(#116): faro capture with the beam pointing north"`
 
 ## Assumptions
 
@@ -174,3 +174,9 @@ Decididas en el grilling (sin cita directa; cualquier opción razonable cumple e
   - Q18: fuera de alcance → #183.
 - Supuestos: los 5 de `## Assumptions`.
 - Issues abiertos: #183 (casa-farero, acento vecino cortado).
+
+## Cambios tras la revisión (etapa 6)
+
+- `accentReach` arma un mundo nuevo por región en lugar de compartir `sweep`: con el mundo compartido, los animadores con otro período (feria, humo, neones) quedaban en fases que dependían del orden del catálogo. Cuesta ≈ 4 s más en `exhibits.test.ts`.
+- Los puntos se miden con su halo más grande (`HALO_BASE`, `r × 2.2`), que es lo que `drawAccents` pinta, no con `r`.
+- El comentario dice "estado inicial" en lugar de "primer tick": la lectura k = 0 es la capa antes de cualquier tick, que es el primer cuadro que se dibuja.

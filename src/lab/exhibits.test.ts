@@ -5,7 +5,7 @@ import { bounds, type Solid } from "../iso/solids";
 import { BLEED, WORLD } from "../map/geo";
 import { BEAM_PERIOD_MS } from "../scenes/sea-anim";
 import { assembleWorld } from "../world/assemble";
-import { type Box, FRAME_H } from "../world/frame";
+import { type Box, FRAME_H, HALO_BASE } from "../world/frame";
 import { cropAnimators, cropScene } from "./crop";
 import { EXHIBITS, GROUPS, type GroupId, pickExhibit, stepExhibit } from "./exhibits";
 
@@ -28,24 +28,25 @@ const { scene, animators } = assembleWorld(undefined, { reducedMotion: false });
 const within = (s: Solid, b: Box): boolean => { const r = bounds(s); return r.min.x >= b.x0 && r.max.x <= b.x1 && r.min.y >= b.y0 && r.max.y <= b.y1; };
 const top = (solids: readonly Solid[]): number => Math.max(0, ...solids.map((s) => bounds(s).max.z));
 
-// un mundo aparte para barrer la vuelta del haz sin mover los animadores de `measure`
-const sweep = assembleWorld(undefined, { reducedMotion: false });
 const TURN_STEPS = 32;
+const HALO_K = Math.max(...HALO_BASE.map((h) => h.k)); // el disco más grande que dibuja `drawAccents` alrededor de un punto
 
 /**
  * Altura de caja que hace falta para que los acentos de la estructura no se salgan por arriba del cuadro:
- * se mide en pantalla contra el vértice norte de `boxFrame`. Cuentan los estáticos y los animados en el
- * primer tick y a lo largo de una vuelta del haz; un acento es de la estructura si su centro (o el primer
- * vértice, de donde nace el haz) cae en la caja.
+ * se mide en pantalla contra el vértice norte de `boxFrame`. Cuentan los estáticos y los animados en su
+ * estado inicial y a lo largo de una vuelta del haz, sobre un mundo nuevo para que la medida no dependa del
+ * orden del catálogo; un acento es de la estructura si su centro (o el primer vértice, de donde nace el haz)
+ * cae en la caja.
  */
 function accentReach(box: Box): number {
   const north = (box.x0 + box.y0) / 2;
   const own = (a: Accent): boolean => { const p = a.kind === "dot" ? a.at : a.pts[0]!; return p.x >= box.x0 && p.x <= box.x1 && p.y >= box.y0 && p.y <= box.y1; };
   const reach = (accents: readonly Accent[]): number => Math.max(0, ...accents.filter(own).flatMap((a) =>
-    a.kind === "dot" ? [(north - project(a.at).y + a.r) / Z_SCALE] : a.pts.map((p) => (north - project(p).y) / Z_SCALE)));
+    a.kind === "dot" ? [(north - project(a.at).y + a.r * HALO_K) / Z_SCALE] : a.pts.map((p) => (north - project(p).y) / Z_SCALE)));
+  const sweep = assembleWorld(undefined, { reducedMotion: false });
   const anims = cropAnimators(sweep.animators, box);
   let max = reach(cropScene(sweep.scene, box).accents);
-  for (let k = 0; k < TURN_STEPS; k++) { // una vuelta exacta: la región siguiente arranca con el haz en el mismo ángulo
+  for (let k = 0; k < TURN_STEPS; k++) {
     for (const a of anims) for (const id of a.ids) { const l = a.layer(id); if (l.kind === "accent") max = Math.max(max, reach(l.accents)); }
     for (const a of anims) a.tick(BEAM_PERIOD_MS / TURN_STEPS);
   }
