@@ -1,4 +1,4 @@
-import type { AnimLayer, Animator } from "./animator";
+import { layerLookup, type AnimLayer, type Animator } from "./animator";
 import type { TerrainMesh } from "./terrain";
 import { BANDS, createWaterAnim } from "./water-anim";
 
@@ -11,7 +11,7 @@ export function waterAnimator(terrain: TerrainMesh, opts: { reducedMotion: boole
   return {
     ids: Object.keys(layers),
     claims: [...terrain.water, terrain.foam],
-    layer: (id) => layers[id]!(),
+    layer: layerLookup("waterAnimator", layers),
     tick(dtMs) {
       const c = anim.tick(dtMs), out = new Set<string>();
       for (const k of c.bands) out.add(`water.band${k}`);

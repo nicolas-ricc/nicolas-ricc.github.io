@@ -1,4 +1,4 @@
-import type { AnimLayer, Animator } from "./animator";
+import { layerLookup, type AnimLayer, type Animator } from "./animator";
 import type { SeaScene } from "./sea";
 import { SHIPS, createSeaAnim } from "./sea-anim";
 
@@ -20,7 +20,7 @@ export function seaAnimator(scene: SeaScene, opts: { reducedMotion: boolean }): 
   });
   return {
     ids: Object.keys(layers),
-    layer: (id) => layers[id]!(),
+    layer: layerLookup("seaAnimator", layers),
     tick(dtMs) {
       const c = anim.tick(dtMs);
       const out = new Set<string>();
