@@ -76,12 +76,12 @@ describe("zoning", () => {
     }
   });
 
-  it("maxHeightFor topa a 10 la fila frente a la torre", () => {
+  it("maxHeightFor topa a 10 la fila frente a la torre y a la fuente de la plaza", () => {
     expect(maxHeightFor(blockAt(102, 242))).toBe(10);
     expect(maxHeightFor(blockAt(132, 242))).toBe(10);
     expect(maxHeightFor(blockAt(132, 242), LANDMARK_MAX_H)).toBe(10);
     expect(maxHeightFor(blockAt(72, 242))).toBe(MAX_BUILDING_H);
-    expect(maxHeightFor(blockAt(162, 242))).toBe(MAX_BUILDING_H);
+    expect(maxHeightFor(blockAt(162, 242))).toBe(10); // delante de la fuente (150, 227): más alta la tapa y su charco flota sobre el techo
     expect(maxHeightFor(blockAt(72, 242), LANDMARK_MAX_H)).toBe(LANDMARK_MAX_H);
   });
 

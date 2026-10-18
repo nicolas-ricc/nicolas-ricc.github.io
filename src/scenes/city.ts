@@ -53,7 +53,7 @@ export function city(rng: Rng, districtRng: Rng, lightsRng: Rng): CityScene {
   add(recipe("footbridge")(FOOTBRIDGE_LOT, rng, STYLES.residencial));
   streets(ground, solids, accents);
   bridge(solids, accents);
-  westQuay(solids);
+  westQuay(solids, accents);
   const maleconLights = malecon(solids, accents);
   collapsed(solids, rng);
   greenery(solids, rng);

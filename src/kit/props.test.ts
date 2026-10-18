@@ -99,6 +99,11 @@ describe("props", () => {
     expect(f.solids[1]).toMatchObject({ kind: "cylinder", at: v3(AT.x, AT.y, AT.z + 0.6), r: 0.6, h: 1.5, mat: "marble" });
     expect(f.accents.length).toBe(3);
     for (const a of f.accents) expect(a.kind === "poly" && a.color === "amberBleed" && a.pts.every((p) => Math.abs(p.z - (AT.z + 0.6)) < 1e-9)).toBe(true);
+    expect(f.accents.every((a) => a.kind === "poly" && a.alpha === 0.35)).toBe(true); // no se confunde con los charcos de la torre (0.25)
+  });
+
+  it("charco: el alpha se puede pedir", () => {
+    expect(puddle(0, 0, "amberBleed", 0.12, 0.5).every((a) => a.kind === "poly" && a.alpha === 0.5)).toBe(true);
   });
 
   it("charco: tres octógonos concéntricos de radio 2.5, 1.8 y 1.2 a z 0.12, alpha 0.25, del color pedido", () => {

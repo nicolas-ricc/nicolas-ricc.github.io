@@ -72,8 +72,8 @@ export const FIXED: readonly { x: number; y: number; recipe: string }[] = [
   { ...WATER_TOWER_BLOCK, recipe: "patioResidential" },
 ];
 
-/** Tope de la fila frente a la torre: ahí un edificio alto taparía el piso encendido. */
-export const maxHeightFor = (b: Block, top = MAX_BUILDING_H): number => (b.row === 3 && b.x >= 96 && b.x + b.w <= 162 ? FRONT_CAP_H : top);
+/** Tope de la fila frente a la plaza: ahí un edificio alto taparía el piso encendido de la torre o la fuente (fixed.ts). */
+export const maxHeightFor = (b: Block, top = MAX_BUILDING_H): number => (b.row === 3 && b.x >= 96 && b.x + b.w <= 186 ? FRONT_CAP_H : top);
 
 /** Lado de `b` que mira a `r` a través de una calle, si se solapan en el otro eje. */
 function facing(b: Rect, r: Rect): Side | undefined {
