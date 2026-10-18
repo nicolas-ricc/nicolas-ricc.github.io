@@ -3,6 +3,7 @@ import { buildRenderList } from "../iso/render-list";
 import { bounds, isFlat, type Solid } from "../iso/solids";
 import { BLEED, WORLD, worldZoneAt } from "../map/geo";
 import { allIsoColors } from "../map/palette-iso";
+import { city } from "./city";
 import { LANDMARKS, world, zoneRng } from "./world";
 
 describe("world", () => {
@@ -35,6 +36,7 @@ describe("world", () => {
 
   it("filtrar por zona deja fuera lo demás", () => {
     const w = world(7, { zones: ["cv"] });
+    expect(w.city!.lights.windows.length).toBeGreaterThan(0);
     expect(w.shipyard).toBeNull();
     expect(w.city).not.toBeNull();
     expect(w.solids.length).toBeGreaterThan(250);
@@ -86,5 +88,11 @@ describe("world", () => {
     const raised = w.solids.filter((s) => !isFlat(s) && worldZoneAt(bounds(s).min.x, bounds(s).min.y) === "portfolio");
     expect(raised.length).toBeGreaterThan(400);
     expect(w.factory!.solids.every((s) => bounds(s).max.y <= 4 || bounds(s).max.x <= 0)).toBe(true); // y ≤ 4: la cinta y sus caballetes bajan hasta el patio de material (y 1..3)
+  });
+
+  it("las luces de la ciudad salen de zoneRng(seed, \"cv\", 3)", () => {
+    const w = world(7, { zones: ["cv"] });
+    expect(w.city!.lights.windows.length).toBeGreaterThan(0);
+    expect(JSON.stringify(w.city!.lights)).toBe(JSON.stringify(city(zoneRng(7, "cv"), zoneRng(7, "cv", 1), zoneRng(7, "cv", 3)).lights));
   });
 });
