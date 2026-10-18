@@ -1,9 +1,9 @@
-import { v3 } from "../../iso/geometry";
+import { v3, type Vec2 } from "../../iso/geometry";
 import type { Rng } from "../../map/seed";
 import { prism } from "../../scenes/city-pieces";
 import type { Facade } from "../../iso/facade";
 import { addBuilding, emptyPiece, fitToCap } from "../piece";
-import { beacon, clock, garland, lamp, place } from "../props";
+import { beacon, clock, garland, lamp, place, sign } from "../props";
 import { hipRoof, pyramid } from "../roofs";
 import type { Lot, Piece, RecipeDef, Side, Style } from "../types";
 
@@ -72,6 +72,63 @@ export function station(lot: Lot, _rng: Rng, style: Style): Piece {
   return fitToCap(p, lot);
 }
 
+const DRUM_R = 6.5, DRUM_SIDES = 12;
+/** Media anchura de un polígono regular con caras planas al N/S/E/O (como lo arma `cylinder`). */
+const apothem = (r: number, sides: number): number => r * Math.cos(Math.PI / sides);
+
+/**
+ * Teatro: tambor con cúpula de cobre y, al este, la columnata con marquesina,
+ * cartel y escalinata. Mira al este porque tambor + columnata + escalinata
+ * (19.56) no entran en el fondo de un lote.
+ */
+export function theatre(lot: Lot, _rng: Rng, style: Style): Piece {
+  const p = emptyPiece(), { z } = lot, half = apothem(DRUM_R, DRUM_SIDES);
+  const x0 = lot.x + (lot.w - (2 * half + 5 + 2)) / 2, cx = x0 + half, cy = lot.y + lot.d / 2;
+  const drum: Facade = { floors: 3, cols: 1 };
+  addBuilding(p, { kind: "cylinder", at: v3(cx, cy, z), r: DRUM_R, h: 9, mat: style.mat, sides: DRUM_SIDES, facade: drum, tone: style.tone }, drum);
+  p.solids.push({ kind: "dome", at: v3(cx, cy, z + 9), r: DRUM_R, h: 4, mat: "copper", sides: DRUM_SIDES, rings: 3 });
+  const colX = x0 + 2 * half, colY = cy - 7.5, colonnade: Facade = { floors: 1, cols: 5, base: "arcade" };
+  addBuilding(p, prism(colX, colY, z, 5, 15, 5, "marble", { facade: colonnade }), colonnade);
+  const front = colX + 5;
+  p.solids.push({ kind: "ramp", at: v3(front, colY, z), w: 2, d: 15, h: 1, mat: style.trim, dir: "e" }); // escalinata
+  p.solids.push({ kind: "ramp", at: v3(front, cy - 4.5, z + 4), w: 1.5, d: 9, h: 0.4, mat: style.trim, dir: "e" }); // marquesina
+  place(p.solids, p.accents, sign(v3(front, cy - 3.5, z + 4.4), 7, 1.5, "e"));
+  p.landmarkTop = v3(cx, cy, z + 13);
+  return fitToCap(p, lot);
+}
+
+const CHAMFER = 3, RING = 2.5;
+
+/** Rectángulo x0..x1 × y0..y1 con la esquina SE cortada a 45° (`c`), crecido `o` hacia afuera. */
+function chamfered(x0: number, y0: number, x1: number, y1: number, c: number, o = 0): Vec2[] {
+  const k = o * (Math.SQRT2 - 1);
+  return [{ x: x0 - o, y: y0 - o }, { x: x1 + o, y: y0 - o }, { x: x1 + o, y: y1 - c + k }, { x: x1 - c + k, y: y1 + o }, { x: x0 - o, y: y1 + o }];
+}
+
+/**
+ * Palacio cívico: cuerpo con chaflán en la esquina SE, cornisa pesada, cubierta
+ * a cuatro aguas perimetral en cuatro alas que no se tocan y, en el hueco del
+ * medio, cúpula sobre tambor. Escalinata al sur con un farol a cada lado.
+ */
+export function civicPalace(lot: Lot, _rng: Rng, style: Style): Piece {
+  const p = emptyPiece(), { z } = lot;
+  const x0 = lot.x + 0.5, x1 = lot.x + lot.w - 0.5, y0 = lot.y, y1 = lot.y + lot.d - 2, bw = x1 - x0, bd = y1 - y0;
+  const facade: Facade = { floors: Math.max(2, Math.round(12 / style.floorH)), cols: 5, base: "portico" };
+  addBuilding(p, { kind: "poly", footprint: chamfered(x0, y0, x1, y1, CHAMFER), z, h: 12, mat: style.mat, facade, tone: style.tone }, facade);
+  p.solids.push({ kind: "poly", footprint: chamfered(x0, y0, x1, y1, CHAMFER, 0.8), z: z + 12, h: 1, mat: style.trim });
+  const top = z + 13;
+  // la huella va achicada 0.5: con el vuelo de hipRoof cada ala queda justa sobre su franja
+  const rings = [[x0, y0, bw, RING], [x0, y1 - RING, bw - CHAMFER, RING], [x0, y0 + RING, RING, bd - 2 * RING], [x1 - RING, y0 + RING, RING, bd - RING - CHAMFER]] as const;
+  for (const [rx, ry, rw, rd] of rings) p.solids.push(...hipRoof({ x: rx + 0.5, y: ry + 0.5, w: rw - 1, d: rd - 1, z: top }, style.roof));
+  const cx = x0 + bw / 2, cy = y0 + bd / 2;
+  p.solids.push({ kind: "cylinder", at: v3(cx, cy, top), r: 4, h: 2, mat: style.mat, sides: 12 }, { kind: "dome", at: v3(cx, cy, top + 2), r: 4, h: 3.5, mat: style.roof, sides: 12, rings: 3 });
+  const sx0 = x0 + 1.5, sx1 = x1 - CHAMFER - 1.5;
+  p.solids.push({ kind: "ramp", at: v3(sx0, y1, z), w: sx1 - sx0, d: 2, h: 1, mat: style.trim, dir: "s" });
+  for (const lx of [x0 + 0.45, sx1 + 0.45]) place(p.solids, p.accents, lamp(v3(lx, y1 + 0.7, z)));
+  p.landmarkTop = v3(cx, cy, top + 5.5);
+  return fitToCap(p, lot);
+}
+
 /** Torre de agua ornamental para un lote chico (≥ 5×5): cuatro patas, tanque, cúpula y baliza. */
 export function waterTower(lot: Lot, _rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { z } = lot, cx = lot.x + lot.w / 2, cy = lot.y + lot.d / 2;
@@ -109,6 +166,8 @@ export function footbridge(lot: Lot, _rng: Rng, _style: Style): Piece {
 export const LANDMARKS: readonly RecipeDef[] = [
   { name: "market", recipe: market, family: "landmarks", landmark: true },
   { name: "station", recipe: station, family: "landmarks", landmark: true },
+  { name: "theatre", recipe: theatre, family: "landmarks", landmark: true },
+  { name: "civicPalace", recipe: civicPalace, family: "landmarks", landmark: true },
   { name: "waterTower", recipe: waterTower, family: "landmarks", landmark: true },
   { name: "footbridge", recipe: footbridge, family: "landmarks", landmark: true },
 ];
