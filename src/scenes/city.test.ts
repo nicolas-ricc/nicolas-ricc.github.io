@@ -115,6 +115,16 @@ describe("city", () => {
     expect(s.accents.filter((a) => a.color === "windowWarm" || a.color === "windowCool").length).toBeGreaterThanOrEqual(100);
   });
 
+  it("scene.accents no trae las ventanas animables ni el neón que titila; sí las demás encendidas y los otros neones", () => {
+    const s = scene(), l = s.lights;
+    const polys = new Set(s.accents.flatMap((a) => (a.kind === "poly" ? [a.pts] : [])));
+    expect(l.windows.some((w) => w.animable)).toBe(true);
+    expect(l.flicker).not.toBeNull();
+    for (const w of l.windows.filter((x) => x.animable)) expect(polys.has(w.window.pts)).toBe(false);
+    for (const w of l.windows.filter((x) => x.on && !x.animable)) expect(polys.has(w.window.pts)).toBe(true);
+    l.neons.forEach((n, i) => { for (const a of n.accents) expect(s.accents.includes(a)).toBe(i !== l.flicker); });
+  });
+
   it("el rng de las luces no cambia la ciudad, solo sus luces", () => {
     const a = city(createRng(7), createRng(8), createRng(9)), b = city(createRng(7), createRng(8), createRng(10));
     expect(JSON.stringify(b.solids)).toBe(JSON.stringify(a.solids));
