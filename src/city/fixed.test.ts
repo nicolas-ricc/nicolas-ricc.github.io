@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
 import { bounds, type Bounds, type Solid } from "../iso/solids";
+import { dockCrane } from "../kit/props";
 import { createRng } from "../map/seed";
 import { AVENUE, BRIDGE, COLLAPSED, EAST_RING, MALECON, PLAZA, STREET, TOWER, WEST_QUAY, blocks, estuaryEast } from "../scenes/city-grid";
 import { plazaTone, tiles } from "../scenes/city-pieces";
@@ -230,7 +231,10 @@ describe("westQuay", () => {
   });
 
   it("ningún sólido del muelle se solapa en caja con otro", () => {
-    expect(overlapping(built().solids)).toEqual([]);
+    // mástil y pluma de la grúa son una sola prop: su solape interno no cuenta, el resto sí
+    const crane = dockCrane(v3(195, 202, 0.6), "e").map((c) => JSON.stringify(c));
+    const own = (s: Solid) => crane.includes(JSON.stringify(s));
+    expect(overlapping(built().solids).filter(([a, b]) => !(own(a) && own(b)))).toEqual([]);
   });
 });
 

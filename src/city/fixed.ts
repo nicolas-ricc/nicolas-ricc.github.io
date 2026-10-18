@@ -6,7 +6,7 @@ import type { Rng } from "../map/seed";
 import { QUAY_X, WORLD, ZONE_SPLIT_Y } from "../map/geo";
 import { AVENUE, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_RING, FALLEN_BLOCK, LIT_FLOOR, MALECON, PLAZA, ROWS, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, inCrater } from "../scenes/city-grid";
 import { jungle } from "../scenes/flora";
-import { CAR, bench, bollard, car, fountain, garland, kiosk, lamp, place, puddle, stoneArch } from "../kit/props";
+import { CAR, awning, bench, bollard, car, chair, dockCrane, fountain, garland, kiosk, lamp, place, puddle, stoneArch, table } from "../kit/props";
 import { PLINTH_H, plazaTone, prism, tiles } from "../scenes/city-pieces";
 
 // ---------------------------------------------------------------- plaza y torre
@@ -93,11 +93,21 @@ export function bridge(solids: Solid[], accents: Accent[]): void {
   solids.push(...car(v3(x0 + 40, y0 + 1.5, top), "steel"), ...car(v3(x0 + 58, y1 - 3, top), "rust")); // autos detenidos
 }
 
-export function westQuay(solids: Solid[]): void {
+export function westQuay(solids: Solid[], accents: Accent[]): void {
   const { x0, x1 } = WEST_QUAY, w = x1 - x0;
   solids.push(prism(x0, CITY_EDGE.north, -1, w, 194 - CITY_EDGE.north, 1.6, "plaza"), prism(x0, 200, -1, w, CITY_EDGE.south - 200, 1.6, "plaza"));
   solids.push({ kind: "ramp", at: v3(x0, 194, -1), w, d: 6, h: 1.6, mat: "plaza", dir: "e" }); // escalera al agua
-  for (const y of [192, 201]) solids.push(...bollard(v3(x0 + 3, y, 0.6)));
+  // galpones pegados al borde del agua (x 193..198): así los bolardos de x 192.5 caben en la franja libre junto a ellos
+  for (const y of [164, 178]) solids.push({ kind: "vault", at: v3(193, y, 0.6), len: 12, w: 5, h: 2.5, axis: "y", mat: "rust", segments: 6 });
+  for (let y = 160; y <= 202; y += 6) if (y !== 196) solids.push(...bollard(v3(192.5, y, 0.6))); // 196 es la escalera (194..200)
+  solids.push(...dockCrane(v3(195, 202, 0.6), "e"));
+  // terrazas en la calle del muelle (x 186..192), frente a las dos manzanas de bares de la columna 162 (y0 164 y 188)
+  for (const y0 of [164, 188]) for (const y of [y0 + 3, y0 + 9, y0 + 15]) {
+    solids.push(...table(v3(188.5, y, 0)), ...chair(v3(187.5, y + 0.25, 0)), ...chair(v3(190, y + 0.25, 0)));
+    solids.push(...awning(v3(186, y - 1, 2.2), 3, "e")); // toldo contra la pared del lote
+  }
+  for (let y = 164; y <= 200; y += 6) solids.push(prism(191, y, 0, 0.3, 0.3, 3, "steel")); // postes de la guirnalda
+  accents.push(...garland([v3(191.15, 164.15, 3), v3(191.15, 200.15, 3)]));
 }
 
 export function malecon(solids: Solid[], accents: Accent[]): Vec3[] {
