@@ -18,6 +18,8 @@
  * Crepúsculo tardío: los tonos de arriba, `sky` y `shadow` son los de `palette-base.ts` × 0.7
  * por canal (`DARKEN`); los acentos no se oscurecen, así los neones destacan sobre la escena.
  * Para ajustar, editar la base y correr `npm run palette`, que imprime los literales a pegar acá.
+ * `sky` e `ink` también están escritos a mano en el `<style>` de `lab/*.html`; `palette-guard.test.ts`
+ * exige que todo hex de esas páginas sea un valor de esta paleta.
  */
 export const ISO_TONES = {
   slab:      { top: 0x6c5945, lit: 0x5a442b, shade: 0x2b282e, up: 0x816649, down: 0x5b4e42 },
@@ -67,11 +69,12 @@ export const ISO_COLORS = {
   magenta: 0xff5ee0,
   magentaMid: 0xc42a9d,
   magentaBleed: 0x54173f,
+  ink: 0xd8d4e8, // texto de las páginas del lab (lab/*.html); no se oscurece
 } as const;
 
 export type Material = keyof typeof ISO_TONES;
 export type Tone = "shade" | "lit" | "down" | "top" | "up";
-export type AccentColor = Exclude<keyof typeof ISO_COLORS, "shadow" | "sky">;
+export type AccentColor = Exclude<keyof typeof ISO_COLORS, "shadow" | "sky" | "ink">;
 export const ACCENT_COLORS: readonly AccentColor[] = ["cyan", "cyanMid", "cyanBleed", "amber", "amberMid", "amberBleed", "magenta", "magentaMid", "magentaBleed"];
 
 /** De oscuro a claro. `stepTone` se mueve por acá. */

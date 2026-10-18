@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ISO_COLORS } from "../map/palette-iso";
 import { runBoot } from "./boot";
 
 afterEach(() => { vi.restoreAllMocks(); });
@@ -35,12 +36,13 @@ describe("runBoot (#103)", () => {
 });
 
 const ROOT = new URL("../../", import.meta.url).pathname;
+const ink = `#${ISO_COLORS.ink.toString(16).padStart(6, "0")}`;
 
 describe("el mensaje de arranque se lee sobre el cielo (#103)", () => {
   for (const p of ["world", "blog", "resume", "portfolio", "storybook"]) {
     it(`lab/${p}.html fija el color de texto claro del storybook en html, body`, () => {
       const html = readFileSync(`${ROOT}lab/${p}.html`, "utf8");
-      expect(html).toMatch(/html, body \{[^}]*color: #d8d4e8;[^}]*font: 14px\/1\.4 system-ui, sans-serif;/);
+      expect(html).toMatch(new RegExp(`html, body \\{[^}]*color: ${ink};[^}]*font: 14px/1\\.4 system-ui, sans-serif;`));
     });
   }
 });
