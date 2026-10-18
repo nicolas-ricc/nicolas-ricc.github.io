@@ -16,7 +16,7 @@
 - Criterio 2: los tests del mar y el baseline de polígonos no cambian. Ningún test existente de `src/scenes/sea.test.ts` se edita ni se borra. `JSON.stringify(sea(createRng(7)))` tiene que dar el mismo sha256 antes y después: `3cb0759d29acc7bacea268e56ac898cd4529f2e926313d408a4aaa02814d3f63`, medido en `main` 6c806ed. El render list (`buildRenderList([...ground, ...solids])`, 614 instrucciones, sha256 `d9901a5c…`) se deriva de la escena, así que queda cubierto.
 - Criterio 3: `npm test` y `npm run typecheck` en verde.
 - Nombres pedidos por el brief: `GALLERY_DECK_R`, `POST_W`, `POST_H`, `LANTERN_R`, `CAP_R`.
-- Comentarios y nombres de tests en castellano, como el resto de `src/scenes`. Commits `test(#27): …` y `refactor(#27): …`.
+- Comentarios y nombres de tests en castellano, como el resto de `src/scenes`. Los tests de las dos tasks se commitean juntos, en rojo, antes de implementar (`test(#27): evals`). Cada task commitea después solo su implementación (`refactor(#27): …`), como en el historial (`git log`: `test(#21): …`, `fix(#25): …`).
 
 ## Decisiones técnicas (declaradas)
 
@@ -51,15 +51,15 @@
 **Interfaces:**
 - Produces: `export const POST_W = 0.3`, `export const POST_H = 1.2`, `export const GALLERY_DECK_R = GALLERY_R + POST_W`, más la constante privada `DRUM_TOP_R = DRUM_R0 - (DRUMS - 1) * DRUM_STEP`, que la Task 2 usa para `LANTERN_R`.
 
-- [ ] **Step 1: test que falla.** Agregar `GALLERY_DECK_R, POST_H, POST_W` al import de `./sea` y este test dentro de `describe("sea", …)`:
+- [ ] **Step 1: test que falla** (ya commiteado en la etapa de evals; si falta, agregarlo). Agregar `GALLERY_DECK_R, POST_H, POST_W` al import de `./sea`, el alias `type Cyl = Extract<Solid, { kind: "cylinder" }>;` debajo de `const water`, y este test dentro de `describe("sea", …)`. Los filtros usan type guards porque `poly`, `strip` y `ground` no tienen `at` (`src/iso/solids.ts:12,17,18`):
 
 ```ts
   it("galería del faro: disco y postes con medidas nombradas, sin mover un bit (#27)", () => {
     const s = scene();
     expect([GALLERY_R, GALLERY_DECK_R, POST_W, POST_H]).toEqual([2.7, 3, 0.3, 1.2]);
-    const deck = s.solids.filter((x) => x.kind === "cylinder" && x.mat === "steel" && x.h === 0.6 && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y);
-    expect(deck.map((d) => d.kind === "cylinder" && d.r)).toEqual([GALLERY_DECK_R]);
-    const posts = s.solids.filter((x) => x.kind === "prism" && x.mat === "steel" && x.w === POST_W && x.d === POST_W && x.h === POST_H);
+    const deck = s.solids.filter((x): x is Cyl => x.kind === "cylinder" && x.mat === "steel" && x.h === 0.6 && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y);
+    expect(deck.map((d) => d.r)).toEqual([GALLERY_DECK_R]);
+    const posts = s.solids.filter((x): x is Extract<Solid, { kind: "prism" }> => x.kind === "prism" && x.mat === "steel" && x.w === POST_W && x.d === POST_W && x.h === POST_H);
     expect(posts).toHaveLength(8);
     for (const p of posts) expect(Math.hypot(p.at.x + POST_W / 2 - LIGHTHOUSE.x, p.at.y + POST_W / 2 - LIGHTHOUSE.y)).toBeCloseTo(GALLERY_R, 9);
   });
@@ -85,8 +85,8 @@ export const GALLERY_DECK_R = GALLERY_R + POST_W;
   for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; out.push(prism(x + GALLERY_R * Math.cos(a) - POST_W / 2, y + GALLERY_R * Math.sin(a) - POST_W / 2, z, POST_W, POST_W, POST_H, "steel")); }
 ```
 
-- [ ] **Step 4: correr.** `npx vitest run src/scenes/sea.test.ts` en verde, y `npm run typecheck`.
-- [ ] **Step 5: commit.** `git commit -am "refactor(#27): galería del faro con medidas nombradas"`
+- [ ] **Step 4: correr.** `npx vitest run src/scenes/sea.test.ts` y `npm run typecheck` en verde. Medir el sha256 con el script de `.scratch/evals-27.md`: tiene que seguir dando `3cb0759d…3f63`. Si cambió, la Task 1 lo rompió.
+- [ ] **Step 5: commit.** Solo `src/scenes/sea.ts`: `git commit -m "refactor(#27): galería del faro con medidas nombradas" src/scenes/sea.ts`
 
 ### Task 2: linterna y tapa con nombre
 
@@ -98,16 +98,16 @@ export const GALLERY_DECK_R = GALLERY_R + POST_W;
 - Consumes: `DRUM_TOP_R` (privada, Task 1).
 - Produces: `export const LANTERN_R = DRUM_TOP_R - 0.6`, `export const CAP_R = LANTERN_R + 0.2`.
 
-- [ ] **Step 1: test que falla.** Agregar `CAP_R, LANTERN_R` al import y este test:
+- [ ] **Step 1: test que falla** (ya commiteado en la etapa de evals). Agregar `CAP_R, LANTERN_R` al import y este test, que reusa el alias `Cyl` de la Task 1:
 
 ```ts
   it("linterna y tapa del faro con radios nombrados, retranqueadas del último tambor (#27)", () => {
     const s = scene();
     expect([LANTERN_R, CAP_R]).toEqual([1.6, 1.8]);
-    const glass = s.solids.filter((x) => x.kind === "cylinder" && x.mat === "glass" && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y);
-    expect(glass.map((g) => g.kind === "cylinder" && g.r)).toEqual([LANTERN_R]);
-    const cap = s.solids.filter((x) => x.kind === "cone" && x.mat === "steel" && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y);
-    expect(cap.map((c) => c.kind === "cone" && c.r)).toEqual([CAP_R]);
+    const glass = s.solids.filter((x): x is Cyl => x.kind === "cylinder" && x.mat === "glass" && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y);
+    expect(glass.map((g) => g.r)).toEqual([LANTERN_R]);
+    const cap = s.solids.filter((x): x is Extract<Solid, { kind: "cone" }> => x.kind === "cone" && x.mat === "steel" && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y);
+    expect(cap.map((c) => c.r)).toEqual([CAP_R]);
   });
 ```
 
@@ -121,4 +121,26 @@ export const LANTERN_R = DRUM_TOP_R - 0.6, CAP_R = LANTERN_R + 0.2;
 
   y en `lighthouse()`, `cyl(x, y, z, LANTERN_R, LANTERN_H, "glass", 8)` y `r: CAP_R` en el cono.
 - [ ] **Step 4: correr.** `npm test` y `npm run typecheck` en verde. Volver a medir el sha256 de `JSON.stringify(sea(createRng(7)))` con el script de `.scratch/evals-27.md`: tiene que dar `3cb0759d…3f63`. Hacer el grep del criterio 1 sobre el cuerpo de `lighthouse()`.
-- [ ] **Step 5: commit.** `git commit -am "refactor(#27): linterna y tapa del faro con radios nombrados"`
+- [ ] **Step 5: commit.** `git commit -m "refactor(#27): linterna y tapa del faro con radios nombrados" src/scenes/sea.ts`
+
+## Assumptions
+
+- **El divisor `/ 2` no es una dimensión.** `POST_W / 2` y `LANTERN_H / 2` aplican un factor de forma (la mitad) a constantes con nombre. El criterio 1 habla de "literales numéricos para radios ni alturas". Grep del criterio: `sed -n '/^function lighthouse/,/^}/p' src/scenes/sea.ts | grep -oE '\b[0-9]+(\.[0-9]+)?\b' | sort -u` tiene que devolver solo `0 2 8`. Hoy devuelve `0 0.15 0.3 1.2 1.6 1.8 2 3 8`. Alternativa descartada: nombrar `HALF = 0.5` (ruido).
+- **El import de `sea.test.ts` no es un test.** Se agregan nombres al import y un alias de tipo; ningún `it(…)` existente cambia. Alternativa descartada: un archivo de test aparte, que duplicaría `scene()`.
+- **`DRUM_TOP_R` no se testea directo.** `GALLERY_R === 2.7` (exacto) la fija, porque `GALLERY_R = DRUM_TOP_R + 0.5`. Alternativa descartada: exportarla solo para el test.
+- **Los postes no siguen al fuste.** Su sección no tiene relación geométrica con el radio de los tambores: el brief pide derivar "donde la relación es geométrica". La linterna sí la tiene, porque se apoya sobre el último tambor.
+- **La posición exacta de cada poste no tiene `toBe`.** La protegen el sha256 y el hecho de que `0.3 / 2 === 0.15` es exacto en double, así que la expresión da el mismo resultado.
+- **Baseline en HEAD de la rama.** El commit del plan solo toca `docs/`. Igual, la etapa de evals vuelve a medir el sha256 antes de la Task 1.
+
+## Contenido de `.scratch/evals-27.md` (lo crea la etapa de evals; ignorado vía `.git/info/exclude`)
+
+1. Hash: un `src/scenes/zz-h.test.ts` temporal que escribe en `/tmp/h.out` el sha256 de `JSON.stringify(sea(createRng(7)))` y el de `buildRenderList([...s.ground, ...s.solids])` con su largo. Se corre con `npx vitest run src/scenes/zz-h.test.ts` y se borra. Esperado: `SCENE 3cb0759d29acc7bacea268e56ac898cd4529f2e926313d408a4aaa02814d3f63` y `RL d9901a5cf91a02473b85f75b57f63fa404437911df60a217cba3a7a946472d70 614`.
+2. Grep del criterio 1 (ver Assumptions): esperado `0 2 8`.
+3. No hay UI que cambie. La geometría es idéntica bit a bit, así que no hace falta un script de agent-browser: el hash de la escena es más estricto que una captura.
+
+## Grilling
+
+- Rondas: 1. Los cambios fueron correcciones: type guards, medir el hash por task, la convención de commits y las Assumptions. No hubo pasos nuevos ni costuras distintas, así que no se corrió una segunda ronda.
+- Preguntas: 18. CODE: 11 (Q3, Q4, Q5, Q7, Q8, Q10, Q11, Q13, Q14, Q17, Q18). ISSUE: 1 (Q12). NO SOURCE como supuesto técnico: 6 (Q1, Q2, Q6, Q9, Q15, Q16), resueltos en Assumptions o en los pasos.
+- Spec ambiguity: ninguna.
+- Fuera de alcance: las luces de la galería en `sea()` (`sea.ts:159`) repiten el conteo `8` y la altura `lantern.z - 2`, que depende implícitamente de `LANTERN_H`. Abierto como #130.
