@@ -1,4 +1,3 @@
-import { Graphics } from "pixi.js";
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
@@ -82,7 +81,13 @@ describe("coverFrame", () => {
 describe("halo de los acentos", () => {
   const dot: Accent = { kind: "dot", at: v3(0, 0, 0), r: 1, color: "cyan" };
   const poly: Accent = { kind: "poly", pts: [v3(0, 0, 0), v3(1, 0, 0), v3(1, 1, 0)], color: "magenta" };
-  const fills = (accents: Accent[], halo?: HaloStyle): number => { const g = new Graphics(); drawAccents(g, accents, halo); return g.context.instructions.length; };
+  /** Doble de Graphics: en Pixi cada `fill` agrega una instrucción al contexto; acá se cuentan. */
+  const fills = (accents: Accent[], halo?: HaloStyle): number => {
+    let n = 0;
+    const g = { clear: () => g, circle: () => g, poly: () => g, fill: () => { n++; return g; } };
+    drawAccents(g as unknown as Parameters<typeof drawAccents>[0], accents, halo);
+    return n;
+  };
 
   it("el fallback suma un disco más grande y más tenue que el base", () => {
     expect(HALO_FALLBACK.length).toBeGreaterThan(HALO_BASE.length);
