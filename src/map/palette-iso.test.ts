@@ -89,11 +89,7 @@ describe("paleta isométrica", () => {
   });
 
   it("agua y destello fallan si se invierte la relación", () => {
-    const tones: AguaPaleta = {
-      ...ISO_TONES,
-      shallow: { ...ISO_TONES.shallow, up: ISO_TONES.glint.top },
-      glint: { ...ISO_TONES.glint, top: ISO_TONES.shallow.up },
-    };
+    const tones: AguaPaleta = { ...ISO_TONES, glint: { ...ISO_TONES.glint, top: ISO_TONES.shallow.up } };
     expect(() => aguaYDestello(tones, DARKEN)).toThrow(/expected/);
   });
 
