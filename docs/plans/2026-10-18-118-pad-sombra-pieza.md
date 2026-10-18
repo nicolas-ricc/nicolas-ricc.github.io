@@ -23,7 +23,7 @@
 ## Datos
 
 - `SHADOW_DIR = (0.894, −0.447)`: la sombra cae hacia x+ e y−. `SHADOW_PER_UNIT = Z_SCALE / tan 25° ≈ 3.002` unidades por unidad de altura, con la altura recortada a `SHADOW_MAX_H = 18`.
-- `shadowPolygon(s)` devuelve el casco convexo de los vértices proyectados a z = 0, o `null` si el sólido es plano o está entero bajo z 0. Los vértices bajo el suelo se quedan donde están. El núcleo (`maxH = SHADOW_CORE_H`) queda dentro del casco completo, así que alcanza con cubrir el completo.
+- `shadowPolygon(s)` devuelve el casco convexo de los vértices proyectados a z = 0, o `null` si el sólido es plano o está entero bajo z 0. Los vértices bajo el suelo se quedan donde están. `buildRenderList` (`src/iso/render-list.ts:34`) dibuja dos bandas por sólido: `shadowPolygon(s)` (tope `SHADOW_MAX_H`) y `shadowPolygon(s, SHADOW_CORE_H)`. El núcleo no siempre queda dentro del casco completo: en un sólido que flota (la pluma de la grúa, a z 20) el núcleo se corre la mitad que la banda completa. Sí queda dentro del pad: cada vértice del núcleo está en el segmento entre la planta del vértice (dentro de `±r`) y su punto de la banda completa, y el pad es una caja convexa que contiene a los dos. El test del catálogo mira las dos bandas igual.
 - Medición actual (pad contra caja de la sombra completa, en x/y):
 
   | pieza | pad | sombra x | sombra y |
@@ -64,10 +64,10 @@
 - Test: `src/lab/crop.test.ts` (bloque `describe("pieceScene", …)`)
 
 **Interfaces:**
-- Consumes: `shadowPolygon(s: Solid, maxH?: number): Vec2[] | null` de `src/iso/light.ts`; `EXHIBITS` de `src/lab/exhibits.ts`.
+- Consumes: `shadowPolygon(s: Solid, maxH?: number): Vec2[] | null` y `SHADOW_CORE_H` de `src/iso/light.ts`; `EXHIBITS` de `src/lab/exhibits.ts`. El segundo parámetro de `pieceScene`, `pad: Material = "paving"`, es solo el material del pad (los cuatro barcos usan `"water"`, `exhibits.ts:162-165`); no toca la caja.
 - Produces: `pieceScene` con la misma firma. `ground[0]` es un rectángulo, ya no necesariamente cuadrado ni centrado.
 
-- [ ] **Step 1: tests que fallan.** En `src/lab/crop.test.ts`, agregar a los imports `shadowPolygon` (`../iso/light`) y `EXHIBITS` (`./exhibits`). Reemplazar el test `"los sólidos y acentos de build, y un pad de paving de 1 u centrado en el origen"` y agregar dos tests:
+- [ ] **Step 1: tests que fallan.** En `src/lab/crop.test.ts`, agregar a los imports `shadowPolygon` y `SHADOW_CORE_H` (`../iso/light`) y `EXHIBITS` (`./exhibits`). Reemplazar el test `"los sólidos y acentos de build, y un pad de paving de 1 u centrado en el origen"` y agregar dos tests:
 
 ```ts
   it("los sólidos y acentos de build, y un pad de paving de 1 u que cubre la pieza y su sombra", () => {
@@ -99,7 +99,7 @@
       if (e.kind !== "piece") continue;
       const s = pieceScene(e.build, e.pad);
       const { min, max } = bounds(s.ground[0]!);
-      for (const so of s.solids) for (const p of shadowPolygon(so) ?? []) {
+      for (const so of s.solids) for (const p of [...shadowPolygon(so) ?? [], ...shadowPolygon(so, SHADOW_CORE_H) ?? []]) {
         if (p.x < min.x || p.x > max.x || p.y < min.y || p.y > max.y) out.push(`${e.id} (${p.x.toFixed(1)}, ${p.y.toFixed(1)})`);
       }
     }
@@ -156,3 +156,17 @@
 ```
 
 - [ ] **Step 4: commit.** `git add docs/superpowers/specs && git commit -m "docs(#118): grua-torre capture with the shadow on the pad"`
+
+## Assumptions
+
+- **Encuadre más chico.** El storybook encaja `solidsBox` de pad y sólidos (`storybook.ts:96`). Con el pad nuevo la grúa se ve a la mitad de escala (pad de 38 u a ~92 u de ancho). Ningún criterio fija la escala de la pieza en el cuadro; el brief pide que la sombra caiga sobre el pad, y verla entera obliga a encuadrarla. Alternativa descartada: recortar el pad al cuadro anterior, que deja la sombra afuera.
+- **Rectángulo con el cuadrado `±r` de base** (Decisión 1). Alternativa descartada: caja ajustada a huella y sombra sin el cuadrado, que mueve también los bordes oeste, norte y sur de piezas descentradas y cambia todos los pads sin necesidad.
+- **Desplazamiento del pad de agua.** `Z_SCALE = 1.4` (`src/iso/project.ts`): el pad de agua a z −1 se dibuja 1.4 u de pantalla más abajo que la sombra a z 0. Visto sobre el pad, la sombra se corre hacia x− e y− hasta 2.8 u de `x + y`, que caben en `PAD_M = 3` por los bordes oeste y norte. La banda "suave" es el mismo polígono completo con alpha (`stage.ts:58`), no un difuminado más ancho.
+- **`build` vacío.** Con `build` vacío, `top` sale `Infinity`. Es así desde antes, ningún exhibit lo usa y el bucle nuevo no lo cambia. Queda como está.
+
+## Grilling
+
+- Rondas: 1 (el plan no cambió de forma sustancial: se corrigió el dato del núcleo y el test del catálogo mira las dos bandas).
+- Preguntas: 15. Fuentes: CODE 13, DOC 1 (spec del storybook, línea de `faro-haz.png`), NO SOURCE 1 (escala del encuadre, supuesto técnico).
+- Supuestos: los cuatro de `## Assumptions`.
+- Issues abiertos: ninguno.
