@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { createRng } from "./seed";
+import { createRng, SEED } from "./seed";
 
 describe("createRng", () => {
   it("es determinístico para la misma seed", () => {
@@ -33,5 +34,24 @@ describe("createRng", () => {
   it("pick devuelve un elemento del array", () => {
     const rng = createRng(9);
     expect(["a", "b", "c"]).toContain(rng.pick(["a", "b", "c"]));
+  });
+});
+
+const ROOT = new URL("../../", import.meta.url).pathname;
+const source = (path: string): string => readFileSync(`${ROOT}${path}`, "utf8");
+
+describe("SEED (#105)", () => {
+  it("es 7", () => {
+    expect(SEED).toBe(7);
+  });
+  it.each(["src/lab/exhibits.ts", "src/scenes/city.test.ts", "src/scenes/fair.test.ts"])("%s la importa de map/seed y no del ensamblador", (path) => {
+    const src = source(path);
+    expect(src).toMatch(/import \{[^}]*\bSEED\b[^}]*\} from "\.\.\/map\/seed";/);
+    expect(src).not.toContain("world/assemble");
+  });
+  it("el ensamblador la importa de map/seed y no la declara", () => {
+    const src = source("src/world/assemble.ts");
+    expect(src).toMatch(/import \{[^}]*\bSEED\b[^}]*\} from "\.\.\/map\/seed";/);
+    expect(src).not.toMatch(/const SEED\b/);
   });
 });
