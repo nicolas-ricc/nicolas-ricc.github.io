@@ -25,14 +25,14 @@
 - Linterna: `LIGHTHOUSE.z + DRUMS·DRUM_H + GALLERY_H + LANTERN_H/2 = 7 + 24 + 0.6 + 1.5 = 33.1` (lo fija `sea.test.ts:36`).
 - Haz (`src/scenes/sea-anim.ts`): dos cuñas horizontales a la altura de la linterna, `BEAM_LEN = 24` y `BEAM_INNER = 12`, semiancho `BEAM_HALF = 7°`, una vuelta cada `BEAM_PERIOD_MS = 8000`. En el primer tick el ángulo es 0 (al este): ahí la punta no sube en pantalla, así que medir solo el primer tick no detecta el corte. Hay que barrer la vuelta.
 - La punta sube más en pantalla cuando el haz apunta al norte de la pantalla (dirección `(−1, −1)/√2`, ángulo 225°): sube `BEAM_LEN/√2 ≈ 16.97` unidades de pantalla sobre la linterna. El vértice norte de la caja ya está `DRUM_R0 + M = 6.2` unidades más arriba que el centro del faro. Altura necesaria: `33.1 + (16.97 − 6.2)/1.4 ≈ 40.79`. Con el semiancho de 7° la medida real es 40.76; `h = 39` corta ≈ 2.5 unidades de pantalla.
-- Prototipo de la medición sobre las 38 regiones (barrido de 32 pasos de 250 ms): solo `faro` (40.76 > 39) y `casa-farero` (30.9 > 13) se pasan. En `casa-farero` es la punta del haz del faro vecino que entra a la caja por el oeste: su origen (la linterna) está fuera.
+- Prototipo de la medición sobre las 38 regiones (barrido de 33 lecturas a 250 ms, sin el filtro `own`, o sea un superconjunto de lo que mide el test): solo `faro` (40.76 > 39) y `casa-farero` (30.9 > 13) se pasan. En `casa-farero` es la punta del haz del faro vecino que entra a la caja por el oeste: su origen (la linterna) está fuera.
 
 ## Decisiones técnicas (declaradas)
 
 1. **Medida en pantalla, solo hacia arriba.** "Sale de la caja" se lee como "sale del cuadro": la cuña de 24 u siempre sale de la caja x/y del faro (±6.2 u), y lo que corta el canvas es el borde superior del cuadro proyectado. El test compara la `y` en pantalla de cada vértice de acento (y la parte de arriba de cada punto, `y − r`) con la del vértice norte de `boxFrame`, expresado como altura equivalente: `((x0 + y0)/2 − project(p).y + r)/Z_SCALE ≤ h`.
 2. **Ancho no se vigila.** El ancho visible depende de la proporción del host (`#lab-host` es el viewport menos 30 rem). A 1600×900 entra con holgura (≈ 87 u de pantalla visibles contra 68 del haz). Ensanchar la caja para un host angosto cambiaría el encuadre de todo el exhibit; queda fuera.
 3. **Qué acentos cuentan.** Los que pertenecen a la estructura: un punto si su centro cae en la caja, un polígono si su primer vértice cae en la caja (el haz nace en `pts[0]`, la linterna). Es la misma idea que `within` para sólidos. La punta del haz que entra a `casa-farero` es un acento vecino cortado, como los sólidos vecinos; arreglarlo es otro cambio de encuadre y va a un follow-up.
-4. **Barrido de una vuelta del haz, sobre un mundo aparte.** Se arma un segundo `assembleWorld` para no mover los animadores que miden los demás tests. Se mira la capa de acentos en el primer tick y después de cada uno de 32 pasos de `BEAM_PERIOD_MS/32` (11.25°, incluye 225°). El barrido aplica a todas las regiones, no solo al faro.
+4. **Barrido de una vuelta del haz, sobre un mundo aparte.** Se arma un segundo `assembleWorld` para no mover los animadores que miden los demás tests. Se mira la capa de acentos en el primer tick y antes de cada uno de los 31 pasos siguientes de `BEAM_PERIOD_MS/32` (11.25°, incluye 225°): 32 ticks por región suman una vuelta exacta, así que el `sweep` compartido devuelve el haz al mismo ángulo y el resultado no depende del orden de las regiones. El barrido aplica a todas las regiones, no solo al faro.
 5. **Fórmula del `h`.** `LANTERN_Z + (BEAM_LEN·√½ − DRUM_R0 − M)/Z_SCALE`. Usa la cuña larga sin el semiancho: cota superior simple (0.03 u de más) que sigue a `BEAM_LEN` si cambia.
 6. **Captura.** Se agrega `docs/superpowers/specs/assets/97-storybook/faro-haz.png` con el haz apuntando al norte (la fase peor), tomada con `?bloom=off` como las de cierre de #97. `faro.png` queda como evidencia del corte que cita el issue.
 
@@ -100,7 +100,7 @@ function accentReach(box: Box): number {
     a.kind === "dot" ? [(north - project(a.at).y + a.r) / Z_SCALE] : a.pts.map((p) => (north - project(p).y) / Z_SCALE)));
   const anims = cropAnimators(sweep.animators, box);
   let max = reach(cropScene(sweep.scene, box).accents);
-  for (let k = 0; k <= TURN_STEPS; k++) {
+  for (let k = 0; k < TURN_STEPS; k++) { // 32 pasos = una vuelta exacta: la región siguiente arranca con el haz en el mismo ángulo
     for (const a of anims) for (const id of a.ids) { const l = a.layer(id); if (l.kind === "accent") max = Math.max(max, reach(l.accents)); }
     for (const a of anims) a.tick(BEAM_PERIOD_MS / TURN_STEPS);
   }
@@ -145,3 +145,32 @@ function accentReach(box: Box): number {
 - [ ] **Step 2:** detener el ticker de Pixi (`window.__PIXI_DEVTOOLS_WRAPPER__` da el renderer y el stage; la app se alcanza con el gancho de devtools) y avanzar el reloj con pasos fijos de 100 ms hasta 5000 ms (ángulo 225°), como en el método del time-lapse de CLAUDE.md. Verificar en pantalla que la punta queda dentro del canvas; repetir en 0, 2000, 4000 y 6000 ms.
 - [ ] **Step 3:** guardar la captura de 5000 ms como `faro-haz.png` y sumar una frase a la spec: "`faro-haz.png`: el haz al norte con el encuadre de #116".
 - [ ] **Step 4:** `git commit -m "docs(#116): faro capture with the beam pointing north"`
+
+## Assumptions
+
+Decididas en el grilling (sin cita directa; cualquier opción razonable cumple el issue):
+
+1. **El commit de tests en rojo** (`test(#116): …` antes del `fix`) lo pide el pipeline del agente (etapa 3: "Commit the failing tests"). Se descarta juntar test y arreglo en un commit: el PR se mergea con squash, así que `main` no ve el commit rojo.
+2. **Step 2 de la tarea 2 predice que falla solo `faro`.** El prototipo corrió sin el filtro `own`; `casa-farero` queda afuera porque el haz nace en la linterna (x 396), fuera de su caja (x ≤ 383). Se verifica en la etapa 3 corriendo el test.
+3. **Ancho del cuadro.** La verificación en navegador se hace a 1600×900 (CLAUDE.md, `agent-browser set viewport 1600 900 2`). Se descarta ensanchar la caja para hosts angostos: el brief fija el arreglo en `h`.
+4. **Ticker para la captura.** El wrapper de devtools tiene un getter `app` (`inject/index.js`: `this.app?.stage`); si no está, se usa `?speed=` con capturas sucesivas hasta ver el haz al norte.
+5. **`pts[0]!`:** ningún acento `poly` del mundo tiene cero vértices (los arman `wedge`, ventanas y carteles con 3 o más); el tipo no lo impide y el test no lo vigila.
+
+## Grilling
+
+- Rondas: 1 (el plan no cambió de forma sustancial: se corrigió el bucle del barrido y se agregaron supuestos).
+- Preguntas: 18. Por fuente: ISSUE 4 (1, 17, 18, 3/AC), CODE 10 (3, 4, 5, 6, 7, 8, 9, 11, 14, 16), DOC 1 (15, CLAUDE.md), NO SOURCE 3 (2, 12, 13) → supuestos técnicos; 10 → respondida con la corrida del prototipo.
+- Respuestas clave:
+  - Q1: ISSUE (cuerpo): "A likely fix is to add the beam's reach to `h`"; brief: "La altura del encuadre incluye el alcance del haz". `h` solo mueve el borde superior del cuadro (`src/world/frame.ts:16-21`, `h` solo en el vértice norte), así que el criterio se lee en pantalla y hacia arriba.
+  - Q3: CODE `src/lab/exhibits.test.ts:23`: `SLACK = 8`; 40.79 ≤ 40.76 + 8.
+  - Q4: CODE `src/scenes/sea.ts:50-60`: `lighthouse(out)` sin parámetro de base, `z` es acumulador local desde `LIGHTHOUSE.z`; un solo llamado (`sea.ts:163`).
+  - Q6: CODE `src/scenes/sea-anim.ts:156,178-181`: `beam()` arma las cuñas con `clock` = 0 → ángulo 0 antes de cualquier tick; `sea-animator.ts:9` la expone como capa `sea.beam`.
+  - Q7: CODE `sea-anim.ts` `tick(dtMs)`: `clock += dtMs` (acumula); `cropAnimators` envuelve los mismos animadores (`src/lab/crop.ts`), por eso el bucle hace exactamente 32 ticks por región.
+  - Q8: CODE `src/world/assemble.ts:20`: `assembleWorld(zones, { reducedMotion })` crea animadores nuevos en cada llamado.
+  - Q9: CODE `src/lab/exhibits.ts:147-149` (caja con `DRUM_R0` y `M`) e import de `DRUM_R0` en la línea 14.
+  - Q11: CODE: `sea.ts` y `sea-anim.ts` importan solo de `src/iso`, `src/map` y `src/scenes`; `exhibits.ts` ya importa de `../scenes/sea` y `../scenes/factory-anim`.
+  - Q14: CODE: `git log` tiene `refactor(#105)`, `refactor(#68)`, `refactor(#66)`.
+  - Q16: CODE `src/lab/storybook.ts`: `pickExhibit(location.hash)` y `bloomFromSearch(location.search)`.
+  - Q18: fuera de alcance → #183.
+- Supuestos: los 5 de `## Assumptions`.
+- Issues abiertos: #183 (casa-farero, acento vecino cortado).
