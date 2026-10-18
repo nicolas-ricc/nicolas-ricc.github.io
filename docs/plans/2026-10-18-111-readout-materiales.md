@@ -62,7 +62,7 @@ En `src/lab/crop.test.ts`, dentro de `describe("readout")`:
 a) Agregar una rueda con góndolas a la capa animada `"s"` y a `all`. Reemplazar la definición de `anim` y de `all`:
 
 ```ts
-  const wheel: Solid = { kind: "wheel", at: v3(0, -3, 6), r: 2, width: 0.5, mat: "steel", sides: 8, angle: 0, gondolas: { mat: "rust", w: 0.6, d: 0.4, h: 0.5 } };
+  const wheel: Solid = { kind: "wheel", at: v3(3, 3, 4), r: 2, width: 0.5, mat: "steel", sides: 8, angle: 0, gondolas: { mat: "rust", w: 0.6, d: 0.4, h: 0.5 } };
   const anim: Animator = {
     ids: ["s", "a", "w"],
     layer: (id) => id === "s"
@@ -82,7 +82,7 @@ a) Agregar una rueda con góndolas a la capa animada `"s"` y a `all`. Reemplazar
   });
 ```
 
-Los tests de caja usan `all` y valores `-2` y `8`; la rueda (x −2..2, z 4..8) no los cambia. Verificarlo al correr.
+Los tests de caja usan `all` y valores `-2` y `8`; la rueda (centro (3, 3, 4), r 2: x e y entre 1 y 5, z entre 2 y 6) queda dentro. Verificarlo al correr.
 
 b) Reemplazar el test de materiales:
 
@@ -98,7 +98,7 @@ b) Reemplazar el test de materiales:
   it("una noria con góndolas lista su material; sin góndolas, solo el de la rueda", () => {
     const only = (s: Solid) => readout({ ...scene, ground: [], solids: [s], accents: [] } as WorldScene, []).materials;
     expect(only(wheel)).toEqual(["rust", "steel"]);
-    expect(only({ kind: "wheel", at: v3(0, -3, 6), r: 2, width: 0.5, mat: "steel", sides: 8, angle: 0 })).toEqual(["steel"]);
+    expect(only({ kind: "wheel", at: v3(3, 3, 4), r: 2, width: 0.5, mat: "steel", sides: 8, angle: 0 })).toEqual(["steel"]);
   });
 ```
 
@@ -160,3 +160,33 @@ Expected: verde.
 git add src/lab/crop.ts
 git commit -m "fix(#111): readout lists the materials tessellate draws"
 ```
+
+## Assumptions
+
+1. **El criterio 1 se prueba en `crop.test.ts` con sólidos sueltos.** Alternativa rechazada: un test sobre `EXHIBITS` (el exhibit real de la feria). El brief pide el test "del módulo de recorte"; un test sobre el catálogo ataría el test de `readout` a la composición de la feria. Las escenas del test ya salen de `pieceScene`, que es como se arman los exhibits `piece`.
+2. **El commit de tests en rojo (`test(#111): evals`) lo prescribe el pipeline del run, no un documento del repo.** El commit siguiente (`fix(#111)`) los vuelve a verde; si la Task 1 se abandona a mitad, el rojo queda en la rama y no en `main`.
+3. **No se busca a mano un sólido cuyo `mat` aparezca solo en caras traseras.** Si existiera, que deje de listarse es lo que pide el brief ("lista exactamente los materiales que se pintan").
+
+## Grilling
+
+Una ronda; la revisión del plan fue menor (posición de la rueda del test y esta sección), sin segunda ronda. 15 preguntas. Griller: `fable`.
+
+| # | Fuente | Respuesta |
+|---|--------|-----------|
+| 1 | ISSUE + DOC | Brief: "En el test del módulo de recorte, un exhibit con una noria con góndolas…". `docs/superpowers/specs/2026-10-17-storybook-estructuras-design.md:30`: un exhibit es una caja recortada o una pieza; `readout(scene, animators)` (`src/lab/crop.ts:150`) recibe esa escena. Ningún test de exhibit del catálogo afirma `materials` hoy. Ver Assumption 1. |
+| 2 | CODE | `src/iso/solids.ts:24`: `interface Face { pts; normal; mat: Material; tone; toneOffset }`; `src/iso/solids.ts:243`: `tessellate(s: Solid): Face[]`, sin envoltorio. |
+| 3 | CODE | `src/iso/solids.ts:153`: `top = s.topMat ?? s.mat`, `deckMat = s.topMat ? "deck" : s.mat`; la cubierta lleva `"deck"` y la obra muerta `topMat`. `"deck"` es clave de `ISO_TONES` (`src/map/palette-iso.ts:38`), y `Material = keyof typeof ISO_TONES` (`:72`). |
+| 4 | CODE | Medido con los mismos literales de casco y prisma del test (`src/lab/crop.test.ts:159`, `:11`) y con una rueda `at (0,0,10), r 5, width 1.2, sides 8, angle 0, gondolas rust 1.6×1.2×1.4`. La rueda del test cambia de tamaño, pero el conjunto no depende de eso: cada góndola es una caja extruida (`src/iso/solids.ts:215`) cuya tapa tiene normal +z y no se descarta. El Step 2/5 lo comprueba al correr. |
+| 5 | CODE | Las tapas de las góndolas (normal +z) sobreviven a cualquier `angle`; `rust` no desaparece entre cuadros. `readout` lee `a.layer(id)` en su estado actual (`src/lab/crop.ts:151`). |
+| 6 | CODE | `all` se deriva: `const all = [pad, prism(1, 1), hull, ...(anim.layer("s") as { solids: Solid[] }).solids]` (`src/lab/crop.test.ts:178`). La rueda entra sola. |
+| 7 | CODE | `crop.test.ts:187-195`: la caja se compara con la calculada sobre `all` y además `min.x === -2` y `max.z === 8` (los define el prisma `brick`, `at x −2, h 8`). La rueda va en el plano `WHEEL_U = (√½, −√½, 0)` (`src/iso/solids.ts:190`) centrada en (3, 3, 4) con r 2: x e y entre ≈1,6 y 4,4 (más ancho y góndolas, muy por dentro), z entre 2 y 6. No toca los extremos. |
+| 8 | CODE | `src/iso/solids.ts:16`: `hull` requiere `at, len, beam, h, mat`; `topMat`, `heading`, `sheer` son opcionales. El casco sin `topMat` del test es el mismo literal de `crop.test.ts:159` sin `topMat`. |
+| 9 | CODE | `scene` en el test ya se construye con `as WorldScene` (`crop.test.ts:166`) porque `accents` es un literal de unión; `readout` toma `scene.ground` + `scene.solids` + capas sólidas (`crop.ts:152`); vaciar `ground` y pasar `[]` animadores aísla `s`. |
+| 10 | CODE | `crop.ts:170`: `materials: [...mats].sort()`, orden por unidades de código: `deck < hullBlue`, `rust < steel`. |
+| 11 | CODE | `grep -rln "materials\|Materiales" src lab`: solo `crop.ts`, `crop.test.ts`, `storybook.ts:51`. Ningún snapshot ni script compara la cadena; la captura PNG de #95 es un registro histórico. |
+| 12 | CODE | `crop.ts:151`: `animators.flatMap((a) => a.ids.map((id) => a.layer(id)))`, para todo id, sin depender de `tick`. |
+| 13 | NO SOURCE | Assumption 2 (técnica). |
+| 14 | CODE + NO SOURCE | `isFlat` = `strip` y `ground` (`src/iso/solids.ts:30-32`). Lo demás es Assumption 3 (técnica). |
+| 15 | CODE | `crop.ts:171`: los colores de acento van aparte en `accentColors`; el Step 4 no toca esa línea. |
+
+Por fuente: ISSUE 1 (junto con DOC), DOC 1, CODE 14, NO SOURCE 2 (ambas técnicas). Assumptions: 3. Issues abiertos: ninguno. Estado: `ok`.
