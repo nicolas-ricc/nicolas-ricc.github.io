@@ -141,7 +141,7 @@ DARKEN por canal (±1)" cubre los nueve. La regla, aplicada sobre la base:
 |---|---|
 | `deep` | `shade × (0.70, 0.72, 0.80)` (más oscuro y más azul) |
 | `dim` | media aritmética de `shade` y `lit` |
-| `pale` | media aritmética de `top` y `up` |
+| `pale` | media aritmética de `up` y `glow` (decidido en #36, opción A: así la luminancia crece estrictamente a lo largo de la escalera) |
 | `glow` | `up × (1.12, 1.08, 1.02)`, saturado a 255 |
 
 Materiales nuevos, exclusivos de Resume:

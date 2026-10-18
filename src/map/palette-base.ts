@@ -32,6 +32,11 @@ export const BASE_TONES = {
   foam:      { top: 0xc4d3d6, lit: 0xa19c85, shade: 0x4e5980, up: 0xe3ecda, down: 0xa9bac9 },
   abyss:     { top: 0x0f2740, lit: 0x081733, shade: 0x061026, up: 0x152e45, down: 0x0c213d },
   glint:     { top: 0xf58c5a, lit: 0xc96838, shade: 0x623b36, up: 0xffc496, down: 0xd37b55 },
+  // Resume nivel 2: cityLadder(top) pegado como literal
+  plaster:   { top: 0xb89a86, lit: 0x977253, shade: 0x4a4150, up: 0xd5ac89, down: 0x9e887e },
+  terracotta:{ top: 0x9a5a3c, lit: 0x7e4325, shade: 0x3e2624, up: 0xb3653d, down: 0x844f38 },
+  marble:    { top: 0xcfc4b0, lit: 0xaa916d, shade: 0x53526a, up: 0xf0dcb4, down: 0xb2aca5 },
+  awning:    { top: 0x3a5a4a, lit: 0x30432e, shade: 0x17262c, up: 0x43654b, down: 0x324f46 },
 } as const;
 
 export const BASE_SHADOW = 0x2a1a3a;
