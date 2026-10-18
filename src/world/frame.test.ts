@@ -1,11 +1,10 @@
-import { Graphics } from "pixi.js";
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
 import { project } from "../iso/project";
 import type { RenderItem } from "../iso/render-list";
 import { BLEED, WORLD } from "../map/geo";
-import { HALO_BASE, HALO_FALLBACK, type HaloStyle, coverFrame, drawAccents, fitTransform, zoneFrame } from "./frame";
+import { HALO_BASE, HALO_FALLBACK, type HaloStyle, boxFrame, coverFrame, drawAccents, fitTransform, zoneFrame } from "./frame";
 
 describe("fitTransform", () => {
   it("escala para que el bounding box entre con margen y quede centrado", () => {
@@ -33,6 +32,21 @@ describe("zoneFrame", () => {
   it("all cubre el mundo", () => {
     const [it] = zoneFrame("all");
     expect(Math.max(...it!.pts.filter((_, i) => i % 2 === 0))).toBe(630);
+  });
+});
+
+describe("boxFrame", () => {
+  it("proyecta las cuatro esquinas de la caja y la norte lleva h", () => {
+    const [it] = boxFrame({ x0: 10, y0: 20, x1: 30, y1: 50 }, 12);
+    expect(it!.pts).toHaveLength(8);
+    const n = project(v3(10, 20, 12));
+    expect(it!.pts.slice(0, 2)).toEqual([n.x, n.y]);
+    const rest = [[30, 20], [30, 50], [10, 50]].flatMap(([x, y]) => { const p = project(v3(x!, y!, 0)); return [p.x, p.y]; });
+    expect(it!.pts.slice(2)).toEqual(rest);
+  });
+  it("sin h usa el alto de referencia de zoneFrame", () => {
+    const [a] = boxFrame({ x0: WORLD.x0, y0: WORLD.y0, x1: WORLD.x1, y1: WORLD.y1 });
+    expect(a!.pts).toEqual(zoneFrame("all")[0]!.pts);
   });
 });
 
@@ -67,7 +81,13 @@ describe("coverFrame", () => {
 describe("halo de los acentos", () => {
   const dot: Accent = { kind: "dot", at: v3(0, 0, 0), r: 1, color: "cyan" };
   const poly: Accent = { kind: "poly", pts: [v3(0, 0, 0), v3(1, 0, 0), v3(1, 1, 0)], color: "magenta" };
-  const fills = (accents: Accent[], halo?: HaloStyle): number => { const g = new Graphics(); drawAccents(g, accents, halo); return g.context.instructions.length; };
+  /** Doble de Graphics: en Pixi cada `fill` agrega una instrucción al contexto; acá se cuentan. */
+  const fills = (accents: Accent[], halo?: HaloStyle): number => {
+    let n = 0;
+    const g = { clear: () => g, circle: () => g, poly: () => g, fill: () => { n++; return g; } };
+    drawAccents(g as unknown as Parameters<typeof drawAccents>[0], accents, halo);
+    return n;
+  };
 
   it("el fallback suma un disco más grande y más tenue que el base", () => {
     expect(HALO_FALLBACK.length).toBeGreaterThan(HALO_BASE.length);

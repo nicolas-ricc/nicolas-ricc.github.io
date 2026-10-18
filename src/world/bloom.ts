@@ -24,8 +24,13 @@ export function formatBloomVerdict(v: BloomVerdict, budgetMs: number): string {
   return `promedio ${v.avgMs.toFixed(1)} ms en ${v.frames} frames (tick ${v.avgTickMs.toFixed(1)} + render ${v.avgRenderMs.toFixed(1)}), presupuesto ${budgetMs} ms → ${v.mode === "on" ? "activo" : "fallback"}`;
 }
 
-/** Corre `fn` cuando el navegador esté ocioso (a más tardar en 1 s); sin `requestIdleCallback`, en la próxima tarea. */
+/**
+ * Corre `fn` cuando el navegador esté ocioso (a más tardar en 1 s). Sin `requestIdleCallback`, en la tarea
+ * siguiente al próximo frame, sin cota de tiempo (una pestaña oculta no da frames): el `setTimeout` deja que ese
+ * frame se pinte sin el bloom. Sin rAF, en la próxima tarea.
+ */
 export function scheduleIdle(fn: () => void): void {
   if (typeof requestIdleCallback === "function") requestIdleCallback(fn, { timeout: 1000 });
+  else if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => setTimeout(fn, 0));
   else setTimeout(fn, 0);
 }

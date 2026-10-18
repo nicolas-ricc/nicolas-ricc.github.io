@@ -62,7 +62,7 @@ describe("world", () => {
     const mats = (solids: Solid[]) => new Set(solids.filter((s) => s.kind !== "cone").map((s) => s.mat));
     const portfolio = mats([...w.shipyard!.solids, ...w.factory!.solids]), cv = mats(w.city!.solids), blog = mats(w.sea!.solids);
     expect([...portfolio].filter((m) => cv.has(m)).sort()).toEqual(["rust", "steel"]);
-    const sharedWithBlog = ["steel", "rust", "hull", "rock", "glass"]; // glass: la linterna del faro (spec §7)
+    const sharedWithBlog = ["steel", "rust", "hull", "rock", "glass", "deck"]; // glass: la linterna del faro (spec §7); deck: cubiertas de los barcos y terrazas del muelle de Resume
     for (const other of [portfolio, cv]) for (const m of blog) if (other.has(m)) expect(sharedWithBlog).toContain(m);
   });
 

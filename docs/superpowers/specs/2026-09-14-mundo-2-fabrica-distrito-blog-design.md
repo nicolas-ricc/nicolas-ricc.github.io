@@ -83,7 +83,11 @@ sección "Desvíos respecto de la spec"):
   (hasta 40 conos), pedruscos (20), roca (6 `poly`), faro, casa, boyas, pecio
   (≥ 80 estáticos) y los tres barcos (~30). La spec heredó 250 de la spec del
   mundo; el usuario pidió que el Blog sea agua.
-- Ruta de barcos ejecutada (`ROUTE` en `src/scenes/sea-anim.ts`):
+- *Desvío: reemplazado por los carriles semirrectos de #87 (`LANE_OUT` /
+  `LANE_BACK`) y la velocidad única `LANE_SPEED = 1.2` de #63, con fases 0,
+  1/3 y 2/3; ver `2026-10-16-barcos-referencia.md` y
+  `2026-10-17-barcos-inventario.md`. Lo que sigue queda como registro.*
+  Ruta de barcos ejecutada (`ROUTE` en `src/scenes/sea-anim.ts`):
   `(326, -24) → (350, 10) → (500, 20) → (510, 118) → (520, 172) → (545, 224)
   → (610, 260)`, no la polilínea de la spec. El inicio en `(326, -24)` (no
   `(290, -6)`) evita que un barco en la bahía (`max.y < 24`) quede detrás
@@ -435,12 +439,20 @@ Hereda el §6 de la spec del mundo; lo que sigue lo precisa o lo corrige.
   Remolcador: `hull` 18×6×3, caseta `steel` 5×4×3. Barcaza: `hull` 40×9×2,
   seis contenedores 6×2.4×2.4 `rust`/`steel`. Luz de mástil `magentaMid` r 0.7
   y luces de posición (`magenta` r 0.4 a babor, `cyanMid` a estribor).
-- **Ruta.** Una sola polilínea `ROUTE`: (290, -6) → (380, 56) → (432, 118)
+- **Ruta.** *Desvío: reemplazado por los carriles semirrectos de #87
+  (`LANE_OUT` / `LANE_BACK`) y la velocidad única `LANE_SPEED = 1.2` de #63,
+  con fases 0, 1/3 y 2/3; ver `2026-10-16-barcos-referencia.md` y
+  `2026-10-17-barcos-inventario.md`. Lo que sigue queda como registro.*
+  Una sola polilínea `ROUTE`: (290, -6) → (380, 56) → (432, 118)
   → (470, 172) → (530, 224) → (600, 260). Cumple: `x > 430` mientras
   `|y − 118| < 40`; nace en la bahía (agua de `inMouth`); cruza la fosa
   (`abyssX(172) ≈ 450 < 470`); termina en el sangrado este. Heading = dirección
   del tramo, interpolado en los 20 u alrededor de cada vértice.
-- **Marcha.** Velocidades 1.2 / 2 / 0.8 u/s, fases 0 / 0.4 / 0.75 del ciclo.
+- **Marcha.** *Desvío: reemplazado por los carriles semirrectos de #87
+  (`LANE_OUT` / `LANE_BACK`) y la velocidad única `LANE_SPEED = 1.2` de #63,
+  con fases 0, 1/3 y 2/3; ver `2026-10-16-barcos-referencia.md` y
+  `2026-10-17-barcos-inventario.md`. Lo que sigue queda como registro.*
+  Velocidades 1.2 / 2 / 0.8 u/s, fases 0 / 0.4 / 0.75 del ciclo.
   Desvanecido: alpha 0 → 1 en los primeros 30 u y 1 → 0 en los últimos 30 u
   (bruma). Al llegar al final se recicla al inicio. Sombra y estela siguen
   el alpha. `Graphics` propias por barco (sombra en `shadowSlot`).

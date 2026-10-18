@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buildRenderList } from "../iso/render-list";
 import { isFlat } from "../iso/solids";
-import { SEED, assembleWorld } from "../world/assemble";
+import { SEED } from "../map/seed";
+import { assembleWorld } from "../world/assemble";
 import { city } from "./city";
 import { zoneRng } from "./world";
 

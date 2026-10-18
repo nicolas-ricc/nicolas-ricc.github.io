@@ -9,20 +9,35 @@ import { headlandZ, terrainAt } from "./terrain";
 /**
  * Blog, parte estática: la punta de roca con el faro y la casa del farero
  * (clickean Portfolio), el arrecife, dos boyas, y en la fosa el pecio con su
- * boya (landmark del Blog). Los barcos y el mar animado están en sea-anim.ts.
+ * boya (landmark del Blog): un costero partido en dos del que asoman la proa y
+ * la casa de popa. Los barcos y el mar animado están en sea-anim.ts.
  * Spec §7.
  */
 export interface SeaScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; lantern: Vec3; buoys: Vec3[]; neon: { gallery: Vec3[]; coast: Vec3[]; keeperSign: Accent } }
 
 export const LIGHTHOUSE = { x: 396, y: 118, z: 7 } as const;
 export const KEEPER = { x: 372, y: 108 } as const;
-export const BUOYS: readonly Vec2[] = [{ x: 420, y: 80 }, { x: 430, y: 160 }];
-export const WRECK_BUOY = { x: 470, y: 160 } as const;
-export const WRECK = { x: 462, y: 150, heading: Math.PI / 6 } as const;
+// Reubicados en #87: la ida pasaba por la boya vieja (420, 80) y un barco al oeste o norte de un sólido
+// que se le superpone en pantalla queda detrás. Las boyas marcan el bajo al sur de la punta, al oeste de
+// la ida (35 y 40 u del carril: los barcos pasan por delante). El pecio sigue en la fosa (su popa queda
+// ~16 u al este del talud, `abyssX(262)` ≈ 474), 30 u al este de la vuelta; ningún barco lo tapa ni es tapado.
+export const BUOYS: readonly Vec2[] = [{ x: 398, y: 150 }, { x: 392, y: 200 }];
+export const WRECK_BUOY = { x: 498, y: 272 } as const;
+export const WRECK = { x: 490, y: 262, heading: Math.PI / 6 } as const;
 const WATER_Z = -1;
-const DRUMS = 6, DRUM_H = 4, DRUM_R0 = 3.2, DRUM_STEP = 0.2, GALLERY_H = 0.6, LANTERN_H = 3, CAP_H = 2;
+export const DRUM_R0 = 3.2;
+const DRUMS = 6, DRUM_H = 4, DRUM_STEP = 0.2, GALLERY_H = 0.6, LANTERN_H = 3, CAP_H = 2;
+/** Centro de la linterna, de donde nace el haz (sea-anim.ts). */
+export const LANTERN_Z = LIGHTHOUSE.z + DRUMS * DRUM_H + GALLERY_H + LANTERN_H / 2;
+const DRUM_TOP_R = DRUM_R0 - (DRUMS - 1) * DRUM_STEP;
 /** Galería de neón y postes de la baranda: último tambor + 0.5. Las luces van a la altura de la plataforma (lantern.z − 2). */
-export const GALLERY_R = DRUM_R0 - (DRUMS - 1) * DRUM_STEP + 0.5;
+export const GALLERY_R = DRUM_TOP_R + 0.5;
+/** Sección y altura de los postes de la baranda: medidas propias, no siguen al fuste. */
+export const POST_W = 0.3, POST_H = 1.2;
+/** El disco sobresale media sección de poste por fuera de la baranda. */
+export const GALLERY_DECK_R = GALLERY_R + POST_W;
+/** Linterna retranqueada respecto del último tambor; la tapa la cubre con un alero de 0.2. */
+export const LANTERN_R = DRUM_TOP_R - 0.6, CAP_R = LANTERN_R + 0.2;
 /**
  * Balizas de costa: arco a ~12.8 u de la punta, de NE a SE por el este. La punta y su orilla
  * (12 u) son Portfolio para `worldZoneAt`; a esta distancia ya es Blog (lo fija sea.test.ts).
@@ -38,12 +53,12 @@ function lighthouse(out: Solid[]): Vec3 {
   const { x, y } = LIGHTHOUSE;
   let z = LIGHTHOUSE.z;
   for (let i = 0; i < DRUMS; i++) { out.push(cyl(x, y, z, DRUM_R0 - i * DRUM_STEP, DRUM_H, i % 2 === 0 ? "whitewash" : "rust")); z += DRUM_H; }
-  out.push(cyl(x, y, z, 3, GALLERY_H, "steel")); z += GALLERY_H;
-  for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; out.push(prism(x + GALLERY_R * Math.cos(a) - 0.15, y + GALLERY_R * Math.sin(a) - 0.15, z, 0.3, 0.3, 1.2, "steel")); }
-  out.push(cyl(x, y, z, 1.6, LANTERN_H, "glass", 8));
-  const lantern = v3(x, y, z + LANTERN_H / 2);
+  out.push(cyl(x, y, z, GALLERY_DECK_R, GALLERY_H, "steel")); z += GALLERY_H;
+  for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; out.push(prism(x + GALLERY_R * Math.cos(a) - POST_W / 2, y + GALLERY_R * Math.sin(a) - POST_W / 2, z, POST_W, POST_W, POST_H, "steel")); }
+  out.push(cyl(x, y, z, LANTERN_R, LANTERN_H, "glass", 8));
+  const lantern = v3(x, y, LANTERN_Z);
   z += LANTERN_H;
-  out.push({ kind: "cone", at: v3(x, y, z), r: 1.8, h: CAP_H, mat: "steel", sides: 8 });
+  out.push({ kind: "cone", at: v3(x, y, z), r: CAP_R, h: CAP_H, mat: "steel", sides: 8 });
   return lantern;
 }
 
@@ -102,10 +117,47 @@ function buoysAndWreck(out: Solid[], ground: Solid[], accents: Accent[]): Vec3[]
     return { pts: [v3(WRECK_BUOY.x + r0 * Math.cos(a0), WRECK_BUOY.y + r0 * Math.sin(a0), -0.95), v3(WRECK_BUOY.x + r1 * Math.cos(a0), WRECK_BUOY.y + r1 * Math.sin(a0), -0.95), v3(WRECK_BUOY.x + r1 * Math.cos(a1), WRECK_BUOY.y + r1 * Math.sin(a1), -0.95)] };
   });
   ground.push({ kind: "ground", mat: "foam", tris: ring });
-  out.push({ kind: "hull", at: v3(WRECK.x, WRECK.y, -3), len: 40, beam: 8, h: 4, mat: "hull", topMat: "rust", heading: WRECK.heading }); // asoma 1 u
-  const mx = WRECK.x + 20 * Math.cos(WRECK.heading), my = WRECK.y + 20 * Math.sin(WRECK.heading);
-  out.push(prism(mx - 0.3, my - 0.3, 0, 0.6, 0.6, 6, "rust")); // mástil
+  wreck(out, ground);
   return bases;
+}
+
+/**
+ * Pecio (#83): un costero de 40 u partido en dos y hundido en la fosa. La popa (`WRECK`) queda
+ * ~16 u al este del talud (`abyssX(262)` ≈ 474) y todo el casco cae en `abyss`. No se lo corre hasta el
+ * talud: exigiría revalidar los carriles con el validador de #87, porque la vuelta pasa a 30 u del pecio.
+ * El centro del casco está bajo el agua; asoman la proa (una cuña oxidada con su cubierta y la bita) y la
+ * casa de popa (banda de casco oxidada, caseta encalada con ventanas, chimenea y mástil). Coordenadas locales como
+ * en el kit de ships.ts: x de popa (0) a proa (`WRECK_LEN`), y a estribor, giradas por `WRECK.heading`.
+ * Las piezas quedan todas por encima del agua (z ≥ −1): el motor dibuja los sólidos sobre el agua, así
+ * que un casco "hundido" entero se vería a flote.
+ */
+const WRECK_LEN = 40;
+function wreck(out: Solid[], ground: Solid[]): void {
+  const c = Math.cos(WRECK.heading), s = Math.sin(WRECK.heading);
+  const local = (dx: number, dy: number): Vec2 => ({ x: WRECK.x + dx * c - dy * s, y: WRECK.y + dx * s + dy * c });
+  const plate = (pts: [number, number][], z: number, h: number, mat: Material, facade?: { floors: number; cols: number }): Solid => ({ kind: "poly", footprint: pts.map(([dx, dy]) => local(dx, dy)), z, h, mat, ...(facade ? { facade } : {}) });
+  const foam = (dx: number, dy: number, r0: number, r1: number): void => {
+    const o = local(dx, dy);
+    ground.push({ kind: "ground", mat: "foam", tris: Array.from({ length: 8 }, (_, k): { pts: [Vec3, Vec3, Vec3] } => {
+      const a0 = (k / 8) * Math.PI * 2, a1 = ((k + 1) / 8) * Math.PI * 2;
+      return { pts: [v3(o.x + r0 * Math.cos(a0), o.y + r0 * Math.sin(a0), -0.95), v3(o.x + r1 * Math.cos(a0), o.y + r1 * Math.sin(a0), -0.95), v3(o.x + r1 * Math.cos(a1), o.y + r1 * Math.sin(a1), -0.95)] };
+    }) });
+  };
+  // proa: cuña con obra viva oscura, franja oxidada de obra muerta, cubierta de madera y la bita; el agua lame alrededor
+  const bow: [number, number][] = [[27, -3.6], [37, -2.4], [WRECK_LEN, 0], [37, 2.4], [27, 3.6]];
+  out.push(plate(bow, WATER_Z, 0.8, "hull"), plate(bow, WATER_Z + 0.8, 0.9, "rust"));
+  out.push(plate([[28, -2.8], [36.5, -1.9], [39, 0], [36.5, 1.9], [28, 2.8]], WATER_Z + 1.7, 0.2, "deck"));
+  const bitt = local(36, 0);
+  out.push(cyl(bitt.x, bitt.y, WATER_Z + 1.9, 0.4, 0.5, "steel", 6));
+  foam(33, 0, 5.5, 6.8);
+  // popa: banda de casco oxidada que asoma, caseta de dos niveles con ventanas, chimenea y mástil
+  out.push(plate([[3, -3.6], [12, -3.6], [12, 3.6], [3, 3.6]], WATER_Z, 1, "rust"));
+  out.push(plate([[4, -3], [11, -3], [11, 3], [4, 3]], WATER_Z + 1, 1.5, "whitewash", { floors: 1, cols: 4 }));
+  out.push(plate([[6, -2.2], [10.5, -2.2], [10.5, 2.2], [6, 2.2]], WATER_Z + 2.5, 1.3, "whitewash", { floors: 1, cols: 3 }));
+  const funnel = local(5, 0);
+  out.push(cyl(funnel.x, funnel.y, WATER_Z + 2.5, 0.7, 2.2, "rust", 8));
+  out.push({ kind: "poly", footprint: [local(9.8, -0.25), local(10.2, -0.25), local(10.2, 0.25), local(9.8, 0.25)], z: WATER_Z + 3.8, h: 4.5, mat: "steel" }); // mástil sobre la caseta
+  foam(7.5, 0, 5.5, 6.8);
 }
 
 export function sea(rng: Rng): SeaScene {

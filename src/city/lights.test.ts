@@ -7,7 +7,7 @@ import { createRng } from "../map/seed";
 import { blocks } from "../scenes/city-grid";
 import { city, type CityScene, type PlacedPiece } from "../scenes/city";
 import { zoneRng } from "../scenes/world";
-import { SEED } from "../world/assemble";
+import { SEED } from "../map/seed";
 import { lightBox, lights, MAX_ANIMABLE, MAX_NEONS, WINDOW_ALPHA } from "./lights";
 import { CATALOGUE, type Barrio } from "./zoning";
 

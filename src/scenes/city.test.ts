@@ -4,12 +4,11 @@ import { buildRenderList } from "../iso/render-list";
 import { bounds, type Solid } from "../iso/solids";
 import { QUAY_X, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
-import { createRng } from "../map/seed";
+import { createRng, SEED } from "../map/seed";
 import { AVENUE, BOULEVARD, BRIDGE, CITY_EDGE, COLLAPSED, ROWS, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_RING, FALLEN_BLOCK, MALECON, PLAZA, TOWER, WEST_QUAY, blocks, estuaryEast, inBlock, inCrater } from "./city-grid";
 import { PLINTH_H, TOWER_H, city, type CityScene } from "./city";
 import { CAR } from "../kit/props";
 import { FIXED, FOOTBRIDGE_LOT, MAX_BUILDING_H, WATER_TOWER_BLOCK, assign } from "../city/zoning";
-import { SEED } from "../world/assemble";
 import { zoneRng } from "./world";
 
 const scene = (): CityScene => city(createRng(7), createRng(8), createRng(9));
@@ -306,5 +305,11 @@ describe("city", () => {
       const wall = s.solids.find((w) => w.kind === "prism" && !!w.facade && inDistrict(w) && Math.abs(w.at.y + w.d + 0.4 - y) < 1e-6);
       expect(wall).toBeDefined();
     }
+  });
+});
+
+describe("imports de city.ts (#50)", () => {
+  it("no importa brokenTone, que no usa", () => {
+    expect(readFileSync(new URL("./city.ts", import.meta.url), "utf8")).not.toMatch(/brokenTone/);
   });
 });

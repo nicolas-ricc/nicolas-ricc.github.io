@@ -1,8 +1,33 @@
 import { describe, expect, it } from "vitest";
-import { ACCENT_COLORS, ISO_COLORS, ISO_TONES, TONE_LADDER, allIsoColors, stepTone, toneColor, type Material } from "./palette-iso";
+import { ACCENT_COLORS, ISO_COLORS, ISO_TONES, TONE_LADDER, allIsoColors, stepTone, toneColor, type AccentColor, type Material } from "./palette-iso";
 import { BASE_SHADOW, BASE_SKY, BASE_TONES, DARKEN, darken, extendLadder } from "./palette-base";
 
 const lum = (c: number): number => ((c >> 16) & 255) * 0.3 + ((c >> 8) & 255) * 0.59 + (c & 255) * 0.11;
+
+type WaterMat = "shallow" | "water" | "waterDeep" | "abyss";
+type AguaPaleta = Record<WaterMat | "glint", Record<"top" | "up" | "lit" | "down", number>>;
+
+// Los umbrales base se calibraron sobre la paleta previa al oscurecimiento de #12;
+// se escalan por el factor para que el test siga la relación y no el brillo absoluto.
+const CRESTA_SUTIL = 30, DESTELLO_CALIDO = 120, DESTELLO_CLARO = 30;
+
+function aguaYDestello(tones: AguaPaleta, factor: number): void {
+  const rgb = (c: number) => [c >> 16, (c >> 8) & 255, c & 255] as const;
+  const warmth = (c: number) => rgb(c)[0] - rgb(c)[2];
+  const blueShare = (c: number) => rgb(c)[2] / (rgb(c)[0] + rgb(c)[1] + rgb(c)[2]);
+  const mats = ["shallow", "water", "waterDeep", "abyss"] as const;
+  for (let i = 1; i < mats.length; i++) expect(lum(tones[mats[i]!].top)).toBeLessThan(lum(tones[mats[i - 1]!].top));
+  for (const m of mats) {
+    expect(warmth(tones[m].up)).toBeGreaterThan(warmth(tones[m].top)); // apenas más cálida
+    expect(blueShare(tones[m].up)).toBeGreaterThan(0.4); // pero azul: la cresta no es un destello
+    expect(lum(tones[m].up) - lum(tones[m].top)).toBeLessThan(CRESTA_SUTIL * factor); // y sutil
+    expect(warmth(tones.glint.top)).toBeGreaterThan(warmth(tones[m].top) + DESTELLO_CALIDO * factor); // el destello sí es coral
+    expect(lum(tones.glint.top)).toBeGreaterThan(lum(tones[m].up) + DESTELLO_CLARO * factor);
+    expect(blueShare(tones[m].lit)).toBeGreaterThan(blueShare(tones[m].top));
+    expect(lum(tones[m].lit)).toBeLessThan(lum(tones[m].down));
+    expect(lum(tones[m].down)).toBeLessThan(lum(tones[m].top));
+  }
+}
 
 describe("paleta isométrica", () => {
   it("cada material tiene los nueve tonos, con luminancia estrictamente creciente", () => {
@@ -49,22 +74,25 @@ describe("paleta isométrica", () => {
   });
 
   it("agua: cuatro profundidades que se oscurecen, seno frío y cresta clara que sigue siendo agua; el sol va en glint", () => {
-    const rgb = (c: number) => [c >> 16, (c >> 8) & 255, c & 255] as const;
-    const warmth = (c: number) => rgb(c)[0] - rgb(c)[2];
-    const blueShare = (c: number) => rgb(c)[2] / (rgb(c)[0] + rgb(c)[1] + rgb(c)[2]);
-    const mats = ["shallow", "water", "waterDeep", "abyss"] as const;
-    for (let i = 1; i < mats.length; i++) expect(lum(ISO_TONES[mats[i]!].top)).toBeLessThan(lum(ISO_TONES[mats[i - 1]!].top));
-    for (const m of mats) {
-      expect(warmth(ISO_TONES[m].up)).toBeGreaterThan(warmth(ISO_TONES[m].top)); // apenas más cálida
-      expect(blueShare(ISO_TONES[m].up)).toBeGreaterThan(0.4); // pero azul: la cresta no es un destello
-      expect(lum(ISO_TONES[m].up) - lum(ISO_TONES[m].top)).toBeLessThan(30); // y sutil
-      expect(warmth(ISO_TONES.glint.top)).toBeGreaterThan(warmth(ISO_TONES[m].top) + 120); // el destello sí es coral
-      expect(lum(ISO_TONES.glint.top)).toBeGreaterThan(lum(ISO_TONES[m].up) + 30);
-      expect(blueShare(ISO_TONES[m].lit)).toBeGreaterThan(blueShare(ISO_TONES[m].top));
-      expect(lum(ISO_TONES[m].lit)).toBeLessThan(lum(ISO_TONES[m].down));
-      expect(lum(ISO_TONES[m].down)).toBeLessThan(lum(ISO_TONES[m].top));
-    }
+    aguaYDestello(ISO_TONES, DARKEN);
     expect(Object.keys(ISO_TONES.hullBlue).sort()).toEqual([...TONE_LADDER].sort());
+  });
+
+  it("agua y destello aguantan otro oscurecimiento: los umbrales siguen al factor", () => {
+    const factor = 0.6;
+    const tonos = (m: WaterMat | "glint") => ({
+      top: darken(BASE_TONES[m].top, factor), up: darken(BASE_TONES[m].up, factor),
+      lit: darken(BASE_TONES[m].lit, factor), down: darken(BASE_TONES[m].down, factor),
+    });
+    const tones: AguaPaleta = {
+      shallow: tonos("shallow"), water: tonos("water"), waterDeep: tonos("waterDeep"), abyss: tonos("abyss"), glint: tonos("glint"),
+    };
+    aguaYDestello(tones, factor);
+  });
+
+  it("agua y destello fallan si se invierte la relación", () => {
+    const tones: AguaPaleta = { ...ISO_TONES, glint: { ...ISO_TONES.glint, top: ISO_TONES.shallow.up } };
+    expect(() => aguaYDestello(tones, DARKEN)).toThrow(/expected/);
   });
 
   it("tríadas de acento por zona: cian, ámbar y magenta, todas en el atlas", () => {
@@ -76,6 +104,15 @@ describe("paleta isométrica", () => {
       expect(lum(ISO_COLORS[base])).toBeGreaterThan(lum(ISO_COLORS[`${base}Mid`]));
       expect(lum(ISO_COLORS[`${base}Mid`])).toBeGreaterThan(lum(ISO_COLORS[`${base}Bleed`]));
     }
+  });
+
+  it("ink, el texto de las páginas del lab, está en la paleta y no es un acento", () => {
+    expect(ISO_COLORS.ink).toBe(0xd8d4e8);
+    expect(allIsoColors().has(ISO_COLORS.ink)).toBe(true);
+    expect(ACCENT_COLORS).not.toContain("ink");
+    // @ts-expect-error ink no es un color de acento
+    const accent: AccentColor = "ink";
+    expect(accent).toBe("ink");
   });
 });
 

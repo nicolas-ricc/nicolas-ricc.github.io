@@ -121,3 +121,68 @@ describe("sortByDepth con barrido", () => {
     expect(sortByDepth(solids)).toEqual(sortByDepthNaive(solids));
   });
 });
+
+describe("sortByDepth con cascos", () => {
+  const hull: Solid = { kind: "hull", at: v3(0, 0, -1), len: 20, beam: 6, h: 5, mat: "steel", heading: 0, sheer: 1.25 };
+  const deck = -1 + 5;
+
+  it("una pieza apoyada en la cubierta de un casco se dibuja después del casco, aunque quede en la mitad lejana", () => {
+    for (const heading of [0, Math.PI / 2, Math.PI, -Math.PI / 2, 2.3]) {
+      const h: Solid = { ...hull, heading } as Solid;
+      const c = Math.cos(heading), s = Math.sin(heading);
+      // casetas sobre la cubierta en cada extremo y en cada banda, en el marco del casco
+      const onDeck = (x0: number, y0: number, w: number, d: number): Solid => ({
+        kind: "poly", z: deck, h: 3, mat: "steel",
+        footprint: [[x0, y0], [x0 + w, y0], [x0 + w, y0 + d], [x0, y0 + d]].map(([x, y]) => ({ x: x! * c - y! * s, y: x! * s + y! * c })),
+      });
+      const pieces = [onDeck(2, -1, 2, 2), onDeck(14, -1, 2, 2), onDeck(9, -2.5, 2, 1), onDeck(9, 1.5, 2, 1)];
+      const order = sortByDepth([...pieces, h], heading);
+      const hullAt = order.indexOf(h);
+      for (const p of pieces) expect(order.indexOf(p)).toBeGreaterThan(hullAt);
+    }
+  });
+
+  it("una pieza que no está sobre la cubierta conserva el orden de siempre", () => {
+    const hb = bounds(hull);
+    const behind = box(2, hb.min.y - 4, 0, 3, 3, 2); // al norte del casco, base z 0
+    const order = sortByDepth([hull, behind]);
+    expect(order.indexOf(behind)).toBeLessThan(order.indexOf(hull));
+  });
+});
+
+describe("sortByDepth en el marco del barco", () => {
+  // Caja alineada con el marco local rotado `h` alrededor del origen (como las piezas de un barco).
+  const rotBox = (h: number, x0: number, y0: number, w: number, d: number, z: number, hz: number): Solid => {
+    const c = Math.cos(h), s = Math.sin(h);
+    const footprint = [[x0, y0], [x0 + w, y0], [x0 + w, y0 + d], [x0, y0 + d]].map(([x, y]) => ({ x: x! * c - y! * s, y: x! * s + y! * c }));
+    return { kind: "poly", footprint, z, h: hz, mat: "steel" };
+  };
+
+  it("una pieza apoyada en el extremo lejano de otra rotada se dibuja después, a cualquier rumbo", () => {
+    for (const h of [0.5, 0.3, 1.2, 2.3, -0.7, -2.6]) {
+      const lower = rotBox(h, 0, 0, 40, 6, 0, 3);
+      const upper = rotBox(h, 34, 0, 6, 6, 3, 3);
+      expect(sortByDepth([upper, lower], h)).toEqual([lower, upper]);
+      expect(sortByDepth([lower, upper], h)).toEqual([lower, upper]);
+    }
+  });
+
+  it("tres niveles de casa y puente a rumbo 100 grados: cada pieza se dibuja después de la que tiene debajo", () => {
+    // Medidas locales (x, y, ancho, largo, z, alto) de una caseta, su ala de puente y una barandilla; esta no se afirma, pero sin ella el orden viejo acierta por casualidad.
+    const specs = [[5, -2.4, 6.5, 4.8, 6.8, 1.4], [6.5, -5, 4, 10, 8.2, 1.5], [12.4, -3.5, 1, 7, 6.5, 0.3]] as const;
+    const h = (100 * Math.PI) / 180;
+    const pieces = specs.map(([x, y, w, d, z, hz]) => rotBox(h, x, y, w, d, z, hz));
+    for (const input of [pieces, [...pieces].reverse()]) {
+      const order = sortByDepth(input, h);
+      expect(order.indexOf(pieces[0]!)).toBeLessThan(order.indexOf(pieces[1]!));
+    }
+  });
+
+  it("sin rumbo o con rumbo 0 el orden es el de siempre", () => {
+    const rng = createRng(5);
+    const solids: Solid[] = [];
+    for (let i = 0; i < 60; i++) solids.push(box(rng.int(0, 60), rng.int(0, 40), rng.chance(0.1) ? -3 : 0, rng.int(1, 12), rng.int(1, 12), rng.int(1, 20)));
+    expect(sortByDepth(solids, 0)).toEqual(sortByDepthNaive(solids));
+    expect(sortByDepth(solids)).toEqual(sortByDepthNaive(solids));
+  });
+});
