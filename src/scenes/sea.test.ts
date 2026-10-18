@@ -14,6 +14,7 @@ const water = new Set(["water", "sea", "shore", "abyss", "reef"]);
 type Cyl = Extract<Solid, { kind: "cylinder" }>;
 type Prism = Extract<Solid, { kind: "prism" }>;
 type Cone = Extract<Solid, { kind: "cone" }>;
+type Poly = Extract<Solid, { kind: "poly" }>;
 
 describe("sea", () => {
   it("es determinística, trae ≥ 80 sólidos elevados y usa solo materiales del Blog o compartidos", () => {
@@ -145,8 +146,8 @@ describe("pecio: comentario y posición (#89)", () => {
     expect(WRECK.x - abyssX(WRECK.y)).toBeGreaterThan(15);
     expect(WRECK.x - abyssX(WRECK.y)).toBeLessThan(17);
     const near = (x: Solid) => { const b = bounds(x); return Math.hypot((b.min.x + b.max.x) / 2 - WRECK.x, (b.min.y + b.max.y) / 2 - WRECK.y) < 45; };
-    const hull = scene().solids.filter((x) => x.kind === "poly" && near(x)); // las placas del pecio; la boya es un cilindro y queda fuera
+    const hull = scene().solids.filter((x): x is Poly => x.kind === "poly" && near(x)); // las placas del pecio; la boya es un cilindro y queda fuera
     expect(hull.length).toBeGreaterThanOrEqual(6);
-    for (const x of hull) if (x.kind === "poly") for (const p of x.footprint) expect(terrainAt(p.x, p.y)).toBe("abyss");
+    for (const x of hull) for (const p of x.footprint) expect(terrainAt(p.x, p.y)).toBe("abyss");
   });
 });

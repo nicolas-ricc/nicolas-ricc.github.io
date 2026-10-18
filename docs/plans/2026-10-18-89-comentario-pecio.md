@@ -20,7 +20,7 @@
 
 - `abyssX(y) = 392 + 0.25 * (y + 60) + 6 * sin(y / 17)`; `abyssX(262)` ≈ 474.25.
 - `WRECK = { x: 490, y: 262, heading: π/6 }`; la popa es el origen local (x local 0), así que está 15.75 u al este del talud.
-- El punto del casco más cercano al talud (barrido de x local 0…40, y local −4…4) queda a 14.1 u al este: todo el pecio cae en `abyss`.
+- El vértice de placa más cercano al talud (local (3, 3.6), banda de popa) queda a 17.0 u al este; la envolvente teórica de x local 0…40, y local −4…4 daría 14.1 u. Todo el pecio cae en `abyss`.
 - El comentario de las constantes (`sea.ts:19-22`) ya dice "su popa queda ~16 u al este del talud … 30 u al este de la vuelta". El docstring nuevo dice lo mismo.
 
 ## Decisiones técnicas (declaradas)
@@ -135,7 +135,7 @@ git commit -m "docs(#89): el pecio yace en la fosa, a ~16 u del talud"
 ## Assumptions
 
 - **La guarda geométrica es un agregado técnico, no un criterio del brief.** Sostiene la afirmación que el criterio 1 pone en el docstring ("en la fosa, a ~16 u del talud"). Alternativa rechazada: no fijar los números y dejar que el comentario pueda volver a desfasarse.
-- **La guarda mira los vértices de las placas, no el centro de cada pieza.** Con el centro, la esquina más cercana al talud (14,1 u) quedaba sin comprobar. Los cilindros (chimenea, bita) quedan dentro del contorno de las placas, y la boya `WRECK_BUOY` es un cilindro que el filtro `kind === "poly"` deja fuera. Alternativa rechazada: el centro de cada sólido, que además incluía la boya.
+- **La guarda mira los vértices de las placas, no el centro de cada pieza.** Con el centro, la esquina más cercana al talud (17,0 u) quedaba sin comprobar. Los cilindros (chimenea, bita) quedan dentro del contorno de las placas, y la boya `WRECK_BUOY` es un cilindro que el filtro `kind === "poly"` deja fuera. Alternativa rechazada: el centro de cada sólido, que además incluía la boya.
 - **Test de regex sobre el fuente.** Sigue el patrón de `city.test.ts:231` y `sea-anim.test.ts:353`, que leen el `.ts` con `readFileSync(new URL(…, import.meta.url))`. Alternativa rechazada: verificarlo solo a mano, sin test.
 - **El motivo del docstring cita el issue casi textual:** "exige revalidar los carriles con el validador de #87, porque la vuelta pasa a 30 u del pecio". Alternativa rechazada: "los carriles se validaron con el pecio a 30 u", que el issue no afirma.
 - **El script de diff de `.scratch/evals-89.md` no se versiona.** `.scratch/` va en `.git/info/exclude`; el script se copia a la descripción del PR.
