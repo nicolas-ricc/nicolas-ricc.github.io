@@ -19,7 +19,7 @@ export const MAX_DISTRICT_H = 24;
 export const FRONT_CAP_H = 10;
 
 /** Caja del piso encendido de la torre (city.ts pone la torre; acá solo hace falta dónde queda). */
-export const LIT: Bounds = { min: v3(TOWER.x, TOWER.y, LIT_FLOOR * (TOWER_H / TOWER_FLOORS)), max: v3(TOWER.x + TOWER.w, TOWER.y + TOWER.d, (LIT_FLOOR + 1) * (TOWER_H / TOWER_FLOORS)) };
+const LIT: Bounds = { min: v3(TOWER.x, TOWER.y, LIT_FLOOR * (TOWER_H / TOWER_FLOORS)), max: v3(TOWER.x + TOWER.w, TOWER.y + TOWER.d, (LIT_FLOOR + 1) * (TOWER_H / TOWER_FLOORS)) };
 
 /**
  * Regla del piso encendido: si un edificio de 24 en esta manzana se
@@ -71,7 +71,6 @@ export const FIXED: readonly { x: number; y: number; recipe: string }[] = [
   { x: 162, y: 218, recipe: "civicPalace" }, { x: 42, y: 242, recipe: "library" }, { x: SITE.x, y: SITE.y, recipe: "constructionSite" },
   { ...WATER_TOWER_BLOCK, recipe: "patioResidential" },
 ];
-
 
 /** Tope de la fila frente a la torre: ahí un edificio alto taparía el piso encendido. */
 export const maxHeightFor = (b: Block, top = MAX_BUILDING_H): number => (b.row === 3 && b.x >= 96 && b.x + b.w <= 162 ? FRONT_CAP_H : top);
@@ -129,7 +128,7 @@ export function assign(rng: Rng, districtRng: Rng): Placed[] {
     const r = barrio === "distrito" ? districtRng : rng;
     let recipe = fixed?.recipe ?? pick(r, CATALOGUE[barrio].recipes);
     if (!fixed && barrio === "residencial") {
-      for (let i = 0; i < 5 && out.some((p) => p.barrio === "residencial" && adjacent(p.block, b) && p.recipe === recipe); i++) recipe = pick(r, CATALOGUE[barrio].recipes);
+      for (let i = 0; i < 5 && out.some((p) => adjacent(p.block, b) && p.recipe === recipe); i++) recipe = pick(r, CATALOGUE[barrio].recipes);
     }
     const top = fixed || barrio === "distrito" ? LANDMARK_MAX_H : MAX_BUILDING_H;
     const lot: Lot = {
@@ -137,7 +136,7 @@ export function assign(rng: Rng, districtRng: Rng): Placed[] {
       z: NO_PLINTH.includes(recipe) ? 0 : PLINTH_H, open: openSides(b),
       maxH: Math.min(maxHeightFor(b, top), maxDistrictHeight(b)),
     };
-    out.push({ block: b, barrio, recipe, lot, tone: r.int(-1, 1) });
+    out.push({ block: b, barrio, recipe, lot, tone: rng.int(-1, 1) });
   }
   return out;
 }

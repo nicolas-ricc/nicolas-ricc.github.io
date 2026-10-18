@@ -124,6 +124,11 @@ describe("zoning", () => {
     expect(JSON.stringify(sceneAssign())).not.toBe(JSON.stringify(assign(createRng(9), createRng(8))));
   });
 
+  it("el tono sale de rng y no depende de districtRng", () => {
+    const tones = (d: number) => assign(createRng(7), createRng(d)).map((p) => p.tone);
+    expect(tones(8)).toEqual(tones(9));
+  });
+
   it("con la semilla del mundo se usan ≥ 14 recetas distintas", () => {
     expect(new Set(worldAssign().map((p) => p.recipe)).size).toBeGreaterThanOrEqual(14);
   });
