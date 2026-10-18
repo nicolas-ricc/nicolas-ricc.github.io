@@ -1,9 +1,23 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
-import { bounds, type Solid } from "../iso/solids";
+import { v3 } from "../iso/geometry";
+import { bounds, type Bounds, type Solid } from "../iso/solids";
 import { createRng } from "../map/seed";
-import { BRIDGE, COLLAPSED, EAST_RING, STREET, WEST_QUAY, estuaryEast } from "../scenes/city-grid";
-import { bridge, collapsed } from "./fixed";
+import { AVENUE, BRIDGE, COLLAPSED, EAST_RING, MALECON, PLAZA, STREET, TOWER, WEST_QUAY, blocks, estuaryEast } from "../scenes/city-grid";
+import { plazaTone, tiles } from "../scenes/city-pieces";
+import { bridge, collapsed, malecon, plazaAndTower, westQuay } from "./fixed";
+
+const EPS = 1e-6;
+/** Solape estricto de cajas: dos sólidos que solo se tocan (uno apoyado sobre otro) no cuentan. */
+const overlaps = (a: Bounds, b: Bounds) =>
+  a.min.x < b.max.x - EPS && a.max.x > b.min.x + EPS && a.min.y < b.max.y - EPS && a.max.y > b.min.y + EPS && a.min.z < b.max.z - EPS && a.max.z > b.min.z + EPS;
+const overlapping = (solids: Solid[]) => {
+  const bs = solids.map(bounds), out: [Solid, Solid][] = [];
+  for (let i = 0; i < bs.length; i++) for (let j = i + 1; j < bs.length; j++) if (overlaps(bs[i]!, bs[j]!)) out.push([solids[i]!, solids[j]!]);
+  return out;
+};
+const prisms = (solids: Solid[]) => solids.filter((s): s is Solid & { kind: "prism" } => s.kind === "prism");
+const dots = (accents: Accent[]) => accents.filter((a): a is Accent & { kind: "dot" } => a.kind === "dot");
 
 describe("bridge", () => {
   const built = () => { const solids: Solid[] = [], accents: Accent[] = []; bridge(solids, accents); return { solids, accents }; };
@@ -106,6 +120,171 @@ describe("collapsed", () => {
     expect(built().filter((s) => s.kind !== "dome")).toHaveLength(7); // rampa, plataforma, ruina, tres bloques hundidos, bloque en la calle
     const a = createRng(3), b = createRng(3);
     collapsed([], a); b.int(2, 3); // la única tirada: el alto de la ruina
+    expect(a.next()).toBe(b.next());
+  });
+});
+
+describe("malecon", () => {
+  const built = () => { const solids: Solid[] = [], accents: Accent[] = []; const bulbs = malecon(solids, accents); return { solids, accents, bulbs }; };
+  const { x0, x1, y0, y1, z } = MALECON;
+
+  it("los dos muros largos llevan galería de arcos sobre el agua", () => {
+    const walls = prisms(built().solids).filter((s) => s.at.z === -1 && s.d > 30);
+    expect(walls).toHaveLength(2);
+    for (const w of walls) expect(w.facade).toEqual({ floors: 1, cols: Math.round(w.d / 6), base: "arcade", bands: false });
+  });
+
+  it("pérgola: cuatro postes deck sobre el paseo, fuera de la escalera, dos vigas de 12 y una guirnalda a z ≈ 3.6", () => {
+    const { solids, accents } = built();
+    const posts = prisms(solids).filter((s) => s.mat === "deck" && s.w === 0.4 && s.d === 0.4 && s.h === 3);
+    expect(posts).toHaveLength(4);
+    for (const p of posts) {
+      expect(p.at.z).toBe(z);
+      expect(p.at.x).toBeGreaterThanOrEqual(x0);
+      expect(p.at.x + p.w).toBeLessThanOrEqual(x1 - 6); // la escalera ocupa x1 − 6 .. x1
+    }
+    const beams = prisms(solids).filter((s) => s.mat === "deck" && s.d === 12);
+    expect(beams).toHaveLength(2);
+    for (const b of beams) expect(b).toMatchObject({ w: 0.3, h: 0.3, at: { y: 221, z: z + 3 } });
+    const lights = dots(accents).filter((a) => a.color === "amber" && a.r === 0.25 && Math.abs(a.at.z - 3.6) < EPS && a.at.x >= x0 && a.at.x <= x1 && a.at.y >= y0 && a.at.y <= y1);
+    expect(lights.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it("un kiosco en (x0 + 2, 240) sobre el paseo", () => {
+    const k = prisms(built().solids).filter((s) => s.mat === "officeDark" && s.w === 2 && s.d === 2 && s.h === 2.4);
+    expect(k).toHaveLength(1);
+    expect(k[0]!.at).toEqual(v3(x0 + 2, 240, z));
+  });
+
+  it("devuelve los 8 bombillos de hoy", () => {
+    expect(built().bulbs).toEqual([180, 210, 250, 272, 284, 296, 308, 320].map((y) => v3(x1 - 3 + 0.3, y + 0.3, z + 5.4)));
+  });
+
+  it("ningún sólido del malecón se solapa en caja con otro", () => {
+    expect(overlapping(built().solids)).toEqual([]);
+  });
+});
+
+describe("westQuay", () => {
+  const built = () => { const solids: Solid[] = [], accents: Accent[] = []; westQuay(solids, accents); return { solids, accents }; };
+  const { x0, x1 } = WEST_QUAY;
+  const inQuay = (b: Bounds) => b.min.x >= x0 - EPS && b.max.x <= x1 + EPS;
+
+  it("muro en dos tramos y escalera como hoy", () => {
+    const { solids } = built();
+    expect(prisms(solids).filter((s) => s.mat === "plaza" && s.at.x === x0 && s.at.z === -1 && s.w === x1 - x0 && s.h === 1.6)).toHaveLength(2);
+    expect(solids.filter((s) => s.kind === "ramp" && s.mat === "plaza" && s.at.y === 194 && s.at.z === -1 && s.d === 6)).toHaveLength(1);
+  });
+
+  it("dos galpones vault rust sobre el muelle, en y 164..176 y 178..190, dentro de 192..198 y sin solaparse", () => {
+    const vaults = built().solids.filter((s): s is Solid & { kind: "vault" } => s.kind === "vault");
+    expect(vaults).toHaveLength(2);
+    for (const v of vaults) {
+      expect(v).toMatchObject({ mat: "rust", axis: "y", len: 12, w: 5, h: 2.5, segments: 6 });
+      expect(v.at.z).toBe(0.6);
+      expect(inQuay(bounds(v))).toBe(true);
+    }
+    expect(vaults.map((v) => v.at.y).sort((a, b) => a - b)).toEqual([164, 178]);
+    expect(overlaps(bounds(vaults[0]!), bounds(vaults[1]!))).toBe(false);
+  });
+
+  it("una grúa de muelle sobre el muro y al menos seis bolardos fuera de galpones y escalera", () => {
+    const { solids } = built();
+    const masts = prisms(solids).filter((s) => s.mat === "steel" && s.w === 1 && s.d === 1 && s.h === 6);
+    expect(masts).toHaveLength(1);
+    expect(masts[0]!.at).toEqual(v3(195, 202, 0.6));
+    const bollards = solids.filter((s): s is Solid & { kind: "cylinder" } => s.kind === "cylinder" && s.mat === "rust" && s.r === 0.4);
+    expect(bollards.length).toBeGreaterThanOrEqual(6);
+    for (const b of bollards) {
+      expect(b.at.z).toBe(0.6);
+      expect(inQuay(bounds(b))).toBe(true);
+      expect(b.at.y + b.r <= 194 || b.at.y - b.r >= 200).toBe(true);
+    }
+  });
+
+  it("terrazas: al menos seis mesas y doce sillas en la calle del muelle, antes de la avenida, sin entrar al muro ni a una manzana", () => {
+    const { solids } = built();
+    const tables = prisms(solids).filter((s) => s.mat === "paving" && s.w === 1 && s.d === 1 && s.h === 0.7);
+    const chairs = prisms(solids).filter((s) => s.mat === "paving" && s.w === 0.5 && s.d === 0.5 && s.h === 0.5);
+    expect(tables.length).toBeGreaterThanOrEqual(6);
+    expect(chairs.length).toBeGreaterThanOrEqual(12);
+    const terrace = solids.filter((s) => bounds(s).max.x <= x0 + EPS);
+    expect(terrace.length).toBeGreaterThanOrEqual(tables.length + chairs.length);
+    for (const s of terrace) {
+      const b = bounds(s);
+      expect(b.min.x).toBeGreaterThanOrEqual(186 - EPS);
+      expect(b.max.y).toBeLessThan(AVENUE.y0);
+      expect(blocks().some((k) => b.min.x < k.x + k.w - EPS && b.max.x > k.x + EPS && b.min.y < k.y + k.d - EPS && b.max.y > k.y + EPS)).toBe(false);
+    }
+  });
+
+  it("toldos contra la pared del lote, mirando a la calle, y una guirnalda entre postes", () => {
+    const { solids, accents } = built();
+    const awnings = solids.filter((s) => s.kind === "ramp" && s.mat === "awning");
+    expect(awnings.length).toBeGreaterThanOrEqual(6);
+    for (const a of awnings) expect(a.kind === "ramp" && a.dir === "e" && a.at.x === 186).toBe(true);
+    const posts = prisms(solids).filter((s) => s.mat === "steel" && s.w === 0.3 && s.d === 0.3 && s.h === 3);
+    expect(posts.length).toBeGreaterThanOrEqual(2);
+    const lights = dots(accents).filter((a) => a.color === "amber" && a.r === 0.25 && a.at.x >= 186 && a.at.x <= x0 && a.at.y < AVENUE.y0);
+    expect(lights.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it("ningún sólido del muelle se solapa en caja con otro", () => {
+    expect(overlapping(built().solids)).toEqual([]);
+  });
+});
+
+describe("plazaAndTower", () => {
+  const built = () => { const solids: Solid[] = [], ground: Solid[] = [], accents: Accent[] = []; const tower = plazaAndTower(solids, ground, accents, createRng(7)); return { solids, ground, accents, tower }; };
+  const fountainOf = (solids: Solid[]) => solids.filter((s): s is Solid & { kind: "cylinder" } => s.kind === "cylinder" && s.mat === "marble" && s.r === 3);
+  const kiosksOf = (solids: Solid[]) => prisms(solids).filter((s) => s.mat === "officeDark" && s.w === 2 && s.d === 2 && s.h === 2.4);
+
+  it("una fuente de mármol r 3 centrada en (150, 227) con su charco alpha 0.35", () => {
+    const { solids, accents } = built();
+    const f = fountainOf(solids);
+    expect(f).toHaveLength(1);
+    expect(f[0]!.at.x).toBe(150);
+    expect(f[0]!.at.y).toBe(227);
+    expect(accents.filter((a) => a.kind === "poly" && a.color === "amberBleed" && a.alpha === 0.35)).toHaveLength(3);
+  });
+
+  it("dos kioscos dentro de la plaza, en las esquinas norte", () => {
+    const { solids } = built();
+    const ks = kiosksOf(solids);
+    expect(ks).toHaveLength(2);
+    for (const k of ks) {
+      const b = bounds(k);
+      expect(b.min.x >= PLAZA.x && b.max.x <= PLAZA.x + PLAZA.w && b.min.y >= PLAZA.y && b.max.y <= PLAZA.y + PLAZA.d).toBe(true);
+      expect(b.min.y).toBeLessThan(PLAZA.y + 3);
+    }
+    expect(Math.min(...ks.map((k) => k.at.x))).toBeLessThan(PLAZA.x + 6);
+    expect(Math.max(...ks.map((k) => k.at.x))).toBeGreaterThan(PLAZA.x + PLAZA.w - 6);
+  });
+
+  it("la torre como antes: 8 ventanas encendidas, antena y la ventana del papel en la pared este", () => {
+    const { tower } = built();
+    expect(tower.litWindows).toHaveLength(8);
+    expect(tower.paperWindow.x).toBeCloseTo(TOWER.x + TOWER.w, 6);
+    expect(tower.antenna.z).toBeGreaterThan(35);
+  });
+
+  it("lo nuevo no pasa de 5 ni se solapa con bancos, faroles, cordón ni torre", () => {
+    const { solids } = built();
+    const fountain = solids.filter((s) => s.mat === "marble"), kiosks = solids.filter((s) => s.mat === "terracotta" || kiosksOf(solids).includes(s as Solid & { kind: "prism" }));
+    const fresh = [...fountain, ...kiosks];
+    expect(fresh.length).toBe(2 + 4);
+    const rest = solids.filter((s) => !fresh.includes(s)).map(bounds);
+    for (const s of fresh) {
+      const b = bounds(s);
+      expect(b.max.z).toBeLessThanOrEqual(5);
+      expect(rest.some((r) => overlaps(b, r))).toBe(false);
+    }
+  });
+
+  it("los dos charcos de la torre siguen con alpha 0.25 y el rng se consume como hoy", () => {
+    expect(built().accents.filter((a) => a.kind === "poly" && a.color === "amberBleed" && a.alpha === 0.25)).toHaveLength(6);
+    const a = createRng(7), b = createRng(7);
+    plazaAndTower([], [], [], a); tiles(b, PLAZA, 0.05, "plaza", plazaTone);
     expect(a.next()).toBe(b.next());
   });
 });

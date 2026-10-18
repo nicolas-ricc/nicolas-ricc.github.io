@@ -49,7 +49,7 @@ describe("city", () => {
       expect(b.max.y).toBeLessThanOrEqual(WORLD.y1 + 1);
       if (s.kind !== "cone") expect(b.min.y).toBeGreaterThanOrEqual(ZONE_SPLIT_Y - 1);
       expect(CITY_MATS).toContain(s.mat);
-      if (s.mat === "steel" || s.mat === "rust") expect(["prism", "cylinder"]).toContain(s.kind); // solo mobiliario y autos
+      if (s.mat === "steel" || s.mat === "rust") expect(["prism", "cylinder", "vault"]).toContain(s.kind); // solo mobiliario, autos y los galpones del muelle
     }
     const mats = new Set(all(scene()).map((s) => s.mat));
     for (const m of ["plaster", "terracotta", "marble", "awning"] as const) expect(mats.has(m)).toBe(true);
@@ -63,6 +63,7 @@ describe("city", () => {
     expect(buildings.length).toBeGreaterThanOrEqual(90);
     for (const b of buildings) {
       if (isTowerPiece(b)) continue;
+      if (b.kind === "prism" && b.mat === "paving" && b.at.z === -1) continue; // los muros del malecón llevan galería de arcos, no son edificios
       expect(b.kind !== "prism" || b.h <= (inDistrict(b) || inFixed(b) ? 24 : MAX_BUILDING_H)).toBe(true);
       expect(blocks().some((blk) => inRect(bounds(b), blk))).toBe(true); // dentro de una manzana
     }
@@ -162,7 +163,7 @@ describe("city", () => {
     const boulevard = s.solids.filter((x) => x.kind === "prism" && x.mat === "leafDark" && x.at.z === 0); // no la terraza verde de una torre de vidrio del distrito
     expect(boulevard.length).toBeGreaterThanOrEqual(8);
     expect(boulevard.every((x) => bounds(x).min.y >= BOULEVARD.y0 && bounds(x).max.y <= BOULEVARD.y1)).toBe(true);
-    const lamps = s.accents.filter((a) => a.kind === "dot" && a.color === "amber");
+    const lamps = s.accents.filter((a) => a.kind === "dot" && a.color === "amber" && a.r === 0.6); // faroles (props.lamp), no las guirnaldas
     expect(lamps.length).toBeGreaterThanOrEqual(20);
     for (const l of lamps) {
       if (l.kind !== "dot") continue;
