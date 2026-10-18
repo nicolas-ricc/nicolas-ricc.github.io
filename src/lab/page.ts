@@ -19,6 +19,13 @@ export function bloomFromSearch(search: string): BloomMode | null {
   return BLOOM_CYCLE.find((m) => m === v) ?? null;
 }
 
+/** `?speed=` escala el reloj de los animadores; 0 lo congela. Ausente, vacío, no numérico, negativo o infinito: 1. */
+export function speedFromSearch(search: string): number {
+  const v = new URLSearchParams(search).get("speed")?.trim();
+  const n = v ? Number(v) : NaN;
+  return Number.isFinite(n) && n >= 0 ? n + 0 : 1;
+}
+
 export function nextBloomMode(mode: BloomMode): BloomMode {
   return BLOOM_CYCLE[(BLOOM_CYCLE.indexOf(mode) + 1) % BLOOM_CYCLE.length]!;
 }
