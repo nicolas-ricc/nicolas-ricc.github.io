@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("pixi.js", async (importOriginal) => {
   const real = await importOriginal<typeof import("pixi.js")>();
   // los filtros reales compilan shaders WebGL: en node solo importa que existan y con qué opciones
-  class StubFilter { constructor(readonly options?: unknown) {} }
+  class StubFilter { destroyed = false; constructor(readonly options?: unknown) {} destroy() { this.destroyed = true; } }
   return { ...real, AlphaFilter: StubFilter, BlurFilter: StubFilter };
 });
 
@@ -154,5 +154,62 @@ describe("setLayer", () => {
     for (const l of ["ground", "shadow", "accents"] as const) s.setLayer(l, false);
     expect(s.container.children).toHaveLength(9);
     expect(s.bloom).toBe("off");
+  });
+});
+
+describe("destroy", () => {
+  type Stub = { destroyed: boolean };
+  const shadowFilters = (c: Container) => [c.children[3]!, c.children[4]!].flatMap((k) => k.filters as unknown as Stub[]);
+
+  it("destruye el bloomSlot creado por on aunque el modo actual sea off, y libera su filtro", () => {
+    const s = build();
+    s.setBloom("on");
+    const slot = bloomSlotOf(s.container)!;
+    const blur = (slot.filters as unknown as Stub[])[0]!;
+    s.setBloom("off");
+    s.destroy();
+    expect(slot.destroyed).toBe(true);
+    expect(slot.children).toHaveLength(0);
+    expect(blur.destroyed).toBe(true);
+  });
+
+  it("destruye el árbol con sus contextos y los filtros de sombra", () => {
+    const s = build();
+    const accent = accentSlotOf(s.container).children[0] as Graphics, ctx = accent.context;
+    const alphas = shadowFilters(s.container);
+    s.destroy();
+    expect(s.container.destroyed).toBe(true);
+    expect(accent.destroyed).toBe(true);
+    expect(ctx.destroyed).toBe(true);
+    expect(alphas).toHaveLength(2);
+    alphas.forEach((f) => expect(f.destroyed).toBe(true));
+  });
+
+  it("con el bloom en on el slot está en el árbol: se destruye una vez y libera su filtro", () => {
+    const s = build();
+    s.setBloom("on");
+    const slot = bloomSlotOf(s.container)!, blur = (slot.filters as unknown as Stub[])[0]!;
+    expect(() => s.destroy()).not.toThrow();
+    expect(slot.destroyed).toBe(true);
+    expect(blur.destroyed).toBe(true);
+  });
+
+  it("sin bloom armado nunca no lanza", () => {
+    expect(() => build().destroy()).not.toThrow();
+  });
+
+  it("después de destroy, todo es no-op: destroy, setBloom, setLayer, setFocus y tick", () => {
+    const s = build();
+    s.setBloom("fallback");
+    s.destroy();
+    expect(() => {
+      s.destroy();
+      s.setBloom("on");
+      s.setBloom("off");
+      s.setLayer("accents", false);
+      s.setFocus("blog");
+      s.tick(100);
+    }).not.toThrow();
+    expect(s.bloom).toBe("fallback");
   });
 });
