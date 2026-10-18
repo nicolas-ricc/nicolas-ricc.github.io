@@ -3,7 +3,7 @@ import type { Accent } from "../iso/accent";
 import { centroid, v3 } from "../iso/geometry";
 import { bounds, type Solid } from "../iso/solids";
 import { createRng } from "../map/seed";
-import { antenna, awning, beacon, bench, bollard, car, chair, clock, container, dockCrane, fence, fountain, garland, helipad, kiosk, lamp, machineRoom, neon, patioTree, puddle, roofShrub, rooftopGarden, sign, solarPanel, streetTree, table, trafficLight, waterTank } from "./props";
+import { antenna, awning, beacon, bench, bollard, car, chair, clock, container, dockCrane, fence, fountain, garland, helipad, kiosk, lamp, machineRoom, neon, patioTree, puddle, roofShrub, rooftopGarden, sign, solarPanel, stoneArch, ARCH_SLABS, streetTree, table, trafficLight, waterTank } from "./props";
 
 const AT = v3(10, 20, 0.3);
 const size = (s: Solid) => { const b = bounds(s); return [b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z].map((n) => Math.round(n * 100) / 100); };
@@ -168,5 +168,22 @@ describe("props", () => {
     expect(bounds(jib!).max.z).toBeCloseTo(AT.z + 6, 9);
     expect(bounds(jib!).max.x).toBeCloseTo(11, 9);  // al oeste: termina sobre el mástil
     expect(bounds(dockCrane(AT, "e")[1]!).min.x).toBeCloseTo(10, 9);
+  });
+});
+
+describe("stoneArch", () => {
+  it("seis losas de piedra de punta a punta, centradas en y, del perfil al tope", () => {
+    const slabs = stoneArch(10, 20, 12, 5, 3, (s) => 3 - 2 * s);
+    expect(slabs).toHaveLength(ARCH_SLABS);
+    slabs.forEach((sl, k) => {
+      if (sl.kind !== "prism") throw new Error("losa no prisma");
+      expect(sl.mat).toBe("stone");
+      expect(sl.at.x).toBeCloseTo(10 + k * 2, 9);
+      expect(sl.w).toBeCloseTo(2, 9);
+      expect(sl.at.y).toBeCloseTo(20.2, 9);
+      expect(sl.d).toBeCloseTo(4.6, 9);
+      expect(sl.at.z).toBeCloseTo(3 - 2 * Math.sin((Math.PI * (k + 0.5)) / 6), 9);
+      expect(sl.at.z + sl.h).toBeCloseTo(3, 9);
+    });
   });
 });

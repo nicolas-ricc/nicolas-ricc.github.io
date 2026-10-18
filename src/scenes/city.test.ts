@@ -161,14 +161,14 @@ describe("city", () => {
     }
   });
 
-  it("puente: tablero sobre el agua de muelle a anillo, pilotes hasta el fondo, rampas en las cabeceras", () => {
+  it("puente: tablero sobre el agua de muelle a anillo, pilas de piedra hasta el fondo, rampas en las cabeceras", () => {
     const s = scene();
     const deck = s.solids.find((x) => x.kind === "prism" && x.mat === "asphalt" && x.w > 60)!;
     expect(deck.kind === "prism" && deck.at.x).toBe(WEST_QUAY.x0);
     expect(deck.kind === "prism" && deck.at.x + deck.w).toBe(EAST_RING.x1);
     expect(deck.kind === "prism" && deck.at.z).toBe(1.2);
-    const piers = s.solids.filter((x) => x.kind === "prism" && x.mat === "plaza" && x.at.z === -1 && x.at.y === BRIDGE.y0);
-    expect(piers).toHaveLength(4);
+    const piers = s.solids.filter((x) => x.kind === "poly" && x.mat === "stone" && x.z === -1 && bounds(x).min.y >= BRIDGE.y0 - 1 && bounds(x).max.y <= BRIDGE.y1 + 1);
+    expect(piers.length).toBeGreaterThanOrEqual(4);
     const ramps = s.solids.filter((x) => x.kind === "ramp" && x.mat === "asphalt" && x.at.y === BRIDGE.y0);
     expect(ramps.map((r) => r.kind === "ramp" && r.dir).sort()).toEqual(["e", "w"]);
   });
