@@ -58,7 +58,7 @@ describe("haz: un solo ángulo por frame (#66)", () => {
     expect(wedgeSrc).not.toMatch(/beamAngle/);
   });
   it("beam() llama una sola vez a beamAngle() y pasa el ángulo a las dos cuñas", () => {
-    expect(src.match(/beamAngle\(\)/g)).toHaveLength(1);
+    expect(src.match(/beamAngle\(\)/g) ?? []).toHaveLength(1);
     expect(src).toMatch(/beam: \(\) => \{\s*const \w+ = beamAngle\(\);/);
   });
   it("las dos cuñas comparten rotación en todo el giro, con sus largos y alfas", () => {
@@ -69,7 +69,7 @@ describe("haz: un solo ángulo por frame (#66)", () => {
       expect(x.pts).toHaveLength(3);
       const o = x.pts[0]!, p = x.pts[1]!, q = x.pts[2]!;
       const mx = (p.x + q.x) / 2 - o.x, my = (p.y + q.y) / 2 - o.y, m = Math.hypot(mx, my);
-      return { ux: mx / m, uy: my / m, len: Math.hypot(p.x - o.x, p.y - o.y) };
+      return { ux: mx / m, uy: my / m, len: Math.hypot(p.x - o.x, p.y - o.y), alpha: x.alpha };
     };
     for (let t = 0; t < BEAM_PERIOD_MS; t += BEAM_PERIOD_MS / 4) {
       const [outer, inner] = a.beam().map(axis);
@@ -77,7 +77,7 @@ describe("haz: un solo ángulo por frame (#66)", () => {
       expect(inner!.uy).toBeCloseTo(outer!.uy, 9);
       expect(outer!.len).toBeCloseTo(BEAM_LEN, 9);
       expect(inner!.len).toBeCloseTo(BEAM_INNER, 9);
-      expect(a.beam().map((x) => x.alpha)).toEqual([0.5, 0.6]);
+      expect([outer!.alpha, inner!.alpha]).toEqual([0.5, 0.6]);
       a.tick(BEAM_PERIOD_MS / 4);
     }
   });

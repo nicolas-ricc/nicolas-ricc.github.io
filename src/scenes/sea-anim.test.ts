@@ -357,7 +357,7 @@ describe("haz: un solo ángulo por frame (#66)", () => {
     expect(wedgeSrc).not.toMatch(/beamAngle/);
   });
   it("beam() llama una sola vez a beamAngle() y pasa el ángulo a las dos cuñas", () => {
-    expect(src.match(/beamAngle\(\)/g)).toHaveLength(1);
+    expect(src.match(/beamAngle\(\)/g) ?? []).toHaveLength(1);
     expect(src).toMatch(/beam: \(\) => \{\s*const \w+ = beamAngle\(\);/);
   });
   it("las dos cuñas comparten rotación en todo el giro, con sus largos y alfas", () => {
