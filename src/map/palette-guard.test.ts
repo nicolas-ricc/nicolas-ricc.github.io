@@ -36,9 +36,9 @@ describe("guard de paleta", () => {
 const LAB = new URL("../../lab/", import.meta.url).pathname;
 const PALETTE = allIsoColors();
 
-/** Literales hex que no son colores de la paleta. Uno de 3, 4 u 8 dígitos nunca lo es: no se puede abreviar para saltar el guard. */
+/** Literales hex que no son colores de la paleta. Uno de otro largo que 6 nunca lo es: ni abreviado ni con dígitos de más se salta el guard. */
 function offPalette(text: string): string[] {
-  return (text.match(/#[0-9a-fA-F]{3,8}\b/g) ?? []).filter((h) => h.length !== 7 || !PALETTE.has(parseInt(h.slice(1), 16)));
+  return (text.match(/#[0-9a-fA-F]+\b/g) ?? []).filter((h) => h.length !== 7 || !PALETTE.has(parseInt(h.slice(1), 16)));
 }
 
 describe("guard de paleta en lab/*.html", () => {
@@ -54,6 +54,7 @@ describe("guard de paleta en lab/*.html", () => {
     expect(offPalette("background: #100E19;")).toEqual([]);
     expect(offPalette("background: #100e1a;")).toEqual(["#100e1a"]);
     expect(offPalette("color: #fff; border: #100e19ff;")).toEqual(["#fff", "#100e19ff"]);
+    expect(offPalette("color: #100e19abc;")).toEqual(["#100e19abc"]);
     expect(offPalette("#exhibits a { color: inherit; } #readout dl {}")).toEqual([]);
   });
 
