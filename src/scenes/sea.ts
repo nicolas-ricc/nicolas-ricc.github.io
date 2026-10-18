@@ -33,6 +33,8 @@ export const GALLERY_R = DRUM_TOP_R + 0.5;
 export const POST_W = 0.3, POST_H = 1.2;
 /** El disco sobresale media sección de poste por fuera de la baranda. */
 export const GALLERY_DECK_R = GALLERY_R + POST_W;
+/** Linterna retranqueada respecto del último tambor; la tapa la cubre con un alero de 0.2. */
+export const LANTERN_R = DRUM_TOP_R - 0.6, CAP_R = LANTERN_R + 0.2;
 /**
  * Balizas de costa: arco a ~12.8 u de la punta, de NE a SE por el este. La punta y su orilla
  * (12 u) son Portfolio para `worldZoneAt`; a esta distancia ya es Blog (lo fija sea.test.ts).
@@ -50,10 +52,10 @@ function lighthouse(out: Solid[]): Vec3 {
   for (let i = 0; i < DRUMS; i++) { out.push(cyl(x, y, z, DRUM_R0 - i * DRUM_STEP, DRUM_H, i % 2 === 0 ? "whitewash" : "rust")); z += DRUM_H; }
   out.push(cyl(x, y, z, GALLERY_DECK_R, GALLERY_H, "steel")); z += GALLERY_H;
   for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; out.push(prism(x + GALLERY_R * Math.cos(a) - POST_W / 2, y + GALLERY_R * Math.sin(a) - POST_W / 2, z, POST_W, POST_W, POST_H, "steel")); }
-  out.push(cyl(x, y, z, 1.6, LANTERN_H, "glass", 8));
+  out.push(cyl(x, y, z, LANTERN_R, LANTERN_H, "glass", 8));
   const lantern = v3(x, y, z + LANTERN_H / 2);
   z += LANTERN_H;
-  out.push({ kind: "cone", at: v3(x, y, z), r: 1.8, h: CAP_H, mat: "steel", sides: 8 });
+  out.push({ kind: "cone", at: v3(x, y, z), r: CAP_R, h: CAP_H, mat: "steel", sides: 8 });
   return lantern;
 }
 
