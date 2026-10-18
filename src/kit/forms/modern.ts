@@ -4,7 +4,7 @@ import { GABLE_RATIO } from "../../iso/solids";
 import type { Rng } from "../../map/seed";
 import { PLINTH_H, prism, tiles } from "../../scenes/city-pieces";
 import { towerCrane } from "../../scenes/pieces";
-import { LANDMARK_MAX_H, addBuilding, emptyPiece, southSign } from "../piece";
+import { LANDMARK_MAX_H, SIGN_MIN_H, addBuilding, emptyPiece, southSign } from "../piece";
 import { beacon, container, fence, helipad, sign, table } from "../props";
 import { gableRoof, greenRoof } from "../roofs";
 import type { Lot, Piece, RecipeDef, Style } from "../types";
@@ -15,7 +15,6 @@ import type { Lot, Piece, RecipeDef, Style } from "../types";
  * de startups con patio verde y obra en construcción), mudadas desde
  * district.ts. Spec §5 y §6.
  */
-export const SIGN_MIN_H = 12;
 export const MAX_CLASSIC_H = 18;
 const CURTAIN_WINDOW = { w: 0.85, h: 0.8 } as const;
 

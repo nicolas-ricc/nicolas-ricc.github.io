@@ -102,6 +102,13 @@ describe("kit: familia composite", () => {
     }
   });
 
+  it("decoStepped: el tono crece de cuerpo a cuerpo también con style.tone 1 y -1", () => {
+    for (const tone of [-1, 1]) {
+      const tiers = polys(recipe("decoStepped")(LOT, createRng(1), { ...STYLES.centro, tone }).solids);
+      for (let k = 1; k < 3; k++) expect(tiers[k]!.tone ?? 0).toBeGreaterThan(tiers[k - 1]!.tone ?? 0);
+    }
+  });
+
   it("chamferCorner: la esquina sobre open[0], hacia la otra calle abierta o hacia la cámara; SE sin open", () => {
     expect(chamferCorner(["s", "e"])).toBe("se");
     expect(chamferCorner(["s", "w"])).toBe("sw");

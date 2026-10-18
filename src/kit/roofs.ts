@@ -20,7 +20,7 @@ export const HIP_ROOF_H = HIP_EAVE * (1 + GABLE_RATIO);
 
 export const cornice = (f: Footprint, mat: Material): Solid[] => [prism(f.x - 0.5, f.y - 0.5, f.z, f.w + 1, f.d + 1, CORNICE_H, mat)];
 
-/** Huella corrida `m` hacia afuera (inglete en cada vértice): el vuelo de la cornisa de un `poly`. Conserva el orden de los vértices. */
+/** Huella corrida `m` hacia afuera (inglete en cada vértice): el vuelo de la cornisa de un `poly`. Conserva el orden de los vértices; supone un polígono simple sin vértices repetidos ni lados que vuelven sobre sí. */
 export function offsetFootprint(fp: Vec2[], m: number): Vec2[] {
   let area = 0;
   for (let i = 0; i < fp.length; i++) { const p = fp[i]!, q = fp[(i + 1) % fp.length]!; area += p.x * q.y - q.x * p.y; }

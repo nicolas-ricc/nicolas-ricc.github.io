@@ -33,6 +33,9 @@
 8. **Nave abovedada**: los cuerpos laterales (h 3) van al norte y al sur de la nave (al este y oeste solo queda 1); profundidad `min(3, (d − 9)/2)`. Llevan su propia fachada `arcade` de un piso (la arcada de la nave queda tapada por el lateral sur).
 9. **Galería**: dos prismas apilados con la misma huella (lote − 1 por lado): planta baja `arcade` de 3 y dos pisos de `min(style.floorH, …)`; los pisos de una `Facade` son iguales, por eso dos sólidos.
 10. **`southSign` pasa de `modern.ts` a `piece.ts`** (lo usan `modern` y `podiumTower`); las alturas de remates salen de constantes exportadas (`CORNICE_H` en `roofs.ts`; `WATER_TANK_H`, `MACHINE_ROOM_H`, `ANTENNA_H`, `HELIPAD_H` en `props.ts`), usadas también por las props mismas.
+11. **Gemelas: 12..13.6 en vez de 12..16** (revisión de código). 16 + cornisa 0.4 + antena 4 = 20.4 pasa el tope de 18 del contrato; se topa contando la antena. No se usa una antena más corta: la spec §5 pide "una sola medida por rol" para las props.
+12. **Déco sobre base cuadrada** (`min(w, d) − 2`): "rectángulo con las cuatro esquinas cortadas" incluye el cuadrado, y el cuerpo concéntrico escalonado se lee como torre déco; sobre la base del lote (21×15) los tres cuerpos serían losas anchas. El tono de los cuerpos es `style.tone − 1, +0, +1` para que crezca estricto con `tone` −1..1.
+13. **Nave abovedada con al menos dos pisos** y el lateral norte sin paredes publicadas (revisión de código): con `civico` (`floorH 3.5`) la nave de 5 tenía un solo piso de arcada, sin ventanas y tapado por el lateral sur; la cara sur del lateral norte queda enterrada contra la nave y una luz ahí flotaría.
 
 ## Review Focus
 

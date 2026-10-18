@@ -67,6 +67,16 @@ describe("kit: familia curved", () => {
     }
   });
 
+  it("vaultedHall: la nave publica ventanas sobre los laterales en todo estilo y ninguna pared enterrada contra la nave", () => {
+    for (const id of ["centro", "civico"] as const) for (const seed of SEEDS.slice(0, 5)) {
+      const p = recipe("vaultedHall")(LOT, createRng(seed), STYLES[id]);
+      const nave = p.solids.flatMap((s) => (s.kind === "prism" && s.d === 9 && s.facade ? [s] : []))[0]!;
+      expect(p.windows.length).toBeGreaterThan(0);
+      for (const w of p.windows) expect(Math.min(...w.pts.map((q) => q.z))).toBeGreaterThanOrEqual(nave.at.z + 3 - EPS);
+      expect(p.walls.some((w) => w.normal.y > 0.99 && w.pts.every((q) => Math.abs(q.y - nave.at.y) < EPS))).toBe(false);
+    }
+  });
+
   it("gallery: planta baja con arcada de 3 en el frente, dos pisos con ventanas encima y techo hip de roof, tono propio", () => {
     for (const seed of SEEDS) {
       const p = recipe("gallery")(LOT, createRng(seed), STYLES.civico);

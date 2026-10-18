@@ -90,6 +90,7 @@ export function fountain(at: Vec3): Lit {
   };
 }
 
+/** Alto total sobre `at.z` de los remates de techo: las recetas lo descuentan de su tope (el tanque son patas de 1.1 y tanque de 2). */
 export const WATER_TANK_H = 3.1, MACHINE_ROOM_H = 2, ANTENNA_H = 4, HELIPAD_H = 0.3;
 
 /** Centro. Tanque de agua sobre cuatro postes (1.1, no 1.2: distingue el poste del auto en el filtro de tests). */
