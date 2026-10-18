@@ -187,7 +187,7 @@ describe("capa desconocida en los adaptadores", () => {
 - [ ] **Step 2: correr y ver que falla**
 
 Run: `npx vitest run src/scenes/animators.test.ts`
-Expected: los siete casos "nombra el animador y el id" FAIL: se lanza `TypeError: layers[id] is not a function`, no el mensaje esperado. Los siete "sigue resolviendo" PASS.
+Expected: los siete casos "nombra el animador y el id" FAIL. Con `nada.capa` se lanza `TypeError: layers[id] is not a function` en lugar del mensaje esperado. Con `toString` no se lanza nada: `layers["toString"]()` devuelve `"[object Object]"`. Los siete "sigue resolviendo" PASS.
 
 - [ ] **Step 3: migrar los adaptadores**
 
@@ -222,3 +222,26 @@ Expected: 14 tests PASS. El grep no imprime nada. Suite completa y typecheck en 
 git add src/scenes/*-animator.ts src/scenes/animators.test.ts
 git commit -m "refactor(#25): animator adapters resolve layers through layerLookup"
 ```
+
+## Assumptions
+
+Decisiones técnicas sin fuente escrita: cualquiera de las opciones satisface el issue.
+
+- **Nombre del animador = nombre de la función exportada** (`seaAnimator`). Se descartó el prefijo de escena (`sea`). El brief pide "el nombre del animador" y el contrato `Animator` no trae ningún campo de nombre (`src/scenes/animator.ts:15-21`), así que el nombre se escribe a mano en cada adaptador.
+- **Idioma de los commits:** inglés para el asunto y castellano para el código. El historial reciente mezcla los dos (`git log`: `fix(#19): zero towers…` / `test(#21): umbrales…`) y ningún documento lo fija.
+- **Estado intermedio:** si solo entra la Task 1, el helper queda exportado y sin uso. No rompe nada y no hace falta revertirlo. La Task 2 completa el criterio 2.
+
+## Grilling
+
+- Rondas: 1 (los cambios fueron menores: se corrigió el resultado esperado del Step 2 de la Task 2).
+- Preguntas: 18. CODE: 14. DOC: 1 (Q18, `.factory/config.toml`). ISSUE: 2 (Q2 y Q8, el Agent Brief). NO SOURCE → supuesto técnico: 3 (Q8 en parte, Q13, Q16).
+- Respuestas destacadas:
+  - Los siete adaptadores declaran `const layers: Record<string, () => AnimLayer>` y exponen `layer: (id) => layers[id]!()`, en `city-animator.ts:9,17`, `factory-animator.ts:10,13`, `fair-animator.ts:8,18`, `sea-animator.ts:8,23`, `shipyard-animator.ts:9,16`, `tech-animator.ts:9,17` y `water-animator.ts:8,14`.
+  - `AnimLayer` tiene tres `kind`: `solid`, `accent` y `water` (`animator.ts:9-13`).
+  - `tsconfig.json` tiene `target` y `lib` en ES2022, con `noUncheckedIndexedAccess` activo. `vite.config.ts:5` construye con `target: "es2022"`.
+  - `vitest.config.ts` incluye `src/**/*.test.ts`.
+  - `world.ts:28` tipa `sea: SeaScene | null`. Los tests existentes ya usan `world(7).sea!` (`sea-animator.test.ts:9`).
+  - Nadie captura el error de `layer()`. Los usos están en `world/stage.ts:95-116` y `lab/crop.ts:84,151`, y el único catch es `main.ts:163`, que loguea cualquier error de `boot()` y degrada a `no-canvas`. Ese comportamiento no cambia.
+  - Ningún test existente espera un `TypeError` de `layer()` (`grep toThrow src/scenes/*animator*.test.ts` vacío).
+  - Q2: el criterio 2 del brief es literalmente el grep. Fuera de los adaptadores, `layer()` solo se llama sobre `Animator`s.
+- Issues abiertos: ninguno.
