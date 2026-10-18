@@ -189,9 +189,13 @@ describe("destroy", () => {
     const s = build();
     s.setBloom("on");
     const slot = bloomSlotOf(s.container)!, blur = (slot.filters as unknown as Stub[])[0]!;
+    // el espejo no es dueño de su contexto: lo libera la Graphics original del árbol
+    const mirror = slot.children[0] as Graphics, ctx = mirror.context;
     expect(() => s.destroy()).not.toThrow();
     expect(slot.destroyed).toBe(true);
     expect(blur.destroyed).toBe(true);
+    expect(mirror.destroyed).toBe(true);
+    expect(ctx.destroyed).toBe(true);
   });
 
   it("sin bloom armado nunca no lanza", () => {
