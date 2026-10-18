@@ -1,5 +1,5 @@
 import type { Rng } from "../map/seed";
-import type { AnimLayer, Animator } from "./animator";
+import { layerLookup, type AnimLayer, type Animator } from "./animator";
 import type { TechScene } from "./tech";
 import { createTechAnim } from "./tech-anim";
 
@@ -14,7 +14,7 @@ export function techAnimator(scene: TechScene, rng: Rng, opts: { reducedMotion: 
   };
   return {
     ids: Object.keys(layers),
-    layer: (id) => layers[id]!(),
+    layer: layerLookup("techAnimator", layers),
     tick(dtMs) { const c = anim.tick(dtMs), out = new Set<string>(); if (c.windows) out.add("tech.windows"); if (c.signs) out.add("tech.signs"); if (c.telecom) out.add("tech.telecom"); if (c.neon) out.add("tech.neon"); return out; },
   };
 }

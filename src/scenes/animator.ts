@@ -7,7 +7,8 @@ import type { Solid } from "../iso/solids";
  * agua) y `tick` dice cuáles hay que redibujar.
  */
 export type AnimLayer =
-  | { kind: "solid"; solids: Solid[]; alpha?: number }
+  // `heading`: marco en que los sólidos están alineados, para ordenar por profundidad
+  | { kind: "solid"; solids: Solid[]; alpha?: number; heading?: number }
   | { kind: "accent"; accents: Accent[]; alpha?: number }
   | { kind: "water"; water: Solid[]; alpha?: number };
 
@@ -15,6 +16,16 @@ export interface Animator {
   readonly ids: readonly string[];
   /** Cuerpos de agua del terreno que este animador dibuja por su cuenta (partidos en bandas, por ejemplo): el runtime no los pinta estáticos. */
   readonly claims?: readonly Solid[];
+  /** Solo definida para los ids de `ids`: cualquier otro id lanza. */
   layer(id: string): AnimLayer;
   tick(dtMs: number): ReadonlySet<string>;
+}
+
+/** `layer(id)` de un adaptador sobre su tabla de capas; un id ajeno a la tabla lanza un error que nombra al animador. */
+export function layerLookup(animator: string, layers: Readonly<Record<string, () => AnimLayer>>): (id: string) => AnimLayer {
+  return (id) => {
+    const layer = Object.hasOwn(layers, id) ? layers[id] : undefined;
+    if (!layer) throw new Error(`Capa desconocida en ${animator}: ${id}`);
+    return layer();
+  };
 }

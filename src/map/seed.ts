@@ -1,3 +1,6 @@
+/** La semilla del mundo: de ella salen las escenas, los Rng de los animadores y las piezas del lab. */
+export const SEED = 7;
+
 export interface Rng {
   next(): number;
   int(min: number, max: number): number;

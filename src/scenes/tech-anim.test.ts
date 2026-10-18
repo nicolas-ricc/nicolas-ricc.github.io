@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createRng } from "../map/seed";
 import { tech } from "./tech";
-import { CROWN_FLIP_GAP_MS, CROWN_PERIOD_MS, NEON_STEP_MS, SIGN_PERIOD_MS, SIGN_STEP_MS, TECH_BLINK_GAP_MS, createTechAnim } from "./tech-anim";
+import { CROWN_FLIP_GAP_MS, CROWN_PERIOD_MS, NEON_STEP_MS, RING_STEP_MS, SIGN_PERIOD_MS, SIGN_STEP_MS, TECH_BLINK_GAP_MS, createTechAnim } from "./tech-anim";
 
 const setup = (reducedMotion = false) => { const scene = tech(createRng(7)); return { scene, anim: createTechAnim(scene, createRng(3), { reducedMotion }) }; };
+const sinTorres = () => { const s = tech(createRng(7)); return { ...s, towers: [], neon: { ...s.neon, crowns: [] } }; };
 
 describe("tech-anim", () => {
   it("frame 0: cada torre tiene un piso encendido (ventanas ámbar en sus caras visibles), carteles a alpha 1, luz de telecom", () => {
@@ -68,5 +69,24 @@ describe("tech-anim", () => {
     const { scene, anim } = setup(true);
     for (let i = 0; i < 200; i++) anim.tick(100);
     expect(anim.neon()).toEqual([...scene.neon.crowns, ...scene.neon.mastRing.map((at) => ({ kind: "dot", at, r: 0.5, color: "magentaMid" }))]);
+  });
+  it("sin torres las ventanas quedan quietas pero carteles, telecom y anillo del mástil siguen", () => {
+    const scene = sinTorres(), anim = createTechAnim(scene, createRng(3), { reducedMotion: false });
+    expect(scene.signs.length).toBeGreaterThan(0);
+    const seen = { windows: false, signs: false, telecom: false, neon: false };
+    for (let t = 0; t < TECH_BLINK_GAP_MS[1] + 1000; t += 100) {
+      const c = anim.tick(100);
+      for (const k of Object.keys(seen) as (keyof typeof seen)[]) if (c[k]) seen[k] = true;
+    }
+    expect(seen).toEqual({ windows: false, signs: true, telecom: true, neon: true });
+    expect(anim.windows()).toEqual([]);
+    expect(anim.neon().every((a) => a.kind === "dot")).toBe(true);
+  });
+  it("sin coronas, neon solo se reporta cuando cambia el paso de corona o de anillo, nunca por el cambio de color", () => {
+    const anim = createTechAnim(sinTorres(), createRng(3), { reducedMotion: false });
+    for (let t = 1; t <= CROWN_FLIP_GAP_MS[1] + 1000; t++) {
+      const paso = Math.floor(t / NEON_STEP_MS) !== Math.floor((t - 1) / NEON_STEP_MS) || Math.floor(t / RING_STEP_MS) !== Math.floor((t - 1) / RING_STEP_MS);
+      expect(anim.tick(1).neon).toBe(paso);
+    }
   });
 });

@@ -19,13 +19,19 @@ export function nextHalo(mode: BloomMode): HaloStyle {
   return mode === "fallback" ? HALO_FALLBACK : HALO_BASE;
 }
 
+export type StageLayer = "ground" | "shadow" | "accents";
+
 export interface Stage {
   container: Container;
   staticCount: number;
   readonly bloom: BloomMode;
   setFocus(zone: WorldZone | null): void;
   setBloom(mode: BloomMode): void;
+  /** Solo para el laboratorio: cambia `visible` de los contenedores de una capa; el sitio no lo llama. */
+  setLayer(layer: StageLayer, visible: boolean): void;
   tick(dtMs: number): void;
+  /** Libera el árbol con sus contextos, el `bloomSlot` aunque esté fuera del árbol y los filtros; después todo es no-op. */
+  destroy(): void;
 }
 
 /** Constante de tiempo del lerp de alpha (velo y luces): min(1, dt / LERP_MS). */
@@ -40,10 +46,11 @@ interface AccentGraphics { g: Graphics; zone: WorldZone | null; base: number; dr
  * estáticos (uno por zona) y una Graphics por capa de acentos animada.
  * El bloom es perezoso: arranca en `off`, sin `bloomSlot`; el primer `setBloom("on")`
  * lo arma (espejos de los acentos con filtro) y lo inserta justo debajo de `accentSlot`.
+ * Un `bloomSlot` armado después de `setLayer("accents", false)` nace oculto.
  */
 export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage {
   const container = new Container();
-  let bloom: BloomMode = "off", halo: HaloStyle = HALO_BASE, bloomSlot: Container | null = null;
+  let bloom: BloomMode = "off", halo: HaloStyle = HALO_BASE, bloomSlot: Container | null = null, accentsVisible = true, destroyed = false;
   const gBleed = new Graphics(), gGround = new Graphics(), gShadow = new Graphics(), gCore = new Graphics(), gSolid = new Graphics();
   const waterSlot = new Container(), shadowSlot = new Container(), coreSlot = new Container(), solidSlot = new Container(), veilSlot = new Container(), accentSlot = new Container();
   // cada banda de sombra es una unión: el filtro aplica el alpha al conjunto,
@@ -103,7 +110,7 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage
     } else if (kind === "solid") {
       const gs = new Graphics(), gc = new Graphics(), g = new Graphics();
       shadowSlot.addChild(gs); coreSlot.addChild(gc); solidSlot.addChild(g);
-      redraw.set(id, () => { const l = a.layer(id) as AnimLayer & { kind: "solid" }; const items = buildRenderList(l.solids); drawLayer(gs, items, "shadow"); drawLayer(gc, items, "shadowCore"); drawLayer(g, items, "solid"); const al = l.alpha ?? 1; gs.alpha = gc.alpha = g.alpha = al; });
+      redraw.set(id, () => { const l = a.layer(id) as AnimLayer & { kind: "solid" }; const items = buildRenderList(l.solids, l.heading); drawLayer(gs, items, "shadow"); drawLayer(gc, items, "shadowCore"); drawLayer(g, items, "solid"); const al = l.alpha ?? 1; gs.alpha = gc.alpha = g.alpha = al; });
     } else {
       const g = new Graphics();
       g.blendMode = "add";
@@ -127,6 +134,7 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage
   const buildBloomSlot = (): Container => {
     const slot = new Container();
     slot.blendMode = "add";
+    slot.visible = accentsVisible;
     slot.filters = [new BlurFilter(BLOOM_FILTER)];
     for (const e of accents) {
       const m = new Graphics({ context: e.g.context });
@@ -141,9 +149,9 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage
     container,
     staticCount: staticItems.length,
     get bloom() { return bloom; },
-    setFocus(zone) { target = focusAlphas(zone); },
+    setFocus(zone) { if (!destroyed) target = focusAlphas(zone); },
     setBloom(mode) {
-      if (mode === bloom) return;
+      if (destroyed || mode === bloom) return;
       // el slot se arma antes de cambiar el modo: si el filtro fallara, el Stage sigue en el modo anterior
       if (mode === "on") container.addChildAt(bloomSlot ?? buildBloomSlot(), container.getChildIndex(accentSlot));
       else bloomSlot?.removeFromParent();
@@ -152,7 +160,17 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage
       if (h !== halo) { halo = h; for (const e of accents) e.draw(); }
       applyAlphas();
     },
+    setLayer(layer, visible) {
+      if (destroyed) return;
+      if (layer === "ground") gBleed.visible = waterSlot.visible = gGround.visible = visible;
+      else if (layer === "shadow") shadowSlot.visible = coreSlot.visible = visible;
+      else {
+        accentsVisible = accentSlot.visible = visible;
+        if (bloomSlot) bloomSlot.visible = visible;
+      }
+    },
     tick(dtMs) {
+      if (destroyed) return;
       for (const a of animators) for (const id of a.tick(dtMs)) redraw.get(id)?.();
       const k = Math.min(1, dtMs / LERP_MS);
       for (const z of WORLD_ZONES) {
@@ -160,6 +178,16 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage
         current[z].accents += (target[z].accents - current[z].accents) * k;
       }
       applyAlphas();
+    },
+    destroy() {
+      if (destroyed) return;
+      destroyed = true;
+      // Container.destroy no destruye `filters`; se leen antes, porque después el getter ya no los devuelve
+      const filters = [shadowSlot, coreSlot, bloomSlot].flatMap((c) => c?.filters ?? []);
+      // los espejos comparten el contexto de su original: lo libera el árbol con `context: true`
+      bloomSlot?.destroy({ children: true });
+      container.destroy({ children: true, context: true });
+      for (const f of filters) f.destroy();
     },
   };
 }

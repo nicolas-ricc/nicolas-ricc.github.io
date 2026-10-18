@@ -26,6 +26,8 @@
  * solo `shade lit down top up`. Los cuatro materiales de Resume nivel 2 (`plaster`,
  * `terracotta`, `marble`, `awning`) siguen la regla de ciudad/costa.
  * Para ajustar, editar la base y correr `npm run palette`, que imprime los literales a pegar acá.
+ * `sky` e `ink` también están escritos a mano en el `<style>` de `lab/*.html`; `palette-guard.test.ts`
+ * exige que todo hex de esas páginas sea un valor de esta paleta.
  */
 export const ISO_TONES = {
   slab:      { deep: 0x1e1d25, shade: 0x2b282e, dim: 0x43362d, lit: 0x5a442b, down: 0x5b4e42, top: 0x6c5945, up: 0x816649, pale: 0x896a4a, glow: 0x906f4a },
@@ -83,11 +85,12 @@ export const ISO_COLORS = {
   // Resume nivel 2: luces por ventana (cálida y fría)
   windowWarm: 0xffd9a0,
   windowCool: 0xa8d8ff,
+  ink: 0xd8d4e8, // texto de las páginas del lab (lab/*.html); no se oscurece
 } as const;
 
 export type Material = keyof typeof ISO_TONES;
 export type Tone = "deep" | "shade" | "dim" | "lit" | "down" | "top" | "up" | "pale" | "glow";
-export type AccentColor = Exclude<keyof typeof ISO_COLORS, "shadow" | "sky">;
+export type AccentColor = Exclude<keyof typeof ISO_COLORS, "shadow" | "sky" | "ink">;
 export const ACCENT_COLORS: readonly AccentColor[] = ["cyan", "cyanMid", "cyanBleed", "amber", "amberMid", "amberBleed", "magenta", "magentaMid", "magentaBleed", "windowWarm", "windowCool"];
 
 /** De oscuro a claro. `stepTone` se mueve por acá. */

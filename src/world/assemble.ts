@@ -1,5 +1,5 @@
 import type { WorldZone } from "../map/geo";
-import { createRng } from "../map/seed";
+import { createRng, SEED } from "../map/seed";
 import type { Animator } from "../scenes/animator";
 import { cityAnimator } from "../scenes/city-animator";
 import { factoryAnimator } from "../scenes/factory-animator";
@@ -9,8 +9,6 @@ import { shipyardAnimator } from "../scenes/shipyard-animator";
 import { techAnimator } from "../scenes/tech-animator";
 import { waterAnimator } from "../scenes/water-animator";
 import { world, type WorldScene } from "../scenes/world";
-
-export const SEED = 7;
 
 /** Un animador con la zona cuyas luces atenúa el velo; `null` (el agua) nunca se atenúa. */
 export type ZonedAnimator = Animator & { zone: WorldZone | null };

@@ -1,0 +1,192 @@
+import type { Accent } from "../iso/accent";
+import { v3 } from "../iso/geometry";
+import { Z_SCALE } from "../iso/project";
+import { campus } from "../kit/forms/modern";
+import { lamp, place } from "../kit/props";
+import { STYLES } from "../kit/styles";
+import type { Solid } from "../iso/solids";
+import { MOUTH_Y, QUAY_X, type WorldZone } from "../map/geo";
+import type { Material } from "../map/palette-iso";
+import { createRng, SEED } from "../map/seed";
+import { BLOCK_D, BLOCK_W, BRIDGE, COLLAPSED, DISTRICT_COLS, DISTRICT_ROWS, EAST_COLS, MALECON, PLAZA, ROWS, SITE, TOWER, TOWER_H, WEST_COLS } from "../scenes/city-grid";
+import { PLANT, RAIL_YARD_X, STACK_BASE_H, STACKS } from "../scenes/factory";
+import { PUFF_LIFT, PUFF_RANGE } from "../scenes/factory-anim";
+import { ARCADE, BUMPER, CAROUSEL, COASTER, DROP, PIER, WHEEL } from "../scenes/fair";
+import { jungle } from "../scenes/flora";
+import { CONTAINER_YARD, COOLING, POWER, PYLON_H, PYLON_N, PYLON_STEP, PYLON_X0, PYLON_Y, SILOS, STACKS_N, TANKS } from "../scenes/hinterland";
+import { towerCrane } from "../scenes/pieces";
+import { BUOYS, DRUM_R0, KEEPER, LANTERN_Z, LIGHTHOUSE, WRECK } from "../scenes/sea";
+import { BEAM_LEN } from "../scenes/sea-anim";
+import { ship, shipAt, type ShipKind } from "../scenes/ships";
+import { SUBURB_COLS } from "../scenes/sprawl-grid";
+import { ARENA, AUDITORIUM, TELECOM } from "../scenes/tech";
+import type { Box } from "../world/frame";
+
+export type GroupId = "fabrica" | "astillero" | "hinterland" | "feria" | "ciudad" | "tecnologico" | "mar";
+
+/** Grupos del índice, en orden: la tabla de la spec §3. */
+export const GROUPS: readonly { id: GroupId; zone: WorldZone; title: string }[] = [
+  { id: "fabrica", zone: "portfolio", title: "Portfolio: fábrica" },
+  { id: "astillero", zone: "portfolio", title: "Portfolio: astillero" },
+  { id: "hinterland", zone: "portfolio", title: "Portfolio: hinterland" },
+  { id: "feria", zone: "portfolio", title: "Portfolio: feria" },
+  { id: "ciudad", zone: "cv", title: "Resume: ciudad" },
+  { id: "tecnologico", zone: "cv", title: "Resume: tecnológico" },
+  { id: "mar", zone: "blog", title: "Blog: mar" },
+];
+
+/** Una estructura para mirar sola: una caja sobre el mundo real o una pieza reubicable armada en el origen (con `pad` opcional: el material del suelo bajo ella). */
+export type Exhibit = { id: string; title: string; zone: WorldZone; group: GroupId } & (
+  | { kind: "region"; box: Box; h?: number }
+  | { kind: "piece"; build: (out: Solid[], accents: Accent[]) => void; pad?: Material }
+);
+
+const M = 3; // margen: veredas, faroles y sombras cortas
+
+const stacksX = STACKS.map((s) => s.x), stacksY = STACKS.map((s) => s.y), stackR = Math.max(...STACKS.map((s) => s.r));
+const tanksX = TANKS.map((t) => t.x), tanksY = TANKS.map((t) => t.y);
+const stackTop = Math.max(...STACKS.map((s) => s.h)) + STACK_BASE_H;
+const buoysX = BUOYS.map((b) => b.x), buoysY = BUOYS.map((b) => b.y);
+
+// un barco con el punto medio de la unidad (empujador incluido) en el origen, a flote sobre agua
+const vessel = (kind: ShipKind) => (out: Solid[], accents: Accent[]): void => {
+  const { solids, lights } = ship(kind, shipAt(kind, { x: 0, y: 0 }, 0), 0);
+  out.push(...solids); accents.push(...lights);
+};
+
+export const EXHIBITS: readonly Exhibit[] = [
+  // al sur 1 u: la grúa torre del desvío (y −12) queda afuera
+  { id: "planta", title: "Planta de ladrillo", zone: "portfolio", group: "fabrica", kind: "region",
+    box: { x0: PLANT.x - M, y0: PLANT.y - M, x1: PLANT.x + PLANT.w + M, y1: PLANT.y + PLANT.d + 1 }, h: PLANT.h + 4 }, // dientes de sierra
+  // el humo deriva al NNE hasta PUFF_RANGE: la caja se estira al norte para no cortar la columna (la subestación queda adentro, detrás)
+  // la torre de enfriamiento es privada en factory.ts: (172, −36), r 9
+  { id: "chimeneas", title: "Chimeneas y torre de enfriamiento", zone: "portfolio", group: "fabrica", kind: "region",
+    box: { x0: Math.min(...stacksX) - stackR - M, y0: Math.min(...stacksY) - stackR - PUFF_RANGE, x1: 172 + 9 + M, y1: -36 + 9 + M },
+    h: stackTop + PUFF_RANGE * PUFF_LIFT },
+  // a mano: cerco 149..190 × −60..−47 (privado en factory.ts); y1 −46 deja afuera la torre de enfriamiento (y ≥ −45). El humo pasa por encima
+  { id: "subestacion", title: "Subestación", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: 146, y0: -63, x1: 193, y1: -46 }, h: 10 },
+  // a mano: camiones y pallets de truckYard; la grúa torre (60, −12) está en medio de la playa y queda adentro
+  { id: "playa-camiones", title: "Playa de camiones", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: 17, y0: -15, x1: 113, y1: 2 }, h: 22 },
+  { id: "playa-vias", title: "Playa de vías", zone: "portfolio", group: "fabrica", kind: "region",
+    box: { x0: RAIL_YARD_X[0] - 4, y0: 40, x1: -4, y1: 100 }, h: 10 }, // a mano en y: los acopios de mineral (rng, x −25..−13, y 44..96, privados en factory.ts) con vías y vagones
+  // a mano: del portón este (x 121, y −20) al patio de material (x 30, y 1..3); la grúa torre del desvío queda adentro y manda en h
+  { id: "cinta", title: "Cinta transportadora", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: 28, y0: -15, x1: 125, y1: 4 }, h: 22 },
+  // las constantes de shipyard.ts son privadas: cajas a mano
+  // gradas x 110..QUAY_X, y 36..72; el pórtico (x 150) monta sobre ellas y queda adentro
+  { id: "gradas", title: "Gradas", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 108, y0: 33, x1: QUAY_X + 2, y1: 75 }, h: 28 },
+  // el agua entre el muelle y la escollera, desde la bocana; sin barcos desde #87 (los carriles arrancan en la bocana)
+  { id: "darsena", title: "Dársena", zone: "portfolio", group: "astillero", kind: "region", box: { x0: QUAY_X - 2, y0: MOUTH_Y, x1: 275, y1: 80 }, h: 5 },
+  { id: "grua-portico", title: "Grúa pórtico", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 146, y0: 30, x1: 156, y1: 78 }, h: 28 },
+  // calle de transferencia x 100..108 con los faroles en 108.5; entre las naves (x ≤ 98) y las gradas (x ≥ 110)
+  { id: "calle-faroles", title: "Calle de faroles", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 99, y0: 8, x1: 111, y1: 128 }, h: 7 },
+  // las dos naves de montaje: x 8..98, filas y 36 y 56 de 16
+  { id: "naves", title: "Naves de montaje", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 5, y0: 33, x1: 101, y1: 75 }, h: 14 },
+  // pluma 24 al este y contrapluma 8 al oeste: con el mástil en x −8 queda en −16..16
+  { id: "grua-torre", title: "Grúa torre", zone: "portfolio", group: "astillero", kind: "piece",
+    build: (out, accents) => towerCrane(out, accents, { at: { x: -8, y: 0 }, mastH: 20, jibLen: 24, dir: "e", light: "amber" }) },
+  { id: "farol", title: "Farol", zone: "portfolio", group: "astillero", kind: "piece", build: (out, accents) => place(out, accents, lamp(v3(-0.3, -0.3, 0))) },
+  { id: "central-termica", title: "Central térmica y torre de enfriamiento", zone: "portfolio", group: "hinterland", kind: "region",
+    box: { x0: COOLING.x - COOLING.r - M, y0: POWER.y - M, x1: STACKS_N[0].x + 2 + M, y1: COOLING.y + COOLING.r + M }, h: 30 }, // chimeneas de 28
+  // radio de tanque rng 7..9
+  { id: "tanques", title: "Tanques", zone: "portfolio", group: "hinterland", kind: "region",
+    box: { x0: Math.min(...tanksX) - 9 - M, y0: Math.min(...tanksY) - 9 - M, x1: Math.max(...tanksX) + 9 + M, y1: Math.max(...tanksY) + 9 + M }, h: 12 },
+  { id: "silos", title: "Silos", zone: "portfolio", group: "hinterland", kind: "region",
+    box: { x0: SILOS.x0 - SILOS.r - M, y0: SILOS.y0 - SILOS.r - M, x1: SILOS.x0 + (SILOS.cols - 1) * SILOS.step + SILOS.r + M, y1: SILOS.y0 + (SILOS.rows - 1) * SILOS.step + SILOS.r + M },
+    h: SILOS.h + 4 }, // elevador de granos h + 3
+  // la línea entera, 336 u: encuadra fina; la montaña rusa y los autitos quedan cortados por el borde sur, más bajos
+  { id: "alta-tension", title: "Línea de alta tensión", zone: "portfolio", group: "hinterland", kind: "region",
+    box: { x0: PYLON_X0 - 4, y0: PYLON_Y - 4, x1: PYLON_X0 + (PYLON_N - 1) * PYLON_STEP + 4, y1: PYLON_Y + 4 }, h: PYLON_H + 2 },
+  // las grúas de la playa van de y0 − 4 a la última fila + 6
+  { id: "playa-contenedores", title: "Playa de contenedores", zone: "portfolio", group: "hinterland", kind: "region",
+    box: { x0: CONTAINER_YARD.x0 - M, y0: CONTAINER_YARD.y0 - 4 - M, x1: CONTAINER_YARD.x1 + M, y1: CONTAINER_YARD.y0 + (CONTAINER_YARD.rows - 1) * CONTAINER_YARD.rowStep + 6 + M }, h: 13 },
+  { id: "noria", title: "Noria", zone: "portfolio", group: "feria", kind: "region",
+    box: { x0: WHEEL.x - WHEEL.r - M, y0: WHEEL.y - WHEEL.r - M, x1: WHEEL.x + WHEEL.r + M, y1: WHEEL.y + WHEEL.r + M }, h: WHEEL.hub + WHEEL.r },
+  { id: "montana-rusa", title: "Montaña rusa", zone: "portfolio", group: "feria", kind: "region",
+    box: { x0: COASTER.x0 - M, y0: COASTER.y0 - M, x1: COASTER.x1 + M, y1: COASTER.y1 + M }, h: 17 }, // perfil hasta 14
+  { id: "torre-caida", title: "Torre de caída", zone: "portfolio", group: "feria", kind: "region",
+    box: { x0: DROP.x - 5, y0: DROP.y - 5, x1: DROP.x + 5, y1: DROP.y + 5 }, h: DROP.h + 3 },
+  { id: "carrusel", title: "Carrusel", zone: "portfolio", group: "feria", kind: "region",
+    box: { x0: CAROUSEL.x - 9, y0: CAROUSEL.y - 9, x1: CAROUSEL.x + 9, y1: CAROUSEL.y + 9 }, h: 11 }, // luces a r 6.5
+  // al oeste pegado al alero (x − 1): el portal de la feria llega a x 94.75; al norte la montaña rusa llega a y −193
+  { id: "arcade", title: "Arcade", zone: "portfolio", group: "feria", kind: "region",
+    box: { x0: ARCADE.x - 1, y0: ARCADE.y - 0.5, x1: ARCADE.x + 24 + M, y1: ARCADE.y + 14 + M }, h: 10 },
+  // al norte pegado: la montaña rusa llega a y −193
+  { id: "autitos-chocadores", title: "Autitos chocadores", zone: "portfolio", group: "feria", kind: "region",
+    box: { x0: BUMPER.x - M, y0: BUMPER.y - 0.5, x1: BUMPER.x + 14 + M, y1: BUMPER.y + 10 + M }, h: 6 },
+  // el muelle arranca en x 227 (bayShoreX en fair.ts, privado)
+  { id: "muelle", title: "Muelle de la feria", zone: "portfolio", group: "feria", kind: "region",
+    box: { x0: 227 - M, y0: PIER.y - M, x1: 227 + PIER.len + M, y1: PIER.y + PIER.d + 6 }, h: 10 },
+  // la torre de oficinas está en el centro de la plaza: queda adentro
+  { id: "plaza", title: "Plaza", zone: "cv", group: "ciudad", kind: "region",
+    box: { x0: PLAZA.x - M, y0: PLAZA.y - M, x1: PLAZA.x + PLAZA.w + M, y1: PLAZA.y + PLAZA.d + M }, h: TOWER_H + 8 },
+  // h + 8: la antena llega a z 37.9
+  { id: "torre", title: "Torre de oficinas", zone: "cv", group: "ciudad", kind: "region",
+    box: { x0: TOWER.x - M, y0: TOWER.y - M, x1: TOWER.x + TOWER.w + M, y1: TOWER.y + TOWER.d + M }, h: TOWER_H + 8 },
+  // de rampa a rampa; al oeste y al este pegado a las manzanas vecinas (edificios hasta 10.7), al norte los árboles de la ribera
+  { id: "puente", title: "Puente", zone: "cv", group: "ciudad", kind: "region",
+    box: { x0: WEST_COLS[WEST_COLS.length - 1]! + BLOCK_W + 0.5, y0: BRIDGE.y0 - 1, x1: EAST_COLS[0]! + 1, y1: BRIDGE.y1 + M }, h: 8 },
+  // entero, 168 u: encuadra fino. Al oeste pegado y al norte 2 u adentro; h 9 por los árboles del cinturón que asoman (hasta 8.4)
+  { id: "malecon", title: "Malecón", zone: "cv", group: "ciudad", kind: "region",
+    box: { x0: MALECON.x0 - 1, y0: MALECON.y0 + 2, x1: MALECON.x1 + M, y1: MALECON.y1 + M }, h: 9 },
+  // la losa caída llega a x − 16; al sur pegado, la selva
+  { id: "manzana-derrumbada", title: "Manzana derrumbada", zone: "cv", group: "ciudad", kind: "region",
+    box: { x0: COLLAPSED.x - 16 - M, y0: COLLAPSED.y - M, x1: COLLAPSED.x + COLLAPSED.w + M, y1: COLLAPSED.y + COLLAPSED.d + 1 }, h: 6 },
+  { id: "manzana-distrito", title: "Manzana del distrito", zone: "cv", group: "ciudad", kind: "region",
+    box: { x0: DISTRICT_COLS[0] - M, y0: DISTRICT_ROWS[1] - M, x1: DISTRICT_COLS[0] + BLOCK_W + M, y1: DISTRICT_ROWS[1] + BLOCK_D + M }, h: 20 },
+  { id: "obra", title: "Obra en construcción", zone: "cv", group: "ciudad", kind: "region",
+    box: { x0: SITE.x - M, y0: SITE.y - M, x1: SITE.x + SITE.w + M, y1: SITE.y + SITE.d + M }, h: 25 },
+  // receta `campus` del kit sobre una manzana de distrito; el suelo de la pieza va a `out` con los sólidos
+  { id: "campus", title: "Campus", zone: "cv", group: "ciudad", kind: "piece",
+    build: (out, accents) => {
+      const p = campus({ x: -12.5, y: -9.5, w: 25, d: 19, z: 0, open: [], maxH: 24 }, createRng(SEED), STYLES.distrito);
+      out.push(...p.ground, ...p.solids);
+      accents.push(...p.accents);
+    } },
+  { id: "selva", title: "Selva", zone: "cv", group: "ciudad", kind: "piece", build: (out) => jungle(out, createRng(SEED), { x0: -12, x1: 12, y0: -12, y1: 12 }, 14, 0) },
+  // tecnológico: cada estructura ocupa una manzana BLOCK_W × BLOCK_D
+  { id: "mastil", title: "Mástil de telecomunicaciones", zone: "cv", group: "tecnologico", kind: "region",
+    box: { x0: TELECOM.x - M, y0: TELECOM.y - M, x1: TELECOM.x + BLOCK_W + M, y1: TELECOM.y + BLOCK_D + M }, h: 26 },
+  { id: "arena", title: "Arena", zone: "cv", group: "tecnologico", kind: "region",
+    box: { x0: ARENA.x - M, y0: ARENA.y - M, x1: ARENA.x + BLOCK_W + M, y1: ARENA.y + BLOCK_D + M }, h: 15 },
+  { id: "auditorio", title: "Auditorio", zone: "cv", group: "tecnologico", kind: "region",
+    box: { x0: AUDITORIUM.x - M, y0: AUDITORIUM.y - M, x1: AUDITORIUM.x + BLOCK_W + M, y1: AUDITORIUM.y + BLOCK_D + M }, h: 14 },
+  // las dos torres de la fila ROWS[1], columnas SUBURB_COLS[1] y [0]; la altura sale del rng: el test la vigila
+  { id: "torres", title: "Torres del distrito tecnológico", zone: "cv", group: "tecnologico", kind: "region",
+    box: { x0: SUBURB_COLS[1] - M, y0: ROWS[1] - M, x1: SUBURB_COLS[0] + BLOCK_W + M, y1: ROWS[1] + BLOCK_D + M }, h: 22 },
+  // el haz nace en la linterna y gira: apuntando al norte su punta sube BEAM_LEN/√2 en pantalla, y el vértice norte de la caja ya está DRUM_R0 + M más arriba que el faro
+  { id: "faro", title: "Faro", zone: "blog", group: "mar", kind: "region",
+    box: { x0: LIGHTHOUSE.x - DRUM_R0 - M, y0: LIGHTHOUSE.y - DRUM_R0 - M, x1: LIGHTHOUSE.x + DRUM_R0 + M, y1: LIGHTHOUSE.y + DRUM_R0 + M },
+    h: LANTERN_Z + (BEAM_LEN * Math.SQRT1_2 - DRUM_R0 - M) / Z_SCALE },
+  // la casa es 8 × 6 (privado en sea.ts)
+  { id: "casa-farero", title: "Casa del farero", zone: "blog", group: "mar", kind: "region",
+    box: { x0: KEEPER.x - M, y0: KEEPER.y - M, x1: KEEPER.x + 8 + M, y1: KEEPER.y + 6 + M }, h: 13 }, // sobre la punta, z ≈ 7
+  // las dos boyas del bajo al sur de la punta, a 50 u una de otra
+  { id: "boyas", title: "Boyas", zone: "blog", group: "mar", kind: "region",
+    box: { x0: Math.min(...buoysX) - 5, y0: Math.min(...buoysY) - 5, x1: Math.max(...buoysX) + 5, y1: Math.max(...buoysY) + 5 }, h: 4 },
+  // el casco mide 40 u a 30°: llega a (WRECK.x + 35, WRECK.y + 20); la boya del pecio queda adentro
+  { id: "pecio", title: "Pecio", zone: "blog", group: "mar", kind: "region",
+    box: { x0: WRECK.x - 5, y0: WRECK.y - 5, x1: WRECK.x + 38, y1: WRECK.y + 26 }, h: 9 },
+  { id: "carguero", title: "Carguero", zone: "blog", group: "mar", kind: "piece", build: vessel("cargo"), pad: "water" },
+  { id: "remolcador", title: "Remolcador", zone: "blog", group: "mar", kind: "piece", build: vessel("tug"), pad: "water" },
+  { id: "convoy", title: "Convoy con barcaza", zone: "blog", group: "mar", kind: "piece", build: vessel("barge"), pad: "water" },
+  { id: "lancha", title: "Lancha colectiva", zone: "blog", group: "mar", kind: "piece", build: vessel("ferry"), pad: "water" },
+];
+
+/** El exhibit del hash (`#id` o `id`); vacío o desconocido, el primero. */
+export function pickExhibit(hash: string, list: readonly Exhibit[] = EXHIBITS): Exhibit {
+  let id: string;
+  try { id = decodeURIComponent(hash.replace(/^#/, "")); } catch { id = ""; } // %-escape roto: como desconocido
+  return list.find((e) => e.id === id) ?? list[0]!;
+}
+
+/** Vecino en el orden del índice, dando la vuelta en los extremos. */
+export function stepExhibit(id: string, delta: 1 | -1, list: readonly Exhibit[] = EXHIBITS): Exhibit {
+  const i = list.findIndex((e) => e.id === id);
+  if (i < 0) return list[0]!;
+  return list[(i + delta + list.length) % list.length]!;
+}
+
+/** La entrada no entra entera en la vista del índice (rectángulos de `getBoundingClientRect`). */
+export function outOfView(entry: { top: number; bottom: number }, view: { top: number; bottom: number }): boolean {
+  return entry.top < view.top || entry.bottom > view.bottom;
+}

@@ -1,5 +1,5 @@
 import type { Rng } from "../map/seed";
-import type { AnimLayer, Animator } from "./animator";
+import { layerLookup, type AnimLayer, type Animator } from "./animator";
 import type { CityScene } from "./city";
 import { createCityAnim } from "./city-anim";
 
@@ -15,7 +15,7 @@ export function cityAnimator(scene: CityScene, rng: Rng, opts: { reducedMotion: 
   };
   return {
     ids: Object.keys(layers),
-    layer: (id) => layers[id]!(),
+    layer: layerLookup("cityAnimator", layers),
     tick(dtMs) {
       const c = anim.tick(dtMs);
       const out = new Set<string>();

@@ -1,15 +1,20 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildRenderList } from "../iso/render-list";
 import { bounds, isFlat, type Solid } from "../iso/solids";
-import { ZONE_SPLIT_X, inHeadland, worldZoneAt } from "../map/geo";
+import { ZONE_SPLIT_X, abyssX, inHeadland, worldZoneAt } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
-import { BUOYS, COAST, COAST_Z, GALLERY_R, KEEPER, LIGHTHOUSE, WRECK, WRECK_BUOY, sea, type SeaScene } from "./sea";
+import { BUOYS, CAP_R, COAST, COAST_Z, GALLERY_DECK_R, GALLERY_R, KEEPER, LANTERN_R, LANTERN_Z, LIGHTHOUSE, POST_H, POST_W, WRECK, WRECK_BUOY, sea, type SeaScene } from "./sea";
 import { headlandZ, terrainAt } from "./terrain";
 
 const scene = (): SeaScene => sea(createRng(7));
 const SEA_MATS: readonly Material[] = ["rock", "whitewash", "rust", "steel", "glass", "hull", "deck", "foam", "leaf", "leafDark"];
 const water = new Set(["water", "sea", "shore", "abyss", "reef"]);
+type Cyl = Extract<Solid, { kind: "cylinder" }>;
+type Prism = Extract<Solid, { kind: "prism" }>;
+type Cone = Extract<Solid, { kind: "cone" }>;
+type Poly = Extract<Solid, { kind: "poly" }>;
 
 describe("sea", () => {
   it("es determinística, trae ≥ 80 sólidos elevados y usa solo materiales del Blog o compartidos", () => {
@@ -29,7 +34,27 @@ describe("sea", () => {
     const top = Math.max(...s.solids.filter((x) => Math.abs(bounds(x).min.x - (LIGHTHOUSE.x - 3.2)) < 4 && Math.abs(bounds(x).min.y - (LIGHTHOUSE.y - 3.2)) < 4).map((x) => bounds(x).max.z));
     expect(top - LIGHTHOUSE.z).toBeCloseTo(29.6, 1);
     expect(s.lantern.z).toBeCloseTo(LIGHTHOUSE.z + 24 + 0.6 + 1.5, 6);
+    expect(s.lantern.z).toBe(LANTERN_Z);
     expect(worldZoneAt(LIGHTHOUSE.x, LIGHTHOUSE.y)).toBe("portfolio"); // el faro clickea Portfolio
+  });
+
+  it("galería del faro: disco y postes con medidas nombradas, sin mover un bit (#27)", () => {
+    const s = scene();
+    expect([GALLERY_R, GALLERY_DECK_R, POST_W, POST_H]).toEqual([2.7, 3, 0.3, 1.2]);
+    const deck = s.solids.filter((x): x is Cyl => x.kind === "cylinder" && x.mat === "steel" && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y);
+    expect(deck.map((d) => d.r)).toEqual([GALLERY_DECK_R]);
+    const posts = s.solids.filter((x): x is Prism => x.kind === "prism" && x.mat === "steel" && x.w === POST_W && x.d === POST_W && x.h === POST_H && Math.hypot(x.at.x - LIGHTHOUSE.x, x.at.y - LIGHTHOUSE.y) < GALLERY_DECK_R);
+    expect(posts).toHaveLength(8);
+    for (const p of posts) expect(Math.hypot(p.at.x + POST_W / 2 - LIGHTHOUSE.x, p.at.y + POST_W / 2 - LIGHTHOUSE.y)).toBeCloseTo(GALLERY_R, 9);
+  });
+
+  it("linterna y tapa del faro con radios nombrados, retranqueadas del último tambor (#27)", () => {
+    const s = scene();
+    expect([LANTERN_R, CAP_R]).toEqual([1.6, 1.8]);
+    const glass = s.solids.filter((x): x is Cyl => x.kind === "cylinder" && x.mat === "glass" && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y);
+    expect(glass.map((g) => g.r)).toEqual([LANTERN_R]);
+    const cap = s.solids.filter((x): x is Cone => x.kind === "cone" && x.mat === "steel" && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y);
+    expect(cap.map((c) => c.r)).toEqual([CAP_R]);
   });
 
   it("casa del farero, sendero de roca escalonado sobre la punta, afloramientos, pedruscos y arrecife", () => {
@@ -55,9 +80,20 @@ describe("sea", () => {
     expect(s.solids.some((x) => x.kind === "cylinder" && x.mat === "steel" && x.at.x === WRECK_BUOY.x)).toBe(true);
     expect(s.accents).toEqual([{ kind: "poly", pts: expect.any(Array), color: "magentaBleed", alpha: expect.any(Number) }, { kind: "dot", at: { x: WRECK_BUOY.x, y: WRECK_BUOY.y, z: 1 }, r: 1, color: "magentaMid" }]);
     expect(s.ground.some((g) => g.kind === "ground" && g.mat === "foam" && g.tris.length === 8)).toBe(true);
-    const wreck = s.solids.find((x) => x.kind === "hull")!;
-    expect(wreck.kind === "hull" && wreck.heading).toBe(WRECK.heading);
-    expect(wreck.at).toEqual({ x: WRECK.x, y: WRECK.y, z: -3 });
+    // pecio (#83): sin casco entero a flote; asoman la proa (cuña de óxido con cubierta) y la casa de popa (caseta con ventanas, chimenea, mástil), todo sobre el agua
+    expect(s.solids.some((x) => x.kind === "hull")).toBe(false);
+    const near = (x: Solid) => { const b = bounds(x); return Math.hypot((b.min.x + b.max.x) / 2 - WRECK.x, (b.min.y + b.max.y) / 2 - WRECK.y) < 45; };
+    const parts = s.solids.filter(near);
+    expect(parts.filter((x) => x.kind === "poly" && x.mat === "hull" && x.footprint.length === 5)).toHaveLength(1); // cuña de proa, obra viva
+    expect(parts.filter((x) => x.kind === "poly" && x.mat === "rust" && x.footprint.length === 5)).toHaveLength(1); // y su franja oxidada de obra muerta
+    expect(s.ground.filter((g) => g.kind === "ground" && g.mat === "foam" && g.tris.length === 8).length).toBeGreaterThanOrEqual(3); // espuma: boya, proa y popa del pecio
+    expect(parts.filter((x) => x.kind === "poly" && x.mat === "whitewash" && x.facade)).toHaveLength(2); // caseta de popa
+    expect(parts.some((x) => x.kind === "cylinder" && x.mat === "rust" && x.h > 2)).toBe(true); // chimenea
+    expect(parts.some((x) => x.kind === "poly" && x.mat === "steel" && x.h >= 4)).toBe(true); // mástil
+    for (const x of parts) expect(bounds(x).min.z).toBeGreaterThanOrEqual(-1); // nada bajo el agua
+    const bow = parts.find((x) => x.kind === "poly" && x.mat === "hull" && x.footprint.length === 5)!, house = parts.find((x) => x.kind === "poly" && x.mat === "whitewash" && x.facade)!;
+    const bb = bounds(bow), hb = bounds(house);
+    expect(Math.hypot((bb.min.x + bb.max.x) / 2 - (hb.min.x + hb.max.x) / 2, (bb.min.y + bb.max.y) / 2 - (hb.min.y + hb.max.y) / 2)).toBeGreaterThan(20); // partido en dos: el centro está hundido
     for (const x of s.solids) if (x.kind === "cylinder" || x.kind === "hull") if (bounds(x).min.x > ZONE_SPLIT_X + 60) expect(water.has(terrainAt(x.at.x, x.at.y))).toBe(true);
   });
 
@@ -95,5 +131,24 @@ describe("sea", () => {
     const s = scene();
     const colors = allIsoColors();
     for (const i of buildRenderList([...s.ground, ...s.solids])) expect(colors.has(i.color)).toBe(true);
+  });
+});
+
+describe("pecio: comentario y posición (#89)", () => {
+  const doc = readFileSync(new URL("./sea.ts", import.meta.url), "utf8").match(/\/\*\*\n \* Pecio \(#83\)[\s\S]*?\*\/\nconst WRECK_LEN/)?.[0] ?? "";
+  it("el docstring pone el pecio en la fosa, a ~16 u del talud, y no la popa en el talud", () => {
+    expect(doc).not.toBe("");
+    expect(doc).toMatch(/hundido en la fosa/);
+    expect(doc).not.toMatch(/(en|sobre) el talud/);
+    expect(doc).toMatch(/16 u al este del talud/);
+    expect(doc).toMatch(/#87/);
+  });
+  it("la popa queda ~16 u al este del talud y todo el casco cae en la fosa", () => {
+    expect(WRECK.x - abyssX(WRECK.y)).toBeGreaterThan(15);
+    expect(WRECK.x - abyssX(WRECK.y)).toBeLessThan(17);
+    const near = (x: Solid) => { const b = bounds(x); return Math.hypot((b.min.x + b.max.x) / 2 - WRECK.x, (b.min.y + b.max.y) / 2 - WRECK.y) < 45; };
+    const hull = scene().solids.filter((x): x is Poly => x.kind === "poly" && near(x)); // las placas del pecio; la boya es un cilindro y queda fuera
+    expect(hull.length).toBeGreaterThanOrEqual(6);
+    for (const x of hull) for (const p of x.footprint) expect(terrainAt(p.x, p.y)).toBe("abyss");
   });
 });

@@ -1,4 +1,4 @@
-import type { AnimLayer, Animator } from "./animator";
+import { layerLookup, type AnimLayer, type Animator } from "./animator";
 import type { FairScene } from "./fair";
 import { createFairAnim } from "./fair-anim";
 
@@ -15,7 +15,7 @@ export function fairAnimator(scene: FairScene, opts: { reducedMotion: boolean })
   };
   return {
     ids: Object.keys(layers),
-    layer: (id) => layers[id]!(),
+    layer: layerLookup("fairAnimator", layers),
     tick(dtMs) { const c = anim.tick(dtMs), out = new Set<string>(); if (c.wheel) out.add("fair.wheel"); if (c.lights) out.add("fair.wheelLights"); if (c.train) out.add("fair.train"); if (c.drop) out.add("fair.drop"); if (c.neon) out.add("fair.neon"); if (c.signs) out.add("fair.signs"); return out; },
   };
 }

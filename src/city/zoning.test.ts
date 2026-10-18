@@ -5,7 +5,7 @@ import { LANDMARK_MAX_H } from "../kit/piece";
 import { PLINTH_H } from "../scenes/city-pieces";
 import { BLOCK_D, BLOCK_W, SIDEWALK, SITE, STREET, TOWER, WEST_QUAY, blocks, estuaryEast, type Block } from "../scenes/city-grid";
 import { zoneRng } from "../scenes/world";
-import { SEED } from "../world/assemble";
+import { SEED } from "../map/seed";
 import { CATALOGUE, FIXED, FOOTBRIDGE_LOT, MAX_BUILDING_H, MAX_DISTRICT_H, NO_PLINTH, WATER_TOWER_BLOCK, assign, barrioOf, maxDistrictHeight, maxHeightFor, openSides, waterTowerLot, type Barrio, type Placed } from "./zoning";
 
 const key = (b: { x: number; y: number }): string => `${b.x},${b.y}`;

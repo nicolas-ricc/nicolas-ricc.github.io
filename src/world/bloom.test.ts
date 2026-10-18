@@ -56,9 +56,31 @@ describe("scheduleIdle", () => {
   });
   it("si no, setTimeout 0: no corre en el acto", () => {
     vi.stubGlobal("requestIdleCallback", undefined);
+    vi.stubGlobal("requestAnimationFrame", undefined);
     vi.useFakeTimers();
     const fn = vi.fn();
     scheduleIdle(fn);
+    expect(fn).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(0);
+    expect(fn).toHaveBeenCalledOnce();
+  });
+  it("con requestIdleCallback no pasa por requestAnimationFrame", () => {
+    const raf = vi.fn();
+    vi.stubGlobal("requestIdleCallback", vi.fn());
+    vi.stubGlobal("requestAnimationFrame", raf);
+    scheduleIdle(() => {});
+    expect(raf).not.toHaveBeenCalled();
+  });
+  it("sin requestIdleCallback, espera un frame pintado: rAF y después setTimeout 0 (#32)", () => {
+    vi.stubGlobal("requestIdleCallback", undefined);
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal("requestAnimationFrame", vi.fn((cb: FrameRequestCallback) => frames.push(cb)));
+    vi.useFakeTimers();
+    const fn = vi.fn();
+    scheduleIdle(fn);
+    vi.advanceTimersByTime(0);
+    expect(fn).not.toHaveBeenCalled();
+    frames.shift()?.(0);
     expect(fn).not.toHaveBeenCalled();
     vi.advanceTimersByTime(0);
     expect(fn).toHaveBeenCalledOnce();

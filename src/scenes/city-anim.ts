@@ -1,7 +1,7 @@
 import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
 import { WINDOW_ALPHA } from "../city/lights";
-import type { Rng } from "../map/seed";
+import { createRng, type Rng } from "../map/seed";
 import type { CityScene } from "./city";
 import { chase } from "./neon";
 
@@ -11,8 +11,9 @@ import { chase } from "./neon";
  * una ventana hacia el NNE, la luz de la antena pulsa y los neones del distrito
  * cambian: un cartel cada 3..7 s cambia de color o se apaga un paso, y dos luces
  * corren por el malecón. Además, ventanas de los edificios se prenden y se
- * apagan, y un neón de calle del muelle titila. Frame 0 = todo quieto y
- * encendido; con reduced-motion se queda ahí.
+ * apagan, y un neón de calle del muelle titila. Las pausas se miden en tiempo
+ * de pared, no en ticks. Frame 0 = todo quieto y encendido; con reduced-motion
+ * se queda ahí.
  */
 export const BLINK_GAP_MS: [number, number] = [4000, 9000];
 export const PAPER_SPEED = 4 / 1000; // u por ms
@@ -32,19 +33,22 @@ export const WINDOW_GAP_MS: [number, number] = [300, 900]; // entre un cambio de
 export const FLICKER_GAP_MS: [number, number] = [1000, 3000]; // entre un titileo del neón de calle y el siguiente
 export const FLICKER_ALPHA = 0.3; // halo y frente del neón de calle mientras titila
 export const MALECON_R = 0.35;
+const SEED_MAX = 2 ** 32 - 1; // semilla de un Rng derivado (sin literal 0x…: el guard de paleta lo tomaría por color)
 const ANTENNA_BASE_R = 0.8, ANTENNA_PULSE_R = 0.3, ANTENNA_PERIOD = 1200; // r = 0.8 + 0.3·(1 + sin(t / 1200))
 const NNE = { x: 0.45, y: -0.893 }; // unidad: nor-noreste (y crece al sur); en pantalla sube a la derecha
 const PERP = { x: -NNE.y, y: NNE.x }; // perpendicular a la deriva: abre el abanico
 
 export interface CityAnimChanges { lit: boolean; papers: boolean; antenna: boolean; neon: boolean; windows: boolean }
-export interface CityAnim { lit(): Accent[]; papers(): Accent[]; antenna(): Accent; neon(): Accent[]; windows(): Accent[]; tick(dtMs: number): CityAnimChanges }
+export interface CityAnim { lit(): Accent[]; papers(): Accent[]; antenna(): Accent; neon(): Accent[]; windows(): Accent[]; tick(dtMs: number): CityAnimChanges; fired(): { lit: number; neon: number } }
 
 const NONE: CityAnimChanges = { lit: false, papers: false, antenna: false, neon: false, windows: false };
 
 export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights">, rng: Rng, opts: { reducedMotion: boolean }): CityAnim {
   const { tower, neon } = scene;
   const w = tower.paperWindow;
-  const nextGap = (): number => rng.int(BLINK_GAP_MS[0], BLINK_GAP_MS[1]);
+  // flujo propio: compartir `rng` con los papeles haría que la pausa sorteada dependa del troceo
+  const blinkRng = createRng(rng.int(0, SEED_MAX));
+  const nextGap = (): number => blinkRng.int(BLINK_GAP_MS[0], BLINK_GAP_MS[1]);
 
   let clock = 0;
   let off = false;
@@ -68,8 +72,10 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
   });
   // neones: van después del estado de los papeles para no reordenar sus tiradas
   const signs = neon.signs.map((a) => ({ a, color: a.color, offUntil: -1 }));
-  let signTimer = rng.int(SIGN_GAP_MS[0], SIGN_GAP_MS[1]);
+  const signRng = createRng(rng.int(0, SEED_MAX)); // flujo propio, por lo mismo que blinkRng
+  let signTimer = signRng.int(SIGN_GAP_MS[0], SIGN_GAP_MS[1]);
   let maleconStep = 0;
+  let blinks = 0, signEvents = 0; // disparos desde la construcción, para fired()
   // ventanas: después de papeles y carteles para no reordenar sus tiradas
   const wins = scene.lights.windows.filter((x) => x.animable).map((x) => ({ w: x, on: x.on }));
   const target = wins.filter((x) => x.on).length, tol = Math.max(1, Math.round(0.05 * wins.length));
@@ -105,14 +111,17 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
       return [...on, ...lights, ...st];
     },
     windows: () => wins.filter((x) => x.on).map(({ w: lw }): Accent => ({ kind: "poly", pts: lw.window.pts, color: lw.color, alpha: WINDOW_ALPHA })),
+    fired: () => ({ lit: blinks, neon: signEvents }),
     tick(dtMs) {
-      if (opts.reducedMotion || dtMs <= 0) return NONE;
+      if (opts.reducedMotion || !Number.isFinite(dtMs) || dtMs <= 0) return NONE; // NaN o Infinity colgarían los while
       clock += dtMs;
       const c: CityAnimChanges = { lit: false, papers: true, antenna: false, neon: false, windows: false };
 
-      // parpadeo: un tick apagado, después una pausa nueva
-      if (off) { off = false; blinkTimer = nextGap(); c.lit = true; }
-      else { blinkTimer -= dtMs; if (blinkTimer <= 0) { off = true; c.lit = true; } }
+      // parpadeo: un tick apagado (dos seguidos solo con ticks ≥ 4 s); la pausa siguiente cuenta desde el
+      // disparo, y un tick largo puede disparar varios
+      if (off) { off = false; c.lit = true; }
+      blinkTimer -= dtMs;
+      while (blinkTimer <= 0) { blinkTimer += nextGap(); blinks++; off = true; c.lit = true; }
 
       for (const p of papers) {
         p.dist += PAPER_SPEED * p.speed * dtMs;
@@ -124,11 +133,12 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
 
       for (const s of signs) if (s.offUntil >= 0 && clock >= s.offUntil) { s.offUntil = -1; c.neon = true; } // vuelve el tubo
       signTimer -= dtMs;
-      if (signTimer <= 0 && signs.length > 0) {
-        const s = signs[rng.int(0, signs.length - 1)]!;
-        if (rng.chance(0.5)) s.color = s.color === "cyan" ? "magenta" : "cyan";
+      while (signTimer <= 0 && signs.length > 0) { // un tick largo puede traer varios eventos
+        const s = signs[signRng.int(0, signs.length - 1)]!;
+        if (signRng.chance(0.5)) s.color = s.color === "cyan" ? "magenta" : "cyan";
         else if (s.offUntil < 0) s.offUntil = clock + NEON_STEP_MS;
-        signTimer = rng.int(SIGN_GAP_MS[0], SIGN_GAP_MS[1]);
+        signTimer += signRng.int(SIGN_GAP_MS[0], SIGN_GAP_MS[1]);
+        signEvents++;
         c.neon = true; // un cambio de color o un apagón siempre se ve (SIGN_GAP_MS ≥ 3000 > NEON_STEP_MS)
       }
       const mStep = Math.floor(clock / MALECON_STEP_MS);

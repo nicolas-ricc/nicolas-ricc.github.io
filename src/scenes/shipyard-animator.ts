@@ -1,5 +1,5 @@
 import type { Rng } from "../map/seed";
-import type { AnimLayer, Animator } from "./animator";
+import { layerLookup, type AnimLayer, type Animator } from "./animator";
 import type { Scene } from "./shipyard";
 import { createShipyardAnim } from "./shipyard-anim";
 
@@ -13,7 +13,7 @@ export function shipyardAnimator(scene: Scene, rng: Rng, opts: { reducedMotion: 
   };
   return {
     ids: Object.keys(layers),
-    layer: (id) => layers[id]!(),
+    layer: layerLookup("shipyardAnimator", layers),
     tick(dtMs) {
       const c = anim.tick(dtMs);
       const out = new Set<string>();

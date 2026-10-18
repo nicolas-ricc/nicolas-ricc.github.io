@@ -3,7 +3,7 @@ import type { Accent } from "../iso/accent";
 import { createRng } from "../map/seed";
 import { WINDOW_ALPHA } from "../city/lights";
 import { city, type CityScene } from "./city";
-import { ANTENNA_STEP_MS, MALECON_STEP_MS, NEON_STEP_MS, PAPER_RANGE, createCityAnim } from "./city-anim";
+import { ANTENNA_STEP_MS, BLINK_GAP_MS, MALECON_STEP_MS, NEON_STEP_MS, PAPER_RANGE, SIGN_GAP_MS, createCityAnim } from "./city-anim";
 
 const setup = (reducedMotion = false) => {
   const scene = city(createRng(7), createRng(8), createRng(9));
@@ -14,6 +14,14 @@ const withoutStreet = (scene: CityScene, a: Accent[]): Accent[] => {
   const pts = new Set(scene.lights.neons.flatMap((n) => n.accents.flatMap((x) => (x.kind === "poly" ? [x.pts] : []))));
   return a.filter((x) => x.kind !== "poly" || !pts.has(x.pts));
 };
+let troceadoScene: CityScene | undefined; // city() es caro: una sola escena para todos los troceos
+const troceado = (dts: number[], seed = 3) => {
+  const scene = (troceadoScene ??= city(createRng(7), createRng(8), createRng(9)));
+  const anim = createCityAnim(scene, createRng(seed), { reducedMotion: false });
+  for (const dt of dts) anim.tick(dt);
+  return anim;
+};
+const veces = (n: number, dt: number) => Array.from({ length: n }, () => dt);
 type Kind<K> = Extract<Accent, { kind: K }>;
 const lights = (a: Accent[]) => a.filter((x): x is Kind<"dot"> => x.kind === "dot");
 const signsOf = (a: Accent[]) => a.filter((x): x is Kind<"poly"> => x.kind === "poly");
@@ -267,5 +275,77 @@ describe("city-anim", () => {
       expect(a.neon()).toEqual(b.neon());
       expect(a.papers()).toEqual(b.papers());
     }
+  });
+
+  it("fired cuenta los apagones del piso y los eventos de carteles", () => {
+    const { anim } = setup();
+    expect(anim.fired()).toEqual({ lit: 0, neon: 0 });
+    let offs = 0;
+    for (let t = 0; t < 60000; t += 33) { anim.tick(33); if (anim.lit().length === 0) offs++; }
+    expect(anim.fired().lit).toBe(offs); // a 33 ms cada disparo es un tick apagado
+    expect(anim.fired().neon).toBeGreaterThanOrEqual(60000 / 7000 - 1);
+    expect(anim.fired().neon).toBeLessThanOrEqual(60000 / 3000);
+  });
+
+  it("fired no cuenta nada con reduced-motion, con dt <= 0 ni con dt no finito", () => {
+    const quieto = setup(true).anim;
+    quieto.tick(60000);
+    expect(quieto.fired()).toEqual({ lit: 0, neon: 0 });
+    const { anim } = setup();
+    anim.tick(0); anim.tick(-5000);
+    expect(anim.fired()).toEqual({ lit: 0, neon: 0 });
+    // sin el guard, un dt infinito no terminaría el while (el lab ya lo descarta en speedFromSearch)
+    expect(anim.tick(Infinity)).toEqual({ lit: false, papers: false, antenna: false, neon: false, windows: false });
+    expect(anim.tick(NaN)).toEqual({ lit: false, papers: false, antenna: false, neon: false, windows: false });
+    expect(anim.fired()).toEqual({ lit: 0, neon: 0 });
+  });
+
+  it("parpadeo: tick(7000) y siete tick(1000) disparan lo mismo, y también 60 s en uno o en 60", () => {
+    expect(troceado([7000]).fired().lit).toBe(troceado(veces(7, 1000)).fired().lit);
+    expect(troceado([60000]).fired().lit).toBe(troceado(veces(60, 1000)).fired().lit);
+    expect(troceado([60000]).fired().lit).toBe(troceado(veces(60000 / 25, 25)).fired().lit);
+  });
+
+  it("parpadeo: un tick de 10 min dispara muchos apagones, como 600 de 1 s", () => {
+    const largo = troceado([600000]).fired().lit;
+    expect(largo).toBeGreaterThanOrEqual(600000 / BLINK_GAP_MS[1] - 1);
+    expect(largo).toBeLessThanOrEqual(600000 / BLINK_GAP_MS[0]);
+    expect(largo).toBe(troceado(veces(600, 1000)).fired().lit);
+  });
+
+  it("parpadeo: tras un tick largo que apaga el piso, el siguiente tick corto lo enciende", () => {
+    const { tower, anim } = setup();
+    anim.tick(BLINK_GAP_MS[1]); // la primera pausa vence seguro dentro de este tick
+    expect(anim.lit()).toEqual([]);
+    anim.tick(33);
+    expect(anim.lit()).toEqual(tower.litWindows);
+  });
+
+  it("tick(7000) y siete tick(1000) con la misma semilla dejan los mismos contadores de pisos y neones", () => {
+    // en 7 s cada temporizador dispara a lo sumo una vez (pausas ≥ 4000 y ≥ 3000 ms), así que este caso
+    // también daba igual con el reinicio viejo; los de 60 s y 10 min son los que lo distinguen
+    for (let seed = 0; seed < 50; seed++) expect(troceado([7000], seed).fired()).toEqual(troceado(veces(7, 1000), seed).fired());
+  });
+
+  it("carteles: 60 s o 10 min de una vez disparan lo mismo que troceados", () => {
+    expect(troceado([60000]).fired().neon).toBe(troceado(veces(60, 1000)).fired().neon);
+    const largo = troceado([600000]).fired().neon;
+    expect(largo).toBeGreaterThanOrEqual(600000 / SIGN_GAP_MS[1] - 1);
+    expect(largo).toBeLessThanOrEqual(600000 / SIGN_GAP_MS[0]);
+    expect(largo).toBe(troceado(veces(600, 1000)).fired().neon);
+  });
+
+  it("un troceo irregular deja los mismos contadores y colores que su suma en un tick", () => {
+    const dts = [16, 33, 100, 250, 1000, 5000, 7000, 33];
+    const a = troceado(dts), b = troceado([dts.reduce((s, x) => s + x, 0)]);
+    expect(a.fired()).toEqual(b.fired());
+    expect(signsOf(a.neon()).map((s) => s.color)).toEqual(signsOf(b.neon()).map((s) => s.color));
+  });
+
+  it("sin carteles un tick largo no se cuelga y no cuenta eventos", () => {
+    const scene = city(createRng(7), createRng(8), createRng(9));
+    const anim = createCityAnim({ ...scene, neon: { ...scene.neon, signs: [] } }, createRng(3), { reducedMotion: false });
+    anim.tick(600000);
+    expect(anim.fired().neon).toBe(0);
   });
 });
