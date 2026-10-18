@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { depthAt } from "./depth-map";
 import type { Accent } from "../iso/accent";
@@ -6,7 +7,7 @@ import { convexHull, polyline, v3, type Vec2 } from "../iso/geometry";
 import { project } from "../iso/project";
 import { bounds, hullRings, isFlat, type Bounds, type Solid } from "../iso/solids";
 import { WORLD, inCoverQuad, worldZoneAt } from "../map/geo";
-import { BEAM_PERIOD_MS, CYCLE_MS, FADE_U, FERRY_PAUSE_MS, FERRY_ROUTE, FERRY_SPEED, KEEPER_SIGN_MS, LANE_BACK, LANE_OUT, LANE_SPEED, NEON_STEP_MS, OFF_MS, PORT_MS, SHIPS, alphaAt, createSeaAnim, laneAt, laneLength } from "./sea-anim";
+import { BEAM_INNER, BEAM_LEN, BEAM_PERIOD_MS, CYCLE_MS, FADE_U, FERRY_PAUSE_MS, FERRY_ROUTE, FERRY_SPEED, KEEPER_SIGN_MS, LANE_BACK, LANE_OUT, LANE_SPEED, NEON_STEP_MS, OFF_MS, PORT_MS, SHIPS, alphaAt, createSeaAnim, laneAt, laneLength } from "./sea-anim";
 import { SHIP_SPECS, ship, shipAt } from "./ships";
 import { bleedTerrainAt, terrainAt } from "./terrain";
 import { world } from "./world";
@@ -345,5 +346,38 @@ describe("neones", () => {
     expect(sign(a.neon()).color).toBe("magenta");
     a.tick(KEEPER_SIGN_MS);
     expect(sign(a.neon()).color).toBe("cyan");
+  });
+});
+
+describe("haz: un solo ángulo por frame (#66)", () => {
+  const src = readFileSync(new URL("./sea-anim.ts", import.meta.url), "utf8");
+  it("wedge recibe el ángulo y no lo calcula", () => {
+    const wedgeSrc = src.match(/const wedge = [\s\S]*?\n  };\n/)?.[0];
+    expect(wedgeSrc).toBeDefined();
+    expect(wedgeSrc).not.toMatch(/beamAngle/);
+  });
+  it("beam() llama una sola vez a beamAngle() y pasa el ángulo a las dos cuñas", () => {
+    expect(src.match(/beamAngle\(\)/g) ?? []).toHaveLength(1);
+    expect(src).toMatch(/beam: \(\) => \{\s*const \w+ = beamAngle\(\);/);
+  });
+  it("las dos cuñas comparten rotación en todo el giro, con sus largos y alfas", () => {
+    const { a } = setup();
+    // Dirección como vector unitario y no como atan2: en a = π la y del punto medio es ~0 y el signo puede saltar entre +π y −π.
+    const axis = (x: Accent) => {
+      if (x.kind !== "poly") throw new Error();
+      expect(x.pts).toHaveLength(3);
+      const o = x.pts[0]!, p = x.pts[1]!, q = x.pts[2]!;
+      const mx = (p.x + q.x) / 2 - o.x, my = (p.y + q.y) / 2 - o.y, m = Math.hypot(mx, my);
+      return { ux: mx / m, uy: my / m, len: Math.hypot(p.x - o.x, p.y - o.y), alpha: x.alpha };
+    };
+    for (let t = 0; t < BEAM_PERIOD_MS; t += BEAM_PERIOD_MS / 4) {
+      const [outer, inner] = a.beam().map(axis);
+      expect(inner!.ux).toBeCloseTo(outer!.ux, 9);
+      expect(inner!.uy).toBeCloseTo(outer!.uy, 9);
+      expect(outer!.len).toBeCloseTo(BEAM_LEN, 9);
+      expect(inner!.len).toBeCloseTo(BEAM_INNER, 9);
+      expect([outer!.alpha, inner!.alpha]).toEqual([0.5, 0.6]);
+      a.tick(BEAM_PERIOD_MS / 4);
+    }
   });
 });
