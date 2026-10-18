@@ -11,8 +11,8 @@ import { chase } from "./neon";
  * una ventana hacia el NNE, la luz de la antena pulsa y los neones del distrito
  * cambian: un cartel cada 3..7 s cambia de color o se apaga un paso, y dos luces
  * corren por el malecón. Además, ventanas de los edificios se prenden y se
- * apagan, y un neón de calle del muelle titila. Frame 0 = todo quieto y encendido; con reduced-motion
- * se queda ahí.
+ * apagan, y un neón de calle del muelle titila. Frame 0 = todo quieto y
+ * encendido; con reduced-motion se queda ahí.
  */
 export const BLINK_GAP_MS: [number, number] = [4000, 9000];
 export const PAPER_SPEED = 4 / 1000; // u por ms

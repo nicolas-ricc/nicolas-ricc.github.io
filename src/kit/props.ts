@@ -71,7 +71,7 @@ export function clock(cx: number, southY: number, cz: number): Accent {
 
 const NEON_HALO = 1.3, NEON_BACK = 0.05;
 
-/** Tubo de neón: el halo `Bleed` (1.3× alrededor del centro, apenas detrás) y el tubo encima. */
+/** Tubo de neón: el halo `Bleed` (1.3× alrededor del centro, apenas detrás) y el tubo encima. city-anim titila estos dos por posición: no reordenar. */
 export function neon(pts: Vec3[], color: "amber" | "cyan" | "magenta"): Accent[] {
   const c = centroid(pts);
   const halo = pts.map((p) => v3(c.x + (p.x - c.x) * NEON_HALO - NEON_BACK, c.y + (p.y - c.y) * NEON_HALO - NEON_BACK, c.z + (p.z - c.z) * NEON_HALO));
