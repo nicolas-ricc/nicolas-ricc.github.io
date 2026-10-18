@@ -6,7 +6,7 @@ import type { Rng } from "../map/seed";
 import { QUAY_X, WORLD, ZONE_SPLIT_Y } from "../map/geo";
 import { AVENUE, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_RING, FALLEN_BLOCK, LIT_FLOOR, MALECON, PLAZA, ROWS, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, inCrater } from "../scenes/city-grid";
 import { jungle } from "../scenes/flora";
-import { CAR, bench, bollard, car, fountain, kiosk, lamp, place, puddle, stoneArch } from "../kit/props";
+import { CAR, bench, bollard, car, fountain, garland, kiosk, lamp, place, puddle, stoneArch } from "../kit/props";
 import { PLINTH_H, plazaTone, prism, tiles } from "../scenes/city-pieces";
 
 // ---------------------------------------------------------------- plaza y torre
@@ -102,10 +102,17 @@ export function westQuay(solids: Solid[]): void {
 
 export function malecon(solids: Solid[], accents: Accent[]): Vec3[] {
   const { x0, x1, y0, y1, z } = MALECON, w = x1 - x0, stairsY = 227;
-  solids.push(prism(x0, y0, -1, w, stairsY - y0, z + 1, "paving"), prism(x0, stairsY + 6, -1, w, y1 - stairsY - 6, z + 1, "paving"));
+  const arcade = (d: number): Facade => ({ floors: 1, cols: Math.round(d / 6), base: "arcade", bands: false }); // galería de arcos en los dos muros largos
+  const dN = stairsY - y0, dS = y1 - stairsY - 6;
+  solids.push(prism(x0, y0, -1, w, dN, z + 1, "paving", { facade: arcade(dN) }), prism(x0, stairsY + 6, -1, w, dS, z + 1, "paving", { facade: arcade(dS) }));
   solids.push({ kind: "ramp", at: v3(x1 - 6, stairsY, -1), w: 6, d: 6, h: z + 1, mat: "paving", dir: "e" }); // escalera, hacia adentro de la zona
   solids.push(prism(x0, stairsY, -1, w - 6, 6, z + 1, "paving"));
   solids.push(prism(x1 - 1.5, y0, z, 1.5, stairsY - y0, 0.8, "paving"), prism(x1 - 1.5, stairsY + 6, z, 1.5, y1 - stairsY - 6, 0.8, "paving")); // parapeto
+  // pérgola en x0..x0+4 (no x0+2..x0+6): la escalera baja hacia el este desde x1 − 6, un poste ahí quedaría flotando
+  for (const x of [x0, x0 + 3.6]) for (const y of [221, 232.6]) solids.push(prism(x, y, z, 0.4, 0.4, 3, "deck"));
+  for (const x of [x0 + 0.05, x0 + 3.65]) solids.push(prism(x, 221, z + 3, 0.3, 12, 0.3, "deck")); // vigas sobre los postes oeste y este
+  accents.push(...garland([v3(x0 + 3.8, 221, z + 3), v3(x0 + 3.8, 233, z + 3)]));
+  solids.push(...kiosk(v3(x0 + 2, 240, z)));
   for (const y of [170, 200, 245, 258]) solids.push(...bench(v3(x0 + 2, y, z))); // bancos
   // faroles cada 12 u; el tramo nuevo del distrito (266..326) no comparte ninguno con el viejo
   const bulbs = [180, 210, 250, 272, 284, 296, 308, 320].map((y) => { const l = lamp(v3(x1 - 3, y, z)); place(solids, accents, l); return l.bulb; });
