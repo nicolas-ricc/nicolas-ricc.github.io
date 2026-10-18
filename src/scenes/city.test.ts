@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildRenderList } from "../iso/render-list";
 import { bounds, type Solid } from "../iso/solids";
@@ -224,5 +225,16 @@ describe("city", () => {
     const bulbs = c.accents.filter((a) => a.kind === "dot" && a.color === "amber" && a.at.x === MALECON.x1 - 3 + 0.3);
     expect(c.neon.malecon).toHaveLength(8);
     for (const p of c.neon.malecon) expect(bulbs.some((b) => b.kind === "dot" && b.at.x === p.x && b.at.y === p.y && b.at.z + 0.4 === p.z)).toBe(true);
+  });
+
+  it("las props salen del kit: city.ts y streets.ts no arman bolardos, autos, semáforos, tanques ni charcos a mano", () => {
+    for (const f of ["src/scenes/city.ts", "src/city/streets.ts"]) {
+      const src = readFileSync(new URL(`../../${f}`, import.meta.url), "utf8");
+      expect(src).not.toMatch(/r: 0\.4, h: 0\.8/);          // bolardo
+      expect(src).not.toMatch(/3, 1\.5, 1\.2/);             // auto
+      expect(src).not.toMatch(/0\.3, 0\.3, 4, "steel"/);    // semáforo
+      expect(src).not.toMatch(/PUDDLE_RADII/);              // charco
+      expect(src).not.toMatch(/r: 1\.2, h: 2, mat: "rust"/); // tanque de agua
+    }
   });
 });

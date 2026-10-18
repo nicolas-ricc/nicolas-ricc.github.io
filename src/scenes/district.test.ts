@@ -42,13 +42,13 @@ describe("district", () => {
     expect(solids.filter((s) => s.kind === "prism" && s.mat === "paving" && s.h === 0.3 && s.at.z > 1 && inRect(s, SITE)).length).toBe(5); // losas
   });
 
-  it("alturas: edificios ≤ 24, remates ≤ 28, y nada delante del piso encendido supera 10", () => {
+  it("alturas: edificios ≤ 24, remates ≤ 24 sobre el zócalo, y nada delante del piso encendido supera 10", () => {
     const { solids } = build();
     const lit = { min: v3(TOWER.x, TOWER.y, LIT_FLOOR * (TOWER_H / TOWER_FLOORS)), max: v3(TOWER.x + TOWER.w, TOWER.y + TOWER.d, (LIT_FLOOR + 1) * (TOWER_H / TOWER_FLOORS)) };
     for (const s of solids) {
       const b = bounds(s);
       if (s.kind === "prism" && s.facade) expect(s.h).toBeLessThanOrEqual(MAX_DISTRICT_H);
-      expect(b.max.z).toBeLessThanOrEqual(28); // 0.3 + 24 + 3 losas de 0.3 + terraza 0.3 + cono 2 = 27.5, con margen para la suma en coma flotante
+      expect(b.max.z).toBeLessThanOrEqual(PLINTH_H + 24 + 1e-9); // tope de las recetas landmark del kit (24 sobre el zócalo), con remate
       if (s.kind === "prism" && s.facade && overlaps(screenBounds(b), screenBounds(lit)) && isBehind(lit, b)) expect(s.h).toBeLessThanOrEqual(10);
     }
     expect(maxDistrictHeight({ x: TOWER.x + 20, y: TOWER.y + 20, w: 24, d: 18 })).toBe(10); // una manzana que en pantalla pisa el piso encendido y queda delante
@@ -62,6 +62,11 @@ describe("district", () => {
     const colors = allIsoColors();
     for (const i of buildRenderList([...ground, ...solids])) expect(colors.has(i.color)).toBe(true);
     expect(solids.filter((s) => !isFlat(s)).length).toBeGreaterThan(150);
+  });
+
+  it("cada cartel es el slot sur de una receta convertido en cian o magenta opaco", () => {
+    const { signs } = build();
+    expect(signs.every((s) => s.kind === "poly" && s.alpha === 1)).toBe(true);
   });
 
   it("carteles de neón: uno por edificio ≥ 12 u, cian o magenta, plano en y, 0.4 u delante de la cara sur", () => {
