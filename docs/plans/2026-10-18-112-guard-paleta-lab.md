@@ -33,7 +33,7 @@
 2. **Qué cuenta como literal.** El guard busca `/#[0-9a-fA-F]{3,8}\b/g`. Uno de 3, 4 u 8 dígitos (`#fff`, `#100e19ff`) nunca coincide con un valor de la paleta y por eso falla, así no se puede saltar el guard escribiendo el color abreviado. La comparación ignora mayúsculas (`#100E19` pasa). Un selector de id que sea todo hex (`#bad`, `#face`) también fallaría: hoy no hay ninguno y el mensaje del fallo lo deja a la vista.
 3. **Notación `rgb()`/`rgba()`.** No se vigila: el brief habla de literales hex. `rgba(255, 255, 255, 0.12)` en `storybook.html` queda como está (es un velo de opacidad, no un color de la paleta).
 4. **El criterio 1 queda ejecutable.** Además de la verificación a mano (cambiar `#100e19` y ver fallar el test), un test unitario del extractor del guard comprueba que `#100e1a` se reporta y `#100e19` no.
-5. **El comentario CSS** de cada página pasa a nombrar a los dos colores y al guard, así quien lo edite sabe que hay un test.
+5. **El comentario CSS** de cada página pasa a nombrar a los dos colores y al guard, así quien lo edite sabe que hay un test. Solo cambia el comentario: las declaraciones quedan en su orden.
 
 ## Review Focus
 
@@ -42,6 +42,15 @@
 3. Si alguien agrega una página nueva al lab, el guard la recorre sin tocar la lista: se listan con `readdirSync`. La tarea 2 exige al menos las cinco actuales e incluye `world.html` por nombre.
 4. `ink` no debe aparecer como color de acento. Un `@ts-expect-error` en la tarea 1 fija que `"ink"` no es un `AccentColor`.
 5. Un color dentro de un comentario HTML o CSS también se vigila: el guard lee el archivo entero. Es intencional, porque un comentario con un hex desactualizado engaña igual que el código.
+
+## Assumptions
+
+Decididas en el grilling (sin fuente escrita; cualquier opción cumple el issue):
+
+- **"Más cercano" no está definido en el brief.** Se toma que no hay valor cercano porque el candidato más claro (`whitewash.up`, `0xaea289`) cambiaría a la vista el texto del lab: más oscuro y cálido. Alternativa descartada: reemplazar `#d8d4e8` por `whitewash.up`.
+- **`index.html` no entra al guard.** El brief lo deja fuera "salvo que ya pase el guard sin cambios"; hoy no tiene hex, pero el guard se llama "en lab/*.html" y el issue habla del lab. Alternativa descartada: sumarlo a la lista del guard.
+- **Solo un nivel de `lab/`.** `find lab -type d` devuelve solo `lab`, y el brief dice `lab/*.html`. Alternativa descartada: recorrer subcarpetas.
+- **Orden TDD.** En la etapa de evals se escriben los tests de las dos tareas antes de la implementación, así el RED de la tarea 2 (`["#d8d4e8"]` en las cinco páginas) se ve antes de que exista `ink`.
 
 ---
 
@@ -152,26 +161,27 @@ describe("guard de paleta en lab/*.html", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails without Task 1** (si la tarea 1 ya está, verificar a mano en el paso 4)
+- [ ] **Step 2: Run test to verify it fails without Task 1** (si la tarea 1 ya está, verificar a mano en el paso 3)
 
 Run: `npx vitest run src/map/palette-guard.test.ts`
 Expected, sin `ink` en la paleta: FAIL en las cinco páginas con `["#d8d4e8"]`. Con `ink`: PASS.
 
-- [ ] **Step 3: Actualizar el comentario CSS** de la línea 9 en las cinco páginas:
-
-```
-background: #100e19; color: #d8d4e8; /* = ISO_COLORS.sky e ISO_COLORS.ink en src/map/palette-iso.ts; lo vigila palette-guard.test.ts */
-```
-
-con el resto de la regla (`margin`, `height`, `overflow`, `font`) igual. El orden queda `margin: 0; height: 100%; overflow: hidden; background: #100e19; color: #d8d4e8; /* … */ font: 14px/1.4 system-ui, sans-serif;`.
-
-- [ ] **Step 4: Verificación del criterio 1 (a mano, y revertir)**
+- [ ] **Step 3: Verificación del criterio 1 (a mano, y revertir), antes de tocar las páginas**
 
 ```bash
 sed -i 's/#100e19/#100e1a/' lab/blog.html
 npx vitest run src/map/palette-guard.test.ts   # FAIL: lab/blog.html … ["#100e1a"]
-git checkout lab/blog.html                     # o revertir el sed si el paso 3 no está commiteado
+sed -i 's/#100e1a/#100e19/' lab/blog.html
+git diff --exit-code lab/blog.html             # sin cambios
 npx vitest run src/map/palette-guard.test.ts   # PASS
+```
+
+Pegar la línea del FAIL en el informe de la tarea: es la evidencia del criterio 1.
+
+- [ ] **Step 4: Actualizar solo el comentario CSS** de la línea 9 (idéntica en las cinco páginas). Las declaraciones y su orden no cambian:
+
+```bash
+sed -i 's|/\* = ISO_COLORS.sky en src/map/palette-iso.ts \*/|/* = ISO_COLORS.sky; el color de abajo es ISO_COLORS.ink (src/map/palette-iso.ts); lo vigila palette-guard.test.ts */|' lab/*.html
 ```
 
 - [ ] **Step 5: Full suite and typecheck**
@@ -185,3 +195,10 @@ Expected: PASS.
 git add src/map/palette-guard.test.ts lab/*.html
 git commit -m "feat(#112): palette guard walks lab/*.html"
 ```
+
+## Grilling
+
+- Rondas: 1 (los cambios no agregaron ni quitaron pasos ni movieron la costura: no hizo falta segunda ronda). Griller: `fable`.
+- Preguntas: 16. Respondidas con CODE: 11 (1, 2, 3, 5, 6, 7, 8, 11, 14, 15, 16), con ISSUE: 2 (4, 10), sin fuente: 3 (9, 12, 13).
+- Las sin fuente son supuestos técnicos (ver `## Assumptions`) o correcciones del plan: el paso de verificación del criterio 1 se mueve antes de editar las páginas y revierte con `sed` en lugar de `git checkout` (12); el comentario CSS se cambia sin reordenar declaraciones (11).
+- Ambigüedades de spec: ninguna. Issues abiertas: ninguna.
