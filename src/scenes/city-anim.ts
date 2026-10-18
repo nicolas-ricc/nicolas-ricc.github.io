@@ -1,6 +1,6 @@
 import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
-import type { Rng } from "../map/seed";
+import { createRng, type Rng } from "../map/seed";
 import type { CityScene } from "./city";
 import { chase } from "./neon";
 
@@ -38,7 +38,9 @@ const NONE: CityAnimChanges = { lit: false, papers: false, antenna: false, neon:
 
 export function createCityAnim(tower: CityScene["tower"], neon: CityScene["neon"], rng: Rng, opts: { reducedMotion: boolean }): CityAnim {
   const w = tower.paperWindow;
-  const nextGap = (): number => rng.int(BLINK_GAP_MS[0], BLINK_GAP_MS[1]);
+  // flujo propio: compartir `rng` con los papeles haría que la pausa sorteada dependa del troceo
+  const blinkRng = createRng(rng.int(0, 0xffffffff));
+  const nextGap = (): number => blinkRng.int(BLINK_GAP_MS[0], BLINK_GAP_MS[1]);
 
   let clock = 0;
   let off = false;
@@ -95,9 +97,10 @@ export function createCityAnim(tower: CityScene["tower"], neon: CityScene["neon"
       clock += dtMs;
       const c: CityAnimChanges = { lit: false, papers: true, antenna: false, neon: false };
 
-      // parpadeo: un tick apagado, después una pausa nueva
-      if (off) { off = false; blinkTimer = nextGap(); c.lit = true; }
-      else { blinkTimer -= dtMs; if (blinkTimer <= 0) { off = true; blinks++; c.lit = true; } }
+      // parpadeo: un tick apagado; la pausa siguiente cuenta desde el disparo, y un tick largo puede disparar varios
+      if (off) { off = false; c.lit = true; }
+      blinkTimer -= dtMs;
+      while (blinkTimer <= 0) { blinkTimer += nextGap(); blinks++; off = true; c.lit = true; }
 
       for (const p of papers) {
         p.dist += PAPER_SPEED * p.speed * dtMs;
