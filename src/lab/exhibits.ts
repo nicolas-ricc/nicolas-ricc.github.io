@@ -178,3 +178,8 @@ export function stepExhibit(id: string, delta: 1 | -1, list: readonly Exhibit[] 
   if (i < 0) return list[0]!;
   return list[(i + delta + list.length) % list.length]!;
 }
+
+/** La entrada no entra entera en la vista del índice (rectángulos de `getBoundingClientRect`). */
+export function outOfView(entry: { top: number; bottom: number }, view: { top: number; bottom: number }): boolean {
+  return entry.top < view.top || entry.bottom > view.bottom;
+}
