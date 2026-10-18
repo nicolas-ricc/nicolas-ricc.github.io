@@ -65,6 +65,27 @@ describe("paleta isométrica", () => {
     expect(Object.keys(ISO_TONES.hullBlue).sort()).toEqual(["down", "lit", "shade", "top", "up"]);
   });
 
+  it("agua y destello aguantan otro oscurecimiento: los umbrales siguen al factor", () => {
+    const factor = 0.6;
+    const tonos = (m: WaterMat | "glint") => ({
+      top: darken(BASE_TONES[m].top, factor), up: darken(BASE_TONES[m].up, factor),
+      lit: darken(BASE_TONES[m].lit, factor), down: darken(BASE_TONES[m].down, factor),
+    });
+    const tones: AguaPaleta = {
+      shallow: tonos("shallow"), water: tonos("water"), waterDeep: tonos("waterDeep"), abyss: tonos("abyss"), glint: tonos("glint"),
+    };
+    aguaYDestello(tones, factor);
+  });
+
+  it("agua y destello fallan si se invierte la relación", () => {
+    const tones: AguaPaleta = {
+      ...ISO_TONES,
+      shallow: { ...ISO_TONES.shallow, up: ISO_TONES.glint.top },
+      glint: { ...ISO_TONES.glint, top: ISO_TONES.shallow.up },
+    };
+    expect(() => aguaYDestello(tones, DARKEN)).toThrow(/expected/);
+  });
+
   it("tríadas de acento por zona: cian, ámbar y magenta, todas en el atlas", () => {
     expect(ACCENT_COLORS).toEqual(["cyan", "cyanMid", "cyanBleed", "amber", "amberMid", "amberBleed", "magenta", "magentaMid", "magentaBleed"]);
     const all = allIsoColors();
