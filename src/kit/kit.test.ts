@@ -26,6 +26,15 @@ function inPoly(p: Vec2, poly: Vec2[]): boolean {
   return inside;
 }
 
+/** Punto sobre algún lado del polígono (a 1e-6): está en la huella, no en el hueco. */
+function onEdge(p: Vec2, poly: Vec2[]): boolean {
+  return poly.some((a, i) => {
+    const b = poly[(i + 1) % poly.length]!, dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
+    const t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2;
+    return t >= -1e-9 && t <= 1 + 1e-9 && Math.abs(dx * (p.y - a.y) - dy * (p.x - a.x)) / Math.sqrt(l2) < 1e-6;
+  });
+}
+
 /** Para cada poly cóncavo, ningún otro sólido de la pieza tiene parte de su caja en el hueco (casco convexo menos huella). */
 function concaveIntruders(solids: Solid[]): number {
   let n = 0;
@@ -38,7 +47,7 @@ function concaveIntruders(solids: Solid[]): number {
       const b = bounds(o);
       for (let i = 0; i <= 4; i++) for (let j = 0; j <= 4; j++) {
         const p = { x: b.min.x + ((b.max.x - b.min.x) * i) / 4, y: b.min.y + ((b.max.y - b.min.y) * j) / 4 };
-        if (inPoly(p, hull) && !inPoly(p, s.footprint)) n++;
+        if (inPoly(p, hull) && !inPoly(p, s.footprint) && !onEdge(p, s.footprint)) n++;
       }
     }
   }
@@ -61,6 +70,13 @@ describe("kit: el oráculo del hueco cóncavo", () => {
     const onWing: Solid = { kind: "cone", at: { x: 2, y: 2, z: 6 }, r: 1, h: 2, mat: "leaf" };
     expect(concaveIntruders([L, inHole])).toBeGreaterThan(0);
     expect(concaveIntruders([L, onWing])).toBe(0);
+  });
+
+  it("un sólido a ras de las caras del hueco (sobre el borde de la huella) no es intruso", () => {
+    const L: Solid = { kind: "poly", footprint: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 4 }, { x: 4, y: 4 }, { x: 4, y: 10 }, { x: 0, y: 10 }], z: 0, h: 6, mat: "plaster" };
+    const slab: Solid = { kind: "prism", at: { x: -0.5, y: -0.5, z: 6 }, w: 11, d: 4.5, h: 0.4, mat: "stone" };
+    const tower: Solid = { kind: "prism", at: { x: 0, y: 0, z: 6.4 }, w: 4, d: 4, h: 8, mat: "plaster" };
+    expect(concaveIntruders([L, slab, tower])).toBe(0);
   });
 });
 

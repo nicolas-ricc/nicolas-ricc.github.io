@@ -90,20 +90,23 @@ export function fountain(at: Vec3): Lit {
   };
 }
 
+/** Alto total sobre `at.z` de los remates de techo: las recetas lo descuentan de su tope (el tanque son patas de 1.1 y tanque de 2). */
+export const WATER_TANK_H = 3.1, MACHINE_ROOM_H = 2, ANTENNA_H = 4, HELIPAD_H = 0.3;
+
 /** Centro. Tanque de agua sobre cuatro postes (1.1, no 1.2: distingue el poste del auto en el filtro de tests). */
 export function waterTank(at: Vec3): Solid[] {
   const legs = ([[-0.8, -0.8], [0.8, -0.8], [0.8, 0.8], [-0.8, 0.8]] as const).map(([dx, dy]) => prism(at.x + dx - 0.15, at.y + dy - 0.15, at.z, 0.3, 0.3, 1.1, "steel"));
-  return [...legs, { kind: "cylinder", at: v3(at.x, at.y, at.z + 1.1), r: 1.2, h: 2, mat: "rust", sides: 6 }];
+  return [...legs, { kind: "cylinder", at: v3(at.x, at.y, at.z + 1.1), r: 1.2, h: WATER_TANK_H - 1.1, mat: "rust", sides: 6 }];
 }
 
-export const machineRoom = (at: Vec3): Solid[] => [prism(at.x, at.y, at.z, 4, 3, 2, "officeDark")];
+export const machineRoom = (at: Vec3): Solid[] => [prism(at.x, at.y, at.z, 4, 3, MACHINE_ROOM_H, "officeDark")];
 /** Base de la antena. */
-export const antenna = (at: Vec3): Solid[] => [{ kind: "cylinder", at, r: 0.2, h: 4, mat: "steel", sides: 4 }];
+export const antenna = (at: Vec3): Solid[] => [{ kind: "cylinder", at, r: 0.2, h: ANTENNA_H, mat: "steel", sides: 4 }];
 
 /** Centro. */
 export const helipad = (at: Vec3): Lit => ({
-  solids: [{ kind: "cylinder", at, r: 3, h: 0.3, mat: "paving", sides: 8 }],
-  accents: [{ kind: "dot", at: v3(at.x, at.y, at.z + 0.3), r: 0.6, color: "amberMid" }],
+  solids: [{ kind: "cylinder", at, r: 3, h: HELIPAD_H, mat: "paving", sides: 8 }],
+  accents: [{ kind: "dot", at: v3(at.x, at.y, at.z + HELIPAD_H), r: 0.6, color: "amberMid" }],
 });
 
 export const beacon = (at: Vec3): Lit => ({ solids: [], accents: [{ kind: "dot", at, r: 0.5, color: "amberMid" }] });

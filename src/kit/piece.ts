@@ -1,10 +1,18 @@
+import { v3 } from "../iso/geometry";
 import { facadeWindows, type Facade } from "../iso/facade";
 import { visibleWalls, type Solid } from "../iso/solids";
-import type { Piece } from "./types";
+import type { Lot, Piece, Slot, Style } from "./types";
 
 /** Tope de altura sobre `lot.z` de una receta común y de una `landmark`. */
 export const RECIPE_MAX_H = 18;
 export const LANDMARK_MAX_H = 24;
+/** Altura desde la que una torre lleva cartel en la cara sur. */
+export const SIGN_MIN_H = 12;
+
+/** Tope de altura de una receta común en este lote. */
+export const recipeCap = (lot: Lot): number => Math.min(lot.maxH, RECIPE_MAX_H);
+/** Pisos de un cuerpo de alto `h` con la altura de piso del estilo; al menos uno. */
+export const floorsFor = (h: number, style: Style): number => Math.max(1, Math.round(h / style.floorH));
 
 export const emptyPiece = (): Piece => ({ solids: [], ground: [], accents: [], windows: [], slots: [], walls: [] });
 
@@ -17,3 +25,12 @@ export function addBuilding(p: Piece, s: Solid, f: Facade): void {
     for (const win of facadeWindows(w, f)) p.windows.push({ ...win, wall: w.normal, building });
   }
 }
+
+/** Hueco del cartel de neón en la cara sur, a media altura: 1.6 de alto, 1 de margen a cada lado, 0.4 delante de la pared. */
+export function southSign(x: number, southY: number, w: number, z0: number): Slot {
+  const y = southY + 0.4, z1 = z0 + 1.6;
+  return { pts: [v3(x + 1, y, z0), v3(x + w - 1, y, z0), v3(x + w - 1, y, z1), v3(x + 1, y, z1)], wall: v3(0, 1, 0), side: "s", kind: "sign", local: 0 };
+}
+
+/** Tono desplazado `k` y recortado al rango de `Solid.tone` (−2..+2). */
+export const shiftTone = (t: number, k: number): number => Math.max(-2, Math.min(2, t + k));
