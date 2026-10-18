@@ -373,3 +373,8 @@ Supuestos técnicos declarados en la revisión del plan (van a la descripción d
 - Preguntas: 16. Fuentes: ISSUE 7, CODE 13, DOC 2 (varias respuestas citan más de una); NO SOURCE 4 (1, 2-centros, 13, 14-paso), todas supuestos técnicos.
 - Supuestos: los seis de "Assumptions".
 - Issues abiertos: ninguno.
+
+## Revisión de código (etapa 6)
+
+- **Perfil del arco corregido.** La revisión mostró en la captura que la fórmula literal (`z − r·s`) dejaba un delantal de piedra colgado, más hondo en el centro del vano: un arco invertido. Prevalecen el criterio de aceptación ("tres arcos de piedra escalonados"), el "reutilizar la misma construcción" del puente peatonal, la spec §8 y la decisión 10 de #35. El borde inferior pasa a `z − r + (r − 0.4)·s`: arranca en `z − r` = −1 y sube hacia la clave, con 0.4 de losa en la clave como el peatonal. Se conservan las 18 losas, `min.z ≥ −1` y `max.z = BRIDGE.z`, y el test de `fixed.test.ts` invierte la desigualdad. Reemplaza la decisión 2 y el supuesto 5.
+- El salto de cono de piedra en `city.test.ts` queda acotado a la huella del puente.

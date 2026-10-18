@@ -52,11 +52,12 @@ export function plazaAndTower(solids: Solid[], ground: Solid[], accents: Accent[
 
 // ---------------------------------------------------------------- puente, muelle oeste y malecón
 
-/** Pilas del puente de la avenida: tres en el agua cada 21 desde el estribo y una bajo la cabecera este. */
+/** Pilas del puente de la avenida: tres en el agua cada 21 desde `BRIDGE.x0` y una bajo la cabecera este. */
 const BRIDGE_PIERS = [213, 234, 255, 274] as const;
 const OBELISK = 1.2, POST_STEP = 3; // lado del obelisco y paso máximo entre postes de la balaustrada
+const ARCH_KEY = 0.4; // losa que queda en la clave del arco, como en el puente peatonal
 
-/** Pila con tajamar centrada en `cx`: hexágono de 2 en x y del tablero + 1 de punta al norte y al sur. */
+/** Pila con tajamar centrada en `cx`: hexágono de 2 en x que pasa 1 al norte y al sur del tablero, en punta. */
 function cutwater(cx: number, y0: number, y1: number, z: number): Solid {
   const footprint: Vec2[] = [{ x: cx, y: y0 - 1 }, { x: cx + 1, y: y0 }, { x: cx + 1, y: y1 }, { x: cx, y: y1 + 1 }, { x: cx - 1, y: y1 }, { x: cx - 1, y: y0 }];
   return { kind: "poly", footprint, z: -1, h: z + 1, mat: "stone" };
@@ -69,10 +70,11 @@ export function bridge(solids: Solid[], accents: Accent[]): void {
   solids.push({ kind: "ramp", at: v3(x0 - STREET, y0, 0), w: STREET, d, h: top, mat: "asphalt", dir: "w" });
   solids.push({ kind: "ramp", at: v3(x1, y0, 0), w: STREET, d, h: top, mat: "asphalt", dir: "e" });
   for (const cx of BRIDGE_PIERS) solids.push(cutwater(cx, y0, y1, z));
-  // tres arcos entre pilas; el borde inferior baja hacia el centro del vano (issue #47), sin pasar de z −1
+  // tres arcos entre pilas: arrancan en z − r (nunca bajo z −1) y suben hacia la clave, como el puente peatonal.
+  // La fórmula literal del issue (z − r·s) colgaba las losas más largas en el centro: un arco invertido.
   for (let i = 0; i < BRIDGE_PIERS.length - 1; i++) {
     const a = BRIDGE_PIERS[i]! + 1, span = BRIDGE_PIERS[i + 1]! - 1 - a, r = Math.min(span / 2, z + 1);
-    solids.push(...stoneArch(a, y0, span, d, z, (s) => z - r * s));
+    solids.push(...stoneArch(a, y0, span, d, z, (s) => z - r + (r - ARCH_KEY) * s));
   }
   solids.push(prism(WEST_QUAY.x0, y0, 0.6, WEST_QUAY.x1 - WEST_QUAY.x0, d, z - 0.6, "plaza")); // estribo (0.6, el tope del muelle): el tablero apoya, no flota
   // balaustrada entre obeliscos: postes cada 3 o menos de punta a punta y un pasamanos encima

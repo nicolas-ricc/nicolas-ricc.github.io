@@ -29,7 +29,7 @@ describe("bridge", () => {
     }
   });
 
-  it("18 losas de arco bajo el tablero; las centrales de cada vano bajan más que las de los extremos", () => {
+  it("18 losas de arco bajo el tablero; en cada vano el borde inferior sube hacia la clave", () => {
     const slabs = built().solids
       .filter((s): s is Solid & { kind: "prism" } => s.kind === "prism" && s.mat === "stone" && s.at.z < BRIDGE.z)
       .sort((a, b) => a.at.x - b.at.x);
@@ -41,7 +41,7 @@ describe("bridge", () => {
     }
     for (let i = 0; i < 3; i++) {
       const zs = slabs.slice(i * 6, i * 6 + 6).map((s) => s.at.z);
-      expect(Math.max(zs[2]!, zs[3]!)).toBeLessThan(Math.min(zs[0]!, zs[5]!));
+      expect(Math.min(zs[2]!, zs[3]!)).toBeGreaterThan(Math.max(zs[0]!, zs[5]!));
     }
   });
 
