@@ -26,6 +26,15 @@ function inPoly(p: Vec2, poly: Vec2[]): boolean {
   return inside;
 }
 
+/** Punto sobre algún lado del polígono (a 1e-6): está en la huella, no en el hueco. */
+function onEdge(p: Vec2, poly: Vec2[]): boolean {
+  return poly.some((a, i) => {
+    const b = poly[(i + 1) % poly.length]!, dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
+    const t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2;
+    return t >= -1e-9 && t <= 1 + 1e-9 && Math.abs(dx * (p.y - a.y) - dy * (p.x - a.x)) / Math.sqrt(l2) < 1e-6;
+  });
+}
+
 /** Para cada poly cóncavo, ningún otro sólido de la pieza tiene parte de su caja en el hueco (casco convexo menos huella). */
 function concaveIntruders(solids: Solid[]): number {
   let n = 0;
@@ -38,7 +47,7 @@ function concaveIntruders(solids: Solid[]): number {
       const b = bounds(o);
       for (let i = 0; i <= 4; i++) for (let j = 0; j <= 4; j++) {
         const p = { x: b.min.x + ((b.max.x - b.min.x) * i) / 4, y: b.min.y + ((b.max.y - b.min.y) * j) / 4 };
-        if (inPoly(p, hull) && !inPoly(p, s.footprint)) n++;
+        if (inPoly(p, hull) && !inPoly(p, s.footprint) && !onEdge(p, s.footprint)) n++;
       }
     }
   }
