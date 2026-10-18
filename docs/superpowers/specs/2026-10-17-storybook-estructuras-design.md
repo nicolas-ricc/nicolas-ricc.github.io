@@ -60,7 +60,8 @@ export const EXHIBITS: readonly Exhibit[];
   subestación, cinta) la caja se escribe a mano y el test de no-vacío (§7) la
   vigila.
 - Un exhibit `piece` se construye sobre un pad de `paving` de 1 u de espesor
-  centrado en el origen, sin terreno ni animadores. `build` llama a la
+  centrado en el origen (desde #118 se estira hasta cubrir la sombra
+  proyectada: ver la nota de `grua-torre-sombra.png`), sin terreno ni animadores. `build` llama a la
   función existente con una posición fija: `ship("cargo", {x:0,y:0}, 0)`,
   `towerCrane(out, accents, { at: {x:0,y:0}, mastH: 20, jibLen: 24, dir: "e", light: "amber" })`, etc.
 
@@ -222,3 +223,4 @@ Lo que la implementación hizo distinto de lo escrito arriba, con su origen.
 - §6/§8 no fijaban URL. La página se sirve en `/lab/storybook.html` (`base: "/"` en `vite.config.ts`); `CLAUDE.md` dice `/map/`, ver #99.
 - §8 pedía capturas de cuatro exhibits. Las de cierre están en `docs/superpowers/specs/assets/97-storybook/` (`chimeneas`, `torre`, `faro`, `grua-torre`, `world`) y se tomaron con `?bloom=off` para no depender de la medición diferida en headless (#97).
 - La captura `faro` de #97 corta la punta del haz: el `h` del exhibit cubría tambores, linterna y tapa, no la cuña larga. Desde #116 el `h` sale de `LANTERN_Z` y `BEAM_LEN`, y el test de encuadre mide también los acentos en pantalla, a lo largo de una vuelta del haz. `faro-haz.png` muestra el haz apuntando al norte, la fase en que más sube, con `?bloom=off`.
+- La captura `grua-torre` de #97 muestra la sombra de la pluma saliendo del pad. Desde #118 el pad de las piezas cubre también la sombra proyectada, medida con `shadowPolygon`, el mismo proyector que la dibuja: queda descentrado hacia el ENE. `grua-torre-sombra.png` lo muestra, con `?bloom=off`.
