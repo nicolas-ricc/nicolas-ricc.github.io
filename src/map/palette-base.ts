@@ -57,7 +57,6 @@ const scale = (c: number, [r, g, b]: Rgb): number => {
   const ch = (shift: number, f: number) => Math.min(255, Math.round(((c >> shift) & 255) * f));
   return (ch(16, r) << 16) | (ch(8, g) << 8) | ch(0, b);
 };
-/** Promedio canal a canal, redondeado. */
 const mean = (a: number, b: number): number => {
   const ch = (shift: number) => Math.round((((a >> shift) & 255) + ((b >> shift) & 255)) / 2);
   return (ch(16) << 16) | (ch(8) << 8) | ch(0);
