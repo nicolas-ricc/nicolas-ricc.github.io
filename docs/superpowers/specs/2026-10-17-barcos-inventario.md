@@ -273,3 +273,7 @@ Límite de lo verificado: hay un solo instante capturado con dos barcos de carri
 | gradas 1 y 2, dique seco | correctos | correctos | [antes-darsena](assets/85-barcos/antes-darsena.png) | [despues-gradas](assets/85-barcos/despues-gradas.png) |
 | botes de la feria | el bote 3 enterrado | igual (defecto de #86, derivado a #98) | [antes-feria-botes](assets/85-barcos/antes-feria-botes.png) | [despues-feria-botes](assets/85-barcos/despues-feria-botes.png), [despues-feria-botes-ancho](assets/85-barcos/despues-feria-botes-ancho.png) |
 | conteos por frame | 8/82/0/2/53 y 9/105/0/3/63 | 9/105/0/3/59 y 9/105/0/3/63 | tabla "Conteos por frame" | tabla "Conteos por frame" de Después |
+
+## Botes de la feria (#98)
+
+El bote 3, que en el "antes" y el "después" quedaba enterrado en el entarimado del muelle, ya no lo está. Cada bote busca cerca de su lugar (y = −284, −256, −228, −200) la primera posición sobre la arena cuya planta no toque la de ningún sólido de la feria: primero acercándose al agua (de 9 a 6 u de la orilla) y después corriéndose a lo largo de la orilla (hasta ±14 u). En la escena del sitio quedan en (207, −282), (210, −256), (249, −227) y (266, −191). Con el encuadre ancho de #88 (centro (250, −242), s = 7) se ven los cuatro botes sobre la arena: [98-feria-botes](assets/85-barcos/98-feria-botes.png).
