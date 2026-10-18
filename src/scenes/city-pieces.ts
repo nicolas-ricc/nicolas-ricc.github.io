@@ -49,25 +49,3 @@ export function lamp(solids: Solid[], accents: Accent[], x: number, y: number, z
   accents.push({ kind: "dot", at: bulb, r: 0.6, color: "amber" });
   return bulb;
 }
-
-/** Tres edificios bajos en U alrededor de un patio verde; el suelo de la manzana es selva, con zócalos sueltos bajo cada edificio (esquema de las manzanas devoradas). */
-export function campus(out: Solid[], ground: Solid[], accents: Accent[], rng: Rng, r: Rect, x: number, y: number, w: number, d: number): void {
-  ground.push(tiles(rng, r, 0.05, "leafDark"));
-  const bldg = (bx: number, by: number, bw: number, bd: number, h: number) => {
-    out.push(prism(bx, by, 0, bw, bd, PLINTH_H, "paving"));
-    out.push(prism(bx + 0.5, by + 0.5, PLINTH_H, bw - 1, bd - 1, h, "office", { facade: { floors: Math.max(2, Math.round(h / 3)), cols: Math.max(2, Math.round(bw / 4)), base: "glass" } }));
-    out.push(prism(bx, by, PLINTH_H + h, bw, bd, 0.4, "officeDark"));
-    return PLINTH_H + h + 0.4;
-  };
-  const topN = bldg(x, y, w, 5, rng.int(6, 8));
-  bldg(x, y + 6, 6, d - 6, rng.int(6, 8));
-  bldg(x + w - 6, y + 6, 6, d - 6, rng.int(6, 8));
-  const px0 = x + 6, px1 = x + w - 6, py0 = y + 6, py1 = y + d; // patio 9×9
-  for (let k = 0, n = rng.int(4, 6); k < n; k++) out.push({ kind: "cone", at: v3(px0 + 1.5 + rng.next() * (px1 - px0 - 3), py0 + 1.5 + rng.next() * (py1 - py0 - 3), 0.05), r: 1 + rng.next() * 0.5, h: 2 + rng.next(), mat: "leaf" });
-  ground.push({ kind: "strip", path: [{ x: (px0 + px1) / 2, y: y + 5 }, { x: (px0 + px1) / 2, y: py1 }], width: 1, z: 0.08, mat: "paving" });
-  ground.push({ kind: "strip", path: [{ x: px0, y: (py0 + py1) / 2 }, { x: px1, y: (py0 + py1) / 2 }], width: 1, z: 0.08, mat: "paving" });
-  for (const [dx, dy] of [[1, 1], [px1 - px0 - 2, 1], [1, py1 - py0 - 2], [px1 - px0 - 2, py1 - py0 - 2]] as const) out.push(prism(px0 + dx, py0 + dy, 0.05, 1, 1, 0.7, "paving")); // mesas
-  const sx = x + w / 2 - 2, sy = y + 4.5; // cartel luminoso sobre el borde sur del techo del edificio norte
-  accents.push({ kind: "poly", pts: [v3(sx - 0.3, sy, topN - 0.2), v3(sx + 4.3, sy, topN - 0.2), v3(sx + 4.3, sy, topN + 1.4), v3(sx - 0.3, sy, topN + 1.4)], color: "amberBleed", alpha: 0.6 });
-  accents.push({ kind: "poly", pts: [v3(sx, sy, topN), v3(sx + 4, sy, topN), v3(sx + 4, sy, topN + 1.2), v3(sx, sy, topN + 1.2)], color: "amber" });
-}

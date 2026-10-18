@@ -16,7 +16,7 @@ describe("tech", () => {
     expect(JSON.stringify(scene())).toBe(JSON.stringify(scene()));
     const s = scene();
     const raised = s.solids.filter((x) => !isFlat(x));
-    expect(raised.length).toBeGreaterThan(400); expect(raised.length).toBeLessThan(1200);
+    expect(raised.length).toBeGreaterThan(400); expect(raised.length).toBeLessThan(1250); // 1200 antes de #39: el cartel del campus ahora es una caja más (22 campus)
     for (const x of s.solids) {
       const b = bounds(x);
       expect(b.min.y).toBeGreaterThanOrEqual(ZONE_SPLIT_Y);
