@@ -1,5 +1,5 @@
 import type { Rng } from "../map/seed";
-import type { AnimLayer, Animator } from "./animator";
+import { layerLookup, type AnimLayer, type Animator } from "./animator";
 import type { FactoryScene } from "./factory";
 import { createFactoryAnim } from "./factory-anim";
 
@@ -10,7 +10,7 @@ export function factoryAnimator(scene: FactoryScene, rng: Rng, opts: { reducedMo
   const layers: Record<string, () => AnimLayer> = Object.fromEntries(ids.map((id, k) => [id, () => ({ kind: "solid", solids: anim.puffs(k) })]));
   return {
     ids,
-    layer: (id) => layers[id]!(),
+    layer: layerLookup("factoryAnimator", layers),
     tick: (dtMs) => new Set(anim.tick(dtMs) ? ids : []),
   };
 }
