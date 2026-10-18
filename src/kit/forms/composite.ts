@@ -21,7 +21,7 @@ const TOWER_MIN_H = 3;
  */
 export function podiumTower(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;
-  const ph = Math.min(rng.int(4, 6), recipeCap(lot) - Math.max(WATER_TANK_H, MACHINE_ROOM_H) - CORNICE_H - TOWER_MIN_H); // el rng se consume igual; con tope bajo baja el podio
+  const ph = Math.min(rng.int(4, 6), recipeCap(lot) - Math.max(WATER_TANK_H, MACHINE_ROOM_H) - CORNICE_H - TOWER_MIN_H); // el rng se consume igual con tope bajo
   const pf: Facade = { floors: floorsFor(ph, style), cols: Math.max(2, Math.round(w / 4)), base: "glass" };
   addBuilding(p, prism(x, y, z, w, d, ph, style.mat, { facade: pf, tone: style.tone }), pf);
   p.solids.push(...cornice({ x, y, w, d, z: z + ph }, style.trim));
