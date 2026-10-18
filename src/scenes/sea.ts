@@ -120,7 +120,9 @@ function buoysAndWreck(out: Solid[], ground: Solid[], accents: Accent[]): Vec3[]
 }
 
 /**
- * Pecio (#83): un costero de 40 u partido en dos y hundido de popa en el talud de la fosa. El centro del
+ * Pecio (#83): un costero de 40 u partido en dos y hundido en la fosa. La popa (`WRECK`) queda
+ * ~16 u al este del talud (`abyssX(262)` ≈ 474) y todo el casco cae en `abyss`. No se lo corre hasta
+ * el talud: exigiría revalidar los carriles con el validador de #87, porque la vuelta pasa a 30 u. El centro del
  * casco está bajo el agua; asoman la proa (una cuña oxidada con su cubierta y la bita) y la casa de popa
  * (banda de casco oxidada, caseta encalada con ventanas, chimenea y mástil). Coordenadas locales como
  * en el kit de ships.ts: x de popa (0) a proa (`WRECK_LEN`), y a estribor, giradas por `WRECK.heading`.
