@@ -60,7 +60,8 @@ export const EXHIBITS: readonly Exhibit[];
   subestación, cinta) la caja se escribe a mano y el test de no-vacío (§7) la
   vigila.
 - Un exhibit `piece` se construye sobre un pad de `paving` de 1 u de espesor
-  centrado en el origen, sin terreno ni animadores. `build` llama a la
+  centrado en el origen (desde #118 se estira hasta cubrir la sombra
+  proyectada: ver la nota de `grua-torre-sombra.png`), sin terreno ni animadores. `build` llama a la
   función existente con una posición fija: `ship("cargo", {x:0,y:0}, 0)`,
   `towerCrane(out, accents, { at: {x:0,y:0}, mastH: 20, jibLen: 24, dir: "e", light: "amber" })`, etc.
 

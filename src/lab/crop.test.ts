@@ -144,16 +144,16 @@ describe("pieceScene", () => {
     expect([min.x, min.y, max.x, max.y]).toEqual([-7, -7, 7, 7]);
   });
   it("la sombra de cada pieza del catálogo cae sobre el pad", () => {
-    const out: string[] = [];
+    const out = new Set<string>();
     for (const e of EXHIBITS) {
       if (e.kind !== "piece") continue;
       const s = pieceScene(e.build, e.pad);
       const { min, max } = bounds(s.ground[0]!);
       for (const so of s.solids) for (const p of [...shadowPolygon(so) ?? [], ...shadowPolygon(so, SHADOW_CORE_H) ?? []]) {
-        if (p.x < min.x || p.x > max.x || p.y < min.y || p.y > max.y) out.push(e.id);
+        if (p.x < min.x || p.x > max.x || p.y < min.y || p.y > max.y) out.add(e.id);
       }
     }
-    expect([...new Set(out)]).toEqual([]);
+    expect([...out]).toEqual([]);
   });
   it("el pad contiene a una pieza descentrada", () => {
     const b = bounds(scene.ground[0]!);
