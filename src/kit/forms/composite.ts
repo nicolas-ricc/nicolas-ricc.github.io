@@ -1,11 +1,11 @@
-import { v3 } from "../../iso/geometry";
+import { v3, type Vec2 } from "../../iso/geometry";
 import type { Facade } from "../../iso/facade";
 import type { Rng } from "../../map/seed";
 import { prism } from "../../scenes/city-pieces";
 import { RECIPE_MAX_H, addBuilding, emptyPiece, shiftTone, southSign } from "../piece";
 import { ANTENNA_H, MACHINE_ROOM_H, WATER_TANK_H, antenna, machineRoom, waterTank } from "../props";
-import { CORNICE_H, cornice } from "../roofs";
-import type { Lot, Piece, RecipeDef, Style } from "../types";
+import { CORNICE_H, cornice, offsetFootprint } from "../roofs";
+import type { Lot, Piece, RecipeDef, Side, Style } from "../types";
 
 /**
  * Familia `composite` (spec §5, issue #41): cuerpos compuestos. Toda altura
@@ -57,7 +57,66 @@ export function twinTowers(lot: Lot, rng: Rng, style: Style): Piece {
   return p;
 }
 
+const CHAMFER = 1.5, TIER_INSET = 1.5, SPIRE_H = 3, SPIRE_R = 1.5;
+
+/** Rectángulo con las cuatro esquinas cortadas `c`, en el orden canónico (desde el norte, horario en pantalla). */
+export const chamferedRect = (x: number, y: number, w: number, d: number, c: number): Vec2[] => [
+  { x: x + c, y }, { x: x + w - c, y }, { x: x + w, y: y + c }, { x: x + w, y: y + d - c },
+  { x: x + w - c, y: y + d }, { x: x + c, y: y + d }, { x, y: y + d - c }, { x, y: y + c },
+];
+
+/** Déco escalonada: tres cuerpos concéntricos con chaflán (0.5, 0.3 y 0.2 de la altura sin el chapitel), tono creciente, chapitel de cuatro caras. */
+export function decoStepped(lot: Lot, rng: Rng, style: Style): Piece {
+  const p = emptyPiece(), { x, y, w, d, z } = lot;
+  const body = Math.min(rng.int(12, 18), cap(lot)) - SPIRE_H, s0 = Math.min(w, d) - 2;
+  let zt = z;
+  [0.5, 0.3, 0.2].forEach((share, k) => {
+    const th = body * share, s = s0 - 2 * TIER_INSET * k, f: Facade = { floors: floors(th, style), cols: 2 };
+    addBuilding(p, { kind: "poly", footprint: chamferedRect(x + (w - s) / 2, y + (d - s) / 2, s, s, CHAMFER), z: zt, h: th, mat: style.mat, facade: f, tone: shiftTone(style.tone, k) }, f);
+    zt += th;
+  });
+  p.solids.push({ kind: "cone", at: v3(x + w / 2, y + d / 2, zt), r: SPIRE_R, h: SPIRE_H, mat: style.roof, sides: 4 });
+  return p;
+}
+
+type Corner = "nw" | "ne" | "se" | "sw";
+
+/** Esquina del chaflán: la de `open[0]` que toca otra calle abierta contigua; si no hay, la que mira a la cámara (este o sur). SE sin `open`. */
+export function chamferCorner(open: Side[]): Corner {
+  const a = open[0];
+  if (!a) return "se";
+  if (a === "n" || a === "s") return a === "n" ? (open.includes("w") ? "nw" : "ne") : (open.includes("w") ? "sw" : "se");
+  return a === "e" ? (open.includes("n") ? "ne" : "se") : (open.includes("n") ? "nw" : "sw");
+}
+
+/** Rectángulo en orden canónico con la esquina `corner` cortada `c` (cinco vértices). */
+export function cutCorner(x: number, y: number, w: number, d: number, corner: Corner, c: number): Vec2[] {
+  const full: Record<Corner, Vec2[]> = { nw: [{ x, y }], ne: [{ x: x + w, y }], se: [{ x: x + w, y: y + d }], sw: [{ x, y: y + d }] };
+  const cut: Record<Corner, Vec2[]> = {
+    nw: [{ x, y: y + c }, { x: x + c, y }], ne: [{ x: x + w - c, y }, { x: x + w, y: y + c }],
+    se: [{ x: x + w, y: y + d - c }, { x: x + w - c, y: y + d }], sw: [{ x: x + c, y: y + d }, { x, y: y + d - c }],
+  };
+  return (["nw", "ne", "se", "sw"] as const).flatMap((k) => (k === corner ? cut[k] : full[k]));
+}
+
+const CHAMFER_CUT = 4;
+
+/** Chaflán: una esquina cortada 4 hacia la calle, fachada en todas las paredes, cornisa agrandada 0.5 y sala de máquinas. */
+export function chamfer(lot: Lot, rng: Rng, style: Style): Piece {
+  const p = emptyPiece(), { x, y, w, d, z } = lot;
+  const h = Math.min(rng.int(8, 14), cap(lot) - CORNICE_H - MACHINE_ROOM_H);
+  const bx = x + 1, by = y + 1, bw = w - 2, bd = d - 2;
+  const fp = cutCorner(bx, by, bw, bd, chamferCorner(lot.open), CHAMFER_CUT);
+  const f: Facade = { floors: floors(h, style), cols: 3 };
+  addBuilding(p, { kind: "poly", footprint: fp, z, h, mat: style.mat, facade: f, tone: style.tone }, f);
+  p.solids.push({ kind: "poly", footprint: offsetFootprint(fp, 0.5), z: z + h, h: CORNICE_H, mat: style.trim });
+  p.solids.push(...machineRoom(v3(bx + bw / 2 - 2, by + bd / 2 - 1.5, z + h + CORNICE_H)));
+  return p;
+}
+
 export const COMPOSITE: readonly RecipeDef[] = [
   { name: "podiumTower", recipe: podiumTower, family: "composite" },
   { name: "twinTowers", recipe: twinTowers, family: "composite" },
+  { name: "decoStepped", recipe: decoStepped, family: "composite" },
+  { name: "chamfer", recipe: chamfer, family: "composite" },
 ];
