@@ -56,6 +56,7 @@ describe("scheduleIdle", () => {
   });
   it("si no, setTimeout 0: no corre en el acto", () => {
     vi.stubGlobal("requestIdleCallback", undefined);
+    vi.stubGlobal("requestAnimationFrame", undefined);
     vi.useFakeTimers();
     const fn = vi.fn();
     scheduleIdle(fn);

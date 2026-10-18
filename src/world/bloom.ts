@@ -26,7 +26,8 @@ export function formatBloomVerdict(v: BloomVerdict, budgetMs: number): string {
 
 /**
  * Corre `fn` cuando el navegador esté ocioso (a más tardar en 1 s). Sin `requestIdleCallback`, en la tarea
- * siguiente al próximo frame: el `setTimeout` deja que ese frame se pinte sin el bloom. Sin rAF, en la próxima tarea.
+ * siguiente al próximo frame, sin cota de tiempo (una pestaña oculta no da frames): el `setTimeout` deja que ese
+ * frame se pinte sin el bloom. Sin rAF, en la próxima tarea.
  */
 export function scheduleIdle(fn: () => void): void {
   if (typeof requestIdleCallback === "function") requestIdleCallback(fn, { timeout: 1000 });
