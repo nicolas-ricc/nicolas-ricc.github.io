@@ -17,10 +17,10 @@ import type { Lot, Piece, RecipeDef, Side, Slot, Style } from "../types";
 const SHOP_MIN = 4, SHOP_MAX = 6, SHOP_BACK = 3, NEON_Z0 = 2.4, NEON_H = 1.2, AWNING_Z = 2;
 
 const alongX = (side: Side): boolean => side === "n" || side === "s";
-export const frontLen = (lot: Lot, side: Side): number => (alongX(side) ? lot.w : lot.d);
+const frontLen = (lot: Lot, side: Side): number => (alongX(side) ? lot.w : lot.d);
 
 /** Franja `s0..s1` a lo largo del frente `side`, pegada a él, con todo el fondo menos `back`. */
-export function frontRect(lot: Lot, side: Side, s0: number, s1: number, back: number): Rect {
+function frontRect(lot: Lot, side: Side, s0: number, s1: number, back: number): Rect {
   const deep = (alongX(side) ? lot.d : lot.w) - back;
   switch (side) {
     case "s": return { x: lot.x + s0, y: lot.y + back, w: s1 - s0, d: deep };
@@ -31,7 +31,7 @@ export function frontRect(lot: Lot, side: Side, s0: number, s1: number, back: nu
 }
 
 /** Pared del lado `side` de `r`: extremos a→b en planta y normal hacia afuera. */
-export function wallOf(r: Rect, side: Side): { a: Vec2; b: Vec2; normal: Vec3 } {
+function wallOf(r: Rect, side: Side): { a: Vec2; b: Vec2; normal: Vec3 } {
   switch (side) {
     case "s": return { a: { x: r.x, y: r.y + r.d }, b: { x: r.x + r.w, y: r.y + r.d }, normal: v3(0, 1, 0) };
     case "n": return { a: { x: r.x, y: r.y }, b: { x: r.x + r.w, y: r.y }, normal: v3(0, -1, 0) };
@@ -94,7 +94,7 @@ export function shopRow(lot: Lot, rng: Rng, style: Style): Piece {
     p.solids.push(...shopAwning(r, front, lw - 1, lot.z));
     if (!neons) return;
     p.slots.push(neonSlot(r, front, lw - 1, lot.z, k));
-    if (k === corner) p.slots.push(neonSlot(r, second!, lw - 1, lot.z, k));
+    if (second && k === corner) p.slots.push(neonSlot(r, second, lw - 1, lot.z, k));
   });
   return p;
 }

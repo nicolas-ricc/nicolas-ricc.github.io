@@ -16,7 +16,7 @@ import type { Lot, Piece, RecipeDef, Side, Style } from "../types";
 const PASSAGE = 3;
 
 /** Alas de ancho `t` sobre `r` en los lados pedidos: norte y sur a lo ancho, este y oeste entre ellas. Prismas disjuntos, nunca un anillo. */
-export function ring(r: Rect, t: number, sides: readonly Side[]) {
+function ring(r: Rect, t: number, sides: readonly Side[]) {
   const has = (s: Side) => sides.includes(s);
   const y0 = r.y + (has("n") ? t : 0), y1 = r.y + r.d - (has("s") ? t : 0);
   const x0 = r.x + (has("w") ? t : 0), x1 = r.x + r.w - (has("e") ? t : 0);
