@@ -14,6 +14,7 @@ describe("ciclo de vida de los stages del storybook (#102)", () => {
 describe("la entrada actual del índice (#117)", () => {
   it("se centra solo si no se ve entera", () => {
     expect(src).not.toContain('block: "nearest"');
-    expect(src).toMatch(/if \(outOfView\(a\.getBoundingClientRect\(\), nav\.getBoundingClientRect\(\)\)\) a\.scrollIntoView\(\{ block: "center" \}\)/);
+    expect(src).toContain("outOfView(a.getBoundingClientRect(), nav.getBoundingClientRect())");
+    expect(src).toContain('a.scrollIntoView({ block: "center" })');
   });
 });

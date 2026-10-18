@@ -24,7 +24,7 @@
 1. **Si la entrada se ve entera, el índice no se mueve.** El brief lo permite ("puede seguir siendo no desplazar"). Así, un clic con el mouse sobre una entrada visible no le corre la lista bajo el cursor. En cuanto la entrada asoma solo en parte o no asoma, se centra.
 2. **Se usa el `scrollIntoView` nativo con `block: "center"`** y no se calcula el `scrollTop` a mano. En los extremos del índice (`planta`, `lancha`) el navegador acota el desplazamiento y la entrada queda lo más cerca del centro que permite la lista, que es lo esperable.
 3. **El predicado recibe rectángulos** `{ top, bottom }`, que `DOMRect` cumple: el `getBoundingClientRect()` de la entrada contra el de `#exhibits`. El borde del `nav` incluye su `padding` de 1rem; una entrada metida en ese padding cuenta como visible, porque se lee.
-4. **Que se desplacen los ancestros** no es un problema: `html, body` tienen `overflow: hidden` (`lab/storybook.html:9`), así que `scrollIntoView` solo mueve `#exhibits`.
+4. **Que se desplacen los ancestros** no es un problema. `overflow: hidden` no impide que `scrollIntoView` desplace un ancestro, pero `html, body` miden el 100 % de la ventana (`lab/storybook.html:9`) y el `body` es un grid sin contenido que desborde, así que no tienen nada que desplazar y solo se mueve `#exhibits`.
 
 ## Assumptions
 
