@@ -190,7 +190,11 @@ documento manda donde difiera de esta sección.
   18×6×3 con caseta), barcaza (`hull` 40×9×2 con contenedores `rust`/`steel`),
   y un pecio fijo a z -3 junto al arrecife. Los que navegan llevan luz de
   mástil `magentaMid` y luces de posición.
-- **Rutas.** Nacen en la desembocadura (`MOUTH`, esquina NE del astillero),
+- **Rutas.** *Desvío: reemplazado por los carriles semirrectos de #87
+  (`LANE_OUT` / `LANE_BACK`) y la velocidad única `LANE_SPEED = 1.2` de #63,
+  con fases 0, 1/3 y 2/3; ver `2026-10-16-barcos-referencia.md` y
+  `2026-10-17-barcos-inventario.md`. Lo que sigue queda como registro.*
+  Nacen en la desembocadura (`MOUTH`, esquina NE del astillero),
   rodean la punta por el este, siempre con x mayor que el extremo de la roca
   mientras |y - 118| < 40, y siguen al sudeste hasta el borde este del mundo.
   Al rodear la punta por el este quedan delante del faro en profundidad:
