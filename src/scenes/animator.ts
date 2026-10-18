@@ -16,6 +16,7 @@ export interface Animator {
   readonly ids: readonly string[];
   /** Cuerpos de agua del terreno que este animador dibuja por su cuenta (partidos en bandas, por ejemplo): el runtime no los pinta estáticos. */
   readonly claims?: readonly Solid[];
+  /** Solo definida para los ids de `ids`: cualquier otro id lanza. */
   layer(id: string): AnimLayer;
   tick(dtMs: number): ReadonlySet<string>;
 }
