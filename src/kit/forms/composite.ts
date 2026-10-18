@@ -15,10 +15,12 @@ export const SIGN_MIN_H = 12;
 const cap = (lot: Lot): number => Math.min(lot.maxH, RECIPE_MAX_H);
 const floors = (h: number, style: Style): number => Math.max(1, Math.round(h / style.floorH));
 
+const TOWER_MIN_H = 3;
+
 /** Podio que cubre el lote con vidriera y cornisa; torre descentrada en una esquina, 1 adentro del podio. */
 export function podiumTower(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;
-  const ph = rng.int(4, 6);
+  const ph = Math.min(rng.int(4, 6), cap(lot) - Math.max(WATER_TANK_H, MACHINE_ROOM_H) - CORNICE_H - TOWER_MIN_H); // el rng se consume igual; con tope bajo baja el podio
   const pf: Facade = { floors: floors(ph, style), cols: Math.max(2, Math.round(w / 4)), base: "glass" };
   addBuilding(p, prism(x, y, z, w, d, ph, style.mat, { facade: pf, tone: style.tone }), pf);
   p.solids.push(...cornice({ x, y, w, d, z: z + ph }, style.trim));
@@ -132,7 +134,8 @@ export function lTower(lot: Lot, rng: Rng, style: Style): Piece {
   const wh = rng.int(5, 7), wf: Facade = { floors: floors(wh, style), cols: 3 };
   addBuilding(p, { kind: "poly", footprint: lFootprint(x, y, w, d, L_ARM), z, h: wh, mat: style.mat, facade: wf, tone: style.tone }, wf);
   const top = z + wh;
-  p.solids.push(prism(x - 0.5, y - 0.5, top, w + 1, L_ARM + 0.5, CORNICE_H, style.trim), prism(x - 0.5, y + L_ARM, top, L_ARM + 0.5, d - L_ARM + 0.5, CORNICE_H, style.trim));
+  p.solids.push(prism(x - 0.5, y - 0.5, top, w + 1, L_ARM + 0.5, CORNICE_H, style.trim));
+  p.solids.push(prism(x - 0.5, y + L_ARM, top, L_ARM + 0.5, d - L_ARM + 0.5, CORNICE_H, style.trim));
   const total = Math.min(rng.int(12, 16), cap(lot)), th = total - wh - CORNICE_H;
   const tf: Facade = { floors: floors(th, style), cols: 3 };
   addBuilding(p, prism(x, y, top + CORNICE_H, L_ARM, L_ARM, th, style.mat, { facade: tf, tone: shiftTone(style.tone, 1) }), tf);

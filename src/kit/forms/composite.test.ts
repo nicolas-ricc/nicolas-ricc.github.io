@@ -57,6 +57,14 @@ describe("kit: familia composite", () => {
     expect(recipe("podiumTower")({ ...LOT, maxH: 10 }, createRng(1), STYLES.centro).slots).toEqual([]);
   });
 
+  it("podiumTower con maxH 10: la torre tiene al menos 3 de cuerpo", () => {
+    for (const lot of [LOT, SMALL]) for (const seed of SEEDS) {
+      const [, tower] = withFacade(recipe("podiumTower")({ ...lot, maxH: 10 }, createRng(seed), STYLES.centro).solids);
+      if (!tower || tower.kind !== "prism") throw new Error("sin torre");
+      expect(tower.h).toBeGreaterThanOrEqual(3 - 1e-9);
+    }
+  });
+
   it("twinTowers: dos torres iguales ±1, el puente toca las dos a media altura y una sola antena", () => {
     for (const seed of SEEDS) {
       const p = recipe("twinTowers")(LOT, createRng(seed), STYLES.centro);
