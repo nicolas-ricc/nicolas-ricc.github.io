@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { hides, screenHull } from "../iso/depth";
-import { v3, type Vec3 } from "../iso/geometry";
+import { v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { bounds, type Bounds, type Solid } from "../iso/solids";
 import type { Piece, Slot, Window } from "../kit/types";
 import { createRng } from "../map/seed";
@@ -23,7 +23,7 @@ function placedAt(barrio: Barrio, piece: Piece, solidOffset: number, open: ("n" 
 }
 
 /** Oráculo: `true` si algún sólido distinto de `except` tapa la caja. Sin barrido; `bs` es la caché propia del test. */
-const hidden = (box: Bounds, bs: Bounds[], except = -1): boolean => bs.some((b, i) => i !== except && hides(box, b, { back: screenHull(box), front: screenHull(b) }));
+const hidden = (box: Bounds, bs: Bounds[], hs: Vec2[][], except = -1): boolean => bs.some((b, i) => i !== except && hides(box, b, { back: screenHull(box), front: hs[i]! }));
 
 const SEEDS: readonly [string, () => CityScene, boolean][] = [
   ["semilla del mundo", () => city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3)), true],
@@ -33,17 +33,17 @@ const SEEDS: readonly [string, () => CityScene, boolean][] = [
 for (const [name, make, isWorld] of SEEDS) {
   describe(`luces de Resume (${name})`, () => {
     const s = make(), l = s.lights;
-    const bs = s.solids.map(bounds);
+    const bs = s.solids.map(bounds), hs = bs.map(screenHull);
     const ownSolid = (w: { window: Window; owner: number }) => s.placed[w.owner]!.solidOffset + w.window.building;
 
     it("ninguna ventana encendida queda tapada por un sólido (oráculo por fuerza bruta)", () => {
       const on = l.windows.filter((w) => w.on);
       expect(on.length).toBeGreaterThan(100);
-      for (const w of on) expect(hidden(lightBox(w.window.pts), bs, ownSolid(w))).toBe(false);
+      for (const w of on) expect(hidden(lightBox(w.window.pts), bs, hs, ownSolid(w))).toBe(false);
     });
 
     it("ningún neón queda tapado por un sólido (oráculo por fuerza bruta)", () => {
-      for (const n of l.neons) expect(hidden(lightBox(n.slot.pts), bs)).toBe(false);
+      for (const n of l.neons) expect(hidden(lightBox(n.slot.pts), bs, hs)).toBe(false);
     });
 
     it("porcentaje encendido ±8 y proporción cálida ±10 por barrio con ≥ 30 candidatas", () => {
@@ -197,6 +197,14 @@ describe("lights (escenas sintéticas)", () => {
     centro.slots.push(neonSlot(104, 0));
     const l = lights({ solids: [...bares.solids, ...centro.solids], placed: [placedAt("bares", bares, 0), placedAt("centro", centro, 1)] }, createRng(3));
     expect(l.neons.map((n) => n.slot.local)).toEqual([3]);
+  });
+
+  it("neones: si el frente de un local de esquina queda tapado, el neón va a su otro lado abierto", () => {
+    const a = emptyPiece();
+    a.solids.push(prism(0, 0, 0.3, 24, 18, 6), prism(0, 20, 0, 24, 2, 12)); // muro al sur que tapa el frente sur
+    a.slots.push(neonSlot(10, 0), { pts: [v3(24, 8, 2.7), v3(24, 10, 2.7), v3(24, 10, 3.9), v3(24, 8, 3.9)], wall: v3(1, 0, 0), side: "e", kind: "neon", local: 0 });
+    const l = lights({ solids: a.solids, placed: [placedAt("bares", a, 0, ["s", "e"])] }, createRng(3));
+    expect(l.neons.map((n) => n.slot.side)).toEqual(["e"]);
   });
 
   it("neones: el charco cae 1 hacia afuera de la pared, a la z del lote", () => {

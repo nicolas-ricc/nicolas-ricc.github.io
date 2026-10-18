@@ -27,7 +27,7 @@ export interface PlacedPiece { placed: Placed; piece: Piece; solidOffset: number
 export interface CityScene {
   ground: Solid[];   // baldosas de la plaza, suelo de manzanas devoradas, carriles
   solids: Solid[];
-  accents: Accent[]; // faroles, derrame de luz, ventanas encendidas de lights(), neones de bares y fachadas bañadas; las ventanas encendidas del tramo anterior y la antena las anima city-anim
+  accents: Accent[]; // faroles, derrame de luz, ventanas encendidas, neones de bares y fachadas bañadas de lights(); el piso encendido de la torre y la antena los anima city-anim
   tower: TowerLights;
   neon: { signs: Accent[]; malecon: Vec3[] }; // carteles del distrito y luces del malecón; los anima city-anim
   placed: PlacedPiece[];

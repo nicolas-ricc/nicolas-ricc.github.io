@@ -34,9 +34,11 @@ export function lightBox(pts: Vec3[]): Bounds {
 interface Target { box: Bounds; sb: ScreenBounds; hull: Vec2[]; own: number }
 const target = (pts: Vec3[], own: number): Target => { const box = lightBox(pts); return { box, sb: screenBounds(box), hull: screenHull(box), own }; };
 
+/** Cajas de los sólidos con su caja y su silueta en pantalla, calculadas una vez. */
+interface Boxes { boxes: Bounds[]; sbs: ScreenBounds[]; hulls: Vec2[][] }
+
 /** Barrido por `minX` de pantalla: `true` si algún sólido distinto del propio tapa el objetivo. Equivale a probar todos los pares. */
-function occluded(ts: Target[], solids: Bounds[]): boolean[] {
-  const sbs = solids.map(screenBounds), hulls = solids.map(screenHull);
+function occluded(ts: Target[], { boxes, sbs, hulls }: Boxes): boolean[] {
   const items = [...ts.map((t, i) => ({ sb: t.sb, t: i, s: -1 })), ...sbs.map((sb, s) => ({ sb, t: -1, s }))].sort((a, b) => a.sb.minX - b.sb.minX);
   const out = ts.map(() => false);
   for (let i = 0; i < items.length; i++) {
@@ -47,7 +49,7 @@ function occluded(ts: Target[], solids: Bounds[]): boolean[] {
       const [x, y] = a.t >= 0 ? [a, b] : [b, a];
       const t = ts[x.t]!;
       if (out[x.t] || y.s === t.own || !overlaps(t.sb, sbs[y.s]!)) continue;
-      if (hides(t.box, solids[y.s]!, { back: t.hull, front: hulls[y.s]! })) out[x.t] = true;
+      if (hides(t.box, boxes[y.s]!, { back: t.hull, front: hulls[y.s]! })) out[x.t] = true;
     }
   }
   return out;
@@ -61,14 +63,14 @@ function sample<T>(xs: T[], k: number, rng: Rng): T[] {
 }
 
 export function lights(scene: Pick<CityScene, "solids" | "placed">, rng: Rng): CityLights {
-  const bs = scene.solids.map(bounds);
+  const boxes = scene.solids.map(bounds), solids: Boxes = { boxes, sbs: boxes.map(screenBounds), hulls: boxes.map(screenHull) };
   const barrios = Object.keys(CATALOGUE) as Barrio[];
   const counts = Object.fromEntries(barrios.map((b) => [b, { candidates: 0, on: 0, warm: 0 }])) as CityLights["counts"];
 
   // Ventanas no ocultas, en orden de recorrido.
   const cands: { window: Window; owner: number }[] = [], ts: Target[] = [];
   scene.placed.forEach((p, owner) => p.piece.windows.forEach((window) => { cands.push({ window, owner }); ts.push(target(window.pts, p.solidOffset + window.building)); }));
-  const hid = occluded(ts, bs);
+  const hid = occluded(ts, solids);
   const vis = cands.filter((_, i) => !hid[i]);
   const keys = vis.map(() => rng.next());
 
@@ -87,21 +89,23 @@ export function lights(scene: Pick<CityScene, "solids" | "placed">, rng: Rng): C
   }
   for (const w of sample(windows.filter((w) => ["centro", "residencial"].includes(scene.placed[w.owner]!.placed.barrio)), MAX_ANIMABLE, rng)) w.animable = true;
 
-  // Neones del barrio de bares: frente abierto, a 2.4..3.6 sobre el lote, uno por local, a la vista.
-  const slots: { slot: Slot; owner: number }[] = [], nts: Target[] = [], seen = new Set<string>();
+  // Neones del barrio de bares: frente abierto, a 2.4..3.6 sobre el lote, a la vista y uno por local
+  // (se deduplica después de la oclusión: si el frente de un local de esquina queda tapado, vale su otro lado).
+  const slots: { slot: Slot; owner: number }[] = [];
   scene.placed.forEach((p, owner) => {
     if (p.placed.barrio !== "bares") return;
     for (const slot of p.piece.slots) {
-      const key = `${owner}:${slot.local}`;
-      if (slot.kind !== "neon" || !p.placed.lot.open.includes(slot.side) || seen.has(key)) continue;
-      if (!slot.pts.every((q) => q.z - p.placed.lot.z >= NEON_Z[0] - EPS && q.z - p.placed.lot.z <= NEON_Z[1] + EPS)) continue;
-      seen.add(key);
-      slots.push({ slot, owner });
-      nts.push(target(slot.pts, -1));
+      if (slot.kind !== "neon" || !p.placed.lot.open.includes(slot.side)) continue;
+      if (slot.pts.every((q) => q.z - p.placed.lot.z >= NEON_Z[0] - EPS && q.z - p.placed.lot.z <= NEON_Z[1] + EPS)) slots.push({ slot, owner });
     }
   });
-  const nhid = occluded(nts, bs);
-  let free = slots.filter((_, i) => !nhid[i]);
+  const nhid = occluded(slots.map((s) => target(s.slot.pts, -1)), solids), seen = new Set<string>();
+  let free = slots.filter((s, i) => {
+    const key = `${s.owner}:${s.slot.local}`;
+    if (nhid[i] || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
   if (free.length > MAX_NEONS) { const pick = new Set(sample(free, MAX_NEONS, rng)); free = free.filter((s) => pick.has(s)); }
   const neons: StreetNeon[] = free.map(({ slot, owner }) => {
     const r = rng.next() * 100, color = r < 50 ? "amber" : r < 80 ? "magenta" : "cyan";
