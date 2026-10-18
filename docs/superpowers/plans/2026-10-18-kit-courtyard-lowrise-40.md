@@ -57,7 +57,7 @@
 **Interfaces:**
 - Produces: `ring(r: Rect, t: number, sides: readonly Side[]): { wings: { side: Side; rect: Rect }[]; patio: Rect }`; `courtyardO: Recipe`; `COURTYARD: readonly RecipeDef[]` (Task 2 le suma tres entradas).
 
-- [ ] **Step 1: tests** (los escribe la etapa de evals): en `courtyard.test.ts`, para cada receta con patio, con lotes `{1.5,1.5,21,15}`, `{0,0,24,18}` y `{0,0,16,12}` y 20 seeds: las alas (sólidos con `facade`) tienen AABB disjuntas en planta (solape > 1e-6 en x y en y = falla); `courtyard` definido y sin solape con ningún ala; todo `cone` y todo banco (prisma `paving` h 0.5) cae dentro de `courtyard` (± 1e-6). `courtyardO`: con `cx = lot.x + lot.w/2`, ningún sólido cuya AABB cruza en y la franja `[lot.y + lot.d − 5, lot.y + lot.d]` invade en x el intervalo abierto `(cx − 1.5, cx + 1.5)`.
+- [ ] **Step 1: tests** (los escribe la etapa de evals): en `courtyard.test.ts`, para cada receta con patio, con lotes `{1.5,1.5,21,15}`, `{0,0,24,18}` y `{0,0,16,12}` y 20 seeds: las alas (sólidos con `facade`) tienen AABB disjuntas en planta (solape > 1e-6 en x y en y = falla); `courtyard` definido y sin solape con ningún ala; todo `cone` y todo banco (prisma `paving` h 0.5) cae dentro de `courtyard` (± 1e-6). `courtyardO`: con `cx = lot.x + lot.w/2`, ningún sólido cuya AABB cruza en y la franja `[lot.y + lot.d − 5, lot.y + lot.d]` invade en x el intervalo abierto `(cx − 1.5, cx + 1.5)`. Todas las comparaciones de solape son estrictas con tolerancia: dos intervalos se solapan si `min(a1, b1) − max(a0, b0) > 1e-6` (tocarse en el borde no cuenta); "dentro de `courtyard`" se evalúa sobre la AABB del sólido (`bounds`), con 1e-6.
 - [ ] **Step 2: correr** `npx vitest run src/kit/forms/courtyard.test.ts` → FAIL (módulo inexistente).
 - [ ] **Step 3: implementar**
 
@@ -346,5 +346,36 @@ Registro: sumar `rowHouses` y `eatenRuin` (`family: "lowrise"`).
 
 **Files:** Create `docs/superpowers/specs/assets/2026-10-15-resume-nivel-2/kit-40-residencial.png`, `kit-40-bares.png`.
 
-- [ ] Dev server `npm run dev -- --host --port 5173`; `agent-browser` a `/lab/kit.html` (o `/map/lab/kit.html` según base), 1600×900; tecla `3` (residencial) → captura; tecla `2` (bares) → captura. Verificar que hay filas `courtyard` y `lowrise` (7 lotes nuevos) y consola sin errores.
+- [ ] Dev server `npm run dev -- --host --port 5173`; `agent-browser` a `http://localhost:5173/lab/kit.html` (`vite.config.ts:4` tiene `base: "/"`; el `/map/` de CLAUDE.md está desactualizado, ver #131), 1600×900; tecla `3` (residencial) → captura; tecla `2` (bares) → captura. Verificar que hay filas `courtyard` y `lowrise` (7 lotes nuevos) y consola sin errores.
 - [ ] commit `docs(#40): capturas de lab/kit.html con courtyard y lowrise`.
+
+## Assumptions
+
+Decisiones técnicas sin fuente literal (se listan en el PR):
+
+- **A1. `courtyardC` en cinco bandas** (decisión 2). El issue fija solo el ala central (`d/2 − 2.5`) y el ancho 5 para la O; con alas de 5 la C no entra en `d ≤ 15`. Descartado: alas de 5 con patios de fondo ≤ 0 o una C que no cumpla `d ≥ 12`.
+- **A2. `tiles` con la baldosa de 6** (decisión 3). Descartado: agregar un parámetro de tamaño de baldosa a `tiles()` (toca `city-pieces.ts`, fuera del alcance). `tiles` recorta la última baldosa al rect (`city-pieces.ts:37`), así que un patio de 6×2 da una fila.
+- **A3. Frente corto en `shopRow`** (decisión 5). Descartado: lanzar error o salir del lote cuando `4·n > len`.
+- **A4. `tone = style.tone + rng.int(−1, 1)`** (decisión 6). Descartado: ignorar `style.tone`.
+- **A5. Slot centrado de ancho `local.w − 1`, también en la pared lateral del local de esquina** (decisión 7). Descartado: slot lateral pegado a la esquina.
+- **A6. Ventanas en paredes compartidas** (decisión 11): las filtra la oclusión de #45. Descartado: filtrar en `addBuilding` (cambia `modern`).
+- **A7. Alas cortas de la C al oeste** (patios abiertos al este, hacia la cámara). Descartado: una al oeste y otra al este (forma de S).
+
+## Grilling
+
+- Rondas: 1 (los cambios fueron aclaraciones de test y la URL del lab; no cambió ningún task ni costura).
+- Preguntas: 18. Fuentes: CODE 15, ISSUE 6, DOC 2 (varias respuestas citan más de una), NO SOURCE 3 → supuestos técnicos (A1, A2, A7).
+- Respuestas clave:
+  - Q2/Q3: `src/lab/kit-scene.ts:26-27` ya decide el zócalo por `p.ground.length > 0` (no por nombre); el test usa el mismo lote (`kit-scene.ts:25`), `STYLES[style]` y `createRng(seed * 1000 + i)`, con seed 7 y `"centro"` en el test.
+  - Q4: `src/kit/kit.test.ts` exige normal `+x/+y` solo para `windows` y `walls`, no para `slots`.
+  - Q5: `src/kit/types.ts` define `Slot`, `Piece.courtyard`, `RecipeDef.family` con `"courtyard" | "lowrise"`; `src/iso/facade.ts:14` `base: "glass" | "portico" | "arcade"`.
+  - Q8: `roofs.ts` `cornice` vuela 0.5 y `hipRoof` 0.5; `props.ts` `awning` ramp de 0.8 con `at` = esquina NO, `bench` 2×0.6×0.5, `patioTree` cone r 1; `flora.ts:19-25` `jungle` r 2..4, un cono por iteración sin `rails`.
+  - Q10: `solids.ts:290` pinta la fachada (vidriera incluida) en todas las paredes; `piece.ts` publica solo las +x/+y. Con frente `n`/`w` la vidriera existe en esa pared, solo no se publica: coherente con el issue ("`side` = lado del frente").
+  - Q12: `kit.test.ts` `EPS = 1e-9`; el toldo sale exactamente 0.8.
+  - Q13: `styles.ts` `floorH` 3 o 3.5; `shopRow` tiene ≥ 2 pisos con `maxH ≥ 10` ⇒ `h ≥ 6`.
+  - Q14: `piece.ts` calcula `floorH` de la pared como `alto / floors`; nada exige `floors·floorH = h`.
+  - Q15: `src/map/seed.ts:1-21` (`int` acepta negativos: `min + floor(next·(max−min+1))`).
+  - Q16: ISSUE: "`hipRoof` de `style.roof` cada una con su `tone`" solo para `rowHouses`.
+  - Q17: DOC spec líneas 67-70 ("Sólido `ring` monolítico … se descarta por el orden de pintado"); el contrato solo prohíbe intrusos en el hueco de un `poly` cóncavo.
+  - Q18: `src/lab/kit.ts:13` `KEY_STYLE` con `2` bares y `3` residencial; filas por familia en `kit-scene.ts:21-24`.
+- Issues abiertos: ninguno.
