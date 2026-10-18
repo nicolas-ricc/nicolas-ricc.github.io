@@ -154,8 +154,8 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
   };
 
   const beamAngle = (): number => (opts.reducedMotion ? 0 : ((clock % BEAM_PERIOD_MS) / BEAM_PERIOD_MS) * Math.PI * 2);
-  const wedge = (len: number, color: Accent["color"], alpha: number): Accent => {
-    const a = beamAngle(), o: Vec3 = scene.lantern;
+  const wedge = (a: number, len: number, color: Accent["color"], alpha: number): Accent => {
+    const o: Vec3 = scene.lantern;
     return { kind: "poly", pts: [o, v3(o.x + len * Math.cos(a - BEAM_HALF), o.y + len * Math.sin(a - BEAM_HALF), o.z), v3(o.x + len * Math.cos(a + BEAM_HALF), o.y + len * Math.sin(a + BEAM_HALF), o.z)], color, alpha };
   };
 
@@ -175,7 +175,10 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
   return {
     ship: shipFrame,
     state: (k) => states[k]!,
-    beam: () => [wedge(BEAM_LEN, "amberBleed", 0.5), wedge(BEAM_INNER, "amber", 0.6)],
+    beam: () => {
+      const a = beamAngle();
+      return [wedge(a, BEAM_LEN, "amberBleed", 0.5), wedge(a, BEAM_INNER, "amber", 0.6)];
+    },
     buoys: () => scene.buoys.flatMap((b, k) => (buoyOn(k) ? [{ kind: "dot" as const, at: v3(b.x, b.y, b.z + 0.3), r: 0.8, color: "magentaMid" as const }] : [])),
     ferry: ferryFrame,
     neon,
