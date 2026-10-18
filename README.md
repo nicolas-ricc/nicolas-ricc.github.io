@@ -15,8 +15,9 @@ Contenido editable en `content/*.json`. Diseño en `docs/superpowers/specs/`, pl
 
 El sitio (la raíz de myxomatosis.xyz; las zonas viven bajo `/area/` porque `/blog/` es el blog Hugo) muestra el mundo isométrico completo: motor puro en
 `src/iso/`, terreno compartido en `src/scenes/terrain.ts`, escenas en
-`src/scenes/`, incluidas `factory.ts` (fábrica de Portfolio), `city.ts` (orquestador de Resume),
-`src/city/zoning.ts` (barrios de Resume) y `sea.ts` (punta, faro y barcos de Blog). El
+`src/scenes/`, incluidas `factory.ts` (fábrica de Portfolio), `city.ts` (orquestador de Resume)
+y `sea.ts` (punta, faro y barcos de Blog); las piezas de Resume viven en `src/city/`
+(`zoning.ts` barrios, `fixed.ts` piezas fijas, `streets.ts` calles). El
 mundo tiene origen en `(-60, -60)` y un sangrado de terreno alrededor de todo
 el contenido, para que la cámara *cover* nunca muestre cielo; sobre el
 sangrado viven los márgenes construidos, `hinterland.ts` (industria de

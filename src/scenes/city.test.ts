@@ -79,7 +79,7 @@ describe("city", () => {
     expect(s.tower.litWindows.every((a) => a.kind === "poly" && a.color === "amber")).toBe(true);
     expect(s.tower.antenna.z).toBeGreaterThan(TOWER_H + 5);
     expect(s.tower.paperWindow.x).toBeCloseTo(TOWER.x + TOWER.w, 6); // pared este
-    for (const x of s.solids) if (!isTowerPiece(x) && !inDistrict(x)) expect(bounds(x).max.z).toBeLessThanOrEqual(inFixed(x) ? 25 : 21); // los landmarks llegan a 24.4 con cornisa
+    for (const x of s.solids) if (!isTowerPiece(x)) expect(bounds(x).max.z).toBeLessThanOrEqual(inDistrict(x) || inFixed(x) ? 25 : 21); // el distrito y los landmarks llegan a 24 sobre el zócalo, con remate
   });
 
   it("frente a la torre ningún edificio supera 10 ni nada llega a 15 (las ventanas encendidas se pintan arriba de todo)", () => {

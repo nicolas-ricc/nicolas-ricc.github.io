@@ -3,7 +3,7 @@ import { createRng } from "../map/seed";
 import { RECIPES } from "../kit/index";
 import { LANDMARK_MAX_H } from "../kit/piece";
 import { PLINTH_H } from "../scenes/city-pieces";
-import { SIDEWALK, SITE, TOWER, WEST_QUAY, blocks, estuaryEast, type Block } from "../scenes/city-grid";
+import { BLOCK_D, BLOCK_W, SIDEWALK, SITE, STREET, TOWER, WEST_QUAY, blocks, estuaryEast, type Block } from "../scenes/city-grid";
 import { zoneRng } from "../scenes/world";
 import { SEED } from "../world/assemble";
 import { CATALOGUE, FIXED, FOOTBRIDGE_LOT, MAX_BUILDING_H, MAX_DISTRICT_H, NO_PLINTH, WATER_TOWER_BLOCK, assign, barrioOf, maxDistrictHeight, maxHeightFor, openSides, waterTowerLot, type Barrio, type Placed } from "./zoning";
@@ -137,8 +137,8 @@ describe("zoning", () => {
     for (const placed of [worldAssign(), sceneAssign()]) {
       const res = placed.filter((p) => p.barrio === "residencial");
       for (const a of res) for (const b of res) {
-        if (a === b || Math.abs(a.block.x - b.block.x) > 30 || Math.abs(a.block.y - b.block.y) > 24) continue;
-        expect(`${key(a.block)} ${a.recipe}`).not.toBe(`${key(a.block)} ${b.recipe}`);
+        if (a === b || Math.abs(a.block.x - b.block.x) > BLOCK_W + STREET || Math.abs(a.block.y - b.block.y) > BLOCK_D + STREET) continue;
+        expect(b.recipe, `${key(a.block)} y ${key(b.block)}`).not.toBe(a.recipe);
       }
     }
   });

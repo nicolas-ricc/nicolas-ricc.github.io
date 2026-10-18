@@ -7,7 +7,7 @@ import { STYLES } from "../kit/styles";
 import type { Piece } from "../kit/types";
 import { prism, PLINTH_H } from "./city-pieces";
 import { streets } from "../city/streets";
-import { bridge, collapsed, cars, greenery, malecon, plazaAndTower, westQuay } from "../city/fixed";
+import { bridge, collapsed, cars, greenery, malecon, plazaAndTower, westQuay, type TowerLights } from "../city/fixed";
 import { FOOTBRIDGE_LOT, NO_PLINTH, WATER_TOWER_BLOCK, assign, waterTowerLot, type Placed } from "../city/zoning";
 
 /**
@@ -15,7 +15,7 @@ import { FOOTBRIDGE_LOT, NO_PLINTH, WATER_TOWER_BLOCK, assign, waterTowerLot, ty
  * barrio, receta, lote y tono por manzana; acá se arma cada pieza con el kit, se
  * suman las piezas fijas (plaza y torre, puente, ribera, malecón, derrumbe, selva,
  * autos; src/city/fixed.ts) y las calles. El terreno (terrain.ts) es el asfalto.
- * Spec: docs/superpowers/specs/2026-09-14-resume-ciudad-design.md §6.
+ * Spec: docs/superpowers/specs/2026-10-15-resume-nivel-2-kit-zonificacion-luces-design.md §6.
  */
 export { PLINTH_H } from "./city-pieces";
 export { TOWER_H } from "./city-grid";
@@ -27,7 +27,7 @@ export interface CityScene {
   ground: Solid[];   // baldosas de la plaza, suelo de manzanas devoradas, carriles
   solids: Solid[];
   accents: Accent[]; // faroles y derrame de luz; las ventanas encendidas y la antena las anima city-anim
-  tower: { litWindows: Accent[]; antenna: Vec3; paperWindow: Vec3 };
+  tower: TowerLights;
   neon: { signs: Accent[]; malecon: Vec3[] }; // carteles del distrito y luces del malecón; los anima city-anim
   placed: PlacedPiece[];
 }
@@ -46,8 +46,9 @@ export function city(rng: Rng, districtRng: Rng): CityScene {
   }
   const tower = plazaAndTower(solids, ground, accents, rng);
   // torre de agua en el patio de (12, 164) y puente peatonal sobre el estuario
-  const host = placed.find((q) => q.placed.block.x === WATER_TOWER_BLOCK.x && q.placed.block.y === WATER_TOWER_BLOCK.y)!;
-  add(recipe("waterTower")(waterTowerLot(host.piece.courtyard!, host.placed.lot.z), rng, STYLES.residencial));
+  const host = placed.find((q) => q.placed.block.x === WATER_TOWER_BLOCK.x && q.placed.block.y === WATER_TOWER_BLOCK.y);
+  if (!host?.piece.courtyard) throw new Error("la manzana de la torre de agua no tiene patio");
+  add(recipe("waterTower")(waterTowerLot(host.piece.courtyard, host.placed.lot.z), rng, STYLES.residencial));
   add(recipe("footbridge")(FOOTBRIDGE_LOT, rng, STYLES.residencial));
   streets(ground, solids, accents);
   bridge(solids, accents);

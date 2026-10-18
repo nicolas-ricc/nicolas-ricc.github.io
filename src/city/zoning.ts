@@ -11,7 +11,7 @@ import { AVENUE, BLOCK_D, BLOCK_W, EAST_COLS, LIT_FLOOR, PLAZA, SIDEWALK, SITE, 
  * Zonificación de Resume: a qué barrio pertenece cada manzana, qué recetas
  * y luces lleva, qué edificios son fijos y cómo se arma su lote. Módulo puro
  * (sin escena): city.ts asigna con `assign` y vuelca; fixed.ts dibuja lo fijo.
- * No importa district.ts ni city.ts (lo evitan los ciclos).
+ * No importa city.ts (evita el ciclo).
  */
 export type Barrio = StyleId;
 

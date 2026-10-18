@@ -8,11 +8,13 @@ import { AVENUE, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, DISTRIC
 import { jungle } from "../scenes/flora";
 import { CAR, bench, bollard, car, lamp, place, puddle } from "../kit/props";
 import { PLINTH_H, plazaTone, prism, tiles } from "../scenes/city-pieces";
-import type { CityScene } from "../scenes/city";
 
 // ---------------------------------------------------------------- plaza y torre
 
-export function plazaAndTower(solids: Solid[], ground: Solid[], accents: Accent[], rng: Rng): CityScene["tower"] {
+/** Ventanas del piso encendido, punta de la antena y la ventana del papel: los anima city-anim. */
+export interface TowerLights { litWindows: Accent[]; antenna: Vec3; paperWindow: Vec3 }
+
+export function plazaAndTower(solids: Solid[], ground: Solid[], accents: Accent[], rng: Rng): TowerLights {
   ground.push(tiles(rng, PLAZA, 0.05, "plaza", plazaTone));
   // cordón: una banda de `paving` de 1.2 alrededor de la plaza, ancha para que el contorno se lea al zoom de mundo
   const curb = 1.2;
