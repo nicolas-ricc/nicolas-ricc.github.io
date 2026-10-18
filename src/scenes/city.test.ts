@@ -260,7 +260,6 @@ describe("city", () => {
     const host = s.placed.find((p) => p.placed.block.x === WATER_TOWER_BLOCK.x && p.placed.block.y === WATER_TOWER_BLOCK.y)!;
     expect(host.placed.recipe).toBe("patioResidential");
     const court = host.piece.courtyard!;
-    expect(court).toBeDefined();
     const tank = s.solids.find((x) => x.kind === "dome" && x.mat === "copper" && x.r === 2.2);
     expect(tank).toBeDefined();
     if (tank?.kind !== "dome") throw new Error("sin cúpula de la torre de agua");

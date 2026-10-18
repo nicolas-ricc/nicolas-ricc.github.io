@@ -45,7 +45,6 @@ export function city(rng: Rng, districtRng: Rng): CityScene {
     if (p.barrio === "distrito") for (const s of piece.slots) if (s.kind === "sign") signs.push({ kind: "poly", pts: s.pts, color: districtRng.chance(0.5) ? "cyan" : "magenta", alpha: 1 });
   }
   const tower = plazaAndTower(solids, ground, accents, rng);
-  // torre de agua en el patio de (12, 164) y puente peatonal sobre el estuario
   const host = placed.find((q) => q.placed.block.x === WATER_TOWER_BLOCK.x && q.placed.block.y === WATER_TOWER_BLOCK.y);
   if (!host?.piece.courtyard) throw new Error("la manzana de la torre de agua no tiene patio");
   add(recipe("waterTower")(waterTowerLot(host.piece.courtyard, host.placed.lot.z), rng, STYLES.residencial));
