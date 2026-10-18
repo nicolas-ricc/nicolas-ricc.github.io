@@ -17,7 +17,7 @@ const TOWER_MIN_H = 3;
  * Podio que cubre el lote con vidriera y cornisa; torre descentrada en una
  * esquina, 1 adentro del podio. Con un tope bajo baja el podio para dejarle a
  * la torre TOWER_MIN_H de cuerpo; supone `maxH` ≥ 10 (el tope más bajo de la
- * ciudad, FRONT_CAP_H en district.ts).
+ * ciudad, FRONT_CAP_H en src/city/zoning.ts).
  */
 export function podiumTower(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;

@@ -18,7 +18,7 @@ export const ROWS = [164, 188, 218, 242, 272, 302] as const;
 export const DISTRICT_COLS = [-48, -18] as const;
 export const DISTRICT_ROWS = [272, 302] as const;
 export const SITE: Rect = { x: -18, y: 272, w: 24, d: 18 }; // la obra en construcción
-/** La torre del piso encendido: acá (sin rng) para que district.ts calcule su caja sin importar city.ts. */
+/** La torre del piso encendido: acá (sin rng) para que src/city/zoning.ts calcule su caja sin importar city.ts. */
 export const TOWER_H = 30, TOWER_FLOORS = 8, LIT_FLOOR = 5;
 
 export const AVENUE = { y0: 206, y1: 218 } as const;

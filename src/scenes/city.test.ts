@@ -6,7 +6,9 @@ import { QUAY_X, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
 import { AVENUE, BOULEVARD, BRIDGE, CITY_EDGE, COLLAPSED, ROWS, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_RING, FALLEN_BLOCK, MALECON, PLAZA, TOWER, WEST_QUAY, blocks, estuaryEast, inBlock, inCrater } from "./city-grid";
-import { MAX_BUILDING_H, PLINTH_H, TOWER_H, city, type CityScene } from "./city";
+import { PLINTH_H, TOWER_H, city, type CityScene } from "./city";
+import { CAR } from "../kit/props";
+import { FIXED, FOOTBRIDGE_LOT, MAX_BUILDING_H, WATER_TOWER_BLOCK, assign } from "../city/zoning";
 import { SEED } from "../world/assemble";
 import { zoneRng } from "./world";
 
@@ -18,7 +20,11 @@ const inRect = (b: { min: { x: number; y: number }; max: { x: number; y: number 
 const inPlaza = (x: number, y: number) => x > PLAZA.x && x < PLAZA.x + PLAZA.w && y > PLAZA.y && y < PLAZA.y + PLAZA.d;
 const DISTRICT = blocks().filter((b) => b.kind === "district" || b.kind === "site");
 const inDistrict = (s: Solid) => DISTRICT.some((b) => inRect(bounds(s), b));
-const inDistrictXY = (x: number, y: number) => DISTRICT.some((b) => x >= b.x - 1 && x <= b.x + b.w + 1 && y >= b.y - 1 && y <= b.y + b.d + 1);
+const inBlockXY = (x: number, y: number) => blocks().some((b) => x >= b.x - 1 && x <= b.x + b.w + 1 && y >= b.y - 1 && y <= b.y + b.d + 1);
+/** Las manzanas fijas (landmarks): pueden llegar a 24 sobre el zócalo, con remate. */
+const FIXED_BLOCKS = blocks().filter((b) => b.kind !== "plaza" && FIXED.some((f) => f.x === b.x && f.y === b.y));
+const inFixed = (s: Solid) => FIXED_BLOCKS.some((b) => inRect(bounds(s), b));
+const inFootbridge = (x: number, y: number) => x >= FOOTBRIDGE_LOT.x && x <= FOOTBRIDGE_LOT.x + FOOTBRIDGE_LOT.w && y >= FOOTBRIDGE_LOT.y && y <= FOOTBRIDGE_LOT.y + FOOTBRIDGE_LOT.d;
 /** Las cuatro piezas que pueden pasar de 21: el prisma de la torre, su cornisa, la sala de máquinas y el mástil. Los conos y las enredaderas de la base no quedan exentos. */
 const isTowerPiece = (s: Solid) => {
   const b = bounds(s);
@@ -28,7 +34,7 @@ const isTowerPiece = (s: Solid) => {
 // la fila sur frente a la torre: PLAZA.x - 6 .. PLAZA.x + PLAZA.w + 6, la banda que el ruling del controller topa en 10
 const ROW_SOUTH = ROWS[3], FRONT_X0 = PLAZA.x - 6, FRONT_X1 = PLAZA.x + PLAZA.w + 6;
 
-const CITY_MATS: readonly Material[] = ["office", "officeDark", "glass", "asphalt", "paving", "plaza", "curtain", "stone", "copper", "leaf", "leafDark", "water", "steel", "rust"];
+const CITY_MATS: readonly Material[] = ["office", "officeDark", "glass", "asphalt", "paving", "plaza", "curtain", "stone", "copper", "leaf", "leafDark", "water", "steel", "rust", "plaster", "terracotta", "marble", "awning", "deck"];
 
 describe("city", () => {
   it("es determinística por seed", () => {
@@ -45,19 +51,19 @@ describe("city", () => {
       expect(CITY_MATS).toContain(s.mat);
       if (s.mat === "steel" || s.mat === "rust") expect(["prism", "cylinder"]).toContain(s.kind); // solo mobiliario y autos
     }
+    const mats = new Set(all(scene()).map((s) => s.mat));
+    for (const m of ["plaster", "terracotta", "marble", "awning"] as const) expect(mats.has(m)).toBe(true);
   });
 
-  it("hay un zócalo por manzana construida y los edificios apoyan sobre él", () => {
+  it("hay un zócalo por manzana construida y los edificios con fachada caen en su manzana", () => {
     const s = scene();
-    const plinths = s.solids.filter((x) => x.kind === "prism" && x.mat === "paving" && x.h === PLINTH_H && x.at.z === 0);
-    expect(plinths.length).toBeGreaterThanOrEqual(25);
-    const buildings = s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism" && x.facade !== undefined);
-    expect(buildings.length).toBeGreaterThanOrEqual(25);
+    const plinths = s.solids.filter((x) => x.kind === "prism" && x.mat === "paving" && x.h === PLINTH_H && x.at.z === 0 && x.w === 24 && x.d === 18);
+    expect(plinths.length).toBeGreaterThanOrEqual(40);
+    const buildings = s.solids.filter((x) => (x.kind === "prism" || x.kind === "poly" || x.kind === "cylinder") && x.facade !== undefined);
+    expect(buildings.length).toBeGreaterThanOrEqual(90);
     for (const b of buildings) {
-      if (isTowerPiece(b) || inDistrict(b)) continue; // las torres de vidrio superan 18, sus cuerpos altos no apoyan en PLINTH_H y una corona puede medir 3
-      expect(b.at.z).toBe(PLINTH_H);
-      expect(b.h).toBeLessThanOrEqual(MAX_BUILDING_H);
-      expect(b.h).toBeGreaterThanOrEqual(4);
+      if (isTowerPiece(b)) continue;
+      expect(b.kind !== "prism" || b.h <= (inDistrict(b) || inFixed(b) ? 24 : MAX_BUILDING_H)).toBe(true);
       expect(blocks().some((blk) => inRect(bounds(b), blk))).toBe(true); // dentro de una manzana
     }
   });
@@ -73,7 +79,7 @@ describe("city", () => {
     expect(s.tower.litWindows.every((a) => a.kind === "poly" && a.color === "amber")).toBe(true);
     expect(s.tower.antenna.z).toBeGreaterThan(TOWER_H + 5);
     expect(s.tower.paperWindow.x).toBeCloseTo(TOWER.x + TOWER.w, 6); // pared este
-    for (const x of s.solids) if (!isTowerPiece(x) && !inDistrict(x)) expect(bounds(x).max.z).toBeLessThanOrEqual(21);
+    for (const x of s.solids) if (!isTowerPiece(x)) expect(bounds(x).max.z).toBeLessThanOrEqual(inDistrict(x) || inFixed(x) ? 25 : 21); // el distrito y los landmarks llegan a 24 sobre el zócalo, con remate
   });
 
   it("frente a la torre ningún edificio supera 10 ni nada llega a 15 (las ventanas encendidas se pintan arriba de todo)", () => {
@@ -141,7 +147,7 @@ describe("city", () => {
     for (const l of lamps) {
       if (l.kind !== "dot") continue;
       const onAvenue = l.at.y >= AVENUE.y0 - 3 && l.at.y <= AVENUE.y1 + 3, onMalecon = l.at.x >= MALECON.x0, onPlaza = inRect({ min: l.at, max: l.at }, PLAZA);
-      expect(onAvenue || onMalecon || onPlaza || inDistrictXY(l.at.x, l.at.y)).toBe(true); // el distrito tiene sus propias luces (obra, helipuerto, baliza)
+      expect(onAvenue || onMalecon || onPlaza || inFootbridge(l.at.x, l.at.y) || inBlockXY(l.at.x, l.at.y)).toBe(true); // las recetas del kit traen sus luces (obra, helipuerto, baliza, faroles de la estación)
     }
   });
 
@@ -180,10 +186,11 @@ describe("city", () => {
     expect(s.solids.some((x) => x.kind === "ramp" && x.mat === "asphalt" && x.dir === "w" && x.at.y === COLLAPSED.y)).toBe(true);
   });
 
-  it("autos: no caen en manzana ni cráter, y ninguno se superpone con otro", () => {
+  it("autos: una sola medida, no caen en manzana ni cráter, y ninguno se superpone con otro", () => {
     const s = scene();
     const cars = s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism" && (x.mat === "steel" || x.mat === "rust") && x.h === 1.2);
     expect(cars.length).toBeGreaterThanOrEqual(20);
+    expect(new Set(cars.map((c) => `${c.w}x${c.d}x${c.h}`))).toEqual(new Set([`${CAR.w}x${CAR.d}x1.2`]));
     for (const c of cars) {
       expect(inBlock(c.at.x + 1.5, c.at.y + 0.75)).toBe(false);
       expect(inCrater(c.at.x + 1.5, c.at.y + 0.75)).toBe(false);
@@ -228,13 +235,55 @@ describe("city", () => {
   });
 
   it("las props salen del kit: city.ts y streets.ts no arman bolardos, autos, semáforos, tanques ni charcos a mano", () => {
-    for (const f of ["src/scenes/city.ts", "src/city/streets.ts"]) {
+    for (const f of ["src/scenes/city.ts", "src/city/streets.ts", "src/city/fixed.ts"]) {
       const src = readFileSync(new URL(`../../${f}`, import.meta.url), "utf8");
       expect(src).not.toMatch(/r: 0\.4, h: 0\.8/);          // bolardo
       expect(src).not.toMatch(/3, 1\.5, 1\.2/);             // auto
       expect(src).not.toMatch(/0\.3, 0\.3, 4, "steel"/);    // semáforo
       expect(src).not.toMatch(/PUDDLE_RADII/);              // charco
       expect(src).not.toMatch(/r: 1\.2, h: 2, mat: "rust"/); // tanque de agua
+    }
+  });
+
+  it("placed: una pieza por manzana asignada, con el barrio, la receta y el primer sólido de la pieza", () => {
+    const s = scene(), expected = assign(createRng(7), createRng(8));
+    expect(s.placed.map((p) => [p.placed.block.x, p.placed.block.y, p.placed.barrio, p.placed.recipe])).toEqual(expected.map((p) => [p.block.x, p.block.y, p.barrio, p.recipe]));
+    for (const { piece, solidOffset } of s.placed) {
+      expect(piece.solids.length).toBeGreaterThan(0);
+      expect(s.solids[solidOffset]).toBe(piece.solids[0]);
+      expect(s.solids.slice(solidOffset, solidOffset + piece.solids.length)).toEqual(piece.solids);
+    }
+  });
+
+  it("torre de agua en el patio de (12, 164) y puente peatonal de piedra sobre el estuario", () => {
+    const s = scene();
+    const host = s.placed.find((p) => p.placed.block.x === WATER_TOWER_BLOCK.x && p.placed.block.y === WATER_TOWER_BLOCK.y)!;
+    expect(host.placed.recipe).toBe("patioResidential");
+    const court = host.piece.courtyard!;
+    const tank = s.solids.find((x) => x.kind === "dome" && x.mat === "copper" && x.r === 2.2);
+    expect(tank).toBeDefined();
+    if (tank?.kind !== "dome") throw new Error("sin cúpula de la torre de agua");
+    expect(tank.at.x).toBeCloseTo(court.x + court.w / 2, 6);
+    expect(tank.at.y).toBeCloseTo(court.y + court.d / 2, 6);
+    const deck = s.solids.find((x) => x.kind === "prism" && x.mat === "stone" && x.at.x === FOOTBRIDGE_LOT.x && x.w === FOOTBRIDGE_LOT.w);
+    expect(deck).toBeDefined();
+    const b = bounds(deck!);
+    expect(b.min.y).toBeGreaterThanOrEqual(174);
+    expect(b.max.y).toBeLessThanOrEqual(178);
+    expect(b.min.x).toBe(WEST_QUAY.x1);
+    expect(b.max.x).toBeGreaterThan(estuaryEast(178));
+  });
+
+  it("carteles del distrito: cian o magenta opacos, 1.6 de alto, 0.4 delante de la cara sur de un edificio del distrito", () => {
+    const s = scene();
+    for (const sign of s.neon.signs) {
+      if (sign.kind !== "poly") throw new Error("cartel no poly");
+      expect(["cyan", "magenta"]).toContain(sign.color);
+      expect(sign.alpha).toBe(1);
+      const zs = sign.pts.map((p) => p.z), y = sign.pts[0]!.y;
+      expect(Math.max(...zs) - Math.min(...zs)).toBeCloseTo(1.6, 6);
+      const wall = s.solids.find((w) => w.kind === "prism" && !!w.facade && inDistrict(w) && Math.abs(w.at.y + w.d + 0.4 - y) < 1e-6);
+      expect(wall).toBeDefined();
     }
   });
 });

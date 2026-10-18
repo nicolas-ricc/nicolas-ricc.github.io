@@ -6,9 +6,9 @@ import type { Rng } from "../map/seed";
 import type { Rect } from "./city-grid";
 
 /**
- * Piezas de bajo nivel compartidas por la ciudad vieja (city.ts) y el
- * distrito moderno (district.ts): el prisma con techo/fachada opcional, el
- * suelo facetado de baldosas; las props y las recetas viven en `src/kit/`.
+ * Piezas de bajo nivel compartidas por la ciudad (city.ts, src/city/fixed.ts)
+ * y las recetas de `src/kit/`: el prisma con techo/fachada opcional y el suelo
+ * facetado de baldosas; las props viven en `src/kit/props.ts`.
  */
 export const TILE = 6; // baldosa de la plaza y del suelo devorado
 export const PLINTH_H = 0.3;
