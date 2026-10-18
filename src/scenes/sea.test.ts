@@ -1,7 +1,8 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildRenderList } from "../iso/render-list";
 import { bounds, isFlat, type Solid } from "../iso/solids";
-import { ZONE_SPLIT_X, inHeadland, worldZoneAt } from "../map/geo";
+import { ZONE_SPLIT_X, abyssX, inHeadland, worldZoneAt } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
 import { BUOYS, CAP_R, COAST, COAST_Z, GALLERY_DECK_R, GALLERY_R, KEEPER, LANTERN_R, LIGHTHOUSE, POST_H, POST_W, WRECK, WRECK_BUOY, sea, type SeaScene } from "./sea";
@@ -13,6 +14,7 @@ const water = new Set(["water", "sea", "shore", "abyss", "reef"]);
 type Cyl = Extract<Solid, { kind: "cylinder" }>;
 type Prism = Extract<Solid, { kind: "prism" }>;
 type Cone = Extract<Solid, { kind: "cone" }>;
+type Poly = Extract<Solid, { kind: "poly" }>;
 
 describe("sea", () => {
   it("es determinística, trae ≥ 80 sólidos elevados y usa solo materiales del Blog o compartidos", () => {
@@ -128,5 +130,24 @@ describe("sea", () => {
     const s = scene();
     const colors = allIsoColors();
     for (const i of buildRenderList([...s.ground, ...s.solids])) expect(colors.has(i.color)).toBe(true);
+  });
+});
+
+describe("pecio: comentario y posición (#89)", () => {
+  const doc = readFileSync(new URL("./sea.ts", import.meta.url), "utf8").match(/\/\*\*\n \* Pecio \(#83\)[\s\S]*?\*\/\nconst WRECK_LEN/)?.[0] ?? "";
+  it("el docstring pone el pecio en la fosa, a ~16 u del talud, y no la popa en el talud", () => {
+    expect(doc).not.toBe("");
+    expect(doc).toMatch(/hundido en la fosa/);
+    expect(doc).not.toMatch(/(en|sobre) el talud/);
+    expect(doc).toMatch(/16 u al este del talud/);
+    expect(doc).toMatch(/#87/);
+  });
+  it("la popa queda ~16 u al este del talud y todo el casco cae en la fosa", () => {
+    expect(WRECK.x - abyssX(WRECK.y)).toBeGreaterThan(15);
+    expect(WRECK.x - abyssX(WRECK.y)).toBeLessThan(17);
+    const near = (x: Solid) => { const b = bounds(x); return Math.hypot((b.min.x + b.max.x) / 2 - WRECK.x, (b.min.y + b.max.y) / 2 - WRECK.y) < 45; };
+    const hull = scene().solids.filter((x): x is Poly => x.kind === "poly" && near(x)); // las placas del pecio; la boya es un cilindro y queda fuera
+    expect(hull.length).toBeGreaterThanOrEqual(6);
+    for (const x of hull) for (const p of x.footprint) expect(terrainAt(p.x, p.y)).toBe("abyss");
   });
 });
