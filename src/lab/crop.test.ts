@@ -176,6 +176,7 @@ describe("readout", () => {
     tick: () => new Set(),
   };
   const r = readout(scene, [anim]);
+  const only = (s: Solid) => readout({ ...scene, ground: [], solids: [s], accents: [] } as WorldScene, []).materials;
   const all = [pad, prism(1, 1), hull, ...(anim.layer("s") as { solids: Solid[] }).solids];
 
   it("cuenta suelo, sólidos y capas sólidas animadas; ni terreno ni agua", () => {
@@ -198,7 +199,6 @@ describe("readout", () => {
   it("materiales de las caras dibujadas, ordenados y sin repetidos: cubierta del casco y góndolas incluidas", () => {
     expect(r.materials).toEqual(["brick", "concrete", "deck", "hullBlue", "paving", "rust", "steel"]);
   });
-  const only = (s: Solid) => readout({ ...scene, ground: [], solids: [s], accents: [] } as WorldScene, []).materials;
   it("un casco con topMat lista deck; sin topMat, no", () => {
     expect(only(hull)).toEqual(["deck", "hullBlue", "steel"]);
     expect(only({ kind: "hull", at: v3(5, 5, -1), len: 6, beam: 2, h: 2, mat: "hullBlue" })).toEqual(["hullBlue"]);
@@ -206,6 +206,9 @@ describe("readout", () => {
   it("una noria con góndolas lista su material; sin góndolas, solo el de la rueda", () => {
     expect(only(wheel)).toEqual(["rust", "steel"]);
     expect(only({ kind: "wheel", at: v3(3, 3, 4), r: 2, width: 0.5, mat: "steel", sides: 8, angle: 0 })).toEqual(["steel"]);
+  });
+  it("un prisma con fachada lista el vidrio de las ventanas", () => {
+    expect(only({ kind: "prism", at: v3(1, 1, 0), w: 2, d: 2, h: 3, mat: "concrete", facade: { floors: 2, cols: 2 } })).toEqual(["concrete", "glass"]);
   });
   it("colores de acento ordenados y sin repetidos", () => {
     expect(r.accentColors).toEqual(["amber", "cyan", "magenta"]);

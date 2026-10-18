@@ -146,8 +146,8 @@ export interface Readout {
  * Lo que el panel del storybook cuenta de un exhibit: suelo y sólidos de la
  * escena más el estado actual de las capas `solid` y `accent` de los
  * animadores. El terreno y las capas de agua no cuentan. Los materiales son
- * los de las caras que dibuja `tessellate` (cubierta de casco y góndolas
- * incluidas), no los campos `mat`/`topMat`.
+ * los de las caras que dibuja `tessellate` (cubierta de casco, góndolas y
+ * vidrio de fachada incluidos), no los campos `mat`/`topMat`.
  */
 export function readout(scene: WorldScene, animators: readonly Animator[]): Readout {
   const layers = animators.flatMap((a) => a.ids.map((id) => a.layer(id)));
