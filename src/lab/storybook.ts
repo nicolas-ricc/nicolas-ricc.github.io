@@ -80,8 +80,7 @@ async function boot(): Promise<void> {
   };
   const show = (e: Exhibit): void => {
     const mode = stage?.bloom ?? "off";
-    // sin `context: true` los GraphicsContext de cada Graphics sobreviven hasta el GC de Pixi
-    stage?.container.destroy({ children: true, context: true });
+    stage?.destroy();
     const t0 = performance.now();
     let src: [WorldScene, ZonedAnimator[]];
     if (e.kind === "region") {
