@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { bounds } from "../iso/solids";
 import { createRng } from "../map/seed";
-import { cornice, domeRoof, gableRoof, greenRoof, hipRoof, pyramid, stepRoof, stepTop } from "./roofs";
+import type { Vec2 } from "../iso/geometry";
+import { cornice, domeRoof, gableRoof, greenRoof, hipRoof, offsetFootprint, pyramid, stepRoof, stepTop } from "./roofs";
 
 const F = { x: 10, y: 20, w: 12, d: 8, z: 9 };
 const inside = (b: { min: { x: number; y: number }; max: { x: number; y: number } }, m: number) =>
@@ -38,5 +39,18 @@ describe("techos", () => {
     }
     expect(pyramid(F, 4, "copper")[0]).toMatchObject({ kind: "cone", sides: 4, h: 4 });
     expect(domeRoof(F, 3, "copper")[0]).toMatchObject({ kind: "dome", h: 3 });
+  });
+
+  it("offsetFootprint: agranda la huella m hacia afuera en cualquier sentido de giro", () => {
+    const r = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 8 }, { x: 0, y: 8 }];
+    const big = [{ x: -0.5, y: -0.5 }, { x: 10.5, y: -0.5 }, { x: 10.5, y: 8.5 }, { x: -0.5, y: 8.5 }];
+    const close = (a: Vec2[], b: Vec2[]) => a.forEach((p, i) => { expect(p.x).toBeCloseTo(b[i]!.x, 9); expect(p.y).toBeCloseTo(b[i]!.y, 9); });
+    close(offsetFootprint(r, 0.5), big);
+    close(offsetFootprint([...r].reverse(), 0.5), [...big].reverse());
+    // chaflán a 45°: el lado cortado se corre 0.5 sobre su normal
+    const cut = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 4 }, { x: 6, y: 8 }, { x: 0, y: 8 }];
+    const o = offsetFootprint(cut, 0.5), a = o[2]!, b = o[3]!;
+    expect((a.x - 10) * Math.SQRT1_2 + (a.y - 4) * Math.SQRT1_2).toBeCloseTo(0.5, 9);
+    expect((b.x - 6) * Math.SQRT1_2 + (b.y - 8) * Math.SQRT1_2).toBeCloseTo(0.5, 9);
   });
 });

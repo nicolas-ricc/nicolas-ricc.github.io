@@ -62,6 +62,13 @@ describe("kit: el oráculo del hueco cóncavo", () => {
     expect(concaveIntruders([L, inHole])).toBeGreaterThan(0);
     expect(concaveIntruders([L, onWing])).toBe(0);
   });
+
+  it("un sólido a ras de las caras del hueco (sobre el borde de la huella) no es intruso", () => {
+    const L: Solid = { kind: "poly", footprint: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 4 }, { x: 4, y: 4 }, { x: 4, y: 10 }, { x: 0, y: 10 }], z: 0, h: 6, mat: "plaster" };
+    const slab: Solid = { kind: "prism", at: { x: -0.5, y: -0.5, z: 6 }, w: 11, d: 4.5, h: 0.4, mat: "stone" };
+    const tower: Solid = { kind: "prism", at: { x: 0, y: 0, z: 6.4 }, w: 4, d: 4, h: 8, mat: "plaster" };
+    expect(concaveIntruders([L, slab, tower])).toBe(0);
+  });
 });
 
 describe("kit: contrato de toda receta registrada", () => {
