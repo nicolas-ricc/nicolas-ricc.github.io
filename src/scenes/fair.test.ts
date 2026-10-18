@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { isBehind, overlaps, screenBounds } from "../iso/depth";
-import { bounds, isFlat, type Solid } from "../iso/solids";
+import { bounds, isFlat, type Bounds, type Solid } from "../iso/solids";
 import { worldZoneAt } from "../map/geo";
 import type { Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
+import { SEED } from "../world/assemble";
 import { COASTER_PROFILE, DROP, FAIR_MATS, LIFT_SEGMENTS, PIER, WHEEL, coasterPath, dropSolids, fair, trainSolids, wheelSolid } from "./fair";
 import { FAIR, bayShoreX, bayWater, fairAt } from "./sprawl-grid";
 import { bleedTerrainAt } from "./terrain";
+import { zoneRng } from "./world";
 
 const scene = () => fair(createRng(7));
 const slender = (s: Solid) => (s.kind === "cylinder" && s.r <= 3) || (s.kind === "prism" && ((s.w <= 3 && s.d <= 3) || s.h <= 1)) || (s.kind === "poly" && s.h <= 1);
@@ -97,5 +99,43 @@ describe("fair", () => {
     const steps = s.neon.column.slice(1).map((p, k) => p.z - s.neon.column[k]!.z);
     for (const d of steps) expect(d).toBeCloseTo(steps[0]!, 9);
     for (const p of s.neon.column) { expect(p.x).toBe(DROP.x); expect(p.y).toBe(DROP.y + 0.8); }
+  });
+});
+
+describe("botes varados de la playa (#98)", () => {
+  // La escena de los tests, la del sitio y 40 seeds más (8..47, sin repetir el 7): el rumbo de cada bote sale del rng y cambia su planta.
+  const scenes = [fair(createRng(7)), fair(zoneRng(SEED, "portfolio", 3)), ...Array.from({ length: 40 }, (_, i) => fair(createRng(i + 8)))];
+  const hulls = (s: ReturnType<typeof fair>) => s.solids.filter((x): x is Solid & { kind: "hull" } => x.kind === "hull");
+  /** Las plantas (cajas en x e y) se tocan si se solapan con interior no vacío. */
+  const touch = (a: Bounds, b: Bounds) => a.min.x < b.max.x && b.min.x < a.max.x && a.min.y < b.max.y && b.min.y < a.max.y;
+
+  it("ningún casco se solapa en planta con un prisma de material deck", () => {
+    scenes.forEach((s, k) => {
+      for (const h of hulls(s)) for (const d of s.solids) if (d.kind === "prism" && d.mat === "deck") expect(touch(bounds(h), bounds(d)), `escena ${k}, casco en (${h.at.x}, ${h.at.y})`).toBe(false);
+    });
+  });
+
+  it("son cuatro, enteros sobre la arena de la feria y fuera de todo otro sólido", () => {
+    scenes.forEach((s, k) => {
+      expect(hulls(s), `escena ${k}`).toHaveLength(4);
+      const all = s.solids.map((o) => [o, bounds(o)] as const);
+      for (const h of hulls(s)) {
+        const b = bounds(h);
+        for (let y = b.min.y; y < b.max.y + 0.5; y += 0.5) for (const x of [b.min.x, b.max.x]) { const py = Math.min(y, b.max.y); expect(fairAt(x, py)).toBe(true); expect(bayWater(x, py)).toBe(false); }
+        for (const [o, ob] of all) if (o !== h) expect(touch(b, ob), `escena ${k}, casco en (${h.at.x}, ${h.at.y})`).toBe(false);
+      }
+    });
+  });
+
+  it("en la escena del sitio ningún bote queda delante de la vuelta al mundo en pantalla", () => {
+    const wb = bounds(wheelSolid(0));
+    for (const h of hulls(scenes[1]!)) { const hb = bounds(h); if (overlaps(screenBounds(wb), screenBounds(hb))) expect(isBehind(wb, hb)).toBe(false); }
+  });
+
+  it("cada bote queda cerca de su lugar, en orden; con seed 7 los botes 2 y 4, que ya se veían, no se mueven", () => {
+    for (const s of scenes) hulls(s).forEach((h, k) => expect(Math.abs(h.at.y - (-284 + k * 28))).toBeLessThanOrEqual(14));
+    const seven = hulls(scenes[0]!);
+    expect(seven[1]!.at).toEqual({ x: bayShoreX(-256) - 9, y: -256, z: 0 });
+    expect(seven[3]!.at).toEqual({ x: bayShoreX(-200) - 9, y: -200, z: 0 });
   });
 });

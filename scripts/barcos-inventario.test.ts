@@ -145,3 +145,18 @@ describe("documento del inventario, después (#88)", () => {
     for (const re of [/fondeadero/, /42 u/, /boyas/, /pecio/, /fosa/]) expect(deviations).toMatch(re);
   });
 });
+
+describe("botes de la feria fuera del entarimado (#98)", () => {
+  it("capturas: 98-feria-botes.png existe y es un PNG a 2x", () => {
+    const file = new URL("98-feria-botes.png", ASSETS);
+    expect(existsSync(file)).toBe(true);
+    expect(pngSize(file)?.w).toBeGreaterThanOrEqual(3200);
+  });
+
+  it("documento: una sección de #98 cita la captura de los cuatro botes", () => {
+    const fix = doc().slice(doc().search(/^## Botes de la feria \(#98\)/m));
+    expect(fix).toMatch(/^## Botes de la feria \(#98\)/);
+    expect(fix).toMatch(/assets\/85-barcos\/98-feria-botes\.png/);
+    expect(fix).toMatch(/cuatro botes/);
+  });
+});
