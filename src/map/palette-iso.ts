@@ -1,9 +1,8 @@
 /**
  * Atlas de la escena isométrica: atardecer bajo. Nueve tonos por material,
- * de oscuro a claro: `deep, shade, dim, lit, down, top, up, pale, glow`. Los cinco de siempre
- * (`shade lit down top up`) siguen estas reglas; `deep dim pale glow` se suman abajo.
- * Los cinco de siempre, generados una vez (lit = top×0.76 corrido a naranja: la pared que mira al
- * sol; shade = top×0.45 corrido a azul violáceo; down = top×0.88 frío, la
+ * de oscuro a claro: `deep, shade, dim, lit, down, top, up, pale, glow`.
+ * Los cinco de siempre (`shade lit down top up`) se generaron una vez con estas
+ * reglas (lit = top×0.76 corrido a naranja: la pared que mira al sol; shade = top×0.45 corrido a azul violáceo; down = top×0.88 frío, la
  * vertiente a contraluz; up = top×1.12 cálido, el destello) y pegados como
  * literales para que el guard de colores los vea. No calcular colores en runtime.
  * Los materiales de ciudad y costa (`office` en adelante) usan otra regla por
@@ -23,7 +22,7 @@
  * `deep = shade × (0.70, 0.72, 0.80)` (más oscuro y más azul), `dim` = media de `shade` y `lit`,
  * `glow = up × (1.12, 1.08, 1.02)` saturado a 255, `pale` = media de `up` y `glow` (así la
  * luminancia crece estrictamente a lo largo de la escalera). `shadeTone` sigue devolviendo
- * solo `shade lit down top up`. El material `glint` y los de Resume nivel 2 (`plaster`,
+ * solo `shade lit down top up`. Los cuatro materiales de Resume nivel 2 (`plaster`,
  * `terracotta`, `marble`, `awning`) siguen la regla de ciudad/costa.
  * Para ajustar, editar la base y correr `npm run palette`, que imprime los literales a pegar acá.
  */
@@ -80,12 +79,15 @@ export const ISO_COLORS = {
   magenta: 0xff5ee0,
   magentaMid: 0xc42a9d,
   magentaBleed: 0x54173f,
+  // Resume nivel 2: luces por ventana (cálida y fría)
+  windowWarm: 0xffd9a0,
+  windowCool: 0xa8d8ff,
 } as const;
 
 export type Material = keyof typeof ISO_TONES;
 export type Tone = "deep" | "shade" | "dim" | "lit" | "down" | "top" | "up" | "pale" | "glow";
 export type AccentColor = Exclude<keyof typeof ISO_COLORS, "shadow" | "sky">;
-export const ACCENT_COLORS: readonly AccentColor[] = ["cyan", "cyanMid", "cyanBleed", "amber", "amberMid", "amberBleed", "magenta", "magentaMid", "magentaBleed"];
+export const ACCENT_COLORS: readonly AccentColor[] = ["cyan", "cyanMid", "cyanBleed", "amber", "amberMid", "amberBleed", "magenta", "magentaMid", "magentaBleed", "windowWarm", "windowCool"];
 
 /** De oscuro a claro. `stepTone` se mueve por acá. */
 export const TONE_LADDER: readonly Tone[] = ["deep", "shade", "dim", "lit", "down", "top", "up", "pale", "glow"];
