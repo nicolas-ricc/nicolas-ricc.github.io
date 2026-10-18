@@ -2,9 +2,10 @@
  * Atlas de la escena isométrica: atardecer bajo. Nueve tonos por material,
  * de oscuro a claro: `deep, shade, dim, lit, down, top, up, pale, glow`.
  * Los cinco de siempre (`shade lit down top up`) se generaron una vez con estas
- * reglas (lit = top×0.76 corrido a naranja: la pared que mira al sol; shade = top×0.45 corrido a azul violáceo; down = top×0.88 frío, la
- * vertiente a contraluz; up = top×1.12 cálido, el destello) y pegados como
- * literales para que el guard de colores los vea. No calcular colores en runtime.
+ * reglas (lit = top×0.76 corrido a naranja: la pared que mira al sol; shade = top×0.45
+ * corrido a azul violáceo; down = top×0.88 frío, la vertiente a contraluz; up = top×1.12
+ * cálido, el destello) y se pegaron como literales para que el guard de colores los vea.
+ * No calcular colores en runtime.
  * Los materiales de ciudad y costa (`office` en adelante) usan otra regla por
  * canal RGB: `lit = top × (0.82, 0.74, 0.62)`, `shade = top × (0.40, 0.42, 0.60)`,
  * `up = top × (1.16, 1.12, 1.02)`, `down = top × (0.86, 0.88, 0.94)`, generados

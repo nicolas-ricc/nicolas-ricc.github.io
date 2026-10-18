@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { BASE_TONES } from "../src/map/palette-base";
+import { TONE_LADDER } from "../src/map/palette-iso";
 import { paletteLiterals } from "./darken-palette";
 
 describe("darken-palette", () => {
@@ -15,6 +16,7 @@ describe("darken-palette", () => {
   it("cada línea trae los nueve tonos en orden", () => {
     const nine = /\{ deep: 0x[0-9a-f]{6}, shade: 0x[0-9a-f]{6}, dim: 0x[0-9a-f]{6}, lit: 0x[0-9a-f]{6}, down: 0x[0-9a-f]{6}, top: 0x[0-9a-f]{6}, up: 0x[0-9a-f]{6}, pale: 0x[0-9a-f]{6}, glow: 0x[0-9a-f]{6} \},$/;
     for (const l of out.tones) expect(l).toMatch(nine);
+    for (const l of out.tones) expect([...l.matchAll(/(\w+): 0x/g)].map((m) => m[1])).toEqual(TONE_LADDER);
   });
 
   it("sky, shadow y el hex CSS del sky", () => {
