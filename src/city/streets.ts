@@ -4,7 +4,8 @@ import type { Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
 import { QUAY_X } from "../map/geo";
 import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_COLS, EAST_RING, MALECON, PLAZA, ROWS, STREET, WEST_COLS, WEST_QUAY, estuaryEast, estuaryReaches, inBlock, inCrater } from "../scenes/city-grid";
-import { PLINTH_H, lamp, prism } from "../scenes/city-pieces";
+import { lamp, streetTree, trafficLight } from "../kit/props";
+import { PLINTH_H, prism } from "../scenes/city-pieces";
 
 /**
  * Calles de Resume: carriles, avenida con carriles discontinuos y cebras,
@@ -97,14 +98,14 @@ function avenue(ground: Solid[], solids: Solid[]): void {
     const x0 = x === EAST_COLS[0] ? x + 3 : x;                                  // el primer tramo este roza la rampa del puente (276..282)
     const x1 = x === EAST_COLS[1] ? MALECON.x0 - 0.5 : x + BLOCK_W;             // el último termina al pie del malecón, sin meterse en su muro
     solids.push(prism(x0, BOULEVARD.y0, 0, x1 - x0, BOULEVARD.y1 - BOULEVARD.y0, 0.3, "leafDark"));
-    for (const dx of [4, 12, 20]) solids.push({ kind: "cone", at: v3(x + dx, BOULEVARD.y0 + 2, 0.3), r: 1.5, h: 4, mat: "leaf" });
+    for (const dx of [4, 12, 20]) solids.push(...streetTree(v3(x + dx, BOULEVARD.y0 + 2, 0.3)));
   }
 }
 
 /** Faroles cada 12 u sobre la vereda norte de la avenida, en el tramo `[x0, x1]`. */
 function lampRow(solids: Solid[], accents: Accent[], [x0, x1]: readonly [number, number]): void {
   const y = AVENUE.y0 - 1.3;
-  for (let x = x0 + 6; x < x1 - 6; x += 12) lamp(solids, accents, x, y, postZ(x, y));
+  for (let x = x0 + 6; x < x1 - 6; x += 12) { const l = lamp(v3(x, y, postZ(x, y))); solids.push(...l.solids); accents.push(...l.accents); }
 }
 
 /** Semáforos apagados en las esquinas de la avenida y faroles sobre su vereda norte. */
@@ -112,7 +113,7 @@ function streetFurniture(solids: Solid[], accents: Accent[]): void {
   for (const cx of LANE_X) for (const [x, y] of [[cx - 3.5, AVENUE.y0 - 1], [cx + 3, AVENUE.y1 + 0.5]] as const) {
     if (inQuayWall(x)) continue; // un poste ahí caería dentro del muro del muelle
     const z = postZ(x, y);
-    solids.push(prism(x, y, z, 0.3, 0.3, 4, "steel"), prism(x - 0.1, y - 0.1, z + 4, 0.5, 0.5, 1.2, "officeDark"));
+    solids.push(...trafficLight(v3(x, y, z)));
   }
   for (const range of [[CITY_EDGE.west, WEST_QUAY.x0], [EAST_RING.x1, MALECON.x0]] as const) lampRow(solids, accents, range);
 }

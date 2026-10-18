@@ -1,13 +1,15 @@
 import type { Accent } from "../iso/accent";
 import { facadeAccents, windowPatches, type Facade } from "../iso/facade";
 import { centroid, v3, type Vec3 } from "../iso/geometry";
-import { STEP_INSET, STEP_RATIO, visibleWalls, type Solid } from "../iso/solids";
+import { STEP_RATIO, visibleWalls, type Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { QUAY_X, WORLD, ZONE_SPLIT_Y } from "../map/geo";
 import { AVENUE, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_RING, FALLEN_BLOCK, LIT_FLOOR, MALECON, PLAZA, ROWS, SIDEWALK, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, inCrater, type Block } from "./city-grid";
 import { jungle } from "./flora";
-import { PLINTH_H, brokenTone, lamp, plazaTone, prism, tiles } from "./city-pieces";
+import { antenna, bench, bollard, car, lamp, machineRoom, puddle, roofShrub, waterTank } from "../kit/props";
+import { cornice, stepTop } from "../kit/roofs";
+import { PLINTH_H, brokenTone, plazaTone, prism, tiles } from "./city-pieces";
 import { streets } from "../city/streets";
 import { districtBlock, maxDistrictHeight } from "./district";
 
@@ -45,16 +47,15 @@ function building(out: Solid[], rng: Rng, x: number, y: number, z: number, w: nu
   const lowRoof = h >= TALL_H; // ver roofDetail: sobre un edificio de 17..18 solo entra la sala de máquinas bajo el tope de 21
   const facade: Facade = { floors: Math.max(1, Math.round(h / FLOOR_H)), cols: rng.int(2, 4), base: rng.chance(0.5) ? "glass" : "portico" };
   out.push(prism(x, y, z, w, d, h, mat, roof ? { roof, facade } : { facade }));
-  const cornice: Material = mat === "office" ? "officeDark" : "office";
+  const corniceMat: Material = mat === "office" ? "officeDark" : "office";
   if (roof === "step") {
-    const ix = w * STEP_INSET, iy = d * STEP_INSET;
-    const top = z + h + h * STEP_RATIO;
-    out.push(prism(x + ix - 0.5, y + iy - 0.5, top, w - 2 * ix + 1, d - 2 * iy + 1, 0.4, cornice));
-    roofDetail(out, rng, x + ix, y + iy, w - 2 * ix, d - 2 * iy, top + 0.4, lowRoof);
+    // la regla del retranqueo vive en stepTop
+    const top = stepTop({ x, y, w, d, z: z + h }, h * STEP_RATIO);
+    out.push(...cornice(top, corniceMat));
+    roofDetail(out, rng, top.x, top.y, top.w, top.d, top.z + 0.4, lowRoof);
   } else {
-    const top = z + h;
-    out.push(prism(x - 0.5, y - 0.5, top, w + 1, d + 1, 0.4, cornice));
-    roofDetail(out, rng, x, y, w, d, top + 0.4, lowRoof);
+    out.push(...cornice({ x, y, w, d, z: z + h }, corniceMat));
+    roofDetail(out, rng, x, y, w, d, z + h + 0.4, lowRoof);
   }
 }
 
@@ -65,16 +66,12 @@ function building(out: Solid[], rng: Rng, x: number, y: number, z: number, w: nu
  * El rng se consume igual en los dos casos, así la semilla no se desalinea.
  */
 function roofDetail(out: Solid[], rng: Rng, x: number, y: number, w: number, d: number, z: number, lowRoof = false): void {
-  const cx = x + w / 2, cy = y + d / 2;
   const pick = rng.int(0, 3);
   switch (lowRoof ? 1 : pick) {
-    case 0: // tanque de agua sobre cuatro postes (1.1, no 1.2: distingue el poste del auto en el filtro de tests)
-      for (const [dx, dy] of [[-0.8, -0.8], [0.8, -0.8], [0.8, 0.8], [-0.8, 0.8]] as const) out.push(prism(cx + dx - 0.15, cy + dy - 0.15, z, 0.3, 0.3, 1.1, "steel"));
-      out.push({ kind: "cylinder", at: v3(cx, cy, z + 1.1), r: 1.2, h: 2, mat: "rust", sides: 6 });
-      return;
-    case 1: out.push(prism(x + 1, y + 1, z, 4, 3, 2, "officeDark")); return; // sala de máquinas
-    case 2: out.push({ kind: "cylinder", at: v3(x + w - 1.5, y + 1.5, z), r: 0.2, h: 4, mat: "steel", sides: 4 }); return; // antena
-    default: for (const [dx, dy] of [[2, 2], [w - 2, d - 2]] as const) out.push({ kind: "cone", at: v3(x + dx, y + dy, z), r: 1.2, h: 2.5, mat: "leaf" }); // terraza con selva
+    case 0: out.push(...waterTank(v3(x + w / 2, y + d / 2, z))); return;
+    case 1: out.push(...machineRoom(v3(x + 1, y + 1, z))); return; // sala de máquinas
+    case 2: out.push(...antenna(v3(x + w - 1.5, y + 1.5, z))); return;
+    default: for (const [dx, dy] of [[2, 2], [w - 2, d - 2]] as const) out.push(...roofShrub(v3(x + dx, y + dy, z))); // terraza con selva
   }
 }
 
@@ -123,22 +120,8 @@ function block(solids: Solid[], ground: Solid[], rng: Rng, b: Block, maxH: numbe
 /** Ruling: frente a la torre (fila sur, x 96..162) nada supera 10 para que sus ventanas encendidas no floten sobre otro edificio. */
 const maxHeightFor = (b: Block): number => (b.row === 3 && b.x >= 96 && b.x + b.w <= 162 ? 10 : MAX_BUILDING_H);
 
-const PUDDLE_ALPHA = 0.25;
-const PUDDLE_RADII = [2.5, 1.8, 1.2] as const;
-
-/**
- * Charco de luz: tres octógonos planos concéntricos de radio decreciente, a ras
- * del piso. Proyectados se ven como elipses achatadas y, con poco alfa y
- * superpuestos, el borde se deshace en vez de recortarse como una mancha.
- */
-function puddle(x: number, y: number): Accent[] {
-  return PUDDLE_RADII.map((r) => ({
-    kind: "poly",
-    pts: Array.from({ length: 8 }, (_, i) => { const a = ((i + 0.5) / 8) * Math.PI * 2; return v3(x + r * Math.cos(a), y + r * Math.sin(a), 0.12); }),
-    color: "amberBleed",
-    alpha: PUDDLE_ALPHA,
-  }));
-}
+/** Vuelca una prop con luz en las listas de la escena. */
+const place = (solids: Solid[], accents: Accent[], p: { solids: Solid[]; accents: Accent[] }): void => { solids.push(...p.solids); accents.push(...p.accents); };
 
 // ---------------------------------------------------------------- plaza y torre
 
@@ -171,10 +154,10 @@ function plazaAndTower(solids: Solid[], ground: Solid[], accents: Accent[], rng:
   // conos de la esquina y los techos de la fila de enfrente) es esta diagonal,
   // no el pie mismo de la pared; los dos charcos se solapan y se leen como un
   // solo derrame estirado hacia el este.
-  for (const [x, y] of [[TOWER.x + TOWER.w + 6.5, TOWER.y + 2], [TOWER.x + TOWER.w + 9, TOWER.y + 4]] as const) accents.push(...puddle(x, y));
-  for (const [x, y] of [[PLAZA.x + 4, PLAZA.y + 3], [PLAZA.x + PLAZA.w - 6, PLAZA.y + 3], [PLAZA.x + 4, PLAZA.y + PLAZA.d - 4.2], [PLAZA.x + PLAZA.w - 6, PLAZA.y + PLAZA.d - 4.2]] as const) solids.push(prism(x, y, 0.05, 2, 0.6, 0.5, "paving"));
-  lamp(solids, accents, PLAZA.x + 2, PLAZA.y + PLAZA.d / 2, 0.05);
-  lamp(solids, accents, PLAZA.x + PLAZA.w - 2.6, PLAZA.y + PLAZA.d / 2, 0.05);
+  for (const [x, y] of [[TOWER.x + TOWER.w + 6.5, TOWER.y + 2], [TOWER.x + TOWER.w + 9, TOWER.y + 4]] as const) accents.push(...puddle(x, y, "amberBleed"));
+  for (const [x, y] of [[PLAZA.x + 4, PLAZA.y + 3], [PLAZA.x + PLAZA.w - 6, PLAZA.y + 3], [PLAZA.x + 4, PLAZA.y + PLAZA.d - 4.2], [PLAZA.x + PLAZA.w - 6, PLAZA.y + PLAZA.d - 4.2]] as const) solids.push(...bench(v3(x, y, 0.05)));
+  place(solids, accents, lamp(v3(PLAZA.x + 2, PLAZA.y + PLAZA.d / 2, 0.05)));
+  place(solids, accents, lamp(v3(PLAZA.x + PLAZA.w - 2.6, PLAZA.y + PLAZA.d / 2, 0.05)));
   return { litWindows, antenna: v3(mast.x, mast.y, mast.z + 5), paperWindow };
 }
 
@@ -189,16 +172,16 @@ function bridge(solids: Solid[], accents: Accent[]): void {
   for (let x = x0 + 18; x < x1; x += 18) solids.push(prism(x - 1, y0, -1, 2, d, z + 1, "plaza")); // pilotes: 210, 228, 246, 264
   solids.push(prism(WEST_QUAY.x0, y0, 0.6, WEST_QUAY.x1 - WEST_QUAY.x0, d, z - 0.6, "plaza")); // estribo (0.6, el tope del muelle): el tablero apoya, no flota
   solids.push(prism(x0, y0, top, x1 - x0, 0.3, 0.8, "officeDark"), prism(x0, y1 - 0.3, top, x1 - x0, 0.3, 0.8, "officeDark")); // barandas
-  lamp(solids, accents, x0 + 30, y0 + 0.4, top);
-  lamp(solids, accents, x1 - 30, y1 - 1, top);
-  solids.push(prism(x0 + 40, y0 + 1.5, top, 3, 1.5, 1.2, "steel"), prism(x0 + 58, y1 - 3, top, 3, 1.5, 1.2, "rust")); // autos detenidos
+  place(solids, accents, lamp(v3(x0 + 30, y0 + 0.4, top)));
+  place(solids, accents, lamp(v3(x1 - 30, y1 - 1, top)));
+  solids.push(...car(v3(x0 + 40, y0 + 1.5, top), "steel"), ...car(v3(x0 + 58, y1 - 3, top), "rust")); // autos detenidos
 }
 
 function westQuay(solids: Solid[]): void {
   const { x0, x1 } = WEST_QUAY, w = x1 - x0;
   solids.push(prism(x0, CITY_EDGE.north, -1, w, 194 - CITY_EDGE.north, 1.6, "plaza"), prism(x0, 200, -1, w, CITY_EDGE.south - 200, 1.6, "plaza"));
   solids.push({ kind: "ramp", at: v3(x0, 194, -1), w, d: 6, h: 1.6, mat: "plaza", dir: "e" }); // escalera al agua
-  for (const y of [192, 201]) solids.push({ kind: "cylinder", at: v3(x0 + 3, y, 0.6), r: 0.4, h: 0.8, mat: "rust", sides: 6 });
+  for (const y of [192, 201]) solids.push(...bollard(v3(x0 + 3, y, 0.6)));
 }
 
 function malecon(solids: Solid[], accents: Accent[]): Vec3[] {
@@ -207,10 +190,10 @@ function malecon(solids: Solid[], accents: Accent[]): Vec3[] {
   solids.push({ kind: "ramp", at: v3(x1 - 6, stairsY, -1), w: 6, d: 6, h: z + 1, mat: "paving", dir: "e" }); // escalera, hacia adentro de la zona
   solids.push(prism(x0, stairsY, -1, w - 6, 6, z + 1, "paving"));
   solids.push(prism(x1 - 1.5, y0, z, 1.5, stairsY - y0, 0.8, "paving"), prism(x1 - 1.5, stairsY + 6, z, 1.5, y1 - stairsY - 6, 0.8, "paving")); // parapeto
-  for (const y of [170, 200, 245, 258]) solids.push(prism(x0 + 2, y, z, 2, 0.6, 0.5, "paving")); // bancos
+  for (const y of [170, 200, 245, 258]) solids.push(...bench(v3(x0 + 2, y, z))); // bancos
   // faroles cada 12 u; el tramo nuevo del distrito (266..326) no comparte ninguno con el viejo
-  const bulbs = [180, 210, 250, 272, 284, 296, 308, 320].map((y) => lamp(solids, accents, x1 - 3, y, z));
-  for (const y of [stairsY - 1.5, stairsY + 6.5]) solids.push({ kind: "cylinder", at: v3(x1 - 3, y, z), r: 0.4, h: 0.8, mat: "rust", sides: 6 });
+  const bulbs = [180, 210, 250, 272, 284, 296, 308, 320].map((y) => { const l = lamp(v3(x1 - 3, y, z)); place(solids, accents, l); return l.bulb; });
+  for (const y of [stairsY - 1.5, stairsY + 6.5]) solids.push(...bollard(v3(x1 - 3, y, z)));
   return bulbs.map((b) => v3(b.x, b.y, b.z + 0.4));
 }
 
@@ -273,7 +256,7 @@ function cars(solids: Solid[], rng: Rng): void {
       if (rectsOverlap(x, y, 3, 1.5, FALLEN_BLOCK.x, FALLEN_BLOCK.y, FALLEN_BLOCK.w, FALLEN_BLOCK.d)) continue;
       if (placed.some((p) => rectsOverlap(x, y, 3, 1.5, p.x, p.y, 3, 1.5, 1))) continue; // ningún auto pisa a otro, con 1 u de margen
       placed.push({ x, y });
-      solids.push(prism(x, y, 0, 3, 1.5, 1.2, rng.chance(0.6) ? "steel" : "rust"));
+      solids.push(...car(v3(x, y, 0), rng.chance(0.6) ? "steel" : "rust"));
     }
   }
 }

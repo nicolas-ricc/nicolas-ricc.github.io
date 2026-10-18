@@ -1,5 +1,4 @@
-import type { Accent } from "../iso/accent";
-import { v3, type Vec3 } from "../iso/geometry";
+import { v3 } from "../iso/geometry";
 import type { Facade } from "../iso/facade";
 import type { Solid, Tri } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
@@ -9,7 +8,7 @@ import type { Rect } from "./city-grid";
 /**
  * Piezas de bajo nivel compartidas por la ciudad vieja (city.ts) y el
  * distrito moderno (district.ts): el prisma con techo/fachada opcional, el
- * suelo facetado de baldosas y el farol de calle.
+ * suelo facetado de baldosas; las props y las recetas viven en `src/kit/`.
  */
 export const TILE = 6; // baldosa de la plaza y del suelo devorado
 export const PLINTH_H = 0.3;
@@ -40,12 +39,4 @@ export function tiles(rng: Rng, r: Rect, z: number, mat: Material, tone: (rng: R
     tris.push({ pts: [a, b, c], toneOffset: off() }, { pts: [a, c, dd], toneOffset: off() });
   }
   return { kind: "ground", mat, tris };
-}
-
-/** Farol: poste más bombillo ámbar. Devuelve dónde quedó el bombillo. */
-export function lamp(solids: Solid[], accents: Accent[], x: number, y: number, z: number): Vec3 {
-  const bulb = v3(x + 0.3, y + 0.3, z + 5);
-  solids.push(prism(x, y, z, 0.6, 0.6, 5, "steel"));
-  accents.push({ kind: "dot", at: bulb, r: 0.6, color: "amber" });
-  return bulb;
 }
