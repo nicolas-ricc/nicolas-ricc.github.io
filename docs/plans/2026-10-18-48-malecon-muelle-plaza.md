@@ -31,7 +31,7 @@
 6. **Grúa.** `dockCrane(v3(195, 202, 0.6), "e")`: mástil sobre el muelle (tope del muro, 0.6), pluma hacia el agua (al este).
 7. **Galería de arcos.** `facade: { floors: 1, cols: Math.round(d / 6), base: "arcade", bands: false }` en los dos tramos largos del muro (norte `d 69` → 12 arcos; sur `d 93` → 16). El tramo de 6 junto a la escalera queda sin fachada.
 8. **Tests existentes de `city.test.ts` que hay que precisar** (sin cambiar su intención):
-   - "hay un zócalo por manzana… los edificios con fachada caen en su manzana": los muros del malecón (`prism` con `at.z === −1`) ahora tienen fachada y no son edificios → se excluyen del recorrido.
+   - "hay un zócalo por manzana… los edificios con fachada caen en su manzana": los muros del malecón (`prism` `paving` con `at.z === −1`) ahora tienen fachada y no son edificios → se excluyen del recorrido.
    - "todo cae en la zona Resume… `steel`/`rust` solo mobiliario y autos": los galpones son `vault` `rust` → se agrega `vault` a los tipos permitidos.
    - "faroles solo en avenida, puente, plaza y malecón": las guirnaldas de las terrazas son `dot` ámbar r 0.25 fuera de esas zonas → el filtro de faroles pasa a `r === 0.6` (la medida de `props.lamp`).
 
@@ -97,7 +97,7 @@ describe("malecon", () => {
 });
 ```
 
-  y en `city.test.ts`, en "hay un zócalo por manzana…", `if (b.kind === "prism" && b.at.z === -1) continue; // los muros del malecón llevan galería de arcos, no son edificios`.
+  y en `city.test.ts`, en "hay un zócalo por manzana…", `if (b.kind === "prism" && b.mat === "paving" && b.at.z === -1) continue; // los muros del malecón llevan galería de arcos, no son edificios`.
 - [ ] **Step 2:** `npx vitest run src/city/fixed.test.ts` → FAIL.
 - [ ] **Step 3:** en `malecon`: `facade` en los dos `prism` largos; pérgola (decisión 2) con `garland([v3(x0 + 3.8, 221, z + 3), v3(x0 + 3.8, 233, z + 3)])`; `solids.push(...kiosk(v3(x0 + 2, 240, z)))`. Bancos y faroles ya salen de `props`: quedan.
 - [ ] **Step 4:** `npx vitest run src/city src/scenes` → PASS; `npm run typecheck`.
@@ -119,9 +119,9 @@ describe("malecon", () => {
 describe("westQuay", () => {
   const built = () => { const solids: Solid[] = [], accents: Accent[] = []; westQuay(solids, accents); return { solids, accents }; };
   it("muro y escalera como hoy", () => { /* 2 prism plaza at.z −1 en x0; ramp plaza en y 194 */ });
-  it("dos galpones vault rust sobre el muelle, dentro de 192..198, que no se solapan", () => { /* 2 vault, axis y, at.z 0.6, bounds x ⊂ [192,198], cajas disjuntas */ });
+  it("dos galpones vault rust sobre el muelle, dentro de 192..198, que no se solapan", () => { /* 2 vault rust, axis y, len 12, w 5, h 2.5, segments 6, at.z 0.6, at = (193, 164) y (193, 178): y 164..176 y 178..190; bounds x ⊂ [192,198], cajas disjuntas */ });
   it("una grúa de muelle y al menos seis bolardos, ninguno dentro de un galpón ni en la escalera", () => { /* 2 prism steel de dockCrane (h 6 mástil); cylinder rust r 0.4 ≥ 6, sin solape con vaults ni con y 194..200 */ });
-  it("terrazas: ≥ 6 mesas y ≥ 12 sillas en la calle del muelle, antes de la avenida y sin entrar al muro", () => { /* table: prism paving 1×1×0.7; chair: 0.5×0.5×0.5; bounds x ⊂ [186,192], max.y < AVENUE.y0 */ });
+  it("terrazas: ≥ 6 mesas y ≥ 12 sillas en la calle del muelle, antes de la avenida y sin entrar al muro", () => { /* table: prism paving 1×1×0.7; chair: 0.5×0.5×0.5; bounds x ⊂ [186,192], max.y < AVENUE.y0; ningún sólido de las terrazas se solapa con una manzana de blocks() (la manzana 162 termina en x 186) */ });
   it("toldos pegados a la pared del lote y al menos una guirnalda", () => { /* ramp awning dir e at.x 186, ≥ 6; ≥ 6 dot amber r 0.25 en x 186..192 */ });
   it("ningún sólido del muelle se solapa en caja con otro", () => { /* como en malecon */ });
 });
@@ -164,3 +164,16 @@ describe("plazaAndTower", () => {
 ### Cierre (etapa 4 del pipeline, no tarea de implementer)
 
 - Captura de `lab/resume.html` a 1600×900 con el muelle y el malecón, guardada para el PR (guion `.scratch/evals-48.md`).
+
+## Assumptions
+
+- Las tres reubicaciones (decisiones 1, 2 y 3) siguen la regla de profundidad del issue ("ningún sólido ajeno a una receta entra en el hueco…") y sus tests, que no fijan esas coordenadas (`dos vault dentro de 192..198`, `≥ 6 bolardos`, `dos kioscos dentro de PLAZA`). Alternativa descartada: las coordenadas literales, con sólidos metidos unos dentro de otros. Van al PR como desvíos.
+- Las tres precisiones de `city.test.ts` (decisión 8) se hacen en la misma tarea que el código que las vuelve necesarias; la evidencia de que hacen falta es que el test original falla con el código nuevo. Alternativa descartada: dejar el test original y cambiar el diseño (sin galpones `vault`, sin guirnaldas).
+- La guirnalda vive dentro de la caja de la viga: `lights.ts` solo ocluye ventanas y neones de calle (`src/city/lights.ts:65-101`), no los demás acentos, que se pintan arriba de todo.
+- Cada tarea es un commit propio; la 4 no depende de la 3 (otra función). Si una tarea queda a medias se descarta su diff con `git checkout`.
+
+## Grilling
+
+- Rondas: 1 (los cambios al plan fueron precisiones de tests, no pasos nuevos ni otra costura).
+- Preguntas: 17. Fuentes: ISSUE 6, CODE 14, DOC 1 (varias respuestas citan más de una); NO SOURCE 3 → supuestos técnicos (arriba).
+- Issues abiertos: ninguno.
