@@ -6,9 +6,9 @@ import { scheduleIdle } from "../world/bloom";
 import { attachBloom, type BloomProbe } from "../world/bloom-runtime";
 import { type Box, boxFrame, fitTransform } from "../world/frame";
 import { type BloomMode, buildStage, type Stage, type StageLayer } from "../world/stage";
+import { runBoot } from "./boot";
 import { cropAnimators, cropScene, pieceScene, type Readout, readout, solidsBox } from "./crop";
 import { EXHIBITS, type Exhibit, GROUPS, pickExhibit, stepExhibit } from "./exhibits";
-import { runBoot } from "./boot";
 import { bloomFromSearch, nextBloomMode } from "./page";
 
 /**
