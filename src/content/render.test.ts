@@ -53,7 +53,6 @@ describe("renderContent con pdf", () => {
     expect(obj).toMatch(/<a href="\/cv.pdf"[^>]*>/);
   });
   it("va entre el lead y las secciones", () => {
-    expect(html.indexOf("<h2>")).toBeGreaterThan(-1);
     expect(html.indexOf("pdf-viewer")).toBeGreaterThan(html.indexOf('class="lead"'));
     expect(html.indexOf("pdf-viewer")).toBeLessThan(html.indexOf("<h2>"));
   });
