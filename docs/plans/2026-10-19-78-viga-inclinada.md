@@ -31,9 +31,15 @@
 - **Forma:** `{ kind: "beam"; from: Vec3; to: Vec3; w: number; h: number; mat: Material }`. `w` es el ancho (lado horizontal de la sección) y `h` el alto (lado perpendicular a `w` y al eje).
 - **Sección nivelada:** eje `u = (to − from)/|to − from|`. Lado `side = (−u.y, u.x, 0)/|…|` (horizontal, perpendicular al eje en planta). Arriba `up = u × side` (con z ≥ 0 si el eje no es vertical). Si el eje es vertical (`|(u.x, u.y)| < 1e-9`), `side = (0, 1, 0)`. Si el largo es 0, `u = (1, 0, 0)`: queda una placa degenerada con bounds finitos y sin NaN.
 - **Caras:** dos tapas (los 4 vértices de cada extremo) y cuatro lados (cuadriláteros entre los dos anillos). Todas con `face(pts, mat, c)`, con `c` el punto medio, así que la normal sale hacia afuera y el tono sale de `shadeTone`. Ese es el sombreado coherente con el resto.
-- **Pluma del carguero:** `k.beam([dx + 0.3, −3.9, deck + 4.2], [dx + 4.8, −3.9, deck + 8.7], 0.4, 0.5, "steel")`: 45°, 6.36 u de largo (hoy unos 6.6), en crujía de la cabina (y −3.9). La arista baja del talón queda a deck + 4.2 − 0.25·√½ ≈ deck + 4.02, apenas sobre el techo de la cabina (deck + 4). El tope queda a ≈ 12.88 (< 13, el techo de altura del test del carguero).
+- **Pluma del carguero** (corregida tras la primera pasada del navegador, ver "Ajuste tras las capturas"): `k.beam([dx + 0.45, −3.9, deck + 4.2], [dx + 4.95, −3.9, deck + 8.7], 0.4, 0.4, "steel")`. Versión original: `k.beam([dx + 0.3, −3.9, deck + 4.2], [dx + 4.8, −3.9, deck + 8.7], 0.4, 0.5, "steel")`: 45°, 6.36 u de largo (hoy unos 6.6), en crujía de la cabina (y −3.9). La arista baja del talón queda a deck + 4.2 − 0.25·√½ ≈ deck + 4.02, apenas sobre el techo de la cabina (deck + 4). El tope queda a ≈ 12.88 (< 13, el techo de altura del test del carguero).
 - **Estay:** `k.beam([dx − 0.5, −3.9, deck + 4.05], [dx + 4.8, −3.9, deck + 8.7], 0.1, 0.1, "steel")`, de la parte de atrás del techo de la cabina a la punta de la pluma. La sección es 0.1 × 0.1, contra 0.4 × 0.5 de la pluma. Sube a unos 41°, un poco más tendido que la pluma, así que en pantalla se abren desde la punta como un triángulo fino.
 - **Exhibit `viga`:** pieza del grupo `mar` (zona `blog`), justo antes de `carguero`. Una viga `steel` de (−3, −1.5, 0.5) a (3, 1.5, 6.5), w 0.8, h 1 (levantada 0.5 para que ningún vértice quede bajo el pad, en z 0), girada en planta y en alto a la vez, para que se vea que la sección no se tuerce. "Sobre el carguero" lo da el exhibit `carguero`, que ya existe.
+
+## Ajuste tras las capturas
+
+En la primera pasada del navegador, la pluma se leía recta a rumbo 0 y a 57°, pero el estay casi no se veía. Iba en el mismo plano vertical que la pluma (y −3.9) con apenas 5° de diferencia: a rumbo 0 lo tapaba la pluma, de 0.5 de alto, y a 57° ese plano se ve casi de canto. El ajuste:
+- La pluma pasa a 0.4 × 0.4, con talón en dx + 0.45 y punta en dx + 4.95. Sigue a 45° y con el mismo largo (6.36).
+- El estay sale de la esquina interior de atrás del techo de la cabina, `[dx − 0.5, −3.45, deck + 4.05]`, y llega a la misma punta. El desplazamiento a lo largo de la eslora lo separa a rumbos donde el plano de la pluma se ve de frente. El desplazamiento hacia crujía lo separa a rumbos donde se ve de canto. Los dos forman una V fina que se cierra en la punta.
 
 ## Review Focus
 
