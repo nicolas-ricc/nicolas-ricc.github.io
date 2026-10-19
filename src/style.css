@@ -27,7 +27,11 @@ body.zone #content { opacity: 1; }
 #content p { margin: 0 0 0.5rem; }
 #content .links { list-style: none; padding: 0; margin: 0; display: flex; gap: 1rem; flex-wrap: wrap; }
 #content a { color: #7cf5ff; }
-#content .pdf { display: inline-block; margin: 0.5rem 0 1rem; padding: 0.5rem 1rem; border: 1px solid #7cf5ff; border-radius: 4px; text-decoration: none; }
+#content .pdf-viewer { display: flex; flex-direction: column; gap: 0.5rem; margin: 0.5rem 0 1.5rem; }
+#content .pdf-download { align-self: flex-end; display: inline-flex; padding: 0.5rem; color: #ffc457; border: 1px solid currentColor; border-radius: 4px; }
+#content .pdf-download:hover, #content .pdf-download:focus-visible { filter: brightness(1.25); }
+#content .pdf-download:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+#content .pdf-embed { display: block; width: 100%; aspect-ratio: 210 / 297; border: 1px solid #5a3d14; }
 #hud { position: absolute; inset: 1rem auto auto 1rem; z-index: 2; text-shadow: 0 1px 2px #000; }
 #hud a { color: var(--fg); text-decoration: none; font-size: 0.9rem; }
 #hud h1 { margin: 0.25rem 0 0; font-size: 1.5rem; }
