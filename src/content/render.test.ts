@@ -41,10 +41,11 @@ describe("renderContent con pdf", () => {
     expect(tag).toMatch(/\sdownload[\s>]/);
     expect(tag).toContain('aria-label="Descargar CV en PDF"');
     expect(tag).toContain('title="Descargar CV en PDF"');
-    expect(boton![1]).toMatch(/^<svg[\s\S]*<\/svg>$/);
-    expect(boton![1].replace(/<[^>]*>/g, "").trim()).toBe("");
-    expect(boton![1]).toContain('aria-hidden="true"');
-    expect(boton![1]).toContain("currentColor");
+    const inner = boton![1]!;
+    expect(inner).toMatch(/^<svg[\s\S]*<\/svg>$/);
+    expect(inner.replace(/<[^>]*>/g, "").trim()).toBe("");
+    expect(inner).toContain('aria-hidden="true"');
+    expect(inner).toContain("currentColor");
   });
   it("embebe el PDF con respaldo para navegadores sin visor", () => {
     expect(html).toContain('<object class="pdf-embed" data="/cv.pdf" type="application/pdf"');
