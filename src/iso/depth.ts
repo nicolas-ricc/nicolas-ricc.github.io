@@ -70,6 +70,20 @@ function restsOnHull(hull: Solid, other: Solid, hb: Bounds, ob: Bounds): boolean
 }
 
 /**
+ * Pieza de costado: solapa el casco en planta, empieza bajo su cubierta de crujía y no queda entera bajo la quilla
+ * (defensas, goma, bloques que cuadran la barcaza). Va después del casco si su centro cae del lado de la vista respecto
+ * del centro del casco (proyectado en el marco) y antes si cae del lado lejano. 1 después, −1 antes, 0 no aplica: con la
+ * vista paralela al eje que separa los centros no hay lado.
+ */
+function besideHull(hull: Solid, other: Solid, hb: Bounds, ob: Bounds, vx: number, vy: number): number {
+  if (hull.kind !== "hull" || other.kind === "hull") return 0;
+  if (ob.min.z >= hull.at.z + hull.h - EPS || ob.max.z <= hb.min.z + EPS) return 0;
+  if (!(ob.min.x < hb.max.x && hb.min.x < ob.max.x && ob.min.y < hb.max.y && hb.min.y < ob.max.y)) return 0;
+  const t = ((ob.min.x + ob.max.x - hb.min.x - hb.max.x) * vx + (ob.min.y + ob.max.y - hb.min.y - hb.max.y) * vy) / 2;
+  return Math.abs(t) <= EPS ? 0 : Math.sign(t);
+}
+
+/**
  * Orden painter topológico: para cada par que se superpone en pantalla, el que
  * está detrás se dibuja antes. Si los dos se ven "detrás" del otro (esquinas
  * diagonales), decide la suma de coordenadas. Ciclos: se cortan y siguen.
@@ -99,6 +113,7 @@ export function sortByDepth(solids: Solid[], heading = 0): Solid[] {
   for (let a = 0; a < n; a++) {
     const p = byX[a]!, sp = sbs[p]!;
     for (let b = a + 1; b < n; b++) {
+      let side: number;
       const q = byX[b]!, sq = sbs[q]!;
       if (sq.minX >= sp.maxX) break;
       if (!(sp.minY < sq.maxY && sq.minY < sp.maxY)) continue;
@@ -106,6 +121,9 @@ export function sortByDepth(solids: Solid[], heading = 0): Solid[] {
       const ij = isBehindView(bs[i]!, bs[j]!, vx, vy), ji = isBehindView(bs[j]!, bs[i]!, vx, vy);
       if (restsOnHull(solids[i]!, solids[j]!, bs[i]!, bs[j]!)) before[j]!.push(i);
       else if (restsOnHull(solids[j]!, solids[i]!, bs[j]!, bs[i]!)) before[i]!.push(j);
+      else if ((side = besideHull(solids[i]!, solids[j]!, bs[i]!, bs[j]!, vx, vy) || -besideHull(solids[j]!, solids[i]!, bs[j]!, bs[i]!, vx, vy)) !== 0) {
+        if (side > 0) before[j]!.push(i); else before[i]!.push(j);
+      }
       // En el marco girado, si los separan dos planos a la vez ninguno tapa al otro: no hay relación que imponer.
       else if (ij && ji && heading !== 0) continue;
       else if (ij === ji) { if (keys[i]! <= keys[j]!) before[j]!.push(i); else before[i]!.push(j); }
