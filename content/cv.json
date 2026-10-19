@@ -2,9 +2,8 @@
   "id": "cv",
   "titulo": "Resume",
   "descripcion": "Ingeniero de software. Backend, sistemas, y últimamente electrónica.",
+  "pdf": "/cv.pdf",
   "secciones": [
-    { "subtitulo": "Experiencia", "items": [ { "titulo": "Illustrate", "descripcion": "Rol y fechas pendientes.", "links": [] } ] },
-    { "subtitulo": "Stack", "items": [ { "titulo": "Lenguajes y herramientas", "descripcion": "TypeScript, Python, Go, Linux.", "links": [] } ] },
     { "subtitulo": "Contacto", "items": [ { "titulo": "GitHub", "links": [{ "label": "nicolas-ricc", "url": "https://github.com/nicolas-ricc" }] } ] }
   ]
 }

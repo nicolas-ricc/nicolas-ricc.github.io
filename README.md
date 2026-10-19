@@ -9,7 +9,7 @@ Sitio personal: un mapa isométrico nocturno con tres zonas (Portfolio, Resume, 
 
 Sin licencia pública: `private: true`, el campo `license` (ISC) queda como resto del scaffold y no aplica — el repo no se publica en npm.
 
-Contenido editable en `content/*.json`. Diseño en `docs/superpowers/specs/`, plan en `docs/superpowers/plans/`.
+Contenido editable en `content/*.json`. `public/cv.pdf` es una copia del CV de `riccomini-multiverse` (`cv/cv.pdf`); se actualiza a mano con `gh api repos/nicolas-ricc/riccomini-multiverse/contents/cv/cv.pdf -H "Accept: application/vnd.github.raw" > public/cv.pdf`. Diseño en `docs/superpowers/specs/`, plan en `docs/superpowers/plans/`.
 
 ## Mundo isométrico
 
