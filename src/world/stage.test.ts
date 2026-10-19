@@ -8,10 +8,13 @@ vi.mock("pixi.js", async (importOriginal) => {
 });
 
 import type { Container, Graphics } from "pixi.js";
-import { assembleWorld } from "./assemble";
+import type { Accent } from "../iso/accent";
+import { v3 } from "../iso/geometry";
+import type { AnimLayer } from "../scenes/animator";
+import { assembleWorld, type ZonedAnimator } from "./assemble";
 import { HALO_BASE, HALO_FALLBACK } from "./frame";
 import { BLOOM_FILTER, buildStage, nextHalo } from "./stage";
-import { WORLD_ZONES } from "./veil";
+import { ACCENT_DIM, WORLD_ZONES, focusAlphas } from "./veil";
 
 const build = (reducedMotion = true) => { const { scene, animators } = assembleWorld(undefined, { reducedMotion }); return buildStage(scene, animators); };
 const accentSlotOf = (c: Container) => c.children[c.children.length - 1] as Container;
@@ -214,5 +217,44 @@ describe("destroy", () => {
       s.tick(100);
     }).not.toThrow();
     expect(s.bloom).toBe("fallback");
+  });
+});
+
+describe("velo de las luces animadas", () => {
+  const dot = (x: number, y: number): Accent => ({ kind: "dot", at: v3(x, y, 1), r: 1, color: "amber" });
+  const port = dot(380, 118), blog = dot(500, 200);
+  const toy = (layer: () => AnimLayer): ZonedAnimator => ({ zone: "blog", ids: ["luces"], layer, tick: () => new Set(["luces"]) });
+  const stageWith = (a: ZonedAnimator) => buildStage(assembleWorld(["portfolio"], { reducedMotion: true }).scene, [a]);
+  // Graphics animadas: las que siguen a las tres estáticas en accentSlot
+  const animated = (s: ReturnType<typeof buildStage>) => accentSlotOf(s.container).children.slice(3) as Graphics[];
+  const lit = (gs: Graphics[]) => gs.filter((g) => g.context.instructions.length > 0);
+
+  it("una capa sin zona vela cada luz con la zona de su posición, aunque el animador sea de otra zona", () => {
+    const s = stageWith(toy(() => ({ kind: "accent", accents: [port, blog] })));
+    s.setFocus("portfolio"); s.tick(10_000);
+    expect(lit(animated(s)).map((g) => g.alpha).sort()).toEqual([ACCENT_DIM, 1]);
+    s.setFocus("blog"); s.tick(10_000);
+    expect(lit(animated(s)).map((g) => g.alpha).sort()).toEqual([ACCENT_DIM, 1]);
+  });
+  it("una capa con zona vela todas sus luces con esa zona, en una sola Graphics", () => {
+    const s = stageWith(toy(() => ({ kind: "accent", accents: [port, blog], zone: "blog", alpha: 0.5 })));
+    expect(animated(s)).toHaveLength(1);
+    s.setFocus("portfolio"); s.tick(10_000);
+    expect(animated(s)[0]!.alpha).toBeCloseTo(0.5 * ACCENT_DIM);
+  });
+  it("si una zona de la capa se queda sin luces, su Graphics se vacía al redibujar", () => {
+    let on = true;
+    const s = stageWith(toy(() => ({ kind: "accent", accents: on ? [port, blog] : [blog] })));
+    expect(lit(animated(s))).toHaveLength(2);
+    on = false; s.tick(16);
+    expect(lit(animated(s))).toHaveLength(1);
+  });
+  it("las luces estáticas mantienen su alpha por zona con cada foco", () => {
+    const s = build();
+    for (const f of WORLD_ZONES) {
+      s.setFocus(f); s.tick(10_000);
+      const statics = accentSlotOf(s.container).children.slice(0, 3);
+      expect(statics.map((g) => g.alpha)).toEqual(WORLD_ZONES.map((z) => focusAlphas(f)[z].accents));
+    }
   });
 });

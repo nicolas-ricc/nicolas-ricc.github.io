@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { assembleWorld } from "./assemble";
-import { ACCENT_DIM, focusAlphas } from "./veil";
+import { worldZoneAt } from "../map/geo";
+import { ACCENT_DIM, WORLD_ZONES, accentsByZone, focusAlphas } from "./veil";
 
 describe("assembleWorld", () => {
   it("el mundo entero trae los siete animadores, cada uno con su zona; el agua no tiene zona", () => {
@@ -54,5 +55,24 @@ describe("assembleWorld", () => {
     expect(focusAlphas("cv").portfolio.accents).toBe(ACCENT_DIM);
     expect(focusAlphas("blog").portfolio.accents).toBe(ACCENT_DIM);
     expect(a!.tick(1000).size).toBe(0);
+  });
+  it("cada luz animada fija (haz, neones) queda asignada a worldZoneAt de su posición", () => {
+    const { animators } = assembleWorld(undefined, { reducedMotion: false });
+    const sea = animators.find((a) => a.ids.includes("sea.beam"))!;
+    let port = 0;
+    for (let t = 0; t < 40; t++) {
+      sea.tick(250);
+      for (const id of ["sea.beam", "sea.neon"]) {
+        const l = sea.layer(id);
+        if (l.kind !== "accent") throw new Error(id);
+        const byZone = accentsByZone(l.accents, l.zone);
+        for (const z of WORLD_ZONES) for (const a of byZone[z]) {
+          const p = a.kind === "dot" ? a.at : a.pts[0]!;
+          expect(z).toBe(worldZoneAt(p.x, p.y));
+          if (z === "portfolio") port++;
+        }
+      }
+    }
+    expect(port).toBeGreaterThan(0); // el haz y la galería están en Portfolio
   });
 });

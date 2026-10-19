@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { LANE_SPEED, SHIPS, createSeaAnim, laneLength } from "./sea-anim";
 import { seaAnimator } from "./sea-animator";
+import { accentZone } from "../world/veil";
 import { world } from "./world";
 
 describe("seaAnimator", () => {
@@ -50,5 +51,36 @@ describe("seaAnimator", () => {
     const mk = () => seaAnimator(world(7).sea!, { reducedMotion: false });
     const a = mk(), b = mk();
     for (const dt of [16, 33, 100, 250, 1000, 5000, 7000, 33]) { expect([...a.tick(dt)]).toEqual([...b.tick(dt)]); for (const id of a.ids) expect(a.layer(id)).toEqual(b.layer(id)); }
+  });
+  it("las luces de cada barco declaran una sola zona en todo el ciclo: Portfolio la lancha, Blog los demás", () => {
+    const a = seaAnimator(world(7).sea!, { reducedMotion: false });
+    const ids = ["sea.ferryLights", ...SHIPS.map((_, k) => `sea.lights${k}`)];
+    const zones = new Map<string, Set<unknown>>(ids.map((id) => [id, new Set()]));
+    const lancha = new Set<string>(); // zonas por posición de las luces de la lancha
+    let carguero = 0; // muestras del carguero en tierra de Portfolio: prueba que el barrido cruza la costa
+    for (let t = 0; t < 600; t++) {
+      a.tick(500);
+      for (const id of ids) {
+        const l = a.layer(id);
+        if (l.kind !== "accent") throw new Error(id);
+        zones.get(id)!.add(l.zone);
+        if (id === "sea.ferryLights") for (const x of l.accents) lancha.add(accentZone(x));
+        if (id === "sea.lights0") carguero += l.accents.filter((x) => accentZone(x) === "portfolio").length;
+      }
+    }
+    expect([...zones.get("sea.ferryLights")!]).toEqual(["portfolio"]);
+    SHIPS.forEach((_, k) => expect([...zones.get(`sea.lights${k}`)!]).toEqual(["blog"]));
+    expect(carguero).toBeGreaterThan(0);
+    // la zona de la lancha es una decisión, no una medición: este control avisa si su recorrido llega a tocar Blog
+    expect([...lancha]).toEqual(["portfolio"]);
+  });
+  it("con reduced-motion las luces de los barcos declaran la misma zona", () => {
+    const a = seaAnimator(world(7).sea!, { reducedMotion: true });
+    expect(a.layer("sea.ferryLights")).toMatchObject({ kind: "accent", zone: "portfolio" });
+    SHIPS.forEach((_, k) => expect(a.layer(`sea.lights${k}`)).toMatchObject({ kind: "accent", zone: "blog" }));
+  });
+  it("las luces fijas del mar (haz, neones, boyas) no declaran zona: se velan por posición", () => {
+    const a = seaAnimator(world(7).sea!, { reducedMotion: false });
+    for (const id of ["sea.beam", "sea.neon", "sea.buoys"]) expect(a.layer(id)).not.toHaveProperty("zone");
   });
 });
