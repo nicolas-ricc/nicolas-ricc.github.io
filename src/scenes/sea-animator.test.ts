@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BEAM_PERIOD_MS, CYCLE_MS, LANE_SPEED, OFF_MS, SHIPS, createSeaAnim, laneLength } from "./sea-anim";
+import { BEAM_PERIOD_MS, CYCLE_MS, LANE_SPEED, OFF_MS, PORT_MS, SHIPS, createSeaAnim, laneLength } from "./sea-anim";
 import { seaAnimator } from "./sea-animator";
 import { accentZone } from "../world/veil";
 import { world } from "./world";
@@ -99,6 +99,18 @@ describe("seaAnimator marca solo lo que cambió (#71)", () => {
     for (const id of [...shipIds(1), ...shipIds(2)]) expect(still.has(id)).toBe(true);
     const leave = a.tick(OFF_MS); // offscreen → back
     for (const id of shipIds(0)) expect(leave.has(id)).toBe(true);
+  });
+
+  it("la llegada a puerto y el zarpe del ciclo siguiente también marcan", () => {
+    const a = seaAnimator(world(7).sea!, { reducedMotion: false });
+    const BACK = (laneLength("back") / LANE_SPEED) * 1000;
+    a.tick(OUT + OFF_MS + BACK - 10);
+    const port = a.tick(1000); // barco 0: back → offscreen (en puerto)
+    for (const id of shipIds(0)) expect(port.has(id)).toBe(true);
+    const still = a.tick(1000);
+    for (const id of shipIds(0)) expect(still.has(id)).toBe(false);
+    const out = a.tick(PORT_MS); // fin del ciclo: vuelve a zarpar
+    for (const id of shipIds(0)) expect(out.has(id)).toBe(true);
   });
 
   it("el primer tick que avanza marca todas las capas; con dtMs 0 no marca nada", () => {

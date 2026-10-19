@@ -188,6 +188,7 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
       const all = first; first = false;
       const angle = angleAt(clock);
       clock += dtMs;
+      // el redondeo de `%` solo puede marcar de más el haz, nunca de menos: el cuadro sale del mismo `angleAt(clock)`
       const c: SeaChanges = { ships: [], beam: all || angleAt(clock) !== angle, buoys: all, ferry: all, neon: all };
       for (let k = 0; k < SHIPS.length; k++) {
         const prev = states[k]!;
