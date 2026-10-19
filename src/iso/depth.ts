@@ -24,8 +24,11 @@ export function isBehind(a: Bounds, b: Bounds): boolean {
   return a.max.x <= b.min.x + EPS || a.max.y <= b.min.y + EPS || a.max.z <= b.min.z + EPS;
 }
 
-// Con la vista paralela al plano que separa (componente ~0), ninguno tapa al otro: vale como detrás en los dos sentidos.
-const far = (v: number, aMin: number, aMax: number, bMin: number, bMax: number): boolean =>
+/**
+ * `a` queda del lado lejano de `b` en un eje cuya componente de la vista es `v`. Con la vista paralela al plano
+ * que separa (componente ~0) ninguno tapa al otro: vale como detrás en los dos sentidos.
+ */
+const farAlong = (v: number, aMin: number, aMax: number, bMin: number, bMax: number): boolean =>
   (v > -EPS && aMax <= bMin + EPS) || (v < EPS && aMin >= bMax - EPS);
 
 /**
@@ -34,7 +37,7 @@ const far = (v: number, aMin: number, aMax: number, bMin: number, bMax: number):
  * Con una componente ~0 (vista paralela a ese eje) separarse en él cuenta como detrás en los dos sentidos.
  */
 function isBehindView(a: Bounds, b: Bounds, vx: number, vy: number): boolean {
-  return far(vx, a.min.x, a.max.x, b.min.x, b.max.x) || far(vy, a.min.y, a.max.y, b.min.y, b.max.y)
+  return farAlong(vx, a.min.x, a.max.x, b.min.x, b.max.x) || farAlong(vy, a.min.y, a.max.y, b.min.y, b.max.y)
     || a.max.z <= b.min.z + EPS;
 }
 
@@ -117,17 +120,19 @@ export function sortByDepth(solids: Solid[], heading = 0): Solid[] {
   const hulls = solids.flatMap((s, i) => (s.kind === "hull" ? [i] : []));
   const sides = solids.map((s, i) => {
     let m: Map<number, number> | null = null; // casi ningún sólido toca un casco: sin mapa no se aloca nada
-    for (const h of hulls) {
-      const c = restsOnHull(solids[h]!, s, bs[h]!, bs[i]!) ? 1 : besideHull(solids[h]!, s, bs[h]!, bs[i]!, vx, vy);
-      if (c !== 0) (m ??= new Map()).set(h, c);
+    for (const k of hulls) {
+      const side = restsOnHull(solids[k]!, s, bs[k]!, bs[i]!) ? 1 : besideHull(solids[k]!, s, bs[k]!, bs[i]!, vx, vy);
+      if (side !== 0) (m ??= new Map()).set(k, side);
     }
     return m;
   });
-  // 1 si j va después de i porque un casco los separa (i antes, j después), −1 al revés, 0 si ninguno los separa.
-  const across = (i: number, j: number): number => {
+  // Positivo si j va después de i por una regla del casco: uno de los dos es el casco del otro, o un casco los
+  // separa (i antes, j después). Si dos cascos discrepan, manda el primero de la lista. 0 si no hay regla.
+  const hullOrder = (i: number, j: number): number => {
     const a = sides[i], b = sides[j];
-    if (!a || !b) return 0;
-    for (const [h, c] of a) { const d = b.get(h); if (d !== undefined && d !== c) return d; }
+    const own = b?.get(i) ?? -(a?.get(j) ?? 0);
+    if (own || !a || !b) return own;
+    for (const [k, ai] of a) { const bj = b.get(k); if (bj !== undefined && bj !== ai) return bj; }
     return 0;
   };
   const before: number[][] = Array.from({ length: n }, () => []); // before[i] = índices que van antes de i
@@ -139,14 +144,10 @@ export function sortByDepth(solids: Solid[], heading = 0): Solid[] {
       if (sq.minX >= sp.maxX) break;
       if (!(sp.minY < sq.maxY && sq.minY < sp.maxY)) continue;
       const i = Math.min(p, q), j = Math.max(p, q);
-      let side: number; // positivo: j va después de i
+      const side = hullOrder(i, j);
       const ij = isBehindView(bs[i]!, bs[j]!, vx, vy), ji = isBehindView(bs[j]!, bs[i]!, vx, vy);
-      if (restsOnHull(solids[i]!, solids[j]!, bs[i]!, bs[j]!)) before[j]!.push(i);
-      else if (restsOnHull(solids[j]!, solids[i]!, bs[j]!, bs[i]!)) before[i]!.push(j);
-      else if ((side = besideHull(solids[i]!, solids[j]!, bs[i]!, bs[j]!, vx, vy) || -besideHull(solids[j]!, solids[i]!, bs[j]!, bs[i]!, vx, vy)) !== 0) {
-        if (side > 0) before[j]!.push(i); else before[i]!.push(j);
-      }
-      else if ((side = across(i, j)) !== 0) { if (side > 0) before[j]!.push(i); else before[i]!.push(j); }
+      if (side > 0) before[j]!.push(i);
+      else if (side < 0) before[i]!.push(j);
       // En el marco girado, si los separan dos planos a la vez ninguno tapa al otro: no hay relación que imponer.
       else if (ij && ji && heading !== 0) continue;
       else if (ij === ji) { if (keys[i]! <= keys[j]!) before[j]!.push(i); else before[i]!.push(j); }
