@@ -218,15 +218,17 @@ En el bucle, después de las dos ramas de `restsOnHull`:
   // Lado de cada sólido respecto de cada casco (1 después, −1 antes): el casco separa, y lo que va antes de él va antes de lo que va después.
   const hulls = solids.flatMap((s, i) => (s.kind === "hull" ? [i] : []));
   const sides = solids.map((s, i) => {
-    const m = new Map<number, number>();
+    let m: Map<number, number> | null = null; // casi ningún sólido toca un casco: sin mapa no se aloca nada
     for (const h of hulls) {
       const c = restsOnHull(solids[h]!, s, bs[h]!, bs[i]!) ? 1 : besideHull(solids[h]!, s, bs[h]!, bs[i]!, vx, vy);
-      if (c !== 0) m.set(h, c);
+      if (c !== 0) (m ??= new Map()).set(h, c);
     }
     return m;
   });
   const across = (i: number, j: number): number => {
-    for (const [h, c] of sides[i]!) { const d = sides[j]!.get(h); if (d !== undefined && d !== c) return d; }
+    const a = sides[i], b = sides[j];
+    if (!a || !b) return 0;
+    for (const [h, c] of a) { const d = b.get(h); if (d !== undefined && d !== c) return d; }
     return 0;
   };
 ```
@@ -240,6 +242,7 @@ En el bucle, después de las dos ramas de `restsOnHull`:
 Actualizar el JSDoc de `sortByDepth`: la línea "La regla del casco (`restsOnHull`) vale con cualquier rumbo" pasa a nombrar las tres reglas del casco (cubierta, costado y casco que separa), que valen con cualquier rumbo.
 
 - [ ] **Step 3:** el test pasa y `depth.test.ts` sigue en verde. El barrido queda rojo solo en 315°.
+- [ ] **Step 3b: costo.** `sortByDepth` sobre los sólidos no planos de `world(SEED)` (3 359) y sobre cada barco a 72 rumbos, mediana de 15 corridas con calentamiento, antes y después (`.scratch/bench.ts`). Presupuesto: no más de un 15 % sobre `main`. Medido con el prototipo optimizado: estático 16,0 → 16,6 ms, por barco 0,122 → 0,127 ms. Sin el mapa nulo y con `far` como closure, el prototipo daba 27 ms y 0,23 ms.
 - [ ] **Step 4: commit** `fix(#74): el casco separa lo que va antes y lo que va después`.
 
 ### Task 4: eje degenerado
@@ -251,10 +254,11 @@ Actualizar el JSDoc de `sortByDepth`: la línea "La regla del casco (`restsOnHul
 - [ ] **Step 2: implementar.** En `isBehindView`, con la componente de la vista ~0 en un eje, una separación en ese eje cuenta como "detrás" en los dos sentidos. Así cae en la rama `ij && ji`, que en el marco girado no impone relación:
 
 ```ts
+// Con la vista paralela al plano que separa (componente ~0), ninguno tapa al otro: vale como detrás en los dos sentidos.
+const far = (v: number, aMin: number, aMax: number, bMin: number, bMax: number): boolean =>
+  (v > -EPS && aMax <= bMin + EPS) || (v < EPS && aMin >= bMax - EPS);
+
 function isBehindView(a: Bounds, b: Bounds, vx: number, vy: number): boolean {
-  // Con la vista paralela al plano que separa (componente ~0), ninguno tapa al otro: vale como detrás en los dos sentidos.
-  const far = (v: number, aMin: number, aMax: number, bMin: number, bMax: number): boolean =>
-    (v > -EPS && aMax <= bMin + EPS) || (v < EPS && aMin >= bMax - EPS);
   return far(vx, a.min.x, a.max.x, b.min.x, b.max.x) || far(vy, a.min.y, a.max.y, b.min.y, b.max.y)
     || a.max.z <= b.min.z + EPS;
 }
@@ -271,10 +275,42 @@ Con `|v| ≥ EPS` es exactamente la condición de hoy. Actualizar su JSDoc con u
 - Create: `docs/superpowers/specs/assets/74-barcos/lancha-0-despues.png`, `lancha-230-despues.png`
 - Scratch (no se commitea): `.scratch/baseline.ts`
 
-- [ ] **Step 1: render list estático.** `.scratch/baseline.ts` arma `buildRenderList([...terrain.ground, ...scene.ground, ...scene.solids])` de `world(SEED)` (el mismo que `src/world/stage.ts:66`), lo serializa ítem por ítem (`capa|color|puntos`) y lo compara con `.scratch/baseline-main.json`, grabado en `main`. Esperado: 0 posiciones distintas. Si hay diferencias, capturar antes/después de la zona afectada y justificarlas en el PR.
+- [ ] **Step 1: render list estático.** Grabar el baseline en `main` con `git stash`/worktree de `origin/main` (`be29968`): `npx tsx .scratch/baseline.ts .scratch/baseline-main.json`, que escribe 32 447 ítems. Después, sobre la rama: `npx tsx .scratch/baseline.ts .scratch/baseline-main.json`. El script está en el PR, en la sección de verificación. `.scratch/baseline.ts` arma `buildRenderList([...terrain.ground, ...scene.ground, ...scene.solids])` de `world(SEED)` (el mismo que `src/world/stage.ts:66`), lo serializa ítem por ítem (`capa|color|puntos`) y lo compara con `.scratch/baseline-main.json`, grabado en `main`. Esperado: 0 posiciones distintas. Si hay diferencias, capturar antes/después de la zona afectada y justificarlas en el PR.
 - [ ] **Step 2: capturas.** Con `npm run dev -- --host --port 5173`:
   - Rumbo 0: `http://localhost:5173/lab/storybook.html#lancha` (la lancha del storybook se arma a rumbo 0 y pasa por `buildRenderList` de la escena estática, sin rumbo, que es `sortByDepth(…, 0)`). Captura con agent-browser a 1600×900 ×2.
   - Rumbo 230°: el storybook no gira las piezas, y la escena estática se ordena sin rumbo. La lancha animada de la feria sí pasa por `buildRenderList(l.solids, l.heading)` (`src/world/stage.ts:113`). Así que, sobre la misma página del lab, un `agent-browser eval` importa del dev server `/src/scenes/ships.ts` y `/src/iso/render-list.ts`, arma `buildRenderList(ship("ferry", shipAt("ferry", {x:0,y:0}, h), h).solids, h)` con h = 230° y dibuja los polígonos de la capa `solid` con su color en un canvas 2D a pantalla completa, centrado y escalado. Es el mismo orden y los mismos colores que dibuja Pixi, sin luces ni bloom.
   - Mismo procedimiento antes (tarea 1, con `depth.ts` de `main`) y después.
 - [ ] **Step 3:** `npm test` y `npm run typecheck` en verde.
 - [ ] **Step 4: commit** `docs(#74): capturas de la lancha antes y después`.
+
+## Assumptions
+
+- **Regla de costado solo con cruce en z.** Un sólido entero bajo la quilla no es pieza de costado: ahí ordena la separación en z de siempre. Alternativa rechazada: toda pieza que empieza bajo la cubierta, que pondría delante del casco algo que está debajo de él.
+- **Sin lado cuando `|t| ≤ EPS`** (`EPS = 1e-6`, `src/iso/depth.ts:5`, el mismo valor que el test). Alternativa rechazada: decidir por el signo del ruido, que es justamente lo que cierra el ciclo a 315°.
+- **Dos cascos que clasifican distinto un mismo par:** `across` usa el primer casco en orden de lista que los separa. En la barcaza, los únicos sólidos que tocan los dos cascos lo hacen por ruido de redondeo en x = 0 (pechos y bloque de proa del empujador), y los dos cascos los clasifican igual. El barrido de la barcaza lo cubre. Alternativa rechazada: un orden por casco más cercano, que no tiene caso real hoy.
+- **Captura a 230°.** Se hace en la página del lab (storybook), dibujando en un canvas 2D el `buildRenderList(…, h)` que la capa animada de la lancha le pasa a Pixi (`src/world/stage.ts:113`). La lancha de la feria pasa por todos los rumbos, pero no se puede fijar uno, y el storybook ordena sin rumbo. Alternativa rechazada: agregar `?heading=` al storybook, que cambia código del lab que el issue no pide.
+- **Commits en rojo.** El commit `test(#74): evals` deja la suite en rojo hasta la tarea 4, por pedido del pipeline (etapa 3). CI corre en el PR (`.github/workflows`: typecheck, test, build), no en cada commit. El estado intermedio queda en los comentarios de etapa del issue.
+- **Optimización:** mapa de lados nulo y `far` a nivel de módulo, para no pasar del presupuesto de costo (tarea 3, step 3b).
+
+## Grilling
+
+- Rondas: 1 (el plan no cambió de costura ni de pasos; se agregaron un step de costo y precisiones).
+- Preguntas: 16. Respuestas: CODE 12, ISSUE 3, NO SOURCE 5 (4 supuestos técnicos y 1 fuera de alcance; algunas preguntas citan más de una fuente).
+  1. Cadena `else if`: `src/iso/depth.ts:106-113`. Antes de `restsOnHull` no hay ninguna rama: `ij`/`ji` se calculan pero solo se usan después. Las ramas nuevas van después de las dos de `restsOnHull` y antes de la línea 110, así que ganan sobre la separación y la clave. (CODE)
+  2. Dos cascos con clasificación opuesta: no pasa en la barcaza (medido con `.scratch/q2.ts`). Supuesto declarado. (NO SOURCE → supuesto)
+  3. Ciclos residuales: el artefacto commiteado es el barrido de la tarea 1, que mira las dos reglas en 72 rumbos con el orden final, después de cortar ciclos. El tercer test de unidad es el triángulo faja/lanzamiento/casco. (CODE: plan, tarea 1)
+  4. `ij && ji` solo saltea con `heading !== 0` (`depth.ts:110`). A rumbo 0 cae a la clave (`:111`), y la regla (3) no cambia nada ahí, porque con rumbo 0 `vx = vy = VIEW_DIR.x > 0`. (CODE)
+  5. `localBox` y `worldAndFrameBounds` (`depth.ts:38-50`) usan los mismos vértices de `tessellateAll`, girados −heading. La traslación a `AT` corre igual al casco y a la pieza, así que `t` e `inPlan` no cambian. El cilindro se mide por sus vértices en los dos lados. (CODE)
+  6. `EPS = 1e-6` (`depth.ts:5`). (CODE)
+  7. `restsOnHull` (`depth.ts:66-70`): `ob.min.z >= hull.at.z + hull.h - EPS` y solape estricto en planta, sin EPS. El barrido usa un margen −EPS en planta, así que ignora los solapes de ruido. (CODE)
+  8. Botes de la feria: cascos solos, sin piezas (`src/scenes/fair.ts:208`). El astillero tiene cascos sin rumbo (`src/scenes/shipyard.ts:89,141`). Los cubre el render list estático entero. (CODE)
+  9. Comando del baseline: tarea 5, step 1. (CODE)
+  10. Captura a 230°: supuesto declarado. `shipAt` está en `src/scenes/ships.ts:166`. (CODE + supuesto)
+  11. Remolcador y barcaza: ISSUE (nicolas-ricc, Agent Brief): "Toda pieza de costado se dibuja después del casco si está en el costado que mira al espectador y antes si está en el costado lejano" y "Este issue absorbe #77 (piezas de costado)". La tabla del brief da "Remolcador | 0/72 | 3/72 rumbos". (ISSUE)
+  12. Costo: medido, tarea 3, step 3b. (NO SOURCE → supuesto: presupuesto del 15 %)
+  13. `SHIP_SPECS: Record<ShipKind, ShipSpec>` (`ships.ts:20`). "Popa en `at`" (`ships.ts:7-14`, doc de la flota). (CODE)
+  14. `rotBox` es local al `describe("sortByDepth en el marco del barco")` (`src/iso/depth.test.ts:114`). `v3` está importado (`:2`). Variante `hull`: `src/iso/solids.ts:16`, con `len`, `beam`, `h`, `mat` requeridos y `topMat`, `heading`, `sheer` opcionales. (CODE)
+  15. Commits en rojo: supuesto declarado. (NO SOURCE → supuesto)
+  16. Andamios y cunas del astillero: los cubre el render list estático entero de `world(SEED)`, que incluye el astillero (`src/scenes/world.ts:54-57`). (CODE)
+- Supuestos: los seis de la sección anterior.
+- Fuera de alcance: la regla de lado por centroide juzga mal las piezas de la banda cercana que están cerca de un extremo del casco. A rumbo 0, la defensa de estribor en x 5 cuenta como lejana y el casco tapa su mitad interior; es así también en `main`. Va a #195; la falta de `CONTEXT.md` que el brief cita, a #196.
