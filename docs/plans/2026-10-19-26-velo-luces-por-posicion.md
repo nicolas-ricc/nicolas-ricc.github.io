@@ -120,6 +120,7 @@ it("las luces de cada barco declaran una sola zona en todo el ciclo: Portfolio l
   const a = seaAnimator(world(7).sea!, { reducedMotion: false });
   const ids = ["sea.ferryLights", ...SHIPS.map((_, k) => `sea.lights${k}`)];
   const zones = new Map<string, Set<unknown>>(ids.map((id) => [id, new Set()]));
+  const lancha = new Set<string>(); // zonas por posición de las luces de la lancha
   let carguero = 0; // muestras del carguero en tierra de Portfolio: prueba que el barrido cruza la costa
   for (let t = 0; t < 600; t++) {
     a.tick(500);
@@ -127,12 +128,20 @@ it("las luces de cada barco declaran una sola zona en todo el ciclo: Portfolio l
       const l = a.layer(id);
       if (l.kind !== "accent") throw new Error(id);
       zones.get(id)!.add(l.zone);
+      if (id === "sea.ferryLights") for (const x of l.accents) lancha.add(accentZone(x));
       if (id === "sea.lights0") carguero += l.accents.filter((x) => accentZone(x) === "portfolio").length;
     }
   }
   expect([...zones.get("sea.ferryLights")!]).toEqual(["portfolio"]);
   SHIPS.forEach((_, k) => expect([...zones.get(`sea.lights${k}`)!]).toEqual(["blog"]));
   expect(carguero).toBeGreaterThan(0);
+  // la zona de la lancha es una decisión, no una medición: este control avisa si su recorrido llega a tocar Blog
+  expect([...lancha]).toEqual(["portfolio"]);
+});
+it("con reduced-motion las luces de los barcos declaran la misma zona", () => {
+  const a = seaAnimator(world(7).sea!, { reducedMotion: true });
+  expect(a.layer("sea.ferryLights")).toMatchObject({ kind: "accent", zone: "portfolio" });
+  SHIPS.forEach((_, k) => expect(a.layer(`sea.lights${k}`)).toMatchObject({ kind: "accent", zone: "blog" }));
 });
 it("las luces fijas del mar (haz, neones, boyas) no declaran zona: se velan por posición", () => {
   const a = seaAnimator(world(7).sea!, { reducedMotion: false });
@@ -182,7 +191,7 @@ it("cada luz animada fija (haz, neones) queda asignada a worldZoneAt de su posic
     for (const id of ["sea.beam", "sea.neon"]) {
       const l = sea.layer(id);
       if (l.kind !== "accent") throw new Error(id);
-      const byZone = accentsByZone(l.accents, l.zone);
+      const byZone = accentsByZone(l.accents, declared);
       for (const z of WORLD_ZONES) for (const a of byZone[z]) {
         const p = a.kind === "dot" ? a.at : a.pts[0]!;
         expect(z).toBe(worldZoneAt(p.x, p.y));
@@ -263,7 +272,7 @@ Rama `accent` de las capas animadas:
   });
   const draw = (): void => {
     const l = a.layer(id) as AnimLayer & { kind: "accent" };
-    const byZone = accentsByZone(l.accents, l.zone);
+    const byZone = accentsByZone(l.accents, declared);
     // el alpha propio de la capa (barcos que se desvanecen) se guarda; el alpha final lo pone el lerp
     for (const e of entries) { drawAccents(e.g, byZone[e.zone], halo); e.base = l.alpha ?? 1; }
   };
@@ -284,4 +293,19 @@ Rama `accent` de las capas animadas:
 
 ### Verificación en el navegador (criterio de capturas)
 
-Script en `.scratch/evals-26.md` (no versionado): sitio en `http://localhost:5173/lab/world.html`, tecla `5` para rotar el foco a Portfolio y a Blog, `?bloom=off`, encuadre `1`/`3`, captura de la punta del faro; contar con `__PIXI_DEVTOOLS_WRAPPER__.stage` las Graphics de acentos animadas y sus alfas. Lo esperado: con foco en Portfolio la ventana del farero y el cartel/galería/haz quedan a alpha 1; con foco en Blog ambos a `ACCENT_DIM`.
+Script en `.scratch/evals-26.md` (no versionado): sitio en `http://localhost:5173/lab/world.html`, tecla `5` para rotar el foco a Portfolio y a Blog, `?bloom=off`, encuadre `1`/`3`, captura de la punta del faro; contar con `__PIXI_DEVTOOLS_WRAPPER__.stage` las Graphics de acentos animadas y sus alfas. Lo esperado: con foco en Portfolio la ventana del farero y el cartel/galería/haz quedan a alpha 1; con foco en Blog ambos a `ACCENT_DIM`. El lerp converge en headless: `stage.tick` recibe `deltaMS` ≤ 100 y `LERP_MS = 120`, así que `k ≈ 0.83` por cuadro. Medir también `rendering.capture().totals` e `instructions.length` antes (en `main`) y después, para dejar asentado el costo de las Graphics nuevas. Las dos capturas (foco Portfolio, foco Blog) se versionan en `docs/superpowers/specs/assets/26-velo/` como las de #116 y se enlazan en el PR.
+
+## Assumptions
+
+- **El reparto usa la zona leída al armar el Stage** (`declared`), no la de cada redibujo. Las capas de `sea-animator.ts` declaran su zona como literal constante, así que dan lo mismo; usar `declared` evita que una capa que cambiara de zona perdiera luces en silencio. Alternativa rechazada: leer `l.zone` en cada redibujo.
+- **Triple redibujo al cambiar el halo.** `setBloom` llama `e.draw()` por entrada y una capa sin zona tiene tres; solo pasa al cambiar de modo de bloom (`stage.ts`, `setBloom`), no por cuadro. Alternativa rechazada: un `draw` por zona, que reparte la capa tres veces por tick.
+- **Costo de las Graphics vacías.** Comparten un solo `BlurFilter` en el `bloomSlot` (`stage.ts`, `buildBloomSlot`) y `drawAccents` las deja sin instrucciones (`frame.ts:70`, `g.clear()`). Se mide en el navegador (sección de verificación) en lugar de suponerlo.
+- **Capturas versionadas** en `docs/superpowers/specs/assets/26-velo/`, como hizo #116.
+
+## Grilling
+
+- Rondas: 1 (los cambios de la revisión no mueven la costura: ajustan un test, el reparto y la verificación).
+- Preguntas: 18. Fuentes: ISSUE 4, CODE 16, DOC 2, NO SOURCE 4 (algunas respuestas citan más de una fuente).
+- NO SOURCE → supuestos técnicos: zona leída al armar (P3), costo de las Graphics vacías (P6), triple redibujo con `setBloom` (P18), capturas versionadas (P16).
+- NO SOURCE → fuera de alcance: falta `CONTEXT.md` con la entrada **Velo** que cita el brief, y no hay `docs/adr/` (P15) → follow-up.
+- Ninguna ambigüedad de spec.
