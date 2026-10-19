@@ -1,9 +1,11 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { sortByDepth } from "../iso/depth";
 import { bounds, isFlat, tessellateAll, type Solid } from "../iso/solids";
 import { SHIP_MATS, SHIP_SPECS, ship, shipAt, wake, type ShipKind } from "./ships";
 
 const KINDS: ShipKind[] = ["cargo", "tug", "barge", "ferry"];
+const centerXY = (x: Solid): [number, number] => { const b = bounds(x); return [(b.min.x + b.max.x) / 2, (b.min.y + b.max.y) / 2]; };
 
 describe("ships", () => {
   it("cada barco: casco con topMat y arrufo, ≤ 40 sólidos, ≤ 8 luces, todo dentro de la caja del casco (margen 2) y sobre la cubierta", () => {
@@ -199,20 +201,46 @@ describe("carguero (Damen Combi Freighter 3850)", () => {
     expect(covers).toHaveLength(3);
     for (const c of covers) { const b = bounds(c); expect(b.min.x).toBeGreaterThanOrEqual(cb.min.x); expect(b.max.x).toBeLessThanOrEqual(cb.max.x); expect(b.max.z - b.min.z).toBeLessThanOrEqual(0.5); }
   });
-  it("dos grúas en babor: pedestal, cabina y pluma de tres tramos subiendo a 45° hacia proa", () => {
+  it("dos grúas en babor: pedestal, cabina, pluma de una viga a 45° hacia proa y estay fino de la cabina a la punta", () => {
     const pedestals = s.solids.flatMap((x) => (x.kind === "cylinder" && x.r === 0.5 && x.h === 3 ? [x] : []));
     expect(pedestals).toHaveLength(2);
-    const steps = s.solids.filter((x) => x.kind === "poly" && x.mat === "steel" && x.h === 1.5).map((x) => bounds(x));
-    expect(steps).toHaveLength(6);
+    const beams = s.solids.flatMap((x) => (x.kind === "beam" ? [x] : []));
+    const jibs = beams.filter((b) => b.w * b.h >= 0.1), stays = beams.filter((b) => b.w * b.h < 0.1);
+    expect(jibs).toHaveLength(2); expect(stays).toHaveLength(2);
+    expect(s.solids.filter((x) => x.kind === "poly" && x.mat === "steel" && x.h === 1.5)).toHaveLength(0); // sin escalones
     for (const p of pedestals) {
       expect(p.at.y).toBeLessThan(-3.4); expect(p.at.z).toBeCloseTo(4, 6);
-      const boom = steps.filter((b) => b.min.x > p.at.x && b.min.x < p.at.x + 6).sort((a, b) => a.min.x - b.min.x);
-      expect(boom).toHaveLength(3);
-      for (const b of boom) expect(b.max.y).toBeLessThan(0);
-      for (let i = 1; i < 3; i++) {
-        const dx = boom[i]!.min.x - boom[i - 1]!.min.x, dz = boom[i]!.min.z - boom[i - 1]!.min.z;
-        expect(dz).toBeGreaterThan(0); expect(dz).toBeCloseTo(dx, 6);
-        expect(boom[i]!.min.z).toBeCloseTo(boom[i - 1]!.max.z, 6);
+      const jib = jibs.find((b) => Math.abs(b.from.x - p.at.x) < 1)!, stay = stays.find((b) => Math.abs(b.from.x - p.at.x) < 1)!;
+      const run = jib.to.x - jib.from.x, rise = jib.to.z - jib.from.z;
+      expect(rise).toBeCloseTo(run, 6); // 45°
+      expect(Math.hypot(run, rise)).toBeGreaterThan(5.5); expect(Math.hypot(run, rise)).toBeLessThan(7.5);
+      expect(jib.from.y).toBeLessThan(0); expect(bounds(jib).max.y).toBeLessThan(0);
+      expect(bounds(jib).min.z).toBeGreaterThanOrEqual(p.at.z + 4 - 1e-6); // sobre el techo de la cabina
+      expect(stay.to).toEqual(jib.to); // a la punta
+      expect(stay.from.z).toBeGreaterThanOrEqual(p.at.z + 4); expect(stay.from.x).toBeLessThan(jib.from.x); // de lo alto de la cabina, detrás del talón
+      expect(stay.w * stay.h).toBeLessThan((jib.w * jib.h) / 10); // mucho más fino
+    }
+  });
+  it("presupuesto: 37 sólidos, 4 menos por las plumas y 2 más por los estays que los 39 de antes", () => {
+    expect(s.solids).toHaveLength(37);
+  });
+  it("orden: a los 72 rumbos cada pluma y cada estay se dibujan después de su pedestal, su cabina y el casco", () => {
+    for (let k = 0; k < 72; k++) {
+      const h = (k * 5 * Math.PI) / 180, r = ship("cargo", { x: 0, y: 0 }, h).solids, o = sortByDepth(r, h);
+      const at = (x: Solid) => o.indexOf(x);
+      const hull = r.find((x) => x.kind === "hull")!;
+      const peds = r.flatMap((x) => (x.kind === "cylinder" && x.r === 0.5 && x.h === 3 ? [x] : []));
+      expect(peds).toHaveLength(2);
+      for (const ped of peds) {
+        const near = (x: number, y: number) => Math.hypot(x - ped.at.x, y - ped.at.y) < 1;
+        const cab = r.find((x) => x.kind === "poly" && x.mat === "whitewash" && x.h === 1 && near(...centerXY(x)))!;
+        const parts = r.flatMap((x) => (x.kind === "beam" && near(x.from.x, x.from.y) ? [x] : []));
+        expect(cab).toBeDefined(); expect(parts).toHaveLength(2); // pluma y estay
+        for (const part of parts) {
+          expect(at(part), `rumbo ${k * 5}°`).toBeGreaterThan(at(ped));
+          expect(at(part), `rumbo ${k * 5}°`).toBeGreaterThan(at(cab));
+          expect(at(part), `rumbo ${k * 5}°`).toBeGreaterThan(at(hull));
+        }
       }
     }
   });

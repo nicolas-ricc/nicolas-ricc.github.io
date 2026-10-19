@@ -1,6 +1,7 @@
 // src/iso/solids.test.ts
 import { describe, expect, it } from "vitest";
-import { v3 } from "./geometry";
+import { dot, v3, type Vec3 } from "./geometry";
+import { shadeTone } from "./light";
 import { bounds, isFlat, tessellate, tessellateAll, type Solid } from "./solids";
 
 const prism: Solid = { kind: "prism", at: v3(0, 0, 0), w: 2, d: 3, h: 4, mat: "concrete" };
@@ -184,5 +185,82 @@ describe("wheel", () => {
     const top1 = tessellateAll({ ...w, angle: Math.PI / 16 }).filter((f) => f.mat === "rust").flatMap((f) => f.pts).sort((p, q) => q.z - p.z)[0]!;
     expect(Math.hypot(top0.x - top1.x, top0.y - top1.y)).toBeGreaterThan(1);
     expect(tessellate(w).filter((f) => f.mat === "steel").length).toBe(33); // mira a la cámara: nada se descarta
+  });
+});
+
+describe("viga (beam)", () => {
+  const beam = (from: Vec3, to: Vec3, w: number, h: number): Solid => ({ kind: "beam", from, to, w, h, mat: "steel" });
+  const corners = (s: Solid) => tessellateAll(s).flatMap((f) => f.pts);
+  const finite = (s: Solid) => corners(s).every((p) => Number.isFinite(p.x) && Number.isFinite(p.y) && Number.isFinite(p.z));
+
+  it("horizontal: los bounds coinciden con los de la caja equivalente", () => {
+    const b = bounds(beam(v3(0, 1, 2), v3(4, 1, 2), 2, 1));
+    const box = bounds({ kind: "prism", at: v3(0, 0, 1.5), w: 4, d: 2, h: 1, mat: "steel" });
+    for (const k of ["x", "y", "z"] as const) { expect(b.min[k]).toBeCloseTo(box.min[k], 9); expect(b.max[k]).toBeCloseTo(box.max[k], 9); }
+  });
+
+  it("a 45°: los bounds son exactamente los de sus 8 vértices, con la sección nivelada", () => {
+    const r = Math.SQRT1_2, w = 0.4, h = 0.6;
+    // eje (1, 0, 1)/√2; lado (0, 1, 0); arriba (−1, 0, 1)/√2
+    const pts: Vec3[] = [];
+    for (const e of [v3(0, 0, 0), v3(3, 0, 3)]) for (const sy of [-1, 1]) for (const sz of [-1, 1])
+      pts.push(v3(e.x - sz * r * h / 2, e.y + sy * w / 2, e.z + sz * r * h / 2));
+    const b = bounds(beam(v3(0, 0, 0), v3(3, 0, 3), w, h));
+    const ax = (k: "x" | "y" | "z") => pts.map((p) => p[k]);
+    for (const k of ["x", "y", "z"] as const) { expect(b.min[k]).toBeCloseTo(Math.min(...ax(k)), 9); expect(b.max[k]).toBeCloseTo(Math.max(...ax(k)), 9); }
+    // nivelada: cada vértice tiene su pareja de la arista de ancho a la misma z y a `w` en planta
+    const all = corners(beam(v3(0, 0, 0), v3(3, 2, 3), w, h));
+    for (const p of all)
+      expect(all.some((q) => Math.abs(q.z - p.z) < 1e-9 && Math.abs(Math.hypot(q.x - p.x, q.y - p.y) - w) < 1e-9)).toBe(true);
+  });
+
+  it("teselación: 6 caras planas, cerradas (cada arista la comparten dos caras) y con la normal hacia afuera", () => {
+    const s = beam(v3(1, 2, 0.5), v3(4, 0, 5), 0.5, 0.8);
+    const faces = tessellateAll(s);
+    expect(faces).toHaveLength(6);
+    const key = (p: Vec3) => `${p.x.toFixed(6)},${p.y.toFixed(6)},${p.z.toFixed(6)}`;
+    const edges = new Map<string, number>();
+    const mid = v3(2.5, 1, 2.75);
+    for (const f of faces) {
+      expect(f.pts).toHaveLength(4);
+      for (const p of f.pts) expect(dot(f.normal, v3(p.x - f.pts[0]!.x, p.y - f.pts[0]!.y, p.z - f.pts[0]!.z))).toBeCloseTo(0, 9); // plana
+      expect(dot(f.normal, v3(f.pts[0]!.x - mid.x, f.pts[0]!.y - mid.y, f.pts[0]!.z - mid.z))).toBeGreaterThan(0); // hacia afuera
+      f.pts.forEach((p, i) => { const q = f.pts[(i + 1) % 4]!; const e = [key(p), key(q)].sort().join("|"); edges.set(e, (edges.get(e) ?? 0) + 1); });
+    }
+    expect(edges.size).toBe(12);
+    for (const n of edges.values()) expect(n).toBe(2);
+  });
+
+  it("sombreado coherente: la cara de arriba de una viga horizontal es 'top' y las visibles salen por tessellate", () => {
+    const faces = tessellateAll(beam(v3(0, 0, 1), v3(4, 0, 1), 1, 1));
+    expect(faces.filter((f) => f.tone === "top")).toHaveLength(1);
+    expect(tessellate(beam(v3(0, 0, 1), v3(4, 0, 1), 1, 1)).every((f) => f.mat === "steel")).toBe(true);
+  });
+
+  it("invertir from/to da los mismos bounds; una viga que baja también", () => {
+    const a = bounds(beam(v3(0, 0, 0), v3(3, 1, 3), 0.4, 0.6)), b = bounds(beam(v3(3, 1, 3), v3(0, 0, 0), 0.4, 0.6));
+    for (const k of ["x", "y", "z"] as const) { expect(b.min[k]).toBeCloseTo(a.min[k], 9); expect(b.max[k]).toBeCloseTo(a.max[k], 9); }
+  });
+
+  it("vertical: sección w sobre y, h sobre x, sin NaN", () => {
+    const s = beam(v3(0, 0, 0), v3(0, 0, 5), 2, 1);
+    expect(finite(s)).toBe(true);
+    const b = bounds(s);
+    expect(b.max.y - b.min.y).toBeCloseTo(2, 9); expect(b.max.x - b.min.x).toBeCloseTo(1, 9); expect(b.max.z - b.min.z).toBeCloseTo(5, 9);
+  });
+
+  it("largo cero no rompe: vértices y bounds finitos, tessellate no tira", () => {
+    const s = beam(v3(1, 1, 1), v3(1, 1, 1), 0.4, 0.4);
+    expect(finite(s)).toBe(true);
+    const b = bounds(s);
+    for (const k of ["x", "y", "z"] as const) { expect(Number.isFinite(b.min[k])).toBe(true); expect(Number.isFinite(b.max[k])).toBe(true); }
+    expect(() => tessellate(s)).not.toThrow();
+    for (const f of tessellateAll(s)) expect([f.normal.x, f.normal.y, f.normal.z].every(Number.isFinite)).toBe(true);
+  });
+
+  it("a 45°: cada cara lleva el tono que shadeTone da a su normal; la cara de arriba es vertiente", () => {
+    const faces = tessellateAll(beam(v3(0, 0, 4), v3(4.5, 0, 8.5), 0.4, 0.5));
+    for (const f of faces) expect(f.tone).toBe(shadeTone(f.normal));
+    expect(faces.some((f) => f.tone === "up" || f.tone === "down")).toBe(true);
   });
 });

@@ -1,4 +1,5 @@
 import type { Accent } from "../iso/accent";
+import { v3 } from "../iso/geometry";
 import { Z_SCALE } from "../iso/project";
 import type { Solid } from "../iso/solids";
 import { MOUTH_Y, QUAY_X, type WorldZone } from "../map/geo";
@@ -159,6 +160,9 @@ export const EXHIBITS: readonly Exhibit[] = [
   // el casco mide 40 u a 30°: llega a (WRECK.x + 35, WRECK.y + 20); la boya del pecio queda adentro
   { id: "pecio", title: "Pecio", zone: "blog", group: "mar", kind: "region",
     box: { x0: WRECK.x - 5, y0: WRECK.y - 5, x1: WRECK.x + 38, y1: WRECK.y + 26 }, h: 9 },
+  // la viga del motor sola, girada en planta y en alto a la vez: la sección se ve nivelada; montada, en las plumas del carguero
+  { id: "viga", title: "Viga", zone: "blog", group: "mar", kind: "piece", pad: "water",
+    build: (out) => { out.push({ kind: "beam", from: v3(-3, -1.5, 0.5), to: v3(3, 1.5, 6.5), w: 0.8, h: 1, mat: "steel" }); } },
   { id: "carguero", title: "Carguero", zone: "blog", group: "mar", kind: "piece", build: vessel("cargo"), pad: "water" },
   { id: "remolcador", title: "Remolcador", zone: "blog", group: "mar", kind: "piece", build: vessel("tug"), pad: "water" },
   { id: "convoy", title: "Convoy con barcaza", zone: "blog", group: "mar", kind: "piece", build: vessel("barge"), pad: "water" },

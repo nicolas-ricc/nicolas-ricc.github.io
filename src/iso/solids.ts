@@ -13,6 +13,7 @@ export type Solid =
   | { kind: "ramp"; at: Vec3; w: number; d: number; h: number; mat: Material; dir: RampDir }
   | { kind: "cylinder"; at: Vec3; r: number; h: number; mat: Material; sides?: number }
   | { kind: "cone"; at: Vec3; r: number; h: number; mat: Material; sides?: number }
+  | { kind: "beam"; from: Vec3; to: Vec3; w: number; h: number; mat: Material }
   | { kind: "hull"; at: Vec3; len: number; beam: number; h: number; mat: Material; topMat?: Material; heading?: number; sheer?: number }
   | { kind: "strip"; path: Vec2[]; width: number; z: number; mat: Material }
   | { kind: "ground"; tris: Tri[]; mat: Material }
@@ -129,6 +130,25 @@ function cone(at: Vec3, r: number, h: number, sides: number, mat: Material): Fac
   return out;
 }
 
+/**
+ * Viga recta de `from` a `to`, sección `w` × `h`: el lado `w` queda horizontal y perpendicular al eje en planta, así que la
+ * sección no se tuerce. Eje vertical: `w` sobre y. Largo cero: eje x, una placa degenerada que no rompe bounds ni orden.
+ */
+function beam(s: Solid & { kind: "beam" }): Face[] {
+  const dx = s.to.x - s.from.x, dy = s.to.y - s.from.y, dz = s.to.z - s.from.z, len = Math.hypot(dx, dy, dz);
+  const u = len === 0 ? v3(1, 0, 0) : v3(dx / len, dy / len, dz / len);
+  const plan = Math.hypot(u.x, u.y);
+  const side = plan < 1e-9 ? v3(0, 1, 0) : v3(-u.y / plan, u.x / plan, 0);
+  const up = v3(u.y * side.z - u.z * side.y, u.z * side.x - u.x * side.z, u.x * side.y - u.y * side.x);
+  const ring = (e: Vec3): Vec3[] => ([[-1, -1], [1, -1], [1, 1], [-1, 1]] as const).map(([a, b]) =>
+    v3(e.x + side.x * a * s.w / 2 + up.x * b * s.h / 2, e.y + side.y * a * s.w / 2 + up.y * b * s.h / 2, e.z + side.z * a * s.w / 2 + up.z * b * s.h / 2));
+  const r0 = ring(s.from), r1 = ring(s.to);
+  const c = v3((s.from.x + s.to.x) / 2, (s.from.y + s.to.y) / 2, (s.from.z + s.to.z) / 2);
+  const out = [face(r0, s.mat, c), face(r1, s.mat, c)];
+  for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; out.push(face([r0[i]!, r0[j]!, r1[j]!, r1[i]!], s.mat, c)); }
+  return out;
+}
+
 export const HULL_WATERLINE = 0.2, HULL_SHEER = 0.25, KEEL_BEAM = 0.7;
 /** Anillo de cubierta en fracciones de eslora/manga: popa redondeada, manga máxima al 57 %, proa en punta. Sentido horario visto desde arriba. */
 export const DECK_RING: readonly Vec2[] = [
@@ -232,6 +252,7 @@ export function tessellateAll(s: Solid): Face[] {
     case "ramp": return ramp(s.at, s.w, s.d, s.h, s.dir, s.mat);
     case "cylinder": return extrude(regular(s.at.x, s.at.y, s.r, s.sides ?? 8), s.at.z, s.h, s.mat);
     case "cone": return cone(s.at, s.r, s.h, s.sides ?? 6, s.mat);
+    case "beam": return beam(s);
     case "hull": return hull(s);
     case "strip": return strip(s.path, s.width, s.z, s.mat);
     case "ground": return ground(s.tris, s.mat);
