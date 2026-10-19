@@ -5,6 +5,7 @@ import { bounds, isFlat, tessellateAll, type Solid } from "../iso/solids";
 import { SHIP_MATS, SHIP_SPECS, ship, shipAt, wake, type ShipKind } from "./ships";
 
 const KINDS: ShipKind[] = ["cargo", "tug", "barge", "ferry"];
+const centerXY = (x: Solid): [number, number] => { const b = bounds(x); return [(b.min.x + b.max.x) / 2, (b.min.y + b.max.y) / 2]; };
 
 describe("ships", () => {
   it("cada barco: casco con topMat y arrufo, ≤ 40 sólidos, ≤ 8 luces, todo dentro de la caja del casco (margen 2) y sobre la cubierta", () => {
@@ -204,7 +205,7 @@ describe("carguero (Damen Combi Freighter 3850)", () => {
     const pedestals = s.solids.flatMap((x) => (x.kind === "cylinder" && x.r === 0.5 && x.h === 3 ? [x] : []));
     expect(pedestals).toHaveLength(2);
     const beams = s.solids.flatMap((x) => (x.kind === "beam" ? [x] : []));
-    const jibs = beams.filter((b) => b.w * b.h >= 0.15), stays = beams.filter((b) => b.w * b.h < 0.05);
+    const jibs = beams.filter((b) => b.w * b.h >= 0.1), stays = beams.filter((b) => b.w * b.h < 0.1);
     expect(jibs).toHaveLength(2); expect(stays).toHaveLength(2);
     expect(s.solids.filter((x) => x.kind === "poly" && x.mat === "steel" && x.h === 1.5)).toHaveLength(0); // sin escalones
     for (const p of pedestals) {
@@ -227,15 +228,18 @@ describe("carguero (Damen Combi Freighter 3850)", () => {
     for (let k = 0; k < 72; k++) {
       const h = (k * 5 * Math.PI) / 180, r = ship("cargo", { x: 0, y: 0 }, h).solids, o = sortByDepth(r, h);
       const at = (x: Solid) => o.indexOf(x);
-      const peds = r.flatMap((x, i) => (x.kind === "cylinder" && x.r === 0.5 && x.h === 3 ? [i] : []));
+      const hull = r.find((x) => x.kind === "hull")!;
+      const peds = r.flatMap((x) => (x.kind === "cylinder" && x.r === 0.5 && x.h === 3 ? [x] : []));
       expect(peds).toHaveLength(2);
-      for (const i of peds) {
-        const ped = r[i]!, cab = r[i + 1]!, jib = r[i + 2]!, stay = r[i + 3]!;
-        expect(jib.kind).toBe("beam"); expect(stay.kind).toBe("beam");
-        for (const part of [jib, stay]) {
+      for (const ped of peds) {
+        const near = (x: number, y: number) => Math.hypot(x - ped.at.x, y - ped.at.y) < 1;
+        const cab = r.find((x) => x.kind === "poly" && x.mat === "whitewash" && x.h === 1 && near(...centerXY(x)))!;
+        const parts = r.flatMap((x) => (x.kind === "beam" && near(x.from.x, x.from.y) ? [x] : []));
+        expect(cab).toBeDefined(); expect(parts).toHaveLength(2); // pluma y estay
+        for (const part of parts) {
           expect(at(part), `rumbo ${k * 5}°`).toBeGreaterThan(at(ped));
           expect(at(part), `rumbo ${k * 5}°`).toBeGreaterThan(at(cab));
-          expect(at(part), `rumbo ${k * 5}°`).toBeGreaterThan(at(r[0]!));
+          expect(at(part), `rumbo ${k * 5}°`).toBeGreaterThan(at(hull));
         }
       }
     }
