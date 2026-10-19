@@ -97,7 +97,8 @@ function besideHull(hull: Solid, other: Solid, hb: Bounds, ob: Bounds, vx: numbe
  * otro. La pantalla sigue en el mundo; el desempate (`depthKey`) usa el marco, porque en el mundo
  * una pieza girada empata mal y el corte de ciclos suelta relaciones de verdad.
  *
- * La regla del casco (`restsOnHull`) vale con cualquier rumbo, también en las escenas estáticas.
+ * Las tres reglas del casco (cubierta: `restsOnHull`; costado: `besideHull`; y el casco que separa lo que va
+ * antes de lo que va después) valen con cualquier rumbo, también en las escenas estáticas.
  */
 export function sortByDepth(solids: Solid[], heading = 0): Solid[] {
   const n = solids.length;
@@ -108,22 +109,40 @@ export function sortByDepth(solids: Solid[], heading = 0): Solid[] {
   const vx = VIEW_DIR.x * c + VIEW_DIR.y * sn, vy = -VIEW_DIR.x * sn + VIEW_DIR.y * c;
   const sbs = wb.map(screenBounds);
   const keys = heading === 0 ? bs.map((b) => depthKey(b)) : bs.map((b) => depthKey(b, vx, vy));
+  // Lado de cada sólido respecto de cada casco (1 después, −1 antes): el casco separa, y lo que va antes de él va antes de lo que va después.
+  const hulls = solids.flatMap((s, i) => (s.kind === "hull" ? [i] : []));
+  const sides = solids.map((s, i) => {
+    let m: Map<number, number> | null = null; // casi ningún sólido toca un casco: sin mapa no se aloca nada
+    for (const h of hulls) {
+      const c = restsOnHull(solids[h]!, s, bs[h]!, bs[i]!) ? 1 : besideHull(solids[h]!, s, bs[h]!, bs[i]!, vx, vy);
+      if (c !== 0) (m ??= new Map()).set(h, c);
+    }
+    return m;
+  });
+  // 1 si j va después de i porque un casco los separa (i antes, j después), −1 al revés, 0 si ninguno los separa.
+  const across = (i: number, j: number): number => {
+    const a = sides[i], b = sides[j];
+    if (!a || !b) return 0;
+    for (const [h, c] of a) { const d = b.get(h); if (d !== undefined && d !== c) return d; }
+    return 0;
+  };
   const before: number[][] = Array.from({ length: n }, () => []); // before[i] = índices que van antes de i
   const byX = solids.map((_, i) => i).sort((a, b) => sbs[a]!.minX - sbs[b]!.minX);
   for (let a = 0; a < n; a++) {
     const p = byX[a]!, sp = sbs[p]!;
     for (let b = a + 1; b < n; b++) {
-      let side: number;
       const q = byX[b]!, sq = sbs[q]!;
       if (sq.minX >= sp.maxX) break;
       if (!(sp.minY < sq.maxY && sq.minY < sp.maxY)) continue;
       const i = Math.min(p, q), j = Math.max(p, q);
+      let side: number; // positivo: j va después de i
       const ij = isBehindView(bs[i]!, bs[j]!, vx, vy), ji = isBehindView(bs[j]!, bs[i]!, vx, vy);
       if (restsOnHull(solids[i]!, solids[j]!, bs[i]!, bs[j]!)) before[j]!.push(i);
       else if (restsOnHull(solids[j]!, solids[i]!, bs[j]!, bs[i]!)) before[i]!.push(j);
       else if ((side = besideHull(solids[i]!, solids[j]!, bs[i]!, bs[j]!, vx, vy) || -besideHull(solids[j]!, solids[i]!, bs[j]!, bs[i]!, vx, vy)) !== 0) {
         if (side > 0) before[j]!.push(i); else before[i]!.push(j);
       }
+      else if ((side = across(i, j)) !== 0) { if (side > 0) before[j]!.push(i); else before[i]!.push(j); }
       // En el marco girado, si los separan dos planos a la vez ninguno tapa al otro: no hay relación que imponer.
       else if (ij && ji && heading !== 0) continue;
       else if (ij === ji) { if (keys[i]! <= keys[j]!) before[j]!.push(i); else before[i]!.push(j); }
