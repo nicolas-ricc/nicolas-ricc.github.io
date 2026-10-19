@@ -33,7 +33,7 @@
 - **Caras:** dos tapas (los 4 vértices de cada extremo) y cuatro lados (cuadriláteros entre los dos anillos). Todas con `face(pts, mat, c)`, con `c` el punto medio, así que la normal sale hacia afuera y el tono sale de `shadeTone`. Ese es el sombreado coherente con el resto.
 - **Pluma del carguero:** `k.beam([dx + 0.3, −3.9, deck + 4.2], [dx + 4.8, −3.9, deck + 8.7], 0.4, 0.5, "steel")`: 45°, 6.36 u de largo (hoy unos 6.6), en crujía de la cabina (y −3.9). La arista baja del talón queda a deck + 4.2 − 0.25·√½ ≈ deck + 4.02, apenas sobre el techo de la cabina (deck + 4). El tope queda a ≈ 12.88 (< 13, el techo de altura del test del carguero).
 - **Estay:** `k.beam([dx − 0.5, −3.9, deck + 4.05], [dx + 4.8, −3.9, deck + 8.7], 0.1, 0.1, "steel")`, de la parte de atrás del techo de la cabina a la punta de la pluma. La sección es 0.1 × 0.1, contra 0.4 × 0.5 de la pluma. Sube a unos 41°, un poco más tendido que la pluma, así que en pantalla se abren desde la punta como un triángulo fino.
-- **Exhibit `viga`:** pieza del grupo `mar` (zona `blog`), justo antes de `carguero`. Una viga `steel` de (−3, −1.5, 0) a (3, 1.5, 6), w 0.8, h 1, girada en planta y en alto a la vez, para que se vea que la sección no se tuerce. "Sobre el carguero" lo da el exhibit `carguero`, que ya existe.
+- **Exhibit `viga`:** pieza del grupo `mar` (zona `blog`), justo antes de `carguero`. Una viga `steel` de (−3, −1.5, 0.5) a (3, 1.5, 6.5), w 0.8, h 1 (levantada 0.5 para que ningún vértice quede bajo el pad, en z 0), girada en planta y en alto a la vez, para que se vea que la sección no se tuerce. "Sobre el carguero" lo da el exhibit `carguero`, que ya existe.
 
 ## Review Focus
 
@@ -54,7 +54,7 @@
 **Interfaces:**
 - Produces: variante de `Solid` `{ kind: "beam"; from: Vec3; to: Vec3; w: number; h: number; mat: Material }`. `tessellateAll(beam)` devuelve 6 caras (2 tapas y 4 lados). `bounds(beam)` es la caja de sus 8 vértices.
 
-- [ ] **Step 1: tests que fallan** (agregar al final de `src/iso/solids.test.ts`; importar `bounds`, `tessellateAll`, `tessellate`, `type Solid` de `./solids` y `v3`, `dot`, `type Vec3` de `./geometry` si no están ya)
+- [ ] **Step 1: tests que fallan** (agregar al final de `src/iso/solids.test.ts`; importar `bounds`, `tessellateAll`, `tessellate`, `type Solid` de `./solids`, `shadeTone` de `./light` y `v3`, `dot`, `type Vec3` de `./geometry` si no están ya)
 
 ```ts
 describe("viga (beam)", () => {
@@ -124,6 +124,13 @@ describe("viga (beam)", () => {
     const b = bounds(s);
     for (const k of ["x", "y", "z"] as const) { expect(Number.isFinite(b.min[k])).toBe(true); expect(Number.isFinite(b.max[k])).toBe(true); }
     expect(() => tessellate(s)).not.toThrow();
+    for (const f of tessellateAll(s)) expect([f.normal.x, f.normal.y, f.normal.z].every(Number.isFinite)).toBe(true);
+  });
+
+  it("a 45°: cada cara lleva el tono que shadeTone da a su normal; la cara de arriba es vertiente", () => {
+    const faces = tessellateAll(beam(v3(0, 0, 4), v3(4.5, 0, 8.5), 0.4, 0.5));
+    for (const f of faces) expect(f.tone).toBe(shadeTone(f.normal));
+    expect(faces.some((f) => f.tone === "up" || f.tone === "down")).toBe(true);
   });
 });
 ```
@@ -289,6 +296,8 @@ describe("orden de la viga", () => {
 
 (Imports: `sortByDepth` de `../iso/depth` y `type Solid` de `../iso/solids`, si faltan.)
 
+El orden entre pluma y estay no se fija: no lo pide el issue, y se solapan solo cerca de la punta. Las capturas de la Tarea 5 lo miran.
+
 - [ ] **Step 2: correr** `npx vitest run src/scenes/ships.test.ts`. Esperado: FAIL (no hay `beam`, 39 sólidos).
 
 - [ ] **Step 3: implementación** en `src/scenes/ships.ts`. En `interface Kit`, después de `cyl`:
@@ -313,7 +322,7 @@ Reemplazar el lazo de grúas de `cargo` por (mismo orden: pedestal, cabina, plum
   }
 ```
 
-Si el comentario de cabecera del archivo o del kit nombra la pluma escalonada, actualizarlo.
+Actualizar el comentario de cabecera de `ships.ts` (líneas 7-16): "chimeneas y mástiles como cilindros y cajas" pasa a nombrar también "plumas y estays como vigas (`beam`)".
 
 - [ ] **Step 4: correr** `npx vitest run src/scenes` y `npm run typecheck`. Esperado: PASS. También tienen que seguir verdes "con cualquier rumbo, todas las piezas quedan en el círculo de la eslora y por debajo de z 13" y `ships-reference.test.ts`.
 
@@ -350,7 +359,7 @@ Si el comentario de cabecera del archivo o del kit nombra la pluma escalonada, a
 ```ts
   // la viga del motor sola, girada en planta y en alto a la vez: la sección se ve nivelada; montada, en las plumas del carguero
   { id: "viga", title: "Viga", zone: "blog", group: "mar", kind: "piece", pad: "water",
-    build: (out) => { out.push({ kind: "beam", from: v3(-3, -1.5, 0), to: v3(3, 1.5, 6), w: 0.8, h: 1, mat: "steel" }); } },
+    build: (out) => { out.push({ kind: "beam", from: v3(-3, -1.5, 0.5), to: v3(3, 1.5, 6.5), w: 0.8, h: 1, mat: "steel" }); } },
 ```
 
 (importar `v3` de `../iso/geometry`.)
@@ -370,3 +379,22 @@ Las toma el orquestador con agent-browser, siguiendo `.scratch/evals-78.md` (eta
 - [ ] **Step 2:** capturar `/lab/storybook.html#viga`.
 - [ ] **Step 3:** mirar las capturas: la pluma se lee como un brazo recto y el estay como una línea fina.
 - [ ] **Step 4: commit.** `git add docs/superpowers/specs/assets/78-viga && git commit -m "docs(#78): capturas del carguero antes y después de la viga"`
+
+## Assumptions
+
+Decisiones técnicas sin fuente escrita, declaradas para el PR:
+
+1. Forma del sólido `{ kind: "beam"; from; to; w; h; mat }`, con `w` horizontal. La alternativa rechazada era `{ at, len, pitch, yaw }`. El issue la define "por dos puntos 3D (desde, hasta) y una sección … (ancho y alto)".
+2. Eje vertical → `w` sobre y. Largo cero → eje x. Las alternativas rechazadas eran tirar un error o devolver cero caras: el issue pide que "no rompa", y con cero caras `bounds` daría ±Infinity (`src/iso/solids.ts:251-257`).
+3. La pluma se apoya sobre el techo de la cabina (talón a deck + 4.2) y no a media altura de su cara de proa como la escalera de hoy. Así queda separada en z y la cabina va antes a cualquier rumbo (`src/iso/depth.ts:30-35`). Con el talón dentro del alto de la cabina, decidiría la clave y la cabina se dibujaría después de media pluma, como hoy de 140° a 230°.
+4. El orden entre pluma y estay no se fija en tests: lo decide la clave de `sortByDepth`, y lo revisan las capturas.
+5. Exhibit `viga` en el grupo `mar`, antes de `carguero`. La alternativa rechazada era un grupo nuevo "motor": los grupos son la tabla de la spec del storybook (`src/lab/exhibits.ts:24`), y la viga, por ahora, solo la usa el carguero.
+6. Capturas en `docs/superpowers/specs/assets/78-viga/`, la convención `<issue>-<tema>` de las carpetas vecinas (`57-barcos`, `58-faro`, `83-darsena`). El parche de 57° se aplica sobre un worktree temporal y no entra a la rama.
+
+## Grilling
+
+- Rondas: 1 (los cambios fueron locales: no cambió ninguna costura ni se agregaron ni quitaron tareas).
+- Preguntas: 18. Fuentes: CODE 16, DOC 1 (Q15: no hay `CONTEXT.md` ni `docs/adr/`; `README.md` no enumera tipos de sólido), NO SOURCE 1 (Q7, orden pluma/estay → supuesto técnico 4).
+- Cambios al plan: viga del exhibit levantada 0.5 (Q11); test de normales finitas con largo cero (Q3); test de tonos a 45° con `shadeTone` (Q12); comentario de cabecera de `ships.ts` (Q15/Q18).
+- Supuestos: 6 (arriba).
+- Issues abiertos: ninguno.
