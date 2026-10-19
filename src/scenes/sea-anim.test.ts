@@ -288,7 +288,7 @@ describe("mar, haz y boyas", () => {
   });
   it("el haz no se marca si vuelve al mismo ángulo; sí en cualquier otro tick (#71)", () => {
     const { a } = setup();
-    a.tick(1); // primer tick
+    a.tick(1);
     expect(a.tick(BEAM_PERIOD_MS / 4).beam).toBe(true);
     expect(a.tick(BEAM_PERIOD_MS).beam).toBe(false);
   });

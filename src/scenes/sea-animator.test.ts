@@ -91,7 +91,7 @@ describe("seaAnimator marca solo lo que cambió (#71)", () => {
 
   it("un barco fuera de pantalla no marca sus capas; la transición sí", () => {
     const a = seaAnimator(world(7).sea!, { reducedMotion: false });
-    a.tick(OUT - 10); // primer tick: marca todo
+    a.tick(OUT - 10);
     const enter = a.tick(1000); // barco 0: out → offscreen
     for (const id of shipIds(0)) expect(enter.has(id)).toBe(true);
     const still = a.tick(1000); // barco 0 sigue offscreen; 1 y 2 andan
