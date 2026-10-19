@@ -26,7 +26,7 @@ export function seaAnimator(scene: SeaScene, opts: { reducedMotion: boolean }): 
     tick(dtMs) {
       const c = anim.tick(dtMs);
       const out = new Set<string>();
-      if (c.ships) SHIPS.forEach((_, k) => { out.add(`sea.ship${k}`); out.add(`sea.wake${k}`); out.add(`sea.lights${k}`); });
+      SHIPS.forEach((_, k) => { if (c.ships[k]) { out.add(`sea.ship${k}`); out.add(`sea.wake${k}`); out.add(`sea.lights${k}`); } });
       if (c.beam) out.add("sea.beam");
       if (c.buoys) out.add("sea.buoys");
       if (c.neon) out.add("sea.neon");

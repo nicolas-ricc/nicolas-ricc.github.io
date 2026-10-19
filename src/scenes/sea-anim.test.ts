@@ -284,7 +284,13 @@ describe("mar, haz y boyas", () => {
     expect(a.beam()).toHaveLength(2);
     const r = setup(true).a;
     expect(Math.abs(angle(r.beam()))).toBeLessThan(0.2);
-    expect(r.tick(500)).toEqual({ ships: false, beam: false, buoys: false, ferry: false, neon: false });
+    expect(r.tick(500)).toEqual({ ships: [false, false, false], beam: false, buoys: false, ferry: false, neon: false });
+  });
+  it("el haz no se marca si vuelve al mismo ángulo; sí en cualquier otro tick (#71)", () => {
+    const { a } = setup();
+    a.tick(1);
+    expect(a.tick(BEAM_PERIOD_MS / 4).beam).toBe(true);
+    expect(a.tick(BEAM_PERIOD_MS).beam).toBe(false);
   });
   it("el haz es luz cálida: las dos cuñas son de la familia ámbar, ninguna magenta, en todo el giro y con reduced-motion", () => {
     for (const reduced of [false, true]) {

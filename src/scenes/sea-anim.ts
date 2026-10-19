@@ -114,7 +114,7 @@ export function alphaAt(lane: ShipLane, dist: number): number {
 }
 
 export interface ShipFrame { solids: Solid[]; lights: Accent[]; wake: Solid[]; alpha: number; heading?: number }
-export interface SeaChanges { ships: boolean; beam: boolean; buoys: boolean; ferry: boolean; neon: boolean }
+export interface SeaChanges { ships: boolean[]; beam: boolean; buoys: boolean; ferry: boolean; neon: boolean }
 export interface SeaAnim {
   ship(k: number): ShipFrame;
   state(k: number): ShipState;
@@ -126,7 +126,7 @@ export interface SeaAnim {
 }
 
 export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean }): SeaAnim {
-  let clock = 0, buoyStep = 0, neonStep = 0;
+  let clock = 0, buoyStep = 0, neonStep = 0, first = true;
   const cycle = SHIPS.map((s) => s.phase * CYCLE_MS);
   const states = cycle.map(shipStateAt);
 
@@ -153,7 +153,8 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
     return { solids: built.solids, lights: built.lights, wake: wakeTris, alpha: alphaAt(s.lane, s.dist), heading: s.heading };
   };
 
-  const beamAngle = (): number => (opts.reducedMotion ? 0 : ((clock % BEAM_PERIOD_MS) / BEAM_PERIOD_MS) * Math.PI * 2);
+  const angleAt = (t: number): number => (opts.reducedMotion ? 0 : ((t % BEAM_PERIOD_MS) / BEAM_PERIOD_MS) * Math.PI * 2);
+  const beamAngle = (): number => angleAt(clock);
   const wedge = (a: number, len: number, color: Accent["color"], alpha: number): Accent => {
     const o: Vec3 = scene.lantern;
     return { kind: "poly", pts: [o, v3(o.x + len * Math.cos(a - BEAM_HALF), o.y + len * Math.sin(a - BEAM_HALF), o.z), v3(o.x + len * Math.cos(a + BEAM_HALF), o.y + len * Math.sin(a + BEAM_HALF), o.z)], color, alpha };
@@ -183,11 +184,19 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
     ferry: ferryFrame,
     neon,
     tick(dtMs) {
-      const none: SeaChanges = { ships: false, beam: false, buoys: false, ferry: false, neon: false };
-      if (opts.reducedMotion || dtMs <= 0) return none;
+      if (opts.reducedMotion || dtMs <= 0) return { ships: SHIPS.map(() => false), beam: false, buoys: false, ferry: false, neon: false };
+      const all = first; first = false;
+      const angle = angleAt(clock);
       clock += dtMs;
-      const c: SeaChanges = { ships: true, beam: true, buoys: false, ferry: false, neon: false };
-      for (let k = 0; k < SHIPS.length; k++) { cycle[k] = (cycle[k]! + dtMs) % CYCLE_MS; states[k] = shipStateAt(cycle[k]!); }
+      // el redondeo de `%` solo puede marcar de más el haz, nunca de menos: el cuadro sale del mismo `angleAt(clock)`
+      const c: SeaChanges = { ships: [], beam: all || angleAt(clock) !== angle, buoys: all, ferry: all, neon: all };
+      for (let k = 0; k < SHIPS.length; k++) {
+        const prev = states[k]!;
+        cycle[k] = (cycle[k]! + dtMs) % CYCLE_MS; states[k] = shipStateAt(cycle[k]!);
+        const next = states[k]!;
+        // la transición de estado siempre marca (#64), aunque dist y rumbo coincidieran
+        c.ships[k] = all || prev.lane !== next.lane || prev.dist !== next.dist || prev.heading !== next.heading;
+      }
       const bs = Math.floor(clock / (BUOY_PERIOD_MS / 2));
       if (bs !== buoyStep) { buoyStep = bs; c.buoys = true; }
       if (ferryPause > 0) ferryPause -= dtMs;
