@@ -42,7 +42,8 @@ interface AccentGraphics { g: Graphics; zone: WorldZone; base: number; draw: () 
  * Arma las capas de una escena del mundo. Orden, de abajo hacia arriba: sangrado,
  * agua (estática más animada), suelo, banda completa de sombras, núcleo de
  * sombras, sólidos estáticos, sólidos animados, velos (uno por zona), acentos
- * estáticos (uno por zona) y una Graphics por capa de acentos animada.
+ * estáticos (uno por zona) y, por capa de acentos animada, una Graphics por zona
+ * (una sola si la capa declara su zona).
  * El bloom es perezoso: arranca en `off`, sin `bloomSlot`; el primer `setBloom("on")`
  * lo arma (espejos de los acentos con filtro) y lo inserta justo debajo de `accentSlot`.
  * Un `bloomSlot` armado después de `setLayer("accents", false)` nace oculto.
@@ -112,20 +113,20 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage
     } else {
       // una Graphics por zona: cada luz se vela con la zona donde está, salvo que la capa declare la suya (barcos)
       const declared = (a.layer(id) as AnimLayer & { kind: "accent" }).zone;
-      const entries = (declared ? [declared] : WORLD_ZONES).map((zone): AccentGraphics => {
-        const g = new Graphics();
-        g.blendMode = "add";
-        accentSlot.addChild(g);
-        const e: AccentGraphics = { g, zone, base: 1, draw: () => draw() };
-        accents.push(e);
-        return e;
-      });
       const draw = (): void => {
         const l = a.layer(id) as AnimLayer & { kind: "accent" };
         const byZone = accentsByZone(l.accents, declared);
         // el alpha propio de la capa (barcos que se desvanecen) se guarda; el alpha final lo pone el lerp
         for (const e of entries) { drawAccents(e.g, byZone[e.zone], halo); e.base = l.alpha ?? 1; }
       };
+      const entries = (declared ? [declared] : WORLD_ZONES).map((zone): AccentGraphics => {
+        const g = new Graphics();
+        g.blendMode = "add";
+        accentSlot.addChild(g);
+        const e: AccentGraphics = { g, zone, base: 1, draw };
+        accents.push(e);
+        return e;
+      });
       redraw.set(id, draw);
     }
     redraw.get(id)!();
@@ -164,7 +165,8 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage
       else bloomSlot?.removeFromParent();
       bloom = mode;
       const h = nextHalo(mode);
-      if (h !== halo) { halo = h; for (const e of accents) e.draw(); }
+      // las Graphics de una misma capa comparten draw: cada capa se redibuja una vez
+      if (h !== halo) { halo = h; for (const draw of new Set(accents.map((e) => e.draw))) draw(); }
       applyAlphas();
     },
     setLayer(layer, visible) {

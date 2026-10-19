@@ -231,10 +231,13 @@ describe("velo de las luces animadas", () => {
 
   it("una capa sin zona vela cada luz con la zona de su posición, aunque el animador sea de otra zona", () => {
     const s = stageWith(toy(() => ({ kind: "accent", accents: [port, blog] })));
+    // una Graphics por zona, en el orden de WORLD_ZONES: [portfolio, cv, blog]
+    const [gPort, gCv, gBlog] = animated(s);
+    expect(lit([gPort!, gCv!, gBlog!])).toEqual([gPort, gBlog]);
     s.setFocus("portfolio"); s.tick(10_000);
-    expect(lit(animated(s)).map((g) => g.alpha).sort()).toEqual([ACCENT_DIM, 1]);
+    expect([gPort!.alpha, gBlog!.alpha]).toEqual([1, ACCENT_DIM]);
     s.setFocus("blog"); s.tick(10_000);
-    expect(lit(animated(s)).map((g) => g.alpha).sort()).toEqual([ACCENT_DIM, 1]);
+    expect([gPort!.alpha, gBlog!.alpha]).toEqual([ACCENT_DIM, 1]);
   });
   it("una capa con zona vela todas sus luces con esa zona, en una sola Graphics", () => {
     const s = stageWith(toy(() => ({ kind: "accent", accents: [port, blog], zone: "blog", alpha: 0.5 })));

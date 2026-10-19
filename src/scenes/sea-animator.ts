@@ -11,12 +11,13 @@ export function seaAnimator(scene: SeaScene, opts: { reducedMotion: boolean }): 
     "sea.neon": () => ({ kind: "accent", accents: anim.neon() }),
     "sea.ferry": () => { const f = anim.ferry(); return { kind: "solid", solids: f.solids }; },
     "sea.ferryWake": () => { const f = anim.ferry(); return { kind: "water", water: f.wake }; },
-    // la lancha anda siempre por aguas de Portfolio; los barcos pasan casi todo su recorrido en Blog
+    // la lancha anda siempre por aguas de Portfolio
     "sea.ferryLights": () => { const f = anim.ferry(); return { kind: "accent", accents: f.lights, zone: "portfolio" }; },
   };
   SHIPS.forEach((_, k) => {
     layers[`sea.ship${k}`] = () => { const f = anim.ship(k); return { kind: "solid", solids: f.solids, alpha: f.alpha, heading: f.heading }; };
     layers[`sea.wake${k}`] = () => { const f = anim.ship(k); return { kind: "water", water: f.wake, alpha: f.alpha }; };
+    // los barcos pasan casi todo su recorrido en Blog
     layers[`sea.lights${k}`] = () => { const f = anim.ship(k); return { kind: "accent", accents: f.lights, alpha: f.alpha, zone: "blog" }; };
   });
   return {
