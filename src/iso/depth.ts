@@ -24,13 +24,17 @@ export function isBehind(a: Bounds, b: Bounds): boolean {
   return a.max.x <= b.min.x + EPS || a.max.y <= b.min.y + EPS || a.max.z <= b.min.z + EPS;
 }
 
+// Con la vista paralela al plano que separa (componente ~0), ninguno tapa al otro: vale como detrás en los dos sentidos.
+const far = (v: number, aMin: number, aMax: number, bMin: number, bMax: number): boolean =>
+  (v > -EPS && aMax <= bMin + EPS) || (v < EPS && aMin >= bMax - EPS);
+
 /**
  * `a` está detrás de `b` con la vista expresada en un marco girado (`vx`, `vy`): en cada eje horizontal
  * el lado lejano es el que mira contra la componente de la vista. Con `vx`, `vy` > 0 es `isBehind`.
+ * Con una componente ~0 (vista paralela a ese eje) separarse en él cuenta como detrás en los dos sentidos.
  */
 function isBehindView(a: Bounds, b: Bounds, vx: number, vy: number): boolean {
-  return (vx > 0 ? a.max.x <= b.min.x + EPS : a.min.x >= b.max.x - EPS)
-    || (vy > 0 ? a.max.y <= b.min.y + EPS : a.min.y >= b.max.y - EPS)
+  return far(vx, a.min.x, a.max.x, b.min.x, b.max.x) || far(vy, a.min.y, a.max.y, b.min.y, b.max.y)
     || a.max.z <= b.min.z + EPS;
 }
 
