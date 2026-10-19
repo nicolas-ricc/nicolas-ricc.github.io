@@ -133,12 +133,21 @@ describe("selección por hash", () => {
 const pieces = EXHIBITS.flatMap((e) => (e.kind === "piece" ? [e] : []));
 
 describe("exhibits de pieza", () => {
-  it("las ocho piezas, cada una en su zona", () => {
+  it("las nueve piezas, cada una en su zona", () => {
     expect(Object.fromEntries(pieces.map((e) => [e.id, e.zone]))).toEqual({
       "grua-torre": "portfolio", farol: "portfolio",
       campus: "cv", selva: "cv",
-      carguero: "blog", remolcador: "blog", convoy: "blog", lancha: "blog",
+      viga: "blog", carguero: "blog", remolcador: "blog", convoy: "blog", lancha: "blog",
     });
+  });
+  it("la viga es una pieza de un solo sólido beam, antes del carguero", () => {
+    const ids = EXHIBITS.map((e) => e.id);
+    expect(ids.indexOf("viga")).toBe(ids.indexOf("carguero") - 1);
+    const e = EXHIBITS.find((x) => x.id === "viga")!;
+    expect(e.kind).toBe("piece");
+    const out: Solid[] = [];
+    if (e.kind === "piece") e.build(out, []);
+    expect(out.map((s) => s.kind)).toEqual(["beam"]);
   });
   it("cada pieza emite al menos un sólido", () => {
     for (const e of pieces) {

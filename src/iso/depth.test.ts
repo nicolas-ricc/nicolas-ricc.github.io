@@ -174,3 +174,26 @@ describe("sortByDepth con piezas de costado", () => {
     expect(order.indexOf(strip)).toBeLessThan(order.indexOf(hull));
   });
 });
+
+describe("orden de la viga", () => {
+  const cab: Solid = { kind: "prism", at: v3(-0.6, -0.6, 3), w: 1.2, d: 1.2, h: 1, mat: "whitewash" };
+  const jib = (h: number): Solid => {
+    const c = Math.cos(h), s = Math.sin(h), p = (x: number, z: number) => v3(x * c, x * s, z);
+    return { kind: "beam", from: p(0.3, 4.2), to: p(4.8, 8.7), w: 0.4, h: 0.5, mat: "steel" };
+  };
+  it("una pluma apoyada sobre el techo de una caja se dibuja después, en el mundo y en el marco girado", () => {
+    expect(sortByDepth([jib(0), cab]).indexOf(cab)).toBe(0);
+    for (let k = 0; k < 72; k++) {
+      const h = (k * 5 * Math.PI) / 180;
+      const c = Math.cos(h), s = Math.sin(h);
+      const box: Solid = { kind: "poly", footprint: [[-0.6, -0.6], [0.6, -0.6], [0.6, 0.6], [-0.6, 0.6]].map(([x, y]) => ({ x: x! * c - y! * s, y: x! * s + y! * c })), z: 3, h: 1, mat: "whitewash" };
+      const j = jib(h);
+      expect(sortByDepth([j, box], h).indexOf(box), `rumbo ${k * 5}°`).toBe(0);
+    }
+  });
+  it("largo cero no rompe el orden", () => {
+    const z: Solid = { kind: "beam", from: v3(0, 0, 5), to: v3(0, 0, 5), w: 0.4, h: 0.4, mat: "steel" };
+    expect(sortByDepth([z, cab])).toHaveLength(2);
+    expect(sortByDepth([z, cab], 1.2)).toHaveLength(2);
+  });
+});
