@@ -69,10 +69,10 @@ function cargo(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void 
   solids.push(k.box(14, -3.4, 34, 6.8, deck, 1, "rust")); // brazola de la bodega
   for (let i = 0; i < 3; i++) solids.push(k.box(14.2 + i * 11.2, -3.2, 11, 6.4, deck + 1, 0.3, "steel")); // tapas de escotilla
   solids.push(k.box(12.5, -3.2, 0.5, 0.5, deck, 2.5, "steel"), k.box(12.5, 2.7, 0.5, 0.5, deck, 2.5, "steel"), k.box(12.4, -3.5, 1, 7, deck + 2.5, 0.3, "steel")); // pórtico de tapas, estacionado a proa de la casa
-  for (const dx of [25.3, 36.5]) { // grúas de cubierta en babor: pedestal, cabina, pluma a 45° hacia proa apoyada en el techo de la cabina y estay desde la esquina interior de atrás del techo (así no queda tras la pluma) a su punta
+  for (const dx of [25.3, 36.5]) { // grúas de cubierta en babor: pedestal, cabina, pluma a 45° hacia proa apoyada en el techo de la cabina y estay desde la esquina exterior de atrás del techo (hacia la banda; desde la interior quedaba tras la pluma) a su punta
     const tip: [number, number, number] = [dx + 4.95, -3.9, deck + 8.7];
     solids.push(k.cyl(dx, -3.9, deck, 0.5, 3, "steel"), k.box(dx - 0.6, -4.5, 1.2, 1.2, deck + 3, 1, "whitewash"));
-    solids.push(k.beam([dx + 0.45, -3.9, deck + 4.2], tip, 0.4, 0.4, "steel"), k.beam([dx - 0.5, -3.45, deck + 4.05], tip, 0.1, 0.1, "steel"));
+    solids.push(k.beam([dx + 0.45, -3.9, deck + 4.2], tip, 0.4, 0.4, "steel"), k.beam([dx - 0.5, -4.35, deck + 4.05], tip, 0.1, 0.1, "steel"));
   }
   solids.push(k.box(50, -2.1, 4, 4.2, deck, 1.6, "steel")); // castillo de proa
   solids.push(k.box(52, -0.2, 0.4, 0.4, deck + 1.6, 5.4, "steel"), k.box(52.05, -1.5, 0.3, 3, deck + 5.5, 0.25, "steel")); // mástil de proa y cruceta
