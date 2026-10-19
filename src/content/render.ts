@@ -18,7 +18,7 @@ function renderSection(sec: ContentSection): string {
 
 /** Flecha hacia una bandeja; el color lo pone el CSS (currentColor). */
 const DOWNLOAD_ICON =
-  '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>';
+  '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>';
 
 function renderPdf(url: string): string {
   const u = escapeHtml(url);
