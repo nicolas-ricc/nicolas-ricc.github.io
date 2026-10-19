@@ -39,7 +39,7 @@
 
 En la primera pasada del navegador, la pluma se leía recta a rumbo 0 y a 57°, pero el estay casi no se veía. Iba en el mismo plano vertical que la pluma (y −3.9) con apenas 5° de diferencia: a rumbo 0 lo tapaba la pluma, de 0.5 de alto, y a 57° ese plano se ve casi de canto. El ajuste:
 - La pluma pasa a 0.4 × 0.4, con talón en dx + 0.45 y punta en dx + 4.95. Sigue a 45° y con el mismo largo (6.36).
-- El estay sale de la esquina interior de atrás del techo de la cabina, `[dx − 0.5, −3.45, deck + 4.05]`, y llega a la misma punta. El desplazamiento a lo largo de la eslora lo separa a rumbos donde el plano de la pluma se ve de frente. El desplazamiento hacia crujía lo separa a rumbos donde se ve de canto. Los dos forman una V fina que se cierra en la punta.
+- El estay sale de la esquina exterior (hacia la banda de babor) de atrás del techo de la cabina, `[dx − 0.5, −4.35, deck + 4.05]`, y llega a la misma punta. Con la esquina interior (y −3.45), a los rumbos del carril de ida el corrimiento quedaba paralelo a la pluma en pantalla, y el estay seguía tapado. Medido en pantalla, la distancia del arranque del estay a la línea de la pluma es de 0.78 o más en los 14 rumbos de los carriles; con la esquina interior baja a 0.02. Ningún origen la mantiene en todos los rumbos, porque el estay y la pluma se cierran en la misma punta. El desplazamiento a lo largo de la eslora lo separa a rumbos donde el plano de la pluma se ve de frente. El desplazamiento hacia la banda lo separa a rumbos donde se ve de canto. Los dos forman una V fina que se cierra en la punta.
 
 ## Review Focus
 
