@@ -27,6 +27,14 @@
 4. **Forma de `SeaChanges`:** `ships: boolean[]` (una bandera por barco, en el orden de `SHIPS`). Las otras banderas no cambian de forma. Con movimiento reducido o `dtMs <= 0`, `ships` es un arreglo de `false`.
 5. **Boyas, neones y lancha ya cumplen la regla.** Su cuadro es función de `buoyStep`, `neonStep` y `(ferryDist, ferryDir)`, y hoy se marcan solo cuando esos valores cambian. Solo ganan la marca del primer tick.
 
+## Assumptions
+
+Decisiones técnicas sin fuente escrita, tomadas en la revisión del plan (etapa 2). Van también en la descripción del PR.
+
+- **A1. Instantes de las capturas.** 0, `OUT + 5000`, `CYCLE_MS / 2` y `CYCLE_MS / 2 + BEAM_PERIOD_MS`: cubren el estado inicial, un barco offscreen, los tres en carril y un haz no marcado por volver al mismo ángulo. Se descartó un barrido de muchos instantes: la equivalencia de Task 1 ya recorre el ciclo entero sin Pixi.
+- **A2. Dónde quedan los números.** En el cuerpo del PR (el brief dice "Los números van en el PR") y en el comentario de la etapa 4 del issue. Se descartó un documento versionado: el brief no lo pide.
+- **A3. Commits.** Los tests que fallan entran primero como `test(#71): evals` (etapa 3) y la implementación como `feat(#71): …`. La Task 2 no versiona nada.
+
 ## Review Focus
 
 1. Un barco que pasa de `out` a `offscreen` en el mismo tick que otro sigue andando: se marcan los dos, el primero por transición (test en Task 1).
@@ -166,5 +174,12 @@ Sin cambios de comportamiento: produce los números para el PR.
 - [ ] **Step 1: conteo por ciclo.** Correr, en `origin/main` (worktree en `/tmp/m71-before`) y en la rama, un script con `npx tsx` que avance `seaAnimator(world(7).sea!, …)` un `CYCLE_MS` completo a 60 Hz y sume `tick(dt).size`, en total y por capa. Anotar los dos conteos.
 - [ ] **Step 2: medición en Node, como la de triage.** En los dos árboles: 400 ticks de 16,7 ms en un punto fijo del ciclo con un barco offscreen y en otro con los tres en carril; por tick, `tick` más `buildRenderList` de cada capa marcada. Mediana y p95 del mar.
 - [ ] **Step 3: medición en el lab, como #65 y #83.** `npm run dev -- --host --port 5173`; agent-browser a 1600×900, DPR 2; `/lab/blog.html` y `/lab/world.html`, dos corridas calientes cada una, antes (worktree de `origin/main`, otro puerto) y después. Leer `[lab] peor redibujo en 5 s` y la línea de `bloom:`. Presupuesto 15 ms.
-- [ ] **Step 4: capturas idénticas.** En los dos árboles, en `/lab/blog.html`, con el método del time-lapse de `docs/superpowers/specs/2026-10-17-barcos-inventario.md` (llamar al listener del ticker con `deltaMS` fijo) avanzar a los mismos instantes simulados (0, `OUT_MS + 5000` con el carguero offscreen, y otros dos) y guardar PNG del canvas. Comparar por hash o píxel a píxel. Si difieren, investigar antes de seguir.
+- [ ] **Step 4: capturas idénticas.** En los dos árboles, en `/lab/blog.html`, con el método del time-lapse de `docs/superpowers/specs/2026-10-17-barcos-inventario.md` (llamar al listener del ticker con `deltaMS` fijo) avanzar con la misma secuencia de `deltaMS` a los mismos instantes simulados: 0 (estado inicial), `OUT + 5000` con el carguero offscreen (`OUT = laneLength("out") / LANE_SPEED * 1000`, `OUT_MS` no está exportado), `CYCLE_MS / 2` con los tres barcos en carril y `CYCLE_MS / 2 + BEAM_PERIOD_MS` (haz en el mismo ángulo, no marcado) y guardar PNG del canvas. Comparar por hash o píxel a píxel. Si difieren, investigar antes de seguir.
 - [ ] **Step 5:** pegar conteos, mediciones y resultado de capturas en el comentario de la etapa; van al PR.
+
+## Grilling
+
+- Rondas: 1 (los cambios fueron locales: instantes de captura y supuestos).
+- Preguntas: 14. Fuentes: CODE 12, ISSUE 3 (algunas respuestas citan las dos), NO SOURCE 2 (supuestos técnicos A1 y A2; A3 sale del pipeline).
+- Respuestas clave: `shipStateAt` devuelve un literal nuevo (`src/scenes/sea-anim.ts:101-108`); `ship`/`wake`/`shipAt` (`src/scenes/ships.ts:154-172`) no leen reloj; el único lector de `SeaChanges.ships` es `src/scenes/sea-animator.ts:29` (más `sea-anim.test.ts:287`); `stage.ts:132` dibuja cada capa al armarse y `stage.ts:183` redibuja solo los ids de `tick`; el velo de las luces se aplica por alpha en cada tick (`stage.ts:184-189`), sin redibujar.
+- Ambigüedades de spec: ninguna. Issues abiertos: ninguno.
