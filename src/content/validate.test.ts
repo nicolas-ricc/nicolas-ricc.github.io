@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import blog from "../../content/blog.json";
 import cv from "../../content/cv.json";
@@ -29,5 +30,17 @@ describe("validateContent", () => {
   });
   it("los JSON del repo son válidos", () => {
     for (const c of [portfolio, cv, blog]) expect(validateContent(c)).toEqual([]);
+  });
+});
+
+describe("cv.json", () => {
+  it("apunta a /cv.pdf y public/cv.pdf es un PDF", () => {
+    expect(cv.pdf).toBe("/cv.pdf");
+    const bytes = readFileSync(new URL("../../public/cv.pdf", import.meta.url));
+    expect(bytes.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+  });
+  it("no trae las secciones placeholder que reemplaza el PDF", () => {
+    expect(cv.secciones.map((s) => s.subtitulo)).toEqual(["Contacto"]);
+    expect(JSON.stringify(cv)).not.toMatch(/pendiente/i);
   });
 });
