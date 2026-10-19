@@ -5,6 +5,14 @@ import { createRng } from "../map/seed";
 import { bounds, type Solid } from "./solids";
 
 const box = (x: number, y: number, z: number, w = 2, d = 2, h = 2): Solid => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat: "steel" });
+// Caja alineada con el marco local rotado `h` alrededor del origen (como las piezas de un barco).
+const rotBox = (h: number, x0: number, y0: number, w: number, d: number, z: number, hz: number): Solid => {
+  const c = Math.cos(h), s = Math.sin(h);
+  const footprint = [[x0, y0], [x0 + w, y0], [x0 + w, y0 + d], [x0, y0 + d]].map(([x, y]) => ({ x: x! * c - y! * s, y: x! * s + y! * c }));
+  return { kind: "poly", footprint, z, h: hz, mat: "steel" };
+};
+const rotCyl = (h: number, x: number, y: number, z: number, r: number, hz: number): Solid =>
+  ({ kind: "cylinder", at: v3(x * Math.cos(h) - y * Math.sin(h), x * Math.sin(h) + y * Math.cos(h), z), r, h: hz, mat: "steel", sides: 8 });
 
 describe("depth", () => {
   it("screenBounds proyecta las 8 esquinas", () => {
@@ -110,13 +118,6 @@ describe("sortByDepth con cascos", () => {
 });
 
 describe("sortByDepth en el marco del barco", () => {
-  // Caja alineada con el marco local rotado `h` alrededor del origen (como las piezas de un barco).
-  const rotBox = (h: number, x0: number, y0: number, w: number, d: number, z: number, hz: number): Solid => {
-    const c = Math.cos(h), s = Math.sin(h);
-    const footprint = [[x0, y0], [x0 + w, y0], [x0 + w, y0 + d], [x0, y0 + d]].map(([x, y]) => ({ x: x! * c - y! * s, y: x! * s + y! * c }));
-    return { kind: "poly", footprint, z, h: hz, mat: "steel" };
-  };
-
   it("una pieza apoyada en el extremo lejano de otra rotada se dibuja después, a cualquier rumbo", () => {
     for (const h of [0.5, 0.3, 1.2, 2.3, -0.7, -2.6]) {
       const lower = rotBox(h, 0, 0, 40, 6, 0, 3);
@@ -143,5 +144,33 @@ describe("sortByDepth en el marco del barco", () => {
     for (let i = 0; i < 60; i++) solids.push(box(rng.int(0, 60), rng.int(0, 40), rng.chance(0.1) ? -3 : 0, rng.int(1, 12), rng.int(1, 12), rng.int(1, 20)));
     expect(sortByDepth(solids, 0)).toEqual(sortByDepthNaive(solids));
     expect(sortByDepth(solids)).toEqual(sortByDepthNaive(solids));
+  });
+});
+
+describe("sortByDepth con piezas de costado", () => {
+  it("una pieza de costado se dibuja del lado del casco que le toca, aunque la clave diga otra cosa", () => {
+    // cilindro de esquina de popa del remolcador a 145°: lado lejano, y la clave lo mandaba después del casco
+    const h = (145 * Math.PI) / 180;
+    const hull: Solid = { kind: "hull", at: v3(0, 0, -1), len: 19, beam: 7, h: 2.2, mat: "hull", topMat: "hullBlue", heading: h, sheer: 0.3 };
+    const corner = rotCyl(h, 0.9, 1.7, 1, 0.45, 0.9);
+    for (const input of [[corner, hull], [hull, corner]]) expect(sortByDepth(input, h)).toEqual([corner, hull]);
+  });
+
+  it("el casco separa: lo que va antes del casco va antes de lo que va después, aunque los separe un plano", () => {
+    // lancha a rumbo 0: cabina sobre la cubierta, defensa de estribor en la mitad de popa (lado lejano) que el plano y = 1,7 pone después de la cabina
+    const hull: Solid = { kind: "hull", at: v3(0, 0, -1), len: 15, beam: 4, h: 1.2, mat: "hull", topMat: "deck", heading: 0, sheer: 0.3 };
+    const cabin = rotBox(0, 3.5, -1.7, 10, 3.4, 0.2, 1.5), fender = rotCyl(0, 5, 2.05, -0.2, 0.22, 0.5);
+    for (const input of [[hull, cabin, fender], [fender, cabin, hull], [cabin, hull, fender]]) {
+      expect(sortByDepth(input, 0)).toEqual([fender, hull, cabin]);
+    }
+  });
+
+  it("con la vista paralela a un eje del marco, separarse en ese eje no ordena (barcaza a 315°)", () => {
+    const h = (315 * Math.PI) / 180;
+    const hull: Solid = { kind: "hull", at: v3(0, 0, -1), len: 40, beam: 8, h: 1.2, mat: "hull", topMat: "rust", heading: h, sheer: 0 };
+    const strip = rotBox(h, 0, -4, 36.4, 0.15, -0.9, 1.15); // faja de babor, lado lejano
+    const rake = [rotBox(h, 36.4, -4, 2, 8, -0.5, 0.75), rotBox(h, 38.4, -4, 1.6, 8, -0.1, 0.35)]; // lanzamiento de proa, manga completa
+    const order = sortByDepth([hull, ...rake, strip], h);
+    expect(order.indexOf(strip)).toBeLessThan(order.indexOf(hull));
   });
 });
