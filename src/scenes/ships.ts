@@ -7,7 +7,7 @@ import type { Material } from "../map/palette-iso";
 /**
  * Flota: casco lofteado (`hull` con obra muerta `topMat` y arrufo) más
  * superestructuras como `poly` con huella rotada y fachada (ventanas),
- * chimeneas y mástiles como cilindros y cajas. Popa en `at` (`shipAt` lo
+ * chimeneas y mástiles como cilindros y cajas, plumas y estays como vigas (`beam`). Popa en `at` (`shipAt` lo
  * deriva del centro de la unidad), sobre el agua (z −1). Luces: mástil magentaMid, babor magenta, estribor cyanMid; la
  * lancha de la feria suma una ámbar; el empujador y el remolcador, dos proyectores ámbar. `wake` arma la estela de espuma.
  * `cargo` reproduce al Damen Combi Freighter 3850 (casa y puente a popa, bodega con tapas, dos grúas en babor), `tug` al
@@ -32,6 +32,7 @@ interface Kit {
   box: (dx: number, dy: number, w: number, d: number, z: number, h: number, mat: Material, facade?: Facade) => Solid;
   plate: (pts: [number, number][], z: number, h: number, mat: Material) => Solid;
   cyl: (dx: number, dy: number, z: number, r: number, h: number, mat: Material) => Solid;
+  beam: (from: [number, number, number], to: [number, number, number], w: number, h: number, mat: Material) => Solid;
   dot: (dx: number, dy: number, z: number, r: number, color: Accent["color"]) => Accent;
   poly: (pts: [number, number, number][], color: Accent["color"], alpha: number) => Accent;
 }
@@ -45,6 +46,7 @@ function kit(at: Vec2, heading: number): Kit {
     box: (dx, dy, w, d, z, h, mat, facade) => ({ kind: "poly", footprint: [local(dx, dy), local(dx + w, dy), local(dx + w, dy + d), local(dx, dy + d)], z, h, mat, ...(facade ? { facade } : {}) }),
     plate: (pts, z, h, mat) => ({ kind: "poly", footprint: pts.map(([dx, dy]) => local(dx, dy)), z, h, mat }),
     cyl: (dx, dy, z, r, h, mat) => { const p = local(dx, dy); return { kind: "cylinder", at: v3(p.x, p.y, z), r, h, mat, sides: 8 }; },
+    beam: (from, to, w, h, mat) => { const a = local(from[0], from[1]), b = local(to[0], to[1]); return { kind: "beam", from: v3(a.x, a.y, from[2]), to: v3(b.x, b.y, to[2]), w, h, mat }; },
     dot: (dx, dy, z, r, color) => { const p = local(dx, dy); return { kind: "dot", at: v3(p.x, p.y, z), r, color }; },
     poly: (pts, color, alpha) => ({ kind: "poly", pts: pts.map(([dx, dy, z]) => { const p = local(dx, dy); return v3(p.x, p.y, z); }), color, alpha }),
   };
@@ -67,9 +69,10 @@ function cargo(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void 
   solids.push(k.box(14, -3.4, 34, 6.8, deck, 1, "rust")); // brazola de la bodega
   for (let i = 0; i < 3; i++) solids.push(k.box(14.2 + i * 11.2, -3.2, 11, 6.4, deck + 1, 0.3, "steel")); // tapas de escotilla
   solids.push(k.box(12.5, -3.2, 0.5, 0.5, deck, 2.5, "steel"), k.box(12.5, 2.7, 0.5, 0.5, deck, 2.5, "steel"), k.box(12.4, -3.5, 1, 7, deck + 2.5, 0.3, "steel")); // pórtico de tapas, estacionado a proa de la casa
-  for (const dx of [25.3, 36.5]) { // grúas de cubierta en babor: pedestal, cabina y pluma escalonada a 45° hacia proa
+  for (const dx of [25.3, 36.5]) { // grúas de cubierta en babor: pedestal, cabina, pluma a 45° hacia proa apoyada en el techo de la cabina y estay a su punta
+    const tip: [number, number, number] = [dx + 4.8, -3.9, deck + 8.7];
     solids.push(k.cyl(dx, -3.9, deck, 0.5, 3, "steel"), k.box(dx - 0.6, -4.5, 1.2, 1.2, deck + 3, 1, "whitewash"));
-    for (let i = 0; i < 3; i++) solids.push(k.box(dx + 0.6 + 1.5 * i, -4.1, 1.8, 0.4, deck + 3.5 + 1.5 * i, 1.5, "steel"));
+    solids.push(k.beam([dx + 0.3, -3.9, deck + 4.2], tip, 0.4, 0.5, "steel"), k.beam([dx - 0.5, -3.9, deck + 4.05], tip, 0.1, 0.1, "steel"));
   }
   solids.push(k.box(50, -2.1, 4, 4.2, deck, 1.6, "steel")); // castillo de proa
   solids.push(k.box(52, -0.2, 0.4, 0.4, deck + 1.6, 5.4, "steel"), k.box(52.05, -1.5, 0.3, 3, deck + 5.5, 0.25, "steel")); // mástil de proa y cruceta
