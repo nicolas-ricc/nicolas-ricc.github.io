@@ -10,7 +10,7 @@ import { techAnimator } from "../scenes/tech-animator";
 import { waterAnimator } from "../scenes/water-animator";
 import { world, type WorldScene } from "../scenes/world";
 
-/** Un animador con la zona cuyas luces atenúa el velo; `null` (el agua) nunca se atenúa. */
+/** Un animador con su zona de origen (la del lab y los recortes); `null` es el agua. El velo de las luces no la usa: va por la posición de cada luz o por la zona que declare la capa. */
 export type ZonedAnimator = Animator & { zone: WorldZone | null };
 export interface Assembled { scene: WorldScene; animators: ZonedAnimator[] }
 

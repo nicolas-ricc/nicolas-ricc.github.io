@@ -1,5 +1,6 @@
 import type { Accent } from "../iso/accent";
 import type { Solid } from "../iso/solids";
+import type { WorldZone } from "../map/geo";
 
 /**
  * Contrato entre una escena animada y el runtime, sin Pixi: cada id nombra
@@ -9,7 +10,8 @@ import type { Solid } from "../iso/solids";
 export type AnimLayer =
   // `heading`: marco en que los sólidos están alineados, para ordenar por profundidad
   | { kind: "solid"; solids: Solid[]; alpha?: number; heading?: number }
-  | { kind: "accent"; accents: Accent[]; alpha?: number }
+  // `zone`: zona con que se velan todas las luces de la capa (luces montadas en un barco); sin ella, cada luz se vela con la zona de su posición
+  | { kind: "accent"; accents: Accent[]; alpha?: number; zone?: WorldZone }
   | { kind: "water"; water: Solid[]; alpha?: number };
 
 export interface Animator {

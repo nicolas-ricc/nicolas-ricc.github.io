@@ -33,7 +33,9 @@ bahía, al norte de la fábrica; el estuario y el mar siguen hacia el sur hasta
 juntarse.
 
 El runtime que arma y anima ese mundo vive en `src/world/` y lo comparten el
-sitio y el laboratorio: `stage.ts` (capas, velos y luces por zona),
+sitio y el laboratorio: `stage.ts` (capas, velos y luces por zona: cada luz, estática o
+animada, se vela con la zona de su posición, salvo las de un barco, que siguen
+la zona del barco),
 `assemble.ts` (escena + animadores etiquetados por zona), `frame.ts`
 (encuadres puros, `zoneFrame`/`coverFrame`), `veil.ts` (polígonos del velo por
 zona) y `view.ts` (cámara pura: `coverView`, `zoneView`, `clampToBleed`,
