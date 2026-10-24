@@ -392,14 +392,14 @@ issue hijo donde está la decisión (los planes están en `docs/plans/`).
   - Paños de la celosía 2.5/2.5/2.5/1.5 (A2); exhibit con `h: 13`.
 - **§10, excavadora (#216):**
   - La máquina estática vive en `scene.excavator`, capa `factory.excavator`
-    con `heading` propio, y no en `scene.solids` (decisión 1).
-  - Superestructura a z 11..16, no a z 3.4 (2).
-  - Cabina corrida a dx 13..15.5, dy 1.9..3.5 (4).
-  - Pasarela, baranda y rodillos en V terminan en dx 15 (5).
-  - Bloque de pivote de la pluma, que el issue no nombra (10).
+    con `heading` propio, y no en `scene.solids` (D1 de #228).
+  - Superestructura a z 11..16, no a z 3.4 (D2).
+  - Cabina corrida a dx 13..15.5, dy 1.9..3.5 (D4).
+  - Pasarela, baranda y rodillos en V terminan en dx 15 (D5).
+  - Bloque de pivote de la pluma, que el issue no nombra (D10).
   - Los acopios rng quedan al norte (y ≈ 44..48) porque la caja de la máquina
-    incluye el radio de la rueda (11).
-  - La caja del exhibit se recorta en x ≤ 4 (12).
+    incluye el radio de la rueda (D11).
+  - La caja del exhibit se recorta en x ≤ 4 (D12).
 - **§11 (#214):** exhibit de pieza nuevo `tanque-agua`, en el grupo fábrica
   después de `planta`.
 
@@ -437,7 +437,7 @@ después. Polígonos estáticos del primer dibujo: 32447 antes, 37449 después.
 
 ### 14.4 Rendimiento
 
-Consola de la página `index.html` sin parámetros, en la rama:
+Consola de `/lab/world.html` sin parámetros, tecla `1`, en la rama (dev server):
 
 Primera carga:
 ```

@@ -15,7 +15,10 @@ Contenido editable en `content/*.json`. `public/cv.pdf` es una copia del CV de `
 
 El sitio (la raíz de myxomatosis.xyz; las zonas viven bajo `/area/` porque `/blog/` es el blog Hugo) muestra el mundo isométrico completo: motor puro en
 `src/iso/`, terreno compartido en `src/scenes/terrain.ts`, escenas en
-`src/scenes/`, incluidas `factory.ts` (fábrica de Portfolio: nave de calderas de la Fábrica de Luz, maltería de Mistley y tanque de agua sobre patas, tres chimeneas con bandas de balizamiento, subestación de intemperie y excavadora de rueda de cangilones con la rueda animada, `factory.wheel`), `district.ts`
+`src/scenes/`, incluidas `factory.ts` (fábrica de Portfolio: nave de calderas
+de la Fábrica de Luz, maltería de Mistley y tanque de agua sobre patas, tres
+chimeneas con bandas de balizamiento, subestación de intemperie y excavadora
+de rueda de cangilones con la rueda animada, `factory.wheel`), `district.ts`
 (distrito moderno de Resume) y `sea.ts` (punta, faro y barcos de Blog). Los
 tres barcos (Damen Combi Freighter 3850, Damen ASD Tug 2810 y un empujador
 fluvial con barcaza Jumbo) aparecen en la bocana y recorren dos carriles
