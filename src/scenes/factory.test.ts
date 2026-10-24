@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
+import type { Accent } from "../iso/accent";
 import { buildRenderList } from "../iso/render-list";
 import { bounds, isFlat, type Solid } from "../iso/solids";
 import { WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, worldZoneAt } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
-import { PLANT, RAIL_YARD_X, STACKS, STACK_BASE_H, factory, type FactoryScene } from "./factory";
+import { PLANT, RAIL_YARD_X, STACKS, STACK_BASE_H, chimney, factory, type FactoryScene, type Stack } from "./factory";
 import { terrainAt } from "./terrain";
 
 const scene = (): FactoryScene => factory(createRng(7));
@@ -51,10 +52,10 @@ describe("factory", () => {
     expect(bounds(plant)).toMatchObject({ min: { x: PLANT.x, y: PLANT.y } });
     expect(s.solids.filter((x) => x.kind === "ramp" && x.mat === "brick")).toHaveLength(5);
     const stacks = s.solids.filter((x) => x.kind === "cylinder" && x.mat === "brick");
-    expect(stacks).toHaveLength(3);
+    expect(stacks).toHaveLength(21); // 7 por chimenea: base escalonada, fuste y corona
     expect(s.stacks).toHaveLength(3);
     STACKS.forEach((st, i) => expect(s.stacks[i]).toEqual({ x: st.x, y: st.y, z: STACK_BASE_H + st.h }));
-    expect(s.solids.filter((x) => x.kind === "cylinder" && x.mat === "rust" && x.h === 1)).toHaveLength(3); // bandas
+    expect(s.solids.some((x) => x.kind === "cylinder" && x.mat === "rust")).toBe(false); // la banda rust de antes se fue
     expect(s.solids.filter((x) => x.kind === "cylinder" && x.mat === "concrete" && x.r >= 7)).toHaveLength(4); // torre de enfriamiento
     expect(s.solids.some((x) => x.kind === "prism" && x.h === 20 && x.w === 1.2)).toBe(true); // mástil de la grúa
   });
@@ -79,11 +80,153 @@ describe("factory", () => {
     for (const p of piles) expect(p.at.x - p.r).toBeGreaterThanOrEqual(Math.max(...RAIL_YARD_X) + 1); // ningún acopio pisa las vías
   });
 
-  it("acentos cian a la altura de los postes y todo el render usa colores del atlas", () => {
+  it("acentos dot (cian, magenta o ámbar) en altura y todo el render usa colores del atlas", () => {
     const s = scene();
     expect(s.accents.length).toBeGreaterThanOrEqual(7);
-    expect(s.accents.every((a) => a.kind === "dot" && a.color.startsWith("cyan") && a.at.z > 0)).toBe(true);
+    expect(s.accents.every((a) => a.kind === "dot" && ["cyan", "magenta", "amber"].includes(a.color) && a.at.z > 0)).toBe(true);
     const colors = allIsoColors();
     for (const i of buildRenderList([...s.ground, ...s.solids])) expect(colors.has(i.color)).toBe(true);
+  });
+});
+
+type Cyl = Solid & { kind: "cylinder" };
+type Box = Solid & { kind: "prism" };
+const EPS = 1e-6;
+const one = (st: Stack) => { const out: Solid[] = [], acc: Accent[] = []; const mouth = chimney(st, out, acc); return { out, acc, mouth }; };
+const cyls = (out: Solid[], ...mats: Material[]) => out.filter((x): x is Cyl => x.kind === "cylinder" && mats.includes(x.mat)).sort((a, b) => a.at.z - b.at.z);
+const boxes = (out: Solid[], w: number, d: number, h: number) => out.filter((x): x is Box => x.kind === "prism" && Math.abs(x.w - w) < EPS && Math.abs(x.d - d) < EPS && Math.abs(x.h - h) < EPS);
+const apart = (a: Solid, b: Solid) => {
+  const p = bounds(a), q = bounds(b);
+  return p.max.x <= q.min.x || q.max.x <= p.min.x || p.max.y <= q.min.y || q.max.y <= p.min.y || p.max.z <= q.min.z || q.max.z <= p.min.z;
+};
+const APO = Math.cos(Math.PI / 8); // apotema de un cilindro de 8 lados con radio 1
+
+describe.each(STACKS.map((st, i) => [i, st] as const))("chimenea %i", (_i, st) => {
+  const B = STACK_BASE_H, M = B + st.h, z0 = B + 3;
+
+  it("devuelve la boca de hoy", () => expect(one(st).mouth).toEqual({ x: st.x, y: st.y, z: M }));
+
+  it("siete cilindros de ladrillo: base escalonada, fuste que se afina y corona", () => {
+    const b = cyls(one(st).out, "brick");
+    expect(b).toHaveLength(7);
+    const [s1, s2, ...rest] = b, crown = rest.pop()!, shaft = rest;
+    expect(s1!.r).toBeCloseTo(st.r + 1, 6); expect(s1!.at.z).toBeCloseTo(B, 6); expect(s1!.h).toBeCloseTo(1.5, 6);
+    expect(s2!.r).toBeCloseTo(st.r + 0.6, 6); expect(s2!.at.z).toBeCloseTo(B + 1.5, 6); expect(s2!.h).toBeCloseTo(1.5, 6);
+    expect(shaft).toHaveLength(4);
+    expect(shaft[0]!.at.z).toBeCloseTo(z0, 6);
+    expect(shaft[0]!.r).toBeCloseTo(st.r + 0.5, 6); expect(shaft[3]!.r).toBeCloseTo(st.r, 6);
+    for (let k = 1; k < 4; k++) {
+      expect(shaft[k]!.r).toBeLessThan(shaft[k - 1]!.r);
+      expect(Math.abs(shaft[k]!.at.z - (shaft[k - 1]!.at.z + shaft[k - 1]!.h))).toBeLessThan(EPS);
+    }
+    expect(crown.r).toBeCloseTo(st.r + 0.4, 6); expect(crown.at.z + crown.h).toBeCloseTo(M, 6); expect(crown.at.z).toBeCloseTo(M - 0.6, 6);
+  });
+
+  it("siete bandas iguales rojo y blanco, rojo arriba y abajo", () => {
+    const { out } = one(st);
+    const bands = cyls(out, "signal", "whitewash"), shaft = cyls(out, "brick").slice(2, 6);
+    expect(bands).toHaveLength(7);
+    bands.forEach((b, k) => {
+      expect(b.mat).toBe(k % 2 === 0 ? "signal" : "whitewash");
+      expect(b.r).toBeCloseTo(st.r, 6);
+      expect(b.h).toBeCloseTo(bands[0]!.h, 6);
+      if (k > 0) expect(Math.abs(b.at.z - (bands[k - 1]!.at.z + bands[k - 1]!.h))).toBeLessThan(EPS);
+    });
+    expect(bands.filter((b) => b.mat === "signal")).toHaveLength(4);
+    const last = shaft[3]!;
+    expect(Math.abs(bands[0]!.at.z - (last.at.z + last.h))).toBeLessThan(EPS);
+    expect(bands[6]!.at.z + bands[6]!.h).toBeCloseTo(M - 0.6, 6);
+    expect(bands[0]!.at.z - z0).toBeCloseTo(M - 0.6 - bands[0]!.at.z, 6); // mitad y mitad
+  });
+
+  it("sin banda rust", () => expect(one(st).out.some((x) => x.mat === "rust")).toBe(false));
+
+  it("zunchos de acero que asoman del ladrillo", () => {
+    const { out } = one(st);
+    const hoops = cyls(out, "steel").filter((c) => Math.abs(c.h - 0.2) < EPS), shaft = cyls(out, "brick").slice(2, 6);
+    expect(hoops.length).toBeGreaterThanOrEqual(3);
+    for (const h of hoops) {
+      const seg = shaft.find((s) => h.at.z >= s.at.z - EPS && h.at.z + h.h <= s.at.z + s.h + EPS);
+      expect(seg).toBeDefined();
+      expect(h.r).toBeCloseTo(seg!.r + 0.1, 6);
+    }
+  });
+
+  it("puerta en la cara sur del pedestal", () => {
+    const door = boxes(one(st).out, 0.9, 0.3, 1.4).filter((d) => d.mat === "steel");
+    expect(door).toHaveLength(1);
+    expect(door[0]!.at.x).toBeCloseTo(st.x - 0.45, 6); expect(door[0]!.at.y).toBeCloseTo(st.y + 3.5, 6); expect(door[0]!.at.z).toBe(0);
+  });
+
+  it("plataforma con ocho postes y baranda", () => {
+    const { out } = one(st);
+    const deck = cyls(out, "concrete");
+    expect(deck).toHaveLength(1);
+    expect(deck[0]!.r).toBeCloseTo(st.r + 1.2, 6); expect(deck[0]!.h).toBeCloseTo(0.3, 6); expect(deck[0]!.at.z).toBeCloseTo(M - 2, 6);
+    const posts = boxes(out, 0.15, 0.15, 1.1).filter((p) => p.mat === "steel");
+    expect(posts).toHaveLength(8);
+    const lim = (st.r + 1.2) * APO;
+    for (const p of posts) {
+      expect(p.at.z).toBeCloseTo(M - 1.7, 6);
+      const b = bounds(p);
+      for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) expect(Math.hypot(x - st.x, y - st.y)).toBeLessThanOrEqual(lim + EPS);
+    }
+    const rail = out.filter((x): x is Solid & { kind: "beam" } => x.kind === "beam" && x.from.z > M - 1.7 && x.to.z > M - 1.7);
+    expect(rail).toHaveLength(8);
+  });
+
+  it("cuatro pararrayos sobre la boca", () => {
+    const rods = boxes(one(st).out, 0.15, 0.15, 1.5).filter((p) => p.mat === "steel");
+    expect(rods).toHaveLength(4);
+    for (const r of rods) {
+      expect(r.at.z).toBeCloseTo(M, 6);
+      expect(Math.hypot(r.at.x + 0.075 - st.x, r.at.y + 0.075 - st.y)).toBeCloseTo(st.r + 0.1, 6);
+    }
+  });
+
+  it("escalera de gato en la cara sur, fuera del ladrillo, hasta la plataforma", () => {
+    const { out } = one(st);
+    const rails = out.filter((x): x is Box => x.kind === "prism" && x.mat === "steel" && Math.abs(x.w - 0.15) < EPS && Math.abs(x.d - 0.15) < EPS && Math.abs(x.at.z - z0) < EPS);
+    expect(rails).toHaveLength(2);
+    const walls = cyls(out, "brick", "signal", "whitewash").filter((c) => c.at.z < M - 2 && c.at.z + c.h > z0);
+    for (const r of rails) {
+      expect(r.at.z + r.h).toBeCloseTo(M - 2, 6);
+      expect(r.at.y).toBeGreaterThan(st.y);
+      for (const c of walls) expect(bounds(r).min.y).toBeGreaterThan(st.y + c.r * APO);
+    }
+    const rungs = out.filter((x): x is Solid & { kind: "beam" } => x.kind === "beam" && x.from.z === x.to.z && x.from.z < M - 2).sort((a, b) => a.from.z - b.from.z);
+    expect(rungs.length).toBeGreaterThanOrEqual(5);
+    for (let k = 1; k < rungs.length; k++) expect(rungs[k]!.from.z - rungs[k - 1]!.from.z).toBeCloseTo(2, 6);
+  });
+
+  it("dos luces magenta apenas debajo de la boca", () => {
+    const { acc } = one(st);
+    expect(acc).toHaveLength(2);
+    for (const a of acc) { expect(a.kind).toBe("dot"); expect(a.color).toBe("magenta"); if (a.kind === "dot") { expect(a.r).toBe(0.5); expect(a.at.z).toBeCloseTo(M - 1, 6); } }
+  });
+
+  it("ninguna pieza mide menos de 0.15", () => {
+    for (const x of one(st).out) {
+      const b = bounds(x);
+      for (const d of [b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z]) expect(d).toBeGreaterThanOrEqual(0.15 - 1e-9);
+    }
+  });
+
+  it("ninguna pieza toca la torre de enfriamiento", () => {
+    const tower = scene().solids.filter((x) => x.kind === "cylinder" && x.mat === "concrete" && x.r >= 7);
+    expect(tower).toHaveLength(4);
+    for (const p of one(st).out) for (const t of tower) expect(apart(p, t)).toBe(true);
+  });
+
+  it("ninguna pieza entra al cerco de la subestación (y ≤ −47)", () => {
+    for (const p of one(st).out) expect(bounds(p).min.y).toBeGreaterThan(-47);
+  });
+});
+
+describe("chimeneas vecinas", () => {
+  it("las piezas de una chimenea no tocan las de otra", () => {
+    const all = STACKS.map((st) => one(st).out);
+    for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++)
+      for (const a of all[i]!) for (const b of all[j]!) expect(apart(a, b)).toBe(true);
   });
 });
