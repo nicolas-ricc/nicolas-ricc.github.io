@@ -1,8 +1,8 @@
 // src/iso/solids.test.ts
 import { describe, expect, it } from "vitest";
+import { facadeFaces } from "./facade";
 import { dot, v3, type Vec3 } from "./geometry";
 import { shadeTone } from "./light";
-import { facadeFaces } from "./facade";
 import { bounds, isFlat, tessellate, tessellateAll, type Face, type Plate, type Solid } from "./solids";
 
 const prism: Solid = { kind: "prism", at: v3(0, 0, 0), w: 2, d: 3, h: 4, mat: "concrete" };
