@@ -15,8 +15,8 @@ const BAYS = 11; // 12 pilastras = 11 crujías
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material): Solid & { kind: "prism" } => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat });
 
 /** Celosía de ladrillo en damero: placas de 0.5 × 0.8 cada 1 u sobre la pared `wall` de largo `len`, bajo el alero (z 12.8..13.6). */
-function lattice(wall: number, len: number): Plate[] {
-  return Array.from({ length: len }, (_, i): Plate => ({ wall, shape: "rect", u0: i / len, u1: (i + 0.5) / len, z0: 12.8, z1: 13.6, mat: "brick", toneOffset: -2 }));
+function lattice(wall: number, len: number, z0 = 12.8, z1 = 13.6): Plate[] {
+  return Array.from({ length: len }, (_, i): Plate => ({ wall, shape: "rect", u0: i / len, u1: (i + 0.5) / len, z0, z1, mat: "brick", toneOffset: -2 }));
 }
 
 /** Muros, pilastras salientes con zapata, montante y ménsula, zócalo con tubos, techo de pizarra, remate sur y caperuzas. */
@@ -55,7 +55,7 @@ export function gableEnd(out: Solid[]): void {
   // escalones del piñón: ladrillo de 1.2 y tapa blanca de 0.3; celosía en la cara este, del pie a 0.2 bajo la tapa
   for (const [y0, y1, z] of [[-44, -18, 14], [-38, -24, 15.5], [-33, -29, 17]] as const) {
     const d = y1 - y0;
-    const plates = Array.from({ length: d }, (_, i): Plate => ({ wall: 1, shape: "rect", u0: i / d, u1: (i + 0.5) / d, z0: z, z1: z + 1, mat: "brick", toneOffset: -2 }));
+    const plates = lattice(1, d, z, z + 1);
     out.push({ ...prism(119.5, y0, z, 1, d, 1.2, "brick"), plates });
     out.push(prism(119.5, y0, z + 1.2, 1, d, 0.3, "whitewash"));
   }
@@ -71,10 +71,34 @@ export function metalStacks(out: Solid[]): void {
     }
   }
 }
-/** Torre de escalera de acero junto al testero. */
-export function stairTower(_out: Solid[]): void {}
-/** Cinta inclinada de la playa de camiones a la tolva junto al alero. */
-export function inclineBelt(_out: Solid[]): void {}
+/** Torre de escalera de acero junto al testero: cuatro descansos, postes partidos entre ellos, cuatro tramos en zigzag y baranda este y sur. */
+export function stairTower(out: Solid[]): void {
+  const { x0, y0, x1, y1 } = STAIR_TOWER;
+  const landings = [3.5, 7, 10.5, 14];
+  for (const z of landings) out.push(prism(x0, y0, z, 5, 8, 0.25, "steel"));
+  const spans = [[0, 3.5], [3.75, 7], [7.25, 10.5], [10.75, 14], [14.25, 16]] as const;
+  for (const px of [x0, x1 - 0.4]) for (const py of [y0, y1 - 0.4]) for (const [a, b] of spans) out.push(prism(px, py, a, 0.4, 0.4, b - a, "steel"));
+  for (let k = 0; k < 4; k++) {
+    const za = k === 0 ? 0.15 : 3.5 * k + 0.25 + 0.15;
+    const zb = 3.5 * (k + 1) - 0.15;
+    const even = k % 2 === 0;
+    out.push({ kind: "beam", from: v3(even ? 122.5 : 124.5, even ? -27 : -33, za), to: v3(even ? 122.5 : 124.5, even ? -33 : -27, zb), w: 1.0, h: 0.25, mat: "steel" });
+  }
+  for (const z of landings) {
+    out.push({ kind: "beam", from: v3(125.9, -33.6, z + 1.25), to: v3(125.9, -26.4, z + 1.25), w: 0.15, h: 0.15, mat: "steel" });
+    out.push({ kind: "beam", from: v3(121.4, -26.1, z + 1.25), to: v3(125.6, -26.1, z + 1.25), w: 0.15, h: 0.15, mat: "steel" });
+  }
+}
+/** Cinta inclinada de la playa de camiones a la tolva junto al alero, con dos caballetes. */
+export function inclineBelt(out: Solid[]): void {
+  const from = v3(50, -4, 0.5), to = v3(59.7, -15, 12.5);
+  out.push({ kind: "beam", from, to, w: 1.6, h: 0.6, mat: "rust" });
+  out.push(prism(58.2, -16, 11, 3, 2, 2.5, "rust")); // tolva, fuera del muro
+  for (const t of [1 / 3, 2 / 3]) {
+    const x = from.x + (to.x - from.x) * t, y = from.y + (to.y - from.y) * t, z = from.z + (to.z - from.z) * t;
+    out.push(prism(x - 0.2, y - 0.2, 0, 0.4, 0.4, z - 0.3, "rust"));
+  }
+}
 
 /** Nave de calderas completa: cuerpo, testero, chimeneas metálicas, torre de escalera y cinta inclinada. */
 export function boilerHouse(out: Solid[]): void {

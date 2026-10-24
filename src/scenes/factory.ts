@@ -131,7 +131,7 @@ function railYard(out: Solid[], rng: Rng): void {
 }
 
 function lamps(out: Solid[], accents: Accent[]): void {
-  for (const [x, y] of [[24, -13], [64, -13], [58, -16], [148, -46], [-30, 20]] as const) lamp(out, accents, x, y);
+  for (const [x, y] of [[24, -13], [64, -13], [50, -13.5], [148, -46], [-30, 20]] as const) lamp(out, accents, x, y);
 }
 
 export function factory(rng: Rng): FactoryScene {
