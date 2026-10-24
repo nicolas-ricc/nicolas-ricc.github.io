@@ -1160,7 +1160,7 @@ describe("placas", () => {
     expect(Math.max(...disc.pts.map((p) => p.z))).toBeCloseTo(3, 9);
     const tri = tessellateAll({ ...P, plates: [plate(2, { shape: "tri" })] }).find((f) => f.mat === "steel")!;
     expect(tri.pts).toHaveLength(3);
-    const exp = [v3(1, 3, 1), v3(3, 3, 1), v3(2, 3, 3)];
+    const exp = [v3(3, 3, 1), v3(1, 3, 1), v3(2, 3, 3)]; // la arista sur va de (4, 3) a (0, 3): u crece hacia el oeste
     tri.pts.forEach((p, k) => { for (const c of ["x", "y", "z"] as const) expect(p[c]).toBeCloseTo(exp[k]![c], 9); });
   });
 
