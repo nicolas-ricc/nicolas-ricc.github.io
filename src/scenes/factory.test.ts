@@ -11,6 +11,7 @@ import { maltings, waterTower } from "./maltings";
 import { MALT, PLANT, RAIL_YARD_X, STACKS, STACK_BASE_H, chimney, factory, type FactoryScene, type Stack } from "./factory";
 import { towerCrane } from "./pieces";
 import { FIREWALL, PHASES_Y, SUBSTATION, TRANSFORMERS_Y, currentTransformer, disconnector, droppers, powerTransformer, substation } from "./substation";
+import { EXCAVATOR, excavator, excavatorBox } from "./excavator";
 import { terrainAt } from "./terrain";
 
 const scene = (): FactoryScene => factory(createRng(7));
@@ -559,6 +560,22 @@ describe("subestación de intemperie (#215)", () => {
         expect(near(b.from.z, 4.5)).toBe(true);
         expect((b.to.z - b.from.z) / beamLen(b)).toBeCloseTo(Math.sin((35 * Math.PI) / 180));
         expect(b.to.y).toBeGreaterThan(b.from.y);
+describe("excavadora en la playa de vías", () => {
+  const machine = (): Solid[] => { const out: Solid[] = []; excavator(out, []); return out; };
+  const piles = (sc: FactoryScene) => sc.solids.filter((x): x is Solid & { kind: "cone" } => x.kind === "cone" && (x.mat === "rust" || x.mat === "sand"));
+  const isFixed = (p: Solid & { kind: "cone" }) => Math.abs(p.at.x + 14) < EPS && Math.abs(p.at.y - 60) < EPS && p.r === EXCAVATOR.pile.r;
+
+  it("la escena trae la máquina entera", () => {
+    const s = JSON.stringify(scene().solids);
+    for (const x of machine()) expect(s).toContain(JSON.stringify(x));
+  });
+
+  it("ningún sólido toca las vías salvo por encima (z ≥ 2)", () => {
+    for (const x of machine()) {
+      const b = bounds(x);
+      for (const rx of RAIL_YARD_X) for (const dx of [-0.8, 0.8]) {
+        const x0 = rx + dx - 0.2, x1 = rx + dx + 0.2;
+        if (b.max.x > x0 && b.min.x < x1) expect(b.min.z).toBeGreaterThanOrEqual(2);
       }
     }
   });
@@ -594,5 +611,48 @@ describe("subestación de intemperie (#215)", () => {
     const tip = 4.5 + 2.5 * Math.sin((35 * Math.PI) / 180);
     expect(d.map((b) => Math.round(b.to.z * 1000) / 1000).sort()).toEqual([...Array(3).fill(4.5), ...Array(3).fill(5.65), ...Array(6).fill(Math.round(tip * 1000) / 1000)].sort()); // brazo, cabeza del TI, punta del pasatapas
     for (const b of d.filter((x) => near(x.to.z, tip))) expect(near(b.from.y, b.to.y > -52 ? PHASES_Y[2] : PHASES_Y[1])).toBe(true); // T1 → −53.5, T2 → −50
+  it("ni los vagones, ni el farol (−30, 20), y toda la máquina en y ≤ 108", () => {
+    const s = scene();
+    const wagons = s.solids.filter((x) => x.kind === "prism" && x.w === 2.2 && x.d === 7 && x.h === 2.8);
+    expect(wagons).toHaveLength(8);
+    const lamp = s.solids.find((x) => x.kind === "prism" && x.at.x === -30 && x.at.y === 20 && x.w === 0.6)!;
+    expect(lamp).toBeDefined();
+    for (const x of machine()) {
+      for (const w of [...wagons, lamp]) expect(apart(x, w)).toBe(true);
+      expect(bounds(x).max.y).toBeLessThanOrEqual(108);
+    }
+  });
+
+  it("ningún sólido supera z 20.5", () => {
+    for (const x of machine()) expect(bounds(x).max.z).toBeLessThanOrEqual(20.5);
+  });
+
+  it("acopio fijo bajo la rueda más 3 grandes rust y 2 chicos sand del rng", () => {
+    const ps = piles(scene());
+    const fixed = ps.filter(isFixed);
+    expect(fixed).toHaveLength(1);
+    expect(fixed[0]).toMatchObject({ mat: "rust", r: 6.5, h: 4.5, sides: 7 });
+    const rest = ps.filter((p) => !isFixed(p));
+    expect(rest.filter((p) => p.mat === "rust")).toHaveLength(3);
+    expect(rest.filter((p) => p.mat === "sand")).toHaveLength(2);
+  });
+
+  it.each(Array.from({ length: 20 }, (_, i) => i + 1).concat(7))("seed %i: ningún acopio rng toca la caja de la máquina y todos quedan al este de las vías", (seed) => {
+    const box = excavatorBox();
+    for (const p of piles(factory(createRng(seed)))) {
+      expect(p.at.x - p.r).toBeGreaterThanOrEqual(-39);
+      if (isFixed(p)) continue;
+      const touches = p.at.x + p.r > box.x0 && p.at.x - p.r < box.x1 && p.at.y + p.r > box.y0 && p.at.y - p.r < box.y1;
+      expect(touches).toBe(false);
+    }
+  });
+
+  it("la caja de la máquina contiene todos sus sólidos y la rueda a cualquier ángulo", () => {
+    const box = excavatorBox();
+    for (const x of machine()) {
+      const b = bounds(x);
+      expect(b.min.x).toBeGreaterThanOrEqual(box.x0 - EPS); expect(b.max.x).toBeLessThanOrEqual(box.x1 + EPS);
+      expect(b.min.y).toBeGreaterThanOrEqual(box.y0 - EPS); expect(b.max.y).toBeLessThanOrEqual(box.y1 + EPS);
+    }
   });
 });
