@@ -2,7 +2,8 @@
 import { describe, expect, it } from "vitest";
 import { dot, v3, type Vec3 } from "./geometry";
 import { shadeTone } from "./light";
-import { bounds, isFlat, tessellate, tessellateAll, type Solid } from "./solids";
+import { facadeFaces } from "./facade";
+import { bounds, isFlat, tessellate, tessellateAll, type Face, type Plate, type Solid } from "./solids";
 
 const prism: Solid = { kind: "prism", at: v3(0, 0, 0), w: 2, d: 3, h: 4, mat: "concrete" };
 
@@ -262,5 +263,995 @@ describe("viga (beam)", () => {
     const faces = tessellateAll(beam(v3(0, 0, 4), v3(4.5, 0, 8.5), 0.4, 0.5));
     for (const f of faces) expect(f.tone).toBe(shadeTone(f.normal));
     expect(faces.some((f) => f.tone === "up" || f.tone === "down")).toBe(true);
+  });
+});
+
+describe("no regresión de las placas", () => {
+  it("un prisma sin plates tesela exactamente igual que antes de las placas", () => {
+    expect(tessellateAll({ kind: "prism", at: v3(1, 2, 0), w: 3, d: 2, h: 4, mat: "brick" })).toMatchInlineSnapshot(`
+      [
+        {
+          "mat": "brick",
+          "normal": {
+            "x": 0,
+            "y": 0,
+            "z": 1,
+          },
+          "pts": [
+            {
+              "x": 1,
+              "y": 2,
+              "z": 4,
+            },
+            {
+              "x": 4,
+              "y": 2,
+              "z": 4,
+            },
+            {
+              "x": 4,
+              "y": 4,
+              "z": 4,
+            },
+            {
+              "x": 1,
+              "y": 4,
+              "z": 4,
+            },
+          ],
+          "tone": "top",
+          "toneOffset": 0,
+        },
+        {
+          "mat": "brick",
+          "normal": {
+            "x": -0,
+            "y": -0,
+            "z": -1,
+          },
+          "pts": [
+            {
+              "x": 1,
+              "y": 2,
+              "z": 0,
+            },
+            {
+              "x": 4,
+              "y": 2,
+              "z": 0,
+            },
+            {
+              "x": 4,
+              "y": 4,
+              "z": 0,
+            },
+            {
+              "x": 1,
+              "y": 4,
+              "z": 0,
+            },
+          ],
+          "tone": "shade",
+          "toneOffset": 0,
+        },
+        {
+          "mat": "brick",
+          "normal": {
+            "x": 0,
+            "y": -1,
+            "z": 0,
+          },
+          "pts": [
+            {
+              "x": 1,
+              "y": 2,
+              "z": 0,
+            },
+            {
+              "x": 4,
+              "y": 2,
+              "z": 0,
+            },
+            {
+              "x": 4,
+              "y": 2,
+              "z": 4,
+            },
+            {
+              "x": 1,
+              "y": 2,
+              "z": 4,
+            },
+          ],
+          "tone": "shade",
+          "toneOffset": 0,
+        },
+        {
+          "mat": "brick",
+          "normal": {
+            "x": 1,
+            "y": 0,
+            "z": 0,
+          },
+          "pts": [
+            {
+              "x": 4,
+              "y": 2,
+              "z": 0,
+            },
+            {
+              "x": 4,
+              "y": 4,
+              "z": 0,
+            },
+            {
+              "x": 4,
+              "y": 4,
+              "z": 4,
+            },
+            {
+              "x": 4,
+              "y": 2,
+              "z": 4,
+            },
+          ],
+          "tone": "shade",
+          "toneOffset": 0,
+        },
+        {
+          "mat": "brick",
+          "normal": {
+            "x": 0,
+            "y": 1,
+            "z": 0,
+          },
+          "pts": [
+            {
+              "x": 4,
+              "y": 4,
+              "z": 0,
+            },
+            {
+              "x": 1,
+              "y": 4,
+              "z": 0,
+            },
+            {
+              "x": 1,
+              "y": 4,
+              "z": 4,
+            },
+            {
+              "x": 4,
+              "y": 4,
+              "z": 4,
+            },
+          ],
+          "tone": "lit",
+          "toneOffset": 0,
+        },
+        {
+          "mat": "brick",
+          "normal": {
+            "x": -1,
+            "y": 0,
+            "z": 0,
+          },
+          "pts": [
+            {
+              "x": 1,
+              "y": 4,
+              "z": 0,
+            },
+            {
+              "x": 1,
+              "y": 2,
+              "z": 0,
+            },
+            {
+              "x": 1,
+              "y": 2,
+              "z": 4,
+            },
+            {
+              "x": 1,
+              "y": 4,
+              "z": 4,
+            },
+          ],
+          "tone": "lit",
+          "toneOffset": 0,
+        },
+      ]
+    `);
+    expect(tessellateAll({ kind: "prism", at: v3(1, 2, 0), w: 3, d: 2, h: 4, mat: "brick", facade: { floors: 1, cols: 1 } })).toMatchInlineSnapshot(`
+      [
+        {
+          "mat": "brick",
+          "normal": {
+            "x": 0,
+            "y": 0,
+            "z": 1,
+          },
+          "pts": [
+            {
+              "x": 1,
+              "y": 2,
+              "z": 4,
+            },
+            {
+              "x": 4,
+              "y": 2,
+              "z": 4,
+            },
+            {
+              "x": 4,
+              "y": 4,
+              "z": 4,
+            },
+            {
+              "x": 1,
+              "y": 4,
+              "z": 4,
+            },
+          ],
+          "tone": "top",
+          "toneOffset": 0,
+        },
+        {
+          "mat": "brick",
+          "normal": {
+            "x": -0,
+            "y": -0,
+            "z": -1,
+          },
+          "pts": [
+            {
+              "x": 1,
+              "y": 2,
+              "z": 0,
+            },
+            {
+              "x": 4,
+              "y": 2,
+              "z": 0,
+            },
+            {
+              "x": 4,
+              "y": 4,
+              "z": 0,
+            },
+            {
+              "x": 1,
+              "y": 4,
+              "z": 0,
+            },
+          ],
+          "tone": "shade",
+          "toneOffset": 0,
+        },
+        {
+          "mat": "brick",
+          "normal": {
+            "x": 0,
+            "y": -1,
+            "z": 0,
+          },
+          "pts": [
+            {
+              "x": 1,
+              "y": 2,
+              "z": 0,
+            },
+            {
+              "x": 4,
+              "y": 2,
+              "z": 0,
+            },
+            {
+              "x": 4,
+              "y": 2,
+              "z": 4,
+            },
+            {
+              "x": 1,
+              "y": 2,
+              "z": 4,
+            },
+          ],
+          "tone": "shade",
+          "toneOffset": 0,
+        },
+        {
+          "mat": "glass",
+          "normal": {
+            "x": 0,
+            "y": -1,
+            "z": 0,
+          },
+          "pts": [
+            {
+              "x": 1.75,
+              "y": 2,
+              "z": 1,
+            },
+            {
+              "x": 3.25,
+              "y": 2,
+              "z": 1,
+            },
+            {
+              "x": 3.25,
+              "y": 2,
+              "z": 3,
+            },
+            {
+              "x": 1.75,
+              "y": 2,
+              "z": 3,
+            },
+          ],
+          "tone": "shade",
+          "toneOffset": 0,
+        },
+        {
+          "mat": "brick",
+          "normal": {
+            "x": 0,
+            "y": -1,
+            "z": 0,
+          },
+          "pts": [
+            {
+              "x": 1,
+              "y": 2,
+              "z": 3.7,
+            },
+            {
+              "x": 4,
+              "y": 2,
+              "z": 3.7,
+            },
+            {
+              "x": 4,
+              "y": 2,
+              "z": 4,
+            },
+            {
+              "x": 1,
+              "y": 2,
+              "z": 4,
+            },
+          ],
+          "tone": "shade",
+          "toneOffset": -1,
+        },
+        {
+          "mat": "brick",
+          "normal": {
+            "x": 1,
+            "y": 0,
+            "z": 0,
+          },
+          "pts": [
+            {
+              "x": 4,
+              "y": 2,
+              "z": 0,
+            },
+            {
+              "x": 4,
+              "y": 4,
+              "z": 0,
+            },
+            {
+              "x": 4,
+              "y": 4,
+              "z": 4,
+            },
+            {
+              "x": 4,
+              "y": 2,
+              "z": 4,
+            },
+          ],
+          "tone": "shade",
+          "toneOffset": 0,
+        },
+        {
+          "mat": "glass",
+          "normal": {
+            "x": 1,
+            "y": 0,
+            "z": 0,
+          },
+          "pts": [
+            {
+              "x": 4,
+              "y": 2.5,
+              "z": 1,
+            },
+            {
+              "x": 4,
+              "y": 3.5,
+              "z": 1,
+            },
+            {
+              "x": 4,
+              "y": 3.5,
+              "z": 3,
+            },
+            {
+              "x": 4,
+              "y": 2.5,
+              "z": 3,
+            },
+          ],
+          "tone": "shade",
+          "toneOffset": 0,
+        },
+        {
+          "mat": "brick",
+          "normal": {
+            "x": 1,
+            "y": 0,
+            "z": 0,
+          },
+          "pts": [
+            {
+              "x": 4,
+              "y": 2,
+              "z": 3.7,
+            },
+            {
+              "x": 4,
+              "y": 4,
+              "z": 3.7,
+            },
+            {
+              "x": 4,
+              "y": 4,
+              "z": 4,
+            },
+            {
+              "x": 4,
+              "y": 2,
+              "z": 4,
+            },
+          ],
+          "tone": "shade",
+          "toneOffset": -1,
+        },
+        {
+          "mat": "brick",
+          "normal": {
+            "x": 0,
+            "y": 1,
+            "z": 0,
+          },
+          "pts": [
+            {
+              "x": 4,
+              "y": 4,
+              "z": 0,
+            },
+            {
+              "x": 1,
+              "y": 4,
+              "z": 0,
+            },
+            {
+              "x": 1,
+              "y": 4,
+              "z": 4,
+            },
+            {
+              "x": 4,
+              "y": 4,
+              "z": 4,
+            },
+          ],
+          "tone": "lit",
+          "toneOffset": 0,
+        },
+        {
+          "mat": "glass",
+          "normal": {
+            "x": 0,
+            "y": 1,
+            "z": 0,
+          },
+          "pts": [
+            {
+              "x": 3.25,
+              "y": 4,
+              "z": 1,
+            },
+            {
+              "x": 1.75,
+              "y": 4,
+              "z": 1,
+            },
+            {
+              "x": 1.75,
+              "y": 4,
+              "z": 3,
+            },
+            {
+              "x": 3.25,
+              "y": 4,
+              "z": 3,
+            },
+          ],
+          "tone": "lit",
+          "toneOffset": 0,
+        },
+        {
+          "mat": "brick",
+          "normal": {
+            "x": 0,
+            "y": 1,
+            "z": 0,
+          },
+          "pts": [
+            {
+              "x": 4,
+              "y": 4,
+              "z": 3.7,
+            },
+            {
+              "x": 1,
+              "y": 4,
+              "z": 3.7,
+            },
+            {
+              "x": 1,
+              "y": 4,
+              "z": 4,
+            },
+            {
+              "x": 4,
+              "y": 4,
+              "z": 4,
+            },
+          ],
+          "tone": "lit",
+          "toneOffset": -1,
+        },
+        {
+          "mat": "brick",
+          "normal": {
+            "x": -1,
+            "y": 0,
+            "z": 0,
+          },
+          "pts": [
+            {
+              "x": 1,
+              "y": 4,
+              "z": 0,
+            },
+            {
+              "x": 1,
+              "y": 2,
+              "z": 0,
+            },
+            {
+              "x": 1,
+              "y": 2,
+              "z": 4,
+            },
+            {
+              "x": 1,
+              "y": 4,
+              "z": 4,
+            },
+          ],
+          "tone": "lit",
+          "toneOffset": 0,
+        },
+        {
+          "mat": "glass",
+          "normal": {
+            "x": -1,
+            "y": 0,
+            "z": 0,
+          },
+          "pts": [
+            {
+              "x": 1,
+              "y": 3.5,
+              "z": 1,
+            },
+            {
+              "x": 1,
+              "y": 2.5,
+              "z": 1,
+            },
+            {
+              "x": 1,
+              "y": 2.5,
+              "z": 3,
+            },
+            {
+              "x": 1,
+              "y": 3.5,
+              "z": 3,
+            },
+          ],
+          "tone": "lit",
+          "toneOffset": 0,
+        },
+        {
+          "mat": "brick",
+          "normal": {
+            "x": -1,
+            "y": 0,
+            "z": 0,
+          },
+          "pts": [
+            {
+              "x": 1,
+              "y": 4,
+              "z": 3.7,
+            },
+            {
+              "x": 1,
+              "y": 2,
+              "z": 3.7,
+            },
+            {
+              "x": 1,
+              "y": 2,
+              "z": 4,
+            },
+            {
+              "x": 1,
+              "y": 4,
+              "z": 4,
+            },
+          ],
+          "tone": "lit",
+          "toneOffset": -1,
+        },
+      ]
+    `);
+    expect(tessellateAll({ kind: "ramp", at: v3(0, 0, 0), w: 4, d: 2, h: 2, mat: "steel", dir: "s" })).toMatchInlineSnapshot(`
+      [
+        {
+          "mat": "steel",
+          "normal": {
+            "x": -0,
+            "y": -0,
+            "z": -1,
+          },
+          "pts": [
+            {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+            },
+            {
+              "x": 4,
+              "y": 0,
+              "z": 0,
+            },
+            {
+              "x": 4,
+              "y": 2,
+              "z": 0,
+            },
+            {
+              "x": 0,
+              "y": 2,
+              "z": 0,
+            },
+          ],
+          "tone": "shade",
+          "toneOffset": 0,
+        },
+        {
+          "mat": "steel",
+          "normal": {
+            "x": 0,
+            "y": 0.7071067811865475,
+            "z": 0.7071067811865475,
+          },
+          "pts": [
+            {
+              "x": 0,
+              "y": 0,
+              "z": 2,
+            },
+            {
+              "x": 4,
+              "y": 0,
+              "z": 2,
+            },
+            {
+              "x": 4,
+              "y": 2,
+              "z": 0,
+            },
+            {
+              "x": 0,
+              "y": 2,
+              "z": 0,
+            },
+          ],
+          "tone": "up",
+          "toneOffset": 0,
+        },
+        {
+          "mat": "steel",
+          "normal": {
+            "x": -1,
+            "y": -0,
+            "z": -0,
+          },
+          "pts": [
+            {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+            },
+            {
+              "x": 0,
+              "y": 2,
+              "z": 0,
+            },
+            {
+              "x": 0,
+              "y": 2,
+              "z": 0,
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "z": 2,
+            },
+          ],
+          "tone": "lit",
+          "toneOffset": 0,
+        },
+        {
+          "mat": "steel",
+          "normal": {
+            "x": 1,
+            "y": 0,
+            "z": 0,
+          },
+          "pts": [
+            {
+              "x": 4,
+              "y": 0,
+              "z": 0,
+            },
+            {
+              "x": 4,
+              "y": 2,
+              "z": 0,
+            },
+            {
+              "x": 4,
+              "y": 2,
+              "z": 0,
+            },
+            {
+              "x": 4,
+              "y": 0,
+              "z": 2,
+            },
+          ],
+          "tone": "shade",
+          "toneOffset": 0,
+        },
+        {
+          "mat": "steel",
+          "normal": {
+            "x": 0,
+            "y": -1,
+            "z": 0,
+          },
+          "pts": [
+            {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+            },
+            {
+              "x": 4,
+              "y": 0,
+              "z": 0,
+            },
+            {
+              "x": 4,
+              "y": 0,
+              "z": 2,
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "z": 2,
+            },
+          ],
+          "tone": "shade",
+          "toneOffset": 0,
+        },
+        {
+          "mat": "steel",
+          "normal": {
+            "x": 0,
+            "y": 0,
+            "z": 0,
+          },
+          "pts": [
+            {
+              "x": 0,
+              "y": 2,
+              "z": 0,
+            },
+            {
+              "x": 4,
+              "y": 2,
+              "z": 0,
+            },
+            {
+              "x": 4,
+              "y": 2,
+              "z": 0,
+            },
+            {
+              "x": 0,
+              "y": 2,
+              "z": 0,
+            },
+          ],
+          "tone": "shade",
+          "toneOffset": 0,
+        },
+      ]
+    `);
+  });
+});
+
+describe("placas", () => {
+  const P: Solid & { kind: "prism" } = { kind: "prism", at: v3(0, 0, 0), w: 4, d: 3, h: 6, mat: "brick" };
+  const plate = (wall: number, extra: Partial<Plate> = {}): Plate => ({ wall, shape: "rect", u0: 0.25, u1: 0.75, z0: 1, z1: 3, mat: "steel", ...extra });
+  const near = (a: number, lo: number, hi: number) => a >= lo - 1e-9 && a <= hi + 1e-9;
+  const isSouth = (f: Face) => f.mat === "brick" && f.pts.every((p) => p.y === 3) && Math.abs(f.normal.z) < 1e-6;
+
+  it("rect en la pared sur: sale justo después de la cara sur, coplanar y dentro de su rectángulo", () => {
+    const s = { ...P, plates: [plate(2)] };
+    for (const faces of [tessellateAll(s), tessellate(s)]) {
+      const i = faces.findIndex(isSouth);
+      expect(i).toBeGreaterThanOrEqual(0);
+      const pl = faces[i + 1]!;
+      expect(pl.mat).toBe("steel");
+      expect(pl.normal).toEqual(faces[i]!.normal);
+      expect(pl.tone).toBe(faces[i]!.tone);
+      expect(pl.toneOffset).toBe(0);
+      expect(pl.pts).toHaveLength(4);
+      for (const p of pl.pts) { expect(p.y).toBe(3); expect(near(p.x, 1, 3)).toBe(true); expect(near(p.z, 1, 3)).toBe(true); }
+      expect(faces.filter((f) => f.mat === "steel")).toHaveLength(1);
+    }
+  });
+
+  it("toneOffset de la placa se respeta", () => {
+    const pl = tessellateAll({ ...P, plates: [plate(2, { toneOffset: -2 })] }).find((f) => f.mat === "steel")!;
+    expect(pl.toneOffset).toBe(-2);
+  });
+
+  it("placa en la pared norte: está en tessellateAll con la normal norte y no aparece en tessellate", () => {
+    const s = { ...P, plates: [plate(0)] };
+    const all = tessellateAll(s).find((f) => f.mat === "steel")!;
+    expect(all.normal.y).toBeLessThan(0);
+    expect(all.pts.every((p) => p.y === 0)).toBe(true);
+    expect(tessellate(s).some((f) => f.mat === "steel")).toBe(false);
+  });
+
+  it("disc: octógono de 8 puntos que toca los cuatro bordes del rectángulo; tri: 3 puntos con vértice arriba al medio", () => {
+    const disc = tessellateAll({ ...P, plates: [plate(2, { shape: "disc" })] }).find((f) => f.mat === "steel")!;
+    expect(disc.pts).toHaveLength(8);
+    for (const p of disc.pts) { expect(p.y).toBe(3); expect(near(p.x, 1, 3)).toBe(true); expect(near(p.z, 1, 3)).toBe(true); }
+    expect(Math.min(...disc.pts.map((p) => p.x))).toBeCloseTo(1, 9);
+    expect(Math.max(...disc.pts.map((p) => p.x))).toBeCloseTo(3, 9);
+    expect(Math.min(...disc.pts.map((p) => p.z))).toBeCloseTo(1, 9);
+    expect(Math.max(...disc.pts.map((p) => p.z))).toBeCloseTo(3, 9);
+    const tri = tessellateAll({ ...P, plates: [plate(2, { shape: "tri" })] }).find((f) => f.mat === "steel")!;
+    expect(tri.pts).toHaveLength(3);
+    const exp = [v3(1, 3, 1), v3(3, 3, 1), v3(2, 3, 3)];
+    tri.pts.forEach((p, k) => { for (const c of ["x", "y", "z"] as const) expect(p[c]).toBeCloseTo(exp[k]![c], 9); });
+  });
+
+  it("poly de 5 lados: la placa de wall 3 cae sobre la arista 3, y una de wall 1 recorre la arista diagonal", () => {
+    const footprint = [{ x: 0, y: 0 }, { x: 6, y: 0 }, { x: 8, y: 3 }, { x: 4, y: 6 }, { x: 0, y: 4 }];
+    const s: Solid = { kind: "poly", footprint, z: 1, h: 3, mat: "rock", plates: [plate(3, { u0: 0, u1: 1, z0: 2, z1: 3 }), plate(1, { mat: "glass", z0: 2, z1: 3 })] };
+    const all = tessellateAll(s);
+    const edge3 = all.findIndex((f) => f.mat === "rock" && f.pts.length === 4 && f.pts.some((p) => p.x === 4 && p.y === 6) && f.pts.some((p) => p.x === 0 && p.y === 4));
+    expect(edge3).toBeGreaterThanOrEqual(0);
+    const pl = all[edge3 + 1]!;
+    expect(pl.mat).toBe("steel");
+    expect(pl.normal).toEqual(all[edge3]!.normal);
+    const plan = pl.pts.map((p) => `${p.x},${p.y}`);
+    expect(plan).toContain("4,6");
+    expect(plan).toContain("0,4");
+    const diag = all.find((f) => f.mat === "glass")!;
+    const xs = diag.pts.map((p) => p.x), ys = diag.pts.map((p) => p.y);
+    expect(Math.min(...xs)).toBeCloseTo(6.5, 9); expect(Math.max(...xs)).toBeCloseTo(7.5, 9);
+    expect(Math.min(...ys)).toBeCloseTo(0.75, 9); expect(Math.max(...ys)).toBeCloseTo(2.25, 9);
+  });
+
+  it("facade y plates en la misma pared: primero la pared, luego la fachada, luego las placas; las otras paredes no la llevan", () => {
+    const facade = { floors: 2, cols: 1 };
+    const all = tessellateAll({ ...P, facade, plates: [plate(2)] });
+    const i = all.findIndex(isSouth);
+    const n = facadeFaces(all[i]!, facade).length;
+    expect(n).toBeGreaterThan(0);
+    for (const f of all.slice(i + 1, i + 1 + n)) expect(f.mat === "glass" || (f.mat === "brick" && f.toneOffset === -1)).toBe(true);
+    expect(all[i + 1 + n]!.mat).toBe("steel");
+    expect(all.filter((f) => f.mat === "steel")).toHaveLength(1);
+  });
+
+  it("dos placas en la misma pared salen en el orden del arreglo, después de la pared este", () => {
+    const all = tessellateAll({ ...P, plates: [plate(1, { mat: "steel" }), plate(1, { mat: "glass" })] });
+    const i = all.findIndex((f) => f.mat === "brick" && f.pts.every((p) => p.x === 4) && Math.abs(f.normal.z) < 1e-6);
+    expect(all[i + 1]!.mat).toBe("steel");
+    expect(all[i + 2]!.mat).toBe("glass");
+  });
+
+  it("bounds igual con y sin placas, aun con una placa que sobresale", () => {
+    expect(bounds({ ...P, plates: [plate(2)] })).toEqual(bounds(P));
+    expect(bounds({ ...P, plates: [plate(2, { u0: -0.5, u1: 1.5, z0: 5, z1: 9 })] })).toEqual(bounds(P));
+  });
+
+  it("roof gable ignora las placas; roof step las aplica solo a la caja", () => {
+    const gable = { ...P, roof: "gable" as const };
+    expect(tessellateAll({ ...gable, plates: [plate(2)] })).toEqual(tessellateAll(gable));
+    const step = tessellateAll({ ...P, roof: "step", plates: [plate(2)] });
+    expect(step.filter((f) => f.mat === "steel")).toHaveLength(1);
+    const i = step.findIndex((f) => f.mat === "steel");
+    expect(isSouth(step[i - 1]!)).toBe(true);
+  });
+
+  it("wall fuera de rango: no tira y no emite placa", () => {
+    for (const wall of [4, -1, 1.5]) expect(tessellateAll({ ...P, plates: [plate(wall)] })).toEqual(tessellateAll(P));
+  });
+
+  describe("en ramp", () => {
+    const R: Solid & { kind: "ramp" } = { kind: "ramp", at: v3(0, 0, 0), w: 4, d: 2, h: 2, mat: "steel", dir: "n" };
+    const rp = (wall: number, extra: Partial<Plate> = {}): Plate => plate(wall, { mat: "glass", z0: 0.2, z1: 0.8, ...extra });
+    const wallOf = (faces: Face[], pred: (p: Vec3) => boolean) => faces.findIndex((f) => f.mat === "steel" && Math.abs(f.normal.z) < 1e-6 && f.pts.every(pred));
+
+    it("placa en wall 2: sale después del lado sur, en tessellateAll y en tessellate", () => {
+      const s = { ...R, plates: [rp(2)] };
+      for (const faces of [tessellateAll(s), tessellate(s)]) {
+        const i = wallOf(faces, (p) => p.y === 2);
+        expect(i).toBeGreaterThanOrEqual(0);
+        const pl = faces[i + 1]!;
+        expect(pl.mat).toBe("glass");
+        expect(pl.normal).toEqual(faces[i]!.normal);
+        expect(pl.pts.every((p) => p.y === 2)).toBe(true);
+      }
+    });
+
+    it("placa en wall 3 (oeste): recorre la arista de (0, 2) a (0, 0), después de la pared oeste", () => {
+      const all = tessellateAll({ ...R, plates: [rp(3, { u0: 0.1, u1: 0.3, z0: 0.5, z1: 1.5 })] });
+      const i = wallOf(all, (p) => p.x === 0);
+      const pl = all[i + 1]!;
+      expect(pl.mat).toBe("glass");
+      expect(pl.normal).toEqual(all[i]!.normal);
+      for (const p of pl.pts) { expect(p.x).toBe(0); expect(near(p.y, 1.4, 1.8)).toBe(true); }
+    });
+
+    it("placa en wall 1 más alta que el perfil: no se recorta", () => {
+      const pl = tessellateAll({ ...R, plates: [rp(1, { u0: 0, u1: 0.2, z0: 0.5, z1: 1.9 })] }).find((f) => f.mat === "glass")!;
+      expect(Math.max(...pl.pts.map((p) => p.z))).toBeCloseTo(1.9, 9);
+      expect(pl.pts.every((p) => p.x === 4)).toBe(true);
+    });
+
+    it("bounds igual con y sin placas", () => {
+      expect(bounds({ ...R, plates: [rp(2), rp(1, { z1: 5 })] })).toEqual(bounds(R));
+    });
   });
 });
