@@ -5,12 +5,13 @@ import type { Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { WORLD } from "../map/geo";
 import { jungle } from "./flora";
+import { boilerHouse } from "./boiler-house";
 import { towerCrane } from "./pieces";
 
 /**
  * Fábrica, detrás (al norte) y al oeste del astillero. Banda norte
- * `x -60..205, y -60..0` al oeste del río: planta de ladrillo con dientes de
- * sierra, tres chimeneas humeantes, torre de enfriamiento, grúa torre sobre un
+ * `x -60..205, y -60..0` al oeste del río: nave de calderas de la Fábrica de Luz (al
+ * oeste, el marcador de la maltería), tres chimeneas humeantes, torre de enfriamiento, grúa torre sobre un
  * desvío ferroviario, cinta transportadora hasta el patio de material,
  * subestación y playa de camiones. Columna oeste `x -60..0, y 0..146`: playa
  * de vías y acopios de mineral, selva al sur. El terreno es `slab`.
@@ -19,6 +20,7 @@ import { towerCrane } from "./pieces";
 export interface FactoryScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; stacks: Vec3[] }
 
 export const PLANT = { x: 20, y: -46, w: 100, d: 30, h: 14 } as const;
+export const MALT = { x: 20, y: -46, w: 24, d: 30, h: 18 } as const;
 export const STACKS = [{ x: 130, y: -40, r: 2.8, h: 22 }, { x: 140, y: -34, r: 2.6, h: 26 }, { x: 150, y: -40, r: 2.4, h: 24 }] as const;
 export const STACK_BASE_H = 3;
 const DECK_H = 0.3; // losa de la plataforma de las chimeneas
@@ -37,12 +39,10 @@ function lamp(out: Solid[], accents: Accent[], x: number, y: number): void {
 }
 
 function plant(out: Solid[]): void {
-  const { x, y, w, d, h } = PLANT;
-  out.push(prism(x, y, 0, w, d, h, "brick"));
-  for (let i = 0; i < 5; i++) out.push({ kind: "ramp", at: v3(x + i * 20, y, h), w: 20, d, h: 4, mat: "brick", dir: "w" }); // dientes de sierra: cara vertical al este
-  out.push(prism(x - 0.6, y - 0.6, h - 0.8, w + 1.2, d + 1.2, 0.8, "concrete"));                                      // cornisa, bajo el techo: no pisa la huella de los dientes
-  for (const px of [x + 20, x + 60]) out.push(prism(px, y + d - 0.2, 0, 6, 0.5, 8, "concrete"));                       // portones en la cara sur, sobresalen 0.3 (no coplanares con el muro)
-  out.push(prism(x + w - 0.2, -23, 0, 0.5, 6, 8, "concrete"));                                                        // portón este, de donde sale la cinta
+  const { x, y, w } = PLANT;
+  out.push(prism(MALT.x, MALT.y, 0, MALT.w, MALT.d, MALT.h, "brick")); // marcador de la maltería, al oeste de la nave
+  boilerHouse(out);
+  out.push(prism(x + w - 0.2, -23, 0, 0.5, 6, 8, "concrete"));          // portón este, de donde sale la cinta
 }
 
 export type Stack = (typeof STACKS)[number];

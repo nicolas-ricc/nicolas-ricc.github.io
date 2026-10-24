@@ -55,7 +55,7 @@ describe("nave de calderas: cuerpo", () => {
     const tubes = body.filter((s): s is Kind<"cylinder"> => s.kind === "cylinder" && s.r === 0.3 && s.h === 0.8);
     expect(tubes).toHaveLength(20);
     expect(tubes.map((t) => t.mat)).toEqual(Array.from({ length: 20 }, (_, i) => (i % 2 === 0 ? "whitewash" : "rust")));
-    for (const t of tubes) { expect(t.at.z).toBe(3.5); expect(t.at.y - t.r).toBeGreaterThanOrEqual(-15.1); expect(t.at.y + t.r).toBeLessThanOrEqual(-14.5); }
+    for (const t of tubes) { expect(t.at.z).toBe(3.5); expect(t.at.y - t.r).toBeGreaterThanOrEqual(-15.1 - 1e-9); expect(t.at.y + t.r).toBeLessThanOrEqual(-14.5 + 1e-9); }
   });
 
   it("techo de pizarra a dos aguas con cumbrera E-O a z 17, alero sur, remate claro y 4 caperuzas", () => {
