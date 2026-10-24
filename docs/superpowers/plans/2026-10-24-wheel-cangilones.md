@@ -42,6 +42,8 @@ Decisiones técnicas sin fuente explícita (salieron del grilling; van a la desc
 - **Entradas degeneradas** (`depth ≤ 0`, `n ≤ 0`, `teeth < 0`, `slots` no entero, `r − 2.2·width ≤ 0`) son responsabilidad del llamador, como hoy: `wheel()` no valida `sides`, `r` ni `width` (`src/iso/solids.ts:215-239`). Con `n`, `teeth` o `slots` ≤ 0 los bucles simplemente no emiten nada.
 
 
+## Review Focus
+
 1. Rueda sin opciones nuevas (la noria): teselación idéntica byte a byte → snapshot inline tomado **antes** del cambio (Task 1).
 2. `hollow` sin `slots` (o `slots: 0`): `2·sides` caras, sin rayos ni cubo → test en Task 1.
 3. `buckets` sin `hollow`: rayos y cubo siguen; suma `n·(2 + teeth)` caras → test en Task 2.
