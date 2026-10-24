@@ -11,7 +11,7 @@ import { maltings, waterTower } from "./maltings";
 import { MALT, PLANT, RAIL_YARD_X, STACKS, STACK_BASE_H, chimney, factory, type FactoryScene, type Stack } from "./factory";
 import { towerCrane } from "./pieces";
 import { FIREWALL, PHASES_Y, SUBSTATION, TRANSFORMERS_Y, currentTransformer, disconnector, droppers, powerTransformer, substation } from "./substation";
-import { EXCAVATOR, excavator, excavatorBox } from "./excavator";
+import { EXCAVATOR, excavator, excavatorBox, excavatorWheel, local } from "./excavator";
 import { terrainAt } from "./terrain";
 
 const scene = (): FactoryScene => factory(createRng(7));
@@ -54,7 +54,8 @@ describe("factory", () => {
   });
 
   it("nada apoya en agua y todo lo que supera z 26 es esbelto (cilindro r ≤ 4, prisma fino o viga)", () => {
-    for (const x of scene().solids) {
+    const sc = scene();
+    for (const x of [...sc.solids, ...sc.excavator]) {
       const b = bounds(x);
       if (x.kind !== "cone") expect(terrainAt(b.min.x, b.min.y)).not.toBe("water");
       expect(tallOk(x)).toBe(true);
@@ -199,7 +200,7 @@ describe("factory", () => {
     expect(s.accents.length).toBeGreaterThanOrEqual(7);
     expect(s.accents.every((a) => a.kind === "dot" && ["cyan", "magenta", "amber"].includes(a.color) && a.at.z > 0)).toBe(true);
     const colors = allIsoColors();
-    for (const i of buildRenderList([...s.ground, ...s.solids])) expect(colors.has(i.color)).toBe(true);
+    for (const i of buildRenderList([...s.ground, ...s.solids, ...s.excavator])) expect(colors.has(i.color)).toBe(true);
   });
 });
 
@@ -562,8 +563,10 @@ describe("subestación de intemperie (#215)", () => {
         expect(b.to.y).toBeGreaterThan(b.from.y);
 describe("excavadora en la playa de vías", () => {
   const machine = (): Solid[] => { const out: Solid[] = []; excavator(out, []); return out; };
+  const withWheel = (): Solid[] => [...machine(), excavatorWheel(0)]; // la rueda también cuenta contra vías, vagones y farol
+  const axle = local(EXCAVATOR.axleDx, 0);
   const piles = (sc: FactoryScene) => sc.solids.filter((x): x is Solid & { kind: "cone" } => x.kind === "cone" && (x.mat === "rust" || x.mat === "sand"));
-  const isFixed = (p: Solid & { kind: "cone" }) => Math.abs(p.at.x + 14) < EPS && Math.abs(p.at.y - 60) < EPS && p.r === EXCAVATOR.pile.r;
+  const isFixed = (p: Solid & { kind: "cone" }) => Math.abs(p.at.x - axle.x) < EPS && Math.abs(p.at.y - axle.y) < EPS && p.r === EXCAVATOR.pile.r;
 
   it("la escena trae la máquina entera en scene.excavator y ninguna pieza en scene.solids", () => {
     const sc = scene();
@@ -575,7 +578,7 @@ describe("excavadora en la playa de vías", () => {
   });
 
   it("ningún sólido toca las vías salvo por encima (z ≥ 2)", () => {
-    for (const x of machine()) {
+    for (const x of withWheel()) {
       const b = bounds(x);
       for (const rx of RAIL_YARD_X) for (const dx of [-0.8, 0.8]) {
         const x0 = rx + dx - 0.2, x1 = rx + dx + 0.2;
@@ -621,7 +624,7 @@ describe("excavadora en la playa de vías", () => {
     expect(wagons).toHaveLength(8);
     const lamp = s.solids.find((x) => x.kind === "prism" && x.at.x === -30 && x.at.y === 20 && x.w === 0.6)!;
     expect(lamp).toBeDefined();
-    for (const x of machine()) {
+    for (const x of withWheel()) {
       for (const w of [...wagons, lamp]) expect(apart(x, w)).toBe(true);
       expect(bounds(x).max.y).toBeLessThanOrEqual(108);
     }
@@ -646,7 +649,7 @@ describe("excavadora en la playa de vías", () => {
     for (const p of piles(factory(createRng(seed)))) {
       expect(p.at.x - p.r).toBeGreaterThanOrEqual(-39);
       if (isFixed(p)) continue;
-      const touches = p.at.x + p.r > box.x0 && p.at.x - p.r < box.x1 && p.at.y + p.r > box.y0 && p.at.y - p.r < box.y1;
+      const touches = p.at.x + p.r > box.x0 - 1 && p.at.x - p.r < box.x1 + 1 && p.at.y + p.r > box.y0 - 1 && p.at.y - p.r < box.y1 + 1; // caja inflada 1, como la implementación
       expect(touches).toBe(false);
     }
   });
