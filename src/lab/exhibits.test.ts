@@ -199,3 +199,14 @@ describe("entrada del índice fuera de la vista (#117)", () => {
     expect(outOfView({ top: 590, bottom: 612 }, low)).toBe(true);
   });
 });
+
+describe("caja de la planta con maltería y tanque (#214)", () => {
+  it("planta arranca en x 2 y sube a 26: entran la pasarela del tanque (r 4.6) y el vértice del horno", () => {
+    const e = regions.find((r) => r.id === "planta")!;
+    expect(e.box.x0).toBe(2);
+    expect(e.h).toBe(26);
+    const cs = cropScene(scene, e.box);
+    expect(cs.solids.some((s) => s.kind === "cylinder" && s.r === 4.6 && s.at.x === 10 && s.at.y === -36)).toBe(true);
+    expect(cs.solids.some((s) => s.kind === "cone" && s.sides === 4 && s.at.z + s.h === 26)).toBe(true);
+  });
+});
