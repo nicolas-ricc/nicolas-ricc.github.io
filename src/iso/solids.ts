@@ -245,14 +245,12 @@ function wheel(s: Solid & { kind: "wheel" }): Face[] {
   const flat = (pts: Vec3[], mat: Material = s.mat, toneOffset = 0): Face => ({ pts, normal: WHEEL_NORMAL, mat, tone: "top", toneOffset });
   const out: Face[] = [];
   const hub = s.r * 0.12, inner = s.r - s.width, half = s.width / 6;
-  // barra radial de ancho width/3 sobre el ángulo `a`, de radio r0 a r1
   const bar = (a: number, r0: number, r1: number): Face => {
     const px = -Math.sin(a) * half, pz = Math.cos(a) * half; // perpendicular al rayo dentro del plano
     const off = (p: Vec3, sgn: number): Vec3 => v3(p.x + WHEEL_U.x * px * sgn, p.y + WHEEL_U.y * px * sgn, p.z + pz * sgn);
     const i0 = wheelPoint(s.at, a, r0), i1 = wheelPoint(s.at, a, r1);
     return flat([off(i0, -1), off(i1, -1), off(i1, 1), off(i0, 1)]);
   };
-  // sector de llanta entre los ángulos a0 y a1, de radio r0 a r1
   const sector = (a0: number, a1: number, r0: number, r1: number): Face => flat([wheelPoint(s.at, a0, r0), wheelPoint(s.at, a1, r0), wheelPoint(s.at, a1, r1), wheelPoint(s.at, a0, r1)]);
   for (let k = 0; k < s.sides; k++) {
     const a0 = s.angle + (2 * Math.PI * k) / s.sides, a1 = s.angle + (2 * Math.PI * (k + 1)) / s.sides;
@@ -280,10 +278,10 @@ function wheel(s: Solid & { kind: "wheel" }): Face[] {
       // dientes: triángulos equiláteros sobre el borde delantero E0 -> E1, con el vértice hacia fuera del trapecio
       const [e0u, e0z] = uz(e0), [e1u, e1z] = uz(e1), [mu, mz] = uz(m);
       const du = e1u - e0u, dz = e1z - e0z, len = Math.hypot(du, dz);
-      const tu = du / len, tz = dz / len; // a lo largo del borde
+      const tu = du / len, tz = dz / len;
       let nu = tz, nz = -tu; // perpendicular al borde
       if (nu * (e0u + du / 2 - mu) + nz * (e0z + dz / 2 - mz) < 0) { nu = -nu; nz = -nz; }
-      const hb = side / 2, ht = (side * Math.sqrt(3)) / 2; // media base y altura del diente
+      const hb = side / 2, ht = (side * Math.sqrt(3)) / 2;
       for (let j = 0; j < teeth; j++) {
         const f = (j + 0.5) / teeth, cu = e0u + du * f, cz = e0z + dz * f;
         const b0 = back(cu - tu * hb, cz - tz * hb), b1 = back(cu + tu * hb, cz + tz * hb), apex = back(cu + nu * ht, cz + nz * ht);
