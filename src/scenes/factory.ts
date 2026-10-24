@@ -44,13 +44,30 @@ function plant(out: Solid[]): void {
   out.push(prism(x + w - 0.2, -23, 0, 0.5, 6, 8, "concrete"));                                                        // portón este, de donde sale la cinta
 }
 
-function chimneys(out: Solid[]): Vec3[] {
-  return STACKS.map((s) => {
-    out.push(prism(s.x - 3.5, s.y - 3.5, 0, 7, 7, STACK_BASE_H, "concrete"));
-    out.push({ kind: "cylinder", at: v3(s.x, s.y, STACK_BASE_H), r: s.r, h: s.h, mat: "brick" });
-    out.push({ kind: "cylinder", at: v3(s.x, s.y, STACK_BASE_H + (s.h * 2) / 3), r: s.r + 0.2, h: 1, mat: "rust" }); // banda a dos tercios
-    return v3(s.x, s.y, STACK_BASE_H + s.h);
-  });
+export type Stack = (typeof STACKS)[number];
+
+/** Chimenea: pedestal, base escalonada, fuste que se afina con zunchos, siete bandas, corona y puerta. Devuelve la boca. */
+export function chimney(s: Stack, out: Solid[], accents: Accent[]): Vec3 {
+  void accents;
+  const B = STACK_BASE_H, M = B + s.h;
+  const cyl = (z: number, r: number, h: number, mat: Material): Solid => ({ kind: "cylinder", at: v3(s.x, s.y, z), r, h, mat });
+  out.push(prism(s.x - 3.5, s.y - 3.5, 0, 7, 7, B, "concrete"));
+  out.push(cyl(B, s.r + 1.0, 1.5, "brick"), cyl(B + 1.5, s.r + 0.6, 1.5, "brick")); // base escalonada
+  const z0 = B + 3, z1 = M - 0.6, half = (z1 - z0) / 2, seg = half / 4;
+  const radii = [0.5, (0.5 * 2) / 3, 0.5 / 3, 0].map((d) => s.r + d);              // mitad inferior: se afina hasta r
+  radii.forEach((r, i) => out.push(cyl(z0 + i * seg, r, seg, "brick")));
+  for (let z = z0 + 3; z + 0.2 <= z0 + half; z += 3) {                              // zunchos: asoman 0.1 del tramo que abrazan
+    out.push(cyl(z, radii[Math.min(3, Math.floor((z - z0) / seg))]! + 0.1, 0.2, "steel"));
+  }
+  const band = half / 7;
+  for (let i = 0; i < 7; i++) out.push(cyl(z0 + half + i * band, s.r, band, i % 2 === 0 ? "signal" : "whitewash"));
+  out.push(cyl(M - 0.6, s.r + 0.4, 0.6, "brick"));                                    // corona
+  out.push(prism(s.x - 0.45, s.y + 3.5, 0, 0.9, 0.3, 1.4, "steel"));                  // puerta en la cara sur del pedestal
+  return v3(s.x, s.y, M);
+}
+
+function chimneys(out: Solid[], accents: Accent[]): Vec3[] {
+  return STACKS.map((s) => chimney(s, out, accents));
 }
 
 function coolingTower(out: Solid[]): void {
@@ -106,7 +123,7 @@ function lamps(out: Solid[], accents: Accent[]): void {
 export function factory(rng: Rng): FactoryScene {
   const solids: Solid[] = [], accents: Accent[] = [];
   plant(solids);
-  const stacks = chimneys(solids);
+  const stacks = chimneys(solids, accents);
   coolingTower(solids);
   towerCrane(solids, accents, { at: { x: 60, y: -12 }, mastH: 20, jibLen: 30, dir: "e", light: "cyan" });
   siding(solids);
