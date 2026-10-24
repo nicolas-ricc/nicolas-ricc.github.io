@@ -561,28 +561,6 @@ describe("subestación de intemperie (#215)", () => {
         expect(near(b.from.z, 4.5)).toBe(true);
         expect((b.to.z - b.from.z) / beamLen(b)).toBeCloseTo(Math.sin((35 * Math.PI) / 180));
         expect(b.to.y).toBeGreaterThan(b.from.y);
-describe("excavadora en la playa de vías", () => {
-  const machine = (): Solid[] => { const out: Solid[] = []; excavator(out, []); return out; };
-  const withWheel = (): Solid[] => [...machine(), excavatorWheel(0)]; // la rueda también cuenta contra vías, vagones y farol
-  const axle = local(EXCAVATOR.axleDx, 0);
-  const piles = (sc: FactoryScene) => sc.solids.filter((x): x is Solid & { kind: "cone" } => x.kind === "cone" && (x.mat === "rust" || x.mat === "sand"));
-  const isFixed = (p: Solid & { kind: "cone" }) => Math.abs(p.at.x - axle.x) < EPS && Math.abs(p.at.y - axle.y) < EPS && p.r === EXCAVATOR.pile.r;
-
-  it("la escena trae la máquina entera en scene.excavator y ninguna pieza en scene.solids", () => {
-    const sc = scene();
-    expect(sc.excavator).toEqual(machine());
-    expect(sc.excavator.length).toBeGreaterThan(0);
-    for (const x of sc.excavator) expect(sc.solids).not.toContain(x);
-    const s = JSON.stringify(sc.solids);
-    for (const x of machine()) expect(s).not.toContain(JSON.stringify(x));
-  });
-
-  it("ningún sólido toca las vías salvo por encima (z ≥ 2)", () => {
-    for (const x of withWheel()) {
-      const b = bounds(x);
-      for (const rx of RAIL_YARD_X) for (const dx of [-0.8, 0.8]) {
-        const x0 = rx + dx - 0.2, x1 = rx + dx + 0.2;
-        if (b.max.x > x0 && b.min.x < x1) expect(b.min.z).toBeGreaterThanOrEqual(2);
       }
     }
   });
@@ -618,6 +596,35 @@ describe("excavadora en la playa de vías", () => {
     const tip = 4.5 + 2.5 * Math.sin((35 * Math.PI) / 180);
     expect(d.map((b) => Math.round(b.to.z * 1000) / 1000).sort()).toEqual([...Array(3).fill(4.5), ...Array(3).fill(5.65), ...Array(6).fill(Math.round(tip * 1000) / 1000)].sort()); // brazo, cabeza del TI, punta del pasatapas
     for (const b of d.filter((x) => near(x.to.z, tip))) expect(near(b.from.y, b.to.y > -52 ? PHASES_Y[2] : PHASES_Y[1])).toBe(true); // T1 → −53.5, T2 → −50
+  });
+});
+
+describe("excavadora en la playa de vías", () => {
+  const machine = (): Solid[] => { const out: Solid[] = []; excavator(out, []); return out; };
+  const withWheel = (): Solid[] => [...machine(), excavatorWheel(0)]; // la rueda también cuenta contra vías, vagones y farol
+  const axle = local(EXCAVATOR.axleDx, 0);
+  const piles = (sc: FactoryScene) => sc.solids.filter((x): x is Solid & { kind: "cone" } => x.kind === "cone" && (x.mat === "rust" || x.mat === "sand"));
+  const isFixed = (p: Solid & { kind: "cone" }) => Math.abs(p.at.x - axle.x) < EPS && Math.abs(p.at.y - axle.y) < EPS && p.r === EXCAVATOR.pile.r;
+
+  it("la escena trae la máquina entera en scene.excavator y ninguna pieza en scene.solids", () => {
+    const sc = scene();
+    expect(sc.excavator).toEqual(machine());
+    expect(sc.excavator.length).toBeGreaterThan(0);
+    for (const x of sc.excavator) expect(sc.solids).not.toContain(x);
+    const s = JSON.stringify(sc.solids);
+    for (const x of machine()) expect(s).not.toContain(JSON.stringify(x));
+  });
+
+  it("ningún sólido toca las vías salvo por encima (z ≥ 2)", () => {
+    for (const x of withWheel()) {
+      const b = bounds(x);
+      for (const rx of RAIL_YARD_X) for (const dx of [-0.8, 0.8]) {
+        const x0 = rx + dx - 0.2, x1 = rx + dx + 0.2;
+        if (b.max.x > x0 && b.min.x < x1) expect(b.min.z).toBeGreaterThanOrEqual(2);
+      }
+    }
+  });
+
   it("ni los vagones, ni el farol (−30, 20), y toda la máquina en y ≤ 108", () => {
     const s = scene();
     const wagons = s.solids.filter((x) => x.kind === "prism" && x.w === 2.2 && x.d === 7 && x.h === 2.8);
