@@ -71,6 +71,18 @@ describe("paleta isométrica", () => {
     }
   });
 
+  it("materiales de la fábrica detallada: balizamiento rojo, ladrillo amarillo y baranda amarilla", () => {
+    const rgb = (c: number) => [(c >> 16) & 255, (c >> 8) & 255, c & 255] as const;
+    const [sr, sg, sb] = rgb(ISO_TONES.signal.top);
+    expect(sr).toBeGreaterThan(sg + 60);
+    expect(sr).toBeGreaterThan(sb + 60);
+    for (const m of ["stockbrick", "safety"] as const) {
+      const [r, g, b] = rgb(ISO_TONES[m].top);
+      expect(r).toBeGreaterThan(b + 40);
+      expect(g).toBeGreaterThan(b + 40);
+    }
+  });
+
   it("agua: cuatro profundidades que se oscurecen, seno frío y cresta clara que sigue siendo agua; el sol va en glint", () => {
     aguaYDestello(ISO_TONES, DARKEN);
     expect(Object.keys(ISO_TONES.hullBlue).sort()).toEqual(["down", "lit", "shade", "top", "up"]);
