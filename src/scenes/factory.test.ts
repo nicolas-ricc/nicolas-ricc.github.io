@@ -47,7 +47,7 @@ describe("factory", () => {
     expect(tallOk({ kind: "prism", at: { x: 0, y: 0, z: 27 }, w: 30, d: 1, h: 1, mat: "steel" })).toBe(true);
   });
 
-  it("planta de ladrillo con dientes de sierra, tres chimeneas con banda, torre de enfriamiento y grúa", () => {
+  it("planta de ladrillo con dientes de sierra, tres chimeneas sin banda rust, torre de enfriamiento y grúa", () => {
     const s = scene();
     const plant = s.solids.find((x) => x.kind === "prism" && x.mat === "brick" && x.h === PLANT.h)!;
     expect(bounds(plant)).toMatchObject({ min: { x: PLANT.x, y: PLANT.y } });
@@ -102,7 +102,7 @@ const apart = (a: Solid, b: Solid) => {
 };
 const APO = Math.cos(Math.PI / 8); // apotema de un cilindro de 8 lados con radio 1
 
-const isRung = (x: Solid): x is Solid & { kind: "beam" } => x.kind === "beam" && x.from.y === x.to.y && Math.abs(Math.abs(x.to.x - x.from.x) - 0.7) < 1e-9; // peldaño: 0.7 de ancho
+const isRung = (x: Solid): x is Solid & { kind: "beam" } => x.kind === "beam" && x.from.y === x.to.y && Math.abs(Math.abs(x.to.x - x.from.x) - 0.7) < 1e-9; // peldaño: 0.7 de ancho y E-O; la baranda une postes a k·π/4, ninguna cuerda corre E-O
 
 describe.each(STACKS.map((st, i) => [i, st] as const))("chimenea %i", (_i, st) => {
   const B = STACK_BASE_H, M = B + st.h, z0 = B + 3;
@@ -153,6 +153,11 @@ describe.each(STACKS.map((st, i) => [i, st] as const))("chimenea %i", (_i, st) =
       expect(seg).toBeDefined();
       expect(h.r).toBeCloseTo(seg!.r + 0.1, 6);
     }
+    const order = sortByDepth(out);
+    for (const h of hoops) { // el tramo que abraza empata en los tres ejes: tiene que ir antes o lo tapa
+      const seg = shaft.find((s) => h.at.z >= s.at.z - EPS && h.at.z + h.h <= s.at.z + s.h + EPS)!;
+      expect(order.indexOf(seg)).toBeLessThan(order.indexOf(h));
+    }
   });
 
   it("puerta en la cara sur del pedestal", () => {
@@ -165,7 +170,8 @@ describe.each(STACKS.map((st, i) => [i, st] as const))("chimenea %i", (_i, st) =
     const { out } = one(st);
     const deck = cyls(out, "concrete");
     expect(deck).toHaveLength(1);
-    expect(deck[0]!.r).toBeCloseTo(st.r + 1.2, 6); expect(deck[0]!.h).toBeCloseTo(0.3, 6); const bands = cyls(out, "signal", "whitewash");
+    expect(deck[0]!.r).toBeCloseTo(st.r + 1.2, 6); expect(deck[0]!.h).toBeCloseTo(0.3, 6);
+    const bands = cyls(out, "signal", "whitewash");
     expect(deck[0]!.at.z).toBeCloseTo(bands[5]!.at.z + bands[5]!.h, 6); expect(deck[0]!.at.z + deck[0]!.h).toBeCloseTo(bands[6]!.at.z, 6); // llena la junta entre 6ª y 7ª banda
     const posts = boxes(out, 0.15, 0.15, 1.1).filter((p) => p.mat === "steel");
     expect(posts).toHaveLength(8);
