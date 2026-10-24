@@ -1,9 +1,8 @@
 import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
 import type { Plate } from "../iso/plate";
-import type { Solid } from "../iso/solids";
+import { bounds, type Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
-import { bounds } from "../iso/solids";
 import type { Box } from "../world/frame";
 
 /** Excavadora de rueda de cangilones SRs 1300 (TAKRAF) en la playa de vías: chasis en `at`, proa al NE (`heading`); el eje de la rueda queda a `axleDx` del chasis, a z `axleZ`. */
@@ -53,8 +52,8 @@ function chassis(out: Solid[]): void {
   }
   out.push({ kind: "cylinder", at: v3(EXCAVATOR.at.x, EXCAVATOR.at.y, 1.6), r: 4, h: 1, mat: "steel", sides: 16 }); // anillo de giro
   out.push(box(-6, -4.5, 6, 4.5, 2.6, 0.8, "office")); // plataforma
-  // barandas: pasamanos a z 4.4 sobre el borde sur (dy +4.3) y el borde NE (dx +5.8), postes de 0.15 cada 2 u
-  out.push(bar([-6, 4.3, 4.475], [5.8, 4.3, 4.475], 0.15, 0.15, "safety"), bar([5.8, -4.5, 4.475], [5.8, 4.3, 4.475], 0.15, 0.15, "safety")); // el pasamanos apoya sobre los postes (tope z 4.4)
+  // barandas: pasamanos a z 4.475 sobre el borde sur (dy +4.3) y el borde NE (dx +5.8), postes de 0.15 cada 2 u
+  out.push(bar([-6, 4.3, 4.475], [5.8, 4.3, 4.475], 0.15, 0.15, "safety"), bar([5.8, -4.5, 4.475], [5.8, 4.3, 4.475], 0.15, 0.15, "safety")); // el pasamanos (z 4.4..4.55) apoya sobre los postes (tope z 4.4)
   const post = (dx: number, dy: number) => out.push(box(dx - 0.075, dy - 0.075, dx + 0.075, dy + 0.075, 3.4, 1, "safety"));
   for (let dx = -5.85; dx < 5.8; dx += 2) post(dx, 4.3); // postes dentro de la plataforma (|dx| ≤ 5.925, |dy| ≤ 4.425)
   post(5.8, 4.3);
