@@ -76,9 +76,10 @@ describe("specs viejas de los barcos (#69)", () => {
 
 describe("documentación de la fábrica en detalle (#217)", () => {
   const factorySrc = readFileSync(`${ROOT}src/scenes/factory.ts`, "utf8");
+  const parrafos = readme.split(/\n\s*\n/);
   // espacios colapsados: el párrafo se envuelve a ~80 columnas
-  const mundo = (readme.split(/\n\s*\n/).find((p) => p.includes("`factory.ts`")) ?? "").replace(/\s+/g, " ");
-  const lab = readme.split(/\n\s*\n/).find((p) => p.includes("/lab/world.html")) ?? "";
+  const mundo = (parrafos.find((p) => p.includes("`factory.ts`")) ?? "").replace(/\s+/g, " ");
+  const lab = parrafos.find((p) => p.includes("/lab/world.html")) ?? "";
   const fab = readFileSync(`${ROOT}docs/superpowers/specs/2026-10-24-fabrica-detalle-design.md`, "utf8");
   const at = fab.search(/^## 14\. Desvíos y medición$/m);
   const desvios = at < 0 ? "" : fab.slice(at);
