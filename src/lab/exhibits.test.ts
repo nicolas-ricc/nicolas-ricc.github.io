@@ -3,11 +3,11 @@ import type { Accent } from "../iso/accent";
 import { project, Z_SCALE } from "../iso/project";
 import { bounds, type Solid } from "../iso/solids";
 import { BLEED, WORLD } from "../map/geo";
+import { WATER_TOWER, waterTower } from "../scenes/maltings";
 import { BEAM_PERIOD_MS } from "../scenes/sea-anim";
 import { assembleWorld } from "../world/assemble";
 import { type Box, FRAME_H, HALO_BASE } from "../world/frame";
 import { cropAnimators, cropScene } from "./crop";
-import { WATER_TOWER, waterTower } from "../scenes/maltings";
 import { EXHIBITS, GROUPS, type GroupId, outOfView, pickExhibit, stepExhibit } from "./exhibits";
 
 const regions = EXHIBITS.flatMap((e) => (e.kind === "region" ? [e] : []));
@@ -142,7 +142,6 @@ describe("selección por hash", () => {
   });
 });
 
-const waterTowerSolids = (at: { x: number; y: number }): Solid[] => { const out: Solid[] = []; waterTower(out, at); return out; };
 const pieces = EXHIBITS.flatMap((e) => (e.kind === "piece" ? [e] : []));
 
 describe("exhibits de pieza", () => {
@@ -168,7 +167,9 @@ describe("exhibits de pieza", () => {
     const e = EXHIBITS.find((x) => x.id === "tanque-agua")!;
     const out: Solid[] = [];
     if (e.kind === "piece") e.build(out, []);
-    expect(out).toHaveLength(waterTowerSolids(WATER_TOWER).length);
+    const ref: Solid[] = [];
+    waterTower(ref, WATER_TOWER);
+    expect(out).toHaveLength(ref.length);
     for (const s of out) if (s.kind === "cylinder" || s.kind === "cone") expect([s.at.x, s.at.y]).toEqual([0, 0]);
     const deck = out.find((s) => s.kind === "cylinder" && s.r === 4.6)!;
     expect(deck.kind === "cylinder" && deck.at.x === 0 && deck.at.y === 0).toBe(true);
