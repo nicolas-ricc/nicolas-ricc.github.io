@@ -4,9 +4,9 @@ import type { Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { WORLD } from "../map/geo";
-import { jungle } from "./flora";
 import { boilerHouse } from "./boiler-house";
-import { EXCAVATOR, excavator, excavatorBox } from "./excavator";
+import { EXCAVATOR, excavator, excavatorBox, local } from "./excavator";
+import { jungle } from "./flora";
 import { MALT, maltings, waterTower } from "./maltings";
 import { towerCrane } from "./pieces";
 import { substation } from "./substation";
@@ -113,13 +113,13 @@ function truckYard(out: Solid[], accents: Accent[]): void {
   for (const [x, y] of [[20, -14], [110, -3]] as const) lamp(out, accents, x, y);
 }
 
-/** Columna oeste: tres vías N-S que empalman con las vías del oeste del astillero, la excavadora (devuelta aparte: se dibuja en su marco), acopios de mineral al este de ellas, selva al sur. */
-function railYard(out: Solid[], accents: Accent[], rng: Rng): Solid[] {
+/** Columna oeste: tres vías N-S que empalman con las vías del oeste del astillero, la excavadora (en `machine`: se dibuja aparte, en su marco), acopios de mineral al este de ellas, selva al sur. */
+function railYard(out: Solid[], machine: Solid[], accents: Accent[], rng: Rng): void {
   for (const x of RAIL_YARD_X) for (const dx of [-0.8, 0.8]) out.push(strip([{ x: x + dx, y: WORLD.y0 }, { x: x + dx, y: 128 }], 0.4, 0.1, "steel"));
   for (const dy of [-0.8, 0.8]) out.push(strip([{ x: -40 + dy, y: 128 }, { x: -30, y: 132.5 + dy }, { x: 2, y: 132.5 + dy }], 0.4, 0.1, "steel")); // empalme
-  const machine: Solid[] = [];
   excavator(machine, accents);
-  out.push({ kind: "cone", at: v3(-14, 60, 0), r: EXCAVATOR.pile.r, h: EXCAVATOR.pile.h, mat: "rust", sides: 7 }); // acopio fijo bajo la rueda
+  const axle = local(EXCAVATOR.axleDx, 0);
+  out.push({ kind: "cone", at: v3(axle.x, axle.y, 0), r: EXCAVATOR.pile.r, h: EXCAVATOR.pile.h, mat: "rust", sides: 7 }); // acopio fijo bajo la rueda
   const box = excavatorBox();
   for (let i = 0; i < 5; i++) {
     const big = i < 3;
@@ -133,7 +133,6 @@ function railYard(out: Solid[], accents: Accent[], rng: Rng): Solid[] {
   }
   for (let i = 0; i < 8; i++) out.push(prism(RAIL_YARD_X[i % 3]! - 1.1, -46 + i * 14, 0, 2.2, 7, 2.8, i % 2 === 0 ? "rust" : "steel")); // vagones estacionados N-S sobre las vías; -46: el tercero termina en y -11, sin tocar el desvío E-O (y -9.2..-6.8)
   jungle(out, rng, { x0: -58, x1: -6, y0: 110, y1: 140 }, 14, 0.4, { y: [128, 131, 134] }); // y1 140: un cono de r 4 no puede cruzar la costura y = 146; ningún cono pisa el empalme ni las vías del oeste
-  return machine;
 }
 
 function lamps(out: Solid[], accents: Accent[]): void {
@@ -150,7 +149,8 @@ export function factory(rng: Rng): FactoryScene {
   conveyor(solids);
   substation(solids);
   truckYard(solids, accents);
-  const machine = railYard(solids, accents, rng);
+  const machine: Solid[] = [];
+  railYard(solids, machine, accents, rng);
   lamps(solids, accents);
   return { ground: solids.filter((s) => s.kind === "strip"), solids: solids.filter((s) => s.kind !== "strip"), accents, stacks, excavator: machine };
 }

@@ -1,7 +1,7 @@
 import { v3, type Vec3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
-import { excavatorWheel } from "./excavator";
 import type { Rng } from "../map/seed";
+import { excavatorWheel } from "./excavator";
 
 /**
  * Humo de las chimeneas: por cada boca, PUFFS bocanadas (cilindros grises) que

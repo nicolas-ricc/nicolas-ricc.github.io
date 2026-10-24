@@ -25,10 +25,10 @@ export function excavatorWheel(angle: number): Solid {
 
 type Poly = Solid & { kind: "poly" };
 /** Caja girada: huella `[local(dx0,dy0), local(dx1,dy0), local(dx1,dy1), local(dx0,dy1)]`; la pared que ve la cámara es la arista 2 (dy máximo). */
-export const box = (dx0: number, dy0: number, dx1: number, dy1: number, z: number, h: number, mat: Material, extra: Pick<Poly, "facade" | "plates"> = {}): Solid =>
+const box = (dx0: number, dy0: number, dx1: number, dy1: number, z: number, h: number, mat: Material, extra: Pick<Poly, "facade" | "plates"> = {}): Solid =>
   ({ kind: "poly", footprint: [local(dx0, dy0), local(dx1, dy0), local(dx1, dy1), local(dx0, dy1)], z, h, mat, ...extra });
 /** Viga entre dos puntos `[dx, dy, z]` del marco local. */
-export const bar = (from: [number, number, number], to: [number, number, number], w: number, h: number, mat: Material): Solid => {
+const bar = (from: [number, number, number], to: [number, number, number], w: number, h: number, mat: Material): Solid => {
   const a = local(from[0], from[1]), b = local(to[0], to[1]);
   return { kind: "beam", from: v3(a.x, a.y, from[2]), to: v3(b.x, b.y, to[2]), w, h, mat };
 };
