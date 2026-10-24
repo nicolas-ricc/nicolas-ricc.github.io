@@ -463,7 +463,7 @@ describe("subestación de intemperie (#215)", () => {
     const solids = raised();
     expect(solids.filter((x) => isPrism(x, 0.2, 0.2, 9, "steel"))).toHaveLength(16);
     const thin = beams(solids).filter((b) => b.mat === "steel" && near(b.w, 0.15));
-    const diag = thin.filter((b) => { const dz = Math.abs(b.to.z - b.from.z); return (near(dz, 2.5) || near(dz, 1.5)) && near(Math.hypot(b.to.x - b.from.x, b.to.y - b.from.y), 0.8); });
+    const diag = thin.filter((b) => { const dz = Math.abs(b.to.z - b.from.z); return (near(dz, 2.5) || near(dz, 2.4) || near(dz, 1.5)) && near(Math.hypot(b.to.x - b.from.x, b.to.y - b.from.y), 0.8); });
     expect(diag).toHaveLength(64);
     expect(beams(solids).filter((b) => b.mat === "steel" && near(b.w, 0.3) && near(b.h, 0.3))).toHaveLength(4);
     expect(thin.filter((b) => near(Math.abs(b.to.y - b.from.y), 1.125) && near(Math.abs(b.to.z - b.from.z), 1) && near(b.from.x, b.to.x))).toHaveLength(16);

@@ -24,7 +24,7 @@ const skirts = (out: Solid[], x: number, y: number, z0: number, n = 6): void => 
 export function latticePortal(out: Solid[], x: number): void {
   for (const c of [-58.5, -48.5]) {
     for (const dx of [-0.5, 0.3]) for (const dy of [-0.5, 0.3]) out.push(prism(x + dx, c + dy, 0, 0.2, 0.2, 9, "steel")); // montantes
-    for (const [z0, z1] of [[0, 2.5], [2.5, 5], [5, 7.5], [7.5, 9]] as const) {                                         // paños (el último de 1.5)
+    for (const [z0, z1] of [[0.1, 2.5], [2.5, 5], [5, 7.5], [7.5, 9]] as const) {                                         // paños (el último de 1.5; el primero arranca en 0.1: la sección de la diagonal no baja de z 0)
       out.push(wire(x + 0.4, c - 0.4, z0, x + 0.4, c + 0.4, z1), wire(x + 0.4, c + 0.4, z0, x + 0.4, c - 0.4, z1));     // X cara este
       out.push(wire(x - 0.4, c + 0.4, z0, x + 0.4, c + 0.4, z1), wire(x + 0.4, c + 0.4, z0, x - 0.4, c + 0.4, z1));     // X cara sur
     }
