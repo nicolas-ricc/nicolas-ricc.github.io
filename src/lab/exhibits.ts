@@ -17,8 +17,8 @@ import { towerCrane } from "../scenes/pieces";
 import { BUOYS, DRUM_R0, KEEPER, LANTERN_Z, LIGHTHOUSE, WRECK } from "../scenes/sea";
 import { BEAM_LEN } from "../scenes/sea-anim";
 import { ship, shipAt, type ShipKind } from "../scenes/ships";
-import { SUBSTATION } from "../scenes/substation";
 import { SUBURB_COLS } from "../scenes/sprawl-grid";
+import { SUBSTATION } from "../scenes/substation";
 import { ARENA, AUDITORIUM, TELECOM } from "../scenes/tech";
 import type { Box } from "../world/frame";
 

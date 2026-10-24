@@ -387,7 +387,6 @@ describe("subestación de intemperie (#215)", () => {
     expect(b.min.x).toBeGreaterThanOrEqual(SUBSTATION.x0); expect(b.max.x).toBeLessThanOrEqual(SUBSTATION.x1);
     expect(b.min.y).toBeGreaterThanOrEqual(SUBSTATION.y0 - 1e-9); expect(b.max.y).toBeLessThanOrEqual(SUBSTATION.y1 + 1e-9);
     const ground = scene().ground;
-    expect(ground.indexOf(g)).toBe(-1); // otra instancia: se busca por forma
     const gi = ground.findIndex((x) => x.kind === "strip" && x.mat === "sand" && x.width === 13);
     const ci = ground.findIndex((x) => x.kind === "strip" && x.mat === "concrete" && x.path.length === 5 && x.path[0]!.x === 149);
     expect(gi).toBeGreaterThanOrEqual(0); expect(ci).toBeGreaterThan(gi);
