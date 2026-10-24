@@ -570,5 +570,8 @@ describe("subestación de intemperie (#215)", () => {
     const d = beams(build(droppers));
     expect(d).toHaveLength(12);
     for (const b of d) { expect(b.mat).toBe("steel"); expect(near(b.w, 0.15)).toBe(true); expect(near(b.from.z, 9.425)).toBe(true); expect(b.to.z).toBeLessThan(9.425); }
+    const tip = 4.5 + 2.5 * Math.sin((35 * Math.PI) / 180);
+    expect(d.map((b) => Math.round(b.to.z * 1000) / 1000).sort()).toEqual([...Array(3).fill(4.5), ...Array(3).fill(5.65), ...Array(6).fill(Math.round(tip * 1000) / 1000)].sort()); // brazo, cabeza del TI, punta del pasatapas
+    for (const b of d.filter((x) => near(x.to.z, tip))) expect(near(b.from.y, b.to.y > -52 ? PHASES_Y[2] : PHASES_Y[1])).toBe(true); // T1 → −53.5, T2 → −50
   });
 });

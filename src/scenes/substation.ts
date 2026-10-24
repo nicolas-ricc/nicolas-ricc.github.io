@@ -18,6 +18,7 @@ const wire = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: nu
 /** n polleras apiladas desde z0 (h 0.3), r 0.3 las pares y 0.42 las impares. */
 const skirts = (out: Solid[], x: number, y: number, z0: number, n = 6): void => { for (let i = 0; i < n; i++) out.push({ kind: "cylinder", at: v3(x, y, z0 + 0.3 * i), r: i % 2 ? 0.42 : 0.3, h: 0.3, mat: "whitewash" }); };
 
+const ARM_Z = 4.4, CT_TOP_Z = 5.65; // eje del brazo del seccionador y punta de la cabeza del TI: ahí aterrizan sus puentes
 const BUSHINGS_X = [173.5, 175, 176.5] as const;
 /** Punta del pasatapas (a 35° sobre la tapa de la cuba): la comparten el transformador y sus puentes. */
 const bushingTip = (x: number, y0: number): [number, number, number] => [x, y0 + 2 + 2.5 * Math.cos(Math.PI * 35 / 180), 4.5 + 2.5 * Math.sin(Math.PI * 35 / 180)];
@@ -68,22 +69,22 @@ export function phases(out: Solid[]): void {
 export function disconnector(out: Solid[], y: number): void {
   out.push(prism(156.8, y - 0.3, 0, 2.4, 0.6, 2.5, "steel")); // bastidor
   for (const x of [157.1, 158.9]) skirts(out, x, y, 2.5);     // columnas
-  out.push(beam([157.1, y, 4.4], [158.9, y, 4.4], 0.2, 0.2, "signal")); // brazo
+  out.push(beam([157.1, y, ARM_Z], [158.9, y, ARM_Z], 0.2, 0.2, "signal")); // brazo
 }
 
 /** Transformador de corriente: escalerilla de 4 patas, tapa, 6 polleras y cabeza redondeada. */
 export function currentTransformer(out: Solid[], y: number): void {
-  for (const dx of [-0.075 - 0.325, 0.325 - 0.075]) for (const dy of [-0.075 - 0.325, 0.325 - 0.075]) out.push(prism(165 + dx, y + dy, 0, 0.15, 0.15, 2.5, "steel")); // patas
+  for (const dx of [-0.4, 0.25]) for (const dy of [-0.4, 0.25]) out.push(prism(165 + dx, y + dy, 0, 0.15, 0.15, 2.5, "steel")); // patas
   out.push(prism(164.6, y - 0.4, 2.5, 0.8, 0.8, 0.15, "steel")); // tapa
   skirts(out, 165, y, 2.65);
   out.push({ kind: "cylinder", at: v3(165, y, 4.45), r: 0.6, h: 0.8, mat: "whitewash" }); // cabeza
-  out.push({ kind: "cone", at: v3(165, y, 5.25), r: 0.6, h: 0.4, mat: "whitewash", sides: 8 }); // remate
+  out.push({ kind: "cone", at: v3(165, y, CT_TOP_Z - 0.4), r: 0.6, h: 0.4, mat: "whitewash", sides: 8 }); // remate
 }
 
 /** Puentes de seccionadores y TI al conductor (terminan en su panza, z 9.425). */
 export function droppers(out: Solid[]): void {
-  for (const y of PHASES_Y) out.push(wire(158, y, 9.425, 158, y, 4.5), wire(165, y, 9.425, 165, y, 5.65)); // seccionador (brazo) y TI (cabeza)
-  TRANSFORMERS_Y.forEach((y0, k) => { for (const x of BUSHINGS_X) { const t = bushingTip(x, y0); out.push(wire(x, k ? -50 : -53.5, 9.425, t[0], t[1], t[2])); } }); // pasatapas → fase más cercana
+  for (const y of PHASES_Y) out.push(wire(158, y, 9.425, 158, y, ARM_Z + 0.1), wire(165, y, 9.425, 165, y, CT_TOP_Z)); // seccionador (brazo) y TI (cabeza)
+  TRANSFORMERS_Y.forEach((y0, k) => { for (const x of BUSHINGS_X) { const t = bushingTip(x, y0); out.push(wire(x, PHASES_Y[k + 1]!, 9.425, t[0], t[1], t[2])); } }); // pasatapas → fase más cercana
 }
 
 /** Cerco: 13 postes, malla romboidal (X por paño) al sur y al este, y portón de dos hojas en x 168.5..171.5. */
