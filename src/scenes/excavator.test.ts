@@ -12,6 +12,19 @@ const animator = (reducedMotion: boolean) => factoryAnimator(factory(createRng(7
 const wheelLayer = (a: ReturnType<typeof animator>) => { const l = a.layer("factory.wheel"); if (l.kind !== "solid") throw new Error("factory.wheel no es una capa de sólidos"); return l.solids; };
 const angleOf = (a: ReturnType<typeof animator>) => { const w = wheelLayer(a)[0]!; if (w.kind !== "wheel") throw new Error("no es wheel"); return w.angle; };
 
+/** Marco local del chasis de un punto del mundo, y caja local (dx, dy, z) de un sólido. */
+const C = EXCAVATOR.at, S2 = Math.SQRT2;
+const toLocal = (x: number, y: number) => ({ dx: ((x - C.x) - (y - C.y)) / S2, dy: ((x - C.x) + (y - C.y)) / S2 });
+type LBox = { dx0: number; dx1: number; dy0: number; dy1: number; z0: number; z1: number };
+const lbox = (s: Solid): LBox => {
+  const b: LBox = { dx0: Infinity, dx1: -Infinity, dy0: Infinity, dy1: -Infinity, z0: Infinity, z1: -Infinity };
+  for (const f of tessellateAll(s)) for (const p of f.pts) {
+    const l = toLocal(p.x, p.y);
+    b.dx0 = Math.min(b.dx0, l.dx); b.dx1 = Math.max(b.dx1, l.dx); b.dy0 = Math.min(b.dy0, l.dy); b.dy1 = Math.max(b.dy1, l.dy); b.z0 = Math.min(b.z0, p.z); b.z1 = Math.max(b.z1, p.z);
+  }
+  return b;
+};
+
 describe("rueda de la excavadora", () => {
   it.each([0, Math.PI / 7, Math.PI / 3, 2])("tesela en ≤ 400 caras con ángulo %d", (a) => {
     const w = excavatorWheel(a);
@@ -130,8 +143,8 @@ describe("chasis y plataforma de la excavadora", () => {
 
   it("ninguna pieza mide menos de 0.15", () => {
     for (const s of out) {
-      const { min, max } = bounds(s);
-      for (const k of ["x", "y", "z"] as const) expect(max[k] - min[k], `${s.kind} ${s.kind === "poly" ? s.mat : ""}`).toBeGreaterThanOrEqual(0.15 - 1e-9);
+      const l = lbox(s);
+      for (const [k, d] of [["dx", l.dx1 - l.dx0], ["dy", l.dy1 - l.dy0], ["z", l.z1 - l.z0]] as const) expect(d, `${s.kind} ${s.kind === "poly" ? s.mat : ""} ${k}`).toBeGreaterThanOrEqual(0.15 - 1e-9);
     }
   });
 
@@ -148,19 +161,8 @@ describe("chasis y plataforma de la excavadora", () => {
 describe("superestructura, plumas y cabina de la excavadora", () => {
   const out: Solid[] = []; const accents: Accent[] = [];
   excavator(out, accents);
-  const { axleDx, axleZ } = EXCAVATOR, EPS = 1e-6, S2 = Math.SQRT2;
+  const { axleDx, axleZ } = EXCAVATOR, EPS = 1e-6;
   const E = (dx: number) => 17 - (dx - 4.5) * (17 - axleZ) / (axleDx - 4.5);
-  const C = EXCAVATOR.at;
-  const toLocal = (x: number, y: number) => ({ dx: ((x - C.x) - (y - C.y)) / S2, dy: ((x - C.x) + (y - C.y)) / S2 });
-  type LBox = { dx0: number; dx1: number; dy0: number; dy1: number; z0: number; z1: number };
-  const lbox = (s: Solid): LBox => {
-    const b: LBox = { dx0: Infinity, dx1: -Infinity, dy0: Infinity, dy1: -Infinity, z0: Infinity, z1: -Infinity };
-    for (const f of tessellateAll(s)) for (const p of f.pts) {
-      const l = toLocal(p.x, p.y);
-      b.dx0 = Math.min(b.dx0, l.dx); b.dx1 = Math.max(b.dx1, l.dx); b.dy0 = Math.min(b.dy0, l.dy); b.dy1 = Math.max(b.dy1, l.dy); b.z0 = Math.min(b.z0, p.z); b.z1 = Math.max(b.z1, p.z);
-    }
-    return b;
-  };
   const apart = (a: Solid, b: Solid) => { const p = lbox(a), q = lbox(b); return p.dx1 <= q.dx0 + 1e-4 || q.dx1 <= p.dx0 + 1e-4 || p.dy1 <= q.dy0 + 1e-4 || q.dy1 <= p.dy0 + 1e-4 || p.z1 <= q.z0 + 1e-4 || q.z1 <= p.z0 + 1e-4; };
   type Beam = Solid & { kind: "beam" };
   type Poly = Solid & { kind: "poly" };
@@ -185,8 +187,11 @@ describe("superestructura, plumas y cabina de la excavadora", () => {
     expect(legs).toHaveLength(4);
     const segs = legs.map((b) => { const [lo, hi] = byZ(b); return { sy: Math.sign(lo.dy), lo, hi }; });
     const z = (sy: number) => segs.filter((s) => s.sy === sy).map((s) => [s.lo.z, s.hi.z]).sort((a, b) => a[0]! - b[0]!);
-    expect(z(1)).toEqual([[3.4, 11], [16, 20]]);
-    expect(z(-1)).toEqual([[6.1, 11], [16, 20]]);
+    const dip = 0.35 * Math.sin(Math.atan(Math.hypot(1, 2.5) / 16.6));
+    const cut = (r: number[][]) => r.map((x) => x.map((v) => Math.round(v * 1e6) / 1e6));
+    expect(cut(z(1))).toEqual(cut([[3.4 + dip, 11 - dip], [16 + dip, 20]]));
+    expect(cut(z(-1))).toEqual(cut([[6.1 + dip, 11 - dip], [16 + dip, 20]]));
+    for (const b of legs) for (const [o, n] of [[casa, "casa"], [sup, "superestructura"], [polyAt("rust", 5.9)!, "techo"]] as const) { const l = lbox(b), q = lbox(o); expect(l.z1 <= q.z0 + 1e-9 || l.z0 >= q.z1 - 1e-9 || l.dx1 <= q.dx0 || l.dx0 >= q.dx1 || l.dy1 <= q.dy0 || l.dy0 >= q.dy1, `brazo/${n}`).toBe(true); }
     for (const s of segs) { const t = (s.lo.z - 3.4) / 16.6; near(s.lo.dx, -2 + t); near(s.lo.dy, s.sy * 2.5 * (1 - t)); }
     const trav = beams(0.3, "office").filter((b) => b.from.z === b.to.z);
     expect(trav.map((b) => b.from.z).sort((a, b) => a - b)).toEqual([7, 9.5, 18]);
@@ -299,9 +304,9 @@ describe("superestructura, plumas y cabina de la excavadora", () => {
 
   it("ningún sólido supera z 20.5 y ninguna pieza mide menos de 0.15", () => {
     for (const s of out) {
-      const { min, max } = bounds(s);
-      expect(max.z).toBeLessThanOrEqual(20.5);
-      for (const k of ["x", "y", "z"] as const) expect(max[k] - min[k], `${s.kind}`).toBeGreaterThanOrEqual(0.15 - 1e-9);
+      const l = lbox(s);
+      expect(l.z1).toBeLessThanOrEqual(20.5);
+      for (const [k, d] of [["dx", l.dx1 - l.dx0], ["dy", l.dy1 - l.dy0], ["z", l.z1 - l.z0]] as const) expect(d, `${s.kind} ${k}`).toBeGreaterThanOrEqual(0.15 - 1e-9);
     }
   });
 

@@ -68,7 +68,8 @@ function upperWorks(out: Solid[], accents: Accent[]): void {
   const { axleDx, axleZ } = EXCAVATOR, off: Material = "office", steel: Material = "steel";
   // mástil en A: línea (−2, ±2.5, 3.4)→(−1, 0, 20); cada brazo se corta donde cruza la casa (dy −2.5 arranca en su techo, z 6.1) y la superestructura (z 11..16)
   const mast = (sy: number, z: number): [number, number, number] => { const t = (z - 3.4) / 16.6; return [-2 + t, sy * 2.5 * (1 - t), z]; };
-  for (const [sy, z0] of [[1, 3.4], [-1, 6.1]] as const) for (const [a, b] of [[z0, 11], [16, 20]] as const) out.push(bar(mast(sy, a), mast(sy, b), 0.7, 0.7, off));
+  const dip = 0.35 * Math.sin(Math.atan(Math.hypot(1, 2.5) / 16.6)); // la tapa inclinada del brazo (0.7) baja esto por debajo de su corte: se corre cada corte
+  for (const [sy, z0] of [[1, 3.4], [-1, 6.1]] as const) for (const [a, b] of [[z0 + dip, 11 - dip], [16 + dip, 20]] as const) out.push(bar(mast(sy, a), mast(sy, b), 0.7, 0.7, off));
   for (const z of [7, 9.5, 18]) out.push(bar(mast(-1, z), mast(1, z), 0.3, 0.3, off)); // travesaños entre brazos
   // superestructura colgada del mástil, con cartel en la pared visible (3 de 9 u, centrado)
   out.push(box(-6, -3, 3, 3, 11, 5, off, { facade: { floors: 1, cols: 4, window: { w: 0.7, h: 0.4 }, grid: { cols: 2, rows: 1 } }, plates: [{ wall: 2, shape: "rect", u0: 0.5 - 1.5 / 9, u1: 0.5 + 1.5 / 9, z0: 14.6, z1: 15.6, mat: "whitewash" }] }));
