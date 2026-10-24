@@ -1,4 +1,4 @@
-import { v3 } from "../iso/geometry";
+import { v3, type Vec3 } from "../iso/geometry";
 import type { Plate, Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
 
@@ -11,7 +11,7 @@ export const MALT = { x: 20, y: -46, w: 24, d: 30, h: 18 } as const;
 export const WATER_TOWER = { x: 10, y: -36 } as const;
 
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material): Solid & { kind: "prism" } => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat });
-const beam = (from: ReturnType<typeof v3>, to: ReturnType<typeof v3>, w: number, mat: Material, h = w): Solid => ({ kind: "beam", from, to, w, h, mat });
+const beam = (from: Vec3, to: Vec3, w: number, mat: Material, h = w): Solid => ({ kind: "beam", from, to, w, h, mat });
 
 /** Prisma de fachada de cinco pisos, techo de seis faldones con óculos, pilastras y cornisas del piñón, puertas de carga, portón y horno con techo piramidal. */
 export function maltings(out: Solid[]): void {
@@ -41,7 +41,7 @@ export function maltings(out: Solid[]): void {
   out.push({ kind: "ramp", at: v3(28, -46, 18), w: 4, d: 6, h: 4, mat: "steel", dir: "e" });
 
   // pilastras del piñón, adosadas por dentro; la de x 32 solo del tope de la puerta del piso 4 al valle (D2)
-  for (const [px, pw, z0, z1] of [[20, 0.5, 0, 18], [25.75, 0.5, 0, 24], [31.75, 0.5, 16.7, 18], [37.75, 0.5, 0, 24], [43.5, 0.5, 0, 18]] as const) out.push(prism(px, -16.4, z0, pw, -16 - -16.4, z1 - z0, "stockbrick")); // d 0.4 exacto en coma flotante: el borde sur queda en y −16
+  for (const [px, z0, z1] of [[20, 0, 18], [25.75, 0, 24], [31.75, 16.7, 18], [37.75, 0, 24], [43.5, 0, 18]] as const) out.push(prism(px, -16.4, z0, 0.5, -16 - -16.4, z1 - z0, "stockbrick")); // d 0.4 escrito así para que el borde sur caiga exacto en y −16 (−16.4 + 0.4 no da −16 en coma flotante) y toque, sin pisar, la zapata de la nave
   // cornisas: del alero (metido 0.15) a la cumbrera (D3)
   for (const [ax, rx] of [[20.15, 26], [31.85, 26], [32.15, 38], [43.85, 38]] as const) out.push(beam(v3(ax, -16.3, 18.15), v3(rx, -16.3, 24), 0.4, "stockbrick", 0.3));
 

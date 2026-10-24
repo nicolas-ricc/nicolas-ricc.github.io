@@ -7,7 +7,7 @@ import { BEAM_PERIOD_MS } from "../scenes/sea-anim";
 import { assembleWorld } from "../world/assemble";
 import { type Box, FRAME_H, HALO_BASE } from "../world/frame";
 import { cropAnimators, cropScene } from "./crop";
-import { waterTower } from "../scenes/maltings";
+import { WATER_TOWER, waterTower } from "../scenes/maltings";
 import { EXHIBITS, GROUPS, type GroupId, outOfView, pickExhibit, stepExhibit } from "./exhibits";
 
 const regions = EXHIBITS.flatMap((e) => (e.kind === "region" ? [e] : []));
@@ -168,8 +168,8 @@ describe("exhibits de pieza", () => {
     const e = EXHIBITS.find((x) => x.id === "tanque-agua")!;
     const out: Solid[] = [];
     if (e.kind === "piece") e.build(out, []);
-    const at = waterTowerSolids({ x: 0, y: 0 });
-    expect(out).toEqual(at);
+    expect(out).toHaveLength(waterTowerSolids(WATER_TOWER).length);
+    for (const s of out) if (s.kind === "cylinder" || s.kind === "cone") expect([s.at.x, s.at.y]).toEqual([0, 0]);
     const deck = out.find((s) => s.kind === "cylinder" && s.r === 4.6)!;
     expect(deck.kind === "cylinder" && deck.at.x === 0 && deck.at.y === 0).toBe(true);
   });

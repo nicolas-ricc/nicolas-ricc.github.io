@@ -192,7 +192,9 @@ Inventario:
 ## 7. Tanque de agua
 
 `x 6..14, y −40..−32`, al oeste del bloque de maltería. No toca el desvío ni la
-locomotora (`y ≥ −9.3`).
+locomotora (`y ≥ −9.3`). Con la cámara desde el sudeste queda detrás de la
+maltería en el exhibit `planta`: se mira solo en el exhibit de pieza
+`tanque-agua` (#214).
 
 Inventario:
 
