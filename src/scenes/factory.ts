@@ -58,10 +58,10 @@ export function chimney(s: Stack, out: Solid[], accents: Accent[]): Vec3 {
   for (let z = z0 + 3; z + 0.2 <= z0 + half + 1e-9; z += 3) {                              // zunchos: asoman 0.1 del tramo que abrazan
     out.push(cyl(z, radii[Math.min(3, Math.floor((z - z0) / seg + 1e-9))]! + 0.1, 0.2, "steel"));
   }
-  const band = half / 7;
-  for (let i = 0; i < 7; i++) out.push(cyl(z0 + half + i * band, s.r, band, i % 2 === 0 ? "signal" : "whitewash"));
-  const pTop = M - 0.6 - band;                                                        // techo de la plataforma en la junta entre 6ª y 7ª banda: así se separa en z y el orden painter no la dibuja encima de la banda de arriba
-  out.push(cyl(pTop - 0.3, s.r + 1.2, 0.3, "concrete"));                              // plataforma
+  const bh = (half - 0.3) / 7, dz = z0 + half + 6 * bh;                               // la plataforma llena la junta de 0.3 entre la 6ª y la 7ª banda: nada del fuste comparte su z y el orden painter no empata
+  for (let i = 0; i < 7; i++) out.push(cyl(z0 + half + i * bh + (i === 6 ? 0.3 : 0), s.r, bh, i % 2 === 0 ? "signal" : "whitewash"));
+  out.push(cyl(dz, s.r + 1.2, 0.3, "concrete"));                                      // plataforma
+  const pTop = dz + 0.3;
   const pr = (cx: number, cy: number, z: number, h: number): Solid => prism(cx - 0.075, cy - 0.075, z, 0.15, 0.15, h, "steel");
   const pz = pTop, pRad = (s.r + 1.2) * Math.cos(Math.PI / 8) - 0.15;            // postes al medio de cada cara del octógono, metidos 0.15
   const post = (k: number) => v3(s.x + pRad * Math.cos((k * Math.PI) / 4), s.y + pRad * Math.sin((k * Math.PI) / 4), pz);
@@ -72,9 +72,9 @@ export function chimney(s: Stack, out: Solid[], accents: Accent[]): Vec3 {
   }
   out.push(cyl(M - 0.6, s.r + 0.4, 0.6, "brick"));                                    // corona
   for (const [dx, dy] of [[1, 0], [0, 1], [0, -1], [-1, 0]] as const) out.push(pr(s.x + dx * (s.r + 0.1), s.y + dy * (s.r + 0.1), M, 1.5)); // pararrayos
-  const ly = s.y + (s.r + 0.5) * Math.cos(Math.PI / 8) + 0.2;                         // escalera de gato al sur, fuera del tramo más ancho
-  for (const dx of [-0.35, 0.35]) out.push(pr(s.x + dx, ly, z0, pTop - 0.3 - z0));
-  for (let z = z0 + 2; z < pTop - 1; z += 2) out.push({ kind: "beam", from: v3(s.x - 0.35, ly, z), to: v3(s.x + 0.35, ly, z), w: 0.15, h: 0.15, mat: "steel" }); // peldaños: el último a >1 u de la plataforma, uno pegado a ella rompe el orden painter con la banda de arriba
+  const ly = s.y + (s.r + 1.2) * Math.cos(Math.PI / 8) + 0.2;                         // escalera de gato al sur, por fuera de la plataforma: separada en y de bandas y losa, el orden painter no empata
+  for (const dx of [-0.35, 0.35]) out.push(pr(s.x + dx, ly, z0, pTop + 1.1 - z0));
+  for (let z = z0 + 2; z < pTop + 1.1; z += 2) out.push({ kind: "beam", from: v3(s.x - 0.35, ly, z), to: v3(s.x + 0.35, ly, z), w: 0.15, h: 0.15, mat: "steel" }); // peldaños
   accents.push({ kind: "dot", at: v3(s.x + s.r, s.y, M - 1), r: 0.5, color: "magenta" }, { kind: "dot", at: v3(s.x, s.y + s.r, M - 1), r: 0.5, color: "magenta" });
   out.push(prism(s.x - 0.45, s.y + 3.5, 0, 0.9, 0.3, 1.4, "steel"));                  // puerta en la cara sur del pedestal
   return v3(s.x, s.y, M);

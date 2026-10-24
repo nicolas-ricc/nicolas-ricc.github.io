@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { buildRenderList } from "../iso/render-list";
-import { sortByDepth } from "../iso/depth";
+import { overlaps, screenBounds, sortByDepth } from "../iso/depth";
 import { bounds, isFlat, type Solid } from "../iso/solids";
 import { WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, worldZoneAt } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
@@ -102,6 +102,8 @@ const apart = (a: Solid, b: Solid) => {
 };
 const APO = Math.cos(Math.PI / 8); // apotema de un cilindro de 8 lados con radio 1
 
+const isRung = (x: Solid): x is Solid & { kind: "beam" } => x.kind === "beam" && x.from.y === x.to.y && Math.abs(Math.abs(x.to.x - x.from.x) - 0.7) < 1e-9; // peldaño: 0.7 de ancho
+
 describe.each(STACKS.map((st, i) => [i, st] as const))("chimenea %i", (_i, st) => {
   const B = STACK_BASE_H, M = B + st.h, z0 = B + 3;
 
@@ -131,13 +133,13 @@ describe.each(STACKS.map((st, i) => [i, st] as const))("chimenea %i", (_i, st) =
       expect(b.mat).toBe(k % 2 === 0 ? "signal" : "whitewash");
       expect(b.r).toBeCloseTo(st.r, 6);
       expect(b.h).toBeCloseTo(bands[0]!.h, 6);
-      if (k > 0) expect(Math.abs(b.at.z - (bands[k - 1]!.at.z + bands[k - 1]!.h))).toBeLessThan(EPS);
+      if (k > 0) expect(Math.abs(b.at.z - (bands[k - 1]!.at.z + bands[k - 1]!.h) - (k === 6 ? 0.3 : 0))).toBeLessThan(EPS); // hueco de 0.3 entre 6ª y 7ª: lo ocupa la plataforma
     });
     expect(bands.filter((b) => b.mat === "signal")).toHaveLength(4);
     const last = shaft[3]!;
     expect(Math.abs(bands[0]!.at.z - (last.at.z + last.h))).toBeLessThan(EPS);
     expect(bands[6]!.at.z + bands[6]!.h).toBeCloseTo(M - 0.6, 6);
-    expect(bands[0]!.at.z - z0).toBeCloseTo(M - 0.6 - bands[0]!.at.z, 6); // mitad y mitad
+    expect(bands[0]!.at.z).toBeCloseTo(z0 + (M - 0.6 - z0) / 2, 6); // arrancan en la mitad del fuste
   });
 
   it("sin banda rust", () => expect(one(st).out.some((x) => x.mat === "rust")).toBe(false));
@@ -164,7 +166,7 @@ describe.each(STACKS.map((st, i) => [i, st] as const))("chimenea %i", (_i, st) =
     const deck = cyls(out, "concrete");
     expect(deck).toHaveLength(1);
     expect(deck[0]!.r).toBeCloseTo(st.r + 1.2, 6); expect(deck[0]!.h).toBeCloseTo(0.3, 6); const bands = cyls(out, "signal", "whitewash");
-    expect(deck[0]!.at.z + deck[0]!.h).toBeCloseTo(bands[6]!.at.z, 6); // techo en la junta entre 6ª y 7ª banda
+    expect(deck[0]!.at.z).toBeCloseTo(bands[5]!.at.z + bands[5]!.h, 6); expect(deck[0]!.at.z + deck[0]!.h).toBeCloseTo(bands[6]!.at.z, 6); // llena la junta entre 6ª y 7ª banda
     const posts = boxes(out, 0.15, 0.15, 1.1).filter((p) => p.mat === "steel");
     expect(posts).toHaveLength(8);
     const lim = (st.r + 1.2) * APO;
@@ -173,7 +175,7 @@ describe.each(STACKS.map((st, i) => [i, st] as const))("chimenea %i", (_i, st) =
       const b = bounds(p);
       for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) expect(Math.hypot(x - st.x, y - st.y)).toBeLessThanOrEqual(lim + EPS);
     }
-    const rail = out.filter((x): x is Solid & { kind: "beam" } => x.kind === "beam" && x.from.z > deck[0]!.at.z + deck[0]!.h && x.to.z > deck[0]!.at.z + deck[0]!.h);
+    const rail = out.filter((x): x is Solid & { kind: "beam" } => x.kind === "beam" && !isRung(x));
     expect(rail).toHaveLength(8);
   });
 
@@ -186,28 +188,37 @@ describe.each(STACKS.map((st, i) => [i, st] as const))("chimenea %i", (_i, st) =
     }
   });
 
-  it("escalera de gato en la cara sur, fuera del ladrillo, hasta la plataforma", () => {
+  it("escalera de gato en la cara sur, por fuera de la plataforma, hasta la altura de la baranda", () => {
     const { out } = one(st);
     const rails = out.filter((x): x is Box => x.kind === "prism" && x.mat === "steel" && Math.abs(x.w - 0.15) < EPS && Math.abs(x.d - 0.15) < EPS && Math.abs(x.at.z - z0) < EPS);
     expect(rails).toHaveLength(2);
-    const deck = cyls(out, "concrete")[0]!;
-    const walls = cyls(out, "brick", "signal", "whitewash").filter((c) => c.at.z < deck.at.z && c.at.z + c.h > z0);
+    const deck = cyls(out, "concrete")[0]!, top = deck.at.z + deck.h + 1.1;
     for (const r of rails) {
-      expect(r.at.z + r.h).toBeCloseTo(deck.at.z, 6);
-      expect(r.at.y).toBeGreaterThan(st.y);
-      for (const c of walls) expect(bounds(r).min.y).toBeGreaterThan(st.y + c.r * APO);
+      expect(r.at.z + r.h).toBeCloseTo(top, 6);
+      expect(bounds(r).min.y).toBeGreaterThan(st.y + deck.r * APO); // fuera de la cara sur de la losa: también de todo el fuste
     }
-    const rungs = out.filter((x): x is Solid & { kind: "beam" } => x.kind === "beam" && x.from.z === x.to.z && x.from.z < deck.at.z).sort((a, b) => a.from.z - b.from.z);
+    const rungs = out.filter((x): x is Solid & { kind: "beam" } => isRung(x)).sort((a, b) => a.from.z - b.from.z);
     expect(rungs.length).toBeGreaterThanOrEqual(5);
+    for (const g of rungs) expect(g.from.z).toBeLessThan(top);
     for (let k = 1; k < rungs.length; k++) expect(rungs[k]!.from.z - rungs[k - 1]!.from.z).toBeCloseTo(2, 6);
   });
 
-  it("la plataforma no tapa la banda de arriba ni la corona", () => {
+  it("orden painter: la plataforma va antes que la banda de arriba, la corona y los postes y la baranda del lado de la cámara, y la escalera después de la plataforma", () => {
     const { out } = one(st);
-    const order = sortByDepth(out), deck = cyls(out, "concrete")[0]!;
-    const top = cyls(out, "signal", "whitewash")[6]!, crown = cyls(out, "brick").at(-1)!;
-    expect(order.indexOf(deck)).toBeLessThan(order.indexOf(top));
-    expect(order.indexOf(deck)).toBeLessThan(order.indexOf(crown));
+    const order = sortByDepth(out), at = (x: Solid) => order.indexOf(x);
+    const meet = (a: Solid, b: Solid) => overlaps(screenBounds(bounds(a)), screenBounds(bounds(b))); // el orden solo importa si se cruzan en pantalla
+    const deck = cyls(out, "concrete")[0]!, bands = cyls(out, "signal", "whitewash"), crown = cyls(out, "brick").at(-1)!;
+    const posts = boxes(out, 0.15, 0.15, 1.1).filter((p) => p.mat === "steel");
+    const rail = out.filter((x) => x.kind === "beam" && !isRung(x));
+    // del lado lejano (N/O) el borde de la losa puede pisar el pie de un poste: queda detrás del fuste y no se ve
+    const near = (x: Solid) => { const b = bounds(x); return b.min.x + b.max.x - 2 * st.x + b.min.y + b.max.y - 2 * st.y > EPS; };
+    for (const x of [bands[6]!, crown, ...[...posts, ...rail].filter(near)]) if (meet(deck, x)) expect(at(deck)).toBeLessThan(at(x));
+    const ladder = [
+      ...out.filter((x): x is Box => x.kind === "prism" && x.mat === "steel" && Math.abs(x.at.z - z0) < EPS && Math.abs(x.w - 0.15) < EPS),
+      ...out.filter(isRung),
+    ];
+    expect(ladder.length).toBeGreaterThanOrEqual(7);
+    for (const l of ladder) if (meet(l, deck)) expect(at(l)).toBeGreaterThan(at(deck));
   });
 
   it("dos luces magenta apenas debajo de la boca", () => {
