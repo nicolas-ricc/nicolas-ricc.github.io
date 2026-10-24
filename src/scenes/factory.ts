@@ -46,9 +46,8 @@ function plant(out: Solid[]): void {
 
 export type Stack = (typeof STACKS)[number];
 
-/** Chimenea: pedestal, base escalonada, fuste que se afina con zunchos, siete bandas, corona y puerta. Devuelve la boca. */
+/** Chimenea: pedestal, base escalonada, fuste que se afina con zunchos, siete bandas, plataforma con baranda, corona, pararrayos, escalera de gato, luces y puerta. Devuelve la boca. */
 export function chimney(s: Stack, out: Solid[], accents: Accent[]): Vec3 {
-  void accents;
   const B = STACK_BASE_H, M = B + s.h;
   const cyl = (z: number, r: number, h: number, mat: Material): Solid => ({ kind: "cylinder", at: v3(s.x, s.y, z), r, h, mat });
   out.push(prism(s.x - 3.5, s.y - 3.5, 0, 7, 7, B, "concrete"));
@@ -56,12 +55,26 @@ export function chimney(s: Stack, out: Solid[], accents: Accent[]): Vec3 {
   const z0 = B + 3, z1 = M - 0.6, half = (z1 - z0) / 2, seg = half / 4;
   const radii = [0.5, (0.5 * 2) / 3, 0.5 / 3, 0].map((d) => s.r + d);              // mitad inferior: se afina hasta r
   radii.forEach((r, i) => out.push(cyl(z0 + i * seg, r, seg, "brick")));
-  for (let z = z0 + 3; z + 0.2 <= z0 + half; z += 3) {                              // zunchos: asoman 0.1 del tramo que abrazan
-    out.push(cyl(z, radii[Math.min(3, Math.floor((z - z0) / seg))]! + 0.1, 0.2, "steel"));
+  for (let z = z0 + 3; z + 0.2 <= z0 + half + 1e-9; z += 3) {                              // zunchos: asoman 0.1 del tramo que abrazan
+    out.push(cyl(z, radii[Math.min(3, Math.floor((z - z0) / seg + 1e-9))]! + 0.1, 0.2, "steel"));
   }
   const band = half / 7;
   for (let i = 0; i < 7; i++) out.push(cyl(z0 + half + i * band, s.r, band, i % 2 === 0 ? "signal" : "whitewash"));
+  out.push(cyl(M - 2, s.r + 1.2, 0.3, "concrete"));                                   // plataforma bajo la boca
+  const pr = (cx: number, cy: number, z: number, h: number): Solid => prism(cx - 0.075, cy - 0.075, z, 0.15, 0.15, h, "steel");
+  const pz = M - 1.7, pRad = (s.r + 1.2) * Math.cos(Math.PI / 8) - 0.15;            // postes al medio de cada cara del octógono, metidos 0.15
+  const post = (k: number) => v3(s.x + pRad * Math.cos((k * Math.PI) / 4), s.y + pRad * Math.sin((k * Math.PI) / 4), pz);
+  for (let k = 0; k < 8; k++) {
+    const p = post(k), q = post((k + 1) % 8);
+    out.push(pr(p.x, p.y, pz, 1.1));
+    out.push({ kind: "beam", from: v3(p.x, p.y, pz + 1.025), to: v3(q.x, q.y, pz + 1.025), w: 0.15, h: 0.15, mat: "steel" }); // baranda
+  }
   out.push(cyl(M - 0.6, s.r + 0.4, 0.6, "brick"));                                    // corona
+  for (const [dx, dy] of [[1, 0], [0, 1], [0, -1], [-1, 0]] as const) out.push(pr(s.x + dx * (s.r + 0.1), s.y + dy * (s.r + 0.1), M, 1.5)); // pararrayos
+  const ly = s.y + (s.r + 0.5) * Math.cos(Math.PI / 8) + 0.2;                         // escalera de gato al sur, fuera del tramo más ancho
+  for (const dx of [-0.35, 0.35]) out.push(pr(s.x + dx, ly, z0, M - 2 - z0));
+  for (let z = z0 + 2; z < M - 2; z += 2) out.push({ kind: "beam", from: v3(s.x - 0.35, ly, z), to: v3(s.x + 0.35, ly, z), w: 0.15, h: 0.15, mat: "steel" }); // peldaños
+  accents.push({ kind: "dot", at: v3(s.x + s.r, s.y, M - 1), r: 0.5, color: "magenta" }, { kind: "dot", at: v3(s.x, s.y + s.r, M - 1), r: 0.5, color: "magenta" });
   out.push(prism(s.x - 0.45, s.y + 3.5, 0, 0.9, 0.3, 1.4, "steel"));                  // puerta en la cara sur del pedestal
   return v3(s.x, s.y, M);
 }
