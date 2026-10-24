@@ -23,19 +23,20 @@
 
 ## Decisiones técnicas (declaradas)
 
-- **D1 — Techo partido alrededor del horno.** El horno (prisma x 22..28, y −46..−40, z 18..24) se mete en las cajas de las rampas x 20..26 y 26..32: ningún plano los separa y el desempate (suma de coordenadas, `depth.ts`) pinta esas rampas *después* del horno, tapándolo. Las dos rampas del oeste se cortan en y −40: rampa `w` x 20..26 y rampa `e` x 26..32 con `y −40..−16` (w 6, d 24, h 6, z 18); al norte del corte quedan solo los tramos fuera del horno: `ramp` `dir "w"` x 20..22, y −46..−40, z 18, w 2, d 6, h 2 y `ramp` `dir "e"` x 28..32, y −46..−40, z 18, w 4, d 6, h 4. Bajo el horno (x 22..28) no va techo: lo tapa el horno. Las rampas x 32..38 (`w`) y 38..44 (`e`) van enteras (d 30). Total: 6 rampas `steel`, 4 de ellas de w 6 (las que llevan los óculos). Test de escena: el horno se pinta después de las 6 rampas que se cruzan con él en pantalla.
-- **D2 — Pilastras del piñón dentro de la huella.** `y −16.4..−16` (como el issue: adosadas por dentro, la maltería sigue en `y ≤ −16`; el orden painter las pinta después del muro y de las rampas). En x: 20..20.5, 25.75..26.25, 31.75..32.25, 37.75..38.25 y 43.5..44 (las de los extremos hacia adentro, para no pasar de x 44 ni de x 20). Alto: z 0..18 en x 20, 32, 44; z 0..24 en x 26 y 38.
+- **D1 — Techo partido alrededor del horno.** El horno (prisma x 22..28, y −46..−40, z 18..24) se mete en las cajas de las rampas x 20..26 y 26..32: ningún plano los separa y el desempate (suma de coordenadas, `depth.ts`) pinta esas rampas *después* del horno, tapándolo. Las dos rampas del oeste se cortan en y −40: rampa `w` x 20..26 y rampa `e` x 26..32 con `y −40..−16` (w 6, d 24, h 6, z 18); al norte del corte quedan solo los tramos fuera del horno: `ramp` `dir "w"` x 20..22, y −46..−40, z 18, w 2, d 6, h 2 y `ramp` `dir "e"` x 28..32, y −46..−40, z 18, w 4, d 6, h 4. Bajo el horno (x 22..28) no va techo: lo tapa el horno. Las rampas x 32..38 (`w`) y 38..44 (`e`) van enteras (d 30). Total: 6 rampas `steel`, 4 de ellas de w 6 (las que llevan los óculos). Con el corte, cada rampa queda separada del horno por un plano (`isBehind(horno, r) || isBehind(r, horno)`, `depth.ts`): el tramo x 20..22 queda detrás (horno después), los tramos sur (y ≥ −40) y los del este (x ≥ 28) quedan delante (horno antes). Test: ninguna rampa se cruza en 3D con el horno, y para cada rampa que se le cruza en pantalla (`overlaps(screenBounds(…))`) el orden de `sortByDepth` sigue a `isBehind`.
+- **D2 — Pilastras del piñón dentro de la huella.** `y −16.4..−16` (como el issue: adosadas por dentro, la maltería sigue en `y ≤ −16`; el orden painter las pinta después del muro y de las rampas). En x: 20..20.5, 25.75..26.25, 31.75..32.25, 37.75..38.25 y 43.5..44 (las de los extremos hacia adentro, para no pasar de x 44 ni de x 20). Alto: z 0..18 en x 20 y 44; z 0..24 en x 26 y 38; la de x 32 cae sobre el eje de las puertas de carga (x 31..33, D6) y, como sólido pintado después del prisma, las taparía: va solo de z 16.7 (tope de la puerta del piso 4) a z 18, hasta el valle. Desempate (`depthKey` = suma de mín + máx en x e y + (mín + máx)·0.5 en z): pilastra x 20..20.5 → 17.1 contra 11 del prisma, se pinta después.
 - **D3 — Cornisa de los faldones.** `beam` `stockbrick` w 0.4 h 0.3 en `y −16.3`, una por faldón (4), del alero a la cumbrera. Una viga a 45° ensancha su caja ±0.11 en x y z en cada punta: la punta de alero se mete 0.15 en x y z (`(20.15, 18.15)`, `(31.85, 18.15)`, `(32.15, 18.15)`, `(43.85, 18.15)`) y la de cumbrera va a `(26, 24)` o `(38, 24)`. Tope de caja ≈ z 24.11.
 - **D4 — Óculos a z 19.7.** Con centro z 19.8 (issue) el octógono de apotema 0.9 asoma 0.05 u por encima del faldón (distancia del centro a la pendiente 0.85). A z 19.7 la distancia es 0.92 y entra. En la cara sur (`wall 2`) de cada rampa sur de w 6, centro x 23, 29, 35, 41 → `u = 0.5` en todas: anillo `disc` `stockbrick` `u 0.35..0.65, z 18.8..20.6`, luego `disc` `glass` `u 0.5 ± 0.7/6, z 19.0..20.4`. Test: los vértices del óculo quedan bajo la pendiente.
 - **D5 — Fachada.** Prisma `brick` `x 20, y −46, z 0, w 24, d 30, h 18` con `facade { floors: 5, cols: 8, window: { w: 0.45, h: 0.5 }, head: "segmental", headMat: "stockbrick", sill: "stockbrick", piers: { every: 2, w: 0.5, mat: "stockbrick" }, courses: { mat: "stockbrick", h: 0.35 }, ties: { r: 0.25, mat: "steel" } }` (literal del issue). Piso = 3.6 u.
-- **D6 — Puertas de carga y portón.** Placas `rect` `steel` en `wall 2` del prisma: puertas `toneOffset −1`, x 31..33 → `u 11/24..13/24`, z `3.6k .. 3.6k + 2.3` para k = 1..4; portón `toneOffset −2`, x 30.5..33.5 → `u 10.5/24..13.5/24`, z 0..3. Van después de la fachada (las tapa por encima: cubren la pilastra de x 32).
-- **D7 — Horno.** Prisma `brick` `x 22, y −46, z 18, w 6, d 6, h 6`; `cone` `steel` `sides 4` en `(25, −43, 24)`, r 4.2, h 2 (con `regular` girado π/4, el cuadrado de r 4.2 tiene semilado 2.97: cabe en la tapa del horno). Vértice z 26.
+- **D6 — Puertas de carga y portón.** Placas `rect` `steel` en `wall 2` del prisma: puertas `toneOffset −1`, x 31..33 → `u 11/24..13/24`, z `3.6k .. 3.6k + 2.3` para k = 1..4; portón `toneOffset −2`, x 30.5..33.5 → `u 10.5/24..13.5/24`, z 0..3. Van después de la fachada (`plate.ts`: "Sale después de su pared (y de la fachada)"): tapan el `pier` de fachada de x 32 y los bordes de las ventanas vecinas.
+- **D7 — Horno.** Prisma `brick` `x 22, y −46, z 18, w 6, d 6, h 6`; `cone` `steel` `sides 4` en `(25, −43, 24)`, r 4.2, h 2 (`regular()` en `solids.ts` ya gira π/sides: con 4 lados las caras miran a N/S/E/O y el cuadrado de r 4.2 tiene semilado 2.97, cabe en la tapa del horno; no hace falta tocar `src/iso/`). Vértice z 26.
 - **D8 — Tanque: patas y riser.** Centro `WATER_TOWER = { x: 10, y: -36 }`. Semilado a la altura z: `s(z) = 4 − 1.5·z/14`. 4 `beam` `rust` 0.5 × 0.5 de `(10 ± 4, −36 ± 4, 0)` a `(10 ± 2.5, −36 ± 2.5, 14)`. Riser `cylinder` `steel` `(10, −36, 0)` r 0.6 h 14.
 - **D9 — Tornapuntas y cruces.** A z 5 y z 10: 4 `beam` `rust` 0.3 × 0.3 entre ejes de patas vecinas (cuadrado de semilado `s(z)`). Cruces en X: 2 `beam` `rust` 0.15 × 0.15 por paño, en el paño este (x = 10 + s) y el sur (y = −36 + s), en los tramos z 0..5 y 5..10 (cada nivel arriostra el tramo de abajo), de esquina a esquina opuesta del paño sobre los ejes de las patas. 8 cruces en total.
 - **D10 — Escalera.** `beam` `steel` w 0.6 h 0.15 de `(14.5, −31.5, 0)` a `(13, −33, 14)`: la pata SE corrida 0.5·√2 hacia el SE, termina bajo la pasarela.
 - **D11 — Pasarela y baranda.** `cylinder` `steel` `(10, −36, 14)` r 4.6 h 0.25 (8 lados). 8 postes prisma `steel` 0.15 × 0.15 × 1 centrados en radio `4.6·cos(π/8) − 0.15` y ángulos k·π/4, z 14.25..15.25; baranda: 8 `beam` `steel` 0.15 × 0.15 entre centros de postes consecutivos a z 15.175 (mismo patrón que la plataforma de `chimney()`).
 - **D12 — Fondo, cuba, techo, bola.** `cylinder` `steel` r 2.2 (z 13), r 3.2 (z 13.6), r 3.8 (z 14.2), h 0.6 cada uno; cuba r 4 h 8 a z 14.8; `cone` `steel` 12 lados r 4.6 h 1.4 a z 22.8; bola `cylinder` `steel` r 0.3 h 0.5 a z 24.2 (tope 24.7). Todos centrados en (10, −36).
 - **D13 — Exhibit.** `planta`: `box.x0 = 2` (pasarela desde x 5.4; la sombra va al este/norte), resto igual (`y0 PLANT.y − M`, `x1 STAIR_TOWER.x1`, `y1 −14`), `h: 26` (vértice del horno), título "Nave de calderas, maltería y tanque".
+- **D15 — Mínimo 0.15 u.** Como D16 de #213: se miden los parámetros (`prism` w/d/h, `cylinder` 2r/h, `cone` 2r/h, `ramp` w/d/h, `beam` w/h/largo) con `>= 0.15 − 1e-9`, y las placas por ancho `(u1 − u0)·largo` y alto; no se miden los tramos de `apartSliced`.
 - **D14 — Capturas.** Para no pisar las de #213 (`planta-antes/despues.png`), las de este hijo son `docs/superpowers/specs/assets/207-fabrica/planta-malteria-antes.png` (tomada antes de tocar código: 159 sólidos, 1457 caras) y `planta-malteria-despues.png`.
 
 ## Review Focus
@@ -59,7 +60,7 @@
 
 - [ ] **Step 1: tests que fallan** (`maltings.test.ts`): "prisma de ladrillo 24 × 30 × 18 con la fachada de D5"; "seis rampas steel: cuatro de w 6 con cumbreras a z 24 en x 26 y 38 y los dos tramos norte de D1"; "pilastras stockbrick de D2"; "cuatro cornisas beam de D3"; "óculos: dos discos por rampa sur, anillo antes que vidrio, dentro del piñón (D4)"; "cuatro puertas y portón en la pared sur (D6)"; "horno y techo piramidal de D7, vértice z 26"; "ninguna pieza mide menos de 0.15 ni pasa de z 26"; "toda la maltería en x 20..44, y −46..−16"; "orden painter: el horno después de cada rampa que se le cruza en pantalla; pilastras y cornisas después del muro y de las rampas". En `factory.test.ts`, el test de la planta pasa a "maltería" (el prisma 24 × 30 × 18 con `facade.floors === 5`, `build(maltings)` contenido en la escena).
 - [ ] **Step 2:** `npx vitest run src/scenes/maltings.test.ts src/scenes/factory.test.ts` → FAIL (no existe `maltings`).
-- [ ] **Step 3:** implementar `maltings(out)` con D1–D7; `plant()` → `maltings(out); boilerHouse(out); portón`.
+- [ ] **Step 3:** implementar `maltings(out)` con D1–D7; `plant()` → `maltings(out); boilerHouse(out); portón`. En `src/lab/exhibits.ts` la caja `planta` pasa a `h: 26` (el horno llega a z 26 y `exhibits.test.ts` exige que `h` cubra la estructura: sin esto la suite queda roja en este commit).
 - [ ] **Step 4:** los mismos tests → PASS; `npm run typecheck`.
 - [ ] **Step 5:** commit `feat(#214): maltería de Mistley`.
 
@@ -73,18 +74,35 @@
 
 - [ ] **Step 1: tests que fallan** (`maltings.test.ts`): "cuatro patas rust inclinadas de 8 × 8 a 5 × 5 y riser (D8)"; "ocho tornapuntas a z 5 y 10 y ocho cruces en los paños este y sur (D9)"; "escalera paralela a la pata SE (D10)"; "pasarela con 8 postes y 8 tramos de baranda (D11)"; "fondo escalonado, cuba, techo cónico de 12 lados y bola, tope ≤ 25 (D12)"; "ninguna pieza mide menos de 0.15"; "orden painter: la pasarela después del fondo r 3.2 y antes del r 3.8". En `factory.test.ts`: "el tanque no toca desvío ni locomotora (y ≤ −9.3) ni la maltería (x ≤ 20)"; "la maltería no pisa la nave (x ≤ 44) ni los pallets (y ≤ −16)" (con `expectApart` contra los rieles del desvío, la locomotora y su cabina, los pallets y `build(naveBody)` además de los límites).
 - [ ] **Step 2:** FAIL.
-- [ ] **Step 3:** implementar `waterTower(out)` con D8–D12; `plant()` lo llama después de `maltings`.
+- [ ] **Step 3:** implementar `waterTower(out)` con D8–D12; `plant()` lo llama después de `maltings`. Caja `planta`: `x0: 2` (D13).
 - [ ] **Step 4:** PASS + typecheck.
 - [ ] **Step 5:** commit `feat(#214): tanque de agua sobre patas`.
 
-### Task 3: Exhibit `planta`, docs y captura
+### Task 3: Test de la caja `planta`, docs y captura
 
 **Files:**
-- Modify: `src/lab/exhibits.ts` (D13 y su comentario), `src/lab/exhibits.test.ts` (test "planta incluye el tanque": `box.x0 === 2`, el recorte trae la pasarela r 4.6 y el horno; `h === 26`), `README.md` si menciona el marcador.
+- Modify: `src/lab/exhibits.ts` (título y comentario de D13), `src/lab/exhibits.test.ts` (test "planta incluye el tanque": `box.x0 === 2`, el recorte trae la pasarela r 4.6 y el horno; `h === 26`), `README.md` si menciona el marcador.
 - Create: `docs/superpowers/specs/assets/207-fabrica/planta-malteria-despues.png`.
 
-- [ ] **Step 1:** test que falla en `exhibits.test.ts`; FAIL.
-- [ ] **Step 2:** cambiar la caja; `npx vitest run src/lab/exhibits.test.ts` → PASS.
+- [ ] **Step 1:** test en `exhibits.test.ts` (escrito en stage 3, rojo hasta las Tareas 1 y 2).
+- [ ] **Step 2:** título y comentario de la caja; `npx vitest run src/lab/exhibits.test.ts` → PASS.
 - [ ] **Step 3:** `npm test` y `npm run typecheck` en verde.
 - [ ] **Step 4:** captura con agent-browser de `/lab/storybook.html?speed=0#planta` a 1600 × 900, escala 2; anotar sólidos y caras del panel.
 - [ ] **Step 5:** commit `feat(#214): caja de planta con maltería y tanque`.
+
+## Assumptions
+
+- A1 (D1): techo partido en y −40 alrededor del horno, en vez de 4 rampas enteras de d 30 (rechazado: el desempate de profundidad pinta las rampas sobre el horno).
+- A2 (D2): pilastras de los extremos hacia adentro de la huella (rechazado: centradas en x 20/44, pisan la nave); la de x 32 solo de z 16.7 a 18 (rechazado: entera, tapa las puertas de carga).
+- A3 (D3): puntas de alero de la cornisa metidas 0.15 (rechazado: en el alero exacto, la caja pasa de x 44).
+- A4 (D4): óculos a z 19.7 (rechazado: z 19.8 del issue, asoma 0.05 u del faldón).
+- A5 (D9): cruces en los tramos z 0..5 y 5..10 (rechazado: 5..10 y 10..14; el issue no fija el tramo).
+- A6 (D14): capturas `planta-malteria-*.png` (rechazado: pisar `planta-antes/despues.png` de #213).
+- A7: la caja `planta` cambia en las Tareas 1 y 2, junto con lo que la agranda, para que cada commit quede en verde.
+
+## Grilling
+
+- Rondas: 1 (los cambios reordenan pasos y precisan decisiones; no cambian la costura). Griller: fable.
+- Preguntas: 17. Fuentes: ISSUE 6, CODE 10, DOC 1 (algunas citan más de una); NO SOURCE 3 → supuestos técnicos (A2 pilastra de x 32, A5 tramos de las cruces, A7 orden de la caja). Ambigüedades de spec: 0. Fuera de alcance: 0.
+- Correcciones: D1 (el test de orden afirmaba "horno después de las 6 rampas": falso para las del este; ahora sigue a `isBehind`), D2/D6 (la pilastra de x 32 tapaba las puertas), D7 (no hay rotación de `regular`: ya está girado), D15 nuevo (cómo se mide el mínimo), caja `planta` adelantada a las Tareas 1 y 2.
+- Issues abiertos: ninguno.
