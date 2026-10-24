@@ -70,6 +70,7 @@ function sortByDepthNaive(solids: Solid[]): Solid[] {
   for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
     if (!overlaps(sbs[i]!, sbs[j]!)) continue;
     const ij = isBehind(bs[i]!, bs[j]!), ji = isBehind(bs[j]!, bs[i]!);
+    if (ij && ji) continue;
     if (ij === ji) { if (keys[i]! <= keys[j]!) before[j]!.push(i); else before[i]!.push(j); }
     else if (ij) before[j]!.push(i);
     else before[i]!.push(j);

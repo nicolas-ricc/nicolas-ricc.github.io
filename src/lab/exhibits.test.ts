@@ -109,6 +109,17 @@ describe("catálogo de exhibits", () => {
   });
 });
 
+describe("caja de la nave de calderas (#213)", () => {
+  it("planta llega al borde este de la torre de escalera (x 126): entra la torre y queda afuera la primera chimenea", () => {
+    const e = regions.find((r) => r.id === "planta")!;
+    expect(e.box.x1).toBe(126);
+    const cs = cropScene(scene, e.box);
+    expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "steel" && s.w === 5 && s.d === 8)).toBe(true); // descansos de la torre
+    expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "concrete" && s.w === 7 && s.d === 7)).toBe(false); // pedestal x ≥ 126.5
+    expect(cs.solids.filter((s) => s.kind === "cylinder" && s.mat === "rust" && s.r === 0.5)).toHaveLength(4); // chimeneas metálicas
+  });
+});
+
 describe("selección por hash", () => {
   const [first, second] = EXHIBITS;
   it("acepta el hash con o sin #", () => {

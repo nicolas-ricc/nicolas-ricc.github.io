@@ -7,6 +7,7 @@ import type { Material } from "../map/palette-iso";
 import { createRng, SEED } from "../map/seed";
 import { BLOCK_D, BLOCK_W, BRIDGE, COLLAPSED, DISTRICT_COLS, DISTRICT_ROWS, EAST_COLS, MALECON, PLAZA, ROWS, SITE, TOWER, TOWER_H, WEST_COLS } from "../scenes/city-grid";
 import { campus, lamp } from "../scenes/city-pieces";
+import { STAIR_TOWER } from "../scenes/boiler-house";
 import { PLANT, RAIL_YARD_X, STACK_BASE_H, STACKS } from "../scenes/factory";
 import { PUFF_LIFT, PUFF_RANGE } from "../scenes/factory-anim";
 import { ARCADE, BUMPER, CAROUSEL, COASTER, DROP, PIER, WHEEL } from "../scenes/fair";
@@ -53,9 +54,9 @@ const vessel = (kind: ShipKind) => (out: Solid[], accents: Accent[]): void => {
 };
 
 export const EXHIBITS: readonly Exhibit[] = [
-  // al sur 1 u: la grúa torre del desvío (y −12) queda afuera
-  { id: "planta", title: "Planta de ladrillo", zone: "portfolio", group: "fabrica", kind: "region",
-    box: { x0: PLANT.x - M, y0: PLANT.y - M, x1: PLANT.x + PLANT.w + M, y1: PLANT.y + PLANT.d + 1 }, h: PLANT.h + 4 }, // dientes de sierra
+  // x1 = borde este de la torre de escalera (126): queda afuera la primera chimenea, cuya plataforma (#212) arranca en x 126.3; y1 −14: zócalo y tolva adentro, faroles y grúa torre del desvío afuera; h 23: chimeneas metálicas (22.6)
+  { id: "planta", title: "Nave de calderas", zone: "portfolio", group: "fabrica", kind: "region",
+    box: { x0: PLANT.x - M, y0: PLANT.y - M, x1: STAIR_TOWER.x1, y1: -14 }, h: 23 },
   // el humo deriva al NNE hasta PUFF_RANGE: la caja se estira al norte para no cortar la columna (la subestación queda adentro, detrás)
   // la torre de enfriamiento es privada en factory.ts: (172, −36), r 9
   { id: "chimeneas", title: "Chimeneas y torre de enfriamiento", zone: "portfolio", group: "fabrica", kind: "region",

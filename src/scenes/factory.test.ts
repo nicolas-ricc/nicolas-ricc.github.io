@@ -2,17 +2,39 @@ import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { buildRenderList } from "../iso/render-list";
 import { overlaps, screenBounds, sortByDepth } from "../iso/depth";
-import { bounds, isFlat, type Solid } from "../iso/solids";
+import { bounds, isFlat, type Bounds, type Solid } from "../iso/solids";
 import { WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, worldZoneAt } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
-import { PLANT, RAIL_YARD_X, STACKS, STACK_BASE_H, chimney, factory, type FactoryScene, type Stack } from "./factory";
+import { boilerHouse, gableEnd, inclineBelt, metalStacks, NAVE, naveBody, stairTower } from "./boiler-house";
+import { MALT, PLANT, RAIL_YARD_X, STACKS, STACK_BASE_H, chimney, factory, type FactoryScene, type Stack } from "./factory";
+import { towerCrane } from "./pieces";
 import { terrainAt } from "./terrain";
 
 const scene = (): FactoryScene => factory(createRng(7));
 const PORTFOLIO_MATS: readonly Material[] = ["slab", "concrete", "rust", "steel", "road", "rail", "sand", "brick", "leaf", "leafDark", "whitewash", "glass", "office", "signal", "stockbrick", "safety"];
 const slender = (s: Solid) => (s.kind === "cylinder" && s.r <= 4) || (s.kind === "prism" && ((s.w <= 3 && s.d <= 3) || s.h <= 1)) || s.kind === "beam"; // chimeneas, mástiles, vigas y barandas
 const tallOk = (s: Solid) => bounds(s).max.z <= 26 || slender(s);
+const build = (f: (out: Solid[]) => void): Solid[] => { const out: Solid[] = []; f(out); return out; };
+
+/** Cajas para comparar vecindades: una viga diagonal se parte en 16 tramos (su caja entera cubre mucho aire). */
+function slices(s: Solid): Bounds[] {
+  if (s.kind !== "beam") return [bounds(s)];
+  const at = (t: number) => ({ x: s.from.x + (s.to.x - s.from.x) * t, y: s.from.y + (s.to.y - s.from.y) * t, z: s.from.z + (s.to.z - s.from.z) * t });
+  return Array.from({ length: 16 }, (_, i) => bounds({ ...s, from: at(i / 16), to: at((i + 1) / 16) }));
+}
+const boxApart = (a: Bounds, b: Bounds): boolean =>
+  a.max.x <= b.min.x || b.max.x <= a.min.x || a.max.y <= b.min.y || b.max.y <= a.min.y || a.max.z <= b.min.z || b.max.z <= a.min.z;
+/** Separados en x, en y o en z (el contacto vale), tramo por tramo. */
+const apartSliced = (a: Solid, b: Solid): boolean => slices(a).every((p) => slices(b).every((q) => boxApart(p, q)));
+const expectApart = (as: readonly Solid[], bs: readonly Solid[]) => {
+  expect(as.length).toBeGreaterThan(0); expect(bs.length).toBeGreaterThan(0);
+  for (const a of as) for (const b of bs) expect(apartSliced(a, b), `${JSON.stringify(a).slice(0, 90)} × ${JSON.stringify(b).slice(0, 90)}`).toBe(true);
+};
+const isTruck = (x: Solid) => x.kind === "prism" && x.d === 2.4 && ((x.w === 6 && x.h === 2.8) || (x.w === 2 && x.h === 2.2));
+const isPallet = (x: Solid) => x.kind === "prism" && x.mat === "steel" && x.w === 3 && x.d === 2 && x.at.y === -3;
+const isLamp = (x: Solid) => x.kind === "prism" && x.mat === "steel" && x.w === 0.6 && x.d === 0.6 && x.h === 5;
+const crane = build((out) => towerCrane(out, [], { at: { x: 60, y: -12 }, mastH: 20, jibLen: 30, dir: "e", light: "cyan" }));
 
 describe("factory", () => {
   it("es determinística y trae más de 90 sólidos elevados dentro de Portfolio", () => {
@@ -47,18 +69,86 @@ describe("factory", () => {
     expect(tallOk({ kind: "prism", at: { x: 0, y: 0, z: 27 }, w: 30, d: 1, h: 1, mat: "steel" })).toBe(true);
   });
 
-  it("planta de ladrillo con dientes de sierra, tres chimeneas sin banda rust, torre de enfriamiento y grúa", () => {
+  it("la planta: marcador de la maltería 24 × 30 × 18 y nave de dos prismas de ladrillo apilados, sin dientes de sierra; tres chimeneas sin banda rust, torre de enfriamiento y grúa", () => {
     const s = scene();
-    const plant = s.solids.find((x) => x.kind === "prism" && x.mat === "brick" && x.h === PLANT.h)!;
-    expect(bounds(plant)).toMatchObject({ min: { x: PLANT.x, y: PLANT.y } });
-    expect(s.solids.filter((x) => x.kind === "ramp" && x.mat === "brick")).toHaveLength(5);
+    expect(MALT).toEqual({ x: 20, y: -46, w: 24, d: 30, h: 18 });
+    expect(NAVE).toEqual({ x: 44, y: -46, w: 76, d: 30, h: 14 });
+    expect(PLANT).toMatchObject({ x: 20, y: -46, w: 100, d: 30 }); // huella estable
+    expect(s.solids.filter((x) => x.kind === "prism" && x.mat === "brick" && x.at.x === MALT.x && x.at.y === MALT.y && x.w === 24 && x.d === 30 && x.h === 18)).toHaveLength(1);
+    expect(s.solids.filter((x) => x.kind === "prism" && x.mat === "brick" && x.at.x === NAVE.x && x.at.y === NAVE.y && x.w === NAVE.w && x.d === NAVE.d && x.h === 7)).toHaveLength(2);
+    expect(s.solids.filter((x) => x.kind === "ramp" && x.mat === "brick")).toHaveLength(0);
+    for (const x of build(boilerHouse)) expect(s.solids).toContainEqual(x);
     const stacks = s.solids.filter((x) => x.kind === "cylinder" && x.mat === "brick");
     expect(stacks).toHaveLength(21); // 7 por chimenea: base escalonada, fuste y corona
     expect(s.stacks).toHaveLength(3);
     STACKS.forEach((st, i) => expect(s.stacks[i]).toEqual({ x: st.x, y: st.y, z: STACK_BASE_H + st.h }));
-    expect(s.solids.some((x) => x.kind === "cylinder" && x.mat === "rust")).toBe(false); // la banda rust de antes se fue
+    expect(s.solids.some((x) => x.kind === "cylinder" && x.mat === "rust" && x.r > 1)).toBe(false); // la banda rust de antes se fue (las chimeneas metálicas y los tubos de la nave son finos)
     expect(s.solids.filter((x) => x.kind === "cylinder" && x.mat === "concrete" && x.r >= 7)).toHaveLength(4); // torre de enfriamiento
     expect(s.solids.some((x) => x.kind === "prism" && x.h === 20 && x.w === 1.2)).toBe(true); // mástil de la grúa
+  });
+
+  it("el portón este sigue en x 119.8..120.3, y −23..−17", () => {
+    const gates = scene().solids.filter((x) => x.kind === "prism" && x.mat === "concrete" && x.h === 8);
+    expect(gates).toHaveLength(1);
+    expect(bounds(gates[0]!)).toEqual({ min: { x: 119.8, y: -23, z: 0 }, max: { x: 120.3, y: -17, z: 8 } });
+  });
+
+  it("ningún sólido de la nave supera z 20 salvo las chimeneas metálicas y sus tensores (≤ 22.6)", () => {
+    const stacks = build(metalStacks);
+    for (const x of stacks) expect(bounds(x).max.z).toBeLessThanOrEqual(22.6 + 1e-9);
+    for (const x of [...build(naveBody), ...build(gableEnd), ...build(stairTower), ...build(inclineBelt)]) expect(bounds(x).max.z).toBeLessThanOrEqual(20);
+  });
+
+  it("las chimeneas metálicas y sus tensores quedan dentro de la huella de la nave en planta", () => {
+    for (const x of build(metalStacks)) {
+      const b = bounds(x);
+      expect(b.min.x).toBeGreaterThanOrEqual(NAVE.x); expect(b.max.x).toBeLessThanOrEqual(NAVE.x + NAVE.w);
+      expect(b.min.y).toBeGreaterThanOrEqual(NAVE.y); expect(b.max.y).toBeLessThanOrEqual(NAVE.y + NAVE.d);
+    }
+  });
+
+  it("la torre de escalera no toca la cinta existente (x 121..123, y ≥ −20) ni el pedestal de la primera chimenea (x ≥ 126.5)", () => {
+    const s = scene();
+    const conveyor = s.solids.filter((x) => x.kind === "prism" && x.mat === "steel" && ((x.at.z === 6 && x.h === 0.6) || (x.w === 0.8 && x.d === 0.8 && x.h === 6)));
+    const pedestal = s.solids.filter((x) => x.kind === "prism" && x.mat === "concrete" && x.w === 7 && x.d === 7);
+    expect(Math.min(...pedestal.map((p) => bounds(p).min.x))).toBe(126.5);
+    expectApart(build(stairTower), [...conveyor, ...pedestal]);
+  });
+
+  it("la cinta inclinada y su tolva no tocan camiones, pallets, grúa torre (mástil, pluma, cable, gancho) ni faroles", () => {
+    const s = scene();
+    for (const c of crane) expect(s.solids).toContainEqual(c);
+    expect(s.solids.filter(isTruck)).toHaveLength(6);
+    expect(s.solids.filter(isPallet)).toHaveLength(6);
+    expect(s.solids.filter(isLamp)).toHaveLength(7);
+    expectApart(build(inclineBelt), [...s.solids.filter(isTruck), ...s.solids.filter(isPallet), ...crane, ...s.solids.filter(isLamp)]);
+  });
+
+  it("el zócalo no toca camiones ni faroles", () => {
+    const s = scene();
+    const plinth = build(naveBody).filter((x) => (x.kind === "prism" && x.mat === "whitewash" && x.h === 3.5) || (x.kind === "cylinder" && x.r === 0.3 && x.h === 0.8));
+    expect(plinth).toHaveLength(21);
+    expectApart(plinth, [...s.solids.filter(isTruck), ...s.solids.filter(isLamp)]);
+  });
+
+  it("las ménsulas de las pilastras no tocan el remate sur del alero", () => {
+    const body = build(naveBody);
+    expectApart(body.filter((x) => x.kind === "beam" && x.w === 0.3), body.filter((x) => x.kind === "prism" && x.mat === "whitewash" && x.at.y === -15.4));
+  });
+
+  it("en la escena, el muro alto se pinta antes de cada tramo del faldón norte y del sur (sin ciclos que corten esas relaciones)", () => {
+    const near = scene().solids.filter((x) => { const b = bounds(x); return b.max.x >= 17 && b.min.x <= 126.4 && b.max.y >= -49 && b.min.y <= -14; });
+    const order = sortByDepth(near);
+    const wall = order.findIndex((x) => x.kind === "prism" && x.mat === "brick" && x.at.x === NAVE.x && x.at.z === 7);
+    const roof = order.flatMap((x, i) => (x.kind === "ramp" && x.mat === "steel" ? [i] : []));
+    expect(roof).toHaveLength(6);
+    for (const i of roof) expect(i).toBeGreaterThan(wall);
+  });
+
+  it("el farol de (58, −16) pasa a (50, −13.5)", () => {
+    const at = scene().solids.filter(isLamp).map((l) => l.kind === "prism" ? [l.at.x, l.at.y] : []);
+    expect(at).toContainEqual([50, -13.5]);
+    expect(at).not.toContainEqual([58, -16]);
   });
 
   it("desvío con seis vagones y locomotora, cinta elevada, subestación, camiones y playa de vías con acopios", () => {

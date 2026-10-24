@@ -92,8 +92,10 @@ function besideHull(hull: Solid, other: Solid, hb: Bounds, ob: Bounds, vx: numbe
 
 /**
  * Orden painter topológico: para cada par que se superpone en pantalla, el que
- * está detrás se dibuja antes. Si los dos se ven "detrás" del otro (esquinas
- * diagonales), decide la suma de coordenadas. Ciclos: se cortan y siguen.
+ * está detrás se dibuja antes. Si cada uno queda "detrás" del otro por un plano distinto (esquinas
+ * diagonales), ninguno tapa al otro y no se impone orden: esa arista de desempate cerraba ciclos que
+ * cortaban relaciones de verdad. Si no los separa ningún plano, decide la suma de coordenadas.
+ * Ciclos: se cortan y siguen.
  * Los pares se buscan con un barrido por x de pantalla (solo se comparan cajas
  * cuyos rangos en x se cruzan) y cada lista `before` se ordena ascendente:
  * el resultado es el mismo que comparando todos los pares en orden de índice.
@@ -148,8 +150,8 @@ export function sortByDepth(solids: Solid[], heading = 0): Solid[] {
       const ij = isBehindView(bs[i]!, bs[j]!, vx, vy), ji = isBehindView(bs[j]!, bs[i]!, vx, vy);
       if (side > 0) before[j]!.push(i);
       else if (side < 0) before[i]!.push(j);
-      // En el marco girado, si los separan dos planos a la vez ninguno tapa al otro: no hay relación que imponer.
-      else if (ij && ji && heading !== 0) continue;
+      // Los separan dos planos a la vez: ninguno tapa al otro
+      else if (ij && ji) continue;
       else if (ij === ji) { if (keys[i]! <= keys[j]!) before[j]!.push(i); else before[i]!.push(j); }
       else if (ij) before[j]!.push(i);
       else before[i]!.push(j);
