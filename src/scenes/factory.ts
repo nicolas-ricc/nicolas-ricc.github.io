@@ -7,15 +7,16 @@ import { WORLD } from "../map/geo";
 import { jungle } from "./flora";
 import { boilerHouse } from "./boiler-house";
 import { towerCrane } from "./pieces";
+import { substation } from "./substation";
 
 /**
  * Fábrica, detrás (al norte) y al oeste del astillero. Banda norte
  * `x -60..205, y -60..0` al oeste del río: nave de calderas (Fábrica de Luz) y,
  * al oeste, el marcador de la maltería, tres chimeneas humeantes, torre de
  * enfriamiento, grúa torre sobre un desvío ferroviario, cinta transportadora
- * hasta el patio de material, subestación y playa de camiones. Columna oeste
- * `x -60..0, y 0..146`: playa de vías y acopios de mineral, selva al sur. El
- * terreno es `slab`.
+ * hasta el patio de material, subestación de intemperie (`substation.ts`) y
+ * playa de camiones. Columna oeste `x -60..0, y 0..146`: playa de vías y
+ * acopios de mineral, selva al sur. El terreno es `slab`.
  * Spec: docs/superpowers/specs/2026-09-14-mundo-2-fabrica-distrito-blog-design.md §5.
  */
 export interface FactoryScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; stacks: Vec3[] }
@@ -101,15 +102,6 @@ function conveyor(out: Solid[]): void {
   out.push(prism(30, 1, CONVEYOR_Z, 93, 2, 0.6, "steel"));
   for (let y = -16; y < 2; y += 12) out.push(prism(121.6, y, 0, 0.8, 0.8, CONVEYOR_Z, "steel"));
   for (let x = 34; x < 120; x += 12) out.push(prism(x, 1.6, 0, 0.8, 0.8, CONVEYOR_Z, "steel"));
-}
-
-function substation(out: Solid[]): void {
-  for (let i = 0; i < 6; i++) out.push(prism(152 + (i % 3) * 12, -58 + Math.floor(i / 3) * 6, 0, 3, 3, 3, "steel"));
-  for (const x of [150, 186]) {
-    out.push(prism(x, -59, 0, 0.6, 0.6, 7, "steel"), prism(x, -49, 0, 0.6, 0.6, 7, "steel"));
-    out.push(prism(x, -59, 6.4, 0.6, 10.6, 0.6, "steel")); // travesaño del pórtico
-  }
-  out.push(strip([{ x: 149, y: -60 }, { x: 190, y: -60 }, { x: 190, y: -47 }, { x: 149, y: -47 }, { x: 149, y: -60 }], 0.3, 0.05, "concrete")); // cerco
 }
 
 function truckYard(out: Solid[], accents: Accent[]): void {
