@@ -1069,6 +1069,27 @@ describe("fachada rica (#209)", () => {
       }
     });
 
+    it("dintel, alféizar y zócalo que se pasarían de la pared se recortan al alero y a la base", () => {
+      const tall: Facade = { floors: 2, cols: 1, window: { w: 0.95, h: 0.9 }, head: "segmental", sill: "concrete", plinth: { h: 5, mat: "whitewash" } };
+      const wall = southOf(box(8, 4, 1.4, tall));
+      const faces = facadeFaces(wall, tall);
+      for (const x of faces) for (const p of x.pts) { expect(p.z).toBeLessThanOrEqual(1.4 + 1e-9); expect(p.z).toBeGreaterThanOrEqual(-1e-9); }
+      const flat = facadeFaces(wall, { ...tall, head: "flat" });
+      for (const x of flat) for (const p of x.pts) expect(p.z).toBeLessThanOrEqual(1.4 + 1e-9);
+    });
+
+    it("placa de tirante más alta que la losa en un piso bajo: el centro se acota sobre la base", () => {
+      const f: Facade = { floors: 2, cols: 2, piers: { every: 1, w: 0.5, mat: "rust" }, ties: { r: 0.4, mat: "steel" } };
+      const ties = facadeFaces(southOf(box(8, 4, 1, f)), f).filter((x) => x.mat === "steel");
+      expect(ties).toHaveLength(3);
+      for (const t of ties) { expect(lo(zs(t))).toBeGreaterThanOrEqual(-1e-9); expect(hi(zs(t))).toBeLessThanOrEqual(1 + 1e-9); }
+    });
+
+    it("ventana de ancho cero: el arco rebajado no emite puntos NaN", () => {
+      const f: Facade = { floors: 1, cols: 1, window: { w: 0, h: 0.5 }, head: "segmental" };
+      for (const x of facadeFaces(southOf(box(4, 4, 3, f)), f)) for (const p of x.pts) expect(Number.isFinite(p.z) && Number.isFinite(p.x)).toBe(true);
+    });
+
     it("el sólido anfitrión no cambia de bounds ni suma sólidos: solo caras después de cada pared", () => {
       const plain = tessellateAll(box(12, 4, 9, { floors: 3, cols: 4 }));
       const fancy = tessellateAll(box(12, 4, 9, rich));
