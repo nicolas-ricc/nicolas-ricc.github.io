@@ -15,6 +15,8 @@ import type { Face } from "./solids";
  * ventana, 0.1 u más ancho a cada lado; `grid` parte la ventana en `cols` × `rows` con franjas
  * de 0.12 u (`mat` por defecto acero); `head` es un dintel plano (banda de 0.25 u) o rebajado
  * (arco de flecha 0.3 × ancho), de material `headMat` o el de la pared. Sin recorte.
+ * `ties`: con `piers`, un octógono de radio `r` (u) sobre cada pilastra, a la altura del centro de la
+ * imposta/losa de cada entrepiso (no la del último piso); su centro se acota para caer dentro de la pared.
  */
 export interface Facade {
   floors: number; cols: number; litFloor?: number; base?: "glass" | "portico"; window?: { w: number; h: number };
@@ -48,7 +50,6 @@ function patch(wall: Face, s0: number, s1: number, z0: number, z1: number): Vec3
 
 const floorHeight = (wall: Face, f: Facade): number => (wall.pts[2]!.z - wall.pts[0]!.z) / f.floors;
 
-/** Rectángulo sobre la pared: s0..s1 a lo largo de la base (0..1), z0..z1 absolutos. */
 type WallRect = { s0: number; s1: number; z0: number; z1: number };
 
 /** Rectángulos (s, z) de las ventanas de un piso (0 = planta baja). Con `base`, el piso 0 tiene una sola banda o ninguna. */
@@ -66,7 +67,7 @@ function windowRects(wall: Face, f: Facade, floor: number): WallRect[] {
 }
 
 /** Fracción `s` de cada borde de pilastra, sin recortar: columnas `k` múltiplo de `every`, y siempre `k = cols`. */
-export function pierEdges(wall: Face, f: Facade): number[] {
+function pierEdges(f: Facade): number[] {
   if (!f.piers) return [];
   const out: number[] = [];
   for (let k = 0; k <= f.cols; k++) if (k % f.piers.every === 0 || k === f.cols) out.push(k / f.cols);
@@ -91,6 +92,18 @@ function headPoly(wall: Face, kind: "flat" | "segmental", r: WallRect, len: numb
   return wallPoly(wall, pts);
 }
 
+/** Octógono de radio `r` (vértices a π/8 + k·π/4) centrado en (s, z), con el centro acotado para que quede dentro de la pared. */
+function tiePoly(wall: Face, s: number, z: number, r: number, len: number): Vec3[] {
+  const rs = r / len, zb = wall.pts[0]!.z, zt = wall.pts[2]!.z;
+  const cs = Math.min(1 - rs, Math.max(rs, s)), cz = Math.min(zt - r, Math.max(zb + r, z));
+  const pts: [number, number][] = [];
+  for (let k = 0; k < 8; k++) {
+    const t = Math.PI / 8 + k * Math.PI / 4;
+    pts.push([cs + rs * Math.cos(t), cz + r * Math.sin(t)]);
+  }
+  return wallPoly(wall, pts);
+}
+
 export function facadeFaces(wall: Face, f: Facade): Face[] {
   const fh = floorHeight(wall, f), zb = wall.pts[0]!.z;
   const mk = (pts: Vec3[], mat: Material, toneOffset: number): Face => ({ pts, normal: wall.normal, mat, tone: wall.tone, toneOffset });
@@ -99,7 +112,7 @@ export function facadeFaces(wall: Face, f: Facade): Face[] {
   if (f.plinth) out.push(mk(patch(wall, 0, 1, zb, zb + f.plinth.h), f.plinth.mat, 0));
   if (f.piers) {
     const half = f.piers.w / 2 / len;
-    for (const e of pierEdges(wall, f)) out.push(mk(patch(wall, Math.max(0, e - half), Math.min(1, e + half), zb, wall.pts[2]!.z), f.piers.mat, 0));
+    for (const e of pierEdges(f)) out.push(mk(patch(wall, Math.max(0, e - half), Math.min(1, e + half), zb, wall.pts[2]!.z), f.piers.mat, 0));
   }
   for (let i = 0; i < f.floors; i++) {
     const z0 = zb + i * fh;
@@ -122,6 +135,10 @@ export function facadeFaces(wall: Face, f: Facade): Face[] {
     }
     if (f.courses) out.push(mk(patch(wall, 0, 1, z0 + fh - f.courses.h, z0 + fh), f.courses.mat, 0)); // imposta
     else out.push(mk(patch(wall, 0, 1, z0 + fh - SLAB_H, z0 + fh), wall.mat, -1)); // losa
+    if (f.ties && f.piers && i < f.floors - 1) {
+      const zc = z0 + fh - (f.courses?.h ?? SLAB_H) / 2;
+      for (const e of pierEdges(f)) out.push(mk(tiePoly(wall, e, zc, f.ties.r, len), f.ties.mat, 0));
+    }
   }
   return out;
 }
