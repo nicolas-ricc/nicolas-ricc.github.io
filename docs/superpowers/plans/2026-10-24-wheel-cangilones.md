@@ -31,7 +31,16 @@
 - `buckets` funciona con o sin `hollow` (sobresale de la llanta exterior, que existe siempre).
 - Conteo: `hollow` + `slots` + `buckets` = `2·sides + slots + n·(2 + teeth)`; sin góndolas, todas en el plano.
 
-## Review Focus
+## Assumptions
+
+Decisiones técnicas sin fuente explícita (salieron del grilling; van a la descripción del PR):
+
+- **Extensión radial de las ranuras** `r − 1.7·width .. r − 0.5·width`. El issue dice "barras radiales de ancho `width/3` que unen las dos llantas", sin radios. Alternativa descartada: exactamente el hueco `r − 1.2·width .. r − width` (bordes coincidentes con las llantas, riesgo de costura de antialias entre polígonos del mismo color).
+- **Reparto de los dientes**: equiespaciados a lo largo del borde delantero (centro del diente j en la fracción `(j + 0.5)/teeth`), equiláteros, vértice hacia afuera del trapecio. Alternativa descartada: dientes en la punta exterior del borde (se encimarían con `teeth > 1`).
+- **Centro de la malla** = promedio de los 4 vértices del trapecio ("mismo centro" del issue). Alternativa descartada: centroide de área (difiere poco y complica el test).
+- **`buckets` sin `hollow`** se permite (sobresalen de la llanta exterior, que existe siempre). El issue no lo prohíbe; restringirlo por tipo complicaría la unión sin beneficio.
+- **Entradas degeneradas** (`depth ≤ 0`, `n ≤ 0`, `teeth < 0`, `slots` no entero, `r − 2.2·width ≤ 0`) son responsabilidad del llamador, como hoy: `wheel()` no valida `sides`, `r` ni `width` (`src/iso/solids.ts:215-239`). Con `n`, `teeth` o `slots` ≤ 0 los bucles simplemente no emiten nada.
+
 
 1. Rueda sin opciones nuevas (la noria): teselación idéntica byte a byte → snapshot inline tomado **antes** del cambio (Task 1).
 2. `hollow` sin `slots` (o `slots: 0`): `2·sides` caras, sin rayos ni cubo → test en Task 1.
@@ -49,7 +58,7 @@
 
 **Interfaces:**
 - Consumes: `wheelPoint`, `WHEEL_U`, `WHEEL_NORMAL`, `tessellate`, `tessellateAll`, `bounds` (existentes).
-- Produces: tipo `wheel` con `hollow?: boolean; slots?: number; buckets?: { n: number; depth: number; teeth: number; mat: Material }` (el campo `buckets` se declara acá y se implementa en Task 2). En el test, un ayudante `planeAngle(at: Vec3, p: Vec3): number` y `planeRadius(at: Vec3, p: Vec3): number` (distancia en el plano: `hypot(dot(p − at, WHEEL_U), p.z − at.z)`) que Task 2 reutiliza.
+- Produces: tipo `wheel` con `hollow?: boolean; slots?: number` (el campo `buckets` lo declara Task 2, junto con su implementación, para no dejar un campo muerto en un commit intermedio). En el test, un ayudante `planeAngle(at: Vec3, p: Vec3): number` y `planeRadius(at: Vec3, p: Vec3): number` (distancia en el plano: `hypot(dot(p − at, WHEEL_U), p.z − at.z)`) que Task 2 reutiliza.
 
 - [ ] **Step 1: Snapshot de hoy (antes de tocar `solids.ts`)**
 
@@ -85,7 +94,8 @@ Expected: PASS, snapshot intacto.
 - Test: `src/iso/solids.test.ts` (`describe("wheel")`)
 
 **Interfaces:**
-- Consumes: tipo con `buckets` y ayudantes de test `planeAngle`, `planeRadius` (Task 1).
+- Consumes: tipo con `hollow`/`slots` y ayudantes de test `planeAngle`, `planeRadius` (Task 1).
+- Produces: campo `buckets?: { n: number; depth: number; teeth: number; mat: Material }` en el tipo `wheel`.
 - Produces: nada nuevo exportado; #216 usará `buckets: { n: 14, depth: 1.2, teeth: 2, mat: "rust" }`.
 
 - [ ] **Step 1: Tests que fallan** (rueda base `B = { at: v3(-14, 60, 9.2), r: 5.5, width: 0.5, mat: "rust", sides: 28, angle: 0, hollow: true, slots: 28, buckets: { n: 14, depth: 1.2, teeth: 2, mat: "steel" } }`; usar `mat: "steel"` en los cangilones para separarlos por material)
@@ -105,7 +115,7 @@ Expected: PASS, snapshot intacto.
 Run: `npx vitest run src/iso/solids.test.ts`
 Expected: FAIL en los tests de cangilones.
 
-- [ ] **Step 3: Implementar** según "Decisiones" (trapecio, malla, dientes; después de llantas/ranuras/rayos/cubo y antes de góndolas). Actualizar el docstring de `wheel()` para nombrar las opciones nuevas.
+- [ ] **Step 3: Implementar** — declarar `buckets` en el tipo y emitir según "Decisiones" (trapecio, malla, dientes; después de llantas/ranuras/rayos/cubo y antes de góndolas). Actualizar el docstring de `wheel()` para nombrar las opciones nuevas.
 
 - [ ] **Step 4: Verde completo**
 
@@ -113,3 +123,10 @@ Run: `npm test && npm run typecheck`
 Expected: todo PASS (incluidos los tests de la feria sin tocarlos y el snapshot de Task 1).
 
 - [ ] **Step 5: Commit** — `feat(#211): cangilones con dientes y malla en wheel`
+
+## Grilling
+
+- Rondas: 1 (los cambios fueron menores: mover la declaración de `buckets` a Task 2 y agregar `## Assumptions`; no cambió ninguna costura ni se agregaron pasos).
+- Preguntas: 16. Fuentes: ISSUE 8 (1, 2, 11, 12 parcial, 13 parcial, 15, más los valores de 12), CODE 10 (3 `render-list.ts:38`, 4 `solids.ts:264-266`, 5 `solids.ts:219-228`, 6 `palette-iso.ts:85-90`, 7 `solids.ts:210-212`, 8 `palette-iso.ts`, 9 `solids.ts:270-279`, 11 `fair-anim.ts:41`, 14, 16 `solids.ts:231-237`), DOC 0, NO SOURCE 4 → todas supuestos técnicos (ranuras, dientes, centro de malla, degenerados) y ninguna ambigüedad de spec ni fuera de alcance.
+- Supuestos: ver `## Assumptions`.
+- Issues abiertos: ninguno.
