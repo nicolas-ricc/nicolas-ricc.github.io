@@ -1,16 +1,19 @@
 // src/iso/solids.ts
 import type { Material, Tone } from "../map/palette-iso";
-import { facadeFaces, isWall, type Facade } from "./facade";
+import { facadeFaces, type Facade } from "./facade";
 import { centroid, dot, polygonNormal, type Vec2, type Vec3, v3 } from "./geometry";
 import { shadeTone } from "./light";
+import { plateFaces, type Plate } from "./plate";
 import { VIEW_DIR } from "./project";
+
+export type { Plate } from "./plate";
 
 export interface Tri { pts: [Vec3, Vec3, Vec3]; toneOffset?: number; baseTone?: number }
 
 export type Solid =
-  | { kind: "prism"; at: Vec3; w: number; d: number; h: number; mat: Material; roof?: "flat" | "gable" | "step"; facade?: Facade }
-  | { kind: "poly"; footprint: Vec2[]; z: number; h: number; mat: Material; facade?: Facade }
-  | { kind: "ramp"; at: Vec3; w: number; d: number; h: number; mat: Material; dir: RampDir }
+  | { kind: "prism"; at: Vec3; w: number; d: number; h: number; mat: Material; roof?: "flat" | "gable" | "step"; facade?: Facade; plates?: Plate[] }
+  | { kind: "poly"; footprint: Vec2[]; z: number; h: number; mat: Material; facade?: Facade; plates?: Plate[] }
+  | { kind: "ramp"; at: Vec3; w: number; d: number; h: number; mat: Material; dir: RampDir; plates?: Plate[] }
   | { kind: "cylinder"; at: Vec3; r: number; h: number; mat: Material; sides?: number }
   | { kind: "cone"; at: Vec3; r: number; h: number; mat: Material; sides?: number }
   | { kind: "beam"; from: Vec3; to: Vec3; w: number; h: number; mat: Material }
@@ -52,6 +55,26 @@ function extrude(footprint: Vec2[], z0: number, h: number, mat: Material): Face[
   }
   return out;
 }
+
+/**
+ * Techo y base pasan; tras la pared de la arista `edgeOf(k)` (cara `k + 2`) van sus caras de fachada y sus placas.
+ * Cuenta con el orden de `extrude` (techo, base, una pared por arista) o de `ramp` (base, plano, cuatro paredes).
+ */
+function withPlates(raw: Face[], footprint: Vec2[], s: { facade?: Facade; plates?: Plate[] }, edgeOf: (k: number) => number = (k) => k): Face[] {
+  if (!s.facade && !s.plates?.length) return raw;
+  const n = footprint.length;
+  return raw.flatMap((f, k) => {
+    if (k < 2) return [f];
+    const i = edgeOf(k - 2);
+    return [f, ...(s.facade ? facadeFaces(f, s.facade) : []), ...plateFaces(f, footprint[i]!, footprint[(i + 1) % n]!, (s.plates ?? []).filter((p) => p.wall === i))];
+  });
+}
+
+/**
+ * Paredes de la rampa (caras 2..5: oeste, este, norte, sur) → arista de `rect` que las cubre. Las placas van sobre el plano
+ * vertical de la arista, sin recortar al perfil inclinado; la del lado de altura 0 hereda una normal nula y `tessellate` la descarta.
+ */
+const RAMP_WALL_EDGE = [3, 1, 0, 2];
 
 const rect = (x: number, y: number, w: number, d: number): Vec2[] => [{ x, y }, { x: x + w, y }, { x: x + w, y: y + d }, { x, y: y + d }];
 
@@ -242,14 +265,14 @@ export function tessellateAll(s: Solid): Face[] {
   switch (s.kind) {
     case "prism": {
       if (s.roof === "gable") return gable(s.at, s.w, s.d, s.h, s.mat);
-      const raw = extrude(rect(s.at.x, s.at.y, s.w, s.d), s.at.z, s.h, s.mat);
-      const box = s.facade ? raw.flatMap((f) => (isWall(f) ? [f, ...facadeFaces(f, s.facade!)] : [f])) : raw;
+      const fp = rect(s.at.x, s.at.y, s.w, s.d);
+      const box = withPlates(extrude(fp, s.at.z, s.h, s.mat), fp, s);
       if (s.roof !== "step") return box;
       const ix = s.w * STEP_INSET, iy = s.d * STEP_INSET;
       return [...box, ...extrude(rect(s.at.x + ix, s.at.y + iy, s.w - 2 * ix, s.d - 2 * iy), s.at.z + s.h, s.h * STEP_RATIO, s.mat)];
     }
-    case "poly": { const raw = extrude(s.footprint, s.z, s.h, s.mat); return s.facade ? raw.flatMap((f) => (isWall(f) ? [f, ...facadeFaces(f, s.facade!)] : [f])) : raw; }
-    case "ramp": return ramp(s.at, s.w, s.d, s.h, s.dir, s.mat);
+    case "poly": return withPlates(extrude(s.footprint, s.z, s.h, s.mat), s.footprint, s);
+    case "ramp": return withPlates(ramp(s.at, s.w, s.d, s.h, s.dir, s.mat), rect(s.at.x, s.at.y, s.w, s.d), { plates: s.plates }, (k) => RAMP_WALL_EDGE[k]!);
     case "cylinder": return extrude(regular(s.at.x, s.at.y, s.r, s.sides ?? 8), s.at.z, s.h, s.mat);
     case "cone": return cone(s.at, s.r, s.h, s.sides ?? 6, s.mat);
     case "beam": return beam(s);
@@ -268,8 +291,9 @@ export function tessellate(s: Solid): Face[] {
 
 export interface Bounds { min: Vec3; max: Vec3 }
 
-/** Caja de alineación de eje que contiene todos los vértices del sólido. */
+/** Caja de alineación de eje que contiene todos los vértices del sólido. Las placas no cuentan. */
 export function bounds(s: Solid): Bounds {
+  if ("plates" in s && s.plates) s = { ...s, plates: undefined };
   const min = v3(Infinity, Infinity, Infinity), max = v3(-Infinity, -Infinity, -Infinity);
   for (const f of tessellateAll(s)) for (const p of f.pts) {
     min.x = Math.min(min.x, p.x); min.y = Math.min(min.y, p.y); min.z = Math.min(min.z, p.z);
