@@ -73,3 +73,45 @@ describe("specs viejas de los barcos (#69)", () => {
     });
   }
 });
+
+describe("documentación de la fábrica en detalle (#217)", () => {
+  const factorySrc = readFileSync(`${ROOT}src/scenes/factory.ts`, "utf8");
+  const parrafos = readme.split(/\n\s*\n/);
+  // espacios colapsados: el párrafo se envuelve a ~80 columnas
+  const mundo = (parrafos.find((p) => p.includes("`factory.ts`")) ?? "").replace(/\s+/g, " ");
+  const lab = parrafos.find((p) => p.includes("/lab/world.html")) ?? "";
+  const fab = readFileSync(`${ROOT}docs/superpowers/specs/2026-10-24-fabrica-detalle-design.md`, "utf8");
+  const at = fab.search(/^## 14\. Desvíos y medición$/m);
+  const desvios = at < 0 ? "" : fab.slice(at);
+  it("el párrafo del mundo isométrico describe la fábrica nueva", () => {
+    for (const re of [/nave de calderas/, /maltería/, /tanque de agua/, /chimeneas[^.]*bandas/, /subestación de intemperie/, /excavadora de rueda/]) expect(mundo).toMatch(re);
+  });
+  it("README lista la spec de la fábrica en detalle entre las specs", () => {
+    expect(lab).toContain("2026-10-24-fabrica-detalle-design.md");
+  });
+  it("el docstring de factory.ts apunta a la spec nueva", () => {
+    const end = factorySrc.indexOf("export interface FactoryScene");
+    expect(end).toBeGreaterThan(0);
+    expect(factorySrc.slice(0, end)).toContain("docs/superpowers/specs/2026-10-24-fabrica-detalle-design.md");
+  });
+  it("la spec de la fábrica dice implementada", () => {
+    const estado = fab.split("\n").find((l) => l.startsWith("**Estado:**")) ?? "";
+    expect(estado).toMatch(/implementad/);
+    expect(estado).not.toMatch(/pendiente/);
+  });
+  it("la spec cierra con desvíos, tabla de caras y medición", () => {
+    expect(at).toBeGreaterThan(0);
+    for (const id of ["planta", "chimeneas", "subestacion", "playa-vias", "cinta", "excavadora"]) expect(desvios).toMatch(new RegExp(`^\\| \`${id}\` \\|`, "m"));
+    expect(desvios).toContain("assets/207-fabrica/mundo-antes.png");
+    expect(desvios).toContain("assets/207-fabrica/mundo-despues.png");
+    expect(desvios).toMatch(/\[lab\] bloom/);
+    expect(desvios).toMatch(/peor redibujo/);
+  });
+  it("las vistas del mundo antes y después son PNG de 1600×900 a 2x", () => {
+    for (const name of ["mundo-antes", "mundo-despues"]) {
+      const png = readFileSync(`${ROOT}docs/superpowers/specs/assets/207-fabrica/${name}.png`);
+      expect(png.subarray(1, 4).toString()).toBe("PNG");
+      expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([3200, 1800]);
+    }
+  });
+});

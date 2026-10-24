@@ -60,8 +60,13 @@ describe("world", () => {
     const w = world(7);
     const mats = (solids: Solid[]) => new Set(solids.filter((s) => s.kind !== "cone").map((s) => s.mat));
     const portfolio = mats([...w.shipyard!.solids, ...w.factory!.solids]), cv = mats(w.city!.solids), blog = mats(w.sea!.solids);
-    expect([...portfolio].filter((m) => cv.has(m)).sort()).toEqual(["rust", "steel"]);
-    const sharedWithBlog = ["steel", "rust", "hull", "rock", "glass"]; // glass: la linterna del faro (spec §7)
+    // glass: vidrio de fachadas; office: gris lila de la excavadora (decisión de #207). Subconjunto, no igualdad:
+    // hoy la fábrica todavía no los usa (#218).
+    const sharedWithCity = ["glass", "office", "rust", "steel"];
+    const shared = [...portfolio].filter((m) => cv.has(m));
+    expect(shared).toEqual(expect.arrayContaining(["rust", "steel"])); // lo que ya se comparte hoy sigue cubierto
+    for (const m of shared) expect(sharedWithCity).toContain(m);
+    const sharedWithBlog = ["steel", "rust", "hull", "rock", "glass", "whitewash"]; // glass: la linterna del faro (spec §7); whitewash: porcelana y remates de la fábrica (#207)
     for (const other of [portfolio, cv]) for (const m of blog) if (other.has(m)) expect(sharedWithBlog).toContain(m);
   });
 

@@ -12,6 +12,6 @@ const byColor = (accents: Accent[]) => {
 describe("acentos de Portfolio", () => {
   const w = world(7);
   it("astillero", () => expect(byColor(w.shipyard!.accents)).toEqual({ cyan: 10 }));
-  it("fábrica", () => expect(byColor(w.factory!.accents)).toEqual({ cyan: 8 }));
+  it("fábrica", () => expect(byColor(w.factory!.accents)).toEqual({ amber: 3, cyan: 8, magenta: 6 }));
   it("hinterland", () => expect(byColor(w.hinterland!.accents)).toEqual({ cyan: 21, cyanMid: 1 }));
 });

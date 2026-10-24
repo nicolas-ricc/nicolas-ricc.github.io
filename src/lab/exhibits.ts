@@ -1,5 +1,6 @@
 import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
+import { shadowPolygon } from "../iso/light";
 import { Z_SCALE } from "../iso/project";
 import type { Solid } from "../iso/solids";
 import { MOUTH_Y, QUAY_X, type WorldZone } from "../map/geo";
@@ -7,7 +8,10 @@ import type { Material } from "../map/palette-iso";
 import { createRng, SEED } from "../map/seed";
 import { BLOCK_D, BLOCK_W, BRIDGE, COLLAPSED, DISTRICT_COLS, DISTRICT_ROWS, EAST_COLS, MALECON, PLAZA, ROWS, SITE, TOWER, TOWER_H, WEST_COLS } from "../scenes/city-grid";
 import { campus, lamp } from "../scenes/city-pieces";
+import { STAIR_TOWER } from "../scenes/boiler-house";
+import { excavator, excavatorBox, excavatorWheel } from "../scenes/excavator";
 import { PLANT, RAIL_YARD_X, STACK_BASE_H, STACKS } from "../scenes/factory";
+import { waterTower } from "../scenes/maltings";
 import { PUFF_LIFT, PUFF_RANGE } from "../scenes/factory-anim";
 import { ARCADE, BUMPER, CAROUSEL, COASTER, DROP, PIER, WHEEL } from "../scenes/fair";
 import { jungle } from "../scenes/flora";
@@ -17,6 +21,7 @@ import { BUOYS, DRUM_R0, KEEPER, LANTERN_Z, LIGHTHOUSE, WRECK } from "../scenes/
 import { BEAM_LEN } from "../scenes/sea-anim";
 import { ship, shipAt, type ShipKind } from "../scenes/ships";
 import { SUBURB_COLS } from "../scenes/sprawl-grid";
+import { SUBSTATION } from "../scenes/substation";
 import { ARENA, AUDITORIUM, TELECOM } from "../scenes/tech";
 import type { Box } from "../world/frame";
 
@@ -46,6 +51,14 @@ const tanksX = TANKS.map((t) => t.x), tanksY = TANKS.map((t) => t.y);
 const stackTop = Math.max(...STACKS.map((s) => s.h)) + STACK_BASE_H;
 const buoysX = BUOYS.map((b) => b.x), buoysY = BUOYS.map((b) => b.y);
 
+// excavadora: su caja en planta más la sombra proyectada de cada sólido (rueda incluida)
+const excavatorExtent = ((): Box => {
+  const out: Solid[] = []; excavator(out, []); out.push(excavatorWheel(0));
+  const b = { ...excavatorBox() };
+  for (const s of out) for (const p of shadowPolygon(s) ?? []) { b.x0 = Math.min(b.x0, p.x); b.y0 = Math.min(b.y0, p.y); b.x1 = Math.max(b.x1, p.x); b.y1 = Math.max(b.y1, p.y); }
+  return b;
+})();
+
 // un barco con el punto medio de la unidad (empujador incluido) en el origen, a flote sobre agua
 const vessel = (kind: ShipKind) => (out: Solid[], accents: Accent[]): void => {
   const { solids, lights } = ship(kind, shipAt(kind, { x: 0, y: 0 }, 0), 0);
@@ -53,20 +66,25 @@ const vessel = (kind: ShipKind) => (out: Solid[], accents: Accent[]): void => {
 };
 
 export const EXHIBITS: readonly Exhibit[] = [
-  // al sur 1 u: la grúa torre del desvío (y −12) queda afuera
-  { id: "planta", title: "Planta de ladrillo", zone: "portfolio", group: "fabrica", kind: "region",
-    box: { x0: PLANT.x - M, y0: PLANT.y - M, x1: PLANT.x + PLANT.w + M, y1: PLANT.y + PLANT.d + 1 }, h: PLANT.h + 4 }, // dientes de sierra
+  // x1 = borde este de la torre de escalera (126): queda afuera la primera chimenea, cuya plataforma (#212) arranca en x 126.3; y1 −14: zócalo y tolva adentro, faroles y grúa torre del desvío afuera; h 26: vértice del horno de la maltería (26); x0 2: pasarela del tanque (x ≥ 5.4)
+  { id: "planta", title: "Nave de calderas, maltería y tanque", zone: "portfolio", group: "fabrica", kind: "region",
+    box: { x0: 2, y0: PLANT.y - M, x1: STAIR_TOWER.x1, y1: -14 }, h: 26 },
+  // en planta el tanque queda detrás de la maltería (la cámara mira desde el sudeste): solo, se ven patas, cruces, escalera y pasarela
+  { id: "tanque-agua", title: "Tanque de agua", zone: "portfolio", group: "fabrica", kind: "piece", pad: "slab", build: (out) => waterTower(out, { x: 0, y: 0 }) },
   // el humo deriva al NNE hasta PUFF_RANGE: la caja se estira al norte para no cortar la columna (la subestación queda adentro, detrás)
   // la torre de enfriamiento es privada en factory.ts: (172, −36), r 9
   { id: "chimeneas", title: "Chimeneas y torre de enfriamiento", zone: "portfolio", group: "fabrica", kind: "region",
     box: { x0: Math.min(...stacksX) - stackR - M, y0: Math.min(...stacksY) - stackR - PUFF_RANGE, x1: 172 + 9 + M, y1: -36 + 9 + M },
     h: stackTop + PUFF_RANGE * PUFF_LIFT },
-  // a mano: cerco 149..190 × −60..−47 (privado en factory.ts); y1 −46 deja afuera la torre de enfriamiento (y ≥ −45). El humo pasa por encima
-  { id: "subestacion", title: "Subestación", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: 146, y0: -63, x1: 193, y1: -46 }, h: 10 },
+  // cerco de SUBSTATION más margen (3 y 1 al sur); y1 −46 deja afuera la torre de enfriamiento (y ≥ −45). h 13: los mástiles llegan a z 12; el humo pasa por encima
+  { id: "subestacion", title: "Subestación", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: SUBSTATION.x0 - 3, y0: SUBSTATION.y0 - 3, x1: SUBSTATION.x1 + 3, y1: SUBSTATION.y1 + 1 }, h: 13 },
   // a mano: camiones y pallets de truckYard; la grúa torre (60, −12) está en medio de la playa y queda adentro
   { id: "playa-camiones", title: "Playa de camiones", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: 17, y0: -15, x1: 113, y1: 2 }, h: 22 },
   { id: "playa-vias", title: "Playa de vías", zone: "portfolio", group: "fabrica", kind: "region",
-    box: { x0: RAIL_YARD_X[0] - 4, y0: 40, x1: -4, y1: 100 }, h: 10 }, // a mano en y: los acopios de mineral (rng, x −25..−13, y 44..96, privados en factory.ts) con vías y vagones
+    box: { x0: RAIL_YARD_X[0] - 4, y0: 40, x1: -4, y1: 100 }, h: 21 }, // a mano en y: los acopios de mineral (rng, x −25..−13, y 44..96, privados en factory.ts) con vías y vagones; h cubre la excavadora (≈20,3)
+  // x1 tope 4: la sombra cae al ENE sobre el astillero y la caja se detiene antes de las naves (x 8)
+  { id: "excavadora", title: "Excavadora de rueda de cangilones", zone: "portfolio", group: "fabrica", kind: "region",
+    box: { x0: excavatorExtent.x0 - M, y0: excavatorExtent.y0 - M, x1: Math.min(excavatorExtent.x1 + M, 4), y1: excavatorExtent.y1 + M }, h: 21 }, // caja + sombras; h cubre la máquina (≈20,3), que es capa animada
   // a mano: del portón este (x 121, y −20) al patio de material (x 30, y 1..3); la grúa torre del desvío queda adentro y manda en h
   { id: "cinta", title: "Cinta transportadora", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: 28, y0: -15, x1: 125, y1: 4 }, h: 22 },
   // las constantes de shipyard.ts son privadas: cajas a mano

@@ -32,6 +32,9 @@ export const BASE_TONES = {
   foam:      { top: 0xc4d3d6, lit: 0xa19c85, shade: 0x4e5980, up: 0xe3ecda, down: 0xa9bac9 },
   abyss:     { top: 0x0f2740, lit: 0x081733, shade: 0x061026, up: 0x152e45, down: 0x0c213d },
   glint:     { top: 0xf58c5a, lit: 0xc96838, shade: 0x623b36, up: 0xffc496, down: 0xd37b55 },
+  signal:    { top: 0xc0392b, lit: 0x9d2a1b, shade: 0x4d181a, up: 0xdf402c, down: 0xa53228 },
+  stockbrick:{ top: 0xc9a86a, lit: 0xa57c42, shade: 0x504740, up: 0xe9bc6c, down: 0xad9464 },
+  safety:    { top: 0xd9a62e, lit: 0xb27b1d, shade: 0x57461c, up: 0xfcba2f, down: 0xbb922b },
 } as const;
 
 export const BASE_SHADOW = 0x2a1a3a;
