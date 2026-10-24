@@ -87,8 +87,6 @@ describe("fachada", () => {
   });
 });
 
-// ── #209: fachada rica ──────────────────────────────────────────────────────
-
 const ser = (faces: Face[]) =>
   faces.map((f) => ({ mat: f.mat, tone: f.tone, toneOffset: f.toneOffset, normal: [f.normal.x, f.normal.y, f.normal.z], pts: f.pts.map((p) => [p.x, p.y, p.z]) }));
 const southOf = (s: Solid) => tessellateAll(s).find((f) => isWall(f) && f.pts.every((p) => p.y === (s.kind === "prism" ? s.at.y + s.d : NaN)))!;

@@ -140,7 +140,7 @@ export function facadeFaces(wall: Face, f: Facade): Face[] {
       const head = f.head && headPoly(wall, f.head, r, len);
       if (head) out.push(mk(head, f.headMat ?? wall.mat, 0));
     }
-    if (f.courses) out.push(mk(patch(wall, 0, 1, Math.max(zb, z0 + fh - f.courses.h), z0 + fh), f.courses.mat, 0)); // imposta
+    if (f.courses) out.push(mk(patch(wall, 0, 1, Math.max(zb, z0 + fh - f.courses.h), z0 + fh), f.courses.mat, 0));
     else out.push(mk(patch(wall, 0, 1, z0 + fh - SLAB_H, z0 + fh), wall.mat, -1)); // losa
     if (f.ties && f.piers && i < f.floors - 1) {
       const zc = z0 + fh - (f.courses?.h ?? SLAB_H) / 2;
