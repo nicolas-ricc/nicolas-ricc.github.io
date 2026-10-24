@@ -148,15 +148,12 @@ describe.each(STACKS.map((st, i) => [i, st] as const))("chimenea %i", (_i, st) =
     const { out } = one(st);
     const hoops = cyls(out, "steel").filter((c) => Math.abs(c.h - 0.2) < EPS), shaft = cyls(out, "brick").slice(2, 6);
     expect(hoops.length).toBeGreaterThanOrEqual(3);
+    const order = sortByDepth(out);
     for (const h of hoops) {
       const seg = shaft.find((s) => h.at.z >= s.at.z - EPS && h.at.z + h.h <= s.at.z + s.h + EPS);
       expect(seg).toBeDefined();
       expect(h.r).toBeCloseTo(seg!.r + 0.1, 6);
-    }
-    const order = sortByDepth(out);
-    for (const h of hoops) { // el tramo que abraza empata en los tres ejes: tiene que ir antes o lo tapa
-      const seg = shaft.find((s) => h.at.z >= s.at.z - EPS && h.at.z + h.h <= s.at.z + s.h + EPS)!;
-      expect(order.indexOf(seg)).toBeLessThan(order.indexOf(h));
+      expect(order.indexOf(seg!)).toBeLessThan(order.indexOf(h)); // el tramo que abraza empata en los tres ejes: tiene que ir antes o lo tapa
     }
   });
 

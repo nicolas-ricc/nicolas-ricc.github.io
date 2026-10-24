@@ -47,7 +47,7 @@ function plant(out: Solid[]): void {
 
 export type Stack = (typeof STACKS)[number];
 
-/** Chimenea: pedestal, base escalonada, fuste que se afina con zunchos, siete bandas, plataforma con baranda, corona, pararrayos, escalera de gato, luces y puerta. Devuelve la boca. */
+/** Emite una chimenea detallada en `out`/`accents` y devuelve su boca. */
 export function chimney(s: Stack, out: Solid[], accents: Accent[]): Vec3 {
   const B = STACK_BASE_H, M = B + s.h;
   const cyl = (z: number, r: number, h: number, mat: Material): Solid => ({ kind: "cylinder", at: v3(s.x, s.y, z), r, h, mat });
@@ -56,7 +56,7 @@ export function chimney(s: Stack, out: Solid[], accents: Accent[]): Vec3 {
   const z0 = B + 3, z1 = M - 0.6, half = (z1 - z0) / 2, seg = half / 4;
   const radii = [0.5, (0.5 * 2) / 3, 0.5 / 3, 0].map((d) => s.r + d);              // mitad inferior: se afina hasta r
   radii.forEach((r, i) => out.push(cyl(z0 + i * seg, r, seg, "brick")));
-  for (let k = 0; k < 3; k++) out.push(cyl(z0 + (k + 1) * seg - 0.2, radii[k]! + 0.1, 0.2, "steel")); // zunchos en la junta de arriba de cada tramo que se afina: asoman 0.1 y, con el centro sobre el del tramo, el orden painter los dibuja después
+  for (let k = 0; k < 3; k++) out.push(cyl(z0 + (k + 1) * seg - 0.2, radii[k]! + 0.1, 0.2, "steel")); // zunchos en la junta de arriba de cada tramo: con el centro sobre el del tramo, el orden painter los dibuja después
   const bh = (half - DECK_H) / 7, dz = z0 + half + 6 * bh;                            // la plataforma llena la junta entre la 6ª y la 7ª banda: nada del fuste comparte su z y el orden painter no empata
   for (let i = 0; i < 7; i++) out.push(cyl(z0 + half + i * bh + (i === 6 ? DECK_H : 0), s.r, bh, i % 2 === 0 ? "signal" : "whitewash"));
   out.push(cyl(dz, s.r + 1.2, DECK_H, "concrete"));                                   // plataforma
