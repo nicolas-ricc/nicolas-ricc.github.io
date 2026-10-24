@@ -9,6 +9,7 @@ import { BLOCK_D, BLOCK_W, BRIDGE, COLLAPSED, DISTRICT_COLS, DISTRICT_ROWS, EAST
 import { campus, lamp } from "../scenes/city-pieces";
 import { STAIR_TOWER } from "../scenes/boiler-house";
 import { PLANT, RAIL_YARD_X, STACK_BASE_H, STACKS } from "../scenes/factory";
+import { waterTower } from "../scenes/maltings";
 import { PUFF_LIFT, PUFF_RANGE } from "../scenes/factory-anim";
 import { ARCADE, BUMPER, CAROUSEL, COASTER, DROP, PIER, WHEEL } from "../scenes/fair";
 import { jungle } from "../scenes/flora";
@@ -58,6 +59,8 @@ export const EXHIBITS: readonly Exhibit[] = [
   // x1 = borde este de la torre de escalera (126): queda afuera la primera chimenea, cuya plataforma (#212) arranca en x 126.3; y1 −14: zócalo y tolva adentro, faroles y grúa torre del desvío afuera; h 26: vértice del horno de la maltería (26); x0 2: pasarela del tanque (x ≥ 5.4)
   { id: "planta", title: "Nave de calderas, maltería y tanque", zone: "portfolio", group: "fabrica", kind: "region",
     box: { x0: 2, y0: PLANT.y - M, x1: STAIR_TOWER.x1, y1: -14 }, h: 26 },
+  // en planta el tanque queda detrás de la maltería (la cámara mira desde el sudeste): solo, se ven patas, cruces, escalera y pasarela
+  { id: "tanque-agua", title: "Tanque de agua", zone: "portfolio", group: "fabrica", kind: "piece", pad: "slab", build: (out) => waterTower(out, { x: 0, y: 0 }) },
   // el humo deriva al NNE hasta PUFF_RANGE: la caja se estira al norte para no cortar la columna (la subestación queda adentro, detrás)
   // la torre de enfriamiento es privada en factory.ts: (172, −36), r 9
   { id: "chimeneas", title: "Chimeneas y torre de enfriamiento", zone: "portfolio", group: "fabrica", kind: "region",

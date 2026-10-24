@@ -7,6 +7,7 @@ import { BEAM_PERIOD_MS } from "../scenes/sea-anim";
 import { assembleWorld } from "../world/assemble";
 import { type Box, FRAME_H, HALO_BASE } from "../world/frame";
 import { cropAnimators, cropScene } from "./crop";
+import { waterTower } from "../scenes/maltings";
 import { EXHIBITS, GROUPS, type GroupId, outOfView, pickExhibit, stepExhibit } from "./exhibits";
 
 const regions = EXHIBITS.flatMap((e) => (e.kind === "region" ? [e] : []));
@@ -141,12 +142,13 @@ describe("selección por hash", () => {
   });
 });
 
+const waterTowerSolids = (at: { x: number; y: number }): Solid[] => { const out: Solid[] = []; waterTower(out, at); return out; };
 const pieces = EXHIBITS.flatMap((e) => (e.kind === "piece" ? [e] : []));
 
 describe("exhibits de pieza", () => {
-  it("las nueve piezas, cada una en su zona", () => {
+  it("las diez piezas, cada una en su zona", () => {
     expect(Object.fromEntries(pieces.map((e) => [e.id, e.zone]))).toEqual({
-      "grua-torre": "portfolio", farol: "portfolio",
+      "tanque-agua": "portfolio", "grua-torre": "portfolio", farol: "portfolio",
       campus: "cv", selva: "cv",
       viga: "blog", carguero: "blog", remolcador: "blog", convoy: "blog", lancha: "blog",
     });
@@ -159,6 +161,17 @@ describe("exhibits de pieza", () => {
     const out: Solid[] = [];
     if (e.kind === "piece") e.build(out, []);
     expect(out.map((s) => s.kind)).toEqual(["beam"]);
+  });
+  it("el tanque de agua (#214) va solo, centrado en el origen, después de planta: en planta queda detrás de la maltería", () => {
+    const ids = EXHIBITS.map((e) => e.id);
+    expect(ids.indexOf("tanque-agua")).toBe(ids.indexOf("planta") + 1);
+    const e = EXHIBITS.find((x) => x.id === "tanque-agua")!;
+    const out: Solid[] = [];
+    if (e.kind === "piece") e.build(out, []);
+    const at = waterTowerSolids({ x: 0, y: 0 });
+    expect(out).toEqual(at);
+    const deck = out.find((s) => s.kind === "cylinder" && s.r === 4.6)!;
+    expect(deck.kind === "cylinder" && deck.at.x === 0 && deck.at.y === 0).toBe(true);
   });
   it("cada pieza emite al menos un sólido", () => {
     for (const e of pieces) {

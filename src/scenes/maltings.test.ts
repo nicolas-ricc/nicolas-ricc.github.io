@@ -205,6 +205,13 @@ describe("tanque de agua", () => {
     for (const c of cyls) { expect(c.at.x).toBe(cx); expect(c.at.y).toBe(cy); }
   });
 
+  it("armado en otro centro es el mismo tanque trasladado", () => {
+    const moved: Solid[] = []; waterTower(moved, { x: 0, y: 0 });
+    const shift = (s: Solid) => JSON.parse(JSON.stringify(s, (k, v) => (k === "x" && typeof v === "number" ? +(v - cx).toFixed(9) : k === "y" && typeof v === "number" ? +(v - cy).toFixed(9) : v)));
+    const round = (s: Solid) => JSON.parse(JSON.stringify(s, (k, v) => (typeof v === "number" ? +v.toFixed(9) : v)));
+    expect(moved.map(round)).toEqual(all.map(shift).map(round));
+  });
+
   it("ninguna pieza mide menos de 0.15", () => {
     for (const s of all) for (const d of dims(s)) expect(d).toBeGreaterThanOrEqual(0.15 - 1e-9);
   });

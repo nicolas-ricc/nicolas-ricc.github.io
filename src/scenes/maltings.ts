@@ -50,9 +50,9 @@ export function maltings(out: Solid[]): void {
   out.push({ kind: "cone", at: v3(25, -43, 24), r: 4.2, h: 2, mat: "steel", sides: 4 });
 }
 
-/** Tanque de agua sobre cuatro patas inclinadas con tornapuntas, cruces, riser, escalera, pasarela con baranda, cuba y techo cónico. */
-export function waterTower(out: Solid[]): void {
-  const { x: cx, y: cy } = WATER_TOWER;
+/** Tanque de agua sobre cuatro patas inclinadas con tornapuntas, cruces, riser, escalera, pasarela con baranda, cuba y techo cónico; centrado en `at`. */
+export function waterTower(out: Solid[], at: { x: number; y: number } = WATER_TOWER): void {
+  const { x: cx, y: cy } = at;
   const s = (z: number) => 4 - (1.5 * z) / 14; // semilado a la altura z
   const cyl = (r: number, z: number, h: number): Solid => ({ kind: "cylinder", at: v3(cx, cy, z), r, h, mat: "steel" });
   const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const;
@@ -73,7 +73,7 @@ export function waterTower(out: Solid[]): void {
       out.push(beam(v3(cx + k * a, cy + a, z0), v3(cx - k * b, cy + b, z1), 0.15, "rust")); // paño sur
     }
   }
-  out.push(beam(v3(14.5, -31.5, 0), v3(13, -33, 14), 0.6, "steel", 0.15)); // escalera junto a la pata SE
+  out.push(beam(v3(cx + 4.5, cy + 4.5, 0), v3(cx + 3, cy + 3, 14), 0.6, "steel", 0.15)); // escalera junto a la pata SE
 
   // pasarela con ocho postes y baranda (como la plataforma de las chimeneas)
   out.push(cyl(4.6, 14, 0.25));
