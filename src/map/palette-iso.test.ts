@@ -73,11 +73,12 @@ describe("paleta isométrica", () => {
 
   it("materiales de la fábrica detallada: balizamiento rojo, ladrillo amarillo y baranda amarilla", () => {
     const rgb = (c: number) => [(c >> 16) & 255, (c >> 8) & 255, c & 255] as const;
-    const [sr, sg, sb] = rgb(ISO_TONES.signal.top);
+    // sobre la base: el matiz es del material y no depende de DARKEN; ISO_TONES la sigue por el test de ±1
+    const [sr, sg, sb] = rgb(BASE_TONES.signal.top);
     expect(sr).toBeGreaterThan(sg + 60);
     expect(sr).toBeGreaterThan(sb + 60);
     for (const m of ["stockbrick", "safety"] as const) {
-      const [r, g, b] = rgb(ISO_TONES[m].top);
+      const [r, g, b] = rgb(BASE_TONES[m].top);
       expect(r).toBeGreaterThan(b + 40);
       expect(g).toBeGreaterThan(b + 40);
     }

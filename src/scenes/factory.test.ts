@@ -41,6 +41,8 @@ describe("factory", () => {
     expect(tallOk({ kind: "cylinder", at, r: 4, h: 30, mat: "brick" })).toBe(true);
     expect(tallOk({ kind: "beam", from: at, to: { x: 0, y: 0, z: 30 }, w: 1, h: 1, mat: "steel" })).toBe(true);
     expect(tallOk({ kind: "prism", at, w: 5, d: 5, h: 26, mat: "brick" })).toBe(true);
+    expect(tallOk({ kind: "prism", at, w: 3, d: 3, h: 30, mat: "steel" })).toBe(true);
+    expect(tallOk({ kind: "prism", at: { x: 0, y: 0, z: 27 }, w: 30, d: 1, h: 1, mat: "steel" })).toBe(true);
   });
 
   it("planta de ladrillo con dientes de sierra, tres chimeneas con banda, torre de enfriamiento y grúa", () => {
