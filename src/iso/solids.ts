@@ -20,7 +20,7 @@ export type Solid =
   | { kind: "hull"; at: Vec3; len: number; beam: number; h: number; mat: Material; topMat?: Material; heading?: number; sheer?: number }
   | { kind: "strip"; path: Vec2[]; width: number; z: number; mat: Material }
   | { kind: "ground"; tris: Tri[]; mat: Material }
-  | { kind: "wheel"; at: Vec3; r: number; width: number; mat: Material; sides: number; angle: number; gondolas?: { mat: Material; w: number; d: number; h: number } };
+  | { kind: "wheel"; at: Vec3; r: number; width: number; mat: Material; sides: number; angle: number; gondolas?: { mat: Material; w: number; d: number; h: number }; hollow?: boolean; slots?: number; buckets?: { n: number; depth: number; teeth: number; mat: Material } };
 
 /** Hacia dónde baja la rampa: "e" tiene el borde alto al oeste, "s" lo tiene al norte. */
 export type RampDir = "e" | "w" | "n" | "s";
@@ -234,23 +234,61 @@ export const WHEEL_U: Vec3 = { x: SQ, y: -SQ, z: 0 };
 export const WHEEL_NORMAL: Vec3 = { x: SQ, y: SQ, z: 0 };
 export const wheelPoint = (at: Vec3, a: number, rho: number): Vec3 => v3(at.x + WHEEL_U.x * rho * Math.cos(a), at.y + WHEEL_U.y * rho * Math.cos(a), at.z + rho * Math.sin(a));
 
-/** Rueda de frente a la cámara: llanta en sectores, rayos, cubo (todos en el plano, tono `top`) y góndolas como prismas colgados de la llanta. */
+/** Rueda de frente a la cámara: llanta en sectores, rayos, cubo (todos en el plano, tono `top`) y góndolas como prismas colgados de la llanta.
+ *  `hollow`: llanta doble (exterior + interior a `r − 2.2·width .. r − 1.2·width`), sin rayos ni cubo; `slots`: barras radiales de ancho `width/3` que unen las dos llantas (solo con `hollow`).
+ *  `buckets`: `n` cangilones trapezoidales que sobresalen `depth` de la llanta exterior, con una malla interior (60 %, `toneOffset −2`) y `teeth` dientes triangulares de lado `depth/3`, equiespaciados en el borde de mayor ángulo
+ *  (el borde mide ≈ `depth`: con más de 3 dientes las bases se enciman). */
 function wheel(s: Solid & { kind: "wheel" }): Face[] {
   // Los planos de la rueda no siguen la regla habitual de sombreado por normal: una pared que
   // mirase a la cámara se pintaría "shade" (la cara más oscura), pero el anillo debe leerse en
   // el color base del material, así que se fuerza el tono "top" sin desplazamiento.
-  const flat = (pts: Vec3[]): Face => ({ pts, normal: WHEEL_NORMAL, mat: s.mat, tone: "top", toneOffset: 0 });
+  const flat = (pts: Vec3[], mat: Material = s.mat, toneOffset = 0): Face => ({ pts, normal: WHEEL_NORMAL, mat, tone: "top", toneOffset });
   const out: Face[] = [];
   const hub = s.r * 0.12, inner = s.r - s.width, half = s.width / 6;
+  const bar = (a: number, r0: number, r1: number): Face => {
+    const px = -Math.sin(a) * half, pz = Math.cos(a) * half; // perpendicular al rayo dentro del plano
+    const off = (p: Vec3, sgn: number): Vec3 => v3(p.x + WHEEL_U.x * px * sgn, p.y + WHEEL_U.y * px * sgn, p.z + pz * sgn);
+    const i0 = wheelPoint(s.at, a, r0), i1 = wheelPoint(s.at, a, r1);
+    return flat([off(i0, -1), off(i1, -1), off(i1, 1), off(i0, 1)]);
+  };
+  const sector = (a0: number, a1: number, r0: number, r1: number): Face => flat([wheelPoint(s.at, a0, r0), wheelPoint(s.at, a1, r0), wheelPoint(s.at, a1, r1), wheelPoint(s.at, a0, r1)]);
   for (let k = 0; k < s.sides; k++) {
     const a0 = s.angle + (2 * Math.PI * k) / s.sides, a1 = s.angle + (2 * Math.PI * (k + 1)) / s.sides;
-    out.push(flat([wheelPoint(s.at, a0, inner), wheelPoint(s.at, a1, inner), wheelPoint(s.at, a1, s.r), wheelPoint(s.at, a0, s.r)]));
-    const px = -Math.sin(a0) * half, pz = Math.cos(a0) * half; // perpendicular al rayo dentro del plano
-    const off = (p: Vec3, sgn: number): Vec3 => v3(p.x + WHEEL_U.x * px * sgn, p.y + WHEEL_U.y * px * sgn, p.z + pz * sgn);
-    const i0 = wheelPoint(s.at, a0, hub), i1 = wheelPoint(s.at, a0, inner);
-    out.push(flat([off(i0, -1), off(i1, -1), off(i1, 1), off(i0, 1)]));
+    out.push(sector(a0, a1, inner, s.r));
+    out.push(s.hollow ? sector(a0, a1, s.r - 2.2 * s.width, s.r - 1.2 * s.width) : bar(a0, hub, inner));
   }
-  out.push(flat(Array.from({ length: 8 }, (_, k) => wheelPoint(s.at, s.angle + (2 * Math.PI * k) / 8, hub))));
+  if (!s.hollow) out.push(flat(Array.from({ length: 8 }, (_, k) => wheelPoint(s.at, s.angle + (2 * Math.PI * k) / 8, hub))));
+  else {
+    const slots = s.slots ?? 0; // ranuras: de la mitad de la llanta interior a la mitad de la exterior
+    for (let k = 0; k < slots; k++) out.push(bar(s.angle + (2 * Math.PI * k) / slots, s.r - 1.7 * s.width, s.r - 0.5 * s.width));
+  }
+  if (s.buckets) {
+    const { n, depth, teeth, mat } = s.buckets;
+    const h0 = (0.45 * Math.PI) / n, h1 = (0.3 * Math.PI) / n, side = depth / 3;
+    // coordenadas (u, z) relativas al centro de la rueda <-> mundo
+    const uz = (p: Vec3): [number, number] => [(p.x - s.at.x) * WHEEL_U.x + (p.y - s.at.y) * WHEEL_U.y, p.z - s.at.z];
+    const back = (u: number, z: number): Vec3 => v3(s.at.x + WHEEL_U.x * u, s.at.y + WHEEL_U.y * u, s.at.z + z);
+    for (let k = 0; k < n; k++) {
+      const c = s.angle + (2 * Math.PI * k) / n;
+      const e0 = wheelPoint(s.at, c + h0, s.r), e1 = wheelPoint(s.at, c + h1, s.r + depth);
+      const trap = [wheelPoint(s.at, c - h0, s.r), e0, e1, wheelPoint(s.at, c - h1, s.r + depth)];
+      out.push(flat(trap, mat));
+      const m = v3(trap.reduce((q, p) => q + p.x, 0) / 4, trap.reduce((q, p) => q + p.y, 0) / 4, trap.reduce((q, p) => q + p.z, 0) / 4);
+      out.push(flat(trap.map((p) => v3(m.x + 0.6 * (p.x - m.x), m.y + 0.6 * (p.y - m.y), m.z + 0.6 * (p.z - m.z))), mat, -2));
+      // dientes: triángulos equiláteros sobre el borde delantero E0 -> E1, con el vértice hacia fuera del trapecio
+      const [e0u, e0z] = uz(e0), [e1u, e1z] = uz(e1), [mu, mz] = uz(m);
+      const du = e1u - e0u, dz = e1z - e0z, len = Math.hypot(du, dz);
+      const tu = du / len, tz = dz / len;
+      let nu = tz, nz = -tu; // perpendicular al borde
+      if (nu * (e0u + du / 2 - mu) + nz * (e0z + dz / 2 - mz) < 0) { nu = -nu; nz = -nz; }
+      const hb = side / 2, ht = (side * Math.sqrt(3)) / 2;
+      for (let j = 0; j < teeth; j++) {
+        const f = (j + 0.5) / teeth, cu = e0u + du * f, cz = e0z + dz * f;
+        const b0 = back(cu - tu * hb, cz - tz * hb), b1 = back(cu + tu * hb, cz + tz * hb), apex = back(cu + nu * ht, cz + nz * ht);
+        out.push(flat([b0, b1, apex], mat));
+      }
+    }
+  }
   if (s.gondolas) {
     const g = s.gondolas;
     for (let k = 0; k < s.sides; k++) {
