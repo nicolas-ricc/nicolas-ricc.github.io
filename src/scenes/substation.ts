@@ -11,14 +11,32 @@ export const PHASES_Y = [-57, -53.5, -50] as const;
 export const TRANSFORMERS_Y = [-59, -53] as const; // y0 de cada cuba: T1 al norte, T2 al sur
 export const FIREWALL = { x: 171.5, y: -54.3, w: 7, d: 0.6, h: 5.5 } as const;
 
-export function powerTransformer(_out: Solid[], _y0: number, _southBank: boolean): void {}
-
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material): Solid & { kind: "prism" } => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat });
 const strip = (path: Vec2[], width: number, z: number, mat: Material): Solid => ({ kind: "strip", path, width, z, mat });
 const beam = (from: [number, number, number], to: [number, number, number], w: number, h: number, mat: Material): Solid => ({ kind: "beam", from: v3(...from), to: v3(...to), w, h, mat });
 const wire = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number): Solid => beam([x0, y0, z0], [x1, y1, z1], 0.15, 0.15, "steel");
 /** n polleras apiladas desde z0 (h 0.3), r 0.3 las pares y 0.42 las impares. */
 const skirts = (out: Solid[], x: number, y: number, z0: number, n = 6): void => { for (let i = 0; i < n; i++) out.push({ kind: "cylinder", at: v3(x, y, z0 + 0.3 * i), r: i % 2 ? 0.42 : 0.3, h: 0.3, mat: "whitewash" }); };
+
+const BUSHINGS_X = [173.5, 175, 176.5] as const;
+/** Punta del pasatapas (a 35° sobre la tapa de la cuba): la comparten el transformador y sus puentes. */
+const bushingTip = (x: number, y0: number): [number, number, number] => [x, y0 + 2 + 2.5 * Math.cos(Math.PI * 35 / 180), 4.5 + 2.5 * Math.sin(Math.PI * 35 / 180)];
+
+/** Transformador de potencia: base, cuba con placa, aletas (este y, si `southBank`, sur), conservador con caño, 3 pasatapas y foso de 4 marcos. */
+export function powerTransformer(out: Solid[], y0: number, southBank: boolean): void {
+  out.push(prism(172.5, y0 + 0.5, 0, 5, 3, 0.5, "concrete")); // base
+  out.push({ ...prism(172, y0, 0.5, 6, 4, 4, "steel"), plates: [southBank ? { wall: 2, shape: "rect", u0: 0.05, u1: 0.1833, z0: 2, z1: 2.6, mat: "whitewash" } : { wall: 1, shape: "rect", u0: 0.77, u1: 0.97, z0: 2, z1: 2.6, mat: "whitewash" }] }); // cuba + placa (T1 la lleva al este: el banco sur no cabe)
+  for (let i = 0; i < 6; i++) {
+    out.push(prism(178, y0 + 0.925 + 0.4 * i, 1, 1.6, 0.15, 3, "steel"));                            // aletas este
+    if (southBank) out.push(prism(173.925 + 0.4 * i, y0 + 4, 1, 0.15, 1.6, 3, "steel"));             // aletas sur
+  }
+  out.push(beam([172.5, y0 + 1, 5.8], [178.5, y0 + 1, 5.8], 1.2, 1.2, "steel"));                     // conservador (eje 5.8, panza 5.2)
+  for (const x of [173.35, 177.35]) out.push(prism(x, y0 + 0.85, 4.5, 0.3, 0.3, 0.7, "steel"));      // postes
+  out.push(wire(178.3, y0 + 1, 5.2, 177.7, y0 + 1, 4.5));                                           // caño
+  for (const x of BUSHINGS_X) out.push(beam([x, y0 + 2, 4.5], bushingTip(x, y0), 0.4, 0.4, "whitewash")); // pasatapas
+  out.push(prism(171.4, y0 - 0.6, 0, 7.2, 0.3, 0.3, "concrete"), prism(171.4, y0 + 4.3, 0, 7.2, 0.3, 0.3, "concrete")); // foso N y S
+  out.push(prism(171.4, y0 - 0.3, 0, 0.3, 4.6, 0.3, "concrete"), prism(178.3, y0 - 0.3, 0, 0.3, 4.6, 0.3, "concrete")); // foso O y E
+}
 
 /** Pórtico de celosía en x: 2 columnas de 4 montantes con X por paño en las caras este y sur, viga Warren, puntas y mástiles. */
 export function latticePortal(out: Solid[], x: number): void {
@@ -65,6 +83,7 @@ export function currentTransformer(out: Solid[], y: number): void {
 /** Puentes de seccionadores y TI al conductor (terminan en su panza, z 9.425). */
 export function droppers(out: Solid[]): void {
   for (const y of PHASES_Y) out.push(wire(158, y, 9.425, 158, y, 4.5), wire(165, y, 9.425, 165, y, 5.65)); // seccionador (brazo) y TI (cabeza)
+  TRANSFORMERS_Y.forEach((y0, k) => { for (const x of BUSHINGS_X) { const t = bushingTip(x, y0); out.push(wire(x, k ? -50 : -53.5, 9.425, t[0], t[1], t[2])); } }); // pasatapas → fase más cercana
 }
 
 /** Cerco: 13 postes, malla romboidal (X por paño) al sur y al este, y portón de dos hojas en x 168.5..171.5. */
@@ -96,6 +115,7 @@ export function substation(out: Solid[]): void {
   for (const y of PHASES_Y) currentTransformer(out, y);
   powerTransformer(out, TRANSFORMERS_Y[0], false);
   powerTransformer(out, TRANSFORMERS_Y[1], true);
+  out.push(prism(FIREWALL.x, FIREWALL.y, 0, FIREWALL.w, FIREWALL.d, FIREWALL.h, "concrete")); // cortafuego
   droppers(out);
   out.push({ ...prism(182, -52, 0, 4, 3, 2.8, "whitewash"), facade: { floors: 1, cols: 2 }, plates: [{ wall: 2, shape: "rect", u0: 0.1, u1: 0.4, z0: 0, z1: 2.3, mat: "steel", toneOffset: -2 }] }); // caseta de control
   fence(out);
