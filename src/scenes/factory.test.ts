@@ -44,7 +44,7 @@ describe("factory", () => {
     expect(JSON.stringify(factory(createRng(7)))).toBe(JSON.stringify(factory(createRng(7))));
     const s = scene();
     expect(s.solids.filter((x) => !isFlat(x)).length).toBeGreaterThan(90); // la selva del cinturón descarta los conos que pisarían las vías del oeste
-    for (const x of [...s.ground, ...s.solids]) {
+    for (const x of [...s.ground, ...s.solids, ...s.excavator]) {
       const b = bounds(x);
       expect(b.min.x).toBeGreaterThanOrEqual(WORLD.x0 - 1); expect(b.max.x).toBeLessThanOrEqual(ZONE_SPLIT_X);
       expect(b.min.y).toBeGreaterThanOrEqual(WORLD.y0 - 1); expect(b.max.y).toBeLessThanOrEqual(ZONE_SPLIT_Y);
@@ -565,9 +565,13 @@ describe("excavadora en la playa de vías", () => {
   const piles = (sc: FactoryScene) => sc.solids.filter((x): x is Solid & { kind: "cone" } => x.kind === "cone" && (x.mat === "rust" || x.mat === "sand"));
   const isFixed = (p: Solid & { kind: "cone" }) => Math.abs(p.at.x + 14) < EPS && Math.abs(p.at.y - 60) < EPS && p.r === EXCAVATOR.pile.r;
 
-  it("la escena trae la máquina entera", () => {
-    const s = JSON.stringify(scene().solids);
-    for (const x of machine()) expect(s).toContain(JSON.stringify(x));
+  it("la escena trae la máquina entera en scene.excavator y ninguna pieza en scene.solids", () => {
+    const sc = scene();
+    expect(sc.excavator).toEqual(machine());
+    expect(sc.excavator.length).toBeGreaterThan(0);
+    for (const x of sc.excavator) expect(sc.solids).not.toContain(x);
+    const s = JSON.stringify(sc.solids);
+    for (const x of machine()) expect(s).not.toContain(JSON.stringify(x));
   });
 
   it("ningún sólido toca las vías salvo por encima (z ≥ 2)", () => {

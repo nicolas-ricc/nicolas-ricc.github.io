@@ -6,6 +6,7 @@ import type { Rng } from "../map/seed";
 import { WORLD } from "../map/geo";
 import { jungle } from "./flora";
 import { boilerHouse } from "./boiler-house";
+import { EXCAVATOR, excavator, excavatorBox } from "./excavator";
 import { MALT, maltings, waterTower } from "./maltings";
 import { towerCrane } from "./pieces";
 import { substation } from "./substation";
@@ -16,11 +17,11 @@ import { substation } from "./substation";
  * al oeste, la maltería de Mistley y un tanque de agua sobre patas, tres chimeneas humeantes, torre de
  * enfriamiento, grúa torre sobre un desvío ferroviario, cinta transportadora
  * hasta el patio de material, subestación de intemperie (`substation.ts`) y
- * playa de camiones. Columna oeste `x -60..0, y 0..146`: playa de vías y
- * acopios de mineral, selva al sur. El terreno es `slab`.
+ * playa de camiones. Columna oeste `x -60..0, y 0..146`: playa de vías,
+ * excavadora de rueda de cangilones y acopios de mineral, selva al sur. El terreno es `slab`.
  * Spec: docs/superpowers/specs/2026-09-14-mundo-2-fabrica-distrito-blog-design.md §5.
  */
-export interface FactoryScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; stacks: Vec3[] }
+export interface FactoryScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; stacks: Vec3[]; excavator: Solid[] }
 
 export const PLANT = { x: 20, y: -46, w: 100, d: 30, h: 14 } as const;
 export { MALT };
@@ -112,16 +113,27 @@ function truckYard(out: Solid[], accents: Accent[]): void {
   for (const [x, y] of [[20, -14], [110, -3]] as const) lamp(out, accents, x, y);
 }
 
-/** Columna oeste: tres vías N-S que empalman con las vías del oeste del astillero, acopios de mineral al este de ellas, selva al sur. */
-function railYard(out: Solid[], rng: Rng): void {
+/** Columna oeste: tres vías N-S que empalman con las vías del oeste del astillero, la excavadora (devuelta aparte: se dibuja en su marco), acopios de mineral al este de ellas, selva al sur. */
+function railYard(out: Solid[], accents: Accent[], rng: Rng): Solid[] {
   for (const x of RAIL_YARD_X) for (const dx of [-0.8, 0.8]) out.push(strip([{ x: x + dx, y: WORLD.y0 }, { x: x + dx, y: 128 }], 0.4, 0.1, "steel"));
   for (const dy of [-0.8, 0.8]) out.push(strip([{ x: -40 + dy, y: 128 }, { x: -30, y: 132.5 + dy }, { x: 2, y: 132.5 + dy }], 0.4, 0.1, "steel")); // empalme
-  for (let i = 0; i < 6; i++) {
-    const big = i < 4;
-    out.push({ kind: "cone", at: v3(rng.int(-25, -13), rng.int(44, 96), 0), r: big ? rng.int(6, 9) : 5, h: big ? rng.int(4, 6) : 3, mat: big ? "rust" : "sand", sides: 7 });
+  const machine: Solid[] = [];
+  excavator(machine, accents);
+  out.push({ kind: "cone", at: v3(-14, 60, 0), r: EXCAVATOR.pile.r, h: EXCAVATOR.pile.h, mat: "rust", sides: 7 }); // acopio fijo bajo la rueda
+  const box = excavatorBox();
+  for (let i = 0; i < 5; i++) {
+    const big = i < 3;
+    for (let tries = 0; ; tries++) {
+      if (tries >= 1000) throw new Error("railYard: sin sitio para un acopio fuera de la excavadora");
+      const x = rng.int(-25, -13), y = rng.int(44, 96), r = big ? rng.int(6, 9) : 5, h = big ? rng.int(4, 6) : 3;
+      if (x + r > box.x0 - 1 && x - r < box.x1 + 1 && y + r > box.y0 - 1 && y - r < box.y1 + 1) continue; // toca la caja inflada 1: se repite la tirada entera
+      out.push({ kind: "cone", at: v3(x, y, 0), r, h, mat: big ? "rust" : "sand", sides: 7 });
+      break;
+    }
   }
   for (let i = 0; i < 8; i++) out.push(prism(RAIL_YARD_X[i % 3]! - 1.1, -46 + i * 14, 0, 2.2, 7, 2.8, i % 2 === 0 ? "rust" : "steel")); // vagones estacionados N-S sobre las vías; -46: el tercero termina en y -11, sin tocar el desvío E-O (y -9.2..-6.8)
   jungle(out, rng, { x0: -58, x1: -6, y0: 110, y1: 140 }, 14, 0.4, { y: [128, 131, 134] }); // y1 140: un cono de r 4 no puede cruzar la costura y = 146; ningún cono pisa el empalme ni las vías del oeste
+  return machine;
 }
 
 function lamps(out: Solid[], accents: Accent[]): void {
@@ -138,7 +150,7 @@ export function factory(rng: Rng): FactoryScene {
   conveyor(solids);
   substation(solids);
   truckYard(solids, accents);
-  railYard(solids, rng);
+  const machine = railYard(solids, accents, rng);
   lamps(solids, accents);
-  return { ground: solids.filter((s) => s.kind === "strip"), solids: solids.filter((s) => s.kind !== "strip"), accents, stacks };
+  return { ground: solids.filter((s) => s.kind === "strip"), solids: solids.filter((s) => s.kind !== "strip"), accents, stacks, excavator: machine };
 }

@@ -25,6 +25,16 @@ const lbox = (s: Solid): LBox => {
   return b;
 };
 
+describe("capa factory.excavator", () => {
+  it("sólidos de la escena con el heading de la máquina; tick nunca la marca", () => {
+    const sc = factory(createRng(7)), a = factoryAnimator(sc, createRng(3), { reducedMotion: false });
+    expect(a.ids.slice(-2)).toEqual(["factory.excavator", "factory.wheel"]);
+    const l = a.layer("factory.excavator");
+    expect(l).toEqual({ kind: "solid", solids: sc.excavator, heading: EXCAVATOR.heading });
+    for (const dt of [16, 100, 2000]) expect(a.tick(dt).has("factory.excavator")).toBe(false);
+  });
+});
+
 describe("rueda de la excavadora", () => {
   it.each([0, Math.PI / 7, Math.PI / 3, 2])("tesela en ≤ 400 caras con ángulo %d", (a) => {
     const w = excavatorWheel(a);
