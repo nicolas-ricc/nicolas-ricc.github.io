@@ -11,6 +11,10 @@ import type { Face } from "./solids";
  * `plinth`: banda de alto `h` desde la base. `piers`: franja de ancho `w` (u) en
  * cada borde de columna múltiplo de `every` y en el borde final, de la base al
  * alero. `courses`: imposta de alto `h` en el tope de cada piso, en lugar de la losa.
+ * Por ventana salen `[sill, vidrio, ...grid, head]`: `sill` es un alféizar de 0.2 u bajo la
+ * ventana, 0.1 u más ancho a cada lado; `grid` parte la ventana en `cols` × `rows` con franjas
+ * de 0.12 u (`mat` por defecto acero); `head` es un dintel plano (banda de 0.25 u) o rebajado
+ * (arco de flecha 0.3 × ancho), de material `headMat` o el de la pared. Sin recorte.
  */
 export interface Facade {
   floors: number; cols: number; litFloor?: number; base?: "glass" | "portico"; window?: { w: number; h: number };
@@ -74,19 +78,48 @@ export function windowPatches(wall: Face, f: Facade, floor: number): Vec3[][] {
   return windowRects(wall, f, floor).map((r) => patch(wall, r.s0, r.s1, r.z0, r.z1));
 }
 
+/** Dintel sobre la ventana: banda plana de 0.25 u, o rebajado (7 puntos: extremos superiores + arco de 5, flecha 0.3 × ancho). */
+function headPoly(wall: Face, kind: "flat" | "segmental", r: WallRect, len: number): Vec3[] {
+  if (kind === "flat") return patch(wall, r.s0, r.s1, r.z1, r.z1 + 0.25);
+  const c = (r.s1 - r.s0) * len, h = 0.3 * c, R = (c * c / 4 + h * h) / (2 * h);
+  const theta = Math.asin(c / 2 / R), mid = (r.s0 + r.s1) / 2, zc = r.z1 + h - R;
+  const pts: [number, number][] = [[r.s0, r.z1], [r.s1, r.z1]];
+  for (let j = 1; j <= 5; j++) {
+    const phi = theta - j * 2 * theta / 6;
+    pts.push([mid + R * Math.sin(phi) / len, zc + R * Math.cos(phi)]);
+  }
+  return wallPoly(wall, pts);
+}
+
 export function facadeFaces(wall: Face, f: Facade): Face[] {
   const fh = floorHeight(wall, f), zb = wall.pts[0]!.z;
   const mk = (pts: Vec3[], mat: Material, toneOffset: number): Face => ({ pts, normal: wall.normal, mat, tone: wall.tone, toneOffset });
+  const len = Math.hypot(wall.pts[1]!.x - wall.pts[0]!.x, wall.pts[1]!.y - wall.pts[0]!.y);
   const out: Face[] = [];
   if (f.plinth) out.push(mk(patch(wall, 0, 1, zb, zb + f.plinth.h), f.plinth.mat, 0));
   if (f.piers) {
-    const len = Math.hypot(wall.pts[1]!.x - wall.pts[0]!.x, wall.pts[1]!.y - wall.pts[0]!.y), half = f.piers.w / 2 / len;
+    const half = f.piers.w / 2 / len;
     for (const e of pierEdges(wall, f)) out.push(mk(patch(wall, Math.max(0, e - half), Math.min(1, e + half), zb, wall.pts[2]!.z), f.piers.mat, 0));
   }
   for (let i = 0; i < f.floors; i++) {
     const z0 = zb + i * fh;
     if (i === 0 && f.base === "portico") out.push(mk(patch(wall, 0.05, 0.95, z0, z0 + fh * 0.8), wall.mat, -2));
-    for (const w of windowPatches(wall, f, i)) out.push(mk(w, "glass", 0));
+    for (const r of windowRects(wall, f, i)) {
+      if (f.sill) out.push(mk(patch(wall, r.s0 - 0.1 / len, r.s1 + 0.1 / len, r.z0 - 0.2, r.z0), f.sill, 1));
+      out.push(mk(patch(wall, r.s0, r.s1, r.z0, r.z1), "glass", 0));
+      if (f.grid) {
+        const bar = f.grid.mat ?? "steel", hs = 0.06 / len;
+        for (let c = 1; c < f.grid.cols; c++) {
+          const s = r.s0 + (r.s1 - r.s0) * c / f.grid.cols;
+          out.push(mk(patch(wall, s - hs, s + hs, r.z0, r.z1), bar, -1));
+        }
+        for (let q = 1; q < f.grid.rows; q++) {
+          const z = r.z0 + (r.z1 - r.z0) * q / f.grid.rows;
+          out.push(mk(patch(wall, r.s0, r.s1, z - 0.06, z + 0.06), bar, -1));
+        }
+      }
+      if (f.head) out.push(mk(headPoly(wall, f.head, r, len), f.headMat ?? wall.mat, 0));
+    }
     if (f.courses) out.push(mk(patch(wall, 0, 1, z0 + fh - f.courses.h, z0 + fh), f.courses.mat, 0)); // imposta
     else out.push(mk(patch(wall, 0, 1, z0 + fh - SLAB_H, z0 + fh), wall.mat, -1)); // losa
   }
