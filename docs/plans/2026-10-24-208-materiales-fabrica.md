@@ -22,7 +22,7 @@
 
 1. Orden de claves: si un material nuevo queda en otra posición en un atlas, "crepúsculo tardío" falla; el implementador debe pegar al final en ambos. Lo cubre el test existente.
 2. Tonos ordenados y sombra azulada: los tres nuevos deben pasar "cada material tiene cinco tonos ordenados" y "la sombra es más azul que roja". Lo cubren los tests existentes, que iteran todas las claves.
-3. `up` que desborda 255 (`safety.up` rojo = 0xd9 × 1.16 = 251.9, casi al borde): la regla recorta; ningún canal desborda con estos valores, verificado al calcularlos abajo.
+3. `up` que desborda 255 (`safety.up` rojo = 0xd9 × 1.16 = 251.7, casi al borde): la regla recorta; ningún canal desborda con estos valores (derivación en `## Assumptions`).
 4. "En verde contra la escena actual": la escena de hoy comparte con la ciudad solo `rust` y `steel` (medido con `world(7)`), así que la regla de zona nueva no puede exigir igualdad exacta con `["glass", "office", "rust", "steel"]` hasta que la fábrica use vidrio y lila (#213, #216). Ver Task 2.
 5. La regla de altura no debe dejar pasar sólidos anchos altos: el test sigue fallando si aparece un prisma ancho por encima de z 26 (se agrega un caso que lo comprueba con un sólido sintético).
 
@@ -112,7 +112,9 @@ it("la regla de altura rechaza un sólido ancho por encima de z 26 y acepta viga
 // glass: vidrio de fachadas; office: gris lila de la excavadora (decisión de #207). Subconjunto, no igualdad:
 // hoy la fábrica todavía no los usa.
 const sharedWithCity = ["glass", "office", "rust", "steel"];
-for (const m of portfolio) if (cv.has(m)) expect(sharedWithCity).toContain(m);
+const shared = [...portfolio].filter((m) => cv.has(m));
+expect(shared).toEqual(expect.arrayContaining(["rust", "steel"])); // lo que ya se comparte hoy sigue cubierto
+for (const m of shared) expect(sharedWithCity).toContain(m);
 ```
 
 y `sharedWithBlog` pasa a `["steel", "rust", "hull", "rock", "glass", "whitewash"]` con el comentario `// glass: la linterna del faro (spec §7); whitewash: porcelana y remates de la fábrica (#207)`.
@@ -122,3 +124,16 @@ y `sharedWithBlog` pasa a `["steel", "rust", "hull", "rock", "glass", "whitewash
 - [ ] **Step 5: Run** `npm test && npm run typecheck` → todo verde.
 
 - [ ] **Step 6: Commit** `test(#208): reglas de zona y altura de la fábrica detallada`.
+
+## Assumptions
+
+- **Regla de zona como subconjunto** (en vez de `toEqual(["glass", "office", "rust", "steel"])`): con `world(7)` medido, la intersección de hoy es `["rust", "steel"]`; la igualdad exacta contradiría "en verde contra la escena actual" del issue. Se conserva la cobertura de hoy exigiendo que `rust` y `steel` sigan compartidos. Alternativa rechazada: igualdad exacta (rompe hoy). Volver a la igualdad cuando la fábrica use `glass` y `office` queda en #218.
+- **Tonos derivados calculados por script**, no a mano: `node` aplicando los multiplicadores por canal con `Math.round` y recorte a 255. Ningún test verifica los multiplicadores (el issue no lo pide); los existentes verifican ±1 contra `npm run palette`, orden de luminancia (signal 40.1 < 74.8 < 83.4 < 96.0 < 109.5; stockbrick 72.9 < 129.9 < 150.2 < 171.1 < 192.7; safety 70.5 < 129.2 < 147.0 < 168.1 < 190.5, medidos sobre la base) y sombra relativa más azul que el top.
+- **`tallOk` extraída** como función de módulo para poder probar la regla con sólidos sintéticos; alternativa rechazada: dejarla inline (no se podría probar que sigue rechazando sólidos anchos).
+
+## Grilling
+
+- Rondas: 1 (la revisión no cambió tareas ni costuras; no hubo segunda ronda).
+- Preguntas: 14. Por fuente: ISSUE 5, CODE 8, NO SOURCE 1 (técnica: cobertura perdida por la regla de subconjunto → mitigada con `arrayContaining` y follow-up).
+- Supuestos: los tres de `## Assumptions`.
+- Issues abiertos: #218 (restaurar la igualdad exacta de la regla de zona).
