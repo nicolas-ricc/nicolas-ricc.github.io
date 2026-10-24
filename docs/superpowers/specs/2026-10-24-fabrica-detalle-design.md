@@ -1,7 +1,8 @@
 # Fábrica en detalle: planta, chimeneas, subestación y excavadora
 
 **Fecha:** 2026-10-24
-**Estado:** diseño aprobado en conversación; pendiente de revisión escrita
+**Estado:** implementado en #208–#217 (rama `feature/207-fabrica-detalle`); los
+desvíos están en §14
 **Alcance:** remodelar con mucho más detalle arquitectónico la planta de
 ladrillo, las chimeneas y la subestación de la fábrica (Portfolio,
 `src/scenes/factory.ts`), y agregar una excavadora de rueda de cangilones
@@ -337,3 +338,127 @@ Inventario:
 - No se modelan las otras máquinas de Ferropolis (Mosquito, Mad Max, Gemini,
   Medusa).
 - Sin texto legible: los carteles son placas de color.
+
+## 14. Desvíos y medición
+
+Lo que cambió al implementar respecto de lo escrito arriba. Cada línea cita el
+issue hijo donde está la decisión (los planes están en `docs/plans/`).
+
+### 14.1 Desvíos
+
+- **§4.1:** `beam` ya existía (#78) con la firma `{ from, to, w, h }`, no
+  `{ a, b, size }`. No se agregó otro sólido.
+- **§4.3:** las placas son el campo `plates` de `prism`, `poly` y `ramp`, en
+  `src/iso/plate.ts` (#210). `gable` las ignora y `step` las aplica solo a la
+  caja.
+- **§5, nave (#213):**
+  - Los portones sur se quitaron; queda solo el este.
+  - El farol de (58, −16) pasó a (50, −13.5).
+  - Pilastras fuera del muro (y −16..−15.5), porque en y −16.5..−16 quedaban
+    dentro del prisma (D1).
+  - Tolva (x 58.2..61.2, y −16..−14) y cinta (de (50, −4, 0.5) a
+    (59.7, −15, 12.5)) corridas (D2).
+  - Techo desde x 44, sin alero oeste (D3).
+  - Faldón norte en 5 tramos E-O, uno por chimenea (D18).
+  - `sortByDepth` ya no ordena entre cajas separadas por dos planos opuestos,
+    tampoco sin giro (D19).
+  - Queda abierto #218: devolver la regla de zona de `world.test` a igualdad
+    exacta (venía de #219, que la dejó como subconjunto).
+- **§6, maltería (#214):**
+  - Fachada uniforme en todas las caras: la este lleva 8 ventanas por piso
+    (2 por vano), no 1 por vano; las de z < 14 quedan tapadas por la nave
+    (decisión 9 de #207).
+  - Techo partido alrededor del horno: 6 rampas `steel` (D1).
+  - Óculos a z 19.7 y no 19.8, para que el anillo no asome del faldón (D4).
+  - Impostas lisas: el kit no tiene dentículos.
+  - Pilastras de los extremos corridas hacia adentro (x 20..20.5 y 43.5..44)
+    y la de x 32 solo de z 16.7 a 18 (D2). Con eso se atiende #223, el choque
+    de la pilastra de x 44 con la nave.
+- **§7, tanque (#214):** se ve entero solo en el exhibit `tanque-agua`; en
+  `#planta` asoman la cuba y el techo detrás de la maltería. Es un desvío del
+  criterio 1.
+- **§8, chimeneas (#212):**
+  - La plataforma no está a boca − 2: llena una junta de 0.3 entre la 6ª y la
+    7ª banda.
+  - La escalera va por fuera de la plataforma (`y + (r + 1.2)·cos(π/8) + 0.2`).
+  - Los zunchos van en la junta de arriba de cada tramo que se afina, con el
+    radio del tramo + 0.1.
+  - La base r + 1.0 sobresale 0.011 del pedestal en la chimenea de r 2.8.
+- **§9, subestación (#215):**
+  - El código vive en `src/scenes/substation.ts`, no en `factory.ts` (A1).
+  - El conductor va entre las cadenas, de 152.85 a 185.15 (A3).
+  - T1 no lleva aletas al sur y su placa va en la cara este (A5).
+  - Base `concrete` bajo cada cuba (A6).
+  - Paños de la celosía 2.5/2.5/2.5/1.5 (A2); exhibit con `h: 13`.
+- **§10, excavadora (#216):**
+  - La máquina estática vive en `scene.excavator`, capa `factory.excavator`
+    con `heading` propio, y no en `scene.solids` (D1 de #228).
+  - Superestructura a z 11..16, no a z 3.4 (D2).
+  - Cabina corrida a dx 13..15.5, dy 1.9..3.5 (D4).
+  - Pasarela, baranda y rodillos en V terminan en dx 15 (D5).
+  - Bloque de pivote de la pluma, que el issue no nombra (D10).
+  - Los acopios rng quedan al norte (y ≈ 44..48) porque la caja de la máquina
+    incluye el radio de la rueda (D11).
+  - La caja del exhibit se recorta en x ≤ 4 (D12).
+- **§11 (#214):** exhibit de pieza nuevo `tanque-agua`, en el grupo fábrica
+  después de `planta`.
+
+### 14.2 Caras por exhibit
+
+| exhibit | sólidos antes | caras antes | sólidos después | caras después |
+|---|---|---|---|---|
+| `planta` | 13 | 39 | 221 | 1972 |
+| `chimeneas` | 40 | 165 | 463 | 1637 |
+| `subestacion` | 20 | 67 | 364 | 1212 |
+| `playa-vias` | 14 | 42 | 87 | 490 |
+| `cinta` | 35 | 99 | 61 | 535 |
+| `excavadora` | — | — | 84 | 485 |
+| `tanque-agua` | — | — | 46 | 165 |
+
+Cada columna usa la caja de exhibit de su propio árbol: "antes" la de `main`
+(b489779) y "después" la de esta rama. `excavadora` y `tanque-agua` no existen
+en `main`. La fila `tanque-agua` es informativa: su tanque entra en `planta`
+solo en parte.
+
+### 14.3 Vista del mundo y totals
+
+- Antes: ![mundo antes](assets/207-fabrica/mundo-antes.png)
+- Después: ![mundo después](assets/207-fabrica/mundo-despues.png)
+
+La excavadora aparece solo en "después" porque es nueva.
+
+`totals` de `rendering.capture()` en el mundo (tecla `1`, `?speed=0`):
+
+- Antes (69 instrucciones): `{"containers":9,"graphics":169,"meshes":0,"sprites":0,"texts":0,"tilingSprites":0,"nineSliceSprites":0,"filters":3,"masks":0}`
+- Después (75 instrucciones): `{"containers":9,"graphics":175,"meshes":0,"sprites":0,"texts":0,"tilingSprites":0,"nineSliceSprites":0,"filters":3,"masks":0}`
+
+Suma sin `containers`: 172 antes, 178 después. Con `containers`: 181 antes, 187
+después. Polígonos estáticos del primer dibujo: 32447 antes, 37449 después.
+
+### 14.4 Rendimiento
+
+Consola de `/lab/world.html` sin parámetros, tecla `1`, en la rama (dev server):
+
+Primera carga:
+```
+[info] [lab] peor redibujo en 5 s: 28.70 ms
+[info] [lab] bloom: promedio 18.2 ms en 60 frames (tick 11.9 + render 6.3), presupuesto 15 ms → fallback
+```
+Caliente 1:
+```
+[info] [lab] peor redibujo en 5 s: 30.20 ms
+[info] [lab] bloom: promedio 19.8 ms en 60 frames (tick 12.9 + render 7.0), presupuesto 15 ms → fallback
+```
+Caliente 2:
+```
+[info] [lab] peor redibujo en 5 s: 23.00 ms
+[info] [lab] bloom: promedio 18.4 ms en 60 frames (tick 11.9 + render 6.5), presupuesto 15 ms → fallback
+```
+
+Entorno: Pixi 8.20.1, renderer `webgl2`, viewport 1600×900 a 2x, agent-browser
+headless (HeadlessChrome, ~2 fps) con la extensión PixiJS DevTools 2.3.1. El
+bloom se midió en el dev server.
+
+Las dos corridas calientes pasaron los 15 ms de presupuesto, así que se abrió
+el seguimiento #229. La medición salió de un navegador headless, por lo que
+hay que confirmarla en hardware real.

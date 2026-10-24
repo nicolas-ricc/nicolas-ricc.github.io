@@ -20,6 +20,7 @@ import { substation } from "./substation";
  * playa de camiones. Columna oeste `x -60..0, y 0..146`: playa de vías,
  * excavadora de rueda de cangilones y acopios de mineral, selva al sur. El terreno es `slab`.
  * Spec: docs/superpowers/specs/2026-09-14-mundo-2-fabrica-distrito-blog-design.md §5.
+ * Detalle de planta, chimeneas, subestación y excavadora: docs/superpowers/specs/2026-10-24-fabrica-detalle-design.md.
  */
 export interface FactoryScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; stacks: Vec3[]; excavator: Solid[] }
 
