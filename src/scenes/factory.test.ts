@@ -445,7 +445,7 @@ describe("subestación de intemperie (#215)", () => {
     expect(pillars.map((p) => p.at.x).sort()).toEqual([168.5, 170.9]);
     const plates = pillars.flatMap((p) => p.plates ?? []);
     expect(plates).toEqual(expect.arrayContaining([expect.objectContaining({ wall: 2, shape: "tri", mat: "safety" }), expect.objectContaining({ wall: 2, shape: "rect", mat: "signal" })]));
-    const bars = solids.filter((x): x is Solid & { kind: "prism" } => isPrism(x, 0.15, 0.15, 2, "steel"));
+    const bars = solids.filter((x): x is Solid & { kind: "prism" } => isPrism(x, 0.15, 0.15, 2, "steel") && x.at.z === 0); // los mástiles (z 10) miden igual
     expect(bars).toHaveLength(8);
     for (const b of bars) { expect(b.at.x).toBeGreaterThanOrEqual(169.1 - 1e-9); expect(b.at.x + 0.15).toBeLessThanOrEqual(170.9 + 1e-9); }
     expect(beams(solids).filter((b) => near(b.from.z, 1.85) && near(b.to.z, 1.85) && near(b.from.y, -47.3))).toHaveLength(2);
