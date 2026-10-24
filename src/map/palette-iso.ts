@@ -55,6 +55,10 @@ export const ISO_TONES = {
   foam:      { top: 0x899496, lit: 0x716d5d, shade: 0x373e5a, up: 0x9fa599, down: 0x76828d },
   abyss:     { top: 0x0b1b2d, lit: 0x061024, shade: 0x040b1b, up: 0x0f2030, down: 0x08172b }, // fosa
   glint:     { top: 0xac623f, lit: 0x8d4927, shade: 0x452926, up: 0xb38969, down: 0x94563b }, // destellos del sol en el agua: coral del atardecer, solo en formas chicas
+  // fábrica detallada (#207)
+  signal:    { top: 0x86281e, lit: 0x6e1d13, shade: 0x361112, up: 0x9c2d1f, down: 0x73231c },
+  stockbrick:{ top: 0x8d764a, lit: 0x73572e, shade: 0x38322d, up: 0xa3844c, down: 0x796846 },
+  safety:    { top: 0x987420, lit: 0x7d5614, shade: 0x3d3114, up: 0xb08221, down: 0x83661e },
 } as const;
 
 export const ISO_COLORS = {
