@@ -144,7 +144,7 @@ describe("factory", () => {
     const near = scene().solids.filter((x) => { const b = bounds(x); return b.max.x >= 17 && b.min.x <= 126.4 && b.max.y >= -49 && b.min.y <= -14; });
     const order = sortByDepth(near);
     const wall = order.findIndex((x) => x.kind === "prism" && x.mat === "brick" && x.at.x === NAVE.x && x.at.z === 7);
-    const roof = order.flatMap((x, i) => (x.kind === "ramp" && x.mat === "steel" ? [i] : []));
+    const roof = order.flatMap((x, i) => (x.kind === "ramp" && x.mat === "steel" && x.at.x >= NAVE.x ? [i] : []));
     expect(roof).toHaveLength(6);
     for (const i of roof) expect(i).toBeGreaterThan(wall);
   });

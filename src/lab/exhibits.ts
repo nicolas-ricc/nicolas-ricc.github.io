@@ -55,9 +55,9 @@ const vessel = (kind: ShipKind) => (out: Solid[], accents: Accent[]): void => {
 };
 
 export const EXHIBITS: readonly Exhibit[] = [
-  // x1 = borde este de la torre de escalera (126): queda afuera la primera chimenea, cuya plataforma (#212) arranca en x 126.3; y1 −14: zócalo y tolva adentro, faroles y grúa torre del desvío afuera; h 23: chimeneas metálicas (22.6)
-  { id: "planta", title: "Nave de calderas", zone: "portfolio", group: "fabrica", kind: "region",
-    box: { x0: PLANT.x - M, y0: PLANT.y - M, x1: STAIR_TOWER.x1, y1: -14 }, h: 23 },
+  // x1 = borde este de la torre de escalera (126): queda afuera la primera chimenea, cuya plataforma (#212) arranca en x 126.3; y1 −14: zócalo y tolva adentro, faroles y grúa torre del desvío afuera; h 26: vértice del horno de la maltería (26); x0 2: pasarela del tanque (x ≥ 5.4)
+  { id: "planta", title: "Nave de calderas, maltería y tanque", zone: "portfolio", group: "fabrica", kind: "region",
+    box: { x0: 2, y0: PLANT.y - M, x1: STAIR_TOWER.x1, y1: -14 }, h: 26 },
   // el humo deriva al NNE hasta PUFF_RANGE: la caja se estira al norte para no cortar la columna (la subestación queda adentro, detrás)
   // la torre de enfriamiento es privada en factory.ts: (172, −36), r 9
   { id: "chimeneas", title: "Chimeneas y torre de enfriamiento", zone: "portfolio", group: "fabrica", kind: "region",

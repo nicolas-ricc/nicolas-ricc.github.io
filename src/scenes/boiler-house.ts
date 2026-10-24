@@ -39,7 +39,7 @@ export function naveBody(out: Solid[]): void {
     out.push({ kind: "beam", from: v3(c, -15.85, 11.2), to: v3(c, -15.15, 13.55), w: 0.3, h: 0.3, mat: "rust" });
   }
 
-  // techo de pizarra a dos aguas, cumbrera E-O a z 17 en y −31; sin alero oeste (el marcador de la maltería queda pegado)
+  // techo de pizarra a dos aguas, cumbrera E-O a z 17 en y −31; sin alero oeste (la maltería queda pegado)
   // el faldón norte va en tramos E-O con una chimenea metálica cerca del centro de cada uno: la chimenea y sus tensores
   // se cruzan con la caja del faldón y el desempate de profundidad (suma de coordenadas) los pinta después de su tramo
   const cuts = [x, 62.5, 77.5, 92.5, 107.5, 119.5];
