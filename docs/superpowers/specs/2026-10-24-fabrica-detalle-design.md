@@ -365,8 +365,9 @@ issue hijo donde está la decisión (los planes están en `docs/plans/`).
   - Queda abierto #218: devolver la regla de zona de `world.test` a igualdad
     exacta (venía de #219, que la dejó como subconjunto).
 - **§6, maltería (#214):**
-  - Fachada uniforme en todas las caras; la este también lleva ventanas por
-    piso.
+  - Fachada uniforme en todas las caras: la este lleva 8 ventanas por piso
+    (2 por vano), no 1 por vano; las de z < 14 quedan tapadas por la nave
+    (decisión 9 de #207).
   - Techo partido alrededor del horno: 6 rampas `steel` (D1).
   - Óculos a z 19.7 y no 19.8, para que el anillo no asome del faldón (D4).
   - Impostas lisas: el kit no tiene dentículos.
