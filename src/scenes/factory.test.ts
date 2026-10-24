@@ -2,13 +2,14 @@ import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { buildRenderList } from "../iso/render-list";
 import { overlaps, screenBounds, sortByDepth } from "../iso/depth";
-import { bounds, isFlat, type Bounds, type Solid } from "../iso/solids";
+import { bounds, isFlat, tessellateAll, type Bounds, type Solid } from "../iso/solids";
 import { WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, worldZoneAt } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
 import { boilerHouse, gableEnd, inclineBelt, metalStacks, NAVE, naveBody, stairTower } from "./boiler-house";
 import { MALT, PLANT, RAIL_YARD_X, STACKS, STACK_BASE_H, chimney, factory, type FactoryScene, type Stack } from "./factory";
 import { towerCrane } from "./pieces";
+import { FIREWALL, PHASES_Y, SUBSTATION, TRANSFORMERS_Y, currentTransformer, disconnector, droppers, powerTransformer, substation } from "./substation";
 import { terrainAt } from "./terrain";
 
 const scene = (): FactoryScene => factory(createRng(7));
@@ -162,7 +163,6 @@ describe("factory", () => {
     const conveyorPieces = s.solids.filter((x) => x.kind === "prism" && ((x.at.z === 6 && x.h === 0.6) || (x.w === 0.8 && x.d === 0.8 && x.h === 6)));
     expect(s.solids.filter((x) => x.kind === "prism" && x.at.z === 6 && x.h === 0.6)).toHaveLength(2); // dos tramos de cinta
     for (const c of conveyorPieces) { const b = bounds(c); expect(b.min.x >= PLANT.x + PLANT.w || b.min.y >= PLANT.y + PLANT.d).toBe(true); } // la cinta no pisa la planta
-    expect(s.solids.filter((x) => x.kind === "prism" && x.w === 3 && x.d === 3 && x.h === 3 && x.mat === "steel")).toHaveLength(6); // transformadores
     expect(s.solids.filter((x) => x.kind === "prism" && x.w === 6 && x.d === 2.4 && x.h === 2.8)).toHaveLength(3); // camiones
     const rails = s.ground.filter((x) => x.kind === "strip" && x.mat === "steel");
     expect(rails.length).toBeGreaterThanOrEqual(RAIL_YARD_X.length * 2 + 2);
@@ -343,5 +343,232 @@ describe("chimeneas vecinas", () => {
     const all = STACKS.map((st) => one(st).out);
     for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++)
       for (const a of all[i]!) for (const b of all[j]!) expect(apart(a, b)).toBe(true);
+  });
+});
+
+const sub = (): Solid[] => build(substation);
+const raised = (): Solid[] => sub().filter((x) => !isFlat(x));
+function union(solids: readonly Solid[]): Bounds {
+  const bs = solids.map(bounds);
+  return {
+    min: { x: Math.min(...bs.map((b) => b.min.x)), y: Math.min(...bs.map((b) => b.min.y)), z: Math.min(...bs.map((b) => b.min.z)) },
+    max: { x: Math.max(...bs.map((b) => b.max.x)), y: Math.max(...bs.map((b) => b.max.y)), z: Math.max(...bs.map((b) => b.max.z)) },
+  };
+}
+/** Disjuntas en x, en y o en z (tocarse en una cara no es solape). */
+const apartBox = (a: Bounds, b: Bounds): boolean =>
+  a.max.x <= b.min.x + 1e-9 || b.max.x <= a.min.x + 1e-9 || a.max.y <= b.min.y + 1e-9 || b.max.y <= a.min.y + 1e-9 || a.max.z <= b.min.z + 1e-9 || b.max.z <= a.min.z + 1e-9;
+const near = (a: number, b: number): boolean => Math.abs(a - b) < 1e-6;
+const isPrism = (x: Solid, w: number, d: number, h: number, mat?: string): x is Solid & { kind: "prism" } =>
+  x.kind === "prism" && near(x.w, w) && near(x.d, d) && near(x.h, h) && (mat === undefined || x.mat === mat);
+type Beam = Solid & { kind: "beam" };
+const beams = (solids: readonly Solid[]): Beam[] => solids.filter((x): x is Beam => x.kind === "beam");
+const beamLen = (b: Beam): number => Math.hypot(b.to.x - b.from.x, b.to.y - b.from.y, b.to.z - b.from.z);
+const cylinders = (solids: readonly Solid[]) => solids.filter((x): x is Solid & { kind: "cylinder" } => x.kind === "cylinder");
+const T1 = (): Solid[] => build((o) => powerTransformer(o, TRANSFORMERS_Y[0], false));
+const T2 = (): Solid[] => build((o) => powerTransformer(o, TRANSFORMERS_Y[1], true));
+const fins = (solids: readonly Solid[]) => solids.filter((x) => x.mat === "steel" && (isPrism(x, 0.15, 1.6, 3) || isPrism(x, 1.6, 0.15, 3)));
+
+describe("subestación de intemperie (#215)", () => {
+  it("se quitan los cubos 3 × 3 × 3 y los pórticos de postes de hoy", () => {
+    const s = scene();
+    expect(s.solids.filter((x) => isPrism(x, 3, 3, 3, "steel"))).toHaveLength(0);
+    expect(s.solids.filter((x) => isPrism(x, 0.6, 0.6, 7, "steel"))).toHaveLength(0);
+    expect(s.solids.filter((x) => isPrism(x, 0.6, 10.6, 0.6, "steel"))).toHaveLength(0);
+  });
+
+  it("patio de grava sand antes del cordón concrete, y los dos en el suelo de la fábrica", () => {
+    const flat = sub().filter(isFlat);
+    const yard = flat.findIndex((x) => x.kind === "strip" && x.mat === "sand"), curb = flat.findIndex((x) => x.kind === "strip" && x.mat === "concrete");
+    expect(yard).toBeGreaterThanOrEqual(0); expect(curb).toBeGreaterThan(yard);
+    const g = flat[yard]!;
+    expect(g).toMatchObject({ kind: "strip", width: 13, z: 0.03, path: [{ x: 149, y: -53.5 }, { x: 190, y: -53.5 }] });
+    const b = bounds(g);
+    expect(b.min.x).toBeGreaterThanOrEqual(SUBSTATION.x0); expect(b.max.x).toBeLessThanOrEqual(SUBSTATION.x1);
+    expect(b.min.y).toBeGreaterThanOrEqual(SUBSTATION.y0 - 1e-9); expect(b.max.y).toBeLessThanOrEqual(SUBSTATION.y1 + 1e-9);
+    const ground = scene().ground;
+    expect(ground.indexOf(g)).toBe(-1); // otra instancia: se busca por forma
+    const gi = ground.findIndex((x) => x.kind === "strip" && x.mat === "sand" && x.width === 13);
+    const ci = ground.findIndex((x) => x.kind === "strip" && x.mat === "concrete" && x.path.length === 5 && x.path[0]!.x === 149);
+    expect(gi).toBeGreaterThanOrEqual(0); expect(ci).toBeGreaterThan(gi);
+  });
+
+  it("todo sólido de la subestación cae dentro del cerco x 149..190, y −60..−47, y ninguno supera z 12", () => {
+    const solids = raised();
+    expect(solids.length).toBeGreaterThan(300);
+    for (const x of solids) {
+      const b = bounds(x);
+      expect(b.min.x, x.kind).toBeGreaterThanOrEqual(SUBSTATION.x0); expect(b.max.x, x.kind).toBeLessThanOrEqual(SUBSTATION.x1);
+      expect(b.min.y, x.kind).toBeGreaterThanOrEqual(SUBSTATION.y0); expect(b.max.y, x.kind).toBeLessThanOrEqual(SUBSTATION.y1);
+      expect(b.min.z, x.kind).toBeGreaterThanOrEqual(0); expect(b.max.z, x.kind).toBeLessThanOrEqual(12 + 1e-9);
+    }
+    expect(union(solids).max.z).toBeCloseTo(12); // los mástiles de hilo de guardia
+  });
+
+  it("ninguna pieza más fina que 0.15 u", () => {
+    const min = 0.15 - 1e-9;
+    for (const x of raised()) {
+      if (x.kind === "prism") for (const v of [x.w, x.d, x.h]) expect(v).toBeGreaterThanOrEqual(min);
+      if (x.kind === "cylinder" || x.kind === "cone") { expect(2 * x.r).toBeGreaterThanOrEqual(min); expect(x.h).toBeGreaterThanOrEqual(min); }
+      if (x.kind === "beam") for (const v of [x.w, x.h, beamLen(x)]) expect(v).toBeGreaterThanOrEqual(min);
+    }
+  });
+
+  it("no toca la torre de enfriamiento, el pedestal de la tercera chimenea ni el farol de (148, −46)", () => {
+    const s = scene();
+    const tower = s.solids.filter((x) => x.kind === "cylinder" && x.mat === "concrete" && x.r >= 7);
+    const pedestal = s.solids.filter((x) => isPrism(x, 7, 7, STACK_BASE_H, "concrete") && x.at.x === STACKS[2].x - 3.5);
+    const lamp = s.solids.filter((x) => isPrism(x, 0.6, 0.6, 5, "steel") && x.at.x === 148 && x.at.y === -46);
+    expect(tower).toHaveLength(4); expect(pedestal).toHaveLength(1); expect(lamp).toHaveLength(1);
+    expect(bounds(pedestal[0]!)).toMatchObject({ min: { x: 146.5, y: -43.5 }, max: { x: 153.5, y: -36.5 } });
+    for (const x of raised()) {
+      const b = bounds(x);
+      expect(b.max.y).toBeLessThan(-45); // la torre ocupa y ≥ −45
+      for (const n of [...tower, ...pedestal, ...lamp]) expect(apartBox(b, bounds(n))).toBe(true);
+    }
+  });
+
+  it("cerco: 13 postes, ninguno en el portón, y malla romboidal de 26 diagonales", () => {
+    const solids = raised();
+    const posts = solids.filter((x): x is Solid & { kind: "prism" } => isPrism(x, 0.15, 0.15, 2.2, "steel"));
+    expect(posts).toHaveLength(13);
+    for (const p of posts) expect(p.at.x + 0.15 <= 168.5 || p.at.x >= 171.5).toBe(true);
+    expect(posts.filter((p) => near(p.at.y, -47.15))).toHaveLength(10); // lado sur
+    expect(posts.filter((p) => near(p.at.x, 189.85))).toHaveLength(4);  // lado este, con la esquina
+    const mesh = beams(solids).filter((b) => b.mat === "steel" && near(b.w, 0.15) && near(Math.min(b.from.z, b.to.z), 0.1) && near(Math.max(b.from.z, b.to.z), 2.1));
+    expect(mesh).toHaveLength(26);
+  });
+
+  it("portón de dos hojas: pilares con carteles rayo safety y peligro signal, 8 barrotes y 2 rieles", () => {
+    const solids = raised();
+    const pillars = solids.filter((x): x is Solid & { kind: "prism" } => isPrism(x, 0.6, 0.6, 2.6, "concrete"));
+    expect(pillars.map((p) => p.at.x).sort()).toEqual([168.5, 170.9]);
+    const plates = pillars.flatMap((p) => p.plates ?? []);
+    expect(plates).toEqual(expect.arrayContaining([expect.objectContaining({ wall: 2, shape: "tri", mat: "safety" }), expect.objectContaining({ wall: 2, shape: "rect", mat: "signal" })]));
+    const bars = solids.filter((x): x is Solid & { kind: "prism" } => isPrism(x, 0.15, 0.15, 2, "steel"));
+    expect(bars).toHaveLength(8);
+    for (const b of bars) { expect(b.at.x).toBeGreaterThanOrEqual(169.1 - 1e-9); expect(b.at.x + 0.15).toBeLessThanOrEqual(170.9 + 1e-9); }
+    expect(beams(solids).filter((b) => near(b.from.z, 1.85) && near(b.to.z, 1.85) && near(b.from.y, -47.3))).toHaveLength(2);
+  });
+
+  it("caseta de control whitewash con fachada y puerta", () => {
+    const hut = raised().filter((x): x is Solid & { kind: "prism" } => isPrism(x, 4, 3, 2.8, "whitewash"));
+    expect(hut).toHaveLength(1);
+    expect(hut[0]!.at).toEqual({ x: 182, y: -52, z: 0 });
+    expect(hut[0]!.facade).toMatchObject({ floors: 1, cols: 2 });
+    expect(hut[0]!.plates).toEqual([expect.objectContaining({ wall: 2, shape: "rect", mat: "steel", toneOffset: -2 })]);
+  });
+
+  it("dos pórticos de celosía: 16 montantes, 64 diagonales en X, 4 cordones, 16 tramos de zigzag, 4 puntas y 4 mástiles", () => {
+    const solids = raised();
+    expect(solids.filter((x) => isPrism(x, 0.2, 0.2, 9, "steel"))).toHaveLength(16);
+    const thin = beams(solids).filter((b) => b.mat === "steel" && near(b.w, 0.15));
+    const diag = thin.filter((b) => { const dz = Math.abs(b.to.z - b.from.z); return (near(dz, 2.5) || near(dz, 1.5)) && near(Math.hypot(b.to.x - b.from.x, b.to.y - b.from.y), 0.8); });
+    expect(diag).toHaveLength(64);
+    expect(beams(solids).filter((b) => b.mat === "steel" && near(b.w, 0.3) && near(b.h, 0.3))).toHaveLength(4);
+    expect(thin.filter((b) => near(Math.abs(b.to.y - b.from.y), 1.125) && near(Math.abs(b.to.z - b.from.z), 1) && near(b.from.x, b.to.x))).toHaveLength(16);
+    expect(solids.filter((x) => x.kind === "cone" && x.mat === "steel" && x.sides === 4 && near(x.r, 0.7) && near(x.h, 1))).toHaveLength(4);
+    expect(solids.filter((x) => isPrism(x, 0.15, 0.15, 2, "steel") && near(x.at.z, 10))).toHaveLength(4);
+  });
+
+  it("tres líneas de 151.5 a 186.5 a z 9.5: dos cadenas de 9 discos alternados y un conductor entre ellas, disjuntos en x", () => {
+    const all = beams(raised());
+    for (const y of PHASES_Y) {
+      const line = all.filter((b) => near(b.from.y, y) && near(b.to.y, y) && near(b.from.z, 9.5) && near(b.to.z, 9.5));
+      const discs = line.filter((b) => near(beamLen(b), 0.15));
+      expect(discs).toHaveLength(18);
+      for (const d of discs) expect((near(d.w, 0.5) && near(d.h, 0.5) && d.mat === "whitewash") || (near(d.w, 0.35) && near(d.h, 0.35) && d.mat === "glass")).toBe(true);
+      expect(discs.filter((d) => d.mat === "whitewash")).toHaveLength(10);
+      const wires = line.filter((b) => b.mat === "steel" && near(b.w, 0.15) && !near(beamLen(b), 0.15));
+      expect(wires).toHaveLength(1);
+      const w = bounds(wires[0]!);
+      expect(w.min.x).toBeCloseTo(152.85); expect(w.max.x).toBeCloseTo(185.15);
+      const db = discs.map(bounds);
+      expect(Math.min(...db.map((b) => b.min.x))).toBeCloseTo(151.5); expect(Math.max(...db.map((b) => b.max.x))).toBeCloseTo(186.5);
+      for (const b of db) expect(b.max.x <= w.min.x + 1e-9 || b.min.x >= w.max.x - 1e-9).toBe(true);
+    }
+  });
+
+  it("tres seccionadores: bastidor, dos columnas de 6 polleras y brazo signal", () => {
+    const solids = raised();
+    expect(solids.filter((x) => isPrism(x, 2.4, 0.6, 2.5, "steel"))).toHaveLength(3);
+    expect(beams(solids).filter((b) => b.mat === "signal" && near(b.w, 0.2) && near(b.h, 0.2))).toHaveLength(3);
+    const one = build((o) => disconnector(o, PHASES_Y[0]));
+    const sheds = cylinders(one).filter((c) => c.mat === "whitewash" && near(c.h, 0.3));
+    expect(sheds).toHaveLength(12);
+    expect(new Set(sheds.map((c) => c.r))).toEqual(new Set([0.3, 0.42]));
+    expect(new Set(sheds.map((c) => c.at.x))).toEqual(new Set([157.1, 158.9]));
+  });
+
+  it("tres TI sobre escalerilla, con 6 polleras y cabeza redondeada", () => {
+    const one = build((o) => currentTransformer(o, PHASES_Y[1]));
+    expect(one.filter((x) => isPrism(x, 0.15, 0.15, 2.5, "steel"))).toHaveLength(4);
+    expect(one.filter((x) => isPrism(x, 0.8, 0.8, 0.15, "steel"))).toHaveLength(1);
+    expect(cylinders(one).filter((c) => c.mat === "whitewash" && near(c.h, 0.3))).toHaveLength(6);
+    expect(cylinders(one).filter((c) => c.mat === "whitewash" && near(c.r, 0.6) && near(c.h, 0.8))).toHaveLength(1);
+    expect(one.filter((x) => x.kind === "cone" && x.mat === "whitewash" && near(x.r, 0.6) && near(x.h, 0.4))).toHaveLength(1);
+    expect(cylinders(raised()).filter((c) => c.mat === "whitewash" && near(c.r, 0.6) && near(c.h, 0.8))).toHaveLength(3);
+    expect(cylinders(raised()).filter((c) => c.mat === "whitewash" && near(c.h, 0.3))).toHaveLength(54); // 36 de seccionadores + 18 de TI
+  });
+
+  it("seccionadores, TI y transformadores de fases distintas no se tocan entre sí", () => {
+    const units: { phase: number; b: Bounds }[] = [
+      ...PHASES_Y.map((y, i) => ({ phase: i, b: union(build((o) => disconnector(o, y))) })),
+      ...PHASES_Y.map((y, i) => ({ phase: i, b: union(build((o) => currentTransformer(o, y))) })),
+      { phase: 0, b: union(T1()) }, { phase: 2, b: union(T2()) },
+    ];
+    for (const a of units) for (const c of units) if (a.phase !== c.phase) expect(apartBox(a.b, c.b)).toBe(true);
+  });
+
+  it("dos transformadores: cuba 6 × 4 × 4 a z 0.5 con placa, 18 aletas, conservador con caño y 3 pasatapas a 35° hacia el sur", () => {
+    const solids = raised();
+    const tanks = solids.filter((x): x is Solid & { kind: "prism" } => isPrism(x, 6, 4, 4, "steel"));
+    expect(tanks.map((t) => t.at)).toEqual(TRANSFORMERS_Y.map((y) => ({ x: 172, y, z: 0.5 })));
+    for (const t of tanks) expect(t.plates).toEqual([expect.objectContaining({ shape: "rect", mat: "whitewash" })]);
+    expect(fins(solids)).toHaveLength(18);
+    expect(fins(T1())).toHaveLength(6); expect(fins(T2())).toHaveLength(12);
+    for (const unit of [T1(), T2()]) {
+      expect(beams(unit).filter((b) => b.mat === "steel" && near(b.w, 1.2) && near(b.h, 1.2))).toHaveLength(1); // conservador
+      expect(beams(unit).filter((b) => b.mat === "steel" && near(b.w, 0.15))).toHaveLength(1);                  // caño
+      expect(unit.filter((x) => isPrism(x, 0.3, 0.3, 0.7, "steel"))).toHaveLength(2);                           // postes del conservador
+      const bushings = beams(unit).filter((b) => b.mat === "whitewash" && near(b.w, 0.4));
+      expect(bushings).toHaveLength(3);
+      for (const b of bushings) {
+        expect(beamLen(b)).toBeCloseTo(2.5);
+        expect(near(b.from.z, 4.5)).toBe(true);
+        expect((b.to.z - b.from.z) / beamLen(b)).toBeCloseTo(Math.sin((35 * Math.PI) / 180));
+        expect(b.to.y).toBeGreaterThan(b.from.y);
+      }
+    }
+  });
+
+  it("la placa de T1 cae al sur de sus aletas este y la de T2 al este de sus aletas sur", () => {
+    const plate = (unit: Solid[]) => tessellateAll(unit.find((x) => isPrism(x, 6, 4, 4, "steel"))!).filter((f) => f.mat === "whitewash");
+    const p1 = plate(T1()), p2 = plate(T2());
+    expect(p1).toHaveLength(1); expect(p2).toHaveLength(1);
+    const f1 = union(fins(T1())), f2 = fins(T2()).filter((x) => isPrism(x, 0.15, 1.6, 3)).map(bounds);
+    expect(Math.min(...p1[0]!.pts.map((p) => p.y))).toBeGreaterThanOrEqual(f1.max.y);
+    expect(p1[0]!.pts.every((p) => near(p.x, 178))).toBe(true);
+    expect(Math.min(...p2[0]!.pts.map((p) => p.x))).toBeGreaterThanOrEqual(Math.max(...f2.map((b) => b.max.x)));
+    expect(p2[0]!.pts.every((p) => near(p.y, TRANSFORMERS_Y[1] + 4))).toBe(true);
+  });
+
+  it("cortafuego más alto que las cubas y sin tocarlas; fosos de 4 marcos por cuba; T1 y T2 no tocan el cortafuego", () => {
+    const solids = raised();
+    const wall = solids.filter((x) => isPrism(x, FIREWALL.w, FIREWALL.d, FIREWALL.h, "concrete"));
+    expect(wall).toHaveLength(1);
+    const wb = bounds(wall[0]!);
+    expect(wb).toMatchObject({ min: { x: 171.5, y: -54.3, z: 0 }, max: { x: 178.5, z: 5.5 } });
+    const tanks = solids.filter((x) => isPrism(x, 6, 4, 4, "steel"));
+    for (const t of tanks) { expect(apartBox(wb, bounds(t))).toBe(true); expect(wb.max.z).toBeGreaterThan(bounds(t).max.z); }
+    expect(solids.filter((x) => x.kind === "prism" && x.mat === "concrete" && near(x.h, 0.3) && near(x.at.z, 0))).toHaveLength(8);
+    for (const unit of [T1(), T2()]) expect(apartBox(wb, union(unit))).toBe(true);
+    expect(apartBox(union(T1()), union(T2()))).toBe(true);
+  });
+
+  it("12 puentes bajan de la panza del conductor a seccionadores, TI y pasatapas", () => {
+    const d = beams(build(droppers));
+    expect(d).toHaveLength(12);
+    for (const b of d) { expect(b.mat).toBe("steel"); expect(near(b.w, 0.15)).toBe(true); expect(near(b.from.z, 9.425)).toBe(true); expect(b.to.z).toBeLessThan(9.425); }
   });
 });
