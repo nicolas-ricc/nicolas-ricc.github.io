@@ -236,10 +236,11 @@ describe("wheel hueca, ranuras y cangilones (#211)", () => {
       for (const p of f.pts) expect(p.x + p.y).toBeCloseTo(at.x + at.y, 6);
     }
   };
-  const hollow: Solid = { kind: "wheel", at: AT, r: 5.5, width: 0.5, mat: "rust", sides: 28, angle: 0, hollow: true, slots: 28 };
-  const B: Solid = { ...hollow, buckets: { n: 14, depth: 1.2, teeth: 2, mat: "steel" } } as Solid;
+  type Wheel = Extract<Solid, { kind: "wheel" }>;
+  const hollow: Wheel = { kind: "wheel", at: AT, r: 5.5, width: 0.5, mat: "rust", sides: 28, angle: 0, hollow: true, slots: 28 };
+  const B: Wheel = { ...hollow, buckets: { n: 14, depth: 1.2, teeth: 2, mat: "steel" } };
   /** Bloques de caras `steel` por cangilón: trapecio, malla y dientes. */
-  const bucketBlocks = (s: Solid, per = 4) => { const f = tessellateAll(s).filter((x) => x.mat === "steel"); return Array.from({ length: f.length / per }, (_, k) => f.slice(k * per, (k + 1) * per)); };
+  const bucketBlocks = (s: Solid, per = 2 + (s.kind === "wheel" ? s.buckets?.teeth ?? 0 : 0)) => { const f = tessellateAll(s).filter((x) => x.mat === "steel"); return Array.from({ length: f.length / per }, (_, k) => f.slice(k * per, (k + 1) * per)); };
 
   it("hueca con ranuras: llanta doble, sin rayos ni cubo, todo en el plano", () => {
     const faces = tessellateAll(hollow);
@@ -250,13 +251,13 @@ describe("wheel hueca, ranuras y cangilones (#211)", () => {
   });
 
   it("hueca sin ranuras: 2·sides caras", () => {
-    expect(tessellateAll({ ...hollow, slots: undefined } as Solid)).toHaveLength(56);
-    expect(tessellateAll({ ...hollow, slots: 0 } as Solid)).toHaveLength(56);
+    expect(tessellateAll({ ...hollow, slots: undefined })).toHaveLength(56);
+    expect(tessellateAll({ ...hollow, slots: 0 })).toHaveLength(56);
   });
 
   it("ranuras: centradas en angle + k·2π/slots y unen las dos llantas", () => {
     for (const angle of [0, 0.2]) {
-      const w = { ...hollow, sides: 8, slots: 4, angle } as Solid;
+      const w: Wheel = { ...hollow, sides: 8, slots: 4, angle };
       const slots = tessellateAll(w).slice(16);
       expect(slots).toHaveLength(4);
       slots.forEach((f, k) => {
@@ -313,12 +314,14 @@ describe("wheel hueca, ranuras y cangilones (#211)", () => {
         const da = wrap(planeAngle(AT, mean(t.pts)) - (2 * Math.PI * k) / n);
         expect(da).toBeGreaterThan((0.3 * Math.PI) / n);
         expect(da).toBeLessThan(Math.PI / n);
+        // el vértice (tercer punto) queda a mayor ángulo que el punto medio de su base
+        expect(wrap(planeAngle(AT, t.pts[2]!) - planeAngle(AT, mean([t.pts[0]!, t.pts[1]!])))).toBeGreaterThan(0);
       }
     });
   });
 
   it("cangilones: girar π/n mueve el cangilón 0 y conserva la cantidad de caras", () => {
-    const B2 = { ...B, angle: Math.PI / 14 } as Solid;
+    const B2: Wheel = { ...B, angle: Math.PI / 14 };
     expect(tessellateAll(B2)).toHaveLength(tessellateAll(B).length);
     const t0 = bucketBlocks(B)[0]![0]!, t1 = bucketBlocks(B2)[0]![0]!;
     expect(Math.max(...t0.pts.map((p, i) => dist(p, t1.pts[i]!)))).toBeGreaterThan(0.1);
@@ -326,24 +329,26 @@ describe("wheel hueca, ranuras y cangilones (#211)", () => {
   });
 
   it("cangilones: bounds incluye r + depth", () => {
-    const b = bounds({ ...B, angle: Math.PI / 2 } as Solid);
+    const b = bounds({ ...B, angle: Math.PI / 2 });
     expect(b.max.z).toBeGreaterThan(9.2 + 5.5 + 0.9 * 1.2);
     expect(b.max.z).toBeLessThanOrEqual(9.2 + 5.5 + 1.2 + 1e-6);
   });
 
   it("cangilones sin hollow: rayos y cubo siguen", () => {
-    expect(tessellateAll({ ...B, hollow: undefined, slots: undefined } as Solid)).toHaveLength(28 + 28 + 1 + 14 * 4);
+    expect(tessellateAll({ ...B, hollow: undefined, slots: undefined })).toHaveLength(28 + 28 + 1 + 14 * 4);
   });
 
   it("cangilones con teeth 0: trapecio y malla por cangilón", () => {
-    const w = { ...B, buckets: { n: 14, depth: 1.2, teeth: 0, mat: "steel" } } as Solid;
-    expect(tessellateAll(w).filter((f) => f.mat === "steel")).toHaveLength(14 * 2);
+    const w: Wheel = { ...B, buckets: { n: 14, depth: 1.2, teeth: 0, mat: "steel" } };
+    const blocks = bucketBlocks(w);
+    expect(blocks).toHaveLength(14);
+    for (const b of blocks) expect(b.map((f) => f.pts.length)).toEqual([4, 4]);
   });
 
   it("cangilones con góndolas: las góndolas no cambian", () => {
     const g = { mat: "glass" as const, w: 0.8, d: 0.6, h: 0.7 };
-    const plain = { kind: "wheel", at: AT, r: 5.5, width: 0.5, mat: "rust", sides: 12, angle: 0.3, gondolas: g } as Solid;
-    const withB = { ...plain, buckets: { n: 14, depth: 1.2, teeth: 2, mat: "steel" } } as Solid;
+    const plain: Wheel = { kind: "wheel", at: AT, r: 5.5, width: 0.5, mat: "rust", sides: 12, angle: 0.3, gondolas: g };
+    const withB: Wheel = { ...plain, buckets: { n: 14, depth: 1.2, teeth: 2, mat: "steel" } };
     expect(tessellateAll(withB).filter((f) => f.mat === "glass")).toEqual(tessellateAll(plain).filter((f) => f.mat === "glass"));
   });
 });

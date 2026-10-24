@@ -236,7 +236,8 @@ export const wheelPoint = (at: Vec3, a: number, rho: number): Vec3 => v3(at.x + 
 
 /** Rueda de frente a la cámara: llanta en sectores, rayos, cubo (todos en el plano, tono `top`) y góndolas como prismas colgados de la llanta.
  *  `hollow`: llanta doble (exterior + interior a `r − 2.2·width .. r − 1.2·width`), sin rayos ni cubo; `slots`: barras radiales de ancho `width/3` que unen las dos llantas (solo con `hollow`).
- *  `buckets`: `n` cangilones trapezoidales que sobresalen `depth` de la llanta exterior, con una malla interior (60 %, `toneOffset −2`) y `teeth` dientes triangulares en el borde de mayor ángulo. */
+ *  `buckets`: `n` cangilones trapezoidales que sobresalen `depth` de la llanta exterior, con una malla interior (60 %, `toneOffset −2`) y `teeth` dientes triangulares de lado `depth/3`, equiespaciados en el borde de mayor ángulo
+ *  (el borde mide ≈ `depth`: con más de 3 dientes las bases se enciman). */
 function wheel(s: Solid & { kind: "wheel" }): Face[] {
   // Los planos de la rueda no siguen la regla habitual de sombreado por normal: una pared que
   // mirase a la cámara se pintaría "shade" (la cara más oscura), pero el anillo debe leerse en
@@ -251,14 +252,12 @@ function wheel(s: Solid & { kind: "wheel" }): Face[] {
     const i0 = wheelPoint(s.at, a, r0), i1 = wheelPoint(s.at, a, r1);
     return flat([off(i0, -1), off(i1, -1), off(i1, 1), off(i0, 1)]);
   };
+  // sector de llanta entre los ángulos a0 y a1, de radio r0 a r1
+  const sector = (a0: number, a1: number, r0: number, r1: number): Face => flat([wheelPoint(s.at, a0, r0), wheelPoint(s.at, a1, r0), wheelPoint(s.at, a1, r1), wheelPoint(s.at, a0, r1)]);
   for (let k = 0; k < s.sides; k++) {
     const a0 = s.angle + (2 * Math.PI * k) / s.sides, a1 = s.angle + (2 * Math.PI * (k + 1)) / s.sides;
-    out.push(flat([wheelPoint(s.at, a0, inner), wheelPoint(s.at, a1, inner), wheelPoint(s.at, a1, s.r), wheelPoint(s.at, a0, s.r)]));
-    if (s.hollow) {
-      out.push(flat([wheelPoint(s.at, a0, s.r - 2.2 * s.width), wheelPoint(s.at, a1, s.r - 2.2 * s.width), wheelPoint(s.at, a1, s.r - 1.2 * s.width), wheelPoint(s.at, a0, s.r - 1.2 * s.width)]));
-    } else {
-      out.push(bar(a0, hub, inner));
-    }
+    out.push(sector(a0, a1, inner, s.r));
+    out.push(s.hollow ? sector(a0, a1, s.r - 2.2 * s.width, s.r - 1.2 * s.width) : bar(a0, hub, inner));
   }
   if (!s.hollow) out.push(flat(Array.from({ length: 8 }, (_, k) => wheelPoint(s.at, s.angle + (2 * Math.PI * k) / 8, hub))));
   else {
@@ -281,11 +280,14 @@ function wheel(s: Solid & { kind: "wheel" }): Face[] {
       // dientes: triángulos equiláteros sobre el borde delantero E0 -> E1, con el vértice hacia fuera del trapecio
       const [e0u, e0z] = uz(e0), [e1u, e1z] = uz(e1), [mu, mz] = uz(m);
       const du = e1u - e0u, dz = e1z - e0z, len = Math.hypot(du, dz);
-      let nu = dz / len, nz = -du / len; // perpendicular al borde
+      const tu = du / len, tz = dz / len; // a lo largo del borde
+      let nu = tz, nz = -tu; // perpendicular al borde
       if (nu * (e0u + du / 2 - mu) + nz * (e0z + dz / 2 - mz) < 0) { nu = -nu; nz = -nz; }
+      const hb = side / 2, ht = (side * Math.sqrt(3)) / 2; // media base y altura del diente
       for (let j = 0; j < teeth; j++) {
-        const f = (j + 0.5) / teeth, cu = e0u + du * f, cz = e0z + dz * f, tu = du / len, tz = dz / len;
-        out.push(flat([back(cu - (tu * side) / 2, cz - (tz * side) / 2), back(cu + (tu * side) / 2, cz + (tz * side) / 2), back(cu + (nu * side * Math.sqrt(3)) / 2, cz + (nz * side * Math.sqrt(3)) / 2)], mat));
+        const f = (j + 0.5) / teeth, cu = e0u + du * f, cz = e0z + dz * f;
+        const b0 = back(cu - tu * hb, cz - tz * hb), b1 = back(cu + tu * hb, cz + tz * hb), apex = back(cu + nu * ht, cz + nz * ht);
+        out.push(flat([b0, b1, apex], mat));
       }
     }
   }
