@@ -3,6 +3,7 @@ import type { Accent } from "../iso/accent";
 import { project, Z_SCALE } from "../iso/project";
 import { bounds, type Solid } from "../iso/solids";
 import { BLEED, WORLD } from "../map/geo";
+import { WATER_TOWER, waterTower } from "../scenes/maltings";
 import { BEAM_PERIOD_MS } from "../scenes/sea-anim";
 import { assembleWorld } from "../world/assemble";
 import { type Box, FRAME_H, HALO_BASE } from "../world/frame";
@@ -144,9 +145,9 @@ describe("selección por hash", () => {
 const pieces = EXHIBITS.flatMap((e) => (e.kind === "piece" ? [e] : []));
 
 describe("exhibits de pieza", () => {
-  it("las nueve piezas, cada una en su zona", () => {
+  it("las diez piezas, cada una en su zona", () => {
     expect(Object.fromEntries(pieces.map((e) => [e.id, e.zone]))).toEqual({
-      "grua-torre": "portfolio", farol: "portfolio",
+      "tanque-agua": "portfolio", "grua-torre": "portfolio", farol: "portfolio",
       campus: "cv", selva: "cv",
       viga: "blog", carguero: "blog", remolcador: "blog", convoy: "blog", lancha: "blog",
     });
@@ -159,6 +160,19 @@ describe("exhibits de pieza", () => {
     const out: Solid[] = [];
     if (e.kind === "piece") e.build(out, []);
     expect(out.map((s) => s.kind)).toEqual(["beam"]);
+  });
+  it("el tanque de agua (#214) va solo, centrado en el origen, después de planta: en planta queda detrás de la maltería", () => {
+    const ids = EXHIBITS.map((e) => e.id);
+    expect(ids.indexOf("tanque-agua")).toBe(ids.indexOf("planta") + 1);
+    const e = EXHIBITS.find((x) => x.id === "tanque-agua")!;
+    const out: Solid[] = [];
+    if (e.kind === "piece") e.build(out, []);
+    const ref: Solid[] = [];
+    waterTower(ref, WATER_TOWER);
+    expect(out).toHaveLength(ref.length);
+    for (const s of out) if (s.kind === "cylinder" || s.kind === "cone") expect([s.at.x, s.at.y]).toEqual([0, 0]);
+    const deck = out.find((s) => s.kind === "cylinder" && s.r === 4.6)!;
+    expect(deck.kind === "cylinder" && deck.at.x === 0 && deck.at.y === 0).toBe(true);
   });
   it("cada pieza emite al menos un sólido", () => {
     for (const e of pieces) {
@@ -197,5 +211,16 @@ describe("entrada del índice fuera de la vista (#117)", () => {
     expect(outOfView({ top: 50, bottom: 72 }, low)).toBe(true);
     expect(outOfView({ top: 100, bottom: 122 }, low)).toBe(false);
     expect(outOfView({ top: 590, bottom: 612 }, low)).toBe(true);
+  });
+});
+
+describe("caja de la planta con maltería y tanque (#214)", () => {
+  it("planta arranca en x 2 y sube a 26: entran la pasarela del tanque (r 4.6) y el vértice del horno", () => {
+    const e = regions.find((r) => r.id === "planta")!;
+    expect(e.box.x0).toBe(2);
+    expect(e.h).toBe(26);
+    const cs = cropScene(scene, e.box);
+    expect(cs.solids.some((s) => s.kind === "cylinder" && s.r === 4.6 && s.at.x === 10 && s.at.y === -36)).toBe(true);
+    expect(cs.solids.some((s) => s.kind === "cone" && s.sides === 4 && s.at.z + s.h === 26)).toBe(true);
   });
 });

@@ -7,6 +7,7 @@ import { WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, worldZoneAt } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
 import { boilerHouse, gableEnd, inclineBelt, metalStacks, NAVE, naveBody, stairTower } from "./boiler-house";
+import { maltings, waterTower } from "./maltings";
 import { MALT, PLANT, RAIL_YARD_X, STACKS, STACK_BASE_H, chimney, factory, type FactoryScene, type Stack } from "./factory";
 import { towerCrane } from "./pieces";
 import { FIREWALL, PHASES_Y, SUBSTATION, TRANSFORMERS_Y, currentTransformer, disconnector, droppers, powerTransformer, substation } from "./substation";
@@ -70,12 +71,14 @@ describe("factory", () => {
     expect(tallOk({ kind: "prism", at: { x: 0, y: 0, z: 27 }, w: 30, d: 1, h: 1, mat: "steel" })).toBe(true);
   });
 
-  it("la planta: marcador de la maltería 24 × 30 × 18 y nave de dos prismas de ladrillo apilados, sin dientes de sierra; tres chimeneas sin banda rust, torre de enfriamiento y grúa", () => {
+  it("la planta: maltería 24 × 30 × 18 de cinco pisos, tanque y nave de dos prismas de ladrillo apilados, sin dientes de sierra; tres chimeneas sin banda rust, torre de enfriamiento y grúa", () => {
     const s = scene();
     expect(MALT).toEqual({ x: 20, y: -46, w: 24, d: 30, h: 18 });
     expect(NAVE).toEqual({ x: 44, y: -46, w: 76, d: 30, h: 14 });
     expect(PLANT).toMatchObject({ x: 20, y: -46, w: 100, d: 30 }); // huella estable
-    expect(s.solids.filter((x) => x.kind === "prism" && x.mat === "brick" && x.at.x === MALT.x && x.at.y === MALT.y && x.w === 24 && x.d === 30 && x.h === 18)).toHaveLength(1);
+    expect(s.solids.filter((x) => x.kind === "prism" && x.mat === "brick" && x.at.x === MALT.x && x.at.y === MALT.y && x.w === 24 && x.d === 30 && x.h === 18 && x.facade?.floors === 5)).toHaveLength(1);
+    for (const x of [...build(maltings), ...build(waterTower)]) expect(s.solids).toContainEqual(x);
+    expect(s.solids.filter((x) => x.kind === "ramp" && x.mat === "steel" && x.w === 6 && x.at.z === 18)).toHaveLength(4); // faldones de la maltería
     expect(s.solids.filter((x) => x.kind === "prism" && x.mat === "brick" && x.at.x === NAVE.x && x.at.y === NAVE.y && x.w === NAVE.w && x.d === NAVE.d && x.h === 7)).toHaveLength(2);
     expect(s.solids.filter((x) => x.kind === "ramp" && x.mat === "brick")).toHaveLength(0);
     for (const x of build(boilerHouse)) expect(s.solids).toContainEqual(x);
@@ -141,9 +144,28 @@ describe("factory", () => {
     const near = scene().solids.filter((x) => { const b = bounds(x); return b.max.x >= 17 && b.min.x <= 126.4 && b.max.y >= -49 && b.min.y <= -14; });
     const order = sortByDepth(near);
     const wall = order.findIndex((x) => x.kind === "prism" && x.mat === "brick" && x.at.x === NAVE.x && x.at.z === 7);
-    const roof = order.flatMap((x, i) => (x.kind === "ramp" && x.mat === "steel" ? [i] : []));
+    const roof = order.flatMap((x, i) => (x.kind === "ramp" && x.mat === "steel" && x.at.x >= NAVE.x ? [i] : []));
     expect(roof).toHaveLength(6);
     for (const i of roof) expect(i).toBeGreaterThan(wall);
+  });
+
+  it("el tanque no toca desvío ni locomotora (y ≤ −9.3) ni la maltería (x ≤ 20)", () => {
+    const s = scene(), tank = build(waterTower);
+    for (const x of tank) { const b = bounds(x); expect(b.max.y).toBeLessThanOrEqual(-9.3); expect(b.max.x).toBeLessThanOrEqual(20); }
+    const siding = s.ground.filter((x) => x.kind === "strip" && x.path.some((p) => p.y > -9.3 && p.y < -6.7));
+    const loco = s.solids.filter((x) => x.kind === "prism" && x.mat === "steel" && x.at.y === -9.3);
+    expect(loco).toHaveLength(2); // locomotora y cabina
+    expectApart(tank, [...siding, ...loco, ...build(maltings)]);
+  });
+
+  it("la maltería no pisa la nave (x ≤ 44) ni los pallets (y ≤ −16)", () => {
+    const s = scene(), malt = build(maltings);
+    for (const x of malt) { const b = bounds(x); expect(b.max.x).toBeLessThanOrEqual(44); expect(b.max.y).toBeLessThanOrEqual(-16); }
+    expectApart(malt, [...build(naveBody), ...s.solids.filter(isPallet)]);
+  });
+
+  it("ningún sólido de maltería o tanque supera z 26", () => {
+    for (const x of [...build(maltings), ...build(waterTower)]) expect(bounds(x).max.z).toBeLessThanOrEqual(26 + 1e-9);
   });
 
   it("el farol de (58, −16) pasa a (50, −13.5)", () => {
