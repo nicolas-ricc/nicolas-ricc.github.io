@@ -5,7 +5,7 @@ import type { Material } from "../map/palette-iso";
 /**
  * Nave de calderas de la Fábrica de Luz, sobre la huella `x 44..120, y −46..−16`
  * de la planta. La cámara ve techo, este (+x) y sur (+y): el detalle va ahí.
- * Decisiones: .superpowers/sdd/2026-10-24-213-nave-calderas/decisions.md.
+ * Decisiones (D1–D19): docs/plans/2026-10-24-213-nave-calderas.md.
  */
 export const NAVE = { x: 44, y: -46, w: 76, d: 30, h: 14 } as const;
 export const STAIR_TOWER = { x0: 121, y0: -34, x1: 126, y1: -26 } as const;
@@ -14,7 +14,7 @@ export const METAL_STACK_X = [55, 70, 85, 100] as const;
 const BAYS = 11; // 12 pilastras = 11 crujías
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material): Solid & { kind: "prism" } => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat });
 
-/** Celosía de ladrillo en damero: placas de 0.5 × 0.8 cada 1 u sobre la pared `wall` de largo `len`, bajo el alero (z 12.8..13.6). */
+/** Celosía de ladrillo en damero: placas de 0.5 u cada 1 u sobre la pared `wall` de largo `len` (entero: una placa por unidad), bajo el alero (z 12.8..13.6). */
 function lattice(wall: number, len: number, z0 = 12.8, z1 = 13.6): Plate[] {
   return Array.from({ length: len }, (_, i): Plate => ({ wall, shape: "rect", u0: i / len, u1: (i + 0.5) / len, z0, z1, mat: "brick", toneOffset: -2 }));
 }
@@ -36,7 +36,7 @@ export function naveBody(out: Solid[]): void {
     out.push(prism(c - 0.45, -16, 3.5, 0.9, 0.9, 0.6, "concrete"));
     out.push(prism(c - 0.25, -16, 4.1, 0.5, 0.5, 9.9, "rust"));
     out.push(prism(c - 0.6, -16, 4.1, 0.15, 0.15, 9.9, "rust"));
-    out.push({ kind: "beam", from: v3(c, -15.5, 11.5), to: v3(c, -15.15, 13.55), w: 0.3, h: 0.3, mat: "rust" });
+    out.push({ kind: "beam", from: v3(c, -15.85, 11.2), to: v3(c, -15.15, 13.55), w: 0.3, h: 0.3, mat: "rust" });
   }
 
   // techo de pizarra a dos aguas, cumbrera E-O a z 17 en y −31; sin alero oeste (el marcador de la maltería queda pegado)
@@ -74,6 +74,7 @@ export function metalStacks(out: Solid[]): void {
     }
   }
 }
+
 /** Torre de escalera de acero junto al testero: cuatro descansos, postes partidos entre ellos, cuatro tramos en zigzag y baranda este y sur. */
 export function stairTower(out: Solid[]): void {
   const { x0, y0, x1, y1 } = STAIR_TOWER;
@@ -92,6 +93,7 @@ export function stairTower(out: Solid[]): void {
     out.push({ kind: "beam", from: v3(121.4, -26.1, z + 1.25), to: v3(125.6, -26.1, z + 1.25), w: 0.15, h: 0.15, mat: "steel" });
   }
 }
+
 /** Cinta inclinada de la playa de camiones a la tolva junto al alero, con dos caballetes. */
 export function inclineBelt(out: Solid[]): void {
   const from = v3(50, -4, 0.5), to = v3(59.7, -15, 12.5);

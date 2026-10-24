@@ -37,7 +37,7 @@ describe("nave de calderas: cuerpo", () => {
     expect(prisms(body).filter((p) => p.mat === "rust" && p.w === 0.15 && p.d === 0.15 && p.at.y === -16)).toHaveLength(12);
     const brackets = beams(body).filter((b) => b.mat === "rust" && b.w === 0.3);
     expect(brackets).toHaveLength(12);
-    for (const b of brackets) { expect(b.from.y).toBe(-15.5); expect(b.to.z).toBeGreaterThan(b.from.z); expect(b.to.y).toBeGreaterThan(b.from.y); }
+    for (const b of brackets) { expect(b.from.y).toBe(-15.85); expect(bounds(b).min.y).toBeGreaterThanOrEqual(-16); expect(b.to.y - b.from.y).toBeGreaterThanOrEqual(0.7 - 1e-9); /* diagonal, sin entrar en el muro */ expect(b.to.z).toBeGreaterThan(b.from.z); expect(b.to.y).toBeGreaterThan(b.from.y); }
   });
 
   it("banda de celosía de ladrillo en damero bajo el alero, en los muros sur y este del prisma alto", () => {

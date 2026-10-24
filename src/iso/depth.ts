@@ -92,8 +92,10 @@ function besideHull(hull: Solid, other: Solid, hb: Bounds, ob: Bounds, vx: numbe
 
 /**
  * Orden painter topológico: para cada par que se superpone en pantalla, el que
- * está detrás se dibuja antes. Si los dos se ven "detrás" del otro (esquinas
- * diagonales), decide la suma de coordenadas. Ciclos: se cortan y siguen.
+ * está detrás se dibuja antes. Si cada uno queda "detrás" del otro por un plano distinto (esquinas
+ * diagonales), ninguno tapa al otro y no se impone orden: esa arista de desempate cerraba ciclos que
+ * cortaban relaciones de verdad. Si no los separa ningún plano, decide la suma de coordenadas.
+ * Ciclos: se cortan y siguen.
  * Los pares se buscan con un barrido por x de pantalla (solo se comparan cajas
  * cuyos rangos en x se cruzan) y cada lista `before` se ordena ascendente:
  * el resultado es el mismo que comparando todos los pares en orden de índice.

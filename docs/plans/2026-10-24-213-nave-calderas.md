@@ -24,7 +24,7 @@
 
 ## Decisiones técnicas (declaradas; corrigen coordenadas del issue que se contradicen con "salientes" / "sin solapes")
 
-- **D1 — Pilastras fuera del muro.** El issue las pone en `y −16.5..−16`, que está *dentro* del prisma del muro (su cara sur es y = −16; el sur es +y), así que no se verían, y el spec §5 las pide "salientes del muro sur". Van en `y −16..−15.5`. Como el zócalo ocupa `y −16..−14.5, z 0..3.5` delante del muro (en la foto las pilastras arrancan detrás del cuerpo blanco), la **zapata** `concrete` 0.9 × 0.9 × 0.6 apoya sobre el zócalo (`y −16..−15.1`, z 3.5..4.1) y la pilastra `rust` 0.5 × 0.5 va de z 4.1 a 14. Montante de celosía: prisma `rust` 0.15 × 0.15 al oeste, separado 0.2 (x `c − 0.6..c − 0.45`, mismo y y z). Ménsula: `beam` `rust` 0.3 × 0.3 de `(c, −15.5, 11.5)` a `(c, −15.15, 13.55)`: su caja llega a z 13.58, bajo el remate sur (z ≥ 13.7), y no entra en el techo. Centros `c = 44 + k·76/11`, k = 0..11.
+- **D1 — Pilastras fuera del muro.** El issue las pone en `y −16.5..−16`, que está *dentro* del prisma del muro (su cara sur es y = −16; el sur es +y), así que no se verían, y el spec §5 las pide "salientes del muro sur". Van en `y −16..−15.5`. Como el zócalo ocupa `y −16..−14.5, z 0..3.5` delante del muro (en la foto las pilastras arrancan detrás del cuerpo blanco), la **zapata** `concrete` 0.9 × 0.9 × 0.6 apoya sobre el zócalo (`y −16..−15.1`, z 3.5..4.1) y la pilastra `rust` 0.5 × 0.5 va de z 4.1 a 14. Montante de celosía: prisma `rust` 0.15 × 0.15 al oeste, separado 0.2 (x `c − 0.6..c − 0.45`, mismo y y z). Ménsula: `beam` `rust` 0.3 × 0.3 de `(c, −15.85, 11.2)` a `(c, −15.15, 13.55)` (revisión de stage 5: diagonal legible; su caja queda en y ≥ −16, fuera del muro): su caja llega a z 13.6, bajo el remate sur (z ≥ 13.7), y no entra en el techo. Centros `c = 44 + k·76/11`, k = 0..11.
 - **D2 — Tolva fuera del muro.** El issue la pone en `y −17.5..−15.5`, 1.5 u dentro del muro. Va en `x 58.2..61.2, y −16..−14, z 11..13.5`, y la cinta inclinada termina en su centro: `beam` `rust` 1.6 × 0.6 de `(50, −4, 0.5)` a `(59.7, −15, 12.5)`. Medido con `bounds` en 16 tramos: con los extremos del issue, `(52, −4)` → `(60, −16.5)`, el tramo que pasa junto al mástil de la grúa (x 59.4..60.6, y −12.6..−11.4, `pieces.ts:21`) lo toca, porque la esquina de la sección llega a x ≈ 59.4; con `(50, −4)` → `(59.7, −15)` ningún tramo toca mástil, farol (50, −13.5), camiones ni pallets. Caballetes: 2 prismas `rust` 0.4 × 0.4 centrados bajo la cinta en t = 1/3 y 2/3, de z 0 hasta 0.3 bajo el eje.
 - **D3 — Techo sin alero oeste.** El issue dice `x 43.4..119.5`; el tramo `43.4..44` se metería en el marcador (y luego en la maltería, h 18). El techo va de `x 44` a `119.5`. Norte: `ramp` `steel` `x 44, y −46.6, z 14, w 75.5, d 15.6, h 3, dir "n"`; sur: `y −31, d 15.6, dir "s"`. Cumbrera a z 17 en y −31.
 - **D4 — Remates.** Sur: prisma `whitewash` `x 44..119.5, y −15.4..−15.1, z 13.7..14` (bajo el borde del alero, sin cruzarlo). Este: el alero este queda detrás del piñón; el remate este lo da la cornisa del testero (D6).
@@ -40,9 +40,9 @@
 - **D14 — Constantes.** `factory.ts` conserva `PLANT` (huella completa, h 14 = alero) y exporta `MALT = { x: 20, y: -46, w: 24, d: 30, h: 18 }`; `boiler-house.ts` exporta `NAVE = { x: 44, y: -46, w: 76, d: 30, h: 14 }`, `STAIR_TOWER = { x0: 121, y0: -34, x1: 126, y1: -26 }`, `METAL_STACK_X = [55, 70, 85, 100]`.
 - **D16 — Mínimo 0.15 u.** El test recorre los sólidos que emite `boilerHouse` en un arreglo nuevo: `prism` mide `w`, `d`, `h`; `cylinder` `2r` y `h`; `beam` `w`, `h` y su largo; `ramp` `w`, `d`, `h`. Las placas (`plates`) no son sólidos: se mide aparte su ancho `(u1 − u0)·largo de la pared` y su alto `z1 − z0`.
 - **D17 — Vecindades con test** (lista cerrada, de los criterios del issue): torre contra cinta existente (`x 121..123, y ≥ −20`: los prismas de `conveyor()`) y contra el pedestal de la primera chimenea (`x ≥ 126.5`); cinta inclinada + caballetes + tolva contra camiones (`w 6/2, d 2.4`), pallets (`d 2`, y −3), grúa torre (todo sólido `steel`/`rust` que `towerCrane` emite en (60, −12): mástil, pluma, contrapluma, contrapeso, cabina, cable, gancho) y faroles (prismas `steel` 0.6 × 0.6 × 5); zócalo contra camiones y faroles; chimeneas metálicas + tensores dentro de `x 44..120, y −46..−16` en planta. Además, ménsulas contra remate sur (D1).
+- **D15 — Exhibits.** `planta`: caja `{ x0: PLANT.x − M, y0: PLANT.y − M, x1: 126.4, y1: −14 }` (y1 −14 deja dentro zócalo y tolva y afuera faroles y grúa), `h: 23` (chimeneas metálicas a 22.6), título "Nave de calderas". `cinta`: se ajusta solo si `exhibits.test.ts` lo pide.
 - **D18 — Faldón norte en tramos (stage 4, captura).** La chimenea y sus tensores se cruzan con la caja del faldón: el desempate por suma de coordenadas pintaba las de x 55 y 70 antes del faldón entero (tapadas). El faldón norte va en 5 `ramp` E-O cortadas en x 62.5, 77.5, 92.5, 107.5, cada una con su chimenea cerca del centro; los tensores sur terminan en `(cx ± 2, −31.2, 16.96)` (sobre el faldón norte, sin tocar la caja del sur). Test: "se pintan después del faldón norte que pisan".
 - **D19 — `sortByDepth` sin arista para cajas separadas por dos planos opuestos, también sin giro (stage 4, captura).** Ya era la regla en el marco girado; sin giro la arista del desempate cerraba ciclos (muro alto → faldón → zócalo → tubo → muro) y el corte de ciclos tiraba relaciones reales: dos tramos del faldón salían debajo del muro alto. Geometría: si un plano deja a A del lado lejano y otro deja a B del lado lejano, ninguno tapa al otro, así que no hace falta orden. `sortByDepthNaive` del test sigue la misma regla. Test de escena: "el muro alto se pinta antes de cada tramo del faldón". Capturas de `plaza` y `gradas` sin cambios visibles.
-- **D15 — Exhibits.** `planta`: caja `{ x0: PLANT.x − M, y0: PLANT.y − M, x1: 126.4, y1: −14 }` (y1 −14 deja dentro zócalo y tolva y afuera faroles y grúa), `h: 23` (chimeneas metálicas a 22.6), título "Nave de calderas". `cinta`: se ajusta solo si `exhibits.test.ts` lo pide.
 
 ## Review Focus
 
@@ -64,9 +64,9 @@
 **Interfaces:**
 - Produces: `NAVE`, `boilerHouse(out: Solid[]): void`, `naveBody(out: Solid[]): void` (muros D13, pilastras D1, celosía D11, zócalo D12, techo D3, remate sur D4, caperuzas D9), `MALT` en `factory.ts`.
 
-- [ ] Tests (escritos en stage 3, commit `test(#213): evals`). Aserciones: dos prismas `brick` `x 44, y −46, w 76, d 30, h 7` en z 0 y 7 con `facade.cols` 11 y 22, `grid {3, 4}`, `head "flat"`, `courses {rust, 0.4}`; 12 prismas `rust` 0.5 × 0.5 en `y −16`, centros `44 + k·76/11`, cada uno con zapata `concrete` 0.9 × 0.9 × 0.6 a z 3.5, montante 0.15 y ménsula `beam`; 76 placas en `wall 2` y 30 en `wall 1` del prisma alto, `toneOffset −2`, z 12.8..13.6; zócalo `whitewash` `x 44, y −16, w 76, d 1.5, h 3.5` con `facade.cols` 20 y 20 cilindros r 0.3 h 0.8 alternando `whitewash`/`rust`; dos `ramp` `steel` con cumbrera z 17, remate `whitewash` y 4 caperuzas 1.2 × 1.2 × 0.8 a z 17; mínimo 0.15 (D16); en `factory.test.ts`: ninguna `ramp` `brick`, un prisma `brick` 24 × 30 × 18 en (20, −46), el portón `concrete` en `x 119.8..120.3, y −23..−17`. `npx vitest run src/scenes` → FAIL.
-- [ ] Implementar `naveBody` y `boilerHouse` (que por ahora solo llama a `naveBody`); `plant()` = marcador `prism(20, −46, 0, 24, 30, 18, "brick")` + `boilerHouse(out)` + portón este de hoy. Quitar dientes, cornisa y portones sur. Docstring de `factory.ts`: "nave de calderas (Fábrica de Luz) y, al oeste, el marcador de la maltería".
-- [ ] `npx vitest run src/scenes` → los tests de esta tarea PASS. Commit `feat(#213): cuerpo de la nave de calderas y marcador de la maltería`.
+- [x] Tests (escritos en stage 3, commit `test(#213): evals`). Aserciones: dos prismas `brick` `x 44, y −46, w 76, d 30, h 7` en z 0 y 7 con `facade.cols` 11 y 22, `grid {3, 4}`, `head "flat"`, `courses {rust, 0.4}`; 12 prismas `rust` 0.5 × 0.5 en `y −16`, centros `44 + k·76/11`, cada uno con zapata `concrete` 0.9 × 0.9 × 0.6 a z 3.5, montante 0.15 y ménsula `beam`; 76 placas en `wall 2` y 30 en `wall 1` del prisma alto, `toneOffset −2`, z 12.8..13.6; zócalo `whitewash` `x 44, y −16, w 76, d 1.5, h 3.5` con `facade.cols` 20 y 20 cilindros r 0.3 h 0.8 alternando `whitewash`/`rust`; dos `ramp` `steel` con cumbrera z 17, remate `whitewash` y 4 caperuzas 1.2 × 1.2 × 0.8 a z 17; mínimo 0.15 (D16); en `factory.test.ts`: ninguna `ramp` `brick`, un prisma `brick` 24 × 30 × 18 en (20, −46), el portón `concrete` en `x 119.8..120.3, y −23..−17`. `npx vitest run src/scenes` → FAIL.
+- [x] Implementar `naveBody` y `boilerHouse` (que por ahora solo llama a `naveBody`); `plant()` = marcador `prism(20, −46, 0, 24, 30, 18, "brick")` + `boilerHouse(out)` + portón este de hoy. Quitar dientes, cornisa y portones sur. Docstring de `factory.ts`: "nave de calderas (Fábrica de Luz) y, al oeste, el marcador de la maltería".
+- [x] `npx vitest run src/scenes` → los tests de esta tarea PASS. Commit `feat(#213): cuerpo de la nave de calderas y marcador de la maltería`.
 
 ### Task 2: Testero, piñón y chimeneas metálicas
 
@@ -75,8 +75,8 @@
 **Interfaces:**
 - Consumes: `NAVE`. Produces: `gableEnd(out: Solid[]): void` (D5, D6), `metalStacks(out: Solid[]): void` (D10), `METAL_STACK_X`; `boilerHouse` los llama.
 
-- [ ] Tests: "testero: marco whitewash y piñón escalonado…", "cuatro chimeneas metálicas con 4 tensores…", `factory.test.ts` "las chimeneas metálicas y sus tensores quedan dentro de la huella de la nave" y "ningún sólido de la nave supera z 20…". FAIL.
-- [ ] Implementar. Como las chimeneas suben a 22.6, en esta tarea la caja de `planta` pasa a D15 (si no, `exhibits.test.ts` queda en rojo). PASS. Commit `feat(#213): testero con piñón escalonado y chimeneas metálicas`.
+- [x] Tests: "testero: marco whitewash y piñón escalonado…", "cuatro chimeneas metálicas con 4 tensores…", `factory.test.ts` "las chimeneas metálicas y sus tensores quedan dentro de la huella de la nave" y "ningún sólido de la nave supera z 20…". FAIL.
+- [x] Implementar. Como las chimeneas suben a 22.6, en esta tarea la caja de `planta` pasa a D15 (si no, `exhibits.test.ts` queda en rojo). PASS. Commit `feat(#213): testero con piñón escalonado y chimeneas metálicas`.
 
 ### Task 3: Torre de escalera, cinta inclinada y farol
 
@@ -85,16 +85,18 @@
 **Interfaces:**
 - Produces: `stairTower(out: Solid[]): void` (D7), `inclineBelt(out: Solid[]): void` (D2), `STAIR_TOWER`; `boilerHouse` los llama.
 
-- [ ] Tests: "torre de escalera…", "cinta inclinada…", `factory.test.ts` "la torre de escalera no toca…", "la cinta inclinada y su tolva no tocan…", "el zócalo no toca…". FAIL.
-- [ ] Implementar; en `lamps()` el farol `(58, −16)` pasa a `(50, −13.5)`. PASS. Commit `feat(#213): torre de escalera y cinta inclinada con tolva`.
+- [x] Tests: "torre de escalera…", "cinta inclinada…", `factory.test.ts` "la torre de escalera no toca…", "la cinta inclinada y su tolva no tocan…", "el zócalo no toca…". FAIL.
+- [x] Implementar; en `lamps()` el farol `(58, −16)` pasa a `(50, −13.5)`. PASS. Commit `feat(#213): torre de escalera y cinta inclinada con tolva`.
 
 ### Task 4: Exhibits y capturas
 
+(Ejecutada por el controlador: la caja ya estaba en la Tarea 2; las capturas van en el commit `fix(#213)` de orden de pintado, D18/D19.)
+
 **Files:** Modify `src/lab/exhibits.ts`. Test: `src/lab/exhibits.test.ts` (sin cambios de lógica).
 
-- [ ] Revisar la caja de `planta` (D15, puesta en la Tarea 2) con todo emitido; `cinta` (caja `x 28..125, y −15..4`, h 22) solo si su encuadre o sus vecinos fallan. `npx vitest run src/lab` PASS.
-- [ ] `npm test` y `npm run typecheck` PASS.
-- [ ] Capturas "después" de `planta` y `cinta` (1600 × 900, 2x) en `docs/superpowers/specs/assets/207-fabrica/<exhibit>-despues.png`; anotar caras del panel. Script `.scratch/evals-213.md`. Commit `feat(#213): cajas de los exhibits planta y cinta y capturas`.
+- [x] Revisar la caja de `planta` (D15, puesta en la Tarea 2) con todo emitido; `cinta` (caja `x 28..125, y −15..4`, h 22) solo si su encuadre o sus vecinos fallan. `npx vitest run src/lab` PASS.
+- [x] `npm test` y `npm run typecheck` PASS.
+- [x] Capturas "después" de `planta` y `cinta` (1600 × 900, 2x) en `docs/superpowers/specs/assets/207-fabrica/<exhibit>-despues.png`; anotar caras del panel. Script `.scratch/evals-213.md`. Commit `feat(#213): cajas de los exhibits planta y cinta y capturas`.
 
 ## Assumptions
 
