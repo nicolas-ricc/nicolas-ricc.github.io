@@ -14,7 +14,7 @@ const regions = EXHIBITS.flatMap((e) => (e.kind === "region" ? [e] : []));
 
 // el índice de la spec §3, en orden; las piezas (#94) no cuentan
 const CATALOG: Record<GroupId, string[]> = {
-  fabrica: ["planta", "chimeneas", "subestacion", "playa-camiones", "playa-vias", "cinta"],
+  fabrica: ["planta", "chimeneas", "subestacion", "playa-camiones", "playa-vias", "excavadora", "cinta"],
   astillero: ["gradas", "darsena", "grua-portico", "calle-faroles", "naves"],
   hinterland: ["central-termica", "tanques", "silos", "alta-tension", "playa-contenedores"],
   feria: ["noria", "montana-rusa", "torre-caida", "carrusel", "arcade", "autitos-chocadores", "muelle"],
@@ -22,7 +22,7 @@ const CATALOG: Record<GroupId, string[]> = {
   tecnologico: ["mastil", "arena", "auditorio", "torres"],
   mar: ["faro", "casa-farero", "boyas", "pecio"],
 };
-const ANIMATED = ["chimeneas", "noria", "torre", "faro"];
+const ANIMATED = ["chimeneas", "excavadora", "noria", "torre", "faro"];
 const SLACK = 8; // más alto que esto sobre la estructura y queda chica en el cuadro
 
 const { scene, animators } = assembleWorld(undefined, { reducedMotion: false });
