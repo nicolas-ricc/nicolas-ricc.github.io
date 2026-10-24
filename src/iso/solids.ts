@@ -66,6 +66,19 @@ function withPlates(raw: Face[], footprint: Vec2[], s: { facade?: Facade; plates
   });
 }
 
+/** Paredes de la rampa (caras 2..5: oeste, este, norte, sur) → arista de `rect` que las cubre. */
+const RAMP_WALL_EDGE = [3, 1, 0, 2];
+
+/** Las placas van sobre el plano vertical de la arista, sin recortar al perfil inclinado. */
+function rampPlates(raw: Face[], fp: Vec2[], plates?: Plate[]): Face[] {
+  if (!plates?.length) return raw;
+  return raw.flatMap((f, k) => {
+    if (k < 2) return [f];
+    const e = RAMP_WALL_EDGE[k - 2]!;
+    return [f, ...plateFaces(f, fp[e]!, fp[(e + 1) % 4]!, plates.filter((p) => p.wall === e))];
+  });
+}
+
 const rect = (x: number, y: number, w: number, d: number): Vec2[] => [{ x, y }, { x: x + w, y }, { x: x + w, y: y + d }, { x, y: y + d }];
 
 function regular(cx: number, cy: number, r: number, sides: number): Vec2[] {
@@ -262,7 +275,7 @@ export function tessellateAll(s: Solid): Face[] {
       return [...box, ...extrude(rect(s.at.x + ix, s.at.y + iy, s.w - 2 * ix, s.d - 2 * iy), s.at.z + s.h, s.h * STEP_RATIO, s.mat)];
     }
     case "poly": return withPlates(extrude(s.footprint, s.z, s.h, s.mat), s.footprint, s);
-    case "ramp": return ramp(s.at, s.w, s.d, s.h, s.dir, s.mat);
+    case "ramp": return rampPlates(ramp(s.at, s.w, s.d, s.h, s.dir, s.mat), rect(s.at.x, s.at.y, s.w, s.d), s.plates);
     case "cylinder": return extrude(regular(s.at.x, s.at.y, s.r, s.sides ?? 8), s.at.z, s.h, s.mat);
     case "cone": return cone(s.at, s.r, s.h, s.sides ?? 6, s.mat);
     case "beam": return beam(s);
