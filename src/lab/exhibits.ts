@@ -53,9 +53,9 @@ const vessel = (kind: ShipKind) => (out: Solid[], accents: Accent[]): void => {
 };
 
 export const EXHIBITS: readonly Exhibit[] = [
-  // al sur 1 u: la grúa torre del desvío (y −12) queda afuera
-  { id: "planta", title: "Planta de ladrillo", zone: "portfolio", group: "fabrica", kind: "region",
-    box: { x0: PLANT.x - M, y0: PLANT.y - M, x1: PLANT.x + PLANT.w + M, y1: PLANT.y + PLANT.d + 1 }, h: PLANT.h + 4 }, // dientes de sierra
+  // x1 126.4: entra la torre de escalera (hasta 126) y queda afuera el pedestal de la primera chimenea (126.5); y1 −14: zócalo y tolva adentro, faroles y grúa torre del desvío afuera; h 23: chimeneas metálicas (22.6)
+  { id: "planta", title: "Nave de calderas", zone: "portfolio", group: "fabrica", kind: "region",
+    box: { x0: PLANT.x - M, y0: PLANT.y - M, x1: 126.4, y1: -14 }, h: 23 },
   // el humo deriva al NNE hasta PUFF_RANGE: la caja se estira al norte para no cortar la columna (la subestación queda adentro, detrás)
   // la torre de enfriamiento es privada en factory.ts: (172, −36), r 9
   { id: "chimeneas", title: "Chimeneas y torre de enfriamiento", zone: "portfolio", group: "fabrica", kind: "region",

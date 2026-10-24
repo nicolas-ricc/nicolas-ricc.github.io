@@ -11,7 +11,7 @@ export const NAVE = { x: 44, y: -46, w: 76, d: 30, h: 14 } as const;
 export const STAIR_TOWER = { x0: 121, y0: -34, x1: 126, y1: -26 } as const;
 export const METAL_STACK_X = [55, 70, 85, 100] as const;
 
-const PIERS = 11; // 12 pilastras = 11 crujías
+const BAYS = 11; // 12 pilastras = 11 crujías
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material): Solid & { kind: "prism" } => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat });
 
 /** Celosía de ladrillo en damero: placas de 0.5 × 0.8 cada 1 u sobre la pared `wall` de largo `len`, bajo el alero (z 12.8..13.6). */
@@ -31,8 +31,8 @@ export function naveBody(out: Solid[]): void {
   for (let i = 0; i < 20; i++) out.push({ kind: "cylinder", at: v3(x + (i + 0.5) * 3.8, -14.8, 3.5), r: 0.3, h: 0.8, mat: i % 2 === 0 ? "whitewash" : "rust" });
 
   // pilastras: zapata sobre el zócalo, fuste a y −16..−15.5, montante de celosía al oeste y ménsula bajo el remate
-  for (let k = 0; k <= PIERS; k++) {
-    const c = x + (k * w) / PIERS;
+  for (let k = 0; k <= BAYS; k++) {
+    const c = x + (k * w) / BAYS;
     out.push(prism(c - 0.45, -16, 3.5, 0.9, 0.9, 0.6, "concrete"));
     out.push(prism(c - 0.25, -16, 4.1, 0.5, 0.5, 9.9, "rust"));
     out.push(prism(c - 0.6, -16, 4.1, 0.15, 0.15, 9.9, "rust"));
@@ -46,15 +46,37 @@ export function naveBody(out: Solid[]): void {
   for (const cx of [62.5, 77.5, 92.5, 110]) out.push(prism(cx - 0.6, -31.6, 17, 1.2, 1.2, 0.8, "steel")); // caperuzas en la cumbrera
 }
 
-/** Testero este: marco, piñón escalonado con tapa y celosía. */
-export function gableEnd(_out: Solid[]): void {}
-/** Cuatro chimeneas metálicas sobre el faldón norte con sus tensores. */
-export function metalStacks(_out: Solid[]): void {}
+/** Testero este: marco de pilastras, bandas y cornisa blancas; piñón escalonado de ladrillo con tapa blanca y celosía. */
+export function gableEnd(out: Solid[]): void {
+  for (const y of [-46, -36, -26, -17]) out.push(prism(120, y, 0, 1, 1, 13.7, "whitewash"));
+  for (const [y0, y1] of [[-45, -36], [-35, -26], [-25, -23]] as const) out.push(prism(120, y0, 7, 0.3, y1 - y0, 0.3, "whitewash")); // bandas solo entre pilastras; la última se corta en el portón
+  out.push(prism(120, -46, 13.7, 1, 30, 0.3, "whitewash")); // cornisa
+
+  // escalones del piñón: ladrillo de 1.2 y tapa blanca de 0.3; celosía en la cara este, del pie a 0.2 bajo la tapa
+  for (const [y0, y1, z] of [[-44, -18, 14], [-38, -24, 15.5], [-33, -29, 17]] as const) {
+    const d = y1 - y0;
+    const plates = Array.from({ length: d }, (_, i): Plate => ({ wall: 1, shape: "rect", u0: i / d, u1: (i + 0.5) / d, z0: z, z1: z + 1, mat: "brick", toneOffset: -2 }));
+    out.push({ ...prism(119.5, y0, z, 1, d, 1.2, "brick"), plates });
+    out.push(prism(119.5, y0, z + 1.2, 1, d, 0.3, "whitewash"));
+  }
+}
+
+/** Cuatro chimeneas metálicas sobre el faldón norte, cada una con cuatro tensores a los faldones. */
+export function metalStacks(out: Solid[]): void {
+  for (const cx of METAL_STACK_X) {
+    out.push({ kind: "cylinder", at: v3(cx, -33, 16.6), r: 0.5, h: 6, mat: "rust" });
+    for (const sx of [-1, 1]) {
+      out.push({ kind: "beam", from: v3(cx + sx * 0.35, -33.35, 21), to: v3(cx + sx * 2, -35, 16.23), w: 0.15, h: 0.15, mat: "rust" }); // faldón norte
+      out.push({ kind: "beam", from: v3(cx + sx * 0.35, -32.65, 21), to: v3(cx + sx * 2, -31, 17), w: 0.15, h: 0.15, mat: "rust" });    // faldón sur
+    }
+  }
+}
 /** Torre de escalera de acero junto al testero. */
 export function stairTower(_out: Solid[]): void {}
 /** Cinta inclinada de la playa de camiones a la tolva junto al alero. */
 export function inclineBelt(_out: Solid[]): void {}
 
+/** Nave de calderas completa: cuerpo, testero, chimeneas metálicas, torre de escalera y cinta inclinada. */
 export function boilerHouse(out: Solid[]): void {
   naveBody(out); gableEnd(out); metalStacks(out); stairTower(out); inclineBelt(out);
 }

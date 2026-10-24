@@ -10,11 +10,12 @@ import { towerCrane } from "./pieces";
 
 /**
  * Fábrica, detrás (al norte) y al oeste del astillero. Banda norte
- * `x -60..205, y -60..0` al oeste del río: nave de calderas de la Fábrica de Luz (al
- * oeste, el marcador de la maltería), tres chimeneas humeantes, torre de enfriamiento, grúa torre sobre un
- * desvío ferroviario, cinta transportadora hasta el patio de material,
- * subestación y playa de camiones. Columna oeste `x -60..0, y 0..146`: playa
- * de vías y acopios de mineral, selva al sur. El terreno es `slab`.
+ * `x -60..205, y -60..0` al oeste del río: nave de calderas (Fábrica de Luz) y,
+ * al oeste, el marcador de la maltería, tres chimeneas humeantes, torre de
+ * enfriamiento, grúa torre sobre un desvío ferroviario, cinta transportadora
+ * hasta el patio de material, subestación y playa de camiones. Columna oeste
+ * `x -60..0, y 0..146`: playa de vías y acopios de mineral, selva al sur. El
+ * terreno es `slab`.
  * Spec: docs/superpowers/specs/2026-09-14-mundo-2-fabrica-distrito-blog-design.md §5.
  */
 export interface FactoryScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; stacks: Vec3[] }
@@ -39,7 +40,7 @@ function lamp(out: Solid[], accents: Accent[], x: number, y: number): void {
 }
 
 function plant(out: Solid[]): void {
-  const { x, y, w } = PLANT;
+  const { x, w } = PLANT;
   out.push(prism(MALT.x, MALT.y, 0, MALT.w, MALT.d, MALT.h, "brick")); // marcador de la maltería, al oeste de la nave
   boilerHouse(out);
   out.push(prism(x + w - 0.2, -23, 0, 0.5, 6, 8, "concrete"));          // portón este, de donde sale la cinta
