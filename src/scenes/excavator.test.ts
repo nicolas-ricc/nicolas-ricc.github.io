@@ -105,7 +105,7 @@ describe("chasis y plataforma de la excavadora", () => {
     expect(pl).toMatchObject({ z: 2.6 }); expect(pl?.kind === "poly" && pl.h).toBeCloseTo(0.8, 6);
     const rails = out.filter((s) => s.kind === "beam" && s.mat === "safety" && s.w === 0.15);
     expect(rails).toHaveLength(2);
-    for (const r of rails) if (r.kind === "beam") { expect(r.from.z).toBe(4.4); expect(r.to.z).toBe(4.4); }
+    for (const r of rails) if (r.kind === "beam") { expect(r.from.z).toBe(4.475); expect(r.to.z).toBe(4.475); }
     const posts = polys.filter((s) => s.mat === "safety" && s.z === 3.4);
     expect(posts.length).toBeGreaterThanOrEqual(10);
     for (const p of posts) expect(p.kind === "poly" && p.h).toBe(1);
@@ -117,7 +117,7 @@ describe("chasis y plataforma de la excavadora", () => {
     expect(casa?.kind === "poly" && casa.h).toBeCloseTo(2.5, 6);
     const techo = polys.find((s) => s.mat === "rust" && s.z === 5.9);
     expect(techo?.kind === "poly" && techo.h).toBeCloseTo(0.2, 6);
-    expect(5.9 + 0.2).toBeCloseTo(6.1, 6);
+    expect(techo?.kind === "poly" && techo.z + techo.h).toBeCloseTo(6.1, 6);
   });
 
   it("dos escaleras safety", () => {

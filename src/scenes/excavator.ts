@@ -43,9 +43,11 @@ export function excavator(out: Solid[], _accents: Accent[]): void {
   out.push({ kind: "cylinder", at: v3(EXCAVATOR.at.x, EXCAVATOR.at.y, 1.6), r: 4, h: 1, mat: "steel", sides: 16 }); // anillo de giro
   out.push(box(-6, -4.5, 6, 4.5, 2.6, 0.8, "office")); // plataforma
   // barandas: pasamanos a z 4.4 sobre el borde sur (dy +4.3) y el borde NE (dx +5.8), postes de 0.15 cada 2 u
-  out.push(bar([-6, 4.3, 4.4], [6, 4.3, 4.4], 0.15, 0.15, "safety"), bar([5.8, -4.5, 4.4], [5.8, 4.5, 4.4], 0.15, 0.15, "safety"));
-  for (let dx = -6; dx <= 6; dx += 2) out.push(box(dx - 0.075, 4.225, dx + 0.075, 4.375, 3.4, 1, "safety"));
-  for (let dy = -4.5; dy < 4.3; dy += 2) out.push(box(5.725, dy - 0.075, 5.875, dy + 0.075, 3.4, 1, "safety"));
+  out.push(bar([-6, 4.3, 4.475], [5.8, 4.3, 4.475], 0.15, 0.15, "safety"), bar([5.8, -4.5, 4.475], [5.8, 4.3, 4.475], 0.15, 0.15, "safety")); // el pasamanos apoya sobre los postes (tope z 4.4)
+  const post = (dx: number, dy: number) => out.push(box(dx - 0.075, dy - 0.075, dx + 0.075, dy + 0.075, 3.4, 1, "safety"));
+  for (let dx = -5.85; dx < 5.8; dx += 2) post(dx, 4.3); // postes dentro de la plataforma (|dx| ≤ 5.925, |dy| ≤ 4.425)
+  post(5.8, 4.3);
+  for (let dy = -4.35; dy < 4.3; dy += 2) post(5.8, dy);
   out.push(box(-5, -4, 0, 0, 3.4, 2.5, "whitewash", { facade: { floors: 1, cols: 3 } }), box(-5, -4, 0, 0, 5.9, 0.2, "rust")); // casa baja y techo
-  out.push(bar([-5, 5.2, 0], [-1, 5.2, 3.4], 0.6, 0.15, "safety"), bar([3, -0.8, 3.4], [0.2, -0.8, 6.1], 0.6, 0.15, "safety")); // escaleras
+  out.push(bar([-5, 5.2, 0.075], [-1, 5.2, 3.4], 0.6, 0.15, "safety"), bar([3, -0.8, 3.4], [0.2, -0.8, 6.1], 0.6, 0.15, "safety")); // escaleras
 }
