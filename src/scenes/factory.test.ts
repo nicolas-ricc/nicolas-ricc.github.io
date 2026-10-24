@@ -8,8 +8,9 @@ import { PLANT, RAIL_YARD_X, STACKS, STACK_BASE_H, factory, type FactoryScene } 
 import { terrainAt } from "./terrain";
 
 const scene = (): FactoryScene => factory(createRng(7));
-const PORTFOLIO_MATS: readonly Material[] = ["slab", "concrete", "rust", "steel", "road", "rail", "sand", "brick", "leaf", "leafDark"];
-const slender = (s: Solid) => (s.kind === "cylinder" && s.r <= 3) || (s.kind === "prism" && ((s.w <= 3 && s.d <= 3) || s.h <= 1)); // mástiles, chimeneas y vigas finas (pluma)
+const PORTFOLIO_MATS: readonly Material[] = ["slab", "concrete", "rust", "steel", "road", "rail", "sand", "brick", "leaf", "leafDark", "whitewash", "glass", "office", "signal", "stockbrick", "safety"];
+const slender = (s: Solid) => (s.kind === "cylinder" && s.r <= 4) || (s.kind === "prism" && ((s.w <= 3 && s.d <= 3) || s.h <= 1)) || s.kind === "beam"; // chimeneas, mástiles, vigas y barandas
+const tallOk = (s: Solid) => bounds(s).max.z <= 26 || slender(s);
 
 describe("factory", () => {
   it("es determinística y trae más de 90 sólidos elevados dentro de Portfolio", () => {
@@ -25,12 +26,23 @@ describe("factory", () => {
     }
   });
 
-  it("nada apoya en agua y solo chimeneas y mástil superan 18, y son esbeltos", () => {
+  it("nada apoya en agua y todo lo que supera z 26 es esbelto (cilindro r ≤ 4, prisma fino o viga)", () => {
     for (const x of scene().solids) {
       const b = bounds(x);
       if (x.kind !== "cone") expect(terrainAt(b.min.x, b.min.y)).not.toBe("water");
-      if (b.max.z > 18) expect(slender(x)).toBe(true);
+      expect(tallOk(x)).toBe(true);
     }
+  });
+
+  it("la regla de altura rechaza un sólido ancho por encima de z 26 y acepta vigas y cilindros finos", () => {
+    const at = { x: 0, y: 0, z: 0 };
+    expect(tallOk({ kind: "prism", at, w: 5, d: 5, h: 27, mat: "brick" })).toBe(false);
+    expect(tallOk({ kind: "cylinder", at, r: 4.5, h: 27, mat: "brick" })).toBe(false);
+    expect(tallOk({ kind: "cylinder", at, r: 4, h: 30, mat: "brick" })).toBe(true);
+    expect(tallOk({ kind: "beam", from: at, to: { x: 0, y: 0, z: 30 }, w: 1, h: 1, mat: "steel" })).toBe(true);
+    expect(tallOk({ kind: "prism", at, w: 5, d: 5, h: 26, mat: "brick" })).toBe(true);
+    expect(tallOk({ kind: "prism", at, w: 3, d: 3, h: 30, mat: "steel" })).toBe(true);
+    expect(tallOk({ kind: "prism", at: { x: 0, y: 0, z: 27 }, w: 30, d: 1, h: 1, mat: "steel" })).toBe(true);
   });
 
   it("planta de ladrillo con dientes de sierra, tres chimeneas con banda, torre de enfriamiento y grúa", () => {
