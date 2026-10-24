@@ -18,6 +18,7 @@ import { BUOYS, DRUM_R0, KEEPER, LANTERN_Z, LIGHTHOUSE, WRECK } from "../scenes/
 import { BEAM_LEN } from "../scenes/sea-anim";
 import { ship, shipAt, type ShipKind } from "../scenes/ships";
 import { SUBURB_COLS } from "../scenes/sprawl-grid";
+import { SUBSTATION } from "../scenes/substation";
 import { ARENA, AUDITORIUM, TELECOM } from "../scenes/tech";
 import type { Box } from "../world/frame";
 
@@ -62,8 +63,8 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "chimeneas", title: "Chimeneas y torre de enfriamiento", zone: "portfolio", group: "fabrica", kind: "region",
     box: { x0: Math.min(...stacksX) - stackR - M, y0: Math.min(...stacksY) - stackR - PUFF_RANGE, x1: 172 + 9 + M, y1: -36 + 9 + M },
     h: stackTop + PUFF_RANGE * PUFF_LIFT },
-  // a mano: cerco 149..190 × −60..−47 (privado en factory.ts); y1 −46 deja afuera la torre de enfriamiento (y ≥ −45). El humo pasa por encima
-  { id: "subestacion", title: "Subestación", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: 146, y0: -63, x1: 193, y1: -46 }, h: 10 },
+  // cerco de SUBSTATION más margen (3 y 1 al sur); y1 −46 deja afuera la torre de enfriamiento (y ≥ −45). h 13: los mástiles llegan a z 12; el humo pasa por encima
+  { id: "subestacion", title: "Subestación", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: SUBSTATION.x0 - 3, y0: SUBSTATION.y0 - 3, x1: SUBSTATION.x1 + 3, y1: SUBSTATION.y1 + 1 }, h: 13 },
   // a mano: camiones y pallets de truckYard; la grúa torre (60, −12) está en medio de la playa y queda adentro
   { id: "playa-camiones", title: "Playa de camiones", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: 17, y0: -15, x1: 113, y1: 2 }, h: 22 },
   { id: "playa-vias", title: "Playa de vías", zone: "portfolio", group: "fabrica", kind: "region",
