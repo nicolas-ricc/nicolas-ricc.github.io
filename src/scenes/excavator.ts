@@ -3,6 +3,8 @@ import { v3 } from "../iso/geometry";
 import type { Plate } from "../iso/plate";
 import type { Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
+import { bounds } from "../iso/solids";
+import type { Box } from "../world/frame";
 
 /** Excavadora de rueda de cangilones SRs 1300 (TAKRAF) en la playa de vías: chasis en `at`, proa al NE (`heading`); el eje de la rueda queda a `axleDx` del chasis, a z `axleZ`. */
 export const EXCAVATOR = {
@@ -32,8 +34,17 @@ export const bar = (from: [number, number, number], to: [number, number, number]
 };
 const cyl = (dx: number, dy: number, z: number, r: number, h: number, mat: Material): Solid => { const p = local(dx, dy); return { kind: "cylinder", at: v3(p.x, p.y, z), r, h, mat, sides: 8 }; };
 
+/** z del eje de la pluma de la rueda en `dx` (baja de 17 en dx 4.5 a `axleZ` en el eje). */
+const E = (dx: number) => 17 - (dx - 4.5) * (17 - EXCAVATOR.axleZ) / (EXCAVATOR.axleDx - 4.5);
+
+/** Máquina entera: chasis y plataforma, mástil en A, superestructura, plumas, escudo y tolvas, cabina y reflectores (la rueda va aparte, animada). */
+export function excavator(out: Solid[], accents: Accent[]): void {
+  chassis(out);
+  upperWorks(out, accents);
+}
+
 /** Chasis y nivel de plataforma: orugas con zapatas y rodillos, anillo de giro, plataforma con barandas, casa baja y escaleras. */
-export function excavator(out: Solid[], _accents: Accent[]): void {
+function chassis(out: Solid[]): void {
   // Orugas: 12 zapatas de 0.3 cada 0.8 u sobre la arista 2 (u=0 en el extremo dx máximo; 10 u de largo → fracciones /10)
   const shoes: Plate[] = Array.from({ length: 12 }, (_, k) => ({ wall: 2, shape: "rect", u0: (0.2 + 0.8 * k) / 10, u1: (0.5 + 0.8 * k) / 10, z0: 0, z1: 1.6, mat: "rust", toneOffset: -2 }));
   for (const [dy0, dy1] of [[-4.2, -1.8], [1.8, 4.2]] as const) {
@@ -50,4 +61,46 @@ export function excavator(out: Solid[], _accents: Accent[]): void {
   for (let dy = -4.35; dy < 4.3; dy += 2) post(5.8, dy);
   out.push(box(-5, -4, 0, 0, 3.4, 2.5, "whitewash", { facade: { floors: 1, cols: 3 } }), box(-5, -4, 0, 0, 5.9, 0.2, "rust")); // casa baja y techo
   out.push(bar([-5, 5.2, 0.075], [-1, 5.2, 3.4], 0.6, 0.15, "safety"), bar([3, -0.8, 3.4], [0.2, -0.8, 6.1], 0.6, 0.15, "safety")); // escaleras
+}
+
+/** Mástil, superestructura, viga superior, pluma de la rueda con sus tirantes, escudo, pluma de descarga y cabina. */
+function upperWorks(out: Solid[], accents: Accent[]): void {
+  const { axleDx, axleZ } = EXCAVATOR, off: Material = "office", steel: Material = "steel";
+  // mástil en A: línea (−2, ±2.5, 3.4)→(−1, 0, 20); cada brazo se corta donde cruza la casa (dy −2.5 arranca en su techo, z 6.1) y la superestructura (z 11..16)
+  const mast = (sy: number, z: number): [number, number, number] => { const t = (z - 3.4) / 16.6; return [-2 + t, sy * 2.5 * (1 - t), z]; };
+  for (const [sy, z0] of [[1, 3.4], [-1, 6.1]] as const) for (const [a, b] of [[z0, 11], [16, 20]] as const) out.push(bar(mast(sy, a), mast(sy, b), 0.7, 0.7, off));
+  for (const z of [7, 9.5, 18]) out.push(bar(mast(-1, z), mast(1, z), 0.3, 0.3, off)); // travesaños entre brazos
+  // superestructura colgada del mástil, con cartel en la pared visible (3 de 9 u, centrado)
+  out.push(box(-6, -3, 3, 3, 11, 5, off, { facade: { floors: 1, cols: 4, window: { w: 0.7, h: 0.4 }, grid: { cols: 2, rows: 1 } }, plates: [{ wall: 2, shape: "rect", u0: 0.5 - 1.5 / 9, u1: 0.5 + 1.5 / 9, z0: 14.6, z1: 15.6, mat: "whitewash" }] }));
+  out.push(bar([-1, 0, 20], [-20, 0, 20], 0.6, 0.6, off), box(-22, -0.75, -20, 0.75, 18.5, 1.5, off)); // viga superior y cajón del contrapeso
+  out.push(box(3, -1.85, 5, 1.85, 15, 1.75, off)); // pivote: une la superestructura con el arranque de los cordones
+  // pluma de la rueda: cordones hasta el eje, diagonales en zigzag cada 3 u, cinta y rodillos en V
+  for (const sy of [-1, 1]) out.push(bar([4.5, sy * 1.6, 17], [axleDx, sy * 1.6, axleZ], 0.5, 0.5, off));
+  for (let k = 0, dx = 4.5; dx + 3 <= axleDx; k++, dx += 3) { const s = k % 2 ? -1 : 1; out.push(bar([dx, s * 1.6, E(dx)], [dx + 3, -s * 1.6, E(dx + 3)], 0.2, 0.2, off)); }
+  out.push(bar([4.5, 0, 17 - 0.15], [19.5, 0, E(19.5) - 0.15], 2.6, 0.2, steel));
+  out.push(bar([15, -1.3, E(15) + 0.35], [15, 0, E(15)], 0.2, 0.2, steel), bar([15, 0, E(15)], [15, 1.3, E(15) + 0.35], 0.2, 0.2, steel));
+  out.push(bar([4.5, 1.6, 17.33], [15, 1.6, E(15) + 0.33], 0.6, 0.15, off), bar([4.5, 1.85, 18.33], [15, 1.85, E(15) + 1.33], 0.15, 0.15, "safety")); // pasarela y baranda
+  out.push(bar([-1, 0, 20], [12, 0, E(12) + 0.4], 0.3, 0.3, off), bar([-1, 0, 20], [21, 0, E(21) + 0.4], 0.3, 0.3, off)); // tirantes
+  for (const sy of [-1, 1]) out.push(bar([12, sy * 1.6, E(12) + 0.25], [12, sy * 1.6, 20], 0.4, 0.4, off)); // pórtico intermedio
+  out.push(bar([12, -1.6, 20], [12, 1.6, 20], 0.4, 0.4, off));
+  // escudo, tolva fija, cortina y tambor de cabeza: todo en dy ≤ −0.3, detrás del disco de la rueda
+  out.push(box(axleDx, -0.8, axleDx + 6, -0.5, axleZ, 6, off), box(21.1, -1.3, 24.1, -0.3, 5, 2.5, "rust"), box(21.6, -0.5, 23.6, -0.3, 7.5, 2.5, steel));
+  out.push(bar([20, -1.3, E(20)], [20, -0.3, E(20)], 1, 1, steel));
+  // pluma de descarga hacia el oeste con tolva colgante
+  const dz = (dx: number) => 5.88 + (dx + 5.2) * (5.88 - 4) / 18.8;
+  for (const sy of [-1, 1]) out.push(bar([-5.2, sy * 1.2, 5.88], [-24, sy * 1.2, 4], 0.4, 0.4, off));
+  for (let k = 0, dx = -5.2; dx - 3 >= -24; k++, dx -= 3) { const s = k % 2 ? -1 : 1; out.push(bar([dx, s * 1.2, dz(dx)], [dx - 3, -s * 1.2, dz(dx - 3)], 0.2, 0.2, off)); }
+  out.push(box(-25, -1, -23, 1, 2, 2, "rust"));
+  // cabina de 2 pisos con techo con alero y tres reflectores
+  out.push(box(13, 1.5, 15.5, 3.5, 9.5, 2.2, steel, { facade: { floors: 2, cols: 3, window: { w: 0.7, h: 0.6 } } }), box(12.75, 1.25, 15.65, 3.75, 11.7, 0.2, steel));
+  for (const dx of [13.5, 14.25, 15]) { const p = local(dx, 3.5); accents.push({ kind: "dot", at: v3(p.x, p.y, 12), r: 0.6, color: "amber" }); }
+}
+
+/** Caja en planta (x, y) de la máquina: unión de los `bounds` de sus sólidos y de la rueda a cualquier ángulo (eje ± (r + depth)·√½). */
+export function excavatorBox(): Box {
+  const out: Solid[] = []; excavator(out, []);
+  const ax = local(EXCAVATOR.axleDx, 0), { r, buckets } = EXCAVATOR.wheel, R = (r + buckets.depth) * Math.SQRT1_2;
+  const box: Box = { x0: ax.x - R, y0: ax.y - R, x1: ax.x + R, y1: ax.y + R };
+  for (const s of out) { const b = bounds(s); box.x0 = Math.min(box.x0, b.min.x); box.y0 = Math.min(box.y0, b.min.y); box.x1 = Math.max(box.x1, b.max.x); box.y1 = Math.max(box.y1, b.max.y); }
+  return box;
 }
