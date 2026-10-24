@@ -110,9 +110,9 @@ describe("catálogo de exhibits", () => {
 });
 
 describe("caja de la nave de calderas (#213)", () => {
-  it("planta llega a x 126.4: entra la torre de escalera y queda afuera el pedestal de la primera chimenea", () => {
+  it("planta llega al borde este de la torre de escalera (x 126): entra la torre y queda afuera la primera chimenea", () => {
     const e = regions.find((r) => r.id === "planta")!;
-    expect(e.box.x1).toBe(126.4);
+    expect(e.box.x1).toBe(126);
     const cs = cropScene(scene, e.box);
     expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "steel" && s.w === 5 && s.d === 8)).toBe(true); // descansos de la torre
     expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "concrete" && s.w === 7 && s.d === 7)).toBe(false); // pedestal x ≥ 126.5

@@ -18,7 +18,7 @@ const tallOk = (s: Solid) => bounds(s).max.z <= 26 || slender(s);
 const build = (f: (out: Solid[]) => void): Solid[] => { const out: Solid[] = []; f(out); return out; };
 
 /** Cajas para comparar vecindades: una viga diagonal se parte en 16 tramos (su caja entera cubre mucho aire). */
-function boxes(s: Solid): Bounds[] {
+function slices(s: Solid): Bounds[] {
   if (s.kind !== "beam") return [bounds(s)];
   const at = (t: number) => ({ x: s.from.x + (s.to.x - s.from.x) * t, y: s.from.y + (s.to.y - s.from.y) * t, z: s.from.z + (s.to.z - s.from.z) * t });
   return Array.from({ length: 16 }, (_, i) => bounds({ ...s, from: at(i / 16), to: at((i + 1) / 16) }));
@@ -26,10 +26,10 @@ function boxes(s: Solid): Bounds[] {
 const boxApart = (a: Bounds, b: Bounds): boolean =>
   a.max.x <= b.min.x || b.max.x <= a.min.x || a.max.y <= b.min.y || b.max.y <= a.min.y || a.max.z <= b.min.z || b.max.z <= a.min.z;
 /** Separados en x, en y o en z (el contacto vale), tramo por tramo. */
-const apart = (a: Solid, b: Solid): boolean => boxes(a).every((p) => boxes(b).every((q) => boxApart(p, q)));
+const apartSliced = (a: Solid, b: Solid): boolean => slices(a).every((p) => slices(b).every((q) => boxApart(p, q)));
 const expectApart = (as: readonly Solid[], bs: readonly Solid[]) => {
   expect(as.length).toBeGreaterThan(0); expect(bs.length).toBeGreaterThan(0);
-  for (const a of as) for (const b of bs) expect(apart(a, b), `${JSON.stringify(a).slice(0, 90)} × ${JSON.stringify(b).slice(0, 90)}`).toBe(true);
+  for (const a of as) for (const b of bs) expect(apartSliced(a, b), `${JSON.stringify(a).slice(0, 90)} × ${JSON.stringify(b).slice(0, 90)}`).toBe(true);
 };
 const isTruck = (x: Solid) => x.kind === "prism" && x.d === 2.4 && ((x.w === 6 && x.h === 2.8) || (x.w === 2 && x.h === 2.2));
 const isPallet = (x: Solid) => x.kind === "prism" && x.mat === "steel" && x.w === 3 && x.d === 2 && x.at.y === -3;
