@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { facadeFaces } from "./facade";
 import { dot, v3, type Vec3 } from "./geometry";
 import { shadeTone } from "./light";
-import { bounds, isFlat, tessellate, tessellateAll, type Face, type Plate, type Solid } from "./solids";
+import { bounds, isFlat, tessellate, tessellateAll, WHEEL_NORMAL, WHEEL_U, type Face, type Plate, type Solid } from "./solids";
 
 const prism: Solid = { kind: "prism", at: v3(0, 0, 0), w: 2, d: 3, h: 4, mat: "concrete" };
 
@@ -186,6 +186,165 @@ describe("wheel", () => {
     const top1 = tessellateAll({ ...w, angle: Math.PI / 16 }).filter((f) => f.mat === "rust").flatMap((f) => f.pts).sort((p, q) => q.z - p.z)[0]!;
     expect(Math.hypot(top0.x - top1.x, top0.y - top1.y)).toBeGreaterThan(1);
     expect(tessellate(w).filter((f) => f.mat === "steel").length).toBe(33); // mira a la cámara: nada se descarta
+  });
+
+  it("wheel: sin opciones nuevas tesela exactamente igual que antes de #211", () => {
+    const w: Solid = { kind: "wheel", at: v3(10, 4, 6), r: 3, width: 0.5, mat: "steel", sides: 3, angle: 0.3, gondolas: { mat: "rust", w: 0.6, d: 0.4, h: 0.5 } };
+    const fx = (n: number) => n.toFixed(4);
+    const lines = tessellateAll(w).map((f) => `${f.mat} ${f.tone} ${f.toneOffset} n=(${fx(f.normal.x)},${fx(f.normal.y)},${fx(f.normal.z)}) ${f.pts.map((p) => `${fx(p.x)},${fx(p.y)},${fx(p.z)}`).join(" ")}`);
+    expect(lines.join("\n")).toMatchInlineSnapshot(`
+      "steel top 0 n=(0.7071,0.7071,0.0000) 11.6888,2.3112,6.7388 8.7032,5.2968,7.6990 8.4438,5.5562,8.0388 12.0266,1.9734,6.8866
+      steel top 0 n=(0.7071,0.7071,0.0000) 10.2606,3.7394,6.0268 11.7062,2.2938,6.6592 11.6714,2.3286,6.8184 10.2258,3.7742,6.1860
+      steel top 0 n=(0.7071,0.7071,0.0000) 8.7032,5.2968,7.6990 9.6080,4.3920,3.5622 9.5296,4.4704,3.0747 8.4438,5.5562,8.0388
+      steel top 0 n=(0.7071,0.7071,0.0000) 9.8533,4.1467,6.3058 8.7432,5.2568,7.7601 8.6631,5.3369,7.6378 9.7732,4.2268,6.1835
+      steel top 0 n=(0.7071,0.7071,0.0000) 9.6080,4.3920,3.5622 11.6888,2.3112,6.7388 12.0266,1.9734,6.8866 9.5296,4.4704,3.0747
+      steel top 0 n=(0.7071,0.7071,0.0000) 9.8861,4.1139,5.6674 9.5506,4.4494,3.5807 9.6655,4.3345,3.5438 10.0010,3.9990,5.6305
+      steel top 0 n=(0.7071,0.7071,0.0000) 10.2432,3.7568,6.1064 10.1188,3.8812,6.3184 9.9248,4.0752,6.3439 9.7748,4.2252,6.1680 9.7568,4.2432,5.8936 9.8812,4.1188,5.6816 10.0752,3.9248,5.6561 10.2252,3.7748,5.8320
+      rust top 0 n=(0.0000,0.0000,1.0000) 10.1312,3.3688,8.6815 10.7312,3.3688,8.6815 10.7312,3.7688,8.6815 10.1312,3.7688,8.6815
+      rust shade 0 n=(0.0000,0.0000,-1.0000) 10.1312,3.3688,8.1815 10.7312,3.3688,8.1815 10.7312,3.7688,8.1815 10.1312,3.7688,8.1815
+      rust shade 0 n=(0.0000,-1.0000,0.0000) 10.1312,3.3688,8.1815 10.7312,3.3688,8.1815 10.7312,3.3688,8.6815 10.1312,3.3688,8.6815
+      rust shade 0 n=(1.0000,0.0000,0.0000) 10.7312,3.3688,8.1815 10.7312,3.7688,8.1815 10.7312,3.7688,8.6815 10.7312,3.3688,8.6815
+      rust lit 0 n=(0.0000,1.0000,0.0000) 10.7312,3.7688,8.1815 10.1312,3.7688,8.1815 10.1312,3.7688,8.6815 10.7312,3.7688,8.6815
+      rust lit 0 n=(-1.0000,0.0000,0.0000) 10.1312,3.7688,8.1815 10.1312,3.3688,8.1815 10.1312,3.3688,8.6815 10.1312,3.7688,8.6815
+      rust top 0 n=(0.0000,0.0000,1.0000) 7.8423,5.6577,5.1873 8.4423,5.6577,5.1873 8.4423,6.0577,5.1873 7.8423,6.0577,5.1873
+      rust shade 0 n=(0.0000,0.0000,-1.0000) 7.8423,5.6577,4.6873 8.4423,5.6577,4.6873 8.4423,6.0577,4.6873 7.8423,6.0577,4.6873
+      rust shade 0 n=(0.0000,-1.0000,0.0000) 7.8423,5.6577,4.6873 8.4423,5.6577,4.6873 8.4423,5.6577,5.1873 7.8423,5.6577,5.1873
+      rust shade 0 n=(1.0000,0.0000,0.0000) 8.4423,5.6577,4.6873 8.4423,6.0577,4.6873 8.4423,6.0577,5.1873 8.4423,5.6577,5.1873
+      rust lit 0 n=(0.0000,1.0000,0.0000) 8.4423,6.0577,4.6873 7.8423,6.0577,4.6873 7.8423,6.0577,5.1873 8.4423,6.0577,5.1873
+      rust lit 0 n=(-1.0000,0.0000,0.0000) 7.8423,6.0577,4.6873 7.8423,5.6577,4.6873 7.8423,5.6577,5.1873 7.8423,6.0577,5.1873
+      rust top 0 n=(0.0000,0.0000,1.0000) 11.1265,2.3735,4.1311 11.7265,2.3735,4.1311 11.7265,2.7735,4.1311 11.1265,2.7735,4.1311
+      rust shade 0 n=(0.0000,0.0000,-1.0000) 11.1265,2.3735,3.6311 11.7265,2.3735,3.6311 11.7265,2.7735,3.6311 11.1265,2.7735,3.6311
+      rust shade 0 n=(0.0000,-1.0000,0.0000) 11.1265,2.3735,3.6311 11.7265,2.3735,3.6311 11.7265,2.3735,4.1311 11.1265,2.3735,4.1311
+      rust shade 0 n=(1.0000,0.0000,0.0000) 11.7265,2.3735,3.6311 11.7265,2.7735,3.6311 11.7265,2.7735,4.1311 11.7265,2.3735,4.1311
+      rust lit 0 n=(0.0000,1.0000,0.0000) 11.7265,2.7735,3.6311 11.1265,2.7735,3.6311 11.1265,2.7735,4.1311 11.7265,2.7735,4.1311
+      rust lit 0 n=(-1.0000,0.0000,0.0000) 11.1265,2.7735,3.6311 11.1265,2.3735,3.6311 11.1265,2.3735,4.1311 11.1265,2.7735,4.1311"
+    `);
+  });
+});
+
+describe("wheel hueca, ranuras y cangilones (#211)", () => {
+  const AT = v3(-14, 60, 9.2);
+  const planeRadius = (at: Vec3, p: Vec3) => Math.hypot((p.x - at.x) * WHEEL_U.x + (p.y - at.y) * WHEEL_U.y, p.z - at.z);
+  const planeAngle = (at: Vec3, p: Vec3) => Math.atan2(p.z - at.z, (p.x - at.x) * WHEEL_U.x + (p.y - at.y) * WHEEL_U.y);
+  const wrap = (a: number) => { const t = Math.atan2(Math.sin(a), Math.cos(a)); return t <= -Math.PI ? t + 2 * Math.PI : t; };
+  const mean = (pts: Vec3[]) => v3(pts.reduce((s, p) => s + p.x, 0) / pts.length, pts.reduce((s, p) => s + p.y, 0) / pts.length, pts.reduce((s, p) => s + p.z, 0) / pts.length);
+  const dist = (p: Vec3, q: Vec3) => Math.hypot(p.x - q.x, p.y - q.y, p.z - q.z);
+  const inPlane = (faces: Face[], at: Vec3) => {
+    for (const f of faces) {
+      expect(f.normal.x).toBeCloseTo(WHEEL_NORMAL.x, 9); expect(f.normal.y).toBeCloseTo(WHEEL_NORMAL.y, 9); expect(f.normal.z).toBeCloseTo(WHEEL_NORMAL.z, 9);
+      expect(f.tone).toBe("top");
+      for (const p of f.pts) expect(p.x + p.y).toBeCloseTo(at.x + at.y, 6);
+    }
+  };
+  const hollow: Solid = { kind: "wheel", at: AT, r: 5.5, width: 0.5, mat: "rust", sides: 28, angle: 0, hollow: true, slots: 28 };
+  const B: Solid = { ...hollow, buckets: { n: 14, depth: 1.2, teeth: 2, mat: "steel" } } as Solid;
+  /** Bloques de caras `steel` por cangilón: trapecio, malla y dientes. */
+  const bucketBlocks = (s: Solid, per = 4) => { const f = tessellateAll(s).filter((x) => x.mat === "steel"); return Array.from({ length: f.length / per }, (_, k) => f.slice(k * per, (k + 1) * per)); };
+
+  it("hueca con ranuras: llanta doble, sin rayos ni cubo, todo en el plano", () => {
+    const faces = tessellateAll(hollow);
+    expect(faces).toHaveLength(2 * 28 + 28);
+    for (const f of faces) for (const p of f.pts) expect(planeRadius(AT, p)).toBeGreaterThanOrEqual(5.5 - 2.2 * 0.5 - 1e-6);
+    inPlane(faces, AT);
+    expect(tessellate(hollow)).toHaveLength(faces.length);
+  });
+
+  it("hueca sin ranuras: 2·sides caras", () => {
+    expect(tessellateAll({ ...hollow, slots: undefined } as Solid)).toHaveLength(56);
+    expect(tessellateAll({ ...hollow, slots: 0 } as Solid)).toHaveLength(56);
+  });
+
+  it("ranuras: centradas en angle + k·2π/slots y unen las dos llantas", () => {
+    for (const angle of [0, 0.2]) {
+      const w = { ...hollow, sides: 8, slots: 4, angle } as Solid;
+      const slots = tessellateAll(w).slice(16);
+      expect(slots).toHaveLength(4);
+      slots.forEach((f, k) => {
+        expect(wrap(planeAngle(AT, mean(f.pts)) - (angle + (k * Math.PI) / 2))).toBeCloseTo(0, 6);
+        const rs = f.pts.map((p) => planeRadius(AT, p));
+        expect(Math.min(...rs)).toBeLessThan(5.5 - 1.2 * 0.5);
+        expect(Math.max(...rs)).toBeGreaterThan(5.5 - 0.5);
+      });
+    }
+  });
+
+  it("tessellate no descarta caras de la rueda (vieja y hueca)", () => {
+    const old: Solid = { kind: "wheel", at: AT, r: 5.5, width: 0.5, mat: "rust", sides: 16, angle: 0.4 };
+    for (const w of [old, hollow, B]) expect(tessellate(w)).toHaveLength(tessellateAll(w).length);
+  });
+
+  it("cangilones: 2·sides + slots + n·(2 + teeth) caras, todas en el plano", () => {
+    const faces = tessellateAll(B);
+    expect(faces).toHaveLength(56 + 28 + 14 * 4);
+    inPlane(faces, AT);
+  });
+
+  it("cangilones: el trapecio llega a r + depth", () => {
+    const blocks = bucketBlocks(B);
+    expect(blocks).toHaveLength(14);
+    for (const [trap] of blocks) {
+      expect(trap!.pts).toHaveLength(4);
+      const rs = trap!.pts.map((p) => planeRadius(AT, p)).sort((a, b) => a - b);
+      expect(rs[0]).toBeCloseTo(5.5, 6); expect(rs[1]).toBeCloseTo(5.5, 6);
+      expect(rs[2]).toBeCloseTo(6.7, 6); expect(rs[3]).toBeCloseTo(6.7, 6);
+    }
+  });
+
+  it("cangilones: la malla es el 60 % interior con toneOffset −2", () => {
+    expect(bucketBlocks(B)).toHaveLength(14);
+    for (const [trap, mesh, ...teeth] of bucketBlocks(B)) {
+      expect(trap!.toneOffset).toBe(0);
+      for (const t of teeth) expect(t.toneOffset).toBe(0);
+      expect(mesh!.toneOffset).toBe(-2);
+      const c = mean(trap!.pts), cm = mean(mesh!.pts);
+      expect(dist(c, cm)).toBeCloseTo(0, 6);
+      mesh!.pts.forEach((p, i) => expect(dist(p, c)).toBeCloseTo(0.6 * dist(trap!.pts[i]!, c), 6));
+    }
+  });
+
+  it("cangilones: los dientes van del lado de mayor ángulo", () => {
+    const n = 14;
+    expect(bucketBlocks(B)).toHaveLength(n);
+    bucketBlocks(B).forEach(([, , ...teeth], k) => {
+      expect(teeth).toHaveLength(2);
+      for (const t of teeth) {
+        expect(t.pts).toHaveLength(3);
+        t.pts.forEach((p, i) => expect(dist(p, t.pts[(i + 1) % 3]!)).toBeCloseTo(1.2 / 3, 6));
+        const da = wrap(planeAngle(AT, mean(t.pts)) - (2 * Math.PI * k) / n);
+        expect(da).toBeGreaterThan((0.3 * Math.PI) / n);
+        expect(da).toBeLessThan(Math.PI / n);
+      }
+    });
+  });
+
+  it("cangilones: girar π/n mueve el cangilón 0 y conserva la cantidad de caras", () => {
+    const B2 = { ...B, angle: Math.PI / 14 } as Solid;
+    expect(tessellateAll(B2)).toHaveLength(tessellateAll(B).length);
+    const t0 = bucketBlocks(B)[0]![0]!, t1 = bucketBlocks(B2)[0]![0]!;
+    expect(Math.max(...t0.pts.map((p, i) => dist(p, t1.pts[i]!)))).toBeGreaterThan(0.1);
+    expect(wrap(planeAngle(AT, mean(t1.pts)) - Math.PI / 14)).toBeCloseTo(0, 6);
+  });
+
+  it("cangilones: bounds incluye r + depth", () => {
+    const b = bounds({ ...B, angle: Math.PI / 2 } as Solid);
+    expect(b.max.z).toBeGreaterThan(9.2 + 5.5 + 0.9 * 1.2);
+    expect(b.max.z).toBeLessThanOrEqual(9.2 + 5.5 + 1.2 + 1e-6);
+  });
+
+  it("cangilones sin hollow: rayos y cubo siguen", () => {
+    expect(tessellateAll({ ...B, hollow: undefined, slots: undefined } as Solid)).toHaveLength(28 + 28 + 1 + 14 * 4);
+  });
+
+  it("cangilones con teeth 0: trapecio y malla por cangilón", () => {
+    const w = { ...B, buckets: { n: 14, depth: 1.2, teeth: 0, mat: "steel" } } as Solid;
+    expect(tessellateAll(w).filter((f) => f.mat === "steel")).toHaveLength(14 * 2);
+  });
+
+  it("cangilones con góndolas: las góndolas no cambian", () => {
+    const g = { mat: "glass" as const, w: 0.8, d: 0.6, h: 0.7 };
+    const plain = { kind: "wheel", at: AT, r: 5.5, width: 0.5, mat: "rust", sides: 12, angle: 0.3, gondolas: g } as Solid;
+    const withB = { ...plain, buckets: { n: 14, depth: 1.2, teeth: 2, mat: "steel" } } as Solid;
+    expect(tessellateAll(withB).filter((f) => f.mat === "glass")).toEqual(tessellateAll(plain).filter((f) => f.mat === "glass"));
   });
 });
 
