@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { buildRenderList } from "../iso/render-list";
+import { sortByDepth } from "../iso/depth";
 import { bounds, isFlat, type Solid } from "../iso/solids";
 import { WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, worldZoneAt } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
@@ -162,16 +163,17 @@ describe.each(STACKS.map((st, i) => [i, st] as const))("chimenea %i", (_i, st) =
     const { out } = one(st);
     const deck = cyls(out, "concrete");
     expect(deck).toHaveLength(1);
-    expect(deck[0]!.r).toBeCloseTo(st.r + 1.2, 6); expect(deck[0]!.h).toBeCloseTo(0.3, 6); expect(deck[0]!.at.z).toBeCloseTo(M - 2, 6);
+    expect(deck[0]!.r).toBeCloseTo(st.r + 1.2, 6); expect(deck[0]!.h).toBeCloseTo(0.3, 6); const bands = cyls(out, "signal", "whitewash");
+    expect(deck[0]!.at.z + deck[0]!.h).toBeCloseTo(bands[6]!.at.z, 6); // techo en la junta entre 6ª y 7ª banda
     const posts = boxes(out, 0.15, 0.15, 1.1).filter((p) => p.mat === "steel");
     expect(posts).toHaveLength(8);
     const lim = (st.r + 1.2) * APO;
     for (const p of posts) {
-      expect(p.at.z).toBeCloseTo(M - 1.7, 6);
+      expect(p.at.z).toBeCloseTo(deck[0]!.at.z + deck[0]!.h, 6);
       const b = bounds(p);
       for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) expect(Math.hypot(x - st.x, y - st.y)).toBeLessThanOrEqual(lim + EPS);
     }
-    const rail = out.filter((x): x is Solid & { kind: "beam" } => x.kind === "beam" && x.from.z > M - 1.7 && x.to.z > M - 1.7);
+    const rail = out.filter((x): x is Solid & { kind: "beam" } => x.kind === "beam" && x.from.z > deck[0]!.at.z + deck[0]!.h && x.to.z > deck[0]!.at.z + deck[0]!.h);
     expect(rail).toHaveLength(8);
   });
 
@@ -188,15 +190,24 @@ describe.each(STACKS.map((st, i) => [i, st] as const))("chimenea %i", (_i, st) =
     const { out } = one(st);
     const rails = out.filter((x): x is Box => x.kind === "prism" && x.mat === "steel" && Math.abs(x.w - 0.15) < EPS && Math.abs(x.d - 0.15) < EPS && Math.abs(x.at.z - z0) < EPS);
     expect(rails).toHaveLength(2);
-    const walls = cyls(out, "brick", "signal", "whitewash").filter((c) => c.at.z < M - 2 && c.at.z + c.h > z0);
+    const deck = cyls(out, "concrete")[0]!;
+    const walls = cyls(out, "brick", "signal", "whitewash").filter((c) => c.at.z < deck.at.z && c.at.z + c.h > z0);
     for (const r of rails) {
-      expect(r.at.z + r.h).toBeCloseTo(M - 2, 6);
+      expect(r.at.z + r.h).toBeCloseTo(deck.at.z, 6);
       expect(r.at.y).toBeGreaterThan(st.y);
       for (const c of walls) expect(bounds(r).min.y).toBeGreaterThan(st.y + c.r * APO);
     }
-    const rungs = out.filter((x): x is Solid & { kind: "beam" } => x.kind === "beam" && x.from.z === x.to.z && x.from.z < M - 2).sort((a, b) => a.from.z - b.from.z);
+    const rungs = out.filter((x): x is Solid & { kind: "beam" } => x.kind === "beam" && x.from.z === x.to.z && x.from.z < deck.at.z).sort((a, b) => a.from.z - b.from.z);
     expect(rungs.length).toBeGreaterThanOrEqual(5);
     for (let k = 1; k < rungs.length; k++) expect(rungs[k]!.from.z - rungs[k - 1]!.from.z).toBeCloseTo(2, 6);
+  });
+
+  it("la plataforma no tapa la banda de arriba ni la corona", () => {
+    const { out } = one(st);
+    const order = sortByDepth(out), deck = cyls(out, "concrete")[0]!;
+    const top = cyls(out, "signal", "whitewash")[6]!, crown = cyls(out, "brick").at(-1)!;
+    expect(order.indexOf(deck)).toBeLessThan(order.indexOf(top));
+    expect(order.indexOf(deck)).toBeLessThan(order.indexOf(crown));
   });
 
   it("dos luces magenta apenas debajo de la boca", () => {
