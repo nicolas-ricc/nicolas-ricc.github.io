@@ -40,7 +40,10 @@ export function naveBody(out: Solid[]): void {
   }
 
   // techo de pizarra a dos aguas, cumbrera E-O a z 17 en y −31; sin alero oeste (el marcador de la maltería queda pegado)
-  out.push({ kind: "ramp", at: v3(x, -46.6, 14), w: 75.5, d: 15.6, h: 3, mat: "steel", dir: "n" });
+  // el faldón norte va en tramos E-O con una chimenea metálica cerca del centro de cada uno: la chimenea y sus tensores
+  // se cruzan con la caja del faldón y el desempate de profundidad (suma de coordenadas) los pinta después de su tramo
+  const cuts = [x, 62.5, 77.5, 92.5, 107.5, 119.5];
+  for (let i = 0; i < cuts.length - 1; i++) out.push({ kind: "ramp", at: v3(cuts[i]!, -46.6, 14), w: cuts[i + 1]! - cuts[i]!, d: 15.6, h: 3, mat: "steel", dir: "n" });
   out.push({ kind: "ramp", at: v3(x, -31, 14), w: 75.5, d: 15.6, h: 3, mat: "steel", dir: "s" });
   out.push(prism(x, -15.4, 13.7, 75.5, 0.3, 0.3, "whitewash")); // remate sur, bajo el borde del alero
   for (const cx of [62.5, 77.5, 92.5, 110]) out.push(prism(cx - 0.6, -31.6, 17, 1.2, 1.2, 0.8, "steel")); // caperuzas en la cumbrera
@@ -67,7 +70,7 @@ export function metalStacks(out: Solid[]): void {
     out.push({ kind: "cylinder", at: v3(cx, -33, 16.6), r: 0.5, h: 6, mat: "rust" });
     for (const sx of [-1, 1]) {
       out.push({ kind: "beam", from: v3(cx + sx * 0.35, -33.35, 21), to: v3(cx + sx * 2, -35, 16.23), w: 0.15, h: 0.15, mat: "rust" }); // faldón norte
-      out.push({ kind: "beam", from: v3(cx + sx * 0.35, -32.65, 21), to: v3(cx + sx * 2, -31, 17), w: 0.15, h: 0.15, mat: "rust" });    // faldón sur
+      out.push({ kind: "beam", from: v3(cx + sx * 0.35, -32.65, 21), to: v3(cx + sx * 2, -31.2, 16.96), w: 0.15, h: 0.15, mat: "rust" }); // junto a la cumbrera, sin pisar el faldón sur
     }
   }
 }

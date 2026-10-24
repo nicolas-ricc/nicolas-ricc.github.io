@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { sortByDepth } from "../iso/depth";
 import { bounds, type Plate, type Solid } from "../iso/solids";
 import { METAL_STACK_X, NAVE, STAIR_TOWER, boilerHouse, gableEnd, inclineBelt, metalStacks, naveBody, stairTower } from "./boiler-house";
 
@@ -60,12 +61,13 @@ describe("nave de calderas: cuerpo", () => {
 
   it("techo de pizarra a dos aguas con cumbrera E-O a z 17, alero sur, remate claro y 4 caperuzas", () => {
     const roof = body.filter((s): s is Kind<"ramp"> => s.kind === "ramp");
-    expect(roof).toHaveLength(2);
-    for (const r of roof) { expect(r.mat).toBe("steel"); expect(r.at.z).toBe(14); expect(r.h).toBe(3); expect(r.at.x).toBe(44); expect(r.at.x + r.w).toBe(119.5); }
-    expect(roof.map((r) => r.dir).sort()).toEqual(["n", "s"]);
-    const south = roof.find((r) => r.dir === "s")!, north = roof.find((r) => r.dir === "n")!;
-    expect(north.at.y).toBeCloseTo(-46.6, 6); expect(north.at.y + north.d).toBeCloseTo(-31, 6);
-    expect(south.at.y).toBe(-31); expect(south.at.y + south.d).toBeCloseTo(-15.4, 6);
+    for (const r of roof) { expect(r.mat).toBe("steel"); expect(r.at.z).toBe(14); expect(r.h).toBe(3); }
+    const south = roof.filter((r) => r.dir === "s"), north = roof.filter((r) => r.dir === "n");
+    expect(south).toHaveLength(1);
+    expect(south[0]!.at).toEqual({ x: 44, y: -31, z: 14 }); expect(south[0]!.w).toBe(75.5); expect(south[0]!.at.y + south[0]!.d).toBeCloseTo(-15.4, 6);
+    // faldón norte en tramos E-O, cada uno con su chimenea metálica cerca del centro (orden de pintado)
+    expect(north.map((r) => [r.at.x, r.at.x + r.w])).toEqual([[44, 62.5], [62.5, 77.5], [77.5, 92.5], [92.5, 107.5], [107.5, 119.5]]);
+    for (const r of north) { expect(r.at.y).toBeCloseTo(-46.6, 6); expect(r.at.y + r.d).toBeCloseTo(-31, 6); }
     expect(prisms(body).some((p) => p.mat === "whitewash" && p.at.y === -15.4 && near(p.d, 0.3) && near(p.h, 0.3))).toBe(true); // remate sur
     const vents = prisms(body).filter((p) => p.mat === "steel" && p.w === 1.2 && p.d === 1.2 && p.h === 0.8);
     expect(vents).toHaveLength(4);
@@ -100,6 +102,18 @@ describe("nave de calderas: testero y chimeneas metálicas", () => {
     const guys = beams(m);
     expect(guys).toHaveLength(16);
     for (const g of guys) { expect(g.w).toBe(0.15); expect(g.h).toBe(0.15); expect(g.mat).toBe("rust"); expect(g.to.z).toBeLessThan(g.from.z); }
+    for (const g of guys) expect(bounds(g).max.y).toBeLessThanOrEqual(-31); // no pisan el faldón sur
+  });
+
+  it("las chimeneas metálicas y sus tensores se pintan después del faldón norte que pisan", () => {
+    const order = sortByDepth(build(boilerHouse));
+    const north = order.filter((s): s is Kind<"ramp"> => s.kind === "ramp" && s.dir === "n");
+    const stacks = order.filter((s) => (s.kind === "cylinder" && s.mat === "rust" && s.r === 0.5) || (s.kind === "beam" && s.w === 0.15 && s.mat === "rust" && s.from.z === 21));
+    expect(stacks).toHaveLength(20);
+    for (const s of stacks) {
+      const b = bounds(s);
+      for (const r of north) if (b.min.x < r.at.x + r.w && b.max.x > r.at.x) expect(order.indexOf(s), JSON.stringify(s).slice(0, 80)).toBeGreaterThan(order.indexOf(r));
+    }
   });
 });
 

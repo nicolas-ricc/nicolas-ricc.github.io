@@ -136,6 +136,15 @@ describe("factory", () => {
     expectApart(body.filter((x) => x.kind === "beam" && x.w === 0.3), body.filter((x) => x.kind === "prism" && x.mat === "whitewash" && x.at.y === -15.4));
   });
 
+  it("en la escena, el muro alto se pinta antes de cada tramo del faldón norte y del sur (sin ciclos que corten esas relaciones)", () => {
+    const near = scene().solids.filter((x) => { const b = bounds(x); return b.max.x >= 17 && b.min.x <= 126.4 && b.max.y >= -49 && b.min.y <= -14; });
+    const order = sortByDepth(near);
+    const wall = order.findIndex((x) => x.kind === "prism" && x.mat === "brick" && x.at.x === NAVE.x && x.at.z === 7);
+    const roof = order.flatMap((x, i) => (x.kind === "ramp" && x.mat === "steel" ? [i] : []));
+    expect(roof).toHaveLength(6);
+    for (const i of roof) expect(i).toBeGreaterThan(wall);
+  });
+
   it("el farol de (58, −16) pasa a (50, −13.5)", () => {
     const at = scene().solids.filter(isLamp).map((l) => l.kind === "prism" ? [l.at.x, l.at.y] : []);
     expect(at).toContainEqual([50, -13.5]);

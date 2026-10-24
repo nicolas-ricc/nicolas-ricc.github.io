@@ -148,8 +148,9 @@ export function sortByDepth(solids: Solid[], heading = 0): Solid[] {
       const ij = isBehindView(bs[i]!, bs[j]!, vx, vy), ji = isBehindView(bs[j]!, bs[i]!, vx, vy);
       if (side > 0) before[j]!.push(i);
       else if (side < 0) before[i]!.push(j);
-      // En el marco girado, si los separan dos planos a la vez ninguno tapa al otro: no hay relación que imponer.
-      else if (ij && ji && heading !== 0) continue;
+      // Si los separan dos planos a la vez ninguno tapa al otro: no hay relación que imponer (con la arista del desempate
+      // los cuerpos largos, como un muro o un faldón de 75 u, cierran ciclos con las piezas chicas de alrededor).
+      else if (ij && ji) continue;
       else if (ij === ji) { if (keys[i]! <= keys[j]!) before[j]!.push(i); else before[i]!.push(j); }
       else if (ij) before[j]!.push(i);
       else before[i]!.push(j);
