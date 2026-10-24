@@ -92,7 +92,7 @@ function upperWorks(out: Solid[], accents: Accent[]): void {
   for (let k = 0, dx = -5.2; dx - 3 >= -24; k++, dx -= 3) { const s = k % 2 ? -1 : 1; out.push(bar([dx, s * 1.2, dz(dx)], [dx - 3, -s * 1.2, dz(dx - 3)], 0.2, 0.2, off)); }
   out.push(box(-25, -1, -23, 1, 2, 2, "rust"));
   // cabina de 2 pisos con techo con alero y tres reflectores
-  out.push(box(13, 1.5, 15.5, 3.5, 9.5, 2.2, steel, { facade: { floors: 2, cols: 3, window: { w: 0.7, h: 0.6 } } }), box(12.75, 1.25, 15.65, 3.75, 11.7, 0.2, steel));
+  out.push(box(13, 1.9, 15.5, 3.5, 9.5, 2.2, steel, { facade: { floors: 2, cols: 3, window: { w: 0.7, h: 0.6 } } }), box(12.75, 1.25, 15.65, 3.75, 11.71, 0.2, steel));
   for (const dx of [13.5, 14.25, 15]) { const p = local(dx, 3.5); accents.push({ kind: "dot", at: v3(p.x, p.y, 12), r: 0.6, color: "amber" }); }
 }
 

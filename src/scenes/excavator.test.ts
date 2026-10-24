@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { bounds, tessellate, tessellateAll, type Solid } from "../iso/solids";
 import type { Accent } from "../iso/accent";
-import { overlaps, screenBounds, sortByDepth } from "../iso/depth";
+import { overlaps, sortByDepth } from "../iso/depth";
 import { VIEW_DIR, Z_SCALE, project } from "../iso/project";
 import { createRng } from "../map/seed";
 import { EXCAVATOR, excavator, excavatorBox, excavatorWheel, local } from "./excavator";
@@ -179,7 +179,7 @@ describe("superestructura, plumas y cabina de la excavadora", () => {
   const descarga = beams(0.4, "office").filter((b) => pt(b, "from").dx < 0).sort((a, b) => pt(a, "from").dy - pt(b, "from").dy);
   const escudo = polyAt("office", 9.2)!, tolva = polyAt("rust", 5)!, cortina = polyAt("steel", 7.5)!;
   const tambor = out.find((s): s is Beam => s.kind === "beam" && s.mat === "steel" && s.w === 1)!;
-  const cabina = polyAt("steel", 9.5)!, techo = polyAt("steel", 11.7)!;
+  const cabina = polyAt("steel", 9.5)!, techo = polyAt("steel", 11.71)!;
 
   it("mástil en A: 2 brazos de 0.7 en tramos cortados en z 11..16 y 3 travesaños", () => {
     expect(legs).toHaveLength(4);
@@ -286,8 +286,8 @@ describe("superestructura, plumas y cabina de la excavadora", () => {
 
   it("cabina steel con fachada de 2 pisos × 3 y techo con alero; 3 acentos amber r 0.6", () => {
     expect(cabina.facade).toEqual({ floors: 2, cols: 3, window: { w: 0.7, h: 0.6 } });
-    const l = lbox({ ...cabina, facade: undefined }); near(l.dx0, 13); near(l.dx1, 15.5); near(l.dy0, 1.5); near(l.dy1, 3.5); near(l.z1, 11.7);
-    const t = lbox(techo); near(t.dx0, 12.75); near(t.dx1, 15.65); near(t.dy0, 1.25); near(t.dy1, 3.75); near(t.z1, 11.9);
+    const l = lbox({ ...cabina, facade: undefined }); near(l.dx0, 13); near(l.dx1, 15.5); near(l.dy0, 1.9); near(l.dy1, 3.5); near(l.z1, 11.7);
+    const t = lbox(techo); near(t.dx0, 12.75); near(t.dx1, 15.65); near(t.dy0, 1.25); near(t.dy1, 3.75); near(t.z1, 11.91);
     expect(accents).toHaveLength(3);
     [13.5, 14.25, 15].forEach((dx, k) => {
       const a = accents[k]!;
@@ -329,54 +329,26 @@ describe("superestructura, plumas y cabina de la excavadora", () => {
     for (const [n, x] of [["cabina", cabina], ["techo", techo]] as const) { const l = lbox(x); expect(p!.z + slope * (l.dx1 - p!.dx) - half, `${n}/cordón`).toBeGreaterThanOrEqual(l.z1 - 1e-6); }
   });
 
-  // Pares (abajo ← arriba) que `sortByDepth` con rumbo 0 no puede ordenar: las cajas alineadas al mundo de las vigas a 45° se inflan y forman ciclos que se cortan.
-  // Quedan fijados a propósito: si el orden mejora o empeora, el test lo marca. Los pares solo del chasis (Task 2) no se evalúan.
-  const PAINTER_CONOCIDOS: string[] = [
-    "4:poly/rust después de 28:beam/office",
-    "4:poly/rust después de 61:beam/office",
-    "4:poly/rust después de 62:beam/office",
-    "9:poly/office después de 30:beam/office",
-    "9:poly/office después de 32:beam/office",
-    "9:poly/office después de 33:beam/office",
-    "9:poly/office después de 35:poly/office",
-    "9:poly/office después de 39:beam/office",
-    "9:poly/office después de 40:beam/office",
-    "9:poly/office después de 47:beam/steel",
-    "9:poly/office después de 53:beam/office",
-    "9:poly/office después de 61:beam/office",
-    "9:poly/office después de 62:beam/office",
-    "9:poly/office después de 63:beam/office",
-    "9:poly/office después de 64:beam/office",
-    "10:beam/safety después de 39:beam/office",
-    "10:beam/safety después de 40:beam/office",
-    "10:beam/safety después de 53:beam/office",
-    "10:beam/safety después de 63:beam/office",
-    "19:poly/safety después de 39:beam/office",
-    "19:poly/safety después de 40:beam/office",
-    "19:poly/safety después de 47:beam/steel",
-    "19:poly/safety después de 53:beam/office",
-    "25:poly/rust después de 32:beam/office",
-    "25:poly/rust después de 33:beam/office",
-    "25:poly/rust después de 35:poly/office",
-    "25:poly/rust después de 53:beam/office",
-    "26:beam/safety después de 62:beam/office",
-    "28:beam/office después de 52:beam/office",
-    "61:beam/office después de 35:poly/office",
-    "70:poly/steel después de 44:beam/office",
-    "70:poly/steel después de 52:beam/office",
-    "71:poly/steel después de 52:beam/office",
-  ];
-  it("orden painter: lo que se solapa en pantalla y está separado en z va de abajo hacia arriba (salvo los ciclos conocidos)", () => {
-    const sorted = sortByDepth(out), pos = new Map(sorted.map((s, i) => [s, i])), first = out.indexOf(legs[0]!);
+  // pantalla de una caja local: sus 8 esquinas proyectadas (la caja alineada al mundo de una pieza girada se infla)
+  const screenOf = (l: LBox) => {
+    const sb = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+    for (const dx of [l.dx0, l.dx1]) for (const dy of [l.dy0, l.dy1]) for (const z of [l.z0, l.z1]) {
+      const w = local(dx, dy), q = project({ x: w.x, y: w.y, z });
+      sb.minX = Math.min(sb.minX, q.x); sb.maxX = Math.max(sb.maxX, q.x); sb.minY = Math.min(sb.minY, q.y); sb.maxY = Math.max(sb.maxY, q.y);
+    }
+    return sb;
+  };
+  it("orden painter: lo que se solapa en pantalla y está separado en z va de abajo hacia arriba en el marco de la máquina", () => {
+    const sorted = sortByDepth(out, EXCAVATOR.heading), pos = new Map(sorted.map((s, i) => [s, i]));
     const name = (k: number) => `${k}:${out[k]!.kind}/${"mat" in out[k]! ? out[k]!.mat : ""}`;
     const bad: string[] = [];
     for (let i = 0; i < out.length; i++) for (let j = 0; j < out.length; j++) {
-      if (i === j || (i < first && j < first)) continue;
-      const a = bounds(out[i]!), b = bounds(out[j]!);
-      if (a.max.z > b.min.z + EPS || !overlaps(screenBounds(a), screenBounds(b))) continue;
+      if (i === j) continue;
+      const a = lbox(out[i]!), b = lbox(out[j]!);
+      if (a.z1 > b.z0 + EPS || !overlaps(screenOf(a), screenOf(b))) continue;
       if (pos.get(out[i]!)! > pos.get(out[j]!)!) bad.push(`${name(i)} después de ${name(j)}`);
     }
-    expect(bad).toEqual(PAINTER_CONOCIDOS);
+    expect(bad).toEqual([]);
   });
 
   it("excavatorBox contiene todos los bounds y la envolvente de la rueda", () => {
