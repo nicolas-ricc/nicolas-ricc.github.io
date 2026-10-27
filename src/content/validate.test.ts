@@ -25,6 +25,13 @@ describe("validateContent", () => {
     delete bad.secciones[0]!.items[0]!.links[0]!.url;
     expect(validateContent(bad)).toEqual(["secciones[0].items[0].links[0].url: falta o no es string"]);
   });
+  it("valida proyectos", () => {
+    expect(validateContent({ ...ok, proyectos: [{ nombre: "A", url: "https://a" }, { nombre: "B", repo: "https://b" }] })).toEqual([]);
+    expect(validateContent({ ...ok, proyectos: [{ url: "https://a" }, { nombre: "B", repo: 3 }] })).toEqual([
+      "proyectos[0].nombre: falta o no es string",
+      "proyectos[1].repo: no es string",
+    ]);
+  });
   it("rechaza lo que no es objeto", () => {
     expect(validateContent(null)).toEqual(["raíz: no es un objeto"]);
   });
@@ -39,8 +46,17 @@ describe("cv.json", () => {
     const bytes = readFileSync(new URL("../../public/cv.pdf", import.meta.url));
     expect(bytes.subarray(0, 5).toString("latin1")).toBe("%PDF-");
   });
-  it("no trae las secciones placeholder que reemplaza el PDF", () => {
-    expect(cv.secciones.map((s) => s.subtitulo)).toEqual(["Contacto"]);
+  it("no trae texto fuera del PDF", () => {
+    expect(cv).not.toHaveProperty("descripcion");
+    expect(cv.secciones).toEqual([]);
     expect(JSON.stringify(cv)).not.toMatch(/pendiente/i);
+  });
+});
+
+describe("portfolio.json", () => {
+  it("es una lista de proyectos sin categorías", () => {
+    expect(portfolio.secciones).toEqual([]);
+    expect(portfolio).not.toHaveProperty("descripcion");
+    expect(portfolio.proyectos.map((p) => p.nombre)).toEqual(["Ballotage", "Damodaran", "Hammurabi", "Map"]);
   });
 });
