@@ -1,13 +1,5 @@
 {
   "id": "blog",
   "titulo": "Blog",
-  "descripcion": "Myxomatosis: ensayos sobre filosofía, tecnología y lo que ande dando vueltas.",
-  "secciones": [
-    {
-      "subtitulo": "Secciones",
-      "items": [
-        { "titulo": "Portada", "descripcion": "Ensayos largos.", "links": [{ "label": "myxomatosis.xyz/blog", "url": "https://myxomatosis.xyz/blog/" }] }
-      ]
-    }
-  ]
+  "secciones": []
 }

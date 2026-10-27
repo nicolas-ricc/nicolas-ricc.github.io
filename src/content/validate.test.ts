@@ -32,6 +32,13 @@ describe("validateContent", () => {
       "proyectos[1].repo: no es string",
     ]);
   });
+  it("valida artículos", () => {
+    expect(validateContent({ ...ok, articulos: [{ titulo: "A", url: "https://a" }] })).toEqual([]);
+    expect(validateContent({ ...ok, articulos: [{ url: "https://a" }, { titulo: "B" }] })).toEqual([
+      "articulos[0].titulo: falta o no es string",
+      "articulos[1].url: falta o no es string",
+    ]);
+  });
   it("rechaza lo que no es objeto", () => {
     expect(validateContent(null)).toEqual(["raíz: no es un objeto"]);
   });
@@ -58,5 +65,12 @@ describe("portfolio.json", () => {
     expect(portfolio.secciones).toEqual([]);
     expect(portfolio).not.toHaveProperty("descripcion");
     expect(portfolio.proyectos.map((p) => p.nombre)).toEqual(["Ballotage", "Damodaran", "Hammurabi", "Map"]);
+  });
+});
+
+describe("blog.json", () => {
+  it("no trae título visible, copete ni secciones", () => {
+    expect(blog).not.toHaveProperty("descripcion");
+    expect(blog.secciones).toEqual([]);
   });
 });

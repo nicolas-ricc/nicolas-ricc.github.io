@@ -1,4 +1,4 @@
-import type { ContentItem, ContentSection, Proyecto, ZoneContent } from "./types";
+import type { Articulo, ContentItem, ContentSection, Proyecto, ZoneContent } from "./types";
 
 export function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -30,6 +30,10 @@ function renderProyecto(pr: Proyecto): string {
   return `<li>${nombre}${url}${repo}</li>`;
 }
 
+function renderArticulo(ar: Articulo): string {
+  return `<li><a href="${escapeHtml(ar.url)}" target="_blank" rel="noopener">${escapeHtml(ar.titulo)}</a></li>`;
+}
+
 /** Flecha hacia una bandeja; el color lo pone el CSS (currentColor). */
 const DOWNLOAD_ICON =
   '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>';
@@ -47,6 +51,8 @@ export function renderContent(zone: ZoneContent): string {
   if (zone.pdf) return `<h1 class="sr-only">${escapeHtml(zone.titulo)}</h1>${renderPdf(zone.pdf)}`;
   // con lista de proyectos el panel muestra solo la lista; el h1 queda para lectores de pantalla
   if (zone.proyectos) return `<h1 class="sr-only">${escapeHtml(zone.titulo)}</h1><ul class="proyectos">${zone.proyectos.map(renderProyecto).join("")}</ul>`;
+  // con lista de artículos el panel muestra solo los títulos enlazados; el h1 queda para lectores de pantalla
+  if (zone.articulos) return `<h1 class="sr-only">${escapeHtml(zone.titulo)}</h1><ul class="articulos">${zone.articulos.map(renderArticulo).join("")}</ul>`;
   const lead = zone.descripcion ? `<p class="lead">${escapeHtml(zone.descripcion)}</p>` : "";
   return `<h1>${escapeHtml(zone.titulo)}</h1>${lead}${zone.secciones.map(renderSection).join("")}`;
 }

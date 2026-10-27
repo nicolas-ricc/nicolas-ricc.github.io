@@ -20,16 +20,15 @@ describe("parseRss", () => {
 });
 
 describe("mergeBlogFeed", () => {
-  const blog: ZoneContent = { id: "blog", titulo: "Blog", secciones: [{ subtitulo: "Secciones", items: [] }] };
-  it("agrega 'Últimos posts' con máximo 5", () => {
+  const blog: ZoneContent = { id: "blog", titulo: "Blog", secciones: [] };
+  it("arma la lista de artículos, título y link, máximo 5", () => {
     const items = Array.from({ length: 7 }, (_, i) => ({ title: `P${i}`, url: `https://x/${i}`, date: "2026-01-01" }));
     const out = mergeBlogFeed(blog, items);
-    expect(out.secciones).toHaveLength(2);
-    expect(out.secciones[1]!.subtitulo).toBe("Últimos posts");
-    expect(out.secciones[1]!.items).toHaveLength(5);
-    expect(out.secciones[1]!.items[0]).toEqual({ titulo: "P0", descripcion: "2026-01-01", links: [{ label: "Leer", url: "https://x/0" }] });
+    expect(out.secciones).toEqual([]);
+    expect(out.articulos).toHaveLength(5);
+    expect(out.articulos![0]).toEqual({ titulo: "P0", url: "https://x/0" });
   });
-  it("sin items devuelve el mismo contenido", () => {
-    expect(mergeBlogFeed(blog, [])).toEqual(blog);
+  it("sin items la lista queda vacía", () => {
+    expect(mergeBlogFeed(blog, []).articulos).toEqual([]);
   });
 });
