@@ -33,7 +33,8 @@ describe("validateContent", () => {
     ]);
   });
   it("valida artículos", () => {
-    expect(validateContent({ ...ok, articulos: [{ titulo: "A", url: "https://a" }] })).toEqual([]);
+    expect(validateContent({ ...ok, articulos: [{ titulo: "A", url: "https://a" }, { titulo: "B", url: "https://b", descripcion: "d" }] })).toEqual([]);
+    expect(validateContent({ ...ok, articulos: [{ titulo: "A", url: "https://a", descripcion: 1 }] })).toEqual(["articulos[0].descripcion: no es string"]);
     expect(validateContent({ ...ok, articulos: [{ url: "https://a" }, { titulo: "B" }] })).toEqual([
       "articulos[0].titulo: falta o no es string",
       "articulos[1].url: falta o no es string",

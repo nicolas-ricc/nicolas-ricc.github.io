@@ -114,3 +114,10 @@ describe("renderContent con artículos", () => {
     );
   });
 });
+
+describe("renderContent con artículos y descripción", () => {
+  it("la descripción va bajo el título, escapada", () => {
+    const html = renderContent({ id: "blog", titulo: "Blog", secciones: [], articulos: [{ titulo: "A", url: "https://a/", descripcion: "¿Lenguaje & <mundo>?" }] });
+    expect(html).toContain('<li><a href="https://a/" target="_blank" rel="noopener">A</a><p>¿Lenguaje &amp; &lt;mundo&gt;?</p></li>');
+  });
+});

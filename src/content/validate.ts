@@ -27,6 +27,7 @@ export function validateContent(data: unknown): string[] {
       if (!isObj(ar)) { errs.push(`${p}: no es un objeto`); return; }
       if (!isStr(ar.titulo)) errs.push(`${p}.titulo: falta o no es string`);
       if (!isStr(ar.url)) errs.push(`${p}.url: falta o no es string`);
+      if (ar.descripcion !== undefined && !isStr(ar.descripcion)) errs.push(`${p}.descripcion: no es string`);
     });
   }
   if (!Array.isArray(data.secciones)) { errs.push("secciones: falta o no es array"); return errs; }
