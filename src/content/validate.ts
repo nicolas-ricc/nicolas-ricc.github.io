@@ -20,6 +20,15 @@ export function validateContent(data: unknown): string[] {
       if (pr.repo !== undefined && !isStr(pr.repo)) errs.push(`${p}.repo: no es string`);
     });
   }
+  if (data.articulos !== undefined) {
+    if (!Array.isArray(data.articulos)) errs.push("articulos: no es array");
+    else data.articulos.forEach((ar, i) => {
+      const p = `articulos[${i}]`;
+      if (!isObj(ar)) { errs.push(`${p}: no es un objeto`); return; }
+      if (!isStr(ar.titulo)) errs.push(`${p}.titulo: falta o no es string`);
+      if (!isStr(ar.url)) errs.push(`${p}.url: falta o no es string`);
+    });
+  }
   if (!Array.isArray(data.secciones)) { errs.push("secciones: falta o no es array"); return errs; }
   data.secciones.forEach((sec, i) => {
     const p = `secciones[${i}]`;

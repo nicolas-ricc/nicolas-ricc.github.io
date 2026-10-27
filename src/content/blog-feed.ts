@@ -19,15 +19,5 @@ export function parseRss(xml: string): FeedItem[] {
 }
 
 export function mergeBlogFeed(blog: ZoneContent, items: FeedItem[]): ZoneContent {
-  if (items.length === 0) return blog;
-  return {
-    ...blog,
-    secciones: [
-      ...blog.secciones,
-      {
-        subtitulo: "Últimos posts",
-        items: items.slice(0, 5).map((it) => ({ titulo: it.title, descripcion: it.date, links: [{ label: "Leer", url: it.url }] })),
-      },
-    ],
-  };
+  return { ...blog, articulos: items.slice(0, 5).map((it) => ({ titulo: it.title, url: it.url })) };
 }

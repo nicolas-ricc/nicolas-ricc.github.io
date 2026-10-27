@@ -27,7 +27,7 @@ body.zone #content { opacity: 1; }
 #content p { margin: 0 0 0.5rem; }
 #content .links { list-style: none; padding: 0; margin: 0; display: flex; gap: 1rem; flex-wrap: wrap; }
 #content a { color: #7cf5ff; }
-#content .proyectos { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; font-size: 1.1rem; }
+#content .proyectos, #content .articulos { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; font-size: 1.1rem; }
 #content .externo { display: inline-flex; vertical-align: -0.1em; }
 #content .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 #content .pdf-viewer { display: flex; flex-direction: column; gap: 0.5rem; }

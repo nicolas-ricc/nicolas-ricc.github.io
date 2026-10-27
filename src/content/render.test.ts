@@ -97,3 +97,20 @@ describe("renderContent con proyectos", () => {
     expect(renderContent({ id: "portfolio", titulo: "P", descripcion: "copete", secciones: [], proyectos: [] })).not.toContain("copete");
   });
 });
+
+describe("renderContent con artículos", () => {
+  const html = renderContent({
+    id: "blog",
+    titulo: "Blog",
+    descripcion: "copete",
+    secciones: [{ subtitulo: "Secciones", items: [] }],
+    articulos: [{ titulo: "Rawls & <puente>", url: "https://x/rawls/" }, { titulo: "Necias", url: "https://x/necias/" }],
+  });
+  it("solo la lista: cada título enlaza su artículo", () => {
+    expect(html).toBe(
+      '<h1 class="sr-only">Blog</h1><ul class="articulos">' +
+        '<li><a href="https://x/rawls/" target="_blank" rel="noopener">Rawls &amp; &lt;puente&gt;</a></li>' +
+        '<li><a href="https://x/necias/" target="_blank" rel="noopener">Necias</a></li></ul>',
+    );
+  });
+});
