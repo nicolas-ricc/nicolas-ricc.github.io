@@ -31,7 +31,8 @@ function renderProyecto(pr: Proyecto): string {
 }
 
 function renderArticulo(ar: Articulo): string {
-  return `<li><a href="${escapeHtml(ar.url)}" target="_blank" rel="noopener">${escapeHtml(ar.titulo)}</a></li>`;
+  const desc = ar.descripcion ? `<p>${escapeHtml(ar.descripcion)}</p>` : "";
+  return `<li><a href="${escapeHtml(ar.url)}" target="_blank" rel="noopener">${escapeHtml(ar.titulo)}</a>${desc}</li>`;
 }
 
 /** Flecha hacia una bandeja; el color lo pone el CSS (currentColor). */
