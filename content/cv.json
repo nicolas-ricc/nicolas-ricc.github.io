@@ -1,9 +1,6 @@
 {
   "id": "cv",
   "titulo": "Resume",
-  "descripcion": "Ingeniero de software. Backend, sistemas, y últimamente electrónica.",
   "pdf": "/cv.pdf",
-  "secciones": [
-    { "subtitulo": "Contacto", "items": [ { "titulo": "GitHub", "links": [{ "label": "nicolas-ricc", "url": "https://github.com/nicolas-ricc" }] } ] }
-  ]
+  "secciones": []
 }

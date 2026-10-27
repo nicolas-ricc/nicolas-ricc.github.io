@@ -1,20 +1,11 @@
 {
   "id": "portfolio",
   "titulo": "Portfolio",
-  "descripcion": "Cosas que construí, en distintos grados de terminadas.",
-  "secciones": [
-    {
-      "subtitulo": "Juegos",
-      "items": [
-        { "titulo": "politik_tcg", "descripcion": "Trading card game sobre política.", "links": [{ "label": "Repo", "url": "https://github.com/nicolas-ricc/politik_tcg" }] }
-      ]
-    },
-    {
-      "subtitulo": "Herramientas",
-      "items": [
-        { "titulo": "capgate", "descripcion": "Descripción pendiente.", "links": [{ "label": "Repo", "url": "https://github.com/nicolas-ricc/capgate" }] },
-        { "titulo": "hammurabi", "descripcion": "Descripción pendiente.", "links": [{ "label": "Repo", "url": "https://github.com/nicolas-ricc/hammurabi" }] }
-      ]
-    }
-  ]
+  "proyectos": [
+    { "nombre": "Ballotage", "url": "https://balcarce50tcg.myxomatosis.workers.dev" },
+    { "nombre": "Damodaran", "repo": "https://github.com/nicolas-ricc/damodaran" },
+    { "nombre": "Hammurabi" },
+    { "nombre": "Map", "url": "https://myxomatosis.xyz/", "repo": "https://github.com/nicolas-ricc/nicolas-ricc.github.io" }
+  ],
+  "secciones": []
 }

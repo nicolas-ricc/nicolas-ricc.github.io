@@ -10,6 +10,16 @@ export function validateContent(data: unknown): string[] {
   if (!isStr(data.titulo)) errs.push("titulo: falta o no es string");
   if (data.descripcion !== undefined && !isStr(data.descripcion)) errs.push("descripcion: no es string");
   if (data.pdf !== undefined && !isStr(data.pdf)) errs.push("pdf: no es string");
+  if (data.proyectos !== undefined) {
+    if (!Array.isArray(data.proyectos)) errs.push("proyectos: no es array");
+    else data.proyectos.forEach((pr, i) => {
+      const p = `proyectos[${i}]`;
+      if (!isObj(pr)) { errs.push(`${p}: no es un objeto`); return; }
+      if (!isStr(pr.nombre)) errs.push(`${p}.nombre: falta o no es string`);
+      if (pr.url !== undefined && !isStr(pr.url)) errs.push(`${p}.url: no es string`);
+      if (pr.repo !== undefined && !isStr(pr.repo)) errs.push(`${p}.repo: no es string`);
+    });
+  }
   if (!Array.isArray(data.secciones)) { errs.push("secciones: falta o no es array"); return errs; }
   data.secciones.forEach((sec, i) => {
     const p = `secciones[${i}]`;
