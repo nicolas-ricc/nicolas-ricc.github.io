@@ -305,7 +305,8 @@ function collapsed(solids: Solid[], rng: Rng): void {
 
 /**
  * Como `jungle`, pero descarta los conos que caerían en agua abierta del
- * estuario (consume el rng en el mismo orden, así no desalinea la semilla).
+ * estuario, cuya orilla es `islandWestX` (consume el rng en el mismo orden,
+ * así no desalinea la semilla).
  */
 function jungleOnLand(out: Solid[], rng: Rng, rect: { x0: number; x1: number; y0: number; y1: number }, n: number, z = 0.4): void {
   const tmp: Solid[] = [];

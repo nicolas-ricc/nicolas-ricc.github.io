@@ -271,4 +271,9 @@ describe("clearOfWater", () => {
     expect(clearOfWater(10, 10, 20, 20, 3)).toBe(true);
     expect(clearOfWater(250, 60, 252, 62, 3)).toBe(false);
   });
+
+  it("el margen cuenta: caja en tierra junto a la ribera", () => {
+    expect(clearOfWater(271, 60, 272, 61, 0)).toBe(true);  // eastBank(60) = 269: la caja está en tierra
+    expect(clearOfWater(271, 60, 272, 61, 3)).toBe(false); // pero a 3 u hay agua
+  });
 });
