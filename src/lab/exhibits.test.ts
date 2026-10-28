@@ -5,7 +5,10 @@ import { bounds, type Solid } from "../iso/solids";
 import { BLEED, WORLD } from "../map/geo";
 import { STAIR_TOWER } from "../scenes/boiler-house";
 import { WATER_TOWER, waterTower } from "../scenes/maltings";
+import { createFactoryAnim } from "../scenes/factory-anim";
+import { factory } from "../scenes/factory";
 import { BEAM_PERIOD_MS } from "../scenes/sea-anim";
+import { createRng } from "../map/seed";
 import { assembleWorld } from "../world/assemble";
 import { type Box, FRAME_H, HALO_BASE } from "../world/frame";
 import { cropAnimators, cropScene } from "./crop";
@@ -117,7 +120,7 @@ describe("caja de la nave de calderas (#213)", () => {
     expect(e.box.x1).toBe(STAIR_TOWER.x1);
     const cs = cropScene(scene, e.box);
     expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "steel" && s.w === 5 && s.d === 8)).toBe(true); // descansos de la torre
-    expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "concrete" && s.w === 7 && s.d === 7)).toBe(false); // pedestal x ≥ 126.5
+    expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "concrete" && s.w === 7 && s.d === 7)).toBe(false); // pedestales de las chimeneas: y ≥ 28.5, al norte de la caja
     expect(cs.solids.filter((s) => s.kind === "cylinder" && s.mat === "rust" && s.r === 0.5)).toHaveLength(4); // chimeneas metálicas
   });
 });
@@ -233,5 +236,29 @@ describe("caja de la planta con maltería y tanque (#214)", () => {
     const cs = cropScene(scene, e.box);
     expect(cs.solids.some((s) => s.kind === "cylinder" && s.r === 4.6 && s.at.x === 10 && s.at.y === -36)).toBe(true);
     expect(cs.solids.some((s) => s.kind === "cone" && s.sides === 4 && s.at.z + s.h === 26)).toBe(true);
+  });
+});
+
+describe("caja de las chimeneas (#245)", () => {
+  const e = regions.find((r) => r.id === "chimeneas")!;
+
+  it("se calcula desde STACKS y COOLING: x0 COOLING.x − r − 3, 13 de más al este por el humo, al sur la plataforma (r + 1.2); h 36", () => {
+    expect(e.box.x0).toBeCloseTo(40 - 9 - 3, 9);
+    expect(e.box.y0).toBeCloseTo(26 - 2.8 - 28, 9);
+    expect(e.box.x1).toBeCloseTo(86 + 2.8 + 3 + 13, 9);
+    expect(e.box.y1).toBeCloseTo(32 + 2.8 + 1.2 + 3, 9);
+    expect(e.h).toBeCloseTo(29 + 28 * 0.25, 9);
+  });
+
+  it("ninguna bocanada sale de la caja en x/y en una vuelta (40 s a 33 ms)", () => {
+    const anim = createFactoryAnim(factory(createRng(7)).stacks, createRng(1), { reducedMotion: false });
+    const { x0, y0, x1, y1 } = e.box;
+    for (let t = 0; t <= 40_000; t += 33) {
+      for (let k = 0; k < 3; k++) for (const p of anim.puffs(k)) {
+        const b = bounds(p);
+        expect(b.min.x >= x0 && b.max.x <= x1 && b.min.y >= y0 && b.max.y <= y1, `t ${t} chimenea ${k}: ${JSON.stringify(b)}`).toBe(true);
+      }
+      anim.tick(33);
+    }
   });
 });
