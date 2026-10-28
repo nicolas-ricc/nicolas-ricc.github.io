@@ -16,9 +16,9 @@
 - Constantes literales del issue: `ENTRY_X = WEST_RAIL_X0` (−402), `LINE_SPEED = 24` (u/s), `BRAKE_U = 60`, `DWELL_MS = 30000`, `OFF_MS = 20000`, `FADE_U = 30`, `BLINK_MS = 500`, `CROSSING_NEAR_U = 30`, `PRE_DEPART_MS = 5000`, `TRACK_Y = TRACKS_Y[2]` (132.5) y `LEN = trainLen(4)` (46.8).
 - No se mueven `STOP_X` (158), `BUFFER_X` (160), `TRACKS_Y`, `SIGNALS`, `CROSSING`, `STREET_EDGE` (108) ni la caja del tren (y ± 1.7, z ≤ 5.7).
 - Puro y sin Pixi en `src/scenes/`. Sin `setTimeout`/`setInterval`/`Date`/`performance`: el tiempo es el `dtMs` acumulado en `tick` (#192). Sin rng: nada es aleatorio.
-- Acentos solo de la paleta: `cyan` (faros), `magenta` (rojas, paso a nivel, semáforo rojo), `cyanMid` (semáforo verde), `amber`. Nada de hex fuera de `palette-base.ts` y `palette-iso.ts` (guarda de paleta).
+- Acentos solo de la paleta (`ACCENT_COLORS`, `palette-iso.ts:87`), sin blanco/rojo/verde: `cyan` (faros), `magenta` (rojas, paso a nivel, semáforo rojo), `cyanMid` (semáforo verde); `emu` ya usa además `amber` (cartel) y `cyanBleed` (salón). Radios del issue: paso a nivel r 0.45, semáforos r 0.4. Nada de hex fuera de `palette-base.ts` y `palette-iso.ts` (guarda de paleta).
 - Comentarios y docstrings en castellano rioplatense, con la densidad de `sea-anim.ts` y `train.ts`.
-- Al final de cada tarea: sus tests y `npm run typecheck` en verde. Al final de la Task 4: `npm test` entero en verde.
+- Al final de cada tarea: sus tests en verde y `npm run typecheck` sin errores fuera de los archivos de test de tareas posteriores (`tsconfig.json` incluye `src`, así que los tests de stage 3 de las Tasks 2–4 no compilan hasta que exista lo que importan; ver A9). Al final de la Task 4: `npm run typecheck` limpio y `npm test` entero en verde.
 
 ## Review Focus
 
@@ -37,6 +37,10 @@
 - **A5. `tag`** se exporta desde `src/world/assemble.ts` para que `storybook.ts` etiquete el animador de la pieza con la zona del exhibit.
 - **A6. Semáforos.** Un dot por semáforo en `(s.x + 0.25, s.y + 0.25)`, el centro del poste: rojo `magenta` r 0.4 a z 4.4, verde `cyanMid` r 0.4 a z 3.9. Orden: `[in, out]`.
 - **A7. Capa `rail.train` en `off`.** Sigue emitiendo los sólidos en el x0 final de `out` con `alpha 0`. No hay cambio de `x0`/`lead`/`alpha` durante `off`, así que no redibuja.
+- **A9. Typecheck por tarea.** Los tests de stage 3 se escriben todos antes de la Task 1 (lo pide el pipeline) y `tsconfig.json` (`include: ["src", …]`) los compila. Hasta la Task 4, "typecheck limpio" significa sin errores en archivos que no son tests de una tarea posterior. Alternativa rechazada: excluir los tests del typecheck (cambia la configuración del repo).
+- **A10. `tick` y el primer tick.** Como en `sea-anim.ts`, `if (reducedMotion || dtMs <= 0) return` sin cambios va antes de consumir `first`. Un `tick(0)` inicial no marca nada y no consume el primer tick.
+- **A11. Memo de `train()`.** Una sola ranura con la última clave `(x0, lead)`. No es un mapa.
+- **A12. Si la oclusión con posiciones reales falla.** El recorrido es el mismo que ya barre `train-occlusion.test.ts` (#280), de x0 −448.8 a 111.2. Este plan no toca flora ni escenas estáticas: si el test encuentra un sólido delante, el implementador lo reporta y no mueve nada (reglas que hereda el issue).
 - **A8. Capturas** `tren.png`, `paso-a-nivel.png` y `tren-llegando.png` en `docs/superpowers/specs/assets/2026-10-27-estacion/`, a 3200×1800 (viewport 1600×900, escala 2). Las toma el orquestador al final de stage 4 con agent-browser. Para el paso a nivel con el tren cerca se usa el método del CLAUDE.md: avanzar el ticker con `deltaMS` fijo. No es tarea de un implementador.
 
 ## Tests de stage 3
@@ -57,10 +61,10 @@ Los escribe el orquestador antes de la Task 1, en rojo: `src/scenes/rail-anim.te
 
 - [ ] **Step 1:** Tests de stage 3 (ya escritos):
   - "ciclo": `trainStateAt(0)` con `x0 + LEN === ENTRY_X` y `alpha 0`; `trainStateAt(IN_MS)` con `phase "dwell"`, `x0 + LEN` a 1e-6 de `STOP_X` y `alpha 1`; muestras de la espera en `STOP_X − LEN` con `lead "e"`; `trainStateAt(phaseStart("off") − 1e-6)` con `x0 + LEN ≤ ENTRY_X + 1e-6` y `alpha 0`; en `off`, `alpha 0`; `trainStateAt(CYCLE_MS − 1).phase === "off"`; `lead` es `"e"` en `in` y `"w"` en `out`; `IN_MS ≈ 25833.33`, `CYCLE_MS ≈ 101666.67`.
-  - "continuidad en los bordes de fase" (Review Focus 1).
+  - "continuidad en los bordes de fase" (Review Focus 1): `x0` continuo a 1e-6 en los tres bordes; en `phaseStart("off")` la fase es `off`, con el x0 final de `out`, `alpha 0` y `lead "w"`; en `IN_MS` la fase es `dwell` con `lead "e"`.
   - "invariantes" cada 250 ms: `x0 + LEN ≤ BUFFER_X`; `alpha` en [0, 1]; `alpha` monótono no decreciente mientras el frente avanza los primeros `FADE_U` u y no creciente mientras la cola recorre los últimos `FADE_U` u.
   - "paso a nivel: activo": inactivo en `ms = 0` y a mitad de la espera; activo en `dwell` con `msInPhase = DWELL_MS − PRE_DEPART_MS`; activo en `in` cuando el frente pasa x 70 y en `out` mientras la formación corta [70, 138]; inactivo en `out` cuando la cola pasa por debajo de 70.
-  - "semáforos": entrada verde en `ms = 0` y roja apenas el frente pasa 96; salida roja al principio de la espera y verde desde `DWELL_MS − PRE_DEPART_MS`; en `out`, verde mientras `x0 + LEN ≥ 108` y roja cuando la cola pasa por debajo de 108; en `off`, los dos rojos.
+  - "semáforos": entrada verde en `ms = 0` y roja apenas el frente pasa 96; salida roja al principio de la espera y verde desde `DWELL_MS − PRE_DEPART_MS`; en `out`, verde mientras `x0 + LEN ≥ 108` y roja cuando la cola pasa por debajo de 108; en `off`, los dos rojos; "lo demás rojo" (issue): la salida en `in` y la entrada en `dwell` y `out`, siempre rojas.
 - [ ] **Step 2:** `npx vitest run src/scenes/rail-anim.test.ts` → FAIL (no existe el módulo).
 - [ ] **Step 3:** Implementar en `rail-anim.ts`. Cinemática de A1, por tramos con fórmulas cerradas (sin integrar). `alpha = clamp((x0 + LEN − ENTRY_X) / FADE_U, 0, 1)`. `crossingActive` corta `[x0, x0 + LEN]` contra `[CROSSING.x0 − CROSSING_NEAR_U, CROSSING.x1 + CROSSING_NEAR_U]`. El docstring del módulo explica el ciclo y anota el desvío de §7 (el paso a nivel no titila durante la espera salvo los últimos 5 s).
 - [ ] **Step 4:** `npx vitest run src/scenes/rail-anim.test.ts -t "ciclo|continuidad|invariantes|activo|semáforos"` → PASS; `npm run typecheck` → limpio.
@@ -80,7 +84,7 @@ Los escribe el orquestador antes de la Task 1, en rojo: `src/scenes/rail-anim.te
   - "luces": tras avanzar a un instante de `in`, los dots `cyan` de `train().lights` tienen x mayor que todo sólido (punta este) y los `magenta` x menor; en `out`, al revés; los dos `amber` están uno en cada punta.
   - "parpadeo": con el paso a nivel activo, `crossing()` da 2 dots `magenta` r 0.45, uno por poste, a z `h − 0.4`; tras `BLINK_MS` cada dot cambia de y por 1 (y la x queda igual). Inactivo, `[]`.
   - "semáforos (acentos)": dot `magenta` a z 4.4 si es rojo y `cyanMid` a z 3.9 si es verde, en `(s.x + 0.25, s.y + 0.25)`.
-  - "tick": el primer tick marca los tres; a mitad de `dwell` (no en los últimos 5 s) un tick de 100 ms no marca nada; en `in`, `train` marca en cada tick; `crossing` marca al cambiar el paso de parpadeo; `tick(CYCLE_MS * 3 + 1234)` deja `state()` igual a `trainStateAt(1234)` (Review Focus 2); `tick(0)` después del primero no marca.
+  - "tick": el primer tick marca los tres; a mitad de `dwell` (no en los últimos 5 s) un tick de 100 ms no marca nada; en `in`, `train` marca en cada tick; `crossing` marca al cambiar el paso de parpadeo; `tick(CYCLE_MS * 3 + 1234)` deja `state()` igual a `trainStateAt(1234)` (Review Focus 2); `tick(0)` después del primero no marca; un `tick(0)` inicial no marca y el siguiente `tick(100)` marca los tres (A10).
   - "reducedMotion": `tick` vacío también en la primera llamada; `state()` es `{ phase: "dwell", x0: STOP_X − LEN, lead: "e", alpha: 1 }`; `train().lights` trae `cyanBleed` (salón encendido); `crossing()` es `[]`; `signals()` da dos `magenta`.
   - "invariantes de sólidos": en muestras de 250 ms, cada sólido de `train().solids` cae en y 130.8..134.2 y z 0..5.7.
   - "tope de caras": `train().solids` tesela en ≤ 600 caras en 20 muestras repartidas en el ciclo.
@@ -138,3 +142,11 @@ Los escribe el orquestador antes de la Task 1, en rojo: `src/scenes/rail-anim.te
 
 - Dev server y el script `.scratch/evals-281.md` con agent-browser: `/lab/world.html?speed=4` con `1`, `/lab/storybook.html#tren`, `#paso-a-nivel` y `#estacion`.
 - Capturas de A8, commiteadas en `docs/superpowers/specs/assets/2026-10-27-estacion/`.
+
+## Grilling
+
+- Una ronda (griller: fable). 18 preguntas; los cambios fueron aclaraciones y tests agregados, sin pasos nuevos ni costura distinta, así que no hubo segunda ronda.
+- Fuentes: ISSUE 7 (2, 3, 5, 8, 10, 12, 14), CODE 10 (1, 4, 5, 6, 7, 11, 13, 15, 16, 18) y NO SOURCE 4 (1, 9, 11, 17) con algunas preguntas citando ambas. Las cuatro sin fuente son supuestos técnicos.
+- Supuestos agregados: A9 (typecheck por tarea), A10 (`tick(0)` inicial), A11 (memo de una ranura), A12 (oclusión: reportar, no mover). Se aclaró A1 contra la fórmula literal del issue (`CYCLE_MS = IN_MS + DWELL_MS + OUT_MS + OFF_MS`). A3 queda: la alternativa rechazada es cambiar la regla de `cropAnimators` (`crop.ts:77-90`), que afecta a todos los exhibits de región.
+- Tests agregados: los aspectos "lo demás rojo", el `tick(0)` inicial y `alpha`/`lead` en los bordes de fase.
+- Issues abiertos: ninguno. Ambigüedades de spec: ninguna.
