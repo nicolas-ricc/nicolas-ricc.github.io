@@ -105,6 +105,23 @@ describe("world", () => {
     }
   });
 
+  it("el astillero en la banda norte no toca el desvío, los vagones, la locomotora ni la grúa torre (#247)", () => {
+    const w = world(7);
+    const siding = w.factory!.ground.filter((s) => s.kind === "strip").map(bounds).filter((b) => b.min.y >= -9.01 && b.max.y <= -6.99); // rieles del desvío
+    const pieces = w.factory!.solids.filter((s) => !isFlat(s)).map(bounds).filter((b) => b.min.y >= -13.1 && b.max.y <= -6.7); // vagones, locomotora y grúa torre
+    expect(siding).toHaveLength(2);
+    expect(pieces.length).toBeGreaterThanOrEqual(8);
+    const band = w.shipyard!.solids.filter((s) => s.kind !== "cone" && bounds(s).max.y < 0 && bounds(s).min.x < 198); // sin muelle ni bolardos
+    expect(band.length).toBeGreaterThanOrEqual(40);
+    for (const s of band) {
+      const b = bounds(s), where = JSON.stringify(s).slice(0, 90);
+      expect(b.min.y, where).toBeGreaterThanOrEqual(-60);
+      for (const o of [...siding, ...pieces]) {
+        expect(b.max.x <= o.min.x + 1e-9 || o.max.x <= b.min.x + 1e-9 || b.max.y <= o.min.y + 1e-9 || o.max.y <= b.min.y + 1e-9, where).toBe(true);
+      }
+    }
+  });
+
   it("el landmark del Blog cae en la fosa y el sangrado existe solo con el mundo entero", () => {
     expect(worldZoneAt(LANDMARKS.blog.x, LANDMARKS.blog.y)).toBe("blog");
     expect(world(7).terrain.bleed.length).toBeGreaterThan(0);

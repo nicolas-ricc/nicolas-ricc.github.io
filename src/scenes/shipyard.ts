@@ -7,12 +7,13 @@ import { jungle as flora } from "./flora";
 
 
 /**
- * Portfolio: astillero en 2.5D. Mismo plano que terrain.ts: gradas que
- * terminan en el agua, calle de transferencia N-S, ribera dragada recta
- * en QUAY_X, dique seco al NE, playa al SO, muelle de alistamiento
- * del otro lado del río. Coordenadas en unidades del mapa viejo (1 u ≈ 1 px).
- * Las naves de montaje, los talleres y el patio de material se rearman en la
- * banda norte (`y −58..−16`) en otro hijo de #238.
+ * Portfolio: astillero en 2.5D. Mismo plano que terrain.ts: gradas al este de
+ * la calle de transferencia N-S, que terminan en el agua; ribera dragada
+ * recta en QUAY_X, dique seco al NE, playa al SO, muelle de alistamiento del
+ * otro lado del río. Las naves de montaje, los talleres y el patio de
+ * material van al norte, detrás de la fábrica, en la banda `y −58..−16`; la
+ * fábrica de Portfolio queda entre la calle y la playa de vías. Coordenadas
+ * en unidades del mapa viejo (1 u ≈ 1 px).
  */
 
 export interface Scene {
@@ -30,6 +31,8 @@ const STREET_X = 100, STREET_W = 8;
 export const STREET_EDGE = STREET_X + STREET_W; // x donde empiezan los faroles
 const ROW_Y = [36, 56] as const;
 const ROW_H = 16;
+const HALL_X = 10, HALL_W = 90, HALL_H = 10;
+const HALL_ROWS_Y = [-52, -32] as const; // naves de montaje, en la banda norte
 const SLIP_X = 110;
 export const RAIL_Y = [131, 134] as const; // vías del oeste; el hinterland las prolonga hacia el oeste hasta el borde del sangrado
 const GANTRY_X = 150, GANTRY_H = 24;
@@ -45,6 +48,14 @@ const strip = (path: Vec2[], width: number, z: number, mat: Solid["mat"]): Solid
 function quay(out: Solid[]): void {
   out.push(prism(QUAY_X, WORLD.y0, WATER_Z, QUAY_W, BOTTOM - WORLD.y0, 1.5, "concrete"));
   for (let y = WORLD.y0 + 6; y < BOTTOM; y += 12) out.push({ kind: "cylinder", at: v3(QUAY_X + 2, y, 0.5), r: 0.7, h: 1, mat: "steel", sides: 6 });
+}
+
+function halls(out: Solid[]): void {
+  for (const y of HALL_ROWS_Y) {
+    out.push(prism(HALL_X, y, 0, HALL_W, ROW_H, HALL_H, "concrete", "gable"));
+    out.push(prism(HALL_X + HALL_W - 8, y + 2, 0, 2, 3, 2, "rust"));   // autoelevador esperando en el portón este
+    out.push(prism(HALL_X + 2, y + ROW_H - 5, 0, 3, 2, 2, "steel"));   // otro en el portón oeste
+  }
 }
 
 function street(out: Solid[]): void {
@@ -90,6 +101,22 @@ function gantry(out: Solid[]): { trolley: Solid & { kind: "prism" }; range: [num
   return { trolley, range };
 }
 
+// ---------------------------------------------------------------- patio de material (banda norte)
+
+function materialYard(out: Solid[], rng: Rng): void {
+  for (const [x, y] of [[104, -58], [118, -58], [104, -50], [118, -50], [132, -56]] as const) { // chapas apiladas con desfase
+    const layers = rng.int(2, 4);
+    for (let l = 0; l < layers; l++) out.push(prism(x + l * 0.4, y + l * 0.4, l * 0.5, 10, 2, 0.5, "steel"));
+  }
+  for (const [x, y] of [[104, -42], [122, -42], [140, -44]] as const) { // mazos de caños
+    for (let i = 0; i < 4; i++) out.push(prism(x, y + i * 1.2, 0, 14, 1, 1, "rust"));
+  }
+  for (let i = 0; i < 6; i++) out.push({ kind: "cylinder", at: v3(149 + (i % 3) * 5, -57 + Math.floor(i / 3) * 5, 0), r: 1.5, h: 1.5, mat: "rust", sides: 8 }); // bobinas
+  for (let i = 0; i < 4; i++) out.push(prism(150 + (i % 2) * 12, -46 + Math.floor(i / 2) * 6, 0, 9, 4, 3, "steel", "step")); // secciones de casco
+  out.push({ kind: "cylinder", at: v3(174, -54, 0), r: 5, h: 8, mat: "concrete" });
+  out.push({ kind: "cylinder", at: v3(186, -42, 0), r: 4, h: 6, mat: "concrete" });
+}
+
 // ---------------------------------------------------------------- dique seco (NE)
 
 function dryDock(out: Solid[], ground: Solid[]): void {
@@ -107,6 +134,16 @@ function dryDock(out: Solid[], ground: Solid[]): void {
   out.push({ kind: "hull", at: v3(x + 6, y + d / 2, z), len: 60, beam: 10, h: 5, mat: "hull" });
   out.push(prism(x + 12, y + d / 2 - 2.5, z + 5, 8, 5, 3, "concrete")); // superestructura
   out.push(prism(x + w - 10, 0, 0, 8, 4, 4, "concrete", "step"));       // casa de bombas (x 182..190, no pisa el muelle en 198..202)
+}
+
+// ---------------------------------------------------------------- talleres (banda norte)
+
+function workshops(out: Solid[]): void {
+  for (const x of [106, 134]) {
+    out.push(prism(x, -33, 0, 24, 14, 7, "concrete", "step"));
+    out.push(prism(x + 3, -30, 7, 2, 2, 1, "steel"));
+    out.push(prism(x + 18, -23, 7, 2, 2, 1, "steel"));
+  }
 }
 
 // ---------------------------------------------------------------- playa, prefabricados, vías (SO)
@@ -192,10 +229,13 @@ export function shipyard(rng: Rng): Scene {
   const accents: Accent[] = [];
   const weldSpots: Vec3[] = [];
   quay(solids);
+  materialYard(solids, rng);
   dryDock(solids, ground);
+  halls(solids);
   street(solids);
   slipways(solids, weldSpots);
   const g = gantry(solids);
+  workshops(solids);
   parkingAndRails(solids, rng);
   factory(solids, accents);
   fittingOut(solids, rng);
