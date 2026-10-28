@@ -3,6 +3,8 @@ import { buildRenderList } from "../iso/render-list";
 import { bounds, isFlat, type Solid } from "../iso/solids";
 import { BLEED, WORLD, worldZoneAt } from "../map/geo";
 import { allIsoColors } from "../map/palette-iso";
+import { STAIR_TOWER } from "./boiler-house";
+import { PLANT } from "./factory";
 import { SUBSTATION } from "./substation";
 import { LANDMARKS, world, zoneRng } from "./world";
 
@@ -92,17 +94,30 @@ describe("world", () => {
     }
   });
 
+  it("ningún sólido elevado de otra escena entra a la huella de la planta ni a la playa de camiones (#246)", () => {
+    const w = world(7);
+    const mine = new Set(w.factory!.solids);
+    const others = w.solids.filter((s) => !isFlat(s) && !mine.has(s));
+    const areas = [{ x0: PLANT.x, x1: STAIR_TOWER.x1, y0: PLANT.y - 0.6, y1: PLANT.y + PLANT.d + 1.5 }, { x0: PLANT.x, x1: STAIR_TOWER.x1, y0: PLANT.y + PLANT.d + 1.5, y1: PLANT.y + PLANT.d + 16 }]; // techo desde el alero norte hasta el zócalo; playa al sur
+    for (const s of others) {
+      const b = bounds(s);
+      for (const a of areas) expect(b.max.x <= a.x0 || b.min.x >= a.x1 || b.max.y <= a.y0 || b.min.y >= a.y1, JSON.stringify(s).slice(0, 90)).toBe(true);
+    }
+  });
+
   it("el landmark del Blog cae en la fosa y el sangrado existe solo con el mundo entero", () => {
     expect(worldZoneAt(LANDMARKS.blog.x, LANDMARKS.blog.y)).toBe("blog");
     expect(world(7).terrain.bleed.length).toBeGreaterThan(0);
     expect(world(7, { zones: ["portfolio"] }).terrain.bleed).toEqual([]);
   });
 
-  it("Portfolio con fábrica supera 400 sólidos elevados y la fábrica queda al norte y al oeste del astillero", () => {
+  it("Portfolio con fábrica supera 400 sólidos elevados y la fábrica queda en la columna oeste, el desvío con la grúa o la región nueva (#246)", () => {
     const w = world(7);
     const raised = w.solids.filter((s) => !isFlat(s) && worldZoneAt(bounds(s).min.x, bounds(s).min.y) === "portfolio");
     expect(raised.length).toBeGreaterThan(400);
-    const inNewRegion = (b: ReturnType<typeof bounds>) => b.min.x >= 4 && b.max.x <= 99 && b.min.y >= -4 && b.max.y <= 99; // región que deja el astillero (#238)
-    expect(w.factory!.solids.every((s) => bounds(s).max.y <= 0 || bounds(s).max.x <= 0 || inNewRegion(bounds(s)))).toBe(true);
+    const west = (b: ReturnType<typeof bounds>) => b.max.x <= 0; // columna oeste
+    const sidingAndCrane = (b: ReturnType<typeof bounds>) => b.min.y >= -13.1 && b.max.y <= -6.7; // desvío y grúa torre, que se quedan
+    const inNewRegion = (b: ReturnType<typeof bounds>) => b.min.x >= 4 && b.max.x <= 98.7 && b.min.y >= -4 && b.max.y <= 99; // región que deja el astillero (#238)
+    expect(w.factory!.solids.filter((s) => !west(bounds(s)) && !sidingAndCrane(bounds(s)) && !inNewRegion(bounds(s))).map((s) => JSON.stringify(s).slice(0, 90))).toEqual([]);
   });
 });

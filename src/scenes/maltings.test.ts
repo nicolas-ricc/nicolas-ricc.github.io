@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { isBehind, overlaps, screenBounds, sortByDepth } from "../iso/depth";
 import { bounds, type Plate, type Solid } from "../iso/solids";
+import { translate } from "../iso/translate";
 import { MALT, WATER_TOWER, maltings, waterTower } from "./maltings";
+import { PLANT_SHIFT } from "./plant-frame";
 
 type Kind<K extends Solid["kind"]> = Solid & { kind: K };
 const build = (f: (out: Solid[]) => void): Solid[] => { const out: Solid[] = []; f(out); return out; };
@@ -10,6 +12,17 @@ const near = (a: number, b: number) => Math.abs(a - b) < 1e-6;
 const len = (b: Kind<"beam">) => Math.hypot(b.to.x - b.from.x, b.to.y - b.from.y, b.to.z - b.from.z);
 const meet = (a: Solid, b: Solid) => overlaps(screenBounds(bounds(a)), screenBounds(bounds(b)));
 const cross3d = (a: Solid, b: Solid) => !isBehind(bounds(a), bounds(b)) && !isBehind(bounds(b), bounds(a));
+/** Redondeo a 1e-6: las sumas del traslado mueven una coordenada un ε. */
+const r6 = (v: number): number => Math.round(v * 1e6) / 1e6;
+/** Huella FNV-1a de 32 bits del JSON de los sólidos, con los números redondeados a 1e-6 (como la de la subestación, #244). */
+function fingerprint(solids: readonly Solid[]): string {
+  const json = JSON.stringify(solids, (_k, v: unknown) => (typeof v === "number" ? r6(v) + 0 : v));
+  let h = 0x811c9dc5;
+  for (let i = 0; i < json.length; i++) h = Math.imul(h ^ json.charCodeAt(i), 0x01000193) >>> 0;
+  return h.toString(16).padStart(8, "0");
+}
+/** Huella de la maltería en su marco local (x 20..44, y −46..−16), tomada antes de la mudanza (#246). */
+const LOCAL_FINGERPRINT = "9cc52915";
 
 /** Dimensiones de cada pieza por sus parámetros (D15 del plan): ninguna menor a 0.15. */
 function dims(s: Solid): number[] {
@@ -28,16 +41,26 @@ function plateDims(s: Solid): number[] {
 
 describe("maltería", () => {
   const all = build(maltings);
-  const walls = of(all, "prism").filter((p) => p.mat === "brick" && p.at.x === 20 && p.w === 24);
+  const walls = of(all, "prism").filter((p) => p.mat === "brick" && p.at.x === MALT.x && p.w === MALT.w);
   const ramps = of(all, "ramp");
   const kiln = of(all, "prism").find((p) => p.mat === "brick" && p.w === 6 && p.d === 6)!;
 
-  it("MALT conserva la huella", () => expect(MALT).toEqual({ x: 20, y: -46, w: 24, d: 30, h: 18 }));
+  it("MALT es la huella de antes trasladada PLANT_SHIFT (−15, +90): x 5..29, y 44..74", () => {
+    expect(PLANT_SHIFT).toEqual({ x: -15, y: 90 });
+    expect(MALT.x).toBe(20 + PLANT_SHIFT.x); expect(MALT.y).toBe(-46 + PLANT_SHIFT.y);
+    expect(MALT).toEqual({ x: 5, y: 44, w: 24, d: 30, h: 18 });
+  });
+
+  it("es la maltería de antes trasladada: mismos sólidos, en el mismo orden, desplazados PLANT_SHIFT", () => {
+    expect(all).toHaveLength(18);
+    expect(fingerprint(all.map((s) => translate(s, -PLANT_SHIFT.x, -PLANT_SHIFT.y)))).toBe(LOCAL_FINGERPRINT);
+    expect(walls[0]!.at).toEqual({ x: MALT.x, y: MALT.y, z: 0 }); // ancla legible: el prisma arranca en la esquina de MALT
+  });
 
   it("prisma de ladrillo 24 × 30 × 18 con la fachada del issue (D5)", () => {
     expect(walls).toHaveLength(1);
     const w = walls[0]!;
-    expect(w).toMatchObject({ at: { x: 20, y: -46, z: 0 }, d: 30, h: 18 });
+    expect(w).toMatchObject({ at: { x: MALT.x, y: MALT.y, z: 0 }, d: MALT.d, h: MALT.h });
     expect(w.facade).toEqual({
       floors: 5, cols: 8, window: { w: 0.45, h: 0.5 }, head: "segmental", headMat: "stockbrick", sill: "stockbrick",
       piers: { every: 2, w: 0.5, mat: "stockbrick" }, courses: { mat: "stockbrick", h: 0.35 }, ties: { r: 0.25, mat: "steel" },
@@ -48,18 +71,18 @@ describe("maltería", () => {
     expect(ramps).toHaveLength(6);
     expect(ramps.every((r) => r.mat === "steel" && r.at.z === 18)).toBe(true);
     const full = ramps.filter((r) => r.w === 6).map((r) => [r.at.x, r.at.y, r.d, r.h, r.dir]).sort((a, b) => (a[0] as number) - (b[0] as number));
-    expect(full).toEqual([[20, -40, 24, 6, "w"], [26, -40, 24, 6, "e"], [32, -46, 30, 6, "w"], [38, -46, 30, 6, "e"]]);
+    expect(full).toEqual([[MALT.x, MALT.y + 6, 24, 6, "w"], [MALT.x + 6, MALT.y + 6, 24, 6, "e"], [MALT.x + 12, MALT.y, 30, 6, "w"], [MALT.x + 18, MALT.y, 30, 6, "e"]]);
     const north = ramps.filter((r) => r.w !== 6).map((r) => [r.at.x, r.at.y, r.w, r.d, r.h, r.dir]).sort((a, b) => (a[0] as number) - (b[0] as number));
-    expect(north).toEqual([[20, -46, 2, 6, 2, "w"], [28, -46, 4, 6, 4, "e"]]);
+    expect(north).toEqual([[MALT.x, MALT.y, 2, 6, 2, "w"], [MALT.x + 8, MALT.y, 4, 6, 4, "e"]]);
   });
 
   it("pilastras stockbrick 0.5 × 0.4 adosadas al sur hasta los vértices (D2)", () => {
     const piers = of(all, "prism").filter((p) => p.mat === "stockbrick").map((p) => [p.at.x, p.at.y, p.at.z, p.w, p.d, p.at.z + p.h]).sort((a, b) => a[0]! - b[0]!);
     expect(piers).toHaveLength(5);
-    const want = [[20, 0, 18], [25.75, 0, 24], [31.75, 16.7, 18], [37.75, 0, 24], [43.5, 0, 18]];
+    const want = [[0, 0, 18], [5.75, 0, 24], [11.75, 16.7, 18], [17.75, 0, 24], [23.5, 0, 18]].map(([dx, z0, z1]) => [MALT.x + dx!, z0, z1]);
     piers.forEach((p, i) => {
       const [x, z0, z1] = want[i]!;
-      expect(p[0]).toBeCloseTo(x!, 6); expect(p[1]).toBeCloseTo(-16.4, 6); expect(p[2]).toBeCloseTo(z0!, 6);
+      expect(p[0]).toBeCloseTo(x!, 6); expect(p[1]).toBeCloseTo(MALT.y + MALT.d - 0.4, 6); expect(p[2]).toBeCloseTo(z0!, 6);
       expect(p[3]).toBeCloseTo(0.5, 6); expect(p[4]).toBeCloseTo(0.4, 6); expect(p[5]).toBeCloseTo(z1!, 6);
     });
   });
@@ -67,9 +90,9 @@ describe("maltería", () => {
   it("cuatro cornisas beam stockbrick 0.4 × 0.3 en y −16.3 del alero a la cumbrera (D3)", () => {
     const c = of(all, "beam").filter((b) => b.mat === "stockbrick");
     expect(c).toHaveLength(4);
-    const ends = c.map((b) => [b.from, b.to].map((p) => [p.x, p.z]).sort((a, b) => a[1]! - b[1]!)).sort((a, b) => a[0]![0]! - b[0]![0]!);
-    expect(ends).toEqual([[[20.15, 18.15], [26, 24]], [[31.85, 18.15], [26, 24]], [[32.15, 18.15], [38, 24]], [[43.85, 18.15], [38, 24]]]);
-    for (const b of c) { expect(b.w).toBe(0.4); expect(b.h).toBe(0.3); expect(b.from.y).toBe(-16.3); expect(b.to.y).toBe(-16.3); }
+    const ends = c.map((b) => [b.from, b.to].map((p) => [r6(p.x - MALT.x), p.z]).sort((a, b) => a[1]! - b[1]!)).sort((a, b) => a[0]![0]! - b[0]![0]!);
+    expect(ends).toEqual([[[0.15, 18.15], [6, 24]], [[11.85, 18.15], [6, 24]], [[12.15, 18.15], [18, 24]], [[23.85, 18.15], [18, 24]]]); // x relativas a MALT.x
+    for (const b of c) { expect(b.w).toBe(0.4); expect(b.h).toBe(0.3); expect(b.from.y).toBeCloseTo(MALT.y + MALT.d - 0.3, 9); expect(b.to.y).toBeCloseTo(MALT.y + MALT.d - 0.3, 9); }
   });
 
   it("óculos: en la cara sur de cada rampa de w 6, anillo stockbrick y después vidrio, dentro del piñón (D4)", () => {
@@ -102,22 +125,22 @@ describe("maltería", () => {
   });
 
   it("horno de ladrillo con techo piramidal de pizarra, vértice z 26 (D7)", () => {
-    expect(kiln).toMatchObject({ at: { x: 22, y: -46, z: 18 }, w: 6, d: 6, h: 6 });
+    expect(kiln).toMatchObject({ at: { x: MALT.x + 2, y: MALT.y, z: 18 }, w: 6, d: 6, h: 6 });
     const cone = of(all, "cone");
     expect(cone).toHaveLength(1);
-    expect(cone[0]).toMatchObject({ at: { x: 25, y: -43, z: 24 }, r: 4.2, h: 2, mat: "steel", sides: 4 });
+    expect(cone[0]).toMatchObject({ at: { x: MALT.x + 5, y: MALT.y + 3, z: 24 }, r: 4.2, h: 2, mat: "steel", sides: 4 });
     const b = bounds(cone[0]!);
-    expect(b.min.x).toBeGreaterThanOrEqual(22 - 1e-6); expect(b.max.x).toBeLessThanOrEqual(28 + 1e-6);
-    expect(b.min.y).toBeGreaterThanOrEqual(-46 - 1e-6); expect(b.max.y).toBeLessThanOrEqual(-40 + 1e-6);
+    expect(b.min.x).toBeGreaterThanOrEqual(MALT.x + 2 - 1e-6); expect(b.max.x).toBeLessThanOrEqual(MALT.x + 8 + 1e-6);
+    expect(b.min.y).toBeGreaterThanOrEqual(MALT.y - 1e-6); expect(b.max.y).toBeLessThanOrEqual(MALT.y + 6 + 1e-6);
   });
 
-  it("ninguna pieza mide menos de 0.15 ni pasa de z 26; todo en x 20..44, y −46..−16", () => {
+  it("ninguna pieza mide menos de 0.15 ni pasa de z 26; todo dentro de MALT en planta", () => {
     for (const s of all) {
       for (const d of [...dims(s), ...plateDims(s)]) expect(d).toBeGreaterThanOrEqual(0.15 - 1e-9);
       const b = bounds(s);
       expect(b.max.z).toBeLessThanOrEqual(26 + 1e-9);
-      expect(b.min.x).toBeGreaterThanOrEqual(20 - 1e-9); expect(b.max.x).toBeLessThanOrEqual(44 + 1e-9);
-      expect(b.min.y).toBeGreaterThanOrEqual(-46 - 1e-9); expect(b.max.y).toBeLessThanOrEqual(-16 + 1e-9);
+      expect(b.min.x).toBeGreaterThanOrEqual(MALT.x - 1e-9); expect(b.max.x).toBeLessThanOrEqual(MALT.x + MALT.w + 1e-9);
+      expect(b.min.y).toBeGreaterThanOrEqual(MALT.y - 1e-9); expect(b.max.y).toBeLessThanOrEqual(MALT.y + MALT.d + 1e-9);
     }
   });
 
@@ -145,7 +168,10 @@ describe("tanque de agua", () => {
   const beams = of(all, "beam"), cyls = of(all, "cylinder");
   const cyl = (r: number, z: number) => cyls.find((c) => near(c.r, r) && near(c.at.z, z));
 
-  it("centro (10, −36)", () => expect(WATER_TOWER).toEqual({ x: 10, y: -36 }));
+  it("centro (15, 32), al norte de la maltería (#246)", () => {
+    expect(WATER_TOWER).toEqual({ x: 15, y: 32 });
+    for (const s of all) expect(bounds(s).max.y).toBeLessThan(MALT.y); // patas, escalera y pasarela al norte del muro norte
+  });
 
   it("cuatro patas rust 0.5 inclinadas de 8 × 8 a 5 × 5 y riser central (D8)", () => {
     const legs = beams.filter((b) => b.mat === "rust" && b.w === 0.5);
@@ -180,7 +206,7 @@ describe("tanque de agua", () => {
   it("escalera paralela a la pata sudeste, hasta la pasarela (D10)", () => {
     const ladder = beams.filter((b) => b.w === 0.6);
     expect(ladder).toHaveLength(1);
-    expect(ladder[0]).toMatchObject({ from: { x: 14.5, y: -31.5, z: 0 }, to: { x: 13, y: -33, z: 14 }, h: 0.15, mat: "steel" });
+    expect(ladder[0]).toMatchObject({ from: { x: cx + 4.5, y: cy + 4.5, z: 0 }, to: { x: cx + 3, y: cy + 3, z: 14 }, h: 0.15, mat: "steel" });
   });
 
   it("pasarela r 4.6 a z 14 con ocho postes y ocho tramos de baranda (D11)", () => {
