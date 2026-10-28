@@ -119,6 +119,16 @@ function dryDock(out: Solid[], ground: Solid[]): void {
   out.push(prism(x + w - 10, 0, 0, 8, 4, 4, "concrete", "step"));       // casa de bombas (x 182..190, no pisa el muelle en 198..202)
 }
 
+// ---------------------------------------------------------------- talleres (banda norte)
+
+function workshops(out: Solid[]): void {
+  for (const x of [106, 134]) {
+    out.push(prism(x, -33, 0, 24, 14, 7, "concrete", "step"));
+    out.push(prism(x + 3, -30, 7, 2, 2, 1, "steel"));
+    out.push(prism(x + 18, -23, 7, 2, 2, 1, "steel"));
+  }
+}
+
 // ---------------------------------------------------------------- playa, prefabricados, vías (SO)
 
 function parkingAndRails(out: Solid[], rng: Rng): void {
@@ -207,6 +217,7 @@ export function shipyard(rng: Rng): Scene {
   street(solids);
   slipways(solids, weldSpots);
   const g = gantry(solids);
+  workshops(solids);
   parkingAndRails(solids, rng);
   factory(solids, accents);
   fittingOut(solids, rng);
