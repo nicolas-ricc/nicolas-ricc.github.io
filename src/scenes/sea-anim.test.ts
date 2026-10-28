@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { depthAt } from "./depth-map";
 import type { Accent } from "../iso/accent";
-import { isBehind, overlaps, screenBounds } from "../iso/depth";
+import { hullsIntersect, isBehind, overlaps, screenBounds, screenHull } from "../iso/depth";
 import { convexHull, polyline, v3, type Vec2 } from "../iso/geometry";
 import { project } from "../iso/project";
 import { bounds, hullRings, isFlat, type Bounds, type Solid } from "../iso/solids";
@@ -13,21 +13,6 @@ import { bleedTerrainAt, terrainAt } from "./terrain";
 import { world } from "./world";
 
 const WATER = new Set(["water", "sea", "shore", "abyss"]);
-/** SAT entre dos polígonos convexos: se intersecan si ningún eje (normal de un lado) los separa. */
-const intersects = (a: Vec2[], b: Vec2[]): boolean => {
-  const axes = [a, b].flatMap((poly) => poly.map((p, i) => { const q = poly[(i + 1) % poly.length]!; return { x: p.y - q.y, y: q.x - p.x }; }));
-  return axes.every((n) => {
-    const pa = a.map((p) => p.x * n.x + p.y * n.y), pb = b.map((p) => p.x * n.x + p.y * n.y);
-    return Math.max(...pa) >= Math.min(...pb) && Math.max(...pb) >= Math.min(...pa);
-  });
-};
-/**
- * Hexágono en pantalla de una caja del mundo (envolvente convexa de sus ocho vértices proyectados). El rectángulo
- * de `screenBounds` lo envuelve con mucho aire cuando la caja es larga en diagonal (un carguero con rumbo norte): daba
- * falsos positivos de oclusión con la escollera de la dársena, a 35 u del barco (#83). Dos cajas se superponen en
- * pantalla si se cortan sus hexágonos.
- */
-const screenHull = (b: Bounds): Vec2[] => { const pts: Vec2[] = []; for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) pts.push(project(v3(x, y, z))); return convexHull(pts); };
 type Static = { b: Bounds; sb: ReturnType<typeof screenBounds>; sh: Vec2[] };
 const staticsOf = (solids: Solid[]): Static[] => solids.map((s) => { const b = bounds(s); return { b, sb: screenBounds(b), sh: screenHull(b) }; });
 /** Caja de alineación del carguero centrado en `p` (z −1..13) y comprobación de que ningún sólido estático que se le superponga en pantalla lo tapa. */
@@ -35,7 +20,7 @@ const expectNotBehind = (statics: Static[], p: { x: number; y: number }, heading
   const parts = ship("cargo", shipAt("cargo", p, heading), heading).solids.map(bounds);
   const sb: Bounds = { min: v3(Math.min(...parts.map((b) => b.min.x)), Math.min(...parts.map((b) => b.min.y)), -1), max: v3(Math.max(...parts.map((b) => b.max.x)), Math.max(...parts.map((b) => b.max.y)), 13) };
   const scr = screenBounds(sb), sh = screenHull(sb);
-  for (const s of statics) if (overlaps(scr, s.sb) && intersects(sh, s.sh)) expect(isBehind(sb, s.b)).toBe(false);
+  for (const s of statics) if (overlaps(scr, s.sb) && hullsIntersect(sh, s.sh)) expect(isBehind(sb, s.b)).toBe(false);
 };
 const setup = (reducedMotion = false) => { const w = world(7); return { w, a: createSeaAnim(w.sea!, { reducedMotion }) }; };
 
@@ -120,7 +105,7 @@ describe("dos carriles", () => {
     for (let d = 0; d <= Lb; d += 4) { const p = laneAt("back", d); backs.push(silhouette(p, p.heading)); }
     for (let d = 0; d <= Lo; d += 4) {
       const p = laneAt("out", d), s = silhouette(p, p.heading);
-      for (const b of backs) expect(intersects(s, b)).toBe(false);
+      for (const b of backs) expect(hullsIntersect(s, b)).toBe(false);
     }
   });
 
@@ -130,12 +115,6 @@ describe("dos carriles", () => {
       const p = laneAt(lane, d);
       for (let f = 0; f <= ferry.length; f += 2) { const q = ferry.at(f); expect(Math.hypot(p.x - q.x, p.y - q.y)).toBeGreaterThan(20); }
     }
-  });
-
-  it("intersects (SAT) detecta superposición y separación", () => {
-    const sq = (x: number, y: number): Vec2[] => [{ x, y }, { x: x + 2, y }, { x: x + 2, y: y + 2 }, { x, y: y + 2 }];
-    expect(intersects(sq(0, 0), sq(1, 1))).toBe(true);
-    expect(intersects(sq(0, 0), sq(3, 0))).toBe(false);
   });
 
   it("laneAt('back') interpola el rumbo en los vértices y en el extremo llega con el rumbo del último tramo", () => {

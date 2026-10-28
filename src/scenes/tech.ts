@@ -8,7 +8,9 @@ import { WORLD, ZONE_SPLIT_Y } from "../map/geo";
 import { BLOCK_W, BOULEVARD, CITY_EDGE, SIDEWALK, WEST_QUAY } from "./city-grid";
 import { PLINTH_H, brokenTone, campus, lamp, plazaTone, prism, tiles } from "./city-pieces";
 import { jungle } from "./flora";
+import { RAIL_Y } from "./shipyard";
 import { GREEN_BELT, REACH, SUBURB_COLS, suburbBlocks, type SprawlBlock } from "./sprawl-grid";
+import { TRAIN_CLEAR } from "./station";
 
 /**
  * Distrito tecnológico de Resume: la ciudad sigue hacia el oeste y el sur del
@@ -184,6 +186,6 @@ export function tech(rng: Rng): TechScene {
   }
   avenue(ground, solids, accents);
   quay(solids);
-  jungle(solids, rng, { x0: -238, x1: WORLD.x0 - 2, y0: ZONE_SPLIT_Y + 2, y1: GREEN_BELT.y1 - 2 }, 2);
+  jungle(solids, rng, { x0: -238, x1: WORLD.x0 - 2, y0: ZONE_SPLIT_Y + 2, y1: GREEN_BELT.y1 - 2 }, 2, 0.4, { y: RAIL_Y, train: TRAIN_CLEAR }); // sin conos delante del tren (#280)
   return { ground, solids, accents, towers, signs, telecom: telecomTop, neon: { crowns, mastRing: [3, 6, 9].map((dz) => v3(telecomTop.x, telecomTop.y + 0.6, telecomTop.z - dz)) } };
 }
