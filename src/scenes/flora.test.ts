@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Solid } from "../iso/solids";
 import { createRng, type Rng } from "../map/seed";
-import { jungle } from "./flora";
+import { jungle, type Rails } from "./flora";
 
 describe("flora", () => {
   it("pone n conos de selva dentro del rectángulo, a la altura pedida", () => {
@@ -33,7 +33,7 @@ describe("flora: regla del tren", () => {
   const rails = { y: [131, 134], train: T };
   /** Rng falso: `chance` siempre true; `int` devuelve, en orden, x, y, r, h (el orden de `jungle`). */
   const fixed = (...ints: number[]): Rng => { let i = 0; return { next: () => 0, chance: () => true, int: () => ints[i++]!, pick: (a) => a[0]! }; };
-  const one = (x: number, y: number, r: number, h: number, rl?: Parameters<typeof jungle>[5]): Solid[] => {
+  const one = (x: number, y: number, r: number, h: number, rl?: Rails): Solid[] => {
     const out: Solid[] = [];
     jungle(out, fixed(x, y, r, h), { x0: x, x1: x, y0: y, y1: y }, 1, 0.4, rl);
     return out;
