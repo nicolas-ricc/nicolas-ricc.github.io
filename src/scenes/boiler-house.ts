@@ -32,6 +32,7 @@ const emit = (out: Solid[], build: (o: Solid[]) => void): void => {
   build(local);
   for (const s of local) out.push(translate(s, PLANT_SHIFT.x, PLANT_SHIFT.y));
 };
+
 /** Celosía de ladrillo en damero: placas de 0.5 u cada 1 u sobre la pared `wall` de largo `len` (entero: una placa por unidad), bajo el alero (z 12.8..13.6). */
 function lattice(wall: number, len: number, z0 = 12.8, z1 = 13.6): Plate[] {
   return Array.from({ length: len }, (_, i): Plate => ({ wall, shape: "rect", u0: i / len, u1: (i + 0.5) / len, z0, z1, mat: "brick", toneOffset: -2 }));
@@ -123,16 +124,15 @@ function inclineBeltLocal(out: Solid[]): void {
   }
 }
 
-
-/** Muros, pilastras salientes con zapata, montante y ménsula, zócalo con tubos, techo de pizarra, remate sur y caperuzas. */
+/** Cuerpo de la nave en mundo; ver `naveBodyLocal`. */
 export const naveBody = (out: Solid[]): void => emit(out, naveBodyLocal);
-/** Testero este: marco de pilastras, bandas y cornisa blancas; piñón escalonado de ladrillo con tapa blanca y celosía. */
+/** Testero este en mundo; ver `gableEndLocal`. */
 export const gableEnd = (out: Solid[]): void => emit(out, gableEndLocal);
-/** Cuatro chimeneas metálicas sobre el faldón norte, cada una con cuatro tensores a los faldones. */
+/** Chimeneas metálicas en mundo; ver `metalStacksLocal`. */
 export const metalStacks = (out: Solid[]): void => emit(out, metalStacksLocal);
-/** Torre de escalera de acero junto al testero. */
+/** Torre de escalera en mundo; ver `stairTowerLocal`. */
 export const stairTower = (out: Solid[]): void => emit(out, stairTowerLocal);
-/** Cinta inclinada de la playa de camiones a la tolva junto al alero, con dos caballetes. */
+/** Cinta inclinada en mundo; ver `inclineBeltLocal`. */
 export const inclineBelt = (out: Solid[]): void => emit(out, inclineBeltLocal);
 
 /** Nave de calderas completa: cuerpo, testero, chimeneas metálicas, torre de escalera y cinta inclinada. */
