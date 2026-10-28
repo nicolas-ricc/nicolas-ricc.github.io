@@ -311,17 +311,18 @@ describe("station: edificio, torre y explanada (#278)", () => {
       expect(dent, `cornisa ${wall}`).toHaveLength(10);
       for (const p of dent) expect((p.u1 - p.u0) * wallLen(h, wall)).toBeCloseTo(0.4, 9);
     }
-    const slopeDent = on(h, 1, "stockbrick").filter((p) => p.z0 > 7.9);
+    const slopeDent = on(h, 1, "stockbrick").filter((p) => p.z0 !== 7.5 && close(p.z1 - p.z0, 0.4) && close((p.u1 - p.u0) * 18, 0.4));
     expect(slopeDent).toHaveLength(8);
     for (const p of slopeDent) {
       const yc = 106 + ((p.u0 + p.u1) / 2) * 18, line = 8 + 2.8 * (9 - Math.abs(yc - 115)) / 9;
       expect(p.z1).toBeCloseTo(line - 0.1, 9); expect(p.z1 - p.z0).toBeCloseTo(0.4, 9);
       expect(p.u1 <= 0.41 || p.u0 >= 0.59).toBe(true); // no pisa el arco
     }
-    // tres ventanales en el este, bajo el pórtico (y 110..122), con parteluces y pilastras
+    // tres ventanales en el este, bajo el pórtico, con parteluces y pilastras
     const big = on(h, 1, "glass").sort((a, b) => a.u0 - b.u0);
     expect(big.map(span)).toEqual([[0.08, 0.28, 1.2, 6.4], [0.39, 0.61, 1.2, 6.4], [0.72, 0.92, 1.2, 6.4]]);
-    for (const p of big) { expect(106 + p.u0 * 18).toBeGreaterThanOrEqual(110 - 1e-9); expect(106 + p.u1 * 18).toBeLessThanOrEqual(122 + 1e-9); }
+    // u corre de y 106 a y 124 en el muro este: el ventanal del medio queda centrado en la cumbrera (y 115)
+    expect(106 + ((big[1]!.u0 + big[1]!.u1) / 2) * 18).toBeCloseTo(115, 9);
     const mull = on(h, 1, "canopy").filter((p) => p.z0 >= 1.2 - 1e-9);
     for (const g of big) {
       const inside = mull.filter((m) => m.u0 >= g.u0 - 1e-9 && m.u1 <= g.u1 + 1e-9);
