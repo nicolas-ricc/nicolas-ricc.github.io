@@ -26,10 +26,10 @@ Mitre: edificio de ladrillo con techos de teja, torre del reloj, andenes con
 marquesinas verdes, topes y paso a nivel), con una formación estacionada de tres
 coches en la vía 2 y un tren EMU de cuatro coches (`train.ts`) que entra por la
 vía del oeste desde el borde del sangrado, espera 30 s contra los topes y vuelve
-a salir (`rail.train`, `rail-anim.ts`). Los
-tres barcos (Damen Combi Freighter 3850, Damen ASD Tug 2810 y un empujador
-fluvial con barcaza Jumbo) aparecen en la bocana y recorren dos carriles
-semirrectos: `LANE_OUT` baja hacia abajo-izquierda de la pantalla hasta salir
+a salir (`rail.train`, `rail-anim.ts`). Los tres barcos (Damen Combi
+Freighter 3850, Damen ASD Tug 2810 y un empujador fluvial con barcaza Jumbo)
+aparecen en la bocana y recorren dos carriles semirrectos: `LANE_OUT` baja
+hacia abajo-izquierda de la pantalla hasta salir
 del cover y `LANE_BACK` vuelve a la bocana, donde se desvanecen ("entran a
 puerto"); no fondean ni giran en el lugar. La lancha de la feria es una lancha
 colectiva del Tigre y el pecio de la fosa, un costero partido en dos. El

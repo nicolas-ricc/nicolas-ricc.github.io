@@ -428,9 +428,10 @@ el issue hijo donde está la decisión (#276–#281; este cierre es #282).
   este (`min.x − 1.4·z ≥ 158`) admite topes de hasta h 1.43; el tope mide 1.2
   (`BUFFER_H`).
 - **§4.2 y §5.4, formación estacionada de 3 coches en la vía 2, no de 4 en la
-  vía 1 (#279):** el tramo recto de la vía 1 va de x 134 a 160 (26 u); con el
-  frente en `STOP_X` 158 deja 24 u, y una formación de 4 coches mide 46.8. La vía 2 (x 121..160) aloja 3 coches
-  (35.2 u): x 122.8..158 (`PARKED`). El tren animado sí es de 4.
+  vía 1 (#279):** el tramo recto de la vía 1 va de x 134 a 160 (26 u); con
+  el frente en `STOP_X` 158 deja 24 u, y una formación de 4 coches mide 46.8.
+  La vía 2 (x 121..160) aloja 3 coches (35.2 u): x 122.8..158 (`PARKED`). El
+  tren animado sí es de 4.
 - **§7, animador sin rng (#281):** no hay `createRng(SEED + n)` para el tren.
   Nada es aleatorio: el ciclo es una función cerrada de los ms.
 - **§7, ciclo ≈ 101.7 s, no ≈ 120 (#281):** sale de las constantes del issue
@@ -440,12 +441,15 @@ el issue hijo donde está la decisión (#276–#281; este cierre es #282).
   el tren siempre corta la ventana del cruce (x 70..138, `CROSSING` ±
   `CROSSING_NEAR_U`) y solo manda ese aviso.
 - **§6.1, extensión del kit (#276):** `roofMat` en `prism` (las dos vertientes
-  de un `gable` con otro material que los muros) y `plates` en `gable`. Materiales nuevos `tile`, `canopy` y `livery`, con sus
-  tonos pegados desde `npm run palette`.
-- **§6.3, +20 % de caras no aplicable:** lo que salió con la calderería (con
-  sus faroles y secciones) pesaba 138 caras (42 sólidos, medido con `tessellate` en la planificación de
-  #239); la estación de #277 trae 376 estáticas. La resta neta da 137 porque
-  #277 cambia una cara más en otro lado. El total del astillero pasa de 1061 a 1586
+  de un `gable` con otro material que los muros) y `plates` en `gable`.
+  Materiales nuevos `tile`, `canopy` y `livery`, con sus tonos pegados desde
+  `npm run palette`.
+- **§6.3, +20 % de caras no aplicable:** lo que salió con la calderería
+  (`factory()` más las secciones prefabricadas de `parkingAndRails` y los
+  faroles de (112, 124) y (174, 124)) pesaba 138 caras y 42 sólidos, medido con
+  `tessellate` en el comentario de planificación de #239; la estación de #277
+  trae 376 estáticas. La resta neta (1061 + 376 − 1300) da 137; la diferencia
+  de una cara no se rastreó. El total del astillero pasa de 1061 a 1586
   (+49.5 %); la historia #239 ya había descartado el +20 % como criterio y lo
   midió en este cierre. Desglose en §12.1.
 - **§6.2, conos perdidos (#280):** 11 conos de selva, por escena:
@@ -503,8 +507,9 @@ muestra el panel del storybook, con la caja de cada árbol; las piezas, con
 
 `estacion`, `paso-a-nivel` y `tren` no existen en `main`. `calle-faroles`
 baja de 35 a 31 con los mismos 14 sólidos: la caja (x 99..111, y 8..128) ya no
-toma dos durmientes `rust` de la calderería (x 110..112, y 101..104 y
-111..114; −6 caras) y sí dos rieles del abanico que la cruzan (+2). El
+toma dos autoelevadores `rust` de la calderería (x 110..112, y 101..104 y
+111..114; −6 caras) y sí dos rieles del abanico cuya caja solapa la de la
+calle (+2). El
 exhibit `tren` da 144 caras: 138 del tren (25 sólidos) y 6 de la losa
 `paving` de la pieza.
 
@@ -596,12 +601,15 @@ los rastros de la grúa, los barcos y otras animaciones son de otras zonas.
 
 Observaciones, **sin defectos de la estación vistos**:
 
-- En `estacion-despues.png` sale hacia arriba a la izquierda una franja gris
-  larga y diagonal, y en `paso-a-nivel-despues.png` hay grandes polígonos
-  grises (caja del panel 0..160 × 0..142). No son defectos de la estación: el
-  recorte del storybook conserva entero todo sólido que solape la caja
-  (`cropSolid`, `src/lab/crop.ts:28`), así que el `strip` largo de la calle de
-  transferencia (x 100..108) y los de la vía del oeste se ven sin cortar. Lo
+- En `estacion-despues.png` sale hacia arriba a la derecha (hacia −y) una
+  franja gris larga y diagonal, y en `paso-a-nivel-despues.png` hay grandes
+  polígonos grises (caja del panel 0..160 × 0..142). No son defectos de la
+  estación: el recorte del storybook conserva entero todo sólido que solape la
+  caja (`cropSolid`, `src/lab/crop.ts:28`). En `estacion` es el `strip` de la
+  calle de transferencia (x 100..108, y 0..142): con `g` (suelo oculto) la
+  franja desaparece. En `paso-a-nivel` se suman los rieles de la vía del oeste
+  del astillero (x 0..104), que solapan su caja (x0 95). La caja Y −60 del
+  panel de `estacion` es el muelle (x 198..202, y −60..142). Lo
   mismo ya se veía en las capturas de los hijos, `estacion-edificio.png` (#278)
   y `paso-a-nivel.png` (#281). No se abrió issue de seguimiento.
 - Las capturas de la estación en movimiento no se pudieron ver a velocidad

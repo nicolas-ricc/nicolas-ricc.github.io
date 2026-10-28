@@ -11,9 +11,9 @@ import { emu, trainLen } from "./train";
  * marquesinas verdes. Disposición: región `STATION` (x 100..197, y 80..142);
  * vías 1..3 en `TRACKS_Y` con el abanico `LADDER`; andenes `ISLAND`, `SIDE` y
  * `HEAD`; topes en `BUFFER_X`; edificio, torre y explanada al este de `HEAD`; y
- * el paso a nivel sobre la calle, x 100..108. Las constantes son el contrato con los hijos
- * siguientes de #239 (edificio, torre, tren, animador): no cambiar sus
- * valores sin anotarlo. `station()` es determinista y no usa rng; los `strip`
+ * el paso a nivel sobre la calle, x 100..108. Las constantes son el contrato
+ * con los hijos siguientes de #239 (edificio, torre, tren, animador): no
+ * cambiar sus valores sin anotarlo. `station()` es determinista y no usa rng; los `strip`
  * que emite terminan en `ground` por el filtro final de `shipyard()`.
  *
  * La formación de 3 coches (`PARKED`) queda estacionada en la vía 2, con el
