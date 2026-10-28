@@ -169,7 +169,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "monoblock", title: "Monoblock", zone: "cv", group: "tecnologico", kind: "region",
     box: { x0: 132 - M, y0: 448 - M, x1: 132 + BLOCK_W + M, y1: 448 + BLOCK_D + M }, h: 13 },
   { id: "casas", title: "Casas con techo de teja", zone: "cv", group: "tecnologico", kind: "region",
-    box: { x0: 132 - M, y0: 520 - M, x1: 132 + BLOCK_W + M, y1: 520 + BLOCK_D + M }, h: 5 },
+    box: { x0: 132 - M, y0: 520 - M, x1: 132 + BLOCK_W + M, y1: 520 + BLOCK_D + M }, h: 8 },
   { id: "escuela", title: "Escuela", zone: "cv", group: "tecnologico", kind: "region",
     box: { x0: SCHOOL.x - M, y0: SCHOOL.y - M, x1: SCHOOL.x + BLOCK_W + M, y1: SCHOOL.y + BLOCK_D + M }, h: 6 },
   { id: "club", title: "Club", zone: "cv", group: "tecnologico", kind: "region",
@@ -177,7 +177,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "plaza-barrio", title: "Plaza de barrio", zone: "cv", group: "tecnologico", kind: "region",
     box: { x0: PLAZAS[0].x - M, y0: PLAZAS[0].y - M, x1: PLAZAS[0].x + BLOCK_W + M, y1: PLAZAS[0].y + BLOCK_D + M }, h: 5 },
   { id: "costanera", title: "Costanera", zone: "cv", group: "tecnologico", kind: "region",
-    box: { x0: 184, y0: 480, x1: 199, y1: 560 }, h: 5 },
+    box: { x0: 184, y0: 480, x1: 199, y1: 560 }, h: 8 },
   { id: "barrio", title: "Barrio costero", zone: "cv", group: "tecnologico", kind: "region",
     box: { x0: 40, y0: 470, x1: 199, y1: 612 }, h: 10 },
   // el haz nace en la linterna y gira: apuntando al norte su punta sube BEAM_LEN/√2 en pantalla, y el vértice norte de la caja ya está DRUM_R0 + M más arriba que el faro
