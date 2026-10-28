@@ -64,7 +64,7 @@ function offPaths(b: SprawlBlock, s: Solid): boolean {
 /** Grupos que no pueden solaparse entre sí: cada juego, cada banco, cada árbol. */
 const groups = (p: Parts): Solid[][] => [[...p.ring, ...p.roof], [...p.platform, ...p.ramp], [...p.posts, ...p.beam, ...p.seats], p.sand, ...p.benches.map((s) => [s]), ...p.trees.map((s) => [s])];
 
-/** Senderos, calesita, tobogán, hamacas y arenero según el issue y la paridad (Task 1). */
+/** Senderos, calesita, tobogán, hamacas y arenero según la paridad. */
 function checkPlay(b: SprawlBlock, p: Parts): void {
   const at = `${b.x},${b.y}`, { x, y } = b;
   expect(p.strips, at).toHaveLength(0);
@@ -98,7 +98,7 @@ function checkPlay(b: SprawlBlock, p: Parts): void {
   expect(quadrant(b, [one(p.sand, `arenero ${at}`)]), at).toBe("NO");
 }
 
-/** Bancos, árboles, faroles, senderos libres y sin solapes (Task 2). */
+/** Bancos, árboles, faroles, senderos libres y sin solapes. */
 function checkRest(b: SprawlBlock, p: Parts, dots: readonly (Accent & { kind: "dot" })[]): void {
   const at = `${b.x},${b.y}`;
   expect(p.benches, at).toHaveLength(2);
