@@ -6,6 +6,7 @@ import type { Solid } from "../iso/solids";
 import { MOUTH_Y, QUAY_X, type WorldZone } from "../map/geo";
 import type { Material } from "../map/palette-iso";
 import { createRng, SEED } from "../map/seed";
+import type { Animator } from "../scenes/animator";
 import { BLOCK_D, BLOCK_W, BRIDGE, COLLAPSED, DISTRICT_COLS, DISTRICT_ROWS, EAST_COLS, MALECON, PLAZA, ROWS, SITE, TOWER, TOWER_H, WEST_COLS } from "../scenes/city-grid";
 import { campus, lamp } from "../scenes/city-pieces";
 import { STAIR_TOWER } from "../scenes/boiler-house";
@@ -17,15 +18,13 @@ import { ARCADE, BUMPER, CAROUSEL, COASTER, DROP, PIER, WHEEL } from "../scenes/
 import { jungle } from "../scenes/flora";
 import { CONTAINER_YARD, COOLING, POWER, PYLON_H, PYLON_N, PYLON_STEP, PYLON_X0, PYLON_Y, SILOS, STACKS_N, TANKS } from "../scenes/hinterland";
 import { towerCrane } from "../scenes/pieces";
+import { pieceTrain, trainPieceAnimator } from "../scenes/rail-animator";
 import { BUOYS, DRUM_R0, KEEPER, LANTERN_Z, LIGHTHOUSE, WRECK } from "../scenes/sea";
 import { BEAM_LEN } from "../scenes/sea-anim";
 import { ship, shipAt, type ShipKind } from "../scenes/ships";
 import { SUBURB_COLS } from "../scenes/sprawl-grid";
 import { SUBSTATION } from "../scenes/substation";
 import { ARENA, AUDITORIUM, TELECOM } from "../scenes/tech";
-import type { Animator } from "../scenes/animator";
-import { trainPieceAnimator } from "../scenes/rail-animator";
-import { emu, trainLen } from "../scenes/train";
 import type { Box } from "../world/frame";
 
 export type GroupId = "fabrica" | "astillero" | "hinterland" | "feria" | "ciudad" | "tecnologico" | "mar";
@@ -102,7 +101,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "punta-norte", title: "Punta norte de la isla", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 270, y0: 0, x1: 350, y1: 60 }, h: 9 },
   // la estación terminal: x 108..198, y 98..143; h medido como en punta-norte: lo fija el remate de la torre del reloj, z 29 (la estación no emite humo)
   { id: "estacion", title: "Estación terminal", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 108, y0: 98, x1: 198, y1: 143 }, h: 29 },
-  // el paso a nivel: x 95..112, y 124..142; x0 95 (no 98) para que el semáforo de entrada (poste en x 96.1..96.4) quede adentro: sin eso `cropAnimators` descarta el animador del tren en ms 0; h medido igual: lo fija el farol de la calle en (108.5, 124), a z 5 (los postes del cruce llegan a z 3; los semáforos quedan afuera)
+  // el paso a nivel: x 95..112, y 124..142; x0 95 (no 98) para que el semáforo de entrada (poste en x 96.1..96.4) quede adentro: sin eso `cropAnimators` descarta el animador del tren en ms 0; h medido igual: lo fija el farol de la calle en (108.5, 124), a z 5 (los postes del cruce llegan a z 3 y el semáforo de entrada a 4.7; el de salida queda afuera)
   { id: "paso-a-nivel", title: "Paso a nivel", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 95, y0: 124, x1: 112, y1: 142 }, h: 5 },
   // pluma 24 al este y contrapluma 8 al oeste: con el mástil en x −8 queda en −16..16
   { id: "grua-torre", title: "Grúa torre", zone: "portfolio", group: "astillero", kind: "piece",
@@ -110,7 +109,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "farol", title: "Farol", zone: "portfolio", group: "astillero", kind: "piece", build: (out, accents) => { lamp(out, accents, -0.3, -0.3, 0); } },
   // el EMU de 4 coches centrado en el origen: `build` pone solo los sólidos; las luces (salón, cartel, faros y rojas) las da la capa `tren.lights` de su animador, que invierte la punta cada 4 s
   { id: "tren", title: "Tren EMU de la Mitre", zone: "portfolio", group: "astillero", kind: "piece", pad: "paving",
-    build: (out) => { out.push(...emu(-trainLen(4) / 2, 0, { cars: 4, lead: "e", lit: true }).solids); },
+    build: (out) => { out.push(...pieceTrain("e").solids); },
     animate: trainPieceAnimator },
   { id: "central-termica", title: "Central térmica y torre de enfriamiento", zone: "portfolio", group: "hinterland", kind: "region",
     box: { x0: COOLING.x - COOLING.r - M, y0: POWER.y - M, x1: STACKS_N[0].x + 2 + M, y1: COOLING.y + COOLING.r + M }, h: 30 }, // chimeneas de 28

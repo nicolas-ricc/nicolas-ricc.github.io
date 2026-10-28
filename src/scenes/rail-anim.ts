@@ -1,6 +1,6 @@
 import type { Accent } from "../iso/accent";
-import type { Solid } from "../iso/solids";
 import { v3 } from "../iso/geometry";
+import type { Solid } from "../iso/solids";
 import { WEST_RAIL_X0 } from "./hinterland";
 import { flip } from "./neon";
 import { STREET_EDGE } from "./shipyard";
@@ -135,10 +135,11 @@ export function createRailAnim(opts: { reducedMotion: boolean }): RailAnim {
     },
     signals: () => {
       const a = aspects();
-      return [[SIGNALS.in, a.in], [SIGNALS.out, a.out]].map(([p, asp]): Accent => {
-        const pos = p as typeof SIGNALS.in, red = asp === "red";
-        return { kind: "dot", at: v3(pos.x + 0.25, pos.y + 0.25, red ? 4.4 : 3.9), r: SIGNAL_R_DOT, color: red ? "magenta" : "cyanMid" };
-      });
+      const dot = (p: { x: number; y: number }, asp: Aspect): Accent => {
+        const red = asp === "red";
+        return { kind: "dot", at: v3(p.x + 0.25, p.y + 0.25, red ? 4.4 : 3.9), r: SIGNAL_R_DOT, color: red ? "magenta" : "cyanMid" };
+      };
+      return [dot(SIGNALS.in, a.in), dot(SIGNALS.out, a.out)];
     },
     state: () => s,
     tick(dtMs) {
