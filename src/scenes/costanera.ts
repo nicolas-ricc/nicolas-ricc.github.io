@@ -5,6 +5,8 @@ import { CITY_EDGE, WEST_QUAY } from "./city-grid";
 import { prism } from "./city-pieces";
 import { REACH } from "./sprawl-grid";
 
+export const ACCESSES = [400, 500, 600] as const;
+
 /** Marcador de la costanera: el muro de la ribera oeste con bolardos (el `quay()` de hoy), sin rng. */
 export function costanera(ctx: BarrioCtx): void {
   const { x0, x1 } = WEST_QUAY, y1 = WORLD.y1 + REACH.s;
