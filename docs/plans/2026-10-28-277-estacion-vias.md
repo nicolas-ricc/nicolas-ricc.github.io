@@ -18,13 +18,13 @@
 - Detalle en caras +x, +y y techo; tamaño mínimo 0.15 u.
 - Reglas de oclusión (issue, "Qué hay hoy"): al sur `y_min − 1.4·z_max ≥ 134.5`; al norte `y_max ≤ 130.8`; al este del tope `x_min − y_max ≥ 27.2` o `x_min − 1.4·z_max ≥ 158`.
 - Comentarios y docstrings en castellano rioplatense, densidad como `shipyard.ts` (un comentario corto por pieza).
-- `npm test` y `npm run typecheck` en verde al final de cada tarea.
+- Al final de cada tarea: sus tests en verde y `npm run typecheck` en verde (los tests de stage 3 de tareas posteriores pueden seguir rojos). Al final de Task 5: `npm test` entero en verde.
 
 ## Review Focus
 
 1. **Semáforo de entrada contra el borde x 96.** Con la cabeza de 0.5 centrada en un poste de 0.3 anclado en `SIGNALS.in`, la cabeza arrancaría en x 95.9 y rompería la caja de `STATION` ampliada (x ≥ 96). Convención decidida (A1); la cubre el test de "todo cae en STATION".
 2. **Tercer riel cruzando la calle.** La vía 3 recta arranca en x 104, dentro de la calle (x 100..108): un tercer riel ahí cruzaría el paso a nivel. Decidido en A2; test en stage 3: ningún `strip` `whitewash` de la estación tiene un punto con x < `CROSSING.x1` (108).
-3. **Fajas en muros de altura 0.** El muro sur de la rampa sur y el norte de la rampa norte tienen altura 0: una placa ahí hereda normal nula y `tessellate` la descarta (`solids.ts`, comentario de `RAMP_WALL_EDGE`). Decidido en A3; test en stage 3: el teselado de cada marquesina de andén tiene al menos una cara `whitewash` con `normal.y > 0` y otra con `normal.x > 0`.
+3. **Fajas en muros de altura 0.** El muro sur de la rampa sur y el norte de la rampa norte tienen altura 0: una placa ahí hereda normal nula y `tessellate` la descarta (`solids.ts`, comentario de `RAMP_WALL_EDGE`). Decidido en A3; test en stage 3: cada rampa `canopy` de marquesina, teselada sola, da al menos una cara `whitewash` con `normal.x > 0` (la placa este no se pierde), y por cada marquesina de andén hay un prisma `whitewash` de 0.25 de alto pegado a su borde sur (y0 = y1 de la marquesina).
 4. **Empalme de la vía del oeste con la estación.** Los rieles de `parkingAndRails` terminan en x 104 y los de la vía 3 empiezan en x 104, en las mismas y (131, 134): sin hueco ni solape. Test en `shipyard.test.ts` (stage 3).
 5. **El rng antes de la estación no cambia.** Los cinco autos de la playa siguen iguales con seed 7; la chatarra de `fittingOut` cambia y se re-mide. Test "el rng…" (stage 3).
 
@@ -38,7 +38,22 @@
 - **A6. Franja amarilla** (`safety` 0.3 × 0.15 a z 1): `ISLAND` en sus dos bordes largos (y0..y0+0.3 y y1−0.3..y1), `SIDE` en el sur (y1−0.3..y1), `HEAD` en el oeste (x0..x0+0.3), que da a los topes. Columnas de `HEAD` en x 161.8..162.1, y 104 + 6k (104…128), z 1..3.5.
 - **A7. Excepción "sobre la vía 3"** del test de oclusión: se exceptúa todo sólido con `min.x ≥ BUFFER_X` (topes y andén transversal con lo que lleva encima); el andén transversal cumple la regla del este (161.5 − 131 = 30.5).
 - **A8. Materiales compartidos.** Medido con `world(7)`: la estación agrega a los sólidos de Portfolio `asphalt` (cabezas de semáforo; ciudad) y `deck` (tablones; Blog). `paving` no se usa. `safety`, `canopy` y `signal` no están en la ciudad ni en el Blog.
+- **A10. Docstring de `shipyard.ts`.** Se conserva "la fábrica de Portfolio queda entre la calle y la playa de vías": habla de `factory.ts` (la fábrica, x < 100), no de la calderería. Se reemplaza solo lo que describe la zona al sur de las gradas. Alternativa descartada: reescribir el docstring entero.
+- **A11. Corridas por tarea.** Cada tarea corre sus tests filtrados y `npm run typecheck`; la suite entera, al final de Task 5 y del stage 4. Alternativa descartada: `npm test` verde en cada commit, imposible con los tests de stage 3 de tareas posteriores todavía rojos.
+- **A12. `h` de los exhibits** medido corriendo el test, no con una copia de `measure()`. Alternativa descartada: exportar `measure()` desde un módulo de producción solo para medir.
 - **A9. Acentos del astillero tras el cambio:** `{ cyan: 7, cyanMid: 8, magenta: 3 }` (5 faroles de la calle + 2 del muelle; 3 + 2 + 3 luces de marquesina; 3 luces de tope).
+
+## Tests de stage 3
+
+Los escribe el orquestador antes de Task 1, en rojo. Lista cerrada (el detalle de cada aserción es el de la sección "Tests" del issue; acá, lo que el issue deja abierto):
+
+- `src/scenes/station.test.ts` (nuevo): "constantes" (igualdad con los literales del issue: contrato con #278–#281); "determinista"; "todo cae en STATION (x 96..197, y 80..142) y nada elevado pasa z 6"; "vías: rieles, durmientes y tercer riel" (A2, A5); "abanico"; "andenes y franjas"; "marquesinas: columnas, cabriadas, fajas y luces" (A3, A4; Review Focus 3; 8 `cyanMid`); "topes con luz magenta" (3); "cerco"; "semáforos" (A1); "paso a nivel: tablones, postes y barreras" (A1, cuatro tramos por barrera); "oclusión: reglas sur, norte, este y sobre la vía 3" (A7: las reglas se aplican por geometría a todo sólido no plano de alto > 0.4, no por grupo); vecindades "marquesinas ↔ vías", "andenes ↔ vías", "paso a nivel ↔ calle", "estación ↔ playa", "estación ↔ faroles de la calle y camión" (cajas disjuntas en x, y o z con 1e-9).
+- `src/scenes/shipyard.test.ts`: "la vía del oeste llega a x 104 y la estación la continúa hasta 160" (Review Focus 4); acentos (fuera de la estación cian; en la estación cian, cyanMid o magenta); "el rng…" sin prefabricados y con la chatarra re-medida con `tsx` sobre el código de Task 1 (autos iguales a hoy: `parkingAndRails` siembra los autos antes del bucle borrado, y `factory()` no recibe rng); "no queda nada de la calderería"; "faroles" sin cambios; faroles del muelle en y 20 y 80, ninguno en y 120.
+- `src/scenes/portfolio-accents.test.ts`: `shipyard` → `{ cyan: 7, cyanMid: 8, magenta: 3 }` (A9).
+- `src/scenes/world.test.ts` "no comparten materiales": `asphalt` a la lista de la ciudad y `deck` a la del Blog (A8).
+- `src/lab/exhibits.test.ts`: `CATALOG.astillero` suma `"estacion", "paso-a-nivel"`.
+
+Medición de A8 (`world(7)` en la base, `tsx`): Portfolio `brick concrete glass hull rust signal steel stockbrick whitewash`; ciudad `asphalt curtain leaf leafDark office officeDark paving plaza rust steel stone`; Blog `deck glass hull rock rust steel whitewash`.
 
 ---
 
@@ -89,7 +104,15 @@
 **Files:** Modify `src/lab/exhibits.ts` (dos regiones tras `punta-norte`, comentario de una línea cada una como sus vecinos). Tests ya ajustados en stage 3: `exhibits.test.ts` (`CATALOG`), `world.test.ts`, `portfolio-accents.test.ts`.
 
 - [ ] **Step 1:** `npx vitest run src/lab/exhibits.test.ts src/scenes/world.test.ts src/scenes/portfolio-accents.test.ts` → FAIL solo por `CATALOG` (los otros dos pasan desde Task 4).
-- [ ] **Step 2:** `estacion` `{ x0: 108, y0: 98, x1: 198, y1: 143 }` y `paso-a-nivel` `{ x0: 98, y0: 124, x1: 112, y1: 142 }`, grupo `astillero`, zona `portfolio`, `h` = el menor entero que pasa "encuadre" y "vecinos": medirlo con un script `tsx` en `.scratch/` que llame al mismo cálculo que `measure()` (`ceil(max(inside, accents, neighbour))`), y anotar en el comentario que se midió así.
+- [ ] **Step 2:** `estacion` `{ x0: 108, y0: 98, x1: 198, y1: 143 }` y `paso-a-nivel` `{ x0: 98, y0: 124, x1: 112, y1: 142 }`, grupo `astillero`, zona `portfolio`, `h` = el menor entero que pasa "encuadre" y "vecinos". `measure()` no se exporta (vive en `exhibits.test.ts`): no se duplica; se baja `h` de a uno corriendo `npx vitest run src/lab/exhibits.test.ts -t astillero` hasta el menor que pasa, y el comentario dice que se midió así (como `punta-norte`).
 - [ ] **Step 3:** `npm test && npm run typecheck` → PASS. Commit `feat(#277): exhibits estacion y paso-a-nivel`.
 
 Después de Task 5, el orquestador saca `estacion-vias.png` (exhibit `#estacion`, 1600×900 a 2x) y corre `.scratch/evals-277.md`.
+
+## Grilling
+
+- Rondas: 1 (los cambios agregan detalle sin cambiar ninguna tarea ni ninguna costura: no hubo segunda ronda). Griller: `fable`.
+- 18 preguntas: 6 respondidas con el issue (constantes, reglas de oclusión por geometría, `RAIL_Z` y tablones, `CROSSING` y barreras, vecindades nombradas, región `STATION`); 6 con el código (`shipyard.ts:258` filtra por `kind === "strip"`; autos antes del bucle borrado y `factory()` sin rng; `measure()` sin exportar en `exhibits.test.ts`; #276 ya en la base, con `canopy`/`tile`/`livery` en `palette-iso.ts`; `palette-guard.test.ts` y `pixi-free.test.ts`; las listas de `world.test.ts:68,72` y `portfolio-accents.test.ts`); 6 sin fuente, todas supuestos técnicos.
+- Supuestos agregados: A10–A12, la sección "Tests de stage 3", Review Focus 3 endurecido (la placa este se verifica en la rampa sola), el conteo de 8 `cyanMid` fijado en `station.test.ts` y la corrida por tarea en Global Constraints.
+- Ambigüedades de spec: ninguna. Issues abiertos: ninguno.
+- Resultado: `ok`.
