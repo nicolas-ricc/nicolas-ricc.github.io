@@ -9,14 +9,14 @@ import { EXCAVATOR, excavator, excavatorBox, local } from "./excavator";
 import { jungle } from "./flora";
 import { MALT, maltings, waterTower } from "./maltings";
 import { towerCrane } from "./pieces";
-import { substation } from "./substation";
+import { SUBSTATION, substation } from "./substation";
 
 /**
  * Fábrica, detrás (al norte) y al oeste del astillero. Banda norte
  * `x -60..205, y -60..0` al oeste del río: nave de calderas (Fábrica de Luz) y,
  * al oeste, la maltería de Mistley y un tanque de agua sobre patas, tres chimeneas humeantes, torre de
- * enfriamiento, grúa torre sobre un desvío ferroviario, subestación de intemperie (`substation.ts`) y
- * playa de camiones. Columna oeste `x -60..0, y 0..146`: playa de vías,
+ * enfriamiento, grúa torre sobre un desvío ferroviario y playa de camiones. Al sur del desvío, ya fuera de la banda
+ * (mudanza de #238), la subestación de intemperie (`substation.ts`, x 54..95, y −2..11). Columna oeste `x -60..0, y 0..146`: playa de vías,
  * excavadora de rueda de cangilones y acopios de mineral, selva al sur. El terreno es `slab`.
  * Spec: docs/superpowers/specs/2026-09-14-mundo-2-fabrica-distrito-blog-design.md §5.
  * Detalle de planta, chimeneas, subestación y excavadora: docs/superpowers/specs/2026-10-24-fabrica-detalle-design.md.
@@ -127,7 +127,8 @@ function railYard(out: Solid[], machine: Solid[], accents: Accent[], rng: Rng): 
 }
 
 function lamps(out: Solid[], accents: Accent[]): void {
-  for (const [x, y] of [[24, -13], [64, -13], [50, -13.5], [148, -46], [-30, 20]] as const) lamp(out, accents, x, y);
+  // el cuarto farol es el de la subestación: esquina SO del cerco
+  for (const [x, y] of [[24, -13], [64, -13], [50, -13.5], [SUBSTATION.x0 - 1, SUBSTATION.y1 + 1], [-30, 20]] as const) lamp(out, accents, x, y);
 }
 
 export function factory(rng: Rng): FactoryScene {
