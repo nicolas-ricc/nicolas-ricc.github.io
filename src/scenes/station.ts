@@ -190,9 +190,7 @@ function portico(out: Solid[], accents: Accent[]): void {
   // marquesina con una franja de vidrio en sus caras este y sur
   const glass = (wall: number) => rect(wall, 0.02, 0.98, 5.3, 5.5, "glass");
   out.push(prism(PORTICO.x, PORTICO.y, PORTICO.z, PORTICO.w, PORTICO.d, 0.4, "canopy", [glass(1), glass(2)]));
-  // dos columnas redondas hasta la marquesina
   for (const y of [111.5, 120.5]) out.push({ kind: "cylinder", at: v3(193.4, y, 0.15), r: 0.3, h: 5.05, mat: "canopy", sides: 8 });
-  // cartel claro sobre la marquesina, sin texto
   out.push(prism(193.85, 111, 5.6, 0.15, 10, 1, "whitewash"));
   // tres luces bajo la marquesina y dos farolas de pared a los lados de la entrada
   for (const y of [112, 116, 120]) accents.push({ kind: "dot", at: v3(192, y, 5.1), r: 0.9, color: "amber" });
@@ -229,7 +227,6 @@ function tower(out: Solid[], accents: Accent[]): void {
     if (wall === 1 || wall === 2) accents.push({ kind: "poly", pts: wallPts(fp, dial), color: "amber", alpha: 0.6 });
   }
   out.push(solid(TOWER, "stone", plates));
-  // pináculos en las esquinas
   for (const x of [TOWER.x, TOWER.x + TOWER.w - 0.4]) for (const y of [TOWER.y, TOWER.y + TOWER.d - 0.4]) out.push(prism(x, y, 24, 0.4, 0.4, 1.2, "safety"));
   // remate: pirámide de teja cuya base es el cuadrado del fuste
   out.push({ kind: "cone", at: v3(TOWER.x + 3, TOWER.y + 3, 24), r: 3 * Math.SQRT2, h: 5, mat: "tile", sides: 4 });
