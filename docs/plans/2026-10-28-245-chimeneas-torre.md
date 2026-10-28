@@ -80,3 +80,30 @@ Tests que tiene que satisfacer (de evals, en `exhibits.test.ts`):
 - **"Caja" del humo con `bounds`.** "Ninguna bocanada sale de la caja en x/y" se lee con el cilindro entero (`bounds`), más exigente que el centro.
 - **Capturas.** La de antes se toma en el stage 3 con el código de la rama base; si agent-browser no levanta, el PR lo marca como verificación manual pendiente.
 - **Commit intermedio rojo.** Los tests se commitean fallando en `test(#245): evals`; el PR se squashea y lo que se mergea está verde.
+- **Margen del humo.** Una bocanada llega como mucho a `dist = PUFF_RANGE` sobre el eje NNE `(0.45, −0.893)` más un seno lateral ≤ `PUFF_SIDE` 1.5 sobre `PERP = (0.893, 0.45)`, con radio ≤ `PUFF_R1` 3 (`factory-anim.ts:13-20,34-37`): x máx = 86 + 12.6 + 1.34 + 3 = 102.94 < 104.8; y mín = 26 − 25.0 − 0.68 − 3 = −2.68 > −4.8; x mín = 58 − 1.34 − 3 = 53.66 > 28. Los 13 del issue sobran ~1.9 u. El test de una vuelta lo muestrea; la cota es analítica.
+- **40 s es más de una vuelta.** Cada bocanada recorre `PUFF_RANGE` a `PUFF_SPEED · speed` con `speed ∈ [0.8, 1.2)` (`factory-anim.ts:15,27`): a lo sumo 28 / 0.0016 = 17.5 s; el seno tiene período `PUFF_PERIOD_MS` 2.5 s. 40 s cubre más de dos recorridos completos de cada bocanada. La semilla 1 es la que usan los tests de `factory-anim.test.ts:10`; la cota no depende de la semilla.
+
+## Grilling
+
+- 1 ronda, 17 preguntas. El plan no cambió de forma; se agregaron dos supuestos (margen del humo, 40 s).
+- Fuentes: ISSUE 4, CODE 11, DOC 0, NO SOURCE 2 (supuestos técnicos).
+- Respuestas:
+  1. CODE `src/scenes/factory-anim.ts:13,15` exporta `PUFF_RANGE` y `PUFF_LIFT`; `:25` `createFactoryAnim(stacks: readonly Vec3[], rng, opts): FactoryAnim`; `:39` `puffs(k)` devuelve `Solid[]` (cilindros `concrete`), aptos para `bounds`. `factory-anim.test.ts:4,10` ya lo llama así.
+  2. CODE `src/scenes/maltings.ts:57`: los cilindros del tanque son `steel`. CODE `factory.test.ts:94` y `:359` ya filtran la torre por `cylinder`+`concrete`+`r ≥ 7` y asertan `toHaveLength(4)`.
+  3. CODE `src/scenes/pieces.ts:20-28`: toda pieza de la grúa queda en `y − 1 .. y + 1` (mástil 59.4..60.6 × −12.6..−11.4, h 20; pluma y −12.5..−11.5, z 19..19.8): con `at.y = −12` (`factory.ts`, `towerCrane(... at { x: 60, y: -12 })`) ninguna llega a y −4.8.
+  4. CODE `src/lab/exhibits.ts:49`: `stackR = Math.max(...STACKS.map((s) => s.r))` = 2.8. ISSUE: "`y0: min(stacksY) − stackR − PUFF_RANGE`" — se conserva la fórmula de hoy; el test fija el número que da.
+  5. CODE `src/scenes/factory-anim.ts:18-19,34-37` (`NNE`, `PERP`, `PUFF_SIDE`, `PUFF_R1`). Aritmética en Assumptions ("Margen del humo"): 102.94 < 104.8. ISSUE: "los 13 de más al este son por el humo, que deriva 0.45·28 ≈ 12.6 al este".
+  6. NO SOURCE → supuesto técnico ("40 s es más de una vuelta"). ISSUE: "en una vuelta de `createFactoryAnim(scene.stacks, …)` (p. ej. 40 s a 33 ms)".
+  7. CODE `src/scenes/factory.ts`: `function coolingTower(out: Solid[])` lee el `COOLING` privado (`const COOLING = { x: 172, y: -36 }`) y el literal 9 está en `for (const r of [9, 8, 7, 7.5])`.
+  8. CODE `src/scenes/factory.test.ts`: `build` :22, `slices` :25, `expectApart` :34, `one` :213, `apartBox` :402 (con 1e-9), `stairTower` importado en :9 de `boiler-house`. Nada que crear.
+  9. CODE `factory.ts` `chimney`: plataforma `cyl(dz, s.r + 1.2, …)` es lo más ancho en x; al sur la escalera en `ly = s.y + (s.r + 1.2)·cos(π/8) + 0.2` con postes de 0.15 → 32 + 3.696 + 0.2 + 0.15 = 36.046. ISSUE: "escaleras hasta y 36.05" y "todo sólido de las chimeneas cae en x 54..90, y 22..36.1".
+  10. CODE `factory.test.ts:369-375`: para cada par de chimeneas, toda pieza de una `apart` de toda pieza de la otra (sin distancias fijas). Pedestales nuevos x 54.5..61.5 / 68.5..75.5 / 82.5..89.5: disjuntos en x. ISSUE: "los `describe.each(STACKS)` y "chimeneas vecinas" siguen (relativos)".
+  11. ISSUE: "**Rama base:** `feature/238-fabrica-mudanza` (hijo de #238; el PR va contra esa rama, no contra `main`)". `git log origin/feature/238-fabrica-mudanza`: d1f393e (#244), fd59a63 (#243).
+  12. CODE `src/scenes/world.test.ts:105-106`: toda pieza de la fábrica cumple `max.y ≤ 0`, `max.x ≤ 0` o región x 4..99 × y −4..99; ISSUE: "La regla de `world.test.ts` … ya cubre el lugar nuevo". Si se commitea Task 1 sin Task 2, el exhibit sigue con el literal 172 y su test nuevo queda rojo; se squashea (Assumptions).
+  13. `grep` de `126.5` / `172` / `(130, −40)`: `exhibits.ts:69,75` (Task 2 los reescribe), `exhibits.test.ts:120` (comentario; ISSUE: "la aserción del pedestal fuera de `planta` sigue siendo cierta (ahora por y); dejarla" — se actualiza el comentario), `factory.test.ts:121` (se reemplaza), `factory-anim.test.ts:6` (bocas propias; ISSUE: "`factory-anim.test.ts` usa bocas propias (no cambia)"), specs y planes viejos (históricos; README/docstrings los cierra #248 según el comentario de plan de #238, hijo 8).
+  14. CODE `src/lab/page.ts:22` "`?speed=` escala el reloj …; 0 lo congela". CODE `factory-anim.ts:9-10`: "Arrancan escalonadas, así el frame 0 (y reduced-motion) muestra una columna".
+  15. NO SOURCE en el repo → supuesto técnico ya declarado ("Commit intermedio rojo"); lo pide el pipeline de este run (stage 3) y el merge es `--squash`.
+  16. CODE `world.test.ts:105-106` (región x ≤ 99, y ≥ −4) y los tests de caja nuevos (x ≤ 90 y ≥ 22; x ≤ 49, y ≥ 5), más estrictos que x ≤ 98.7 / y ≥ −4.
+  17. ISSUE: "Con el alero norte en y 43.4 y z 14, una chimenea en (cx, cy) se ve desde z > (cy − 23.8)/1.4"; el ≥ 50 % en la cover lo verifica el cierre (#238, comentario de plan: hijo 8 "verificación del 50 % de las chimeneas en la cover"); la nave todavía no está en y 44 en esta rama (#246). Este hijo fija y ≤ 36.1 por test.
+- Supuestos: 6 (sección Assumptions).
+- Issues abiertos: ninguno.
