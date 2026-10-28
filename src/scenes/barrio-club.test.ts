@@ -43,6 +43,7 @@ const boards = () => prisms("whitewash", 1.2, 0.15, 0.8);
 const fencePosts = () => prisms("steel", 0.15, 0.15, 3);
 const wires = () => own.filter((s): s is Beam => s.kind === "beam" && s.mat === "steel" && near(s.w, 0.15) && near(s.h, 0.15));
 const towers = () => prisms("steel", 0.3, 0.3, 8);
+const trees = () => own.filter((s): s is Cone => s.kind === "cone" && s.mat === "leaf" && near(s.r, 1.4) && near(s.h, 4));
 
 describe("club Pedro Echagüe (#253), sobre el mundo", () => {
   it("frente stone 10×6 h 9 con cartel azul y amarillo y ventanal de escalera en la pared sur", () => {
@@ -118,7 +119,7 @@ describe("club Pedro Echagüe (#253), sobre el mundo", () => {
 
   it("farol y árbol de vereda", () => {
     expect(prisms("steel", 0.6, 0.6, 5)).toHaveLength(1);
-    expect(own.filter((s): s is Cone => s.kind === "cone" && s.mat === "leaf" && near(s.r, 1.4) && near(s.h, 4))).toHaveLength(1);
+    expect(trees()).toHaveLength(1);
   });
 
   it("nada se solapa: frente, gimnasio, cancha, aros, cerco, torres y árbol", () => {
@@ -127,8 +128,7 @@ describe("club Pedro Echagüe (#253), sobre el mundo", () => {
     pairs.push([f, g, "frente-gimnasio"], [f, ridge(), "frente-lomo"], [g, fl, "gimnasio-cancha"], [ridge(), fl, "lomo-cancha"]);
     for (const v of vaults()) pairs.push([f, v, "frente-bóveda"], [v, fl, "bóveda-cancha"]);
     for (const s of [...hoopPosts(), ...fencePosts(), ...towers()]) pairs.push([s, fl, "poste-piso"], [s, pt, "poste-pintura"]);
-    const tree = own.find((s) => s.kind === "cone" && s.mat === "leaf")!;
-    for (const t of towers()) pairs.push([tree, t, "árbol-torre"]);
+    for (const t of towers()) pairs.push([one(trees(), "árbol"), t, "árbol-torre"]);
     for (const [a, c, what] of pairs) expect(apart(a, c), what).toBe(true);
   });
 
