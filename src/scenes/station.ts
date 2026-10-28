@@ -5,10 +5,15 @@ import type { Solid } from "../iso/solids";
 import { emu, trainLen } from "./train";
 
 /**
- * Estación cabecera (tipo Estación Tigre) al final de la vía del oeste, en la
- * zona al sur de las gradas. Las constantes son el contrato con los hijos
- * siguientes de #239 (edificio, torre, tren, animador): no cambiar sus
- * valores sin anotarlo. `station()` es determinista y no usa rng; los `strip`
+ * Estación cabecera al final de la vía del oeste, al sur de las gradas. El
+ * modelo real es la Estación Tigre, cabecera de la Línea Mitre (1995): edificio
+ * de ladrillo con techos de teja, torre del reloj de piedra, pórtico y
+ * marquesinas verdes. Disposición: región `STATION` (x 100..197, y 80..142);
+ * vías 1..3 en `TRACKS_Y` con el abanico `LADDER`; andenes `ISLAND`, `SIDE` y
+ * `HEAD`; topes en `BUFFER_X`; edificio, torre y explanada al este de `HEAD`; y
+ * el paso a nivel sobre la calle, x 100..108. Las constantes son el contrato
+ * con los hijos siguientes de #239 (edificio, torre, tren, animador): no
+ * cambiar sus valores sin anotarlo. `station()` es determinista y no usa rng; los `strip`
  * que emite terminan en `ground` por el filtro final de `shipyard()`.
  *
  * La formación de 3 coches (`PARKED`) queda estacionada en la vía 2, con el
@@ -20,6 +25,8 @@ import { emu, trainLen } from "./train";
  *  - al sur del tren (y_min > TRAIN_CLEAR.y1 = 134.2): `y_min − 1.4·z_max ≥ 134.5`;
  *  - al norte: `y_max ≤ TRAIN_CLEAR.y0` (130.8);
  *  - al este del tope: `x_min − y_max ≥ 27.2` o `x_min − 1.4·z_max ≥ 158`.
+ *
+ * Spec: docs/superpowers/specs/2026-10-27-estacion-terminal-design.md (desvíos en §12).
  */
 export const STATION = { x0: 100, y0: 80, x1: 197, y1: 142 } as const;
 export const GAUGE = 3, RAIL_W = 0.5, RAIL_Z = 0.05;
