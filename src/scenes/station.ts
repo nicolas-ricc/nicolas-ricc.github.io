@@ -62,7 +62,7 @@ function ladder(out: Solid[]): void {
 /** Andenes de hormigón con franja amarilla del lado de las vías; baranda sobre el borde este del transversal. */
 function platforms(out: Solid[]): void {
   for (const p of [ISLAND, SIDE, HEAD]) out.push(prism(p.x0, p.y0, 0, p.x1 - p.x0, p.y1 - p.y0, 1, "concrete"));
-  out.push(prism(ISLAND.x0, ISLAND.y0, 1, 37, 0.3, 0.15, "safety"), prism(ISLAND.x0, ISLAND.y1 - 0.3, 1, 37, 0.3, 0.15, "safety"));
+  out.push(prism(ISLAND.x0, ISLAND.y0, 1, ISLAND.x1 - ISLAND.x0, 0.3, 0.15, "safety"), prism(ISLAND.x0, ISLAND.y1 - 0.3, 1, ISLAND.x1 - ISLAND.x0, 0.3, 0.15, "safety"));
   out.push(prism(SIDE.x0, SIDE.y1 - 0.3, 1, SIDE.x1 - SIDE.x0, 0.3, 0.15, "safety"));
   out.push(prism(HEAD.x0, HEAD.y0, 1, 0.3, HEAD.y1 - HEAD.y0, 0.15, "safety"));
   out.push(prism(165.8, HEAD.y0, 1, 0.2, HEAD.y1 - HEAD.y0, 1, "canopy"));
@@ -99,11 +99,33 @@ function buffers(out: Solid[], accents: Accent[]): void {
   }
 }
 
+/** Dos semáforos de vía: poste steel bajo una cabeza asphalt; SIGNALS es la esquina NO de la cabeza. */
+function signals(out: Solid[]): void {
+  for (const s of [SIGNALS.in, SIGNALS.out]) {
+    out.push(prism(s.x + 0.1, s.y + 0.1, 0, 0.3, 0.3, 3.5, "steel"));
+    out.push(prism(s.x, s.y, 3.5, 0.5, 0.5, 1.2, "asphalt"));
+  }
+}
+
+/** Paso a nivel estático: tablones entre y por fuera de los rieles, dos postes y dos barreras bajas rayadas. */
+function crossing(out: Solid[]): void {
+  const w = CROSSING.x1 - CROSSING.x0;
+  for (const [y, d] of [[131.3, 2.4], [129.6, 1.1], [134.3, 1.1]] as const) out.push(prism(CROSSING.x0, y, 0, w, d, 0.3, "deck"));
+  for (const p of [CROSSING.north, CROSSING.south]) out.push(prism(p.x, p.y, 0, 0.3, 0.3, p.h, "steel"));
+  // barrera: cuatro tramos iguales desde el poste hacia afuera, signal junto al poste
+  for (const [y, from, to] of [[128.75, 99.7, 107.7], [137.75, 108.3, 100.3]] as const) {
+    const step = (to - from) / 4;
+    for (let k = 0; k < 4; k++) out.push({ kind: "beam", from: v3(from + step * k, y, 1), to: v3(from + step * (k + 1), y, 1), w: 0.25, h: 0.25, mat: k % 2 === 0 ? "signal" : "whitewash" });
+  }
+}
+
 export function station(out: Solid[], accents: Accent[]): void {
   tracks(out);
   ladder(out);
   platforms(out);
   canopies(out, accents);
   buffers(out, accents);
-  out.push(prism(110, FENCE_Y, 0, 50, 0.3, 1, "steel")); // cerco sur
+  signals(out);
+  crossing(out);
+  out.push(prism(110, FENCE_Y, 0, BUFFER_X - 110, 0.3, 1, "steel")); // cerco sur
 }
