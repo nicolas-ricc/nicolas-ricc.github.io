@@ -33,7 +33,7 @@
 ## Assumptions
 
 - **A1. Exportar `building`** además de llamarla desde `station()`: los tests que hablan de "todo lo del edificio" la llaman sola, sin filtrar la salida de `station()` por coordenadas.
-- **A2. Contorno de placas.** `plate.ts` exporta `plateOutline(p: Plate): Vec2[]` (hoy `outline`, privada, sin cambio de cuerpo). `station.ts` agrega `wallPts(fp: Vec2[], p: Plate): Vec3[]`, que lleva ese contorno a mundo sobre la arista `p.wall` de la huella `fp`. Las `poly` nocturnas y los tests usan `wallPts`. Alternativa descartada: copiar el octógono en `station.ts`.
+- **A2. Contorno de placas.** `plate.ts` renombra su `outline` privada (hoy la llama solo `plateFaces`, `plate.ts:29`) a `export function plateOutline(p: Plate): Vec2[]`, sin cambio de cuerpo: devuelve el contorno en coordenadas (u, z) de la placa, sin proyectar. `station.ts` agrega `wallPts(fp: Vec2[], p: Plate): Vec3[]`, que lleva ese contorno a mundo sobre la arista `fp[p.wall] → fp[(p.wall + 1) % 4]`, igual que `plateFaces`. `fp` es la huella rectangular del sólido, `[(x, y), (x + w, y), (x + w, y + d), (x, y + d)]`, con una función local `footprint(s: { x, y, w, d })`. Sentido de `u` (`solids.ts` `rect()`, `plate.ts:7-9`): muro 0, de x0 a x1; muro 1, de y0 a y1; muro 2, de x1 a x0; muro 3, de y1 a y0. Las `poly` nocturnas y los tests usan `wallPts`. Alternativa descartada: copiar el octógono en `station.ts`.
 - **A3. Hastiales del remate: el pentágono mira hacia afuera.** El issue dice "0.8 × 2 (la cara angosta hacia afuera: w < d en las caras este y oeste, w > d en norte y sur)" y "una placa … en su hastial exterior". En el kit, un gable con `w < d` tiene la cumbrera N-S y los hastiales al norte y al sur. Entonces el de la cara este no tendría hastial hacia el este. Se cumple "cara angosta hacia afuera" + "hastial exterior" (foto 04: el hastial de piedra mira al frente): este y oeste `w 2, d 0.8` (cumbrera E-O); norte y sur `w 0.8, d 2`. Huellas: E (188, 128.6), O (184, 128.6), N (186.6, 126), S (186.6, 130), todos a z 24, h 1 (alero 25, cumbrera 25.35), adentro del cuadrado de la torre. El respiradero es `rect` `asphalt` u 0.3125..0.6875 (0.3 de 0.8), z 24.5..24.8, en `wall` 1 (E), 3 (O), 0 (N), 2 (S). Desvío anotado en el PR.
 - **A4. Toldos `dir "e"`.** `WING_S` (x 168..184) no tiene cara al este en x 190: ahí están `LINK` y la torre. Los toldos `e` van solo en `WING_N`: dos, `ramp` `signal` en x 190, w 0.8, d 2, h 0.5, z 3, en y 100.5..102.5 y 103.5..105.5. Cada uno lleva una vidriera `rect` `glass` en `wall 1` de `WING_N`, en el mismo rango de u (0.0833..0.4167 y 0.5833..0.9167), z 0.8..2.8. Los cuatro toldos `s` de `WING_S` van centrados en x 170, 174, 178, 182 (x c−1..c+1, y 132..132.8, z 3), con su vidriera en `wall 2`, u `(184 − (c ± 1))/16`, z 0.8..2.8. Desvío anotado.
 - **A5. Faroles y palmeras: la coordenada del issue es el centro.** Poste `steel` en (cx − 0.3, cy − 0.3, 0.15), 0.6×0.6×6, con `dot` `cyan` r 1.2 en (cx, cy, 6.15). Palmera: tronco `cylinder` `deck` r 0.25, h 6, `sides: 6`, en (cx, cy, 0.15); copa `cone` `leaf` r 1.8, h 1.6, 6 lados (el default) en (cx, cy, 6.15).
@@ -43,7 +43,7 @@
 - **A9. Excepción del remate.** En "ningún sólido elevado pisa otro" se exceptúan los pares (cono del remate, pináculo) y (cono del remate, hastial del remate). Pináculos: `prism` `safety` 0.4×0.4×1.2 en (184, 126), (189.6, 126), (184, 131.6), (189.6, 131.6), z 24.
 - **A10. Cornisa dentada.** Muros 1 y 2 del hall: diez `rect` `stockbrick` de 0.4 de ancho en mundo, centradas en u (k + 0.5)/10, z 7.5..7.9. En el hastial este, bajo cada vertiente, cuatro `rect` de 0.4 × 0.4 centradas en y 107, 108.8, 110.6, 112.4 y su espejo (230 − y). La placa termina 0.1 bajo la línea del techo: `z1 = 8 + 2.8·(y − 106)/9 − 0.1`, `z0 = z1 − 0.4`. La última, en y 112.2..112.6, no pisa el arco (u ≥ 0.41 → y ≥ 113.38).
 - **A11. Ventanas y parteluces.** Ventanales del este (hall, `wall 1`, largo 18): por cada ventanal, parteluz vertical `canopy` de 0.15 en su centro de u, z 1.2..6.4, y horizontal `canopy` en todo su ancho, z 3.925..4.075. Ventanas del sur (hall, `wall 2`, largo 20): cuatro `rect` `glass` de 1.6 centradas en u (k + 0.5)/4, z 2..5.5, cada una con un parteluz vertical `canopy` de 0.15 en su centro. Hoy `WING_S` y `LINK` tapan la parte de abajo; quedan por el issue.
-- **A12. Pórtico.** Placa `glass` en `wall 1` y `wall 2` de `PORTICO`: u 0.02..0.98, z 5.3..5.5. Columnas `cylinder` `canopy` r 0.3, `sides: 8`, centradas en (193.4, 111.5) y (193.4, 120.5), z 0.15, h 5.05. Cartel `prism` `whitewash` (193.85, 111, 5.6), w 0.15, d 10, h 1. Luces `amber` r 0.9 bajo la marquesina en (192, 112, 5.1), (192, 116, 5.1), (192, 120, 5.1). Farolas de pared `amber` r 0.5 en (190.05, 109, 3.2) y (190.05, 123, 3.2).
+- **A12. Pórtico.** La marquesina es el prisma `PORTICO` mismo: `canopy`, x 190..194, y 110..122, z 5.2..5.6 (issue). Placa `glass` en `wall 1` y `wall 2` de `PORTICO`: u 0.02..0.98, z 5.3..5.5. Columnas `cylinder` `canopy` r 0.3, `sides: 8`, centradas en (193.4, 111.5) y (193.4, 120.5), z 0.15, h 5.05. Cartel `prism` `whitewash` (193.85, 111, 5.6), w 0.15, d 10, h 1. Luces `amber` r 0.9 bajo la marquesina en (192, 112, 5.1), (192, 116, 5.1), (192, 120, 5.1). Farolas de pared `amber` r 0.5 en (190.05, 109, 3.2) y (190.05, 123, 3.2).
 - **A13. Zócalo** `rect` `canopy` u 0..1, z 0..0.8, en `wall 1` y `wall 2` de `HALL`, `WING_N` y `WING_S` (aunque el hall tape el sur de `WING_N`, por el issue).
 - **A14. Torre.** Ranuras `rect` `asphalt` u 0.475..0.525 (0.3 de 6), z 4..8 y 11..15, en `wall 1` y `wall 2`. Las esferas y sus `poly` `amber` alpha 0.6 (`wall 1` y `wall 2`) usan `wallPts`. El cono, con `r = 3·Math.SQRT2`, tiene su base sobre el cuadrado 184..190 × 126..132 (tolerancia 1e-9).
 - **A15. Materiales compartidos** (medido con `world(7)` en la base, sin contar conos): la ciudad usa `paving` y `stone`, y la estación usa los dos. `sharedWithCity` suma `"stone"` (fuste de la torre) y `"paving"` (losa de la explanada), con su motivo. `deck` y `glass` ya están en la lista del Blog. `leaf` y `tile` solo van en conos, que no cuentan.
@@ -61,7 +61,7 @@ Los escribe el orquestador antes de Task 1, en rojo. Lista cerrada:
   - "alas y toldos" (A4).
   - "explanada": faroles, palmeras (A5, A6) y baranda `canopy` 197..197.3 × 98..136 × 0..1. Todo lo que apoya en la losa arranca en z 0.15.
   - "torre": ranuras, cuatro esferas `disc` `whitewash` en `wall` 0..3 sobre anillos `safety`, pináculos (A9), remate (A14) que llega a `TOWER.top`, y la torre es el sólido más alto de `station()`. Hastiales y respiraderos (A3).
-  - "luces de noche": ≥ 3 `dot` `amber` bajo el pórtico (x 190..194, y 110..122, z < 5.2). 2 `poly` `amber` en las esferas, que coinciden con su contorno (Review Focus 2). 7 `poly` `cyanBleed` sobre placas `glass` del hall. 1 `poly` `amberBleed` sobre la linterna. 1 `poly` `amber` sobre el abanico. 2 `dot` `cyan` de los faroles de la explanada.
+  - "luces de noche": ≥ 3 `dot` `amber` bajo el pórtico (x 190..194, y 110..122, z < 5.2). 2 `poly` `amber` en las esferas, que coinciden con su contorno (Review Focus 2). 7 `poly` `cyanBleed` sobre placas `glass` del hall. 1 `poly` `amberBleed` sobre la linterna. 1 `poly` `amber` sobre el vidrio del medio punto (el "abanico vidriado" del issue, no el abanico de vías de #277; es el "1 del medio punto" de A16). 2 `dot` `cyan` de los faroles de la explanada.
   - "tamaño mínimo 0.15" en cada sólido de `building()` (extensión de su caja en x, y y z) y en cada placa.
   - vecindades: "edificio ↔ HEAD y su marquesina" (todo `min.x ≥ 166`, y disjunto de las cajas de `HEAD` y su techo); "torre ↔ explanada" (todo `max.x ≤ 190` salvo marquesina del pórtico, cartel, columnas, toldos `e` y lo que apoya en la losa; lo que está en x > 190 arranca en z ≥ 0.15); "explanada ↔ muelle" (`max.x ≤ 197.3`); "hall ↔ alas ↔ torre" (cajas que se tocan y no se cruzan); "ningún sólido del edificio en y < 98 ni y > 136".
 - `src/scenes/station.test.ts`, tests existentes: "todo cae en STATION…" según A7; "ningún sólido elevado pisa otro…" con la excepción A9. "oclusión" sin cambios: debe pasar con el edificio.
@@ -125,7 +125,7 @@ Los escribe el orquestador antes de Task 1, en rojo. Lista cerrada:
 
 ### Task 6: Integración: acentos, materiales, exhibit y suite entera
 
-**Files:** Modify `src/lab/exhibits.ts` (`estacion.h` y su comentario). Los tests de stage 3 de `portfolio-accents.test.ts` y `world.test.ts` ya están escritos.
+**Files:** Modify `src/lab/exhibits.ts` (`estacion.h` y su comentario). Test: `src/scenes/portfolio-accents.test.ts` (A16), `src/scenes/world.test.ts` (A15), `src/lab/exhibits.test.ts` ("encuadre", "vecinos"). Los tests de acentos y materiales quedan en verde al terminar las Tasks 4 y 5 (los acentos del edificio se cuentan en `w.shipyard`, porque `shipyard()` llama a `station()`: `shipyard.ts:224`). Esta tarea los confirma con la suite entera.
 
 - [ ] **Step 1:** `npm test` → solo fallan "encuadre" y los tests de acentos o materiales que sigan rojos.
 - [ ] **Step 2:** Bajar `h` desde 30 hasta el menor entero que pasa "encuadre" y "vecinos" (A17). Comentario: "lo fija el remate de la torre, z 29".
@@ -133,3 +133,41 @@ Los escribe el orquestador antes de Task 1, en rojo. Lista cerrada:
 - [ ] **Step 4:** Commit `feat(#278): exhibit estacion con h para la torre`.
 
 Después de Task 6, el orquestador saca `docs/superpowers/specs/assets/2026-10-27-estacion/estacion-edificio.png` (storybook `#estacion`, 1600×900 a 2x = 3200×1800) y corre `.scratch/evals-278.md`.
+
+## Cobertura de criterios
+
+| Criterio del issue | Tests de stage 3 |
+|---|---|
+| Inventario §5.1 y §5.2 con las huellas | "huellas exactas", "hall", "pórtico", "alas y toldos", "explanada", "torre" |
+| Luces de noche | "luces de noche", `portfolio-accents.test.ts` |
+| Vecindad, regla del este, `npm test` y typecheck | vecindades, "oclusión" (existente), "ningún sólido elevado pisa otro", suite |
+| Exhibit `estacion` con `h` ajustado | `exhibits.test.ts` "encuadre" y "vecinos" |
+| Captura y casillas en el PR | manual (stage 4: captura; stage 8: cuerpo del PR) |
+
+Los tests "tamaño mínimo 0.15" y "la torre es el sólido más alto" vienen de la sección "Tests" del issue, no de los criterios.
+
+## Grilling
+
+Una ronda (los cambios no agregan ni sacan pasos), con 18 preguntas del griller (model: fable). Fuentes de las respuestas: ISSUE 12, CODE 9, DOC 1 (comentario de #239 para la rama base). Hay respuestas que citan más de una fuente. Sin fuente: 3, todas supuestos técnicos.
+
+- Q1 (sentido de `u`): CODE `plate.ts:5-9` y `solids.ts` `rect()`. Agregado a A2.
+- Q2 (A3): CODE `solids.ts` `gable()` y `GABLE_WALL_EDGE` (`w < d`: hastiales norte y sur); ISSUE "una placa `rect` `asphalt` 0.3×0.3 (respiradero) en su hastial exterior" y "la cara angosta hacia afuera". La lectura literal deja sin hastial exterior al de la cara este, así que no cumple el issue; spec §2: mirar la foto 04. Es una contradicción interna con una sola lectura que cumple todo: supuesto técnico, anotado como desvío.
+- Q3 (placas sobre el alero): ISSUE "una `tri` con `z0` = alero y `z1` = cumbrera sobre un hastial cubre su triángulo"; CODE `plate.ts` `plateFaces` mapea z absolutos sin recortar.
+- Q4: tabla "Cobertura de criterios".
+- Q5: CODE `solids.ts` `regular()` (desfase π/lados: con 4 lados, vértices a ±r·cos 45° = ±3) y `bounds()` (por vértices de `tessellateAll`).
+- Q6: el "abanico" es el del medio punto; aclarado.
+- Q7: ISSUE "marquesina `prism` `canopy` `PORTICO` (x 190..194, y 110..122, z 5.2, h 0.4)"; agregado a A12.
+- Q8: ISSUE "explanada ↔ muelle (`max.x ≤ 197.3`)" y "baranda … x 197..197.3 (el muelle arranca en 198)"; CODE `shipyard.ts:53` (muelle en `QUAY_X` = 198).
+- Q9: ISSUE "cartel: `prism` `whitewash` x 193.85..194, y 111..121, z 5.6..6.6". El cartel lo fija el issue, así que se mueve la palmera.
+- Q10: ISSUE "`dir: \"s\"` en la cara sur de `WING_S`, cuatro; `dir: \"e\"` en las caras este de las dos alas, dos por ala": 4 + 2 = 6 (A4).
+- Q11: aclarado en Task 6. CODE `portfolio-accents.test.ts:14` (`cyan: 7`).
+- Q12: CODE `exhibits.test.ts:104-113`; ISSUE "subir `h` a 30 (o al menor entero que pase … con la torre a 29 y el humo de nadie)". `station()` no emite humo.
+- Q13: CODE `src/map/palette-guard.test.ts`; ISSUE, lista de materiales y acentos (todos existen). El test de tamaño mínimo es nuevo.
+- Q14: CODE `plate.ts:12-29`. Renombrar; único llamador `plateFaces` (A2).
+- Q15: ISSUE "En `wall 2` (sur) del hall, cuatro ventanas … de noche `poly` `cyanBleed` alpha 0.5 sobre cada ventana (este y sur)". CODE: `station.test.ts`, "oclusión" recorre `raised` (sólidos), no acentos.
+- Q16: NO SOURCE, supuesto técnico: `fp` se calcula desde las constantes de caja con `footprint()` (A2).
+- Q17: DOC, comentario de nicolas-ricc en #239, "Branch: feature/239-estacion-tigre"; ISSUE, criterio "Captura `docs/superpowers/specs/assets/2026-10-27-estacion/estacion-edificio.png`". La PNG se commitea. `.scratch/` no (lo pide el pipeline, en `.git/info/exclude`).
+- Q18: NO SOURCE, supuesto técnico: los commits intermedios viven en la rama `agent/278-*`. El PR se squashea contra la base con la suite en verde, así que la base nunca recibe una tarea suelta.
+- Q1 (muros 0 y 3) también: NO SOURCE, resuelto leyendo el código, como supuesto técnico.
+
+Supuestos: A1–A17. No se abrieron issues: no quedó nada fuera de alcance.
