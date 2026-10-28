@@ -80,7 +80,8 @@ function canopies(out: Solid[], accents: Accent[]): void {
     for (let x = x0 + 2.5; x + 0.15 <= x1; x += 5) {
       out.push(prism(x - 0.15, ym - 0.15, 1, 0.3, 0.3, 3.2, "steel"));
       out.push({ kind: "beam", from: v3(x, p.y0, 4), to: v3(x, p.y1, 4), w: 0.2, h: 0.2, mat: "steel" });
-      for (const y of [p.y0, p.y1]) out.push({ kind: "beam", from: v3(x, y, 4), to: v3(x, ym, 4.1), w: 0.15, h: 0.15, mat: "steel" });
+      // diagonales a 0.01 del borde: el anillo inclinado del extremo no entra en la faja sur
+      for (const y of [p.y0 + 0.01, p.y1 - 0.01]) out.push({ kind: "beam", from: v3(x, y, 4), to: v3(x, ym, 4.1), w: 0.15, h: 0.15, mat: "steel" });
     }
     for (let x = x0 + 5; x < x1; x += 10) accents.push({ kind: "dot", at: v3(x, ym, 3.9), r: 0.8, color: "cyanMid" });
   }

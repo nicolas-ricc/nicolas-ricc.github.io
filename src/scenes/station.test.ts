@@ -146,6 +146,7 @@ describe("station", () => {
       for (const wall of [1, 2]) {
         const ps = (b.plates ?? []).filter((p) => p.wall === wall && p.shape === "rect").sort((p, q) => p.u0 - q.u0);
         expect(ps.map((p) => p.mat), `pared ${wall}`).toEqual(["safety", "asphalt", "safety", "asphalt"]);
+        expect(ps.map((p) => [p.u0, p.u1, p.z0, p.z1]), `franjas ${wall}`).toEqual([0, 1, 2, 3].map((k) => [k / 4, (k + 1) / 4, 0, BUFFER_H]));
       }
     }
     const reds = dots.filter((d) => d.color === "magenta");
@@ -208,9 +209,22 @@ describe("station: vecindades (cajas disjuntas, 1e-9)", () => {
   const platformSolids = prisms.filter((p) => p.mat === "concrete");
   const columns = prisms.filter((p) => p.mat === "steel" && p.w === 0.3 && p.d === 0.3 && p.at.z === 1);
 
-  it("marquesinas ↔ vías: ninguna columna pisa la franja eje ±1.75", () => {
+  it("marquesinas ↔ vías: ninguna columna, rampa ni faja pisa la franja eje ±1.75", () => {
     expect(columns.length).toBe(16);
-    for (const c of columns) TRACKS_Y.forEach((y, i) => expect(apart(bounds(c), trackBand(y, i))).toBe(true));
+    const roofs = [...ramps, ...prisms.filter((p) => p.mat === "whitewash" || (p.mat === "canopy" && p.at.z > 1))];
+    expect(roofs).toHaveLength(7); // cuatro rampas, dos fajas sur y el techo del transversal
+    for (const c of [...columns, ...roofs]) TRACKS_Y.forEach((y, i) => expect(apart(bounds(c), trackBand(y, i))).toBe(true));
+  });
+
+  it("ningún sólido elevado pisa otro, salvo las piezas de una misma cabriada (columna, tirante y diagonales, A4)", () => {
+    const bs = raised.map((s) => ({ s, b: bounds(s) }));
+    const truss = (s: Solid) => s.kind === "beam" || (s.kind === "prism" && s.mat === "steel" && s.w === 0.3 && s.at.z === 1);
+    const sameX = (a: Bounds, b: Bounds) => Math.abs((a.min.x + a.max.x) / 2 - (b.min.x + b.max.x) / 2) < 1e-6;
+    for (let i = 0; i < bs.length; i++) for (let j = i + 1; j < bs.length; j++) {
+      const a = bs[i]!, b = bs[j]!;
+      if (truss(a.s) && truss(b.s) && sameX(a.b, b.b)) continue;
+      expect(apart(a.b, b.b), `${JSON.stringify(a.b)} ↔ ${JSON.stringify(b.b)}`).toBe(true);
+    }
   });
 
   it("andenes ↔ vías", () => {
