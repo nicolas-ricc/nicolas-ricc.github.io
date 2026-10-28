@@ -1,4 +1,6 @@
-import { CELL, QUAY_X, ZONE_SPLIT_Y, eastBank } from "../map/geo";
+import { QUAY_X, SEAM_CY, ZONE_SPLIT_Y, eastBank } from "../map/geo";
+export { ESTUARY_FLARE, estuaryEast } from "../map/geo";
+import { ESTUARY_FLARE } from "../map/geo";
 
 /**
  * Grilla de Resume, la ciudad de oficinas. Módulo puro y sin rng: es la única
@@ -43,9 +45,6 @@ export const CRATERS: readonly { x: number; y: number; r: number }[] = [{ x: 60,
  * la última fila de celdas antes de la costura (centro y = 141) y se abre
  * hacia el sur, en vez de seguir el meandro de riverCenter.
  */
-const SEAM_CY = Math.floor(ZONE_SPLIT_Y / CELL) * CELL - CELL / 2;
-export const ESTUARY_FLARE = 0.35; // cuánto se abre la ribera este por unidad hacia el sur
-export const estuaryEast = (y: number): number => eastBank(SEAM_CY) + Math.max(0, y - ZONE_SPLIT_Y) * ESTUARY_FLARE;
 /** Inversa de estuaryEast al sur de la costura: a qué y la ribera este llega a x (menor que ZONE_SPLIT_Y si nunca lo alcanza al norte). */
 export const estuaryReaches = (x: number): number => ZONE_SPLIT_Y + (x - eastBank(SEAM_CY)) / ESTUARY_FLARE;
 

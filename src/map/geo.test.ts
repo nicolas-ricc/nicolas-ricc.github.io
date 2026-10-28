@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HEADLAND, MOUTH_Y, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, abyssX, distToHeadland, inHeadland, inMouth, pointInPolygon, riverCenter, shoreWidth, worldZoneAt } from "./geo";
+import { HEADLAND, MOUTH_Y, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, abyssX, distToHeadland, estuaryEast, estuaryInset, inHeadland, inMouth, islandEastX, islandWestX, northCoastY, pointInPolygon, riverCenter, shoreWidth, worldZoneAt } from "./geo";
 
 describe("mundo", () => {
   it("el contenido tiene origen negativo y lados múltiplos de 18", () => {
@@ -31,14 +31,14 @@ describe("mundo", () => {
     expect(shoreWidth(0)).toBeGreaterThan(4);
   });
 
-  it("la desembocadura es todo lo que hay al este del río por encima de MOUTH_Y", () => {
+  it("la boca llega hasta la costa norte de la isla", () => {
     expect(MOUTH_Y).toBe(24);
-    for (let y = 0; y < MOUTH_Y; y += 4) {
-      expect(inMouth(riverCenter(y) - RIVER_HALF - 1, y)).toBe(false);
-      expect(inMouth(riverCenter(y), y)).toBe(true);
-      expect(inMouth(343, y)).toBe(true);
+    for (let x = 280; x <= 360; x += 4) {
+      const c = northCoastY(x);
+      expect(inMouth(x, c - 1)).toBe(true);  // un paso al norte de la costa: agua de la boca
+      expect(inMouth(x, c + 1)).toBe(false); // un paso al sur: ya es tierra
     }
-    expect(inMouth(300, MOUTH_Y)).toBe(false);
+    expect(inMouth(riverCenter(0) - RIVER_HALF - 1, 0)).toBe(false); // al oeste del río no hay boca
   });
 
   it("la punta nace en el muelle de alistamiento y llega hasta x≈400 con el faro en la punta", () => {
@@ -60,5 +60,42 @@ describe("mundo", () => {
   it("pointInPolygon vive en geo", () => {
     expect(pointInPolygon(1, 1, [0, 0, 4, 0, 4, 4, 0, 4])).toBe(true);
     expect(pointInPolygon(5, 1, [0, 0, 4, 0, 4, 4, 0, 4])).toBe(false);
+  });
+});
+
+describe("costa de la isla", () => {
+  it("islandEastX queda entre el corte y el borde de la orilla; el malecón es recto; la punta sur cierra", () => {
+    for (let y = 0; y <= 145; y++) {
+      expect(islandEastX(y)).toBeGreaterThan(330);
+      expect(islandEastX(y)).toBeLessThanOrEqual(ZONE_SPLIT_X + shoreWidth(y) - 1.5 + 1e-9);
+    }
+    for (let y = 158; y <= 336; y += 2) expect(islandEastX(y)).toBe(ZONE_SPLIT_X);
+    expect(islandEastX(400)).toBe(-Infinity);
+  });
+
+  it("islandEastX cambia de escala al norte: varía al menos dos celdas", () => {
+    const xs = Array.from({ length: 146 }, (_, y) => islandEastX(y));
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThanOrEqual(12);
+  });
+
+  it("frente a los galpones la costa norte queda en y ≤ 21", () => {
+    for (let x = 303; x <= 327; x += 6) expect(northCoastY(x)).toBeLessThanOrEqual(21);
+  });
+
+  it("northCoastY: la caleta al NO baja de y 24 y la punta al NE sube al norte de y 12", () => {
+    expect(northCoastY(286)).toBeGreaterThan(26);
+    let min = Infinity;
+    for (let x = 330; x <= 350; x++) min = Math.min(min, northCoastY(x));
+    expect(min).toBeLessThan(12);
+  });
+
+  it("estuaryInset: en [0, 10], nulo en la costura y bajo la manzana derrumbada; islandWestX no pasa de la ribera", () => {
+    for (let y = 146; y <= 336; y++) {
+      expect(estuaryInset(y)).toBeGreaterThanOrEqual(0);
+      expect(estuaryInset(y)).toBeLessThanOrEqual(10);
+    }
+    expect(estuaryInset(150)).toBe(0);
+    for (let y = 196; y <= 262; y += 2) expect(estuaryInset(y)).toBe(0);
+    for (let y = 146; y <= 400; y++) expect(islandWestX(y)).toBeLessThanOrEqual(estuaryEast(y));
   });
 });
