@@ -1,21 +1,34 @@
 import { v3, type Vec3 } from "../iso/geometry";
 import type { Plate, Solid } from "../iso/solids";
+import { translate } from "../iso/translate";
 import type { Material } from "../map/palette-iso";
+import { PLANT_SHIFT } from "./plant-frame";
 
 /**
- * Maltería de Mistley (`x 20..44, y −46..−16`, al oeste de la nave de calderas) y tanque de agua
- * sobre patas (`x ≤ 20, y ≤ −9.3`). La cámara ve techo, este (+x) y sur (+y): el detalle va ahí.
+ * Maltería de Mistley y tanque de agua sobre patas. La cámara ve techo, este (+x) y sur (+y): el detalle va ahí.
  * Decisiones (D1–D15): docs/plans/2026-10-24-214-malteria-tanque.md.
+ *
+ * La maltería está dibujada en un marco local, `x 20..44, y −46..−16`, y se traslada con `PLANT_SHIFT (−15, +90)`
+ * a `x 5..29, y 44..74` (#246). El tanque va al norte de ella, en `WATER_TOWER`.
+ * Todo lo exportado está en coordenadas de mundo; el marco local es privado (`MALT_LOCAL` y `maltingsLocal`).
  */
-export const MALT = { x: 20, y: -46, w: 24, d: 30, h: 18 } as const;
-export const WATER_TOWER = { x: 10, y: -36 } as const;
+const MALT_LOCAL = { x: 20, y: -46, w: 24, d: 30, h: 18 } as const;
+export const MALT = { ...MALT_LOCAL, x: MALT_LOCAL.x + PLANT_SHIFT.x, y: MALT_LOCAL.y + PLANT_SHIFT.y } as const;
+/** Al norte de la maltería: `x 10.4..19.6, y 27.4..36.6`, tope z 24.7, asoma por encima del techo. */
+export const WATER_TOWER = { x: 15, y: 32 } as const;
 
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material): Solid & { kind: "prism" } => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat });
 const beam = (from: Vec3, to: Vec3, w: number, mat: Material, h = w): Solid => ({ kind: "beam", from, to, w, h, mat });
 
 /** Prisma de fachada de cinco pisos, techo de seis faldones con óculos, pilastras y cornisas del piñón, puertas de carga, portón y horno con techo piramidal. */
 export function maltings(out: Solid[]): void {
-  const { x, y, w, d, h } = MALT;
+  const local: Solid[] = [];
+  maltingsLocal(local);
+  for (const s of local) out.push(translate(s, PLANT_SHIFT.x, PLANT_SHIFT.y));
+}
+
+function maltingsLocal(out: Solid[]): void {
+  const { x, y, w, d, h } = MALT_LOCAL;
   const rect = (u0: number, u1: number, z0: number, z1: number, toneOffset: number): Plate => ({ wall: 2, shape: "rect", u0, u1, z0, z1, mat: "steel", toneOffset });
   const plates: Plate[] = [1, 2, 3, 4].map((k) => rect(11 / 24, 13 / 24, 3.6 * k, 3.6 * k + 2.3, -1));
   plates.push(rect(10.5 / 24, 13.5 / 24, 0, 3, -2));
