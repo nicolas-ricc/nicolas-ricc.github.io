@@ -93,7 +93,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "grua-portico", title: "Grúa pórtico", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 146, y0: 30, x1: 156, y1: 78 }, h: 28 },
   // calle de transferencia x 100..108 con los faroles en 108.5; al oeste de las gradas (x ≥ 110)
   { id: "calle-faroles", title: "Calle de faroles", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 99, y0: 8, x1: 111, y1: 128 }, h: 7 },
-  // las dos naves de montaje: x 10..100, filas y −52 y −32 de 16; y1 −14 deja afuera el contrapeso de la grúa (z 19.8) y x1 102 el patio (x ≥ 104)
+  // las dos naves de montaje: x 10..100, filas y −52 y −32 de 16; y1 −14 deja afuera el contrapeso de la grúa (y −13..−11, z 18.5..20) y x1 102 el patio (x ≥ 104)
   { id: "naves", title: "Naves de montaje", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 7, y0: -55, x1: 102, y1: -14 }, h: 14 },
   // pluma 24 al este y contrapluma 8 al oeste: con el mástil en x −8 queda en −16..16
   { id: "grua-torre", title: "Grúa torre", zone: "portfolio", group: "astillero", kind: "piece",

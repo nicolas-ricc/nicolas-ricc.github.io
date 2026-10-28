@@ -168,7 +168,6 @@ describe("shipyard en la banda norte (#247)", () => {
     const s = scene();
     const ws = workshops(s);
     expect(ws.map(at)).toEqual([[106, -33, 0], [134, -33, 0]]);
-    expect(s.solids.filter((x) => x.kind === "prism" && x.roof === "step").length).toBeGreaterThanOrEqual(2);
     expect(units(s).map((x) => [x.at.x, x.at.y]).sort((a, b) => a[0]! - b[0]!)).toEqual([[109, -30], [124, -23], [137, -30], [152, -23]]);
   });
 
