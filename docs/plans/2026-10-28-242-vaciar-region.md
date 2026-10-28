@@ -93,3 +93,16 @@
 ### Capturas (fuera de las tasks de código, las hace el orquestador)
 
 `/lab/world.html` con la tecla `1`, viewport 1600×900 escala 2: `vaciar-antes.png` antes de Task 1 (stage de evals) y `vaciar-despues.png` después de Task 3, en `docs/superpowers/specs/assets/2026-10-27-fabrica-mudanza/`.
+
+## Assumptions
+
+- **Rieles prohibidos por recta entera, no por punto suelto** (ver "Decisión técnica declarada"). Alternativa rechazada: prohibir cualquier punto en x 101/104, que rompe la vía del oeste que el issue pide conservar hasta x 104. Todos los strips `rail` del astillero son de dos puntos (`shipyard.ts:57-74,108-111`), así que "todos los puntos en x 101" equivale a "vertical en x 101".
+- **El test de región recorre solo `solids`**: el issue lo pide así ("ningún sólido de `shipyard(rng).solids` salvo conos"). Los `ground` que quedan (calle x 100..108, playa y 100..126, vías y ≥ 130.75) no entran a la región de todos modos.
+- **Las tasks se commitean por separado, el PR entra squash** (stage 10 del pipeline). Un estado con Task 1 y sin Task 2 vive solo en `agent/242-*`.
+
+## Grilling
+
+- Rondas: 1 (el plan no cambió de forma sustancial: se sumaron supuestos, ningún paso). Griller: `fable`.
+- Preguntas: 17. Fuentes: ISSUE 9 (1, 2, 3, 10, 11, 15, 16, 17 parcial, 13 parcial), CODE 11 (4, 5, 6, 7, 8, 9, 12, 13, 14, 17), DOC 1 (3: pipeline/AGENTS.md). NO SOURCE: 2 → supuestos técnicos (14, 17). Ninguna ambigüedad de spec, nada fuera de alcance.
+- Supuestos: los tres de arriba.
+- Issues abiertos: ninguno.
