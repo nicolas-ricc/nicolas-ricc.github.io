@@ -9,6 +9,7 @@ import { BLOCK_W, BOULEVARD, CITY_EDGE, SIDEWALK, WEST_QUAY } from "./city-grid"
 import { PLINTH_H, brokenTone, campus, lamp, plazaTone, prism, tiles } from "./city-pieces";
 import { jungle } from "./flora";
 import { GREEN_BELT, REACH, SUBURB_COLS, suburbBlocks, type SprawlBlock } from "./sprawl-grid";
+import { ARENA, AUDITORIUM, TELECOM, TOWER_D } from "./tech-zoning";
 
 /**
  * Distrito tecnológico de Resume: la ciudad sigue hacia el oeste y el sur del
@@ -22,11 +23,9 @@ import { GREEN_BELT, REACH, SUBURB_COLS, suburbBlocks, type SprawlBlock } from "
 export interface Tower { box: Solid & { kind: "prism" }; facade: Facade }
 export interface TechScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; towers: Tower[]; signs: Accent[]; telecom: Vec3; neon: { crowns: Accent[]; mastRing: Vec3[] } }
 
-export const TOWER_D = 60, CAMPUS_D = 160;
+export { ARENA, AUDITORIUM, TELECOM, TOWER_D };
+export const CAMPUS_D = 160;
 export const MAX_TECH_H = 20;
-export const TELECOM = { x: -114, y: 242 } as const;
-export const ARENA = { x: 102, y: 448 } as const;
-export const AUDITORIUM = { x: 12, y: 352 } as const;
 export const TECH_MATS: readonly Material[] = ["office", "officeDark", "glass", "curtain", "paving", "plaza", "stone", "copper", "concrete", "leaf", "leafDark", "steel", "rust"];
 const CURTAIN_WINDOW = { w: 0.85, h: 0.8 } as const;
 const LAB_FACADE: Facade = { floors: 1, cols: 1, base: "glass" };

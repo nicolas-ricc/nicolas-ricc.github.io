@@ -10,7 +10,9 @@ const KINDS: readonly Kind[] = ["tower", "campus", "monoblock", "casas", "park",
 const blocks = suburbBlocks();
 const world = () => zoneKinds(zoneRng(SEED, "cv", 2), blocks);
 const at = (p: { x: number; y: number }) => blocks.findIndex((b) => b.x === p.x && b.y === p.y);
-const neighbours = (a: SprawlBlock, b: SprawlBlock) => (a.y === b.y && Math.abs(a.x - b.x) === 30) || (a.x === b.x && Math.abs(a.y - b.y) > 0 && Math.abs(a.y - b.y) <= 30);
+const AVENUE = { y0: 242, y1: 272 }; // la avenida separa estas dos filas: no son vecinas
+const across = (a: SprawlBlock, b: SprawlBlock) => Math.min(a.y, b.y) === AVENUE.y0 && Math.max(a.y, b.y) === AVENUE.y1;
+const neighbours = (a: SprawlBlock, b: SprawlBlock) => !across(a, b) && ((a.y === b.y && Math.abs(a.x - b.x) === 30) || (a.x === b.x && Math.abs(a.y - b.y) > 0 && Math.abs(a.y - b.y) <= 30));
 const FIXED = [TELECOM, ARENA, AUDITORIUM, SCHOOL, CLUB, ...PLAZAS];
 const count = (kinds: Kind[], k: Kind, only?: (b: SprawlBlock) => boolean) => kinds.filter((x, i) => x === k && (!only || only(blocks[i]!))).length;
 const visible = (b: SprawlBlock) => inCoverQuad(b.x + 12, b.y + 9, 16 / 9, 0);
