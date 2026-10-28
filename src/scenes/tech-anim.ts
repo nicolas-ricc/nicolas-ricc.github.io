@@ -14,7 +14,8 @@ import type { TechScene } from "./tech";
  * de telecomunicaciones respira. Las coronas de neón pulsan (alpha 0.45..1,
  * desfasadas) y cada 6..12 s una cambia cian ↔ magenta; el anillo del mástil
  * corre de a una luz. Las ventanas del barrio (`homes`) se encienden y apagan
- * por grupo con un reloj de pared propio, salvo las de `ALWAYS_LIT`. Frame 0 = todo encendido y quieto.
+ * por grupo con un reloj de pared propio, salvo las de `ALWAYS_LIT`.
+ * Frame 0 = todo encendido y quieto.
  */
 export const TECH_BLINK_GAP_MS: [number, number] = [4000, 9000];
 export const SIGN_PERIOD_MS = 3000, SIGN_STEP_MS = 150, TELECOM_STEP_MS = 100;

@@ -2,14 +2,15 @@ import { bounds, tessellate, type Solid } from "../iso/solids";
 import type { Box } from "../world/frame";
 import type { Rect } from "./city-grid";
 
+/** El sólido cae entero (su `bounds` en planta) dentro de `r` inflado 0.5 por lado. */
+export function insideInflated(s: Solid, r: Box): boolean {
+  const { min, max } = bounds(s);
+  return min.x >= r.x0 - 0.5 && min.y >= r.y0 - 0.5 && max.x <= r.x1 + 0.5 && max.y <= r.y1 + 0.5;
+}
+
 /** Caras visibles de los sólidos que caen enteros dentro de `r` inflado 0.5 por lado. */
 export function facesIn(solids: readonly Solid[], r: Box): number {
-  let n = 0;
-  for (const s of solids) {
-    const { min, max } = bounds(s);
-    if (min.x >= r.x0 - 0.5 && min.y >= r.y0 - 0.5 && max.x <= r.x1 + 0.5 && max.y <= r.y1 + 0.5) n += tessellate(s).length;
-  }
-  return n;
+  return solids.reduce((n, s) => n + (insideInflated(s, r) ? tessellate(s).length : 0), 0);
 }
 
 /** La manzana más 2 de vereda por lado. */

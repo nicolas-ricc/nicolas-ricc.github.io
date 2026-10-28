@@ -1,6 +1,6 @@
 import { WORLD } from "../map/geo";
 import type { Rng } from "../map/seed";
-import type { Rect } from "./city-grid";
+import { ROWS, type Rect } from "./city-grid";
 import type { SprawlBlock } from "./sprawl-grid";
 
 /** Zonificación del distrito tecnológico: decide el tipo de cada manzana en un pre-pase, antes de construir nada. */
@@ -19,7 +19,9 @@ export const PLAZAS = [{ x: 132, y: 496 }, { x: 72, y: 472 }] as const;
 /** ¿La manzana es del barrio costero (al sur del mundo y fuera del radio de torres)? */
 export const inBarrio = (b: SprawlBlock): boolean => b.y > WORLD.y1 && b.dist >= TOWER_D;
 /** Paridad de tablero de la manzana: vecinas inmediatas alternan 0/1. */
-export const blockParity = (b: Rect): 0 | 1 => ((Math.round((b.x + 84) / 30) + Math.round((b.y - 328) / 24)) & 1) as 0 | 1;
+export const blockParity = (b: Rect): 0 | 1 => ((Math.round((b.x + 84) / 30) + rowStep(b.y)) & 1) as 0 | 1;
+/** Paso de fila: cada 24 desde 328 al sur; en las filas de la ciudad (`ROWS`, con pasos de 24 y 30) cuenta filas hacia atrás desde 328, así el damero también alterna ahí (con `(y − 328) / 24`, 242 y 272 caían en la misma paridad). */
+const rowStep = (y: number): number => { const k = ROWS.indexOf(y as (typeof ROWS)[number]); return y < 328 && k >= 0 ? k - ROWS.length : Math.round((y - 328) / 24); };
 
 const is = (b: SprawlBlock, p: { x: number; y: number }): boolean => b.x === p.x && b.y === p.y;
 

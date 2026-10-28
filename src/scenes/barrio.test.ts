@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { v3 } from "../iso/geometry";
-import { createRng } from "../map/seed";
-import { ALWAYS_LIT, homeWindow, lawn, type BarrioCtx } from "./barrio";
-
-const newCtx = (): BarrioCtx => ({ solids: [], ground: [], accents: [], homes: [], rng: createRng(7) });
+import { ALWAYS_LIT, homeWindow, lawn } from "./barrio";
+import { newCtx } from "./barrio-fixtures";
 
 describe("barrio", () => {
   it("lawn: un prisma leafDark h 0.05 de toda la manzana", () => {

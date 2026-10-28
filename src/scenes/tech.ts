@@ -23,7 +23,8 @@ import { ARENA, AUDITORIUM, TELECOM, TOWER_D, zoneKinds } from "./tech-zoning";
  * distrito sobre la misma grilla, como un parque de oficinas y campus: torres
  * de muro cortina cerca del contenido, monoblocks y campus de startups después
  * y, al sur, un barrio residencial costero (monoblocks, casas, escuela, club,
- * plazas y costanera). Tres hitos: torre de telecomunicaciones, arena, auditorio. Todo edificio tiene fachada.
+ * plazas y costanera). Tres hitos: torre de telecomunicaciones, arena, auditorio.
+ * Todo edificio de oficinas tiene fachada; las ventanas del barrio son acentos (`homes`).
  * Solo existe con el mundo entero (vive sobre el sangrado).
  * Spec: docs/superpowers/specs/2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md §3
  * y docs/superpowers/specs/2026-10-27-barrio-costero-design.md.

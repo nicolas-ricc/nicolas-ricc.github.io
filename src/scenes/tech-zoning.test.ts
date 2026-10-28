@@ -10,11 +10,7 @@ const KINDS: readonly Kind[] = ["tower", "campus", "monoblock", "casas", "park",
 const blocks = suburbBlocks();
 const world = () => zoneKinds(zoneRng(SEED, "cv", 2), blocks);
 const at = (p: { x: number; y: number }) => blocks.findIndex((b) => b.x === p.x && b.y === p.y);
-// Desvío (#249): las filas 242 y 272 de la ciudad (`ROWS`, 30 de paso) caen en la misma paridad de `blockParity`, pensada
-// para las filas cada 24 del sur; al oeste del contenido el damero no las separa. Es el único par de filas así (fuera del barrio).
-const SAME_PARITY_ROWS = [242, 272] as const;
-const sameParityRows = (a: SprawlBlock, b: SprawlBlock) => Math.min(a.y, b.y) === SAME_PARITY_ROWS[0] && Math.max(a.y, b.y) === SAME_PARITY_ROWS[1];
-const neighbours = (a: SprawlBlock, b: SprawlBlock) => !sameParityRows(a, b) && ((a.y === b.y && Math.abs(a.x - b.x) === 30) || (a.x === b.x && Math.abs(a.y - b.y) > 0 && Math.abs(a.y - b.y) <= 30));
+const neighbours = (a: SprawlBlock, b: SprawlBlock) => (a.y === b.y && Math.abs(a.x - b.x) === 30) || (a.x === b.x && Math.abs(a.y - b.y) > 0 && Math.abs(a.y - b.y) <= 30);
 const FIXED = [TELECOM, ARENA, AUDITORIUM, SCHOOL, CLUB, ...PLAZAS];
 const count = (kinds: Kind[], k: Kind, only?: (b: SprawlBlock) => boolean) => kinds.filter((x, i) => x === k && (!only || only(blocks[i]!))).length;
 const visible = (b: SprawlBlock) => inCoverQuad(b.x + 12, b.y + 9, 16 / 9, 0);
@@ -49,6 +45,11 @@ describe("zoneKinds", () => {
     expect(count(kinds, "plaza", visible)).toBeGreaterThanOrEqual(2);
     expect(kinds[at({ x: 132, y: 448 })]).toBe("monoblock");
     expect(kinds[at({ x: 132, y: 520 })]).toBe("casas");
+  });
+
+  it("blockParity: la fórmula del issue al sur (y ≥ 328); toda pareja de vecinas del distrito con paridad distinta", () => {
+    for (const b of blocks) if (b.y >= 328) expect(blockParity(b)).toBe((Math.round((b.x + 84) / 30) + Math.round((b.y - 328) / 24)) & 1);
+    blocks.forEach((a) => blocks.forEach((b) => { if (neighbours(a, b)) expect(blockParity(a), `${a.x},${a.y} → ${b.x},${b.y}`).not.toBe(blockParity(b)); }));
   });
 
   it("ningún monoblock tiene un vecino monoblock; vecinas del barrio con paridad distinta", () => {

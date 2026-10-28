@@ -13,10 +13,12 @@ export interface HomeWindow { pts: Vec3[]; lit: boolean; group: string }
 export interface BarrioCtx { solids: Solid[]; ground: Solid[]; accents: Accent[]; homes: HomeWindow[]; rng: Rng }
 
 /** Césped de toda la manzana. */
-export const lawn = (ctx: BarrioCtx, b: Rect): void => { ctx.solids.push(prism(b.x, b.y, 0, b.w, b.d, 0.05, "leafDark")); };
+export function lawn(ctx: BarrioCtx, b: Rect): void { ctx.solids.push(prism(b.x, b.y, 0, b.w, b.d, 0.05, "leafDark")); }
 
-export const homeWindow = (ctx: BarrioCtx, pts: Vec3[], lit: boolean, group: string): void => { ctx.homes.push({ pts, lit, group }); };
+/** Ventana de casa: un polígono sobre la pared que la capa `tech.homes` enciende y apaga con su grupo. */
+export function homeWindow(ctx: BarrioCtx, pts: Vec3[], lit: boolean, group: string): void { ctx.homes.push({ pts, lit, group }); }
 
 /** Rectángulo (4 puntos) sobre una pared `x = cte` (u recorre y) o `y = cte` (u recorre x); v es la altura z0..z1. */
-export const wallWindow = (wall: { x: number } | { y: number }, u0: number, u1: number, z0: number, z1: number): Vec3[] =>
-  ("x" in wall ? [v3(wall.x, u0, z0), v3(wall.x, u1, z0), v3(wall.x, u1, z1), v3(wall.x, u0, z1)] : [v3(u0, wall.y, z0), v3(u1, wall.y, z0), v3(u1, wall.y, z1), v3(u0, wall.y, z1)]);
+export function wallWindow(wall: { x: number } | { y: number }, u0: number, u1: number, z0: number, z1: number): Vec3[] {
+  return "x" in wall ? [v3(wall.x, u0, z0), v3(wall.x, u1, z0), v3(wall.x, u1, z1), v3(wall.x, u0, z1)] : [v3(u0, wall.y, z0), v3(u1, wall.y, z0), v3(u1, wall.y, z1), v3(u0, wall.y, z1)];
+}

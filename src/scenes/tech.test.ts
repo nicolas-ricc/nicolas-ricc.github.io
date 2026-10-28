@@ -6,7 +6,7 @@ import { createRng, SEED } from "../map/seed";
 import { suburbBlocks, type SprawlBlock } from "./sprawl-grid";
 import { ARENA, AUDITORIUM, MAX_TECH_H, TECH_MATS, TELECOM, tech } from "./tech";
 import { techAnimator } from "./tech-animator";
-import { ACCENT_CAP, BARRIO_REGION, COSTANERA_RECT, FACE_CAPS, REGION_FACES_BEFORE, TECH_FACES_BEFORE, blockRect, facesIn } from "./tech-budget";
+import { ACCENT_CAP, BARRIO_REGION, COSTANERA_RECT, FACE_CAPS, REGION_FACES_BEFORE, TECH_FACES_BEFORE, blockRect, facesIn, insideInflated } from "./tech-budget";
 import { inBarrio, zoneKinds, type Kind } from "./tech-zoning";
 import { zoneRng } from "./world";
 import { bleedTerrainAt, terrainAt } from "./terrain";
@@ -96,7 +96,6 @@ describe("tech", () => {
 const worldScene = tech(zoneRng(SEED, "cv", 2));
 const worldBlocks = suburbBlocks(), worldKinds = zoneKinds(zoneRng(SEED, "cv", 2), worldBlocks);
 const everything = [...worldScene.solids, ...worldScene.ground];
-const within = (x: Solid, r: { x0: number; y0: number; x1: number; y1: number }) => { const b = bounds(x); return b.min.x >= r.x0 - 0.5 && b.max.x <= r.x1 + 0.5 && b.min.y >= r.y0 - 0.5 && b.max.y <= r.y1 + 0.5; };
 const neighbours = (a: SprawlBlock, b: SprawlBlock) => (a.y === b.y && Math.abs(a.x - b.x) === 30) || (a.x === b.x && Math.abs(a.y - b.y) > 0 && Math.abs(a.y - b.y) <= 30);
 const homesOf = (kind: Kind) => worldScene.homes.filter((w) => worldBlocks.some((b, i) => { const r = blockRect(b); return worldKinds[i] === kind && w.pts.every((p) => p.x >= r.x0 && p.x <= r.x1 && p.y >= r.y0 && p.y <= r.y1); }));
 
@@ -104,7 +103,7 @@ describe("barrio costero (#249)", () => {
   it("variedad: dos manzanas vecinas del barrio nunca tienen la misma firma", () => {
     const r2 = (v: number) => Math.round(v * 2) / 2;
     const signature = (b: SprawlBlock, kind: Kind) => {
-      const raised = worldScene.solids.filter((x) => !isFlat(x) && within(x, blockRect(b)));
+      const raised = worldScene.solids.filter((x) => !isFlat(x) && insideInflated(x, blockRect(b)));
       const prints = raised.flatMap((x) => {
         if ((x.kind !== "prism" && x.kind !== "poly" && x.kind !== "ramp") || x.h < 1) return [];
         const bb = bounds(x);

@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { bounds } from "../iso/solids";
+import { bounds, tessellate } from "../iso/solids";
 import { WORLD } from "../map/geo";
 import type { Rng } from "../map/seed";
 import { newCtx } from "./barrio-fixtures";
 import { CITY_EDGE, WEST_QUAY } from "./city-grid";
 import { costanera } from "./costanera";
-import { tessellate } from "../iso/solids";
 import { REACH } from "./sprawl-grid";
 
 describe("costanera (marcador: el muelle de hoy)", () => {
