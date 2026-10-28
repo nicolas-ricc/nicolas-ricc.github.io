@@ -10,13 +10,12 @@ export type { Plate } from "./plate";
 
 export interface Tri { pts: [Vec3, Vec3, Vec3]; toneOffset?: number; baseTone?: number }
 
-/**
- * Prisma: caja con techo plano, a dos aguas (`gable`) o escalonado (`step`).
- * `roofMat` solo lo usa `roof: "gable"`: pinta las dos vertientes; muros,
- * hastiales y base llevan `mat`. Sin `roofMat`, todo sale en `mat`.
- * `facade` no aplica a `roof: "gable"`, porque los hastiales son pentágonos; `plates` sí (muros y hastiales).
- */
 export type Solid =
+  /**
+   * Caja con techo plano, a dos aguas (`gable`) o escalonado (`step`). `roofMat` solo lo usa `roof: "gable"`: pinta las dos
+   * vertientes; muros, hastiales y base llevan `mat`. Sin `roofMat`, todo sale en `mat`. `facade` no aplica a `roof: "gable"`,
+   * porque los hastiales son pentágonos; `plates` sí (muros y hastiales).
+   */
   | { kind: "prism"; at: Vec3; w: number; d: number; h: number; mat: Material; roofMat?: Material; roof?: "flat" | "gable" | "step"; facade?: Facade; plates?: Plate[] }
   | { kind: "poly"; footprint: Vec2[]; z: number; h: number; mat: Material; facade?: Facade; plates?: Plate[] }
   | { kind: "ramp"; at: Vec3; w: number; d: number; h: number; mat: Material; dir: RampDir; plates?: Plate[] }
@@ -100,7 +99,8 @@ function regular(cx: number, cy: number, r: number, sides: number): Vec2[] {
 }
 
 /** Placas tras cada muro y hastial del gable; base y vertientes no las llevan. Sin placas devuelve `raw` tal cual. */
-function gablePlates(raw: Face[], at: Vec3, w: number, d: number, plates?: Plate[]): Face[] {
+function gablePlates(raw: Face[], s: { at: Vec3; w: number; d: number; plates?: Plate[] }): Face[] {
+  const { at, w, d, plates } = s;
   if (!plates?.length) return raw;
   const fp = rect(at.x, at.y, w, d), edges = GABLE_WALL_EDGE[w >= d ? "wide" : "deep"];
   return raw.flatMap((f, k) => {
@@ -326,7 +326,7 @@ function wheel(s: Solid & { kind: "wheel" }): Face[] {
 export function tessellateAll(s: Solid): Face[] {
   switch (s.kind) {
     case "prism": {
-      if (s.roof === "gable") return gablePlates(gable(s.at, s.w, s.d, s.h, s.mat, s.roofMat), s.at, s.w, s.d, s.plates);
+      if (s.roof === "gable") return gablePlates(gable(s.at, s.w, s.d, s.h, s.mat, s.roofMat), s);
       const fp = rect(s.at.x, s.at.y, s.w, s.d);
       const box = withPlates(extrude(fp, s.at.z, s.h, s.mat), fp, s);
       if (s.roof !== "step") return box;

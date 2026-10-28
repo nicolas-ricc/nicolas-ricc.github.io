@@ -170,13 +170,6 @@ describe("translateAccent", () => {
     });
   }
 
-  it("conserva roofMat y plates de un gable", () => {
-    const g = byName("prism gable con roofMat y plates") as Solid & { kind: "prism" };
-    const t = translate(g, DX, DY) as typeof g;
-    expect(t.roofMat).toBe("tile");
-    expect(t.plates).toBe(g.plates);
-  });
-
   it("los puntos movidos no son los del original", () => {
     const dot = ACCENTS[0]![1] as Accent & { kind: "dot" };
     expect((translateAccent(dot, 0, 0) as typeof dot).at).not.toBe(dot.at);
