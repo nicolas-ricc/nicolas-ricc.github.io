@@ -125,6 +125,10 @@ describe("station", () => {
       expect(fascia, "faja sur").toHaveLength(1);
       expect(close(fascia[0]!.at.z + fascia[0]!.h, 4.2)).toBe(true);
       for (const r of mine) expect(tessellate(r).some((f) => f.mat === "whitewash" && f.normal.x > 0), `faja este ${r.dir}`).toBe(true);
+      for (const r of mine) { // la placa este va en la mitad del muro de más de 0.25 de alto (A3)
+        const east = (r.plates ?? []).filter((p) => p.wall === 1 && p.mat === "whitewash");
+        expect(east.map((p) => [p.u0, p.u1, p.z0, p.z1]), `faja este ${r.dir}`).toEqual([r.dir === "n" ? [0.5, 1, 4.2, 4.45] : [0, 0.5, 4.2, 4.45]]);
+      }
       const lights = dots.filter((d) => d.color === "cyanMid" && d.at.y === ym && d.at.z === 3.9 && d.r === 0.8).map((d) => d.at.x).sort((a, b) => a - b);
       expect(lights).toEqual(c.lights);
     }
