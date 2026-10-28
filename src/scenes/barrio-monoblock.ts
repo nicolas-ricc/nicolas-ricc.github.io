@@ -51,10 +51,10 @@ function windows(ctx: BarrioCtx, b: SprawlBlock, slabs: Slab[]): void {
 /** Árboles por ranuras a lo largo de x (el último pegado al borde este) en la banda libre entre placas: nunca se solapan ni pisan un zócalo. */
 function trees(ctx: BarrioCtx, b: SprawlBlock, slabs: Slab[]): Solid[] {
   const [y0, y1] = slabs.length === 2 ? [b.y + 7.3, b.y + 10.7] : slabs[0]!.y === b.y + 2 ? [b.y + 7.3, b.y + 18] : [b.y, b.y + 10.7], n = ctx.rng.int(4, 6), w = 24 / n;
-  return Array.from({ length: n }, (_, k) => {
+  return Array.from({ length: n }, (_, k): Solid => {
     const r = 1.2 + 0.4 * ctx.rng.next(), h = 3.5 + 1.5 * ctx.rng.next();
     const x = k === n - 1 ? b.x + 24 - r : b.x + w * k + r + (w - 2 * r) * ctx.rng.next(), y = y0 + r + (y1 - y0 - 2 * r) * ctx.rng.next();
-    return { kind: "cone", at: v3(x, y, 0.05), r, h, mat: "leaf", sides: 6 } as Solid;
+    return { kind: "cone", at: v3(x, y, 0.05), r, h, mat: "leaf", sides: 6 };
   });
 }
 
