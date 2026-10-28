@@ -245,8 +245,9 @@ el issue hijo donde está la decisión (#241–#247; este cierre es #248).
 - **Orden de los hijos (#242–#247):** entre #242 y #247 la rama queda sin
   galpones; es un estado intermedio de la historia, no de `main`. Los hijos
   van en orden.
-- **§2.3, patio de material (#247):** su cota sur está en y −58.62.
-- **Farol (#266):** el farol de (5, 76) entra en la caja de `planta`.
+- **§2.3, patio de material (#247):** su borde norte llega a y −58.62
+  (el issue de #247 decía −58).
+- **Farol (#246, PR #266):** el farol de (5, 76) entra en la caja de `planta`.
 - **§3.3, chimeneas visibles (#245, medido en #248):** la chimenea de (86, 32)
   se ve entera (100 %), no el 86 % que suponía el issue; ver §9.2.
 
@@ -283,8 +284,9 @@ Notas:
   `naves` {5, 33, 101, 75} h 14 → {7, −55, 102, −14} h 14;
   `cinta` {28, −15, 125, 4} h 22 → eliminado.
 - `chimeneas` después mide 144 de fondo (y −2.1..142) porque la caja llega a
-  x1 = 104.8 (la chimenea de x 86 más radio, margen y 13 de humo) y corta la calle de
-  transferencia (x 100..108, a lo largo de y). `cropSolid` conserva el
+  x1 = 104.8 (x 86 + `stackR` 2.8, el mayor radio, de la chimenea de x 58, +
+  margen 3 + 13 de deriva del humo) y corta la calle de transferencia
+  (x 100..108, a lo largo de y). `cropSolid` conserva el
   sólido entero, así que la caja de sólidos se estira. Es solo del recorte:
   no cambia las caras de la fábrica.
 - `subestacion` da 362/1207 y no 361/1200 como en #261 (medido en d1f393e).
