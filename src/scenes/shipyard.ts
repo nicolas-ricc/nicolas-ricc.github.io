@@ -1,9 +1,10 @@
 import type { Accent } from "../iso/accent";
 import { v3, type Vec2, type Vec3 } from "../iso/geometry";
-import type { Solid } from "../iso/solids";
-import { BOTTOM, DOCK, MOUTH_Y, QUAY_W, QUAY_X, WORLD, eastBank } from "../map/geo";
+import { bounds, type Solid } from "../iso/solids";
+import { BOTTOM, DOCK, QUAY_W, QUAY_X, WORLD, eastBank, northCoastY } from "../map/geo";
 import type { Rng } from "../map/seed";
 import { jungle as flora } from "./flora";
+import { clearOfWater } from "./terrain-classify";
 
 
 /**
@@ -202,13 +203,26 @@ function fittingOut(out: Solid[], rng: Rng): void {
   for (const x of [304, 316]) out.push(prism(x, 24, 0, 8, 92, 6, "concrete", "gable"));
   out.push({ kind: "cylinder", at: v3(310, 122, 0), r: 4, h: 6, mat: "concrete" });
   for (let i = 0; i < 6; i++) out.push(prism(302 + rng.int(0, 24), 130 + rng.int(0, 10), 0, 3, 2, 1, "rust")); // chatarra
-  for (let y = MOUTH_Y + 1; y < AREA_H; y += 3) out.push({ kind: "cone", at: v3(eastBank(y) + 1.5, y, 0), r: 1.6, h: 1.2, mat: "rock", sides: 5 }); // escollera
+  const rock = (x: number, y: number): Solid => ({ kind: "cone", at: v3(x, y, 0), r: 1.6, h: 1.2, mat: "rock", sides: 5 });
+  for (let y = 0; y < AREA_H; y += 3) { // escollera del río: solo donde ya hay tierra
+    const x = eastBank(y) + 1.5;
+    if (y >= northCoastY(x)) out.push(rock(x, y));
+  }
+  for (let x = Math.ceil(eastBank(30)) + 6; x < 300; x += 3) out.push(rock(x, northCoastY(x) + 1.5)); // escollera de la caleta; arranca 6 u al este de la ribera (eastBank(30) = 277) para no pisar el último cono del río
 }
 
 // ---------------------------------------------------------------- selva y faroles
 
 function jungle(out: Solid[], rng: Rng): void {
-  const cluster = (x0: number, x1: number, y0: number, y1: number, n: number) => flora(out, rng, { x0, x1, y0, y1 }, n);
+  // siembra igual (el rng no se mueve) y descarta lo que queda a menos de 3 u del agua
+  const cluster = (x0: number, x1: number, y0: number, y1: number, n: number) => {
+    const tmp: Solid[] = [];
+    flora(tmp, rng, { x0, x1, y0, y1 }, n);
+    for (const s of tmp) {
+      const b = bounds(s);
+      if (clearOfWater(b.min.x, b.min.y, b.max.x, b.max.y, 3)) out.push(s);
+    }
+  };
   cluster(3, 39, 102, 125, 10);   // SO, al norte de las vías (r ≤ 4: nunca las pisa)
   cluster(3, 39, 139, 143, 4);    // SO, al sur de las vías
   cluster(332, 340, 50, 94, 6);   // borde este, entre la bahía y la punta (y0 50, Task 6: deja fuera del alcance diagonal del carguero que sale de la bahía)

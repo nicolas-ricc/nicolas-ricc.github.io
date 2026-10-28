@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildRenderList } from "../iso/render-list";
 import { bounds, type Solid } from "../iso/solids";
-import { WORLD } from "../map/geo";
+import { WORLD, northCoastY } from "../map/geo";
 import { allIsoColors } from "../map/palette-iso";
 import { createRng } from "../map/seed";
 import { AREA_H, AREA_W, STREET_EDGE, shipyard, type Scene } from "./shipyard";
@@ -85,6 +85,12 @@ describe("shipyard parte 2", () => {
     expect(sheds).toHaveLength(2);
     const rocks = s.solids.filter((x) => x.kind === "cone" && x.mat === "rock");
     expect(rocks.length).toBeGreaterThan(30);
+  });
+
+  it("la escollera bordea la costa nueva de la punta norte", () => {
+    const rocks = scene().solids.filter((x): x is Solid & { kind: "cone" } => x.kind === "cone" && x.mat === "rock");
+    expect(rocks.filter((r) => r.at.y < 30 && r.at.x < 300).length).toBeGreaterThanOrEqual(4);
+    for (const r of rocks) expect(r.at.y).toBeGreaterThanOrEqual(northCoastY(r.at.x) - 2);
   });
 
   it("faroles: poste de acero con luz cian encima", () => {

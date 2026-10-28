@@ -95,6 +95,8 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "calle-faroles", title: "Calle de faroles", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 99, y0: 8, x1: 111, y1: 128 }, h: 7 },
   // las dos naves de montaje: x 10..100, filas y −52 y −32 de 16; y1 −14 deja afuera el contrapeso de la grúa (y −13..−11, z 18.5..20) y x1 102 el patio (x ≥ 104)
   { id: "naves", title: "Naves de montaje", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 7, y0: -55, x1: 102, y1: -14 }, h: 14 },
+  // la costa norte de la isla frente a los galpones: x 270..350, y 0..60; h es el menor entero que pasa encuadre y vecinos (medido con el `measure` de exhibits.test.ts)
+  { id: "punta-norte", title: "Punta norte de la isla", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 270, y0: 0, x1: 350, y1: 60 }, h: 9 },
   // pluma 24 al este y contrapluma 8 al oeste: con el mástil en x −8 queda en −16..16
   { id: "grua-torre", title: "Grúa torre", zone: "portfolio", group: "astillero", kind: "piece",
     build: (out, accents) => towerCrane(out, accents, { at: { x: -8, y: 0 }, mastH: 20, jibLen: 24, dir: "e", light: "amber" }) },
@@ -149,6 +151,8 @@ export const EXHIBITS: readonly Exhibit[] = [
     box: { x0: DISTRICT_COLS[0] - M, y0: DISTRICT_ROWS[1] - M, x1: DISTRICT_COLS[0] + BLOCK_W + M, y1: DISTRICT_ROWS[1] + BLOCK_D + M }, h: 12 },
   { id: "obra", title: "Obra en construcción", zone: "cv", group: "ciudad", kind: "region",
     box: { x0: SITE.x - M, y0: SITE.y - M, x1: SITE.x + SITE.w + M, y1: SITE.y + SITE.d + M }, h: 25 },
+  // la punta sur: x 270..380, y 300..400; necesita el mundo sin filtro de zonas (el storybook lo arma con `assembleWorld(undefined, …)`); h es el menor entero que pasa encuadre y vecinos (medido con el `measure` de exhibits.test.ts)
+  { id: "punta-sur", title: "Punta sur de la isla", zone: "cv", group: "ciudad", kind: "region", box: { x0: 270, y0: 300, x1: 380, y1: 400 }, h: 10 },
   // patio 9×9 entre tres edificios de 6: 21×15; el suelo de la manzana va a `out` con los sólidos
   { id: "campus", title: "Campus", zone: "cv", group: "ciudad", kind: "piece",
     build: (out, accents) => campus(out, out, accents, createRng(SEED), { x: -12.5, y: -9.5, w: 25, d: 19 }, -10.5, -7.5, 21, 15) },
