@@ -23,7 +23,7 @@ import { substation } from "./substation";
  */
 export interface FactoryScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; stacks: Vec3[]; excavator: Solid[] }
 
-export const PLANT = { x: MALT.x, y: MALT.y, w: MALT.w + NAVE.w, d: 30, h: 14 } as const; // maltería + nave: el testero este queda en NAVE.x + NAVE.w
+export const PLANT = { x: MALT.x, y: MALT.y, w: MALT.w + NAVE.w, d: 30, h: 14 } as const;
 export { MALT };
 export const STACKS = [{ x: 130, y: -40, r: 2.8, h: 22 }, { x: 140, y: -34, r: 2.6, h: 26 }, { x: 150, y: -40, r: 2.4, h: 24 }] as const;
 export const STACK_BASE_H = 3;
