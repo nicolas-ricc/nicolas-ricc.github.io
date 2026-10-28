@@ -38,6 +38,11 @@
 - **A4.** Los conos perdidos se copian de la tabla del PR #287 (medidos con `world(7)`): 11 en total (hinterland 4, astillero 4, ciudad 1, tecnológico 1, fábrica 1).
 - **A5.** Si una captura muestra un defecto, el follow-up se abre con `gh issue create … --label needs-triage --label agent-follow-up` y el cuerpo empieza con `Follow-up of #282` (el issue lo pide; formato del pipeline). Lo hace el orquestador, no el implementador: el implementador lo anota en `.scratch/medicion-282.md`.
 - **A6.** Las casillas de §5 y §10 se marcan `[x]` con la referencia al final del ítem, entre paréntesis: `(captura `estacion-despues.png`; test `station.test.ts` "…")`. Las referencias salen de los PRs #283–#288.
+- **A8.** Los commits intermedios de Task 1–3 dejan en rojo los `it` del describe "(#239)" que les tocan a tareas posteriores (los escribe en rojo el stage 3, como en el plan de #248). Cada tarea pone en verde solo los suyos; `npm test` entero en verde se exige al cerrar Task 4. Alternativa rechazada: escribir cada test con su tarea, que contradice el stage 3 del pipeline (evals antes de implementar).
+- **A9.** Si el máximo de `rail.train` supera 600, o una captura muestra un defecto, no se toca código (regla del issue): se anota en §12 y va a un follow-up (A5).
+- **A10.** La regla "calderería solo en 'en el lugar de la calderería'" del README no tiene test: la verifica el revisor de la tarea.
+- **A11.** Una casilla de §5/§10 que se cumpla con desvío se marca `[x]` y remite a §12; si alguna no se cumple, se deja `[ ]` con la explicación y el test de "§5 sin `- [ ]`" se ajusta en el stage 6 con el motivo. Los PRs #283–#288 cubren todo §5.
+- **A12.** Las capturas de Task 3 se commitean juntas o ninguna; si Task 3 se repite, se regeneran las seis.
 - **A7.** El log `[lab] bloom` se toma de la consola de `/lab/world.html` (`agent-browser console`) después de ~10 s; en headless puede quedar `fallback`: se anota como riesgo, no bloquea.
 
 ---
@@ -59,7 +64,7 @@
 - [ ] **Step 6: `station.ts`.** Primer párrafo: modelo real (Estación Tigre, cabecera de la Línea Mitre, 1995: ladrillo, teja, torre del reloj de piedra, pórtico y marquesinas verdes); disposición (región `STATION` x 100..197, y 80..142; vías 1..3 en `TRACKS_Y`, abanico `LADDER`, andenes `ISLAND`/`SIDE`/`HEAD`, topes en `BUFFER_X`, edificio, torre y explanada al este de `HEAD`, paso a nivel sobre la calle x 100..108); conservar los párrafos de `PARKED` y de oclusión tal cual; última línea `Spec: docs/superpowers/specs/2026-10-27-estacion-terminal-design.md (desvíos en §12).`
 - [ ] **Step 7: `train.ts`.** Agregar al final del docstring: `Spec: docs/superpowers/specs/2026-10-27-estacion-terminal-design.md §5.4 (desvíos en §12).`
 - [ ] **Step 8: `rail-anim.ts`.** Agregar un párrafo de desvíos de §7 antes del último: frente a 2 u del tope y no ≈ 1 (`STOP_X` 158, tope h 1.2), sin rng (nada es aleatorio; el spec pedía `createRng(SEED + n)`), ciclo ≈ 101,7 s y no ≈ 120; mantener el del paso a nivel; última línea `Spec: docs/superpowers/specs/2026-10-27-estacion-terminal-design.md §7 (desvíos en §12).`
-- [ ] **Step 9: Correr** — `npx vitest run src/lab/docs.test.ts`: verdes los de esta tarea y todos los describes anteriores. `npm run typecheck`.
+- [ ] **Step 9: Correr** — `npx vitest run src/lab/docs.test.ts`: verdes los `it` de esta tarea (README, docstrings) y todos los describes anteriores; los de Task 2–4 siguen en rojo (A8). `npm run typecheck`.
 - [ ] **Step 10: Commit** — `docs(#282): README y docstrings de la estación terminal y el tren`.
 
 ### Task 2: Nota en la spec 10-15 e índice del storybook
@@ -90,16 +95,20 @@
 
 - [ ] **Step 1: Worktree** — `git worktree add /tmp/main-05318e5 05318e5 && ln -s /work/node_modules /tmp/main-05318e5/node_modules`.
 - [ ] **Step 2: Caras** — `.scratch/caras-282.ts <raíz>`: importa `src/lab/exhibits.ts`, `src/world/assemble.ts`, `src/lab/crop.ts`, `src/scenes/shipyard.ts`, `src/map/seed.ts`, `src/iso/solids.ts` de `<raíz>` (import dinámico con `pathToFileURL`); imprime `id sólidos caras` para los cinco ids (los ausentes como `—`) y el total estático del astillero. `npx tsx .scratch/caras-282.ts /tmp/main-05318e5` y `… /work`. Chequeo: antes = 1061 (#239); después ≈ 1300 + edificio + 105 de la formación (PRs #284, #285, #286), salvo cambios posteriores que se expliquen.
-- [ ] **Step 3: Máximo de `rail.train`** — en el mismo script, solo con `/work`: para `ms` de 0 a `CYCLE_MS` cada 250, `trainStateAt(ms)`, y si `alpha > 0`, `emu(s.x0, TRACK_Y, { cars: 4, lead: s.lead, lit: true }).solids` teselado; imprimir el máximo y su `ms`. Esperado ≤ 600.
+- [ ] **Step 3: Máximo de `rail.train`** — en el mismo script, solo con `/work`: para `ms` de 0 a `CYCLE_MS` cada 250, `trainStateAt(ms)`, y si `alpha > 0`, `emu(s.x0, TRACK_Y, { cars: 4, lead: s.lead, lit: true }).solids` teselado; imprimir el máximo y su `ms`. Esperado ≤ 600; si no, A9.
 - [ ] **Step 4: Servidor** — `npm run dev -- --host --port 5173` en segundo plano con `nohup … > .scratch/vite.log &` (no esperar su fin); `curl -sf http://localhost:5173/lab/world.html`.
 - [ ] **Step 5: Cover** — agent-browser con la extensión (CLAUDE.md), `set viewport 1600 900 2`, `open http://localhost:5173/`, dos `wait 3000`, `screenshot …/cover-despues.png`.
-- [ ] **Step 6: Gancho del ticker** — `.scratch/hook-ticker.js` como en `2026-10-17-barcos-inventario.md` "Método del time-lapse" (tomar el `?v=` del import de `pixi__js.js` del bundle servido); deja `window.__tk`. Avanzar el reloj: `__tk._head.next._fn.call(__tk._head.next._context, { deltaMS: ms / speed })`, con `speed` = 0.001 en el storybook (`?speed=0.001`) y en el lab (`/lab/world.html?speed=0.001`).
+- [ ] **Step 6: Gancho del ticker** — `.scratch/hook-ticker.js` como en `2026-10-17-barcos-inventario.md` "Método del time-lapse" (tomar el `?v=` del import de `pixi__js.js` del bundle servido); deja `window.__tk`; el texto que devuelve (`String(_fn)`) tiene que contener `stage.tick(ticker.deltaMS * speed)` (`src/lab/page.ts:85`, `src/lab/storybook.ts:141`); si no, se avanzó otro listener. Avanzar el reloj: `__tk._head.next._fn.call(__tk._head.next._context, { deltaMS: ms / speed })`, con `speed` = 0.001 en el storybook (`?speed=0.001`) y en el lab (`/lab/world.html?speed=0.001`).
 - [ ] **Step 7: Portfolio** — `/lab/world.html?speed=0.001`, `press 1`, gancho, avanzar 52 000 ms, `renderer.render(stage)`, `screenshot …/portfolio-despues.png`. Copiar la línea `[lab] bloom` de `agent-browser console`.
 - [ ] **Step 8: Exhibits** — `/lab/storybook.html?speed=0.001#tren` (ms 0) → `tren-despues.png`; `#paso-a-nivel` a 21 500 ms → `paso-a-nivel-despues.png`; `#estacion` a 52 000 ms → `estacion-despues.png`. Recargar la página entre exhibits para empezar en ms 0.
-- [ ] **Step 9: Time-lapse** — `/lab/world.html?speed=0.001`, `press 1`, gancho; `.scratch/timelapse.js` = el bucle del método A con `DT = 2000/0.001` por cuadro (2000 ms simulados), acumulador `lighten` solo (sin `accB`), parar a los 55 cuadros (110 s ≥ `CYCLE_MS`); exportar `accA.toDataURL("image/png")` y escribirlo a `…/time-lapse-ciclo.png` (por `eval` en trozos o `screenshot` de un `<img>` a pantalla completa; cualquiera que dé 3200×1800).
+- [ ] **Step 9: Time-lapse** — recargar `/lab/world.html?speed=0.001` (el Step 7 ya avanzó el reloj), `press 1`, gancho; el primer cuadro no tiene que mostrar el tren (en ms 0 el frente está en el borde del sangrado, `alpha` 0); `.scratch/timelapse.js` = el bucle del método A con `DT = 2000/0.001` por cuadro (2000 ms simulados), acumulador `lighten` solo (sin `accB`), parar a los 55 cuadros (110 s ≥ `CYCLE_MS`); exportar `accA.toDataURL("image/png")` y escribirlo a `…/time-lapse-ciclo.png` (por `eval` en trozos o `screenshot` de un `<img>` a pantalla completa; cualquiera que dé 3200×1800).
 - [ ] **Step 10: Verificar y mirar** — `node -e` que lea el IHDR (bytes 16..23) de los seis PNG: 3200×1800. Abrir cada uno (Read) y anotar en `.scratch/medicion-282.md` qué se ve y cualquier defecto (A5).
 - [ ] **Step 11: Limpieza** (también si aborta): `pkill -f "vite.*5173"`, `agent-browser close`, `git worktree remove --force /tmp/main-05318e5`.
 - [ ] **Step 12: Commit** — `git add docs/superpowers/specs/assets/2026-10-27-estacion/ && git commit -m "docs(#282): capturas después y time-lapse de un ciclo del tren"`.
+
+### Entre Task 3 y Task 4 (orquestador)
+
+Si `.scratch/medicion-282.md` anota defectos o un máximo > 600, el orquestador abre el follow-up (A5) y pasa el número a Task 4; si no hay, §12.3 dice "sin defectos vistos".
 
 ### Task 4: Spec de la estación — estado, casillas y `## 12. Desvíos`
 
@@ -122,7 +131,7 @@
   - `roofMat` y placas en gable como extensión del kit; materiales `tile`, `canopy`, `livery` (#276);
   - +20 % de caras no aplicable: la calderería eran 138 caras; delta en §12.1;
   - conos perdidos: tabla por escena (A4), y la quinta selva (empalme de la fábrica) (#280);
-  - de los PRs: semáforos y paso a nivel con la esquina NO como punto (#277 A1); hastiales del remate (#278 A3); ventanas sur del hall sin luz (#278 A18); piso del tope de caras ≥ 120 (#279 A1); caja de `paso-a-nivel` con `x0` 95 (#281); luz del poste norte del paso a nivel sobre el tren (#281); `asphalt`, `deck`, `stone`, `paving` compartidos (#277, #278).
+  - de los PRs: semáforos y paso a nivel con la esquina NO como punto (#277 A1); hastiales del remate (#278 A3); ventanas sur del hall sin luz (#278 A18); piso del tope de caras ≥ 120 (#279 A1); caja de `paso-a-nivel` con `x0` 95 (#281); luz del poste norte del paso a nivel sobre el tren (#281); `asphalt`, `deck`, `stone`, `paving` compartidos (#277, #278). Antes de escribir cada número, confirmarlo en el código de la rama (`grep` de la constante o del test) y no solo en el PR.
   - `### 12.1 Caras por exhibit`: tabla de Task 3 con filas `` | `gradas` | ``, `` `calle-faroles` ``, `` `estacion` ``, `` `paso-a-nivel` ``, `` `tren` ``; total del astillero antes/después con delta; máximo de `rail.train` (≤ 600). Sin umbral.
   - `### 12.2 Ciclo medido`: fases y `CYCLE_MS`; cuadros, `deltaMS` 2000 y ms simulados del time-lapse; línea `[lab] bloom`.
   - `### 12.3 Capturas`: enlaces relativos `assets/2026-10-27-estacion/<nombre>.png` a `cover-antes`, `cover-despues`, `portfolio-antes`, `portfolio-despues`, `estacion-despues`, `paso-a-nivel-despues`, `tren-despues`, `time-lapse-ciclo` y a las de los hijos (`estacion-vias`, `estacion-edificio`, `tren-estacionado`, `corredor-sur`, `tren`, `paso-a-nivel`, `tren-llegando`); defectos vistos (si hay) con el issue de follow-up.
@@ -157,3 +166,25 @@ Cada tarea corre el describe entero y solo mira los suyos.
 | 7 delta de caras | 3 | 3, 4 |
 | 8 docs.test | 4 | stage 3 |
 | 9 PR (inventario, caras, time-lapse, conos, bloom) | 5 | stage 8 |
+
+## Grilling
+
+- 1 ronda. El griller fue `fable`. Las revisiones fueron menores, sin cambio de costura: A8–A12, la recarga antes del time-lapse, el chequeo del listener, el paso del orquestador entre Task 3 y Task 4, y la confirmación de los números en el código.
+- 18 preguntas, con estas fuentes:
+  - ISSUE: 3 (5, 7, 18).
+  - CODE: 8 (4, 6, 9, 11, 12, 14, 18).
+  - DOC: 2 (10, 3).
+  - NO SOURCE: 6 (1, 2, 8, 13, 15, 16). Todas son supuestos técnicos, A8–A12. Ninguna es ambigüedad de spec ni queda fuera de alcance.
+- Respuestas clave:
+  - En `main` 05318e5:
+    - `gradas` y `calle-faroles` tienen las mismas cajas que en la rama (`exhibits.ts:90,95` contra `:92,97`).
+    - `readout`, `cropScene`, `cropAnimators` y `pieceScene` están en `crop.ts:161,54,83,113`.
+    - `assembleWorld(zones, opts)` está en `assemble.ts:20`.
+    - `package.json` y `package-lock.json` no cambian entre 05318e5 y HEAD (`git diff --stat` vacío), así que el `node_modules` enlazado vale (A1).
+  - Valores de `rail-anim.ts`: `IN_MS` = 25 833 ms, `phaseStart("out")` = 55 833 ms y `CYCLE_MS` = 101 667 ms. A los 52 s el tren está detenido. Los 21,5 s sobre el cruce salen del PR #288 ("`#paso-a-nivel` a 21,5 s con el tren sobre el cruce").
+  - El tope de 600 es de la capa: spec §6.3 ("su capa lleva un tope de **600 caras**") e issue ítem 7 ("el máximo de `rail.train` (≤ 600)").
+  - El listener del lab usa `ticker.deltaMS * speed` (`page.ts:83-85`, `storybook.ts:138-141`). Llamarlo directo esquiva el tope `_maxElapsedMS`, que vive en `Ticker.update` (CLAUDE.md; método A de `2026-10-17-barcos-inventario.md`).
+  - Los conos de A4 siguen vigentes: después de #287 solo entró #288, y #288 no toca `flora.ts` ni las escenas (`git diff 726ab5c f96897f --stat`).
+  - El ítem 9 (cuerpo del PR) lo produce el stage 8 del pipeline, fuera del plan.
+  - La atribución de los commits sale de las instrucciones de la sesión.
+- Issues abiertos: ninguno.
