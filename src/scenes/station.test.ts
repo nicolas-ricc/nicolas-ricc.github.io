@@ -420,7 +420,7 @@ describe("station: edificio, torre y explanada (#278)", () => {
     expect(amberPolys.some((p) => samePts(p.pts, fan[0]!.pts) && p.alpha === 0.5), "medio punto").toBe(true);
     const windows = faces(h, "glass", "rect");
     const cyanB = bPolys.filter((p) => p.color === "cyanBleed");
-    expect(cyanB).toHaveLength(7);
+    expect(cyanB).toHaveLength(3); // los ventanales del este; las ventanas del sur no se prenden (las tapan el ala y la torre)
     for (const p of cyanB) { expect(p.alpha).toBe(0.5); expect(windows.some((f) => samePts(p.pts, f.pts)), "ventana").toBe(true); }
     const lantern = bPolys.filter((p) => p.color === "amberBleed");
     expect(lantern).toHaveLength(1);

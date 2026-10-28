@@ -171,3 +171,8 @@ Una ronda (los cambios no agregan ni sacan pasos), con 18 preguntas del griller 
 - Q1 (muros 0 y 3) también: NO SOURCE, resuelto leyendo el código, como supuesto técnico.
 
 Supuestos: A1–A17. No se abrieron issues: no quedó nada fuera de alcance.
+
+## Cambios tras la revisión (stage 6)
+
+- **A18. Ventanas del sur sin luz de noche** (desvío del issue, "de noche `poly` `cyanBleed` alpha 0.5 sobre cada ventana (este y sur)"): las tapan `WING_S` (hasta z ≈ 5.3 en proyección), `LINK` y la torre. Los acentos se dibujan encima de todo, así que brillarían sobre el techo del ala y el fuste. Quedan las placas; A16 pasa a `cyanBleed: 3`.
+- **A10 corregido:** los dientes bajo las vertientes arrancan en y 107.9, de 1.6 en 1.6 (107.9, 109.5, 111.1, 112.7 y su espejo 230 − y). Con y 107, el primero se encimaba con el diente de la esquina del alero.

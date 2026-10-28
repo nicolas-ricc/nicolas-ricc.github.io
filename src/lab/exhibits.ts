@@ -99,7 +99,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "punta-norte", title: "Punta norte de la isla", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 270, y0: 0, x1: 350, y1: 60 }, h: 9 },
   // la estación terminal: x 108..198, y 98..143; h medido como en punta-norte: lo fija el remate de la torre del reloj, z 29 (la estación no emite humo)
   { id: "estacion", title: "Estación terminal", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 108, y0: 98, x1: 198, y1: 143 }, h: 29 },
-  // el paso a nivel: x 98..112, y 124..142; h medido igual: el mismo farol (los postes del cruce llegan a z 3; los semáforos quedan afuera)
+  // el paso a nivel: x 98..112, y 124..142; h medido igual: lo fija el farol de la calle en (108.5, 124), a z 5 (los postes del cruce llegan a z 3; los semáforos quedan afuera)
   { id: "paso-a-nivel", title: "Paso a nivel", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 98, y0: 124, x1: 112, y1: 142 }, h: 5 },
   // pluma 24 al este y contrapluma 8 al oeste: con el mástil en x −8 queda en −16..16
   { id: "grua-torre", title: "Grúa torre", zone: "portfolio", group: "astillero", kind: "piece",

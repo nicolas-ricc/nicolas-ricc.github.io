@@ -133,12 +133,16 @@ type Box = { x: number; y: number; w: number; d: number };
 /** Huella rectangular, en el orden de las aristas de los muros: N, E, S, O. */
 const footprint = (s: Box): Vec2[] => [{ x: s.x, y: s.y }, { x: s.x + s.w, y: s.y }, { x: s.x + s.w, y: s.y + s.d }, { x: s.x, y: s.y + s.d }];
 /** Contorno de una placa en mundo, sobre la arista `fp[wall] → fp[wall + 1]` (igual que `plateFaces`). */
-export function wallPts(fp: Vec2[], p: Plate): Vec3[] {
+function wallPts(fp: Vec2[], p: Plate): Vec3[] {
   const a = fp[p.wall]!, b = fp[(p.wall + 1) % 4]!;
   return plateOutline(p).map((q) => v3(a.x + (b.x - a.x) * q.x, a.y + (b.y - a.y) * q.x, q.y));
 }
-const solid = (s: Box & { h: number }, mat: Solid["mat"], plates?: Plate[], gable = false): Solid =>
-  ({ ...prism(s.x, s.y, 0, s.w, s.d, s.h, mat, plates), ...(gable && { roof: "gable" as const, roofMat: "tile" as const }) });
+/** Prisma a dos aguas; sin `roofMat`, las vertientes van en `mat`. */
+const gable = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Solid["mat"], plates?: Plate[], roofMat?: Solid["mat"]): Solid =>
+  ({ kind: "prism", at: { x, y, z }, w, d, h, mat, roof: "gable", ...(roofMat && { roofMat }), ...(plates && { plates }) });
+/** Caja de la huella `s` desde z 0: plana o, con `roofMat`, a dos aguas. */
+const solid = (s: Box & { h: number }, mat: Solid["mat"], plates?: Plate[], roofMat?: Solid["mat"]): Solid =>
+  (roofMat ? gable(s.x, s.y, 0, s.w, s.d, s.h, mat, plates, roofMat) : prism(s.x, s.y, 0, s.w, s.d, s.h, mat, plates));
 /** Placa rectangular de `u0..u1` y `z0..z1` sobre el muro `wall`. */
 const rect = (wall: number, u0: number, u1: number, z0: number, z1: number, mat: Solid["mat"]): Plate => ({ wall, shape: "rect", u0, u1, z0, z1, mat });
 /** Zócalo verde grisáceo en los muros este y sur. */
@@ -157,7 +161,8 @@ function hall(out: Solid[], accents: Accent[]): void {
     const c = (k + 0.5) / 10, e = 0.2 / len;
     plates.push(rect(wall, c - e, c + e, 7.5, 7.9, "stockbrick"));
   }
-  for (const yc of [107, 108.8, 110.6, 112.4, 117.6, 119.4, 121.2, 123]) {
+  // desde y 107.9: el primero no se encima con el diente de la esquina del alero (y 106.7..107.1)
+  for (const yc of [0, 1, 2, 3].flatMap((k) => [107.9 + 1.6 * k, 230 - (107.9 + 1.6 * k)])) {
     const u = (yc - HALL.y) / HALL.d, e = 0.2 / HALL.d, z1 = 8 + 2.8 * (9 - Math.abs(yc - 115)) / 9 - 0.1;
     plates.push(rect(1, u - e, u + e, z1 - 0.4, z1, "stockbrick"));
   }
@@ -168,13 +173,13 @@ function hall(out: Solid[], accents: Accent[]): void {
     night(g, "cyanBleed", 0.5);
   }
   plates.push(rect(1, 0.3, 0.36, 0.8, 7.5, "stockbrick"), rect(1, 0.64, 0.7, 0.8, 7.5, "stockbrick"));
-  // cuatro ventanas al sur, cada una con su parteluz
+  // cuatro ventanas al sur, cada una con su parteluz; sin luz de noche: WING_S, LINK y la torre las tapan, y el acento se
+  // dibuja encima de todo (brillaría sobre el techo del ala y el fuste)
   for (let k = 0; k < 4; k++) {
-    const c = (k + 0.5) / 4, w = 0.8 / HALL.w, e = 0.075 / HALL.w, g = rect(2, c - w, c + w, 2, 5.5, "glass");
-    plates.push(g, rect(2, c - e, c + e, 2, 5.5, "canopy"));
-    night(g, "cyanBleed", 0.5);
+    const c = (k + 0.5) / 4, w = 0.8 / HALL.w, e = 0.075 / HALL.w;
+    plates.push(rect(2, c - w, c + w, 2, 5.5, "glass"), rect(2, c - e, c + e, 2, 5.5, "canopy"));
   }
-  out.push(solid(HALL, "brick", plates, true));
+  out.push(solid(HALL, "brick", plates, "tile"));
   // linterna vidriada sobre la cumbrera, con tapas en los extremos
   out.push(prism(172, 114.4, 10.8, 16, 1.2, 0.8, "glass"), prism(171.85, 114.4, 10.8, 0.15, 1.2, 0.8, "asphalt"), prism(188, 114.4, 10.8, 0.15, 1.2, 0.8, "asphalt"));
   accents.push({ kind: "poly", pts: [v3(188, 115.6, 10.8), v3(172, 115.6, 10.8), v3(172, 115.6, 11.6), v3(188, 115.6, 11.6)], color: "amberBleed", alpha: 0.6 });
@@ -209,7 +214,7 @@ function wings(out: Solid[]): void {
     awnings.push(awning(c - 1, WING_S.y + WING_S.d, 2, 0.8, "s"));
     ps.push(rect(2, (WING_S.x + WING_S.w - c - 1) / WING_S.w, (WING_S.x + WING_S.w - c + 1) / WING_S.w, 0.8, 2.8, "glass"));
   }
-  out.push(solid(WING_N, "brick", pn, true), solid(WING_S, "brick", ps, true), solid(LINK, "brick"), solid(SERVICE, "brick"), ...awnings);
+  out.push(solid(WING_N, "brick", pn, "tile"), solid(WING_S, "brick", ps, "tile"), solid(LINK, "brick"), solid(SERVICE, "brick"), ...awnings);
 }
 
 /** Torre del reloj: fuste con ranuras y cuatro esferas, pináculos y remate de teja con hastiales de piedra. */
@@ -223,7 +228,7 @@ function tower(out: Solid[], accents: Accent[]): void {
     plates.push(dial);
     if (wall === 1 || wall === 2) accents.push({ kind: "poly", pts: wallPts(fp, dial), color: "amber", alpha: 0.6 });
   }
-  out.push(solid({ ...TOWER }, "stone", plates));
+  out.push(solid(TOWER, "stone", plates));
   // pináculos en las esquinas
   for (const x of [TOWER.x, TOWER.x + TOWER.w - 0.4]) for (const y of [TOWER.y, TOWER.y + TOWER.d - 0.4]) out.push(prism(x, y, 24, 0.4, 0.4, 1.2, "safety"));
   // remate: pirámide de teja cuya base es el cuadrado del fuste
@@ -232,7 +237,7 @@ function tower(out: Solid[], accents: Accent[]): void {
   const gables: [number, number, number, number, number][] = [[188, 128.6, 2, 0.8, 1], [184, 128.6, 2, 0.8, 3], [186.6, 126, 0.8, 2, 0], [186.6, 130, 0.8, 2, 2]];
   for (const [x, y, w, d, wall] of gables) {
     const vent = rect(wall, 0.3125, 0.6875, 24.5, 24.8, "asphalt");
-    out.push({ ...prism(x, y, 24, w, d, 1, "stone", [vent]), roof: "gable" as const } as Solid);
+    out.push(gable(x, y, 24, w, d, 1, "stone", [vent]));
   }
 }
 
@@ -241,7 +246,7 @@ function esplanade(out: Solid[], accents: Accent[]): void {
   out.push(prism(ESPLANADE.x0, ESPLANADE.y0, 0, ESPLANADE.x1 - ESPLANADE.x0, ESPLANADE.y1 - ESPLANADE.y0, 0.15, "paving"));
   // faroles: la coordenada es el centro del poste
   for (const y of [102, 130]) {
-    out.push(prism(195.2, y - 0.3, 0.15, 0.6, 0.6, 6, "steel"));
+    out.push(prism(195.5 - 0.3, y - 0.3, 0.15, 0.6, 0.6, 6, "steel"));
     accents.push({ kind: "dot", at: v3(195.5, y, 6.15), r: 1.2, color: "cyan" });
   }
   // palmeras: la central en 195.6 para que la copa no cruce el cartel (A6)
@@ -249,7 +254,7 @@ function esplanade(out: Solid[], accents: Accent[]): void {
     out.push({ kind: "cylinder", at: v3(x, y, 0.15), r: 0.25, h: 6, mat: "deck", sides: 6 });
     out.push({ kind: "cone", at: v3(x, y, 6.15), r: 1.8, h: 1.6, mat: "leaf" });
   }
-  out.push(prism(197, ESPLANADE.y0, 0, 0.3, ESPLANADE.y1 - ESPLANADE.y0, 1, "canopy")); // baranda
+  out.push(prism(ESPLANADE.x1, ESPLANADE.y0, 0, 0.3, ESPLANADE.y1 - ESPLANADE.y0, 1, "canopy")); // baranda
 }
 
 /** Edificio de pasajeros, torre del reloj y explanada. Determinista, sin rng. */
