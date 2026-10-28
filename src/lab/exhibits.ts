@@ -167,7 +167,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "torres", title: "Torres del distrito tecnológico", zone: "cv", group: "tecnologico", kind: "region",
     box: { x0: SUBURB_COLS[1] - M, y0: ROWS[1] - M, x1: SUBURB_COLS[0] + BLOCK_W + M, y1: ROWS[1] + BLOCK_D + M }, h: 22 },
   { id: "monoblock", title: "Monoblock", zone: "cv", group: "tecnologico", kind: "region",
-    box: { x0: 132 - M, y0: 448 - M, x1: 132 + BLOCK_W + M, y1: 448 + BLOCK_D + M }, h: 13 },
+    box: { x0: 132 - M, y0: 448 - M, x1: 132 + BLOCK_W + M, y1: 448 + BLOCK_D + M }, h: 23.6 },
   { id: "casas", title: "Casas con techo de teja", zone: "cv", group: "tecnologico", kind: "region",
     box: { x0: 132 - M, y0: 520 - M, x1: 132 + BLOCK_W + M, y1: 520 + BLOCK_D + M }, h: 5 },
   { id: "escuela", title: "Escuela", zone: "cv", group: "tecnologico", kind: "region",
