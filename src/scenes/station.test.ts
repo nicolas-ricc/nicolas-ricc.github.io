@@ -3,7 +3,8 @@ import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
 import type { Plate } from "../iso/plate";
 import { bounds, isFlat, tessellate, tessellateAll, type Bounds, type Solid } from "../iso/solids";
-import { BUFFER_H, BUFFER_X, CROSSING, FENCE_Y, GAUGE, HEAD, ISLAND, LADDER, RAIL_W, RAIL_Z, SIDE, SIGNALS, STATION, STOP_X, TRACK_X0, TRACKS_Y, TRAIN_CLEAR, station, building, HALL, WING_N, WING_S, LINK, SERVICE, TOWER, PORTICO, ESPLANADE } from "./station";
+import { BUFFER_H, BUFFER_X, CROSSING, FENCE_Y, GAUGE, HEAD, ISLAND, LADDER, RAIL_W, RAIL_Z, SIDE, SIGNALS, STATION, STOP_X, TRACK_X0, TRACKS_Y, TRAIN_CLEAR, PARKED, station, building, HALL, WING_N, WING_S, LINK, SERVICE, TOWER, PORTICO, ESPLANADE } from "./station";
+import { emu, trainLen } from "./train";
 
 const build = (): { out: Solid[]; accents: Accent[] } => { const out: Solid[] = [], accents: Accent[] = []; station(out, accents); return { out, accents }; };
 const { out, accents } = build();
@@ -13,6 +14,8 @@ const strips = out.filter((s): s is Solid & { kind: "strip" } => s.kind === "str
 const ramps = out.filter((s): s is Solid & { kind: "ramp" } => s.kind === "ramp");
 const beams = out.filter((s): s is Solid & { kind: "beam" } => s.kind === "beam");
 const dots = accents.filter((a): a is Accent & { kind: "dot" } => a.kind === "dot");
+// caja de un coche del tren estacionado (#279)
+const isCar = (p: Solid & { kind: "prism" }) => p.mat === "whitewash" && p.w === 11 && p.d === 3.4 && p.h === 4 && p.at.z === 1;
 const box = (p: Solid & { kind: "prism" }) => [p.at.x, p.at.y, p.at.z, p.w, p.d, p.h];
 const sorted = <T>(xs: T[]) => [...xs].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
 const close = (a: number, b: number) => Math.abs(a - b) < 1e-9;
@@ -207,6 +210,40 @@ describe("station", () => {
   });
 });
 
+describe("station: formación estacionada en la vía 2 (#279)", () => {
+  const bodies = prisms.filter(isCar);
+  const parked = emu(STOP_X - trainLen(PARKED.cars), TRACKS_Y[PARKED.track], { cars: PARKED.cars, lead: null, lit: true });
+  it("tres coches con eje en la vía 2, entre TRACK_X0[1] y STOP_X", () => {
+    expect(PARKED).toEqual({ track: 1, cars: 3 });
+    expect(bodies).toHaveLength(3);
+    for (const b of bodies) {
+      expect(close(b.at.y + 1.7, TRACKS_Y[1])).toBe(true);
+      expect(b.at.x).toBeGreaterThanOrEqual(TRACK_X0[1]);
+      expect(b.at.x + b.w).toBeLessThanOrEqual(STOP_X);
+    }
+    const couplers = prisms.filter((p) => p.mat === "safety" && p.w === 0.5 && p.d === 0.6 && p.h === 0.4);
+    expect(couplers).toHaveLength(2);
+    expect(Math.max(...couplers.map((p) => p.at.x + p.w))).toBeCloseTo(STOP_X, 9);
+    expect(Math.min(...couplers.map((p) => p.at.x))).toBeGreaterThanOrEqual(TRACK_X0[1]);
+  });
+
+  it("salón encendido, sin faros ni rojas, y todo en y ≤ 124.2 (+0.05 de las luces)", () => {
+    const bleed = accents.filter((a): a is Accent & { kind: "poly" } => a.kind === "poly" && a.color === "cyanBleed" && a.alpha === 0.7);
+    expect(bleed).toHaveLength(12);
+    for (const p of bleed) for (const q of p.pts) expect(q.y).toBeCloseTo(124.25, 9);
+    expect(dots.filter((d) => (d.color === "cyan" && d.r === 0.3) || (d.color === "magenta" && d.r === 0.25))).toEqual([]);
+    const inStation = new Set(out.map((x) => JSON.stringify(x))), lights = new Set(accents.map((a) => JSON.stringify(a)));
+    for (const x of parked.solids) {
+      expect(inStation.has(JSON.stringify(x)), JSON.stringify(x).slice(0, 100)).toBe(true);
+      expect(bounds(x).max.y).toBeLessThanOrEqual(TRACKS_Y[1] + 1.7 + 1e-9);
+    }
+    for (const a of parked.lights) {
+      expect(lights.has(JSON.stringify(a))).toBe(true);
+      for (const q of a.kind === "poly" ? a.pts : [a.at]) expect(q.y).toBeLessThanOrEqual(TRACKS_Y[1] + 1.75 + 1e-9);
+    }
+  });
+});
+
 describe("station: vecindades (cajas disjuntas, 1e-9)", () => {
   const trackBand = (axis: number, i: number) => flatBox(TRACK_X0[i]!, axis - 1.75, BUFFER_X, axis + 1.75); // tramo recto: de TRACK_X0 a los topes
   const platformSolids = prisms.filter((p) => p.mat === "concrete");
@@ -215,7 +252,8 @@ describe("station: vecindades (cajas disjuntas, 1e-9)", () => {
   it("marquesinas ↔ vías: ninguna columna, rampa ni faja pisa la franja eje ±1.75", () => {
     expect(columns.length).toBe(16);
     // x < 166: lo de vías y andenes; el pórtico, el cartel y los toldos del edificio (#278) quedan al este
-    const roofs = [...ramps, ...prisms.filter((p) => p.mat === "whitewash" || (p.mat === "canopy" && p.at.z > 1))].filter((s) => s.at.x < 166);
+    // #279: los coches estacionados (`isCar`) sí van sobre la vía 2
+    const roofs = [...ramps, ...prisms.filter((p) => (p.mat === "whitewash" && !isCar(p)) || (p.mat === "canopy" && p.at.z > 1))].filter((s) => s.at.x < 166);
     expect(roofs).toHaveLength(7); // cuatro rampas, dos fajas sur y el techo del transversal
     for (const c of [...columns, ...roofs]) TRACKS_Y.forEach((y, i) => expect(apart(bounds(c), trackBand(y, i))).toBe(true));
   });
@@ -226,11 +264,15 @@ describe("station: vecindades (cajas disjuntas, 1e-9)", () => {
     const spire = (s: Solid) => s.kind === "cone" && s.mat === "tile";
     const onTop = (s: Solid) => s.kind === "prism" && s.at.z === 24 && (s.mat === "safety" || (s.mat === "stone" && s.roof === "gable"));
     const truss = (s: Solid) => s.kind === "beam" || (s.kind === "prism" && s.mat === "steel" && s.w === 0.3 && s.at.z === 1);
+    // los bogies de la formación estacionada apoyan en la vía 2: cruzan sus durmientes (z 0..0.3), plan #279 A4
+    const bogie = (s: Solid) => s.kind === "prism" && s.mat === "steel" && s.w === 2.4 && s.d === 2.8 && s.h === 1 && s.at.z === 0 && close(s.at.y + 1.4, TRACKS_Y[PARKED.track]);
+    const sleeper2 = (s: Solid) => s.kind === "prism" && s.mat === "rust" && s.h === 0.3 && s.at.y === TRACKS_Y[1] - 2.5;
     const sameX = (a: Bounds, b: Bounds) => Math.abs((a.min.x + a.max.x) / 2 - (b.min.x + b.max.x) / 2) < 1e-6;
     for (let i = 0; i < bs.length; i++) for (let j = i + 1; j < bs.length; j++) {
       const a = bs[i]!, b = bs[j]!;
       if (truss(a.s) && truss(b.s) && sameX(a.b, b.b)) continue;
       if ((spire(a.s) && onTop(b.s)) || (spire(b.s) && onTop(a.s))) continue;
+      if ((bogie(a.s) && sleeper2(b.s)) || (bogie(b.s) && sleeper2(a.s))) continue;
       expect(apart(a.b, b.b), `${JSON.stringify(a.b)} ↔ ${JSON.stringify(b.b)}`).toBe(true);
     }
   });

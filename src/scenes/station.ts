@@ -2,6 +2,7 @@ import type { Accent } from "../iso/accent";
 import { v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { plateOutline, type Plate } from "../iso/plate";
 import type { Solid } from "../iso/solids";
+import { emu, trainLen } from "./train";
 
 /**
  * Estación cabecera (tipo Estación Tigre) al final de la vía del oeste, en la
@@ -9,6 +10,9 @@ import type { Solid } from "../iso/solids";
  * siguientes de #239 (edificio, torre, tren, animador): no cambiar sus
  * valores sin anotarlo. `station()` es determinista y no usa rng; los `strip`
  * que emite terminan en `ground` por el filtro final de `shipyard()`.
+ *
+ * La formación de 3 coches (`PARKED`) queda estacionada en la vía 2, con el
+ * salón encendido y sin faros: es parte del astillero, no del animador.
  *
  * Oclusión: las capas animadas se dibujan encima de lo estático, así que nada
  * estático puede quedar delante del tren (vía 3, caja `TRAIN_CLEAR`, z 0..5.7,
@@ -40,6 +44,7 @@ export const SERVICE = { x: 166, y: 106, w: 4, d: 18, h: 6 } as const;
 export const TOWER = { x: 184, y: 126, w: 6, d: 6, h: 24, top: 29 } as const;
 export const PORTICO = { x: 190, y: 110, w: 4, d: 12, z: 5.2 } as const;
 export const ESPLANADE = { x0: 190, x1: 197, y0: 98, y1: 136 } as const;
+export const PARKED = { track: 1, cars: 3 } as const;          // formación estacionada en la vía 2 (#279)
 
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Solid["mat"], plates?: Plate[]): Solid =>
   ({ kind: "prism", at: { x, y, z }, w, d, h, mat, ...(plates && { plates }) });
@@ -263,6 +268,13 @@ export function building(out: Solid[], accents: Accent[]): void {
   esplanade(out, accents);
 }
 
+/** Formación estacionada en la vía 2, pegada al tope: salón encendido, sin faros ni rojas. */
+function parked(out: Solid[], accents: Accent[]): void {
+  const t = emu(STOP_X - trainLen(PARKED.cars), TRACKS_Y[PARKED.track], { cars: PARKED.cars, lead: null, lit: true });
+  out.push(...t.solids);
+  accents.push(...t.lights);
+}
+
 export function station(out: Solid[], accents: Accent[]): void {
   tracks(out);
   ladder(out);
@@ -273,4 +285,5 @@ export function station(out: Solid[], accents: Accent[]): void {
   crossing(out);
   out.push(prism(110, FENCE_Y, 0, BUFFER_X - 110, 0.3, 1, "steel")); // cerco sur
   building(out, accents);
+  parked(out, accents);
 }
