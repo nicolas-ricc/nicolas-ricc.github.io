@@ -1,6 +1,6 @@
 # Barrio: monoblocks del Barrio Simón Bolívar — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: `.agents/skills/subagent-driven-development` (la única de ejecución que lista `AGENTS.md`). Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Reemplazar el marcador de `src/scenes/barrio-monoblock.ts` por los monoblocks del Barrio Simón Bolívar: una o dos placas 20×5 de tres alturas con planta baja de ladrillo, fachada en grilla (bandas de ventanas y pilastras como `plates`), loggias con baranda, tanques con antena, parque con árboles, senderos y faroles, y ventanas encendibles (`HomeWindow`) con las loggias como franjas.
 
@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- `npm test` y `npm run typecheck` en verde al final de cada tarea. No tocar `FACE_CAPS`, `TECH_FACES_BEFORE`, `REGION_FACES_BEFORE`, `ACCENT_CAP` ni la firma `monoblock(ctx: BarrioCtx, b: SprawlBlock): void`; no tocar `tech.ts`.
+- Los tests de `barrio-monoblock.test.ts` se escriben todos en la etapa de evals (rojos). Al final de cada tarea: typecheck verde, verdes los tests que nombra esa tarea y todo lo que ya estaba verde en la rama base; los tests de tareas siguientes pueden seguir rojos. Al final de Task 3, `npm test` completo en verde. No tocar `FACE_CAPS`, `TECH_FACES_BEFORE`, `REGION_FACES_BEFORE`, `ACCENT_CAP` ni la firma `monoblock(ctx: BarrioCtx, b: SprawlBlock): void`; no tocar `tech.ts`.
 - Solo materiales de `TECH_MATS`: aquí `leafDark` (césped, vía `lawn`), `paving`, `whitewash`, `stone`, `brick`, `glass`, `officeDark`, `concrete`, `steel`, `leaf`. Ningún material nuevo.
 - Las ventanas **no** usan `facade`: bandas y pilastras son `plates`; las ventanas encendibles son `HomeWindow` vía `homeWindow(ctx, pts, lit, group)` y `wallWindow(...)` de `src/scenes/barrio.ts`.
 - Tamaño mínimo 0.15 u en toda dimensión. Nada no esbelto por encima de 21.5 (esbelto = prisma de lado ≤ 3).
@@ -23,14 +23,15 @@
 ## Geometría (decidida en el issue; acá solo se fijan los huecos)
 
 - Placa: cuerpo `prism(px, py, 0.3, 20, 5, h, mat)` con `px = b.x + 2`, `py ∈ {b.y + 2, b.y + 11}`; zócalo `prism(px − 0.3, py − 0.3, 0, 20.6, 5.6, 0.3, "paving")` (centrado bajo el cuerpo, apoyado en z 0 como los zócalos de `campus`). `floors = h / 3`.
-- Plates del cuerpo, en este orden: ladrillo (si toca: `wall 1` y `wall 2`, u 0..1, z 0.3..3.3) → por piso las dos bandas `glass` `toneOffset −1` (sur y este) → pilastras (`mat` de la placa, `toneOffset +1`, z 0.3..0.3+h; sur en u `k/8 ± 0.01`, k = 1..7; este en u `0.46..0.54`) → por columna de loggia la placa `officeDark` `toneOffset −2` (z 0.3..0.3+h) y luego sus barandas `whitewash` por piso (z `0.3+3f+0.9..+1.1`).
+- Sorteos (issue): `chance(0.5)` → dos placas, si no una; con una, `py = b.y + 2` si `blockParity(b) === 0`, `b.y + 11` si no; alturas con `pick` de `[12, 15, 18]` sin repetir en la manzana; por placa `mat = chance(0.5) ? "whitewash" : "stone"` y `brick = chance(0.5)`.
+- Plates del cuerpo, en este orden (`plateFaces` las pinta en orden de array, `src/iso/plate.ts:9,29`): ladrillo (si toca: `wall 1` y `wall 2`, u 0..1, z 0.3..3.3) → por piso las dos bandas `glass` `toneOffset −1` (sur y este, u 0.03..0.97, z `0.3+3f+1.0..0.3+3f+2.1`; la del piso 0 se pinta sobre el ladrillo, como fija el issue) → pilastras (`mat` de la placa, `toneOffset +1`, z 0.3..0.3+h; sur en u `k/8 ± 0.01`, k = 1..7; este en u `0.46..0.54`) → por columna de loggia la placa `officeDark` `toneOffset −2` (z 0.3..0.3+h) y luego sus barandas `whitewash` por piso (z `0.3+3f+0.9..+1.1`).
 - Loggias: `rng.int(1, 2)` columnas; 1 → vano `[2]`, 2 → vanos `[2, 6]` (vano k: u `k/8..(k+1)/8`).
 - Tanques: `n = floors >= 5 ? 3 : 2` prismas `concrete` 2×2×2.8 en `z = 0.3 + h`, centro x `px + 20·(k + 0.5)/n`, centro y `py + 2.5`; antena `prism` `steel` 0.2×0.2×2.5 centrada sobre el primer tanque (`z = 0.3 + h + 2.8`).
 - Senderos (`ctx.ground`, `strip` `paving` width 1, z 0.08 como `barrio-plaza.ts`): N–S en `x = b.x + 23.2`, de `y = b.y` a `b.y + 18` (entre el extremo este de los zócalos, x 22.3, y el borde de la manzana); E–O de `x = b.x` a `b.x + 23.2` en `y = b.y + 9` con dos placas, `b.y + 8.3` con una al norte, `b.y + 10.2` con una al sur.
-- Árboles: `cone` `leaf` 6 lados en `z = 0.05`, `r = 1.2 + 0.4·rng.next()`, `h = 3.5 + 1.5·rng.next()`. La franja libre es `x ∈ [b.x, b.x + 22.3]` y en y la banda sin placa ni zócalo: con dos placas `[b.y + 7.3, b.y + 10.7]`; con una al norte `[b.y + 7.3, b.y + 18]`; con una al sur `[b.y, b.y + 10.7]`. `n = rng.int(4, 6)` árboles, cada uno en su ranura de ancho `22.3 / n` a lo largo de x (centro aleatorio dentro de la ranura achicada por r; y aleatorio dentro de la banda achicada por r); si la caja del cono pisa otro árbol o un zócalo, reintentar hasta 10 veces y descartar. Las ranuras garantizan ≥ 4 con 4 pedidos; los árboles pueden pisar el sendero E–O (es plano).
+- Árboles: `cone` `leaf` 6 lados en `z = 0.05`, `r = 1.2 + 0.4·rng.next()`, `h = 3.5 + 1.5·rng.next()`. La franja libre es `x ∈ [b.x, b.x + 22.3]` y en y la banda sin placa ni zócalo: con dos placas `[b.y + 7.3, b.y + 10.7]`; con una al norte `[b.y + 7.3, b.y + 18]`; con una al sur `[b.y, b.y + 10.7]`. `n = rng.int(4, 6)` árboles, cada uno en su ranura de ancho `22.3 / n` a lo largo de x (centro aleatorio dentro de la ranura achicada por r; y aleatorio dentro de la banda achicada por r). Las ranuras ya garantizan que no hay solape (vecinos a ≥ r₁ + r₂, contacto permitido) y que ningún árbol pisa un zócalo, así que no hace falta el reintento del issue: el resultado que pide ("sin tocar placas ni zócalos") queda garantizado por construcción y siempre salen los `n` árboles. Los árboles pueden pisar el sendero E–O (es plano).
 - Faroles: `cornerLamps(ctx, b)` (ya pone `(b.x + 23, b.y − 1.5)` y `(b.x + 1, b.y + 18.6)`).
 - Grupos de luz: `${b.x},${b.y}:p${i}-s${f}-${k}` (sur), `${b.x},${b.y}:p${i}-e${f}-${j}` (este), `${b.x},${b.y}:p${i}-L${vano}` (columna de loggia, común a todos sus pisos); `i` = índice de placa.
-- Presupuesto: con todo, dos placas de 6 y 5 pisos con dos loggias cada una y 6 árboles dan ≈ 127 caras > 115. Recorte, en este orden y solo hasta entrar: árboles a 4; luego loggias a 1 en la placa más alta; luego en la otra. Nunca tanques ni bandas. El conteo se hace con `facesIn([...sólidos de la manzana], blockRect(b))` sobre los sólidos ya generados (helper puro, no sobre `ctx`).
+- Presupuesto: con todo, dos placas de 6 y 5 pisos con dos loggias cada una y 6 árboles dan ≈ 127 caras > 115. Recorte, en este orden y solo hasta entrar: árboles a 4; luego loggias a 1 en la placa más alta; luego en la otra. Nunca tanques ni bandas. El conteo es el mismo que el del test de tope (`facesIn([...solids, ...ground], blockRect(b))`, sin `HomeWindow`, que son acentos): `monoblock` emite primero `lawn`, senderos y `cornerLamps` en `ctx`, y mide `ctx.solids + ctx.ground + candidatos` (placas y árboles generados en arrays aparte) antes de volcar los candidatos. Configuración mínima tras el recorte (18 + 15, ladrillo en ambas, una loggia cada una, 3 + 3 tanques, 4 árboles): 47 + 44 + 3 césped + 2 senderos + 6 faroles + 12 árboles = **114 ≤ 115**, así que el recorte siempre termina dentro del tope; el test de tope lo vigila igual.
 
 ## Review Focus
 
@@ -55,7 +56,7 @@
 - [ ] Step 1: tests (ya en `barrio-monoblock.test.ts`): "1 o 2 cuerpos 20×5 de alturas {12,15,18} distintas", "tres alturas en el barrio", "tanques y antena", "placas solo en wall 1 y 2", "nada no esbelto supera 21.5", sobre `tech(zoneRng(SEED, "cv", 2))` y las manzanas `monoblock` de `zoneKinds`.
 - [ ] Step 2: `npx vitest run src/scenes/barrio-monoblock.test.ts` → FAIL.
 - [ ] Step 3: implementar `slab` y la parte de placas de `monoblock` según "Geometría".
-- [ ] Step 4: mismo comando → esos tests PASS.
+- [ ] Step 4: mismo comando → esos tests PASS. Ajustar `h` del exhibit `monoblock` en `src/lab/exhibits.ts` al que pida `exhibits.test.ts` ("h cubre la estructura y sus acentos y no sobra más de SLACK", `exhibits.test.ts:100`); el valor depende de la altura sorteada en (132, 448), ≤ 18.3 + 2.8 + 2.5 = 23.6, por eso se mide y no se fija acá. `npx vitest run src/lab` → PASS.
 - [ ] Step 5: commit `feat(#250): placas del monoblock con grilla, loggias y tanques`.
 
 ### Task 2: ventanas encendibles
@@ -66,7 +67,7 @@
 
 - [ ] Step 1: tests (ya escritos): "ventanas sobre el plano sur o este de un cuerpo", "columna de loggia con `lit` común", "fracción encendida en [0.30, 0.45]".
 - [ ] Step 2: correr → FAIL.
-- [ ] Step 3: por placa y piso: sur, una ventana 0.9×0.9 centrada en cada vano no loggia (`x` del centro `px + 20·(1 − (k + 0.5)/8)`, z `0.3+3f+1.1..+2.0`), `lit = chance(0.38)`; este, 2 (y `py + 1.25` y `py + 3.75`), igual; por columna de loggia `lit = chance(0.5)` una vez y una ventana por piso que cubre el vano (z `0.3+3f+1.2..+2.6`) con el grupo de la columna. Orden de tiradas: por placa, primero los `lit` de las columnas de loggia, después piso por piso sur y este.
+- [ ] Step 3: por placa y piso: sur, una ventana 0.9×0.9 centrada en cada vano no loggia (`x` del centro `px + 20·(1 − (k + 0.5)/8)`, z `0.3+3f+1.1..+2.0`), `lit = chance(0.38)`; este, 2 (y `py + 1.25` y `py + 3.75`), igual; por columna de loggia `lit = chance(0.5)` una vez y una ventana por piso que cubre el vano (z `0.3+3f+1.2..+2.6`) con el grupo de la columna. El orden de tiradas es libre (los tests miden propiedades).
 - [ ] Step 4: correr → PASS. `npx vitest run src/scenes/tech.test.ts` → luces y acentos PASS.
 - [ ] Step 5: commit `feat(#250): ventanas encendibles del monoblock`.
 
@@ -77,5 +78,23 @@
 - [ ] Step 1: tests (ya escritos): "≥ 4 árboles y 2 faroles", "cuerpos, tanques y árboles no se solapan", "dentro de FACE_CAPS.monoblock", senderos.
 - [ ] Step 2: correr → FAIL.
 - [ ] Step 3: árboles, senderos y `cornerLamps` según "Geometría"; recorte de presupuesto (árboles → loggias) antes de emitir ventanas, para que las ventanas sigan a las loggias que quedaron.
-- [ ] Step 4: `npx vitest run src/scenes src/lab` → PASS; si `exhibits.test.ts` falla por `h`, poner el `h` que pide (≈ 24) y repetir.
+- [ ] Step 4: `npx vitest run src/scenes src/lab` → PASS; si `exhibits.test.ts` volvió a fallar por `h` (árboles), reajustarlo.
 - [ ] Step 5: `npm test && npm run typecheck` → verde. Commit `feat(#250): parque, faroles y presupuesto del monoblock`.
+
+## Assumptions
+
+1. Zócalo centrado bajo el cuerpo, z 0..0.3 (alternativa descartada: zócalo en z 0.05 como el marcador; el issue mide z desde 0.3).
+2. Sendero N–S en `x = b.x + 23.2`, entre los zócalos y el borde (alternativa: por el medio, donde cruza la banda de árboles).
+3. Una loggia → vano 2; dos → vanos 2 y 6 (el issue da los vanos; no dice cuál con una sola).
+4. Árboles por ranuras en vez de reintentos al azar (mismo resultado que pide el issue, sin descartes).
+5. Recorte: árboles a 4, después loggias a 1 empezando por la placa más alta (el issue: "bajar a 4 árboles y a una loggia").
+6. Acentos: estimado ≈ 944 − 326 + 0.39 × ≈ 1350 ventanas ≈ 1150 ≤ 1300 (medido al empezar: 157 estáticos + capas 787). Si el test de acentos se rompiera, no hay cantidad que el issue permita recortar en ventanas: se documenta y se bloquea.
+7. Nombres de grupo `${b.x},${b.y}:p${i}-…`: `tech-anim.ts:42-43` solo los usa como clave de un `Map`, nadie los parsea; el prefijo de manzana evita choques entre manzanas.
+
+## Grilling
+
+- Rondas: 1. Preguntas: 16.
+- Fuentes: ISSUE 6 (1, 3, 6, 8, 12, 2 con cuenta), CODE 7 (7 `plate.ts:9,29`; 9 `barrio.ts:19`; 10 `tech-budget.ts:12,17`, `barrio.ts:25`, `solids.ts:18,21`; 13 `tech-anim.ts:42-43`; 14 `exhibits.test.ts:100`), DOC 1 (15 `AGENTS.md`), NO SOURCE 4 (4, 5, 11, 16), todas supuestos técnicos.
+- Supuestos: los 7 de arriba. 16: el mínimo de 0.15 u del issue se cumple (barandas 0.2 de alto, pilastras 0.4 de ancho, antena 0.2); no se agrega un test propio porque el issue no lo pide para esta pieza.
+- Issues abiertos: ninguno. Sin ambigüedades de spec.
+- Resultado: ok.
