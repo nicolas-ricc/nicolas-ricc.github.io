@@ -8,7 +8,7 @@ import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
 import { BAYS, boilerHouse, gableEnd, inclineBelt, metalStacks, NAVE, naveBody, STAIR_TOWER, stairTower } from "./boiler-house";
 import { maltings, waterTower } from "./maltings";
-import { MALT, PLANT, RAIL_YARD_X, STACKS, STACK_BASE_H, chimney, factory, type FactoryScene, type Stack } from "./factory";
+import { COOLING, MALT, PLANT, RAIL_YARD_X, STACKS, STACK_BASE_H, chimney, factory, type FactoryScene, type Stack } from "./factory";
 import { towerCrane } from "./pieces";
 import { FIREWALL, PHASES_Y, SUBSTATION, SUBSTATION_SHIFT, TRANSFORMERS_Y, currentTransformer, disconnector, droppers, powerTransformer, substation } from "./substation";
 import { translate } from "../iso/translate";
@@ -90,6 +90,7 @@ describe("factory", () => {
     expect(stacks).toHaveLength(21); // 7 por chimenea: base escalonada, fuste y corona
     expect(s.stacks).toHaveLength(3);
     STACKS.forEach((st, i) => expect(s.stacks[i]).toEqual({ x: st.x, y: st.y, z: STACK_BASE_H + st.h }));
+    expect(s.stacks).toEqual([{ x: 58, y: 32, z: 25 }, { x: 72, y: 26, z: 29 }, { x: 86, y: 32, z: 27 }]); // bocas detrás del lugar nuevo de la nave (#245)
     expect(s.solids.some((x) => x.kind === "cylinder" && x.mat === "rust" && x.r > 1)).toBe(false); // la banda rust de antes se fue (las chimeneas metálicas y los tubos de la nave son finos)
     expect(s.solids.filter((x) => x.kind === "cylinder" && x.mat === "concrete" && x.r >= 7)).toHaveLength(4); // torre de enfriamiento
     expect(s.solids.some((x) => x.kind === "prism" && x.h === 20 && x.w === 1.2)).toBe(true); // mástil de la grúa
@@ -118,11 +119,10 @@ describe("factory", () => {
     }
   });
 
-  it("la torre de escalera no toca el pedestal de la primera chimenea (x ≥ 126.5)", () => {
-    const s = scene();
-    const pedestal = s.solids.filter((x) => x.kind === "prism" && x.mat === "concrete" && x.w === 7 && x.d === 7);
-    expect(Math.min(...pedestal.map((p) => bounds(p).min.x))).toBe(126.5);
-    expectApart(build(stairTower), pedestal);
+  it("la torre de escalera no toca ninguna chimenea", () => {
+    const tower = build(stairTower).flatMap(slices), pieces = STACKS.flatMap((st) => one(st).out);
+    expect(tower.length).toBeGreaterThan(0); expect(pieces.length).toBeGreaterThan(0);
+    expect(pieces.filter((p) => slices(p).some((a) => tower.some((b) => !boxApart(a, b)))).map((p) => JSON.stringify(p).slice(0, 90))).toEqual([]); // tramos precalculados: expectApart tarda 1,4 s
   });
 
   it("la cinta inclinada y su tolva no tocan camiones, pallets, grúa torre (mástil, pluma, cable, gancho) ni faroles", () => {
@@ -371,6 +371,43 @@ describe("chimeneas vecinas", () => {
     const all = STACKS.map((st) => one(st).out);
     for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++)
       for (const a of all[i]!) for (const b of all[j]!) expect(apart(a, b)).toBe(true);
+  });
+});
+
+const coolingTower = (solids: readonly Solid[]) => solids.filter((x): x is Solid & { kind: "cylinder" } => x.kind === "cylinder" && x.mat === "concrete" && x.r >= 7);
+const inBox = (b: Bounds, x0: number, x1: number, y0: number, y1: number): boolean =>
+  b.min.x >= x0 - 1e-9 && b.max.x <= x1 + 1e-9 && b.min.y >= y0 - 1e-9 && b.max.y <= y1 + 1e-9;
+
+describe("chimeneas y torre de enfriamiento detrás del lugar nuevo de la nave (#245)", () => {
+  it("STACKS en (58, 32), (72, 26), (86, 32) con los mismos r y h; COOLING exportado en (40, 14) r 9", () => {
+    expect(STACKS).toEqual([{ x: 58, y: 32, r: 2.8, h: 22 }, { x: 72, y: 26, r: 2.6, h: 26 }, { x: 86, y: 32, r: 2.4, h: 24 }]);
+    expect(COOLING).toEqual({ x: 40, y: 14, r: 9 });
+  });
+
+  it("todo sólido de las chimeneas cae en x 54..90, y 22..36.1", () => {
+    for (const st of STACKS) for (const x of one(st).out) expect(inBox(bounds(x), 54, 90, 22, 36.1), JSON.stringify(x).slice(0, 90)).toBe(true);
+  });
+
+  it("la torre de enfriamiento: 4 cilindros en x 31..49, y 5..23, el de abajo de r COOLING.r centrado en COOLING", () => {
+    const tower = coolingTower(scene().solids);
+    expect(tower).toHaveLength(4);
+    for (const t of tower) { expect(inBox(bounds(t), 31, 49, 5, 23)).toBe(true); expect(t.at).toMatchObject({ x: COOLING.x, y: COOLING.y }); }
+    expect(tower.find((t) => t.at.z === 0)!.r).toBe(COOLING.r);
+  });
+
+  it("chimeneas y torre no tocan ningún otro sólido no plano de la fábrica: subestación, farol (53, 12), pallets, camiones, desvío, grúa, planta y tanque", () => {
+    const s = scene();
+    const mine = [...STACKS.flatMap((st) => one(st).out), ...coolingTower(s.solids)];
+    const keys = new Set(mine.map((x) => JSON.stringify(x)));
+    expect(s.solids.filter((x) => keys.has(JSON.stringify(x)))).toHaveLength(mine.length);
+    const others = s.solids.filter((x) => !isFlat(x) && !keys.has(JSON.stringify(x)));
+    expect(others.length).toBeGreaterThan(0);
+    expect(others.filter(isLamp).some((l) => l.at.x === 53 && l.at.y === 12)).toBe(true);
+    const u = union(mine);
+    const near = others.flatMap(slices).filter((b) => b.max.x >= u.min.x - 1 && b.min.x <= u.max.x + 1 && b.max.y >= u.min.y - 1 && b.min.y <= u.max.y + 1); // el resto no puede tocar
+    expect(near.length).toBeGreaterThan(0); // el farol (53, 12), al menos
+    const touching = mine.filter((a) => slices(a).some((p) => near.some((q) => !apartBox(p, q)))); // un expect por par tarda 10 s
+    expect(touching.map((a) => JSON.stringify(a).slice(0, 90))).toEqual([]);
   });
 });
 
