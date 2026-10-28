@@ -2,7 +2,7 @@ import { v3 } from "../iso/geometry";
 import type { Plate } from "../iso/plate";
 import type { Solid } from "../iso/solids";
 import { homeWindow, wallWindow, type BarrioCtx } from "./barrio";
-import { prism } from "./city-pieces";
+import { lamp, prism } from "./city-pieces";
 import type { SprawlBlock } from "./sprawl-grid";
 
 /** Placa de pared: rect de u0..u1 y z0..z1 sobre `wall` (1 este, 2 sur). */
@@ -27,9 +27,31 @@ function gym(ctx: BarrioCtx, b: SprawlBlock): void {
   homeWindow(ctx, wallWindow({ y: b.y + 10 }, b.x + 12, b.x + 15.44, 3.6, 4.6), true, "club-gimnasio");
 }
 
-/** Club Pedro Echagüe: zócalo, frente de piedra con cartel y gimnasio con bóveda. */
+/** Cancha de básquet: piso azul con pintura verde, dos aros con tablero hacia la cancha, cerco de 4 postes con 2 alambres y dos torres de luz con dot ámbar. */
+function court(ctx: BarrioCtx, b: SprawlBlock): void {
+  const { x, y } = b;
+  ctx.solids.push(prism(x + 17, y + 2, 0.3, 5, 14, 0.1, "hullBlue"), prism(x + 17.7, y + 3.5, 0.4, 3.6, 11, 0.05, "leaf"));
+  for (const py of [2.4, 15.4]) ctx.solids.push(prism(x + 19.4, y + py, 0.4, 0.2, 0.2, 3, "steel"));
+  for (const by of [2.6, 15.25]) ctx.solids.push(prism(x + 18.9, y + by, 2.2, 1.2, 0.15, 0.8, "whitewash"));
+  for (const [fx, fy] of [[16.8, 1.8], [22.05, 1.8], [16.8, 16.05], [22.05, 16.05]] as const) ctx.solids.push(prism(x + fx, y + fy, 0.3, 0.15, 0.15, 3, "steel"));
+  ctx.solids.push({ kind: "beam", from: v3(x + 22.125, y + 1.875, 2.9), to: v3(x + 22.125, y + 16.125, 2.9), w: 0.15, h: 0.15, mat: "steel" }, { kind: "beam", from: v3(x + 16.875, y + 16.125, 2.9), to: v3(x + 22.125, y + 16.125, 2.9), w: 0.15, h: 0.15, mat: "steel" });
+  for (const ty of [4, 14]) {
+    ctx.solids.push(prism(x + 22.5, y + ty, 0.3, 0.3, 0.3, 8, "steel"));
+    ctx.accents.push({ kind: "dot", at: v3(x + 22.65, y + ty + 0.15, 8.3), r: 0.8, color: "amber" });
+  }
+}
+
+/** Vereda: farol en la esquina sur y árbol cónico al este. */
+function sidewalk(ctx: BarrioCtx, b: SprawlBlock): void {
+  lamp(ctx.solids, ctx.accents, b.x + 1, b.y + 18.6, 0);
+  ctx.solids.push({ kind: "cone", at: v3(b.x + 24.8, b.y + 9, 0), r: 1.4, h: 4, mat: "leaf", sides: 6 });
+}
+
+/** Club Pedro Echagüe: zócalo, frente de piedra con cartel, gimnasio con bóveda, cancha con aros, cerco y torres de luz, y vereda con farol y árbol. */
 export function club(ctx: BarrioCtx, b: SprawlBlock): void {
   ctx.solids.push(prism(b.x, b.y, 0, b.w, b.d, 0.3, "paving"));
   front(ctx, b);
   gym(ctx, b);
+  court(ctx, b);
+  sidewalk(ctx, b);
 }
