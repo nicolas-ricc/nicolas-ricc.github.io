@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { BLEED, MOUTH_Y, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, riverCenter, worldZoneAt } from "../map/geo";
+import { BLEED, MOUTH_Y, TIP_BOX, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, riverCenter, worldZoneAt } from "../map/geo";
 import { createRng } from "../map/seed";
 import type { Solid, Tri } from "../iso/solids";
+import { BLEED_WATER } from "./terrain-classify";
 import { CELL, baseToneAt, bleedTerrainAt, bleedZ, buildTerrain, seaTerrainAt, shipyardTerrainAt, terrainAt, waterBand } from "./terrain";
 
 const tris = (s: Solid): Tri[] => (s.kind === "ground" ? s.tris : []);
@@ -112,6 +113,26 @@ describe("clasificación", () => {
 });
 
 describe("buildTerrain", () => {
+  it("la punta sur se dibuja en celdas de 6 u", () => {
+    const m = buildTerrain(createRng(7));
+    const side = (t: Tri) => Math.max(...t.pts.map((p) => p.x)) - Math.min(...t.pts.map((p) => p.x));
+    const inBox = (t: Tri) => t.pts.every((p) => p.x >= TIP_BOX.x0 && p.x <= TIP_BOX.x1 && p.y >= TIP_BOX.y0 && p.y <= TIP_BOX.y1);
+    const bleed = m.bleed.flatMap(tris).filter(inBox);
+    expect(bleed.length).toBeGreaterThanOrEqual(50);
+    for (const t of [...bleed, ...m.water.flatMap(tris).filter(inBox)]) expect(side(t)).toBe(6);
+  });
+  it("el borde de la caja de la punta sur es agua, salvo la costura", () => {
+    for (let v = TIP_BOX.x0; v <= TIP_BOX.x1; v += 6) expect(BLEED_WATER.has(bleedTerrainAt(v, TIP_BOX.y1))).toBe(true);
+    for (let v = TIP_BOX.y0 + 6; v <= TIP_BOX.y1; v += 6) {
+      expect(BLEED_WATER.has(bleedTerrainAt(TIP_BOX.x0, v))).toBe(true);
+      expect(BLEED_WATER.has(bleedTerrainAt(TIP_BOX.x1, v))).toBe(true);
+    }
+  });
+  it("la subdivisión no toca el rng", () => {
+    const r = createRng(7); let n = 0; const next = r.next; r.next = () => { n++; return next(); };
+    buildTerrain(r);
+    expect(n).toBe(11912);
+  });
   it("una sola malla determinística que cubre el mundo", () => {
     const a = buildTerrain(createRng(7)), b = buildTerrain(createRng(7));
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));

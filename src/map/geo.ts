@@ -197,3 +197,6 @@ export function islandEastX(y: number): number {
   const v = lo + (hi - lo) * t;
   return y < 146 ? v : v + ((ZONE_SPLIT_X - v) * (y - 146)) / 12;
 }
+
+/** Caja de la punta sur que el sangrado dibuja en celdas de 6 u (múltiplos de la grilla del sangrado, anclada en (−402, −438)). */
+export const TIP_BOX = { x0: 264, y0: 336, x1: 372, y1: 408 } as const;

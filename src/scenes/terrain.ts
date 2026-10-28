@@ -1,6 +1,6 @@
 import { v3 } from "../iso/geometry";
 import type { Solid, Tri } from "../iso/solids";
-import { BLEED, CELL, CELL_BLEED, DOCK, WORLD, abyssX, worldZoneAt, type WorldZone } from "../map/geo";
+import { BLEED, CELL, CELL_BLEED, DOCK, TIP_BOX, WORLD, abyssX, worldZoneAt, type WorldZone } from "../map/geo";
 import type { Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { depthAt } from "./depth-map";
@@ -18,7 +18,7 @@ import { BLEED_WATER, WATER_TERRAIN, bleedTerrainAt, terrainAt, type BleedTerrai
  * se reparte acá una sola vez. `water-animator.ts` reclama esos `Solid` y les
  * muta `toneOffset` in place a cada paso, igual que el astillero con sus otros
  * cuerpos animados; el terreno no sabe nada de eso. El agua del sangrado se subdivide en celdas de
- * `CELL_BLEED` (se probó una subdivisión a 9 u dentro del cover; la
+ * `CELL_BLEED` (la única excepción es `TIP_BOX`, la punta sur de la isla, en celdas de `CELL`) (se probó una subdivisión a 9 u dentro del cover; la
  * decisión gateada por medición la descartó, ver spec §"Desvíos de la
  * implementación").
  */
@@ -147,7 +147,9 @@ function cellTris(out: Tri[], x0: number, y0: number, x1: number, y1: number, za
   else out.push({ pts: [a, b, d] }, { pts: [b, c, d] });
 }
 
-/** Grilla de CELL_BLEED alrededor de WORLD. Comparte vértices con la de CELL en la costura (lados múltiplos de 18) y ahí no lleva jitter. El agua del sangrado usa las mismas celdas, sin subdividir (decisión gateada por medición, ver spec §"Desvíos de la implementación"). */
+/**
+ * Grilla de CELL_BLEED alrededor de WORLD. Comparte vértices con la de CELL en la costura (lados múltiplos de 18) y ahí no lleva jitter. El agua del sangrado usa las mismas celdas, sin subdividir (decisión gateada por medición, ver spec §"Desvíos de la implementación"). Única excepción: las celdas cuyo centro cae en `TIP_BOX` (la punta sur de la isla) se parten en 3×3 de 6 u, tierra y agua, clasificadas por su centro; sus vértices nuevos toman altura de `tipVertexZ` (por posición, sin rng: el stream de la grilla de 18 u no cambia).
+ */
 function buildBleed(rng: Rng, w: WaterTris, foam: Tri[]): Solid[] {
   const bx0 = WORLD.x0 - BLEED.x, by0 = WORLD.y0 - BLEED.y, bx1 = WORLD.x1 + BLEED.x, by1 = WORLD.y1 + BLEED.y;
   const cols = (bx1 - bx0) / CELL_BLEED, rows = (by1 - by0) / CELL_BLEED;
@@ -173,14 +175,31 @@ function buildBleed(rng: Rng, w: WaterTris, foam: Tri[]): Solid[] {
     }
   }
   const tris: Partial<Record<Material, Tri[]>> = { leafDark: [], rock: [], slab: [], asphalt: [], sand: [] };
+  const landMat = (t: BleedTerrain, cx: number, cy: number): Material => t === "jungle" ? (bleedZ(cx, cy) > ROCK_FROM_Z ? "rock" : "leafDark") : BLEED_MAT[t as "industrial" | "urban" | "fair"];
+  // altura de un vértice de la punta sur: costura = contenido; agua = WATER_Z; tierra = relieve + ruido por posición
+  const tipVertexZ = (x: number, y: number): number => {
+    if (inside(x, y)) return contentBaseZ(x, y);
+    if (BLEED_WATER.has(bleedTerrainAt(x, y))) return WATER_Z;
+    return bleedZ(x, y) + cellNoise(x, y) * JITTER.jungle;
+  };
   for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
     const x0 = bx0 + i * CELL_BLEED, y0 = by0 + j * CELL_BLEED, x1 = x0 + CELL_BLEED, y1 = y0 + CELL_BLEED;
     const cx = x0 + CELL_BLEED / 2, cy = y0 + CELL_BLEED / 2;
     if (inside(cx, cy)) continue;
+    if (cx >= TIP_BOX.x0 && cx <= TIP_BOX.x1 && cy >= TIP_BOX.y0 && cy <= TIP_BOX.y1) {
+      const n = CELL_BLEED / CELL;
+      for (let sj = 0; sj < n; sj++) for (let si = 0; si < n; si++) {
+        const sx0 = x0 + si * CELL, sy0 = y0 + sj * CELL, sx1 = sx0 + CELL, sy1 = sy0 + CELL;
+        const scx = sx0 + CELL / 2, scy = sy0 + CELL / 2;
+        const st = bleedTerrainAt(scx, scy);
+        if (BLEED_WATER.has(st)) { waterCell(w, foam, sx0, sy0, sx1, sy1, i * n + si, j * n + sj); continue; }
+        cellTris(tris[landMat(st, scx, scy)]!, sx0, sy0, sx1, sy1, tipVertexZ(sx0, sy0), tipVertexZ(sx1, sy0), tipVertexZ(sx1, sy1), tipVertexZ(sx0, sy1), null, i * n + si, j * n + sj);
+      }
+      continue;
+    }
     const t = bleedTerrainAt(cx, cy);
     if (BLEED_WATER.has(t)) { waterCell(w, foam, x0, y0, x1, y1, i, j); continue; }
-    const mat: Material = t === "jungle" ? (bleedZ(cx, cy) > ROCK_FROM_Z ? "rock" : "leafDark") : BLEED_MAT[t as "industrial" | "urban" | "fair"];
-    cellTris(tris[mat]!, x0, y0, x1, y1, z[j]![i]!, z[j]![i + 1]!, z[j + 1]![i + 1]!, z[j + 1]![i]!, null, i, j);
+    cellTris(tris[landMat(t, cx, cy)]!, x0, y0, x1, y1, z[j]![i]!, z[j]![i + 1]!, z[j + 1]![i + 1]!, z[j + 1]![i]!, null, i, j);
   }
   return (Object.keys(tris) as Material[]).filter((m) => tris[m]!.length > 0).map((m): Solid => ({ kind: "ground", mat: m, tris: tris[m]! }));
 }
