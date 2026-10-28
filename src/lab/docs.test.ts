@@ -115,3 +115,68 @@ describe("documentación de la fábrica en detalle (#217)", () => {
     }
   });
 });
+
+describe("documentación del barrio costero (#256)", () => {
+  const techSrc = readFileSync(`${ROOT}src/scenes/tech.ts`, "utf8");
+  const mundo3 = readFileSync(`${ROOT}docs/superpowers/specs/2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md`, "utf8");
+  const story = readFileSync(`${ROOT}docs/superpowers/specs/2026-10-17-storybook-estructuras-design.md`, "utf8");
+  const barrio = readFileSync(`${ROOT}docs/superpowers/specs/2026-10-27-barrio-costero-design.md`, "utf8");
+  const parrafos = readme.split(/\n\s*\n/);
+  // espacios colapsados: el párrafo se envuelve a ~80 columnas
+  const mundo = (parrafos.find((p) => p.includes("`tech.ts`")) ?? "").replace(/\s+/g, " ");
+  const lab = parrafos.find((p) => p.includes("/lab/world.html")) ?? "";
+  const at = barrio.search(/^## 11\. Desvíos$/m);
+  const desvios = at < 0 ? "" : barrio.slice(at);
+  const png = (n: string) => readFileSync(`${ROOT}docs/superpowers/specs/assets/2026-10-27-barrio/${n}.png`);
+  const size = (b: Buffer) => [b.readUInt32BE(16), b.readUInt32BE(20)];
+
+  it("el párrafo del mundo cuenta el barrio costero y deja el distrito tecnológico al oeste", () => {
+    for (const re of [/barrio residencial costero/, /monoblocks/, /casas con techo de teja/, /escuela/, /club/, /plazas/, /costanera iluminada sobre el muelle/]) expect(mundo).toMatch(re);
+    expect(mundo).toMatch(/distrito tecnológico de Resume al oeste/);
+    expect(mundo).not.toMatch(/al oeste y al sur de la ciudad/);
+  });
+  it("README lista la spec del barrio entre las specs", () => {
+    expect(lab).toContain("2026-10-27-barrio-costero-design.md");
+  });
+  it("el docstring de tech.ts cuenta el barrio y apunta a su spec", () => {
+    const end = techSrc.indexOf("export interface Tower");
+    expect(end).toBeGreaterThan(0);
+    const doc = techSrc.slice(0, end);
+    expect(doc).toMatch(/barrio residencial costero/);
+    expect(doc).toContain("docs/superpowers/specs/2026-10-27-barrio-costero-design.md");
+    expect(doc).not.toMatch(/laboratori|atrio/);
+  });
+  it("mundo-3 remite al spec del barrio encima de la tabla de tipos", () => {
+    const from = mundo3.indexOf("## 2. Decisiones"), to = mundo3.indexOf("| Tema | Decisión |");
+    expect(from).toBeGreaterThan(0);
+    expect(mundo3.slice(from, to)).toContain("2026-10-27-barrio-costero-design.md");
+  });
+  it("el índice del storybook lista los siete exhibits del barrio", () => {
+    const row = story.split("\n").find((l) => l.startsWith("| Resume: tecnológico |")) ?? "";
+    for (const t of ["monoblock", "casas con techo de teja", "escuela", "club", "plaza de barrio", "costanera", "barrio costero"]) expect(row).toContain(t);
+  });
+  it("capturas del cierre: vistas enteras a 1600×900 ×2 y recortes de la esquina iguales", () => {
+    for (const n of ["cover-despues", "barrio-despues", "mundo-antes", "mundo-despues"]) {
+      const b = png(n);
+      expect(b.subarray(1, 4).toString()).toBe("PNG");
+      expect(size(b)).toEqual([3200, 1800]);
+    }
+    for (const n of ["barrio-4-antes", "barrio-4-despues"]) {
+      const b = png(n);
+      expect(b.subarray(1, 4).toString()).toBe("PNG");
+      expect(size(b)).toEqual([840, 600]);
+    }
+  });
+  it("la spec del barrio dice implementada", () => {
+    const estado = barrio.split("\n").find((l) => l.startsWith("**Estado:**")) ?? "";
+    expect(estado).toMatch(/implementad/);
+  });
+  it("la spec del barrio cierra con desvíos, caras, acentos, totals y bloom", () => {
+    expect(at).toBeGreaterThan(0);
+    for (const id of ["monoblock", "casas", "escuela", "club", "plaza-barrio", "costanera", "barrio"]) expect(desvios).toMatch(new RegExp(`^\\| \`${id}\` \\|`, "m"));
+    for (const s of ["TECH_FACES_BEFORE", "REGION_FACES_BEFORE", "totals", "mediana", "roofMat", "plaza-barrio", "ACCESSES"]) expect(desvios).toContain(s);
+    expect(desvios.match(/\[lab\] bloom: /g)?.length ?? 0).toBeGreaterThanOrEqual(6);
+    expect(desvios.match(/\[lab\] peor redibujo en 5 s: /g)?.length ?? 0).toBeGreaterThanOrEqual(6);
+    for (const n of ["cover-antes", "cover-despues", "barrio-4-antes", "barrio-4-despues", "barrio-despues", "mundo-antes", "mundo-despues"]) expect(desvios).toContain(`assets/2026-10-27-barrio/${n}.png`);
+  });
+});
