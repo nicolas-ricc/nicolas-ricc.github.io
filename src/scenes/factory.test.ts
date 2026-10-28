@@ -120,7 +120,9 @@ describe("factory", () => {
   });
 
   it("la torre de escalera no toca ninguna chimenea", () => {
-    expectApart(build(stairTower), STACKS.flatMap((st) => one(st).out));
+    const tower = build(stairTower).flatMap(slices), pieces = STACKS.flatMap((st) => one(st).out);
+    expect(tower.length).toBeGreaterThan(0); expect(pieces.length).toBeGreaterThan(0);
+    expect(pieces.filter((p) => slices(p).some((a) => tower.some((b) => !boxApart(a, b)))).map((p) => JSON.stringify(p).slice(0, 90))).toEqual([]); // tramos precalculados: expectApart tarda 1,4 s
   });
 
   it("la cinta inclinada y su tolva no tocan camiones, pallets, grúa torre (mástil, pluma, cable, gancho) ni faroles", () => {

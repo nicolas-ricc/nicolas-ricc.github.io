@@ -120,7 +120,7 @@ describe("caja de la nave de calderas (#213)", () => {
     expect(e.box.x1).toBe(STAIR_TOWER.x1);
     const cs = cropScene(scene, e.box);
     expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "steel" && s.w === 5 && s.d === 8)).toBe(true); // descansos de la torre
-    expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "concrete" && s.w === 7 && s.d === 7)).toBe(false); // pedestales de las chimeneas: y ≥ 28.5, al norte de la caja
+    expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "concrete" && s.w === 7 && s.d === 7)).toBe(false); // pedestales de las chimeneas: y ≥ 22.5, al norte de la caja
     expect(cs.solids.filter((s) => s.kind === "cylinder" && s.mat === "rust" && s.r === 0.5)).toHaveLength(4); // chimeneas metálicas
   });
 });
