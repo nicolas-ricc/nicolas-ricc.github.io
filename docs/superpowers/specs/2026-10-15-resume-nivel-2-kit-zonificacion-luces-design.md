@@ -202,7 +202,7 @@ sus ventanas de paredes **que miran a la cámara** (normal con componente
 | `composite.ts` | **podio + torre** (podio todo el lote h 4..6, torre 10×10 a 12×12 h 12..18 descentrada), **gemelas con puente** (dos torres 8×10 y puente a media altura), **déco escalonada** (tres cuerpos con chaflán y chapitel `cone` 4 lados), **chaflán** (poly con esquina cortada hacia la calle más ancha), **L con torre** (ala baja en L y torre en la esquina) |
 | `curved.ts` | **torre cilíndrica** (cylinder 16 lados con fachada), **rotonda** (cylinder 12 lados + `dome`), **nave abovedada** (`vault` + fachada `arcade`), **galería** (planta baja `arcade`, dos pisos encima, techo `hip`) |
 | `lowrise.ts` | **hilera de locales** (4..5 lotes angostos de 4..6 de ancho, 2..3 pisos, toldos, `hip` o terraza; publica `slots` de neón en planta baja hacia `open`), **casas en hilera**, **ruina devorada** (lo de hoy, con el kit) |
-| `landmarks.ts` | **mercado cubierto** (`vault` central + dos naves laterales + torre del reloj), **estación** (`vault` + `dome` sobre el hall + reloj), **teatro** (tambor + `dome` + columnata `arcade` + marquesina), **palacio cívico** (chaflán + `hip` + `dome` central + escalinata `ramp`), **biblioteca** (galería `arcade` en `marble` + patio), **torre de agua ornamental** (cylinder sobre cuatro patas + `dome` `copper`), **puente peatonal** (tablero de 55 sobre tres arcos de piedra) |
+| `landmarks.ts` | **mercado cubierto** (`vault` central + dos naves laterales + torre del reloj), **estación** (`vault` + `dome` sobre el hall + reloj) *(descartada: ver la nota de §6)*, **teatro** (tambor + `dome` + columnata `arcade` + marquesina), **palacio cívico** (chaflán + `hip` + `dome` central + escalinata `ramp`), **biblioteca** (galería `arcade` en `marble` + patio), **torre de agua ornamental** (cylinder sobre cuatro patas + `dome` `copper`), **puente peatonal** (tablero de 55 sobre tres arcos de piedra) |
 
 Lo que ya existe en `district.ts` (torre de vidrio escalonada, clásico de
 piedra, campus, obra) se muda a `src/kit/forms/modern.ts` sin cambiar su
@@ -259,6 +259,10 @@ de luces.
 | **Cívico** | plaza; `72, 218` (teatro); `162, 218` (palacio cívico); `42, 242` (biblioteca) | nodo principal | fijos | `marble`/`stone`/`copper` | fachadas bañadas (`amberBleed` poly en planta baja), 30 % frías |
 | **Ribera este** | cols `280, 310` × filas `164..242`, menos el derrumbe (`COLLAPSED`) | ciudad vieja devorada, mercado frente al puente | mercado fijo en `280, 188`; resto: clásico 30, L con torre 30, ruina devorada 40 | `office`/`officeDark` | 25 % encendidas, mezcla |
 | **Distrito moderno** | `DISTRICT_COLS`/`DISTRICT_ROWS` | como hoy, sobre el kit | torre de vidrio 30, gemelas 20, clásico 20, campus 20, cilíndrica 10; obra fija en `SITE` | `curtain`/`stone`/`copper` | 40 % encendidas, 85 % frías |
+
+*Desvío (2026-10-28): la estación va al final de la vía del oeste del
+astillero, en el lugar de la calderería; ver
+`2026-10-27-estacion-terminal-design.md`. Esta pieza queda descartada.*
 
 Piezas singulares fijas, además de las de la tabla: **estación** en `−18, 188`
 (la avenida y el tren siguen al oeste), **torre de agua ornamental** en el
@@ -420,6 +424,9 @@ el lab. Son seis entregas mergeables por separado:
 3. **Zonificación** (§6): `zoning.ts`, `city.ts` reescrito como orquestador,
    calles simplificadas, piezas fijas nuevas del mapa (estación, mercado,
    teatro, palacio, biblioteca, torre de agua, puente peatonal).
+   *Desvío (2026-10-28): la estación va al final de la vía del oeste del
+   astillero, en el lugar de la calderería; ver
+   `2026-10-27-estacion-terminal-design.md`. Esta pieza queda descartada.*
 4. **Luces** (§7): `lights.ts`, oclusión, neones, fachadas bañadas,
    `city-anim` ampliado.
 5. **Piezas fijas rehechas** (§8): puente, malecón, muelle, plaza, derrumbe.
