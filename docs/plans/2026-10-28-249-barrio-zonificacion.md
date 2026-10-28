@@ -14,7 +14,7 @@
 
 - `npm test` y `npm run typecheck` en verde al final de cada tarea (incluida `palette-guard.test.ts`: ningún literal `0x…` de 6 dígitos fuera de `palette-base.ts`/`palette-iso.ts`).
 - Determinismo: mismo rng → misma escena (`JSON.stringify` igual).
-- Estilo del repo: comentarios y nombres en castellano, líneas largas de una sola expresión como en `tech.ts`, docstring corto por función.
+- Estilo del repo: comentarios y docstrings en castellano, líneas largas de una sola expresión como en `tech.ts`, docstring corto por función. Los identificadores son los que fija el issue (`lawn`, `homeWindow`, `HomeWindow`, `facesIn`, `blockRect`, `HOMES_GAP_MS`…), aunque mezclen idiomas como ya hace el código (`pickKind`, `quay`).
 - Medido en `b9550c5` (rama base, igual a `main`) con `tech(zoneRng(SEED, "cv", 2))`, sólidos + suelo, `tessellate(s).length`: **`TECH_FACES_BEFORE = 8458`** (7198 de sólidos), **`REGION_FACES_BEFORE = 1286`** (región `{ x0: 42, y0: 472, x1: 186, y1: 610 }`, `bounds` dentro del rect inflado 0.5). El issue estimaba ≈ 1316; se usa el medido.
 - Resume sigue ámbar: ninguna luz nueva cian ni magenta.
 - No tocar `TELECOM`/`ARENA`/`AUDITORIUM`, `tower`, `campus`, `park`, `telecom`, `arena`, `auditorium`, `avenue`.
@@ -84,7 +84,8 @@
   - ningún `monoblock` tiene vecino `monoblock` (vecino: mismo `y` y |dx| = 30, o mismo `x` y 0 < |dy| ≤ 30);
   - ningún `park` con `inBarrio(b)`;
   - rng espía (`{ ...rng, chance: (p) => { calls++; return rng.chance(p) }, next/int/pick contados también }`): llamadas totales = `blocks.length − fijas` (fijas = bloques en hitos, `SCHOOL`, `CLUB`, `PLAZAS`), todas a `chance(0.12)`;
-  - tabla del mundo (como documentación, `toEqual` sobre los conteos): 34 tower, 15 campus, 18 monoblock, 17 casas, 7 plaza, 10 park, 1 escuela, 1 club, 1 telecom, 1 arena, 1 auditorium. Si el algoritmo da otra tabla, **no** cambiar el algoritmo: reportarlo (el issue dice que la calculó el planner; la tabla mínima de arriba es el criterio).
+  - tabla del mundo (`toEqual` sobre los conteos; verificada por el orquestador con este algoritmo antes de planificar): 34 tower, 15 campus, 18 monoblock, 17 casas, 7 plaza, 10 park, 1 escuela, 1 club, 1 telecom, 1 arena, 1 auditorium; visibles en el cover 13 monoblock, 8 casas, 1 escuela, 1 club, 4 plaza;
+  - toda pareja de vecinas con `inBarrio` en las dos tiene paridad distinta (las únicas vecinas de igual paridad del distrito están a ambos lados de la avenida, y 242 → 272, fuera del barrio);
   - `TELECOM` importado de `./tech` es el mismo objeto que el de `./tech-zoning`.
 - [ ] Step 2: correr → FAIL.
 - [ ] Step 3: implementar `zoneKinds` exactamente con este orden por manzana, en el orden recibido: hito → su tipo (sin rng); `SCHOOL` → `escuela`, `CLUB` → `club`, `PLAZAS` → `plaza` (sin rng); si no, **un** `rng.chance(0.12)` → `inBarrio(b) ? "plaza" : "park"`; si no, `b.dist < TOWER_D` → `tower`; `b.dist < MONOBLOCK_D` → `blockParity(b) === 0 ? "monoblock" : "campus"`; resto `casas`.
@@ -99,6 +100,7 @@
 **Interfaces:**
 - Consumes: `prism` de `city-pieces.ts`; `WEST_QUAY`, `CITY_EDGE` de `city-grid.ts`; `REACH` de `sprawl-grid.ts`; `WORLD`.
 - Produces:
+  - `export const ALWAYS_LIT: ReadonlySet<string> = new Set(["escuela-escalera", "club-gimnasio"])`: grupos que la capa `tech.homes` nunca apaga (plan de #240, decisión 9: "bandas del gimnasio y caja de escalera de la escuela siempre `lit`").
   - `export interface HomeWindow { pts: Vec3[]; lit: boolean; group: string }`
   - `export interface BarrioCtx { solids: Solid[]; ground: Solid[]; accents: Accent[]; homes: HomeWindow[]; rng: Rng }`
   - `export function lawn(ctx: BarrioCtx, b: Rect): void` — un `prism(b.x, b.y, 0, b.w, b.d, 0.05, "leafDark")` a `ctx.solids`
@@ -110,7 +112,7 @@
   - `barrio.test.ts`: `lawn` agrega 1 prisma `leafDark` h 0.05 del tamaño de la manzana; `homeWindow` agrega una entrada con los valores dados.
   - `barrio-escuela.test.ts` (manzana `SCHOOL`): no vacío; todo `bounds` dentro de la manzana ±0.5; zócalo `paving` 0.3 de la manzana entera y prisma `whitewash` 6×16×5.6 en `(x+2, y+1, 0.3)`; exactamente una `HomeWindow`, `lit: true`, grupo `"escuela-escalera"`, 4 puntos con `x = b.x + 8`, 1×1; caras (`tessellate`) ≤ 120.
   - `barrio-club.test.ts` (manzana `CLUB`): zócalo `paving` 0.3 + prisma `stone` 10×6×9 en `(x+2, y+11, 0.3)`; una `HomeWindow` `lit: true`, grupo `"club-gimnasio"`, puntos con `y = b.y + 17`; dentro de la manzana; caras ≤ 150.
-  - `costanera.test.ts`: los sólidos son exactamente los de `quay()` de hoy (prisma `plaza` en x `WEST_QUAY.x0..x1`, y `CITY_EDGE.south..WORLD.y1 + REACH.s`, z −1, h 1.6, y los bolardos `rust`) — comparar con una copia literal de lo que produce `quay()` hoy (`toEqual` contra los sólidos generados antes de moverlo); caras ≤ 350; `bounds.max.x ≤ 198`.
+  - `costanera.test.ts`: el primer sólido es `prism(WEST_QUAY.x0, CITY_EDGE.south, -1, WEST_QUAY.x1 - WEST_QUAY.x0, WORLD.y1 + REACH.s - CITY_EDGE.south, 1.6, "plaza")` (`toEqual`); el resto son los bolardos `cylinder` `rust` r 0.4 h 0.8 `sides 6` en `x0 + 3`, y desde `CITY_EDGE.south + 8` cada 24 mientras `y < WORLD.y1 + REACH.s` (la misma fórmula de `quay()` hoy, `tech.ts:162-166`); no toca `ctx.rng` (rng espía sin llamadas), ni `ground`, `accents`, `homes`; caras ≤ 350; `bounds.max.x ≤ 198`.
 - [ ] Step 2: correr → FAIL.
 - [ ] Step 3: implementar. `costanera` es `quay()` movida tal cual a `ctx.solids` (en `tech.ts` todavía no se borra `quay`; lo cambia Task 6).
 - [ ] Step 4: correr los cuatro tests → PASS; `npm run typecheck`.
@@ -153,7 +155,7 @@ Geometría (del issue; los grupos de `HomeWindow` llevan prefijo `${b.x},${b.y}:
   - quitar las expectativas de "> 40 rampas glass" y de "> 3 cajas officeDark h 5 w 20" (el resto de ese `it` se queda, con título sin laboratorios); tope de sólidos elevados `< 2500`;
   - fachada: "cada prisma de h ≥ 3 y w,d ≥ 4 de material `curtain`, `office`, `officeDark` o `glass` lleva `facade`" (ajustar el `> 80` al conteo real si hace falta, dejando un mínimo > 0 con comentario);
   - **variedad** sobre `tech(zoneRng(SEED, "cv", 2))` con `zoneKinds(zoneRng(SEED, "cv", 2), suburbBlocks())` para los tipos: firma = `kind + "|" + n + "|" + huellas`, `n` = sólidos no planos con `bounds` en `blockRect(b)` (definir `blockRect` local o importarlo de Task 8 si ya está; si no, `{ x0: b.x − 2, y0: b.y − 2, x1: b.x + 26, y1: b.y + 20 }`), huellas = `x, y, w, d` relativas a la manzana redondeadas a 0.5 de los `prism`/`poly`/`ramp` con h ≥ 1, ordenadas; para todo par de vecinas (definición de Task 3) con `inBarrio` en ambas, firmas distintas;
-  - **luces**: toda `HomeWindow` tiene 4 puntos coplanares en `x = cte` o `y = cte`; fracción `lit` de las ventanas dentro de manzanas `monoblock` en [0.30, 0.45]; `casas` en [0.15, 0.40]; todas las de `escuela`/`club` `lit`;
+  - **luces**: las ventanas de un mismo `group` tienen todas el mismo `lit` en la escena; toda `HomeWindow` tiene 4 puntos coplanares en `x = cte` o `y = cte`; fracción `lit` de las ventanas dentro de manzanas `monoblock` en [0.30, 0.45]; `casas` en [0.15, 0.40]; todas las de `escuela`/`club` `lit`;
   - no hay `prism` `officeDark` 20×13×5 ni pares `curtain` 9×13 (labs/atrios) en la escena.
 - [ ] Step 2: correr → FAIL.
 - [ ] Step 3: en `tech()`: `const kinds = zoneKinds(rng, blocks)` antes de construir nada; luego un solo recorrido en el mismo orden y el mismo `rng`; `ctx: BarrioCtx = { solids, ground, accents, homes, rng }`; `monoblock`/`casas`/`escuela`/`club`/`plaza` a sus módulos; `costanera(ctx)` en lugar de `quay()`. Borrar `pickKind`, `atrium`, `lab`, `LAB_FACADE`, `quay`, `CAMPUS_D` (sin otros usos en `src/`) y el import `tiles`/`plazaTone` si queda sin uso. Docstring de `tech.ts`: barrio residencial costero al sur (monoblocks, casas, escuela, club, plazas, costanera) en lugar de laboratorios y atrios; remite además a `docs/superpowers/specs/2026-10-27-barrio-costero-design.md`.
@@ -175,12 +177,13 @@ Geometría (del issue; los grupos de `HomeWindow` llevan prefijo `${b.x},${b.y}:
   - troceado: dos animadores con la misma semilla; uno `tick(60000)`, el otro 600 × `tick(100)`: `fired().homes` igual y `homes()` igual;
   - `reducedMotion`: 100 ticks de 100 → `homes()` igual al frame 0 y `tick().homes` siempre `false`;
   - `tick(NaN)`, `tick(Infinity)`, `tick(0)`, `tick(-5)`: no cambia nada y termina (Review Focus 5);
+  - `ALWAYS_LIT`: en 120 s de ticks de 100 ms las ventanas de `"escuela-escalera"` y `"club-gimnasio"` siguen en `homes()` siempre;
   - sin homes (`{ ...scene, homes: [] }`): `homes()` es `[]` y en 60 s de ticks `homes` nunca es `true`;
   - Review Focus 4: misma secuencia de ticks sobre `scene` y `{ ...scene, homes: [] }` → `windows()` y `neon()` iguales;
   - actualizar el test de reduced-motion existente para el objeto con `homes: false`.
   - `tech-animator.test.ts`: los ids ordenados suman `"tech.homes"`.
 - [ ] Step 2: correr → FAIL.
-- [ ] Step 3: implementar con el patrón de `city-anim.ts`: `const SEED_MAX = 2 ** 32 - 1` (con el comentario de por qué no `0x…`); estado `lit` por grupo copiado de `scene.homes` (si un grupo tiene ventanas mezcladas, manda la primera); `homesRng = createRng(rng.int(0, SEED_MAX))` derivado **después** del estado existente; en `tick`, tras la guarda `opts.reducedMotion || !Number.isFinite(dtMs) || dtMs <= 0`: `homesTimer -= dtMs; while (homesTimer <= 0 && groups.length > 0) { homesTimer += homesRng.int(...HOMES_GAP_MS); invertir groups[homesRng.int(0, groups.length − 1)]; homesFired++; c.homes = true }`. Docstring del módulo: una línea sobre las ventanas del barrio.
+- [ ] Step 3: implementar con el patrón de `city-anim.ts`: `const SEED_MAX = 2 ** 32 - 1` (con el comentario de por qué no `0x…`); estado `lit` por grupo copiado de `scene.homes` (la escena garantiza que un grupo es homogéneo, test de Task 6); la lista de grupos que el reloj sortea excluye `ALWAYS_LIT`; `homesRng = createRng(rng.int(0, SEED_MAX))` derivado **después** del estado existente; en `tick`, tras la guarda `opts.reducedMotion || !Number.isFinite(dtMs) || dtMs <= 0`: `homesTimer -= dtMs; while (homesTimer <= 0 && groups.length > 0) { homesTimer += homesRng.int(...HOMES_GAP_MS); invertir groups[homesRng.int(0, groups.length − 1)]; homesFired++; c.homes = true }`. Docstring del módulo: una línea sobre las ventanas del barrio.
 - [ ] Step 4: `npx vitest run src/scenes src/world` → PASS; typecheck.
 - [ ] Step 5: commit `feat(#249): capa tech.homes con reloj de pared`.
 
@@ -222,3 +225,17 @@ Geometría (del issue; los grupos de `HomeWindow` llevan prefijo `${b.x},${b.y}:
 
 - `cover-antes.png` ya tomada sobre `b9550c5` (antes de tocar código) en `docs/superpowers/specs/assets/2026-10-27-barrio/`.
 - Tras Task 9: dev server, script `.scratch/evals-249.md` con agent-browser, captura `cover-zonificacion.png` y comprobación de los exhibits nuevos.
+
+## Assumptions
+
+- **Fijos siempre encendidos.** `ALWAYS_LIT` en `barrio.ts` excluye `"escuela-escalera"` y `"club-gimnasio"` del sorteo de `tech.homes` (fuente: plan de #240, decisión 9). Alternativa descartada: un campo `fixed?` en `HomeWindow`, que cambiaría la interfaz que fija el issue.
+- **Valor medido sobre el estimado.** `REGION_FACES_BEFORE = 1286` (medido) en lugar de ≈ 1316 (el issue pide "verificar" y `<medido>`).
+- **Tonos de `tile`.** Si el recálculo difiere de los valores del issue en más de ±1, mandan los del issue (son los únicos escritos).
+- **Secuencia de rng.** Derivar `homesRng` en la construcción corre en uno las tiradas de `rng` de las torres y coronas respecto de `main`; ningún test fija esa secuencia (no hay snapshot de `tech`/`tech-anim`; los tests son de comportamiento) y los ticks no dependen de `homes` (Review Focus 4).
+- **Si un test de Task 6 sale rojo** (variedad, fracción de luces): se corrigen los marcadores de Tasks 4–5 dentro de la geometría del issue; nunca se aflojan los umbrales del issue.
+- **`quay` y `CAMPUS_D`** no tienen otros usos en `src/` (`grep`: `shipyard.ts` tiene su propio `quay` local).
+
+## Grilling
+
+- Rondas: 1 (el plan no cambió de costura: se agregaron dos tests, `ALWAYS_LIT` y el detalle del test de costanera). Griller: model fable.
+- Preguntas: 17. Fuentes: ISSUE 9, CODE 12, DOC 1 (varias respuestas citan más de una fuente); NO SOURCE 4, todos supuestos técnicos (arriba). Ninguna ambigüedad de spec, nada fuera de alcance: sin issues abiertos.
