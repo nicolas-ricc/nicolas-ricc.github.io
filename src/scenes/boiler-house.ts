@@ -4,7 +4,8 @@ import type { Material } from "../map/palette-iso";
 
 /**
  * Nave de calderas de la Fábrica de Luz, sobre la huella `x 44..107, y −46..−16`
- * de la planta; todo lo que depende del largo se deriva de `BAYS` vanos de `BAY` u. La cámara ve techo, este (+x) y sur (+y): el detalle va ahí.
+ * de la planta. Todo lo que depende del largo se deriva de `BAYS` vanos de `BAY` u.
+ * La cámara ve techo, este (+x) y sur (+y): el detalle va ahí.
  * Decisiones (D1–D19): docs/plans/2026-10-24-213-nave-calderas.md.
  */
 export const BAYS = 9; // 10 pilastras = 9 crujías
