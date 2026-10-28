@@ -62,7 +62,7 @@ export function casas(ctx: BarrioCtx, b: SprawlBlock): void {
   if (n === 4) lots.splice(rng.int(0, 4), 1);
   const hi = lots.findIndex((l) => l >= 3); // casa H del plan: la primera de la fila sur
   const houses = lots.map((lot, i): House => {
-    const south = lot >= 3, a = rng.int(5, 6), c0 = rng.int(4, 5), c = a === c0 ? c0 - 1 : c0, h = rng.chance(0.6) ? 3 : 5.5;
+    const south = lot >= 3, a = rng.int(5, 6), c0 = rng.int(4, 5), c = parity === 1 && a === c0 ? c0 - 1 : c0, h = rng.chance(0.6) ? 3 : 5.5; // 5×5 solo en paridad 0 (w ≥ d); en paridad 1, d > w estricto
     const [w, d] = parity === 0 ? [a, c] : [c, a];
     const mat: Material = rng.chance(0.6) ? "whitewash" : "brick";
     return { x: b.x + 2 + 8 * (lot % 3), y: b.y + (south ? 11 : 2.5), w: i === hi ? Math.min(w, 5) : w, d, h, mat };

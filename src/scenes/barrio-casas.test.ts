@@ -161,6 +161,11 @@ describe("casas de Ciudad Jardín (#251), semillas sueltas", () => {
       expect(faces(ctx)).toBeLessThanOrEqual(FACE_CAPS.casas);
     });
   }
+  it("la planta 5×5 existe en paridad 0 y nunca en paridad 1", () => {
+    const squares = (b: SprawlBlock) => Array.from({ length: 20 }, (_, s) => { const ctx = newCtx(createRng(s + 1)); casas(ctx, b); return parts(ctx.solids).houses.filter((h) => h.w === h.d).length; }).reduce((x, y) => x + y, 0);
+    const [even, odd] = blockParity(b0) === 0 ? [b0, b1] : [b1, b0];
+    expect(squares(even)).toBeGreaterThan(0); expect(squares(odd)).toBe(0);
+  });
   it("el ala aparece en algunas corridas y no en otras", () => {
     const withAla = Array.from({ length: 20 }, (_, s) => { const ctx = newCtx(createRng(s + 1)); casas(ctx, b0); return parts(ctx.solids).ala.length; });
     expect(withAla.some((n) => n === 1)).toBe(true); expect(withAla.some((n) => n === 0)).toBe(true);
