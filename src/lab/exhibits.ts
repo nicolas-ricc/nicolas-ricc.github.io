@@ -10,7 +10,7 @@ import { BLOCK_D, BLOCK_W, BRIDGE, COLLAPSED, DISTRICT_COLS, DISTRICT_ROWS, EAST
 import { campus, lamp } from "../scenes/city-pieces";
 import { STAIR_TOWER } from "../scenes/boiler-house";
 import { excavator, excavatorBox, excavatorWheel } from "../scenes/excavator";
-import { PLANT, RAIL_YARD_X, STACK_BASE_H, STACKS } from "../scenes/factory";
+import { COOLING as FACTORY_COOLING, PLANT, RAIL_YARD_X, STACK_BASE_H, STACKS } from "../scenes/factory";
 import { waterTower } from "../scenes/maltings";
 import { PUFF_LIFT, PUFF_RANGE } from "../scenes/factory-anim";
 import { ARCADE, BUMPER, CAROUSEL, COASTER, DROP, PIER, WHEEL } from "../scenes/fair";
@@ -66,37 +66,35 @@ const vessel = (kind: ShipKind) => (out: Solid[], accents: Accent[]): void => {
 };
 
 export const EXHIBITS: readonly Exhibit[] = [
-  // x1 = borde este de la torre de escalera (126): queda afuera la primera chimenea, cuya plataforma (#212) arranca en x 126.3; y1 −14: zócalo y tolva adentro, faroles y grúa torre del desvío afuera; h 26: vértice del horno de la maltería (26); x0 2: pasarela del tanque (x ≥ 5.4)
-  { id: "planta", title: "Nave de calderas, maltería y tanque", zone: "portfolio", group: "fabrica", kind: "region",
-    box: { x0: 2, y0: PLANT.y - M, x1: STAIR_TOWER.x1, y1: -14 }, h: 26 },
-  // en planta el tanque queda detrás de la maltería (la cámara mira desde el sudeste): solo, se ven patas, cruces, escalera y pasarela
+  // {2, 41, 98, 76}: x1 = borde este de la torre de escalera (STAIR_TOWER.x1); zócalo y tolva adentro; faroles y camiones afuera salvo el farol de (5, 76), que toca el borde sur (y1 76); chimeneas (y ≤ 36.05) y tanque (y ≤ 36.8, con la escalera) afuera por el norte; h 26: vértice del horno de la maltería
+  { id: "planta", title: "Nave de calderas y maltería", zone: "portfolio", group: "fabrica", kind: "region",
+    box: { x0: PLANT.x - M, y0: PLANT.y - M, x1: STAIR_TOWER.x1, y1: PLANT.y + PLANT.d + 2 }, h: 26 },
+  // el tanque (WATER_TOWER, al norte de la maltería) queda fuera de la caja de planta: solo, se ven patas, cruces, escalera y pasarela
   { id: "tanque-agua", title: "Tanque de agua", zone: "portfolio", group: "fabrica", kind: "piece", pad: "slab", build: (out) => waterTower(out, { x: 0, y: 0 }) },
-  // el humo deriva al NNE hasta PUFF_RANGE: la caja se estira al norte para no cortar la columna (la subestación queda adentro, detrás)
-  // la torre de enfriamiento es privada en factory.ts: (172, −36), r 9
+  // el humo deriva al NNE hasta PUFF_RANGE: la caja se estira al norte para no cortar la columna
+  // el humo deriva 0.45·PUFF_RANGE ≈ 12.6 al este (de ahí los 13); la plataforma sobresale r + 1.2 al sur; la subestación y su farol quedan adentro, detrás
   { id: "chimeneas", title: "Chimeneas y torre de enfriamiento", zone: "portfolio", group: "fabrica", kind: "region",
-    box: { x0: Math.min(...stacksX) - stackR - M, y0: Math.min(...stacksY) - stackR - PUFF_RANGE, x1: 172 + 9 + M, y1: -36 + 9 + M },
+    box: { x0: FACTORY_COOLING.x - FACTORY_COOLING.r - M, y0: Math.min(...stacksY) - stackR - PUFF_RANGE, x1: Math.max(...stacksX) + stackR + M + 13, y1: Math.max(...stacksY) + stackR + 1.2 + M },
     h: stackTop + PUFF_RANGE * PUFF_LIFT },
-  // cerco de SUBSTATION más margen (3 y 1 al sur); y1 −46 deja afuera la torre de enfriamiento (y ≥ −45). h 13: los mástiles llegan a z 12; el humo pasa por encima
+  // cerco de SUBSTATION más margen (3 y 1 al sur): {51, −5, 98, 12}; no toca los vagones del desvío (y ≤ −6.8) ni cruza x 99 (`calle-faroles`). h 13: los mástiles llegan a z 12; el humo pasa por encima.
   { id: "subestacion", title: "Subestación", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: SUBSTATION.x0 - 3, y0: SUBSTATION.y0 - 3, x1: SUBSTATION.x1 + 3, y1: SUBSTATION.y1 + 1 }, h: 13 },
-  // a mano: camiones y pallets de truckYard; la grúa torre (60, −12) está en medio de la playa y queda adentro
-  { id: "playa-camiones", title: "Playa de camiones", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: 17, y0: -15, x1: 113, y1: 2 }, h: 22 },
+  // a mano {2, 76, 98, 92}: camiones y pallets de truckYard; la tolva (z 13.5) cruza el borde norte; el caballete más alto adentro llega a 8.3; la grúa ya no está
+  { id: "playa-camiones", title: "Playa de camiones", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: 2, y0: 76, x1: 98, y1: 92 }, h: 16 },
   { id: "playa-vias", title: "Playa de vías", zone: "portfolio", group: "fabrica", kind: "region",
     box: { x0: RAIL_YARD_X[0] - 4, y0: 40, x1: -4, y1: 100 }, h: 21 }, // a mano en y: los acopios de mineral (rng, x −25..−13, y 44..96, privados en factory.ts) con vías y vagones; h cubre la excavadora (≈20,3)
-  // x1 tope 4: la sombra cae al ENE sobre el astillero y la caja se detiene antes de las naves (x 8)
+  // x1 tope 4, borde oeste de la región nueva: la sombra cae al ENE sobre el astillero
   { id: "excavadora", title: "Excavadora de rueda de cangilones", zone: "portfolio", group: "fabrica", kind: "region",
     box: { x0: excavatorExtent.x0 - M, y0: excavatorExtent.y0 - M, x1: Math.min(excavatorExtent.x1 + M, 4), y1: excavatorExtent.y1 + M }, h: 21 }, // caja + sombras; h cubre la máquina (≈20,3), que es capa animada
-  // a mano: del portón este (x 121, y −20) al patio de material (x 30, y 1..3); la grúa torre del desvío queda adentro y manda en h
-  { id: "cinta", title: "Cinta transportadora", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: 28, y0: -15, x1: 125, y1: 4 }, h: 22 },
   // las constantes de shipyard.ts son privadas: cajas a mano
   // gradas x 110..QUAY_X, y 36..72; el pórtico (x 150) monta sobre ellas y queda adentro
   { id: "gradas", title: "Gradas", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 108, y0: 33, x1: QUAY_X + 2, y1: 75 }, h: 28 },
   // el agua entre el muelle y la escollera, desde la bocana; sin barcos desde #87 (los carriles arrancan en la bocana)
   { id: "darsena", title: "Dársena", zone: "portfolio", group: "astillero", kind: "region", box: { x0: QUAY_X - 2, y0: MOUTH_Y, x1: 275, y1: 80 }, h: 5 },
   { id: "grua-portico", title: "Grúa pórtico", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 146, y0: 30, x1: 156, y1: 78 }, h: 28 },
-  // calle de transferencia x 100..108 con los faroles en 108.5; entre las naves (x ≤ 98) y las gradas (x ≥ 110)
+  // calle de transferencia x 100..108 con los faroles en 108.5; al oeste de las gradas (x ≥ 110)
   { id: "calle-faroles", title: "Calle de faroles", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 99, y0: 8, x1: 111, y1: 128 }, h: 7 },
-  // las dos naves de montaje: x 8..98, filas y 36 y 56 de 16
-  { id: "naves", title: "Naves de montaje", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 5, y0: 33, x1: 101, y1: 75 }, h: 14 },
+  // las dos naves de montaje: x 10..100, filas y −52 y −32 de 16; y1 −14 deja afuera el contrapeso de la grúa (y −13..−11, z 18.5..20) y x1 102 el patio (x ≥ 104)
+  { id: "naves", title: "Naves de montaje", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 7, y0: -55, x1: 102, y1: -14 }, h: 14 },
   // la costa norte de la isla frente a los galpones: x 270..350, y 0..60; h es el menor entero que pasa encuadre y vecinos (medido con el `measure` de exhibits.test.ts)
   { id: "punta-norte", title: "Punta norte de la isla", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 270, y0: 0, x1: 350, y1: 60 }, h: 9 },
   // pluma 24 al este y contrapluma 8 al oeste: con el mástil en x −8 queda en −16..16

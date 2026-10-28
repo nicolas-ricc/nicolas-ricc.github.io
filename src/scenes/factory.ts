@@ -4,35 +4,41 @@ import type { Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { WORLD } from "../map/geo";
-import { boilerHouse } from "./boiler-house";
+import { boilerHouse, NAVE } from "./boiler-house";
 import { EXCAVATOR, excavator, excavatorBox, local } from "./excavator";
 import { jungle } from "./flora";
 import { MALT, maltings, waterTower } from "./maltings";
 import { towerCrane } from "./pieces";
-import { substation } from "./substation";
+import { PLANT_SHIFT, emitPlant } from "./plant-frame";
+import { SUBSTATION, substation } from "./substation";
 
 /**
- * Fábrica, detrás (al norte) y al oeste del astillero. Banda norte
- * `x -60..205, y -60..0` al oeste del río: nave de calderas (Fábrica de Luz) y,
- * al oeste, la maltería de Mistley y un tanque de agua sobre patas, tres chimeneas humeantes, torre de
- * enfriamiento, grúa torre sobre un desvío ferroviario, cinta transportadora
- * hasta el patio de material, subestación de intemperie (`substation.ts`) y
- * playa de camiones. Columna oeste `x -60..0, y 0..146`: playa de vías,
- * excavadora de rueda de cangilones y acopios de mineral, selva al sur. El terreno es `slab`.
+ * Fábrica de Portfolio, en el lugar que tenían los galpones del astillero (región x 4..98.7, y −4..99). La planta
+ * (la maltería de Mistley, x 5..29, y 44..74; la nave de calderas de la Fábrica de Luz, x 29..92, y 44..74, con su
+ * torre de escalera en x 93..98; el tanque de agua sobre patas en (15, 32)), la playa de camiones y sus faroles se
+ * arman en el marco local y se trasladan con `PLANT_SHIFT` de `plant-frame.ts`: la playa de camiones y los faroles
+ * quedan en y 76..89, con la cinta inclinada bajando hasta ella desde la tolva (y 74..76). Al norte de la planta,
+ * tres chimeneas humeantes (en (58, 32), (72, 26) y (86, 32)), la torre de enfriamiento en (40, 14) y la subestación
+ * de intemperie (`substation.ts`, x 54..95, y −2..11). Ya no están la cinta larga, el ramal `SPUR_Y`, el ramal
+ * embutido en la calle, las chatas ni los rieles nave→grada.
+ * En la banda norte (`x > 0, y −60..−4`) quedan el desvío ferroviario, la grúa torre y, detrás de la fábrica, las naves de
+ * montaje, los talleres y el patio de material del astillero (`shipyard.ts`). Columna oeste `x ≤ 0` (`x -60..0,
+ * y 0..146`), igual que antes: playa de vías, excavadora de rueda de cangilones y acopios de mineral, selva al sur
+ * y el farol de (−30, 20). El terreno es `slab`.
  * Spec: docs/superpowers/specs/2026-09-14-mundo-2-fabrica-distrito-blog-design.md §5.
  * Detalle de planta, chimeneas, subestación y excavadora: docs/superpowers/specs/2026-10-24-fabrica-detalle-design.md.
+ * Mudanza: docs/superpowers/specs/2026-10-27-fabrica-mudanza-design.md.
  */
 export interface FactoryScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; stacks: Vec3[]; excavator: Solid[] }
 
-export const PLANT = { x: 20, y: -46, w: 100, d: 30, h: 14 } as const;
+export const PLANT = { x: MALT.x, y: MALT.y, w: MALT.w + NAVE.w, d: 30, h: 14 } as const;
 export { MALT };
-export const STACKS = [{ x: 130, y: -40, r: 2.8, h: 22 }, { x: 140, y: -34, r: 2.6, h: 26 }, { x: 150, y: -40, r: 2.4, h: 24 }] as const;
+export const STACKS = [{ x: 58, y: 32, r: 2.8, h: 22 }, { x: 72, y: 26, r: 2.6, h: 26 }, { x: 86, y: 32, r: 2.4, h: 24 }] as const;
 export const STACK_BASE_H = 3;
 const DECK_H = 0.3; // losa de la plataforma de las chimeneas
 export const SIDING_Y = -8;
 export const RAIL_YARD_X = [-56, -48, -40] as const; // vías N-S de la playa; los acopios van al este de ellas
-const COOLING = { x: 172, y: -36 } as const;
-const CONVEYOR_Z = 6;
+export const COOLING = { x: 40, y: 14, r: 9 } as const; // torre de enfriamiento: al norte del lugar de la nave, x 31..49, y 5..23
 const LAMP_H = 5;
 
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material): Solid => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat });
@@ -44,11 +50,11 @@ function lamp(out: Solid[], accents: Accent[], x: number, y: number): void {
 }
 
 function plant(out: Solid[]): void {
-  const { x, w } = PLANT;
   maltings(out);
   waterTower(out);
   boilerHouse(out);
-  out.push(prism(x + w - 0.2, -23, 0, 0.5, 6, 8, "concrete"));          // portón este, de donde sale la cinta
+  const localE = PLANT.x + PLANT.w - PLANT_SHIFT.x;
+  emitPlant(out, (o) => o.push(prism(localE - 0.2, -23, 0, 0.5, 6, 8, "concrete"))); // portón este
 }
 
 export type Stack = (typeof STACKS)[number];
@@ -91,7 +97,7 @@ function chimneys(out: Solid[], accents: Accent[]): Vec3[] {
 
 function coolingTower(out: Solid[]): void {
   let z = 0;
-  for (const r of [9, 8, 7, 7.5]) { out.push({ kind: "cylinder", at: v3(COOLING.x, COOLING.y, z), r, h: 4, mat: "concrete", sides: 12 }); z += 4; }
+  for (const r of [COOLING.r, 8, 7, 7.5]) { out.push({ kind: "cylinder", at: v3(COOLING.x, COOLING.y, z), r, h: 4, mat: "concrete", sides: 12 }); z += 4; }
 }
 
 function siding(out: Solid[]): void {
@@ -100,18 +106,12 @@ function siding(out: Solid[]): void {
   out.push(prism(6, SIDING_Y - 1.3, 0, 9, 2.6, 3.6, "steel"), prism(12, SIDING_Y - 1.3, 3.6, 3, 2.6, 1, "steel"));      // locomotora y cabina
 }
 
-/** Del portón este de la planta al patio de material: arranca justo afuera del portón, dos tramos rectos a z 6 sobre caballetes cada 12 u. */
-function conveyor(out: Solid[]): void {
-  out.push(prism(121, -20, CONVEYOR_Z, 2, 22, 0.6, "steel"));
-  out.push(prism(30, 1, CONVEYOR_Z, 93, 2, 0.6, "steel"));
-  for (let y = -16; y < 2; y += 12) out.push(prism(121.6, y, 0, 0.8, 0.8, CONVEYOR_Z, "steel"));
-  for (let x = 34; x < 120; x += 12) out.push(prism(x, 1.6, 0, 0.8, 0.8, CONVEYOR_Z, "steel"));
-}
-
 function truckYard(out: Solid[], accents: Accent[]): void {
-  for (const [x, y] of [[40, -12], [70, -6], [95, -12]] as const) { out.push(prism(x, y, 0, 6, 2.4, 2.8, "rust")); out.push(prism(x + 6, y, 0, 2, 2.4, 2.2, "steel")); } // caja y cabina
-  for (let i = 0; i < 6; i++) out.push(prism(22 + i * 4, -3, 0, 3, 2, 0.5 + (i % 3) * 0.4, "steel")); // pallets de chapa junto al portón oeste
-  for (const [x, y] of [[20, -14], [110, -3]] as const) lamp(out, accents, x, y);
+  emitPlant(out, (o, a) => {
+    for (const [x, y] of [[40, -12], [70, -6], [95, -12]] as const) { o.push(prism(x, y, 0, 6, 2.4, 2.8, "rust")); o.push(prism(x + 6, y, 0, 2, 2.4, 2.2, "steel")); } // caja y cabina
+    for (let i = 0; i < 6; i++) o.push(prism(22 + i * 4, -3, 0, 3, 2, 0.5 + (i % 3) * 0.4, "steel")); // pallets de chapa junto al portón oeste
+    for (const [x, y] of [[20, -14], [110, -3]] as const) lamp(o, a, x, y);
+  }, accents);
 }
 
 /** Columna oeste: tres vías N-S que empalman con las vías del oeste del astillero, la excavadora (en `machine`: se dibuja aparte, en su marco), acopios de mineral al este de ellas, selva al sur. */
@@ -137,7 +137,9 @@ function railYard(out: Solid[], machine: Solid[], accents: Accent[], rng: Rng): 
 }
 
 function lamps(out: Solid[], accents: Accent[]): void {
-  for (const [x, y] of [[24, -13], [64, -13], [50, -13.5], [148, -46], [-30, 20]] as const) lamp(out, accents, x, y);
+  emitPlant(out, (o, a) => { for (const [x, y] of [[24, -13], [64, -13], [50, -13.5]] as const) lamp(o, a, x, y); }, accents); // los tres de la planta, en el marco local
+  // el cuarto farol es el de la subestación: esquina SO del cerco
+  for (const [x, y] of [[SUBSTATION.x0 - 1, SUBSTATION.y1 + 1], [-30, 20]] as const) lamp(out, accents, x, y);
 }
 
 export function factory(rng: Rng): FactoryScene {
@@ -147,7 +149,6 @@ export function factory(rng: Rng): FactoryScene {
   coolingTower(solids);
   towerCrane(solids, accents, { at: { x: 60, y: -12 }, mastH: 20, jibLen: 30, dir: "e", light: "cyan" });
   siding(solids);
-  conveyor(solids);
   substation(solids);
   truckYard(solids, accents);
   const machine: Solid[] = [];

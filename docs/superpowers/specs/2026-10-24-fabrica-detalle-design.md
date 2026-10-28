@@ -25,6 +25,12 @@ y contra las fotos de referencia.
 
 ## 2. Reglas de modelado
 
+*Desvío (2026-10-27): las "huellas estables" de abajo quedaron reemplazadas
+por la mudanza del complejo al lugar de los galpones
+(`2026-10-27-fabrica-mudanza-design.md`, #238): cambian las posiciones de
+planta, portón, `STACKS`, cinta, playa de camiones y subestación. El detalle
+de §5–§9 sigue vigente. Lo que sigue queda como registro.*
+
 - **Visibilidad.** La cámara (`VIEW_DIR = normalize(1.4, 1.4, 1)`) solo ve la
   cara superior y las que miran a **+x (este)** y **+y (sur)**. Todo el
   detalle va en esas caras; las caras norte y oeste llevan el material base
