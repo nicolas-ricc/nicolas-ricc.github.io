@@ -15,7 +15,8 @@ export interface Rails {
    * `q = x − 1.4z` contra `x1` (con r y h de la copa); basta con que uno
    * separe para que quede. Solo vale al sur de las vías (`y` mayor): las
    * capas animadas se pintan encima de lo estático, así que lo que está al
-   * norte queda detrás del tren y no lo tapa.
+   * norte queda detrás del tren y no lo tapa. Pide al menos una vía en `y`:
+   * sin vías todo cuenta como sur.
    */
   train?: { y0: number; y1: number; x1: number };
 }
