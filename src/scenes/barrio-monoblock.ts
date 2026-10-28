@@ -1,4 +1,5 @@
-import { v3, type Vec2 } from "../iso/geometry";
+import { v3, type Vec2, type Vec3 } from "../iso/geometry";
+import { Z_SCALE } from "../iso/project";
 import type { Plate } from "../iso/plate";
 import type { Solid } from "../iso/solids";
 import { cornerLamps, homeWindow, lawn, wallWindow, type BarrioCtx } from "./barrio";
@@ -30,6 +31,14 @@ export function slab(p: Slab): Solid[] {
   return [prism(p.x - 0.3, p.y - 0.3, 0, 20.6, 5.6, 0.3, "paving"), body, ...tanks, prism(c.x + 0.9, c.y + 0.9, top + 2.8, 0.2, 0.2, 2.5, "steel")];
 }
 
+/** ¿El rayo desde p hacia la cámara (Z_SCALE, Z_SCALE, 1) atraviesa el cuerpo de la placa s? El contacto no cuenta. */
+const hidden = (p: Vec3, s: Slab): boolean => {
+  const d = [Z_SCALE, Z_SCALE, 1], o = [p.x, p.y, p.z], lo = [s.x, s.y, 0.3], hi = [s.x + 20, s.y + 5, 0.3 + s.h];
+  let t0 = -Infinity, t1 = Infinity;
+  for (let i = 0; i < 3; i++) { const a = (lo[i]! - o[i]!) / d[i]!, c = (hi[i]! - o[i]!) / d[i]!; t0 = Math.max(t0, Math.min(a, c)); t1 = Math.min(t1, Math.max(a, c)); }
+  return t1 > 1e-9 && t0 < t1 - 1e-9;
+};
+
 /** Ventanas encendibles: sur (por vano no loggia) y este por piso; una por piso por columna de loggia, con `lit` común. */
 export function windows(ctx: BarrioCtx, b: SprawlBlock, slabs: Slab[]): void {
   slabs.forEach((s, i) => {
@@ -38,21 +47,21 @@ export function windows(ctx: BarrioCtx, b: SprawlBlock, slabs: Slab[]): void {
     for (let f = 0; f < floors; f++) {
       const z = 0.3 + 3 * f;
       for (let k = 0; k < 8; k++) {
-        const cx = s.x + 20 * (1 - (k + 0.5) / 8), loggia = s.loggias.includes(k);
-        if (loggia) homeWindow(ctx, wallWindow({ y: s.y + 5 }, cx - 1.25, cx + 1.25, z + 1.2, z + 2.6), lit[k]!, `${b.x},${b.y}:p${i}-L${k}`);
-        else homeWindow(ctx, wallWindow({ y: s.y + 5 }, cx - 0.45, cx + 0.45, z + 1.1, z + 2), ctx.rng.chance(0.38), `${b.x},${b.y}:p${i}-s${f}-${k}`);
+        const cx = s.x + 20 * (1 - (k + 0.5) / 8), loggia = s.loggias.includes(k), h = loggia ? 1.25 : 0.45;
+        const pts = wallWindow({ y: s.y + 5 }, cx - h, cx + h, z + (loggia ? 1.2 : 1.1), z + (loggia ? 2.6 : 2)), lt = loggia ? lit[k]! : ctx.rng.chance(0.38);
+        if (!slabs.some((o) => o !== s && pts.some((q) => hidden(q, o)))) homeWindow(ctx, pts, lt, `${b.x},${b.y}:p${i}-${loggia ? "L" : `s${f}-`}${k}`);
       }
       for (let j = 0; j < 2; j++) { const c = s.y + 1.25 + 2.5 * j; homeWindow(ctx, wallWindow({ x: s.x + 20 }, c - 0.45, c + 0.45, z + 1.1, z + 2), ctx.rng.chance(0.38), `${b.x},${b.y}:p${i}-e${f}-${j}`); }
     }
   });
 }
 
-/** Árboles por ranuras a lo largo de x en la banda libre entre placas: nunca se solapan ni pisan un zócalo. */
+/** Árboles por ranuras a lo largo de x (el último pegado al borde este) en la banda libre entre placas: nunca se solapan ni pisan un zócalo. */
 function trees(ctx: BarrioCtx, b: SprawlBlock, slabs: Slab[]): Solid[] {
-  const [y0, y1] = slabs.length === 2 ? [b.y + 7.3, b.y + 10.7] : slabs[0]!.y === b.y + 2 ? [b.y + 7.3, b.y + 18] : [b.y, b.y + 10.7], n = ctx.rng.int(4, 6), w = 22.3 / n;
+  const [y0, y1] = slabs.length === 2 ? [b.y + 7.3, b.y + 10.7] : slabs[0]!.y === b.y + 2 ? [b.y + 7.3, b.y + 18] : [b.y, b.y + 10.7], n = ctx.rng.int(4, 6), w = 24 / n;
   return Array.from({ length: n }, (_, k) => {
     const r = 1.2 + 0.4 * ctx.rng.next(), h = 3.5 + 1.5 * ctx.rng.next();
-    const x = b.x + w * k + r + (w - 2 * r) * ctx.rng.next(), y = y0 + r + (y1 - y0 - 2 * r) * ctx.rng.next();
+    const x = k === n - 1 ? b.x + 24 - r : b.x + w * k + r + (w - 2 * r) * ctx.rng.next(), y = y0 + r + (y1 - y0 - 2 * r) * ctx.rng.next();
     return { kind: "cone", at: v3(x, y, 0.05), r, h, mat: "leaf", sides: 6 } as Solid;
   });
 }
@@ -72,10 +81,10 @@ export function monoblock(ctx: BarrioCtx, b: SprawlBlock): void {
   ctx.ground.push(path({ x: b.x, y: py }, { x: b.x + 23.2, y: py }));
   cornerLamps(ctx, b);
   const park = trees(ctx, b, slabs), body = slabs.flatMap(slab), cut = (): Solid[] => [...ctx.solids, ...ctx.ground, ...body, ...park];
-  // Presupuesto: árboles a 4, luego loggias a 1 (placa más alta primero) hasta entrar en el tope.
+  // Presupuesto: árboles a 4 (desde el oeste), luego loggias a 1 (placa más alta primero) hasta entrar en el tope.
   const tall = [...slabs].sort((a, c) => c.h - a.h);
   while (facesIn(cut(), blockRect(b)) > FACE_CAPS.monoblock) {
-    if (park.length > 4) park.pop();
+    if (park.length > 4) park.shift();
     else { const s = tall.find((t) => t.loggias.length > 1); if (!s) break; s.loggias = [2]; body.splice(0, body.length, ...slabs.flatMap(slab)); }
   }
   ctx.solids.push(...body, ...park);

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bounds, isFlat, type Solid } from "../iso/solids";
+import { Z_SCALE } from "../iso/project";
 import { SEED } from "../map/seed";
 import { suburbBlocks } from "./sprawl-grid";
 import { tech } from "./tech";
@@ -31,6 +32,14 @@ const overlap = (a: Solid, b: Solid) => {
   const p = bounds(a), q = bounds(b), e = 1e-9;
   const xy = p.min.x < q.max.x - e && q.min.x < p.max.x - e && p.min.y < q.max.y - e && q.min.y < p.max.y - e;
   return xy && p.min.z < q.max.z - e && q.min.z < p.max.z - e;
+};
+
+/** ¿El rayo desde (x, y, z) hacia la cámara (Z_SCALE, Z_SCALE, 1) atraviesa el cuerpo p? El contacto no cuenta. */
+const tapado = (q: { x: number; y: number; z: number }, p: Prism) => {
+  const d = [Z_SCALE, Z_SCALE, 1], o = [q.x, q.y, q.z], lo = [p.at.x, p.at.y, p.at.z], hi = [p.at.x + p.w, p.at.y + p.d, p.at.z + p.h];
+  let t0 = -Infinity, t1 = Infinity;
+  for (let i = 0; i < 3; i++) { const a = (lo[i]! - o[i]!) / d[i]!, c = (hi[i]! - o[i]!) / d[i]!; t0 = Math.max(t0, Math.min(a, c)); t1 = Math.min(t1, Math.max(a, c)); }
+  return t1 > 1e-9 && t0 < t1 - 1e-9;
 };
 
 describe("monoblocks del Barrio Simón Bolívar (#250)", () => {
@@ -120,10 +129,25 @@ describe("monoblocks del Barrio Simón Bolívar (#250)", () => {
       const tall = of(b).homes.filter((w) => { const zs = w.pts.map((q) => q.z); return Math.max(...zs) - Math.min(...zs) > 1.2; });
       const byColumn = new Map<string, boolean[]>();
       for (const w of tall) { const k = `${w.pts[0]!.y}|${Math.min(...w.pts.map((q) => q.x)).toFixed(3)}`; byColumn.set(k, [...(byColumn.get(k) ?? []), w.lit]); }
-      expect(byColumn.size).toBeGreaterThanOrEqual(of(b).bodies.length);
+      expect(byColumn.size).toBeGreaterThanOrEqual(1); // la placa trasera más baja queda tapada entera
       for (const lits of byColumn.values()) { expect(new Set(lits).size).toBe(1); columns++; if (lits[0]) litColumns++; }
     }
     expect(litColumns).toBeGreaterThan(0); expect(litColumns).toBeLessThan(columns);
+  });
+
+  it("ninguna ventana del monoblock queda tapada por otra placa de su manzana", () => {
+    for (const b of monos) {
+      const { bodies, homes } = of(b);
+      for (const w of homes) for (const q of w.pts) for (const p of bodies) expect(tapado(q, p), `${b.x},${b.y} ${w.group}`).toBe(false);
+    }
+  });
+
+  it("en cada manzana al menos un árbol se ve: su ápice no lo tapa ningún cuerpo", () => {
+    for (const b of monos) {
+      const { bodies, trees } = of(b);
+      const seen = trees.some((t) => { const c = t as Solid & { kind: "cone" }; const a = { x: c.at.x, y: c.at.y, z: c.at.z + c.h }; return bodies.every((p) => !tapado(a, p)); });
+      expect(seen, `${b.x},${b.y}`).toBe(true);
+    }
   });
 
   it("la fracción encendida de todas las ventanas de monoblocks está en [0.30, 0.45]", () => {
