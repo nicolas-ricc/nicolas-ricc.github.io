@@ -82,7 +82,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "playa-camiones", title: "Playa de camiones", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: 17, y0: -15, x1: 113, y1: 2 }, h: 22 },
   { id: "playa-vias", title: "Playa de vías", zone: "portfolio", group: "fabrica", kind: "region",
     box: { x0: RAIL_YARD_X[0] - 4, y0: 40, x1: -4, y1: 100 }, h: 21 }, // a mano en y: los acopios de mineral (rng, x −25..−13, y 44..96, privados en factory.ts) con vías y vagones; h cubre la excavadora (≈20,3)
-  // x1 tope 4: la sombra cae al ENE sobre el astillero y la caja se detiene en x 4, borde oeste de la región nueva
+  // x1 tope 4, borde oeste de la región nueva: la sombra cae al ENE sobre el astillero
   { id: "excavadora", title: "Excavadora de rueda de cangilones", zone: "portfolio", group: "fabrica", kind: "region",
     box: { x0: excavatorExtent.x0 - M, y0: excavatorExtent.y0 - M, x1: Math.min(excavatorExtent.x1 + M, 4), y1: excavatorExtent.y1 + M }, h: 21 }, // caja + sombras; h cubre la máquina (≈20,3), que es capa animada
   // las constantes de shipyard.ts son privadas: cajas a mano

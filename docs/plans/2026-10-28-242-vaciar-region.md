@@ -45,7 +45,7 @@
 - Consumes: nada.
 - Produces: `shipyard(rng): Scene` con la misma firma. Función privada nueva `parkingAndRails(out: Solid[], rng: Rng): void`.
 
-- [ ] **Step 1: Tests (ya escritos, fallando)**
+- [x] **Step 1: Tests (ya escritos, fallando)**
   - "hay naves a dos aguas…" → "hay galpones a dos aguas en alistamiento, gradas…": gable con `at.x > 300` exactamente 2 (la nave de pintura, x 112 y 126, sigue a dos aguas fuera de la región); resto igual.
   - Se borra "patio de material: tanques cilíndricos y pilas apiladas".
   - "talleres con techo escalonado…" → "autos en la playa": solo `cars ≥ 3`.
@@ -53,10 +53,10 @@
   - Nuevo "sin rieles nave→grada, ramal embutido ni ramal SPUR_Y": ningún strip `rail` de `ground` vertical con todos sus x en 101 o todos en 104, ni horizontal con todos sus y en {40, 47, 60, 67, 30.5, 33.5}.
   - Nuevo "piezas quitadas": ningún prisma `gable` 90×16, ni `step` 24×14 a y 80, ni equipos 2×2×1 a z 7, ni cilindro en (80, 10) o (92, 22), ni chapas 10×2×0.5, caños 14×1×1, bobinas r 1.5, secciones `step` 9×4×3, ni chatas `w 4.4 d 8 h 3`.
   - Nuevo "la vía del oeste termina en x 104 con durmientes; el camión de la calle sigue": strips `rail` de (0, y)→(104, y) para y 131 y 134; ≥ 20 durmientes `1×5×0.3 rust` a y 130; prisma `rust` en (105, 88) 3×7×2.5.
-- [ ] **Step 2:** `npx vitest run src/scenes/shipyard.test.ts` → FAIL en región, rieles, piezas quitadas y naves.
-- [ ] **Step 3: Implementar.** Borrar `halls()` y `materialYard()` y sus llamadas. `workshops()` → `parkingAndRails(out, rng)` sin los dos talleres ni equipos, con el mismo cuerpo restante y mismo orden de rng; renombrar el comentario de sección a "playa, prefabricados, vías (SO)". En `street()` dejar solo el strip de la calle y el camión (comentario del camión: "camión bajando por la calle"). Borrar `HALL_X/HALL_W/HALL_H` y `SPUR_Y`. El comentario de `RAIL_Y` y de las vías ya no dice "hasta el ramal". Docstring: sacar la línea de producción y los "talleres"; agregar una línea: "Las naves de montaje, los talleres y el patio de material se rearman en la banda norte (`y −58..−16`) en otro hijo de #238."
-- [ ] **Step 4:** `npx vitest run src/scenes/shipyard.test.ts` → PASS; `npm run typecheck` → sin errores.
-- [ ] **Step 5:** commit `feat(#242): astillero sin naves, talleres, patio ni ramales`.
+- [x] **Step 2:** `npx vitest run src/scenes/shipyard.test.ts` → FAIL en región, rieles, piezas quitadas y naves.
+- [x] **Step 3: Implementar.** Borrar `halls()` y `materialYard()` y sus llamadas. `workshops()` → `parkingAndRails(out, rng)` sin los dos talleres ni equipos, con el mismo cuerpo restante y mismo orden de rng; renombrar el comentario de sección a "playa, prefabricados, vías (SO)". En `street()` dejar solo el strip de la calle y el camión (comentario del camión: "camión bajando por la calle"). Borrar `HALL_X/HALL_W/HALL_H` y `SPUR_Y`. El comentario de `RAIL_Y` y de las vías ya no dice "hasta el ramal". Docstring: sacar la línea de producción y los "talleres"; agregar una línea: "Las naves de montaje, los talleres y el patio de material se rearman en la banda norte (`y −58..−16`) en otro hijo de #238."
+- [x] **Step 4:** `npx vitest run src/scenes/shipyard.test.ts` → PASS; `npm run typecheck` → sin errores.
+- [x] **Step 5:** commit `feat(#242): astillero sin naves, talleres, patio ni ramales`.
 
 ### Task 2: Fábrica sin cinta larga
 
@@ -67,14 +67,14 @@
 **Interfaces:**
 - Consumes: nada. Produces: `factory(rng): FactoryScene` sin cambios de firma.
 
-- [ ] **Step 1: Tests (ya escritos, fallando)**
+- [x] **Step 1: Tests (ya escritos, fallando)**
   - "la torre de escalera no toca … ni el pedestal…" → "la torre de escalera no toca el pedestal de la primera chimenea (x ≥ 126.5)": sin el filtro `conveyor`.
   - "desvío con seis vagones…, cinta elevada…" → sin "cinta elevada"; las dos aserciones de la cinta se reemplazan por: ningún prisma con `at.z === 6 && h === 0.6`, ningún prisma 0.8×0.8×6.
   - `world.test.ts`: `max.y <= 0 || max.x <= 0` y el comentario de la cinta se quita.
-- [ ] **Step 2:** `npx vitest run src/scenes/factory.test.ts src/scenes/world.test.ts` → FAIL.
-- [ ] **Step 3: Implementar.** Borrar `conveyor()`, `CONVEYOR_Z` y la llamada. Docstring: quitar "cinta transportadora hasta el patio de material"; el resto del docstring no se toca. Comentario del portón este: "portón este" (ya no sale la cinta).
-- [ ] **Step 4:** mismo comando → PASS; `npm run typecheck`.
-- [ ] **Step 5:** commit `feat(#242): fábrica sin cinta larga`.
+- [x] **Step 2:** `npx vitest run src/scenes/factory.test.ts src/scenes/world.test.ts` → FAIL.
+- [x] **Step 3: Implementar.** Borrar `conveyor()`, `CONVEYOR_Z` y la llamada. Docstring: quitar "cinta transportadora hasta el patio de material"; el resto del docstring no se toca. Comentario del portón este: "portón este" (ya no sale la cinta).
+- [x] **Step 4:** mismo comando → PASS; `npm run typecheck`.
+- [x] **Step 5:** commit `feat(#242): fábrica sin cinta larga`.
 
 ### Task 3: Storybook sin `cinta` ni `naves`
 
@@ -84,11 +84,11 @@
 
 **Interfaces:** ninguna nueva.
 
-- [ ] **Step 1: Test (ya escrito):** `CATALOG.fabrica = ["planta", "chimeneas", "subestacion", "playa-camiones", "playa-vias", "excavadora"]`, `CATALOG.astillero = ["gradas", "darsena", "grua-portico", "calle-faroles"]`.
-- [ ] **Step 2:** `npx vitest run src/lab/exhibits.test.ts` → FAIL en el catálogo.
-- [ ] **Step 3: Implementar.** Borrar las entradas `cinta` y `naves` con sus comentarios. Comentario de `excavadora`: la caja se detiene en x 4, borde oeste de la región nueva. Comentario de `calle-faroles`: "calle de transferencia x 100..108 con los faroles en 108.5, al oeste de las gradas (x ≥ 110)". Valores de caja sin cambios.
-- [ ] **Step 4:** `npx vitest run src/lab/exhibits.test.ts src/scenes/portfolio-accents.test.ts` → PASS; luego `npm test` y `npm run typecheck` completos.
-- [ ] **Step 5:** commit `feat(#242): storybook sin cinta ni naves`.
+- [x] **Step 1: Test (ya escrito):** `CATALOG.fabrica = ["planta", "chimeneas", "subestacion", "playa-camiones", "playa-vias", "excavadora"]`, `CATALOG.astillero = ["gradas", "darsena", "grua-portico", "calle-faroles"]`.
+- [x] **Step 2:** `npx vitest run src/lab/exhibits.test.ts` → FAIL en el catálogo.
+- [x] **Step 3: Implementar.** Borrar las entradas `cinta` y `naves` con sus comentarios. Comentario de `excavadora`: la caja se detiene en x 4, borde oeste de la región nueva. Comentario de `calle-faroles`: "calle de transferencia x 100..108 con los faroles en 108.5, al oeste de las gradas (x ≥ 110)". Valores de caja sin cambios.
+- [x] **Step 4:** `npx vitest run src/lab/exhibits.test.ts src/scenes/portfolio-accents.test.ts` → PASS; luego `npm test` y `npm run typecheck` completos.
+- [x] **Step 5:** commit `feat(#242): storybook sin cinta ni naves`.
 
 ### Capturas (fuera de las tasks de código, las hace el orquestador)
 
