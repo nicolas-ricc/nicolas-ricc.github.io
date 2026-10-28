@@ -171,7 +171,9 @@ describe("factory", () => {
     for (const x of tank) expect(s.solids).toContainEqual(x);
     for (const x of tank) expect(bounds(x).max.y).toBeLessThan(MALT.y);
     for (const x of tank) for (const st of STACKS) expect(bounds(x).max.x).toBeLessThan(st.x - 3.5); // al oeste de los pedestales
-    expectApart(tank, [...build(maltings), ...coolingTower(s.solids), ...STACKS.flatMap((st) => one(st).out)]);
+    const near = [...build(maltings), ...coolingTower(s.solids), ...STACKS.flatMap((st) => one(st).out)].flatMap(slices); // tramos precalculados: expectApart tarda más de 3 s
+    expect(near.length).toBeGreaterThan(0);
+    expect(tank.filter((a) => slices(a).some((p) => near.some((q) => !boxApart(p, q)))).map((a) => JSON.stringify(a).slice(0, 90))).toEqual([]);
   });
 
   it("chimeneas y torre de enfriamiento no tocan nave ni maltería, y toda pieza de chimenea queda al norte del faldón (max.y < NAVE.y − 0.6)", () => {
