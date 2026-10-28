@@ -100,6 +100,22 @@ function gantry(out: Solid[]): { trolley: Solid & { kind: "prism" }; range: [num
   return { trolley, range };
 }
 
+// ---------------------------------------------------------------- patio de material (banda norte)
+
+function materialYard(out: Solid[], rng: Rng): void {
+  for (const [x, y] of [[104, -58], [118, -58], [104, -50], [118, -50], [132, -56]] as const) { // chapas apiladas con desfase
+    const layers = rng.int(2, 4);
+    for (let l = 0; l < layers; l++) out.push(prism(x + l * 0.4, y + l * 0.4, l * 0.5, 10, 2, 0.5, "steel"));
+  }
+  for (const [x, y] of [[104, -42], [122, -42], [140, -44]] as const) { // mazos de caños
+    for (let i = 0; i < 4; i++) out.push(prism(x, y + i * 1.2, 0, 14, 1, 1, "rust"));
+  }
+  for (let i = 0; i < 6; i++) out.push({ kind: "cylinder", at: v3(149 + (i % 3) * 5, -57 + Math.floor(i / 3) * 5, 0), r: 1.5, h: 1.5, mat: "rust", sides: 8 }); // bobinas
+  for (let i = 0; i < 4; i++) out.push(prism(150 + (i % 2) * 12, -46 + Math.floor(i / 2) * 6, 0, 9, 4, 3, "steel", "step")); // secciones de casco
+  out.push({ kind: "cylinder", at: v3(174, -54, 0), r: 5, h: 8, mat: "concrete" });
+  out.push({ kind: "cylinder", at: v3(186, -42, 0), r: 4, h: 6, mat: "concrete" });
+}
+
 // ---------------------------------------------------------------- dique seco (NE)
 
 function dryDock(out: Solid[], ground: Solid[]): void {
@@ -212,6 +228,7 @@ export function shipyard(rng: Rng): Scene {
   const accents: Accent[] = [];
   const weldSpots: Vec3[] = [];
   quay(solids);
+  materialYard(solids, rng);
   dryDock(solids, ground);
   halls(solids);
   street(solids);
