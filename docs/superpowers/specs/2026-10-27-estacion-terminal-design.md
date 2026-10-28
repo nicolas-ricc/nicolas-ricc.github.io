@@ -428,8 +428,8 @@ el issue hijo donde está la decisión (#276–#281; este cierre es #282).
   este (`min.x − 1.4·z ≥ 158`) admite topes de hasta h 1.43; el tope mide 1.2
   (`BUFFER_H`).
 - **§4.2 y §5.4, formación estacionada de 3 coches en la vía 2, no de 4 en la
-  vía 1 (#279):** el tramo recto de la vía 1 va de x 134 a 160, 26 u, y una
-  formación de 4 coches mide 46.8. La vía 2 (x 121..160) aloja 3 coches
+  vía 1 (#279):** el tramo recto de la vía 1 va de x 134 a 160 (26 u); con el
+  frente en `STOP_X` 158 deja 24 u, y una formación de 4 coches mide 46.8. La vía 2 (x 121..160) aloja 3 coches
   (35.2 u): x 122.8..158 (`PARKED`). El tren animado sí es de 4.
 - **§7, animador sin rng (#281):** no hay `createRng(SEED + n)` para el tren.
   Nada es aleatorio: el ciclo es una función cerrada de los ms.
@@ -437,14 +437,15 @@ el issue hijo donde está la decisión (#276–#281; este cierre es #282).
   (`IN_MS` + `DWELL_MS` + `OUT_MS` + `OFF_MS`); ver §12.2.
 - **§7, paso a nivel apagado durante la espera (#281):** se enciende solo en
   los últimos 5 s de la espera (`PRE_DEPART_MS`), como aviso de partida: parado,
-  el tren siempre corta la calle (x 70..138) y solo manda ese aviso.
+  el tren siempre corta la ventana del cruce (x 70..138, `CROSSING` ±
+  `CROSSING_NEAR_U`) y solo manda ese aviso.
 - **§6.1, extensión del kit (#276):** `roofMat` en `prism` (las dos vertientes
-  de un `gable` con otro material que los muros) y placas en `gable`
-  (`gablePlates`). Materiales nuevos `tile`, `canopy` y `livery`, con sus
+  de un `gable` con otro material que los muros) y `plates` en `gable`. Materiales nuevos `tile`, `canopy` y `livery`, con sus
   tonos pegados desde `npm run palette`.
 - **§6.3, +20 % de caras no aplicable:** lo que salió con la calderería (con
-  sus faroles y secciones) pesaba ≈ 137 caras, y la estación de #277 trae 376
-  estáticas. El total del astillero pasa de 1061 a 1586
+  sus faroles y secciones) pesaba 138 caras (42 sólidos, medido con `tessellate` en la planificación de
+  #239); la estación de #277 trae 376 estáticas. La resta neta da 137 porque
+  #277 cambia una cara más en otro lado. El total del astillero pasa de 1061 a 1586
   (+49.5 %); la historia #239 ya había descartado el +20 % como criterio y lo
   midió en este cierre. Desglose en §12.1.
 - **§6.2, conos perdidos (#280):** 11 conos de selva, por escena:
@@ -582,12 +583,16 @@ Todas a 1600×900 en 2x (3200×1800), en `assets/2026-10-27-estacion/`. Las del
 | [`paso-a-nivel.png`](assets/2026-10-27-estacion/paso-a-nivel.png) | exhibit `#paso-a-nivel` con el tren encima (#281) |
 | [`tren-llegando.png`](assets/2026-10-27-estacion/tren-llegando.png) | el tren entrando por la vía del oeste (#281) |
 
-Lo que se ve: en la cover, un tren de 4 coches verde y azul parado junto al
-edificio con torre del reloj; en `portfolio-despues.png`, coches con luz de
-salón y faros, marquesinas y techos de teja; en `tren-despues.png`, aire
-acondicionado por coche, faros cian al este y luces rojas al oeste. En
-`time-lapse-ciclo.png` se lee la traza del tren desde el borde noroeste hasta
-la estación, sin nada estático dibujado sobre ella.
+Lo que se ve: en la cover, un tren de coches azules con ventanas cian parado
+junto al edificio de techos de teja con torre del reloj, al borde de la
+bahía; en `portfolio-despues.png`, el mismo tren con las ventanas del salón
+encendidas, el edificio con la torre, la marquesina verde y las farolas; en
+`tren-despues.png`, coches blancos con banda azul, ventanas cian, aire
+acondicionado en el techo, faros cian en la punta este, luces magenta en la
+oeste y cartel ámbar. En `time-lapse-ciclo.png` se lee la traza del tren como
+una hilera de coches que baja desde el borde oeste (arriba a la izquierda)
+por la vía del oeste hasta la estación, sin nada estático dibujado sobre ella;
+los rastros de la grúa, los barcos y otras animaciones son de otras zonas.
 
 Observaciones, **sin defectos de la estación vistos**:
 
