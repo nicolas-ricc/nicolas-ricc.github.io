@@ -10,6 +10,10 @@ const DX = 7, DY = -4;
 const SOLIDS: [string, Solid][] = [
   ["prism con facade y plates", { kind: "prism", at: v3(1, 2, 0.5), w: 4, d: 3, h: 2, mat: "concrete", facade: { floors: 2, cols: 3 }, plates: [{ wall: 2, shape: "rect", u0: 0.25, u1: 0.5, z0: 0.75, z1: 1.5, mat: "steel" }] }],
   ["prism gable", { kind: "prism", at: v3(-3, 1, 0), w: 6, d: 4, h: 3, mat: "brick", roof: "gable" }],
+  ["prism gable con roofMat y plates", { kind: "prism", at: v3(-3, 1, 0), w: 6, d: 4, h: 3, mat: "brick", roof: "gable", roofMat: "tile", plates: [
+    { wall: 2, shape: "rect", u0: 0.25, u1: 0.75, z0: 0.5, z1: 2.5, mat: "glass" },
+    { wall: 1, shape: "tri", u0: 0, u1: 1, z0: 3, z1: 4, mat: "stone" },
+  ] }],
   ["poly con facade", { kind: "poly", footprint: [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 5, y: 3 }, { x: 1, y: 4 }], z: 0.5, h: 3, mat: "concrete", facade: { floors: 1, cols: 2 } }],
   ["ramp con plates", { kind: "ramp", at: v3(2, -1, 0.25), w: 3, d: 2, h: 1, mat: "concrete", dir: "e", plates: [{ wall: 2, shape: "disc", u0: 0.25, u1: 0.75, z0: 0.25, z1: 0.75, mat: "steel" }] }],
   ["cylinder", { kind: "cylinder", at: v3(5, 5, 1), r: 2, h: 6, mat: "steel", sides: 12 }],
@@ -83,6 +87,13 @@ describe("translate", () => {
       });
     });
   }
+
+  it("conserva roofMat y plates de un gable", () => {
+    const g = byName("prism gable con roofMat y plates") as Solid & { kind: "prism" };
+    const t = translate(g, DX, DY) as typeof g;
+    expect(t.roofMat).toBe("tile");
+    expect(t.plates).toBe(g.plates);
+  });
 
   it("los puntos movidos no son los del original", () => {
     const prism = byName("prism con facade y plates") as Solid & { kind: "prism" };

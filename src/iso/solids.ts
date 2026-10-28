@@ -11,7 +11,12 @@ export type { Plate } from "./plate";
 export interface Tri { pts: [Vec3, Vec3, Vec3]; toneOffset?: number; baseTone?: number }
 
 export type Solid =
-  | { kind: "prism"; at: Vec3; w: number; d: number; h: number; mat: Material; roof?: "flat" | "gable" | "step"; facade?: Facade; plates?: Plate[] }
+  /**
+   * Caja con techo plano, a dos aguas (`gable`) o escalonado (`step`). `roofMat` solo lo usa `roof: "gable"`: pinta las dos
+   * vertientes; muros, hastiales y base llevan `mat`. Sin `roofMat`, todo sale en `mat`. `facade` no aplica a `roof: "gable"`,
+   * porque los hastiales son pentágonos; `plates` sí (muros y hastiales).
+   */
+  | { kind: "prism"; at: Vec3; w: number; d: number; h: number; mat: Material; roofMat?: Material; roof?: "flat" | "gable" | "step"; facade?: Facade; plates?: Plate[] }
   | { kind: "poly"; footprint: Vec2[]; z: number; h: number; mat: Material; facade?: Facade; plates?: Plate[] }
   | { kind: "ramp"; at: Vec3; w: number; d: number; h: number; mat: Material; dir: RampDir; plates?: Plate[] }
   | { kind: "cylinder"; at: Vec3; r: number; h: number; mat: Material; sides?: number }
@@ -76,6 +81,12 @@ function withPlates(raw: Face[], footprint: Vec2[], s: { facade?: Facade; plates
  */
 const RAMP_WALL_EDGE = [3, 1, 0, 2];
 
+/**
+ * Muros y hastiales del gable (caras 1..4 de `gable()`) → arista de `rect` que los cubre, según la orientación de la cumbrera.
+ * `wide` (w >= d): pared norte, pared sur, hastial oeste, hastial este. `deep` (w < d): pared oeste, pared este, hastial norte, hastial sur.
+ */
+const GABLE_WALL_EDGE = { wide: [0, 2, 3, 1], deep: [3, 1, 0, 2] };
+
 const rect = (x: number, y: number, w: number, d: number): Vec2[] => [{ x, y }, { x: x + w, y }, { x: x + w, y: y + d }, { x, y: y + d }];
 
 function regular(cx: number, cy: number, r: number, sides: number): Vec2[] {
@@ -87,32 +98,45 @@ function regular(cx: number, cy: number, r: number, sides: number): Vec2[] {
   return pts;
 }
 
-function gable(at: Vec3, w: number, d: number, h: number, mat: Material): Face[] {
+/** Placas tras cada muro y hastial del gable; base y vertientes no las llevan. Sin placas devuelve `raw` tal cual. */
+function gablePlates(raw: Face[], s: { at: Vec3; w: number; d: number; plates?: Plate[] }): Face[] {
+  const { at, w, d, plates } = s;
+  if (!plates?.length) return raw;
+  const fp = rect(at.x, at.y, w, d), edges = GABLE_WALL_EDGE[w >= d ? "wide" : "deep"];
+  return raw.flatMap((f, k) => {
+    if (k < 1 || k > 4) return [f];
+    const i = edges[k - 1]!;
+    return [f, ...plateFaces(f, fp[i]!, fp[(i + 1) % 4]!, plates.filter((p) => p.wall === i))];
+  });
+}
+
+function gable(at: Vec3, w: number, d: number, h: number, mat: Material, roofMat: Material = mat): Face[] {
   const { x, y, z } = at;
   const eave = z + h, ridge = eave + h * GABLE_RATIO;
   const c = v3(x + w / 2, y + d / 2, z + h / 2);
   const f = (pts: Vec3[]) => face(pts, mat, c);
+  const slope = (pts: Vec3[]) => face(pts, roofMat, c);
   if (w >= d) {
     const ym = y + d / 2;
     return [
-      f([v3(x, y, z), v3(x + w, y, z), v3(x + w, y + d, z), v3(x, y + d, z)]),                          // base
-      f([v3(x, y, z), v3(x + w, y, z), v3(x + w, y, eave), v3(x, y, eave)]),                             // pared norte
-      f([v3(x, y + d, z), v3(x + w, y + d, z), v3(x + w, y + d, eave), v3(x, y + d, eave)]),             // pared sur
-      f([v3(x, y, z), v3(x, y, eave), v3(x, ym, ridge), v3(x, y + d, eave), v3(x, y + d, z)]),           // hastial oeste
+      f([v3(x, y, z), v3(x + w, y, z), v3(x + w, y + d, z), v3(x, y + d, z)]),                                     // base
+      f([v3(x, y, z), v3(x + w, y, z), v3(x + w, y, eave), v3(x, y, eave)]),                                       // pared norte
+      f([v3(x, y + d, z), v3(x + w, y + d, z), v3(x + w, y + d, eave), v3(x, y + d, eave)]),                       // pared sur
+      f([v3(x, y, z), v3(x, y, eave), v3(x, ym, ridge), v3(x, y + d, eave), v3(x, y + d, z)]),                     // hastial oeste
       f([v3(x + w, y, z), v3(x + w, y, eave), v3(x + w, ym, ridge), v3(x + w, y + d, eave), v3(x + w, y + d, z)]), // hastial este
-      f([v3(x, y, eave), v3(x + w, y, eave), v3(x + w, ym, ridge), v3(x, ym, ridge)]),                   // vertiente norte
-      f([v3(x, y + d, eave), v3(x + w, y + d, eave), v3(x + w, ym, ridge), v3(x, ym, ridge)]),           // vertiente sur
+      slope([v3(x, y, eave), v3(x + w, y, eave), v3(x + w, ym, ridge), v3(x, ym, ridge)]),                         // vertiente norte
+      slope([v3(x, y + d, eave), v3(x + w, y + d, eave), v3(x + w, ym, ridge), v3(x, ym, ridge)]),                 // vertiente sur
     ];
   }
   const xm = x + w / 2;
   return [
     f([v3(x, y, z), v3(x + w, y, z), v3(x + w, y + d, z), v3(x, y + d, z)]),
-    f([v3(x, y, z), v3(x, y + d, z), v3(x, y + d, eave), v3(x, y, eave)]),                               // pared oeste
-    f([v3(x + w, y, z), v3(x + w, y + d, z), v3(x + w, y + d, eave), v3(x + w, y, eave)]),               // pared este
-    f([v3(x, y, z), v3(x, y, eave), v3(xm, y, ridge), v3(x + w, y, eave), v3(x + w, y, z)]),             // hastial norte
+    f([v3(x, y, z), v3(x, y + d, z), v3(x, y + d, eave), v3(x, y, eave)]),                                       // pared oeste
+    f([v3(x + w, y, z), v3(x + w, y + d, z), v3(x + w, y + d, eave), v3(x + w, y, eave)]),                       // pared este
+    f([v3(x, y, z), v3(x, y, eave), v3(xm, y, ridge), v3(x + w, y, eave), v3(x + w, y, z)]),                     // hastial norte
     f([v3(x, y + d, z), v3(x, y + d, eave), v3(xm, y + d, ridge), v3(x + w, y + d, eave), v3(x + w, y + d, z)]), // hastial sur
-    f([v3(x, y, eave), v3(x, y + d, eave), v3(xm, y + d, ridge), v3(xm, y, ridge)]),                     // vertiente oeste
-    f([v3(x + w, y, eave), v3(x + w, y + d, eave), v3(xm, y + d, ridge), v3(xm, y, ridge)]),             // vertiente este
+    slope([v3(x, y, eave), v3(x, y + d, eave), v3(xm, y + d, ridge), v3(xm, y, ridge)]),                         // vertiente oeste
+    slope([v3(x + w, y, eave), v3(x + w, y + d, eave), v3(xm, y + d, ridge), v3(xm, y, ridge)]),                 // vertiente este
   ];
 }
 
@@ -302,7 +326,7 @@ function wheel(s: Solid & { kind: "wheel" }): Face[] {
 export function tessellateAll(s: Solid): Face[] {
   switch (s.kind) {
     case "prism": {
-      if (s.roof === "gable") return gable(s.at, s.w, s.d, s.h, s.mat);
+      if (s.roof === "gable") return gablePlates(gable(s.at, s.w, s.d, s.h, s.mat, s.roofMat), s);
       const fp = rect(s.at.x, s.at.y, s.w, s.d);
       const box = withPlates(extrude(fp, s.at.z, s.h, s.mat), fp, s);
       if (s.roof !== "step") return box;
