@@ -14,14 +14,14 @@ import { SUBSTATION, substation } from "./substation";
 
 /**
  * Fábrica de Portfolio, en el lugar que tenían los galpones del astillero (región x 4..98.7, y −4..99). La planta
- * (la maltería de Mistley, x 5..29, y 44..74, la nave de calderas de la Fábrica de Luz, x 29..92, y 44..74, con su
- * torre de escalera en x 93..98, y el tanque de agua sobre patas en (15, 32)), la playa de camiones y sus faroles se
+ * (la maltería de Mistley, x 5..29, y 44..74; la nave de calderas de la Fábrica de Luz, x 29..92, y 44..74, con su
+ * torre de escalera en x 93..98; el tanque de agua sobre patas en (15, 32)), la playa de camiones y sus faroles se
  * arman en el marco local y se trasladan con `PLANT_SHIFT` de `plant-frame.ts`: la playa de camiones y los faroles
  * quedan en y 76..89, con la cinta inclinada bajando hasta ella desde la tolva (y 74..76). Al norte de la planta,
  * tres chimeneas humeantes (en (58, 32), (72, 26) y (86, 32)), la torre de enfriamiento en (40, 14) y la subestación
  * de intemperie (`substation.ts`, x 54..95, y −2..11). Ya no están la cinta larga, el ramal `SPUR_Y`, el ramal
  * embutido en la calle, las chatas ni los rieles nave→grada.
- * En la banda norte (`x > 0`) quedan el desvío ferroviario, la grúa torre y, detrás de la fábrica, las naves de
+ * En la banda norte (`x > 0, y −60..−4`) quedan el desvío ferroviario, la grúa torre y, detrás de la fábrica, las naves de
  * montaje, los talleres y el patio de material del astillero (`shipyard.ts`). Columna oeste `x ≤ 0` (`x -60..0,
  * y 0..146`), igual que antes: playa de vías, excavadora de rueda de cangilones y acopios de mineral, selva al sur
  * y el farol de (−30, 20). El terreno es `slab`.

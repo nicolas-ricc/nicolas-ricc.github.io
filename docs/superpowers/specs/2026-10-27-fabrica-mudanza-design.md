@@ -230,7 +230,8 @@ el issue hijo donde está la decisión (#241–#247; este cierre es #248).
   solo al norte de y 96 (decisión de la spec de la estación). La vía del oeste
   termina en x 104 como hoy.
 - **§3.2, nave (#243):** 63 u (9 vanos de 7), no "unas 62".
-- **§2.2, tanque (#246):** en (15, 32), no en x 10..19, y 28..37.
+- **§2.2, tanque (#246):** centro fijo en (15, 32), `WATER_TOWER`; su huella
+  (x 10.4..19.6, y 27.4..36.6) es el lugar sugerido. Es una precisión.
 - **§2.2, chimeneas (#245):** en (58, 32), (72, 26) y (86, 32), no en
   (60, 34), (72, 28) y (84, 34).
 - **§2.2, torre de enfriamiento (#245):** en (40, 14).
@@ -268,14 +269,19 @@ storybook. Caja = ancho × fondo × alto de los sólidos recortados.
 | `tanque-agua` | 63.5×39.4×26.7 | 46 | 165 | 63.5×39.4×26.7 | 46 | 165 |
 
 Total de caras, sin `tanque-agua`: antes 5912, después 4772, **delta −1140**.
-La mudanza no suma caras: restan la nave de 9 vanos y el exhibit `cinta`.
+El total mezcla geometría y cajas. De geometría, restan la nave de 9 vanos y
+el exhibit `cinta`. El resto viene de las cajas nuevas: `playa-camiones`
+(−460) ya no toma la grúa torre ni los pallets viejos, `planta` pierde el
+tanque (165 caras) y `chimeneas` (+193) gana la subestación, que quedó
+dentro de su caja. La mudanza no suma caras.
 
 Notas:
 
 - Cada columna usa la caja de exhibit de su propio árbol. "Antes" es
   `origin/main` (a34dec0, que incluye las costas de #237, no presentes en la
   rama de la historia); "después" es esta rama. La fila `tanque-agua` es
-  informativa: no cambia, y el tanque entra en `planta` solo en parte.
+  informativa: no cambia. El tanque entra entero en la caja de `planta` en
+  `main` y queda afuera en la rama.
 - Cajas de los exhibits `{x0, y0, x1, y1}` h, antes → después:
   `planta` {2, −49, 126, −14} h 26 → {2, 41, 98, 76} h 26;
   `chimeneas` {124.2, −70.8, 184, −24} h 36 → {28, −4.8, 104.8, 39} h 36;
@@ -353,5 +359,9 @@ cover:
 - `cinta`, solo antes (el exhibit ya no existe):
   [antes](assets/2026-10-27-fabrica-mudanza/cinta-antes.png).
 
-Las demás capturas de esa carpeta (`playa-camiones-*`, `mundo-*`,
+- `playa-camiones` (registro de #246, sin recaptura):
+  [antes](assets/2026-10-27-fabrica-mudanza/playa-camiones-antes.png) y
+  [después](assets/2026-10-27-fabrica-mudanza/playa-camiones-despues.png).
+
+Las demás capturas de esa carpeta (`mundo-*`,
 `planta-9-vanos-*`, `vaciar-*`) son el registro intermedio de cada hijo.
