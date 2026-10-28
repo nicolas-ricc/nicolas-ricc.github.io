@@ -114,19 +114,14 @@ describe("shipyard sin la región nueva (#242)", () => {
     }
   });
 
-  it("no quedan naves, talleres con sus equipos, patio de material ni chatas", () => {
+  it("lo viejo no vuelve a su lugar viejo: naves, talleres, tanques del patio ni chatas (#247)", () => {
     const s = scene();
     const ps = prisms(s);
-    expect(ps.filter((x) => x.roof === "gable" && x.w === 90 && x.d === 16)).toEqual([]);           // naves de montaje
-    expect(ps.filter((x) => x.roof === "step" && x.w === 24 && x.d === 14 && x.at.y === 80)).toEqual([]); // talleres
-    expect(ps.filter((x) => x.w === 2 && x.d === 2 && x.h === 1 && x.at.z === 7)).toEqual([]);      // equipos en el techo
-    expect(ps.filter((x) => x.w === 10 && x.d === 2 && x.h === 0.5)).toEqual([]);                    // chapas
-    expect(ps.filter((x) => x.w === 14 && x.d === 1 && x.h === 1)).toEqual([]);                      // caños
-    expect(ps.filter((x) => x.roof === "step" && x.w === 9 && x.d === 4 && x.h === 3)).toEqual([]);  // secciones de casco
-    expect(ps.filter((x) => x.w === 4.4 && x.d === 8 && x.h === 3)).toEqual([]);                     // chatas
+    expect(ps.filter((x) => x.roof === "gable" && x.w === 90 && x.d === 16 && (x.at.y === 36 || x.at.y === 56))).toEqual([]); // naves en ROW_Y
+    expect(ps.filter((x) => x.roof === "step" && x.w === 24 && x.d === 14 && x.at.y === 80)).toEqual([]);                     // talleres viejos
+    expect(ps.filter((x) => x.w === 4.4 && x.d === 8 && x.h === 3)).toEqual([]);                                               // chatas
     const cyl = s.solids.filter((x): x is Solid & { kind: "cylinder" } => x.kind === "cylinder");
-    expect(cyl.filter((c) => (c.at.x === 80 && c.at.y === 10) || (c.at.x === 92 && c.at.y === 22))).toEqual([]); // tanques del patio
-    expect(cyl.filter((c) => c.r === 1.5 && c.h === 1.5)).toEqual([]);                               // bobinas
+    expect(cyl.filter((c) => (c.at.x === 80 && c.at.y === 10) || (c.at.x === 92 && c.at.y === 22))).toEqual([]); // tanques del patio viejo
   });
 
   it("la vía del oeste sigue terminando en x 104 con durmientes; el camión de la calle sigue", () => {
@@ -136,5 +131,95 @@ describe("shipyard sin la región nueva (#242)", () => {
     }
     expect(prisms(s).filter((x) => x.mat === "rust" && x.w === 1 && x.d === 5 && x.h === 0.3 && x.at.y === 130).length).toBeGreaterThanOrEqual(20);
     expect(prisms(s).some((x) => x.mat === "rust" && x.at.x === 105 && x.at.y === 88 && x.w === 3 && x.d === 7 && x.h === 2.5)).toBe(true);
+  });
+});
+
+describe("shipyard en la banda norte (#247)", () => {
+  const prisms = (s: Scene) => s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism");
+  const cylinders = (s: Scene) => s.solids.filter((x): x is Solid & { kind: "cylinder" } => x.kind === "cylinder");
+  const at = (x: Solid & { kind: "prism" }) => [x.at.x, x.at.y, x.at.z];
+  const box = (ss: Solid[]) => {
+    const bs = ss.map(bounds);
+    return { x0: Math.min(...bs.map((b) => b.min.x)), y0: Math.min(...bs.map((b) => b.min.y)), x1: Math.max(...bs.map((b) => b.max.x)), y1: Math.max(...bs.map((b) => b.max.y)) };
+  };
+  type Box = ReturnType<typeof box>;
+  const apart = (a: Box, b: Box) => a.x1 <= b.x0 + 1e-9 || b.x1 <= a.x0 + 1e-9 || a.y1 <= b.y0 + 1e-9 || b.y1 <= a.y0 + 1e-9;
+
+  const halls = (s: Scene) => prisms(s).filter((x) => x.roof === "gable" && x.w === 90 && x.d === 16 && x.h === 10 && x.mat === "concrete");
+  const forklifts = (s: Scene) => prisms(s).filter((x) => x.at.z === 0 && x.h === 2 && ((x.mat === "rust" && x.w === 2 && x.d === 3) || (x.mat === "steel" && x.w === 3 && x.d === 2)) && x.at.y < 0);
+  const workshops = (s: Scene) => prisms(s).filter((x) => x.roof === "step" && x.w === 24 && x.d === 14 && x.h === 7 && x.mat === "concrete");
+  const units = (s: Scene) => prisms(s).filter((x) => x.mat === "steel" && x.w === 2 && x.d === 2 && x.h === 1 && x.at.z === 7);
+  const yard = (s: Scene): Solid[] => [
+    ...prisms(s).filter((x) => (x.w === 10 && x.d === 2 && x.h === 0.5) || (x.w === 14 && x.d === 1 && x.h === 1) || (x.roof === "step" && x.w === 9 && x.d === 4 && x.h === 3)),
+    ...cylinders(s).filter((c) => (c.r === 1.5 && c.h === 1.5) || (c.mat === "concrete" && ((c.at.x === 174 && c.at.y === -54) || (c.at.x === 186 && c.at.y === -42)))),
+  ];
+  const band = (s: Scene) => s.solids.filter((x) => x.kind !== "cone" && bounds(x).max.y < 0 && bounds(x).min.x < 198);
+
+  it("naves a dos aguas: dos gable 90×16×10 en HALL_ROWS_Y con 4 autoelevadores", () => {
+    const s = scene();
+    expect(halls(s).map(at)).toEqual([[10, -52, 0], [10, -32, 0]]);
+    expect(Math.max(...halls(s).map((h) => bounds(h).max.z))).toBeCloseTo(13.5, 9); // cumbrera
+    const fl = forklifts(s).map((x) => [x.mat, x.at.x, x.at.y]);
+    expect(fl).toHaveLength(4);
+    expect(fl).toEqual(expect.arrayContaining([["rust", 92, -50], ["rust", 92, -30], ["steel", 12, -41], ["steel", 12, -21]]));
+  });
+
+  it("talleres con techo escalonado y equipos en el techo", () => {
+    const s = scene();
+    const ws = workshops(s);
+    expect(ws.map(at)).toEqual([[106, -33, 0], [134, -33, 0]]);
+    expect(s.solids.filter((x) => x.kind === "prism" && x.roof === "step").length).toBeGreaterThanOrEqual(2);
+    expect(units(s).map((x) => [x.at.x, x.at.y]).sort((a, b) => a[0]! - b[0]!)).toEqual([[109, -30], [124, -23], [137, -30], [152, -23]]);
+  });
+
+  it("patio de material: tanques cilíndricos y pilas apiladas, trasladado (+94, −64)", () => {
+    const s = scene();
+    expect(cylinders(s).filter((c) => c.r >= 4).length).toBeGreaterThanOrEqual(3); // dos en el patio, uno en alistamiento
+    expect(s.solids.filter((x) => x.kind === "prism" && x.at.z > 0 && x.at.z < 3 && x.h <= 1).length).toBeGreaterThanOrEqual(5); // apilados
+    const plates = prisms(s).filter((x) => x.w === 10 && x.d === 2 && x.h === 0.5);
+    expect(plates.filter((x) => x.at.z === 0).map(at)).toEqual([[104, -58, 0], [118, -58, 0], [104, -50, 0], [118, -50, 0], [132, -56, 0]]);
+    const pipes = prisms(s).filter((x) => x.w === 14 && x.d === 1 && x.h === 1 && x.mat === "rust");
+    expect(pipes).toHaveLength(12);
+    expect(pipes.filter((x) => x.at.y === -42 || x.at.y === -44).map((x) => [x.at.x, x.at.y])).toEqual([[104, -42], [122, -42], [140, -44]]);
+    const coils = cylinders(s).filter((c) => c.r === 1.5 && c.h === 1.5 && c.mat === "rust" && c.sides === 8);
+    expect(coils.map((c) => [c.at.x, c.at.y])).toEqual([[149, -57], [154, -57], [159, -57], [149, -52], [154, -52], [159, -52]]);
+    const sections = prisms(s).filter((x) => x.roof === "step" && x.w === 9 && x.d === 4 && x.h === 3 && x.mat === "steel");
+    expect(sections.map(at)).toEqual([[150, -46, 0], [162, -46, 0], [150, -40, 0], [162, -40, 0]]);
+    const tanks = cylinders(s).filter((c) => c.mat === "concrete" && c.at.y < 0).map((c) => [c.at.x, c.at.y, c.r, c.h]);
+    expect(tanks).toEqual([[174, -54, 5, 8], [186, -42, 4, 6]]);
+    const b = box(yard(s));
+    expect(b.x0).toBeGreaterThanOrEqual(104); expect(b.x1).toBeLessThanOrEqual(192);
+    expect(b.y0).toBeGreaterThanOrEqual(-59); expect(b.y1).toBeLessThanOrEqual(-35.7);
+  });
+
+  it("el rng da lo mismo que en main (seed 7): autos, secciones prefabricadas y chatarra", () => {
+    // valores de origin/main (a34dec0) medidos con tsx: el orden de llamadas de main consume el rng igual
+    const ps = prisms(scene());
+    expect(ps.filter((x) => x.h === 1.5 && x.w === 3).map((x) => [x.at.x, x.at.y, x.mat])).toEqual([[65, 102, "steel"], [73, 116, "steel"], [53, 116, "rust"], [57, 102, "steel"], [73, 102, "rust"]]);
+    expect(ps.filter((x) => x.mat === "steel" && x.w === 9 && x.d === 5 && x.h === 3).map((x) => [x.at.x, x.at.y])).toEqual([[112, 82], [136, 82], [148, 82], [112, 90], [124, 90], [136, 90], [148, 90]]);
+    expect(ps.filter((x) => x.w === 3 && x.d === 2 && x.h === 1 && x.at.x >= 302).map((x) => [x.at.x, x.at.y])).toEqual([[303, 140], [315, 136], [319, 140], [317, 140], [322, 130], [306, 133]]);
+  });
+
+  it("naves ↔ talleres ↔ patio apartados (cajas disjuntas, 1e-9)", () => {
+    const s = scene();
+    const ws = workshops(s), us = units(s);
+    const groups: Box[] = [
+      ...halls(s).map((h) => box([h])),
+      ...ws.map((w) => box([w, ...us.filter((u) => u.at.x >= w.at.x && u.at.x < w.at.x + w.w)])),
+      box(yard(s)),
+    ];
+    expect(groups).toHaveLength(5);
+    for (let i = 0; i < groups.length; i++) for (let j = i + 1; j < groups.length; j++) expect(apart(groups[i]!, groups[j]!), `${i} ↔ ${j}`).toBe(true);
+  });
+
+  it("la banda norte: todo sólido con max.y < 0 (salvo muelle, bolardos y conos) cae en x 10..192, y −59..−13 y no supera z 22", () => {
+    const bs = band(scene()).map(bounds);
+    expect(bs.length).toBeGreaterThanOrEqual(40); // naves, autoelevadores, talleres, equipos y patio: sin esto pasaría vacío
+    for (const b of bs) {
+      const where = JSON.stringify(b);
+      expect(b.min.x, where).toBeGreaterThanOrEqual(10); expect(b.max.x, where).toBeLessThanOrEqual(192);
+      expect(b.min.y, where).toBeGreaterThanOrEqual(-59); expect(b.max.y, where).toBeLessThanOrEqual(-13);
+      expect(b.max.z, where).toBeLessThanOrEqual(22);
+    }
   });
 });
