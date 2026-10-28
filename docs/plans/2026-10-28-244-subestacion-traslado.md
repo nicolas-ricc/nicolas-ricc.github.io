@@ -74,4 +74,30 @@ Tests que tiene que satisfacer (de evals): todo sólido no plano en `SUBSTATION`
 - **El test "no toca la torre de enfriamiento, el pedestal de la tercera chimenea ni el farol de (148, −46)"** se reemplaza por el test de vecinos nuevo, que los cubre (todo sólido no plano de `factory()` fuera de la subestación) y además exige el farol en (53, 12).
 - **Identificar la subestación dentro de `factory()`:** por igualdad estructural (JSON) contra `build(substation)` no planos; lo demás son "otros".
 - **Commit intermedio rojo.** Los tests re-expresados se commitean fallando en `test(#244): evals`, y la Task 1 deja rojo el test de vecinos hasta la Task 2. El PR se squashea y lo que se mergea está verde.
+- **Tuplas.** `PHASES_Y` y `TRANSFORMERS_Y` conservan su tipo de tupla (`readonly [number, number, number]` y `readonly [number, number]`): `droppers` y los tests indexan `PHASES_Y[k + 1]` con `noUncheckedIndexedAccess`. Se derivan con un helper `shiftYs = <T extends readonly number[]>(ys: T): T => ys.map((y) => y + SUBSTATION_SHIFT.y) as unknown as T`. Alternativa descartada: tipearlas a mano (el issue pide calcularlas).
+- **Huella del test de traslado.** El helper `fingerprint(solids)` vive en `factory.test.ts`: `JSON.stringify` de cada sólido con los números redondeados por `Math.round(v * 1e6) / 1e6` (orden de claves del objeto tal como lo arma el builder) y FNV-1a de 32 bits con la semilla estándar `0x811c9dc5`. El literal se calcula en el stage 3 con el código de hoy, antes de tocar `substation.ts`. Si la huella no coincide, el test también compara cantidad y anclas legibles, que dicen qué pieza se movió.
 - **Capturas.** Si agent-browser no levanta, el commit sale sin PNG y el PR lo marca como verificación manual pendiente.
+
+## Grilling
+
+- 1 ronda: el plan no cambió sustancialmente, solo se agregaron dos supuestos. 16 preguntas.
+- Fuentes: ISSUE 6, CODE 8, DOC 1, NO SOURCE 1 (supuesto técnico).
+- Respuestas:
+  1. ISSUE: "**Rama base:** `feature/238-fabrica-mudanza` (hijo de #238; el PR va contra esa rama, no contra `main`)". La rama existe en `origin`: `git branch -r` → `origin/feature/238-fabrica-mudanza`, punta fd59a63 (#243).
+  2. Los escribe el stage 3 del pipeline (`test(#244): evals`), que corre después de este plan. Ahí se toma también la captura "antes" y se calcula el literal de la huella (ver Assumptions).
+  3. CODE `src/scenes/factory.ts:145`: `factory()` solo reparte los sólidos en `ground` (strip) y `solids` (lo demás), sin copiarlos ni mutarlos. Si ninguno matchea, el test exige `matched.length === raised().length` antes de comparar y falla.
+  4. CODE `src/scenes/factory.ts:145` (filtro `s.kind === "strip"`) y `src/iso/solids.ts:34-36` (`isFlat`: strip o ground). CODE `src/iso/translate.ts`: `translate` conserva `kind` (`{ ...s, path: … }`).
+  5. CODE `src/scenes/substation.ts`: la subestación no emite acentos (todas sus funciones reciben solo `out: Solid[]`). El único acento asociado es el del farol, en `factory.ts:39-42` `lamp()`, que se mueve con el farol.
+  6. CODE: `grep` de imports de `./substation`: solo `factory.ts` (`substation`), `exhibits.ts` (`SUBSTATION`) y `factory.test.ts`. No hay otros llamadores de los sub-builders.
+  7. Supuesto técnico (ver Assumptions, "Huella del test de traslado").
+  8. CODE `src/scenes/factory.ts:39-42`: el farol es un prisma de 0.6 × 0.6 × 5 (`LAMP_H = 5`). En (53, 12) ocupa x 53..53.6, y 12..12.6: toca el borde y1 = 12 de la caja y su altura 5 es menor que h 13, así que "vecinos" pasa.
+  9. ISSUE: "desvío `SIDING_Y = −8` (… vagones x −50..3, y −9.2..−6.8; locomotora x 6..15, y −9.3..−6.7), grúa torre (60, −12) (contrapeso x 52..54, y −13..−11 …)". CODE `src/scenes/pieces.ts:21-28`: todas las piezas de la grúa están entre y − 1 e y + 1, es decir y −13..−11. CODE `factory.ts:112-116`: camión `prism(70, -6, 0, 6, 2.4, …)` y pallets `22 + i*4, -3`.
+  10. CODE `src/scenes/world.test.ts:93`: `expect(w.factory!.solids.every((s) => bounds(s).max.y <= 0 || bounds(s).max.x <= 0))`. ISSUE: "cada sólido de la fábrica cumple `max.x <= 0`, o `max.y <= 0`, o `(min.x >= 4 && max.x <= 99 && min.y >= -4 && max.y <= 99)`". Lo escribe el stage 3.
+  11. ISSUE, criterio 1: "es el de hoy trasladado (−95, +58) (test de traslado)" lo cubre la huella. ISSUE, criterio 6: "capturas antes/después de `#subestacion` en el PR" lo cubren las PNG. El docstring no tiene test: lo controla la revisión de la Task 1. "Siguen 7 faroles" lo cubre `portfolio-accents.test.ts` (cyan 8).
+  12. No hay regla del repo. El pipeline de este run pide commitear los tests en rojo (stage 3) y el merge es `--squash` (stage 10). Revertir es borrar la rama.
+  13. CODE `src/scenes/substation.ts:94` (`PHASES_Y[k + 1]!`) y `factory.test.ts` (`PHASES_Y[0]`, `TRANSFORMERS_Y[1]`). Se conservan las tuplas (ver Assumptions).
+  14. CODE `src/scenes/factory.test.ts:385`: `const near = (a, b) => Math.abs(a - b) < 1e-6`. CODE `factory.test.ts:383-384`: `apartBox` con 1e-9.
+  15. CODE `src/lab/page.ts:23-27`: `speedFromSearch` acepta `n >= 0`. CODE `src/lab/page.test.ts`: "0 congela el reloj".
+  16. CODE `src/scenes/substation.ts:23,38,63,70`: `powerTransformer(out, y0, southBank)`, `latticePortal(out, x)`, `disconnector(out, y)`, `currentTransformer(out, y)`. Cada uno recibe una sola coordenada, así que se le resta solo la componente del shift que le corresponde.
+- Supuestos: 7 (sección Assumptions).
+- Issues abiertos: ninguno.
