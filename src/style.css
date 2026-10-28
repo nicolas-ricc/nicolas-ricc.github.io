@@ -70,9 +70,9 @@ body.zone #content { opacity: 1; }
    el nav vuelve al flujo y debe verse: por eso también se excluye .no-canvas. */
 .js:not(.mapa-listo):not(.no-canvas) #zonas a { visibility: hidden; }
 #zonas a[data-zone="portfolio"] { color: #ffc457; }
-#zonas a[data-zone="cv"] { color: #7cf5ff; }
-/* verde de acento del blog (myxomatosis.xyz/blog) */
-#zonas a[data-zone="blog"] { color: #8ec07c; }
+/* Resume lleva el verde de acento del blog (myxomatosis.xyz/blog); Blog, el cian */
+#zonas a[data-zone="cv"] { color: #8ec07c; }
+#zonas a[data-zone="blog"] { color: #7cf5ff; }
 #zonas a:hover, #zonas a:focus-visible { text-decoration: underline; text-underline-offset: 0.3em; filter: brightness(1.25); }
 #zonas a:focus-visible { outline: 2px solid var(--fg); outline-offset: 4px; }
 #zonas a.dim { opacity: 0.35; }
