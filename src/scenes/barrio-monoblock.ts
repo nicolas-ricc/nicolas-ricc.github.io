@@ -1,8 +1,10 @@
+import { v3, type Vec2 } from "../iso/geometry";
 import type { Plate } from "../iso/plate";
 import type { Solid } from "../iso/solids";
 import { cornerLamps, homeWindow, lawn, wallWindow, type BarrioCtx } from "./barrio";
 import { prism } from "./city-pieces";
 import type { SprawlBlock } from "./sprawl-grid";
+import { FACE_CAPS, blockRect, facesIn } from "./tech-budget";
 import { blockParity } from "./tech-zoning";
 
 /** Una placa del monoblock: esquina (x, y) del cuerpo 20×5, altura h, revoque, planta baja de ladrillo y vanos de loggia (0..7). */
@@ -45,16 +47,37 @@ export function windows(ctx: BarrioCtx, b: SprawlBlock, slabs: Slab[]): void {
   });
 }
 
-/** Monoblocks del Barrio Simón Bolívar: una o dos placas de 4 a 6 pisos con grilla y loggias, ventanas al sur y al este, dos faroles. */
+/** Árboles por ranuras a lo largo de x en la banda libre entre placas: nunca se solapan ni pisan un zócalo. */
+function trees(ctx: BarrioCtx, b: SprawlBlock, slabs: Slab[]): Solid[] {
+  const [y0, y1] = slabs.length === 2 ? [b.y + 7.3, b.y + 10.7] : slabs[0]!.y === b.y + 2 ? [b.y + 7.3, b.y + 18] : [b.y, b.y + 10.7], n = ctx.rng.int(4, 6), w = 22.3 / n;
+  return Array.from({ length: n }, (_, k) => {
+    const r = 1.2 + 0.4 * ctx.rng.next(), h = 3.5 + 1.5 * ctx.rng.next();
+    const x = b.x + w * k + r + (w - 2 * r) * ctx.rng.next(), y = y0 + r + (y1 - y0 - 2 * r) * ctx.rng.next();
+    return { kind: "cone", at: v3(x, y, 0.05), r, h, mat: "leaf", sides: 6 } as Solid;
+  });
+}
+
+/** Monoblocks del Barrio Simón Bolívar: una o dos placas de 4 a 6 pisos con grilla y loggias, parque con senderos, ventanas al sur y al este, dos faroles. */
 export function monoblock(ctx: BarrioCtx, b: SprawlBlock): void {
   lawn(ctx, b);
   const two = ctx.rng.chance(0.5), hs = [12, 15, 18], slabs: Slab[] = [];
+  const path = (a: Vec2, c: Vec2): Solid => ({ kind: "strip", path: [a, c], width: 1, z: 0.08, mat: "paving" });
+  ctx.ground.push(path({ x: b.x + 23.2, y: b.y }, { x: b.x + 23.2, y: b.y + 18 }));
   for (let i = 0; i < (two ? 2 : 1); i++) {
     const h = ctx.rng.pick(hs); hs.splice(hs.indexOf(h), 1);
     const y = b.y + (two ? (i === 0 ? 2 : 11) : blockParity(b) === 0 ? 2 : 11), mat = ctx.rng.chance(0.5) ? "whitewash" : "stone";
     slabs.push({ x: b.x + 2, y, h, mat, brick: ctx.rng.chance(0.5), loggias: ctx.rng.int(1, 2) === 1 ? [2] : [2, 6] });
   }
-  slabs.forEach((s) => ctx.solids.push(...slab(s)));
-  windows(ctx, b, slabs);
+  const py = two ? b.y + 9 : slabs[0]!.y === b.y + 2 ? b.y + 8.3 : b.y + 10.2;
+  ctx.ground.push(path({ x: b.x, y: py }, { x: b.x + 23.2, y: py }));
   cornerLamps(ctx, b);
+  const park = trees(ctx, b, slabs), body = slabs.flatMap(slab), cut = (): Solid[] => [...ctx.solids, ...ctx.ground, ...body, ...park];
+  // Presupuesto: árboles a 4, luego loggias a 1 (placa más alta primero) hasta entrar en el tope.
+  const tall = [...slabs].sort((a, c) => c.h - a.h);
+  while (facesIn(cut(), blockRect(b)) > FACE_CAPS.monoblock) {
+    if (park.length > 4) park.pop();
+    else { const s = tall.find((t) => t.loggias.length > 1); if (!s) break; s.loggias = [2]; body.splice(0, body.length, ...slabs.flatMap(slab)); }
+  }
+  ctx.solids.push(...body, ...park);
+  windows(ctx, b, slabs);
 }
