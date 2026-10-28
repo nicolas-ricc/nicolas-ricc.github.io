@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BLEED, MOUTH_Y, TIP_BOX, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, riverCenter, worldZoneAt } from "../map/geo";
 import { createRng } from "../map/seed";
 import type { Solid, Tri } from "../iso/solids";
-import { BLEED_WATER } from "./terrain-classify";
+import { BLEED_WATER, clearOfWater } from "./terrain-classify";
 import { CELL, baseToneAt, bleedTerrainAt, bleedZ, buildTerrain, seaTerrainAt, shipyardTerrainAt, terrainAt, waterBand } from "./terrain";
 
 const tris = (s: Solid): Tri[] => (s.kind === "ground" ? s.tris : []);
@@ -263,5 +263,12 @@ describe("buildTerrain", () => {
     const sand = m.bleed.find((s) => s.kind === "ground" && s.mat === "sand");
     expect(sand && sand.kind === "ground" && sand.tris.length).toBeGreaterThan(50);
     for (const t of tris(sand!)) for (const p of t.pts) expect(Math.abs(p.z)).toBeLessThanOrEqual(0.1);
+  });
+});
+
+describe("clearOfWater", () => {
+  it("true sobre losa, false sobre el río", () => {
+    expect(clearOfWater(10, 10, 20, 20, 3)).toBe(true);
+    expect(clearOfWater(250, 60, 252, 62, 3)).toBe(false);
   });
 });

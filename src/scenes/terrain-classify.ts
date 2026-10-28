@@ -1,4 +1,4 @@
-import { BOTTOM, DOCK, QUAY_X, SHORE_W, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, abyssX, distToHeadland, eastBank, inHeadland, inMouth, islandEastX, islandWestX, shoreWidth } from "../map/geo";
+import { BOTTOM, CELL, DOCK, QUAY_X, SHORE_W, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, abyssX, distToHeadland, eastBank, inHeadland, inMouth, islandEastX, islandWestX, shoreWidth } from "../map/geo";
 import { CITY_EDGE, DISTRICT_BANK_Y, EAST_RING, MALECON_STREET_X, inCrater } from "./city-grid";
 import { bayWater, builtAt, estuaryWater } from "./sprawl-grid";
 
@@ -70,4 +70,12 @@ export function bleedTerrainAt(x: number, y: number): BleedTerrain {
 export function isWaterAt(x: number, y: number): boolean {
   if (x >= WORLD.x0 && x < WORLD.x1 && y >= WORLD.y0 && y < WORLD.y1) return WATER_TERRAIN.has(terrainAt(x, y));
   return BLEED_WATER.has(bleedTerrainAt(x, y));
+}
+
+/** `true` si ninguna celda de la grilla de `CELL` (anclada en WORLD.x0/y0) que corta el rectángulo agrandado `margin` tiene el centro en agua. */
+export function clearOfWater(x0: number, y0: number, x1: number, y1: number, margin: number): boolean {
+  const i0 = Math.floor((x0 - margin - WORLD.x0) / CELL), i1 = Math.floor((x1 + margin - WORLD.x0) / CELL);
+  const j0 = Math.floor((y0 - margin - WORLD.y0) / CELL), j1 = Math.floor((y1 + margin - WORLD.y0) / CELL);
+  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) if (isWaterAt(WORLD.x0 + (i + 0.5) * CELL, WORLD.y0 + (j + 0.5) * CELL)) return false;
+  return true;
 }
