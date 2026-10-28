@@ -7,12 +7,13 @@ import { jungle as flora } from "./flora";
 
 
 /**
- * Portfolio: astillero en 2.5D. Mismo plano que terrain.ts: gradas que
- * terminan en el agua, calle de transferencia N-S, ribera dragada recta
- * en QUAY_X, dique seco al NE, playa al SO, muelle de alistamiento
- * del otro lado del río. Coordenadas en unidades del mapa viejo (1 u ≈ 1 px).
- * Las naves de montaje, los talleres y el patio de material se rearman en la
- * banda norte (`y −58..−16`) en otro hijo de #238.
+ * Portfolio: astillero en 2.5D. Mismo plano que terrain.ts: gradas al este de
+ * la calle de transferencia N-S, que terminan en el agua; ribera dragada
+ * recta en QUAY_X, dique seco al NE, playa al SO, muelle de alistamiento del
+ * otro lado del río. Las naves de montaje, los talleres y el patio de
+ * material van al norte, detrás de la fábrica, en la banda `y −58..−16`; la
+ * fábrica de Portfolio queda entre la calle y la playa de vías. Coordenadas
+ * en unidades del mapa viejo (1 u ≈ 1 px).
  */
 
 export interface Scene {
