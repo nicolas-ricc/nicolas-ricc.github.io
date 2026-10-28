@@ -92,9 +92,9 @@ Tests que tiene que satisfacer (de evals): `NAVE`, `STAIR_TOWER`, `METAL_STACK_X
 - [ ] **Step 2: Implementar.**
   - `plant()`: `maltings`, `waterTower(out)` (default `WATER_TOWER`), `boilerHouse`, y el portón armado en local (`prism(PLANT_LOCAL_E − 0.2, −23, 0, 0.5, 6, 8)` con `PLANT_LOCAL_E = PLANT.x + PLANT.w − PLANT_SHIFT.x`) empujado con `translate`. Mismo orden de emisión.
   - `truckYard()`: arma camiones, pallets y sus dos faroles en arrays locales (`Solid[]`, `Accent[]`) con los literales de hoy y empuja `translate` / `translateAccent` con `PLANT_SHIFT`.
-  - `lamps()`: los tres faroles de la planta ((24, −13), (64, −13), (50, −13.5)) en arrays locales trasladados igual; el de la subestación y el de (−30, 20) se emiten directo. Mismo orden de faroles que hoy.
+  - `lamps()`: los tres faroles de la planta ((24, −13), (64, −13), (50, −13.5)) en arrays locales trasladados igual; el de la subestación y el de (−30, 20) se emiten directo, después. Hoy los tres de la planta ya van primero y contiguos (`factory.ts:130`), así que un solo lote conserva el orden.
   - Un helper privado `emitPlant(out: Solid[], accents: Accent[], build: (o: Solid[], a: Accent[]) => void): void` para no repetir el traslado tres veces.
-  - Docstring del módulo: la planta, el tanque, la playa de camiones y sus faroles en la región nueva (`PLANT_SHIFT` de `plant-frame.ts`); en la banda vieja quedan solo el desvío y la grúa torre.
+  - Docstring del módulo: la planta, el tanque, la playa de camiones y sus faroles en la región nueva (`PLANT_SHIFT` de `plant-frame.ts`); en la banda vieja (`x > 0, y −60..0`) quedan solo el desvío y la grúa torre; la columna oeste (`x ≤ 0`: `railYard`, excavadora, selva, farol (−30, 20)) no cambia.
 - [ ] **Step 3: Verificar.** `npx vitest run src/scenes/factory.test.ts src/scenes/world.test.ts src/scenes/portfolio-accents.test.ts` → PASS; `npm run typecheck`.
 - [ ] **Step 4: Commit** `feat(#246): portón, playa de camiones y faroles de la planta trasladados`.
 
@@ -123,3 +123,30 @@ Tests que tiene que satisfacer (de evals): portón en x 91.8..92.3, y 67..73 (y 
 - **Commits intermedios rojos.** Los tests re-expresados se commitean fallando en `test(#246): evals`; entre Task 1 y Task 3 los tests de `factory.test.ts` siguen rojos (planta a medio mudar). El PR se squashea y lo que se mergea está verde.
 - **Test de vecindad entre escenas** (`world.test.ts`): ningún sólido elevado de otra escena entra a la huella `PLANT` ni a la playa {2, 76, 98, 92}; misma forma que el test de la subestación (#244).
 - **Capturas.** Si agent-browser no levanta, el commit sale sin PNG y el PR lo marca como verificación manual pendiente.
+
+## Grilling
+
+- Rondas: 1 (el plan no cambió de costura; solo se aclararon dos pasos). Preguntas: 18.
+- Fuentes: ISSUE 9, CODE 12, DOC 1 (algunas respuestas citan más de una). Sin preguntas sin fuente que bloqueen.
+- Respuestas clave:
+  1. Criterios → Tasks: constantes (T1, T2), traslado + portón + camiones + pallets + faroles + acentos (T1–T3), tests re-expresados (T1–T3), vecindad y región (T3), torre de escalera ↔ chimeneas y `railYard`/excavadora (T3, tests de hoy), exhibits (T4), capturas (stage 3 y T4), suite (T4). `LABEL_AT`/zonas/velo: ISSUE "`railYard`, la excavadora, el desvío, la grúa, `LABEL_AT`, zonas y velo no cambian"; ningún paso los toca.
+  2. CODE `boiler-house.ts` no importa `MALT`; `factory.ts` `truckYard()`/`lamps()` usan literales, salvo el farol de la subestación (`SUBSTATION`, no se traslada). Solo `plant()` lee `PLANT` (el portón) → T3 lo pasa a local.
+  3. CODE `factory.test.ts` "todo sólido de las chimeneas cae en x 54..90, y 22..36.1"; torre de enfriamiento x 31..49, y 5..23. Tanque x ≤ 19.6: apartado.
+  4. CODE `exhibits.ts:73` `tanque-agua` arma `waterTower(out, { x: 0, y: 0 })`: es pieza en el origen, no depende de `WATER_TOWER`. `exhibits.test.ts:185` compara contra `waterTower(ref, WATER_TOWER)` trasladado al origen.
+  5. CODE `factory.ts:130`: los tres faroles de la planta van primero y contiguos; `truckYard()` emite sus dos faroles al final de su propio bloque. Los lotes conservan el orden.
+  6. CODE `factory.ts` `lamp()`: poste `prism(x, y, 0, 0.6, 0.6, 5)` → (5, 76) da min.x 5 ≥ 4; (95, 87) da max.x 95.6 ≤ 98.7. Pallets `prism(22 + 4i, −3, …, 3, 2, …)`: `at` es la esquina → x 7..30.
+  7. Medido: `−16.4 + 90 + 0.4 === 74` exacto en coma flotante; de todas formas los tests de contacto usan 1e-9 (ISSUE "las comparaciones de contacto admiten 1e-9").
+  8. CODE: `waterTower` se llama en `factory.ts:46` (default), `exhibits.ts:73` y `maltings.test.ts:209` con (0, 0), y en `exhibits.test.ts:185` con `WATER_TOWER`. Ninguno pasa la posición vieja.
+  9. CODE `src/iso/translate.ts` (`translate`, `translateAccent`, #241); `fingerprint` en `factory.test.ts` (#244); `emit` en `substation.ts`. No se crea nada nuevo.
+  10. Corregido en T3: la columna oeste es `x ≤ 0`; la banda vieja es `x > 0, y −60..0`.
+  11. ISSUE "Reglas que hereda"; comentario de plan de #238, decisión 8.
+  12. ISSUE "el portón se arma en local y se traslada (x 91.8..92.3, y 67..73)".
+  13. CODE: vértice del horno z 26 (`maltings.ts` cono z 24 + h 2); torre de escalera z 16; chimeneas metálicas ≤ 22.6 (`factory.test.ts`); `tallOk` en `factory.test.ts:21`.
+  14. CODE `exhibits.ts:47` `const M = 3`.
+  15. Squash: lo pide la instrucción del pipeline (stage 10 `--squash`). CI: `.github/workflows/deploy.yml` corre `npm test` en `pull_request` (head del PR), no por commit.
+  16. ISSUE "**Rama base:** `feature/238-fabrica-mudanza`". Rama con #244 (d1f393e) y #245 (6aceef3).
+  17. Todo se traslada junto con el mismo shift, así que las distancias relativas no cambian. Hoy pasan "la cinta inclinada y su tolva no tocan camiones, pallets…" y "el zócalo no toca camiones ni faroles" (`factory.test.ts`).
+  18. ISSUE: las capturas son criterio de aceptación. Se toman; si agent-browser falla, el PR lo declara como verificación manual pendiente (regla del pipeline, stage 3).
+- Supuestos (además de `## Assumptions`): ninguno nuevo.
+- Issues abiertos: ninguno.
+- Resultado: `ok`.
