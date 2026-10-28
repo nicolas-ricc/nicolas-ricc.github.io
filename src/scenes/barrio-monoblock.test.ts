@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { bounds, isFlat, type Solid } from "../iso/solids";
-import { Z_SCALE } from "../iso/project";
-import { SEED } from "../map/seed";
+import { occluded } from "../iso/project";
+import { SEED, createRng } from "../map/seed";
+import { newCtx } from "./barrio-fixtures";
+import { monoblock } from "./barrio-monoblock";
 import { suburbBlocks } from "./sprawl-grid";
 import { tech } from "./tech";
 import { FACE_CAPS, blockRect, facesIn, insideInflated } from "./tech-budget";
-import { zoneKinds } from "./tech-zoning";
+import { blockParity, zoneKinds } from "./tech-zoning";
 import { zoneRng } from "./world";
 
 type Prism = Solid & { kind: "prism" };
@@ -28,19 +30,13 @@ const of = (b: (typeof monos)[number]) => {
   return { r, solids, ground, bodies, plinths, tanks, antennas, trees, homes, lamps };
 };
 const onRoof = (t: Prism, body: Prism) => Math.abs(t.at.z - (body.at.z + body.h)) < 1e-9 && t.at.x >= body.at.x && t.at.x + t.w <= body.at.x + body.w && t.at.y >= body.at.y && t.at.y + t.d <= body.at.y + body.d;
+const tapado = (q: { x: number; y: number; z: number }, p: Prism) => occluded(q, p.at, { x: p.at.x + p.w, y: p.at.y + p.d, z: p.at.z + p.h });
 const overlap = (a: Solid, b: Solid) => {
   const p = bounds(a), q = bounds(b), e = 1e-9;
   const xy = p.min.x < q.max.x - e && q.min.x < p.max.x - e && p.min.y < q.max.y - e && q.min.y < p.max.y - e;
   return xy && p.min.z < q.max.z - e && q.min.z < p.max.z - e;
 };
 
-/** ¿El rayo desde (x, y, z) hacia la cámara (Z_SCALE, Z_SCALE, 1) atraviesa el cuerpo p? El contacto no cuenta. */
-const tapado = (q: { x: number; y: number; z: number }, p: Prism) => {
-  const d = [Z_SCALE, Z_SCALE, 1], o = [q.x, q.y, q.z], lo = [p.at.x, p.at.y, p.at.z], hi = [p.at.x + p.w, p.at.y + p.d, p.at.z + p.h];
-  let t0 = -Infinity, t1 = Infinity;
-  for (let i = 0; i < 3; i++) { const a = (lo[i]! - o[i]!) / d[i]!, c = (hi[i]! - o[i]!) / d[i]!; t0 = Math.max(t0, Math.min(a, c)); t1 = Math.min(t1, Math.max(a, c)); }
-  return t1 > 1e-9 && t0 < t1 - 1e-9;
-};
 
 describe("monoblocks del Barrio Simón Bolívar (#250)", () => {
   it("hay manzanas de monoblocks en el mundo", () => expect(monos.length).toBe(18));
@@ -163,5 +159,16 @@ describe("monoblocks del Barrio Simón Bolívar (#250)", () => {
         if (!slender && !isFlat(s)) expect(bounds(s).max.z).toBeLessThanOrEqual(21.5);
       }
     }
+  });
+
+  it("con paridad 1 y una sola placa: va al fondo (y + 11), árboles al norte de su zócalo, sendero E–O en y + 10.2", () => {
+    const b = blocks.find((x) => blockParity(x) === 1)!;
+    const ctx = Array.from({ length: 40 }, (_, k) => { const c = newCtx(createRng(k + 1)); monoblock(c, b); return c; }).find((c) => c.solids.filter((s) => s.kind === "prism" && s.w === 20 && s.d === 5).length === 1)!;
+    expect(ctx).toBeDefined();
+    expect(ctx.solids.find((s) => s.kind === "prism" && s.w === 20 && s.d === 5)).toMatchObject({ at: { x: b.x + 2, y: b.y + 11 } });
+    const cones = ctx.solids.filter((s) => s.kind === "cone");
+    expect(cones.length).toBeGreaterThanOrEqual(4);
+    for (const t of cones) { const r = bounds(t); expect(r.min.y).toBeGreaterThanOrEqual(b.y - 1e-9); expect(r.max.y).toBeLessThanOrEqual(b.y + 10.7 + 1e-9); }
+    expect(ctx.ground.some((s) => s.kind === "strip" && s.path.every((p) => p.y === b.y + 10.2))).toBe(true);
   });
 });

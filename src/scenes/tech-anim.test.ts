@@ -126,7 +126,7 @@ describe("tech-anim: ventanas del barrio (#249)", () => {
     const fixed = scene.homes.filter((h) => ALWAYS_LIT.has(h.group)).map((h) => key(h.pts));
     expect(fixed.length).toBeGreaterThanOrEqual(2);
     for (let i = 0; i < 1200; i++) { anim.tick(100); const lit = litKeys(anim); for (const k of fixed) expect(lit.has(k)).toBe(true); }
-  }, 20_000);
+  }, 10_000);
   it("con reduced-motion o dt no válido no cambia nada", () => {
     const r = setup(true);
     const h0 = r.anim.homes();
