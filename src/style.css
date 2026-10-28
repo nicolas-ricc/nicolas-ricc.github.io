@@ -73,7 +73,8 @@ body.zone #content { opacity: 1; }
 /* Resume lleva el verde de acento del blog (myxomatosis.xyz/blog); Blog, el cian */
 #zonas a[data-zone="cv"] { color: #8ec07c; }
 #zonas a[data-zone="blog"] { color: #7cf5ff; }
-#zonas a:hover, #zonas a:focus-visible { text-decoration: underline; text-underline-offset: 0.3em; filter: brightness(1.25); }
+/* sin subrayado: el hover ya enciende la zona entera en el mapa */
+#zonas a:hover, #zonas a:focus-visible { filter: brightness(1.25); }
 #zonas a:focus-visible { outline: 2px solid var(--fg); outline-offset: 4px; }
 #zonas a.dim { opacity: 0.35; }
 #titulo { position: absolute; left: 1rem; bottom: 0.75rem; margin: 0; z-index: 1; pointer-events: none; font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; color: #ffc457; text-shadow: 0 0 6px #000, 0 1px 2px #000; transition: opacity 200ms ease; }
