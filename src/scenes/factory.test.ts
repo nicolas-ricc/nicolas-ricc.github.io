@@ -113,12 +113,11 @@ describe("factory", () => {
     }
   });
 
-  it("la torre de escalera no toca la cinta existente (x 121..123, y ≥ −20) ni el pedestal de la primera chimenea (x ≥ 126.5)", () => {
+  it("la torre de escalera no toca el pedestal de la primera chimenea (x ≥ 126.5)", () => {
     const s = scene();
-    const conveyor = s.solids.filter((x) => x.kind === "prism" && x.mat === "steel" && ((x.at.z === 6 && x.h === 0.6) || (x.w === 0.8 && x.d === 0.8 && x.h === 6)));
     const pedestal = s.solids.filter((x) => x.kind === "prism" && x.mat === "concrete" && x.w === 7 && x.d === 7);
     expect(Math.min(...pedestal.map((p) => bounds(p).min.x))).toBe(126.5);
-    expectApart(build(stairTower), [...conveyor, ...pedestal]);
+    expectApart(build(stairTower), pedestal);
   });
 
   it("la cinta inclinada y su tolva no tocan camiones, pallets, grúa torre (mástil, pluma, cable, gancho) ni faroles", () => {
@@ -176,7 +175,7 @@ describe("factory", () => {
     expect(at).not.toContainEqual([58, -16]);
   });
 
-  it("desvío con seis vagones y locomotora, cinta elevada, subestación, camiones y playa de vías con acopios", () => {
+  it("desvío con seis vagones y locomotora, sin cinta larga, subestación, camiones y playa de vías con acopios", () => {
     const s = scene();
     const wagons = s.solids.filter((x) => x.kind === "prism" && x.w === 8 && x.d === 2.4 && x.h === 3);
     expect(wagons).toHaveLength(6);
@@ -184,9 +183,8 @@ describe("factory", () => {
       const a = bounds(wagons[i]!), b = bounds(wagons[j]!);
       expect(a.max.x <= b.min.x || b.max.x <= a.min.x).toBe(true);
     }
-    const conveyorPieces = s.solids.filter((x) => x.kind === "prism" && ((x.at.z === 6 && x.h === 0.6) || (x.w === 0.8 && x.d === 0.8 && x.h === 6)));
-    expect(s.solids.filter((x) => x.kind === "prism" && x.at.z === 6 && x.h === 0.6)).toHaveLength(2); // dos tramos de cinta
-    for (const c of conveyorPieces) { const b = bounds(c); expect(b.min.x >= PLANT.x + PLANT.w || b.min.y >= PLANT.y + PLANT.d).toBe(true); } // la cinta no pisa la planta
+    expect(s.solids.filter((x) => x.kind === "prism" && x.at.z === 6 && x.h === 0.6)).toEqual([]);           // tramos de la cinta larga
+    expect(s.solids.filter((x) => x.kind === "prism" && x.w === 0.8 && x.d === 0.8 && x.h === 6)).toEqual([]); // sus caballetes
     expect(s.solids.filter((x) => x.kind === "prism" && x.w === 6 && x.d === 2.4 && x.h === 2.8)).toHaveLength(3); // camiones
     const rails = s.ground.filter((x) => x.kind === "strip" && x.mat === "steel");
     expect(rails.length).toBeGreaterThanOrEqual(RAIL_YARD_X.length * 2 + 2);
