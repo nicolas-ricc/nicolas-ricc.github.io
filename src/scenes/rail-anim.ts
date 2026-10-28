@@ -52,7 +52,6 @@ export type Aspect = "red" | "green";
 export interface TrainState { phase: Phase; x0: number; lead: "e" | "w"; alpha: number }
 
 const START: Record<Phase, number> = { in: 0, dwell: IN_MS, out: IN_MS + DWELL_MS, off: IN_MS + DWELL_MS + OUT_MS };
-/** Ms del ciclo en que arranca la fase. */
 export const phaseStart = (phase: Phase): number => START[phase];
 
 const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
