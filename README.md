@@ -30,7 +30,9 @@ mundo tiene origen en `(-60, -60)` y un sangrado de terreno alrededor de todo
 el contenido, para que la cámara *cover* nunca muestre cielo; sobre el
 sangrado viven los márgenes construidos, `hinterland.ts` (industria de
 Portfolio al norte y al oeste de la fábrica, con su central térmica) y
-`tech.ts` (distrito tecnológico de Resume al oeste y al sur de la ciudad),
+`tech.ts` (distrito tecnológico de Resume al oeste de la ciudad y, al sur,
+sobre el estuario, un barrio residencial costero: monoblocks, casas con techo
+de teja, escuela, club, plazas y una costanera iluminada sobre el muelle),
 separados por un cinturón verde; `fair.ts` es la feria de la playa sobre la
 bahía, al norte de la fábrica; el estuario y el mar siguen hacia el sur hasta
 juntarse. La fábrica ocupa el lugar que tenían los galpones del astillero,
@@ -74,7 +76,8 @@ look, `src/map/palette-iso.ts`. Specs en `docs/superpowers/specs/`
 `2026-10-17-barcos-inventario.md`,
 `2026-10-17-storybook-estructuras-design.md`,
 `2026-10-24-fabrica-detalle-design.md`,
-`2026-10-27-fabrica-mudanza-design.md`).
+`2026-10-27-fabrica-mudanza-design.md`,
+`2026-10-27-barrio-costero-design.md`).
 
 `/lab/storybook.html` es el storybook de estructuras: muestra un edificio o
 estructura a la vez, recortado del mundo por su caja (o armado solo en el

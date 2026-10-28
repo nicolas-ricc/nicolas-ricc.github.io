@@ -35,6 +35,7 @@ export const BASE_TONES = {
   signal:    { top: 0xc0392b, lit: 0x9d2a1b, shade: 0x4d181a, up: 0xdf402c, down: 0xa53228 },
   stockbrick:{ top: 0xc9a86a, lit: 0xa57c42, shade: 0x504740, up: 0xe9bc6c, down: 0xad9464 },
   safety:    { top: 0xd9a62e, lit: 0xb27b1d, shade: 0x57461c, up: 0xfcba2f, down: 0xbb922b },
+  tile:      { top: 0xb0603c, lit: 0x904725, shade: 0x462824, up: 0xcc6c3d, down: 0x975438 },
 } as const;
 
 export const BASE_SHADOW = 0x2a1a3a;
