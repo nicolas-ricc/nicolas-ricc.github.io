@@ -30,7 +30,9 @@ mundo tiene origen en `(-60, -60)` y un sangrado de terreno alrededor de todo
 el contenido, para que la cámara *cover* nunca muestre cielo; sobre el
 sangrado viven los márgenes construidos, `hinterland.ts` (industria de
 Portfolio al norte y al oeste de la fábrica, con su central térmica) y
-`tech.ts` (distrito tecnológico de Resume al oeste de la ciudad y, al sur, sobre el estuario, un barrio residencial costero: monoblocks, casas con techo de teja, escuela, club, plazas y una costanera iluminada sobre el muelle),
+`tech.ts` (distrito tecnológico de Resume al oeste de la ciudad y, al sur,
+sobre el estuario, un barrio residencial costero: monoblocks, casas con techo
+de teja, escuela, club, plazas y una costanera iluminada sobre el muelle),
 separados por un cinturón verde; `fair.ts` es la feria de la playa sobre la
 bahía, al norte de la fábrica; el estuario y el mar siguen hacia el sur hasta
 juntarse.
