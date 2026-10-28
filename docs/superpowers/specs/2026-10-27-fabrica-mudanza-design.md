@@ -1,7 +1,7 @@
 # Fábrica: el complejo se muda al frente, los galpones atrás
 
 **Fecha:** 2026-10-27
-**Estado:** aprobado, listo para agente
+**Estado:** implementado en #238 (rama `feature/238-fabrica-mudanza`, hijos #241–#247 y este cierre, #248); los desvíos están en §9
 **Alcance:** intercambiar el lugar del complejo fabril de Portfolio (la
 "Fábrica de Luz" con la maltería, el tanque, las chimeneas, la torre de
 enfriamiento y la subestación) con los galpones del astillero (naves de
