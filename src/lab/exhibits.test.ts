@@ -3,8 +3,12 @@ import type { Accent } from "../iso/accent";
 import { project, Z_SCALE } from "../iso/project";
 import { bounds, type Solid } from "../iso/solids";
 import { BLEED, WORLD } from "../map/geo";
+import { STAIR_TOWER } from "../scenes/boiler-house";
 import { WATER_TOWER, waterTower } from "../scenes/maltings";
+import { createFactoryAnim } from "../scenes/factory-anim";
+import { PLANT, factory } from "../scenes/factory";
 import { BEAM_PERIOD_MS } from "../scenes/sea-anim";
+import { createRng } from "../map/seed";
 import { assembleWorld } from "../world/assemble";
 import { type Box, FRAME_H, HALO_BASE } from "../world/frame";
 import { cropAnimators, cropScene } from "./crop";
@@ -14,11 +18,11 @@ const regions = EXHIBITS.flatMap((e) => (e.kind === "region" ? [e] : []));
 
 // el índice de la spec §3, en orden; las piezas (#94) no cuentan
 const CATALOG: Record<GroupId, string[]> = {
-  fabrica: ["planta", "chimeneas", "subestacion", "playa-camiones", "playa-vias", "excavadora", "cinta"],
-  astillero: ["gradas", "darsena", "grua-portico", "calle-faroles", "naves"],
+  fabrica: ["planta", "chimeneas", "subestacion", "playa-camiones", "playa-vias", "excavadora"],
+  astillero: ["gradas", "darsena", "grua-portico", "calle-faroles", "naves", "punta-norte"],
   hinterland: ["central-termica", "tanques", "silos", "alta-tension", "playa-contenedores"],
   feria: ["noria", "montana-rusa", "torre-caida", "carrusel", "arcade", "autitos-chocadores", "muelle"],
-  ciudad: ["plaza", "torre", "puente", "malecon", "manzana-derrumbada", "manzana-distrito", "obra"],
+  ciudad: ["plaza", "torre", "puente", "malecon", "manzana-derrumbada", "manzana-distrito", "obra", "punta-sur"],
   tecnologico: ["mastil", "arena", "auditorio", "torres", "monoblock", "casas", "escuela", "club", "plaza-barrio", "costanera", "barrio"],
   mar: ["faro", "casa-farero", "boyas", "pecio"],
 };
@@ -111,13 +115,23 @@ describe("catálogo de exhibits", () => {
 });
 
 describe("caja de la nave de calderas (#213)", () => {
-  it("planta llega al borde este de la torre de escalera (x 126): entra la torre y queda afuera la primera chimenea", () => {
+  it("planta llega al borde este de la torre de escalera (STAIR_TOWER.x1): entra la torre y queda afuera la primera chimenea", () => {
     const e = regions.find((r) => r.id === "planta")!;
-    expect(e.box.x1).toBe(126);
+    expect(e.box.x1).toBe(STAIR_TOWER.x1);
     const cs = cropScene(scene, e.box);
     expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "steel" && s.w === 5 && s.d === 8)).toBe(true); // descansos de la torre
-    expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "concrete" && s.w === 7 && s.d === 7)).toBe(false); // pedestal x ≥ 126.5
+    expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "concrete" && s.w === 7 && s.d === 7)).toBe(false); // pedestales de las chimeneas: y ≥ 22.5, al norte de la caja
     expect(cs.solids.filter((s) => s.kind === "cylinder" && s.mat === "rust" && s.r === 0.5)).toHaveLength(4); // chimeneas metálicas
+  });
+});
+
+describe("caja de la subestación (#244)", () => {
+  it("sigue la fórmula del cerco: {51, −5, 98, 12} h 13, sin cruzar calle-faroles (x0 99) ni bajar a los vagones (y ≤ −6.8)", () => {
+    const e = regions.find((x) => x.id === "subestacion")!, street = regions.find((x) => x.id === "calle-faroles")!;
+    expect(e.box).toEqual({ x0: 51, y0: -5, x1: 98, y1: 12 });
+    expect(e.h).toBe(13);
+    expect(e.box.x1).toBeLessThan(street.box.x0);
+    expect(e.box.y0).toBeGreaterThan(-6.8);
   });
 });
 
@@ -161,7 +175,7 @@ describe("exhibits de pieza", () => {
     if (e.kind === "piece") e.build(out, []);
     expect(out.map((s) => s.kind)).toEqual(["beam"]);
   });
-  it("el tanque de agua (#214) va solo, centrado en el origen, después de planta: en planta queda detrás de la maltería", () => {
+  it("el tanque de agua (#214) va solo, centrado en el origen, después de planta: la caja de planta no lo contiene (#246)", () => {
     const ids = EXHIBITS.map((e) => e.id);
     expect(ids.indexOf("tanque-agua")).toBe(ids.indexOf("planta") + 1);
     const e = EXHIBITS.find((x) => x.id === "tanque-agua")!;
@@ -214,13 +228,65 @@ describe("entrada del índice fuera de la vista (#117)", () => {
   });
 });
 
-describe("caja de la planta con maltería y tanque (#214)", () => {
-  it("planta arranca en x 2 y sube a 26: entran la pasarela del tanque (r 4.6) y el vértice del horno", () => {
-    const e = regions.find((r) => r.id === "planta")!;
-    expect(e.box.x0).toBe(2);
+describe("caja de la planta con maltería (#214, #246)", () => {
+  const e = regions.find((r) => r.id === "planta")!;
+
+  it("planta va de PLANT.x − 3 a STAIR_TOWER.x1 y de PLANT.y − 3 a 2 al sur del muro sur: {2, 41, 98, 76}", () => {
+    expect(e.box).toEqual({ x0: PLANT.x - 3, y0: PLANT.y - 3, x1: STAIR_TOWER.x1, y1: PLANT.y + PLANT.d + 2 });
+    expect(e.box).toEqual({ x0: 2, y0: 41, x1: 98, y1: 76 });
+    expect(e.title).toBe("Nave de calderas y maltería");
+  });
+
+  it("sube a 26 por el vértice del horno y no contiene el tanque (ningún cilindro r 4.6)", () => {
     expect(e.h).toBe(26);
     const cs = cropScene(scene, e.box);
-    expect(cs.solids.some((s) => s.kind === "cylinder" && s.r === 4.6 && s.at.x === 10 && s.at.y === -36)).toBe(true);
     expect(cs.solids.some((s) => s.kind === "cone" && s.sides === 4 && s.at.z + s.h === 26)).toBe(true);
+    expect(cs.solids.some((s) => s.kind === "cylinder" && s.r === 4.6)).toBe(false);
+  });
+
+  it("entran zócalo y tolva; quedan afuera camiones y faroles, salvo el de (5, 76), que toca el borde sur (cropSolid incluye bordes)", () => {
+    const cs = cropScene(scene, e.box);
+    expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "whitewash" && s.h === 3.5)).toBe(true); // zócalo
+    expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "rust" && s.w === 3 && s.d === 2 && s.h === 2.5)).toBe(true); // tolva
+    expect(cs.solids.some((s) => s.kind === "prism" && s.d === 2.4 && s.h === 2.8)).toBe(false); // camiones
+    expect(cs.solids.flatMap((s) => (s.kind === "prism" && s.mat === "steel" && s.w === 0.6 && s.d === 0.6 && s.h === 5 ? [[s.at.x, s.at.y]] : []))).toEqual([[5, 76]]); // faroles
+  });
+});
+
+describe("caja de la playa de camiones (#246)", () => {
+  const e = regions.find((r) => r.id === "playa-camiones")!;
+
+  it("{2, 76, 98, 92} h 16: entran los tres camiones, los seis pallets y la cinta; no entra la grúa torre", () => {
+    expect(e.box).toEqual({ x0: 2, y0: 76, x1: 98, y1: 92 });
+    expect(e.h).toBe(16);
+    const cs = cropScene(scene, e.box);
+    expect(cs.solids.filter((s) => s.kind === "prism" && s.w === 6 && s.d === 2.4 && s.h === 2.8)).toHaveLength(3);
+    expect(cs.solids.filter((s) => s.kind === "prism" && s.mat === "steel" && s.w === 3 && s.d === 2)).toHaveLength(6);
+    expect(cs.solids.some((s) => s.kind === "beam" && s.mat === "rust" && s.w === 1.6)).toBe(true); // cinta inclinada
+    expect(cs.solids.some((s) => s.kind === "prism" && s.h === 20 && s.w === 1.2)).toBe(false); // mástil de la grúa
+  });
+});
+
+describe("caja de las chimeneas (#245)", () => {
+  const e = regions.find((r) => r.id === "chimeneas")!;
+
+  it("se calcula desde STACKS y COOLING: x0 COOLING.x − r − 3, 13 de más al este por el humo, al sur la plataforma (r + 1.2); h 36", () => {
+    expect(e.box.x0).toBeCloseTo(40 - 9 - 3, 9);
+    expect(e.box.y0).toBeCloseTo(26 - 2.8 - 28, 9);
+    expect(e.box.x1).toBeCloseTo(86 + 2.8 + 3 + 13, 9);
+    expect(e.box.y1).toBeCloseTo(32 + 2.8 + 1.2 + 3, 9);
+    expect(e.h).toBeCloseTo(29 + 28 * 0.25, 9);
+  });
+
+  it("ninguna bocanada sale de la caja en x/y en una vuelta (40 s a 33 ms)", () => {
+    const anim = createFactoryAnim(factory(createRng(7)).stacks, createRng(1), { reducedMotion: false });
+    const { x0, y0, x1, y1 } = e.box;
+    for (let t = 0; t <= 40_000; t += 33) {
+      for (let k = 0; k < 3; k++) for (const p of anim.puffs(k)) {
+        const b = bounds(p);
+        expect(b.min.x >= x0 && b.max.x <= x1 && b.min.y >= y0 && b.max.y <= y1, `t ${t} chimenea ${k}: ${JSON.stringify(b)}`).toBe(true);
+      }
+      anim.tick(33);
+    }
   });
 });

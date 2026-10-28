@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const ROOT = new URL("../../", import.meta.url).pathname;
@@ -178,5 +178,64 @@ describe("documentación del barrio costero (#256)", () => {
     expect(desvios.match(/\[lab\] bloom: /g)?.length ?? 0).toBeGreaterThanOrEqual(6);
     expect(desvios.match(/\[lab\] peor redibujo en 5 s: /g)?.length ?? 0).toBeGreaterThanOrEqual(6);
     for (const n of ["cover-antes", "cover-despues", "barrio-4-antes", "barrio-4-despues", "barrio-despues", "mundo-antes", "mundo-despues"]) expect(desvios).toContain(`assets/2026-10-27-barrio/${n}.png`);
+  });
+});
+
+describe("documentación de la mudanza de la fábrica (#238)", () => {
+  const factorySrc = readFileSync(`${ROOT}src/scenes/factory.ts`, "utf8");
+  const shipyardSrc = readFileSync(`${ROOT}src/scenes/shipyard.ts`, "utf8");
+  const parrafos = readme.split(/\n\s*\n/);
+  // espacios colapsados: el párrafo se envuelve a ~80 columnas
+  const mundo = (parrafos.find((p) => p.includes("`factory.ts`")) ?? "").replace(/\s+/g, " ");
+  const lab = parrafos.find((p) => p.includes("/lab/world.html")) ?? "";
+  const SPEC = "2026-10-27-fabrica-mudanza-design.md";
+  const ASSETS = `${ROOT}docs/superpowers/specs/assets/2026-10-27-fabrica-mudanza/`;
+  const mudanza = readFileSync(`${ROOT}docs/superpowers/specs/${SPEC}`, "utf8");
+  const at = mudanza.search(/^## 9\. Desvíos$/m);
+  const desvios = at < 0 ? "" : mudanza.slice(at);
+  it("el párrafo del mundo pone los galpones al norte, detrás de la fábrica", () => {
+    expect(mundo).toMatch(/(galpones|naves de montaje)[^.]*(al norte|detrás)[^.]*fábrica/);
+  });
+  it("README lista la spec de la mudanza entre las specs del laboratorio", () => {
+    expect(lab).toContain(SPEC);
+  });
+  it("el docstring de factory.ts apunta a la spec de la mudanza y no describe el lugar viejo", () => {
+    const end = factorySrc.indexOf("export interface FactoryScene");
+    expect(end).toBeGreaterThan(0);
+    const doc = factorySrc.slice(0, end);
+    expect(doc).toContain(`docs/superpowers/specs/${SPEC}`);
+    expect(doc).not.toContain("detrás (al norte) y al oeste del astillero");
+  });
+  it("shipyard.ts no describe la línea de producción vieja", () => {
+    expect(shipyardSrc.replace(/\s*\*\s*/g, " ")).not.toContain("patio de material → nave de montaje → grada");
+  });
+  it("la spec de la fábrica en detalle abre §2 con la nota de desvío", () => {
+    const fab = readFileSync(`${ROOT}docs/superpowers/specs/2026-10-24-fabrica-detalle-design.md`, "utf8");
+    const i = fab.search(/^## 2\. Reglas de modelado$/m);
+    expect(i).toBeGreaterThan(0);
+    const nota = fab.slice(i).split(/\n\s*\n/)[1] ?? "";
+    expect(nota.startsWith("*Desvío (2026-10-27):")).toBe(true);
+    expect(nota.replace(/\s+/g, " ")).toContain(SPEC);
+  });
+  it("la spec de la mudanza dice implementada", () => {
+    const estado = mudanza.split("\n").find((l) => l.startsWith("**Estado:**")) ?? "";
+    expect(estado).toMatch(/implementad/);
+    expect(estado).not.toMatch(/listo para agente/);
+  });
+  it("la spec de la mudanza cierra con desvíos, tabla de caras y capturas", () => {
+    expect(at).toBeGreaterThan(0);
+    for (const id of ["planta", "chimeneas", "subestacion", "playa-camiones", "naves", "cinta"]) expect(desvios).toMatch(new RegExp(`^\\| \`${id}\` \\|`, "m"));
+    for (const name of ["cover-antes", "cover-despues"]) expect(desvios).toContain(`assets/2026-10-27-fabrica-mudanza/${name}.png`);
+  });
+  it("las covers antes y después son PNG de 1600×900 a 2x", () => {
+    for (const name of ["cover-antes", "cover-despues"]) {
+      const png = readFileSync(`${ASSETS}${name}.png`);
+      expect(png.subarray(1, 4).toString()).toBe("PNG");
+      expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([3200, 1800]);
+    }
+  });
+  it("están las capturas antes y después de los exhibits", () => {
+    const names = ["planta", "chimeneas", "subestacion", "naves"].flatMap((id) => [`${id}-antes`, `${id}-despues`]).concat("cinta-antes");
+    for (const name of names) expect(existsSync(`${ASSETS}${name}.png`), name).toBe(true);
   });
 });

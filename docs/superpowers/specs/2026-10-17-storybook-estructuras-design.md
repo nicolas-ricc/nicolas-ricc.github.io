@@ -70,10 +70,10 @@ Lista inicial, agrupada por zona (el orden es el del índice):
 | Zona | Exhibits región | Exhibits pieza |
 |---|---|---|
 | Portfolio: fábrica | planta, chimeneas y torre de enfriamiento, subestación, playa de camiones, playa de vías, cinta transportadora | — |
-| Portfolio: astillero | gradas, dársena, grúa pórtico, calle de faroles, naves | grúa torre, farol |
+| Portfolio: astillero | gradas, dársena, grúa pórtico, calle de faroles, naves, punta norte | grúa torre, farol |
 | Portfolio: hinterland | central térmica y torre de enfriamiento, tanques, silos, línea de torres de alta tensión, playa de contenedores | — |
 | Portfolio: feria | noria, montaña rusa, torre de caída, carrusel, arcade, autitos chocadores, muelle | — |
-| Resume: ciudad | plaza, torre, puente, malecón, manzana derrumbada, manzana del distrito, obra | campus, selva |
+| Resume: ciudad | plaza, torre, puente, malecón, manzana derrumbada, manzana del distrito, obra, punta sur | campus, selva |
 | Resume: tecnológico | mástil de telecomunicaciones, arena, auditorio, torres, monoblock, casas con techo de teja, escuela, club, plaza de barrio, costanera, barrio costero | — |
 | Blog: mar | faro, casa del farero, boyas, pecio | carguero, remolcador, convoy con barcaza, lancha colectiva |
 

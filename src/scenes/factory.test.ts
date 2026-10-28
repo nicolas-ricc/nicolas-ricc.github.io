@@ -6,11 +6,14 @@ import { bounds, isFlat, tessellateAll, type Bounds, type Solid } from "../iso/s
 import { WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, worldZoneAt } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
-import { boilerHouse, gableEnd, inclineBelt, metalStacks, NAVE, naveBody, stairTower } from "./boiler-house";
-import { maltings, waterTower } from "./maltings";
-import { MALT, PLANT, RAIL_YARD_X, STACKS, STACK_BASE_H, chimney, factory, type FactoryScene, type Stack } from "./factory";
+import { BAYS, boilerHouse, gableEnd, inclineBelt, metalStacks, NAVE, naveBody, STAIR_TOWER, stairTower } from "./boiler-house";
+import { WATER_TOWER, maltings, waterTower } from "./maltings";
+import { PLANT_SHIFT } from "./plant-frame";
+import { COOLING, MALT, PLANT, RAIL_YARD_X, STACKS, STACK_BASE_H, chimney, factory, type FactoryScene, type Stack } from "./factory";
 import { towerCrane } from "./pieces";
-import { FIREWALL, PHASES_Y, SUBSTATION, TRANSFORMERS_Y, currentTransformer, disconnector, droppers, powerTransformer, substation } from "./substation";
+import { FIREWALL, PHASES_Y, SUBSTATION, SUBSTATION_SHIFT, TRANSFORMERS_Y, currentTransformer, disconnector, droppers, powerTransformer, substation } from "./substation";
+import { fingerprint, r6 } from "../iso/fingerprint";
+import { translate } from "../iso/translate";
 import { EXCAVATOR, excavator, excavatorBox, excavatorWheel, local } from "./excavator";
 import { terrainAt } from "./terrain";
 
@@ -35,8 +38,9 @@ const expectApart = (as: readonly Solid[], bs: readonly Solid[]) => {
   for (const a of as) for (const b of bs) expect(apartSliced(a, b), `${JSON.stringify(a).slice(0, 90)} × ${JSON.stringify(b).slice(0, 90)}`).toBe(true);
 };
 const isTruck = (x: Solid) => x.kind === "prism" && x.d === 2.4 && ((x.w === 6 && x.h === 2.8) || (x.w === 2 && x.h === 2.2));
-const isPallet = (x: Solid) => x.kind === "prism" && x.mat === "steel" && x.w === 3 && x.d === 2 && x.at.y === -3;
-const isLamp = (x: Solid) => x.kind === "prism" && x.mat === "steel" && x.w === 0.6 && x.d === 0.6 && x.h === 5;
+const PALLET_Y = PLANT.y + PLANT.d + 13; // fila de pallets: 13 u al sur del muro sur de la planta
+const isPallet = (x: Solid): x is Solid & { kind: "prism" } => x.kind === "prism" && x.mat === "steel" && x.w === 3 && x.d === 2 && x.at.y === PALLET_Y;
+const isLamp = (x: Solid): x is Solid & { kind: "prism" } => x.kind === "prism" && x.mat === "steel" && x.w === 0.6 && x.d === 0.6 && x.h === 5;
 const crane = build((out) => towerCrane(out, [], { at: { x: 60, y: -12 }, mastH: 20, jibLen: 30, dir: "e", light: "cyan" }));
 
 describe("factory", () => {
@@ -75,9 +79,12 @@ describe("factory", () => {
 
   it("la planta: maltería 24 × 30 × 18 de cinco pisos, tanque y nave de dos prismas de ladrillo apilados, sin dientes de sierra; tres chimeneas sin banda rust, torre de enfriamiento y grúa", () => {
     const s = scene();
-    expect(MALT).toEqual({ x: 20, y: -46, w: 24, d: 30, h: 18 });
-    expect(NAVE).toEqual({ x: 44, y: -46, w: 76, d: 30, h: 14 });
-    expect(PLANT).toMatchObject({ x: 20, y: -46, w: 100, d: 30 }); // huella estable
+    expect(MALT).toEqual({ x: 5, y: 44, w: 24, d: 30, h: 18 });
+    expect(PLANT).toEqual({ x: MALT.x, y: MALT.y, w: MALT.w + NAVE.w, d: 30, h: 14 }); // maltería + nave
+    expect(PLANT).toEqual({ x: 5, y: 44, w: 87, d: 30, h: 14 });
+    expect(PLANT.x).toBe(20 + PLANT_SHIFT.x); expect(PLANT.y).toBe(-46 + PLANT_SHIFT.y);
+    expect(PLANT.w).toBe(87);
+    expect(PLANT.x + PLANT.w).toBe(NAVE.x + NAVE.w); // el portón queda contra el testero
     expect(s.solids.filter((x) => x.kind === "prism" && x.mat === "brick" && x.at.x === MALT.x && x.at.y === MALT.y && x.w === 24 && x.d === 30 && x.h === 18 && x.facade?.floors === 5)).toHaveLength(1);
     for (const x of [...build(maltings), ...build(waterTower)]) expect(s.solids).toContainEqual(x);
     expect(s.solids.filter((x) => x.kind === "ramp" && x.mat === "steel" && x.w === 6 && x.at.z === 18)).toHaveLength(4); // faldones de la maltería
@@ -88,15 +95,20 @@ describe("factory", () => {
     expect(stacks).toHaveLength(21); // 7 por chimenea: base escalonada, fuste y corona
     expect(s.stacks).toHaveLength(3);
     STACKS.forEach((st, i) => expect(s.stacks[i]).toEqual({ x: st.x, y: st.y, z: STACK_BASE_H + st.h }));
+    expect(s.stacks).toEqual([{ x: 58, y: 32, z: 25 }, { x: 72, y: 26, z: 29 }, { x: 86, y: 32, z: 27 }]); // bocas detrás del lugar nuevo de la nave (#245)
     expect(s.solids.some((x) => x.kind === "cylinder" && x.mat === "rust" && x.r > 1)).toBe(false); // la banda rust de antes se fue (las chimeneas metálicas y los tubos de la nave son finos)
     expect(s.solids.filter((x) => x.kind === "cylinder" && x.mat === "concrete" && x.r >= 7)).toHaveLength(4); // torre de enfriamiento
     expect(s.solids.some((x) => x.kind === "prism" && x.h === 20 && x.w === 1.2)).toBe(true); // mástil de la grúa
   });
 
-  it("el portón este sigue en x 119.8..120.3, y −23..−17", () => {
+  it("el portón este va en el testero: x 91.8..92.3, y 67..73", () => {
     const gates = scene().solids.filter((x) => x.kind === "prism" && x.mat === "concrete" && x.h === 8);
     expect(gates).toHaveLength(1);
-    expect(bounds(gates[0]!)).toEqual({ min: { x: 119.8, y: -23, z: 0 }, max: { x: 120.3, y: -17, z: 8 } });
+    const b = bounds(gates[0]!);
+    expect(b.min.x).toBeCloseTo(PLANT.x + PLANT.w - 0.2, 9); expect(b.max.x).toBeCloseTo(PLANT.x + PLANT.w + 0.3, 9);
+    expect(b.min.x).toBeCloseTo(91.8, 9); expect(b.max.x).toBeCloseTo(92.3, 9);
+    expect(b.min.y).toBeCloseTo(PLANT.y + 23, 9); expect(b.max.y).toBeCloseTo(PLANT.y + 29, 9);
+    expect(b.min.y).toBeCloseTo(67, 9); expect(b.max.y).toBeCloseTo(73, 9); expect(b.min.z).toBe(0); expect(b.max.z).toBe(8);
   });
 
   it("ningún sólido de la nave supera z 20 salvo las chimeneas metálicas y sus tensores (≤ 22.6)", () => {
@@ -113,37 +125,40 @@ describe("factory", () => {
     }
   });
 
-  it("la torre de escalera no toca la cinta existente (x 121..123, y ≥ −20) ni el pedestal de la primera chimenea (x ≥ 126.5)", () => {
-    const s = scene();
-    const conveyor = s.solids.filter((x) => x.kind === "prism" && x.mat === "steel" && ((x.at.z === 6 && x.h === 0.6) || (x.w === 0.8 && x.d === 0.8 && x.h === 6)));
-    const pedestal = s.solids.filter((x) => x.kind === "prism" && x.mat === "concrete" && x.w === 7 && x.d === 7);
-    expect(Math.min(...pedestal.map((p) => bounds(p).min.x))).toBe(126.5);
-    expectApart(build(stairTower), [...conveyor, ...pedestal]);
+  it("la torre de escalera no toca ninguna chimenea", () => {
+    const tower = build(stairTower).flatMap(slices), pieces = STACKS.flatMap((st) => one(st).out);
+    expect(tower.length).toBeGreaterThan(0); expect(pieces.length).toBeGreaterThan(0);
+    expect(pieces.filter((p) => slices(p).some((a) => tower.some((b) => !boxApart(a, b)))).map((p) => JSON.stringify(p).slice(0, 90))).toEqual([]); // tramos precalculados: expectApart tarda 1,4 s
   });
 
-  it("la cinta inclinada y su tolva no tocan camiones, pallets, grúa torre (mástil, pluma, cable, gancho) ni faroles", () => {
+  it("la cinta inclinada y su tolva no tocan camiones, pallets ni faroles", () => {
     const s = scene();
-    for (const c of crane) expect(s.solids).toContainEqual(c);
     expect(s.solids.filter(isTruck)).toHaveLength(6);
     expect(s.solids.filter(isPallet)).toHaveLength(6);
     expect(s.solids.filter(isLamp)).toHaveLength(7);
-    expectApart(build(inclineBelt), [...s.solids.filter(isTruck), ...s.solids.filter(isPallet), ...crane, ...s.solids.filter(isLamp)]);
+    expectApart(build(inclineBelt), [...s.solids.filter(isTruck), ...s.solids.filter(isPallet), ...s.solids.filter(isLamp)]);
   });
 
-  it("el zócalo no toca camiones ni faroles", () => {
+  it("la grúa torre y el desvío se quedan: la grúa en (60, −12), lejos de la planta", () => {
+    const s = scene();
+    for (const c of crane) expect(s.solids).toContainEqual(c);
+    for (const c of crane) expect(bounds(c).max.y).toBeLessThan(PLANT.y);
+  });
+
+  it("el zócalo no toca camiones, pallets ni faroles", () => {
     const s = scene();
     const plinth = build(naveBody).filter((x) => (x.kind === "prism" && x.mat === "whitewash" && x.h === 3.5) || (x.kind === "cylinder" && x.r === 0.3 && x.h === 0.8));
-    expect(plinth).toHaveLength(21);
-    expectApart(plinth, [...s.solids.filter(isTruck), ...s.solids.filter(isLamp)]);
+    expect(plinth).toHaveLength(2 * BAYS + 1);
+    expectApart(plinth, [...s.solids.filter(isTruck), ...s.solids.filter(isPallet), ...s.solids.filter(isLamp)]);
   });
 
   it("las ménsulas de las pilastras no tocan el remate sur del alero", () => {
     const body = build(naveBody);
-    expectApart(body.filter((x) => x.kind === "beam" && x.w === 0.3), body.filter((x) => x.kind === "prism" && x.mat === "whitewash" && x.at.y === -15.4));
+    expectApart(body.filter((x) => x.kind === "beam" && x.w === 0.3), body.filter((x) => x.kind === "prism" && x.mat === "whitewash" && Math.abs(x.at.y - (NAVE.y + NAVE.d + 0.6)) < 1e-9));
   });
 
   it("en la escena, el muro alto se pinta antes de cada tramo del faldón norte y del sur (sin ciclos que corten esas relaciones)", () => {
-    const near = scene().solids.filter((x) => { const b = bounds(x); return b.max.x >= 17 && b.min.x <= 126.4 && b.max.y >= -49 && b.min.y <= -14; });
+    const near = scene().solids.filter((x) => { const b = bounds(x); return b.max.x >= PLANT.x - 3 && b.min.x <= STAIR_TOWER.x1 + 0.4 && b.max.y >= PLANT.y - 3 && b.min.y <= PLANT.y + PLANT.d + 2; });
     const order = sortByDepth(near);
     const wall = order.findIndex((x) => x.kind === "prism" && x.mat === "brick" && x.at.x === NAVE.x && x.at.z === 7);
     const roof = order.flatMap((x, i) => (x.kind === "ramp" && x.mat === "steel" && x.at.x >= NAVE.x ? [i] : []));
@@ -151,32 +166,82 @@ describe("factory", () => {
     for (const i of roof) expect(i).toBeGreaterThan(wall);
   });
 
-  it("el tanque no toca desvío ni locomotora (y ≤ −9.3) ni la maltería (x ≤ 20)", () => {
+  it("el tanque, al norte de la maltería (y < MALT.y), no toca maltería, torre de enfriamiento ni chimeneas", () => {
     const s = scene(), tank = build(waterTower);
-    for (const x of tank) { const b = bounds(x); expect(b.max.y).toBeLessThanOrEqual(-9.3); expect(b.max.x).toBeLessThanOrEqual(20); }
-    const siding = s.ground.filter((x) => x.kind === "strip" && x.path.some((p) => p.y > -9.3 && p.y < -6.7));
-    const loco = s.solids.filter((x) => x.kind === "prism" && x.mat === "steel" && x.at.y === -9.3);
-    expect(loco).toHaveLength(2); // locomotora y cabina
-    expectApart(tank, [...siding, ...loco, ...build(maltings)]);
+    expect(tank.some((x) => x.kind === "cylinder" && x.at.x === WATER_TOWER.x && x.at.y === WATER_TOWER.y)).toBe(true);
+    for (const x of tank) expect(s.solids).toContainEqual(x);
+    for (const x of tank) expect(bounds(x).max.y).toBeLessThan(MALT.y);
+    for (const x of tank) for (const st of STACKS) expect(bounds(x).max.x).toBeLessThan(st.x - 3.5); // al oeste de los pedestales
+    const near = [...build(maltings), ...coolingTower(s.solids), ...STACKS.flatMap((st) => one(st).out)].flatMap(slices); // tramos precalculados: expectApart tarda más de 3 s
+    expect(near.length).toBeGreaterThan(0);
+    expect(tank.filter((a) => slices(a).some((p) => near.some((q) => !boxApart(p, q)))).map((a) => JSON.stringify(a).slice(0, 90))).toEqual([]);
   });
 
-  it("la maltería no pisa la nave (x ≤ 44) ni los pallets (y ≤ −16)", () => {
+  it("chimeneas y torre de enfriamiento no tocan nave ni maltería, y toda pieza de chimenea queda al norte del faldón (max.y < NAVE.y − 0.6)", () => {
+    const s = scene(), stacks = STACKS.flatMap((st) => one(st).out);
+    for (const x of stacks) expect(bounds(x).max.y, JSON.stringify(x).slice(0, 90)).toBeLessThan(NAVE.y - 0.6);
+    const plant = [...build(boilerHouse), ...build(maltings)].flatMap(slices); // tramos precalculados: expectApart tarda más de 5 s
+    expect(stacks.length).toBeGreaterThan(0); expect(plant.length).toBeGreaterThan(0);
+    const touching = [...stacks, ...coolingTower(s.solids)].filter((a) => slices(a).some((p) => plant.some((q) => !boxApart(p, q))));
+    expect(touching.map((a) => JSON.stringify(a).slice(0, 90))).toEqual([]);
+  });
+
+  it("la planta (maltería, tanque, nave y portón) no toca la subestación", () => {
+    const s = scene();
+    const gate = s.solids.filter((x) => x.kind === "prism" && x.mat === "concrete" && x.h === 8);
+    const plantSolids = [...build(maltings), ...build(waterTower), ...build(boilerHouse), ...gate];
+    expect(gate).toHaveLength(1);
+    expect(union(plantSolids).min.y).toBeGreaterThan(union(raised()).max.y); // la planta entera al sur de todo sólido de la subestación
+    for (const x of plantSolids) expect(apartBox(bounds(x), FENCE_BOX)).toBe(true);
+  });
+
+  it("la maltería no pisa la nave (x ≤ NAVE.x) ni los pallets (y ≤ MALT.y + MALT.d)", () => {
     const s = scene(), malt = build(maltings);
-    for (const x of malt) { const b = bounds(x); expect(b.max.x).toBeLessThanOrEqual(44); expect(b.max.y).toBeLessThanOrEqual(-16); }
+    for (const x of malt) { const b = bounds(x); expect(b.max.x).toBeLessThanOrEqual(NAVE.x + 1e-9); expect(b.max.y).toBeLessThanOrEqual(MALT.y + MALT.d + 1e-9); }
     expectApart(malt, [...build(naveBody), ...s.solids.filter(isPallet)]);
+  });
+
+  it("playa de camiones trasladada PLANT_SHIFT: camiones en (25, 78), (55, 84), (80, 78) y pallets en x 7..30, y 87..89", () => {
+    const s = scene();
+    const boxes = s.solids.filter((x): x is Solid & { kind: "prism" } => isTruck(x) && x.kind === "prism" && x.w === 6).map((x) => [x.at.x, x.at.y]);
+    expect(boxes).toEqual([[25, 78], [55, 84], [80, 78]]);
+    expect(boxes).toEqual([[40, -12], [70, -6], [95, -12]].map(([x, y]) => [x! + PLANT_SHIFT.x, y! + PLANT_SHIFT.y]));
+    const cabs = s.solids.filter((x): x is Solid & { kind: "prism" } => isTruck(x) && x.kind === "prism" && x.w === 2).map((x) => [x.at.x, x.at.y]);
+    expect(cabs).toEqual([[31, 78], [61, 84], [86, 78]]);
+    const pallets = s.solids.filter(isPallet);
+    expect(pallets).toHaveLength(6);
+    const u = union(pallets);
+    expect([u.min.x, u.max.x, u.min.y, u.max.y]).toEqual([7, 30, 87, 89]);
+  });
+
+  it("7 faroles: los cinco de la planta trasladados, el de la subestación y el de (−30, 20); cada uno con su acento cian encima", () => {
+    const s = scene();
+    const at = s.solids.filter(isLamp).map((l) => [l.at.x, l.at.y]);
+    expect([...at].sort((a, b) => a[0]! - b[0]! || a[1]! - b[1]!)).toEqual([[-30, 20], [5, 76], [9, 77], [35, 76.5], [49, 77], [53, 12], [95, 87]]);
+    for (const [x, y] of at) expect(s.accents.filter((a) => a.kind === "dot" && a.color === "cyan" && Math.abs(a.at.x - (x! + 0.3)) < 1e-9 && Math.abs(a.at.y - (y! + 0.3)) < 1e-9 && a.at.z === 5)).toHaveLength(1); // el traslado mueve la x un ε
+  });
+
+  it("todo sólido de la fábrica fuera de la columna oeste y del desvío con la grúa cae en x 4..98.7, y −4..99", () => {
+    const sc = scene();
+    const west = (b: Bounds) => b.max.x <= 0;
+    const sidingAndCrane = (b: Bounds) => b.min.y >= -13.1 && b.max.y <= -6.7;
+    const region = (b: Bounds) => b.min.x >= 4 - 1e-9 && b.max.x <= 98.7 + 1e-9 && b.min.y >= -4 - 1e-9 && b.max.y <= 99 + 1e-9;
+    const out = sc.solids.filter((x) => { const b = bounds(x); return !west(b) && !sidingAndCrane(b) && !region(b); });
+    expect(out.map((x) => JSON.stringify(x).slice(0, 90))).toEqual([]);
   });
 
   it("ningún sólido de maltería o tanque supera z 26", () => {
     for (const x of [...build(maltings), ...build(waterTower)]) expect(bounds(x).max.z).toBeLessThanOrEqual(26 + 1e-9);
   });
 
-  it("el farol de (58, −16) pasa a (50, −13.5)", () => {
-    const at = scene().solids.filter(isLamp).map((l) => l.kind === "prism" ? [l.at.x, l.at.y] : []);
-    expect(at).toContainEqual([50, -13.5]);
-    expect(at).not.toContainEqual([58, -16]);
+  it("el farol de (58, −16) pasa a (50, −13.5), y con la mudanza a (35, 76.5)", () => {
+    const at = scene().solids.filter(isLamp).map((l) => [l.at.x, l.at.y]);
+    expect(at).toContainEqual([50 + PLANT_SHIFT.x, -13.5 + PLANT_SHIFT.y]);
+    expect(at).toContainEqual([35, 76.5]);
+    expect(at).not.toContainEqual([58 + PLANT_SHIFT.x, -16 + PLANT_SHIFT.y]);
   });
 
-  it("desvío con seis vagones y locomotora, cinta elevada, subestación, camiones y playa de vías con acopios", () => {
+  it("desvío con seis vagones y locomotora, sin cinta larga, subestación, camiones y playa de vías con acopios", () => {
     const s = scene();
     const wagons = s.solids.filter((x) => x.kind === "prism" && x.w === 8 && x.d === 2.4 && x.h === 3);
     expect(wagons).toHaveLength(6);
@@ -184,9 +249,8 @@ describe("factory", () => {
       const a = bounds(wagons[i]!), b = bounds(wagons[j]!);
       expect(a.max.x <= b.min.x || b.max.x <= a.min.x).toBe(true);
     }
-    const conveyorPieces = s.solids.filter((x) => x.kind === "prism" && ((x.at.z === 6 && x.h === 0.6) || (x.w === 0.8 && x.d === 0.8 && x.h === 6)));
-    expect(s.solids.filter((x) => x.kind === "prism" && x.at.z === 6 && x.h === 0.6)).toHaveLength(2); // dos tramos de cinta
-    for (const c of conveyorPieces) { const b = bounds(c); expect(b.min.x >= PLANT.x + PLANT.w || b.min.y >= PLANT.y + PLANT.d).toBe(true); } // la cinta no pisa la planta
+    expect(s.solids.filter((x) => x.kind === "prism" && x.at.z === 6 && x.h === 0.6)).toEqual([]);           // tramos de la cinta larga
+    expect(s.solids.filter((x) => x.kind === "prism" && x.w === 0.8 && x.d === 0.8 && x.h === 6)).toEqual([]); // sus caballetes
     expect(s.solids.filter((x) => x.kind === "prism" && x.w === 6 && x.d === 2.4 && x.h === 2.8)).toHaveLength(3); // camiones
     const rails = s.ground.filter((x) => x.kind === "strip" && x.mat === "steel");
     expect(rails.length).toBeGreaterThanOrEqual(RAIL_YARD_X.length * 2 + 2);
@@ -357,8 +421,9 @@ describe.each(STACKS.map((st, i) => [i, st] as const))("chimenea %i", (_i, st) =
     for (const p of one(st).out) for (const t of tower) expect(apart(p, t)).toBe(true);
   });
 
-  it("ninguna pieza entra al cerco de la subestación (y ≤ −47)", () => {
-    for (const p of one(st).out) expect(bounds(p).min.y).toBeGreaterThan(-47);
+  it("ninguna pieza entra al cerco de la subestación (en planta)", () => {
+    const fence = { min: { ...FENCE_BOX.min, z: -Infinity }, max: { ...FENCE_BOX.max, z: Infinity } };
+    for (const p of one(st).out) expect(apartBox(bounds(p), fence)).toBe(true);
   });
 });
 
@@ -370,7 +435,50 @@ describe("chimeneas vecinas", () => {
   });
 });
 
+const coolingTower = (solids: readonly Solid[]) => solids.filter((x): x is Solid & { kind: "cylinder" } => x.kind === "cylinder" && x.mat === "concrete" && x.r >= 7);
+const inBox = (b: Bounds, x0: number, x1: number, y0: number, y1: number): boolean =>
+  b.min.x >= x0 - 1e-9 && b.max.x <= x1 + 1e-9 && b.min.y >= y0 - 1e-9 && b.max.y <= y1 + 1e-9;
+
+describe("chimeneas y torre de enfriamiento detrás del lugar nuevo de la nave (#245)", () => {
+  it("STACKS en (58, 32), (72, 26), (86, 32) con los mismos r y h; COOLING exportado en (40, 14) r 9", () => {
+    expect(STACKS).toEqual([{ x: 58, y: 32, r: 2.8, h: 22 }, { x: 72, y: 26, r: 2.6, h: 26 }, { x: 86, y: 32, r: 2.4, h: 24 }]);
+    expect(COOLING).toEqual({ x: 40, y: 14, r: 9 });
+  });
+
+  it("todo sólido de las chimeneas cae en x 54..90, y 22..36.1", () => {
+    for (const st of STACKS) for (const x of one(st).out) expect(inBox(bounds(x), 54, 90, 22, 36.1), JSON.stringify(x).slice(0, 90)).toBe(true);
+  });
+
+  it("la torre de enfriamiento: 4 cilindros en x 31..49, y 5..23, el de abajo de r COOLING.r centrado en COOLING", () => {
+    const tower = coolingTower(scene().solids);
+    expect(tower).toHaveLength(4);
+    for (const t of tower) { expect(inBox(bounds(t), 31, 49, 5, 23)).toBe(true); expect(t.at).toMatchObject({ x: COOLING.x, y: COOLING.y }); }
+    expect(tower.find((t) => t.at.z === 0)!.r).toBe(COOLING.r);
+  });
+
+  it("chimeneas y torre no tocan ningún otro sólido no plano de la fábrica: subestación, farol (53, 12), pallets, camiones, desvío, grúa, planta y tanque", () => {
+    const s = scene();
+    const mine = [...STACKS.flatMap((st) => one(st).out), ...coolingTower(s.solids)];
+    const keys = new Set(mine.map((x) => JSON.stringify(x)));
+    expect(s.solids.filter((x) => keys.has(JSON.stringify(x)))).toHaveLength(mine.length);
+    const others = s.solids.filter((x) => !isFlat(x) && !keys.has(JSON.stringify(x)));
+    expect(others.length).toBeGreaterThan(0);
+    expect(others.filter(isLamp).some((l) => l.at.x === 53 && l.at.y === 12)).toBe(true);
+    const u = union(mine);
+    const near = others.flatMap(slices).filter((b) => b.max.x >= u.min.x - 1 && b.min.x <= u.max.x + 1 && b.max.y >= u.min.y - 1 && b.min.y <= u.max.y + 1); // el resto no puede tocar
+    expect(near.length).toBeGreaterThan(0); // el farol (53, 12), al menos
+    const touching = mine.filter((a) => slices(a).some((p) => near.some((q) => !apartBox(p, q)))); // un expect por par tarda 10 s
+    expect(touching.map((a) => JSON.stringify(a).slice(0, 90))).toEqual([]);
+  });
+});
+
 const sub = (): Solid[] => build(substation);
+/** Cerco de la subestación en mundo, de z 0 a los mástiles (z 12). */
+const FENCE_BOX: Bounds = { min: { x: SUBSTATION.x0, y: SUBSTATION.y0, z: 0 }, max: { x: SUBSTATION.x1, y: SUBSTATION.y1, z: 12 } };
+/** Portón del cerco sur: de 19.5 a 22.5 desde la esquina oeste. */
+const GATE = { x0: SUBSTATION.x0 + 19.5, x1: SUBSTATION.x0 + 22.5 } as const;
+/** Huella de la subestación de hoy en su marco local (x 149..190, y −60..−47), tomada antes del traslado (#244). */
+const LOCAL_FINGERPRINT = "ef04a1c8";
 const raised = (): Solid[] => sub().filter((x) => !isFlat(x));
 function union(solids: readonly Solid[]): Bounds {
   const bs = solids.map(bounds);
@@ -406,23 +514,50 @@ describe("subestación de intemperie (#215)", () => {
     const yard = flat.findIndex((x) => x.kind === "strip" && x.mat === "sand"), curb = flat.findIndex((x) => x.kind === "strip" && x.mat === "concrete");
     expect(yard).toBeGreaterThanOrEqual(0); expect(curb).toBeGreaterThan(yard);
     const g = flat[yard]!;
-    expect(g).toMatchObject({ kind: "strip", width: 13, z: 0.03, path: [{ x: 149, y: -53.5 }, { x: 190, y: -53.5 }] });
+    expect(g).toMatchObject({ kind: "strip", width: SUBSTATION.y1 - SUBSTATION.y0, z: 0.03, path: [{ x: SUBSTATION.x0, y: (SUBSTATION.y0 + SUBSTATION.y1) / 2 }, { x: SUBSTATION.x1, y: (SUBSTATION.y0 + SUBSTATION.y1) / 2 }] });
     const b = bounds(g);
     expect(b.min.x).toBeGreaterThanOrEqual(SUBSTATION.x0); expect(b.max.x).toBeLessThanOrEqual(SUBSTATION.x1);
     expect(b.min.y).toBeGreaterThanOrEqual(SUBSTATION.y0 - 1e-9); expect(b.max.y).toBeLessThanOrEqual(SUBSTATION.y1 + 1e-9);
     const ground = scene().ground;
     const gi = ground.findIndex((x) => x.kind === "strip" && x.mat === "sand" && x.width === 13);
-    const ci = ground.findIndex((x) => x.kind === "strip" && x.mat === "concrete" && x.path.length === 5 && x.path[0]!.x === 149);
+    const ci = ground.findIndex((x) => x.kind === "strip" && x.mat === "concrete" && x.path.length === 5 && x.path[0]!.x === SUBSTATION.x0);
     expect(gi).toBeGreaterThanOrEqual(0); expect(ci).toBeGreaterThan(gi);
   });
 
-  it("todo sólido de la subestación cae dentro del cerco x 149..190, y −60..−47, y ninguno supera z 12", () => {
+  it("el cerco está contra el desvío en x 54..95, y −2..11: SUBSTATION_SHIFT (−95, +58) desde x 149..190, y −60..−47", () => {
+    expect(SUBSTATION_SHIFT).toEqual({ x: -95, y: 58 });
+    expect(SUBSTATION).toEqual({ x0: 54, x1: 95, y0: -2, y1: 11 });
+    expect(PHASES_Y).toEqual([1, 4.5, 8]);
+    expect(TRANSFORMERS_Y).toEqual([-1, 5]);
+    expect(FIREWALL).toMatchObject({ w: 7, d: 0.6, h: 5.5 });
+    expect(FIREWALL.x).toBeCloseTo(76.5, 9); expect(FIREWALL.y).toBeCloseTo(3.7, 9);
+  });
+
+  it("es la subestación de hoy trasladada: mismos sólidos, en el mismo orden, desplazados SUBSTATION_SHIFT", () => {
+    const world = sub();
+    expect(world).toHaveLength(357);
+    expect(raised()).toHaveLength(355);
+    const local = world.map((x) => translate(x, -SUBSTATION_SHIFT.x, -SUBSTATION_SHIFT.y));
+    expect(fingerprint(local)).toBe(LOCAL_FINGERPRINT);
+    // anclas en el marco de hoy, más el shift: caseta, cubas, cortafuego y pilares del portón
+    const at = (x: number, y: number) => ({ x: x + SUBSTATION_SHIFT.x, y: y + SUBSTATION_SHIFT.y });
+    const hut = world.find((x): x is Solid & { kind: "prism" } => isPrism(x, 4, 3, 2.8, "whitewash"))!;
+    expect(hut.at).toMatchObject(at(182, -52));
+    const tanks = world.filter((x): x is Solid & { kind: "prism" } => isPrism(x, 6, 4, 4, "steel"));
+    expect(tanks.map((t) => ({ x: t.at.x, y: t.at.y }))).toEqual([at(172, -59), at(172, -53)]);
+    const wall = world.find((x): x is Solid & { kind: "prism" } => isPrism(x, FIREWALL.w, FIREWALL.d, FIREWALL.h, "concrete"))!;
+    expect(r6(wall.at.x)).toBe(r6(at(171.5, -54.3).x)); expect(r6(wall.at.y)).toBe(r6(at(171.5, -54.3).y));
+    const pillars = world.filter((x): x is Solid & { kind: "prism" } => isPrism(x, 0.6, 0.6, 2.6, "concrete"));
+    expect(pillars.map((p) => r6(p.at.x))).toEqual([r6(at(168.5, 0).x), r6(at(170.9, 0).x)]);
+  });
+
+  it("todo sólido de la subestación cae dentro del cerco SUBSTATION, y ninguno supera z 12", () => {
     const solids = raised();
     expect(solids.length).toBeGreaterThan(300);
     for (const x of solids) {
       const b = bounds(x);
-      expect(b.min.x, x.kind).toBeGreaterThanOrEqual(SUBSTATION.x0); expect(b.max.x, x.kind).toBeLessThanOrEqual(SUBSTATION.x1);
-      expect(b.min.y, x.kind).toBeGreaterThanOrEqual(SUBSTATION.y0); expect(b.max.y, x.kind).toBeLessThanOrEqual(SUBSTATION.y1);
+      expect(b.min.x, x.kind).toBeGreaterThanOrEqual(SUBSTATION.x0 - 1e-9); expect(b.max.x, x.kind).toBeLessThanOrEqual(SUBSTATION.x1 + 1e-9);
+      expect(b.min.y, x.kind).toBeGreaterThanOrEqual(SUBSTATION.y0 - 1e-9); expect(b.max.y, x.kind).toBeLessThanOrEqual(SUBSTATION.y1 + 1e-9);
       expect(b.min.z, x.kind).toBeGreaterThanOrEqual(0); expect(b.max.z, x.kind).toBeLessThanOrEqual(12 + 1e-9);
     }
     expect(union(solids).max.z).toBeCloseTo(12); // los mástiles de hilo de guardia
@@ -437,27 +572,35 @@ describe("subestación de intemperie (#215)", () => {
     }
   });
 
-  it("no toca la torre de enfriamiento, el pedestal de la tercera chimenea ni el farol de (148, −46)", () => {
-    const s = scene();
-    const tower = s.solids.filter((x) => x.kind === "cylinder" && x.mat === "concrete" && x.r >= 7);
-    const pedestal = s.solids.filter((x) => isPrism(x, 7, 7, STACK_BASE_H, "concrete") && x.at.x === STACKS[2].x - 3.5);
-    const lamp = s.solids.filter((x) => isPrism(x, 0.6, 0.6, 5, "steel") && x.at.x === 148 && x.at.y === -46);
-    expect(tower).toHaveLength(4); expect(pedestal).toHaveLength(1); expect(lamp).toHaveLength(1);
-    expect(bounds(pedestal[0]!)).toMatchObject({ min: { x: 146.5, y: -43.5 }, max: { x: 153.5, y: -36.5 } });
-    for (const x of raised()) {
-      const b = bounds(x);
-      expect(b.max.y).toBeLessThan(-45); // la torre ocupa y ≥ −45
-      for (const n of [...tower, ...pedestal, ...lamp]) expect(apartBox(b, bounds(n))).toBe(true);
-    }
+  it("queda en la región nueva: y ≥ −4 y x ≤ 98.7", () => {
+    for (const x of raised()) { const b = bounds(x); expect(b.min.y).toBeGreaterThanOrEqual(-4); expect(b.max.x).toBeLessThanOrEqual(98.7); }
+  });
+
+  it("farol de la subestación en la esquina SO del cerco, (53, 12)", () => {
+    const lamp = scene().solids.filter((x): x is Solid & { kind: "prism" } => isLamp(x) && x.at.x === SUBSTATION.x0 - 1 && x.at.y === SUBSTATION.y1 + 1);
+    expect(lamp).toHaveLength(1);
+    expect(lamp[0]!.at).toMatchObject({ x: 53, y: 12 });
+    expect(scene().solids.filter((x) => isLamp(x) && x.at.x === 148 && x.at.y === -46)).toHaveLength(0);
+  });
+
+  it("no toca ningún otro sólido de la fábrica: vagones, locomotora, grúa torre, pallets, camiones, faroles, torre y chimeneas", () => {
+    const s = scene(), mine = raised();
+    const keys = new Set(mine.map((x) => JSON.stringify(x)));
+    expect(s.solids.filter((x) => keys.has(JSON.stringify(x)))).toHaveLength(mine.length);
+    const others = s.solids.filter((x) => !keys.has(JSON.stringify(x)));
+    expect(others.length).toBeGreaterThan(0);
+    const near12 = others.flatMap(slices).filter((b) => b.max.x >= SUBSTATION.x0 - 2 && b.min.x <= SUBSTATION.x1 + 2 && b.max.y >= SUBSTATION.y0 - 2 && b.min.y <= SUBSTATION.y1 + 2);
+    expect(near12.length).toBeGreaterThan(0); // el farol propio, al menos
+    for (const a of mine) for (const p of slices(a)) for (const q of near12) expect(apartBox(p, q), JSON.stringify(a).slice(0, 90)).toBe(true);
   });
 
   it("cerco: 13 postes, ninguno en el portón, y malla romboidal de 26 diagonales", () => {
     const solids = raised();
     const posts = solids.filter((x): x is Solid & { kind: "prism" } => isPrism(x, 0.15, 0.15, 2.2, "steel"));
     expect(posts).toHaveLength(13);
-    for (const p of posts) expect(p.at.x + 0.15 <= 168.5 || p.at.x >= 171.5).toBe(true);
-    expect(posts.filter((p) => near(p.at.y, -47.15))).toHaveLength(10); // lado sur
-    expect(posts.filter((p) => near(p.at.x, 189.85))).toHaveLength(4);  // lado este, con la esquina
+    for (const p of posts) expect(p.at.x + 0.15 <= GATE.x0 + 1e-9 || p.at.x >= GATE.x1 - 1e-9).toBe(true);
+    expect(posts.filter((p) => near(p.at.y, SUBSTATION.y1 - 0.15))).toHaveLength(10); // lado sur
+    expect(posts.filter((p) => near(p.at.x, SUBSTATION.x1 - 0.15))).toHaveLength(4);  // lado este, con la esquina
     const mesh = beams(solids).filter((b) => b.mat === "steel" && near(b.w, 0.15) && near(Math.min(b.from.z, b.to.z), 0.1) && near(Math.max(b.from.z, b.to.z), 2.1));
     expect(mesh).toHaveLength(26);
   });
@@ -465,19 +608,19 @@ describe("subestación de intemperie (#215)", () => {
   it("portón de dos hojas: pilares con carteles rayo safety y peligro signal, 8 barrotes y 2 rieles", () => {
     const solids = raised();
     const pillars = solids.filter((x): x is Solid & { kind: "prism" } => isPrism(x, 0.6, 0.6, 2.6, "concrete"));
-    expect(pillars.map((p) => p.at.x).sort()).toEqual([168.5, 170.9]);
+    expect(pillars.map((p) => r6(p.at.x)).sort((a, b) => a - b)).toEqual([r6(GATE.x0), r6(GATE.x1 - 0.6)]);
     const plates = pillars.flatMap((p) => p.plates ?? []);
     expect(plates).toEqual(expect.arrayContaining([expect.objectContaining({ wall: 2, shape: "tri", mat: "safety" }), expect.objectContaining({ wall: 2, shape: "rect", mat: "signal" })]));
     const bars = solids.filter((x): x is Solid & { kind: "prism" } => isPrism(x, 0.15, 0.15, 2, "steel") && x.at.z === 0); // los mástiles (z 10) miden igual
     expect(bars).toHaveLength(8);
-    for (const b of bars) { expect(b.at.x).toBeGreaterThanOrEqual(169.1 - 1e-9); expect(b.at.x + 0.15).toBeLessThanOrEqual(170.9 + 1e-9); }
-    expect(beams(solids).filter((b) => near(b.from.z, 1.85) && near(b.to.z, 1.85) && near(b.from.y, -47.3))).toHaveLength(2);
+    for (const b of bars) { expect(b.at.x).toBeGreaterThanOrEqual(GATE.x0 + 0.6 - 1e-9); expect(b.at.x + 0.15).toBeLessThanOrEqual(GATE.x1 - 0.6 + 1e-9); }
+    expect(beams(solids).filter((b) => near(b.from.z, 1.85) && near(b.to.z, 1.85) && near(b.from.y, SUBSTATION.y1 - 0.3))).toHaveLength(2);
   });
 
   it("caseta de control whitewash con fachada y puerta", () => {
     const hut = raised().filter((x): x is Solid & { kind: "prism" } => isPrism(x, 4, 3, 2.8, "whitewash"));
     expect(hut).toHaveLength(1);
-    expect(hut[0]!.at).toEqual({ x: 182, y: -52, z: 0 });
+    expect(hut[0]!.at).toEqual({ x: SUBSTATION.x0 + 33, y: SUBSTATION.y0 + 8, z: 0 });
     expect(hut[0]!.facade).toMatchObject({ floors: 1, cols: 2 });
     expect(hut[0]!.plates).toEqual([expect.objectContaining({ wall: 2, shape: "rect", mat: "steel", toneOffset: -2 })]);
   });
@@ -494,7 +637,7 @@ describe("subestación de intemperie (#215)", () => {
     expect(solids.filter((x) => isPrism(x, 0.15, 0.15, 2, "steel") && near(x.at.z, 10))).toHaveLength(4);
   });
 
-  it("tres líneas de 151.5 a 186.5 a z 9.5: dos cadenas de 9 discos alternados y un conductor entre ellas, disjuntos en x", () => {
+  it("tres líneas de SUBSTATION.x0 + 2.5 a SUBSTATION.x1 − 3.5 a z 9.5: dos cadenas de 9 discos alternados y un conductor entre ellas, disjuntos en x", () => {
     const all = beams(raised());
     for (const y of PHASES_Y) {
       const line = all.filter((b) => near(b.from.y, y) && near(b.to.y, y) && near(b.from.z, 9.5) && near(b.to.z, 9.5));
@@ -505,9 +648,9 @@ describe("subestación de intemperie (#215)", () => {
       const wires = line.filter((b) => b.mat === "steel" && near(b.w, 0.15) && !near(beamLen(b), 0.15));
       expect(wires).toHaveLength(1);
       const w = bounds(wires[0]!);
-      expect(w.min.x).toBeCloseTo(152.85); expect(w.max.x).toBeCloseTo(185.15);
+      expect(w.min.x).toBeCloseTo(SUBSTATION.x0 + 3.85); expect(w.max.x).toBeCloseTo(SUBSTATION.x1 - 4.85);
       const db = discs.map(bounds);
-      expect(Math.min(...db.map((b) => b.min.x))).toBeCloseTo(151.5); expect(Math.max(...db.map((b) => b.max.x))).toBeCloseTo(186.5);
+      expect(Math.min(...db.map((b) => b.min.x))).toBeCloseTo(SUBSTATION.x0 + 2.5); expect(Math.max(...db.map((b) => b.max.x))).toBeCloseTo(SUBSTATION.x1 - 3.5);
       for (const b of db) expect(b.max.x <= w.min.x + 1e-9 || b.min.x >= w.max.x - 1e-9).toBe(true);
     }
   });
@@ -520,7 +663,8 @@ describe("subestación de intemperie (#215)", () => {
     const sheds = cylinders(one).filter((c) => c.mat === "whitewash" && near(c.h, 0.3));
     expect(sheds).toHaveLength(12);
     expect(new Set(sheds.map((c) => c.r))).toEqual(new Set([0.3, 0.42]));
-    expect(new Set(sheds.map((c) => c.at.x))).toEqual(new Set([157.1, 158.9]));
+    expect(new Set(sheds.map((c) => r6(c.at.x)))).toEqual(new Set([r6(SUBSTATION.x0 + 8.1), r6(SUBSTATION.x0 + 9.9)]));
+    for (const c of sheds) { expect(near(c.at.y, PHASES_Y[0])).toBe(true); expect(apartBox(bounds(c), FENCE_BOX)).toBe(false); } // sub-builder en mundo: cae en el cerco
   });
 
   it("tres TI sobre escalerilla, con 6 polleras y cabeza redondeada", () => {
@@ -541,12 +685,16 @@ describe("subestación de intemperie (#215)", () => {
       { phase: 0, b: union(T1()) }, { phase: 2, b: union(T2()) },
     ];
     for (const a of units) for (const c of units) if (a.phase !== c.phase) expect(apartBox(a.b, c.b)).toBe(true);
+    for (const { b } of units) { // los sub-builders reciben y emiten mundo: cada unidad cae dentro del cerco
+      expect(b.min.x).toBeGreaterThanOrEqual(SUBSTATION.x0); expect(b.max.x).toBeLessThanOrEqual(SUBSTATION.x1);
+      expect(b.min.y).toBeGreaterThanOrEqual(SUBSTATION.y0 - 1e-9); expect(b.max.y).toBeLessThanOrEqual(SUBSTATION.y1 + 1e-9);
+    }
   });
 
   it("dos transformadores: cuba 6 × 4 × 4 a z 0.5 con placa, 18 aletas, conservador con caño y 3 pasatapas a 35° hacia el sur", () => {
     const solids = raised();
     const tanks = solids.filter((x): x is Solid & { kind: "prism" } => isPrism(x, 6, 4, 4, "steel"));
-    expect(tanks.map((t) => t.at)).toEqual(TRANSFORMERS_Y.map((y) => ({ x: 172, y, z: 0.5 })));
+    expect(tanks.map((t) => t.at)).toEqual(TRANSFORMERS_Y.map((y) => ({ x: SUBSTATION.x0 + 23, y, z: 0.5 })));
     for (const t of tanks) expect(t.plates).toEqual([expect.objectContaining({ shape: "rect", mat: "whitewash" })]);
     expect(fins(solids)).toHaveLength(18);
     expect(fins(T1())).toHaveLength(6); expect(fins(T2())).toHaveLength(12);
@@ -571,7 +719,7 @@ describe("subestación de intemperie (#215)", () => {
     expect(p1).toHaveLength(1); expect(p2).toHaveLength(1);
     const f1 = union(fins(T1())), f2 = fins(T2()).filter((x) => isPrism(x, 0.15, 1.6, 3)).map(bounds);
     expect(Math.min(...p1[0]!.pts.map((p) => p.y))).toBeGreaterThanOrEqual(f1.max.y);
-    expect(p1[0]!.pts.every((p) => near(p.x, 178))).toBe(true);
+    expect(p1[0]!.pts.every((p) => near(p.x, SUBSTATION.x0 + 29))).toBe(true);
     expect(Math.min(...p2[0]!.pts.map((p) => p.x))).toBeGreaterThanOrEqual(Math.max(...f2.map((b) => b.max.x)));
     expect(p2[0]!.pts.every((p) => near(p.y, TRANSFORMERS_Y[1] + 4))).toBe(true);
   });
@@ -581,7 +729,8 @@ describe("subestación de intemperie (#215)", () => {
     const wall = solids.filter((x) => isPrism(x, FIREWALL.w, FIREWALL.d, FIREWALL.h, "concrete"));
     expect(wall).toHaveLength(1);
     const wb = bounds(wall[0]!);
-    expect(wb).toMatchObject({ min: { x: 171.5, y: -54.3, z: 0 }, max: { x: 178.5, z: 5.5 } });
+    expect(wb.min.x).toBeCloseTo(FIREWALL.x); expect(wb.min.y).toBeCloseTo(FIREWALL.y); expect(wb.min.z).toBe(0);
+    expect(wb.max.x).toBeCloseTo(FIREWALL.x + FIREWALL.w); expect(wb.max.z).toBeCloseTo(FIREWALL.h);
     const tanks = solids.filter((x) => isPrism(x, 6, 4, 4, "steel"));
     for (const t of tanks) { expect(apartBox(wb, bounds(t))).toBe(true); expect(wb.max.z).toBeGreaterThan(bounds(t).max.z); }
     expect(solids.filter((x) => x.kind === "prism" && x.mat === "concrete" && near(x.h, 0.3) && near(x.at.z, 0))).toHaveLength(8);
@@ -595,7 +744,7 @@ describe("subestación de intemperie (#215)", () => {
     for (const b of d) { expect(b.mat).toBe("steel"); expect(near(b.w, 0.15)).toBe(true); expect(near(b.from.z, 9.425)).toBe(true); expect(b.to.z).toBeLessThan(9.425); }
     const tip = 4.5 + 2.5 * Math.sin((35 * Math.PI) / 180);
     expect(d.map((b) => Math.round(b.to.z * 1000) / 1000).sort()).toEqual([...Array(3).fill(4.5), ...Array(3).fill(5.65), ...Array(6).fill(Math.round(tip * 1000) / 1000)].sort()); // brazo, cabeza del TI, punta del pasatapas
-    for (const b of d.filter((x) => near(x.to.z, tip))) expect(near(b.from.y, b.to.y > -52 ? PHASES_Y[2] : PHASES_Y[1])).toBe(true); // T1 → −53.5, T2 → −50
+    for (const b of d.filter((x) => near(x.to.z, tip))) expect(near(b.from.y, b.to.y > TRANSFORMERS_Y[1] + 1 ? PHASES_Y[2] : PHASES_Y[1])).toBe(true); // T1 → PHASES_Y[1], T2 → PHASES_Y[2]
   });
 });
 

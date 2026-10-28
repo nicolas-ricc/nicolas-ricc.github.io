@@ -1,15 +1,34 @@
 import { v3, type Vec2 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
+import { translate } from "../iso/translate";
 import type { Material } from "../map/palette-iso";
 
 /**
- * Subestación de intemperie de la fábrica (Pont-l'Abbé + celosía de Davis Dam), dentro del cerco `x 149..190, y −60..−47`.
+ * Subestación de intemperie de la fábrica (Pont-l'Abbé + celosía de Davis Dam).
  * Spec: docs/superpowers/specs/2026-10-24-fabrica-detalle-design.md §9; plan: docs/plans/2026-10-24-215-subestacion.md.
+ *
+ * La geometría está dibujada en un marco local, el cerco `x 149..190, y −60..−47`, y se traslada con
+ * `SUBSTATION_SHIFT (−95, +58)` al lugar de hoy: `x 54..95, y −2..11`, contra el desvío (#244).
+ * Todo lo exportado está en coordenadas de mundo; el marco local es privado (`*_LOCAL` y los builders `*Local`).
  */
-export const SUBSTATION = { x0: 149, x1: 190, y0: -60, y1: -47 } as const;
-export const PHASES_Y = [-57, -53.5, -50] as const;
-export const TRANSFORMERS_Y = [-59, -53] as const; // y0 de cada cuba: T1 al norte, T2 al sur
-export const FIREWALL = { x: 171.5, y: -54.3, w: 7, d: 0.6, h: 5.5 } as const;
+export const SUBSTATION_SHIFT = { x: -95, y: 58 } as const;
+
+const SUBSTATION_LOCAL = { x0: 149, x1: 190, y0: -60, y1: -47 } as const;
+const PHASES_LOCAL = [-57, -53.5, -50] as const;
+const TRANSFORMERS_LOCAL = [-59, -53] as const; // y0 de cada cuba: T1 al norte, T2 al sur
+const FIREWALL_LOCAL = { x: 171.5, y: -54.3, w: 7, d: 0.6, h: 5.5 } as const;
+
+export const SUBSTATION = { x0: SUBSTATION_LOCAL.x0 + SUBSTATION_SHIFT.x, x1: SUBSTATION_LOCAL.x1 + SUBSTATION_SHIFT.x, y0: SUBSTATION_LOCAL.y0 + SUBSTATION_SHIFT.y, y1: SUBSTATION_LOCAL.y1 + SUBSTATION_SHIFT.y } as const;
+export const PHASES_Y: readonly [number, number, number] = [PHASES_LOCAL[0] + SUBSTATION_SHIFT.y, PHASES_LOCAL[1] + SUBSTATION_SHIFT.y, PHASES_LOCAL[2] + SUBSTATION_SHIFT.y];
+export const TRANSFORMERS_Y: readonly [number, number] = [TRANSFORMERS_LOCAL[0] + SUBSTATION_SHIFT.y, TRANSFORMERS_LOCAL[1] + SUBSTATION_SHIFT.y]; // y0 de cada cuba: T1 al norte, T2 al sur
+export const FIREWALL = { ...FIREWALL_LOCAL, x: FIREWALL_LOCAL.x + SUBSTATION_SHIFT.x, y: FIREWALL_LOCAL.y + SUBSTATION_SHIFT.y } as const;
+
+/** Arma con `build` en el marco local y empuja cada sólido trasladado a mundo. */
+const emit = (out: Solid[], build: (o: Solid[]) => void): void => {
+  const local: Solid[] = [];
+  build(local);
+  for (const s of local) out.push(translate(s, SUBSTATION_SHIFT.x, SUBSTATION_SHIFT.y));
+};
 
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material): Solid & { kind: "prism" } => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat });
 const strip = (path: Vec2[], width: number, z: number, mat: Material): Solid => ({ kind: "strip", path, width, z, mat });
@@ -24,7 +43,7 @@ const BUSHINGS_X = [173.5, 175, 176.5] as const;
 const bushingTip = (x: number, y0: number): [number, number, number] => [x, y0 + 2 + 2.5 * Math.cos(Math.PI * 35 / 180), 4.5 + 2.5 * Math.sin(Math.PI * 35 / 180)];
 
 /** Transformador de potencia: base, cuba con placa, aletas (este y, si `southBank`, sur), conservador con caño, 3 pasatapas y foso de 4 marcos. */
-export function powerTransformer(out: Solid[], y0: number, southBank: boolean): void {
+function powerTransformerLocal(out: Solid[], y0: number, southBank: boolean): void {
   out.push(prism(172.5, y0 + 0.5, 0, 5, 3, 0.5, "concrete")); // base
   out.push({ ...prism(172, y0, 0.5, 6, 4, 4, "steel"), plates: [southBank ? { wall: 2, shape: "rect", u0: 0.05, u1: 0.1833, z0: 2, z1: 2.6, mat: "whitewash" } : { wall: 1, shape: "rect", u0: 0.77, u1: 0.97, z0: 2, z1: 2.6, mat: "whitewash" }] }); // cuba + placa (T1 la lleva al este: el banco sur no cabe)
   for (let i = 0; i < 6; i++) {
@@ -40,7 +59,7 @@ export function powerTransformer(out: Solid[], y0: number, southBank: boolean): 
 }
 
 /** Pórtico de celosía en x: 2 columnas de 4 montantes con X por paño en las caras este y sur, viga Warren, puntas y mástiles. */
-export function latticePortal(out: Solid[], x: number): void {
+function latticePortalLocal(out: Solid[], x: number): void {
   for (const c of [-58.5, -48.5]) {
     for (const dx of [-0.5, 0.3]) for (const dy of [-0.5, 0.3]) out.push(prism(x + dx, c + dy, 0, 0.2, 0.2, 9, "steel")); // montantes
     for (const [z0, z1] of [[0.1, 2.5], [2.5, 5], [5, 7.5], [7.5, 9]] as const) {                                         // paños (el último de 1.5; el primero arranca en 0.1: la sección de la diagonal no baja de z 0)
@@ -54,9 +73,9 @@ export function latticePortal(out: Solid[], x: number): void {
   for (let i = 0; i < 8; i++) out.push(wire(x, -58 + (9 * i) / 8, 9 + (i % 2), x, -58 + (9 * (i + 1)) / 8, 9 + ((i + 1) % 2))); // zigzag Warren
 }
 
-/** Tres fases de 151.5 a 186.5 a z 9.5: cadena de 9 discos en cada anclaje y el conductor entre ellas (disjuntos en x, para `sortByDepth`). */
-export function phases(out: Solid[]): void {
-  for (const y of PHASES_Y) {
+/** Tres fases de 151.5 a 186.5 (marco local) a z 9.5: cadena de 9 discos en cada anclaje y el conductor entre ellas (disjuntos en x, para `sortByDepth`). */
+function phasesLocal(out: Solid[]): void {
+  for (const y of PHASES_LOCAL) {
     for (let i = 0; i < 9; i++) {
       const s = i % 2 ? 0.35 : 0.5, mat: Material = i % 2 ? "glass" : "whitewash";
       for (const x of [151.5 + 0.15 * i, 186.5 - 0.15 * (i + 1)]) out.push(beam([x, y, 9.5], [x + 0.15, y, 9.5], s, s, mat)); // disco
@@ -66,14 +85,14 @@ export function phases(out: Solid[]): void {
 }
 
 /** Seccionador de apertura central: bastidor, dos columnas de 6 polleras y brazo `signal`. */
-export function disconnector(out: Solid[], y: number): void {
+function disconnectorLocal(out: Solid[], y: number): void {
   out.push(prism(156.8, y - 0.3, 0, 2.4, 0.6, 2.5, "steel")); // bastidor
   for (const x of [157.1, 158.9]) skirts(out, x, y, 2.5);     // columnas
   out.push(beam([157.1, y, ARM_Z], [158.9, y, ARM_Z], 0.2, 0.2, "signal")); // brazo
 }
 
 /** Transformador de corriente: escalerilla de 4 patas, tapa, 6 polleras y cabeza redondeada. */
-export function currentTransformer(out: Solid[], y: number): void {
+function currentTransformerLocal(out: Solid[], y: number): void {
   for (const dx of [-0.4, 0.25]) for (const dy of [-0.4, 0.25]) out.push(prism(165 + dx, y + dy, 0, 0.15, 0.15, 2.5, "steel")); // patas
   out.push(prism(164.6, y - 0.4, 2.5, 0.8, 0.8, 0.15, "steel")); // tapa
   skirts(out, 165, y, 2.65);
@@ -82,13 +101,13 @@ export function currentTransformer(out: Solid[], y: number): void {
 }
 
 /** Puentes de seccionadores y TI al conductor (terminan en su panza, z 9.425). */
-export function droppers(out: Solid[]): void {
-  for (const y of PHASES_Y) out.push(wire(158, y, 9.425, 158, y, ARM_Z + 0.1), wire(165, y, 9.425, 165, y, CT_TOP_Z)); // seccionador (brazo) y TI (cabeza)
-  TRANSFORMERS_Y.forEach((y0, k) => { for (const x of BUSHINGS_X) { const t = bushingTip(x, y0); out.push(wire(x, PHASES_Y[k + 1]!, 9.425, t[0], t[1], t[2])); } }); // pasatapas → fase más cercana
+function droppersLocal(out: Solid[]): void {
+  for (const y of PHASES_LOCAL) out.push(wire(158, y, 9.425, 158, y, ARM_Z + 0.1), wire(165, y, 9.425, 165, y, CT_TOP_Z)); // seccionador (brazo) y TI (cabeza)
+  TRANSFORMERS_LOCAL.forEach((y0, k) => { for (const x of BUSHINGS_X) { const t = bushingTip(x, y0); out.push(wire(x, PHASES_LOCAL[k + 1]!, 9.425, t[0], t[1], t[2])); } }); // pasatapas → fase más cercana
 }
 
-/** Cerco: 13 postes, malla romboidal (X por paño) al sur y al este, y portón de dos hojas en x 168.5..171.5. */
-export function fence(out: Solid[]): void {
+/** Cerco: 13 postes, malla romboidal (X por paño) al sur y al este, y portón de dos hojas en x 168.5..171.5 (marco local). */
+function fenceLocal(out: Solid[]): void {
   const post = (x: number, y: number): Solid => prism(x, y, 0, 0.15, 0.15, 2.2, "steel");
   const xs: number[] = [];
   for (let i = 0; i <= 10; i++) if (i !== 5) xs.push(Math.min(149 + 4.1 * i, 189.85)); // i = 5 cae en el portón
@@ -107,17 +126,35 @@ export function fence(out: Solid[]): void {
   }
 }
 
+/** Transformador de potencia con `y0` (de la cuba) en mundo; ver `powerTransformerLocal`. */
+export const powerTransformer = (out: Solid[], y0: number, southBank: boolean): void => emit(out, (o) => powerTransformerLocal(o, y0 - SUBSTATION_SHIFT.y, southBank));
+/** Pórtico de celosía en `x` de mundo; ver `latticePortalLocal`. */
+export const latticePortal = (out: Solid[], x: number): void => emit(out, (o) => latticePortalLocal(o, x - SUBSTATION_SHIFT.x));
+/** Las tres fases en mundo, de `SUBSTATION.x0 + 2.5` a `SUBSTATION.x1 - 3.5`; ver `phasesLocal`. */
+export const phases = (out: Solid[]): void => emit(out, phasesLocal);
+/** Seccionador sobre la fase `y` de mundo; ver `disconnectorLocal`. */
+export const disconnector = (out: Solid[], y: number): void => emit(out, (o) => disconnectorLocal(o, y - SUBSTATION_SHIFT.y));
+/** Transformador de corriente sobre la fase `y` de mundo; ver `currentTransformerLocal`. */
+export const currentTransformer = (out: Solid[], y: number): void => emit(out, (o) => currentTransformerLocal(o, y - SUBSTATION_SHIFT.y));
+/** Puentes de seccionadores, TI y pasatapas a las fases, en mundo; ver `droppersLocal`. */
+export const droppers = (out: Solid[]): void => emit(out, droppersLocal);
+/** Cerco con malla y portón en mundo (x `SUBSTATION.x0 + 19.5`..`+ 22.5`, 73.5..76.5); ver `fenceLocal`. */
+export const fence = (out: Solid[]): void => emit(out, fenceLocal);
+
+/** Todo en el marco local y un solo traslado (los exportados ya trasladan: llamarlos acá correría la subestación dos veces). */
 export function substation(out: Solid[]): void {
-  out.push(strip([{ x: 149, y: -53.5 }, { x: 190, y: -53.5 }], 13, 0.03, "sand")); // patio de grava
-  out.push(strip([{ x: 149, y: -60 }, { x: 190, y: -60 }, { x: 190, y: -47 }, { x: 149, y: -47 }, { x: 149, y: -60 }], 0.3, 0.05, "concrete")); // cordón
-  for (const x of [151, 187]) latticePortal(out, x);
-  phases(out);
-  for (const y of PHASES_Y) disconnector(out, y);
-  for (const y of PHASES_Y) currentTransformer(out, y);
-  powerTransformer(out, TRANSFORMERS_Y[0], false);
-  powerTransformer(out, TRANSFORMERS_Y[1], true);
-  out.push(prism(FIREWALL.x, FIREWALL.y, 0, FIREWALL.w, FIREWALL.d, FIREWALL.h, "concrete")); // cortafuego
-  droppers(out);
-  out.push({ ...prism(182, -52, 0, 4, 3, 2.8, "whitewash"), facade: { floors: 1, cols: 2 }, plates: [{ wall: 2, shape: "rect", u0: 0.1, u1: 0.4, z0: 0, z1: 2.3, mat: "steel", toneOffset: -2 }] }); // caseta de control
-  fence(out);
+  emit(out, (o) => {
+    o.push(strip([{ x: 149, y: -53.5 }, { x: 190, y: -53.5 }], 13, 0.03, "sand")); // patio de grava
+    o.push(strip([{ x: 149, y: -60 }, { x: 190, y: -60 }, { x: 190, y: -47 }, { x: 149, y: -47 }, { x: 149, y: -60 }], 0.3, 0.05, "concrete")); // cordón
+    for (const x of [151, 187]) latticePortalLocal(o, x);
+    phasesLocal(o);
+    for (const y of PHASES_LOCAL) disconnectorLocal(o, y);
+    for (const y of PHASES_LOCAL) currentTransformerLocal(o, y);
+    powerTransformerLocal(o, TRANSFORMERS_LOCAL[0], false);
+    powerTransformerLocal(o, TRANSFORMERS_LOCAL[1], true);
+    o.push(prism(FIREWALL_LOCAL.x, FIREWALL_LOCAL.y, 0, FIREWALL_LOCAL.w, FIREWALL_LOCAL.d, FIREWALL_LOCAL.h, "concrete")); // cortafuego
+    droppersLocal(o);
+    o.push({ ...prism(182, -52, 0, 4, 3, 2.8, "whitewash"), facade: { floors: 1, cols: 2 }, plates: [{ wall: 2, shape: "rect", u0: 0.1, u1: 0.4, z0: 0, z1: 2.3, mat: "steel", toneOffset: -2 }] }); // caseta de control
+    fenceLocal(o);
+  });
 }

@@ -1,17 +1,20 @@
 import type { Accent } from "../iso/accent";
 import { v3, type Vec2, type Vec3 } from "../iso/geometry";
-import type { Solid } from "../iso/solids";
-import { BOTTOM, DOCK, MOUTH_Y, QUAY_W, QUAY_X, WORLD, eastBank } from "../map/geo";
+import { bounds, type Solid } from "../iso/solids";
+import { BOTTOM, DOCK, QUAY_W, QUAY_X, WORLD, eastBank, northCoastY } from "../map/geo";
 import type { Rng } from "../map/seed";
 import { jungle as flora } from "./flora";
+import { clearOfWater } from "./terrain-classify";
 
 
 /**
- * Portfolio: astillero en 2.5D. Mismo plano que terrain.ts: línea de
- * producción de oeste a este que termina en el agua (patio de material → nave
- * de montaje → grada → río), calle de transferencia N-S, ribera dragada recta
- * en QUAY_X, dique seco al NE, talleres y playa al SO, muelle de alistamiento
- * del otro lado del río. Coordenadas en unidades del mapa viejo (1 u ≈ 1 px).
+ * Portfolio: astillero en 2.5D. Mismo plano que terrain.ts: gradas al este de
+ * la calle de transferencia N-S, que terminan en el agua; ribera dragada
+ * recta en QUAY_X, dique seco al NE, playa al SO, muelle de alistamiento del
+ * otro lado del río. Las naves de montaje, los talleres y el patio de
+ * material van al norte, detrás de la fábrica, en la banda `y −58..−16`; la
+ * fábrica de Portfolio queda entre la calle y la playa de vías. Coordenadas
+ * en unidades del mapa viejo (1 u ≈ 1 px).
  */
 
 export interface Scene {
@@ -29,7 +32,8 @@ const STREET_X = 100, STREET_W = 8;
 export const STREET_EDGE = STREET_X + STREET_W; // x donde empiezan los faroles
 const ROW_Y = [36, 56] as const;
 const ROW_H = 16;
-const HALL_X = 8, HALL_W = 90, HALL_H = 10;
+const HALL_X = 10, HALL_W = 90, HALL_H = 10;
+const HALL_ROWS_Y = [-52, -32] as const; // naves de montaje, en la banda norte
 const SLIP_X = 110;
 export const RAIL_Y = [131, 134] as const; // vías del oeste; el hinterland las prolonga hacia el oeste hasta el borde del sangrado
 const GANTRY_X = 150, GANTRY_H = 24;
@@ -48,26 +52,16 @@ function quay(out: Solid[]): void {
 }
 
 function halls(out: Solid[]): void {
-  for (const y of ROW_Y) {
+  for (const y of HALL_ROWS_Y) {
     out.push(prism(HALL_X, y, 0, HALL_W, ROW_H, HALL_H, "concrete", "gable"));
     out.push(prism(HALL_X + HALL_W - 8, y + 2, 0, 2, 3, 2, "rust"));   // autoelevador esperando en el portón este
     out.push(prism(HALL_X + 2, y + ROW_H - 5, 0, 3, 2, 2, "steel"));   // otro en el portón oeste
   }
 }
 
-const SPUR_Y = 32; // ramal que entra al patio de material, entre el patio y la primera nave
-
 function street(out: Solid[]): void {
   out.push(strip([{ x: STREET_X + STREET_W / 2, y: 0 }, { x: STREET_X + STREET_W / 2, y: BOTTOM }], STREET_W, -0.4, "road"));
-  for (const y of ROW_Y) for (const dy of [4, 11]) {
-    out.push(strip([{ x: HALL_X + HALL_W, y: y + dy }, { x: SLIP_X, y: y + dy }], 0.5, 0.05, "rail")); // rieles nave → grada
-  }
-  // ramal ferroviario embebido en la calle: viene de las vías del sur y dobla al patio de material
-  for (const dx of [1, 4]) out.push(strip([{ x: STREET_X + dx, y: RAIL_Y[0] }, { x: STREET_X + dx, y: SPUR_Y - 1.5 }], 0.5, -0.35, "rail"));
-  for (const dy of [-1.5, 1.5]) out.push(strip([{ x: HALL_X + 2, y: SPUR_Y + dy }, { x: STREET_X + 4, y: SPUR_Y + dy }], 0.5, 0.05, "rail"));
-  out.push(prism(STREET_X + 0.3, 60, -0.4, 4.4, 8, 3, "rust"));   // vagón plataforma en el ramal
-  out.push(prism(STREET_X + 0.3, 69, -0.4, 4.4, 8, 3, "steel"));
-  out.push(prism(STREET_X + 5, 88, -0.4, 3, 7, 2.5, "rust"));     // camión bajando hacia los talleres
+  out.push(prism(STREET_X + 5, 88, -0.4, 3, 7, 2.5, "rust"));     // camión bajando por la calle
 }
 
 function slipways(out: Solid[], weldSpots: Vec3[]): void {
@@ -108,20 +102,20 @@ function gantry(out: Solid[]): { trolley: Solid & { kind: "prism" }; range: [num
   return { trolley, range };
 }
 
-// ---------------------------------------------------------------- patio de material (NO)
+// ---------------------------------------------------------------- patio de material (banda norte)
 
 function materialYard(out: Solid[], rng: Rng): void {
-  for (const [x, y] of [[10, 6], [24, 6], [10, 14], [24, 14], [38, 8]] as const) { // chapas apiladas con desfase
+  for (const [x, y] of [[104, -58], [118, -58], [104, -50], [118, -50], [132, -56]] as const) { // chapas apiladas con desfase
     const layers = rng.int(2, 4);
     for (let l = 0; l < layers; l++) out.push(prism(x + l * 0.4, y + l * 0.4, l * 0.5, 10, 2, 0.5, "steel"));
   }
-  for (const [x, y] of [[10, 22], [28, 22], [46, 20]] as const) { // mazos de caños
+  for (const [x, y] of [[104, -42], [122, -42], [140, -44]] as const) { // mazos de caños
     for (let i = 0; i < 4; i++) out.push(prism(x, y + i * 1.2, 0, 14, 1, 1, "rust"));
   }
-  for (let i = 0; i < 6; i++) out.push({ kind: "cylinder", at: v3(55 + (i % 3) * 5, 7 + Math.floor(i / 3) * 5, 0), r: 1.5, h: 1.5, mat: "rust", sides: 8 }); // bobinas
-  for (let i = 0; i < 4; i++) out.push(prism(56 + (i % 2) * 12, 18 + Math.floor(i / 2) * 6, 0, 9, 4, 3, "steel", "step")); // secciones de casco
-  out.push({ kind: "cylinder", at: v3(80, 10, 0), r: 5, h: 8, mat: "concrete" });
-  out.push({ kind: "cylinder", at: v3(92, 22, 0), r: 4, h: 6, mat: "concrete" });
+  for (let i = 0; i < 6; i++) out.push({ kind: "cylinder", at: v3(149 + (i % 3) * 5, -57 + Math.floor(i / 3) * 5, 0), r: 1.5, h: 1.5, mat: "rust", sides: 8 }); // bobinas
+  for (let i = 0; i < 4; i++) out.push(prism(150 + (i % 2) * 12, -46 + Math.floor(i / 2) * 6, 0, 9, 4, 3, "steel", "step")); // secciones de casco
+  out.push({ kind: "cylinder", at: v3(174, -54, 0), r: 5, h: 8, mat: "concrete" });
+  out.push({ kind: "cylinder", at: v3(186, -42, 0), r: 4, h: 6, mat: "concrete" });
 }
 
 // ---------------------------------------------------------------- dique seco (NE)
@@ -143,14 +137,19 @@ function dryDock(out: Solid[], ground: Solid[]): void {
   out.push(prism(x + w - 10, 0, 0, 8, 4, 4, "concrete", "step"));       // casa de bombas (x 182..190, no pisa el muelle en 198..202)
 }
 
-// ---------------------------------------------------------------- talleres, playa, vías (SO)
+// ---------------------------------------------------------------- talleres (banda norte)
 
-function workshops(out: Solid[], rng: Rng): void {
-  for (const x of [46, 74]) {
-    out.push(prism(x, 80, 0, 24, 14, 7, "concrete", "step"));
-    out.push(prism(x + 3, 83, 7, 2, 2, 1, "steel"));
-    out.push(prism(x + 18, 90, 7, 2, 2, 1, "steel"));
+function workshops(out: Solid[]): void {
+  for (const x of [106, 134]) {
+    out.push(prism(x, -33, 0, 24, 14, 7, "concrete", "step"));
+    out.push(prism(x + 3, -30, 7, 2, 2, 1, "steel"));
+    out.push(prism(x + 18, -23, 7, 2, 2, 1, "steel"));
   }
+}
+
+// ---------------------------------------------------------------- playa, prefabricados, vías (SO)
+
+function parkingAndRails(out: Solid[], rng: Rng): void {
   out.push(strip([{ x: 46, y: 113 }, { x: 98, y: 113 }], 26, -0.4, "road")); // playa
   for (let x = 48; x < 98; x += 4) out.push(strip([{ x, y: 102 }, { x, y: 106 }], 0.4, -0.3, "rail")); // líneas
   for (let i = 0; i < 5; i++) {
@@ -161,7 +160,7 @@ function workshops(out: Solid[], rng: Rng): void {
     if (!rng.chance(0.8)) continue;
     out.push(prism(112 + (i % 4) * 12, 82 + Math.floor(i / 4) * 8, 0, 9, 5, 3, "steel"));
   }
-  for (const y of RAIL_Y) out.push(strip([{ x: 0, y }, { x: STREET_X + 4, y }], 0.5, 0.05, "rail")); // vías del oeste, hasta el ramal
+  for (const y of RAIL_Y) out.push(strip([{ x: 0, y }, { x: STREET_X + 4, y }], 0.5, 0.05, "rail")); // vías del oeste
   for (let x = 2; x < STREET_X; x += 4) out.push(prism(x, RAIL_Y[0] - 1, 0, 1, 5, 0.3, "rust")); // durmientes
 }
 
@@ -204,13 +203,26 @@ function fittingOut(out: Solid[], rng: Rng): void {
   for (const x of [304, 316]) out.push(prism(x, 24, 0, 8, 92, 6, "concrete", "gable"));
   out.push({ kind: "cylinder", at: v3(310, 122, 0), r: 4, h: 6, mat: "concrete" });
   for (let i = 0; i < 6; i++) out.push(prism(302 + rng.int(0, 24), 130 + rng.int(0, 10), 0, 3, 2, 1, "rust")); // chatarra
-  for (let y = MOUTH_Y + 1; y < AREA_H; y += 3) out.push({ kind: "cone", at: v3(eastBank(y) + 1.5, y, 0), r: 1.6, h: 1.2, mat: "rock", sides: 5 }); // escollera
+  const rock = (x: number, y: number): Solid => ({ kind: "cone", at: v3(x, y, 0), r: 1.6, h: 1.2, mat: "rock", sides: 5 });
+  for (let y = 0; y < AREA_H; y += 3) { // escollera del río: solo donde ya hay tierra
+    const x = eastBank(y) + 1.5;
+    if (y >= northCoastY(x)) out.push(rock(x, y));
+  }
+  for (let x = Math.ceil(eastBank(30)) + 6; x < 300; x += 3) out.push(rock(x, northCoastY(x) + 1.5)); // escollera de la caleta; arranca 6 u al este de la ribera (eastBank(30) = 277) para no pisar el último cono del río
 }
 
 // ---------------------------------------------------------------- selva y faroles
 
 function jungle(out: Solid[], rng: Rng): void {
-  const cluster = (x0: number, x1: number, y0: number, y1: number, n: number) => flora(out, rng, { x0, x1, y0, y1 }, n);
+  // siembra igual (el rng no se mueve) y descarta lo que queda a menos de 3 u del agua
+  const cluster = (x0: number, x1: number, y0: number, y1: number, n: number) => {
+    const tmp: Solid[] = [];
+    flora(tmp, rng, { x0, x1, y0, y1 }, n);
+    for (const s of tmp) {
+      const b = bounds(s);
+      if (clearOfWater(b.min.x, b.min.y, b.max.x, b.max.y, 3)) out.push(s);
+    }
+  };
   cluster(3, 39, 102, 125, 10);   // SO, al norte de las vías (r ≤ 4: nunca las pisa)
   cluster(3, 39, 139, 143, 4);    // SO, al sur de las vías
   cluster(332, 340, 50, 94, 6);   // borde este, entre la bahía y la punta (y0 50, Task 6: deja fuera del alcance diagonal del carguero que sale de la bahía)
@@ -237,7 +249,8 @@ export function shipyard(rng: Rng): Scene {
   street(solids);
   slipways(solids, weldSpots);
   const g = gantry(solids);
-  workshops(solids, rng);
+  workshops(solids);
+  parkingAndRails(solids, rng);
   factory(solids, accents);
   fittingOut(solids, rng);
   jungle(solids, rng);
