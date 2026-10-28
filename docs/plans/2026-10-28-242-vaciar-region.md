@@ -46,7 +46,7 @@
 - Produces: `shipyard(rng): Scene` con la misma firma. Función privada nueva `parkingAndRails(out: Solid[], rng: Rng): void`.
 
 - [ ] **Step 1: Tests (ya escritos, fallando)**
-  - "hay naves a dos aguas…" → "hay galpones a dos aguas en alistamiento, gradas…": gable con `at.x > 300` exactamente 2 y ningún gable con `at.x ≤ 300`; resto igual.
+  - "hay naves a dos aguas…" → "hay galpones a dos aguas en alistamiento, gradas…": gable con `at.x > 300` exactamente 2 (la nave de pintura, x 112 y 126, sigue a dos aguas fuera de la región); resto igual.
   - Se borra "patio de material: tanques cilíndricos y pilas apiladas".
   - "talleres con techo escalonado…" → "autos en la playa": solo `cars ≥ 3`.
   - Nuevo "la región nueva (x 4..99, y −4..99) queda vacía salvo conos de selva": para todo `s` de `solids` con `kind !== "cone"`, `!(min.x < 99 && max.x > 4 && min.y < 99 && max.y > −4)`.
