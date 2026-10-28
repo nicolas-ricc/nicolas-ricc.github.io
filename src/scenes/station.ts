@@ -44,8 +44,8 @@ function tracks(out: Solid[]): void {
     // vía 3 desde x 110 hasta 158; las otras dos, a 2 u del arranque del recto
     const first = i === 2 ? 110 : x0 + 2;
     for (let x = first; x < BUFFER_X - 1; x += 4) out.push(prism(x, axis - 2.5, 0, 1, 5, 0.3, "rust"));
-    const x3 = Math.max(x0, CROSSING.x1);
-    out.push(strip([{ x: x3, y: axis + 2.1 }, { x: BUFFER_X, y: axis + 2.1 }], 0.3, 0.05, "whitewash"));
+    const thirdX0 = Math.max(x0, CROSSING.x1);
+    out.push(strip([{ x: thirdX0, y: axis + 2.1 }, { x: BUFFER_X, y: axis + 2.1 }], 0.3, 0.05, "whitewash"));
   });
 }
 
