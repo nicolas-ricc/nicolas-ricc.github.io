@@ -15,6 +15,7 @@
  * cielo: más clara y apenas más cálida, sigue siendo agua). El sol no se refleja en la cara del
  * agua sino en `glint` (coral del atardecer, regla de ciudad/costa), que solo pintan los destellos
  * chicos de `water-anim.ts`. `hullBlue` sigue la regla de ciudad/costa.
+ * De la estación terminal: `tile` sigue la regla de los ocres de la fábrica; `canopy` y `livery`, la de ciudad/costa.
  * Crepúsculo tardío: los tonos de arriba, `sky` y `shadow` son los de `palette-base.ts` × 0.7
  * por canal (`DARKEN`); los acentos no se oscurecen, así los neones destacan sobre la escena.
  * Para ajustar, editar la base y correr `npm run palette`, que imprime los literales a pegar acá.
@@ -59,6 +60,10 @@ export const ISO_TONES = {
   signal:    { top: 0x86281e, lit: 0x6e1d13, shade: 0x361112, up: 0x9c2d1f, down: 0x73231c },
   stockbrick:{ top: 0x8d764a, lit: 0x73572e, shade: 0x38322d, up: 0xa3844c, down: 0x796846 },
   safety:    { top: 0x987420, lit: 0x7d5614, shade: 0x3d3114, up: 0xb08221, down: 0x83661e },
+  // estación terminal (#239)
+  tile:      { top: 0x7f432a, lit: 0x693318, shade: 0x331e22, up: 0x974e2b, down: 0x6b3b2b }, // estación: teja terracota de los techos
+  canopy:    { top: 0x2c4b34, lit: 0x243720, shade: 0x121f1f, up: 0x335435, down: 0x264231 }, // estación: chapa verde de las marquesinas
+  livery:    { top: 0x193d81, lit: 0x152d50, shade: 0x0a1a4d, up: 0x1d4484, down: 0x163679 }, // tren: azul cobalto de la librea
 } as const;
 
 export const ISO_COLORS = {
