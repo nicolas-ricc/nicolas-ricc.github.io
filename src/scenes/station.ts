@@ -217,9 +217,20 @@ function tower(out: Solid[], _accents: Accent[]): void {
   out.push(prism(TOWER.x, TOWER.y, 0, TOWER.w, TOWER.d, TOWER.h, "stone"));
 }
 
-/** Losa de la explanada; faroles, palmeras y baranda llegan después. */
-function esplanade(out: Solid[], _accents: Accent[]): void {
+/** Explanada: losa, dos faroles altos, tres palmeras y baranda al este. */
+function esplanade(out: Solid[], accents: Accent[]): void {
   out.push(prism(ESPLANADE.x0, ESPLANADE.y0, 0, ESPLANADE.x1 - ESPLANADE.x0, ESPLANADE.y1 - ESPLANADE.y0, 0.15, "paving"));
+  // faroles: la coordenada es el centro del poste
+  for (const y of [102, 130]) {
+    out.push(prism(195.2, y - 0.3, 0.15, 0.6, 0.6, 6, "steel"));
+    accents.push({ kind: "dot", at: v3(195.5, y, 6.15), r: 1.2, color: "cyan" });
+  }
+  // palmeras: la central en 195.6 para que la copa no cruce el cartel (A6)
+  for (const [x, y] of [[195.5, 108], [195.6, 116.5], [195.5, 125]] as const) {
+    out.push({ kind: "cylinder", at: v3(x, y, 0.15), r: 0.25, h: 6, mat: "deck", sides: 6 });
+    out.push({ kind: "cone", at: v3(x, y, 6.15), r: 1.8, h: 1.6, mat: "leaf" });
+  }
+  out.push(prism(197, ESPLANADE.y0, 0, 0.3, ESPLANADE.y1 - ESPLANADE.y0, 1, "canopy")); // baranda
 }
 
 /** Edificio de pasajeros, torre del reloj y explanada. Determinista, sin rng. */
