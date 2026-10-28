@@ -1,7 +1,11 @@
+import type { Accent } from "../iso/accent";
+import type { Solid } from "../iso/solids";
+import { v3 } from "../iso/geometry";
 import { WEST_RAIL_X0 } from "./hinterland";
+import { flip } from "./neon";
 import { STREET_EDGE } from "./shipyard";
 import { CROSSING, SIGNALS, STOP_X, TRACKS_Y } from "./station";
-import { trainLen } from "./train";
+import { emu, trainLen } from "./train";
 
 /**
  * Estación animada, sin Pixi: el EMU de cuatro coches entra por el oeste por la vía 3, frena y
@@ -94,3 +98,60 @@ export function signalAspects(s: TrainState, msInPhase: number): { in: Aspect; o
   return { in: inGreen ? "green" : "red", out: outGreen ? "green" : "red" };
 }
 
+export interface RailChanges { train: boolean; crossing: boolean; signals: boolean }
+export interface RailAnim {
+  train(): { solids: Solid[]; lights: Accent[]; alpha: number };
+  crossing(): Accent[];
+  signals(): Accent[];
+  state(): TrainState;
+  tick(dtMs: number): RailChanges;
+}
+
+const CROSSING_R_DOT = 0.45, SIGNAL_R_DOT = 0.4;
+
+export function createRailAnim(opts: { reducedMotion: boolean }): RailAnim {
+  // sin movimiento el tren queda parado en la estación, con el salón encendido (`dwell` desde su inicio)
+  let ms = opts.reducedMotion ? phaseStart("dwell") : 0, first = true;
+  let s = trainStateAt(ms);
+  const inPhase = (): number => ms - phaseStart(s.phase);
+  const active = (): boolean => crossingActive(s, inPhase());
+  const aspects = () => signalAspects(s, inPhase());
+  const blinkStep = (): number => Math.floor(ms / BLINK_MS);
+
+  // memo de una sola ranura: en `dwell`, `off` y entre cuadros iguales no se reteselan los coches
+  let memo: { x0: number; lead: "e" | "w"; solids: Solid[]; lights: Accent[] } | null = null;
+  const built = () => {
+    if (!memo || memo.x0 !== s.x0 || memo.lead !== s.lead) memo = { x0: s.x0, lead: s.lead, ...emu(s.x0, TRACK_Y, { cars: 4, lead: s.lead, lit: true }) };
+    return memo;
+  };
+
+  return {
+    train: () => { const b = built(); return { solids: b.solids, lights: b.lights, alpha: s.alpha }; },
+    crossing: () => {
+      if (!active()) return [];
+      const step = blinkStep();
+      // una sola luz por poste, alternando de lado: nunca están las dos encendidas
+      return [CROSSING.north, CROSSING.south].map((p): Accent => ({ kind: "dot", at: v3(p.x + 0.15, p.y + 0.15 + flip(step, -0.5, 0.5), p.h - 0.4), r: CROSSING_R_DOT, color: "magenta" }));
+    },
+    signals: () => {
+      const a = aspects();
+      return [[SIGNALS.in, a.in], [SIGNALS.out, a.out]].map(([p, asp]): Accent => {
+        const pos = p as typeof SIGNALS.in, red = asp === "red";
+        return { kind: "dot", at: v3(pos.x + 0.25, pos.y + 0.25, red ? 4.4 : 3.9), r: SIGNAL_R_DOT, color: red ? "magenta" : "cyanMid" };
+      });
+    },
+    state: () => s,
+    tick(dtMs) {
+      if (opts.reducedMotion || dtMs <= 0) return { train: false, crossing: false, signals: false };
+      const all = first; first = false;
+      const prev = s, wasActive = active(), prevStep = blinkStep(), prevAsp = aspects();
+      ms = (ms + dtMs) % CYCLE_MS; s = trainStateAt(ms);
+      const asp = aspects(), nowActive = active();
+      return {
+        train: all || s.x0 !== prev.x0 || s.lead !== prev.lead || s.alpha !== prev.alpha,
+        crossing: all || nowActive !== wasActive || (nowActive && blinkStep() !== prevStep),
+        signals: all || asp.in !== prevAsp.in || asp.out !== prevAsp.out,
+      };
+    },
+  };
+}
