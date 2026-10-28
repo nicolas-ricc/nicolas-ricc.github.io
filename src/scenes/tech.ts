@@ -5,44 +5,38 @@ import type { Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { WORLD, ZONE_SPLIT_Y } from "../map/geo";
-import { BLOCK_W, BOULEVARD, CITY_EDGE, SIDEWALK, WEST_QUAY } from "./city-grid";
-import { PLINTH_H, brokenTone, campus, lamp, plazaTone, prism, tiles } from "./city-pieces";
+import { BLOCK_W, BOULEVARD, CITY_EDGE, SIDEWALK } from "./city-grid";
+import { PLINTH_H, brokenTone, campus, lamp, prism, tiles } from "./city-pieces";
 import { jungle } from "./flora";
-import { GREEN_BELT, REACH, SUBURB_COLS, suburbBlocks, type SprawlBlock } from "./sprawl-grid";
-import { ARENA, AUDITORIUM, TELECOM, TOWER_D } from "./tech-zoning";
+import { GREEN_BELT, SUBURB_COLS, suburbBlocks, type SprawlBlock } from "./sprawl-grid";
+import type { BarrioCtx, HomeWindow } from "./barrio";
+import { casas } from "./barrio-casas";
+import { club } from "./barrio-club";
+import { escuela } from "./barrio-escuela";
+import { monoblock } from "./barrio-monoblock";
+import { plaza } from "./barrio-plaza";
+import { costanera } from "./costanera";
+import { ARENA, AUDITORIUM, TELECOM, TOWER_D, zoneKinds } from "./tech-zoning";
 
 /**
  * Distrito tecnológico de Resume: la ciudad sigue hacia el oeste y el sur del
  * distrito sobre la misma grilla, como un parque de oficinas y campus: torres
- * de muro cortina cerca del contenido, campus de startups después, naves de
- * laboratorio y centros de datos con paneles solares al final. Tres hitos:
- * torre de telecomunicaciones, arena, auditorio. Todo edificio tiene fachada.
+ * de muro cortina cerca del contenido, monoblocks y campus de startups después
+ * y, al sur, un barrio residencial costero (monoblocks, casas, escuela, club,
+ * plazas y costanera). Tres hitos: torre de telecomunicaciones, arena, auditorio. Todo edificio tiene fachada.
  * Solo existe con el mundo entero (vive sobre el sangrado).
- * Spec: docs/superpowers/specs/2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md §3.
+ * Spec: docs/superpowers/specs/2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md §3
+ * y docs/superpowers/specs/2026-10-27-barrio-costero-design.md.
  */
 export interface Tower { box: Solid & { kind: "prism" }; facade: Facade }
-export interface TechScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; towers: Tower[]; signs: Accent[]; telecom: Vec3; neon: { crowns: Accent[]; mastRing: Vec3[] } }
+export interface TechScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; towers: Tower[]; signs: Accent[]; telecom: Vec3; neon: { crowns: Accent[]; mastRing: Vec3[] }; homes: HomeWindow[] }
 
 export { ARENA, AUDITORIUM, TELECOM, TOWER_D };
-export const CAMPUS_D = 160;
 export const MAX_TECH_H = 20;
-export const TECH_MATS: readonly Material[] = ["office", "officeDark", "glass", "curtain", "paving", "plaza", "stone", "copper", "concrete", "leaf", "leafDark", "steel", "rust"];
+export const TECH_MATS: readonly Material[] = ["office", "officeDark", "glass", "curtain", "paving", "plaza", "stone", "copper", "concrete", "leaf", "leafDark", "steel", "rust", "tile", "brick", "whitewash", "signal", "safety", "hullBlue", "sand"];
 const CURTAIN_WINDOW = { w: 0.85, h: 0.8 } as const;
-const LAB_FACADE: Facade = { floors: 1, cols: 1, base: "glass" };
-
-type Kind = "tower" | "campus" | "atrium" | "lab" | "park" | "telecom" | "arena" | "auditorium";
 
 const strip = (path: Vec2[], width: number, z: number, mat: Material): Solid => ({ kind: "strip", path, width, z, mat });
-
-function pickKind(rng: Rng, b: SprawlBlock): Kind {
-  if (b.x === TELECOM.x && b.y === TELECOM.y) return "telecom";
-  if (b.x === ARENA.x && b.y === ARENA.y) return "arena";
-  if (b.x === AUDITORIUM.x && b.y === AUDITORIUM.y) return "auditorium";
-  if (rng.chance(0.12)) return "park";
-  if (b.dist < TOWER_D) return "tower";
-  if (b.dist < CAMPUS_D) return rng.chance(0.5) ? "campus" : "atrium";
-  return "lab";
-}
 
 /** Cartel luminoso: caja oscura con un poly ámbar en su cara sur. Devuelve el acento para animarlo. */
 function sign(out: Solid[], x: number, y: number, z: number, w: number, h: number): Accent {
@@ -81,29 +75,6 @@ function tower(out: Solid[], accents: Accent[], signs: Accent[], crowns: Accent[
   crowns.push(crown(k, tx, ty + td + 0.02, z - 0.3, tw));
   if (h >= 18) accents.push({ kind: "dot", at: v3(tx + tw, ty, z + 0.5), r: 0.5, color: "amberMid" });
   if (rng.chance(0.5)) lamp(out, accents, b.x + b.w - 1, b.y - 1.5, 0);
-}
-
-/** Atrio: dos losas de muro cortina unidas por un atrio de vidrio más bajo, sobre una plaza de baldosas con cartel de pie. */
-function atrium(out: Solid[], ground: Solid[], signs: Accent[], rng: Rng, b: SprawlBlock): void {
-  ground.push(tiles(rng, b, 0.05, "plaza", plazaTone));
-  const ix = b.x + SIDEWALK + 0.5, iy = b.y + SIDEWALK, h = rng.int(6, 9);
-  const facade: Facade = { floors: Math.max(2, Math.round(h / 3)), cols: 3, window: CURTAIN_WINDOW, base: "glass" };
-  out.push(prism(ix, iy, 0.05, 9, 13, PLINTH_H, "paving"), prism(ix + 12, iy, 0.05, 9, 13, PLINTH_H, "paving"));
-  out.push(prism(ix, iy, PLINTH_H, 9, 13, h, "curtain", { facade }), prism(ix + 12, iy, PLINTH_H, 9, 13, h, "curtain", { facade }));
-  out.push(prism(ix + 9, iy + 1, PLINTH_H, 3, 11, 4, "glass", { facade: { floors: 1, cols: 1, base: "glass" } }));
-  for (const [dx, dy] of [[2, 15], [19, 15], [8, 16], [13, 16]] as const) out.push({ kind: "cone", at: v3(b.x + dx, b.y + dy, 0.05), r: 1.1, h: 2.5, mat: "leaf" });
-  out.push(prism(b.x + b.w - 5, b.y + b.d - 3, 0.05, 0.4, 0.4, 2, "officeDark"));
-  signs.push(sign(out, b.x + b.w - 6.3, b.y + b.d - 3, 2.05, 3, 1.2)); // cartel de pie
-}
-
-/** Nave de laboratorio o centro de datos: banda de vidrio por pared, equipos en el techo, campo solar y estacionamiento. */
-function lab(out: Solid[], rng: Rng, b: SprawlBlock): void {
-  out.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
-  const ix = b.x + SIDEWALK, iy = b.y + SIDEWALK;
-  out.push(prism(ix, iy, PLINTH_H, 20, 13, 5, "officeDark", { facade: LAB_FACADE }));
-  for (let k = 0, n = rng.int(4, 6); k < n; k++) out.push(prism(ix + 1 + k * 3.5, iy + 2 + (k % 2) * 6, PLINTH_H + 5, 1.5, 1.5, 1, "steel"));
-  for (let x = ix; x + 3 <= ix + 20; x += 6) for (let y = iy + 13.4; y + 1.6 <= b.y + b.d - SIDEWALK; y += 2.2) out.push({ kind: "ramp", at: v3(x, y, PLINTH_H), w: 3, d: 1.6, h: 0.5, mat: "glass", dir: "s" });
-  for (let k = 0, n = rng.int(6, 8); k < n; k++) out.push(prism(b.x + 1 + k * 3, b.y + b.d + 0.3, 0, 2.2, 1.4, 1.2, rng.chance(0.5) ? "steel" : "rust")); // autos en el cordón sur
 }
 
 /** Plaza de barrio: suelo de selva facetado, senderos en cruz y conos. */
@@ -159,30 +130,27 @@ function avenue(ground: Solid[], solids: Solid[], accents: Accent[]): void {
   }
 }
 
-/** El muro de la ribera oeste sigue al sur del distrito hasta donde llega el distrito tecnológico. */
-function quay(solids: Solid[]): void {
-  const { x0, x1 } = WEST_QUAY;
-  solids.push(prism(x0, CITY_EDGE.south, -1, x1 - x0, WORLD.y1 + REACH.s - CITY_EDGE.south, 1.6, "plaza"));
-  for (let y = CITY_EDGE.south + 8; y < WORLD.y1 + REACH.s; y += 24) solids.push({ kind: "cylinder", at: v3(x0 + 3, y, 0.6), r: 0.4, h: 0.8, mat: "rust", sides: 6 });
-}
-
 export function tech(rng: Rng): TechScene {
-  const ground: Solid[] = [], solids: Solid[] = [], accents: Accent[] = [], towers: Tower[] = [], signs: Accent[] = [], crowns: Accent[] = [];
+  const ground: Solid[] = [], solids: Solid[] = [], accents: Accent[] = [], towers: Tower[] = [], signs: Accent[] = [], crowns: Accent[] = [], homes: HomeWindow[] = [];
+  const blocks = suburbBlocks(), kinds = zoneKinds(rng, blocks), ctx: BarrioCtx = { solids, ground, accents, homes, rng };
   let telecomTop = v3(TELECOM.x, TELECOM.y, 0);
-  for (const b of suburbBlocks()) {
-    switch (pickKind(rng, b)) {
+  blocks.forEach((b, i) => {
+    switch (kinds[i]) {
       case "tower": tower(solids, accents, signs, crowns, towers, rng, b); break;
       case "campus": { const ix = b.x + SIDEWALK, iy = b.y + SIDEWALK; campus(solids, ground, accents, rng, b, ix, iy, b.w - 2 * SIDEWALK, b.d - 2 * SIDEWALK); break; }
-      case "atrium": atrium(solids, ground, signs, rng, b); break;
-      case "lab": lab(solids, rng, b); break;
+      case "monoblock": monoblock(ctx, b); break;
+      case "casas": casas(ctx, b); break;
+      case "escuela": escuela(ctx, b); break;
+      case "club": club(ctx, b); break;
+      case "plaza": plaza(ctx, b); break;
       case "park": park(solids, ground, rng, b); break;
       case "telecom": telecomTop = telecom(solids, b); break;
       case "arena": arena(solids, accents, b); break;
       case "auditorium": auditorium(solids, signs, b); break;
     }
-  }
+  });
   avenue(ground, solids, accents);
-  quay(solids);
-  jungle(solids, rng, { x0: -238, x1: WORLD.x0 - 2, y0: ZONE_SPLIT_Y + 2, y1: GREEN_BELT.y1 - 2 }, 2);
-  return { ground, solids, accents, towers, signs, telecom: telecomTop, neon: { crowns, mastRing: [3, 6, 9].map((dz) => v3(telecomTop.x, telecomTop.y + 0.6, telecomTop.z - dz)) } };
+  costanera(ctx);
+  jungle(solids, rng, { x0: -238, x1: WORLD.x0 - 2, y0: ZONE_SPLIT_Y + 5, y1: GREEN_BELT.y1 - 2 }, 2); // +5: el radio máximo de cono (4) no cruza el corte de zona
+  return { ground, solids, accents, towers, signs, homes, telecom: telecomTop, neon: { crowns, mastRing: [3, 6, 9].map((dz) => v3(telecomTop.x, telecomTop.y + 0.6, telecomTop.z - dz)) } };
 }
