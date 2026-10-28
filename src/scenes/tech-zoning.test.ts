@@ -11,7 +11,7 @@ const blocks = suburbBlocks();
 const world = () => zoneKinds(zoneRng(SEED, "cv", 2), blocks);
 const at = (p: { x: number; y: number }) => blocks.findIndex((b) => b.x === p.x && b.y === p.y);
 // Desvío (#249): las filas 242 y 272 de la ciudad (`ROWS`, 30 de paso) caen en la misma paridad de `blockParity`, pensada
-// para las filas cada 24 del sur; al oeste del contenido el damero no las separa. Es el único par así (fuera del barrio).
+// para las filas cada 24 del sur; al oeste del contenido el damero no las separa. Es el único par de filas así (fuera del barrio).
 const SAME_PARITY_ROWS = [242, 272] as const;
 const sameParityRows = (a: SprawlBlock, b: SprawlBlock) => Math.min(a.y, b.y) === SAME_PARITY_ROWS[0] && Math.max(a.y, b.y) === SAME_PARITY_ROWS[1];
 const neighbours = (a: SprawlBlock, b: SprawlBlock) => !sameParityRows(a, b) && ((a.y === b.y && Math.abs(a.x - b.x) === 30) || (a.x === b.x && Math.abs(a.y - b.y) > 0 && Math.abs(a.y - b.y) <= 30));
