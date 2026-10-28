@@ -240,7 +240,8 @@ describe("station: vecindades (cajas disjuntas, 1e-9)", () => {
   it("marquesinas ↔ vías: ninguna columna, rampa ni faja pisa la franja eje ±1.75", () => {
     expect(columns.length).toBe(16);
     // x < 166: lo de vías y andenes; el pórtico, el cartel y los toldos del edificio (#278) quedan al este
-    const roofs = [...ramps, ...prisms.filter((p) => p.mat === "whitewash" || (p.mat === "canopy" && p.at.z > 1))].filter((s) => s.at.x < 166);
+    // #279: las cajas `whitewash` de 11 de largo son los coches estacionados, que sí van sobre la vía 2
+    const roofs = [...ramps, ...prisms.filter((p) => (p.mat === "whitewash" && p.w !== 11) || (p.mat === "canopy" && p.at.z > 1))].filter((s) => s.at.x < 166);
     expect(roofs).toHaveLength(7); // cuatro rampas, dos fajas sur y el techo del transversal
     for (const c of [...columns, ...roofs]) TRACKS_Y.forEach((y, i) => expect(apart(bounds(c), trackBand(y, i))).toBe(true));
   });
