@@ -12,7 +12,7 @@ import { trainLen } from "./train";
  * saber dónde está el tren, de modo que el estado es una función pura de `ms` y no hay nada que
  * acumular ni sortear. Entrada: crucero de `LINE_SPEED` hasta `STOP_X − BRAKE_U` (500 u) y frenado
  * uniforme en 5 s (a = 4,8 u/s²) hasta parar justo en el tope. Salida: simétrica, la formación
- * acelera 60 u en 5 s y hace crucero otras 500 u hasta que el frente llega a `ENTRY_X` (el
+ * acelera 60 u en 5 s y hace crucero otras 500 u hasta que la cola llega a `ENTRY_X` (el
  * mismo borde del que entró), ya invisible. El `alpha` sube en los primeros `FADE_U` u del frente
  * y baja en los últimos, así que el tren aparece y desaparece sin cortes dentro del sangrado.
  *
@@ -52,7 +52,7 @@ const START: Record<Phase, number> = { in: 0, dwell: IN_MS, out: IN_MS + DWELL_M
 export const phaseStart = (phase: Phase): number => START[phase];
 
 const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
-// EPS: el ciclo se arma con sumas de floats; un frente a menos de 1e-6 u de ENTRY_X ya es "en el borde" (alpha 0 exacto)
+// EPS: el ciclo se arma con sumas de floats; un frente a menos de 1e-6 u de ENTRY_X ya es "en el borde" (alpha 0 exacto; al final de `out` el error de float daba ~8e-10)
 const EPS = 1e-6;
 const fade = (front: number): number => (front - ENTRY_X <= EPS ? 0 : clamp01((front - ENTRY_X) / FADE_U));
 const DWELL_X0 = STOP_X - LEN, END_X0 = ENTRY_X - LEN;
@@ -60,7 +60,7 @@ const DWELL_X0 = STOP_X - LEN, END_X0 = ENTRY_X - LEN;
 /** Distancia recorrida desde que el tren está parado en un frenado (o arranque) de `t` ms, 0..BRAKE_U. */
 const brakeU = (t: number): number => LINE_SPEED * t / 1000 - BRAKE_A * t * t / 2;
 
-/** Estado del tren a `ms` del ciclo (0 ≤ ms < CYCLE_MS). `x0` es la cola; el frente va en `x0 + LEN`. */
+/** Estado del tren a `ms` del ciclo (0 ≤ ms < CYCLE_MS). `x0` es el extremo oeste: en `in`/`dwell` el frente es `x0 + LEN`; en `out` el frente es `x0` y la cola `x0 + LEN`. */
 export function trainStateAt(ms: number): TrainState {
   if (ms < IN_MS) {
     const front = ms < CRUISE_MS ? ENTRY_X + LINE_SPEED * ms / 1000 : STOP_X - BRAKE_U + brakeU(ms - CRUISE_MS);
@@ -69,7 +69,7 @@ export function trainStateAt(ms: number): TrainState {
   if (ms < START.out) return { phase: "dwell", x0: DWELL_X0, lead: "e", alpha: 1 };
   if (ms < START.off) {
     const t = ms - START.out;
-    // arranque simétrico del frenado: 60 u acelerando y después crucero; el frente es x0 + LEN
+    // arranque simétrico del frenado: 60 u acelerando y después crucero; la cola es x0 + LEN (el frente va al oeste)
     const run = t < BRAKE_MS ? BRAKE_U - brakeU(BRAKE_MS - t) : BRAKE_U + LINE_SPEED * (t - BRAKE_MS) / 1000;
     const x0 = DWELL_X0 - run;
     return { phase: "out", x0, lead: "w", alpha: fade(x0 + LEN) };
@@ -80,6 +80,7 @@ export function trainStateAt(ms: number): TrainState {
 /** ¿Parpadea el paso a nivel? `msInPhase` son los ms desde `phaseStart(s.phase)`. */
 export function crossingActive(s: TrainState, msInPhase: number): boolean {
   if (s.phase === "off") return false;
+  // parado, el tren siempre corta [70, 138]: solo manda el aviso de partida
   if (s.phase === "dwell") return msInPhase >= DWELL_MS - PRE_DEPART_MS - EPS;
   const a = CROSSING.x0 - CROSSING_NEAR_U, b = CROSSING.x1 + CROSSING_NEAR_U;
   return s.x0 <= b && s.x0 + LEN >= a;
@@ -87,9 +88,9 @@ export function crossingActive(s: TrainState, msInPhase: number): boolean {
 
 /** Aspecto de los dos semáforos: entrada (poste en x 96) y salida (x 118, que se despeja en `STREET_EDGE`). */
 export function signalAspects(s: TrainState, msInPhase: number): { in: Aspect; out: Aspect } {
-  const front = s.x0 + LEN;
-  const inGreen = s.phase === "in" && front < SIGNALS.in.x;
-  const outGreen = (s.phase === "dwell" && msInPhase >= DWELL_MS - PRE_DEPART_MS - EPS) || (s.phase === "out" && front >= STREET_EDGE);
+  const east = s.x0 + LEN; // frente en `in`, cola en `out`
+  const inGreen = s.phase === "in" && east < SIGNALS.in.x;
+  const outGreen = (s.phase === "dwell" && msInPhase >= DWELL_MS - PRE_DEPART_MS - EPS) || (s.phase === "out" && east >= STREET_EDGE);
   return { in: inGreen ? "green" : "red", out: outGreen ? "green" : "red" };
 }
 
