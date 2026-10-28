@@ -3,7 +3,7 @@ import { layerLookup, type AnimLayer, type Animator } from "./animator";
 import type { TechScene } from "./tech";
 import { createTechAnim } from "./tech-anim";
 
-/** Adapta el distrito tecnológico al contrato `Animator`: cuatro capas de acentos. */
+/** Adapta el distrito tecnológico al contrato `Animator`: cinco capas de acentos. */
 export function techAnimator(scene: TechScene, rng: Rng, opts: { reducedMotion: boolean }): Animator {
   const anim = createTechAnim(scene, rng, opts);
   const layers: Record<string, () => AnimLayer> = {
@@ -11,10 +11,11 @@ export function techAnimator(scene: TechScene, rng: Rng, opts: { reducedMotion: 
     "tech.signs": () => ({ kind: "accent", accents: anim.signs() }),
     "tech.telecom": () => ({ kind: "accent", accents: [anim.telecom()] }),
     "tech.neon": () => ({ kind: "accent", accents: anim.neon() }),
+    "tech.homes": () => ({ kind: "accent", accents: anim.homes() }),
   };
   return {
     ids: Object.keys(layers),
     layer: layerLookup("techAnimator", layers),
-    tick(dtMs) { const c = anim.tick(dtMs), out = new Set<string>(); if (c.windows) out.add("tech.windows"); if (c.signs) out.add("tech.signs"); if (c.telecom) out.add("tech.telecom"); if (c.neon) out.add("tech.neon"); return out; },
+    tick(dtMs) { const c = anim.tick(dtMs), out = new Set<string>(); if (c.windows) out.add("tech.windows"); if (c.signs) out.add("tech.signs"); if (c.telecom) out.add("tech.telecom"); if (c.neon) out.add("tech.neon"); if (c.homes) out.add("tech.homes"); return out; },
   };
 }
