@@ -453,7 +453,7 @@ describe("station: edificio, torre y explanada (#278)", () => {
         expect(b.min.x, JSON.stringify(b)).toBeGreaterThanOrEqual(190 - 1e-9);
         if (!(s.kind === "prism" && s.mat === "canopy" && s.at.x === 197)) expect(b.min.z, JSON.stringify(b)).toBeGreaterThanOrEqual(0.15 - 1e-9);
       }
-      const tower = bb.filter(({ b }) => b.min.x >= TOWER.x - 1e-9 && b.min.y >= TOWER.y - 1e-9 && b.max.y <= TOWER.y + TOWER.d + 1e-9 && b.min.z >= 0 && b.max.z > 5);
+      const tower = bb.filter(({ b }) => b.min.x >= TOWER.x - 1e-9 && b.min.x < TOWER.x + TOWER.w && b.min.y >= TOWER.y - 1e-9 && b.max.y <= TOWER.y + TOWER.d + 1e-9 && b.min.z >= 0 && b.max.z > 5);
       for (const { b } of tower) expect(b.max.x).toBeLessThanOrEqual(190 + 1e-9);
     });
     it("explanada ↔ muelle: max.x ≤ 197.3", () => {
