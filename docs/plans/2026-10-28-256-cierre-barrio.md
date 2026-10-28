@@ -10,6 +10,18 @@
 
 **Spec:** issue #256 (criterios de aceptación) y `docs/superpowers/specs/2026-10-27-barrio-costero-design.md` §4.2, §5, §7, §8, §9. Contexto: plan de la historia en el comentario de #240 (decisiones 1–24). Hijos: #249–#255 (cerrados), PRs #262, #264, #265, #267, #268, #270, #271, ya en la rama base (`git log origin/main..origin/feature/240-barrio-costero`: d669cf3 … fa9ac76).
 
+## Criterios de #256 → tareas
+
+| Criterio de aceptación de #256 | Dónde |
+|---|---|
+| 1. Las seis PNG en `assets/2026-10-27-barrio/`, enlazadas en el PR | Task 3 (archivos y test), stage 8 (enlaces) |
+| 2. Tabla de caras y acentos con porcentajes y `totals`, en el PR y en el spec; total ≤ +10 %, región ≤ +25 % | Task 3 (medición), Task 4 (§11.2–11.3), stage 8; los topes ya los verifica `tech.test.ts:156-159` |
+| 3. Seis líneas de bloom y peor redibujo, medianas y delta, en el PR y en el spec | Task 3 Step 9, Task 4 (§11.4), stage 8 |
+| 4. Checklist del punto 4 en el PR (zonificación, §4.2, §9) | Task 3 (g) produce la tabla; stage 8. El issue dice "Checklist completo **en el PR**" (punto 4 de "Qué hacer") |
+| 5. Tope de sólidos recalculado | Task 2 |
+| 6. README, docstring, nota de mundo-3, índice del storybook y "Desvíos" | Task 1 y Task 4 |
+| 7. `npm test`, `npm run typecheck`, `npm run build` | Task 4 Step 4 y stage 4 |
+
 ## Global Constraints
 
 - Rama base `feature/240-barrio-costero`; el PR va contra esa rama.
@@ -21,7 +33,9 @@
 - Acentos de `tech` = `scene.accents.length` + frame 0 de todas las capas `accent` de `techAnimator(scene, createRng(SEED + 5), { reducedMotion: false })` (como `tech.test.ts:167-171`), en b9550c5 y en la rama.
 - Bloom: `/lab/world.html` **sin parámetros**, una carga fría descartada y **tres corridas calientes** (recargas) por lado. Por corrida, copiar literal `[lab] bloom: …` y el primer `[lab] peor redibujo en 5 s: …` posterior. Medianas del promedio de bloom y del peor redibujo; delta = después − antes. Si el delta de la mediana de bloom supera 1 ms: decirlo tal cual en el PR y en "Desvíos", con las seis líneas crudas. Este issue no simplifica piezas ni abre follow-up por eso.
 - Tope de sólidos de `tech.test.ts:23`: `ceil(medido × 1.10 / 100) × 100`, con medido = sólidos elevados (`!isFlat`) de la escena del test, `tech(createRng(7))`.
-- Scripts de medición en `.scratch/` (en `.git/info/exclude`), nunca commiteados.
+- Scripts de medición en `.scratch/` (ya está en `.git/info/exclude`), nunca commiteados. El script de caras importa **solo** desde la raíz que recibe. `facesIn` y `insideInflated` no existen en b9550c5, así que se copian al script (son tres líneas sobre `bounds`/`tessellate` de esa raíz). No se mezclan dos `src/` en un mismo proceso.
+- Formatos de log: `[lab] bloom: promedio X ms en 60 frames (tick T + render R), presupuesto 15 ms → activo|fallback` (`src/world/bloom.ts:23-24`, `bloom-runtime.ts:37`). El número de la mediana es X. `[lab] peor redibujo en 5 s: W ms` (`src/lab/page.ts:91`). Las dos líneas son iguales en b9550c5.
+- agent-browser: sesión `AGENT_BROWSER_SESSION=cierre256`. Los pids de vite van en `.scratch/pids`. Si una corrida no emite las dos líneas en 180 s, se repite una vez; si vuelve a fallar, se anota "sin línea" y se informa así.
 - `CLAUDE.md` no cambia (el método de captura no cambió).
 - `npm test`, `npm run typecheck` y `npm run build` en verde.
 - Idioma de docs y comentarios: castellano rioplatense, como el resto del repo.
@@ -38,10 +52,13 @@
 
 - **A1. "Antes" en b9550c5, no en `origin/main`.** Ver Global Constraints. Descartado: `origin/main` (a34dec0 agrega las costas de la isla, que la rama no tiene, y el delta de bloom y `totals` incluiría ese cambio).
 - **A2. Caras "antes" por exhibit = la misma caja sobre b9550c5.** El issue permite "—" o el marcador. La caja vieja es lo que el barrio reemplazó y sirve para el presupuesto; el marcador se anota de los PRs de los hijos (monoblock 15, casas 25, escuela 6, club 6, plaza-barrio 16, costanera 94). Descartado: solo "—", que no compara nada.
-- **A3. `totals` del mundo** con la página recién cargada, sin apretar ninguna tecla (encuadre por defecto): el stage tiene los mismos objetos con cualquier encuadre. Se informan todas las claves y la suma sin `containers`.
+- **A3. `totals` del mundo** en `/lab/world.html` sin parámetros, **después** de la línea `[lab] bloom:`: `stage.ts:164` agrega el slot del bloom recién cuando el modo es `on`, así que antes de esa línea el conteo no es estable. Se toman en la primera corrida caliente de cada lado y se anota el modo (`activo`/`fallback`). Se informan todas las claves y la suma sin `containers`. Descartado: con la página recién cargada, que depende del momento.
 - **A4. Tope de sólidos sobre `tech(createRng(7))`**, la escena que usa el test. Descartado: la semilla del mundo, que el test no usa.
 - **A5. `## 11. Desvíos`** sigue a §10 "Fuera de alcance", la última sección del spec.
 - **A6. Recorte con Python stdlib** (`zlib` + `struct`, decodifica los filtros PNG y escribe con filtro 0). La máquina no tiene ImageMagick ni PIL. Descartado: agregar una dependencia npm.
+- **A8. Cover del sitio sin `?speed`.** El sitio no lee `?speed` (`src/main.ts` no lo usa) ni usa `Date`/`Math.random`: la escena es determinística y solo cambia la fase de las animaciones (barcos, ventanas). `cover-antes.png` se tomó igual (#262). Se espera a que la red quede ociosa y 8 s más.
+- **A9. Bloom por encima de +1 ms.** El issue lo resuelve: "Si el delta de la mediana supera 1 ms, decirlo tal cual en el PR y en 'Desvíos' con las seis líneas crudas (este hijo no simplifica piezas…)". El plan de #240 aclara que el bloom no es criterio de ningún hijo, por el ruido entre corridas de #229 (18.4 y 19.8 ms). No se abre follow-up: el pipeline solo abre follow-ups desde la revisión del plan.
+- **A10. "implementado" antes de llegar a `main`.** Hay precedente en `2026-10-24-fabrica-detalle-design.md:4` ("implementado en #208–#217 (rama `feature/207-fabrica-detalle`)").
 - **A7. Índice del storybook.** La fila "Resume: tecnológico" de `2026-10-17-storybook-estructuras-design.md` ya lista los siete (#249). La Task 1 lo fija con un test y no lo edita.
 
 ---
@@ -102,7 +119,7 @@ it("el índice del storybook lista los siete exhibits del barrio", () => {
 
 - [ ] **Step 1: Medir.** Con un `.scratch/solidos-256.ts` efímero: `tech(createRng(7)).solids.filter((x) => !isFlat(x)).length` → `N`. Tope = `Math.ceil(N * 1.1 / 100) * 100`. Anotar `N` y el tope en `.scratch/medicion-256.md`.
 - [ ] **Step 2: Cambiar el test.** `expect(raised.length).toBeLessThan(<tope>)`. Antes del `expect`, un comentario de una línea: `// tope = medido (N, #256) × 1.10, redondeado a la centena superior`.
-- [ ] **Step 3: Run, expect PASS.** `npx vitest run src/scenes/tech.test.ts`. Comprobación del ajuste: con un tope de `N` el test falla y con `N + 1` pasa. Probarlo a mano y no commitearlo.
+- [ ] **Step 3: Run, expect PASS.** `npx vitest run src/scenes/tech.test.ts`. Comprobación del ajuste: con un tope de `N` el test falla y con `N + 1` pasa. Probarlo a mano y no commitearlo. Si el tope calculado sale igual a 2500, no se cambia el número y se agrega solo el comentario. `N > 2500` no puede pasar, porque el test está en verde.
 - [ ] **Step 4: Commit.** `test(#256): tope de sólidos elevados de tech al medido + 10 %`.
 
 ### Task 3: Mediciones y capturas (ningún script se commitea)
@@ -135,20 +152,20 @@ it("capturas del cierre: vistas enteras a 1600×900 ×2 y recortes de la esquina
 ```
 
 - [ ] **Step 2: Run, expect FAIL** (ENOENT).
-- [ ] **Step 3: Worktree "antes".** `git worktree add /tmp/main b9550c5 && (cd /tmp/main && npm ci)`. Esperado: `/tmp/main/node_modules` existe.
+- [ ] **Step 3: Worktree "antes".** Si `/tmp/main` ya existe: `git worktree remove --force /tmp/main; git worktree prune`. Después: `git worktree add /tmp/main b9550c5 && (cd /tmp/main && npm ci)`. Esperado: `/tmp/main/node_modules` existe.
 - [ ] **Step 4: Script de caras, acentos y zonificación.** `.scratch/caras-256.ts <raíz>` importa dinámicamente desde `<raíz>/src/...` e imprime (a), (b), (c) y, si existe `tech-zoning.ts`, (g). En b9550c5 los exhibits del barrio no existen: tomar las cajas de la rama (`/work/src/lab/exhibits.ts`) y aplicarlas a la escena de b9550c5. Correr `npx tsx .scratch/caras-256.ts /tmp/main` y `npx tsx .scratch/caras-256.ts /work`. Verificación: antes da total 8458 y región 1286 (las constantes); después, el total ≤ 9303 y la región ≤ 1607; `costanera` coincide con lo que mide el panel en el Step 6.
 - [ ] **Step 5: Servidores.** `npm run dev -- --host --port 5173` en `/work` y `npm run dev -- --host --port 5174` en `/tmp/main`, con `nohup … &` y el pid guardado. Verificar con `curl -sf` las dos raíces.
 - [ ] **Step 6: Capturas.**
-  - Abrir agent-browser con la extensión, con el comando de CLAUDE.md y `set viewport 1600 900 2`.
-  - Sitio: `http://localhost:5173/`. Esperar a que el canvas dibuje (≥ 5 s) → `cover-despues.png`.
+  - Abrir agent-browser con la extensión, con el comando de CLAUDE.md y `set viewport 1600 900 2`. Primero correr el snippet de CLAUDE.md "¿enganchó?" (verificado con 0.26; acá corre 0.27): tiene que dar `active: "pixi-active"`. Si no engancha, las capturas se toman igual y el bloqueo de los `totals` se anota.
+  - Sitio: `http://localhost:5173/`, `wait --load networkidle` y 8 s más (A8) → `cover-despues.png`.
   - Mundo: `http://localhost:5174/lab/world.html?speed=0`, `press 2`, esperar `[lab] primer dibujo` en `agent-browser console` → `mundo-antes.png`. Lo mismo en 5173 → `mundo-despues.png`.
   - Exhibit: `http://localhost:5173/lab/storybook.html?speed=0#barrio` → `barrio-despues.png`, y anotar las caras de los exhibits del panel.
   - Mirar cada PNG con Read para confirmar el encuadre.
 - [ ] **Step 7: Recortes.** `.scratch/crop-256.py <in> <out> <x> <y> 840 600` (Python stdlib, correr con `python3 -I`). Elegir `x, y` mirando `cover-antes.png` contra `barrio-4.jpg`: el rótulo RESUME arriba a la izquierda y la costa abajo a la derecha. Aplicar la misma caja a `cover-antes.png` → `barrio-4-antes.png` y a `cover-despues.png` → `barrio-4-despues.png`. Mirar los dos con Read y anotar la caja en (f).
-- [ ] **Step 8: `totals`.** En `world.html` de cada puerto, recién cargado y sin teclas, correr `agent-browser eval` con el snippet `rendering.capture()` de CLAUDE.md, y el de `__PIXI_DEVTOOLS_WRAPPER__` para la versión y el renderer → (d) y (f).
+- [ ] **Step 8: `totals`.** En `world.html` de cada puerto, sin parámetros, después de la línea `[lab] bloom:` de la primera corrida caliente del Step 9 (A3), correr `agent-browser eval` con el snippet `rendering.capture()` de CLAUDE.md, y el de `__PIXI_DEVTOOLS_WRAPPER__` para la versión y el renderer → (d) y (f).
 - [ ] **Step 9: Bloom.**
   - Para cada puerto (5174 primero), abrir `/lab/world.html` sin parámetros. Esa carga fría se descarta.
-  - Después, tres veces: `agent-browser reload`, esperar a que aparezcan `[lab] bloom: …` y un `[lab] peor redibujo en 5 s: …` posterior, y copiar las dos líneas literales. Para esperar, usar `agent-browser wait 5000` en bucle (60 frames a ~2 fps tardan ~30–60 s) y leer `agent-browser console`. Limpiar la consola entre corridas con `agent-browser console --clear`, si existe; si no, contar líneas.
+  - Después, tres veces: `agent-browser reload`, esperar a que aparezcan `[lab] bloom: …` y un `[lab] peor redibujo en 5 s: …` posterior, y copiar las dos líneas literales. Para esperar, usar `agent-browser wait 5000` en bucle (60 frames a ~2 fps tardan ~30–60 s) y leer `agent-browser console`. Limpiar la consola antes de cada recarga con `agent-browser console --clear` (existe en 0.27). Esperar hasta 180 s por corrida (Global Constraints).
   - Calcular las medianas del promedio de bloom y del peor redibujo, y el delta → (e).
 - [ ] **Step 10: Run, expect PASS.** `npx vitest run src/lab/docs.test.ts`.
 - [ ] **Step 11: Limpieza.** Hacerla también si la tarea aborta a mitad: matar los dos `vite`, `agent-browser close`, `git worktree remove --force /tmp/main`.
@@ -201,8 +218,8 @@ it("la spec del barrio cierra con desvíos, caras, acentos, totals y bloom", () 
       - club: luz de la banda sur solo en el tramo visible (#253);
       - sin cancha chica en la plaza ("cancha o arenero") (#254);
       - tope de sólidos `< <tope>` (Task 2).
-    - `### 11.2 Caras y acentos`: tabla `| | antes | después | Δ |` con total `tech` (`TECH_FACES_BEFORE`), región (`REGION_FACES_BEFORE`) y acentos estáticos + frame 0. Después, la tabla `| exhibit | antes (b9550c5, misma caja) | marcador (#249) | después |`, una fila por exhibit con formato `` | `monoblock` | … ``.
-    - `### 11.3 Capturas y totals`: enlaces a los siete PNG de `assets/2026-10-27-barrio/` (antes y después del cover, de la esquina y del mundo, y el exhibit `barrio`), `totals` antes/después y su suma sin `containers`.
+    - `### 11.2 Caras y acentos`: tabla `| | antes | después | Δ |` con total `tech` (`TECH_FACES_BEFORE`), región (`REGION_FACES_BEFORE`) y acentos estáticos + frame 0. Después, la tabla `| exhibit | antes (b9550c5, misma caja) | marcador (#249) | después |`, una fila por exhibit con formato `` | `monoblock` | … ``. Las caras del marcador salen de los paneles de los PRs #265, #264, #268, #267, #270 y #271. `barrio` no tiene marcador informado: va "—".
+    - `### 11.3 Capturas y totals`: la caja del recorte (x, y, 840×600 sobre 3200×1800), enlaces a los siete PNG de `assets/2026-10-27-barrio/` (antes y después del cover, de la esquina y del mundo, y el exhibit `barrio`), `totals` antes/después y su suma sin `containers`.
     - `### 11.4 Bloom`: las seis líneas `[lab] bloom: …` y las seis `[lab] peor redibujo en 5 s: …`, literales, en un bloque de código. Medianas, delta y entorno. Si el delta supera 1 ms, una frase que lo diga tal cual.
 - [ ] **Step 4: Run, expect PASS.** `npx vitest run src/lab/docs.test.ts`. Después `npm test`, `npm run typecheck` y `npm run build`.
 - [ ] **Step 5: Commit.** `docs(#256): spec del barrio implementada, con desvíos y medición`.
@@ -216,3 +233,22 @@ La descripción del PR lleva:
 - la tabla de zonificación (g), en `<details>`, con las visibles marcadas;
 - el inventario §4.2 entero, con cada casilla marcada y su captura (copiado de los PRs de los hijos, diciendo qué casilla no se ve en ninguna captura);
 - los criterios de §9.
+
+## Grilling
+
+- 1 ronda. Los cambios fueron aclaraciones: el mapa de criterios a tareas, los formatos de log, el momento de los `totals`, el timeout, la sesión y los pids, el caso de empate del tope y la caja del recorte en la spec. No se agregaron ni se quitaron tareas. Griller: fable.
+- 17 preguntas. Fuentes:
+  - ISSUE: 4 (1, 7, 13 en parte, 14);
+  - CODE: 11 (2, 3, 4, 5, 6, 9, 10, 11, 12, 16, 17);
+  - NO SOURCE: 3 (8, 15, y 13 en el caso del empate).
+- Respuestas clave:
+  - `cover-antes.png` mide 3200×1800 y se tomó en b9550c5 (mensaje de d669cf3). `tech-budget.ts` dice "Medidos en b9550c5".
+  - En b9550c5 existen `cropScene`/`cropAnimators`/`readout` (`crop.ts:54,83,161`), `assembleWorld` (`assemble.ts:20`), `isFlat` (`solids.ts:34`), la tecla `"2": "cv"` (`page.ts:12`) y las líneas `primer dibujo`/`peor redibujo` (`page.ts:56,91`).
+  - `sprawl-grid.ts`, `geo.ts`, `world.ts`, `page.ts` y `main.ts` no cambian entre b9550c5 y la rama (`git diff --stat` vacío): las cajas eligen el mismo suelo.
+  - Topes +10 %/+25 %: spec §5 y `tech.test.ts:156-159`.
+  - `| Tema | Decisión |` aparece una sola vez, en la línea 35, después de `## 2. Decisiones` (línea 33).
+  - Spec del barrio: `**Estado:**` en la línea 4 y `## 10. Fuera de alcance` en la 280.
+  - `docs.test.ts` define `ROOT` y `readme` arriba; `parrafos` y `lab` son locales al `describe` de #217, así que el `describe` nuevo los define.
+  - `` `tech.ts` `` aparece por primera vez en README:33, dentro del párrafo "Mundo isométrico".
+- Supuestos: A1–A10.
+- Issues abiertos: ninguno.
