@@ -20,7 +20,8 @@ describe("tech", () => {
     expect(JSON.stringify(scene())).toBe(JSON.stringify(scene()));
     const s = scene();
     const raised = s.solids.filter((x) => !isFlat(x));
-    expect(raised.length).toBeGreaterThan(400); expect(raised.length).toBeLessThan(2500);
+    // tope = medido (1505, #256) × 1.10, redondeado a la centena superior
+    expect(raised.length).toBeGreaterThan(400); expect(raised.length).toBeLessThan(1700);
     for (const x of s.solids) {
       const b = bounds(x);
       expect(b.min.y).toBeGreaterThanOrEqual(ZONE_SPLIT_Y);
