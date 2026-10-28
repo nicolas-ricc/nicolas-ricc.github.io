@@ -30,7 +30,6 @@ describe("shipyard", () => {
     const kinds = (k: Solid["kind"]) => s.solids.filter((x) => x.kind === k);
     const gables = s.solids.filter((x) => x.kind === "prism" && x.roof === "gable");
     expect(gables.filter((x) => x.kind === "prism" && x.at.x > 300)).toHaveLength(2); // los galpones del muelle de alistamiento
-    expect(gables.every((x) => x.kind === "prism" && x.at.x > 300)).toBe(true);       // las naves de montaje se fueron de la región nueva
     expect(kinds("ramp").filter((r) => r.kind === "ramp" && r.at.z === 0)).toHaveLength(2); // las gradas; los dientes de sierra van en alto
     expect(kinds("hull").length).toBeGreaterThanOrEqual(1);
     expect(s.weldSpots.length).toBeGreaterThan(10);

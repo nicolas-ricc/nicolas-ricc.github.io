@@ -148,7 +148,7 @@ function factory(out: Solid[], accents: Accent[]): void {
   for (const x of [183.2, 184.6]) out.push(prism(x, 100, 4, 0.8, 38, 0.8, "rust"));         // cañerías N-S
   out.push(prism(fx + fw, 123.6, 4, 183.2 - fx - fw, 0.8, 0.8, "rust"));                    // ramal a la nave
   for (const y of [106, 118, 130]) out.push({ kind: "cylinder", at: v3(190, y, 0), r: 4, h: 7, mat: "steel" }); // granja de tanques
-  out.push(prism(fx, 126, 0, 30, 14, 7, "concrete")); // nave de pintura (techo plano: los dos aguas quedan solo en alistamiento)
+  out.push(prism(fx, 126, 0, 30, 14, 7, "concrete", "gable")); // nave de pintura
   for (const [lx, ly] of [[153, 129], [158, 129], [153, 134], [158, 134]] as const) out.push(prism(lx, ly, 0, 0.8, 0.8, 12, "steel")); // patas
   out.push({ kind: "cylinder", at: v3(156.4, 132.4, 12), r: 3.5, h: 4, mat: "steel" });   // torre de agua
   for (const y of [126, 131, 136]) out.push(prism(146, y, 0, 4, 3, 3, "steel"));           // subestación
