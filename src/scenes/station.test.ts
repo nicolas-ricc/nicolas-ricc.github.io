@@ -4,6 +4,7 @@ import { v3 } from "../iso/geometry";
 import type { Plate } from "../iso/plate";
 import { bounds, isFlat, tessellate, tessellateAll, type Bounds, type Solid } from "../iso/solids";
 import { BUFFER_H, BUFFER_X, CROSSING, FENCE_Y, GAUGE, HEAD, ISLAND, LADDER, RAIL_W, RAIL_Z, SIDE, SIGNALS, STATION, STOP_X, TRACK_X0, TRACKS_Y, TRAIN_CLEAR, PARKED, station, building, HALL, WING_N, WING_S, LINK, SERVICE, TOWER, PORTICO, ESPLANADE } from "./station";
+import { emu, trainLen } from "./train";
 
 const build = (): { out: Solid[]; accents: Accent[] } => { const out: Solid[] = [], accents: Accent[] = []; station(out, accents); return { out, accents }; };
 const { out, accents } = build();
@@ -13,6 +14,8 @@ const strips = out.filter((s): s is Solid & { kind: "strip" } => s.kind === "str
 const ramps = out.filter((s): s is Solid & { kind: "ramp" } => s.kind === "ramp");
 const beams = out.filter((s): s is Solid & { kind: "beam" } => s.kind === "beam");
 const dots = accents.filter((a): a is Accent & { kind: "dot" } => a.kind === "dot");
+// caja de un coche del tren estacionado (#279)
+const isCar = (p: Solid & { kind: "prism" }) => p.mat === "whitewash" && p.w === 11 && p.d === 3.4 && p.h === 4 && p.at.z === 1;
 const box = (p: Solid & { kind: "prism" }) => [p.at.x, p.at.y, p.at.z, p.w, p.d, p.h];
 const sorted = <T>(xs: T[]) => [...xs].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
 const close = (a: number, b: number) => Math.abs(a - b) < 1e-9;
@@ -208,7 +211,8 @@ describe("station", () => {
 });
 
 describe("station: formación estacionada en la vía 2 (#279)", () => {
-  const bodies = prisms.filter((p) => p.mat === "whitewash" && p.w === 11 && p.d === 3.4 && p.h === 4 && p.at.z === 1);
+  const bodies = prisms.filter(isCar);
+  const parked = emu(STOP_X - trainLen(PARKED.cars), TRACKS_Y[PARKED.track], { cars: PARKED.cars, lead: null, lit: true });
   it("tres coches con eje en la vía 2, entre TRACK_X0[1] y STOP_X", () => {
     expect(PARKED).toEqual({ track: 1, cars: 3 });
     expect(bodies).toHaveLength(3);
@@ -228,7 +232,15 @@ describe("station: formación estacionada en la vía 2 (#279)", () => {
     expect(bleed).toHaveLength(12);
     for (const p of bleed) for (const q of p.pts) expect(q.y).toBeCloseTo(124.25, 9);
     expect(dots.filter((d) => (d.color === "cyan" && d.r === 0.3) || (d.color === "magenta" && d.r === 0.25))).toEqual([]);
-    for (const b of bodies) expect(bounds(b).max.y).toBeLessThanOrEqual(TRACKS_Y[1] + 1.7 + 1e-9);
+    const inStation = new Set(out.map((x) => JSON.stringify(x))), lights = new Set(accents.map((a) => JSON.stringify(a)));
+    for (const x of parked.solids) {
+      expect(inStation.has(JSON.stringify(x)), JSON.stringify(x).slice(0, 100)).toBe(true);
+      expect(bounds(x).max.y).toBeLessThanOrEqual(TRACKS_Y[1] + 1.7 + 1e-9);
+    }
+    for (const a of parked.lights) {
+      expect(lights.has(JSON.stringify(a))).toBe(true);
+      for (const q of a.kind === "poly" ? a.pts : [a.at]) expect(q.y).toBeLessThanOrEqual(TRACKS_Y[1] + 1.75 + 1e-9);
+    }
   });
 });
 
@@ -240,8 +252,8 @@ describe("station: vecindades (cajas disjuntas, 1e-9)", () => {
   it("marquesinas ↔ vías: ninguna columna, rampa ni faja pisa la franja eje ±1.75", () => {
     expect(columns.length).toBe(16);
     // x < 166: lo de vías y andenes; el pórtico, el cartel y los toldos del edificio (#278) quedan al este
-    // #279: las cajas `whitewash` de 11 de largo son los coches estacionados, que sí van sobre la vía 2
-    const roofs = [...ramps, ...prisms.filter((p) => (p.mat === "whitewash" && p.w !== 11) || (p.mat === "canopy" && p.at.z > 1))].filter((s) => s.at.x < 166);
+    // #279: los coches estacionados (`isCar`) sí van sobre la vía 2
+    const roofs = [...ramps, ...prisms.filter((p) => (p.mat === "whitewash" && !isCar(p)) || (p.mat === "canopy" && p.at.z > 1))].filter((s) => s.at.x < 166);
     expect(roofs).toHaveLength(7); // cuatro rampas, dos fajas sur y el techo del transversal
     for (const c of [...columns, ...roofs]) TRACKS_Y.forEach((y, i) => expect(apart(bounds(c), trackBand(y, i))).toBe(true));
   });
