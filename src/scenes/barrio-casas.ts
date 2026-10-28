@@ -52,25 +52,25 @@ function trees(ctx: BarrioCtx, b: SprawlBlock, cx: number): void {
 }
 
 /**
- * Manzana de casas de Ciudad Jardín: césped, 4 o 5 casas a dos aguas (lotes de 8 u, piñón según paridad), la primera de la fila sur con
- * cochera al oeste (lote sur 0 siempre vacío) y, con 4 casas Y H en el lote sur 1, un ala al este; chimeneas, ventanas al sur, muro con reja, árboles y dos faroles.
+ * Manzana de casas de Ciudad Jardín: césped, 4 o 5 casas a dos aguas (lotes de 8 u con retiro de 1.5, piñón según paridad), la primera de la fila sur con
+ * cochera al oeste (lote sur 0 siempre vacío) y, si sale `rng.chance(0.5)` (4 casas) Y H cae en el lote sur 1, un ala al este; chimeneas, ventanas al sur, muro con reja, árboles y dos faroles.
  */
 export function casas(ctx: BarrioCtx, b: SprawlBlock): void {
   const { rng } = ctx, parity = blockParity(b);
   lawn(ctx, b);
-  const n = Math.min(4 + rng.int(0, 2), 5), lots = [0, 1, 2, 4, 5];
+  const alaWanted = rng.chance(0.5), n = alaWanted ? 4 : Math.min(4 + rng.int(0, 2), 5), lots = [0, 1, 2, 4, 5];
   if (n === 4) lots.splice(rng.int(0, 4), 1);
   const hi = lots.findIndex((l) => l >= 3); // casa H del plan: la primera de la fila sur
   const houses = lots.map((lot, i): House => {
     const south = lot >= 3, a = rng.int(5, 6), c0 = rng.int(4, 5), c = a === c0 ? c0 - 1 : c0, h = rng.chance(0.6) ? 3 : 5.5;
     const [w, d] = parity === 0 ? [a, c] : [c, a];
     const mat: Material = rng.chance(0.6) ? "whitewash" : "brick";
-    return { x: b.x + 1.5 + 8 * (lot % 3), y: b.y + (south ? 10 : 2), w: i === hi ? Math.min(w, 5) : w, d, h, mat };
+    return { x: b.x + 2 + 8 * (lot % 3), y: b.y + (south ? 11 : 2.5), w: i === hi ? Math.min(w, 5) : w, d, h, mat };
   });
   houses.forEach((h, i) => { house(ctx, h); if (i % 2 === 0) chimney(ctx, h, parity); windows(ctx, b, h, i); });
   const home = houses[hi]!, cx = home.x - 1.5;
   garage(ctx, b, home);
-  if (n === 4 && lots.includes(4)) house(ctx, { x: home.x + home.w, y: home.y + home.d - 3, w: 3, d: 3, h: 3, mat: home.mat });
+  if (alaWanted && lots.includes(4)) house(ctx, { x: home.x + home.w, y: home.y + home.d - 3, w: 3, d: 3, h: 3, mat: home.mat });
   wall(ctx, b, cx);
   trees(ctx, b, cx);
   lamp(ctx.solids, ctx.accents, b.x + 23, b.y + 18.6, 0);
