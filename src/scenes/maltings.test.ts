@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isBehind, overlaps, screenBounds, sortByDepth } from "../iso/depth";
 import { bounds, type Plate, type Solid } from "../iso/solids";
+import { fingerprint, r6 } from "../iso/fingerprint";
 import { translate } from "../iso/translate";
 import { MALT, WATER_TOWER, maltings, waterTower } from "./maltings";
 import { PLANT_SHIFT } from "./plant-frame";
@@ -12,15 +13,6 @@ const near = (a: number, b: number) => Math.abs(a - b) < 1e-6;
 const len = (b: Kind<"beam">) => Math.hypot(b.to.x - b.from.x, b.to.y - b.from.y, b.to.z - b.from.z);
 const meet = (a: Solid, b: Solid) => overlaps(screenBounds(bounds(a)), screenBounds(bounds(b)));
 const cross3d = (a: Solid, b: Solid) => !isBehind(bounds(a), bounds(b)) && !isBehind(bounds(b), bounds(a));
-/** Redondeo a 1e-6: las sumas del traslado mueven una coordenada un ε. */
-const r6 = (v: number): number => Math.round(v * 1e6) / 1e6;
-/** Huella FNV-1a de 32 bits del JSON de los sólidos, con los números redondeados a 1e-6 (como la de la subestación, #244). */
-function fingerprint(solids: readonly Solid[]): string {
-  const json = JSON.stringify(solids, (_k, v: unknown) => (typeof v === "number" ? r6(v) + 0 : v));
-  let h = 0x811c9dc5;
-  for (let i = 0; i < json.length; i++) h = Math.imul(h ^ json.charCodeAt(i), 0x01000193) >>> 0;
-  return h.toString(16).padStart(8, "0");
-}
 /** Huella de la maltería en su marco local (x 20..44, y −46..−16), tomada antes de la mudanza (#246). */
 const LOCAL_FINGERPRINT = "9cc52915";
 

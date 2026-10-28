@@ -1,8 +1,7 @@
 import { v3 } from "../iso/geometry";
 import type { Plate, Solid } from "../iso/solids";
-import { translate } from "../iso/translate";
 import type { Material } from "../map/palette-iso";
-import { PLANT_SHIFT } from "./plant-frame";
+import { PLANT_SHIFT, emitPlant } from "./plant-frame";
 
 /**
  * Nave de calderas de la Fábrica de Luz. Dibujada en un marco local, sobre la huella `x 44..107, y −46..−16`
@@ -26,12 +25,6 @@ export const STAIR_TOWER = {
 } as const;
 export const METAL_STACK_X: readonly number[] = METAL_STACK_X_LOCAL.map((x) => x + PLANT_SHIFT.x);
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material): Solid & { kind: "prism" } => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat });
-
-const emit = (out: Solid[], build: (o: Solid[]) => void): void => {
-  const local: Solid[] = [];
-  build(local);
-  for (const s of local) out.push(translate(s, PLANT_SHIFT.x, PLANT_SHIFT.y));
-};
 
 /** Celosía de ladrillo en damero: placas de 0.5 u cada 1 u sobre la pared `wall` de largo `len` (entero: una placa por unidad), bajo el alero (z 12.8..13.6). */
 function lattice(wall: number, len: number, z0 = 12.8, z1 = 13.6): Plate[] {
@@ -125,15 +118,15 @@ function inclineBeltLocal(out: Solid[]): void {
 }
 
 /** Cuerpo de la nave en mundo; ver `naveBodyLocal`. */
-export const naveBody = (out: Solid[]): void => emit(out, naveBodyLocal);
+export const naveBody = (out: Solid[]): void => emitPlant(out, naveBodyLocal);
 /** Testero este en mundo; ver `gableEndLocal`. */
-export const gableEnd = (out: Solid[]): void => emit(out, gableEndLocal);
+export const gableEnd = (out: Solid[]): void => emitPlant(out, gableEndLocal);
 /** Chimeneas metálicas en mundo; ver `metalStacksLocal`. */
-export const metalStacks = (out: Solid[]): void => emit(out, metalStacksLocal);
+export const metalStacks = (out: Solid[]): void => emitPlant(out, metalStacksLocal);
 /** Torre de escalera en mundo; ver `stairTowerLocal`. */
-export const stairTower = (out: Solid[]): void => emit(out, stairTowerLocal);
+export const stairTower = (out: Solid[]): void => emitPlant(out, stairTowerLocal);
 /** Cinta inclinada en mundo; ver `inclineBeltLocal`. */
-export const inclineBelt = (out: Solid[]): void => emit(out, inclineBeltLocal);
+export const inclineBelt = (out: Solid[]): void => emitPlant(out, inclineBeltLocal);
 
 /** Nave de calderas completa: cuerpo, testero, chimeneas metálicas, torre de escalera y cinta inclinada. */
 export function boilerHouse(out: Solid[]): void {

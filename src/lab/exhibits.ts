@@ -66,10 +66,10 @@ const vessel = (kind: ShipKind) => (out: Solid[], accents: Accent[]): void => {
 };
 
 export const EXHIBITS: readonly Exhibit[] = [
-  // {2, 41, 98, 76}: x1 = borde este de la torre de escalera (STAIR_TOWER.x1); zócalo y tolva adentro; faroles y camiones afuera salvo el farol de (5, 76), que toca el borde sur (y1 76); chimeneas (y ≤ 36.05) y tanque (y ≤ 36.6) afuera por el norte; h 26: vértice del horno de la maltería
+  // {2, 41, 98, 76}: x1 = borde este de la torre de escalera (STAIR_TOWER.x1); zócalo y tolva adentro; faroles y camiones afuera salvo el farol de (5, 76), que toca el borde sur (y1 76); chimeneas (y ≤ 36.05) y tanque (y ≤ 36.8, con la escalera) afuera por el norte; h 26: vértice del horno de la maltería
   { id: "planta", title: "Nave de calderas y maltería", zone: "portfolio", group: "fabrica", kind: "region",
     box: { x0: PLANT.x - M, y0: PLANT.y - M, x1: STAIR_TOWER.x1, y1: PLANT.y + PLANT.d + 2 }, h: 26 },
-  // en planta el tanque queda detrás de la maltería (la cámara mira desde el sudeste): solo, se ven patas, cruces, escalera y pasarela
+  // el tanque (WATER_TOWER, al norte de la maltería) queda fuera de la caja de planta: solo, se ven patas, cruces, escalera y pasarela
   { id: "tanque-agua", title: "Tanque de agua", zone: "portfolio", group: "fabrica", kind: "piece", pad: "slab", build: (out) => waterTower(out, { x: 0, y: 0 }) },
   // el humo deriva al NNE hasta PUFF_RANGE: la caja se estira al norte para no cortar la columna
   // el humo deriva 0.45·PUFF_RANGE ≈ 12.6 al este (de ahí los 13); la plataforma sobresale r + 1.2 al sur; la subestación y su farol quedan adentro, detrás

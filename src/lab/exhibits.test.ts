@@ -175,7 +175,7 @@ describe("exhibits de pieza", () => {
     if (e.kind === "piece") e.build(out, []);
     expect(out.map((s) => s.kind)).toEqual(["beam"]);
   });
-  it("el tanque de agua (#214) va solo, centrado en el origen, después de planta: en planta queda detrás de la maltería", () => {
+  it("el tanque de agua (#214) va solo, centrado en el origen, después de planta: la caja de planta no lo contiene (#246)", () => {
     const ids = EXHIBITS.map((e) => e.id);
     expect(ids.indexOf("tanque-agua")).toBe(ids.indexOf("planta") + 1);
     const e = EXHIBITS.find((x) => x.id === "tanque-agua")!;

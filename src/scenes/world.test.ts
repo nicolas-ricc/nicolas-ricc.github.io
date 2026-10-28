@@ -117,7 +117,7 @@ describe("world", () => {
     expect(raised.length).toBeGreaterThan(400);
     const west = (b: ReturnType<typeof bounds>) => b.max.x <= 0; // columna oeste
     const sidingAndCrane = (b: ReturnType<typeof bounds>) => b.min.y >= -13.1 && b.max.y <= -6.7; // desvío y grúa torre, que se quedan
-    const inNewRegion = (b: ReturnType<typeof bounds>) => b.min.x >= 4 && b.max.x <= 98.7 && b.min.y >= -4 && b.max.y <= 99; // región que deja el astillero (#238)
+    const inNewRegion = (b: ReturnType<typeof bounds>) => b.min.x >= 4 && b.max.x <= 98.7 && b.min.y >= -4 && b.max.y <= 99; // región que deja el astillero (#238); x ≤ 98.7 para todo sólido, más estricto que el issue (que lo pide para lo de más de 7 de alto)
     expect(w.factory!.solids.filter((s) => !west(bounds(s)) && !sidingAndCrane(bounds(s)) && !inNewRegion(bounds(s))).map((s) => JSON.stringify(s).slice(0, 90))).toEqual([]);
   });
 });

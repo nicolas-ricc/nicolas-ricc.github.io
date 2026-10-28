@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { sortByDepth } from "../iso/depth";
 import { bounds, type Plate, type Solid } from "../iso/solids";
+import { fingerprint } from "../iso/fingerprint";
 import { translate } from "../iso/translate";
 import { BAY, BAYS, METAL_STACK_X, NAVE, STAIR_TOWER, boilerHouse, gableEnd, inclineBelt, metalStacks, naveBody, stairTower } from "./boiler-house";
 import { PLANT_SHIFT } from "./plant-frame";
@@ -14,15 +15,6 @@ const PIER_X = Array.from({ length: BAYS + 1 }, (_, k) => NAVE.x + k * BAY);
 const E = NAVE.x + NAVE.w; // testero
 const CUTS = [NAVE.x, NAVE.x + 2 * BAY, NAVE.x + 4 * BAY, NAVE.x + 6 * BAY, NAVE.x + 8 * BAY, E - 0.5]; // faldón norte
 const S = NAVE.y + NAVE.d; // muro sur: el zócalo, las pilastras y la cinta se miden desde acá
-/** Redondeo a 1e-6: las sumas del traslado mueven una coordenada un ε. */
-const r6 = (v: number): number => Math.round(v * 1e6) / 1e6;
-/** Huella FNV-1a de 32 bits del JSON de los sólidos, con los números redondeados a 1e-6 (como la de la subestación, #244). */
-function fingerprint(solids: readonly Solid[]): string {
-  const json = JSON.stringify(solids, (_k, v: unknown) => (typeof v === "number" ? r6(v) + 0 : v));
-  let h = 0x811c9dc5;
-  for (let i = 0; i < json.length; i++) h = Math.imul(h ^ json.charCodeAt(i), 0x01000193) >>> 0;
-  return h.toString(16).padStart(8, "0");
-}
 /** Huella de la nave completa en su marco local (x 44..113, y −46..−1), tomada antes de la mudanza (#246). */
 const LOCAL_FINGERPRINT = "9c16a99f";
 

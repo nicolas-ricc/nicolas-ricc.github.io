@@ -1,8 +1,7 @@
 import { v3, type Vec3 } from "../iso/geometry";
 import type { Plate, Solid } from "../iso/solids";
-import { translate } from "../iso/translate";
 import type { Material } from "../map/palette-iso";
-import { PLANT_SHIFT } from "./plant-frame";
+import { PLANT_SHIFT, emitPlant } from "./plant-frame";
 
 /**
  * Maltería de Mistley y tanque de agua sobre patas. La cámara ve techo, este (+x) y sur (+y): el detalle va ahí.
@@ -22,9 +21,7 @@ const beam = (from: Vec3, to: Vec3, w: number, mat: Material, h = w): Solid => (
 
 /** Prisma de fachada de cinco pisos, techo de seis faldones con óculos, pilastras y cornisas del piñón, puertas de carga, portón y horno con techo piramidal. */
 export function maltings(out: Solid[]): void {
-  const local: Solid[] = [];
-  maltingsLocal(local);
-  for (const s of local) out.push(translate(s, PLANT_SHIFT.x, PLANT_SHIFT.y));
+  emitPlant(out, maltingsLocal);
 }
 
 function maltingsLocal(out: Solid[]): void {

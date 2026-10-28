@@ -12,6 +12,7 @@ import { PLANT_SHIFT } from "./plant-frame";
 import { COOLING, MALT, PLANT, RAIL_YARD_X, STACKS, STACK_BASE_H, chimney, factory, type FactoryScene, type Stack } from "./factory";
 import { towerCrane } from "./pieces";
 import { FIREWALL, PHASES_Y, SUBSTATION, SUBSTATION_SHIFT, TRANSFORMERS_Y, currentTransformer, disconnector, droppers, powerTransformer, substation } from "./substation";
+import { fingerprint, r6 } from "../iso/fingerprint";
 import { translate } from "../iso/translate";
 import { EXCAVATOR, excavator, excavatorBox, excavatorWheel, local } from "./excavator";
 import { terrainAt } from "./terrain";
@@ -476,15 +477,6 @@ const sub = (): Solid[] => build(substation);
 const FENCE_BOX: Bounds = { min: { x: SUBSTATION.x0, y: SUBSTATION.y0, z: 0 }, max: { x: SUBSTATION.x1, y: SUBSTATION.y1, z: 12 } };
 /** Portón del cerco sur: de 19.5 a 22.5 desde la esquina oeste. */
 const GATE = { x0: SUBSTATION.x0 + 19.5, x1: SUBSTATION.x0 + 22.5 } as const;
-/** Redondeo a 1e-6: compara x de mundo (157.1 − 95 no es exactamente 62.1). */
-const r6 = (v: number): number => Math.round(v * 1e6) / 1e6;
-/** Huella FNV-1a de 32 bits del JSON de los sólidos, con los números redondeados a 1e-6. */
-function fingerprint(solids: readonly Solid[]): string {
-  const json = JSON.stringify(solids, (_k, v: unknown) => (typeof v === "number" ? r6(v) + 0 : v));
-  let h = 0x811c9dc5;
-  for (let i = 0; i < json.length; i++) h = Math.imul(h ^ json.charCodeAt(i), 0x01000193) >>> 0;
-  return h.toString(16).padStart(8, "0");
-}
 /** Huella de la subestación de hoy en su marco local (x 149..190, y −60..−47), tomada antes del traslado (#244). */
 const LOCAL_FINGERPRINT = "ef04a1c8";
 const raised = (): Solid[] => sub().filter((x) => !isFlat(x));
