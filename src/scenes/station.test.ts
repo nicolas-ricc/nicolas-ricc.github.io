@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
-import { bounds, isFlat, tessellate, type Bounds, type Solid } from "../iso/solids";
-import { BUFFER_H, BUFFER_X, CROSSING, FENCE_Y, GAUGE, HEAD, ISLAND, LADDER, RAIL_W, RAIL_Z, SIDE, SIGNALS, STATION, STOP_X, TRACK_X0, TRACKS_Y, TRAIN_CLEAR, station } from "./station";
+import { v3 } from "../iso/geometry";
+import type { Plate } from "../iso/plate";
+import { bounds, isFlat, tessellate, tessellateAll, type Bounds, type Solid } from "../iso/solids";
+import { BUFFER_H, BUFFER_X, CROSSING, FENCE_Y, GAUGE, HEAD, ISLAND, LADDER, RAIL_W, RAIL_Z, SIDE, SIGNALS, STATION, STOP_X, TRACK_X0, TRACKS_Y, TRAIN_CLEAR, station, building, HALL, WING_N, WING_S, LINK, SERVICE, TOWER, PORTICO, ESPLANADE } from "./station";
 
 const build = (): { out: Solid[]; accents: Accent[] } => { const out: Solid[] = [], accents: Accent[] = []; station(out, accents); return { out, accents }; };
 const { out, accents } = build();
@@ -47,14 +49,15 @@ describe("station", () => {
     expect(JSON.stringify(build())).toBe(JSON.stringify(build()));
   });
 
-  it("todo cae en STATION (x 96..197, y 80..142) y nada elevado pasa z 6", () => {
+  it("todo cae en STATION (x 96..197.3, y 80..142) y nada elevado al oeste del edificio pasa z 6", () => {
     expect(out.length).toBeGreaterThan(50);
     for (const s of out) {
       const b = bounds(s), where = JSON.stringify(s).slice(0, 120);
-      expect(b.min.x, where).toBeGreaterThanOrEqual(96 - 1e-9); expect(b.max.x, where).toBeLessThanOrEqual(STATION.x1 + 1e-9);
+      // 197.3: la baranda de la explanada (#278, "explanada ↔ muelle"); el muelle arranca en 198
+      expect(b.min.x, where).toBeGreaterThanOrEqual(96 - 1e-9); expect(b.max.x, where).toBeLessThanOrEqual(STATION.x1 + 0.3 + 1e-9);
       expect(b.min.y, where).toBeGreaterThanOrEqual(STATION.y0 - 1e-9); expect(b.max.y, where).toBeLessThanOrEqual(STATION.y1 + 1e-9);
     }
-    for (const s of raised) expect(bounds(s).max.z).toBeLessThanOrEqual(6);
+    for (const s of raised) if (bounds(s).min.x < 166) expect(bounds(s).max.z).toBeLessThanOrEqual(6);
   });
 
   it("vías: rieles de TRACK_X0 a BUFFER_X en eje ±1.5, durmientes cada 4 u y tercer riel en eje + 2.1", () => {
@@ -216,13 +219,17 @@ describe("station: vecindades (cajas disjuntas, 1e-9)", () => {
     for (const c of [...columns, ...roofs]) TRACKS_Y.forEach((y, i) => expect(apart(bounds(c), trackBand(y, i))).toBe(true));
   });
 
-  it("ningún sólido elevado pisa otro, salvo las piezas de una misma cabriada (columna, tirante y diagonales, A4)", () => {
+  it("ningún sólido elevado pisa otro, salvo las piezas de una misma cabriada (columna, tirante y diagonales, A4) y el remate de la torre (#278)", () => {
     const bs = raised.map((s) => ({ s, b: bounds(s) }));
+    // la caja del cono del remate cubre todo el tope de la torre: pináculos y hastiales la cruzan siempre
+    const spire = (s: Solid) => s.kind === "cone" && s.mat === "tile";
+    const onTop = (s: Solid) => s.kind === "prism" && s.at.z === 24 && (s.mat === "safety" || (s.mat === "stone" && s.roof === "gable"));
     const truss = (s: Solid) => s.kind === "beam" || (s.kind === "prism" && s.mat === "steel" && s.w === 0.3 && s.at.z === 1);
     const sameX = (a: Bounds, b: Bounds) => Math.abs((a.min.x + a.max.x) / 2 - (b.min.x + b.max.x) / 2) < 1e-6;
     for (let i = 0; i < bs.length; i++) for (let j = i + 1; j < bs.length; j++) {
       const a = bs[i]!, b = bs[j]!;
       if (truss(a.s) && truss(b.s) && sameX(a.b, b.b)) continue;
+      if ((spire(a.s) && onTop(b.s)) || (spire(b.s) && onTop(a.s))) continue;
       expect(apart(a.b, b.b), `${JSON.stringify(a.b)} ↔ ${JSON.stringify(b.b)}`).toBe(true);
     }
   });
@@ -246,5 +253,219 @@ describe("station: vecindades (cajas disjuntas, 1e-9)", () => {
   it("estación ↔ faroles de la calle (x 108.5, y 12/40/68/96/124) y camión (105, 88)", () => {
     const others = [...[12, 40, 68, 96, 124].map((y) => flatBox(108.5, y, 109.1, y + 0.6, 0, 5)), flatBox(105, 88, 108, 95, -0.4, 2.1)];
     for (const s of raised) for (const o of others) expect(apart(bounds(s), o)).toBe(true);
+  });
+});
+
+describe("station: edificio, torre y explanada (#278)", () => {
+  const mine = (): { out: Solid[]; accents: Accent[] } => { const o: Solid[] = [], a: Accent[] = []; building(o, a); return { out: o, accents: a }; };
+  const { out: bOut, accents: bAcc } = mine();
+  const bPrisms = bOut.filter((s): s is Solid & { kind: "prism" } => s.kind === "prism");
+  const bRamps = bOut.filter((s): s is Solid & { kind: "ramp" } => s.kind === "ramp");
+  const bDots = bAcc.filter((a): a is Accent & { kind: "dot" } => a.kind === "dot");
+  const bPolys = bAcc.filter((a): a is Accent & { kind: "poly" } => a.kind === "poly");
+  const at = (c: { x: number; y: number; w: number; d: number }, h: number, z = 0) => (p: Solid & { kind: "prism" }) =>
+    close(p.at.x, c.x) && close(p.at.y, c.y) && close(p.at.z, z) && close(p.w, c.w) && close(p.d, c.d) && close(p.h, h);
+  const find = (c: { x: number; y: number; w: number; d: number }, h: number, z = 0) => { const r = bPrisms.filter(at(c, h, z)); expect(r, JSON.stringify(c)).toHaveLength(1); return r[0]!; };
+  const hall = () => find(HALL, HALL.h), wingN = () => find(WING_N, WING_N.h), wingS = () => find(WING_S, WING_S.h);
+  const shaft = () => find({ x: TOWER.x, y: TOWER.y, w: TOWER.w, d: TOWER.d }, TOWER.h);
+  const on = (s: { plates?: Plate[] }, wall: number, mat: string, shape = "rect") => (s.plates ?? []).filter((p) => p.wall === wall && p.mat === mat && p.shape === shape);
+  const span = (p: Plate) => [p.u0, p.u1, p.z0, p.z1].map((v) => Math.round(v * 1e6) / 1e6);
+  const wallLen = (s: { w: number; d: number }, wall: number) => (wall % 2 === 0 ? s.w : s.d);
+  const samePts = (a: { x: number; y: number; z: number }[], b: { x: number; y: number; z: number }[]) =>
+    a.length === b.length && a.every((p) => b.some((q) => close(p.x, q.x) && close(p.y, q.y) && close(p.z, q.z)));
+
+  it("huellas exactas (contrato con los hijos siguientes de #239)", () => {
+    expect(HALL).toEqual({ x: 170, y: 106, w: 20, d: 18, h: 8 });
+    expect(WING_N).toEqual({ x: 168, y: 100, w: 22, d: 6, h: 5 });
+    expect(WING_S).toEqual({ x: 168, y: 124, w: 16, d: 8, h: 5 });
+    expect(LINK).toEqual({ x: 184, y: 124, w: 6, d: 2, h: 5 });
+    expect(SERVICE).toEqual({ x: 166, y: 106, w: 4, d: 18, h: 6 });
+    expect(TOWER).toEqual({ x: 184, y: 126, w: 6, d: 6, h: 24, top: 29 });
+    expect(PORTICO).toEqual({ x: 190, y: 110, w: 4, d: 12, z: 5.2 });
+    expect(ESPLANADE).toEqual({ x0: 190, x1: 197, y0: 98, y1: 136 });
+    for (const [c, h] of [[HALL, 8], [WING_N, 5], [WING_S, 5]] as const) {
+      const p = find(c, h);
+      expect([p.mat, p.roof, p.roofMat]).toEqual(["brick", "gable", "tile"]);
+    }
+    for (const [c, h] of [[LINK, 5], [SERVICE, 6]] as const) { const p = find(c, h); expect([p.mat, p.roof ?? "flat"]).toEqual(["brick", "flat"]); }
+    expect(shaft().mat).toBe("stone");
+    const slab = bPrisms.filter((p) => p.mat === "paving");
+    expect(slab.map(box)).toEqual([[190, 98, 0, 7, 38, 0.15]]);
+    // station() incluye el edificio
+    for (const s of bOut) expect(out.some((o) => JSON.stringify(o) === JSON.stringify(s))).toBe(true);
+  });
+
+  it("hall: alero 8, cumbrera 10.8, linterna con tapas, medio punto, cornisa dentada, ventanales y zócalo", () => {
+    const h = hall(), b = bounds(h);
+    expect(b.max.z).toBeCloseTo(10.8, 9);
+    // linterna y tapas
+    expect(bPrisms.filter((p) => p.mat === "glass").map(box)).toEqual([[172, 114.4, 10.8, 16, 1.2, 0.8]]);
+    expect(sorted(bPrisms.filter((p) => p.mat === "asphalt" && p.at.z === 10.8).map(box).map((r) => r.map((v) => Math.round(v * 1e6) / 1e6))))
+      .toEqual(sorted([[171.85, 114.4, 10.8, 0.15, 1.2, 0.8], [188, 114.4, 10.8, 0.15, 1.2, 0.8]]));
+    // medio punto en el hastial este
+    expect(on(h, 1, "stockbrick", "disc").map(span)).toEqual([[0.41, 0.59, 8.1, 10]]);
+    expect(on(h, 1, "glass", "disc").map(span)).toEqual([[0.43, 0.57, 8.3, 9.8]]);
+    // cornisa: 10 + 10 en los muros a z 7.5..7.9, 8 bajo las vertientes del hastial
+    for (const wall of [1, 2]) {
+      const dent = on(h, wall, "stockbrick").filter((p) => p.z0 === 7.5 && p.z1 === 7.9);
+      expect(dent, `cornisa ${wall}`).toHaveLength(10);
+      for (const p of dent) expect((p.u1 - p.u0) * wallLen(h, wall)).toBeCloseTo(0.4, 9);
+    }
+    const slopeDent = on(h, 1, "stockbrick").filter((p) => p.z0 > 7.9);
+    expect(slopeDent).toHaveLength(8);
+    for (const p of slopeDent) {
+      const yc = 106 + ((p.u0 + p.u1) / 2) * 18, line = 8 + 2.8 * (9 - Math.abs(yc - 115)) / 9;
+      expect(p.z1).toBeCloseTo(line - 0.1, 9); expect(p.z1 - p.z0).toBeCloseTo(0.4, 9);
+      expect(p.u1 <= 0.41 || p.u0 >= 0.59).toBe(true); // no pisa el arco
+    }
+    // tres ventanales en el este, bajo el pórtico (y 110..122), con parteluces y pilastras
+    const big = on(h, 1, "glass").sort((a, b) => a.u0 - b.u0);
+    expect(big.map(span)).toEqual([[0.08, 0.28, 1.2, 6.4], [0.39, 0.61, 1.2, 6.4], [0.72, 0.92, 1.2, 6.4]]);
+    for (const p of big) { expect(106 + p.u0 * 18).toBeGreaterThanOrEqual(110 - 1e-9); expect(106 + p.u1 * 18).toBeLessThanOrEqual(122 + 1e-9); }
+    const mull = on(h, 1, "canopy").filter((p) => p.z0 >= 1.2 - 1e-9);
+    for (const g of big) {
+      const inside = mull.filter((m) => m.u0 >= g.u0 - 1e-9 && m.u1 <= g.u1 + 1e-9);
+      expect(inside.some((m) => close((m.u1 - m.u0) * 18, 0.15) && close(m.z0, 1.2) && close(m.z1, 6.4) && close((m.u0 + m.u1) / 2, (g.u0 + g.u1) / 2)), "parteluz vertical").toBe(true);
+      expect(inside.some((m) => close(m.z1 - m.z0, 0.15) && close((m.z0 + m.z1) / 2, 4) && close(m.u0, g.u0) && close(m.u1, g.u1)), "parteluz horizontal").toBe(true);
+    }
+    expect(on(h, 1, "stockbrick").filter((p) => p.z0 === 0.8).map(span)).toEqual([[0.3, 0.36, 0.8, 7.5], [0.64, 0.7, 0.8, 7.5]]);
+    // cuatro ventanas en el sur, 1.6 de ancho, z 2..5.5, con parteluz
+    const south = on(h, 2, "glass");
+    expect(south).toHaveLength(4);
+    for (const p of south) {
+      expect((p.u1 - p.u0) * 20).toBeCloseTo(1.6, 9); expect([p.z0, p.z1]).toEqual([2, 5.5]);
+      expect(on(h, 2, "canopy").some((m) => m.u0 > p.u0 && m.u1 < p.u1 && close((m.u1 - m.u0) * 20, 0.15))).toBe(true);
+    }
+    // zócalo en el hall y las alas
+    for (const s of [h, wingN(), wingS()]) for (const wall of [1, 2]) expect(on(s, wall, "canopy").filter((p) => p.z0 === 0 && p.z1 === 0.8 && p.u0 === 0 && p.u1 === 1), `zócalo ${wall}`).toHaveLength(1);
+  });
+
+  it("pórtico: marquesina con vidrio, dos columnas redondas, cartel claro", () => {
+    const m = find({ x: PORTICO.x, y: PORTICO.y, w: PORTICO.w, d: PORTICO.d }, 0.4, PORTICO.z);
+    expect(m.mat).toBe("canopy");
+    for (const wall of [1, 2]) expect(on(m, wall, "glass").length, `vidrio ${wall}`).toBe(1);
+    const cols = bOut.filter((s): s is Solid & { kind: "cylinder" } => s.kind === "cylinder" && s.mat === "canopy");
+    expect(sorted(cols.map((c) => [c.at.x, c.at.y, c.at.z, c.r, c.sides, Math.round((c.at.z + c.h) * 1e6) / 1e6]))).toEqual(sorted([[193.4, 111.5, 0.15, 0.3, 8, 5.2], [193.4, 120.5, 0.15, 0.3, 8, 5.2]]));
+    expect(bPrisms.filter((p) => p.mat === "whitewash").map(box).map((r) => r.map((v) => Math.round(v * 1e6) / 1e6))).toEqual([[193.85, 111, 5.6, 0.15, 10, 1]]);
+  });
+
+  it("alas y toldos: cuatro al sur de WING_S, dos al este de WING_N, cada uno con su vidriera", () => {
+    const sRamps = bRamps.filter((r) => r.mat === "signal" && r.dir === "s"), eRamps = bRamps.filter((r) => r.mat === "signal" && r.dir === "e");
+    expect(sRamps).toHaveLength(4); expect(eRamps).toHaveLength(2);
+    for (const r of sRamps) expect([r.at.y, r.at.z, r.w, r.d, r.h]).toEqual([132, 3, 2, 0.8, 0.5]);
+    for (const r of eRamps) expect([r.at.x, r.at.z, r.w, r.d, r.h]).toEqual([190, 3, 0.8, 2, 0.5]);
+    const ws = on(wingS(), 2, "glass"), wn = on(wingN(), 1, "glass");
+    for (const r of sRamps) expect(ws.some((p) => close(184 - p.u0 * 16, r.at.x + r.w) && close(184 - p.u1 * 16, r.at.x) && p.z1 <= 3 + 1e-9), `vidriera s ${r.at.x}`).toBe(true);
+    for (const r of eRamps) expect(wn.some((p) => close(100 + p.u0 * 6, r.at.y) && close(100 + p.u1 * 6, r.at.y + r.d) && p.z1 <= 3 + 1e-9), `vidriera e ${r.at.y}`).toBe(true);
+    for (const r of sRamps) { expect(r.at.x).toBeGreaterThanOrEqual(WING_S.x - 1e-9); expect(r.at.x + r.w).toBeLessThanOrEqual(WING_S.x + WING_S.w + 1e-9); }
+    for (const r of eRamps) { expect(r.at.y).toBeGreaterThanOrEqual(WING_N.y - 1e-9); expect(r.at.y + r.d).toBeLessThanOrEqual(WING_N.y + WING_N.d + 1e-9); }
+  });
+
+  it("explanada: faroles altos, palmeras y baranda; lo que apoya en la losa arranca en z 0.15", () => {
+    const posts = bPrisms.filter((p) => p.mat === "steel" && p.w === 0.6 && p.h === 6);
+    expect(sorted(posts.map((p) => [Math.round((p.at.x + 0.3) * 1e6) / 1e6, Math.round((p.at.y + 0.3) * 1e6) / 1e6, p.at.z]))).toEqual(sorted([[195.5, 102, 0.15], [195.5, 130, 0.15]]));
+    const trunks = bOut.filter((s): s is Solid & { kind: "cylinder" } => s.kind === "cylinder" && s.mat === "deck");
+    expect(sorted(trunks.map((t) => [t.at.x, t.at.y, t.at.z, t.r, t.h, t.sides]))).toEqual(sorted([[195.5, 108, 0.15, 0.25, 6, 6], [195.6, 116.5, 0.15, 0.25, 6, 6], [195.5, 125, 0.15, 0.25, 6, 6]]));
+    const crowns = bOut.filter((s): s is Solid & { kind: "cone" } => s.kind === "cone" && s.mat === "leaf");
+    expect(sorted(crowns.map((c) => [c.at.x, c.at.y, c.at.z, c.r, c.h]))).toEqual(sorted(trunks.map((t) => [t.at.x, t.at.y, 6.15, 1.8, 1.6])));
+    expect(bPrisms.filter((p) => p.mat === "canopy" && p.at.x === 197).map(box)).toEqual([[197, 98, 0, 0.3, 38, 1]]);
+    for (const s of bOut) {
+      const b = bounds(s);
+      if (b.min.x >= ESPLANADE.x0 + 1e-9 && b.max.x <= ESPLANADE.x1 + 1e-9 && b.max.z > 0.15 + 1e-9) expect(b.min.z, JSON.stringify(b)).toBeGreaterThanOrEqual(0.15 - 1e-9);
+    }
+  });
+
+  it("torre: fuste de piedra con ranuras, cuatro esferas con anillo, pináculos, remate de teja con hastiales y respiraderos", () => {
+    const t = shaft();
+    for (const wall of [1, 2]) expect(sorted(on(t, wall, "asphalt").map(span))).toEqual(sorted([[0.475, 0.525, 4, 8], [0.475, 0.525, 11, 15]]));
+    for (const wall of [0, 1, 2, 3]) {
+      expect(on(t, wall, "safety", "disc").map(span), `anillo ${wall}`).toEqual([[0.2, 0.8, 20.3, 23.3]]);
+      expect(on(t, wall, "whitewash", "disc").map(span), `esfera ${wall}`).toEqual([[0.26, 0.74, 20.6, 23]]);
+    }
+    const pins = bPrisms.filter((p) => p.mat === "safety" && p.at.z === 24);
+    expect(sorted(pins.map(box).map((r) => r.map((v) => Math.round(v * 1e6) / 1e6)))).toEqual(sorted([[184, 126], [189.6, 126], [184, 131.6], [189.6, 131.6]].map(([x, y]) => [x, y, 24, 0.4, 0.4, 1.2])));
+    const roof = bOut.filter((s): s is Solid & { kind: "cone" } => s.kind === "cone" && s.mat === "tile");
+    expect(roof).toHaveLength(1);
+    const rb = bounds(roof[0]!);
+    expect([rb.min.x, rb.min.y, rb.min.z, rb.max.x, rb.max.y, rb.max.z].map((v) => Math.round(v * 1e6) / 1e6)).toEqual([184, 126, 24, 190, 132, TOWER.top]);
+    expect(roof[0]!.sides).toBe(4);
+    const top = Math.max(...out.filter((s) => !isFlat(s)).map((s) => bounds(s).max.z));
+    expect(top).toBeCloseTo(TOWER.top, 9);
+    expect(out.filter((s) => !isFlat(s) && bounds(s).max.z > TOWER.top - 1e-9)).toEqual([roof[0]]);
+    // hastiales: pentágono hacia afuera (A3), respiradero en el hastial exterior
+    const gables = bPrisms.filter((p) => p.mat === "stone" && p.roof === "gable");
+    expect(sorted(gables.map(box).map((r) => r.map((v) => Math.round(v * 1e6) / 1e6)))).toEqual(sorted([
+      [188, 128.6, 24, 2, 0.8, 1], [184, 128.6, 24, 2, 0.8, 1], [186.6, 126, 24, 0.8, 2, 1], [186.6, 130, 24, 0.8, 2, 1],
+    ]));
+    const outWall = (g: Solid & { kind: "prism" }) => (g.w > g.d ? (g.at.x > 186 ? 1 : 3) : (g.at.y > 128 ? 2 : 0));
+    for (const g of gables) expect(on(g, outWall(g), "asphalt").map(span), `respiradero ${outWall(g)}`).toEqual([[0.3125, 0.6875, 24.5, 24.8]]);
+  });
+
+  it("luces de noche: pórtico, linterna, medio punto, ventanas, esferas y faroles", () => {
+    const portico = bDots.filter((d) => d.color === "amber" && d.at.x > 190 && d.at.x < 194 && d.at.y > 110 && d.at.y < 122 && d.at.z < 5.2);
+    expect(portico.length).toBeGreaterThanOrEqual(3);
+    expect(sorted(bDots.filter((d) => d.color === "amber" && d.r === 0.5).map((d) => [d.at.x, d.at.y, d.at.z]))).toEqual(sorted([[190.05, 109, 3.2], [190.05, 123, 3.2]]));
+    expect(sorted(bDots.filter((d) => d.color === "cyan").map((d) => [d.at.x, d.at.y, d.at.z, d.r]))).toEqual(sorted([[195.5, 102, 6.15, 1.2], [195.5, 130, 6.15, 1.2]]));
+    // cada poly cae sobre una placa del muro (mismo contorno en mundo)
+    const t = shaft(), h = hall();
+    const faces = (s: Solid, mat: string, shape: string) => tessellateAll(s).filter((f) => f.mat === mat && f.pts.length === (shape === "disc" ? 8 : 4));
+    const dial = faces(t, "whitewash", "disc").filter((f) => f.normal.x > 0.5 || f.normal.y > 0.5);
+    const amberPolys = bPolys.filter((p) => p.color === "amber");
+    expect(dial).toHaveLength(2);
+    for (const f of dial) expect(amberPolys.some((p) => samePts(p.pts, f.pts) && p.alpha === 0.6), "esfera").toBe(true);
+    const fan = faces(h, "glass", "disc");
+    expect(fan).toHaveLength(1);
+    expect(amberPolys.some((p) => samePts(p.pts, fan[0]!.pts) && p.alpha === 0.5), "medio punto").toBe(true);
+    const windows = faces(h, "glass", "rect");
+    const cyanB = bPolys.filter((p) => p.color === "cyanBleed");
+    expect(cyanB).toHaveLength(7);
+    for (const p of cyanB) { expect(p.alpha).toBe(0.5); expect(windows.some((f) => samePts(p.pts, f.pts)), "ventana").toBe(true); }
+    const lantern = bPolys.filter((p) => p.color === "amberBleed");
+    expect(lantern).toHaveLength(1);
+    expect(lantern[0]!.alpha).toBe(0.6);
+    expect(samePts(lantern[0]!.pts, [v3(188, 115.6, 10.8), v3(172, 115.6, 10.8), v3(172, 115.6, 11.6), v3(188, 115.6, 11.6)])).toBe(true);
+  });
+
+  it("tamaño mínimo 0.15 en todo sólido y toda placa del edificio", () => {
+    for (const s of bOut) {
+      const b = bounds(s), where = JSON.stringify(s).slice(0, 120);
+      for (const k of ["x", "y", "z"] as const) expect(b.max[k] - b.min[k], `${where} ${k}`).toBeGreaterThanOrEqual(0.15 - 1e-9);
+      if (s.kind !== "prism" && s.kind !== "ramp") continue;
+      for (const p of s.plates ?? []) {
+        expect((p.u1 - p.u0) * wallLen(s, p.wall), `${where} placa u`).toBeGreaterThanOrEqual(0.15 - 1e-9);
+        expect(p.z1 - p.z0, `${where} placa z`).toBeGreaterThanOrEqual(0.15 - 1e-9);
+      }
+    }
+  });
+
+  describe("vecindades", () => {
+    const bb = bOut.map((s) => ({ s, b: bounds(s) }));
+    it("edificio ↔ HEAD y su marquesina: todo en x ≥ 166, disjunto del andén y su techo", () => {
+      const head = flatBox(HEAD.x0, HEAD.y0, HEAD.x1, HEAD.y1, 0, 3.8);
+      for (const { b } of bb) { expect(b.min.x, JSON.stringify(b)).toBeGreaterThanOrEqual(166 - 1e-9); expect(apart(b, head)).toBe(true); }
+    });
+    it("torre ↔ explanada: lo que pasa x 190 es pórtico, cartel, columnas, toldos o apoya en la losa (z ≥ 0.15)", () => {
+      const slab = bPrisms.find((p) => p.mat === "paving")!;
+      for (const { s, b } of bb) {
+        if (s === slab || b.max.x <= 190 + 1e-9) continue;
+        expect(b.min.x, JSON.stringify(b)).toBeGreaterThanOrEqual(190 - 1e-9);
+        if (!(s.kind === "prism" && s.mat === "canopy" && s.at.x === 197)) expect(b.min.z, JSON.stringify(b)).toBeGreaterThanOrEqual(0.15 - 1e-9);
+      }
+      const tower = bb.filter(({ b }) => b.min.x >= TOWER.x - 1e-9 && b.min.y >= TOWER.y - 1e-9 && b.max.y <= TOWER.y + TOWER.d + 1e-9 && b.min.z >= 0 && b.max.z > 5);
+      for (const { b } of tower) expect(b.max.x).toBeLessThanOrEqual(190 + 1e-9);
+    });
+    it("explanada ↔ muelle: max.x ≤ 197.3", () => {
+      for (const { b } of bb) expect(b.max.x).toBeLessThanOrEqual(197.3 + 1e-9);
+    });
+    it("hall ↔ alas ↔ torre: cajas que se tocan pero no se cruzan", () => {
+      const parts = [hall(), wingN(), wingS(), find(LINK, 5), find(SERVICE, 6), shaft()].map(bounds);
+      const touch = (a: Bounds, b: Bounds) => a.min.x <= b.max.x + 1e-9 && b.min.x <= a.max.x + 1e-9 && a.min.y <= b.max.y + 1e-9 && b.min.y <= a.max.y + 1e-9;
+      for (let i = 0; i < parts.length; i++) for (let j = i + 1; j < parts.length; j++) expect(apart(parts[i]!, parts[j]!), `${i} ↔ ${j}`).toBe(true);
+      const [h, n, s, l, sv, t] = parts as [Bounds, Bounds, Bounds, Bounds, Bounds, Bounds];
+      for (const [a, b] of [[h, n], [h, s], [h, l], [h, sv], [s, t], [l, t], [n, sv], [s, sv]] as const) expect(touch(a, b)).toBe(true);
+    });
+    it("ningún sólido del edificio en y < 98 ni y > 136", () => {
+      for (const { b } of bb) { expect(b.min.y).toBeGreaterThanOrEqual(98 - 1e-9); expect(b.max.y).toBeLessThanOrEqual(136 + 1e-9); }
+    });
   });
 });

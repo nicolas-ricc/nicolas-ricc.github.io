@@ -11,7 +11,7 @@ const byColor = (accents: Accent[]) => {
 /** Portfolio no se toca en la historia #11: mismos colores, misma cantidad. La feria queda afuera a propósito (es la excepción con neones). */
 describe("acentos de Portfolio", () => {
   const w = world(7);
-  it("astillero", () => expect(byColor(w.shipyard!.accents)).toEqual({ cyan: 7, cyanMid: 8, magenta: 3 }));
+  it("astillero", () => expect(byColor(w.shipyard!.accents)).toEqual({ amber: 8, amberBleed: 1, cyan: 9, cyanBleed: 7, cyanMid: 8, magenta: 3 }));
   it("fábrica", () => expect(byColor(w.factory!.accents)).toEqual({ amber: 3, cyan: 8, magenta: 6 }));
   it("hinterland", () => expect(byColor(w.hinterland!.accents)).toEqual({ cyan: 21, cyanMid: 1 }));
 });
