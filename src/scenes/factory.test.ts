@@ -404,7 +404,8 @@ describe("chimeneas y torre de enfriamiento detrás del lugar nuevo de la nave (
     const u = union(mine);
     const near = others.flatMap(slices).filter((b) => b.max.x >= u.min.x - 1 && b.min.x <= u.max.x + 1 && b.max.y >= u.min.y - 1 && b.min.y <= u.max.y + 1); // el resto no puede tocar
     expect(near.length).toBeGreaterThan(0); // el farol (53, 12), al menos
-    for (const a of mine) for (const p of slices(a)) for (const q of near) expect(apartBox(p, q), JSON.stringify(a).slice(0, 90)).toBe(true);
+    const touching = mine.filter((a) => slices(a).some((p) => near.some((q) => !apartBox(p, q)))); // un expect por par tarda 10 s
+    expect(touching.map((a) => JSON.stringify(a).slice(0, 90))).toEqual([]);
   });
 });
 
