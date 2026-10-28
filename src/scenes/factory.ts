@@ -14,9 +14,8 @@ import { SUBSTATION, substation } from "./substation";
 /**
  * Fábrica, detrás (al norte) y al oeste del astillero. Banda norte
  * `x -60..205, y -60..0` al oeste del río: nave de calderas (Fábrica de Luz) y,
- * al oeste, la maltería de Mistley y un tanque de agua sobre patas, tres chimeneas humeantes, torre de
- * enfriamiento, grúa torre sobre un desvío ferroviario y playa de camiones. Al sur del desvío, ya fuera de la banda
- * (mudanza de #238), la subestación de intemperie (`substation.ts`, x 54..95, y −2..11). Columna oeste `x -60..0, y 0..146`: playa de vías,
+ * al oeste, la maltería de Mistley y un tanque de agua sobre patas, grúa torre sobre un desvío ferroviario y playa de camiones. Al sur del desvío, ya fuera de la banda
+ * (mudanza de #238), la subestación de intemperie (`substation.ts`, x 54..95, y −2..11) y, en la región nueva al norte del lugar de la nave (y 43.4), tres chimeneas humeantes (x 54..90, y 22..36) y la torre de enfriamiento (x 31..49, y 5..23), también mudanza de #238. Columna oeste `x -60..0, y 0..146`: playa de vías,
  * excavadora de rueda de cangilones y acopios de mineral, selva al sur. El terreno es `slab`.
  * Spec: docs/superpowers/specs/2026-09-14-mundo-2-fabrica-distrito-blog-design.md §5.
  * Detalle de planta, chimeneas, subestación y excavadora: docs/superpowers/specs/2026-10-24-fabrica-detalle-design.md.
@@ -25,12 +24,12 @@ export interface FactoryScene { ground: Solid[]; solids: Solid[]; accents: Accen
 
 export const PLANT = { x: MALT.x, y: MALT.y, w: MALT.w + NAVE.w, d: 30, h: 14 } as const;
 export { MALT };
-export const STACKS = [{ x: 130, y: -40, r: 2.8, h: 22 }, { x: 140, y: -34, r: 2.6, h: 26 }, { x: 150, y: -40, r: 2.4, h: 24 }] as const;
+export const STACKS = [{ x: 58, y: 32, r: 2.8, h: 22 }, { x: 72, y: 26, r: 2.6, h: 26 }, { x: 86, y: 32, r: 2.4, h: 24 }] as const;
 export const STACK_BASE_H = 3;
 const DECK_H = 0.3; // losa de la plataforma de las chimeneas
 export const SIDING_Y = -8;
 export const RAIL_YARD_X = [-56, -48, -40] as const; // vías N-S de la playa; los acopios van al este de ellas
-const COOLING = { x: 172, y: -36 } as const;
+export const COOLING = { x: 40, y: 14, r: 9 } as const; // torre de enfriamiento: al norte del lugar de la nave, x 31..49, y 5..23
 const LAMP_H = 5;
 
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material): Solid => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat });
@@ -89,7 +88,7 @@ function chimneys(out: Solid[], accents: Accent[]): Vec3[] {
 
 function coolingTower(out: Solid[]): void {
   let z = 0;
-  for (const r of [9, 8, 7, 7.5]) { out.push({ kind: "cylinder", at: v3(COOLING.x, COOLING.y, z), r, h: 4, mat: "concrete", sides: 12 }); z += 4; }
+  for (const r of [COOLING.r, 8, 7, 7.5]) { out.push({ kind: "cylinder", at: v3(COOLING.x, COOLING.y, z), r, h: 4, mat: "concrete", sides: 12 }); z += 4; }
 }
 
 function siding(out: Solid[]): void {
