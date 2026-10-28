@@ -3,8 +3,8 @@ import { v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { bounds, type Solid } from "../iso/solids";
 import { BOTTOM, DOCK, QUAY_W, QUAY_X, WORLD, eastBank, northCoastY } from "../map/geo";
 import type { Rng } from "../map/seed";
-import { jungle as flora } from "./flora";
-import { station } from "./station";
+import { jungle as flora, type Rails } from "./flora";
+import { TRAIN_CLEAR, station } from "./station";
 import { clearOfWater } from "./terrain-classify";
 
 
@@ -185,16 +185,16 @@ function fittingOut(out: Solid[], rng: Rng): void {
 
 function jungle(out: Solid[], rng: Rng): void {
   // siembra igual (el rng no se mueve) y descarta lo que queda a menos de 3 u del agua
-  const cluster = (x0: number, x1: number, y0: number, y1: number, n: number) => {
+  const cluster = (x0: number, x1: number, y0: number, y1: number, n: number, rails?: Rails) => {
     const tmp: Solid[] = [];
-    flora(tmp, rng, { x0, x1, y0, y1 }, n);
+    flora(tmp, rng, { x0, x1, y0, y1 }, n, 0.4, rails);
     for (const s of tmp) {
       const b = bounds(s);
       if (clearOfWater(b.min.x, b.min.y, b.max.x, b.max.y, 3)) out.push(s);
     }
   };
   cluster(3, 39, 102, 125, 10);   // SO, al norte de las vías (r ≤ 4: nunca las pisa)
-  cluster(3, 39, 139, 143, 4);    // SO, al sur de las vías
+  cluster(3, 39, 139, 143, 4, { y: RAIL_Y, train: TRAIN_CLEAR }); // SO, al sur de las vías (el corredor del tren lo vacía, #280)
   cluster(332, 340, 50, 94, 6);   // borde este, entre la bahía y la punta (y0 50, Task 6: deja fuera del alcance diagonal del carguero que sale de la bahía)
   cluster(332, 340, 136, 143, 2); // al sur de la punta
   cluster(301, 328, 127, 143, 6); // al sur de los galpones, sin pisar la base de la punta (x ≥ 330)

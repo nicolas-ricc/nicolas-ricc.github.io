@@ -6,7 +6,9 @@ import type { Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { QUAY_X, WORLD, ZONE_SPLIT_Y, islandWestX } from "../map/geo";
 import { AVENUE, BLOCK_W, BOULEVARD, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_COLS, EAST_RING, FALLEN_BLOCK, LIT_FLOOR, MALECON, PLAZA, ROWS, SIDEWALK, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_COLS, WEST_QUAY, blocks, estuaryEast, estuaryReaches, inBlock, inCrater, type Block } from "./city-grid";
-import { jungle } from "./flora";
+import { jungle, type Rails } from "./flora";
+import { RAIL_Y } from "./shipyard";
+import { TRAIN_CLEAR } from "./station";
 import { PLINTH_H, lamp, plazaTone, prism, tiles } from "./city-pieces";
 import { districtBlock, maxDistrictHeight } from "./district";
 
@@ -308,9 +310,9 @@ function collapsed(solids: Solid[], rng: Rng): void {
  * estuario, cuya orilla es `islandWestX` (consume el rng en el mismo orden,
  * así no desalinea la semilla).
  */
-function jungleOnLand(out: Solid[], rng: Rng, rect: { x0: number; x1: number; y0: number; y1: number }, n: number, z = 0.4): void {
+function jungleOnLand(out: Solid[], rng: Rng, rect: { x0: number; x1: number; y0: number; y1: number }, n: number, z = 0.4, rails?: Rails): void {
   const tmp: Solid[] = [];
-  jungle(tmp, rng, rect, n, z);
+  jungle(tmp, rng, rect, n, z, rails);
   for (const s of tmp) {
     if (s.kind === "cone" && s.at.x > QUAY_X - s.r && s.at.x <= islandWestX(s.at.y) + s.r) continue;
     out.push(s);
@@ -318,7 +320,7 @@ function jungleOnLand(out: Solid[], rng: Rng, rect: { x0: number; x1: number; y0
 }
 
 function greenery(solids: Solid[], rng: Rng): void {
-  jungleOnLand(solids, rng, { x0: WORLD.x0 + 3, x1: 340, y0: ZONE_SPLIT_Y + 1, y1: CITY_EDGE.north - 2 }, 30);      // cinturón de costura, sin pisar el estuario
+  jungleOnLand(solids, rng, { x0: WORLD.x0 + 3, x1: 340, y0: ZONE_SPLIT_Y + 1, y1: CITY_EDGE.north - 2 }, 30, 0.4, { y: RAIL_Y, train: TRAIN_CLEAR });      // cinturón de costura, sin pisar el estuario
   for (let y = ROWS[0]; y < COLLAPSED.y; y += 8) {                                                        // ribera este del estuario, ciudad vieja
     const x0 = Math.ceil(islandWestX(y + 6)) + 2, x1 = EAST_RING.x0 - 3;
     if (x1 - x0 >= 2) jungleOnLand(solids, rng, { x0, x1, y0: y, y1: y + 6 }, rng.int(1, 2));
