@@ -28,6 +28,23 @@ export function slab(p: Slab): Solid[] {
   return [prism(p.x - 0.3, p.y - 0.3, 0, 20.6, 5.6, 0.3, "paving"), body, ...tanks, prism(c.x + 0.9, c.y + 0.9, top + 2.8, 0.2, 0.2, 2.5, "steel")];
 }
 
+/** Ventanas encendibles: sur (por vano no loggia) y este por piso; una por piso por columna de loggia, con `lit` común. */
+export function windows(ctx: BarrioCtx, b: SprawlBlock, slabs: Slab[]): void {
+  slabs.forEach((s, i) => {
+    const floors = s.h / 3, lit: Record<number, boolean> = {};
+    for (const k of s.loggias) lit[k] = ctx.rng.chance(0.5);
+    for (let f = 0; f < floors; f++) {
+      const z = 0.3 + 3 * f;
+      for (let k = 0; k < 8; k++) {
+        const cx = s.x + 20 * (1 - (k + 0.5) / 8), loggia = s.loggias.includes(k);
+        if (loggia) homeWindow(ctx, wallWindow({ y: s.y + 5 }, cx - 1.25, cx + 1.25, z + 1.2, z + 2.6), lit[k]!, `${b.x},${b.y}:p${i}-L${k}`);
+        else homeWindow(ctx, wallWindow({ y: s.y + 5 }, cx - 0.45, cx + 0.45, z + 1.1, z + 2), ctx.rng.chance(0.38), `${b.x},${b.y}:p${i}-s${f}-${k}`);
+      }
+      for (let j = 0; j < 2; j++) { const c = s.y + 1.25 + 2.5 * j; homeWindow(ctx, wallWindow({ x: s.x + 20 }, c - 0.45, c + 0.45, z + 1.1, z + 2), ctx.rng.chance(0.38), `${b.x},${b.y}:p${i}-e${f}-${j}`); }
+    }
+  });
+}
+
 /** Monoblocks del Barrio Simón Bolívar: una o dos placas de 4 a 6 pisos con grilla y loggias, ventanas al sur y al este, dos faroles. */
 export function monoblock(ctx: BarrioCtx, b: SprawlBlock): void {
   lawn(ctx, b);
@@ -37,13 +54,7 @@ export function monoblock(ctx: BarrioCtx, b: SprawlBlock): void {
     const y = b.y + (two ? (i === 0 ? 2 : 11) : blockParity(b) === 0 ? 2 : 11), mat = ctx.rng.chance(0.5) ? "whitewash" : "stone";
     slabs.push({ x: b.x + 2, y, h, mat, brick: ctx.rng.chance(0.5), loggias: ctx.rng.int(1, 2) === 1 ? [2] : [2, 6] });
   }
-  slabs.forEach((s, i) => {
-    ctx.solids.push(...slab(s));
-    for (let f = 0; f < s.h / 3; f++) {
-      const z = 0.3 + 3 * f + 1.15;
-      for (let k = 0; k < 8; k++) { if (s.loggias.includes(k)) continue; const c = s.x + 2.5 * (k + 0.5); homeWindow(ctx, wallWindow({ y: s.y + 5 }, c - 0.45, c + 0.45, z, z + 0.9), ctx.rng.chance(0.38), `${b.x},${b.y}:p${i}-s${f}-${k}`); }
-      for (let j = 0; j < 2; j++) { const c = s.y + 2.5 * (j + 0.5); homeWindow(ctx, wallWindow({ x: s.x + 20 }, c - 0.45, c + 0.45, z, z + 0.9), ctx.rng.chance(0.38), `${b.x},${b.y}:p${i}-e${f}-${j}`); }
-    }
-  });
+  slabs.forEach((s) => ctx.solids.push(...slab(s)));
+  windows(ctx, b, slabs);
   cornerLamps(ctx, b);
 }
