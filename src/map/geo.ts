@@ -159,10 +159,13 @@ export function northCoastY(x: number): number {
     + Math.max(0, x - 350) ** 2 / 6;
 }
 
-/** Costura de las celdas del estuario: centro de la última fila antes de ZONE_SPLIT_Y (y = 141). */
+/**
+ * Ruling de la parte 1: el estuario hereda el ancho del canal del astillero en
+ * la última fila de celdas antes de la costura (centro y = 141) y se abre
+ * hacia el sur, en vez de seguir el meandro de riverCenter.
+ */
 export const SEAM_CY = Math.floor(ZONE_SPLIT_Y / CELL) * CELL - CELL / 2;
 export const ESTUARY_FLARE = 0.35; // cuánto se abre la ribera este por unidad hacia el sur
-/** Ribera este del estuario: hereda el ancho del canal en la costura y se abre hacia el sur. */
 export const estuaryEast = (y: number): number => eastBank(SEAM_CY) + Math.max(0, y - ZONE_SPLIT_Y) * ESTUARY_FLARE;
 
 /** Cuánto entra la tierra de la isla sobre el agua del estuario, en [0, 10]; 0 al norte de y 152 y en y 196..262. */
@@ -188,7 +191,7 @@ export function islandEastX(y: number): number {
       * (0.86 + 0.07 * Math.sin(y / 4.7) + 0.05 * Math.sin(y / 2.1 + 1)) + 4 * bump(y, 356, 4);
     return islandWestX(y) + ancho;
   }
-  const lo = y < 134 ? 331 : 331 + ((y - 134) * (ZONE_SPLIT_X - 331)) / 12;
+  const lo = y < 134 ? 331 : Math.min(ZONE_SPLIT_X, 331 + ((y - 134) * (ZONE_SPLIT_X - 331)) / 12);
   const hi = ZONE_SPLIT_X + shoreWidth(y) - 1.5;
   const t = 0.5 + 0.3 * Math.sin(y / 8.3 + 0.9) + 0.17 * Math.sin(y / 2.4 + 0.3);
   const v = lo + (hi - lo) * t;
