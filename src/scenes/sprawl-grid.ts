@@ -1,5 +1,5 @@
-import { islandEastX, islandWestX, CELL_BLEED, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, inCoverQuad, riverCenter } from "../map/geo";
-import { BLOCK_D, BLOCK_W, CITY_EDGE, ROWS, WEST_COLS, estuaryEast, type Rect } from "./city-grid";
+import { CELL_BLEED, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, inCoverQuad, islandEastX, islandWestX, riverCenter } from "../map/geo";
+import { BLOCK_D, BLOCK_W, CITY_EDGE, ROWS, WEST_COLS, type Rect } from "./city-grid";
 
 /**
  * Geografía de los márgenes: qué parte del sangrado es tierra construida y de

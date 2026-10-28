@@ -1,5 +1,5 @@
-import { islandEastX, islandWestX, BOTTOM, DOCK, QUAY_X, SHORE_W, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, abyssX, distToHeadland, eastBank, inHeadland, inMouth, shoreWidth } from "../map/geo";
-import { CITY_EDGE, DISTRICT_BANK_Y, EAST_RING, MALECON_STREET_X, estuaryEast, inCrater } from "./city-grid";
+import { BOTTOM, DOCK, QUAY_X, SHORE_W, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, abyssX, distToHeadland, eastBank, inHeadland, inMouth, islandEastX, islandWestX, shoreWidth } from "../map/geo";
+import { CITY_EDGE, DISTRICT_BANK_Y, EAST_RING, MALECON_STREET_X, inCrater } from "./city-grid";
 import { bayWater, builtAt, estuaryWater } from "./sprawl-grid";
 
 /**
