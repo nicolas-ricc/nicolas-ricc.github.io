@@ -59,6 +59,8 @@ export const ISO_TONES = {
   signal:    { top: 0x86281e, lit: 0x6e1d13, shade: 0x361112, up: 0x9c2d1f, down: 0x73231c },
   stockbrick:{ top: 0x8d764a, lit: 0x73572e, shade: 0x38322d, up: 0xa3844c, down: 0x796846 },
   safety:    { top: 0x987420, lit: 0x7d5614, shade: 0x3d3114, up: 0xb08221, down: 0x83661e },
+  // barrio costero (#240): teja
+  tile:      { top: 0x7b432a, lit: 0x65321a, shade: 0x311c19, up: 0x8f4c2b, down: 0x6a3b27 },
 } as const;
 
 export const ISO_COLORS = {
