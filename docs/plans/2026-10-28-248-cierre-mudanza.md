@@ -33,6 +33,9 @@
 
 - **A1.** "Antes" de la cover es `origin/main` tal cual (incluye #237, costas, que la rama base no tiene). Lo que difiere fuera de la fábrica se anota.
 - **A2.** Las capturas de los hijos con el mismo nombre (`planta-*`, `chimeneas-*`, `subestacion-*`, `naves-*`) se reemplazan; las demás (`vaciar-*`, `mundo-*`, `planta-9-vanos-*`, `playa-camiones-*`) quedan como registro de cada paso.
+- **A4.** Ids que no existen en un árbol (`cinta` en la rama; ninguno más: `naves` y `playa-camiones` existen en los dos) se imprimen como "—", y así van a la tabla.
+- **A5.** La cover se captura sin `?speed=0` (el issue: "en el sitio no hace falta"); se espera a que haya humo en pantalla (dos `wait 3000`) y el chequeo del humo es visual sobre esa captura. Las dos covers no son el mismo frame de animación; la comparación es de disposición, no de píxeles.
+- **A6.** Si falla una captura, no se commitea nada de Task 3 hasta tener las once; los servidores se matan con `pkill -f "vite.*517[34]"` y el worktree con `git worktree remove --force /tmp/main`, en el paso de limpieza que corre el implementador siempre al final, aunque haya fallado antes.
 - **A3.** Fracción visible = (altura total − z desde la que se ve) / altura total, con altura total = `STACK_BASE_H + h` (pedestal incluido): 25, 29 y 27. La escala de `coverView(1600, 900)` da la altura en píxeles CSS de la parte visible.
 
 ---
@@ -62,7 +65,7 @@
 
 - [ ] **Step 1: Correr** — `npx vitest run src/lab/docs.test.ts -t "#238"`: fallan nota y estado.
 - [ ] **Step 2: Nota.** Línea en blanco tras el título y luego un párrafo en cursiva: `*Desvío (2026-10-27): las "huellas estables" de abajo quedaron reemplazadas por la mudanza del complejo al lugar de los galpones (`2026-10-27-fabrica-mudanza-design.md`, #238): cambian las posiciones de planta, portón, `STACKS`, cinta, playa de camiones y subestación. El detalle de §5–§9 sigue vigente. Lo que sigue queda como registro.*`
-- [ ] **Step 3: Estado.** `**Estado:** implementado en #238 (rama `feature/238-fabrica-mudanza`, hijos #241–#248); los desvíos están en §9`.
+- [ ] **Step 3: Estado.** `**Estado:** implementado en #238 (rama `feature/238-fabrica-mudanza`, hijos #241–#247 y este cierre, #248); los desvíos están en §9`.
 - [ ] **Step 4: Correr** y **commit** — `docs(#248): nota de desvío en la spec de la fábrica en detalle y mudanza implementada`.
 
 ### Task 3: Capturas, tabla de caras y chimeneas en la cover (sin código commiteado)
@@ -76,7 +79,7 @@
 
 - [ ] **Step 1: Worktree** — `git worktree add /tmp/main origin/main && (cd /tmp/main && npm ci)`.
 - [ ] **Step 2: Caras** — `.scratch/caras-248.ts <raíz>` importa `src/lab/exhibits.ts`, `src/world/assemble.ts`, `src/lab/crop.ts` de esa raíz e imprime `id caja sólidos caras` para cada id de Global Constraints que exista. `npx tsx .scratch/caras-248.ts /tmp/main` y `… /work`. Chequeo: "después" de `planta` 164/1652 y `playa-camiones` 21/63 (PR #266), `subestacion` 361/1200 (PR #261), salvo cambios posteriores que se expliquen.
-- [ ] **Step 3: Chimeneas** — con `STACKS`, `STACK_BASE_H` de `factory.ts`, alero norte y 43.4 z 14 y testero z 18.5 x 92..93, calcular z visible = `max(0, (cy − 23.8)/1.4)` (y para la del este, también el tramo que tapa el testero); esperado 76 %, 94 %, 86 %. Proyectar con `coverView(1600, 900)` (escala y offset) boca y base visible a píxeles.
+- [ ] **Step 3: Chimeneas** — con `STACKS`, `STACK_BASE_H` de `factory.ts`, alero norte y 43.4 z 14 y testero z 18.5 x 92..93, calcular z visible = `max(0, (cy − 23.8)/1.4)` (`Z_SCALE = 1.4` en `src/iso/project.ts:4`; 23.8 sale del alero: `sy = sx/2 + 43.4 − 1.4·14`; no depende de x porque el alero es paralelo al eje x, siempre que el `sx = cx − cy` de la chimenea caiga dentro del `sx` del alero, −14.4..48.6: la de (86, 32), con sx 54, queda fuera y la tapa el testero/torre) (y para la del este, también el tramo que tapa el testero); esperado 76 %, 94 %, 86 %. Proyectar con `coverView(1600, 900)` (escala y offset) boca y base visible a píxeles.
 - [ ] **Step 4: Servidores** — 5173 (rama) y 5174 (`/tmp/main`); `curl -sf` a cada uno.
 - [ ] **Step 5: Capturas** — agent-browser (CLAUDE.md), `set viewport 1600 900 2`. Cover: abrir `http://localhost:5174/`, esperar el primer dibujo (dos `wait 3000` y mirar), `screenshot …/cover-antes.png`; ídem 5173 → `cover-despues.png`. Exhibits: `http://localhost:517x/lab/storybook.html?speed=0#<id>` → `<id>-antes.png` / `<id>-despues.png`; `cinta` solo en 5174. Verificar con `file` que todo es PNG 3200 x 1800 y mirar cada uno (Read).
 - [ ] **Step 6: Mirar la cover** — en `cover-despues.png`: bandas de balizamiento visibles en las tres chimeneas, humo desde las bocas, rótulo PORTFOLIO fuera de la fábrica, fachada sur de la nave, cabecera de la maltería. Anotar en `.scratch/medicion-248.md`. Si hay un problema de geometría, se anota en Desvíos y se informa al orquestador; no se arregla acá.
@@ -108,4 +111,30 @@ Nuevo `describe("documentación de la mudanza de la fábrica (#238)")` en `src/l
 - `shipyard.ts` no contiene `patio de material → nave de montaje → grada`;
 - spec 10-24: la primera línea no vacía después de `## 2. Reglas de modelado` empieza con `*Desvío (2026-10-27):` y el párrafo nombra `2026-10-27-fabrica-mudanza-design.md`;
 - spec de la mudanza: `^## 9\. Desvíos$`; `**Estado:**` matchea `implementad` y no `listo para agente`; la sección tiene filas `` | `planta` | ``, `chimeneas`, `subestacion`, `playa-camiones`, `naves`, `cinta` y enlaces a `cover-antes.png` y `cover-despues.png`;
-- `cover-antes.png` y `cover-despues.png` son PNG 3200×1800; las demás capturas de Task 3 existen.
+- `cover-antes.png` y `cover-despues.png` son PNG 3200×1800 (lectura del IHDR como el test de #217: `png.subarray(1, 4)` y `readUInt32BE(16/20)`); las demás capturas de Task 3 existen.
+
+Los tests de shipyard y de "no contiene" ya pasan hoy (guardas de regresión): `patio de material → nave de montaje → grada` está en `origin/main` (`shipyard.ts:13`) y no en la rama. Cada tarea corre el describe entero y solo mira los suyos.
+
+Todos los commits llevan la línea `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+
+## Mapa issue → tareas
+
+| "Qué hacer" | Criterio | Tarea |
+|---|---|---|
+| 1 README | 1 | 1 |
+| 2 docstrings | 1 | 1 |
+| 3 docs.test | 1 | stage 3 |
+| 4 nota 10-24 | 2 | 2 |
+| 5 Estado + Desvíos | 2, 5 | 2, 4 |
+| 6 capturas | 3 | 3 |
+| 7 chimeneas en la cover | 4 | 3 (+ PR) |
+| 8 tabla de caras y delta total | 5 | 3, 4 (+ PR) |
+| verificación general | 6 | 4 |
+
+## Grilling
+
+- 1 ronda (revisiones menores: mapa issue → tareas, A4–A6, derivación de la fórmula, rango de hijos, línea de atribución). Griller: fable.
+- 17 preguntas. Fuentes: ISSUE 7 (1, 4, 5, 9, 10, 11, 12), CODE 8 (2, 3, 5, 6, 8, 15, 16, 17), DOC 1 (13: CLAUDE.md, método de captura), NO SOURCE 4 → supuestos técnicos (2 ids ausentes → A4; 10 frame de la cover → A5; 13 limpieza → A6; 14 filtro `-t`, que matchea "(#238)" en el nombre del describe).
+- Respuestas clave: el delta total lo pide el ítem 8 y el criterio 5 ("Tabla de caras … y delta total"). `cropScene`/`cropAnimators`/`pieceScene`/`readout` existen en `origin/main` (`crop.ts:54,83,113,161`), `assembleWorld(zones, { reducedMotion })` en `assemble.ts:20`; se importan en Node como hace `exhibits.test.ts:30` (`vitest.config.ts:4`, `environment: "node"`). `tsx` es devDependency (`package.json:31`). El "antes" desde `origin/main` lo fija el ítem 6 del issue; la base de la rama de la historia es b9550c5 (`git merge-base`). Los valores esperados de "después" salen de los PR #266 y #261; `chimeneas` y `naves` sin esperado (se miden). "§5–§9 sigue vigente" es cita del issue (ítem 4) y de la spec de la mudanza ("No cambia el detalle arquitectónico de cada pieza (§5–§9 de ese spec)"); "lo que sigue queda como registro" se refiere a las huellas, y se reescribe así. El reemplazo de capturas con el mismo nombre lo pide el ítem 6 ("Si un hijo anterior dejó una captura con el mismo nombre, reemplazarla por la final"). Rótulo: `LABEL_AT.portfolio = (66, −128, 0)` (`src/main.ts:35`), fuera de la región x 4..98.7, y −4..99 en mundo; en pantalla se confirma a ojo sobre `cover-despues.png`. `coverView` en `src/world/view.ts:30`. El header de `executing-plans` es el formato fijo del skill `writing-plans`; se ejecuta con `subagent-driven-development`.
+- Supuestos: A1–A6.
+- Issues abiertos: ninguno.
