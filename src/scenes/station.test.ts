@@ -200,18 +200,18 @@ describe("station", () => {
 });
 
 describe("station: vecindades (cajas disjuntas, 1e-9)", () => {
-  const trackBand = (axis: number) => flatBox(0, axis - 1.75, 400, axis + 1.75);
+  const trackBand = (axis: number, i: number) => flatBox(TRACK_X0[i]!, axis - 1.75, BUFFER_X, axis + 1.75); // tramo recto: de TRACK_X0 a los topes
   const platformSolids = prisms.filter((p) => p.mat === "concrete");
   const columns = prisms.filter((p) => p.mat === "steel" && p.w === 0.3 && p.d === 0.3 && p.at.z === 1);
 
   it("marquesinas ↔ vías: ninguna columna pisa la franja eje ±1.75", () => {
     expect(columns.length).toBe(16);
-    for (const c of columns) for (const y of TRACKS_Y) expect(apart(bounds(c), trackBand(y))).toBe(true);
+    for (const c of columns) TRACKS_Y.forEach((y, i) => expect(apart(bounds(c), trackBand(y, i))).toBe(true));
   });
 
   it("andenes ↔ vías", () => {
     expect(platformSolids).toHaveLength(3);
-    for (const p of platformSolids) for (const y of TRACKS_Y) expect(apart(bounds(p), trackBand(y))).toBe(true);
+    for (const p of platformSolids) TRACKS_Y.forEach((y, i) => expect(apart(bounds(p), trackBand(y, i))).toBe(true));
   });
 
   it("paso a nivel ↔ calle: los postes quedan fuera de x 100..108", () => {
