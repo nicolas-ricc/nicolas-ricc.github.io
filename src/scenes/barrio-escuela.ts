@@ -24,7 +24,7 @@ const PILASTRAS: [number, number][] = [[0, 0.025], [0.2375, 0.2625], [0.4875, 0.
 /** Pilastras de piedra de la base al alero sobre la cara 1. */
 const pilastras = (): Plate[] => PILASTRAS.map(([u0, u1]) => placa(1, u0, u1, Z, 5.9, "stone", 1));
 
-/** Escudo de la torre norte: disco `safety` centrado sobre la cara oeste. */
+/** Escudo de la torre norte: disco `safety` centrado sobre la cara este. */
 const ESCUDO: Plate = { wall: 1, shape: "disc", u0: 0.3, u1: 0.7, z0: 7.2, z1: 8.4, mat: "safety" };
 
 /** Bloque de aulas y dos torres de ladrillo con remate de piedra y escudo. */
@@ -35,7 +35,7 @@ function bloque(ctx: BarrioCtx, b: SprawlBlock): void {
   ctx.solids.push(prism(b.x + 7.8, b.y + 4.8, 9.8, 3.4, 3.4, 0.4, "stone"), prism(b.x + 7.8, b.y + 9.8, 9.8, 3.4, 3.4, 0.4, "stone"));
 }
 
-/** Patio de plaza con mástil, bandera con banda azul y patio cubierto de cobre sobre cuatro columnas. */
+/** Patio de plaza con mástil, bandera con banda celeste y patio cubierto de cobre sobre cuatro columnas. */
 function patio(ctx: BarrioCtx, b: SprawlBlock): void {
   const banda = placa(2, 0, 1, 6.27, 6.53, "hullBlue");
   ctx.solids.push(prism(b.x + 11, b.y + 1, Z, 11, 16, 0.05, "plaza"), prism(b.x + 20, b.y + 14, Z, 0.2, 0.2, 7, "whitewash"));
