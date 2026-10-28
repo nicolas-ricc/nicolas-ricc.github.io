@@ -80,15 +80,16 @@ export function worldZoneAt(x: number, y: number): WorldZone {
 }
 
 /**
- * Desembocadura: en el mapa viejo el río corría de norte a sur sin tocar el
- * mar. Ahora, por encima de MOUTH_Y, todo lo que hay al este de la orilla
- * oeste del río es una bahía que abre al mar. Es la única salida de los barcos.
+ * Desembocadura: al norte de la costa de la isla (northCoastY), todo lo que
+ * hay al este de la orilla oeste del río es una bahía que abre al mar. Es la
+ * única salida de los barcos.
  */
-export const MOUTH_Y = 24;
-
 export function inMouth(x: number, y: number): boolean {
-  return y < MOUTH_Y && x >= riverCenter(y) - RIVER_HALF;
+  return y < northCoastY(x) && x >= riverCenter(y) - RIVER_HALF;
 }
+
+/** Latitud de referencia de la boca (la usan el exhibit darsena y los tests); la costa real es northCoastY. */
+export const MOUTH_Y = 24;
 
 /** Punta del faro: nace en el muelle de alistamiento (x 330..344) y se adelgaza hasta x = 400. Sentido horario. */
 export const HEADLAND: readonly [number, number][] = [
@@ -141,3 +142,69 @@ export const QUAY_X = 198, QUAY_W = 4;
 export const BOTTOM = 142;
 export const DOCK = { x: 120, y: 6, w: 72, d: 24, depth: 6 } as const; // alineado a CELL
 export const eastBank = (y: number): number => riverCenter(y) + RIVER_HALF;
+
+// ---------------------------------------------------------------- costa de la isla (única fuente de verdad)
+// Va al final: usa CELL y eastBank, declarados arriba.
+
+const bump = (v: number, c: number, s: number): number => Math.exp(-(((v - c) / s) ** 2));
+const ramp = (v: number, a: number, b: number): number => Math.min(1, Math.max(0, (v - a) / (b - a)));
+
+/**
+ * Costa norte: la isla es tierra donde y ≥ northCoastY(x). Vale para todo x;
+ * punta al NE (x 344), caleta al NO (x 286) y, al este de x 350, la costa dobla al sur.
+ */
+export function northCoastY(x: number): number {
+  return 17 - 10 * bump(x, 344, 11) + 13 * bump(x, 286, 8)
+    + 2.2 * Math.sin(x / 2.3 + 0.7) + 1.4 * Math.sin(x / 5.1 + 2)
+    + Math.max(0, x - 350) ** 2 / 6;
+}
+
+/**
+ * Ruling de la parte 1: el estuario hereda el ancho del canal del astillero en
+ * la última fila de celdas antes de la costura (centro y = 141) y se abre
+ * hacia el sur, en vez de seguir el meandro de riverCenter.
+ */
+export const SEAM_CY = Math.floor(ZONE_SPLIT_Y / CELL) * CELL - CELL / 2;
+export const ESTUARY_FLARE = 0.35; // cuánto se abre la ribera este por unidad hacia el sur
+export const estuaryEast = (y: number): number => eastBank(SEAM_CY) + Math.max(0, y - ZONE_SPLIT_Y) * ESTUARY_FLARE;
+
+/** Cuánto entra la tierra de la isla sobre el agua del estuario, en [0, 10]; 0 al norte de y 152 (costura), en y 196..222 (puente) y en y 238..262 (manzana derrumbada). */
+export function estuaryInset(y: number): number {
+  const env = ramp(y, 152, 160) * (1 - ramp(y, 188, 196)) + ramp(y, 222, 226) * (1 - ramp(y, 234, 238)) + ramp(y, 262, 266);
+  return env * (6 + 2.5 * Math.sin(y / 7.6 + 0.4) + 1.5 * Math.sin(y / 2.5 + 1.1));
+}
+
+/** Costa oeste de la isla en su mitad sur (y ≥ 146): hasta acá llega el agua del estuario. */
+export const islandWestX = (y: number): number => estuaryEast(y) - estuaryInset(y);
+
+/**
+ * Costa este: la isla es tierra donde x < islandEastX(y). Ondulada al norte de
+ * y 158, recta (malecón) entre 158 y WORLD.y1 y punta sur redondeada más allá
+ * (-Infinity desde y 380: todo agua).
+ * - Al norte de 146 oscila entre `lo` y `hi`: `lo` = 331 deja 3 u de pie a
+ *   galpones (x ≤ 324) y chatarra (x ≤ 329); entre y 134 (base de la punta del
+ *   faro) y 146 (costura de zonas) sube a 344, y `hi` = 344 + shoreWidth − 1.5
+ *   no deja tierra que clickee Blog (`worldZoneAt`).
+ * - Entre 146 y 158 (arranque del malecón) se interpola a 344.
+ * - Punta sur: elipse de 44 u de largo desde WORLD.y1 sobre el ancho de la
+ *   lengua en la costura, achicada a 0.86 ± 0.12 por dos senos (29 u y 13 u) y
+ *   con una punta menor en y 356.
+ */
+export function islandEastX(y: number): number {
+  if (y >= 158 && y <= WORLD.y1) return ZONE_SPLIT_X;
+  if (y > WORLD.y1) {
+    const s = (y - WORLD.y1) / 44;
+    if (s >= 1) return -Infinity;
+    const ancho = (ZONE_SPLIT_X - estuaryEast(WORLD.y1)) * Math.sqrt(1 - s * s)
+      * (0.86 + 0.07 * Math.sin(y / 4.7) + 0.05 * Math.sin(y / 2.1 + 1)) + 4 * bump(y, 356, 4);
+    return islandWestX(y) + ancho;
+  }
+  const lo = y < 134 ? 331 : Math.min(ZONE_SPLIT_X, 331 + ((y - 134) * (ZONE_SPLIT_X - 331)) / 12);
+  const hi = ZONE_SPLIT_X + shoreWidth(y) - 1.5;
+  const t = 0.5 + 0.3 * Math.sin(y / 8.3 + 0.9) + 0.17 * Math.sin(y / 2.4 + 0.3);
+  const v = lo + (hi - lo) * t;
+  return y < 146 ? v : v + ((ZONE_SPLIT_X - v) * (y - 146)) / 12;
+}
+
+/** Caja de la punta sur que el sangrado dibuja en celdas de 6 u (múltiplos de la grilla del sangrado, anclada en (−402, −438)). */
+export const TIP_BOX = { x0: 264, y0: 336, x1: 372, y1: 408 } as const;
