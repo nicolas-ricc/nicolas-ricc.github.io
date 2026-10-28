@@ -179,6 +179,20 @@ function hall(out: Solid[], accents: Accent[]): void {
   accents.push({ kind: "poly", pts: [v3(188, 115.6, 10.8), v3(172, 115.6, 10.8), v3(172, 115.6, 11.6), v3(188, 115.6, 11.6)], color: "amberBleed", alpha: 0.6 });
 }
 
+/** Pórtico de acceso: marquesina con vidrio, dos columnas, cartel claro y luces de noche. */
+function portico(out: Solid[], accents: Accent[]): void {
+  // marquesina con una franja de vidrio en sus caras este y sur
+  const glass = (wall: number): Plate => ({ wall, shape: "rect", u0: 0.02, u1: 0.98, z0: 5.3, z1: 5.5, mat: "glass" });
+  out.push(prism(PORTICO.x, PORTICO.y, PORTICO.z, PORTICO.w, PORTICO.d, 0.4, "canopy", [glass(1), glass(2)]));
+  // dos columnas redondas hasta la marquesina
+  for (const y of [111.5, 120.5]) out.push({ kind: "cylinder", at: v3(193.4, y, 0.15), r: 0.3, h: 5.05, mat: "canopy", sides: 8 });
+  // cartel claro sobre la marquesina, sin texto
+  out.push(prism(193.85, 111, 5.6, 0.15, 10, 1, "whitewash"));
+  // tres luces bajo la marquesina y dos farolas de pared a los lados de la entrada
+  for (const y of [112, 116, 120]) accents.push({ kind: "dot", at: v3(192, y, 5.1), r: 0.9, color: "amber" });
+  for (const y of [109, 123]) accents.push({ kind: "dot", at: v3(190.05, y, 3.2), r: 0.5, color: "amber" });
+}
+
 /** Alas y servicio, con zócalo; las placas de cada una se suman en `wings`. */
 function wings(out: Solid[]): void {
   const wingN = solid(WING_N, "brick", plinth(), true), wingS = solid(WING_S, "brick", plinth(), true);
@@ -198,6 +212,7 @@ function esplanade(out: Solid[], _accents: Accent[]): void {
 /** Edificio de pasajeros, torre del reloj y explanada. Determinista, sin rng. */
 export function building(out: Solid[], accents: Accent[]): void {
   hall(out, accents);
+  portico(out, accents);
   wings(out);
   tower(out, accents);
   esplanade(out, accents);
