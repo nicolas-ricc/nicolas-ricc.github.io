@@ -6,7 +6,7 @@ import { WORLD, northCoastY } from "../map/geo";
 import { allIsoColors } from "../map/palette-iso";
 import { createRng } from "../map/seed";
 import { AREA_H, AREA_W, STREET_EDGE, shipyard, type Scene } from "./shipyard";
-import { BUFFER_X, STATION } from "./station";
+import { BUFFER_X, ESPLANADE, STATION } from "./station";
 
 const scene = (): Scene => shipyard(createRng(7));
 const all = (s: Scene): Solid[] => [...s.ground, ...s.solids, s.trolley];
@@ -48,12 +48,14 @@ describe("shipyard", () => {
 
   it("los acentos del astillero fuera de la estación son cian; los de la estación son cian, cyanMid o magenta", () => {
     const s = scene();
-    const inStation = (a: Accent) => a.kind === "dot" && a.at.x >= 110 && a.at.x <= STATION.x1 && a.at.y >= 100 && a.at.y <= STATION.y1;
+    // poly: las ventanas, la linterna y las esferas del edificio (#278), ubicadas por su primer vértice
+    const where = (a: Accent) => (a.kind === "dot" ? a.at : a.pts[0]!);
+    const inStation = (a: Accent) => { const p = where(a); return p.x >= 110 && p.x <= STATION.x1 && p.y >= 100 && p.y <= STATION.y1; };
     const outside = s.accents.filter((a) => !inStation(a)), inside = s.accents.filter(inStation);
     expect(outside.length).toBeGreaterThanOrEqual(7); // cinco faroles de la calle y dos del muelle
     expect(outside.every((a) => a.kind === "dot" && a.color === "cyan" && a.at.z > 0)).toBe(true);
     expect(inside.length).toBeGreaterThanOrEqual(11); // ocho luces de marquesina y tres de tope
-    expect(inside.every((a) => a.kind === "dot" && ["cyan", "cyanMid", "magenta"].includes(a.color) && a.at.z > 0)).toBe(true);
+    expect(inside.every((a) => a.kind === "dot" ? ["cyan", "cyanMid", "magenta", "amber"].includes(a.color) && a.at.z > 0 : ["amber", "amberBleed", "cyanBleed"].includes(a.color))).toBe(true);
   });
 
   it("todo el render usa colores del atlas", () => {
@@ -82,7 +84,8 @@ describe("shipyard parte 2", () => {
     const s = scene();
     const cones = s.solids.filter((x): x is Solid & { kind: "cone" } => x.kind === "cone" && (x.mat === "leaf" || x.mat === "leafDark"));
     expect(cones.length).toBeGreaterThanOrEqual(20);
-    for (const c of cones) expect(c.at.x < 42 || c.at.x > 300).toBe(true);
+    // las palmeras de la explanada de la estación (#278) quedan en x 190..197, fuera de la losa del astillero
+    for (const c of cones) expect(c.at.x < 42 || c.at.x > 300 || (c.at.x > ESPLANADE.x0 && c.at.x < ESPLANADE.x1)).toBe(true);
   });
 
   it("muelle de alistamiento: galpones a dos aguas al este del río y escollera", () => {
