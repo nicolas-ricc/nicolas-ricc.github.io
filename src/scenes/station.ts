@@ -212,9 +212,28 @@ function wings(out: Solid[]): void {
   out.push(solid(WING_N, "brick", pn, true), solid(WING_S, "brick", ps, true), solid(LINK, "brick"), solid(SERVICE, "brick"), ...awnings);
 }
 
-/** Fuste de la torre; ranuras, relojes y remate llegan después. */
-function tower(out: Solid[], _accents: Accent[]): void {
-  out.push(prism(TOWER.x, TOWER.y, 0, TOWER.w, TOWER.d, TOWER.h, "stone"));
+/** Torre del reloj: fuste con ranuras y cuatro esferas, pináculos y remate de teja con hastiales de piedra. */
+function tower(out: Solid[], accents: Accent[]): void {
+  const fp = footprint(TOWER), plates: Plate[] = [];
+  for (const wall of [1, 2]) plates.push(rect(wall, 0.475, 0.525, 4, 8, "asphalt"), rect(wall, 0.475, 0.525, 11, 15, "asphalt"));
+  // esferas en los cuatro muros: anillo dorado y cara blanca; de noche se prenden las de este y sur
+  for (const wall of [0, 1, 2, 3]) {
+    plates.push({ wall, shape: "disc", u0: 0.2, u1: 0.8, z0: 20.3, z1: 23.3, mat: "safety" });
+    const dial: Plate = { wall, shape: "disc", u0: 0.26, u1: 0.74, z0: 20.6, z1: 23, mat: "whitewash" };
+    plates.push(dial);
+    if (wall === 1 || wall === 2) accents.push({ kind: "poly", pts: wallPts(fp, dial), color: "amber", alpha: 0.6 });
+  }
+  out.push(solid({ ...TOWER }, "stone", plates));
+  // pináculos en las esquinas
+  for (const x of [TOWER.x, TOWER.x + TOWER.w - 0.4]) for (const y of [TOWER.y, TOWER.y + TOWER.d - 0.4]) out.push(prism(x, y, 24, 0.4, 0.4, 1.2, "safety"));
+  // remate: pirámide de teja cuya base es el cuadrado del fuste
+  out.push({ kind: "cone", at: v3(TOWER.x + 3, TOWER.y + 3, 24), r: 3 * Math.SQRT2, h: 5, mat: "tile", sides: 4 });
+  // hastiales de piedra con la cara angosta hacia afuera (A3); respiradero en el hastial exterior
+  const gables: [number, number, number, number, number][] = [[188, 128.6, 2, 0.8, 1], [184, 128.6, 2, 0.8, 3], [186.6, 126, 0.8, 2, 0], [186.6, 130, 0.8, 2, 2]];
+  for (const [x, y, w, d, wall] of gables) {
+    const vent = rect(wall, 0.3125, 0.6875, 24.5, 24.8, "asphalt");
+    out.push({ ...prism(x, y, 24, w, d, 1, "stone", [vent]), roof: "gable" as const } as Solid);
+  }
 }
 
 /** Explanada: losa, dos faroles altos, tres palmeras y baranda al este. */
