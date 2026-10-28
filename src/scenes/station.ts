@@ -137,15 +137,16 @@ export function wallPts(fp: Vec2[], p: Plate): Vec3[] {
   const a = fp[p.wall]!, b = fp[(p.wall + 1) % 4]!;
   return plateOutline(p).map((q) => v3(a.x + (b.x - a.x) * q.x, a.y + (b.y - a.y) * q.x, q.y));
 }
-const solid = (s: Box & { h: number }, mat: Solid["mat"], plates: Plate[], gable = false): Solid =>
+const solid = (s: Box & { h: number }, mat: Solid["mat"], plates?: Plate[], gable = false): Solid =>
   ({ ...prism(s.x, s.y, 0, s.w, s.d, s.h, mat, plates), ...(gable && { roof: "gable" as const, roofMat: "tile" as const }) });
+/** Placa rectangular de `u0..u1` y `z0..z1` sobre el muro `wall`. */
+const rect = (wall: number, u0: number, u1: number, z0: number, z1: number, mat: Solid["mat"]): Plate => ({ wall, shape: "rect", u0, u1, z0, z1, mat });
 /** Zócalo verde grisáceo en los muros este y sur. */
-const plinth = (): Plate[] => [1, 2].map((wall) => ({ wall, shape: "rect", u0: 0, u1: 1, z0: 0, z1: 0.8, mat: "canopy" }));
+const plinth = (): Plate[] => [1, 2].map((wall) => rect(wall, 0, 1, 0, 0.8, "canopy"));
 
 /** Hall: gable de ladrillo con linterna, medio punto, cornisa dentada, tres ventanales al este y cuatro ventanas al sur. */
 function hall(out: Solid[], accents: Accent[]): void {
   const fp = footprint(HALL), plates: Plate[] = plinth();
-  const rect = (wall: number, u0: number, u1: number, z0: number, z1: number, mat: Solid["mat"]): Plate => ({ wall, shape: "rect", u0, u1, z0, z1, mat });
   const night = (p: Plate, color: "cyanBleed" | "amber", alpha: number) => accents.push({ kind: "poly", pts: wallPts(fp, p), color, alpha });
   // medio punto en el hastial este: arco de ladrillo y abanico vidriado
   const fan: Plate = { wall: 1, shape: "disc", u0: 0.43, u1: 0.57, z0: 8.3, z1: 9.8, mat: "glass" };
@@ -182,7 +183,7 @@ function hall(out: Solid[], accents: Accent[]): void {
 /** Pórtico de acceso: marquesina con vidrio, dos columnas, cartel claro y luces de noche. */
 function portico(out: Solid[], accents: Accent[]): void {
   // marquesina con una franja de vidrio en sus caras este y sur
-  const glass = (wall: number): Plate => ({ wall, shape: "rect", u0: 0.02, u1: 0.98, z0: 5.3, z1: 5.5, mat: "glass" });
+  const glass = (wall: number) => rect(wall, 0.02, 0.98, 5.3, 5.5, "glass");
   out.push(prism(PORTICO.x, PORTICO.y, PORTICO.z, PORTICO.w, PORTICO.d, 0.4, "canopy", [glass(1), glass(2)]));
   // dos columnas redondas hasta la marquesina
   for (const y of [111.5, 120.5]) out.push({ kind: "cylinder", at: v3(193.4, y, 0.15), r: 0.3, h: 5.05, mat: "canopy", sides: 8 });
@@ -193,10 +194,22 @@ function portico(out: Solid[], accents: Accent[]): void {
   for (const y of [109, 123]) accents.push({ kind: "dot", at: v3(190.05, y, 3.2), r: 0.5, color: "amber" });
 }
 
-/** Alas y servicio, con zócalo; las placas de cada una se suman en `wings`. */
+/** Alas y servicio: zócalo, vidrieras y toldos rojos (dos al este de WING_N, cuatro al sur de WING_S). */
 function wings(out: Solid[]): void {
-  const wingN = solid(WING_N, "brick", plinth(), true), wingS = solid(WING_S, "brick", plinth(), true);
-  out.push(wingN, wingS, solid(LINK, "brick", []), solid(SERVICE, "brick", []));
+  const awning = (x: number, y: number, w: number, d: number, dir: "e" | "s"): Solid => ({ kind: "ramp", at: v3(x, y, 3), w, d, h: 0.5, mat: "signal", dir });
+  const pn = plinth(), ps = plinth();
+  const awnings: Solid[] = [];
+  // al este de WING_N: vidriera de z 0.8..2.8 bajo cada toldo
+  for (const y of [100.5, 103.5]) {
+    awnings.push(awning(WING_N.x + WING_N.w, y, 0.8, 2, "e"));
+    pn.push(rect(1, (y - WING_N.y) / WING_N.d, (y + 2 - WING_N.y) / WING_N.d, 0.8, 2.8, "glass"));
+  }
+  // al sur de WING_S: `u` corre de x1 a x0
+  for (const c of [170, 174, 178, 182]) {
+    awnings.push(awning(c - 1, WING_S.y + WING_S.d, 2, 0.8, "s"));
+    ps.push(rect(2, (WING_S.x + WING_S.w - c - 1) / WING_S.w, (WING_S.x + WING_S.w - c + 1) / WING_S.w, 0.8, 2.8, "glass"));
+  }
+  out.push(solid(WING_N, "brick", pn, true), solid(WING_S, "brick", ps, true), solid(LINK, "brick"), solid(SERVICE, "brick"), ...awnings);
 }
 
 /** Fuste de la torre; ranuras, relojes y remate llegan después. */
