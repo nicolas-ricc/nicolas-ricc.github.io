@@ -360,8 +360,9 @@ describe.each(STACKS.map((st, i) => [i, st] as const))("chimenea %i", (_i, st) =
     for (const p of one(st).out) for (const t of tower) expect(apart(p, t)).toBe(true);
   });
 
-  it("ninguna pieza entra al cerco de la subestación", () => {
-    for (const p of one(st).out) expect(apartBox(bounds(p), FENCE_BOX)).toBe(true);
+  it("ninguna pieza entra al cerco de la subestación (en planta)", () => {
+    const fence = { min: { ...FENCE_BOX.min, z: -Infinity }, max: { ...FENCE_BOX.max, z: Infinity } };
+    for (const p of one(st).out) expect(apartBox(bounds(p), fence)).toBe(true);
   });
 });
 

@@ -85,7 +85,7 @@ describe("world", () => {
     const w = world(7);
     const mine = new Set(w.factory!.solids);
     const others = w.solids.filter((s) => !isFlat(s) && !mine.has(s));
-    expect(others.length).toBeLessThan(w.solids.length - mine.size + 1);
+    expect(w.solids.filter((s) => mine.has(s))).toHaveLength(mine.size); // world() reusa los objetos de la fábrica
     for (const s of others) {
       const b = bounds(s);
       expect(b.max.x <= SUBSTATION.x0 || b.min.x >= SUBSTATION.x1 || b.max.y <= SUBSTATION.y0 || b.min.y >= SUBSTATION.y1, JSON.stringify(s).slice(0, 90)).toBe(true);

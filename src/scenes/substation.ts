@@ -76,7 +76,7 @@ function latticePortalLocal(out: Solid[], x: number): void {
   for (let i = 0; i < 8; i++) out.push(wire(x, -58 + (9 * i) / 8, 9 + (i % 2), x, -58 + (9 * (i + 1)) / 8, 9 + ((i + 1) % 2))); // zigzag Warren
 }
 
-/** Tres fases de `SUBSTATION.x0 + 2.5` a `SUBSTATION.x1 − 3.5` a z 9.5: cadena de 9 discos en cada anclaje y el conductor entre ellas (disjuntos en x, para `sortByDepth`). */
+/** Tres fases de 151.5 a 186.5 (marco local) a z 9.5: cadena de 9 discos en cada anclaje y el conductor entre ellas (disjuntos en x, para `sortByDepth`). */
 function phasesLocal(out: Solid[]): void {
   for (const y of PHASES_LOCAL) {
     for (let i = 0; i < 9; i++) {
@@ -109,7 +109,7 @@ function droppersLocal(out: Solid[]): void {
   TRANSFORMERS_LOCAL.forEach((y0, k) => { for (const x of BUSHINGS_X) { const t = bushingTip(x, y0); out.push(wire(x, PHASES_LOCAL[k + 1]!, 9.425, t[0], t[1], t[2])); } }); // pasatapas → fase más cercana
 }
 
-/** Cerco: 13 postes, malla romboidal (X por paño) al sur y al este, y portón de dos hojas en x 168.5..171.5. */
+/** Cerco: 13 postes, malla romboidal (X por paño) al sur y al este, y portón de dos hojas en x 168.5..171.5 (marco local). */
 function fenceLocal(out: Solid[]): void {
   const post = (x: number, y: number): Solid => prism(x, y, 0, 0.15, 0.15, 2.2, "steel");
   const xs: number[] = [];
@@ -141,7 +141,7 @@ export const disconnector = (out: Solid[], y: number): void => emit(out, (o) => 
 export const currentTransformer = (out: Solid[], y: number): void => emit(out, (o) => currentTransformerLocal(o, y - SUBSTATION_SHIFT.y));
 /** Puentes de seccionadores, TI y pasatapas a las fases, en mundo; ver `droppersLocal`. */
 export const droppers = (out: Solid[]): void => emit(out, droppersLocal);
-/** Cerco con portón y malla en mundo; ver `fenceLocal`. */
+/** Cerco con malla y portón en mundo (x `SUBSTATION.x0 + 19.5`..`+ 22.5`, 73.5..76.5); ver `fenceLocal`. */
 export const fence = (out: Solid[]): void => emit(out, fenceLocal);
 
 /** Todo en el marco local y un solo traslado (los exportados ya trasladan: llamarlos acá correría la subestación dos veces). */

@@ -76,7 +76,8 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "chimeneas", title: "Chimeneas y torre de enfriamiento", zone: "portfolio", group: "fabrica", kind: "region",
     box: { x0: Math.min(...stacksX) - stackR - M, y0: Math.min(...stacksY) - stackR - PUFF_RANGE, x1: 172 + 9 + M, y1: -36 + 9 + M },
     h: stackTop + PUFF_RANGE * PUFF_LIFT },
-  // cerco de SUBSTATION más margen (3 y 1 al sur): {51, −5, 98, 12}; no toca los vagones del desvío (y ≤ −6.8) ni cruza x 99 (`calle-faroles`). h 13: los mástiles llegan a z 12; el humo pasa por encima
+  // cerco de SUBSTATION más margen (3 y 1 al sur): {51, −5, 98, 12}; no toca los vagones del desvío (y ≤ −6.8) ni cruza x 99 (`calle-faroles`). h 13: los mástiles llegan a z 12; el humo pasa por encima.
+  // Transitorio (#238): entran la punta baja de la cinta inclinada y el camión de (70, −6) hasta que la playa de camiones se mude (#246)
   { id: "subestacion", title: "Subestación", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: SUBSTATION.x0 - 3, y0: SUBSTATION.y0 - 3, x1: SUBSTATION.x1 + 3, y1: SUBSTATION.y1 + 1 }, h: 13 },
   // a mano: camiones y pallets de truckYard; la grúa torre (60, −12) está en medio de la playa y queda adentro
   { id: "playa-camiones", title: "Playa de camiones", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: 17, y0: -15, x1: 113, y1: 2 }, h: 22 },
