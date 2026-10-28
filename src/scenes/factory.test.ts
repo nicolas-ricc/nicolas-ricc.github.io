@@ -178,6 +178,7 @@ describe("factory", () => {
     const s = scene(), stacks = STACKS.flatMap((st) => one(st).out);
     for (const x of stacks) expect(bounds(x).max.y, JSON.stringify(x).slice(0, 90)).toBeLessThan(NAVE.y - 0.6);
     const plant = [...build(boilerHouse), ...build(maltings)].flatMap(slices); // tramos precalculados: expectApart tarda más de 5 s
+    expect(stacks.length).toBeGreaterThan(0); expect(plant.length).toBeGreaterThan(0);
     const touching = [...stacks, ...coolingTower(s.solids)].filter((a) => slices(a).some((p) => plant.some((q) => !boxApart(p, q))));
     expect(touching.map((a) => JSON.stringify(a).slice(0, 90))).toEqual([]);
   });

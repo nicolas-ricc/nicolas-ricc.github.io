@@ -16,7 +16,7 @@ import { SUBSTATION, substation } from "./substation";
 /**
  * Fábrica, detrás (al norte) y al oeste del astillero. La planta (la maltería de Mistley, la nave de calderas
  * de la Fábrica de Luz y el tanque de agua sobre patas), la playa de camiones y sus faroles se arman en el marco
- * local y se trasladan con `PLANT_SHIFT` de `plant-frame.ts` a la región nueva, al norte (x 5..92, y 44..74).
+ * local y se trasladan con `PLANT_SHIFT` de `plant-frame.ts` a la región nueva: planta en x 5..98, y 43.4..75.5 (torre de escalera y zócalo incluidos), playa de camiones y faroles en y 75..89.
  * En la banda vieja (`x > 0, y −60..0`) quedan solo el desvío ferroviario y la grúa torre. Al sur del desvío,
  * ya fuera de la banda (mudanza de #238), la subestación de intemperie (`substation.ts`, x 54..95, y −2..11) y,
  * en la región nueva al norte del lugar de la nave (y 43.4), tres chimeneas humeantes (x 54..90, y 22..36) y la
