@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- `npm test` y `npm run typecheck` en verde al final de cada tarea; ningún literal `0x…` (guarda de paleta).
+- Al final de cada tarea: `npm run typecheck` en verde y verdes los tests de esa tarea; los de tareas siguientes en `barrio-escuela.test.ts` / `exhibits.test.ts` pueden seguir rojos (los evals de la etapa 3 se commitean fallando). Al final de la Task 4, `npm test` entero en verde. Ningún literal `0x…` (guarda de paleta).
 - Solo materiales de `TECH_MATS`; ningún material nuevo. Tamaño mínimo 0.15 u en toda dimensión.
 - No tocar `tech.ts`, `zoneKinds`, `FACE_CAPS`, `TECH_FACES_BEFORE`, `REGION_FACES_BEFORE`, `ACCENT_CAP`.
 - Estilo de `src/scenes/barrio*.ts`: castellano, docstring corto por función, expresiones en una línea, helpers de `barrio.ts` (`homeWindow`, `wallWindow`) y `city-pieces.ts` (`prism`, `lamp`).
@@ -43,7 +43,7 @@
   1. zócalo `copper` u 0..1, z 0.3..1.3;
   2. imposta `stone` u 0..1, z 3.0..3.3;
   3. 16 ventanas `glass` `toneOffset −1`: pisos `f ∈ {0, 1}`, z `1.0 + 2.8f .. 2.6 + 2.8f`; pares centrados en u `c ∈ {0.125, 0.375, 0.625, 0.875}` (y = 3, 7, 11, 15 locales); cada ventana 0.9 u de ancho, centros a `c ± 0.6/16` (0.3 de separación dentro del par);
-  4. 5 pilastras `stone` `toneOffset +1`, 0.4 u de ancho (0.025 en u), centradas en u 0.25, 0.5, 0.75 y en los extremos (u 0..0.025 y 0.975..1), z **1.3..5.9**;
+  4. 5 pilastras `stone` `toneOffset +1`, 0.4 u de ancho (0.025 en u), centradas en u 0.25, 0.5, 0.75 y en los extremos (u 0..0.025 y 0.975..1), z 0.3..5.9 (de la base al alero, como el issue);
   5. entrada `officeDark` `toneOffset −2`, u 0.45..0.55 (y locales 8.2..9.8), z 0.3..2.6.
 - `wall 2` (sur, 6 u, `u` crece hacia el oeste): zócalo y imposta igual que arriba; un par de ventanas por piso centrado en u 0.5 (centros a `0.5 ± 0.6/6`, ancho 0.9/6).
 
@@ -51,16 +51,16 @@ Costo estimado (`tessellate`): zócalo 3 + bloque 3 + 24 placas este + 6 placas 
 
 ## Decisiones técnicas (desvíos declarados respecto del issue)
 
-1. **Pilastras desde z 1.3, no desde la base.** El issue fija el orden zócalo → imposta → ventanas → pilastras; pintadas desde z 0.3 cortarían el zócalo verde en cinco lugares y §4.2 pide "zócalo verde oscuro **a todo lo largo**". Arrancan sobre el zócalo (1.3) y suben al alero (5.9).
+1. *(Retirada en el grilling: las pilastras van de la base al alero, z 0.3..5.9, literal del issue. Las ventanas de planta baja del propio issue — z 1.0 — ya se pintan sobre el zócalo, así que el issue acepta que la banda verde quede cortada por lo que se pinta después.)*
 2. **Entrada después de las pilastras.** La puerta (u 0.45..0.55) cae sobre la pilastra de u 0.5; se pinta última para que se vea la puerta doble.
 3. **Banda celeste en `wall 2` de la bandera, no en `wall 1`.** La bandera mide 1.2 en x y 0.15 en y: su `wall 1` (este) mide 0.15 de ancho y la franja no se vería; el paño visible es la cara sur (`wall 2`, 1.2 de largo).
 4. **Columnas y mástil apoyan en z 0.3** (como dice el issue) y comparten 0.05 de altura con el piso del patio (`plaza` h 0.05): el piso es un solado, como el césped de las otras piezas, y no entra en los pares de solape que pide el issue (bloque ↔ torres, torres ↔ patio cubierto, mástil ↔ patio cubierto, árboles ↔ farol).
 5. **Ventanas detrás de las torres.** Los pares de y 7 y 11 locales quedan en parte detrás de las torres (y 5..8 y 10..13). Se dejan: el issue pide 16 placas `glass` en `wall 1` y el pintor las tapa con las torres; arriba de la imposta las ventanas del piso alto también quedan tras las torres (que llegan a 9.8).
-6. **`ctx.rng` no se consume.** Ninguna pieza decorativa lo necesita; el test de determinismo construye con dos semillas y compara `JSON.stringify` de sólidos, acentos y ventanas.
+6. **`ctx.rng` no se consume.** Ninguna pieza decorativa lo necesita; el test de determinismo construye con dos semillas (`newCtx(createRng(s))` de `barrio-fixtures.ts`) y compara `JSON.stringify` de sólidos, acentos y ventanas, y además verifica que, tras `escuela()`, `ctx.rng.next()` da lo mismo que un `createRng` fresco de la misma semilla.
 
 ## Review Focus
 
-1. Placas de la cara sur con `u` invertido (crece hacia el oeste): un par centrado en 0.5 es simétrico, pero cualquier asimetría quedaría espejada — el test fija el par en x locales 4.95..5.85 y 6.15..7.05.
+1. Placas de la cara sur con `u` invertido (crece hacia el oeste, `X = x+8 − 6u`): un par centrado en u 0.5 cae en x locales 3.95..4.85 y 5.15..6.05 — el test fija esos valores.
 2. Solapes en el borde: torres tocando el bloque (`x+8`) y el patio (`x+11`) — tocarse vale, pisarse no; el test usa la comparación con `EPS`.
 3. Árbol sur ↔ farol de vereda: el cono hexagonal llega a `y+16.4`, el farol arranca en `y+18.6`.
 4. Que los sólidos de la vereda (árboles a `x+24.8 ± 1.4`) caigan dentro de `blockRect` inflado 0.5 (`x+26.5`), si no `facesIn` no los cuenta y el tope miente.
@@ -119,3 +119,17 @@ Costo estimado (`tessellate`): zócalo 3 + bloque 3 + 24 placas este + 6 placas 
 - [ ] **Step 4:** Commit `feat(#252): h del exhibit escuela`.
 
 La captura `escuela-despues.png` (agent-browser, 1600×900 a 2x, `/lab/storybook.html?speed=0#escuela`) y las caras del panel antes/después las toma el orquestador al cerrar la etapa 4; `escuela-antes.png` ya está tomada (marcador: 2 sólidos, 6 caras, 1 acento).
+
+## Assumptions
+
+- Banda celeste en `wall 2` de la bandera (decisión 3). Alternativa rechazada: `wall 1` literal del issue, una franja de 0.15 × 0.26 que no se lee; el issue la nombra "la banda celeste", o sea, para que se vea.
+- Puerta pintada después de las pilastras (decisión 2). Alternativa rechazada: pilastra de u 0.5 encima de la puerta doble.
+- Commits intermedios con evals todavía rojos de tareas siguientes (Global Constraints). Alternativa rechazada: un solo commit con toda la pieza (pierde la revisión por tarea).
+- El test de determinismo además verifica que `ctx.rng` no se consumió. Alternativa rechazada: solo comparar salidas.
+
+## Grilling
+
+- Rondas: 1 (los cambios no agregan ni quitan pasos ni cambian la costura). Preguntas: 15. Griller: `fable`.
+- Fuentes: ISSUE 8 (2, 3, 6, 7, 10, 11, 12 parcial, 15 parcial), CODE 11 (`src/scenes/tech-budget.ts` `blockRect`/`facesIn`/`FACE_CAPS`; `src/iso/plate.ts:11` `Plate`; `src/scenes/city-pieces.ts:46-51` `lamp()` con `dot` `amber`; `src/scenes/barrio.ts:9` `ALWAYS_LIT`, `lawn()` h 0.05; `src/scenes/tech.test.ts:137-139` escuela+club ≥ 2 ventanas, todas `lit`; `src/scenes/barrio-fixtures.ts:7` `newCtx`; `src/lab/exhibits.test.ts:26,33-50` `SLACK = 8` y `accentReach` con `HALO_K`; `src/scenes/barrio-casas.ts` faroles en `y+18.6` y `x+24.6`), NO SOURCE 3 → todas supuestos técnicos (13, 14, banda de la bandera).
+- Correcciones: Review Focus 1 tenía mal las x de la cara sur (pregunta 1); se retiró la decisión 1 (pregunta 10).
+- Issues de seguimiento: ninguno. Bloqueos: ninguno.
