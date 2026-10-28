@@ -37,7 +37,7 @@ const expectApart = (as: readonly Solid[], bs: readonly Solid[]) => {
 };
 const isTruck = (x: Solid) => x.kind === "prism" && x.d === 2.4 && ((x.w === 6 && x.h === 2.8) || (x.w === 2 && x.h === 2.2));
 const isPallet = (x: Solid) => x.kind === "prism" && x.mat === "steel" && x.w === 3 && x.d === 2 && x.at.y === -3;
-const isLamp = (x: Solid) => x.kind === "prism" && x.mat === "steel" && x.w === 0.6 && x.d === 0.6 && x.h === 5;
+const isLamp = (x: Solid): x is Solid & { kind: "prism" } => x.kind === "prism" && x.mat === "steel" && x.w === 0.6 && x.d === 0.6 && x.h === 5;
 const crane = build((out) => towerCrane(out, [], { at: { x: 60, y: -12 }, mastH: 20, jibLen: 30, dir: "e", light: "cyan" }));
 
 describe("factory", () => {
@@ -439,7 +439,8 @@ describe("subestación de intemperie (#215)", () => {
     expect(SUBSTATION).toEqual({ x0: 54, x1: 95, y0: -2, y1: 11 });
     expect(PHASES_Y).toEqual([1, 4.5, 8]);
     expect(TRANSFORMERS_Y).toEqual([-1, 5]);
-    expect(FIREWALL).toEqual({ x: 76.5, y: 3.7, w: 7, d: 0.6, h: 5.5 });
+    expect(FIREWALL).toMatchObject({ w: 7, d: 0.6, h: 5.5 });
+    expect(FIREWALL.x).toBeCloseTo(76.5, 9); expect(FIREWALL.y).toBeCloseTo(3.7, 9);
   });
 
   it("es la subestación de hoy trasladada: mismos sólidos, en el mismo orden, desplazados SUBSTATION_SHIFT", () => {
@@ -465,8 +466,8 @@ describe("subestación de intemperie (#215)", () => {
     expect(solids.length).toBeGreaterThan(300);
     for (const x of solids) {
       const b = bounds(x);
-      expect(b.min.x, x.kind).toBeGreaterThanOrEqual(SUBSTATION.x0); expect(b.max.x, x.kind).toBeLessThanOrEqual(SUBSTATION.x1);
-      expect(b.min.y, x.kind).toBeGreaterThanOrEqual(SUBSTATION.y0); expect(b.max.y, x.kind).toBeLessThanOrEqual(SUBSTATION.y1);
+      expect(b.min.x, x.kind).toBeGreaterThanOrEqual(SUBSTATION.x0 - 1e-9); expect(b.max.x, x.kind).toBeLessThanOrEqual(SUBSTATION.x1 + 1e-9);
+      expect(b.min.y, x.kind).toBeGreaterThanOrEqual(SUBSTATION.y0 - 1e-9); expect(b.max.y, x.kind).toBeLessThanOrEqual(SUBSTATION.y1 + 1e-9);
       expect(b.min.z, x.kind).toBeGreaterThanOrEqual(0); expect(b.max.z, x.kind).toBeLessThanOrEqual(12 + 1e-9);
     }
     expect(union(solids).max.z).toBeCloseTo(12); // los mástiles de hilo de guardia

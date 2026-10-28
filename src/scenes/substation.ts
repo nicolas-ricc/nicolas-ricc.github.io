@@ -18,36 +18,19 @@ const PHASES_LOCAL = [-57, -53.5, -50] as const;
 const TRANSFORMERS_LOCAL = [-59, -53] as const; // y0 de cada cuba: T1 al norte, T2 al sur
 const FIREWALL_LOCAL = { x: 171.5, y: -54.3, w: 7, d: 0.6, h: 5.5 } as const;
 
-/** Redondea a 1e-9: `-47.15 + 58` da `10.850000000000001` y `+ 0.15` ya no cae justo en 11. */
-const snap = (n: number): number => Math.round(n * 1e9) / 1e9;
-const snapXY = <P extends Vec2>(p: P): P => ({ ...p, x: snap(p.x), y: snap(p.y) });
-
 /** Lista de y del marco local pasada a mundo, conservando el tipo de tupla. */
-const shiftYs = <T extends readonly number[]>(ys: T): T => ys.map((y) => snap(y + SUBSTATION_SHIFT.y)) as unknown as T;
+const shiftYs = <T extends readonly number[]>(ys: T): T => ys.map((y) => y + SUBSTATION_SHIFT.y) as unknown as T;
 
 export const SUBSTATION = { x0: LOCAL.x0 + SUBSTATION_SHIFT.x, x1: LOCAL.x1 + SUBSTATION_SHIFT.x, y0: LOCAL.y0 + SUBSTATION_SHIFT.y, y1: LOCAL.y1 + SUBSTATION_SHIFT.y } as const;
 export const PHASES_Y = shiftYs(PHASES_LOCAL);
 export const TRANSFORMERS_Y = shiftYs(TRANSFORMERS_LOCAL); // y0 de cada cuba: T1 al norte, T2 al sur
-export const FIREWALL = { ...FIREWALL_LOCAL, x: snap(FIREWALL_LOCAL.x + SUBSTATION_SHIFT.x), y: snap(FIREWALL_LOCAL.y + SUBSTATION_SHIFT.y) } as const;
-
-/** Traslada a mundo y limpia el ruido de coma flotante de los puntos (solo los tipos que arma la subestación). */
-const toWorld = (s: Solid): Solid => {
-  const t = translate(s, SUBSTATION_SHIFT.x, SUBSTATION_SHIFT.y);
-  switch (t.kind) {
-    case "prism":
-    case "cylinder":
-    case "cone": return { ...t, at: snapXY(t.at) };
-    case "beam": return { ...t, from: snapXY(t.from), to: snapXY(t.to) };
-    case "strip": return { ...t, path: t.path.map(snapXY) };
-    default: return t;
-  }
-};
+export const FIREWALL = { ...FIREWALL_LOCAL, x: FIREWALL_LOCAL.x + SUBSTATION_SHIFT.x, y: FIREWALL_LOCAL.y + SUBSTATION_SHIFT.y } as const;
 
 /** Arma con `build` en el marco local y empuja cada sólido trasladado a mundo. */
 const emit = (out: Solid[], build: (o: Solid[]) => void): void => {
   const local: Solid[] = [];
   build(local);
-  for (const s of local) out.push(toWorld(s));
+  for (const s of local) out.push(translate(s, SUBSTATION_SHIFT.x, SUBSTATION_SHIFT.y));
 };
 
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material): Solid & { kind: "prism" } => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat });
