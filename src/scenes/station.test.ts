@@ -59,12 +59,13 @@ describe("station", () => {
 
   it("vías: rieles de TRACK_X0 a BUFFER_X en eje ±1.5, durmientes cada 4 u y tercer riel en eje + 2.1", () => {
     TRACKS_Y.forEach((axis, i) => {
+      const x0 = TRACK_X0[i]!;
       for (const dy of [-GAUGE / 2, GAUGE / 2]) {
-        expect(strips.filter((s) => s.mat === "rail" && s.width === RAIL_W && s.z === RAIL_Z && horizontal(s, axis + dy, TRACK_X0[i], BUFFER_X)), `vía ${i + 1} ${dy}`).toHaveLength(1);
+        expect(strips.filter((s) => s.mat === "rail" && s.width === RAIL_W && s.z === RAIL_Z && horizontal(s, axis + dy, x0, BUFFER_X)), `vía ${i + 1} ${dy}`).toHaveLength(1);
       }
       const sleepers = prisms.filter((p) => p.mat === "rust" && p.w === 1 && p.d === 5 && p.h === 0.3 && p.at.z === 0 && p.at.y === axis - 2.5);
       expect(sleepers.map((p) => p.at.x).sort((a, b) => a - b), `durmientes vía ${i + 1}`).toEqual(SLEEPERS[i]);
-      const third = strips.filter((s) => s.mat === "whitewash" && s.width === 0.3 && s.z === 0.05 && horizontal(s, axis + 2.1, Math.max(TRACK_X0[i], CROSSING.x1), BUFFER_X));
+      const third = strips.filter((s) => s.mat === "whitewash" && s.width === 0.3 && s.z === 0.05 && horizontal(s, axis + 2.1, Math.max(x0, CROSSING.x1), BUFFER_X));
       expect(third, `tercer riel vía ${i + 1}`).toHaveLength(1);
     });
     expect(SLEEPERS[2]![0]).toBe(110); expect(SLEEPERS[2]!.at(-1)).toBe(158);
