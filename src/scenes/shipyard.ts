@@ -14,9 +14,9 @@ import { clearOfWater } from "./terrain-classify";
  * recta en QUAY_X, dique seco al NE, playa al SO, muelle de alistamiento del
  * otro lado del río. Las naves de montaje, los talleres y el patio de
  * material van al norte, detrás de la fábrica, en la banda `y −58..−16`; la
- * fábrica de Portfolio queda entre la calle y la playa de vías. La zona de
- * producción al sur de las gradas es la estación cabecera (`station.ts`), al
- * final de la vía del oeste. Coordenadas en unidades del mapa viejo
+ * fábrica de Portfolio queda entre la calle y la playa de vías. Al sur de las
+ * gradas, al final de la vía del oeste, está la estación cabecera
+ * (`station.ts`). Coordenadas en unidades del mapa viejo
  * (1 u ≈ 1 px).
  */
 

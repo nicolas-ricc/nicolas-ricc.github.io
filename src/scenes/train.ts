@@ -17,6 +17,8 @@ import type { Bounds, Plate, Solid } from "../iso/solids";
  *
  * La caja de alineación (`trainBox`: x `x0..x0 + trainLen`, y ± 1.7, z `0..TRAIN_TOP`) es el contrato con el animador y con la
  * regla de oclusión de la estación: ningún sólido sale de ahí (las luces pueden ir 0.05 por fuera).
+ *
+ * Spec: docs/superpowers/specs/2026-10-27-estacion-terminal-design.md §5.4 (desvíos en §12).
  */
 export const CAR_LEN = 11, CAR_W = 3.4, CAR_H = 4, FLOOR_Z = 1, GAP = 0.6, COUPLER = 0.5;
 export const trainLen = (cars: number) => cars * CAR_LEN + (cars - 1) * GAP + 2 * COUPLER;

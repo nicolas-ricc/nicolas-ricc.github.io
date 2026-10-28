@@ -20,6 +20,10 @@ import { emu, trainLen } from "./train";
  * mismo borde del que entró), ya invisible. El `alpha` sube en los primeros `FADE_U` u del frente
  * y baja en los últimos, así que el tren aparece y desaparece sin cortes dentro del sangrado.
  *
+ * Desvíos del spec §7: el frente para a 2 u del tope y no a ≈ 1 (`STOP_X` 158, tope de
+ * 1,2 u de alto); no hay rng, nada es aleatorio (el spec pedía `createRng(SEED + n)`); y el
+ * ciclo dura ≈ 101,7 s y no ≈ 120.
+ *
  * Paso a nivel y semáforos cuelgan del mismo estado. El paso a nivel parpadea mientras la
  * formación corta la ventana de `CROSSING` ampliada `CROSSING_NEAR_U` a cada lado, y en la espera
  * solo los últimos `PRE_DEPART_MS` (aviso de partida). Desvío del spec §7: ahí el paso a nivel
@@ -27,6 +31,8 @@ import { emu, trainLen } from "./train";
  * queda a oscuras salvo los últimos 5 s. La entrada se pone roja apenas el frente pasa su poste;
  * la salida, verde desde 5 s antes de partir hasta que la cola deja la calle (`STREET_EDGE`).
  * Lo demás, rojo.
+ *
+ * Spec: docs/superpowers/specs/2026-10-27-estacion-terminal-design.md §7 (desvíos en §12).
  */
 export const ENTRY_X = WEST_RAIL_X0;
 export const LINE_SPEED = 24;       // u/s en crucero
