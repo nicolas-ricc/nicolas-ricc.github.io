@@ -36,9 +36,10 @@ export const BASE_TONES = {
   stockbrick:{ top: 0xc9a86a, lit: 0xa57c42, shade: 0x504740, up: 0xe9bc6c, down: 0xad9464 },
   safety:    { top: 0xd9a62e, lit: 0xb27b1d, shade: 0x57461c, up: 0xfcba2f, down: 0xbb922b },
   // estación terminal (#239)
-  tile:      { top: 0xb5603c, lit: 0x964922, shade: 0x492b31, up: 0xd7703d, down: 0x99543d },
   canopy:    { top: 0x3f6b4a, lit: 0x344f2e, shade: 0x192d2c, up: 0x49784b, down: 0x365e46 },
   livery:    { top: 0x2457b8, lit: 0x1e4072, shade: 0x0e256e, up: 0x2a61bc, down: 0x1f4dad },
+  // teja: la del barrio costero (#240), compartida con la estación (#239)
+  tile:      { top: 0xb0603c, lit: 0x904725, shade: 0x462824, up: 0xcc6c3d, down: 0x975438 },
 } as const;
 
 export const BASE_SHADOW = 0x2a1a3a;

@@ -19,7 +19,7 @@ describe("darken", () => {
   });
 
   it("materiales de la estación: tile, canopy y livery; ISO_TONES es la base oscurecida canal a canal", () => {
-    expect(BASE_TONES.tile.top).toBe(0xb5603c);
+    expect(BASE_TONES.tile.top).toBe(0xb0603c); // la teja del barrio costero (#240), que llegó antes a main; la estación la comparte
     expect(BASE_TONES.canopy.top).toBe(0x3f6b4a);
     expect(BASE_TONES.livery.top).toBe(0x2457b8);
     for (const m of ["tile", "canopy", "livery"] as const) {
