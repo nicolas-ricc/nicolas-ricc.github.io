@@ -29,15 +29,14 @@ function gym(ctx: BarrioCtx, b: SprawlBlock): void {
 
 /** Cancha de básquet: piso azul con pintura verde, dos aros con tablero hacia la cancha, cerco de 4 postes con 2 alambres y dos torres de luz con dot ámbar. */
 function court(ctx: BarrioCtx, b: SprawlBlock): void {
-  const { x, y } = b;
-  ctx.solids.push(prism(x + 17, y + 2, 0.3, 5, 14, 0.1, "hullBlue"), prism(x + 17.7, y + 3.5, 0.4, 3.6, 11, 0.05, "leaf"));
-  for (const py of [2.4, 15.4]) ctx.solids.push(prism(x + 19.4, y + py, 0.4, 0.2, 0.2, 3, "steel"));
-  for (const by of [2.6, 15.25]) ctx.solids.push(prism(x + 18.9, y + by, 2.2, 1.2, 0.15, 0.8, "whitewash"));
-  for (const [fx, fy] of [[16.8, 1.8], [22.05, 1.8], [16.8, 16.05], [22.05, 16.05]] as const) ctx.solids.push(prism(x + fx, y + fy, 0.3, 0.15, 0.15, 3, "steel"));
-  ctx.solids.push({ kind: "beam", from: v3(x + 22.125, y + 1.875, 2.9), to: v3(x + 22.125, y + 16.125, 2.9), w: 0.15, h: 0.15, mat: "steel" }, { kind: "beam", from: v3(x + 16.875, y + 16.125, 2.9), to: v3(x + 22.125, y + 16.125, 2.9), w: 0.15, h: 0.15, mat: "steel" });
+  ctx.solids.push(prism(b.x + 17, b.y + 2, 0.3, 5, 14, 0.1, "hullBlue"), prism(b.x + 17.7, b.y + 3.5, 0.4, 3.6, 11, 0.05, "leaf"));
+  for (const py of [2.4, 15.4]) ctx.solids.push(prism(b.x + 19.4, b.y + py, 0.4, 0.2, 0.2, 3, "steel"));
+  for (const by of [2.6, 15.25]) ctx.solids.push(prism(b.x + 18.9, b.y + by, 2.2, 1.2, 0.15, 0.8, "whitewash"));
+  for (const [fx, fy] of [[16.8, 1.8], [22.05, 1.8], [16.8, 16.05], [22.05, 16.05]] as const) ctx.solids.push(prism(b.x + fx, b.y + fy, 0.3, 0.15, 0.15, 3, "steel"));
+  ctx.solids.push({ kind: "beam", from: v3(b.x + 22.125, b.y + 1.875, 2.9), to: v3(b.x + 22.125, b.y + 16.125, 2.9), w: 0.15, h: 0.15, mat: "steel" }, { kind: "beam", from: v3(b.x + 16.875, b.y + 16.125, 2.9), to: v3(b.x + 22.125, b.y + 16.125, 2.9), w: 0.15, h: 0.15, mat: "steel" });
   for (const ty of [4, 14]) {
-    ctx.solids.push(prism(x + 22.5, y + ty, 0.3, 0.3, 0.3, 8, "steel"));
-    ctx.accents.push({ kind: "dot", at: v3(x + 22.65, y + ty + 0.15, 8.3), r: 0.8, color: "amber" });
+    ctx.solids.push(prism(b.x + 22.5, b.y + ty, 0.3, 0.3, 0.3, 8, "steel"));
+    ctx.accents.push({ kind: "dot", at: v3(b.x + 22.65, b.y + ty + 0.15, 8.3), r: 0.8, color: "amber" });
   }
 }
 
