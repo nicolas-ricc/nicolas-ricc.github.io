@@ -210,7 +210,7 @@ function fittingOut(out: Solid[], rng: Rng): void {
     const x = eastBank(y) + 1.5;
     if (y >= northCoastY(x)) out.push(rock(x, y));
   }
-  for (let x = Math.ceil(eastBank(30)) + 6; x < 300; x += 3) out.push(rock(x, northCoastY(x) + 1.5)); // escollera de la caleta
+  for (let x = Math.ceil(eastBank(30)) + 6; x < 300; x += 3) out.push(rock(x, northCoastY(x) + 1.5)); // escollera de la caleta; arranca 6 u al este de la ribera (eastBank(30) = 277) para no pisar el último cono del río
 }
 
 // ---------------------------------------------------------------- selva y faroles

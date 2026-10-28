@@ -95,7 +95,9 @@ describe("costa de la isla", () => {
       expect(estuaryInset(y)).toBeLessThanOrEqual(10);
     }
     expect(estuaryInset(150)).toBe(0);
-    for (let y = 196; y <= 262; y += 2) expect(estuaryInset(y)).toBe(0);
+    for (let y = 196; y <= 222; y += 2) expect(estuaryInset(y)).toBe(0); // puente (y 207..217) y avenida
+    for (let y = 238; y <= 262; y += 2) expect(estuaryInset(y)).toBe(0); // manzana derrumbada: rampa y losas hundidas
+    expect(estuaryInset(230)).toBeGreaterThan(2);                        // entre el puente y el derrumbe la ribera también entra
     for (let y = 146; y <= 400; y++) expect(islandWestX(y)).toBeLessThanOrEqual(estuaryEast(y));
   });
 });

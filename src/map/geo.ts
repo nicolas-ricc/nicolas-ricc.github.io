@@ -168,9 +168,9 @@ export const SEAM_CY = Math.floor(ZONE_SPLIT_Y / CELL) * CELL - CELL / 2;
 export const ESTUARY_FLARE = 0.35; // cuánto se abre la ribera este por unidad hacia el sur
 export const estuaryEast = (y: number): number => eastBank(SEAM_CY) + Math.max(0, y - ZONE_SPLIT_Y) * ESTUARY_FLARE;
 
-/** Cuánto entra la tierra de la isla sobre el agua del estuario, en [0, 10]; 0 al norte de y 152 y en y 196..262. */
+/** Cuánto entra la tierra de la isla sobre el agua del estuario, en [0, 10]; 0 al norte de y 152 (costura), en y 196..222 (puente) y en y 238..262 (manzana derrumbada). */
 export function estuaryInset(y: number): number {
-  const env = ramp(y, 152, 160) * (1 - ramp(y, 188, 196)) + ramp(y, 262, 266);
+  const env = ramp(y, 152, 160) * (1 - ramp(y, 188, 196)) + ramp(y, 222, 226) * (1 - ramp(y, 234, 238)) + ramp(y, 262, 266);
   return env * (6 + 2.5 * Math.sin(y / 7.6 + 0.4) + 1.5 * Math.sin(y / 2.5 + 1.1));
 }
 
@@ -181,6 +181,14 @@ export const islandWestX = (y: number): number => estuaryEast(y) - estuaryInset(
  * Costa este: la isla es tierra donde x < islandEastX(y). Ondulada al norte de
  * y 158, recta (malecón) entre 158 y WORLD.y1 y punta sur redondeada más allá
  * (-Infinity desde y 380: todo agua).
+ * - Al norte de 146 oscila entre `lo` y `hi`: `lo` = 331 deja 3 u de pie a
+ *   galpones (x ≤ 324) y chatarra (x ≤ 329); entre y 134 (base de la punta del
+ *   faro) y 146 (costura de zonas) sube a 344, y `hi` = 344 + shoreWidth − 1.5
+ *   no deja tierra que clickee Blog (`worldZoneAt`).
+ * - Entre 146 y 158 (arranque del malecón) se interpola a 344.
+ * - Punta sur: elipse de 44 u de largo desde WORLD.y1 sobre el ancho de la
+ *   lengua en la costura, achicada a 0.86 ± 0.12 por dos senos (29 u y 13 u) y
+ *   con una punta menor en y 356.
  */
 export function islandEastX(y: number): number {
   if (y >= 158 && y <= WORLD.y1) return ZONE_SPLIT_X;

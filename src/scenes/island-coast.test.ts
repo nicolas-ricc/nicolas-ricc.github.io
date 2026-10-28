@@ -82,6 +82,8 @@ describe("costa de la isla", () => {
     const escollera = (s: Solid) => s.kind === "cone" && s.mat === "rock"; // shipyard.ts: el único `rock` del astillero
     const candidates = [
       ...[...sy.solids, ...sy.ground].filter((s) => onIsland(s) && !escollera(s)),
+      // de la ciudad, solo la franja de costura (y < 158): al sur la ribera del estuario solo gana tierra
+      // (islandWestX ≤ estuaryEast, geo.test.ts) y malecón, puente y derrumbe están en el agua a propósito
       ...cs.solids.filter((s) => onIsland(s) && bounds(s).max.y < MALECON.y0),
     ];
     expect(candidates.length).toBeGreaterThan(10);
