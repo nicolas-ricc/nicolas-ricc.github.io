@@ -50,7 +50,7 @@ describe("hinterland", () => {
     expect(s.solids.filter((x) => x.kind === "prism" && x.d === 0.24).length).toBeGreaterThanOrEqual(2 * (PYLON_N - 4)); // cables
     expect(s.solids.filter((x) => x.kind === "prism" && x.w === 6 && x.d === 2.4 && x.h === 2.6 && x.at.z > 0).length).toBeGreaterThan(20); // contenedores apilados
     const belt = s.solids.filter((x) => x.kind === "cone" && (x.mat === "leaf" || x.mat === "leafDark") && x.at.y >= GREEN_BELT.y0 && x.at.y < GREEN_BELT.y1 && x.at.x < WORLD.x0);
-    expect(belt.length).toBeGreaterThanOrEqual(20); // 30 antes del corredor del tren (#280): despeja 4 conos del cinturón
+    expect(belt.length).toBeGreaterThanOrEqual(20); // 30 antes del corredor del tren (#280): despeja 10 conos del cinturón
   });
 
   it("acentos cian y colores del atlas", () => {

@@ -6,11 +6,11 @@ import type { Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { QUAY_X, WORLD, ZONE_SPLIT_Y, islandWestX } from "../map/geo";
 import { AVENUE, BLOCK_W, BOULEVARD, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_COLS, EAST_RING, FALLEN_BLOCK, LIT_FLOOR, MALECON, PLAZA, ROWS, SIDEWALK, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_COLS, WEST_QUAY, blocks, estuaryEast, estuaryReaches, inBlock, inCrater, type Block } from "./city-grid";
+import { PLINTH_H, lamp, plazaTone, prism, tiles } from "./city-pieces";
+import { districtBlock, maxDistrictHeight } from "./district";
 import { jungle, type Rails } from "./flora";
 import { RAIL_Y } from "./shipyard";
 import { TRAIN_CLEAR } from "./station";
-import { PLINTH_H, lamp, plazaTone, prism, tiles } from "./city-pieces";
-import { districtBlock, maxDistrictHeight } from "./district";
 
 /**
  * Resume: ciudad de oficinas en grilla, tragada por la selva, partida por el

@@ -5,10 +5,10 @@ import type { Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { BLEED, WORLD, ZONE_SPLIT_Y, inCoverQuad } from "../map/geo";
 import { jungle } from "./flora";
-import { TRAIN_CLEAR } from "./station";
 import { towerCrane } from "./pieces";
 import { RAIL_Y } from "./shipyard";
 import { COVER_MARGIN, GREEN_BELT, builtAt } from "./sprawl-grid";
+import { TRAIN_CLEAR } from "./station";
 
 /**
  * Hinterland industrial de Portfolio, sobre el sangrado al norte y al oeste
