@@ -7,11 +7,7 @@ import type { Solid } from "./solids";
 /** Punto movido `(dx, dy)` en planta: z no cambia. Devuelve un objeto nuevo. */
 const move = <P extends Vec2>(p: P, dx: number, dy: number): P => ({ ...p, x: p.x + dx, y: p.y + dy });
 
-/**
- * Sólido igual al dado pero desplazado `(dx, dy)` en planta; z no cambia.
- * Mueve solo los puntos (`at`, `from`/`to`, `footprint`, `path`, `tris`); lo demás se copia tal cual (mismas referencias).
- * No redondea ni muta `s`: los puntos movidos son objetos nuevos.
- */
+/** Sólido desplazado `(dx, dy)` en planta. Solo los puntos son objetos nuevos; el resto (plates, facade…) comparte referencia. No muta `s`. */
 export function translate(s: Solid, dx: number, dy: number): Solid {
   const p = (q: Vec2): Vec2 => move(q, dx, dy);
   const p3 = (q: Vec3): Vec3 => move(q, dx, dy);
@@ -29,11 +25,7 @@ export function translate(s: Solid, dx: number, dy: number): Solid {
   }
 }
 
-/**
- * Acento igual al dado pero desplazado `(dx, dy)` en planta; z no cambia.
- * `dot` mueve `at`; `poly` mueve cada punto de `pts` (array nuevo); el resto (`r`, `color`, `alpha`) se copia.
- * No redondea ni muta `a`.
- */
+/** Acento desplazado `(dx, dy)` en planta. No muta `a`. */
 export function translateAccent(a: Accent, dx: number, dy: number): Accent {
   switch (a.kind) {
     case "dot": return { ...a, at: move(a.at, dx, dy) };
