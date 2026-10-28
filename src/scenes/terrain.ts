@@ -18,9 +18,9 @@ import { BLEED_WATER, WATER_TERRAIN, bleedTerrainAt, terrainAt, type BleedTerrai
  * se reparte acá una sola vez. `water-animator.ts` reclama esos `Solid` y les
  * muta `toneOffset` in place a cada paso, igual que el astillero con sus otros
  * cuerpos animados; el terreno no sabe nada de eso. El agua del sangrado se subdivide en celdas de
- * `CELL_BLEED` (la única excepción es `TIP_BOX`, la punta sur de la isla, en celdas de `CELL`) (se probó una subdivisión a 9 u dentro del cover; la
- * decisión gateada por medición la descartó, ver spec §"Desvíos de la
- * implementación").
+ * `CELL_BLEED`, salvo en `TIP_BOX` (la punta sur de la isla), que va en celdas de
+ * `CELL`. Se probó una subdivisión a 9 u dentro del cover; la decisión gateada
+ * por medición la descartó, ver spec §"Desvíos de la implementación".
  */
 // La clasificación vive en `terrain-classify.ts` (abajo de `depth-map.ts`, que la necesita): acá se
 // reexporta tal cual, así quien ya la pedía a `terrain.ts` sigue igual.
@@ -148,7 +148,7 @@ function cellTris(out: Tri[], x0: number, y0: number, x1: number, y1: number, za
 }
 
 /**
- * Grilla de CELL_BLEED alrededor de WORLD. Comparte vértices con la de CELL en la costura (lados múltiplos de 18) y ahí no lleva jitter. El agua del sangrado usa las mismas celdas, sin subdividir (decisión gateada por medición, ver spec §"Desvíos de la implementación"). Única excepción: las celdas cuyo centro cae en `TIP_BOX` (la punta sur de la isla) se parten en 3×3 de 6 u, tierra y agua, clasificadas por su centro; sus vértices nuevos toman altura de `tipVertexZ` (por posición, sin rng: el stream de la grilla de 18 u no cambia).
+ * Grilla de CELL_BLEED alrededor de WORLD. Comparte vértices con la de CELL en la costura (lados múltiplos de 18) y ahí no lleva jitter. El agua del sangrado usa las mismas celdas, sin subdividir salvo `TIP_BOX` (decisión gateada por medición, ver spec §"Desvíos de la implementación"). En `TIP_BOX` (la punta sur de la isla) las celdas cuyo centro cae adentro se parten en 3×3 de 6 u, tierra y agua, clasificadas por su centro; sus vértices nuevos toman altura de `tipVertexZ` (por posición, sin rng: el stream de la grilla de 18 u no cambia).
  */
 function buildBleed(rng: Rng, w: WaterTris, foam: Tri[]): Solid[] {
   const bx0 = WORLD.x0 - BLEED.x, by0 = WORLD.y0 - BLEED.y, bx1 = WORLD.x1 + BLEED.x, by1 = WORLD.y1 + BLEED.y;
