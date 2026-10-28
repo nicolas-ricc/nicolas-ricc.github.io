@@ -19,7 +19,7 @@ const CATALOG: Record<GroupId, string[]> = {
   hinterland: ["central-termica", "tanques", "silos", "alta-tension", "playa-contenedores"],
   feria: ["noria", "montana-rusa", "torre-caida", "carrusel", "arcade", "autitos-chocadores", "muelle"],
   ciudad: ["plaza", "torre", "puente", "malecon", "manzana-derrumbada", "manzana-distrito", "obra"],
-  tecnologico: ["mastil", "arena", "auditorio", "torres"],
+  tecnologico: ["mastil", "arena", "auditorio", "torres", "monoblock", "casas", "escuela", "club", "plaza-barrio", "costanera", "barrio"],
   mar: ["faro", "casa-farero", "boyas", "pecio"],
 };
 const ANIMATED = ["chimeneas", "excavadora", "noria", "torre", "faro"];
