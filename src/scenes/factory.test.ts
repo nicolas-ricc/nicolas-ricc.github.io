@@ -6,7 +6,7 @@ import { bounds, isFlat, tessellateAll, type Bounds, type Solid } from "../iso/s
 import { WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, worldZoneAt } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
-import { boilerHouse, gableEnd, inclineBelt, metalStacks, NAVE, naveBody, STAIR_TOWER, stairTower } from "./boiler-house";
+import { BAYS, boilerHouse, gableEnd, inclineBelt, metalStacks, NAVE, naveBody, STAIR_TOWER, stairTower } from "./boiler-house";
 import { maltings, waterTower } from "./maltings";
 import { MALT, PLANT, RAIL_YARD_X, STACKS, STACK_BASE_H, chimney, factory, type FactoryScene, type Stack } from "./factory";
 import { towerCrane } from "./pieces";
@@ -136,7 +136,7 @@ describe("factory", () => {
   it("el zócalo no toca camiones ni faroles", () => {
     const s = scene();
     const plinth = build(naveBody).filter((x) => (x.kind === "prism" && x.mat === "whitewash" && x.h === 3.5) || (x.kind === "cylinder" && x.r === 0.3 && x.h === 0.8));
-    expect(plinth).toHaveLength(21);
+    expect(plinth).toHaveLength(2 * BAYS + 1);
     expectApart(plinth, [...s.solids.filter(isTruck), ...s.solids.filter(isLamp)]);
   });
 
