@@ -13,17 +13,21 @@ import { PLANT_SHIFT, emitPlant } from "./plant-frame";
 import { SUBSTATION, substation } from "./substation";
 
 /**
- * Fábrica, detrás (al norte) y al oeste del astillero. La planta (la maltería de Mistley, la nave de calderas
- * de la Fábrica de Luz y el tanque de agua sobre patas), la playa de camiones y sus faroles se arman en el marco
- * local y se trasladan con `PLANT_SHIFT` de `plant-frame.ts` a la región nueva: planta en x 5..98, y 43.4..75.5 (torre de escalera y zócalo incluidos), playa de camiones y faroles en y 76..89, con la cinta inclinada bajando hasta ella desde la tolva (y 74..76).
- * En la banda vieja (`x > 0, y −60..0`) quedan solo el desvío ferroviario y la grúa torre. Al sur del desvío,
- * ya fuera de la banda (mudanza de #238), la subestación de intemperie (`substation.ts`, x 54..95, y −2..11) y,
- * en la región nueva al norte del lugar de la nave (y 43.4), tres chimeneas humeantes (x 54..90, y 22..36) y la
- * torre de enfriamiento (x 31..49, y 5..23), también mudanza de #238. Columna oeste `x ≤ 0` (`x -60..0, y 0..146`),
- * que no cambia: playa de vías, excavadora de rueda de cangilones y acopios de mineral, selva al sur y el farol
- * de (−30, 20). El terreno es `slab`.
+ * Fábrica de Portfolio, en el lugar que tenían los galpones del astillero (región x 4..98.7, y −4..99). La planta
+ * (la maltería de Mistley, x 5..29, y 44..74, la nave de calderas de la Fábrica de Luz, x 29..92, y 44..74, con su
+ * torre de escalera en x 93..98, y el tanque de agua sobre patas en (15, 32)), la playa de camiones y sus faroles se
+ * arman en el marco local y se trasladan con `PLANT_SHIFT` de `plant-frame.ts`: la playa de camiones y los faroles
+ * quedan en y 76..89, con la cinta inclinada bajando hasta ella desde la tolva (y 74..76). Al norte de la planta,
+ * tres chimeneas humeantes (en (58, 32), (72, 26) y (86, 32)), la torre de enfriamiento en (40, 14) y la subestación
+ * de intemperie (`substation.ts`, x 54..95, y −2..11). Ya no están la cinta larga, el ramal `SPUR_Y`, el ramal
+ * embutido en la calle, las chatas ni los rieles nave→grada.
+ * En la banda norte (`x > 0`) quedan el desvío ferroviario, la grúa torre y, detrás de la fábrica, las naves de
+ * montaje, los talleres y el patio de material del astillero (`shipyard.ts`). Columna oeste `x ≤ 0` (`x -60..0,
+ * y 0..146`), igual que antes: playa de vías, excavadora de rueda de cangilones y acopios de mineral, selva al sur
+ * y el farol de (−30, 20). El terreno es `slab`.
  * Spec: docs/superpowers/specs/2026-09-14-mundo-2-fabrica-distrito-blog-design.md §5.
  * Detalle de planta, chimeneas, subestación y excavadora: docs/superpowers/specs/2026-10-24-fabrica-detalle-design.md.
+ * Mudanza: docs/superpowers/specs/2026-10-27-fabrica-mudanza-design.md.
  */
 export interface FactoryScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; stacks: Vec3[]; excavator: Solid[] }
 

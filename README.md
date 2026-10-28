@@ -33,7 +33,11 @@ Portfolio al norte y al oeste de la fábrica, con su central térmica) y
 `tech.ts` (distrito tecnológico de Resume al oeste y al sur de la ciudad),
 separados por un cinturón verde; `fair.ts` es la feria de la playa sobre la
 bahía, al norte de la fábrica; el estuario y el mar siguen hacia el sur hasta
-juntarse.
+juntarse. La fábrica ocupa el lugar que tenían los galpones del astillero,
+entre la playa de vías y la calle de transferencia, delante del desvío, con la
+cinta inclinada bajando a la playa de camiones (la cinta larga ya no está); las
+naves de montaje, los talleres y el patio de material del astillero quedan al
+norte, detrás de la fábrica.
 
 El runtime que arma y anima ese mundo vive en `src/world/` y lo comparten el
 sitio y el laboratorio: `stage.ts` (capas, velos y luces por zona: cada luz, estática o
@@ -69,7 +73,8 @@ look, `src/map/palette-iso.ts`. Specs en `docs/superpowers/specs/`
 `2026-10-16-barcos-referencia.md`,
 `2026-10-17-barcos-inventario.md`,
 `2026-10-17-storybook-estructuras-design.md`,
-`2026-10-24-fabrica-detalle-design.md`).
+`2026-10-24-fabrica-detalle-design.md`,
+`2026-10-27-fabrica-mudanza-design.md`).
 
 `/lab/storybook.html` es el storybook de estructuras: muestra un edificio o
 estructura a la vez, recortado del mundo por su caja (o armado solo en el
