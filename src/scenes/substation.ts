@@ -13,17 +13,14 @@ import type { Material } from "../map/palette-iso";
  */
 export const SUBSTATION_SHIFT = { x: -95, y: 58 } as const;
 
-const LOCAL = { x0: 149, x1: 190, y0: -60, y1: -47 } as const;
+const SUBSTATION_LOCAL = { x0: 149, x1: 190, y0: -60, y1: -47 } as const;
 const PHASES_LOCAL = [-57, -53.5, -50] as const;
 const TRANSFORMERS_LOCAL = [-59, -53] as const; // y0 de cada cuba: T1 al norte, T2 al sur
 const FIREWALL_LOCAL = { x: 171.5, y: -54.3, w: 7, d: 0.6, h: 5.5 } as const;
 
-/** Lista de y del marco local pasada a mundo, conservando el tipo de tupla. */
-const shiftYs = <T extends readonly number[]>(ys: T): { readonly [K in keyof T]: number } => ys.map((y) => y + SUBSTATION_SHIFT.y) as unknown as { readonly [K in keyof T]: number };
-
-export const SUBSTATION = { x0: LOCAL.x0 + SUBSTATION_SHIFT.x, x1: LOCAL.x1 + SUBSTATION_SHIFT.x, y0: LOCAL.y0 + SUBSTATION_SHIFT.y, y1: LOCAL.y1 + SUBSTATION_SHIFT.y } as const;
-export const PHASES_Y = shiftYs(PHASES_LOCAL);
-export const TRANSFORMERS_Y = shiftYs(TRANSFORMERS_LOCAL); // y0 de cada cuba: T1 al norte, T2 al sur
+export const SUBSTATION = { x0: SUBSTATION_LOCAL.x0 + SUBSTATION_SHIFT.x, x1: SUBSTATION_LOCAL.x1 + SUBSTATION_SHIFT.x, y0: SUBSTATION_LOCAL.y0 + SUBSTATION_SHIFT.y, y1: SUBSTATION_LOCAL.y1 + SUBSTATION_SHIFT.y } as const;
+export const PHASES_Y: readonly [number, number, number] = [PHASES_LOCAL[0] + SUBSTATION_SHIFT.y, PHASES_LOCAL[1] + SUBSTATION_SHIFT.y, PHASES_LOCAL[2] + SUBSTATION_SHIFT.y];
+export const TRANSFORMERS_Y: readonly [number, number] = [TRANSFORMERS_LOCAL[0] + SUBSTATION_SHIFT.y, TRANSFORMERS_LOCAL[1] + SUBSTATION_SHIFT.y]; // y0 de cada cuba: T1 al norte, T2 al sur
 export const FIREWALL = { ...FIREWALL_LOCAL, x: FIREWALL_LOCAL.x + SUBSTATION_SHIFT.x, y: FIREWALL_LOCAL.y + SUBSTATION_SHIFT.y } as const;
 
 /** Arma con `build` en el marco local y empuja cada sólido trasladado a mundo. */
