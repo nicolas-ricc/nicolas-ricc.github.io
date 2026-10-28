@@ -80,7 +80,7 @@ Los escribe el orquestador antes de Task 1, en rojo:
 **Interfaces:**
 - Produces: `export interface Rails { y: readonly number[]; train?: { y0: number; y1: number; x1: number } }`. `jungle` tiene la misma firma.
 
-- [ ] **Step 1: Tests (stage 3)** en `describe("regla del tren")`. Un helper siembra un solo cono en un área degenerada (`x0 = x1`, `y0 = y1`). Como `r` y `h` salen del rng, se usa un rng falso (`Rng` con `chance`/`int` que devuelven valores fijos: `int(a, b)` devuelve, en orden, x, y, r, h) para fijar r y h. Con `T = { y0: 130.8, y1: 134.2, x1: 158 }` y `rails = { y: [131, 134], train: T }`:
+- [ ] **Step 1: Tests (stage 3)** en `describe("regla del tren")`. Un helper siembra un solo cono en un área degenerada (`x0 = x1`, `y0 = y1`). Como `r` y `h` salen del rng, se usa un rng falso (`Rng` cuyo `chance` devuelve `true` y cuyo `int(a, b)` devuelve, en orden, x, y, r, h: el orden de `flora.ts:21-23`, un `chance` y cuatro `int` por cono, sin reintentos) para fijar r y h. Con `T = { y0: 130.8, y1: 134.2, x1: 158 }` y `rails = { y: [131, 134], train: T }`:
   - sur y alto: cono (100, 141), r 2, h 9, z 0.4 → descartado (`141 − 2 − 13.16 = 125.84 < 134.5`).
   - más al sur: (100, y) con `y = 134.5 + 2 + 1.4·9.4` = 149.66 → queda (borde exacto, Review Focus 3). También queda en y 150.
   - al este del frente: (180, 141), r 2, h 5 → `180 − 2 − 7.56 = 170.44 ≥ 158` → queda.
@@ -122,9 +122,30 @@ Lo escribe el orquestador en stage 3. Queda en rojo hasta Task 3.
 - Consumes: `screenHull`, `hullsIntersect`, `isBehind`, `overlaps`, `screenBounds` (`../iso/depth`); `trainBox`, `trainLen` (`./train`); `STOP_X`, `TRACKS_Y` (`./station`); `WEST_RAIL_X0` (`./hinterland`); `world` (`./world`).
 
 - [ ] Test "ningún sólido estático alto queda delante del tren en todo el recorrido": statics son `world(7).solids` con la extensión en z > 0.4 (A4). Se barren los x0 de A6, con `y = TRACKS_Y[2]`. Para cada sólido con `overlaps` y `hullsIntersect`, `isBehind(tren, sólido)` es false, con el mensaje JSON del sólido y el x0. Se cuentan los pares superpuestos (> 0).
-- [ ] Test "el barrido cubre el sangrado": algún sólido estático con `max.x < −60` se superpone (bounds y hull) con el tren en algún x0 (A5).
+- [ ] Test "el barrido cubre el sangrado": algún sólido estático con `max.x < −60` se superpone (bounds y hull) con el tren en algún x0 (A5). Medido: ningún sólido del sangrado que no sea cono se superpone. Los que sostienen el test son los conos del cinturón al norte de la vía, que quedan detrás del tren y la regla del tren no toca. Se verifica en verde después de Task 3.
 - [ ] Docstring breve: por qué (las capas animadas se pintan encima, `stage.ts`), y que §6.2 da la regla y este test la prueba sobre el mundo armado.
 
 ### Task 5 (orquestador, stage 4): captura
 
 - [ ] `npm run dev -- --host --port 5173`, agent-browser con viewport 1600×900 a 2x, `/lab/world.html`, tecla `1`. Guardar en `docs/superpowers/specs/assets/2026-10-27-estacion/corredor-sur.png`, encuadrando el corredor al sur de la vía (A9). Commit `docs(#280): captura del corredor sur`.
+
+## Grilling
+
+Una ronda con 18 preguntas (griller: `fable`). Fuentes: ISSUE 9, CODE 7, NO SOURCE 2 (supuestos técnicos). Sin ambigüedades de spec y sin issues abiertos.
+
+- Q1, paso 4: ISSUE "para `x0` desde `WEST_RAIL_X0 − trainLen(4)` hasta `STOP_X − trainLen(4)` de a 4 u". La regla de `flora` es SAT exacto contra la unión de todas las posiciones (frente máximo `x1`), así que no depende del muestreo.
+- Q2, el 0.3: ISSUE "`at.y − r − 1.4·(at.z + h) < train.y1 + 0.3`". CODE `train.ts:88-89`: `trainBox` tiene y ± `CAR_W/2` = 130.8..134.2, igual que `TRAIN_CLEAR` (`station.ts:37`). El test compara contra `trainBox`. La regla usa `TRAIN_CLEAR` con 0.3 de margen, el mismo de `station.ts:20` (134.5).
+- Q3, z = 0: sobre una caja, el máximo de `p = y − 1.4z` y el de `q = x − 1.4z` se dan en z mínima (0). Contra el máximo del tren es contra lo que se compara el mínimo del cono. ISSUE: "los únicos ejes separadores del SAT son `p = y − 1.4z`, `q = x − 1.4z` y `sx = x − y`". Un cono que solo queda "arriba" en pantalla tiene p mínimo ≥ 134.5 y la regla lo deja.
+- Q4, prototipo: NO SOURCE (supuesto técnico). Es el test de Task 4 sin el `expect`; se corre de nuevo en Task 3 Step 3. Contingencia: ISSUE "si un sólido no cono quedara delante del tren, se anota en el PR y se decide ahí".
+- Q5: CODE `shipyard.ts:41` (`export const RAIL_Y`), `hinterland.ts:155` (`{ y: RAIL_Y }`), `tech.ts:187` (hoy sin `rails`: se agrega `0.4, rails`), `city.ts:311` (hoy sin `rails`).
+- Q6, ciclos: CODE `train.ts:1-3` solo importa `../iso/*`; `station.ts:1-5` solo importa `../iso/*` y `./train`. Lo prueba `npm run typecheck` más `npm test`.
+- Q7, Q8, Q14, consumo: CODE `flora.ts:21-26`: `for i < n` con n intentos fijos; `chance` y luego `int` para x, y, r y h; el descarte es un `continue` después de consumir. El rng falso se corrigió para que incluya `chance`.
+- Q9: CODE `city.ts:321` (y0 = `ZONE_SPLIT_Y + 1` = 147) y `tech.ts:187` (y0 148): |147 − 134| = 13 ≥ 4 + 1.5.
+- Q10: medido y anotado en Task 4.
+- Q11: ISSUE "Todos los sólidos de h ≤ 0.4 (rieles, durmientes, tablones) están exentos por la regla de §6.2"; CODE `station.test.ts` "oclusión" usa `max.z − min.z <= 0.4`. El tren estacionado está al norte (y ≤ 124.2): ISSUE "la propia formación estacionada no hace falta: está al norte". Medido: no es infractor.
+- Q12: CODE `sea-anim.test.ts:6` importa `convexHull` y `Vec2` de `../iso/geometry`; `depth.ts:1` ya importa `v3` de `./geometry`.
+- Q13: el criterio es el del Step 1 (`overlaps` true y `hullsIntersect` false), el mismo fenómeno descripto en `sea-anim.test.ts:25-29`.
+- Q15: ISSUE "Contar en el PR, por escena, cuántos conos se pierden". Los números van al comentario de stage 4 y al PR.
+- Q16: ISSUE "`shipyard.test.ts` ≥ 20 → el número que quede si baja, con el motivo".
+- Q17: ISSUE criterio "Captura … (`/lab/world.html` con `1`, 3200×1800) mostrando el corredor al sur de la vía". El encuadre lo elige el orquestador (NO SOURCE, supuesto técnico A9).
+- Q18: CODE `station.ts:30,37`, `train.ts:22,88`, `hinterland.ts:159`, en la base b861565.
