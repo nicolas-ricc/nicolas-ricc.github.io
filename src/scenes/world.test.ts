@@ -3,6 +3,7 @@ import { buildRenderList } from "../iso/render-list";
 import { bounds, isFlat, type Solid } from "../iso/solids";
 import { BLEED, WORLD, worldZoneAt } from "../map/geo";
 import { allIsoColors } from "../map/palette-iso";
+import { SUBSTATION } from "./substation";
 import { LANDMARKS, world, zoneRng } from "./world";
 
 describe("world", () => {
@@ -80,6 +81,17 @@ describe("world", () => {
     for (const i of buildRenderList([...w.terrain.ground, ...w.terrain.water, w.terrain.foam, ...w.terrain.bleed, ...w.ground, ...w.solids])) expect(colors.has(i.color)).toBe(true);
   });
 
+  it("ningún sólido elevado de otra escena entra al cerco de la subestación (#244)", () => {
+    const w = world(7);
+    const mine = new Set(w.factory!.solids);
+    const others = w.solids.filter((s) => !isFlat(s) && !mine.has(s));
+    expect(others.length).toBeLessThan(w.solids.length - mine.size + 1);
+    for (const s of others) {
+      const b = bounds(s);
+      expect(b.max.x <= SUBSTATION.x0 || b.min.x >= SUBSTATION.x1 || b.max.y <= SUBSTATION.y0 || b.min.y >= SUBSTATION.y1, JSON.stringify(s).slice(0, 90)).toBe(true);
+    }
+  });
+
   it("el landmark del Blog cae en la fosa y el sangrado existe solo con el mundo entero", () => {
     expect(worldZoneAt(LANDMARKS.blog.x, LANDMARKS.blog.y)).toBe("blog");
     expect(world(7).terrain.bleed.length).toBeGreaterThan(0);
@@ -90,6 +102,7 @@ describe("world", () => {
     const w = world(7);
     const raised = w.solids.filter((s) => !isFlat(s) && worldZoneAt(bounds(s).min.x, bounds(s).min.y) === "portfolio");
     expect(raised.length).toBeGreaterThan(400);
-    expect(w.factory!.solids.every((s) => bounds(s).max.y <= 0 || bounds(s).max.x <= 0)).toBe(true);
+    const inNewRegion = (b: ReturnType<typeof bounds>) => b.min.x >= 4 && b.max.x <= 99 && b.min.y >= -4 && b.max.y <= 99; // región que deja el astillero (#238)
+    expect(w.factory!.solids.every((s) => bounds(s).max.y <= 0 || bounds(s).max.x <= 0 || inNewRegion(bounds(s)))).toBe(true);
   });
 });

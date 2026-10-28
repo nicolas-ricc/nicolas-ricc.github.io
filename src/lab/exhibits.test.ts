@@ -122,6 +122,16 @@ describe("caja de la nave de calderas (#213)", () => {
   });
 });
 
+describe("caja de la subestación (#244)", () => {
+  it("sigue la fórmula del cerco: {51, −5, 98, 12} h 13, sin cruzar calle-faroles (x0 99) ni bajar a los vagones (y ≤ −6.8)", () => {
+    const e = regions.find((x) => x.id === "subestacion")!, street = regions.find((x) => x.id === "calle-faroles")!;
+    expect(e.box).toEqual({ x0: 51, y0: -5, x1: 98, y1: 12 });
+    expect(e.h).toBe(13);
+    expect(e.box.x1).toBeLessThan(street.box.x0);
+    expect(e.box.y0).toBeGreaterThan(-6.8);
+  });
+});
+
 describe("selección por hash", () => {
   const [first, second] = EXHIBITS;
   it("acepta el hash con o sin #", () => {
