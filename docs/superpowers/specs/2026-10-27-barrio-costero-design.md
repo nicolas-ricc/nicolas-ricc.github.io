@@ -1,7 +1,7 @@
 # Barrio residencial costero en lugar de los labs del distrito tecnológico
 
 **Fecha:** 2026-10-27
-**Estado:** aprobado, listo para agente
+**Estado:** implementado en #249–#256 (rama `feature/240-barrio-costero`); los desvíos y la medición están en §11
 **Alcance:** convertir la parte lejana del distrito tecnológico de Resume (los
 "laboratorios" y los "atrios", al sudoeste de la ciudad, sobre el estuario) en
 un **barrio residencial costero** que se entienda de un vistazo:
@@ -284,3 +284,150 @@ Resume.
   tecnológico.
 - Fusionar la rama `feature/35-resume-nivel-2`.
 - Autos o gente en movimiento.
+
+## 11. Desvíos
+
+Lo que quedó distinto del diseño y lo que se midió al cerrar la historia.
+"Antes" es b9550c5, el merge-base con `main` sobre el que se midieron
+`TECH_FACES_BEFORE` y `REGION_FACES_BEFORE` y se tomó `cover-antes.png`.
+`origin/main` ya tiene las costas de la isla (#237), que la rama no tiene:
+medir contra él mezclaría ese cambio en los deltas.
+
+### 11.1 Lo que la historia decidió distinto
+
+- Ventanas por placas en banda en vez de `facade`, por presupuesto (#249, #250).
+- Techos solo a dos aguas con `roofMat`, sin `hip` (#249, #251).
+- Escuela de proporción ≈ 3:1 con fachada al este y vestíbulo con la puerta (#252).
+- Exhibit `plaza-barrio`, porque el id `plaza` ya existía (#249).
+- Plazas con césped liso en vez de `tiles`, y senderos `poly` en vez de `strip`,
+  porque el césped tapa los `strip` (#254).
+- Zonificación en pre-pase (`zoneKinds`), con damero monoblock/campus, plazas
+  fijas y `blockParity` por índice de fila en `ROWS` en las filas de la ciudad
+  (para `y ≥ 328` da lo mismo que la fórmula del diseño) (#249).
+- Costanera con `ACCESSES = [400, 500, 600]` y su recorte de presupuesto:
+  3 bancos, 3 cestos y sombrillas de 4 lados (#255).
+- Casas: 4–5 por manzana (no 6), lote sur 0 vacío para la cochera y ala solo
+  al este (#251).
+- Monoblock: no emite las ventanas tapadas por la placa delantera
+  (`occluded()`), porque `tech.homes` se dibuja sobre los sólidos (#250).
+- Club: la luz de la banda sur solo en el tramo visible (#253).
+- Sin cancha chica en la plaza: el spec pide "cancha o arenero" y quedó el
+  arenero (#254).
+- Tope de sólidos elevados de `tech` en `tech.test.ts`: `< 1700`. Medido
+  N = 1505 sobre `tech(createRng(7))`; tope = `ceil(1505 × 1,10 / 100) × 100`.
+
+### 11.2 Caras y acentos
+
+Caras de `tech` (sólidos + suelo, `tech(zoneRng(SEED, "cv", 2))`):
+
+| | antes | después | Δ |
+|---|---|---|---|
+| total del distrito (`TECH_FACES_BEFORE`) | 8458 | 8592 | +134 (+1,58 %) |
+| región `BARRIO_REGION` (`REGION_FACES_BEFORE`) | 1286 | 1296 | +10 (+0,78 %) |
+| acentos estáticos | 94 | 191 | +97 (+103,2 %) |
+| acentos en el frame 0 de las capas `accent` | 508 | 1004 | +496 (+97,6 %) |
+| acentos, suma | 602 | 1195 | +593 (+98,5 %) |
+
+Caras por exhibit, medidas con `readout(cropScene(scene, e.box),
+cropAnimators(animators, e.box)).faces`. "Antes" es la misma caja sobre el
+mundo de b9550c5 (labs y atrios); el marcador es el valor que dio #249 con las
+piezas mínimas, según los PRs de los hijos. El panel del storybook coincide
+con el script en los siete.
+
+| exhibit | antes (b9550c5, misma caja) | marcador (#249) | después |
+|---|---|---|---|
+| `monoblock` | 101 | 15 | 114 |
+| `casas` | 52 | 25 | 55 |
+| `escuela` | 52 | 6 | 86 |
+| `club` | 55 | 6 | 80 |
+| `plaza-barrio` | 46 | 16 | 58 |
+| `costanera` | 49 | 94 | 221 |
+| `barrio` | 1355 | — | 1529 |
+
+Las cajas de "antes" son las de `src/lab/exhibits.ts`, corridas 3 u hacia atrás
+en x e y: `monoblock` (132, 448), `casas` (132, 520), `escuela` (102, 520), `club`
+(132, 544), `plaza-barrio` (132, 496) con 30×24; `costanera` (184, 480)–(199, 568);
+`barrio` (40, 470)–(199, 612). Las caras del exhibit incluyen a los vecinos
+que caen dentro de la caja (por eso `costanera` da 221 y `facesIn` del
+rectángulo, 349).
+
+Zonificación del mundo (`zoneKinds` sobre las 106 manzanas): 34 `tower`,
+18 `monoblock`, 15 `campus`, 10 `park`, 7 `plaza`, 17 `casas`, 1 `escuela`,
+1 `club`, 1 `telecom`, 1 `arena`, 1 `auditorium`. La tabla manzana por manzana
+está en el PR.
+
+### 11.3 Capturas y totals
+
+Capturas en `assets/2026-10-27-barrio/` (1600×900 a 2x, PNG de 3200×1800):
+
+- Cover del sitio: [antes](assets/2026-10-27-barrio/cover-antes.png) y
+  [después](assets/2026-10-27-barrio/cover-despues.png).
+- Esquina de Resume (recorte de los dos covers):
+  [antes](assets/2026-10-27-barrio/barrio-4-antes.png) y
+  [después](assets/2026-10-27-barrio/barrio-4-despues.png). La caja es la misma
+  en los dos: esquina (5, 1002), 840×600 sobre 3200×1800, con el rótulo RESUME
+  con su caja en ≈ (25, 50) del recorte.
+- Mundo (`/lab/world.html?speed=0`, tecla `2`):
+  [antes](assets/2026-10-27-barrio/mundo-antes.png) y
+  [después](assets/2026-10-27-barrio/mundo-despues.png).
+- Exhibit `barrio` (`/lab/storybook.html?speed=0#barrio`):
+  [después](assets/2026-10-27-barrio/barrio-despues.png).
+
+`totals` de `rendering.capture()` en `/lab/world.html` sin parámetros, en la
+primera corrida caliente y después de la línea `[lab] bloom:` (antes de ella
+el conteo no es estable). El modo de bloom fue `activo` de los dos lados.
+
+| clave | antes | después |
+|---|---|---|
+| containers | 9 | 9 |
+| graphics | 175 | 181 |
+| meshes | 0 | 0 |
+| sprites | 0 | 0 |
+| texts | 0 | 0 |
+| tilingSprites | 0 | 0 |
+| nineSliceSprites | 0 | 0 |
+| filters | 3 | 3 |
+| masks | 0 | 0 |
+| **suma sin containers** | **178** | **184** |
+| instrucciones | 69 | 71 |
+
+`drawCalls` salió 0 de los dos lados; no es fiable (ver `CLAUDE.md`).
+
+### 11.4 Bloom
+
+`/lab/world.html` sin parámetros, una carga fría descartada y tres corridas
+calientes (recargas) por lado. De cada corrida, la línea `[lab] bloom: …` y el
+primer `[lab] peor redibujo en 5 s: …` posterior.
+
+```
+antes (b9550c5, puerto 5174)
+[lab] bloom: promedio 12.8 ms en 60 frames (tick 8.8 + render 4.0), presupuesto 15 ms → activo
+[lab] peor redibujo en 5 s: 17.80 ms
+[lab] bloom: promedio 12.7 ms en 60 frames (tick 8.7 + render 4.0), presupuesto 15 ms → activo
+[lab] peor redibujo en 5 s: 20.00 ms
+[lab] bloom: promedio 12.9 ms en 60 frames (tick 8.7 + render 4.1), presupuesto 15 ms → activo
+[lab] peor redibujo en 5 s: 20.20 ms
+
+después (rama, puerto 5173)
+[lab] bloom: promedio 13.2 ms en 60 frames (tick 8.8 + render 4.4), presupuesto 15 ms → activo
+[lab] peor redibujo en 5 s: 17.20 ms
+[lab] bloom: promedio 13.1 ms en 60 frames (tick 8.9 + render 4.2), presupuesto 15 ms → activo
+[lab] peor redibujo en 5 s: 21.40 ms
+[lab] bloom: promedio 13.3 ms en 60 frames (tick 9.0 + render 4.3), presupuesto 15 ms → activo
+[lab] peor redibujo en 5 s: 21.70 ms
+```
+
+| | antes | después | delta |
+|---|---|---|---|
+| mediana del promedio de bloom (ms) | 12.8 | 13.2 | +0.4 |
+| mediana del peor redibujo (ms) | 20.0 | 21.4 | +1.4 |
+
+La mediana del bloom sube 0,4 ms, dentro del +1 ms del criterio de §9 (que
+es del bloom). La mediana del **peor redibujo** sube 1,4 ms, y eso sí supera
+1 ms; el criterio no lo cubre, y el rango entre corridas es del mismo orden
+(antes 17.8–20.2 ms, después 17.2–21.7 ms). Las seis corridas quedaron en
+modo `activo`.
+
+Entorno: Pixi 8.20.1, renderer webgl2, PixiJS DevTools enganchado
+(`isPixiActive` = `pixi-active`); agent-browser 0.27.0 headless
+(`--headless=new`), viewport 1600×900 a 2x.
