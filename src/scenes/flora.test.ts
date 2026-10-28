@@ -51,6 +51,7 @@ describe("flora: regla del tren", () => {
   it("deja los que quedan al este del frente", () => {
     expect(one(180, 141, 2, 5, rails)).toHaveLength(1);
     expect(one(175, 141, 2, 9, rails)).toHaveLength(1);
+    expect(one(173, 141, 2, 9, rails)).toHaveLength(1); // solo lo separa sx: 173 − 2 − 143 = 28 ≥ 27.2 (q da 155.84 < 158)
   });
   it("no toca los conos al norte de la vía", () => {
     expect(one(100, 120, 2, 9, rails)).toHaveLength(1);
