@@ -17,5 +17,5 @@ export function emitPlant(out: Solid[], build: (o: Solid[], a: Accent[]) => void
   build(o, a);
   if (a.length > 0 && !accents) throw new Error("emitPlant: acentos sin destino");
   for (const s of o) out.push(translate(s, PLANT_SHIFT.x, PLANT_SHIFT.y));
-  for (const c of a) accents!.push(translateAccent(c, PLANT_SHIFT.x, PLANT_SHIFT.y));
+  for (const c of a) accents?.push(translateAccent(c, PLANT_SHIFT.x, PLANT_SHIFT.y));
 }

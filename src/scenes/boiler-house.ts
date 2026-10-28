@@ -117,15 +117,10 @@ function inclineBeltLocal(out: Solid[]): void {
   }
 }
 
-/** Cuerpo de la nave en mundo; ver `naveBodyLocal`. */
 export const naveBody = (out: Solid[]): void => emitPlant(out, naveBodyLocal);
-/** Testero este en mundo; ver `gableEndLocal`. */
 export const gableEnd = (out: Solid[]): void => emitPlant(out, gableEndLocal);
-/** Chimeneas metálicas en mundo; ver `metalStacksLocal`. */
 export const metalStacks = (out: Solid[]): void => emitPlant(out, metalStacksLocal);
-/** Torre de escalera en mundo; ver `stairTowerLocal`. */
 export const stairTower = (out: Solid[]): void => emitPlant(out, stairTowerLocal);
-/** Cinta inclinada en mundo; ver `inclineBeltLocal`. */
 export const inclineBelt = (out: Solid[]): void => emitPlant(out, inclineBeltLocal);
 
 /** Nave de calderas completa: cuerpo, testero, chimeneas metálicas, torre de escalera y cinta inclinada. */
