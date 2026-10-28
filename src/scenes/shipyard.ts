@@ -30,6 +30,8 @@ const STREET_X = 100, STREET_W = 8;
 export const STREET_EDGE = STREET_X + STREET_W; // x donde empiezan los faroles
 const ROW_Y = [36, 56] as const;
 const ROW_H = 16;
+const HALL_X = 10, HALL_W = 90, HALL_H = 10;
+const HALL_ROWS_Y = [-52, -32] as const; // naves de montaje, en la banda norte
 const SLIP_X = 110;
 export const RAIL_Y = [131, 134] as const; // vías del oeste; el hinterland las prolonga hacia el oeste hasta el borde del sangrado
 const GANTRY_X = 150, GANTRY_H = 24;
@@ -45,6 +47,14 @@ const strip = (path: Vec2[], width: number, z: number, mat: Solid["mat"]): Solid
 function quay(out: Solid[]): void {
   out.push(prism(QUAY_X, WORLD.y0, WATER_Z, QUAY_W, BOTTOM - WORLD.y0, 1.5, "concrete"));
   for (let y = WORLD.y0 + 6; y < BOTTOM; y += 12) out.push({ kind: "cylinder", at: v3(QUAY_X + 2, y, 0.5), r: 0.7, h: 1, mat: "steel", sides: 6 });
+}
+
+function halls(out: Solid[]): void {
+  for (const y of HALL_ROWS_Y) {
+    out.push(prism(HALL_X, y, 0, HALL_W, ROW_H, HALL_H, "concrete", "gable"));
+    out.push(prism(HALL_X + HALL_W - 8, y + 2, 0, 2, 3, 2, "rust"));   // autoelevador esperando en el portón este
+    out.push(prism(HALL_X + 2, y + ROW_H - 5, 0, 3, 2, 2, "steel"));   // otro en el portón oeste
+  }
 }
 
 function street(out: Solid[]): void {
@@ -193,6 +203,7 @@ export function shipyard(rng: Rng): Scene {
   const weldSpots: Vec3[] = [];
   quay(solids);
   dryDock(solids, ground);
+  halls(solids);
   street(solids);
   slipways(solids, weldSpots);
   const g = gantry(solids);
