@@ -6,7 +6,7 @@ import { bounds, isFlat, tessellateAll, type Bounds, type Solid } from "../iso/s
 import { WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, worldZoneAt } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
-import { boilerHouse, gableEnd, inclineBelt, metalStacks, NAVE, naveBody, stairTower } from "./boiler-house";
+import { BAYS, boilerHouse, gableEnd, inclineBelt, metalStacks, NAVE, naveBody, STAIR_TOWER, stairTower } from "./boiler-house";
 import { maltings, waterTower } from "./maltings";
 import { MALT, PLANT, RAIL_YARD_X, STACKS, STACK_BASE_H, chimney, factory, type FactoryScene, type Stack } from "./factory";
 import { towerCrane } from "./pieces";
@@ -76,8 +76,9 @@ describe("factory", () => {
   it("la planta: maltería 24 × 30 × 18 de cinco pisos, tanque y nave de dos prismas de ladrillo apilados, sin dientes de sierra; tres chimeneas sin banda rust, torre de enfriamiento y grúa", () => {
     const s = scene();
     expect(MALT).toEqual({ x: 20, y: -46, w: 24, d: 30, h: 18 });
-    expect(NAVE).toEqual({ x: 44, y: -46, w: 76, d: 30, h: 14 });
-    expect(PLANT).toMatchObject({ x: 20, y: -46, w: 100, d: 30 }); // huella estable
+    expect(PLANT).toEqual({ x: MALT.x, y: MALT.y, w: MALT.w + NAVE.w, d: 30, h: 14 }); // maltería + nave
+    expect(PLANT.w).toBe(87);
+    expect(PLANT.x + PLANT.w).toBe(NAVE.x + NAVE.w); // el portón queda contra el testero
     expect(s.solids.filter((x) => x.kind === "prism" && x.mat === "brick" && x.at.x === MALT.x && x.at.y === MALT.y && x.w === 24 && x.d === 30 && x.h === 18 && x.facade?.floors === 5)).toHaveLength(1);
     for (const x of [...build(maltings), ...build(waterTower)]) expect(s.solids).toContainEqual(x);
     expect(s.solids.filter((x) => x.kind === "ramp" && x.mat === "steel" && x.w === 6 && x.at.z === 18)).toHaveLength(4); // faldones de la maltería
@@ -93,10 +94,13 @@ describe("factory", () => {
     expect(s.solids.some((x) => x.kind === "prism" && x.h === 20 && x.w === 1.2)).toBe(true); // mástil de la grúa
   });
 
-  it("el portón este sigue en x 119.8..120.3, y −23..−17", () => {
+  it("el portón este va en el testero: x 106.8..107.3, y −23..−17", () => {
     const gates = scene().solids.filter((x) => x.kind === "prism" && x.mat === "concrete" && x.h === 8);
     expect(gates).toHaveLength(1);
-    expect(bounds(gates[0]!)).toEqual({ min: { x: 119.8, y: -23, z: 0 }, max: { x: 120.3, y: -17, z: 8 } });
+    const b = bounds(gates[0]!);
+    expect(b.min.x).toBeCloseTo(PLANT.x + PLANT.w - 0.2, 9); expect(b.max.x).toBeCloseTo(PLANT.x + PLANT.w + 0.3, 9);
+    expect(b.min.x).toBeCloseTo(106.8, 9); expect(b.max.x).toBeCloseTo(107.3, 9);
+    expect(b.min.y).toBe(-23); expect(b.max.y).toBe(-17); expect(b.min.z).toBe(0); expect(b.max.z).toBe(8);
   });
 
   it("ningún sólido de la nave supera z 20 salvo las chimeneas metálicas y sus tensores (≤ 22.6)", () => {
@@ -132,7 +136,7 @@ describe("factory", () => {
   it("el zócalo no toca camiones ni faroles", () => {
     const s = scene();
     const plinth = build(naveBody).filter((x) => (x.kind === "prism" && x.mat === "whitewash" && x.h === 3.5) || (x.kind === "cylinder" && x.r === 0.3 && x.h === 0.8));
-    expect(plinth).toHaveLength(21);
+    expect(plinth).toHaveLength(2 * BAYS + 1);
     expectApart(plinth, [...s.solids.filter(isTruck), ...s.solids.filter(isLamp)]);
   });
 
@@ -142,7 +146,7 @@ describe("factory", () => {
   });
 
   it("en la escena, el muro alto se pinta antes de cada tramo del faldón norte y del sur (sin ciclos que corten esas relaciones)", () => {
-    const near = scene().solids.filter((x) => { const b = bounds(x); return b.max.x >= 17 && b.min.x <= 126.4 && b.max.y >= -49 && b.min.y <= -14; });
+    const near = scene().solids.filter((x) => { const b = bounds(x); return b.max.x >= 17 && b.min.x <= STAIR_TOWER.x1 + 0.4 && b.max.y >= -49 && b.min.y <= -14; });
     const order = sortByDepth(near);
     const wall = order.findIndex((x) => x.kind === "prism" && x.mat === "brick" && x.at.x === NAVE.x && x.at.z === 7);
     const roof = order.flatMap((x, i) => (x.kind === "ramp" && x.mat === "steel" && x.at.x >= NAVE.x ? [i] : []));

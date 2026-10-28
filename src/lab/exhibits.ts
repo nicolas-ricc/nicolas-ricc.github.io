@@ -66,7 +66,7 @@ const vessel = (kind: ShipKind) => (out: Solid[], accents: Accent[]): void => {
 };
 
 export const EXHIBITS: readonly Exhibit[] = [
-  // x1 = borde este de la torre de escalera (126): queda afuera la primera chimenea, cuya plataforma (#212) arranca en x 126.3; y1 −14: zócalo y tolva adentro, faroles y grúa torre del desvío afuera; h 26: vértice del horno de la maltería (26); x0 2: pasarela del tanque (x ≥ 5.4)
+  // x1 = borde este de la torre de escalera (STAIR_TOWER.x1, 113): queda afuera la primera chimenea, cuyo pedestal arranca en x 126.5; y1 −14: zócalo y tolva adentro, faroles y grúa torre del desvío afuera; h 26: vértice del horno de la maltería (26); x0 2: pasarela del tanque (x ≥ 5.4)
   { id: "planta", title: "Nave de calderas, maltería y tanque", zone: "portfolio", group: "fabrica", kind: "region",
     box: { x0: 2, y0: PLANT.y - M, x1: STAIR_TOWER.x1, y1: -14 }, h: 26 },
   // en planta el tanque queda detrás de la maltería (la cámara mira desde el sudeste): solo, se ven patas, cruces, escalera y pasarela
