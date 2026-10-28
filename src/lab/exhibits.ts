@@ -71,12 +71,12 @@ export const EXHIBITS: readonly Exhibit[] = [
     box: { x0: 2, y0: PLANT.y - M, x1: STAIR_TOWER.x1, y1: -14 }, h: 26 },
   // en planta el tanque queda detrás de la maltería (la cámara mira desde el sudeste): solo, se ven patas, cruces, escalera y pasarela
   { id: "tanque-agua", title: "Tanque de agua", zone: "portfolio", group: "fabrica", kind: "piece", pad: "slab", build: (out) => waterTower(out, { x: 0, y: 0 }) },
-  // el humo deriva al NNE hasta PUFF_RANGE: la caja se estira al norte para no cortar la columna (la subestación queda adentro, detrás)
+  // el humo deriva al NNE hasta PUFF_RANGE: la caja se estira al norte para no cortar la columna
   // la torre de enfriamiento es privada en factory.ts: (172, −36), r 9
   { id: "chimeneas", title: "Chimeneas y torre de enfriamiento", zone: "portfolio", group: "fabrica", kind: "region",
     box: { x0: Math.min(...stacksX) - stackR - M, y0: Math.min(...stacksY) - stackR - PUFF_RANGE, x1: 172 + 9 + M, y1: -36 + 9 + M },
     h: stackTop + PUFF_RANGE * PUFF_LIFT },
-  // cerco de SUBSTATION más margen (3 y 1 al sur); y1 −46 deja afuera la torre de enfriamiento (y ≥ −45). h 13: los mástiles llegan a z 12; el humo pasa por encima
+  // cerco de SUBSTATION más margen (3 y 1 al sur): {51, −5, 98, 12}; no toca los vagones del desvío (y ≤ −6.8) ni cruza x 99 (`calle-faroles`). h 13: los mástiles llegan a z 12; el humo pasa por encima
   { id: "subestacion", title: "Subestación", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: SUBSTATION.x0 - 3, y0: SUBSTATION.y0 - 3, x1: SUBSTATION.x1 + 3, y1: SUBSTATION.y1 + 1 }, h: 13 },
   // a mano: camiones y pallets de truckYard; la grúa torre (60, −12) está en medio de la playa y queda adentro
   { id: "playa-camiones", title: "Playa de camiones", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: 17, y0: -15, x1: 113, y1: 2 }, h: 22 },
