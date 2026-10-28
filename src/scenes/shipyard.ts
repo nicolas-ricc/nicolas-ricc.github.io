@@ -16,8 +16,8 @@ import { clearOfWater } from "./terrain-classify";
  * material van al norte, detrás de la fábrica, en la banda `y −58..−16`; la
  * fábrica de Portfolio queda entre la calle y la playa de vías. La zona de
  * producción al sur de las gradas es la estación cabecera (`station.ts`), al
- * final de la vía del oeste. Coordenadas
- * en unidades del mapa viejo (1 u ≈ 1 px).
+ * final de la vía del oeste. Coordenadas en unidades del mapa viejo
+ * (1 u ≈ 1 px).
  */
 
 export interface Scene {
