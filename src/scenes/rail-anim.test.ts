@@ -11,7 +11,8 @@ import { BUFFER_X, CROSSING, SIGNALS, STOP_X, TRACKS_Y } from "./station";
 import { trainBox, trainLen } from "./train";
 import { world } from "./world";
 
-const front = (s: TrainState) => s.x0 + LEN;
+/** Extremo este: el frente al entrar y en la espera, la cola al salir. */
+const east = (s: TrainState) => s.x0 + LEN;
 const inPhase = (ms: number) => ms - phaseStart(trainStateAt(ms).phase);
 /** Primer ms (paso de 1 ms) desde `from` en que se cumple `pred`. */
 const firstMs = (from: number, to: number, pred: (ms: number) => boolean): number => {
@@ -41,22 +42,22 @@ describe("rail-anim: ciclo", () => {
   it("en ms 0 el frente asoma en ENTRY_X, invisible, con faros al este", () => {
     const s = trainStateAt(0);
     expect(s.phase).toBe("in");
-    expect(front(s)).toBeCloseTo(ENTRY_X, 9);
+    expect(east(s)).toBeCloseTo(ENTRY_X, 9);
     expect(s.alpha).toBe(0);
     expect(s.lead).toBe("e");
   });
   it("crucero a LINE_SPEED y frenado uniforme hasta parar con el frente en STOP_X", () => {
-    expect(front(trainStateAt(1000))).toBeCloseTo(ENTRY_X + 24, 6);
+    expect(east(trainStateAt(1000))).toBeCloseTo(ENTRY_X + 24, 6);
     const brake = IN_MS - 5000;
-    expect(front(trainStateAt(brake))).toBeCloseTo(STOP_X - BRAKE_U, 6);
+    expect(east(trainStateAt(brake))).toBeCloseTo(STOP_X - BRAKE_U, 6);
     // a mitad del frenado (2.5 s, a = 4.8): 24·2.5 − 4.8·2.5²/2 = 45
-    expect(front(trainStateAt(brake + 2500))).toBeCloseTo(STOP_X - BRAKE_U + 45, 6);
+    expect(east(trainStateAt(brake + 2500))).toBeCloseTo(STOP_X - BRAKE_U + 45, 6);
     expect(trainStateAt(IN_MS - 1).phase).toBe("in");
   });
   it("en IN_MS para con el frente exactamente en STOP_X y alpha 1", () => {
     const s = trainStateAt(IN_MS);
     expect(s.phase).toBe("dwell");
-    expect(Math.abs(front(s) - STOP_X)).toBeLessThan(1e-6);
+    expect(Math.abs(east(s) - STOP_X)).toBeLessThan(1e-6);
     expect(s.alpha).toBe(1);
   });
   it("toda la espera queda en STOP_X − LEN con faros al este", () => {
@@ -73,7 +74,7 @@ describe("rail-anim: ciclo", () => {
     expect(mid.lead).toBe("w");
     expect(mid.x0).toBeLessThan(STOP_X - LEN);
     const end = trainStateAt(phaseStart("off") - 1e-6);
-    expect(front(end)).toBeLessThanOrEqual(ENTRY_X + 1e-6);
+    expect(east(end)).toBeLessThanOrEqual(ENTRY_X + 1e-6);
     expect(end.alpha).toBe(0);
   });
   it("en off alpha 0; el último ms del ciclo es off", () => {
@@ -90,7 +91,7 @@ describe("rail-anim: ciclo", () => {
     const off = trainStateAt(phaseStart("off"));
     expect(off.alpha).toBe(0);
     expect(off.lead).toBe("w");
-    expect(front(off)).toBeCloseTo(ENTRY_X, 6);
+    expect(east(off)).toBeCloseTo(ENTRY_X, 6);
   });
 });
 
@@ -98,14 +99,14 @@ describe("rail-anim: invariantes cada 250 ms", () => {
   it("nunca al este de los topes; alpha en 0..1", () => {
     for (const ms of samples(250)) {
       const s = trainStateAt(ms);
-      expect(front(s), `ms ${ms}`).toBeLessThanOrEqual(BUFFER_X);
+      expect(east(s), `ms ${ms}`).toBeLessThanOrEqual(BUFFER_X);
       expect(s.alpha).toBeGreaterThanOrEqual(0);
       expect(s.alpha).toBeLessThanOrEqual(1);
     }
   });
   it("alpha sube en los primeros FADE_U u de la entrada y baja en los últimos de la salida", () => {
     let prev = -1;
-    for (let ms = 0; front(trainStateAt(ms)) <= ENTRY_X + FADE_U + 5; ms += 250) {
+    for (let ms = 0; east(trainStateAt(ms)) <= ENTRY_X + FADE_U + 5; ms += 250) {
       const a = trainStateAt(ms).alpha;
       expect(a).toBeGreaterThanOrEqual(prev);
       prev = a;
@@ -114,7 +115,7 @@ describe("rail-anim: invariantes cada 250 ms", () => {
     prev = 2;
     for (let ms = phaseStart("out"); ms < phaseStart("off"); ms += 250) {
       const s = trainStateAt(ms);
-      if (front(s) > ENTRY_X + FADE_U + 5) continue;
+      if (east(s) > ENTRY_X + FADE_U + 5) continue;
       expect(s.alpha).toBeLessThanOrEqual(prev);
       prev = s.alpha;
     }
@@ -150,16 +151,16 @@ describe("rail-anim: paso a nivel activo", () => {
   });
   it("entrando: se activa cuando el frente llega a x 70", () => {
     const on = firstMs(0, IN_MS, (ms) => crossingActive(trainStateAt(ms), inPhase(ms)));
-    expect(front(trainStateAt(on))).toBeGreaterThanOrEqual(near0);
-    expect(front(trainStateAt(on - 1))).toBeLessThan(near0);
+    expect(east(trainStateAt(on))).toBeGreaterThanOrEqual(near0);
+    expect(east(trainStateAt(on - 1))).toBeLessThan(near0);
     for (let ms = on; ms < IN_MS; ms += 100) expect(crossingActive(trainStateAt(ms), inPhase(ms))).toBe(true);
   });
   it("saliendo: activo mientras la formación corta [70, 138] y se apaga cuando la cola pasa x 70", () => {
     const out = phaseStart("out");
     expect(crossingActive(trainStateAt(out), 0)).toBe(true);
     const off = firstMs(out, phaseStart("off"), (ms) => !crossingActive(trainStateAt(ms), inPhase(ms)));
-    expect(front(trainStateAt(off))).toBeLessThan(near0);
-    expect(front(trainStateAt(off - 1))).toBeGreaterThanOrEqual(near0);
+    expect(east(trainStateAt(off))).toBeLessThan(near0);
+    expect(east(trainStateAt(off - 1))).toBeGreaterThanOrEqual(near0);
   });
 });
 
@@ -168,8 +169,8 @@ describe("rail-anim: semáforos", () => {
   it("entrada verde al principio de la entrada y roja cuando el frente pasa x 96", () => {
     expect(asp(0).in).toBe("green");
     const red = firstMs(0, IN_MS, (ms) => asp(ms).in === "red");
-    expect(front(trainStateAt(red))).toBeGreaterThanOrEqual(SIGNALS.in.x);
-    expect(front(trainStateAt(red - 1))).toBeLessThan(SIGNALS.in.x);
+    expect(east(trainStateAt(red))).toBeGreaterThanOrEqual(SIGNALS.in.x);
+    expect(east(trainStateAt(red - 1))).toBeLessThan(SIGNALS.in.x);
   });
   it("salida roja en la espera hasta 5 s antes de partir, verde desde ahí", () => {
     const pre = IN_MS + DWELL_MS - PRE_DEPART_MS;
@@ -180,8 +181,8 @@ describe("rail-anim: semáforos", () => {
   });
   it("salida roja cuando la cola deja x 108", () => {
     const red = firstMs(phaseStart("out"), phaseStart("off"), (ms) => asp(ms).out === "red");
-    expect(front(trainStateAt(red))).toBeLessThan(STREET_EDGE);
-    expect(front(trainStateAt(red - 1))).toBeGreaterThanOrEqual(STREET_EDGE);
+    expect(east(trainStateAt(red))).toBeLessThan(STREET_EDGE);
+    expect(east(trainStateAt(red - 1))).toBeGreaterThanOrEqual(STREET_EDGE);
   });
   it("lo demás rojo: salida en la entrada, entrada en la espera y la salida, los dos en off", () => {
     for (let ms = 0; ms < IN_MS; ms += 500) expect(asp(ms).out).toBe("red");
