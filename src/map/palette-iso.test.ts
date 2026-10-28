@@ -145,3 +145,12 @@ describe("crepúsculo tardío", () => {
     expect(ACCENT_COLORS.map((c) => ISO_COLORS[c])).toEqual([0x7cf5ff, 0x27b3c9, 0x134a52, 0xffc457, 0xd08a1e, 0x5a3d14, 0xff5ee0, 0xc42a9d, 0x54173f]);
   });
 });
+
+describe("tile (#249)", () => {
+  it("tile es cálido: teja terracota", () => {
+    const t = BASE_TONES.tile.top, r = (t >> 16) & 255, g = (t >> 8) & 255, b = t & 255;
+    expect(r).toBeGreaterThan(b + 60);
+    expect(r).toBeGreaterThan(g + 40);
+    expect(ISO_TONES.tile.top).toBe(darken(t, DARKEN));
+  });
+});

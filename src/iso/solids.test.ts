@@ -1419,3 +1419,22 @@ describe("placas", () => {
     });
   });
 });
+
+describe("roofMat en techo a dos aguas (#249)", () => {
+  const casa = (w: number, d: number): Solid => ({ kind: "prism", at: v3(1, 2, 0), w, d, h: 3, mat: "whitewash", roof: "gable" });
+  it("gable sin roofMat: caras idénticas a hoy", () => {
+    expect(tessellateAll(casa(5, 4))).toMatchSnapshot();
+    expect(tessellateAll(casa(4, 5))).toMatchSnapshot();
+  });
+  it("gable con roofMat: solo las dos vertientes llevan roofMat; bounds no cambia", () => {
+    for (const [w, d] of [[5, 4], [4, 5]] as const) {
+      const base = casa(w, d), roofed = { ...base, roofMat: "tile" } as Solid;
+      const all = tessellateAll(roofed), tiled = all.filter((f) => f.mat === "tile");
+      expect(tiled).toHaveLength(2);
+      for (const f of tiled) expect(f.normal.z).toBeGreaterThan(0);
+      expect(all.filter((f) => f.mat === "whitewash")).toHaveLength(5);
+      expect(all.map((f) => f.pts)).toEqual(tessellateAll(base).map((f) => f.pts));
+      expect(bounds(roofed)).toEqual(bounds(base));
+    }
+  });
+});

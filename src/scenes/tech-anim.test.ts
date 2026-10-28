@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { createRng } from "../map/seed";
 import { tech } from "./tech";
-import { CROWN_FLIP_GAP_MS, CROWN_PERIOD_MS, NEON_STEP_MS, RING_STEP_MS, SIGN_PERIOD_MS, SIGN_STEP_MS, TECH_BLINK_GAP_MS, createTechAnim } from "./tech-anim";
+import { ALWAYS_LIT } from "./barrio";
+import { CROWN_FLIP_GAP_MS, CROWN_PERIOD_MS, HOMES_GAP_MS, NEON_STEP_MS, RING_STEP_MS, SIGN_PERIOD_MS, SIGN_STEP_MS, TECH_BLINK_GAP_MS, createTechAnim } from "./tech-anim";
 
 const setup = (reducedMotion = false) => { const scene = tech(createRng(7)); return { scene, anim: createTechAnim(scene, createRng(3), { reducedMotion }) }; };
 const sinTorres = () => { const s = tech(createRng(7)); return { ...s, towers: [], neon: { ...s.neon, crowns: [] } }; };
@@ -33,7 +34,7 @@ describe("tech-anim", () => {
   });
   it("con reduced-motion no cambia nada", () => {
     const { anim } = setup(true);
-    for (let i = 0; i < 100; i++) expect(anim.tick(100)).toEqual({ windows: false, signs: false, telecom: false, neon: false });
+    for (let i = 0; i < 100; i++) expect(anim.tick(100)).toEqual({ windows: false, signs: false, telecom: false, neon: false, homes: false });
   });
   it("neones frame 0: coronas a alpha 1 con sus colores iniciales y las tres luces del mástil", () => {
     const { scene, anim } = setup();
@@ -73,12 +74,12 @@ describe("tech-anim", () => {
   it("sin torres las ventanas quedan quietas pero carteles, telecom y anillo del mástil siguen", () => {
     const scene = sinTorres(), anim = createTechAnim(scene, createRng(3), { reducedMotion: false });
     expect(scene.signs.length).toBeGreaterThan(0);
-    const seen = { windows: false, signs: false, telecom: false, neon: false };
+    const seen = { windows: false, signs: false, telecom: false, neon: false, homes: false };
     for (let t = 0; t < TECH_BLINK_GAP_MS[1] + 1000; t += 100) {
       const c = anim.tick(100);
       for (const k of Object.keys(seen) as (keyof typeof seen)[]) if (c[k]) seen[k] = true;
     }
-    expect(seen).toEqual({ windows: false, signs: true, telecom: true, neon: true });
+    expect(seen).toEqual({ windows: false, signs: true, telecom: true, neon: true, homes: true });
     expect(anim.windows()).toEqual([]);
     expect(anim.neon().every((a) => a.kind === "dot")).toBe(true);
   });
@@ -88,5 +89,65 @@ describe("tech-anim", () => {
       const paso = Math.floor(t / NEON_STEP_MS) !== Math.floor((t - 1) / NEON_STEP_MS) || Math.floor(t / RING_STEP_MS) !== Math.floor((t - 1) / RING_STEP_MS);
       expect(anim.tick(1).neon).toBe(paso);
     }
+  });
+});
+
+describe("tech-anim: ventanas del barrio (#249)", () => {
+  const key = (pts: { x: number; y: number; z: number }[]) => JSON.stringify(pts);
+  const litKeys = (anim: ReturnType<typeof createTechAnim>) => new Set(anim.homes().map((a) => (a.kind === "poly" ? key(a.pts) : "")));
+  it("frame 0: exactamente las HomeWindow encendidas de la escena, poly ámbar", () => {
+    const { scene, anim } = setup();
+    expect(scene.homes.length).toBeGreaterThan(0);
+    expect(anim.homes()).toEqual(scene.homes.filter((h) => h.lit).map((h) => ({ kind: "poly", pts: h.pts, color: "amber", alpha: 1 })));
+  });
+  it("en HOMES_GAP_MS[1] + 100 ms algún grupo cambia; las ventanas de un grupo siempre comparten estado", () => {
+    const { scene, anim } = setup();
+    const groups = new Map<string, string[]>();
+    for (const h of scene.homes) groups.set(h.group, [...(groups.get(h.group) ?? []), key(h.pts)]);
+    let changed = false;
+    for (let t = 0; t < HOMES_GAP_MS[1] + 100; t += 100) {
+      if (anim.tick(100).homes) changed = true;
+      const lit = litKeys(anim);
+      for (const ks of groups.values()) expect(new Set(ks.map((k) => lit.has(k))).size).toBe(1);
+    }
+    expect(changed).toBe(true);
+    expect(anim.fired().homes).toBeGreaterThanOrEqual(1);
+  });
+  it("troceado: un tick de 60 s dispara lo mismo que 600 ticks de 100 ms", () => {
+    const a = setup().anim, b = setup().anim;
+    a.tick(60000);
+    for (let i = 0; i < 600; i++) b.tick(100);
+    expect(a.fired().homes).toBeGreaterThan(0);
+    expect(a.fired().homes).toBe(b.fired().homes);
+    expect(a.homes()).toEqual(b.homes());
+  });
+  it("la escalera de la escuela y el gimnasio del club nunca se apagan", () => {
+    const { scene, anim } = setup();
+    const fixed = scene.homes.filter((h) => ALWAYS_LIT.has(h.group)).map((h) => key(h.pts));
+    expect(fixed.length).toBeGreaterThanOrEqual(2);
+    for (let i = 0; i < 1200; i++) { anim.tick(100); const lit = litKeys(anim); for (const k of fixed) expect(lit.has(k)).toBe(true); }
+  });
+  it("con reduced-motion o dt no válido no cambia nada", () => {
+    const r = setup(true);
+    const h0 = r.anim.homes();
+    for (let i = 0; i < 100; i++) expect(r.anim.tick(100).homes).toBe(false);
+    expect(r.anim.homes()).toEqual(h0);
+    const { anim } = setup();
+    const f0 = anim.homes();
+    for (const dt of [NaN, Infinity, 0, -5]) expect(anim.tick(dt).homes).toBe(false);
+    expect(anim.homes()).toEqual(f0);
+    expect(anim.fired().homes).toBe(0);
+  });
+  it("sin homes la capa devuelve [] y nunca reporta cambios", () => {
+    const anim = createTechAnim({ ...tech(createRng(7)), homes: [] }, createRng(3), { reducedMotion: false });
+    expect(anim.homes()).toEqual([]);
+    for (let i = 0; i < 600; i++) expect(anim.tick(100).homes).toBe(false);
+  });
+  it("las luces del barrio no mueven las ventanas de las torres ni los neones", () => {
+    const s = tech(createRng(7));
+    const a = createTechAnim(s, createRng(3), { reducedMotion: false }), b = createTechAnim({ ...s, homes: [] }, createRng(3), { reducedMotion: false });
+    for (let i = 0; i < 300; i++) { a.tick(100); b.tick(100); }
+    expect(a.windows()).toEqual(b.windows());
+    expect(a.neon()).toEqual(b.neon());
   });
 });
