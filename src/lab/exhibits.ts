@@ -10,7 +10,7 @@ import { BLOCK_D, BLOCK_W, BRIDGE, COLLAPSED, DISTRICT_COLS, DISTRICT_ROWS, EAST
 import { campus, lamp } from "../scenes/city-pieces";
 import { STAIR_TOWER } from "../scenes/boiler-house";
 import { excavator, excavatorBox, excavatorWheel } from "../scenes/excavator";
-import { PLANT, RAIL_YARD_X, STACK_BASE_H, STACKS } from "../scenes/factory";
+import { COOLING as FACTORY_COOLING, PLANT, RAIL_YARD_X, STACK_BASE_H, STACKS } from "../scenes/factory";
 import { waterTower } from "../scenes/maltings";
 import { PUFF_LIFT, PUFF_RANGE } from "../scenes/factory-anim";
 import { ARCADE, BUMPER, CAROUSEL, COASTER, DROP, PIER, WHEEL } from "../scenes/fair";
@@ -66,15 +66,15 @@ const vessel = (kind: ShipKind) => (out: Solid[], accents: Accent[]): void => {
 };
 
 export const EXHIBITS: readonly Exhibit[] = [
-  // x1 = borde este de la torre de escalera (STAIR_TOWER.x1, 113): queda afuera la primera chimenea, cuyo pedestal arranca en x 126.5; y1 −14: zócalo y tolva adentro, faroles y grúa torre del desvío afuera; h 26: vértice del horno de la maltería (26); x0 2: pasarela del tanque (x ≥ 5.4)
+  // x1 = borde este de la torre de escalera (STAIR_TOWER.x1, 113): las chimeneas quedan afuera por y (sus pedestales arrancan en y 22.5); y1 −14: zócalo y tolva adentro, faroles y grúa torre del desvío afuera; h 26: vértice del horno de la maltería (26); x0 2: pasarela del tanque (x ≥ 5.4)
   { id: "planta", title: "Nave de calderas, maltería y tanque", zone: "portfolio", group: "fabrica", kind: "region",
     box: { x0: 2, y0: PLANT.y - M, x1: STAIR_TOWER.x1, y1: -14 }, h: 26 },
   // en planta el tanque queda detrás de la maltería (la cámara mira desde el sudeste): solo, se ven patas, cruces, escalera y pasarela
   { id: "tanque-agua", title: "Tanque de agua", zone: "portfolio", group: "fabrica", kind: "piece", pad: "slab", build: (out) => waterTower(out, { x: 0, y: 0 }) },
   // el humo deriva al NNE hasta PUFF_RANGE: la caja se estira al norte para no cortar la columna
-  // la torre de enfriamiento es privada en factory.ts: (172, −36), r 9
+  // el humo deriva 0.45·PUFF_RANGE ≈ 12.6 al este (de ahí los 13); la plataforma sobresale r + 1.2 al sur; la subestación y su farol quedan adentro, detrás
   { id: "chimeneas", title: "Chimeneas y torre de enfriamiento", zone: "portfolio", group: "fabrica", kind: "region",
-    box: { x0: Math.min(...stacksX) - stackR - M, y0: Math.min(...stacksY) - stackR - PUFF_RANGE, x1: 172 + 9 + M, y1: -36 + 9 + M },
+    box: { x0: FACTORY_COOLING.x - FACTORY_COOLING.r - M, y0: Math.min(...stacksY) - stackR - PUFF_RANGE, x1: Math.max(...stacksX) + stackR + M + 13, y1: Math.max(...stacksY) + stackR + 1.2 + M },
     h: stackTop + PUFF_RANGE * PUFF_LIFT },
   // cerco de SUBSTATION más margen (3 y 1 al sur): {51, −5, 98, 12}; no toca los vagones del desvío (y ≤ −6.8) ni cruza x 99 (`calle-faroles`). h 13: los mástiles llegan a z 12; el humo pasa por encima.
   // Transitorio (#238): entran la punta baja de la cinta inclinada y el camión de (70, −6) hasta que la playa de camiones se mude (#246)
