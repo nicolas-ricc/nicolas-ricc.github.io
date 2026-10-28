@@ -239,3 +239,76 @@ describe("documentación de la mudanza de la fábrica (#238)", () => {
     for (const name of names) expect(existsSync(`${ASSETS}${name}.png`), name).toBe(true);
   });
 });
+
+describe("documentación de la estación terminal (#239)", () => {
+  const src = (name: string) => readFileSync(`${ROOT}src/scenes/${name}`, "utf8");
+  // el docstring de un módulo: del primer `/**` hasta su cierre
+  const docstring = (txt: string) => { const i = txt.indexOf("/**"); return i < 0 ? "" : txt.slice(i, txt.indexOf("*/", i)); };
+  const parrafos = readme.split(/\n\s*\n/);
+  // espacios colapsados: el párrafo se envuelve a ~80 columnas
+  const mundo = (parrafos.find((p) => p.includes("`factory.ts`")) ?? "").replace(/\s+/g, " ");
+  const lab = parrafos.find((p) => p.includes("/lab/world.html")) ?? "";
+  const story = parrafos.find((p) => p.includes("/lab/storybook.html")) ?? "";
+  const SPEC = "2026-10-27-estacion-terminal-design.md";
+  const ASSETS = `${ROOT}docs/superpowers/specs/assets/2026-10-27-estacion/`;
+  const estacion = readFileSync(`${ROOT}docs/superpowers/specs/${SPEC}`, "utf8");
+  const at = estacion.search(/^## 12\. Desvíos$/m);
+  const desvios = at < 0 ? "" : estacion.slice(at);
+  it("el párrafo del mundo nombra la estación y el tren", () => {
+    expect(mundo).toMatch(/estaci[oó]n/);
+    expect(mundo).toMatch(/EMU|tren/);
+  });
+  it("README lista la spec de la estación entre las specs del laboratorio", () => {
+    expect(lab).toContain(SPEC);
+  });
+  it("el párrafo del storybook nombra los exhibits de la estación", () => {
+    for (const id of ["estacion", "paso-a-nivel", "tren"]) expect(story).toContain(id);
+  });
+  it("el docstring de shipyard.ts no nombra la calderería", () => {
+    const doc = docstring(src("shipyard.ts"));
+    expect(doc).toContain("station.ts");
+    expect(doc).not.toMatch(/calderer[ií]a/i);
+  });
+  it("los docstrings de station.ts, train.ts y rail-anim.ts apuntan a la spec", () => {
+    for (const name of ["station.ts", "train.ts", "rail-anim.ts"]) expect(docstring(src(name)).replace(/\s*\*\s*/g, " "), name).toContain(`docs/superpowers/specs/${SPEC}`);
+    expect(docstring(src("station.ts"))).toMatch(/Tigre/);
+  });
+  it("la spec de la estación dice implementada", () => {
+    const estado = estacion.split("\n").find((l) => l.startsWith("**Estado:**")) ?? "";
+    expect(estado).toMatch(/implementad/);
+    expect(estado).not.toMatch(/listo para agente/);
+  });
+  it("el inventario de §5 está marcado", () => {
+    const i = estacion.search(/^## 5\. /m), j = estacion.search(/^## 6\. /m);
+    expect(i).toBeGreaterThan(0);
+    expect(estacion.slice(i, j)).not.toMatch(/- \[ \]/);
+  });
+  it("la spec cierra con desvíos, tabla de caras, ciclo y capturas", () => {
+    expect(at).toBeGreaterThan(0);
+    for (const h of [/^### 12\.1 /m, /^### 12\.2 /m, /^### 12\.3 /m]) expect(desvios).toMatch(h);
+    for (const id of ["estacion", "paso-a-nivel", "tren"]) expect(desvios).toMatch(new RegExp(`^\\| \`${id}\` \\|`, "m"));
+    for (const name of ["cover-antes", "cover-despues", "time-lapse-ciclo"]) expect(desvios).toContain(`assets/2026-10-27-estacion/${name}.png`);
+  });
+  it("la cover antes, la después y el time-lapse son PNG de 1600×900 a 2x", () => {
+    for (const name of ["cover-antes", "cover-despues", "time-lapse-ciclo"]) {
+      const png = readFileSync(`${ASSETS}${name}.png`);
+      expect(png.subarray(1, 4).toString()).toBe("PNG");
+      expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([3200, 1800]);
+    }
+  });
+  it("están las capturas después de la vista de Portfolio y de los exhibits", () => {
+    for (const name of ["portfolio-despues", "estacion-despues", "paso-a-nivel-despues", "tren-despues"]) expect(existsSync(`${ASSETS}${name}.png`), name).toBe(true);
+  });
+  it("la spec de 2026-10-15 descarta la estación de −18, 188 antes de nombrarla", () => {
+    const NOTE = "*Desvío (2026-10-28): la estación va al final de la vía del oeste del astillero, en el lugar de la calderería; ver `2026-10-27-estacion-terminal-design.md`. Esta pieza queda descartada.*";
+    const nivel2 = readFileSync(`${ROOT}docs/superpowers/specs/2026-10-15-resume-nivel-2-kit-zonificacion-luces-design.md`, "utf8").replace(/\s+/g, " ");
+    const nota = nivel2.indexOf(NOTE);
+    expect(nota).toBeGreaterThan(0);
+    expect(nota).toBeLessThan(nivel2.indexOf("−18, 188"));
+  });
+  it("el índice del storybook suma la estación, el paso a nivel y el tren al astillero", () => {
+    const story17 = readFileSync(`${ROOT}docs/superpowers/specs/2026-10-17-storybook-estructuras-design.md`, "utf8");
+    const fila = story17.split("\n").find((l) => l.startsWith("| Portfolio: astillero |")) ?? "";
+    for (const name of ["estación", "paso a nivel", "tren"]) expect(fila).toContain(name);
+  });
+});

@@ -16,6 +16,8 @@ import { escuela } from "./barrio-escuela";
 import { monoblock } from "./barrio-monoblock";
 import { plaza } from "./barrio-plaza";
 import { costanera } from "./costanera";
+import { RAIL_Y } from "./shipyard";
+import { TRAIN_CLEAR } from "./station";
 import { ARENA, AUDITORIUM, TELECOM, TOWER_D, zoneKinds } from "./tech-zoning";
 
 /**
@@ -152,6 +154,7 @@ export function tech(rng: Rng): TechScene {
   });
   avenue(ground, solids, accents);
   costanera(ctx);
-  jungle(solids, rng, { x0: -238, x1: WORLD.x0 - 2, y0: ZONE_SPLIT_Y + 5, y1: GREEN_BELT.y1 - 2 }, 2); // +5: el radio máximo de cono (4) no cruza el corte de zona
+  // +5: el radio máximo de cono (4) no cruza el corte de zona; sin conos delante del tren (#280)
+  jungle(solids, rng, { x0: -238, x1: WORLD.x0 - 2, y0: ZONE_SPLIT_Y + 5, y1: GREEN_BELT.y1 - 2 }, 2, 0.4, { y: RAIL_Y, train: TRAIN_CLEAR });
   return { ground, solids, accents, towers, signs, homes, telecom: telecomTop, neon: { crowns, mastRing: [3, 6, 9].map((dz) => v3(telecomTop.x, telecomTop.y + 0.6, telecomTop.z - dz)) } };
 }

@@ -1,0 +1,163 @@
+import type { Accent } from "../iso/accent";
+import { v3 } from "../iso/geometry";
+import type { Solid } from "../iso/solids";
+import { WEST_RAIL_X0 } from "./hinterland";
+import { flip } from "./neon";
+import { STREET_EDGE } from "./shipyard";
+import { CROSSING, SIGNALS, STOP_X, TRACKS_Y } from "./station";
+import { emu, trainLen } from "./train";
+
+/**
+ * Estación animada, sin Pixi: el EMU de cuatro coches entra por el oeste por la vía 3, frena y
+ * para con el frente en `STOP_X`, espera, sale hacia el oeste y se pierde; después la vía queda
+ * vacía un rato. El ciclo es `in → dwell → out → off`, de `CYCLE_MS` (≈ 101,7 s).
+ *
+ * Todo sale de fórmulas cerradas por tramos (nada se integra): el tiempo del ciclo alcanza para
+ * saber dónde está el tren, de modo que el estado es una función pura de `ms` y no hay nada que
+ * acumular ni sortear. Entrada: crucero de `LINE_SPEED` hasta `STOP_X − BRAKE_U` (500 u) y frenado
+ * uniforme en 5 s (a = 4,8 u/s²) hasta parar justo en el tope. Salida: simétrica, la formación
+ * acelera 60 u en 5 s y hace crucero otras 500 u hasta que la cola llega a `ENTRY_X` (el
+ * mismo borde del que entró), ya invisible. El `alpha` sube en los primeros `FADE_U` u del frente
+ * y baja en los últimos, así que el tren aparece y desaparece sin cortes dentro del sangrado.
+ *
+ * Desvíos del spec §7: el frente para a 2 u del tope y no a ≈ 1 (`STOP_X` 158, tope de
+ * 1,2 u de alto); no hay rng, nada es aleatorio (el spec pedía `createRng(SEED + n)`); y el
+ * ciclo dura ≈ 101,7 s y no ≈ 120.
+ *
+ * Paso a nivel y semáforos cuelgan del mismo estado. El paso a nivel parpadea mientras la
+ * formación corta la ventana de `CROSSING` ampliada `CROSSING_NEAR_U` a cada lado, y en la espera
+ * solo los últimos `PRE_DEPART_MS` (aviso de partida). Desvío del spec §7: ahí el paso a nivel
+ * seguiría titilando toda la espera, pero con el tren parado 30 s sería ruido sin información;
+ * queda a oscuras salvo los últimos 5 s. La entrada se pone roja apenas el frente pasa su poste;
+ * la salida, verde desde 5 s antes de partir hasta que la cola deja la calle (`STREET_EDGE`).
+ * Lo demás, rojo.
+ *
+ * Spec: docs/superpowers/specs/2026-10-27-estacion-terminal-design.md §7 (desvíos en §12).
+ */
+export const ENTRY_X = WEST_RAIL_X0;
+export const LINE_SPEED = 24;       // u/s en crucero
+export const BRAKE_U = 60;          // distancia de frenado (y de arranque) antes de STOP_X
+export const DWELL_MS = 30000, OFF_MS = 20000;
+export const FADE_U = 30;
+export const BLINK_MS = 500;
+export const CROSSING_NEAR_U = 30;
+export const PRE_DEPART_MS = 5000;
+export const TRACK_Y = TRACKS_Y[2];
+export const LEN = trainLen(4);
+
+const CRUISE_U = STOP_X - BRAKE_U - ENTRY_X;                 // 500 u
+const BRAKE_MS = 2 * BRAKE_U / LINE_SPEED * 1000;            // 5000 ms: v pasa de 24 a 0 en 60 u
+const BRAKE_A = LINE_SPEED * LINE_SPEED / (2 * BRAKE_U) / 1e6; // 4,8 u/s² en u/ms²
+const CRUISE_MS = CRUISE_U / LINE_SPEED * 1000;              // 20 833,3 ms
+export const IN_MS = CRUISE_MS + BRAKE_MS;
+export const OUT_MS = IN_MS;
+export const CYCLE_MS = IN_MS + DWELL_MS + OUT_MS + OFF_MS;
+
+export type Phase = "in" | "dwell" | "out" | "off";
+export type Aspect = "red" | "green";
+export interface TrainState { phase: Phase; x0: number; lead: "e" | "w"; alpha: number }
+
+const START: Record<Phase, number> = { in: 0, dwell: IN_MS, out: IN_MS + DWELL_MS, off: IN_MS + DWELL_MS + OUT_MS };
+export const phaseStart = (phase: Phase): number => START[phase];
+
+const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
+// EPS: el ciclo se arma con sumas de floats; un frente a menos de 1e-6 u de ENTRY_X ya es "en el borde" (alpha 0 exacto; al final de `out` el error de float daba ~8e-10)
+const EPS = 1e-6;
+const fade = (front: number): number => (front - ENTRY_X <= EPS ? 0 : clamp01((front - ENTRY_X) / FADE_U));
+const DWELL_X0 = STOP_X - LEN, END_X0 = ENTRY_X - LEN;
+
+/** Distancia recorrida desde que el tren está parado en un frenado (o arranque) de `t` ms, 0..BRAKE_U. */
+const brakeU = (t: number): number => LINE_SPEED * t / 1000 - BRAKE_A * t * t / 2;
+
+/** Estado del tren a `ms` del ciclo (0 ≤ ms < CYCLE_MS). `x0` es el extremo oeste: en `in`/`dwell` el frente es `x0 + LEN`; en `out` el frente es `x0` y la cola `x0 + LEN`. */
+export function trainStateAt(ms: number): TrainState {
+  if (ms < IN_MS) {
+    const front = ms < CRUISE_MS ? ENTRY_X + LINE_SPEED * ms / 1000 : STOP_X - BRAKE_U + brakeU(ms - CRUISE_MS);
+    return { phase: "in", x0: front - LEN, lead: "e", alpha: fade(front) };
+  }
+  if (ms < START.out) return { phase: "dwell", x0: DWELL_X0, lead: "e", alpha: 1 };
+  if (ms < START.off) {
+    const t = ms - START.out;
+    // arranque simétrico del frenado: 60 u acelerando y después crucero; la cola es x0 + LEN (el frente va al oeste)
+    const run = t < BRAKE_MS ? BRAKE_U - brakeU(BRAKE_MS - t) : BRAKE_U + LINE_SPEED * (t - BRAKE_MS) / 1000;
+    const x0 = DWELL_X0 - run;
+    return { phase: "out", x0, lead: "w", alpha: fade(x0 + LEN) };
+  }
+  return { phase: "off", x0: END_X0, lead: "w", alpha: 0 };
+}
+
+/** ¿Parpadea el paso a nivel? `msInPhase` son los ms desde `phaseStart(s.phase)`. */
+export function crossingActive(s: TrainState, msInPhase: number): boolean {
+  if (s.phase === "off") return false;
+  // parado, el tren siempre corta [70, 138]: solo manda el aviso de partida
+  if (s.phase === "dwell") return msInPhase >= DWELL_MS - PRE_DEPART_MS - EPS;
+  const a = CROSSING.x0 - CROSSING_NEAR_U, b = CROSSING.x1 + CROSSING_NEAR_U;
+  return s.x0 <= b && s.x0 + LEN >= a;
+}
+
+/** Aspecto de los dos semáforos: entrada (poste en x 96) y salida (x 118, que se despeja en `STREET_EDGE`). */
+export function signalAspects(s: TrainState, msInPhase: number): { in: Aspect; out: Aspect } {
+  const east = s.x0 + LEN; // frente en `in`, cola en `out`
+  const inGreen = s.phase === "in" && east < SIGNALS.in.x;
+  const outGreen = (s.phase === "dwell" && msInPhase >= DWELL_MS - PRE_DEPART_MS - EPS) || (s.phase === "out" && east >= STREET_EDGE);
+  return { in: inGreen ? "green" : "red", out: outGreen ? "green" : "red" };
+}
+
+export interface RailChanges { train: boolean; crossing: boolean; signals: boolean }
+export interface RailAnim {
+  train(): { solids: Solid[]; lights: Accent[]; alpha: number };
+  crossing(): Accent[];
+  signals(): Accent[];
+  state(): TrainState;
+  tick(dtMs: number): RailChanges;
+}
+
+const CROSSING_R_DOT = 0.45, SIGNAL_R_DOT = 0.4;
+
+export function createRailAnim(opts: { reducedMotion: boolean }): RailAnim {
+  // sin movimiento el tren queda parado en la estación, con el salón encendido (`dwell` desde su inicio)
+  let ms = opts.reducedMotion ? phaseStart("dwell") : 0, first = true;
+  let s = trainStateAt(ms);
+  const inPhase = (): number => ms - phaseStart(s.phase);
+  const active = (): boolean => crossingActive(s, inPhase());
+  const aspects = () => signalAspects(s, inPhase());
+  const blinkStep = (): number => Math.floor(ms / BLINK_MS);
+
+  // memo de una sola ranura: en `dwell`, `off` y entre cuadros iguales no se reteselan los coches
+  let memo: { x0: number; lead: "e" | "w"; solids: Solid[]; lights: Accent[] } | null = null;
+  const built = () => {
+    if (!memo || memo.x0 !== s.x0 || memo.lead !== s.lead) memo = { x0: s.x0, lead: s.lead, ...emu(s.x0, TRACK_Y, { cars: 4, lead: s.lead, lit: true }) };
+    return memo;
+  };
+
+  return {
+    train: () => { const b = built(); return { solids: b.solids, lights: b.lights, alpha: s.alpha }; },
+    crossing: () => {
+      if (!active()) return [];
+      const step = blinkStep();
+      // una sola luz por poste, alternando de lado: nunca están las dos encendidas
+      return [CROSSING.north, CROSSING.south].map((p): Accent => ({ kind: "dot", at: v3(p.x + 0.15, p.y + 0.15 + flip(step, -0.5, 0.5), p.h - 0.4), r: CROSSING_R_DOT, color: "magenta" }));
+    },
+    signals: () => {
+      const a = aspects();
+      const dot = (p: { x: number; y: number }, asp: Aspect): Accent => {
+        const red = asp === "red";
+        return { kind: "dot", at: v3(p.x + 0.25, p.y + 0.25, red ? 4.4 : 3.9), r: SIGNAL_R_DOT, color: red ? "magenta" : "cyanMid" };
+      };
+      return [dot(SIGNALS.in, a.in), dot(SIGNALS.out, a.out)];
+    },
+    state: () => s,
+    tick(dtMs) {
+      if (opts.reducedMotion || dtMs <= 0) return { train: false, crossing: false, signals: false };
+      const all = first; first = false;
+      const prev = s, wasActive = active(), prevStep = blinkStep(), prevAsp = aspects();
+      ms = (ms + dtMs) % CYCLE_MS; s = trainStateAt(ms);
+      const asp = aspects(), nowActive = active();
+      return {
+        train: all || s.x0 !== prev.x0 || s.lead !== prev.lead || s.alpha !== prev.alpha,
+        crossing: all || nowActive !== wasActive || (nowActive && blinkStep() !== prevStep),
+        signals: all || asp.in !== prevAsp.in || asp.out !== prevAsp.out,
+      };
+    },
+  };
+}

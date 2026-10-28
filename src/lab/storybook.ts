@@ -1,7 +1,7 @@
 import { Application } from "pixi.js";
 import { ISO_COLORS } from "../map/palette-iso";
 import type { WorldScene } from "../scenes/world";
-import { assembleWorld, type ZonedAnimator } from "../world/assemble";
+import { assembleWorld, tag, type ZonedAnimator } from "../world/assemble";
 import { scheduleIdle } from "../world/bloom";
 import { attachBloom, type BloomProbe } from "../world/bloom-runtime";
 import { type Box, boxFrame, fitTransform } from "../world/frame";
@@ -22,7 +22,8 @@ const host = document.getElementById("lab-host") as HTMLDivElement;
 const nav = document.getElementById("exhibits") as HTMLElement;
 const panel = document.getElementById("readout") as HTMLElement;
 const log = import.meta.env.DEV;
-const { scene, animators } = assembleWorld(undefined, { reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches });
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const { scene, animators } = assembleWorld(undefined, { reducedMotion });
 
 for (const g of GROUPS) {
   const h = document.createElement("h2");
@@ -91,7 +92,7 @@ async function boot(): Promise<void> {
       frame = { box: e.box, h: e.h };
     } else {
       const piece = pieceScene(e.build, e.pad);
-      src = [piece, []];
+      src = [piece, e.animate ? [tag(e.animate({ reducedMotion }), e.zone)] : []];
       stage = buildStage(...src);
       frame = solidsBox([...piece.ground, ...piece.solids]);
     }

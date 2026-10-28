@@ -4,6 +4,7 @@ import type { Animator } from "../scenes/animator";
 import { cityAnimator } from "../scenes/city-animator";
 import { factoryAnimator } from "../scenes/factory-animator";
 import { fairAnimator } from "../scenes/fair-animator";
+import { railAnimator } from "../scenes/rail-animator";
 import { seaAnimator } from "../scenes/sea-animator";
 import { shipyardAnimator } from "../scenes/shipyard-animator";
 import { techAnimator } from "../scenes/tech-animator";
@@ -14,7 +15,7 @@ import { world, type WorldScene } from "../scenes/world";
 export type ZonedAnimator = Animator & { zone: WorldZone | null };
 export interface Assembled { scene: WorldScene; animators: ZonedAnimator[] }
 
-const tag = (a: Animator, zone: WorldZone | null): ZonedAnimator => Object.assign(a, { zone });
+export const tag = (a: Animator, zone: WorldZone | null): ZonedAnimator => Object.assign(a, { zone });
 
 /** El mundo (o algunas zonas) y sus animadores, con los seeds del laboratorio. */
 export function assembleWorld(zones: readonly WorldZone[] | undefined, opts: { reducedMotion: boolean }): Assembled {
@@ -22,6 +23,8 @@ export function assembleWorld(zones: readonly WorldZone[] | undefined, opts: { r
   const scene = world(SEED, zones ? { zones } : {});
   const animators: ZonedAnimator[] = [tag(waterAnimator(scene.terrain, { reducedMotion }), null)];
   if (scene.shipyard) animators.push(tag(shipyardAnimator(scene.shipyard, createRng(SEED + 1), { reducedMotion }), "portfolio"));
+  // el tren corre por la vía del astillero; su cola sale del terreno por el oeste (el lab), así que va aun con el filtro ["portfolio"]
+  if (scene.shipyard) animators.push(tag(railAnimator({ reducedMotion }), "portfolio"));
   if (scene.city) animators.push(tag(cityAnimator(scene.city, createRng(SEED + 2), { reducedMotion }), "cv"));
   if (scene.factory) animators.push(tag(factoryAnimator({ ...scene.factory, stacks: [...scene.factory.stacks, ...(scene.hinterland?.stacks ?? [])] }, createRng(SEED + 4), { reducedMotion }), "portfolio"));
   if (scene.tech) animators.push(tag(techAnimator(scene.tech, createRng(SEED + 5), { reducedMotion }), "cv"));

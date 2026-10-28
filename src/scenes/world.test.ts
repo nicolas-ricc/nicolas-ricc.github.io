@@ -65,11 +65,11 @@ describe("world", () => {
     const portfolio = mats([...w.shipyard!.solids, ...w.factory!.solids]), cv = mats(w.city!.solids), blog = mats(w.sea!.solids);
     // glass: vidrio de fachadas; office: gris lila de la excavadora (decisión de #207). Subconjunto, no igualdad:
     // hoy la fábrica todavía no los usa (#218).
-    const sharedWithCity = ["glass", "office", "rust", "steel"];
+    const sharedWithCity = ["glass", "office", "rust", "steel", "asphalt", "stone", "paving"]; // asphalt: cabezas de los semáforos de la estación (#277); stone: fuste de la torre del reloj y paving: losa de la explanada (#278)
     const shared = [...portfolio].filter((m) => cv.has(m));
     expect(shared).toEqual(expect.arrayContaining(["rust", "steel"])); // lo que ya se comparte hoy sigue cubierto
     for (const m of shared) expect(sharedWithCity).toContain(m);
-    const sharedWithBlog = ["steel", "rust", "hull", "rock", "glass", "whitewash"]; // glass: la linterna del faro (spec §7); whitewash: porcelana y remates de la fábrica (#207)
+    const sharedWithBlog = ["steel", "rust", "hull", "rock", "glass", "whitewash", "deck"]; // glass: la linterna del faro (spec §7); whitewash: porcelana y remates de la fábrica (#207); deck: tablones del paso a nivel (#277)
     for (const other of [portfolio, cv]) for (const m of blog) if (other.has(m)) expect(sharedWithBlog).toContain(m);
   });
 

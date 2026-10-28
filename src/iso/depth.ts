@@ -1,4 +1,4 @@
-import { v3 } from "./geometry";
+import { convexHull, v3, type Vec2 } from "./geometry";
 import { VIEW_DIR, project } from "./project";
 import { bounds, tessellateAll, type Bounds, type Solid } from "./solids";
 
@@ -18,6 +18,27 @@ export function screenBounds(b: Bounds): ScreenBounds {
 
 export const overlaps = (a: ScreenBounds, b: ScreenBounds): boolean =>
   a.minX < b.maxX && b.minX < a.maxX && a.minY < b.maxY && b.minY < a.maxY;
+
+/**
+ * Hexágono en pantalla de una caja del mundo (envolvente convexa de sus ocho vértices proyectados). El rectángulo
+ * de `screenBounds` lo envuelve con mucho aire cuando la caja es larga en diagonal (un carguero con rumbo norte): daba
+ * falsos positivos de oclusión con la escollera de la dársena, a 35 u del barco (#83). Dos cajas se superponen en
+ * pantalla si se cortan sus hexágonos.
+ */
+export function screenHull(b: Bounds): Vec2[] {
+  const pts: Vec2[] = [];
+  for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) pts.push(project(v3(x, y, z)));
+  return convexHull(pts);
+}
+
+/** SAT entre dos polígonos convexos: se intersecan si ningún eje (normal de un lado) los separa. Tocarse cuenta como cortarse. */
+export function hullsIntersect(a: Vec2[], b: Vec2[]): boolean {
+  const axes = [a, b].flatMap((poly) => poly.map((p, i) => { const q = poly[(i + 1) % poly.length]!; return { x: p.y - q.y, y: q.x - p.x }; }));
+  return axes.every((n) => {
+    const pa = a.map((p) => p.x * n.x + p.y * n.y), pb = b.map((p) => p.x * n.x + p.y * n.y);
+    return Math.max(...pa) >= Math.min(...pb) && Math.max(...pb) >= Math.min(...pa);
+  });
+}
 
 /** `a` está detrás de `b` si hay un eje que los separa con `a` del lado lejano (oeste, norte o abajo). */
 export function isBehind(a: Bounds, b: Bounds): boolean {

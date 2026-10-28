@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { project, Z_SCALE } from "../iso/project";
-import { bounds, type Solid } from "../iso/solids";
+import { bounds, tessellate, type Solid } from "../iso/solids";
 import { BLEED, WORLD } from "../map/geo";
 import { STAIR_TOWER } from "../scenes/boiler-house";
 import { WATER_TOWER, waterTower } from "../scenes/maltings";
 import { createFactoryAnim } from "../scenes/factory-anim";
 import { PLANT, factory } from "../scenes/factory";
 import { BEAM_PERIOD_MS } from "../scenes/sea-anim";
+import { trainLen } from "../scenes/train";
 import { createRng } from "../map/seed";
 import { assembleWorld } from "../world/assemble";
 import { type Box, FRAME_H, HALO_BASE } from "../world/frame";
@@ -19,14 +20,14 @@ const regions = EXHIBITS.flatMap((e) => (e.kind === "region" ? [e] : []));
 // el índice de la spec §3, en orden; las piezas (#94) no cuentan
 const CATALOG: Record<GroupId, string[]> = {
   fabrica: ["planta", "chimeneas", "subestacion", "playa-camiones", "playa-vias", "excavadora"],
-  astillero: ["gradas", "darsena", "grua-portico", "calle-faroles", "naves", "punta-norte"],
+  astillero: ["gradas", "darsena", "grua-portico", "calle-faroles", "naves", "punta-norte", "estacion", "paso-a-nivel"],
   hinterland: ["central-termica", "tanques", "silos", "alta-tension", "playa-contenedores"],
   feria: ["noria", "montana-rusa", "torre-caida", "carrusel", "arcade", "autitos-chocadores", "muelle"],
   ciudad: ["plaza", "torre", "puente", "malecon", "manzana-derrumbada", "manzana-distrito", "obra", "punta-sur"],
   tecnologico: ["mastil", "arena", "auditorio", "torres", "monoblock", "casas", "escuela", "club", "plaza-barrio", "costanera", "barrio"],
   mar: ["faro", "casa-farero", "boyas", "pecio"],
 };
-const ANIMATED = ["chimeneas", "excavadora", "noria", "torre", "faro"];
+const ANIMATED = ["chimeneas", "excavadora", "noria", "torre", "faro", "estacion", "paso-a-nivel"];
 const SLACK = 8; // más alto que esto sobre la estructura y queda chica en el cuadro
 
 const { scene, animators } = assembleWorld(undefined, { reducedMotion: false });
@@ -83,6 +84,12 @@ describe("catálogo de exhibits", () => {
       expect(box.x0, id).toBeLessThan(box.x1); expect(box.y0, id).toBeLessThan(box.y1);
       expect(box.x0, id).toBeGreaterThanOrEqual(WORLD.x0 - BLEED.x); expect(box.x1, id).toBeLessThanOrEqual(WORLD.x1 + BLEED.x);
       expect(box.y0, id).toBeGreaterThanOrEqual(WORLD.y0 - BLEED.y); expect(box.y1, id).toBeLessThanOrEqual(WORLD.y1 + BLEED.y);
+    }
+  });
+  it("estacion y paso-a-nivel recortan el animador del tren en su estado inicial (#281)", () => {
+    for (const id of ["estacion", "paso-a-nivel"]) {
+      const e = regions.find((r) => r.id === id)!;
+      expect(cropAnimators(animators, e.box).some((a) => a.ids.includes("rail.train")), id).toBe(true);
     }
   });
   it("los cuatro exhibits de #92 recortan un animador que no es el agua", () => {
@@ -159,9 +166,9 @@ describe("selección por hash", () => {
 const pieces = EXHIBITS.flatMap((e) => (e.kind === "piece" ? [e] : []));
 
 describe("exhibits de pieza", () => {
-  it("las diez piezas, cada una en su zona", () => {
+  it("las once piezas, cada una en su zona", () => {
     expect(Object.fromEntries(pieces.map((e) => [e.id, e.zone]))).toEqual({
-      "tanque-agua": "portfolio", "grua-torre": "portfolio", farol: "portfolio",
+      "tanque-agua": "portfolio", "grua-torre": "portfolio", farol: "portfolio", tren: "portfolio",
       campus: "cv", selva: "cv",
       viga: "blog", carguero: "blog", remolcador: "blog", convoy: "blog", lancha: "blog",
     });
@@ -187,6 +194,41 @@ describe("exhibits de pieza", () => {
     for (const s of out) if (s.kind === "cylinder" || s.kind === "cone") expect([s.at.x, s.at.y]).toEqual([0, 0]);
     const deck = out.find((s) => s.kind === "cylinder" && s.r === 4.6)!;
     expect(deck.kind === "cylinder" && deck.at.x === 0 && deck.at.y === 0).toBe(true);
+  });
+  it("el tren (#281) va después del farol, sobre paving: solo sólidos, ≤ 600 caras, centrado en el origen", () => {
+    const ids = EXHIBITS.map((e) => e.id);
+    expect(ids.indexOf("tren")).toBe(ids.indexOf("farol") + 1);
+    const e = pieces.find((x) => x.id === "tren")!;
+    expect(e.pad).toBe("paving");
+    const out: Solid[] = [], accents: Accent[] = [];
+    e.build(out, accents);
+    expect(accents).toEqual([]); // las luces las pone el animador de la pieza
+    expect(out.flatMap(tessellate).length).toBeLessThanOrEqual(600);
+    const xs = out.flatMap((s) => { const b = bounds(s); return [b.min.x, b.max.x]; });
+    expect(Math.min(...xs)).toBeCloseTo(-trainLen(4) / 2, 9);
+    expect(Math.max(...xs)).toBeCloseTo(trainLen(4) / 2, 9);
+  });
+  it("con animate, las luces del tren cambian de punta cada 4 s; con reducedMotion quedan al este", () => {
+    const e = pieces.find((x) => x.id === "tren")!;
+    expect(e.animate).toBeDefined();
+    const cyanX = (a: ReturnType<NonNullable<typeof e.animate>>): number[] => {
+      const l = a.layer("tren.lights");
+      if (l.kind !== "accent") throw new Error("tren.lights");
+      expect(l.zone).toBe("portfolio");
+      return l.accents.flatMap((x) => (x.kind === "dot" && x.color === "cyan" ? [x.at.x] : []));
+    };
+    const a = e.animate!({ reducedMotion: false });
+    expect([...a.ids]).toEqual(["tren.lights"]);
+    expect(a.tick(16).has("tren.lights")).toBe(true);
+    expect(cyanX(a).length).toBe(2);
+    for (const x of cyanX(a)) expect(x).toBeGreaterThan(0);
+    expect(a.tick(1000).size).toBe(0);
+    expect(a.tick(3000).has("tren.lights")).toBe(true);
+    for (const x of cyanX(a)) expect(x).toBeLessThan(0);
+    const r = e.animate!({ reducedMotion: true });
+    expect(r.tick(4000).size).toBe(0);
+    expect(r.tick(4000).size).toBe(0);
+    for (const x of cyanX(r)) expect(x).toBeGreaterThan(0);
   });
   it("cada pieza emite al menos un sólido", () => {
     for (const e of pieces) {

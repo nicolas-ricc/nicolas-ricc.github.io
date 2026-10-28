@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { v3 } from "./geometry";
-import { isBehind, overlaps, screenBounds, sortByDepth } from "./depth";
+import { v3, type Vec2 } from "./geometry";
+import { hullsIntersect, isBehind, overlaps, screenBounds, screenHull, sortByDepth } from "./depth";
 import { createRng } from "../map/seed";
 import { bounds, type Solid } from "./solids";
 
@@ -196,5 +196,23 @@ describe("orden de la viga", () => {
     const z: Solid = { kind: "beam", from: v3(0, 0, 5), to: v3(0, 0, 5), w: 0.4, h: 0.4, mat: "steel" };
     expect(sortByDepth([z, cab])).toHaveLength(2);
     expect(sortByDepth([z, cab], 1.2)).toHaveLength(2);
+  });
+});
+
+describe("screenHull / hullsIntersect", () => {
+  const sq = (x: number, y: number): Vec2[] => [{ x, y }, { x: x + 2, y }, { x: x + 2, y: y + 2 }, { x, y: y + 2 }];
+  it("SAT: el cuadrado de 2 se corta con el corrido 1 y no con el corrido 3", () => {
+    expect(hullsIntersect(sq(0, 0), sq(1, 1))).toBe(true);
+    expect(hullsIntersect(sq(0, 0), sq(3, 0))).toBe(false);
+  });
+  it("el hexágono de una caja tiene 6 vértices dentro de su screenBounds", () => {
+    const b = bounds(box(0, 0, 0)), sb = screenBounds(b), h = screenHull(b);
+    expect(h).toHaveLength(6);
+    for (const p of h) { expect(p.x).toBeGreaterThanOrEqual(sb.minX); expect(p.x).toBeLessThanOrEqual(sb.maxX); expect(p.y).toBeGreaterThanOrEqual(sb.minY); expect(p.y).toBeLessThanOrEqual(sb.maxY); }
+  });
+  it("una caja larga en diagonal no se corta con otra a 35 u aunque sus rectángulos se superpongan (#83)", () => {
+    const long = { min: v3(0, 0, 0), max: v3(4, 80, 13) }, far = { min: v3(40, 40, 0), max: v3(42, 42, 2) };
+    expect(overlaps(screenBounds(long), screenBounds(far))).toBe(true);
+    expect(hullsIntersect(screenHull(long), screenHull(far))).toBe(false);
   });
 });

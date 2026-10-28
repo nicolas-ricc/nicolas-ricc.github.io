@@ -1369,9 +1369,10 @@ describe("placas", () => {
     expect(bounds({ ...P, plates: [plate(2, { u0: -0.5, u1: 1.5, z0: 5, z1: 9 })] })).toEqual(bounds(P));
   });
 
-  it("roof gable ignora las placas; roof step las aplica solo a la caja", () => {
-    const gable = { ...P, roof: "gable" as const };
-    expect(tessellateAll({ ...gable, plates: [plate(2)] })).toEqual(tessellateAll(gable));
+  it("roof gable lleva las placas en muros y hastiales; roof step las aplica solo a la caja", () => {
+    const gable = tessellateAll({ ...P, roof: "gable", plates: [plate(2)] });
+    expect(gable.filter((f) => f.mat === "steel")).toHaveLength(1);
+    expect(isSouth(gable[gable.findIndex((f) => f.mat === "steel") - 1]!)).toBe(true);
     const step = tessellateAll({ ...P, roof: "step", plates: [plate(2)] });
     expect(step.filter((f) => f.mat === "steel")).toHaveLength(1);
     const i = step.findIndex((f) => f.mat === "steel");
