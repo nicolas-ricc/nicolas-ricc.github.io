@@ -90,6 +90,6 @@ describe("world", () => {
     const w = world(7);
     const raised = w.solids.filter((s) => !isFlat(s) && worldZoneAt(bounds(s).min.x, bounds(s).min.y) === "portfolio");
     expect(raised.length).toBeGreaterThan(400);
-    expect(w.factory!.solids.every((s) => bounds(s).max.y <= 4 || bounds(s).max.x <= 0)).toBe(true); // y ≤ 4: la cinta y sus caballetes bajan hasta el patio de material (y 1..3)
+    expect(w.factory!.solids.every((s) => bounds(s).max.y <= 0 || bounds(s).max.x <= 0)).toBe(true);
   });
 });

@@ -14,8 +14,8 @@ const regions = EXHIBITS.flatMap((e) => (e.kind === "region" ? [e] : []));
 
 // el índice de la spec §3, en orden; las piezas (#94) no cuentan
 const CATALOG: Record<GroupId, string[]> = {
-  fabrica: ["planta", "chimeneas", "subestacion", "playa-camiones", "playa-vias", "excavadora", "cinta"],
-  astillero: ["gradas", "darsena", "grua-portico", "calle-faroles", "naves"],
+  fabrica: ["planta", "chimeneas", "subestacion", "playa-camiones", "playa-vias", "excavadora"],
+  astillero: ["gradas", "darsena", "grua-portico", "calle-faroles"],
   hinterland: ["central-termica", "tanques", "silos", "alta-tension", "playa-contenedores"],
   feria: ["noria", "montana-rusa", "torre-caida", "carrusel", "arcade", "autitos-chocadores", "muelle"],
   ciudad: ["plaza", "torre", "puente", "malecon", "manzana-derrumbada", "manzana-distrito", "obra"],
