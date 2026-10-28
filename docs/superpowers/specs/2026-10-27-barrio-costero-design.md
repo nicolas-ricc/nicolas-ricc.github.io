@@ -327,6 +327,11 @@ Caras de `tech` (sólidos + suelo, `tech(zoneRng(SEED, "cv", 2))`):
 | acentos estáticos | 94 | 191 | +97 (+103,2 %) |
 | acentos en el frame 0 de las capas `accent` | 508 | 1004 | +496 (+97,6 %) |
 | acentos, suma | 602 | 1195 | +593 (+98,5 %) |
+| polígonos estáticos (`[lab] primer dibujo`, mundo entero) | 37449 | 38159 | +710 (+1,9 %) |
+
+La suma de acentos queda bajo `ACCENT_CAP` = 1300 (`tech-budget.ts`, test en
+`tech.test.ts`). Los polígonos estáticos salen de la línea `[lab] primer dibujo:
+… polígonos estáticos` de `/lab/world.html`, en b9550c5 y en la rama.
 
 Caras por exhibit, medidas con `readout(cropScene(scene, e.box),
 cropAnimators(animators, e.box)).faces`. "Antes" es la misma caja sobre el
@@ -344,12 +349,13 @@ con el script en los siete.
 | `costanera` | 49 | 94 | 221 |
 | `barrio` | 1355 | — | 1529 |
 
-Las cajas de "antes" son las de `src/lab/exhibits.ts`, corridas 3 u hacia atrás
-en x e y: `monoblock` (132, 448), `casas` (132, 520), `escuela` (102, 520), `club`
-(132, 544), `plaza-barrio` (132, 496) con 30×24; `costanera` (184, 480)–(199, 568);
-`barrio` (40, 470)–(199, 612). Las caras del exhibit incluyen a los vecinos
-que caen dentro de la caja (por eso `costanera` da 221 y `facesIn` del
-rectángulo, 349).
+Las cajas de "antes" son las mismas de `src/lab/exhibits.ts`: 3 u de margen
+alrededor de la manzana en `monoblock` (132, 448), `casas` (132, 520), `escuela`
+(102, 520), `club` (132, 544) y `plaza-barrio` (132, 496) (30×24 en total);
+`costanera` (184, 480)–(199, 568); `barrio` (40, 470)–(199, 612). Las caras
+del exhibit cuentan lo que cae en esa caja, vecinos incluidos. El tope
+`FACE_CAPS.costanera` se mide con otra caja, `facesIn(COSTANERA_RECT)`, que
+cubre todo el muelle: 349 (≤ 350).
 
 Zonificación del mundo (`zoneKinds` sobre las 106 manzanas): 34 `tower`,
 18 `monoblock`, 15 `campus`, 10 `park`, 7 `plaza`, 17 `casas`, 1 `escuela`,
