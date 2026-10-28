@@ -19,7 +19,7 @@ const TRANSFORMERS_LOCAL = [-59, -53] as const; // y0 de cada cuba: T1 al norte,
 const FIREWALL_LOCAL = { x: 171.5, y: -54.3, w: 7, d: 0.6, h: 5.5 } as const;
 
 /** Lista de y del marco local pasada a mundo, conservando el tipo de tupla. */
-const shiftYs = <T extends readonly number[]>(ys: T): T => ys.map((y) => y + SUBSTATION_SHIFT.y) as unknown as T;
+const shiftYs = <T extends readonly number[]>(ys: T): { readonly [K in keyof T]: number } => ys.map((y) => y + SUBSTATION_SHIFT.y) as unknown as { readonly [K in keyof T]: number };
 
 export const SUBSTATION = { x0: LOCAL.x0 + SUBSTATION_SHIFT.x, x1: LOCAL.x1 + SUBSTATION_SHIFT.x, y0: LOCAL.y0 + SUBSTATION_SHIFT.y, y1: LOCAL.y1 + SUBSTATION_SHIFT.y } as const;
 export const PHASES_Y = shiftYs(PHASES_LOCAL);
@@ -129,13 +129,19 @@ function fenceLocal(out: Solid[]): void {
   }
 }
 
-/** Wrappers exportados: reciben el parámetro en mundo, arman en local y trasladan. */
+/** Transformador de potencia con `y0` (de la cuba) en mundo; ver `powerTransformerLocal`. */
 export const powerTransformer = (out: Solid[], y0: number, southBank: boolean): void => emit(out, (o) => powerTransformerLocal(o, y0 - SUBSTATION_SHIFT.y, southBank));
+/** Pórtico de celosía en `x` de mundo; ver `latticePortalLocal`. */
 export const latticePortal = (out: Solid[], x: number): void => emit(out, (o) => latticePortalLocal(o, x - SUBSTATION_SHIFT.x));
+/** Las tres fases en mundo, de `SUBSTATION.x0 + 2.5` a `SUBSTATION.x1 - 3.5`; ver `phasesLocal`. */
 export const phases = (out: Solid[]): void => emit(out, phasesLocal);
+/** Seccionador sobre la fase `y` de mundo; ver `disconnectorLocal`. */
 export const disconnector = (out: Solid[], y: number): void => emit(out, (o) => disconnectorLocal(o, y - SUBSTATION_SHIFT.y));
+/** Transformador de corriente sobre la fase `y` de mundo; ver `currentTransformerLocal`. */
 export const currentTransformer = (out: Solid[], y: number): void => emit(out, (o) => currentTransformerLocal(o, y - SUBSTATION_SHIFT.y));
+/** Puentes de seccionadores, TI y pasatapas a las fases, en mundo; ver `droppersLocal`. */
 export const droppers = (out: Solid[]): void => emit(out, droppersLocal);
+/** Cerco con portón y malla en mundo; ver `fenceLocal`. */
 export const fence = (out: Solid[]): void => emit(out, fenceLocal);
 
 /** Todo en el marco local y un solo traslado (los exportados ya trasladan: llamarlos acá correría la subestación dos veces). */
