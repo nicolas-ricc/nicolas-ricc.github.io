@@ -1,6 +1,6 @@
 import type { Accent } from "../iso/accent";
-import { v3 } from "../iso/geometry";
-import type { Plate } from "../iso/plate";
+import { v3, type Vec2, type Vec3 } from "../iso/geometry";
+import { plateOutline, type Plate } from "../iso/plate";
 import type { Solid } from "../iso/solids";
 
 /**
@@ -31,6 +31,15 @@ export const FENCE_Y = 136;
 export const CROSSING = { x0: 100, x1: 108, north: { x: 99.4, y: 128.6, h: 3 }, south: { x: 108.3, y: 137.6, h: 2 } } as const;
 export const SIGNALS = { in: { x: 96, y: 129.6 }, out: { x: 118, y: 129.6 } } as const;
 export const TRAIN_CLEAR = { y0: 130.8, y1: 134.2, x1: STOP_X } as const;
+// edificio de pasajeros, torre y explanada (#278): huellas al este de HEAD, antes del muelle (x 198)
+export const HALL = { x: 170, y: 106, w: 20, d: 18, h: 8 } as const;      // cumbrera E-O en y 115 a z 10.8
+export const WING_N = { x: 168, y: 100, w: 22, d: 6, h: 5 } as const;
+export const WING_S = { x: 168, y: 124, w: 16, d: 8, h: 5 } as const;
+export const LINK = { x: 184, y: 124, w: 6, d: 2, h: 5 } as const;
+export const SERVICE = { x: 166, y: 106, w: 4, d: 18, h: 6 } as const;
+export const TOWER = { x: 184, y: 126, w: 6, d: 6, h: 24, top: 29 } as const;
+export const PORTICO = { x: 190, y: 110, w: 4, d: 12, z: 5.2 } as const;
+export const ESPLANADE = { x0: 190, x1: 197, y0: 98, y1: 136 } as const;
 
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Solid["mat"], plates?: Plate[]): Solid =>
   ({ kind: "prism", at: { x, y, z }, w, d, h, mat, ...(plates && { plates }) });
@@ -120,6 +129,80 @@ function crossing(out: Solid[]): void {
   }
 }
 
+type Box = { x: number; y: number; w: number; d: number };
+/** Huella rectangular, en el orden de las aristas de los muros: N, E, S, O. */
+const footprint = (s: Box): Vec2[] => [{ x: s.x, y: s.y }, { x: s.x + s.w, y: s.y }, { x: s.x + s.w, y: s.y + s.d }, { x: s.x, y: s.y + s.d }];
+/** Contorno de una placa en mundo, sobre la arista `fp[wall] → fp[wall + 1]` (igual que `plateFaces`). */
+export function wallPts(fp: Vec2[], p: Plate): Vec3[] {
+  const a = fp[p.wall]!, b = fp[(p.wall + 1) % 4]!;
+  return plateOutline(p).map((q) => v3(a.x + (b.x - a.x) * q.x, a.y + (b.y - a.y) * q.x, q.y));
+}
+const solid = (s: Box & { h: number }, mat: Solid["mat"], plates: Plate[], gable = false): Solid =>
+  ({ ...prism(s.x, s.y, 0, s.w, s.d, s.h, mat, plates), ...(gable && { roof: "gable" as const, roofMat: "tile" as const }) });
+/** Zócalo verde grisáceo en los muros este y sur. */
+const plinth = (): Plate[] => [1, 2].map((wall) => ({ wall, shape: "rect", u0: 0, u1: 1, z0: 0, z1: 0.8, mat: "canopy" }));
+
+/** Hall: gable de ladrillo con linterna, medio punto, cornisa dentada, tres ventanales al este y cuatro ventanas al sur. */
+function hall(out: Solid[], accents: Accent[]): void {
+  const fp = footprint(HALL), plates: Plate[] = plinth();
+  const rect = (wall: number, u0: number, u1: number, z0: number, z1: number, mat: Solid["mat"]): Plate => ({ wall, shape: "rect", u0, u1, z0, z1, mat });
+  const night = (p: Plate, color: "cyanBleed" | "amber", alpha: number) => accents.push({ kind: "poly", pts: wallPts(fp, p), color, alpha });
+  // medio punto en el hastial este: arco de ladrillo y abanico vidriado
+  const fan: Plate = { wall: 1, shape: "disc", u0: 0.43, u1: 0.57, z0: 8.3, z1: 9.8, mat: "glass" };
+  plates.push({ wall: 1, shape: "disc", u0: 0.41, u1: 0.59, z0: 8.1, z1: 10, mat: "stockbrick" }, fan);
+  night(fan, "amber", 0.5);
+  // cornisa dentada: dientes de 0.4 en los muros, y bajo cada vertiente del hastial
+  for (const [wall, len] of [[1, HALL.d], [2, HALL.w]] as const) for (let k = 0; k < 10; k++) {
+    const c = (k + 0.5) / 10, e = 0.2 / len;
+    plates.push(rect(wall, c - e, c + e, 7.5, 7.9, "stockbrick"));
+  }
+  for (const yc of [107, 108.8, 110.6, 112.4, 117.6, 119.4, 121.2, 123]) {
+    const u = (yc - HALL.y) / HALL.d, e = 0.2 / HALL.d, z1 = 8 + 2.8 * (9 - Math.abs(yc - 115)) / 9 - 0.1;
+    plates.push(rect(1, u - e, u + e, z1 - 0.4, z1, "stockbrick"));
+  }
+  // ventanales del este con parteluces y pilastras
+  for (const [u0, u1] of [[0.08, 0.28], [0.39, 0.61], [0.72, 0.92]] as const) {
+    const c = (u0 + u1) / 2, e = 0.075 / HALL.d, g = rect(1, u0, u1, 1.2, 6.4, "glass");
+    plates.push(g, rect(1, c - e, c + e, 1.2, 6.4, "canopy"), rect(1, u0, u1, 3.925, 4.075, "canopy"));
+    night(g, "cyanBleed", 0.5);
+  }
+  plates.push(rect(1, 0.3, 0.36, 0.8, 7.5, "stockbrick"), rect(1, 0.64, 0.7, 0.8, 7.5, "stockbrick"));
+  // cuatro ventanas al sur, cada una con su parteluz
+  for (let k = 0; k < 4; k++) {
+    const c = (k + 0.5) / 4, w = 0.8 / HALL.w, e = 0.075 / HALL.w, g = rect(2, c - w, c + w, 2, 5.5, "glass");
+    plates.push(g, rect(2, c - e, c + e, 2, 5.5, "canopy"));
+    night(g, "cyanBleed", 0.5);
+  }
+  out.push(solid(HALL, "brick", plates, true));
+  // linterna vidriada sobre la cumbrera, con tapas en los extremos
+  out.push(prism(172, 114.4, 10.8, 16, 1.2, 0.8, "glass"), prism(171.85, 114.4, 10.8, 0.15, 1.2, 0.8, "asphalt"), prism(188, 114.4, 10.8, 0.15, 1.2, 0.8, "asphalt"));
+  accents.push({ kind: "poly", pts: [v3(188, 115.6, 10.8), v3(172, 115.6, 10.8), v3(172, 115.6, 11.6), v3(188, 115.6, 11.6)], color: "amberBleed", alpha: 0.6 });
+}
+
+/** Alas y servicio, con zócalo; las placas de cada una se suman en `wings`. */
+function wings(out: Solid[]): void {
+  const wingN = solid(WING_N, "brick", plinth(), true), wingS = solid(WING_S, "brick", plinth(), true);
+  out.push(wingN, wingS, solid(LINK, "brick", []), solid(SERVICE, "brick", []));
+}
+
+/** Fuste de la torre; ranuras, relojes y remate llegan después. */
+function tower(out: Solid[], _accents: Accent[]): void {
+  out.push(prism(TOWER.x, TOWER.y, 0, TOWER.w, TOWER.d, TOWER.h, "stone"));
+}
+
+/** Losa de la explanada; faroles, palmeras y baranda llegan después. */
+function esplanade(out: Solid[], _accents: Accent[]): void {
+  out.push(prism(ESPLANADE.x0, ESPLANADE.y0, 0, ESPLANADE.x1 - ESPLANADE.x0, ESPLANADE.y1 - ESPLANADE.y0, 0.15, "paving"));
+}
+
+/** Edificio de pasajeros, torre del reloj y explanada. Determinista, sin rng. */
+export function building(out: Solid[], accents: Accent[]): void {
+  hall(out, accents);
+  wings(out);
+  tower(out, accents);
+  esplanade(out, accents);
+}
+
 export function station(out: Solid[], accents: Accent[]): void {
   tracks(out);
   ladder(out);
@@ -129,4 +212,5 @@ export function station(out: Solid[], accents: Accent[]): void {
   signals(out);
   crossing(out);
   out.push(prism(110, FENCE_Y, 0, BUFFER_X - 110, 0.3, 1, "steel")); // cerco sur
+  building(out, accents);
 }

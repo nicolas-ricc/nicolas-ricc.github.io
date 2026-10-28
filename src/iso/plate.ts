@@ -11,7 +11,7 @@ import type { Face } from "./solids";
 export interface Plate { wall: number; shape: "rect" | "disc" | "tri"; u0: number; u1: number; z0: number; z1: number; mat: Material; toneOffset?: number }
 
 /** Contorno de la placa en coordenadas (u, z). */
-function outline(p: Plate): Vec2[] {
+export function plateOutline(p: Plate): Vec2[] {
   switch (p.shape) {
     case "rect": return [{ x: p.u0, y: p.z0 }, { x: p.u1, y: p.z0 }, { x: p.u1, y: p.z1 }, { x: p.u0, y: p.z1 }];
     case "tri": return [{ x: p.u0, y: p.z0 }, { x: p.u1, y: p.z0 }, { x: (p.u0 + p.u1) / 2, y: p.z1 }];
@@ -26,5 +26,5 @@ function outline(p: Plate): Vec2[] {
 /** Una cara por placa, en orden, sobre la arista a→b. `plates` ya viene filtrada a las de esa arista. */
 export function plateFaces(wall: Face, a: Vec2, b: Vec2, plates: readonly Plate[]): Face[] {
   const at = (u: number, z: number): Vec3 => v3(a.x + (b.x - a.x) * u, a.y + (b.y - a.y) * u, z);
-  return plates.map((p) => ({ pts: outline(p).map((q) => at(q.x, q.y)), normal: wall.normal, mat: p.mat, tone: wall.tone, toneOffset: p.toneOffset ?? 0 }));
+  return plates.map((p) => ({ pts: plateOutline(p).map((q) => at(q.x, q.y)), normal: wall.normal, mat: p.mat, tone: wall.tone, toneOffset: p.toneOffset ?? 0 }));
 }
