@@ -4,12 +4,12 @@ import { worldZoneAt } from "../map/geo";
 import { ACCENT_DIM, WORLD_ZONES, accentsByZone, focusAlphas } from "./veil";
 
 describe("assembleWorld", () => {
-  it("el mundo entero trae los siete animadores, cada uno con su zona; el agua no tiene zona", () => {
+  it("el mundo entero trae los ocho animadores, cada uno con su zona; el agua no tiene zona", () => {
     const { scene, animators } = assembleWorld(undefined, { reducedMotion: true });
     expect(scene.terrain.bleed.length).toBeGreaterThan(0);
     const zones = animators.map((a) => a.zone);
     expect(zones.filter((z) => z === null)).toHaveLength(1);
-    expect(zones.filter((z) => z === "portfolio")).toHaveLength(3); // astillero, fábrica, feria
+    expect(zones.filter((z) => z === "portfolio")).toHaveLength(4); // astillero, tren, fábrica, feria
     expect(zones.filter((z) => z === "cv")).toHaveLength(2);        // ciudad, tech
     expect(zones.filter((z) => z === "blog")).toHaveLength(1);      // mar
     const water = animators.find((a) => a.zone === null)!;
@@ -22,7 +22,20 @@ describe("assembleWorld", () => {
   it("con filtro de zonas solo vienen los animadores de esas zonas más el agua", () => {
     const { animators } = assembleWorld(["portfolio"], { reducedMotion: true });
     expect(new Set(animators.map((a) => a.zone))).toEqual(new Set([null, "portfolio"]));
-    expect(animators.filter((a) => a.zone === "portfolio")).toHaveLength(2); // sin la feria (vive en el sangrado)
+    expect(animators.filter((a) => a.zone === "portfolio")).toHaveLength(3); // astillero, tren y fábrica: sin la feria (vive en el sangrado)
+  });
+  it("el tren vive en un animador de Portfolio y sus tres capas de luces declaran zone portfolio", () => {
+    const { animators } = assembleWorld(undefined, { reducedMotion: true });
+    const a = animators.find((x) => x.ids.includes("rail.train"));
+    expect(a?.zone).toBe("portfolio");
+    for (const id of ["rail.lights", "rail.crossing", "rail.signals"]) {
+      const l = a!.layer(id);
+      expect(l.kind === "accent" && l.zone, id).toBe("portfolio");
+    }
+  });
+  it("con filtro [\"portfolio\"] el tren sigue armado", () => {
+    const { animators } = assembleWorld(["portfolio"], { reducedMotion: true });
+    expect(animators.some((x) => x.ids.includes("rail.train"))).toBe(true);
   });
   it("la capa tech.neon vive en un animador de Resume y se atenúa con el velo", () => {
     const { animators } = assembleWorld(undefined, { reducedMotion: true });
