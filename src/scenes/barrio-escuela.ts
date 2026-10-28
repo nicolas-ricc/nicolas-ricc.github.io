@@ -21,22 +21,16 @@ function ventanas(wall: number, len: number, pares: number[]): Plate[] {
 
 /** Rangos u de las cinco pilastras: extremos y u 0.25, 0.5, 0.75. */
 const PILASTRAS: [number, number][] = [[0, 0.025], [0.2375, 0.2625], [0.4875, 0.5125], [0.7375, 0.7625], [0.975, 1]];
-/** Pilastras de piedra de la base al alero sobre la cara 1. */
-const pilastras = (): Plate[] => PILASTRAS.map(([u0, u1]) => placa(1, u0, u1, Z, 5.9, "stone", 1));
-
-/** Escudo de la torre norte: disco `safety` centrado sobre la cara este. */
-const ESCUDO: Plate = { wall: 1, shape: "disc", u0: 0.3, u1: 0.7, z0: 7.2, z1: 8.4, mat: "safety" };
-
-/** Bloque de aulas, dos torres de ladrillo con remate de piedra y escudo, y entre ellas un zaguán al ras de las torres con la puerta doble. */
+/** Bloque de aulas, torres de ladrillo con remate y escudo, y zaguán con puerta doble entre ellas. */
 function bloque(ctx: BarrioCtx, b: SprawlBlock): void {
-  const plates = [...bandas(1), ...ventanas(1, 16, [0.125, 0.375, 0.625, 0.875]), ...pilastras(), ...bandas(2), ...ventanas(2, 6, [0.5])];
+  const plates = [...bandas(1), ...ventanas(1, 16, [0.125, 0.375, 0.625, 0.875]), ...PILASTRAS.map(([u0, u1]) => placa(1, u0, u1, Z, 5.9, "stone", 1)), ...bandas(2), ...ventanas(2, 6, [0.5])];
   ctx.solids.push({ ...prism(b.x + 2, b.y + 1, Z, 6, 16, 5.6, "whitewash"), plates });
-  ctx.solids.push(prism(b.x + 8, b.y + 10, Z, 3, 3, 9.5, "brick"), { ...prism(b.x + 8, b.y + 5, Z, 3, 3, 9.5, "brick"), plates: [ESCUDO] });
+  ctx.solids.push(prism(b.x + 8, b.y + 10, Z, 3, 3, 9.5, "brick"), { ...prism(b.x + 8, b.y + 5, Z, 3, 3, 9.5, "brick"), plates: [{ wall: 1, shape: "disc", u0: 0.3, u1: 0.7, z0: 7.2, z1: 8.4, mat: "safety" }] });
   ctx.solids.push({ ...prism(b.x + 8, b.y + 8, Z, 3, 2, 2.9, "whitewash"), plates: [placa(1, 0.1, 0.9, Z, 2.6, "officeDark", -2)] });
   ctx.solids.push(prism(b.x + 7.8, b.y + 4.8, 9.8, 3.4, 3.4, 0.4, "stone"), prism(b.x + 7.8, b.y + 9.8, 9.8, 3.4, 3.4, 0.4, "stone"));
 }
 
-/** Patio de plaza con mástil, bandera con banda celeste y patio cubierto de cobre sobre cuatro columnas. */
+/** Patio con mástil y bandera, y patio cubierto de cobre sobre cuatro columnas. */
 function patio(ctx: BarrioCtx, b: SprawlBlock): void {
   const banda = placa(2, 0, 1, 6.27, 6.53, "hullBlue");
   ctx.solids.push(prism(b.x + 11, b.y + 1, Z, 11, 16, 0.05, "plaza"), prism(b.x + 20, b.y + 14, Z, 0.2, 0.2, 7, "whitewash"));
@@ -45,7 +39,7 @@ function patio(ctx: BarrioCtx, b: SprawlBlock): void {
   for (const [cx, cy] of [[12, 2], [20.6, 2], [12, 7.6], [20.6, 7.6]] as const) ctx.solids.push(prism(b.x + cx, b.y + cy, Z, 0.4, 0.4, 3.2, "concrete"));
 }
 
-/** Escuela: zócalo de manzana, bloque de aulas encalado con torres y escudo, patio con mástil y bandera, patio cubierto, dos árboles, farol de vereda, farol de entrada y escalera encendida. */
+/** Escuela: zócalo, bloque de aulas, patio, dos árboles, faroles y escalera encendida. */
 export function escuela(ctx: BarrioCtx, b: SprawlBlock): void {
   ctx.solids.push(prism(b.x, b.y, 0, b.w, b.d, Z, "paving"));
   bloque(ctx, b);
