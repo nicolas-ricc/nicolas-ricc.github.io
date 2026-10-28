@@ -1,5 +1,5 @@
-import { homeWindow, lawn, wallWindow, type BarrioCtx } from "./barrio";
-import { lamp, prism } from "./city-pieces";
+import { cornerLamps, homeWindow, lawn, wallWindow, type BarrioCtx } from "./barrio";
+import { prism } from "./city-pieces";
 import type { SprawlBlock } from "./sprawl-grid";
 import { blockParity } from "./tech-zoning";
 
@@ -12,5 +12,5 @@ export function casas(ctx: BarrioCtx, b: SprawlBlock): void {
     ctx.solids.push(prism(x, y, 0.05, w, d, 3, "whitewash", { roof: "gable", roofMat: "tile" }));
     homeWindow(ctx, wallWindow({ y: y + d }, x + w / 2 - 0.35, x + w / 2 + 0.35, 1.05, 1.85), ctx.rng.chance(0.27), `${b.x},${b.y}:c${i}`);
   }
-  lamp(ctx.solids, ctx.accents, b.x + 23, b.y - 1.5, 0); lamp(ctx.solids, ctx.accents, b.x + 1, b.y + 18.6, 0);
+  cornerLamps(ctx, b);
 }

@@ -3,7 +3,7 @@ import { v3, type Vec3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import type { Rng } from "../map/seed";
 import type { Rect } from "./city-grid";
-import { prism } from "./city-pieces";
+import { lamp, prism } from "./city-pieces";
 
 /** Grupos de `tech.homes` que la capa nocturna nunca apaga (#240, decisión 9). */
 export const ALWAYS_LIT: ReadonlySet<string> = new Set(["escuela-escalera", "club-gimnasio"]);
@@ -14,6 +14,9 @@ export interface BarrioCtx { solids: Solid[]; ground: Solid[]; accents: Accent[]
 
 /** Césped de toda la manzana. */
 export function lawn(ctx: BarrioCtx, b: Rect): void { ctx.solids.push(prism(b.x, b.y, 0, b.w, b.d, 0.05, "leafDark")); }
+
+/** Dos faroles de vereda en esquinas opuestas de la manzana. */
+export function cornerLamps(ctx: BarrioCtx, b: Rect): void { lamp(ctx.solids, ctx.accents, b.x + 23, b.y - 1.5, 0); lamp(ctx.solids, ctx.accents, b.x + 1, b.y + 18.6, 0); }
 
 /** Ventana de casa: un polígono sobre la pared que la capa `tech.homes` enciende y apaga con su grupo. */
 export function homeWindow(ctx: BarrioCtx, pts: Vec3[], lit: boolean, group: string): void { ctx.homes.push({ pts, lit, group }); }

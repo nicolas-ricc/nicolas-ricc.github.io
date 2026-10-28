@@ -166,25 +166,18 @@ export const EXHIBITS: readonly Exhibit[] = [
   // las dos torres de la fila ROWS[1], columnas SUBURB_COLS[1] y [0]; la altura sale del rng: el test la vigila
   { id: "torres", title: "Torres del distrito tecnológico", zone: "cv", group: "tecnologico", kind: "region",
     box: { x0: SUBURB_COLS[1] - M, y0: ROWS[1] - M, x1: SUBURB_COLS[0] + BLOCK_W + M, y1: ROWS[1] + BLOCK_D + M }, h: 22 },
-  // monoblock de la manzana (132, 448)
   { id: "monoblock", title: "Monoblock", zone: "cv", group: "tecnologico", kind: "region",
     box: { x0: 132 - M, y0: 448 - M, x1: 132 + BLOCK_W + M, y1: 448 + BLOCK_D + M }, h: 13 },
-  // casas de la manzana (132, 520)
   { id: "casas", title: "Casas con techo de teja", zone: "cv", group: "tecnologico", kind: "region",
     box: { x0: 132 - M, y0: 520 - M, x1: 132 + BLOCK_W + M, y1: 520 + BLOCK_D + M }, h: 5 },
-  // escuela del barrio
   { id: "escuela", title: "Escuela", zone: "cv", group: "tecnologico", kind: "region",
     box: { x0: SCHOOL.x - M, y0: SCHOOL.y - M, x1: SCHOOL.x + BLOCK_W + M, y1: SCHOOL.y + BLOCK_D + M }, h: 6 },
-  // club del barrio
   { id: "club", title: "Club", zone: "cv", group: "tecnologico", kind: "region",
     box: { x0: CLUB.x - M, y0: CLUB.y - M, x1: CLUB.x + BLOCK_W + M, y1: CLUB.y + BLOCK_D + M }, h: 10 },
-  // primera plaza del barrio
   { id: "plaza-barrio", title: "Plaza de barrio", zone: "cv", group: "tecnologico", kind: "region",
     box: { x0: PLAZAS[0].x - M, y0: PLAZAS[0].y - M, x1: PLAZAS[0].x + BLOCK_W + M, y1: PLAZAS[0].y + BLOCK_D + M }, h: 5 },
-  // la costanera sobre el borde este
   { id: "costanera", title: "Costanera", zone: "cv", group: "tecnologico", kind: "region",
     box: { x0: 184, y0: 480, x1: 199, y1: 560 }, h: 5 },
-  // el barrio entero
   { id: "barrio", title: "Barrio costero", zone: "cv", group: "tecnologico", kind: "region",
     box: { x0: 40, y0: 470, x1: 199, y1: 612 }, h: 10 },
   // el haz nace en la linterna y gira: apuntando al norte su punta sube BEAM_LEN/√2 en pantalla, y el vértice norte de la caja ya está DRUM_R0 + M más arriba que el faro

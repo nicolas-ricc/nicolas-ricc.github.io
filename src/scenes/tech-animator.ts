@@ -16,6 +16,6 @@ export function techAnimator(scene: TechScene, rng: Rng, opts: { reducedMotion: 
   return {
     ids: Object.keys(layers),
     layer: layerLookup("techAnimator", layers),
-    tick(dtMs) { const c = anim.tick(dtMs), out = new Set<string>(); if (c.windows) out.add("tech.windows"); if (c.signs) out.add("tech.signs"); if (c.telecom) out.add("tech.telecom"); if (c.neon) out.add("tech.neon"); if (c.homes) out.add("tech.homes"); return out; },
+    tick(dtMs) { const c = anim.tick(dtMs), out = new Set<string>(); for (const k of ["windows", "signs", "telecom", "neon", "homes"] as const) if (c[k]) out.add(`tech.${k}`); return out; },
   };
 }
