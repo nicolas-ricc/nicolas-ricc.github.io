@@ -177,7 +177,9 @@ describe("factory", () => {
   it("chimeneas y torre de enfriamiento no tocan nave ni maltería, y toda pieza de chimenea queda al norte del faldón (max.y < NAVE.y − 0.6)", () => {
     const s = scene(), stacks = STACKS.flatMap((st) => one(st).out);
     for (const x of stacks) expect(bounds(x).max.y, JSON.stringify(x).slice(0, 90)).toBeLessThan(NAVE.y - 0.6);
-    expectApart([...stacks, ...coolingTower(s.solids)], [...build(boilerHouse), ...build(maltings)]);
+    const plant = [...build(boilerHouse), ...build(maltings)].flatMap(slices); // tramos precalculados: expectApart tarda más de 5 s
+    const touching = [...stacks, ...coolingTower(s.solids)].filter((a) => slices(a).some((p) => plant.some((q) => !boxApart(p, q))));
+    expect(touching.map((a) => JSON.stringify(a).slice(0, 90))).toEqual([]);
   });
 
   it("la planta (maltería, tanque, nave y portón) no toca la subestación", () => {
@@ -212,7 +214,7 @@ describe("factory", () => {
     const s = scene();
     const at = s.solids.filter(isLamp).map((l) => [l.at.x, l.at.y]);
     expect([...at].sort((a, b) => a[0]! - b[0]! || a[1]! - b[1]!)).toEqual([[-30, 20], [5, 76], [9, 77], [35, 76.5], [49, 77], [53, 12], [95, 87]]);
-    for (const [x, y] of at) expect(s.accents.filter((a) => a.kind === "dot" && a.color === "cyan" && a.at.x === x! + 0.3 && a.at.y === y! + 0.3 && a.at.z === 5)).toHaveLength(1);
+    for (const [x, y] of at) expect(s.accents.filter((a) => a.kind === "dot" && a.color === "cyan" && Math.abs(a.at.x - (x! + 0.3)) < 1e-9 && Math.abs(a.at.y - (y! + 0.3)) < 1e-9 && a.at.z === 5)).toHaveLength(1); // el traslado mueve la x un ε
   });
 
   it("todo sólido de la fábrica fuera de la columna oeste y del desvío con la grúa cae en x 4..98.7, y −4..99", () => {
