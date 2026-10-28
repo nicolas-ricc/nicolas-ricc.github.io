@@ -175,7 +175,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "club", title: "Club", zone: "cv", group: "tecnologico", kind: "region",
     box: { x0: CLUB.x - M, y0: CLUB.y - M, x1: CLUB.x + BLOCK_W + M, y1: CLUB.y + BLOCK_D + M }, h: 10 },
   { id: "plaza-barrio", title: "Plaza de barrio", zone: "cv", group: "tecnologico", kind: "region",
-    box: { x0: PLAZAS[0].x - M, y0: PLAZAS[0].y - M, x1: PLAZAS[0].x + BLOCK_W + M, y1: PLAZAS[0].y + BLOCK_D + M }, h: 5 },
+    box: { x0: PLAZAS[0].x - M, y0: PLAZAS[0].y - M, x1: PLAZAS[0].x + BLOCK_W + M, y1: PLAZAS[0].y + BLOCK_D + M }, h: 5.6 },
   { id: "costanera", title: "Costanera", zone: "cv", group: "tecnologico", kind: "region",
     box: { x0: 184, y0: 480, x1: 199, y1: 560 }, h: 8 },
   { id: "barrio", title: "Barrio costero", zone: "cv", group: "tecnologico", kind: "region",
