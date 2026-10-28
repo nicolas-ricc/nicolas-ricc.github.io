@@ -66,10 +66,10 @@ const vessel = (kind: ShipKind) => (out: Solid[], accents: Accent[]): void => {
 };
 
 export const EXHIBITS: readonly Exhibit[] = [
-  // x1 = borde este de la torre de escalera (STAIR_TOWER.x1, 113): las chimeneas quedan afuera por y (sus pedestales arrancan en y 22.5); y1 −14: zócalo y tolva adentro, faroles y grúa torre del desvío afuera; h 26: vértice del horno de la maltería (26); x0 2: pasarela del tanque (x ≥ 5.4)
-  { id: "planta", title: "Nave de calderas, maltería y tanque", zone: "portfolio", group: "fabrica", kind: "region",
-    box: { x0: 2, y0: PLANT.y - M, x1: STAIR_TOWER.x1, y1: -14 }, h: 26 },
-  // en planta el tanque queda detrás de la maltería (la cámara mira desde el sudeste): solo, se ven patas, cruces, escalera y pasarela
+  // {2, 41, 98, 76}: x1 = borde este de la torre de escalera (STAIR_TOWER.x1); zócalo y tolva adentro; faroles y camiones afuera salvo el farol de (5, 76), que toca el borde sur (y1 76); chimeneas (y ≤ 36.05) y tanque (y ≤ 36.8, con la escalera) afuera por el norte; h 26: vértice del horno de la maltería
+  { id: "planta", title: "Nave de calderas y maltería", zone: "portfolio", group: "fabrica", kind: "region",
+    box: { x0: PLANT.x - M, y0: PLANT.y - M, x1: STAIR_TOWER.x1, y1: PLANT.y + PLANT.d + 2 }, h: 26 },
+  // el tanque (WATER_TOWER, al norte de la maltería) queda fuera de la caja de planta: solo, se ven patas, cruces, escalera y pasarela
   { id: "tanque-agua", title: "Tanque de agua", zone: "portfolio", group: "fabrica", kind: "piece", pad: "slab", build: (out) => waterTower(out, { x: 0, y: 0 }) },
   // el humo deriva al NNE hasta PUFF_RANGE: la caja se estira al norte para no cortar la columna
   // el humo deriva 0.45·PUFF_RANGE ≈ 12.6 al este (de ahí los 13); la plataforma sobresale r + 1.2 al sur; la subestación y su farol quedan adentro, detrás
@@ -77,10 +77,9 @@ export const EXHIBITS: readonly Exhibit[] = [
     box: { x0: FACTORY_COOLING.x - FACTORY_COOLING.r - M, y0: Math.min(...stacksY) - stackR - PUFF_RANGE, x1: Math.max(...stacksX) + stackR + M + 13, y1: Math.max(...stacksY) + stackR + 1.2 + M },
     h: stackTop + PUFF_RANGE * PUFF_LIFT },
   // cerco de SUBSTATION más margen (3 y 1 al sur): {51, −5, 98, 12}; no toca los vagones del desvío (y ≤ −6.8) ni cruza x 99 (`calle-faroles`). h 13: los mástiles llegan a z 12; el humo pasa por encima.
-  // Transitorio (#238): entran la punta baja de la cinta inclinada y el camión de (70, −6) hasta que la playa de camiones se mude (#246)
   { id: "subestacion", title: "Subestación", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: SUBSTATION.x0 - 3, y0: SUBSTATION.y0 - 3, x1: SUBSTATION.x1 + 3, y1: SUBSTATION.y1 + 1 }, h: 13 },
-  // a mano: camiones y pallets de truckYard; la grúa torre (60, −12) está en medio de la playa y queda adentro
-  { id: "playa-camiones", title: "Playa de camiones", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: 17, y0: -15, x1: 113, y1: 2 }, h: 22 },
+  // a mano {2, 76, 98, 92}: camiones y pallets de truckYard; la tolva (z 13.5) cruza el borde norte; el caballete más alto adentro llega a 8.3; la grúa ya no está
+  { id: "playa-camiones", title: "Playa de camiones", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: 2, y0: 76, x1: 98, y1: 92 }, h: 16 },
   { id: "playa-vias", title: "Playa de vías", zone: "portfolio", group: "fabrica", kind: "region",
     box: { x0: RAIL_YARD_X[0] - 4, y0: 40, x1: -4, y1: 100 }, h: 21 }, // a mano en y: los acopios de mineral (rng, x −25..−13, y 44..96, privados en factory.ts) con vías y vagones; h cubre la excavadora (≈20,3)
   // x1 tope 4, borde oeste de la región nueva: la sombra cae al ENE sobre el astillero
