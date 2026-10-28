@@ -14,7 +14,7 @@ import { PLANT_SHIFT } from "./plant-frame";
  */
 const MALT_LOCAL = { x: 20, y: -46, w: 24, d: 30, h: 18 } as const;
 export const MALT = { ...MALT_LOCAL, x: MALT_LOCAL.x + PLANT_SHIFT.x, y: MALT_LOCAL.y + PLANT_SHIFT.y } as const;
-/** Al norte de la maltería: `x 10.4..19.6, y 27.4..36.6`, tope z 24.7, asoma por encima del techo. */
+/** Al norte de la maltería: pasarela `x 10.4..19.6, y 27.4..36.6` (con la escalera, hasta x 19.8, y 36.8), tope z 24.7, asoma por encima del techo. */
 export const WATER_TOWER = { x: 15, y: 32 } as const;
 
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material): Solid & { kind: "prism" } => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat });
