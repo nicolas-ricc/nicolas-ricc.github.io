@@ -108,7 +108,8 @@ function checkRest(b: SprawlBlock, p: Parts, dots: readonly (Accent & { kind: "d
   for (const l of p.lamps) expect(dots.filter((d) => d.color === "amber" && d.at.x >= l.at.x - EPS && d.at.x <= l.at.x + l.w + EPS && d.at.y >= l.at.y - EPS && d.at.y <= l.at.y + l.d + EPS), at).toHaveLength(1);
   const gs = groups(p);
   for (const g of gs) for (const s of g) expect(offPaths(b, s), `${at} sobre sendero: ${JSON.stringify(bounds(s))}`).toBe(true);
-  for (let i = 0; i < gs.length; i++) for (let j = i + 1; j < gs.length; j++) for (const a of gs[i]!) for (const c of gs[j]!) expect(apart(a, c), `${at} ${JSON.stringify(bounds(a))} × ${JSON.stringify(bounds(c))}`).toBe(true);
+  const all = gs.flat(); // también dentro de cada juego: viga y postes, techo y disco, rampa y plataforma solo se tocan
+  for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) expect(apart(all[i]!, all[j]!), `${at} ${JSON.stringify(bounds(all[i]!))} × ${JSON.stringify(bounds(all[j]!))}`).toBe(true);
 }
 
 // manzanas sintéticas: (36, 328) paridad 0, (6, 328) paridad 1; más las dos plazas fijas
