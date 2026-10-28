@@ -133,3 +133,10 @@ La captura `escuela-despues.png` (agent-browser, 1600×900 a 2x, `/lab/storybook
 - Fuentes: ISSUE 8 (2, 3, 6, 7, 10, 11, 12 parcial, 15 parcial), CODE 11 (`src/scenes/tech-budget.ts` `blockRect`/`facesIn`/`FACE_CAPS`; `src/iso/plate.ts:11` `Plate`; `src/scenes/city-pieces.ts:46-51` `lamp()` con `dot` `amber`; `src/scenes/barrio.ts:9` `ALWAYS_LIT`, `lawn()` h 0.05; `src/scenes/tech.test.ts:137-139` escuela+club ≥ 2 ventanas, todas `lit`; `src/scenes/barrio-fixtures.ts:7` `newCtx`; `src/lab/exhibits.test.ts:26,33-50` `SLACK = 8` y `accentReach` con `HALO_K`; `src/scenes/barrio-casas.ts` faroles en `y+18.6` y `x+24.6`), NO SOURCE 3 → todas supuestos técnicos (13, 14, banda de la bandera).
 - Correcciones: Review Focus 1 tenía mal las x de la cara sur (pregunta 1); se retiró la decisión 1 (pregunta 10).
 - Issues de seguimiento: ninguno. Bloqueos: ninguno.
+
+## Review fixes (etapa 6)
+
+- **Zaguán** `whitewash` 3×2×2.9 en `(x+8, y+8, 0.3)`, al ras de la cara este de las torres (`x+11`), con la puerta doble `officeDark` en su `wall 1` (u 0.1..0.9 → y 8.2..9.8, z 0.3..2.6). La puerta sale del bloque: en la cara del bloque, al fondo del hueco de 3 u entre torres, quedaba entera tapada por la torre sur vista desde +x+y.
+- **Farol de entrada** a `(x+11.2, y+9, 3.2)`: en `(x+8.2, …)` se proyectaba dentro de la silueta de la torre sur y el halo se pegaba a la ventana de la escalera.
+- Test de solapes completo: todos los pares de sólidos elevados de la manzana (sin los solados de `paving` y `plaza`).
+- Caras: 83 → 86 (tope 120).

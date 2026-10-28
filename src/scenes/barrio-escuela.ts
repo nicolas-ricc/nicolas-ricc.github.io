@@ -27,11 +27,12 @@ const pilastras = (): Plate[] => PILASTRAS.map(([u0, u1]) => placa(1, u0, u1, Z,
 /** Escudo de la torre norte: disco `safety` centrado sobre la cara este. */
 const ESCUDO: Plate = { wall: 1, shape: "disc", u0: 0.3, u1: 0.7, z0: 7.2, z1: 8.4, mat: "safety" };
 
-/** Bloque de aulas y dos torres de ladrillo con remate de piedra y escudo. */
+/** Bloque de aulas, dos torres de ladrillo con remate de piedra y escudo, y entre ellas un zaguán al ras de las torres con la puerta doble. */
 function bloque(ctx: BarrioCtx, b: SprawlBlock): void {
-  const plates = [...bandas(1), ...ventanas(1, 16, [0.125, 0.375, 0.625, 0.875]), ...pilastras(), placa(1, 0.45, 0.55, Z, 2.6, "officeDark", -2), ...bandas(2), ...ventanas(2, 6, [0.5])];
+  const plates = [...bandas(1), ...ventanas(1, 16, [0.125, 0.375, 0.625, 0.875]), ...pilastras(), ...bandas(2), ...ventanas(2, 6, [0.5])];
   ctx.solids.push({ ...prism(b.x + 2, b.y + 1, Z, 6, 16, 5.6, "whitewash"), plates });
   ctx.solids.push(prism(b.x + 8, b.y + 10, Z, 3, 3, 9.5, "brick"), { ...prism(b.x + 8, b.y + 5, Z, 3, 3, 9.5, "brick"), plates: [ESCUDO] });
+  ctx.solids.push({ ...prism(b.x + 8, b.y + 8, Z, 3, 2, 2.9, "whitewash"), plates: [placa(1, 0.1, 0.9, Z, 2.6, "officeDark", -2)] });
   ctx.solids.push(prism(b.x + 7.8, b.y + 4.8, 9.8, 3.4, 3.4, 0.4, "stone"), prism(b.x + 7.8, b.y + 9.8, 9.8, 3.4, 3.4, 0.4, "stone"));
 }
 
@@ -51,6 +52,6 @@ export function escuela(ctx: BarrioCtx, b: SprawlBlock): void {
   patio(ctx, b);
   for (const ty of [3, 15]) ctx.solids.push({ kind: "cone", at: v3(b.x + 24.8, b.y + ty, 0), r: 1.4, h: 4, mat: "leaf", sides: 6 });
   lamp(ctx.solids, ctx.accents, b.x + 23, b.y + 18.6, 0);
-  ctx.accents.push({ kind: "dot", at: v3(b.x + 8.2, b.y + 9, 3.2), r: 0.5, color: "amber" });
+  ctx.accents.push({ kind: "dot", at: v3(b.x + 11.2, b.y + 9, 3.2), r: 0.5, color: "amber" });
   for (const [z0, z1] of [[4.5, 6.1], [7, 8.6]] as const) homeWindow(ctx, wallWindow({ x: b.x + 11 }, b.y + 11, b.y + 12, z0, z1), true, "escuela-escalera");
 }

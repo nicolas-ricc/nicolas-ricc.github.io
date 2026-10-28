@@ -27,6 +27,7 @@ const prisms = own.filter(isPrism);
 const find = (f: (s: Prism) => boolean): Prism[] => prisms.filter(f);
 const block = find((s) => s.mat === "whitewash" && s.w === 6 && s.d === 16)[0];
 const towers = find((s) => s.mat === "brick" && s.w === 3 && s.d === 3).sort((p, q) => p.at.y - q.at.y);
+const hall = find((s) => s.mat === "whitewash" && s.w === 3 && s.d === 2)[0];
 const roof = find((s) => s.mat === "copper" && s.w === 9 && s.d === 6)[0];
 const columns = find((s) => s.mat === "concrete" && s.w === 0.4 && s.d === 0.4);
 const mast = find((s) => s.mat === "whitewash" && s.w === 0.2 && s.d === 0.2)[0];
@@ -82,11 +83,16 @@ describe("escuela Ameghino (#252), sobre el mundo", () => {
     [0.0125, 0.25, 0.5, 0.75, 0.9875].forEach((c, i) => expect(cs[i]).toBeCloseTo(c));
   });
 
-  it("puerta doble officeDark entre las torres, la última placa de la cara este", () => {
-    const east = plates(block, 1), door = east[east.length - 1]!;
-    expect(door).toMatchObject({ shape: "rect", mat: "officeDark", toneOffset: -2 });
-    expect(door.u0 * 16).toBeCloseTo(7.2); expect(door.u1 * 16).toBeCloseTo(8.8);
-    expect(door.z0).toBeCloseTo(0.3); expect(door.z1).toBeCloseTo(2.6);
+  it("zaguán whitewash entre las torres, al ras de su cara este, con la puerta doble officeDark", () => {
+    expect(hall).toBeDefined();
+    expect(hall!.at).toEqual({ x: x + 8, y: y + 8, z: 0.3 });
+    expect(hall!.at.x + hall!.w).toBe(x + 11);
+    const door = plates(hall, 1, (p) => p.mat === "officeDark");
+    expect(door).toHaveLength(1);
+    expect(door[0]).toMatchObject({ shape: "rect", toneOffset: -2 });
+    expect(hall!.at.y + door[0]!.u0 * hall!.d).toBeCloseTo(y + 8.2); expect(hall!.at.y + door[0]!.u1 * hall!.d).toBeCloseTo(y + 9.8);
+    expect(door[0]!.z0).toBeCloseTo(0.3); expect(door[0]!.z1).toBeCloseTo(2.6);
+    expect(plates(block, 1, (p) => p.mat === "officeDark")).toHaveLength(0); // detrás de las torres no se vería
   });
 
   it("dos torres de ladrillo 3×3 de h ≥ 9 tocando la cara este, con un hueco ≥ 1.5 que enmarca la puerta", () => {
@@ -108,10 +114,10 @@ describe("escuela Ameghino (#252), sobre el mundo", () => {
     expect(shield[0]).toMatchObject({ u0: 0.3, u1: 0.7 }); expect(shield[0]!.z0).toBeCloseTo(7.2); expect(shield[0]!.z1).toBeCloseTo(8.4);
   });
 
-  it("farol de entrada: dot ámbar r 0.5 en el hueco entre torres", () => {
+  it("farol de entrada: dot ámbar r 0.5 sobre la puerta, delante del hueco entre torres", () => {
     const dots = scene.accents.filter((a): a is Accent & { kind: "dot" } => a.kind === "dot" && inRect(a) && a.r === 0.5 && a.color === "amber");
     expect(dots).toHaveLength(1);
-    expect(dots[0]!.at.x).toBeCloseTo(x + 8.2); expect(dots[0]!.at.y).toBeCloseTo(y + 9); expect(dots[0]!.at.z).toBeCloseTo(3.2);
+    expect(dots[0]!.at.x).toBeCloseTo(x + 11.2); expect(dots[0]!.at.y).toBeCloseTo(y + 9); expect(dots[0]!.at.z).toBeCloseTo(3.2);
   });
 
   it("caja de escalera: dos ventanas encendidas del grupo escuela-escalera en la cara este de la torre sur", () => {
@@ -171,6 +177,11 @@ describe("escuela Ameghino (#252), sobre el mundo", () => {
       ...trees.flatMap((t) => lampPost.map((l): [Solid, Solid] => [t, l])),
     ];
     for (const [p, q] of pairs) expect(apart(p, q), `${JSON.stringify(bounds(p))} × ${JSON.stringify(bounds(q))}`).toBe(true);
+  });
+
+  it("ningún par de piezas elevadas se solapa (los solados de paving y plaza no cuentan)", () => {
+    const raised = own.filter((s) => !(isPrism(s) && (s.mat === "paving" || s.mat === "plaza") && s.h <= 0.3));
+    for (let i = 0; i < raised.length; i++) for (let j = i + 1; j < raised.length; j++) expect(apart(raised[i]!, raised[j]!), `${JSON.stringify(bounds(raised[i]!))} × ${JSON.stringify(bounds(raised[j]!))}`).toBe(true);
   });
 
   it("dentro del tope de caras y nada más alto que 21.5", () => {
