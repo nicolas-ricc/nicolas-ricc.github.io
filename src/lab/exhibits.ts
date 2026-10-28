@@ -82,21 +82,17 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "playa-camiones", title: "Playa de camiones", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: 17, y0: -15, x1: 113, y1: 2 }, h: 22 },
   { id: "playa-vias", title: "Playa de vías", zone: "portfolio", group: "fabrica", kind: "region",
     box: { x0: RAIL_YARD_X[0] - 4, y0: 40, x1: -4, y1: 100 }, h: 21 }, // a mano en y: los acopios de mineral (rng, x −25..−13, y 44..96, privados en factory.ts) con vías y vagones; h cubre la excavadora (≈20,3)
-  // x1 tope 4: la sombra cae al ENE sobre el astillero y la caja se detiene antes de las naves (x 8)
+  // x1 tope 4: la sombra cae al ENE sobre el astillero y la caja se detiene en x 4, borde oeste de la región nueva
   { id: "excavadora", title: "Excavadora de rueda de cangilones", zone: "portfolio", group: "fabrica", kind: "region",
     box: { x0: excavatorExtent.x0 - M, y0: excavatorExtent.y0 - M, x1: Math.min(excavatorExtent.x1 + M, 4), y1: excavatorExtent.y1 + M }, h: 21 }, // caja + sombras; h cubre la máquina (≈20,3), que es capa animada
-  // a mano: del portón este (x 121, y −20) al patio de material (x 30, y 1..3); la grúa torre del desvío queda adentro y manda en h
-  { id: "cinta", title: "Cinta transportadora", zone: "portfolio", group: "fabrica", kind: "region", box: { x0: 28, y0: -15, x1: 125, y1: 4 }, h: 22 },
   // las constantes de shipyard.ts son privadas: cajas a mano
   // gradas x 110..QUAY_X, y 36..72; el pórtico (x 150) monta sobre ellas y queda adentro
   { id: "gradas", title: "Gradas", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 108, y0: 33, x1: QUAY_X + 2, y1: 75 }, h: 28 },
   // el agua entre el muelle y la escollera, desde la bocana; sin barcos desde #87 (los carriles arrancan en la bocana)
   { id: "darsena", title: "Dársena", zone: "portfolio", group: "astillero", kind: "region", box: { x0: QUAY_X - 2, y0: MOUTH_Y, x1: 275, y1: 80 }, h: 5 },
   { id: "grua-portico", title: "Grúa pórtico", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 146, y0: 30, x1: 156, y1: 78 }, h: 28 },
-  // calle de transferencia x 100..108 con los faroles en 108.5; entre las naves (x ≤ 98) y las gradas (x ≥ 110)
+  // calle de transferencia x 100..108 con los faroles en 108.5; al oeste de las gradas (x ≥ 110)
   { id: "calle-faroles", title: "Calle de faroles", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 99, y0: 8, x1: 111, y1: 128 }, h: 7 },
-  // las dos naves de montaje: x 8..98, filas y 36 y 56 de 16
-  { id: "naves", title: "Naves de montaje", zone: "portfolio", group: "astillero", kind: "region", box: { x0: 5, y0: 33, x1: 101, y1: 75 }, h: 14 },
   // pluma 24 al este y contrapluma 8 al oeste: con el mástil en x −8 queda en −16..16
   { id: "grua-torre", title: "Grúa torre", zone: "portfolio", group: "astillero", kind: "piece",
     build: (out, accents) => towerCrane(out, accents, { at: { x: -8, y: 0 }, mastH: 20, jibLen: 24, dir: "e", light: "amber" }) },
