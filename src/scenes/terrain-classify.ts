@@ -1,4 +1,4 @@
-import { BOTTOM, DOCK, QUAY_X, SHORE_W, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, abyssX, distToHeadland, eastBank, inHeadland, inMouth, shoreWidth } from "../map/geo";
+import { islandEastX, islandWestX, BOTTOM, DOCK, QUAY_X, SHORE_W, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, abyssX, distToHeadland, eastBank, inHeadland, inMouth, shoreWidth } from "../map/geo";
 import { CITY_EDGE, DISTRICT_BANK_Y, EAST_RING, MALECON_STREET_X, estuaryEast, inCrater } from "./city-grid";
 import { bayWater, builtAt, estuaryWater } from "./sprawl-grid";
 
@@ -28,7 +28,7 @@ export function shipyardTerrainAt(x: number, y: number): Terrain {
 }
 
 export function cityTerrainAt(x: number, y: number): Terrain {
-  if (x >= QUAY_X && x <= estuaryEast(y)) return "water";
+  if (x >= QUAY_X && x <= islandWestX(y)) return "water";
   if (y < CITY_EDGE.north) return "jungle"; // cinturón de costura con el astillero
   if (y >= DISTRICT_BANK_Y && x > QUAY_X) return x >= MALECON_STREET_X ? "asphalt" : "jungle"; // ribera este del distrito: selva, y la calle del malecón
   if (y >= CITY_EDGE.south || x < CITY_EDGE.west) return "asphalt"; // bordes oeste y sur: el distrito tecnológico del sangrado sigue derecho desde la ciudad
@@ -48,7 +48,7 @@ export function seaTerrainAt(x: number, y: number): Terrain {
 
 /** Despacha por geografía, no por zona clickeable: el mar y la punta son de seaTerrainAt aunque clickeen Portfolio o Resume. */
 export function terrainAt(x: number, y: number): Terrain {
-  if (x >= ZONE_SPLIT_X || inHeadland(x, y)) return seaTerrainAt(x, y);
+  if (inHeadland(x, y) || x >= islandEastX(y)) return seaTerrainAt(x, y);
   return y >= ZONE_SPLIT_Y ? cityTerrainAt(x, y) : shipyardTerrainAt(x, y);
 }
 

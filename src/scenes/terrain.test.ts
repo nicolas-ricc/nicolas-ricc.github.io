@@ -22,6 +22,11 @@ describe("clasificación", () => {
     expect(shipyardTerrainAt(50, -30)).toBe("slab");     // banda de la fábrica
     expect(shipyardTerrainAt(300, -30)).toBe("water");   // la bahía sigue al norte
   });
+  it("astillero: la costa norte nueva, con tierra frente a los galpones, caleta y punta NE", () => {
+    expect(terrainAt(300, 18)).toBe("east");   // tierra nueva frente a los galpones (antes agua: costa en y 21)
+    expect(terrainAt(286, 27)).toBe("water");  // caleta al NO
+    expect(terrainAt(339, 9)).not.toBe("water"); // punta NE
+  });
   it("mar: punta, arrecife, orilla y mar abierto", () => {
     expect(terrainAt(380, 118)).toBe("headland");
     expect(terrainAt(336, 115)).toBe("headland");          // la base de la punta gana en la zona del astillero
@@ -85,8 +90,10 @@ describe("clasificación", () => {
     expect(bleedTerrainAt(100, -400)).toBe("jungle");       // más allá del alcance norte (ahora hasta y −348 más el alcance, con la feria de por medio)
     expect(bleedTerrainAt(100, 700)).toBe("jungle");        // más allá del alcance sur
     expect(bleedTerrainAt(250, 400)).toBe("river");         // el estuario sigue
-    expect(bleedTerrainAt(330, 340)).toBe("jungle");        // la punta de la lengua entre el estuario y el mar
-    expect(bleedTerrainAt(338, 400)).toBe("river");         // la lengua termina en dos celdas; después el estuario es todo agua hasta el mar
+    expect(bleedTerrainAt(330, 340)).toBe("jungle");        // la base de la punta sur, entre el estuario y el mar
+    expect(bleedTerrainAt(325, 370)).toBe("jungle");        // cerca del extremo de la punta sur (en y 370 la tierra va de x 317 a 338; termina en y 380)
+    expect(bleedTerrainAt(330, 385)).toBe("river");         // al sur del extremo de la punta: todo agua
+    expect(bleedTerrainAt(338, 400)).toBe("river");         // más al sur la punta ya no existe; el estuario es todo agua hasta el mar
     expect(bleedTerrainAt(346, 400)).toBe("shore");         // orilla frente a la costa de Resume
     expect(bleedTerrainAt(400, 400)).toBe("sea");
     expect(bleedTerrainAt(560, 500)).toBe("abyss");
