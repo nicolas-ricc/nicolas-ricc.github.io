@@ -3,6 +3,7 @@ import type { Accent } from "../iso/accent";
 import { project, Z_SCALE } from "../iso/project";
 import { bounds, type Solid } from "../iso/solids";
 import { BLEED, WORLD } from "../map/geo";
+import { STAIR_TOWER } from "../scenes/boiler-house";
 import { WATER_TOWER, waterTower } from "../scenes/maltings";
 import { BEAM_PERIOD_MS } from "../scenes/sea-anim";
 import { assembleWorld } from "../world/assemble";
@@ -111,9 +112,9 @@ describe("catálogo de exhibits", () => {
 });
 
 describe("caja de la nave de calderas (#213)", () => {
-  it("planta llega al borde este de la torre de escalera (x 126): entra la torre y queda afuera la primera chimenea", () => {
+  it("planta llega al borde este de la torre de escalera (STAIR_TOWER.x1): entra la torre y queda afuera la primera chimenea", () => {
     const e = regions.find((r) => r.id === "planta")!;
-    expect(e.box.x1).toBe(126);
+    expect(e.box.x1).toBe(STAIR_TOWER.x1);
     const cs = cropScene(scene, e.box);
     expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "steel" && s.w === 5 && s.d === 8)).toBe(true); // descansos de la torre
     expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "concrete" && s.w === 7 && s.d === 7)).toBe(false); // pedestal x ≥ 126.5
