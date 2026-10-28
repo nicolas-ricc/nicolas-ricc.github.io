@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { buildRenderList } from "../iso/render-list";
+import type { Accent } from "../iso/accent";
 import { bounds, type Solid } from "../iso/solids";
 import { WORLD, northCoastY } from "../map/geo";
 import { allIsoColors } from "../map/palette-iso";
 import { createRng } from "../map/seed";
 import { AREA_H, AREA_W, STREET_EDGE, shipyard, type Scene } from "./shipyard";
+import { BUFFER_X, STATION } from "./station";
 
 const scene = (): Scene => shipyard(createRng(7));
 const all = (s: Scene): Solid[] => [...s.ground, ...s.solids, s.trolley];
@@ -44,10 +46,14 @@ describe("shipyard", () => {
     expect(s.trolley.at.y).toBe(s.trolleyRange[0]);
   });
 
-  it("los acentos son cian y están a la altura de las paredes", () => {
+  it("los acentos del astillero fuera de la estación son cian; los de la estación son cian, cyanMid o magenta", () => {
     const s = scene();
-    expect(s.accents.length).toBeGreaterThan(8);
-    expect(s.accents.every((a) => a.kind === "dot" && a.color.startsWith("cyan") && a.at.z > 0)).toBe(true);
+    const inStation = (a: Accent) => a.kind === "dot" && a.at.x >= 110 && a.at.x <= STATION.x1 && a.at.y >= 100 && a.at.y <= STATION.y1;
+    const outside = s.accents.filter((a) => !inStation(a)), inside = s.accents.filter(inStation);
+    expect(outside.length).toBeGreaterThanOrEqual(7); // cinco faroles de la calle y dos del muelle
+    expect(outside.every((a) => a.kind === "dot" && a.color === "cyan" && a.at.z > 0)).toBe(true);
+    expect(inside.length).toBeGreaterThanOrEqual(11); // ocho luces de marquesina y tres de tope
+    expect(inside.every((a) => a.kind === "dot" && ["cyan", "cyanMid", "magenta"].includes(a.color) && a.at.z > 0)).toBe(true);
   });
 
   it("todo el render usa colores del atlas", () => {
@@ -130,10 +136,12 @@ describe("shipyard sin la región nueva (#242)", () => {
     expect(cyl.filter((c) => (c.at.x === 80 && c.at.y === 10) || (c.at.x === 92 && c.at.y === 22))).toEqual([]); // tanques del patio viejo
   });
 
-  it("la vía del oeste sigue terminando en x 104 con durmientes; el camión de la calle sigue", () => {
+  it("la vía del oeste llega a x 104 en parkingAndRails y la estación la continúa hasta 160; el camión de la calle sigue", () => {
     const s = scene();
     for (const y of [131, 134]) {
       expect(rails(s).some((r) => r.path.length === 2 && r.path[0]!.x === 0 && r.path[0]!.y === y && r.path[1]!.x === 104 && r.path[1]!.y === y), `vía y ${y}`).toBe(true);
+      expect(rails(s).some((r) => r.path.length === 2 && r.path[0]!.x === 104 && r.path[0]!.y === y && r.path[1]!.x === BUFFER_X && r.path[1]!.y === y), `estación y ${y}`).toBe(true);
+      expect(rails(s).filter((r) => r.path.every((p) => p.y === y)).flatMap((r) => r.path.map((p) => p.x)).sort((a, b) => a - b)).toEqual([0, 104, 104, BUFFER_X]); // sin hueco ni solape
     }
     expect(prisms(s).filter((x) => x.mat === "rust" && x.w === 1 && x.d === 5 && x.h === 0.3 && x.at.y === 130).length).toBeGreaterThanOrEqual(20);
     expect(prisms(s).some((x) => x.mat === "rust" && x.at.x === 105 && x.at.y === 88 && x.w === 3 && x.d === 7 && x.h === 2.5)).toBe(true);
@@ -197,12 +205,29 @@ describe("shipyard en la banda norte (#247)", () => {
     expect(b.y0).toBeGreaterThanOrEqual(-59); expect(b.y1).toBeLessThanOrEqual(-35.7);
   });
 
-  it("el rng da lo mismo que en main (seed 7): autos, secciones prefabricadas y chatarra", () => {
-    // valores de origin/main (a34dec0) medidos con tsx: el orden de llamadas de main consume el rng igual
+  it("el rng (seed 7): autos como en main, sin secciones prefabricadas y con la chatarra re-medida (#277)", () => {
+    // autos: valores de origin/main (a34dec0), se siembran antes del bucle que se fue; chatarra medida con tsx sin los ocho `chance` de los prefabricados
     const ps = prisms(scene());
     expect(ps.filter((x) => x.h === 1.5 && x.w === 3).map((x) => [x.at.x, x.at.y, x.mat])).toEqual([[65, 102, "steel"], [73, 116, "steel"], [53, 116, "rust"], [57, 102, "steel"], [73, 102, "rust"]]);
-    expect(ps.filter((x) => x.mat === "steel" && x.w === 9 && x.d === 5 && x.h === 3).map((x) => [x.at.x, x.at.y])).toEqual([[112, 82], [136, 82], [148, 82], [112, 90], [124, 90], [136, 90], [148, 90]]);
-    expect(ps.filter((x) => x.w === 3 && x.d === 2 && x.h === 1 && x.at.x >= 302).map((x) => [x.at.x, x.at.y])).toEqual([[303, 140], [315, 136], [319, 140], [317, 140], [322, 130], [306, 133]]);
+    expect(ps.filter((x) => x.mat === "steel" && x.w === 9 && x.d === 5 && x.h === 3)).toEqual([]);
+    expect(ps.filter((x) => x.w === 3 && x.d === 2 && x.h === 1 && x.at.x >= 302).map((x) => [x.at.x, x.at.y])).toEqual([[308, 139], [306, 131], [305, 133], [315, 138], [303, 140], [315, 136]]);
+  });
+
+  it("no queda nada de la calderería (#277)", () => {
+    const s = scene();
+    expect(s.solids.filter((x) => x.kind === "ramp" && x.at.z === 9)).toEqual([]);                                 // dientes de sierra
+    expect(s.solids.filter((x) => x.kind === "cylinder" && x.mat === "rust" && x.r === 2.2)).toEqual([]);          // chimeneas
+    expect(prisms(s).filter((x) => x.roof === "gable" && x.at.x === 112 && x.at.y === 126)).toEqual([]);           // nave de pintura
+    expect(prisms(s).filter((x) => x.mat === "steel" && x.at.x === 183.6)).toEqual([]);                            // rack
+    expect(s.solids.filter((x) => x.kind === "cylinder" && x.at.x === 190 && x.r === 4)).toEqual([]);              // tanques
+  });
+
+  it("faroles del muelle en y 20 y 80 (en quay()); ninguno en y 120 ni en (112, 124) / (174, 124) (#277)", () => {
+    const s = scene();
+    const lampAt = (x: number, y: number) => prisms(s).some((p) => p.mat === "steel" && p.w === 0.6 && p.h === 5 && p.at.x === x && p.at.y === y);
+    expect(lampAt(198 - 1.4, 20)).toBe(true); expect(lampAt(198 - 1.4, 80)).toBe(true);
+    expect(lampAt(198 - 1.4, 120)).toBe(false); expect(lampAt(112, 124)).toBe(false); expect(lampAt(174, 124)).toBe(false);
+    for (const y of [20, 80]) expect(s.accents.some((a) => a.kind === "dot" && a.color === "cyan" && a.at.x === 198 - 1.4 + 0.3 && a.at.y === y + 0.3 && a.at.z === 5)).toBe(true);
   });
 
   it("naves ↔ talleres ↔ patio apartados (cajas disjuntas, 1e-9)", () => {
