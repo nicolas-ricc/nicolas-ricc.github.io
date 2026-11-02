@@ -14,7 +14,7 @@ describe("ciclo de vida de los stages del storybook (#102)", () => {
 describe("elementos de la página (#187)", () => {
   it("no los lee con getElementById: los resuelve mountStorybook", () => {
     expect(src).not.toContain("getElementById(");
-    expect(src).toContain("mountStorybook(document,");
+    expect(src).toMatch(/mountStorybook\(\s*document\s*,/);
   });
 });
 

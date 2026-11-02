@@ -25,11 +25,10 @@ afterEach(() => { vi.restoreAllMocks(); document.body.replaceChildren(); });
 describe("elementos del storybook con guarda (#187)", () => {
   it("con los tres presentes devuelve host, nav y panel", () => {
     page();
-    expect(storybookElements(document)).toEqual({
-      host: document.getElementById("lab-host"),
-      nav: document.getElementById("exhibits"),
-      panel: document.getElementById("readout"),
-    });
+    const els = storybookElements(document);
+    expect(els.host).toBe(document.getElementById("lab-host"));
+    expect(els.nav).toBe(document.getElementById("exhibits"));
+    expect(els.panel).toBe(document.getElementById("readout"));
   });
   it("sin #readout lanza nombrándolo", () => {
     page(["lab-host", "exhibits"]);
@@ -51,7 +50,10 @@ describe("mountStorybook avisa en la página (#187)", () => {
     const run = vi.fn();
     mountStorybook(document, run);
     expect(run).toHaveBeenCalledTimes(1);
-    expect(run).toHaveBeenCalledWith(storybookElements(document));
+    const [els] = run.mock.calls[0]!;
+    expect(els.host).toBe(document.getElementById("lab-host"));
+    expect(els.nav).toBe(document.getElementById("exhibits"));
+    expect(els.panel).toBe(document.getElementById("readout"));
     expect(error).not.toHaveBeenCalled();
   });
   it("sin #exhibits escribe el motivo en el host, registra y no lanza", () => {
@@ -78,6 +80,11 @@ describe("mountStorybook avisa en la página (#187)", () => {
     mountStorybook(document, () => { throw err; });
     expect(document.getElementById("lab-host")!.textContent).toBe("No se pudo iniciar el storybook: sin mundo");
     expect(error).toHaveBeenCalledWith("[storybook] no se pudo iniciar", err);
+  });
+  it("un throw que no es Error se muestra tal cual", () => {
+    page();
+    mountStorybook(document, () => { throw "sin contexto"; });
+    expect(document.getElementById("lab-host")!.textContent).toBe("No se pudo iniciar el storybook: sin contexto");
   });
 });
 

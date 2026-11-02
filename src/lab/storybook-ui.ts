@@ -1,17 +1,21 @@
 import type { Readout } from "./crop";
 import { type Exhibit, type GroupId, outOfView } from "./exhibits";
 
+const HOST_ID = "lab-host";
 /** Ids que `lab/storybook.html` debe tener; un test lo comprueba contra el HTML. */
-export const STORYBOOK_IDS = ["lab-host", "exhibits", "readout"] as const;
+export const STORYBOOK_IDS = [HOST_ID, "exhibits", "readout"] as const;
 
 export interface StorybookElements { host: HTMLElement; nav: HTMLElement; panel: HTMLElement }
 
 /** Resuelve los tres elementos; si faltan, lanza nombrándolos todos (en el orden de STORYBOOK_IDS). */
 export function storybookElements(doc: Document): StorybookElements {
-  const missing = STORYBOOK_IDS.filter((id) => !doc.getElementById(id)).map((id) => `#${id}`);
-  if (missing.length) throw new Error(`${missing.length === 1 ? "falta" : "faltan"} ${missing.join(", ")} en la página`);
-  const el = (id: (typeof STORYBOOK_IDS)[number]): HTMLElement => doc.getElementById(id) as HTMLElement;
-  return { host: el("lab-host"), nav: el("exhibits"), panel: el("readout") };
+  const found = STORYBOOK_IDS.map((id) => doc.getElementById(id));
+  const [host, nav, panel] = found;
+  if (!host || !nav || !panel) {
+    const missing = STORYBOOK_IDS.filter((_, i) => !found[i]).map((id) => `#${id}`);
+    throw new Error(`${missing.length === 1 ? "falta" : "faltan"} ${missing.join(", ")} en la página`);
+  }
+  return { host, nav, panel };
 }
 
 /**
@@ -23,7 +27,7 @@ export function mountStorybook(doc: Document, run: (els: StorybookElements) => v
     run(storybookElements(doc));
   } catch (err) {
     console.error("[storybook] no se pudo iniciar", err);
-    const target = doc.getElementById(STORYBOOK_IDS[0]) ?? doc.body;
+    const target = doc.getElementById(HOST_ID) ?? doc.body;
     target.textContent = `No se pudo iniciar el storybook: ${err instanceof Error ? err.message : String(err)}`;
   }
 }
