@@ -16,8 +16,19 @@
 - Equivalencia de troceo: con la misma semilla, `tick(60000)` y `600 × tick(100)` (y un troceo irregular de igual suma) dejan iguales los contadores de `fired()` y el estado visible (acentos) de cada capa tocada. Posiciones de papeles: iguales a `1e-6`.
 - `tick` con `reducedMotion`, `dt ≤ 0`, `NaN` o `Infinity` no cambia nada ni cuenta disparos (los `while` colgarían con `Infinity`). `tech-anim` y `city-anim` ya lo hacen; `shipyard-anim` lo gana.
 - Frame 0 no cambia: las tiradas de construcción que deciden el estado inicial (pisos encendidos de las torres, papeles escalonados, colores) quedan en el mismo orden.
-- Fuera de alcance: `factory-anim`, `fair-anim`, `rail-anim`, `sea-anim`, `water-anim` (no los nombra el issue).
+- Fuera de alcance: `factory-anim`, `fair-anim`, `rail-anim`, `sea-anim`, `water-anim` (el issue nombra solo `tech-anim.ts:50-52`, `:63-64`, `shipyard-anim.ts:67-76` y, por el comentario del dueño, `city-anim.ts:110`). El humo de `factory-anim` y la pausa del ferry de `sea-anim` repiten el patrón: #293.
 - `npm test` y `npm run typecheck` en verde.
+
+## Assumptions
+
+Decididas en la revisión del plan (stage 2), sin fuente escrita; cualquiera cumple el criterio del issue:
+
+- `fired()` nuevo en `ShipyardAnim` y campos nuevos en `TechAnim`/`CityAnim`: seam de test, como hizo #23 con `CityAnim.fired()`. Alternativa descartada: comparar solo acentos (no distingue "disparó dos veces" de "ninguna").
+- Papeles: al reciclar, el tiempo sobrante se recorre a la velocidad nueva (avance por tiempo). Alternativa descartada: `p.dist -= PAPER_RANGE` (arrastra el exceso a la velocidad vieja; un tick largo y uno troceado siguen dando posiciones distintas).
+- Chispas: `burst()` se llama en cada cuadro aunque el tick largo lo saltee, para que las tiradas no dependan del troceo. Alternativa descartada: saltear los cuadros invisibles (más barato, pero el jitter final cambia según el troceo).
+- `sparkRng` propio aunque `assemble.ts:25` ya le da a shipyard un `Rng` exclusivo: así el animador no depende de que el llamador no comparta su `rng`.
+- Tolerancias de los tests: `1e-6` en posiciones de papeles (sumas en coma flotante en distinto orden); `1.2` = velocidad máxima de un papel (`0.8 + rng.next() * 0.4`, `city-anim.ts:54`); `PAPER_RANGE + PAPER_SIDE` = alcance máximo en el plano.
+- Sin cambios de README ni docs: no describen estos temporizadores; se actualizan los docstrings.
 
 ## Review Focus
 
@@ -36,7 +47,7 @@
 - Test: `src/scenes/tech-anim.test.ts`
 
 **Interfaces:**
-- Produces: `TechAnim.fired(): { homes: number; windows: number; crowns: number }`. `windows` = eventos de torre que cambiaron un piso (solo cuenta con torres); `crowns` = cambios de color de corona (solo con coronas).
+- Produces: `TechAnim.fired(): { homes: number; windows: number; crowns: number }`. `windows` = vencimientos del temporizador con al menos una torre (cada uno sortea una torre y la apaga con `chance(0.3)` o le cambia el piso; puede no verse si ya estaba apagada); `crowns` = cambios de color de corona (solo con coronas).
 
 - [ ] **Step 1: tests que fallan** en un `describe("tech-anim: troceo (#125)")`:
   - `"un tick de 60 s deja lo mismo que 600 ticks de 100 ms"`: `a.tick(60000)`, `b` con 600×100; `expect(a.fired()).toEqual(b.fired())`, `expect(a.fired().windows).toBeGreaterThanOrEqual(60000 / TECH_BLINK_GAP_MS[1] - 1)`, `expect(a.fired().crowns).toBeGreaterThanOrEqual(60000 / CROWN_FLIP_GAP_MS[1] - 1)`, `expect(a.windows()).toEqual(b.windows())`, `expect(a.neon()).toEqual(b.neon())`.
@@ -101,3 +112,10 @@
 ### Task 4: verificación final
 
 - [ ] `npm test` y `npm run typecheck` → verdes.
+
+## Grilling
+
+- Rondas: 1 (los cambios fueron aclaraciones; no se agregaron ni quitaron pasos). Griller: `fable`.
+- Preguntas: 18. Fuentes: ISSUE 1 (alcance: cuerpo de #125 y comentario del dueño), CODE 14 (`tech-anim.ts:30-80`, `shipyard-anim.ts:13-78`, `city-anim.ts:16-122`, `seed.ts:22` (`int` consume un `next()`), `shipyard.ts:73-86,213-218` (las cuadernas salen siempre de `slipways`), `palette-guard.test.ts:8-30`, `tech-anim.test.ts:7-8`, `city-anim.test.ts:11-17`, tests de animadores "mismo seed → misma secuencia", que comparan dos instancias iguales), NO SOURCE 3 → supuestos técnicos (ver Assumptions). Ambigüedades de spec: 0.
+- Corrección del plan: `fired().windows` cuenta vencimientos con torres, no cambios visibles (el `chance(0.3)` puede apagar una torre ya apagada).
+- Issues abiertos: #293 (humo de `factory-anim` y pausa del ferry de `sea-anim`).
