@@ -27,7 +27,7 @@ Decididas en la revisión del plan (stage 2), sin fuente escrita; cualquiera cum
 - Papeles: al reciclar, el tiempo sobrante se recorre a la velocidad nueva (avance por tiempo). Alternativa descartada: `p.dist -= PAPER_RANGE` (arrastra el exceso a la velocidad vieja; un tick largo y uno troceado siguen dando posiciones distintas).
 - Chispas: `burst()` se llama en cada cuadro aunque el tick largo lo saltee, para que las tiradas no dependan del troceo. Alternativa descartada: saltear los cuadros invisibles (más barato, pero el jitter final cambia según el troceo).
 - `sparkRng` propio aunque `assemble.ts:25` ya le da a shipyard un `Rng` exclusivo: así el animador no depende de que el llamador no comparta su `rng`.
-- Tolerancias de los tests: `1e-6` en posiciones de papeles (sumas en coma flotante en distinto orden); `1.2` = velocidad máxima de un papel (`0.8 + rng.next() * 0.4`, `city-anim.ts:54`); `PAPER_RANGE + PAPER_SIDE` = alcance máximo en el plano.
+- Tolerancias de los tests: `1e-6` en posiciones de papeles (sumas en coma flotante en distinto orden); `0.8` = velocidad mínima de un papel (`0.8 + rng.next() * 0.4`, `city-anim.ts:54`; la cota inferior de reciclados usa la más lenta); `PAPER_RANGE + PAPER_SIDE` = alcance máximo en el plano.
 - Sin cambios de README ni docs: no describen estos temporizadores; se actualizan los docstrings.
 
 ## Review Focus
@@ -92,7 +92,7 @@ Decididas en la revisión del plan (stage 2), sin fuente escrita; cualquiera cum
 - [ ] **Step 1: tests que fallan** (usan `troceado`/`veces` del archivo):
   - `"papeles: un tick de 60 s deja los papeles donde 600 de 100 ms"`: `fired().papers` iguales y `> 0`; cada `dot(a.papers()[i]).at` y `r` igual a `b` con `toBeCloseTo(_, 6)`.
   - `"papeles: un troceo irregular y su suma dejan lo mismo"` con dts `[16, 33, 100, 250, 1000, 5000, 7000, 33, 20000]`.
-  - `"papeles: tras 10 min de una vez siguen dentro del recorrido"`: `fired().papers ≥ n · 600000 / (PAPER_RANGE / (PAPER_SPEED * 1.2)) - n` con `n = papers().length`, y cada papel a distancia de la ventana, en el plano (`Math.hypot(x - w.x, y - w.y)`), `≤ PAPER_RANGE + PAPER_SIDE`.
+  - `"papeles: tras 10 min de una vez siguen dentro del recorrido"`: `fired().papers ≥ n · 600000 / (PAPER_RANGE / (PAPER_SPEED * 0.8)) - n` (velocidad mínima) con `n = papers().length`, y cada papel a distancia de la ventana, en el plano (`Math.hypot(x - w.x, y - w.y)`), `≤ PAPER_RANGE + PAPER_SIDE`.
   - Los `toEqual({ lit: 0, neon: 0 })` existentes pasan a `{ lit: 0, neon: 0, papers: 0 }`; el troceo de 7000/1000 con 50 semillas sigue comparando `fired()` completo.
 - [ ] **Step 2:** `npx vitest run src/scenes/city-anim.test.ts` → FAIL.
 - [ ] **Step 3: implementar.** Cada papel lleva su `Rng`, derivado al final de la construcción (después de `signRng`, así no cambian las tiradas iniciales ni las semillas de `blinkRng`/`signRng`); `respawn` tira de él después del arranque. Avance por tiempo, no por distancia, porque la velocidad cambia al reciclar:
