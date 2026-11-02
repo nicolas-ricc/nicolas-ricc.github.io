@@ -68,8 +68,18 @@ describe("guard de paleta en lab/*.html", () => {
 
 const STYLE_CSS = fileURLToPath(new URL("../style.css", import.meta.url));
 
-/** Off-palette hex literals src/style.css may use (lowercase). */
-const STYLE_CSS_ALLOWLIST: ReadonlySet<string> = new Set<string>([]);
+/**
+ * Off-palette hex literals src/style.css may use (lowercase). These are the
+ * site's UI colours, deliberately not scene colours; any other off-palette
+ * hex fails.
+ */
+const STYLE_CSS_ALLOWLIST: ReadonlySet<string> = new Set<string>([
+  "#e6edf3", // --fg: UI text
+  "#9aa7b2", // --muted: secondary UI text
+  "#22303c", // border under #content h2
+  "#000", // text-shadow behind #hud and #titulo
+  "#8ec07c", // Resume label: the blog's accent green (myxomatosis.xyz/blog)
+]);
 
 function styleCssOffenders(text: string): string[] {
   return offPalette(text).filter((h) => !STYLE_CSS_ALLOWLIST.has(h.toLowerCase()));
