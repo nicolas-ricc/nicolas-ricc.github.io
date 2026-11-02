@@ -77,7 +77,7 @@ describe("factory", () => {
     expect(tallOk({ kind: "prism", at: { x: 0, y: 0, z: 27 }, w: 30, d: 1, h: 1, mat: "steel" })).toBe(true);
   });
 
-  it("the plant: five-story 24 × 30 × 18 maltings, tower and hall of two stacked brick prisms, no sawtooth roofs; three chimneys without a rust band, cooling tower and crane", () => {
+  it("the plant: five-story 24 × 30 × 18 maltings, water tower and hall of two stacked brick prisms, no sawtooth roofs; three chimneys without a rust band, cooling tower and crane", () => {
     const s = scene();
     expect(MALT).toEqual({ x: 5, y: 44, w: 24, d: 30, h: 18 });
     expect(PLANT).toEqual({ x: MALT.x, y: MALT.y, w: MALT.w + HALL.w, d: 30, h: 14 }); // maltings + hall
@@ -166,7 +166,7 @@ describe("factory", () => {
     for (const i of roof) expect(i).toBeGreaterThan(wall);
   });
 
-  it("the tower, north of the maltings (y < MALT.y), touches no maltings, cooling tower or chimneys", () => {
+  it("the water tower, north of the maltings (y < MALT.y), touches no maltings, cooling tower or chimneys", () => {
     const s = scene(), tank = build(waterTower);
     expect(tank.some((x) => x.kind === "cylinder" && x.at.x === WATER_TOWER.x && x.at.y === WATER_TOWER.y)).toBe(true);
     for (const x of tank) expect(s.solids).toContainEqual(x);
@@ -186,7 +186,7 @@ describe("factory", () => {
     expect(touching.map((a) => JSON.stringify(a).slice(0, 90))).toEqual([]);
   });
 
-  it("the plant (maltings, tower, hall and gate) does not touch the substation", () => {
+  it("the plant (maltings, water tower, hall and gate) does not touch the substation", () => {
     const s = scene();
     const gate = s.solids.filter((x) => x.kind === "prism" && x.mat === "concrete" && x.h === 8);
     const plantSolids = [...build(maltings), ...build(waterTower), ...build(boilerHouse), ...gate];
@@ -230,7 +230,7 @@ describe("factory", () => {
     expect(out.map((x) => JSON.stringify(x).slice(0, 90))).toEqual([]);
   });
 
-  it("no solid of the maltings or tower exceeds z 26", () => {
+  it("no solid of the maltings or water tower exceeds z 26", () => {
     for (const x of [...build(maltings), ...build(waterTower)]) expect(bounds(x).max.z).toBeLessThanOrEqual(26 + 1e-9);
   });
 
@@ -456,7 +456,7 @@ describe("chimneys and cooling tower behind the hall's new spot (#245)", () => {
     expect(tower.find((t) => t.at.z === 0)!.r).toBe(COOLING.r);
   });
 
-  it("chimneys and tower touch no other non-flat solid of the factory: substation, lamp (53, 12), pallets, trucks, siding, crane, plant and tower", () => {
+  it("chimneys and cooling tower touch no other non-flat solid of the factory: substation, lamp (53, 12), pallets, trucks, siding, crane, plant and water tower", () => {
     const s = scene();
     const mine = [...STACKS.flatMap((st) => one(st).out), ...coolingTower(s.solids)];
     const keys = new Set(mine.map((x) => JSON.stringify(x)));

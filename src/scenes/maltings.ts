@@ -8,7 +8,7 @@ import { PLANT_SHIFT, emitPlant } from "./plant-frame";
  * Decisions (D1–D15): docs/plans/2026-10-24-214-malteria-tanque.md.
  *
  * The maltings is drawn in a local frame, `x 20..44, y −46..−16`, and moved with `PLANT_SHIFT (−15, +90)`
- * to `x 5..29, y 44..74` (#246). The tower goes north of it, at `WATER_TOWER`.
+ * to `x 5..29, y 44..74` (#246). The water tower goes north of it, at `WATER_TOWER`.
  * Everything exported is in world coordinates; the local frame is private (`MALT_LOCAL` and `maltingsLocal`).
  */
 const MALT_LOCAL = { x: 20, y: -46, w: 24, d: 30, h: 18 } as const;
