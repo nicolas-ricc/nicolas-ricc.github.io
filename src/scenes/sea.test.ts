@@ -59,11 +59,11 @@ describe("sea", () => {
 
   it("luces de la galería: una por poste, 0.5 bajo el piso del disco, sin mover un bit (#130)", () => {
     const s = scene();
-    expect(GALLERY_POSTS).toBe(8);
+    expect(GALLERY_POSTS).toBe(8); // pin de deriva, como las medidas de #27
     expect(GALLERY_LIGHT_Z).toBe(LANTERN_Z - 2);
     const deck = s.solids.find((x): x is Cyl => x.kind === "cylinder" && x.mat === "steel" && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y)!;
     expect(GALLERY_LIGHT_Z + 0.5).toBe(deck.at.z + deck.h);
-    const posts = s.solids.filter((x): x is Prism => x.kind === "prism" && x.mat === "steel" && x.w === POST_W && x.h === POST_H && Math.hypot(x.at.x - LIGHTHOUSE.x, x.at.y - LIGHTHOUSE.y) < GALLERY_DECK_R);
+    const posts = s.solids.filter((x): x is Prism => x.kind === "prism" && x.mat === "steel" && x.w === POST_W && x.d === POST_W && x.h === POST_H && Math.hypot(x.at.x - LIGHTHOUSE.x, x.at.y - LIGHTHOUSE.y) < GALLERY_DECK_R);
     expect(posts).toHaveLength(GALLERY_POSTS);
     expect(s.neon.gallery).toHaveLength(GALLERY_POSTS);
     s.neon.gallery.forEach((p, k) => {
