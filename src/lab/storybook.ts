@@ -13,12 +13,12 @@ import { bloomFromSearch, nextBloomMode, speedFromSearch } from "./page";
 import { buildIndex, markCurrent, mountStorybook, renderReadout } from "./storybook-ui";
 
 /**
- * Storybook de estructuras: un exhibit a la vez, recortado del mundo por su
- * caja o armado solo en el origen (piezas). El hash elige el exhibit; flechas
- * y j/k solo escriben el hash. 6 rota el bloom; ?bloom= lo fuerza y ?speed=
- * escala el reloj hasta 100 (?speed=0 lo congela), como en page.ts. g, h y a
- * ocultan o muestran suelo, sombras y acentos (con el bloom) y se recuerdan
- * entre exhibits.
+ * Structures storybook: one exhibit at a time, cropped from the world by its
+ * box or built alone at the origin (pieces). The hash picks the exhibit; arrows
+ * and j/k only write the hash. 6 rotates the bloom; ?bloom= forces it and ?speed=
+ * scales the clock up to 100 (?speed=0 freezes it), as in page.ts. g, h and a
+ * hide or show ground, shadows and accents (with the bloom) and are remembered
+ * across exhibits.
  */
 mountStorybook(document, ({ host, nav, panel }) => {
   const log = import.meta.env.DEV;
@@ -52,7 +52,7 @@ mountStorybook(document, ({ host, nav, panel }) => {
       const t0 = performance.now();
       let src: [WorldScene, ZonedAnimator[]];
       if (e.kind === "region") {
-        // la misma caja a ambos: el memo del recorte se indexa por identidad de Box
+        // the same box for both: the crop memo is keyed by Box identity
         src = [cropScene(scene, e.box), cropAnimators(animators, e.box)];
         stage = buildStage(...src);
         frame = { box: e.box, h: e.h };
@@ -64,7 +64,7 @@ mountStorybook(document, ({ host, nav, panel }) => {
       }
       app.stage.addChild(stage.container);
       for (const l of Object.keys(layers) as StageLayer[]) stage.setLayer(l, layers[l]);
-      if (log) console.info(`[storybook] ${e.id}: primer dibujo ${(performance.now() - t0).toFixed(1)} ms, ${stage.staticCount} polígonos estáticos`);
+      if (log) console.info(`[storybook] ${e.id}: first draw ${(performance.now() - t0).toFixed(1)} ms, ${stage.staticCount} static polygons`);
       renderReadout(panel, readout(...src));
       stage.setBloom(mode);
       current = e;
@@ -80,17 +80,17 @@ mountStorybook(document, ({ host, nav, panel }) => {
     window.addEventListener("hashchange", fromHash);
     app.renderer.on("resize", fit);
     // deferred like page.ts; later stages inherit the mode in show()
-    // attachBloom guarda el stage y aplica el veredicto más tarde: se le pasa el vigente, no el primero (que se destruye al cambiar)
+    // attachBloom keeps the stage and applies the verdict later: pass it the live one, not the first (which is destroyed on change)
     const live = { get bloom() { return stage!.bloom; }, setBloom(m: BloomMode) { stage!.setBloom(m); } };
     afterFirstRender(app.renderer.runners.postrender, () => { bloom = attachBloom({ app, stage: live, log, prefix: "storybook", force: bloomFromSearch(location.search) }); });
 
     const NEXT = new Set(["ArrowRight", "ArrowDown", "j"]), PREV = new Set(["ArrowLeft", "ArrowUp", "k"]);
     window.addEventListener("keydown", (ev) => {
-      if (ev.altKey || ev.ctrlKey || ev.metaKey) return; // Alt/Cmd + flecha es atrás/adelante del navegador
+      if (ev.altKey || ev.ctrlKey || ev.metaKey) return; // Alt/Cmd + arrow is the browser's back/forward
       if (current && (NEXT.has(ev.key) || PREV.has(ev.key))) { ev.preventDefault(); location.hash = stepExhibit(current.id, NEXT.has(ev.key) ? 1 : -1).id; }
       const layer = LAYER_KEY[ev.key];
-      if (layer && stage && !ev.repeat) { layers[layer] = !layers[layer]; stage.setLayer(layer, layers[layer]); if (log) console.info(`[storybook] ${layer}: ${layers[layer] ? "visible" : "oculto"}`); }
-      if (ev.key === "6" && stage) { stage.setBloom(nextBloomMode(stage.bloom)); if (log) console.info(`[storybook] bloom a mano: ${stage.bloom}`); }
+      if (layer && stage && !ev.repeat) { layers[layer] = !layers[layer]; stage.setLayer(layer, layers[layer]); if (log) console.info(`[storybook] ${layer}: ${layers[layer] ? "visible" : "hidden"}`); }
+      if (ev.key === "6" && stage) { stage.setBloom(nextBloomMode(stage.bloom)); if (log) console.info(`[storybook] bloom by hand: ${stage.bloom}`); }
     });
 
     const speed = speedFromSearch(location.search);
@@ -104,7 +104,7 @@ mountStorybook(document, ({ host, nav, panel }) => {
       if (log) {
         worst = Math.max(worst, dt);
         since += ticker.deltaMS;
-        if (since > 5000) { console.info(`[storybook] peor redibujo en 5 s: ${worst.toFixed(2)} ms`); worst = 0; since = 0; }
+        if (since > 5000) { console.info(`[storybook] worst redraw in 5 s: ${worst.toFixed(2)} ms`); worst = 0; since = 0; }
       }
     });
   }

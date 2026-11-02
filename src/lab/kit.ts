@@ -6,9 +6,9 @@ import { drawAccents, drawLayer, fitTransform } from "../world/frame";
 import { kitScene } from "./kit-scene";
 
 /**
- * Lab del kit: todas las recetas del registro sobre una grilla de lotes. Tecla
- * `s` cambia el seed; `1..4` el estilo (centro, bares, residencial, cívico).
- * Sin bloom ni animadores.
+ * Kit lab: every recipe in the registry on a grid of lots. Key `s` changes
+ * the seed; `1..4` the style (downtown, bars, residential, civic). No bloom
+ * or animators.
  */
 const KEY_STYLE: Record<string, StyleId> = { "1": "downtown", "2": "bars", "3": "residential", "4": "civic" };
 const LAYERS: readonly Layer[] = ["ground", "shadow", "shadowCore", "solid"];
@@ -23,7 +23,7 @@ async function boot(): Promise<void> {
   host.appendChild(app.canvas);
   const world = new Container(), layers = LAYERS.map(() => new Graphics()), lights = new Graphics();
   lights.blendMode = "add";
-  // cada banda de sombra es una unión: el filtro va en un Container, igual que stage.ts
+  // each shadow band is a union: the filter goes on a Container, like stage.ts
   for (const [i, l] of LAYERS.entries()) {
     if (l === "shadow" || l === "shadowCore") {
       const slot = new Container();

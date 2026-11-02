@@ -13,20 +13,20 @@ const KEY_ZONE: Record<string, Frame> = { "0": "all", "1": "portfolio", "2": "cv
 
 const BLOOM_CYCLE: readonly BloomMode[] = ["off", "on", "fallback"];
 
-/** `?bloom=on|off|fallback` fuerza el modo de bloom; cualquier otro valor no fuerza nada. */
+/** `?bloom=on|off|fallback` forces the bloom mode; any other value forces nothing. */
 export function bloomFromSearch(search: string): BloomMode | null {
   const v = new URLSearchParams(search).get("bloom");
   return BLOOM_CYCLE.find((m) => m === v) ?? null;
 }
 
-/** Tope de `?speed=`: un valor enorme congelaría la pestaña (los animadores iteran en proporción a `dt`). */
+/** Cap of `?speed=`: a huge value would freeze the tab (the animators iterate in proportion to `dt`). */
 export const MAX_SPEED = 100;
 
-/** `?speed=` escala el reloj de los animadores, de 0 (lo congela) a `MAX_SPEED`. Ausente, vacío, no numérico, negativo, infinito o mayor que el tope: 1. */
+/** `?speed=` scales the animators' clock, from 0 (freezes it) to `MAX_SPEED`. Absent, empty, non-numeric, negative, infinite or above the cap: 1. */
 export function speedFromSearch(search: string): number {
   const v = new URLSearchParams(search).get("speed")?.trim();
   const n = v ? Number(v) : NaN;
-  return Number.isFinite(n) && n >= 0 && n <= MAX_SPEED ? n + 0 : 1; // + 0 vuelve -0 en 0
+  return Number.isFinite(n) && n >= 0 && n <= MAX_SPEED ? n + 0 : 1; // + 0 turns -0 into 0
 }
 
 export function nextBloomMode(mode: BloomMode): BloomMode {
@@ -34,11 +34,11 @@ export function nextBloomMode(mode: BloomMode): BloomMode {
 }
 
 /**
- * Una página del laboratorio: el mundo (o algunas zonas), sus animadores y el
- * encuadre inicial. Teclas 0..3 encuadran mundo, Portfolio, Resume y Blog; 4
- * el cover 16:9; 5 rota el foco (velo) entre ninguno, Portfolio, Resume y Blog;
- * 6 rota el bloom entre off, on y fallback (`?bloom=on|off|fallback` lo fuerza al cargar; sin parámetro se mide y decide solo).
- * `?speed=` escala el reloj de los animadores (hasta 100) y `?speed=0` lo congela.
+ * A lab page: the world (or some zones), its animators and the initial
+ * framing. Keys 0..3 frame world, Portfolio, Resume and Blog; 4 the 16:9
+ * cover; 5 rotates the focus (veil) among none, Portfolio, Resume and Blog;
+ * 6 rotates the bloom among off, on and fallback (`?bloom=on|off|fallback` forces it on load; with no parameter it measures and decides by itself).
+ * `?speed=` scales the animators' clock (up to 100) and `?speed=0` freezes it.
  */
 export function bootWorldPage(zones: readonly WorldZone[] | undefined, frame: Frame): void {
   const host = document.getElementById("lab-host") as HTMLDivElement;
@@ -56,11 +56,11 @@ export function bootWorldPage(zones: readonly WorldZone[] | undefined, frame: Fr
     const t0 = performance.now();
     const stage = buildStage(scene, animators);
     app.stage.addChild(stage.container);
-    if (log) console.info(`[lab] primer dibujo: ${(performance.now() - t0).toFixed(1)} ms, ${stage.staticCount} polígonos estáticos`);
+    if (log) console.info(`[lab] first draw: ${(performance.now() - t0).toFixed(1)} ms, ${stage.staticCount} static polygons`);
 
     let current = frame;
     const fit = (): void => {
-      // cover toca el borde del sangrado en sus cuatro esquinas: con margen se asoma el cielo justo ahí.
+      // cover touches the bleed edge at its four corners: with a margin the sky peeks through right there.
       const items = current === "cover" ? coverFrame(16 / 9) : zoneFrame(current);
       const f = fitTransform(items, host.clientWidth, host.clientHeight, current === "cover" ? 0 : undefined);
       stage.container.position.set(f.x, f.y);
@@ -77,10 +77,10 @@ export function bootWorldPage(zones: readonly WorldZone[] | undefined, frame: Fr
       const z = KEY_ZONE[e.key];
       if (z) { current = z; fit(); }
       if (e.key === "5") { focusIdx = (focusIdx + 1) % focusCycle.length; stage.setFocus(focusCycle[focusIdx]!); }
-      if (e.key === "6") { stage.setBloom(nextBloomMode(stage.bloom)); if (log) console.info(`[lab] bloom a mano: ${stage.bloom}`); }
+      if (e.key === "6") { stage.setBloom(nextBloomMode(stage.bloom)); if (log) console.info(`[lab] bloom by hand: ${stage.bloom}`); }
     });
 
-    // ?speed=0.1 ralentiza el reloj de los animadores (revisión de materiales en cámara lenta) y ?speed=0 congela el frame; solo el laboratorio.
+    // ?speed=0.1 slows the animators' clock (material review in slow motion) and ?speed=0 freezes the frame; lab only.
     const speed = speedFromSearch(location.search);
     let worst = 0, since = 0;
     app.ticker.add((ticker) => {
@@ -91,7 +91,7 @@ export function bootWorldPage(zones: readonly WorldZone[] | undefined, frame: Fr
       if (log) {
         worst = Math.max(worst, dt);
         since += ticker.deltaMS;
-        if (since > 5000) { console.info(`[lab] peor redibujo en 5 s: ${worst.toFixed(2)} ms`); worst = 0; since = 0; }
+        if (since > 5000) { console.info(`[lab] worst redraw in 5 s: ${worst.toFixed(2)} ms`); worst = 0; since = 0; }
       }
     });
   }

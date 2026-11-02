@@ -20,6 +20,8 @@ const STEMS = new Set(("barrio barrios costanera escuela casa casas fila filas a
 
 /** Content JSON keys (decision 2a): the TS fields that mirror `content/*.json`. */
 const CONTENT_KEYS = /\b(titulo|subtitulo|descripcion|nombre|proyectos|articulos|secciones)\b/g;
+/** The ids of the storybook exhibits (the URL hash), as whole tokens; `tren.lights` is the id of the train animator's light layer. */
+const EXHIBIT_IDS = /(?<![\w.-])(planta|tanque-agua|chimeneas|subestacion|playa-camiones|playa-vias|excavadora|gradas|darsena|grua-portico|calle-faroles|naves|punta-norte|estacion|paso-a-nivel|grua-torre|farol|tren(\.lights)?|central-termica|tanques|silos|alta-tension|playa-contenedores|noria|montana-rusa|torre-caida|carrusel|arcade|autitos-chocadores|muelle|plaza|torre|puente|malecon|manzana-derrumbada|manzana-distrito|obra|punta-sur|campus|selva|mastil|arena|auditorio|torres|monoblock|casas|escuela|club|plaza-barrio|costanera|barrio|faro|casa-farero|boyas|pecio|viga|carguero|remolcador|convoy|lancha)(?![\w.-])/g;
 /** Strings shown to the visitor or kept as data. */
 const ALLOW: Record<string, RegExp[]> = {
   "*": [/Nicolás Riccomini/g, /\[mapa\]/g],
@@ -39,6 +41,8 @@ const ALLOW: Record<string, RegExp[]> = {
   "src/style.css": [/\.(externo|proyectos|articulos)\b/g],
   // exhibit ids are the storybook URL hash, cited by the old specs (decision 2b)
   "src/lab/exhibits.ts": [/\bid: "[a-z0-9-]+"/g],
+  // the test names the exhibits by their (Spanish) ids and reads the animator layer `tren.lights`; only the ids of the catalog are stripped, as whole tokens
+  "src/lab/exhibits.test.ts": [EXHIBIT_IDS],
   // `sin` is the trig function in two geometry comments (it is also the Spanish word for "without")
   "src/iso/solids.ts": [/\bsin(?= φ|\(π\))/g],
   // `"se"` is the southeast corner id of the chamfer recipe (it collides with the Spanish word "se"); the guard sees string text without its quotes
@@ -71,6 +75,24 @@ const ALLOW: Record<string, RegExp[]> = {
     /Ángulo|Cierre y medición|mayoría|Desvíos|Puerto de salida|Desvío posterior|sin fondeadero/g,
     /inventario-después|Inventario después|API de|Desde #87 no hay fondeadero ni barcos fondeados|Un barco fondeado/g,
     /\b(cargo|tug|barge|faro)-(antes|despues)\b|cover-ida-vuelta/g,
+  ],
+  // proper nouns: the Fábrica de Luz is the real power station the factory models (decision 2c)
+  "README.md": [/Fábrica de Luz/g],
+  // the anchor of a link into an old Spanish spec, whose heading stays in Spanish (decision 3)
+  "CLAUDE.md": [/#método-del-time-lapse/g],
+  // the docs test pins prose of the old Spanish specs in `docs/superpowers/specs/`, which stay untouched (decision 3): each entry is a
+  // literal of one of those specs (status line, headings, deviation notes, table rows, log text, exhibit names) or an exhibit id
+  "src/lab/docs.test.ts": [
+    /casas con techo de teja|plaza de barrio|barrio costero|estación|paso a nivel|peor redibujo( en 5 s)?/g,
+    EXHIBIT_IDS,
+    /\*\*Estado:\*\*|implementad|sin implementar|pendiente|listo para agente/g,
+    /Desvíos( y medición)?|Reglas de modelado|## 2\. Decisiones|\| Tema \| Decisión \|/g,
+    /\*Desvío[^"*]*\*?/g,
+    /\| (Resume: tecnológico|Portfolio: astillero) \|/g,
+    // old asset names of those specs: `<view>-antes`, `<view>-despues`, and their folders
+    /[\w-]*-(antes|despues)\b|assets\/[\w.-]*(fabrica|barrio|estacion)[\w.-]*\//g,
+    // the old spec mundo-3
+    /\bmundo-3\b/g,
   ],
   "src/scenes/world-baseline.test.ts": [/"?[a-z-]+"?: "[0-9a-f]{8}\/[0-9a-f]{8}"/g],
 };
