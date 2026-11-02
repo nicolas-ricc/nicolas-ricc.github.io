@@ -254,7 +254,7 @@ describe("lancha de la feria", () => {
 describe("mar, haz y boyas", () => {
   it("el haz da una vuelta cada 8 s y con reduced-motion apunta al este", () => {
     const { a } = setup();
-    const angle = (acc: ReturnType<typeof a.beam>) => { const p = acc[0]!; if (p.kind !== "poly") throw new Error(); const apex = p.pts[0]!, tip = p.pts[1]!; return Math.atan2(tip.y - apex.y, tip.x - apex.x); };
+    const angle = (acc: ReturnType<typeof a.beam>) => { const p = acc[0]!; if (p.kind !== "poly") throw new Error("se esperaba una cuña poly"); const apex = p.pts[0]!, tip = p.pts[1]!; return Math.atan2(tip.y - apex.y, tip.x - apex.x); };
     const a0 = angle(a.beam());
     a.tick(BEAM_PERIOD_MS / 4);
     expect(angle(a.beam()) - a0).toBeCloseTo(Math.PI / 2, 1);
@@ -349,7 +349,7 @@ describe("haz: un solo ángulo por frame (#66)", () => {
     const { a } = setup();
     // Dirección como vector unitario y no como atan2: en a = π la y del punto medio es ~0 y el signo puede saltar entre +π y −π.
     const axis = (x: Accent) => {
-      if (x.kind !== "poly") throw new Error();
+      if (x.kind !== "poly") throw new Error("se esperaba una cuña poly");
       expect(x.pts).toHaveLength(3);
       const o = x.pts[0]!, p = x.pts[1]!, q = x.pts[2]!;
       const mx = (p.x + q.x) / 2 - o.x, my = (p.y + q.y) / 2 - o.y, m = Math.hypot(mx, my);
@@ -364,5 +364,22 @@ describe("haz: un solo ángulo por frame (#66)", () => {
       expect([outer!.alpha, inner!.alpha]).toEqual([0.5, 0.6]);
       a.tick(BEAM_PERIOD_MS / 4);
     }
+  });
+});
+
+describe("haz: vértice propio (#149)", () => {
+  it("cada cuña lleva su propia copia de la linterna", () => {
+    const { w, a } = setup();
+    const lantern = w.sea!.lantern, before = { ...lantern };
+    const apex = (x: Accent) => { if (x.kind !== "poly") throw new Error("se esperaba una cuña poly"); return x.pts[0]!; };
+    const beam = a.beam();
+    expect(beam).toHaveLength(2);
+    const [o0, o1] = beam.map(apex);
+    for (const o of [o0, o1]) { expect(o).toEqual(lantern); expect(o).not.toBe(lantern); }
+    expect(o0).not.toBe(o1);
+    o0!.x += 5;
+    expect(lantern).toEqual(before);
+    a.tick(100);
+    expect(apex(a.beam()[0]!)).toEqual(before);
   });
 });
