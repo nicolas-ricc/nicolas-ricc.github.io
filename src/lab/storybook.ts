@@ -7,10 +7,10 @@ import { attachBloom, type BloomProbe } from "../world/bloom-runtime";
 import { type Box, boxFrame, fitTransform } from "../world/frame";
 import { type BloomMode, buildStage, type Stage, type StageLayer } from "../world/stage";
 import { runBoot } from "./boot";
-import { cropAnimators, cropScene, pieceScene, type Readout, readout, solidsBox } from "./crop";
-import { EXHIBITS, type Exhibit, GROUPS, outOfView, pickExhibit, stepExhibit } from "./exhibits";
+import { cropAnimators, cropScene, pieceScene, readout, solidsBox } from "./crop";
+import { EXHIBITS, type Exhibit, GROUPS, pickExhibit, stepExhibit } from "./exhibits";
 import { bloomFromSearch, nextBloomMode, speedFromSearch } from "./page";
-import { mountStorybook } from "./storybook-ui";
+import { buildIndex, markCurrent, mountStorybook, renderReadout } from "./storybook-ui";
 
 /**
  * Storybook de estructuras: un exhibit a la vez, recortado del mundo por su
@@ -25,42 +25,7 @@ mountStorybook(document, ({ host, nav, panel }) => {
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const { scene, animators } = assembleWorld(undefined, { reducedMotion });
 
-  for (const g of GROUPS) {
-    const h = document.createElement("h2");
-    h.textContent = g.title;
-    const ul = document.createElement("ul");
-    for (const e of EXHIBITS.filter((x) => x.group === g.id)) {
-      const a = document.createElement("a");
-      a.href = `#${e.id}`; a.textContent = e.title; a.dataset.id = e.id;
-      const li = document.createElement("li"); li.appendChild(a); ul.appendChild(li);
-    }
-    nav.append(h, ul);
-  }
-
-  const n1 = (x: number): string => x.toFixed(1);
-
-  function renderReadout(r: Readout): void {
-    const b = r.box;
-    const rows: [string, string][] = [
-      ["Sólidos", String(r.solids)],
-      ["Suelo", String(r.ground)],
-      ["Caras", String(r.faces)],
-      ["Acentos", String(r.accents)],
-      ["Caja x", b ? `${n1(b.min.x)} … ${n1(b.max.x)}` : "—"],
-      ["Caja y", b ? `${n1(b.min.y)} … ${n1(b.max.y)}` : "—"],
-      ["Caja z", b ? `${n1(b.min.z)} … ${n1(b.max.z)}` : "—"],
-      ["Ancho × fondo × alto", b ? `${n1(b.w)} × ${n1(b.d)} × ${n1(b.h)} u` : "—"],
-      ["Materiales", r.materials.join(", ") || "—"],
-      ["Colores de acento", r.accentColors.join(", ") || "—"],
-    ];
-    const dl = document.createElement("dl");
-    for (const [k, v] of rows) {
-      const dt = document.createElement("dt"), dd = document.createElement("dd");
-      dt.textContent = k; dd.textContent = v;
-      dl.append(dt, dd);
-    }
-    panel.replaceChildren(dl);
-  }
+  buildIndex(nav, GROUPS, EXHIBITS);
 
   const LAYER_KEY: Record<string, StageLayer> = { g: "ground", h: "shadow", a: "accents" };
 
@@ -100,17 +65,11 @@ mountStorybook(document, ({ host, nav, panel }) => {
       app.stage.addChild(stage.container);
       for (const l of Object.keys(layers) as StageLayer[]) stage.setLayer(l, layers[l]);
       if (log) console.info(`[storybook] ${e.id}: primer dibujo ${(performance.now() - t0).toFixed(1)} ms, ${stage.staticCount} polígonos estáticos`);
-      renderReadout(readout(...src));
+      renderReadout(panel, readout(...src));
       stage.setBloom(mode);
       current = e;
       fit();
-      for (const a of nav.querySelectorAll<HTMLAnchorElement>("a")) {
-        if (a.dataset.id === e.id) {
-          a.setAttribute("aria-current", "page");
-          // el índice no entra entero en la columna: centrada, con vecinas legibles; si ya se ve, quieta
-          if (outOfView(a.getBoundingClientRect(), nav.getBoundingClientRect())) a.scrollIntoView({ block: "center" });
-        } else a.removeAttribute("aria-current");
-      }
+      markCurrent(nav, e.id);
     };
     const fromHash = (): void => {
       const e = pickExhibit(location.hash);

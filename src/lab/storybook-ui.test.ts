@@ -136,17 +136,17 @@ describe("panel de lectura del storybook (#187)", () => {
   const rows = (panel: HTMLElement): [string | null, string | null][] =>
     [...panel.querySelectorAll("dt")].map((dt) => [dt.textContent, dt.nextElementSibling?.textContent ?? null]);
 
-  it("una fila por dato, con la caja a un decimal", () => {
+  it("una fila por dato, el suelo justo después de los sólidos (#185) y la caja a un decimal", () => {
     const panel = document.createElement("aside");
     const r: Readout = {
-      solids: 5, faces: 12, accents: 1,
+      solids: 5, ground: 2, faces: 12, accents: 1,
       box: { min: { x: 0, y: 0, z: 0 }, max: { x: 2, y: 3, z: 4 }, w: 2, d: 3, h: 4 },
       materials: ["slab", "concrete"], accentColors: ["amber"],
     };
     renderReadout(panel, r);
     expect(panel.querySelectorAll("dl")).toHaveLength(1);
     expect(rows(panel)).toEqual([
-      ["Sólidos", "5"], ["Caras", "12"], ["Acentos", "1"],
+      ["Sólidos", "5"], ["Suelo", "2"], ["Caras", "12"], ["Acentos", "1"],
       ["Caja x", "0.0 … 2.0"], ["Caja y", "0.0 … 3.0"], ["Caja z", "0.0 … 4.0"],
       ["Ancho × fondo × alto", "2.0 × 3.0 × 4.0 u"],
       ["Materiales", "slab, concrete"], ["Colores de acento", "amber"],
@@ -154,10 +154,10 @@ describe("panel de lectura del storybook (#187)", () => {
   });
   it("sin caja ni materiales muestra — y una segunda llamada reemplaza el dl", () => {
     const panel = document.createElement("aside");
-    const empty: Readout = { solids: 0, faces: 0, accents: 0, box: null, materials: [], accentColors: [] };
+    const empty: Readout = { solids: 0, ground: 0, faces: 0, accents: 0, box: null, materials: [], accentColors: [] };
     renderReadout(panel, empty);
     renderReadout(panel, empty);
     expect(panel.querySelectorAll("dl")).toHaveLength(1);
-    expect(rows(panel).slice(3).map(([, v]) => v)).toEqual(["—", "—", "—", "—", "—", "—"]);
+    expect(rows(panel).slice(4).map(([, v]) => v)).toEqual(["—", "—", "—", "—", "—", "—"]);
   });
 });
