@@ -25,10 +25,11 @@
 1. **Key lists, from the listeners.**
    - World pages (`world`, `blog`, `resume`, `portfolio`) all boot through `bootWorldPage` (`src/lab/page.ts`), whose listener handles `KEY_ZONE` keys `0`..`4`, `5` (focus/veil) and `6` (bloom): `aria-keyshortcuts="0 1 2 3 4 5 6"`. This holds for `portfolio.html` too, even though its `aria-label` names no keys, and for `world`/`resume`, whose labels say `0..3`: the attribute lists what the code handles; the label copy is not touched.
    - Storybook (`src/lab/storybook.ts`): `NEXT` = `ArrowRight ArrowDown j`, `PREV` = `ArrowLeft ArrowUp k`, `LAYER_KEY` = `g h a`, and `6`: `aria-keyshortcuts="ArrowRight ArrowDown ArrowLeft ArrowUp j k g h a 6"`.
-2. **DOM library: `happy-dom`** (`npm i -D happy-dom@^21`), the lighter of the two environments Vitest supports out of the box. Only the new test file opts in; the rest of the suite stays in `node`.
+2. **DOM library: `happy-dom`** (`npm i -D happy-dom@^21`), one of the two DOM environments Vitest supports by name. Only the new test file opts in; the rest of the suite stays in `node`.
 3. **The test mounts only the host.** It parses the page with `DOMParser`, imports `#lab-host` into `document.body` (so no `<script type="module">` runs) and checks `getAttribute("tabindex") === "0"`, `tabIndex === 0`, `focus()` making it `document.activeElement`, and the exact `aria-keyshortcuts` string.
 4. **Listeners on `window` are pinned** by a source test in the same file: both scripts contain `window.addEventListener("keydown"` and neither contains `host.addEventListener(`.
-5. **No focus-ring styling.** The browser's default focus indicator is kept: hiding it would hurt keyboard users, and the issue does not ask for a style.
+5. **No focus-ring styling.** The owner's decision does not cover CSS. The default outline of a full-viewport host is likely clipped at the viewport edge; that is follow-up #303, not this issue.
+6. **Page inventory pinned.** The test asserts the `.html` files in `lab/` are exactly the keys of `SHORTCUTS`, so a sixth lab page without the attributes fails the suite.
 
 ## Review Focus
 
@@ -73,19 +74,21 @@ describe("lab host keyboard access (#167)", () => {
       expect(mountHost(page).getAttribute("aria-keyshortcuts")).toBe(keys);
     });
   }
+  it("covers every page in lab/", () => {
+    expect(readdirSync(`${ROOT}lab`).filter((f) => f.endsWith(".html")).map((f) => f.slice(0, -5)).sort()).toEqual(Object.keys(SHORTCUTS).sort());
+  });
   it("keydown listeners stay on window", () => {
     for (const f of ["src/lab/page.ts", "src/lab/storybook.ts"]) {
-      const src = readFileSync(`${ROOT}${f}`, "utf8");
-      expect(src, f).toContain('window.addEventListener("keydown"');
-      expect(src, f).not.toContain("host.addEventListener(");
+      const targets = [...readFileSync(`${ROOT}${f}`, "utf8").matchAll(/(\w+)\.addEventListener\(\s*["']key\w+["']/g)].map((m) => m[1]);
+      expect(targets, f).toEqual(["window"]);
     }
   });
 });
 ```
 
-`mountHost` reads `lab/<page>.html`, parses it with `new DOMParser().parseFromString(html, "text/html")`, and `document.body.replaceChildren(document.importNode(host, true))`, returning the imported node. (Writing the storybook entry now is fine: its two cases fail until Task 2.)
+`ROOT` is `new URL("../../", import.meta.url).pathname`, as in `src/lab/host.test.ts`. `mountHost(page: string): HTMLElement` reads `lab/<page>.html`, parses it with `new DOMParser().parseFromString(html, "text/html")`, and `document.body.replaceChildren(document.importNode(host, true))`, returning the imported node; a missing host throws (`Error(`lab/${page}.html has no #lab-host`)`), which also narrows the `getElementById` result under `strict`. (Writing the storybook entry now is fine: its two cases fail until Task 2.)
 
-- [ ] **Step 3: Run to verify it fails** — `npx vitest run src/lab/host-keyboard.test.ts`. Expected: the world-page cases FAIL (`tabindex` is `null`), the window-listener case PASSES.
+- [ ] **Step 3: Run to verify it fails** — `npx vitest run src/lab/host-keyboard.test.ts`. Expected: the tabindex and shortcut cases FAIL for every page; the inventory and window-listener cases PASS.
 - [ ] **Step 4: Implement** — in the four world HTML files, `<div id="lab-host" role="application"` becomes `<div id="lab-host" role="application" tabindex="0" aria-keyshortcuts="0 1 2 3 4 5 6"`, rest of the tag unchanged.
 - [ ] **Step 5: Run to verify it passes** — `npx vitest run src/lab/host-keyboard.test.ts src/lab/host.test.ts src/lab/page.test.ts`. Expected: everything PASSES except the two storybook cases.
 - [ ] **Step 6: Commit** — `git add lab/world.html lab/blog.html lab/resume.html lab/portfolio.html && git commit -m "fix(#167): focusable lab host with aria-keyshortcuts on the world pages"`.
@@ -102,3 +105,20 @@ describe("lab host keyboard access (#167)", () => {
 - [ ] **Step 2: Implement** — `tabindex="0" aria-keyshortcuts="ArrowRight ArrowDown ArrowLeft ArrowUp j k g h a 6"` after `role="application"` on the storybook host.
 - [ ] **Step 3: Run the full suite and typecheck** — `npm test && npm run typecheck`. Expected: all PASS.
 - [ ] **Step 4: Commit** — `git add lab/storybook.html && git commit -m "fix(#167): focusable storybook host with aria-keyshortcuts"`.
+
+## Assumptions
+
+- **happy-dom over jsdom.** Either satisfies "a DOM test"; happy-dom 21 was checked to reflect `tabIndex` (`0` with `tabindex="0"`, `-1` without), `DOMParser` + `importNode` + `focus()` set `document.activeElement`, and removing the node resets it to `<body>`. happy-dom also lets `focus()` land on a `<div>` *without* `tabindex`, so the discriminating assertions are `getAttribute("tabindex")` and `tabIndex`; the `activeElement` check only proves the mounted node is live.
+- **A second test file** instead of extending `src/lab/host.test.ts`: that file runs in `node`; the owner asked for a DOM test, and opting a single new file into `happy-dom` keeps the rest of the suite in `node`.
+- **`aria-keyshortcuts` lists every handled key**, even where a key frames a region that a page does not draw (e.g. `2`/`3` on `portfolio`): `zoneFrame` frames fixed world boxes (`src/world/frame.ts:24-32`) and the listener (`src/lab/page.ts:76-80`) runs them on every page, ungated (only the log is behind `import.meta.env.DEV`).
+- **Focus after a click.** No lab or world code installs pointer handlers or calls `preventDefault` on pointer/mouse events (grep of `src/lab`, `src/world`); Pixi's `EventSystem._onPointerDown` only calls `preventDefault` on *normalized* (non-PointerEvent) input. The browser script checks it.
+- **Browser evidence** for Review Focus 2 and 5 comes from the pipeline's stage 4, which runs `.scratch/evals-167.md` (untracked by design) against the dev server; its result goes into the PR description.
+- **`fix` commit type**, as #103's a11y change (`e2fe6b6 fix(#103): lab host role …`): the issue reports a defect ("no es enfocable").
+
+## Grilling
+
+- Rounds: 2. Questions: 14 + 16 = 30.
+- Sources: CODE 21 (`src/lab/page.ts:74-80`, `src/lab/storybook.ts:128-135`, `src/lab/host.test.ts:9-14`, `src/lab/page.test.ts:36`, `src/world/frame.ts:24-32`, `tsconfig.json`, `ls lab/`, `grep keydown src` → only `page.ts:76`, `storybook.ts:129` and the site's `src/main.ts:140`, which no lab page loads, `node_modules/vitest/package.json` peer `happy-dom: "*"`, Pixi `EventSystem._onPointerDown`, `git log`); ISSUE 3 (owner's decision comment); DOC 1 (`.factory/config.toml` commands); NO SOURCE 5.
+- Technical assumptions: see `## Assumptions` (happy-dom, separate test file, every handled key listed, focus after click, browser evidence in stage 4, `fix` type, `mountHost` throws on a missing host).
+- Out of scope, issues opened: #302 (the `aria-label` copy does not match the handled keys), #303 (focus ring of the full-viewport host clipped at the viewport edge). Round 1 had added a CSS focus-ring change; round 2 found no source for it, so it was removed from the plan and became #303.
+- No spec ambiguity: status `ok`.
