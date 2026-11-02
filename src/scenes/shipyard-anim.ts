@@ -8,7 +8,6 @@ export interface ShipyardAnim {
   tick(dtMs: number): AnimChanges;
   sparks(): Accent[];
   trolleyLamp(): Accent;
-  /** Eventos de soldadura arrancados (cada uno con sus tres cuadros). */
   fired(): { sparks: number };
 }
 
