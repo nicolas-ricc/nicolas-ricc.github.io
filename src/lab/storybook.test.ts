@@ -11,11 +11,10 @@ describe("ciclo de vida de los stages del storybook (#102)", () => {
   });
 });
 
-describe("la entrada actual del índice (#117)", () => {
-  it("se centra solo si no se ve entera", () => {
-    expect(src).not.toContain('block: "nearest"');
-    expect(src).toContain("outOfView(a.getBoundingClientRect(), nav.getBoundingClientRect())");
-    expect(src).toContain('a.scrollIntoView({ block: "center" })');
+describe("elementos de la página (#187)", () => {
+  it("no los lee con getElementById: los resuelve mountStorybook", () => {
+    expect(src).not.toContain("getElementById(");
+    expect(src).toContain("mountStorybook(document,");
   });
 });
 
