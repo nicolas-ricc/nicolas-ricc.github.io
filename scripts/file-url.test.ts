@@ -9,7 +9,7 @@ function testSources(dir: string, out: string[] = []): string[] {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, e.name);
     if (e.isDirectory()) testSources(full, out);
-    else if (e.name.endsWith(".ts")) out.push(full);
+    else if (/\.[cm]?[jt]sx?$/.test(e.name)) out.push(full);
   }
   return out;
 }
