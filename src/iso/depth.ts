@@ -96,8 +96,8 @@ const depthKey = (b: Bounds, vx?: number, vy?: number): number =>
  *    normalised by the hull half-extent) gives a normal; after if that normal points toward the view, before if away,
  *    0 if the view is parallel to the face or the piece is centred.
  */
-function hullSide(hull: Solid, other: Solid, hb: Bounds, ob: Bounds, ring: number[] | undefined, vx: number, vy: number): number {
-  if (hull.kind !== "hull" || other.kind === "hull" || !ring) return 0;
+function hullSide(hull: Solid, other: Solid, hb: Bounds, ob: Bounds, ring: number[], vx: number, vy: number): number {
+  if (hull.kind !== "hull" || other.kind === "hull") return 0;
   if (!(ob.min.x < hb.max.x && hb.min.x < ob.max.x && ob.min.y < hb.max.y && hb.min.y < ob.max.y)) return 0;
   const deck = hull.at.z + hull.h;
   if (ob.min.z >= deck - EPS) return 1;
@@ -145,7 +145,7 @@ export function sortByDepth(solids: Solid[], heading = 0): Solid[] {
   const sides = solids.map((s, i) => {
     let m: Map<number, number> | null = null; // casi ningún sólido toca un casco: sin mapa no se aloca nada
     for (const k of hulls) {
-      const side = hullSide(solids[k]!, s, bs[k]!, bs[i]!, rings.get(k), vx, vy);
+      const side = hullSide(solids[k]!, s, bs[k]!, bs[i]!, rings.get(k)!, vx, vy);
       if (side !== 0) (m ??= new Map()).set(k, side);
     }
     return m;

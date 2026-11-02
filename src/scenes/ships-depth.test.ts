@@ -15,7 +15,7 @@ const toLocal = (x: number, y: number, heading: number): [number, number] => {
   return [dx * c + dy * sn, -dx * sn + dy * c];
 };
 
-/** Caja del sólido en el marco del barco: vértices trasladados a la popa y girados −heading. */
+/** Box of the solid in the ship frame (vertices through `toLocal`). */
 function localBox(s: Solid, heading: number) {
   const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
   for (const f of tessellateAll(s)) for (const p of f.pts) {
