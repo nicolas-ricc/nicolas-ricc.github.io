@@ -14,7 +14,7 @@
 
 - Owner's decision: "`palette-guard` también recorre `src/style.css` (`offPalette`), con una allowlist explícita y comentada de los grises de la UI (`#e6edf3`, `#9aa7b2`, `#22303c`, …); cualquier otro hex fuera de la paleta falla."
 - "Código, comentarios y mensajes de test nuevos, en inglés (ver #194)". The existing Spanish test names stay as they are: translating them is #194's job.
-- `npm test` and `npm run typecheck` are green. Commits are `test(#203): …` and `feat(#203): …`.
+- `npm test` and `npm run typecheck` are green. Commits: Steps 1–2 land as `test(#203): evals` (the pipeline's evals stage, red); Steps 3–8 as `feat(#203): …`, following `feat(#112): palette guard covers lab/*.html` (723ce0e).
 
 ## Data
 
@@ -92,7 +92,7 @@ describe("palette guard on src/style.css", () => {
   });
 
   it("allowlist entries are off-palette", () => {
-    for (const hex of STYLE_CSS_ALLOWLIST) expect(offPalette(hex)).toEqual([hex]);
+    expect([...STYLE_CSS_ALLOWLIST].filter((hex) => offPalette(hex).length === 0)).toEqual([]);
   });
 
   it("allowlist entries are still used in src/style.css", () => {
@@ -116,13 +116,28 @@ Expected: FAIL. The helper test fails at its first assertion with `["#e6edf3", "
 Run: `npx vitest run src/map/palette-guard.test.ts src/map/background.test.ts`
 Expected: PASS. `background.test.ts` still finds `--bg: #100e19`.
 
-- [ ] **Step 6: Check the guard by hand.** Temporarily change `#22303c` in `style.css` to `#22303d`, then run Step 5's command. Expected: FAIL with `["#22303d"]` from the file test, and the "still used" test reports `["#22303c"]`. Revert the change.
+- [ ] **Step 6: Check the guard by hand.** Temporarily change `#22303c` in `style.css` to `#22303d`, then run Step 5's command. Expected: FAIL with `["#22303d"]` from the file test, and the "still used" test reports `["#22303c"]`. Revert the change, then confirm the revert: `grep -c 22303d src/style.css` prints `0` and `git diff src/style.css` shows only the Step 4 comment.
 
 - [ ] **Step 7: Full suite and typecheck.** Run: `npm test && npm run typecheck`. Expected: all green.
 
-- [ ] **Step 8: Commit.**
+- [ ] **Step 8: Commit** (the tests of Steps 1–2 are already committed as `test(#203): evals`).
 
 ```bash
 git add src/map/palette-guard.test.ts src/style.css
 git commit -m "feat(#203): palette guard scans src/style.css with a UI colour allowlist"
 ```
+
+## Assumptions
+
+Decided in the grilling (no written source; any option satisfies the issue):
+
+- **`#000` and `#8ec07c` are allowlisted, not recoloured.** The owner's list of greys ends in "…" and #177, which #203 absorbs, already listed `#000` among the off-palette values to handle. `#8ec07c` (added in 3c26e1c, "Blog en verde", later swapped to Resume) is documented in `style.css` as the blog's accent green. Allowlisting keeps the site pixel-identical. Rejected: recolouring the Resume label to a palette value (visible change nobody asked for) or adding it to `ISO_COLORS` (makes it drawable by scenes).
+- **Hex only.** The owner's comment scopes the guard to `offPalette`, which only reads hex literals; `rgb()`, `hsl()` and named colours stay outside, as in the lab guard (#112, Decision 3). Rejected: parsing every CSS colour notation.
+- **Hex-only id selectors stay a known false positive**, as in the lab guard (#112, Decision 2). None exists today: the file's hex tokens, in order, are `#100e19 #e6edf3 #9aa7b2 #22303c #7cf5ff #ffc457 #5a3d14 #000 #ffc457 #8ec07c #7cf5ff #ffc457 #000 #000`.
+- **The allowlist tests always assert once** (a filtered array compared to `[]`), so an empty allowlist does not make them vacuous. `vitest.config.ts` has no `requireAssertions`.
+- **Coupling to the palette is intended** (Decision 3): if `ISO_COLORS` gains one of the greys, the "off-palette" test fails and the entry must be removed from the allowlist.
+- **The pointer comment in `style.css`** is a comment only; it changes no rule. Its text has no hex literal, and `background.test.ts` matches `/--bg:\s*(#[0-9a-fA-F]{6})/`, so it keeps finding `--bg`.
+
+## Grilling
+
+One round, 16 questions (griller model: fable). Sources: ISSUE 4, CODE 9, DOC 0, NO SOURCE 3 (all technical assumptions, listed above). No spec ambiguities, no follow-up issues. The plan changed in detail only (allowlist test form, revert check, commit split), so no second round.
