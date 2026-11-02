@@ -133,7 +133,7 @@ describe("boiler house box (#213)", () => {
 });
 
 describe("substation box (#244)", () => {
-  it("follows the fence formula: {51, −5, 98, 12} h 13, without crossing calle-faroles (x0 99) or dropping to the wagons (y ≤ −6.8)", () => {
+  it("follows the fence formula: {51, −5, 98, 12} h 13, without crossing `calle-faroles` (x0 99) or dropping to the wagons (y ≤ −6.8)", () => {
     const e = regions.find((x) => x.id === "subestacion")!, street = regions.find((x) => x.id === "calle-faroles")!;
     expect(e.box).toEqual({ x0: 51, y0: -5, x1: 98, y1: 12 });
     expect(e.h).toBe(13);
@@ -168,9 +168,9 @@ const pieces = EXHIBITS.flatMap((e) => (e.kind === "piece" ? [e] : []));
 describe("piece exhibits", () => {
   it("the eleven pieces, each in its zone", () => {
     expect(Object.fromEntries(pieces.map((e) => [e.id, e.zone]))).toEqual({
-      "tanque-agua": "portfolio", "grua-torre": "portfolio", farol: "portfolio", tren: "portfolio",
-      campus: "cv", selva: "cv",
-      viga: "blog", carguero: "blog", remolcador: "blog", convoy: "blog", lancha: "blog",
+      "tanque-agua": "portfolio", "grua-torre": "portfolio", "farol": "portfolio", "tren": "portfolio",
+      "campus": "cv", "selva": "cv",
+      "viga": "blog", "carguero": "blog", "remolcador": "blog", "convoy": "blog", "lancha": "blog",
     });
   });
   it("the beam is a single-solid beam piece, before the freighter", () => {

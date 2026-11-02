@@ -30,7 +30,7 @@ describe("agent notes: headless warning (#99)", () => {
     expect(claude).toMatch(/~?2 fps/);
     expect(claude).toMatch(/deltaMS/);
     expect(claude).toMatch(/100 ms/);
-    expect(claude).toMatch(/0.2·N/);
+    expect(claude).toMatch(/0\.2·N/);
   });
   it("CLAUDE.md links the time-lapse method and the section exists", () => {
     expect(claude).toContain(`(${METHOD}#método-del-time-lapse)`);

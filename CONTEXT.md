@@ -7,7 +7,7 @@ The site is an isometric night map in three zones (Portfolio, Resume, Blog). The
 Code: `src/world/veil.ts` (`VEIL_ALPHA`, `ACCENT_DIM`, `focusAlphas`, `veilPolygons`, `accentsByZone`), `src/world/stage.ts` (`setFocus`).
 
 ### Zone
-(Zona.) One of the three clickable regions of the world, `"portfolio"`, `"cv"` (Resume) or `"blog"`; the ids are also the routes. A point belongs to a zone by geography, not by a straight split: `worldZoneAt(x, y)` returns Portfolio for the headland, the reef and its shore (the lighthouse caps the shipyard), Resume for the seawall shore, and Blog only for the open sea. The same function classifies the veil cells, the static lights and the hit test.
+(Zona.) One of the three clickable regions of the world, `"portfolio"`, `"cv"` (Resume) or `"blog"`; the ids are also the routes. A point belongs to a zone by geography, not by a straight split: `worldZoneAt(x, y)` returns Portfolio for the headland, the reef and its shore (the lighthouse caps the shipyard), Resume for the seawall shore, and Blog only for the open sea. The main split is `ZONE_SPLIT_X` (344) plus `shoreWidth(y)`: land west of it is Portfolio for y < `ZONE_SPLIT_Y` (146) and Resume for y >= 146; east of it is Blog. The same function classifies the veil cells, the static lights and the hit test.
 Code: `src/map/geo.ts` (`WorldZone`, `worldZoneAt`), `src/world/veil.ts` (`WORLD_ZONES`).
 
 ### Accent
@@ -35,7 +35,7 @@ Code: `src/iso/depth.ts` (`sortByDepth`, `hullSide`, `hullOrder`, `farAlong`); `
 Code: `src/iso/depth.ts` (`sortByDepth`, `worldAndFrameBounds`), `src/scenes/ships.ts` (`kit`), `src/scenes/animator.ts` (`AnimLayer.heading`).
 
 ### Lanes
-(Carriles.) The two nearly straight routes the ships follow between the river mouth and the lower-left corner of the cover: the outbound lane `LANE_OUT` starts at the mouth (362, −16), skirts the point on the east and heads south-southwest until it leaves the cover; the return lane `LANE_BACK` enters from the lower left, runs about 42 u east of the outbound lane and ends at the mouth (397, −39). Ships move along them at `LANE_SPEED` (1.2 u/s), fade in and out (`FADE_U`) at the mouth, and cycle out, off camera (`OFF_MS`), back, in port (`PORT_MS`); ship k runs at phase k·T/3 of `CYCLE_MS`. They neither anchor nor turn in place.
+(Carriles.) The two nearly straight routes the ships follow between the river mouth and the lower-left corner of the cover: the outbound lane `LANE_OUT` starts at the mouth (362, −16), skirts the point on the east and heads south-southwest until it leaves the cover; the return lane `LANE_BACK` enters from the lower left, runs about 42 u east of the outbound lane and ends at the mouth (397, −39). Ships move along them at `LANE_SPEED` (1.2 u/s), fade in and out (`FADE_U`, `alphaAt`) at both ends of each lane (the sea end lies in the bleed), and cycle out, off camera (`OFF_MS`), back, in port (`PORT_MS`); ship k runs at phase k·T/3 of `CYCLE_MS`. They neither anchor nor turn in place.
 Code: `src/scenes/sea-anim.ts` (`LANE_OUT`, `LANE_BACK`, `LANE_SPEED`, `shipStateAt`, `CYCLE_MS`); introduced in #87.
 
 ### Exhibit
