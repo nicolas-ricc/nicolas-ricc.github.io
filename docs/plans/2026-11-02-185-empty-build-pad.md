@@ -68,7 +68,10 @@ it("an empty build gets a finite ±3 pad with its top face at z = 0", () => {
   expect([min.z, max.z]).toEqual([-1, 0]);
 });
 it("a build of faceless solids also gets the pad at z = 0", () => {
-  const s = pieceScene((out) => { out.push({ kind: "ground", mat: "concrete", tris: [] }); });
+  const faceless: Solid = { kind: "ground", mat: "concrete", tris: [] };
+  const s = pieceScene((out) => { out.push(faceless); });
+  expect(s.solids).toEqual([faceless]);
+  expect(s.ground).toHaveLength(1);
   const { min, max } = bounds(s.ground[0]!);
   expect([min.x, min.y, max.x, max.y]).toEqual([-3, -3, 3, 3]);
   expect([min.z, max.z]).toEqual([-1, 0]);
@@ -77,8 +80,8 @@ it("a build of faceless solids also gets the pad at z = 0", () => {
 
 - [ ] **Step 2: Run to verify they fail**
 
-Run: `npx vitest run src/lab/crop.test.ts -t "pad"`
-Expected: the two new tests FAIL (z bounds are `±Infinity`/`NaN`); the rest pass.
+Run: `npx vitest run src/lab/crop.test.ts`
+Expected: the two new tests FAIL (z bounds are `±Infinity`/`NaN`); every other test in the file passes.
 
 - [ ] **Step 3: Implement**
 
@@ -163,3 +166,20 @@ git commit -m "fix(#185): readout counts the ground apart from the solids"
 
 - `npm test` and `npm run typecheck` green.
 - Browser (`.scratch/evals-185.md`): `lab/storybook.html?bloom=off#viga` shows "Sólidos" 1 and "Suelo" 1 (before: "Sólidos" 2); `#carguero` shows "Sólidos" 37 and "Suelo" 1 (before: 38). Pixi active, no console errors.
+
+## Assumptions
+
+- **x/y of the empty pad need no guard.** In `pieceScene` (`src/lab/crop.ts`), `r = Math.max(r, -min.x, max.x, -min.y, max.y)` starts at 0; a faceless solid's `bounds` (`src/iso/solids.ts:357-365`, min = +Infinity, max = −Infinity over no points) only feeds `-Infinity` into that `max`, so `r` stays 0. `shadowPolygon` returns `null` for flat solids (`src/iso/light.ts`, `isFlat`), so the shadow loop adds nothing. Only `top` is poisoned. Rejected: guarding x/y too (dead code).
+- **Bottom follows top.** The bottom vertices are built at `top - 1` in `pieceScene`; with `top = 0` the bottom is −1 without a second change.
+- **Count by origin, not by `Solid.kind`.** The owner's comment names the sources ("`scene.solids` más los sólidos de los animadores"), not kinds. No piece exhibit has an animator emitting `kind: "ground"` solids (ship exhibits have no `animate`, `src/lab/exhibits.ts:209-214`), so the browser numbers do not depend on it. Rejected: filtering animator solids by `kind`.
+- **One PR.** Both tasks ship together in this issue's PR; the intermediate state between the two commits never reaches `main`.
+- **Red typecheck only inside the evals commit.** The `test(#185): evals` commit references `r.ground` before it exists; CI (`.github/workflows/deploy.yml`) runs on `pull_request` and `push` to `main`, and the branch is pushed only after implementation. Same practice as #118 and #167.
+- **Only new or rewritten text in English.** The owner's comment: "Código, comentarios y mensajes de test nuevos, en inglés". Untouched Spanish comments and tests in `crop.ts`/`crop.test.ts` stay; the `readout` doc comment is rewritten, so it goes to English.
+- **Before numbers are measured, not recorded in the repo.** `#viga` 2 and `#carguero` 38 were measured on `main` (ba68056) with `readout(pieceScene(e.build, e.pad), [])` and are quoted in the #185 stage-1 comment; the browser script re-reads them live.
+
+## Grilling
+
+- Rounds: 1. Questions: 17.
+- Sources: 14 CODE (`crop.ts` `pieceScene`/`readout`, `solids.ts` `bounds`, `light.ts` `shadowPolygon`, `crop.test.ts` imports and fixtures, `storybook.ts` rows, `storybook.test.ts` `src`, `exhibits.ts`, `deploy.yml`), 2 ISSUE (owner's comment), 1 NO SOURCE → technical assumption (one PR).
+- Plan corrections: the faceless-solid test also asserts `s.solids` and `s.ground.length`; Task 1 Step 2 runs the whole file (`-t "pad"` also matched five existing tests).
+- Issues opened: none.
