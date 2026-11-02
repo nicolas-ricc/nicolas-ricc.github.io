@@ -24,13 +24,24 @@ export function formatBloomVerdict(v: BloomVerdict, budgetMs: number): string {
   return `promedio ${v.avgMs.toFixed(1)} ms en ${v.frames} frames (tick ${v.avgTickMs.toFixed(1)} + render ${v.avgRenderMs.toFixed(1)}), presupuesto ${budgetMs} ms → ${v.mode === "on" ? "activo" : "fallback"}`;
 }
 
-/**
- * Corre `fn` cuando el navegador esté ocioso (a más tardar en 1 s). Sin `requestIdleCallback`, en la tarea
- * siguiente al próximo frame, sin cota de tiempo (una pestaña oculta no da frames): el `setTimeout` deja que ese
- * frame se pinte sin el bloom. Sin rAF, en la próxima tarea.
- */
-export function scheduleIdle(fn: () => void): void {
-  if (typeof requestIdleCallback === "function") requestIdleCallback(fn, { timeout: 1000 });
-  else if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => setTimeout(fn, 0));
-  else setTimeout(fn, 0);
+/** Structural slice of Pixi's `SystemRunner`, so this module stays Pixi-free. */
+export interface RenderRunner {
+  add(listener: { postrender(): void }): unknown;
+  remove(listener: { postrender(): void }): unknown;
+}
+
+/** Runs `fn` in the task after Pixi's first real render: a one-shot `postrender` listener, then `setTimeout(fn, 0)`. */
+export function afterFirstRender(postrender: RenderRunner, fn: () => void): void {
+  let done = false;
+  const once = {
+    postrender() {
+      if (done) return;
+      done = true;
+      // removing inside `emit` skips the next listener and breaks the runner's loop: defer it
+      queueMicrotask(() => postrender.remove(once));
+      // the just-rendered frame is presented without the effect; `fn` runs in the next task
+      setTimeout(fn, 0);
+    },
+  };
+  postrender.add(once);
 }
