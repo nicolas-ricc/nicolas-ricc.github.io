@@ -131,7 +131,7 @@ async function boot(): Promise<void> {
     if (current && (NEXT.has(ev.key) || PREV.has(ev.key))) { ev.preventDefault(); location.hash = stepExhibit(current.id, NEXT.has(ev.key) ? 1 : -1).id; }
     const layer = LAYER_KEY[ev.key];
     if (layer && stage && !ev.repeat) { layers[layer] = !layers[layer]; stage.setLayer(layer, layers[layer]); if (log) console.info(`[storybook] ${layer}: ${layers[layer] ? "visible" : "oculto"}`); }
-    if (ev.key === "6" && stage) { stage.setBloom(nextBloomMode(stage.bloom)); if (log) console.info(`[storybook] bloom: ${stage.bloom}`); }
+    if (ev.key === "6" && stage) { stage.setBloom(nextBloomMode(stage.bloom)); if (log) console.info(`[storybook] bloom a mano: ${stage.bloom}`); }
   });
 
   const speed = speedFromSearch(location.search);
@@ -142,8 +142,10 @@ async function boot(): Promise<void> {
     stage.tick(ticker.deltaMS * speed);
     const dt = performance.now() - t;
     bloom?.tick(dt);
-    worst = Math.max(worst, dt);
-    since += ticker.deltaMS;
-    if (log && since > 5000) { console.info(`[storybook] peor redibujo en 5 s: ${worst.toFixed(2)} ms`); worst = 0; since = 0; }
+    if (log) {
+      worst = Math.max(worst, dt);
+      since += ticker.deltaMS;
+      if (since > 5000) { console.info(`[storybook] peor redibujo en 5 s: ${worst.toFixed(2)} ms`); worst = 0; since = 0; }
+    }
   });
 }
