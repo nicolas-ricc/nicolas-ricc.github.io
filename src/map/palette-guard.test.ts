@@ -71,7 +71,8 @@ const STYLE_CSS = fileURLToPath(new URL("../style.css", import.meta.url));
 /**
  * Off-palette hex literals src/style.css may use (lowercase). These are the
  * site's UI colours, deliberately not scene colours; any other off-palette
- * hex fails.
+ * hex fails. Matching ignores case but not form: `#000` is allowed, `#000000`
+ * is not.
  */
 const STYLE_CSS_ALLOWLIST: ReadonlySet<string> = new Set<string>([
   "#e6edf3", // --fg: UI text
