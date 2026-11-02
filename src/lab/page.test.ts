@@ -77,7 +77,7 @@ describe("lab world help documents URL parameters (#180)", () => {
     for (const m of listed) expect(bloomFromSearch(`?bloom=${m}`), m).toBe(m);
     const cycle: BloomMode[] = ["off"];
     for (let m = nextBloomMode("off"); m !== "off"; m = nextBloomMode(m)) cycle.push(m);
-    expect([...listed].sort()).toEqual([...cycle].sort());
+    expect(listed.sort()).toEqual(cycle.sort());
   });
   it("lists ?speed= with its cap and ?speed=0 freezing the clock", () => {
     expect(label).toContain(`?speed= escala el reloj de las animaciones hasta ${MAX_SPEED}; ?speed=0 lo congela.`);
