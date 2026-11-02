@@ -90,3 +90,27 @@ const fakeRunner = () => {
 - [ ] **Step 3:** README, párrafo "El bloom de las luces…": "lo activan después del primer render real de Pixi (el `postrender` de `app.renderer`), en la tarea siguiente (`afterFirstRender`, `src/world/bloom.ts`; `attachBloom`, `src/world/bloom-runtime.ts`), no por orden de rAF ni por `requestIdleCallback`", resto igual.
 - [ ] **Step 4: Run** `npm test` y `npm run typecheck` → todo verde.
 - [ ] **Step 5: Commit** `fix(#140): attach bloom after Pixi's first render`.
+
+## Assumptions
+
+Decisiones técnicas sin fuente escrita, tomadas en la revisión del plan (van también a la descripción del PR):
+
+1. **"Primer render real" = el primer `postrender` que se emite después de llamar a `afterFirstRender`.** Si entre `app.init` y la llamada ya hubo renders (los arranques tienen `await` intermedios), el bloom entra tras el render siguiente: sigue sin estar en el primer dibujo. Alternativa descartada: consultar un contador de renders del renderer, porque Pixi no lo expone.
+2. **Destrucción entre el `postrender` y la tarea.** No hay HMR en `src` (`grep import.meta.hot` está vacío), y `storybook.ts:87` destruye el `Stage` pero no la `app`, y `attachBloom` recibe el stage `live`. Queda igual que con `scheduleIdle`, que tampoco cancelaba. Alternativa descartada: devolver un cancelador sin consumidores (YAGNI).
+3. **Se pierde el `timeout: 1000` de `requestIdleCallback`.** La medición de 60 frames empieza en la tarea que sigue al primer render, no en tiempo ocioso. La decisión del dueño lo pide así ("`postrender`, y después una tarea"). `attachBloom` y su presupuesto no cambian.
+4. **Tareas y pintado.** Un `setTimeout(0)` encolado dentro del callback de rAF del ticker corre en una tarea posterior al paso de rendering de ese frame, según el event loop de HTML. El repo no lo documenta. La issue lo da por supuesto ("y después una tarea").
+5. **Timers falsos y microtareas.** `vitest.config.ts` no configura `fakeTimers`. La lista por defecto de Vitest no falsea `queueMicrotask`, así que `await Promise.resolve()` vacía la microtarea del `remove`. Lo confirman los propios tests: si no fuera así, colgarían en lugar de pasar.
+6. **Referencias históricas.** `scheduleIdle` aparece fuera de `src` solo en `docs/plans/2026-10-17-92-*`, `docs/plans/2026-10-18-32-*`, `docs/superpowers/plans/2026-10-14-bloom-diferido.md` y `docs/superpowers/specs/2026-10-17-*`. Son planes y specs históricos y no se tocan. El README no lo nombra.
+
+## Grilling
+
+- Rondas: 1, porque el plan no cambió de forma sustancial: solo se agregó `## Assumptions`. Griller: `fable`.
+- Preguntas: 15. Fuentes de las respuestas: ISSUE 4 (Q3, Q7, Q11, Q15), CODE 9 (Q1, Q4, Q5, Q6, Q9, Q11, Q12, Q14, más Q2 en parte) y NO SOURCE → supuesto técnico 6 (Q2, Q6, Q7, Q8, Q10, Q13). Una pregunta puede tener más de una fuente.
+- Ambigüedades de spec: ninguna. Fuera de alcance: ninguna, así que no se abrieron issues.
+- Respuestas clave:
+  - Q1: en `src` no hay `generateTexture`, `extract.` ni `renderer.render(`; el grep está vacío.
+  - Q4: `Runners` tiene `postrender` como clave nombrada `SystemRunner` (`AbstractRenderer.d.ts:109-114`), así que no hay rama `undefined`.
+  - Q5: `bloom-runtime.ts:35` hace `queueMicrotask(() => { prerender.remove(pre); postrender.remove(post); })`, y `remove` busca por identidad.
+  - Q12: dos llamadas crean dos listeners distintos, así que el dedupe de `SystemRunner.add` (`SystemRunner.mjs:41-45`) no los fusiona. `add(item: unknown)` acepta el tipo estructural, y el argumento extra que pasa `emit(options)` se ignora.
+  - Q14: `noUnusedLocals` no marca exports, y lint = typecheck (`.factory/config.toml`).
+  - Q15: el inglés lo pide el dueño ("Código, comentarios y mensajes de test nuevos, en inglés (ver #194)"); el castellano del README, el brief, punto 5 ("en castellano como el resto del documento").
