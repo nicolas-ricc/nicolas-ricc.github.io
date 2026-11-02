@@ -1,4 +1,7 @@
 import { ZONE_IDS } from "../map/zones";
+import type { ZoneId } from "../map/zones";
+
+const PDF_ZONE: ZoneId = "cv";
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const isStr = (v: unknown): v is string => typeof v === "string" && v.length > 0;
@@ -10,6 +13,7 @@ export function validateContent(data: unknown): string[] {
   if (!isStr(data.titulo)) errs.push("titulo: falta o no es string");
   if (data.descripcion !== undefined && !isStr(data.descripcion)) errs.push("descripcion: no es string");
   if (data.pdf !== undefined && !isStr(data.pdf)) errs.push("pdf: no es string");
+  if (data.pdf !== undefined && data.id !== PDF_ZONE) errs.push("pdf: only the cv zone may declare one");
   if (data.proyectos !== undefined) {
     if (!Array.isArray(data.proyectos)) errs.push("proyectos: no es array");
     else data.proyectos.forEach((pr, i) => {
