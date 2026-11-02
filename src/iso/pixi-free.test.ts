@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = new URL("../../", import.meta.url).pathname;
 const DIRS = ["src/iso", "src/scenes"];
+// Import de Pixi con cualquier comilla; también atrapa import() e import type.
+const PIXI_IMPORT = /["']pixi\.js["']/;
 
 function sourceFiles(dir: string, out: string[] = []): string[] {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -42,7 +44,7 @@ describe("guard de motor sin Pixi", () => {
   for (const file of files) {
     // src/iso y src/scenes son el motor puro: no deben depender del runtime de render (Pixi).
     it(`${relative(ROOT, file)} no importa Pixi`, () => {
-      expect(readFileSync(file, "utf8")).not.toMatch(/from "pixi\.js"/);
+      expect(readFileSync(file, "utf8")).not.toMatch(PIXI_IMPORT);
     });
   }
 });
@@ -72,7 +74,7 @@ describe("tests sin Pixi (#103)", () => {
 
   for (const file of files) {
     it(`${relative(ROOT, file)} usa dobles en vez de Pixi`, () => {
-      expect(readFileSync(file, "utf8")).not.toMatch(/["']pixi\.js["']/);
+      expect(readFileSync(file, "utf8")).not.toMatch(PIXI_IMPORT);
     });
   }
 });
