@@ -1,6 +1,6 @@
 # Guard de motor sin Pixi con cualquier comilla y convención en el README (#168): plan de implementación
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `subagent-driven-development` (`.agents/skills/subagent-driven-development/SKILL.md`) to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** que el guard de fuentes de `src/iso` y `src/scenes` detecte cualquier import de Pixi (comillas simples o dobles, `import()`, `import type`) con la misma expresión que el guard de tests, y que el README documente la convención «los tests del motor no usan Pixi» con sus excepciones.
 
@@ -25,6 +25,21 @@
 2. **Sin buscar `from` ni `import`.** `/["']pixi\.js["']/` cubre `from '…'`, `import("…")`, `import type … from '…'` y `export … from '…'` porque solo mira el especificador. No coincide con `pixi.js-legacy` ni con `@pixi/…` (otros paquetes) ni con `pixi.js` sin comillas en un comentario: hoy ningún fuente de `src/iso`/`src/scenes` lo menciona entre comillas (`grep -rnE "[\"']pixi\.js[\"']" src/iso src/scenes` vacío), así que ampliar no rompe nada.
 3. **Sección `## Tests` al final del README.** Es una convención de tests, no del mundo isométrico; los párrafos existentes no se tocan (otros tests de `docs.test.ts` parten el README por párrafos).
 4. **El README no repite la lista a mano sin control.** El test lee `PIXI_TESTS` del texto de `pixi-free.test.ts` y exige que cada ruta aparezca en el párrafo; si #166 o un sucesor agrega una excepción, el test pide documentarla.
+
+## Criterios del issue → tareas
+
+1. «el guard de fuentes … podría usar el mismo [`/["']pixi\.js["']/`]» → Task 1 (constante compartida + `it` de formas).
+2. «`README.md` no documenta la convención de no usar Pixi en los tests» → Task 2.
+3. Comentario de nicolas-ricc: «la nota de convención en el README dice «los tests del motor no usan Pixi»» → Task 2, frase exacta en el test.
+4. Mismo comentario: «los tests de módulos de Pixi (`stage`, `bloom-runtime`) pueden usarlo, y las excepciones del guard quedan explícitas» → Task 2, test que exige cada ruta de `PIXI_TESTS` en la sección.
+
+## Assumptions
+
+- **Backticks fuera.** `` import(`pixi.js`) `` no coincide con `/["']pixi\.js["']/`. El issue pide la expresión del guard de tests, no una más amplia; un import dinámico con template no existe hoy en `src`. Rechazado: ampliar a `` ["'`] `` (divergiría del guard de #103 sin pedido).
+- **Mención entre comillas en un comentario falla el guard.** Más estricto que hoy; ningún fuente del motor la tiene (grep vacío en `origin/main` 7412bdb). Si apareciera, se reescribe el comentario sin comillas. Rechazado: buscar solo `from`/`import(` (vuelve a depender de la sintaxis).
+- **Acoplamiento textual en vez de módulo compartido.** `docs.test.ts` lee `PIXI_TESTS` como texto, igual que lee fuentes con `readFileSync` en el resto del archivo (`src/lab/docs.test.ts:78`, `:186`). Rechazado: módulo exportado nuevo solo para tests (archivo nuevo fuera del alcance). Si la declaración cambia de forma, `paths.length > 0` falla en rojo: no se degrada a lista vacía.
+- **Sección `## Tests` nueva al final.** El README tiene solo `## Mundo isométrico` (`README.md:14`); la lista de scripts del inicio son viñetas de una línea. Rechazado: meter la convención en la viñeta de `npm test`.
+- **El párrafo nombra `src/iso/`, `src/scenes/` y el guard.** El issue no lo exige textual; se incluye para que la convención diga qué se vigila (`DIRS = ["src/iso", "src/scenes"]`, `src/iso/pixi-free.test.ts:6`).
 
 ## Review Focus
 
@@ -74,7 +89,7 @@ describe("PIXI_IMPORT (#168)", () => {
 Run: `npx vitest run src/iso/pixi-free.test.ts`
 Expected: FAIL, `PIXI_IMPORT is not defined` (o error de TS/referencia).
 
-- [ ] **Step 3: Definir `const PIXI_IMPORT = /["']pixi\.js["']/;`** debajo de `DIRS`, con un comentario de una línea (cualquier comilla, también `import()` e `import type`), y usarla en `:28` (`not.toMatch(PIXI_IMPORT)`) y en el guard de tests (`:56`).
+- [ ] **Step 3: Definir `const PIXI_IMPORT = /["']pixi\.js["']/;`** debajo de `DIRS`, con un comentario de una línea (cualquier comilla, también `import()` e `import type`), y usarla en los dos `expect` que hoy llevan literal: el del guard de fuentes (`not.toMatch(/from "pixi\.js"/)`, hoy `:28`) y el del guard de tests (`not.toMatch(/["']pixi\.js["']/)`, hoy `:56`). Se ubican por contenido, no por número de línea.
 
 - [ ] **Step 4: Correr y ver pasar**
 
@@ -97,7 +112,8 @@ Expected: PASS, todos los `it`.
 
 ```ts
 describe("convención de tests sin Pixi (#103, #168)", () => {
-  const sec = readme.slice(Math.max(0, readme.search(/^## Tests$/m)));
+  const at = readme.search(/^## Tests$/m);
+  const sec = at < 0 ? "" : readme.slice(at);
   const guard = readFileSync(`${ROOT}src/iso/pixi-free.test.ts`, "utf8");
   it("README tiene una sección de tests con la convención", () => {
     expect(readme).toMatch(/^## Tests$/m);
@@ -119,7 +135,7 @@ describe("convención de tests sin Pixi (#103, #168)", () => {
 Run: `npx vitest run src/lab/docs.test.ts`
 Expected: FAIL en los dos `it` nuevos (no hay `## Tests`).
 
-- [ ] **Step 3: Agregar al final de `README.md`** una línea en blanco, `## Tests` y un párrafo que diga, con estas piezas: «los tests del motor no usan Pixi»; el guard `src/iso/pixi-free.test.ts` falla si un fuente de `src/iso/` o `src/scenes/` importa `pixi.js` o si un test de `src/` lo nombra, con comillas simples o dobles, `import()` o `import type`; los tests usan dobles; las excepciones explícitas son los tests de módulos de Pixi, `src/world/stage.test.ts` y `src/world/bloom-runtime.test.ts` (`PIXI_TESTS` en el guard, #166), y una excepción nueva se agrega ahí y en este párrafo.
+- [ ] **Step 3: Agregar al final de `README.md`** una línea en blanco, `## Tests` y un párrafo que diga, con estas piezas: «los tests del motor no usan Pixi»; el guard `src/iso/pixi-free.test.ts` falla si un fuente de `src/iso/` o `src/scenes/` importa `pixi.js` o si un test de `src/` lo nombra, con comillas simples o dobles, `import()` o `import type`; los tests usan dobles de prueba (fakes) en vez de Pixi —«dobles» en el sentido de test doubles, no de comillas—; las excepciones explícitas son los tests de módulos de Pixi, `src/world/stage.test.ts` y `src/world/bloom-runtime.test.ts` (`PIXI_TESTS` en el guard, #166), y una excepción nueva se agrega ahí y en este párrafo.
 
 - [ ] **Step 4: Correr y ver pasar**
 
@@ -132,3 +148,11 @@ Run: `npm test && npm run typecheck`
 Expected: todo verde.
 
 - [ ] **Step 6: Commit** `docs(#168): convención de tests sin Pixi en el README`
+
+## Grilling
+
+- Rondas: 1 (griller `fable`). Revisión del plan menor (sin pasos nuevos ni costura distinta): no hizo falta segunda ronda.
+- Preguntas: 15. Fuentes: CODE 10, ISSUE 3, DOC 1, NO SOURCE → assumption 4 (algunas preguntas con más de una fuente).
+- Cambios: `sec` vacío si falta `## Tests` (antes caía a todo el README, Q5); «dobles» aclarado como test doubles (Q13); literales ubicados por contenido (Q12); encabezado con el skill real (Q15); criterios mapeados (Q6).
+- Assumptions: ver `## Assumptions` (backticks, comentarios, acoplamiento textual, sección nueva, párrafo descriptivo).
+- Issues abiertos: ninguno.
