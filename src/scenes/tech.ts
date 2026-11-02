@@ -12,27 +12,27 @@ import { STYLES } from "../kit/styles";
 import { PLINTH_H, brokenTone, prism, tiles } from "./city-pieces";
 import { jungle } from "./flora";
 import { GREEN_BELT, SUBURB_COLS, suburbBlocks, type SprawlBlock } from "./sprawl-grid";
-import type { BarrioCtx, HomeWindow } from "./barrio";
-import { casas } from "./barrio-casas";
-import { club } from "./barrio-club";
-import { escuela } from "./barrio-escuela";
-import { monoblock } from "./barrio-monoblock";
-import { plaza } from "./barrio-plaza";
-import { costanera } from "./costanera";
+import type { NeighborhoodCtx, HomeWindow } from "./neighborhood";
+import { houses } from "./neighborhood-houses";
+import { club } from "./neighborhood-club";
+import { school } from "./neighborhood-school";
+import { monoblock } from "./neighborhood-monoblock";
+import { plaza } from "./neighborhood-plaza";
+import { waterfront } from "./waterfront";
 import { RAIL_Y } from "./shipyard";
 import { TRAIN_CLEAR } from "./station";
 import { ARENA, AUDITORIUM, TELECOM, TOWER_D, zoneKinds } from "./tech-zoning";
 
 /**
- * Distrito tecnológico de Resume: la ciudad sigue hacia el oeste y el sur del
- * distrito sobre la misma grilla, como un parque de oficinas y campus: torres
- * de muro cortina cerca del contenido, monoblocks y campus de startups después
- * y, al sur, un barrio residencial costero (monoblocks, casas, escuela, club,
- * plazas y costanera). Tres hitos: torre de telecomunicaciones, arena, auditorio.
- * Todo edificio de oficinas tiene fachada; las ventanas del barrio son acentos (`homes`).
- * Solo existe con el mundo entero (vive sobre el sangrado).
+ * Tech district of Resume: the city continues to the west and south of the
+ * district on the same grid, like an office and campus park: curtain wall
+ * towers near the content, monoblocks and startup campuses after that
+ * and, to the south, a coastal residential neighborhood (monoblocks, houses, school, club,
+ * plazas and waterfront). Three landmarks: telecommunications tower, arena, auditorium.
+ * Every office building has a facade; the windows of the neighborhood are accents (`homes`).
+ * It only exists with the whole world (it lives over the bleed).
  * Spec: docs/superpowers/specs/2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md §3
- * y docs/superpowers/specs/2026-10-27-barrio-costero-design.md.
+ * and docs/superpowers/specs/2026-10-27-barrio-costero-design.md.
  */
 export interface Tower { box: Solid & { kind: "prism" }; facade: Facade }
 export interface TechScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; towers: Tower[]; signs: Accent[]; telecom: Vec3; neon: { crowns: Accent[]; mastRing: Vec3[] }; homes: HomeWindow[] }
@@ -44,18 +44,18 @@ const CURTAIN_WINDOW = { w: 0.85, h: 0.8 } as const;
 
 const strip = (path: Vec2[], width: number, z: number, mat: Material): Solid => ({ kind: "strip", path, width, z, mat });
 
-/** Corona de neón: franja en la cara sur del cuerpo superior, pegada al borde de arriba; cian en torres pares, magenta en impares. */
+/** Neon crown: strip on the south face of the upper body, attached to the top edge; cyan on even towers, magenta on odd ones. */
 function crown(k: number, x: number, y: number, top: number, w: number): Accent {
   const x0 = x + 0.4, x1 = x + w - 0.4, z0 = top - 0.6;
   return { kind: "poly", pts: [v3(x0, y, z0), v3(x1, y, z0), v3(x1, y, top), v3(x0, y, top)], color: k % 2 === 0 ? "cyan" : "magenta", alpha: 1 };
 }
 
-/** Torre de muro cortina en uno o dos cuerpos, con helipuerto o terraza verde y cartel de azotea. */
+/** Curtain wall tower in one or two bodies, with a helipad or green terrace and a rooftop sign. */
 function tower(out: Solid[], accents: Accent[], signs: Accent[], crowns: Accent[], towers: Tower[], rng: Rng, b: SprawlBlock): void {
   out.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
   const h = rng.int(12, MAX_TECH_H - 2), bw = rng.int(12, 16), bd = rng.int(10, 13);
   const bx = b.x + (b.w - bw) / 2, by = b.y + (b.d - bd) / 2;
-  const th0Full = Math.round(h * 0.7); // el segundo cuerpo solo entra si el primero no queda por debajo del mínimo de 12
+  const th0Full = Math.round(h * 0.7); // the second body only fits if the first does not fall below the minimum of 12
   const tiers = th0Full >= 12 && rng.chance(0.5) ? 2 : 1, th0 = tiers === 2 ? th0Full : h;
   const facade: Facade = { floors: Math.max(2, Math.round(th0 / 3)), cols: Math.max(2, Math.round(bw / 2.5)), window: CURTAIN_WINDOW, base: "glass" };
   const box = prism(bx, by, PLINTH_H, bw, bd, th0, "curtain", { facade });
@@ -71,13 +71,13 @@ function tower(out: Solid[], accents: Accent[], signs: Accent[], crowns: Accent[
   }
   if (rng.chance(0.5)) { out.push({ kind: "cylinder", at: v3(tx + tw / 2, ty + td / 2, z), r: 2.5, h: 0.3, mat: "paving", sides: 8 }); accents.push({ kind: "dot", at: v3(tx + tw / 2, ty + td / 2, z + 0.3), r: 0.6, color: "amberMid" }); }
   else { out.push(prism(tx + 0.5, ty + 0.5, z, tw - 1, td - 1, 0.3, "leafDark")); for (let k = 0, n = rng.int(1, 3); k < n; k++) out.push({ kind: "cone", at: v3(tx + 1.5 + rng.next() * (tw - 3), ty + 1.5 + rng.next() * (td - 3), z + 0.3), r: 1, h: 2, mat: "leaf" }); }
-  place(out, signs, sign(v3(tx + tw / 2 - 3, ty + td - 0.4, z), 6, 1.6)); // cartel de azotea en el borde sur
+  place(out, signs, sign(v3(tx + tw / 2 - 3, ty + td - 0.4, z), 6, 1.6)); // rooftop sign on the south edge
   crowns.push(crown(k, tx, ty + td + 0.02, z - 0.3, tw));
   if (h >= 18) accents.push(...beacon(v3(tx + tw, ty, z + 0.5)).accents);
   if (rng.chance(0.5)) place(out, accents, lamp(v3(b.x + b.w - 1, b.y - 1.5, 0)));
 }
 
-/** Plaza de barrio: suelo de selva facetado, senderos en cruz y conos. */
+/** Neighborhood plaza: faceted jungle ground, crossing paths and cones. */
 function park(out: Solid[], ground: Solid[], rng: Rng, b: SprawlBlock): void {
   ground.push(tiles(rng, b, 0.05, "leafDark", brokenTone));
   ground.push(strip([{ x: b.x + b.w / 2, y: b.y }, { x: b.x + b.w / 2, y: b.y + b.d }], 1, 0.08, "paving"));
@@ -85,7 +85,7 @@ function park(out: Solid[], ground: Solid[], rng: Rng, b: SprawlBlock): void {
   jungle(out, rng, { x0: b.x + 2, x1: b.x + b.w - 2, y0: b.y + 2, y1: b.y + b.d - 2 }, rng.int(4, 6), 0.05);
 }
 
-/** Torre de telecomunicaciones: base de hormigón, mástil esbelto, tres platos y luz en la punta. */
+/** Telecommunications tower: concrete base, slender mast, three dishes and a light at the tip. */
 function telecom(out: Solid[], b: SprawlBlock): Vec3 {
   out.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
   const cx = b.x + b.w / 2, cy = b.y + b.d / 2;
@@ -96,7 +96,7 @@ function telecom(out: Solid[], b: SprawlBlock): Vec3 {
 
 const octagon = (cx: number, cy: number, rx: number, ry: number): Vec2[] => Array.from({ length: 8 }, (_, i) => { const a = ((i + 0.5) / 8) * Math.PI * 2; return { x: cx + rx * Math.cos(a), y: cy + ry * Math.sin(a) }; });
 
-/** Arena: anillo octogonal de piedra con el césped encima y cuatro torres de luz. */
+/** Arena: octagonal stone ring with the lawn on top and four light towers. */
 function arena(out: Solid[], accents: Accent[], b: SprawlBlock): void {
   out.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
   const cx = b.x + b.w / 2, cy = b.y + b.d / 2, h = 5;
@@ -108,7 +108,7 @@ function arena(out: Solid[], accents: Accent[], b: SprawlBlock): void {
   }
 }
 
-/** Auditorio: tambor de muro cortina con cubierta de cobre, marquesina sobre dos columnas y cartel. */
+/** Auditorium: curtain wall drum with a copper roof, canopy on two columns and a sign. */
 function auditorium(out: Solid[], signs: Accent[], b: SprawlBlock): void {
   out.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
   const cx = b.x + b.w / 2, cy = b.y + 8;
@@ -119,7 +119,7 @@ function auditorium(out: Solid[], signs: Accent[], b: SprawlBlock): void {
   place(out, signs, sign(v3(cx - 3, b.y + b.d - 1.4, PLINTH_H + 3.4), 6, 1.2));
 }
 
-/** La avenida del distrito sigue hacia el oeste: cordones, cantero central con árboles y faroles. */
+/** The avenue of the district continues to the west: curbs, central planter with trees and street lamps. */
 function avenue(ground: Solid[], solids: Solid[], accents: Accent[]): void {
   const x0 = SUBURB_COLS[SUBURB_COLS.length - 1]!, x1 = CITY_EDGE.west;
   for (const y of [BOULEVARD.y0 - 0.3, BOULEVARD.y1 + 0.3]) ground.push(strip([{ x: x0, y }, { x: x1, y }], 0.4, 0.05, "paving"));
@@ -132,7 +132,7 @@ function avenue(ground: Solid[], solids: Solid[], accents: Accent[]): void {
 
 export function tech(rng: Rng): TechScene {
   const ground: Solid[] = [], solids: Solid[] = [], accents: Accent[] = [], towers: Tower[] = [], signs: Accent[] = [], crowns: Accent[] = [], homes: HomeWindow[] = [];
-  const blocks = suburbBlocks(), kinds = zoneKinds(rng, blocks), ctx: BarrioCtx = { solids, ground, accents, homes, rng };
+  const blocks = suburbBlocks(), kinds = zoneKinds(rng, blocks), ctx: NeighborhoodCtx = { solids, ground, accents, homes, rng };
   let telecomTop = v3(TELECOM.x, TELECOM.y, 0);
   blocks.forEach((b, i) => {
     switch (kinds[i]) {
@@ -143,8 +143,8 @@ export function tech(rng: Rng): TechScene {
         break;
       }
       case "monoblock": monoblock(ctx, b); break;
-      case "casas": casas(ctx, b); break;
-      case "escuela": escuela(ctx, b); break;
+      case "houses": houses(ctx, b); break;
+      case "school": school(ctx, b); break;
       case "club": club(ctx, b); break;
       case "plaza": plaza(ctx, b); break;
       case "park": park(solids, ground, rng, b); break;
@@ -154,8 +154,8 @@ export function tech(rng: Rng): TechScene {
     }
   });
   avenue(ground, solids, accents);
-  costanera(ctx);
-  // +5: el radio máximo de cono (4) no cruza el corte de zona; sin conos delante del tren (#280)
+  waterfront(ctx);
+  // +5: the maximum cone radius (4) does not cross the zone cut; no cones in front of the train (#280)
   jungle(solids, rng, { x0: -238, x1: WORLD.x0 - 2, y0: ZONE_SPLIT_Y + 5, y1: GREEN_BELT.y1 - 2 }, 2, 0.4, { y: RAIL_Y, train: TRAIN_CLEAR });
   return { ground, solids, accents, towers, signs, homes, telecom: telecomTop, neon: { crowns, mastRing: [3, 6, 9].map((dz) => v3(telecomTop.x, telecomTop.y + 0.6, telecomTop.z - dz)) } };
 }

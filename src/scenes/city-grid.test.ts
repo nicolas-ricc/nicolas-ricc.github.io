@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { QUAY_X, ZONE_SPLIT_X, ZONE_SPLIT_Y } from "../map/geo";
-import { AVENUE, BLOCK_D, BLOCK_W, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_COLS, DISTRICT_ROWS, EAST_RING, MALECON, PLAZA, ROWS, STREET, TOWER, WEST_QUAY, blocks, estuaryEast, estuaryReaches, inBlock, inCrater } from "./city-grid";
+import { AVENUE, BLOCK_D, BLOCK_W, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_COLS, DISTRICT_ROWS, EAST_RING, PROMENADE, PLAZA, ROWS, STREET, TOWER, WEST_QUAY, blocks, estuaryEast, estuaryReaches, inBlock, inCrater } from "./city-grid";
 
 const overlaps = (a: { x: number; y: number; w: number; d: number }, b: { x: number; y: number; w: number; d: number }) =>
   a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.d && b.y < a.y + a.d;
 
 describe("city-grid", () => {
-  it("hay al menos 30 manzanas, una plaza y un derrumbe, y ninguna se pisa con otra", () => {
+  it("there are at least 30 blocks, one plaza and one collapse, and none overlaps another", () => {
     const bs = blocks();
     expect(bs.length).toBeGreaterThanOrEqual(30);
     expect(bs.filter((b) => b.kind === "plaza")).toHaveLength(1);
@@ -14,7 +14,7 @@ describe("city-grid", () => {
     for (let i = 0; i < bs.length; i++) for (let j = i + 1; j < bs.length; j++) expect(overlaps(bs[i]!, bs[j]!)).toBe(false);
   });
 
-  it("entre manzanas vecinas queda al menos una calle", () => {
+  it("between neighboring blocks there is at least one street", () => {
     const bs = blocks();
     for (const a of bs) for (const b of bs) {
       if (a === b) continue;
@@ -23,32 +23,32 @@ describe("city-grid", () => {
     }
   });
 
-  it("toda manzana cae en tierra de la ciudad: lejos del estuario, dentro de los bordes", () => {
+  it("every block falls on city land: away from the estuary, inside the edges", () => {
     for (const b of blocks()) {
       expect(b.x).toBeGreaterThanOrEqual(CITY_EDGE.west);
       expect(b.y).toBeGreaterThanOrEqual(CITY_EDGE.north + STREET);
-      expect(b.y + b.d).toBeLessThanOrEqual(CITY_EDGE.south - 4); // la calle sur es de 4: el borde va alineado a CELL
+      expect(b.y + b.d).toBeLessThanOrEqual(CITY_EDGE.south - 4); // the south street is 4: the edge is aligned to CELL
       if (b.bank === "west") expect(b.x + b.w).toBeLessThanOrEqual(WEST_QUAY.x0 - STREET);
       else {
-        expect(b.x + b.w).toBeLessThanOrEqual(MALECON.x0);
+        expect(b.x + b.w).toBeLessThanOrEqual(PROMENADE.x0);
         if (b.kind !== "collapsed") expect(b.x).toBeGreaterThanOrEqual(estuaryEast(b.y + b.d) + STREET);
       }
     }
-    // el derrumbe es la única manzana que el agua toca
+    // the collapse is the only block the water touches
     expect(COLLAPSED.x).toBeLessThan(estuaryEast(COLLAPSED.y + COLLAPSED.d) + STREET);
   });
 
-  it("la avenida separa las filas 2 y 3 y el puente la cruza de muelle a anillo", () => {
+  it("the avenue separates rows 2 and 3 and the bridge crosses it from quay to ring", () => {
     expect(ROWS[1] + BLOCK_D).toBe(AVENUE.y0);
     expect(ROWS[2]).toBe(AVENUE.y1);
     expect(BRIDGE.x0).toBe(WEST_QUAY.x0);
     expect(BRIDGE.x1).toBe(EAST_RING.x1);
     expect(BRIDGE.y0).toBeGreaterThanOrEqual(AVENUE.y0);
     expect(BRIDGE.y1).toBeLessThanOrEqual(AVENUE.y1);
-    expect(estuaryEast(BRIDGE.y1)).toBeLessThan(BRIDGE.x1); // el puente llega a tierra
+    expect(estuaryEast(BRIDGE.y1)).toBeLessThan(BRIDGE.x1); // the bridge reaches land
   });
 
-  it("la plaza y la torre están en su lugar y la torre entra en la plaza", () => {
+  it("the plaza and the tower are in place and the tower fits inside the plaza", () => {
     expect(blocks().find((b) => b.kind === "plaza")).toMatchObject(PLAZA);
     expect(PLAZA.y).toBe(AVENUE.y1);
     expect(overlaps(TOWER, PLAZA)).toBe(true);
@@ -56,7 +56,7 @@ describe("city-grid", () => {
     expect(TOWER.y).toBeGreaterThan(PLAZA.y); expect(TOWER.y + TOWER.d).toBeLessThan(PLAZA.y + PLAZA.d);
   });
 
-  it("los cráteres están sobre calles, no sobre manzanas", () => {
+  it("the craters are on streets, not on blocks", () => {
     expect(CRATERS).toHaveLength(3);
     for (const c of CRATERS) {
       expect(inBlock(c.x, c.y)).toBe(false);
@@ -66,25 +66,25 @@ describe("city-grid", () => {
     expect(inBlock(PLAZA.x + 1, PLAZA.y + 1)).toBe(true);
   });
 
-  it("el estuario hereda el canal en la costura y se abre hacia el sur", () => {
+  it("the estuary inherits the channel at the seam and opens toward the south", () => {
     expect(estuaryEast(ZONE_SPLIT_Y)).toBeGreaterThan(QUAY_X + 30);
     expect(estuaryEast(ZONE_SPLIT_Y)).toBeLessThan(QUAY_X + 60);
     expect(estuaryEast(260) - estuaryEast(ZONE_SPLIT_Y)).toBeCloseTo((260 - ZONE_SPLIT_Y) * 0.35, 6);
     expect(estuaryEast(270)).toBeLessThan(ZONE_SPLIT_X - 40);
-    expect(estuaryReaches(estuaryEast(240))).toBeCloseTo(240, 6);            // inversa
-    expect(estuaryReaches(EAST_RING.x0 + STREET / 2)).toBeGreaterThan(AVENUE.y1); // el eje del anillo pisa agua recién al sur de la avenida
+    expect(estuaryReaches(estuaryEast(240))).toBeCloseTo(240, 6);            // inverse
+    expect(estuaryReaches(EAST_RING.x0 + STREET / 2)).toBeGreaterThan(AVENUE.y1); // the axis of the ring steps on water only south of the avenue
     expect(BLOCK_W).toBe(24);
   });
 
-  it("distrito: dos columnas al oeste y dos filas al sur, solo ribera oeste, 24 manzanas con una obra; el malecón llega a 326", () => {
+  it("district: two columns to the west and two rows to the south, west bank only, 24 blocks with one construction site; the promenade reaches 326", () => {
     const d = blocks().filter((b) => b.kind === "district" || b.kind === "site");
     expect(d).toHaveLength(24);
     expect(d.filter((b) => b.kind === "site")).toHaveLength(1);
     expect(d.every((b) => b.bank === "west")).toBe(true);
     expect(d.every((b) => (DISTRICT_COLS as readonly number[]).includes(b.x) || (DISTRICT_ROWS as readonly number[]).includes(b.y))).toBe(true);
     expect(blocks().filter((b) => b.bank === "east").every((b) => b.y < DISTRICT_ROWS[0])).toBe(true);
-    expect(blocks().filter((b) => b.kind === "block")).toHaveLength(29); // las 30 manzanas viejas menos la derrumbada: nada viejo cambió de tipo
+    expect(blocks().filter((b) => b.kind === "block")).toHaveLength(29); // the 30 old blocks minus the collapsed one: no old block changed kind
     expect(CITY_EDGE).toEqual({ west: -54, north: 158, south: 324 });
-    expect(MALECON.y1).toBe(326);
+    expect(PROMENADE.y1).toBe(326);
   });
 });

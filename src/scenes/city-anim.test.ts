@@ -3,38 +3,38 @@ import type { Accent } from "../iso/accent";
 import { createRng } from "../map/seed";
 import { WINDOW_ALPHA } from "../city/lights";
 import { city, type CityScene } from "./city";
-import { type CityAnim, ANTENNA_STEP_MS, BLINK_GAP_MS, MALECON_STEP_MS, NEON_STEP_MS, PAPER_RANGE, PAPER_SIDE, PAPER_SPEED, SIGN_GAP_MS, createCityAnim } from "./city-anim";
+import { type CityAnim, ANTENNA_STEP_MS, BLINK_GAP_MS, PROMENADE_STEP_MS, NEON_STEP_MS, PAPER_RANGE, PAPER_SIDE, PAPER_SPEED, SIGN_GAP_MS, createCityAnim } from "./city-anim";
 
 const setup = (reducedMotion = false) => {
   const scene = city(createRng(7), createRng(8), createRng(9));
   return { scene, tower: scene.tower, anim: createCityAnim(scene, createRng(3), { reducedMotion }) };
 };
-/** Saca de una capa `neon()` los acentos del neón de calle (los copia con otro alfa al titilar, pero conserva `pts`). */
+/** Removes the street neon accents from a `neon()` layer (it copies them with another alpha when flickering, but keeps `pts`). */
 const withoutStreet = (scene: CityScene, a: Accent[]): Accent[] => {
   const pts = new Set(scene.lights.neons.flatMap((n) => n.accents.flatMap((x) => (x.kind === "poly" ? [x.pts] : []))));
   return a.filter((x) => x.kind !== "poly" || !pts.has(x.pts));
 };
-let troceadoScene: CityScene | undefined; // city() es caro: una sola escena para todos los troceos
-const troceado = (dts: number[], seed = 3) => {
-  const scene = (troceadoScene ??= city(createRng(7), createRng(8), createRng(9)));
+let chunkedScene: CityScene | undefined; // city() is expensive: a single scene for all the chunkings
+const chunked = (dts: number[], seed = 3) => {
+  const scene = (chunkedScene ??= city(createRng(7), createRng(8), createRng(9)));
   const anim = createCityAnim(scene, createRng(seed), { reducedMotion: false });
   for (const dt of dts) anim.tick(dt);
   return anim;
 };
-const veces = (n: number, dt: number) => Array.from({ length: n }, () => dt);
+const repeat = (n: number, dt: number) => Array.from({ length: n }, () => dt);
 type Kind<K> = Extract<Accent, { kind: K }>;
 const lights = (a: Accent[]) => a.filter((x): x is Kind<"dot"> => x.kind === "dot");
 const signsOf = (a: Accent[]) => a.filter((x): x is Kind<"poly"> => x.kind === "poly");
-const dot = (a: Accent): Extract<Accent, { kind: "dot" }> => { if (a.kind !== "dot") throw new Error("se esperaba dot"); return a; };
+const dot = (a: Accent): Extract<Accent, { kind: "dot" }> => { if (a.kind !== "dot") throw new Error("expected dot"); return a; };
 
 describe("city-anim", () => {
-  it("frame 0: piso encendido, papeles escalonados desde la ventana, antena a radio 1.1", () => {
+  it("frame 0: lit floor, papers staggered from the window, antenna at radius 1.1", () => {
     const { tower, anim } = setup();
     const w = tower.paperWindow;
     expect(anim.lit()).toEqual(tower.litWindows);
     expect(anim.papers().length).toBeGreaterThanOrEqual(5);
     expect(anim.papers().length).toBeLessThanOrEqual(8);
-    // el reguero arranca en la ventana y se estira: uno está exactamente ahí y ninguno pasa PAPER_RANGE
+    // the trail starts at the window and stretches: one is exactly there and none passes PAPER_RANGE
     expect(anim.papers().some((p) => dot(p).at.x === w.x && dot(p).at.y === w.y && dot(p).at.z === w.z)).toBe(true);
     for (const p of anim.papers()) {
       const d = dot(p);
@@ -46,7 +46,7 @@ describe("city-anim", () => {
     expect(dot(anim.antenna()).color).toBe("amberMid");
   });
 
-  it("el piso se apaga de a un tick, nunca dos seguidos, y se apaga al menos 5 veces en 60 s", () => {
+  it("the floor goes off one tick at a time, never two in a row, and goes off at least 5 times in 60 s", () => {
     const { anim } = setup();
     let offs = 0, prevOff = false;
     for (let t = 0; t < 60000; t += 33) {
@@ -60,7 +60,7 @@ describe("city-anim", () => {
     expect(offs).toBeLessThanOrEqual(16);
   });
 
-  it("los papeles nunca se alejan más de PAPER_RANGE de la ventana y derivan al NNE", () => {
+  it("the papers never get farther than PAPER_RANGE from the window and drift to the NNE", () => {
     const { tower, anim } = setup();
     let driftedNNE = false;
     for (let t = 0; t < 20000; t += 33) {
@@ -69,7 +69,7 @@ describe("city-anim", () => {
       for (const p of anim.papers()) {
         const d = dot(p);
         expect(Math.hypot(d.at.x - tower.paperWindow.x, d.at.y - tower.paperWindow.y)).toBeLessThanOrEqual(PAPER_RANGE + 2);
-        expect(d.at.y).toBeLessThanOrEqual(tower.paperWindow.y + 2); // nunca baja hacia el sur
+        expect(d.at.y).toBeLessThanOrEqual(tower.paperWindow.y + 2); // never goes down toward the south
         expect(d.r).toBeGreaterThanOrEqual(0.12 - 1e-6);
         expect(d.r).toBeLessThanOrEqual(0.4 + 1e-6);
         if (d.at.x > tower.paperWindow.x + 10 && d.at.y < tower.paperWindow.y - 10) driftedNNE = true;
@@ -78,7 +78,7 @@ describe("city-anim", () => {
     expect(driftedNNE).toBe(true);
   });
 
-  it("la antena pulsa entre 0.8 y 1.4 y solo reporta cambio cada ANTENNA_STEP_MS", () => {
+  it("the antenna pulses between 0.8 and 1.4 and reports a change only every ANTENNA_STEP_MS", () => {
     const { anim } = setup();
     let changes = 0;
     for (let t = 0; t < 10000; t += 33) {
@@ -90,41 +90,41 @@ describe("city-anim", () => {
     expect(changes).toBeLessThanOrEqual(10000 / ANTENNA_STEP_MS + 1);
   });
 
-  it("con reduced-motion nada cambia", () => {
+  it("with reduced-motion nothing changes", () => {
     const { tower, anim } = setup(true);
     const before = JSON.stringify(anim.papers());
     for (let t = 0; t < 5000; t += 33) expect(anim.tick(33)).toEqual({ lit: false, papers: false, antenna: false, neon: false, windows: false });
     expect(anim.lit()).toEqual(tower.litWindows);
-    expect(JSON.stringify(anim.papers())).toBe(before); // el reguero queda congelado donde arrancó
+    expect(JSON.stringify(anim.papers())).toBe(before); // the trail stays frozen where it started
   });
 
-  it("neon frame 0: carteles en su color inicial y todas las luces del malecón; solo cian/magenta", () => {
+  it("neon frame 0: signs in their initial color and all the lights of the promenade; only cyan/magenta", () => {
     const { scene, anim } = setup();
     const own = withoutStreet(scene, anim.neon());
     expect(signsOf(own)).toEqual(scene.neon.signs);
-    expect(lights(own).map((d) => d.at)).toEqual(scene.neon.malecon);
+    expect(lights(own).map((d) => d.at)).toEqual(scene.neon.promenade);
     for (const d of lights(own)) { expect(d.color).toBe("cyanMid"); expect(d.r).toBe(0.35); }
     for (const x of own) expect(x.color).toMatch(/^(cyan|magenta)/);
   });
 
-  it("neon con reduced-motion: tick no reporta y la capa queda en el frame 0", () => {
+  it("neon with reduced-motion: tick does not report and the layer stays at frame 0", () => {
     const { anim } = setup(true);
     const f0 = anim.neon();
     expect(anim.tick(1000).neon).toBe(false);
     expect(anim.neon()).toEqual(f0);
   });
 
-  it("el malecón corre: desde el paso 1 hay exactamente 2 luces encendidas y cambian por paso", () => {
+  it("the promenade runs: from step 1 there are exactly 2 lights on and they change per step", () => {
     const { anim } = setup();
-    expect(anim.tick(MALECON_STEP_MS).neon).toBe(true);
+    expect(anim.tick(PROMENADE_STEP_MS).neon).toBe(true);
     const a = lights(anim.neon());
     expect(a).toHaveLength(2);
-    anim.tick(MALECON_STEP_MS);
+    anim.tick(PROMENADE_STEP_MS);
     expect(lights(anim.neon())).toHaveLength(2);
     expect(lights(anim.neon())).not.toEqual(a);
   });
 
-  it("carteles: hay eventos; un cambio de color persiste y un apagón apaga un solo cartel", () => {
+  it("signs: there are events; a color change persists and a blackout turns off a single sign", () => {
     const { scene, anim } = setup();
     const n = scene.neon.signs.length, mag = (a: Accent[]) => signsOf(a).filter((s) => s.color === "magenta").length;
     let colorChanged = false, blinked = false;
@@ -138,7 +138,7 @@ describe("city-anim", () => {
     expect(signsOf(withoutStreet(scene, anim.neon())).length).toBeGreaterThanOrEqual(n - 1);
   });
 
-  it("un apagón dura un paso entero y el cartel vuelve con el mismo color", () => {
+  it("a blackout lasts a whole step and the sign comes back with the same color", () => {
     const { scene, anim } = setup();
     const n = scene.neon.signs.length, dt = 10;
     let before = signsOf(withoutStreet(scene, anim.neon())), offMs = 0, blinks = 0;
@@ -148,7 +148,7 @@ describe("city-anim", () => {
       if (s.length === n - 1) offMs += dt;
       else if (offMs > 0) {
         blinks++;
-        expect(offMs).toBeGreaterThanOrEqual(NEON_STEP_MS); // un paso entero, no un frame
+        expect(offMs).toBeGreaterThanOrEqual(NEON_STEP_MS); // a whole step, not a frame
         expect(offMs).toBeLessThanOrEqual(NEON_STEP_MS + dt);
         expect(s).toEqual(before);
         offMs = 0;
@@ -158,14 +158,14 @@ describe("city-anim", () => {
     expect(blinks).toBeGreaterThan(0);
   });
 
-  it("ventanas frame 0: las animables encendidas de lights, con su color y alfa 0.85", () => {
+  it("windows frame 0: the animatable lit ones from lights, with their color and alpha 0.85", () => {
     const { scene, anim } = setup();
     const want = scene.lights.windows.filter((w) => w.animable && w.on).map((w) => ({ kind: "poly", pts: w.window.pts, color: w.color, alpha: WINDOW_ALPHA }));
     expect(want.length).toBeGreaterThan(0);
     expect(anim.windows()).toEqual(want);
   });
 
-  it("ventanas: en 60 s cambian ≥ 40 veces, siempre dentro de ±max(1, 5 %) del objetivo y solo entre las animables", () => {
+  it("windows: in 60 s they change ≥ 40 times, always within ±max(1, 5 %) of the target and only among the animatable ones", () => {
     const { scene, anim } = setup();
     const animable = scene.lights.windows.filter((w) => w.animable);
     const pts = new Set(animable.map((w) => w.window.pts));
@@ -183,14 +183,14 @@ describe("city-anim", () => {
     expect(seen.size).toBeGreaterThan(1);
   });
 
-  it("ventanas: sin animables la capa queda vacía y nunca reporta cambio", () => {
+  it("windows: with no animatable ones the layer stays empty and never reports a change", () => {
     const scene = city(createRng(7), createRng(8), createRng(9));
     const anim = createCityAnim({ ...scene, lights: { ...scene.lights, windows: [] } }, createRng(3), { reducedMotion: false });
     expect(anim.windows()).toEqual([]);
     for (let t = 0; t < 10000; t += 100) expect(anim.tick(100).windows).toBe(false);
   });
 
-  it("ventanas: con una o dos animables no hay excepción y la cantidad queda en objetivo ± 1", () => {
+  it("windows: with one or two animatable ones there is no exception and the count stays at target ± 1", () => {
     const scene = city(createRng(7), createRng(8), createRng(9));
     const base = scene.lights.windows.filter((w) => w.animable);
     for (const ws of [[{ ...base[0]!, on: true }], [{ ...base[0]!, on: false }, { ...base[1]!, on: false }]]) {
@@ -205,14 +205,14 @@ describe("city-anim", () => {
     }
   });
 
-  it("ventanas con reduced-motion: quedan en el frame 0 y tick no reporta", () => {
+  it("windows with reduced-motion: they stay at frame 0 and tick does not report", () => {
     const { anim } = setup(true);
     const f0 = anim.windows();
     for (let t = 0; t < 5000; t += 100) expect(anim.tick(100).windows).toBe(false);
     expect(anim.windows()).toEqual(f0);
   });
 
-  it("el neón de calle elegido está en la capa en el frame 0 tal cual, y ningún otro neón de calle", () => {
+  it("the chosen street neon is in the layer at frame 0 as is, and no other street neon", () => {
     const { scene, anim } = setup();
     const f = scene.lights.flicker!;
     expect(f).not.toBeNull();
@@ -221,7 +221,7 @@ describe("city-anim", () => {
     scene.lights.neons.forEach((n, i) => { if (i !== f) for (const a of n.accents) expect(layer.some((x) => x.kind === "poly" && a.kind === "poly" && x.pts === a.pts)).toBe(false); });
   });
 
-  it("el neón titila ≥ 10 veces en 60 s: frente y halo a 0.3 un paso exacto, el charco igual, y vuelve a su alfa", () => {
+  it("the neon flickers ≥ 10 times in 60 s: front and halo at 0.3 for exactly one step, the puddle unchanged, and it returns to its alpha", () => {
     const { scene, anim } = setup();
     const n = scene.lights.neons[scene.lights.flicker!]!.accents;
     const front = n[1]!, halo = n[0]!, puddle = n.slice(2);
@@ -253,21 +253,21 @@ describe("city-anim", () => {
     expect(flickers).toBeGreaterThanOrEqual(10);
   });
 
-  it("sin neón que titile la capa neon es la de siempre: carteles y malecón", () => {
+  it("with no neon to flicker the neon layer is the usual one: signs and promenade", () => {
     const scene = city(createRng(7), createRng(8), createRng(9));
     const anim = createCityAnim({ ...scene, lights: { ...scene.lights, flicker: null } }, createRng(3), { reducedMotion: false });
     expect(signsOf(anim.neon())).toEqual(scene.neon.signs);
-    expect(lights(anim.neon()).map((d) => d.at)).toEqual(scene.neon.malecon);
+    expect(lights(anim.neon()).map((d) => d.at)).toEqual(scene.neon.promenade);
   });
 
-  it("con reduced-motion el neón de calle nunca titila", () => {
+  it("with reduced-motion the street neon never flickers", () => {
     const { anim } = setup(true);
     const f0 = anim.neon();
     for (let t = 0; t < 10000; t += 100) expect(anim.tick(100).neon).toBe(false);
     expect(anim.neon()).toEqual(f0);
   });
 
-  it("mismo rng → mismas capas tras los mismos ticks", () => {
+  it("same rng → same layers after the same ticks", () => {
     const a = setup().anim, b = setup().anim;
     for (const dt of [16, 33, 100, 250, 1000, 5000, 7000, 33, 100, 100]) {
       expect(a.tick(dt)).toEqual(b.tick(dt));
@@ -277,72 +277,72 @@ describe("city-anim", () => {
     }
   });
 
-  it("fired cuenta los apagones del piso y los eventos de carteles", () => {
+  it("fired counts the floor blackouts and the sign events", () => {
     const { anim } = setup();
     expect(anim.fired()).toEqual({ lit: 0, neon: 0, papers: 0 });
     let offs = 0;
     for (let t = 0; t < 60000; t += 33) { anim.tick(33); if (anim.lit().length === 0) offs++; }
-    expect(anim.fired().lit).toBe(offs); // a 33 ms cada disparo es un tick apagado
+    expect(anim.fired().lit).toBe(offs); // at 33 ms each firing is one tick off
     expect(anim.fired().neon).toBeGreaterThanOrEqual(60000 / 7000 - 1);
     expect(anim.fired().neon).toBeLessThanOrEqual(60000 / 3000);
   });
 
-  it("fired no cuenta nada con reduced-motion, con dt <= 0 ni con dt no finito", () => {
-    const quieto = setup(true).anim;
-    quieto.tick(60000);
-    expect(quieto.fired()).toEqual({ lit: 0, neon: 0, papers: 0 });
+  it("fired counts nothing with reduced-motion, with dt <= 0 or with a non-finite dt", () => {
+    const still = setup(true).anim;
+    still.tick(60000);
+    expect(still.fired()).toEqual({ lit: 0, neon: 0, papers: 0 });
     const { anim } = setup();
     anim.tick(0); anim.tick(-5000);
     expect(anim.fired()).toEqual({ lit: 0, neon: 0, papers: 0 });
-    // sin el guard, un dt infinito no terminaría el while (el lab ya lo descarta en speedFromSearch)
+    // without the guard, an infinite dt would never end the while (the lab already discards it in speedFromSearch)
     expect(anim.tick(Infinity)).toEqual({ lit: false, papers: false, antenna: false, neon: false, windows: false });
     expect(anim.tick(NaN)).toEqual({ lit: false, papers: false, antenna: false, neon: false, windows: false });
     expect(anim.fired()).toEqual({ lit: 0, neon: 0, papers: 0 });
   });
 
-  it("parpadeo: tick(7000) y siete tick(1000) disparan lo mismo, y también 60 s en uno o en 60", () => {
-    expect(troceado([7000]).fired().lit).toBe(troceado(veces(7, 1000)).fired().lit);
-    expect(troceado([60000]).fired().lit).toBe(troceado(veces(60, 1000)).fired().lit);
-    expect(troceado([60000]).fired().lit).toBe(troceado(veces(60000 / 25, 25)).fired().lit);
+  it("blink: tick(7000) and seven tick(1000) fire the same, and so do 60 s in one or in 60", () => {
+    expect(chunked([7000]).fired().lit).toBe(chunked(repeat(7, 1000)).fired().lit);
+    expect(chunked([60000]).fired().lit).toBe(chunked(repeat(60, 1000)).fired().lit);
+    expect(chunked([60000]).fired().lit).toBe(chunked(repeat(60000 / 25, 25)).fired().lit);
   });
 
-  it("parpadeo: un tick de 10 min dispara muchos apagones, como 600 de 1 s", () => {
-    const largo = troceado([600000]).fired().lit;
-    expect(largo).toBeGreaterThanOrEqual(600000 / BLINK_GAP_MS[1] - 1);
-    expect(largo).toBeLessThanOrEqual(600000 / BLINK_GAP_MS[0]);
-    expect(largo).toBe(troceado(veces(600, 1000)).fired().lit);
+  it("blink: one 10 min tick fires many blackouts, like 600 of 1 s", () => {
+    const long = chunked([600000]).fired().lit;
+    expect(long).toBeGreaterThanOrEqual(600000 / BLINK_GAP_MS[1] - 1);
+    expect(long).toBeLessThanOrEqual(600000 / BLINK_GAP_MS[0]);
+    expect(long).toBe(chunked(repeat(600, 1000)).fired().lit);
   });
 
-  it("parpadeo: tras un tick largo que apaga el piso, el siguiente tick corto lo enciende", () => {
+  it("blink: after a long tick that turns the floor off, the next short tick turns it on", () => {
     const { tower, anim } = setup();
-    anim.tick(BLINK_GAP_MS[1]); // la primera pausa vence seguro dentro de este tick
+    anim.tick(BLINK_GAP_MS[1]); // the first pause surely expires within this tick
     expect(anim.lit()).toEqual([]);
     anim.tick(33);
     expect(anim.lit()).toEqual(tower.litWindows);
   });
 
-  it("tick(7000) y siete tick(1000) con la misma semilla dejan los mismos contadores de pisos y neones", () => {
-    // en 7 s cada temporizador dispara a lo sumo una vez (pausas ≥ 4000 y ≥ 3000 ms), así que este caso
-    // también daba igual con el reinicio viejo; los de 60 s y 10 min son los que lo distinguen
-    for (let seed = 0; seed < 50; seed++) expect(troceado([7000], seed).fired()).toEqual(troceado(veces(7, 1000), seed).fired());
+  it("tick(7000) and seven tick(1000) with the same seed leave the same floor and neon counters", () => {
+    // in 7 s each timer fires at most once (pauses ≥ 4000 and ≥ 3000 ms), so this case
+    // also gave the same result with the old reset; the 60 s and 10 min ones are what tell them apart
+    for (let seed = 0; seed < 50; seed++) expect(chunked([7000], seed).fired()).toEqual(chunked(repeat(7, 1000), seed).fired());
   });
 
-  it("carteles: 60 s o 10 min de una vez disparan lo mismo que troceados", () => {
-    expect(troceado([60000]).fired().neon).toBe(troceado(veces(60, 1000)).fired().neon);
-    const largo = troceado([600000]).fired().neon;
-    expect(largo).toBeGreaterThanOrEqual(600000 / SIGN_GAP_MS[1] - 1);
-    expect(largo).toBeLessThanOrEqual(600000 / SIGN_GAP_MS[0]);
-    expect(largo).toBe(troceado(veces(600, 1000)).fired().neon);
+  it("signs: 60 s or 10 min at once fire the same as chunked", () => {
+    expect(chunked([60000]).fired().neon).toBe(chunked(repeat(60, 1000)).fired().neon);
+    const long = chunked([600000]).fired().neon;
+    expect(long).toBeGreaterThanOrEqual(600000 / SIGN_GAP_MS[1] - 1);
+    expect(long).toBeLessThanOrEqual(600000 / SIGN_GAP_MS[0]);
+    expect(long).toBe(chunked(repeat(600, 1000)).fired().neon);
   });
 
-  it("un troceo irregular deja los mismos contadores y colores que su suma en un tick", () => {
+  it("an irregular chunking leaves the same counters and colors as its sum in one tick", () => {
     const dts = [16, 33, 100, 250, 1000, 5000, 7000, 33];
-    const a = troceado(dts), b = troceado([dts.reduce((s, x) => s + x, 0)]);
+    const a = chunked(dts), b = chunked([dts.reduce((s, x) => s + x, 0)]);
     expect(a.fired()).toEqual(b.fired());
     expect(signsOf(a.neon()).map((s) => s.color)).toEqual(signsOf(b.neon()).map((s) => s.color));
   });
 
-  it("sin carteles un tick largo no se cuelga y no cuenta eventos", () => {
+  it("with no signs a long tick does not hang and counts no events", () => {
     const scene = city(createRng(7), createRng(8), createRng(9));
     const anim = createCityAnim({ ...scene, neon: { ...scene.neon, signs: [] } }, createRng(3), { reducedMotion: false });
     anim.tick(600000);
@@ -350,8 +350,8 @@ describe("city-anim", () => {
   });
 });
 
-describe("city-anim: papeles con tiempo de pared (#124, #125)", () => {
-  const mismos = (a: CityAnim, b: CityAnim) => {
+describe("city-anim: papers with wall time (#124, #125)", () => {
+  const same = (a: CityAnim, b: CityAnim) => {
     expect(a.fired()).toEqual(b.fired());
     const pa = a.papers().map(dot), pb = b.papers().map(dot);
     expect(pa).toHaveLength(pb.length);
@@ -361,19 +361,19 @@ describe("city-anim: papeles con tiempo de pared (#124, #125)", () => {
       expect(p.r).toBeCloseTo(q.r, 6);
     });
   };
-  it("papeles: un tick de 60 s deja los papeles donde 600 de 100 ms", () => {
-    const a = troceado([60000]), b = troceado(veces(600, 100));
+  it("papers: one 60 s tick leaves the papers where 600 of 100 ms do", () => {
+    const a = chunked([60000]), b = chunked(repeat(600, 100));
     expect(a.fired().papers).toBeGreaterThan(0);
-    mismos(a, b);
+    same(a, b);
   });
-  it("papeles: un troceo irregular y su suma dejan lo mismo", () => {
+  it("papers: an irregular chunking and its sum leave the same", () => {
     const dts = [16, 33, 100, 250, 1000, 5000, 7000, 33, 20000];
-    mismos(troceado(dts), troceado([dts.reduce((s, x) => s + x, 0)]));
+    same(chunked(dts), chunked([dts.reduce((s, x) => s + x, 0)]));
   });
-  it("papeles: tras 10 min de una vez siguen dentro del recorrido", () => {
+  it("papers: after 10 min at once they are still within the path", () => {
     const { tower } = setup(), w = tower.paperWindow;
-    const anim = troceado([600000]), n = anim.papers().length;
-    expect(anim.fired().papers).toBeGreaterThanOrEqual(n * 600000 / (PAPER_RANGE / (PAPER_SPEED * 0.8)) - n); // velocidad mínima: cada papel recicla al menos una vez cada PAPER_RANGE / (PAPER_SPEED · 0.8) ms
+    const anim = chunked([600000]), n = anim.papers().length;
+    expect(anim.fired().papers).toBeGreaterThanOrEqual(n * 600000 / (PAPER_RANGE / (PAPER_SPEED * 0.8)) - n); // minimum speed: each paper recycles at least once every PAPER_RANGE / (PAPER_SPEED · 0.8) ms
     for (const p of anim.papers().map(dot)) expect(Math.hypot(p.at.x - w.x, p.at.y - w.y)).toBeLessThanOrEqual(PAPER_RANGE + PAPER_SIDE);
   });
 });

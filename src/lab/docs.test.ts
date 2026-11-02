@@ -139,13 +139,13 @@ describe("documentación del barrio costero (#256)", () => {
   it("README lista la spec del barrio entre las specs", () => {
     expect(lab).toContain("2026-10-27-barrio-costero-design.md");
   });
-  it("el docstring de tech.ts cuenta el barrio y apunta a su spec", () => {
+  it("the docstring of tech.ts describes the neighborhood and points to its spec", () => {
     const end = techSrc.indexOf("export interface Tower");
     expect(end).toBeGreaterThan(0);
     const doc = techSrc.slice(0, end);
-    expect(doc).toMatch(/barrio residencial costero/);
+    expect(doc).toMatch(/coastal residential neighborhood/);
     expect(doc).toContain("docs/superpowers/specs/2026-10-27-barrio-costero-design.md");
-    expect(doc).not.toMatch(/laboratori|atrio/);
+    expect(doc).not.toMatch(/laborator|atrium/);
   });
   it("mundo-3 remite al spec del barrio encima de la tabla de tipos", () => {
     const from = mundo3.indexOf("## 2. Decisiones"), to = mundo3.indexOf("| Tema | Decisión |");

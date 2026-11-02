@@ -1,5 +1,5 @@
 import { BOTTOM, CELL, DOCK, QUAY_X, SHORE_W, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, abyssX, distToHeadland, eastBank, inHeadland, inMouth, islandEastX, islandWestX, shoreWidth } from "../map/geo";
-import { CITY_EDGE, DISTRICT_BANK_Y, EAST_RING, MALECON_STREET_X, inCrater } from "./city-grid";
+import { CITY_EDGE, DISTRICT_BANK_Y, EAST_RING, PROMENADE_STREET_X, inCrater } from "./city-grid";
 import { bayWater, builtAt, estuaryWater } from "./sprawl-grid";
 
 /**
@@ -30,7 +30,7 @@ export function shipyardTerrainAt(x: number, y: number): Terrain {
 export function cityTerrainAt(x: number, y: number): Terrain {
   if (x >= QUAY_X && x <= islandWestX(y)) return "water";
   if (y < CITY_EDGE.north) return "jungle"; // cinturón de costura con el astillero
-  if (y >= DISTRICT_BANK_Y && x > QUAY_X) return x >= MALECON_STREET_X ? "asphalt" : "jungle"; // ribera este del distrito: selva, y la calle del malecón
+  if (y >= DISTRICT_BANK_Y && x > QUAY_X) return x >= PROMENADE_STREET_X ? "asphalt" : "jungle"; // ribera este del distrito: selva, y la calle del malecón
   if (y >= CITY_EDGE.south || x < CITY_EDGE.west) return "asphalt"; // bordes oeste y sur: el distrito tecnológico del sangrado sigue derecho desde la ciudad
   if (x > QUAY_X && x < EAST_RING.x0) return "jungle";
   if (inCrater(x, y)) return "jungle";

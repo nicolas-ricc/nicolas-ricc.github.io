@@ -3,7 +3,7 @@ import { bounds, type Solid, type Tri } from "../iso/solids";
 import { WORLD } from "../map/geo";
 import { createRng } from "../map/seed";
 import { city } from "./city";
-import { MALECON } from "./city-grid";
+import { PROMENADE } from "./city-grid";
 import { shipyard } from "./shipyard";
 import { buildTerrain } from "./terrain";
 import { isWaterAt, terrainAt } from "./terrain-classify";
@@ -48,9 +48,9 @@ describe("costa de la isla", () => {
       let start = 0, side = 0;
       for (let j = 0; j <= NY; j++) {
         const a = inI(i - 1, j), b = inI(i, j), x = X0 + i * C, y = Y0 + j * C;
-        const malecon = x === 342 && y >= 156 && y < 330;
+        const promenade = x === 342 && y >= 156 && y < 330;
         let s = j < NY && a !== b ? (a ? 1 : 2) : 0;
-        if (s && (malecon || exemptCell(a ? i - 1 : i, j))) s = 0;
+        if (s && (promenade || exemptCell(a ? i - 1 : i, j))) s = 0;
         if (s !== side) { if (side && (j - start) * C > 30) runs.push(`x=${x} y ${Y0 + start * C}..${y}`); start = j; side = s; }
       }
     }
@@ -84,7 +84,7 @@ describe("costa de la isla", () => {
       ...[...sy.solids, ...sy.ground].filter((s) => onIsland(s) && !escollera(s)),
       // de la ciudad, solo la franja de costura (y < 158): al sur la ribera del estuario solo gana tierra
       // (islandWestX ≤ estuaryEast, geo.test.ts) y malecón, puente y derrumbe están en el agua a propósito
-      ...cs.solids.filter((s) => onIsland(s) && bounds(s).max.y < MALECON.y0),
+      ...cs.solids.filter((s) => onIsland(s) && bounds(s).max.y < PROMENADE.y0),
     ];
     expect(candidates.length).toBeGreaterThan(10);
     const wet = candidates.filter(nearWater).map((s) => { const b = bounds(s); return `${s.kind}/${s.mat} ${b.min.x.toFixed(1)},${b.min.y.toFixed(1)}..${b.max.x.toFixed(1)},${b.max.y.toFixed(1)}`; });

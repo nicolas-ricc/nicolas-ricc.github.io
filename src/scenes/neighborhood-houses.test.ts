@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { bounds, type Solid } from "../iso/solids";
 import { createRng, SEED } from "../map/seed";
-import type { HomeWindow } from "./barrio";
-import { blockAt, faces, newCtx } from "./barrio-fixtures";
-import { casas } from "./barrio-casas";
+import type { HomeWindow } from "./neighborhood";
+import { blockAt, faces, newCtx } from "./neighborhood-fixtures";
+import { houses } from "./neighborhood-houses";
 import { suburbBlocks, type SprawlBlock } from "./sprawl-grid";
 import { tech } from "./tech";
 import { FACE_CAPS, blockRect, facesIn, insideInflated } from "./tech-budget";
@@ -13,13 +13,13 @@ import { zoneRng } from "./world";
 type Prism = Solid & { kind: "prism" };
 const isPrism = (s: Solid): s is Prism => s.kind === "prism";
 
-/** Las piezas de una manzana de casas, clasificadas por forma y material. */
+/** The pieces of a block of houses, classified by shape and material. */
 function parts(solids: readonly Solid[]) {
   const gables = solids.filter((s): s is Prism => isPrism(s) && s.roof === "gable");
   return {
     gables,
     houses: gables.filter((s) => s.w >= 4 && s.d >= 4),
-    ala: gables.filter((s) => s.w === 3 && s.d === 3),
+    wing: gables.filter((s) => s.w === 3 && s.d === 3),
     chims: solids.filter((s): s is Prism => isPrism(s) && s.mat === "brick" && s.w === 0.6 && s.d === 0.6),
     garage: solids.filter((s): s is Prism => isPrism(s) && s.mat === "whitewash" && s.roof !== "gable" && s.w === 3 && s.d === 3.5),
     roof: solids.filter((s): s is Solid & { kind: "ramp" } => s.kind === "ramp" && s.mat === "tile"),
@@ -38,7 +38,7 @@ const apart = (a: Solid, b: Solid): boolean => {
 const crossXY = (a: Solid, b: Solid): boolean => { const p = bounds(a), q = bounds(b); return p.max.x > q.min.x + EPS && q.max.x > p.min.x + EPS && p.max.y > q.min.y + EPS && q.max.y > p.min.y + EPS; };
 const holds = (house: Prism, c: Prism): boolean => c.at.x >= house.at.x && c.at.x + c.w <= house.at.x + house.w && c.at.y >= house.at.y && c.at.y + c.d <= house.at.y + house.d;
 
-/** Pares de casas, ala, cochera, techo, chimeneas y muro que se pisan (la chimenea con su casa vale). */
+/** Pairs of houses, wing, garage, roof, chimneys and wall that overlap (a chimney with its house is fine). */
 function overlaps(solids: readonly Solid[]): string[] {
   const p = parts(solids), all: Solid[] = [...p.gables, ...p.garage, ...p.roof, ...p.chims, ...p.walls], bad: string[] = [];
   for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
@@ -50,19 +50,19 @@ function overlaps(solids: readonly Solid[]): string[] {
   return bad;
 }
 
-// el mundo real: rng de la zona y el tipo de cada manzana según el pre-pase
+// the real world: the zone rng and the kind of each block according to the pre-pass
 const scene = tech(zoneRng(SEED, "cv", 2));
 const everything = [...scene.solids, ...scene.ground];
 const blocks = suburbBlocks(), kinds = zoneKinds(zoneRng(SEED, "cv", 2), blocks);
-const casasBlocks = blocks.filter((_, i) => kinds[i] === "casas");
+const houseBlocks = blocks.filter((_, i) => kinds[i] === "houses");
 const own = (b: SprawlBlock) => everything.filter((s) => insideInflated(s, blockRect(b)));
 const homesIn = (b: SprawlBlock): HomeWindow[] => { const r = blockRect(b); return scene.homes.filter((w) => w.pts.every((q) => q.x >= r.x0 && q.x <= r.x1 && q.y >= r.y0 && q.y <= r.y1)); };
-const each = (f: (b: SprawlBlock, p: ReturnType<typeof parts>) => void) => { for (const b of casasBlocks) f(b, parts(own(b))); };
+const each = (f: (b: SprawlBlock, p: ReturnType<typeof parts>) => void) => { for (const b of houseBlocks) f(b, parts(own(b))); };
 
-describe("casas de Ciudad Jardín (#251), sobre el mundo", () => {
-  it("hay manzanas de casas para probar", () => expect(casasBlocks.length).toBeGreaterThanOrEqual(10));
+describe("houses of Ciudad Jardín (#251), over the world", () => {
+  it("there are blocks of houses to test", () => expect(houseBlocks.length).toBeGreaterThanOrEqual(10));
 
-  it("4 a 5 casas gable de teja, revoque o ladrillo, de uno o dos pisos", () => each((b, p) => {
+  it("4 to 5 gabled houses with tile, plaster or brick, of one or two stories", () => each((b, p) => {
     const at = `${b.x},${b.y}`;
     expect(p.houses.length, at).toBeGreaterThanOrEqual(4); expect(p.houses.length, at).toBeLessThanOrEqual(5);
     expect(p.gables.length, at).toBeGreaterThanOrEqual(4); expect(p.gables.length, at).toBeLessThanOrEqual(6);
@@ -73,19 +73,19 @@ describe("casas de Ciudad Jardín (#251), sobre el mundo", () => {
     }
   }));
 
-  it("la cumbrera sigue la paridad: w ≥ d ⇔ blockParity === 0", () => each((b, p) => {
+  it("the ridge follows the parity: w ≥ d ⇔ blockParity === 0", () => each((b, p) => {
     for (const h of p.houses) expect(h.w >= h.d, `${b.x},${b.y}`).toBe(blockParity(b) === 0);
   }));
 
-  it("como mucho un ala, pegada al este de una casa, al ras de su fachada sur y del mismo material", () => each((b, p) => {
-    expect(p.ala.length).toBeLessThanOrEqual(1);
-    for (const a of p.ala) {
+  it("at most one wing, attached to the east of a house, flush with its south facade and of the same material", () => each((b, p) => {
+    expect(p.wing.length).toBeLessThanOrEqual(1);
+    for (const a of p.wing) {
       expect(a.h).toBe(3);
       expect(p.houses.some((h) => Math.abs(h.at.x + h.w - a.at.x) < EPS && Math.abs(h.at.y + h.d - (a.at.y + 3)) < EPS && h.mat === a.mat), `${b.x},${b.y}`).toBe(true);
     }
   }));
 
-  it("chimeneas de ladrillo apoyadas en el alero y dentro de su casa", () => each((b, p) => {
+  it("brick chimneys resting on the eave and inside their house", () => each((b, p) => {
     expect(p.chims.length, `${b.x},${b.y}`).toBeGreaterThanOrEqual(2);
     for (const c of p.chims) {
       expect(c.h).toBe(1.6);
@@ -93,7 +93,7 @@ describe("casas de Ciudad Jardín (#251), sobre el mundo", () => {
     }
   }));
 
-  it("una cochera con techo de teja y entrada de auto hasta el cordón sur", () => each((b, p) => {
+  it("one garage with a tile roof and a driveway down to the south curb", () => each((b, p) => {
     const at = `${b.x},${b.y}`;
     expect(p.garage, at).toHaveLength(1); expect(p.roof, at).toHaveLength(1); expect(p.drive, at).toHaveLength(1);
     const g = p.garage[0]!, r = p.roof[0]!, d = p.drive[0]!, db = bounds(d);
@@ -107,7 +107,7 @@ describe("casas de Ciudad Jardín (#251), sobre el mundo", () => {
     expect(db.min.x).toBeGreaterThanOrEqual(g.at.x - EPS); expect(db.max.x).toBeLessThanOrEqual(g.at.x + 3 + EPS);
   }));
 
-  it("muro bajo de ladrillo con reja, en dos tramos con un hueco de 3 u en la entrada de auto", () => each((b, p) => {
+  it("low brick wall with a grille, in two sections with a 3 u gap at the driveway", () => each((b, p) => {
     const at = `${b.x},${b.y}`;
     expect(p.walls, at).toHaveLength(2);
     for (const w of p.walls) {
@@ -119,14 +119,14 @@ describe("casas de Ciudad Jardín (#251), sobre el mundo", () => {
     expect((gap0 + gap1) / 2, at).toBeCloseTo((db.min.x + db.max.x) / 2, 9);
   }));
 
-  it("árboles de vereda en la calle sur y dos faroles, sin pisar la entrada ni los faroles", () => each((b, p) => {
+  it("sidewalk trees on the south street and two street lamps, without stepping on the driveway or the street lamps", () => each((b, p) => {
     const at = `${b.x},${b.y}`;
     expect(p.trees.filter((t) => t.at.y >= b.y + 18).length, at).toBeGreaterThanOrEqual(3);
     expect(p.lamps, at).toHaveLength(2);
     for (const t of p.trees) for (const o of [...p.drive, ...p.lamps]) expect(crossXY(t, o), at).toBe(false);
   }));
 
-  it("ventanas y puertas sobre la pared sur de una casa, con grupos únicos de la manzana", () => each((b, p) => {
+  it("windows and doors on the south wall of a house, with groups unique within the block", () => each((b, p) => {
     const at = `${b.x},${b.y}`, ws = homesIn(b);
     expect(ws.length, at).toBeGreaterThanOrEqual(p.houses.length * 2);
     for (const w of ws) {
@@ -138,36 +138,36 @@ describe("casas de Ciudad Jardín (#251), sobre el mundo", () => {
     expect(new Set(ws.map((w) => w.group)).size, at).toBe(ws.length);
   }));
 
-  it("fracción encendida de ventanas y puertas de casas entre 0.15 y 0.40", () => {
-    const ws = casasBlocks.flatMap(homesIn), share = ws.filter((w) => w.lit).length / ws.length;
+  it("lit fraction of house windows and doors between 0.15 and 0.40", () => {
+    const ws = houseBlocks.flatMap(homesIn), share = ws.filter((w) => w.lit).length / ws.length;
     expect(share).toBeGreaterThanOrEqual(0.15); expect(share).toBeLessThanOrEqual(0.40);
   });
 
-  it("casas, ala, cochera, techo, chimeneas y muro no se solapan (tocarse vale)", () => each((b) => {
+  it("houses, wing, garage, roof, chimneys and wall do not overlap (touching is fine)", () => each((b) => {
     expect(overlaps(own(b)), `${b.x},${b.y}`).toEqual([]);
   }));
 
-  it("dentro del tope de caras", () => each((b) => expect(facesIn(everything, blockRect(b)), `${b.x},${b.y}`).toBeLessThanOrEqual(FACE_CAPS.casas)));
+  it("within the face cap", () => each((b) => expect(facesIn(everything, blockRect(b)), `${b.x},${b.y}`).toBeLessThanOrEqual(FACE_CAPS.houses)));
 });
 
-describe("casas de Ciudad Jardín (#251), semillas sueltas", () => {
+describe("houses of Ciudad Jardín (#251), loose seeds", () => {
   const b0 = blockAt(132, 520), b1 = blockAt(102, 520);
-  it("las dos manzanas de prueba tienen paridad distinta", () => expect(blockParity(b0)).not.toBe(blockParity(b1)));
+  it("the two test blocks have different parity", () => expect(blockParity(b0)).not.toBe(blockParity(b1)));
   for (const b of [b0, b1]) for (const seed of [1, 7, 11]) {
-    it(`(${b.x},${b.y}) semilla ${seed}: sin solapes y dentro del tope`, () => {
+    it(`(${b.x},${b.y}) seed ${seed}: no overlaps and within the cap`, () => {
       const ctx = newCtx(createRng(seed));
-      casas(ctx, b);
+      houses(ctx, b);
       expect(overlaps(ctx.solids)).toEqual([]);
-      expect(faces(ctx)).toBeLessThanOrEqual(FACE_CAPS.casas);
+      expect(faces(ctx)).toBeLessThanOrEqual(FACE_CAPS.houses);
     });
   }
-  it("la planta 5×5 existe en paridad 0 y nunca en paridad 1", () => {
-    const squares = (b: SprawlBlock) => Array.from({ length: 20 }, (_, s) => { const ctx = newCtx(createRng(s + 1)); casas(ctx, b); return parts(ctx.solids).houses.filter((h) => h.w === h.d).length; }).reduce((x, y) => x + y, 0);
+  it("the 5×5 plan exists in parity 0 and never in parity 1", () => {
+    const squares = (b: SprawlBlock) => Array.from({ length: 20 }, (_, s) => { const ctx = newCtx(createRng(s + 1)); houses(ctx, b); return parts(ctx.solids).houses.filter((h) => h.w === h.d).length; }).reduce((x, y) => x + y, 0);
     const [even, odd] = blockParity(b0) === 0 ? [b0, b1] : [b1, b0];
     expect(squares(even)).toBeGreaterThan(0); expect(squares(odd)).toBe(0);
   });
-  it("el ala aparece en algunas corridas y no en otras", () => {
-    const withAla = Array.from({ length: 20 }, (_, s) => { const ctx = newCtx(createRng(s + 1)); casas(ctx, b0); return parts(ctx.solids).ala.length; });
-    expect(withAla.some((n) => n === 1)).toBe(true); expect(withAla.some((n) => n === 0)).toBe(true);
+  it("the wing appears in some runs and not in others", () => {
+    const withWing = Array.from({ length: 20 }, (_, s) => { const ctx = newCtx(createRng(s + 1)); houses(ctx, b0); return parts(ctx.solids).wing.length; });
+    expect(withWing.some((n) => n === 1)).toBe(true); expect(withWing.some((n) => n === 0)).toBe(true);
   });
 });

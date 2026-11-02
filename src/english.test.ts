@@ -46,10 +46,13 @@ const ALLOW: Record<string, RegExp[]> = {
   "src/kit/forms/composite.ts": [/^\s*(?:(?:nw|ne|se|sw|n|s|e|w)\s+)*se(?:\s+(?:nw|ne|se|sw|n|s|e|w))*\s*$/g],
   // the test name says "SE without open" (the corner id)
   "src/kit/forms/composite.test.ts": [/\bSE without open/g, /^\s*(?:(?:nw|ne|se|sw|n|s|e|w)\s+)*se(?:\s+(?:nw|ne|se|sw|n|s|e|w))*\s*$/g],
-  // `MALECON` is imported under an English alias; its definition in src/scenes/city-grid.ts is renamed by the scenes task
-  "src/city/fixed.ts": [/\bMALECON as /g],
-  "src/city/fixed.test.ts": [/\bMALECON as /g],
-  "src/city/streets.ts": [/\bMALECON as /g],
+  // proper nouns of the real places the neighborhood pieces model (decision 2c)
+  "src/scenes/neighborhood-houses.ts": [/Ciudad Jardín/g],
+  "src/scenes/neighborhood-houses.test.ts": [/Ciudad Jardín/g],
+  "src/scenes/neighborhood-monoblock.ts": [/Simón Bolívar/g],
+  "src/scenes/neighborhood-monoblock.test.ts": [/Simón Bolívar/g],
+  // `SE` is the southeast quadrant id of the plaza test (it collides with the Spanish word "se")
+  "src/scenes/neighborhood-plaza.test.ts": [/\bSE\b/g],
   "src/scenes/world-baseline.test.ts": [/"?[a-z-]+"?: "[0-9a-f]{8}\/[0-9a-f]{8}"/g],
 };
 

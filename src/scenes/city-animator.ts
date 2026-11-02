@@ -3,7 +3,7 @@ import { layerLookup, type AnimLayer, type Animator } from "./animator";
 import type { CityScene } from "./city";
 import { createCityAnim } from "./city-anim";
 
-/** Adapta las animaciones de la ciudad al contrato `Animator`. Todas son capas de acentos. */
+/** Adapts the city animations to the `Animator` contract. All of them are accent layers. */
 export function cityAnimator(scene: CityScene, rng: Rng, opts: { reducedMotion: boolean }): Animator {
   const anim = createCityAnim(scene, rng, opts);
   const layers: Record<string, () => AnimLayer> = {

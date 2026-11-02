@@ -12,24 +12,24 @@ import { bridge, collapsed, cars, greenery, promenade, plazaAndTower, westQuay, 
 import { FOOTBRIDGE_LOT, NO_PLINTH, WATER_TOWER_BLOCK, assign, waterTowerLot, type Placed } from "../city/zoning";
 
 /**
- * Resume: orquestador de la ciudad. La zonificación (src/city/zoning.ts) reparte
- * barrio, receta, lote y tono por manzana; acá se arma cada pieza con el kit, se
- * suman las piezas fijas (plaza y torre, puente, ribera, malecón, derrumbe, selva,
- * autos; src/city/fixed.ts) y las calles. El terreno (terrain.ts) es el asfalto.
+ * Resume: orchestrator of the city. The zoning (src/city/zoning.ts) assigns
+ * neighborhood, recipe, lot and tone per block; here each piece is built with the kit, the
+ * fixed pieces are added (plaza and tower, bridge, riverside, promenade, collapse, jungle,
+ * cars; src/city/fixed.ts) and the streets. The terrain (terrain.ts) is the asphalt.
  * Spec: docs/superpowers/specs/2026-10-15-resume-nivel-2-kit-zonificacion-luces-design.md §6.
  */
 export { PLINTH_H } from "./city-pieces";
 export { TOWER_H } from "./city-grid";
 
-/** Una pieza colocada: `solidOffset` es el índice de su primer sólido en `scene.solids`. */
+/** A placed piece: `solidOffset` is the index of its first solid in `scene.solids`. */
 export interface PlacedPiece { placed: Placed; piece: Piece; solidOffset: number }
 
 export interface CityScene {
-  ground: Solid[];   // baldosas de la plaza, suelo de manzanas devoradas, carriles
+  ground: Solid[];   // plaza tiles, ground of devoured blocks, lanes
   solids: Solid[];
-  accents: Accent[]; // faroles, derrame de luz, ventanas encendidas fijas, neones de bares y fachadas bañadas de lights(); las ventanas animables, el neón que titila (lights().flicker), el piso encendido de la torre y la antena los anima city-anim
+  accents: Accent[]; // street lamps, light spill, fixed lit windows, bar neons and bathed facades of lights(); the animatable windows, the flickering neon (lights().flicker), the lit floor of the tower and the antenna are animated by city-anim
   tower: TowerLights;
-  neon: { signs: Accent[]; malecon: Vec3[] }; // carteles del distrito y luces del malecón; los anima city-anim
+  neon: { signs: Accent[]; promenade: Vec3[] }; // signs of the district and lights of the promenade; city-anim animates them
   placed: PlacedPiece[];
   lights: CityLights;
 }
@@ -43,18 +43,18 @@ export function city(rng: Rng, districtRng: Rng, lightsRng: Rng): CityScene {
     const piece = recipe(p.recipe)(p.lot, r, { ...STYLES[p.neighborhood], tone: p.tone });
     placed.push({ placed: p, piece, solidOffset: solids.length });
     add(piece);
-    // el cartel consume el rng después de la receta, así las tiradas de la receta no dependen de cuántos slots haya
+    // the sign consumes the rng after the recipe, so the recipe draws do not depend on how many slots there are
     if (p.neighborhood === "district") for (const s of piece.slots) if (s.kind === "sign") signs.push({ kind: "poly", pts: s.pts, color: districtRng.chance(0.5) ? "cyan" : "magenta", alpha: 1 });
   }
   const tower = plazaAndTower(solids, ground, accents, rng);
   const host = placed.find((q) => q.placed.block.x === WATER_TOWER_BLOCK.x && q.placed.block.y === WATER_TOWER_BLOCK.y);
-  if (!host?.piece.courtyard) throw new Error("la manzana de la torre de agua no tiene patio");
+  if (!host?.piece.courtyard) throw new Error("the water tower block has no courtyard");
   add(recipe("waterTower")(waterTowerLot(host.piece.courtyard, host.placed.lot.z), rng, STYLES.residential));
   add(recipe("footbridge")(FOOTBRIDGE_LOT, rng, STYLES.residential));
   streets(ground, solids, accents);
   bridge(solids, accents);
   westQuay(solids, accents);
-  const maleconLights = promenade(solids, accents);
+  const promenadeLights = promenade(solids, accents);
   collapsed(solids, rng);
   greenery(solids, rng);
   cars(solids, rng);
@@ -62,5 +62,5 @@ export function city(rng: Rng, districtRng: Rng, lightsRng: Rng): CityScene {
   for (const w of lit.windows) if (w.on && !w.animable) accents.push({ kind: "poly", pts: w.window.pts, color: w.color, alpha: WINDOW_ALPHA });
   lit.neons.forEach((n, i) => { if (i !== lit.flicker) accents.push(...n.accents); });
   accents.push(...lit.bathed);
-  return { ground, solids, accents, tower, neon: { signs, malecon: maleconLights }, placed, lights: lit };
+  return { ground, solids, accents, tower, neon: { signs, promenade: promenadeLights }, placed, lights: lit };
 }

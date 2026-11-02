@@ -4,7 +4,7 @@ import { v3 } from "../iso/geometry";
 import { bounds, type Bounds, type Solid } from "../iso/solids";
 import { awning, dockCrane } from "../kit/props";
 import { createRng } from "../map/seed";
-import { AVENUE, BLOCK_W, BRIDGE, COLLAPSED, EAST_RING, MALECON as PROMENADE, PLAZA, SIDEWALK, STREET, TOWER, WEST_QUAY, blocks, estuaryEast } from "../scenes/city-grid";
+import { AVENUE, BLOCK_W, BRIDGE, COLLAPSED, EAST_RING, PROMENADE, PLAZA, SIDEWALK, STREET, TOWER, WEST_QUAY, blocks, estuaryEast } from "../scenes/city-grid";
 import { plazaTone, tiles } from "../scenes/city-pieces";
 import { bridge, collapsed, promenade, plazaAndTower, westQuay } from "./fixed";
 
