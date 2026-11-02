@@ -108,7 +108,7 @@ export function solidsBox(solids: readonly Solid[]): { box: Box; h: number } {
  * de 1 u de espesor que la cubre con margen, ella y la sombra que proyecta
  * (con el proyector del motor: el pad queda descentrado hacia donde cae la sombra).
  * La cara de arriba del pad va al piso de la pieza (−1 para los barcos, que
- * flotan en `WATER_Z`). Sin terreno ni subescenas: el stage no las lee.
+ * flotan en `WATER_Z`). With no solids the pad's top face is at 0. Sin terreno ni subescenas: el stage no las lee.
  */
 export function pieceScene(build: (out: Solid[], accents: Accent[]) => void, pad: Material = "paving"): WorldScene {
   const solids: Solid[] = [], accents: Accent[] = [];
@@ -126,7 +126,8 @@ export function pieceScene(build: (out: Solid[], accents: Accent[]) => void, pad
     x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y);
   }
   x0 -= PAD_M; y0 -= PAD_M; x1 += PAD_M; y1 += PAD_M;
-  const top = Math.floor(floor);
+  // no solid, or only faceless ones: floor stays Infinity, so the pad sits at z = 0
+  const top = Number.isFinite(floor) ? Math.floor(floor) : 0;
   // tapa y las dos caras que ve la cámara (este, sur), con la normal hacia afuera
   const nw = v3(x0, y0, top), ne = v3(x1, y0, top), se = v3(x1, y1, top), sw = v3(x0, y1, top);
   const neB = v3(x1, y0, top - 1), seB = v3(x1, y1, top - 1), swB = v3(x0, y1, top - 1);
