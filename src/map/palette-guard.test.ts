@@ -65,3 +65,37 @@ describe("guard de paleta en lab/*.html", () => {
     });
   }
 });
+
+const STYLE_CSS = fileURLToPath(new URL("../style.css", import.meta.url));
+
+/** Off-palette hex literals src/style.css may use (lowercase). */
+const STYLE_CSS_ALLOWLIST: ReadonlySet<string> = new Set<string>([]);
+
+function styleCssOffenders(text: string): string[] {
+  return offPalette(text).filter((h) => !STYLE_CSS_ALLOWLIST.has(h.toLowerCase()));
+}
+
+describe("palette guard on src/style.css", () => {
+  const css = readFileSync(STYLE_CSS, "utf8");
+
+  it("reports off-palette literals unless allowlisted, ignoring case", () => {
+    expect(styleCssOffenders("color: #e6edf3; color: #E6EDF3; text-shadow: 0 0 2px #000;")).toEqual([]);
+    expect(styleCssOffenders("background: #100E19; color: #9aa7b2;")).toEqual([]);
+    expect(styleCssOffenders("color: #e6edf4;")).toEqual(["#e6edf4"]);
+    expect(styleCssOffenders("color: #000000; border: #e6edf3ff;")).toEqual(["#000000", "#e6edf3ff"]);
+    expect(styleCssOffenders("#content a { color: inherit; } #app {}")).toEqual([]);
+  });
+
+  it("src/style.css only uses palette colours or allowlisted UI colours", () => {
+    expect(styleCssOffenders(css)).toEqual([]);
+  });
+
+  it("allowlist entries are off-palette", () => {
+    expect([...STYLE_CSS_ALLOWLIST].filter((hex) => offPalette(hex).length === 0)).toEqual([]);
+  });
+
+  it("allowlist entries are still used in src/style.css", () => {
+    const used = new Set(offPalette(css).map((h) => h.toLowerCase()));
+    expect([...STYLE_CSS_ALLOWLIST].filter((hex) => !used.has(hex))).toEqual([]);
+  });
+});
