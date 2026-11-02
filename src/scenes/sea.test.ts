@@ -33,7 +33,7 @@ describe("sea", () => {
     expect(s.solids.some((x) => x.kind === "cylinder" && x.mat === "glass" && x.h === 3)).toBe(true);
     const top = Math.max(...s.solids.filter((x) => Math.abs(bounds(x).min.x - (LIGHTHOUSE.x - 3.2)) < 4 && Math.abs(bounds(x).min.y - (LIGHTHOUSE.y - 3.2)) < 4).map((x) => bounds(x).max.z));
     expect(top - LIGHTHOUSE.z).toBeCloseTo(29.6, 1);
-    expect(s.lantern.z).toBeCloseTo(LIGHTHOUSE.z + 24 + 0.6 + 1.5, 6);
+    expect(s.lantern.z).toBeCloseTo(LIGHTHOUSE.z + 24 + 0.6 + 1.5, 6); // pin de deriva a propósito (#133): seis tambores de 4 + galería 0.6 + media linterna, en literales para que cambiar una constante rompa acá
     expect(s.lantern.z).toBe(LANTERN_Z);
     expect(worldZoneAt(LIGHTHOUSE.x, LIGHTHOUSE.y)).toBe("portfolio"); // el faro clickea Portfolio
   });
@@ -121,7 +121,7 @@ describe("sea", () => {
       expect(p.z).toBeCloseTo(s.lantern.z - 2, 6);
       expect(Math.abs(Math.hypot(p.x - LIGHTHOUSE.x, p.y - LIGHTHOUSE.y) - GALLERY_R)).toBeLessThan(1e-6);
     }
-    expect(GALLERY_R).toBeCloseTo(2.2 + 0.5, 6); // último tambor + 0.5
+    expect(GALLERY_R).toBeCloseTo(2.2 + 0.5, 6); // pin de deriva a propósito (#133): último tambor (2.2) + 0.5, en literales y no con las constantes
     expect(coast.length).toBeGreaterThanOrEqual(6); expect(coast.length).toBeLessThanOrEqual(10);
     expect(coast).toEqual(COAST.map((p) => ({ x: p.x, y: p.y, z: COAST_Z })));
     expect(COAST_Z).toBe(1.2);
