@@ -63,12 +63,12 @@ describe("world", () => {
     const w = world(7);
     const mats = (solids: Solid[]) => new Set(solids.filter((s) => s.kind !== "cone").map((s) => s.mat));
     const portfolio = mats([...w.shipyard!.solids, ...w.factory!.solids, ...w.factory!.excavator]), // la excavadora vive fuera de factory.solids (#216)
-       cv = mats(w.city!.solids), blog = mats(w.sea!.solids);
+      cv = mats(w.city!.solids), blog = mats(w.sea!.solids);
     // Igualdad exacta (#218): falla si alguno deja de compartirse o aparece otro. office: gris lila de la excavadora (decisión de #207);
-    // asphalt: cabezas de los semáforos de la estación (#277); stone: fuste de la torre del reloj y paving: losa de la explanada (#278).
+    // asphalt: cabezas de los semáforos de la estación (#277) y tapas de la linterna (#278); stone: fuste de la torre del reloj y paving: losa de la explanada (#278).
     // Sin glass: la ciudad solo tiene vidrio en caras de fachada, no como mat de un sólido.
     const sharedWithCity = ["asphalt", "office", "paving", "rust", "steel", "stone"];
-    expect([...portfolio].filter((m) => cv.has(m)).sort()).toEqual(sharedWithCity);
+    expect([...portfolio].filter((m) => cv.has(m)).sort()).toEqual([...sharedWithCity].sort());
     const sharedWithBlog = ["steel", "rust", "hull", "rock", "glass", "whitewash", "deck"]; // glass: la linterna del faro (spec §7); whitewash: porcelana y remates de la fábrica (#207); deck: tablones del paso a nivel (#277)
     for (const other of [portfolio, cv]) for (const m of blog) if (other.has(m)) expect(sharedWithBlog).toContain(m);
   });
