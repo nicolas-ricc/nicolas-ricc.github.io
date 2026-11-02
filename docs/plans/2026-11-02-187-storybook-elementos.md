@@ -27,6 +27,15 @@
 5. **`assembleWorld` no se mueve dentro de `boot()`.** `page.ts` sigue el mismo patrón y el issue no lo pide. Basta con que corra dentro del callback de `mountStorybook` (decisión 2).
 6. **Los tests de fuente que quedan en `storybook.test.ts`** (`stage?.destroy()` y los logs de #132) se quedan: cubren código atado a Pixi que sigue en `storybook.ts`. El de #117, que leía `outOfView(...)` del fuente, se reemplaza por un test de comportamiento de `markCurrent`.
 
+## Assumptions
+
+Decisiones técnicas sin fuente escrita, tomadas en la revisión del plan (etapa 2). Van también en la descripción del PR.
+
+- **A1. Sin `#lab-host`, el mensaje reemplaza el contenido de `body`** (`textContent =`), igual que `runBoot` reemplaza el del host (`src/lab/boot.ts:8`). Lo que se pierde es el `nav` y el `aside`, que a esa altura están vacíos porque el script los llena. Se descartó añadir un `<p>` al principio de `body`: dejaría un grid de tres columnas con un hueco y el aviso encajado en la primera.
+- **A2. El estado intermedio de Task 1.** `renderReadout` y `boot` quedan como funciones internas del callback y toman `host`, `nav` y `panel` por clausura. `boot` corre asíncrona dentro de `runBoot`, que sigue atendiendo sus rechazos. Task 2 saca `renderReadout` del callback. Se descartó pasar los elementos por parámetro a `boot`, porque `runBoot` llama a `boot()` sin argumentos.
+- **A3. Orden de los ids en el mensaje:** el de `STORYBOOK_IDS` (`lab-host`, `exhibits`, `readout`), no el del documento. Así es determinista e independiente del HTML. Un test lo fija.
+- **A4. Sin cambios de comportamiento con la página completa.** Lo comprueba el script de agent-browser de la etapa 3 (`.scratch/evals-187.md`): el canvas existe, `#exhibits` tiene un enlace por exhibit, la entrada de `location.hash` lleva `aria-current="page"`, `#readout` tiene un `dl` con 9 `dt`, y no aparece "No se pudo iniciar". Una segunda corrida sobre una copia de la página sin `#readout` muestra el mensaje.
+
 ## Review Focus
 
 1. La página sin `#lab-host`: el mensaje aparece en `body` y no se lanza nada (test en Task 1).
@@ -59,6 +68,7 @@
   - `mountStorybook` con la página completa llama a `run` una vez con los elementos y no registra error.
   - `mountStorybook` sin `#exhibits`: el texto de `#lab-host` pasa a ser `"No se pudo iniciar el storybook: falta #exhibits en la página"`, `run` no se llama, `console.error` se llama con `"[storybook] no se pudo iniciar"` y el error, y la llamada no lanza.
   - `mountStorybook` sin `#lab-host`: el texto de `document.body` pasa a ser `"No se pudo iniciar el storybook: falta #lab-host en la página"`.
+  - `mountStorybook` con una página sin ninguno de los tres: `document.body` muestra `"No se pudo iniciar el storybook: faltan #lab-host, #exhibits, #readout en la página"` (orden de `STORYBOOK_IDS`, A3).
   - `mountStorybook` con un `run` que lanza `new Error("sin mundo")`: el host muestra `"No se pudo iniciar el storybook: sin mundo"`.
   - `lab/storybook.html` tiene un elemento por cada id de `STORYBOOK_IDS`. Se parsea con `DOMParser` y la ruta se arma como en `host-keyboard.test.ts`, con `resolve(import.meta.dirname, "../..")`.
 
@@ -67,7 +77,7 @@
   - `storybook.ts` contiene `mountStorybook(document,`.
 
 - [ ] **Step 2:** `npx vitest run src/lab/storybook-ui.test.ts src/lab/storybook.test.ts` falla porque el módulo no existe y porque `storybook.ts` todavía usa `getElementById`.
-- [ ] **Step 3: Implementar `storybook-ui.ts` (solo estas dos funciones) y reescribir `storybook.ts`.** `storybook.ts` queda como `mountStorybook(document, ({ host, nav, panel }) => { … })`: dentro va todo lo que hoy está en el nivel superior, desde `reducedMotion`/`assembleWorld` hasta `void runBoot(host, "storybook", boot);`. `renderReadout` y `boot` pasan a ser funciones internas o reciben los elementos, según convenga. `void runBoot(host, "storybook", boot);` se mantiene literal, porque lo fija `boot.test.ts`, y el `window.addEventListener("keydown"` también (`host-keyboard.test.ts`). El JSDoc del módulo se queda en `storybook.ts`.
+- [ ] **Step 3: Implementar `storybook-ui.ts` (solo estas dos funciones) y reescribir `storybook.ts`.** `storybook.ts` queda como `mountStorybook(document, ({ host, nav, panel }) => { … })`: dentro va todo lo que hoy está en el nivel superior, desde `reducedMotion`/`assembleWorld` hasta `void runBoot(host, "storybook", boot);`. `renderReadout` y `boot` pasan a ser funciones internas del callback y usan `host`, `nav` y `panel` por clausura (A2). `void runBoot(host, "storybook", boot);` se mantiene literal, porque lo fija `boot.test.ts`, y el `window.addEventListener("keydown"` también (`host-keyboard.test.ts`). El JSDoc del módulo se queda en `storybook.ts`.
 - [ ] **Step 4:** `npm test` y `npm run typecheck` en verde.
 - [ ] **Step 5: Commit** `fix(#187): el storybook resuelve sus elementos con guarda y avisa en la página`.
 
@@ -99,3 +109,9 @@
 - [ ] **Step 3: Implementar las tres funciones y usarlas desde `storybook.ts`.** `show()` llama a `renderReadout(panel, readout(...src))` y a `markCurrent(nav, e.id)`, y el armado del índice pasa a ser `buildIndex(nav, GROUPS, EXHIBITS)`. Los imports que `storybook.ts` deje de usar (`outOfView`) salen de ahí. El comentario de #117 ("el índice no entra entero…") viaja con el código a `markCurrent`.
 - [ ] **Step 4:** `npm test` y `npm run typecheck` en verde.
 - [ ] **Step 5: Commit** `refactor(#187): índice, entrada actual y panel del storybook en storybook-ui.ts`.
+
+## Grilling
+
+- Rondas: 1 (la revisión no cambió tareas ni la costura del plan, solo precisó redacción y supuestos, así que no hizo falta una segunda).
+- Preguntas: 17. Con fuente en el código: 13 (1, 2, 3, 6, 7, 9, 10, 11, 14, 16 y 17, más 4 y 8 en parte). Con fuente en el issue: 2 (13 y 15). Sin fuente: 4, que quedaron como supuestos técnicos (A1-A4: preguntas 4, 5, 8 y 12).
+- Ambigüedades de spec: ninguna. Issues abiertos fuera de alcance: ninguno.
