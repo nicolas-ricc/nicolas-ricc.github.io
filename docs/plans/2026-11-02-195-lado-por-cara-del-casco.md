@@ -50,6 +50,7 @@ Done in pipeline stage 3, before any change to `depth.ts`.
   - Hull/cabin/fender at heading 0: expected `[hull, cabin, fender]` for the three input orders.
   - New hull-separates triple: tug hull (`at (0,0,-1)`, `len 19, beam 7, h 2.2, sheer 0.3`), `low = rotBox(h, 10, -1, 2, 2, 0, 1)`, `deckBox = rotBox(h, 7, -1, 2, 2, 1.2, 1.8)` → `[low, hull, deckBox]` for three input orders at headings 0 and π.
   - New sunk deckhouse: tug hull, `house = rotBox(h, 8.2, -2.2, 6, 4.4, 1.1, 1.7)` → `[hull, house]` for both input orders at 0°, 90°, 180°, 270°, 145°.
+  - Same sunk deckhouse with the hull and house at heading 90° but sorted at heading 0 (`sortByDepth(input, 0)`) → `[hull, house]`: pins that the ring comes from the hull's own heading while the frame is the sort heading (the fair boats' case, `src/scenes/fair.ts:208`). See Assumption A1.
 - [ ] **Step 4: run red.** `npx vitest run src/iso/depth.test.ts src/scenes/ships-depth.test.ts`. Expected failures: sweep (ferry, tug, barge), ferry fender case, the new fender/corner expectations, hull/cabin/fender, sunk deckhouse at 180°/270°/145°. Record them in the stage comment.
 - [ ] **Step 5: commit** `test(#195): evals`.
 
@@ -74,6 +75,23 @@ Done in pipeline stage 3, before any change to `depth.ts`.
 - Create: `docs/superpowers/specs/assets/195-ferry-fender/ferry-0-before.png`, `ferry-0-after.png`
 - Scratch (not committed): `.scratch/static-list-195.ts`
 
+- [ ] **Step 0:** `.scratch/` goes in `.git/info/exclude` (never committed); the `main` worktree lives in `/tmp/main-195` and is removed with `git worktree remove` at the end of this task.
 - [ ] **Step 1:** Scratch script that builds `world(SEED)` and `buildRenderList([...terrain.ground, ...scene.ground, ...scene.solids])` as `src/world/stage.ts` does, dumps the items to JSON; run it on `main` (a `git worktree` of `origin/main`) and on the branch; compare item by item. Expected: identical count and 0 differing items.
 - [ ] **Step 2:** Captures with agent-browser (viewport 1600×900 at 2×) of `http://localhost:5173/lab/storybook.html#lancha` on `main` (before) and on the branch (after), per `CLAUDE.md`. Before: the aft-most starboard fender half hidden by the hull; after: drawn over the hull.
 - [ ] **Step 3:** commit `docs(#195): ferry fender captures`.
+
+## Assumptions
+
+- **A1.** One extra assertion beyond D2: the sunk deckhouse with hull heading 90° sorted at heading 0. D2 has no case where the hull heading differs from the sort heading, and the static comparison only proves "no change". Rejected: relying on the static `world(SEED)` comparison alone.
+- **A2.** The `ships-depth.test.ts` oracle re-implements D1 on ship-local boxes, so it is not independent of D1's text; the independent pins are the literal expected orders of D2 in `depth.test.ts` and the ferry-fender `it`. D1 is the owner's/planner's fixed definition ("Design decisions (fixed; do not reopen)"). Rejected: a geometric oracle (e.g. rasterised occlusion), which the issue does not ask for.
+- **A3.** The sweep keeps today's convention for "no side": a pair whose expected side is 0 is skipped, as `src/scenes/ships-depth.test.ts:39` does now (`if (Math.abs(t) <= EPS) continue`).
+- **A4.** If the Task 3 static comparison reports a difference, Task 2 is not shipped as is: the difference contradicts the issue's "cannot change under any hull rule" and is taken back to the issue as a blocker (spec ambiguity), not patched over.
+- **A5.** Red evals are committed on the branch before the fix (the issue's "Red-first" in "How to test"); the branch is squash-merged, so no red commit reaches `main`.
+- **A6.** No guard against `len`/`beam` = 0: the `hull` solid type (`src/iso/solids.ts:25`) has no validation and every hull in the repo has literal positive sizes (`ships.ts` `SHIP_SPECS`, `fair.ts:208`, `shipyard.ts:89,141`).
+- **A7.** Rings are kept in an array/map keyed by the hull's index in `solids`, the same key `sides` already uses (`src/iso/depth.ts`, `hulls` / `sides`).
+
+## Grilling
+
+- Rounds: 1 (the revisions add one assertion and a cleanup step; no seam changed, so no second round).
+- Questions: 18. Sources: ISSUE 9, CODE 13, DOC 1 (several answers cite more than one); NO SOURCE → technical assumption 7 (A1–A7); spec ambiguity 0; out of scope 0.
+- Issues opened: none.
