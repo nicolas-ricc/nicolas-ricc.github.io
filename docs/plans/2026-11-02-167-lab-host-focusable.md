@@ -86,7 +86,7 @@ describe("lab host keyboard access (#167)", () => {
 });
 ```
 
-`ROOT` is `new URL("../../", import.meta.url).pathname`, as in `src/lab/host.test.ts`. `mountHost(page: string): HTMLElement` reads `lab/<page>.html`, parses it with `new DOMParser().parseFromString(html, "text/html")`, and `document.body.replaceChildren(document.importNode(host, true))`, returning the imported node; a missing host throws (`Error(`lab/${page}.html has no #lab-host`)`), which also narrows the `getElementById` result under `strict`. (Writing the storybook entry now is fine: its two cases fail until Task 2.)
+`ROOT` is `${resolve(import.meta.dirname, "../..")}/`: under happy-dom `import.meta.url` is a `/@fs/` URL, so the `new URL(…, import.meta.url).pathname` of `src/lab/host.test.ts` does not work here. `mountHost(page: string): HTMLElement` reads `lab/<page>.html`, parses it with `new DOMParser().parseFromString(html, "text/html")`, and `document.body.replaceChildren(document.importNode(host, true))`, returning the imported node; a missing host throws (`Error(`lab/${page}.html has no #lab-host`)`), which also narrows the `getElementById` result under `strict`. (Writing the storybook entry now is fine: its two cases fail until Task 2.)
 
 - [ ] **Step 3: Run to verify it fails** — `npx vitest run src/lab/host-keyboard.test.ts`. Expected: the tabindex and shortcut cases FAIL for every page; the inventory and window-listener cases PASS.
 - [ ] **Step 4: Implement** — in the four world HTML files, `<div id="lab-host" role="application"` becomes `<div id="lab-host" role="application" tabindex="0" aria-keyshortcuts="0 1 2 3 4 5 6"`, rest of the tag unchanged.
