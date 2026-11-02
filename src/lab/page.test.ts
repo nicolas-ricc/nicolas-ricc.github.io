@@ -67,6 +67,23 @@ describe("?speed= en el lab (#114)", () => {
   });
 });
 
+describe("lab world help documents URL parameters (#180)", () => {
+  const hostTag = (p: string): string => readFileSync(`${ROOT}lab/${p}.html`, "utf8").match(/<div id="lab-host"[^>]*>/)?.[0] ?? "";
+  const label = /\baria-label="([^"]*)"/.exec(hostTag("world"))?.[1] ?? "";
+  it("lists ?bloom= with the modes it forces", () => {
+    expect(label).toContain("?bloom= lo fuerza al cargar: on, off o fallback.");
+    for (const m of /\?bloom= lo fuerza al cargar: (\w+), (\w+) o (\w+)\./.exec(label)!.slice(1)) expect(bloomFromSearch(`?bloom=${m}`), m).toBe(m);
+  });
+  it("lists ?speed= with its cap and ?speed=0 freezing the clock", () => {
+    expect(label).toContain(`?speed= escala el reloj de las animaciones hasta ${MAX_SPEED}; ?speed=0 lo congela.`);
+  });
+  it("leaves the other lab pages' help alone", () => {
+    for (const p of ["blog", "resume", "portfolio", "storybook"]) {
+      expect(hostTag(p), p).not.toMatch(/\?(speed|bloom)=/);
+    }
+  });
+});
+
 describe("?speed=0 en las páginas (#114)", () => {
   const storySrc = readFileSync(`${ROOT}src/lab/storybook.ts`, "utf8");
   it("page.ts y storybook.ts leen la velocidad con speedFromSearch", () => {
