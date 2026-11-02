@@ -9,14 +9,14 @@ const setup = (reducedMotion = false) => {
   return { scene, anim: createShipyardAnim(scene, createRng(3), { reducedMotion }) };
 };
 
-/** Los acentos de este escenario siempre son puntos; angosta el tipo para los tests. */
+/** The accents in this scene are always dots; narrows the type for the tests. */
 const dot = (a: Accent): Extract<Accent, { kind: "dot" }> => {
-  if (a.kind !== "dot") throw new Error("se esperaba un acento de tipo dot");
+  if (a.kind !== "dot") throw new Error("expected an accent of kind dot");
   return a;
 };
 
 describe("shipyard-anim", () => {
-  it("el carro nunca sale de la viga y vuelve al inicio tras un ciclo", () => {
+  it("the trolley never leaves the beam and returns to the start after a cycle", () => {
     const { scene, anim } = setup();
     const [y0, y1] = scene.trolleyRange;
     for (let t = 0; t < TROLLEY_CYCLE_MS; t += 33) {
@@ -28,7 +28,7 @@ describe("shipyard-anim", () => {
     expect(scene.trolley.at.y).toBeCloseTo(y0, 3);
   });
 
-  it("durante la pausa inicial el carro no se mueve y tick no reporta cambio", () => {
+  it("during the initial pause the trolley does not move and tick reports no change", () => {
     const { scene, anim } = setup();
     const y = scene.trolley.at.y;
     const c = anim.tick(TROLLEY_PAUSE_MS / 2);
@@ -36,7 +36,7 @@ describe("shipyard-anim", () => {
     expect(c.trolley).toBe(false);
   });
 
-  it("a mitad de ciclo el carro está en el otro extremo", () => {
+  it("at mid-cycle the trolley is at the other end", () => {
     const { scene, anim } = setup();
     anim.tick(TROLLEY_CYCLE_MS / 2);
     expect(scene.trolley.at.y).toBeCloseTo(scene.trolleyRange[1], 3);
@@ -44,7 +44,7 @@ describe("shipyard-anim", () => {
     expect(dot(anim.trolleyLamp()).at.z).toBeLessThan(scene.trolley.at.z);
   });
 
-  it("las chispas aparecen en una cuaderna, duran tres frames y desaparecen", () => {
+  it("the sparks appear at a rib, last three frames and disappear", () => {
     const { scene, anim } = setup();
     let seen = 0, maxFrames = 0, run = 0;
     let runSpot: { x: number; y: number } | null = null;
@@ -57,9 +57,9 @@ describe("shipyard-anim", () => {
         expect(s.length).toBeLessThanOrEqual(6);
         expect(scene.weldSpots.some((w) => Math.abs(w.x - dot(s[0]!).at.x) < 3 && Math.abs(w.y - dot(s[0]!).at.y) < 3)).toBe(true);
         if (run === 1) {
-          // primera frame del evento: fija la cuaderna que todo el flicker debe respetar.
-          // Se promedia la frame para cancelar el jitter y se toma la cuaderna más
-          // cercana (no la primera que matchee un umbral, porque hay varias a <3u).
+          // first frame of the event: fixes the rib that the whole flicker must respect.
+          // The frame is averaged to cancel the jitter and the nearest rib
+          // is taken (not the first that matches a threshold, because several are within <3u).
           const cx = s.reduce((sum, a) => sum + dot(a).at.x, 0) / s.length;
           const cy = s.reduce((sum, a) => sum + dot(a).at.y, 0) / s.length;
           runSpot = scene.weldSpots.reduce((best, w) => {
@@ -67,7 +67,7 @@ describe("shipyard-anim", () => {
             return d < best.d ? { w, d } : best;
           }, { w: scene.weldSpots[0]!, d: Infinity }).w;
         } else if (runSpot) {
-          // frames siguientes del mismo evento: todas las chispas cerca de la MISMA cuaderna
+          // following frames of the same event: all the sparks near the SAME rib
           for (const a of s) {
             expect(Math.abs(dot(a).at.x - runSpot.x)).toBeLessThan(3);
             expect(Math.abs(dot(a).at.y - runSpot.y)).toBeLessThan(3);
@@ -79,7 +79,7 @@ describe("shipyard-anim", () => {
     expect(maxFrames).toBeLessThanOrEqual(3);
   });
 
-  it("con reduced-motion nada cambia nunca", () => {
+  it("with reduced-motion nothing ever changes", () => {
     const { scene, anim } = setup(true);
     const y = scene.trolley.at.y;
     for (let i = 0; i < 100; i++) {
@@ -91,52 +91,52 @@ describe("shipyard-anim", () => {
   });
 });
 
-describe("shipyard-anim: troceo (#125)", () => {
-  const troceado = (dts: number[]) => {
+describe("shipyard-anim: chunking (#125)", () => {
+  const chunked = (dts: number[]) => {
     const { scene, anim } = setup();
     for (const dt of dts) anim.tick(dt);
     return { y: scene.trolley.at.y, anim };
   };
-  const veces = (n: number, dt: number) => Array.from({ length: n }, () => dt);
-  it("un tick de 60 s deja lo mismo que 600 ticks de 100 ms", () => {
-    const a = troceado([60000]), b = troceado(veces(600, 100));
+  const repeat = (n: number, dt: number) => Array.from({ length: n }, () => dt);
+  it("one 60 s tick leaves the same as 600 ticks of 100 ms", () => {
+    const a = chunked([60000]), b = chunked(repeat(600, 100));
     expect(a.anim.fired().sparks).toBeGreaterThan(0);
     expect(a.anim.fired()).toEqual(b.anim.fired());
     expect(a.anim.sparks()).toEqual(b.anim.sparks());
     expect(a.y).toBe(b.y);
   });
-  it("un troceo irregular deja lo mismo que su suma", () => {
+  it("an irregular chunking leaves the same as its sum", () => {
     const dts = [16, 33, 100, 250, 1000, 5000, 7000, 33, 1234];
-    const a = troceado(dts), b = troceado([dts.reduce((s, x) => s + x, 0)]);
+    const a = chunked(dts), b = chunked([dts.reduce((s, x) => s + x, 0)]);
     expect(a.anim.fired()).toEqual(b.anim.fired());
     expect(a.anim.sparks()).toEqual(b.anim.sparks());
   });
-  it("un tick largo que termina a mitad de un evento muestra el mismo cuadro", () => {
+  it("a long tick that ends mid-event shows the same frame", () => {
     const b = setup().anim;
     let t = 0;
     while (b.sparks().length === 0) { b.tick(100); t += 100; }
-    b.tick(100); t += 100; // segundo cuadro del evento
+    b.tick(100); t += 100; // second frame of the event
     const a = setup().anim;
     a.tick(t);
     expect(b.sparks().length).toBeGreaterThan(0);
     expect(a.sparks()).toEqual(b.sparks());
   });
-  it("10 min de una vez: tantos eventos como 6000 ticks de 100 ms", () => {
-    const largo = troceado([600000]).anim.fired().sparks;
-    expect(largo).toBeGreaterThanOrEqual(600000 / (SPARK_GAP_MS[1] + 300) - 1);
-    expect(largo).toBeLessThanOrEqual(600000 / SPARK_GAP_MS[0]);
-    expect(largo).toBe(troceado(veces(6000, 100)).anim.fired().sparks);
+  it("10 min at once: as many events as 6000 ticks of 100 ms", () => {
+    const long = chunked([600000]).anim.fired().sparks;
+    expect(long).toBeGreaterThanOrEqual(600000 / (SPARK_GAP_MS[1] + 300) - 1);
+    expect(long).toBeLessThanOrEqual(600000 / SPARK_GAP_MS[0]);
+    expect(long).toBe(chunked(repeat(6000, 100)).anim.fired().sparks);
   });
-  it("un evento entero dentro de un tick largo no reporta cambio de chispas", () => {
+  it("an entire event inside a long tick reports no spark change", () => {
     const b = setup().anim;
     let t = 0;
     while (b.sparks().length === 0) { b.tick(10); t += 10; }
     while (b.sparks().length > 0) { b.tick(10); t += 10; }
     const a = setup().anim;
-    expect(a.tick(t).sparks).toBe(false); // vacío antes y después: nada que redibujar
+    expect(a.tick(t).sparks).toBe(false); // empty before and after: nothing to redraw
     expect(a.fired().sparks).toBe(1);
   });
-  it("dt no válido no cambia nada", () => {
+  it("an invalid dt changes nothing", () => {
     const { scene, anim } = setup();
     const y = scene.trolley.at.y;
     for (const dt of [0, -5, NaN, Infinity]) expect(anim.tick(dt)).toEqual({ trolley: false, sparks: false });

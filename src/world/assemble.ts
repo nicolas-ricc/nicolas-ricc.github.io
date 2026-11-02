@@ -11,19 +11,19 @@ import { techAnimator } from "../scenes/tech-animator";
 import { waterAnimator } from "../scenes/water-animator";
 import { world, type WorldScene } from "../scenes/world";
 
-/** Un animador con su zona de origen (la del lab y los recortes); `null` es el agua. El velo de las luces no la usa: va por la posición de cada luz o por la zona que declare la capa. */
+/** An animator with its zone of origin (the lab's and the crops'); `null` is the water. The lights' veil does not use it: it goes by the position of each light or by the zone the layer declares. */
 export type ZonedAnimator = Animator & { zone: WorldZone | null };
 export interface Assembled { scene: WorldScene; animators: ZonedAnimator[] }
 
 export const tag = (a: Animator, zone: WorldZone | null): ZonedAnimator => Object.assign(a, { zone });
 
-/** El mundo (o algunas zonas) y sus animadores, con los seeds del laboratorio. */
+/** The world (or some zones) and its animators, with the lab's seeds. */
 export function assembleWorld(zones: readonly WorldZone[] | undefined, opts: { reducedMotion: boolean }): Assembled {
   const { reducedMotion } = opts;
   const scene = world(SEED, zones ? { zones } : {});
   const animators: ZonedAnimator[] = [tag(waterAnimator(scene.terrain, { reducedMotion }), null)];
   if (scene.shipyard) animators.push(tag(shipyardAnimator(scene.shipyard, createRng(SEED + 1), { reducedMotion }), "portfolio"));
-  // el tren corre por la vía del astillero; su cola sale del terreno por el oeste (el lab), así que va aun con el filtro ["portfolio"]
+  // the train runs along the shipyard track; its tail leaves the terrain on the west (the lab), so it goes even with the ["portfolio"] filter
   if (scene.shipyard) animators.push(tag(railAnimator({ reducedMotion }), "portfolio"));
   if (scene.city) animators.push(tag(cityAnimator(scene.city, createRng(SEED + 2), { reducedMotion }), "cv"));
   if (scene.factory) animators.push(tag(factoryAnimator({ ...scene.factory, stacks: [...scene.factory.stacks, ...(scene.hinterland?.stacks ?? [])] }, createRng(SEED + 4), { reducedMotion }), "portfolio"));

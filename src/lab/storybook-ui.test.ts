@@ -6,10 +6,10 @@ import type { Readout } from "./crop";
 import { EXHIBITS, GROUPS } from "./exhibits";
 import { buildIndex, markCurrent, mountStorybook, renderReadout, STORYBOOK_IDS, storybookElements } from "./storybook-ui";
 
-// bajo happy-dom import.meta.url es una URL /@fs/, no una ruta
+// under happy-dom import.meta.url is a /@fs/ URL, not a path
 const ROOT = `${resolve(import.meta.dirname, "../..")}/`;
 
-/** Arma el body con los ids pedidos, en el orden de lab/storybook.html. */
+/** Builds the body with the requested ids, in the order of lab/storybook.html. */
 function page(ids: readonly string[] = STORYBOOK_IDS): void {
   document.body.replaceChildren(...["exhibits", "lab-host", "readout"].filter((id) => ids.includes(id)).map((id) => {
     const el = document.createElement(id === "exhibits" ? "nav" : id === "readout" ? "aside" : "div");
@@ -22,30 +22,30 @@ let error: ReturnType<typeof vi.spyOn>;
 beforeEach(() => { error = vi.spyOn(console, "error").mockImplementation(() => {}); });
 afterEach(() => { vi.restoreAllMocks(); document.body.replaceChildren(); });
 
-describe("elementos del storybook con guarda (#187)", () => {
-  it("con los tres presentes devuelve host, nav y panel", () => {
+describe("guarded storybook elements (#187)", () => {
+  it("with all three present it returns host, nav and panel", () => {
     page();
     const els = storybookElements(document);
     expect(els.host).toBe(document.getElementById("lab-host"));
     expect(els.nav).toBe(document.getElementById("exhibits"));
     expect(els.panel).toBe(document.getElementById("readout"));
   });
-  it("sin #readout lanza nombrándolo", () => {
+  it("without #readout it throws naming it", () => {
     page(["lab-host", "exhibits"]);
-    expect(() => storybookElements(document)).toThrow("falta #readout en la página");
+    expect(() => storybookElements(document)).toThrow("#readout is missing from the page");
   });
-  it("sin dos los nombra a los dos", () => {
+  it("without two it names both", () => {
     page(["lab-host"]);
-    expect(() => storybookElements(document)).toThrow("faltan #exhibits, #readout en la página");
+    expect(() => storybookElements(document)).toThrow("#exhibits, #readout are missing from the page");
   });
-  it("lab/storybook.html tiene un elemento por cada id de STORYBOOK_IDS", () => {
+  it("lab/storybook.html has an element for each id of STORYBOOK_IDS", () => {
     const html = new DOMParser().parseFromString(readFileSync(`${ROOT}lab/storybook.html`, "utf8"), "text/html");
     for (const id of STORYBOOK_IDS) expect(html.getElementById(id), id).not.toBeNull();
   });
 });
 
-describe("mountStorybook avisa en la página (#187)", () => {
-  it("con la página completa llama a run una vez y no registra error", () => {
+describe("mountStorybook reports on the page (#187)", () => {
+  it("with the full page it calls run once and logs no error", () => {
     page();
     const run = vi.fn();
     mountStorybook(document, run);
@@ -56,60 +56,60 @@ describe("mountStorybook avisa en la página (#187)", () => {
     expect(els.panel).toBe(document.getElementById("readout"));
     expect(error).not.toHaveBeenCalled();
   });
-  it("sin #exhibits escribe el motivo en el host, registra y no lanza", () => {
+  it("without #exhibits it writes the reason to the host, logs and does not throw", () => {
     page(["lab-host", "readout"]);
     const run = vi.fn();
     expect(() => mountStorybook(document, run)).not.toThrow();
-    expect(document.getElementById("lab-host")!.textContent).toBe("No se pudo iniciar el storybook: falta #exhibits en la página");
+    expect(document.getElementById("lab-host")!.textContent).toBe("Could not start the storybook: #exhibits is missing from the page");
     expect(run).not.toHaveBeenCalled();
-    expect(error).toHaveBeenCalledWith("[storybook] no se pudo iniciar", expect.any(Error));
+    expect(error).toHaveBeenCalledWith("[storybook] could not start", expect.any(Error));
   });
-  it("sin #lab-host escribe el motivo en body", () => {
+  it("without #lab-host it writes the reason to body", () => {
     page(["exhibits", "readout"]);
     mountStorybook(document, vi.fn());
-    expect(document.body.textContent).toBe("No se pudo iniciar el storybook: falta #lab-host en la página");
+    expect(document.body.textContent).toBe("Could not start the storybook: #lab-host is missing from the page");
   });
-  it("sin ninguno nombra los tres en el orden de STORYBOOK_IDS", () => {
+  it("with none it names all three in STORYBOOK_IDS order", () => {
     page([]);
     mountStorybook(document, vi.fn());
-    expect(document.body.textContent).toBe("No se pudo iniciar el storybook: faltan #lab-host, #exhibits, #readout en la página");
+    expect(document.body.textContent).toBe("Could not start the storybook: #lab-host, #exhibits, #readout are missing from the page");
   });
-  it("un error síncrono de run se muestra en el host", () => {
+  it("a synchronous error from run shows in the host", () => {
     page();
-    const err = new Error("sin mundo");
+    const err = new Error("no world");
     mountStorybook(document, () => { throw err; });
-    expect(document.getElementById("lab-host")!.textContent).toBe("No se pudo iniciar el storybook: sin mundo");
-    expect(error).toHaveBeenCalledWith("[storybook] no se pudo iniciar", err);
+    expect(document.getElementById("lab-host")!.textContent).toBe("Could not start the storybook: no world");
+    expect(error).toHaveBeenCalledWith("[storybook] could not start", err);
   });
-  it("un throw que no es Error se muestra tal cual", () => {
+  it("a throw that is not an Error is shown as is", () => {
     page();
-    mountStorybook(document, () => { throw "sin contexto"; });
-    expect(document.getElementById("lab-host")!.textContent).toBe("No se pudo iniciar el storybook: sin contexto");
+    mountStorybook(document, () => { throw "no context"; });
+    expect(document.getElementById("lab-host")!.textContent).toBe("Could not start the storybook: no context");
   });
 });
 
-describe("índice del storybook (#187)", () => {
-  const groups = [{ id: "fabrica", title: "Fábrica" }, { id: "mar", title: "Mar" }] as const;
+describe("storybook index (#187)", () => {
+  const groups = [{ id: "factory", title: "Factory" }, { id: "sea", title: "Sea" }] as const;
   const exhibits = [
-    { id: "a", title: "Alfa", group: "fabrica" },
-    { id: "b", title: "Beta", group: "mar" },
-    { id: "c", title: "Gama", group: "mar" },
+    { id: "a", title: "Alpha", group: "factory" },
+    { id: "b", title: "Beta", group: "sea" },
+    { id: "c", title: "Gamma", group: "sea" },
   ] as const;
   const nav = (): HTMLElement => { const n = document.createElement("nav"); buildIndex(n, groups, exhibits); return n; };
 
-  it("un h2 y un ul por grupo, con los enlaces en orden", () => {
+  it("one h2 and one ul per group, with the links in order", () => {
     const n = nav();
     expect([...n.children].map((c) => c.tagName)).toEqual(["H2", "UL", "H2", "UL"]);
-    expect([...n.querySelectorAll("h2")].map((h) => h.textContent)).toEqual(["Fábrica", "Mar"]);
+    expect([...n.querySelectorAll("h2")].map((h) => h.textContent)).toEqual(["Factory", "Sea"]);
     const links = [...n.querySelectorAll("ul")].map((ul) => [...ul.querySelectorAll<HTMLElement>("li > a")].map((a) => [a.getAttribute("href"), a.dataset.id, a.textContent]));
-    expect(links).toEqual([[["#a", "a", "Alfa"]], [["#b", "b", "Beta"], ["#c", "c", "Gama"]]]);
+    expect(links).toEqual([[["#a", "a", "Alpha"]], [["#b", "b", "Beta"], ["#c", "c", "Gamma"]]]);
   });
-  it("con el catálogo real crea un enlace por exhibit", () => {
+  it("with the real catalog it creates one link per exhibit", () => {
     const n = document.createElement("nav");
     buildIndex(n, GROUPS, EXHIBITS);
     expect(n.querySelectorAll("a")).toHaveLength(EXHIBITS.length);
   });
-  it("solo la entrada actual lleva aria-current", () => {
+  it("only the current entry carries aria-current", () => {
     const n = nav();
     markCurrent(n, "b");
     markCurrent(n, "c");
@@ -126,24 +126,24 @@ describe("índice del storybook (#187)", () => {
     a.scrollIntoView = scroll;
     return { n, scroll };
   }
-  it("fuera de la vista se centra (#117)", () => {
+  it("out of view it is centered (#117)", () => {
     const { n, scroll } = spied(rect(1200, 1222));
     markCurrent(n, "c");
     expect(scroll).toHaveBeenCalledTimes(1);
     expect(scroll).toHaveBeenCalledWith({ block: "center" });
   });
-  it("si ya se ve entera, el índice no se mueve (#117)", () => {
+  it("if it is already fully visible, the index does not move (#117)", () => {
     const { n, scroll } = spied(rect(100, 122));
     markCurrent(n, "c");
     expect(scroll).not.toHaveBeenCalled();
   });
 });
 
-describe("panel de lectura del storybook (#187)", () => {
+describe("storybook readout panel (#187)", () => {
   const rows = (panel: HTMLElement): [string | null, string | null][] =>
     [...panel.querySelectorAll("dt")].map((dt) => [dt.textContent, dt.nextElementSibling?.textContent ?? null]);
 
-  it("una fila por dato, el suelo justo después de los sólidos (#185) y la caja a un decimal", () => {
+  it("one row per datum, the ground right after the solids (#185) and the box to one decimal", () => {
     const panel = document.createElement("aside");
     const r: Readout = {
       solids: 5, ground: 2, faces: 12, accents: 1,
@@ -153,13 +153,13 @@ describe("panel de lectura del storybook (#187)", () => {
     renderReadout(panel, r);
     expect(panel.querySelectorAll("dl")).toHaveLength(1);
     expect(rows(panel)).toEqual([
-      ["Sólidos", "5"], ["Suelo", "2"], ["Caras", "12"], ["Acentos", "1"],
-      ["Caja x", "0.0 … 2.0"], ["Caja y", "0.0 … 3.0"], ["Caja z", "0.0 … 4.0"],
-      ["Ancho × fondo × alto", "2.0 × 3.0 × 4.0 u"],
-      ["Materiales", "slab, concrete"], ["Colores de acento", "amber"],
+      ["Solids", "5"], ["Ground", "2"], ["Faces", "12"], ["Accents", "1"],
+      ["Box x", "0.0 … 2.0"], ["Box y", "0.0 … 3.0"], ["Box z", "0.0 … 4.0"],
+      ["Width × depth × height", "2.0 × 3.0 × 4.0 u"],
+      ["Materials", "slab, concrete"], ["Accent colors", "amber"],
     ]);
   });
-  it("sin caja ni materiales muestra — y una segunda llamada reemplaza el dl", () => {
+  it("without a box or materials it shows — and a second call replaces the dl", () => {
     const panel = document.createElement("aside");
     const empty: Readout = { solids: 0, ground: 0, faces: 0, accents: 0, box: null, materials: [], accentColors: [] };
     renderReadout(panel, empty);

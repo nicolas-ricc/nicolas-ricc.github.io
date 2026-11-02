@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("pixi.js", async (importOriginal) => {
   const real = await importOriginal<typeof import("pixi.js")>();
-  // los filtros reales compilan shaders WebGL: en node solo importa que existan y con qué opciones
+  // the real filters compile WebGL shaders: in node it only matters that they exist and with which options
   class StubFilter { destroyed = false; constructor(readonly options?: unknown) {} destroy() { this.destroyed = true; } }
   return { ...real, AlphaFilter: StubFilter, BlurFilter: StubFilter };
 });
@@ -22,15 +22,15 @@ const bloomSlotOf = (c: Container) => c.children.find((k) => (k.filters as reado
 const fills = (c: Container) => accentSlotOf(c).children.reduce((n, g) => n + (g as Graphics).context.instructions.length, 0);
 
 describe("nextHalo", () => {
-  it("fallback usa el halo grande; off y on el de hoy", () => {
+  it("fallback uses the large halo; off and on use today's", () => {
     expect(nextHalo("fallback")).toBe(HALO_FALLBACK);
     expect(nextHalo("off")).toBe(HALO_BASE);
     expect(nextHalo("on")).toBe(HALO_BASE);
   });
 });
 
-describe("modos de bloom del Stage", () => {
-  it("buildStage arranca en off, sin bloomSlot ni filtros sobre los acentos", () => {
+describe("Stage bloom modes", () => {
+  it("buildStage starts at off, with no bloomSlot or filters on the accents", () => {
     const s = build();
     expect(s.bloom).toBe("off");
     expect(s.container.children).toHaveLength(9);
@@ -38,7 +38,7 @@ describe("modos de bloom del Stage", () => {
     expect(accentSlotOf(s.container).filters ?? []).toHaveLength(0);
   });
 
-  it("on agrega un bloomSlot con filtro justo debajo de accentSlot, con un espejo por Graphics de acentos", () => {
+  it("on adds a bloomSlot with a filter right below accentSlot, with one mirror per accent Graphics", () => {
     const s = build();
     const accentSlot = accentSlotOf(s.container);
     s.setBloom("on");
@@ -48,14 +48,14 @@ describe("modos de bloom del Stage", () => {
     expect(s.container.children.indexOf(bloom)).toBe(s.container.children.indexOf(accentSlot) - 1);
     expect(bloom.blendMode).toBe("add");
     expect(bloom.filters).toHaveLength(1);
-    // la última pasada del blur compone con el blendMode del filtro, no con el del contenedor
+    // the last blur pass composes with the filter's blendMode, not the container's
     expect(BLOOM_FILTER.blendMode).toBe("add");
     expect(bloom.children).toHaveLength(accentSlot.children.length);
     bloom.children.forEach((m, i) => expect((m as Graphics).context).toBe((accentSlot.children[i] as Graphics).context));
     expect(accentSlot.filters ?? []).toHaveLength(0);
   });
 
-  it("on → off → on reutiliza un único bloomSlot; on repetido es idempotente", () => {
+  it("on → off → on reuses a single bloomSlot; a repeated on is idempotent", () => {
     const s = build();
     s.setBloom("on");
     const first = bloomSlotOf(s.container);
@@ -69,7 +69,7 @@ describe("modos de bloom del Stage", () => {
     expect(s.container.children).toHaveLength(10);
   });
 
-  it("fallback quita el bloomSlot y redibuja los dot con el halo grande; off los devuelve al de hoy", () => {
+  it("fallback removes the bloomSlot and redraws the dots with the large halo; off returns them to today's", () => {
     const s = build();
     const base = fills(s.container);
     s.setBloom("on");
@@ -83,21 +83,21 @@ describe("modos de bloom del Stage", () => {
     expect(fills(s.container)).toBeGreaterThan(base);
   });
 
-  it("en fallback, los redibujos de los animadores siguen con el halo grande", () => {
-    // solo Blog (mar con boyas y barcos): basta para tener capas de acentos animadas y mantiene el test rápido
+  it("in fallback, the animators' redraws keep the large halo", () => {
+    // only Blog (sea with buoys and ships): enough to have animated accent layers and keeps the test fast
     const blog = () => { const { scene, animators } = assembleWorld(["blog"], { reducedMotion: false }); return buildStage(scene, animators); };
-    // los primeros hijos de accentSlot son los acentos estáticos, uno por zona; el resto, las capas animadas
+    // the first children of accentSlot are the static accents, one per zone; the rest, the animated layers
     const animatedFills = (c: Container) => accentSlotOf(c).children.slice(WORLD_ZONES.length).reduce((n, g) => n + (g as Graphics).context.instructions.length, 0);
     const sFb = blog(), sOff = blog();
     sFb.setBloom("fallback");
     for (let i = 0; i < 10; i++) { sFb.tick(100); sOff.tick(100); }
-    // mismos animadores deterministas, mismo reloj: solo cambia el halo
+    // same deterministic animators, same clock: only the halo changes
     expect(animatedFills(sFb.container)).toBeGreaterThan(animatedFills(sOff.container));
     sFb.setBloom("off");
     expect(animatedFills(sFb.container)).toBe(animatedFills(sOff.container));
   });
 
-  it("los espejos copian el alpha de su original al cambiar el foco", () => {
+  it("the mirrors copy the alpha of their original when the focus changes", () => {
     const s = build();
     s.setBloom("on");
     s.setFocus("blog");
@@ -109,25 +109,25 @@ describe("modos de bloom del Stage", () => {
 });
 
 describe("setLayer", () => {
-  // índices sin bloom: 0 sangrado, 1 agua, 2 suelo, 3 banda, 4 núcleo, 5 sólidos, 6 sólidos animados, 7 velos, 8 acentos
+  // indices without bloom: 0 bleed, 1 water, 2 ground, 3 band, 4 core, 5 solids, 6 animated solids, 7 veils, 8 accents
   const LAYER_IDX = { ground: [0, 1, 2], shadow: [3, 4], accents: [8] } as const;
-  const visibles = (c: Container) => c.children.map((k) => k.visible);
+  const visibleFlags = (c: Container) => c.children.map((k) => k.visible);
 
-  it.each(Object.entries(LAYER_IDX))("%s oculta solo sus contenedores y vuelve a mostrarlos", (layer, idx) => {
+  it.each(Object.entries(LAYER_IDX))("%s hides only its containers and shows them again", (layer, idx) => {
     const s = build();
     s.setLayer(layer as keyof typeof LAYER_IDX, false);
-    visibles(s.container).forEach((v, i) => expect(v).toBe(!(idx as readonly number[]).includes(i)));
+    visibleFlags(s.container).forEach((v, i) => expect(v).toBe(!(idx as readonly number[]).includes(i)));
     s.setLayer(layer as keyof typeof LAYER_IDX, true);
-    expect(visibles(s.container).every(Boolean)).toBe(true);
+    expect(visibleFlags(s.container).every(Boolean)).toBe(true);
   });
 
-  it("con las tres capas ocultas siguen visibles los sólidos y los velos", () => {
+  it("with the three layers hidden the solids and the veils stay visible", () => {
     const s = build();
     for (const l of ["ground", "shadow", "accents"] as const) s.setLayer(l, false);
-    expect(visibles(s.container)).toEqual([false, false, false, false, false, true, true, true, false]);
+    expect(visibleFlags(s.container)).toEqual([false, false, false, false, false, true, true, true, false]);
   });
 
-  it("el bloomSlot sigue a los acentos si ya existe", () => {
+  it("the bloomSlot follows the accents if it already exists", () => {
     const s = build();
     s.setBloom("on");
     s.setLayer("accents", false);
@@ -136,14 +136,14 @@ describe("setLayer", () => {
     expect(bloomSlotOf(s.container)!.visible).toBe(true);
   });
 
-  it("un bloomSlot armado con los acentos ocultos nace oculto", () => {
+  it("a bloomSlot built with the accents hidden is born hidden", () => {
     const s = build();
     s.setLayer("accents", false);
     s.setBloom("on");
     expect(bloomSlotOf(s.container)!.visible).toBe(false);
   });
 
-  it("el bloomSlot fuera del container también sigue a los acentos (on → fallback → on)", () => {
+  it("the bloomSlot outside the container also follows the accents (on → fallback → on)", () => {
     const s = build();
     s.setBloom("on");
     s.setBloom("fallback");
@@ -152,7 +152,7 @@ describe("setLayer", () => {
     expect(bloomSlotOf(s.container)!.visible).toBe(false);
   });
 
-  it("setLayer no cambia la cantidad de hijos ni el modo de bloom", () => {
+  it("setLayer changes neither the number of children nor the bloom mode", () => {
     const s = build();
     for (const l of ["ground", "shadow", "accents"] as const) s.setLayer(l, false);
     expect(s.container.children).toHaveLength(9);
@@ -163,7 +163,7 @@ describe("setLayer", () => {
 describe("destroy", () => {
   type Stub = { destroyed: boolean };
 
-  it("destruye el bloomSlot creado por on aunque el modo actual sea off, y libera su filtro", () => {
+  it("destroys the bloomSlot created by on even if the current mode is off, and frees its filter", () => {
     const s = build();
     s.setBloom("on");
     const slot = bloomSlotOf(s.container)!;
@@ -175,7 +175,7 @@ describe("destroy", () => {
     expect(blur.destroyed).toBe(true);
   });
 
-  it("destruye el árbol con sus contextos y los filtros de sombra", () => {
+  it("destroys the tree with its contexts and the shadow filters", () => {
     const s = build();
     const accent = accentSlotOf(s.container).children[0] as Graphics, ctx = accent.context;
     const alphas = [s.container.children[3]!, s.container.children[4]!].flatMap((k) => k.filters as unknown as Stub[]);
@@ -187,11 +187,11 @@ describe("destroy", () => {
     alphas.forEach((f) => expect(f.destroyed).toBe(true));
   });
 
-  it("con el bloom en on el slot está en el árbol: se destruye una vez y libera su filtro", () => {
+  it("with the bloom on the slot is in the tree: it is destroyed once and frees its filter", () => {
     const s = build();
     s.setBloom("on");
     const slot = bloomSlotOf(s.container)!, blur = (slot.filters as unknown as Stub[])[0]!;
-    // el espejo no es dueño de su contexto: lo libera la Graphics original del árbol
+    // the mirror does not own its context: the tree's original Graphics frees it
     const mirror = slot.children[0] as Graphics, ctx = mirror.context;
     expect(() => s.destroy()).not.toThrow();
     expect(slot.destroyed).toBe(true);
@@ -200,11 +200,11 @@ describe("destroy", () => {
     expect(ctx.destroyed).toBe(true);
   });
 
-  it("sin bloom armado nunca no lanza", () => {
+  it("with no bloom ever built it does not throw", () => {
     expect(() => build().destroy()).not.toThrow();
   });
 
-  it("después de destroy, todo es no-op: destroy, setBloom, setLayer, setFocus y tick", () => {
+  it("after destroy, everything is a no-op: destroy, setBloom, setLayer, setFocus and tick", () => {
     const s = build();
     s.setBloom("fallback");
     s.destroy();
@@ -220,18 +220,18 @@ describe("destroy", () => {
   });
 });
 
-describe("velo de las luces animadas", () => {
+describe("veil of the animated lights", () => {
   const dot = (x: number, y: number): Accent => ({ kind: "dot", at: v3(x, y, 1), r: 1, color: "amber" });
   const port = dot(380, 118), blog = dot(500, 200);
-  const toy = (layer: () => AnimLayer): ZonedAnimator => ({ zone: "blog", ids: ["luces"], layer, tick: () => new Set(["luces"]) });
+  const toy = (layer: () => AnimLayer): ZonedAnimator => ({ zone: "blog", ids: ["lights"], layer, tick: () => new Set(["lights"]) });
   const stageWith = (a: ZonedAnimator) => buildStage(assembleWorld(["portfolio"], { reducedMotion: true }).scene, [a]);
-  // Graphics animadas: las que siguen a las tres estáticas en accentSlot
+  // animated Graphics: the ones that follow the three static ones in accentSlot
   const animated = (s: ReturnType<typeof buildStage>) => accentSlotOf(s.container).children.slice(3) as Graphics[];
   const lit = (gs: Graphics[]) => gs.filter((g) => g.context.instructions.length > 0);
 
-  it("una capa sin zona vela cada luz con la zona de su posición, aunque el animador sea de otra zona", () => {
+  it("a layer without a zone veils each light with the zone of its position, even if the animator belongs to another zone", () => {
     const s = stageWith(toy(() => ({ kind: "accent", accents: [port, blog] })));
-    // una Graphics por zona, en el orden de WORLD_ZONES: [portfolio, cv, blog]
+    // one Graphics per zone, in the order of WORLD_ZONES: [portfolio, cv, blog]
     const [gPort, gCv, gBlog] = animated(s);
     expect(lit([gPort!, gCv!, gBlog!])).toEqual([gPort, gBlog]);
     s.setFocus("portfolio"); s.tick(10_000);
@@ -239,20 +239,20 @@ describe("velo de las luces animadas", () => {
     s.setFocus("blog"); s.tick(10_000);
     expect([gPort!.alpha, gBlog!.alpha]).toEqual([ACCENT_DIM, 1]);
   });
-  it("una capa con zona vela todas sus luces con esa zona, en una sola Graphics", () => {
+  it("a layer with a zone veils all its lights with that zone, in a single Graphics", () => {
     const s = stageWith(toy(() => ({ kind: "accent", accents: [port, blog], zone: "blog", alpha: 0.5 })));
     expect(animated(s)).toHaveLength(1);
     s.setFocus("portfolio"); s.tick(10_000);
     expect(animated(s)[0]!.alpha).toBeCloseTo(0.5 * ACCENT_DIM);
   });
-  it("si una zona de la capa se queda sin luces, su Graphics se vacía al redibujar", () => {
+  it("if a zone of the layer is left without lights, its Graphics empties on redraw", () => {
     let on = true;
     const s = stageWith(toy(() => ({ kind: "accent", accents: on ? [port, blog] : [blog] })));
     expect(lit(animated(s))).toHaveLength(2);
     on = false; s.tick(16);
     expect(lit(animated(s))).toHaveLength(1);
   });
-  it("las luces estáticas mantienen su alpha por zona con cada foco", () => {
+  it("the static lights keep their per-zone alpha with each focus", () => {
     const s = build();
     for (const f of WORLD_ZONES) {
       s.setFocus(f); s.tick(10_000);

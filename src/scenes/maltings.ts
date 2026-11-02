@@ -4,22 +4,22 @@ import type { Material } from "../map/palette-iso";
 import { PLANT_SHIFT, emitPlant } from "./plant-frame";
 
 /**
- * Maltería de Mistley y tanque de agua sobre patas. La cámara ve techo, este (+x) y sur (+y): el detalle va ahí.
- * Decisiones (D1–D15): docs/plans/2026-10-24-214-malteria-tanque.md.
+ * Mistley maltings and water tower on legs. The camera sees the roof, east (+x) and south (+y): the detail goes there.
+ * Decisions (D1–D15): docs/plans/2026-10-24-214-malteria-tanque.md.
  *
- * La maltería está dibujada en un marco local, `x 20..44, y −46..−16`, y se traslada con `PLANT_SHIFT (−15, +90)`
- * a `x 5..29, y 44..74` (#246). El tanque va al norte de ella, en `WATER_TOWER`.
- * Todo lo exportado está en coordenadas de mundo; el marco local es privado (`MALT_LOCAL` y `maltingsLocal`).
+ * The maltings is drawn in a local frame, `x 20..44, y −46..−16`, and moved with `PLANT_SHIFT (−15, +90)`
+ * to `x 5..29, y 44..74` (#246). The water tower goes north of it, at `WATER_TOWER`.
+ * Everything exported is in world coordinates; the local frame is private (`MALT_LOCAL` and `maltingsLocal`).
  */
 const MALT_LOCAL = { x: 20, y: -46, w: 24, d: 30, h: 18 } as const;
 export const MALT = { ...MALT_LOCAL, x: MALT_LOCAL.x + PLANT_SHIFT.x, y: MALT_LOCAL.y + PLANT_SHIFT.y } as const;
-/** Al norte de la maltería: pasarela `x 10.4..19.6, y 27.4..36.6` (con la escalera, hasta x 19.8, y 36.8), tope z 24.7, asoma por encima del techo. */
+/** North of the maltings: catwalk `x 10.4..19.6, y 27.4..36.6` (with the ladder, out to x 19.8, y 36.8), top z 24.7, sticks out above the roof. */
 export const WATER_TOWER = { x: 15, y: 32 } as const;
 
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material): Solid & { kind: "prism" } => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat });
 const beam = (from: Vec3, to: Vec3, w: number, mat: Material, h = w): Solid => ({ kind: "beam", from, to, w, h, mat });
 
-/** Prisma de fachada de cinco pisos, techo de seis faldones con óculos, pilastras y cornisas del piñón, puertas de carga, portón y horno con techo piramidal. */
+/** Five-story facade prism, six-pitch roof with oculi, gable pilasters and cornices, loading doors, gate and kiln with a pyramidal roof. */
 export function maltings(out: Solid[]): void {
   emitPlant(out, maltingsLocal);
 }
@@ -38,7 +38,7 @@ function maltingsLocal(out: Solid[]): void {
     plates,
   });
 
-  // techo: seis rampas; las del oeste se cortan en y −40 por el horno (D1). Óculos en la cara sur de las de w 6 (D4)
+  // roof: six ramps; the west ones are cut at y −40 by the kiln (D1). Oculi on the south face of the w 6 ones (D4)
   const oculus = (): Plate[] => [
     { wall: 2, shape: "disc", u0: 0.35, u1: 0.65, z0: 18.8, z1: 20.6, mat: "stockbrick" },
     { wall: 2, shape: "disc", u0: 0.5 - 0.7 / 6, u1: 0.5 + 0.7 / 6, z0: 19, z1: 20.4, mat: "glass" },
@@ -47,23 +47,23 @@ function maltingsLocal(out: Solid[]): void {
   out.push({ kind: "ramp", at: v3(26, -40, 18), w: 6, d: 24, h: 6, mat: "steel", dir: "e", plates: oculus() });
   out.push({ kind: "ramp", at: v3(32, -46, 18), w: 6, d: 30, h: 6, mat: "steel", dir: "w", plates: oculus() });
   out.push({ kind: "ramp", at: v3(38, -46, 18), w: 6, d: 30, h: 6, mat: "steel", dir: "e", plates: oculus() });
-  out.push({ kind: "ramp", at: v3(20, -46, 18), w: 2, d: 6, h: 2, mat: "steel", dir: "w" });  // al norte del corte, fuera del horno
+  out.push({ kind: "ramp", at: v3(20, -46, 18), w: 2, d: 6, h: 2, mat: "steel", dir: "w" });  // north of the cut, outside the kiln
   out.push({ kind: "ramp", at: v3(28, -46, 18), w: 4, d: 6, h: 4, mat: "steel", dir: "e" });
 
-  // pilastras del piñón, adosadas por dentro; la de x 32 solo del tope de la puerta del piso 4 al valle (D2)
-  for (const [px, z0, z1] of [[20, 0, 18], [25.75, 0, 24], [31.75, 16.7, 18], [37.75, 0, 24], [43.5, 0, 18]] as const) out.push(prism(px, -16.4, z0, 0.5, -16 - -16.4, z1 - z0, "stockbrick")); // d 0.4 escrito así para que el borde sur caiga exacto en y −16 (−16.4 + 0.4 no da −16 en coma flotante) y toque, sin pisar, la zapata de la nave
-  // cornisas: del alero (metido 0.15) a la cumbrera (D3)
+  // gable pilasters, attached on the inside; the one at x 32 only from the top of the floor 4 door to the valley (D2)
+  for (const [px, z0, z1] of [[20, 0, 18], [25.75, 0, 24], [31.75, 16.7, 18], [37.75, 0, 24], [43.5, 0, 18]] as const) out.push(prism(px, -16.4, z0, 0.5, -16 - -16.4, z1 - z0, "stockbrick")); // d 0.4 written this way so the south edge lands exactly on y −16 (−16.4 + 0.4 is not −16 in floating point) and touches, without covering, the hall's footing
+  // cornices: from the eave (inset 0.15) to the ridge (D3)
   for (const [ax, rx] of [[20.15, 26], [31.85, 26], [32.15, 38], [43.85, 38]] as const) out.push(beam(v3(ax, -16.3, 18.15), v3(rx, -16.3, 24), 0.4, "stockbrick", 0.3));
 
-  // horno con techo piramidal (D7)
+  // kiln with a pyramidal roof (D7)
   out.push(prism(22, -46, 18, 6, 6, 6, "brick"));
   out.push({ kind: "cone", at: v3(25, -43, 24), r: 4.2, h: 2, mat: "steel", sides: 4 });
 }
 
-/** Tanque de agua sobre cuatro patas inclinadas con tornapuntas, cruces, riser, escalera, pasarela con baranda, cuba y techo cónico; centrado en `at`. */
+/** Water tower on four slanted legs with struts, crosses, riser, ladder, catwalk with railing, tank and conical roof; centered on `at`. */
 export function waterTower(out: Solid[], at: { x: number; y: number } = WATER_TOWER): void {
   const { x: cx, y: cy } = at;
-  const s = (z: number) => 4 - (1.5 * z) / 14; // semilado a la altura z
+  const s = (z: number) => 4 - (1.5 * z) / 14; // half-side at height z
   const cyl = (r: number, z: number, h: number): Solid => ({ kind: "cylinder", at: v3(cx, cy, z), r, h, mat: "steel" });
   const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const;
 
@@ -79,13 +79,13 @@ export function waterTower(out: Solid[], at: { x: number; y: number } = WATER_TO
   for (const [z0, z1] of [[0, 5], [5, 10]] as const) {
     const a = s(z0), b = s(z1);
     for (const k of [-1, 1]) {
-      out.push(beam(v3(cx + a, cy + k * a, z0), v3(cx + b, cy - k * b, z1), 0.15, "rust")); // paño este
-      out.push(beam(v3(cx + k * a, cy + a, z0), v3(cx - k * b, cy + b, z1), 0.15, "rust")); // paño sur
+      out.push(beam(v3(cx + a, cy + k * a, z0), v3(cx + b, cy - k * b, z1), 0.15, "rust")); // east panel
+      out.push(beam(v3(cx + k * a, cy + a, z0), v3(cx - k * b, cy + b, z1), 0.15, "rust")); // south panel
     }
   }
-  out.push(beam(v3(cx + 4.5, cy + 4.5, 0), v3(cx + 3, cy + 3, 14), 0.6, "steel", 0.15)); // escalera junto a la pata SE
+  out.push(beam(v3(cx + 4.5, cy + 4.5, 0), v3(cx + 3, cy + 3, 14), 0.6, "steel", 0.15)); // ladder next to the southeast leg
 
-  // pasarela con ocho postes y baranda (como la plataforma de las chimeneas)
+  // catwalk with eight posts and railing (like the chimney platform)
   out.push(cyl(4.6, 14, 0.25));
   const pr = 4.6 * Math.cos(Math.PI / 8) - 0.15;
   const post = (k: number) => v3(cx + pr * Math.cos((k * Math.PI) / 4), cy + pr * Math.sin((k * Math.PI) / 4), 15.175);
@@ -95,7 +95,7 @@ export function waterTower(out: Solid[], at: { x: number; y: number } = WATER_TO
     out.push(beam(p, q, 0.15, "steel"));
   }
 
-  // fondo escalonado, cuba, techo y bola
+  // stepped bottom, tank, roof and ball
   out.push(cyl(2.2, 13, 0.6), cyl(3.2, 13.6, 0.6), cyl(3.8, 14.2, 0.6), cyl(4, 14.8, 8));
   out.push({ kind: "cone", at: v3(cx, cy, 22.8), r: 4.6, h: 1.4, mat: "steel", sides: 12 });
   out.push(cyl(0.3, 24.2, 0.5));

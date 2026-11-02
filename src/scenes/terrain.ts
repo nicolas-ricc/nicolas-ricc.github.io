@@ -8,22 +8,22 @@ import { bayShoreX, beyondBuilt, inFairBox } from "./sprawl-grid";
 import { BLEED_WATER, WATER_TERRAIN, bleedTerrainAt, terrainAt, type BleedTerrain, type Terrain } from "./terrain-classify";
 
 /**
- * Terreno de todo el mundo: una grilla facetada de CELL sobre WORLD (el
- * contenido) más una de CELL_BLEED alrededor (el sangrado). Cada zona aporta
- * su clasificador; `terrainAt` despacha por geografía. Una sola malla por
- * grilla garantiza que los vértices en las costuras compartan altura. El agua
- * (de contenido y de sangrado) se reparte por profundidad (distancia a
- * tierra) en `TerrainMesh.water`, un `Solid` por `WaterMat` (`shallow`,
- * `water`, `waterDeep`, `abyss`), más `TerrainMesh.foam` junto a la costa;
- * se reparte acá una sola vez. `water-animator.ts` reclama esos `Solid` y les
- * muta `toneOffset` in place a cada paso, igual que el astillero con sus otros
- * cuerpos animados; el terreno no sabe nada de eso. El agua del sangrado se subdivide en celdas de
- * `CELL_BLEED`, salvo en `TIP_BOX` (la punta sur de la isla), que va en celdas de
- * `CELL`. Se probó una subdivisión a 9 u dentro del cover; la decisión gateada
- * por medición la descartó, ver spec §"Desvíos de la implementación".
+ * Terrain of the whole world: a faceted CELL grid over WORLD (the
+ * content) plus a CELL_BLEED one around it (the bleed). Each zone contributes
+ * its classifier; `terrainAt` dispatches by geography. A single mesh per
+ * grid guarantees that the vertices at the seams share height. The water
+ * (content and bleed) is split by depth (distance to
+ * land) in `TerrainMesh.water`, one `Solid` per `WaterMat` (`shallow`,
+ * `water`, `waterDeep`, `abyss`), plus `TerrainMesh.foam` along the coast;
+ * it is split here only once. `water-animator.ts` claims those `Solid`s and
+ * mutates their `toneOffset` in place at each step, just like the shipyard with its other
+ * animated bodies; the terrain knows nothing about that. The bleed water is subdivided into cells of
+ * `CELL_BLEED`, except in `TIP_BOX` (the south tip of the island), which uses cells of
+ * `CELL`. A 9 u subdivision inside the cover was tried; the measurement-gated
+ * decision discarded it, see spec §"Desvíos de la implementación".
  */
-// La clasificación vive en `terrain-classify.ts` (abajo de `depth-map.ts`, que la necesita): acá se
-// reexporta tal cual, así quien ya la pedía a `terrain.ts` sigue igual.
+// The classification lives in `terrain-classify.ts` (below `depth-map.ts`, which needs it): here it is
+// re-exported as is, so whoever already asked `terrain.ts` for it keeps working the same.
 export { bleedTerrainAt, cityTerrainAt, seaTerrainAt, shipyardTerrainAt, terrainAt, type BleedTerrain, type Terrain } from "./terrain-classify";
 
 export { CELL };
@@ -31,20 +31,20 @@ const WATER_Z = -1;
 
 export type WaterMat = "shallow" | "water" | "waterDeep" | "abyss";
 export const WATER_MATS: readonly WaterMat[] = ["shallow", "water", "waterDeep", "abyss"];
-// FOAM_W = 9 (no el 3 de la spec): la spec mide en unidades finas, pero depthAt cuantiza en la grilla
-// de CELL = 6 (más la diagonal, 8.49), así que la primera cadena de celdas de agua junto a tierra ya
-// está a 6 u; 9 la cubre sin llegar a la segunda cadena.
+// FOAM_W = 9 (not the spec's 3): the spec measures in fine units, but depthAt quantizes on the CELL = 6
+// grid (plus the diagonal, 8.49), so the first chain of water cells next to land is already
+// 6 u away; 9 covers it without reaching the second chain.
 export const SHALLOW_D = 12, DEEP_D = 48, FOAM_W = 9;
 const ABYSS_RAMP = 60;
 
 export interface TerrainMesh { ground: Solid[]; bleed: Solid[]; water: Solid[]; foam: Solid }
 
-/** Terrenos que sí van a la malla de tierra: sin el pozo del dique ni el agua. */
+/** Terrains that do go into the land mesh: without the dock pit or the water. */
 type GroundTerrain = Exclude<Terrain, "dock" | "water" | "sea" | "shore" | "abyss">;
 
 const HILL_H = 12, HILL_REACH = 180, HILL_JITTER = 3, ROCK_FROM_Z = 9;
-const HILL_TAPER = 72; // las lomas del norte bajan a 0 en las 4 celdas antes del corte selva/bahía, así la selva llega al agua a 0.6 y no hay acantilado sin cara
-/** Altura base de la selva del sangrado: lomas que suben con la distancia más allá de la tierra construida, solo detrás de ella (norte y oeste). Al sur y al este queda chato. */
+const HILL_TAPER = 72; // the northern hills drop to 0 over the 4 cells before the jungle/bay cut, so the jungle meets the water at 0.6 and there is no cliff without a face
+/** Base height of the bleed jungle: hills that rise with distance beyond the built land, only behind it (north and west). To the south and east it stays flat. */
 export function bleedZ(x: number, y: number): number {
   let hill = Math.min(1, beyondBuilt(x, y) / HILL_REACH);
   if (y < WORLD.y0) hill *= Math.min(1, Math.max(0, (bayShoreX(y) - x) / HILL_TAPER));
@@ -52,7 +52,7 @@ export function bleedZ(x: number, y: number): number {
 }
 
 const HEADLAND_BASE_Z = 1, HEADLAND_TOP_Z = 7, HEADLAND_RISE_X0 = 330, HEADLAND_RISE_X1 = 355;
-/** La punta sube desde su base hasta el faro: rampa en x, con el jitter de `headland` encima. */
+/** The point rises from its base to the lighthouse: ramp in x, with the `headland` jitter on top. */
 export const headlandZ = (x: number): number => {
   const t = Math.min(1, Math.max(0, (x - HEADLAND_RISE_X0) / (HEADLAND_RISE_X1 - HEADLAND_RISE_X0)));
   return HEADLAND_BASE_Z + (HEADLAND_TOP_Z - HEADLAND_BASE_Z) * t;
@@ -60,20 +60,20 @@ export const headlandZ = (x: number): number => {
 
 const BASE_Z: Record<Terrain, number> = { slab: 0, water: WATER_Z, east: 0, jungle: 0.6, dock: -DOCK.depth, asphalt: 0, sea: WATER_Z, shore: WATER_Z, headland: HEADLAND_TOP_Z, reef: 0.5, abyss: WATER_Z };
 const JITTER: Record<Terrain, number> = { slab: 0.4, water: 0, east: 0.5, jungle: 0.8, dock: 0, asphalt: 0.1, sea: 0, shore: 0, headland: 1.5, reef: 0.3, abyss: 0 };
-// Solo los terrenos que llegan a `ground()`: el pozo del dique lo amuebla la escena y el agua se
-// reparte por profundidad en `WATER_MATS`, así que ninguno de los dos tiene material acá.
+// Only the terrains that reach `ground()`: the scene furnishes the dock pit and the water is
+// split by depth in `WATER_MATS`, so neither of the two has a material here.
 const MAT: Record<GroundTerrain, Material> = { slab: "slab", east: "sand", jungle: "leafDark", asphalt: "asphalt", headland: "rock", reef: "rock" };
 const BLEED_MAT: Record<Exclude<BleedTerrain, "sea" | "shore" | "abyss" | "river">, Material> = { jungle: "leafDark", industrial: "slab", urban: "asphalt", fair: "sand" };
 const BLEED_BUILT = new Set<BleedTerrain>(["industrial", "urban", "fair"]);
 
 const onSeam = (x: number, y: number): boolean => x === WORLD.x0 || x === WORLD.x1 || y === WORLD.y0 || y === WORLD.y1;
-/** z base del contenido en un punto (sin jitter); en la costura las dos grillas usan esto. */
+/** Base z of the content at a point (no jitter); at the seam both grids use this. */
 const contentBaseZ = (x: number, y: number): number => {
   const t = terrainAt(Math.min(x, WORLD.x1 - 1), Math.min(y, WORLD.y1 - 1));
   return t === "headland" ? headlandZ(x) : BASE_Z[t];
 };
 
-/** Material del agua en un punto por profundidad (distancia a tierra); la fosa manda por geografía. Null en tierra. */
+/** Water material at a point by depth (distance to land); the trench rules by geography. Null on land. */
 export function waterBand(x: number, y: number): WaterMat | null {
   const inside = x >= WORLD.x0 && x < WORLD.x1 && y >= WORLD.y0 && y < WORLD.y1;
   const t = inside ? terrainAt(x, y) : bleedTerrainAt(x, y);
@@ -83,7 +83,7 @@ export function waterBand(x: number, y: number): WaterMat | null {
 }
 const depthBand = (x: number, y: number): WaterMat => { const d = depthAt(x, y); return d < SHALLOW_D ? "shallow" : d <= DEEP_D ? "water" : "waterDeep"; };
 
-/** Ruido fijo por celda en [−1, 1) (mixing de enteros, como `triMix` en water-anim.ts). */
+/** Fixed noise per cell in [−1, 1) (integer mixing, like `triMix` in water-anim.ts). */
 const cellNoise = (x: number, y: number): number => {
   let h = (Math.floor(x) * 374761393 + Math.floor(y) * 668265263 + 7 * 1013904223) | 0;
   h = Math.imul(h ^ (h >>> 13), 1274126177);
@@ -91,9 +91,9 @@ const cellNoise = (x: number, y: number): number => {
 };
 const ABYSS_DITHER = 15;
 /**
- * Material de una celda de agua: `waterBand`, salvo a menos de ABYSS_DITHER de `abyssX`, donde el
- * borde de la fosa se decide con ruido por celda. Sin esto el cambio de material era una recta
- * limpia de pantalla (la ola no cruza materiales y no la rompe).
+ * Material of a water cell: `waterBand`, except within ABYSS_DITHER of `abyssX`, where the
+ * trench edge is decided with per-cell noise. Without this the material change was a clean
+ * straight screen line (the wave does not cross materials and does not break it).
  */
 export function waterCellMat(x: number, y: number): WaterMat | null {
   const m = waterBand(x, y);
@@ -104,14 +104,14 @@ export function waterCellMat(x: number, y: number): WaterMat | null {
 }
 
 /**
- * Posición dentro de la banda, +1 (borde somero, junto a tierra) … −1 (borde profundo), continua:
- * la redondea `water-anim.ts` junto con la ola, así el ruido por triángulo ditherea los contornos de
- * profundidad (redondeada acá daban rectas largas en el mar abierto, donde la ola es baja).
+ * Position within the band, +1 (shallow edge, next to land) … −1 (deep edge), continuous:
+ * `water-anim.ts` rounds it together with the wave, so the per-triangle noise dithers the depth
+ * contours (rounded here they gave long straight lines in the open sea, where the wave is low).
  */
 export function baseToneAt(x: number, y: number, mat: WaterMat): number {
   const d = depthAt(x, y);
-  // "shallow" nunca ve d = 0 (depthAt cuantiza en pasos de CELL): la primera celda de agua ya está a
-  // CELL de tierra, así que la fracción arranca ahí, no en 0, o toda la banda redondearía a 0.
+  // "shallow" never sees d = 0 (depthAt quantizes in CELL steps): the first water cell is already at
+  // CELL from land, so the fraction starts there, not at 0, or the whole band would round to 0.
   const frac = mat === "shallow" ? Math.max(0, (d - CELL) / (SHALLOW_D - CELL)) : mat === "water" ? (d - SHALLOW_D) / (DEEP_D - SHALLOW_D) : mat === "waterDeep" ? Math.min(1, (d - DEEP_D) / DEEP_D) : Math.min(1, Math.max(0, (x - abyssX(y)) / ABYSS_RAMP));
   return Math.max(-1, Math.min(1, 1 - 2 * frac));
 }
@@ -120,8 +120,8 @@ type WaterTris = Record<WaterMat, Tri[]>;
 const newWaterTris = (): WaterTris => ({ shallow: [], water: [], waterDeep: [], abyss: [] });
 
 /**
- * Dos triángulos de agua por celda, con `baseTone` por su centro, y copia en
- * `foam` si están a menos de FOAM_W de tierra.
+ * Two water triangles per cell, with `baseTone` from its center, and a copy in
+ * `foam` if they are within FOAM_W of land.
  */
 function waterCell(w: WaterTris, foam: Tri[], x0: number, y0: number, x1: number, y1: number, i: number, j: number): void {
   const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
@@ -139,7 +139,7 @@ function waterCell(w: WaterTris, foam: Tri[], x0: number, y0: number, x1: number
 
 const waterSolids = (w: WaterTris): Solid[] => WATER_MATS.filter((m) => w[m].length > 0).map((m): Solid => ({ kind: "ground", mat: m, tris: w[m] }));
 
-/** Dos triángulos por celda con diagonal alternada: el "papercraft" no se lee como una grilla de cuadrados. */
+/** Two triangles per cell with an alternating diagonal: the "papercraft" does not read as a grid of squares. */
 function cellTris(out: Tri[], x0: number, y0: number, x1: number, y1: number, za: number, zb: number, zc: number, zd: number, flat: number | null, i: number, j: number): void {
   const p = (x: number, y: number, z: number) => v3(x, y, flat ?? z);
   const a = p(x0, y0, za), b = p(x1, y0, zb), c = p(x1, y1, zc), d = p(x0, y1, zd);
@@ -148,7 +148,7 @@ function cellTris(out: Tri[], x0: number, y0: number, x1: number, y1: number, za
 }
 
 /**
- * Grilla de CELL_BLEED alrededor de WORLD. Comparte vértices con la de CELL en la costura (lados múltiplos de 18) y ahí no lleva jitter. El agua del sangrado usa las mismas celdas, sin subdividir salvo `TIP_BOX` (decisión gateada por medición, ver spec §"Desvíos de la implementación"). En `TIP_BOX` (la punta sur de la isla) las celdas cuyo centro cae adentro se parten en 3×3 de 6 u, tierra y agua, clasificadas por su centro; sus vértices nuevos toman altura de `tipVertexZ` (por posición, sin rng: el stream de la grilla de 18 u no cambia).
+ * CELL_BLEED grid around WORLD. It shares vertices with the CELL one at the seam (sides that are multiples of 18) and carries no jitter there. The bleed water uses the same cells, without subdividing except `TIP_BOX` (measurement-gated decision, see spec §"Desvíos de la implementación"). In `TIP_BOX` (the south tip of the island) the cells whose center falls inside are split into 3×3 of 6 u, land and water, classified by their center; their new vertices take their height from `tipVertexZ` (by position, no rng: the 18 u grid's stream does not change).
  */
 function buildBleed(rng: Rng, w: WaterTris, foam: Tri[]): Solid[] {
   const bx0 = WORLD.x0 - BLEED.x, by0 = WORLD.y0 - BLEED.y, bx1 = WORLD.x1 + BLEED.x, by1 = WORLD.y1 + BLEED.y;
@@ -160,23 +160,23 @@ function buildBleed(rng: Rng, w: WaterTris, foam: Tri[]): Solid[] {
     for (let i = 0; i <= cols; i++) {
       const x = bx0 + i * CELL_BLEED, y = by0 + j * CELL_BLEED;
       const r = rng.next() * 2 - 1;
-      if (inside(x, y)) { z[j]!.push(onSeam(x, y) ? contentBaseZ(x, y) : 0); continue; } // interior: no se usa; costura: z del contenido
-      // la orilla de la bahía es una curva más fina que la grilla: dentro del rectángulo de la
-      // feria la tratamos siempre como tierra plana, aunque ese vértice puntual ya sea bahía,
-      // para que la arena no se incline hacia el agua (la celda de agua vecina no lee este arreglo).
-      // La fila de vértices del borde sur de la feria también: la celda de arena de arriba los lee, y
-      // del lado de la bahía serían agua a −1 (la arena se hundiría hacia el sur).
+      if (inside(x, y)) { z[j]!.push(onSeam(x, y) ? contentBaseZ(x, y) : 0); continue; } // interior: unused; seam: content z
+      // the bay shore is a curve finer than the grid: inside the fair's
+      // rectangle we always treat it as flat land, even if that particular vertex is already bay,
+      // so the sand does not slope toward the water (the neighboring water cell does not read this array).
+      // The row of vertices on the fair's south edge too: the sand cell above reads them, and
+      // on the bay side they would be water at −1 (the sand would sink toward the south).
       if (inFairBox(x, y) || inFairBox(x, y - CELL_BLEED)) { z[j]!.push(r * JITTER.asphalt); continue; }
       const t = bleedTerrainAt(x, y);
       if (BLEED_WATER.has(t)) { z[j]!.push(WATER_Z); continue; }
-      if (BLEED_BUILT.has(t)) { z[j]!.push(r * JITTER.asphalt); continue; } // tierra construida: plana como el asfalto del contenido
+      if (BLEED_BUILT.has(t)) { z[j]!.push(r * JITTER.asphalt); continue; } // built land: flat like the content's asphalt
       const base = bleedZ(x, y);
       z[j]!.push(base + r * (base > 0.6 ? HILL_JITTER : JITTER.jungle));
     }
   }
   const tris: Partial<Record<Material, Tri[]>> = { leafDark: [], rock: [], slab: [], asphalt: [], sand: [] };
   const landMat = (t: BleedTerrain, cx: number, cy: number): Material => t === "jungle" ? (bleedZ(cx, cy) > ROCK_FROM_Z ? "rock" : "leafDark") : BLEED_MAT[t as "industrial" | "urban" | "fair"];
-  // altura de un vértice de la punta sur: costura = contenido; agua = WATER_Z; tierra = relieve + ruido por posición
+  // height of a south-tip vertex: seam = content; water = WATER_Z; land = relief + noise by position
   const tipVertexZ = (x: number, y: number): number => {
     if (inside(x, y)) return contentBaseZ(x, y);
     if (BLEED_WATER.has(bleedTerrainAt(x, y))) return WATER_Z;
@@ -205,9 +205,9 @@ function buildBleed(rng: Rng, w: WaterTris, foam: Tri[]): Solid[] {
 }
 
 /**
- * Grilla de CELL sobre WORLD con alturas por vértice; cada celda son dos
- * triángulos clasificados por su centro. `zones` filtra celdas por zona
- * clickeable (y entonces no hay sangrado: las páginas de zona no lo usan).
+ * CELL grid over WORLD with per-vertex heights; each cell is two
+ * triangles classified by their center. `zones` filters cells by clickable
+ * zone (and then there is no bleed: the zone pages do not use it).
  */
 export function buildTerrain(rng: Rng, zones?: readonly WorldZone[]): TerrainMesh {
   const cols = (WORLD.x1 - WORLD.x0) / CELL, rows = (WORLD.y1 - WORLD.y0) / CELL;
@@ -217,7 +217,7 @@ export function buildTerrain(rng: Rng, zones?: readonly WorldZone[]): TerrainMes
     for (let i = 0; i <= cols; i++) {
       const x = WORLD.x0 + i * CELL, y = WORLD.y0 + j * CELL;
       const t = terrainAt(Math.min(x, WORLD.x1 - 1), Math.min(y, WORLD.y1 - 1));
-      const jitter = onSeam(x, y) ? 0 : JITTER[t]; // la costura con el sangrado no lleva jitter: las dos grillas coinciden ahí
+      const jitter = onSeam(x, y) ? 0 : JITTER[t]; // the seam with the bleed carries no jitter: the two grids coincide there
       z[j]!.push(contentBaseZ(x, y) + (rng.next() * 2 - 1) * jitter);
     }
   }
@@ -229,9 +229,9 @@ export function buildTerrain(rng: Rng, zones?: readonly WorldZone[]): TerrainMes
     const cx = x0 + CELL / 2, cy = y0 + CELL / 2;
     if (zones && !zones.includes(worldZoneAt(cx, cy))) continue;
     const t = terrainAt(cx, cy);
-    if (t === "dock") continue; // el pozo lo amuebla la escena del astillero
+    if (t === "dock") continue; // the shipyard scene furnishes the pit
     if (WATER_TERRAIN.has(t)) { waterCell(w, foam, x0, y0, x1, y1, i, j); continue; }
-    cellTris(tris[t], x0, y0, x1, y1, z[j]![i]!, z[j]![i + 1]!, z[j + 1]![i + 1]!, z[j + 1]![i]!, null, i, j); // ningún terreno que llegue acá es plano: el pozo del dique salió arriba
+    cellTris(tris[t], x0, y0, x1, y1, z[j]![i]!, z[j]![i + 1]!, z[j + 1]![i + 1]!, z[j + 1]![i]!, null, i, j); // no terrain that reaches here is flat: the dock pit was skipped above
   }
   const ground = (t: GroundTerrain): Solid => ({ kind: "ground", mat: MAT[t], tris: tris[t] });
   return {

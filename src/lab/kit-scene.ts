@@ -6,18 +6,18 @@ import { STYLES } from "../kit/styles";
 import type { Lot, StyleId } from "../kit/types";
 import { PLINTH_H, prism } from "../scenes/city-pieces";
 
-/** Lote de cada receta en el lab y paso de la grilla. */
+/** Lot of each recipe in the lab and the grid step. */
 export const KIT_LOT = { w: 24, d: 18 } as const;
 export const KIT_STEP = { x: 30, y: 24 } as const;
 
 /**
- * Todas las recetas del registro, una fila por familia en el orden del registro.
- * Como en la ciudad: la receta va sobre un zócalo prisma paving de PLINTH_H,
- * salvo la que trae `ground` propio (el campus), que va a z 0 sin zócalo
- * (un prisma taparía su suelo, que se pinta antes que todo sólido).
- * Las recetas de `LAB_LOTS` van en su lote, centrado en la celda; la que trae `z` propia
- * (el puente, que en la ciudad apoya en el agua) va sin zócalo.
- * Cada lote tiene su rng, así la receta puede llamarse dos veces igual.
+ * Every recipe in the registry, one row per family in registry order.
+ * As in the city: the recipe sits on a paving prism plinth of PLINTH_H,
+ * except the one that brings its own `ground` (the campus), which goes at z 0
+ * with no plinth (a prism would cover its ground, which is painted before any solid).
+ * The `LAB_LOTS` recipes go in their own lot, centered in the cell; the one that brings its own `z`
+ * (the bridge, which in the city rests on the water) goes with no plinth.
+ * Each lot has its own rng, so the recipe can be called twice and give the same result.
  */
 export function kitScene(seed: number, style: StyleId): { solids: Solid[]; accents: Accent[]; lots: { x: number; y: number; name: string }[] } {
   const families = [...new Set(RECIPES.map((r) => r.family))];

@@ -10,10 +10,10 @@ import { WORLD_ZONES, accentsByZone, focusAlphas, veilPolygons } from "./veil";
 
 export type BloomMode = "off" | "on" | "fallback";
 
-/** Parámetros del BlurFilter del bloom; exportados para que el log del lab los imprima (#18). */
+/** BlurFilter parameters of the bloom; exported so the lab's log prints them (#18). */
 export const BLOOM_FILTER: BlurFilterOptions = { strength: 6, quality: 2, resolution: 0.5, blendMode: "add" };
 
-/** `fallback` no tiene filtro: compensa con un halo más grande en cada luz. */
+/** `fallback` has no filter: it compensates with a larger halo on each light. */
 export function nextHalo(mode: BloomMode): HaloStyle {
   return mode === "fallback" ? HALO_FALLBACK : HALO_BASE;
 }
@@ -26,35 +26,35 @@ export interface Stage {
   readonly bloom: BloomMode;
   setFocus(zone: WorldZone | null): void;
   setBloom(mode: BloomMode): void;
-  /** Solo para el laboratorio: cambia `visible` de los contenedores de una capa; el sitio no lo llama. */
+  /** For the lab only: toggles `visible` on the containers of a layer; the site does not call it. */
   setLayer(layer: StageLayer, visible: boolean): void;
   tick(dtMs: number): void;
-  /** Libera el árbol con sus contextos, el `bloomSlot` aunque esté fuera del árbol y los filtros; después todo es no-op. */
+  /** Frees the tree with its contexts, the `bloomSlot` even if it is outside the tree, and the filters; afterwards everything is a no-op. */
   destroy(): void;
 }
 
-/** Constante de tiempo del lerp de alpha (velo y luces): min(1, dt / LERP_MS). */
+/** Time constant of the alpha lerp (veil and lights): min(1, dt / LERP_MS). */
 const LERP_MS = 120;
 
 interface AccentGraphics { g: Graphics; zone: WorldZone; base: number; draw: () => void; mirror?: Graphics }
 
 /**
- * Arma las capas de una escena del mundo. Orden, de abajo hacia arriba: sangrado,
- * agua (estática más animada), suelo, banda completa de sombras, núcleo de
- * sombras, sólidos estáticos, sólidos animados, velos (uno por zona), acentos
- * estáticos (uno por zona) y, por capa de acentos animada, una Graphics por zona
- * (una sola si la capa declara su zona).
- * El bloom es perezoso: arranca en `off`, sin `bloomSlot`; el primer `setBloom("on")`
- * lo arma (espejos de los acentos con filtro) y lo inserta justo debajo de `accentSlot`.
- * Un `bloomSlot` armado después de `setLayer("accents", false)` nace oculto.
+ * Builds the layers of a world scene. Order, bottom to top: bleed,
+ * water (static plus animated), ground, full shadow band, shadow
+ * core, static solids, animated solids, veils (one per zone), static
+ * accents (one per zone) and, per animated accent layer, one Graphics per zone
+ * (a single one if the layer declares its zone).
+ * The bloom is lazy: it starts at `off`, without a `bloomSlot`; the first `setBloom("on")`
+ * builds it (mirrors of the accents with a filter) and inserts it right below `accentSlot`.
+ * A `bloomSlot` built after `setLayer("accents", false)` is born hidden.
  */
 export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage {
   const container = new Container();
   let bloom: BloomMode = "off", halo: HaloStyle = HALO_BASE, bloomSlot: Container | null = null, accentsVisible = true, destroyed = false;
   const gBleed = new Graphics(), gGround = new Graphics(), gShadow = new Graphics(), gCore = new Graphics(), gSolid = new Graphics();
   const waterSlot = new Container(), shadowSlot = new Container(), coreSlot = new Container(), solidSlot = new Container(), veilSlot = new Container(), accentSlot = new Container();
-  // cada banda de sombra es una unión: el filtro aplica el alpha al conjunto,
-  // no a cada polígono, así dos sombras superpuestas no se oscurecen dos veces
+  // each shadow band is a union: the filter applies the alpha to the whole,
+  // not to each polygon, so two overlapping shadows do not darken twice
   shadowSlot.filters = [new AlphaFilter({ alpha: SHADOW_BAND_ALPHA })];
   coreSlot.filters = [new AlphaFilter({ alpha: SHADOW_BAND_ALPHA })];
   shadowSlot.addChild(gShadow);
@@ -69,7 +69,7 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage
   drawLayer(gCore, staticItems, "shadowCore");
   drawLayer(gSolid, staticItems, "solid");
 
-  // velos: una Graphics por zona, color cielo, alpha animado desde 0
+  // veils: one Graphics per zone, sky color, alpha animated from 0
   const veils = {} as Record<WorldZone, Graphics>;
   const polys = veilPolygons();
   for (const z of WORLD_ZONES) {
@@ -80,7 +80,7 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage
     veilSlot.addChild(g);
   }
 
-  // acentos estáticos repartidos por zona (worldZoneAt de su posición)
+  // static accents split by zone (worldZoneAt of their position)
   const accents: AccentGraphics[] = [];
   const byZone = accentsByZone(scene.accents);
   for (const z of WORLD_ZONES) {
@@ -92,13 +92,13 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage
     accents.push({ g, zone: z, base: 1, draw });
   }
 
-  // agua estática: todo cuerpo de agua que ningún animador reclame (camino de reserva)
+  // static water: every body of water that no animator claims (fallback path)
   const animatedWater = new Set(animators.flatMap((a) => [...(a.claims ?? []), ...a.ids.flatMap((id) => { const l = a.layer(id); return l.kind === "water" ? l.water : []; })]));
   const staticWater = new Graphics();
   waterSlot.addChild(staticWater);
   drawLayer(staticWater, buildRenderList([...terrain.water, terrain.foam].filter((w) => !animatedWater.has(w))), "ground");
 
-  // una Graphics (o par) por capa animada
+  // one Graphics (or pair) per animated layer
   const redraw = new Map<string, () => void>();
   for (const a of animators) for (const id of a.ids) {
     const kind = a.layer(id).kind;
@@ -111,12 +111,12 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage
       shadowSlot.addChild(gs); coreSlot.addChild(gc); solidSlot.addChild(g);
       redraw.set(id, () => { const l = a.layer(id) as AnimLayer & { kind: "solid" }; const items = buildRenderList(l.solids, l.heading); drawLayer(gs, items, "shadow"); drawLayer(gc, items, "shadowCore"); drawLayer(g, items, "solid"); const al = l.alpha ?? 1; gs.alpha = gc.alpha = g.alpha = al; });
     } else {
-      // una Graphics por zona: cada luz se vela con la zona donde está, salvo que la capa declare la suya (barcos)
+      // one Graphics per zone: each light is veiled with the zone it is in, unless the layer declares its own (ships)
       const declared = (a.layer(id) as AnimLayer & { kind: "accent" }).zone;
       const draw = (): void => {
         const l = a.layer(id) as AnimLayer & { kind: "accent" };
         const byZone = accentsByZone(l.accents, declared);
-        // el alpha propio de la capa (barcos que se desvanecen) se guarda; el alpha final lo pone el lerp
+        // the layer's own alpha (ships that fade out) is stored; the final alpha is set by the lerp
         for (const e of entries) { drawAccents(e.g, byZone[e.zone], halo); e.base = l.alpha ?? 1; }
       };
       const entries = (declared ? [declared] : WORLD_ZONES).map((zone): AccentGraphics => {
@@ -132,7 +132,7 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage
     redraw.get(id)!();
   }
 
-  // lerp de alpha: objetivos por zona (focusAlphas) y valores actuales
+  // alpha lerp: per-zone targets (focusAlphas) and current values
   let target = focusAlphas(null);
   const current: Record<WorldZone, { veil: number; accents: number }> = { portfolio: { veil: 0, accents: 1 }, cv: { veil: 0, accents: 1 }, blog: { veil: 0, accents: 1 } };
   const applyAlphas = (): void => {
@@ -160,12 +160,12 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage
     setFocus(zone) { if (!destroyed) target = focusAlphas(zone); },
     setBloom(mode) {
       if (destroyed || mode === bloom) return;
-      // el slot se arma antes de cambiar el modo: si el filtro fallara, el Stage sigue en el modo anterior
+      // the slot is built before changing the mode: if the filter failed, the Stage stays in the previous mode
       if (mode === "on") container.addChildAt(bloomSlot ?? buildBloomSlot(), container.getChildIndex(accentSlot));
       else bloomSlot?.removeFromParent();
       bloom = mode;
       const h = nextHalo(mode);
-      // las Graphics de una misma capa comparten draw: cada capa se redibuja una vez
+      // the Graphics of one layer share draw: each layer is redrawn once
       if (h !== halo) { halo = h; for (const draw of new Set(accents.map((e) => e.draw))) draw(); }
       applyAlphas();
     },
@@ -191,9 +191,9 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage
     destroy() {
       if (destroyed) return;
       destroyed = true;
-      // Container.destroy no destruye `filters`; se leen antes, porque después el getter ya no los devuelve
+      // Container.destroy does not destroy `filters`; read them first, because afterwards the getter no longer returns them
       const filters = [shadowSlot, coreSlot, bloomSlot].flatMap((c) => c?.filters ?? []);
-      // los espejos comparten el contexto de su original: lo libera el árbol con `context: true`
+      // the mirrors share the context of their original: the tree frees it with `context: true`
       bloomSlot?.destroy({ children: true });
       container.destroy({ children: true, context: true });
       for (const f of filters) f.destroy();

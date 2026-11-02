@@ -1,14 +1,14 @@
 // src/iso/fingerprint.ts
-// Huella corta de una lista de sólidos, para fijar en un test que una geometría no cambió.
+// Short fingerprint of a list of solids, to pin in a test that a geometry did not change.
 import type { Solid } from "./solids";
 
-/** Redondeo a 1e-6: las sumas de un traslado mueven una coordenada un ε (157.1 − 95 no es exactamente 62.1). */
+/** Rounding to 1e-6: the sums of a translation move a coordinate by an ε (157.1 − 95 is not exactly 62.1). */
 export const r6 = (v: number): number => Math.round(v * 1e6) / 1e6;
 
-/** Huella FNV-1a de 32 bits del JSON de los sólidos, con los números redondeados a 1e-6 (y sin −0). Sensible al orden. */
+/** 32-bit FNV-1a fingerprint of the solids' JSON, with numbers rounded to 1e-6 (and no −0). Order-sensitive. */
 export function fingerprint(solids: readonly Solid[]): string {
   const json = JSON.stringify(solids, (_k, v: unknown) => (typeof v === "number" ? r6(v) + 0 : v));
-  let h = 2166136261; // semilla y primo FNV-1a de 32 bits, en decimal: el guard de paleta toma todo hex de 6 dígitos por un color
+  let h = 2166136261; // 32-bit FNV-1a seed and prime, in decimal: the palette guard takes any 6-digit hex for a color
   for (let i = 0; i < json.length; i++) h = Math.imul(h ^ json.charCodeAt(i), 16777619) >>> 0;
   return h.toString(16).padStart(8, "0");
 }

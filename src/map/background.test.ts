@@ -6,15 +6,15 @@ const ROOT = new URL("../../", import.meta.url);
 const sky = `#${ISO_COLORS.sky.toString(16).padStart(6, "0")}`;
 const read = (path: string) => readFileSync(new URL(path, ROOT), "utf8");
 
-describe("fondo de página = cielo del canvas", () => {
-  it("--bg de style.css", () => {
+describe("page background = canvas sky", () => {
+  it("--bg of style.css", () => {
     expect(read("src/style.css").match(/--bg:\s*(#[0-9a-fA-F]{6})/)?.[1]?.toLowerCase()).toBe(sky);
   });
 
   const labs = readdirSync(new URL("lab/", ROOT)).filter((f) => f.endsWith(".html"));
-  it("encuentra las páginas del lab", () => expect(labs.length).toBeGreaterThanOrEqual(4));
+  it("finds the lab pages", () => expect(labs.length).toBeGreaterThanOrEqual(4));
   for (const page of labs) {
-    it(`background de lab/${page}`, () => {
+    it(`background of lab/${page}`, () => {
       const hexes = [...read(`lab/${page}`).matchAll(/background:\s*(#[0-9a-fA-F]{6})/g)].map((m) => m[1]!.toLowerCase());
       expect(hexes.length).toBeGreaterThan(0);
       expect(hexes.every((h) => h === sky)).toBe(true);

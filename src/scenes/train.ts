@@ -3,26 +3,26 @@ import { v3 } from "../iso/geometry";
 import type { Bounds, Plate, Solid } from "../iso/solids";
 
 /**
- * Tren EMU de la Línea Mitre: modelo real CSR Sifang (2014–16), librea Trenes Argentinos (caja blanca, banda azul cobalto),
- * alimentación por tercer riel, sin pantógrafo. Escala §3 de la spec: cada coche mide 11 × 3.4 × 4 (largo × ancho × alto de
- * caja) sobre bogies de 1 u; el piso queda a z 1 y el techo a 5.2 (con el aire acondicionado, 5.7). El tren anda sobre x y
- * nunca gira, así que no hay `heading`.
+ * Mitre Line EMU train: real CSR Sifang model (2014–16), Trenes Argentinos livery (white body, cobalt blue band),
+ * third-rail power, no pantograph. Spec scale §3: each car measures 11 × 3.4 × 4 (length × width × height of
+ * body) on 1 u bogies; the floor sits at z 1 and the roof at 5.2 (with the air conditioning, 5.7). The train runs along x and
+ * never turns, so there is no `heading`.
  *
- * `emu` devuelve `{ solids, lights }` en coordenadas de mundo, con el extremo oeste en `x0` sobre el eje `y`. El coche k arranca
- * en `x0 + COUPLER + k·(CAR_LEN + GAP)`. Cada coche lleva caja, techo, aire acondicionado, dos bogies, bastidor, librea, tres
- * puertas por lado y ventanas; los frentes de cabina, con parabrisas y enganche, van en los dos extremos de la formación y los
- * fuelles entre coches. `lights` trae:
- * salón (`lit`) un `cyanBleed` por tramo de ventanas del muro sur; cartel LED `amber` en los dos frentes; faros `cyan` en el
- * frente `lead` y luces rojas `magenta` en el otro; con `lead: null`, ni faros ni rojas.
+ * `emu` returns `{ solids, lights }` in world coordinates, with the west end at `x0` on the `y` axis. Car k starts
+ * at `x0 + COUPLER + k·(CAR_LEN + GAP)`. Each car carries body, roof, air conditioning, two bogies, frame, livery, three
+ * doors per side and windows; the cab fronts, with windshield and coupler, go at both ends of the consist and the
+ * gangway bellows between cars. `lights` brings:
+ * saloon (`lit`) one `cyanBleed` per run of windows on the south wall; `amber` LED sign on both fronts; `cyan` headlights on the
+ * `lead` front and `magenta` red lights on the other; with `lead: null`, neither headlights nor red lights.
  *
- * La caja de alineación (`trainBox`: x `x0..x0 + trainLen`, y ± 1.7, z `0..TRAIN_TOP`) es el contrato con el animador y con la
- * regla de oclusión de la estación: ningún sólido sale de ahí (las luces pueden ir 0.05 por fuera).
+ * The alignment box (`trainBox`: x `x0..x0 + trainLen`, y ± 1.7, z `0..TRAIN_TOP`) is the contract with the animator and with the
+ * station's occlusion rule: no solid leaves it (the lights may go 0.05 outside).
  *
- * Spec: docs/superpowers/specs/2026-10-27-estacion-terminal-design.md §5.4 (desvíos en §12).
+ * Spec: docs/superpowers/specs/2026-10-27-estacion-terminal-design.md §5.4 (deviations in §12).
  */
 export const CAR_LEN = 11, CAR_W = 3.4, CAR_H = 4, FLOOR_Z = 1, GAP = 0.6, COUPLER = 0.5;
 export const trainLen = (cars: number) => cars * CAR_LEN + (cars - 1) * GAP + 2 * COUPLER;
-export const TRAIN_TOP = 5.7; // techo 5.2 + aire acondicionado 0.5
+export const TRAIN_TOP = 5.7; // roof 5.2 + air conditioning 0.5
 export type Lead = "e" | "w" | null;
 export interface EmuOpts { cars: 3 | 4; lead: Lead; lit: boolean }
 
@@ -35,58 +35,58 @@ const prism = (x: number, y: number, z: number, w: number, d: number, h: number,
 const rect = (wall: number, u0: number, u1: number, z0: number, z1: number, mat: Plate["mat"]): Plate => ({ wall, shape: "rect", u0, u1, z0, z1, mat });
 const r6 = (v: number) => Math.round(v * 1e6) / 1e6;
 
-/** Muro sur de la caja (se pinta en este orden): bastidor, filete, banda, ventanas, puertas y ventanillas. */
+/** South wall of the body (painted in this order): frame, pinstripe, band, windows, doors and door windows. */
 function southWall(): Plate[] {
   return [
-    rect(2, 0, 1, FLOOR_Z, 1.25, "steel"), // bastidor
-    rect(2, 0, 1, 1.4, 1.6, "livery"), // filete
-    rect(2, 0, 1, 3.9, 4.7, "livery"), // banda ancha
-    ...PANES.map(([u0, u1]) => rect(2, u0, u1, 2.5, 3.8, "glass")), // banda de ventanas, entre puertas y extremos
+    rect(2, 0, 1, FLOOR_Z, 1.25, "steel"), // frame
+    rect(2, 0, 1, 1.4, 1.6, "livery"), // pinstripe
+    rect(2, 0, 1, 3.9, 4.7, "livery"), // wide band
+    ...PANES.map(([u0, u1]) => rect(2, u0, u1, 2.5, 3.8, "glass")), // window band, between doors and ends
     ...DOORS.map(([u0, u1]) => rect(2, u0, u1, 1.05, 3.9, "livery")),
-    ...DOORS.map(([u0, u1]) => rect(2, r6(u0 + 0.02), r6(u1 - 0.02), 2.5, 3.4, "glass")), // ventanilla de cada puerta
+    ...DOORS.map(([u0, u1]) => rect(2, r6(u0 + 0.02), r6(u1 - 0.02), 2.5, 3.4, "glass")), // window of each door
   ];
 }
 
-/** Frente de cabina: franja azul, mitad superior azul y parabrisas, en el muro `wall` (1 este, 3 oeste). */
+/** Cab front: blue stripe, blue upper half and windshield, on wall `wall` (1 east, 3 west). */
 const cabFront = (wall: number): Plate[] => [rect(wall, 0, 1, 1.6, 2.6, "livery"), rect(wall, 0, 1, 4.3, 5, "livery"), rect(wall, 0.1, 0.9, 2.6, 4.3, "asphalt")];
 
-/** Formación de `cars` coches con el extremo oeste en `x0` sobre el eje `y`; `lead` es la punta con faros (la otra lleva luces rojas); `lit`, el salón encendido. */
+/** Consist of `cars` cars with the west end at `x0` on the `y` axis; `lead` is the end with headlights (the other carries red lights); `lit`, the saloon lit. */
 export function emu(x0: number, y: number, opts: EmuOpts): { solids: Solid[]; lights: Accent[] } {
   const { cars } = opts;
   const solids: Solid[] = [];
   const lights: Accent[] = [];
-  const yNorte = y - CAR_W / 2, ySur = y + CAR_W / 2 + 0.05;
+  const yNorth = y - CAR_W / 2, ySouth = y + CAR_W / 2 + 0.05;
   for (let k = 0; k < cars; k++) {
     const xk = x0 + COUPLER + k * (CAR_LEN + GAP), c = xk + CAR_LEN / 2;
     const plates = [...southWall(), ...(k === cars - 1 ? cabFront(1) : []), ...(k === 0 ? cabFront(3) : [])];
-    solids.push(prism(xk, yNorte, FLOOR_Z, CAR_LEN, CAR_W, CAR_H, "whitewash", plates)); // caja
-    solids.push(prism(xk, yNorte, ROOF_Z, CAR_LEN, CAR_W, 0.2, "paving")); // techo
-    solids.push(prism(c - 1.8, y - 1, ROOF_Z + 0.2, 3.6, 2, 0.5, "steel", [rect(2, 0.1, 0.45, 5.3, 5.6, "asphalt"), rect(2, 0.55, 0.9, 5.3, 5.6, "asphalt")])); // aire acondicionado y rejillas
+    solids.push(prism(xk, yNorth, FLOOR_Z, CAR_LEN, CAR_W, CAR_H, "whitewash", plates)); // body
+    solids.push(prism(xk, yNorth, ROOF_Z, CAR_LEN, CAR_W, 0.2, "paving")); // roof
+    solids.push(prism(c - 1.8, y - 1, ROOF_Z + 0.2, 3.6, 2, 0.5, "steel", [rect(2, 0.1, 0.45, 5.3, 5.6, "asphalt"), rect(2, 0.55, 0.9, 5.3, 5.6, "asphalt")])); // air conditioning and grilles
     for (const dx of [-3.2, 3.2]) solids.push(prism(c + dx - 1.2, y - 1.4, 0, 2.4, 2.8, FLOOR_Z, "steel")); // bogies
-    if (opts.lit) for (const [u0, u1] of PANES) { // salón: un resplandor por tramo de ventanas del muro sur
+    if (opts.lit) for (const [u0, u1] of PANES) { // saloon: one glow per run of windows on the south wall
       const xa = xk + CAR_LEN - u1 * CAR_LEN, xb = xk + CAR_LEN - u0 * CAR_LEN;
-      lights.push({ kind: "poly", pts: [v3(xa, ySur, 2.5), v3(xb, ySur, 2.5), v3(xb, ySur, 3.8), v3(xa, ySur, 3.8)], color: "cyanBleed", alpha: 0.7 });
+      lights.push({ kind: "poly", pts: [v3(xa, ySouth, 2.5), v3(xb, ySouth, 2.5), v3(xb, ySouth, 3.8), v3(xa, ySouth, 3.8)], color: "cyanBleed", alpha: 0.7 });
     }
-    if (k < cars - 1) solids.push(prism(xk + CAR_LEN, y - 1.5, 1.2, GAP, 3, 3.6, "asphalt")); // fuelle hacia el coche siguiente
+    if (k < cars - 1) solids.push(prism(xk + CAR_LEN, y - 1.5, 1.2, GAP, 3, 3.6, "asphalt")); // gangway bellows toward the next car
   }
-  solids.push(prism(x0, y - 0.3, 1.3, COUPLER, 0.6, 0.4, "safety")); // enganche oeste
-  solids.push(prism(x0 + trainLen(cars) - COUPLER, y - 0.3, 1.3, COUPLER, 0.6, 0.4, "safety")); // enganche este
-  const xW = x0 + COUPLER - 0.05, xE = x0 + trainLen(cars) - COUPLER + 0.05; // frentes de cabina, luces 0.05 por fuera
-  const ya = yNorte + 0.35 * CAR_W, yb = yNorte + 0.65 * CAR_W;
-  for (const x of [xW, xE]) { // cartel LED ámbar en los dos frentes, aunque no haya `lead`
+  solids.push(prism(x0, y - 0.3, 1.3, COUPLER, 0.6, 0.4, "safety")); // west coupler
+  solids.push(prism(x0 + trainLen(cars) - COUPLER, y - 0.3, 1.3, COUPLER, 0.6, 0.4, "safety")); // east coupler
+  const xW = x0 + COUPLER - 0.05, xE = x0 + trainLen(cars) - COUPLER + 0.05; // cab fronts, lights 0.05 outside
+  const ya = yNorth + 0.35 * CAR_W, yb = yNorth + 0.65 * CAR_W;
+  for (const x of [xW, xE]) { // amber LED sign on both fronts, even with no `lead`
     lights.push({ kind: "poly", pts: [v3(x, ya, 4.4), v3(x, yb, 4.4), v3(x, yb, 4.75), v3(x, ya, 4.75)], color: "amber", alpha: 0.9 });
   }
   if (opts.lead) {
     const head = opts.lead === "e" ? xE : xW, tail = opts.lead === "e" ? xW : xE;
     for (const dy of [-1.3, 1.3]) {
-      lights.push({ kind: "dot", at: v3(head, y + dy, 1.8), r: 0.3, color: "cyan" }); // faros
-      lights.push({ kind: "dot", at: v3(tail, y + dy, 1.8), r: 0.25, color: "magenta" }); // luces rojas
+      lights.push({ kind: "dot", at: v3(head, y + dy, 1.8), r: 0.3, color: "cyan" }); // headlights
+      lights.push({ kind: "dot", at: v3(tail, y + dy, 1.8), r: 0.25, color: "magenta" }); // red lights
     }
   }
   return { solids, lights };
 }
 
-/** Caja de alineación de la formación: contrato con el animador y con las reglas de oclusión. */
+/** Alignment box of the consist: contract with the animator and with the occlusion rules. */
 export function trainBox(x0: number, y: number, cars: 3 | 4): Bounds {
   return { min: { x: x0, y: y - CAR_W / 2, z: 0 }, max: { x: x0 + trainLen(cars), y: y + CAR_W / 2, z: TRAIN_TOP } };
 }

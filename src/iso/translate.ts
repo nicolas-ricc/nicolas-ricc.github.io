@@ -1,13 +1,13 @@
 // src/iso/translate.ts
-// Desplazar sólidos y acentos en planta, sin tocar z.
+// Shift solids and accents in plan, leaving z untouched.
 import type { Accent } from "./accent";
 import type { Vec2, Vec3 } from "./geometry";
 import type { Solid } from "./solids";
 
-/** Punto movido `(dx, dy)` en planta: z no cambia. Devuelve un objeto nuevo. */
+/** Point moved `(dx, dy)` in plan: z does not change. Returns a new object. */
 const move = <P extends Vec2>(p: P, dx: number, dy: number): P => ({ ...p, x: p.x + dx, y: p.y + dy });
 
-/** Sólido desplazado `(dx, dy)` en planta. Solo los puntos son objetos nuevos; el resto (plates, facade…) comparte referencia. No muta `s`. */
+/** Solid shifted `(dx, dy)` in plan. Only the points are new objects; the rest (plates, facade…) shares references. Does not mutate `s`. */
 export function translate(s: Solid, dx: number, dy: number): Solid {
   const p = (q: Vec2): Vec2 => move(q, dx, dy);
   const p3 = (q: Vec3): Vec3 => move(q, dx, dy);
@@ -27,7 +27,7 @@ export function translate(s: Solid, dx: number, dy: number): Solid {
   }
 }
 
-/** Acento desplazado `(dx, dy)` en planta. No muta `a`. */
+/** Accent shifted `(dx, dy)` in plan. Does not mutate `a`. */
 export function translateAccent(a: Accent, dx: number, dy: number): Accent {
   switch (a.kind) {
     case "dot": return { ...a, at: move(a.at, dx, dy) };

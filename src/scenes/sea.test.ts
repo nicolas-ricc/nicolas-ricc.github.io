@@ -17,14 +17,14 @@ type Cone = Extract<Solid, { kind: "cone" }>;
 type Poly = Extract<Solid, { kind: "poly" }>;
 
 describe("sea", () => {
-  it("es determinística, trae ≥ 80 sólidos elevados y usa solo materiales del Blog o compartidos", () => {
+  it("is deterministic, has ≥ 80 raised solids and uses only Blog or shared materials", () => {
     expect(JSON.stringify(sea(createRng(7)))).toBe(JSON.stringify(sea(createRng(7))));
     const s = scene();
     expect(s.solids.filter((x) => !isFlat(x)).length).toBeGreaterThanOrEqual(80);
     for (const x of [...s.ground, ...s.solids]) { expect(SEA_MATS).toContain(x.mat); expect(bounds(x).min.x).toBeGreaterThanOrEqual(330); }
   });
 
-  it("faro: seis tambores alternados, galería con ocho postes, linterna de vidrio y cono; ≈ 29.6 sobre la roca", () => {
+  it("lighthouse: six alternating drums, gallery with eight posts, glass lantern and cone; ≈ 29.6 above the rock", () => {
     const s = scene();
     const drums = s.solids.filter((x) => x.kind === "cylinder" && x.h === 4 && Math.abs(x.at.x - LIGHTHOUSE.x) < 0.01);
     expect(drums).toHaveLength(6);
@@ -33,12 +33,12 @@ describe("sea", () => {
     expect(s.solids.some((x) => x.kind === "cylinder" && x.mat === "glass" && x.h === 3)).toBe(true);
     const top = Math.max(...s.solids.filter((x) => Math.abs(bounds(x).min.x - (LIGHTHOUSE.x - 3.2)) < 4 && Math.abs(bounds(x).min.y - (LIGHTHOUSE.y - 3.2)) < 4).map((x) => bounds(x).max.z));
     expect(top - LIGHTHOUSE.z).toBeCloseTo(29.6, 1);
-    expect(s.lantern.z).toBeCloseTo(LIGHTHOUSE.z + 24 + 0.6 + 1.5, 6); // pin de deriva a propósito (#133): seis tambores de 4 + galería 0.6 + media linterna, en literales para que cambiar una constante rompa acá
+    expect(s.lantern.z).toBeCloseTo(LIGHTHOUSE.z + 24 + 0.6 + 1.5, 6); // deliberate drift pin (#133): six drums of 4 + gallery 0.6 + half a lantern, in literals so changing a constant breaks here
     expect(s.lantern.z).toBe(LANTERN_Z);
-    expect(worldZoneAt(LIGHTHOUSE.x, LIGHTHOUSE.y)).toBe("portfolio"); // el faro clickea Portfolio
+    expect(worldZoneAt(LIGHTHOUSE.x, LIGHTHOUSE.y)).toBe("portfolio"); // the lighthouse clicks through to Portfolio
   });
 
-  it("galería del faro: disco y postes con medidas nombradas, sin mover un bit (#27)", () => {
+  it("lighthouse gallery: disc and posts with named measurements, not moving a bit (#27)", () => {
     const s = scene();
     expect([GALLERY_R, GALLERY_DECK_R, POST_W, POST_H]).toEqual([2.7, 3, 0.3, 1.2]);
     const deck = s.solids.filter((x): x is Cyl => x.kind === "cylinder" && x.mat === "steel" && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y);
@@ -48,7 +48,7 @@ describe("sea", () => {
     for (const p of posts) expect(Math.hypot(p.at.x + POST_W / 2 - LIGHTHOUSE.x, p.at.y + POST_W / 2 - LIGHTHOUSE.y)).toBeCloseTo(GALLERY_R, 9);
   });
 
-  it("linterna y tapa del faro con radios nombrados, retranqueadas del último tambor (#27)", () => {
+  it("lighthouse lantern and cap with named radii, set back from the last drum (#27)", () => {
     const s = scene();
     expect([LANTERN_R, CAP_R]).toEqual([1.6, 1.8]);
     const glass = s.solids.filter((x): x is Cyl => x.kind === "cylinder" && x.mat === "glass" && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y);
@@ -57,9 +57,9 @@ describe("sea", () => {
     expect(cap.map((c) => c.r)).toEqual([CAP_R]);
   });
 
-  it("luces de la galería: una por poste, 0.5 bajo el piso del disco, sin mover un bit (#130)", () => {
+  it("gallery lights: one per post, 0.5 below the disc floor, not moving a bit (#130)", () => {
     const s = scene();
-    expect(GALLERY_POSTS).toBe(8); // pin de deriva, como las medidas de #27
+    expect(GALLERY_POSTS).toBe(8); // drift pin, like the #27 measurements
     expect(GALLERY_LIGHT_Z).toBe(LANTERN_Z - 2);
     const deck = s.solids.find((x): x is Cyl => x.kind === "cylinder" && x.mat === "steel" && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y)!;
     expect(GALLERY_LIGHT_Z + 0.5).toBe(deck.at.z + deck.h);
@@ -73,7 +73,7 @@ describe("sea", () => {
     });
   });
 
-  it("casa del farero, sendero de roca escalonado sobre la punta, afloramientos, pedruscos y arrecife", () => {
+  it("keeper's house, stepped rock path over the point, outcrops, boulders and reef", () => {
     const s = scene();
     const house = s.solids.find((x) => x.kind === "prism" && x.mat === "whitewash" && x.roof === "gable") as Extract<Solid, { kind: "prism" }>;
     expect(house.at).toMatchObject({ x: KEEPER.x, y: KEEPER.y });
@@ -81,39 +81,39 @@ describe("sea", () => {
     const path = s.ground.filter((x) => x.kind === "strip" && x.mat === "rock");
     expect(path).toHaveLength(10);
     for (const p of path) if (p.kind === "strip") for (const q of p.path) expect(inHeadland(q.x, q.y)).toBe(true);
-    expect(path.map((p) => p.kind === "strip" && p.z)).toEqual([...path].map((p) => p.kind === "strip" && p.z).sort((a, b) => Number(a) - Number(b))); // sube hacia el faro
+    expect(path.map((p) => p.kind === "strip" && p.z)).toEqual([...path].map((p) => p.kind === "strip" && p.z).sort((a, b) => Number(a) - Number(b))); // rises toward the lighthouse
     expect(s.solids.filter((x) => x.kind === "poly" && x.mat === "rock")).toHaveLength(6);
     const reef = s.solids.filter((x) => x.kind === "cone" && x.mat === "rock" && x.h === 1) as Extract<Solid, { kind: "cone" }>[];
     expect(reef.length).toBeGreaterThanOrEqual(30); expect(reef.length).toBeLessThanOrEqual(40);
     for (const c of reef) expect(terrainAt(c.at.x, c.at.y)).toBe("reef");
-    expect(s.solids.filter((x) => x.kind === "cone" && x.mat === "rock" && x.h === 1.5)).toHaveLength(20); // pedruscos sobre la punta
+    expect(s.solids.filter((x) => x.kind === "cone" && x.mat === "rock" && x.h === 1.5)).toHaveLength(20); // boulders on the point
   });
 
-  it("boyas y pecio sobre el agua; la boya del pecio tiene luz fija y anillo de espuma", () => {
+  it("buoys and wreck on the water; the wreck's buoy has a fixed light and a foam ring", () => {
     const s = scene();
     for (const b of BUOYS) expect(s.solids.some((x) => x.kind === "cylinder" && x.mat === "rust" && x.at.x === b.x && x.at.y === b.y && x.at.z === -1)).toBe(true);
     expect(s.buoys).toHaveLength(2);
     expect(s.solids.some((x) => x.kind === "cylinder" && x.mat === "steel" && x.at.x === WRECK_BUOY.x)).toBe(true);
     expect(s.accents).toEqual([{ kind: "poly", pts: expect.any(Array), color: "magentaBleed", alpha: expect.any(Number) }, { kind: "dot", at: { x: WRECK_BUOY.x, y: WRECK_BUOY.y, z: 1 }, r: 1, color: "magentaMid" }]);
     expect(s.ground.some((g) => g.kind === "ground" && g.mat === "foam" && g.tris.length === 8)).toBe(true);
-    // pecio (#83): sin casco entero a flote; asoman la proa (cuña de óxido con cubierta) y la casa de popa (caseta con ventanas, chimenea, mástil), todo sobre el agua
+    // wreck (#83): no whole hull afloat; the bow sticks out (rust wedge with deck) and the stern house (deckhouse with windows, funnel, mast), all above the water
     expect(s.solids.some((x) => x.kind === "hull")).toBe(false);
     const near = (x: Solid) => { const b = bounds(x); return Math.hypot((b.min.x + b.max.x) / 2 - WRECK.x, (b.min.y + b.max.y) / 2 - WRECK.y) < 45; };
     const parts = s.solids.filter(near);
-    expect(parts.filter((x) => x.kind === "poly" && x.mat === "hull" && x.footprint.length === 5)).toHaveLength(1); // cuña de proa, obra viva
-    expect(parts.filter((x) => x.kind === "poly" && x.mat === "rust" && x.footprint.length === 5)).toHaveLength(1); // y su franja oxidada de obra muerta
-    expect(s.ground.filter((g) => g.kind === "ground" && g.mat === "foam" && g.tris.length === 8).length).toBeGreaterThanOrEqual(3); // espuma: boya, proa y popa del pecio
-    expect(parts.filter((x) => x.kind === "poly" && x.mat === "whitewash" && x.facade)).toHaveLength(2); // caseta de popa
-    expect(parts.some((x) => x.kind === "cylinder" && x.mat === "rust" && x.h > 2)).toBe(true); // chimenea
-    expect(parts.some((x) => x.kind === "poly" && x.mat === "steel" && x.h >= 4)).toBe(true); // mástil
-    for (const x of parts) expect(bounds(x).min.z).toBeGreaterThanOrEqual(-1); // nada bajo el agua
+    expect(parts.filter((x) => x.kind === "poly" && x.mat === "hull" && x.footprint.length === 5)).toHaveLength(1); // bow wedge, underwater hull
+    expect(parts.filter((x) => x.kind === "poly" && x.mat === "rust" && x.footprint.length === 5)).toHaveLength(1); // and its rusty topsides stripe
+    expect(s.ground.filter((g) => g.kind === "ground" && g.mat === "foam" && g.tris.length === 8).length).toBeGreaterThanOrEqual(3); // foam: buoy, bow and stern of the wreck
+    expect(parts.filter((x) => x.kind === "poly" && x.mat === "whitewash" && x.facade)).toHaveLength(2); // stern deckhouse
+    expect(parts.some((x) => x.kind === "cylinder" && x.mat === "rust" && x.h > 2)).toBe(true); // funnel
+    expect(parts.some((x) => x.kind === "poly" && x.mat === "steel" && x.h >= 4)).toBe(true); // mast
+    for (const x of parts) expect(bounds(x).min.z).toBeGreaterThanOrEqual(-1); // nothing under the water
     const bow = parts.find((x) => x.kind === "poly" && x.mat === "hull" && x.footprint.length === 5)!, house = parts.find((x) => x.kind === "poly" && x.mat === "whitewash" && x.facade)!;
     const bb = bounds(bow), hb = bounds(house);
-    expect(Math.hypot((bb.min.x + bb.max.x) / 2 - (hb.min.x + hb.max.x) / 2, (bb.min.y + bb.max.y) / 2 - (hb.min.y + hb.max.y) / 2)).toBeGreaterThan(20); // partido en dos: el centro está hundido
+    expect(Math.hypot((bb.min.x + bb.max.x) / 2 - (hb.min.x + hb.max.x) / 2, (bb.min.y + bb.max.y) / 2 - (hb.min.y + hb.max.y) / 2)).toBeGreaterThan(20); // split in two: the center is sunk
     for (const x of s.solids) if (x.kind === "cylinder" || x.kind === "hull") if (bounds(x).min.x > ZONE_SPLIT_X + 60) expect(water.has(terrainAt(x.at.x, x.at.y))).toBe(true);
   });
 
-  it("neones: galería de ocho luces alrededor del fuste, balizas de costa en Blog y cartel cian del farero", () => {
+  it("neons: gallery of eight lights around the shaft, coast beacons in Blog and the keeper's cyan sign", () => {
     const s = scene();
     const { gallery, coast, keeperSign } = s.neon;
     expect(gallery).toHaveLength(8);
@@ -121,7 +121,7 @@ describe("sea", () => {
       expect(p.z).toBeCloseTo(s.lantern.z - 2, 6);
       expect(Math.abs(Math.hypot(p.x - LIGHTHOUSE.x, p.y - LIGHTHOUSE.y) - GALLERY_R)).toBeLessThan(1e-6);
     }
-    expect(GALLERY_R).toBeCloseTo(2.2 + 0.5, 6); // pin de deriva a propósito (#133): último tambor (2.2) + 0.5, en literales y no con las constantes
+    expect(GALLERY_R).toBeCloseTo(2.2 + 0.5, 6); // deliberate drift pin (#133): last drum (2.2) + 0.5, in literals and not with the constants
     expect(coast.length).toBeGreaterThanOrEqual(6); expect(coast.length).toBeLessThanOrEqual(10);
     expect(coast).toEqual(COAST.map((p) => ({ x: p.x, y: p.y, z: COAST_Z })));
     expect(COAST_Z).toBe(1.2);
@@ -137,33 +137,33 @@ describe("sea", () => {
     const xs = keeperSign.pts.map((p) => p.x), ys = keeperSign.pts.map((p) => p.y), zs = keeperSign.pts.map((p) => p.z);
     expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(2, 6);
     expect(Math.max(...zs) - Math.min(...zs)).toBeCloseTo(1, 6);
-    expect(Math.min(...zs)).toBeCloseTo(z + 4, 6); // apoyado en el alero
-    for (const y of ys) expect(y).toBeCloseTo(KEEPER.y + 6.42, 6); // frente de la caja, en la cara sur
-    expect(s.solids.some((x) => x.kind === "prism" && x.mat === "steel" && x.at.y === KEEPER.y + 6 && x.at.z <= z + 4 && x.at.z + x.h >= z + 5 && x.at.x <= Math.min(...xs) && x.at.x + x.w >= Math.max(...xs))).toBe(true); // caja oscura detrás
-    expect(s.accents).toHaveLength(2); // los acentos estáticos no cambian
+    expect(Math.min(...zs)).toBeCloseTo(z + 4, 6); // resting on the eave
+    for (const y of ys) expect(y).toBeCloseTo(KEEPER.y + 6.42, 6); // front of the box, on the south face
+    expect(s.solids.some((x) => x.kind === "prism" && x.mat === "steel" && x.at.y === KEEPER.y + 6 && x.at.z <= z + 4 && x.at.z + x.h >= z + 5 && x.at.x <= Math.min(...xs) && x.at.x + x.w >= Math.max(...xs))).toBe(true); // dark box behind
+    expect(s.accents).toHaveLength(2); // the static accents do not change
   });
 
-  it("todo el render usa colores del atlas", () => {
+  it("the whole render uses atlas colors", () => {
     const s = scene();
     const colors = allIsoColors();
     for (const i of buildRenderList([...s.ground, ...s.solids])) expect(colors.has(i.color)).toBe(true);
   });
 });
 
-describe("pecio: comentario y posición (#89)", () => {
-  const doc = readFileSync(new URL("./sea.ts", import.meta.url), "utf8").match(/\/\*\*\n \* Pecio \(#83\)[\s\S]*?\*\/\nconst WRECK_LEN/)?.[0] ?? "";
-  it("el docstring pone el pecio en la fosa, a ~16 u del talud, y no la popa en el talud", () => {
+describe("wreck: comment and position (#89)", () => {
+  const doc = readFileSync(new URL("./sea.ts", import.meta.url), "utf8").match(/\/\*\*\n \* Wreck \(#83\)[\s\S]*?\*\/\nconst WRECK_LEN/)?.[0] ?? "";
+  it("the docstring puts the wreck in the trench, ~16 u from the slope, and not the stern on the slope", () => {
     expect(doc).not.toBe("");
-    expect(doc).toMatch(/hundido en la fosa/);
-    expect(doc).not.toMatch(/(en|sobre) el talud/);
-    expect(doc).toMatch(/16 u al este del talud/);
+    expect(doc).toMatch(/sunk in the trench/);
+    expect(doc).not.toMatch(/(at|on) the slope/);
+    expect(doc).toMatch(/16 u east of the slope/);
     expect(doc).toMatch(/#87/);
   });
-  it("la popa queda ~16 u al este del talud y todo el casco cae en la fosa", () => {
+  it("the stern sits ~16 u east of the slope and the whole hull falls in the trench", () => {
     expect(WRECK.x - abyssX(WRECK.y)).toBeGreaterThan(15);
     expect(WRECK.x - abyssX(WRECK.y)).toBeLessThan(17);
     const near = (x: Solid) => { const b = bounds(x); return Math.hypot((b.min.x + b.max.x) / 2 - WRECK.x, (b.min.y + b.max.y) / 2 - WRECK.y) < 45; };
-    const hull = scene().solids.filter((x): x is Poly => x.kind === "poly" && near(x)); // las placas del pecio; la boya es un cilindro y queda fuera
+    const hull = scene().solids.filter((x): x is Poly => x.kind === "poly" && near(x)); // the wreck's plates; the buoy is a cylinder and stays out
     expect(hull.length).toBeGreaterThanOrEqual(6);
     for (const x of hull) for (const p of x.footprint) expect(terrainAt(p.x, p.y)).toBe("abyss");
   });

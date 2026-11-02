@@ -9,13 +9,13 @@ import { CORNICE_H, HIP_ROOF_H, cornice, hipRoof } from "../roofs";
 import type { Lot, Piece, RecipeDef, Side, Style } from "../types";
 
 /**
- * Familia `courtyard`: manzanas con patio interior (O con pasaje, U abierta,
- * C de dos patios y patio residencial de techos a cuatro aguas). Cada receta
- * publica su patio en `Piece.courtyard`. Spec §5 y §6.
+ * `courtyard` family: blocks with an interior courtyard (O with a passage, open U,
+ * C with two courtyards and a residential courtyard with hip roofs). Each recipe
+ * publishes its courtyard in `Piece.courtyard`. Spec §5 and §6.
  */
 const PASSAGE = 3;
 
-/** Alas de ancho `t` sobre `r` en los lados pedidos: norte y sur a lo ancho, este y oeste entre ellas. Prismas disjuntos, nunca un anillo. */
+/** Wings of width `t` on `r` on the requested sides: north and south across the full width, east and west between them. Disjoint prisms, never a ring. */
 function ring(r: Rect, t: number, sides: readonly Side[]) {
   const has = (s: Side) => sides.includes(s);
   const y0 = r.y + (has("n") ? t : 0), y1 = r.y + r.d - (has("s") ? t : 0);
@@ -28,7 +28,7 @@ function ring(r: Rect, t: number, sides: readonly Side[]) {
   return { wings, patio: { x: x0, y: y0, w: x1 - x0, d: y1 - y0 } };
 }
 
-/** Ala con fachada de `style.mat` y cornisa, o `hipRoof` de `style.roof` con `hip`; `flush` deja la cornisa sin vuelo de ese lado (borde del pasaje). */
+/** Wing with a `style.mat` facade and cornice, or a `style.roof` `hipRoof` with `hip`; `flush` leaves the cornice without overhang on that side (edge of the passage). */
 function wing(p: Piece, r: Rect, z: number, h: number, cols: number, style: Style, { hip = false, flush }: { hip?: boolean; flush?: "e" | "w" } = {}): void {
   const facade: Facade = { floors: Math.max(1, Math.round(h / style.floorH)), cols };
   addBuilding(p, prism(r.x, r.y, z, r.w, r.d, h, style.mat, { facade, tone: style.tone }), facade);
@@ -37,7 +37,7 @@ function wing(p: Piece, r: Rect, z: number, h: number, cols: number, style: Styl
   p.solids.push(...cornice(f, style.trim));
 }
 
-/** `n` árboles de patio dentro de `r`, a 1 del borde (su radio). */
+/** `n` courtyard trees inside `r`, 1 from the edge (their radius). */
 function patioTrees(p: Piece, rng: Rng, r: Rect, n: number, z: number): void {
   for (let k = 0; k < n; k++) p.solids.push(...patioTree(v3(r.x + 1 + rng.next() * Math.max(0, r.w - 2), r.y + 1 + rng.next() * Math.max(0, r.d - 2), z)));
 }
@@ -49,7 +49,7 @@ export function courtyardO(lot: Lot, rng: Rng, style: Style): Piece {
   for (const { side, rect } of wings) {
     const cols = rng.int(3, 4);
     if (side !== "s") { wing(p, rect, lot.z, h, cols, style); continue; }
-    const half = (rect.w - PASSAGE) / 2; // pasaje centrado: el fondo es el patio
+    const half = (rect.w - PASSAGE) / 2; // centered passage: the back is the courtyard
     wing(p, { ...rect, w: half }, lot.z, h, cols, style, { flush: "e" });
     wing(p, { ...rect, x: rect.x + half + PASSAGE, w: half }, lot.z, h, cols, style, { flush: "w" });
   }
@@ -64,7 +64,7 @@ export function courtyardU(lot: Lot, rng: Rng, style: Style): Piece {
   const h = Math.min(rng.int(6, 10), Math.floor(cap - CORNICE_H));
   const { wings, patio } = ring(lot, 5, (["n", "s", "w", "e"] as const).filter((s) => s !== open));
   for (const { rect } of wings) wing(p, rect, lot.z, h, rng.int(3, 4), style);
-  // banco en el centro y un árbol a cada lado, partiendo el patio por su eje largo, así ningún árbol cae sobre el banco
+  // bench in the center and a tree on each side, splitting the courtyard along its long axis, so no tree falls on the bench
   const cx = patio.x + patio.w / 2, cy = patio.y + patio.d / 2;
   const halves: Rect[] = patio.w >= patio.d
     ? [{ ...patio, w: patio.w / 2 - 1 }, { ...patio, x: cx + 1, w: patio.w / 2 - 1 }]
@@ -75,7 +75,7 @@ export function courtyardU(lot: Lot, rng: Rng, style: Style): Piece {
   return p;
 }
 
-/** Dos patios en cinco bandas (decisión 2): ala norte, patio, ala central, patio, ala sur; dos alas cortas al oeste. */
+/** Two courtyards in five bands (decision 2): north wing, courtyard, central wing, courtyard, south wing; two short wings to the west. */
 export function courtyardC(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), cap = Math.min(lot.maxH, RECIPE_MAX_H), { x, y, w, d, z } = lot;
   const h = Math.min(rng.int(6, 9), Math.floor(cap - CORNICE_H));

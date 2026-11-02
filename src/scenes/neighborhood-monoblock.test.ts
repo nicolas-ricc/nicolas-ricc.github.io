@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { bounds, isFlat, type Solid } from "../iso/solids";
 import { occluded } from "../iso/project";
 import { SEED, createRng } from "../map/seed";
-import { newCtx } from "./barrio-fixtures";
-import { monoblock } from "./barrio-monoblock";
+import { newCtx } from "./neighborhood-fixtures";
+import { monoblock } from "./neighborhood-monoblock";
 import { suburbBlocks } from "./sprawl-grid";
 import { tech } from "./tech";
 import { FACE_CAPS, blockRect, facesIn, insideInflated } from "./tech-budget";
@@ -12,7 +12,7 @@ import { zoneRng } from "./world";
 
 type Prism = Solid & { kind: "prism" };
 
-// el mundo real: manzanas de monoblocks según el pre-pase
+// the real world: monoblock blocks according to the pre-pass
 const scene = tech(zoneRng(SEED, "cv", 2));
 const blocks = suburbBlocks(), kinds = zoneKinds(zoneRng(SEED, "cv", 2), blocks);
 const monos = blocks.filter((_, i) => kinds[i] === "monoblock");
@@ -30,7 +30,7 @@ const of = (b: (typeof monos)[number]) => {
   return { r, solids, ground, bodies, plinths, tanks, antennas, trees, homes, lamps };
 };
 const onRoof = (t: Prism, body: Prism) => Math.abs(t.at.z - (body.at.z + body.h)) < 1e-9 && t.at.x >= body.at.x && t.at.x + t.w <= body.at.x + body.w && t.at.y >= body.at.y && t.at.y + t.d <= body.at.y + body.d;
-const tapado = (q: { x: number; y: number; z: number }, p: Prism) => occluded(q, p.at, { x: p.at.x + p.w, y: p.at.y + p.d, z: p.at.z + p.h });
+const hidden = (q: { x: number; y: number; z: number }, p: Prism) => occluded(q, p.at, { x: p.at.x + p.w, y: p.at.y + p.d, z: p.at.z + p.h });
 const overlap = (a: Solid, b: Solid) => {
   const p = bounds(a), q = bounds(b), e = 1e-9;
   const xy = p.min.x < q.max.x - e && q.min.x < p.max.x - e && p.min.y < q.max.y - e && q.min.y < p.max.y - e;
@@ -38,10 +38,10 @@ const overlap = (a: Solid, b: Solid) => {
 };
 
 
-describe("monoblocks del Barrio Simón Bolívar (#250)", () => {
-  it("hay manzanas de monoblocks en el mundo", () => expect(monos.length).toBe(18));
+describe("monoblocks of the Simón Bolívar neighborhood (#250)", () => {
+  it("there are monoblock blocks in the world", () => expect(monos.length).toBe(18));
 
-  it("cada manzana: 1 o 2 cuerpos 20×5 de h ∈ {12, 15, 18}, distintas si son dos, de revoque claro sobre zócalo", () => {
+  it("each block: 1 or 2 bodies 20×5 of h ∈ {12, 15, 18}, different if there are two, of light plaster on a plinth", () => {
     for (const b of monos) {
       const { bodies, plinths } = of(b);
       expect(bodies.length, `${b.x},${b.y}`).toBeGreaterThanOrEqual(1); expect(bodies.length).toBeLessThanOrEqual(2);
@@ -51,7 +51,7 @@ describe("monoblocks del Barrio Simón Bolívar (#250)", () => {
     }
   });
 
-  it("en el barrio entero aparecen las tres alturas, los dos revoques y planta baja de ladrillo en algunas placas", () => {
+  it("in the whole neighborhood the three heights, the two plasters and a brick ground floor on some slabs appear", () => {
     const bodies = monos.flatMap((b) => of(b).bodies);
     expect(new Set(bodies.map((p) => p.h))).toEqual(new Set([12, 15, 18]));
     expect(new Set(bodies.map((p) => p.mat))).toEqual(new Set(["whitewash", "stone"]));
@@ -60,10 +60,10 @@ describe("monoblocks del Barrio Simón Bolívar (#250)", () => {
     for (const p of brick) expect(p.plates!.filter((q) => q.mat === "brick").map((q) => q.wall).sort()).toEqual([1, 2]);
   });
 
-  it("fachada en grilla: banda de ventanas por piso al sur y al este, 7 pilastras al sur y 1 al este, 1 o 2 loggias con baranda por piso", () => {
+  it("grid facade: band of windows per floor to the south and east, 7 pilasters to the south and 1 to the east, 1 or 2 loggias with a railing per floor", () => {
     for (const b of monos) for (const p of of(b).bodies) {
       const floors = p.h / 3, plates = p.plates ?? [];
-      for (const wall of [1, 2]) expect(plates.filter((q) => q.wall === wall && q.mat === "glass" && q.toneOffset === -1), `banda wall ${wall}`).toHaveLength(floors);
+      for (const wall of [1, 2]) expect(plates.filter((q) => q.wall === wall && q.mat === "glass" && q.toneOffset === -1), `band wall ${wall}`).toHaveLength(floors);
       const piers = plates.filter((q) => q.mat === p.mat && q.toneOffset === 1);
       expect(piers.filter((q) => q.wall === 2)).toHaveLength(7); expect(piers.filter((q) => q.wall === 1)).toHaveLength(1);
       for (const q of piers) { expect(q.z0).toBeCloseTo(0.3); expect(q.z1).toBeCloseTo(0.3 + p.h); }
@@ -74,11 +74,11 @@ describe("monoblocks del Barrio Simón Bolívar (#250)", () => {
     }
   });
 
-  it("ninguna placa glass ni pilastra cae en wall 0 ni wall 3", () => {
+  it("no glass plate or pilaster falls on wall 0 or wall 3", () => {
     for (const b of monos) for (const p of of(b).bodies) for (const q of p.plates ?? []) expect([1, 2]).toContain(q.wall);
   });
 
-  it("torre de tanques: cada cuerpo con ≥ 2 tanques concrete 2×2 apoyados en su azotea y una antena steel sobre un tanque", () => {
+  it("tank tower: each body with ≥ 2 concrete tanks 2×2 resting on its roof and a steel antenna on a tank", () => {
     for (const b of monos) {
       const { bodies, tanks, antennas } = of(b);
       for (const p of bodies) {
@@ -89,7 +89,7 @@ describe("monoblocks del Barrio Simón Bolívar (#250)", () => {
     }
   });
 
-  it("parque: césped, ≥ 4 árboles, 2 senderos de paving, 2 faroles; sin estacionamiento", () => {
+  it("park: lawn, ≥ 4 trees, 2 paving paths, 2 street lamps; no parking", () => {
     for (const b of monos) {
       const { solids, ground, trees, lamps } = of(b);
       expect(solids.some((s) => s.kind === "prism" && s.mat === "leafDark" && s.w === b.w && s.d === b.d)).toBe(true);
@@ -100,14 +100,14 @@ describe("monoblocks del Barrio Simón Bolívar (#250)", () => {
     }
   });
 
-  it("cuerpos, zócalos, tanques y árboles no se solapan", () => {
+  it("bodies, plinths, tanks and trees do not overlap", () => {
     for (const b of monos) {
       const { bodies, plinths, tanks, trees } = of(b), all: Solid[] = [...bodies, ...plinths, ...tanks, ...trees];
       all.forEach((x, i) => all.forEach((y, j) => { if (j > i) expect(overlap(x, y), `${b.x},${b.y} #${i}↔#${j}`).toBe(false); }));
     }
   });
 
-  it("ventanas sobre el plano sur o este de un cuerpo, dentro de su pared", () => {
+  it("windows on the south or east plane of a body, inside its wall", () => {
     for (const b of monos) {
       const { bodies, homes } = of(b);
       expect(homes.length).toBeGreaterThan(0);
@@ -119,39 +119,39 @@ describe("monoblocks del Barrio Simón Bolívar (#250)", () => {
     }
   });
 
-  it("en cada columna de loggia todas las ventanas comparten lit; hay columnas encendidas", () => {
+  it("in each loggia column all the windows share lit; there are lit columns", () => {
     let columns = 0, litColumns = 0;
     for (const b of monos) {
       const tall = of(b).homes.filter((w) => { const zs = w.pts.map((q) => q.z); return Math.max(...zs) - Math.min(...zs) > 1.2; });
       const byColumn = new Map<string, boolean[]>();
       for (const w of tall) { const k = `${w.pts[0]!.y}|${Math.min(...w.pts.map((q) => q.x)).toFixed(3)}`; byColumn.set(k, [...(byColumn.get(k) ?? []), w.lit]); }
-      expect(byColumn.size).toBeGreaterThanOrEqual(1); // la placa trasera más baja queda tapada entera
+      expect(byColumn.size).toBeGreaterThanOrEqual(1); // the lowest back slab is entirely hidden
       for (const lits of byColumn.values()) { expect(new Set(lits).size).toBe(1); columns++; if (lits[0]) litColumns++; }
     }
     expect(litColumns).toBeGreaterThan(0); expect(litColumns).toBeLessThan(columns);
   });
 
-  it("ninguna ventana del monoblock queda tapada por otra placa de su manzana", () => {
+  it("no monoblock window is hidden by another slab of its block", () => {
     for (const b of monos) {
       const { bodies, homes } = of(b);
-      for (const w of homes) for (const q of w.pts) for (const p of bodies) expect(tapado(q, p), `${b.x},${b.y} ${w.group}`).toBe(false);
+      for (const w of homes) for (const q of w.pts) for (const p of bodies) expect(hidden(q, p), `${b.x},${b.y} ${w.group}`).toBe(false);
     }
   });
 
-  it("en cada manzana al menos un árbol se ve: su ápice no lo tapa ningún cuerpo", () => {
+  it("in each block at least one tree is visible: no body hides its apex", () => {
     for (const b of monos) {
       const { bodies, trees } = of(b);
-      const seen = trees.some((t) => { const c = t as Solid & { kind: "cone" }; const a = { x: c.at.x, y: c.at.y, z: c.at.z + c.h }; return bodies.every((p) => !tapado(a, p)); });
+      const seen = trees.some((t) => { const c = t as Solid & { kind: "cone" }; const a = { x: c.at.x, y: c.at.y, z: c.at.z + c.h }; return bodies.every((p) => !hidden(a, p)); });
       expect(seen, `${b.x},${b.y}`).toBe(true);
     }
   });
 
-  it("la fracción encendida de todas las ventanas de monoblocks está en [0.30, 0.45]", () => {
+  it("the lit fraction of all monoblock windows is in [0.30, 0.45]", () => {
     const homes = monos.flatMap((b) => of(b).homes), lit = homes.filter((w) => w.lit).length / homes.length;
     expect(lit).toBeGreaterThanOrEqual(0.30); expect(lit).toBeLessThanOrEqual(0.45);
   });
 
-  it("cada manzana dentro de FACE_CAPS.monoblock; nada no esbelto supera 21.5", () => {
+  it("each block within FACE_CAPS.monoblock; nothing non-slender exceeds 21.5", () => {
     for (const b of monos) {
       expect(facesIn(everything, blockRect(b)), `${b.x},${b.y}`).toBeLessThanOrEqual(FACE_CAPS.monoblock);
       for (const s of of(b).solids) {
@@ -161,7 +161,7 @@ describe("monoblocks del Barrio Simón Bolívar (#250)", () => {
     }
   });
 
-  it("con paridad 1 y una sola placa: va al fondo (y + 11), árboles al norte de su zócalo, sendero E–O en y + 10.2", () => {
+  it("with parity 1 and a single slab: it goes at the back (y + 11), trees north of its plinth, E–W path at y + 10.2", () => {
     const b = blocks.find((x) => blockParity(x) === 1)!;
     const ctx = Array.from({ length: 40 }, (_, k) => { const c = newCtx(createRng(k + 1)); monoblock(c, b); return c; }).find((c) => c.solids.filter((s) => s.kind === "prism" && s.w === 20 && s.d === 5).length === 1)!;
     expect(ctx).toBeDefined();

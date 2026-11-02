@@ -12,9 +12,9 @@ export interface Tri { pts: [Vec3, Vec3, Vec3]; toneOffset?: number; baseTone?: 
 
 export type Solid = (
   /**
-   * Caja con techo plano, a dos aguas (`gable`), escalonado (`step`) o a cuatro aguas (`hip`). `roofMat` solo lo usa `roof: "gable"`: pinta las dos
-   * vertientes; muros, hastiales y base llevan `mat`. Sin `roofMat`, todo sale en `mat`. `facade` no aplica a `roof: "gable"`
-   * ni a `"hip"`, porque los hastiales son pentágonos; `plates` sí en `gable` (muros y hastiales).
+   * Box with a flat roof, a gable roof (`gable`), a stepped roof (`step`) or a hip roof (`hip`). `roofMat` is only used by `roof: "gable"`: it paints the two
+   * slopes; walls, gables and base take `mat`. Without `roofMat`, everything comes out in `mat`. `facade` does not apply to `roof: "gable"`
+   * or `"hip"`, because the gable ends are pentagons; `plates` do apply on `gable` (walls and gable ends).
    */
   | { kind: "prism"; at: Vec3; w: number; d: number; h: number; mat: Material; roofMat?: Material; roof?: "flat" | "gable" | "step" | "hip"; facade?: Facade; plates?: Plate[] }
   | { kind: "poly"; footprint: Vec2[]; z: number; h: number; mat: Material; facade?: Facade; plates?: Plate[] }
@@ -28,22 +28,22 @@ export type Solid = (
   | { kind: "strip"; path: Vec2[]; width: number; z: number; mat: Material }
   | { kind: "ground"; tris: Tri[]; mat: Material }
   | { kind: "wheel"; at: Vec3; r: number; width: number; mat: Material; sides: number; angle: number; gondolas?: { mat: Material; w: number; d: number; h: number }; hollow?: boolean; slots?: number; buckets?: { n: number; depth: number; teeth: number; mat: Material } }
-) & { tone?: number /* entero, −2..+2 */ };
+) & { tone?: number /* integer, −2..+2 */ };
 
-/** Hacia dónde baja la rampa: "e" tiene el borde alto al oeste, "s" lo tiene al norte. */
+/** Which way the ramp descends: "e" has its high edge on the west, "s" has it on the north. */
 export type RampDir = "e" | "w" | "n" | "s";
 
 export interface Face { pts: Vec3[]; normal: Vec3; mat: Material; tone: Tone; toneOffset: number }
 
-export const GABLE_RATIO = 0.35; // altura de cumbrera sobre alero, relativa a la altura de la caja
-export const STEP_RATIO = 0.35;  // altura del segundo nivel del techo escalonado
-export const STEP_INSET = 0.2;   // retranqueo del segundo nivel, relativo al lado
+export const GABLE_RATIO = 0.35; // ridge height above eave, relative to the box height
+export const STEP_RATIO = 0.35;  // height of the second level of the stepped roof
+export const STEP_INSET = 0.2;   // setback of the second level, relative to the side
 
 export function isFlat(s: Solid): boolean {
   return s.kind === "strip" || s.kind === "ground";
 }
 
-/** Cara con la normal orientada hacia afuera del centro `c` del sólido. */
+/** Face with its normal oriented outward from the solid's center `c`. */
 function face(pts: Vec3[], mat: Material, c: Vec3, toneOffset = 0): Face {
   let normal = polygonNormal(pts);
   const fc = centroid(pts);
@@ -51,7 +51,7 @@ function face(pts: Vec3[], mat: Material, c: Vec3, toneOffset = 0): Face {
   return { pts, normal, mat, tone: shadeTone(normal), toneOffset };
 }
 
-/** Doble del área con signo (shoelace). Positiva en el orden canónico de `rect()`: norte, este, sur, oeste. */
+/** Twice the signed area (shoelace). Positive in the canonical order of `rect()`: north, east, south, west. */
 function signedArea2(pts: Vec2[]): number {
   let a = 0;
   for (let i = 0; i < pts.length; i++) {
@@ -62,9 +62,9 @@ function signedArea2(pts: Vec2[]): number {
 }
 
 /**
- * Prisma recto sobre una huella poligonal: techo, base y un cuadrilátero por lado.
- * Las paredes se orientan por el sentido de giro (sirve para huellas cóncavas):
- * la huella se lleva al orden canónico y la normal de `a→b` es `(dy, −dx)`.
+ * Right prism over a polygonal footprint: roof, base and one quadrilateral per side.
+ * Walls are oriented by winding direction (works for concave footprints):
+ * the footprint is brought to canonical order and the normal of `a→b` is `(dy, −dx)`.
  */
 function extrude(footprint: Vec2[], z0: number, h: number, mat: Material): Face[] {
   const fp = signedArea2(footprint) < 0 ? [...footprint].reverse() : footprint;
@@ -78,8 +78,8 @@ function extrude(footprint: Vec2[], z0: number, h: number, mat: Material): Face[
 }
 
 /**
- * Techo y base pasan; tras la pared de la arista `edgeOf(k)` (cara `k + 2`) van sus caras de fachada y sus placas.
- * Cuenta con el orden de `extrude` (techo, base, una pared por arista) o de `ramp` (base, plano, cuatro paredes).
+ * Roof and base pass through; after the wall of edge `edgeOf(k)` (face `k + 2`) go its facade faces and its plates.
+ * Relies on the order of `extrude` (roof, base, one wall per edge) or of `ramp` (base, slope, four walls).
  */
 function withPlates(raw: Face[], footprint: Vec2[], s: { facade?: Facade; plates?: Plate[] }, edgeOf: (k: number) => number = (k) => k): Face[] {
   if (!s.facade && !s.plates?.length) return raw;
@@ -92,8 +92,8 @@ function withPlates(raw: Face[], footprint: Vec2[], s: { facade?: Facade; plates
 }
 
 /**
- * `extrude` invierte las huellas en sentido horario: la pared j de la huella invertida es la arista n−2−j (mód n) de la que escribió quien llama.
- * Así `Plate.wall` sigue indexando la huella original.
+ * `extrude` reverses clockwise footprints: wall j of the reversed footprint is edge n−2−j (mod n) of the one the caller wrote.
+ * That way `Plate.wall` keeps indexing the original footprint.
  */
 function polyEdge(footprint: Vec2[]): (k: number) => number {
   const n = footprint.length;
@@ -101,14 +101,14 @@ function polyEdge(footprint: Vec2[]): (k: number) => number {
 }
 
 /**
- * Paredes de la rampa (caras 2..5: oeste, este, norte, sur) → arista de `rect` que las cubre. Las placas van sobre el plano
- * vertical de la arista, sin recortar al perfil inclinado; la del lado de altura 0 hereda una normal nula y `tessellate` la descarta.
+ * Ramp walls (faces 2..5: west, east, north, south) → edge of `rect` that covers them. Plates go on the vertical
+ * plane of the edge, not clipped to the sloped profile; the one on the height-0 side inherits a null normal and `tessellate` drops it.
  */
 const RAMP_WALL_EDGE = [3, 1, 0, 2];
 
 /**
- * Muros y hastiales del gable (caras 1..4 de `gable()`) → arista de `rect` que los cubre, según la orientación de la cumbrera.
- * `wide` (w >= d): pared norte, pared sur, hastial oeste, hastial este. `deep` (w < d): pared oeste, pared este, hastial norte, hastial sur.
+ * Gable walls and gable ends (faces 1..4 of `gable()`) → edge of `rect` that covers them, depending on the ridge orientation.
+ * `wide` (w >= d): north wall, south wall, west gable end, east gable end. `deep` (w < d): west wall, east wall, north gable end, south gable end.
  */
 const GABLE_WALL_EDGE = { wide: [0, 2, 3, 1], deep: [3, 1, 0, 2] };
 
@@ -117,30 +117,30 @@ const rect = (x: number, y: number, w: number, d: number): Vec2[] => [{ x, y }, 
 function regular(cx: number, cy: number, r: number, sides: number): Vec2[] {
   const pts: Vec2[] = [];
   for (let i = 0; i < sides; i++) {
-    const a = (i / sides) * Math.PI * 2 + Math.PI / sides; // caras planas al norte/sur/este/oeste
+    const a = (i / sides) * Math.PI * 2 + Math.PI / sides; // flat faces to the north/south/east/west
     pts.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
   }
   return pts;
 }
 
-/** Techo a cuatro aguas: paredes hasta el alero y cumbrera por el eje largo, acortada min(w, d)/2 en cada punta. */
+/** Hip roof: walls up to the eave and a ridge along the long axis, shortened by min(w, d)/2 at each end. */
 function hip(at: Vec3, w: number, d: number, h: number, mat: Material): Face[] {
   const { x, y, z } = at;
   const eave = z + h, ridge = eave + h * GABLE_RATIO, i = Math.min(w, d) / 2;
   const c = v3(x + w / 2, y + d / 2, z + h / 2);
   const f = (pts: Vec3[]) => face(pts, mat, c);
   const nw = v3(x, y, eave), ne = v3(x + w, y, eave), se = v3(x + w, y + d, eave), sw = v3(x, y + d, eave);
-  const box = extrude(rect(x, y, w, d), z, h, mat).slice(1); // base y paredes, sin el techo plano
+  const box = extrude(rect(x, y, w, d), z, h, mat).slice(1); // base and walls, without the flat roof
   if (w >= d) {
     const r0 = v3(x + i, y + d / 2, ridge), r1 = v3(x + w - i, y + d / 2, ridge);
-    const top = w === d ? [r0] : [r1, r0]; // con w === d la cumbrera es un punto y los faldones largos quedan triángulos
+    const top = w === d ? [r0] : [r1, r0]; // with w === d the ridge is a point and the long slopes become triangles
     return [...box, f([nw, ne, ...top]), f([sw, se, ...top]), f([nw, sw, r0]), f([ne, se, r1])];
   }
   const r0 = v3(x + w / 2, y + i, ridge), r1 = v3(x + w / 2, y + d - i, ridge);
   return [...box, f([nw, sw, r1, r0]), f([ne, se, r1, r0]), f([nw, ne, r0]), f([sw, se, r1])];
 }
 
-/** Placas tras cada muro y hastial del gable; base y vertientes no las llevan. Sin placas devuelve `raw` tal cual. */
+/** Plates after each gable wall and gable end; base and slopes do not take them. Without plates it returns `raw` as is. */
 function gablePlates(raw: Face[], s: { at: Vec3; w: number; d: number; plates?: Plate[] }): Face[] {
   const { at, w, d, plates } = s;
   if (!plates?.length) return raw;
@@ -162,30 +162,30 @@ function gable(at: Vec3, w: number, d: number, h: number, mat: Material, roofMat
     const ym = y + d / 2;
     return [
       f([v3(x, y, z), v3(x + w, y, z), v3(x + w, y + d, z), v3(x, y + d, z)]),                                     // base
-      f([v3(x, y, z), v3(x + w, y, z), v3(x + w, y, eave), v3(x, y, eave)]),                                       // pared norte
-      f([v3(x, y + d, z), v3(x + w, y + d, z), v3(x + w, y + d, eave), v3(x, y + d, eave)]),                       // pared sur
-      f([v3(x, y, z), v3(x, y, eave), v3(x, ym, ridge), v3(x, y + d, eave), v3(x, y + d, z)]),                     // hastial oeste
-      f([v3(x + w, y, z), v3(x + w, y, eave), v3(x + w, ym, ridge), v3(x + w, y + d, eave), v3(x + w, y + d, z)]), // hastial este
-      slope([v3(x, y, eave), v3(x + w, y, eave), v3(x + w, ym, ridge), v3(x, ym, ridge)]),                         // vertiente norte
-      slope([v3(x, y + d, eave), v3(x + w, y + d, eave), v3(x + w, ym, ridge), v3(x, ym, ridge)]),                 // vertiente sur
+      f([v3(x, y, z), v3(x + w, y, z), v3(x + w, y, eave), v3(x, y, eave)]),                                       // north wall
+      f([v3(x, y + d, z), v3(x + w, y + d, z), v3(x + w, y + d, eave), v3(x, y + d, eave)]),                       // south wall
+      f([v3(x, y, z), v3(x, y, eave), v3(x, ym, ridge), v3(x, y + d, eave), v3(x, y + d, z)]),                     // west gable end
+      f([v3(x + w, y, z), v3(x + w, y, eave), v3(x + w, ym, ridge), v3(x + w, y + d, eave), v3(x + w, y + d, z)]), // east gable end
+      slope([v3(x, y, eave), v3(x + w, y, eave), v3(x + w, ym, ridge), v3(x, ym, ridge)]),                         // north slope
+      slope([v3(x, y + d, eave), v3(x + w, y + d, eave), v3(x + w, ym, ridge), v3(x, ym, ridge)]),                 // south slope
     ];
   }
   const xm = x + w / 2;
   return [
     f([v3(x, y, z), v3(x + w, y, z), v3(x + w, y + d, z), v3(x, y + d, z)]),
-    f([v3(x, y, z), v3(x, y + d, z), v3(x, y + d, eave), v3(x, y, eave)]),                                       // pared oeste
-    f([v3(x + w, y, z), v3(x + w, y + d, z), v3(x + w, y + d, eave), v3(x + w, y, eave)]),                       // pared este
-    f([v3(x, y, z), v3(x, y, eave), v3(xm, y, ridge), v3(x + w, y, eave), v3(x + w, y, z)]),                     // hastial norte
-    f([v3(x, y + d, z), v3(x, y + d, eave), v3(xm, y + d, ridge), v3(x + w, y + d, eave), v3(x + w, y + d, z)]), // hastial sur
-    slope([v3(x, y, eave), v3(x, y + d, eave), v3(xm, y + d, ridge), v3(xm, y, ridge)]),                         // vertiente oeste
-    slope([v3(x + w, y, eave), v3(x + w, y + d, eave), v3(xm, y + d, ridge), v3(xm, y, ridge)]),                 // vertiente este
+    f([v3(x, y, z), v3(x, y + d, z), v3(x, y + d, eave), v3(x, y, eave)]),                                       // west wall
+    f([v3(x + w, y, z), v3(x + w, y + d, z), v3(x + w, y + d, eave), v3(x + w, y, eave)]),                       // east wall
+    f([v3(x, y, z), v3(x, y, eave), v3(xm, y, ridge), v3(x + w, y, eave), v3(x + w, y, z)]),                     // north gable end
+    f([v3(x, y + d, z), v3(x, y + d, eave), v3(xm, y + d, ridge), v3(x + w, y + d, eave), v3(x + w, y + d, z)]), // south gable end
+    slope([v3(x, y, eave), v3(x, y + d, eave), v3(xm, y + d, ridge), v3(xm, y, ridge)]),                         // west slope
+    slope([v3(x + w, y, eave), v3(x + w, y + d, eave), v3(xm, y + d, ridge), v3(xm, y, ridge)]),                 // east slope
   ];
 }
 
 function ramp(at: Vec3, w: number, d: number, h: number, dir: RampDir, mat: Material): Face[] {
   const { x, y, z } = at;
   const hi = z + h;
-  // altura de cada esquina según hacia dónde baja
+  // height of each corner depending on which way it descends
   const corner = (west: boolean, north: boolean): number => {
     switch (dir) {
       case "e": return west ? hi : z;
@@ -199,11 +199,11 @@ function ramp(at: Vec3, w: number, d: number, h: number, dir: RampDir, mat: Mate
   const f = (pts: Vec3[]) => face(pts, mat, c);
   return [
     f([v3(x, y, z), v3(x + w, y, z), v3(x + w, y + d, z), v3(x, y + d, z)]),             // base
-    f([v3(x, y, nw), v3(x + w, y, ne), v3(x + w, y + d, se), v3(x, y + d, sw)]),         // plano inclinado
-    f([v3(x, y, z), v3(x, y + d, z), v3(x, y + d, sw), v3(x, y, nw)]),                   // pared oeste
-    f([v3(x + w, y, z), v3(x + w, y + d, z), v3(x + w, y + d, se), v3(x + w, y, ne)]),   // pared este
-    f([v3(x, y, z), v3(x + w, y, z), v3(x + w, y, ne), v3(x, y, nw)]),                   // lado norte
-    f([v3(x, y + d, z), v3(x + w, y + d, z), v3(x + w, y + d, se), v3(x, y + d, sw)]),   // lado sur
+    f([v3(x, y, nw), v3(x + w, y, ne), v3(x + w, y + d, se), v3(x, y + d, sw)]),         // sloped plane
+    f([v3(x, y, z), v3(x, y + d, z), v3(x, y + d, sw), v3(x, y, nw)]),                   // west wall
+    f([v3(x + w, y, z), v3(x + w, y + d, z), v3(x + w, y + d, se), v3(x + w, y, ne)]),   // east wall
+    f([v3(x, y, z), v3(x + w, y, z), v3(x + w, y, ne), v3(x, y, nw)]),                   // north side
+    f([v3(x, y + d, z), v3(x + w, y + d, z), v3(x + w, y + d, se), v3(x, y + d, sw)]),   // south side
   ];
 }
 
@@ -219,14 +219,14 @@ function cone(at: Vec3, r: number, h: number, sides: number, mat: Material): Fac
   return out;
 }
 
-/** Cúpula: anillos a ángulo polar creciente (radio r·cos φ, altura h·sin φ), cuadriláteros entre anillos y triángulos al ápice. */
+/** Dome: rings at increasing polar angle (radius r·cos φ, height h·sin φ), quadrilaterals between rings and triangles to the apex. */
 function dome(at: Vec3, r: number, h: number, sides: number, rings: number, mat: Material): Face[] {
   const ring = (k: number): Vec3[] => {
     const phi = (k / rings) * (Math.PI / 2), z = at.z + h * Math.sin(phi);
     return regular(at.x, at.y, r * Math.cos(phi), sides).map((p) => v3(p.x, p.y, z));
   };
   const apex = v3(at.x, at.y, at.z + h);
-  const c = v3(at.x, at.y, at.z + h / 3); // con el centro a nivel de la base, la base no se podría orientar
+  const c = v3(at.x, at.y, at.z + h / 3); // with the center at base level, the base could not be oriented
   const out = [face(ring(0), mat, c)];
   for (let k = 0; k < rings; k++) {
     const lo = ring(k), hi = k < rings - 1 ? ring(k + 1) : null;
@@ -238,15 +238,15 @@ function dome(at: Vec3, r: number, h: number, sides: number, rings: number, mat:
   return out;
 }
 
-/** Bóveda de cañón: medio óvalo (semiancho w/2, alto h) en franjas a lo largo del eje, dos hastiales y la base. `at` es la esquina NO. */
+/** Barrel vault: half oval (half-width w/2, height h) in strips along the axis, two gable ends and the base. `at` is the NW corner. */
 function vault(s: Solid & { kind: "vault" }): Face[] {
   const { at, len, w, h, mat } = s, n = s.segments ?? 6;
-  // u a lo largo del eje, v a lo ancho; el último punto del arco cierra exacto (sin(π) no es 0)
+  // u along the axis, v across; the last point of the arc closes exactly (sin(π) is not 0)
   const P = (u: number, j: number): Vec3 => {
     const t = (j / n) * Math.PI, v = j === n ? w : (w / 2) * (1 - Math.cos(t)), z = j === n ? at.z : at.z + h * Math.sin(t);
     return s.axis === "x" ? v3(at.x + u, at.y + v, z) : v3(at.x + v, at.y + u, z);
   };
-  // con el centro a nivel de la base, la base no se podría orientar
+  // with the center at base level, the base could not be oriented
   const mid = s.axis === "x" ? v3(at.x + len / 2, at.y + w / 2, at.z + h / 3) : v3(at.x + w / 2, at.y + len / 2, at.z + h / 3);
   const arc = (u: number) => Array.from({ length: n + 1 }, (_, j) => P(u, j));
   const out = [face([P(0, 0), P(len, 0), P(len, n), P(0, n)], mat, mid), face(arc(0), mat, mid), face(arc(len), mat, mid)];
@@ -255,8 +255,8 @@ function vault(s: Solid & { kind: "vault" }): Face[] {
 }
 
 /**
- * Viga recta de `from` a `to`, sección `w` × `h`: el lado `w` queda horizontal y perpendicular al eje en planta, así que la
- * sección no se tuerce. Eje vertical: `w` sobre y. Largo cero: eje x, una placa degenerada que no rompe bounds ni orden.
+ * Straight beam from `from` to `to`, cross-section `w` × `h`: side `w` stays horizontal and perpendicular to the axis in plan, so the
+ * section does not twist. Vertical axis: `w` along y. Zero length: x axis, a degenerate plate that breaks neither bounds nor ordering.
  */
 function beam(s: Solid & { kind: "beam" }): Face[] {
   const dx = s.to.x - s.from.x, dy = s.to.y - s.from.y, dz = s.to.z - s.from.z, len = Math.hypot(dx, dy, dz);
@@ -274,15 +274,15 @@ function beam(s: Solid & { kind: "beam" }): Face[] {
 }
 
 export const HULL_WATERLINE = 0.2, HULL_SHEER = 0.25, KEEL_BEAM = 0.7;
-/** Anillo de cubierta en fracciones de eslora/manga: popa redondeada, manga máxima al 57 %, proa en punta. Sentido horario visto desde arriba. */
+/** Deck ring in fractions of length/beam: rounded stern, maximum beam at 57 %, pointed bow. Clockwise seen from above. */
 export const DECK_RING: readonly Vec2[] = [
   { x: 0.04, y: -0.3 }, { x: 0, y: 0 }, { x: 0.04, y: 0.3 }, { x: 0.18, y: 0.5 }, { x: 0.57, y: 0.5 },
   { x: 0.86, y: 0.3 }, { x: 1, y: 0 }, { x: 0.86, y: -0.3 }, { x: 0.57, y: -0.5 }, { x: 0.18, y: -0.5 },
 ];
-/** Arrufo: cuánto sube la cubierta sobre `h` en cada punto (proa cuadrática, popa lineal más corta). */
+/** Sheer: how much the deck rises above `h` at each point (quadratic bow, shorter linear stern). */
 const sheerAt = (x: number): number => Math.max(0, (x - 0.55) / 0.45) ** 2 + 0.4 * Math.max(0, (0.18 - x) / 0.18);
 
-/** Anillos de cubierta y quilla en coordenadas de mundo (popa en `at`, proa a `len` según `heading`). */
+/** Deck and keel rings in world coordinates (stern at `at`, bow at `len` along `heading`). */
 export function hullRings(s: Solid & { kind: "hull" }): { deck: Vec3[]; keel: Vec3[] } {
   const c = Math.cos(s.heading ?? 0), sn = Math.sin(s.heading ?? 0), sheer = s.sheer ?? HULL_SHEER;
   const world = (fx: number, fy: number, z: number): Vec3 => { const x = fx * s.len, y = fy * s.beam; return v3(s.at.x + x * c - y * sn, s.at.y + x * sn + y * c, z); };
@@ -291,7 +291,7 @@ export function hullRings(s: Solid & { kind: "hull" }): { deck: Vec3[]; keel: Ve
   return { deck, keel };
 }
 
-/** Casco lofteado entre quilla y cubierta: cada lado son dos cuadriláteros (obra viva en `mat`, obra muerta en `topMat`) partidos en triángulos. */
+/** Hull lofted between keel and deck: each side is two quadrilaterals (underwater hull in `mat`, topsides in `topMat`) split into triangles. */
 function hull(s: Solid & { kind: "hull" }): Face[] {
   const { deck, keel } = hullRings(s);
   const c = centroid([...deck, ...keel]);
@@ -330,24 +330,24 @@ function ground(tris: Tri[], mat: Material): Face[] {
 }
 
 const SQ = Math.SQRT1_2;
-/** El plano de la rueda: `u` es horizontal en pantalla (mundo (1, −1)); la normal mira a la cámara. */
+/** The wheel's plane: `u` is horizontal on screen (world (1, −1)); the normal faces the camera. */
 export const WHEEL_U: Vec3 = { x: SQ, y: -SQ, z: 0 };
 export const WHEEL_NORMAL: Vec3 = { x: SQ, y: SQ, z: 0 };
 export const wheelPoint = (at: Vec3, a: number, rho: number): Vec3 => v3(at.x + WHEEL_U.x * rho * Math.cos(a), at.y + WHEEL_U.y * rho * Math.cos(a), at.z + rho * Math.sin(a));
 
-/** Rueda de frente a la cámara: llanta en sectores, rayos, cubo (todos en el plano, tono `top`) y góndolas como prismas colgados de la llanta.
- *  `hollow`: llanta doble (exterior + interior a `r − 2.2·width .. r − 1.2·width`), sin rayos ni cubo; `slots`: barras radiales de ancho `width/3` que unen las dos llantas (solo con `hollow`).
- *  `buckets`: `n` cangilones trapezoidales que sobresalen `depth` de la llanta exterior, con una malla interior (60 %, `toneOffset −2`) y `teeth` dientes triangulares de lado `depth/3`, equiespaciados en el borde de mayor ángulo
- *  (el borde mide ≈ `depth`: con más de 3 dientes las bases se enciman). */
+/** Wheel facing the camera: rim in sectors, spokes, hub (all in the plane, tone `top`) and gondolas as prisms hanging from the rim.
+ *  `hollow`: double rim (outer + inner at `r − 2.2·width .. r − 1.2·width`), no spokes or hub; `slots`: radial bars of width `width/3` joining the two rims (only with `hollow`).
+ *  `buckets`: `n` trapezoidal buckets protruding `depth` from the outer rim, with an inner mesh (60 %, `toneOffset −2`) and `teeth` triangular teeth of side `depth/3`, evenly spaced on the edge of greater angle
+ *  (the edge measures ≈ `depth`: with more than 3 teeth the bases overlap). */
 function wheel(s: Solid & { kind: "wheel" }): Face[] {
-  // Los planos de la rueda no siguen la regla habitual de sombreado por normal: una pared que
-  // mirase a la cámara se pintaría "shade" (la cara más oscura), pero el anillo debe leerse en
-  // el color base del material, así que se fuerza el tono "top" sin desplazamiento.
+  // The wheel's planes do not follow the usual shading-by-normal rule: a wall that
+  // faced the camera would be painted "shade" (the darkest face), but the ring must read in
+  // the material's base color, so the "top" tone is forced with no offset.
   const flat = (pts: Vec3[], mat: Material = s.mat, toneOffset = 0): Face => ({ pts, normal: WHEEL_NORMAL, mat, tone: "top", toneOffset });
   const out: Face[] = [];
   const hub = s.r * 0.12, inner = s.r - s.width, half = s.width / 6;
   const bar = (a: number, r0: number, r1: number): Face => {
-    const px = -Math.sin(a) * half, pz = Math.cos(a) * half; // perpendicular al rayo dentro del plano
+    const px = -Math.sin(a) * half, pz = Math.cos(a) * half; // perpendicular to the spoke within the plane
     const off = (p: Vec3, sgn: number): Vec3 => v3(p.x + WHEEL_U.x * px * sgn, p.y + WHEEL_U.y * px * sgn, p.z + pz * sgn);
     const i0 = wheelPoint(s.at, a, r0), i1 = wheelPoint(s.at, a, r1);
     return flat([off(i0, -1), off(i1, -1), off(i1, 1), off(i0, 1)]);
@@ -360,13 +360,13 @@ function wheel(s: Solid & { kind: "wheel" }): Face[] {
   }
   if (!s.hollow) out.push(flat(Array.from({ length: 8 }, (_, k) => wheelPoint(s.at, s.angle + (2 * Math.PI * k) / 8, hub))));
   else {
-    const slots = s.slots ?? 0; // ranuras: de la mitad de la llanta interior a la mitad de la exterior
+    const slots = s.slots ?? 0; // slots: from the middle of the inner rim to the middle of the outer one
     for (let k = 0; k < slots; k++) out.push(bar(s.angle + (2 * Math.PI * k) / slots, s.r - 1.7 * s.width, s.r - 0.5 * s.width));
   }
   if (s.buckets) {
     const { n, depth, teeth, mat } = s.buckets;
     const h0 = (0.45 * Math.PI) / n, h1 = (0.3 * Math.PI) / n, side = depth / 3;
-    // coordenadas (u, z) relativas al centro de la rueda <-> mundo
+    // (u, z) coordinates relative to the wheel center <-> world
     const uz = (p: Vec3): [number, number] => [(p.x - s.at.x) * WHEEL_U.x + (p.y - s.at.y) * WHEEL_U.y, p.z - s.at.z];
     const back = (u: number, z: number): Vec3 => v3(s.at.x + WHEEL_U.x * u, s.at.y + WHEEL_U.y * u, s.at.z + z);
     for (let k = 0; k < n; k++) {
@@ -376,11 +376,11 @@ function wheel(s: Solid & { kind: "wheel" }): Face[] {
       out.push(flat(trap, mat));
       const m = v3(trap.reduce((q, p) => q + p.x, 0) / 4, trap.reduce((q, p) => q + p.y, 0) / 4, trap.reduce((q, p) => q + p.z, 0) / 4);
       out.push(flat(trap.map((p) => v3(m.x + 0.6 * (p.x - m.x), m.y + 0.6 * (p.y - m.y), m.z + 0.6 * (p.z - m.z))), mat, -2));
-      // dientes: triángulos equiláteros sobre el borde delantero E0 -> E1, con el vértice hacia fuera del trapecio
+      // teeth: equilateral triangles on the leading edge E0 -> E1, with the apex pointing out of the trapezoid
       const [e0u, e0z] = uz(e0), [e1u, e1z] = uz(e1), [mu, mz] = uz(m);
       const du = e1u - e0u, dz = e1z - e0z, len = Math.hypot(du, dz);
       const tu = du / len, tz = dz / len;
-      let nu = tz, nz = -tu; // perpendicular al borde
+      let nu = tz, nz = -tu; // perpendicular to the edge
       if (nu * (e0u + du / 2 - mu) + nz * (e0z + dz / 2 - mz) < 0) { nu = -nu; nz = -nz; }
       const hb = side / 2, ht = (side * Math.sqrt(3)) / 2;
       for (let j = 0; j < teeth; j++) {
@@ -425,26 +425,26 @@ function facesOf(s: Solid): Face[] {
   }
 }
 
-/** Caras del sólido; `tone` desplaza el toneOffset de todas. */
+/** Faces of the solid; `tone` shifts the toneOffset of all of them. */
 export function tessellateAll(s: Solid): Face[] {
   const faces = facesOf(s), t = s.tone ?? 0;
   return t === 0 ? faces : faces.map((f) => ({ ...f, toneOffset: f.toneOffset + t }));
 }
 
-/** Solo lo que mira a la cámara. Suelo y franjas se emiten enteros. */
+/** Only what faces the camera. Ground and strips are emitted whole. */
 export function tessellate(s: Solid): Face[] {
   const all = tessellateAll(s);
   return isFlat(s) ? all : all.filter((f) => dot(f.normal, VIEW_DIR) > 0);
 }
 
-/** Paredes visibles del sólido sin las caras de su fachada ni sus placas (coplanares, `isWall` las tomaría por pared): las bandas comparten material y tono con la pared. */
+/** Visible walls of the solid without its facade faces or plates (coplanar, `isWall` would take them for walls): the bands share material and tone with the wall. */
 export function visibleWalls(s: Solid): Face[] {
   return tessellate({ ...s, facade: undefined, plates: undefined } as Solid).filter(isWall);
 }
 
 export interface Bounds { min: Vec3; max: Vec3 }
 
-/** Caja de alineación de eje que contiene todos los vértices del sólido. Las placas no cuentan. */
+/** Axis-aligned box containing all the solid's vertices. Plates do not count. */
 export function bounds(s: Solid): Bounds {
   if ("plates" in s && s.plates) s = { ...s, plates: undefined };
   const min = v3(Infinity, Infinity, Infinity), max = v3(-Infinity, -Infinity, -Infinity);

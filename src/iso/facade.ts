@@ -4,26 +4,26 @@ import { v3, type Vec3 } from "./geometry";
 import type { Face } from "./solids";
 
 /**
- * Fachada procedural de un sólido extruido (prism, poly, cylinder): pisos
- * iguales, `cols` ventanas por piso, una losa oscura arriba de cada piso. Cada
- * piso lleva debajo una banda de pared cuyo tono sube con la altura
- * (`bands: false` la apaga). La planta baja puede ser vidriera (una banda de
- * vidrio), pórtico (banda muy oscura) o arcada (arcos oscuros sobre pilares).
- * Las caras salen coplanares a la pared, después de ella, así se pintan encima.
- * Orden: primero las bandas de todos los pisos (cubren la pared entera: después
- * tapan zócalo y pilastras), luego zócalo y pilastras, y por piso pórtico o
- * arcada, ventanas, imposta o losa y tirantes.
- * `plinth`: banda de alto `h` desde la base. `piers`: franja de ancho `w` (u) en
- * cada borde de columna múltiplo de `every` y en el borde final, de la base al
- * alero. `courses`: imposta de alto `h` en el tope de cada piso, en lugar de la losa.
- * Por ventana salen `[sill, vidrio, ...grid, head]`: `sill` es un alféizar de 0.2 u bajo la
- * ventana, 0.1 u más ancho a cada lado; `grid` parte la ventana en `cols` × `rows` con franjas
- * de 0.12 u (`mat` por defecto acero); `head` es un dintel plano (banda de 0.25 u) o rebajado
- * (arco de flecha 0.3 × ancho), de material `headMat` o el de la pared. Dintel, alféizar, zócalo e
- * impostas se recortan al alero y a la base: nada sale de la pared.
- * `ties`: con `piers`, un octógono de radio `r` (u) sobre cada pilastra, a la altura del centro de la
- * imposta/losa de cada entrepiso (no la del último piso); su centro se acota para caer dentro de la pared
- * (si `r` cabe: menor que la mitad del largo y del alto de la pared).
+ * Procedural facade of an extruded solid (prism, poly, cylinder): equal
+ * floors, `cols` windows per floor, a dark slab above each floor. Each
+ * floor carries a wall band beneath it whose tone rises with height
+ * (`bands: false` turns it off). The ground floor can be a shopfront (one band of
+ * glass), a portico (very dark band) or an arcade (dark arches over pillars).
+ * The faces come out coplanar with the wall, after it, so they are painted on top.
+ * Order: first the bands of all floors (they cover the whole wall: later they
+ * are covered by plinth and pilasters), then plinth and pilasters, and per floor portico or
+ * arcade, windows, course or slab, and ties.
+ * `plinth`: band of height `h` from the base. `piers`: strip of width `w` (u) at
+ * each column edge that is a multiple of `every` and at the final edge, from the base to the
+ * eave. `courses`: course of height `h` at the top of each floor, in place of the slab.
+ * Per window come `[sill, glass, ...grid, head]`: `sill` is a 0.2 u sill below the
+ * window, 0.1 u wider on each side; `grid` splits the window into `cols` × `rows` with strips
+ * of 0.12 u (`mat` defaults to steel); `head` is a flat lintel (0.25 u band) or segmental
+ * (arch with rise 0.3 × width), of material `headMat` or the wall's. Lintel, sill, plinth and
+ * courses are clipped to the eave and the base: nothing sticks out of the wall.
+ * `ties`: with `piers`, an octagon of radius `r` (u) on each pilaster, at the height of the center of the
+ * course/slab of each intermediate floor (not the top floor's); its center is clamped to fall inside the wall
+ * (if `r` fits: less than half the wall's length and height).
  */
 export interface Facade {
   floors: number; cols: number; litFloor?: number; base?: "glass" | "portico" | "arcade"; window?: { w: number; h: number }; bands?: false;
@@ -37,41 +37,41 @@ export interface Facade {
 }
 
 export const SLAB_H = 0.3;
-const WINDOW_W = 0.5; // fracción del ancho de columna
-const WINDOW_H = 0.5; // fracción de la altura del piso
+const WINDOW_W = 0.5; // fraction of the column width
+const WINDOW_H = 0.5; // fraction of the floor height
 export const ARCH_SEGMENTS = 6;
-const ARCH_W = 0.7; // fracción del ancho de columna
-const ARCH_SPRING = 0.45; // arranque del arco, fracción de la altura del piso
-const ARCH_TOP = 0.8; // clave del arco
-const PILLAR_H = 0.85; // banda de pilares
+const ARCH_W = 0.7; // fraction of the column width
+const ARCH_SPRING = 0.45; // arch springing, fraction of the floor height
+const ARCH_TOP = 0.8; // arch crown
+const PILLAR_H = 0.85; // pillar band
 
 export function isWall(f: Face): boolean {
   return Math.abs(f.normal.z) < 1e-6;
 }
 
-/** Punto de la pared: s a lo largo de la base (0..1), z absoluto. La base de la pared es pts[0]→pts[1]. */
+/** Point on the wall: s along the base (0..1), absolute z. The wall's base is pts[0]→pts[1]. */
 function at(wall: Face, s: number, z: number): Vec3 {
   const a = wall.pts[0]!, b = wall.pts[1]!;
   return v3(a.x + (b.x - a.x) * s, a.y + (b.y - a.y) * s, z);
 }
 
-/** Polígono sobre la pared desde puntos (s, z): s a lo largo de la base (0..1, pts[0]→pts[1]), z absoluto. */
+/** Polygon on the wall from (s, z) points: s along the base (0..1, pts[0]→pts[1]), absolute z. */
 function wallPoly(wall: Face, pts: [number, number][]): Vec3[] {
   return pts.map(([s, z]) => at(wall, s, z));
 }
 
-/** Rectángulo sobre la pared: s0..s1 a lo largo de la base (0..1), z0..z1 absolutos. */
+/** Rectangle on the wall: s0..s1 along the base (0..1), z0..z1 absolute. */
 function patch(wall: Face, s0: number, s1: number, z0: number, z1: number): Vec3[] {
   return wallPoly(wall, [[s0, z0], [s1, z0], [s1, z1], [s0, z1]]);
 }
 
-/** Tono de la banda del piso: por tercios con 4 o más pisos, 0 y +1 con 2..3, 0 con uno. */
+/** Tone of the floor's band: by thirds with 4 or more floors, 0 and +1 with 2..3, 0 with one. */
 export function bandTone(floor: number, floors: number): number {
   if (floors >= 4) return Math.floor((3 * floor) / floors);
   return floors >= 2 && floor > 0 ? 1 : 0;
 }
 
-/** Arco de medio punto en la columna k: base del rectángulo y el semicírculo de derecha a izquierda (sus extremos son las esquinas superiores). */
+/** Semicircular arch in column k: base of the rectangle and the semicircle from right to left (its ends are the upper corners). */
 function arch(wall: Face, f: Facade, k: number, z0: number, fh: number): Vec3[] {
   const cw = 1 / f.cols, sc = (k + 0.5) * cw, hw = (ARCH_W * cw) / 2;
   const zs = z0 + fh * ARCH_SPRING, rz = fh * (ARCH_TOP - ARCH_SPRING);
@@ -87,7 +87,7 @@ const floorHeight = (wall: Face, f: Facade): number => (wall.pts[2]!.z - wall.pt
 
 type WallRect = { s0: number; s1: number; z0: number; z1: number };
 
-/** Rectángulos (s, z) de las ventanas de un piso (0 = planta baja). Con `base`, el piso 0 tiene una sola banda o ninguna. */
+/** (s, z) rectangles of a floor's windows (0 = ground floor). With `base`, floor 0 has a single band or none. */
 function windowRects(wall: Face, f: Facade, floor: number): WallRect[] {
   const fh = floorHeight(wall, f), z0 = wall.pts[0]!.z + floor * fh;
   if (floor === 0 && f.base === "glass") return [{ s0: 0.08, s1: 0.92, z0: z0 + fh * 0.15, z1: z0 + fh * 0.8 }];
@@ -101,7 +101,7 @@ function windowRects(wall: Face, f: Facade, floor: number): WallRect[] {
   return out;
 }
 
-/** Las ventanas de la fachada con su piso: la planta baja solo si no tiene `base` (la vidriera no es ventana). */
+/** The facade's windows with their floor: the ground floor only if it has no `base` (the shopfront is not a window). */
 export function facadeWindows(wall: Face, f: Facade): { pts: Vec3[]; floor: number }[] {
   const out: { pts: Vec3[]; floor: number }[] = [];
   for (let floor = f.base ? 1 : 0; floor < f.floors; floor++) {
@@ -110,7 +110,7 @@ export function facadeWindows(wall: Face, f: Facade): { pts: Vec3[]; floor: numb
   return out;
 }
 
-/** Fracción `s` de cada borde de pilastra, sin recortar: columnas `k` múltiplo de `every`, y siempre `k = cols`. */
+/** Fraction `s` of each pilaster edge, unclipped: columns `k` that are a multiple of `every`, and always `k = cols`. */
 function pierEdges(f: Facade): number[] {
   if (!f.piers) return [];
   const out: number[] = [];
@@ -118,12 +118,12 @@ function pierEdges(f: Facade): number[] {
   return out;
 }
 
-/** Ventanas de un piso (0 = planta baja), como polígonos sobre la pared. */
+/** Windows of a floor (0 = ground floor), as polygons on the wall. */
 export function windowPatches(wall: Face, f: Facade, floor: number): Vec3[][] {
   return windowRects(wall, f, floor).map((r) => patch(wall, r.s0, r.s1, r.z0, r.z1));
 }
 
-/** Dintel sobre la ventana: banda plana de 0.25 u, o rebajado (7 puntos: extremos superiores + arco de 5, flecha 0.3 × ancho). */
+/** Lintel over the window: flat 0.25 u band, or segmental (7 points: upper ends + arc of 5, rise 0.3 × width). */
 function headPoly(wall: Face, kind: "flat" | "segmental", r: WallRect, len: number): Vec3[] | null {
   const zt = wall.pts[2]!.z;
   if (kind === "flat") return patch(wall, r.s0, r.s1, r.z1, Math.min(zt, r.z1 + 0.25));
@@ -139,7 +139,7 @@ function headPoly(wall: Face, kind: "flat" | "segmental", r: WallRect, len: numb
   return wallPoly(wall, pts);
 }
 
-/** Octógono de radio `r` (vértices a π/8 + k·π/4) centrado en (s, z), con el centro acotado para que quede dentro de la pared. */
+/** Octagon of radius `r` (vertices at π/8 + k·π/4) centered at (s, z), with the center clamped so it stays inside the wall. */
 function tiePoly(wall: Face, s: number, z: number, r: number, len: number): Vec3[] {
   const rs = r / len, zb = wall.pts[0]!.z, zt = wall.pts[2]!.z;
   const cs = Math.min(1 - rs, Math.max(rs, s)), cz = Math.min(zt - r, Math.max(zb + r, z));
@@ -167,7 +167,7 @@ export function facadeFaces(wall: Face, f: Facade): Face[] {
     const z0 = zb + i * fh;
     if (i === 0 && f.base === "portico") out.push(mk(patch(wall, 0.05, 0.95, z0, z0 + fh * 0.8), wall.mat, -2));
     if (i === 0 && f.base === "arcade") {
-      out.push(mk(patch(wall, 0, 1, z0, z0 + fh * PILLAR_H), wall.mat, -1)); // pilares: los arcos se pintan encima
+      out.push(mk(patch(wall, 0, 1, z0, z0 + fh * PILLAR_H), wall.mat, -1)); // pillars: the arches are painted on top
       for (let k = 0; k < f.cols; k++) out.push(mk(arch(wall, f, k, z0, fh), wall.mat, -2));
     }
     for (const r of windowRects(wall, f, i)) {
@@ -188,7 +188,7 @@ export function facadeFaces(wall: Face, f: Facade): Face[] {
       if (head) out.push(mk(head, f.headMat ?? wall.mat, 0));
     }
     if (f.courses) out.push(mk(patch(wall, 0, 1, Math.max(zb, z0 + fh - f.courses.h), z0 + fh), f.courses.mat, 0));
-    else out.push(mk(patch(wall, 0, 1, z0 + fh - SLAB_H, z0 + fh), wall.mat, -1)); // losa
+    else out.push(mk(patch(wall, 0, 1, z0 + fh - SLAB_H, z0 + fh), wall.mat, -1)); // slab
     if (f.ties && f.piers && i < f.floors - 1) {
       const zc = z0 + fh - (f.courses?.h ?? SLAB_H) / 2;
       for (const e of edges) out.push(mk(tiePoly(wall, e, zc, f.ties.r, len), f.ties.mat, 0));
@@ -197,7 +197,7 @@ export function facadeFaces(wall: Face, f: Facade): Face[] {
   return out;
 }
 
-/** Las ventanas del piso encendido, como polígonos de luz sobre las paredes dadas (usar las visibles). */
+/** The lit floor's windows, as light polygons on the given walls (use the visible ones). */
 export function facadeAccents(walls: Face[], f: Facade, color: AccentColor): Accent[] {
   if (f.litFloor === undefined) return [];
   return walls.flatMap((wall) => windowPatches(wall, f, f.litFloor!).map((pts): Accent => ({ kind: "poly", pts, color })));

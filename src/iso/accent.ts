@@ -2,7 +2,7 @@ import { ISO_COLORS, type AccentColor } from "../map/palette-iso";
 import type { Vec3 } from "./geometry";
 import { project } from "./project";
 
-/** Luz artificial: se dibuja arriba de todo con blend "add". Un punto (farol, chispa) o un polígono (ventana encendida, haz). */
+/** Artificial light: drawn on top of everything with "add" blend. A dot (lamp, spark) or a polygon (lit window, beam). */
 export type Accent =
   | { kind: "dot"; at: Vec3; r: number; color: AccentColor }
   | { kind: "poly"; pts: Vec3[]; color: AccentColor; alpha?: number };

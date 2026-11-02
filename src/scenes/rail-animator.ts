@@ -3,7 +3,7 @@ import { flip } from "./neon";
 import { createRailAnim } from "./rail-anim";
 import { emu, trainLen } from "./train";
 
-/** Adapta el tren de la línea al contrato `Animator`: el tren (`rail.train`), sus luces (`rail.lights`), las del paso a nivel y los semáforos. Las luces van en la zona de Portfolio: la vía y la estación son de ahí. */
+/** Adapts the line's train to the `Animator` contract: the train (`rail.train`), its lights (`rail.lights`), those of the level crossing and the signals. The lights go in the Portfolio zone: the track and the station belong there. */
 export function railAnimator(opts: { reducedMotion: boolean }): Animator {
   const anim = createRailAnim(opts);
   const layers: Record<string, () => AnimLayer> = {
@@ -26,19 +26,19 @@ export function railAnimator(opts: { reducedMotion: boolean }): Animator {
   };
 }
 
-/** Cada cuántos ms la pieza del tren cambia de punta (faros al este, faros al oeste). */
+/** Every how many ms the train piece switches ends (headlights east, headlights west). */
 export const PIECE_FLIP_MS = 4000;
 
-/** La formación de la pieza `tren`: 4 coches centrados en el origen, con el salón encendido. Los sólidos los arma el exhibit; las luces, `trainPieceAnimator`. */
+/** The consist of the train piece: 4 cars centered on the origin, with the saloon lit. The exhibit builds the solids; `trainPieceAnimator`, the lights. */
 export const pieceTrain = (lead: "e" | "w") => emu(-trainLen(4) / 2, 0, { cars: 4, lead, lit: true });
 
 /**
- * Animador de la pieza `tren` del storybook: el tren quieto en el origen y, en la capa `tren.lights`, sus luces (salón, cartel, faros y rojas). Cada `PIECE_FLIP_MS` invierte la punta, así se ven los dos extremos; con `reducedMotion` queda fijo mirando al este y `tick` no marca nada. Las luces van en la zona de Portfolio, como en la línea.
+ * Animator of the storybook's train piece: the train still at the origin and, in the `tren.lights` layer, its lights (saloon, sign, headlights and red lights). Every `PIECE_FLIP_MS` it flips the lead end, so both ends are seen; with `reducedMotion` it stays fixed facing east and `tick` marks nothing. The lights go in the Portfolio zone, as on the line.
  */
 export function trainPieceAnimator(opts: { reducedMotion: boolean }): Animator {
   const { reducedMotion } = opts;
   let clock = 0, first = true, lead: "e" | "w" = "e";
-  const lights = { e: pieceTrain("e").lights, w: pieceTrain("w").lights }; // dos juegos fijos: la capa se lee varias veces por redibujo
+  const lights = { e: pieceTrain("e").lights, w: pieceTrain("w").lights }; // two fixed sets: the layer is read several times per redraw
   const layers: Record<string, () => AnimLayer> = {
     "tren.lights": () => ({ kind: "accent", accents: lights[lead], zone: "portfolio" }),
   };
@@ -50,7 +50,7 @@ export function trainPieceAnimator(opts: { reducedMotion: boolean }): Animator {
       if (reducedMotion || dtMs <= 0) return out;
       clock += dtMs;
       const next = flip(Math.floor(clock / PIECE_FLIP_MS), "e", "w");
-      // la primera vez se marca siempre: la capa todavía no se dibujó
+      // the first time it is always marked: the layer has not been drawn yet
       if (first || next !== lead) out.add("tren.lights");
       first = false; lead = next;
       return out;

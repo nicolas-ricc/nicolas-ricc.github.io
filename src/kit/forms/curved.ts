@@ -7,9 +7,9 @@ import { HELIPAD_H, helipad, place } from "../props";
 import { CORNICE_H, HIP_ROOF_H, domeRoof, hipRoof } from "../roofs";
 import type { Lot, Piece, RecipeDef, Style } from "../types";
 
-/** Familia `curved` (spec §5, issue #41): cilindros, cúpulas y bóvedas. Alturas topadas en min(lot.maxH, 18) contando los remates. */
+/** `curved` family (spec §5, issue #41): cylinders, domes and vaults. Heights capped at min(lot.maxH, 18) counting the toppers. */
 
-/** Torre cilíndrica de 16 lados con vidriera, losa de remate de `trim` (vuela 0.4) y helipuerto. */
+/** 16-sided cylindrical tower with a shop window, `trim` capping slab (overhangs 0.4) and helipad. */
 export function cylinderTower(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;
   const r = Math.min(rng.int(6, 7), Math.min(w, d) / 2);
@@ -23,7 +23,7 @@ export function cylinderTower(lot: Lot, rng: Rng, style: Style): Piece {
 
 const ROTUNDA_R = 6, DOME_H = 3.5, LANTERN_R = 1, LANTERN_H = 1.2;
 
-/** Rotonda: tambor de 12 lados con arcada, cúpula de `roof` y linterna. */
+/** Rotunda: 12-sided drum with an arcade, `roof` dome and lantern. */
 export function rotunda(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;
   const h = Math.min(rng.int(6, 8), recipeCap(lot) - DOME_H - LANTERN_H);
@@ -34,30 +34,30 @@ export function rotunda(lot: Lot, rng: Rng, style: Style): Piece {
   return p;
 }
 
-const NAVE_D = 9, NAVE_H = 5, VAULT_H = 3, AISLE_H = 3;
+const HALL_D = 9, HALL_H = 5, VAULT_H = 3, AISLE_H = 3;
 
 /**
- * Nave abovedada a lo largo de x (el lado largo: supone w ≥ d, como toda
- * manzana de la ciudad), con arcada, y dos naves laterales bajas al norte y
- * al sur con su propia arcada. La nave lleva al menos dos pisos para que sus
- * ventanas queden por encima de los laterales. El lateral norte no publica
- * paredes: su cara sur queda enterrada contra la nave.
+ * Vaulted hall along x (the long side: assumes w ≥ d, like every
+ * block in the city), with an arcade, and two low side aisles to the north and
+ * south with their own arcade. The hall has at least two floors so that its
+ * windows sit above the side aisles. The north aisle does not publish
+ * walls: its south face is buried against the hall.
  */
 export function vaultedHall(lot: Lot, _rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;
-  const bx = x + 1, len = w - 2, by = y + (d - NAVE_D) / 2, nh = Math.min(NAVE_H, recipeCap(lot) - VAULT_H);
+  const bx = x + 1, len = w - 2, by = y + (d - HALL_D) / 2, nh = Math.min(HALL_H, recipeCap(lot) - VAULT_H);
   const f: Facade = { floors: Math.max(2, floorsFor(nh, style)), cols: Math.max(2, Math.round(len / 3)), base: "arcade" };
-  addBuilding(p, prism(bx, by, z, len, NAVE_D, nh, style.mat, { facade: f, tone: style.tone }), f);
-  p.solids.push({ kind: "vault", at: v3(bx, by, z + nh), len, w: NAVE_D, h: VAULT_H, axis: "x", mat: style.roof, segments: 6 });
-  const ad = Math.min(3, (d - NAVE_D) / 2), af: Facade = { floors: 1, cols: f.cols, base: "arcade" };
+  addBuilding(p, prism(bx, by, z, len, HALL_D, nh, style.mat, { facade: f, tone: style.tone }), f);
+  p.solids.push({ kind: "vault", at: v3(bx, by, z + nh), len, w: HALL_D, h: VAULT_H, axis: "x", mat: style.roof, segments: 6 });
+  const ad = Math.min(3, (d - HALL_D) / 2), af: Facade = { floors: 1, cols: f.cols, base: "arcade" };
   p.solids.push(prism(bx, by - ad, z, len, ad, AISLE_H, style.mat, { facade: af, tone: style.tone }));
-  addBuilding(p, prism(bx, by + NAVE_D, z, len, ad, AISLE_H, style.mat, { facade: af, tone: style.tone }), af);
+  addBuilding(p, prism(bx, by + HALL_D, z, len, ad, AISLE_H, style.mat, { facade: af, tone: style.tone }), af);
   return p;
 }
 
 const ARCADE_H = 3;
 
-/** Galería: planta baja con arcada de 3 y dos pisos encima (dos sólidos: los pisos de una fachada son iguales), techo a cuatro aguas. */
+/** Gallery: ground floor with an arcade of 3 and two floors above (two solids: the floors of one facade are equal), hip roof. */
 export function gallery(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;
   const bx = x + 1, by = y + 1, bw = w - 2, bd = d - 2, tone = shiftTone(style.tone, 1);

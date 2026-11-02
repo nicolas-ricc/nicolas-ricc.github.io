@@ -2,19 +2,19 @@ import { v3, type Vec2 } from "../iso/geometry";
 import { occluded } from "../iso/project";
 import type { Plate } from "../iso/plate";
 import type { Solid } from "../iso/solids";
-import { cornerLamps, homeWindow, lawn, wallWindow, type BarrioCtx } from "./barrio";
+import { cornerLamps, homeWindow, lawn, wallWindow, type NeighborhoodCtx } from "./neighborhood";
 import { prism } from "./city-pieces";
 import type { SprawlBlock } from "./sprawl-grid";
 import { FACE_CAPS, blockRect, facesIn } from "./tech-budget";
 import { blockParity } from "./tech-zoning";
 
-/** Una placa del monoblock: esquina (x, y) del cuerpo 20×5, altura h, revoque, planta baja de ladrillo y vanos de loggia (0..7). */
+/** A slab of the monoblock: corner (x, y) of the 20×5 body, height h, plaster, brick ground floor and loggia bays (0..7). */
 export interface Slab { x: number; y: number; h: number; mat: "whitewash" | "stone"; brick: boolean; loggias: number[] }
 
-/** Placa de pared: rect de u0..u1 y z0..z1 sobre `wall` (1 este, 2 sur). */
+/** Wall plate: rect of u0..u1 and z0..z1 on `wall` (1 east, 2 south). */
 const rect = (wall: number, u0: number, u1: number, z0: number, z1: number, mat: Plate["mat"], toneOffset?: number): Plate => ({ wall, shape: "rect", u0, u1, z0, z1, mat, toneOffset });
 
-/** Zócalo, cuerpo con ladrillo, bandas de vidrio, pilastras y loggias, tanques de azotea y antena. */
+/** Plinth, body with brick, glass bands, pilasters and loggias, rooftop tanks and antenna. */
 export function slab(p: Slab): Solid[] {
   const floors = p.h / 3, top = 0.3 + p.h, n = floors >= 5 ? 3 : 2, plates: Plate[] = [];
   if (p.brick) plates.push(rect(1, 0, 1, 0.3, 3.3, "brick"), rect(2, 0, 1, 0.3, 3.3, "brick"));
@@ -31,8 +31,8 @@ export function slab(p: Slab): Solid[] {
   return [prism(p.x - 0.3, p.y - 0.3, 0, 20.6, 5.6, 0.3, "paving"), body, ...tanks, prism(c.x + 0.9, c.y + 0.9, top + 2.8, 0.2, 0.2, 2.5, "steel")];
 }
 
-/** Ventanas encendibles: sur (por vano no loggia) y este por piso; una por piso por columna de loggia, con `lit` común. */
-function windows(ctx: BarrioCtx, b: SprawlBlock, slabs: Slab[]): void {
+/** Lightable windows: south (per non-loggia bay) and east per floor; one per floor per loggia column, with a common `lit`. */
+function windows(ctx: NeighborhoodCtx, b: SprawlBlock, slabs: Slab[]): void {
   slabs.forEach((s, i) => {
     const floors = s.h / 3, lit: Record<number, boolean> = {};
     for (const k of s.loggias) lit[k] = ctx.rng.chance(0.5);
@@ -48,8 +48,8 @@ function windows(ctx: BarrioCtx, b: SprawlBlock, slabs: Slab[]): void {
   });
 }
 
-/** Árboles por ranuras a lo largo de x (el último pegado al borde este) en la banda libre entre placas: nunca se solapan ni pisan un zócalo. */
-function trees(ctx: BarrioCtx, b: SprawlBlock, slabs: Slab[]): Solid[] {
+/** Trees by slots along x (the last one against the east edge) in the free band between slabs: they never overlap or step on a plinth. */
+function trees(ctx: NeighborhoodCtx, b: SprawlBlock, slabs: Slab[]): Solid[] {
   const [y0, y1] = slabs.length === 2 ? [b.y + 7.3, b.y + 10.7] : slabs[0]!.y === b.y + 2 ? [b.y + 7.3, b.y + 18] : [b.y, b.y + 10.7], n = ctx.rng.int(4, 6), w = 24 / n;
   return Array.from({ length: n }, (_, k): Solid => {
     const r = 1.2 + 0.4 * ctx.rng.next(), h = 3.5 + 1.5 * ctx.rng.next();
@@ -58,9 +58,9 @@ function trees(ctx: BarrioCtx, b: SprawlBlock, slabs: Slab[]): Solid[] {
   });
 }
 
-/** Monoblocks del Barrio Simón Bolívar: una o dos placas de 4 a 6 pisos con grilla y loggias, parque con senderos, ventanas al sur y al este, dos faroles. */
-export function monoblock(ctx: BarrioCtx, b: SprawlBlock): void {
-  const s0 = ctx.solids.length, g0 = ctx.ground.length; // lo de esta manzana: el tope no mira el resto del distrito
+/** Monoblocks of the Simón Bolívar neighborhood: one or two slabs of 4 to 6 floors with a grid and loggias, park with paths, windows to the south and east, two street lamps. */
+export function monoblock(ctx: NeighborhoodCtx, b: SprawlBlock): void {
+  const s0 = ctx.solids.length, g0 = ctx.ground.length; // what belongs to this block: the cap does not look at the rest of the district
   lawn(ctx, b);
   const two = ctx.rng.chance(0.5), hs = [12, 15, 18], slabs: Slab[] = [];
   const path = (a: Vec2, c: Vec2): Solid => ({ kind: "strip", path: [a, c], width: 1, z: 0.08, mat: "paving" });
@@ -74,7 +74,7 @@ export function monoblock(ctx: BarrioCtx, b: SprawlBlock): void {
   ctx.ground.push(path({ x: b.x, y: py }, { x: b.x + 23.2, y: py }));
   cornerLamps(ctx, b);
   const park = trees(ctx, b, slabs), body = slabs.flatMap(slab), cut = (): Solid[] => [...ctx.solids.slice(s0), ...ctx.ground.slice(g0), ...body, ...park];
-  // Presupuesto: árboles a 4 (desde el oeste), luego loggias a 1 (placa más alta primero) hasta entrar en el tope.
+  // Budget: trees down to 4 (from the west), then loggias down to 1 (tallest slab first) until it fits under the cap.
   const tall = [...slabs].sort((a, c) => c.h - a.h);
   while (facesIn(cut(), blockRect(b)) > FACE_CAPS.monoblock) {
     if (park.length > 4) park.shift();

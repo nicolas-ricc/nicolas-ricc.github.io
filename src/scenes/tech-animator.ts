@@ -3,7 +3,7 @@ import { layerLookup, type AnimLayer, type Animator } from "./animator";
 import type { TechScene } from "./tech";
 import { createTechAnim } from "./tech-anim";
 
-/** Adapta el distrito tecnológico al contrato `Animator`: cinco capas de acentos. */
+/** Adapts the tech district to the `Animator` contract: five accent layers. */
 export function techAnimator(scene: TechScene, rng: Rng, opts: { reducedMotion: boolean }): Animator {
   const anim = createTechAnim(scene, rng, opts);
   const layers: Record<string, () => AnimLayer> = {

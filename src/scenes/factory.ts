@@ -4,7 +4,7 @@ import type { Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { WORLD } from "../map/geo";
-import { boilerHouse, NAVE } from "./boiler-house";
+import { boilerHouse, HALL } from "./boiler-house";
 import { EXCAVATOR, excavator, excavatorBox, local } from "./excavator";
 import { jungle } from "./flora";
 import { MALT, maltings, waterTower } from "./maltings";
@@ -14,32 +14,32 @@ import { TRAIN_CLEAR } from "./station";
 import { SUBSTATION, substation } from "./substation";
 
 /**
- * Fábrica de Portfolio, en el lugar que tenían los galpones del astillero (región x 4..98.7, y −4..99). La planta
- * (la maltería de Mistley, x 5..29, y 44..74; la nave de calderas de la Fábrica de Luz, x 29..92, y 44..74, con su
- * torre de escalera en x 93..98; el tanque de agua sobre patas en (15, 32)), la playa de camiones y sus faroles se
- * arman en el marco local y se trasladan con `PLANT_SHIFT` de `plant-frame.ts`: la playa de camiones y los faroles
- * quedan en y 76..89, con la cinta inclinada bajando hasta ella desde la tolva (y 74..76). Al norte de la planta,
- * tres chimeneas humeantes (en (58, 32), (72, 26) y (86, 32)), la torre de enfriamiento en (40, 14) y la subestación
- * de intemperie (`substation.ts`, x 54..95, y −2..11). Ya no están la cinta larga, el ramal `SPUR_Y`, el ramal
- * embutido en la calle, las chatas ni los rieles nave→grada.
- * En la banda norte (`x > 0, y −60..−4`) quedan el desvío ferroviario, la grúa torre y, detrás de la fábrica, las naves de
- * montaje, los talleres y el patio de material del astillero (`shipyard.ts`). Columna oeste `x ≤ 0` (`x -60..0,
- * y 0..146`), igual que antes: playa de vías, excavadora de rueda de cangilones y acopios de mineral, selva al sur
- * y el farol de (−30, 20). El terreno es `slab`.
+ * Portfolio factory, where the shipyard sheds used to stand (region x 4..98.7, y −4..99). The plant
+ * (Mistley's maltings, x 5..29, y 44..74; the boiler hall of the Fábrica de Luz, x 29..92, y 44..74, with its
+ * stair tower at x 93..98; the water tower on legs at (15, 32)), the truck yard and its lamps are
+ * built in the local frame and moved with `PLANT_SHIFT` from `plant-frame.ts`: the truck yard and the lamps
+ * sit at y 76..89, with the inclined belt running down to it from the hopper (y 74..76). North of the plant,
+ * three smoking chimneys (at (58, 32), (72, 26) and (86, 32)), the cooling tower at (40, 14) and the outdoor
+ * substation (`substation.ts`, x 54..95, y −2..11). Gone are the long belt, the `SPUR_Y` spur, the spur
+ * set into the street, the flatcars and the hall→slipway rails.
+ * The north band (`x > 0, y −60..−4`) keeps the rail siding, the tower crane and, behind the factory, the assembly
+ * halls, the workshops and the shipyard's material yard (`shipyard.ts`). West column `x ≤ 0` (`x -60..0,
+ * y 0..146`), as before: rail yard, bucket-wheel excavator and ore piles, jungle to the south
+ * and the lamp at (−30, 20). The terrain is `slab`.
  * Spec: docs/superpowers/specs/2026-09-14-mundo-2-fabrica-distrito-blog-design.md §5.
- * Detalle de planta, chimeneas, subestación y excavadora: docs/superpowers/specs/2026-10-24-fabrica-detalle-design.md.
- * Mudanza: docs/superpowers/specs/2026-10-27-fabrica-mudanza-design.md.
+ * Plant, chimney, substation and excavator detail: docs/superpowers/specs/2026-10-24-fabrica-detalle-design.md.
+ * Move: docs/superpowers/specs/2026-10-27-fabrica-mudanza-design.md.
  */
 export interface FactoryScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; stacks: Vec3[]; excavator: Solid[] }
 
-export const PLANT = { x: MALT.x, y: MALT.y, w: MALT.w + NAVE.w, d: 30, h: 14 } as const;
+export const PLANT = { x: MALT.x, y: MALT.y, w: MALT.w + HALL.w, d: 30, h: 14 } as const;
 export { MALT };
 export const STACKS = [{ x: 58, y: 32, r: 2.8, h: 22 }, { x: 72, y: 26, r: 2.6, h: 26 }, { x: 86, y: 32, r: 2.4, h: 24 }] as const;
 export const STACK_BASE_H = 3;
-const DECK_H = 0.3; // losa de la plataforma de las chimeneas
+const DECK_H = 0.3; // slab of the chimney platform
 export const SIDING_Y = -8;
-export const RAIL_YARD_X = [-56, -48, -40] as const; // vías N-S de la playa; los acopios van al este de ellas
-export const COOLING = { x: 40, y: 14, r: 9 } as const; // torre de enfriamiento: al norte del lugar de la nave, x 31..49, y 5..23
+export const RAIL_YARD_X = [-56, -48, -40] as const; // N-S tracks of the yard; the piles go east of them
+export const COOLING = { x: 40, y: 14, r: 9 } as const; // cooling tower: north of the hall's old spot, x 31..49, y 5..23
 const LAMP_H = 5;
 
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material): Solid => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat });
@@ -55,40 +55,40 @@ function plant(out: Solid[]): void {
   waterTower(out);
   boilerHouse(out);
   const localE = PLANT.x + PLANT.w - PLANT_SHIFT.x;
-  emitPlant(out, (o) => o.push(prism(localE - 0.2, -23, 0, 0.5, 6, 8, "concrete"))); // portón este
+  emitPlant(out, (o) => o.push(prism(localE - 0.2, -23, 0, 0.5, 6, 8, "concrete"))); // east gate
 }
 
 export type Stack = (typeof STACKS)[number];
 
-/** Emite una chimenea detallada en `out`/`accents` y devuelve su boca. */
+/** Emits a detailed chimney into `out`/`accents` and returns its mouth. */
 export function chimney(s: Stack, out: Solid[], accents: Accent[]): Vec3 {
   const B = STACK_BASE_H, M = B + s.h;
   const cyl = (z: number, r: number, h: number, mat: Material): Solid => ({ kind: "cylinder", at: v3(s.x, s.y, z), r, h, mat });
   out.push(prism(s.x - 3.5, s.y - 3.5, 0, 7, 7, B, "concrete"));
-  out.push(cyl(B, s.r + 1.0, 1.5, "brick"), cyl(B + 1.5, s.r + 0.6, 1.5, "brick")); // base escalonada
+  out.push(cyl(B, s.r + 1.0, 1.5, "brick"), cyl(B + 1.5, s.r + 0.6, 1.5, "brick")); // stepped base
   const z0 = B + 3, z1 = M - 0.6, half = (z1 - z0) / 2, seg = half / 4;
-  const radii = [0.5, (0.5 * 2) / 3, 0.5 / 3, 0].map((d) => s.r + d);              // mitad inferior: se afina hasta r
+  const radii = [0.5, (0.5 * 2) / 3, 0.5 / 3, 0].map((d) => s.r + d);              // lower half: tapers down to r
   radii.forEach((r, i) => out.push(cyl(z0 + i * seg, r, seg, "brick")));
-  for (let k = 0; k < 3; k++) out.push(cyl(z0 + (k + 1) * seg - 0.2, radii[k]! + 0.1, 0.2, "steel")); // zunchos en la junta de arriba de cada tramo: con el centro sobre el del tramo, el orden painter los dibuja después
-  const bh = (half - DECK_H) / 7, dz = z0 + half + 6 * bh;                            // la plataforma llena la junta entre la 6ª y la 7ª banda: nada del fuste comparte su z y el orden painter no empata
+  for (let k = 0; k < 3; k++) out.push(cyl(z0 + (k + 1) * seg - 0.2, radii[k]! + 0.1, 0.2, "steel")); // hoops at the top joint of each section: with the center over the section's, painter order draws them afterwards
+  const bh = (half - DECK_H) / 7, dz = z0 + half + 6 * bh;                            // the platform fills the joint between the 6th and 7th band: nothing on the shaft shares its z and painter order has no tie
   for (let i = 0; i < 7; i++) out.push(cyl(z0 + half + i * bh + (i === 6 ? DECK_H : 0), s.r, bh, i % 2 === 0 ? "signal" : "whitewash"));
-  out.push(cyl(dz, s.r + 1.2, DECK_H, "concrete"));                                   // plataforma
+  out.push(cyl(dz, s.r + 1.2, DECK_H, "concrete"));                                   // platform
   const pTop = dz + DECK_H;
   const pr = (cx: number, cy: number, z: number, h: number): Solid => prism(cx - 0.075, cy - 0.075, z, 0.15, 0.15, h, "steel");
-  const pRad = (s.r + 1.2) * Math.cos(Math.PI / 8) - 0.15;            // postes al medio de cada cara del octógono, metidos 0.15
+  const pRad = (s.r + 1.2) * Math.cos(Math.PI / 8) - 0.15;            // posts at the middle of each octagon face, inset 0.15
   const post = (k: number) => v3(s.x + pRad * Math.cos((k * Math.PI) / 4), s.y + pRad * Math.sin((k * Math.PI) / 4), pTop);
   for (let k = 0; k < 8; k++) {
     const p = post(k), q = post((k + 1) % 8);
     out.push(pr(p.x, p.y, pTop, 1.1));
-    out.push({ kind: "beam", from: v3(p.x, p.y, pTop + 1.025), to: v3(q.x, q.y, pTop + 1.025), w: 0.15, h: 0.15, mat: "steel" }); // baranda
+    out.push({ kind: "beam", from: v3(p.x, p.y, pTop + 1.025), to: v3(q.x, q.y, pTop + 1.025), w: 0.15, h: 0.15, mat: "steel" }); // handrail
   }
-  out.push(cyl(M - 0.6, s.r + 0.4, 0.6, "brick"));                                    // corona
-  for (const [dx, dy] of [[1, 0], [0, 1], [0, -1], [-1, 0]] as const) out.push(pr(s.x + dx * (s.r + 0.1), s.y + dy * (s.r + 0.1), M, 1.5)); // pararrayos
-  const ly = s.y + (s.r + 1.2) * Math.cos(Math.PI / 8) + 0.2;                         // escalera de gato al sur, por fuera de la plataforma: separada en y de bandas y losa, el orden painter no empata
+  out.push(cyl(M - 0.6, s.r + 0.4, 0.6, "brick"));                                    // crown
+  for (const [dx, dy] of [[1, 0], [0, 1], [0, -1], [-1, 0]] as const) out.push(pr(s.x + dx * (s.r + 0.1), s.y + dy * (s.r + 0.1), M, 1.5)); // lightning rods
+  const ly = s.y + (s.r + 1.2) * Math.cos(Math.PI / 8) + 0.2;                         // ladder to the south, outside the platform: separated in y from bands and slab, painter order has no tie
   for (const dx of [-0.35, 0.35]) out.push(pr(s.x + dx, ly, z0, pTop + 1.1 - z0));
-  for (let z = z0 + 2; z < pTop + 1.1; z += 2) out.push({ kind: "beam", from: v3(s.x - 0.35, ly, z), to: v3(s.x + 0.35, ly, z), w: 0.15, h: 0.15, mat: "steel" }); // peldaños
+  for (let z = z0 + 2; z < pTop + 1.1; z += 2) out.push({ kind: "beam", from: v3(s.x - 0.35, ly, z), to: v3(s.x + 0.35, ly, z), w: 0.15, h: 0.15, mat: "steel" }); // rungs
   accents.push({ kind: "dot", at: v3(s.x + s.r, s.y, M - 1), r: 0.5, color: "magenta" }, { kind: "dot", at: v3(s.x, s.y + s.r, M - 1), r: 0.5, color: "magenta" });
-  out.push(prism(s.x - 0.45, s.y + 3.5, 0, 0.9, 0.3, 1.4, "steel"));                  // puerta en la cara sur del pedestal
+  out.push(prism(s.x - 0.45, s.y + 3.5, 0, 0.9, 0.3, 1.4, "steel"));                  // door on the south face of the pedestal
   return v3(s.x, s.y, M);
 }
 
@@ -103,43 +103,43 @@ function coolingTower(out: Solid[]): void {
 
 function siding(out: Solid[]): void {
   for (const dy of [-0.8, 0.8]) out.push(strip([{ x: WORLD.x0, y: SIDING_Y + dy }, { x: 110, y: SIDING_Y + dy }], 0.4, 0.1, "steel"));
-  for (let i = 0; i < 6; i++) out.push(prism(-50 + i * 9, SIDING_Y - 1.2, 0, 8, 2.4, 3, i % 2 === 0 ? "rust" : "steel")); // vagones con 1 u de hueco
-  out.push(prism(6, SIDING_Y - 1.3, 0, 9, 2.6, 3.6, "steel"), prism(12, SIDING_Y - 1.3, 3.6, 3, 2.6, 1, "steel"));      // locomotora y cabina
+  for (let i = 0; i < 6; i++) out.push(prism(-50 + i * 9, SIDING_Y - 1.2, 0, 8, 2.4, 3, i % 2 === 0 ? "rust" : "steel")); // wagons with a 1 u gap
+  out.push(prism(6, SIDING_Y - 1.3, 0, 9, 2.6, 3.6, "steel"), prism(12, SIDING_Y - 1.3, 3.6, 3, 2.6, 1, "steel"));      // locomotive and cab
 }
 
 function truckYard(out: Solid[], accents: Accent[]): void {
   emitPlant(out, (o, a) => {
-    for (const [x, y] of [[40, -12], [70, -6], [95, -12]] as const) { o.push(prism(x, y, 0, 6, 2.4, 2.8, "rust")); o.push(prism(x + 6, y, 0, 2, 2.4, 2.2, "steel")); } // caja y cabina
-    for (let i = 0; i < 6; i++) o.push(prism(22 + i * 4, -3, 0, 3, 2, 0.5 + (i % 3) * 0.4, "steel")); // pallets de chapa junto al portón oeste
+    for (const [x, y] of [[40, -12], [70, -6], [95, -12]] as const) { o.push(prism(x, y, 0, 6, 2.4, 2.8, "rust")); o.push(prism(x + 6, y, 0, 2, 2.4, 2.2, "steel")); } // box and cab
+    for (let i = 0; i < 6; i++) o.push(prism(22 + i * 4, -3, 0, 3, 2, 0.5 + (i % 3) * 0.4, "steel")); // sheet-metal pallets by the west gate
     for (const [x, y] of [[20, -14], [110, -3]] as const) lamp(o, a, x, y);
   }, accents);
 }
 
-/** Columna oeste: tres vías N-S que empalman con las vías del oeste del astillero, la excavadora (en `machine`: se dibuja aparte, en su marco), acopios de mineral al este de ellas, selva al sur. */
+/** West column: three N-S tracks that join the shipyard's west tracks, the excavator (in `machine`: drawn separately, in its own frame), ore piles east of them, jungle to the south. */
 function railYard(out: Solid[], machine: Solid[], accents: Accent[], rng: Rng): void {
   for (const x of RAIL_YARD_X) for (const dx of [-0.8, 0.8]) out.push(strip([{ x: x + dx, y: WORLD.y0 }, { x: x + dx, y: 128 }], 0.4, 0.1, "steel"));
-  for (const dy of [-0.8, 0.8]) out.push(strip([{ x: -40 + dy, y: 128 }, { x: -30, y: 132.5 + dy }, { x: 2, y: 132.5 + dy }], 0.4, 0.1, "steel")); // empalme
+  for (const dy of [-0.8, 0.8]) out.push(strip([{ x: -40 + dy, y: 128 }, { x: -30, y: 132.5 + dy }, { x: 2, y: 132.5 + dy }], 0.4, 0.1, "steel")); // junction
   excavator(machine, accents);
   const axle = local(EXCAVATOR.axleDx, 0);
-  out.push({ kind: "cone", at: v3(axle.x, axle.y, 0), r: EXCAVATOR.pile.r, h: EXCAVATOR.pile.h, mat: "rust", sides: 7 }); // acopio fijo bajo la rueda
+  out.push({ kind: "cone", at: v3(axle.x, axle.y, 0), r: EXCAVATOR.pile.r, h: EXCAVATOR.pile.h, mat: "rust", sides: 7 }); // fixed pile under the wheel
   const box = excavatorBox();
   for (let i = 0; i < 5; i++) {
     const big = i < 3;
     for (let tries = 0; ; tries++) {
-      if (tries >= 1000) throw new Error("railYard: sin sitio para un acopio fuera de la excavadora");
+      if (tries >= 1000) throw new Error("railYard: no room for a pile outside the excavator");
       const x = rng.int(-25, -13), y = rng.int(44, 96), r = big ? rng.int(6, 9) : 5, h = big ? rng.int(4, 6) : 3;
-      if (x + r > box.x0 - 1 && x - r < box.x1 + 1 && y + r > box.y0 - 1 && y - r < box.y1 + 1) continue; // toca la caja inflada 1: se repite la tirada entera
+      if (x + r > box.x0 - 1 && x - r < box.x1 + 1 && y + r > box.y0 - 1 && y - r < box.y1 + 1) continue; // touches the box inflated by 1: the whole draw is repeated
       out.push({ kind: "cone", at: v3(x, y, 0), r, h, mat: big ? "rust" : "sand", sides: 7 });
       break;
     }
   }
-  for (let i = 0; i < 8; i++) out.push(prism(RAIL_YARD_X[i % 3]! - 1.1, -46 + i * 14, 0, 2.2, 7, 2.8, i % 2 === 0 ? "rust" : "steel")); // vagones estacionados N-S sobre las vías; -46: el tercero termina en y -11, sin tocar el desvío E-O (y -9.2..-6.8)
-  jungle(out, rng, { x0: -58, x1: -6, y0: 110, y1: 140 }, 14, 0.4, { y: [128, 131, 134], train: TRAIN_CLEAR }); // y1 140: un cono de r 4 no puede cruzar la costura y = 146; ningún cono pisa el empalme ni las vías del oeste
+  for (let i = 0; i < 8; i++) out.push(prism(RAIL_YARD_X[i % 3]! - 1.1, -46 + i * 14, 0, 2.2, 7, 2.8, i % 2 === 0 ? "rust" : "steel")); // wagons parked N-S on the tracks; -46: the third ends at y -11, not touching the E-W siding (y -9.2..-6.8)
+  jungle(out, rng, { x0: -58, x1: -6, y0: 110, y1: 140 }, 14, 0.4, { y: [128, 131, 134], train: TRAIN_CLEAR }); // y1 140: a cone of r 4 cannot cross the seam y = 146; no cone covers the junction or the west tracks
 }
 
 function lamps(out: Solid[], accents: Accent[]): void {
-  emitPlant(out, (o, a) => { for (const [x, y] of [[24, -13], [64, -13], [50, -13.5]] as const) lamp(o, a, x, y); }, accents); // los tres de la planta, en el marco local
-  // el cuarto farol es el de la subestación: esquina SO del cerco
+  emitPlant(out, (o, a) => { for (const [x, y] of [[24, -13], [64, -13], [50, -13.5]] as const) lamp(o, a, x, y); }, accents); // the plant's three, in the local frame
+  // the fourth lamp is the substation's: SW corner of the fence
   for (const [x, y] of [[SUBSTATION.x0 - 1, SUBSTATION.y1 + 1], [-30, 20]] as const) lamp(out, accents, x, y);
 }
 

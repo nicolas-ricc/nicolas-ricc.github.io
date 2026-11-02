@@ -2,37 +2,37 @@ import type { Readout } from "./crop";
 import { type Exhibit, type GroupId, outOfView } from "./exhibits";
 
 const HOST_ID = "lab-host";
-/** Ids que `lab/storybook.html` debe tener; un test lo comprueba contra el HTML. */
+/** Ids that `lab/storybook.html` must have; a test checks them against the HTML. */
 export const STORYBOOK_IDS = [HOST_ID, "exhibits", "readout"] as const;
 
 export interface StorybookElements { host: HTMLElement; nav: HTMLElement; panel: HTMLElement }
 
-/** Resuelve los tres elementos; si faltan, lanza nombrándolos todos (en el orden de STORYBOOK_IDS). */
+/** Resolves the three elements; if any are missing, throws naming them all (in STORYBOOK_IDS order). */
 export function storybookElements(doc: Document): StorybookElements {
   const found = STORYBOOK_IDS.map((id) => doc.getElementById(id));
   const [host, nav, panel] = found;
   if (!host || !nav || !panel) {
     const missing = STORYBOOK_IDS.filter((_, i) => !found[i]).map((id) => `#${id}`);
-    throw new Error(`${missing.length === 1 ? "falta" : "faltan"} ${missing.join(", ")} en la página`);
+    throw new Error(`${missing.join(", ")} ${missing.length === 1 ? "is" : "are"} missing from the page`);
   }
   return { host, nav, panel };
 }
 
 /**
- * Resuelve los elementos y corre el arranque. Cualquier error síncrono se ve
- * en la página (en #lab-host, o en body si falta) en vez de dejarla en blanco.
+ * Resolves the elements and runs the boot. Any synchronous error shows
+ * on the page (in #lab-host, or in body if it is missing) instead of leaving it blank.
  */
 export function mountStorybook(doc: Document, run: (els: StorybookElements) => void): void {
   try {
     run(storybookElements(doc));
   } catch (err) {
-    console.error("[storybook] no se pudo iniciar", err);
+    console.error("[storybook] could not start", err);
     const target = doc.getElementById(HOST_ID) ?? doc.body;
-    target.textContent = `No se pudo iniciar el storybook: ${err instanceof Error ? err.message : String(err)}`;
+    target.textContent = `Could not start the storybook: ${err instanceof Error ? err.message : String(err)}`;
   }
 }
 
-/** Un `<h2>` por grupo y bajo él un `<ul>` con un enlace por exhibit, en orden. */
+/** One `<h2>` per group and under it a `<ul>` with one link per exhibit, in order. */
 export function buildIndex(
   nav: HTMLElement,
   groups: readonly { id: GroupId; title: string }[],
@@ -52,12 +52,12 @@ export function buildIndex(
   }
 }
 
-/** Marca `aria-current` en la entrada `id` y se lo quita a las demás. */
+/** Sets `aria-current` on the `id` entry and removes it from the others. */
 export function markCurrent(nav: HTMLElement, id: string): void {
   for (const a of nav.querySelectorAll<HTMLAnchorElement>("a")) {
     if (a.dataset.id === id) {
       a.setAttribute("aria-current", "page");
-      // el índice no entra entero en la columna: centrada, con vecinas legibles; si ya se ve, quieta
+      // the index does not fit whole in the column: centered, with readable neighbors; if already in view, leave it
       if (outOfView(a.getBoundingClientRect(), nav.getBoundingClientRect())) a.scrollIntoView({ block: "center" });
     } else a.removeAttribute("aria-current");
   }
@@ -65,20 +65,20 @@ export function markCurrent(nav: HTMLElement, id: string): void {
 
 const n1 = (x: number): string => x.toFixed(1);
 
-/** Pinta la lectura del recorte como un `<dl>` de nueve filas, reemplazando el anterior. */
+/** Paints the crop's readout as a `<dl>` of nine rows, replacing the previous one. */
 export function renderReadout(panel: HTMLElement, r: Readout): void {
   const b = r.box;
   const rows: [string, string][] = [
-    ["Sólidos", String(r.solids)],
-    ["Suelo", String(r.ground)],
-    ["Caras", String(r.faces)],
-    ["Acentos", String(r.accents)],
-    ["Caja x", b ? `${n1(b.min.x)} … ${n1(b.max.x)}` : "—"],
-    ["Caja y", b ? `${n1(b.min.y)} … ${n1(b.max.y)}` : "—"],
-    ["Caja z", b ? `${n1(b.min.z)} … ${n1(b.max.z)}` : "—"],
-    ["Ancho × fondo × alto", b ? `${n1(b.w)} × ${n1(b.d)} × ${n1(b.h)} u` : "—"],
-    ["Materiales", r.materials.join(", ") || "—"],
-    ["Colores de acento", r.accentColors.join(", ") || "—"],
+    ["Solids", String(r.solids)],
+    ["Ground", String(r.ground)],
+    ["Faces", String(r.faces)],
+    ["Accents", String(r.accents)],
+    ["Box x", b ? `${n1(b.min.x)} … ${n1(b.max.x)}` : "—"],
+    ["Box y", b ? `${n1(b.min.y)} … ${n1(b.max.y)}` : "—"],
+    ["Box z", b ? `${n1(b.min.z)} … ${n1(b.max.z)}` : "—"],
+    ["Width × depth × height", b ? `${n1(b.w)} × ${n1(b.d)} × ${n1(b.h)} u` : "—"],
+    ["Materials", r.materials.join(", ") || "—"],
+    ["Accent colors", r.accentColors.join(", ") || "—"],
   ];
   const doc = panel.ownerDocument;
   const dl = doc.createElement("dl");

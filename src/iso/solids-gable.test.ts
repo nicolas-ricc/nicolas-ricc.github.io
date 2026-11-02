@@ -10,8 +10,8 @@ const plate = (wall: number, extra: Partial<Plate> = {}): Plate => ({ wall, shap
 const sloped = (f: Face) => Math.abs(f.normal.z) > 1e-6 && Math.abs(f.normal.z) < 1 - 1e-6;
 const on = (f: Face, pred: (p: Vec3) => boolean) => f.pts.every(pred);
 
-describe("gable sin extras", () => {
-  it("w >= d: base, pared norte, pared sur, hastial oeste, hastial este, vertiente norte, vertiente sur; todo mat", () => {
+describe("gable without extras", () => {
+  it("w >= d: base, north wall, south wall, west gable end, east gable end, north slope, south slope; all mat", () => {
     const all = tessellateAll(WIDE);
     expect(all).toHaveLength(7);
     expect(on(all[0]!, (p) => p.z === 0)).toBe(true);
@@ -24,7 +24,7 @@ describe("gable sin extras", () => {
     expect(all.every((f) => f.mat === "brick")).toBe(true);
   });
 
-  it("w < d: base, pared oeste, pared este, hastial norte, hastial sur, vertiente oeste, vertiente este", () => {
+  it("w < d: base, west wall, east wall, north gable end, south gable end, west slope, east slope", () => {
     const all = tessellateAll(DEEP);
     expect(all).toHaveLength(7);
     expect(on(all[0]!, (p) => p.z === 0)).toBe(true);
@@ -37,14 +37,14 @@ describe("gable sin extras", () => {
     expect(all.every((f) => f.mat === "brick")).toBe(true);
   });
 
-  it("plates vacío da lo mismo que sin plates", () => {
+  it("empty plates gives the same as no plates", () => {
     expect(tessellateAll({ ...WIDE, plates: [] })).toEqual(tessellateAll(WIDE));
   });
 });
 
 describe("roofMat", () => {
   for (const [name, G] of [["w >= d", WIDE], ["w < d", DEEP]] as const) {
-    it(`${name}: las dos vertientes salen en roofMat; muros, hastiales y base en mat`, () => {
+    it(`${name}: the two slopes come out in roofMat; walls, gable ends and base in mat`, () => {
       const all = tessellateAll({ ...G, roofMat: "tile" });
       const roof = all.filter(sloped);
       expect(roof).toHaveLength(2);
@@ -53,17 +53,17 @@ describe("roofMat", () => {
       expect(all.find((f) => f.normal.z < -0.5)!.mat).toBe("brick"); // base
     });
 
-    it(`${name}: roofMat solo cambia mat, no geometría ni tono`, () => {
+    it(`${name}: roofMat only changes mat, not geometry or tone`, () => {
       const a = tessellateAll(G), b = tessellateAll({ ...G, roofMat: "tile" });
       expect(b.map(({ mat: _, ...f }) => f)).toEqual(a.map(({ mat: _, ...f }) => f));
     });
   }
 });
 
-describe("placas en gable", () => {
+describe("plates on gable", () => {
   const afterWall = (all: Face[], pred: (p: Vec3) => boolean, pts: number) => all.findIndex((f) => f.mat === "brick" && f.pts.length === pts && on(f, pred));
 
-  it("w >= d: wall 1 sale tras el hastial este, wall 2 tras la pared sur, con normal y tono de su cara", () => {
+  it("w >= d: wall 1 comes after the east gable end, wall 2 after the south wall, with the normal and tone of its face", () => {
     const all = tessellateAll({ ...WIDE, plates: [plate(1, { mat: "glass" }), plate(2)] });
     expect(all).toHaveLength(9);
     const e = afterWall(all, (p) => p.x === 10, 5);
@@ -80,7 +80,7 @@ describe("placas en gable", () => {
     expect(on(gs, (p) => p.y === 4)).toBe(true);
   });
 
-  it("w < d: wall 0 sale tras el hastial norte, wall 1 tras la pared este", () => {
+  it("w < d: wall 0 comes after the north gable end, wall 1 after the east wall", () => {
     const all = tessellateAll({ ...DEEP, plates: [plate(0, { mat: "glass" }), plate(1)] });
     expect(all).toHaveLength(9);
     const n = afterWall(all, (p) => p.y === 0, 5);
@@ -97,14 +97,14 @@ describe("placas en gable", () => {
     expect(on(ge, (p) => p.x === 4)).toBe(true);
   });
 
-  it("w >= d: wall 0 tras la pared norte y wall 3 tras el hastial oeste", () => {
+  it("w >= d: wall 0 after the north wall and wall 3 after the west gable end", () => {
     const all = tessellateAll({ ...WIDE, plates: [plate(3, { mat: "glass" }), plate(0)] });
     expect(on(all[afterWall(all, (p) => p.y === 0, 4) + 1]!, (p) => p.y === 0)).toBe(true);
     expect(all[afterWall(all, (p) => p.y === 0, 4) + 1]!.mat).toBe("steel");
     expect(all[afterWall(all, (p) => p.x === 0, 5) + 1]!.mat).toBe("glass");
   });
 
-  it("una placa tri de alero a cumbrera cubre exactamente el triángulo del hastial este", () => {
+  it("a tri plate from eave to ridge covers exactly the east gable end's triangle", () => {
     const tri = plate(1, { shape: "tri", u0: 0, u1: 1, z0: 4, z1: 4 + 4 * GABLE_RATIO, mat: "stone" });
     const pl = tessellateAll({ ...WIDE, plates: [tri] }).find((f) => f.mat === "stone")!;
     expect(pl.pts).toHaveLength(3);
@@ -114,7 +114,7 @@ describe("placas en gable", () => {
     for (const w of want) expect(gableEast.pts.some((p) => Math.abs(p.x - w.x) < 1e-9 && Math.abs(p.y - w.y) < 1e-9 && Math.abs(p.z - w.z) < 1e-9)).toBe(true);
   });
 
-  it("vertientes y base no llevan placas; las placas conservan su mat aunque haya roofMat", () => {
+  it("slopes and base take no plates; plates keep their mat even with roofMat", () => {
     const all = tessellateAll({ ...WIDE, roofMat: "tile", plates: [plate(2, { mat: "glass" })] });
     expect(all).toHaveLength(8);
     expect(all.filter((f) => f.mat === "glass")).toHaveLength(1);
@@ -123,17 +123,17 @@ describe("placas en gable", () => {
     expect(all[i - 1]!.mat).toBe("brick");
   });
 
-  it("facade sigue sin aplicarse al gable, aun con plates", () => {
+  it("facade still does not apply to the gable, even with plates", () => {
     const plates = [plate(2)];
     expect(tessellateAll({ ...WIDE, plates, facade: { floors: 2, cols: 2 } })).toEqual(tessellateAll({ ...WIDE, plates }));
     expect(tessellateAll({ ...WIDE, facade: { floors: 2, cols: 2 } })).toEqual(tessellateAll(WIDE));
   });
 
-  it("wall fuera de rango: no tira y no emite placa", () => {
+  it("wall out of range: does not throw and emits no plate", () => {
     for (const wall of [4, -1, 1.5]) expect(tessellateAll({ ...WIDE, plates: [plate(wall)] })).toEqual(tessellateAll(WIDE));
   });
 
-  it("tessellate conserva pared → placa en las caras visibles y descarta la placa de una cara oculta", () => {
+  it("tessellate keeps wall → plate on visible faces and drops the plate of a hidden face", () => {
     const vis = tessellate({ ...WIDE, plates: [plate(1, { mat: "glass" }), plate(2), plate(0, { mat: "stone" })] });
     const e = vis.findIndex((f) => f.mat === "brick" && f.pts.length === 5 && on(f, (p) => p.x === 10));
     expect(vis[e + 1]!.mat).toBe("glass");
@@ -142,7 +142,7 @@ describe("placas en gable", () => {
     expect(vis.some((f) => f.mat === "stone")).toBe(false);
   });
 
-  it("bounds no cambia con placas, aun con una que sobresale de la cumbrera", () => {
+  it("bounds does not change with plates, even with one that sticks out past the ridge", () => {
     expect(bounds({ ...WIDE, plates: [plate(1), plate(2, { u0: -0.5, u1: 1.5, z1: 9 })] })).toEqual(bounds(WIDE));
     expect(bounds({ ...WIDE, roofMat: "tile" })).toEqual(bounds(WIDE));
   });

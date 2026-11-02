@@ -12,7 +12,7 @@ export function normalize(a: Vec3): Vec3 {
   return len === 0 ? { x: 0, y: 0, z: 0 } : { x: a.x / len, y: a.y / len, z: a.z / len };
 }
 
-/** Normal por el método de Newell: funciona para polígonos no planos y de cualquier tamaño. */
+/** Normal by Newell's method: works for non-planar polygons of any size. */
 export function polygonNormal(pts: Vec3[]): Vec3 {
   let x = 0, y = 0, z = 0;
   for (let i = 0; i < pts.length; i++) {
@@ -33,7 +33,7 @@ export function centroid(pts: Vec3[]): Vec3 {
   };
 }
 
-/** Casco convexo (monotone chain). Sin puntos colineales en el borde. */
+/** Convex hull (monotone chain). No collinear points on the border. */
 export function convexHull(input: Vec2[]): Vec2[] {
   const pts = [...input].sort((a, b) => a.x - b.x || a.y - b.y);
   if (pts.length < 3) return pts;
@@ -55,17 +55,17 @@ export function convexHull(input: Vec2[]): Vec2[] {
 }
 
 export interface PolySeg { a: Vec3; b: Vec3; len: number; heading: number }
-/** Punto de la polilínea: posición, rumbo del tramo y su índice. */
+/** Point on the polyline: position, heading of the segment and its index. */
 export interface PolyPoint { x: number; y: number; z: number; heading: number; seg: number }
 export interface Polyline { segs: readonly PolySeg[]; length: number; at(d: number): PolyPoint }
 
 /**
- * Camina una polilínea: tramos con largo (en planta, x/y) y rumbo, largo
- * total y el punto a `d` unidades del inicio (z interpolada, 0 si los puntos
- * son `Vec2`). `at` recorta `d` a `[0, length]`: quien quiera dar la vuelta o
- * rebotar lo hace antes de llamar. En el límite entre dos tramos manda el
- * anterior (t = 1), así el índice no salta antes de tiempo. Para cerrar un
- * circuito, pasar el primer punto otra vez al final.
+ * Walks a polyline: segments with length (in plan, x/y) and heading, total
+ * length and the point `d` units from the start (z interpolated, 0 if the
+ * points are `Vec2`). `at` clamps `d` to `[0, length]`: whoever wants to wrap
+ * around or bounce does so before calling. At the boundary between two
+ * segments the earlier one wins (t = 1), so the index does not jump early.
+ * To close a loop, pass the first point again at the end.
  */
 export function polyline(pts: readonly (Vec2 | Vec3)[]): Polyline {
   const p = pts.map((q) => v3(q.x, q.y, (q as Partial<Vec3>).z ?? 0));

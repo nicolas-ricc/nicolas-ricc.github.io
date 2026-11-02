@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`roofMat en techo a dos aguas (#249) > gable sin roofMat: caras idénticas a hoy 1`] = `
+exports[`roofMat on gable roof (#249) > gable without roofMat: faces identical to today 1`] = `
 [
   {
     "mat": "whitewash",
@@ -239,7 +239,7 @@ exports[`roofMat en techo a dos aguas (#249) > gable sin roofMat: caras idéntic
 ]
 `;
 
-exports[`roofMat en techo a dos aguas (#249) > gable sin roofMat: caras idénticas a hoy 2`] = `
+exports[`roofMat on gable roof (#249) > gable without roofMat: faces identical to today 2`] = `
 [
   {
     "mat": "whitewash",

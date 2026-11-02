@@ -6,11 +6,11 @@ import type { Rng } from "../map/seed";
 import type { Rect } from "./city-grid";
 
 /**
- * Piezas de bajo nivel compartidas por la ciudad (city.ts, src/city/fixed.ts)
- * y las recetas de `src/kit/`: el prisma con techo/fachada opcional y el suelo
- * facetado de baldosas; las props viven en `src/kit/props.ts`.
+ * Low-level pieces shared by the city (city.ts, src/city/fixed.ts)
+ * and the recipes of `src/kit/`: the prism with optional roof/facade and the
+ * faceted tile ground; the props live in `src/kit/props.ts`.
  */
-export const TILE = 6; // baldosa de la plaza y del suelo devorado
+export const TILE = 6; // tile of the plaza and of the devoured ground
 export const PLINTH_H = 0.3;
 
 export type Prism = Solid & { kind: "prism" };
@@ -25,12 +25,12 @@ export const prism = (x: number, y: number, z: number, w: number, d: number, h: 
   return p;
 };
 
-/** Baldosa rota del suelo devorado: un tercio con ±1. */
+/** Broken tile of the devoured ground: a third with ±1. */
 export const brokenTone = (rng: Rng): number => (rng.chance(1 / 3) ? rng.pick([-1, 1]) : 0);
-/** Baldosa de la plaza: la mitad más clara y un quinto más oscura, para que la plaza se lea como un claro y no como asfalto. */
+/** Tile of the plaza: half lighter and a fifth darker, so the plaza reads as a clearing and not as asphalt. */
 export const plazaTone = (rng: Rng): number => { const r = rng.next(); return r < 0.5 ? 1 : r < 0.7 ? -1 : 0; };
 
-/** Suelo facetado de baldosas `TILE`×`TILE`, con el tono de cada una según `tone`. */
+/** Faceted ground of `TILE`×`TILE` tiles, with the tone of each one given by `tone`. */
 export function tiles(rng: Rng, r: Rect, z: number, mat: Material, tone: (rng: Rng) => number = brokenTone): Solid {
   const tris: Tri[] = [];
   const off = (): number => tone(rng);
