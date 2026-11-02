@@ -24,13 +24,16 @@ I measured `world(7)` with the test's own formula (`s.mat` of every solid whose 
 |---|---|
 | `shipyard.solids ∪ factory.solids` ∩ `city.solids` | `asphalt, paving, rust, steel, stone` |
 | `factory.excavator` | `office, rust, safety, steel, whitewash` |
+| `city.solids` | `asphalt, curtain, leaf, leafDark, office, officeDark, paving, plaza, rust, steel, stone` (no `safety`, `whitewash` or `glass`) |
 | `city.solids` (does it contain `glass`?) | no. City glass only comes from facades (`facade.base: "glass"`, windows): faces generated in `src/iso/facade.ts`, never a solid's `mat` |
+
+Every row was measured with a throwaway Vitest probe that applied the test's `mats()` to `world(7)` and was not committed. Once the change is in, the test itself reproduces the measurement: on failure, `toEqual` prints the received array.
 
 The test's current allowlist is `["glass", "office", "rust", "steel", "asphalt", "stone", "paving"]`. #277 added `asphalt`, and #278 added `stone` and `paving`.
 
 ## Technical decisions (declared)
 
-1. **The excavator counts as Portfolio.** `office` reached Portfolio with the excavator (#216, decision of #207). The excavator is rendered from `factory.excavator` (the animated layer `factory.excavator` in `factory-animator.ts`), not from `factory.solids`. Without it the test cannot see `office`, which defeats the purpose the issue gives it: "detecte si alguno deja de usarse". The wheel (`excavatorWheel`) is left out. It is created per frame and is made of `steel`/`rust`, which the set already contains.
+1. **The excavator counts as Portfolio.** `office` reached Portfolio with the excavator (#216, decision of #207). The excavator is rendered from `factory.excavator` (the animated layer `factory.excavator` in `factory-animator.ts`), not from `factory.solids`. Without it the test cannot see `office`, which defeats the purpose the issue gives it: "detecte si alguno deja de usarse". The wheel (`excavatorWheel`) is left out. It is created per frame (`factory-anim.ts:40`) and is all `rust` (`excavator.ts:20-23`: `mat` and `buckets.mat`), which the set already contains.
 2. **`glass` leaves the city-shared list.** The measurement is by solid `mat`. The city has no solid made of `glass`: its glass comes only from facade faces. If facade faces were counted, the test would mean something else, because every facade's sills, grids and slabs would enter the set too. That is outside this issue. A comment records why `glass` is missing.
 3. **The expected set is `["asphalt", "office", "paving", "rust", "steel", "stone"]`, sorted, compared against the sorted intersection.** The issue's literal list (`glass, office, rust, steel`) predates #277 and #278. The issue asks for exact equality, and this is the exact set of today's scene.
 4. **Comments stay in Spanish**, like the rest of `world.test.ts`. The per-material comments (#277, #278, #207) are kept.
@@ -41,7 +44,7 @@ The test's current allowlist is `["glass", "office", "rust", "steel", "asphalt",
 2. A new shared material must fail too (the old loop already did this). Also covered by the `toEqual`.
 3. The intersection's order depends on solid order. Sorting it keeps the test from breaking when solids are reordered. Covered by `.sort()` on both sides.
 4. `w.factory` is null when the zone is missing. `world(7)` builds every zone, and the test already uses `!` for `shipyard`/`factory`, so the same pattern applies.
-5. The Blog half must not change behaviour. The diff does not touch the `sharedWithBlog` lines.
+5. The Blog half must not change behaviour. `portfolio` also feeds the Blog loop, so adding the excavator adds `office`, `safety` and `whitewash` to the Portfolio side. The Blog loop iterates over `blog` materials, and `blog` has neither `office` nor `safety`. `whitewash` was already in `portfolio` (from the factory) and in `sharedWithBlog`. The Blog verdict therefore stays the same, and Step 5 runs that test as well.
 
 ---
 
@@ -79,3 +82,16 @@ Expected: FAIL, because `office` is missing from the received array (the excavat
 Run: `npx vitest run src/scenes/world.test.ts`. Expected: PASS. Then run `npm test` and `npm run typecheck`, both green.
 
 - [ ] **Step 6: commit** `fix(#218): igualdad exacta Portfolio ∩ ciudad, con la excavadora`.
+
+## Assumptions
+
+- **A1 (D1):** the excavator counts on the Portfolio side. Rejected alternative: leaving it out and also dropping `office` from the set. The test would then not see the material that #216 introduced and that the issue mentions by name.
+- **A2 (D2):** `glass` is not part of the exact set, because the test measures solid `mat` and the city only has glass in facade faces (`city.ts:47`, `facade.ts:128`). Rejected alternative: counting facade and plate faces. That would change what "materiales de construcción" means in this test, and every facade material (sills, grids, slabs) would enter the set. No visual change either way, so this is not a spec ambiguity.
+- **A3 (D3):** the extra materials `asphalt`, `stone` and `paving` are part of the rule. #277 ("sumar a la lista de la ciudad `asphalt` y `paving` si la estación los usa") and #278 ("si la estación usa `stone` (torre) hay que sumarlo con el motivo") added them on purpose.
+
+## Grilling
+
+- Rounds: 1. The revision corrected wording and added data, but changed no task or seam, so there was no second round.
+- Questions: 13. By source: ISSUE 3 (Q1, Q4, Q7: #218, #277, #278), CODE 9 (Q2, Q3, Q5, Q6, Q8, Q9, Q10, Q12, Q13), NO SOURCE 1 (Q11, technical: the convention of a red `test(#N): evals` commit comes from the pipeline, and this repo's history has it, e.g. `test(#203)` 6b0bd05. The branch is squash-merged, so no red commit reaches `main`).
+- Assumptions: A1–A3.
+- Issues opened: none.
