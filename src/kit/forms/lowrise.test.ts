@@ -27,7 +27,7 @@ describe("kit: lowrise family", () => {
         const p = shopRow(["s"], seed);
         expect(p.slots.length).toBeGreaterThanOrEqual(4);
         expect(p.slots.length).toBeLessThanOrEqual(5);
-        expect(p.slots.map((s) => s.local)).toEqual(p.slots.map((_, i) => i));
+        expect(p.slots.map((s) => s.shop)).toEqual(p.slots.map((_, i) => i));
         for (const s of p.slots) {
           expect(s).toMatchObject({ kind: "neon", side: "s", wall: { x: 0, y: 1, z: 0 } });
           for (const q of s.pts) {
@@ -47,7 +47,7 @@ describe("kit: lowrise family", () => {
       for (const seed of SEEDS) {
         const slots = shopRow(["s", "e"], seed).slots, east = slots.filter((s) => s.side === "e");
         expect(east).toHaveLength(1);
-        expect(east[0]!.local).toBe(Math.max(...slots.map((s) => s.local)));
+        expect(east[0]!.shop).toBe(Math.max(...slots.map((s) => s.shop)));
         for (const q of east[0]!.pts) expect(Math.abs(q.x - (LOT.x + LOT.w))).toBeLessThanOrEqual(TOL);
       }
     });

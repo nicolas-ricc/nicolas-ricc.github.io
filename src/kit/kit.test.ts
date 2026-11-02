@@ -189,7 +189,7 @@ describe("kit: modern family", () => {
       expect(p.landmarkTop).toBeDefined();
       expect(p.slots.length).toBeLessThanOrEqual(1);
       for (const s of p.slots) {
-        expect(s).toMatchObject({ kind: "sign", side: "s", local: 0, wall: { x: 0, y: 1, z: 0 } });
+        expect(s).toMatchObject({ kind: "sign", side: "s", shop: 0, wall: { x: 0, y: 1, z: 0 } });
         expect(s.pts).toHaveLength(4);
         expect(new Set(s.pts.map((q) => q.y)).size).toBe(1);
       }

@@ -41,11 +41,11 @@ function wallOf(r: Rect, side: Side): { a: Vec2; b: Vec2; normal: Vec3 } {
 }
 
 /** Neon slot of width `width` centered on wall `side` of `r`, z `lot.z + 2.4 .. + 3.6`. */
-function neonSlot(r: Rect, side: Side, width: number, z: number, local: number): Slot {
+function neonSlot(r: Rect, side: Side, width: number, z: number, shop: number): Slot {
   const { a, b, normal } = wallOf(r, side), len = Math.hypot(b.x - a.x, b.y - a.y);
   const at = (t: number, zz: number) => v3(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, zz);
   const t0 = (len - width) / 2 / len, t1 = 1 - t0, z0 = z + NEON_Z0, z1 = z0 + NEON_H;
-  return { pts: [at(t0, z0), at(t1, z0), at(t1, z1), at(t0, z1)], wall: normal, side, kind: "neon", local };
+  return { pts: [at(t0, z0), at(t1, z0), at(t1, z1), at(t0, z1)], wall: normal, side, kind: "neon", shop };
 }
 
 /** Awning of `len` centered on wall `side` of `r`, sloping down toward the street. */

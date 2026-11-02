@@ -52,7 +52,7 @@ describe("kit: composite family", () => {
       expect(tb.max.x).toBeLessThanOrEqual(pb.max.x - 1 + EPS);
       expect(tb.max.y).toBeLessThanOrEqual(pb.max.y - 1 + EPS);
       expect(tb.min.z).toBeGreaterThanOrEqual(pb.max.z - EPS);
-      for (const s of p.slots) expect(s).toMatchObject({ kind: "sign", side: "s", local: 0 });
+      for (const s of p.slots) expect(s).toMatchObject({ kind: "sign", side: "s", shop: 0 });
     }
     expect(recipe("podiumTower")({ ...LOT, maxH: 10 }, createRng(1), STYLES.downtown).slots).toEqual([]);
   });

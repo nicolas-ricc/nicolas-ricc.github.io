@@ -100,7 +100,7 @@ export function lights(scene: Pick<CityScene, "solids" | "placed">, rng: Rng): C
   });
   const nhid = occluded(slots.map((s) => target(s.slot.pts, -1)), solids), seen = new Set<string>();
   let free = slots.filter((s, i) => {
-    const key = `${s.owner}:${s.slot.local}`;
+    const key = `${s.owner}:${s.slot.shop}`;
     if (nhid[i] || seen.has(key)) return false;
     seen.add(key);
     return true;

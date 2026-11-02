@@ -42,8 +42,10 @@ const ALLOW: Record<string, RegExp[]> = {
   // `sin` is the trig function in two geometry comments (it is also the Spanish word for "without")
   "src/iso/solids.ts": [/\bsin(?= φ|\(π\))/g],
   // `"se"` is the southeast corner id of the chamfer recipe (it collides with the Spanish word "se"); the guard sees string text without its quotes
-  "src/kit/forms/composite.ts": [/\bse\b/gi],
-  "src/kit/forms/composite.test.ts": [/\bse\b/gi],
+  // (only a line whose string text is nothing but corner ids is stripped, so a Spanish "se" in a comment is still caught)
+  "src/kit/forms/composite.ts": [/^\s*(?:(?:nw|ne|se|sw|n|s|e|w)\s+)*se(?:\s+(?:nw|ne|se|sw|n|s|e|w))*\s*$/g],
+  // the test name says "SE without open" (the corner id)
+  "src/kit/forms/composite.test.ts": [/\bSE without open/g, /^\s*(?:(?:nw|ne|se|sw|n|s|e|w)\s+)*se(?:\s+(?:nw|ne|se|sw|n|s|e|w))*\s*$/g],
   // `MALECON` is imported under an English alias; its definition in src/scenes/city-grid.ts is renamed by the scenes task
   "src/city/fixed.ts": [/\bMALECON as /g],
   "src/city/fixed.test.ts": [/\bMALECON as /g],

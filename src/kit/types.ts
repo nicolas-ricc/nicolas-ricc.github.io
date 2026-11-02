@@ -17,8 +17,8 @@ export interface Lot { x: number; y: number; w: number; d: number; z: number; op
 export interface Style { id: StyleId; mat: Material; trim: Material; roof: Material; tone: number; floorH: number; window: "windowWarm" | "windowCool" }
 /** `wall`: wall normal. `building`: index of the solid in `Piece.solids`. */
 export interface Window { pts: Vec3[]; floor: number; wall: Vec3; building: number }
-/** `local`: index of the shop (ground-floor frontage) within the piece. */
-export interface Slot { pts: Vec3[]; wall: Vec3; side: Side; kind: "neon" | "sign"; local: number }
+/** `shop`: index of the shop (ground-floor frontage) within the piece. */
+export interface Slot { pts: Vec3[]; wall: Vec3; side: Side; kind: "neon" | "sign"; shop: number }
 /** Wall with a facade that faces the camera. */
 export interface Wall { pts: Vec3[]; normal: Vec3; floorH: number; building: number }
 export interface Piece { solids: Solid[]; ground: Solid[]; accents: Accent[]; windows: Window[]; slots: Slot[]; walls: Wall[]; courtyard?: Rect; landmarkTop?: Vec3 }

@@ -89,7 +89,7 @@ for (const [name, make, isWorld] of SEEDS) {
         expect(n.slot.kind).toBe("neon");
         expect(p.piece.slots).toContain(n.slot);
         expect(p.placed.lot.open).toContain(n.slot.side);
-        const key = `${n.owner}:${n.slot.local}`;
+        const key = `${n.owner}:${n.slot.shop}`;
         expect(seen.has(key)).toBe(false);
         seen.add(key);
         for (const q of n.slot.pts) {
@@ -186,7 +186,7 @@ describe("lights (synthetic scenes)", () => {
     for (const b of NEIGHBORHOODS) if (b !== "residential") expect(l.counts[b]).toEqual({ candidates: 0, on: 0, warm: 0 });
   });
 
-  const neonSlot = (x: number, local: number, z0 = 2.7): Slot => ({ pts: quad(x, x + 2, 18, z0, z0 + 1.2), wall: v3(0, 1, 0), side: "s", kind: "neon", local });
+  const neonSlot = (x: number, shop: number, z0 = 2.7): Slot => ({ pts: quad(x, x + 2, 18, z0, z0 + 1.2), wall: v3(0, 1, 0), side: "s", kind: "neon", shop });
 
   it("neons: at most 24 even with 30 open slots, and one per shop", () => {
     const a = emptyPiece();
@@ -195,7 +195,7 @@ describe("lights (synthetic scenes)", () => {
     a.slots.push(neonSlot(1, 0)); // second slot of shop 0: doesn't count
     const l = lights({ solids: a.solids, placed: [placedAt("bars", a, 0)] }, createRng(3));
     expect(l.neons).toHaveLength(MAX_NEONS);
-    expect(new Set(l.neons.map((n) => n.slot.local)).size).toBe(MAX_NEONS);
+    expect(new Set(l.neons.map((n) => n.slot.shop)).size).toBe(MAX_NEONS);
   });
 
   it("neons: slots outside 2.4..3.6 above the lot, those on closed sides, those of another neighborhood and signs are discarded", () => {
@@ -205,13 +205,13 @@ describe("lights (synthetic scenes)", () => {
     downtown.solids.push(prism(100, 0, 0.3, 20, 18, 6));
     downtown.slots.push(neonSlot(104, 0));
     const l = lights({ solids: [...bars.solids, ...downtown.solids], placed: [placedAt("bars", bars, 0), placedAt("downtown", downtown, 1)] }, createRng(3));
-    expect(l.neons.map((n) => n.slot.local)).toEqual([3]);
+    expect(l.neons.map((n) => n.slot.shop)).toEqual([3]);
   });
 
   it("neons: if the front of a corner shop is hidden, the neon goes to its other open side", () => {
     const a = emptyPiece();
     a.solids.push(prism(0, 0, 0.3, 24, 18, 6), prism(0, 20, 0, 24, 2, 12)); // wall to the south that hides the south front
-    a.slots.push(neonSlot(10, 0), { pts: [v3(24, 8, 2.7), v3(24, 10, 2.7), v3(24, 10, 3.9), v3(24, 8, 3.9)], wall: v3(1, 0, 0), side: "e", kind: "neon", local: 0 });
+    a.slots.push(neonSlot(10, 0), { pts: [v3(24, 8, 2.7), v3(24, 10, 2.7), v3(24, 10, 3.9), v3(24, 8, 3.9)], wall: v3(1, 0, 0), side: "e", kind: "neon", shop: 0 });
     const l = lights({ solids: a.solids, placed: [placedAt("bars", a, 0, ["s", "e"])] }, createRng(3));
     expect(l.neons.map((n) => n.slot.side)).toEqual(["e"]);
   });

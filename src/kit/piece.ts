@@ -29,7 +29,7 @@ export function addBuilding(p: Piece, s: Solid, f: Facade): void {
 /** Slot of the neon sign on the south face, at mid height: 1.6 tall, 1 margin on each side, 0.4 in front of the wall. */
 export function southSign(x: number, southY: number, w: number, z0: number): Slot {
   const y = southY + 0.4, z1 = z0 + 1.6;
-  return { pts: [v3(x + 1, y, z0), v3(x + w - 1, y, z0), v3(x + w - 1, y, z1), v3(x + 1, y, z1)], wall: v3(0, 1, 0), side: "s", kind: "sign", local: 0 };
+  return { pts: [v3(x + 1, y, z0), v3(x + w - 1, y, z0), v3(x + w - 1, y, z1), v3(x + 1, y, z1)], wall: v3(0, 1, 0), side: "s", kind: "sign", shop: 0 };
 }
 
 /** Tone shifted by `k` and clamped to the range of `Solid.tone` (−2..+2). */
