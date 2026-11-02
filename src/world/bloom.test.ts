@@ -68,11 +68,13 @@ describe("afterFirstRender", () => {
     runner.emit();
     expect(fn).not.toHaveBeenCalled();
   });
-  it("runs fn once in the task after the first postrender", () => {
+  it("runs fn once in the task after the first postrender", async () => {
     vi.useFakeTimers();
     const runner = fakeRunner(), fn = vi.fn();
     afterFirstRender(runner, fn);
     runner.emit();
+    await Promise.resolve();
+    expect(fn).not.toHaveBeenCalled();
     vi.advanceTimersByTime(0);
     expect(fn).toHaveBeenCalledOnce();
   });
