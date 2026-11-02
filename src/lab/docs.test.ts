@@ -315,7 +315,8 @@ describe("documentación de la estación terminal (#239)", () => {
 
 describe("convención de tests sin Pixi (#103, #168)", () => {
   const at = readme.search(/^## Tests$/m);
-  const sec = at < 0 ? "" : readme.slice(at);
+  // hasta el próximo `## `, para que una sección posterior no cuente
+  const sec = at < 0 ? "" : readme.slice(at).split(/\n(?=## )/)[0];
   const guard = readFileSync(`${ROOT}src/iso/pixi-free.test.ts`, "utf8");
   it("README tiene una sección de tests con la convención", () => {
     expect(readme).toMatch(/^## Tests$/m);

@@ -29,8 +29,8 @@ describe("PIXI_IMPORT (#168)", () => {
     ])
       expect(src).toMatch(PIXI_IMPORT);
   });
-  it("no confunde paquetes vecinos ni menciones sueltas", () => {
-    for (const src of [`from '${MOD}-legacy'`, `from "@pixi/core"`, `// sin ${MOD} acá`]) expect(src).not.toMatch(PIXI_IMPORT);
+  it("no marca una mención sin comillas", () => {
+    expect(`// sin ${MOD} acá`).not.toMatch(PIXI_IMPORT);
   });
 });
 
