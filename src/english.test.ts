@@ -35,6 +35,8 @@ const ALLOW: Record<string, RegExp[]> = {
   "src/style.css": [/\.(externo|proyectos|articulos)\b/g],
   // exhibit ids are the storybook URL hash, cited by the old specs (decision 2b)
   "src/lab/exhibits.ts": [/\bid: "[a-z0-9-]+"/g],
+  // `sin` is the trig function in two geometry comments (it is also the Spanish word for "without")
+  "src/iso/solids.ts": [/\bsin\b/g],
   "src/scenes/world-baseline.test.ts": [/"?[a-z-]+"?: "[0-9a-f]{8}\/[0-9a-f]{8}"/g],
 };
 
