@@ -21,10 +21,10 @@
 
 ## Review Focus
 
-1. Relación agua/destello invertida: el test "agua y destello fallan si se invierte la relación" tiene que seguir fallando por una aserción, con `toThrow(/expected/)`. La primera aserción que cae es justo la del piso azul. No se toca, y el paso 4 lo corre.
-2. Otro oscurecimiento (factor 0,6): el test "agua y destello aguantan otro oscurecimiento" tiene que seguir en verde. Si alguien escalara `CRESTA_AZUL` por `factor`, el piso bajaría a 0,24 y dejaría pasar casi cualquier color. El paso 3 pide no escalarlo.
-3. Cobertura de `hullBlue`: la aserción se mueve y no se pierde. El `grep` del paso 4 lo comprueba.
-4. Literal suelto: `0.4` no aparece más dentro de `aguaYDestello`. El `grep` del paso 4 lo comprueba.
+1. Relación agua/destello invertida: el test "agua y destello fallan si se invierte la relación" tiene que seguir fallando por una aserción, con `toThrow(/expected/)`. La primera aserción que cae es justo la del piso azul: lo dice la decisión 4 de `docs/plans/2026-10-18-21-umbrales-agua-darken.md`. El test no se toca, y el paso 5 lo corre.
+2. Otro oscurecimiento (factor 0,6): el test "agua y destello aguantan otro oscurecimiento" tiene que seguir en verde. Si alguien escalara `CRESTA_AZUL` por `factor`, el piso bajaría a 0,24 con ese factor (0,28 con `DARKEN`) y dejaría pasar casi cualquier color. El paso 3 pide no escalarlo. Ningún test lo detectaría, así que lo cubre un chequeo del eval.
+3. Cobertura de `hullBlue`: la aserción se mueve y no se pierde. El eval del paso 5 lo comprueba.
+4. Literal suelto: `0.4` aparece una sola vez en el archivo, en la declaración de `CRESTA_AZUL`. El eval del paso 5 lo comprueba.
 5. Typecheck: el cambio no agrega `any` ni `as` nuevos.
 
 ---
@@ -38,7 +38,15 @@
 - Consumes: `aguaYDestello(tones: AguaPaleta, factor: number): void` y las constantes `CRESTA_SUTIL`, `DESTELLO_CALIDO` y `DESTELLO_CLARO`, ya presentes en el archivo.
 - Produces: la constante del archivo `CRESTA_AZUL = 0.4`, que no se exporta.
 
-- [ ] **Step 1: eval rojo.** Correr `.scratch/evals-122.sh` (stage 3). Hoy falla en los chequeos estructurales: `rgb` sin máscara, `0.4` literal, `hullBlue` dentro del test de agua.
+- [ ] **Step 1: eval rojo.** Correr `.scratch/evals-122.sh`. El script lo crea el stage 3 del pipeline y no se commitea: `.scratch/` va a `.git/info/exclude`. Hace seis chequeos sobre `src/map/palette-iso.test.ts`:
+  - (a) no queda ningún `c >> 16]` ni `[c >> 16,` sin máscara;
+  - (b) existe `const CRESTA_AZUL = 0.4;`;
+  - (c) `0.4` aparece exactamente una vez en el archivo;
+  - (d) no existe `CRESTA_AZUL * factor`;
+  - (e) `hullBlue` aparece una sola vez, dentro de la lista del test "materiales exclusivos de ciudad y costa";
+  - (f) `npx vitest run src/map/palette-iso.test.ts` pasa.
+
+  Hoy fallan (a), (b), (c) y (e).
 
 - [ ] **Step 2: enmascarar el rojo.** En `aguaYDestello`, `rgb` pasa a ser `(c: number) => [(c >> 16) & 255, (c >> 8) & 255, c & 255] as const`, la misma forma que tiene el `rgb` del test de la fábrica.
 
@@ -50,7 +58,7 @@
 
   En la aserción, poner `toBeGreaterThan(CRESTA_AZUL)` en lugar del `0.4` y conservar el comentario de línea. No multiplicar por `factor`.
 
-- [ ] **Step 4: mover `hullBlue`.** Sacar la línea `expect(Object.keys(ISO_TONES.hullBlue)…)` del test "agua: cuatro profundidades…" y agregar `"hullBlue"` al final de la lista del test "materiales exclusivos de ciudad y costa". El test de agua queda con una sola línea, `aguaYDestello(ISO_TONES, DARKEN);`.
+- [ ] **Step 4: mover `hullBlue`.** La aserción del bucle, `expect(Object.keys(ISO_TONES[m]).sort()).toEqual(["down", "lit", "shade", "top", "up"])`, es idéntica a la de la línea 89, así que la cobertura no cambia. El test es un solo `it` con un `for`, no un `it.each`, así que el número de tests tampoco cambia. Sacar la línea `expect(Object.keys(ISO_TONES.hullBlue)…)` del test "agua: cuatro profundidades…" y agregar `"hullBlue"` al final de la lista del test "materiales exclusivos de ciudad y costa". El test de agua queda con una sola línea, `aguaYDestello(ISO_TONES, DARKEN);`.
 
 - [ ] **Step 5: verificar.**
   - Correr `.scratch/evals-122.sh`. Se espera que todos los chequeos den OK y que el script salga con 0.
@@ -70,3 +78,19 @@ git commit -m "test(#122): rojo enmascarado, CRESTA_AZUL con origen y hullBlue e
 2. **`rgb` se queda local.** Se descartó subir un `rgb` compartido al nivel del módulo para que lo usen `aguaYDestello` y el test de la fábrica. Habría tocado un test que el issue no menciona, y el issue pide consistencia, no deduplicar.
 3. **`hullBlue` se suma a la lista.** Se descartó agregar un `expect` suelto después del bucle: la lista ya es "materiales de forma estándar", y `hullBlue` es el casco de los barcos del puerto (costa).
 4. **El 0,4 no se recalibra.** El issue lo pide documentado, no cambiado. El commit que lo introdujo (0dec5f1) no deja escrito de dónde sale. El comentario dice lo que se puede medir (gris 1/3, `glint` ≈0,19, `shallow` ≈0,415) y no inventa una derivación.
+5. **Medidas del comentario.** Se tomaron en el stage 0 con un test descartable que leía `ISO_TONES`. `blueShare` de `up` y `top`: `shallow` 0,415/0,435; `water` 0,433/0,455; `waterDeep` 0,471/0,496; `abyss` 0,505/0,542; `glint.top` 0,189.
+6. **El nombre `CRESTA_AZUL`.** En el archivo, "cresta" es el tono `up` del agua. Lo muestran el comentario de la línea 22 ("la cresta no es un destello") y `CRESTA_SUTIL`, que acota `lum(up) − lum(top)`. El piso acota el azul de esa cresta.
+7. **El rojo enmascarado no cambia resultados.** Todos los colores de la paleta son literales de 24 bits (`0x……`, por ejemplo `src/map/palette-base.ts:11-34`), y `darken` produce valores por canal. Por eso `c >> 16` ya era `≤ 255` y la máscara no cambia ningún resultado.
+
+## Grilling
+
+- Rounds: 1. The second round was skipped because the changes were small: no step was added or removed, and the seam stayed the same.
+- Questions: 16. By source:
+  - CODE: 9 (2, 4, 5, 6, 7, 10, 11, 14, 16);
+  - DOC: 2 (3, preceding plan; 12);
+  - technical assumption: 5 (1, 8, 9, 13, 15, all settled in the eval).
+- Changes to the plan:
+  - The eval now spells out its six checks, including one that rejects `CRESTA_AZUL * factor`.
+  - The step references in Review Focus are fixed.
+  - Assumptions 5–7 are added.
+- Issues opened: none.
