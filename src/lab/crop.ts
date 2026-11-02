@@ -108,7 +108,8 @@ export function solidsBox(solids: readonly Solid[]): { box: Box; h: number } {
  * de 1 u de espesor que la cubre con margen, ella y la sombra que proyecta
  * (con el proyector del motor: el pad queda descentrado hacia donde cae la sombra).
  * La cara de arriba del pad va al piso de la pieza (−1 para los barcos, que
- * flotan en `WATER_Z`). With no solids the pad's top face is at 0. Sin terreno ni subescenas: el stage no las lee.
+ * flotan en `WATER_Z`). Sin terreno ni subescenas: el stage no las lee.
+ * With no solid geometry the pad's top face is at 0.
  */
 export function pieceScene(build: (out: Solid[], accents: Accent[]) => void, pad: Material = "paving"): WorldScene {
   const solids: Solid[] = [], accents: Accent[] = [];
