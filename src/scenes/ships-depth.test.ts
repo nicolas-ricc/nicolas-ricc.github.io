@@ -75,7 +75,8 @@ describe("order of each ship's pieces against its hull", () => {
     const hull = solids.find((s) => s.kind === "hull")!;
     const fenders = solids.filter((s): s is Solid & { kind: "cylinder" } => s.kind === "cylinder" && s.mat === "asphalt");
     const aft = fenders.reduce((a, b) => (b.at.x < a.at.x ? b : a));
-    expect([aft.at.x - AT.x, aft.at.y - AT.y]).toEqual([5, 2.05]);
+    expect(aft.at.x - AT.x).toBeCloseTo(5);
+    expect(aft.at.y - AT.y).toBeCloseTo(2.05);
     const order = sortByDepth(solids, 0);
     expect(order.indexOf(aft)).toBeGreaterThan(order.indexOf(hull));
   });
