@@ -8,7 +8,7 @@ describe("railAnimator", () => {
   it("ids and unknown layer", () => {
     const a = railAnimator({ reducedMotion: false });
     expect([...a.ids]).toEqual(IDS);
-    expect(() => a.layer("rail.unknown")).toThrow(new Error("Capa desconocida en railAnimator: rail.unknown"));
+    expect(() => a.layer("rail.unknown")).toThrow(new Error("Unknown layer in railAnimator: rail.unknown"));
   });
   it("rail.train is solid; the three light layers declare zone portfolio; train and lights with the same alpha", () => {
     const a = railAnimator({ reducedMotion: false });

@@ -6,21 +6,21 @@ import type { Rng } from "../map/seed";
 import { FAIR, bayShoreX, bayWater, fairAt } from "./sprawl-grid";
 
 /**
- * La feria de la playa, al norte de la fábrica sobre la bahía (estética
- * Coney Island): paseo de madera con faroles, muelle con pabellón, vuelta al
- * mundo, montaña rusa de madera, carrusel, torre de caída, salón de arcades,
- * puestos, autitos chocadores, sombrillas, portada. Es el único lugar con
- * acentos de los tres colores. Las piezas que se mueven (rueda, tren, góndola
- * de la torre) las arma el animador con los builders puros de acá.
+ * The beach fair, north of the factory over the bay (Coney Island
+ * look): boardwalk with street lamps, pier with pavilion, Ferris
+ * wheel, wooden roller coaster, carousel, drop tower, arcade hall,
+ * booths, bumper cars, umbrellas, gate. It is the only place with
+ * accents of all three colors. The moving pieces (wheel, train, tower
+ * gondola) are assembled by the animator with the pure builders here.
  * Spec: docs/superpowers/specs/2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md §4.3.
  */
 export interface FairScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; wheelAxis: Vec3; drop: { at: Vec3; h: number }; neon: { marquee: Vec3[]; lift: Vec3[]; column: Vec3[] }; arcadeSigns: [Accent, Accent] }
 
-/** En la playa del sureste, entre el carrusel y el paseo de madera: 20 u de radio para que se lea desde el cover. Posición elegida para que nada estático quede delante de ella en pantalla (la regla del test). */
+/** On the southeast beach, between the carousel and the boardwalk: 20 u radius so it reads from the cover. Position chosen so nothing static ends up in front of it on screen (the test's rule). */
 export const WHEEL = { x: 216, y: -204, r: 20, hub: 23, sides: 20 } as const;
 export const COASTER = { x0: 94, x1: 156, y0: -226, y1: -196 } as const;
 export const COASTER_PROFILE: readonly number[] = [4, 6, 8, 10, 12, 14, 13, 9, 5, 4, 6, 9, 12, 10, 6, 4, 5, 8, 11, 8, 5, 4, 4, 4];
-/** Tramos del circuito que son la subida (lenta) del tren: los usan las luces de la subida y el animador. */
+/** Circuit segments that are the train's (slow) climb: used by the lift lights and the animator. */
 export const LIFT_SEGMENTS = 6;
 export const DROP = { x: 150, y: -264, h: 24 } as const;
 export const PIER = { y: -246, d: 10, len: 46 } as const;
@@ -28,7 +28,7 @@ export const BOARDWALK_W = 8;
 export const CAROUSEL = { x: 178, y: -212 } as const;
 export const ARCADE = { x: 96, y: -192 } as const;
 export const BUMPER = { x: 130, y: -194 } as const;
-/** Cartel ámbar del portal (cara sur): la marquesina de neón se alinea con él. */
+/** Amber sign of the gate (south face): the neon marquee lines up with it. */
 const GATE_SIGN = { x0: 86.5, x1: 93.5, y: -177.98, z0: 6.1, z1: 7 } as const;
 export const FAIR_MATS: readonly Material[] = ["deck", "whitewash", "rust", "steel", "copper", "stone", "concrete", "plaza", "paving", "sand", "rail", "glass", "hull", "leaf", "leafDark"];
 const BOOTH_MATS: readonly Material[] = ["whitewash", "rust", "copper"];
@@ -38,9 +38,9 @@ const prism = (x: number, y: number, z: number, w: number, d: number, h: number,
 const cyl = (x: number, y: number, z: number, r: number, h: number, mat: Material, sides = 8): Solid => ({ kind: "cylinder", at: v3(x, y, z), r, h, mat, sides });
 const cone = (x: number, y: number, z: number, r: number, h: number, mat: Material, sides = 8): Solid => ({ kind: "cone", at: v3(x, y, z), r, h, mat, sides });
 const dot = (x: number, y: number, z: number, r: number, color: AccentColor): Accent => ({ kind: "dot", at: v3(x, y, z), r, color });
-/** Cartel: poly de luz en un plano vertical paralelo al eje x (cara sur), de `x0..x1` y `z0..z1`. */
+/** Sign: light poly on a vertical plane parallel to the x axis (south face), from `x0..x1` and `z0..z1`. */
 const sign = (x0: number, x1: number, y: number, z0: number, z1: number, color: AccentColor): Accent => ({ kind: "poly", pts: [v3(x0, y, z0), v3(x1, y, z0), v3(x1, y, z1), v3(x0, y, z1)], color });
-/** Caja rotada `heading` con centro en (cx, cy): para vías, vigas y autos del tren. */
+/** Box rotated by `heading` centered at (cx, cy): for tracks, beams and train cars. */
 const rotBox = (cx: number, cy: number, len: number, wid: number, heading: number, z: number, h: number, mat: Material): Solid => {
   const c = Math.cos(heading), s = Math.sin(heading), hl = len / 2, hw = wid / 2;
   const p = (dx: number, dy: number): Vec2 => ({ x: cx + dx * c - dy * s, y: cy + dx * s + dy * c });
@@ -48,13 +48,13 @@ const rotBox = (cx: number, cy: number, len: number, wid: number, heading: numbe
 };
 const onFair = (x: number, y: number, w: number, d: number): boolean => [[x, y], [x + w, y], [x + w, y + d], [x, y + d]].every(([px, py]) => fairAt(px!, py!));
 
-// ---------------------------------------------------------------- builders para el animador
+// ---------------------------------------------------------------- builders for the animator
 
 export function wheelSolid(angle: number): Solid {
   return { kind: "wheel", at: v3(WHEEL.x, WHEEL.y, WHEEL.hub), r: WHEEL.r, width: 1.2, mat: "steel", sides: WHEEL.sides, angle, gondolas: { mat: "rust", w: 1.6, d: 1.2, h: 1.4 } };
 }
 
-/** Circuito rectangular de 24 puntos (sentido horario desde la esquina SO, por el lado sur hacia el este) con la z de `COASTER_PROFILE`. */
+/** Rectangular circuit of 24 points (clockwise from the SW corner, along the south side toward the east) with the z of `COASTER_PROFILE`. */
 export function coasterPath(): Vec3[] {
   const { x0, x1, y0, y1 } = COASTER, w = x1 - x0, d = y1 - y0, per = 2 * (w + d);
   return COASTER_PROFILE.map((z, k) => {
@@ -66,41 +66,41 @@ export function coasterPath(): Vec3[] {
   });
 }
 
-// El circuito es constante (no depende del rng): se calcula una sola vez al cargar el módulo, no en
-// cada llamada. `coasterAt`/`trainSolids` los llama el animador a cada cuadro (Task 18). El primer
-// punto va otra vez al final: `polyline` es abierta y el circuito cierra.
+// The circuit is constant (it does not depend on the rng): computed once when the module loads, not on
+// every call. The animator calls `coasterAt`/`trainSolids` every frame (Task 18). The first
+// point goes again at the end: `polyline` is open and the circuit closes.
 const COASTER_PATH = coasterPath();
 const COASTER_LINE = polyline([...COASTER_PATH, COASTER_PATH[0]!]);
 const COASTER_LENGTH = COASTER_LINE.length;
 export const coasterLength = (): number => COASTER_LENGTH;
 
-/** Punto y rumbo del circuito a `dist` del inicio (z interpolada); el tren da vueltas, así que la distancia se envuelve. */
+/** Point and heading of the circuit at `dist` from the start (interpolated z); the train loops, so the distance wraps. */
 export function coasterAt(dist: number): PolyPoint {
   return COASTER_LINE.at(((dist % COASTER_LENGTH) + COASTER_LENGTH) % COASTER_LENGTH);
 }
 
-/** Tres autos del tren a `dist`, `dist − 2.6`, `dist − 5.2` sobre la vía: caja `rust` y asiento `steel`. */
+/** Three train cars at `dist`, `dist − 2.6`, `dist − 5.2` on the track: `rust` body and `steel` seat. */
 export function trainSolids(dist: number): Solid[] {
   const out: Solid[] = [];
   for (let i = 0; i < 3; i++) { const p = coasterAt(dist - i * 2.6); out.push(rotBox(p.x, p.y, 2.2, 1.4, p.heading, p.z + 0.25, 1, "rust"), rotBox(p.x, p.y, 1.6, 1, p.heading, p.z + 1.25, 0.4, "steel")); }
   return out;
 }
 
-/** Góndola de la torre de caída a la altura `z`: anillo `rust` con ocho asientos. */
+/** Gondola of the drop tower at height `z`: `rust` ring with eight seats. */
 export function dropSolids(z: number): Solid[] {
   const out: Solid[] = [cyl(DROP.x, DROP.y, z, 2.4, 1.4, "rust")];
   for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; out.push(prism(DROP.x + 2.6 * Math.cos(a) - 0.3, DROP.y + 2.6 * Math.sin(a) - 0.3, z + 1.4, 0.6, 0.6, 0.8, "steel")); }
   return out;
 }
 
-// ---------------------------------------------------------------- escena estática
+// ---------------------------------------------------------------- static scene
 
 function boardwalk(out: Solid[], accents: Accent[]): void {
   for (let y = -300; y < -172; y += 18) {
-    const x = Math.min(bayShoreX(y), bayShoreX(y + 9), bayShoreX(y + 18)) - 16; // la orilla se corre hasta 25 u en 18 de largo: el tramo entero queda en arena
+    const x = Math.min(bayShoreX(y), bayShoreX(y + 9), bayShoreX(y + 18)) - 16; // the shore shifts up to 25 u over 18 of length: the whole stretch stays on sand
     if (!onFair(x, y, BOARDWALK_W, 18)) continue;
     out.push(prism(x, y, 0, BOARDWALK_W, 18, 0.6, "deck"));
-    for (let py = y + 3; py < y + 18; py += 6) out.push(prism(x + BOARDWALK_W - 0.4, py, 0.6, 0.3, 0.3, 1, "steel")); // baranda del lado del agua
+    for (let py = y + 3; py < y + 18; py += 6) out.push(prism(x + BOARDWALK_W - 0.4, py, 0.6, 0.3, 0.3, 1, "steel")); // railing on the water side
     out.push(prism(x + 0.6, y + 9, 0.6, 0.4, 0.4, 4, "steel")); accents.push(dot(x + 0.8, y + 9.2, 4.6, 0.7, "amber"));
     out.push(prism(x + 2, y + 4, 0.6, 2, 0.6, 0.5, "deck"));
   }
@@ -109,7 +109,7 @@ function boardwalk(out: Solid[], accents: Accent[]): void {
 function pier(out: Solid[], accents: Accent[]): void {
   const x0 = bayShoreX(PIER.y + PIER.d / 2) - 16 + BOARDWALK_W - 2, y = PIER.y;
   out.push(prism(x0, y, WATER_Z, PIER.len, PIER.d, 1.8, "deck"));
-  for (let px = x0 + 4; px < x0 + PIER.len; px += 8) out.push(cyl(px, y + PIER.d + 0.4, WATER_Z, 0.4, 1.4, "rust", 6)); // pilotes del lado visible (sur)
+  for (let px = x0 + 4; px < x0 + PIER.len; px += 8) out.push(cyl(px, y + PIER.d + 0.4, WATER_Z, 0.4, 1.4, "rust", 6)); // piles on the visible (south) side
   for (let px = x0 + 2; px < x0 + PIER.len - 8; px += 4) for (const py of [y + 0.5, y + PIER.d - 0.5]) { out.push(prism(px - 0.15, py - 0.15, 0.8, 0.3, 0.3, 3, "steel")); accents.push(dot(px, py, 3.8, 0.35, "amber")); }
   const cx = x0 + PIER.len - 5, cy = y + PIER.d / 2;
   out.push(cyl(cx, cy, 0.8, 5, 4, "whitewash", 8), cone(cx, cy, 4.8, 5.6, 2.5, "copper", 8));
@@ -118,10 +118,10 @@ function pier(out: Solid[], accents: Accent[]): void {
 
 function wheelSupport(out: Solid[], accents: Accent[]): void {
   const s = Math.SQRT1_2, { x, y } = WHEEL;
-  for (const su of [-1, 1]) out.push(prism(x + su * 2.5 * s - 1.5 * s - 0.4, y - su * 2.5 * s - 1.5 * s - 0.4, 0, 0.8, 0.8, WHEEL.hub, "steel")); // dos columnas detrás del plano (lado −(1,1))
-  out.push(rotBox(x - 1.2 * s, y - 1.2 * s, 6, 0.8, -Math.PI / 4, WHEEL.hub - 0.4, 0.8, "steel")); // viga del eje, detrás
+  for (const su of [-1, 1]) out.push(prism(x + su * 2.5 * s - 1.5 * s - 0.4, y - su * 2.5 * s - 1.5 * s - 0.4, 0, 0.8, 0.8, WHEEL.hub, "steel")); // two columns behind the plane (−(1,1) side)
+  out.push(rotBox(x - 1.2 * s, y - 1.2 * s, 6, 0.8, -Math.PI / 4, WHEEL.hub - 0.4, 0.8, "steel")); // axle beam, behind
   out.push(prism(x - 6, y - 4, 0, 12, 8, 0.6, "concrete"));
-  out.push(prism(x - 12, y - 8, 0, 3, 3, 2.5, "whitewash", { roof: "gable" })); accents.push(sign(x - 11.7, x - 9.3, y - 4.98, 0.8, 1.8, "amber")); // boletería, detrás del plano de la rueda
+  out.push(prism(x - 12, y - 8, 0, 3, 3, 2.5, "whitewash", { roof: "gable" })); accents.push(sign(x - 11.7, x - 9.3, y - 4.98, 0.8, 1.8, "amber")); // ticket booth, behind the wheel's plane
   accents.push(dot(x, y, WHEEL.hub, 0.9, "amber"));
 }
 
@@ -131,11 +131,11 @@ function coaster(out: Solid[]): void {
     const a = path[k]!, b = path[(k + 1) % n]!, len = Math.hypot(b.x - a.x, b.y - a.y), heading = Math.atan2(b.y - a.y, b.x - a.x), zm = (a.z + b.z) / 2;
     const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2, px = -Math.sin(heading), py = Math.cos(heading);
     for (const side of [-1, 1]) out.push(rotBox(cx + px * side, cy + py * side, len, 0.3, heading, zm, 0.25, "rail"));
-    out.push(prism(a.x - 0.25, a.y - 0.25, 0, 0.5, 0.5, a.z, "rust")); // columna
-    out.push(rotBox(a.x, a.y, 2.4, 0.4, heading + Math.PI / 2, a.z - 0.3, 0.3, "deck")); // travesaño
-    out.push(rotBox(cx, cy, len, 0.3, heading, Math.min(a.z, b.z) / 2, 0.3, "rust")); // celosía
+    out.push(prism(a.x - 0.25, a.y - 0.25, 0, 0.5, 0.5, a.z, "rust")); // column
+    out.push(rotBox(a.x, a.y, 2.4, 0.4, heading + Math.PI / 2, a.z - 0.3, 0.3, "deck")); // crossbar
+    out.push(rotBox(cx, cy, len, 0.3, heading, Math.min(a.z, b.z) / 2, 0.3, "rust")); // lattice
   }
-  const s = path[0]!; // estación sobre el primer segmento
+  const s = path[0]!; // station over the first segment
   for (const [dx, dy] of [[0, -3], [8, -3], [0, 1], [8, 1]] as const) out.push(prism(s.x + dx, s.y + dy, 0, 0.4, 0.4, 7, "steel"));
   out.push(prism(s.x, s.y - 3, 7, 8, 4, 0.3, "whitewash"));
 }
@@ -166,7 +166,7 @@ function arcade(out: Solid[]): [Accent, Accent] {
   out.push(prism(x, y, 0, 24, 12, 6, "whitewash", { facade: { floors: 1, cols: 5, base: "glass" } }));
   out.push(prism(x - 1, y + 12, 4, 26, 2, 0.4, "copper"), prism(x, y + 12, 3.6, 24, 1.5, 0.2, "rust"));
   out.push(prism(x + 7, y + 11, 6, 10, 0.4, 2.4, "steel"));
-  return [sign(x + 7.3, x + 16.7, y + 11.42, 6.3, 8.1, "magenta"), sign(x + 7.3, x + 16.7, y + 11.42, 6.3, 8.1, "amber")]; // los dibuja solo la capa animada `fair.signs`
+  return [sign(x + 7.3, x + 16.7, y + 11.42, 6.3, 8.1, "magenta"), sign(x + 7.3, x + 16.7, y + 11.42, 6.3, 8.1, "amber")]; // only the animated layer `fair.signs` draws them
 }
 
 function booths(out: Solid[], accents: Accent[]): void {
@@ -188,18 +188,18 @@ function bumperCars(out: Solid[], accents: Accent[]): void {
   for (let i = 0; i < 6; i++) accents.push(dot(x + 2 + (i % 3) * 5, y + 2.5 + Math.floor(i / 3) * 5, 3.6, 0.4, "cyan"));
 }
 
-/** Plantas (cajas en x e y) que se solapan con interior no vacío. */
+/** Footprints (boxes in x and y) that overlap with a non-empty interior. */
 const touch = (a: Bounds, b: Bounds): boolean => a.min.x < b.max.x && b.min.x < a.max.x && a.min.y < b.max.y && b.min.y < a.max.y;
-/** Caja entera sobre la arena de la feria: sus bordes este y oeste, cada 0,5 u en y. `fairAt` ya excluye la bahía, y la orilla no es monótona (en y −276..−268 baja a 211 y vuelve a subir), así que no alcanza con las esquinas. */
+/** Whole box on the fair's sand: its east and west edges, every 0.5 u in y. `fairAt` already excludes the bay, and the shore is not monotonic (at y −276..−268 it drops to 211 and rises again), so the corners are not enough. */
 const onSand = (b: Bounds): boolean => {
   for (let y = b.min.y; ; y = Math.min(y + 0.5, b.max.y)) { if (!fairAt(b.min.x, y) || !fairAt(b.max.x, y)) return false; if (y === b.max.y) return true; }
 };
 
 /**
- * Bote varado cerca de `y0`: recorre la orilla (dy 0, +1, −1 … ±14) y, en cada y, de 9 a 6 u del agua, hasta que el
- * casco queda entero sobre la arena de la feria (`onSand`) y su planta no toca la de nada de `taken`. A 9 u del agua cae dentro
- * del paseo de madera (de 16 a 8 u de la orilla) salvo donde la orilla se corre, por eso se acerca al agua antes de
- * alejarse en y. `null` si no hay lugar.
+ * Stranded boat near `y0`: walks the shore (dy 0, +1, −1 … ±14) and, at each y, from 9 to 6 u from the water, until the
+ * hull sits entirely on the fair's sand (`onSand`) and its footprint touches nothing in `taken`. At 9 u from the water it falls inside
+ * the boardwalk (16 to 8 u from the shore) except where the shore shifts, so it moves closer to the water before
+ * moving away in y. `null` if there is no room.
  */
 function boatAt(y0: number, heading: number, taken: readonly Bounds[]): Solid | null {
   for (let i = 0; i <= 28; i++) {
@@ -243,7 +243,7 @@ export function fair(rng: Rng): FairScene {
   const arcadeSigns = arcade(solids);
   booths(solids, accents);
   bumperCars(solids, accents);
-  beach(solids, rng); // después de los sólidos estáticos: los botes buscan lugar libre entre ellos
+  beach(solids, rng); // after the static solids: the boats look for free space among them
   gate(solids, accents);
   const drop = { at: v3(DROP.x, DROP.y, 1), h: DROP.h };
   return { ground: [], solids, accents, wheelAxis: v3(WHEEL.x, WHEEL.y, WHEEL.hub), drop, neon: neon(drop), arcadeSigns };

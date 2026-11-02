@@ -29,14 +29,14 @@ const animators: [string, () => Animator][] = [
   ["waterAnimator", () => waterAnimator(w.terrain, opts)],
 ];
 
-describe("capa desconocida en los adaptadores", () => {
-  it.each(animators)("%s nombra el animador y el id", (name, mk) => {
+describe("unknown layer in the adapters", () => {
+  it.each(animators)("%s names the animator and the id", (name, mk) => {
     const a = mk();
-    expect(() => a.layer("nada.capa")).toThrow(new Error(`Capa desconocida en ${name}: nada.capa`));
-    expect(() => a.layer("toString")).toThrow(`Capa desconocida en ${name}: toString`);
+    expect(() => a.layer("none.layer")).toThrow(new Error(`Unknown layer in ${name}: none.layer`));
+    expect(() => a.layer("toString")).toThrow(`Unknown layer in ${name}: toString`);
   });
 
-  it.each(animators)("%s sigue resolviendo todos sus ids", (_, mk) => {
+  it.each(animators)("%s still resolves all its ids", (_, mk) => {
     const a = mk();
     expect(a.ids.length).toBeGreaterThan(0);
     for (const id of a.ids) expect(["solid", "accent", "water"]).toContain(a.layer(id).kind);

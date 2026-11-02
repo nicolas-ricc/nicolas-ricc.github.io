@@ -60,6 +60,18 @@ const ALLOW: Record<string, RegExp[]> = {
   "src/scenes/rail-animator.ts": [/\btren\.lights\b/g],
   // `SE` is the southeast quadrant id of the plaza test (it collides with the Spanish word "se")
   "src/scenes/neighborhood-plaza.test.ts": [/\bSE\b/g],
+  // proper noun: the Paraná delta, where the Tigre launch runs (decision 2c)
+  "src/scenes/ships.ts": [/Paraná/g],
+  // heading of the old terrain spec, which stays in Spanish
+  "src/scenes/terrain.ts": [/Desvíos de la implementación/g],
+  // the old ships reference spec stays in Spanish (decision 3): the patterns that match its headings, labels and
+  // text, the Spanish photo angles and its asset file names are literals of that spec
+  "src/scenes/ships-reference.test.ts": [
+    /Astillero\/clase|Eslora|Manga|Altura sobre el agua|Rasgos de silueta|Piezas sugeridas|por importancia|Altura máx/g,
+    /Ángulo|Cierre y medición|mayoría|Desvíos|Puerto de salida|Desvío posterior|sin fondeadero/g,
+    /inventario-después|Inventario después|API de|Desde #87 no hay fondeadero ni barcos fondeados|Un barco fondeado/g,
+    /\b(cargo|tug|barge|faro)-(antes|despues)\b|cover-ida-vuelta/g,
+  ],
   "src/scenes/world-baseline.test.ts": [/"?[a-z-]+"?: "[0-9a-f]{8}\/[0-9a-f]{8}"/g],
 };
 

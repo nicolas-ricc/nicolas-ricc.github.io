@@ -2,7 +2,7 @@ import { layerLookup, type AnimLayer, type Animator } from "./animator";
 import type { TerrainMesh } from "./terrain";
 import { BANDS, createWaterAnim } from "./water-anim";
 
-/** Adapta el agua al contrato `Animator`. Reclama todos los cuerpos de agua y la espuma: el runtime no los pinta estáticos. */
+/** Adapts the water to the `Animator` contract. Claims every water body and the foam: the runtime does not paint them static. */
 export function waterAnimator(terrain: TerrainMesh, opts: { reducedMotion: boolean }): Animator {
   const anim = createWaterAnim(terrain, opts);
   const layers: Record<string, () => AnimLayer> = {};

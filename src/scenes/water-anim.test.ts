@@ -10,8 +10,8 @@ const tri = (x: number, y: number, base = 0): Tri => ({ pts: [v3(x, y, -1), v3(x
 const tris = (s: { kind: string; tris?: Tri[] }) => (s.kind === "ground" ? s.tris! : []);
 
 describe("water-anim", () => {
-  it("la ola es periódica, acotada, y el mar de fondo viaja hacia el noroeste", () => {
-    const T = SWELL.T * CHOP.T / 500; // múltiplo común de los dos períodos (9000 y 5500): 99 000
+  it("the wave is periodic, bounded, and the background sea travels northwest", () => {
+    const T = SWELL.T * CHOP.T / 500; // common multiple of the two periods (9000 and 5500): 99 000
     for (let k = 0; k < 200; k++) {
       const t = tri(k * 3, (k * 7) % 100, (k % 3) - 1);
       expect(waveField(t, "water", 1234)).toBeCloseTo(waveField(t, "water", 1234 + T), 6);
@@ -22,7 +22,7 @@ describe("water-anim", () => {
         expect(v).toBeLessThanOrEqual(1);
       }
     }
-    // la cresta que está en s a t está en s − λ/4 a t + T/4, con s la coordenada a lo largo de k (viaja contra k: hacia el NO)
+    // the crest at s at time t is at s − λ/4 at t + T/4, with s the coordinate along k (travels against k: toward the NW)
     const dir = { x: SWELL.k.x, y: SWELL.k.y }, q = SWELL.lambda / 4;
     let towardNW = 0, towardSE = 0;
     for (let x = 0; x < 400; x += 6) {
@@ -32,7 +32,7 @@ describe("water-anim", () => {
     }
     expect(towardNW).toBeLessThan(towardSE);
   });
-  it("en promedio la ola respeta el baseTone (orilla más clara que el borde profundo) y la fosa es más mansa que el mar", () => {
+  it("on average the wave respects the baseTone (shore lighter than the deep edge) and the trench is calmer than the sea", () => {
     let sea = 0, abyss = 0, n = 0;
     const mean = (t: Tri): number => { let sum = 0, m = 0; for (let c = 0; c < SWELL.T; c += 50) { sum += waveTone(t, "water", c); m++; } return sum / m; };
     for (let k = 0; k < 300; k++) {
@@ -42,10 +42,10 @@ describe("water-anim", () => {
     }
     expect(abyss / n).toBeLessThan(sea / n);
   });
-  it("las crestas no son rectas: a lo largo de una horizontal de pantalla el tono cambia a menudo", () => {
-    // Con una sola ola plana hacia el NO, la cresta era horizontal en pantalla (x − y constante) y
-    // decenas de triángulos seguidos compartían tono. Ahora, en 60 celdas seguidas de la misma
-    // horizontal, hay tramos iguales pero ninguno largo.
+  it("the crests are not straight: along a screen horizontal the tone changes often", () => {
+    // With a single flat wave toward the NW, the crest was horizontal on screen (x − y constant) and
+    // dozens of consecutive triangles shared a tone. Now, in 60 consecutive cells of the same
+    // horizontal, there are equal runs but none long.
     let longest = 0;
     for (let clock = 0; clock < SWELL.T; clock += 900) {
       let run = 1;
@@ -57,7 +57,7 @@ describe("water-anim", () => {
     }
     expect(longest).toBeLessThan(9);
   });
-  it("reparte el agua en seis bandas parejas y entrelazadas, pinta una por paso en ronda y mueve la espuma", () => {
+  it("splits the water into six even, interleaved bands, paints one per step in rotation and moves the foam", () => {
     const terrain = buildTerrain(createRng(7));
     const a = createWaterAnim(terrain, { reducedMotion: false });
     const water = (k: number) => a.band(k).filter((s) => s.mat !== "glint");
@@ -65,7 +65,7 @@ describe("water-anim", () => {
     const total = terrain.water.reduce((n, s) => n + tris(s).length, 0);
     expect(sizes.reduce((x, y) => x + y, 0)).toBe(total);
     expect(Math.max(...sizes)).toBeLessThan(1.5 * Math.min(...sizes));
-    // entrelazadas: cada banda cubre todo el ancho de pantalla, no una franja
+    // interleaved: each band covers the whole screen width, not a stripe
     const sx = (t: Tri) => project(t.pts[0]).x;
     const span = (ts: Tri[]) => Math.max(...ts.map(sx)) - Math.min(...ts.map(sx));
     const all = terrain.water.flatMap(tris);
@@ -79,7 +79,7 @@ describe("water-anim", () => {
     expect(foam.some((t) => t.toneOffset === -1)).toBe(true);
     expect(foam.filter((t) => t.toneOffset === 0).length).toBeGreaterThan(foam.length / 2);
   });
-  it("la espuma lame: cada triángulo alterna a lo largo del ciclo y los vecinos no van todos juntos", () => {
+  it("the foam laps: each triangle alternates over the cycle and neighbors do not all move together", () => {
     const t = tri(200, 300);
     const states = new Set<boolean>();
     for (let c = 0; c < 5200; c += 100) states.add(foamOn(t, c));
@@ -88,7 +88,7 @@ describe("water-anim", () => {
     for (let k = 0; k < 40; k++) if (foamOn(tri(k * 6, 0), 0) !== foamOn(tri(k * 6 + 6, 0), 0)) differ++;
     expect(differ).toBeGreaterThan(3);
   });
-  it("triHash reparte parejo mod 4 sobre la grilla y no queda en franjas diagonales; triNoise está en [−1, 1)", () => {
+  it("triHash spreads evenly mod 4 over the grid and does not fall into diagonal stripes; triNoise is in [−1, 1)", () => {
     const terrain = buildTerrain(createRng(7));
     const all = terrain.water.flatMap(tris);
     const counts = [0, 0, 0, 0];
@@ -100,18 +100,18 @@ describe("water-anim", () => {
     }
     let sameAsNeighbor = 0, checked = 0;
     for (let k = 0; k < 300; k++) {
-      const a = tri(k * 6, 0), b = tri((k + 1) * 6, 6); // vecinos a lo largo de una diagonal de pantalla
+      const a = tri(k * 6, 0), b = tri((k + 1) * 6, 6); // neighbors along a screen diagonal
       if (triHash(a) === triHash(b)) sameAsNeighbor++;
       checked++;
     }
     expect(sameAsNeighbor).toBeLessThan(0.4 * checked);
   });
-  it("los destellos son rombos chicos, horizontales en pantalla, dentro de la celda, y solo donde la ola es alta", () => {
+  it("glints are small diamonds, horizontal on screen, inside the cell, and only where the wave is high", () => {
     const t = tri(30, 60);
     const [a, b] = glintShape(t, 2.2);
     const pts = [...a.pts, ...b.pts].map(project);
     const w = Math.max(...pts.map((p) => p.x)) - Math.min(...pts.map((p) => p.x)), h = Math.max(...pts.map((p) => p.y)) - Math.min(...pts.map((p) => p.y));
-    const cell = project(v3(36, 60, -1)).x - project(v3(30, 66, -1)).x; // ancho de pantalla de la celda (12 u)
+    const cell = project(v3(36, 60, -1)).x - project(v3(30, 66, -1)).x; // screen width of the cell (12 u)
     expect(w).toBeLessThan(0.7 * cell);
     expect(h).toBeLessThan(w / 4);
     for (const p of [...a.pts, ...b.pts]) { expect(p.x).toBeGreaterThan(30); expect(p.x).toBeLessThan(36); expect(p.y).toBeGreaterThan(60); expect(p.y).toBeLessThan(66); }
@@ -120,7 +120,7 @@ describe("water-anim", () => {
       if (g.length) { expect(waveField(t, "water", c)).toBeGreaterThanOrEqual(GLINT_H); expect(g).toHaveLength(2); expect(g.every((x) => x.toneOffset === 0 || x.toneOffset === 1)).toBe(true); }
     }
   });
-  it("en el terreno real los destellos son pocos y las bandas los llevan como material glint al final", () => {
+  it("on the real terrain the glints are few and the bands carry them as glint material at the end", () => {
     const terrain = buildTerrain(createRng(7));
     const a = createWaterAnim(terrain, { reducedMotion: false });
     let glint = 0, water = 0;

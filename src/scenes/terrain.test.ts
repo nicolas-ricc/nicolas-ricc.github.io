@@ -6,73 +6,73 @@ import { BLEED_WATER, clearOfWater } from "./terrain-classify";
 import { CELL, baseToneAt, bleedTerrainAt, bleedZ, buildTerrain, seaTerrainAt, shipyardTerrainAt, terrainAt, waterBand } from "./terrain";
 
 const tris = (s: Solid): Tri[] => (s.kind === "ground" ? s.tris : []);
-// La fila de vértices más cercana a ZONE_SPLIT_Y = 146 es y = 144: la comparten la última fila de celdas del astillero (centro 141) y la primera de la ciudad (centro 147).
+// The row of vertices closest to ZONE_SPLIT_Y = 146 is y = 144: it is shared by the last row of shipyard cells (center 141) and the first of the city (center 147).
 const SEAM_Y = Math.floor(ZONE_SPLIT_Y / CELL) * CELL;
 const allTris = (m: ReturnType<typeof buildTerrain>): Tri[] => [...m.ground, ...m.water].flatMap(tris);
 
-describe("clasificación", () => {
-  it("astillero: losa al oeste del muelle, río, desembocadura y selva en los bordes", () => {
+describe("classification", () => {
+  it("shipyard: slab west of the quay, river, river mouth and jungle at the edges", () => {
     expect(shipyardTerrainAt(50, 50)).toBe("slab");
     expect(shipyardTerrainAt(QUAY_X + 20, 60)).toBe("water");
-    expect(shipyardTerrainAt(300, 10)).toBe("water");     // bahía
+    expect(shipyardTerrainAt(300, 10)).toBe("water");     // bay
     expect(shipyardTerrainAt(300, MOUTH_Y + 2)).toBe("east");
     expect(shipyardTerrainAt(10, 144)).toBe("jungle");
     expect(shipyardTerrainAt(150, 20)).toBe("dock");
-    expect(shipyardTerrainAt(-30, 50)).toBe("slab");     // playa de vías
+    expect(shipyardTerrainAt(-30, 50)).toBe("slab");     // track yard
     expect(shipyardTerrainAt(-30, 130)).toBe("jungle");
-    expect(shipyardTerrainAt(50, -30)).toBe("slab");     // banda de la fábrica
-    expect(shipyardTerrainAt(300, -30)).toBe("water");   // la bahía sigue al norte
+    expect(shipyardTerrainAt(50, -30)).toBe("slab");     // factory band
+    expect(shipyardTerrainAt(300, -30)).toBe("water");   // the bay continues to the north
   });
-  it("astillero: la costa norte nueva, con tierra frente a los galpones, caleta y punta NE", () => {
-    expect(terrainAt(300, 18)).toBe("east");   // tierra nueva frente a los galpones (antes agua: costa en y 21)
-    expect(terrainAt(286, 27)).toBe("water");  // caleta al NO
-    expect(terrainAt(339, 9)).not.toBe("water"); // punta NE
+  it("shipyard: the new north coast, with land in front of the sheds, cove and NE point", () => {
+    expect(terrainAt(300, 18)).toBe("east");   // new land in front of the sheds (formerly water: coast at y 21)
+    expect(terrainAt(286, 27)).toBe("water");  // cove to the NW
+    expect(terrainAt(339, 9)).not.toBe("water"); // NE point
   });
-  it("mar: punta, arrecife, orilla y mar abierto", () => {
+  it("sea: point, reef, shore and open sea", () => {
     expect(terrainAt(380, 118)).toBe("headland");
-    expect(terrainAt(336, 115)).toBe("headland");          // la base de la punta gana en la zona del astillero
+    expect(terrainAt(336, 115)).toBe("headland");          // the base of the point wins in the shipyard zone
     expect(seaTerrainAt(404, 118)).toBe("reef");
-    expect(seaTerrainAt(350, 60)).toBe("shore");           // pegado a la costa del astillero
+    expect(seaTerrainAt(350, 60)).toBe("shore");           // next to the shipyard coast
     expect(seaTerrainAt(400, 200)).toBe("sea");
-    expect(seaTerrainAt(350, 10)).toBe("shore");           // frente a la bahía hay bajío
+    expect(seaTerrainAt(350, 10)).toBe("shore");           // in front of the bay there is a shoal
     expect(seaTerrainAt(370, 10)).toBe("sea");
     expect(seaTerrainAt(500, 200)).toBe("abyss");
     expect(seaTerrainAt(410, 60)).toBe("sea");
-    expect(terrainAt(ZONE_SPLIT_X + 2, 200)).toBe("shore"); // clickea Resume pero es orilla
+    expect(terrainAt(ZONE_SPLIT_X + 2, 200)).toBe("shore"); // clicks through to Resume but is shore
   });
-  it("ciudad: cinturón de selva, estuario, ribera este de selva, cráteres y asfalto", () => {
-    expect(terrainAt(50, ZONE_SPLIT_Y + 4)).toBe("jungle");   // cinturón
-    expect(terrainAt(-56, 200)).toBe("asphalt");               // borde oeste: el distrito tecnológico sigue derecho desde la ciudad
-    expect(terrainAt(100, 330)).toBe("asphalt");               // borde sur, ídem
-    expect(terrainAt(255, 200)).toBe("water");                 // estuario
-    expect(terrainAt(268, 200)).toBe("jungle");                // ribera este, antes del anillo
-    expect(terrainAt(290, 200)).toBe("asphalt");               // ciudad del este
-    expect(terrainAt(60, 185)).toBe("jungle");                 // cráter
+  it("city: jungle belt, estuary, jungle east bank, craters and asphalt", () => {
+    expect(terrainAt(50, ZONE_SPLIT_Y + 4)).toBe("jungle");   // belt
+    expect(terrainAt(-56, 200)).toBe("asphalt");               // west edge: the tech district continues straight from the city
+    expect(terrainAt(100, 330)).toBe("asphalt");               // south edge, likewise
+    expect(terrainAt(255, 200)).toBe("water");                 // estuary
+    expect(terrainAt(268, 200)).toBe("jungle");                // east bank, before the ring
+    expect(terrainAt(290, 200)).toBe("asphalt");               // city to the east
+    expect(terrainAt(60, 185)).toBe("jungle");                 // crater
     expect(terrainAt(50, 200)).toBe("asphalt");
-    expect(terrainAt(340, 200)).toBe("asphalt");               // bajo el malecón
-    expect(terrainAt(ZONE_SPLIT_X, 200)).toBe("shore");        // la costura este sigue siendo mar
+    expect(terrainAt(340, 200)).toBe("asphalt");               // under the seawall
+    expect(terrainAt(ZONE_SPLIT_X, 200)).toBe("shore");        // the east seam is still sea
     expect(terrainAt(-30, 290)).toBe("asphalt");
     expect(terrainAt(300, 300)).toBe("jungle");
     expect(terrainAt(338, 300)).toBe("asphalt");
     expect(terrainAt(300, 267)).toBe("jungle");
     expect(terrainAt(335, 300)).toBe("jungle");
   });
-  it("en la zona cv solo hay asfalto, selva y agua", () => {
+  it("in the cv zone there is only asphalt, jungle and water", () => {
     const seen = new Set<string>();
     for (let y = ZONE_SPLIT_Y + 3; y < WORLD.y1; y += CELL) for (let x = WORLD.x0 + 3; x < ZONE_SPLIT_X; x += CELL) seen.add(terrainAt(x, y));
     expect([...seen].sort()).toEqual(["asphalt", "jungle", "water"]);
   });
-  it("el agua es continua en la costura y el estuario no llega al límite con Blog", () => {
-    // la última fila de celdas del astillero (centro 141) y la primera de la ciudad (centro 147) mojan las mismas columnas
+  it("the water is continuous at the seam and the estuary does not reach the border with Blog", () => {
+    // the last row of shipyard cells (center 141) and the first of the city (center 147) wet the same columns
     const waterX = (y: number) => { const xs: number[] = []; for (let x = 3; x < ZONE_SPLIT_X; x += CELL) if (terrainAt(x, y) === "water") xs.push(x); return xs; };
     const north = waterX(141), south = waterX(147);
     expect(north.length).toBeGreaterThan(3);
     expect(south[0]).toBe(north[0]);
     expect(Math.abs(south[south.length - 1]! - north[north.length - 1]!)).toBeLessThanOrEqual(CELL);
-    // al sur del todo el estuario sigue dejando tierra antes de x = 344
+    // at the far south the estuary still leaves land before x = 344
     expect(terrainAt(ZONE_SPLIT_X - 3, WORLD.y1 - 3)).not.toBe("water");
   });
-  it("ningún punto de tierra clickea Blog y toda la fosa clickea Blog", () => {
+  it("no land point clicks through to Blog and the whole trench clicks through to Blog", () => {
     const land = new Set(["slab", "east", "jungle", "dock", "asphalt", "headland", "reef"]);
     for (let y = WORLD.y0 + 3; y < WORLD.y1; y += CELL) for (let x = WORLD.x0 + 3; x < WORLD.x1; x += CELL) {
       const t = terrainAt(x, y), z = worldZoneAt(x, y);
@@ -80,40 +80,40 @@ describe("clasificación", () => {
       if (t === "abyss") expect(z).toBe("blog");
     }
   });
-  it("sangrado: tierra construida cerca del contenido, selva y lomas más allá; el estuario y el mar siguen al sur, la bahía al norte", () => {
-    expect(bleedTerrainAt(-100, 100)).toBe("industrial");   // oeste de Portfolio
-    expect(bleedTerrainAt(-100, 200)).toBe("urban");        // oeste de Resume
-    expect(bleedTerrainAt(100, 400)).toBe("urban");         // sur de Resume
-    expect(bleedTerrainAt(100, -100)).toBe("industrial");   // norte de la fábrica
-    expect(bleedTerrainAt(-100, -100)).toBe("industrial");  // esquina NO
-    expect(bleedTerrainAt(-100, 400)).toBe("urban");        // esquina SO
-    expect(bleedTerrainAt(-300, 100)).toBe("jungle");       // más allá del alcance oeste
-    expect(bleedTerrainAt(100, -400)).toBe("jungle");       // más allá del alcance norte (ahora hasta y −348 más el alcance, con la feria de por medio)
-    expect(bleedTerrainAt(100, 700)).toBe("jungle");        // más allá del alcance sur
-    expect(bleedTerrainAt(250, 400)).toBe("river");         // el estuario sigue
-    expect(bleedTerrainAt(330, 340)).toBe("jungle");        // la base de la punta sur, entre el estuario y el mar
-    expect(bleedTerrainAt(325, 370)).toBe("jungle");        // cerca del extremo de la punta sur (en y 370 la tierra va de x 317 a 338; termina en y 380)
-    expect(bleedTerrainAt(330, 385)).toBe("river");         // al sur del extremo de la punta: todo agua
-    expect(bleedTerrainAt(338, 400)).toBe("river");         // más al sur la punta ya no existe; el estuario es todo agua hasta el mar
-    expect(bleedTerrainAt(346, 400)).toBe("shore");         // orilla frente a la costa de Resume
+  it("bleed: built land near the content, jungle and hills beyond; the estuary and the sea continue to the south, the bay to the north", () => {
+    expect(bleedTerrainAt(-100, 100)).toBe("industrial");   // west of Portfolio
+    expect(bleedTerrainAt(-100, 200)).toBe("urban");        // west of Resume
+    expect(bleedTerrainAt(100, 400)).toBe("urban");         // south of Resume
+    expect(bleedTerrainAt(100, -100)).toBe("industrial");   // north of the factory
+    expect(bleedTerrainAt(-100, -100)).toBe("industrial");  // NW corner
+    expect(bleedTerrainAt(-100, 400)).toBe("urban");        // SW corner
+    expect(bleedTerrainAt(-300, 100)).toBe("jungle");       // beyond the west reach
+    expect(bleedTerrainAt(100, -400)).toBe("jungle");       // beyond the north reach (now up to y −348 plus the reach, with the fair in between)
+    expect(bleedTerrainAt(100, 700)).toBe("jungle");        // beyond the south reach
+    expect(bleedTerrainAt(250, 400)).toBe("river");         // the estuary continues
+    expect(bleedTerrainAt(330, 340)).toBe("jungle");        // the base of the south point, between the estuary and the sea
+    expect(bleedTerrainAt(325, 370)).toBe("jungle");        // near the end of the south point (at y 370 the land runs from x 317 to 338; it ends at y 380)
+    expect(bleedTerrainAt(330, 385)).toBe("river");         // south of the end of the point: all water
+    expect(bleedTerrainAt(338, 400)).toBe("river");         // further south the point no longer exists; the estuary is all water up to the sea
+    expect(bleedTerrainAt(346, 400)).toBe("shore");         // shore in front of the Resume coast
     expect(bleedTerrainAt(400, 400)).toBe("sea");
     expect(bleedTerrainAt(560, 500)).toBe("abyss");
-    expect(bleedTerrainAt(250, 460)).toBe("river");         // en y 460 el estuario ya llegó a 344: agua continua hasta el mar
+    expect(bleedTerrainAt(250, 460)).toBe("river");         // at y 460 the estuary has already reached 344: continuous water up to the sea
     expect(bleedTerrainAt(343, 460)).toBe("river");
-    expect(bleedTerrainAt(360, -100)).toBe("sea");         // bahía al norte, al oeste de la fosa
-    expect(bleedTerrainAt(440, -100)).toBe("abyss");       // la fosa sigue al norte del contenido (abyssX(−100) ≈ 382)
+    expect(bleedTerrainAt(360, -100)).toBe("sea");         // bay to the north, west of the trench
+    expect(bleedTerrainAt(440, -100)).toBe("abyss");       // the trench continues north of the content (abyssX(−100) ≈ 382)
     expect(bleedTerrainAt(600, 100)).toBe("abyss");
-    expect(bleedZ(-380, 100)).toBeGreaterThan(9);   // loma al oeste, más allá de la tierra construida
-    expect(bleedZ(-380, -430)).toBeGreaterThan(9);  // loma al norte, dentro de la grilla del sangrado
-    expect(bleedZ(-100, 100)).toBe(0.6);            // sobre la tierra construida no sube
-    expect(bleedZ(100, 500)).toBe(0.6);             // chato al sur
-    expect(bleedZ(-60, 100)).toBe(0.6);             // en la costura no sube
-    expect(bleedZ(riverCenter(-300) - RIVER_HALF - 10, -300)).toBeLessThan(3); // la loma baja antes del corte con la bahía: sin acantilado
+    expect(bleedZ(-380, 100)).toBeGreaterThan(9);   // hill to the west, beyond the built land
+    expect(bleedZ(-380, -430)).toBeGreaterThan(9);  // hill to the north, inside the bleed grid
+    expect(bleedZ(-100, 100)).toBe(0.6);            // over the built land it does not rise
+    expect(bleedZ(100, 500)).toBe(0.6);             // flat to the south
+    expect(bleedZ(-60, 100)).toBe(0.6);             // at the seam it does not rise
+    expect(bleedZ(riverCenter(-300) - RIVER_HALF - 10, -300)).toBeLessThan(3); // the hill drops before the cut with the bay: no cliff
   });
 });
 
 describe("buildTerrain", () => {
-  it("la punta sur se dibuja en celdas de 6 u", () => {
+  it("the south point is drawn in 6 u cells", () => {
     const m = buildTerrain(createRng(7));
     const side = (t: Tri) => Math.max(...t.pts.map((p) => p.x)) - Math.min(...t.pts.map((p) => p.x));
     const inBox = (t: Tri) => t.pts.every((p) => p.x >= TIP_BOX.x0 && p.x <= TIP_BOX.x1 && p.y >= TIP_BOX.y0 && p.y <= TIP_BOX.y1);
@@ -121,30 +121,30 @@ describe("buildTerrain", () => {
     expect(bleed.length).toBeGreaterThanOrEqual(50);
     for (const t of [...bleed, ...m.water.flatMap(tris).filter(inBox)]) expect(side(t)).toBe(6);
   });
-  it("el borde de la caja de la punta sur es agua, salvo la costura", () => {
+  it("the edge of the south point's box is water, except the seam", () => {
     for (let v = TIP_BOX.x0; v <= TIP_BOX.x1; v += 6) expect(BLEED_WATER.has(bleedTerrainAt(v, TIP_BOX.y1))).toBe(true);
     for (let v = TIP_BOX.y0 + 6; v <= TIP_BOX.y1; v += 6) {
       expect(BLEED_WATER.has(bleedTerrainAt(TIP_BOX.x0, v))).toBe(true);
       expect(BLEED_WATER.has(bleedTerrainAt(TIP_BOX.x1, v))).toBe(true);
     }
   });
-  it("la subdivisión no toca el rng", () => {
+  it("the subdivision does not touch the rng", () => {
     const r = createRng(7); let n = 0; const next = r.next; r.next = () => { n++; return next(); };
     buildTerrain(r);
     expect(n).toBe(11912);
   });
-  it("una sola malla determinística que cubre el mundo", () => {
+  it("a single deterministic mesh covering the world", () => {
     const a = buildTerrain(createRng(7)), b = buildTerrain(createRng(7));
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
     const t = allTris(a);
     expect(t.length).toBeGreaterThan(2 * ((WORLD.x1 - WORLD.x0) / CELL) * ((WORLD.y1 - WORLD.y0) / CELL) * 0.9);
-    // el agua (m.water) mezcla contenido y sangrado: solo el suelo (m.ground) queda acotado a WORLD.
+    // the water (m.water) mixes content and bleed: only the ground (m.ground) is bounded to WORLD.
     for (const tri of a.ground.flatMap(tris)) for (const p of tri.pts) {
       expect(p.x).toBeGreaterThanOrEqual(WORLD.x0); expect(p.x).toBeLessThanOrEqual(WORLD.x1);
       expect(p.y).toBeGreaterThanOrEqual(WORLD.y0); expect(p.y).toBeLessThanOrEqual(WORLD.y1);
     }
   });
-  it("el agua se reparte por profundidad en cuatro materiales, toda a z −1, con baseTone en [−1, 1] y espuma junto a la costa", () => {
+  it("the water is split by depth into four materials, all at z −1, with baseTone in [−1, 1] and foam next to the coast", () => {
     const m = buildTerrain(createRng(7));
     expect(m.water.map((w) => w.mat)).toEqual(["shallow", "water", "waterDeep", "abyss"]);
     for (const w of m.water) {
@@ -153,67 +153,67 @@ describe("buildTerrain", () => {
     }
     expect(m.foam.mat).toBe("foam");
     expect(tris(m.foam).length).toBeGreaterThan(200);
-    expect(waterBand(200, 300)).toBe("shallow"); expect(waterBand(240, 300)).toBe("water"); // orilla y centro del estuario
+    expect(waterBand(200, 300)).toBe("shallow"); expect(waterBand(240, 300)).toBe("water"); // shore and center of the estuary
     expect(waterBand(560, 60)).toBe("abyss"); expect(waterBand(100, 100)).toBeNull();
     expect(tris(m.water[3]!).length).toBeGreaterThan(400);
-    // baseTone tiene dientes: "shallow" no queda todo en 0 (depthAt cuantiza en pasos de CELL, así que la
-    // primera celda de agua junto a tierra, d = CELL, es el borde somero: +1), y "water" cruza por las dos puntas.
+    // baseTone has teeth: "shallow" does not stay all at 0 (depthAt quantizes in CELL steps, so the
+    // first water cell next to land, d = CELL, is the shallow edge: +1), and "water" crosses through both ends.
     expect(tris(m.water[0]!).some((t) => t.baseTone === 1)).toBe(true);
     expect(tris(m.water[1]!).some((t) => t.baseTone === 1)).toBe(true);
     expect(tris(m.water[1]!).some((t) => t.baseTone === -1)).toBe(true);
-    // (200,300) es la orilla del estuario (waterBand "shallow"), a depthAt = CELL = 6 de tierra: la
-    // primera celda de agua, el borde más somero posible, así que baseToneAt da +1 exacto.
+    // (200,300) is the estuary shore (waterBand "shallow"), at depthAt = CELL = 6 from land: the
+    // first water cell, the shallowest possible edge, so baseToneAt gives exactly +1.
     expect(waterBand(200, 300)).toBe("shallow");
     expect(baseToneAt(200, 300, "shallow")).toBe(1);
   });
 
-  it("el sangrado no deja agujeros: toda celda de 18 con agua dentro del cover produce 2 triángulos (sin subdividir, gateado por medición)", () => {
+  it("the bleed leaves no holes: every 18 cell with water inside the cover produces 2 triangles (not subdivided, measurement-gated)", () => {
     const m = buildTerrain(createRng(7));
     const all = m.water.flatMap(tris);
-    // celda real del sangrado (ancla bx0 = -402, by0 = -438), en la bahía al norte, dentro del cover.
+    // real bleed cell (anchor bx0 = -402, by0 = -438), in the bay to the north, inside the cover.
     const x0 = 282, y0 = -420, x1 = 300, y1 = -402;
     const inCell = all.filter((t) => t.pts.every((p) => p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1));
     expect(inCell.length).toBe(2);
   });
 
-  it("el canal del astillero y la bahía siguen clasificando como agua (no como agujero) en m.water", () => {
+  it("the shipyard channel and the bay still classify as water (not as a hole) in m.water", () => {
     const m = buildTerrain(createRng(7));
     const all = m.water.flatMap(tris);
-    // la bahía es río: al norte de la desembocadura, al este del canal, sigue habiendo agua en m.water.
+    // the bay is river: north of the river mouth, east of the channel, there is still water in m.water.
     expect(all.some((t) => t.pts.every((p) => p.y < MOUTH_Y && p.x > 300))).toBe(true);
-    // el canal del astillero nunca cruza al oeste del muelle: ningún triángulo de agua del contenido
-    // (dentro de WORLD, y < ZONE_SPLIT_Y) tiene vértices en x < QUAY_X.
+    // the shipyard channel never crosses west of the quay: no content water triangle
+    // (inside WORLD, y < ZONE_SPLIT_Y) has vertices at x < QUAY_X.
     const inContent = (p: { x: number; y: number }) => p.x >= WORLD.x0 && p.x <= WORLD.x1 && p.y >= WORLD.y0 && p.y <= WORLD.y1;
     expect(all.filter((t) => t.pts.every((p) => inContent(p) && p.y < ZONE_SPLIT_Y))).not.toEqual([]);
     expect(all.filter((t) => t.pts.every((p) => inContent(p) && p.y < ZONE_SPLIT_Y)).every((t) => t.pts.every((p) => p.x >= QUAY_X))).toBe(true);
   });
 
-  it("el agua del sangrado usa celdas de 18, dentro y fuera del cover (gateado por medición: peor redibujo)", () => {
+  it("the bleed water uses 18 cells, inside and outside the cover (measurement-gated: worst redraw)", () => {
     const m = buildTerrain(createRng(7));
     const side = (t: Tri) => Math.max(...t.pts.map((p) => p.x)) - Math.min(...t.pts.map((p) => p.x));
     const at = (x: number, y: number) => m.water.flatMap(tris).filter((t) => t.pts.some((p) => Math.abs(p.x - x) < 1 && Math.abs(p.y - y) < 1));
-    // vértices reales de la grilla (anclada en bx0=-402, by0=-438): dentro del cover, (264,−348), en la
-    // bahía al norte de la feria; afuera, (858,660), mar abierto al sureste. Los `every` no dicen nada
-    // sobre un conjunto vacío (era el caso del (597,300) de antes, que caía en el centro de una celda,
-    // no en un vértice): primero hay que haber encontrado celdas ahí.
+    // real grid vertices (anchored at bx0=-402, by0=-438): inside the cover, (264,−348), in the
+    // bay north of the fair; outside, (858,660), open sea to the southeast. The `every` calls say nothing
+    // about an empty set (that was the case of the earlier (597,300), which fell in the center of a cell,
+    // not on a vertex): cells must be found there first.
     expect(at(264, -348).length).toBeGreaterThan(0);
     expect(at(858, 660).length).toBeGreaterThan(0);
     expect(at(264, -348).every((t) => side(t) === 18)).toBe(true);
     expect(at(858, 660).every((t) => side(t) === 18)).toBe(true);
   });
-  it("la punta está alta y cae al mar; el dique seco no tiene suelo (lo pone la escena)", () => {
+  it("the point is high and drops to the sea; the dry dock has no ground (the scene provides it)", () => {
     const m = buildTerrain(createRng(7));
     const rock = m.ground.filter((g) => g.kind === "ground" && g.mat === "rock").flatMap(tris);
     const high = rock.filter((t) => t.pts.every((p) => p.z >= 4));
     expect(high.length).toBeGreaterThan(20);
-    // la base de la punta (x < 340) es baja: nada alto junto a los galpones del muelle
+    // the base of the point (x < 340) is low: nothing tall next to the quay sheds
     const base = rock.filter((t) => t.pts.every((p) => p.x <= 340 && p.y > 96 && p.y < 136));
     expect(base.length).toBeGreaterThan(0);
     expect(base.every((t) => t.pts.every((p) => p.z < 4))).toBe(true);
     const inDock = allTris(m).filter((t) => t.pts.every((p) => p.x > 122 && p.x < 190 && p.y > 8 && p.y < 28));
     expect(inDock).toEqual([]);
   });
-  it("filtrar por zona conserva las alturas en la costura", () => {
+  it("filtering by zone preserves the heights at the seam", () => {
     const p = buildTerrain(createRng(7), ["portfolio"]), c = buildTerrain(createRng(7), ["cv"]);
     const onSeam = (m: ReturnType<typeof buildTerrain>) => new Map(allTris(m).flatMap((t) => t.pts).filter((v) => v.y === SEAM_Y).map((v) => [`${v.x},${v.y}`, v.z]));
     const a = onSeam(p), b = onSeam(c);
@@ -222,14 +222,14 @@ describe("buildTerrain", () => {
     for (const [k, z] of a) if (b.has(k)) expect(b.get(k)).toBe(z);
     expect(allTris(p).every((t) => t.pts.every((v) => v.y <= ZONE_SPLIT_Y + CELL))).toBe(true);
   });
-  it("el asfalto es casi plano y sale como su propio ground", () => {
+  it("the asphalt is nearly flat and comes out as its own ground", () => {
     const m = buildTerrain(createRng(7), ["cv"]);
     const asphalt = m.ground.filter((g) => g.kind === "ground" && g.mat === "asphalt").flatMap(tris);
     expect(asphalt.length).toBeGreaterThan(600);
     expect(asphalt.every((t) => t.pts.every((p) => Math.abs(p.z) <= 0.1 || terrainAt(p.x, p.y) !== "asphalt"))).toBe(true);
     expect(m.ground.some((g) => g.kind === "ground" && g.mat === "paving")).toBe(false);
   });
-  it("el sangrado rodea el contenido con celdas de 18, sin lomas al sur ni al este, y sin jitter en la costura", () => {
+  it("the bleed surrounds the content with 18 cells, no hills to the south or east, and no jitter at the seam", () => {
     const m = buildTerrain(createRng(7));
     expect(m.bleed.length).toBeGreaterThan(0);
     const bt = m.bleed.flatMap(tris);
@@ -239,12 +239,12 @@ describe("buildTerrain", () => {
     for (const t of bt) for (const p of t.pts) {
       expect(p.x).toBeGreaterThanOrEqual(WORLD.x0 - BLEED.x); expect(p.x).toBeLessThanOrEqual(WORLD.x1 + BLEED.x);
       expect(p.y).toBeGreaterThanOrEqual(WORLD.y0 - BLEED.y); expect(p.y).toBeLessThanOrEqual(WORLD.y1 + BLEED.y);
-      if ((p.y > WORLD.y1 && p.x >= WORLD.x0) || p.x > WORLD.x1) expect(p.z).toBeLessThanOrEqual(1.4); // al sur (salvo la esquina SO, que queda detrás) y al este, chato
+      if ((p.y > WORLD.y1 && p.x >= WORLD.x0) || p.x > WORLD.x1) expect(p.z).toBeLessThanOrEqual(1.4); // to the south (except the SW corner, which stays behind) and to the east, flat
     }
-    expect(bt.some((t) => t.pts.every((p) => p.y < WORLD.y0 - 250 && p.x < 100 && p.z > 6))).toBe(true); // lomas al norte, más allá de la tierra construida
-    expect(m.water.flatMap(tris).some((t) => t.pts.every((p) => p.y > WORLD.y1 && p.x > QUAY_X && p.x < 300 && p.z === -1))).toBe(true); // el estuario sigue al sur (ahora en m.water, no en m.bleed)
-    // costura: los vértices del sangrado sobre el borde del contenido tienen la z base del contenido, sin jitter.
-    // Solo el tramo del borde que toca el contenido: un vértice en x = WORLD.x0 pero y = 400 es selva común del sangrado.
+    expect(bt.some((t) => t.pts.every((p) => p.y < WORLD.y0 - 250 && p.x < 100 && p.z > 6))).toBe(true); // hills to the north, beyond the built land
+    expect(m.water.flatMap(tris).some((t) => t.pts.every((p) => p.y > WORLD.y1 && p.x > QUAY_X && p.x < 300 && p.z === -1))).toBe(true); // the estuary continues to the south (now in m.water, not in m.bleed)
+    // seam: the bleed vertices on the content's edge have the content's base z, no jitter.
+    // Only the stretch of the edge that touches the content: a vertex at x = WORLD.x0 but y = 400 is ordinary bleed jungle.
     const onSeam = (p: { x: number; y: number }) =>
       ((p.x === WORLD.x0 || p.x === WORLD.x1) && p.y >= WORLD.y0 && p.y <= WORLD.y1) ||
       ((p.y === WORLD.y0 || p.y === WORLD.y1) && p.x >= WORLD.x0 && p.x <= WORLD.x1);
@@ -253,11 +253,11 @@ describe("buildTerrain", () => {
     for (const z of seamZ) expect([0, 0.6, -1]).toContain(z);
     const contentSeamZ = new Set(allTris(m).flatMap((t) => t.pts).filter(onSeam).map((p) => p.z));
     for (const z of contentSeamZ) expect([0, 0.6, -1]).toContain(z);
-    // con filtro por zona no hay sangrado
+    // with a zone filter there is no bleed
     expect(buildTerrain(createRng(7), ["cv"]).bleed).toEqual([]);
   });
 
-  it("la feria es arena plana en el sangrado norte", () => {
+  it("the fair is flat sand in the north bleed", () => {
     expect(bleedTerrainAt(150, -264)).toBe("fair");
     const m = buildTerrain(createRng(7));
     const sand = m.bleed.find((s) => s.kind === "ground" && s.mat === "sand");
@@ -267,13 +267,13 @@ describe("buildTerrain", () => {
 });
 
 describe("clearOfWater", () => {
-  it("true sobre losa, false sobre el río", () => {
+  it("true over slab, false over the river", () => {
     expect(clearOfWater(10, 10, 20, 20, 3)).toBe(true);
     expect(clearOfWater(250, 60, 252, 62, 3)).toBe(false);
   });
 
-  it("el margen cuenta: caja en tierra junto a la ribera", () => {
-    expect(clearOfWater(271, 60, 272, 61, 0)).toBe(true);  // eastBank(60) = 269: la caja está en tierra
-    expect(clearOfWater(271, 60, 272, 61, 3)).toBe(false); // pero a 3 u hay agua
+  it("the margin counts: box on land next to the bank", () => {
+    expect(clearOfWater(271, 60, 272, 61, 0)).toBe(true);  // eastBank(60) = 269: the box is on land
+    expect(clearOfWater(271, 60, 272, 61, 3)).toBe(false); // but within 3 u there is water
   });
 });

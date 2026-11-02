@@ -2,7 +2,7 @@ import { layerLookup, type AnimLayer, type Animator } from "./animator";
 import type { FairScene } from "./fair";
 import { createFairAnim } from "./fair-anim";
 
-/** Adapta la feria al contrato `Animator`: rueda, tren y góndola como sólidos animados; luces, neones y carteles como acentos. */
+/** Adapts the fair to the `Animator` contract: wheel, train and gondola as animated solids; lights, neons and signs as accents. */
 export function fairAnimator(scene: FairScene, opts: { reducedMotion: boolean }): Animator {
   const anim = createFairAnim(scene, opts);
   const layers: Record<string, () => AnimLayer> = {

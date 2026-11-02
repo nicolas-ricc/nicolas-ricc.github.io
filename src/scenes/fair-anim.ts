@@ -6,14 +6,14 @@ import { chase, flip } from "./neon";
 import { DROP, LIFT_SEGMENTS, WHEEL, coasterAt, coasterLength, dropSolids, trainSolids, wheelSolid, type FairScene } from "./fair";
 
 /**
- * La feria en movimiento, sin Pixi: la vuelta al mundo gira (una vuelta cada
- * 40 s) con cuatro luces que corren por la llanta, el tren recorre el
- * circuito (lento en la subida, rápido después), la góndola de la torre sube,
- * espera y cae, los dos carteles del salón alternan y los neones corren:
- * marquesina, subida y columna de la torre (que sigue a la góndola). Frame 0 =
- * rueda en 0, tren en la estación, góndola abajo, cuatro luces fijas, cartel
- * magenta y neones en su paso 0 (cuatro luces de marquesina, dos de subida,
- * columna en reposo).
+ * The fair in motion, without Pixi: the Ferris wheel turns (one turn every
+ * 40 s) with four lights running along the rim, the train runs the
+ * circuit (slow on the climb, fast afterwards), the tower gondola rises,
+ * waits and falls, the hall's two signs alternate and the neons run:
+ * marquee, climb and tower column (which follows the gondola). Frame 0 =
+ * wheel at 0, train at the station, gondola down, four fixed lights, magenta
+ * sign and neons at their step 0 (four marquee lights, two climb lights,
+ * column at rest).
  */
 export const WHEEL_PERIOD_MS = 40000, WHEEL_STEP_MS = 250, WHEEL_LIGHT_STEP_MS = 150, WHEEL_LIT = 4;
 export const TRAIN_SPEED = 9, TRAIN_LIFT_SPEED = 3;
@@ -23,7 +23,7 @@ export const SIGN_ALT_MS = 500, NEON_STEP_MS = 200, NEON_R = 0.35, NEON_OFF_R = 
 export interface FairChanges { wheel: boolean; lights: boolean; train: boolean; drop: boolean; signs: boolean; neon: boolean }
 export interface FairAnim { wheel(): Solid[]; wheelLights(): Accent[]; train(): Solid[]; drop(): Solid[]; signs(): Accent[]; neon(): Accent[]; angle(): number; trainDist(): number; dropZ(): number; tick(dtMs: number): FairChanges }
 
-/** Altura de la góndola sobre la base dentro del ciclo: subida lineal, pausa, caída cuadrática, pausa. */
+/** Height of the gondola above the base within the cycle: linear rise, pause, quadratic fall, pause. */
 export function dropEase(ms: number): number {
   const t = ms % DROP_CYCLE_MS;
   if (t < DROP_RISE_MS) return t / DROP_RISE_MS;
@@ -35,9 +35,9 @@ export function dropEase(ms: number): number {
 export function createFairAnim(scene: FairScene, opts: { reducedMotion: boolean }): FairAnim {
   const L = coasterLength(), base = scene.drop.at.z, top = DROP.h - 3;
   let clock = 0, wheelStep = 0, lightStep = 0, dropStep = 0, signStep = 0, neonStep = 0, dist = 0;
-  // La rueda se redibuja cada WHEEL_STEP_MS, así que su ángulo se cuantiza al último paso. Las luces
-  // de la llanta corren más seguido (WHEEL_LIGHT_STEP_MS) y leen este mismo ángulo: si usaran el reloj
-  // continuo se adelantarían hasta un paso entero y quedarían fuera de la llanta dibujada.
+  // The wheel is redrawn every WHEEL_STEP_MS, so its angle is quantized to the last step. The rim
+  // lights run more often (WHEEL_LIGHT_STEP_MS) and read this same angle: if they used the continuous
+  // clock they would get ahead by up to a whole step and end up off the drawn rim.
   const angle = () => (opts.reducedMotion ? 0 : (2 * Math.PI * ((wheelStep * WHEEL_STEP_MS) % WHEEL_PERIOD_MS)) / WHEEL_PERIOD_MS);
   const dropZ = () => base + (top - base) * (opts.reducedMotion ? 0 : dropEase(clock));
   const run = (pts: Vec3[], lit: number, color: (k: number) => AccentColor): Accent[] => chase(pts.length, neonStep, lit).flatMap((o, k) => (o ? [{ kind: "dot" as const, at: pts[k]!, r: NEON_R, color: color(k) }] : []));
@@ -47,7 +47,7 @@ export function createFairAnim(scene: FairScene, opts: { reducedMotion: boolean 
     train: () => trainSolids(dist),
     drop: () => dropSolids(dropZ()),
     signs: () => [scene.arcadeSigns[signStep % 2]!],
-    // La columna se enciende (magenta) por debajo de la góndola; por encima queda en reposo (magentaBleed).
+    // The column lights up (magenta) below the gondola; above it stays at rest (magentaBleed).
     neon: () => {
       const z = dropZ();
       return [
@@ -68,7 +68,7 @@ export function createFairAnim(scene: FairScene, opts: { reducedMotion: boolean 
       const ds = Math.floor(clock / DROP_STEP_MS); if (ds !== dropStep) { dropStep = ds; c.drop = true; }
       const ss = Math.floor(clock / SIGN_ALT_MS); if (ss !== signStep) { signStep = ss; c.signs = true; }
       const ns = Math.floor(clock / NEON_STEP_MS); if (ns !== neonStep) { neonStep = ns; c.neon = true; }
-      if (c.drop) c.neon = true; // la columna sigue a la góndola
+      if (c.drop) c.neon = true; // the column follows the gondola
       return c;
     },
   };

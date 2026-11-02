@@ -2,12 +2,12 @@ import { BLEED, CELL, WORLD } from "../map/geo";
 import { isWaterAt } from "./terrain-classify";
 
 /**
- * Distancia de cada punto de agua a la tierra más cercana, en unidades de
- * mundo: transformada de distancia (chaflán 1 / √2, dos pasadas) sobre una
- * grilla de CELL que cubre contenido y sangrado. Se calcula una vez, sin rng.
- * La usa el terreno para repartir el agua por profundidad. La clasificación
- * viene de `terrain-classify.ts`, abajo de `terrain.ts`: si la pidiéramos a
- * `terrain.ts` habría un ciclo, porque el terreno usa `depthAt`.
+ * Distance from each water point to the nearest land, in world
+ * units: distance transform (1 / √2 chamfer, two passes) over a
+ * CELL grid that covers content and bleed. Computed once, without rng.
+ * The terrain uses it to split the water by depth. The classification
+ * comes from `terrain-classify.ts`, below `terrain.ts`: asking
+ * `terrain.ts` for it would create a cycle, because the terrain uses `depthAt`.
  */
 const X0 = WORLD.x0 - BLEED.x, Y0 = WORLD.y0 - BLEED.y, X1 = WORLD.x1 + BLEED.x, Y1 = WORLD.y1 + BLEED.y;
 const COLS = (X1 - X0) / CELL, ROWS = (Y1 - Y0) / CELL;
@@ -29,7 +29,7 @@ function build(): Float32Array {
   return d;
 }
 
-/** Distancia a tierra en unidades de mundo (0 en tierra o fuera del sangrado). */
+/** Distance to land in world units (0 on land or outside the bleed). */
 export function depthAt(x: number, y: number): number {
   grid ??= build();
   const i = Math.floor((x - X0) / CELL), j = Math.floor((y - Y0) / CELL);
