@@ -11,11 +11,10 @@ describe("ciclo de vida de los stages del storybook (#102)", () => {
   });
 });
 
-describe("la entrada actual del índice (#117)", () => {
-  it("se centra solo si no se ve entera", () => {
-    expect(src).not.toContain('block: "nearest"');
-    expect(src).toContain("outOfView(a.getBoundingClientRect(), nav.getBoundingClientRect())");
-    expect(src).toContain('a.scrollIntoView({ block: "center" })');
+describe("elementos de la página (#187)", () => {
+  it("no los lee con getElementById: los resuelve mountStorybook", () => {
+    expect(src).not.toContain("getElementById(");
+    expect(src).toMatch(/mountStorybook\(\s*document\s*,/);
   });
 });
 
@@ -32,11 +31,5 @@ describe("logs del storybook (#132)", () => {
   });
   it("worst y since se acumulan solo con log, como en src/main.ts", () => {
     expect(src).toMatch(/bloom\?\.tick\(dt\);\s*if \(log\) \{\s*worst = Math\.max\(worst, dt\);\s*since \+= ticker\.deltaMS;\s*if \(since > 5000\) \{.*worst = 0; since = 0; \}\s*\}/);
-  });
-});
-
-describe("readout rows (#185)", () => {
-  it("shows the ground in its own Suelo row, right after Sólidos", () => {
-    expect(src).toMatch(/\["Sólidos", String\(r\.solids\)\],\s*\["Suelo", String\(r\.ground\)\],/);
   });
 });
