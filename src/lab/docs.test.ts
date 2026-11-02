@@ -145,7 +145,7 @@ describe("documentación del barrio costero (#256)", () => {
     const doc = techSrc.slice(0, end);
     expect(doc).toMatch(/coastal residential neighborhood/);
     expect(doc).toContain("docs/superpowers/specs/2026-10-27-barrio-costero-design.md");
-    expect(doc).not.toMatch(/laborator|atrium/);
+    expect(doc).not.toMatch(/laborator|atri(um|a)/);
   });
   it("mundo-3 remite al spec del barrio encima de la tabla de tipos", () => {
     const from = mundo3.indexOf("## 2. Decisiones"), to = mundo3.indexOf("| Tema | Decisión |");

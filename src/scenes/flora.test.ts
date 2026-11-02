@@ -51,7 +51,7 @@ describe("flora: train rule", () => {
   it("keeps those that lie east of the front", () => {
     expect(one(180, 141, 2, 5, rails)).toHaveLength(1);
     expect(one(175, 141, 2, 9, rails)).toHaveLength(1);
-    expect(one(173, 141, 2, 9, rails)).toHaveLength(1); // only sx separates it: 173 − 2 − 143 = 28 ≥ 27.2 (q da 157.84 < 158)
+    expect(one(173, 141, 2, 9, rails)).toHaveLength(1); // only sx separates it: 173 − 2 − 143 = 28 ≥ 27.2 (q gives 157.84 < 158)
   });
   it("does not touch the cones north of the track", () => {
     expect(one(100, 120, 2, 9, rails)).toHaveLength(1);
