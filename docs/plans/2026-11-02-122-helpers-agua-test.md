@@ -46,7 +46,7 @@
   - (e) `hullBlue` aparece una sola vez, dentro de la lista del test "materiales exclusivos de ciudad y costa";
   - (f) `npx vitest run src/map/palette-iso.test.ts` pasa.
 
-  Hoy fallan (a), (b), (c) y (e).
+  Hoy fallan (a), (b) y (e); (c) ya pasa, porque el `0.4` está una sola vez, en la aserción.
 
 - [ ] **Step 2: enmascarar el rojo.** En `aguaYDestello`, `rgb` pasa a ser `(c: number) => [(c >> 16) & 255, (c >> 8) & 255, c & 255] as const`, la misma forma que tiene el `rgb` del test de la fábrica.
 
