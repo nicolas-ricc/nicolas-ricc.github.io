@@ -32,7 +32,7 @@
 1. **La barra final se conserva.** `fileURLToPath` de una URL de directorio (`file:///work/`) devuelve `/work/`, con la barra. Los usos existentes concatenan con template strings (`` `${ROOT}lab/…` ``), así que el valor sigue siendo intercambiable y esos usos no cambian.
 2. **El guard vive en `scripts/`.** Cubre `src/` y `scripts/`, el mismo alcance que el `grep` del issue. Ya está en el `include` de `vitest.config.ts`.
 3. **El guard no se detecta a sí mismo.** Busca con la regex `/import\.meta\.url\)\.pathname/`. Su texto fuente lleva barras invertidas, así que no contiene la cadena literal que busca.
-4. **La prueba con espacios va en un script y no en un test unitario.** Correr Vitest dentro de Vitest desde otra ruta es caro y frágil. El eval copia el repo a `/tmp/mis proyectos/mapá/`, enlaza `node_modules` y corre los 8 archivos afectados. Antes del cambio falla con ENOENT; después pasa.
+4. **La prueba con espacios va en un script y no en un test unitario.** Correr Vitest dentro de Vitest desde otra ruta es caro y frágil. El eval copia el repo a `/tmp/mis proyectos/mapá/`, enlaza `node_modules` y corre la suite **completa**. Ya se corrió antes del cambio y dio `8 failed | 91 passed (99)`: fallaron exactamente los 8 archivos de la lista, todos con `ENOENT … '/tmp/mis%20proyectos/map%C3%A1/…'`. Los otros 91 archivos pasaron desde esa ruta, así que Vitest en sí no tiene problema con el espacio ni con la tilde.
 
 ## Review Focus
 
@@ -74,13 +74,13 @@ Expected: FAIL. `hits` lista los 8 archivos de Global Constraints.
 
 - [ ] **Step 3: Escribir `.scratch/evals-173.md`**
 
-Es un script bash que hace esto:
-- `D="/tmp/mis proyectos/mapá"`.
-- Copia el repo a `$D` con `rsync`, salvo `node_modules` y `.git`.
-- Crea el enlace `ln -s /work/node_modules "$D/node_modules"`.
-- Corre `(cd "$D" && npx vitest run <los 8 archivos> scripts/file-url.test.ts)`.
+Es un Markdown con un único bloque ` ```bash `. Se corre con `sed -n '/^```bash$/,/^```$/{/^```/d;p}' .scratch/evals-173.md | bash`, y el bloque hace esto:
+- `D="/tmp/mis proyectos/mapá"`, y `rm -rf "$D"` para arrancar limpio.
+- Copia el árbol de trabajo con `tar --exclude=./node_modules --exclude=./.git`, porque la máquina no tiene `rsync`.
+- Crea el enlace `ln -sfn <repo>/node_modules "$D/node_modules"`.
+- Corre `npx vitest run` (la suite completa) y la salida va a `/tmp/evals-173.log`.
 
-Resultado esperado: exit 0 y ningún `ENOENT`. Agregar `.scratch/` a `.git/info/exclude`.
+Resultado esperado: exit 0 y ningún `ENOENT` en el log. Agregar `.scratch/` a `.git/info/exclude`. El resultado (antes y después) va a la descripción del PR, que es la evidencia durable.
 
 - [ ] **Step 4: Commit**
 
@@ -108,8 +108,8 @@ Expected: PASS.
 
 - [ ] **Step 3: Correr el eval con espacios**
 
-Run: `bash .scratch/evals-173.md` (o el bloque de código del archivo).
-Expected: exit 0.
+Run: `sed -n '/^```bash$/,/^```$/{/^```/d;p}' .scratch/evals-173.md | bash`
+Expected: exit 0. La suite completa pasa (99 archivos más el guard) y no hay ningún `ENOENT`.
 
 - [ ] **Step 4: Suite completa y typecheck**
 
@@ -119,6 +119,21 @@ Expected: PASS. `grep -rn "import.meta.url).pathname" src scripts` no devuelve n
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src
+git add src/iso/pixi-free.test.ts src/lab/boot.test.ts src/lab/docs.test.ts src/lab/host.test.ts src/lab/lab-excluded.test.ts src/lab/page.test.ts src/map/palette-guard.test.ts src/map/seed.test.ts
 git commit -m "fix(#173): rutas de test con fileURLToPath"
 ```
+
+## Assumptions
+
+- **Solo POSIX.** CI corre en `ubuntu-latest` (`.github/workflows/deploy.yml:17`) y los usos existentes ya concatenan con `/`. No se adapta nada para Windows. Se descartó usar `path.join` en todos los usos: es un cambio más grande que el issue no pide.
+- **El guard replica el `grep` del issue.** Busca el literal `import.meta.url).pathname`. Se descartó un análisis más amplio (por ejemplo, `.pathname` sobre una `URL` guardada en una variable): el issue define las apariciones con ese `grep`.
+- **El eval corre la suite completa y no solo los 8 archivos.** El objetivo es que la suite pase desde esa ruta.
+- **La caché de Vitest se escribe en el `node_modules` real a través del symlink** (`node_modules/.vite`). Es inocua y está gitignoreada.
+- **El test rojo entra al branch antes del fix.** El commit `test(#173): evals` va solo en el branch del agente. El PR se abre con el fix ya aplicado.
+
+## Grilling
+
+- Rounds: 1 (griller model: fable). 15 preguntas.
+- Fuentes: CODE 10 (1, 2, 6, 7, 8, 9, 11, 13 y 15 citan el código o la corrida del eval; 3 cita `deploy.yml`), ISSUE 2 (5 y 12), NO SOURCE → supuesto técnico 3 (4, 10 y 14).
+- Cambios en el plan: el eval es un Markdown con un bloque bash, usa `tar` en vez de `rsync`, borra la copia anterior, corre la suite completa y quedó verificado antes del cambio (8 de 99 archivos fallan con ENOENT). El commit del fix nombra los archivos uno por uno. Se agregó `## Assumptions`.
+- Spec ambiguities: ninguna. Issues abiertos: ninguno.
