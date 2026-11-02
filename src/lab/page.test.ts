@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { assembleWorld } from "../world/assemble";
+import type { BloomMode } from "../world/stage";
 import { EXHIBITS } from "./exhibits";
 import { bloomFromSearch, MAX_SPEED, nextBloomMode, speedFromSearch } from "./page";
 
@@ -72,7 +73,11 @@ describe("lab world help documents URL parameters (#180)", () => {
   const label = /\baria-label="([^"]*)"/.exec(hostTag("world"))?.[1] ?? "";
   it("lists ?bloom= with the modes it forces", () => {
     expect(label).toContain("?bloom= lo fuerza al cargar: on, off o fallback.");
-    for (const m of /\?bloom= lo fuerza al cargar: (\w+), (\w+) o (\w+)\./.exec(label)!.slice(1)) expect(bloomFromSearch(`?bloom=${m}`), m).toBe(m);
+    const listed = /\?bloom= lo fuerza al cargar: ([^.]+)\./.exec(label)![1]!.split(/, | o /);
+    for (const m of listed) expect(bloomFromSearch(`?bloom=${m}`), m).toBe(m);
+    const cycle: BloomMode[] = ["off"];
+    for (let m = nextBloomMode("off"); m !== "off"; m = nextBloomMode(m)) cycle.push(m);
+    expect([...listed].sort()).toEqual([...cycle].sort());
   });
   it("lists ?speed= with its cap and ?speed=0 freezing the clock", () => {
     expect(label).toContain(`?speed= escala el reloj de las animaciones hasta ${MAX_SPEED}; ?speed=0 lo congela.`);
