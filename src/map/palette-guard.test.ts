@@ -1,9 +1,10 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { basename, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { allIsoColors } from "./palette-iso";
 
-const SRC = new URL("../", import.meta.url).pathname; // src/
+const SRC = fileURLToPath(new URL("../", import.meta.url)); // src/
 
 /** palette-iso.ts define los colores; palette-base.ts guarda el atlas previo al oscurecimiento; seed.ts usa 0x6d2b79f5, la constante de mulberry32. */
 const EXEMPT = new Set(["map/palette-iso.ts", "map/palette-base.ts", "map/seed.ts"]);
@@ -33,7 +34,7 @@ describe("guard de paleta", () => {
   }
 });
 
-const LAB = new URL("../../lab/", import.meta.url).pathname;
+const LAB = fileURLToPath(new URL("../../lab/", import.meta.url));
 const PALETTE = allIsoColors();
 
 /** Literales hex que no son colores de la paleta. Uno de otro largo que 6 nunca lo es: ni abreviado ni con dígitos de más se salta el guard. */

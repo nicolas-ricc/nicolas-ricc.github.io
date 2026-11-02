@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const ROOT = new URL("../../", import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const PAGES = ["world", "blog", "resume", "portfolio", "storybook"];
 
 describe("host del lab (#103)", () => {

@@ -8,6 +8,7 @@ import { jungle } from "./flora";
 import { towerCrane } from "./pieces";
 import { RAIL_Y } from "./shipyard";
 import { COVER_MARGIN, GREEN_BELT, builtAt } from "./sprawl-grid";
+import { TRAIN_CLEAR } from "./station";
 
 /**
  * Hinterland industrial de Portfolio, sobre el sangrado al norte y al oeste
@@ -152,7 +153,7 @@ function westHalls(out: Solid[], accents: Accent[], rng: Rng): void {
   out.push({ kind: "cylinder", at: v3(wx, wy, legH), r: 3, h: 4, mat: "steel", sides: 10 });
   accents.push({ kind: "dot", at: v3(wx, wy, legH + 4.2), r: 0.6, color: "cyanMid" });
   for (const [x, y] of [[-190, 44], [-130, 96], [-70, 20], [-150, -50], [-180, 10]] as const) lamp(out, accents, x, y);
-  jungle(out, rng, { x0: -238, x1: WORLD.x0 - 2, y0: GREEN_BELT.y0 + 2, y1: ZONE_SPLIT_Y - 5 }, 60, 0.4, { y: RAIL_Y }); // la mitad de Portfolio del cinturón verde (r ≤ 4: ningún cono cruza la costura y = 146); se siembran 60 porque los que caerían sobre las vías del oeste se descartan (quedan ~30)
+  jungle(out, rng, { x0: -238, x1: WORLD.x0 - 2, y0: GREEN_BELT.y0 + 2, y1: ZONE_SPLIT_Y - 5 }, 60, 0.4, { y: RAIL_Y, train: TRAIN_CLEAR }); // la mitad de Portfolio del cinturón verde (r ≤ 4: ningún cono cruza la costura y = 146); se siembran 60 porque los que caerían sobre las vías del oeste se descartan (quedan ~20 tras despejar el corredor del tren, #280)
 }
 
 /** Las vías del oeste del astillero siguen por el cinturón verde hasta el borde del sangrado: en pantalla salen por la izquierda, como si no terminaran. */

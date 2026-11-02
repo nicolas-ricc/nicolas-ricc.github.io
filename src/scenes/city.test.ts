@@ -307,9 +307,3 @@ describe("city", () => {
     }
   });
 });
-
-describe("imports de city.ts (#50)", () => {
-  it("no importa brokenTone, que no usa", () => {
-    expect(readFileSync(new URL("./city.ts", import.meta.url), "utf8")).not.toMatch(/brokenTone/);
-  });
-});

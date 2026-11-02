@@ -88,3 +88,14 @@ export function accentZone(a: Accent): WorldZone {
   const p = a.kind === "dot" ? a.at : a.pts[0]!;
   return worldZoneAt(p.x, p.y);
 }
+
+/**
+ * Reparte luces por zona del velo: cada una con la zona donde está parada
+ * (`accentZone`), salvo que la capa declare una zona (luces montadas en un
+ * barco, que se velan enteras con la zona del barco).
+ */
+export function accentsByZone(accents: readonly Accent[], zone?: WorldZone): Record<WorldZone, Accent[]> {
+  const out: Record<WorldZone, Accent[]> = { portfolio: [], cv: [], blog: [] };
+  for (const a of accents) out[zone ?? accentZone(a)].push(a);
+  return out;
+}

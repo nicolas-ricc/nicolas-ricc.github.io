@@ -11,10 +11,25 @@ describe("ciclo de vida de los stages del storybook (#102)", () => {
   });
 });
 
-describe("la entrada actual del índice (#117)", () => {
-  it("se centra solo si no se ve entera", () => {
-    expect(src).not.toContain('block: "nearest"');
-    expect(src).toContain("outOfView(a.getBoundingClientRect(), nav.getBoundingClientRect())");
-    expect(src).toContain('a.scrollIntoView({ block: "center" })');
+describe("elementos de la página (#187)", () => {
+  it("no los lee con getElementById: los resuelve mountStorybook", () => {
+    expect(src).not.toContain("getElementById(");
+    expect(src).toMatch(/mountStorybook\(\s*document\s*,/);
+  });
+});
+
+describe("logs del storybook (#132)", () => {
+  it("la tecla 6 no usa el prefijo bloom: del veredicto medido", () => {
+    const infos = src.match(/console\.\w+\(\s*([`"'])[\s\S]*?\1/g) ?? [];
+    expect(infos.length).toBeGreaterThan(0);
+    expect(infos.filter((l) => l.includes("bloom:"))).toEqual([]);
+    expect(src).toMatch(/stage\.setBloom\(nextBloomMode\(stage\.bloom\)\);\s*if \(log\) console\.info\(`\[storybook\] bloom a mano: \$\{stage\.bloom\}`\);/);
+  });
+  it("la ayuda de teclas sigue describiendo la tecla 6", () => {
+    expect(src).toMatch(/6 rota el bloom/);
+    expect(readFileSync(new URL("../../lab/storybook.html", import.meta.url), "utf8")).toMatch(/aria-label="[^"]*Tecla 6 rota el bloom: off, on, fallback\.[^"]*"/);
+  });
+  it("worst y since se acumulan solo con log, como en src/main.ts", () => {
+    expect(src).toMatch(/bloom\?\.tick\(dt\);\s*if \(log\) \{\s*worst = Math\.max\(worst, dt\);\s*since \+= ticker\.deltaMS;\s*if \(since > 5000\) \{.*worst = 0; since = 0; \}\s*\}/);
   });
 });

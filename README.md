@@ -9,19 +9,30 @@ Sitio personal: un mapa isométrico nocturno con tres zonas (Portfolio, Resume, 
 
 Sin licencia pública: `private: true`, el campo `license` (ISC) queda como resto del scaffold y no aplica — el repo no se publica en npm.
 
-Contenido editable en `content/*.json`. Diseño en `docs/superpowers/specs/`, plan en `docs/superpowers/plans/`.
+Contenido editable en `content/*.json`. `public/cv.pdf` es una copia del CV de `riccomini-multiverse` (`cv/cv.pdf`); se actualiza a mano con `gh api repos/nicolas-ricc/riccomini-multiverse/contents/cv/cv.pdf -H "Accept: application/vnd.github.raw" > public/cv.pdf`. Diseño en `docs/superpowers/specs/`, plan en `docs/superpowers/plans/`.
 
 ## Mundo isométrico
 
 El sitio (la raíz de myxomatosis.xyz; las zonas viven bajo `/area/` porque `/blog/` es el blog Hugo) muestra el mundo isométrico completo: motor puro en
 `src/iso/`, terreno compartido en `src/scenes/terrain.ts`, escenas en
-`src/scenes/`, incluidas `factory.ts` (fábrica de Portfolio), `city.ts` (orquestador de Resume)
-y `sea.ts` (punta, faro y barcos de Blog); las piezas de Resume viven en `src/city/`
-(`zoning.ts` barrios, `fixed.ts` piezas fijas, `streets.ts` calles, `lights.ts`
-ventanas, neones y fachadas bañadas). Los
-tres barcos (Damen Combi Freighter 3850, Damen ASD Tug 2810 y un empujador
-fluvial con barcaza Jumbo) aparecen en la bocana y recorren dos carriles
-semirrectos: `LANE_OUT` baja hacia abajo-izquierda de la pantalla hasta salir
+`src/scenes/`, incluidas `factory.ts` (fábrica de Portfolio: nave de calderas
+de la Fábrica de Luz, maltería de Mistley y tanque de agua sobre patas, tres
+chimeneas con bandas de balizamiento, subestación de intemperie y excavadora
+de rueda de cangilones con la rueda animada, `factory.wheel`), `city.ts`
+(orquestador de Resume) y `sea.ts` (punta, faro y barcos de Blog). Las piezas de
+Resume viven en `src/city/` (`zoning.ts` barrios, `fixed.ts` piezas fijas,
+`streets.ts` calles, `lights.ts` ventanas, neones y fachadas bañadas) y en el
+kit `src/kit/` (se explora en `lab/kit.html`). Al final
+de la vía del oeste, en el lugar de la calderería del astillero, está la
+estación cabecera (`station.ts`, modelada sobre la Estación Tigre de la Línea
+Mitre: edificio de ladrillo con techos de teja, torre del reloj, andenes con
+marquesinas verdes, topes y paso a nivel), con una formación estacionada de tres
+coches en la vía 2 y un tren EMU de cuatro coches (`train.ts`) que entra por la
+vía del oeste desde el borde del sangrado, espera 30 s contra los topes y vuelve
+a salir (`rail.train`, `rail-anim.ts`). Los tres barcos (Damen Combi
+Freighter 3850, Damen ASD Tug 2810 y un empujador fluvial con barcaza Jumbo)
+aparecen en la bocana y recorren dos carriles semirrectos: `LANE_OUT` baja
+hacia abajo-izquierda de la pantalla hasta salir
 del cover y `LANE_BACK` vuelve a la bocana, donde se desvanecen ("entran a
 puerto"); no fondean ni giran en el lugar. La lancha de la feria es una lancha
 colectiva del Tigre y el pecio de la fosa, un costero partido en dos. El
@@ -29,13 +40,21 @@ mundo tiene origen en `(-60, -60)` y un sangrado de terreno alrededor de todo
 el contenido, para que la cámara *cover* nunca muestre cielo; sobre el
 sangrado viven los márgenes construidos, `hinterland.ts` (industria de
 Portfolio al norte y al oeste de la fábrica, con su central térmica) y
-`tech.ts` (distrito tecnológico de Resume al oeste y al sur de la ciudad),
+`tech.ts` (distrito tecnológico de Resume al oeste de la ciudad y, al sur,
+sobre el estuario, un barrio residencial costero: monoblocks, casas con techo
+de teja, escuela, club, plazas y una costanera iluminada sobre el muelle),
 separados por un cinturón verde; `fair.ts` es la feria de la playa sobre la
 bahía, al norte de la fábrica; el estuario y el mar siguen hacia el sur hasta
-juntarse.
+juntarse. La fábrica ocupa el lugar que tenían los galpones del astillero,
+entre la playa de vías y la calle de transferencia, delante del desvío, con la
+cinta inclinada bajando a la playa de camiones (la cinta larga ya no está); las
+naves de montaje, los talleres y el patio de material del astillero quedan al
+norte, detrás de la fábrica.
 
 El runtime que arma y anima ese mundo vive en `src/world/` y lo comparten el
-sitio y el laboratorio: `stage.ts` (capas, velos y luces por zona),
+sitio y el laboratorio: `stage.ts` (capas, velos y luces por zona: cada luz, estática o
+animada, se vela con la zona de su posición, salvo las de un barco, que siguen
+la zona del barco),
 `assemble.ts` (escena + animadores etiquetados por zona), `frame.ts`
 (encuadres puros, `zoneFrame`/`coverFrame`), `veil.ts` (polígonos del velo por
 zona) y `view.ts` (cámara pura: `coverView`, `zoneView`, `clampToBleed`,
@@ -74,16 +93,23 @@ Specs en `docs/superpowers/specs/`
 `2026-10-15-resume-nivel-2-kit-zonificacion-luces-design.md`,
 `2026-10-16-barcos-referencia.md`,
 `2026-10-17-barcos-inventario.md`,
-`2026-10-17-storybook-estructuras-design.md`).
+`2026-10-17-storybook-estructuras-design.md`,
+`2026-10-24-fabrica-detalle-design.md`,
+`2026-10-27-fabrica-mudanza-design.md`,
+`2026-10-27-estacion-terminal-design.md`,
+`2026-10-27-barrio-costero-design.md`).
 
 `/lab/storybook.html` es el storybook de estructuras: muestra un edificio o
 estructura a la vez, recortado del mundo por su caja (o armado solo en el
-origen, para las piezas reubicables como barcos y grúa torre), con su
-animación y un panel de lectura (sólidos, caras, acentos, caja, materiales).
+origen, para las piezas reubicables como barcos y grúa torre; la estación
+son `#estacion` y `#paso-a-nivel`, regiones con el tren animado, y `#tren`, la
+pieza con las luces que se invierten cada 4 s), con su
+animación y un panel de lectura (sólidos, suelo, caras, acentos, caja, materiales).
 El hash de la URL elige el exhibit (`#faro`); flechas (`←`/`→`, `↑`/`↓`)
 o `j`/`k` pasan al siguiente o al anterior; `g`, `h` y `a` ocultan o
 muestran suelo, sombras y acentos; `6` rota el bloom, `?bloom=` lo fuerza y
-`?speed=` escala el reloj de las animaciones (`?speed=0` lo congela).
+`?speed=` escala el reloj de las animaciones hasta 100 (`?speed=0` lo
+congela; por encima de 100 vale 1).
 
 El bloom de las luces no entra en el primer dibujo: el sitio y el lab lo
 activan después, en una tarea diferida (`attachBloom`,
@@ -94,3 +120,13 @@ ejemplo `[mapa] bloom: promedio 9.9 ms en 60 frames (tick 6.4 + render
 3.5), presupuesto 15 ms → activo` (con prefijo `[lab]` en el
 laboratorio). En el lab, `?bloom=` fuerza el modo sin medir y `6` lo
 rota.
+
+## Tests
+
+Convención: los tests del motor no usan Pixi. El guard
+`src/iso/pixi-free.test.ts` falla si un fuente de `src/iso/` o `src/scenes/`
+importa `pixi.js`, o si un test de `src/` lo nombra, con comillas simples o
+dobles, `import()` o `import type`. En su lugar se usan dobles de prueba
+(fakes). Las excepciones explícitas son los tests de módulos de Pixi,
+`src/world/stage.test.ts` y `src/world/bloom-runtime.test.ts` (`PIXI_TESTS`
+en el guard, #166); una excepción nueva se agrega ahí y en este párrafo.

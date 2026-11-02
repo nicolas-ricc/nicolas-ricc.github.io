@@ -70,11 +70,11 @@ Lista inicial, agrupada por zona (el orden es el del índice):
 | Zona | Exhibits región | Exhibits pieza |
 |---|---|---|
 | Portfolio: fábrica | planta, chimeneas y torre de enfriamiento, subestación, playa de camiones, playa de vías, cinta transportadora | — |
-| Portfolio: astillero | gradas, dársena, grúa pórtico, calle de faroles, naves | grúa torre, farol |
+| Portfolio: astillero | gradas, dársena, grúa pórtico, calle de faroles, naves, punta norte, estación, paso a nivel | grúa torre, farol, tren |
 | Portfolio: hinterland | central térmica y torre de enfriamiento, tanques, silos, línea de torres de alta tensión, playa de contenedores | — |
 | Portfolio: feria | noria, montaña rusa, torre de caída, carrusel, arcade, autitos chocadores, muelle | — |
-| Resume: ciudad | plaza, torre, puente, malecón, manzana derrumbada, manzana del distrito, obra | campus, selva |
-| Resume: tecnológico | mástil de telecomunicaciones, arena, auditorio, torres | — |
+| Resume: ciudad | plaza, torre, puente, malecón, manzana derrumbada, manzana del distrito, obra, punta sur | campus, selva |
+| Resume: tecnológico | mástil de telecomunicaciones, arena, auditorio, torres, monoblock, casas con techo de teja, escuela, club, plaza de barrio, costanera, barrio costero | — |
 | Blog: mar | faro, casa del farero, boyas, pecio | carguero, remolcador, convoy con barcaza, lancha colectiva |
 
 El catálogo es dato: agregar una estructura nueva al mundo es agregar una
@@ -224,4 +224,6 @@ Lo que la implementación hizo distinto de lo escrito arriba, con su origen.
 - §8 pedía capturas de cuatro exhibits. Las de cierre están en `docs/superpowers/specs/assets/97-storybook/` (`chimeneas`, `torre`, `faro`, `grua-torre`, `world`) y se tomaron con `?bloom=off` para no depender de la medición diferida en headless (#97).
 - La captura `faro` de #97 corta la punta del haz: el `h` del exhibit cubría tambores, linterna y tapa, no la cuña larga. Desde #116 el `h` sale de `LANTERN_Z` y `BEAM_LEN`, y el test de encuadre mide también los acentos en pantalla, a lo largo de una vuelta del haz. `faro-haz.png` muestra el haz apuntando al norte, la fase en que más sube, con `?bloom=off`.
 - La captura `grua-torre` de #97 muestra la sombra de la pluma saliendo del pad. Desde #118 el pad de las piezas cubre también la sombra proyectada, medida con `shadowPolygon`, el mismo proyector que la dibuja: queda descentrado hacia el ENE. `grua-torre-sombra.png` lo muestra, con `?bloom=off`.
+- §7 sumaba `scene.ground` en Sólidos, así que el pad de una pieza contaba como un sólido más (`#carguero` mostraba 38 para 37). Desde #185 Sólidos cuenta `scene.solids` más las capas sólidas de los animadores, y una fila aparte, Suelo, muestra `scene.ground.length`; caras, caja y materiales siguen incluyendo el suelo. Una pieza sin sólidos (o solo con sólidos sin caras) lleva la tapa del pad en 0 en lugar de `Math.floor(min z)`, que daba `Infinity` (#185, #200).
 - §6 no fijaba cómo se desplaza el índice. La entrada actual se centra en la columna (`block: "center"`) cuando no se ve entera, y si ya se ve, la lista no se mueve. Cerca del final del índice el navegador detiene el desplazamiento en el máximo, así que `faro` queda sobre el centro con sus vecinas visibles debajo. Capturas `indice-antes` e `indice-despues` en `assets/97-storybook/`, con `#faro`; `indice-despues-malecon` muestra el centrado pleno, al llegar por hash a la primera entrada bajo el pliegue (#117).
+- §6 no preveía qué pasa si `lab/storybook.html` pierde `#lab-host`, `#exhibits` o `#readout`. `storybook.ts` arranca con `mountStorybook` de `src/lab/storybook-ui.ts`, que resuelve los tres y, si falta alguno o el arranque síncrono lanza, muestra `No se pudo iniciar el storybook: …` en el host (o en `body` si falta el host). El índice, la entrada actual y el panel (`buildIndex`, `markCurrent`, `renderReadout`) viven en ese módulo, que no corre nada al importarse y se prueba con happy-dom (#187).

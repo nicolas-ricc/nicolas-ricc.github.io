@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { createRng, SEED } from "./seed";
 
@@ -37,7 +38,7 @@ describe("createRng", () => {
   });
 });
 
-const ROOT = new URL("../../", import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const source = (path: string): string => readFileSync(`${ROOT}${path}`, "utf8");
 
 describe("SEED (#105)", () => {

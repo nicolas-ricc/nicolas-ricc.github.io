@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { createRng } from "../map/seed";
 import { shipyard } from "./shipyard";
-import { TROLLEY_CYCLE_MS, TROLLEY_PAUSE_MS, createShipyardAnim } from "./shipyard-anim";
+import { SPARK_GAP_MS, TROLLEY_CYCLE_MS, TROLLEY_PAUSE_MS, createShipyardAnim } from "./shipyard-anim";
 
 const setup = (reducedMotion = false) => {
   const scene = shipyard(createRng(7));
@@ -88,5 +88,59 @@ describe("shipyard-anim", () => {
     }
     expect(scene.trolley.at.y).toBe(y);
     expect(anim.sparks()).toEqual([]);
+  });
+});
+
+describe("shipyard-anim: troceo (#125)", () => {
+  const troceado = (dts: number[]) => {
+    const { scene, anim } = setup();
+    for (const dt of dts) anim.tick(dt);
+    return { y: scene.trolley.at.y, anim };
+  };
+  const veces = (n: number, dt: number) => Array.from({ length: n }, () => dt);
+  it("un tick de 60 s deja lo mismo que 600 ticks de 100 ms", () => {
+    const a = troceado([60000]), b = troceado(veces(600, 100));
+    expect(a.anim.fired().sparks).toBeGreaterThan(0);
+    expect(a.anim.fired()).toEqual(b.anim.fired());
+    expect(a.anim.sparks()).toEqual(b.anim.sparks());
+    expect(a.y).toBe(b.y);
+  });
+  it("un troceo irregular deja lo mismo que su suma", () => {
+    const dts = [16, 33, 100, 250, 1000, 5000, 7000, 33, 1234];
+    const a = troceado(dts), b = troceado([dts.reduce((s, x) => s + x, 0)]);
+    expect(a.anim.fired()).toEqual(b.anim.fired());
+    expect(a.anim.sparks()).toEqual(b.anim.sparks());
+  });
+  it("un tick largo que termina a mitad de un evento muestra el mismo cuadro", () => {
+    const b = setup().anim;
+    let t = 0;
+    while (b.sparks().length === 0) { b.tick(100); t += 100; }
+    b.tick(100); t += 100; // segundo cuadro del evento
+    const a = setup().anim;
+    a.tick(t);
+    expect(b.sparks().length).toBeGreaterThan(0);
+    expect(a.sparks()).toEqual(b.sparks());
+  });
+  it("10 min de una vez: tantos eventos como 6000 ticks de 100 ms", () => {
+    const largo = troceado([600000]).anim.fired().sparks;
+    expect(largo).toBeGreaterThanOrEqual(600000 / (SPARK_GAP_MS[1] + 300) - 1);
+    expect(largo).toBeLessThanOrEqual(600000 / SPARK_GAP_MS[0]);
+    expect(largo).toBe(troceado(veces(6000, 100)).anim.fired().sparks);
+  });
+  it("un evento entero dentro de un tick largo no reporta cambio de chispas", () => {
+    const b = setup().anim;
+    let t = 0;
+    while (b.sparks().length === 0) { b.tick(10); t += 10; }
+    while (b.sparks().length > 0) { b.tick(10); t += 10; }
+    const a = setup().anim;
+    expect(a.tick(t).sparks).toBe(false); // vacío antes y después: nada que redibujar
+    expect(a.fired().sparks).toBe(1);
+  });
+  it("dt no válido no cambia nada", () => {
+    const { scene, anim } = setup();
+    const y = scene.trolley.at.y;
+    for (const dt of [0, -5, NaN, Infinity]) expect(anim.tick(dt)).toEqual({ trolley: false, sparks: false });
+    expect(anim.fired().sparks).toBe(0);
+    expect(scene.trolley.at.y).toBe(y);
   });
 });

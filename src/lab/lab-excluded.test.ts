@@ -1,7 +1,8 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const ROOT = new URL("../../", import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 
 describe("laboratorio fuera de producción", () => {
   it("existen las entradas de dev", () => {

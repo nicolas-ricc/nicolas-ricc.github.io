@@ -1,4 +1,5 @@
-import { CELL, QUAY_X, ZONE_SPLIT_Y, eastBank } from "../map/geo";
+import { ESTUARY_FLARE, QUAY_X, SEAM_CY, ZONE_SPLIT_Y, eastBank, estuaryEast } from "../map/geo";
+export { ESTUARY_FLARE, estuaryEast };
 
 /**
  * Grilla de Resume, la ciudad de oficinas. Módulo puro y sin rng: es la única
@@ -38,14 +39,6 @@ export const COLLAPSED: Rect = { x: 280, y: 242, w: 24, d: 18 }; // el estuario 
 export const FALLEN_BLOCK: Rect = { x: MALECON.x0 - 8, y: 237.5, w: 6, d: 3 };
 export const CRATERS: readonly { x: number; y: number; r: number }[] = [{ x: 60, y: 185, r: 5 }, { x: 150, y: 239, r: 6 }, { x: 307, y: 224, r: 5 }];
 
-/**
- * Ruling de la parte 1: el estuario hereda el ancho del canal del astillero en
- * la última fila de celdas antes de la costura (centro y = 141) y se abre
- * hacia el sur, en vez de seguir el meandro de riverCenter.
- */
-const SEAM_CY = Math.floor(ZONE_SPLIT_Y / CELL) * CELL - CELL / 2;
-export const ESTUARY_FLARE = 0.35; // cuánto se abre la ribera este por unidad hacia el sur
-export const estuaryEast = (y: number): number => eastBank(SEAM_CY) + Math.max(0, y - ZONE_SPLIT_Y) * ESTUARY_FLARE;
 /** Inversa de estuaryEast al sur de la costura: a qué y la ribera este llega a x (menor que ZONE_SPLIT_Y si nunca lo alcanza al norte). */
 export const estuaryReaches = (x: number): number => ZONE_SPLIT_Y + (x - eastBank(SEAM_CY)) / ESTUARY_FLARE;
 

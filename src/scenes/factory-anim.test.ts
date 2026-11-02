@@ -19,7 +19,7 @@ describe("humo", () => {
   it("deriva al NNE sin alejarse más de PUFF_RANGE + 2 de la boca, y se recicla", () => {
     const a = createFactoryAnim(stacks, createRng(1), { reducedMotion: false });
     for (let t = 0; t < 40000; t += 33) {
-      expect(a.tick(33)).toBe(true);
+      expect(a.tick(33).smoke).toBe(true);
       for (const k of [0, 1]) for (const s of a.puffs(k)) {
         if (s.kind !== "cylinder") continue;
         const dx = s.at.x - stacks[k]!.x, dy = s.at.y - stacks[k]!.y;
@@ -33,7 +33,7 @@ describe("humo", () => {
   it("con reduced-motion no cambia nada", () => {
     const a = createFactoryAnim(stacks, createRng(1), { reducedMotion: true });
     const before = JSON.stringify(a.puffs(0));
-    expect(a.tick(500)).toBe(false);
+    expect(a.tick(500)).toEqual({ smoke: false, wheel: false });
     expect(JSON.stringify(a.puffs(0))).toBe(before);
   });
 });

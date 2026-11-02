@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { depthAt } from "./depth-map";
 import type { Accent } from "../iso/accent";
-import { isBehind, overlaps, screenBounds } from "../iso/depth";
+import { hullsIntersect, isBehind, overlaps, screenBounds, screenHull } from "../iso/depth";
 import { convexHull, polyline, v3, type Vec2 } from "../iso/geometry";
 import { project } from "../iso/project";
 import { bounds, hullRings, isFlat, type Bounds, type Solid } from "../iso/solids";
@@ -13,21 +13,6 @@ import { bleedTerrainAt, terrainAt } from "./terrain";
 import { world } from "./world";
 
 const WATER = new Set(["water", "sea", "shore", "abyss"]);
-/** SAT entre dos polígonos convexos: se intersecan si ningún eje (normal de un lado) los separa. */
-const intersects = (a: Vec2[], b: Vec2[]): boolean => {
-  const axes = [a, b].flatMap((poly) => poly.map((p, i) => { const q = poly[(i + 1) % poly.length]!; return { x: p.y - q.y, y: q.x - p.x }; }));
-  return axes.every((n) => {
-    const pa = a.map((p) => p.x * n.x + p.y * n.y), pb = b.map((p) => p.x * n.x + p.y * n.y);
-    return Math.max(...pa) >= Math.min(...pb) && Math.max(...pb) >= Math.min(...pa);
-  });
-};
-/**
- * Hexágono en pantalla de una caja del mundo (envolvente convexa de sus ocho vértices proyectados). El rectángulo
- * de `screenBounds` lo envuelve con mucho aire cuando la caja es larga en diagonal (un carguero con rumbo norte): daba
- * falsos positivos de oclusión con la escollera de la dársena, a 35 u del barco (#83). Dos cajas se superponen en
- * pantalla si se cortan sus hexágonos.
- */
-const screenHull = (b: Bounds): Vec2[] => { const pts: Vec2[] = []; for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) pts.push(project(v3(x, y, z))); return convexHull(pts); };
 type Static = { b: Bounds; sb: ReturnType<typeof screenBounds>; sh: Vec2[] };
 const staticsOf = (solids: Solid[]): Static[] => solids.map((s) => { const b = bounds(s); return { b, sb: screenBounds(b), sh: screenHull(b) }; });
 /** Caja de alineación del carguero centrado en `p` (z −1..13) y comprobación de que ningún sólido estático que se le superponga en pantalla lo tapa. */
@@ -35,7 +20,7 @@ const expectNotBehind = (statics: Static[], p: { x: number; y: number }, heading
   const parts = ship("cargo", shipAt("cargo", p, heading), heading).solids.map(bounds);
   const sb: Bounds = { min: v3(Math.min(...parts.map((b) => b.min.x)), Math.min(...parts.map((b) => b.min.y)), -1), max: v3(Math.max(...parts.map((b) => b.max.x)), Math.max(...parts.map((b) => b.max.y)), 13) };
   const scr = screenBounds(sb), sh = screenHull(sb);
-  for (const s of statics) if (overlaps(scr, s.sb) && intersects(sh, s.sh)) expect(isBehind(sb, s.b)).toBe(false);
+  for (const s of statics) if (overlaps(scr, s.sb) && hullsIntersect(sh, s.sh)) expect(isBehind(sb, s.b)).toBe(false);
 };
 const setup = (reducedMotion = false) => { const w = world(7); return { w, a: createSeaAnim(w.sea!, { reducedMotion }) }; };
 
@@ -120,7 +105,7 @@ describe("dos carriles", () => {
     for (let d = 0; d <= Lb; d += 4) { const p = laneAt("back", d); backs.push(silhouette(p, p.heading)); }
     for (let d = 0; d <= Lo; d += 4) {
       const p = laneAt("out", d), s = silhouette(p, p.heading);
-      for (const b of backs) expect(intersects(s, b)).toBe(false);
+      for (const b of backs) expect(hullsIntersect(s, b)).toBe(false);
     }
   });
 
@@ -130,12 +115,6 @@ describe("dos carriles", () => {
       const p = laneAt(lane, d);
       for (let f = 0; f <= ferry.length; f += 2) { const q = ferry.at(f); expect(Math.hypot(p.x - q.x, p.y - q.y)).toBeGreaterThan(20); }
     }
-  });
-
-  it("intersects (SAT) detecta superposición y separación", () => {
-    const sq = (x: number, y: number): Vec2[] => [{ x, y }, { x: x + 2, y }, { x: x + 2, y: y + 2 }, { x, y: y + 2 }];
-    expect(intersects(sq(0, 0), sq(1, 1))).toBe(true);
-    expect(intersects(sq(0, 0), sq(3, 0))).toBe(false);
   });
 
   it("laneAt('back') interpola el rumbo en los vértices y en el extremo llega con el rumbo del último tramo", () => {
@@ -275,7 +254,7 @@ describe("lancha de la feria", () => {
 describe("mar, haz y boyas", () => {
   it("el haz da una vuelta cada 8 s y con reduced-motion apunta al este", () => {
     const { a } = setup();
-    const angle = (acc: ReturnType<typeof a.beam>) => { const p = acc[0]!; if (p.kind !== "poly") throw new Error(); const apex = p.pts[0]!, tip = p.pts[1]!; return Math.atan2(tip.y - apex.y, tip.x - apex.x); };
+    const angle = (acc: ReturnType<typeof a.beam>) => { const p = acc[0]!; if (p.kind !== "poly") throw new Error("se esperaba una cuña poly"); const apex = p.pts[0]!, tip = p.pts[1]!; return Math.atan2(tip.y - apex.y, tip.x - apex.x); };
     const a0 = angle(a.beam());
     a.tick(BEAM_PERIOD_MS / 4);
     expect(angle(a.beam()) - a0).toBeCloseTo(Math.PI / 2, 1);
@@ -284,7 +263,13 @@ describe("mar, haz y boyas", () => {
     expect(a.beam()).toHaveLength(2);
     const r = setup(true).a;
     expect(Math.abs(angle(r.beam()))).toBeLessThan(0.2);
-    expect(r.tick(500)).toEqual({ ships: false, beam: false, buoys: false, ferry: false, neon: false });
+    expect(r.tick(500)).toEqual({ ships: [false, false, false], beam: false, buoys: false, ferry: false, neon: false });
+  });
+  it("el haz no se marca si vuelve al mismo ángulo; sí en cualquier otro tick (#71)", () => {
+    const { a } = setup();
+    a.tick(1);
+    expect(a.tick(BEAM_PERIOD_MS / 4).beam).toBe(true);
+    expect(a.tick(BEAM_PERIOD_MS).beam).toBe(false);
   });
   it("el haz es luz cálida: las dos cuñas son de la familia ámbar, ninguna magenta, en todo el giro y con reduced-motion", () => {
     for (const reduced of [false, true]) {
@@ -364,7 +349,7 @@ describe("haz: un solo ángulo por frame (#66)", () => {
     const { a } = setup();
     // Dirección como vector unitario y no como atan2: en a = π la y del punto medio es ~0 y el signo puede saltar entre +π y −π.
     const axis = (x: Accent) => {
-      if (x.kind !== "poly") throw new Error();
+      if (x.kind !== "poly") throw new Error("se esperaba una cuña poly");
       expect(x.pts).toHaveLength(3);
       const o = x.pts[0]!, p = x.pts[1]!, q = x.pts[2]!;
       const mx = (p.x + q.x) / 2 - o.x, my = (p.y + q.y) / 2 - o.y, m = Math.hypot(mx, my);
@@ -379,5 +364,22 @@ describe("haz: un solo ángulo por frame (#66)", () => {
       expect([outer!.alpha, inner!.alpha]).toEqual([0.5, 0.6]);
       a.tick(BEAM_PERIOD_MS / 4);
     }
+  });
+});
+
+describe("haz: vértice propio (#149)", () => {
+  it("cada cuña lleva su propia copia de la linterna", () => {
+    const { w, a } = setup();
+    const lantern = w.sea!.lantern, before = { ...lantern };
+    const apex = (x: Accent) => { if (x.kind !== "poly") throw new Error("se esperaba una cuña poly"); return x.pts[0]!; };
+    const beam = a.beam();
+    expect(beam).toHaveLength(2);
+    const [o0, o1] = beam.map(apex);
+    for (const o of [o0, o1]) { expect(o).toEqual(lantern); expect(o).not.toBe(lantern); }
+    expect(o0).not.toBe(o1);
+    o0!.x += 5;
+    expect(lantern).toEqual(before);
+    a.tick(100);
+    expect(apex(a.beam()[0]!)).toEqual(before);
   });
 });

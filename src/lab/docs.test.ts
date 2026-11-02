@@ -1,7 +1,8 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const ROOT = new URL("../../", import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const readme = readFileSync(`${ROOT}README.md`, "utf8");
 const blogLab = readFileSync(`${ROOT}src/lab/blog.ts`, "utf8");
 
@@ -72,4 +73,262 @@ describe("specs viejas de los barcos (#69)", () => {
       }
     });
   }
+});
+
+describe("documentación de la fábrica en detalle (#217)", () => {
+  const factorySrc = readFileSync(`${ROOT}src/scenes/factory.ts`, "utf8");
+  const parrafos = readme.split(/\n\s*\n/);
+  // espacios colapsados: el párrafo se envuelve a ~80 columnas
+  const mundo = (parrafos.find((p) => p.includes("`factory.ts`")) ?? "").replace(/\s+/g, " ");
+  const lab = parrafos.find((p) => p.includes("/lab/world.html")) ?? "";
+  const fab = readFileSync(`${ROOT}docs/superpowers/specs/2026-10-24-fabrica-detalle-design.md`, "utf8");
+  const at = fab.search(/^## 14\. Desvíos y medición$/m);
+  const desvios = at < 0 ? "" : fab.slice(at);
+  it("el párrafo del mundo isométrico describe la fábrica nueva", () => {
+    for (const re of [/nave de calderas/, /maltería/, /tanque de agua/, /chimeneas[^.]*bandas/, /subestación de intemperie/, /excavadora de rueda/]) expect(mundo).toMatch(re);
+  });
+  it("README lista la spec de la fábrica en detalle entre las specs", () => {
+    expect(lab).toContain("2026-10-24-fabrica-detalle-design.md");
+  });
+  it("el docstring de factory.ts apunta a la spec nueva", () => {
+    const end = factorySrc.indexOf("export interface FactoryScene");
+    expect(end).toBeGreaterThan(0);
+    expect(factorySrc.slice(0, end)).toContain("docs/superpowers/specs/2026-10-24-fabrica-detalle-design.md");
+  });
+  it("la spec de la fábrica dice implementada", () => {
+    const estado = fab.split("\n").find((l) => l.startsWith("**Estado:**")) ?? "";
+    expect(estado).toMatch(/implementad/);
+    expect(estado).not.toMatch(/pendiente/);
+  });
+  it("la spec cierra con desvíos, tabla de caras y medición", () => {
+    expect(at).toBeGreaterThan(0);
+    for (const id of ["planta", "chimeneas", "subestacion", "playa-vias", "cinta", "excavadora"]) expect(desvios).toMatch(new RegExp(`^\\| \`${id}\` \\|`, "m"));
+    expect(desvios).toContain("assets/207-fabrica/mundo-antes.png");
+    expect(desvios).toContain("assets/207-fabrica/mundo-despues.png");
+    expect(desvios).toMatch(/\[lab\] bloom/);
+    expect(desvios).toMatch(/peor redibujo/);
+  });
+  it("las vistas del mundo antes y después son PNG de 1600×900 a 2x", () => {
+    for (const name of ["mundo-antes", "mundo-despues"]) {
+      const png = readFileSync(`${ROOT}docs/superpowers/specs/assets/207-fabrica/${name}.png`);
+      expect(png.subarray(1, 4).toString()).toBe("PNG");
+      expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([3200, 1800]);
+    }
+  });
+});
+
+describe("documentación del barrio costero (#256)", () => {
+  const techSrc = readFileSync(`${ROOT}src/scenes/tech.ts`, "utf8");
+  const mundo3 = readFileSync(`${ROOT}docs/superpowers/specs/2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md`, "utf8");
+  const story = readFileSync(`${ROOT}docs/superpowers/specs/2026-10-17-storybook-estructuras-design.md`, "utf8");
+  const barrio = readFileSync(`${ROOT}docs/superpowers/specs/2026-10-27-barrio-costero-design.md`, "utf8");
+  const parrafos = readme.split(/\n\s*\n/);
+  // espacios colapsados: el párrafo se envuelve a ~80 columnas
+  const mundo = (parrafos.find((p) => p.includes("`tech.ts`")) ?? "").replace(/\s+/g, " ");
+  const lab = parrafos.find((p) => p.includes("/lab/world.html")) ?? "";
+  const at = barrio.search(/^## 11\. Desvíos$/m);
+  const desvios = at < 0 ? "" : barrio.slice(at);
+  const png = (n: string) => readFileSync(`${ROOT}docs/superpowers/specs/assets/2026-10-27-barrio/${n}.png`);
+  const size = (b: Buffer) => [b.readUInt32BE(16), b.readUInt32BE(20)];
+
+  it("el párrafo del mundo cuenta el barrio costero y deja el distrito tecnológico al oeste", () => {
+    for (const re of [/barrio residencial costero/, /monoblocks/, /casas con techo de teja/, /escuela/, /club/, /plazas/, /costanera iluminada sobre el muelle/]) expect(mundo).toMatch(re);
+    expect(mundo).toMatch(/distrito tecnológico de Resume al oeste/);
+    expect(mundo).not.toMatch(/al oeste y al sur de la ciudad/);
+  });
+  it("README lista la spec del barrio entre las specs", () => {
+    expect(lab).toContain("2026-10-27-barrio-costero-design.md");
+  });
+  it("el docstring de tech.ts cuenta el barrio y apunta a su spec", () => {
+    const end = techSrc.indexOf("export interface Tower");
+    expect(end).toBeGreaterThan(0);
+    const doc = techSrc.slice(0, end);
+    expect(doc).toMatch(/barrio residencial costero/);
+    expect(doc).toContain("docs/superpowers/specs/2026-10-27-barrio-costero-design.md");
+    expect(doc).not.toMatch(/laboratori|atrio/);
+  });
+  it("mundo-3 remite al spec del barrio encima de la tabla de tipos", () => {
+    const from = mundo3.indexOf("## 2. Decisiones"), to = mundo3.indexOf("| Tema | Decisión |");
+    expect(from).toBeGreaterThan(0);
+    expect(mundo3.slice(from, to)).toContain("2026-10-27-barrio-costero-design.md");
+  });
+  it("el índice del storybook lista los siete exhibits del barrio", () => {
+    const row = story.split("\n").find((l) => l.startsWith("| Resume: tecnológico |")) ?? "";
+    for (const t of ["monoblock", "casas con techo de teja", "escuela", "club", "plaza de barrio", "costanera", "barrio costero"]) expect(row).toContain(t);
+  });
+  it("capturas del cierre: vistas enteras a 1600×900 ×2 y recortes de la esquina iguales", () => {
+    for (const n of ["cover-despues", "barrio-despues", "mundo-antes", "mundo-despues"]) {
+      const b = png(n);
+      expect(b.subarray(1, 4).toString()).toBe("PNG");
+      expect(size(b)).toEqual([3200, 1800]);
+    }
+    for (const n of ["barrio-4-antes", "barrio-4-despues"]) {
+      const b = png(n);
+      expect(b.subarray(1, 4).toString()).toBe("PNG");
+      expect(size(b)).toEqual([840, 600]);
+    }
+  });
+  it("la spec del barrio dice implementada", () => {
+    const estado = barrio.split("\n").find((l) => l.startsWith("**Estado:**")) ?? "";
+    expect(estado).toMatch(/implementad/);
+  });
+  it("la spec del barrio cierra con desvíos, caras, acentos, totals y bloom", () => {
+    expect(at).toBeGreaterThan(0);
+    for (const id of ["monoblock", "casas", "escuela", "club", "plaza-barrio", "costanera", "barrio"]) expect(desvios).toMatch(new RegExp(`^\\| \`${id}\` \\|`, "m"));
+    for (const s of ["TECH_FACES_BEFORE", "REGION_FACES_BEFORE", "totals", "mediana", "roofMat", "plaza-barrio", "ACCESSES"]) expect(desvios).toContain(s);
+    expect(desvios.match(/\[lab\] bloom: /g)?.length ?? 0).toBeGreaterThanOrEqual(6);
+    expect(desvios.match(/\[lab\] peor redibujo en 5 s: /g)?.length ?? 0).toBeGreaterThanOrEqual(6);
+    for (const n of ["cover-antes", "cover-despues", "barrio-4-antes", "barrio-4-despues", "barrio-despues", "mundo-antes", "mundo-despues"]) expect(desvios).toContain(`assets/2026-10-27-barrio/${n}.png`);
+  });
+});
+
+describe("documentación de la mudanza de la fábrica (#238)", () => {
+  const factorySrc = readFileSync(`${ROOT}src/scenes/factory.ts`, "utf8");
+  const shipyardSrc = readFileSync(`${ROOT}src/scenes/shipyard.ts`, "utf8");
+  const parrafos = readme.split(/\n\s*\n/);
+  // espacios colapsados: el párrafo se envuelve a ~80 columnas
+  const mundo = (parrafos.find((p) => p.includes("`factory.ts`")) ?? "").replace(/\s+/g, " ");
+  const lab = parrafos.find((p) => p.includes("/lab/world.html")) ?? "";
+  const SPEC = "2026-10-27-fabrica-mudanza-design.md";
+  const ASSETS = `${ROOT}docs/superpowers/specs/assets/2026-10-27-fabrica-mudanza/`;
+  const mudanza = readFileSync(`${ROOT}docs/superpowers/specs/${SPEC}`, "utf8");
+  const at = mudanza.search(/^## 9\. Desvíos$/m);
+  const desvios = at < 0 ? "" : mudanza.slice(at);
+  it("el párrafo del mundo pone los galpones al norte, detrás de la fábrica", () => {
+    expect(mundo).toMatch(/(galpones|naves de montaje)[^.]*(al norte|detrás)[^.]*fábrica/);
+  });
+  it("README lista la spec de la mudanza entre las specs del laboratorio", () => {
+    expect(lab).toContain(SPEC);
+  });
+  it("el docstring de factory.ts apunta a la spec de la mudanza y no describe el lugar viejo", () => {
+    const end = factorySrc.indexOf("export interface FactoryScene");
+    expect(end).toBeGreaterThan(0);
+    const doc = factorySrc.slice(0, end);
+    expect(doc).toContain(`docs/superpowers/specs/${SPEC}`);
+    expect(doc).not.toContain("detrás (al norte) y al oeste del astillero");
+  });
+  it("shipyard.ts no describe la línea de producción vieja", () => {
+    expect(shipyardSrc.replace(/\s*\*\s*/g, " ")).not.toContain("patio de material → nave de montaje → grada");
+  });
+  it("la spec de la fábrica en detalle abre §2 con la nota de desvío", () => {
+    const fab = readFileSync(`${ROOT}docs/superpowers/specs/2026-10-24-fabrica-detalle-design.md`, "utf8");
+    const i = fab.search(/^## 2\. Reglas de modelado$/m);
+    expect(i).toBeGreaterThan(0);
+    const nota = fab.slice(i).split(/\n\s*\n/)[1] ?? "";
+    expect(nota.startsWith("*Desvío (2026-10-27):")).toBe(true);
+    expect(nota.replace(/\s+/g, " ")).toContain(SPEC);
+  });
+  it("la spec de la mudanza dice implementada", () => {
+    const estado = mudanza.split("\n").find((l) => l.startsWith("**Estado:**")) ?? "";
+    expect(estado).toMatch(/implementad/);
+    expect(estado).not.toMatch(/listo para agente/);
+  });
+  it("la spec de la mudanza cierra con desvíos, tabla de caras y capturas", () => {
+    expect(at).toBeGreaterThan(0);
+    for (const id of ["planta", "chimeneas", "subestacion", "playa-camiones", "naves", "cinta"]) expect(desvios).toMatch(new RegExp(`^\\| \`${id}\` \\|`, "m"));
+    for (const name of ["cover-antes", "cover-despues"]) expect(desvios).toContain(`assets/2026-10-27-fabrica-mudanza/${name}.png`);
+  });
+  it("las covers antes y después son PNG de 1600×900 a 2x", () => {
+    for (const name of ["cover-antes", "cover-despues"]) {
+      const png = readFileSync(`${ASSETS}${name}.png`);
+      expect(png.subarray(1, 4).toString()).toBe("PNG");
+      expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([3200, 1800]);
+    }
+  });
+  it("están las capturas antes y después de los exhibits", () => {
+    const names = ["planta", "chimeneas", "subestacion", "naves"].flatMap((id) => [`${id}-antes`, `${id}-despues`]).concat("cinta-antes");
+    for (const name of names) expect(existsSync(`${ASSETS}${name}.png`), name).toBe(true);
+  });
+});
+
+describe("documentación de la estación terminal (#239)", () => {
+  const src = (name: string) => readFileSync(`${ROOT}src/scenes/${name}`, "utf8");
+  // el docstring de un módulo: del primer `/**` hasta su cierre
+  const docstring = (txt: string) => { const i = txt.indexOf("/**"); return i < 0 ? "" : txt.slice(i, txt.indexOf("*/", i)); };
+  const parrafos = readme.split(/\n\s*\n/);
+  // espacios colapsados: el párrafo se envuelve a ~80 columnas
+  const mundo = (parrafos.find((p) => p.includes("`factory.ts`")) ?? "").replace(/\s+/g, " ");
+  const lab = parrafos.find((p) => p.includes("/lab/world.html")) ?? "";
+  const story = parrafos.find((p) => p.includes("/lab/storybook.html")) ?? "";
+  const SPEC = "2026-10-27-estacion-terminal-design.md";
+  const ASSETS = `${ROOT}docs/superpowers/specs/assets/2026-10-27-estacion/`;
+  const estacion = readFileSync(`${ROOT}docs/superpowers/specs/${SPEC}`, "utf8");
+  const at = estacion.search(/^## 12\. Desvíos$/m);
+  const desvios = at < 0 ? "" : estacion.slice(at);
+  it("el párrafo del mundo nombra la estación y el tren", () => {
+    expect(mundo).toMatch(/estaci[oó]n/);
+    expect(mundo).toMatch(/EMU|tren/);
+  });
+  it("README lista la spec de la estación entre las specs del laboratorio", () => {
+    expect(lab).toContain(SPEC);
+  });
+  it("el párrafo del storybook nombra los exhibits de la estación", () => {
+    for (const id of ["estacion", "paso-a-nivel", "tren"]) expect(story).toContain(id);
+  });
+  it("el docstring de shipyard.ts no nombra la calderería", () => {
+    const doc = docstring(src("shipyard.ts"));
+    expect(doc).toContain("station.ts");
+    expect(doc).not.toMatch(/calderer[ií]a/i);
+  });
+  it("los docstrings de station.ts, train.ts y rail-anim.ts apuntan a la spec", () => {
+    for (const name of ["station.ts", "train.ts", "rail-anim.ts"]) expect(docstring(src(name)).replace(/\s*\*\s*/g, " "), name).toContain(`docs/superpowers/specs/${SPEC}`);
+    expect(docstring(src("station.ts"))).toMatch(/Tigre/);
+  });
+  it("la spec de la estación dice implementada", () => {
+    const estado = estacion.split("\n").find((l) => l.startsWith("**Estado:**")) ?? "";
+    expect(estado).toMatch(/implementad/);
+    expect(estado).not.toMatch(/listo para agente/);
+  });
+  it("el inventario de §5 está marcado", () => {
+    const i = estacion.search(/^## 5\. /m), j = estacion.search(/^## 6\. /m);
+    expect(i).toBeGreaterThan(0);
+    expect(estacion.slice(i, j)).not.toMatch(/- \[ \]/);
+  });
+  it("la spec cierra con desvíos, tabla de caras, ciclo y capturas", () => {
+    expect(at).toBeGreaterThan(0);
+    for (const h of [/^### 12\.1 /m, /^### 12\.2 /m, /^### 12\.3 /m]) expect(desvios).toMatch(h);
+    for (const id of ["estacion", "paso-a-nivel", "tren"]) expect(desvios).toMatch(new RegExp(`^\\| \`${id}\` \\|`, "m"));
+    for (const name of ["cover-antes", "cover-despues", "time-lapse-ciclo"]) expect(desvios).toContain(`assets/2026-10-27-estacion/${name}.png`);
+  });
+  it("la cover antes, la después y el time-lapse son PNG de 1600×900 a 2x", () => {
+    for (const name of ["cover-antes", "cover-despues", "time-lapse-ciclo"]) {
+      const png = readFileSync(`${ASSETS}${name}.png`);
+      expect(png.subarray(1, 4).toString()).toBe("PNG");
+      expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([3200, 1800]);
+    }
+  });
+  it("están las capturas después de la vista de Portfolio y de los exhibits", () => {
+    for (const name of ["portfolio-despues", "estacion-despues", "paso-a-nivel-despues", "tren-despues"]) expect(existsSync(`${ASSETS}${name}.png`), name).toBe(true);
+  });
+  it("la spec de 2026-10-15 descarta la estación de −18, 188 antes de nombrarla", () => {
+    const NOTE = "*Desvío (2026-10-28): la estación va al final de la vía del oeste del astillero, en el lugar de la calderería; ver `2026-10-27-estacion-terminal-design.md`. Esta pieza queda descartada.*";
+    const nivel2 = readFileSync(`${ROOT}docs/superpowers/specs/2026-10-15-resume-nivel-2-kit-zonificacion-luces-design.md`, "utf8").replace(/\s+/g, " ");
+    const nota = nivel2.indexOf(NOTE);
+    expect(nota).toBeGreaterThan(0);
+    expect(nota).toBeLessThan(nivel2.indexOf("−18, 188"));
+  });
+  it("el índice del storybook suma la estación, el paso a nivel y el tren al astillero", () => {
+    const story17 = readFileSync(`${ROOT}docs/superpowers/specs/2026-10-17-storybook-estructuras-design.md`, "utf8");
+    const fila = story17.split("\n").find((l) => l.startsWith("| Portfolio: astillero |")) ?? "";
+    for (const name of ["estación", "paso a nivel", "tren"]) expect(fila).toContain(name);
+  });
+});
+
+describe("convención de tests sin Pixi (#103, #168)", () => {
+  const at = readme.search(/^## Tests$/m);
+  // hasta el próximo `## `, para que una sección posterior no cuente
+  const sec = at < 0 ? "" : readme.slice(at).split(/\n(?=## )/)[0];
+  const guard = readFileSync(`${ROOT}src/iso/pixi-free.test.ts`, "utf8");
+  it("README tiene una sección de tests con la convención", () => {
+    expect(readme).toMatch(/^## Tests$/m);
+    expect(sec).toContain("los tests del motor no usan Pixi");
+    expect(sec).toContain("src/iso/pixi-free.test.ts");
+    for (const d of ["src/iso/", "src/scenes/"]) expect(sec).toContain(d);
+  });
+  it("README nombra cada excepción de PIXI_TESTS", () => {
+    const set = /PIXI_TESTS = new Set\(\[([^\]]*)\]\)/.exec(guard)?.[1] ?? "";
+    const paths = [...set.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+    expect(paths.length).toBeGreaterThan(0);
+    for (const p of paths) expect(sec).toContain(p);
+  });
 });

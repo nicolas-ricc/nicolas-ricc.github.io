@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { BLEED, MOUTH_Y, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, riverCenter, worldZoneAt } from "../map/geo";
+import { BLEED, MOUTH_Y, TIP_BOX, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, riverCenter, worldZoneAt } from "../map/geo";
 import { createRng } from "../map/seed";
 import type { Solid, Tri } from "../iso/solids";
+import { BLEED_WATER, clearOfWater } from "./terrain-classify";
 import { CELL, baseToneAt, bleedTerrainAt, bleedZ, buildTerrain, seaTerrainAt, shipyardTerrainAt, terrainAt, waterBand } from "./terrain";
 
 const tris = (s: Solid): Tri[] => (s.kind === "ground" ? s.tris : []);
@@ -21,6 +22,11 @@ describe("clasificación", () => {
     expect(shipyardTerrainAt(-30, 130)).toBe("jungle");
     expect(shipyardTerrainAt(50, -30)).toBe("slab");     // banda de la fábrica
     expect(shipyardTerrainAt(300, -30)).toBe("water");   // la bahía sigue al norte
+  });
+  it("astillero: la costa norte nueva, con tierra frente a los galpones, caleta y punta NE", () => {
+    expect(terrainAt(300, 18)).toBe("east");   // tierra nueva frente a los galpones (antes agua: costa en y 21)
+    expect(terrainAt(286, 27)).toBe("water");  // caleta al NO
+    expect(terrainAt(339, 9)).not.toBe("water"); // punta NE
   });
   it("mar: punta, arrecife, orilla y mar abierto", () => {
     expect(terrainAt(380, 118)).toBe("headland");
@@ -85,8 +91,10 @@ describe("clasificación", () => {
     expect(bleedTerrainAt(100, -400)).toBe("jungle");       // más allá del alcance norte (ahora hasta y −348 más el alcance, con la feria de por medio)
     expect(bleedTerrainAt(100, 700)).toBe("jungle");        // más allá del alcance sur
     expect(bleedTerrainAt(250, 400)).toBe("river");         // el estuario sigue
-    expect(bleedTerrainAt(330, 340)).toBe("jungle");        // la punta de la lengua entre el estuario y el mar
-    expect(bleedTerrainAt(338, 400)).toBe("river");         // la lengua termina en dos celdas; después el estuario es todo agua hasta el mar
+    expect(bleedTerrainAt(330, 340)).toBe("jungle");        // la base de la punta sur, entre el estuario y el mar
+    expect(bleedTerrainAt(325, 370)).toBe("jungle");        // cerca del extremo de la punta sur (en y 370 la tierra va de x 317 a 338; termina en y 380)
+    expect(bleedTerrainAt(330, 385)).toBe("river");         // al sur del extremo de la punta: todo agua
+    expect(bleedTerrainAt(338, 400)).toBe("river");         // más al sur la punta ya no existe; el estuario es todo agua hasta el mar
     expect(bleedTerrainAt(346, 400)).toBe("shore");         // orilla frente a la costa de Resume
     expect(bleedTerrainAt(400, 400)).toBe("sea");
     expect(bleedTerrainAt(560, 500)).toBe("abyss");
@@ -105,6 +113,26 @@ describe("clasificación", () => {
 });
 
 describe("buildTerrain", () => {
+  it("la punta sur se dibuja en celdas de 6 u", () => {
+    const m = buildTerrain(createRng(7));
+    const side = (t: Tri) => Math.max(...t.pts.map((p) => p.x)) - Math.min(...t.pts.map((p) => p.x));
+    const inBox = (t: Tri) => t.pts.every((p) => p.x >= TIP_BOX.x0 && p.x <= TIP_BOX.x1 && p.y >= TIP_BOX.y0 && p.y <= TIP_BOX.y1);
+    const bleed = m.bleed.flatMap(tris).filter(inBox);
+    expect(bleed.length).toBeGreaterThanOrEqual(50);
+    for (const t of [...bleed, ...m.water.flatMap(tris).filter(inBox)]) expect(side(t)).toBe(6);
+  });
+  it("el borde de la caja de la punta sur es agua, salvo la costura", () => {
+    for (let v = TIP_BOX.x0; v <= TIP_BOX.x1; v += 6) expect(BLEED_WATER.has(bleedTerrainAt(v, TIP_BOX.y1))).toBe(true);
+    for (let v = TIP_BOX.y0 + 6; v <= TIP_BOX.y1; v += 6) {
+      expect(BLEED_WATER.has(bleedTerrainAt(TIP_BOX.x0, v))).toBe(true);
+      expect(BLEED_WATER.has(bleedTerrainAt(TIP_BOX.x1, v))).toBe(true);
+    }
+  });
+  it("la subdivisión no toca el rng", () => {
+    const r = createRng(7); let n = 0; const next = r.next; r.next = () => { n++; return next(); };
+    buildTerrain(r);
+    expect(n).toBe(11912);
+  });
   it("una sola malla determinística que cubre el mundo", () => {
     const a = buildTerrain(createRng(7)), b = buildTerrain(createRng(7));
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
@@ -235,5 +263,17 @@ describe("buildTerrain", () => {
     const sand = m.bleed.find((s) => s.kind === "ground" && s.mat === "sand");
     expect(sand && sand.kind === "ground" && sand.tris.length).toBeGreaterThan(50);
     for (const t of tris(sand!)) for (const p of t.pts) expect(Math.abs(p.z)).toBeLessThanOrEqual(0.1);
+  });
+});
+
+describe("clearOfWater", () => {
+  it("true sobre losa, false sobre el río", () => {
+    expect(clearOfWater(10, 10, 20, 20, 3)).toBe(true);
+    expect(clearOfWater(250, 60, 252, 62, 3)).toBe(false);
+  });
+
+  it("el margen cuenta: caja en tierra junto a la ribera", () => {
+    expect(clearOfWater(271, 60, 272, 61, 0)).toBe(true);  // eastBank(60) = 269: la caja está en tierra
+    expect(clearOfWater(271, 60, 272, 61, 3)).toBe(false); // pero a 3 u hay agua
   });
 });

@@ -52,6 +52,7 @@ export function fitToCap(p: Piece, lot: Lot): Piece {
       case "strip": return { ...s, z: z(s.z) };
       case "ground": return { ...s, tris: s.tris.map((t) => ({ ...t, pts: [P(t.pts[0]), P(t.pts[1]), P(t.pts[2])] })) };
       case "wheel": return { ...s, at: P(s.at) };
+      case "beam": return { ...s, from: P(s.from), to: P(s.to) };
       default: return { ...s, at: P(s.at), h: s.h * k };
     }
   };

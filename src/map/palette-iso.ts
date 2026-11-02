@@ -17,6 +17,7 @@
  * cielo: más clara y apenas más cálida, sigue siendo agua). El sol no se refleja en la cara del
  * agua sino en `glint` (coral del atardecer, regla de ciudad/costa), que solo pintan los destellos
  * chicos de `water-anim.ts`. `hullBlue` sigue la regla de ciudad/costa.
+ * De la estación terminal: `tile` sigue la regla de los ocres de la fábrica; `canopy` y `livery`, la de ciudad/costa.
  * Crepúsculo tardío: los tonos de arriba, `sky` y `shadow` son los de `palette-base.ts` × 0.7
  * por canal (`DARKEN`); los acentos no se oscurecen, así los neones destacan sobre la escena.
  * Escalera de nueve (`extendLadder` en `palette-base.ts`, aplicada sobre la base antes de oscurecer):
@@ -68,6 +69,15 @@ export const ISO_TONES = {
   terracotta:{ deep: 0x1e1314, shade: 0x2b1b19, dim: 0x42251a, lit: 0x582f1a, down: 0x5c3727, top: 0x6c3f2a, up: 0x7d472b, pale: 0x854a2b, glow: 0x8c4c2b },
   marble:    { deep: 0x29293b, shade: 0x3a394a, dim: 0x59504c, lit: 0x77664c, down: 0x7d7873, top: 0x91897b, up: 0xa89a7e, pale: 0xaea07f, glow: 0xb3a781 },
   awning:    { deep: 0x0b1319, shade: 0x101b1f, dim: 0x19251f, lit: 0x222f20, down: 0x233731, top: 0x293f34, up: 0x2f4735, pale: 0x324a35, glow: 0x354c36 },
+  // fábrica detallada (#207)
+  signal:    { deep: 0x260c0f, shade: 0x361112, dim: 0x521713, lit: 0x6e1d13, down: 0x73231c, top: 0x86281e, up: 0x9c2d1f, pale: 0xa62f1f, glow: 0xaf301f },
+  stockbrick:{ deep: 0x272424, shade: 0x38322d, dim: 0x56452e, lit: 0x73572e, down: 0x796846, top: 0x8d764a, up: 0xa3844c, pale: 0xab894c, glow: 0xb38e4d },
+  safety:    { deep: 0x2b230f, shade: 0x3d3114, dim: 0x5d4414, lit: 0x7d5614, down: 0x83661e, top: 0x987420, up: 0xb08221, pale: 0xb28822, glow: 0xb38d22 },
+  // estación terminal (#239)
+  canopy:    { deep: 0x0d1619, shade: 0x121f1f, dim: 0x1b2b1f, lit: 0x243720, down: 0x264231, top: 0x2c4b34, up: 0x335435, pale: 0x375835, glow: 0x395b36 }, // estación: chapa verde de las marquesinas
+  livery:    { deep: 0x07133e, shade: 0x0a1a4d, dim: 0x0f244e, lit: 0x152d50, down: 0x163679, top: 0x193d81, up: 0x1d4484, pale: 0x1f4785, glow: 0x214a86 }, // tren: azul cobalto de la librea
+  // barrio costero (#240) y estación (#239): teja
+  tile:      { deep: 0x221414, shade: 0x311c19, dim: 0x4b271a, lit: 0x65321a, down: 0x6a3b27, top: 0x7b432a, up: 0x8f4c2b, pale: 0x974f2b, glow: 0xa0522b },
 } as const;
 
 export const ISO_COLORS = {

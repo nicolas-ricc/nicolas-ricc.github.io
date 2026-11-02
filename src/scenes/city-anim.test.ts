@@ -3,7 +3,7 @@ import type { Accent } from "../iso/accent";
 import { createRng } from "../map/seed";
 import { WINDOW_ALPHA } from "../city/lights";
 import { city, type CityScene } from "./city";
-import { ANTENNA_STEP_MS, BLINK_GAP_MS, MALECON_STEP_MS, NEON_STEP_MS, PAPER_RANGE, SIGN_GAP_MS, createCityAnim } from "./city-anim";
+import { type CityAnim, ANTENNA_STEP_MS, BLINK_GAP_MS, MALECON_STEP_MS, NEON_STEP_MS, PAPER_RANGE, PAPER_SIDE, PAPER_SPEED, SIGN_GAP_MS, createCityAnim } from "./city-anim";
 
 const setup = (reducedMotion = false) => {
   const scene = city(createRng(7), createRng(8), createRng(9));
@@ -279,7 +279,7 @@ describe("city-anim", () => {
 
   it("fired cuenta los apagones del piso y los eventos de carteles", () => {
     const { anim } = setup();
-    expect(anim.fired()).toEqual({ lit: 0, neon: 0 });
+    expect(anim.fired()).toEqual({ lit: 0, neon: 0, papers: 0 });
     let offs = 0;
     for (let t = 0; t < 60000; t += 33) { anim.tick(33); if (anim.lit().length === 0) offs++; }
     expect(anim.fired().lit).toBe(offs); // a 33 ms cada disparo es un tick apagado
@@ -290,14 +290,14 @@ describe("city-anim", () => {
   it("fired no cuenta nada con reduced-motion, con dt <= 0 ni con dt no finito", () => {
     const quieto = setup(true).anim;
     quieto.tick(60000);
-    expect(quieto.fired()).toEqual({ lit: 0, neon: 0 });
+    expect(quieto.fired()).toEqual({ lit: 0, neon: 0, papers: 0 });
     const { anim } = setup();
     anim.tick(0); anim.tick(-5000);
-    expect(anim.fired()).toEqual({ lit: 0, neon: 0 });
+    expect(anim.fired()).toEqual({ lit: 0, neon: 0, papers: 0 });
     // sin el guard, un dt infinito no terminaría el while (el lab ya lo descarta en speedFromSearch)
     expect(anim.tick(Infinity)).toEqual({ lit: false, papers: false, antenna: false, neon: false, windows: false });
     expect(anim.tick(NaN)).toEqual({ lit: false, papers: false, antenna: false, neon: false, windows: false });
-    expect(anim.fired()).toEqual({ lit: 0, neon: 0 });
+    expect(anim.fired()).toEqual({ lit: 0, neon: 0, papers: 0 });
   });
 
   it("parpadeo: tick(7000) y siete tick(1000) disparan lo mismo, y también 60 s en uno o en 60", () => {
@@ -347,5 +347,33 @@ describe("city-anim", () => {
     const anim = createCityAnim({ ...scene, neon: { ...scene.neon, signs: [] } }, createRng(3), { reducedMotion: false });
     anim.tick(600000);
     expect(anim.fired().neon).toBe(0);
+  });
+});
+
+describe("city-anim: papeles con tiempo de pared (#124, #125)", () => {
+  const mismos = (a: CityAnim, b: CityAnim) => {
+    expect(a.fired()).toEqual(b.fired());
+    const pa = a.papers().map(dot), pb = b.papers().map(dot);
+    expect(pa).toHaveLength(pb.length);
+    pa.forEach((p, i) => {
+      const q = pb[i]!;
+      expect(p.at.x).toBeCloseTo(q.at.x, 6); expect(p.at.y).toBeCloseTo(q.at.y, 6); expect(p.at.z).toBeCloseTo(q.at.z, 6);
+      expect(p.r).toBeCloseTo(q.r, 6);
+    });
+  };
+  it("papeles: un tick de 60 s deja los papeles donde 600 de 100 ms", () => {
+    const a = troceado([60000]), b = troceado(veces(600, 100));
+    expect(a.fired().papers).toBeGreaterThan(0);
+    mismos(a, b);
+  });
+  it("papeles: un troceo irregular y su suma dejan lo mismo", () => {
+    const dts = [16, 33, 100, 250, 1000, 5000, 7000, 33, 20000];
+    mismos(troceado(dts), troceado([dts.reduce((s, x) => s + x, 0)]));
+  });
+  it("papeles: tras 10 min de una vez siguen dentro del recorrido", () => {
+    const { tower } = setup(), w = tower.paperWindow;
+    const anim = troceado([600000]), n = anim.papers().length;
+    expect(anim.fired().papers).toBeGreaterThanOrEqual(n * 600000 / (PAPER_RANGE / (PAPER_SPEED * 0.8)) - n); // velocidad mínima: cada papel recicla al menos una vez cada PAPER_RANGE / (PAPER_SPEED · 0.8) ms
+    for (const p of anim.papers().map(dot)) expect(Math.hypot(p.at.x - w.x, p.at.y - w.y)).toBeLessThanOrEqual(PAPER_RANGE + PAPER_SIDE);
   });
 });

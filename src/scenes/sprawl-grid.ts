@@ -1,5 +1,5 @@
-import { CELL_BLEED, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, inCoverQuad, riverCenter } from "../map/geo";
-import { BLOCK_D, BLOCK_W, CITY_EDGE, ROWS, WEST_COLS, estuaryEast, type Rect } from "./city-grid";
+import { CELL_BLEED, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, inCoverQuad, islandEastX, islandWestX, riverCenter } from "../map/geo";
+import { BLOCK_D, BLOCK_W, CITY_EDGE, ROWS, WEST_COLS, type Rect } from "./city-grid";
 
 /**
  * Geografía de los márgenes: qué parte del sangrado es tierra construida y de
@@ -34,11 +34,8 @@ const northDist = (y: number): number => WORLD.y0 - y;
 
 /** La bahía sigue hacia el norte al este de la orilla oeste del río. */
 export const bayWater = (x: number, y: number): boolean => y < WORLD.y0 && x >= bayShoreX(y);
-/** La lengua de tierra entre el estuario y el mar se adelgaza de 37 a 0 en las dos primeras celdas al sur del contenido; después es toda agua. */
-const SPIT_LEN = 2 * CELL_BLEED;
-export const spitEast = (y: number): number => ZONE_SPLIT_X - (ZONE_SPLIT_X - estuaryEast(WORLD.y1)) * Math.min(1, (y - WORLD.y1) / SPIT_LEN);
-/** Al sur del contenido el estuario sigue hasta juntarse con el mar, rodeando la punta de la lengua. */
-export const estuaryWater = (x: number, y: number): boolean => y > WORLD.y1 && x >= QUAY_X && x < ZONE_SPLIT_X && (x <= estuaryEast(y) || x >= spitEast(y));
+/** Al sur del contenido el estuario sigue hasta juntarse con el mar, rodeando la punta sur de la isla (se redondea y termina en y ≈ 380; después es toda agua). */
+export const estuaryWater = (x: number, y: number): boolean => y > WORLD.y1 && x >= QUAY_X && x < ZONE_SPLIT_X && (x <= islandWestX(y) || x >= islandEastX(y));
 
 /**
  * Tierra construida en un punto fuera del contenido, o null si es selva, loma
