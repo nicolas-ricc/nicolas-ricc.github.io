@@ -1,5 +1,4 @@
-import { ZONE_IDS } from "../map/zones";
-import type { ZoneId } from "../map/zones";
+import { ZONE_IDS, type ZoneId } from "../map/zones";
 
 const PDF_ZONE: ZoneId = "cv";
 
