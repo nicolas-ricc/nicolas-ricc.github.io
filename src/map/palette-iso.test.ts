@@ -10,16 +10,21 @@ type AguaPaleta = Record<WaterMat | "glint", Record<"top" | "up" | "lit" | "down
 // Los umbrales base se calibraron sobre la paleta previa al oscurecimiento de #12;
 // se escalan por el factor para que el test siga la relación y no el brillo absoluto.
 const CRESTA_SUTIL = 30, DESTELLO_CALIDO = 120, DESTELLO_CLARO = 30;
+// Piso de la fracción de azul b / (r + g + b) de la cresta (el tono up del agua). Es un ratio,
+// así que no se escala por el factor de oscurecimiento. Un gris neutro da 1/3 y el coral de
+// glint.top da ≈0,19, así que 0,4 exige que el azul domine con claridad. El material más
+// justo hoy es shallow.up, con ≈0,415.
+const CRESTA_AZUL = 0.4;
 
 function aguaYDestello(tones: AguaPaleta, factor: number): void {
-  const rgb = (c: number) => [c >> 16, (c >> 8) & 255, c & 255] as const;
+  const rgb = (c: number) => [(c >> 16) & 255, (c >> 8) & 255, c & 255] as const;
   const warmth = (c: number) => rgb(c)[0] - rgb(c)[2];
   const blueShare = (c: number) => rgb(c)[2] / (rgb(c)[0] + rgb(c)[1] + rgb(c)[2]);
   const mats = ["shallow", "water", "waterDeep", "abyss"] as const;
   for (let i = 1; i < mats.length; i++) expect(lum(tones[mats[i]!].top)).toBeLessThan(lum(tones[mats[i - 1]!].top));
   for (const m of mats) {
     expect(warmth(tones[m].up)).toBeGreaterThan(warmth(tones[m].top)); // apenas más cálida
-    expect(blueShare(tones[m].up)).toBeGreaterThan(0.4); // pero azul: la cresta no es un destello
+    expect(blueShare(tones[m].up)).toBeGreaterThan(CRESTA_AZUL); // pero azul: la cresta no es un destello
     expect(lum(tones[m].up) - lum(tones[m].top)).toBeLessThan(CRESTA_SUTIL * factor); // y sutil
     expect(warmth(tones.glint.top)).toBeGreaterThan(warmth(tones[m].top) + DESTELLO_CALIDO * factor); // el destello sí es coral
     expect(lum(tones.glint.top)).toBeGreaterThan(lum(tones[m].up) + DESTELLO_CLARO * factor);
@@ -67,9 +72,29 @@ describe("paleta isométrica", () => {
     expect(all.has(ISO_COLORS.cyan)).toBe(true);
   });
 
+  it("todo material tiene la escalera de nueve", () => {
+    const nueve = ["deep", "dim", "down", "glow", "lit", "pale", "shade", "top", "up"];
+    for (const m of Object.keys(ISO_TONES) as Material[]) {
+      expect(Object.keys(ISO_TONES[m]).sort(), m).toEqual(nueve);
+    }
+  });
+
   it("materiales exclusivos de ciudad y costa", () => {
-    for (const m of ["office", "officeDark", "glass", "asphalt", "paving", "plaza", "curtain", "stone", "copper", "whitewash", "foam", "abyss", "plaster", "terracotta", "marble", "awning"] as const) {
+    for (const m of ["office", "officeDark", "glass", "asphalt", "paving", "plaza", "curtain", "stone", "copper", "whitewash", "foam", "abyss", "hullBlue", "plaster", "terracotta", "marble", "awning"] as const) {
       expect(Object.keys(ISO_TONES[m]).sort()).toEqual([...TONE_LADDER].sort());
+    }
+  });
+
+  it("materiales de la fábrica detallada: balizamiento rojo, ladrillo amarillo y baranda amarilla", () => {
+    const rgb = (c: number) => [(c >> 16) & 255, (c >> 8) & 255, c & 255] as const;
+    // sobre la base: el matiz es del material y no depende de DARKEN; ISO_TONES la sigue por el test de ±1
+    const [sr, sg, sb] = rgb(BASE_TONES.signal.top);
+    expect(sr).toBeGreaterThan(sg + 60);
+    expect(sr).toBeGreaterThan(sb + 60);
+    for (const m of ["stockbrick", "safety"] as const) {
+      const [r, g, b] = rgb(BASE_TONES[m].top);
+      expect(r).toBeGreaterThan(b + 40);
+      expect(g).toBeGreaterThan(b + 40);
     }
   });
 
@@ -133,5 +158,14 @@ describe("crepúsculo tardío", () => {
 
   it("los once acentos no se oscurecen", () => {
     expect(ACCENT_COLORS.map((c) => ISO_COLORS[c])).toEqual([0x7cf5ff, 0x27b3c9, 0x134a52, 0xffc457, 0xd08a1e, 0x5a3d14, 0xff5ee0, 0xc42a9d, 0x54173f, 0xffd9a0, 0xa8d8ff]);
+  });
+});
+
+describe("tile (#249)", () => {
+  it("tile es cálido: teja terracota", () => {
+    const t = BASE_TONES.tile.top, r = (t >> 16) & 255, g = (t >> 8) & 255, b = t & 255;
+    expect(r).toBeGreaterThan(b + 60);
+    expect(r).toBeGreaterThan(g + 40);
+    expect(ISO_TONES.tile.top).toBe(darken(t, DARKEN));
   });
 });

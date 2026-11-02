@@ -5,7 +5,7 @@ import { bounds, isFlat, type Solid } from "../iso/solids";
 import { ZONE_SPLIT_X, abyssX, inHeadland, worldZoneAt } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
-import { BUOYS, CAP_R, COAST, COAST_Z, GALLERY_DECK_R, GALLERY_R, KEEPER, LANTERN_R, LANTERN_Z, LIGHTHOUSE, POST_H, POST_W, WRECK, WRECK_BUOY, sea, type SeaScene } from "./sea";
+import { BUOYS, CAP_R, COAST, COAST_Z, GALLERY_DECK_R, GALLERY_LIGHT_Z, GALLERY_POSTS, GALLERY_R, KEEPER, LANTERN_R, LANTERN_Z, LIGHTHOUSE, POST_H, POST_W, WRECK, WRECK_BUOY, sea, type SeaScene } from "./sea";
 import { headlandZ, terrainAt } from "./terrain";
 
 const scene = (): SeaScene => sea(createRng(7));
@@ -33,7 +33,7 @@ describe("sea", () => {
     expect(s.solids.some((x) => x.kind === "cylinder" && x.mat === "glass" && x.h === 3)).toBe(true);
     const top = Math.max(...s.solids.filter((x) => Math.abs(bounds(x).min.x - (LIGHTHOUSE.x - 3.2)) < 4 && Math.abs(bounds(x).min.y - (LIGHTHOUSE.y - 3.2)) < 4).map((x) => bounds(x).max.z));
     expect(top - LIGHTHOUSE.z).toBeCloseTo(29.6, 1);
-    expect(s.lantern.z).toBeCloseTo(LIGHTHOUSE.z + 24 + 0.6 + 1.5, 6);
+    expect(s.lantern.z).toBeCloseTo(LIGHTHOUSE.z + 24 + 0.6 + 1.5, 6); // pin de deriva a propósito (#133): seis tambores de 4 + galería 0.6 + media linterna, en literales para que cambiar una constante rompa acá
     expect(s.lantern.z).toBe(LANTERN_Z);
     expect(worldZoneAt(LIGHTHOUSE.x, LIGHTHOUSE.y)).toBe("portfolio"); // el faro clickea Portfolio
   });
@@ -55,6 +55,22 @@ describe("sea", () => {
     expect(glass.map((g) => g.r)).toEqual([LANTERN_R]);
     const cap = s.solids.filter((x): x is Cone => x.kind === "cone" && x.mat === "steel" && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y);
     expect(cap.map((c) => c.r)).toEqual([CAP_R]);
+  });
+
+  it("luces de la galería: una por poste, 0.5 bajo el piso del disco, sin mover un bit (#130)", () => {
+    const s = scene();
+    expect(GALLERY_POSTS).toBe(8); // pin de deriva, como las medidas de #27
+    expect(GALLERY_LIGHT_Z).toBe(LANTERN_Z - 2);
+    const deck = s.solids.find((x): x is Cyl => x.kind === "cylinder" && x.mat === "steel" && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y)!;
+    expect(GALLERY_LIGHT_Z + 0.5).toBe(deck.at.z + deck.h);
+    const posts = s.solids.filter((x): x is Prism => x.kind === "prism" && x.mat === "steel" && x.w === POST_W && x.d === POST_W && x.h === POST_H && Math.hypot(x.at.x - LIGHTHOUSE.x, x.at.y - LIGHTHOUSE.y) < GALLERY_DECK_R);
+    expect(posts).toHaveLength(GALLERY_POSTS);
+    expect(s.neon.gallery).toHaveLength(GALLERY_POSTS);
+    s.neon.gallery.forEach((p, k) => {
+      expect(p.z).toBe(GALLERY_LIGHT_Z);
+      expect(p.x).toBeCloseTo(posts[k]!.at.x + POST_W / 2, 9);
+      expect(p.y).toBeCloseTo(posts[k]!.at.y + POST_W / 2, 9);
+    });
   });
 
   it("casa del farero, sendero de roca escalonado sobre la punta, afloramientos, pedruscos y arrecife", () => {
@@ -105,7 +121,7 @@ describe("sea", () => {
       expect(p.z).toBeCloseTo(s.lantern.z - 2, 6);
       expect(Math.abs(Math.hypot(p.x - LIGHTHOUSE.x, p.y - LIGHTHOUSE.y) - GALLERY_R)).toBeLessThan(1e-6);
     }
-    expect(GALLERY_R).toBeCloseTo(2.2 + 0.5, 6); // último tambor + 0.5
+    expect(GALLERY_R).toBeCloseTo(2.2 + 0.5, 6); // pin de deriva a propósito (#133): último tambor (2.2) + 0.5, en literales y no con las constantes
     expect(coast.length).toBeGreaterThanOrEqual(6); expect(coast.length).toBeLessThanOrEqual(10);
     expect(coast).toEqual(COAST.map((p) => ({ x: p.x, y: p.y, z: COAST_Z })));
     expect(COAST_Z).toBe(1.2);

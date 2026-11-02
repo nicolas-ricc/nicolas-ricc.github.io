@@ -32,6 +32,8 @@ pero lo que lo rodea es plano:
 
 ## 2. Decisiones
 
+> **Nota (2026-10-28):** los laboratorios y los atrios de la fila "Suburbio → distrito tecnológico" ya no existen; al sur del distrito hay un barrio residencial costero. Ver `2026-10-27-barrio-costero-design.md`.
+
 | Tema | Decisión |
 |---|---|
 | Suburbio → distrito tecnológico | `suburb.ts` se reemplaza por `tech.ts` sobre la misma grilla (`suburbBlocks`). Tres tipos por distancia: **torres** de muro cortina (h 12..20) cerca del contenido, **campus** de startups con patio y cartel en el medio, **laboratorios y centros de datos** con paneles solares y estacionamiento lejos. Todos con fachada (`facade`) salvo los laboratorios, que llevan una sola banda de vidrio por pared. Los tres hitos cambian: torre de telecomunicaciones (en vez del depósito de agua), auditorio de vidrio (en vez de la iglesia), el estadio queda como arena. Parques 12 % como hasta ahora; desaparecen los baldíos |

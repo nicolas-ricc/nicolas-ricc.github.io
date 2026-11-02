@@ -1,3 +1,4 @@
+/* Hex colours here are checked by src/map/palette-guard.test.ts: palette values, or the UI colours in its STYLE_CSS_ALLOWLIST. */
 :root {
   color-scheme: dark;
   --bg: #100e19;
@@ -27,7 +28,15 @@ body.zone #content { opacity: 1; }
 #content p { margin: 0 0 0.5rem; }
 #content .links { list-style: none; padding: 0; margin: 0; display: flex; gap: 1rem; flex-wrap: wrap; }
 #content a { color: #7cf5ff; }
-#content .pdf { display: inline-block; margin: 0.5rem 0 1rem; padding: 0.5rem 1rem; border: 1px solid #7cf5ff; border-radius: 4px; text-decoration: none; }
+#content .proyectos, #content .articulos { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; font-size: 1.1rem; }
+#content .articulos p { margin: 0.25rem 0 0; font-size: 0.95rem; font-style: italic; opacity: 0.8; }
+#content .externo { display: inline-flex; vertical-align: -0.1em; }
+#content .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+#content .pdf-viewer { display: flex; flex-direction: column; gap: 0.5rem; }
+#content .pdf-download { align-self: flex-end; display: inline-flex; padding: 0.5rem; color: #ffc457; border: 1px solid currentColor; border-radius: 4px; }
+#content .pdf-download:hover, #content .pdf-download:focus-visible { filter: brightness(1.25); }
+#content .pdf-download:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+#content .pdf-embed { display: block; width: 100%; aspect-ratio: 210 / 297; border: 1px solid #5a3d14; }
 #hud { position: absolute; inset: 1rem auto auto 1rem; z-index: 2; text-shadow: 0 1px 2px #000; }
 #hud a { color: var(--fg); text-decoration: none; font-size: 0.9rem; }
 #hud h1 { margin: 0.25rem 0 0; font-size: 1.5rem; }
@@ -48,8 +57,12 @@ body.zone #content { opacity: 1; }
 #zonas ul { list-style: none; margin: 0; padding: 0; }
 #zonas a {
   position: absolute; left: 0; top: 0; pointer-events: auto; will-change: transform;
-  font-size: 0.8rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; text-decoration: none;
-  text-shadow: 0 0 6px #000, 0 1px 2px #000; transition: opacity 200ms ease;
+  font-family: "Rubik Doodle Shadow", system-ui, sans-serif;
+  /* la fuente solo trae peso 400: sin negrita sintética; más grande y menos espaciada para que el doble trazo se lea */
+  font-size: 1.3rem; font-weight: 400; letter-spacing: 0.06em; text-transform: uppercase; text-decoration: none;
+  transition: opacity 200ms ease;
+  /* placa oscura, cuadrada y translúcida: el rótulo se lee sobre cualquier zona del mapa (sin text-shadow: ensucia las letras huecas de la fuente) */
+  padding: 0.4rem 0.7rem; background: rgba(8, 10, 18, 0.62); border-radius: 0;
 }
 /* ocultos hasta que main.ts los coloque sobre su landmark (primer jumpTo de la
    cámara): si no, se ven apilados en la esquina y saltan a su lugar. Solo con
@@ -57,10 +70,12 @@ body.zone #content { opacity: 1; }
    accesibles desde el primer render (prerenderizado, sin canvas). Sin canvas
    el nav vuelve al flujo y debe verse: por eso también se excluye .no-canvas. */
 .js:not(.mapa-listo):not(.no-canvas) #zonas a { visibility: hidden; }
-#zonas a[data-zone="portfolio"] { color: #7cf5ff; }
-#zonas a[data-zone="cv"] { color: #ffc457; }
-#zonas a[data-zone="blog"] { color: #ff5ee0; }
-#zonas a:hover, #zonas a:focus-visible { text-decoration: underline; text-underline-offset: 0.3em; filter: brightness(1.25); }
+#zonas a[data-zone="portfolio"] { color: #ffc457; }
+/* Resume lleva el verde de acento del blog (myxomatosis.xyz/blog); Blog, el cian */
+#zonas a[data-zone="cv"] { color: #8ec07c; }
+#zonas a[data-zone="blog"] { color: #7cf5ff; }
+/* sin subrayado: el hover ya enciende la zona entera en el mapa */
+#zonas a:hover, #zonas a:focus-visible { filter: brightness(1.25); }
 #zonas a:focus-visible { outline: 2px solid var(--fg); outline-offset: 4px; }
 #zonas a.dim { opacity: 0.35; }
 #titulo { position: absolute; left: 1rem; bottom: 0.75rem; margin: 0; z-index: 1; pointer-events: none; font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; color: #ffc457; text-shadow: 0 0 6px #000, 0 1px 2px #000; transition: opacity 200ms ease; }
@@ -73,4 +88,4 @@ body.zone #titulo { opacity: 0; }
 .no-canvas #content { opacity: 1; }
 .no-canvas #zonas { position: static; pointer-events: auto; padding: 2rem clamp(1rem, 4vw, 3rem) 0; }
 .no-canvas #zonas ul { display: flex; gap: 1.5rem; flex-wrap: wrap; }
-.no-canvas #zonas a { position: static; transform: none !important; visibility: visible; font-size: 1.1rem; letter-spacing: 0; text-transform: none; text-decoration: underline; }
+.no-canvas #zonas a { position: static; transform: none !important; visibility: visible; padding: 0; background: none; font-family: inherit; font-size: 1.1rem; letter-spacing: 0; text-transform: none; text-decoration: underline; }

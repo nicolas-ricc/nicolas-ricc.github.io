@@ -1,6 +1,7 @@
-import { v3, type Vec2 } from "./geometry";
+import { convexHull, v3, type Vec2 } from "./geometry";
 import { VIEW_DIR, project } from "./project";
-import { bounds, tessellateAll, type Bounds, type Solid } from "./solids";
+import { pointInPolygon } from "../map/geo";
+import { bounds, hullRings, tessellateAll, type Bounds, type Solid } from "./solids";
 
 const EPS = 1e-6;
 
@@ -19,26 +20,33 @@ export function screenBounds(b: Bounds): ScreenBounds {
 export const overlaps = (a: ScreenBounds, b: ScreenBounds): boolean =>
   a.minX < b.maxX && b.minX < a.maxX && a.minY < b.maxY && b.minY < a.maxY;
 
+/**
+ * Hexágono en pantalla de una caja del mundo (envolvente convexa de sus ocho vértices proyectados). El rectángulo
+ * de `screenBounds` lo envuelve con mucho aire cuando la caja es larga en diagonal (un carguero con rumbo norte): daba
+ * falsos positivos de oclusión con la escollera de la dársena, a 35 u del barco (#83). Dos cajas se superponen en
+ * pantalla si se cortan sus hexágonos.
+ */
+export function screenHull(b: Bounds): Vec2[] {
+  const pts: Vec2[] = [];
+  for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) pts.push(project(v3(x, y, z)));
+  return convexHull(pts);
+}
+
+/** SAT entre dos polígonos convexos: se intersecan si ningún eje (normal de un lado) los separa. Tocarse cuenta como cortarse. */
+export function hullsIntersect(a: Vec2[], b: Vec2[]): boolean {
+  const axes = [a, b].flatMap((poly) => poly.map((p, i) => { const q = poly[(i + 1) % poly.length]!; return { x: p.y - q.y, y: q.x - p.x }; }));
+  return axes.every((n) => {
+    const pa = a.map((p) => p.x * n.x + p.y * n.y), pb = b.map((p) => p.x * n.x + p.y * n.y);
+    return Math.max(...pa) >= Math.min(...pb) && Math.max(...pb) >= Math.min(...pa);
+  });
+}
+
 /** `a` está detrás de `b` si hay un eje que los separa con `a` del lado lejano (oeste, norte o abajo). */
 export function isBehind(a: Bounds, b: Bounds): boolean {
   return a.max.x <= b.min.x + EPS || a.max.y <= b.min.y + EPS || a.max.z <= b.min.z + EPS;
 }
 
-/** Silueta en pantalla de una caja: casco convexo de sus 8 esquinas proyectadas (monotone chain). */
-export function screenHull(b: Bounds): Vec2[] {
-  const ps: Vec2[] = [];
-  for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) ps.push(project(v3(x, y, z)));
-  ps.sort((p, q) => p.x - q.x || p.y - q.y);
-  const cross = (o: Vec2, a: Vec2, c: Vec2): number => (a.x - o.x) * (c.y - o.y) - (a.y - o.y) * (c.x - o.x);
-  const half = (pts: Vec2[]): Vec2[] => {
-    const out: Vec2[] = [];
-    for (const p of pts) { while (out.length >= 2 && cross(out[out.length - 2]!, out[out.length - 1]!, p) <= EPS) out.pop(); out.push(p); }
-    return out.slice(0, -1);
-  };
-  return [...half(ps), ...half([...ps].reverse())];
-}
-
-/** Dos polígonos convexos se cruzan si ningún eje de sus bordes los separa (tocarse no cuenta). */
+/** Dos polígonos convexos se cruzan si ningún eje de sus bordes los separa (tocarse no cuenta). A diferencia de `hullsIntersect`, donde tocarse sí cuenta: la oclusión de `lights.ts` no tapa una ventana con un vecino que apenas la roza. */
 export function hullsOverlap(a: Vec2[], b: Vec2[]): boolean {
   for (const poly of [a, b]) for (let i = 0; i < poly.length; i++) {
     const p = poly[i]!, q = poly[(i + 1) % poly.length]!, nx = q.y - p.y, ny = p.x - q.x;
@@ -56,12 +64,19 @@ export function hides(back: Bounds, front: Bounds, hulls?: { back: Vec2[]; front
 }
 
 /**
+ * `a` queda del lado lejano de `b` en un eje cuya componente de la vista es `v`. Con la vista paralela al plano
+ * que separa (componente ~0) ninguno tapa al otro: vale como detrás en los dos sentidos.
+ */
+const farAlong = (v: number, aMin: number, aMax: number, bMin: number, bMax: number): boolean =>
+  (v > -EPS && aMax <= bMin + EPS) || (v < EPS && aMin >= bMax - EPS);
+
+/**
  * `a` está detrás de `b` con la vista expresada en un marco girado (`vx`, `vy`): en cada eje horizontal
  * el lado lejano es el que mira contra la componente de la vista. Con `vx`, `vy` > 0 es `isBehind`.
+ * Con una componente ~0 (vista paralela a ese eje) separarse en él cuenta como detrás en los dos sentidos.
  */
 function isBehindView(a: Bounds, b: Bounds, vx: number, vy: number): boolean {
-  return (vx > 0 ? a.max.x <= b.min.x + EPS : a.min.x >= b.max.x - EPS)
-    || (vy > 0 ? a.max.y <= b.min.y + EPS : a.min.y >= b.max.y - EPS)
+  return farAlong(vx, a.min.x, a.max.x, b.min.x, b.max.x) || farAlong(vy, a.min.y, a.max.y, b.min.y, b.max.y)
     || a.max.z <= b.min.z + EPS;
 }
 
@@ -87,23 +102,37 @@ const depthKey = (b: Bounds, vx?: number, vy?: number): number =>
     : (vx * (b.min.x + b.max.x) + vy * (b.min.y + b.max.y)) / VIEW_DIR.x + (b.min.z + b.max.z) * 0.5;
 
 /**
- * El sheer levanta la caja del casco por encima de su cubierta, así que una pieza
- * apoyada en ella (base en la cubierta de crujía, dentro del casco en planta) se
- * superpone en los tres ejes y la clave de profundidad sola la manda antes del
- * casco si cae en su mitad lejana. Aquí el casco siempre va antes. Se mide contra la
- * cubierta de crujía (sin arrufo): una pieza con base más baja, sobre la proa o la popa
- * levantadas, no entra en la regla.
+ * Side of a non-hull piece against a hull: 1 after it, -1 before it, 0 no rule. All in the sort frame; `ring` is the
+ * hull's deck ring in that frame, flat `[x0, y0, x1, y1, ...]`.
+ * 0. Not a hull / other is a hull / the plan boxes do not overlap: 0.
+ * 1. Base at or above the midship deck (`hull.at.z + hull.h`, no sheer): after.
+ * 2. All four plan-box corners inside the deck ring (the piece hangs from the deck): after if it rises above the
+ *    deck, else before (sunk under it).
+ * 3. Wholly under the keel: 0.
+ * 4. Otherwise it hangs from a face: the hull box face it sits against (the axis where its centre is farthest out,
+ *    normalised by the hull half-extent) gives a normal; after if that normal points toward the view, before if away,
+ *    0 if the view is parallel to the face or the piece is centred.
  */
-function restsOnHull(hull: Solid, other: Solid, hb: Bounds, ob: Bounds): boolean {
-  if (hull.kind !== "hull" || other.kind === "hull") return false;
-  return ob.min.z >= hull.at.z + hull.h - EPS
-    && ob.min.x < hb.max.x && hb.min.x < ob.max.x && ob.min.y < hb.max.y && hb.min.y < ob.max.y;
+function hullSide(hull: Solid, other: Solid, hb: Bounds, ob: Bounds, ring: number[], vx: number, vy: number): number {
+  if (hull.kind !== "hull" || other.kind === "hull") return 0;
+  if (!(ob.min.x < hb.max.x && hb.min.x < ob.max.x && ob.min.y < hb.max.y && hb.min.y < ob.max.y)) return 0;
+  const deck = hull.at.z + hull.h;
+  if (ob.min.z >= deck - EPS) return 1;
+  if (pointInPolygon(ob.min.x, ob.min.y, ring) && pointInPolygon(ob.max.x, ob.min.y, ring)
+    && pointInPolygon(ob.min.x, ob.max.y, ring) && pointInPolygon(ob.max.x, ob.max.y, ring)) return ob.max.z > deck + EPS ? 1 : -1;
+  if (ob.max.z <= hb.min.z + EPS) return 0;
+  const u = (ob.min.x + ob.max.x - hb.min.x - hb.max.x) / (hb.max.x - hb.min.x);
+  const w = (ob.min.y + ob.max.y - hb.min.y - hb.max.y) / (hb.max.y - hb.min.y);
+  const t = Math.abs(u) >= Math.abs(w) ? Math.sign(u) * vx : Math.sign(w) * vy;
+  return Math.abs(t) <= EPS ? 0 : Math.sign(t);
 }
 
 /**
  * Orden painter topológico: para cada par que se superpone en pantalla, el que
- * está detrás se dibuja antes. Si los dos se ven "detrás" del otro (esquinas
- * diagonales), decide la suma de coordenadas. Ciclos: se cortan y siguen.
+ * está detrás se dibuja antes. Si cada uno queda "detrás" del otro por un plano distinto (esquinas
+ * diagonales), ninguno tapa al otro y no se impone orden: esa arista de desempate cerraba ciclos que
+ * cortaban relaciones de verdad. Si no los separa ningún plano, decide la suma de coordenadas.
+ * Ciclos: se cortan y siguen.
  * Los pares se buscan con un barrido por x de pantalla (solo se comparan cajas
  * cuyos rangos en x se cruzan) y cada lista `before` se ordena ascendente:
  * el resultado es el mismo que comparando todos los pares en orden de índice.
@@ -114,7 +143,8 @@ function restsOnHull(hull: Solid, other: Solid, hb: Bounds, ob: Bounds): boolean
  * otro. La pantalla sigue en el mundo; el desempate (`depthKey`) usa el marco, porque en el mundo
  * una pieza girada empata mal y el corte de ciclos suelta relaciones de verdad.
  *
- * La regla del casco (`restsOnHull`) vale con cualquier rumbo, también en las escenas estáticas.
+ * The hull rules (`hullSide`: deck, outline and face of the hull a piece hangs from; and the hull separating what
+ * goes before it from what goes after) hold at any heading, also in static scenes.
  */
 export function sortByDepth(solids: Solid[], heading = 0): Solid[] {
   const n = solids.length;
@@ -125,6 +155,27 @@ export function sortByDepth(solids: Solid[], heading = 0): Solid[] {
   const vx = VIEW_DIR.x * c + VIEW_DIR.y * sn, vy = -VIEW_DIR.x * sn + VIEW_DIR.y * c;
   const sbs = wb.map(screenBounds);
   const keys = heading === 0 ? bs.map((b) => depthKey(b)) : bs.map((b) => depthKey(b, vx, vy));
+  // Lado de cada sólido respecto de cada casco (1 después, −1 antes): el casco separa, y lo que va antes de él va antes de lo que va después.
+  const hulls = solids.flatMap((s, i) => (s.kind === "hull" ? [i] : []));
+  const rings = new Map<number, number[]>(); // deck ring of each hull in the sort frame, once per call
+  for (const k of hulls) rings.set(k, hullRings(solids[k] as Solid & { kind: "hull" }).deck.flatMap((p) => [p.x * c + p.y * sn, -p.x * sn + p.y * c]));
+  const sides = solids.map((s, i) => {
+    let m: Map<number, number> | null = null; // casi ningún sólido toca un casco: sin mapa no se aloca nada
+    for (const k of hulls) {
+      const side = hullSide(solids[k]!, s, bs[k]!, bs[i]!, rings.get(k)!, vx, vy);
+      if (side !== 0) (m ??= new Map()).set(k, side);
+    }
+    return m;
+  });
+  // Positivo si j va después de i por una regla del casco: uno de los dos es el casco del otro, o un casco los
+  // separa (i antes, j después). Si dos cascos discrepan, manda el primero de la lista. 0 si no hay regla.
+  const hullOrder = (i: number, j: number): number => {
+    const a = sides[i], b = sides[j];
+    const own = b?.get(i) ?? -(a?.get(j) ?? 0);
+    if (own || !a || !b) return own;
+    for (const [k, ai] of a) { const bj = b.get(k); if (bj !== undefined && bj !== ai) return bj; }
+    return 0;
+  };
   const before: number[][] = Array.from({ length: n }, () => []); // before[i] = índices que van antes de i
   const byX = solids.map((_, i) => i).sort((a, b) => sbs[a]!.minX - sbs[b]!.minX);
   for (let a = 0; a < n; a++) {
@@ -134,11 +185,12 @@ export function sortByDepth(solids: Solid[], heading = 0): Solid[] {
       if (sq.minX >= sp.maxX) break;
       if (!(sp.minY < sq.maxY && sq.minY < sp.maxY)) continue;
       const i = Math.min(p, q), j = Math.max(p, q);
+      const side = hullOrder(i, j);
       const ij = isBehindView(bs[i]!, bs[j]!, vx, vy), ji = isBehindView(bs[j]!, bs[i]!, vx, vy);
-      if (restsOnHull(solids[i]!, solids[j]!, bs[i]!, bs[j]!)) before[j]!.push(i);
-      else if (restsOnHull(solids[j]!, solids[i]!, bs[j]!, bs[i]!)) before[i]!.push(j);
-      // En el marco girado, si los separan dos planos a la vez ninguno tapa al otro: no hay relación que imponer.
-      else if (ij && ji && heading !== 0) continue;
+      if (side > 0) before[j]!.push(i);
+      else if (side < 0) before[i]!.push(j);
+      // Los separan dos planos a la vez: ninguno tapa al otro
+      else if (ij && ji) continue;
       else if (ij === ji) { if (keys[i]! <= keys[j]!) before[j]!.push(i); else before[i]!.push(j); }
       else if (ij) before[j]!.push(i);
       else before[i]!.push(j);

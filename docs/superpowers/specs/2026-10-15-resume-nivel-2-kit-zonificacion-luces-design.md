@@ -202,7 +202,7 @@ sus ventanas de paredes **que miran a la cámara** (normal con componente
 | `composite.ts` | **podio + torre** (podio todo el lote h 4..6, torre 10×10 a 12×12 h 12..18 descentrada), **gemelas con puente** (dos torres 8×10 y puente a media altura), **déco escalonada** (tres cuerpos con chaflán y chapitel `cone` 4 lados), **chaflán** (poly con esquina cortada hacia la calle más ancha), **L con torre** (ala baja en L y torre en la esquina) |
 | `curved.ts` | **torre cilíndrica** (cylinder 16 lados con fachada), **rotonda** (cylinder 12 lados + `dome`), **nave abovedada** (`vault` + fachada `arcade`), **galería** (planta baja `arcade`, dos pisos encima, techo `hip`) |
 | `lowrise.ts` | **hilera de locales** (4..5 lotes angostos de 4..6 de ancho, 2..3 pisos, toldos, `hip` o terraza; publica `slots` de neón en planta baja hacia `open`), **casas en hilera**, **ruina devorada** (lo de hoy, con el kit) |
-| `landmarks.ts` | **mercado cubierto** (`vault` central + dos naves laterales + torre del reloj), **estación** (`vault` + `dome` sobre el hall + reloj), **teatro** (tambor + `dome` + columnata `arcade` + marquesina), **palacio cívico** (chaflán + `hip` + `dome` central + escalinata `ramp`), **biblioteca** (galería `arcade` en `marble` + patio), **torre de agua ornamental** (cylinder sobre cuatro patas + `dome` `copper`), **puente peatonal** (tablero de 55 sobre tres arcos de piedra) |
+| `landmarks.ts` | **mercado cubierto** (`vault` central + dos naves laterales + torre del reloj), **estación** (`vault` + `dome` sobre el hall + reloj) *(descartada: ver la nota de §6)*, **teatro** (tambor + `dome` + columnata `arcade` + marquesina), **palacio cívico** (chaflán + `hip` + `dome` central + escalinata `ramp`), **biblioteca** (galería `arcade` en `marble` + patio), **torre de agua ornamental** (cylinder sobre cuatro patas + `dome` `copper`), **puente peatonal** (tablero de 55 sobre tres arcos de piedra) |
 
 Lo que ya existe en `district.ts` (torre de vidrio escalonada, clásico de
 piedra, campus, obra) se muda a `src/kit/forms/modern.ts` sin cambiar su
@@ -259,6 +259,10 @@ de luces.
 | **Cívico** | plaza; `72, 218` (teatro); `162, 218` (palacio cívico); `42, 242` (biblioteca) | nodo principal | fijos | `marble`/`stone`/`copper` | fachadas bañadas (`amberBleed` poly en planta baja), 30 % frías |
 | **Ribera este** | cols `280, 310` × filas `164..242`, menos el derrumbe (`COLLAPSED`) | ciudad vieja devorada, mercado frente al puente | mercado fijo en `280, 188`; resto: clásico 30, L con torre 30, ruina devorada 40 | `office`/`officeDark` | 25 % encendidas, mezcla |
 | **Distrito moderno** | `DISTRICT_COLS`/`DISTRICT_ROWS` | como hoy, sobre el kit | torre de vidrio 30, gemelas 20, clásico 20, campus 20, cilíndrica 10; obra fija en `SITE` | `curtain`/`stone`/`copper` | 40 % encendidas, 85 % frías |
+
+*Desvío (2026-10-28): la estación va al final de la vía del oeste del
+astillero, en el lugar de la calderería; ver
+`2026-10-27-estacion-terminal-design.md`. Esta pieza queda descartada.*
 
 Piezas singulares fijas, además de las de la tabla: **estación** en `−18, 188`
 (la avenida y el tren siguen al oeste), **torre de agua ornamental** en el
@@ -637,6 +641,316 @@ El kit en `lab/kit.html`, teclas `1..4` (centro, bares, residencial, cívico):
 ![kit, residencial](assets/2026-10-15-resume-nivel-2/kit-residencial.png)
 ![kit, cívico](assets/2026-10-15-resume-nivel-2/kit-civico.png)
 
+### Re-medición tras integrar `main` (#291)
+
+Medido el 2026-11-02 sobre el merge de `main@7aeab41` en la rama de la historia (#291), sin recortes: no se aplicó ninguno de §9 (A5). Los conteos y la tabla de caras son deterministas y valen. **Los tiempos no son limpios** (ver abajo).
+
+Método: el de §9.1 (segunda carga; `console --clear; reload; wait 3000; console`; navegador cerrado entre cargas), con `agent-browser` 0.27.0, HeadlessChrome 156.0.0.0, renderer ANGLE sobre SwiftShader (`webgl2`, sin GPU), DPR 2, viewport 1600×900, Linux 7.2.0-cachyos. "Después" es la rama en `:5173`; el baseline de tiempos es un worktree de `main@7aeab41` con `npx vite` en `:5174`, alternando un lado y otro. La historia (`b357ecf`) solo se usó para su captura y su columna de la tabla de caras. Antes de cada lectura se esperó (hasta 2 a 5 minutos) a que el load average de 1 minuto bajara de 6 y se anotó la línea; el tope de espera es menor que los 10 minutos del método para acotar la sesión.
+
+**Condición de la máquina.** La máquina es compartida y otros procesos la mantuvieron con un load average de 10 a 28 durante toda la sesión (procesos ajenos: el navegador de esta sesión estaba cerrado al medir). En el lab, el load average de 1 minuto antes de cada lectura fue casi siempre < 6, pero subió durante muchas lecturas. En el sitio, 8 de las 10 lecturas de primer dibujo empezaron con load > 6, y en cada par el lado "después" se midió con más carga que `main`: esa tanda está confundida por la carga y no compara un lado con el otro. En los peores momentos los cuadros de la página bajaron a 1-2 fps, y el baseline `main` medido en la misma sesión cayó a `fallback` y superó los 22 ms de peor redibujo igual que la rama. Por eso las lecturas de tiempo (primer dibujo, bloom y peor redibujo) **no se presentan como limpias**: no sirven para afirmar que se cumplen ni que se incumplen los topes; en el lab sirven solo para comparar un lado con el otro en la misma sesión, y ahí no hay una diferencia atribuible al merge.
+
+#### Tabla de caras (sólidos / caras por exhibit)
+
+Script `.scratch/caras-291.ts <raíz>` (no se commitea): importa `src/lab/exhibits.ts`, `src/world/assemble.ts`, `src/lab/crop.ts` y `src/iso/render-list.ts` de cada raíz y, por exhibit, imprime los sólidos y las caras de `readout` (sólidos de la escena recortada más las capas animadas; caras teseladas, suelo incluido). El total del mundo es `buildRenderList([...terrain.ground, ...ground, ...solids]).length`, el mismo número que loguea el lab como `polígonos estáticos` (35 605 en la historia, 38 724 en `main`, 41 507 después, los tres coinciden con el log del navegador de cada lado). La columna del total muestra sólidos de la escena / polígonos estáticos. Un guion es un exhibit que ese árbol no tiene. Solo `main` y después comparten `readout`: la historia cuenta los sólidos de otra manera (incluye la losa del recorte), así que su columna de sólidos no se compara con las otras dos (por ejemplo, `farol` 2 contra 1 es la misma pieza). En exhibits sin fachada, las diferencias de ±1 a 3 caras entre `main` y después son paredes de canto (área proyectada 0): el `extrude` de la historia las descarta o las conserva por redondeo y no se ven. Las caras que suben en exhibits con fachada son las bandas por piso.
+
+| exhibit | historia `b357ecf` | `main` `7aeab41` | después |
+|---|---|---|---|
+| `planta` | 13 / 39 | 164 / 1652 | 164 / 1649 |
+| `tanque-agua` | — | 45 / 165 | 45 / 164 |
+| `chimeneas` | 40 / 165 | 530 / 1830 | 530 / 1831 |
+| `subestacion` | 20 / 67 | 360 / 1207 | 360 / 1209 |
+| `playa-camiones` | 34 / 96 | 21 / 63 | 21 / 63 |
+| `playa-vias` | 14 / 42 | 81 / 490 | 81 / 493 |
+| `excavadora` | — | 80 / 485 | 80 / 488 |
+| `gradas` | 75 / 226 | 68 / 222 | 68 / 222 |
+| `darsena` | 29 / 102 | 27 / 102 | 27 / 102 |
+| `grua-portico` | 21 / 70 | 18 / 70 | 18 / 70 |
+| `calle-faroles` | 23 / 45 | 9 / 31 | 9 / 31 |
+| `naves` | 15 / 33 | 6 / 20 | 6 / 20 |
+| `punta-norte` | — | 22 / 96 | 22 / 96 |
+| `estacion` | — | 162 / 651 | 162 / 651 |
+| `paso-a-nivel` | — | 20 / 69 | 20 / 69 |
+| `grua-torre` | 8 / 27 | 7 / 27 | 7 / 27 |
+| `farol` | 2 / 9 | 1 / 9 | 1 / 9 |
+| `tren` | — | 25 / 144 | 25 / 144 |
+| `central-termica` | 50 / 208 | 49 / 206 | 49 / 208 |
+| `tanques` | 7 / 46 | 6 / 46 | 6 / 46 |
+| `silos` | 13 / 55 | 12 / 55 | 12 / 55 |
+| `alta-tension` | 101 / 301 | 97 / 299 | 97 / 301 |
+| `playa-contenedores` | 160 / 480 | 160 / 480 | 160 / 480 |
+| `noria` | 6 / 116 | 6 / 117 | 6 / 116 |
+| `montana-rusa` | 136 / 408 | 136 / 408 | 136 / 408 |
+| `torre-caida` | 11 / 35 | 11 / 35 | 11 / 35 |
+| `carrusel` | 15 / 72 | 15 / 72 | 15 / 72 |
+| `arcade` | 4 / 18 | 4 / 16 | 4 / 18 |
+| `autitos-chocadores` | 17 / 51 | 17 / 51 | 17 / 51 |
+| `muelle` | 30 / 113 | 30 / 113 | 30 / 113 |
+| `plaza` | 53 / 273 | 28 / 243 | 33 / 273 |
+| `torre` | 19 / 166 | 14 / 151 | 14 / 166 |
+| `puente` | 112 / 311 | 19 / 71 | 102 / 311 |
+| `malecon` | 37 / 174 | 26 / 91 | 34 / 174 |
+| `manzana-derrumbada` | 11 / 39 | 8 / 36 | 9 / 39 |
+| `manzana-distrito` | 10 / 94 | 21 / 151 | 7 / 94 |
+| `obra` | 30 / 84 | 27 / 100 | 27 / 84 |
+| `punta-sur` | — | 8 / 24 | 6 / 54 |
+| `campus` | 23 / 172 | 21 / 151 | 22 / 172 |
+| `selva` | 15 / 51 | 14 / 51 | 14 / 51 |
+| `mastil` | 6 / 24 | 6 / 23 | 6 / 24 |
+| `arena` | 7 / 25 | 7 / 25 | 7 / 25 |
+| `auditorio` | 7 / 34 | 7 / 34 | 7 / 34 |
+| `torres` | 16 / 188 | 16 / 135 | 16 / 147 |
+| `monoblock` | — | 19 / 114 | 19 / 114 |
+| `casas` | — | 18 / 55 | 18 / 55 |
+| `escuela` | — | 18 / 86 | 18 / 86 |
+| `club` | — | 22 / 80 | 22 / 80 |
+| `plaza-barrio` | — | 19 / 58 | 19 / 58 |
+| `costanera` | — | 66 / 221 | 66 / 221 |
+| `barrio` | — | 478 / 1529 | 478 / 1529 |
+| `faro` | 25 / 105 | 22 / 97 | 22 / 97 |
+| `casa-farero` | 11 / 33 | 8 / 33 | 8 / 33 |
+| `boyas` | 2 / 8 | 2 / 8 | 2 / 8 |
+| `pecio` | 13 / 82 | 10 / 79 | 10 / 82 |
+| `viga` | — | 1 / 9 | 1 / 9 |
+| `carguero` | 40 / 189 | 37 / 175 | 37 / 183 |
+| `remolcador` | 26 / 129 | 25 / 123 | 25 / 129 |
+| `convoy` | 39 / 196 | 38 / 190 | 38 / 196 |
+| `lancha` | 14 / 74 | 13 / 71 | 13 / 74 |
+| **total del mundo** | 3610 / 35605 | 4461 / 38724 | 4706 / 41507 |
+
+Dos exhibits tienen menos sólidos después que en `main`, y ninguno de los dos es una pieza perdida. Se revisó sólido por sólido con `cropScene`. `manzana-distrito`: el recorte de después es idéntico al de la historia (siete sólidos: plinto, dos cuerpos de muro cortina, dos coronas, cilindro y poste). Los 21 de `main` son la manzana del `district.ts` viejo, que la historia reemplazó por el kit a propósito. `punta-sur`: las mismas piezas fijas que en `main` (dos losas `paving` y dos postes `steel`). Solo cambian los conos de selva, que se sortean: la ciudad de la historia consume el rng en otro orden, así que caen dos conos en la caja en lugar de cuatro. Las caras suben de 24 a 54 por las bandas y la escalera de tonos. Todos los demás exhibits de `main` tienen igual o más sólidos. Los sólidos de las escenas de `main` (`planta`, `chimeneas`, `subestacion`, `barrio`, `estacion`, `costanera`, …) coinciden con los de `main`.
+
+#### Conteos (`src/scenes/city-budget.test.ts`, pasa)
+
+Sobre la semilla real del mundo: 1121 sólidos elevados de Resume, 137 `strip`, 707 acentos estáticos y 41 507 polígonos estáticos del mundo (`reducedMotion: true`; igual al `stage.staticCount` del lab).
+
+#### Tabla
+
+| Métrica | Tope | Medido | `main` en la sesión | Cumple |
+|---|---|---|---|---|
+| Sólidos elevados de Resume (contenido) | 2 200 | 1 121 | — (la escena de `main` es otra) | sí |
+| `strip` de Resume | 150 | 137 | — | sí |
+| Polígonos estáticos del mundo | 46 000 | 41 507 | 38 724 | sí |
+| Acentos estáticos de Resume | 900 | 707 | — | sí |
+| Primer dibujo caliente, lab `world.html` (mediana de 10) | 230 ms | 219.0 ms (con una cola de 708.4) | 230.4 ms (cola de 727.7) | no concluyente: máquina cargada; el mismo `main` dio 230.4 ms en la sesión contra 173 ms limpios (§9) |
+| Primer dibujo caliente, sitio `/` (mediana de 5) | 270 ms | 578.4 ms | 304.2 ms | no concluyente: ambos lados pasan el tope con la máquina cargada; solo los dos últimos pares (load 5.9 y 5.4) dieron 299.1 vs 281.9 ms |
+| Peor redibujo en 5 s, lab (3 cargas) | 22 ms | 10.9 a 67.8 ms | 12.3 a 98.8 ms | no concluyente (carga ajena): las ventanas limpias de la primera carga dieron 11.1 a 19.7 ms |
+| Bloom: promedio tick + render en 60 frames, lab | ≤ 15 ms (en `on`) | 12.0 `activo`; 15.9 y 20.0 `fallback` | 15.9 `fallback`; 13.9 y 13.6 `activo` | no concluyente: los dos lados caen a `fallback` en la misma sesión |
+| Bloom, sitio | ≤ 15 ms (en `on`) | 13.1 y 14.4 `activo`; 19.1 `fallback` | 14.9 `activo`; 15.8 y 18.1 `fallback` | no concluyente: ídem |
+
+Recortes aplicados: ninguno. Los topes de conteo (los que no dependen de la máquina) se cumplen todos; los de tiempo hay que volver a medirlos en una máquina sin carga ajena antes de darlos por cumplidos o incumplidos. En el lab, la rama no quedó peor que `main` en la misma sesión (primer dibujo: 219.0 contra 230.4 ms). En el sitio, la comparación no vale: el lado "después" se midió siempre con más carga.
+
+Medianas. Lab, después: 205.8 206.0 207.1 213.1 213.8 224.2 241.1 244.3 268.2 708.4, mediana 219.0 ms. Lab, `main`: 213.4 219.4 220.6 223.0 225.7 235.1 290.1 316.6 725.6 727.7, mediana 230.4 ms. Sitio, después: 299.1 555.9 578.4 717.8 969.4, mediana 578.4 ms. Sitio, `main`: 281.7 281.9 304.2 501.3 635.1, mediana 304.2 ms.
+
+Nota de la sesión: la primera tanda de lecturas del sitio de `main` salió vacía porque el worktree no tenía `content/blog.generated.json` (lo genera `npm run feed`); se generó y esas lecturas se repitieron enteras (las del bloque de abajo).
+
+#### Capturas (`lab/world.html`, 1600×900, DPR 2, segunda carga, `wait 3000`)
+
+- Historia (`b357ecf`): ![antes, historia](assets/2026-10-15-resume-nivel-2/integracion-291-antes-historia.png)
+- `main` (`7aeab41`): ![antes, main](assets/2026-10-15-resume-nivel-2/integracion-291-antes-main.png)
+- Después del merge: ![después](assets/2026-10-15-resume-nivel-2/integracion-291-despues.png)
+
+#### Lecturas crudas
+
+Copiadas de `agent-browser console`, con la línea de load average de cada lectura (promedios de 1, 5 y 15 minutos, tomada justo antes de abrir la página). Pares del lab (`despues` = `:5173`, `main` = `:5174`).
+
+```
+-- despues-par-1 load average: 5.52, 13.73, 14.55
+[info] [lab] primer dibujo: 206.0 ms, 41507 polígonos estáticos
+-- main-par-1 load average: 5.47, 13.00, 14.28
+[info] [lab] primer dibujo: 213.4 ms, 38724 polígonos estáticos
+-- despues-par-2 load average: 5.18, 12.47, 14.08
+[info] [lab] primer dibujo: 213.8 ms, 41507 polígonos estáticos
+-- main-par-2 load average: 5.87, 12.19, 13.96
+[info] [lab] primer dibujo: 225.7 ms, 38724 polígonos estáticos
+-- despues-par-3 load average: 5.43, 11.04, 13.44
+[info] [lab] primer dibujo: 244.3 ms, 41507 polígonos estáticos
+-- main-par-3 load average: 5.71, 10.64, 13.23
+[info] [lab] primer dibujo: 316.6 ms, 38724 polígonos estáticos
+-- despues-par-4 load average: 10.82, 11.46, 13.24
+[info] [lab] primer dibujo: 224.2 ms, 41507 polígonos estáticos
+-- main-par-4 load average: 5.44, 9.90, 12.60
+[info] [lab] primer dibujo: 223.0 ms, 38724 polígonos estáticos
+-- despues-par-5 load average: 5.18, 9.57, 12.43
+[info] [lab] primer dibujo: 708.4 ms, 41507 polígonos estáticos
+-- main-par-5 load average: 5.51, 9.05, 11.95
+[info] [lab] primer dibujo: 220.6 ms, 38724 polígonos estáticos
+-- despues-par-6 load average: 5.04, 8.83, 11.85
+[info] [lab] primer dibujo: 205.8 ms, 41507 polígonos estáticos
+-- main-par-6 load average: 5.76, 8.86, 11.82
+[info] [lab] primer dibujo: 725.6 ms, 38724 polígonos estáticos
+-- despues-par-7 load average: 5.95, 8.65, 11.58
+[info] [lab] primer dibujo: 241.1 ms, 41507 polígonos estáticos
+-- main-par-7 load average: 5.81, 8.53, 11.51
+[info] [lab] primer dibujo: 235.1 ms, 38724 polígonos estáticos
+-- despues-par-8 load average: 5.38, 8.35, 11.42
+[info] [lab] primer dibujo: 268.2 ms, 41507 polígonos estáticos
+-- main-par-8 load average: 5.24, 8.22, 11.34
+[info] [lab] primer dibujo: 290.1 ms, 38724 polígonos estáticos
+-- despues-par-9 load average: 5.60, 8.20, 11.04
+[info] [lab] primer dibujo: 207.1 ms, 41507 polígonos estáticos
+-- main-par-9 load average: 4.97, 7.98, 10.94
+[info] [lab] primer dibujo: 727.7 ms, 38724 polígonos estáticos
+-- despues-par-10 load average: 5.88, 8.16, 10.83
+[info] [lab] primer dibujo: 213.1 ms, 41507 polígonos estáticos
+-- main-par-10 load average: 5.59, 8.02, 10.76
+[info] [lab] primer dibujo: 219.4 ms, 38724 polígonos estáticos
+```
+
+Cargas largas del lab (espera de 40 s por el ritmo de cuadros de la máquina cargada; `peor redibujo` son todas las ventanas de 5 s):
+
+```
+-- lab-long-despues-1 load average: 5.11, 12.30, 14.43
+[info] [lab] primer dibujo: 224.3 ms, 41507 polígonos estáticos
+[info] [lab] peor redibujo en 5 s: 14.00 ms
+[info] [lab] bloom: promedio 12.0 ms en 60 frames (tick 7.7 + render 4.3), presupuesto 15 ms → activo
+[info] [lab] peor redibujo en 5 s: 14.10 ms
+[info] [lab] peor redibujo en 5 s: 14.60 ms
+[info] [lab] peor redibujo en 5 s: 19.70 ms
+[info] [lab] peor redibujo en 5 s: 13.50 ms
+[info] [lab] peor redibujo en 5 s: 11.10 ms
+[info] [lab] peor redibujo en 5 s: 11.60 ms
+[info] [lab] peor redibujo en 5 s: 16.10 ms
+-- lab-long-main-1 load average: 5.58, 11.55, 13.82
+[info] [lab] primer dibujo: 220.3 ms, 38724 polígonos estáticos
+[info] [lab] peor redibujo en 5 s: 16.30 ms
+[info] [lab] bloom: promedio 15.9 ms en 60 frames (tick 10.8 + render 5.1), presupuesto 15 ms → fallback
+[info] [lab] peor redibujo en 5 s: 58.10 ms
+[info] [lab] peor redibujo en 5 s: 30.00 ms
+[info] [lab] peor redibujo en 5 s: 18.60 ms
+[info] [lab] peor redibujo en 5 s: 17.40 ms
+[info] [lab] peor redibujo en 5 s: 98.80 ms
+[info] [lab] peor redibujo en 5 s: 60.40 ms
+-- lab-long-despues-2 load average: 13.15, 13.76, 14.50
+[info] [lab] primer dibujo: 321.6 ms, 41507 polígonos estáticos
+[info] [lab] peor redibujo en 5 s: 30.50 ms
+[info] [lab] bloom: promedio 15.9 ms en 60 frames (tick 10.2 + render 5.7), presupuesto 15 ms → fallback
+[info] [lab] peor redibujo en 5 s: 31.20 ms
+[info] [lab] peor redibujo en 5 s: 46.80 ms
+[info] [lab] peor redibujo en 5 s: 16.80 ms
+[info] [lab] peor redibujo en 5 s: 11.40 ms
+[info] [lab] peor redibujo en 5 s: 17.60 ms
+[info] [lab] peor redibujo en 5 s: 22.20 ms
+-- lab-long-main-2 load average: 5.33, 12.58, 14.31
+[info] [lab] primer dibujo: 217.3 ms, 38724 polígonos estáticos
+[info] [lab] peor redibujo en 5 s: 19.70 ms
+[info] [lab] bloom: promedio 13.9 ms en 60 frames (tick 9.4 + render 4.5), presupuesto 15 ms → activo
+[info] [lab] peor redibujo en 5 s: 17.30 ms
+[info] [lab] peor redibujo en 5 s: 14.70 ms
+[info] [lab] peor redibujo en 5 s: 14.80 ms
+[info] [lab] peor redibujo en 5 s: 59.00 ms
+[info] [lab] peor redibujo en 5 s: 16.70 ms
+[info] [lab] peor redibujo en 5 s: 16.80 ms
+[info] [lab] peor redibujo en 5 s: 18.00 ms
+-- lab-long-despues-3 load average: 5.78, 11.64, 13.68
+[info] [lab] primer dibujo: 739.1 ms, 41507 polígonos estáticos
+[info] [lab] peor redibujo en 5 s: 67.80 ms
+[info] [lab] bloom: promedio 20.0 ms en 60 frames (tick 12.6 + render 7.3), presupuesto 15 ms → fallback
+[info] [lab] peor redibujo en 5 s: 31.70 ms
+[info] [lab] peor redibujo en 5 s: 17.70 ms
+[info] [lab] peor redibujo en 5 s: 17.90 ms
+[info] [lab] peor redibujo en 5 s: 11.70 ms
+[info] [lab] peor redibujo en 5 s: 11.50 ms
+[info] [lab] peor redibujo en 5 s: 10.90 ms
+[info] [lab] peor redibujo en 5 s: 11.00 ms
+[info] [lab] peor redibujo en 5 s: 11.00 ms
+-- lab-long-main-3 load average: 5.69, 11.35, 13.34
+[info] [lab] primer dibujo: 210.9 ms, 38724 polígonos estáticos
+[info] [lab] peor redibujo en 5 s: 16.30 ms
+[info] [lab] bloom: promedio 13.6 ms en 60 frames (tick 9.4 + render 4.2), presupuesto 15 ms → activo
+[info] [lab] peor redibujo en 5 s: 15.20 ms
+[info] [lab] peor redibujo en 5 s: 19.00 ms
+[info] [lab] peor redibujo en 5 s: 18.70 ms
+[info] [lab] peor redibujo en 5 s: 19.90 ms
+[info] [lab] peor redibujo en 5 s: 15.00 ms
+[info] [lab] peor redibujo en 5 s: 17.60 ms
+[info] [lab] peor redibujo en 5 s: 20.70 ms
+[info] [lab] peor redibujo en 5 s: 12.30 ms
+```
+
+Sitio, primer dibujo y cargas largas (la segunda vuelta, con `main` ya funcionando; puntero movido en las largas):
+
+```
+# sitio primer dibujo
+-- site-despues-1 load average: 22.59, 24.87, 22.00
+[info] [mapa] primer dibujo: 717.8 ms, 41507 polígonos estáticos
+-- site-main-1 load average: 21.14, 23.16, 21.72
+[info] [mapa] primer dibujo: 635.1 ms, 38724 polígonos estáticos
+-- site-despues-2 load average: 17.06, 21.25, 21.23
+[info] [mapa] primer dibujo: 969.4 ms, 41507 polígonos estáticos
+-- site-main-2 load average: 13.31, 19.13, 20.53
+[info] [mapa] primer dibujo: 304.2 ms, 38724 polígonos estáticos
+-- site-despues-3 load average: 14.70, 16.87, 19.45
+[info] [mapa] primer dibujo: 555.9 ms, 41507 polígonos estáticos
+-- site-main-3 load average: 8.75, 13.84, 17.99
+[info] [mapa] primer dibujo: 501.3 ms, 38724 polígonos estáticos
+-- site-despues-4 load average: 16.64, 14.64, 17.71
+[info] [mapa] primer dibujo: 578.4 ms, 41507 polígonos estáticos
+-- site-main-4 load average: 6.75, 11.60, 16.19
+[info] [mapa] primer dibujo: 281.7 ms, 38724 polígonos estáticos
+-- site-despues-5 load average: 5.94, 11.27, 16.03
+[info] [mapa] primer dibujo: 299.1 ms, 41507 polígonos estáticos
+-- site-main-5 load average: 5.40, 10.98, 15.89
+[info] [mapa] primer dibujo: 281.9 ms, 38724 polígonos estáticos
+# sitio carga larga
+-- site-long-despues-1 load average: 4.88, 10.68, 15.74
+[info] [mapa] primer dibujo: 303.6 ms, 41507 polígonos estáticos
+[info] [mapa] peor redibujo en 5 s: 88.20 ms
+[info] [mapa] bloom: promedio 19.1 ms en 60 frames (tick 12.7 + render 6.4), presupuesto 15 ms → fallback
+[info] [mapa] peor redibujo en 5 s: 20.80 ms
+[info] [mapa] peor redibujo en 5 s: 37.30 ms
+[info] [mapa] peor redibujo en 5 s: 13.60 ms
+[info] [mapa] peor redibujo en 5 s: 15.80 ms
+[info] [mapa] peor redibujo en 5 s: 11.20 ms
+[info] [mapa] peor redibujo en 5 s: 19.70 ms
+-- site-long-main-1 load average: 5.63, 10.45, 14.52
+[info] [mapa] primer dibujo: 317.6 ms, 38724 polígonos estáticos
+[info] [mapa] peor redibujo en 5 s: 16.10 ms
+[info] [mapa] bloom: promedio 14.9 ms en 60 frames (tick 10.4 + render 4.4), presupuesto 15 ms → activo
+[info] [mapa] peor redibujo en 5 s: 14.40 ms
+[info] [mapa] peor redibujo en 5 s: 17.60 ms
+[info] [mapa] peor redibujo en 5 s: 16.10 ms
+[info] [mapa] peor redibujo en 5 s: 20.20 ms
+[info] [mapa] peor redibujo en 5 s: 13.80 ms
+[info] [mapa] peor redibujo en 5 s: 47.30 ms
+-- site-long-despues-2 load average: 5.70, 10.39, 13.46
+[info] [mapa] primer dibujo: 990.1 ms, 41507 polígonos estáticos
+[info] [mapa] peor redibujo en 5 s: 31.10 ms
+[info] [mapa] bloom: promedio 14.4 ms en 60 frames (tick 9.2 + render 5.3), presupuesto 15 ms → activo
+[info] [mapa] peor redibujo en 5 s: 17.00 ms
+[info] [mapa] peor redibujo en 5 s: 42.50 ms
+[info] [mapa] peor redibujo en 5 s: 13.40 ms
+[info] [mapa] peor redibujo en 5 s: 16.30 ms
+[info] [mapa] peor redibujo en 5 s: 13.20 ms
+-- site-long-main-2 load average: 5.52, 10.85, 13.15
+[info] [mapa] primer dibujo: 1059.7 ms, 38724 polígonos estáticos
+[info] [mapa] peor redibujo en 5 s: 72.60 ms
+[info] [mapa] bloom: promedio 18.1 ms en 60 frames (tick 11.8 + render 6.3), presupuesto 15 ms → fallback
+[info] [mapa] peor redibujo en 5 s: 15.40 ms
+[info] [mapa] peor redibujo en 5 s: 20.20 ms
+[info] [mapa] peor redibujo en 5 s: 27.30 ms
+[info] [mapa] peor redibujo en 5 s: 13.80 ms
+[info] [mapa] peor redibujo en 5 s: 19.00 ms
+[info] [mapa] peor redibujo en 5 s: 16.10 ms
+-- site-long-despues-3 load average: 5.76, 11.02, 12.85
+[info] [mapa] primer dibujo: 289.5 ms, 41507 polígonos estáticos
+[info] [mapa] peor redibujo en 5 s: 14.80 ms
+[info] [mapa] bloom: promedio 13.1 ms en 60 frames (tick 8.4 + render 4.6), presupuesto 15 ms → activo
+[info] [mapa] peor redibujo en 5 s: 22.60 ms
+[info] [mapa] peor redibujo en 5 s: 16.30 ms
+[info] [mapa] peor redibujo en 5 s: 68.10 ms
+[info] [mapa] peor redibujo en 5 s: 16.70 ms
+[info] [mapa] peor redibujo en 5 s: 20.90 ms
+-- site-long-main-3 load average: 5.93, 10.67, 12.45
+[info] [mapa] primer dibujo: 1123.9 ms, 38724 polígonos estáticos
+[info] [mapa] peor redibujo en 5 s: 55.40 ms
+[info] [mapa] bloom: promedio 15.8 ms en 60 frames (tick 10.3 + render 5.5), presupuesto 15 ms → fallback
+[info] [mapa] peor redibujo en 5 s: 17.00 ms
+[info] [mapa] peor redibujo en 5 s: 44.20 ms
+[info] [mapa] peor redibujo en 5 s: 60.70 ms
+[info] [mapa] peor redibujo en 5 s: 50.00 ms
+[info] [mapa] peor redibujo en 5 s: 31.50 ms
+```
+
 ## 9.2 Desvíos de implementación
 
 Lo que los hijos de la historia declararon en sus PR (contra `feature/35-resume-nivel-2`), respecto de esta spec y del texto de sus issues.
@@ -694,6 +1008,9 @@ el lab. Son seis entregas mergeables por separado:
 3. **Zonificación** (§6): `zoning.ts`, `city.ts` reescrito como orquestador,
    calles simplificadas, piezas fijas nuevas del mapa (estación, mercado,
    teatro, palacio, biblioteca, torre de agua, puente peatonal).
+   *Desvío (2026-10-28): la estación va al final de la vía del oeste del
+   astillero, en el lugar de la calderería; ver
+   `2026-10-27-estacion-terminal-design.md`. Esta pieza queda descartada.*
 4. **Luces** (§7): `lights.ts`, oclusión, neones, fachadas bañadas,
    `city-anim` ampliado.
 5. **Piezas fijas rehechas** (§8): puente, malecón, muelle, plaza, derrumbe.

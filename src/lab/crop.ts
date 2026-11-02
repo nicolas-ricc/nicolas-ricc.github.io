@@ -126,7 +126,8 @@ export function pieceScene(build: (out: Solid[], accents: Accent[]) => void, pad
     x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y);
   }
   x0 -= PAD_M; y0 -= PAD_M; x1 += PAD_M; y1 += PAD_M;
-  const top = Math.floor(floor);
+  // no solid, or only faceless ones: floor stays Infinity, so the pad sits at z = 0
+  const top = Number.isFinite(floor) ? Math.floor(floor) : 0;
   // tapa y las dos caras que ve la cámara (este, sur), con la normal hacia afuera
   const nw = v3(x0, y0, top), ne = v3(x1, y0, top), se = v3(x1, y1, top), sw = v3(x0, y1, top);
   const neB = v3(x1, y0, top - 1), seB = v3(x1, y1, top - 1), swB = v3(x0, y1, top - 1);
@@ -144,6 +145,7 @@ export function pieceScene(build: (out: Solid[], accents: Accent[]) => void, pad
 
 export interface Readout {
   solids: number;
+  ground: number;
   faces: number;
   accents: number;
   box: { min: Vec3; max: Vec3; w: number; d: number; h: number } | null;
@@ -152,20 +154,22 @@ export interface Readout {
 }
 
 /**
- * Lo que el panel del storybook cuenta de un exhibit: suelo y sólidos de la
- * escena más el estado actual de las capas `solid` y `accent` de los
- * animadores. El terreno y las capas de agua no cuentan. Los materiales son
- * los de las caras que dibuja `tessellate` (cubierta de casco, góndolas y
- * vidrio de fachada incluidos), no los campos `mat`/`topMat`.
+ * What the storybook panel counts for an exhibit. `solids` is the scene
+ * solids plus the current state of the animators' `solid` layers; the scene
+ * ground is counted apart in `ground`. Faces, box and materials cover the
+ * ground and the solids together. Terrain and water layers never count.
+ * Materials are those of the faces `tessellate` draws (hull deck, gondolas
+ * and facade glass included), not the `mat`/`topMat` fields.
  */
 export function readout(scene: WorldScene, animators: readonly Animator[]): Readout {
   const layers = animators.flatMap((a) => a.ids.map((id) => a.layer(id)));
-  const solids = [...scene.ground, ...scene.solids, ...layers.flatMap((l) => (l.kind === "solid" ? l.solids : []))];
+  const solids = [...scene.solids, ...layers.flatMap((l) => (l.kind === "solid" ? l.solids : []))];
+  const drawn = [...scene.ground, ...solids];
   const accents = [...scene.accents, ...layers.flatMap((l) => (l.kind === "accent" ? l.accents : []))];
   const mats = new Set<Material>();
   const min = v3(Infinity, Infinity, Infinity), max = v3(-Infinity, -Infinity, -Infinity);
   let faces = 0;
-  for (const s of solids) {
+  for (const s of drawn) {
     const fs = tessellate(s);
     faces += fs.length;
     for (const f of fs) mats.add(f.mat);
@@ -175,9 +179,10 @@ export function readout(scene: WorldScene, animators: readonly Animator[]): Read
   }
   return {
     solids: solids.length,
+    ground: scene.ground.length,
     faces,
     accents: accents.length,
-    box: solids.length ? { min, max, w: max.x - min.x, d: max.y - min.y, h: max.z - min.z } : null,
+    box: drawn.length ? { min, max, w: max.x - min.x, d: max.y - min.y, h: max.z - min.z } : null,
     materials: [...mats].sort(),
     accentColors: [...new Set(accents.map((a) => a.color))].sort(),
   };

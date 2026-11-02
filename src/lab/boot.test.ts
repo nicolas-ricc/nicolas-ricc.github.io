@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ISO_COLORS } from "../map/palette-iso";
 import { runBoot } from "./boot";
@@ -35,7 +36,7 @@ describe("runBoot (#103)", () => {
   });
 });
 
-const ROOT = new URL("../../", import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const ink = `#${ISO_COLORS.ink.toString(16).padStart(6, "0")}`;
 
 describe("el mensaje de arranque se lee sobre el cielo (#103)", () => {

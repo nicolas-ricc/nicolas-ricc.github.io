@@ -1,10 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { v3 } from "./geometry";
-import { hides, hullsOverlap, isBehind, overlaps, screenBounds, screenHull, sortByDepth } from "./depth";
+import { v3, type Vec2 } from "./geometry";
+import { hides, hullsIntersect, hullsOverlap, isBehind, overlaps, screenBounds, screenHull, sortByDepth } from "./depth";
 import { createRng } from "../map/seed";
 import { bounds, type Solid } from "./solids";
 
 const box = (x: number, y: number, z: number, w = 2, d = 2, h = 2): Solid => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat: "steel" });
+// Caja alineada con el marco local rotado `h` alrededor del origen (como las piezas de un barco).
+const rotBox = (h: number, x0: number, y0: number, w: number, d: number, z: number, hz: number): Solid => {
+  const c = Math.cos(h), s = Math.sin(h);
+  const footprint = [[x0, y0], [x0 + w, y0], [x0 + w, y0 + d], [x0, y0 + d]].map(([x, y]) => ({ x: x! * c - y! * s, y: x! * s + y! * c }));
+  return { kind: "poly", footprint, z, h: hz, mat: "steel" };
+};
+const rotCyl = (h: number, x: number, y: number, z: number, r: number, hz: number): Solid =>
+  ({ kind: "cylinder", at: v3(x * Math.cos(h) - y * Math.sin(h), x * Math.sin(h) + y * Math.cos(h), z), r, h: hz, mat: "steel", sides: 8 });
 
 describe("depth", () => {
   it("screenHull: una caja proyecta un hexágono dentro de su caja de pantalla", () => {
@@ -103,6 +111,7 @@ function sortByDepthNaive(solids: Solid[]): Solid[] {
   for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
     if (!overlaps(sbs[i]!, sbs[j]!)) continue;
     const ij = isBehind(bs[i]!, bs[j]!), ji = isBehind(bs[j]!, bs[i]!);
+    if (ij && ji) continue;
     if (ij === ji) { if (keys[i]! <= keys[j]!) before[j]!.push(i); else before[i]!.push(j); }
     else if (ij) before[j]!.push(i);
     else before[i]!.push(j);
@@ -151,13 +160,6 @@ describe("sortByDepth con cascos", () => {
 });
 
 describe("sortByDepth en el marco del barco", () => {
-  // Caja alineada con el marco local rotado `h` alrededor del origen (como las piezas de un barco).
-  const rotBox = (h: number, x0: number, y0: number, w: number, d: number, z: number, hz: number): Solid => {
-    const c = Math.cos(h), s = Math.sin(h);
-    const footprint = [[x0, y0], [x0 + w, y0], [x0 + w, y0 + d], [x0, y0 + d]].map(([x, y]) => ({ x: x! * c - y! * s, y: x! * s + y! * c }));
-    return { kind: "poly", footprint, z, h: hz, mat: "steel" };
-  };
-
   it("una pieza apoyada en el extremo lejano de otra rotada se dibuja después, a cualquier rumbo", () => {
     for (const h of [0.5, 0.3, 1.2, 2.3, -0.7, -2.6]) {
       const lower = rotBox(h, 0, 0, 40, 6, 0, 3);
@@ -184,5 +186,95 @@ describe("sortByDepth en el marco del barco", () => {
     for (let i = 0; i < 60; i++) solids.push(box(rng.int(0, 60), rng.int(0, 40), rng.chance(0.1) ? -3 : 0, rng.int(1, 12), rng.int(1, 12), rng.int(1, 20)));
     expect(sortByDepth(solids, 0)).toEqual(sortByDepthNaive(solids));
     expect(sortByDepth(solids)).toEqual(sortByDepthNaive(solids));
+  });
+});
+
+describe("sortByDepth con piezas de costado", () => {
+  const ferryHull: Solid = { kind: "hull", at: v3(0, 0, -1), len: 15, beam: 4, h: 1.2, mat: "hull", topMat: "deck", heading: 0, sheer: 0.3 };
+  const tugHull = (h: number): Solid => ({ kind: "hull", at: v3(0, 0, -1), len: 19, beam: 7, h: 2.2, mat: "hull", topMat: "hullBlue", heading: h, sheer: 0.3 });
+
+  it("a side piece is drawn on the side of the hull face it hangs from, whatever its centroid says", () => {
+    // ferry at heading 0: the starboard band faces the viewer, even for a fender in the far (aft) half of the hull
+    const starboard = rotCyl(0, 5, 2.05, -0.2, 0.22, 0.5), port = rotCyl(0, 5, -2.05, -0.2, 0.22, 0.5);
+    for (const input of [[starboard, ferryHull], [ferryHull, starboard]]) expect(sortByDepth(input, 0)).toEqual([ferryHull, starboard]);
+    for (const input of [[port, ferryHull], [ferryHull, port]]) expect(sortByDepth(input, 0)).toEqual([port, ferryHull]);
+    // tug stern corner at 145°: it hangs from the stern (|u| 0.91 > |w| 0.49), and the stern faces the viewer
+    const h = (145 * Math.PI) / 180, hull = tugHull(h), corner = rotCyl(h, 0.9, 1.7, 1, 0.45, 0.9);
+    for (const input of [[corner, hull], [hull, corner]]) expect(sortByDepth(input, h)).toEqual([hull, corner]);
+  });
+
+  it("the hull separates: what goes before the hull goes before what goes after it, even if a plane separates them", () => {
+    // ferry at heading 0: cabin on the deck, starboard fender on the near band
+    const cabin = rotBox(0, 3.5, -1.7, 10, 3.4, 0.2, 1.5), fender = rotCyl(0, 5, 2.05, -0.2, 0.22, 0.5);
+    for (const input of [[ferryHull, cabin, fender], [fender, cabin, ferryHull], [cabin, ferryHull, fender]]) {
+      expect(sortByDepth(input, 0)).toEqual([ferryHull, cabin, fender]);
+    }
+    // tug: a low piece inside the outline (before the hull) and a deck piece the x-plane puts behind it
+    for (const h of [0, Math.PI]) {
+      const hull = tugHull(h), low = rotBox(h, 10, -1, 2, 2, 0, 1), deckBox = rotBox(h, 7, -1, 2, 2, 1.2, 1.8);
+      for (const input of [[hull, low, deckBox], [deckBox, low, hull], [low, hull, deckBox]]) {
+        expect(sortByDepth(input, h), `heading ${h}`).toEqual([low, hull, deckBox]);
+      }
+    }
+  });
+
+  it("a deckhouse sunk slightly below the midship deck is drawn after the hull", () => {
+    for (const deg of [0, 90, 180, 270, 145]) {
+      const h = (deg * Math.PI) / 180, hull = tugHull(h), house = rotBox(h, 8.2, -2.2, 6, 4.4, 1.1, 1.7);
+      for (const input of [[house, hull], [hull, house]]) expect(sortByDepth(input, h), `heading ${deg}°`).toEqual([hull, house]);
+    }
+    // hull at its own heading, sorted in the world frame (as the beached boats of the fair are)
+    const h = Math.PI / 2, hull = tugHull(h), house = rotBox(h, 8.2, -2.2, 6, 4.4, 1.1, 1.7);
+    for (const input of [[house, hull], [hull, house]]) expect(sortByDepth(input, 0)).toEqual([hull, house]);
+  });
+
+  it("con la vista paralela a un eje del marco, separarse en ese eje no ordena (barcaza a 315°)", () => {
+    const h = (315 * Math.PI) / 180;
+    const hull: Solid = { kind: "hull", at: v3(0, 0, -1), len: 40, beam: 8, h: 1.2, mat: "hull", topMat: "rust", heading: h, sheer: 0 };
+    const strip = rotBox(h, 0, -4, 36.4, 0.15, -0.9, 1.15); // faja de babor, lado lejano
+    const rake = [rotBox(h, 36.4, -4, 2, 8, -0.5, 0.75), rotBox(h, 38.4, -4, 1.6, 8, -0.1, 0.35)]; // lanzamiento de proa, manga completa
+    const order = sortByDepth([hull, ...rake, strip], h);
+    expect(order.indexOf(strip)).toBeLessThan(order.indexOf(hull));
+  });
+});
+
+describe("orden de la viga", () => {
+  const cab: Solid = { kind: "prism", at: v3(-0.6, -0.6, 3), w: 1.2, d: 1.2, h: 1, mat: "whitewash" };
+  const jib = (h: number): Solid => {
+    const c = Math.cos(h), s = Math.sin(h), p = (x: number, z: number) => v3(x * c, x * s, z);
+    return { kind: "beam", from: p(0.3, 4.2), to: p(4.8, 8.7), w: 0.4, h: 0.5, mat: "steel" };
+  };
+  it("una pluma apoyada sobre el techo de una caja se dibuja después, en el mundo y en el marco girado", () => {
+    expect(sortByDepth([jib(0), cab]).indexOf(cab)).toBe(0);
+    for (let k = 0; k < 72; k++) {
+      const h = (k * 5 * Math.PI) / 180;
+      const c = Math.cos(h), s = Math.sin(h);
+      const box: Solid = { kind: "poly", footprint: [[-0.6, -0.6], [0.6, -0.6], [0.6, 0.6], [-0.6, 0.6]].map(([x, y]) => ({ x: x! * c - y! * s, y: x! * s + y! * c })), z: 3, h: 1, mat: "whitewash" };
+      const j = jib(h);
+      expect(sortByDepth([j, box], h).indexOf(box), `rumbo ${k * 5}°`).toBe(0);
+    }
+  });
+  it("largo cero no rompe el orden", () => {
+    const z: Solid = { kind: "beam", from: v3(0, 0, 5), to: v3(0, 0, 5), w: 0.4, h: 0.4, mat: "steel" };
+    expect(sortByDepth([z, cab])).toHaveLength(2);
+    expect(sortByDepth([z, cab], 1.2)).toHaveLength(2);
+  });
+});
+
+describe("screenHull / hullsIntersect", () => {
+  const sq = (x: number, y: number): Vec2[] => [{ x, y }, { x: x + 2, y }, { x: x + 2, y: y + 2 }, { x, y: y + 2 }];
+  it("SAT: el cuadrado de 2 se corta con el corrido 1 y no con el corrido 3", () => {
+    expect(hullsIntersect(sq(0, 0), sq(1, 1))).toBe(true);
+    expect(hullsIntersect(sq(0, 0), sq(3, 0))).toBe(false);
+  });
+  it("el hexágono de una caja tiene 6 vértices dentro de su screenBounds", () => {
+    const b = bounds(box(0, 0, 0)), sb = screenBounds(b), h = screenHull(b);
+    expect(h).toHaveLength(6);
+    for (const p of h) { expect(p.x).toBeGreaterThanOrEqual(sb.minX); expect(p.x).toBeLessThanOrEqual(sb.maxX); expect(p.y).toBeGreaterThanOrEqual(sb.minY); expect(p.y).toBeLessThanOrEqual(sb.maxY); }
+  });
+  it("una caja larga en diagonal no se corta con otra a 35 u aunque sus rectángulos se superpongan (#83)", () => {
+    const long = { min: v3(0, 0, 0), max: v3(4, 80, 13) }, far = { min: v3(40, 40, 0), max: v3(42, 42, 2) };
+    expect(overlaps(screenBounds(long), screenBounds(far))).toBe(true);
+    expect(hullsIntersect(screenHull(long), screenHull(far))).toBe(false);
   });
 });

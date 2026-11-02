@@ -2,7 +2,8 @@ import type { Accent } from "../iso/accent";
 import { facadeAccents } from "../iso/facade";
 import { v3 } from "../iso/geometry";
 import { visibleWalls } from "../iso/solids";
-import type { Rng } from "../map/seed";
+import { createRng, type Rng } from "../map/seed";
+import { ALWAYS_LIT } from "./barrio";
 import { chase, pulse } from "./neon";
 import type { TechScene } from "./tech";
 
@@ -12,26 +13,40 @@ import type { TechScene } from "./tech";
  * los carteles ámbar pulsan (alpha 0.6..1, período 3 s) y la luz de la torre
  * de telecomunicaciones respira. Las coronas de neón pulsan (alpha 0.45..1,
  * desfasadas) y cada 6..12 s una cambia cian ↔ magenta; el anillo del mástil
- * corre de a una luz. Frame 0 = todo encendido y quieto.
+ * corre de a una luz. Las ventanas del barrio (`homes`) se encienden y apagan
+ * por grupo con un reloj de pared propio, salvo las de `ALWAYS_LIT`.
+ * Los temporizadores de torres y coronas cuentan tiempo de pared (flujo propio,
+ * exceso arrastrado): un tick largo dispara varios vencimientos.
+ * Frame 0 = todo encendido y quieto.
  */
 export const TECH_BLINK_GAP_MS: [number, number] = [4000, 9000];
 export const SIGN_PERIOD_MS = 3000, SIGN_STEP_MS = 150, TELECOM_STEP_MS = 100;
 export const NEON_STEP_MS = 150, CROWN_PERIOD_MS = 2400, RING_STEP_MS = 200;
 export const CROWN_FLIP_GAP_MS: [number, number] = [6000, 12000];
+export const HOMES_GAP_MS: [number, number] = [3000, 7000];
+const SEED_MAX = 2 ** 32 - 1; // semilla de un Rng derivado (sin literal 0x…: el guard de paleta lo tomaría por color)
 const CROWN_ALPHA = [0.45, 1] as const, RING_R = 0.5;
 const TELECOM_R = 0.8, TELECOM_PULSE = 0.3, TELECOM_PERIOD = 1200;
 
-export interface TechAnimChanges { windows: boolean; signs: boolean; telecom: boolean; neon: boolean }
-export interface TechAnim { windows(): Accent[]; signs(): Accent[]; telecom(): Accent; neon(): Accent[]; tick(dtMs: number): TechAnimChanges }
+export interface TechAnimChanges { windows: boolean; signs: boolean; telecom: boolean; neon: boolean; homes: boolean }
+export interface TechAnim { windows(): Accent[]; signs(): Accent[]; telecom(): Accent; neon(): Accent[]; homes(): Accent[]; fired(): { homes: number; windows: number; crowns: number }; tick(dtMs: number): TechAnimChanges }
 
 export function createTechAnim(scene: TechScene, rng: Rng, opts: { reducedMotion: boolean }): TechAnim {
   const walls = scene.towers.map((t) => visibleWalls(t.box).filter((f) => f.mat === "curtain" && f.toneOffset === 0));
   const lit: (number | null)[] = scene.towers.map((t) => rng.int(1, t.facade.floors - 1));
-  const nextGap = () => rng.int(TECH_BLINK_GAP_MS[0], TECH_BLINK_GAP_MS[1]);
-  let clock = 0, blinkTimer = nextGap(), signStep = 0, telecomStep = 0;
+  const blinkRng = createRng(rng.int(0, SEED_MAX)); // flujo propio de las torres, derivado donde antes se sorteaba el primer plazo
+  const nextGap = () => blinkRng.int(TECH_BLINK_GAP_MS[0], TECH_BLINK_GAP_MS[1]);
+  // windowsFired: vencimientos con torres (apagar una torre ya apagada cuenta aunque no se vea); crownsFired: cambios de color
+  let clock = 0, blinkTimer = nextGap(), windowsFired = 0, crownsFired = 0, signStep = 0, telecomStep = 0;
   const colors = scene.neon.crowns.map((c) => c.color);
-  const nextFlip = () => rng.int(CROWN_FLIP_GAP_MS[0], CROWN_FLIP_GAP_MS[1]);
+  const flipRng = createRng(rng.int(0, SEED_MAX));
+  const nextFlip = () => flipRng.int(CROWN_FLIP_GAP_MS[0], CROWN_FLIP_GAP_MS[1]);
   let flipTimer = nextFlip(), neonStep = 0, ringStep = 0;
+  // luces del barrio: flujo propio, derivado al final para no reordenar las tiradas de torres y coronas
+  const homesRng = createRng(rng.int(0, SEED_MAX));
+  const groupLit = new Map<string, boolean>(); for (const h of scene.homes) if (!groupLit.has(h.group)) groupLit.set(h.group, h.lit);
+  const flipGroups = [...groupLit.keys()].filter((g) => !ALWAYS_LIT.has(g));
+  let homesTimer = homesRng.int(HOMES_GAP_MS[0], HOMES_GAP_MS[1]), homesFired = 0;
   const signAlpha = () => 0.8 + 0.2 * Math.cos((2 * Math.PI * (clock % SIGN_PERIOD_MS)) / SIGN_PERIOD_MS); // clock 0 → alpha 1 (frame 0 quieto y encendido)
   return {
     windows: () => scene.towers.flatMap((t, k) => (lit[k] === null ? [] : facadeAccents(walls[k]!, { ...t.facade, litFloor: lit[k]! }, "amber"))),
@@ -43,27 +58,31 @@ export function createTechAnim(scene: TechScene, rng: Rng, opts: { reducedMotion
       const on = ringStep === 0 ? scene.neon.mastRing.map(() => true) : chase(scene.neon.mastRing.length, ringStep, 1); // paso 0 = frame 0: todo encendido, como con reduced motion
       return [...crowns, ...scene.neon.mastRing.filter((_, k) => on[k]).map((p): Accent => ({ kind: "dot", at: p, r: RING_R, color: "magentaMid" }))];
     },
+    homes: () => scene.homes.filter((h) => groupLit.get(h.group)).map((h): Accent => ({ kind: "poly", pts: h.pts, color: "amber", alpha: 1 })),
+    fired: () => ({ homes: homesFired, windows: windowsFired, crowns: crownsFired }),
     tick(dtMs) {
-      const c: TechAnimChanges = { windows: false, signs: false, telecom: false, neon: false };
-      if (opts.reducedMotion || dtMs <= 0) return c;
+      const c: TechAnimChanges = { windows: false, signs: false, telecom: false, neon: false, homes: false };
+      if (opts.reducedMotion || !Number.isFinite(dtMs) || dtMs <= 0) return c;
       clock += dtMs;
       blinkTimer -= dtMs;
-      if (blinkTimer <= 0) {
-        blinkTimer = nextGap();
+      while (blinkTimer <= 0) {
+        blinkTimer += nextGap();
         if (scene.towers.length > 0) { // sin torres no hay a quién sortear; las demás capas siguen
-          const k = rng.int(0, scene.towers.length - 1), floors = scene.towers[k]!.facade.floors;
+          const k = blinkRng.int(0, scene.towers.length - 1), floors = scene.towers[k]!.facade.floors;
           const old = lit[k];
-          if (rng.chance(0.3)) lit[k] = null;
-          else { let nv = rng.int(1, floors - 1); if (nv === old && floors > 2) nv = nv === floors - 1 ? nv - 1 : nv + 1; lit[k] = nv; } // siempre cambia el piso si hay más de una opción
-          c.windows = true;
+          if (blinkRng.chance(0.3)) lit[k] = null;
+          else { let nv = blinkRng.int(1, floors - 1); if (nv === old && floors > 2) nv = nv === floors - 1 ? nv - 1 : nv + 1; lit[k] = nv; } // siempre cambia el piso si hay más de una opción
+          c.windows = true; windowsFired++;
         }
       }
       const ss = Math.floor(clock / SIGN_STEP_MS); if (ss !== signStep) { signStep = ss; c.signs = true; }
       const ts = Math.floor(clock / TELECOM_STEP_MS); if (ts !== telecomStep) { telecomStep = ts; c.telecom = true; }
       flipTimer -= dtMs;
-      if (flipTimer <= 0) { flipTimer = nextFlip(); if (colors.length > 0) { const k = rng.int(0, colors.length - 1); colors[k] = colors[k] === "cyan" ? "magenta" : "cyan"; c.neon = true; } }
+      while (flipTimer <= 0) { flipTimer += nextFlip(); if (colors.length > 0) { const k = flipRng.int(0, colors.length - 1); colors[k] = colors[k] === "cyan" ? "magenta" : "cyan"; c.neon = true; crownsFired++; } }
       const ns = Math.floor(clock / NEON_STEP_MS); if (ns !== neonStep) { neonStep = ns; c.neon = true; }
       const rs = Math.floor(clock / RING_STEP_MS); if (rs !== ringStep) { ringStep = rs; c.neon = true; }
+      homesTimer -= dtMs;
+      while (homesTimer <= 0 && flipGroups.length > 0) { homesTimer += homesRng.int(HOMES_GAP_MS[0], HOMES_GAP_MS[1]); const g = flipGroups[homesRng.int(0, flipGroups.length - 1)]!; groupLit.set(g, !groupLit.get(g)); homesFired++; c.homes = true; }
       return c;
     },
   };

@@ -72,3 +72,17 @@ describe("shadowPolygon", () => {
     expect(shadowPoint(v3(0, 0, 20), SHADOW_CORE_H)).toEqual(shadowPoint(v3(0, 0, 9)));
   });
 });
+
+describe("sombra de la viga", () => {
+  it("una pluma flotando proyecta sombra que contiene la proyección de la punta; largo cero no rompe", () => {
+    const s: Solid = { kind: "beam", from: v3(0, 0, 4), to: v3(4, 0, 8), w: 0.4, h: 0.5, mat: "steel" };
+    const poly = shadowPolygon(s)!;
+    expect(poly.length).toBeGreaterThanOrEqual(3);
+    const tip = shadowPoint(v3(4, 0, 8));
+    const xs = poly.map((p) => p.x), ys = poly.map((p) => p.y);
+    expect(tip.x).toBeGreaterThanOrEqual(Math.min(...xs) - 1e-9); expect(tip.x).toBeLessThanOrEqual(Math.max(...xs) + 1e-9);
+    expect(tip.y).toBeGreaterThanOrEqual(Math.min(...ys) - 1e-9); expect(tip.y).toBeLessThanOrEqual(Math.max(...ys) + 1e-9);
+    const zero = shadowPolygon({ ...s, to: s.from });
+    expect(zero!.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y))).toBe(true);
+  });
+});

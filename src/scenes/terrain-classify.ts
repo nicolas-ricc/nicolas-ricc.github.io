@@ -1,5 +1,5 @@
-import { BOTTOM, DOCK, QUAY_X, SHORE_W, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, abyssX, distToHeadland, eastBank, inHeadland, inMouth, shoreWidth } from "../map/geo";
-import { CITY_EDGE, DISTRICT_BANK_Y, EAST_RING, MALECON_STREET_X, estuaryEast, inCrater } from "./city-grid";
+import { BOTTOM, CELL, DOCK, QUAY_X, SHORE_W, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, abyssX, distToHeadland, eastBank, inHeadland, inMouth, islandEastX, islandWestX, shoreWidth } from "../map/geo";
+import { CITY_EDGE, DISTRICT_BANK_Y, EAST_RING, MALECON_STREET_X, inCrater } from "./city-grid";
 import { bayWater, builtAt, estuaryWater } from "./sprawl-grid";
 
 /**
@@ -28,7 +28,7 @@ export function shipyardTerrainAt(x: number, y: number): Terrain {
 }
 
 export function cityTerrainAt(x: number, y: number): Terrain {
-  if (x >= QUAY_X && x <= estuaryEast(y)) return "water";
+  if (x >= QUAY_X && x <= islandWestX(y)) return "water";
   if (y < CITY_EDGE.north) return "jungle"; // cinturón de costura con el astillero
   if (y >= DISTRICT_BANK_Y && x > QUAY_X) return x >= MALECON_STREET_X ? "asphalt" : "jungle"; // ribera este del distrito: selva, y la calle del malecón
   if (y >= CITY_EDGE.south || x < CITY_EDGE.west) return "asphalt"; // bordes oeste y sur: el distrito tecnológico del sangrado sigue derecho desde la ciudad
@@ -48,7 +48,7 @@ export function seaTerrainAt(x: number, y: number): Terrain {
 
 /** Despacha por geografía, no por zona clickeable: el mar y la punta son de seaTerrainAt aunque clickeen Portfolio o Resume. */
 export function terrainAt(x: number, y: number): Terrain {
-  if (x >= ZONE_SPLIT_X || inHeadland(x, y)) return seaTerrainAt(x, y);
+  if (inHeadland(x, y) || x >= islandEastX(y)) return seaTerrainAt(x, y);
   return y >= ZONE_SPLIT_Y ? cityTerrainAt(x, y) : shipyardTerrainAt(x, y);
 }
 
@@ -70,4 +70,12 @@ export function bleedTerrainAt(x: number, y: number): BleedTerrain {
 export function isWaterAt(x: number, y: number): boolean {
   if (x >= WORLD.x0 && x < WORLD.x1 && y >= WORLD.y0 && y < WORLD.y1) return WATER_TERRAIN.has(terrainAt(x, y));
   return BLEED_WATER.has(bleedTerrainAt(x, y));
+}
+
+/** `true` si ninguna celda de la grilla de `CELL` (anclada en WORLD.x0/y0) que corta el rectángulo agrandado `margin` tiene el centro en agua. */
+export function clearOfWater(x0: number, y0: number, x1: number, y1: number, margin: number): boolean {
+  const i0 = Math.floor((x0 - margin - WORLD.x0) / CELL), i1 = Math.floor((x1 + margin - WORLD.x0) / CELL);
+  const j0 = Math.floor((y0 - margin - WORLD.y0) / CELL), j1 = Math.floor((y1 + margin - WORLD.y0) / CELL);
+  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) if (isWaterAt(WORLD.x0 + (i + 0.5) * CELL, WORLD.y0 + (j + 0.5) * CELL)) return false;
+  return true;
 }

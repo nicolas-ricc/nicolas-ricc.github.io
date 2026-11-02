@@ -14,11 +14,12 @@ export const TILE = 6; // baldosa de la plaza y del suelo devorado
 export const PLINTH_H = 0.3;
 
 export type Prism = Solid & { kind: "prism" };
-export type Extra = { roof?: "flat" | "gable" | "step" | "hip"; facade?: Facade; tone?: number };
+export type Extra = { roof?: "flat" | "gable" | "step" | "hip"; roofMat?: Material; facade?: Facade; tone?: number };
 
 export const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material, extra: Extra = {}): Prism => {
   const p: Prism = { kind: "prism", at: v3(x, y, z), w, d, h, mat };
   if (extra.roof) p.roof = extra.roof;
+  if (extra.roofMat) p.roofMat = extra.roofMat;
   if (extra.facade) p.facade = extra.facade;
   if (extra.tone) p.tone = extra.tone;
   return p;

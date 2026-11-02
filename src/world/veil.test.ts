@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
+import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
 import { BLEED, CELL, CELL_BLEED, WORLD, worldZoneAt } from "../map/geo";
-import { ACCENT_DIM, VEIL_ALPHA, accentZone, focusAlphas, veilCells, veilPolygons, veilRuns } from "./veil";
+import { ACCENT_DIM, VEIL_ALPHA, accentZone, accentsByZone, focusAlphas, veilCells, veilPolygons, veilRuns } from "./veil";
 
 describe("veilCells", () => {
   const cells = veilCells();
@@ -78,5 +79,19 @@ describe("accentZone", () => {
   it("un punto por su posición, un polígono por su primer vértice, en mundo", () => {
     expect(accentZone({ kind: "dot", at: v3(10, 10, 5), r: 1, color: "cyan" })).toBe("portfolio");
     expect(accentZone({ kind: "poly", pts: [v3(500, 200, 0), v3(10, 10, 0)], color: "magenta" })).toBe("blog");
+  });
+});
+
+describe("accentsByZone", () => {
+  const dot = (x: number, y: number): Accent => ({ kind: "dot", at: v3(x, y, 1), r: 1, color: "amber" });
+  const port = dot(380, 118), blog = dot(500, 200), cv = dot(-30, 300);
+  it("sin zona, cada luz va a la zona de su posición (accentZone)", () => {
+    expect(accentsByZone([port, blog, cv])).toEqual({ portfolio: [port], cv: [cv], blog: [blog] });
+  });
+  it("con zona, todas van a esa zona aunque estén en otra", () => {
+    expect(accentsByZone([port, blog, cv], "blog")).toEqual({ portfolio: [], cv: [], blog: [port, blog, cv] });
+  });
+  it("sin luces devuelve las tres zonas vacías", () => {
+    expect(accentsByZone([])).toEqual({ portfolio: [], cv: [], blog: [] });
   });
 });

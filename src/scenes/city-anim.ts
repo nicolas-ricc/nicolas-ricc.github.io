@@ -12,7 +12,8 @@ import { chase } from "./neon";
  * cambian: un cartel cada 3..7 s cambia de color o se apaga un paso, y dos luces
  * corren por el malecón. Además, ventanas de los edificios se prenden y se
  * apagan, y un neón de calle del muelle titila. Las pausas se miden en tiempo
- * de pared, no en ticks. Frame 0 = todo quieto y encendido; con reduced-motion
+ * de pared, no en ticks; el papel que llega al final renace en la ventana y sigue
+ * con el tiempo que sobra. Frame 0 = todo quieto y encendido; con reduced-motion
  * se queda ahí.
  */
 export const BLINK_GAP_MS: [number, number] = [4000, 9000];
@@ -39,7 +40,7 @@ const NNE = { x: 0.45, y: -0.893 }; // unidad: nor-noreste (y crece al sur); en 
 const PERP = { x: -NNE.y, y: NNE.x }; // perpendicular a la deriva: abre el abanico
 
 export interface CityAnimChanges { lit: boolean; papers: boolean; antenna: boolean; neon: boolean; windows: boolean }
-export interface CityAnim { lit(): Accent[]; papers(): Accent[]; antenna(): Accent; neon(): Accent[]; windows(): Accent[]; tick(dtMs: number): CityAnimChanges; fired(): { lit: number; neon: number } }
+export interface CityAnim { lit(): Accent[]; papers(): Accent[]; antenna(): Accent; neon(): Accent[]; windows(): Accent[]; tick(dtMs: number): CityAnimChanges; fired(): { lit: number; neon: number; papers: number } }
 
 const NONE: CityAnimChanges = { lit: false, papers: false, antenna: false, neon: false, windows: false };
 
@@ -55,18 +56,18 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
   let blinkTimer = nextGap();
   let antennaStep = 0;
   interface Paper { dist: number; phase: number; side: number; speed: number }
-  const respawn = (p: Paper): void => {
+  const respawn = (p: Paper, r: Rng): void => {
     p.dist = 0;
-    p.phase = rng.next() * Math.PI * 2;
-    p.side = (rng.next() * 2 - 1) * PAPER_SIDE;
-    p.speed = 0.8 + rng.next() * 0.4;
+    p.phase = r.next() * Math.PI * 2;
+    p.side = (r.next() * 2 - 1) * PAPER_SIDE;
+    p.speed = 0.8 + r.next() * 0.4;
   };
   // escalonados de arranque: el papel i nace ya a (i / n)·PAPER_RANGE de la
   // ventana, así el frame 0 (y reduced-motion) muestra un reguero y no un punto.
   const n = rng.int(5, 8);
   const papers: Paper[] = Array.from({ length: n }, (_, i) => {
     const p: Paper = { dist: 0, phase: 0, side: 0, speed: 1 };
-    respawn(p);
+    respawn(p, rng);
     p.dist = (i / n) * PAPER_RANGE;
     return p;
   });
@@ -74,8 +75,9 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
   const signs = neon.signs.map((a) => ({ a, color: a.color, offUntil: -1 }));
   const signRng = createRng(rng.int(0, SEED_MAX)); // flujo propio, por lo mismo que blinkRng
   let signTimer = signRng.int(SIGN_GAP_MS[0], SIGN_GAP_MS[1]);
+  const paperRngs = papers.map(() => createRng(rng.int(0, SEED_MAX))); // uno por papel, al final: el reciclaje no depende del troceo
   let maleconStep = 0;
-  let blinks = 0, signEvents = 0; // disparos desde la construcción, para fired()
+  let blinks = 0, signEvents = 0, recycled = 0; // disparos desde la construcción, para fired()
   // ventanas: después de papeles y carteles para no reordenar sus tiradas
   const wins = scene.lights.windows.filter((x) => x.animable).map((x) => ({ w: x, on: x.on }));
   const target = wins.filter((x) => x.on).length, tol = Math.max(1, Math.round(0.05 * wins.length));
@@ -111,7 +113,7 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
       return [...on, ...lights, ...st];
     },
     windows: () => wins.filter((x) => x.on).map(({ w: lw }): Accent => ({ kind: "poly", pts: lw.window.pts, color: lw.color, alpha: WINDOW_ALPHA })),
-    fired: () => ({ lit: blinks, neon: signEvents }),
+    fired: () => ({ lit: blinks, neon: signEvents, papers: recycled }),
     tick(dtMs) {
       if (opts.reducedMotion || !Number.isFinite(dtMs) || dtMs <= 0) return NONE; // NaN o Infinity colgarían los while
       clock += dtMs;
@@ -123,10 +125,14 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
       blinkTimer -= dtMs;
       while (blinkTimer <= 0) { blinkTimer += nextGap(); blinks++; off = true; c.lit = true; }
 
-      for (const p of papers) {
-        p.dist += PAPER_SPEED * p.speed * dtMs;
-        if (p.dist >= PAPER_RANGE) respawn(p);
-      }
+      papers.forEach((p, i) => { // por tiempo, no por distancia: la velocidad cambia al reciclar
+        let left = dtMs;
+        for (;;) {
+          const v = PAPER_SPEED * p.speed, toEnd = (PAPER_RANGE - p.dist) / v;
+          if (toEnd > left) { p.dist += v * left; break; }
+          left -= toEnd; respawn(p, paperRngs[i]!); recycled++;
+        }
+      });
 
       const step = Math.floor(clock / ANTENNA_STEP_MS);
       if (step !== antennaStep) { antennaStep = step; c.antenna = true; }

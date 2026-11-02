@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { project, Z_SCALE } from "../iso/project";
-import { bounds, type Solid } from "../iso/solids";
+import { bounds, tessellate, type Solid } from "../iso/solids";
 import { BLEED, WORLD } from "../map/geo";
+import { STAIR_TOWER } from "../scenes/boiler-house";
+import { WATER_TOWER, waterTower } from "../scenes/maltings";
+import { createFactoryAnim } from "../scenes/factory-anim";
+import { PLANT, factory } from "../scenes/factory";
 import { BEAM_PERIOD_MS } from "../scenes/sea-anim";
+import { trainLen } from "../scenes/train";
+import { createRng } from "../map/seed";
 import { assembleWorld } from "../world/assemble";
 import { type Box, FRAME_H, HALO_BASE } from "../world/frame";
 import { cropAnimators, cropScene } from "./crop";
@@ -13,15 +19,15 @@ const regions = EXHIBITS.flatMap((e) => (e.kind === "region" ? [e] : []));
 
 // el índice de la spec §3, en orden; las piezas (#94) no cuentan
 const CATALOG: Record<GroupId, string[]> = {
-  fabrica: ["planta", "chimeneas", "subestacion", "playa-camiones", "playa-vias", "cinta"],
-  astillero: ["gradas", "darsena", "grua-portico", "calle-faroles", "naves"],
+  fabrica: ["planta", "chimeneas", "subestacion", "playa-camiones", "playa-vias", "excavadora"],
+  astillero: ["gradas", "darsena", "grua-portico", "calle-faroles", "naves", "punta-norte", "estacion", "paso-a-nivel"],
   hinterland: ["central-termica", "tanques", "silos", "alta-tension", "playa-contenedores"],
   feria: ["noria", "montana-rusa", "torre-caida", "carrusel", "arcade", "autitos-chocadores", "muelle"],
-  ciudad: ["plaza", "torre", "puente", "malecon", "manzana-derrumbada", "manzana-distrito", "obra"],
-  tecnologico: ["mastil", "arena", "auditorio", "torres"],
+  ciudad: ["plaza", "torre", "puente", "malecon", "manzana-derrumbada", "manzana-distrito", "obra", "punta-sur"],
+  tecnologico: ["mastil", "arena", "auditorio", "torres", "monoblock", "casas", "escuela", "club", "plaza-barrio", "costanera", "barrio"],
   mar: ["faro", "casa-farero", "boyas", "pecio"],
 };
-const ANIMATED = ["chimeneas", "noria", "torre", "faro"];
+const ANIMATED = ["chimeneas", "excavadora", "noria", "torre", "faro", "estacion", "paso-a-nivel"];
 const SLACK = 8; // más alto que esto sobre la estructura y queda chica en el cuadro
 
 const { scene, animators } = assembleWorld(undefined, { reducedMotion: false });
@@ -80,6 +86,12 @@ describe("catálogo de exhibits", () => {
       expect(box.y0, id).toBeGreaterThanOrEqual(WORLD.y0 - BLEED.y); expect(box.y1, id).toBeLessThanOrEqual(WORLD.y1 + BLEED.y);
     }
   });
+  it("estacion y paso-a-nivel recortan el animador del tren en su estado inicial (#281)", () => {
+    for (const id of ["estacion", "paso-a-nivel"]) {
+      const e = regions.find((r) => r.id === id)!;
+      expect(cropAnimators(animators, e.box).some((a) => a.ids.includes("rail.train")), id).toBe(true);
+    }
+  });
   it("los cuatro exhibits de #92 recortan un animador que no es el agua", () => {
     for (const id of ANIMATED) {
       const e = regions.find((r) => r.id === id)!;
@@ -109,6 +121,27 @@ describe("catálogo de exhibits", () => {
   });
 });
 
+describe("caja de la nave de calderas (#213)", () => {
+  it("planta llega al borde este de la torre de escalera (STAIR_TOWER.x1): entra la torre y queda afuera la primera chimenea", () => {
+    const e = regions.find((r) => r.id === "planta")!;
+    expect(e.box.x1).toBe(STAIR_TOWER.x1);
+    const cs = cropScene(scene, e.box);
+    expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "steel" && s.w === 5 && s.d === 8)).toBe(true); // descansos de la torre
+    expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "concrete" && s.w === 7 && s.d === 7)).toBe(false); // pedestales de las chimeneas: y ≥ 22.5, al norte de la caja
+    expect(cs.solids.filter((s) => s.kind === "cylinder" && s.mat === "rust" && s.r === 0.5)).toHaveLength(4); // chimeneas metálicas
+  });
+});
+
+describe("caja de la subestación (#244)", () => {
+  it("sigue la fórmula del cerco: {51, −5, 98, 12} h 13, sin cruzar calle-faroles (x0 99) ni bajar a los vagones (y ≤ −6.8)", () => {
+    const e = regions.find((x) => x.id === "subestacion")!, street = regions.find((x) => x.id === "calle-faroles")!;
+    expect(e.box).toEqual({ x0: 51, y0: -5, x1: 98, y1: 12 });
+    expect(e.h).toBe(13);
+    expect(e.box.x1).toBeLessThan(street.box.x0);
+    expect(e.box.y0).toBeGreaterThan(-6.8);
+  });
+});
+
 describe("selección por hash", () => {
   const [first, second] = EXHIBITS;
   it("acepta el hash con o sin #", () => {
@@ -133,12 +166,69 @@ describe("selección por hash", () => {
 const pieces = EXHIBITS.flatMap((e) => (e.kind === "piece" ? [e] : []));
 
 describe("exhibits de pieza", () => {
-  it("las ocho piezas, cada una en su zona", () => {
+  it("las once piezas, cada una en su zona", () => {
     expect(Object.fromEntries(pieces.map((e) => [e.id, e.zone]))).toEqual({
-      "grua-torre": "portfolio", farol: "portfolio",
+      "tanque-agua": "portfolio", "grua-torre": "portfolio", farol: "portfolio", tren: "portfolio",
       campus: "cv", selva: "cv",
-      carguero: "blog", remolcador: "blog", convoy: "blog", lancha: "blog",
+      viga: "blog", carguero: "blog", remolcador: "blog", convoy: "blog", lancha: "blog",
     });
+  });
+  it("la viga es una pieza de un solo sólido beam, antes del carguero", () => {
+    const ids = EXHIBITS.map((e) => e.id);
+    expect(ids.indexOf("viga")).toBe(ids.indexOf("carguero") - 1);
+    const e = EXHIBITS.find((x) => x.id === "viga")!;
+    expect(e.kind).toBe("piece");
+    const out: Solid[] = [];
+    if (e.kind === "piece") e.build(out, []);
+    expect(out.map((s) => s.kind)).toEqual(["beam"]);
+  });
+  it("el tanque de agua (#214) va solo, centrado en el origen, después de planta: la caja de planta no lo contiene (#246)", () => {
+    const ids = EXHIBITS.map((e) => e.id);
+    expect(ids.indexOf("tanque-agua")).toBe(ids.indexOf("planta") + 1);
+    const e = EXHIBITS.find((x) => x.id === "tanque-agua")!;
+    const out: Solid[] = [];
+    if (e.kind === "piece") e.build(out, []);
+    const ref: Solid[] = [];
+    waterTower(ref, WATER_TOWER);
+    expect(out).toHaveLength(ref.length);
+    for (const s of out) if (s.kind === "cylinder" || s.kind === "cone") expect([s.at.x, s.at.y]).toEqual([0, 0]);
+    const deck = out.find((s) => s.kind === "cylinder" && s.r === 4.6)!;
+    expect(deck.kind === "cylinder" && deck.at.x === 0 && deck.at.y === 0).toBe(true);
+  });
+  it("el tren (#281) va después del farol, sobre paving: solo sólidos, ≤ 600 caras, centrado en el origen", () => {
+    const ids = EXHIBITS.map((e) => e.id);
+    expect(ids.indexOf("tren")).toBe(ids.indexOf("farol") + 1);
+    const e = pieces.find((x) => x.id === "tren")!;
+    expect(e.pad).toBe("paving");
+    const out: Solid[] = [], accents: Accent[] = [];
+    e.build(out, accents);
+    expect(accents).toEqual([]); // las luces las pone el animador de la pieza
+    expect(out.flatMap(tessellate).length).toBeLessThanOrEqual(600);
+    const xs = out.flatMap((s) => { const b = bounds(s); return [b.min.x, b.max.x]; });
+    expect(Math.min(...xs)).toBeCloseTo(-trainLen(4) / 2, 9);
+    expect(Math.max(...xs)).toBeCloseTo(trainLen(4) / 2, 9);
+  });
+  it("con animate, las luces del tren cambian de punta cada 4 s; con reducedMotion quedan al este", () => {
+    const e = pieces.find((x) => x.id === "tren")!;
+    expect(e.animate).toBeDefined();
+    const cyanX = (a: ReturnType<NonNullable<typeof e.animate>>): number[] => {
+      const l = a.layer("tren.lights");
+      if (l.kind !== "accent") throw new Error("tren.lights");
+      expect(l.zone).toBe("portfolio");
+      return l.accents.flatMap((x) => (x.kind === "dot" && x.color === "cyan" ? [x.at.x] : []));
+    };
+    const a = e.animate!({ reducedMotion: false });
+    expect([...a.ids]).toEqual(["tren.lights"]);
+    expect(a.tick(16).has("tren.lights")).toBe(true);
+    expect(cyanX(a).length).toBe(2);
+    for (const x of cyanX(a)) expect(x).toBeGreaterThan(0);
+    expect(a.tick(1000).size).toBe(0);
+    expect(a.tick(3000).has("tren.lights")).toBe(true);
+    for (const x of cyanX(a)) expect(x).toBeLessThan(0);
+    const r = e.animate!({ reducedMotion: true });
+    expect(r.tick(4000).size).toBe(0);
+    expect(r.tick(4000).size).toBe(0);
+    for (const x of cyanX(r)) expect(x).toBeGreaterThan(0);
   });
   it("cada pieza emite al menos un sólido", () => {
     for (const e of pieces) {
@@ -177,5 +267,68 @@ describe("entrada del índice fuera de la vista (#117)", () => {
     expect(outOfView({ top: 50, bottom: 72 }, low)).toBe(true);
     expect(outOfView({ top: 100, bottom: 122 }, low)).toBe(false);
     expect(outOfView({ top: 590, bottom: 612 }, low)).toBe(true);
+  });
+});
+
+describe("caja de la planta con maltería (#214, #246)", () => {
+  const e = regions.find((r) => r.id === "planta")!;
+
+  it("planta va de PLANT.x − 3 a STAIR_TOWER.x1 y de PLANT.y − 3 a 2 al sur del muro sur: {2, 41, 98, 76}", () => {
+    expect(e.box).toEqual({ x0: PLANT.x - 3, y0: PLANT.y - 3, x1: STAIR_TOWER.x1, y1: PLANT.y + PLANT.d + 2 });
+    expect(e.box).toEqual({ x0: 2, y0: 41, x1: 98, y1: 76 });
+    expect(e.title).toBe("Nave de calderas y maltería");
+  });
+
+  it("sube a 26 por el vértice del horno y no contiene el tanque (ningún cilindro r 4.6)", () => {
+    expect(e.h).toBe(26);
+    const cs = cropScene(scene, e.box);
+    expect(cs.solids.some((s) => s.kind === "cone" && s.sides === 4 && s.at.z + s.h === 26)).toBe(true);
+    expect(cs.solids.some((s) => s.kind === "cylinder" && s.r === 4.6)).toBe(false);
+  });
+
+  it("entran zócalo y tolva; quedan afuera camiones y faroles, salvo el de (5, 76), que toca el borde sur (cropSolid incluye bordes)", () => {
+    const cs = cropScene(scene, e.box);
+    expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "whitewash" && s.h === 3.5)).toBe(true); // zócalo
+    expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "rust" && s.w === 3 && s.d === 2 && s.h === 2.5)).toBe(true); // tolva
+    expect(cs.solids.some((s) => s.kind === "prism" && s.d === 2.4 && s.h === 2.8)).toBe(false); // camiones
+    expect(cs.solids.flatMap((s) => (s.kind === "prism" && s.mat === "steel" && s.w === 0.6 && s.d === 0.6 && s.h === 5 ? [[s.at.x, s.at.y]] : []))).toEqual([[5, 76]]); // faroles
+  });
+});
+
+describe("caja de la playa de camiones (#246)", () => {
+  const e = regions.find((r) => r.id === "playa-camiones")!;
+
+  it("{2, 76, 98, 92} h 16: entran los tres camiones, los seis pallets y la cinta; no entra la grúa torre", () => {
+    expect(e.box).toEqual({ x0: 2, y0: 76, x1: 98, y1: 92 });
+    expect(e.h).toBe(16);
+    const cs = cropScene(scene, e.box);
+    expect(cs.solids.filter((s) => s.kind === "prism" && s.w === 6 && s.d === 2.4 && s.h === 2.8)).toHaveLength(3);
+    expect(cs.solids.filter((s) => s.kind === "prism" && s.mat === "steel" && s.w === 3 && s.d === 2)).toHaveLength(6);
+    expect(cs.solids.some((s) => s.kind === "beam" && s.mat === "rust" && s.w === 1.6)).toBe(true); // cinta inclinada
+    expect(cs.solids.some((s) => s.kind === "prism" && s.h === 20 && s.w === 1.2)).toBe(false); // mástil de la grúa
+  });
+});
+
+describe("caja de las chimeneas (#245)", () => {
+  const e = regions.find((r) => r.id === "chimeneas")!;
+
+  it("se calcula desde STACKS y COOLING: x0 COOLING.x − r − 3, 13 de más al este por el humo, al sur la plataforma (r + 1.2); h 36", () => {
+    expect(e.box.x0).toBeCloseTo(40 - 9 - 3, 9);
+    expect(e.box.y0).toBeCloseTo(26 - 2.8 - 28, 9);
+    expect(e.box.x1).toBeCloseTo(86 + 2.8 + 3 + 13, 9);
+    expect(e.box.y1).toBeCloseTo(32 + 2.8 + 1.2 + 3, 9);
+    expect(e.h).toBeCloseTo(29 + 28 * 0.25, 9);
+  });
+
+  it("ninguna bocanada sale de la caja en x/y en una vuelta (40 s a 33 ms)", () => {
+    const anim = createFactoryAnim(factory(createRng(7)).stacks, createRng(1), { reducedMotion: false });
+    const { x0, y0, x1, y1 } = e.box;
+    for (let t = 0; t <= 40_000; t += 33) {
+      for (let k = 0; k < 3; k++) for (const p of anim.puffs(k)) {
+        const b = bounds(p);
+        expect(b.min.x >= x0 && b.max.x <= x1 && b.min.y >= y0 && b.max.y <= y1, `t ${t} chimenea ${k}: ${JSON.stringify(b)}`).toBe(true);
+      }
+      anim.tick(33);
+    }
   });
 });

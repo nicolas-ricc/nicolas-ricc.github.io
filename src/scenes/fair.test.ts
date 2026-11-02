@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { isBehind, overlaps, screenBounds } from "../iso/depth";
 import { bounds, isFlat, type Bounds, type Solid } from "../iso/solids";
 import { worldZoneAt } from "../map/geo";
-import type { Material } from "../map/palette-iso";
 import { createRng, SEED } from "../map/seed";
 import { COASTER_PROFILE, DROP, FAIR_MATS, LIFT_SEGMENTS, PIER, WHEEL, coasterPath, dropSolids, fair, trainSolids, wheelSolid } from "./fair";
 import { FAIR, bayShoreX, bayWater, fairAt } from "./sprawl-grid";
