@@ -34,3 +34,25 @@ export function scheduleIdle(fn: () => void): void {
   else if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => setTimeout(fn, 0));
   else setTimeout(fn, 0);
 }
+
+/** Structural slice of Pixi's `SystemRunner`, so this module stays Pixi-free. */
+export interface RenderRunner {
+  add(listener: { postrender(): void }): unknown;
+  remove(listener: { postrender(): void }): unknown;
+}
+
+/** Runs `fn` in the task after Pixi's first real render: a one-shot `postrender` listener, then `setTimeout(fn, 0)`. */
+export function afterFirstRender(postrender: RenderRunner, fn: () => void): void {
+  let done = false;
+  const once = {
+    postrender() {
+      if (done) return;
+      done = true;
+      // removing inside `emit` skips the next listener and breaks the runner's loop: defer it
+      queueMicrotask(() => postrender.remove(once));
+      // the just-rendered frame is presented without the effect; `fn` runs in the next task
+      setTimeout(fn, 0);
+    },
+  };
+  postrender.add(once);
+}
