@@ -26,9 +26,9 @@
 
    with
 
-   `Diseño en \`docs/superpowers/specs/\`. Planes en dos carpetas: \`docs/plans/\` (corridas de agentes) y \`docs/superpowers/plans/\`; no se consolidan, para no romper enlaces de issues y PRs.`
+   `Diseño en \`docs/superpowers/specs/\`. Planes en dos carpetas: \`docs/plans/\` (corridas de agentes) y \`docs/superpowers/plans/\`; no se mueven, para no romper enlaces de issues y PRs.`
 
-   The parenthetical is the owner's wording. `docs/superpowers/plans/` gets no label: its plans overlap in date with `docs/plans/` (e.g. `2026-10-24-wheel-cangilones.md` vs `docs/plans/2026-10-16-59-…`), so any "older"/"by hand" label would be a guess.
+   The parenthetical and the reason are the owner's wording ("No se mueve ningún archivo, para no romper enlaces de issues y PRs"). `docs/superpowers/plans/` gets no label: its plans overlap in date with `docs/plans/` (e.g. `2026-10-24-wheel-cangilones.md` vs `docs/plans/2026-10-16-59-…`), so any "older"/"by hand" label would be a guess.
 2. **No other file is touched.** `CLAUDE.md` and `AGENTS.md` do not mention plan folders; the `.agents/skills/` default (`docs/superpowers/plans/`) is not part of the repo (AGENTS.md: "never commit them"). Source comments pointing at `docs/plans/…` files (`src/scenes/boiler-house.ts:13` etc.) are already correct.
 3. **Test locates the sentence by the paragraph containing `docs/superpowers/specs/` and "Planes en"**, not by line number, so reflowing the paragraph does not break it.
 
@@ -37,7 +37,7 @@
 1. The README names a folder that does not exist or is empty (typo, trailing slash dropped) — the test extracts every `docs/…plans/` path in the sentence and asserts each is a directory with at least one `.md`.
 2. Only one of the two folders named (the original bug) — the test asserts both `` `docs/plans/` `` and `` `docs/superpowers/plans/` `` appear in the paragraph.
 3. The old singular sentence survives next to the new one, contradicting it — the test asserts `plan en \`docs/superpowers/plans/\`` is gone from the README.
-4. Plans moved or deleted by accident while editing — Step 4 checks `git diff --stat origin/main -- docs/plans docs/superpowers/plans` shows only this plan file added.
+4. Plans moved or deleted by accident while editing — Step 4 checks `git diff --stat $(git merge-base origin/main HEAD) -- docs/plans docs/superpowers/plans` shows only this plan file added.
 5. Agent-run plans not identified as such — the test asserts `` `docs/plans/` (corridas de agentes) ``.
 
 ---
@@ -76,11 +76,27 @@ describe("README names both plan folders (#204)", () => {
 
 - [ ] **Step 2: Run to verify it fails** — `npx vitest run src/lab/docs.test.ts`. Expected: the three new cases FAIL (`para` is empty; the old sentence is still there); every pre-existing case PASSES.
 - [ ] **Step 3: Implement** — replace the sentence of decision 1 in `README.md:12`; nothing else on the line changes.
-- [ ] **Step 4: Run to verify it passes** — `npx vitest run src/lab/docs.test.ts` → all PASS; `git diff --stat origin/main -- docs/plans docs/superpowers/plans` lists only this plan file.
+- [ ] **Step 4: Run to verify it passes** — `npx vitest run src/lab/docs.test.ts` → all PASS; `git diff --stat $(git merge-base origin/main HEAD) -- docs/plans docs/superpowers/plans` lists only this plan file (merge-base, so plans landed on `main` after the branch was cut do not show up).
 - [ ] **Step 5: Full suite and typecheck** — `npm test` and `npm run typecheck`, both green.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add README.md
+git add README.md src/lab/docs.test.ts
 git commit -m "docs(#204): README nombra docs/plans/ y docs/superpowers/plans/"
 ```
+
+## Assumptions
+
+- **`ROOT` ends in `/`**: `src/lab/docs.test.ts:5` builds it with `fileURLToPath(new URL("../../", import.meta.url))`, so `${ROOT}docs/plans/` is a valid path. `readme` is a module-scope string (`src/lab/docs.test.ts:6`), so `para` is computed eagerly.
+- **The paragraph split is sound**: `README.md:11` and `README.md:13` are blank lines, so `para` is exactly line 12.
+- **The old sentence occurs once** (`grep -c` → 1) and "Planes en" occurs zero times, so case 2 and the `find` in case 1 flip from red to green with only the line-12 edit.
+- **Test naming**: every `describe` in `src/lab/docs.test.ts` ends with `(#NNN)`. The title is in English per #194; the rejected alternative was a Spanish title like its neighbours.
+- **The order is pinned by the copy, not by a requirement**: `toEqual` pins the order of decision 1. The rejected alternative was a set comparison, which would also accept a third or duplicated folder. A mistyped folder (e.g. no trailing slash) shows up as a length mismatch in the `toEqual` diff, and that diff names what was extracted.
+- **Step 6 also commits the test file** when the evals commit did not already include it.
+- **The commit types `plan`, `test`, `docs` and the `evals` subject** come from the pipeline brief; the `test(#NNN):` and `docs(#NNN):` forms already appear in `git log` (e.g. `1749776`, `7412bdb`).
+
+## Grilling
+
+- Rounds: 1 (the revisions were local wording and step fixes, not a different seam).
+- Questions: 14. Sources: ISSUE 3 (Q5, Q6, Q7), CODE 6 (Q1, Q2, Q3, Q8, Q12, Q13), DOC 1 (Q12: `docs/superpowers/specs/2026-10-24-fabrica-detalle-design.md:351` "los planes están en `docs/plans/`"), NO SOURCE → technical assumption 4 (Q4, Q9, Q10, Q11, Q14 folded with Q11).
+- Assumptions: see above. Spec ambiguities: none. Follow-up issues opened: none.
