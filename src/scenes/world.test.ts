@@ -62,7 +62,8 @@ describe("world", () => {
   it("astillero + fábrica, ciudad + distrito y Blog no comparten materiales de construcción, salvo los compartidos por regla", () => {
     const w = world(7);
     const mats = (solids: Solid[]) => new Set(solids.filter((s) => s.kind !== "cone").map((s) => s.mat));
-    const portfolio = mats([...w.shipyard!.solids, ...w.factory!.solids]), cv = mats(w.city!.solids), blog = mats(w.sea!.solids);
+    const portfolio = mats([...w.shipyard!.solids, ...w.factory!.solids, ...w.factory!.excavator]), // la excavadora vive fuera de factory.solids (#216)
+       cv = mats(w.city!.solids), blog = mats(w.sea!.solids);
     // Igualdad exacta (#218): falla si alguno deja de compartirse o aparece otro. office: gris lila de la excavadora (decisión de #207);
     // asphalt: cabezas de los semáforos de la estación (#277); stone: fuste de la torre del reloj y paving: losa de la explanada (#278).
     // Sin glass: la ciudad solo tiene vidrio en caras de fachada, no como mat de un sólido.
