@@ -11,6 +11,7 @@ export interface ZoneContent {
   id: ZoneId;
   titulo: string;
   descripcion?: string;
+  /** Only the cv zone may declare it (enforced by `validateContent`). */
   pdf?: string;
   proyectos?: Proyecto[];
   articulos?: Articulo[];
