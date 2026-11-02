@@ -15,8 +15,9 @@ import { bloomFromSearch, nextBloomMode, speedFromSearch } from "./page";
  * Storybook de estructuras: un exhibit a la vez, recortado del mundo por su
  * caja o armado solo en el origen (piezas). El hash elige el exhibit; flechas
  * y j/k solo escriben el hash. 6 rota el bloom; ?bloom= lo fuerza y ?speed=
- * escala el reloj (?speed=0 lo congela), como en page.ts. g, h y a ocultan o
- * muestran suelo, sombras y acentos (con el bloom) y se recuerdan entre exhibits.
+ * escala el reloj hasta 100 (?speed=0 lo congela), como en page.ts. g, h y a
+ * ocultan o muestran suelo, sombras y acentos (con el bloom) y se recuerdan
+ * entre exhibits.
  */
 const host = document.getElementById("lab-host") as HTMLDivElement;
 const nav = document.getElementById("exhibits") as HTMLElement;

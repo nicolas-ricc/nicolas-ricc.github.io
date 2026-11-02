@@ -19,11 +19,14 @@ export function bloomFromSearch(search: string): BloomMode | null {
   return BLOOM_CYCLE.find((m) => m === v) ?? null;
 }
 
-/** `?speed=` escala el reloj de los animadores; 0 lo congela. Ausente, vacío, no numérico, negativo o infinito: 1. */
+/** Tope de `?speed=`: un valor enorme congelaría la pestaña (los animadores iteran en proporción a `dt`). */
+export const MAX_SPEED = 100;
+
+/** `?speed=` escala el reloj de los animadores, de 0 (lo congela) a `MAX_SPEED`. Ausente, vacío, no numérico, negativo, infinito o mayor que el tope: 1. */
 export function speedFromSearch(search: string): number {
   const v = new URLSearchParams(search).get("speed")?.trim();
   const n = v ? Number(v) : NaN;
-  return Number.isFinite(n) && n >= 0 ? n + 0 : 1; // + 0 vuelve -0 en 0
+  return Number.isFinite(n) && n >= 0 && n <= MAX_SPEED ? n + 0 : 1; // + 0 vuelve -0 en 0
 }
 
 export function nextBloomMode(mode: BloomMode): BloomMode {
@@ -35,7 +38,7 @@ export function nextBloomMode(mode: BloomMode): BloomMode {
  * encuadre inicial. Teclas 0..3 encuadran mundo, Portfolio, Resume y Blog; 4
  * el cover 16:9; 5 rota el foco (velo) entre ninguno, Portfolio, Resume y Blog;
  * 6 rota el bloom entre off, on y fallback (`?bloom=on|off|fallback` lo fuerza al cargar; sin parámetro se mide y decide solo).
- * `?speed=` escala el reloj de los animadores y `?speed=0` lo congela.
+ * `?speed=` escala el reloj de los animadores (hasta 100) y `?speed=0` lo congela.
  */
 export function bootWorldPage(zones: readonly WorldZone[] | undefined, frame: Frame): void {
   const host = document.getElementById("lab-host") as HTMLDivElement;
