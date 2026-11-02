@@ -6,7 +6,7 @@ import { bounds, isFlat, type Solid } from "../iso/solids";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
 import { buildRenderList } from "../iso/render-list";
-import { DISTRICT_COLS, DISTRICT_ROWS, LIT_FLOOR, SITE, TOWER, TOWER_FLOORS, TOWER_H, blocks, type Block } from "./city-grid";
+import { LIT_FLOOR, SITE, TOWER, TOWER_FLOORS, TOWER_H, blocks, type Block } from "./city-grid";
 import { PLINTH_H } from "./city-pieces";
 import { MAX_DISTRICT_H, districtBlock, maxDistrictHeight } from "./district";
 
