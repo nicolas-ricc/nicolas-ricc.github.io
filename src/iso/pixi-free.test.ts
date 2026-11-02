@@ -14,6 +14,24 @@ function sourceFiles(dir: string, out: string[] = []): string[] {
   return out;
 }
 
+describe("PIXI_IMPORT (#168)", () => {
+  // armado, para que este archivo no caiga en su propio guard de tests
+  const MOD = ["pixi", "js"].join(".");
+  it("detecta comillas simples y dobles, import() e import type", () => {
+    for (const src of [
+      `import { Graphics } from "${MOD}";`,
+      `import { Graphics } from '${MOD}';`,
+      `import type { Container } from '${MOD}';`,
+      `const pixi = await import("${MOD}");`,
+      `export { Ticker } from '${MOD}';`,
+    ])
+      expect(src).toMatch(PIXI_IMPORT);
+  });
+  it("no confunde paquetes vecinos ni menciones sueltas", () => {
+    for (const src of [`from '${MOD}-legacy'`, `from "@pixi/core"`, `// sin ${MOD} acá`]) expect(src).not.toMatch(PIXI_IMPORT);
+  });
+});
+
 describe("guard de motor sin Pixi", () => {
   const files = DIRS.flatMap((d) => sourceFiles(`${ROOT}${d}`));
 
