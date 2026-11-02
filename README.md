@@ -108,3 +108,13 @@ ejemplo `[mapa] bloom: promedio 9.9 ms en 60 frames (tick 6.4 + render
 3.5), presupuesto 15 ms → activo` (con prefijo `[lab]` en el
 laboratorio). En el lab, `?bloom=` fuerza el modo sin medir y `6` lo
 rota.
+
+## Tests
+
+Convención: los tests del motor no usan Pixi. El guard
+`src/iso/pixi-free.test.ts` falla si un fuente de `src/iso/` o `src/scenes/`
+importa `pixi.js`, o si un test de `src/` lo nombra, con comillas simples o
+dobles, `import()` o `import type`. En su lugar se usan dobles de prueba
+(fakes). Las excepciones explícitas son los tests de módulos de Pixi,
+`src/world/stage.test.ts` y `src/world/bloom-runtime.test.ts` (`PIXI_TESTS`
+en el guard, #166); una excepción nueva se agrega ahí y en este párrafo.
