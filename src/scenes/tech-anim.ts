@@ -36,6 +36,7 @@ export function createTechAnim(scene: TechScene, rng: Rng, opts: { reducedMotion
   const lit: (number | null)[] = scene.towers.map((t) => rng.int(1, t.facade.floors - 1));
   const blinkRng = createRng(rng.int(0, SEED_MAX)); // flujo propio de las torres, derivado donde antes se sorteaba el primer plazo
   const nextGap = () => blinkRng.int(TECH_BLINK_GAP_MS[0], TECH_BLINK_GAP_MS[1]);
+  // windowsFired: vencimientos con torres (apagar una torre ya apagada cuenta aunque no se vea); crownsFired: cambios de color
   let clock = 0, blinkTimer = nextGap(), windowsFired = 0, crownsFired = 0, signStep = 0, telecomStep = 0;
   const colors = scene.neon.crowns.map((c) => c.color);
   const flipRng = createRng(rng.int(0, SEED_MAX));

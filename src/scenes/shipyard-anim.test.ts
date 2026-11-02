@@ -127,6 +127,15 @@ describe("shipyard-anim: troceo (#125)", () => {
     expect(largo).toBeLessThanOrEqual(600000 / SPARK_GAP_MS[0]);
     expect(largo).toBe(troceado(veces(6000, 100)).anim.fired().sparks);
   });
+  it("un evento entero dentro de un tick largo no reporta cambio de chispas", () => {
+    const b = setup().anim;
+    let t = 0;
+    while (b.sparks().length === 0) { b.tick(10); t += 10; }
+    while (b.sparks().length > 0) { b.tick(10); t += 10; }
+    const a = setup().anim;
+    expect(a.tick(t).sparks).toBe(false); // vacío antes y después: nada que redibujar
+    expect(a.fired().sparks).toBe(1);
+  });
   it("dt no válido no cambia nada", () => {
     const { scene, anim } = setup();
     const y = scene.trolley.at.y;

@@ -70,13 +70,14 @@ export function createShipyardAnim(scene: Scene, rng: Rng, opts: { reducedMotion
       if (y !== scene.trolley.at.y) { scene.trolley.at.y = y; changes.trolley = true; }
 
       // El exceso se arrastra: cada vuelta es un paso de idle → cuadro 0 → 1 → 2 → idle.
+      const before = live;
       sparkTimer -= dtMs;
       while (sparkTimer <= 0) {
         if (sparkFrame < 0) { sparkFrame = 0; sparksFired++; spot = sparkRng.pick(scene.weldSpots); sparkTimer += SPARK_FRAME_MS; burst(); }
         else if (sparkFrame + 1 >= SPARK_FRAMES) { sparkFrame = -1; spot = null; live = []; sparkTimer += nextGap(); }
         else { sparkFrame++; sparkTimer += SPARK_FRAME_MS; burst(); }
-        changes.sparks = true;
       }
+      changes.sparks = live !== before && (before.length > 0 || live.length > 0); // un evento entero dentro del tick no se ve
       return changes;
     },
   };

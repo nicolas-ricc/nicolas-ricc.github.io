@@ -174,7 +174,7 @@ describe("tech-anim: troceo (#125)", () => {
     const a = troceado([600000]), b = troceado(veces(600, 1000));
     expect(a.fired().windows).toBeGreaterThanOrEqual(600000 / TECH_BLINK_GAP_MS[1] - 1);
     expect(a.fired().windows).toBeLessThanOrEqual(600000 / TECH_BLINK_GAP_MS[0]);
-    expect(a.fired()).toEqual(b.fired());
+    igual(a, b);
   });
   it("un troceo irregular deja lo mismo que su suma", () => {
     const dts = [16, 33, 100, 250, 1000, 5000, 7000, 33, 12000];
