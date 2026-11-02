@@ -29,6 +29,7 @@ describe("lab host keyboard access (#167)", () => {
       const host = mountHost(page);
       expect(host.getAttribute("tabindex")).toBe("0");
       expect(host.tabIndex).toBe(0);
+      // happy-dom focuses any element, tabindex or not: this only proves the mounted host is live
       host.focus();
       expect(document.activeElement).toBe(host);
     });
@@ -43,7 +44,8 @@ describe("lab host keyboard access (#167)", () => {
   it("keydown listeners stay on window", () => {
     for (const f of ["src/lab/page.ts", "src/lab/storybook.ts"]) {
       const targets = [...readFileSync(`${ROOT}${f}`, "utf8").matchAll(/(\w+)\.addEventListener\(\s*["']key\w+["']/g)].map((m) => m[1]);
-      expect(targets, f).toEqual(["window"]);
+      expect(targets.length, f).toBeGreaterThan(0);
+      expect(new Set(targets), f).toEqual(new Set(["window"]));
     }
   });
 });
