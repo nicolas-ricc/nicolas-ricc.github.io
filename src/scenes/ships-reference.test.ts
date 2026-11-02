@@ -129,9 +129,9 @@ describe("barcos-referencia: cierre y medición (#65)", () => {
     expect(at).toBeGreaterThan(item.indexOf("(232, 50)"));
     const note = item.slice(at);
     for (const s of ["`LANE_OUT`", "`LANE_BACK`", "sin fondeadero"]) expect(note).toContain(s);
-    const link = note.match(/\]\((2026-10-17-barcos-inventario\.md)#([^)]+)\)/);
-    expect(link?.[2]).toBe("inventario-después");
-    const inv = new URL(link![1]!, DOC);
+    const link = note.match(/\]\(2026-10-17-barcos-inventario\.md#([^)]+)\)/);
+    expect(link?.[1]).toBe("inventario-después");
+    const inv = new URL("2026-10-17-barcos-inventario.md", DOC);
     expect(existsSync(inv)).toBe(true);
     expect(readFileSync(inv, "utf8")).toMatch(/^### Inventario después\s*$/m);
   });
