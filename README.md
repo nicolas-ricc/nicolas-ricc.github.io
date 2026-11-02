@@ -9,7 +9,7 @@ Sitio personal: un mapa isométrico nocturno con tres zonas (Portfolio, Resume, 
 
 Sin licencia pública: `private: true`, el campo `license` (ISC) queda como resto del scaffold y no aplica — el repo no se publica en npm.
 
-Contenido editable en `content/*.json`. `public/cv.pdf` es una copia del CV de `riccomini-multiverse` (`cv/cv.pdf`); se actualiza a mano con `gh api repos/nicolas-ricc/riccomini-multiverse/contents/cv/cv.pdf -H "Accept: application/vnd.github.raw" > public/cv.pdf`. Diseño en `docs/superpowers/specs/`, plan en `docs/superpowers/plans/`.
+Contenido editable en `content/*.json`. `public/cv.pdf` es una copia del CV de `riccomini-multiverse` (`cv/cv.pdf`); se actualiza a mano con `gh api repos/nicolas-ricc/riccomini-multiverse/contents/cv/cv.pdf -H "Accept: application/vnd.github.raw" > public/cv.pdf`. Diseño en `docs/superpowers/specs/`. Planes en dos carpetas: `docs/plans/` (corridas de agentes) y `docs/superpowers/plans/`; no se mueven, para no romper enlaces de issues y PRs.
 
 ## Mundo isométrico
 
@@ -112,10 +112,12 @@ muestran suelo, sombras y acentos; `6` rota el bloom, `?bloom=` lo fuerza y
 congela; por encima de 100 vale 1).
 
 El bloom de las luces no entra en el primer dibujo: el sitio y el lab lo
-activan después, en una tarea diferida (`attachBloom`,
-`src/world/bloom-runtime.ts`), y miden 60 frames. Si el promedio de tick
-más render supera 15 ms, lo quitan y dejan un halo más grande en los
-puntos de luz (`fallback`). En desarrollo la decisión se loguea, por
+activan después del primer render real de Pixi (el `postrender` de
+`app.renderer`), en la tarea siguiente (`afterFirstRender`,
+`src/world/bloom.ts`; `attachBloom`, `src/world/bloom-runtime.ts`), no por
+orden de rAF ni por `requestIdleCallback`, y miden 60 frames. Si el
+promedio de tick más render supera 15 ms, lo quitan y dejan un halo más
+grande en los puntos de luz (`fallback`). En desarrollo la decisión se loguea, por
 ejemplo `[mapa] bloom: promedio 9.9 ms en 60 frames (tick 6.4 + render
 3.5), presupuesto 15 ms → activo` (con prefijo `[lab]` en el
 laboratorio). En el lab, `?bloom=` fuerza el modo sin medir y `6` lo

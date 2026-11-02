@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BLOOM_BUDGET_MS, BLOOM_SAMPLE_FRAMES, createBloomBudget, formatBloomVerdict, scheduleIdle, type BloomVerdict } from "./bloom";
+import { afterFirstRender, BLOOM_BUDGET_MS, BLOOM_SAMPLE_FRAMES, createBloomBudget, formatBloomVerdict, type BloomVerdict } from "./bloom";
 
 const feed = (b: ReturnType<typeof createBloomBudget>, n: number, tickMs: number, renderMs: number) => {
   let v: BloomVerdict | null = null;
@@ -45,44 +45,67 @@ describe("formatBloomVerdict", () => {
   });
 });
 
-describe("scheduleIdle", () => {
-  afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
-  it("usa requestIdleCallback con timeout 1000 si existe", () => {
-    const ric = vi.fn();
-    vi.stubGlobal("requestIdleCallback", ric);
-    const fn = () => {};
-    scheduleIdle(fn);
-    expect(ric).toHaveBeenCalledWith(fn, { timeout: 1000 });
-  });
-  it("si no, setTimeout 0: no corre en el acto", () => {
-    vi.stubGlobal("requestIdleCallback", undefined);
-    vi.stubGlobal("requestAnimationFrame", undefined);
+type PostrenderListener = { postrender(): void };
+const fakeRunner = () => {
+  const items: PostrenderListener[] = [];
+  return {
+    items,
+    add(l: PostrenderListener) { items.push(l); },
+    remove(l: PostrenderListener) { const i = items.indexOf(l); if (i >= 0) items.splice(i, 1); },
+    // same loop as Pixi's SystemRunner.emit: length captured up front
+    emit() { for (let i = 0, len = items.length; i < len; i++) items[i]!.postrender(); },
+  };
+};
+
+describe("afterFirstRender", () => {
+  afterEach(() => { vi.useRealTimers(); });
+  it("does not run fn before any postrender, nor synchronously inside the first one", () => {
     vi.useFakeTimers();
-    const fn = vi.fn();
-    scheduleIdle(fn);
+    const runner = fakeRunner(), fn = vi.fn();
+    afterFirstRender(runner, fn);
+    vi.advanceTimersByTime(0);
+    expect(fn).not.toHaveBeenCalled();
+    runner.emit();
+    expect(fn).not.toHaveBeenCalled();
+  });
+  it("runs fn once in the task after the first postrender", async () => {
+    vi.useFakeTimers();
+    const runner = fakeRunner(), fn = vi.fn();
+    afterFirstRender(runner, fn);
+    runner.emit();
+    await Promise.resolve();
     expect(fn).not.toHaveBeenCalled();
     vi.advanceTimersByTime(0);
     expect(fn).toHaveBeenCalledOnce();
   });
-  it("con requestIdleCallback no pasa por requestAnimationFrame", () => {
-    const raf = vi.fn();
-    vi.stubGlobal("requestIdleCallback", vi.fn());
-    vi.stubGlobal("requestAnimationFrame", raf);
-    scheduleIdle(() => {});
-    expect(raf).not.toHaveBeenCalled();
-  });
-  it("sin requestIdleCallback, espera un frame pintado: rAF y después setTimeout 0 (#32)", () => {
-    vi.stubGlobal("requestIdleCallback", undefined);
-    const frames: FrameRequestCallback[] = [];
-    vi.stubGlobal("requestAnimationFrame", vi.fn((cb: FrameRequestCallback) => frames.push(cb)));
+  it("a second postrender before the task does not schedule fn twice", () => {
     vi.useFakeTimers();
-    const fn = vi.fn();
-    scheduleIdle(fn);
-    vi.advanceTimersByTime(0);
-    expect(fn).not.toHaveBeenCalled();
-    frames.shift()?.(0);
-    expect(fn).not.toHaveBeenCalled();
+    const runner = fakeRunner(), fn = vi.fn();
+    afterFirstRender(runner, fn);
+    runner.emit();
+    runner.emit();
     vi.advanceTimersByTime(0);
     expect(fn).toHaveBeenCalledOnce();
+  });
+  it("detaches itself after the first postrender", async () => {
+    vi.useFakeTimers();
+    const runner = fakeRunner(), fn = vi.fn();
+    afterFirstRender(runner, fn);
+    runner.emit();
+    await Promise.resolve();
+    expect(runner.items).toHaveLength(0);
+    runner.emit();
+    vi.advanceTimersByTime(0);
+    expect(fn).toHaveBeenCalledOnce();
+  });
+  it("detaching does not skip a listener added after it", async () => {
+    vi.useFakeTimers();
+    const runner = fakeRunner(), other = { postrender: vi.fn() };
+    afterFirstRender(runner, () => {});
+    runner.add(other);
+    runner.emit();
+    await Promise.resolve();
+    runner.emit();
+    expect(other.postrender).toHaveBeenCalledTimes(2);
   });
 });

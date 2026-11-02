@@ -190,21 +190,42 @@ describe("sortByDepth en el marco del barco", () => {
 });
 
 describe("sortByDepth con piezas de costado", () => {
-  it("una pieza de costado se dibuja del lado del casco que le toca, aunque la clave diga otra cosa", () => {
-    // cilindro de esquina de popa del remolcador a 145°: lado lejano, y la clave lo mandaba después del casco
-    const h = (145 * Math.PI) / 180;
-    const hull: Solid = { kind: "hull", at: v3(0, 0, -1), len: 19, beam: 7, h: 2.2, mat: "hull", topMat: "hullBlue", heading: h, sheer: 0.3 };
-    const corner = rotCyl(h, 0.9, 1.7, 1, 0.45, 0.9);
-    for (const input of [[corner, hull], [hull, corner]]) expect(sortByDepth(input, h)).toEqual([corner, hull]);
+  const ferryHull: Solid = { kind: "hull", at: v3(0, 0, -1), len: 15, beam: 4, h: 1.2, mat: "hull", topMat: "deck", heading: 0, sheer: 0.3 };
+  const tugHull = (h: number): Solid => ({ kind: "hull", at: v3(0, 0, -1), len: 19, beam: 7, h: 2.2, mat: "hull", topMat: "hullBlue", heading: h, sheer: 0.3 });
+
+  it("a side piece is drawn on the side of the hull face it hangs from, whatever its centroid says", () => {
+    // ferry at heading 0: the starboard band faces the viewer, even for a fender in the far (aft) half of the hull
+    const starboard = rotCyl(0, 5, 2.05, -0.2, 0.22, 0.5), port = rotCyl(0, 5, -2.05, -0.2, 0.22, 0.5);
+    for (const input of [[starboard, ferryHull], [ferryHull, starboard]]) expect(sortByDepth(input, 0)).toEqual([ferryHull, starboard]);
+    for (const input of [[port, ferryHull], [ferryHull, port]]) expect(sortByDepth(input, 0)).toEqual([port, ferryHull]);
+    // tug stern corner at 145°: it hangs from the stern (|u| 0.91 > |w| 0.49), and the stern faces the viewer
+    const h = (145 * Math.PI) / 180, hull = tugHull(h), corner = rotCyl(h, 0.9, 1.7, 1, 0.45, 0.9);
+    for (const input of [[corner, hull], [hull, corner]]) expect(sortByDepth(input, h)).toEqual([hull, corner]);
   });
 
-  it("el casco separa: lo que va antes del casco va antes de lo que va después, aunque los separe un plano", () => {
-    // lancha a rumbo 0: cabina sobre la cubierta, defensa de estribor en la mitad de popa (lado lejano) que el plano y = 1,7 pone después de la cabina
-    const hull: Solid = { kind: "hull", at: v3(0, 0, -1), len: 15, beam: 4, h: 1.2, mat: "hull", topMat: "deck", heading: 0, sheer: 0.3 };
+  it("the hull separates: what goes before the hull goes before what goes after it, even if a plane separates them", () => {
+    // ferry at heading 0: cabin on the deck, starboard fender on the near band
     const cabin = rotBox(0, 3.5, -1.7, 10, 3.4, 0.2, 1.5), fender = rotCyl(0, 5, 2.05, -0.2, 0.22, 0.5);
-    for (const input of [[hull, cabin, fender], [fender, cabin, hull], [cabin, hull, fender]]) {
-      expect(sortByDepth(input, 0)).toEqual([fender, hull, cabin]);
+    for (const input of [[ferryHull, cabin, fender], [fender, cabin, ferryHull], [cabin, ferryHull, fender]]) {
+      expect(sortByDepth(input, 0)).toEqual([ferryHull, cabin, fender]);
     }
+    // tug: a low piece inside the outline (before the hull) and a deck piece the x-plane puts behind it
+    for (const h of [0, Math.PI]) {
+      const hull = tugHull(h), low = rotBox(h, 10, -1, 2, 2, 0, 1), deckBox = rotBox(h, 7, -1, 2, 2, 1.2, 1.8);
+      for (const input of [[hull, low, deckBox], [deckBox, low, hull], [low, hull, deckBox]]) {
+        expect(sortByDepth(input, h), `heading ${h}`).toEqual([low, hull, deckBox]);
+      }
+    }
+  });
+
+  it("a deckhouse sunk slightly below the midship deck is drawn after the hull", () => {
+    for (const deg of [0, 90, 180, 270, 145]) {
+      const h = (deg * Math.PI) / 180, hull = tugHull(h), house = rotBox(h, 8.2, -2.2, 6, 4.4, 1.1, 1.7);
+      for (const input of [[house, hull], [hull, house]]) expect(sortByDepth(input, h), `heading ${deg}°`).toEqual([hull, house]);
+    }
+    // hull at its own heading, sorted in the world frame (as the beached boats of the fair are)
+    const h = Math.PI / 2, hull = tugHull(h), house = rotBox(h, 8.2, -2.2, 6, 4.4, 1.1, 1.7);
+    for (const input of [[house, hull], [hull, house]]) expect(sortByDepth(input, 0)).toEqual([hull, house]);
   });
 
   it("con la vista paralela a un eje del marco, separarse en ese eje no ordena (barcaza a 315°)", () => {

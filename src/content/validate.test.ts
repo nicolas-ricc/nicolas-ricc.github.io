@@ -48,6 +48,29 @@ describe("validateContent", () => {
   });
 });
 
+describe("validateContent: pdf", () => {
+  const cvZone = { id: "cv", titulo: "CV", secciones: [] };
+  it("accepts a pdf on the cv zone, and a cv zone without one", () => {
+    expect(validateContent({ ...cvZone, pdf: "/cv.pdf" })).toEqual([]);
+    expect(validateContent(cvZone)).toEqual([]);
+  });
+  it("rejects a pdf on any other zone", () => {
+    for (const id of ["portfolio", "blog"]) {
+      expect(validateContent({ ...ok, id, pdf: "/x.pdf" })).toEqual(["pdf: only the cv zone may declare one"]);
+    }
+  });
+  it("reports both the type and the zone of a bad pdf outside cv", () => {
+    for (const pdf of ["", 3]) {
+      expect(validateContent({ ...ok, pdf })).toEqual(["pdf: no es string", "pdf: only the cv zone may declare one"]);
+    }
+  });
+  it("rejects a pdf whose zone id is unknown or missing", () => {
+    expect(validateContent({ ...ok, id: "nada", pdf: "/x.pdf" })).toContain("pdf: only the cv zone may declare one");
+    const { id: _, ...noId } = ok;
+    expect(validateContent({ ...noId, pdf: "/x.pdf" })).toContain("pdf: only the cv zone may declare one");
+  });
+});
+
 describe("cv.json", () => {
   it("apunta a /cv.pdf y public/cv.pdf es un PDF", () => {
     expect(cv.pdf).toBe("/cv.pdf");
