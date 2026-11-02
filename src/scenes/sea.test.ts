@@ -5,7 +5,7 @@ import { bounds, isFlat, type Solid } from "../iso/solids";
 import { ZONE_SPLIT_X, abyssX, inHeadland, worldZoneAt } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
-import { BUOYS, CAP_R, COAST, COAST_Z, GALLERY_DECK_R, GALLERY_R, KEEPER, LANTERN_R, LANTERN_Z, LIGHTHOUSE, POST_H, POST_W, WRECK, WRECK_BUOY, sea, type SeaScene } from "./sea";
+import { BUOYS, CAP_R, COAST, COAST_Z, GALLERY_DECK_R, GALLERY_LIGHT_Z, GALLERY_POSTS, GALLERY_R, KEEPER, LANTERN_R, LANTERN_Z, LIGHTHOUSE, POST_H, POST_W, WRECK, WRECK_BUOY, sea, type SeaScene } from "./sea";
 import { headlandZ, terrainAt } from "./terrain";
 
 const scene = (): SeaScene => sea(createRng(7));
@@ -55,6 +55,22 @@ describe("sea", () => {
     expect(glass.map((g) => g.r)).toEqual([LANTERN_R]);
     const cap = s.solids.filter((x): x is Cone => x.kind === "cone" && x.mat === "steel" && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y);
     expect(cap.map((c) => c.r)).toEqual([CAP_R]);
+  });
+
+  it("luces de la galería: una por poste, 0.5 bajo el piso del disco, sin mover un bit (#130)", () => {
+    const s = scene();
+    expect(GALLERY_POSTS).toBe(8);
+    expect(GALLERY_LIGHT_Z).toBe(LANTERN_Z - 2);
+    const deck = s.solids.find((x): x is Cyl => x.kind === "cylinder" && x.mat === "steel" && x.at.x === LIGHTHOUSE.x && x.at.y === LIGHTHOUSE.y)!;
+    expect(GALLERY_LIGHT_Z + 0.5).toBe(deck.at.z + deck.h);
+    const posts = s.solids.filter((x): x is Prism => x.kind === "prism" && x.mat === "steel" && x.w === POST_W && x.h === POST_H && Math.hypot(x.at.x - LIGHTHOUSE.x, x.at.y - LIGHTHOUSE.y) < GALLERY_DECK_R);
+    expect(posts).toHaveLength(GALLERY_POSTS);
+    expect(s.neon.gallery).toHaveLength(GALLERY_POSTS);
+    s.neon.gallery.forEach((p, k) => {
+      expect(p.z).toBe(GALLERY_LIGHT_Z);
+      expect(p.x).toBeCloseTo(posts[k]!.at.x + POST_W / 2, 9);
+      expect(p.y).toBeCloseTo(posts[k]!.at.y + POST_W / 2, 9);
+    });
   });
 
   it("casa del farero, sendero de roca escalonado sobre la punta, afloramientos, pedruscos y arrecife", () => {
