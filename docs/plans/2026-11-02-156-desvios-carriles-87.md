@@ -17,7 +17,7 @@
 - Texto exacto que se agrega, en la misma línea, después de "…a 35 u.", separado por un espacio:
 
   ```
-  *Desvío posterior (#87): el fondeadero y los cruces de la bahía ya no existen; los barcos van y vuelven por dos carriles semirrectos, `LANE_OUT` y `LANE_BACK`, entre la bocana y la esquina inferior izquierda del cover, sin fondeadero. El estado vigente está en [`2026-10-17-barcos-inventario.md`](2026-10-17-barcos-inventario.md#inventario-después). Lo anterior queda como registro.*
+  *Desvío posterior (#87): sin fondeadero ni cruces de la bahía, dos carriles semirrectos (`LANE_OUT` / `LANE_BACK`) entre la bocana y la esquina inferior izquierda del cover; estado vigente en [`2026-10-17-barcos-inventario.md`](2026-10-17-barcos-inventario.md#inventario-después), lo anterior queda como registro.*
   ```
 
 - Tests, comentarios y mensajes en castellano. Commits `test(#156): evals` y `docs(#156): …`.
@@ -46,7 +46,7 @@
 - Modify: `docs/superpowers/specs/2026-10-16-barcos-referencia.md:529`
 
 **Interfaces:**
-- Consumes: `close()`, `DOC` y `read` ya definidos en el archivo de test.
+- Consumes: `close()` y `DOC` (`URL`, `ships-reference.test.ts:10`) y los imports `existsSync`/`readFileSync` (`:1`), ya presentes en el archivo de test.
 - Produces: nada.
 
 - [ ] **Step 1: Escribir el test que falla**
@@ -54,7 +54,9 @@
 ```ts
   it("la viñeta del puerto de salida apunta a los carriles de #87 sin borrar el registro de #83 (#156)", () => {
     const sec = close();
-    const desvios = sec.slice(sec.search(/^### Desvíos/m));
+    const from = sec.search(/^### Desvíos/m);
+    expect(from).toBeGreaterThanOrEqual(0);
+    const desvios = sec.slice(from);
     const item = desvios.split("\n").find((l) => l.startsWith("- **Puerto de salida")) ?? "";
     for (const old of ["(232, 50)", "(362, −16)", "y −50..−70"]) expect(item).toContain(old);
     const at = item.indexOf("*Desvío posterior (#87):");
@@ -72,7 +74,7 @@
 - [ ] **Step 2: Correr el test y verlo fallar**
 
 Run: `npx vitest run src/scenes/ships-reference.test.ts`
-Expected: FAIL solo el `it` nuevo (`expected -1 to be greater than …`).
+Expected: FAIL solo el `it` nuevo (`expected -1 to be greater than …`). Los signos menos de los literales son U+2212, como en la línea 529.
 
 - [ ] **Step 3: Agregar el puntero**
 
@@ -91,3 +93,17 @@ git commit -m "docs(#156): puntero a los carriles de #87 en los desvíos de la r
 ```
 
 (El test se commitea antes, en rojo, como `test(#156): evals`.)
+
+## Assumptions
+
+- **Ancla con la regla de slug de GitHub** (minúsculas, espacios a guiones, acentos conservados). `### Inventario después` aparece una sola vez en el inventario, así que no lleva sufijo `-1`. El test verifica archivo y encabezado, no el slug: descartado un slugger propio en el test para una sola ancla.
+- **Commit del test en rojo** (`test(#156): evals`) antes del de docs, como en #69 (`b23faeb`); el PR se integra con squash, así que `main` nunca queda en rojo.
+- **Nota en cursiva, al final de la viñeta.** El issue pide no reescribir la historia; la cursiva sigue el precedente de #69. Descartado anteponerla: la viñeta es una cronología #63 → #83 y #87 va después.
+- **Puntero corto.** El issue sugiere "a one-line pointer". La nota es una sola oración en la misma línea física de la viñeta (el documento no corta líneas: hay líneas de más de 400 caracteres y no hay formateador de Markdown en el repo). Su contenido copia la fila de `cargo`, `tug`, `barge` del inventario (`2026-10-17-barcos-inventario.md:136`: "Dos carriles semirrectos entre la bocana y la esquina inferior izquierda del cover … sin fondeadero").
+
+## Grilling
+
+Una ronda (los cambios no alteraron la tarea ni la costura: nota más corta, guarda `from >= 0`, interfaces corregidas). 15 preguntas del griller (modelo `fable`).
+
+- Con fuente: ISSUE 3 ("a one-line pointer to #87 (and to the inventory doc)", "without rewriting the history", "the outbound and return legs crossing the bay", que están en la propia línea 529). CODE 8 (`ships-reference.test.ts:1` imports, `:10` `DOC` es `URL`, `:95-96` `close()` corta en el siguiente `## `, `:113-119` el `it` de desvíos solo exige `^- \*\*.*#6x`; línea 529 con U+2212 verificado con `od`; inventario `:132` encabezado único y `:136` texto de los carriles; línea 518 dice literalmente "`antes-cover.png` y `antes-recorrido.png` (fondeadero en la bocana, …)" bajo "Medición de #83"; sin prettier/markdownlint en `package.json` ni en la raíz). DOC 2 (`docs/plans/2026-10-18-69-nota-desvio-route.md`: nota en cursiva y `test(#69): evals`; encabezado `superpowers:subagent-driven-development` exigido por la plantilla del skill `writing-plans`).
+- Sin fuente, supuesto técnico: 2 (regla de slug del ancla; commit rojo intermedio). Ambigüedades de spec: 0. Fuera de alcance: 0. Issues abiertos: ninguno.
