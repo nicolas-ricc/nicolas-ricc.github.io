@@ -291,3 +291,28 @@ describe("eslora del empujador (#68)", () => {
     expect(boat!.min.x).toBe(-14); expect(boat!.max.x).toBeCloseTo(-9.8, 9);
   });
 });
+
+describe("manga y francobordo del empujador (#153)", () => {
+  it("el casco, el bloque de proa y pDeck toman PUSHER_BEAM y PUSHER_H, sin literales propios", () => {
+    const src = readFileSync(new URL("./ships.ts", import.meta.url), "utf8");
+    const body = src.slice(src.indexOf("function barge("), src.indexOf("function ferry("));
+    const lines = body.split("\n"), hulls = lines.filter((l) => l.includes('"hullBlue"')), deck = lines.filter((l) => l.includes("const pDeck"));
+    expect(hulls.length).toBeGreaterThan(0); expect(deck).toHaveLength(1);
+    for (const l of [...hulls, ...deck]) expect(l).not.toMatch(/(?<![\w.])(7|3\.5|1\.6|1\.55)(?![\w.])/);
+    expect(hulls.some((l) => l.includes("PUSHER_BEAM, PUSHER_H"))).toBe(true);
+    expect(deck[0]).toContain("PUSHER_H");
+  });
+  it("el bloque de proa y la cubierta del empujador quedan donde estaban, bit a bit", () => {
+    const s = ship("barge", { x: 0, y: 0 }, 0), pDeck = -1 + 1.6 + 0.05;
+    const bow = s.solids.flatMap((x) => (x.kind === "poly" && x.mat === "hullBlue" ? [x] : []));
+    expect(bow).toHaveLength(1);
+    const p = bow[0]!, b = bounds(p);
+    expect(p.z).toBe(-0.9); expect(p.h).toBe(1.55);
+    expect(b.min.x).toBe(-5.5); expect(b.max.x).toBe(0); expect(b.min.y).toBe(-3.5); expect(b.max.y).toBe(3.5);
+    const white = s.solids.flatMap((x) => (x.kind === "poly" && x.mat === "whitewash" ? [x] : []));
+    const knees = white.filter((x) => { const t = bounds(x); return !x.facade && t.min.x >= -1.5 && t.max.x <= 1e-9; });
+    const house = white.filter((x) => bounds(x).min.x < -10 && x.h === 1.55);
+    expect(knees).toHaveLength(2); expect(house).toHaveLength(1);
+    for (const x of [...knees, ...house]) expect(x.z).toBe(pDeck);
+  });
+});
