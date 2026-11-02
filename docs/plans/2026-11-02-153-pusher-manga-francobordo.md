@@ -88,3 +88,18 @@ git commit -m "refactor(#153): PUSHER_BEAM and PUSHER_H drive the pusher hull, b
 
 1. **El alto del bloque de proa se escribe `PUSHER_H - 0.05`** y no desde `pDeck`, para no mover el último bit (decisión 2). Si el francobordo cambia, el tope del bloque sigue a `pDeck` igual.
 2. **El test de fuente asume que cada una de las tres sentencias está en una línea**, como hoy. El repo no tiene formateador (`.factory/config.toml`: "No linter is configured"). Si alguien las parte, el test falla al no encontrar la línea, y ese aviso alcanza.
+3. **`-0.9` queda literal y no pasa a `WATER_Z + 0.1`**, aunque `-1 + 0.1 === -0.9` da `true`. Es la base compartida con los bloques que cuadran el casco de la barcaza (`ships.ts:111-113`, también `-0.9` literal) y no es manga ni francobordo; nombrarla es otro refactor.
+4. **El `0.05` de `pDeck` queda suelto.** Es el margen de cubierta que la barcaza también escribe suelto (`top = deck + 0.05`, `ships.ts:115`). El issue no lo nombra.
+5. **El `1.55` de la casilla larga y de los niveles de la torre (`pDeck + 1.55`) no es francobordo**: es el alto de un nivel de superestructura sobre `pDeck`. Coincide en valor con el alto del bloque de proa, pero no se mueve si cambia el francobordo. El criterio 1 solo mira las líneas `hullBlue` y `pDeck`.
+6. **La regex no atrapa grafías como `7.0` o `1.60`.** Se acepta: el test es un guardián del texto de hoy, como el de `sternOf`, no un detector de evasiones.
+7. **Commit en rojo.** `test(#153): evals` deja `npm test` en rojo hasta el commit siguiente; lo pide el pipeline del agente (etapa 3), no una regla del repo. Si la implementación se abandona, la rama queda con ese commit y sin PR; se revierte con `git revert`.
+8. **Ejecución con subagent-driven-development.** `executing-plans` no está en `AGENTS.md`; la cabecera es la plantilla de la skill.
+
+## Grilling
+
+- Rondas: 1. Preguntas: 15. El plan no cambió de forma (ni pasos nuevos ni quitados): solo se agregaron supuestos 3–8, así que no hizo falta una segunda ronda.
+- Respuestas por fuente:
+  - ISSUE (Q4, Q13 en parte): "Its freeboard `1.6` is written a second time in `const pDeck = WATER_Z + 1.6 + 0.05`… The bow block next to it (`k.box(-5.5, -3.5, 5.5, 7, -0.9, 1.55, …)`) repeats the beam `7` (y −3.5 … 3.5), and its height `1.55` is tied to the same freeboard."
+  - CODE (Q1, Q2, Q3, Q5, Q7, Q8, Q9, Q14): selectores ejecutados contra `ship("barge", {x:0,y:0}, 0)` (un solo `poly` `hullBlue`, en `x −5.5…0, y −3.5…3.5, z −0.9, h 1.55`; dos pechos; una casilla); `kit()` en `ships.ts:42-52` (`hull` emite `kind: "hull"`, `box(dx, dy, w, d, z, h, …)` arma el footprint hacia +x/+y y pasa `z`/`h` sin transformar); `function barge` en `ships.ts:109` seguida de `function ferry` en `ships.ts:137`; `WATER_Z = -1` en `ships.ts:27`, no exportado, y el test de #68 ya escribe `-1 + 1.6 + 0.05` (`ships.test.ts:284`); `readFileSync(new URL("./ships.ts", import.meta.url))` en `ships.test.ts:276`; `hulls[1]` con `toMatchObject` (igualdad estricta) en `ships.test.ts:125`; `ship()` en `ships.ts:157`.
+  - NO SOURCE → supuesto técnico (Q6, Q10, Q11, Q12, Q13, Q15): supuestos 3–8 y supuesto 2 de la decisión de commits (inglés como #68).
+- Spec ambiguity: ninguna. Fuera de alcance: ninguno; no se abrieron issues.
