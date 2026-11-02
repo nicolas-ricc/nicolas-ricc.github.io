@@ -118,6 +118,23 @@ describe("barcos-referencia: cierre y medición (#65)", () => {
     const desvios = sec.slice(at);
     for (const child of ["#60", "#61", "#62", "#63"]) expect(desvios).toMatch(new RegExp(`^- \\*\\*.*${child}`, "m"));
   });
+  it("la viñeta del puerto de salida apunta a los carriles de #87 sin borrar el registro de #83 (#156)", () => {
+    const sec = close();
+    const from = sec.search(/^### Desvíos/m);
+    expect(from).toBeGreaterThanOrEqual(0);
+    const desvios = sec.slice(from);
+    const item = desvios.split("\n").find((l) => l.startsWith("- **Puerto de salida")) ?? "";
+    for (const old of ["(232, 50)", "(362, −16)", "y −50..−70"]) expect(item).toContain(old);
+    const at = item.indexOf("*Desvío posterior (#87):");
+    expect(at).toBeGreaterThan(item.indexOf("(232, 50)"));
+    const note = item.slice(at);
+    for (const s of ["`LANE_OUT`", "`LANE_BACK`", "sin fondeadero"]) expect(note).toContain(s);
+    const link = note.match(/\]\((2026-10-17-barcos-inventario\.md)#([^)]+)\)/);
+    expect(link?.[2]).toBe("inventario-después");
+    const inv = new URL(link![1]!, DOC);
+    expect(existsSync(inv)).toBe(true);
+    expect(readFileSync(inv, "utf8")).toMatch(/^### Inventario después\s*$/m);
+  });
   it("capturas del checklist: antes/después por barco, faro y cover con ida y vuelta", () => {
     const dir = new URL("../../docs/superpowers/specs/assets/57-barcos/", import.meta.url);
     for (const f of ["cargo-antes", "cargo-despues", "tug-antes", "tug-despues", "barge-antes", "barge-despues", "faro-antes", "faro-despues", "cover-ida-vuelta"])
