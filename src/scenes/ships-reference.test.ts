@@ -135,6 +135,12 @@ describe("barcos-referencia: cierre y medición (#65)", () => {
     expect(existsSync(inv)).toBe(true);
     expect(readFileSync(inv, "utf8")).toMatch(/^### Inventario después\s*$/m);
   });
+  it("la viñeta de la API de sea-anim avisa que el barco fondeado ya no existe desde #87 (#156)", () => {
+    const sec = close();
+    const item = sec.slice(sec.search(/^### Desvíos/m)).split("\n").find((l) => l.startsWith("- **API de `sea-anim.ts`")) ?? "";
+    expect(item).toContain("Un barco fondeado no lleva estela");
+    expect(item.indexOf("*Desde #87 no hay fondeadero ni barcos fondeados")).toBeGreaterThan(item.indexOf("Un barco fondeado"));
+  });
   it("capturas del checklist: antes/después por barco, faro y cover con ida y vuelta", () => {
     const dir = new URL("../../docs/superpowers/specs/assets/57-barcos/", import.meta.url);
     for (const f of ["cargo-antes", "cargo-despues", "tug-antes", "tug-despues", "barge-antes", "barge-despues", "faro-antes", "faro-despues", "cover-ida-vuelta"])
