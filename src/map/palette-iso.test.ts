@@ -10,16 +10,21 @@ type AguaPaleta = Record<WaterMat | "glint", Record<"top" | "up" | "lit" | "down
 // Los umbrales base se calibraron sobre la paleta previa al oscurecimiento de #12;
 // se escalan por el factor para que el test siga la relación y no el brillo absoluto.
 const CRESTA_SUTIL = 30, DESTELLO_CALIDO = 120, DESTELLO_CLARO = 30;
+// Piso de la fracción de azul b / (r + g + b) de la cresta (el tono up del agua). Es un ratio,
+// así que no se escala por el factor de oscurecimiento. Un gris neutro da 1/3 y el coral de
+// glint.top da ≈0,19, así que 0,4 exige que el azul domine con claridad. El material más
+// justo hoy es shallow.up, con ≈0,415.
+const CRESTA_AZUL = 0.4;
 
 function aguaYDestello(tones: AguaPaleta, factor: number): void {
-  const rgb = (c: number) => [c >> 16, (c >> 8) & 255, c & 255] as const;
+  const rgb = (c: number) => [(c >> 16) & 255, (c >> 8) & 255, c & 255] as const;
   const warmth = (c: number) => rgb(c)[0] - rgb(c)[2];
   const blueShare = (c: number) => rgb(c)[2] / (rgb(c)[0] + rgb(c)[1] + rgb(c)[2]);
   const mats = ["shallow", "water", "waterDeep", "abyss"] as const;
   for (let i = 1; i < mats.length; i++) expect(lum(tones[mats[i]!].top)).toBeLessThan(lum(tones[mats[i - 1]!].top));
   for (const m of mats) {
     expect(warmth(tones[m].up)).toBeGreaterThan(warmth(tones[m].top)); // apenas más cálida
-    expect(blueShare(tones[m].up)).toBeGreaterThan(0.4); // pero azul: la cresta no es un destello
+    expect(blueShare(tones[m].up)).toBeGreaterThan(CRESTA_AZUL); // pero azul: la cresta no es un destello
     expect(lum(tones[m].up) - lum(tones[m].top)).toBeLessThan(CRESTA_SUTIL * factor); // y sutil
     expect(warmth(tones.glint.top)).toBeGreaterThan(warmth(tones[m].top) + DESTELLO_CALIDO * factor); // el destello sí es coral
     expect(lum(tones.glint.top)).toBeGreaterThan(lum(tones[m].up) + DESTELLO_CLARO * factor);
@@ -66,7 +71,7 @@ describe("paleta isométrica", () => {
   });
 
   it("materiales exclusivos de ciudad y costa", () => {
-    for (const m of ["office", "officeDark", "glass", "asphalt", "paving", "plaza", "curtain", "stone", "copper", "whitewash", "foam", "abyss"] as const) {
+    for (const m of ["office", "officeDark", "glass", "asphalt", "paving", "plaza", "curtain", "stone", "copper", "whitewash", "foam", "abyss", "hullBlue"] as const) {
       expect(Object.keys(ISO_TONES[m]).sort()).toEqual(["down", "lit", "shade", "top", "up"]);
     }
   });
@@ -86,7 +91,6 @@ describe("paleta isométrica", () => {
 
   it("agua: cuatro profundidades que se oscurecen, seno frío y cresta clara que sigue siendo agua; el sol va en glint", () => {
     aguaYDestello(ISO_TONES, DARKEN);
-    expect(Object.keys(ISO_TONES.hullBlue).sort()).toEqual(["down", "lit", "shade", "top", "up"]);
   });
 
   it("agua y destello aguantan otro oscurecimiento: los umbrales siguen al factor", () => {
