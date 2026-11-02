@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const DIRS = ["src/iso", "src/scenes"];
+// Import de Pixi con cualquier comilla; también atrapa import() e import type.
+const PIXI_IMPORT = /["']pixi\.js["']/;
 
 function sourceFiles(dir: string, out: string[] = []): string[] {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -14,6 +16,24 @@ function sourceFiles(dir: string, out: string[] = []): string[] {
   }
   return out;
 }
+
+describe("PIXI_IMPORT (#168)", () => {
+  // armado, para que este archivo no caiga en su propio guard de tests
+  const MOD = ["pixi", "js"].join(".");
+  it("detecta comillas simples y dobles, import() e import type", () => {
+    for (const src of [
+      `import { Graphics } from "${MOD}";`,
+      `import { Graphics } from '${MOD}';`,
+      `import type { Container } from '${MOD}';`,
+      `const pixi = await import("${MOD}");`,
+      `export { Ticker } from '${MOD}';`,
+    ])
+      expect(src).toMatch(PIXI_IMPORT);
+  });
+  it("no marca una mención sin comillas", () => {
+    expect(`// sin ${MOD} acá`).not.toMatch(PIXI_IMPORT);
+  });
+});
 
 describe("guard de motor sin Pixi", () => {
   const files = DIRS.flatMap((d) => sourceFiles(`${ROOT}${d}`));
@@ -25,7 +45,7 @@ describe("guard de motor sin Pixi", () => {
   for (const file of files) {
     // src/iso y src/scenes son el motor puro: no deben depender del runtime de render (Pixi).
     it(`${relative(ROOT, file)} no importa Pixi`, () => {
-      expect(readFileSync(file, "utf8")).not.toMatch(/from "pixi\.js"/);
+      expect(readFileSync(file, "utf8")).not.toMatch(PIXI_IMPORT);
     });
   }
 });
@@ -55,7 +75,7 @@ describe("tests sin Pixi (#103)", () => {
 
   for (const file of files) {
     it(`${relative(ROOT, file)} usa dobles en vez de Pixi`, () => {
-      expect(readFileSync(file, "utf8")).not.toMatch(/["']pixi\.js["']/);
+      expect(readFileSync(file, "utf8")).not.toMatch(PIXI_IMPORT);
     });
   }
 });

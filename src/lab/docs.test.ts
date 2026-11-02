@@ -313,3 +313,22 @@ describe("documentación de la estación terminal (#239)", () => {
     for (const name of ["estación", "paso a nivel", "tren"]) expect(fila).toContain(name);
   });
 });
+
+describe("convención de tests sin Pixi (#103, #168)", () => {
+  const at = readme.search(/^## Tests$/m);
+  // hasta el próximo `## `, para que una sección posterior no cuente
+  const sec = at < 0 ? "" : readme.slice(at).split(/\n(?=## )/)[0];
+  const guard = readFileSync(`${ROOT}src/iso/pixi-free.test.ts`, "utf8");
+  it("README tiene una sección de tests con la convención", () => {
+    expect(readme).toMatch(/^## Tests$/m);
+    expect(sec).toContain("los tests del motor no usan Pixi");
+    expect(sec).toContain("src/iso/pixi-free.test.ts");
+    for (const d of ["src/iso/", "src/scenes/"]) expect(sec).toContain(d);
+  });
+  it("README nombra cada excepción de PIXI_TESTS", () => {
+    const set = /PIXI_TESTS = new Set\(\[([^\]]*)\]\)/.exec(guard)?.[1] ?? "";
+    const paths = [...set.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+    expect(paths.length).toBeGreaterThan(0);
+    for (const p of paths) expect(sec).toContain(p);
+  });
+});
