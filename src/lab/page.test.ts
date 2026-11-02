@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { assembleWorld } from "../world/assemble";
 import { EXHIBITS } from "./exhibits";
@@ -23,7 +24,7 @@ describe("bloom en el lab", () => {
   });
 });
 
-const ROOT = new URL("../../", import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const pageSrc = readFileSync(`${ROOT}src/lab/page.ts`, "utf8");
 
 describe("logs del lab (#31)", () => {

@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const ROOT = new URL("../../", import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const readme = readFileSync(`${ROOT}README.md`, "utf8");
 const blogLab = readFileSync(`${ROOT}src/lab/blog.ts`, "utf8");
 
