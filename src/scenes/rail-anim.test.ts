@@ -11,26 +11,26 @@ import { BUFFER_X, CROSSING, SIGNALS, STOP_X, TRACKS_Y } from "./station";
 import { trainBox, trainLen } from "./train";
 import { world } from "./world";
 
-/** Extremo este: el frente al entrar y en la espera, la cola al salir. */
+/** East end: the front when entering and during the dwell, the tail when leaving. */
 const east = (s: TrainState) => s.x0 + LEN;
 const inPhase = (ms: number) => ms - phaseStart(trainStateAt(ms).phase);
-/** Primer ms (paso de 1 ms) desde `from` en que se cumple `pred`. */
+/** First ms (in 1 ms steps) from `from` at which `pred` holds. */
 const firstMs = (from: number, to: number, pred: (ms: number) => boolean): number => {
   for (let ms = from; ms < to; ms += 1) if (pred(ms)) return ms;
-  throw new Error("no se cumple");
+  throw new Error("never holds");
 };
 const samples = (step: number): number[] => { const out: number[] = []; for (let ms = 0; ms < CYCLE_MS; ms += step) out.push(ms); return out; };
-/** Animador avanzado a `ms` del ciclo (un solo tick, que es el primero). */
+/** Animator advanced to `ms` of the cycle (a single tick, which is the first). */
 const animAt = (ms: number) => { const a = createRailAnim({ reducedMotion: false }); a.tick(ms); return a; };
 const dots = (as: Accent[], color: string) => as.filter((a): a is Accent & { kind: "dot" } => a.kind === "dot" && a.color === color);
 
-describe("rail-anim: constantes", () => {
-  it("valores del issue", () => {
+describe("rail-anim: constants", () => {
+  it("values from the issue", () => {
     expect([ENTRY_X, LINE_SPEED, BRAKE_U, DWELL_MS, OFF_MS, FADE_U, BLINK_MS, CROSSING_NEAR_U, PRE_DEPART_MS]).toEqual([-402, 24, 60, 30000, 20000, 30, 500, 30, 5000]);
     expect(TRACK_Y).toBe(TRACKS_Y[2]);
     expect(LEN).toBe(trainLen(4));
   });
-  it("entrada y salida simétricas: crucero de 500 u más 5 s de frenado; ciclo ≈ 101.7 s", () => {
+  it("symmetric entry and exit: 500 u cruise plus 5 s of braking; cycle ≈ 101.7 s", () => {
     expect(IN_MS).toBeCloseTo(500 / 24 * 1000 + 5000, 6);
     expect(OUT_MS).toBeCloseTo(IN_MS, 6);
     expect(CYCLE_MS).toBeCloseTo(IN_MS + DWELL_MS + OUT_MS + OFF_MS, 6);
@@ -38,29 +38,29 @@ describe("rail-anim: constantes", () => {
   });
 });
 
-describe("rail-anim: ciclo", () => {
-  it("en ms 0 el frente asoma en ENTRY_X, invisible, con faros al este", () => {
+describe("rail-anim: cycle", () => {
+  it("at ms 0 the front appears at ENTRY_X, invisible, with headlights to the east", () => {
     const s = trainStateAt(0);
     expect(s.phase).toBe("in");
     expect(east(s)).toBeCloseTo(ENTRY_X, 9);
     expect(s.alpha).toBe(0);
     expect(s.lead).toBe("e");
   });
-  it("crucero a LINE_SPEED y frenado uniforme hasta parar con el frente en STOP_X", () => {
+  it("cruise at LINE_SPEED and uniform braking until stopping with the front at STOP_X", () => {
     expect(east(trainStateAt(1000))).toBeCloseTo(ENTRY_X + 24, 6);
     const brake = IN_MS - 5000;
     expect(east(trainStateAt(brake))).toBeCloseTo(STOP_X - BRAKE_U, 6);
-    // a mitad del frenado (2.5 s, a = 4.8): 24·2.5 − 4.8·2.5²/2 = 45
+    // halfway through the braking (2.5 s, a = 4.8): 24·2.5 − 4.8·2.5²/2 = 45
     expect(east(trainStateAt(brake + 2500))).toBeCloseTo(STOP_X - BRAKE_U + 45, 6);
     expect(trainStateAt(IN_MS - 1).phase).toBe("in");
   });
-  it("en IN_MS para con el frente exactamente en STOP_X y alpha 1", () => {
+  it("at IN_MS it stops with the front exactly at STOP_X and alpha 1", () => {
     const s = trainStateAt(IN_MS);
     expect(s.phase).toBe("dwell");
     expect(Math.abs(east(s) - STOP_X)).toBeLessThan(1e-6);
     expect(s.alpha).toBe(1);
   });
-  it("toda la espera queda en STOP_X − LEN con faros al este", () => {
+  it("the whole dwell stays at STOP_X − LEN with headlights to the east", () => {
     for (let ms = IN_MS; ms < IN_MS + DWELL_MS; ms += 1000) {
       const s = trainStateAt(ms);
       expect(s.phase).toBe("dwell");
@@ -68,7 +68,7 @@ describe("rail-anim: ciclo", () => {
       expect(s.lead).toBe("e");
     }
   });
-  it("sale hacia el oeste con los faros al oeste y termina con la cola en ENTRY_X, invisible", () => {
+  it("leaves to the west with headlights to the west and ends with the tail at ENTRY_X, invisible", () => {
     const mid = trainStateAt(phaseStart("out") + 10000);
     expect(mid.phase).toBe("out");
     expect(mid.lead).toBe("w");
@@ -77,11 +77,11 @@ describe("rail-anim: ciclo", () => {
     expect(east(end)).toBeLessThanOrEqual(ENTRY_X + 1e-6);
     expect(end.alpha).toBe(0);
   });
-  it("en off alpha 0; el último ms del ciclo es off", () => {
+  it("in off alpha 0; the last ms of the cycle is off", () => {
     for (let ms = phaseStart("off"); ms < CYCLE_MS; ms += 1000) expect(trainStateAt(ms).alpha).toBe(0);
     expect(trainStateAt(CYCLE_MS - 1).phase).toBe("off");
   });
-  it("continuidad en los bordes de fase", () => {
+  it("continuity at phase boundaries", () => {
     for (const p of ["dwell", "out", "off"] as const) {
       const t = phaseStart(p), a = trainStateAt(t - 1e-6), b = trainStateAt(t);
       expect(b.phase, p).toBe(p);
@@ -95,8 +95,8 @@ describe("rail-anim: ciclo", () => {
   });
 });
 
-describe("rail-anim: invariantes cada 250 ms", () => {
-  it("nunca al este de los topes; alpha en 0..1", () => {
+describe("rail-anim: invariants every 250 ms", () => {
+  it("never east of the buffers; alpha in 0..1", () => {
     for (const ms of samples(250)) {
       const s = trainStateAt(ms);
       expect(east(s), `ms ${ms}`).toBeLessThanOrEqual(BUFFER_X);
@@ -104,7 +104,7 @@ describe("rail-anim: invariantes cada 250 ms", () => {
       expect(s.alpha).toBeLessThanOrEqual(1);
     }
   });
-  it("alpha sube en los primeros FADE_U u de la entrada y baja en los últimos de la salida", () => {
+  it("alpha rises over the first FADE_U u of the entry and falls over the last of the exit", () => {
     let prev = -1;
     for (let ms = 0; east(trainStateAt(ms)) <= ENTRY_X + FADE_U + 5; ms += 250) {
       const a = trainStateAt(ms).alpha;
@@ -121,7 +121,7 @@ describe("rail-anim: invariantes cada 250 ms", () => {
     }
     expect(prev).toBeLessThan(0.2);
   });
-  it("todos los sólidos del tren sobre RAIL_Y (y 130.8..134.2) y en z 0..5.7", () => {
+  it("all the train solids over RAIL_Y (y 130.8..134.2) and at z 0..5.7", () => {
     const a = createRailAnim({ reducedMotion: false });
     a.tick(1);
     for (let k = 0; k < CYCLE_MS / 250; k++) {
@@ -136,10 +136,10 @@ describe("rail-anim: invariantes cada 250 ms", () => {
   });
 });
 
-describe("rail-anim: paso a nivel activo", () => {
+describe("rail-anim: active level crossing", () => {
   const near0 = CROSSING.x0 - CROSSING_NEAR_U, near1 = CROSSING.x1 + CROSSING_NEAR_U; // 70, 138
-  it("la ventana es [70, 138]", () => { expect([near0, near1]).toEqual([70, 138]); });
-  it("inactivo con el tren fuera de pantalla y durante la espera, salvo los últimos 5 s", () => {
+  it("the window is [70, 138]", () => { expect([near0, near1]).toEqual([70, 138]); });
+  it("inactive with the train off screen and during the dwell, except the last 5 s", () => {
     expect(crossingActive(trainStateAt(0), 0)).toBe(false);
     expect(crossingActive(trainStateAt(IN_MS), 0)).toBe(false);
     const mid = IN_MS + DWELL_MS / 2;
@@ -149,13 +149,13 @@ describe("rail-anim: paso a nivel activo", () => {
     expect(crossingActive(trainStateAt(pre), inPhase(pre))).toBe(true);
     for (let ms = phaseStart("off"); ms < CYCLE_MS; ms += 1000) expect(crossingActive(trainStateAt(ms), inPhase(ms))).toBe(false);
   });
-  it("entrando: se activa cuando el frente llega a x 70", () => {
+  it("entering: it activates when the front reaches x 70", () => {
     const on = firstMs(0, IN_MS, (ms) => crossingActive(trainStateAt(ms), inPhase(ms)));
     expect(east(trainStateAt(on))).toBeGreaterThanOrEqual(near0);
     expect(east(trainStateAt(on - 1))).toBeLessThan(near0);
     for (let ms = on; ms < IN_MS; ms += 100) expect(crossingActive(trainStateAt(ms), inPhase(ms))).toBe(true);
   });
-  it("saliendo: activo mientras la formación corta [70, 138] y se apaga cuando la cola pasa x 70", () => {
+  it("leaving: active while the consist cuts [70, 138] and it turns off when the tail passes x 70", () => {
     const out = phaseStart("out");
     expect(crossingActive(trainStateAt(out), 0)).toBe(true);
     const off = firstMs(out, phaseStart("off"), (ms) => !crossingActive(trainStateAt(ms), inPhase(ms)));
@@ -164,40 +164,40 @@ describe("rail-anim: paso a nivel activo", () => {
   });
 });
 
-describe("rail-anim: semáforos", () => {
+describe("rail-anim: signals", () => {
   const asp = (ms: number) => signalAspects(trainStateAt(ms), inPhase(ms));
-  it("entrada verde al principio de la entrada y roja cuando el frente pasa x 96", () => {
+  it("entry green at the start of the entry and red when the front passes x 96", () => {
     expect(asp(0).in).toBe("green");
     const red = firstMs(0, IN_MS, (ms) => asp(ms).in === "red");
     expect(east(trainStateAt(red))).toBeGreaterThanOrEqual(SIGNALS.in.x);
     expect(east(trainStateAt(red - 1))).toBeLessThan(SIGNALS.in.x);
   });
-  it("salida roja en la espera hasta 5 s antes de partir, verde desde ahí", () => {
+  it("exit red during the dwell until 5 s before departing, green from then on", () => {
     const pre = IN_MS + DWELL_MS - PRE_DEPART_MS;
     expect(asp(IN_MS).out).toBe("red");
     expect(asp(pre - 1).out).toBe("red");
     expect(asp(pre).out).toBe("green");
     expect(asp(phaseStart("out")).out).toBe("green");
   });
-  it("salida roja cuando la cola deja x 108", () => {
+  it("exit red when the tail leaves x 108", () => {
     const red = firstMs(phaseStart("out"), phaseStart("off"), (ms) => asp(ms).out === "red");
     expect(east(trainStateAt(red))).toBeLessThan(STREET_EDGE);
     expect(east(trainStateAt(red - 1))).toBeGreaterThanOrEqual(STREET_EDGE);
   });
-  it("lo demás rojo: salida en la entrada, entrada en la espera y la salida, los dos en off", () => {
+  it("everything else red: exit during the entry, entry during the dwell and the exit, both in off", () => {
     for (let ms = 0; ms < IN_MS; ms += 500) expect(asp(ms).out).toBe("red");
     for (let ms = IN_MS; ms < phaseStart("off"); ms += 500) expect(asp(ms).in).toBe("red");
     for (let ms = phaseStart("off"); ms < CYCLE_MS; ms += 500) expect(asp(ms)).toEqual({ in: "red", out: "red" });
   });
 });
 
-describe("createRailAnim: luces del tren", () => {
+describe("createRailAnim: train lights", () => {
   const ends = (ms: number) => {
     const t = animAt(ms).train();
     const xs = t.solids.flatMap((s) => { const b = bounds(s); return [b.min.x, b.max.x]; });
     return { t, west: Math.min(...xs), east: Math.max(...xs) };
   };
-  it("entrando: faros cyan en la punta este, rojas magenta en la oeste; cartel amber en las dos", () => {
+  it("entering: cyan headlights on the east end, magenta red lights on the west; amber sign on both", () => {
     const { t, west, east } = ends(15000);
     const cyan = dots(t.lights, "cyan"), mag = dots(t.lights, "magenta");
     expect(cyan.length).toBe(2); expect(mag.length).toBe(2);
@@ -207,12 +207,12 @@ describe("createRailAnim: luces del tren", () => {
     expect(amber.some((x) => Math.abs(x - east) < 1)).toBe(true);
     expect(amber.some((x) => Math.abs(x - west) < 1)).toBe(true);
   });
-  it("saliendo: invertidas", () => {
+  it("leaving: reversed", () => {
     const { t, west, east } = ends(phaseStart("out") + 8000);
     for (const d of dots(t.lights, "cyan")) expect(Math.abs(d.at.x - west)).toBeLessThan(1);
     for (const d of dots(t.lights, "magenta")) expect(Math.abs(d.at.x - east)).toBeLessThan(1);
   });
-  it("salón encendido y alpha del estado", () => {
+  it("saloon lit and state alpha", () => {
     const a = animAt(15000);
     expect(a.train().lights.some((l) => l.color === "cyanBleed")).toBe(true);
     expect(a.train().alpha).toBe(a.state().alpha);
@@ -220,9 +220,9 @@ describe("createRailAnim: luces del tren", () => {
   });
 });
 
-describe("createRailAnim: paso a nivel y semáforos (acentos)", () => {
+describe("createRailAnim: level crossing and signals (accents)", () => {
   const pre = IN_MS + DWELL_MS - PRE_DEPART_MS;
-  it("activo: un dot magenta r 0.45 por poste a z h − 0.4, que alterna 1 u en y cada BLINK_MS", () => {
+  it("active: one magenta dot r 0.45 per post at z h − 0.4, alternating 1 u in y every BLINK_MS", () => {
     const a = animAt(pre + 10);
     const c0 = a.crossing();
     expect(c0).toHaveLength(2);
@@ -244,10 +244,10 @@ describe("createRailAnim: paso a nivel y semáforos (acentos)", () => {
       expect(Math.abs(d.at.y - d0.at.y)).toBeCloseTo(1, 9);
     });
   });
-  it("inactivo: vacío", () => {
+  it("inactive: empty", () => {
     expect(animAt(IN_MS + 1000).crossing()).toEqual([]);
   });
-  it("semáforos: rojo magenta r 0.4 a z 4.4, verde cyanMid r 0.4 a z 3.9, en el centro del poste", () => {
+  it("signals: red magenta r 0.4 at z 4.4, green cyanMid r 0.4 at z 3.9, at the center of the post", () => {
     const check = (ms: number, want: { in: "red" | "green"; out: "red" | "green" }) => {
       const s = animAt(ms).signals();
       expect(s).toHaveLength(2);
@@ -265,31 +265,31 @@ describe("createRailAnim: paso a nivel y semáforos (acentos)", () => {
 });
 
 describe("createRailAnim: tick", () => {
-  it("el primer tick marca todo", () => {
+  it("the first tick marks everything", () => {
     expect(createRailAnim({ reducedMotion: false }).tick(16)).toEqual({ train: true, crossing: true, signals: true });
   });
-  it("tick(0) inicial no marca ni consume el primero; tick(0) después tampoco marca", () => {
+  it("an initial tick(0) neither marks nor consumes the first; a later tick(0) does not mark either", () => {
     const a = createRailAnim({ reducedMotion: false });
     expect(a.tick(0)).toEqual({ train: false, crossing: false, signals: false });
     expect(a.tick(100)).toEqual({ train: true, crossing: true, signals: true });
     expect(a.tick(0)).toEqual({ train: false, crossing: false, signals: false });
   });
-  it("a mitad de la espera no marca nada", () => {
+  it("mid-dwell it marks nothing", () => {
     const a = animAt(IN_MS + 5000);
     expect(a.tick(100)).toEqual({ train: false, crossing: false, signals: false });
   });
-  it("entrando, el tren marca en cada tick", () => {
+  it("while entering, the train marks on every tick", () => {
     const a = animAt(5000);
     for (let k = 0; k < 10; k++) expect(a.tick(33).train).toBe(true);
   });
-  it("con el paso a nivel activo, crossing marca al cambiar el paso de parpadeo y no entre medio", () => {
+  it("with the level crossing active, crossing marks when the blink step changes and not in between", () => {
     const pre = IN_MS + DWELL_MS - PRE_DEPART_MS;
-    const start = Math.ceil(pre / BLINK_MS) * BLINK_MS + 10; // 10 ms después de un cambio de paso, ya activo
+    const start = Math.ceil(pre / BLINK_MS) * BLINK_MS + 10; // 10 ms after a step change, already active
     const a = animAt(start);
     expect(a.tick(100).crossing).toBe(false);
     expect(a.tick(BLINK_MS - 100).crossing).toBe(true);
   });
-  it("un dt de varias vueltas da la vuelta con módulo", () => {
+  it("a dt of several laps wraps around with modulo", () => {
     const a = createRailAnim({ reducedMotion: false });
     a.tick(CYCLE_MS * 3 + 1234);
     const s = a.state(), t = trainStateAt(1234);
@@ -299,7 +299,7 @@ describe("createRailAnim: tick", () => {
 });
 
 describe("createRailAnim: reducedMotion", () => {
-  it("estado fijo en la espera, salón encendido, paso a nivel apagado, semáforos rojos, tick sin cambios", () => {
+  it("fixed state in the dwell, saloon lit, level crossing off, red signals, tick without changes", () => {
     const a = createRailAnim({ reducedMotion: true });
     for (const dt of [16, 1000, CYCLE_MS]) expect(a.tick(dt)).toEqual({ train: false, crossing: false, signals: false });
     expect(a.state()).toEqual({ phase: "dwell", x0: STOP_X - LEN, lead: "e", alpha: 1 });
@@ -311,17 +311,17 @@ describe("createRailAnim: reducedMotion", () => {
   });
 });
 
-describe("createRailAnim: tope de caras", () => {
-  it("rail.train tesela en ≤ 600 caras en 20 muestras del ciclo", () => {
+describe("createRailAnim: face cap", () => {
+  it("rail.train tessellates in ≤ 600 faces over 20 samples of the cycle", () => {
     for (let k = 0; k < 20; k++) {
       const faces = animAt((k + 0.5) * CYCLE_MS / 20).train().solids.flatMap(tessellate).length;
-      expect(faces, `muestra ${k}`).toBeLessThanOrEqual(600);
+      expect(faces, `sample ${k}`).toBeLessThanOrEqual(600);
     }
   });
 });
 
-describe("createRailAnim: oclusión con posiciones reales", () => {
-  it("con el tren visible, ningún sólido estático alto que se le superpone en pantalla queda delante", () => {
+describe("createRailAnim: occlusion with real positions", () => {
+  it("with the train visible, no tall static solid that overlaps it on screen is in front", () => {
     const statics = world(7).solids.map((s) => { const b = bounds(s); return { s, b, sb: screenBounds(b), sh: screenHull(b) }; })
       .filter((o) => o.b.max.z - o.b.min.z > 0.4);
     let checked = 0;

@@ -205,10 +205,10 @@ describe("documentación de la mudanza de la fábrica (#238)", () => {
     expect(end).toBeGreaterThan(0);
     const doc = factorySrc.slice(0, end);
     expect(doc).toContain(`docs/superpowers/specs/${SPEC}`);
-    expect(doc).not.toContain("detrás (al norte) y al oeste del astillero");
+    expect(doc).not.toContain("behind (north) and west of the shipyard");
   });
   it("shipyard.ts no describe la línea de producción vieja", () => {
-    expect(shipyardSrc.replace(/\s*\*\s*/g, " ")).not.toContain("patio de material → nave de montaje → grada");
+    expect(shipyardSrc.replace(/\s*\*\s*/g, " ")).not.toContain("material yard → assembly hall → slipway");
   });
   it("la spec de la fábrica en detalle abre §2 con la nota de desvío", () => {
     const fab = readFileSync(`${ROOT}docs/superpowers/specs/2026-10-24-fabrica-detalle-design.md`, "utf8");
@@ -268,7 +268,7 @@ describe("documentación de la estación terminal (#239)", () => {
   it("el docstring de shipyard.ts no nombra la calderería", () => {
     const doc = docstring(src("shipyard.ts"));
     expect(doc).toContain("station.ts");
-    expect(doc).not.toMatch(/calderer[ií]a/i);
+    expect(doc).not.toMatch(/boiler ?shop/i);
   });
   it("los docstrings de station.ts, train.ts y rail-anim.ts apuntan a la spec", () => {
     for (const name of ["station.ts", "train.ts", "rail-anim.ts"]) expect(docstring(src(name)).replace(/\s*\*\s*/g, " "), name).toContain(`docs/superpowers/specs/${SPEC}`);

@@ -3,15 +3,15 @@ import { CITY_EDGE, DISTRICT_BANK_Y, EAST_RING, PROMENADE_STREET_X, inCrater } f
 import { bayWater, builtAt, estuaryWater } from "./sprawl-grid";
 
 /**
- * Clasificación del terreno, sin malla ni materiales: qué hay en cada punto
- * del contenido (`terrainAt`) y del sangrado (`bleedTerrainAt`), y si ese
- * punto es agua (`isWaterAt`). Vive abajo de `terrain.ts` y de `depth-map.ts`
- * a propósito: el mapa de profundidad necesita la clasificación y el terreno
- * necesita el mapa de profundidad, así que la clasificación no puede importar
- * a ninguno de los dos. `terrain.ts` la reexporta para quien ya la pedía ahí.
+ * Terrain classification, with no mesh or materials: what is at each point
+ * of the content (`terrainAt`) and of the bleed (`bleedTerrainAt`), and whether that
+ * point is water (`isWaterAt`). It lives below `terrain.ts` and `depth-map.ts`
+ * on purpose: the depth map needs the classification and the terrain
+ * needs the depth map, so the classification cannot import
+ * either of them. `terrain.ts` re-exports it for whoever already asked for it there.
  */
 export type Terrain = "slab" | "water" | "east" | "jungle" | "dock" | "asphalt" | "sea" | "shore" | "headland" | "reef" | "abyss";
-/** Sangrado: selva y lomas, agua (mar, orilla, fosa, estuario) y tierra construida (industrial de Portfolio, urbana de Resume). */
+/** Bleed: jungle and hills, water (sea, shore, trench, estuary) and built land (industrial for Portfolio, urban for Resume). */
 export type BleedTerrain = "jungle" | "sea" | "shore" | "abyss" | "river" | "industrial" | "urban" | "fair";
 
 const REEF_W = 6;
@@ -20,18 +20,18 @@ export const WATER_TERRAIN = new Set<Terrain>(["water", "sea", "shore", "abyss"]
 export const BLEED_WATER = new Set<BleedTerrain>(["sea", "shore", "abyss", "river"]);
 
 export function shipyardTerrainAt(x: number, y: number): Terrain {
-  if (x < 0) return y < 110 ? "slab" : "jungle"; // columna oeste: playa de vías y acopios, selva al sur
+  if (x < 0) return y < 110 ? "slab" : "jungle"; // west column: rail yard and piles, jungle to the south
   if (x >= DOCK.x && x < DOCK.x + DOCK.w && y >= DOCK.y && y < DOCK.y + DOCK.d) return "dock";
-  if (x < QUAY_X) return x < 42 && y > 100 ? "jungle" : y >= BOTTOM ? "jungle" : "slab"; // la banda norte (y < 0) es losa de fábrica
+  if (x < QUAY_X) return x < 42 && y > 100 ? "jungle" : y >= BOTTOM ? "jungle" : "slab"; // the north band (y < 0) is factory slab
   if (x <= eastBank(y) || inMouth(x, y)) return "water";
   return x > 330 || y > 124 ? "jungle" : "east";
 }
 
 export function cityTerrainAt(x: number, y: number): Terrain {
   if (x >= QUAY_X && x <= islandWestX(y)) return "water";
-  if (y < CITY_EDGE.north) return "jungle"; // cinturón de costura con el astillero
-  if (y >= DISTRICT_BANK_Y && x > QUAY_X) return x >= PROMENADE_STREET_X ? "asphalt" : "jungle"; // ribera este del distrito: selva, y la calle del malecón
-  if (y >= CITY_EDGE.south || x < CITY_EDGE.west) return "asphalt"; // bordes oeste y sur: el distrito tecnológico del sangrado sigue derecho desde la ciudad
+  if (y < CITY_EDGE.north) return "jungle"; // seam belt with the shipyard
+  if (y >= DISTRICT_BANK_Y && x > QUAY_X) return x >= PROMENADE_STREET_X ? "asphalt" : "jungle"; // east bank of the district: jungle, and the promenade street
+  if (y >= CITY_EDGE.south || x < CITY_EDGE.west) return "asphalt"; // west and south edges: the bleed's tech district continues straight on from the city
   if (x > QUAY_X && x < EAST_RING.x0) return "jungle";
   if (inCrater(x, y)) return "jungle";
   return "asphalt";
@@ -42,37 +42,37 @@ export function seaTerrainAt(x: number, y: number): Terrain {
   const d = distToHeadland(x, y);
   if (d < REEF_W) return "reef";
   if (d < SHORE_W) return "shore";
-  if (x < ZONE_SPLIT_X + shoreWidth(y)) return "shore"; // bajío frente a la costa del astillero, la bahía y el malecón
+  if (x < ZONE_SPLIT_X + shoreWidth(y)) return "shore"; // shoal off the coast of the shipyard, the bay and the promenade
   return x >= abyssX(y) ? "abyss" : "sea";
 }
 
-/** Despacha por geografía, no por zona clickeable: el mar y la punta son de seaTerrainAt aunque clickeen Portfolio o Resume. */
+/** Dispatches by geography, not by clickable zone: the sea and the headland belong to seaTerrainAt even if they click through to Portfolio or Resume. */
 export function terrainAt(x: number, y: number): Terrain {
   if (inHeadland(x, y) || x >= islandEastX(y)) return seaTerrainAt(x, y);
   return y >= ZONE_SPLIT_Y ? cityTerrainAt(x, y) : shipyardTerrainAt(x, y);
 }
 
 /**
- * Sangrado: mar y fosa al este; al sur, el estuario y el mar siguen hasta
- * juntarse (`seaTerrainAt` clasifica orilla, mar y fosa al este de 344); al
- * norte, la bahía sigue al este del río. La tierra restante es construida
- * (industrial, urbana o la feria de arena, `builtAt`) hasta `REACH` y selva con lomas más allá.
+ * Bleed: sea and trench to the east; to the south, the estuary and the sea continue until
+ * they meet (`seaTerrainAt` classifies shore, sea and trench east of 344); to the
+ * north, the bay continues east of the river. The remaining land is built
+ * (industrial, urban or the sand fair, `builtAt`) up to `REACH` and jungle with hills beyond.
  */
 export function bleedTerrainAt(x: number, y: number): BleedTerrain {
   if (x > WORLD.x1) return x >= abyssX(y) ? "abyss" : "sea";
   if (y > WORLD.y1 && x >= ZONE_SPLIT_X) { const t = seaTerrainAt(x, y); return t === "abyss" || t === "shore" ? t : "sea"; }
   if (estuaryWater(x, y)) return "river";
-  if (bayWater(x, y)) return x >= abyssX(y) ? "abyss" : "sea"; // la fosa sigue al norte: cortada en y = WORLD.y0 dibujaba una L con su borde oeste
+  if (bayWater(x, y)) return x >= abyssX(y) ? "abyss" : "sea"; // the trench continues north: cut at y = WORLD.y0 it drew an L with its west edge
   return builtAt(x, y) ?? "jungle";
 }
 
-/** Agua en un punto, con el clasificador que le toque: el del contenido adentro de WORLD, el del sangrado afuera. */
+/** Water at a point, with whichever classifier applies: the content's inside WORLD, the bleed's outside. */
 export function isWaterAt(x: number, y: number): boolean {
   if (x >= WORLD.x0 && x < WORLD.x1 && y >= WORLD.y0 && y < WORLD.y1) return WATER_TERRAIN.has(terrainAt(x, y));
   return BLEED_WATER.has(bleedTerrainAt(x, y));
 }
 
-/** `true` si ninguna celda de la grilla de `CELL` (anclada en WORLD.x0/y0) que corta el rectángulo agrandado `margin` tiene el centro en agua. */
+/** `true` if no cell of the `CELL` grid (anchored at WORLD.x0/y0) that cuts the rectangle grown by `margin` has its center in water. */
 export function clearOfWater(x0: number, y0: number, x1: number, y1: number, margin: number): boolean {
   const i0 = Math.floor((x0 - margin - WORLD.x0) / CELL), i1 = Math.floor((x1 + margin - WORLD.x0) / CELL);
   const j0 = Math.floor((y0 - margin - WORLD.y0) / CELL), j1 = Math.floor((y1 + margin - WORLD.y0) / CELL);

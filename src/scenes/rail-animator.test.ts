@@ -5,12 +5,12 @@ import { railAnimator } from "./rail-animator";
 const IDS = ["rail.train", "rail.lights", "rail.crossing", "rail.signals"];
 
 describe("railAnimator", () => {
-  it("ids y capa desconocida", () => {
+  it("ids and unknown layer", () => {
     const a = railAnimator({ reducedMotion: false });
     expect([...a.ids]).toEqual(IDS);
-    expect(() => a.layer("rail.nada")).toThrow(new Error("Capa desconocida en railAnimator: rail.nada"));
+    expect(() => a.layer("rail.unknown")).toThrow(new Error("Capa desconocida en railAnimator: rail.unknown"));
   });
-  it("rail.train es sólida; las tres de luces declaran zone portfolio; tren y luces con el mismo alpha", () => {
+  it("rail.train is solid; the three light layers declare zone portfolio; train and lights with the same alpha", () => {
     const a = railAnimator({ reducedMotion: false });
     a.tick(15000);
     const train = a.layer("rail.train"), lights = a.layer("rail.lights");
@@ -25,19 +25,19 @@ describe("railAnimator", () => {
     expect(train.alpha).toBeGreaterThan(0);
     expect(lights.alpha).toBe(train.alpha);
   });
-  it("el primer tick marca los cuatro; a mitad de la espera, ninguno", () => {
+  it("the first tick marks all four; mid-dwell, none", () => {
     const a = railAnimator({ reducedMotion: false });
     expect([...a.tick(IN_MS + DWELL_MS / 2)].sort()).toEqual([...IDS].sort());
     expect(a.tick(100).size).toBe(0);
   });
-  it("entrando marca tren y luces juntos", () => {
+  it("while entering it marks train and lights together", () => {
     const a = railAnimator({ reducedMotion: false });
     a.tick(5000);
     const c = a.tick(33);
     expect(c.has("rail.train")).toBe(true);
     expect(c.has("rail.lights")).toBe(true);
   });
-  it("con reducedMotion no marca nada y el tren está detenido", () => {
+  it("with reducedMotion it marks nothing and the train is stopped", () => {
     const a = railAnimator({ reducedMotion: true });
     expect(a.tick(1000).size).toBe(0);
     const t = a.layer("rail.train");

@@ -3,7 +3,7 @@ import { layerLookup, type AnimLayer, type Animator } from "./animator";
 import type { Scene } from "./shipyard";
 import { createShipyardAnim } from "./shipyard-anim";
 
-/** Adapta las animaciones del astillero al contrato `Animator`. El agua del canal no: la reparte terrain.ts y la anima water-animator.ts. */
+/** Adapts the shipyard's animations to the `Animator` contract. Not the canal water: terrain.ts hands it out and water-animator.ts animates it. */
 export function shipyardAnimator(scene: Scene, rng: Rng, opts: { reducedMotion: boolean }): Animator {
   const anim = createShipyardAnim(scene, rng, opts);
   const layers: Record<string, () => AnimLayer> = {

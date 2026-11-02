@@ -51,6 +51,13 @@ const ALLOW: Record<string, RegExp[]> = {
   "src/scenes/neighborhood-houses.test.ts": [/Ciudad Jardín/g],
   "src/scenes/neighborhood-monoblock.ts": [/Simón Bolívar/g],
   "src/scenes/neighborhood-monoblock.test.ts": [/Simón Bolívar/g],
+  // proper noun: the Fábrica de Luz is the real power station the boiler hall models (decision 2c)
+  "src/scenes/boiler-house.ts": [/Fábrica de Luz/g],
+  "src/scenes/factory.ts": [/Fábrica de Luz/g],
+  // proper noun: the real substation the model is based on (decision 2c)
+  "src/scenes/substation.ts": [/Pont-l'Abbé/g],
+  // the animator layer id is built from the exhibit id `tren` (decision 2b) and exhibits.test.ts reads it
+  "src/scenes/rail-animator.ts": [/\btren\.lights\b/g],
   // `SE` is the southeast quadrant id of the plaza test (it collides with the Spanish word "se")
   "src/scenes/neighborhood-plaza.test.ts": [/\bSE\b/g],
   "src/scenes/world-baseline.test.ts": [/"?[a-z-]+"?: "[0-9a-f]{8}\/[0-9a-f]{8}"/g],
