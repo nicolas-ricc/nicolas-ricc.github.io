@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { afterFirstRender, BLOOM_BUDGET_MS, BLOOM_SAMPLE_FRAMES, createBloomBudget, formatBloomVerdict, scheduleIdle, type BloomVerdict } from "./bloom";
+import { afterFirstRender, BLOOM_BUDGET_MS, BLOOM_SAMPLE_FRAMES, createBloomBudget, formatBloomVerdict, type BloomVerdict } from "./bloom";
 
 const feed = (b: ReturnType<typeof createBloomBudget>, n: number, tickMs: number, renderMs: number) => {
   let v: BloomVerdict | null = null;
@@ -42,48 +42,6 @@ describe("formatBloomVerdict", () => {
       .toBe("promedio 12.3 ms en 60 frames (tick 4.1 + render 8.2), presupuesto 15 ms → activo");
     expect(formatBloomVerdict({ frames: 60, avgMs: 31, avgTickMs: 6, avgRenderMs: 25, mode: "fallback" }, 15))
       .toBe("promedio 31.0 ms en 60 frames (tick 6.0 + render 25.0), presupuesto 15 ms → fallback");
-  });
-});
-
-describe("scheduleIdle", () => {
-  afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
-  it("usa requestIdleCallback con timeout 1000 si existe", () => {
-    const ric = vi.fn();
-    vi.stubGlobal("requestIdleCallback", ric);
-    const fn = () => {};
-    scheduleIdle(fn);
-    expect(ric).toHaveBeenCalledWith(fn, { timeout: 1000 });
-  });
-  it("si no, setTimeout 0: no corre en el acto", () => {
-    vi.stubGlobal("requestIdleCallback", undefined);
-    vi.stubGlobal("requestAnimationFrame", undefined);
-    vi.useFakeTimers();
-    const fn = vi.fn();
-    scheduleIdle(fn);
-    expect(fn).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(0);
-    expect(fn).toHaveBeenCalledOnce();
-  });
-  it("con requestIdleCallback no pasa por requestAnimationFrame", () => {
-    const raf = vi.fn();
-    vi.stubGlobal("requestIdleCallback", vi.fn());
-    vi.stubGlobal("requestAnimationFrame", raf);
-    scheduleIdle(() => {});
-    expect(raf).not.toHaveBeenCalled();
-  });
-  it("sin requestIdleCallback, espera un frame pintado: rAF y después setTimeout 0 (#32)", () => {
-    vi.stubGlobal("requestIdleCallback", undefined);
-    const frames: FrameRequestCallback[] = [];
-    vi.stubGlobal("requestAnimationFrame", vi.fn((cb: FrameRequestCallback) => frames.push(cb)));
-    vi.useFakeTimers();
-    const fn = vi.fn();
-    scheduleIdle(fn);
-    vi.advanceTimersByTime(0);
-    expect(fn).not.toHaveBeenCalled();
-    frames.shift()?.(0);
-    expect(fn).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(0);
-    expect(fn).toHaveBeenCalledOnce();
   });
 });
 

@@ -15,7 +15,7 @@ import { zoneById, ZONE_IDS, type ZoneId } from "./map/zones";
 import { pathForZone, zoneFromPath } from "./router";
 import { showMap, showZone } from "./views";
 import { assembleWorld } from "./world/assemble";
-import { scheduleIdle } from "./world/bloom";
+import { afterFirstRender } from "./world/bloom";
 import { attachBloom, type BloomProbe } from "./world/bloom-runtime";
 import { buildStage } from "./world/stage";
 import { coverView, pointerToWorld, zoneView, type View } from "./world/view";
@@ -160,8 +160,8 @@ async function boot(): Promise<void> {
   const root = document.documentElement;
   root.classList.add("no-anim");
   render(current, false);
-  // el bloom entra en una tarea diferida: el primer dibujo se sirve sin filtro
-  scheduleIdle(() => { bloom = attachBloom({ app, stage, log, prefix: "mapa" }); });
+  // bloom attaches in the task after Pixi's first real render: the first frame is served without the filter
+  afterFirstRender(app.renderer.runners.postrender, () => { bloom = attachBloom({ app, stage, log, prefix: "mapa" }); });
   // Los rótulos estaban ocultos (ver #zonas a en style.css) hasta este primer
   // jumpTo, que ya los colocó en su lugar: recién ahora se muestran.
   root.classList.add("mapa-listo");

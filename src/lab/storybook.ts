@@ -2,7 +2,7 @@ import { Application } from "pixi.js";
 import { ISO_COLORS } from "../map/palette-iso";
 import type { WorldScene } from "../scenes/world";
 import { assembleWorld, tag, type ZonedAnimator } from "../world/assemble";
-import { scheduleIdle } from "../world/bloom";
+import { afterFirstRender } from "../world/bloom";
 import { attachBloom, type BloomProbe } from "../world/bloom-runtime";
 import { type Box, boxFrame, fitTransform } from "../world/frame";
 import { type BloomMode, buildStage, type Stage, type StageLayer } from "../world/stage";
@@ -79,10 +79,10 @@ mountStorybook(document, ({ host, nav, panel }) => {
     fromHash();
     window.addEventListener("hashchange", fromHash);
     app.renderer.on("resize", fit);
-    // diferido como en page.ts; los stages siguientes heredan el modo en show()
+    // deferred like page.ts; later stages inherit the mode in show()
     // attachBloom guarda el stage y aplica el veredicto más tarde: se le pasa el vigente, no el primero (que se destruye al cambiar)
     const live = { get bloom() { return stage!.bloom; }, setBloom(m: BloomMode) { stage!.setBloom(m); } };
-    scheduleIdle(() => { bloom = attachBloom({ app, stage: live, log, prefix: "storybook", force: bloomFromSearch(location.search) }); });
+    afterFirstRender(app.renderer.runners.postrender, () => { bloom = attachBloom({ app, stage: live, log, prefix: "storybook", force: bloomFromSearch(location.search) }); });
 
     const NEXT = new Set(["ArrowRight", "ArrowDown", "j"]), PREV = new Set(["ArrowLeft", "ArrowUp", "k"]);
     window.addEventListener("keydown", (ev) => {

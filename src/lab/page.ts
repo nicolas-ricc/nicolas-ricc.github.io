@@ -2,7 +2,7 @@ import { Application } from "pixi.js";
 import type { WorldZone } from "../map/geo";
 import { ISO_COLORS } from "../map/palette-iso";
 import { assembleWorld } from "../world/assemble";
-import { scheduleIdle } from "../world/bloom";
+import { afterFirstRender } from "../world/bloom";
 import { attachBloom, type BloomProbe } from "../world/bloom-runtime";
 import { coverFrame, fitTransform, type Frame, zoneFrame } from "../world/frame";
 import { type BloomMode, buildStage } from "../world/stage";
@@ -67,9 +67,9 @@ export function bootWorldPage(zones: readonly WorldZone[] | undefined, frame: Fr
       stage.container.scale.set(f.scale);
     };
     fit();
-    // diferido igual que el sitio; ?bloom= fuerza el modo y no mide
+    // deferred like the site; ?bloom= forces the mode and skips measuring
     let bloom: BloomProbe | null = null;
-    scheduleIdle(() => { bloom = attachBloom({ app, stage, log, prefix: "lab", force: bloomFromSearch(location.search) }); });
+    afterFirstRender(app.renderer.runners.postrender, () => { bloom = attachBloom({ app, stage, log, prefix: "lab", force: bloomFromSearch(location.search) }); });
     app.renderer.on("resize", fit);
     const focusCycle: (WorldZone | null)[] = [null, ...WORLD_ZONES];
     let focusIdx = 0;

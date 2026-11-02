@@ -100,8 +100,10 @@ muestran suelo, sombras y acentos; `6` rota el bloom, `?bloom=` lo fuerza y
 congela; por encima de 100 vale 1).
 
 El bloom de las luces no entra en el primer dibujo: el sitio y el lab lo
-activan después, en una tarea diferida (`attachBloom`,
-`src/world/bloom-runtime.ts`), y miden 60 frames. Si el promedio de tick
+activan después del primer render real de Pixi (el `postrender` de
+`app.renderer`), en la tarea siguiente (`afterFirstRender`,
+`src/world/bloom.ts`; `attachBloom`, `src/world/bloom-runtime.ts`), no por
+orden de rAF ni por `requestIdleCallback`, y miden 60 frames. Si el promedio de tick
 más render supera 15 ms, lo quitan y dejan un halo más grande en los
 puntos de luz (`fallback`). En desarrollo la decisión se loguea, por
 ejemplo `[mapa] bloom: promedio 9.9 ms en 60 frames (tick 6.4 + render
