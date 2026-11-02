@@ -157,7 +157,7 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
   const beamAngle = (): number => angleAt(clock);
   const wedge = (a: number, len: number, color: Accent["color"], alpha: number): Accent => {
     const o: Vec3 = scene.lantern;
-    return { kind: "poly", pts: [o, v3(o.x + len * Math.cos(a - BEAM_HALF), o.y + len * Math.sin(a - BEAM_HALF), o.z), v3(o.x + len * Math.cos(a + BEAM_HALF), o.y + len * Math.sin(a + BEAM_HALF), o.z)], color, alpha };
+    return { kind: "poly", pts: [v3(o.x, o.y, o.z), v3(o.x + len * Math.cos(a - BEAM_HALF), o.y + len * Math.sin(a - BEAM_HALF), o.z), v3(o.x + len * Math.cos(a + BEAM_HALF), o.y + len * Math.sin(a + BEAM_HALF), o.z)], color, alpha };
   };
 
   const buoyOn = (k: number): boolean => Math.floor((clock + k * (BUOY_PERIOD_MS / 2)) / (BUOY_PERIOD_MS / 2)) % 2 === 0;
