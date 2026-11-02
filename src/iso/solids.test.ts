@@ -1468,14 +1468,14 @@ describe("orientación por sentido de giro", () => {
   it("placas de una poly horaria caen en su pared (#291): wall indexa la huella tal como se escribió", () => {
     const fp = [{ x: 0, y: 0 }, { x: 0, y: 5 }, { x: 6, y: 5 }, { x: 6, y: 0 }]; // horaria: extrude la invierte
     expect(signed(fp)).toBeLessThan(0);
-    const plate: Plate = { wall: 0, shape: "rect", u0: 0.25, u1: 0.75, z0: 1, z1: 2, mat: "steel" };
+    const plate: Plate = { wall: 0, shape: "rect", u0: 0.1, u1: 0.4, z0: 1, z1: 2, mat: "steel" }; // asimétrico: u corre en el sentido de la arista original
     const faces = tessellateAll({ kind: "poly", footprint: fp, z: 0, h: 3, mat: "rock", plates: [plate] });
     const pl = faces.filter((f) => f.mat === "steel");
     expect(pl).toHaveLength(1);
     // la arista 0 original va de (0,0) a (0,5): la pared oeste, normal (-1, 0)
     expect(pl[0]!.normal.x).toBeCloseTo(-1, 9);
     expect(pl[0]!.normal.y).toBeCloseTo(0, 9);
-    for (const p of pl[0]!.pts) { expect(p.x).toBeCloseTo(0, 9); expect(p.y).toBeGreaterThanOrEqual(1.25 - 1e-9); expect(p.y).toBeLessThanOrEqual(3.75 + 1e-9); }
+    for (const p of pl[0]!.pts) { expect(p.x).toBeCloseTo(0, 9); expect(p.y).toBeGreaterThanOrEqual(0.5 - 1e-9); expect(p.y).toBeLessThanOrEqual(2 + 1e-9); }
     const wall = faces[faces.indexOf(pl[0]!) - 1]!;
     expect(wall.pts.every((p) => p.x === 0)).toBe(true);
     expect(wall.normal).toEqual(pl[0]!.normal);

@@ -45,7 +45,7 @@ export function isBehind(a: Bounds, b: Bounds): boolean {
   return a.max.x <= b.min.x + EPS || a.max.y <= b.min.y + EPS || a.max.z <= b.min.z + EPS;
 }
 
-/** Dos polígonos convexos se cruzan si ningún eje de sus bordes los separa (tocarse no cuenta). */
+/** Dos polígonos convexos se cruzan si ningún eje de sus bordes los separa (tocarse no cuenta). A diferencia de `hullsIntersect`, donde tocarse sí cuenta: la oclusión de `lights.ts` no tapa una ventana con un vecino que apenas la roza. */
 export function hullsOverlap(a: Vec2[], b: Vec2[]): boolean {
   for (const poly of [a, b]) for (let i = 0; i < poly.length; i++) {
     const p = poly[i]!, q = poly[(i + 1) % poly.length]!, nx = q.y - p.y, ny = p.x - q.x;

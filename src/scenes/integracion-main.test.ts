@@ -17,7 +17,7 @@ describe("integración de main en la historia #35", () => {
       floors: 3, cols: 4,
       plinth: { h: 0.6, mat: "stone" }, piers: { every: 2, w: 0.4, mat: "stone" },
       courses: { mat: "stone", h: 0.4 }, ties: { r: 0.2, mat: "stone" },
-    } as Facade;
+    } satisfies Facade;
     const faces = facadeFaces(wall, facade);
     const fullFloor = (f: Face) => f.mat === "office" && Math.abs(Math.max(...f.pts.map((p) => p.z)) - Math.min(...f.pts.map((p) => p.z)) - 3) < 1e-9;
     const bands = faces.flatMap((f, i) => (fullFloor(f) ? [i] : []));
@@ -30,10 +30,10 @@ describe("integración de main en la historia #35", () => {
   it("una placa con wall 0 sobre una poly horaria cae en la arista footprint[0] → footprint[1]", () => {
     // horaria en (x este, y sur): área con signo negativa, la historia la invierte al extruir
     const footprint = [{ x: 0, y: 0 }, { x: 0, y: 4 }, { x: 4, y: 4 }, { x: 4, y: 0 }];
-    const poly = { kind: "poly", footprint, z: 0, h: 3, mat: "concrete", plates: [{ wall: 0, shape: "rect", u0: 0.25, u1: 0.75, z0: 1, z1: 2, mat: "signal" }] } as unknown as Solid;
+    const poly: Solid = { kind: "poly", footprint, z: 0, h: 3, mat: "concrete", plates: [{ wall: 0, shape: "rect", u0: 0.1, u1: 0.4, z0: 1, z1: 2, mat: "signal" }] };
     const plate = tessellateAll(poly).filter((f) => f.mat === "signal");
     expect(plate).toHaveLength(1);
-    for (const p of plate[0]!.pts) expect(p.x).toBeCloseTo(0);
+    for (const p of plate[0]!.pts) { expect(p.x).toBeCloseTo(0); expect(p.y).toBeGreaterThanOrEqual(0.4 - 1e-9); expect(p.y).toBeLessThanOrEqual(1.6 + 1e-9); } // u en el sentido de la arista original
     expect(plate[0]!.normal.x).toBeCloseTo(-1);
   });
 
@@ -46,6 +46,6 @@ describe("integración de main en la historia #35", () => {
   it("el mundo trae la ciudad del kit y el barrio de main", () => {
     const w = world(SEED);
     expect(w.city!.placed.length).toBeGreaterThan(0); // historia: piezas del kit por barrio
-    expect((w.tech as unknown as { homes?: unknown[] }).homes?.length ?? 0).toBeGreaterThan(0); // main: ventanas del barrio costero
+    expect(w.tech!.homes.length).toBeGreaterThan(0); // main: ventanas del barrio costero
   });
 });
