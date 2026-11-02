@@ -40,7 +40,7 @@
 - Consumes: `setup()` del test (`{ w, a }`, con `w.sea!.lantern: Vec3`), `a.beam(): Accent[]`, `a.tick(ms)`.
 - Produces: nada nuevo.
 
-- [ ] **Step 1: test rojo.** `it("cada cuña lleva su propia copia de la linterna (#149)")`:
+- [ ] **Step 1: test rojo.** `it("cada cuña lleva su propia copia de la linterna")`, dentro del `describe("haz: vértice propio (#149)")`:
   - `const { w, a } = setup(); const lantern = w.sea!.lantern; const before = { ...lantern };`
   - `const beam = a.beam(); expect(beam).toHaveLength(2);` (si `beam()` devolviera `[]`, el bucle no correría y el test pasaría en vacío).
   - para cada cuña de `beam`: si no es `poly`, `throw new Error("se esperaba una cuña poly")`; `expect(x.pts[0]).toEqual(lantern)` y `expect(x.pts[0]).not.toBe(lantern)`.
