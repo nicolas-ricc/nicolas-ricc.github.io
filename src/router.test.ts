@@ -11,7 +11,7 @@ describe("router", () => {
     expect(zoneFromPath("/blog/")).toBeNull(); // /blog/ is the Hugo site, not a zone
     expect(zoneFromPath("/area/")).toBeNull();
     expect(zoneFromPath("/area/blogx/")).toBeNull();
-    expect(zoneFromPath("/otra/")).toBeNull();
+    expect(zoneFromPath("/other/")).toBeNull();
   });
   it("maps zones to paths", () => {
     expect(pathForZone(null)).toBe("/");

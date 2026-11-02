@@ -33,7 +33,7 @@ const ALLOW: Record<string, RegExp[]> = {
   "src/content/validate.ts": [CONTENT_KEYS],
   "src/content/blog-feed.ts": [CONTENT_KEYS],
   // Spanish fixtures stand in for visitor content
-  "src/content/render.test.ts": [CONTENT_KEYS, /: "[^"]*"/g, /Quién soy &(amp;)? qué hago/g, /Sin (<url>|&lt;url&gt;)/g, /¿Lenguaje &(amp;)? (<|&lt;)mundo(>|&gt;)\?/g],
+  "src/content/render.test.ts": [/\btitulo: "Rawls & <puente>"/g, CONTENT_KEYS, /Quién soy &(amp;)? qué hago/g, /Sin (<url>|&lt;url&gt;)/g, /¿Lenguaje &(amp;)? (<|&lt;)mundo(>|&gt;)\?/g],
   "src/content/validate.test.ts": [CONTENT_KEYS],
   "src/content/blog-feed.test.ts": [CONTENT_KEYS, /(title|description|titulo|descripcion): ('[^']*'|"[^"]*")/g,
     // the RSS fixture stands in for a Spanish blog post
@@ -98,19 +98,29 @@ const ALLOW: Record<string, RegExp[]> = {
 };
 
 /** Tokens that collide with WORDS but are not prose: `Math.sin`, file paths. */
-const NOT_PROSE = [/\bMath\.\w+/g, /[\w./-]*\.(md|png|ts|html|json|pdf|css)\b/g, /\bdocs\/[\w./-]*/g, /lang="es"/g];
+const NOT_PROSE = [/\bMath\.\w+/g, /[\w./-]*\.(md|png|ts|html|json|pdf|css)\b/g, /\bdocs\/[\w./-]*/g];
 
-/** Comment and string text of a TS/CSS source, line by line (code replaced by spaces). */
+/** A `/` after one of these (or at the start) opens a regex literal, not a division. */
+const BEFORE_REGEX = new Set(["", "(", ",", "=", ":", "[", "!", "&", "|", "?", "{", "}", ";"]);
+
+/** Comment, string and regex-literal text of a TS/CSS source, line by line (code replaced by spaces). */
 function proseOf(src: string, css: boolean): string[] {
-  let out = "", mode: "code" | "line" | "block" | "str" = "code", quote = "";
+  let out = "", mode: "code" | "line" | "block" | "str" | "regex" = "code", quote = "", prev = "", inClass = false;
   for (let i = 0; i < src.length; i++) {
     const c = src[i]!, n = src[i + 1];
     if (c === "\n") { out += "\n"; if (mode === "line") mode = "code"; continue; }
     if (mode === "code") {
       if (!css && c === "/" && n === "/") { mode = "line"; out += "  "; i++; continue; }
       if (c === "/" && n === "*") { mode = "block"; out += "  "; i++; continue; }
-      if (!css && (c === '"' || c === "'" || c === "`")) { mode = "str"; quote = c; out += " "; continue; }
+      if (!css && (c === '"' || c === "'" || c === "`")) { mode = "str"; quote = c; out += " "; prev = c; continue; }
+      if (!css && c === "/" && BEFORE_REGEX.has(prev)) { mode = "regex"; inClass = false; out += " "; continue; }
+      if (!/\s/.test(c)) prev = c;
       out += " ";
+    } else if (mode === "regex") {
+      if (c === "\\") { out += "  "; i++; continue; }
+      if (c === "[") inClass = true; else if (c === "]") inClass = false;
+      else if (c === "/" && !inClass) { mode = "code"; prev = ")"; out += " "; continue; }
+      out += c;
     } else if (mode === "block") {
       if (c === "*" && n === "/") { mode = "code"; out += "  "; i++; continue; }
       out += c;
@@ -171,6 +181,8 @@ describe("the guard itself", () => {
     expect(offenses("x.ts", "const barrioOf = 1;")).toHaveLength(1);
     expect(offenses("x.ts", "const y = Math.sin(a) + Math.cos(b); // centroid of the anchor")).toEqual([]);
     expect(offenses("x.md", "See `docs/plans/2026-10-19-26-velo-luces-por-posicion.md`.")).toEqual([]);
+    expect(offenses("x.test.ts", "expect(readme).toMatch(/dos carriles por la costa/);")).toHaveLength(1);
+    expect(offenses("x.ts", "const half = w / 2 / scale; const re = /[/]two lanes/;")).toEqual([]);
   });
 });
 

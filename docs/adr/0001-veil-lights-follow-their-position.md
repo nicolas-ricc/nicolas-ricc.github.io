@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-10-19 (issue #26; follow-up of the point and lighthouse neons of issue #15).
+Accepted. Decided 2026-10-19 in issue #26 (follow-up of the point and lighthouse neons of issue #15); recorded 2026-11-02 in issue #194.
 
 ## Context
 
