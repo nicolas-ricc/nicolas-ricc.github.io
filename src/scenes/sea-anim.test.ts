@@ -366,3 +366,20 @@ describe("haz: un solo ángulo por frame (#66)", () => {
     }
   });
 });
+
+describe("haz: vértice propio (#149)", () => {
+  it("cada cuña lleva su propia copia de la linterna", () => {
+    const { w, a } = setup();
+    const lantern = w.sea!.lantern, before = { ...lantern };
+    const apex = (x: Accent) => { if (x.kind !== "poly") throw new Error("se esperaba una cuña poly"); return x.pts[0]!; };
+    const beam = a.beam();
+    expect(beam).toHaveLength(2);
+    const [o0, o1] = beam.map(apex);
+    for (const o of [o0, o1]) { expect(o).toEqual(lantern); expect(o).not.toBe(lantern); }
+    expect(o0).not.toBe(o1);
+    o0!.x += 5;
+    expect(lantern).toEqual(before);
+    a.tick(100);
+    expect(apex(a.beam()[0]!)).toEqual(before);
+  });
+});
