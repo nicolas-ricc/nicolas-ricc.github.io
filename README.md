@@ -103,9 +103,9 @@ El bloom de las luces no entra en el primer dibujo: el sitio y el lab lo
 activan después del primer render real de Pixi (el `postrender` de
 `app.renderer`), en la tarea siguiente (`afterFirstRender`,
 `src/world/bloom.ts`; `attachBloom`, `src/world/bloom-runtime.ts`), no por
-orden de rAF ni por `requestIdleCallback`, y miden 60 frames. Si el promedio de tick
-más render supera 15 ms, lo quitan y dejan un halo más grande en los
-puntos de luz (`fallback`). En desarrollo la decisión se loguea, por
+orden de rAF ni por `requestIdleCallback`, y miden 60 frames. Si el
+promedio de tick más render supera 15 ms, lo quitan y dejan un halo más
+grande en los puntos de luz (`fallback`). En desarrollo la decisión se loguea, por
 ejemplo `[mapa] bloom: promedio 9.9 ms en 60 frames (tick 6.4 + render
 3.5), presupuesto 15 ms → activo` (con prefijo `[lab]` en el
 laboratorio). En el lab, `?bloom=` fuerza el modo sin medir y `6` lo
