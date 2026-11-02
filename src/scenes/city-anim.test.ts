@@ -245,7 +245,7 @@ describe("city-anim: papeles con tiempo de pared (#124, #125)", () => {
   it("papeles: tras 10 min de una vez siguen dentro del recorrido", () => {
     const { tower } = setup(), w = tower.paperWindow;
     const anim = troceado([600000]), n = anim.papers().length;
-    expect(anim.fired().papers).toBeGreaterThanOrEqual(n * 600000 / (PAPER_RANGE / (PAPER_SPEED * 1.2)) - n);
+    expect(anim.fired().papers).toBeGreaterThanOrEqual(n * 600000 / (PAPER_RANGE / (PAPER_SPEED * 0.8)) - n); // velocidad mínima: cada papel recicla al menos una vez cada PAPER_RANGE / (PAPER_SPEED · 0.8) ms
     for (const p of anim.papers().map(dot)) expect(Math.hypot(p.at.x - w.x, p.at.y - w.y)).toBeLessThanOrEqual(PAPER_RANGE + PAPER_SIDE);
   });
 });
