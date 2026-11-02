@@ -143,6 +143,25 @@ describe("pieceScene", () => {
     const { min, max } = bounds(pieceScene((out) => { out.push(flat); }).ground[0]!);
     expect([min.x, min.y, max.x, max.y]).toEqual([-7, -7, 7, 7]);
   });
+  it("an empty build gets a finite ±3 pad with its top face at z = 0", () => {
+    const s = pieceScene(() => {});
+    expect(s.solids).toEqual([]);
+    const pts = s.ground[0]!.kind === "ground" ? s.ground[0]!.tris.flatMap((t) => t.pts) : [];
+    expect(pts.length).toBeGreaterThan(0);
+    for (const p of pts) for (const c of [p.x, p.y, p.z]) expect(Number.isFinite(c)).toBe(true);
+    const { min, max } = bounds(s.ground[0]!);
+    expect([min.x, min.y, max.x, max.y]).toEqual([-3, -3, 3, 3]);
+    expect([min.z, max.z]).toEqual([-1, 0]);
+  });
+  it("a build of faceless solids also gets the pad at z = 0", () => {
+    const faceless: Solid = { kind: "ground", mat: "concrete", tris: [] };
+    const s = pieceScene((out) => { out.push(faceless); });
+    expect(s.solids).toEqual([faceless]);
+    expect(s.ground).toHaveLength(1);
+    const { min, max } = bounds(s.ground[0]!);
+    expect([min.x, min.y, max.x, max.y]).toEqual([-3, -3, 3, 3]);
+    expect([min.z, max.z]).toEqual([-1, 0]);
+  });
   it("la sombra de cada pieza del catálogo cae sobre el pad", () => {
     const out = new Set<string>();
     for (const e of EXHIBITS) {
@@ -203,8 +222,13 @@ describe("readout", () => {
   const only = (s: Solid) => readout({ ...scene, ground: [], solids: [s], accents: [] } as WorldScene, []).materials;
   const all = [pad, prism(1, 1), hull, ...(anim.layer("s") as { solids: Solid[] }).solids];
 
-  it("cuenta suelo, sólidos y capas sólidas animadas; ni terreno ni agua", () => {
-    expect(r.solids).toBe(5);
+  it("counts scene solids and animated solid layers, not the ground, terrain or water", () => {
+    expect(r.solids).toBe(4);
+  });
+  it("counts the scene ground apart", () => {
+    expect(r.ground).toBe(1);
+    const two = readout({ ...scene, ground: [pad, pad] } as WorldScene, [anim]);
+    expect([two.solids, two.ground]).toEqual([4, 2]);
   });
   it("las caras son las de tessellate sobre los mismos sólidos", () => {
     expect(r.faces).toBe(all.reduce((n, s) => n + tessellate(s).length, 0));
@@ -239,6 +263,6 @@ describe("readout", () => {
   });
   it("una escena sin sólidos ni animadores da caja nula y listas vacías", () => {
     const empty = { ...scene, ground: [], solids: [], accents: [] } as WorldScene;
-    expect(readout(empty, [])).toEqual({ solids: 0, faces: 0, accents: 0, box: null, materials: [], accentColors: [] });
+    expect(readout(empty, [])).toEqual({ solids: 0, ground: 0, faces: 0, accents: 0, box: null, materials: [], accentColors: [] });
   });
 });

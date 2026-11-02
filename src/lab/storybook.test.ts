@@ -34,3 +34,9 @@ describe("logs del storybook (#132)", () => {
     expect(src).toMatch(/bloom\?\.tick\(dt\);\s*if \(log\) \{\s*worst = Math\.max\(worst, dt\);\s*since \+= ticker\.deltaMS;\s*if \(since > 5000\) \{.*worst = 0; since = 0; \}\s*\}/);
   });
 });
+
+describe("readout rows (#185)", () => {
+  it("shows the ground in its own Suelo row, right after Sólidos", () => {
+    expect(src).toMatch(/\["Sólidos", String\(r\.solids\)\],\s*\["Suelo", String\(r\.ground\)\],/);
+  });
+});
