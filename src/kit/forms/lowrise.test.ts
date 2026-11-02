@@ -10,19 +10,19 @@ const LOT: Lot = { x: 1.5, y: 1.5, w: 21, d: 15, z: 0, open: ["s"], maxH: 24 };
 const SEEDS = Array.from({ length: 20 }, (_, i) => i + 1);
 const TOL = 1e-6;
 
-const shopRow = (open: Side[], seed: number, lot: Lot = LOT): Piece => recipe("shopRow")({ ...lot, open }, createRng(seed), STYLES.bares);
+const shopRow = (open: Side[], seed: number, lot: Lot = LOT): Piece => recipe("shopRow")({ ...lot, open }, createRng(seed), STYLES.bars);
 const faced = (p: Piece): Solid[] => p.solids.filter((s) => "facade" in s && s.facade);
 const cones = (p: Piece): Solid[] => p.solids.filter((s) => s.kind === "cone");
 
-describe("kit: familia lowrise", () => {
-  it("registra hilera de locales, casas en hilera y ruina devorada, ninguna landmark", () => {
+describe("kit: lowrise family", () => {
+  it("registers shop row, row houses and eaten ruin, none a landmark", () => {
     const defs = RECIPES.filter((r) => r.family === "lowrise");
     expect(defs.map((r) => r.name)).toEqual(["shopRow", "rowHouses", "eatenRuin"]);
     expect(defs.some((r) => r.landmark)).toBe(false);
   });
 
   describe("shopRow", () => {
-    it("con open s: 4..5 slots neon sobre la pared sur, z 2.4..3.6, uno por local", () => {
+    it("with open s: 4..5 neon slots on the south wall, z 2.4..3.6, one per shop", () => {
       for (const seed of SEEDS) {
         const p = shopRow(["s"], seed);
         expect(p.slots.length).toBeGreaterThanOrEqual(4);
@@ -39,11 +39,11 @@ describe("kit: familia lowrise", () => {
       }
     });
 
-    it("con open vacío no publica slots", () => {
+    it("with empty open it publishes no slots", () => {
       for (const seed of SEEDS) expect(shopRow([], seed).slots).toEqual([]);
     });
 
-    it("con open s y e el local de la esquina (el último) publica además un slot hacia el este", () => {
+    it("with open s and e the corner shop (the last) also publishes a slot toward the east", () => {
       for (const seed of SEEDS) {
         const slots = shopRow(["s", "e"], seed).slots, east = slots.filter((s) => s.side === "e");
         expect(east).toHaveLength(1);
@@ -52,14 +52,14 @@ describe("kit: familia lowrise", () => {
       }
     });
 
-    it("con frente norte u oeste los slots van sobre esa pared, con su normal", () => {
+    it("with a north or west frontage the slots go on that wall, with its normal", () => {
       for (const seed of SEEDS) {
         for (const s of shopRow(["n"], seed).slots) { expect(s).toMatchObject({ side: "n", wall: { x: 0, y: -1, z: 0 } }); for (const q of s.pts) expect(Math.abs(q.y - LOT.y)).toBeLessThanOrEqual(TOL); }
         for (const s of shopRow(["w"], seed).slots) { expect(s).toMatchObject({ side: "w", wall: { x: -1, y: 0, z: 0 } }); for (const q of s.pts) expect(Math.abs(q.x - LOT.x)).toBeLessThanOrEqual(TOL); }
       }
     });
 
-    it("el techo de cada local lleva el tono de su cuerpo", () => {
+    it("the roof of each shop carries its body's tone", () => {
       for (const seed of SEEDS) {
         const p = shopRow(["s"], seed, LOT), shops = faced(p);
         for (const s of shops) {
@@ -69,11 +69,11 @@ describe("kit: familia lowrise", () => {
       }
     });
 
-    it("con open s y n (lados opuestos) no hay local de esquina: solo slots sur", () => {
+    it("with open s and n (opposite sides) there is no corner shop: only south slots", () => {
       for (const seed of SEEDS) expect(shopRow(["s", "n"], seed).slots.every((s) => s.side === "s")).toBe(true);
     });
 
-    it("con frente este en el lote mínimo los slots van sobre la pared este", () => {
+    it("with an east frontage in the minimum lot the slots go on the east wall", () => {
       const lot: Lot = { x: 0, y: 0, w: 16, d: 12, z: 0, open: ["e"], maxH: 24 };
       for (const seed of SEEDS) {
         const p = shopRow(["e"], seed, lot);
@@ -82,7 +82,7 @@ describe("kit: familia lowrise", () => {
       }
     });
 
-    it("cada local tiene vidriera glass y su toldo, el toldo debajo del neón; anchos 4..6 que suman el frente", () => {
+    it("each shop has a glass shop window and its awning, the awning below the neon; widths 4..6 that add up to the frontage", () => {
       for (const seed of SEEDS) {
         const p = shopRow(["s"], seed), shops = faced(p);
         expect(shops.length).toBe(p.slots.length);
@@ -95,7 +95,7 @@ describe("kit: familia lowrise", () => {
         expect(widths.reduce((a, b) => a + b, 0)).toBeCloseTo(LOT.w, 6);
       }
     });
-    it("en un frente de 26 los locales siguen midiendo 4..6 y suman el frente", () => {
+    it("on a frontage of 26 the shops still measure 4..6 and add up to the frontage", () => {
       const lot: Lot = { x: 1.5, y: 1.5, w: 26, d: 15, z: 0, open: ["s"], maxH: 24 };
       for (const seed of SEEDS) {
         const widths = faced(shopRow(["s"], seed, lot)).map((s) => { const b = bounds(s); return b.max.x - b.min.x; });
@@ -106,9 +106,9 @@ describe("kit: familia lowrise", () => {
   });
 
   describe("rowHouses", () => {
-    it("4..5 casas de 2 pisos con puerta (cols 1, portico), anchos 4..5, hip de style.roof cada una, un árbol por par, sin slots", () => {
+    it("4..5 houses of 2 floors with a door (cols 1, portico), widths 4..5, a style.roof hip on each, one tree per pair, no slots", () => {
       for (const seed of SEEDS) {
-        const p = recipe("rowHouses")(LOT, createRng(seed), STYLES.residencial), houses = faced(p);
+        const p = recipe("rowHouses")(LOT, createRng(seed), STYLES.residential), houses = faced(p);
         expect(houses.length).toBeGreaterThanOrEqual(4);
         expect(houses.length).toBeLessThanOrEqual(5);
         for (const h of houses) {
@@ -124,12 +124,12 @@ describe("kit: familia lowrise", () => {
       }
     });
 
-    it("en el lote mínimo y con frente norte u oeste las casas siguen siendo 4..5 de 4..5 pegadas al frente, con el jardín atrás", () => {
+    it("in the minimum lot and with a north or west frontage the houses are still 4..5 of 4..5 flush with the frontage, with the garden behind", () => {
       const lot: Lot = { x: 0, y: 0, w: 16, d: 12, z: 0, open: [], maxH: 24 };
       for (const open of [["s"], ["n"], ["w"]] as Side[][]) for (const seed of SEEDS) {
-        const p = recipe("rowHouses")({ ...lot, open }, createRng(seed), STYLES.residencial), houses = faced(p).map(bounds);
+        const p = recipe("rowHouses")({ ...lot, open }, createRng(seed), STYLES.residential), houses = faced(p).map(bounds);
         const front = open[0]!, alongX = front !== "w";
-        expect(houses.length).toBeGreaterThanOrEqual(alongX ? 4 : 3); // un frente de 12 solo admite 3
+        expect(houses.length).toBeGreaterThanOrEqual(alongX ? 4 : 3); // a frontage of 12 only admits 3
         for (const b of houses) {
           const w = alongX ? b.max.x - b.min.x : b.max.y - b.min.y;
           expect(w).toBeGreaterThanOrEqual(4 - TOL);
@@ -141,18 +141,18 @@ describe("kit: familia lowrise", () => {
       }
     });
 
-    it("el techo de cada casa lleva el tono de su cuerpo", () => {
+    it("the roof of each house carries its body's tone", () => {
       for (const seed of SEEDS) {
-        const p = recipe("rowHouses")(LOT, createRng(seed), STYLES.residencial), houses = faced(p), roofs = p.solids.filter((s) => s.kind === "prism" && s.roof === "hip");
+        const p = recipe("rowHouses")(LOT, createRng(seed), STYLES.residential), houses = faced(p), roofs = p.solids.filter((s) => s.kind === "prism" && s.roof === "hip");
         houses.forEach((h, i) => expect(roofs[i]!.tone ?? 0).toBe(h.tone ?? 0));
       }
     });
   });
 
   describe("eatenRuin", () => {
-    it("suelo leafDark, 2..3 losas paving, ruina officeDark 5×4, ≥ 6 conos, sin ventanas ni slots", () => {
+    it("leafDark floor, 2..3 paving slabs, officeDark ruin 5×4, ≥ 6 cones, no windows or slots", () => {
       for (const seed of SEEDS) {
-        const p = recipe("eatenRuin")(LOT, createRng(seed), STYLES.centro);
+        const p = recipe("eatenRuin")(LOT, createRng(seed), STYLES.downtown);
         expect(p.ground.some((g) => g.kind === "ground" && g.mat === "leafDark")).toBe(true);
         const slabs = p.solids.filter((s) => s.kind === "prism" && s.mat === "paving" && s.h === PLINTH_H);
         expect(slabs.length).toBeGreaterThanOrEqual(2);

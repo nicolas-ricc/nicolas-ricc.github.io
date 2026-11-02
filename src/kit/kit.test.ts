@@ -7,21 +7,21 @@ import { LANDMARK_MAX_H, RECIPE_MAX_H } from "./piece";
 import { STYLES } from "./styles";
 import type { Lot, Piece } from "./types";
 
-/** El lote útil de una manzana de la ciudad (21×15, vereda adentro) y el del lab (24×18). */
+/** The usable lot of a city block (21×15, sidewalk inside) and the lab's (24×18). */
 const LOTS: Lot[] = [
   { x: 1.5, y: 1.5, w: 21, d: 15, z: 0, open: ["s"], maxH: 24 },
   { x: 0, y: 0, w: 24, d: 18, z: 0, open: ["s", "e"], maxH: 24 },
 ];
-/** Los lotes del contrato: los de la ciudad y el lab, o el lote propio de LAB_LOTS en esas dos posiciones. */
+/** The contract's lots: the city's and the lab's, or the own lot from LAB_LOTS in those two positions. */
 const lotsFor = (name: string): Lot[] => {
   const own = LAB_LOTS[name];
   return own ? LOTS.map((l) => ({ ...l, w: own.w, d: own.d, z: own.z ?? 0 })) : LOTS;
 };
-const STYLE_IDS = ["centro", "bares", "residencial", "civico"] as const;
+const STYLE_IDS = ["downtown", "bars", "residential", "civic"] as const;
 const SEEDS = Array.from({ length: 20 }, (_, i) => i + 1);
 const EPS = 1e-9;
 
-/** Punto estrictamente dentro de un polígono (ray casting). */
+/** Point strictly inside a polygon (ray casting). */
 function inPoly(p: Vec2, poly: Vec2[]): boolean {
   let inside = false;
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
@@ -31,7 +31,7 @@ function inPoly(p: Vec2, poly: Vec2[]): boolean {
   return inside;
 }
 
-/** Punto sobre algún lado del polígono (a 1e-6): está en la huella, no en el hueco. */
+/** Point on some side of the polygon (within 1e-6): it is on the footprint, not in the gap. */
 function onEdge(p: Vec2, poly: Vec2[]): boolean {
   return poly.some((a, i) => {
     const b = poly[(i + 1) % poly.length]!, dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
@@ -40,13 +40,13 @@ function onEdge(p: Vec2, poly: Vec2[]): boolean {
   });
 }
 
-/** Para cada poly cóncavo, ningún otro sólido de la pieza tiene parte de su caja en el hueco (casco convexo menos huella). */
+/** For each concave poly, no other solid of the piece has part of its box in the gap (convex hull minus footprint). */
 function concaveIntruders(solids: Solid[]): number {
   let n = 0;
   for (const s of solids) {
     if (s.kind !== "poly") continue;
     const hull = convexHull(s.footprint);
-    if (hull.length === s.footprint.length) continue; // convexo
+    if (hull.length === s.footprint.length) continue; // convex
     for (const o of solids) {
       if (o === s) continue;
       const b = bounds(o);
@@ -59,7 +59,7 @@ function concaveIntruders(solids: Solid[]): number {
   return n;
 }
 
-/** Copia con `dz` sumado a toda coordenada z; las normales (`wall`, `normal`) no se mueven. */
+/** Copy with `dz` added to every z coordinate; the normals (`wall`, `normal`) don't move. */
 function shiftZ(v: unknown, dz: number, key = ""): unknown {
   if (key === "wall" || key === "normal") return v;
   if (Array.isArray(v)) return v.map((x) => shiftZ(x, dz));
@@ -68,8 +68,8 @@ function shiftZ(v: unknown, dz: number, key = ""): unknown {
 }
 const rounded = (v: unknown) => JSON.stringify(v, (_, x) => (typeof x === "number" ? Math.round(x * 1e6) / 1e6 : x));
 
-describe("kit: el oráculo del hueco cóncavo", () => {
-  it("detecta un sólido dentro del hueco de una L y no uno apoyado sobre el ala", () => {
+describe("kit: the concave-gap oracle", () => {
+  it("detects a solid inside the gap of an L and not one resting on the wing", () => {
     const L: Solid = { kind: "poly", footprint: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 4 }, { x: 4, y: 4 }, { x: 4, y: 10 }, { x: 0, y: 10 }], z: 0, h: 6, mat: "plaster" };
     const inHole: Solid = { kind: "cone", at: { x: 7, y: 7, z: 0 }, r: 1, h: 2, mat: "leaf" };
     const onWing: Solid = { kind: "cone", at: { x: 2, y: 2, z: 6 }, r: 1, h: 2, mat: "leaf" };
@@ -77,7 +77,7 @@ describe("kit: el oráculo del hueco cóncavo", () => {
     expect(concaveIntruders([L, onWing])).toBe(0);
   });
 
-  it("un sólido a ras de las caras del hueco (sobre el borde de la huella) no es intruso", () => {
+  it("a solid flush with the faces of the gap (on the footprint's edge) is not an intruder", () => {
     const L: Solid = { kind: "poly", footprint: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 4 }, { x: 4, y: 4 }, { x: 4, y: 10 }, { x: 0, y: 10 }], z: 0, h: 6, mat: "plaster" };
     const slab: Solid = { kind: "prism", at: { x: -0.5, y: -0.5, z: 6 }, w: 11, d: 4.5, h: 0.4, mat: "stone" };
     const tower: Solid = { kind: "prism", at: { x: 0, y: 0, z: 6.4 }, w: 4, d: 4, h: 8, mat: "plaster" };
@@ -85,11 +85,11 @@ describe("kit: el oráculo del hueco cóncavo", () => {
   });
 });
 
-describe("kit: contrato de toda receta registrada", () => {
-  it("el registro tiene nombres únicos y recipe() los encuentra", () => {
+describe("kit: contract of every registered recipe", () => {
+  it("the registry has unique names and recipe() finds them", () => {
     expect(new Set(RECIPES.map((r) => r.name)).size).toBe(RECIPES.length);
     for (const def of RECIPES) expect(recipe(def.name)).toBe(def.recipe);
-    expect(() => recipe("no-existe")).toThrow();
+    expect(() => recipe("does-not-exist")).toThrow();
   });
 
   for (const def of RECIPES) {
@@ -99,7 +99,7 @@ describe("kit: contrato de toda receta registrada", () => {
         for (const lot of lotsFor(def.name)) for (const id of STYLE_IDS) for (const seed of SEEDS) fn(def.recipe(lot, createRng(seed), STYLES[id]), lot);
       };
 
-      it("todo sólido dentro del lote + 0.8, nada bajo lot.z, altura dentro del tope", () => {
+      it("every solid inside the lot + 0.8, nothing below lot.z, height within the cap", () => {
         runs((p, lot) => {
           for (const s of [...p.solids, ...p.ground]) {
             const b = bounds(s);
@@ -113,20 +113,20 @@ describe("kit: contrato de toda receta registrada", () => {
         });
       });
 
-      it("es determinista", () => {
+      it("is deterministic", () => {
         for (const lot of lotsFor(def.name)) for (const id of STYLE_IDS) for (const seed of SEEDS) {
           expect(JSON.stringify(def.recipe(lot, createRng(seed), STYLES[id]))).toBe(JSON.stringify(def.recipe(lot, createRng(seed), STYLES[id])));
         }
       });
 
-      it("con maxH 10 (la manzana frente al piso encendido) también respeta el tope", () => {
+      it("with maxH 10 (the block facing the lit floor) it also respects the cap", () => {
         for (const base of lotsFor(def.name)) for (const id of STYLE_IDS) for (const seed of SEEDS) {
           const lot = { ...base, maxH: 10 }, p = def.recipe(lot, createRng(seed), STYLES[id]);
           for (const s of [...p.solids, ...p.ground]) expect(bounds(s).max.z).toBeLessThanOrEqual(lot.z + cap(lot) + EPS);
         }
       });
 
-      it("ventanas y paredes solo de caras que miran a la cámara, de un edificio con fachada de la pieza", () => {
+      it("windows and walls only from faces that look at the camera, of a building with a facade in the piece", () => {
         runs((p) => {
           for (const w of p.windows) {
             expect(w.wall.x > EPS || w.wall.y > EPS).toBe(true);
@@ -142,18 +142,18 @@ describe("kit: contrato de toda receta registrada", () => {
         });
       });
 
-      it("los acentos no son ventanas encendidas (eso es de lights.ts)", () => {
+      it("accents are not lit windows (that is lights.ts's job)", () => {
         runs((p) => { for (const a of p.accents) expect(["windowWarm", "windowCool"]).not.toContain(a.color); });
       });
 
-      it("ningún sólido ajeno dentro del hueco de un poly cóncavo", () => {
+      it("no foreign solid inside the gap of a concave poly", () => {
         runs((p) => expect(concaveIntruders(p.solids)).toBe(0));
       });
 
-      it("con lot.z = 0.3 la salida es la de lot.z = 0 desplazada 0.3 en z", () => {
+      it("with lot.z = 0.3 the output is that of lot.z = 0 shifted 0.3 in z", () => {
         for (const lot of lotsFor(def.name)) for (const seed of SEEDS.slice(0, 5)) {
-          const base = def.recipe(lot, createRng(seed), STYLES.centro);
-          const up = def.recipe({ ...lot, z: lot.z + 0.3 }, createRng(seed), STYLES.centro);
+          const base = def.recipe(lot, createRng(seed), STYLES.downtown);
+          const up = def.recipe({ ...lot, z: lot.z + 0.3 }, createRng(seed), STYLES.downtown);
           expect(rounded(up)).toBe(rounded(shiftZ(base, 0.3)));
         }
       });
@@ -161,29 +161,29 @@ describe("kit: contrato de toda receta registrada", () => {
   }
 });
 
-describe("kit: familia modern", () => {
-  it("registra las cuatro piezas del distrito; vidrio, clásico y obra son landmark", () => {
+describe("kit: modern family", () => {
+  it("registers the four district pieces; glass, classic and site are landmarks", () => {
     const modern = RECIPES.filter((r) => r.family === "modern");
     expect(modern.map((r) => r.name)).toEqual(["glassTower", "classic", "campus", "constructionSite"]);
     expect(modern.filter((r) => r.landmark).map((r) => r.name)).toEqual(["glassTower", "classic", "constructionSite"]);
   });
 
-  it("campus: patio verde en ground, tres edificios con fachada y cartel ámbar con caja; obra: losas, grúa y cerco", () => {
+  it("campus: green courtyard in ground, three buildings with a facade and an amber sign with a box; site: slabs, crane and fence", () => {
     const lot = LOTS[0]!;
-    const c = recipe("campus")(lot, createRng(4), STYLES.distrito);
+    const c = recipe("campus")(lot, createRng(4), STYLES.district);
     expect(c.ground.some((g) => g.kind === "ground" && g.mat === "leafDark")).toBe(true);
     expect(c.solids.filter((s) => "facade" in s && s.facade)).toHaveLength(3);
     expect(c.accents.some((a) => a.kind === "poly" && a.color === "amber")).toBe(true);
-    const o = recipe("constructionSite")(lot, createRng(4), STYLES.distrito);
+    const o = recipe("constructionSite")(lot, createRng(4), STYLES.district);
     expect(o.solids.filter((s) => s.kind === "prism" && s.mat === "paving" && s.h === 0.3 && s.at.z > 1)).toHaveLength(5);
-    expect(o.solids.some((s) => s.kind === "prism" && s.h === 22 && s.w === 1.2)).toBe(true); // mástil
+    expect(o.solids.some((s) => s.kind === "prism" && s.h === 22 && s.w === 1.2)).toBe(true); // mast
     expect(o.landmarkTop).toBeDefined();
   });
 
-  it("vidrio y clásico publican ventanas, paredes, landmarkTop y un cartel sur solo con h ≥ 12", () => {
+  it("glass and classic publish windows, walls, landmarkTop and a south sign only with h ≥ 12", () => {
     const lot = LOTS[0]!;
     for (const name of ["glassTower", "classic"]) for (const seed of SEEDS) {
-      const p = recipe(name)(lot, createRng(seed), STYLES.distrito);
+      const p = recipe(name)(lot, createRng(seed), STYLES.district);
       expect(p.windows.length).toBeGreaterThan(0);
       expect(p.walls.length).toBeGreaterThan(0);
       expect(p.landmarkTop).toBeDefined();
@@ -194,16 +194,16 @@ describe("kit: familia modern", () => {
         expect(new Set(s.pts.map((q) => q.y)).size).toBe(1);
       }
     }
-    // con un tope bajo no hay cartel: el cuerpo no llega a 12
-    expect(recipe("classic")({ ...lot, maxH: 15 }, createRng(1), STYLES.distrito).slots).toEqual([]);
+    // with a low cap there is no sign: the body doesn't reach 12
+    expect(recipe("classic")({ ...lot, maxH: 15 }, createRng(1), STYLES.district).slots).toEqual([]);
   });
 
-  it("clásico: el reloj es un octógono amberBleed alpha 0.9 de radio 1.2, 0.02 delante de la cara sur del cuerpo", () => {
+  it("classic: the clock is an amberBleed octagon with alpha 0.9 and radius 1.2, 0.02 in front of the body's south face", () => {
     for (const seed of SEEDS) {
-      const p = recipe("classic")(LOTS[0]!, createRng(seed), STYLES.distrito);
+      const p = recipe("classic")(LOTS[0]!, createRng(seed), STYLES.district);
       const body = p.solids.find((s) => s.kind === "prism" && !!s.facade)!;
       const c = p.accents.find((a) => a.kind === "poly" && a.color === "amberBleed");
-      if (!c || c.kind !== "poly" || body.kind !== "prism") throw new Error("sin reloj");
+      if (!c || c.kind !== "poly" || body.kind !== "prism") throw new Error("no clock");
       expect(c.alpha).toBe(0.9);
       expect(c.pts).toHaveLength(8);
       for (const q of c.pts) expect(q.y).toBeCloseTo(body.at.y + body.d + 0.02, 9);
@@ -212,11 +212,11 @@ describe("kit: familia modern", () => {
     }
   });
 
-  it("el estilo pone cornisas y techo: trim y roof del estilo, tone en los cuerpos con fachada", () => {
-    const lot = LOTS[0]!, style = { ...STYLES.bares, tone: 1 };
+  it("the style sets cornices and roof: the style's trim and roof, tone on bodies with a facade", () => {
+    const lot = LOTS[0]!, style = { ...STYLES.bars, tone: 1 };
     for (const seed of SEEDS) {
       const p = recipe("classic")(lot, createRng(seed), style);
-      expect(p.solids.some((s) => s.mat === "officeDark" && s.kind === "prism" && s.h === 1)).toBe(true); // cornisa pesada = trim
+      expect(p.solids.some((s) => s.mat === "officeDark" && s.kind === "prism" && s.h === 1)).toBe(true); // heavy cornice = trim
       const gable = p.solids.find((s) => s.kind === "prism" && s.roof === "gable");
       if (gable) expect(gable.mat).toBe("terracotta");
       for (const s of p.solids) if ("facade" in s && s.facade) expect(s.tone).toBe(1);

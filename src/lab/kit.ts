@@ -10,11 +10,11 @@ import { kitScene } from "./kit-scene";
  * `s` cambia el seed; `1..4` el estilo (centro, bares, residencial, cívico).
  * Sin bloom ni animadores.
  */
-const KEY_STYLE: Record<string, StyleId> = { "1": "centro", "2": "bares", "3": "residencial", "4": "civico" };
+const KEY_STYLE: Record<string, StyleId> = { "1": "downtown", "2": "bars", "3": "residential", "4": "civic" };
 const LAYERS: readonly Layer[] = ["ground", "shadow", "shadowCore", "solid"];
 
 const host = document.getElementById("lab-host") as HTMLDivElement;
-let seed = 7, style: StyleId = "centro";
+let seed = 7, style: StyleId = "downtown";
 void boot();
 
 async function boot(): Promise<void> {

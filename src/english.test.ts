@@ -41,6 +41,13 @@ const ALLOW: Record<string, RegExp[]> = {
   "src/lab/exhibits.ts": [/\bid: "[a-z0-9-]+"/g],
   // `sin` is the trig function in two geometry comments (it is also the Spanish word for "without")
   "src/iso/solids.ts": [/\bsin(?= φ|\(π\))/g],
+  // `"se"` is the southeast corner id of the chamfer recipe (it collides with the Spanish word "se"); the guard sees string text without its quotes
+  "src/kit/forms/composite.ts": [/\bse\b/gi],
+  "src/kit/forms/composite.test.ts": [/\bse\b/gi],
+  // `MALECON` is imported under an English alias; its definition in src/scenes/city-grid.ts is renamed by the scenes task
+  "src/city/fixed.ts": [/\bMALECON as /g],
+  "src/city/fixed.test.ts": [/\bMALECON as /g],
+  "src/city/streets.ts": [/\bMALECON as /g],
   "src/scenes/world-baseline.test.ts": [/"?[a-z-]+"?: "[0-9a-f]{8}\/[0-9a-f]{8}"/g],
 };
 

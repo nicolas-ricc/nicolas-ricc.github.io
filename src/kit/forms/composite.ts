@@ -8,25 +8,25 @@ import { CORNICE_H, cornice, offsetFootprint } from "../roofs";
 import type { Lot, Piece, RecipeDef, Side, Style } from "../types";
 
 /**
- * Familia `composite` (spec §5, issue #41): cuerpos compuestos. Toda altura
- * se topa en min(lot.maxH, 18) contando los remates.
+ * `composite` family (spec §5, issue #41): composite bodies. Every height
+ * is capped at min(lot.maxH, 18) counting the toppers.
  */
 const TOWER_MIN_H = 3;
 
 /**
- * Podio que cubre el lote con vidriera y cornisa; torre descentrada en una
- * esquina, 1 adentro del podio. Con un tope bajo baja el podio para dejarle a
- * la torre TOWER_MIN_H de cuerpo; supone `maxH` ≥ 10 (el tope más bajo de la
- * ciudad, FRONT_CAP_H en src/city/zoning.ts).
+ * Podium that covers the lot with a shop window and cornice; off-center tower in a
+ * corner, 1 inside the podium. With a low cap the podium is lowered to leave the
+ * tower TOWER_MIN_H of body; assumes `maxH` ≥ 10 (the lowest cap in the
+ * city, FRONT_CAP_H in src/city/zoning.ts).
  */
 export function podiumTower(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;
-  const ph = Math.min(rng.int(4, 6), recipeCap(lot) - Math.max(WATER_TANK_H, MACHINE_ROOM_H) - CORNICE_H - TOWER_MIN_H); // el rng se consume igual con tope bajo
+  const ph = Math.min(rng.int(4, 6), recipeCap(lot) - Math.max(WATER_TANK_H, MACHINE_ROOM_H) - CORNICE_H - TOWER_MIN_H); // the rng is consumed all the same with a low cap
   const pf: Facade = { floors: floorsFor(ph, style), cols: Math.max(2, Math.round(w / 4)), base: "glass" };
   addBuilding(p, prism(x, y, z, w, d, ph, style.mat, { facade: pf, tone: style.tone }), pf);
   p.solids.push(...cornice({ x, y, w, d, z: z + ph }, style.trim));
   const size = Math.min(rng.int(10, 12), w - 2, d - 2);
-  const corner = rng.int(0, 3); // 0 NO, 1 NE, 2 SE, 3 SO
+  const corner = rng.int(0, 3); // 0 northwest, 1 northeast, 2 southeast, 3 southwest
   const tx = corner === 1 || corner === 2 ? x + w - 1 - size : x + 1, ty = corner >= 2 ? y + d - 1 - size : y + 1;
   const tank = rng.chance(0.5);
   const total = Math.min(rng.int(12, 18), recipeCap(lot) - (tank ? WATER_TANK_H : MACHINE_ROOM_H));
@@ -41,7 +41,7 @@ export function podiumTower(lot: Lot, rng: Rng, style: Style): Piece {
 
 const TWIN_GAP = 3, BRIDGE_W = 3, BRIDGE_H = 2;
 
-/** Dos torres iguales ±1 separadas 3, con un puente a media altura; antena en la más alta. */
+/** Two equal towers (±1) 3 apart, with a bridge at mid height; antenna on the taller one. */
 export function twinTowers(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;
   const hMax = recipeCap(lot) - CORNICE_H - ANTENNA_H;
@@ -62,13 +62,13 @@ export function twinTowers(lot: Lot, rng: Rng, style: Style): Piece {
 
 const CHAMFER = 1.5, TIER_INSET = 1.5, SPIRE_H = 3, SPIRE_R = 1.5;
 
-/** Rectángulo con las cuatro esquinas cortadas `c`, en el orden canónico (desde el norte, horario en pantalla). */
+/** Rectangle with all four corners cut by `c`, in canonical order (from the north, clockwise on screen). */
 export const chamferedRect = (x: number, y: number, w: number, d: number, c: number): Vec2[] => [
   { x: x + c, y }, { x: x + w - c, y }, { x: x + w, y: y + c }, { x: x + w, y: y + d - c },
   { x: x + w - c, y: y + d }, { x: x + c, y: y + d }, { x, y: y + d - c }, { x, y: y + c },
 ];
 
-/** Déco escalonada: tres cuerpos concéntricos con chaflán (0.5, 0.3 y 0.2 de la altura sin el chapitel), tono creciente desde uno menos que el del estilo, chapitel de cuatro caras. */
+/** Stepped deco: three concentric chamfered bodies (0.5, 0.3 and 0.2 of the height without the spire), tone increasing from one less than the style's, four-sided spire. */
 export function decoStepped(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;
   const body = Math.min(rng.int(12, 18), recipeCap(lot)) - SPIRE_H, s0 = Math.min(w, d) - 2;
@@ -84,7 +84,7 @@ export function decoStepped(lot: Lot, rng: Rng, style: Style): Piece {
 
 type Corner = "nw" | "ne" | "se" | "sw";
 
-/** Esquina del chaflán: la de `open[0]` que toca otra calle abierta contigua; si no hay, la que mira a la cámara (este o sur). SE sin `open`. */
+/** Chamfer corner: the one of `open[0]` that touches another adjacent open street; if none, the one facing the camera (east or south). Southeast without `open`. */
 export function chamferCorner(open: Side[]): Corner {
   const a = open[0];
   if (!a) return "se";
@@ -92,7 +92,7 @@ export function chamferCorner(open: Side[]): Corner {
   return a === "e" ? (open.includes("n") ? "ne" : "se") : (open.includes("n") ? "nw" : "sw");
 }
 
-/** Rectángulo en orden canónico con la esquina `corner` cortada `c` (cinco vértices). */
+/** Rectangle in canonical order with the corner `corner` cut by `c` (five vertices). */
 export function cutCorner(x: number, y: number, w: number, d: number, corner: Corner, c: number): Vec2[] {
   const full: Record<Corner, Vec2[]> = { nw: [{ x, y }], ne: [{ x: x + w, y }], se: [{ x: x + w, y: y + d }], sw: [{ x, y: y + d }] };
   const cut: Record<Corner, Vec2[]> = {
@@ -104,7 +104,7 @@ export function cutCorner(x: number, y: number, w: number, d: number, corner: Co
 
 const CHAMFER_CUT = 4;
 
-/** Chaflán: una esquina cortada 4 hacia la calle, fachada en todas las paredes, cornisa agrandada 0.5 y sala de máquinas. */
+/** Chamfer: one corner cut 4 toward the street, facade on all walls, cornice enlarged by 0.5 and a machine room. */
 export function chamfer(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;
   const h = Math.min(rng.int(8, 14), recipeCap(lot) - CORNICE_H - MACHINE_ROOM_H);
@@ -119,16 +119,16 @@ export function chamfer(lot: Lot, rng: Rng, style: Style): Piece {
 
 const L_ARM = 8;
 
-/** L de seis vértices en orden canónico, brazos de ancho `arm` al norte y al oeste: el hueco queda al sureste, hacia la cámara. */
+/** Six-vertex L in canonical order, arms of width `arm` to the north and west: the gap faces southeast, toward the camera. */
 export const lFootprint = (x: number, y: number, w: number, d: number, arm: number): Vec2[] => [
   { x, y }, { x: x + w, y }, { x: x + w, y: y + arm }, { x: x + arm, y: y + arm }, { x: x + arm, y: y + d }, { x, y: y + d },
 ];
 
 /**
- * L con torre: ala baja en L con fachada y cornisa; torre de L_ARM × L_ARM
- * apoyada sobre el codo, a ras de las caras del hueco. El hueco queda vacío
- * (regla de profundidad); por eso la cornisa son dos losas, una por brazo, y
- * no un poly agrandado, que sería cóncavo y tendría al ala en su hueco.
+ * L with tower: low L-shaped wing with facade and cornice; L_ARM × L_ARM tower
+ * resting on the elbow, flush with the faces of the gap. The gap stays empty
+ * (depth rule); so the cornice is two slabs, one per arm, and
+ * not an enlarged poly, which would be concave and would have the wing in its gap.
  */
 export function lTower(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;

@@ -3,20 +3,20 @@ import { facadeWindows, type Facade } from "../iso/facade";
 import { bounds, visibleWalls, type Solid } from "../iso/solids";
 import type { Lot, Piece, Slot, Style } from "./types";
 
-/** Tope de altura sobre `lot.z` de una receta común y de una `landmark`. */
+/** Height cap above `lot.z` for a common recipe and for a `landmark`. */
 export const RECIPE_MAX_H = 18;
 export const LANDMARK_MAX_H = 24;
-/** Altura desde la que una torre lleva cartel en la cara sur. */
+/** Height from which a tower carries a sign on its south face. */
 export const SIGN_MIN_H = 12;
 
-/** Tope de altura de una receta común en este lote. */
+/** Height cap of a common recipe on this lot. */
 export const recipeCap = (lot: Lot): number => Math.min(lot.maxH, RECIPE_MAX_H);
-/** Pisos de un cuerpo de alto `h` con la altura de piso del estilo; al menos uno. */
+/** Floors of a body of height `h` with the style's floor height; at least one. */
 export const floorsFor = (h: number, style: Style): number => Math.max(1, Math.round(h / style.floorH));
 
 export const emptyPiece = (): Piece => ({ solids: [], ground: [], accents: [], windows: [], slots: [], walls: [] });
 
-/** Suma un edificio con fachada `f` y publica sus paredes y ventanas que miran a la cámara (normal con x > 0 o y > 0). */
+/** Adds a building with facade `f` and publishes its walls and windows that face the camera (normal with x > 0 or y > 0). */
 export function addBuilding(p: Piece, s: Solid, f: Facade): void {
   const building = p.solids.push(s) - 1;
   for (const w of visibleWalls(s)) {
@@ -26,20 +26,20 @@ export function addBuilding(p: Piece, s: Solid, f: Facade): void {
   }
 }
 
-/** Hueco del cartel de neón en la cara sur, a media altura: 1.6 de alto, 1 de margen a cada lado, 0.4 delante de la pared. */
+/** Slot of the neon sign on the south face, at mid height: 1.6 tall, 1 margin on each side, 0.4 in front of the wall. */
 export function southSign(x: number, southY: number, w: number, z0: number): Slot {
   const y = southY + 0.4, z1 = z0 + 1.6;
   return { pts: [v3(x + 1, y, z0), v3(x + w - 1, y, z0), v3(x + w - 1, y, z1), v3(x + 1, y, z1)], wall: v3(0, 1, 0), side: "s", kind: "sign", local: 0 };
 }
 
-/** Tono desplazado `k` y recortado al rango de `Solid.tone` (−2..+2). */
+/** Tone shifted by `k` and clamped to the range of `Solid.tone` (−2..+2). */
 export const shiftTone = (t: number, k: number): number => Math.max(-2, Math.min(2, t + k));
 
 /**
- * Si la pieza pasa el tope `min(lot.maxH, LANDMARK_MAX_H)`, la achata en z
- * (relativa a `lot.z`) para que entre justa: un landmark de medidas fijas
- * respeta así una manzana topada. Las normales no cambian, ni las medidas
- * que no son alturas (el radio de `wheel`, el arrufo de `hull`).
+ * If the piece exceeds the cap `min(lot.maxH, LANDMARK_MAX_H)`, it flattens it in z
+ * (relative to `lot.z`) so it fits exactly: a landmark of fixed dimensions
+ * thus respects a capped block. Normals don't change, nor do the measures
+ * that aren't heights (the radius of `wheel`, the sheer of `hull`).
  */
 export function fitToCap(p: Piece, lot: Lot): Piece {
   const cap = Math.min(lot.maxH, LANDMARK_MAX_H);

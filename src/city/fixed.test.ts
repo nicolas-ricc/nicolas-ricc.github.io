@@ -4,12 +4,12 @@ import { v3 } from "../iso/geometry";
 import { bounds, type Bounds, type Solid } from "../iso/solids";
 import { awning, dockCrane } from "../kit/props";
 import { createRng } from "../map/seed";
-import { AVENUE, BLOCK_W, BRIDGE, COLLAPSED, EAST_RING, MALECON, PLAZA, SIDEWALK, STREET, TOWER, WEST_QUAY, blocks, estuaryEast } from "../scenes/city-grid";
+import { AVENUE, BLOCK_W, BRIDGE, COLLAPSED, EAST_RING, MALECON as PROMENADE, PLAZA, SIDEWALK, STREET, TOWER, WEST_QUAY, blocks, estuaryEast } from "../scenes/city-grid";
 import { plazaTone, tiles } from "../scenes/city-pieces";
-import { bridge, collapsed, malecon, plazaAndTower, westQuay } from "./fixed";
+import { bridge, collapsed, promenade, plazaAndTower, westQuay } from "./fixed";
 
 const EPS = 1e-6;
-/** Solape estricto de cajas: dos sólidos que solo se tocan (uno apoyado sobre otro) no cuentan. */
+/** Strict box overlap: two solids that only touch (one resting on the other) don't count. */
 const overlaps = (a: Bounds, b: Bounds) =>
   a.min.x < b.max.x - EPS && a.max.x > b.min.x + EPS && a.min.y < b.max.y - EPS && a.max.y > b.min.y + EPS && a.min.z < b.max.z - EPS && a.max.z > b.min.z + EPS;
 const overlapping = (solids: Solid[]) => {
@@ -24,7 +24,7 @@ describe("bridge", () => {
   const built = () => { const solids: Solid[] = [], accents: Accent[] = []; bridge(solids, accents); return { solids, accents }; };
   const top = BRIDGE.z + BRIDGE.deckH;
 
-  it("tablero, rampas y estribo como hoy; sin los pilotes de plaza", () => {
+  it("deck, ramps and abutment as today; without the plaza piles", () => {
     const { solids } = built();
     const deck = solids.find((s) => s.kind === "prism" && s.mat === "asphalt" && s.w > 60);
     expect(deck).toMatchObject({ at: { x: WEST_QUAY.x0, y: BRIDGE.y0, z: BRIDGE.z }, w: EAST_RING.x1 - WEST_QUAY.x0, d: BRIDGE.y1 - BRIDGE.y0, h: BRIDGE.deckH });
@@ -34,7 +34,7 @@ describe("bridge", () => {
     expect(solids.some((s) => s.kind === "prism" && s.mat === "plaza" && s.at.z === -1)).toBe(false);
   });
 
-  it("al menos cuatro pilas de piedra con tajamar, del fondo al tablero", () => {
+  it("at least four stone piers with a cutwater, from the bottom to the deck", () => {
     const piers = built().solids.filter((s): s is Solid & { kind: "poly" } => s.kind === "poly" && s.mat === "stone");
     expect(piers.length).toBeGreaterThanOrEqual(4);
     for (const p of piers) {
@@ -44,7 +44,7 @@ describe("bridge", () => {
     }
   });
 
-  it("18 losas de arco bajo el tablero; en cada vano el borde inferior sube hacia la clave", () => {
+  it("18 arch slabs under the deck; in each span the lower edge rises toward the keystone", () => {
     const slabs = built().solids
       .filter((s): s is Solid & { kind: "prism" } => s.kind === "prism" && s.mat === "stone" && s.at.z < BRIDGE.z)
       .sort((a, b) => a.at.x - b.at.x);
@@ -60,7 +60,7 @@ describe("bridge", () => {
     }
   });
 
-  it("balaustrada de piedra: al menos 50 postes sobre el tablero y dos pasamanos; sin barandas officeDark", () => {
+  it("stone balustrade: at least 50 posts on the deck and two handrails; no officeDark railings", () => {
     const { solids } = built();
     const posts = solids.filter((s) => s.kind === "prism" && s.mat === "stone" && s.w === 0.3 && s.d === 0.3 && s.h === 0.9 && s.at.z === top);
     expect(posts.length).toBeGreaterThanOrEqual(50);
@@ -69,7 +69,7 @@ describe("bridge", () => {
     expect(solids.some((s) => s.kind === "prism" && s.mat === "officeDark")).toBe(false);
   });
 
-  it("cuatro obeliscos en las esquinas, cada uno con remate piramidal y un dot ámbar encima; sin faroles", () => {
+  it("four obelisks at the corners, each with a pyramidal top and an amber dot on top; no street lamps", () => {
     const { solids, accents } = built();
     const obelisks = solids.filter((s): s is Solid & { kind: "prism" } => s.kind === "prism" && s.mat === "stone" && s.w === 1.2 && s.d === 1.2 && s.h === 4);
     expect(obelisks).toHaveLength(4);
@@ -83,11 +83,11 @@ describe("bridge", () => {
     expect(solids.some((s) => s.kind === "prism" && s.mat === "steel" && s.h === 5)).toBe(false);
   });
 
-  it("dos autos de la medida de props.car", () => {
+  it("two cars of the size of props.car", () => {
     expect(built().solids.filter((s) => s.kind === "prism" && (s.mat === "steel" || s.mat === "rust") && s.h === 1.2)).toHaveLength(2);
   });
 
-  it("ninguna pieza sale de la huella del puente con sus rampas", () => {
+  it("no piece leaves the footprint of the bridge with its ramps", () => {
     const { solids, accents } = built();
     const inside = (x: number, y: number) => x >= BRIDGE.x0 - STREET - 1e-6 && x <= BRIDGE.x1 + STREET + 1e-6 && y >= BRIDGE.y0 - 1 - 1e-6 && y <= BRIDGE.y1 + 1 + 1e-6;
     for (const s of solids) { const b = bounds(s); expect(inside(b.min.x, b.min.y) && inside(b.max.x, b.max.y)).toBe(true); }
@@ -98,7 +98,7 @@ describe("bridge", () => {
 describe("collapsed", () => {
   const built = () => { const solids: Solid[] = []; collapsed(solids, createRng(3)); return solids; };
 
-  it("un fragmento de cúpula hundido, entero en agua, al oeste del labio de la rampa y sin tocar los bloques hundidos", () => {
+  it("a sunken dome fragment, entirely in water, west of the ramp's lip and not touching the sunken blocks", () => {
     const solids = built();
     const domes = solids.filter((s): s is Solid & { kind: "dome" } => s.kind === "dome");
     expect(domes).toHaveLength(1);
@@ -106,8 +106,8 @@ describe("collapsed", () => {
     expect(d).toMatchObject({ mat: "officeDark", sides: 8, rings: 2, tone: -1 });
     expect(d.at.z).toBeLessThan(0);
     expect(d.h).toBeLessThan(d.r);
-    expect(d.at.x + d.r).toBeLessThan(estuaryEast(d.at.y - d.r)); // la ribera se abre hacia el sur: el borde norte es el más justo
-    expect(d.at.x + d.r).toBeLessThanOrEqual(COLLAPSED.x - 6);   // labio bajo de la rampa
+    expect(d.at.x + d.r).toBeLessThan(estuaryEast(d.at.y - d.r)); // the bank opens toward the south: the north edge is the tightest
+    expect(d.at.x + d.r).toBeLessThanOrEqual(COLLAPSED.x - 6);   // low lip of the ramp
     const box = { x0: d.at.x - d.r, x1: d.at.x + d.r, y0: d.at.y - d.r, y1: d.at.y + d.r };
     const sunk = solids.filter((s) => s.kind === "prism" && s.mat === "officeDark" && s.at.z < 0);
     expect(sunk).toHaveLength(3);
@@ -117,32 +117,32 @@ describe("collapsed", () => {
     }
   });
 
-  it("la cúpula no consume rng: el resto del derrumbe es el de siempre", () => {
-    expect(built().filter((s) => s.kind !== "dome")).toHaveLength(7); // rampa, plataforma, ruina, tres bloques hundidos, bloque en la calle
+  it("the dome consumes no rng: the rest of the collapse is as always", () => {
+    expect(built().filter((s) => s.kind !== "dome")).toHaveLength(7); // ramp, platform, ruin, three sunken blocks, block in the street
     const a = createRng(3), b = createRng(3);
-    collapsed([], a); b.int(2, 3); // la única tirada: el alto de la ruina
+    collapsed([], a); b.int(2, 3); // the only draw: the height of the ruin
     expect(a.next()).toBe(b.next());
   });
 });
 
-describe("malecon", () => {
-  const built = () => { const solids: Solid[] = [], accents: Accent[] = []; const bulbs = malecon(solids, accents); return { solids, accents, bulbs }; };
-  const { x0, x1, y0, y1, z } = MALECON;
+describe("promenade", () => {
+  const built = () => { const solids: Solid[] = [], accents: Accent[] = []; const bulbs = promenade(solids, accents); return { solids, accents, bulbs }; };
+  const { x0, x1, y0, y1, z } = PROMENADE;
 
-  it("los dos muros largos llevan galería de arcos sobre el agua", () => {
+  it("the two long walls carry an arcade over the water", () => {
     const walls = prisms(built().solids).filter((s) => s.at.z === -1 && s.d > 30);
     expect(walls).toHaveLength(2);
     for (const w of walls) expect(w.facade).toEqual({ floors: 1, cols: Math.round(w.d / 6), base: "arcade", bands: false });
   });
 
-  it("pérgola: cuatro postes deck sobre el paseo, fuera de la escalera, dos vigas de 12 y una guirnalda a z ≈ 3.6", () => {
+  it("pergola: four deck posts on the walkway, outside the stairs, two beams of 12 and a garland at z ≈ 3.6", () => {
     const { solids, accents } = built();
     const posts = prisms(solids).filter((s) => s.mat === "deck" && s.w === 0.4 && s.d === 0.4 && s.h === 3);
     expect(posts).toHaveLength(4);
     for (const p of posts) {
       expect(p.at.z).toBe(z);
       expect(p.at.x).toBeGreaterThanOrEqual(x0);
-      expect(p.at.x + p.w).toBeLessThanOrEqual(x1 - 6); // la escalera ocupa x1 − 6 .. x1
+      expect(p.at.x + p.w).toBeLessThanOrEqual(x1 - 6); // the stairs occupy x1 − 6 .. x1
     }
     const beams = prisms(solids).filter((s) => s.mat === "deck" && s.d === 12);
     expect(beams).toHaveLength(2);
@@ -151,17 +151,17 @@ describe("malecon", () => {
     expect(lights.length).toBeGreaterThanOrEqual(6);
   });
 
-  it("un kiosco en (x0 + 2, 240) sobre el paseo", () => {
+  it("a kiosk at (x0 + 2, 240) on the walkway", () => {
     const k = prisms(built().solids).filter((s) => s.mat === "officeDark" && s.w === 2 && s.d === 2 && s.h === 2.4);
     expect(k).toHaveLength(1);
     expect(k[0]!.at).toEqual(v3(x0 + 2, 240, z));
   });
 
-  it("devuelve los 8 bombillos de hoy", () => {
+  it("returns today's 8 bulbs", () => {
     expect(built().bulbs).toEqual([180, 210, 250, 272, 284, 296, 308, 320].map((y) => v3(x1 - 3 + 0.3, y + 0.3, z + 5.4)));
   });
 
-  it("ningún sólido del malecón se solapa en caja con otro", () => {
+  it("no solid of the promenade overlaps another in box", () => {
     expect(overlapping(built().solids)).toEqual([]);
   });
 });
@@ -171,13 +171,13 @@ describe("westQuay", () => {
   const { x0, x1 } = WEST_QUAY;
   const inQuay = (b: Bounds) => b.min.x >= x0 - EPS && b.max.x <= x1 + EPS;
 
-  it("muro en dos tramos y escalera como hoy", () => {
+  it("wall in two stretches and stairs as today", () => {
     const { solids } = built();
     expect(prisms(solids).filter((s) => s.mat === "plaza" && s.at.x === x0 && s.at.z === -1 && s.w === x1 - x0 && s.h === 1.6)).toHaveLength(2);
     expect(solids.filter((s) => s.kind === "ramp" && s.mat === "plaza" && s.at.y === 194 && s.at.z === -1 && s.d === 6)).toHaveLength(1);
   });
 
-  it("dos galpones vault rust sobre el muelle, en y 164..176 y 178..190, dentro de 192..198 y sin solaparse", () => {
+  it("two vault rust sheds on the quay, at y 164..176 and 178..190, within 192..198 and not overlapping", () => {
     const vaults = built().solids.filter((s): s is Solid & { kind: "vault" } => s.kind === "vault");
     expect(vaults).toHaveLength(2);
     for (const v of vaults) {
@@ -189,7 +189,7 @@ describe("westQuay", () => {
     expect(overlaps(bounds(vaults[0]!), bounds(vaults[1]!))).toBe(false);
   });
 
-  it("una grúa de muelle sobre el muro y al menos seis bolardos fuera de galpones y escalera", () => {
+  it("a dock crane on the wall and at least six bollards outside the sheds and stairs", () => {
     const { solids } = built();
     const masts = prisms(solids).filter((s) => s.mat === "steel" && s.w === 1 && s.d === 1 && s.h === 6);
     expect(masts).toHaveLength(1);
@@ -203,13 +203,13 @@ describe("westQuay", () => {
     }
   });
 
-  it("terrazas: al menos seis mesas y doce sillas en la calle del muelle, antes de la avenida, sin entrar al muro ni a una manzana", () => {
+  it("terraces: at least six tables and twelve chairs on the quay street, before the avenue, without entering the wall or a block", () => {
     const { solids } = built();
     const tables = prisms(solids).filter((s) => s.mat === "paving" && s.w === 1 && s.d === 1 && s.h === 0.7);
     const chairs = prisms(solids).filter((s) => s.mat === "paving" && s.w === 0.5 && s.d === 0.5 && s.h === 0.5);
     expect(tables.length).toBeGreaterThanOrEqual(6);
     expect(chairs.length).toBeGreaterThanOrEqual(12);
-    const terrace = solids.filter((s) => bounds(s).max.x <= x0 + EPS && s.mat !== "awning"); // los toldos cuelgan de la pared del lote, sobre la vereda de la manzana
+    const terrace = solids.filter((s) => bounds(s).max.x <= x0 + EPS && s.mat !== "awning"); // the awnings hang from the lot wall, over the block's sidewalk
     expect(terrace.length).toBeGreaterThanOrEqual(tables.length + chairs.length);
     for (const s of terrace) {
       const b = bounds(s);
@@ -219,7 +219,7 @@ describe("westQuay", () => {
     }
   });
 
-  it("toldos contra la pared del lote (x 184.5, la vereda de 1.5 por dentro de la manzana), mirando a la calle, y una guirnalda entre postes", () => {
+  it("awnings against the lot wall (x 184.5, the 1.5 sidewalk inside the block), facing the street, and a garland between posts", () => {
     const { solids, accents } = built();
     const awnings = solids.filter((s) => s.kind === "ramp" && s.mat === "awning");
     expect(awnings.length).toBeGreaterThanOrEqual(6);
@@ -230,16 +230,16 @@ describe("westQuay", () => {
     expect(lights.length).toBeGreaterThanOrEqual(6);
   });
 
-  it("una mesa frente a una vidriera que ya trae toldo no suma otro encima", () => {
+  it("a table facing a shop window that already has an awning doesn't add another on top", () => {
     const solids: Solid[] = [...awning(v3(184.5, 166, 2.3), 5, "e")], accents: Accent[] = [];
     westQuay(solids, accents);
     const awnings = solids.filter((s) => s.kind === "ramp" && s.mat === "awning");
-    expect(awnings).toHaveLength(6); // el de la vidriera más cinco de las seis mesas
+    expect(awnings).toHaveLength(6); // the shop window's plus five of the six tables
     expect(overlapping(awnings)).toEqual([]);
   });
 
-  it("ningún sólido del muelle se solapa en caja con otro", () => {
-    // mástil y pluma de la grúa son una sola prop: su solape interno no cuenta, el resto sí
+  it("no solid of the quay overlaps another in box", () => {
+    // mast and jib of the crane are a single prop: their internal overlap doesn't count, the rest does
     const crane = dockCrane(v3(195, 202, 0.6), "e").map((c) => JSON.stringify(c));
     const own = (s: Solid) => crane.includes(JSON.stringify(s));
     expect(overlapping(built().solids).filter(([a, b]) => !(own(a) && own(b)))).toEqual([]);
@@ -251,7 +251,7 @@ describe("plazaAndTower", () => {
   const fountainOf = (solids: Solid[]) => solids.filter((s): s is Solid & { kind: "cylinder" } => s.kind === "cylinder" && s.mat === "marble" && s.r === 3);
   const kiosksOf = (solids: Solid[]) => prisms(solids).filter((s) => s.mat === "officeDark" && s.w === 2 && s.d === 2 && s.h === 2.4);
 
-  it("una fuente de mármol r 3 centrada en (150, 227) con su charco alpha 0.35", () => {
+  it("a marble fountain r 3 centered at (150, 227) with its puddle alpha 0.35", () => {
     const { solids, accents } = built();
     const f = fountainOf(solids);
     expect(f).toHaveLength(1);
@@ -260,7 +260,7 @@ describe("plazaAndTower", () => {
     expect(accents.filter((a) => a.kind === "poly" && a.color === "amberBleed" && a.alpha === 0.35)).toHaveLength(3);
   });
 
-  it("dos kioscos dentro de la plaza, en las esquinas norte", () => {
+  it("two kiosks inside the plaza, at the north corners", () => {
     const { solids } = built();
     const ks = kiosksOf(solids);
     expect(ks).toHaveLength(2);
@@ -273,14 +273,14 @@ describe("plazaAndTower", () => {
     expect(Math.max(...ks.map((k) => k.at.x))).toBeGreaterThan(PLAZA.x + PLAZA.w - 6);
   });
 
-  it("la torre como antes: 8 ventanas encendidas, antena y la ventana del papel en la pared este", () => {
+  it("the tower as before: 8 lit windows, antenna and the paper window on the east wall", () => {
     const { tower } = built();
     expect(tower.litWindows).toHaveLength(8);
     expect(tower.paperWindow.x).toBeCloseTo(TOWER.x + TOWER.w, 6);
     expect(tower.antenna.z).toBeGreaterThan(35);
   });
 
-  it("lo nuevo no pasa de 5 ni se solapa con bancos, faroles, cordón ni torre", () => {
+  it("the new items don't exceed 5 nor overlap benches, street lamps, curb or tower", () => {
     const { solids } = built();
     const kioskBodies = new Set<Solid>(kiosksOf(solids));
     const fresh = solids.filter((s) => s.mat === "marble" || s.mat === "terracotta" || kioskBodies.has(s));
@@ -293,7 +293,7 @@ describe("plazaAndTower", () => {
     }
   });
 
-  it("los dos charcos de la torre siguen con alpha 0.25 y el rng se consume como hoy", () => {
+  it("the tower's two puddles keep alpha 0.25 and the rng is consumed as today", () => {
     expect(built().accents.filter((a) => a.kind === "poly" && a.color === "amberBleed" && a.alpha === 0.25)).toHaveLength(6);
     const a = createRng(7), b = createRng(7);
     plazaAndTower([], [], [], a); tiles(b, PLAZA, 0.05, "plaza", plazaTone);

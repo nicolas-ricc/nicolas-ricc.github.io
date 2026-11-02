@@ -16,7 +16,7 @@ const isVertical = (s: Strip): boolean => s.path[0]!.x === s.path[1]!.x;
 const isHorizontal = (s: Strip): boolean => s.path[0]!.y === s.path[1]!.y;
 const length = (s: Strip): number => Math.hypot(s.path[1]!.x - s.path[0]!.x, s.path[1]!.y - s.path[0]!.y);
 const mid = (s: Strip): Vec2 => ({ x: (s.path[0]!.x + s.path[1]!.x) / 2, y: (s.path[0]!.y + s.path[1]!.y) / 2 });
-/** Interior estricto de la plaza: un extremo justo sobre el borde no la pisa. */
+/** Strict interior of the plaza: an endpoint exactly on the edge doesn't step on it. */
 const inPlazaStrict = (p: Vec2): boolean => p.x > PLAZA.x && p.x < PLAZA.x + PLAZA.w && p.y > PLAZA.y && p.y < PLAZA.y + PLAZA.d;
 
 const WEST_LANE_X = WEST_COLS.map((x) => x + BLOCK_W + STREET / 2);
@@ -25,7 +25,7 @@ const CROSSINGS = [...WEST_LANE_X, RING_X, EAST_COLS[0] + BLOCK_W + STREET / 2];
 const CARRIAGEWAYS = [(AVENUE.y0 + BOULEVARD.y0) / 2, (BOULEVARD.y1 + AVENUE.y1) / 2];
 
 describe("streets", () => {
-  it("deja entre 80 y 150 strip, todos paving a ras del suelo", () => {
+  it("leaves between 80 and 150 strips, all paving flush with the ground", () => {
     const strips = scene();
     expect(strips.length).toBeGreaterThanOrEqual(80);
     expect(strips.length).toBeLessThanOrEqual(150);
@@ -36,7 +36,7 @@ describe("streets", () => {
     }
   });
 
-  it("cada línea central es un strip de dos puntos, horizontal o vertical, de al menos 1", () => {
+  it("each center line is a two-point strip, horizontal or vertical, of at least 1", () => {
     const lines = ofWidth(0.3);
     expect(lines.length).toBeGreaterThan(0);
     for (const s of lines) {
@@ -46,7 +46,7 @@ describe("streets", () => {
     }
   });
 
-  it("ninguna línea central cruza un cráter ni pisa la plaza", () => {
+  it("no center line crosses a crater or steps on the plaza", () => {
     for (const s of ofWidth(0.3)) {
       const m = mid(s);
       expect(inCrater(m.x, m.y)).toBe(false);
@@ -55,12 +55,12 @@ describe("streets", () => {
     }
   });
 
-  it("toda calle N-S del oeste tiene línea central", () => {
+  it("every west N-S street has a center line", () => {
     const lines = ofWidth(0.3).filter(isVertical);
     for (const x of WEST_LANE_X) expect(lines.some((s) => s.path[0]!.x === x)).toBe(true);
   });
 
-  it("los carriles discontinuos solo van en las dos calzadas de la avenida y en el anillo este", () => {
+  it("the dashed lanes only go on the avenue's two carriageways and on the east ring", () => {
     const dashes = ofWidth(0.4);
     expect(dashes.length).toBeGreaterThan(0);
     for (const s of dashes) {
@@ -73,14 +73,14 @@ describe("streets", () => {
     expect(dashes.some((s) => isVertical(s) && s.path[0]!.x === RING_X)).toBe(true);
   });
 
-  it("no quedan líneas continuas al borde del boulevard", () => {
+  it("no continuous lines remain at the edge of the boulevard", () => {
     for (const s of scene()) for (const p of s.path) {
       expect(Math.abs(p.y - (BOULEVARD.y0 - 0.3))).toBeGreaterThan(1e-6);
       expect(Math.abs(p.y - (BOULEVARD.y1 + 0.3))).toBeGreaterThan(1e-6);
     }
   });
 
-  it("cada cruce de la avenida tiene una cebra de 3 strips de 0.8, salvo bajo el puente", () => {
+  it("each avenue crossing has a crosswalk of 3 strips of 0.8, except under the bridge", () => {
     const zebras = ofWidth(0.8);
     for (const cx of CROSSINGS) {
       const here = zebras.filter((s) => Math.abs(s.path[0]!.x - cx) <= 2);

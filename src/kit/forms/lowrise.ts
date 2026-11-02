@@ -11,15 +11,15 @@ import { HIP_ROOF_H, cornice, hipRoof } from "../roofs";
 import type { Lot, Piece, RecipeDef, Side, Slot, Style } from "../types";
 
 /**
- * Familia `lowrise`: hilera de locales con neón por local, casas en hilera con
- * jardín trasero y la manzana devorada por la selva. Spec §5 y §6.
+ * `lowrise` family: a row of shops with a neon per shop, row houses with a
+ * back garden, and the block eaten by the jungle. Spec §5 and §6.
  */
 const SHOP_MIN = 4, SHOP_MAX = 6, SHOP_BACK = 3, NEON_Z0 = 2.4, NEON_H = 1.2, AWNING_Z = 2;
 
 const alongX = (side: Side): boolean => side === "n" || side === "s";
 const frontLen = (lot: Lot, side: Side): number => (alongX(side) ? lot.w : lot.d);
 
-/** Franja `s0..s1` a lo largo del frente `side`, pegada a él, con todo el fondo menos `back`. */
+/** Strip `s0..s1` along the `side` frontage, flush against it, with the whole depth minus `back`. */
 function frontRect(lot: Lot, side: Side, s0: number, s1: number, back: number): Rect {
   const deep = (alongX(side) ? lot.d : lot.w) - back;
   switch (side) {
@@ -30,7 +30,7 @@ function frontRect(lot: Lot, side: Side, s0: number, s1: number, back: number): 
   }
 }
 
-/** Pared del lado `side` de `r`: extremos a→b en planta y normal hacia afuera. */
+/** Wall on side `side` of `r`: endpoints a→b in plan and outward normal. */
 function wallOf(r: Rect, side: Side): { a: Vec2; b: Vec2; normal: Vec3 } {
   switch (side) {
     case "s": return { a: { x: r.x, y: r.y + r.d }, b: { x: r.x + r.w, y: r.y + r.d }, normal: v3(0, 1, 0) };
@@ -40,7 +40,7 @@ function wallOf(r: Rect, side: Side): { a: Vec2; b: Vec2; normal: Vec3 } {
   }
 }
 
-/** Slot de neón de ancho `width` centrado en la pared `side` de `r`, z `lot.z + 2.4 .. + 3.6`. */
+/** Neon slot of width `width` centered on wall `side` of `r`, z `lot.z + 2.4 .. + 3.6`. */
 function neonSlot(r: Rect, side: Side, width: number, z: number, local: number): Slot {
   const { a, b, normal } = wallOf(r, side), len = Math.hypot(b.x - a.x, b.y - a.y);
   const at = (t: number, zz: number) => v3(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, zz);
@@ -48,14 +48,14 @@ function neonSlot(r: Rect, side: Side, width: number, z: number, local: number):
   return { pts: [at(t0, z0), at(t1, z0), at(t1, z1), at(t0, z1)], wall: normal, side, kind: "neon", local };
 }
 
-/** Toldo de `len` centrado sobre la pared `side` de `r`, bajando hacia la calle. */
+/** Awning of `len` centered on wall `side` of `r`, sloping down toward the street. */
 function shopAwning(r: Rect, side: Side, len: number, z: number): Solid[] {
   const { a } = wallOf(r, side), pad = (alongX(side) ? r.w : r.d) / 2 - len / 2, za = z + AWNING_Z;
   const at = side === "s" ? v3(a.x + pad, a.y, za) : side === "n" ? v3(a.x + pad, a.y - 0.8, za) : side === "e" ? v3(a.x, a.y + pad, za) : v3(a.x - 0.8, a.y + pad, za);
   return awning(at, len, side);
 }
 
-/** Anchos de `n` locales que suman `len` (decisión 5). */
+/** Widths of `n` shops that add up to `len` (decision 5). */
 function shopWidths(rng: Rng, len: number): number[] {
   const n = Math.max(Math.min(rng.int(4, 5), Math.floor(len / SHOP_MIN)), Math.min(5, Math.ceil(len / SHOP_MAX)));
   const ws = Array.from({ length: n }, () => SHOP_MIN);
@@ -69,10 +69,10 @@ function shopWidths(rng: Rng, len: number): number[] {
   return ws;
 }
 
-/** El techo con el tono de su cuerpo (`prism` omite el tono 0). */
+/** The roof with its body's tone (`prism` omits tone 0). */
 const toned = (solids: Solid[], tone: number): Solid[] => (tone ? solids.map((q) => ({ ...q, tone })) : solids);
 
-/** El local de esquina hacia `second`: el último si `second` está al final del eje del frente, el primero al principio, ninguno si es el lado opuesto. */
+/** The corner shop toward `second`: the last if `second` is at the end of the frontage axis, the first at the start, none if it is the opposite side. */
 function cornerLocal(front: Side, second: Side, n: number): number | undefined {
   if (alongX(front) === alongX(second)) return undefined;
   return second === "e" || second === "s" ? n - 1 : 0;
@@ -82,7 +82,7 @@ export function shopRow(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), cap = Math.min(lot.maxH, RECIPE_MAX_H), front = lot.open[0] ?? "s", second = lot.open[1];
   const ws = shopWidths(rng, frontLen(lot, front));
   const corner = second ? cornerLocal(front, second, ws.length) : undefined;
-  const neons = lot.open.length > 0; // sin frente abierto: sur sin neones
+  const neons = lot.open.length > 0; // no open frontage: south without neons
   let s0 = 0;
   ws.forEach((lw, k) => {
     const r = frontRect(lot, front, s0, s0 + lw, SHOP_BACK); s0 += lw;
@@ -99,9 +99,9 @@ export function shopRow(lot: Lot, rng: Rng, style: Style): Piece {
   return p;
 }
 
-const HOUSE_BACK = 5; // jardín trasero
+const HOUSE_BACK = 5; // back garden
 
-/** Punto a `along` sobre el eje del frente y a `fromBack` del fondo del lote. */
+/** Point at `along` on the frontage axis and `fromBack` from the back of the lot. */
 function backPoint(lot: Lot, side: Side, along: number, fromBack: number): Vec2 {
   switch (side) {
     case "s": return { x: lot.x + along, y: lot.y + fromBack };
@@ -117,7 +117,7 @@ export function rowHouses(lot: Lot, rng: Rng, style: Style): Piece {
   const ws = Array.from({ length: n }, () => rng.int(4, 5));
   for (let i = n - 1, sum = ws.reduce((a, b) => a + b, 0); sum > len && i >= 0; i--) if (ws[i] === 5) { ws[i] = 4; sum--; }
   const floors = 2 * style.floorH + HIP_ROOF_H <= cap ? 2 : 1, h = floors * style.floorH;
-  const facade: Facade = { floors, cols: 1, base: "portico" }; // la puerta: planta baja oscura
+  const facade: Facade = { floors, cols: 1, base: "portico" }; // the door: dark ground floor
   let s = (len - ws.reduce((a, b) => a + b, 0)) / 2;
   const starts: number[] = [];
   for (const hw of ws) {
@@ -134,14 +134,14 @@ export function rowHouses(lot: Lot, rng: Rng, style: Style): Piece {
   return p;
 }
 
-/** La manzana devorada: suelo de selva, losas sueltas, una ruina sin fachada y selva encima. */
+/** The eaten block: jungle floor, loose slabs, a ruin with no facade and jungle on top. */
 export function eatenRuin(lot: Lot, rng: Rng, _style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;
   p.ground.push(tiles(rng, lot, z + 0.05, "leafDark"));
   p.solids.push(prism(x, y, z, 0.4 * w, 0.4 * d, PLINTH_H, "paving"), prism(x + 0.6 * w, y + 0.55 * d, z, 0.4 * w, 0.45 * d, PLINTH_H, "paving"));
   if (rng.chance(0.5)) p.solids.push(prism(x, y + 0.65 * d, z, 0.3 * w, 0.35 * d, PLINTH_H, "paving"));
-  p.solids.push(prism(x + 0.45 * w, y + 1, z + 0.05, 5, 4, rng.int(2, 3), "officeDark")); // ruina, sin pisar ninguna losa
-  jungle(p.solids, rng, { x0: x + 4, x1: x + w - 4, y0: y + 4, y1: y + d - 4 }, rng.int(6, 9), z + 0.05); // r ≤ 4: ningún cono sale del lote
+  p.solids.push(prism(x + 0.45 * w, y + 1, z + 0.05, 5, 4, rng.int(2, 3), "officeDark")); // ruin, not stepping on any slab
+  jungle(p.solids, rng, { x0: x + 4, x1: x + w - 4, y0: y + 4, y1: y + d - 4 }, rng.int(6, 9), z + 0.05); // r ≤ 4: no cone leaves the lot
   return p;
 }
 

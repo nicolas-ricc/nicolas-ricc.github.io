@@ -169,7 +169,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   // receta `campus` del kit sobre una manzana de distrito; el suelo de la pieza va a `out` con los sólidos
   { id: "campus", title: "Campus", zone: "cv", group: "ciudad", kind: "piece",
     build: (out, accents) => {
-      const p = campus({ x: -12.5, y: -9.5, w: 25, d: 19, z: 0, open: [], maxH: 24 }, createRng(SEED), STYLES.distrito);
+      const p = campus({ x: -12.5, y: -9.5, w: 25, d: 19, z: 0, open: [], maxH: 24 }, createRng(SEED), STYLES.district);
       out.push(...p.ground, ...p.solids);
       accents.push(...p.accents);
     } },

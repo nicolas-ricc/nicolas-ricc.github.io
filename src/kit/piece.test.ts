@@ -8,13 +8,13 @@ import type { Lot } from "./types";
 const LOT: Lot = { x: 0, y: 0, w: 10, d: 10, z: 2, open: ["s"], maxH: 10 };
 
 describe("fitToCap", () => {
-  it("una pieza que entra en el tope sale igual", () => {
+  it("a piece that fits within the cap comes out unchanged", () => {
     const p = emptyPiece();
     p.solids.push(prism(0, 0, 2, 4, 4, 8, "stone"));
     expect(fitToCap(p, LOT)).toEqual(p);
   });
 
-  it("una pieza más alta que el tope se achata en z relativa a lot.z: sólidos, acentos, paredes y landmarkTop", () => {
+  it("a piece taller than the cap is flattened in z relative to lot.z: solids, accents, walls and landmarkTop", () => {
     const p = emptyPiece();
     p.solids.push(prism(0, 0, 2, 4, 4, 20, "stone"), { kind: "dome", at: v3(2, 2, 22), r: 2, h: 0, mat: "copper" });
     p.accents.push({ kind: "dot", at: v3(1, 1, 12), r: 0.5, color: "amber" });
@@ -32,7 +32,7 @@ describe("fitToCap", () => {
 });
 
 describe("piece", () => {
-  it("shiftTone suma y recorta a −2..+2", () => {
+  it("shiftTone adds and clamps to −2..+2", () => {
     expect(shiftTone(0, 1)).toBe(1);
     expect(shiftTone(2, 1)).toBe(2);
     expect(shiftTone(-2, -1)).toBe(-2);

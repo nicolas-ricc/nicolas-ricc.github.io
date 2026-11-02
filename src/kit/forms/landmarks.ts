@@ -8,27 +8,27 @@ import { hipRoof, pyramid } from "../roofs";
 import type { Lot, Piece, RecipeDef, Side, Style } from "../types";
 
 /**
- * Familia `landmarks`: las estructuras singulares que la zonificación pone en
- * manzanas fijas (spec §5, issue #42). Medidas fijas; `fitToCap` las achata si
- * la manzana tiene un tope más bajo que su alto.
+ * `landmarks` family: the one-off structures that zoning puts on
+ * fixed blocks (spec §5, issue #42). Fixed dimensions; `fitToCap` flattens them if
+ * the block has a cap lower than their height.
  */
 
-const NAVE_W = 9;
+const MARKET_HALL_W = 9;
 
-/** Mercado cubierto: nave central abovedada, dos naves laterales más bajas y la torre del reloj en la esquina SE. Lote de 15 de fondo o más. */
+/** Covered market: vaulted central hall, two lower side aisles and the clock tower on the southeast corner. Lot 15 deep or more. */
 export function market(lot: Lot, _rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, w, z } = lot, len = w - 4;
-  const side = Math.min(4, (lot.d - NAVE_W) / 2); // en un lote de 15 las laterales de 4 no entran
-  const y = lot.y + (lot.d - NAVE_W - 2 * side) / 2;
-  const nave = (ny: number, nl: number, nw: number, h: number, vh: number, segments: number): void => {
+  const side = Math.min(4, (lot.d - MARKET_HALL_W) / 2); // in a lot of 15 the side aisles of 4 don't fit
+  const y = lot.y + (lot.d - MARKET_HALL_W - 2 * side) / 2;
+  const hall = (ny: number, nl: number, nw: number, h: number, vh: number, segments: number): void => {
     const f: Facade = { floors: 1, cols: Math.max(2, Math.round(nl / 3)), base: "arcade" };
     addBuilding(p, prism(x + 2, ny, z, nl, nw, h, style.mat, { facade: f, tone: style.tone }), f);
     p.solids.push({ kind: "vault", at: v3(x + 2, ny, z + h), len: nl, w: nw, h: vh, axis: "x", mat: style.roof, segments });
   };
-  nave(y, len, side, 3.5, 1.5, 6);
-  nave(y + side, len, NAVE_W, 5, 3.5, 8);
-  nave(y + side + NAVE_W, len - 1, side, 3.5, 1.5, 6); // la sur termina contra la torre
-  const tx = x + w - 3, ty = y + 2 * side + NAVE_W - 3;
+  hall(y, len, side, 3.5, 1.5, 6);
+  hall(y + side, len, MARKET_HALL_W, 5, 3.5, 8);
+  hall(y + side + MARKET_HALL_W, len - 1, side, 3.5, 1.5, 6); // the south one ends against the tower
+  const tx = x + w - 3, ty = y + 2 * side + MARKET_HALL_W - 3;
   p.solids.push(prism(tx, ty, z, 3, 3, 14, style.mat), ...pyramid({ x: tx, y: ty, w: 3, d: 3, z: z + 14 }, 2.5, style.roof));
   p.accents.push(clock(tx + 1.5, ty + 3, z + 12.5));
   p.landmarkTop = v3(tx + 1.5, ty + 1.5, z + 16.5);
@@ -38,10 +38,10 @@ export function market(lot: Lot, _rng: Rng, style: Style): Piece {
 const HALL_W = 11, FRONT = 3;
 
 /**
- * Estación: hall central abovedado con cúpula sobre tambor, dos alas con techo
- * a cuatro aguas, reloj en la cara sur del hall, marquesina y faroles del lado
- * `open[0]` (sur por defecto), en una franja de 3 que el edificio deja libre.
- * La bóveda se parte en dos para que el tambor apoye en el techo del hall.
+ * Station: vaulted central hall with a dome on a drum, two wings with hip
+ * roofs, clock on the south face of the hall, canopy and street lamps on the
+ * `open[0]` side (south by default), in a strip of 3 that the building leaves free.
+ * The vault is split in two so the drum rests on the roof of the hall.
  */
 export function station(lot: Lot, _rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { z } = lot, front: Side = lot.open[0] ?? "s", ns = front === "n" || front === "s";
@@ -52,7 +52,7 @@ export function station(lot: Lot, _rng: Rng, style: Style): Piece {
   const half = (b.d - 8) / 2;
   for (const vy of [b.y, b.y + b.d - half]) p.solids.push({ kind: "vault", at: v3(hx, vy, z + 6), len: half, w: HALL_W, h: 3, axis: "y", mat: style.roof, segments: 8 });
   p.solids.push({ kind: "cylinder", at: v3(cx, cy, z + 6), r: 4, h: 3.5, mat: style.mat, sides: 12 }, { kind: "dome", at: v3(cx, cy, z + 9.5), r: 4, h: 3, mat: style.roof, sides: 12, rings: 3 });
-  const ww = (b.w - HALL_W) / 2 - 0.5, wing: Facade = { floors: 1, cols: 3 }; // el 0.5 libre lo cierra el vuelo del techo
+  const ww = (b.w - HALL_W) / 2 - 0.5, wing: Facade = { floors: 1, cols: 3 }; // the free 0.5 is closed by the roof overhang
   for (const wx of [b.x, b.x + b.w - ww]) {
     addBuilding(p, prism(wx, b.y, z, ww, b.d, 4, style.mat, { facade: wing, tone: style.tone }), wing);
     p.solids.push(...hipRoof({ x: wx, y: b.y, w: ww, d: b.d, z: z + 4 }, style.roof));
@@ -73,13 +73,13 @@ export function station(lot: Lot, _rng: Rng, style: Style): Piece {
 }
 
 const DRUM_R = 6.5, DRUM_SIDES = 12;
-/** Media anchura de un polígono regular con caras planas al N/S/E/O (como lo arma `cylinder`). */
+/** Half-width of a regular polygon with flat faces toward N/S/E/W (as `cylinder` builds it). */
 const apothem = (r: number, sides: number): number => r * Math.cos(Math.PI / sides);
 
 /**
- * Teatro: tambor con cúpula de cobre y, al este, la columnata con marquesina,
- * cartel y escalinata. Mira al este porque tambor + columnata + escalinata
- * (19.56) no entran en el fondo de un lote.
+ * Theatre: drum with a copper dome and, to the east, the colonnade with a canopy,
+ * sign and stairway. It faces east because drum + colonnade + stairway
+ * (19.56) don't fit in the depth of a lot.
  */
 export function theatre(lot: Lot, _rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { z } = lot, half = apothem(DRUM_R, DRUM_SIDES);
@@ -90,8 +90,8 @@ export function theatre(lot: Lot, _rng: Rng, style: Style): Piece {
   const colX = x0 + 2 * half, colY = cy - 7.5, colonnade: Facade = { floors: 1, cols: 5, base: "arcade" };
   addBuilding(p, prism(colX, colY, z, 5, 15, 5, "marble", { facade: colonnade }), colonnade);
   const front = colX + 5;
-  p.solids.push({ kind: "ramp", at: v3(front, colY, z), w: 2, d: 15, h: 1, mat: style.trim, dir: "e" }); // escalinata
-  p.solids.push({ kind: "ramp", at: v3(front, cy - 4.5, z + 4), w: 1.5, d: 9, h: 0.4, mat: style.trim, dir: "e" }); // marquesina
+  p.solids.push({ kind: "ramp", at: v3(front, colY, z), w: 2, d: 15, h: 1, mat: style.trim, dir: "e" }); // stairway
+  p.solids.push({ kind: "ramp", at: v3(front, cy - 4.5, z + 4), w: 1.5, d: 9, h: 0.4, mat: style.trim, dir: "e" }); // canopy
   place(p.solids, p.accents, sign(v3(front, cy - 3.5, z + 4.4), 7, 1.5, "e"));
   p.landmarkTop = v3(cx, cy, z + 13);
   return fitToCap(p, lot);
@@ -99,16 +99,16 @@ export function theatre(lot: Lot, _rng: Rng, style: Style): Piece {
 
 const CHAMFER = 3, RING = 2.5;
 
-/** Rectángulo x0..x1 × y0..y1 con la esquina SE cortada a 45° (`c`), crecido `o` hacia afuera. */
+/** Rectangle x0..x1 × y0..y1 with the southeast corner cut at 45° (`c`), grown `o` outward. */
 function chamfered(x0: number, y0: number, x1: number, y1: number, c: number, o = 0): Vec2[] {
   const k = o * (Math.SQRT2 - 1);
   return [{ x: x0 - o, y: y0 - o }, { x: x1 + o, y: y0 - o }, { x: x1 + o, y: y1 - c + k }, { x: x1 - c + k, y: y1 + o }, { x: x0 - o, y: y1 + o }];
 }
 
 /**
- * Palacio cívico: cuerpo con chaflán en la esquina SE, cornisa pesada, cubierta
- * a cuatro aguas perimetral en cuatro alas que no se pisan y, en el hueco del
- * medio, cúpula sobre tambor. Escalinata al sur con un farol a cada lado.
+ * Civic palace: body with a chamfer on the southeast corner, heavy cornice, perimeter
+ * hip roof in four wings that don't overlap and, in the middle
+ * gap, a dome on a drum. Stairway to the south with a street lamp on each side.
  */
 export function civicPalace(lot: Lot, _rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { z } = lot;
@@ -117,7 +117,7 @@ export function civicPalace(lot: Lot, _rng: Rng, style: Style): Piece {
   addBuilding(p, { kind: "poly", footprint: chamfered(x0, y0, x1, y1, CHAMFER), z, h: 12, mat: style.mat, facade, tone: style.tone }, facade);
   p.solids.push({ kind: "poly", footprint: chamfered(x0, y0, x1, y1, CHAMFER, 0.8), z: z + 12, h: 1, mat: style.trim });
   const top = z + 13;
-  // la huella va achicada 0.5: con el vuelo de hipRoof cada ala queda justa sobre su franja
+  // the footprint is shrunk by 0.5: with hipRoof's overhang each wing sits exactly on its strip
   const rings = [[x0, y0, bw, RING], [x0, y1 - RING, bw - CHAMFER, RING], [x0, y0 + RING, RING, bd - 2 * RING], [x1 - RING, y0 + RING, RING, bd - RING - CHAMFER]] as const;
   for (const [rx, ry, rw, rd] of rings) p.solids.push(...hipRoof({ x: rx + 0.5, y: ry + 0.5, w: rw - 1, d: rd - 1, z: top }, style.roof));
   const cx = x0 + bw / 2, cy = y0 + bd / 2;
@@ -132,9 +132,9 @@ export function civicPalace(lot: Lot, _rng: Rng, style: Style): Piece {
 const WING = 5, PORTICO_D = 3;
 
 /**
- * Biblioteca: galería en U (alas oeste, norte y este) alrededor de un patio con
- * baldosas y dos árboles, cerrada al sur por un pórtico bajo. La cornisa vuela
- * solo hacia afuera: el patio queda libre.
+ * Library: U-shaped gallery (west, north and east wings) around a courtyard with
+ * tiles and two trees, closed to the south by a low portico. The cornice overhangs
+ * only outward: the courtyard stays free.
  */
 export function library(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;
@@ -160,7 +160,7 @@ export function library(lot: Lot, rng: Rng, style: Style): Piece {
   return fitToCap(p, lot);
 }
 
-/** Torre de agua ornamental para un lote chico (≥ 5×5): cuatro patas, tanque, cúpula y baliza. */
+/** Ornamental water tower for a small lot (≥ 5×5): four legs, tank, dome and beacon. */
 export function waterTower(lot: Lot, _rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { z } = lot, cx = lot.x + lot.w / 2, cy = lot.y + lot.d / 2;
   for (const [dx, dy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) p.solids.push(prism(cx + dx * 1.75 - 0.2, cy + dy * 1.75 - 0.2, z, 0.4, 0.4, 9, "steel"));
@@ -173,10 +173,10 @@ export function waterTower(lot: Lot, _rng: Rng, style: Style): Piece {
 const DECK_Z = 2.2, DECK_H = 0.4, PIER_W = 1.2, ARCH_RING = 0.4, POST_STEP = 3;
 
 /**
- * Puente peatonal a lo largo de x (lote ≥ 40 × 4..6): tablero sobre tres arcos
- * de piedra entre cuatro pilas. Cada vano son seis losas verticales cuyo borde
- * inferior sigue un medio arco escalonado, achatado a la altura entre `lot.z`
- * y el tablero (con 0.4 de anillo en la clave).
+ * Footbridge along x (lot ≥ 40 × 4..6): deck over three stone arches
+ * between four piers. Each span is six vertical slabs whose lower
+ * edge follows a stepped half arch, flattened to the height between `lot.z`
+ * and the deck (with 0.4 of ring at the keystone).
  */
 export function footbridge(lot: Lot, _rng: Rng, _style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot, deck = z + DECK_Z;
@@ -185,7 +185,7 @@ export function footbridge(lot: Lot, _rng: Rng, _style: Style): Piece {
   for (let i = 0; i < 4; i++) p.solids.push(prism(x + i * (span + PIER_W), y, z, PIER_W, d, DECK_Z, "stone"));
   for (let i = 0; i < 3; i++) p.solids.push(...stoneArch(x + PIER_W + i * (span + PIER_W), y, span, d, deck, (s) => z + rise * s));
   const top = deck + DECK_H;
-  const posts = Math.ceil((w - 0.3) / POST_STEP), step = (w - 0.3) / posts; // de punta a punta, cada 3 o menos
+  const posts = Math.ceil((w - 0.3) / POST_STEP), step = (w - 0.3) / posts; // from end to end, every 3 or less
   for (const ry of [y + 0.5, y + d - 0.8]) for (let i = 0; i <= posts; i++) p.solids.push(prism(x + i * step, ry, top, 0.3, 0.3, 1, "steel"));
   p.accents.push(...garland([v3(x, y + d - 0.65, deck + 1.2), v3(x + w, y + d - 0.65, deck + 1.2)]));
   p.landmarkTop = v3(x + w / 2, y + d / 2, top + 1);

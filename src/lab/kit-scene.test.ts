@@ -7,7 +7,7 @@ import { KIT_LOT, KIT_STEP, kitScene } from "./kit-scene";
 
 describe("escena del lab del kit", () => {
   it("un lote por receta, una fila por familia en el orden del registro, paso 30×24", () => {
-    const { lots } = kitScene(7, "centro");
+    const { lots } = kitScene(7, "downtown");
     expect(lots.map((l) => l.name)).toEqual(RECIPES.map((r) => r.name));
     const families = [...new Set(RECIPES.map((r) => r.family))];
     RECIPES.forEach((r, i) => {
@@ -17,9 +17,9 @@ describe("escena del lab del kit", () => {
   });
 
   it("los lotes estándar de receta sin ground llevan un zócalo prisma paving de 24×18×PLINTH_H en su origen", () => {
-    const { solids, lots } = kitScene(7, "centro");
+    const { solids, lots } = kitScene(7, "downtown");
     // mismo lote y rng que kitScene: algunas recetas traen ground según el seed (courtyardO)
-    const hasGround = (i: number): boolean => RECIPES[i]!.recipe({ x: lots[i]!.x, y: lots[i]!.y, w: KIT_LOT.w, d: KIT_LOT.d, z: PLINTH_H, open: ["s", "e"], maxH: 24 }, createRng(7 * 1000 + i), STYLES.centro).ground.length > 0;
+    const hasGround = (i: number): boolean => RECIPES[i]!.recipe({ x: lots[i]!.x, y: lots[i]!.y, w: KIT_LOT.w, d: KIT_LOT.d, z: PLINTH_H, open: ["s", "e"], maxH: 24 }, createRng(7 * 1000 + i), STYLES.downtown).ground.length > 0;
     const plain = lots.filter((l, i) => !LAB_LOTS[l.name] && !hasGround(i));
     expect(plain.length).toBeLessThan(lots.length); // campus y eatenRuin traen ground
     for (const l of plain) {
@@ -29,7 +29,7 @@ describe("escena del lab del kit", () => {
   });
 
   it("el campus no lleva zócalo en su origen y su suelo leafDark queda a z 0.05", () => {
-    const { solids, lots } = kitScene(7, "centro");
+    const { solids, lots } = kitScene(7, "downtown");
     const l = lots.find((q) => q.name === "campus")!;
     expect(solids.some((s) => s.kind === "prism" && s.at.x === l.x && s.at.y === l.y && s.at.z === 0 && s.w === KIT_LOT.w && s.d === KIT_LOT.d)).toBe(false);
     const g = solids.find((s) => s.kind === "ground" && s.mat === "leafDark" && s.tris.every((t) => t.pts.every((p) => p.x >= l.x && p.x <= l.x + KIT_LOT.w && p.y >= l.y && p.y <= l.y + KIT_LOT.d)));
@@ -37,7 +37,7 @@ describe("escena del lab del kit", () => {
   });
 
   it("la torre de agua va en un lote 6×6 centrado en su celda, sobre un zócalo de 6×6", () => {
-    const { solids, lots } = kitScene(7, "civico"), l = lots.find((q) => q.name === "waterTower")!;
+    const { solids, lots } = kitScene(7, "civic"), l = lots.find((q) => q.name === "waterTower")!;
     const plinth = solids.find((s) => s.kind === "prism" && s.mat === "paving" && s.at.z === 0 && s.at.x === l.x + 9 && s.at.y === l.y + 6);
     expect(plinth).toMatchObject({ w: 6, d: 6, h: PLINTH_H });
     const legs = solids.filter((s) => s.kind === "prism" && s.mat === "steel" && s.h === 9);
@@ -46,7 +46,7 @@ describe("escena del lab del kit", () => {
   });
 
   it("el puente peatonal va en un lote 54×5 a z −1 sin zócalo, último de su fila, y ocupa dos celdas", () => {
-    const { solids, lots } = kitScene(7, "civico"), l = lots.find((q) => q.name === "footbridge")!;
+    const { solids, lots } = kitScene(7, "civic"), l = lots.find((q) => q.name === "footbridge")!;
     const deck = solids.find((s) => s.kind === "prism" && s.mat === "stone" && s.w === 54);
     expect(deck).toMatchObject({ at: { x: l.x, y: l.y + 6.5 + 0.5 } });
     expect(deck?.kind === "prism" && Math.abs(deck.at.z - 1.2) < 1e-9).toBe(true);
@@ -56,9 +56,9 @@ describe("escena del lab del kit", () => {
   });
 
   it("el seed y el estilo cambian la escena; el mismo par la repite", () => {
-    const a = JSON.stringify(kitScene(7, "centro"));
-    expect(JSON.stringify(kitScene(7, "centro"))).toBe(a);
-    expect(JSON.stringify(kitScene(8, "centro"))).not.toBe(a);
-    expect(JSON.stringify(kitScene(7, "residencial"))).not.toBe(a); // trim stone: cambian losas y cornisas
+    const a = JSON.stringify(kitScene(7, "downtown"));
+    expect(JSON.stringify(kitScene(7, "downtown"))).toBe(a);
+    expect(JSON.stringify(kitScene(8, "downtown"))).not.toBe(a);
+    expect(JSON.stringify(kitScene(7, "residential"))).not.toBe(a); // trim stone: cambian losas y cornisas
   });
 });

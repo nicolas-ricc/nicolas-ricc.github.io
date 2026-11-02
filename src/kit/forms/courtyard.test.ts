@@ -6,7 +6,7 @@ import { RECIPES, recipe } from "../index";
 import { STYLES } from "../styles";
 import type { Lot, Piece } from "../types";
 
-/** Lote útil de la ciudad, el del lab y el mínimo que toda receta tiene que aguantar. */
+/** Usable lot of the city, the lab's, and the minimum every recipe has to withstand. */
 const LOTS: Lot[] = [
   { x: 1.5, y: 1.5, w: 21, d: 15, z: 0, open: ["s"], maxH: 24 },
   { x: 0, y: 0, w: 24, d: 18, z: 0, open: ["s", "e"], maxH: 24 },
@@ -16,7 +16,7 @@ const SEEDS = Array.from({ length: 20 }, (_, i) => i + 1);
 const PATIOS = ["courtyardO", "courtyardU", "courtyardC", "patioResidential"] as const;
 const TOL = 1e-6;
 
-/** Los intervalos se solapan de verdad (tocarse en el borde no cuenta). */
+/** The intervals truly overlap (touching at the edge doesn't count). */
 const overlaps = (a0: number, a1: number, b0: number, b1: number): boolean => Math.min(a1, b1) - Math.max(a0, b0) > TOL;
 const overlapsXY = (a: Bounds, b: Bounds): boolean => overlaps(a.min.x, a.max.x, b.min.x, b.max.x) && overlaps(a.min.y, a.max.y, b.min.y, b.max.y);
 const rectBounds = (r: Rect): Bounds => ({ min: { x: r.x, y: r.y, z: 0 }, max: { x: r.x + r.w, y: r.y + r.d, z: 0 } });
@@ -26,11 +26,11 @@ const isBench = (s: Solid): boolean => s.kind === "prism" && s.mat === "paving" 
 const cones = (p: Piece): Solid[] => p.solids.filter((s) => s.kind === "cone");
 
 function runs(name: string, fn: (p: Piece, lot: Lot) => void): void {
-  for (const lot of LOTS) for (const seed of SEEDS) fn(recipe(name)(lot, createRng(seed), STYLES.residencial), lot);
+  for (const lot of LOTS) for (const seed of SEEDS) fn(recipe(name)(lot, createRng(seed), STYLES.residential), lot);
 }
 
-describe("kit: familia courtyard", () => {
-  it("registra O, U, C y patio residencial, ninguna landmark", () => {
+describe("kit: courtyard family", () => {
+  it("registers O, U, C and residential courtyard, none a landmark", () => {
     const defs = RECIPES.filter((r) => r.family === "courtyard");
     expect(defs.map((r) => r.name)).toEqual([...PATIOS]);
     expect(defs.some((r) => r.landmark)).toBe(false);
@@ -38,7 +38,7 @@ describe("kit: familia courtyard", () => {
 
   for (const name of PATIOS) {
     describe(name, () => {
-      it("las alas no se solapan en planta", () => {
+      it("the wings don't overlap in plan", () => {
         runs(name, (p) => {
           const bs = wings(p).map(bounds);
           expect(bs.length).toBeGreaterThanOrEqual(2);
@@ -46,7 +46,7 @@ describe("kit: familia courtyard", () => {
         });
       });
 
-      it("publica un patio de medidas positivas que no pisa ningún ala", () => {
+      it("publishes a courtyard with positive dimensions that doesn't overlap any wing", () => {
         runs(name, (p) => {
           expect(p.courtyard).toBeDefined();
           const c = p.courtyard!;
@@ -56,7 +56,7 @@ describe("kit: familia courtyard", () => {
         });
       });
 
-      it("todo árbol y todo banco cae dentro del patio", () => {
+      it("every tree and every bench falls inside the courtyard", () => {
         runs(name, (p) => {
           for (const s of [...cones(p), ...p.solids.filter(isBench)]) expect(inside(bounds(s), p.courtyard!)).toBe(true);
         });
@@ -64,7 +64,7 @@ describe("kit: familia courtyard", () => {
     });
   }
 
-  it("courtyardO: hueco de 3 en el ala sur, ninguna caja cruza el pasaje", () => {
+  it("courtyardO: gap of 3 in the south wing, no box crosses the passage", () => {
     runs("courtyardO", (p, lot) => {
       const cx = lot.x + lot.w / 2, y0 = lot.y + lot.d - 5, y1 = lot.y + lot.d;
       for (const s of p.solids) {
@@ -72,11 +72,11 @@ describe("kit: familia courtyard", () => {
         if (!overlaps(b.min.y, b.max.y, y0, y1)) continue;
         expect(overlaps(b.min.x, b.max.x, cx - 1.5, cx + 1.5)).toBe(false);
       }
-      expect(wings(p)).toHaveLength(5); // norte, este, oeste y el ala sur partida en dos
+      expect(wings(p)).toHaveLength(5); // north, east, west and the south wing split in two
     });
   });
 
-  it("courtyardO: patio con baldosas paving como ground o verde con 2..3 árboles; las dos variantes salen", () => {
+  it("courtyardO: courtyard with paving tiles as ground or green with 2..3 trees; both variants occur", () => {
     let tiled = 0, green = 0;
     runs("courtyardO", (p) => {
       if (p.ground.length > 0) { tiled++; expect(p.ground.every((g) => g.mat === "paving")).toBe(true); expect(cones(p)).toHaveLength(0); }
@@ -86,32 +86,32 @@ describe("kit: familia courtyard", () => {
     expect(green).toBeGreaterThan(0);
   });
 
-  it("courtyardU: abierta hacia open[0] (sur sin open), dos árboles y un banco", () => {
+  it("courtyardU: open toward open[0] (south without open), two trees and a bench", () => {
     for (const open of [["e"], ["s"], ["n"], ["w"], []] as const) for (const seed of SEEDS) {
       const lot: Lot = { x: 0, y: 0, w: 21, d: 15, z: 0, open: [...open], maxH: 24 }, side = open[0] ?? "s";
-      const p = recipe("courtyardU")(lot, createRng(seed), STYLES.centro), c = p.courtyard!;
+      const p = recipe("courtyardU")(lot, createRng(seed), STYLES.downtown), c = p.courtyard!;
       expect(wings(p)).toHaveLength(3);
       const edge = { s: c.y + c.d === lot.y + lot.d, n: c.y === lot.y, e: c.x + c.w === lot.x + lot.w, w: c.x === lot.x }[side];
       expect(edge).toBe(true);
       expect(cones(p)).toHaveLength(2);
       const benches = p.solids.filter(isBench);
       expect(benches).toHaveLength(1);
-      for (const c of cones(p)) expect(overlapsXY(bounds(c), bounds(benches[0]!))).toBe(false); // ningún árbol sobre el banco
+      for (const c of cones(p)) expect(overlapsXY(bounds(c), bounds(benches[0]!))).toBe(false); // no tree on the bench
     }
   });
 
-  it("courtyardC: cinco alas y publica el patio sur", () => {
+  it("courtyardC: five wings and publishes the south courtyard", () => {
     runs("courtyardC", (p, lot) => {
       expect(wings(p)).toHaveLength(5);
       expect(p.courtyard!.y).toBeGreaterThan(lot.y + lot.d / 2);
     });
   });
 
-  it("patioResidential: alas de 4.5 con hip de style.roof cada una, 2..4 árboles, sin pasaje", () => {
+  it("patioResidential: wings of 4.5 each with a style.roof hip, 2..4 trees, no passage", () => {
     runs("patioResidential", (p) => {
       const ws = wings(p);
       expect(ws).toHaveLength(4);
-      for (const w of ws) { const b = bounds(w); expect(Math.abs(b.max.x - b.min.x - 4.5) < TOL || Math.abs(b.max.y - b.min.y - 4.5) < TOL).toBe(true); expect(w.mat).toBe("plaster"); } // el ancho del ala (su lado corto o, en lotes chicos, el que cruza el anillo)
+      for (const w of ws) { const b = bounds(w); expect(Math.abs(b.max.x - b.min.x - 4.5) < TOL || Math.abs(b.max.y - b.min.y - 4.5) < TOL).toBe(true); expect(w.mat).toBe("plaster"); } // the wing's width (its short side or, in small lots, the one that crosses the ring)
       expect(p.solids.filter((s) => s.kind === "prism" && s.roof === "hip" && s.mat === "terracotta")).toHaveLength(4);
       expect(cones(p).length).toBeGreaterThanOrEqual(2);
       expect(cones(p).length).toBeLessThanOrEqual(4);

@@ -6,10 +6,10 @@ import { CURVED } from "./forms/curved";
 import { LANDMARKS } from "./forms/landmarks";
 import type { Recipe, RecipeDef } from "./types";
 
-/** Todas las recetas del kit. Cada familia nueva agrega su línea; el test genérico (kit.test.ts) la cubre al registrarse. */
+/** All the kit's recipes. Each new family adds its line; the generic test (kit.test.ts) covers it once registered. */
 export const RECIPES: readonly RecipeDef[] = [...MODERN, ...COURTYARD, ...LOWRISE, ...COMPOSITE, ...CURVED, ...LANDMARKS];
 
-/** Lote propio de las recetas que no van en el lote estándar: lo usan el lab y el test genérico. `z`: dónde apoya (el puente, en el agua del estuario). */
+/** Own lot for the recipes that don't use the standard lot: the lab and the generic test use it. `z`: where it rests (the bridge, in the estuary water). */
 export const LAB_LOTS: Readonly<Record<string, { w: number; d: number; z?: number }>> = {
   waterTower: { w: 6, d: 6 },
   footbridge: { w: 54, d: 5, z: -1 },
@@ -17,6 +17,6 @@ export const LAB_LOTS: Readonly<Record<string, { w: number; d: number; z?: numbe
 
 export function recipe(name: string): Recipe {
   const def = RECIPES.find((r) => r.name === name);
-  if (!def) throw new Error(`receta desconocida: ${name}`);
+  if (!def) throw new Error(`unknown recipe: ${name}`);
   return def.recipe;
 }

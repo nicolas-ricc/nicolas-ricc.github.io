@@ -267,7 +267,7 @@ describe("city", () => {
 
   it("placed: una pieza por manzana asignada, con el barrio, la receta y el primer sólido de la pieza", () => {
     const s = scene(), expected = assign(createRng(7), createRng(8));
-    expect(s.placed.map((p) => [p.placed.block.x, p.placed.block.y, p.placed.barrio, p.placed.recipe])).toEqual(expected.map((p) => [p.block.x, p.block.y, p.barrio, p.recipe]));
+    expect(s.placed.map((p) => [p.placed.block.x, p.placed.block.y, p.placed.neighborhood, p.placed.recipe])).toEqual(expected.map((p) => [p.block.x, p.block.y, p.neighborhood, p.recipe]));
     for (const { piece, solidOffset } of s.placed) {
       expect(piece.solids.length).toBeGreaterThan(0);
       expect(s.solids[solidOffset]).toBe(piece.solids[0]);

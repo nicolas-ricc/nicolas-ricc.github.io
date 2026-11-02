@@ -138,7 +138,7 @@ export function tech(rng: Rng): TechScene {
     switch (kinds[i]) {
       case "tower": tower(solids, accents, signs, crowns, towers, rng, b); break;
       case "campus": {
-        const p = campus({ x: b.x + SIDEWALK, y: b.y + SIDEWALK, w: b.w - 2 * SIDEWALK, d: b.d - 2 * SIDEWALK, z: 0, open: [], maxH: MAX_TECH_H }, rng, STYLES.distrito);
+        const p = campus({ x: b.x + SIDEWALK, y: b.y + SIDEWALK, w: b.w - 2 * SIDEWALK, d: b.d - 2 * SIDEWALK, z: 0, open: [], maxH: MAX_TECH_H }, rng, STYLES.district);
         solids.push(...p.solids); ground.push(...p.ground); accents.push(...p.accents);
         break;
       }
