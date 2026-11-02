@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
@@ -330,5 +330,24 @@ describe("convención de tests sin Pixi (#103, #168)", () => {
     const paths = [...set.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
     expect(paths.length).toBeGreaterThan(0);
     for (const p of paths) expect(sec).toContain(p);
+  });
+});
+
+describe("README names both plan folders (#204)", () => {
+  const para = readme.split(/\n\s*\n/).find((p) => p.includes("docs/superpowers/specs/") && p.includes("Planes en")) ?? "";
+  it("names docs/plans/ as the agent runs' folder and docs/superpowers/plans/", () => {
+    expect(para).toContain("`docs/plans/` (corridas de agentes)");
+    expect(para).toContain("`docs/superpowers/plans/`");
+  });
+  it("drops the old single-folder sentence", () => {
+    expect(readme).not.toContain("plan en `docs/superpowers/plans/`");
+  });
+  it("every plan folder it names exists and holds plans", () => {
+    const dirs = [...para.matchAll(/`(docs\/[\w/]*plans\/)`/g)].map((m) => m[1]);
+    expect(dirs).toEqual(["docs/plans/", "docs/superpowers/plans/"]);
+    for (const d of dirs) {
+      expect(existsSync(`${ROOT}${d}`), d).toBe(true);
+      expect(readdirSync(`${ROOT}${d}`).some((f) => f.endsWith(".md")), d).toBe(true);
+    }
   });
 });
