@@ -101,7 +101,7 @@ describe("índice del storybook (#187)", () => {
     const n = nav();
     expect([...n.children].map((c) => c.tagName)).toEqual(["H2", "UL", "H2", "UL"]);
     expect([...n.querySelectorAll("h2")].map((h) => h.textContent)).toEqual(["Fábrica", "Mar"]);
-    const links = [...n.querySelectorAll("ul")].map((ul) => [...ul.querySelectorAll("li > a")].map((a) => [a.getAttribute("href"), (a as HTMLElement).dataset.id, a.textContent]));
+    const links = [...n.querySelectorAll("ul")].map((ul) => [...ul.querySelectorAll<HTMLElement>("li > a")].map((a) => [a.getAttribute("href"), a.dataset.id, a.textContent]));
     expect(links).toEqual([[["#a", "a", "Alfa"]], [["#b", "b", "Beta"], ["#c", "c", "Gama"]]]);
   });
   it("con el catálogo real crea un enlace por exhibit", () => {
@@ -113,7 +113,7 @@ describe("índice del storybook (#187)", () => {
     const n = nav();
     markCurrent(n, "b");
     markCurrent(n, "c");
-    expect([...n.querySelectorAll("a[aria-current]")].map((a) => [(a as HTMLElement).dataset.id, a.getAttribute("aria-current")])).toEqual([["c", "page"]]);
+    expect([...n.querySelectorAll<HTMLElement>("a[aria-current]")].map((a) => [a.dataset.id, a.getAttribute("aria-current")])).toEqual([["c", "page"]]);
   });
 
   const rect = (top: number, bottom: number): DOMRect => ({ top, bottom }) as DOMRect;
