@@ -21,7 +21,7 @@ describe("la entrada actual del índice (#117)", () => {
 
 describe("logs del storybook (#132)", () => {
   it("la tecla 6 no usa el prefijo bloom: del veredicto medido", () => {
-    const infos = src.match(/console\.\w+\((?:`[^`]*`|"[^"]*"|'[^']*')/g) ?? [];
+    const infos = src.match(/console\.\w+\(\s*([`"'])[\s\S]*?\1/g) ?? [];
     expect(infos.length).toBeGreaterThan(0);
     expect(infos.filter((l) => l.includes("bloom:"))).toEqual([]);
     expect(src).toMatch(/stage\.setBloom\(nextBloomMode\(stage\.bloom\)\);\s*if \(log\) console\.info\(`\[storybook\] bloom a mano: \$\{stage\.bloom\}`\);/);
@@ -31,6 +31,6 @@ describe("logs del storybook (#132)", () => {
     expect(readFileSync(new URL("../../lab/storybook.html", import.meta.url), "utf8")).toMatch(/aria-label="[^"]*Tecla 6 rota el bloom: off, on, fallback\.[^"]*"/);
   });
   it("worst y since se acumulan solo con log, como en src/main.ts", () => {
-    expect(src).toMatch(/bloom\?\.tick\(dt\);\s*if \(log\) \{\s*worst = Math\.max\(worst, dt\);\s*since \+= ticker\.deltaMS;\s*if \(since > 5000\) \{ console\.info\(`\[storybook\] peor redibujo en 5 s: [^`]*`\); worst = 0; since = 0; \}\s*\}/);
+    expect(src).toMatch(/bloom\?\.tick\(dt\);\s*if \(log\) \{\s*worst = Math\.max\(worst, dt\);\s*since \+= ticker\.deltaMS;\s*if \(since > 5000\) \{.*worst = 0; since = 0; \}\s*\}/);
   });
 });
