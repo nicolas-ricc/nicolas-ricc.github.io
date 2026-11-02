@@ -96,7 +96,8 @@ animación y un panel de lectura (sólidos, caras, acentos, caja, materiales).
 El hash de la URL elige el exhibit (`#faro`); flechas (`←`/`→`, `↑`/`↓`)
 o `j`/`k` pasan al siguiente o al anterior; `g`, `h` y `a` ocultan o
 muestran suelo, sombras y acentos; `6` rota el bloom, `?bloom=` lo fuerza y
-`?speed=` escala el reloj de las animaciones hasta 100 (`?speed=0` lo congela; por encima de 100 vale 1).
+`?speed=` escala el reloj de las animaciones hasta 100 (`?speed=0` lo
+congela; por encima de 100 vale 1).
 
 El bloom de las luces no entra en el primer dibujo: el sitio y el lab lo
 activan después, en una tarea diferida (`attachBloom`,

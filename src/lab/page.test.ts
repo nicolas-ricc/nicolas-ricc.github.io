@@ -106,9 +106,9 @@ describe("?speed= con tope (#128)", () => {
     expect(speedFromSearch("?speed=100abc")).toBe(1);
   });
   it("la ayuda documenta el tope", () => {
-    expect(pageSrc).toMatch(/\?speed=.*100/);
-    expect(readFileSync(`${ROOT}src/lab/storybook.ts`, "utf8")).toMatch(/\?speed=[\s\S]{0,80}100/);
-    expect(readFileSync(`${ROOT}README.md`, "utf8")).toMatch(/`\?speed=`[^\n]*\n?[^\n]*100/);
+    expect(pageSrc).toMatch(new RegExp(String.raw`\?speed=.*${MAX_SPEED}`));
+    expect(readFileSync(`${ROOT}src/lab/storybook.ts`, "utf8")).toMatch(new RegExp(String.raw`\?speed=[\s\S]{0,80}${MAX_SPEED}`));
+    expect(readFileSync(`${ROOT}README.md`, "utf8")).toMatch(new RegExp(String.raw`\`\?speed=\`[^\n]*\n?[^\n]*${MAX_SPEED}`));
   });
   it.each([false, true])("a velocidad máxima un tick largo de los animadores termina pronto (reducedMotion %s)", (reducedMotion) => {
     const { animators } = assembleWorld(undefined, { reducedMotion });
