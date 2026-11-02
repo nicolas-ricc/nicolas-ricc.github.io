@@ -119,7 +119,7 @@ function barge(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void 
   for (const dx of [1.5, 35.5]) for (const dy of [-2.8, 2.8]) solids.push(k.cyl(dx, dy, top, 0.3, 0.5, "steel")); // bitas
   // empujador pegado a la popa, con proa cuadrada
   const stern = -PUSHER_LEN, house = stern + 2.5;
-  solids.push(k.hull(stern, PUSHER_LEN, PUSHER_BEAM, PUSHER_H, 0, "hullBlue"), k.box(-5.5, -PUSHER_BEAM / 2, 5.5, PUSHER_BEAM, -0.9, PUSHER_H - 0.05, "hullBlue"));
+  solids.push(k.hull(stern, PUSHER_LEN, PUSHER_BEAM, PUSHER_H, 0, "hullBlue"), k.box(-5.5, -PUSHER_BEAM / 2, 5.5, PUSHER_BEAM, -0.9, PUSHER_H - 0.05, "hullBlue")); // el bloque de proa va de 0.1 sobre el agua hasta pDeck
   const pDeck = WATER_Z + PUSHER_H + 0.05; // tope del bloque de proa del empujador
   solids.push(k.box(-1.2, -3, 1.2, 1.2, pDeck, 1.6, "whitewash"), k.box(-1.2, 1.8, 1.2, 1.2, pDeck, 1.6, "whitewash")); // pechos de empuje, sobre la barcaza
   solids.push(k.box(house, -2.6, -1.6 - house, 5.2, pDeck, 1.55, "whitewash", { floors: 1, cols: 10 })); // nivel 1, la casilla larga, de la popa a la torre

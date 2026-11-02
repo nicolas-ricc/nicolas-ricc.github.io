@@ -304,10 +304,10 @@ describe("manga y francobordo del empujador (#153)", () => {
   });
   it("el bloque de proa y la cubierta del empujador quedan donde estaban, bit a bit", () => {
     const s = ship("barge", { x: 0, y: 0 }, 0), pDeck = -1 + 1.6 + 0.05;
-    const bow = s.solids.filter((x) => x.kind === "poly" && x.mat === "hullBlue");
+    const bow = s.solids.flatMap((x) => (x.kind === "poly" && x.mat === "hullBlue" ? [x] : []));
     expect(bow).toHaveLength(1);
     const p = bow[0]!, b = bounds(p);
-    expect(p.kind === "poly" && p.z).toBe(-0.9); expect(p.kind === "poly" && p.h).toBe(1.55);
+    expect(p.z).toBe(-0.9); expect(p.h).toBe(1.55);
     expect(b.min.x).toBe(-5.5); expect(b.max.x).toBe(0); expect(b.min.y).toBe(-3.5); expect(b.max.y).toBe(3.5);
     const white = s.solids.flatMap((x) => (x.kind === "poly" && x.mat === "whitewash" ? [x] : []));
     const knees = white.filter((x) => { const t = bounds(x); return !x.facade && t.min.x >= -1.5 && t.max.x <= 1e-9; });
