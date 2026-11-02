@@ -1,6 +1,7 @@
 import { convexHull, v3, type Vec2 } from "./geometry";
 import { VIEW_DIR, project } from "./project";
-import { bounds, tessellateAll, type Bounds, type Solid } from "./solids";
+import { pointInPolygon } from "../map/geo";
+import { bounds, hullRings, tessellateAll, type Bounds, type Solid } from "./solids";
 
 const EPS = 1e-6;
 
@@ -84,30 +85,28 @@ const depthKey = (b: Bounds, vx?: number, vy?: number): number =>
     : (vx * (b.min.x + b.max.x) + vy * (b.min.y + b.max.y)) / VIEW_DIR.x + (b.min.z + b.max.z) * 0.5;
 
 /**
- * El sheer levanta la caja del casco por encima de su cubierta, así que una pieza
- * apoyada en ella (base en la cubierta de crujía, dentro del casco en planta) se
- * superpone en los tres ejes y la clave de profundidad sola la manda antes del
- * casco si cae en su mitad lejana. Aquí el casco siempre va antes. Se mide contra la
- * cubierta de crujía (sin arrufo): una pieza con base más baja, sobre la proa o la popa
- * levantadas, no entra en la regla.
+ * Side of a non-hull piece against a hull: 1 after it, -1 before it, 0 no rule. All in the sort frame; `ring` is the
+ * hull's deck ring in that frame, flat `[x0, y0, x1, y1, ...]`.
+ * 0. Not a hull / other is a hull / the plan boxes do not overlap: 0.
+ * 1. Base at or above the midship deck (`hull.at.z + hull.h`, no sheer): after.
+ * 2. All four plan-box corners inside the deck ring (the piece hangs from the deck): after if it rises above the
+ *    deck, else before (sunk under it).
+ * 3. Wholly under the keel: 0.
+ * 4. Otherwise it hangs from a face: the hull box face it sits against (the axis where its centre is farthest out,
+ *    normalised by the hull half-extent) gives a normal; after if that normal points toward the view, before if away,
+ *    0 if the view is parallel to the face or the piece is centred.
  */
-function restsOnHull(hull: Solid, other: Solid, hb: Bounds, ob: Bounds): boolean {
-  if (hull.kind !== "hull" || other.kind === "hull") return false;
-  return ob.min.z >= hull.at.z + hull.h - EPS
-    && ob.min.x < hb.max.x && hb.min.x < ob.max.x && ob.min.y < hb.max.y && hb.min.y < ob.max.y;
-}
-
-/**
- * Pieza de costado: solapa el casco en planta, empieza bajo su cubierta de crujía y no queda entera bajo la quilla
- * (defensas, goma, bloques que cuadran la barcaza). Va después del casco si su centro cae del lado de la vista respecto
- * del centro del casco (proyectado en el marco) y antes si cae del lado lejano. 1 después, −1 antes, 0 no aplica: con la
- * vista paralela al eje que separa los centros no hay lado.
- */
-function besideHull(hull: Solid, other: Solid, hb: Bounds, ob: Bounds, vx: number, vy: number): number {
+function hullSide(hull: Solid, other: Solid, hb: Bounds, ob: Bounds, ring: number[], vx: number, vy: number): number {
   if (hull.kind !== "hull" || other.kind === "hull") return 0;
-  if (ob.min.z >= hull.at.z + hull.h - EPS || ob.max.z <= hb.min.z + EPS) return 0;
   if (!(ob.min.x < hb.max.x && hb.min.x < ob.max.x && ob.min.y < hb.max.y && hb.min.y < ob.max.y)) return 0;
-  const t = ((ob.min.x + ob.max.x - hb.min.x - hb.max.x) * vx + (ob.min.y + ob.max.y - hb.min.y - hb.max.y) * vy) / 2;
+  const deck = hull.at.z + hull.h;
+  if (ob.min.z >= deck - EPS) return 1;
+  if (pointInPolygon(ob.min.x, ob.min.y, ring) && pointInPolygon(ob.max.x, ob.min.y, ring)
+    && pointInPolygon(ob.min.x, ob.max.y, ring) && pointInPolygon(ob.max.x, ob.max.y, ring)) return ob.max.z > deck + EPS ? 1 : -1;
+  if (ob.max.z <= hb.min.z + EPS) return 0;
+  const u = (ob.min.x + ob.max.x - hb.min.x - hb.max.x) / (hb.max.x - hb.min.x);
+  const w = (ob.min.y + ob.max.y - hb.min.y - hb.max.y) / (hb.max.y - hb.min.y);
+  const t = Math.abs(u) >= Math.abs(w) ? Math.sign(u) * vx : Math.sign(w) * vy;
   return Math.abs(t) <= EPS ? 0 : Math.sign(t);
 }
 
@@ -127,8 +126,8 @@ function besideHull(hull: Solid, other: Solid, hb: Bounds, ob: Bounds, vx: numbe
  * otro. La pantalla sigue en el mundo; el desempate (`depthKey`) usa el marco, porque en el mundo
  * una pieza girada empata mal y el corte de ciclos suelta relaciones de verdad.
  *
- * Las tres reglas del casco (cubierta: `restsOnHull`; costado: `besideHull`; y el casco que separa lo que va
- * antes de lo que va después) valen con cualquier rumbo, también en las escenas estáticas.
+ * The hull rules (`hullSide`: deck, outline and face of the hull a piece hangs from; and the hull separating what
+ * goes before it from what goes after) hold at any heading, also in static scenes.
  */
 export function sortByDepth(solids: Solid[], heading = 0): Solid[] {
   const n = solids.length;
@@ -141,10 +140,12 @@ export function sortByDepth(solids: Solid[], heading = 0): Solid[] {
   const keys = heading === 0 ? bs.map((b) => depthKey(b)) : bs.map((b) => depthKey(b, vx, vy));
   // Lado de cada sólido respecto de cada casco (1 después, −1 antes): el casco separa, y lo que va antes de él va antes de lo que va después.
   const hulls = solids.flatMap((s, i) => (s.kind === "hull" ? [i] : []));
+  const rings = new Map<number, number[]>(); // deck ring of each hull in the sort frame, once per call
+  for (const k of hulls) rings.set(k, hullRings(solids[k] as Solid & { kind: "hull" }).deck.flatMap((p) => [p.x * c + p.y * sn, -p.x * sn + p.y * c]));
   const sides = solids.map((s, i) => {
     let m: Map<number, number> | null = null; // casi ningún sólido toca un casco: sin mapa no se aloca nada
     for (const k of hulls) {
-      const side = restsOnHull(solids[k]!, s, bs[k]!, bs[i]!) ? 1 : besideHull(solids[k]!, s, bs[k]!, bs[i]!, vx, vy);
+      const side = hullSide(solids[k]!, s, bs[k]!, bs[i]!, rings.get(k)!, vx, vy);
       if (side !== 0) (m ??= new Map()).set(k, side);
     }
     return m;
