@@ -334,8 +334,9 @@ describe("convención de tests sin Pixi (#103, #168)", () => {
 });
 
 describe("README names both plan folders (#204)", () => {
-  const para = readme.split(/\n\s*\n/).find((p) => p.includes("docs/superpowers/specs/") && p.includes("Planes en")) ?? "";
+  const para = readme.split(/\n\s*\n/).find((p) => p.includes("docs/superpowers/specs/") && p.includes("plans/")) ?? "";
   it("names docs/plans/ as the agent runs' folder and docs/superpowers/plans/", () => {
+    expect(para, "README paragraph naming the plan folders").not.toBe("");
     expect(para).toContain("`docs/plans/` (corridas de agentes)");
     expect(para).toContain("`docs/superpowers/plans/`");
   });

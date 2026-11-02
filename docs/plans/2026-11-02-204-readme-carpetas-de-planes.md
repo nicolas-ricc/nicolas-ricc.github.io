@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - No file under `docs/plans/` or `docs/superpowers/plans/` is moved, renamed or edited (owner's decision).
-- README copy stays in Spanish, like the rest of the README; new test names are in English (#194, as in #167 and #180).
+- README copy stays in Spanish, like the rest of the README; new test names are in English, as in #167 and #180.
 - Only the plan sentence of `README.md:12` changes; the rest of that paragraph (the `content/*.json` and `public/cv.pdf` sentences) and "Diseño en `docs/superpowers/specs/`" stay as they are.
 - Commits `<type>(#204): ...`. `npm test` and `npm run typecheck` green.
 - Pipeline evals stage: Task 1 Step 1 (the failing test) is committed alone as `test(#204): evals` before implementation; implementers start at Task 1 Step 3.
@@ -30,7 +30,7 @@
 
    The parenthetical and the reason are the owner's wording ("No se mueve ningún archivo, para no romper enlaces de issues y PRs"). `docs/superpowers/plans/` gets no label: its plans overlap in date with `docs/plans/` (e.g. `2026-10-24-wheel-cangilones.md` vs `docs/plans/2026-10-16-59-…`), so any "older"/"by hand" label would be a guess.
 2. **No other file is touched.** `CLAUDE.md` and `AGENTS.md` do not mention plan folders; the `.agents/skills/` default (`docs/superpowers/plans/`) is not part of the repo (AGENTS.md: "never commit them"). Source comments pointing at `docs/plans/…` files (`src/scenes/boiler-house.ts:13` etc.) are already correct.
-3. **Test locates the sentence by the paragraph containing `docs/superpowers/specs/` and "Planes en"**, not by line number, so reflowing the paragraph does not break it.
+3. **Test locates the sentence by the paragraph containing `docs/superpowers/specs/` and `plans/`**, not by line number, so reflowing the paragraph does not break it.
 
 ## Review Focus
 
@@ -55,8 +55,9 @@
 
 ```ts
 describe("README names both plan folders (#204)", () => {
-  const para = readme.split(/\n\s*\n/).find((p) => p.includes("docs/superpowers/specs/") && p.includes("Planes en")) ?? "";
+  const para = readme.split(/\n\s*\n/).find((p) => p.includes("docs/superpowers/specs/") && p.includes("plans/")) ?? "";
   it("names docs/plans/ as the agent runs' folder and docs/superpowers/plans/", () => {
+    expect(para, "README paragraph naming the plan folders").not.toBe("");
     expect(para).toContain("`docs/plans/` (corridas de agentes)");
     expect(para).toContain("`docs/superpowers/plans/`");
   });
@@ -90,7 +91,7 @@ git commit -m "docs(#204): README nombra docs/plans/ y docs/superpowers/plans/"
 - **`ROOT` ends in `/`**: `src/lab/docs.test.ts:5` builds it with `fileURLToPath(new URL("../../", import.meta.url))`, so `${ROOT}docs/plans/` is a valid path. `readme` is a module-scope string (`src/lab/docs.test.ts:6`), so `para` is computed eagerly.
 - **The paragraph split is sound**: `README.md:11` and `README.md:13` are blank lines, so `para` is exactly line 12.
 - **The old sentence occurs once** (`grep -c` → 1) and "Planes en" occurs zero times, so case 2 and the `find` in case 1 flip from red to green with only the line-12 edit.
-- **Test naming**: every `describe` in `src/lab/docs.test.ts` ends with `(#NNN)`. The title is in English per #194; the rejected alternative was a Spanish title like its neighbours.
+- **Test naming**: every `describe` in `src/lab/docs.test.ts` ends with `(#NNN)`. The title is in English, as in #167 and #180; the rejected alternative was a Spanish title like its neighbours.
 - **The order is pinned by the copy, not by a requirement**: `toEqual` pins the order of decision 1. The rejected alternative was a set comparison, which would also accept a third or duplicated folder. A mistyped folder (e.g. no trailing slash) shows up as a length mismatch in the `toEqual` diff, and that diff names what was extracted.
 - **Step 6 also commits the test file** when the evals commit did not already include it.
 - **The commit types `plan`, `test`, `docs` and the `evals` subject** come from the pipeline brief; the `test(#NNN):` and `docs(#NNN):` forms already appear in `git log` (e.g. `1749776`, `7412bdb`).
