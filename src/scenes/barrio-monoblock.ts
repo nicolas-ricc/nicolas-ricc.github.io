@@ -1,4 +1,4 @@
-import { v3, type Vec2, type Vec3 } from "../iso/geometry";
+import { v3, type Vec2 } from "../iso/geometry";
 import { occluded } from "../iso/project";
 import type { Plate } from "../iso/plate";
 import type { Solid } from "../iso/solids";

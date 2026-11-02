@@ -3,7 +3,7 @@ import { isBehind, overlaps, screenBounds } from "../iso/depth";
 import { v3 } from "../iso/geometry";
 import type { Bounds, Solid } from "../iso/solids";
 import type { Rng } from "../map/seed";
-import { PLINTH_H, campus, prism, tiles } from "./city-pieces";
+import { PLINTH_H, campus, prism } from "./city-pieces";
 import { LIT_FLOOR, SIDEWALK, TOWER, TOWER_FLOORS, TOWER_H, type Block, type Rect } from "./city-grid";
 import { towerCrane } from "./pieces";
 
