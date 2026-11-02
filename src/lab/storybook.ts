@@ -44,6 +44,7 @@ function renderReadout(r: Readout): void {
   const b = r.box;
   const rows: [string, string][] = [
     ["Sólidos", String(r.solids)],
+    ["Suelo", String(r.ground)],
     ["Caras", String(r.faces)],
     ["Acentos", String(r.accents)],
     ["Caja x", b ? `${n1(b.min.x)} … ${n1(b.max.x)}` : "—"],

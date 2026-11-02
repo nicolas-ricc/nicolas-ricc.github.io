@@ -92,7 +92,7 @@ estructura a la vez, recortado del mundo por su caja (o armado solo en el
 origen, para las piezas reubicables como barcos y grúa torre; la estación
 son `#estacion` y `#paso-a-nivel`, regiones con el tren animado, y `#tren`, la
 pieza con las luces que se invierten cada 4 s), con su
-animación y un panel de lectura (sólidos, caras, acentos, caja, materiales).
+animación y un panel de lectura (sólidos, suelo, caras, acentos, caja, materiales).
 El hash de la URL elige el exhibit (`#faro`); flechas (`←`/`→`, `↑`/`↓`)
 o `j`/`k` pasan al siguiente o al anterior; `g`, `h` y `a` ocultan o
 muestran suelo, sombras y acentos; `6` rota el bloom, `?bloom=` lo fuerza y
