@@ -27,11 +27,17 @@ export const WRECK = { x: 490, y: 262, heading: Math.PI / 6 } as const;
 const WATER_Z = -1;
 export const DRUM_R0 = 3.2;
 const DRUMS = 6, DRUM_H = 4, DRUM_STEP = 0.2, GALLERY_H = 0.6, LANTERN_H = 3, CAP_H = 2;
+/** Cara superior del disco de la galería. */
+const DECK_TOP_Z = LIGHTHOUSE.z + DRUMS * DRUM_H + GALLERY_H;
 /** Centro de la linterna, de donde nace el haz (sea-anim.ts). */
-export const LANTERN_Z = LIGHTHOUSE.z + DRUMS * DRUM_H + GALLERY_H + LANTERN_H / 2;
+export const LANTERN_Z = DECK_TOP_Z + LANTERN_H / 2;
 const DRUM_TOP_R = DRUM_R0 - (DRUMS - 1) * DRUM_STEP;
-/** Galería de neón y postes de la baranda: último tambor + 0.5. Las luces van a la altura de la plataforma (lantern.z − 2). */
+/** Galería de neón y postes de la baranda: último tambor + 0.5. */
 export const GALLERY_R = DRUM_TOP_R + 0.5;
+/** Postes de la baranda; una luz de neón por poste. */
+export const GALLERY_POSTS = 8;
+/** Luces de neón de la galería: 0.5 bajo la cara superior del disco, no siguen a la linterna. */
+export const GALLERY_LIGHT_Z = DECK_TOP_Z - 0.5;
 /** Sección y altura de los postes de la baranda: medidas propias, no siguen al fuste. */
 export const POST_W = 0.3, POST_H = 1.2;
 /** El disco sobresale media sección de poste por fuera de la baranda. */
@@ -54,7 +60,7 @@ function lighthouse(out: Solid[]): Vec3 {
   let z = LIGHTHOUSE.z;
   for (let i = 0; i < DRUMS; i++) { out.push(cyl(x, y, z, DRUM_R0 - i * DRUM_STEP, DRUM_H, i % 2 === 0 ? "whitewash" : "rust")); z += DRUM_H; }
   out.push(cyl(x, y, z, GALLERY_DECK_R, GALLERY_H, "steel")); z += GALLERY_H;
-  for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; out.push(prism(x + GALLERY_R * Math.cos(a) - POST_W / 2, y + GALLERY_R * Math.sin(a) - POST_W / 2, z, POST_W, POST_W, POST_H, "steel")); }
+  for (let k = 0; k < GALLERY_POSTS; k++) { const a = (k / GALLERY_POSTS) * Math.PI * 2; out.push(prism(x + GALLERY_R * Math.cos(a) - POST_W / 2, y + GALLERY_R * Math.sin(a) - POST_W / 2, z, POST_W, POST_W, POST_H, "steel")); }
   out.push(cyl(x, y, z, LANTERN_R, LANTERN_H, "glass", 8));
   const lantern = v3(x, y, LANTERN_Z);
   z += LANTERN_H;
@@ -167,6 +173,6 @@ export function sea(rng: Rng): SeaScene {
   path(ground);
   rocks(solids, rng);
   const buoys = buoysAndWreck(solids, ground, accents);
-  const gallery = Array.from({ length: 8 }, (_, k) => { const a = (k / 8) * Math.PI * 2; return v3(LIGHTHOUSE.x + GALLERY_R * Math.cos(a), LIGHTHOUSE.y + GALLERY_R * Math.sin(a), lantern.z - 2); });
+  const gallery = Array.from({ length: GALLERY_POSTS }, (_, k) => { const a = (k / GALLERY_POSTS) * Math.PI * 2; return v3(LIGHTHOUSE.x + GALLERY_R * Math.cos(a), LIGHTHOUSE.y + GALLERY_R * Math.sin(a), GALLERY_LIGHT_Z); });
   return { ground, solids, accents, lantern, buoys, neon: { gallery, coast: COAST.map((p) => v3(p.x, p.y, COAST_Z)), keeperSign } };
 }
