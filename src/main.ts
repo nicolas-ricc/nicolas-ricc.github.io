@@ -27,16 +27,16 @@ const CONTENT: Record<ZoneId, ZoneContent> = {
 };
 
 /**
- * Dónde va cada rótulo (mundo, a nivel del suelo): centrado sobre ese punto,
- * apartado del landmark para no taparlo. Portfolio sobre el galpón largo del
- * puerto, Resume en la ciudad junto a la plaza, Blog en mar abierto.
+ * Where each label goes (world, at ground level): centered on that point,
+ * set apart from the landmark so it does not cover it. Portfolio over the long
+ * shed of the harbor, Resume in the city next to the plaza, Blog on the open sea.
  */
 const LABEL_AT: Record<ZoneId, Vec3> = {
   portfolio: v3(66, -128, 0),
   cv: v3(76, 446, 0),
   blog: v3(633, 145, 0),
 };
-/** Separación mínima (px) entre un rótulo y el borde del host. */
+/** Minimum gap (px) between a label and the edge of the host. */
 const LABEL_MARGIN = 8;
 const clamp = (n: number, lo: number, hi: number): number => Math.min(Math.max(n, lo), Math.max(lo, hi));
 
@@ -54,15 +54,15 @@ async function boot(): Promise<void> {
   const { scene, animators } = assembleWorld(undefined, { reducedMotion: reduced });
   const stage = buildStage(scene, animators);
   app.stage.addChild(stage.container);
-  if (log) console.info(`[mapa] primer dibujo: ${(performance.now() - t0).toFixed(1)} ms, ${stage.staticCount} polígonos estáticos`);
+  if (log) console.info(`[mapa] first draw: ${(performance.now() - t0).toFixed(1)} ms, ${stage.staticCount} static polygons`);
 
   let current: ZoneId | null = zoneFromPath(location.pathname);
-  /** zona bajo el puntero o con un link enfocado; en vista activa manda `current` */
+  /** zone under the pointer or with a focused link; in an active view `current` wins */
   let hot: ZoneId | null = null;
 
   const labels = new Map<ZoneId, HTMLAnchorElement>();
   for (const a of document.querySelectorAll<HTMLAnchorElement>("#zonas a[data-zone]")) {
-    // validar contra ZONE_IDS en vez de castear: un data-zone espurio no entra al mapa
+    // validate against ZONE_IDS instead of casting: a stray data-zone does not enter the map
     const id = a.dataset.zone;
     if ((ZONE_IDS as readonly string[]).includes(id ?? "")) labels.set(id as ZoneId, a);
   }
@@ -70,7 +70,7 @@ async function boot(): Promise<void> {
   const placeLabels = (v: View): void => {
     for (const [id, a] of labels) {
       const p = project(LABEL_AT[id]);
-      // si su lugar cae fuera del host (pantallas angostas), el rótulo se pega al borde más cercano: siempre visible y enfocable
+      // if its spot falls outside the host (narrow screens), the label sticks to the nearest edge: always visible and focusable
       const hw = a.offsetWidth / 2 + LABEL_MARGIN, hh = a.offsetHeight / 2 + LABEL_MARGIN;
       const sx = clamp(p.x * v.scale + v.x, hw, host.clientWidth - hw), sy = clamp(p.y * v.scale + v.y, hh, host.clientHeight - hh);
       a.style.transform = `translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px) translate(-50%, -50%)`;
@@ -100,15 +100,15 @@ async function boot(): Promise<void> {
   }
 
   function navigate(id: ZoneId | null, push: boolean): void {
-    // clic sobre la zona ya activa (o "volver" estando en el mapa): sin entrada de
-    // historial duplicada. popstate no pasa por acá: setea current antes de render.
+    // click on the already active zone (or "back" while on the map): no duplicate
+    // history entry. popstate does not come through here: it sets current before render.
     if (id === current) return;
     current = id;
     if (push) history.pushState({ zone: id }, "", pathForZone(id));
     render(id, true);
   }
 
-  // hover y clic sobre el canvas: puntero → mundo a z 0 → zona por geografía
+  // hover and click on the canvas: pointer → world at z 0 → zone by geography
   const zoneUnder = (e: PointerEvent | MouseEvent): ZoneId => {
     const r = app.canvas.getBoundingClientRect();
     const p = pointerToWorld(camera.state, e.clientX - r.left, e.clientY - r.top);
@@ -119,7 +119,7 @@ async function boot(): Promise<void> {
   app.canvas.addEventListener("pointerleave", () => { hot = null; refreshFocus(); });
   app.canvas.addEventListener("click", (e) => navigate(zoneUnder(e), true));
 
-  // los links del nav son los controles accesibles: foco o hover encienden su zona
+  // the nav links are the accessible controls: focus or hover light up their zone
   for (const [id, a] of labels) {
     a.addEventListener("mouseenter", () => { hot = id; refreshFocus(); });
     a.addEventListener("focus", () => { hot = id; refreshFocus(); });
@@ -128,7 +128,7 @@ async function boot(): Promise<void> {
     a.addEventListener("click", (e) => { e.preventDefault(); navigate(id, true); });
   }
 
-  // El host cambia de tamaño por CSS durante la transición: seguirlo frame a frame.
+  // The host resizes through CSS during the transition: follow it frame by frame.
   new ResizeObserver(() => {
     app.resize();
     const t = targetFor(current);
@@ -151,26 +151,26 @@ async function boot(): Promise<void> {
     if (log) {
       worst = Math.max(worst, dt);
       since += ticker.deltaMS;
-      if (since > 5000) { console.info(`[mapa] peor redibujo en 5 s: ${worst.toFixed(2)} ms`); worst = 0; since = 0; }
+      if (since > 5000) { console.info(`[mapa] worst redraw in 5 s: ${worst.toFixed(2)} ms`); worst = 0; since = 0; }
     }
   });
 
-  // El primer render (sobre todo en una carga directa de /cv/) no debe animar: la clase
-  // .zone recién se aplica acá, después del primer paint, y la grilla animaría sola.
+  // The first render (above all on a direct load of /cv/) must not animate: the .zone
+  // class is only applied here, after the first paint, and the grid would animate on its own.
   const root = document.documentElement;
   root.classList.add("no-anim");
   render(current, false);
   // bloom attaches in the task after Pixi's first real render: the first frame is served without the filter
   afterFirstRender(app.renderer.runners.postrender, () => { bloom = attachBloom({ app, stage, log, prefix: "mapa" }); });
-  // Los rótulos estaban ocultos (ver #zonas a en style.css) hasta este primer
-  // jumpTo, que ya los colocó en su lugar: recién ahora se muestran.
+  // The labels were hidden (see #zonas a in style.css) until this first
+  // jumpTo, which already put them in place: only now are they shown.
   root.classList.add("mapa-listo");
   requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove("no-anim")));
 }
 
 boot().catch((e: unknown) => {
-  // Sin canvas (WebGL caído, init fallido) el sitio sigue siendo navegable: el CSS
-  // de .no-canvas revela el <nav id="zonas"> y el contenido prerenderizado.
+  // Without a canvas (WebGL down, failed init) the site is still navigable: the CSS
+  // of .no-canvas reveals the <nav id="zonas"> and the prerendered content.
   console.error(e);
   document.documentElement.classList.add("no-canvas");
 });

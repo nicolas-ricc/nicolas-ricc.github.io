@@ -2,21 +2,21 @@ import type { SystemRunner } from "pixi.js";
 import { BLOOM_BUDGET_MS, createBloomBudget, formatBloomVerdict } from "./bloom";
 import type { BloomMode, Stage } from "./stage";
 
-/** El llamador pasa en cada frame el tiempo de CPU de `stage.tick`, que ya mide para su log. */
+/** The caller passes in every frame the CPU time of `stage.tick`, which it already measures for its log. */
 export interface BloomProbe { tick(ms: number): void }
 
 interface BloomApp { renderer: { runners: { prerender: SystemRunner; postrender: SystemRunner } } }
 
 /**
- * Activa el bloom y mide 60 frames: tick (lo pasa el llamador) + render (`postrender − prerender`).
- * Si el promedio supera el presupuesto pasa a `fallback`. Con `force` aplica ese modo y no mide;
- * si el `Stage` ya no está en `off` (cambio a mano), lo respeta y tampoco mide.
+ * Turns the bloom on and measures 60 frames: tick (passed by the caller) + render (`postrender − prerender`).
+ * If the average exceeds the budget it switches to `fallback`. With `force` it applies that mode and does not measure;
+ * if the `Stage` is no longer `off` (changed by hand), it respects that and does not measure either.
  */
 export function attachBloom(opts: { app: BloomApp; stage: Pick<Stage, "bloom" | "setBloom">; log: boolean; prefix: string; force?: BloomMode | null }): BloomProbe {
   const { app, stage, log, prefix, force } = opts;
   if (force) {
     stage.setBloom(force);
-    if (log) console.info(`[${prefix}] bloom forzado por URL: ${force}`);
+    if (log) console.info(`[${prefix}] bloom forced by URL: ${force}`);
     return { tick() {} };
   }
   if (stage.bloom !== "off") return { tick() {} };
@@ -30,9 +30,9 @@ export function attachBloom(opts: { app: BloomApp; stage: Pick<Stage, "bloom" | 
       const v = budget.sample({ tickMs: pendingTick, renderMs: performance.now() - t0 });
       pendingTick = 0;
       if (!v) return;
-      // quitar dentro de `emit` salta al listener siguiente y rompe el loop del runner: se difiere
+      // removing inside `emit` skips the next listener and breaks the runner's loop: defer it
       queueMicrotask(() => { prerender.remove(pre); postrender.remove(post); });
-      // si el modo cambió a mano durante la medición, no se pisa
+      // if the mode was changed by hand during the measurement, it is not overwritten
       if (stage.bloom === "on") stage.setBloom(v.mode);
       if (log) console.info(`[${prefix}] bloom: ${formatBloomVerdict(v, BLOOM_BUDGET_MS)}`);
     },

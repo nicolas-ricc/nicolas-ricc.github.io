@@ -12,38 +12,38 @@ const ok = {
 };
 
 describe("validateContent", () => {
-  it("acepta contenido válido", () => {
+  it("accepts valid content", () => {
     expect(validateContent(ok)).toEqual([]);
   });
-  it("rechaza id desconocido y campos faltantes", () => {
+  it("rejects an unknown id and missing fields", () => {
     const errs = validateContent({ id: "nada", secciones: [] });
     expect(errs.some((e) => e.startsWith("id"))).toBe(true);
     expect(errs.some((e) => e.startsWith("titulo"))).toBe(true);
   });
-  it("señala el path del error anidado", () => {
+  it("points at the path of the nested error", () => {
     const bad = structuredClone(ok) as { secciones: { items: { links: { url?: string }[] }[] }[] };
     delete bad.secciones[0]!.items[0]!.links[0]!.url;
-    expect(validateContent(bad)).toEqual(["secciones[0].items[0].links[0].url: falta o no es string"]);
+    expect(validateContent(bad)).toEqual(["secciones[0].items[0].links[0].url: missing or not a string"]);
   });
-  it("valida proyectos", () => {
+  it("validates projects", () => {
     expect(validateContent({ ...ok, proyectos: [{ nombre: "A", url: "https://a" }, { nombre: "B", repo: "https://b" }] })).toEqual([]);
     expect(validateContent({ ...ok, proyectos: [{ url: "https://a" }, { nombre: "B", repo: 3 }] })).toEqual([
-      "proyectos[0].nombre: falta o no es string",
-      "proyectos[1].repo: no es string",
+      "proyectos[0].nombre: missing or not a string",
+      "proyectos[1].repo: not a string",
     ]);
   });
-  it("valida artículos", () => {
+  it("validates articles", () => {
     expect(validateContent({ ...ok, articulos: [{ titulo: "A", url: "https://a" }, { titulo: "B", url: "https://b", descripcion: "d" }] })).toEqual([]);
-    expect(validateContent({ ...ok, articulos: [{ titulo: "A", url: "https://a", descripcion: 1 }] })).toEqual(["articulos[0].descripcion: no es string"]);
+    expect(validateContent({ ...ok, articulos: [{ titulo: "A", url: "https://a", descripcion: 1 }] })).toEqual(["articulos[0].descripcion: not a string"]);
     expect(validateContent({ ...ok, articulos: [{ url: "https://a" }, { titulo: "B" }] })).toEqual([
-      "articulos[0].titulo: falta o no es string",
-      "articulos[1].url: falta o no es string",
+      "articulos[0].titulo: missing or not a string",
+      "articulos[1].url: missing or not a string",
     ]);
   });
-  it("rechaza lo que no es objeto", () => {
-    expect(validateContent(null)).toEqual(["raíz: no es un objeto"]);
+  it("rejects what is not an object", () => {
+    expect(validateContent(null)).toEqual(["root: not an object"]);
   });
-  it("los JSON del repo son válidos", () => {
+  it("the repo's JSON files are valid", () => {
     for (const c of [portfolio, cv, blog]) expect(validateContent(c)).toEqual([]);
   });
 });
@@ -61,7 +61,7 @@ describe("validateContent: pdf", () => {
   });
   it("reports both the type and the zone of a bad pdf outside cv", () => {
     for (const pdf of ["", 3]) {
-      expect(validateContent({ ...ok, pdf })).toEqual(["pdf: no es string", "pdf: only the cv zone may declare one"]);
+      expect(validateContent({ ...ok, pdf })).toEqual(["pdf: not a string", "pdf: only the cv zone may declare one"]);
     }
   });
   it("rejects a pdf whose zone id is unknown or missing", () => {
@@ -72,12 +72,12 @@ describe("validateContent: pdf", () => {
 });
 
 describe("cv.json", () => {
-  it("apunta a /cv.pdf y public/cv.pdf es un PDF", () => {
+  it("points at /cv.pdf and public/cv.pdf is a PDF", () => {
     expect(cv.pdf).toBe("/cv.pdf");
     const bytes = readFileSync(new URL("../../public/cv.pdf", import.meta.url));
     expect(bytes.subarray(0, 5).toString("latin1")).toBe("%PDF-");
   });
-  it("no trae texto fuera del PDF", () => {
+  it("has no text outside the PDF", () => {
     expect(cv).not.toHaveProperty("descripcion");
     expect(cv.secciones).toEqual([]);
     expect(JSON.stringify(cv)).not.toMatch(/pendiente/i);
@@ -85,7 +85,7 @@ describe("cv.json", () => {
 });
 
 describe("portfolio.json", () => {
-  it("es una lista de proyectos sin categorías", () => {
+  it("is a project list without categories", () => {
     expect(portfolio.secciones).toEqual([]);
     expect(portfolio).not.toHaveProperty("descripcion");
     expect(portfolio.proyectos.map((p) => p.nombre)).toEqual(["Ballotage", "Damodaran", "Hammurabi", "Map"]);
@@ -93,7 +93,7 @@ describe("portfolio.json", () => {
 });
 
 describe("blog.json", () => {
-  it("no trae título visible, copete ni secciones", () => {
+  it("has no visible title, standfirst or sections", () => {
     expect(blog).not.toHaveProperty("descripcion");
     expect(blog.secciones).toEqual([]);
   });

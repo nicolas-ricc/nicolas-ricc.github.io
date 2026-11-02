@@ -25,13 +25,17 @@ const ALLOW: Record<string, RegExp[]> = {
   "*": [/Nicolás Riccomini/g, /\[mapa\]/g],
   "src/views.ts": [],
   "src/content/types.ts": [CONTENT_KEYS],
-  "src/content/render.ts": [CONTENT_KEYS, /class="(externo|proyectos|articulos)"/g],
+  "src/content/render.ts": [CONTENT_KEYS, /class="(externo|proyectos|articulos)"/g,
+    // the PDF fallback sentence is shown to the visitor
+    /<p>Este navegador.*<\/p>/g],
   "src/content/validate.ts": [CONTENT_KEYS],
   "src/content/blog-feed.ts": [CONTENT_KEYS],
   // Spanish fixtures stand in for visitor content
-  "src/content/render.test.ts": [CONTENT_KEYS, /: "[^"]*"/g],
+  "src/content/render.test.ts": [CONTENT_KEYS, /: "[^"]*"/g, /Quién soy &(amp;)? qué hago/g, /Sin (<url>|&lt;url&gt;)/g, /¿Lenguaje &(amp;)? (<|&lt;)mundo(>|&gt;)\?/g],
   "src/content/validate.test.ts": [CONTENT_KEYS],
-  "src/content/blog-feed.test.ts": [CONTENT_KEYS, /(title|description|titulo|descripcion): ('[^']*'|"[^"]*")/g],
+  "src/content/blog-feed.test.ts": [CONTENT_KEYS, /(title|description|titulo|descripcion): ('[^']*'|"[^"]*")/g,
+    // the RSS fixture stands in for a Spanish blog post
+    /Rawls como puente/g, /¿Puede un (&amp;quot;|")velo(&amp;quot;|")/g, /dar cuenta del mundo\?/g],
   "src/style.css": [/\.(externo|proyectos|articulos)\b/g],
   // exhibit ids are the storybook URL hash, cited by the old specs (decision 2b)
   "src/lab/exhibits.ts": [/\bid: "[a-z0-9-]+"/g],

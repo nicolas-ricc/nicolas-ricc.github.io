@@ -3,9 +3,9 @@ import { v3 } from "../iso/geometry";
 import { project } from "../iso/project";
 import { BLEED, CELL, CELL_BLEED, WORLD, worldZoneAt, type WorldZone } from "../map/geo";
 
-/** Alpha del velo (color cielo) sobre una zona no enfocada. */
+/** Alpha of the veil (sky color) over an unfocused zone. */
 export const VEIL_ALPHA = 0.45;
-/** Alpha de los acentos (luces) de una zona no enfocada. */
+/** Alpha of the accents (lights) of an unfocused zone. */
 export const ACCENT_DIM = 0.35;
 export const WORLD_ZONES: readonly WorldZone[] = ["portfolio", "cv", "blog"];
 
@@ -14,9 +14,9 @@ export interface VeilCell { zone: WorldZone; x: number; y: number; size: number 
 const CORNERS = [[0, 0], [1, 0], [0, 1], [1, 1]] as const;
 
 /**
- * Celdas de contenido + sangrado, cada una en una sola zona: 18 u donde las
- * cuatro esquinas y el centro coinciden en zona, 6 u (clasificadas por su
- * centro) donde no. Es la misma verdad que el hit test (worldZoneAt).
+ * Cells of content + bleed, each in a single zone: 18 u where the
+ * four corners and the center agree on the zone, 6 u (classified by their
+ * center) where they do not. It is the same truth as the hit test (worldZoneAt).
  */
 export function veilCells(): VeilCell[] {
   const x0 = WORLD.x0 - BLEED.x, y0 = WORLD.y0 - BLEED.y, x1 = WORLD.x1 + BLEED.x, y1 = WORLD.y1 + BLEED.y;
@@ -34,10 +34,10 @@ export function veilCells(): VeilCell[] {
 export interface VeilRun { zone: WorldZone; x0: number; x1: number; y: number; h: number }
 
 /**
- * Funde en tiras las celdas de una misma fila (mismo y), mismo tamaño y misma
- * zona contiguas en x: una fila uniforme de sangrado (por ejemplo Portfolio)
- * pasa de ~70 celdas a una sola tira. No cambia la cobertura, sólo el número
- * de cuadriláteros que hay que proyectar y dibujar.
+ * Merges into strips the cells of one row (same y), same size and same
+ * zone that are contiguous in x: a uniform row of bleed (for example Portfolio)
+ * goes from ~70 cells to a single strip. It does not change the coverage, only the number
+ * of quadrilaterals to project and draw.
  */
 export function veilRuns(): VeilRun[] {
   const byRow = new Map<string, VeilCell[]>();
@@ -60,7 +60,7 @@ export function veilRuns(): VeilRun[] {
   return out;
 }
 
-/** Cada tira como cuadrilátero proyectado a z 0, agrupado por zona. Las tiras no se solapan: una Graphics por zona con alpha global no oscurece dos veces. */
+/** Each strip as a quadrilateral projected at z 0, grouped by zone. The strips do not overlap: one Graphics per zone with a global alpha does not darken twice. */
 export function veilPolygons(): Record<WorldZone, number[][]> {
   const polys: Record<WorldZone, number[][]> = { portfolio: [], cv: [], blog: [] };
   for (const r of veilRuns()) {
@@ -73,7 +73,7 @@ export function veilPolygons(): Record<WorldZone, number[][]> {
 
 export interface FocusAlphas { veil: number; accents: number }
 
-/** Objetivos de alpha por zona para un foco (hover o zona activa): las otras dos se velan y apagan sus luces. */
+/** Alpha targets per zone for a focus (hover or active zone): the other two are veiled and have their lights dimmed. */
 export function focusAlphas(focus: WorldZone | null): Record<WorldZone, FocusAlphas> {
   const out = {} as Record<WorldZone, FocusAlphas>;
   for (const z of WORLD_ZONES) {
@@ -83,16 +83,16 @@ export function focusAlphas(focus: WorldZone | null): Record<WorldZone, FocusAlp
   return out;
 }
 
-/** Zona de un acento por geografía: la posición del punto o el primer vértice del polígono. */
+/** Zone of an accent by geography: the position of the point or the first vertex of the polygon. */
 export function accentZone(a: Accent): WorldZone {
   const p = a.kind === "dot" ? a.at : a.pts[0]!;
   return worldZoneAt(p.x, p.y);
 }
 
 /**
- * Reparte luces por zona del velo: cada una con la zona donde está parada
- * (`accentZone`), salvo que la capa declare una zona (luces montadas en un
- * barco, que se velan enteras con la zona del barco).
+ * Splits lights by veil zone: each one with the zone it stands in
+ * (`accentZone`), unless the layer declares a zone (lights mounted on a
+ * ship, which are veiled entirely with the ship's zone).
  */
 export function accentsByZone(accents: readonly Accent[], zone?: WorldZone): Record<WorldZone, Accent[]> {
   const out: Record<WorldZone, Accent[]> = { portfolio: [], cv: [], blog: [] };

@@ -9,31 +9,31 @@ const rss = `<?xml version="1.0"?><rss><channel><title>Myxomatosis</title>
 </channel></rss>`;
 
 describe("parseRss", () => {
-  it("extrae items con fecha ISO y entidades decodificadas", () => {
+  it("extracts items with an ISO date and decoded entities", () => {
     expect(parseRss(rss)).toEqual([
       { title: "Rawls como puente", url: "https://myxomatosis.xyz/blog/rawls/", date: "2026-09-08", description: '¿Puede un "velo" dar cuenta del mundo?' },
       { title: "A palabras & necias", url: "https://myxomatosis.xyz/blog/necias/", date: "2026-06-01" },
     ]);
   });
-  it("devuelve vacío si no hay items", () => {
+  it("returns empty when there are no items", () => {
     expect(parseRss("<rss></rss>")).toEqual([]);
   });
 });
 
 describe("mergeBlogFeed", () => {
   const blog: ZoneContent = { id: "blog", titulo: "Blog", secciones: [] };
-  it("arma la lista de artículos, título y link, máximo 5", () => {
+  it("builds the article list, title and link, at most 5", () => {
     const items = Array.from({ length: 7 }, (_, i) => ({ title: `P${i}`, url: `https://x/${i}`, date: "2026-01-01" }));
     const out = mergeBlogFeed(blog, items);
     expect(out.secciones).toEqual([]);
     expect(out.articulos).toHaveLength(5);
     expect(out.articulos![0]).toEqual({ titulo: "P0", url: "https://x/0" });
   });
-  it("pasa la descripción del feed cuando la hay", () => {
+  it("passes the feed description through when there is one", () => {
     const out = mergeBlogFeed(blog, [{ title: "A", url: "https://a", date: "", description: "Resumen." }, { title: "B", url: "https://b", date: "" }]);
     expect(out.articulos).toEqual([{ titulo: "A", url: "https://a", descripcion: "Resumen." }, { titulo: "B", url: "https://b" }]);
   });
-  it("sin items la lista queda vacía", () => {
+  it("with no items the list is empty", () => {
     expect(mergeBlogFeed(blog, []).articulos).toEqual([]);
   });
 });

@@ -1,23 +1,23 @@
 import { BLEED, COVER_INSET, WORLD, type WorldZone } from "../map/geo";
 import { coverFrame, fitTransform, zoneFrame } from "./frame";
 
-/** Estado de cámara del contenedor del mundo: `pantalla = mundo_proyectado × scale + (x, y)`. Igual a CameraState. */
+/** Camera state of the world container: `screen = projected_world × scale + (x, y)`. Same as CameraState. */
 export interface View { x: number; y: number; scale: number }
 
-/** El mismo margen que usa coverQuad (COVER_INSET), para que el viewport se quede adentro del sangrado. */
+/** The same margin coverQuad uses (COVER_INSET), so the viewport stays inside the bleed. */
 export const VIEW_INSET = COVER_INSET;
-/** zoneView nunca baja de coverView × esto: con el inset, un viewport exactamente a escala cover no cabe. */
+/** zoneView never goes below coverView × this: with the inset, a viewport at exactly cover scale does not fit. */
 export const ZONE_MIN_ZOOM = 1.01;
 
 const X0 = WORLD.x0 - BLEED.x + VIEW_INSET, X1 = WORLD.x1 + BLEED.x - VIEW_INSET;
 const Y0 = WORLD.y0 - BLEED.y + VIEW_INSET, Y1 = WORLD.y1 + BLEED.y - VIEW_INSET;
 
-/** Inversa de project() a z 0 (la misma que usa coverQuad). */
+/** Inverse of project() at z 0 (the same one coverQuad uses). */
 export function unproject(sx: number, sy: number): { x: number; y: number } {
   return { x: sx / 2 + sy, y: sy - sx / 2 };
 }
 
-/** Punto del host (px desde la esquina del canvas) → mundo a z 0, con la cámara. */
+/** Host point (px from the canvas corner) → world at z 0, through the camera. */
 export function pointerToWorld(v: View, px: number, py: number): { x: number; y: number } {
   return unproject((px - v.x) / v.scale, (py - v.y) / v.scale);
 }
@@ -26,7 +26,7 @@ export function viewCorners(v: View, w: number, h: number): { x: number; y: numb
   return [[0, 0], [w, 0], [w, h], [0, h]].map(([px, py]) => pointerToWorld(v, px!, py!));
 }
 
-/** Encuadre cover: el rectángulo del aspecto del host inscripto en el sangrado (coverQuad) llena el host exacto. Sin cielo. */
+/** Cover framing: the rectangle with the host's aspect inscribed in the bleed (coverQuad) fills the host exactly. No sky. */
 export function coverView(w: number, h: number): View {
   return fitTransform(coverFrame(w / h), w, h, 0);
 }
@@ -34,12 +34,12 @@ export function coverView(w: number, h: number): View {
 const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
 
 /**
- * Corre la vista lo mínimo para que las cuatro esquinas del viewport queden
- * dentro del rectángulo del sangrado (con VIEW_INSET). Como unproject es
- * lineal, la x de mundo de cada esquina es `cX − a` y la y es `cY − b`, con
- * `a = (v.x/2 + v.y)/s`, `b = (v.y − v.x/2)/s` y (cX, cY) fijos por esquina:
- * las restricciones son dos intervalos independientes sobre a y b. Si un
- * intervalo es vacío el viewport no cabe a esa escala y se devuelve coverView.
+ * Shifts the view the minimum needed for the four corners of the viewport to fall
+ * inside the bleed rectangle (with VIEW_INSET). Since unproject is
+ * linear, the world x of each corner is `cX − a` and the y is `cY − b`, with
+ * `a = (v.x/2 + v.y)/s`, `b = (v.y − v.x/2)/s` and (cX, cY) fixed per corner:
+ * the constraints are two independent intervals on a and b. If an
+ * interval is empty the viewport does not fit at that scale and coverView is returned.
  */
 export function clampToBleed(v: View, w: number, h: number): View {
   const s = v.scale;
@@ -48,7 +48,7 @@ export function clampToBleed(v: View, w: number, h: number): View {
   if (aMin > aMax || bMin > bMax) return coverView(w, h);
   const a = clamp((v.x / 2 + v.y) / s, aMin, aMax), b = clamp((v.y - v.x / 2) / s, bMin, bMax);
   const x = s * (a - b), y = (s * (a + b)) / 2;
-  // sin ruido de coma flotante cuando ya estaba adentro
+  // no floating-point noise when it was already inside
   return Math.abs(x - v.x) < 1e-9 && Math.abs(y - v.y) < 1e-9 ? { ...v } : { x, y, scale: s };
 }
 
@@ -58,7 +58,7 @@ function frameCenter(zone: WorldZone): { x: number; y: number } {
   return { x: (Math.min(...xs) + Math.max(...xs)) / 2, y: (Math.min(...ys) + Math.max(...ys)) / 2 };
 }
 
-/** La caja de la zona encajada con margen 4 %; si eso queda por debajo de cover × ZONE_MIN_ZOOM, esa escala centrada en la caja. Siempre dentro del sangrado. */
+/** The zone's box fitted with a 4 % margin; if that falls below cover × ZONE_MIN_ZOOM, that scale centered on the box. Always inside the bleed. */
 export function zoneView(zone: WorldZone, w: number, h: number): View {
   const floor = coverView(w, h).scale * ZONE_MIN_ZOOM;
   const fit = fitTransform(zoneFrame(zone), w, h, 0.04);

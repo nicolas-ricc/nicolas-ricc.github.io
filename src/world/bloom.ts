@@ -1,10 +1,10 @@
-/** Presupuesto del bloom: promedio de tick + render por frame, medido con el bloom activo (#18). */
+/** Bloom budget: average of tick + render per frame, measured with the bloom on (#18). */
 export const BLOOM_BUDGET_MS = 15, BLOOM_SAMPLE_FRAMES = 60;
 
 export interface BloomSample { tickMs: number; renderMs: number }
 export interface BloomVerdict { frames: number; avgMs: number; avgTickMs: number; avgRenderMs: number; mode: "on" | "fallback" }
 
-/** Acumula muestras; devuelve el veredicto al completar `frames`, antes `null`. Después, siempre `null`: una decisión por carga. */
+/** Accumulates samples; returns the verdict on completing `frames`, `null` before. After that, always `null`: one decision per load. */
 export function createBloomBudget(opts: { frames?: number; budgetMs?: number } = {}): { sample(s: BloomSample): BloomVerdict | null } {
   const frames = opts.frames ?? BLOOM_SAMPLE_FRAMES, budgetMs = opts.budgetMs ?? BLOOM_BUDGET_MS;
   let n = 0, tick = 0, render = 0;
@@ -19,9 +19,9 @@ export function createBloomBudget(opts: { frames?: number; budgetMs?: number } =
   };
 }
 
-/** El texto del log después de "bloom: ". */
+/** The log text after "bloom: ". */
 export function formatBloomVerdict(v: BloomVerdict, budgetMs: number): string {
-  return `promedio ${v.avgMs.toFixed(1)} ms en ${v.frames} frames (tick ${v.avgTickMs.toFixed(1)} + render ${v.avgRenderMs.toFixed(1)}), presupuesto ${budgetMs} ms → ${v.mode === "on" ? "activo" : "fallback"}`;
+  return `average ${v.avgMs.toFixed(1)} ms over ${v.frames} frames (tick ${v.avgTickMs.toFixed(1)} + render ${v.avgRenderMs.toFixed(1)}), budget ${budgetMs} ms → ${v.mode === "on" ? "on" : "fallback"}`;
 }
 
 /** Structural slice of Pixi's `SystemRunner`, so this module stays Pixi-free. */

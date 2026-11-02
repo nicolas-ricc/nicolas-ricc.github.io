@@ -7,13 +7,13 @@
 }
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; }
 #app { height: 100%; }
-/* clip y no hidden: un contenedor con overflow:hidden igual scrollea cuando el
-   browser enfoca un hijo fuera de vista, y los links de #zonas están
-   posicionados en absoluto sobre el canvas, algunos fuera del host mientras
-   la cámara los mueve: eso desplazaba el canvas al enfocarlos; overflow:clip
-   no es scrolleable. Como clip no crea un scroll container, el min-width
-   automático de grid seguiría al ancho del canvas y la columna no podría
-   encogerse: por eso el min-width/height: 0. */
+/* clip and not hidden: a container with overflow:hidden still scrolls when the
+   browser focuses a child out of view, and the #zonas links are absolutely
+   positioned over the canvas, some outside the host while the camera moves
+   them: that shifted the canvas when they were focused; overflow:clip is not
+   scrollable. Since clip does not create a scroll container, the automatic grid
+   min-width would follow the canvas width and the column could not shrink:
+   hence the min-width/height: 0. */
 #canvas-host { position: relative; width: 100%; height: 100%; min-width: 0; min-height: 0; overflow: clip; }
 #canvas-host canvas { display: block; }
 #app { display: grid; grid-template-columns: 1fr 0fr; grid-template-rows: 100%; height: 100%; transition: grid-template-columns 500ms cubic-bezier(0.33, 1, 0.68, 1); }
@@ -44,44 +44,44 @@ body.zone #content { opacity: 1; }
   #app { grid-template-columns: 1fr; grid-template-rows: 1fr 0fr; transition-property: grid-template-rows; }
   body.zone #app { grid-template-columns: 1fr; grid-template-rows: 40vh 1fr; }
 }
-/* primer frame del boot: sin transiciones (ver main.ts) */
+/* first frame of boot: no transitions (see main.ts) */
 .no-anim #app, .no-anim #content { transition: none !important; }
 @media (prefers-reduced-motion: reduce) {
   #app, #content { transition: none; }
 }
-/* Rótulos de zona: el nav existe siempre en el DOM (links crawleables y navegables
-   sin JS) y es la capa de etiquetas sobre el canvas: main.ts posiciona cada link
-   sobre el landmark proyectado de su zona en cada frame. Los links son los
-   controles accesibles del mapa: orden de tab natural, foco visible nativo. */
+/* Zone labels: the nav is always in the DOM (crawlable links, navigable without
+   JS) and is the label layer over the canvas: main.ts positions each link over
+   the projected landmark of its zone on every frame. The links are the map's
+   accessible controls: natural tab order, native visible focus. */
 #zonas { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
 #zonas ul { list-style: none; margin: 0; padding: 0; }
 #zonas a {
   position: absolute; left: 0; top: 0; pointer-events: auto; will-change: transform;
   font-family: "Rubik Doodle Shadow", system-ui, sans-serif;
-  /* la fuente solo trae peso 400: sin negrita sintética; más grande y menos espaciada para que el doble trazo se lea */
+  /* the font only ships weight 400: no synthetic bold; larger and less spaced so the double stroke reads */
   font-size: 1.3rem; font-weight: 400; letter-spacing: 0.06em; text-transform: uppercase; text-decoration: none;
   transition: opacity 200ms ease;
-  /* placa oscura, cuadrada y translúcida: el rótulo se lee sobre cualquier zona del mapa (sin text-shadow: ensucia las letras huecas de la fuente) */
+  /* dark, square, translucent plate: the label reads over any zone of the map (no text-shadow: it dirties the font's hollow letters) */
   padding: 0.4rem 0.7rem; background: rgba(8, 10, 18, 0.62); border-radius: 0;
 }
-/* ocultos hasta que main.ts los coloque sobre su landmark (primer jumpTo de la
-   cámara): si no, se ven apilados en la esquina y saltan a su lugar. Solo con
-   JS presente: sin JS nadie los va a posicionar, así que quedan visibles y
-   accesibles desde el primer render (prerenderizado, sin canvas). Sin canvas
-   el nav vuelve al flujo y debe verse: por eso también se excluye .no-canvas. */
+/* hidden until main.ts places them over their landmark (the camera's first
+   jumpTo): otherwise they show stacked in the corner and jump into place. Only
+   with JS present: without JS nobody will position them, so they stay visible
+   and accessible from the first render (prerendered, no canvas). Without a
+   canvas the nav returns to the flow and must show: hence .no-canvas is also excluded. */
 .js:not(.mapa-listo):not(.no-canvas) #zonas a { visibility: hidden; }
 #zonas a[data-zone="portfolio"] { color: #ffc457; }
-/* Resume lleva el verde de acento del blog (myxomatosis.xyz/blog); Blog, el cian */
+/* Resume carries the blog's accent green (myxomatosis.xyz/blog); Blog, the cyan */
 #zonas a[data-zone="cv"] { color: #8ec07c; }
 #zonas a[data-zone="blog"] { color: #7cf5ff; }
-/* sin subrayado: el hover ya enciende la zona entera en el mapa */
+/* no underline: hover already lights up the whole zone on the map */
 #zonas a:hover, #zonas a:focus-visible { filter: brightness(1.25); }
 #zonas a:focus-visible { outline: 2px solid var(--fg); outline-offset: 4px; }
 #zonas a.dim { opacity: 0.35; }
 #titulo { position: absolute; left: 1rem; bottom: 0.75rem; margin: 0; z-index: 1; pointer-events: none; font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; color: #ffc457; text-shadow: 0 0 6px #000, 0 1px 2px #000; transition: opacity 200ms ease; }
 body.zone #titulo { opacity: 0; }
 .no-canvas, .no-canvas body { height: auto; overflow: auto; }
-/* sin canvas el host solo aloja el nav, en flujo */
+/* without a canvas the host only holds the nav, in flow */
 .no-canvas #canvas-host { height: auto; overflow: visible; }
 .no-canvas #canvas-host canvas, .no-canvas #hud, .no-canvas #titulo { display: none; }
 .no-canvas #app { display: block; height: auto; }
