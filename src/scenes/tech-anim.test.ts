@@ -136,7 +136,7 @@ describe("tech-anim: ventanas del barrio (#249)", () => {
     const f0 = anim.homes();
     for (const dt of [NaN, Infinity, 0, -5]) expect(anim.tick(dt).homes).toBe(false);
     expect(anim.homes()).toEqual(f0);
-    expect(anim.fired().homes).toBe(0);
+    expect(anim.fired()).toEqual({ homes: 0, windows: 0, crowns: 0 });
   });
   it("sin homes la capa devuelve [] y nunca reporta cambios", () => {
     const anim = createTechAnim({ ...tech(createRng(7)), homes: [] }, createRng(3), { reducedMotion: false });
@@ -149,5 +149,40 @@ describe("tech-anim: ventanas del barrio (#249)", () => {
     for (let i = 0; i < 300; i++) { a.tick(100); b.tick(100); }
     expect(a.windows()).toEqual(b.windows());
     expect(a.neon()).toEqual(b.neon());
+  });
+});
+
+describe("tech-anim: troceo (#125)", () => {
+  const troceado = (dts: number[], scene = tech(createRng(7))) => {
+    const anim = createTechAnim(scene, createRng(3), { reducedMotion: false });
+    for (const dt of dts) anim.tick(dt);
+    return anim;
+  };
+  const veces = (n: number, dt: number) => Array.from({ length: n }, () => dt);
+  const igual = (a: ReturnType<typeof createTechAnim>, b: ReturnType<typeof createTechAnim>) => {
+    expect(a.fired()).toEqual(b.fired());
+    expect(a.windows()).toEqual(b.windows());
+    expect(a.neon()).toEqual(b.neon());
+  };
+  it("un tick de 60 s deja lo mismo que 600 ticks de 100 ms", () => {
+    const a = troceado([60000]), b = troceado(veces(600, 100));
+    expect(a.fired().windows).toBeGreaterThanOrEqual(60000 / TECH_BLINK_GAP_MS[1] - 1);
+    expect(a.fired().crowns).toBeGreaterThanOrEqual(60000 / CROWN_FLIP_GAP_MS[1] - 1);
+    igual(a, b);
+  });
+  it("un tick de 10 min dispara como 600 de 1 s", () => {
+    const a = troceado([600000]), b = troceado(veces(600, 1000));
+    expect(a.fired().windows).toBeGreaterThanOrEqual(600000 / TECH_BLINK_GAP_MS[1] - 1);
+    expect(a.fired().windows).toBeLessThanOrEqual(600000 / TECH_BLINK_GAP_MS[0]);
+    igual(a, b);
+  });
+  it("un troceo irregular deja lo mismo que su suma", () => {
+    const dts = [16, 33, 100, 250, 1000, 5000, 7000, 33, 12000];
+    igual(troceado(dts), troceado([dts.reduce((s, x) => s + x, 0)]));
+  });
+  it("sin torres ni coronas un tick largo no se cuelga y no cuenta", () => {
+    const anim = troceado([600000], sinTorres());
+    expect(anim.fired().windows).toBe(0);
+    expect(anim.fired().crowns).toBe(0);
   });
 });
