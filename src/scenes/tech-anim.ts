@@ -1,7 +1,7 @@
 import type { Accent } from "../iso/accent";
 import { facadeAccents } from "../iso/facade";
 import { v3 } from "../iso/geometry";
-import { tessellate } from "../iso/solids";
+import { visibleWalls } from "../iso/solids";
 import { createRng, type Rng } from "../map/seed";
 import { ALWAYS_LIT } from "./barrio";
 import { chase, pulse } from "./neon";
@@ -32,7 +32,7 @@ export interface TechAnimChanges { windows: boolean; signs: boolean; telecom: bo
 export interface TechAnim { windows(): Accent[]; signs(): Accent[]; telecom(): Accent; neon(): Accent[]; homes(): Accent[]; fired(): { homes: number; windows: number; crowns: number }; tick(dtMs: number): TechAnimChanges }
 
 export function createTechAnim(scene: TechScene, rng: Rng, opts: { reducedMotion: boolean }): TechAnim {
-  const walls = scene.towers.map((t) => tessellate(t.box).filter((f) => Math.abs(f.normal.z) < 1e-6 && f.mat === "curtain" && f.toneOffset === 0)); // paredes visibles, sin las caras de fachada
+  const walls = scene.towers.map((t) => visibleWalls(t.box).filter((f) => f.mat === "curtain" && f.toneOffset === 0));
   const lit: (number | null)[] = scene.towers.map((t) => rng.int(1, t.facade.floors - 1));
   const blinkRng = createRng(rng.int(0, SEED_MAX)); // flujo propio de las torres, derivado donde antes se sorteaba el primer plazo
   const nextGap = () => blinkRng.int(TECH_BLINK_GAP_MS[0], TECH_BLINK_GAP_MS[1]);

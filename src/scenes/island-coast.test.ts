@@ -77,7 +77,7 @@ describe("costa de la isla", () => {
       return false;
     };
     const sy = shipyard(createRng(7));
-    const cs = city(createRng(7), createRng(8));
+    const cs = city(createRng(7), createRng(8), createRng(9));
     const onIsland = (s: Solid) => bounds(s).max.x >= 276;
     const escollera = (s: Solid) => s.kind === "cone" && s.mat === "rock"; // shipyard.ts: el único `rock` del astillero
     const candidates = [

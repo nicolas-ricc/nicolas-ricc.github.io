@@ -20,6 +20,8 @@ const SOLIDS: [string, Solid][] = [
   ["cone", { kind: "cone", at: v3(-2, 3, 4), r: 1.5, h: 2, mat: "steel" }],
   ["beam", { kind: "beam", from: v3(0, 0, 2), to: v3(6, 3, 4.5), w: 0.5, h: 0.25, mat: "steel" }],
   ["hull con heading", { kind: "hull", at: v3(10, -6, 0), len: 12, beam: 4, h: 1.5, mat: "steel", topMat: "concrete", heading: 0.6 }],
+  ["dome", { kind: "dome", at: v3(-4, 2, 1), r: 3, h: 2, mat: "steel", sides: 8, rings: 2 }],
+  ["vault", { kind: "vault", at: v3(2, -3, 0.5), len: 6, w: 4, h: 2, axis: "x", mat: "concrete", segments: 4 }],
   ["strip", { kind: "strip", path: [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 3 }], width: 1, z: 0.25, mat: "concrete" }],
   ["ground", { kind: "ground", mat: "sand", tris: [
     { pts: [v3(0, 0, 0), v3(4, 0, 0.5), v3(0, 4, 1.5)], toneOffset: -1 },
@@ -37,8 +39,8 @@ const ACCENTS: [string, Accent][] = [
 const byName = (name: string): Solid => SOLIDS.find(([n]) => n === name)![1];
 
 describe("translate", () => {
-  it("las fixtures cubren los diez kind", () => {
-    expect(new Set(SOLIDS.map(([, s]) => s.kind)).size).toBe(10);
+  it("las fixtures cubren los doce kind", () => {
+    expect(new Set(SOLIDS.map(([, s]) => s.kind)).size).toBe(12);
   });
 
   for (const [name, s] of SOLIDS) {

@@ -19,7 +19,7 @@ import { world } from "./world";
 const opts = { reducedMotion: false };
 const w = world(7);
 const animators: [string, () => Animator][] = [
-  ["cityAnimator", () => cityAnimator(city(createRng(7), createRng(8)), createRng(3), opts)],
+  ["cityAnimator", () => cityAnimator(city(createRng(7), createRng(8), createRng(9)), createRng(3), opts)],
   ["factoryAnimator", () => factoryAnimator(factory(createRng(7)), createRng(3), opts)],
   ["fairAnimator", () => fairAnimator(fair(createRng(7)), opts)],
   ["railAnimator", () => railAnimator(opts)],

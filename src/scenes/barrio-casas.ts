@@ -1,7 +1,8 @@
 import { v3 } from "../iso/geometry";
 import type { Material } from "../map/palette-iso";
 import { homeWindow, lawn, wallWindow, type BarrioCtx } from "./barrio";
-import { lamp, prism } from "./city-pieces";
+import { lamp, place } from "../kit/props";
+import { prism } from "./city-pieces";
 import type { SprawlBlock } from "./sprawl-grid";
 import { blockParity } from "./tech-zoning";
 
@@ -73,6 +74,6 @@ export function casas(ctx: BarrioCtx, b: SprawlBlock): void {
   if (alaWanted && lots.includes(4)) house(ctx, { x: home.x + home.w, y: home.y + home.d - 3, w: 3, d: 3, h: 3, mat: home.mat });
   wall(ctx, b, cx);
   trees(ctx, b, cx);
-  lamp(ctx.solids, ctx.accents, b.x + 23, b.y + 18.6, 0);
-  lamp(ctx.solids, ctx.accents, b.x + 24.6, b.y + 4, 0);
+  place(ctx.solids, ctx.accents, lamp(v3(b.x + 23, b.y + 18.6, 0)));
+  place(ctx.solids, ctx.accents, lamp(v3(b.x + 24.6, b.y + 4, 0)));
 }

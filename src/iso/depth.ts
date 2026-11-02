@@ -46,6 +46,23 @@ export function isBehind(a: Bounds, b: Bounds): boolean {
   return a.max.x <= b.min.x + EPS || a.max.y <= b.min.y + EPS || a.max.z <= b.min.z + EPS;
 }
 
+/** Dos polígonos convexos se cruzan si ningún eje de sus bordes los separa (tocarse no cuenta). A diferencia de `hullsIntersect`, donde tocarse sí cuenta: la oclusión de `lights.ts` no tapa una ventana con un vecino que apenas la roza. */
+export function hullsOverlap(a: Vec2[], b: Vec2[]): boolean {
+  for (const poly of [a, b]) for (let i = 0; i < poly.length; i++) {
+    const p = poly[i]!, q = poly[(i + 1) % poly.length]!, nx = q.y - p.y, ny = p.x - q.x;
+    let aMin = Infinity, aMax = -Infinity, bMin = Infinity, bMax = -Infinity;
+    for (const v of a) { const d = v.x * nx + v.y * ny; aMin = Math.min(aMin, d); aMax = Math.max(aMax, d); }
+    for (const v of b) { const d = v.x * nx + v.y * ny; bMin = Math.min(bMin, d); bMax = Math.max(bMax, d); }
+    if (aMax <= bMin + EPS || bMax <= aMin + EPS) return false;
+  }
+  return true;
+}
+
+/** `front` tapa a `back`: `back` queda detrás y sus siluetas se cruzan en pantalla. */
+export function hides(back: Bounds, front: Bounds, hulls?: { back: Vec2[]; front: Vec2[] }): boolean {
+  return isBehind(back, front) && hullsOverlap(hulls?.back ?? screenHull(back), hulls?.front ?? screenHull(front));
+}
+
 /**
  * `a` queda del lado lejano de `b` en un eje cuya componente de la vista es `v`. Con la vista paralela al plano
  * que separa (componente ~0) ninguno tapa al otro: vale como detrás en los dos sentidos.

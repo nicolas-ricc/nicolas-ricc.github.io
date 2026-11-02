@@ -4,6 +4,7 @@ import { bounds, isFlat, type Solid } from "../iso/solids";
 import { BLEED, WORLD, worldZoneAt } from "../map/geo";
 import { allIsoColors } from "../map/palette-iso";
 import { STAIR_TOWER } from "./boiler-house";
+import { city } from "./city";
 import { PLANT } from "./factory";
 import { SUBSTATION } from "./substation";
 import { LANDMARKS, world, zoneRng } from "./world";
@@ -65,11 +66,12 @@ describe("world", () => {
     const portfolio = mats([...w.shipyard!.solids, ...w.factory!.solids, ...w.factory!.excavator]), // la excavadora vive fuera de factory.solids (#216)
       cv = mats(w.city!.solids), blog = mats(w.sea!.solids);
     // Igualdad exacta (#218): falla si alguno deja de compartirse o aparece otro. office: gris lila de la excavadora (decisión de #207);
-    // asphalt: cabezas de los semáforos de la estación (#277) y tapas de la linterna (#278); stone: fuste de la torre del reloj y paving: losa de la explanada (#278).
+    // asphalt: cabezas de los semáforos de la estación (#277) y tapas de la linterna (#278); stone: fuste de la torre del reloj y paving: losa de la explanada (#278);
+    // deck: tablones del paso a nivel (#277) y terrazas del muelle de Resume (#190).
     // Sin glass: la ciudad solo tiene vidrio en caras de fachada, no como mat de un sólido.
-    const sharedWithCity = ["asphalt", "office", "paving", "rust", "steel", "stone"];
+    const sharedWithCity = ["asphalt", "deck", "office", "paving", "rust", "steel", "stone"];
     expect([...portfolio].filter((m) => cv.has(m)).sort()).toEqual([...sharedWithCity].sort());
-    const sharedWithBlog = ["steel", "rust", "hull", "rock", "glass", "whitewash", "deck"]; // glass: la linterna del faro (spec §7); whitewash: porcelana y remates de la fábrica (#207); deck: tablones del paso a nivel (#277)
+    const sharedWithBlog = ["steel", "rust", "hull", "rock", "glass", "whitewash", "deck"]; // glass: la linterna del faro (spec §7); whitewash: porcelana y remates de la fábrica (#207); deck: tablones del paso a nivel (#277), cubiertas de los barcos y terrazas del muelle de Resume (#190)
     for (const other of [portfolio, cv]) for (const m of blog) if (other.has(m)) expect(sharedWithBlog).toContain(m);
   });
 
@@ -136,5 +138,11 @@ describe("world", () => {
     const sidingAndCrane = (b: ReturnType<typeof bounds>) => b.min.y >= -13.1 && b.max.y <= -6.7; // desvío y grúa torre, que se quedan
     const inNewRegion = (b: ReturnType<typeof bounds>) => b.min.x >= 4 && b.max.x <= 98.7 && b.min.y >= -4 && b.max.y <= 99; // región que deja el astillero (#238); x ≤ 98.7 para todo sólido, más estricto que el issue (que lo pide para lo de más de 7 de alto)
     expect(w.factory!.solids.filter((s) => !west(bounds(s)) && !sidingAndCrane(bounds(s)) && !inNewRegion(bounds(s))).map((s) => JSON.stringify(s).slice(0, 90))).toEqual([]);
+  });
+
+  it("las luces de la ciudad salen de zoneRng(seed, \"cv\", 3)", () => {
+    const w = world(7, { zones: ["cv"] });
+    expect(w.city!.lights.windows.length).toBeGreaterThan(0);
+    expect(JSON.stringify(w.city!.lights)).toBe(JSON.stringify(city(zoneRng(7, "cv"), zoneRng(7, "cv", 1), zoneRng(7, "cv", 3)).lights));
   });
 });

@@ -1,6 +1,7 @@
 import { v3 } from "../iso/geometry";
 import { homeWindow, wallWindow, type BarrioCtx } from "./barrio";
-import { lamp, prism } from "./city-pieces";
+import { lamp, place } from "../kit/props";
+import { prism } from "./city-pieces";
 import type { Plate } from "../iso/plate";
 import type { SprawlBlock } from "./sprawl-grid";
 
@@ -45,7 +46,7 @@ export function escuela(ctx: BarrioCtx, b: SprawlBlock): void {
   bloque(ctx, b);
   patio(ctx, b);
   for (const ty of [3, 15]) ctx.solids.push({ kind: "cone", at: v3(b.x + 24.8, b.y + ty, 0), r: 1.4, h: 4, mat: "leaf", sides: 6 });
-  lamp(ctx.solids, ctx.accents, b.x + 23, b.y + 18.6, 0);
+  place(ctx.solids, ctx.accents, lamp(v3(b.x + 23, b.y + 18.6, 0)));
   ctx.accents.push({ kind: "dot", at: v3(b.x + 11.2, b.y + 9, 3.2), r: 0.5, color: "amber" });
   for (const [z0, z1] of [[4.5, 6.1], [7, 8.6]] as const) homeWindow(ctx, wallWindow({ x: b.x + 11 }, b.y + 11, b.y + 12, z0, z1), true, "escuela-escalera");
 }

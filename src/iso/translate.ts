@@ -17,6 +17,8 @@ export function translate(s: Solid, dx: number, dy: number): Solid {
     case "cylinder":
     case "cone":
     case "hull":
+    case "dome":
+    case "vault":
     case "wheel": return { ...s, at: p3(s.at) };
     case "poly": return { ...s, footprint: s.footprint.map(p) };
     case "beam": return { ...s, from: p3(s.from), to: p3(s.to) };

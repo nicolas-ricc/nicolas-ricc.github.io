@@ -20,7 +20,8 @@ describe("tech", () => {
     expect(JSON.stringify(scene())).toBe(JSON.stringify(scene()));
     const s = scene();
     const raised = s.solids.filter((x) => !isFlat(x));
-    // tope = medido (1505, #256) × 1.10, redondeado a la centena superior
+    // tope = medido × 1.10, redondeado a la centena superior. Medido 1524 tras integrar main en #291 (main midió 1505, #256):
+    // el campus del kit trae 1 sólido elevado más que el de main (18 → 19 en cinco muestras) × 19 campus = +19; 1524 × 1.10 = 1676 → 1700
     expect(raised.length).toBeGreaterThan(400); expect(raised.length).toBeLessThan(1700);
     for (const x of s.solids) {
       const b = bounds(x);

@@ -6,7 +6,7 @@ const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 
 describe("laboratorio fuera de producción", () => {
   it("existen las entradas de dev", () => {
-    for (const page of ["portfolio", "resume", "blog", "world", "storybook"]) expect(existsSync(`${ROOT}lab/${page}.html`)).toBe(true);
+    for (const page of ["portfolio", "resume", "blog", "world", "kit", "storybook"]) expect(existsSync(`${ROOT}lab/${page}.html`)).toBe(true);
   });
   it("cada página del lab tiene su entry y noindex", () => {
     for (const f of readdirSync(`${ROOT}lab`).filter((n) => n.endsWith(".html"))) {

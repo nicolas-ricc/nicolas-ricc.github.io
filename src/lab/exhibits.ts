@@ -2,13 +2,15 @@ import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
 import { shadowPolygon } from "../iso/light";
 import { Z_SCALE } from "../iso/project";
+import { campus } from "../kit/forms/modern";
+import { lamp, place } from "../kit/props";
+import { STYLES } from "../kit/styles";
 import type { Solid } from "../iso/solids";
 import { MOUTH_Y, QUAY_X, type WorldZone } from "../map/geo";
 import type { Material } from "../map/palette-iso";
 import { createRng, SEED } from "../map/seed";
 import type { Animator } from "../scenes/animator";
 import { BLOCK_D, BLOCK_W, BRIDGE, COLLAPSED, DISTRICT_COLS, DISTRICT_ROWS, EAST_COLS, MALECON, PLAZA, ROWS, SITE, TOWER, TOWER_H, WEST_COLS } from "../scenes/city-grid";
-import { campus, lamp } from "../scenes/city-pieces";
 import { STAIR_TOWER } from "../scenes/boiler-house";
 import { excavator, excavatorBox, excavatorWheel } from "../scenes/excavator";
 import { COOLING as FACTORY_COOLING, PLANT, RAIL_YARD_X, STACK_BASE_H, STACKS } from "../scenes/factory";
@@ -107,7 +109,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   // pluma 24 al este y contrapluma 8 al oeste: con el mástil en x −8 queda en −16..16
   { id: "grua-torre", title: "Grúa torre", zone: "portfolio", group: "astillero", kind: "piece",
     build: (out, accents) => towerCrane(out, accents, { at: { x: -8, y: 0 }, mastH: 20, jibLen: 24, dir: "e", light: "amber" }) },
-  { id: "farol", title: "Farol", zone: "portfolio", group: "astillero", kind: "piece", build: (out, accents) => { lamp(out, accents, -0.3, -0.3, 0); } },
+  { id: "farol", title: "Farol", zone: "portfolio", group: "astillero", kind: "piece", build: (out, accents) => place(out, accents, lamp(v3(-0.3, -0.3, 0))) },
   // el EMU de 4 coches centrado en el origen: `build` pone solo los sólidos; las luces (salón, cartel, faros y rojas) las da la capa `tren.lights` de su animador, que invierte la punta cada 4 s
   { id: "tren", title: "Tren EMU de la Mitre", zone: "portfolio", group: "astillero", kind: "piece", pad: "paving",
     build: (out) => { out.push(...pieceTrain("e").solids); },
@@ -152,21 +154,25 @@ export const EXHIBITS: readonly Exhibit[] = [
   // de rampa a rampa; al oeste y al este pegado a las manzanas vecinas (edificios hasta 10.7), al norte los árboles de la ribera
   { id: "puente", title: "Puente", zone: "cv", group: "ciudad", kind: "region",
     box: { x0: WEST_COLS[WEST_COLS.length - 1]! + BLOCK_W + 0.5, y0: BRIDGE.y0 - 1, x1: EAST_COLS[0]! + 1, y1: BRIDGE.y1 + M }, h: 8 },
-  // entero, 168 u: encuadra fino. Al oeste pegado y al norte 2 u adentro: los árboles de la selva del cinturón (hasta 8.4) quedan afuera
+  // entero, 168 u: encuadra fino. Al oeste pegado y al norte 2 u adentro; h 9 por los árboles del cinturón que asoman (hasta 8.4)
   { id: "malecon", title: "Malecón", zone: "cv", group: "ciudad", kind: "region",
-    box: { x0: MALECON.x0 - 1, y0: MALECON.y0 + 2, x1: MALECON.x1 + M, y1: MALECON.y1 + M }, h: 7 },
+    box: { x0: MALECON.x0 - 1, y0: MALECON.y0 + 2, x1: MALECON.x1 + M, y1: MALECON.y1 + M }, h: 9 },
   // la losa caída llega a x − 16; al sur pegado, la selva
   { id: "manzana-derrumbada", title: "Manzana derrumbada", zone: "cv", group: "ciudad", kind: "region",
     box: { x0: COLLAPSED.x - 16 - M, y0: COLLAPSED.y - M, x1: COLLAPSED.x + COLLAPSED.w + M, y1: COLLAPSED.y + COLLAPSED.d + 1 }, h: 6 },
   { id: "manzana-distrito", title: "Manzana del distrito", zone: "cv", group: "ciudad", kind: "region",
-    box: { x0: DISTRICT_COLS[0] - M, y0: DISTRICT_ROWS[1] - M, x1: DISTRICT_COLS[0] + BLOCK_W + M, y1: DISTRICT_ROWS[1] + BLOCK_D + M }, h: 12 },
+    box: { x0: DISTRICT_COLS[0] - M, y0: DISTRICT_ROWS[1] - M, x1: DISTRICT_COLS[0] + BLOCK_W + M, y1: DISTRICT_ROWS[1] + BLOCK_D + M }, h: 20 },
   { id: "obra", title: "Obra en construcción", zone: "cv", group: "ciudad", kind: "region",
     box: { x0: SITE.x - M, y0: SITE.y - M, x1: SITE.x + SITE.w + M, y1: SITE.y + SITE.d + M }, h: 25 },
   // la punta sur: x 270..380, y 300..400; necesita el mundo sin filtro de zonas (el storybook lo arma con `assembleWorld(undefined, …)`); h es el menor entero que pasa encuadre y vecinos (medido con el `measure` de exhibits.test.ts)
   { id: "punta-sur", title: "Punta sur de la isla", zone: "cv", group: "ciudad", kind: "region", box: { x0: 270, y0: 300, x1: 380, y1: 400 }, h: 10 },
-  // patio 9×9 entre tres edificios de 6: 21×15; el suelo de la manzana va a `out` con los sólidos
+  // receta `campus` del kit sobre una manzana de distrito; el suelo de la pieza va a `out` con los sólidos
   { id: "campus", title: "Campus", zone: "cv", group: "ciudad", kind: "piece",
-    build: (out, accents) => campus(out, out, accents, createRng(SEED), { x: -12.5, y: -9.5, w: 25, d: 19 }, -10.5, -7.5, 21, 15) },
+    build: (out, accents) => {
+      const p = campus({ x: -12.5, y: -9.5, w: 25, d: 19, z: 0, open: [], maxH: 24 }, createRng(SEED), STYLES.distrito);
+      out.push(...p.ground, ...p.solids);
+      accents.push(...p.accents);
+    } },
   { id: "selva", title: "Selva", zone: "cv", group: "ciudad", kind: "piece", build: (out) => jungle(out, createRng(SEED), { x0: -12, x1: 12, y0: -12, y1: 12 }, 14, 0) },
   // tecnológico: cada estructura ocupa una manzana BLOCK_W × BLOCK_D
   { id: "mastil", title: "Mástil de telecomunicaciones", zone: "cv", group: "tecnologico", kind: "region",

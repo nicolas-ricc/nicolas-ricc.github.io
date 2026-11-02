@@ -11,6 +11,7 @@ const WORLD_KEYS = "0 1 2 3 4 5 6";
 const SHORTCUTS: Record<string, string> = {
   world: WORLD_KEYS, blog: WORLD_KEYS, resume: WORLD_KEYS, portfolio: WORLD_KEYS,
   storybook: "ArrowRight ArrowDown ArrowLeft ArrowUp j k g h a 6",
+  kit: "s 1 2 3 4",
 };
 
 /** Mounts only the page's host into the document, so its module script never runs. */
@@ -42,7 +43,7 @@ describe("lab host keyboard access (#167)", () => {
     expect(pages.sort()).toEqual(Object.keys(SHORTCUTS).sort());
   });
   it("keydown listeners stay on window", () => {
-    for (const f of ["src/lab/page.ts", "src/lab/storybook.ts"]) {
+    for (const f of ["src/lab/page.ts", "src/lab/storybook.ts", "src/lab/kit.ts"]) {
       const targets = [...readFileSync(`${ROOT}${f}`, "utf8").matchAll(/(\w+)\.addEventListener\(\s*["']key\w+["']/g)].map((m) => m[1]);
       expect(targets.length, f).toBeGreaterThan(0);
       expect(new Set(targets), f).toEqual(new Set(["window"]));

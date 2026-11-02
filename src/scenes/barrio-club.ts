@@ -2,7 +2,8 @@ import { v3 } from "../iso/geometry";
 import type { Plate } from "../iso/plate";
 import type { Solid } from "../iso/solids";
 import { homeWindow, wallWindow, type BarrioCtx } from "./barrio";
-import { lamp, prism } from "./city-pieces";
+import { lamp, place } from "../kit/props";
+import { prism } from "./city-pieces";
 import type { SprawlBlock } from "./sprawl-grid";
 
 /** Placa de pared: rect de u0..u1 y z0..z1 sobre `wall` (1 este, 2 sur). */
@@ -42,7 +43,7 @@ function court(ctx: BarrioCtx, b: SprawlBlock): void {
 
 /** Vereda: farol en la esquina sur y árbol cónico al este. */
 function sidewalk(ctx: BarrioCtx, b: SprawlBlock): void {
-  lamp(ctx.solids, ctx.accents, b.x + 1, b.y + 18.6, 0);
+  place(ctx.solids, ctx.accents, lamp(v3(b.x + 1, b.y + 18.6, 0)));
   ctx.solids.push({ kind: "cone", at: v3(b.x + 24.8, b.y + 9, 0), r: 1.4, h: 4, mat: "leaf", sides: 6 });
 }
 

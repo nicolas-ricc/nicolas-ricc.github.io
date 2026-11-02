@@ -18,8 +18,11 @@ El sitio (la raíz de myxomatosis.xyz; las zonas viven bajo `/area/` porque `/bl
 `src/scenes/`, incluidas `factory.ts` (fábrica de Portfolio: nave de calderas
 de la Fábrica de Luz, maltería de Mistley y tanque de agua sobre patas, tres
 chimeneas con bandas de balizamiento, subestación de intemperie y excavadora
-de rueda de cangilones con la rueda animada, `factory.wheel`), `district.ts`
-(distrito moderno de Resume) y `sea.ts` (punta, faro y barcos de Blog). Al final
+de rueda de cangilones con la rueda animada, `factory.wheel`), `city.ts`
+(orquestador de Resume) y `sea.ts` (punta, faro y barcos de Blog). Las piezas de
+Resume viven en `src/city/` (`zoning.ts` barrios, `fixed.ts` piezas fijas,
+`streets.ts` calles, `lights.ts` ventanas, neones y fachadas bañadas) y en el
+kit `src/kit/` (se explora en `lab/kit.html`). Al final
 de la vía del oeste, en el lugar de la calderería del astillero, está la
 estación cabecera (`station.ts`, modelada sobre la Estación Tigre de la Línea
 Mitre: edificio de ladrillo con techos de teja, torre del reloj, andenes con
@@ -57,6 +60,10 @@ la zona del barco),
 zona) y `view.ts` (cámara pura: `coverView`, `zoneView`, `clampToBleed`,
 `unproject`). El sitio encuadra con `coverView(host)` (el aspecto real del
 `#canvas-host`), no con `coverFrame(16/9)` como el laboratorio.
+En Resume, `city-anim.ts` suma la capa `city.windows` (hasta 40 ventanas del
+centro y el residencial que se prenden y apagan manteniendo el porcentaje
+±5 %) y, dentro de `city.neon`, el neón de un bar del muelle que titila; el
+resto de las ventanas y neones va a los acentos estáticos.
 
 `npm run dev` y abrir `/lab/world.html` para el laboratorio: páginas
 finas (`src/lab/page.ts`) que importan `assembleWorld`/`buildStage` de
@@ -69,9 +76,13 @@ Blog; `4` encuadra con `coverFrame(16/9)`; `5` rota el foco del velo entre
 apagado, Portfolio, Resume y Blog; `6` rota el bloom de las luces entre
 `off`, `on` y `fallback`; `?bloom=on|off|fallback` lo fuerza al cargar.
 Las teclas encuadran; no recortan: al enfocar una zona las vecinas asoman
-por el borde. No entra en el build de
-producción. Para cambiar una escena, editar su lista de sólidos; para el
-look, `src/map/palette-iso.ts`. Specs en `docs/superpowers/specs/`
+por el borde. `/lab/kit.html` muestra todas las recetas del kit
+(`src/kit/`) sobre una grilla, una fila por familia (`modern`, `courtyard`,
+`lowrise`, `composite`, `curved` y `landmarks`, ver `src/kit/forms/`); tecla
+`s` cambia el seed y `1..4` el estilo (centro, bares, residencial,
+cívico). No entra en el build de producción. Para cambiar una escena,
+editar su lista de sólidos; para el look, `src/map/palette-iso.ts`.
+Specs en `docs/superpowers/specs/`
 (`2026-09-13-portfolio-isometrico-design.md`, `2026-09-14-mundo-isometrico-design.md`,
 `2026-09-14-resume-ciudad-design.md`,
 `2026-09-14-mundo-2-fabrica-distrito-blog-design.md`,
@@ -79,6 +90,7 @@ look, `src/map/palette-iso.ts`. Specs en `docs/superpowers/specs/`
 `2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md`,
 `2026-09-15-reintegracion-mundo-iso-design.md`,
 `2026-10-14-cyberpunk-crepusculo-neones-bloom-design.md`,
+`2026-10-15-resume-nivel-2-kit-zonificacion-luces-design.md`,
 `2026-10-16-barcos-referencia.md`,
 `2026-10-17-barcos-inventario.md`,
 `2026-10-17-storybook-estructuras-design.md`,
