@@ -28,6 +28,7 @@ The decision lives in one pure function, `accentsByZone(accents, zone?)` in `src
 - A fixed animated light (the lighthouse beam, the point neons) is dimmed or lit with the ground it stands on, as a static light is. The veil of a layer no longer depends on the zone of its animator; `ZonedAnimator.zone` stays as the animator's zone of origin, which the lab crops use.
 - Ships keep a single zone for their whole cycle, so their lights do not change veil while sailing across the seam. Freighter, tug and convoy are Blog's; the river bus is Portfolio's, since it shuttles on its own route (`FERRY_ROUTE`) by the fair.
 - Other layers that declared a zone later for the same reason follow the exception: the train and the level crossing (`rail.lights`, `rail.crossing`, `rail.signals` and the storybook's `tren.lights`, all in `src/scenes/rail-animator.ts`) declare `"portfolio"`. Any new layer of lights that must not change zone with its position has to declare one; a layer that declares none is split by position.
+- Since #56 the train crosses the Resume strip (`x -54..96, y 129..136`) and its layers keep declaring `portfolio`, like a vehicle (see 0002).
 - Cost: a layer without a declared zone has three Graphics (one per zone), most of them empty, instead of one. The bloom mirror is taken from the same list of Graphics, so it needs no change.
 - Out of scope, and still true: moving the zone seam, veiling animated solids or water by position, and optimizing the sea's redraw (#71).
 
