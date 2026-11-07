@@ -110,7 +110,7 @@ function siding(out: Solid[]): void {
 function truckYard(out: Solid[], accents: Accent[]): void {
   emitPlant(out, (o, a) => {
     for (const [x, y] of [[40, -12], [70, -6], [95, -12]] as const) { o.push(prism(x, y, 0, 6, 2.4, 2.8, "rust")); o.push(prism(x + 6, y, 0, 2, 2.4, 2.2, "steel")); } // box and cab
-    for (let i = 0; i < 6; i++) o.push(prism(22 + i * 4, -3, 0, 3, 2, 0.5 + (i % 3) * 0.4, "steel")); // sheet-metal pallets by the west gate
+    for (let i = 0; i < 6; i++) o.push(prism(22 + i * 4, -4, 0, 3, 2, 0.5 + (i % 3) * 0.4, "steel")); // sheet-metal pallets by the west gate
     for (const [x, y] of [[20, -14], [110, -3]] as const) lamp(o, a, x, y);
   }, accents);
 }

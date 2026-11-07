@@ -100,8 +100,11 @@ describe("world", () => {
     const w = world(7);
     const mine = new Set(w.factory!.solids);
     const others = w.solids.filter((s) => !isFlat(s) && !mine.has(s));
-    const areas = [{ x0: PLANT.x, x1: STAIR_TOWER.x1, y0: PLANT.y - 0.6, y1: PLANT.y + PLANT.d + 1.5 }, { x0: PLANT.x, x1: STAIR_TOWER.x1, y0: PLANT.y + PLANT.d + 1.5, y1: PLANT.y + PLANT.d + 14 }]; // roof from the north eave to the plinth; yard to the south, up to y 88 (the seam fence of #319 and its lamp poles stand at y 88.2..90)
+    const areas = [{ x0: PLANT.x, x1: STAIR_TOWER.x1, y0: PLANT.y - 0.6, y1: PLANT.y + PLANT.d + 1.5 }, { x0: PLANT.x, x1: STAIR_TOWER.x1, y0: PLANT.y + PLANT.d + 1.5, y1: PLANT.y + PLANT.d + 16 }]; // roof from the north eave to the plinth; yard to the south, 
+    // the seam fence of #319 (steel wall at y 89.4, posts at y 89.3, lamp poles at y 88.2) runs along the south edge of the yard on purpose
+    const isFence = (s: Solid) => s.kind === "prism" && s.mat === "steel" && ((s.at.y === 89.4 && s.w === 156) || (s.at.y === 89.3 && s.w === 0.3) || (s.at.y === 88.2 && s.w === 0.6 && s.h === 5));
     for (const s of others) {
+      if (isFence(s)) continue;
       const b = bounds(s);
       for (const a of areas) expect(b.max.x <= a.x0 || b.min.x >= a.x1 || b.max.y <= a.y0 || b.min.y >= a.y1, JSON.stringify(s).slice(0, 90)).toBe(true);
     }

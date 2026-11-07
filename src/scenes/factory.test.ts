@@ -38,7 +38,7 @@ const expectApart = (as: readonly Solid[], bs: readonly Solid[]) => {
   for (const a of as) for (const b of bs) expect(apartSliced(a, b), `${JSON.stringify(a).slice(0, 90)} × ${JSON.stringify(b).slice(0, 90)}`).toBe(true);
 };
 const isTruck = (x: Solid) => x.kind === "prism" && x.d === 2.4 && ((x.w === 6 && x.h === 2.8) || (x.w === 2 && x.h === 2.2));
-const PALLET_Y = PLANT.y + PLANT.d + 13; // row of pallets: 13 u south of the plant's south wall
+const PALLET_Y = PLANT.y + PLANT.d + 12; // row of pallets: 12 u south of the plant's south wall
 const isPallet = (x: Solid): x is Solid & { kind: "prism" } => x.kind === "prism" && x.mat === "steel" && x.w === 3 && x.d === 2 && x.at.y === PALLET_Y;
 const isLamp = (x: Solid): x is Solid & { kind: "prism" } => x.kind === "prism" && x.mat === "steel" && x.w === 0.6 && x.d === 0.6 && x.h === 5;
 const crane = build((out) => towerCrane(out, [], { at: { x: 60, y: -12 }, mastH: 20, jibLen: 30, dir: "e", light: "cyan" }));
@@ -201,7 +201,7 @@ describe("factory", () => {
     expectApart(malt, [...build(hallBody), ...s.solids.filter(isPallet)]);
   });
 
-  it("truck yard moved by PLANT_SHIFT: trucks at (25, 78), (55, 84), (80, 78) and pallets at x 7..30, y 87..89", () => {
+  it("truck yard moved by PLANT_SHIFT: trucks at (25, 78), (55, 84), (80, 78) and pallets at x 7..30, y 86..88", () => {
     const s = scene();
     const boxes = s.solids.filter((x): x is Solid & { kind: "prism" } => isTruck(x) && x.kind === "prism" && x.w === 6).map((x) => [x.at.x, x.at.y]);
     expect(boxes).toEqual([[25, 78], [55, 84], [80, 78]]);
@@ -211,7 +211,7 @@ describe("factory", () => {
     const pallets = s.solids.filter(isPallet);
     expect(pallets).toHaveLength(6);
     const u = union(pallets);
-    expect([u.min.x, u.max.x, u.min.y, u.max.y]).toEqual([7, 30, 87, 89]);
+    expect([u.min.x, u.max.x, u.min.y, u.max.y]).toEqual([7, 30, 86, 88]);
   });
 
   it("7 lamps: the plant's five moved, the substation's and the one at (−30, 20); each with its cyan accent on top", () => {

@@ -38,7 +38,7 @@ const ROW_H = 16;
 const HALL_X = 10, HALL_W = 90, HALL_H = 10;
 const HALL_ROWS_Y = [-52, -32] as const; // assembly halls, in the north band
 const SLIP_X = 110;
-export const RAIL_Y = [131, 134] as const; // west tracks; the hinterland extends them west to the edge of the bleed
+export const RAIL_Y = [131, 134] as const; // west tracks: the station draws them from x 96, Resume and the hinterland west of it
 const GANTRY_X = 150, GANTRY_H = 24;
 const WATER_Z = -1;
 const SEAM_Y = 90; // Portfolio/Resume seam; Task 5 replaces it with ZONE_SPLIT_Y
