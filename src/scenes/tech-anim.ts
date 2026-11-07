@@ -32,7 +32,7 @@ export interface TechAnimChanges { windows: boolean; signs: boolean; telecom: bo
 export interface TechAnim { windows(): Accent[]; signs(): Accent[]; telecom(): Accent; neon(): Accent[]; homes(): Accent[]; fired(): { homes: number; windows: number; crowns: number }; tick(dtMs: number): TechAnimChanges }
 
 export function createTechAnim(scene: TechScene, rng: Rng, opts: { reducedMotion: boolean }): TechAnim {
-  const walls = scene.towers.map((t) => visibleWalls(t.box).filter((f) => f.mat === "curtain" && f.toneOffset === 0));
+  const walls = scene.towers.map((t) => visibleWalls(t.box));
   const lit: (number | null)[] = scene.towers.map((t) => rng.int(1, t.facade.floors - 1));
   const blinkRng = createRng(rng.int(0, SEED_MAX)); // own stream of the towers, derived where the first deadline used to be drawn
   const nextGap = () => blinkRng.int(TECH_BLINK_GAP_MS[0], TECH_BLINK_GAP_MS[1]);
