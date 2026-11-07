@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildRenderList } from "../iso/render-list";
 import type { Accent } from "../iso/accent";
 import { bounds, type Solid } from "../iso/solids";
-import { WORLD, northCoastY } from "../map/geo";
+import { WORLD, inStationLand, northCoastY } from "../map/geo";
 import { allIsoColors } from "../map/palette-iso";
 import { createRng } from "../map/seed";
 import { AREA_H, AREA_W, STREET_EDGE, shipyard, type Scene } from "./shipyard";
@@ -74,18 +74,15 @@ describe("shipyard part 2", () => {
     expect(s.ground.some((g) => g.kind === "ground" && g.tris.length > 0 && g.tris.every((t) => t.pts.every((p) => p.z === -6)))).toBe(true);
   });
 
-  it("cars in the parking lot", () => {
-    const s = scene();
-    const cars = s.solids.filter((x) => x.kind === "prism" && x.h === 1.5 && x.w === 3);
-    expect(cars.length).toBeGreaterThanOrEqual(3);
-  });
-
-  it("jungle: cones in the SW and in the east strip, never over the slab", () => {
+  it("jungle: cones in the east strip and the station esplanade, none south of 90 outside the station land", () => {
     const s = scene();
     const cones = s.solids.filter((x): x is Solid & { kind: "cone" } => x.kind === "cone" && (x.mat === "leaf" || x.mat === "leafDark"));
-    expect(cones.length).toBeGreaterThanOrEqual(20);
+    expect(cones.length).toBeGreaterThanOrEqual(5); // measured 5 (seed 7) after the cuts
     // the palms of the station esplanade (#278) are at x 190..197, outside the shipyard slab
-    for (const c of cones) expect(c.at.x < 42 || c.at.x > 300 || (c.at.x > ESPLANADE.x0 && c.at.x < ESPLANADE.x1)).toBe(true);
+    for (const c of cones) {
+      expect(c.at.x > 300 || (c.at.x > ESPLANADE.x0 && c.at.x < ESPLANADE.x1), `cone ${c.at.x},${c.at.y}`).toBe(true);
+      expect(c.at.y <= 90 || inStationLand(c.at.x, c.at.y), `cone ${c.at.x},${c.at.y}`).toBe(true);
+    }
   });
 
   it("fitting-out quay: gable sheds east of the river and riprap", () => {
@@ -93,7 +90,7 @@ describe("shipyard part 2", () => {
     const sheds = s.solids.filter((x) => x.kind === "prism" && x.roof === "gable" && x.at.x > 300);
     expect(sheds).toHaveLength(2);
     const rocks = s.solids.filter((x) => x.kind === "cone" && x.mat === "rock");
-    expect(rocks.length).toBeGreaterThan(30);
+    expect(rocks.length).toBeGreaterThan(20); // measured 27 (seed 7) with the riprap only north of 90
   });
 
   it("the riprap borders the new coast of the north headland", () => {
@@ -114,10 +111,11 @@ describe("shipyard without the new region (#242)", () => {
   const prisms = (s: Scene) => s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism");
   const rails = (s: Scene) => s.ground.filter((x): x is Solid & { kind: "strip" } => x.kind === "strip" && x.mat === "rail");
 
-  it("the new region (x 4..99, y −4..99) stays empty except for jungle cones", () => {
+  it("the new region (x 4..99, y −4..99) stays empty except for jungle cones and the seam fence", () => {
     for (const x of scene().solids) {
       if (x.kind === "cone") continue;
       const b = bounds(x);
+      if (b.min.y >= 88.2) continue; // the seam fence and its lamps (#319)
       expect(b.min.x < 99 && b.max.x > 4 && b.min.y < 99 && b.max.y > -4, JSON.stringify(b)).toBe(false);
     }
   });
@@ -139,14 +137,13 @@ describe("shipyard without the new region (#242)", () => {
     expect(cyl.filter((c) => (c.at.x === 80 && c.at.y === 10) || (c.at.x === 92 && c.at.y === 22))).toEqual([]); // tanks of the old yard
   });
 
-  it("the west track reaches x 104 in parkingAndRails and the station continues it to 160; the street truck remains", () => {
+  it("no shipyard rail west of 96 and the station draws track 3 from 96 to the buffer; the street truck remains", () => {
     const s = scene();
+    for (const r of rails(s)) expect(Math.min(...r.path.map((p) => p.x))).toBeGreaterThanOrEqual(96);
     for (const y of [131, 134]) {
-      expect(rails(s).some((r) => r.path.length === 2 && r.path[0]!.x === 0 && r.path[0]!.y === y && r.path[1]!.x === 104 && r.path[1]!.y === y), `track y ${y}`).toBe(true);
-      expect(rails(s).some((r) => r.path.length === 2 && r.path[0]!.x === 104 && r.path[0]!.y === y && r.path[1]!.x === BUFFER_X && r.path[1]!.y === y), `station y ${y}`).toBe(true);
-      expect(rails(s).filter((r) => r.path.every((p) => p.y === y)).flatMap((r) => r.path.map((p) => p.x)).sort((a, b) => a - b)).toEqual([0, 104, 104, BUFFER_X]); // no gap or overlap
+      expect(rails(s).some((r) => r.path.length === 2 && r.path[0]!.x === 96 && r.path[0]!.y === y && r.path[1]!.x === BUFFER_X && r.path[1]!.y === y), `station y ${y}`).toBe(true);
     }
-    expect(prisms(s).filter((x) => x.mat === "rust" && x.w === 1 && x.d === 5 && x.h === 0.3 && x.at.y === 130).length).toBeGreaterThanOrEqual(20);
+    expect(prisms(s).filter((x) => x.mat === "rust" && x.w === 1 && x.d === 5 && x.h === 0.3 && x.at.y === 130).length).toBe(13); // the station sleepers, x 110..158 (the west ones are the hinterland and Resume)
     expect(prisms(s).some((x) => x.mat === "rust" && x.at.x === 105 && x.at.y === 88 && x.w === 3 && x.d === 7 && x.h === 2.5)).toBe(true);
   });
 });
@@ -208,12 +205,11 @@ describe("shipyard in the north band (#247)", () => {
     expect(b.y0).toBeGreaterThanOrEqual(-59); expect(b.y1).toBeLessThanOrEqual(-35.7);
   });
 
-  it("the rng (seed 7): cars as on main, no prefabricated sections and with the scrap re-measured (#277)", () => {
-    // cars: values from origin/main (a34dec0), seeded before the loop that was removed; scrap measured with tsx without the eight `chance` calls of the prefabricated ones
+  it("the rng (seed 7): no prefabricated sections, nothing of the parking lot or the scrap (#319)", () => {
     const ps = prisms(scene());
-    expect(ps.filter((x) => x.h === 1.5 && x.w === 3).map((x) => [x.at.x, x.at.y, x.mat])).toEqual([[65, 102, "steel"], [73, 116, "steel"], [53, 116, "rust"], [57, 102, "steel"], [73, 102, "rust"]]);
     expect(ps.filter((x) => x.mat === "steel" && x.w === 9 && x.d === 5 && x.h === 3)).toEqual([]);
-    expect(ps.filter((x) => x.w === 3 && x.d === 2 && x.h === 1 && x.at.x >= 302).map((x) => [x.at.x, x.at.y])).toEqual([[308, 139], [306, 131], [305, 133], [315, 138], [303, 140], [315, 136]]);
+    expect(ps.filter((x) => x.h === 1.5 && x.w === 3)).toEqual([]);
+    expect(ps.filter((x) => x.w === 3 && x.d === 2 && x.h === 1 && x.at.x >= 302)).toEqual([]);
   });
 
   it("nothing is left of the boiler shop (#277)", () => {

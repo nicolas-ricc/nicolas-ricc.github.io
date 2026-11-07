@@ -8,11 +8,11 @@ const byColor = (accents: Accent[]) => {
   return out;
 };
 
-/** Portfolio is not touched in story #11: same colors, same count. The fair is left out on purpose (it is the exception with neons). */
+/** Portfolio keeps its colors; counts re-measured in #319 (the seam fence adds 6 cyan). The fair is left out on purpose (it is the exception with neons). */
 describe("Portfolio accents", () => {
   const w = world(7);
-  // #279: the parked consist adds 12 cyanBleed (saloon) and 2 amber (LED signs)
-  it("shipyard", () => expect(byColor(w.shipyard!.accents)).toEqual({ amber: 10, amberBleed: 1, cyan: 9, cyanBleed: 15, cyanMid: 8, magenta: 3 }));
+  // #279: the parked consist adds 12 cyanBleed (saloon) and 2 amber (LED signs); #319: the seam fence adds 6 cyan lamps to the shipyard
+  it("shipyard", () => expect(byColor(w.shipyard!.accents)).toEqual({ amber: 10, amberBleed: 1, cyan: 15, cyanBleed: 15, cyanMid: 8, magenta: 3 }));
   it("factory", () => expect(byColor(w.factory!.accents)).toEqual({ amber: 3, cyan: 8, magenta: 6 }));
   it("hinterland", () => expect(byColor(w.hinterland!.accents)).toEqual({ cyan: 21, cyanMid: 1 }));
 });

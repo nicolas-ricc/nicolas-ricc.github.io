@@ -8,7 +8,8 @@ import { emu, trainLen } from "./train";
  * Terminus station at the end of the west track, south of the slipways. The
  * real model is Tigre Station, terminus of the Mitre Line (1995): brick
  * building with tile roofs, stone clock tower, portico and
- * green canopies. Layout: region `STATION` (x 100..197, y 80..142);
+ * green canopies. Layout: region `STATION` (x 100..197, y 80..142; the rails of track 3
+ * peek out to x 96, the west edge of `STATION_LAND`);
  * tracks 1..3 at `TRACKS_Y` with the `LADDER` fan; platforms `ISLAND`, `SIDE` and
  * `HEAD`; buffers at `BUFFER_X`; building, tower and esplanade east of `HEAD`; and
  * the level crossing over the street, x 100..108. The constants are the contract
@@ -31,7 +32,7 @@ import { emu, trainLen } from "./train";
 export const STATION = { x0: 100, y0: 80, x1: 197, y1: 142 } as const;
 export const GAUGE = 3, RAIL_W = 0.5, RAIL_Z = 0.05;
 export const TRACKS_Y = [112.5, 122.5, 132.5] as const;   // axes of tracks 1, 2, 3; 3 is RAIL_Y (131, 134)
-export const TRACK_X0 = [134, 121, 104] as const;          // where the straight stretch of each track starts
+export const TRACK_X0 = [134, 121, 96] as const;          // where the straight stretch of each track starts; 96 is the west edge of STATION_LAND
 export const LADDER = [{ x: 108, y: 132.5 }, { x: 134, y: 112.5 }] as const; // fan
 export const BUFFER_X = 160, BUFFER_H = 1.2;               // buffers x 160..161.5
 export const STOP_X = 158;                                 // front of the stopped train on track 3
