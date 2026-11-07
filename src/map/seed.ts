@@ -1,4 +1,4 @@
-/** La semilla del mundo: de ella salen las escenas, los Rng de los animadores y las piezas del lab. */
+/** The world seed: the scenes, the animators' Rngs and the lab pieces all come from it. */
 export const SEED = 7;
 
 export interface Rng {

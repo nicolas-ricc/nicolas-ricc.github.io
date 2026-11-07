@@ -1,4 +1,4 @@
-/** Atlas antes del oscurecimiento a crepúsculo tardío. Solo lo leen scripts/darken-palette.ts y el test: el runtime usa los literales de palette-iso.ts. */
+/** Atlas before the darkening to late dusk. Only scripts/darken-palette.ts and the test read it: the runtime uses the literals of palette-iso.ts. */
 export const DARKEN = 0.7;
 
 export const BASE_TONES = {
@@ -32,16 +32,51 @@ export const BASE_TONES = {
   foam:      { top: 0xc4d3d6, lit: 0xa19c85, shade: 0x4e5980, up: 0xe3ecda, down: 0xa9bac9 },
   abyss:     { top: 0x0f2740, lit: 0x081733, shade: 0x061026, up: 0x152e45, down: 0x0c213d },
   glint:     { top: 0xf58c5a, lit: 0xc96838, shade: 0x623b36, up: 0xffc496, down: 0xd37b55 },
+  // Resume level 2: cityLadder(top) pasted as a literal
+  plaster:   { top: 0xb89a86, lit: 0x977253, shade: 0x4a4150, up: 0xd5ac89, down: 0x9e887e },
+  terracotta:{ top: 0x9a5a3c, lit: 0x7e4325, shade: 0x3e2624, up: 0xb3653d, down: 0x844f38 },
+  marble:    { top: 0xcfc4b0, lit: 0xaa916d, shade: 0x53526a, up: 0xf0dcb4, down: 0xb2aca5 },
+  awning:    { top: 0x3a5a4a, lit: 0x30432e, shade: 0x17262c, up: 0x43654b, down: 0x324f46 },
   signal:    { top: 0xc0392b, lit: 0x9d2a1b, shade: 0x4d181a, up: 0xdf402c, down: 0xa53228 },
   stockbrick:{ top: 0xc9a86a, lit: 0xa57c42, shade: 0x504740, up: 0xe9bc6c, down: 0xad9464 },
   safety:    { top: 0xd9a62e, lit: 0xb27b1d, shade: 0x57461c, up: 0xfcba2f, down: 0xbb922b },
+  // terminal station (#239)
+  canopy:    { top: 0x3f6b4a, lit: 0x344f2e, shade: 0x192d2c, up: 0x49784b, down: 0x365e46 },
+  livery:    { top: 0x2457b8, lit: 0x1e4072, shade: 0x0e256e, up: 0x2a61bc, down: 0x1f4dad },
+  // tile: the one from the coastal neighborhood (#240), shared with the station (#239)
+  tile:      { top: 0xb0603c, lit: 0x904725, shade: 0x462824, up: 0xcc6c3d, down: 0x975438 },
 } as const;
 
 export const BASE_SHADOW = 0x2a1a3a;
 export const BASE_SKY = 0x171423;
 
-/** Cada canal RGB × factor, redondeado. */
+/** Each RGB channel × factor, rounded. */
 export function darken(color: number, factor: number): number {
   const ch = (shift: number) => Math.round(((color >> shift) & 255) * factor);
   return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+}
+
+export type FiveTones = { top: number; lit: number; shade: number; up: number; down: number };
+export type NineTones = FiveTones & { deep: number; dim: number; pale: number; glow: number };
+
+type Rgb = readonly [number, number, number];
+/** Each RGB channel × its factor, rounded and clamped to 255. */
+const scale = (c: number, [r, g, b]: Rgb): number => {
+  const ch = (shift: number, f: number) => Math.min(255, Math.round(((c >> shift) & 255) * f));
+  return (ch(16, r) << 16) | (ch(8, g) << 8) | ch(0, b);
+};
+const mean = (a: number, b: number): number => {
+  const ch = (shift: number) => Math.round((((a >> shift) & 255) + ((b >> shift) & 255)) / 2);
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+};
+
+/** "City and coast" rule (see the header of palette-iso.ts) from the base `top`. */
+export function cityLadder(top: number): FiveTones {
+  return { top, lit: scale(top, [0.82, 0.74, 0.62]), shade: scale(top, [0.40, 0.42, 0.60]), up: scale(top, [1.16, 1.12, 1.02]), down: scale(top, [0.86, 0.88, 0.94]) };
+}
+
+/** The five tones plus deep, dim, pale and glow: the nine-step ladder. */
+export function extendLadder(t: FiveTones): NineTones {
+  const glow = scale(t.up, [1.12, 1.08, 1.02]);
+  return { ...t, deep: scale(t.shade, [0.70, 0.72, 0.80]), dim: mean(t.shade, t.lit), pale: mean(t.up, glow), glow };
 }

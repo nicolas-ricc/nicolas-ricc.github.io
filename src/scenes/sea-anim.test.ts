@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { depthAt } from "./depth-map";
 import type { Accent } from "../iso/accent";
-import { isBehind, overlaps, screenBounds } from "../iso/depth";
+import { hullsIntersect, isBehind, overlaps, screenBounds, screenHull } from "../iso/depth";
 import { convexHull, polyline, v3, type Vec2 } from "../iso/geometry";
 import { project } from "../iso/project";
 import { bounds, hullRings, isFlat, type Bounds, type Solid } from "../iso/solids";
@@ -13,52 +13,37 @@ import { bleedTerrainAt, terrainAt } from "./terrain";
 import { world } from "./world";
 
 const WATER = new Set(["water", "sea", "shore", "abyss"]);
-/** SAT entre dos polígonos convexos: se intersecan si ningún eje (normal de un lado) los separa. */
-const intersects = (a: Vec2[], b: Vec2[]): boolean => {
-  const axes = [a, b].flatMap((poly) => poly.map((p, i) => { const q = poly[(i + 1) % poly.length]!; return { x: p.y - q.y, y: q.x - p.x }; }));
-  return axes.every((n) => {
-    const pa = a.map((p) => p.x * n.x + p.y * n.y), pb = b.map((p) => p.x * n.x + p.y * n.y);
-    return Math.max(...pa) >= Math.min(...pb) && Math.max(...pb) >= Math.min(...pa);
-  });
-};
-/**
- * Hexágono en pantalla de una caja del mundo (envolvente convexa de sus ocho vértices proyectados). El rectángulo
- * de `screenBounds` lo envuelve con mucho aire cuando la caja es larga en diagonal (un carguero con rumbo norte): daba
- * falsos positivos de oclusión con la escollera de la dársena, a 35 u del barco (#83). Dos cajas se superponen en
- * pantalla si se cortan sus hexágonos.
- */
-const screenHull = (b: Bounds): Vec2[] => { const pts: Vec2[] = []; for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) pts.push(project(v3(x, y, z))); return convexHull(pts); };
 type Static = { b: Bounds; sb: ReturnType<typeof screenBounds>; sh: Vec2[] };
 const staticsOf = (solids: Solid[]): Static[] => solids.map((s) => { const b = bounds(s); return { b, sb: screenBounds(b), sh: screenHull(b) }; });
-/** Caja de alineación del carguero centrado en `p` (z −1..13) y comprobación de que ningún sólido estático que se le superponga en pantalla lo tapa. */
+/** Alignment box of the freighter centered at `p` (z −1..13) and a check that no static solid overlapping it on screen covers it. */
 const expectNotBehind = (statics: Static[], p: { x: number; y: number }, heading: number): void => {
   const parts = ship("cargo", shipAt("cargo", p, heading), heading).solids.map(bounds);
   const sb: Bounds = { min: v3(Math.min(...parts.map((b) => b.min.x)), Math.min(...parts.map((b) => b.min.y)), -1), max: v3(Math.max(...parts.map((b) => b.max.x)), Math.max(...parts.map((b) => b.max.y)), 13) };
   const scr = screenBounds(sb), sh = screenHull(sb);
-  for (const s of statics) if (overlaps(scr, s.sb) && intersects(sh, s.sh)) expect(isBehind(sb, s.b)).toBe(false);
+  for (const s of statics) if (overlaps(scr, s.sb) && hullsIntersect(sh, s.sh)) expect(isBehind(sb, s.b)).toBe(false);
 };
 const setup = (reducedMotion = false) => { const w = world(7); return { w, a: createSeaAnim(w.sea!, { reducedMotion }) }; };
 
-describe("ruta", () => {
-  it("LANE_OUT nace en la bocana (362, −16), dentro del cover, y termina fuera; agua, profundidad ≥ 6, Blog para x ≥ 380; el fade de mar cae en el sangrado", () => {
+describe("route", () => {
+  it("LANE_OUT starts at the harbor mouth (362, −16), inside the cover, and ends outside; water, depth ≥ 6, Blog for x ≥ 380; the sea fade falls in the bleed", () => {
     expect(LANE_OUT[0]).toEqual({ x: 362, y: -16 });
     expect(inCoverQuad(362, -16)).toBe(true);
     const end = LANE_OUT[LANE_OUT.length - 1]!;
     expect(inCoverQuad(end.x, end.y)).toBe(false);
     const L = laneLength("out");
-    expect(Math.abs(L - 687.9)).toBeLessThan(5); // holgura para mover vértices hasta 2 u
+    expect(Math.abs(L - 687.9)).toBeLessThan(5); // slack to move vertices up to 2 u
     for (let d = 0; d <= L; d += 1) {
       const p = laneAt("out", d);
       const t = inWorld(p.x, p.y) ? terrainAt(p.x, p.y) : bleedTerrainAt(p.x, p.y);
       expect(WATER.has(t)).toBe(true);
       expect(depthAt(p.x, p.y)).toBeGreaterThanOrEqual(6);
       if (p.x >= 380) expect(worldZoneAt(p.x, p.y)).toBe("blog");
-      expect(inCoverQuad(p.x, p.y)).toBe(L - d > FADE_U); // a pleno siempre a la vista; el fade de mar, nunca
+      expect(inCoverQuad(p.x, p.y)).toBe(L - d > FADE_U); // at full alpha always in view; the sea fade, never
     }
-    expect(laneAt("out", 0).heading).toBeCloseTo(Math.atan2(56, 36), 6); // sale de la bocana hacia el sursureste
+    expect(laneAt("out", 0).heading).toBeCloseTo(Math.atan2(56, 36), 6); // leaves the harbor mouth toward the south-southeast
   });
 
-  it("ningún punto del carril queda detrás de un sólido estático que se le superponga en pantalla", () => {
+  it("no point of the lane ends up behind a static solid that overlaps it on screen", () => {
     const statics = staticsOf(world(7).solids);
     for (let d = 0; d <= laneLength("out"); d += 4) {
       const p = laneAt("out", d);
@@ -66,11 +51,11 @@ describe("ruta", () => {
     }
   });
 
-  it("el barco se dibuja centrado en el carril: el casco nace en shipAt(kind, laneAt(lane, d))", () => {
+  it("the ship is drawn centered on the lane: the hull starts at shipAt(kind, laneAt(lane, d))", () => {
     const { a } = setup();
     for (const k of [0, 1, 2]) {
       const s = a.state(k);
-      if (s.lane !== "out" && s.lane !== "back") throw new Error(`barco ${k} fuera de los carriles en el frame 0: ${s.lane}`);
+      if (s.lane !== "out" && s.lane !== "back") throw new Error(`ship ${k} outside the lanes at frame 0: ${s.lane}`);
       const p = laneAt(s.lane, s.dist), at = shipAt(SHIPS[k]!.kind, p, s.heading);
       const hull = a.ship(k).solids.find((s) => s.kind === "hull")!;
       expect(hull.kind === "hull" && hull.at.x).toBeCloseTo(at.x, 6);
@@ -81,21 +66,21 @@ describe("ruta", () => {
 
 const inWorld = (x: number, y: number) => x >= WORLD.x0 && x <= WORLD.x1 && y >= WORLD.y0 && y <= WORLD.y1;
 
-/** Silueta convexa en pantalla de un carguero centrado en `p`: anillo de cubierta proyectado a z −1 y z 13. */
+/** Convex on-screen silhouette of a freighter centered at `p`: deck ring projected at z −1 and z 13. */
 const silhouette = (p: { x: number; y: number }, heading: number): Vec2[] => {
   const hull = ship("cargo", shipAt("cargo", p, heading), heading).solids.find((s) => s.kind === "hull")!;
-  if (hull.kind !== "hull") throw new Error("sin casco");
+  if (hull.kind !== "hull") throw new Error("no hull");
   return convexHull(hullRings(hull).deck.flatMap((q) => [project(v3(q.x, q.y, -1)), project(v3(q.x, q.y, 13))]));
 };
 
-describe("dos carriles", () => {
-  it("LANE_BACK nace fuera del cover y termina en la bocana (397, −39); agua, profundidad ≥ 6, Blog para x ≥ 380; el fade de mar cae en el sangrado", () => {
+describe("two lanes", () => {
+  it("LANE_BACK starts outside the cover and ends at the harbor mouth (397, −39); water, depth ≥ 6, Blog for x ≥ 380; the sea fade falls in the bleed", () => {
     expect(LANE_BACK[0]).toEqual({ x: 424, y: 600 });
     expect(inCoverQuad(424, 600)).toBe(false);
     expect(LANE_BACK[LANE_BACK.length - 1]).toEqual({ x: 397, y: -39 });
     expect(inCoverQuad(397, -39)).toBe(true);
     const L = laneLength("back");
-    expect(Math.abs(L - 664.9)).toBeLessThan(5); // holgura para mover vértices hasta 2 u
+    expect(Math.abs(L - 664.9)).toBeLessThan(5); // slack to move vertices up to 2 u
     for (let d = 0; d <= L; d += 1) {
       const p = laneAt("back", d);
       const t = inWorld(p.x, p.y) ? terrainAt(p.x, p.y) : bleedTerrainAt(p.x, p.y);
@@ -106,7 +91,7 @@ describe("dos carriles", () => {
     }
   });
 
-  it("ningún punto de LANE_BACK queda detrás de un sólido estático que se le superponga en pantalla", () => {
+  it("no point of LANE_BACK ends up behind a static solid that overlaps it on screen", () => {
     const statics = staticsOf(world(7).solids);
     for (let d = 0; d <= laneLength("back"); d += 4) {
       const p = laneAt("back", d);
@@ -114,17 +99,17 @@ describe("dos carriles", () => {
     }
   });
 
-  it("separación: dos cargueros, uno en cada carril, nunca se tocan en pantalla", () => {
+  it("separation: two freighters, one in each lane, never touch on screen", () => {
     const Lo = laneLength("out"), Lb = laneLength("back");
     const backs = [] as Vec2[][];
     for (let d = 0; d <= Lb; d += 4) { const p = laneAt("back", d); backs.push(silhouette(p, p.heading)); }
     for (let d = 0; d <= Lo; d += 4) {
       const p = laneAt("out", d), s = silhouette(p, p.heading);
-      for (const b of backs) expect(intersects(s, b)).toBe(false);
+      for (const b of backs) expect(hullsIntersect(s, b)).toBe(false);
     }
   });
 
-  it("la lancha pasa a más de 20 u de los dos carriles", () => {
+  it("the launch passes more than 20 u from both lanes", () => {
     const ferry = polyline(FERRY_ROUTE);
     for (const lane of ["out", "back"] as const) for (let d = 0; d <= laneLength(lane); d += 2) {
       const p = laneAt(lane, d);
@@ -132,19 +117,13 @@ describe("dos carriles", () => {
     }
   });
 
-  it("intersects (SAT) detecta superposición y separación", () => {
-    const sq = (x: number, y: number): Vec2[] => [{ x, y }, { x: x + 2, y }, { x: x + 2, y: y + 2 }, { x, y: y + 2 }];
-    expect(intersects(sq(0, 0), sq(1, 1))).toBe(true);
-    expect(intersects(sq(0, 0), sq(3, 0))).toBe(false);
-  });
-
-  it("laneAt('back') interpola el rumbo en los vértices y en el extremo llega con el rumbo del último tramo", () => {
+  it("laneAt('back') interpolates the heading at the vertices and at the end arrives with the heading of the last leg", () => {
     const Lb = laneLength("back"), last = Math.atan2(-39 - 18, 397 - 434);
     expect(laneAt("back", Lb).heading).toBeCloseTo(last, 6);
     expect(laneAt("back", 0).heading).toBeCloseTo(Math.atan2(237 - 600, 462 - 424), 6);
   });
 
-  it("cobertura: en 2·T, siempre uno en out y uno en back (y uno a pleno en cada uno), cada barco recorre out → offscreen → back → offscreen en orden, y dos en el mismo carril distan ≥ 100 u", () => {
+  it("coverage: over 2·T, always one in out and one in back (and one at full alpha in each), each ship goes out → offscreen → back → offscreen in order, and two in the same lane are ≥ 100 u apart", () => {
     const { a } = setup();
     const ORDER = ["out", "offscreen", "back", "offscreen"] as const;
     const step = [0, 1, 2].map((k) => ORDER.indexOf(a.state(k).lane as (typeof ORDER)[number])), seen: string[][] = [[], [], []];
@@ -166,10 +145,10 @@ describe("dos carriles", () => {
     for (const k of [0, 1, 2]) for (const i of [0, 1, 2, 3]) expect(seen[k]).toContain(`${i}`);
   });
 
-  it("entrar a puerto: al terminar la vuelta pasa PORT_MS fuera de cámara y reaparece en la bocana, desvanecido", () => {
+  it("entering port: at the end of the return it spends PORT_MS off camera and reappears at the harbor mouth, faded", () => {
     const { a } = setup();
     const Lo = laneLength("out"), Lb = laneLength("back");
-    a.tick(((Lo + Lb) / LANE_SPEED) * 1000 + OFF_MS + 1); // barco 0 recién llegado a la bocana
+    a.tick(((Lo + Lb) / LANE_SPEED) * 1000 + OFF_MS + 1); // ship 0 just arrived at the harbor mouth
     expect(a.state(0)).toMatchObject({ lane: "offscreen", dist: Lb });
     expect(a.ship(0)).toEqual({ solids: [], lights: [], wake: [], alpha: 0 });
     a.tick(PORT_MS - 2);
@@ -177,11 +156,11 @@ describe("dos carriles", () => {
     a.tick(2);
     expect(a.state(0).lane).toBe("out");
     expect(a.state(0).dist).toBeLessThan(0.01);
-    expect(a.state(0).heading).toBeCloseTo(Math.atan2(56, 36), 6); // rumbo del primer tramo de LANE_OUT
+    expect(a.state(0).heading).toBeCloseTo(Math.atan2(56, 36), 6); // heading of the first leg of LANE_OUT
     expect(a.ship(0).alpha).toBeLessThan(0.01);
   });
 
-  it("un dt grande cruza la vuelta y PORT_MS de una vez: cae 6 u dentro de la ida siguiente", () => {
+  it("a large dt crosses the return leg and PORT_MS at once: lands 6 u into the next outbound leg", () => {
     const { a } = setup();
     const Lo = laneLength("out"), Lb = laneLength("back");
     a.tick((Lo / LANE_SPEED) * 1000 + OFF_MS);
@@ -191,8 +170,8 @@ describe("dos carriles", () => {
   });
 });
 
-describe("barcos", () => {
-  it("tres barcos a la misma velocidad, cada uno arranca en la fase k·T/3 de su ciclo; tras CYCLE_MS todos vuelven a su estado", () => {
+describe("ships", () => {
+  it("three ships at the same speed, each starts at phase k·T/3 of its cycle; after CYCLE_MS all return to their state", () => {
     const { a } = setup();
     expect(LANE_SPEED).toBe(1.2);
     expect(SHIPS.map((s) => s.kind)).toEqual(["cargo", "tug", "barge"]);
@@ -200,14 +179,14 @@ describe("barcos", () => {
     const Lo = laneLength("out"), Lb = laneLength("back");
     expect(CYCLE_MS).toBeCloseTo(((Lo + Lb) / LANE_SPEED) * 1000 + OFF_MS + PORT_MS, 6);
     const s0 = [0, 1, 2].map((k) => a.state(k));
-    expect(s0[0]).toMatchObject({ lane: "out", dist: 0 }); // zarpando de la bocana
-    expect(s0[1]!.lane).toBe("out"); expect(s0[1]!.dist).toBeGreaterThan(Lo / 2); // lejos en la ida
-    expect(s0[2]!.lane).toBe("back"); expect(s0[2]!.dist).toBeGreaterThan(Lb / 4); expect(s0[2]!.dist).toBeLessThan((3 * Lb) / 4); // a mitad de la vuelta
+    expect(s0[0]).toMatchObject({ lane: "out", dist: 0 }); // setting sail from the harbor mouth
+    expect(s0[1]!.lane).toBe("out"); expect(s0[1]!.dist).toBeGreaterThan(Lo / 2); // far along the outbound leg
+    expect(s0[2]!.lane).toBe("back"); expect(s0[2]!.dist).toBeGreaterThan(Lb / 4); expect(s0[2]!.dist).toBeLessThan((3 * Lb) / 4); // halfway through the return
     a.tick(CYCLE_MS);
     for (const k of [0, 1, 2]) { const s = a.state(k); expect(s.lane).toBe(s0[k]!.lane); expect(s.dist).toBeCloseTo(s0[k]!.dist, 6); }
   });
 
-  it("alpha: 0 en los dos extremos de cada carril, 1 a FADE_U de ellos; offscreen 0", () => {
+  it("alpha: 0 at both ends of each lane, 1 at FADE_U from them; offscreen 0", () => {
     const Lo = laneLength("out"), Lb = laneLength("back");
     expect(alphaAt("out", 0)).toBe(0);
     expect(alphaAt("out", FADE_U / 2)).toBeCloseTo(0.5, 6);
@@ -222,14 +201,14 @@ describe("barcos", () => {
     expect(alphaAt("offscreen", Lo)).toBe(0);
   });
 
-  it("offscreen: el frame no tiene sólidos, luces ni estela y su alpha es 0", () => {
+  it("offscreen: the frame has no solids, lights or wake and its alpha is 0", () => {
     const { a } = setup();
-    a.tick((laneLength("out") / LANE_SPEED) * 1000 + OFF_MS / 2); // barco 0 a mitad del offscreen
+    a.tick((laneLength("out") / LANE_SPEED) * 1000 + OFF_MS / 2); // ship 0 halfway through offscreen
     expect(a.state(0)).toMatchObject({ lane: "offscreen", dist: laneLength("out") });
     expect(a.ship(0)).toEqual({ solids: [], lights: [], wake: [], alpha: 0 });
   });
 
-  it("un dt grande cruza estados y consume el sobrante: del final de la ida, OFF_MS + 5 s después va 6 u por la vuelta", () => {
+  it("a large dt crosses states and consumes the remainder: from the end of the outbound leg, OFF_MS + 5 s later it is 6 u along the return", () => {
     const { a } = setup();
     a.tick((laneLength("out") / LANE_SPEED) * 1000);
     a.tick(OFF_MS + 5000);
@@ -237,7 +216,7 @@ describe("barcos", () => {
     expect(a.state(0).dist).toBeCloseTo(5 * LANE_SPEED, 6);
   });
 
-  it("reduced motion: tick no cambia el estado de ningún barco", () => {
+  it("reduced motion: tick does not change any ship's state", () => {
     const { a } = setup(true);
     const s0 = [0, 1, 2].map((k) => a.state(k));
     a.tick(60000);
@@ -245,8 +224,8 @@ describe("barcos", () => {
   });
 });
 
-describe("lancha de la feria", () => {
-  it("la lancha va del muelle de la feria al de graneles y vuelve, parando 4 s en cada punta, siempre sobre agua y nunca detrás de un sólido estático", () => {
+describe("fair launch", () => {
+  it("the launch goes from the fair pier to the bulk pier and back, stopping 4 s at each end, always over water and never behind a static solid", () => {
     const { a: anim } = setup(false);
     const fpts = FERRY_ROUTE, fa = fpts[0]!, fb = fpts[fpts.length - 1]!;
     const L = fpts.slice(1).reduce((acc, b, i) => acc + Math.hypot(b.x - fpts[i]!.x, b.y - fpts[i]!.y), 0);
@@ -254,11 +233,11 @@ describe("lancha de la feria", () => {
     expect(f0.alpha).toBe(1);
     const hull0 = f0.solids.find((s) => s.kind === "hull")!;
     expect(hull0.kind === "hull" && hull0.at).toMatchObject({ x: fa.x, y: fa.y });
-    anim.tick(FERRY_PAUSE_MS + 100); // arranca
+    anim.tick(FERRY_PAUSE_MS + 100); // starts
     const seen: { x: number; y: number }[] = [];
     for (let t = 0; t < (2 * L) / FERRY_SPEED + 10; t += 1) { anim.tick(1000); const h = anim.ferry().solids.find((s) => s.kind === "hull")!; if (h.kind === "hull") seen.push({ x: h.at.x, y: h.at.y }); }
-    expect(seen.some((p) => Math.hypot(p.x - fb.x, p.y - fb.y) < FERRY_SPEED)).toBe(true); // llegó al otro muelle
-    expect(seen.some((p) => Math.hypot(p.x - fa.x, p.y - fa.y) < FERRY_SPEED)).toBe(true); // y volvió
+    expect(seen.some((p) => Math.hypot(p.x - fb.x, p.y - fb.y) < FERRY_SPEED)).toBe(true); // reached the other pier
+    expect(seen.some((p) => Math.hypot(p.x - fa.x, p.y - fa.y) < FERRY_SPEED)).toBe(true); // and came back
     for (const p of seen) expect(depthAt(p.x, p.y)).toBeGreaterThanOrEqual(6);
     const statics = world(7).solids.filter((s) => !isFlat(s));
     for (let i = 0; i < fpts.length - 1; i++) {
@@ -272,10 +251,10 @@ describe("lancha de la feria", () => {
   });
 });
 
-describe("mar, haz y boyas", () => {
-  it("el haz da una vuelta cada 8 s y con reduced-motion apunta al este", () => {
+describe("sea, beam and buoys", () => {
+  it("the beam turns once every 8 s and with reduced-motion points east", () => {
     const { a } = setup();
-    const angle = (acc: ReturnType<typeof a.beam>) => { const p = acc[0]!; if (p.kind !== "poly") throw new Error(); const apex = p.pts[0]!, tip = p.pts[1]!; return Math.atan2(tip.y - apex.y, tip.x - apex.x); };
+    const angle = (acc: ReturnType<typeof a.beam>) => { const p = acc[0]!; if (p.kind !== "poly") throw new Error("expected a poly wedge"); const apex = p.pts[0]!, tip = p.pts[1]!; return Math.atan2(tip.y - apex.y, tip.x - apex.x); };
     const a0 = angle(a.beam());
     a.tick(BEAM_PERIOD_MS / 4);
     expect(angle(a.beam()) - a0).toBeCloseTo(Math.PI / 2, 1);
@@ -286,13 +265,13 @@ describe("mar, haz y boyas", () => {
     expect(Math.abs(angle(r.beam()))).toBeLessThan(0.2);
     expect(r.tick(500)).toEqual({ ships: [false, false, false], beam: false, buoys: false, ferry: false, neon: false });
   });
-  it("el haz no se marca si vuelve al mismo ángulo; sí en cualquier otro tick (#71)", () => {
+  it("the beam is not marked if it returns to the same angle; it is on any other tick (#71)", () => {
     const { a } = setup();
     a.tick(1);
     expect(a.tick(BEAM_PERIOD_MS / 4).beam).toBe(true);
     expect(a.tick(BEAM_PERIOD_MS).beam).toBe(false);
   });
-  it("el haz es luz cálida: las dos cuñas son de la familia ámbar, ninguna magenta, en todo el giro y con reduced-motion", () => {
+  it("the beam is warm light: both wedges are from the amber family, none magenta, through the whole turn and with reduced-motion", () => {
     for (const reduced of [false, true]) {
       const { a } = setup(reduced);
       for (let t = 0; t < BEAM_PERIOD_MS; t += BEAM_PERIOD_MS / 4) {
@@ -303,7 +282,7 @@ describe("mar, haz y boyas", () => {
       }
     }
   });
-  it("las boyas parpadean desfasadas: nunca las dos apagadas, cada una encendida la mitad del período", () => {
+  it("the buoys blink out of phase: never both off, each on for half the period", () => {
     const { a } = setup();
     let on0 = 0, on1 = 0;
     for (let t = 0; t < 2000; t += 50) {
@@ -317,11 +296,11 @@ describe("mar, haz y boyas", () => {
   });
 });
 
-describe("neones", () => {
+describe("neons", () => {
   const dots = (xs: Accent[], color: string) => xs.filter((x): x is Extract<Accent, { kind: "dot" }> => x.kind === "dot" && x.color === color);
   const sign = (xs: Accent[]) => xs.find((x) => x.kind === "poly")!;
 
-  it("frame 0 = estado de reduced motion: dos luces de galería, costa a pleno, cartel cian; solo cian/magenta", () => {
+  it("frame 0 = reduced motion state: two gallery lights, coast at full, cyan sign; only cyan/magenta", () => {
     const { w, a } = setup(), r = setup(true).a;
     const n0 = a.neon();
     expect(n0).toEqual(r.neon());
@@ -332,14 +311,14 @@ describe("neones", () => {
     for (const x of n0) expect(x.color).toMatch(/^(cyan|magenta)/);
   });
 
-  it("la galería corre al revés del haz, un lugar por paso de 200 ms", () => {
+  it("the gallery runs opposite to the beam, one place per 200 ms step", () => {
     const { w, a } = setup();
     expect(a.tick(NEON_STEP_MS).neon).toBe(true);
     expect(dots(a.neon(), "magenta").map((d) => d.at)).toEqual([w.sea!.neon.gallery[0], w.sea!.neon.gallery[7]]);
-    expect(a.tick(NEON_STEP_MS / 2).neon).toBe(false); // dentro del mismo paso: nada que redibujar
+    expect(a.tick(NEON_STEP_MS / 2).neon).toBe(false); // within the same step: nothing to redraw
   });
 
-  it("la costa es una onda que viaja y el cartel alterna cian/magenta cada 4 s", () => {
+  it("the coast is a traveling wave and the sign alternates cyan/magenta every 4 s", () => {
     const { a } = setup();
     a.tick(NEON_STEP_MS);
     const rs = dots(a.neon(), "cyan").map((d) => d.r);
@@ -347,7 +326,7 @@ describe("neones", () => {
     expect(new Set(rs).size).toBeGreaterThan(1);
     const peak = (xs: number[]) => xs.indexOf(Math.max(...xs));
     a.tick(4 * NEON_STEP_MS);
-    expect(peak(dots(a.neon(), "cyan").map((d) => d.r))).not.toBe(peak(rs)); // la cresta se corrió: la onda viaja
+    expect(peak(dots(a.neon(), "cyan").map((d) => d.r))).not.toBe(peak(rs)); // the crest shifted: the wave travels
     a.tick(KEEPER_SIGN_MS);
     expect(sign(a.neon()).color).toBe("magenta");
     a.tick(KEEPER_SIGN_MS);
@@ -355,22 +334,22 @@ describe("neones", () => {
   });
 });
 
-describe("haz: un solo ángulo por frame (#66)", () => {
+describe("beam: a single angle per frame (#66)", () => {
   const src = readFileSync(new URL("./sea-anim.ts", import.meta.url), "utf8");
-  it("wedge recibe el ángulo y no lo calcula", () => {
+  it("wedge receives the angle and does not compute it", () => {
     const wedgeSrc = src.match(/const wedge = [\s\S]*?\n  };\n/)?.[0];
     expect(wedgeSrc).toBeDefined();
     expect(wedgeSrc).not.toMatch(/beamAngle/);
   });
-  it("beam() llama una sola vez a beamAngle() y pasa el ángulo a las dos cuñas", () => {
+  it("beam() calls beamAngle() once and passes the angle to both wedges", () => {
     expect(src.match(/beamAngle\(\)/g) ?? []).toHaveLength(1);
     expect(src).toMatch(/beam: \(\) => \{\s*const \w+ = beamAngle\(\);/);
   });
-  it("las dos cuñas comparten rotación en todo el giro, con sus largos y alfas", () => {
+  it("both wedges share rotation through the whole turn, with their lengths and alphas", () => {
     const { a } = setup();
-    // Dirección como vector unitario y no como atan2: en a = π la y del punto medio es ~0 y el signo puede saltar entre +π y −π.
+    // Direction as a unit vector and not as atan2: at a = π the midpoint's y is ~0 and the sign can jump between +π and −π.
     const axis = (x: Accent) => {
-      if (x.kind !== "poly") throw new Error();
+      if (x.kind !== "poly") throw new Error("expected a poly wedge");
       expect(x.pts).toHaveLength(3);
       const o = x.pts[0]!, p = x.pts[1]!, q = x.pts[2]!;
       const mx = (p.x + q.x) / 2 - o.x, my = (p.y + q.y) / 2 - o.y, m = Math.hypot(mx, my);
@@ -385,5 +364,22 @@ describe("haz: un solo ángulo por frame (#66)", () => {
       expect([outer!.alpha, inner!.alpha]).toEqual([0.5, 0.6]);
       a.tick(BEAM_PERIOD_MS / 4);
     }
+  });
+});
+
+describe("beam: own vertex (#149)", () => {
+  it("each wedge carries its own copy of the lantern", () => {
+    const { w, a } = setup();
+    const lantern = w.sea!.lantern, before = { ...lantern };
+    const apex = (x: Accent) => { if (x.kind !== "poly") throw new Error("expected a poly wedge"); return x.pts[0]!; };
+    const beam = a.beam();
+    expect(beam).toHaveLength(2);
+    const [o0, o1] = beam.map(apex);
+    for (const o of [o0, o1]) { expect(o).toEqual(lantern); expect(o).not.toBe(lantern); }
+    expect(o0).not.toBe(o1);
+    o0!.x += 5;
+    expect(lantern).toEqual(before);
+    a.tick(100);
+    expect(apex(a.beam()[0]!)).toEqual(before);
   });
 });

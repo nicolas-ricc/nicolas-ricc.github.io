@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Lab: shape kit</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #100e19; /* = ISO_COLORS.sky in src/map/palette-iso.ts */ }
+      #lab-host { width: 100%; height: 100%; }
+      #lab-host canvas { display: block; }
+    </style>
+  </head>
+  <body>
+    <div id="lab-host" role="application" tabindex="0" aria-keyshortcuts="s 1 2 3 4" aria-label="Shape kit: every recipe in the registry, one row per family. Key s changes the seed; 1..4 change the style (downtown, bars, residential, civic)."></div>
+    <script type="module" src="/src/lab/kit.ts"></script>
+  </body>
+</html>

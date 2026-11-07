@@ -5,14 +5,14 @@ import { project } from "../iso/project";
 import type { Layer, RenderItem } from "../iso/render-list";
 import { WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, coverQuad, type WorldZone } from "../map/geo";
 
-export const FRAME_H = 30; // alto de referencia para que entren los landmarks
+export const FRAME_H = 30; // reference height so the landmarks fit
 
 export type Frame = WorldZone | "all" | "cover";
 
-/** Caja de mundo en x/y; z no cuenta. */
+/** World box in x/y; z does not count. */
 export interface Box { x0: number; y0: number; x1: number; y1: number }
 
-/** Caja de mundo proyectada, como RenderItem para fitTransform: `h` en la esquina norte (la que sube en pantalla), las otras tres a z 0. */
+/** Projected world box, as a RenderItem for fitTransform: `h` at the north corner (the one that rises on screen), the other three at z 0. */
 export function boxFrame(box: Box, h = FRAME_H): RenderItem[] {
   const { x0, y0, x1, y1 } = box;
   const pts: number[] = [];
@@ -20,7 +20,7 @@ export function boxFrame(box: Box, h = FRAME_H): RenderItem[] {
   return [{ layer: "ground", pts, color: 0 }];
 }
 
-/** Caja de una zona (o del mundo) proyectada, como un RenderItem para fitTransform. `cover` es el rectángulo 16:9 inscripto en el rombo del sangrado. */
+/** Projected box of a zone (or of the world), as a RenderItem for fitTransform. `cover` is the 16:9 rectangle inscribed in the bleed rhombus. */
 export function zoneFrame(frame: Frame): RenderItem[] {
   if (frame === "cover") return coverFrame(16 / 9);
   const box = {
@@ -33,7 +33,7 @@ export function zoneFrame(frame: Frame): RenderItem[] {
   return boxFrame({ x0, y0, x1, y1 });
 }
 
-/** Rectángulo cover 16:9 (`coverQuad` de geo.ts) proyectado, como RenderItem para fitTransform. */
+/** Projected 16:9 cover rectangle (`coverQuad` of geo.ts), as a RenderItem for fitTransform. */
 export function coverFrame(aspect: number): RenderItem[] {
   const pts = coverQuad(aspect).flatMap(([x, y]) => { const p = project(v3(x, y, 0)); return [p.x, p.y]; });
   return [{ layer: "ground", pts, color: 0 }];
@@ -41,7 +41,7 @@ export function coverFrame(aspect: number): RenderItem[] {
 
 export interface Fit { x: number; y: number; scale: number }
 
-/** Escala y desplazamiento para que todos los puntos entren en width×height con un margen relativo. */
+/** Scale and offset so that all the points fit in width×height with a relative margin. */
 export function fitTransform(items: RenderItem[], width: number, height: number, margin = 0.04): Fit {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const it of items) for (let i = 0; i < it.pts.length; i += 2) {
@@ -59,11 +59,11 @@ export function drawLayer(g: Graphics, items: RenderItem[], layer: Layer): void 
   for (const it of items) if (it.layer === layer) g.poly(it.pts, true).fill(it.color);
 }
 
-/** Discos translúcidos alrededor de cada luz `dot`: radio `r × k`, alpha propia. */
+/** Translucent discs around each `dot` light: radius `r × k`, own alpha. */
 export type HaloStyle = readonly { k: number; alpha: number }[];
 
 export const HALO_BASE: HaloStyle = [{ k: 2.2, alpha: 0.18 }];
-/** Sin filtro de bloom: un segundo disco más grande y más tenue hace de resplandor barato. */
+/** Without the bloom filter: a second, larger and fainter disc stands in as a cheap glow. */
 export const HALO_FALLBACK: HaloStyle = [...HALO_BASE, { k: 4.5, alpha: 0.1 }];
 
 export function drawAccents(g: Graphics, accents: Accent[], halo: HaloStyle = HALO_BASE): void {

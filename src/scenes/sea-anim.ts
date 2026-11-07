@@ -6,41 +6,41 @@ import { chase, flip, pulse } from "./neon";
 import { ship as buildShip, shipAt, wake, type ShipKind } from "./ships";
 
 /**
- * Blog animado, sin Pixi: tres barcos con ciclo propio, sus estelas y luces, el haz
- * ámbar del faro (luz cálida, no neón) y las dos boyas, más los neones de la punta:
- * la galería corre al revés del haz, la costa ondula y el cartel del farero alterna.
+ * Animated Blog, without Pixi: three ships with their own cycle, their wakes and lights, the amber
+ * lighthouse beam (warm light, not neon) and the two buoys, plus the neons of the point:
+ * the gallery runs opposite to the beam, the coast ripples and the keeper's sign alternates.
  *
- * Dos carriles semirrectos entre la bocana y la esquina inferior izquierda del cover: la ida (`LANE_OUT`)
- * nace en la bocana (362, −16), bordea la punta por el este y baja al sur-suroeste hasta salir del cover;
- * la vuelta (`LANE_BACK`) entra desde abajo-izquierda, sube 42 u al este de la ida y termina en la bocana
- * (397, −39). Los barcos aparecen y se desvanecen ahí mismo (fade de `FADE_U` en las dos puntas), sin
- * recorrido por la bahía ni giro en el lugar. Cada barco rota `out → offscreen (OFF_MS) → back →
- * offscreen (PORT_MS, "entra a puerto")` con la misma velocidad y el barco k en la fase k·T/3 del
- * período T = `CYCLE_MS` (≈ 1172 s). El agua en sí (repartida por profundidad en `terrain.ts`) no es
- * asunto de acá: la anima `water-animator.ts`. Spec §7; rutas semirrectas en #87.
+ * Two semi-straight lanes between the harbor mouth and the lower-left corner of the cover: the outbound leg (`LANE_OUT`)
+ * starts at the harbor mouth (362, −16), skirts the point on the east and heads south-southwest until it leaves the cover;
+ * the return leg (`LANE_BACK`) enters from the lower left, runs 42 u east of the outbound leg and ends at the harbor mouth
+ * (397, −39). The ships appear and fade right there (`FADE_U` fade at both ends), with no
+ * trip around the bay or turn in place. Each ship rotates `out → offscreen (OFF_MS) → back →
+ * offscreen (PORT_MS, "enters port")` at the same speed and ship k at phase k·T/3 of the
+ * period T = `CYCLE_MS` (≈ 1172 s). The water itself (split by depth in `terrain.ts`) is not
+ * this file's business: `water-animator.ts` animates it. Spec §7; semi-straight routes in #87.
  */
-// Carril de ida: el camino del CENTRO del casco (ver `shipAt` en ships.ts), así los tres tamaños de
-// barco comparten el mismo carril. Nace en la bocana (362, −16), dentro del cover, y sale hacia el
-// sursureste (en pantalla, abajo y apenas a la izquierda). Bordea la punta del faro por el este a
-// ~25 u de su orilla: la punta y su orilla de 12 u son Portfolio y los conos del arrecife de la cara
-// norte (x 397..404, y 109..111) obligan a pasar por x ≥ 424 en y ≈ 86. Giros suaves de 6°, 7°, 22°,
-// 13°, 3° y 5° en pantalla; desde (420, 232) corre recto 420 u hasta salir del cover.
+// Outbound lane: the path of the hull's CENTER (see `shipAt` in ships.ts), so the three ship sizes
+// share the same lane. It starts at the harbor mouth (362, −16), inside the cover, and leaves toward the
+// south-southeast (on screen, down and slightly left). It skirts the lighthouse point on the east at
+// ~25 u from its shore: the point and its 12 u shore are Portfolio and the reef cones on the north
+// face (x 397..404, y 109..111) force passing at x ≥ 424 at y ≈ 86. Gentle turns of 6°, 7°, 22°,
+// 13°, 3° and 5° on screen; from (420, 232) it runs straight 420 u until it leaves the cover.
 //
-// El extremo de mar (377, 647) está puesto para que el borde del cover 16:9 caiga a `FADE_U` del
-// final: ese fade ocurre en el sangrado. El de la bocana sí se ve, a propósito. Validado contra agua,
-// `depthAt` ≥ 6, `worldZoneAt === "blog"` para x ≥ 380, oclusión por sólidos estáticos (hexágono
-// proyectado del carguero contra el de cada sólido, ver sea-anim.test.ts), `coverQuad(16/9)` y la
-// lancha (> 20 u). Por eso las boyas y el pecio se movieron en sea.ts: un barco al oeste o al norte
-// de un sólido que se le superpone en pantalla queda detrás. No mover vértices más de 2 u sin revalidar.
+// The sea end (377, 647) is set so the edge of the 16:9 cover falls `FADE_U` from the
+// end: that fade happens in the bleed. The harbor-mouth one is visible, on purpose. Validated against water,
+// `depthAt` ≥ 6, `worldZoneAt === "blog"` for x ≥ 380, occlusion by static solids (projected
+// freighter hexagon against that of each solid, see sea-anim.test.ts), `coverQuad(16/9)` and the
+// launch (> 20 u). That is why the buoys and the wreck were moved in sea.ts: a ship west or north
+// of a solid that overlaps it on screen ends up behind. Do not move vertices more than 2 u without revalidating.
 export const LANE_OUT: readonly Readonly<Vec2>[] = [{ x: 362, y: -16 }, { x: 398, y: 40 }, { x: 424, y: 86 }, { x: 437, y: 114 }, { x: 440, y: 142 }, { x: 434, y: 176 }, { x: 420, y: 232 }, { x: 377, y: 647 }];
-// Carril de vuelta, en el sentido de marcha (mar → bocana): la misma curva de la ida corrida 42 u al
-// este e invertida. Por qué 42 u y no ~30: la silueta en pantalla de un carguero (60 u de eslora) mide
-// ~55 px de alto, y con 30 o 36 u de separación lateral dos cargueros a la par se superponen; 42 u es
-// el mínimo sin solape (separación mínima entre centros 41,2 u). La lancha queda lejos. Validado como
-// la ida y con las siluetas de dos cargueros, uno por carril, que nunca se tocan en pantalla.
+// Return lane, in the direction of travel (sea → harbor mouth): the same curve as the outbound lane shifted 42 u
+// east and reversed. Why 42 u and not ~30: the on-screen silhouette of a freighter (60 u long) is
+// ~55 px tall, and with 30 or 36 u of lateral separation two freighters side by side overlap; 42 u is
+// the minimum without overlap (minimum separation between centers 41.2 u). The launch stays far. Validated like
+// the outbound lane and with the silhouettes of two freighters, one per lane, that never touch on screen.
 export const LANE_BACK: readonly Readonly<Vec2>[] = [{ x: 424, y: 600 }, { x: 462, y: 237 }, { x: 475, y: 185 }, { x: 482, y: 144 }, { x: 477, y: 102 }, { x: 461, y: 66 }, { x: 434, y: 18 }, { x: 397, y: -39 }];
 export const SHIPS: readonly { kind: ShipKind; phase: number }[] = [{ kind: "cargo", phase: 0 }, { kind: "tug", phase: 1 / 3 }, { kind: "barge", phase: 2 / 3 }];
-// Velocidad única: con velocidades distintas un barco alcanzaría al de adelante en el mismo carril y se superpondrían.
+// Single speed: with different speeds a ship would catch up with the one ahead in the same lane and they would overlap.
 export const LANE_SPEED = 1.2;
 export const FADE_U = 30, TURN_U = 20;
 export const OFF_MS = 15000, PORT_MS = 30000;
@@ -49,28 +49,28 @@ export const BUOY_PERIOD_MS = 2000;
 export const NEON_STEP_MS = 200, COAST_PERIOD_MS = 3000, KEEPER_SIGN_MS = 4000;
 const GALLERY_R_DOT = 0.45, GALLERY_LIT = 2;
 
-// Lancha de la feria: hace la lanzadera entre la punta del muelle de la feria (`fair.ts`, bahía
-// norte) y la orilla de la bahía frente al muelle de graneles. Los tres puntos están en agua
-// (bayWater), y el punto norte amarra en el muelle de la feria (ver el ajuste de la Task 17 abajo).
+// Fair launch: shuttles between the tip of the fair's pier (`fair.ts`, north
+// bay) and the bay shore in front of the bulk pier. All three points are in water
+// (bayWater), and the north point moors at the fair's pier (see the Task 17 adjustment below).
 //
-// Ruling del controller (Task 8, fix): una recta entre los dos muelles no sirve porque la costa oeste
-// de la bahía llega hasta x ≈ 277 cerca de y −204 (una saliente entre los dos muelles). Se agregó un
-// punto intermedio que la rodea por el este. El punto sur se corrió 6 u más al este que el propuesto
-// ((235, −84) → (241, −84)): entre el intermedio y el sur, cerca de (257, −126), la recta original
-// volvía a tocar la misma costa (una segunda entrada, más al sur) y quedaba a menos de 6 u de tierra.
-// Con el ajuste, `depthAt` mínimo a lo largo de toda la polilínea es exactamente 6 (en ese mismo punto).
+// Controller ruling (Task 8, fix): a straight line between the two piers does not work because the west coast
+// of the bay reaches x ≈ 277 near y −204 (a spit between the two piers). An intermediate
+// point was added that goes around it on the east. The south point was moved 6 u further east than proposed
+// ((235, −84) → (241, −84)): between the intermediate and the south, near (257, −126), the original line
+// touched the same coast again (a second inlet, further south) and ended up less than 6 u from land.
+// With the adjustment, the minimum `depthAt` along the whole polyline is exactly 6 (at that same point).
 //
-// Ajuste de la Task 17 (regla de la Task 8): con la feria construida, la lancha queda detrás del
-// pabellón del muelle (`fair.ts`, cono `copper`, entonces en (243, −277)) en pantalla —`isBehind(ferry,
-// pabellón)` da `true`— cerca del punto norte, entre el 5 % y el 15 % del primer tramo. Alcanzaba
-// con correr el punto norte 2 u al este para despejarlo, pero la regla pide pasos de 6 u: se corrió
-// ((248, −288) → (254, −288)); no hay más superposición en ese tramo y `depthAt` en el punto sigue
-// muy por encima de 6 (≈ 37).
+// Task 17 adjustment (Task 8 rule): with the fair built, the launch ends up behind the
+// pier pavilion (`fair.ts`, `copper` cone, then at (243, −277)) on screen —`isBehind(ferry,
+// pavilion)` gives `true`— near the north point, between 5 % and 15 % of the first leg. Moving
+// the north point 2 u east would have cleared it, but the rule asks for steps of 6 u: it was moved
+// ((248, −288) → (254, −288)); there is no more overlap on that leg and `depthAt` at the point stays
+// well above 6 (≈ 37).
 //
-// Con la feria corrida 36 u al sur (2026-09-16) el pabellón quedó en (268, −241) y el punto norte
-// conserva el mismo desplazamiento (+11, −11) respecto de él: (279, −252). Verificado con la misma
-// regla: `depthAt` mínimo a lo largo de la polilínea sigue siendo 6 y ningún sólido estático queda
-// delante de la lancha en pantalla.
+// With the fair moved 36 u south (2026-09-16) the pavilion ended up at (268, −241) and the north point
+// keeps the same offset (+11, −11) from it: (279, −252). Verified with the same
+// rule: the minimum `depthAt` along the polyline is still 6 and no static solid ends up
+// in front of the launch on screen.
 export const FERRY_ROUTE: readonly Vec2[] = [{ x: 279, y: -252 }, { x: 290, y: -212 }, { x: 241, y: -84 }];
 export const FERRY_SPEED = 3, FERRY_PAUSE_MS = 4000;
 
@@ -80,10 +80,10 @@ export const laneLength = (lane: Lane): number => lanes[lane].length;
 
 const lerpAngle = (a: number, b: number, t: number): number => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return a + d * t; };
 
-/** Punto y rumbo a `dist` unidades del inicio del carril; el rumbo se interpola en los TURN_U alrededor de cada vértice. */
+/** Point and heading at `dist` units from the start of the lane; the heading is interpolated over the TURN_U around each vertex. */
 export function laneAt(lane: Lane, dist: number): { x: number; y: number; heading: number } {
   const route = lanes[lane], p = route.at(dist), seg = route.segs, i = p.seg, s = seg[i]!;
-  const local = Math.hypot(p.x - s.a.x, p.y - s.a.y); // lo andado dentro del tramo: `at` no devuelve la acumulada
+  const local = Math.hypot(p.x - s.a.x, p.y - s.a.y); // distance covered within the leg: `at` does not return the accumulated one
   let heading = s.heading;
   if (local < TURN_U / 2 && i > 0) heading = lerpAngle(seg[i - 1]!.heading, s.heading, 0.5 + local / TURN_U);
   else if (s.len - local < TURN_U / 2 && i < seg.length - 1) heading = lerpAngle(s.heading, seg[i + 1]!.heading, (TURN_U / 2 - (s.len - local)) / TURN_U);
@@ -97,7 +97,7 @@ const OUT_MS = (laneLength("out") / LANE_SPEED) * 1000, BACK_MS = (laneLength("b
 export const CYCLE_MS = OUT_MS + OFF_MS + BACK_MS + PORT_MS;
 const OUT_END_HEADING = laneAt("out", laneLength("out")).heading, BACK_END_HEADING = laneAt("back", laneLength("back")).heading;
 
-/** Estado de un barco a `ms` del inicio de su ciclo (`0 ≤ ms < CYCLE_MS`): ida, fuera de cámara, vuelta, en puerto (fuera de cámara). */
+/** State of a ship at `ms` from the start of its cycle (`0 ≤ ms < CYCLE_MS`): outbound, off camera, return, in port (off camera). */
 export function shipStateAt(ms: number): ShipState {
   if (ms < OUT_MS) { const dist = (ms / 1000) * LANE_SPEED; return { lane: "out", dist, heading: laneAt("out", dist).heading }; }
   ms -= OUT_MS;
@@ -107,7 +107,7 @@ export function shipStateAt(ms: number): ShipState {
   return { lane: "offscreen", dist: laneLength("back"), heading: BACK_END_HEADING };
 }
 
-/** Desvanecido de FADE_U en las dos puntas de cada carril; fuera de cámara, 0. */
+/** Fade of FADE_U at both ends of each lane; off camera, 0. */
 export function alphaAt(lane: ShipLane, dist: number): number {
   if (lane === "offscreen") return 0;
   return Math.max(0, Math.min(1, dist / FADE_U, (laneLength(lane) - dist) / FADE_U));
@@ -130,9 +130,9 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
   const cycle = SHIPS.map((s) => s.phase * CYCLE_MS);
   const states = cycle.map(shipStateAt);
 
-  // La lancha camina FERRY_ROUTE sin suavizado de giro en los vértices (a diferencia de los barcos,
-  // dobla en el momento): el rumbo es el del tramo actual, invertido cuando vuelve. `polyline.at` ya
-  // recorta la distancia a las dos puntas, que es justo donde la lancha para.
+  // The launch walks FERRY_ROUTE with no turn smoothing at the vertices (unlike the ships,
+  // it turns on the spot): the heading is that of the current leg, reversed on the way back. `polyline.at` already
+  // clamps the distance to the two ends, which is exactly where the launch stops.
   const ferryLine = polyline(FERRY_ROUTE);
   const ferryLen = ferryLine.length;
   const ferryPointAt = ferryLine.at;
@@ -157,12 +157,12 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
   const beamAngle = (): number => angleAt(clock);
   const wedge = (a: number, len: number, color: Accent["color"], alpha: number): Accent => {
     const o: Vec3 = scene.lantern;
-    return { kind: "poly", pts: [o, v3(o.x + len * Math.cos(a - BEAM_HALF), o.y + len * Math.sin(a - BEAM_HALF), o.z), v3(o.x + len * Math.cos(a + BEAM_HALF), o.y + len * Math.sin(a + BEAM_HALF), o.z)], color, alpha };
+    return { kind: "poly", pts: [v3(o.x, o.y, o.z), v3(o.x + len * Math.cos(a - BEAM_HALF), o.y + len * Math.sin(a - BEAM_HALF), o.z), v3(o.x + len * Math.cos(a + BEAM_HALF), o.y + len * Math.sin(a + BEAM_HALF), o.z)], color, alpha };
   };
 
   const buoyOn = (k: number): boolean => Math.floor((clock + k * (BUOY_PERIOD_MS / 2)) / (BUOY_PERIOD_MS / 2)) % 2 === 0;
 
-  /** Galería, costa y cartel. Paso 0 (y reduced motion) = estado fijo encendido; la galería corre al revés del haz. */
+  /** Gallery, coast and sign. Step 0 (and reduced motion) = fixed lit state; the gallery runs opposite to the beam. */
   const neon = (): Accent[] => {
     const { gallery, coast, keeperSign } = scene.neon, at = neonStep * NEON_STEP_MS;
     const on = chase(gallery.length, -neonStep, GALLERY_LIT);
@@ -188,13 +188,13 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
       const all = first; first = false;
       const angle = angleAt(clock);
       clock += dtMs;
-      // el redondeo de `%` solo puede marcar de más el haz, nunca de menos: el cuadro sale del mismo `angleAt(clock)`
+      // the rounding of `%` can only over-mark the beam, never under-mark it: the frame comes from the same `angleAt(clock)`
       const c: SeaChanges = { ships: [], beam: all || angleAt(clock) !== angle, buoys: all, ferry: all, neon: all };
       for (let k = 0; k < SHIPS.length; k++) {
         const prev = states[k]!;
         cycle[k] = (cycle[k]! + dtMs) % CYCLE_MS; states[k] = shipStateAt(cycle[k]!);
         const next = states[k]!;
-        // la transición de estado siempre marca (#64), aunque dist y rumbo coincidieran
+        // a state transition always marks (#64), even if dist and heading coincided
         c.ships[k] = all || prev.lane !== next.lane || prev.dist !== next.dist || prev.heading !== next.heading;
       }
       const bs = Math.floor(clock / (BUOY_PERIOD_MS / 2));

@@ -1,33 +1,33 @@
 import { describe, expect, it, vi } from "vitest";
 import { layerLookup, type AnimLayer } from "./animator";
 
-const capa: AnimLayer = { kind: "accent", accents: [] };
+const anyLayer: AnimLayer = { kind: "accent", accents: [] };
 
 describe("layerLookup", () => {
-  it("resuelve un id de la tabla llamando a su función en cada pedido", () => {
-    const f = vi.fn(() => capa);
-    const layer = layerLookup("pruebaAnimator", { "prueba.a": f });
-    expect(layer("prueba.a")).toBe(capa);
-    expect(layer("prueba.a")).toBe(capa);
+  it("resolves a table id by calling its function on every request", () => {
+    const f = vi.fn(() => anyLayer);
+    const layer = layerLookup("testAnimator", { "test.a": f });
+    expect(layer("test.a")).toBe(anyLayer);
+    expect(layer("test.a")).toBe(anyLayer);
     expect(f).toHaveBeenCalledTimes(2);
   });
 
-  it("con un id desconocido lanza un Error que nombra el animador y el id", () => {
-    const layer = layerLookup("pruebaAnimator", { "prueba.a": () => capa });
-    expect(() => layer("prueba.b")).toThrow(new Error("Capa desconocida en pruebaAnimator: prueba.b"));
+  it("with an unknown id throws an Error that names the animator and the id", () => {
+    const layer = layerLookup("testAnimator", { "test.a": () => anyLayer });
+    expect(() => layer("test.b")).toThrow(new Error("Unknown layer in testAnimator: test.b"));
   });
 
-  it("no confunde las claves heredadas de Object.prototype con capas", () => {
-    const layer = layerLookup("pruebaAnimator", {});
+  it("does not mistake keys inherited from Object.prototype for layers", () => {
+    const layer = layerLookup("testAnimator", {});
     for (const id of ["toString", "constructor", "__proto__", "hasOwnProperty"]) {
-      expect(() => layer(id)).toThrow(`Capa desconocida en pruebaAnimator: ${id}`);
+      expect(() => layer(id)).toThrow(`Unknown layer in testAnimator: ${id}`);
     }
   });
 
-  it("ve las capas agregadas a la tabla después de crear el lookup", () => {
+  it("sees layers added to the table after the lookup is created", () => {
     const layers: Record<string, () => AnimLayer> = {};
-    const layer = layerLookup("pruebaAnimator", layers);
-    layers["prueba.tarde"] = () => capa;
-    expect(layer("prueba.tarde")).toBe(capa);
+    const layer = layerLookup("testAnimator", layers);
+    layers["test.late"] = () => anyLayer;
+    expect(layer("test.late")).toBe(anyLayer);
   });
 });

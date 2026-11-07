@@ -1,11 +1,12 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { basename, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { allIsoColors } from "./palette-iso";
 
-const SRC = new URL("../", import.meta.url).pathname; // src/
+const SRC = fileURLToPath(new URL("../", import.meta.url)); // src/
 
-/** palette-iso.ts define los colores; palette-base.ts guarda el atlas previo al oscurecimiento; seed.ts usa 0x6d2b79f5, la constante de mulberry32. */
+/** palette-iso.ts defines the colors; palette-base.ts keeps the pre-darkening atlas; seed.ts uses 0x6d2b79f5, the mulberry32 constant. */
 const EXEMPT = new Set(["map/palette-iso.ts", "map/palette-base.ts", "map/seed.ts"]);
 
 function sourceFiles(dir: string, out: string[] = []): string[] {
@@ -17,39 +18,39 @@ function sourceFiles(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-describe("guard de paleta", () => {
+describe("palette guard", () => {
   const files = sourceFiles(SRC).filter((f) => !EXEMPT.has(relative(SRC, f)));
 
-  it("encuentra los fuentes de src/", () => {
+  it("finds the sources in src/", () => {
     expect(files.length).toBeGreaterThan(5);
     expect(files.map((f) => relative(SRC, f))).toContain("main.ts");
   });
 
   for (const file of files) {
-    it(`${relative(SRC, file)} no tiene colores hardcodeados`, () => {
+    it(`${relative(SRC, file)} has no hardcoded colors`, () => {
       const hits = readFileSync(file, "utf8").match(/0x[0-9a-fA-F]{6}/g) ?? [];
       expect(hits).toEqual([]);
     });
   }
 });
 
-const LAB = new URL("../../lab/", import.meta.url).pathname;
+const LAB = fileURLToPath(new URL("../../lab/", import.meta.url));
 const PALETTE = allIsoColors();
 
-/** Literales hex que no son colores de la paleta. Uno de otro largo que 6 nunca lo es: ni abreviado ni con dígitos de más se salta el guard. */
+/** Hex literals that are not palette colors. One of any length other than 6 never is: neither abbreviated nor with extra digits gets past the guard. */
 function offPalette(text: string): string[] {
   return (text.match(/#[0-9a-fA-F]+\b/g) ?? []).filter((h) => h.length !== 7 || !PALETTE.has(parseInt(h.slice(1), 16)));
 }
 
-describe("guard de paleta en lab/*.html", () => {
+describe("palette guard on lab/*.html", () => {
   const pages = readdirSync(LAB).filter((f) => f.endsWith(".html")).map((f) => join(LAB, f));
 
-  it("encuentra las páginas del lab", () => {
+  it("finds the lab pages", () => {
     expect(pages.length).toBeGreaterThanOrEqual(5);
     expect(pages.map((f) => basename(f))).toContain("world.html");
   });
 
-  it("reporta lo que no es paleta y deja pasar lo que sí", () => {
+  it("reports what is not palette and lets what is through", () => {
     expect(offPalette("background: #100e19; color: #d8d4e8;")).toEqual([]);
     expect(offPalette("background: #100E19;")).toEqual([]);
     expect(offPalette("background: #100e1a;")).toEqual(["#100e1a"]);
@@ -59,8 +60,53 @@ describe("guard de paleta en lab/*.html", () => {
   });
 
   for (const page of pages) {
-    it(`lab/${basename(page)} solo usa colores de la paleta`, () => {
+    it(`lab/${basename(page)} only uses palette colors`, () => {
       expect(offPalette(readFileSync(page, "utf8"))).toEqual([]);
     });
   }
+});
+
+const STYLE_CSS = fileURLToPath(new URL("../style.css", import.meta.url));
+
+/**
+ * Off-palette hex literals src/style.css may use (lowercase). These are the
+ * site's UI colours, deliberately not scene colours; any other off-palette
+ * hex fails. Matching ignores case but not form: `#000` is allowed, `#000000`
+ * is not.
+ */
+const STYLE_CSS_ALLOWLIST: ReadonlySet<string> = new Set<string>([
+  "#e6edf3", // --fg: UI text
+  "#9aa7b2", // --muted: secondary UI text
+  "#22303c", // border under #content h2
+  "#000", // text-shadow behind #hud and #titulo
+  "#8ec07c", // Resume label: the blog's accent green (myxomatosis.xyz/blog)
+]);
+
+function styleCssOffenders(text: string): string[] {
+  return offPalette(text).filter((h) => !STYLE_CSS_ALLOWLIST.has(h.toLowerCase()));
+}
+
+describe("palette guard on src/style.css", () => {
+  const css = readFileSync(STYLE_CSS, "utf8");
+
+  it("reports off-palette literals unless allowlisted, ignoring case", () => {
+    expect(styleCssOffenders("color: #e6edf3; color: #E6EDF3; text-shadow: 0 0 2px #000;")).toEqual([]);
+    expect(styleCssOffenders("background: #100E19; color: #9aa7b2;")).toEqual([]);
+    expect(styleCssOffenders("color: #e6edf4;")).toEqual(["#e6edf4"]);
+    expect(styleCssOffenders("color: #000000; border: #e6edf3ff;")).toEqual(["#000000", "#e6edf3ff"]);
+    expect(styleCssOffenders("#content a { color: inherit; } #app {}")).toEqual([]);
+  });
+
+  it("src/style.css only uses palette colours or allowlisted UI colours", () => {
+    expect(styleCssOffenders(css)).toEqual([]);
+  });
+
+  it("allowlist entries are off-palette", () => {
+    expect([...STYLE_CSS_ALLOWLIST].filter((hex) => offPalette(hex).length === 0)).toEqual([]);
+  });
+
+  it("allowlist entries are still used in src/style.css", () => {
+    const used = new Set(offPalette(css).map((h) => h.toLowerCase()));
+    expect([...STYLE_CSS_ALLOWLIST].filter((hex) => !used.has(hex))).toEqual([]);
+  });
 });

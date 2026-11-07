@@ -3,7 +3,7 @@ import type { FeedItem, ZoneContent } from "./types";
 const decode = (s: string): string =>
   s.replace(/<!\[CDATA\[(.*?)\]\]>/gs, "$1").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
 
-/** El <description> de Hugo es HTML escapado (`&lt;p&gt;&lt;em&gt;…`): se decodifica, se le quitan las etiquetas y queda texto plano. */
+/** Hugo's <description> is escaped HTML (`&lt;p&gt;&lt;em&gt;…`): it is decoded, its tags are stripped and plain text remains. */
 const plainText = (s: string): string => decode(decode(s).replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
 
 export function parseRss(xml: string): FeedItem[] {

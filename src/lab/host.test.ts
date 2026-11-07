@@ -1,12 +1,13 @@
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const ROOT = new URL("../../", import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const PAGES = ["world", "blog", "resume", "portfolio", "storybook"];
 
-describe("host del lab (#103)", () => {
+describe("lab host (#103)", () => {
   for (const p of PAGES) {
-    it(`lab/${p}.html anuncia la ayuda: role="application" y aria-label en #lab-host`, () => {
+    it(`lab/${p}.html announces the help: role="application" and aria-label on #lab-host`, () => {
       const html = readFileSync(`${ROOT}lab/${p}.html`, "utf8");
       const host = html.match(/<div id="lab-host"[^>]*>/)?.[0] ?? "";
       expect(host).toMatch(/\brole="application"/);

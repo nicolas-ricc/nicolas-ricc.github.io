@@ -4,7 +4,7 @@ import { waterAnimator } from "./water-animator";
 import { world } from "./world";
 
 describe("waterAnimator", () => {
-  it("expone seis bandas y la espuma, reclama toda el agua y con reduced-motion no devuelve ids", () => {
+  it("exposes six bands and the foam, claims all the water and with reduced-motion returns no ids", () => {
     const w = world(7);
     const a = waterAnimator(w.terrain, { reducedMotion: false });
     expect([...a.ids].sort()).toEqual(["water.band0", "water.band1", "water.band2", "water.band3", "water.band4", "water.band5", "water.foam"]);

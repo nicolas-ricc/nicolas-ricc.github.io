@@ -1,4 +1,4 @@
 import { bootWorldPage } from "./page";
 
-// El astillero entra para ver la costura de selva y el estuario que la ciudad hereda.
+// The shipyard comes in to show the seam with the jungle and the estuary the city inherits.
 bootWorldPage(["portfolio", "cv"], "cv");

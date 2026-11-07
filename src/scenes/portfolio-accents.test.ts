@@ -8,10 +8,11 @@ const byColor = (accents: Accent[]) => {
   return out;
 };
 
-/** Portfolio no se toca en la historia #11: mismos colores, misma cantidad. La feria queda afuera a propósito (es la excepción con neones). */
-describe("acentos de Portfolio", () => {
+/** Portfolio is not touched in story #11: same colors, same count. The fair is left out on purpose (it is the exception with neons). */
+describe("Portfolio accents", () => {
   const w = world(7);
-  it("astillero", () => expect(byColor(w.shipyard!.accents)).toEqual({ cyan: 10 }));
-  it("fábrica", () => expect(byColor(w.factory!.accents)).toEqual({ amber: 3, cyan: 8, magenta: 6 }));
+  // #279: the parked consist adds 12 cyanBleed (saloon) and 2 amber (LED signs)
+  it("shipyard", () => expect(byColor(w.shipyard!.accents)).toEqual({ amber: 10, amberBleed: 1, cyan: 9, cyanBleed: 15, cyanMid: 8, magenta: 3 }));
+  it("factory", () => expect(byColor(w.factory!.accents)).toEqual({ amber: 3, cyan: 8, magenta: 6 }));
   it("hinterland", () => expect(byColor(w.hinterland!.accents)).toEqual({ cyan: 21, cyanMid: 1 }));
 });

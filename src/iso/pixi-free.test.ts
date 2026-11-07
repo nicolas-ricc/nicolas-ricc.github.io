@@ -1,9 +1,12 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const ROOT = new URL("../../", import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const DIRS = ["src/iso", "src/scenes"];
+// Pixi import with any quote style; also catches import() and import type.
+const PIXI_IMPORT = /["']pixi\.js["']/;
 
 function sourceFiles(dir: string, out: string[] = []): string[] {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -14,22 +17,40 @@ function sourceFiles(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-describe("guard de motor sin Pixi", () => {
+describe("PIXI_IMPORT (#168)", () => {
+  // assembled, so this file does not trip its own test guard
+  const MOD = ["pixi", "js"].join(".");
+  it("detects single and double quotes, import() and import type", () => {
+    for (const src of [
+      `import { Graphics } from "${MOD}";`,
+      `import { Graphics } from '${MOD}';`,
+      `import type { Container } from '${MOD}';`,
+      `const pixi = await import("${MOD}");`,
+      `export { Ticker } from '${MOD}';`,
+    ])
+      expect(src).toMatch(PIXI_IMPORT);
+  });
+  it("does not flag an unquoted mention", () => {
+    expect(`// without ${MOD} here`).not.toMatch(PIXI_IMPORT);
+  });
+});
+
+describe("Pixi-free engine guard", () => {
   const files = DIRS.flatMap((d) => sourceFiles(`${ROOT}${d}`));
 
-  it("encuentra los fuentes de src/iso y src/scenes", () => {
+  it("finds the sources of src/iso and src/scenes", () => {
     expect(files.length).toBeGreaterThan(5);
   });
 
   for (const file of files) {
-    // src/iso y src/scenes son el motor puro: no deben depender del runtime de render (Pixi).
-    it(`${relative(ROOT, file)} no importa Pixi`, () => {
-      expect(readFileSync(file, "utf8")).not.toMatch(/from "pixi\.js"/);
+    // src/iso and src/scenes are the pure engine: they must not depend on the render runtime (Pixi).
+    it(`${relative(ROOT, file)} does not import Pixi`, () => {
+      expect(readFileSync(file, "utf8")).not.toMatch(PIXI_IMPORT);
     });
   }
 });
 
-/** Prueban Pixi mismo (árbol de `buildStage`, semántica de `SystemRunner`): quedan con el real (#166). */
+/** They test Pixi itself (`buildStage` tree, `SystemRunner` semantics): they keep the real one (#166). */
 const PIXI_TESTS = new Set(["src/world/stage.test.ts", "src/world/bloom-runtime.test.ts"]);
 
 function testFiles(dir: string, out: string[] = []): string[] {
@@ -41,20 +62,20 @@ function testFiles(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-describe("tests sin Pixi (#103)", () => {
+describe("Pixi-free tests (#103)", () => {
   const files = testFiles(`${ROOT}src`).filter((f) => !PIXI_TESTS.has(relative(ROOT, f)));
 
-  it("encuentra los tests de src", () => {
+  it("finds the tests in src", () => {
     expect(files.length).toBeGreaterThan(20);
   });
 
-  it("las excepciones siguen existiendo", () => {
+  it("the exceptions still exist", () => {
     for (const f of PIXI_TESTS) expect(existsSync(`${ROOT}${f}`), f).toBe(true);
   });
 
   for (const file of files) {
-    it(`${relative(ROOT, file)} usa dobles en vez de Pixi`, () => {
-      expect(readFileSync(file, "utf8")).not.toMatch(/["']pixi\.js["']/);
+    it(`${relative(ROOT, file)} uses doubles instead of Pixi`, () => {
+      expect(readFileSync(file, "utf8")).not.toMatch(PIXI_IMPORT);
     });
   }
 });

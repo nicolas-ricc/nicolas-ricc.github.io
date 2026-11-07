@@ -8,13 +8,14 @@ import { jungle } from "./flora";
 import { towerCrane } from "./pieces";
 import { RAIL_Y } from "./shipyard";
 import { COVER_MARGIN, GREEN_BELT, builtAt } from "./sprawl-grid";
+import { TRAIN_CLEAR } from "./station";
 
 /**
- * Hinterland industrial de Portfolio, sobre el sangrado al norte y al oeste
- * de la fábrica: playa de maniobras con vagones, galpones, parque de tanques,
- * batería de silos, línea de alta tensión, acopios, patio de contenedores con
- * pórticos, depósito de agua y camiones. Al sur del patio sigue el cinturón
- * verde que separa la industria de la ciudad. Solo existe con el mundo entero.
+ * Industrial hinterland of Portfolio, on the bleed north and west
+ * of the factory: marshalling yard with wagons, sheds, tank farm,
+ * silo battery, high-voltage line, stockpiles, container yard with
+ * gantries, water tank and trucks. South of the yard comes the green
+ * belt that separates industry from the city. It only exists with the whole world.
  * Spec: docs/superpowers/specs/2026-09-15-margenes-urbanos-design.md §5.
  */
 export interface HinterlandScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; stacks: Vec3[] }
@@ -30,7 +31,7 @@ const LAMP_H = 5, WATER_Z = -1;
 
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material, roof?: "gable"): Solid => (roof ? { kind: "prism", at: v3(x, y, z), w, d, h, mat, roof } : { kind: "prism", at: v3(x, y, z), w, d, h, mat });
 const strip = (path: Vec2[], width: number, z: number, mat: Material): Solid => ({ kind: "strip", path, width, z, mat });
-/** Una huella entera sobre tierra industrial del sangrado (o sobre el contenido, que ya es losa). */
+/** A whole footprint on industrial land of the bleed (or on the content, which is already slab). */
 const onIndustrial = (x: number, y: number, w: number, d: number): boolean =>
   [[x, y], [x + w, y], [x + w, y + d], [x, y + d]].every(([px, py]) => (px! >= WORLD.x0 && px! <= WORLD.x1 && py! >= WORLD.y0 && py! <= WORLD.y1) || builtAt(px!, py!) === "industrial");
 
@@ -39,7 +40,7 @@ function lamp(out: Solid[], accents: Accent[], x: number, y: number): void {
   accents.push({ kind: "dot", at: v3(x + 0.3, y + 0.3, LAMP_H), r: 1.2, color: "cyan" });
 }
 
-/** Playa de maniobras: cinco vías E-O al norte de la fábrica, con vagones en huecos de 10 u elegidos por rng. */
+/** Marshalling yard: five E-W tracks north of the factory, with wagons in 10 u slots chosen by rng. */
 function marshallingYard(out: Solid[], rng: Rng): void {
   for (const y of YARD_TRACKS_Y) for (const dy of [-0.8, 0.8]) out.push(strip([{ x: YARD_X.x0, y: y + dy }, { x: YARD_X.x1, y: y + dy }], 0.4, 0.1, "rail"));
   const slots = Math.floor((YARD_X.x1 - YARD_X.x0) / 10);
@@ -54,10 +55,10 @@ function marshallingYard(out: Solid[], rng: Rng): void {
       out.push(prism(x, y - 1.2, 0, 8, 2.4, 3, rng.chance(0.5) ? "rust" : "steel"));
     }
   }
-  out.push(prism(YARD_X.x0 + 60, YARD_TRACKS_Y[2]! - 1.3, 0, 9, 2.6, 3.6, "steel"), prism(YARD_X.x0 + 66, YARD_TRACKS_Y[2]! - 1.3, 3.6, 3, 2.6, 1, "steel")); // locomotora de maniobras
+  out.push(prism(YARD_X.x0 + 60, YARD_TRACKS_Y[2]! - 1.3, 0, 9, 2.6, 3.6, "steel"), prism(YARD_X.x0 + 66, YARD_TRACKS_Y[2]! - 1.3, 3.6, 3, 2.6, 1, "steel")); // shunting locomotive
 }
 
-/** Dos galpones a dos aguas al norte de la playa, con un autoelevador en cada portón. */
+/** Two gable sheds north of the yard, with a forklift at each gate. */
 function halls(out: Solid[]): void {
   for (const x of [-50, 24]) {
     if (!onIndustrial(x, -130, 60, 14)) continue;
@@ -66,7 +67,7 @@ function halls(out: Solid[]): void {
   }
 }
 
-/** Parque de tanques: seis cilindros bajos en dos filas, con murete de contención. */
+/** Tank farm: six low cylinders in two rows, with a containment wall. */
 function tankFarm(out: Solid[], rng: Rng): void {
   TANKS.forEach((t, i) => {
     if (!onIndustrial(t.x - 9, t.y - 9, 18, 18)) return;
@@ -75,16 +76,16 @@ function tankFarm(out: Solid[], rng: Rng): void {
   out.push(strip([{ x: 106, y: -152 }, { x: 184, y: -152 }, { x: 184, y: -100 }, { x: 106, y: -100 }, { x: 106, y: -152 }], 0.6, 0.15, "concrete"));
 }
 
-/** Batería de silos: 3×2 cilindros esbeltos de hormigón unidos por una galería arriba. */
+/** Silo battery: 3×2 slender concrete cylinders joined by a gallery on top. */
 function silos(out: Solid[]): void {
   const { x0, y0, cols, rows, step, r, h } = SILOS;
   if (!onIndustrial(x0 - r, y0 - r, (cols - 1) * step + 2 * r, (rows - 1) * step + 2 * r)) return;
   for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) out.push({ kind: "cylinder", at: v3(x0 + i * step, y0 + j * step, 0), r, h, mat: "concrete", sides: 10 });
-  out.push(prism(x0 - r, y0 + step / 2 - 1, h, (cols - 1) * step + 2 * r, 2, 1.5, "steel")); // galería
-  out.push(prism(x0 + (cols - 1) * step + r - 0.5, y0 + step / 2 - 0.5, 0, 1, 1, h + 3, "steel")); // elevador de granos
+  out.push(prism(x0 - r, y0 + step / 2 - 1, h, (cols - 1) * step + 2 * r, 2, 1.5, "steel")); // gallery
+  out.push(prism(x0 + (cols - 1) * step + r - 0.5, y0 + step / 2 - 0.5, 0, 1, 1, h + 3, "steel")); // grain elevator
 }
 
-/** Línea de alta tensión E-O detrás de todo: torres cada 48 u con dos travesaños y dos cables. */
+/** E-W high-voltage line behind everything: pylons every 48 u with two crossarms and two cables. */
 function pylons(out: Solid[]): void {
   for (let k = 0; k < PYLON_N; k++) {
     const x = PYLON_X0 + k * PYLON_STEP, y = PYLON_Y;
@@ -95,23 +96,23 @@ function pylons(out: Solid[]): void {
   }
 }
 
-/** Acopios de mineral y arena al NO de la playa, con una pala cargadora. */
+/** Ore and sand stockpiles NW of the yard, with a wheel loader. */
 function stockpiles(out: Solid[], rng: Rng): void {
   for (let i = 0; i < 8; i++) {
     const x = rng.int(-150, -70), y = rng.int(-140, -104), big = i < 5;
     if (!onIndustrial(x - 8, y - 8, 16, 16)) continue;
     out.push({ kind: "cone", at: v3(x, y, 0), r: big ? rng.int(6, 8) : 4, h: big ? rng.int(3, 5) : 2.5, mat: big ? "rust" : "sand", sides: 7 });
   }
-  out.push(prism(-100, -98, 0, 4, 2.6, 2.4, "steel"), prism(-104, -98.3, 0.2, 4, 3.2, 1.2, "rust")); // pala cargadora
+  out.push(prism(-100, -98, 0, 4, 2.6, 2.4, "steel"), prism(-104, -98.3, 0.2, 4, 3.2, 1.2, "rust")); // wheel loader
 }
 
-/** Camiones esperando frente a los galpones y farolas cian. */
+/** Trucks waiting in front of the sheds and cyan lamps. */
 function trucks(out: Solid[], accents: Accent[]): void {
   for (const [x, y] of [[-30, -104], [-16, -104], [40, -104], [54, -104], [70, -104]] as const) { out.push(prism(x, y, 0, 6, 2.4, 2.8, "rust")); out.push(prism(x + 6, y, 0, 2, 2.4, 2.2, "steel")); }
   for (const [x, y] of [[-190, -66], [-120, -66], [-40, -92], [60, -92], [130, -66], [100, -150], [190, -104], [-120, -150], [30, -150]] as const) if (onIndustrial(x, y, 1, 1)) lamp(out, accents, x, y);
 }
 
-/** Muelle de graneles sobre la bahía, al norte del astillero: plataforma de hormigón, bolardos, grúa torre y contenedores. */
+/** Bulk pier over the bay, north of the shipyard: concrete platform, bollards, tower crane and containers. */
 function pier(out: Solid[], accents: Accent[]): void {
   const x = 190, y = -100, w = 18, d = 34;
   if (!onIndustrial(x, y, w - 4, d)) return;
@@ -122,7 +123,7 @@ function pier(out: Solid[], accents: Accent[]): void {
   lamp(out, accents, x + 2, y + 2);
 }
 
-/** Columna oeste: dos vías N-S más, patio de contenedores con dos pórticos, galpones, depósito de agua y camiones. */
+/** West column: two more N-S tracks, container yard with two gantries, sheds, water tank and trucks. */
 function containerYard(out: Solid[], rng: Rng): void {
   for (const x of WEST_TRACKS_X) for (const dx of [-0.8, 0.8]) out.push(strip([{ x: x + dx, y: -200 }, { x: x + dx, y: 100 }], 0.4, 0.1, "rail"));
   for (let i = 0; i < 6; i++) out.push(prism(WEST_TRACKS_X[i % 2]! - 1.1, -30 + i * 16, 0, 2.2, 7, 2.8, i % 2 === 0 ? "rust" : "steel"));
@@ -135,31 +136,31 @@ function containerYard(out: Solid[], rng: Rng): void {
       for (let k = 0; k < n; k++) out.push(prism(x, y, k * 2.6, 6, 2.4, 2.6, rng.chance(0.5) ? "rust" : "steel"));
     }
   }
-  for (const x of [-180, -130]) { // pórticos sobre neumáticos que cruzan las filas
+  for (const x of [-180, -130]) { // rubber-tired gantries that cross the rows
     for (const y of [y0 - 4, y0 + (rows - 1) * rowStep + 6]) out.push(prism(x - 0.6, y - 0.6, 0, 1.2, 1.2, 10, "steel"));
     out.push(prism(x - 0.6, y0 - 4, 9.2, 1.2, (rows - 1) * rowStep + 10, 1, "steel"));
-    out.push(prism(x - 1.2, y0 + 20, 8.4, 2.4, 2.4, 0.8, "rust")); // carro
+    out.push(prism(x - 1.2, y0 + 20, 8.4, 2.4, 2.4, 0.8, "rust")); // trolley
   }
 }
 
-/** Galpones del oeste, depósito de agua y la selva del cinturón verde. */
+/** West sheds, water tank and the green belt's jungle. */
 function westHalls(out: Solid[], accents: Accent[], rng: Rng): void {
   for (const y of [50, 76]) { if (onIndustrial(-190, y, 36, 14)) { out.push(prism(-190, y, 0, 36, 14, 7, "concrete", "gable")); out.push(prism(-152, y + 2, 0, 3, 2, 2, "steel")); } }
-  if (onIndustrial(-140, 58, 60, 24)) out.push(prism(-140, 58, 0, 60, 24, 9, "brick")); // nave de ladrillo
+  if (onIndustrial(-140, 58, 60, 24)) out.push(prism(-140, 58, 0, 60, 24, 9, "brick")); // brick hall
   for (const [x, y] of [[-120, 92], [-108, 92], [-96, 92]] as const) { out.push(prism(x, y, 0, 6, 2.4, 2.8, "rust")); out.push(prism(x + 6, y, 0, 2, 2.4, 2.2, "steel")); }
-  const wx = -100, wy = 40, legH = 8; // depósito de agua
+  const wx = -100, wy = 40, legH = 8; // water tank
   for (const [dx, dy] of [[-2, -2], [2, -2], [2, 2], [-2, 2]] as const) out.push(prism(wx + dx - 0.3, wy + dy - 0.3, 0, 0.6, 0.6, legH, "steel"));
   out.push({ kind: "cylinder", at: v3(wx, wy, legH), r: 3, h: 4, mat: "steel", sides: 10 });
   accents.push({ kind: "dot", at: v3(wx, wy, legH + 4.2), r: 0.6, color: "cyanMid" });
   for (const [x, y] of [[-190, 44], [-130, 96], [-70, 20], [-150, -50], [-180, 10]] as const) lamp(out, accents, x, y);
-  jungle(out, rng, { x0: -238, x1: WORLD.x0 - 2, y0: GREEN_BELT.y0 + 2, y1: ZONE_SPLIT_Y - 5 }, 60, 0.4, { y: RAIL_Y }); // la mitad de Portfolio del cinturón verde (r ≤ 4: ningún cono cruza la costura y = 146); se siembran 60 porque los que caerían sobre las vías del oeste se descartan (quedan ~30)
+  jungle(out, rng, { x0: -238, x1: WORLD.x0 - 2, y0: GREEN_BELT.y0 + 2, y1: ZONE_SPLIT_Y - 5 }, 60, 0.4, { y: RAIL_Y, train: TRAIN_CLEAR }); // the Portfolio half of the green belt (r ≤ 4: no cone crosses the seam y = 146); 60 are seeded because those that would fall on the west tracks are discarded (~20 remain after clearing the train corridor, #280)
 }
 
-/** Las vías del oeste del astillero siguen por el cinturón verde hasta el borde del sangrado: en pantalla salen por la izquierda, como si no terminaran. */
+/** The shipyard's west tracks continue through the green belt to the edge of the bleed: on screen they leave to the left, as if they never ended. */
 export const WEST_RAIL_X0 = WORLD.x0 - BLEED.x;
 function westRails(out: Solid[]): void {
   for (const y of RAIL_Y) out.push(strip([{ x: WEST_RAIL_X0, y }, { x: 0, y }], 0.5, 0.05, "rail"));
-  for (let x = -2; x > WEST_RAIL_X0; x -= 4) out.push(prism(x, RAIL_Y[0] - 1, 0, 1, 5, 0.3, "rust")); // durmientes, al paso de los del astillero
+  for (let x = -2; x > WEST_RAIL_X0; x -= 4) out.push(prism(x, RAIL_Y[0] - 1, 0, 1, 5, 0.3, "rust")); // sleepers, in step with the shipyard's
 }
 
 export const POWER = { x: 34, y: -276, w: 40, d: 16 } as const;
@@ -168,34 +169,34 @@ export const COOLING = { x: 20, y: -236, r: 8 } as const;
 export const PARKING = { x: 50, y: -200, w: 34, d: 24 } as const;
 export const ROAD_Y = -176;
 const inCover = (x: number, y: number): boolean => inCoverQuad(x, y, 16 / 9, COVER_MARGIN);
-/** Huella entera sobre tierra industrial y dentro del cover: guarda cada pieza (o grupo) de la central y la calle. */
+/** Whole footprint on industrial land and inside the cover: guards each piece (or group) of the power plant and the street. */
 const ok = (x: number, y: number, w: number, d: number): boolean => onIndustrial(x, y, w, d) && inCover(x + w / 2, y + d / 2);
 
-/** Central térmica: sala de turbinas, dos chimeneas (las puntas van a `stacks`), torre de refrigeración, carbón con cinta, transformadores. */
+/** Thermal power plant: turbine hall, two chimneys (the tips go to `stacks`), cooling tower, coal with belt, transformers. */
 function powerPlant(out: Solid[], accents: Accent[], stacks: Vec3[], rng: Rng): void {
   const { x, y, w, d } = POWER;
   if (ok(x, y, w, d)) out.push({ kind: "prism", at: v3(x, y, 0), w, d, h: 12, mat: "concrete", facade: { floors: 1, cols: 5 } });
   for (const s of STACKS_N) if (ok(s.x - 2.5, s.y - 2.5, 5, 5)) { out.push(prism(s.x - 2.5, s.y - 2.5, 0, 5, 5, 2, "concrete")); out.push({ kind: "cylinder", at: v3(s.x, s.y, 2), r: 2, h: 26, mat: "concrete", sides: 10 }); stacks.push(v3(s.x, s.y, 28)); }
   if (ok(COOLING.x - COOLING.r, COOLING.y - COOLING.r, COOLING.r * 2, COOLING.r * 2)) out.push({ kind: "cylinder", at: v3(COOLING.x, COOLING.y, 0), r: COOLING.r, h: 12, mat: "concrete", sides: 14 }, { kind: "cylinder", at: v3(COOLING.x, COOLING.y, 12), r: COOLING.r - 1.5, h: 4, mat: "concrete", sides: 14 });
-  for (let i = 0; i < 3; i++) { const cx = 10 + i * 9, cy = -252 + (i % 2) * 4, r = rng.int(5, 6); if (ok(cx - r, cy - r, r * 2, r * 2)) out.push({ kind: "cone", at: v3(cx, cy, 0), r, h: 3, mat: "rust", sides: 7 }); } // carbón
-  if (ok(12, -255.4, 24, 0.8)) { // cinta transportadora: postes + tira plana, como una sola huella
-    for (let cx = 14; cx <= 34; cx += 8) out.push(prism(cx - 0.2, -255.2, 0, 0.4, 0.4, 4, "steel")); // postes de la cinta
-    out.push(strip([{ x: 12, y: -255 }, { x: 36, y: -255 }], 0.8, 4, "steel")); // la cinta es plana: `strip` a z 4 (se pinta en el suelo; los postes la sostienen visualmente)
+  for (let i = 0; i < 3; i++) { const cx = 10 + i * 9, cy = -252 + (i % 2) * 4, r = rng.int(5, 6); if (ok(cx - r, cy - r, r * 2, r * 2)) out.push({ kind: "cone", at: v3(cx, cy, 0), r, h: 3, mat: "rust", sides: 7 }); } // coal
+  if (ok(12, -255.4, 24, 0.8)) { // conveyor belt: posts + flat strip, as a single footprint
+    for (let cx = 14; cx <= 34; cx += 8) out.push(prism(cx - 0.2, -255.2, 0, 0.4, 0.4, 4, "steel")); // belt posts
+    out.push(strip([{ x: 12, y: -255 }, { x: 36, y: -255 }], 0.8, 4, "steel")); // the belt is flat: `strip` at z 4 (it is painted on the ground; the posts visually hold it up)
   }
   for (let i = 0; i < 6; i++) { const tx = 40 + (i % 3) * 10, ty = -252 + Math.floor(i / 3) * 6; if (!ok(tx, ty, 3, 2)) continue; out.push(prism(tx, ty, 0, 3, 2, 3, "steel")); for (const dx of [0.5, 1.5, 2.5]) out.push({ kind: "cylinder", at: v3(tx + dx, ty + 1, 3), r: 0.4, h: 1, mat: "rust", sides: 6 }); }
-  if (ok(38, -254, 32.3, 14.3)) for (const [fx, fy, fw, fd] of [[38, -254, 32, 0.3], [38, -240, 32, 0.3], [38, -254, 0.3, 14], [70, -254, 0.3, 14]] as const) out.push(prism(fx, fy, 0, fw, fd, 1.2, "steel")); // cerco, como una sola huella
+  if (ok(38, -254, 32.3, 14.3)) for (const [fx, fy, fw, fd] of [[38, -254, 32, 0.3], [38, -240, 32, 0.3], [38, -254, 0.3, 14], [70, -254, 0.3, 14]] as const) out.push(prism(fx, fy, 0, fw, fd, 1.2, "steel")); // fence, as a single footprint
   for (const [lx, ly] of [[38, -256], [72, -238]] as const) if (ok(lx, ly, 0.6, 0.6)) lamp(out, accents, lx, ly);
 }
 
-/** Calle de la central a la feria, camiones esperando y el estacionamiento de la feria del lado industrial. */
+/** Street from the power plant to the fair, waiting trucks and the fair's parking lot on the industrial side. */
 function fairRoad(out: Solid[], accents: Accent[], rng: Rng): void {
-  if (ok(0, ROAD_Y - 4, 83.9, 7)) { // la calle y sus farolas, como una sola huella (83.9: el borde x=84 ya es la feria)
+  if (ok(0, ROAD_Y - 4, 83.9, 7)) { // the street and its lamps, as a single footprint (83.9: the edge x=84 is already the fair)
     out.push(strip([{ x: 0, y: ROAD_Y }, { x: 84, y: ROAD_Y }], 6, 0.1, "road"));
     for (const x of [4, 32, 60]) lamp(out, accents, x, ROAD_Y - 4);
   }
   for (const x of [8, 18, 28]) if (ok(x, ROAD_Y + 3.5, 8, 2.4)) { out.push(prism(x, ROAD_Y + 3.5, 0, 6, 2.4, 2.8, "rust")); out.push(prism(x + 6, ROAD_Y + 3.5, 0, 2, 2.4, 2.2, "steel")); }
   const { x, y, w, d } = PARKING;
-  if (ok(x, y, w - 0.1, d)) { // la losa y sus autos, como una sola huella (w-0.1: el borde x=84 ya es la feria)
+  if (ok(x, y, w - 0.1, d)) { // the slab and its cars, as a single footprint (w-0.1: the edge x=84 is already the fair)
     out.push(prism(x, y, 0, w, d, 0.3, "paving"));
     for (let i = 0; i < 12; i++) { const px = x + 2 + (i % 6) * 5, py = y + 3 + Math.floor(i / 6) * 10; out.push(prism(px, py, 0.3, 2.2, 1.4, 1.2, rng.chance(0.5) ? "steel" : "rust")); }
   }

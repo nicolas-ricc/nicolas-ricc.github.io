@@ -1,0 +1,217 @@
+import { describe, expect, it } from "vitest";
+import { bounds, type Solid } from "../../iso/solids";
+import { createRng } from "../../map/seed";
+import { LAB_LOTS, RECIPES, recipe } from "../index";
+import { STYLES } from "../styles";
+import type { Lot, Piece } from "../types";
+
+/** The usable lot of a city block and the lab's. */
+const LOT: Lot = { x: 1.5, y: 1.5, w: 21, d: 15, z: 0, open: ["s"], maxH: 24 };
+const LAB: Lot = { x: 0, y: 0, w: 24, d: 18, z: 0, open: ["s", "e"], maxH: 24 };
+const STYLE_IDS = ["downtown", "bars", "residential", "civic"] as const;
+const SEEDS = Array.from({ length: 10 }, (_, i) => i + 1);
+const EPS = 1e-9;
+
+const top = (p: Piece): number => Math.max(...[...p.solids, ...p.ground].map((s) => bounds(s).max.z));
+/** Test lot of each recipe: the water tower and the bridge have their own (LAB_LOTS). */
+const lotFor = (name: string): Lot => {
+  const own = LAB_LOTS[name];
+  return own ? { ...LOT, w: own.w, d: own.d, z: own.z ?? LOT.z } : LOT;
+};
+/** Arch slabs of the bridge (the only stones of depth d − 0.4), from west to east. */
+const slabs = (p: Piece, lot: Lot) =>
+  p.solids.filter((s): s is Solid & { kind: "prism" } => s.kind === "prism" && s.mat === "stone" && Math.abs(s.d - (lot.d - 0.4)) < EPS).sort((a, b) => a.at.x - b.at.x);
+
+describe("kit: landmarks family", () => {
+  it("registers the seven recipes in the issue's order, all landmarks", () => {
+    const l = RECIPES.filter((r) => r.family === "landmarks");
+    expect(l.map((r) => r.name)).toEqual(["market", "station", "theatre", "civicPalace", "library", "waterTower", "footbridge"]);
+    expect(l.every((r) => r.landmark === true)).toBe(true);
+  });
+
+  it("each recipe publishes landmarkTop at the highest point of the piece, also flattened with maxH 10", () => {
+    for (const def of RECIPES.filter((r) => r.family === "landmarks")) for (const maxH of [24, 10]) for (const id of STYLE_IDS) for (const seed of SEEDS) {
+      const p = def.recipe({ ...lotFor(def.name), maxH }, createRng(seed), STYLES[id]);
+      expect(p.landmarkTop, def.name).toBeDefined();
+      expect(Math.abs(p.landmarkTop!.z - top(p)), def.name).toBeLessThanOrEqual(1e-6);
+    }
+  });
+
+  it("no pair of solids of a recipe interpenetrates (sortByDepth sorts by box)", () => {
+    for (const def of RECIPES.filter((r) => r.family === "landmarks")) for (const lot of LAB_LOTS[def.name] ? [lotFor(def.name)] : [LOT, LAB]) {
+      const boxes = recipe(def.name)(lot, createRng(1), STYLES.civic).solids.map(bounds);
+      for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i]!, b = boxes[j]!;
+        const inside = (["x", "y", "z"] as const).every((k) => Math.min(a.max[k], b.max[k]) - Math.max(a.min[k], b.min[k]) > 1e-6);
+        expect(inside, `${def.name}: solids ${i} and ${j}`).toBe(false);
+      }
+    }
+  });
+
+  it("market, station, theatre and palace have at least one dome or vault", () => {
+    for (const name of ["market", "station", "theatre", "civicPalace"]) {
+      const p = recipe(name)(LOT, createRng(1), STYLES.civic);
+      expect(p.solids.some((s) => s.kind === "dome" || s.kind === "vault"), name).toBe(true);
+    }
+  });
+
+  it("market: central hall with an x vault w 9 h 3.5 of 8 segments on a body h 5 arcade, two aisles with a vault h 1.5 of 6, tower 3×3 h 14 with pyramid and clock", () => {
+    for (const lot of [LOT, LAB]) {
+      const p = recipe("market")(lot, createRng(1), STYLES.riverside);
+      const vaults = p.solids.filter((s): s is Solid & { kind: "vault" } => s.kind === "vault");
+      expect(vaults.filter((v) => v.axis === "x" && v.w === 9 && v.h === 3.5 && v.segments === 8 && v.len === lot.w - 4)).toHaveLength(1);
+      expect(vaults.filter((v) => v.axis === "x" && v.h === 1.5 && v.segments === 6)).toHaveLength(2);
+      expect(p.solids.some((s) => s.kind === "prism" && s.h === 5 && s.facade?.base === "arcade")).toBe(true);
+      const tower = p.solids.find((s): s is Solid & { kind: "prism" } => s.kind === "prism" && s.w === 3 && s.d === 3 && s.h === 14);
+      expect(tower).toBeDefined();
+      expect(p.solids.some((s) => s.kind === "cone" && s.sides === 4)).toBe(true);
+      const clk = p.accents.find((a) => a.kind === "poly" && a.color === "amberBleed");
+      expect(clk?.kind === "poly" && clk.pts.every((q) => Math.abs(q.y - (tower!.at.y + 3.02)) < EPS)).toBe(true);
+    }
+  });
+
+  it("station: hall 11 with a vault and a dome r 4 h 3 with 12 sides and 3 rings on a drum, two wings h 4 with hip, clock, canopy h 0.4 with overhang 2 to the south and four street lamps", () => {
+    const p = recipe("station")(LOT, createRng(1), STYLES.downtown);
+    expect(p.solids.some((s) => s.kind === "prism" && s.w === 11 && s.h === 6 && !!s.facade)).toBe(true);
+    expect(p.solids.filter((s) => s.kind === "vault" && s.axis === "y" && s.w === 11 && s.mat === STYLES.downtown.roof).length).toBeGreaterThan(0);
+    expect(p.solids.some((s) => s.kind === "dome" && s.r === 4 && s.h === 3 && s.sides === 12 && s.rings === 3)).toBe(true);
+    expect(p.solids.some((s) => s.kind === "cylinder" && s.r === 4)).toBe(true);
+    expect(p.solids.filter((s) => s.kind === "prism" && s.h === 4 && !!s.facade)).toHaveLength(2);
+    expect(p.solids.filter((s) => s.kind === "prism" && s.roof === "hip")).toHaveLength(2);
+    expect(p.accents.some((a) => a.kind === "poly" && a.color === "amberBleed")).toBe(true);
+    const marquee = p.solids.filter((s) => s.kind === "ramp" && s.h === 0.4);
+    expect(marquee).toHaveLength(1);
+    expect(marquee[0]).toMatchObject({ dir: "s", d: 2 });
+    expect(p.solids.filter((s) => s.kind === "prism" && s.mat === "steel" && s.h === 5)).toHaveLength(4);
+  });
+
+  it("station: the canopy goes on the open[0] side and the piece stays in the lot with any frontage", () => {
+    for (const side of ["s", "e", "n", "w"] as const) for (const base of [LOT, LAB]) {
+      const lot: Lot = { ...base, open: [side] }, p = recipe("station")(lot, createRng(1), STYLES.downtown);
+      expect(p.solids.find((s) => s.kind === "ramp" && s.h === 0.4)).toMatchObject({ dir: side });
+      for (const s of p.solids) {
+        const b = bounds(s);
+        expect(b.min.x).toBeGreaterThanOrEqual(lot.x - 0.8 - EPS);
+        expect(b.max.x).toBeLessThanOrEqual(lot.x + lot.w + 0.8 + EPS);
+        expect(b.min.y).toBeGreaterThanOrEqual(lot.y - 0.8 - EPS);
+        expect(b.max.y).toBeLessThanOrEqual(lot.y + lot.d + 0.8 + EPS);
+      }
+    }
+    expect(recipe("station")({ ...LOT, open: [] }, createRng(1), STYLES.downtown).solids.find((s) => s.kind === "ramp" && s.h === 0.4)).toMatchObject({ dir: "s" });
+  });
+
+  it("theatre: cylinder drum 12 sides r 6.5 h 9 with facade cols 1, copper dome r 6.5 h 4, marble colonnade 15×5 h 5 arcade cols 5, canopy with sign and stairway", () => {
+    for (const lot of [LOT, LAB]) {
+      const p = recipe("theatre")(lot, createRng(1), STYLES.civic);
+      expect(p.solids.some((s) => s.kind === "cylinder" && s.sides === 12 && s.r === 6.5 && s.h === 9 && s.facade?.cols === 1)).toBe(true);
+      expect(p.solids.some((s) => s.kind === "dome" && s.mat === "copper" && s.r === 6.5 && s.h === 4)).toBe(true);
+      expect(p.solids.some((s) => s.kind === "prism" && s.mat === "marble" && s.h === 5 && s.facade?.base === "arcade" && s.facade.cols === 5 && Math.max(s.w, s.d) === 15 && Math.min(s.w, s.d) === 5)).toBe(true);
+      expect(p.solids.filter((s) => s.kind === "ramp" && s.h === 0.4)).toHaveLength(1);
+      expect(p.solids.filter((s) => s.kind === "ramp" && s.h === 1 && Math.min(s.w, s.d) === 2)).toHaveLength(1);
+      expect(p.solids.some((s) => s.kind === "prism" && s.mat === "officeDark")).toBe(true);
+      expect(p.accents.some((a) => a.kind === "poly" && a.color === "amber")).toBe(true);
+      expect(p.windows.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("civic palace: five-vertex poly (chamfer) h 12 portico cols 5, cornice h 1 with overhang 0.8, four hips, dome r 4 h 3.5 on a drum r 4 h 2, stairway and two street lamps", () => {
+    for (const lot of [LOT, LAB]) {
+      const p = recipe("civicPalace")(lot, createRng(1), STYLES.civic);
+      const body = p.solids.find((s): s is Solid & { kind: "poly" } => s.kind === "poly" && s.h === 12);
+      expect(body?.footprint).toHaveLength(5);
+      expect(body?.facade).toMatchObject({ base: "portico", cols: 5 });
+      const cornice = p.solids.find((s): s is Solid & { kind: "poly" } => s.kind === "poly" && s.h === 1);
+      expect(cornice).toBeDefined();
+      const bb = bounds(body!), cb = bounds(cornice!);
+      expect(bb.min.x - cb.min.x).toBeCloseTo(0.8, 9);
+      expect(cb.max.y - bb.max.y).toBeCloseTo(0.8, 9);
+      expect(p.solids.filter((s) => s.kind === "prism" && s.roof === "hip")).toHaveLength(4);
+      expect(p.solids.some((s) => s.kind === "dome" && s.r === 4 && s.h === 3.5)).toBe(true);
+      expect(p.solids.some((s) => s.kind === "cylinder" && s.r === 4 && s.h === 2)).toBe(true);
+      expect(p.solids.filter((s) => s.kind === "ramp")).toHaveLength(1);
+      expect(p.solids.filter((s) => s.kind === "prism" && s.mat === "steel" && s.h === 5)).toHaveLength(2);
+    }
+  });
+
+  it("library: three marble arcade wings h 7 and a portico h 4; publishes a courtyard with no solids inside except trees and tiles", () => {
+    for (const lot of [LOT, LAB]) for (const seed of SEEDS) {
+      const p = recipe("library")(lot, createRng(seed), STYLES.civic), c = p.courtyard!;
+      expect(c).toBeDefined();
+      expect(p.solids.filter((s) => s.kind === "prism" && s.mat === "marble" && s.h === 7 && s.facade?.base === "arcade")).toHaveLength(3);
+      expect(p.solids.filter((s) => s.kind === "prism" && s.h === 4 && s.facade?.base === "portico")).toHaveLength(1);
+      const inside = (s: Solid) => { const b = bounds(s); return b.max.x > c.x + EPS && b.min.x < c.x + c.w - EPS && b.max.y > c.y + EPS && b.min.y < c.y + c.d - EPS; };
+      const trees = p.solids.filter((s) => s.kind === "cone" && s.mat === "leaf");
+      expect(trees).toHaveLength(2);
+      for (const s of p.solids) if (inside(s)) expect(trees).toContain(s);
+      expect(p.ground.some((g) => g.kind === "ground" && inside(g))).toBe(true);
+    }
+  });
+
+  it("water tower: fits in 6×6 and in 5×5 (+0.8), measures ≤ 16, four steel legs h 9, cylinder tank 8 sides r 2.2 h 4, copper dome and beacon", () => {
+    for (const [w, d] of [[6, 6], [5, 5]] as const) for (const id of STYLE_IDS) {
+      const lot = { ...LOT, w, d }, p = recipe("waterTower")(lot, createRng(1), STYLES[id]);
+      for (const s of p.solids) {
+        const b = bounds(s);
+        expect(b.min.x).toBeGreaterThanOrEqual(lot.x - 0.8 - EPS);
+        expect(b.max.x).toBeLessThanOrEqual(lot.x + w + 0.8 + EPS);
+        expect(b.min.y).toBeGreaterThanOrEqual(lot.y - 0.8 - EPS);
+        expect(b.max.y).toBeLessThanOrEqual(lot.y + d + 0.8 + EPS);
+      }
+      expect(top(p) - lot.z).toBeLessThanOrEqual(16);
+      expect(p.solids.filter((s) => s.kind === "prism" && s.mat === "steel" && s.w === 0.4 && s.d === 0.4 && s.h === 9)).toHaveLength(4);
+      expect(p.solids.some((s) => s.kind === "cylinder" && s.sides === 8 && s.r === 2.2 && s.h === 4 && s.mat === STYLES[id].mat)).toBe(true);
+      expect(p.solids.some((s) => s.kind === "dome" && s.mat === "copper" && s.r === 2.2 && s.h === 1.2)).toBe(true);
+      expect(p.accents.some((a) => a.kind === "dot" && a.at.z > top(p))).toBe(true);
+    }
+  });
+
+  it("bridge in 54×5 at z −1: continuous deck of 54, four piers from z −1, 18 arch slabs, max z ≤ lot.z + 4", () => {
+    const lot = { ...LOT, x: 0, y: 0, w: 54, d: 5, z: -1 }, p = recipe("footbridge")(lot, createRng(1), STYLES.riverside);
+    expect(p.solids.filter((s) => s.kind === "prism" && s.mat === "stone" && s.w === 54 && s.d === 4 && s.h === 0.4 && Math.abs(s.at.z - 1.2) < EPS)).toHaveLength(1);
+    expect(p.solids.filter((s) => s.kind === "prism" && s.w === 1.2 && s.d === 5 && s.at.z === -1 && Math.abs(s.h - 2.2) < EPS)).toHaveLength(4);
+    expect(slabs(p, lot)).toHaveLength(18);
+    expect(top(p)).toBeLessThanOrEqual(lot.z + 4 + EPS);
+    expect(p.accents.length).toBeGreaterThan(0);
+    expect(p.accents.every((a) => a.kind === "dot" && Math.abs(a.at.z - 2.4) < EPS && Math.abs(a.at.y - 4.35) < EPS)).toBe(true);
+  });
+
+  it("bridge: railing posts spread from end to end on both edges", () => {
+    for (const w of [40, 54, 60]) {
+      const lot = { ...LOT, x: 0, y: 0, w, d: 5, z: -1 }, p = recipe("footbridge")(lot, createRng(1), STYLES.riverside);
+      const posts = p.solids.filter((s): s is Solid & { kind: "prism" } => s.kind === "prism" && s.mat === "steel" && s.w === 0.3 && s.h === 1);
+      for (const ry of new Set(posts.map((q) => q.at.y))) {
+        const xs = posts.filter((q) => q.at.y === ry).map((q) => q.at.x).sort((a, b) => a - b);
+        expect(xs[0]).toBeCloseTo(0, 9);
+        expect(xs[xs.length - 1]! + 0.3).toBeCloseTo(w, 9);
+        for (let i = 1; i < xs.length; i++) expect(xs[i]! - xs[i - 1]!).toBeLessThanOrEqual(3 + 1e-9);
+      }
+    }
+  });
+
+  it("bridge: each slab starts where today's construction put it, with 0.2 setback and d − 0.4 depth", () => {
+    const lot = { ...LOT, x: 0, y: 0, w: 54, d: 5, z: -1 }, s = slabs(recipe("footbridge")(lot, createRng(1), STYLES.riverside), lot);
+    const span = (54 - 4 * 1.2) / 3;
+    expect(s).toHaveLength(18);
+    s.forEach((q, n) => {
+      const i = Math.floor(n / 6), k = n % 6;
+      expect(q.at.x).toBeCloseTo(1.2 + i * (span + 1.2) + (k * span) / 6, 9);
+      expect(q.w).toBeCloseTo(span / 6, 9);
+      expect(q.at.y).toBeCloseTo(0.2, 9);
+      expect(q.d).toBeCloseTo(4.6, 9);
+    });
+  });
+
+  it("bridge: the lower edge of the slabs is an upright arch, symmetric in each span and higher at the keystone", () => {
+    for (const [w, d] of [[54, 5], [40, 4], [60, 6]] as const) {
+      const lot = { ...LOT, x: 0, y: 0, w, d, z: -1 }, s = slabs(recipe("footbridge")(lot, createRng(1), STYLES.riverside), lot);
+      expect(s).toHaveLength(18);
+      for (let v = 0; v < 3; v++) {
+        const zs = s.slice(v * 6, v * 6 + 6).map((q) => q.at.z);
+        for (let k = 0; k < 3; k++) expect(zs[k]).toBeCloseTo(zs[5 - k]!, 9);
+        expect(zs[0]!).toBeLessThan(zs[1]!);
+        expect(zs[1]!).toBeLessThan(zs[2]!);
+        expect(zs[0]!).toBeGreaterThanOrEqual(lot.z);
+      }
+    }
+  });
+});

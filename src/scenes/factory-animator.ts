@@ -4,7 +4,7 @@ import type { FactoryScene } from "./factory";
 import { EXCAVATOR } from "./excavator";
 import { createFactoryAnim } from "./factory-anim";
 
-/** Adapta la fábrica al contrato `Animator`: una capa de sólidos por chimenea, la máquina estática (en su marco girado) y la rueda de la excavadora. */
+/** Adapts the factory to the `Animator` contract: one solid layer per chimney, the static machine (in its rotated frame) and the excavator wheel. */
 export function factoryAnimator(scene: FactoryScene, rng: Rng, opts: { reducedMotion: boolean }): Animator {
   const anim = createFactoryAnim(scene.stacks, rng, opts);
   const smoke = scene.stacks.map((_, k) => `factory.smoke${k}`), ids = [...smoke, "factory.excavator", "factory.wheel"];

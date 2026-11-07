@@ -5,14 +5,14 @@ import type { Solid, Tri } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
 
 /**
- * Flota: casco lofteado (`hull` con obra muerta `topMat` y arrufo) más
- * superestructuras como `poly` con huella rotada y fachada (ventanas),
- * chimeneas y mástiles como cilindros y cajas, plumas y estays como vigas (`beam`). Popa en `at` (`shipAt` lo
- * deriva del centro de la unidad), sobre el agua (z −1). Luces: mástil magentaMid, babor magenta, estribor cyanMid; la
- * lancha de la feria suma una ámbar; el empujador y el remolcador, dos proyectores ámbar. `wake` arma la estela de espuma.
- * `cargo` reproduce al Damen Combi Freighter 3850 (casa y puente a popa, bodega con tapas, dos grúas en babor), `tug` al
- * Damen ASD Tug 2810, `barge` un empujador fluvial de tres cubiertas (tipo *Steel Trader*) empujando una barcaza tolva
- * Jumbo Mississippi y `ferry` una lancha colectiva del delta del Paraná (Tigre), de madera barnizada; ver
+ * Fleet: lofted hull (`hull` with topsides `topMat` and sheer) plus
+ * superstructures as `poly` with rotated footprint and facade (windows),
+ * funnels and masts as cylinders and boxes, booms and stays as beams (`beam`). Stern at `at` (`shipAt` derives it
+ * from the unit's center), on the water (z −1). Lights: mast magentaMid, port magenta, starboard cyanMid; the
+ * fair launch adds an amber one; the pusher and the tug, two amber searchlights. `wake` builds the foam wake.
+ * `cargo` reproduces the Damen Combi Freighter 3850 (house and bridge aft, hold with covers, two cranes to port), `tug` the
+ * Damen ASD Tug 2810, `barge` a three-deck river pusher (*Steel Trader* type) pushing a Jumbo Mississippi
+ * hopper barge and `ferry` a shared launch of the Paraná delta (Tigre), in varnished wood; see
  * `docs/superpowers/specs/2026-10-16-barcos-referencia.md`.
  */
 export type ShipKind = "cargo" | "tug" | "barge" | "ferry";
@@ -25,7 +25,7 @@ export const SHIP_SPECS: Record<ShipKind, ShipSpec> = {
 };
 export const SHIP_MATS: readonly Material[] = ["hull", "hullBlue", "whitewash", "steel", "rust", "deck", "glass", "asphalt"];
 const WATER_Z = -1, WAKE_Z = -0.95;
-const PUSHER_LEN = 20; // eslora del empujador, que va detrás de la barcaza con la proa en x 0
+const PUSHER_LEN = 20, PUSHER_BEAM = 7, PUSHER_H = 1.6; // length, beam and freeboard of the pusher; it sits behind the barge with its bow at x 0
 
 interface Kit {
   hull: (dx: number, len: number, beam: number, h: number, sheer: number, topMat: Material) => Solid;
@@ -37,7 +37,7 @@ interface Kit {
   poly: (pts: [number, number, number][], color: Accent["color"], alpha: number) => Accent;
 }
 
-/** Piezas en coordenadas locales del barco (x a proa, y a estribor), rotadas por `heading`. */
+/** Pieces in the ship's local coordinates (x toward the bow, y to starboard), rotated by `heading`. */
 function kit(at: Vec2, heading: number): Kit {
   const c = Math.cos(heading), s = Math.sin(heading);
   const local = (dx: number, dy: number) => ({ x: at.x + dx * c - dy * s, y: at.y + dx * s + dy * c });
@@ -54,102 +54,102 @@ function kit(at: Vec2, heading: number): Kit {
 
 function cargo(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void {
   const deck = WATER_Z + spec.h;
-  solids.push( // casa de popa: tres niveles que se angostan, puente con alerones a toda la manga
+  solids.push( // stern house: three levels that narrow, bridge with wings across the full beam
     k.box(4.5, -3.5, 7.5, 7, deck, 1.4, "whitewash", { floors: 1, cols: 4 }),
     k.box(4.7, -2.7, 7, 5.4, deck + 1.4, 1.4, "whitewash", { floors: 1, cols: 4 }),
     k.box(5, -2.4, 6.5, 4.8, deck + 2.8, 1.4, "whitewash", { floors: 1, cols: 3 }),
     k.box(6.5, -5, 4, 10, deck + 4.2, 1.5, "whitewash", { floors: 1, cols: 4, base: "glass" }),
-    k.box(6.3, -5.1, 4.4, 10.2, deck + 5.7, 0.2, "steel"), // techo del puente
+    k.box(6.3, -5.1, 4.4, 10.2, deck + 5.7, 0.2, "steel"), // bridge roof
   );
-  solids.push(k.cyl(5.8, -1, deck + 4.2, 0.5, 1.8, "steel"), k.cyl(5.8, 1, deck + 4.2, 0.5, 1.8, "steel")); // escapes detrás del puente
-  solids.push(k.box(6, -3.6, 3, 0.9, deck + 1.4, 0.9, "rust")); // bote salvavidas en babor
-  solids.push(k.box(8, -0.2, 0.4, 0.4, deck + 5.9, 2.1, "steel"), k.box(8, -1.5, 0.4, 3, deck + 7, 0.25, "steel")); // mástil de radar y cruceta
+  solids.push(k.cyl(5.8, -1, deck + 4.2, 0.5, 1.8, "steel"), k.cyl(5.8, 1, deck + 4.2, 0.5, 1.8, "steel")); // exhausts behind the bridge
+  solids.push(k.box(6, -3.6, 3, 0.9, deck + 1.4, 0.9, "rust")); // lifeboat to port
+  solids.push(k.box(8, -0.2, 0.4, 0.4, deck + 5.9, 2.1, "steel"), k.box(8, -1.5, 0.4, 3, deck + 7, 0.25, "steel")); // radar mast and crosstree
   lights.push(k.dot(8.2, 0, deck + 8.2, 0.7, "magentaMid"), k.dot(10, -5, deck + 5.2, 0.4, "magenta"), k.dot(10, 5, deck + 5.2, 0.4, "cyanMid"));
-  lights.push(k.poly([[10.52, -4.6, deck + 4.9], [10.52, 4.6, deck + 4.9], [10.52, 4.6, deck + 5.5], [10.52, -4.6, deck + 5.5]], "magentaBleed", 0.8)); // ventanas del puente encendidas, cara de proa
-  solids.push(k.box(14, -3.4, 34, 6.8, deck, 1, "rust")); // brazola de la bodega
-  for (let i = 0; i < 3; i++) solids.push(k.box(14.2 + i * 11.2, -3.2, 11, 6.4, deck + 1, 0.3, "steel")); // tapas de escotilla
-  solids.push(k.box(12.5, -3.2, 0.5, 0.5, deck, 2.5, "steel"), k.box(12.5, 2.7, 0.5, 0.5, deck, 2.5, "steel"), k.box(12.4, -3.5, 1, 7, deck + 2.5, 0.3, "steel")); // pórtico de tapas, estacionado a proa de la casa
-  for (const dx of [25.3, 36.5]) { // grúas de cubierta en babor: pedestal, cabina, pluma a 45° hacia proa apoyada en el techo de la cabina y estay desde la esquina exterior de atrás del techo a su punta
+  lights.push(k.poly([[10.52, -4.6, deck + 4.9], [10.52, 4.6, deck + 4.9], [10.52, 4.6, deck + 5.5], [10.52, -4.6, deck + 5.5]], "magentaBleed", 0.8)); // lit bridge windows, bow face
+  solids.push(k.box(14, -3.4, 34, 6.8, deck, 1, "rust")); // hold coaming
+  for (let i = 0; i < 3; i++) solids.push(k.box(14.2 + i * 11.2, -3.2, 11, 6.4, deck + 1, 0.3, "steel")); // hatch covers
+  solids.push(k.box(12.5, -3.2, 0.5, 0.5, deck, 2.5, "steel"), k.box(12.5, 2.7, 0.5, 0.5, deck, 2.5, "steel"), k.box(12.4, -3.5, 1, 7, deck + 2.5, 0.3, "steel")); // cover gantry, parked forward of the house
+  for (const dx of [25.3, 36.5]) { // deck cranes to port: pedestal, cab, boom at 45° toward the bow resting on the cab roof and a stay from the outer rear corner of the roof to its tip
     const tip: [number, number, number] = [dx + 4.95, -3.9, deck + 8.7];
     solids.push(k.cyl(dx, -3.9, deck, 0.5, 3, "steel"), k.box(dx - 0.6, -4.5, 1.2, 1.2, deck + 3, 1, "whitewash"));
     solids.push(k.beam([dx + 0.45, -3.9, deck + 4.2], tip, 0.4, 0.4, "steel"), k.beam([dx - 0.5, -4.35, deck + 4.05], tip, 0.1, 0.1, "steel"));
   }
-  solids.push(k.box(50, -2.1, 4, 4.2, deck, 1.6, "steel")); // castillo de proa
-  solids.push(k.box(52, -0.2, 0.4, 0.4, deck + 1.6, 5.4, "steel"), k.box(52.05, -1.5, 0.3, 3, deck + 5.5, 0.25, "steel")); // mástil de proa y cruceta
-  solids.push(k.cyl(50.9, 0, deck + 1.6, 0.6, 0.6, "steel"), k.cyl(53.3, -1.2, deck + 1.6, 0.3, 0.5, "steel"), k.cyl(53.3, 1.2, deck + 1.6, 0.3, 0.5, "steel")); // molinete y bitas
-  solids.push(k.box(54.6, 1.6, 0.8, 0.5, deck, 0.8, "steel")); // ancla en el escobén de estribor, bajo el arrufo de la proa
-  solids.push(k.box(12, -5, 22.2, 0.3, deck, 0.8, "hullBlue"), k.box(12, 4.7, 22.2, 0.3, deck, 0.8, "hullBlue")); // amurada en el tramo recto
-  solids.push( // amurada que sigue el afinamiento de la proa hasta el castillo
+  solids.push(k.box(50, -2.1, 4, 4.2, deck, 1.6, "steel")); // forecastle
+  solids.push(k.box(52, -0.2, 0.4, 0.4, deck + 1.6, 5.4, "steel"), k.box(52.05, -1.5, 0.3, 3, deck + 5.5, 0.25, "steel")); // foremast and crosstree
+  solids.push(k.cyl(50.9, 0, deck + 1.6, 0.6, 0.6, "steel"), k.cyl(53.3, -1.2, deck + 1.6, 0.3, 0.5, "steel"), k.cyl(53.3, 1.2, deck + 1.6, 0.3, 0.5, "steel")); // windlass and bitts
+  solids.push(k.box(54.6, 1.6, 0.8, 0.5, deck, 0.8, "steel")); // anchor in the starboard hawsehole, under the bow sheer
+  solids.push(k.box(12, -5, 22.2, 0.3, deck, 0.8, "hullBlue"), k.box(12, 4.7, 22.2, 0.3, deck, 0.8, "hullBlue")); // bulwark on the straight stretch
+  solids.push( // bulwark following the taper of the bow up to the forecastle
     k.plate([[34.2, -5], [50, -3.18], [50, -2.88], [34.2, -4.7]], deck, 0.8, "hullBlue"),
     k.plate([[34.2, 4.7], [50, 2.88], [50, 3.18], [34.2, 5]], deck, 0.8, "hullBlue"),
   );
-  lights.push(k.dot(52.2, 0, deck + 6.7, 0.5, "magentaMid")); // tope de proa
+  lights.push(k.dot(52.2, 0, deck + 6.7, 0.5, "magentaMid")); // bow masthead light
 }
 
 function tug(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void {
   const deck = WATER_Z + spec.h;
-  solids.push(k.box(8.2, -2.2, 6, 4.4, deck, 1.7, "whitewash", { floors: 1, cols: 3 })); // caseta
-  solids.push(k.box(9.7, -1.9, 3.5, 3.8, deck + 1.7, 1.9, "whitewash", { floors: 1, cols: 4, base: "glass" }), k.box(9.5, -2.1, 3.9, 4.2, deck + 3.6, 0.15, "steel")); // timonera panorámica y su techo
-  for (const dy of [-1.9, 1.9]) solids.push(k.cyl(8.5, dy, deck + 1.7, 0.3, 2.7, "steel")); // chimeneas laterales
-  solids.push(k.box(11.2, -0.15, 0.3, 0.3, deck + 3.75, 4.9, "steel")); // mástil
-  solids.push(k.box(11.1, -1.3, 0.25, 2.6, deck + 6.7, 0.2, "steel")); // cruceta
+  solids.push(k.box(8.2, -2.2, 6, 4.4, deck, 1.7, "whitewash", { floors: 1, cols: 3 })); // deckhouse
+  solids.push(k.box(9.7, -1.9, 3.5, 3.8, deck + 1.7, 1.9, "whitewash", { floors: 1, cols: 4, base: "glass" }), k.box(9.5, -2.1, 3.9, 4.2, deck + 3.6, 0.15, "steel")); // panoramic wheelhouse and its roof
+  for (const dy of [-1.9, 1.9]) solids.push(k.cyl(8.5, dy, deck + 1.7, 0.3, 2.7, "steel")); // side funnels
+  solids.push(k.box(11.2, -0.15, 0.3, 0.3, deck + 3.75, 4.9, "steel")); // mast
+  solids.push(k.box(11.1, -1.3, 0.25, 2.6, deck + 6.7, 0.2, "steel")); // crosstree
   solids.push(k.box(10.9, -0.8, 0.3, 1.6, deck + 5, 0.2, "steel")); // radar
-  solids.push(k.box(12.7, -1.7, 0.5, 0.5, deck + 3.75, 0.5, "steel"), k.box(12.7, 1.2, 0.5, 0.5, deck + 3.75, 0.5, "steel")); // proyectores
-  for (const dy of [-1.4, 1.4]) solids.push(k.cyl(10, dy, deck + 3.75, 0.35, 0.5, "whitewash")); // balsas salvavidas en el techo
-  solids.push(k.cyl(15.2, 0, 1.4, 0.6, 0.9, "steel")); // guinche de proa
-  for (const dy of [-1.4, 1.4]) solids.push(k.cyl(15.2, dy, 1.4, 0.25, 0.5, "steel")); // bitas de proa
-  solids.push(k.cyl(2.5, 0, deck, 0.35, 0.6, "steel")); // bita de popa
-  for (const dy of [-2.35, 2.1]) solids.push(k.box(14.4, dy, 1, 0.25, 1.4, 0.8, "hullBlue")); // amurada de proa
-  solids.push(k.box(16.2, -2, 1.8, 4, 0.9, 1, "asphalt"), k.box(18, -0.8, 1, 1.6, 0.9, 1, "asphalt")); // pudding ancho y punta (la punta es la roda)
-  for (const dy of [-3.5, 3.2]) solids.push(k.box(4.2, dy, 7, 0.3, 0.2, 0.5, "asphalt")); // rieles de defensa
-  for (const dy of [-1.7, 1.7]) solids.push(k.cyl(0.9, dy, 1, 0.45, 0.9, "asphalt")); // cilindros de esquina de popa
+  solids.push(k.box(12.7, -1.7, 0.5, 0.5, deck + 3.75, 0.5, "steel"), k.box(12.7, 1.2, 0.5, 0.5, deck + 3.75, 0.5, "steel")); // searchlights
+  for (const dy of [-1.4, 1.4]) solids.push(k.cyl(10, dy, deck + 3.75, 0.35, 0.5, "whitewash")); // life rafts on the roof
+  solids.push(k.cyl(15.2, 0, 1.4, 0.6, 0.9, "steel")); // bow winch
+  for (const dy of [-1.4, 1.4]) solids.push(k.cyl(15.2, dy, 1.4, 0.25, 0.5, "steel")); // bow bitts
+  solids.push(k.cyl(2.5, 0, deck, 0.35, 0.6, "steel")); // stern bitt
+  for (const dy of [-2.35, 2.1]) solids.push(k.box(14.4, dy, 1, 0.25, 1.4, 0.8, "hullBlue")); // bow bulwark
+  solids.push(k.box(16.2, -2, 1.8, 4, 0.9, 1, "asphalt"), k.box(18, -0.8, 1, 1.6, 0.9, 1, "asphalt")); // wide pudding and tip (the tip is the stem)
+  for (const dy of [-3.5, 3.2]) solids.push(k.box(4.2, dy, 7, 0.3, 0.2, 0.5, "asphalt")); // fender rails
+  for (const dy of [-1.7, 1.7]) solids.push(k.cyl(0.9, dy, 1, 0.45, 0.9, "asphalt")); // stern corner cylinders
   lights.push(k.dot(11.35, 0, 10, 0.7, "magentaMid"), k.dot(12, -2.1, 5.15, 0.4, "magenta"), k.dot(12, 2.1, 5.15, 0.4, "cyanMid"), k.dot(12.95, -1.45, 5.5, 0.35, "amber"), k.dot(12.95, 1.45, 5.5, 0.35, "amber"));
-  lights.push(k.poly([[13.22, -1.7, 3.2], [13.22, 1.7, 3.2], [13.22, 1.7, 4.5], [13.22, -1.7, 4.5]], "magentaBleed", 0.8)); // ventanas de la timonera encendidas, cara de proa
+  lights.push(k.poly([[13.22, -1.7, 3.2], [13.22, 1.7, 3.2], [13.22, 1.7, 4.5], [13.22, -1.7, 4.5]], "magentaBleed", 0.8)); // lit wheelhouse windows, bow face
 }
 
 function barge(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void {
-  // barcaza: el anillo fijo del casco tiene popa redonda y proa en punta; cajas que lo cuadran, rake en dos escalones y placas que tapan la muesca de la flotación
+  // barge: the hull's fixed ring has a round stern and a pointed bow; boxes that square it off, rake in two steps and plates that cover the notch at the waterline
   solids.push(k.box(0, -4, 7.2, 8, -0.9, 1.15, "rust"), k.box(22.8, -4, 13.6, 8, -0.9, 1.15, "rust"));
   solids.push(k.box(36.4, -4, 2, 8, -0.5, 0.75, "rust"), k.box(38.4, -4, 1.6, 8, -0.1, 0.35, "rust"));
   solids.push(k.box(0, -4, 36.4, 0.15, -0.9, 1.15, "rust"), k.box(0, 3.85, 36.4, 0.15, -0.9, 1.15, "rust"));
-  const deck = WATER_Z + spec.h, top = deck + 0.05; // tope de los bloques que cuadran el casco
-  solids.push(k.box(3, -3.6, 31.2, 0.4, top, 0.9, "rust"), k.box(3, 3.2, 31.2, 0.4, top, 0.9, "rust")); // brazola: bandas
-  solids.push(k.box(3, -3.2, 0.4, 6.4, top, 0.9, "rust"), k.box(33.8, -3.2, 0.4, 6.4, top, 0.9, "rust")); // y testeros
-  for (let i = 0; i < 4; i++) solids.push(k.box(3.2 + i * 7.7, -3.6, 7.5, 7.2, top + 0.9, 0.4, "steel"), k.box(3.55 + i * 7.7, -2.2, 6.8, 4.4, top + 1.3, 0.3, "steel")); // tapas abovedadas en dos escalones
-  for (const dx of [1.5, 35.5]) for (const dy of [-2.8, 2.8]) solids.push(k.cyl(dx, dy, top, 0.3, 0.5, "steel")); // bitas
-  // empujador pegado a la popa, con proa cuadrada
+  const deck = WATER_Z + spec.h, top = deck + 0.05; // top of the blocks that square off the hull
+  solids.push(k.box(3, -3.6, 31.2, 0.4, top, 0.9, "rust"), k.box(3, 3.2, 31.2, 0.4, top, 0.9, "rust")); // coaming: bands
+  solids.push(k.box(3, -3.2, 0.4, 6.4, top, 0.9, "rust"), k.box(33.8, -3.2, 0.4, 6.4, top, 0.9, "rust")); // and end walls
+  for (let i = 0; i < 4; i++) solids.push(k.box(3.2 + i * 7.7, -3.6, 7.5, 7.2, top + 0.9, 0.4, "steel"), k.box(3.55 + i * 7.7, -2.2, 6.8, 4.4, top + 1.3, 0.3, "steel")); // domed covers in two steps
+  for (const dx of [1.5, 35.5]) for (const dy of [-2.8, 2.8]) solids.push(k.cyl(dx, dy, top, 0.3, 0.5, "steel")); // bitts
+  // pusher attached to the stern, with a square bow
   const stern = -PUSHER_LEN, house = stern + 2.5;
-  solids.push(k.hull(stern, PUSHER_LEN, 7, 1.6, 0, "hullBlue"), k.box(-5.5, -3.5, 5.5, 7, -0.9, 1.55, "hullBlue"));
-  const pDeck = WATER_Z + 1.6 + 0.05; // tope del bloque de proa del empujador
-  solids.push(k.box(-1.2, -3, 1.2, 1.2, pDeck, 1.6, "whitewash"), k.box(-1.2, 1.8, 1.2, 1.2, pDeck, 1.6, "whitewash")); // pechos de empuje, sobre la barcaza
-  solids.push(k.box(house, -2.6, -1.6 - house, 5.2, pDeck, 1.55, "whitewash", { floors: 1, cols: 10 })); // nivel 1, la casilla larga, de la popa a la torre
-  solids.push(k.box(-6.2, -2.3, 4.6, 4.6, pDeck + 1.55, 1.55, "whitewash", { floors: 1, cols: 4 })); // nivel 2
-  solids.push(k.box(-5.7, -2, 3.6, 4, pDeck + 3.1, 1.7, "whitewash", { floors: 1, cols: 4, base: "glass" }), k.box(-5.9, -2.2, 4, 4.4, pDeck + 4.8, 0.15, "steel")); // timonera y techo
-  solids.push(k.cyl(-7.4, -1.3, pDeck + 1.55, 0.8, 1.5, "whitewash"), k.cyl(-7.4, 1.3, pDeck + 1.55, 0.8, 1.5, "whitewash")); // chimeneas gemelas, una por banda
-  solids.push(k.box(-3.9, -0.125, 0.25, 0.25, pDeck + 4.95, 2.6, "steel"), k.box(-5.4, -0.5, 0.8, 1, pDeck + 4.95, 0.5, "steel")); // mástil y radar
-  solids.push(k.box(stern + 6, 0.6, 4.2, 1.5, pDeck + 1.55, 0.5, "steel")); // bote
-  solids.push(k.box(stern + 2.6, -2.6, 9, 0.1, pDeck + 1.55, 0.4, "steel"), k.box(stern + 2.6, 2.5, 9, 0.1, pDeck + 1.55, 0.4, "steel")); // barandas
+  solids.push(k.hull(stern, PUSHER_LEN, PUSHER_BEAM, PUSHER_H, 0, "hullBlue"), k.box(-5.5, -PUSHER_BEAM / 2, 5.5, PUSHER_BEAM, -0.9, PUSHER_H - 0.05, "hullBlue")); // the bow block runs from 0.1 above the water to pDeck
+  const pDeck = WATER_Z + PUSHER_H + 0.05; // top of the pusher's bow block
+  solids.push(k.box(-1.2, -3, 1.2, 1.2, pDeck, 1.6, "whitewash"), k.box(-1.2, 1.8, 1.2, 1.2, pDeck, 1.6, "whitewash")); // push knees, on the barge
+  solids.push(k.box(house, -2.6, -1.6 - house, 5.2, pDeck, 1.55, "whitewash", { floors: 1, cols: 10 })); // level 1, the long cabin, from the stern to the tower
+  solids.push(k.box(-6.2, -2.3, 4.6, 4.6, pDeck + 1.55, 1.55, "whitewash", { floors: 1, cols: 4 })); // level 2
+  solids.push(k.box(-5.7, -2, 3.6, 4, pDeck + 3.1, 1.7, "whitewash", { floors: 1, cols: 4, base: "glass" }), k.box(-5.9, -2.2, 4, 4.4, pDeck + 4.8, 0.15, "steel")); // wheelhouse and roof
+  solids.push(k.cyl(-7.4, -1.3, pDeck + 1.55, 0.8, 1.5, "whitewash"), k.cyl(-7.4, 1.3, pDeck + 1.55, 0.8, 1.5, "whitewash")); // twin funnels, one per side
+  solids.push(k.box(-3.9, -0.125, 0.25, 0.25, pDeck + 4.95, 2.6, "steel"), k.box(-5.4, -0.5, 0.8, 1, pDeck + 4.95, 0.5, "steel")); // mast and radar
+  solids.push(k.box(stern + 6, 0.6, 4.2, 1.5, pDeck + 1.55, 0.5, "steel")); // boat
+  solids.push(k.box(stern + 2.6, -2.6, 9, 0.1, pDeck + 1.55, 0.4, "steel"), k.box(stern + 2.6, 2.5, 9, 0.1, pDeck + 1.55, 0.4, "steel")); // railings
   lights.push(k.dot(-3.775, 0, pDeck + 7.65, 0.7, "magentaMid"), k.dot(-2.3, -2.15, pDeck + 4.35, 0.4, "magenta"), k.dot(-2.3, 2.15, pDeck + 4.35, 0.4, "cyanMid"));
-  lights.push(k.dot(-2.3, -1.7, pDeck + 5.2, 0.35, "amber"), k.dot(-2.3, 1.7, pDeck + 5.2, 0.35, "amber")); // proyectores
-  lights.push(k.poly([[-2.08, -1.6, pDeck + 3.45], [-2.08, 1.6, pDeck + 3.45], [-2.08, 1.6, pDeck + 4.55], [-2.08, -1.6, pDeck + 4.55]], "magentaBleed", 0.8)); // ventanas encendidas de la timonera
+  lights.push(k.dot(-2.3, -1.7, pDeck + 5.2, 0.35, "amber"), k.dot(-2.3, 1.7, pDeck + 5.2, 0.35, "amber")); // searchlights
+  lights.push(k.poly([[-2.08, -1.6, pDeck + 3.45], [-2.08, 1.6, pDeck + 3.45], [-2.08, 1.6, pDeck + 4.55], [-2.08, -1.6, pDeck + 4.55]], "magentaBleed", 0.8)); // lit wheelhouse windows
 }
 
 function ferry(k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]): void {
-  // Lancha colectiva del Tigre: casco bajo de madera barnizada (`deck` como obra muerta), cabina larga de ventanas corridas
-  // que ocupa dos tercios de la eslora, toldilla clara que sobresale, timonera en el extremo de proa de la misma cabina,
-  // popa abierta con baranda y asta de bandera, defensas de goma colgadas del costado.
+  // Shared launch of the Tigre: low varnished-wood hull (`deck` as topsides), long cabin with continuous windows
+  // taking up two thirds of the length, light canopy that overhangs, wheelhouse at the bow end of the same cabin,
+  // open stern with railing and flagpole, rubber fenders hung on the side.
   const deck = WATER_Z + spec.h;
-  solids.push(k.box(3.5, -1.7, 10, 3.4, deck, 1.5, "deck", { floors: 1, cols: 8, base: "glass" })); // cabina de pasajeros, ventanas corridas
-  solids.push(k.box(3.1, -2, 10.8, 4, deck + 1.5, 0.15, "whitewash")); // toldilla, con alero
-  solids.push(k.box(12.1, -0.9, 1.4, 1.8, deck + 1.65, 0.4, "whitewash")); // casquete de la timonera sobre la toldilla
-  solids.push(k.box(11.3, -1.2, 1, 2.4, deck + 1.65, 0.3, "rust")); // bolsos y cajones sobre el techo, a proa
-  solids.push(k.box(0.8, -1.9, 2.7, 0.15, deck, 0.5, "deck"), k.box(0.8, 1.75, 2.7, 0.15, deck, 0.5, "deck")); // barandas de la popa abierta
-  solids.push(k.box(1.2, -0.1, 0.2, 0.2, deck, 1.6, "steel")); // asta de bandera en la popa
-  solids.push(k.box(12.6, -0.1, 0.2, 0.2, deck + 2.05, 1.4, "steel")); // mástil corto sobre la timonera
-  solids.push(k.cyl(13.9, 0, deck, 0.3, 0.3, "steel")); // bita de proa
-  for (const dx of [5, 8.5, 12]) solids.push(k.cyl(dx, 2.05, deck - 0.4, 0.22, 0.5, "asphalt")); // defensas de goma en estribor, la banda que se ve
+  solids.push(k.box(3.5, -1.7, 10, 3.4, deck, 1.5, "deck", { floors: 1, cols: 8, base: "glass" })); // passenger cabin, continuous windows
+  solids.push(k.box(3.1, -2, 10.8, 4, deck + 1.5, 0.15, "whitewash")); // canopy, with eave
+  solids.push(k.box(12.1, -0.9, 1.4, 1.8, deck + 1.65, 0.4, "whitewash")); // wheelhouse cap over the canopy
+  solids.push(k.box(11.3, -1.2, 1, 2.4, deck + 1.65, 0.3, "rust")); // bags and crates on the roof, forward
+  solids.push(k.box(0.8, -1.9, 2.7, 0.15, deck, 0.5, "deck"), k.box(0.8, 1.75, 2.7, 0.15, deck, 0.5, "deck")); // railings of the open stern
+  solids.push(k.box(1.2, -0.1, 0.2, 0.2, deck, 1.6, "steel")); // flagpole at the stern
+  solids.push(k.box(12.6, -0.1, 0.2, 0.2, deck + 2.05, 1.4, "steel")); // short mast over the wheelhouse
+  solids.push(k.cyl(13.9, 0, deck, 0.3, 0.3, "steel")); // bow bitt
+  for (const dx of [5, 8.5, 12]) solids.push(k.cyl(dx, 2.05, deck - 0.4, 0.22, 0.5, "asphalt")); // rubber fenders to starboard, the side that shows
   lights.push(k.dot(12.7, 0, deck + 3.6, 0.55, "magentaMid"), k.dot(13.4, -1.3, deck + 1.3, 0.3, "magenta"), k.dot(13.4, 1.3, deck + 1.3, 0.3, "cyanMid"), k.dot(1.3, 0, deck + 1.7, 0.5, "amber"));
-  lights.push(k.poly([[4, 1.72, deck + 0.5], [13.3, 1.72, deck + 0.5], [13.3, 1.72, deck + 1.3], [4, 1.72, deck + 1.3]], "amberBleed", 0.55)); // ventanas de la cabina encendidas, costado de estribor
+  lights.push(k.poly([[4, 1.72, deck + 0.5], [13.3, 1.72, deck + 0.5], [13.3, 1.72, deck + 1.3], [4, 1.72, deck + 1.3]], "amberBleed", 0.55)); // lit cabin windows, starboard side
 }
 
 const BUILD: Record<ShipKind, (k: Kit, spec: ShipSpec, solids: Solid[], lights: Accent[]) => void> = { cargo, tug, barge, ferry };
@@ -162,16 +162,16 @@ export function ship(kind: ShipKind, at: Vec2, heading: number): { solids: Solid
   return { solids, lights };
 }
 
-/** Popa de la unidad en coordenadas locales: el empujador va `PUSHER_LEN` detrás de la barcaza. */
+/** Stern of the unit in local coordinates: the pusher sits `PUSHER_LEN` behind the barge. */
 const sternOf = (kind: ShipKind): number => (kind === "barge" ? -PUSHER_LEN : 0);
 
-/** `at` de popa para que el punto medio de la unidad completa (empujador incluido) caiga en `center`. */
+/** Stern `at` so the midpoint of the whole unit (pusher included) falls on `center`. */
 export function shipAt(kind: ShipKind, center: Vec2, heading: number): Vec2 {
   const half = (SHIP_SPECS[kind].len + sternOf(kind)) / 2;
   return { x: center.x - half * Math.cos(heading), y: center.y - half * Math.sin(heading) };
 }
 
-/** Estela: ola de proa (2, más clara), V de 6 triángulos finos por banda desde el 80 % de la eslora hacia atrás, remolino de popa (3). 17 triángulos a z −0.95. */
+/** Wake: bow wave (2, lighter), V of 6 thin triangles per side from 80 % of the length backward, stern swirl (3). 17 triangles at z −0.95. */
 export function wake(kind: ShipKind, at: Vec2, heading: number): Tri[] {
   const { len, beam } = SHIP_SPECS[kind], half = beam / 2;
   const c = Math.cos(heading), s = Math.sin(heading);

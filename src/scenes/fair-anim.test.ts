@@ -9,19 +9,19 @@ import { DROP_CYCLE_MS, DROP_RISE_MS, NEON_STEP_MS, WHEEL_LIGHT_STEP_MS, WHEEL_P
 const setup = (reducedMotion = false) => createFairAnim(fair(createRng(7)), { reducedMotion });
 
 describe("fair-anim", () => {
-  it("la rueda da una vuelta en 40 s y se redibuja cada 250 ms; cuatro luces de la llanta encendidas a la vez", () => {
+  it("the wheel turns once in 40 s and redraws every 250 ms; four rim lights lit at once", () => {
     const a = setup();
     expect(a.angle()).toBe(0);
     expect(a.tick(WHEEL_STEP_MS).wheel).toBe(true); expect(a.tick(50).wheel).toBe(false);
-    // El reloj queda entre 300 ms y 40 000 ms: nunca llega a completar la vuelta.
+    // The clock stays between 300 ms and 40 000 ms: it never completes the turn.
     for (let t = WHEEL_STEP_MS + 50; t + 500 < WHEEL_PERIOD_MS; t += 500) a.tick(500);
     expect(a.angle()).toBeGreaterThan(6.2); expect(a.angle()).toBeLessThan(2 * Math.PI);
     expect(a.wheelLights()).toHaveLength(4);
-    // Las luces corren más seguido que la rueda (150 ms contra 250 ms): tras un paso de luces sin paso
-    // de rueda, la rueda en pantalla sigue siendo la dibujada antes (`drawn`), así que las luces tienen
-    // que caer en sus góndolas, o sea leer el ángulo cuantizado de la rueda y no el reloj continuo.
+    // The lights run more often than the wheel (150 ms versus 250 ms): after a light step without a wheel
+    // step, the wheel on screen is still the one drawn before (`drawn`), so the lights have to
+    // land on their gondolas, i.e. read the wheel's quantized angle and not the continuous clock.
     const drawn = a.wheel()[0]!;
-    if (drawn.kind !== "wheel") throw new Error("la rueda no es kind wheel");
+    if (drawn.kind !== "wheel") throw new Error("the wheel is not kind wheel");
     expect(a.tick(WHEEL_LIGHT_STEP_MS).wheel).toBe(false);
     const slots = Array.from({ length: WHEEL.sides }, (_, k) => wheelPoint(drawn.at, drawn.angle + (2 * Math.PI * (k + 0.5)) / WHEEL.sides, WHEEL.r - 0.6));
     for (const l of a.wheelLights()) {
@@ -30,7 +30,7 @@ describe("fair-anim", () => {
       expect(slots.some((s) => Math.hypot(s.x - at.x, s.y - at.y, s.z - at.z) < 1e-9)).toBe(true);
     }
   });
-  it("el tren nunca sale de la vía, sube despacio y baja rápido", () => {
+  it("the train never leaves the track, climbs slowly and descends fast", () => {
     const a = setup();
     const L = coasterLength();
     let prev = a.trainDist(), prevSeg = coasterAt(prev).seg;
@@ -39,13 +39,13 @@ describe("fair-anim", () => {
       const d = a.trainDist(), p = coasterAt(d);
       const moved = ((d - prev) % L + L) % L; prev = d;
       expect(moved).toBeGreaterThan(0); expect(moved).toBeLessThanOrEqual(9.01);
-      if (prevSeg < 6 && p.seg < 6) expect(moved).toBeLessThanOrEqual(3.01); // la velocidad se decide al arrancar el tick
+      if (prevSeg < 6 && p.seg < 6) expect(moved).toBeLessThanOrEqual(3.01); // the speed is decided at the start of the tick
       prevSeg = p.seg;
-      // El perfil real llega a 4.16 (vía + 1.45 del asiento) entre el auto de punta y el de cola (5.2 atrás) en la bajada más brusca: 3 no alcanza.
+      // The real profile reaches 4.16 (track + 1.45 of the seat) between the lead car and the tail car (5.2 behind) on the steepest descent: 3 is not enough.
       for (const s of a.train()) { const b = bounds(s); expect(Math.abs((b.min.z + b.max.z) / 2 - p.z)).toBeLessThan(4.2); }
     }
   });
-  it("la góndola sube 6 s, espera 1 s, cae en 0.6 s y vuelve a la base al final del ciclo", () => {
+  it("the gondola rises for 6 s, waits 1 s, falls in 0.6 s and returns to the base at the end of the cycle", () => {
     const a = setup();
     expect(a.dropZ()).toBe(1);
     for (let t = 0; t < 6000; t += 100) a.tick(100);
@@ -55,7 +55,7 @@ describe("fair-anim", () => {
     a.tick(DROP_CYCLE_MS - 7600); expect(a.dropZ()).toBeCloseTo(1, 1);
     expect(a.drop()).toHaveLength(9);
   });
-  it("los carteles del salón alternan cada 500 ms; con reduced-motion nada cambia y la rueda tiene sus 4 luces fijas", () => {
+  it("the hall's signs alternate every 500 ms; with reduced-motion nothing changes and the wheel has its 4 fixed lights", () => {
     const a = setup();
     const s0 = a.signs()[0]!.color; a.tick(500); expect(a.signs()[0]!.color).not.toBe(s0);
     const r = setup(true);
@@ -68,7 +68,7 @@ const dots = (a: Accent[]) => a.flatMap((x) => (x.kind === "dot" ? [x] : []));
 const on = (pts: Vec3[], a: Accent[]) => dots(a).filter((d) => pts.some((p) => p.x === d.at.x && p.y === d.at.y && p.z === d.at.z));
 
 describe("fair-anim neon", () => {
-  it("frame 0 y reduced motion: 4 de marquesina, 2 de subida, columna entera en magentaBleed; solo cyan/magenta", () => {
+  it("frame 0 and reduced motion: 4 marquee, 2 climb, whole column in magentaBleed; only cyan/magenta", () => {
     const s = fair(createRng(7)), a = createFairAnim(s, { reducedMotion: false }), r = createFairAnim(s, { reducedMotion: true });
     const f0 = a.neon();
     expect(on(s.neon.marquee, f0)).toHaveLength(4);
@@ -79,7 +79,7 @@ describe("fair-anim neon", () => {
     expect(r.tick(1000).neon).toBe(false);
     expect(r.neon()).toEqual(f0);
   });
-  it("la marquesina corre cada 200 ms y cada posición conserva su color (par cyan, impar magenta)", () => {
+  it("the marquee runs every 200 ms and each position keeps its color (even cyan, odd magenta)", () => {
     const s = fair(createRng(7)), a = createFairAnim(s, { reducedMotion: false });
     const m0 = on(s.neon.marquee, a.neon());
     expect(a.tick(NEON_STEP_MS).neon).toBe(true);
@@ -93,22 +93,22 @@ describe("fair-anim neon", () => {
       a.tick(NEON_STEP_MS);
     }
   });
-  it("la columna se redibuja con cada paso de la góndola, aunque no cambie el paso de neón", () => {
+  it("the column redraws on every gondola step, even if the neon step does not change", () => {
     const a = createFairAnim(fair(createRng(7)), { reducedMotion: false });
     const c = a.tick(100);
     expect(c.drop).toBe(true); expect(c.neon).toBe(true);
   });
-  it("la subida corre hacia arriba con dos luces cyanMid", () => {
+  it("the climb runs upward with two cyanMid lights", () => {
     const s = fair(createRng(7)), a = createFairAnim(s, { reducedMotion: false });
     const idx = () => on(s.neon.lift, a.neon()).map((d) => s.neon.lift.findIndex((p) => p.x === d.at.x && p.y === d.at.y && p.z === d.at.z)).sort((x, y) => x - y);
     expect(idx()).toEqual([0, 1]);
     a.tick(NEON_STEP_MS); expect(idx()).toEqual([1, 2]);
     for (const d of on(s.neon.lift, a.neon())) expect(d.color).toBe("cyanMid");
   });
-  it("la columna sube con la góndola: en la cima las cinco de abajo en magenta, en la base ninguna", () => {
+  it("the column rises with the gondola: at the top the five lower ones in magenta, at the base none", () => {
     const s = fair(createRng(7)), a = createFairAnim(s, { reducedMotion: false });
     for (let t = 0; t < DROP_RISE_MS + 500; t += 100) a.tick(100);
-    // la góndola llega a DROP.h − 3 = 21 y la última luz está en drop.h − 2 = 22: nunca se enciende
+    // the gondola reaches DROP.h − 3 = 21 and the last light is at drop.h − 2 = 22: it never lights up
     expect(on(s.neon.column, a.neon()).map((d) => d.color)).toEqual([...Array(5).fill("magenta"), "magentaBleed"]);
     for (let t = 0; t < DROP_CYCLE_MS - DROP_RISE_MS - 500 + 100; t += 100) a.tick(100);
     expect(on(s.neon.column, a.neon()).every((d) => d.color === "magentaBleed")).toBe(true);

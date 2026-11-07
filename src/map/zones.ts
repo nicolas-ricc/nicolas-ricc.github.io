@@ -1,18 +1,18 @@
 export type ZoneId = "portfolio" | "cv" | "blog";
 export const ZONE_IDS: readonly ZoneId[] = ["portfolio", "cv", "blog"];
 
-/** Color de luz artificial de una zona (los `core` de ISO_COLORS; en CSS, los rótulos). */
+/** Artificial light color of a zone (the `core` ones of ISO_COLORS; in CSS, the labels). */
 export type Accent = "cyan" | "amber" | "magenta";
 
 export interface ZoneDef {
   id: ZoneId;
   name: string;
-  /** Ruta de la zona bajo la base, sin barras. Van bajo `area/` para no chocar con /blog/, que es el blog Hugo. */
+  /** Zone path under the base, without slashes. They live under `area/` so as not to clash with /blog/, which is the Hugo blog. */
   path: string;
   accent: Accent;
 }
 
-/** Las tres zonas en orden de tab. La geografía (qué punto es de qué zona) vive en geo.ts (worldZoneAt). */
+/** The three zones in tab order. The geography (which point belongs to which zone) lives in geo.ts (worldZoneAt). */
 export const ZONES: readonly ZoneDef[] = [
   { id: "portfolio", name: "Portfolio", path: "area/portfolio", accent: "cyan" },
   { id: "cv", name: "Resume", path: "area/resume", accent: "amber" },
@@ -21,6 +21,6 @@ export const ZONES: readonly ZoneDef[] = [
 
 export function zoneById(id: ZoneId): ZoneDef {
   const z = ZONES.find((z) => z.id === id);
-  if (!z) throw new Error(`Zona desconocida: ${id}`);
+  if (!z) throw new Error(`Unknown zone: ${id}`);
   return z;
 }

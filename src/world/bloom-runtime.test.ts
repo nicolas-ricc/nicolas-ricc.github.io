@@ -9,7 +9,7 @@ const fakeStage = () => {
   return s;
 };
 let now = 0;
-/** Un frame: tick (si se pasa) y luego render de `renderMs`. */
+/** One frame: tick (if given) and then a render of `renderMs`. */
 const frame = (app: ReturnType<typeof fakeApp>, probe: { tick(ms: number): void }, tickMs: number | null, renderMs: number) => {
   if (tickMs !== null) probe.tick(tickMs);
   app.renderer.runners.prerender.emit();
@@ -26,7 +26,7 @@ describe("attachBloom", () => {
     return { app: fakeApp(), stage: fakeStage(), info };
   };
 
-  it("activa on al adjuntar y queda on si el promedio entra en el presupuesto", () => {
+  it("turns on when attached and stays on if the average fits the budget", () => {
     const { app, stage, info } = setup();
     const probe = attachBloom({ app, stage, log: true, prefix: "mapa" });
     expect(stage.bloom).toBe("on");
@@ -34,19 +34,19 @@ describe("attachBloom", () => {
     expect(info).not.toHaveBeenCalled();
     frame(app, probe, 4, 8);
     expect(stage.bloom).toBe("on");
-    expect(info).toHaveBeenCalledWith("[mapa] bloom: promedio 12.0 ms en 60 frames (tick 4.0 + render 8.0), presupuesto 15 ms → activo");
+    expect(info).toHaveBeenCalledWith("[mapa] bloom: average 12.0 ms over 60 frames (tick 4.0 + render 8.0), budget 15 ms → on");
   });
 
-  it("pasa a fallback si el promedio supera 15 ms", () => {
+  it("switches to fallback if the average exceeds 15 ms", () => {
     const { app, stage, info } = setup();
     const probe = attachBloom({ app, stage, log: true, prefix: "lab" });
     for (let i = 0; i < 60; i++) frame(app, probe, 6, 10);
     expect(stage.setBloom).toHaveBeenLastCalledWith("fallback");
     expect(stage.bloom).toBe("fallback");
-    expect(info).toHaveBeenCalledWith("[lab] bloom: promedio 16.0 ms en 60 frames (tick 6.0 + render 10.0), presupuesto 15 ms → fallback");
+    expect(info).toHaveBeenCalledWith("[lab] bloom: average 16.0 ms over 60 frames (tick 6.0 + render 10.0), budget 15 ms → fallback");
   });
 
-  it("se descuelga de los runners tras el veredicto: una sola decisión", async () => {
+  it("detaches from the runners after the verdict: a single decision", async () => {
     const { app, stage } = setup();
     const probe = attachBloom({ app, stage, log: false, prefix: "mapa" });
     for (let i = 0; i < 60; i++) frame(app, probe, 6, 10);
@@ -58,7 +58,7 @@ describe("attachBloom", () => {
     expect(stage.setBloom).not.toHaveBeenCalled();
   });
 
-  it("descolgarse no rompe a otro listener de postrender agregado después", async () => {
+  it("detaching does not break another postrender listener added afterwards", async () => {
     const { app, stage } = setup();
     const probe = attachBloom({ app, stage, log: false, prefix: "mapa" });
     const third = { postrender: vi.fn() };
@@ -69,14 +69,14 @@ describe("attachBloom", () => {
     expect(app.renderer.runners.postrender.items).toEqual([third]);
   });
 
-  it("un render sin tick previo cuenta tick 0, no el del frame anterior", () => {
+  it("a render without a previous tick counts tick 0, not the previous frame's", () => {
     const { app, stage, info } = setup();
     const probe = attachBloom({ app, stage, log: true, prefix: "mapa" });
     for (let i = 0; i < 30; i++) { frame(app, probe, 10, 2); frame(app, probe, null, 2); }
-    expect(info).toHaveBeenCalledWith("[mapa] bloom: promedio 7.0 ms en 60 frames (tick 5.0 + render 2.0), presupuesto 15 ms → activo");
+    expect(info).toHaveBeenCalledWith("[mapa] bloom: average 7.0 ms over 60 frames (tick 5.0 + render 2.0), budget 15 ms → on");
   });
 
-  it("si el modo cambió a mano durante la medición, el veredicto no lo pisa", () => {
+  it("if the mode was changed by hand during the measurement, the verdict does not overwrite it", () => {
     const { app, stage } = setup();
     const probe = attachBloom({ app, stage, log: false, prefix: "lab" });
     stage.setBloom("off");
@@ -84,24 +84,24 @@ describe("attachBloom", () => {
     expect(stage.bloom).toBe("off");
   });
 
-  it("sin log no escribe en consola", () => {
+  it("without log it writes nothing to the console", () => {
     const { app, stage, info } = setup();
     const probe = attachBloom({ app, stage, log: false, prefix: "mapa" });
     for (let i = 0; i < 60; i++) frame(app, probe, 1, 1);
     expect(info).not.toHaveBeenCalled();
   });
 
-  it("forzado: aplica el modo, loguea el forzado y no mide", () => {
+  it("forced: applies the mode, logs the forcing and does not measure", () => {
     const { app, stage, info } = setup();
     const probe = attachBloom({ app, stage, log: true, prefix: "lab", force: "fallback" });
     expect(stage.setBloom).toHaveBeenCalledExactlyOnceWith("fallback");
-    expect(info).toHaveBeenCalledExactlyOnceWith("[lab] bloom forzado por URL: fallback");
+    expect(info).toHaveBeenCalledExactlyOnceWith("[lab] bloom forced by URL: fallback");
     expect(app.renderer.runners.prerender.items).toHaveLength(0);
     for (let i = 0; i < 60; i++) frame(app, probe, 20, 20);
     expect(stage.setBloom).toHaveBeenCalledOnce();
   });
 
-  it("si el modo cambió a mano antes de adjuntar, no lo pisa ni mide", () => {
+  it("if the mode was changed by hand before attaching, it neither overwrites it nor measures", () => {
     const { app, stage, info } = setup();
     stage.setBloom("fallback");
     stage.setBloom.mockClear();
