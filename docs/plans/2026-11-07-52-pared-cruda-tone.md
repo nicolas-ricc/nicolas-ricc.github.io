@@ -16,7 +16,7 @@
 - One test per site, in `src/city/fixed.test.ts` and `src/scenes/tech-anim.test.ts`: build the tower with `tone` −1, 0 and 1 and get the same windows (same count, same points).
 - If setting `tone` needs something exposed or parametrized, it is the minimal change.
 - Existing tests keep passing with their thresholds untouched: `fixed.test.ts` (`litWindows` with 8 windows, position of `paperWindow`), `city-anim.test.ts`, `lights.test.ts`, `tech-anim.test.ts`.
-- Visual baselines don't change: with `tone: 0` the output is identical (`world-baseline.test.ts` hashes do not move).
+- Visual baselines don't change: with `tone: 0` the output is identical. `world-baseline.test.ts` hashes the static solids and accents and must not move. The lit windows are animator layers (`src/scenes/city-anim.ts:104`, `tech-anim.ts` `windows()`) that that file does not hash, so the fingerprints below pin them.
 - Out of scope: moving the towers to the kit or making them publish `walls`/`windows`; giving these towers a `tone`; changing `visibleWalls` or `facadeFaces`.
 - `npm test` and `npm run typecheck` green.
 
@@ -50,7 +50,8 @@
   - `"towerWindows: tone −1, 0 and 1 give the same windows"`: take `tower` = the prism with `mat === "officeDark"` and a `facade` from `built().solids` (the only one). For `tone` in `[-1, 0, 1]`, `towerWindows({ ...tower, tone }, tower.facade!)` has `litWindows` of length 8 and `toEqual` the `tone: 0` result (`litWindows` and `paperWindow`).
   - `"towerWindows with tone 0 is what plazaAndTower publishes, unchanged from main"`: `towerWindows(tower, tower.facade!)` `toEqual` `{ litWindows: built().tower.litWindows, paperWindow: built().tower.paperWindow }`; `fingerprint(litWindows as Solid[])` is `"9f80b655"`; `paperWindow` `toEqual` `{ x: 137, y: 232.25, z: 20.625 }`.
 - [ ] **Step 2: Run** `npx vitest run src/city/fixed.test.ts`. Expected: FAIL, because `towerWindows` is not exported.
-- [ ] **Step 3: Implement** `towerWindows` as in Interfaces and remove the `.filter(...)` line.
+- [ ] **Step 3: Extract** `towerWindows` as in Interfaces, still keeping the `.filter(...)`. Run the same command. Expected: only the tone test fails (tone ±1 → 0 windows), which shows that the test catches the bug and not just the missing export.
+- [ ] **Step 3b: Remove** the `.filter(...)` line.
 - [ ] **Step 4: Run** `npx vitest run src/city/fixed.test.ts src/scenes/city-anim.test.ts src/city/lights.test.ts src/scenes/world-baseline.test.ts`. Expected: PASS.
 - [ ] **Step 5: Commit** `fix(#52): plaza tower windows from raw visible walls`.
 
@@ -70,9 +71,39 @@
   - `"windows at frame 0 unchanged from main"`: `fingerprint(setup().anim.windows() as Solid[])` is `"b5014007"`.
 - [ ] **Step 2: Run** `npx vitest run src/scenes/tech-anim.test.ts`. Expected: FAIL (tone ±1 → 0 windows).
 - [ ] **Step 3: Implement**: drop the `.filter(...)` on line 35.
-- [ ] **Step 4: Run** `npx vitest run src/scenes/tech-anim.test.ts src/scenes/world-baseline.test.ts`. Expected: PASS. Also run `grep -rnE "toneOffset *===" src/city src/scenes`. Expected: no output.
+- [ ] **Step 4: Run** `npx vitest run src/scenes/tech-anim.test.ts src/scenes/world-baseline.test.ts`. Expected: PASS. Also run `grep -rnE "toneOffset *(===|!==|==|!=)|!\s*[a-z.]*toneOffset\b|\{[^}]*\btoneOffset\b[^}]*\} *=" src/city src/scenes`. Expected: no output. The remaining `toneOffset` hits in those directories are writers (plates, tris, water and foam animation), not wall filters.
 - [ ] **Step 5: Commit** `fix(#52): tech tower windows from raw visible walls`.
 
 ### Closing (orchestrator, no task)
 
 `npm test` and `npm run typecheck` green.
+
+## Assumptions
+
+Technical decisions, taken without a source in the issue. Each lists the rejected alternative.
+
+1. **Seam for the plaza tower: an exported pure `towerWindows(tower, facade)`.** Rejected: a `tone` parameter on `plazaAndTower`, which would put a production knob for giving the tower a `tone` (out of scope: "Darles `tone` a estas torres"). Also rejected: a test that calls `visibleWalls` plus `facadeAccents` itself, which would not exercise the site's code. Backing: the brief's "Si para poder fijar `tone` hace falta exponer o parametrizar algo, que sea el cambio mínimo."
+2. **Equality after 100 ticks in task 2.** The brief asks for the same windows. Comparing after ticks also covers the cached `walls` that the blink reuses. The blink's rng draws depend only on `towers.length` and `floors` (`tech-anim.ts` `tick`), not on the walls, so two animators with `createRng(3)` stay in step.
+3. **Pinned fingerprints** (`9f80b655`, `b5014007`) are how "identical with `tone: 0`" becomes executable. `fingerprint` (`src/iso/fingerprint.ts`) is a generic JSON hash with numbers rounded to 1e-6, so it works on `Accent` lists, as `world-baseline.test.ts` already does with `w.accents`.
+4. **Tasks are independent.** Each commit is green on its own. Both land before the PR, and if either fails, the run stops at stage 4.
+
+## Grilling
+
+- Rounds: 1 (griller model: fable). There were no substantive changes (no new task and no new seam), so no second round.
+- Questions: 14. Sources: CODE 12, ISSUE 3, DOC 1, NO SOURCE 3. All three NO SOURCE answers are technical assumptions: 1, 2 and 4 above. Assumption 3 is CODE-backed.
+- Answers in brief:
+  1. `facadeAccents` builds `{ kind, pts, color }` with no `toneOffset` (`src/iso/facade.ts:201-204`).
+  2. `tone?: number` is declared in `src/iso/solids.ts:31` and added to `toneOffset` in `src/iso/solids.ts:429-431`.
+  3. `visibleWalls` strips `facade` and `plates` (`src/iso/solids.ts:441-443`), and a prism's walls carry `s.mat` (`src/iso/solids.ts:405-409`, `extrude` at `src/iso/solids.ts:71`).
+  4. Brief: "misma cantidad y mismos puntos", "con `tone: 0` el resultado tiene que ser idéntico", "que sea el cambio mínimo".
+  5. `TechScene` is at `src/scenes/tech.ts:38`. The animator only reads it, and `{ ...t.facade, litFloor }` is a copy.
+  6. The blink only uses `dtMs` and `blinkRng`.
+  7. See `src/iso/fingerprint.ts:9-14`.
+  8. Corrected in the constraints: `world-baseline` does not hash the windows.
+  9. `built()` is at `fixed.test.ts:250`, and the facade is on the prism (`src/scenes/city-pieces.ts:23`).
+  10. Added step 3 (red with the filter still in place).
+  11. The grep was broadened.
+  12. The imports are at `fixed.ts:1-4`, and `facadeAccents(walls, facade, "amber")` is at `fixed.ts:38`.
+  13. See assumption 4.
+  14. DOC: `CONTEXT.md` has no entry for walls or tone. The English guard (`src/english.test.ts:171-172`) scans `src/` and `lab/`, not `docs/plans`. The Unicode minus already appears in `fixed.test.ts:145`.
+- Issues opened: none. Spec ambiguities: none.
