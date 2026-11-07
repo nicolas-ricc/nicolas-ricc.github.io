@@ -26,7 +26,7 @@ export const AVENUE = { y0: 206, y1: 218 } as const;
 export const BOULEVARD = { y0: 210, y1: 214 } as const;
 export const WEST_QUAY = { x0: 192, x1: QUAY_X } as const;   // retaining wall of the west bank
 export const EAST_RING = { x0: 270, x1: 276 } as const;      // street along the east bank; x0 a multiple of CELL (classifies terrain)
-export const CITY_EDGE = { west: -54, north: 158, south: 324 } as const; // jungle beyond; south a multiple of CELL (classifies terrain)
+export const CITY_EDGE = { west: -54, north: 90, south: 324 } as const; // the city starts at the seam (ZONE_SPLIT_Y); beyond west and south, asphalt; south a multiple of CELL (classifies terrain)
 export const DISTRICT_BANK_Y = 264; // east bank of the district from here; a multiple of CELL (classifies terrain)
 export const PROMENADE_STREET_X = 336; // promenade street; a multiple of CELL (classifies terrain)
 

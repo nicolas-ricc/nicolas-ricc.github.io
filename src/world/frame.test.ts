@@ -3,7 +3,7 @@ import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
 import { project } from "../iso/project";
 import type { RenderItem } from "../iso/render-list";
-import { BLEED, WORLD } from "../map/geo";
+import { BLEED, STATION_LAND, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y } from "../map/geo";
 import { HALO_BASE, HALO_FALLBACK, type HaloStyle, boxFrame, coverFrame, drawAccents, fitTransform, zoneFrame } from "./frame";
 
 describe("fitTransform", () => {
@@ -28,6 +28,10 @@ describe("zoneFrame", () => {
     expect(Math.max(...xs)).toBe(570 + 60);     // NE corner
     expect(Math.min(...ys)).toBe((344 - 60) / 2 - 30 * 1.4); // NW corner, raised
     expect(Math.max(...ys)).toBe((570 + 336) / 2);
+  });
+  it("Portfolio includes the whole station land, Resume starts at the seam", () => {
+    expect(zoneFrame("portfolio")[0]!.pts).toEqual(boxFrame({ x0: WORLD.x0, y0: WORLD.y0, x1: ZONE_SPLIT_X, y1: STATION_LAND.y1 })[0]!.pts);
+    expect(zoneFrame("cv")[0]!.pts).toEqual(boxFrame({ x0: WORLD.x0, y0: ZONE_SPLIT_Y, x1: ZONE_SPLIT_X, y1: WORLD.y1 })[0]!.pts);
   });
   it("all covers the world", () => {
     const [it] = zoneFrame("all");

@@ -1,22 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { BLEED, MOUTH_Y, TIP_BOX, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, riverCenter, worldZoneAt } from "../map/geo";
+import { BLEED, MOUTH_Y, SHORE_W, distToHeadland, inHeadland, STATION_LAND, inStationLand, TIP_BOX, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, riverCenter, worldZoneAt } from "../map/geo";
 import { createRng } from "../map/seed";
 import type { Solid, Tri } from "../iso/solids";
 import { BLEED_WATER, clearOfWater } from "./terrain-classify";
 import { CELL, baseToneAt, bleedTerrainAt, bleedZ, buildTerrain, seaTerrainAt, shipyardTerrainAt, terrainAt, waterBand } from "./terrain";
 
 const tris = (s: Solid): Tri[] => (s.kind === "ground" ? s.tris : []);
-// The row of vertices closest to ZONE_SPLIT_Y = 146 is y = 144: it is shared by the last row of shipyard cells (center 141) and the first of the city (center 147).
+// The row of vertices at ZONE_SPLIT_Y = 90 is shared by the last row of shipyard cells (center 87) and the first of the city (center 93).
 const SEAM_Y = Math.floor(ZONE_SPLIT_Y / CELL) * CELL;
 const allTris = (m: ReturnType<typeof buildTerrain>): Tri[] => [...m.ground, ...m.water].flatMap(tris);
 
 describe("classification", () => {
+  it("the seam is aligned to the 6 u and 18 u grids", () => {
+    expect(ZONE_SPLIT_Y % 6).toBe(0);
+    expect(ZONE_SPLIT_Y % 18).toBe(0);
+  });
   it("shipyard: slab west of the quay, river, river mouth and jungle at the edges", () => {
     expect(shipyardTerrainAt(50, 50)).toBe("slab");
     expect(shipyardTerrainAt(QUAY_X + 20, 60)).toBe("water");
     expect(shipyardTerrainAt(300, 10)).toBe("water");     // bay
     expect(shipyardTerrainAt(300, MOUTH_Y + 2)).toBe("east");
-    expect(shipyardTerrainAt(10, 144)).toBe("jungle");
+    expect(shipyardTerrainAt(10, 144)).toBe("jungle");   // below the seam (unreached by terrainAt, kept for the jungle rule)
+    expect(shipyardTerrainAt(98, 120)).toBe("asphalt");  // station land, west strip
+    expect(shipyardTerrainAt(150, 100)).toBe("slab");    // station land, slab
     expect(shipyardTerrainAt(150, 20)).toBe("dock");
     expect(shipyardTerrainAt(-30, 50)).toBe("slab");     // track yard
     expect(shipyardTerrainAt(-30, 130)).toBe("jungle");
@@ -41,7 +47,16 @@ describe("classification", () => {
     expect(terrainAt(ZONE_SPLIT_X + 2, 200)).toBe("shore"); // clicks through to Resume but is shore
   });
   it("city: jungle belt, estuary, jungle east bank, craters and asphalt", () => {
-    expect(terrainAt(50, ZONE_SPLIT_Y + 4)).toBe("jungle");   // belt
+    expect(terrainAt(50, ZONE_SPLIT_Y + 4)).toBe("asphalt");  // city from the seam
+    expect(terrainAt(50, 94)).toBe("asphalt");
+    expect(terrainAt(-30, 100)).toBe("asphalt");
+    expect(terrainAt(50, 140)).toBe("asphalt");
+    expect(terrainAt(98, 100)).toBe("asphalt");                // station land, strip west of the track
+    expect(terrainAt(150, 100)).toBe("slab");                  // station land
+    expect(terrainAt(220, 100)).toBe("water");                 // channel
+    expect(terrainAt(260, 100)).toBe("water");
+    expect(terrainAt(290, 100)).toBe("asphalt");               // east bank, between the ring and x 306
+    expect(terrainAt(320, 100)).toBe("jungle");
     expect(terrainAt(-56, 200)).toBe("asphalt");               // west edge: the tech district continues straight from the city
     expect(terrainAt(100, 330)).toBe("asphalt");               // south edge, likewise
     expect(terrainAt(255, 200)).toBe("water");                 // estuary
@@ -59,7 +74,7 @@ describe("classification", () => {
   });
   it("in the cv zone there is only asphalt, jungle and water", () => {
     const seen = new Set<string>();
-    for (let y = ZONE_SPLIT_Y + 3; y < WORLD.y1; y += CELL) for (let x = WORLD.x0 + 3; x < ZONE_SPLIT_X; x += CELL) seen.add(terrainAt(x, y));
+    for (let y = ZONE_SPLIT_Y + 3; y < WORLD.y1; y += CELL) for (let x = WORLD.x0 + 3; x < ZONE_SPLIT_X; x += CELL) if (!inStationLand(x, y) && !inHeadland(x, y) && distToHeadland(x, y) >= SHORE_W) seen.add(terrainAt(x, y));
     expect([...seen].sort()).toEqual(["asphalt", "jungle", "water"]);
   });
   it("the water is continuous at the seam and the estuary does not reach the border with Blog", () => {
@@ -69,6 +84,11 @@ describe("classification", () => {
     expect(north.length).toBeGreaterThan(3);
     expect(south[0]).toBe(north[0]);
     expect(Math.abs(south[south.length - 1]! - north[north.length - 1]!)).toBeLessThanOrEqual(CELL);
+    // the new seam (y 90): the channel is the shipyard's on both sides
+    const n90 = waterX(87), s90 = waterX(93);
+    expect(n90.length).toBeGreaterThan(3);
+    expect(s90[0]).toBe(n90[0]);
+    expect(Math.abs(s90[s90.length - 1]! - n90[n90.length - 1]!)).toBeLessThanOrEqual(CELL);
     // at the far south the estuary still leaves land before x = 344
     expect(terrainAt(ZONE_SPLIT_X - 3, WORLD.y1 - 3)).not.toBe("water");
   });
@@ -81,7 +101,8 @@ describe("classification", () => {
     }
   });
   it("bleed: built land near the content, jungle and hills beyond; the estuary and the sea continue to the south, the bay to the north", () => {
-    expect(bleedTerrainAt(-100, 100)).toBe("industrial");   // west of Portfolio
+    expect(bleedTerrainAt(-100, 100)).toBe("urban");        // west of Resume, from the seam
+    expect(bleedTerrainAt(-100, 80)).toBe("industrial");    // west of Portfolio
     expect(bleedTerrainAt(-100, 200)).toBe("urban");        // west of Resume
     expect(bleedTerrainAt(100, 400)).toBe("urban");         // south of Resume
     expect(bleedTerrainAt(100, -100)).toBe("industrial");   // north of the factory
@@ -215,12 +236,14 @@ describe("buildTerrain", () => {
   });
   it("filtering by zone preserves the heights at the seam", () => {
     const p = buildTerrain(createRng(7), ["portfolio"]), c = buildTerrain(createRng(7), ["cv"]);
-    const onSeam = (m: ReturnType<typeof buildTerrain>) => new Map(allTris(m).flatMap((t) => t.pts).filter((v) => v.y === SEAM_Y).map((v) => [`${v.x},${v.y}`, v.z]));
+    // ground only: a shore vertex of the east bank also belongs to a water cell (z −1) in one zone and to a land cell in the other
+    const onSeam = (m: ReturnType<typeof buildTerrain>) => new Map(m.ground.flatMap(tris).flatMap((t) => t.pts).filter((v) => v.y === SEAM_Y).map((v) => [`${v.x},${v.y}`, v.z]));
     const a = onSeam(p), b = onSeam(c);
     expect(a.size).toBeGreaterThan(10);
     expect([...a.keys()].filter((k) => b.has(k)).length).toBeGreaterThan(10);
     for (const [k, z] of a) if (b.has(k)) expect(b.get(k)).toBe(z);
-    expect(allTris(p).every((t) => t.pts.every((v) => v.y <= ZONE_SPLIT_Y + CELL))).toBe(true);
+    const { x0, x1, y1 } = STATION_LAND;
+    expect(allTris(p).every((t) => t.pts.every((v) => v.y <= ZONE_SPLIT_Y + CELL || (v.y <= y1 + CELL && v.x >= x0 - CELL && v.x <= x1 + CELL) || distToHeadland(v.x, v.y) < SHORE_W + CELL))).toBe(true); // or the headland and its shore, Portfolio by geography
   });
   it("the asphalt is nearly flat and comes out as its own ground", () => {
     const m = buildTerrain(createRng(7), ["cv"]);

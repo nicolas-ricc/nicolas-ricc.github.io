@@ -7,7 +7,7 @@ The site is an isometric night map in three zones (Portfolio, Resume, Blog). The
 Code: `src/world/veil.ts` (`VEIL_ALPHA`, `ACCENT_DIM`, `focusAlphas`, `veilPolygons`, `accentsByZone`), `src/world/stage.ts` (`setFocus`).
 
 ### Zone
-(Zona.) One of the three clickable regions of the world, `"portfolio"`, `"cv"` (Resume) or `"blog"`; the ids are also the routes. A point belongs to a zone by geography, not by a straight split: `worldZoneAt(x, y)` returns Portfolio for the headland, the reef and its shore (the lighthouse caps the shipyard), Resume for the seawall shore, and Blog only for the open sea. The main split is `ZONE_SPLIT_X` (344) plus `shoreWidth(y)`: land west of it is Portfolio for y < `ZONE_SPLIT_Y` (146) and Resume for y >= 146; east of it is Blog. The same function classifies the veil cells, the static lights and the hit test.
+(Zona.) One of the three clickable regions of the world, `"portfolio"`, `"cv"` (Resume) or `"blog"`; the ids are also the routes. A point belongs to a zone by geography, not by a straight split: `worldZoneAt(x, y)` returns Portfolio for the headland, the reef and its shore (the lighthouse caps the shipyard), Resume for the seawall shore, and Blog only for the open sea. The main split is `ZONE_SPLIT_X` (344) plus `shoreWidth(y)`: land west of it is Portfolio for y < `ZONE_SPLIT_Y` (90) and Resume for y >= 90, except `STATION_LAND` (the terminal station, x 96..198, y 90..146), which stays Portfolio; east of it is Blog. The same function classifies the veil cells, the static lights and the hit test.
 Code: `src/map/geo.ts` (`WorldZone`, `worldZoneAt`), `src/world/veil.ts` (`WORLD_ZONES`).
 
 ### Accent

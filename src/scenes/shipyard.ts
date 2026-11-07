@@ -1,7 +1,7 @@
 import type { Accent } from "../iso/accent";
 import { v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { bounds, type Solid } from "../iso/solids";
-import { BOTTOM, DOCK, QUAY_W, QUAY_X, WORLD, eastBank, northCoastY } from "../map/geo";
+import { BOTTOM, DOCK, QUAY_W, QUAY_X, WORLD, ZONE_SPLIT_Y, eastBank, northCoastY } from "../map/geo";
 import type { Rng } from "../map/seed";
 import { jungle as flora } from "./flora";
 import { station } from "./station";
@@ -41,7 +41,6 @@ const SLIP_X = 110;
 export const RAIL_Y = [131, 134] as const; // west tracks: the station draws them from x 96, Resume and the hinterland west of it
 const GANTRY_X = 150, GANTRY_H = 24;
 const WATER_Z = -1;
-const SEAM_Y = 90; // Portfolio/Resume seam; Task 5 replaces it with ZONE_SPLIT_Y
 
 // ---------------------------------------------------------------- pieces
 
@@ -163,7 +162,7 @@ function fittingOut(out: Solid[]): void {
   const rock = (x: number, y: number): Solid => ({ kind: "cone", at: v3(x, y, 0), r: 1.6, h: 1.2, mat: "rock", sides: 5 });
   for (let y = 0; y < AREA_H; y += 3) { // river riprap: only where there is already land
     const x = eastBank(y) + 1.5;
-    if (y < SEAM_Y && y >= northCoastY(x)) out.push(rock(x, y));
+    if (y < ZONE_SPLIT_Y && y >= northCoastY(x)) out.push(rock(x, y));
   }
   for (let x = Math.ceil(eastBank(30)) + 6; x < 300; x += 3) out.push(rock(x, northCoastY(x) + 1.5)); // cove riprap; starts 6 u east of the bank (eastBank(30) = 277) so as not to cover the river's last cone
 }

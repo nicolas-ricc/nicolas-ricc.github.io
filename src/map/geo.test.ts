@@ -4,7 +4,7 @@ import { ESTUARY_Y0, HEADLAND, MOUTH_Y, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SP
 describe("world", () => {
   it("the content has a negative origin and sides that are multiples of 18", () => {
     expect(WORLD).toEqual({ x0: -60, y0: -60, x1: 570, y1: 336 });
-    expect([ZONE_SPLIT_X, ZONE_SPLIT_Y]).toEqual([344, 146]);
+    expect([ZONE_SPLIT_X, ZONE_SPLIT_Y]).toEqual([344, 90]);
     expect((WORLD.x1 - WORLD.x0) % 18).toBe(0);
     expect((WORLD.y1 - WORLD.y0) % 18).toBe(0);
   });
@@ -19,6 +19,14 @@ describe("world", () => {
     expect(worldZoneAt(350, 100)).toBe("portfolio");   // shipyard shore
     expect(worldZoneAt(350, 200)).toBe("cv");          // seawall shore
     expect(worldZoneAt(500, 200)).toBe("blog");
+    expect(worldZoneAt(100, 80)).toBe("portfolio");    // shipyard, north of the seam
+    expect(worldZoneAt(150, 130)).toBe("portfolio");   // station land
+    expect(worldZoneAt(100, 95)).toBe("portfolio");    // station land, first row
+    expect(worldZoneAt(98, 120)).toBe("portfolio");    // station strip x 96..100
+    expect(worldZoneAt(300, 120)).toBe("cv");          // east of the station land
+    expect(worldZoneAt(60, 95)).toBe("cv");            // new strip west of the station
+    expect(worldZoneAt(-30, 100)).toBe("cv");
+    expect(worldZoneAt(290, 100)).toBe("cv");
     expect(worldZoneAt(400, 10)).toBe("blog");
     expect(worldZoneAt(400, 260)).toBe("blog");
     for (let y = -60; y < 336; y += 6) expect(worldZoneAt(ZONE_SPLIT_X + shoreWidth(y) - 0.5, y)).not.toBe("blog");
