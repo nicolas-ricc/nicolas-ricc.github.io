@@ -201,7 +201,8 @@ describe("tech-anim: raw walls whatever the tone (#52)", () => {
     for (let i = 0; i < 100; i++) for (const a of [flat, ...others]) a.tick(100);
     for (const a of others) expect(a.windows()).toEqual(flat.windows());
   });
-  it("windows at frame 0 unchanged from main", () => {
+  // fingerprint recorded on 5f893d9, before #52: a mismatch means the windows moved, so find what changed
+  it("windows at frame 0 unchanged since the #52 baseline", () => {
     expect(fingerprint(setup().anim.windows() as unknown as Solid[])).toBe("b5014007");
   });
 });

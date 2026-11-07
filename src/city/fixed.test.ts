@@ -292,7 +292,8 @@ describe("plazaAndTower", () => {
     }
   });
 
-  it("towerWindows with tone 0 is what plazaAndTower publishes, unchanged from main", () => {
+  // fingerprint and paper window recorded on 5f893d9, before #52: a mismatch means the windows moved, so find what changed
+  it("towerWindows with tone 0 is what plazaAndTower publishes, unchanged since the #52 baseline", () => {
     const { solids, tower } = built(), t = towerOf(solids), got = towerWindows(t, t.facade!);
     expect(got).toEqual({ litWindows: tower.litWindows, paperWindow: tower.paperWindow });
     expect(fingerprint(got.litWindows as unknown as Solid[])).toBe("9f80b655");
