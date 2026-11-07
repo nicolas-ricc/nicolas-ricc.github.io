@@ -7,7 +7,6 @@ import { ALWAYS_LIT } from "./neighborhood";
 import { CROWN_FLIP_GAP_MS, CROWN_PERIOD_MS, HOMES_GAP_MS, NEON_STEP_MS, RING_STEP_MS, SIGN_PERIOD_MS, SIGN_STEP_MS, TECH_BLINK_GAP_MS, createTechAnim } from "./tech-anim";
 
 const setup = (reducedMotion = false) => { const scene = tech(createRng(7)); return { scene, anim: createTechAnim(scene, createRng(3), { reducedMotion }) }; };
-/** The scene with `tone` set on every tower box. */
 const withTone = (tone: number) => { const s = tech(createRng(7)); return { ...s, towers: s.towers.map((t) => ({ ...t, box: { ...t.box, tone } })) }; };
 const withoutTowers = () => { const s = tech(createRng(7)); return { ...s, towers: [], neon: { ...s.neon, crowns: [] } }; };
 
