@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
+import { fingerprint } from "../iso/fingerprint";
 import { v3 } from "../iso/geometry";
 import { bounds, type Bounds, type Solid } from "../iso/solids";
 import { awning, dockCrane } from "../kit/props";
 import { createRng } from "../map/seed";
 import { AVENUE, BLOCK_W, BRIDGE, COLLAPSED, EAST_RING, PROMENADE, PLAZA, SIDEWALK, STREET, TOWER, WEST_QUAY, blocks, estuaryEast } from "../scenes/city-grid";
 import { plazaTone, tiles } from "../scenes/city-pieces";
-import { bridge, collapsed, promenade, plazaAndTower, westQuay } from "./fixed";
+import { bridge, collapsed, promenade, plazaAndTower, towerWindows, westQuay } from "./fixed";
 
 const EPS = 1e-6;
 /** Strict box overlap: two solids that only touch (one resting on the other) don't count. */
@@ -278,6 +279,24 @@ describe("plazaAndTower", () => {
     expect(tower.litWindows).toHaveLength(8);
     expect(tower.paperWindow.x).toBeCloseTo(TOWER.x + TOWER.w, 6);
     expect(tower.antenna.z).toBeGreaterThan(35);
+  });
+
+  const towerOf = (solids: Solid[]) => prisms(solids).find((s) => s.mat === "officeDark" && s.facade)!;
+
+  it("towerWindows: tone −1, 0 and 1 give the same windows", () => {
+    const t = towerOf(built().solids), flat = towerWindows(t, t.facade!);
+    for (const tone of [-1, 0, 1]) {
+      const got = towerWindows({ ...t, tone }, t.facade!);
+      expect(got.litWindows).toHaveLength(8);
+      expect(got).toEqual(flat);
+    }
+  });
+
+  it("towerWindows with tone 0 is what plazaAndTower publishes, unchanged from main", () => {
+    const { solids, tower } = built(), t = towerOf(solids), got = towerWindows(t, t.facade!);
+    expect(got).toEqual({ litWindows: tower.litWindows, paperWindow: tower.paperWindow });
+    expect(fingerprint(got.litWindows as unknown as Solid[])).toBe("9f80b655");
+    expect(got.paperWindow).toEqual({ x: 137, y: 232.25, z: 20.625 });
   });
 
   it("the new items don't exceed 5 nor overlap benches, street lamps, curb or tower", () => {
