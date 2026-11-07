@@ -3,7 +3,7 @@
   "titulo": "Portfolio",
   "proyectos": [
     { "nombre": "Ballotage", "url": "https://balcarce50tcg.myxomatosis.workers.dev" },
-    { "nombre": "Damodaran", "repo": "https://github.com/nicolas-ricc/damodaran" },
+    { "nombre": "Damodaran", "url": "https://myxomatosis.xyz/damodaran/", "repo": "https://github.com/nicolas-ricc/damodaran" },
     { "nombre": "Hammurabi" },
     { "nombre": "Map", "url": "https://myxomatosis.xyz/", "repo": "https://github.com/nicolas-ricc/nicolas-ricc.github.io" }
   ],

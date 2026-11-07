@@ -18,6 +18,10 @@ Code: `src/iso/accent.ts` (`Accent`, `accentItem`), `src/world/veil.ts` (`accent
 (Animador.) The Pixi-free contract between an animated scene and the runtime (`Animator`): the `ids` of its layers, `layer(id)` (an `AnimLayer`: a `solid`, `accent` or `water` layer), `tick(dtMs)` (the set of layer ids that need redrawing) and optional `claims` (terrain water it draws itself). Every animator that `assembleWorld` returns is tagged with its zone of origin (`ZonedAnimator`, `tag(animator, zone)`; `null` for the water). That tag serves the lab and the crops; the veil of its lights does not use it, only the zone a layer declares in `AnimLayer.zone` (see Veil).
 Code: `src/scenes/animator.ts` (`Animator`, `AnimLayer`, `layerLookup`), `src/world/assemble.ts` (`ZonedAnimator`, `tag`, `assembleWorld`).
 
+### Hull
+(Casco.) The solid that is a ship's body up to its deck, lofted with sheer at bow and stern (`kind: "hull"`: `len`, `beam`, `h`, topsides `topMat`, `sheer`, default `HULL_SHEER`). Deck pieces and side pieces are placed against it by the hull rule.
+Code: `src/iso/solids.ts` (`Solid` kind `hull`, `HULL_SHEER`), `src/scenes/ships.ts` (`ShipSpec`, `kit`).
+
 ### Deck piece
 (Pieza de cubierta.) A non-hull solid that stands on a ship's hull and overlaps it in plan. In the code (`hullSide`, in the sort frame, steps 1 and 2) it is one of two cases: its base is at or above the midship deck (`hull.at.z + hull.h`), or all four corners of its plan box lie inside the hull's deck ring and it rises above the deck. It is always drawn after the hull. A piece inside the deck ring that stays below the deck (sunk under it) is drawn before the hull.
 Code: `hullSide` in `src/iso/depth.ts`; vocabulary from `docs/plans/2026-10-19-74-orden-piezas-barcos.md` ("Vocabulario") and `docs/plans/2026-11-02-195-lado-por-cara-del-casco.md`.
@@ -29,6 +33,14 @@ Code: `hullSide` in `src/iso/depth.ts`.
 ### Hull rule
 (Regla del casco.) The three rules of #74 that `sortByDepth` applies to hulls, at any heading and also in static scenes (the ships, the shipyard hulls, the fair boats). (1) The side of a non-hull piece against a hull is decided by `hullSide` (deck piece or side piece, above), not by the depth key. (2) The hull separates: if one piece goes before a hull and another goes after it, the first goes before the second (`hullOrder`; if two hulls disagree, the first in the list wins). (3) A view parallel to the plane that separates two solids (view component within 1e-6) hides neither: separating along it counts as behind in both directions (`farAlong`, `isBehindView`). #195 changed rule 1 from the centroid test to the hull face the piece hangs from.
 Code: `src/iso/depth.ts` (`sortByDepth`, `hullSide`, `hullOrder`, `farAlong`); `src/scenes/ships.ts`; tests `src/iso/depth.test.ts`, `src/scenes/ships-depth.test.ts`.
+
+### Boom
+(Pluma.) The inclined arm of a deck crane, rising from the cab toward the bow and carrying the hook. Avoid "jib", which names the arm of the tower crane in `pieces.ts`.
+Code: `src/scenes/ships.ts` (deck cranes of the cargo ship).
+
+### Stay
+(Estay.) The taut cable from a deck crane's cab roof to the tip of its boom.
+Code: `src/scenes/ships.ts` (deck cranes of the cargo ship).
 
 ### Frame
 (Marco.) A ship's local frame: the axes in which its solids are axis-aligned, x toward the bow and y to starboard, rotated by the ship's `heading`. `kit(at, heading)` in `ships.ts` builds the ship's pieces in it; `sortByDepth(solids, heading)` rotates the boxes and the view by `-heading` to evaluate depth and the hull rule in it (`vx`, `vy` are the view components in that frame); an `AnimLayer` of kind `solid` carries its `heading` for that sort. Not to be confused with `Frame` in `src/world/frame.ts` (`WorldZone | "all" | "cover"`), the camera framing of the page, which has its own functions `zoneFrame`, `coverFrame` and `boxFrame`.
