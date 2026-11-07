@@ -71,7 +71,7 @@
   - `"windows at frame 0 unchanged from main"`: `fingerprint(setup().anim.windows() as Solid[])` is `"b5014007"`.
 - [ ] **Step 2: Run** `npx vitest run src/scenes/tech-anim.test.ts`. Expected: FAIL (tone ±1 → 0 windows).
 - [ ] **Step 3: Implement**: drop the `.filter(...)` on line 35.
-- [ ] **Step 4: Run** `npx vitest run src/scenes/tech-anim.test.ts src/scenes/world-baseline.test.ts`. Expected: PASS. Also run `grep -rnE "toneOffset *(===|!==|==|!=)|!\s*[a-z.]*toneOffset\b|\{[^}]*\btoneOffset\b[^}]*\} *=" src/city src/scenes`. Expected: no output. The remaining `toneOffset` hits in those directories are writers (plates, tris, water and foam animation), not wall filters.
+- [ ] **Step 4: Run** `npx vitest run src/scenes/tech-anim.test.ts src/scenes/world-baseline.test.ts`. Expected: PASS. Also run `grep -rnE "toneOffset *(===|!==|==|!=)|!\s*[a-z.]*toneOffset\b|\{[^}]*\btoneOffset\b[^}]*\} *=" src/city src/scenes --exclude='*.test.ts'`. Expected: only `src/scenes/neighborhood-school.ts:11`, which checks `toneOffset === undefined` when building a plate and is not a wall filter. The hits in `*.test.ts` filter plates and tris, not walls.
 - [ ] **Step 5: Commit** `fix(#52): tech tower windows from raw visible walls`.
 
 ### Closing (orchestrator, no task)
