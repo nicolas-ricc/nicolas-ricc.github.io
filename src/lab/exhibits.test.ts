@@ -79,6 +79,10 @@ describe("exhibit catalog", () => {
     expect(seen).toEqual(order.filter((g) => seen.includes(g)));
     for (const e of EXHIBITS) expect(e.zone, e.id).toBe(GROUPS.find((g) => g.id === e.group)!.zone);
   });
+  it("the rail yard exhibit ends at the seam, y 90", () => {
+    const e = EXHIBITS.find((x) => x.id === "playa-vias")!;
+    expect(e.kind === "region" && e.box.y1).toBe(90);
+  });
   it("every box falls inside the world plus the bleed and is not inverted", () => {
     for (const { id, box } of regions) {
       expect(box.x0, id).toBeLessThan(box.x1); expect(box.y0, id).toBeLessThan(box.y1);

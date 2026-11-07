@@ -86,7 +86,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   // by hand {2, 76, 98, 92}: trucks and pallets of truckYard; the hopper (z 13.5) crosses the north edge; the tallest trestle inside reaches 8.3; the crane is gone
   { id: "playa-camiones", title: "Truck yard", zone: "portfolio", group: "factory", kind: "region", box: { x0: 2, y0: 76, x1: 98, y1: 92 }, h: 16 },
   { id: "playa-vias", title: "Rail yard", zone: "portfolio", group: "factory", kind: "region",
-    box: { x0: RAIL_YARD_X[0] - 4, y0: 40, x1: -4, y1: 100 }, h: 21 }, // by hand in y: the ore stockpiles (rng, x −25..−13, y 44..96, private in factory.ts) with tracks and wagons; h covers the excavator (≈20.3)
+    box: { x0: RAIL_YARD_X[0] - 4, y0: 40, x1: -4, y1: 90 }, h: 21 }, // by hand in y: the ore stockpiles (rng, x −25..−13, y 38..78, private in factory.ts) with tracks and wagons; h covers the excavator (≈20.3)
   // x1 capped at 4, west edge of the new region: the shadow falls ENE over the shipyard
   { id: "excavadora", title: "Bucket-wheel excavator", zone: "portfolio", group: "factory", kind: "region",
     box: { x0: excavatorExtent.x0 - M, y0: excavatorExtent.y0 - M, x1: Math.min(excavatorExtent.x1 + M, 4), y1: excavatorExtent.y1 + M }, h: 21 }, // box + shadows; h covers the machine (≈20.3), which is an animated layer

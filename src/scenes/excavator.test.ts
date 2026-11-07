@@ -42,12 +42,13 @@ describe("excavator wheel", () => {
     expect(tessellate(w).length).toBeLessThanOrEqual(400);
   });
 
-  it("rust, hollow, 28 sides and slots, 14 buckets with 2 teeth, axle at (−14, 60, 9.2)", () => {
+  it("rust, hollow, 28 sides and slots, 14 buckets with 2 teeth, axle at (−14, 54, 9.2)", () => {
     const w = excavatorWheel(0);
     if (w.kind !== "wheel") throw new Error("not a wheel");
     expect(w).toMatchObject({ mat: "rust", r: 5.5, width: 0.5, sides: 28, hollow: true, slots: 28, buckets: { n: 14, depth: 1.2, teeth: 2, mat: "rust" } });
-    expect(w.at.x).toBeCloseTo(-14, 6); expect(w.at.y).toBeCloseTo(60, 6); expect(w.at.z).toBeCloseTo(9.2, 6);
-    expect(EXCAVATOR.at).toEqual({ x: -30, y: 76 });
+    expect(w.at.x).toBeCloseTo(-14, 9); expect(w.at.y).toBeCloseTo(54, 9); expect(w.at.z).toBeCloseTo(9.2, 6);
+    expect(EXCAVATOR.at).toEqual({ x: -30, y: 70 });
+    expect(excavatorBox().y1).toBeLessThanOrEqual(88.4); // north of the seam fence (y 88.2..90)
   });
 });
 

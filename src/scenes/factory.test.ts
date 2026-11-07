@@ -253,7 +253,7 @@ describe("factory", () => {
     expect(s.solids.filter((x) => x.kind === "prism" && x.w === 0.8 && x.d === 0.8 && x.h === 6)).toEqual([]); // its trestles
     expect(s.solids.filter((x) => x.kind === "prism" && x.w === 6 && x.d === 2.4 && x.h === 2.8)).toHaveLength(3); // trucks
     const rails = s.ground.filter((x) => x.kind === "strip" && x.mat === "steel");
-    expect(rails.length).toBeGreaterThanOrEqual(RAIL_YARD_X.length * 2 + 2);
+    expect(rails.length).toBeGreaterThanOrEqual(RAIL_YARD_X.length * 2);
     const piles = s.solids.filter((x): x is Solid & { kind: "cone" } => x.kind === "cone" && (x.mat === "rust" || x.mat === "sand"));
     expect(piles).toHaveLength(6);
     for (const p of piles) expect(p.at.x - p.r).toBeGreaterThanOrEqual(Math.max(...RAIL_YARD_X) + 1); // no pile covers the tracks
@@ -817,5 +817,48 @@ describe("excavator in the rail yard", () => {
       expect(b.min.x).toBeGreaterThanOrEqual(box.x0 - EPS); expect(b.max.x).toBeLessThanOrEqual(box.x1 + EPS);
       expect(b.min.y).toBeGreaterThanOrEqual(box.y0 - EPS); expect(b.max.y).toBeLessThanOrEqual(box.y1 + EPS);
     }
+  });
+});
+
+describe("rail yard ends at the seam", () => {
+  const yard = () => scene().ground.filter((x): x is Solid & { kind: "strip" } => x.kind === "strip" && x.mat === "steel" && RAIL_YARD_X.some((rx) => x.path.every((p) => Math.abs(p.x - rx) <= 0.8 + 1e-9) && x.path.length === 2));
+  type P = Solid & { kind: "prism" };
+  const buffers = () => scene().solids.filter((x): x is P => x.kind === "prism" && x.mat === "steel" && x.w === 3 && x.d === 1.5 && x.h === 1.2);
+
+  it("the six strips run from the world edge to y 86", () => {
+    const rails = yard();
+    expect(rails).toHaveLength(RAIL_YARD_X.length * 2);
+    for (const r of rails) expect(r.path.map((p) => p.y)).toEqual([WORLD.y0, 86]);
+  });
+
+  it("one buffer per track spans y 86..87.5, centred on the axis", () => {
+    const bs = buffers();
+    expect(bs).toHaveLength(RAIL_YARD_X.length);
+    expect(bs.map((b) => b.at.x + b.w / 2).sort((a, b) => a - b)).toEqual([...RAIL_YARD_X]);
+    for (const b of bs) { expect(b.at.y).toBe(86); expect(b.at.y + b.d).toBeCloseTo(87.5, 9); }
+  });
+
+  it("no junction: no strip reaches x 2 or y 132.5", () => {
+    for (const x of scene().ground) if (x.kind === "strip") for (const p of x.path) { if (x.mat === "steel" && p.y > 0) expect(p.x).toBeLessThan(2); expect(p.y).not.toBe(132.5); }
+  });
+
+  it("stockpiles stay at y ≤ 87 and clear of the machine's box", () => {
+    const box = excavatorBox();
+    const cones = scene().solids.filter((x): x is Solid & { kind: "cone" } => x.kind === "cone" && (x.mat === "rust" || x.mat === "sand"));
+    expect(cones).toHaveLength(6);
+    for (const c of cones) {
+      expect(c.at.y).toBeLessThanOrEqual(87);
+      const fixed = Math.abs(c.at.x - local(EXCAVATOR.axleDx, 0).x) < 1e-9 && c.r === EXCAVATOR.pile.r;
+      if (!fixed) expect(c.at.y + c.r <= box.y0 - 1 || c.at.y - c.r >= box.y1 + 1 || c.at.x + c.r <= box.x0 - 1 || c.at.x - c.r >= box.x1 + 1).toBe(true);
+    }
+  });
+
+  it("no foliage cone south of y 90", () => {
+    for (const x of scene().solids) if (x.kind === "cone" && (x.mat === "leaf" || x.mat === "leafDark")) expect(x.at.y).toBeLessThanOrEqual(90);
+  });
+
+  it("stockpiles of seed 7 are pinned", () => {
+    const cones = scene().solids.filter((x): x is Solid & { kind: "cone" } => x.kind === "cone" && (x.mat === "rust" || x.mat === "sand"));
+    expect(cones.map((c) => [c.at.x, c.at.y, c.r, c.h, c.mat])).toEqual([[-14, 54, 6.5, 4.5, "rust"], [-15, 39, 6, 5, "rust"], [-20, 38, 6, 6, "rust"], [-15, 38, 8, 4, "rust"], [-25, 38, 5, 3, "sand"], [-17, 38, 5, 3, "sand"]]);
   });
 });
