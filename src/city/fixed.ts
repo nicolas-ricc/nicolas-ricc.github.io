@@ -16,6 +16,15 @@ import { PLINTH_H, plazaTone, prism, tiles } from "../scenes/city-pieces";
 /** Windows of the lit floor, tip of the antenna and the paper window: city-anim animates them. */
 export interface TowerLights { litWindows: Accent[]; antenna: Vec3; paperWindow: Vec3 }
 
+/** Lit windows and paper window from the raw visible walls of the tower, so `tone` does not matter. */
+export function towerWindows(tower: Solid, facade: Facade): { litWindows: Accent[]; paperWindow: Vec3 } {
+  const walls = visibleWalls(tower);
+  const litWindows = facadeAccents(walls, facade, "amber");
+  const east = walls.find((f) => f.normal.x > 0.5)!;
+  const paperWindow = centroid(windowPatches(east, facade, facade.litFloor!)[facade.cols - 1]!);
+  return { litWindows, paperWindow };
+}
+
 export function plazaAndTower(solids: Solid[], ground: Solid[], accents: Accent[], rng: Rng): TowerLights {
   ground.push(tiles(rng, PLAZA, 0.05, "plaza", plazaTone));
   // curb: a band of `paving` 1.2 wide around the plaza, wide so the outline reads at world zoom
@@ -34,10 +43,7 @@ export function plazaAndTower(solids: Solid[], ground: Solid[], accents: Accent[
   for (const [dx, dy] of [[-1.5, -1.5], [TOWER.w + 1.5, -1.5], [TOWER.w + 1.5, TOWER.d + 1.5], [-1.5, TOWER.d + 1.5]] as const) solids.push({ kind: "cone", at: v3(TOWER.x + dx, TOWER.y + dy, 0.05), r: 2.5, h: 6, mat: "leaf" });
   solids.push(prism(TOWER.x - 0.6, TOWER.y - 0.6, 0, 0.6, 0.6, 12, "leaf"), prism(TOWER.x + TOWER.w, TOWER.y + TOWER.d, 0, 0.6, 0.6, 12, "leaf"));
   // lit-floor windows, only on the walls the camera sees (east and south)
-  const walls = visibleWalls(tower).filter((f) => f.mat === "officeDark" && f.toneOffset === 0);
-  const litWindows = facadeAccents(walls, facade, "amber");
-  const east = walls.find((f) => f.normal.x > 0.5)!;
-  const paperWindow = centroid(windowPatches(east, facade, facade.litFloor!)[facade.cols - 1]!);
+  const { litWindows, paperWindow } = towerWindows(tower, facade);
   // light spill: flat puddles on the tiles, only in the east strip of
   // the plaza (between the tower's east wall and the curb), which is the part
   // the camera sees free of walls, roofs and trees.
