@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HEADLAND, MOUTH_Y, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, abyssX, distToHeadland, estuaryEast, estuaryInset, inHeadland, inMouth, islandEastX, islandWestX, northCoastY, pointInPolygon, riverCenter, shoreWidth, worldZoneAt } from "./geo";
+import { ESTUARY_Y0, HEADLAND, MOUTH_Y, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, abyssX, distToHeadland, estuaryEast, estuaryInset, eastBank, inHeadland, inMouth, inStationLand, islandEastX, islandWestX, northCoastY, pointInPolygon, riverCenter, SEAM_CY, shoreWidth, worldZoneAt } from "./geo";
 
 describe("world", () => {
   it("the content has a negative origin and sides that are multiples of 18", () => {
@@ -99,5 +99,21 @@ describe("island coast", () => {
     for (let y = 238; y <= 262; y += 2) expect(estuaryInset(y)).toBe(0); // collapsed block: ramp and sunken slabs
     expect(estuaryInset(230)).toBeGreaterThan(2);                        // between the bridge and the collapse the riverside also reaches in
     for (let y = 146; y <= 400; y++) expect(islandWestX(y)).toBeLessThanOrEqual(estuaryEast(y));
+  });
+});
+
+describe("estuary anchor and station land", () => {
+  it("the estuary is anchored at ESTUARY_Y0, independent of the zone seam", () => {
+    expect(ESTUARY_Y0).toBe(146);
+    expect(SEAM_CY).toBe(141);
+    expect(estuaryEast(ESTUARY_Y0)).toBe(eastBank(SEAM_CY));
+    expect(estuaryEast(200)).toBeCloseTo(259.9, 9); // value measured on main before the change
+  });
+
+  it("inStationLand is half-open on x 96..198, y 90..146", () => {
+    expect(inStationLand(96, 90)).toBe(true);
+    expect(inStationLand(95.9, 90)).toBe(false);
+    expect(inStationLand(150, 146)).toBe(false);
+    expect(inStationLand(198, 120)).toBe(false);
   });
 });

@@ -1,4 +1,4 @@
-import { ESTUARY_FLARE, QUAY_X, SEAM_CY, ZONE_SPLIT_Y, eastBank, estuaryEast } from "../map/geo";
+import { ESTUARY_FLARE, ESTUARY_Y0, QUAY_X, SEAM_CY, eastBank, estuaryEast } from "../map/geo";
 export { ESTUARY_FLARE, estuaryEast };
 
 /**
@@ -39,8 +39,8 @@ export const COLLAPSED: Rect = { x: 280, y: 242, w: 24, d: 18 }; // the estuary 
 export const FALLEN_BLOCK: Rect = { x: PROMENADE.x0 - 8, y: 237.5, w: 6, d: 3 };
 export const CRATERS: readonly { x: number; y: number; r: number }[] = [{ x: 60, y: 185, r: 5 }, { x: 150, y: 239, r: 6 }, { x: 307, y: 224, r: 5 }];
 
-/** Inverse of estuaryEast south of the seam: at which y the east bank reaches x (less than ZONE_SPLIT_Y if it never reaches it to the north). */
-export const estuaryReaches = (x: number): number => ZONE_SPLIT_Y + (x - eastBank(SEAM_CY)) / ESTUARY_FLARE;
+/** Inverse of estuaryEast south of ESTUARY_Y0: at which y the east bank reaches x (less than ESTUARY_Y0 if it never reaches it to the north). */
+export const estuaryReaches = (x: number): number => ESTUARY_Y0 + (x - eastBank(SEAM_CY)) / ESTUARY_FLARE;
 
 export type BlockKind = "block" | "plaza" | "collapsed" | "district" | "site";
 export interface Block extends Rect { bank: "west" | "east"; row: number; kind: BlockKind }

@@ -163,9 +163,16 @@ export function northCoastY(x: number): number {
  * last row of cells before the seam (center y = 141) and opens toward the
  * south, instead of following the riverCenter meander.
  */
-export const SEAM_CY = Math.floor(ZONE_SPLIT_Y / CELL) * CELL - CELL / 2;
+export const ESTUARY_Y0 = 146; // where the estuary starts to open; independent of the zone seam
+export const SEAM_CY = Math.floor(ESTUARY_Y0 / CELL) * CELL - CELL / 2;
 export const ESTUARY_FLARE = 0.35; // how much the east riverside opens per unit toward the south
-export const estuaryEast = (y: number): number => eastBank(SEAM_CY) + Math.max(0, y - ZONE_SPLIT_Y) * ESTUARY_FLARE;
+export const estuaryEast = (y: number): number => eastBank(SEAM_CY) + Math.max(0, y - ESTUARY_Y0) * ESTUARY_FLARE;
+
+/** Land of the station, Portfolio side of the seam. Half-open: x0 ≤ x < x1 && y0 ≤ y < y1. */
+export const STATION_LAND = { x0: 96, y0: 90, x1: 198, y1: 146 } as const;
+export function inStationLand(x: number, y: number): boolean {
+  return x >= STATION_LAND.x0 && x < STATION_LAND.x1 && y >= STATION_LAND.y0 && y < STATION_LAND.y1;
+}
 
 /** How far the island's land reaches over the estuary water, in [0, 10]; 0 north of y 152 (seam), at y 196..222 (bridge) and at y 238..262 (collapsed block). */
 export function estuaryInset(y: number): number {
