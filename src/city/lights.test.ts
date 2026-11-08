@@ -8,7 +8,8 @@ import { blocks } from "../scenes/city-grid";
 import { city, type CityScene, type PlacedPiece } from "../scenes/city";
 import { zoneRng } from "../scenes/world";
 import { SEED } from "../map/seed";
-import { lightBox, lights, MAX_ANIMABLE, MAX_NEONS, WINDOW_ALPHA } from "./lights";
+import { garland, lamp, puddle } from "../kit/props";
+import { fixedLights, lightBox, lights, placeLit, visibleLights, MAX_ANIMABLE, MAX_NEONS, WINDOW_ALPHA, type FixedLight } from "./lights";
 import { CATALOGUE, type Neighborhood } from "./zoning";
 
 const NEIGHBORHOODS = Object.keys(CATALOGUE) as Neighborhood[];
@@ -107,7 +108,14 @@ for (const [name, make, isWorld] of SEEDS) {
         expect(["amber", "magenta", "cyan"]).toContain(n.color);
         expect(n.accents.some((a) => a.kind === "poly" && a.color === n.color && a.alpha === 1 && a.pts === n.slot.pts)).toBe(true);
         expect(n.accents.every((a) => a.color === n.color || a.color === `${n.color}Bleed`)).toBe(true);
-        expect(n.accents.filter((a) => a.kind === "poly" && a.alpha === 0.25 && a.color === `${n.color}Bleed`)).toHaveLength(3); // the puddle
+        expect([0, 3]).toContain(n.accents.filter((a) => a.kind === "poly" && a.alpha === 0.25 && a.color === `${n.color}Bleed`).length); // the puddle, unless hidden
+      }
+    });
+
+    it("no neon puddle is hidden (brute-force oracle)", () => {
+      for (const n of l.neons) {
+        const ring = n.accents.find((a) => a.kind === "poly" && a.pts.length === 8);
+        if (ring?.kind === "poly") expect(hidden(lightBox([centroid(ring.pts)]), bs, hs)).toBe(false);
       }
     });
 
@@ -272,6 +280,19 @@ describe("lights (synthetic scenes)", () => {
     }
   });
 
+  it("neons: a hidden puddle is dropped, the neon stays", () => {
+    const a = emptyPiece(), b = emptyPiece();
+    a.solids.push(prism(0, 0, 0.3, 24, 18, 6));
+    a.slots.push(neonSlot(10, 0));
+    b.solids.push(prism(10.5, 20, 0, 2, 1, 1)); // low prism on the camera side of the puddle (11, 19, 0.3), below the slot
+    const l = lights({ solids: [...a.solids, ...b.solids], placed: [placedAt("bars", a, 0), placedAt("downtown", b, 1)] }, createRng(3));
+    expect(l.neons).toHaveLength(1);
+    const n = l.neons[0]!;
+    expect(n.accents).toHaveLength(2);
+    expect(n.accents.some((x) => x.kind === "poly" && x.pts === n.slot.pts)).toBe(true);
+    expect(n.accents.some((x) => x.kind === "poly" && x.pts.length === 8)).toBe(false);
+  });
+
   it("neons: colors with weights amber 50, magenta 30, cyan 20", () => {
     const tally = { amber: 0, magenta: 0, cyan: 0 };
     for (let seed = 1; seed <= 40; seed++) {
@@ -284,5 +305,42 @@ describe("lights (synthetic scenes)", () => {
     expect(Math.abs(tally.amber / total - 0.5)).toBeLessThan(0.05);
     expect(Math.abs(tally.magenta / total - 0.3)).toBeLessThan(0.05);
     expect(Math.abs(tally.cyan / total - 0.2)).toBeLessThan(0.05);
+  });
+});
+
+describe("fixed lights", () => {
+  it("a lamp with a foreign prism in front disappears", () => {
+    const s: Solid[] = [], out: FixedLight[] = [];
+    placeLit(s, out, lamp(v3(0, 0, 0)));
+    s.push(prism(1, 1, 0, 1, 1, 10));
+    expect(visibleLights(out, s)).toEqual([]);
+  });
+
+  it("its own post does not hide the lamp", () => {
+    const s: Solid[] = [], out: FixedLight[] = [];
+    placeLit(s, out, lamp(v3(0, 0, 0)));
+    expect(out[0]!.own).toEqual([0, 1]);
+    expect(visibleLights(out, s)).toEqual(lamp(v3(0, 0, 0)).accents);
+  });
+
+  it("a solid inside the own range is exempt, the same solid outside it hides", () => {
+    const wall = prism(1, 1, 0, 1, 1, 10), dot = lamp(v3(0, 0, 0)).accents;
+    expect(visibleLights(fixedLights(dot, [0, 1]), [wall])).toEqual(dot);
+    expect(visibleLights(fixedLights(dot), [wall])).toEqual([]);
+  });
+
+  it("a puddle is one light, kept or dropped whole", () => {
+    const rings = puddle(5, 5, "amberBleed"), ls = fixedLights(rings);
+    expect(ls).toHaveLength(1);
+    expect(ls[0]!.at.x).toBeCloseTo(5, 6); expect(ls[0]!.at.y).toBeCloseTo(5, 6); expect(ls[0]!.at.z).toBeCloseTo(0.12, 6);
+    expect(ls[0]!.own).toEqual([0, 0]);
+    expect(visibleLights(ls, [prism(6, 6, 0, 2, 2, 10)])).toEqual([]);
+    expect(visibleLights(ls, [])).toEqual(rings);
+  });
+
+  it("a garland is one light per dot", () => {
+    const dots = garland([v3(0, 0, 3), v3(0, 3, 3)]);
+    expect(fixedLights(dots)).toHaveLength(dots.length);
+    expect(fixedLights(dots).map((l) => l.accents)).toEqual(dots.map((d) => [d]));
   });
 });
