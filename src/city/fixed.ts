@@ -170,7 +170,7 @@ function jungleOnLand(out: Solid[], rng: Rng, rect: { x0: number; x1: number; y0
 }
 
 export function greenery(solids: Solid[], rng: Rng): void {
-  for (let y = ROWS[0]; y < COLLAPSED.y; y += 8) {                                                        // east bank of the estuary, old city
+  for (let y = ROWS[1]; y < COLLAPSED.y; y += 8) {                                                        // east bank of the estuary, old city
     const x0 = Math.ceil(islandWestX(y + 6)) + 2, x1 = EAST_RING.x0 - 3;
     if (x1 - x0 >= 2) jungleOnLand(solids, rng, { x0, x1, y0: y, y1: y + 6 }, rng.int(1, 2));
   }
@@ -189,7 +189,7 @@ const rectsOverlap = (x0: number, y0: number, w0: number, d0: number, x1: number
 export function cars(solids: Solid[], rng: Rng): void {
   const placed: { x: number; y: number }[] = [];
   for (const b of blocks()) {
-    if (b.kind === "plaza") continue;
+    if (b.kind === "plaza" || b.kind === "freight") continue;
     const n = rng.int(1, 3);
     for (let i = 0; i < n; i++) {
       const x = b.x + rng.int(2, b.w - 5);

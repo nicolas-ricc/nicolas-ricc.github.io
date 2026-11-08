@@ -181,9 +181,9 @@ export const EXHIBITS: readonly Exhibit[] = [
     box: { x0: ARENA.x - M, y0: ARENA.y - M, x1: ARENA.x + BLOCK_W + M, y1: ARENA.y + BLOCK_D + M }, h: 15 },
   { id: "auditorio", title: "Auditorium", zone: "cv", group: "tech", kind: "region",
     box: { x0: AUDITORIUM.x - M, y0: AUDITORIUM.y - M, x1: AUDITORIUM.x + BLOCK_W + M, y1: AUDITORIUM.y + BLOCK_D + M }, h: 14 },
-  // the two towers of row ROWS[1], columns SUBURB_COLS[1] and [0]; the height comes from the rng: the test watches it
+  // the two towers of row ROWS[2], columns SUBURB_COLS[1] and [0]; the height comes from the rng: the test watches it
   { id: "torres", title: "Tech district towers", zone: "cv", group: "tech", kind: "region",
-    box: { x0: SUBURB_COLS[1] - M, y0: ROWS[1] - M, x1: SUBURB_COLS[0] + BLOCK_W + M, y1: ROWS[1] + BLOCK_D + M }, h: 22 },
+    box: { x0: SUBURB_COLS[1] - M, y0: ROWS[2] - M, x1: SUBURB_COLS[0] + BLOCK_W + M, y1: ROWS[2] + BLOCK_D + M }, h: 22 },
   { id: "monoblock", title: "Monoblock", zone: "cv", group: "tech", kind: "region",
     box: { x0: 132 - M, y0: 448 - M, x1: 132 + BLOCK_W + M, y1: 448 + BLOCK_D + M }, h: 23.6 },
   { id: "casas", title: "Houses with tile roofs", zone: "cv", group: "tech", kind: "region",

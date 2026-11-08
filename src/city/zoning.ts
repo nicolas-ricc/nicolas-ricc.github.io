@@ -5,7 +5,7 @@ import { LANDMARK_MAX_H } from "../kit/piece";
 import type { Lot, Side, StyleId } from "../kit/types";
 import type { Rng } from "../map/seed";
 import { PLINTH_H } from "../scenes/city-pieces";
-import { AVENUE, BLOCK_D, BLOCK_W, EAST_COLS, LIT_FLOOR, PLAZA, ROWS, SIDEWALK, SITE, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, type Block, type Rect } from "../scenes/city-grid";
+import { AVENUE, BLOCK_D, BLOCK_W, EAST_COLS, FREIGHT_ROW, LIT_FLOOR, PLAZA, ROWS, SIDEWALK, SITE, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, type Block, type Rect } from "../scenes/city-grid";
 
 /**
  * Resume zoning: which neighborhood each block belongs to, which recipes
@@ -90,6 +90,8 @@ export function openSides(b: Block): Side[] {
   const out: Side[] = [];
   if (b.y + b.d === AVENUE.y0) out.push("s");
   if (b.y === AVENUE.y1) out.push("n");
+  if (b.y === ROWS[0] && !out.includes("s")) out.push("s");                                  // row 92 faces the freight lots and the main line
+  if (b.x === EAST_COLS[0] && b.y === FREIGHT_ROW.y && !out.includes("n")) out.push("n");   // east block at the north end of the strip
   if (b.x + b.w + STREET === WEST_QUAY.x0) out.push("e");
   if (b.bank === "east" && b.x === EAST_COLS[0]) out.push("w");
   const plaza = facing(b, PLAZA);
@@ -123,7 +125,7 @@ export interface Placed { block: Block; neighborhood: Neighborhood; recipe: stri
 export function assign(rng: Rng, districtRng: Rng): Placed[] {
   const out: Placed[] = [];
   for (const b of blocks()) {
-    if (b.kind === "plaza" || b.kind === "collapsed") continue;
+    if (b.kind === "plaza" || b.kind === "collapsed" || b.kind === "freight") continue;
     const neighborhood = neighborhoodOf(b), fixed = FIXED.find((f) => f.x === b.x && f.y === b.y);
     const r = neighborhood === "district" ? districtRng : rng;
     let recipe = fixed?.recipe ?? pick(r, CATALOGUE[neighborhood].recipes);

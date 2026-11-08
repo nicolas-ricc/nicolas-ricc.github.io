@@ -90,7 +90,7 @@ const blockAt = (x: number, y: number): SprawlBlock | null => {
 /** Blocks of the tech district: the western ones follow the rows of the city (and respect the avenue), the southern ones add the columns of the city. No rng. */
 export function suburbBlocks(): SprawlBlock[] {
   const out: SprawlBlock[] = [];
-  for (const y of ROWS) for (const x of SUBURB_COLS) { const b = blockAt(x, y); if (b) out.push(b); }
+  for (const y of ROWS.slice(1)) for (const x of SUBURB_COLS) { const b = blockAt(x, y); if (b) out.push(b); }
   for (const y of SUBURB_ROWS) for (const x of [...SUBURB_COLS, ...WEST_COLS]) { const b = blockAt(x, y); if (b) out.push(b); }
   return out;
 }

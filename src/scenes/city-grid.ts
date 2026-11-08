@@ -73,8 +73,9 @@ export function blocks(): Block[] {
     }
   });
   // Outside ROWS (row -1): the two east blocks of the strip and the freight lots.
-  for (const y of [116, 140]) out.push({ x: EAST_COLS[0], y, w: BLOCK_W, d: BLOCK_D, bank: "east", row: -1, kind: "block" });
-  for (const x of WEST_COLS.slice(0, 5)) out.push({ x, y: FREIGHT_ROW.y, w: BLOCK_W, d: FREIGHT_ROW.d, bank: "west", row: -1, kind: "freight" });
+  // 116 is the freight row; 140 is the second east row of the strip, a street (6) south of 134.
+  for (const y of [FREIGHT_ROW.y, 140]) out.push({ x: EAST_COLS[0], y, w: BLOCK_W, d: BLOCK_D, bank: "east", row: -1, kind: "block" });
+  for (const x of WEST_COLS) if (x + BLOCK_W <= STATION_LAND.x0) out.push({ x, y: FREIGHT_ROW.y, w: BLOCK_W, d: FREIGHT_ROW.d, bank: "west", row: -1, kind: "freight" });
   out.push({ ...PLAZA, bank: "west", row: 3, kind: "plaza" });
   return out;
 }

@@ -6,6 +6,7 @@ import { recipe } from "../kit";
 import { STYLES } from "../kit/styles";
 import type { Piece } from "../kit/types";
 import { prism, PLINTH_H } from "./city-pieces";
+import { blocks } from "./city-grid";
 import { lights, WINDOW_ALPHA, type CityLights } from "../city/lights";
 import { streets } from "../city/streets";
 import { railLands } from "../city/rail-lands";
@@ -48,6 +49,7 @@ export function city(rng: Rng, districtRng: Rng, lightsRng: Rng): CityScene {
     // the sign consumes the rng after the recipe, so the recipe draws do not depend on how many slots there are
     if (p.neighborhood === "district") for (const s of piece.slots) if (s.kind === "sign") signs.push({ kind: "poly", pts: s.pts, color: districtRng.chance(0.5) ? "cyan" : "magenta", alpha: 1 });
   }
+  for (const b of blocks()) if (b.kind === "freight") solids.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
   const tower = plazaAndTower(solids, ground, accents, rng);
   const host = placed.find((q) => q.placed.block.x === WATER_TOWER_BLOCK.x && q.placed.block.y === WATER_TOWER_BLOCK.y);
   if (!host?.piece.courtyard) throw new Error("the water tower block has no courtyard");
