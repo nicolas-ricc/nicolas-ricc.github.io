@@ -11,14 +11,13 @@ import { awning, chair, fence, garland, rooftopGarden, table } from "../props";
 import { gableRoof } from "../roofs";
 import { addBuilding, emptyPiece, recipeCap, shiftTone } from "../piece";
 import type { Lot, Piece, RecipeDef, Side, Style, Window } from "../types";
-import { sawtooth, stackContainers, storeroom, tonePiece } from "./industrial";
+import { SIDES, WALL_NORMALS, sawtooth, stackContainers, storeroom, tonePiece } from "./industrial";
 import { neonSlot } from "./lowrise";
 
 /**
  * `reconversion` family (#322): industrial buildings given a new use. Windows of the
  * sawtooth teeth and of gable halls come from glass plates, since neither admits `facade`.
  */
-const WALL_NORMALS = [v3(0, -1, 0), v3(1, 0, 0), v3(0, 1, 0), v3(-1, 0, 0)]; // plate wall index: 0 N, 1 E, 2 S, 3 W
 const PANE_GAP = 0.2;
 
 /** Windows of `plate` on the edge `plate.wall` of the rectangle (wall 0 north, 1 east, 2 south, 3 west, each running clockwise as in `rect`), split into `panes` equal ones along the plate, `PANE_GAP` apart. */
@@ -60,7 +59,6 @@ export function loftHall(lot: Lot, rng: Rng, style: Style): Piece {
   return tonePiece(p, tone);
 }
 
-const SIDES: readonly Side[] = ["n", "e", "s", "w"];
 
 /**
  * Frame of the front `open[0]` (south without `open`): `u` runs along it (+x for n/s, +y for e/w), `v` goes inward from its edge.
@@ -96,9 +94,10 @@ export function vaultLoft(lot: Lot, rng: Rng, style: Style): Piece {
   const h = Math.min(4, recipeCap(lot) - vaultH);
   const len = Math.min(18, f.len - 2), depth = Math.min(10, f.depth - 3), u0 = (f.len - len) / 2;
   const r = f.rect(u0, 2, len, depth);
-  const body = prism(r.x, r.y, z, r.w, r.d, h, style.mat);
+  const facade = { floors: 1, cols: 4 };
+  const body = prism(r.x, r.y, z, r.w, r.d, h, style.mat, { facade });
   body.plates = [{ wall: f.wall, shape: "rect", u0: 0.25, u1: 0.75, z0: z + 0.2, z1: z + h - 0.2, mat: "glass", toneOffset: 1 }];
-  p.solids.push(body);
+  addBuilding(p, body, facade);
   const axis = f.side === "n" || f.side === "s" ? "x" : "y";
   p.solids.push({ kind: "vault", at: v3(r.x, r.y, z + h), len: axis === "x" ? r.w : r.d, w: axis === "x" ? r.d : r.w, h: vaultH, axis, mat: style.roof, segments: 6 });
   const m = f.rect(u0 + 0.25 * len, 1, 0.5 * len, 1);
@@ -178,7 +177,7 @@ export function derelictHall(lot: Lot, rng: Rng, style: Style): Piece {
     for (const yj of [y + 0.5, y + d - 0.5]) p.solids.push({ kind: "beam", from: v3(x0 + 4 * k, yj, base), to: v3(ridge, yj, top), w: 0.3, h: 0.3, mat: "steel" });
   }
   const first = p.solids.length;
-  for (let i = rng.int(4, 6); i > 0; i--) {
+  for (let i = gaps.length > 0 ? rng.int(4, 6) : 0; i > 0; i--) { // no gap (a lot under 8 wide): no jungle
     const cx = x0 + 4 * rng.pick(gaps) + 2;
     jungle(p.solids, rng, { x0: cx, x1: cx, y0: y + 2, y1: y + d - 2 }, 1, base);
   }
@@ -187,7 +186,7 @@ export function derelictHall(lot: Lot, rng: Rng, style: Style): Piece {
     if (c.kind === "cone") p.solids[i] = { ...c, r: Math.min(c.r, 2), h: Math.min(c.h, cap - h) };
   }
   const t = tonePiece(p, tone);
-  t.solids[0] = { ...t.solids[0]!, tone: tone - 1 };
+  t.solids[0] = { ...t.solids[0]!, tone: shiftTone(tone, -1) };
   return t;
 }
 
@@ -247,7 +246,7 @@ export function freightShed(lot: Lot, rng: Rng, style: Style): Piece {
   while (n > 1 && yardFor(n) > f.len - 6) n--;
   const yard = yardFor(n), shedLen = f.len - yard;
   const r = f.rect(0, strip, shedLen, f.depth - strip);
-  const hall = prism(r.x, r.y, z, r.w, r.d, h, style.mat, { roof: "gable", roofMat: style.mat });
+  const hall = prism(r.x, r.y, z, r.w, r.d, h, style.mat, { roof: "gable", roofMat: style.roof });
   const wallsFor = r.w >= r.d ? [0, 2] : [3, 1], len = Math.max(r.w, r.d), half = 0.75 / len;
   const hp: Plate[] = [];
   for (const wall of wallsFor) hp.push(...ribs(wall, len, z, z + h, shadeTone(WALL_NORMALS[wall]!) === "lit", style.mat));
@@ -292,11 +291,11 @@ export function openDock(lot: Lot, rng: Rng, style: Style): Piece {
     const q = f.rect(6 + k * 3.5, 0.4, 1.2, 1);
     p.solids.push(prism(q.x, q.y, z, q.w, q.d, 0.5, "deck"));
   }
-  const t = tonePiece(p, tone);
   const sub = f.rect(0, f.depth - 5, 6, 5);
   const room = storeroom({ ...lot, x: sub.x, y: sub.y, w: sub.w, d: sub.d, open: [] }, rng, style);
-  t.solids.push(...room.solids);
-  return t;
+  // the storeroom takes the piece's tone, not its own
+  p.solids.push(...room.solids.map((q) => { const c = { ...q }; delete c.tone; return c; }));
+  return tonePiece(p, tone);
 }
 
 export const RECONVERSION: readonly RecipeDef[] = [

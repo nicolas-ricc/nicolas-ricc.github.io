@@ -486,3 +486,49 @@ describe("reconversion edges", () => {
     }
   });
 });
+
+describe("review fixes", () => {
+  it("vaultLoft: the body carries facade { floors: 1, cols: 4 } and publishes its windows", () => {
+    for (const lot of LOTS) for (const seed of SEEDS) {
+      const p = recipe("vaultLoft")(lot, createRng(seed), STYLES.warehouses);
+      const body = p.solids.find((s) => s.kind === "prism" && !!s.facade);
+      expect(body?.kind === "prism" && body.facade).toEqual({ floors: 1, cols: 4 });
+      expect(p.windows.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("derelictHall: tones stay within −2..+2 and a lot under 8 wide grows no jungle (no NaN)", () => {
+    const style = { ...STYLES.warehouses, tone: -2 };
+    for (const seed of SEEDS) {
+      const p = recipe("derelictHall")(LOTS[0]!, createRng(seed), style);
+      for (const s of p.solids) expect(s.tone ?? 0).toBeGreaterThanOrEqual(-2);
+      const narrow = recipe("derelictHall")({ ...LOTS[0]!, w: 7 }, createRng(seed), STYLES.warehouses);
+      expect(narrow.solids.filter((s) => s.kind === "cone")).toEqual([]);
+      for (const s of narrow.solids) for (const v of Object.values(bounds(s).min)) expect(Number.isFinite(v)).toBe(true);
+    }
+  });
+
+  it("openDock: one tone for the whole piece, storeroom included", () => {
+    for (const seed of SEEDS) {
+      const p = recipe("openDock")(FREIGHT_LOT, createRng(seed), STYLES.freight);
+      expect(new Set(p.solids.map((s) => s.tone ?? 0)).size).toBe(1);
+    }
+  });
+
+  it("freightShed: roof in style.roof; trucks perpendicular to the dock with the tail on it, on every front", () => {
+    for (const side of ["n", "e", "s", "w"] as Side[]) for (const base of LOTS) for (const seed of SEEDS) {
+      const lot = { ...base, open: [side] }, p = recipe("freightShed")(lot, createRng(seed), STYLES.freight);
+      const shed = p.solids.find((s) => s.kind === "prism" && s.roof === "gable");
+      expect(shed?.kind === "prism" && shed.roofMat).toBe(STYLES.freight.roof);
+      const dock = bounds(p.solids.find((s) => s.kind === "prism" && s.mat === "concrete" && Math.abs(s.h - 1.2) < 1e-6)!);
+      const trucks = p.solids.filter((s) => s.kind === "prism" && Math.abs(s.h - 2.8) < 1e-6).map(bounds);
+      expect(trucks.length).toBeGreaterThanOrEqual(2);
+      for (const t of trucks) {
+        const across = side === "n" || side === "s" ? t.max.y - t.min.y : t.max.x - t.min.x;
+        expect(across).toBeCloseTo(6, 9);
+        const tail = { s: t.max.y - dock.min.y, n: dock.max.y - t.min.y, e: t.max.x - dock.min.x, w: dock.max.x - t.min.x }[side];
+        expect(tail).toBeCloseTo(0, 9);
+      }
+    }
+  });
+});
