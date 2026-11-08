@@ -184,7 +184,7 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
     ferry: ferryFrame,
     neon,
     tick(dtMs) {
-      if (opts.reducedMotion || dtMs <= 0) return { ships: SHIPS.map(() => false), beam: false, buoys: false, ferry: false, neon: false };
+      if (opts.reducedMotion || !Number.isFinite(dtMs) || dtMs <= 0) return { ships: SHIPS.map(() => false), beam: false, buoys: false, ferry: false, neon: false };
       const all = first; first = false;
       const angle = angleAt(clock);
       clock += dtMs;
@@ -199,11 +199,18 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
       }
       const bs = Math.floor(clock / (BUOY_PERIOD_MS / 2));
       if (bs !== buoyStep) { buoyStep = bs; c.buoys = true; }
-      if (ferryPause > 0) ferryPause -= dtMs;
-      else {
-        ferryDist += (ferryDir * FERRY_SPEED * dtMs) / 1000; c.ferry = true;
-        if (ferryDist >= ferryLen) { ferryDist = ferryLen; ferryDir = -1; ferryPause = FERRY_PAUSE_MS; }
-        else if (ferryDist <= 0) { ferryDist = 0; ferryDir = 1; ferryPause = FERRY_PAUSE_MS; }
+      // the time left over from the pause or from a leg carries into the next phase within the same tick
+      for (let left = dtMs; left > 0;) {
+        if (ferryPause > 0) {
+          const used = Math.min(ferryPause, left);
+          ferryPause -= used; left -= used;
+          continue;
+        }
+        c.ferry = true;
+        const toEnd = ((ferryDir > 0 ? ferryLen - ferryDist : ferryDist) / FERRY_SPEED) * 1000;
+        if (toEnd > left) { ferryDist += (ferryDir * FERRY_SPEED * left) / 1000; break; }
+        left -= toEnd;
+        ferryDist = ferryDir > 0 ? ferryLen : 0; ferryDir = -ferryDir; ferryPause = FERRY_PAUSE_MS;
       }
       const ns = Math.floor(clock / NEON_STEP_MS);
       if (ns !== neonStep) { neonStep = ns; c.neon = true; }
