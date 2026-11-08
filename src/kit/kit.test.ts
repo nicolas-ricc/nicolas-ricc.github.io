@@ -23,7 +23,7 @@ const EPS = 1e-9;
 
 const GAP_AREA_EPS = 1e-6;
 
-/** Absolute shoelace area of a polygon; 0 for fewer than three points. */
+/** Absolute shoelace area. */
 function area(poly: Vec2[]): number {
   let a = 0;
   for (let i = 0; i < poly.length; i++) {
