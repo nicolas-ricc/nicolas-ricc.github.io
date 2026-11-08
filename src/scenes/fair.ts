@@ -123,7 +123,7 @@ export function flumeAt(dist: number): PolyPoint {
 
 /** Two logs at `dist` and `dist − 8` along the channel. */
 export function logSolids(dist: number): Solid[] {
-  return [0, 8].map((back) => { const p = flumeAt(dist - back); return { kind: "hull", at: v3(p.x, p.y, p.z), len: 2.4, beam: 1, h: 0.6, mat: "deck", heading: p.heading } as Solid; });
+  return [0, 8].map((back): Solid => { const p = flumeAt(dist - back); return { kind: "hull", at: v3(p.x, p.y, p.z), len: 2.4, beam: 1, h: 0.6, mat: "deck", heading: p.heading }; });
 }
 
 // ---------------------------------------------------------------- static scene
@@ -229,7 +229,7 @@ export function slide(out: Solid[], accents: Accent[]): void {
     const hw = 1.1, tx = -Math.sin(a), ty = Math.cos(a), ox = x + 5.6 * Math.cos(a), oy = y + 5.6 * Math.sin(a); // rail at radius 5.6, tangent to the tread
     out.push({ kind: "beam", from: v3(ox - tx * hw, oy - ty * hw, z + 0.8), to: v3(ox + tx * hw, oy + ty * hw, z + 0.8), w: 0.1, h: 0.1, mat: "steel" });
   }
-  accents.push({ kind: "dot", at: v3(x, y, 16.3), r: 0.5, color: "amber" });
+  accents.push(dot(x, y, 16.3, 0.5, "amber"));
 }
 
 /** Log flume: raised deck channel (lift ramp, flat with water over the boardwalk, drop ramp to the bay), pillars and splash. */
@@ -251,8 +251,7 @@ export function flume(out: Solid[], accents: Accent[]): void {
 
 /** Food-truck court: five trucks facing south, 8 tables with 2 chairs each, three poles with a bulb garland at z 3. */
 export function foodCourt(out: Solid[], accents: Accent[]): void {
-  const mats: Material[] = ["signal", "copper", "whitewash", "rust", "livery"];
-  mats.forEach((mat, k) => place(out, accents, foodTruck(v3(102 + 12 * k, -176, 0), mat, "s")));
+  TRUCK_TONES.forEach((mat, k) => place(out, accents, foodTruck(v3(102 + 12 * k, -176, 0), mat, "s")));
   for (let k = 0; k < 8; k++) {
     const x = 103 + 7.5 * k;
     out.push(...table(v3(x, -172.5, 0)), ...chair(v3(x - 0.7, -172.25, 0)), ...chair(v3(x + 1.2, -172.25, 0)));
