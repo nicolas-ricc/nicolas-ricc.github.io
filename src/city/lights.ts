@@ -12,7 +12,8 @@ import { CATALOGUE, type Neighborhood } from "./zoning";
  * Resume lights (spec §7, issue #45): which windows light up (with an exact
  * quota per neighborhood), which are animatable, the neons of the bar street and
  * the bathed facades of the civic buildings. Pure module: city.ts pours the result.
- * What is hidden is decided with `hides` (silhouette on screen) and is not published.
+ * What is hidden is decided with `hides` (silhouette on screen); what is covered (centroid
+ * on another solid's box, contact included) is decided in 3D. Neither is published.
  */
 export interface LitWindow { window: Window; owner: number; color: "windowWarm" | "windowCool"; on: boolean; animable: boolean }
 export interface StreetNeon { accents: Accent[]; color: "amber" | "magenta" | "cyan"; owner: number; slot: Slot }
@@ -55,6 +56,10 @@ function occluded(ts: Target[], { boxes, sbs, hulls }: Boxes): boolean[] {
   return out;
 }
 
+/** `true` if the point lies on or inside the box of a solid other than `own` (x/y with contact, z strictly inside). */
+const covered = (c: Vec3, own: number, boxes: Bounds[]): boolean =>
+  boxes.some((b, i) => i !== own && b.min.x - EPS <= c.x && c.x <= b.max.x + EPS && b.min.y - EPS <= c.y && c.y <= b.max.y + EPS && b.min.z + EPS < c.z && c.z < b.max.z - EPS);
+
 /** Sampling without replacement of `k` elements (partial Fisher–Yates) with the rng. */
 function sample<T>(xs: T[], k: number, rng: Rng): T[] {
   const a = [...xs];
@@ -70,11 +75,14 @@ export function lights(scene: Pick<CityScene, "solids" | "placed">, rng: Rng): C
   const cands: { window: Window; owner: number }[] = [], ts: Target[] = [];
   scene.placed.forEach((p, owner) => p.piece.windows.forEach((window) => { cands.push({ window, owner }); ts.push(target(window.pts, p.solidOffset + window.building)); }));
   const hid = occluded(ts, solids);
-  const vis = cands.filter((_, i) => !hid[i]);
-  const keys = vis.map(() => rng.next());
+  const vis = cands.filter((_, i) => !hid[i]), own = ts.filter((_, i) => !hid[i]).map((t) => t.own);
+  const drawn = vis.map(() => rng.next());
+  // Covered windows are dropped after drawing, each free window keeps its key.
+  const keep = vis.map((c, i) => !covered(centroid(c.window.pts), own[i]!, boxes));
+  const keys = drawn.filter((_, i) => keep[i]);
 
   // Exact quota per neighborhood: by key, the first `on` light up and the warm proportion is split between lit and unlit.
-  const windows: LitWindow[] = vis.map((c) => ({ ...c, color: "windowCool", on: false, animable: false }));
+  const windows: LitWindow[] = vis.filter((_, i) => keep[i]).map((c) => ({ ...c, color: "windowCool", on: false, animable: false }));
   for (const b of neighborhoods) {
     const idx = windows.map((_, i) => i).filter((i) => scene.placed[windows[i]!.owner]!.placed.neighborhood === b).sort((i, j) => keys[i]! - keys[j]!);
     const n = idx.length, { on, warm } = CATALOGUE[b].lights;
