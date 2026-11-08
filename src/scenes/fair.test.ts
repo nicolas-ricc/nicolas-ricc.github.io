@@ -50,7 +50,7 @@ describe("fair", () => {
     expect(s.solids.some((x) => x.kind === "cone" && x.mat === "whitewash" && x.r === 7)).toBe(true); // carousel
     expect(s.solids.some((x) => x.kind === "prism" && x.mat === "whitewash" && x.w === 24 && x.facade)).toBe(true); // arcade
     expect(s.solids.filter((x) => x.kind === "cone" && x.r === 1.6).length).toBeGreaterThanOrEqual(10); // umbrellas
-    expect(s.solids.filter((x) => x.kind === "prism" && x.mat === "stone" && x.h === 6)).toHaveLength(2); // gate
+    expect(s.solids.filter((x) => x.kind === "prism" && x.mat === "stone" && x.h === 6 && x.w === 1.5)).toHaveLength(2); // gate
     expect(s.solids.filter((x) => x.kind === "hull").length).toBeGreaterThanOrEqual(3); // stranded boats
     expect(s.accents.filter((a) => a.kind === "dot").length).toBeGreaterThan(30);
     expect(new Set(s.accents.map((a) => a.color)).size).toBeGreaterThanOrEqual(3); // amber, cyan and magenta

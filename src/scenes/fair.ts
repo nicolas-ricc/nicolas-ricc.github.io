@@ -1,6 +1,7 @@
 import type { Accent } from "../iso/accent";
 import { polyline, v3, type PolyPoint, type Vec2, type Vec3 } from "../iso/geometry";
-import { bounds, type Bounds, type Solid } from "../iso/solids";
+import type { Facade } from "../iso/facade";
+import { bounds, type Bounds, type Plate, type Solid } from "../iso/solids";
 import type { AccentColor, Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { FAIR, bayShoreX, bayWater, fairAt } from "./sprawl-grid";
@@ -14,7 +15,7 @@ import { FAIR, bayShoreX, bayWater, fairAt } from "./sprawl-grid";
  * gondola) are assembled by the animator with the pure builders here.
  * Spec: docs/superpowers/specs/2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md §4.3.
  */
-export interface FairScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; wheelAxis: Vec3; drop: { at: Vec3; h: number }; neon: { marquee: Vec3[]; lift: Vec3[]; column: Vec3[] }; arcadeSigns: [Accent, Accent] }
+export interface FairScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; wheelAxis: Vec3; drop: { at: Vec3; h: number }; neon: { marquee: Vec3[]; lift: Vec3[]; column: Vec3[]; ghost: Vec3[] }; arcadeSigns: [Accent, Accent] }
 
 /** On the southeast beach, between the carousel and the boardwalk: 20 u radius so it reads from the cover. Position chosen so nothing static ends up in front of it on screen (the test's rule). */
 export const WHEEL = { x: 216, y: -204, r: 20, hub: 23, sides: 20 } as const;
@@ -30,11 +31,13 @@ export const ARCADE = { x: 96, y: -192 } as const;
 export const BUMPER = { x: 130, y: -194 } as const;
 /** Amber sign of the gate (south face): the neon marquee lines up with it. */
 const GATE_SIGN = { x0: 86.5, x1: 93.5, y: -177.98, z0: 6.1, z1: 7 } as const;
+/** Ghost train: stone hall on the boardwalk side of the pier, doors and track on its south face. */
+export const GHOST = { x: 98, y: -258, w: 20, d: 12 } as const;
 export const FAIR_MATS: readonly Material[] = ["deck", "whitewash", "rust", "steel", "copper", "stone", "concrete", "plaza", "paving", "sand", "rail", "glass", "hull", "leaf", "leafDark"];
 const BOOTH_MATS: readonly Material[] = ["whitewash", "rust", "copper"];
 const WATER_Z = -1;
 
-const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material, extra: { roof?: "gable"; facade?: { floors: number; cols: number; base?: "glass" } } = {}): Solid => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat, ...extra });
+const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material, extra: { roof?: "gable"; facade?: Facade; plates?: Plate[] } = {}): Solid => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat, ...extra });
 const cyl = (x: number, y: number, z: number, r: number, h: number, mat: Material, sides = 8): Solid => ({ kind: "cylinder", at: v3(x, y, z), r, h, mat, sides });
 const cone = (x: number, y: number, z: number, r: number, h: number, mat: Material, sides = 8): Solid => ({ kind: "cone", at: v3(x, y, z), r, h, mat, sides });
 const dot = (x: number, y: number, z: number, r: number, color: AccentColor): Accent => ({ kind: "dot", at: v3(x, y, z), r, color });
@@ -153,7 +156,22 @@ function neon(drop: { at: Vec3; h: number }): FairScene["neon"] {
     marquee: Array.from({ length: 8 }, (_, k) => v3(GATE_SIGN.x0 + (k * (GATE_SIGN.x1 - GATE_SIGN.x0)) / 7, GATE_SIGN.y - 0.02, 7.6)),
     lift: COASTER_PATH.slice(0, LIFT_SEGMENTS + 1).map((p) => v3(p.x, p.y, p.z + 0.8)),
     column: Array.from({ length: 6 }, (_, k) => v3(DROP.x, DROP.y + 0.8, z0 + (k * (z1 - z0)) / 5)),
+    ghost: Array.from({ length: 8 }, (_, k) => v3(GHOST.x + 0.5 + (k * 19) / 7, GHOST.y + GHOST.d + 1.48, 6.6)),
   };
+}
+
+/** Ghost train: stone hall with a gothic tower on its roof (SE corner), copper marquee, two doors with a track each and a skull sign. */
+export function ghostTrain(out: Solid[], accents: Accent[]): void {
+  const { x, y, w, d } = GHOST, ys = y + d; // ys: south face
+  out.push(prism(x, y, 0, w, d, 6, "stone", { facade: { floors: 1, cols: 5, base: "portico" } }));
+  out.push(prism(x + 16, ys - 4, 6, 4, 4, 8, "stone"), cone(x + 18, ys - 2, 14, 3, 4, "stone", 4)); // tower on the roof: two boxes nested would break the AABB order
+  out.push(prism(x, ys, 6, w, 1.5, 0.4, "copper"));
+  for (const dx of [4, 14]) {
+    out.push(rotBox(x + dx - 0.6, ys + 0.4, 1.2, 0.2, 0.5, 0, 2, "rust"), rotBox(x + dx + 0.6, ys + 0.4, 1.2, 0.2, -0.5, 0, 2, "rust"));
+    out.push({ kind: "strip", path: [{ x: x + dx, y: ys }, { x: x + dx, y: ys + 3 }], width: 0.5, z: 0.05, mat: "rail" });
+  }
+  const sx = x + 18, sz = 7, ps = Array.from({ length: 8 }, (_, k) => { const a = (k / 8) * Math.PI * 2 + Math.PI / 8; return v3(sx + 1.2 * Math.cos(a), ys - 0.02, sz + 1.2 * Math.sin(a)); });
+  accents.push({ kind: "poly", pts: ps, color: "windowCool", alpha: 0.9 });
 }
 
 function dropTower(out: Solid[], accents: Accent[]): void {
@@ -232,7 +250,7 @@ function gate(out: Solid[], accents: Accent[]): void {
   for (const [y0, y1] of [[FAIR.y0 + 8, -182], [-172, FAIR.y1]] as const) if (y1 > y0) out.push(prism(FAIR.x0, y0, 0, 0.3, y1 - y0, 1.2, "steel"));
 }
 
-export function fair(rng: Rng): FairScene {
+export function fair(rng: Rng, opts: { legacyOnly?: boolean } = {}): FairScene {
   const solids: Solid[] = [], accents: Accent[] = [];
   boardwalk(solids, accents);
   pier(solids, accents);
@@ -243,6 +261,7 @@ export function fair(rng: Rng): FairScene {
   const arcadeSigns = arcade(solids);
   booths(solids, accents);
   bumperCars(solids, accents);
+  if (!opts.legacyOnly) ghostTrain(solids, accents);
   beach(solids, rng); // after the static solids: the boats look for free space among them
   gate(solids, accents);
   const drop = { at: v3(DROP.x, DROP.y, 1), h: DROP.h };

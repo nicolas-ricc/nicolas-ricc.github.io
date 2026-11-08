@@ -52,6 +52,7 @@ export function createFairAnim(scene: FairScene, opts: { reducedMotion: boolean 
       const z = dropZ();
       return [
         ...run(scene.neon.marquee, 4, (k) => flip(k, "cyan", "magenta")),
+        ...run(scene.neon.ghost, 4, (k) => flip(k, "magenta", "magentaMid")),
         ...run(scene.neon.lift, 2, () => "cyanMid"),
         ...scene.neon.column.map((at) => (at.z <= z ? { kind: "dot" as const, at, r: NEON_R, color: "magenta" as const } : { kind: "dot" as const, at, r: NEON_OFF_R, color: "magentaBleed" as const })),
       ];
