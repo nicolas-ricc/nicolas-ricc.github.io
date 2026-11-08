@@ -59,7 +59,6 @@ describe("streets", () => {
   it("N-S center lines start at CITY_EDGE.north west of the station land and at ESTUARY_Y0 + 12 for the rest (#319)", () => {
     const northmost = (cx: number) => Math.min(...scene().filter((s) => isVertical(s) && s.path[0]!.x === cx).map((s) => Math.min(s.path[0]!.y, s.path[1]!.y)));
     for (const x of WEST_LANE_X) expect(northmost(x)).toBe(x < STATION_LAND.x0 ? CITY_EDGE.north : ESTUARY_Y0 + 12);
-    expect(northmost(WEST_LANE_X.find((x) => x < STATION_LAND.x0)!)).toBe(CITY_EDGE.north);
     expect(northmost(RING_X)).toBe(ESTUARY_Y0 + 12);
   });
 

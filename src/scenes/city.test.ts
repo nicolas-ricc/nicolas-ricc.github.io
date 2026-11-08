@@ -41,7 +41,7 @@ describe("city", () => {
     expect(JSON.stringify(city(createRng(7), createRng(8), createRng(9)))).not.toBe(JSON.stringify(city(createRng(8), createRng(8), createRng(9))));
   });
 
-  it("everything falls in the Resume zone except the belt jungle, and uses only city materials", () => {
+  it("everything falls in the Resume zone except the cones, and uses only city materials", () => {
     for (const s of all(scene())) {
       const b = bounds(s);
       expect(b.min.x).toBeGreaterThanOrEqual(WORLD.x0 - 3); expect(b.max.x).toBeLessThanOrEqual(ZONE_SPLIT_X + 1); // the district grows up to the west edge of the world

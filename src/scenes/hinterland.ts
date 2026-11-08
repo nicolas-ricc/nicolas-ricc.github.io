@@ -141,7 +141,7 @@ function containerYard(out: Solid[], rng: Rng): void {
   }
 }
 
-/** West sheds, water tank and the green belt's jungle. */
+/** West sheds, water tank and lamps. */
 function westHalls(out: Solid[], accents: Accent[]): void {
   for (const y of [50, 75]) { if (onIndustrial(-190, y, 36, 14)) { out.push(prism(-190, y, 0, 36, 14, 7, "concrete", "gable")); out.push(prism(-152, y + 2, 0, 3, 2, 2, "steel")); } }
   if (onIndustrial(-140, 58, 60, 24)) out.push(prism(-140, 58, 0, 60, 24, 9, "brick")); // brick hall

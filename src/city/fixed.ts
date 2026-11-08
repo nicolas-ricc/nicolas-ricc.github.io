@@ -3,7 +3,7 @@ import { facadeAccents, windowPatches, type Facade } from "../iso/facade";
 import { centroid, v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { bounds, visibleWalls, type Solid } from "../iso/solids";
 import type { Rng } from "../map/seed";
-import { ESTUARY_Y0, QUAY_X, ZONE_SPLIT_Y, islandWestX } from "../map/geo";
+import { ESTUARY_Y0, QUAY_X, islandWestX } from "../map/geo";
 import { AVENUE, BLOCK_W, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_RING, FALLEN_BLOCK, LIT_FLOOR, PROMENADE, PLAZA, ROWS, SIDEWALK, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, inCrater } from "../scenes/city-grid";
 import { jungle, type Rails } from "../scenes/flora";
 import { CAR, awning, bench, bollard, car, chair, dockCrane, fountain, garland, kiosk, lamp, place, puddle, stoneArch, table } from "../kit/props";
@@ -170,8 +170,6 @@ function jungleOnLand(out: Solid[], rng: Rng, rect: { x0: number; x1: number; y0
 }
 
 export function greenery(solids: Solid[], rng: Rng): void {
-  // east bank of the seam strip: terrain there is jungle (x ≥ 306, y < ESTUARY_Y0), so it is planted; the strip west of the station stays empty asphalt (#319)
-  jungleOnLand(solids, rng, { x0: 308, x1: 338, y0: ZONE_SPLIT_Y + 3, y1: ESTUARY_Y0 - 4 }, 10, 0.4);
   for (let y = ROWS[0]; y < COLLAPSED.y; y += 8) {                                                        // east bank of the estuary, old city
     const x0 = Math.ceil(islandWestX(y + 6)) + 2, x1 = EAST_RING.x0 - 3;
     if (x1 - x0 >= 2) jungleOnLand(solids, rng, { x0, x1, y0: y, y1: y + 6 }, rng.int(1, 2));

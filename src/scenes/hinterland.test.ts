@@ -42,7 +42,7 @@ describe("hinterland", () => {
     }
   });
 
-  it("marshalling yard with wagons, sheds, tanks, silos, pylons with cables, stacked containers ", () => {
+  it("marshalling yard with wagons, sheds, tanks, silos, pylons with cables, stacked containers", () => {
     const s = scene();
     expect(s.ground.filter((g) => g.kind === "strip" && g.mat === "rail").length).toBeGreaterThanOrEqual(14); // 5 E-W tracks and 2 N-S, two rails each
     expect(s.solids.filter((x) => x.kind === "prism" && x.w === 8 && x.d === 2.4 && x.h === 3).length).toBeGreaterThanOrEqual(12); // wagons
@@ -94,7 +94,7 @@ describe("hinterland", () => {
   it("trucks at y 84, lamp at (−130, 86), two 36×14 gable sheds at x −190, and no west track strip past y 86", () => {
     const s = scene();
     for (const x of [-120, -108, -96]) expect(s.solids.some((q) => q.kind === "prism" && q.at.x === x && q.at.y === 84 && q.w === 6)).toBe(true);
-    expect(s.solids.some((q) => q.kind === "prism" && q.at.x === -130 - 0 && q.at.y === 86 && q.w === 0.6)).toBe(true);
+    expect(s.solids.some((q) => q.kind === "prism" && q.at.x === -130 && q.at.y === 86 && q.w === 0.6)).toBe(true);
     expect(s.solids.filter((q) => q.kind === "prism" && q.roof === "gable" && q.w === 36 && q.d === 14 && q.at.x === -190)).toHaveLength(2);
     for (const g of s.ground) if (g.kind === "strip" && WEST_TRACKS_X.some((x) => Math.abs(g.path[0]!.x - x) < 1)) expect(Math.max(...g.path.map((p) => p.y))).toBeLessThanOrEqual(86);
   });

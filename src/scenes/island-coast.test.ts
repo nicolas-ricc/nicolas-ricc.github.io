@@ -82,11 +82,13 @@ describe("island coast", () => {
     const breakwater = (s: Solid) => s.kind === "cone" && s.mat === "rock"; // shipyard.ts: the shipyard's only `rock`
     const candidates = [
       ...[...sy.solids, ...sy.ground].filter((s) => onIsland(s) && !breakwater(s)),
-      // of the city, only the seam strip (y < 158): to the south the estuary bank only gains land
+      // of the city, only what lies north of the promenade (y < 158): to the south the estuary bank only gains land
       // (islandWestX ≤ estuaryEast, geo.test.ts) and seawall, bridge and collapse are in the water on purpose
       ...cs.solids.filter((s) => onIsland(s) && bounds(s).max.y < PROMENADE.y0),
     ];
-    expect(candidates.length).toBeGreaterThan(10);
+    // #319 removed the shipyard's southern island content (the scrap, the southern jungle clusters) and the city seam belt;
+    // the remaining shipyard island solids (sheds, silo, east jungle) keep the check from being vacuous.
+    expect(candidates.length).toBeGreaterThan(4);
     const wet = candidates.filter(nearWater).map((s) => { const b = bounds(s); return `${s.kind}/${s.mat} ${b.min.x.toFixed(1)},${b.min.y.toFixed(1)}..${b.max.x.toFixed(1)},${b.max.y.toFixed(1)}`; });
     expect(wet).toEqual([]);
   });
