@@ -3,7 +3,7 @@ import { v3, type Vec3 } from "../iso/geometry";
 import type { Plate } from "../iso/plate";
 import type { Solid } from "../iso/solids";
 import type { Rng } from "../map/seed";
-import { rtgAt, stackContainers, stackHeight } from "../kit/forms/industrial";
+import { quayCraneAt, rtgAt, stackContainers, stackHeight } from "../kit/forms/industrial";
 import { prism } from "./city-pieces";
 
 /**
@@ -83,11 +83,18 @@ export function containerYard(out: Solid[], accents: Accent[], rng: Rng): void {
   }
 }
 
-export function quayCranes(_out: Solid[], _accents: Accent[]): void { /* Task 3 */ }
+/** Two quay cranes facing west, on two long rails (x 281 and 287) running the length of the quay. */
+export function quayCranes(out: Solid[], accents: Accent[]): void {
+  for (const c of QUAY_CRANES) quayCraneAt(c, "w", out, accents);
+  for (const x of CRANE_RAILS.x) {
+    out.push({ kind: "strip", path: [{ x, y: CRANE_RAILS.y0 }, { x, y: CRANE_RAILS.y1 }], width: 0.5, z: 0.02, mat: "rail" });
+  }
+}
 
 export function fittingOutSheds(_out: Solid[]): void { /* Task 4 */ }
 
 export function shipyardEast(out: Solid[], accents: Accent[], weldSpots: Vec3[], rng: Rng): void {
   floatingDock(out, accents, weldSpots);
   containerYard(out, accents, rng);
+  quayCranes(out, accents);
 }
