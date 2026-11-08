@@ -33,6 +33,8 @@ Medido con seed 7 sobre `feature/56-costura-90` (b363425):
 9. **Test de oclusión con casco en pantalla:** un par cuenta como solapado si `overlaps(screenBounds)` **y** `hullsOverlap(screenHull)`; el rectángulo solo da falsos positivos con cajas largas en diagonal (#83). Igual que la rueda en `fair.test.ts`, se exige `isBehind(protegida, nueva) === false`.
 10. **`door` del kit industrial pasa a exportarse** para el portón de los galpones.
 
+- `shipyard-east.ts` importa solo de `src/map/geo.ts`, `src/iso/`, `src/kit/` y `src/map/seed.ts`; **nunca** de `shipyard.ts` (que lo importa a él), para no crear un ciclo.
+
 ## File Structure
 
 - Create `src/scenes/shipyard-east.ts`: constantes y builders de la ribera este.
@@ -81,7 +83,7 @@ Piezas (issue, "Dique flotante"): pontón `prism steel (204, 74, −1.2) 42×14�
 
 **Interfaces:**
 - Consumes: `stackContainers`, `stackHeight`, `rtgAt`, `CONTAINER` de `src/kit/forms/industrial.ts`.
-- Produces: `export const YARD = { x0: 288, y0: 30, x1: 304, y1: 80 } as const`; `export const YARD_LANES_X = [289, 294, 299] as const`; `export const YARD_SLOTS_Y = [32, 39, 46, 53, 60, 67, 74] as const`; `export const RIPRAP_KEEP_OUT: readonly { x0: number; y0: number; x1: number; y1: number }[]` (en esta task, `[YARD]`); `export function containerYard(out: Solid[], accents: Accent[], rng: Rng): void`.
+- Produces: `export const YARD = { x0: 288, y0: 30, x1: 304, y1: 80 } as const`; `export const YARD_LANES_X = [289, 294, 299] as const`; `export const YARD_SLOTS_Y = [32, 39, 46, 53, 60, 67, 74] as const`; `export const RIPRAP_KEEP_OUT: readonly { x0: number; y0: number; x1: number; y1: number }[]`, constante estática armada al cargar el módulo con `YARD` y las huellas de patas de `QUAY_CRANES` (`x at.x − 3.4..at.x + 3.4`, `y at.y − 3.4..at.y + 3.4`): `fittingOut()` corre antes que `shipyardEast` y la lee ya completa. Por eso `QUAY_CRANES` se declara en esta task; `export function containerYard(out: Solid[], accents: Accent[], rng: Rng): void`.
 
 Piezas: losa `prism concrete (288, 30, 0) 16×50×0.2`; 21 huecos (carril × posición); el rng elige dos huecos distintos para los straddle carriers; en los otros 19 `stackContainers((x, y, 0.2), n, "y", rng)` con `n = stackHeight(rng)`, limitado a 3 si el hueco es de los carriles 2–3 en `y 46` o `53` (decisión 4); RTG `rtgAt(292.1, 302.1, 50, out, 0.2)`; straddle carrier en hueco `(x, y)`, con `cx = x + 1.2`: cuatro patas `prism steel 0.4×0.4×5` en las esquinas del bastidor, bastidor `prism safety (cx − 1.5, y − 0.5, 5.2) 3×7×0.6`, cabina `prism steel 1×1×1` en `z 5.8` sobre el extremo norte del bastidor; garita `prism concrete (296, 81, 0) 3×3×2.8` con `poly windowCool alpha 0.85` en su cara sur (`y 84`, `x 296.8..298.2`, `z 1.2..2.2`); faroles: poste `prism steel 0.6×0.6×5` en `(288.5, 30.5, 0.2)` y `(303, 79, 0.2)` con `dot cyan r 1.2` en `(+0.3, +0.3, 5.2)`. En `shipyard.ts`, `fittingOut()` salta toda roca cuya caja corte una caja de `RIPRAP_KEEP_OUT`.
 
@@ -90,12 +92,12 @@ Piezas: losa `prism concrete (288, 30, 0) 16×50×0.2`; 21 huecos (carril × pos
   - `"RTG with four legs 10 tall"`: cuatro prism steel `1.2×1.2×7.8` cuyo `max.z` es `10.2` (z 0.2 + 10).
   - `"two straddle carriers on slots without a stack"`: dos prism `safety` `3×7×0.6`; el hueco bajo cada uno no tiene contenedores.
   - `"gatehouse with a window"`: prism concrete `3×3×2.8` y un accent `poly windowCool` con `alpha 0.85`.
-  - `"nothing overlaps"`: por pares, ninguna intersección de cajas con interior > 1e-9 en x, y y z.
+  - `"nothing overlaps"`: por pares, ninguna intersección de cajas con interior > 1e-9 en x, y y z, con `createRng(7)` y con las seeds 1..40 (el rng elige los huecos de los straddle carriers).
   - `"inside x 288..304, y 30..84 and under z 10.6"`.
   - `"the riprap leaves the yard slab"` (en `shipyard.test.ts`, "fitting-out quay"): ninguna `cone rock` corta `YARD`; rocas `> 20`.
 - [ ] **Step 2:** correr → FAIL.
 - [ ] **Step 3:** implementar `containerYard`, `RIPRAP_KEEP_OUT` y el salto en `fittingOut()`; `shipyardEast` llama `containerYard(out, accents, rng)`.
-- [ ] **Step 4:** `npx vitest run src/scenes/shipyard-east.test.ts src/scenes/shipyard.test.ts` → PASS.
+- [ ] **Step 4:** `npx vitest run src/scenes/shipyard-east.test.ts src/scenes/shipyard.test.ts src/scenes/city-budget.test.ts` → PASS.
 - [ ] **Step 5:** commit `feat(#323): container yard`.
 
 ### Task 3: Grúas de muelle
@@ -104,7 +106,8 @@ Piezas: losa `prism concrete (288, 30, 0) 16×50×0.2`; 21 huecos (carril × pos
 
 **Interfaces:**
 - Consumes: `quayCraneAt` (industrial.ts), `RIPRAP_KEEP_OUT` (Task 2).
-- Produces: `export const QUAY_CRANES = [{ x: 284, y: 34 }, { x: 284, y: 62 }] as const`; `export const CRANE_RAILS = { x: [281, 287], y0: 31, y1: 82 } as const`; `export function quayCranes(out: Solid[], accents: Accent[]): void`; `RIPRAP_KEEP_OUT` suma las huellas de patas de cada grúa (`x 280.6..287.4`, `y at.y − 3.4..at.y + 3.4`).
+- Consumes también `QUAY_CRANES = [{ x: 284, y: 34 }, { x: 284, y: 62 }]` (declarada en Task 2).
+- Produces: `export const CRANE_RAILS = { x: [281, 287], y0: 31, y1: 82 } as const`; `export function quayCranes(out: Solid[], accents: Accent[]): void`.
 
 - [ ] **Step 1: tests (fallan)**, `describe("quay cranes")`:
   - `"two gantries with a cyan light at the west tip"`: dos `dot cyan` de `quayCranes` con `at.x < 280`.
@@ -123,7 +126,7 @@ Piezas: losa `prism concrete (288, 30, 0) 16×50×0.2`; 21 huecos (carril × pos
 - Consumes: `ribs` (`src/iso/plate.ts`), `shadeTone` (`src/iso/light.ts`), `door` (exportada ahora desde industrial.ts, firma sin cambios: `door(wall, len, width, z0, h, mat): Plate`).
 - Produces: `export function fittingOutSheds(out: Solid[]): void`.
 
-Piezas: `prism(x, 24, 0, 8, 56, 6, "sheetTeal", { roof: "gable", roofMat: "sheetTeal" })` para `x 304` y `316`, con `plates`: `ribs(1, 56, 0, 6, shadeTone(v3(1,0,0)) === "lit", "sheetTeal")`, `ribs(2, 8, 0, 6, shadeTone(v3(0,1,0)) === "lit", "sheetTeal")` y `door(2, 8, 4, 0, 4, "sheetTeal")` (último). `fittingOut()` ya no los emite; el silo `(310, 86)` sigue en `shipyard.ts`.
+Piezas: `prism(x, 24, 0, 8, 56, 6, "sheetTeal", { roof: "gable", roofMat: "sheetTeal" })` (el `prism` de `city-pieces.ts`; su `Extra` no lleva placas, se asignan después en `.plates`, como `sheetHall`) para `x 304` y `316`, con `plates`: `ribs(1, 56, 0, 6, shadeTone(v3(1,0,0)) === "lit", "sheetTeal")`, `ribs(2, 8, 0, 6, shadeTone(v3(0,1,0)) === "lit", "sheetTeal")` y `door(2, 8, 4, 0, 4, "sheetTeal")` (último). `fittingOut()` ya no los emite; el silo `(310, 86)` sigue en `shipyard.ts`.
 
 - [ ] **Step 1: tests (fallan)**: en `shipyard.test.ts` "fitting-out quay" exige 2 gables `sheetTeal` con `at.x > 300`; en `shipyard-east.test.ts` `"sheds carry ribs on walls 1 and 2 and a door"`: placas con `toneOffset` en `wall 1` y `wall 2`, y una placa `rect` `toneOffset −2` en `wall 2`.
 - [ ] **Step 2:** correr → FAIL.
@@ -155,3 +158,23 @@ Piezas: `prism(x, 24, 0, 8, 56, 6, "sheetTeal", { roof: "gable", roofMat: "sheet
 - [ ] **Step 3:** en `EXHIBITS`, después de `paso-a-nivel`: región `dique-flotante` `{ x0: 202, y0: 72, x1: 248, y1: 90 }`, región `patio-contenedores` `{ x0: 278, y0: 27, x1: 305, y1: 84 }`, pieza `grua-muelle` (`quayCraneAt({ x: 0, y: 0 }, "w", out, accents)`, `pad: "concrete"`), grupo `shipyard`. `darsena.box.y1 = 72`. `h` de las dos regiones nuevas y de `punta-norte` (que ahora recorta una grúa y pilas): el menor entero que pasa framing y neighbors, medido con `measure` de `exhibits.test.ts`; anotar el valor en el comentario como en `punta-norte`.
 - [ ] **Step 4:** correr → PASS; luego `npm test` y `npm run typecheck` completos.
 - [ ] **Step 5:** commit `feat(#323): storybook exhibits`.
+
+## Assumptions
+
+Decisiones técnicas sin cita literal en el issue (las restricciones que las fuerzan sí la tienen); van a la descripción del PR.
+
+- Rieles de grúa en `x 281/287` y `y 31..82` (rechazado: `280.5/285.5` y `y 28`, que no caen bajo las patas y cruzan el agua de la caleta). Restricción: ISSUE "sobre dos rieles `strip rail`".
+- RTG sobre carriles 2 y 3 (rechazado: `rtgAt(288.4, 296.6, 50)`, cuya pata pisa el carril 1). Restricciones: ISSUE "patas afuera de los carriles" y "Nada se solapa (AABB)".
+- La escollera salta rocas bajo la losa y las patas (rechazado: mover el patio o las grúas más allá de lo que el issue permite). Restricción: ISSUE "ninguna pata toca una roca (`cone rock`)".
+- Test del patio en `y 30..84` (rechazado: `30..82`, incompatible con la garita en `(296, 81)` 3×3). Restricción: ISSUE región `patio-contenedores` `y1: 84`.
+- Cian +6 (ISSUE "dos pórticos con `dot cyan` en la punta" + cuatro faroles).
+- Torres del dique contra la cara sur del muro norte (rechazado: solaparlas con el muro, que `sortByDepth` no puede ordenar).
+- `door` exportada desde `industrial.ts` (rechazado: copiar la función).
+- Test de oclusión con `hullsOverlap(screenHull)` además de `overlaps(screenBounds)` (rechazado: solo el rectángulo, con falsos positivos documentados en `depth.ts`, #83).
+
+## Grilling
+
+- Rondas: 1 (los cambios fueron aclaraciones: `RIPRAP_KEEP_OUT` estático, regla de imports, test multi-seed, presupuesto en Task 2; sin cambio de costura).
+- Preguntas: 18. Fuentes: ISSUE 7, CODE 14, DOC 2, medición propia 5 (algunas respuestas citan más de una); NO SOURCE → supuesto técnico: 8 (lista arriba); ambigüedad de spec: 0; fuera de alcance: 0.
+- Mediciones (seed 7, b363425): 42 189 polígonos estáticos (tope 56 000); astillero 381 sólidos elevados; `terrainAt` = `water` en `(205.5, 77)`, `(244.5, 77)`, `(225, 74.75)`, `(225, 87.25)`, `(225, 81)`; los rieles `x 281` y `x 287` (±0.25) son tierra en todo `y 31..82`.
+- Issues abiertos: ninguno.
