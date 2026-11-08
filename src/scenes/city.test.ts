@@ -200,7 +200,8 @@ describe("city", () => {
     for (const l of lamps) {
       if (l.kind !== "dot") continue;
       const onAvenue = l.at.y >= AVENUE.y0 - 3 && l.at.y <= AVENUE.y1 + 3, onPromenade = l.at.x >= PROMENADE.x0, onPlaza = inRect({ min: l.at, max: l.at }, PLAZA), onInlet = l.at.x >= DARSENA.x0 - 2 && l.at.x <= DARSENA.x1 + 2 && l.at.y >= DARSENA.y0 - 2 && l.at.y <= DARSENA.y1 + 2; // the two lamps of the inlet walls (#326)
-      expect(onAvenue || onPromenade || onPlaza || onInlet || inFootbridge(l.at.x, l.at.y) || inBlockXY(l.at.x, l.at.y)).toBe(true); // the kit recipes bring their own lights (construction site, helipad, beacon, station lamps)
+      const onYard = l.at.y === 150.3 && [-39.7, 0.3, 40.3, 80.3].includes(l.at.x); // the four lamps of the freight yard (#325)
+      expect(onAvenue || onPromenade || onPlaza || onInlet || onYard || inFootbridge(l.at.x, l.at.y) || inBlockXY(l.at.x, l.at.y)).toBe(true); // the kit recipes bring their own lights (construction site, helipad, beacon, station lamps)
     }
   });
 
@@ -241,7 +242,7 @@ describe("city", () => {
 
   it("cars: a single size, they do not fall on a block or a crater, and none overlaps another", () => {
     const s = scene();
-    const cars = s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism" && (x.mat === "steel" || x.mat === "rust") && x.h === 1.2 && !(x.at.x === MARKET_SCALE.x && x.at.y === MARKET_SCALE.y && x.w === MARKET_SCALE.w)); // not the fish market scale (#326)
+    const cars = s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism" && (x.mat === "steel" || x.mat === "rust") && x.h === 1.2 && !(x.at.x === MARKET_SCALE.x && x.at.y === MARKET_SCALE.y && x.w === MARKET_SCALE.w) && !(x.w === 1.5 && x.d === 3)); // not the fish market scale (#326) nor the buffer stop of the siding (#325)
     expect(cars.length).toBeGreaterThanOrEqual(20);
     expect(new Set(cars.map((c) => `${c.w}x${c.d}x${c.h}`))).toEqual(new Set([`${CAR.w}x${CAR.d}x1.2`]));
     for (const c of cars) {
@@ -257,7 +258,7 @@ describe("city", () => {
 
   it("the main line crosses the strip: two rails and a ballast bed from WORLD.x0 to the station land (#319)", () => {
     const rails = scene().ground.filter((g) => g.kind === "strip" && g.mat === "rail");
-    expect(rails.filter((g) => g.kind === "strip" && g.width === 0.5).map((g) => g.kind === "strip" && g.path[0]!.y).sort()).toEqual([131, 134]);
+    expect(rails.filter((g) => g.kind === "strip" && g.width === 0.5 && g.path[0]!.x === WORLD.x0).map((g) => g.kind === "strip" && g.path[0]!.y).sort()).toEqual([131, 134]);
     expect(rails.some((g) => g.kind === "strip" && g.width === 5)).toBe(true);
   });
 

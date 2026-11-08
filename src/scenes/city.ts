@@ -9,7 +9,7 @@ import { prism, PLINTH_H } from "./city-pieces";
 import { blocks } from "./city-grid";
 import { lights, WINDOW_ALPHA, type CityLights } from "../city/lights";
 import { streets } from "../city/streets";
-import { railLands } from "../city/rail-lands";
+import { freightYard, railLands } from "../city/rail-lands";
 import { harbor } from "../city/harbor";
 import { bridge, collapsed, cars, greenery, promenade, plazaAndTower, westQuay, type TowerLights } from "../city/fixed";
 import { FOOTBRIDGE_LOT, NO_PLINTH, WATER_TOWER_BLOCK, assign, isBare, waterTowerLot, type Placed } from "../city/zoning";
@@ -58,6 +58,7 @@ export function city(rng: Rng, districtRng: Rng, lightsRng: Rng): CityScene {
   add(recipe("footbridge")(FOOTBRIDGE_LOT, rng, STYLES.residential));
   streets(ground, solids, accents);
   railLands(ground, solids);
+  freightYard(ground, solids, accents, rng);
   bridge(solids, accents);
   westQuay(solids, accents);
   harbor(solids, accents, rng);
