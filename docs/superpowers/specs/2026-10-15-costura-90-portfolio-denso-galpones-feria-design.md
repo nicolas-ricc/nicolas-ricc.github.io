@@ -731,12 +731,21 @@ host es compartido: la carga sube a 9–18 entre cargas por procesos de fuera de
 contenedor. El redibujo y el bloom necesitan 60 frames (≈ 30 s reales a 2 fps),
 así que se leen en cargas largas de 60 s.
 
+**Lecturas fuera de compuerta.** La serie del recorte 1 se tomó antes de la
+compuerta de CPU ociosa, solo con la carga de 1 min, y su 9.ª carga corrió con
+carga 21.08. En la base, `baselab-8` (250.0 ms, carga 20.97) y `basesite-1`
+(740.2 ms, carga 7.39) pasaron la compuerta solo por CPU ociosa, sin bajar de 6
+en tres minutos. Las tres lecturas quedan en las medianas publicadas; sin ellas
+la del recorte 1 es 307.4 ms (8 cargas), la base del lab 455.5 ms (7) y la del
+sitio 714.6 ms (4): todas siguen sobre el tope.
+
 **Primera pasada, antes de los recortes** (44 862 polígonos estáticos): lab
 mediana de 10 = 271.8 ms (255–273 en siete cargas, 502–523 en tres); sitio
 mediana de 5 = 478.1 ms (404–877); peor redibujo 33.3 ms en una corrida del lab
 cuyo bloom había caído a 15.3 ms, y 14.3–18.7 ms en las otras siete ventanas.
 
-**Primer dibujo del lab, mediana después de cada recorte:**
+**Primer dibujo del lab, mediana después de cada recorte** (el sitio se midió
+solo al final, después del recorte 3):
 
 | Después de | Polígonos | Mediana lab | Valores (ms) |
 |---|---|---|---|
@@ -755,7 +764,7 @@ en `860a582`, medida con el mismo protocolo en el mismo host):
 |---|---|---|---|
 | Polígonos estáticos | ≤ 56 000 | 44 789 | 41 507 |
 | Primer dibujo lab, mediana de 10 | ≤ 260 ms | 476.0 ms (255.8–518.0; bimodal ≈ 265 / ≈ 510) | 437.3 ms (mediana de 8; 244.9–481.8) |
-| Primer dibujo sitio, mediana de 5 | ≤ 300 ms | 799.1 ms (370.1–887.7) | 715.1 ms (690.9–811.0) |
+| Primer dibujo sitio, mediana de 5 (4 cargas cortas + la 1.ª larga) | ≤ 300 ms | 799.1 ms (370.1–887.7; con la 2.ª larga, 765.1, la mediana de 6 es 782.1) | 715.1 ms (690.9–811.0) |
 | Peor redibujo en 5 s, lab (3 cargas largas, 6 ventanas) | ≤ 22 ms | 20.1 ms (15.1–20.1) | no medido |
 | Bloom lab | ≤ 15 ms, `on` | 14.2 / 14.0 / 13.7 ms, `on` ×3 | no medido |
 | Bloom sitio | ≤ 15 ms, `on` | 14.1 / 14.1 ms, `on` ×2 | no medido |

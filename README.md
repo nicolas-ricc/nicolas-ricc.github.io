@@ -51,16 +51,16 @@ meet. The factory takes the place the shipyard sheds had,
 between the rail yard and the transfer street, in front of the siding, with the
 inclined belt going down to the truck yard (the long belt is gone); the
 assembly halls, the workshops and the material yard of the shipyard lie to the
-north, behind the factory. The seam between Portfolio and Resume lies at
-`y 90` (`ZONE_SPLIT_Y`), with the terminal station as the exception: its
-land (`STATION_LAND`, the station land) stays Portfolio. South of the seam,
-west of the station, a new strip of Resume
-holds a row of reconverted warehouses with the covered market (row 92), a
-freight row and the rail lands, a fenced band around the west track with a
-siding and a parked freight train; on the east bank, the dock inlet has a
-fish market, a food hall and fishing boats. The shipyard gains a floating dock,
-a container yard, quay cranes and sheet metal. The fair gains a ghost train, a
-mirror house, a slide, a log flume, booths and food trucks.
+north, behind the factory. The seam between Portfolio and Resume lies at `y 90`
+(`ZONE_SPLIT_Y`), with the terminal station as the exception: its land
+(`STATION_LAND`, the station land) stays Portfolio. South of the seam, west of
+the station, a new strip of Resume holds a row of reconverted warehouses with
+the covered market (row 92), a freight row and the rail lands, a fenced band
+around the west track with a siding and a parked freight train; on the east
+bank, the dock inlet has a fish market, a food hall and fishing boats. The
+shipyard gains a floating dock, a container yard, quay cranes and sheet metal.
+The fair gains a ghost train, a mirror house, a slide, a log flume, booths and
+food trucks.
 
 The runtime that builds and animates that world lives in `src/world/` and is shared by the
 site and the lab: `stage.ts` (layers, veils and lights per zone: each light, static or
@@ -124,9 +124,9 @@ or `j`/`k` move to the next or the previous one; `g`, `h` and `a` hide or
 show ground, shadows and accents; `6` rotates the bloom, `?bloom=` forces it and
 `?speed=` scales the animation clock up to 100 (`?speed=0`
 freezes it; above 100 it is 1). The seam at 90 added ten exhibits:
-`#dique-flotante`, `#patio-contenedores` and `#grua-muelle` (shipyard), `#tren-fantasma`, `#casa-espejos`, `#tobogan` and
-`#tronco-acuatico` (fair), and `#galpones`, `#playa-carga` and
-`#mercado-pescado` (city).
+`#dique-flotante`, `#patio-contenedores` and `#grua-muelle` (shipyard),
+`#tren-fantasma`, `#casa-espejos`, `#tobogan` and `#tronco-acuatico` (fair),
+and `#galpones`, `#playa-carga` and `#mercado-pescado` (city).
 
 The lights' bloom is not part of the first draw: the site and the lab
 enable it after Pixi's first real render (the `postrender` of

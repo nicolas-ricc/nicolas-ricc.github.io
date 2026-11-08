@@ -91,11 +91,11 @@ export function serviceStrip(out: Solid[], rng: Rng, protect: Bounds[]): Solid[]
   const pallets = (x: number, y: number) => Array.from({ length: rng.int(1, 4) }, (_, k) => prism(x, y, k * 0.5, 1.2, 1, 0.5, "deck"));
   const items: { fw: number; fd: number; fh: number; build: (x: number, y: number) => Solid[] }[] = [
     // half of the 12 pieces of #324: budget cut 3 of #328
-    ...[0].map(() => ({ fw: 4, fd: 3, fh: 2.6, build: (x: number, y: number) => storeroom({ x, y, w: 4, d: 3, z: 0, open: ["s"], maxH: 3 }, rng, STYLES.industrial).solids })),
-    ...[0].map(() => ({ fw: 2, fd: 3, fh: 2, build: (x: number, y: number) => [prism(x, y, 0, 2, 3, 2, "rust")] })),
+    { fw: 4, fd: 3, fh: 2.6, build: (x: number, y: number) => storeroom({ x, y, w: 4, d: 3, z: 0, open: ["s"], maxH: 3 }, rng, STYLES.industrial).solids },
+    { fw: 2, fd: 3, fh: 2, build: (x: number, y: number) => [prism(x, y, 0, 2, 3, 2, "rust")] },
     ...[0, 1].map(() => ({ fw: 1.2, fd: 1, fh: 2, build: pallets })),
-    ...[0].map(() => ({ fw: 1, fd: 1, fh: 2.2, build: (x: number, y: number) => [prism(x, y, 0, 1, 1, 2.2, "boxBlue")] })),
-    ...[0].map(() => ({ fw: 6, fd: 2.4, fh: 2.6, build: (x: number, y: number) => stackContainers(v3(x, y, 0), 1, "x", rng) })),
+    { fw: 1, fd: 1, fh: 2.2, build: (x: number, y: number) => [prism(x, y, 0, 1, 1, 2.2, "boxBlue")] },
+    { fw: 6, fd: 2.4, fh: 2.6, build: (x: number, y: number) => stackContainers(v3(x, y, 0), 1, "x", rng) },
   ];
   const taken: Plan[] = out.map((s) => planOf([s]));
   const hides = (b: Bounds) => protect.some((l) => overlaps(screenBounds(l), screenBounds(b)) && isBehind(l, b));
