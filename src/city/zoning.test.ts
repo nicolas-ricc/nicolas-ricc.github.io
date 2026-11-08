@@ -3,14 +3,14 @@ import { createRng } from "../map/seed";
 import { RECIPES } from "../kit/index";
 import { LANDMARK_MAX_H } from "../kit/piece";
 import { PLINTH_H } from "../scenes/city-pieces";
-import { BLOCK_D, BLOCK_W, SIDEWALK, SITE, STREET, TOWER, WEST_QUAY, blocks, estuaryEast, type Block } from "../scenes/city-grid";
+import { BLOCK_D, BLOCK_W, ROWS, SIDEWALK, SITE, STREET, TOWER, WEST_QUAY, blocks, estuaryEast, type Block } from "../scenes/city-grid";
 import { zoneRng } from "../scenes/world";
 import { SEED } from "../map/seed";
-import { CATALOGUE, FIXED, FOOTBRIDGE_LOT, MAX_BUILDING_H, MAX_DISTRICT_H, NO_PLINTH, WATER_TOWER_BLOCK, assign, neighborhoodOf, maxDistrictHeight, maxHeightFor, openSides, waterTowerLot, type Neighborhood, type Placed } from "./zoning";
+import { CATALOGUE, FIXED, FRONT_CAP_H, FOOTBRIDGE_LOT, MAX_BUILDING_H, MAX_DISTRICT_H, NO_PLINTH, WATER_TOWER_BLOCK, assign, neighborhoodOf, maxDistrictHeight, maxHeightFor, openSides, waterTowerLot, type Neighborhood, type Placed } from "./zoning";
 
 const key = (b: { x: number; y: number }): string => `${b.x},${b.y}`;
 const blockAt = (x: number, y: number): Block => blocks().find((b) => b.x === x && b.y === y && b.kind !== "plaza")!;
-const cells = (neighborhood: Neighborhood): string[] => blocks().filter((b) => b.kind !== "plaza" && neighborhoodOf(b) === neighborhood).map(key).sort();
+const cells = (neighborhood: Neighborhood): string[] => blocks().filter((b) => b.kind !== "plaza" && b.kind !== "freight" && neighborhoodOf(b) === neighborhood).map(key).sort(); // freight lots get no recipe (assign skips them)
 const sorted = (xs: [number, number][]): string[] => xs.map(([x, y]) => key({ x, y })).sort();
 const worldAssign = (): Placed[] => assign(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1));
 const sceneAssign = (): Placed[] => assign(createRng(7), createRng(8));
@@ -30,10 +30,12 @@ describe("zoning", () => {
 
   it("downtown, residential, civic, riverside and district according to the table", () => {
     expect(cells("downtown")).toEqual(sorted([[72, 164], [72, 188], [42, 218], [72, 242], [102, 242], [132, 242], [162, 242]]));
-    expect(cells("residential")).toEqual(sorted([[12, 164], [12, 188], [12, 218], [12, 242], [42, 164], [42, 188]]));
+    // row 92 is residential for now (#320): its own neighborhood comes with #322
+    expect(cells("residential")).toEqual(sorted([[12, 164], [12, 188], [12, 218], [12, 242], [42, 164], [42, 188], [-48, 92], [-18, 92], [12, 92], [42, 92], [72, 92]]));
     expect(cells("civic")).toEqual(sorted([[72, 218], [162, 218], [42, 242]]));
     expect(neighborhoodOf(blocks().find((b) => b.kind === "plaza")!)).toBe("civic");
     expect(cells("riverside")).toEqual(blocks().filter((b) => b.bank === "east").map(key).sort());
+    expect(cells("riverside")).toEqual(expect.arrayContaining(["280,116", "280,140"])); // provisional (#320): the harbor comes later
     expect(neighborhoodOf(blocks().find((b) => b.kind === "collapsed")!)).toBe("riverside");
     expect(cells("district")).toEqual(blocks().filter((b) => b.kind === "district" || b.kind === "site").map(key).sort());
     expect(cells("district")).toHaveLength(24);
@@ -104,10 +106,24 @@ describe("zoning", () => {
     expect(openSides(blockAt(12, 164))).toEqual([]);
   });
 
+  it("new strip (#320): row 92 opens south, (280, 116) north and west; the plaza-front cap goes by y", () => {
+    for (const b of blocks().filter((x) => x.y === ROWS[0])) expect(openSides(b), key(b)).toContain("s");
+    expect(openSides(blockAt(12, 92))).toEqual(["s"]);
+    expect(openSides(blockAt(280, 116))).toEqual(expect.arrayContaining(["n", "w"]));
+    expect(openSides(blockAt(280, 116))).toHaveLength(2);
+    expect(openSides(blockAt(280, 140))).toEqual(["w"]);
+    expect(maxHeightFor(blockAt(102, 242))).toBe(FRONT_CAP_H);
+    expect(maxHeightFor(blockAt(42, 92))).toBe(MAX_BUILDING_H);
+  });
+
+  it("assign never places a freight lot (#320)", () => {
+    for (const placed of [worldAssign(), sceneAssign()]) expect(placed.some((p) => p.block.kind === "freight")).toBe(false);
+  });
+
   it("assign is deterministic, skips plaza and collapse, and builds lots with sidewalk, plinth and cap", () => {
     expect(JSON.stringify(sceneAssign())).toBe(JSON.stringify(sceneAssign()));
     const placed = sceneAssign();
-    expect(placed.map((p) => `${key(p.block)},${p.block.kind}`)).toEqual(blocks().filter((b) => b.kind !== "plaza" && b.kind !== "collapsed").map((b) => `${key(b)},${b.kind}`));
+    expect(placed.map((p) => `${key(p.block)},${p.block.kind}`)).toEqual(blocks().filter((b) => b.kind !== "plaza" && b.kind !== "collapsed" && b.kind !== "freight").map((b) => `${key(b)},${b.kind}`));
     for (const p of placed) {
       const b = p.block, fixed = FIXED.some((f) => key(f) === key(b));
       expect(p.neighborhood).toBe(neighborhoodOf(b));

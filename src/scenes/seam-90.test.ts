@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
-import { bounds, isFlat, type Solid } from "../iso/solids";
+import { bounds, isFlat, type Bounds, type Solid } from "../iso/solids";
+import { CAR } from "../kit/props";
 import { CELL, ESTUARY_Y0, QUAY_W, QUAY_X, SEAM_CY, STATION_LAND, WORLD, ZONE_SPLIT_Y, eastBank, estuaryEast, inStationLand, worldZoneAt } from "../map/geo";
 import { SEED } from "../map/seed";
 import { veilCells } from "../world/veil";
 import { boxFrame, zoneFrame } from "../world/frame";
-import { CITY_EDGE, estuaryReaches } from "./city-grid";
+import { CITY_EDGE, ROWS, blocks, estuaryReaches } from "./city-grid";
 import { EXCAVATOR, excavatorBox } from "./excavator";
 import { RAIL_YARD_X } from "./factory";
 import { WEST_RAIL_X0, WEST_TRACKS_X } from "./hinterland";
@@ -192,14 +193,18 @@ describe("Resume after the seam (#319)", () => {
     for (const y of RAIL_Y) expect(ci.ground.some((g) => g.kind === "strip" && g.mat === "rail" && g.width === 0.5 && g.path[0]!.y === y && g.path[0]!.x === WORLD.x0 && g.path[1]!.x === STATION_LAND.x0), `rail ${y}`).toBe(true);
     expect(ci.ground.some((g) => g.kind === "strip" && g.mat === "rail" && g.width === 5 && g.path[0]!.y === 132.5)).toBe(true);
     const sleepers = prisms(ci.solids).filter((p) => p.mat === "rust" && p.w === 1 && p.d === 5 && p.h === 0.3 && p.at.y === 130);
-    expect(sleepers.map((p) => p.at.x)).toEqual(Array.from({ length: 39 }, (_, i) => -58 + 4 * i));
+    expect(sleepers.map((p) => p.at.x)).toEqual(Array.from({ length: 39 }, (_, i) => -58 + 4 * i).filter((x) => ![-22, 6, 10, 38, 66, 70].includes(x))); // none under the four level crossings (#320)
   });
 
-  it("the new strip west of the station is empty asphalt: only the main line between y 90 and the first row", () => {
+  it("the new strip west of the station holds only what #320 allows: row 92 and freight blocks with their buildings, cars, rail lands", () => {
+    const strip = blocks().filter((k) => k.x + k.w <= STATION_LAND.x0 && k.y >= 90 && k.y < 164);
+    const inBlock = (b: Bounds) => strip.some((k) => b.min.x >= k.x - 0.5 && b.max.x <= k.x + k.w + 0.5 && b.min.y >= k.y - 0.5 && b.max.y <= k.y + k.d + 0.5);
+    const isCar = (s: Solid) => s.kind === "prism" && s.w === CAR.w && s.d === CAR.d && s.h === 1.2;
+    const onRails = (b: Bounds) => b.min.y >= 128 && b.max.y <= 138.2 && b.max.z <= 3; // (south post ends at 137.8 + 0.3 = 138.1) main line, sleepers, fences, crossings, posts
     for (const s of raised(ci.solids)) {
       const b = bounds(s);
       if (b.min.x >= STATION_LAND.x0 || b.max.y > 158 || b.min.y < 90) continue;
-      expect(s.kind === "prism" && s.mat === "rust" && s.h === 0.3, `${s.kind}/${s.mat} ${b.min.x},${b.min.y}`).toBe(true);
+      expect(inBlock(b) || isCar(s) || onRails(b), `${s.kind}/${s.mat} ${b.min.x},${b.min.y}`).toBe(true);
     }
   });
 
@@ -208,13 +213,15 @@ describe("Resume after the seam (#319)", () => {
     expect(Math.min(...walls.map((p) => p.at.y))).toBe(ESTUARY_Y0);
   });
 
-  it("street lines: N-S from 90 only west of the station, from 158 elsewhere; no E-W line north of the first row", () => {
+  it("street lines (#320): N-S from 90 west of the station skipping 128..137, others from 158; E-W north of ROWS[1] only y 113 and 137", () => {
     const lines = ci.ground.filter((g): g is Solid & { kind: "strip" } => g.kind === "strip" && g.width === 0.3);
     for (const g of lines) {
       const [a, b] = [g.path[0]!, g.path[g.path.length - 1]!];
-      const minY = Math.min(a.y, b.y);
-      if (Math.abs(a.x - b.x) < 1e-9) expect(minY, `N-S ${a.x}`).toBeGreaterThanOrEqual(a.x < STATION_LAND.x0 ? 90 : ESTUARY_Y0 + 12);
-      else expect(minY, `E-W ${a.y}`).toBeGreaterThan(164);
+      const minY = Math.min(a.y, b.y), maxY = Math.max(a.y, b.y);
+      if (Math.abs(a.x - b.x) < 1e-9) {
+        expect(minY, `N-S ${a.x}`).toBeGreaterThanOrEqual(a.x < STATION_LAND.x0 ? 90 : ESTUARY_Y0 + 12);
+        if (a.x < STATION_LAND.x0) expect(maxY <= 128 || minY >= 137, `N-S ${a.x} crosses the track`).toBe(true);
+      } else if (minY < ROWS[1]!) expect([113, 137], `E-W ${a.y}`).toContain(a.y);
     }
     expect(lines.some((g) => g.path[0]!.x < STATION_LAND.x0 && Math.abs(g.path[0]!.x - g.path[1]!.x) < 1e-9 && Math.min(g.path[0]!.y, g.path[1]!.y) === 90)).toBe(true);
   });

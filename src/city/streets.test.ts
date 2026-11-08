@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Vec2 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
-import { ESTUARY_Y0, STATION_LAND } from "../map/geo";
-import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, EAST_COLS, EAST_RING, PLAZA, ROWS, STREET, WEST_COLS, inCrater } from "../scenes/city-grid";
+import { ESTUARY_Y0, STATION_LAND, eastBank } from "../map/geo";
+import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, EAST_COLS, EAST_RING, HARBOR, PLAZA, RING_Y0, ROWS, STREET, WEST_COLS, inCrater } from "../scenes/city-grid";
 import { streets } from "./streets";
 
 type Strip = Solid & { kind: "strip" };
@@ -56,10 +56,38 @@ describe("streets", () => {
     }
   });
 
-  it("N-S center lines start at CITY_EDGE.north west of the station land and at ESTUARY_Y0 + 12 for the rest (#319)", () => {
+  it("N-S lines start at CITY_EDGE.north west of the station land, the ring at RING_Y0 and the rest at ESTUARY_Y0 + 12 (#319, #320)", () => {
     const northmost = (cx: number) => Math.min(...scene().filter((s) => isVertical(s) && s.path[0]!.x === cx).map((s) => Math.min(s.path[0]!.y, s.path[1]!.y)));
     for (const x of WEST_LANE_X) expect(northmost(x)).toBe(x < STATION_LAND.x0 ? CITY_EDGE.north : ESTUARY_Y0 + 12);
-    expect(northmost(RING_X)).toBe(ESTUARY_Y0 + 12);
+    expect(northmost(RING_X)).toBe(RING_Y0);
+    expect(northmost(EAST_COLS[0] + BLOCK_W + STREET / 2)).toBe(ESTUARY_Y0 + 12);
+  });
+
+  it("the N-S lines of the strip skip the level crossings, y 128..137 (#320)", () => {
+    for (const cx of [-21, 9, 39, 69]) {
+      const lines = scene().filter((s) => isVertical(s) && s.path[0]!.x === cx);
+      for (const s of lines) for (const p of s.path) expect(p.y > 128 && p.y < 137, `${cx}: ${p.y}`).toBe(false);
+      for (const s of lines) expect(Math.min(s.path[0]!.y, s.path[1]!.y) < 128 && Math.max(s.path[0]!.y, s.path[1]!.y) > 137, `${cx} spans the track`).toBe(false);
+      const ends = lines.flatMap((s) => s.path.map((p) => p.y));
+      expect(ends, `${cx}`).toContain(128);
+      expect(ends, `${cx}`).toContain(137);
+    }
+  });
+
+  it("no line steps inside the station land (#320)", () => {
+    const inside = (p: Vec2) => p.x > STATION_LAND.x0 && p.x < STATION_LAND.x1 && p.y > STATION_LAND.y0 && p.y < STATION_LAND.y1;
+    for (const s of scene()) {
+      for (const p of s.path) expect(inside(p), JSON.stringify(s.path)).toBe(false);
+      expect(inside(mid(s)), JSON.stringify(s.path)).toBe(false);
+    }
+  });
+
+  it("E-W line at y 113 only west of the station land, and at y 137 between the east blocks (#320)", () => {
+    const at = (y: number) => scene().filter((s) => isHorizontal(s) && s.path[0]!.y === y);
+    const xs = (s: Strip) => [Math.min(s.path[0]!.x, s.path[1]!.x), Math.max(s.path[0]!.x, s.path[1]!.x)];
+    expect(at(113).map(xs)).toEqual([[CITY_EDGE.west, STATION_LAND.x0]]);
+    expect(at(137).map(xs)).toEqual([[Math.ceil(eastBank(137)) + 1, HARBOR.x1 - 2]]);
+    expect(at(161)).toHaveLength(0); // the street 158..164 has no center line, as before
   });
 
   it("no E-W line north of the first block row (#319)", () => {

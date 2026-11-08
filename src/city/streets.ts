@@ -2,8 +2,9 @@ import type { Accent } from "../iso/accent";
 import { v3, type Vec2 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
-import { ESTUARY_Y0, QUAY_X, STATION_LAND } from "../map/geo";
-import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_COLS, EAST_RING, PROMENADE, PLAZA, ROWS, STREET, WEST_COLS, WEST_QUAY, estuaryEast, estuaryReaches, inBlock, inCrater } from "../scenes/city-grid";
+import { ESTUARY_Y0, QUAY_X, STATION_LAND, eastBank } from "../map/geo";
+import { CROSSING_GAP } from "./rail-lands";
+import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_COLS, EAST_RING, HARBOR, PROMENADE, PLAZA, RING_Y0, ROWS, STREET, WEST_COLS, WEST_QUAY, estuaryEast, estuaryReaches, inBlock, inCrater } from "../scenes/city-grid";
 import { lamp, place, streetTree, trafficLight } from "../kit/props";
 import { PLINTH_H, prism } from "../scenes/city-pieces";
 
@@ -73,16 +74,21 @@ const LANE_X = [...WEST_LANE_X, ...EAST_LANE_X];
 function lanes(ground: Solid[]): void {
   for (const cx of LANE_X) {
     const line = cx === RING_X ? dashes : centerLine; // the east ring keeps the dashed lanes
-    line(ground, { x: cx, y: cx < STATION_LAND.x0 ? CITY_EDGE.north : ESTUARY_Y0 + 12 }, { x: cx, y: AVENUE.y0 }); // the city does not stripe the station
+    if (cx < STATION_LAND.x0) { // the level crossings of the railyard stay unstriped
+      line(ground, { x: cx, y: CITY_EDGE.north }, { x: cx, y: CROSSING_GAP.y0 });
+      line(ground, { x: cx, y: CROSSING_GAP.y1 }, { x: cx, y: AVENUE.y0 });
+    } else line(ground, { x: cx, y: cx === RING_X ? RING_Y0 : ESTUARY_Y0 + 12 }, { x: cx, y: AVENUE.y0 }); // the city does not stripe the station
     // south of the avenue the east ring is cut where the estuary comes in, and goes no further than where the east bank turns to jungle: the ground is drawn on top of the water
     const yEnd = cx > QUAY_X ? Math.min(DISTRICT_BANK_Y, estuaryReaches(cx) - 1) : CITY_EDGE.south;
     if (yEnd > AVENUE.y1 + 3) line(ground, { x: cx, y: AVENUE.y1 }, { x: cx, y: yEnd });
   }
-  const rowsY = [...ROWS.slice(1).map((y) => y - STREET / 2), CITY_EDGE.south - 2].filter((y) => y < AVENUE.y0 || y > AVENUE.y1); // 185, 239, 269, 299, 322 (the south street is 4 wide)
+  const rowsY = [...ROWS.slice(2).map((y) => y - STREET / 2), CITY_EDGE.south - 2].filter((y) => y < AVENUE.y0 || y > AVENUE.y1); // 185, 239, 269, 299, 322 (the south street is 4 wide)
   for (const cy of rowsY) {
     centerLine(ground, { x: CITY_EDGE.west, y: cy }, { x: WEST_QUAY.x0, y: cy });
-    if (cy < DISTRICT_ROWS[0] - STREET) centerLine(ground, { x: Math.max(EAST_RING.x0, Math.ceil(estuaryEast(cy)) + 1), y: cy }, { x: PROMENADE.x0, y: cy }); // starts on land; south of the district the east bank is jungle
+    if (cy < DISTRICT_ROWS[0] - STREET) centerLine(ground, { x: Math.max(EAST_RING.x0, Math.ceil(cy < ESTUARY_Y0 ? eastBank(cy) : estuaryEast(cy)) + 1), y: cy }, { x: PROMENADE.x0, y: cy }); // starts on land; south of the district the east bank is jungle; eastBank north of the estuary is defensive (every cy here is ≥ 185 today)
   }
+  centerLine(ground, { x: CITY_EDGE.west, y: 113 }, { x: STATION_LAND.x0, y: 113 }); // north of the railyard, west of the station
+  centerLine(ground, { x: Math.ceil(eastBank(137)) + 1, y: 137 }, { x: HARBOR.x1 - 2, y: 137 }); // between the east blocks
 }
 
 /** Avenue: dashed lanes on each carriageway (the boulevard has no line), 3-strip crosswalks at each crossing and the tree-lined boulevard per block stretch. */
