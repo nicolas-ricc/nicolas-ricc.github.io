@@ -71,3 +71,15 @@ describe("ladders", () => {
     }
   });
 });
+
+describe("corrugated sheet and containers (#321)", () => {
+  const TOPS = { sheetGreen: 0x6a7a6e, sheetTeal: 0x4a6a76, boxRust: 0x8a4a32, boxBlue: 0x3e5c80, boxGreen: 0x4e6e4a, boxGrey: 0x707070, boxOrange: 0xb0703a } as const;
+
+  it("the seven #56 materials come from cityLadder and ISO_TONES darkens their top", () => {
+    for (const [m, top] of Object.entries(TOPS) as [keyof typeof TOPS, number][]) {
+      const want = cityLadder(top);
+      for (const k of ["top", "lit", "shade", "up", "down"] as const) near(BASE_TONES[m][k], want[k]);
+      expect(ISO_TONES[m].top).toBe(darken(top, DARKEN));
+    }
+  });
+});

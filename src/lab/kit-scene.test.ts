@@ -55,6 +55,16 @@ describe("kit lab scene", () => {
     expect(l.x + 54).toBeLessThanOrEqual(l.x + 2 * KIT_STEP.x);
   });
 
+  it("the industrial row (#321) is there, in the industrial style whatever the chosen style", () => {
+    const { solids, lots } = kitScene(7, "downtown");
+    const row = lots.filter((l, i) => RECIPES[i]!.family === "industrial");
+    expect(row.map((l) => l.name)).toEqual(["sawtoothHall", "sheetHall", "containerStack", "stockpile", "tankGroup", "quayCrane", "rtgGantry", "storeroom"]);
+    expect(new Set(row.map((l) => l.y)).size).toBe(1);
+    const l = row[0]!;
+    const body = solids.find((s) => s.kind === "prism" && !!s.facade && s.at.x >= l.x && s.at.x < l.x + KIT_STEP.x && s.at.y >= l.y && s.at.y < l.y + KIT_STEP.y);
+    expect(body?.mat).toBe("concrete");
+  });
+
   it("the seed and the style change the scene; the same pair repeats it", () => {
     const a = JSON.stringify(kitScene(7, "downtown"));
     expect(JSON.stringify(kitScene(7, "downtown"))).toBe(a);

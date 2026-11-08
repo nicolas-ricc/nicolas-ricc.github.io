@@ -14,5 +14,7 @@ describe("Portfolio accents", () => {
   // #279: the parked consist adds 12 cyanBleed (saloon) and 2 amber (LED signs); #319: the seam fence adds 6 cyan lamps to the shipyard
   it("shipyard", () => expect(byColor(w.shipyard!.accents)).toEqual({ amber: 10, amberBleed: 1, cyan: 15, cyanBleed: 15, cyanMid: 8, magenta: 3 }));
   it("factory", () => expect(byColor(w.factory!.accents)).toEqual({ amber: 3, cyan: 8, magenta: 6 }));
+  // #321: spark is only for the animated welding layer, never a static light
+  it("no static accent of the world is spark", () => expect(w.accents.filter((a) => a.color === "spark")).toEqual([]));
   it("hinterland", () => expect(byColor(w.hinterland!.accents)).toEqual({ cyan: 21, cyanMid: 1 }));
 });
