@@ -794,8 +794,10 @@ polígonos.
 
 ### 12.3 Capturas
 
-Cuatro vistas, antes y después de la historia, a 1600×900 con DPR 2 y 3 s de
-espera tras abrir. "Antes" es `860a582`; "después" es el estado de este cierre.
+Cuatro vistas, antes y después de la historia, a 1600×900 con DPR 2. Las
+"antes" entraron con #319 (tomadas sobre `860a582`, la base de la rama, antes de
+sus cambios) y no se regeneraron; las "después" son el estado de este cierre,
+con 3 s de espera tras abrir.
 
 | Vista | Página | Antes | Después |
 |---|---|---|---|
