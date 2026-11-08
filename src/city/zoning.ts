@@ -40,10 +40,11 @@ const CIVIC = [[72, 218], [162, 218], [42, 242]] as const;
 const DOWNTOWN = [[72, 164], [72, 188], [42, 218], [72, 242], [102, 242], [132, 242], [162, 242]] as const;
 const isAt = (b: Block, cells: readonly (readonly [number, number])[]): boolean => cells.some(([x, y]) => b.x === x && b.y === y);
 
-/** Neighborhood of a block: district and construction site, civic plaza, east bank (collapse included: fixed.ts draws it), dock, civic, downtown and the rest residential. */
+/** Neighborhood of a block: district and construction site, civic plaza, harbor (the two east blocks beside the dock inlet), east bank (collapse included: fixed.ts draws it), dock, civic, downtown and the rest residential. */
 export function neighborhoodOf(b: Block): Neighborhood {
   if (b.kind === "district" || b.kind === "site") return "district";
   if (b.kind === "plaza") return "civic";
+  if (b.bank === "east" && b.row === -1) return "harbor";
   if (b.bank === "east") return "riverside";
   if (BARS_X.includes(b.x) && BARS_Y.includes(b.y)) return "bars";
   if (isAt(b, CIVIC)) return "civic";
@@ -69,9 +70,9 @@ export const CATALOGUE = {
 
 /** Water-tower block: a residential courtyard to which fixed.ts adds the tower. */
 export const WATER_TOWER_BLOCK = { x: 12, y: 164 } as const;
-/** Blocks with a fixed recipe (market, station, civic buildings and the construction site). */
+/** Blocks with a fixed recipe (market, fish market, food hall, station, civic buildings and the construction site). */
 export const FIXED: readonly { x: number; y: number; recipe: string }[] = [
-  { x: -18, y: 188, recipe: "station" }, { x: 280, y: 188, recipe: "market" }, { x: 72, y: 218, recipe: "theatre" },
+  { x: -18, y: 188, recipe: "station" }, { x: 280, y: 188, recipe: "market" }, { x: 280, y: 116, recipe: "fishMarket" }, { x: 280, y: 140, recipe: "foodHall" }, { x: 72, y: 218, recipe: "theatre" },
   { x: 162, y: 218, recipe: "civicPalace" }, { x: 42, y: 242, recipe: "library" }, { x: SITE.x, y: SITE.y, recipe: "constructionSite" },
   { ...WATER_TOWER_BLOCK, recipe: "patioResidential" },
 ];

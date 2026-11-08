@@ -67,9 +67,10 @@ describe("world", () => {
       cv = mats(w.city!.solids), blog = mats(w.sea!.solids);
     // Exact equality (#218): fails if one stops being shared or another appears. office: lilac gray of the excavator (decision of #207);
     // asphalt: heads of the station's traffic lights (#277) and lantern caps (#278); stone: shaft of the clock tower and paving: esplanade slab (#278);
-    // deck: level-crossing planks (#277) and terraces of the Resume pier (#190).
+    // deck: level-crossing planks (#277) and terraces of the Resume pier (#190);
+    // brick: factory/station walls and the harbor buildings of the Resume (#326); sheetTeal: fitting-out sheds of the shipyard (#323) and vaults of the harbor buildings (#326).
     // No glass: the city only has glass in facade faces, not as the mat of a solid.
-    const sharedWithCity = ["asphalt", "deck", "office", "paving", "rust", "steel", "stone"];
+    const sharedWithCity = ["asphalt", "brick", "deck", "office", "paving", "rust", "sheetTeal", "steel", "stone"];
     expect([...portfolio].filter((m) => cv.has(m)).sort()).toEqual([...sharedWithCity].sort());
     const sharedWithBlog = ["steel", "rust", "hull", "rock", "glass", "whitewash", "deck"]; // glass: the lighthouse lantern (spec §7); whitewash: porcelain and finials of the factory (#207); deck: level-crossing planks (#277), ship decks and terraces of the Resume pier (#190)
     for (const other of [portfolio, cv]) for (const m of blog) if (other.has(m)) expect(sharedWithBlog).toContain(m);

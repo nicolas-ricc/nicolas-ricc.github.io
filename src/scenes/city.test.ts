@@ -33,7 +33,7 @@ const isTowerPiece = (s: Solid) => {
 // the south row in front of the tower: PLAZA.x - 6 .. PLAZA.x + PLAZA.w + 6, the band that the controller's ruling caps at 10
 const ROW_SOUTH = ROWS[4], FRONT_X0 = PLAZA.x - 6, FRONT_X1 = PLAZA.x + PLAZA.w + 6;
 
-const CITY_MATS: readonly Material[] = ["office", "officeDark", "glass", "asphalt", "paving", "plaza", "curtain", "stone", "copper", "leaf", "leafDark", "water", "steel", "rust", "plaster", "terracotta", "marble", "awning", "deck", "rail"];
+const CITY_MATS: readonly Material[] = ["office", "officeDark", "glass", "asphalt", "paving", "plaza", "curtain", "stone", "copper", "leaf", "leafDark", "water", "steel", "rust", "plaster", "terracotta", "marble", "awning", "deck", "rail", "brick", "sheetTeal"];
 
 describe("city", () => {
   it("is deterministic per seed", () => {
