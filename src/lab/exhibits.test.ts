@@ -23,11 +23,11 @@ const CATALOG: Record<GroupId, string[]> = {
   shipyard: ["gradas", "darsena", "grua-portico", "calle-faroles", "naves", "punta-norte", "estacion", "paso-a-nivel"],
   hinterland: ["central-termica", "tanques", "silos", "alta-tension", "playa-contenedores"],
   fair: ["noria", "montana-rusa", "torre-caida", "carrusel", "arcade", "autitos-chocadores", "muelle"],
-  city: ["plaza", "torre", "puente", "malecon", "manzana-derrumbada", "manzana-distrito", "obra", "punta-sur"],
+  city: ["plaza", "torre", "puente", "malecon", "manzana-derrumbada", "manzana-distrito", "obra", "punta-sur", "galpones", "playa-carga"],
   tech: ["mastil", "arena", "auditorio", "torres", "monoblock", "casas", "escuela", "club", "plaza-barrio", "costanera", "barrio"],
   sea: ["faro", "casa-farero", "boyas", "pecio"],
 };
-const ANIMATED = ["chimeneas", "excavadora", "noria", "torre", "faro", "estacion", "paso-a-nivel"];
+const ANIMATED = ["chimeneas", "excavadora", "noria", "torre", "faro", "estacion", "paso-a-nivel", "playa-carga"];
 const SLACK = 8; // any taller than this above the structure and it looks small in the frame
 
 const { scene, animators } = assembleWorld(undefined, { reducedMotion: false });
