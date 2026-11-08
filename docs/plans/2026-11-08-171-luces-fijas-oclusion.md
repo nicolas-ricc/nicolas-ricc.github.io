@@ -48,6 +48,11 @@ World seed (`city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv
 - `scene.fixedLights` (all fixed lights, before filtering) is added to `CityScene` so the tests can check the oracle against the own ranges; nothing else reads it.
 - The fixed lights enter `scene.accents` after `cars()` (all solids exist) and before the windows of `lights()`. The order of `scene.accents` changes; drawing is additive and `accentsByZone` splits by position, so order is not observable on screen.
 - No `CONTEXT.md` entry and no ADR: no new domain term; "fixed light" stays a docstring word in `lights.ts`.
+- Every solid counts as an occluder, cars included (grilling Q3). The brief: "Si los tapa en pantalla una caja sólida que no es de la propia luz, no se publican". `cars()` parks static solids (`src/city/fixed.ts`, `cars`); nothing animates them. Rejected: running the filter before `cars()`, which would let a parked car cover a published lamp.
+- The puddle's z is the z passed to `puddle()` (grilling Q5): the centroid of a ring is `(x, y, z)` of the call (`src/kit/props.ts`, `puddle`). For the neon puddle that is `lot.z` (`lights.ts`, `puddle(..., scene.placed[owner]!.placed.lot.z)`), for the tower puddles the default 0.12. Task 2 computes the same point from the slot, so the test oracle (ring centroid) and the implementation agree by construction.
+- Task 2's synthetic occluder (grilling Q12) is a low prism (h ≤ 1) about 1.5 u in front of the puddle centre, on the camera side. It covers the ground point on screen but stays below the slot, which sits 2.4..3.6 above the lot, so `free` does not change. The implementer pins exact numbers by checking the slot stays in `neons`.
+- The task 3 oracle also asserts all-or-none (grilling Q14): for each fixed light, either all its accents are in `s.accents` or none are.
+- Captures (grilling Q16): the lab has no URL parameter for zoom. Task 4 frames Resume with key `2`, then zooms by setting the Pixi stage's scale and position through `window.__PIXI_DEVTOOLS_WRAPPER__.stage` (CLAUDE.md, "PixiJS DevTools in agent-browser"), at viewport `1600 900 2`. If that fails, it crops a full-frame capture.
 - The stage-3 evals write the failing tests of tasks 1–3 ahead of the implementation; in stage 4 step 1 of each task is "confirm the test exists and fails".
 
 ## Review Focus
@@ -118,6 +123,7 @@ World seed (`city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv
   - `"the obelisk point behind the block is gone"`: no `dot` in `s.accents` within 0.05 of `(275.4, 216.4, 7.1)`.
   - `"tower puddles, fountain and plaza lamps stay"`: 6 polys `amberBleed` alpha 0.25 and 3 alpha 0.35 in `s.accents` inside the plaza rect; dots at `(PLAZA.x + 2.3, PLAZA.y + PLAZA.d / 2 + 0.3, 5.05)` and `(PLAZA.x + PLAZA.w - 2.3, …)` present.
   - `"kit accents unchanged"`: every accent of every `s.placed[i].piece.accents` is in `s.accents` (by reference).
+  - The oracle test also asserts, for each `f`, that its accents are either all in `s.accents` or none are.
 - [ ] **Step 2: Run** `npx vitest run src/scenes/city.test.ts` — FAIL.
 - [ ] **Step 3: Implement.** Fixed pieces: lamps and the fountain with `placeLit`; obelisk point with `fixedLights([dot], [i, i + 2])` where `i` is the obelisk prism's index; garlands and tower puddles with `fixedLights(...)`. `city()`: `const fixed: FixedLight[] = []`, pass it to the five calls, and after `cars(solids, rng)` do `accents.push(...visibleLights(fixed, solids))`; return `fixedLights: fixed`. Update the `accents` comment of `CityScene`.
 - [ ] **Step 4: Run** `npm test` — only the three `accents` hashes of `world-baseline.test.ts` fail; check `solids`/`ground`/`renderList` and `PIECES` pass. Re-record those three with a `// #171: hidden fixed lights and neon puddles are not published; accents re-recorded once.` line.
@@ -128,3 +134,33 @@ World seed (`city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv
 
 - [ ] With the dev server (`npm run dev -- --host --port 5173`) and `agent-browser`, capture `/lab/resume.html` zoomed on the bridge's east head (x 264..282, y 207..224) and on the avenue's north sidewalk by the tower (x 90..125, y 200..210), on `origin/main` and on the branch. Save to `docs/superpowers/specs/assets/171-fixed-lights/` (`bridge-before.png`, `bridge-after.png`, `avenue-before.png`, `avenue-after.png`), as #142–#144 did.
 - [ ] Commit `captures(#171): before/after screenshots`.
+
+## Grilling
+
+One round (griller model: fable). The revisions added assumptions and test assertions and kept the same seam, so no second round was run.
+
+16 questions. Answers by source:
+- CODE: 13
+- ISSUE: 2
+- DOC: 1
+- NO SOURCE: 5, all technical assumptions; none was a spec ambiguity or out of scope
+
+Answers:
+1. **Order of `scene.accents`.** CODE `src/scenes/world-baseline.test.ts`: `buildRenderList(w.solids)` takes solids only. CODE `src/world/frame.ts:69-80`: `drawAccents` fills each accent independently. CODE `src/world/stage.ts:88,124`: `g.blendMode = "add"`, which commutes. DOC CONTEXT.md, Accent: "drawn on top of everything with additive blend".
+2. **Which hashes move.** CODE `src/scenes/world.ts:62`: `city()` is built only when `cv` is among the zones, so `portfolio` and `blog` alone carry no city accents. Task 3 step 4 checks this empirically.
+3. **Cars as occluders.** ISSUE (brief): "una caja sólida que no es de la propia luz". CODE `fixed.ts` `cars`: static solids. Recorded as an assumption.
+4. **Point boxes.** CODE `src/city/lights.ts:30-33`: `lightBox` pads 0.05 today. Windows are already near-degenerate boxes (flat quads), so the sweep handles thin boxes. Task 1 tests point boxes.
+5. **Puddle z.** NO SOURCE, technical assumption: the z passed to `puddle()`. Recorded.
+6. **Obelisk own range.** CODE `fixed.ts`, `bridge`: the obelisk prism and its cone go in a single `solids.push(prism(...), { kind: "cone", ... })`, so the range is `[i, i + 2)`.
+7. **What a puddle is.** CODE `src/kit/props.ts:98-104`: `fountain().accents = puddle(...)`, three polys. `lamp()` is one dot. `Lit` is exported from `src/kit/props.ts:13`. `fixedLights` is only fed fixed-piece accents: lamps, the fountain, single puddles, garlands and the obelisk dot.
+8. **What `place()` does.** CODE `src/kit/props.ts:16`: it only pushes solids and accents. `lamp(at)` returns geometry at `at` (`props.ts:19-22`).
+9. **Readers of `Target.own`.** CODE `lights.ts:35-57,72,103`: `Target`/`target` are not exported. The callers are the window targets and the neon slots. `y.s` indexes `boxes = scene.solids.map(bounds)`, the same array the pieces push into.
+10. **Tower puddles and the box.** ISSUE (brief): "Los dos charcos de la torre (franja este de la plaza) hoy no están tapados y tienen que mantenerse." The brief defines no box. The AABB box breaks this criterion and the point box satisfies all of them: technical assumption, recorded in "Measured on main".
+11. **Does `fixedLights` move a hash?** CODE `world-baseline.test.ts`: it hashes the named fields `w.solids`, `w.ground` and `w.accents` of `world()`, never the `CityScene`. No snapshot in the city tests (grep for `toMatchSnapshot`: none).
+12. **Neon puddle occluder.** NO SOURCE, technical assumption: a low prism. Recorded.
+13. **Positional asserts in the fixed tests.** CODE: grep for `toEqual` on accents in `fixed.test.ts` and `streets.test.ts` finds none; they filter and count. The pieces push either dots or puddles, never both mixed into one `Lit`.
+14. **Partial puddles.** NO SOURCE, technical assumption: an all-or-none assertion was added to task 3.
+15. **Other callers.** CODE: grep for `bridge(`, `streets(`, `westQuay(`, `promenade(`, `plazaAndTower(` finds only `src/scenes/city.ts:51-59`, `fixed.test.ts` and `streets.test.ts`.
+16. **Captures.** CODE `src/lab/page.ts`: only the `bloom` and `speed` parameters. The assets folder exists (`docs/superpowers/specs/assets/142-plinth-ground/`). NO SOURCE for zooming, technical assumption: stage scale through the devtools wrapper. Recorded.
+
+Issues opened: none.
