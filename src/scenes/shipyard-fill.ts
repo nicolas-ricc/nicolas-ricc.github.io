@@ -1,7 +1,9 @@
+import type { Accent } from "../iso/accent";
 import { v3, type Vec3 } from "../iso/geometry";
 import { bounds, type Solid } from "../iso/solids";
-import { coils, hullSections, pipeBundle, sheetStack } from "../kit/forms/industrial";
+import { coils, hullSections, pipeBundle, sheetStack, stackContainers } from "../kit/forms/industrial";
 import type { Rng } from "../map/seed";
+import { towerCrane } from "./pieces";
 
 /** Fill of the shipyard: one list of pieces per function; the pieces are the same objects pushed to `out` (rails go to the ground). */
 export interface Fill { yard: Solid[][]; dock: Solid[][]; service: Solid[][] }
@@ -51,5 +53,24 @@ export function yardFill(out: Solid[], rng: Rng): Solid[][] {
       break;
     }
   }
+  return pieces;
+}
+
+/** Scaffolding row along the dock: 7 steel posts 0.4×0.4 every 8 from x 128, z −6..0.5, and 6 deck planks 8×0.6×0.2 at z 0 on the pit side of the posts. */
+function scaffold(postY: number, plankY: number): Solid[] {
+  const xs = [0, 1, 2, 3, 4, 5, 6].map((i) => 128 + 8 * i);
+  return [...xs.map((x) => prism(x, postY, -6, 0.4, 0.4, 6.5, "steel")), ...xs.slice(0, -1).map((x) => prism(x, plankY, 0, 8, 0.6, 0.2, "deck"))];
+}
+
+/** Dry dock works: scaffolding rows (north y 8.5, south y 27), tower cranes at (116, 5) and (116, 31) with a cyan light, and two site containers on the slab north of the dock. */
+export function dockWorks(out: Solid[], accents: Accent[], rng: Rng): Solid[][] {
+  const pieces = [scaffold(8.5, 8.9), scaffold(27, 26.4)];
+  for (const y of [5, 31]) {
+    const crane: Solid[] = [];
+    towerCrane(crane, accents, { at: { x: 116, y }, mastH: 14, jibLen: 12, dir: "e", light: "cyan" });
+    pieces.push(crane);
+  }
+  for (const x of [124, 132]) pieces.push(stackContainers(v3(x, 2.5, 0), 1, "x", rng));
+  out.push(...pieces.flat());
   return pieces;
 }

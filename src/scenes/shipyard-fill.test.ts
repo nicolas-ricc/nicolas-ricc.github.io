@@ -41,7 +41,9 @@ describe.each(scenes)("material yard fill (%s)", (_, s) => {
       const b = bounds(x), where = JSON.stringify(b);
       expect(b.min.x, where).toBeGreaterThanOrEqual(YARD.x0); expect(b.max.x, where).toBeLessThanOrEqual(YARD.x1);
       expect(b.min.y, where).toBeGreaterThanOrEqual(YARD.y0); expect(b.max.y, where).toBeLessThanOrEqual(YARD.y1);
-      expect(b.max.z, where).toBeLessThanOrEqual(3 * (1 + STEP_RATIO) + 1e-9); // nominal 3; the stepped roof of a hull section adds 35%
+      const cap = x.kind === "prism" && x.roof === "step" ? 3 * (1 + STEP_RATIO) : 3; // nominal 3; only the bounds of a stepped roof add 35%
+      expect(b.max.z, where).toBeLessThanOrEqual(cap + 1e-9);
+      if (x.kind === "prism" || x.kind === "cylinder") expect(x.at.z + x.h, where).toBeLessThanOrEqual(3 + 1e-9);
     }
   });
 
