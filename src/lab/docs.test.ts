@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { EXHIBITS } from "./exhibits";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const readme = readFileSync(`${ROOT}README.md`, "utf8");
@@ -349,6 +350,76 @@ describe("README names both plan folders (#204)", () => {
     for (const d of dirs) {
       expect(existsSync(`${ROOT}${d}`), d).toBe(true);
       expect(readdirSync(`${ROOT}${d}`).some((f) => f.endsWith(".md")), d).toBe(true);
+    }
+  });
+});
+
+describe("seam at 90 documentation (#56)", () => {
+  const paragraphs = readme.split(/\n\s*\n/);
+  // whitespace collapsed: the paragraph is wrapped at ~80 columns
+  const world = (paragraphs.find((p) => p.includes("`factory.ts`")) ?? "").replace(/\s+/g, " ");
+  const lab = paragraphs.find((p) => p.includes("/lab/world.html")) ?? "";
+  const story = paragraphs.find((p) => p.includes("/lab/storybook.html")) ?? "";
+  const glossary = readFileSync(`${ROOT}CONTEXT.md`, "utf8");
+  const SPEC = "2026-10-15-costura-90-portfolio-denso-galpones-feria-design.md";
+  const ASSETS = `${ROOT}docs/superpowers/specs/assets/2026-10-15-costura-90/`;
+  const seamSpec = readFileSync(`${ROOT}docs/superpowers/specs/${SPEC}`, "utf8");
+  const at = seamSpec.search(/^## 12\. Desvíos$/m);
+  const deviations = at < 0 ? "" : seamSpec.slice(at);
+  const NEW_IDS = ["dique-flotante", "patio-contenedores", "grua-muelle", "galpones", "playa-carga", "mercado-pescado", "tren-fantasma", "casa-espejos", "tobogan", "tronco-acuatico"];
+  const BEFORE = ["portfolio-antes", "resume-antes", "mundo-antes", "cover-antes"];
+  const AFTER = ["portfolio-despues", "resume-despues", "mundo-despues", "cover-despues"];
+  it("README lists the seam spec among the lab specs", () => {
+    expect(lab).toContain(SPEC);
+  });
+  it("the world paragraph names the seam at y 90, the station land, the rail lands and the dock", () => {
+    expect(world).toMatch(/y 90/);
+    expect(world).toMatch(/station land/);
+    expect(world).toMatch(/rail lands/);
+    expect(world).toMatch(/dock inlet/);
+    expect(world).toMatch(/floating dock/);
+    expect(world).toMatch(/ghost train/);
+  });
+  it("the storybook paragraph names the new exhibits, and each one exists", () => {
+    const ids = new Set(EXHIBITS.map((e) => e.id));
+    for (const id of NEW_IDS) {
+      expect(story, id).toContain(`#${id}`);
+      expect(ids.has(id), id).toBe(true);
+    }
+  });
+  it("CONTEXT.md defines the rail lands and anchors the zone entry on STATION_LAND", () => {
+    expect(glossary).toMatch(/^### Rail lands$/m);
+    const rail = glossary.slice(glossary.search(/^### Rail lands$/m)).split(/\n(?=### )/)[0];
+    expect(rail).toContain("src/city/rail-lands.ts");
+    expect(rail).toContain("src/scenes/station.ts");
+    const zone = glossary.slice(glossary.search(/^### Zone$/m)).split(/\n(?=### )/)[0];
+    expect(zone).toMatch(/^Code: .*`src\/map\/geo\.ts` \([^)]*`STATION_LAND`/m);
+  });
+  it("the seam spec says implemented", () => {
+    const status = seamSpec.split("\n").find((l) => l.startsWith("**Estado:**")) ?? "";
+    expect(status).toMatch(/implementad/);
+    expect(status).toContain("#328");
+  });
+  it("§9 is ticked off and the budget table carries the measured column", () => {
+    const i = seamSpec.search(/^## 9\. /m), j = seamSpec.search(/^## 10\. /m);
+    expect(i).toBeGreaterThan(0);
+    const tests = seamSpec.slice(i, j);
+    expect(tests).not.toMatch(/- \[ \]/);
+    expect(tests).toMatch(/- \[x\]/);
+    expect(tests).toMatch(/\| Medido \|$/m);
+  });
+  it("the spec closes with deviations per child, measurement, scene counts and captures", () => {
+    expect(at).toBeGreaterThan(seamSpec.search(/^## 11\. /m));
+    for (const h of [/^### 12\.0 /m, /^### 12\.1 /m, /^### 12\.2 /m, /^### 12\.3 /m]) expect(deviations).toMatch(h);
+    for (const n of [319, 320, 321, 322, 323, 324, 325, 326, 327]) expect(deviations, `#${n}`).toContain(`#${n}`);
+    for (const n of ["423", "778", "1 121", "278", "503", "1 489", "41 507"]) expect(deviations).toContain(n);
+    for (const name of [...BEFORE, ...AFTER]) expect(deviations).toContain(`assets/2026-10-15-costura-90/${name}.png`);
+  });
+  it("the after captures are 1600×900 PNGs at 2x", () => {
+    for (const name of AFTER) {
+      const png = readFileSync(`${ASSETS}${name}.png`);
+      expect(png.subarray(1, 4).toString()).toBe("PNG");
+      expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([3200, 1800]);
     }
   });
 });

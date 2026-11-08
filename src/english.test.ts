@@ -90,7 +90,7 @@ const ALLOW: Record<string, RegExp[]> = {
     /\*Desvío[^"*]*\*?/g,
     /\| (Resume: tecnológico|Portfolio: astillero) \|/g,
     // old asset names of those specs: `<view>-antes`, `<view>-despues`, and their folders
-    /[\w-]*-(antes|despues)\b|assets\/[\w.-]*(fabrica|barrio|estacion)[\w.-]*\//g,
+    /[\w-]*-(antes|despues)\b|assets\/[\w.-]*(fabrica|barrio|estacion|costura)[\w.-]*\//g,
     // the old spec mundo-3
     /\bmundo-3\b/g,
   ],
