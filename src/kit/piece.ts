@@ -1,7 +1,9 @@
 import { v3, type Vec3 } from "../iso/geometry";
 import { facadeWindows, type Facade } from "../iso/facade";
 import { bounds, visibleWalls, type Solid } from "../iso/solids";
-import type { Lot, Piece, Slot, Style } from "./types";
+import type { Rng } from "../map/seed";
+import { PLINTH_H } from "../scenes/city-pieces";
+import type { Lot, Piece, Recipe, Slot, Style } from "./types";
 
 /** Height cap above `lot.z` for a common recipe and for a `landmark`. */
 export const RECIPE_MAX_H = 18;
@@ -45,7 +47,16 @@ export function fitToCap(p: Piece, lot: Lot): Piece {
   const cap = Math.min(lot.maxH, LANDMARK_MAX_H);
   const top = Math.max(...[...p.solids, ...p.ground].map((s) => bounds(s).max.z)) - lot.z;
   if (top <= cap) return p;
-  const k = cap / top, z = (n: number): number => lot.z + (n - lot.z) * k, P = (q: Vec3): Vec3 => v3(q.x, q.y, z(q.z));
+  const k = cap / top;
+  return mapZ(p, (n) => lot.z + (n - lot.z) * k, k);
+}
+
+/** Piece with every z raised by `dz`; heights, normals (`wall`, `Wall.normal`) and `courtyard` unchanged. */
+export const liftPiece = (p: Piece, dz: number): Piece => mapZ(p, (n) => n + dz, 1);
+
+/** Piece with every z coordinate through `z` and every height scaled by `k`; normals and `courtyard` unchanged. */
+function mapZ(p: Piece, z: (n: number) => number, k: number): Piece {
+  const P = (q: Vec3): Vec3 => v3(q.x, q.y, z(q.z));
   const solid = (s: Solid): Solid => {
     switch (s.kind) {
       case "poly": return { ...s, z: z(s.z), h: s.h * k };
@@ -66,4 +77,12 @@ export function fitToCap(p: Piece, lot: Lot): Piece {
     slots: p.slots.map((s) => ({ ...s, pts: s.pts.map(P) })),
     ...(p.landmarkTop ? { landmarkTop: P(p.landmarkTop) } : {}),
   };
+}
+
+/** A recipe's piece on its lot: with `ground` it stays at street level; without, it sits on a `PLINTH_H` plinth (piece and lot lifted). */
+export interface Seated { piece: Piece; lot: Lot; plinth: boolean }
+export function seat(recipe: Recipe, lot: Lot, rng: Rng, style: Style): Seated {
+  const piece = recipe(lot, rng, style);
+  if (piece.ground.length > 0) return { piece, lot, plinth: false };
+  return { piece: liftPiece(piece, PLINTH_H), lot: { ...lot, z: lot.z + PLINTH_H }, plinth: true };
 }

@@ -3,13 +3,14 @@ import type { Vec3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import type { Rng } from "../map/seed";
 import { recipe } from "../kit";
+import { seat } from "../kit/piece";
 import { STYLES } from "../kit/styles";
 import type { Piece } from "../kit/types";
 import { prism, PLINTH_H } from "./city-pieces";
 import { lights, WINDOW_ALPHA, type CityLights } from "../city/lights";
 import { streets } from "../city/streets";
 import { bridge, collapsed, cars, greenery, promenade, plazaAndTower, westQuay, type TowerLights } from "../city/fixed";
-import { FOOTBRIDGE_LOT, NO_PLINTH, WATER_TOWER_BLOCK, assign, waterTowerLot, type Placed } from "../city/zoning";
+import { FOOTBRIDGE_LOT, WATER_TOWER_BLOCK, assign, waterTowerLot, type Placed } from "../city/zoning";
 
 /**
  * Resume: orchestrator of the city. The zoning (src/city/zoning.ts) assigns
@@ -40,9 +41,9 @@ export function city(rng: Rng, districtRng: Rng, lightsRng: Rng): CityScene {
   const add = (piece: Piece): void => { solids.push(...piece.solids); ground.push(...piece.ground); accents.push(...piece.accents); };
   for (const p of assign(rng, districtRng)) {
     const b = p.block, r = p.neighborhood === "district" ? districtRng : rng;
-    if (!NO_PLINTH.includes(p.recipe)) solids.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
-    const piece = recipe(p.recipe)(p.lot, r, { ...STYLES[p.neighborhood], tone: p.tone });
-    placed.push({ placed: p, piece, solidOffset: solids.length });
+    const { piece, lot, plinth } = seat(recipe(p.recipe), p.lot, r, { ...STYLES[p.neighborhood], tone: p.tone });
+    if (plinth) solids.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
+    placed.push({ placed: { ...p, lot }, piece, solidOffset: solids.length });
     add(piece);
     // the sign consumes the rng after the recipe, so the recipe draws do not depend on how many slots there are
     if (p.neighborhood === "district") for (const s of piece.slots) if (s.kind === "sign") signs.push({ kind: "poly", pts: s.pts, color: districtRng.chance(0.5) ? "cyan" : "magenta", alpha: 1 });

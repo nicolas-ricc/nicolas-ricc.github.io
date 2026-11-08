@@ -97,9 +97,6 @@ export function openSides(b: Block): Side[] {
   return out;
 }
 
-/** Recipes that bring their own plinth: they do not rest on the block's. */
-export const NO_PLINTH: readonly string[] = ["eatenRuin", "campus"];
-
 /** Weighted recipe with a single draw from `rng`. */
 function pick(rng: Rng, recipes: readonly { name: string; weight: number }[]): string {
   if (recipes.length === 0) throw new Error("empty catalogue");
@@ -118,7 +115,8 @@ export interface Placed { block: Block; neighborhood: Neighborhood; recipe: stri
  * collapse (fixed.ts draws them). Fixed ones take their recipe without drawing; the
  * district draws with `districtRng` (its sequence doesn't change if another neighborhood's does) and the
  * rest with `rng`. Residential retries up to 5 times if it repeats the recipe
- * of an already assigned adjacent block.
+ * of an already assigned adjacent block. The lot is at street level (`z: 0`):
+ * `city()` seats it (`seat`), lifting it onto the plinth unless the piece brings `ground`.
  */
 export function assign(rng: Rng, districtRng: Rng): Placed[] {
   const out: Placed[] = [];
@@ -133,7 +131,7 @@ export function assign(rng: Rng, districtRng: Rng): Placed[] {
     const top = fixed || neighborhood === "district" ? LANDMARK_MAX_H : MAX_BUILDING_H;
     const lot: Lot = {
       x: b.x + SIDEWALK, y: b.y + SIDEWALK, w: b.w - 2 * SIDEWALK, d: b.d - 2 * SIDEWALK,
-      z: NO_PLINTH.includes(recipe) ? 0 : PLINTH_H, open: openSides(b),
+      z: 0, open: openSides(b),
       maxH: Math.min(maxHeightFor(b, top), maxDistrictHeight(b)),
     };
     out.push({ block: b, neighborhood, recipe, lot, tone: rng.int(-1, 1) });

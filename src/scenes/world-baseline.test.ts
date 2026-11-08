@@ -18,13 +18,14 @@ function sceneHashes(zones?: readonly WorldZone[]) {
   return { solids: hash(w.solids), ground: hash(w.ground), accents: hash(w.accents), renderList: hash(buildRenderList(w.solids)) };
 }
 
-const WORLD = { solids: "f37caca9", ground: "09bd4114", accents: "fe4c8430", renderList: "99d16f52" };
+// #142: library and paved courtyardO patios lose their plinth (ground decides it); re-recorded once.
+const WORLD = { solids: "f6e8b6b4", ground: "7e34966c", accents: "02d4dea6", renderList: "0c405992" };
 const ZONES: Record<WorldZone, typeof WORLD> = {
   portfolio: { solids: "475f3f5b", ground: "8f1e1033", accents: "1eeef7d8", renderList: "e3d76a36" },
-  cv: { solids: "34802462", ground: "a2734276", accents: "8542d61f", renderList: "d6613fa9" },
+  cv: { solids: "bc449263", ground: "aa4fda16", accents: "89250905", renderList: "75670be5" },
   blog: { solids: "a975772d", ground: "47b0356c", accents: "f1574cea", renderList: "b6ad2d44" },
 };
-const RESUME_LAB = { solids: "29a9c540", ground: "638aa6bc", accents: "8a958342", renderList: "766f1dd8" };
+const RESUME_LAB = { solids: "6bb31461", ground: "1a129994", accents: "83c7fc10", renderList: "1df02e06" };
 // keyed by exhibit id (kept in Spanish: it is the storybook URL hash); value is solids/accents
 const PIECES: Record<string, string> = {
   "tanque-agua": "d0fbfe32/741638a5", "grua-torre": "1b24d1ba/b6ded264", farol: "af0034c3/b3c5d09b", tren: "acc6e446/741638a5",

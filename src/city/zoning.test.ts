@@ -6,7 +6,7 @@ import { PLINTH_H } from "../scenes/city-pieces";
 import { BLOCK_D, BLOCK_W, SIDEWALK, SITE, STREET, TOWER, WEST_QUAY, blocks, estuaryEast, type Block } from "../scenes/city-grid";
 import { zoneRng } from "../scenes/world";
 import { SEED } from "../map/seed";
-import { CATALOGUE, FIXED, FOOTBRIDGE_LOT, MAX_BUILDING_H, MAX_DISTRICT_H, NO_PLINTH, WATER_TOWER_BLOCK, assign, neighborhoodOf, maxDistrictHeight, maxHeightFor, openSides, waterTowerLot, type Neighborhood, type Placed } from "./zoning";
+import { CATALOGUE, FIXED, FOOTBRIDGE_LOT, MAX_BUILDING_H, MAX_DISTRICT_H, WATER_TOWER_BLOCK, assign, neighborhoodOf, maxDistrictHeight, maxHeightFor, openSides, waterTowerLot, type Neighborhood, type Placed } from "./zoning";
 
 const key = (b: { x: number; y: number }): string => `${b.x},${b.y}`;
 const blockAt = (x: number, y: number): Block => blocks().find((b) => b.x === x && b.y === y && b.kind !== "plaza")!;
@@ -104,7 +104,7 @@ describe("zoning", () => {
     expect(openSides(blockAt(12, 164))).toEqual([]);
   });
 
-  it("assign is deterministic, skips plaza and collapse, and builds lots with sidewalk, plinth and cap", () => {
+  it("assign is deterministic, skips plaza and collapse, and builds street-level lots with sidewalk and cap", () => {
     expect(JSON.stringify(sceneAssign())).toBe(JSON.stringify(sceneAssign()));
     const placed = sceneAssign();
     expect(placed.map((p) => `${key(p.block)},${p.block.kind}`)).toEqual(blocks().filter((b) => b.kind !== "plaza" && b.kind !== "collapsed").map((b) => `${key(b)},${b.kind}`));
@@ -114,7 +114,7 @@ describe("zoning", () => {
       if (!fixed) expect(CATALOGUE[p.neighborhood].recipes.map((r) => r.name)).toContain(p.recipe);
       expect([-1, 0, 1]).toContain(p.tone);
       expect(p.lot).toMatchObject({ x: b.x + SIDEWALK, y: b.y + SIDEWALK, w: b.w - 2 * SIDEWALK, d: b.d - 2 * SIDEWALK, open: openSides(b) });
-      expect(p.lot.z).toBe(NO_PLINTH.includes(p.recipe) ? 0 : PLINTH_H);
+      expect(p.lot.z).toBe(0); // street level: city() decides the plinth (seat)
       const top = fixed || p.neighborhood === "district" ? LANDMARK_MAX_H : MAX_BUILDING_H;
       expect(p.lot.maxH).toBe(Math.min(maxHeightFor(b, top), maxDistrictHeight(b)));
     }

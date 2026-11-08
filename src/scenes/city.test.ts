@@ -10,6 +10,7 @@ import { PLINTH_H, TOWER_H, city, type CityScene } from "./city";
 import { CAR } from "../kit/props";
 import { FIXED, FOOTBRIDGE_LOT, MAX_BUILDING_H, WATER_TOWER_BLOCK, assign } from "../city/zoning";
 import { zoneRng } from "./world";
+import { fingerprint } from "../iso/fingerprint";
 
 const scene = (): CityScene => city(createRng(7), createRng(8), createRng(9));
 const all = (s: CityScene): Solid[] => [...s.ground, ...s.solids];
@@ -275,10 +276,40 @@ describe("city", () => {
     }
   });
 
+  it("plinth by ground presence, seeds 1..5: no ground piece on a plinth, eatenRuin and campus without one, placed.lot.z is the resolved z", () => {
+    const seen = { courtyardO: 0, library: 0 };
+    for (let s = 1; s <= 5; s++) {
+      const c = city(createRng(s), createRng(s + 1), createRng(s + 2));
+      for (const q of c.placed) {
+        const b = q.placed.block, ground = q.piece.ground.length > 0;
+        const onPlinth = c.solids.some((x) => x.kind === "prism" && x.mat === "paving" && x.at.x === b.x && x.at.y === b.y && x.at.z === 0 && x.w === b.w && x.d === b.d && x.h === PLINTH_H);
+        const id = `seed ${s} ${q.placed.recipe}@${b.x},${b.y}`;
+        expect(onPlinth, id).toBe(!ground);
+        expect(q.placed.lot.z, id).toBe(onPlinth ? PLINTH_H : 0);
+        if (q.placed.recipe === "eatenRuin" || q.placed.recipe === "campus") expect(onPlinth, id).toBe(false);
+        if ((q.placed.recipe === "courtyardO" || q.placed.recipe === "library") && ground) seen[q.placed.recipe]++;
+      }
+    }
+    expect(seen.courtyardO).toBeGreaterThan(0);
+    expect(seen.library).toBeGreaterThan(0);
+  });
+
+  // Fingerprints measured on 860a582, before #142: lifting must reproduce the plinth pieces of then.
+  // A deliberate change to a recipe without ground moves them; re-record then, as with world-baseline.
+  it("pieces without ground are identical to main's plinth pieces (fingerprints measured on 860a582)", () => {
+    const MAIN = ["c5fafd27", "0e4fe4d3", "46251f13", "fff40466", "8841fb6b"];
+    for (let s = 1; s <= 5; s++) {
+      const c = city(createRng(s), createRng(s + 1), createRng(s + 2));
+      const plain = c.placed.filter((q) => q.piece.ground.length === 0).map((q) => q.piece);
+      expect(fingerprint(plain as unknown as Solid[]), `seed ${s}`).toBe(MAIN[s - 1]);
+    }
+  });
+
   it("water tower in the courtyard of (12, 164) and stone footbridge over the estuary", () => {
     const s = scene();
     const host = s.placed.find((p) => p.placed.block.x === WATER_TOWER_BLOCK.x && p.placed.block.y === WATER_TOWER_BLOCK.y)!;
     expect(host.placed.recipe).toBe("patioResidential");
+    expect(host.placed.lot.z).toBe(PLINTH_H); // the host brings no ground: it stays on its plinth, and so does the tower
     const court = host.piece.courtyard!;
     const tank = s.solids.find((x) => x.kind === "dome" && x.mat === "copper" && x.r === 2.2);
     expect(tank).toBeDefined();

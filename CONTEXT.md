@@ -65,3 +65,7 @@ Code: `src/map/geo.ts` (`BLEED`, `CELL_BLEED`), `src/world/veil.ts` (`veilCells`
 ### Cover frame
 The largest 16:9 rectangle that fits inside the projected content plus bleed, pulled in by `COVER_INSET` so it does not expose sky at the edge. It is the camera of the site (`coverView(w, h)`, which uses the real aspect of the host) and of lab key `4` (`coverFrame(16/9)`).
 Code: `src/map/geo.ts` (`coverQuad`, `inCoverQuad`, `COVER_INSET`), `src/world/frame.ts` (`coverFrame`), `src/world/view.ts` (`coverView`).
+
+### Plinth
+(Zócalo.) The `PLINTH_H` (0.3) paving prism under a city block. A recipe rests on it unless its piece brings `ground` (painted before every solid, the plinth would hide it): `seat` runs the recipe once at street level and lifts the piece `PLINTH_H` when it has no ground.
+Code: `src/kit/piece.ts` (`seat`, `liftPiece`), `src/scenes/city-pieces.ts` (`PLINTH_H`), `src/scenes/city.ts`, `src/lab/kit-scene.ts`.
