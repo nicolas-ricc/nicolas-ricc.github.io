@@ -52,7 +52,7 @@ describe("shipyard", () => {
     // poly: the building's windows, lantern and dials (#278), located by their first vertex
     const where = (a: Accent) => (a.kind === "dot" ? a.at : a.pts[0]!);
     const inStation = (a: Accent) => { const p = where(a); return p.x >= 110 && p.x <= STATION.x1 && p.y >= 100 && p.y <= STATION.y1; };
-    const outside = s.accents.filter((a) => !inStation(a)), inside = s.accents.filter(inStation);
+    const outside = s.accents.filter((a) => !inStation(a) && a.color !== "windowCool"), inside = s.accents.filter(inStation);
     expect(outside.length).toBeGreaterThanOrEqual(7); // five street lamps and two quay lamps
     // #323: the one exception is the window of the container yard gatehouse
     const windows = outside.filter((a) => a.kind === "poly");

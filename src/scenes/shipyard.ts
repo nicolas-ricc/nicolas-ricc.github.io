@@ -2,9 +2,10 @@ import type { Accent } from "../iso/accent";
 import { v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { bounds, type Solid } from "../iso/solids";
 import { BOTTOM, DOCK, QUAY_W, QUAY_X, WORLD, ZONE_SPLIT_Y, eastBank, northCoastY } from "../map/geo";
-import type { Rng } from "../map/seed";
+import { createRng, type Rng } from "../map/seed";
 import { jungle as flora } from "./flora";
 import { RIPRAP_KEEP_OUT, shipyardEast } from "./shipyard-east";
+import { portfolioWindows } from "./portfolio-lights";
 import { dockWorks, serviceStrip, yardFill, type Fill } from "./shipyard-fill";
 import { station } from "./station";
 import { clearOfWater } from "./terrain-classify";
@@ -44,6 +45,7 @@ const SLIP_X = 110;
 export const RAIL_Y = [131, 134] as const; // west tracks: the station draws them from x 96, Resume and the hinterland west of it
 const GANTRY_X = 150, GANTRY_H = 24;
 const WATER_Z = -1;
+const SEED_MAX = 2 ** 32 - 1; // seed of a derived Rng (no 0x… literal: the palette guard would take it for a color)
 
 // ---------------------------------------------------------------- pieces
 
@@ -228,5 +230,6 @@ export function shipyard(rng: Rng): Scene {
   shipyardEast(solids, accents, weldSpots, rng);
   ground.push(...solids.filter((s) => s.kind === "strip"));
   const raised = solids.filter((s) => s.kind !== "strip");
+  accents.push(...portfolioWindows(raised, createRng(rng.int(0, SEED_MAX))));
   return { ground, solids: raised, accents, trolley: g.trolley, trolleyRange: g.range, weldSpots, fill };
 }
