@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
-import { bounds, type Bounds, type Solid } from "../iso/solids";
+import { hides, screenHull } from "../iso/depth";
+import { bounds, isFlat, type Bounds, type Solid } from "../iso/solids";
 import { RECIPES, recipe } from "../kit/index";
 import { CAR, dockCrane } from "../kit/props";
 import { STYLES } from "../kit/styles";
@@ -121,7 +122,7 @@ describe("inlet works", () => {
       const boats = solids.filter((s) => s.kind === "hull");
       const walls = solids.filter((s) => s.kind === "prism" && s.mat === "concrete").map(bounds);
       expect(boats).toHaveLength(3);
-      expect(BOATS).toMatchObject({ xs: [285, 291, 297], y: 112, len: 5, beam: 2, h: 0.8 });
+      expect(BOATS).toMatchObject({ xs: [285, 291, 297], y: 98, len: 5, beam: 2, h: 0.8 }); // moored off the north wall: the market hides the south one
       const bs = boats.map(bounds);
       boats.forEach((s, i) => {
         if (s.kind !== "hull") return;
@@ -139,12 +140,12 @@ describe("inlet works", () => {
     }
   });
 
-  it("three rust nets and crates on the south wall, the old crane on its south-east corner, two lamps", () => {
+  it("three rust nets and crates on the south wall, the old crane on the north-east corner, two lamps", () => {
     const { solids, accents } = works(1);
     const onSouthWall = (s: Solid) => s.kind === "prism" && s.at.y >= 114 - EPS && s.at.y + s.d <= 115 + EPS && Math.abs(s.at.z - 0.5) < EPS;
     expect(solids.filter((s) => isPrism(s, "rust", 2, 1, 0.4) && onSouthWall(s))).toHaveLength(3);
     expect(solids.filter((s) => isPrism(s, "deck", 1, 1, 0.8) && onSouthWall(s)).length).toBeGreaterThanOrEqual(2);
-    const crane = JSON.stringify(dockCrane(v3(298, 114, 0.5), "w"));
+    const crane = JSON.stringify(dockCrane(v3(298, 95, 0.5), "w"));
     for (const c of JSON.parse(crane) as Solid[]) expect(solids.map((s) => JSON.stringify(s))).toContain(JSON.stringify(c));
     const posts = solids.filter((s) => isPrism(s, "steel", 0.6, 0.6, 5)).map((s) => (s.kind === "prism" ? `${s.at.x},${s.at.y},${s.at.z}` : ""));
     expect(posts.sort()).toEqual(["283,115.2,0", "299,94,0"]);
@@ -174,8 +175,9 @@ describe("inlet works", () => {
       for (const r of rocks) {
         expect(r).toMatchObject({ r: 1.6, h: 1.2 });
         expect(r.at.y).toBeGreaterThanOrEqual(90); expect(r.at.y).toBeLessThan(146);
-        expect(r.at.x).toBeCloseTo(eastBank(r.at.y) + 1.5, 9);
+        expect(r.at.x).toBeGreaterThanOrEqual(eastBank(r.at.y) + 1.5 - EPS); // on the bank line, or pushed east off a cell drawn as water
         expect(isWaterAt(r.at.x, r.at.y)).toBe(false);
+        expect(clearOfWater(r.at.x, r.at.y, r.at.x, r.at.y, 0)).toBe(true); // the terrain cell under the centre is land: no rock floats over water
         expect(r.at.y >= DARSENA.y0 && r.at.y < DARSENA.y1).toBe(false);
       }
     }
@@ -201,6 +203,16 @@ describe("the inlet in the city", () => {
       const placed = make().placed.map((p) => `${p.placed.recipe}@${p.placed.block.x},${p.placed.block.y}`);
       expect(placed).toContain("fishMarket@280,116");
       expect(placed).toContain("foodHall@280,140");
+    });
+
+    it(`no solid of the city hides a boat from the camera (${name})`, () => {
+      const s = make(), boats = s.solids.filter((x) => x.kind === "hull" && x.mat === "hull").map(bounds);
+      expect(boats).toHaveLength(3);
+      for (const b of boats) for (const o of s.solids) {
+        const ob = bounds(o);
+        if (o.kind === "hull" || isFlat(o) || (o.kind === "prism" && o.mat === "concrete" && o.at.z === -1)) continue; // the inlet's own walls rise 0.5 over the water, by design
+        expect(hides(b, ob, { back: screenHull(b), front: screenHull(ob) }), JSON.stringify(o).slice(0, 90)).toBe(false);
+      }
     });
 
     it(`no car parks on the inlet's walls (${name})`, () => {
