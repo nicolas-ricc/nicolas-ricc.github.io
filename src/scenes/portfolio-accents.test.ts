@@ -3,6 +3,7 @@ import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
 import { createRng } from "../map/seed";
 import { excavatorBox } from "./excavator";
+import { STACKS } from "./factory";
 import { shipyardAnimator } from "./shipyard-animator";
 import { STATION } from "./station";
 import { world } from "./world";
@@ -23,7 +24,8 @@ function ruleViolations(accents: Accent[]): string[] {
     if (!WARM.has(a.color)) return [];
     const station = p.x >= STATION.x0 && p.x <= STATION.x1 && p.y >= STATION.y0 && p.y <= STATION.y1;
     const excavator = p.x >= ex.x0 && p.x <= ex.x1 && p.y >= ex.y0 && p.y <= ex.y1;
-    return station || p.z >= STACK_MOUTH_Z || excavator ? [] : [`place ${at}`];
+    const stackMouth = p.z >= STACK_MOUTH_Z && STACKS.some((k) => Math.hypot(p.x - k.x, p.y - k.y) <= k.r + 1);
+    return station || stackMouth || excavator ? [] : [`place ${at}`];
   });
 }
 
@@ -35,8 +37,8 @@ describe("Portfolio accents", () => {
   it("rule 1: static colors of shipyard, factory and hinterland", () => expect(ruleViolations(portfolio)).toEqual([]));
 
   it("rule 1 catches intruders", () => {
-    const intruders: Accent[] = [{ kind: "dot", at: v3(150, -50, 1), r: 1, color: "amber" }, { kind: "dot", at: v3(150, 50, 5), r: 1, color: "spark" }];
-    expect(ruleViolations(intruders)).toHaveLength(2);
+    const intruders: Accent[] = [{ kind: "dot", at: v3(150, -50, 1), r: 1, color: "amber" }, { kind: "dot", at: v3(150, 50, 5), r: 1, color: "spark" }, { kind: "dot", at: v3(151, 50, 26), r: 1, color: "magenta" }];
+    expect(ruleViolations(intruders)).toHaveLength(3); // the last one is high, but on the gantry beam, not at a chimney mouth
   });
 
   it("rule 2: at least 30 cyan dots across the three scenes", () => expect(portfolio.filter((a) => a.kind === "dot" && a.color === "cyan").length).toBeGreaterThanOrEqual(30));

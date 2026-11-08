@@ -63,6 +63,7 @@ function quay(out: Solid[], accents: Accent[]): void {
   }
 }
 
+/** `portfolio-lights.ts` finds the halls and the workshops by these measures to light their windows. */
 function halls(out: Solid[]): void {
   for (const y of HALL_ROWS_Y) {
     out.push(prism(HALL_X, y, 0, HALL_W, ROW_H, HALL_H, "concrete", "gable"));
@@ -102,16 +103,16 @@ function slipways(out: Solid[], weldSpots: Vec3[]): void {
   });
 }
 
-function gantry(out: Solid[]): { trolley: Solid & { kind: "prism" }; range: [number, number] } {
+function gantry(out: Solid[]): { trolley: Solid & { kind: "prism" }; range: [number, number]; legs: Solid[] } {
   const y0 = ROW_Y[0] - 3, y1 = ROW_Y[1] + ROW_H + 1;
   out.push(strip([{ x: SLIP_X, y: y0 + 1.5 }, { x: QUAY_X, y: y0 + 1.5 }], 0.5, 0.05, "rail"));
   out.push(strip([{ x: SLIP_X, y: y1 + 1.5 }, { x: QUAY_X, y: y1 + 1.5 }], 0.5, 0.05, "rail"));
-  out.push(prism(GANTRY_X, y0, 0, 3, 3, GANTRY_H, "steel"));
-  out.push(prism(GANTRY_X, y1, 0, 3, 3, GANTRY_H, "steel"));
+  const legs = [prism(GANTRY_X, y0, 0, 3, 3, GANTRY_H, "steel"), prism(GANTRY_X, y1, 0, 3, 3, GANTRY_H, "steel")];
+  out.push(...legs);
   out.push(prism(GANTRY_X, y0, GANTRY_H, 3, y1 + 3 - y0, 2, "steel")); // beam
   const range: [number, number] = [y0 + 5, y1 - 6];
   const trolley = prism(GANTRY_X - 1, range[0], GANTRY_H + 2, 5, 4, 2, "rust");
-  return { trolley, range };
+  return { trolley, range, legs };
 }
 
 // ---------------------------------------------------------------- material yard (north band)
@@ -151,6 +152,7 @@ function dryDock(out: Solid[], ground: Solid[]): void {
 
 // ---------------------------------------------------------------- workshops (north band)
 
+/** Measures keyed by `portfolio-lights.ts` too (windows): see `halls()`. */
 function workshops(out: Solid[]): void {
   for (const x of [106, 134]) {
     out.push(prism(x, -33, 0, 24, 14, 7, "concrete", "step"));
@@ -223,7 +225,7 @@ export function shipyard(rng: Rng): Scene {
   siloAndRiprap(solids);
   const yard = yardFill(solids, rng);
   const dock = dockWorks(solids, accents, rng);
-  const fill: Fill = { yard, dock, service: serviceStrip(solids, rng) };
+  const fill: Fill = { yard, dock, service: serviceStrip(solids, rng, g.legs.map(bounds)) };
   jungle(solids, rng);
   lamps(solids, accents);
   seamFence(solids, accents);

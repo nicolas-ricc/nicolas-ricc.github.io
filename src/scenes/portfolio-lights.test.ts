@@ -48,6 +48,12 @@ describe("Portfolio windowCool windows", () => {
     }
   });
 
+  it("the north hall's 12 windows are hidden by the south hall in front of it", () => {
+    const north = cands.filter((c) => c.owner.kind === "prism" && c.owner.w === 90 && c.owner.at.y === -52);
+    expect(north).toHaveLength(12);
+    expect(north.every((c) => c.hidden)).toBe(true);
+  });
+
   it("deterministic by seed", () => {
     const a = JSON.stringify(portfolioWindows(sy.solids, createRng(5)));
     expect(JSON.stringify(portfolioWindows(sy.solids, createRng(5)))).toBe(a);

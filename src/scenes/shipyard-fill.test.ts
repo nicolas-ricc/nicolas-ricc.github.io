@@ -66,7 +66,7 @@ describe.each(scenes)("material yard fill (%s)", (_, s) => {
   it("yard pieces do not overlap each other or the old solids", () => expect(overlapsOf(s, s.fill.yard)).toEqual([]));
 });
 
-it("the site's yard places at least 2 stock groups", () => expect(site.fill.yard.length - 1).toBeGreaterThanOrEqual(2)); // measured 2 with world(7): the issue allows giving up when a group does not fit
+it("the site's yard places at least 3 stock groups", () => expect(site.fill.yard.length - 1).toBeGreaterThanOrEqual(3)); // measured 4 with world(7) (random tries, then first fit)
 
 describe.each(scenes)("dry dock works (%s)", (_, s) => {
   const [north, south, ...rest] = s.fill.dock;
