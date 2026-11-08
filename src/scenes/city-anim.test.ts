@@ -396,6 +396,7 @@ describe("city-anim: windows and street neon with wall time (#192)", () => {
     for (const total of [60000, 600000]) {
       const once = chunked([total]).fired().windows;
       expect(once).toBeGreaterThanOrEqual(total / WINDOW_GAP_MS[1] - 1);
+      expect(once).toBeLessThanOrEqual(total / WINDOW_GAP_MS[0]);
       expect(chunked(repeat(total / 1000, 1000)).fired().windows).toBe(once);
       expect(chunked(repeat(total / 100, 100)).fired().windows).toBe(once);
       expect(chunked(irregular(total)).fired().windows).toBe(once);

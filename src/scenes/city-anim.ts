@@ -84,9 +84,9 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
   const windowRng = createRng(rng.int(0, SEED_MAX)); // own stream, for the same reason as blinkRng
   let windowTimer = windowRng.int(WINDOW_GAP_MS[0], WINDOW_GAP_MS[1]);
   let windowEvents = 0;
+  // street neon: after the windows so as not to reorder their draws
   const flickerRng = createRng(rng.int(0, SEED_MAX)); // own stream; derived even with no street neon, so the shared rng does not depend on it
   let flickers = 0;
-  // street neon: after the windows so as not to reorder their draws
   const street = scene.lights.flicker === null ? null : scene.lights.neons[scene.lights.flicker]!;
   let flickerTimer = street ? flickerRng.int(FLICKER_GAP_MS[0], FLICKER_GAP_MS[1]) : 0;
   let flickerUntil = -1;
@@ -170,7 +170,12 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
       if (street) {
         if (flickerUntil >= 0 && clock >= flickerUntil) { flickerUntil = -1; c.neon = true; }
         flickerTimer -= dtMs;
-        while (flickerTimer <= 0) { flickerUntil = clock + NEON_STEP_MS; flickerTimer += flickerRng.int(FLICKER_GAP_MS[0], FLICKER_GAP_MS[1]); flickers++; c.neon = true; }
+        while (flickerTimer <= 0) { // a long tick can bring several flickers; they share one dim step
+          flickerUntil = clock + NEON_STEP_MS;
+          flickerTimer += flickerRng.int(FLICKER_GAP_MS[0], FLICKER_GAP_MS[1]);
+          flickers++;
+          c.neon = true;
+        }
       }
       return c;
     },
