@@ -28,14 +28,14 @@
 5. **"Solapar" es AABB 3D estricto (1e-9) entre sólidos no planos de piezas distintas.** Dentro de una pieza se toca o se cruza (la grúa torre cruza mástil y cabina, por ejemplo). Los rieles son tiras (`strip`) y van al `ground`: no cuentan.
 6. **Colocación por rechazo** (patio y servicio): caja en planta del grupo contra la caja en planta de **todo** `out` (incluidas las tiras, para no apoyar acopios sobre los rieles) y de lo ya colocado, con 0.5 de margen; 30 intentos por grupo con `rng.next()` para x y para y, y si ninguno entra se desiste.
 7. **Ventanas candidatas solo en paredes rectangulares de planta baja:** `visibleWalls(s)` con `pts.length === 4`, `pts[0].z === pts[1].z === s.at.z` y normal `x > 0` o `y > 0`. El hastial de una nave (pentágono, con `pts[0]→pts[1]` vertical) y el segundo nivel del techo escalonado quedan fuera, porque `facadeWindows` asume la base en `pts[0]→pts[1]`. De los galpones, solo la pared este (`normal.x > 0`). Medido con `world(7)`: 64 candidatas, 28 ocultas por el astillero y 36 visibles.
-8. **Identificación de los dueños de ventanas en `solids`:** las naves son `prism` `gable` `concrete` 90×16×10, los talleres `prism` `step` `concrete` 24×14×7 y los galpones `prism` `gable` 8×56 con `at.x ≥ 300` (de cualquier material, por si #323 los pasa a `sheetTeal`).
+8. **Identificación de los dueños de ventanas en `solids`:** las naves son `prism` `gable` `concrete` 90×16×10 y los talleres `prism` `step` `concrete` 24×14×7 (literales de `halls()`/`workshops()`, `shipyard.ts:46-52,141-147`). Los galpones son cualquier `prism` `gable` con `at.x ≥ 300`, sin mirar medidas ni material, por si #323 los cambia. No se importan constantes de `shipyard.ts` para no crear un ciclo `shipyard ↔ portfolio-lights`.
 9. **Caja de una ventana:** `lightBox(pts)` de `src/city/lights.ts` (AABB ±0.05). El sólido dueño se excluye de los oclusores.
 10. **Prueba de "no tapan" de lo nuevo** (como la rueda en `fair.test.ts`): por cada protegido `P` y cada sólido nuevo `N` no plano, si `overlaps(screenBounds(P), screenBounds(N))` entonces `isBehind(P, N)` es `false`. Protegidos: patas y viga del pórtico, el carro en los dos extremos de `trolleyRange`, el casco y la superestructura del dique seco, y las tres chimeneas (`STACKS`, cilindros de la fábrica de `world(7)`). Los trabajos del dique (andamios, grúas, contenedores) se prueban contra el pórtico y las chimeneas, no contra el casco del dique: están ahí para verse delante y encima de él.
-11. **Franja de servicio:** si la prueba 10 falla para la semilla 7 por la pata sur del pórtico (`x 150..153, y 73..76`), se amplía el tramo saltado hacia el este (`x 147..160`) y se anota el desvío en el PR.
+11. **Franja de servicio y pórtico:** la geometría del issue (`x 112..196`, salto `147..156`) no se toca. Si la prueba 10 falla para la semilla 7 por la pata sur del pórtico (`x 150..153, y 73..76`), `serviceStrip` suma al rechazo el predicado de la prueba 10 contra esa pata (`overlaps(screenBounds) && isBehind(pata, caja)`).
 
 ## Review Focus
 
-1. **Ventana tapada por la fábrica:** la oclusión mira solo el astillero, y la fábrica tapa 2 de las 64 candidatas. Una encendida ahí brillaría a través del vagón o la grúa. Test en la tarea 5: con `world(7)`, ninguna ventana encendida queda oculta (`hides`) por un sólido elevado de `w.factory`.
+1. **Ventana tapada por la fábrica:** la oclusión mira solo el astillero, como decide el issue, y la fábrica tapa 2 de las 64 candidatas. Queda **fuera de alcance**, en #332. En la etapa 4 se mide si alguna encendida de `world(7)` cae ahí, y el resultado va al PR. No es un test.
 2. **Determinismo con otra semilla:** el patio y el servicio desisten si no entra un grupo; con `shipyard(createRng(8))` también se cumplen los límites y el no-solapamiento. Test en las tareas 2 y 4 (semillas 7 y 8).
 3. **El guard sin conteos tiene que poder fallar:** cada regla se prueba también con un acento intruso (un `amber` en el patio, un `spark` estático), es decir, la función que valida la regla se prueba sobre una lista con ese intruso. Test en la tarea 6.
 4. **Chispas con `reducedMotion`:** nunca hay chispas y la capa queda vacía. Ya cubierto en `shipyard-anim.test.ts`, que se conserva.
@@ -51,7 +51,7 @@
 
 - [ ] **Paso 1: test (etapa 3)** `"the sparks are spark dots of r 0.6"`: igual que `"the sparks appear at a rib…"`, recorrer 20 000 ms de a 100; toda chispa vista es `dot`, `color === "spark"`, `r === 0.6`; y `seen > 5`. Los tests de frame 0 sin chispas y de `reducedMotion` se conservan.
 - [ ] **Paso 2:** `npx vitest run src/scenes/shipyard-anim.test.ts` → FALLA (`cyan`).
-- [ ] **Paso 3:** `burst()` emite `color: "spark"`. El `sparkRng.chance(0.6)` que elegía el color **se conserva** (el consumo del rng no cambia, ni los tests de chunking).
+- [ ] **Paso 3:** `burst()` emite `color: "spark"` y se quita el `sparkRng.chance(0.6)` que elegía el color. Ningún test fija posiciones de chispas: los de chunking comparan dos corridas entre sí (`shipyard-anim.test.ts:93-146`).
 - [ ] **Paso 4:** el test pasa. Commit `feat(#324): welding sparks are spark`.
 
 ### Tarea 2: patio de material — acopios y puente grúa (`yardFill`)
@@ -62,10 +62,11 @@
 - Produce: `export interface Fill { yard: Solid[][]; dock: Solid[][]; service: Solid[][] }`; `Scene.fill: Fill`; `export const YARD = { x0: 104, y0: -59, x1: 192, y1: -36 }`; `export function yardFill(out: Solid[], rng: Rng): Solid[][]` (primero el puente grúa, después los acopios).
 
 - [ ] **Paso 1: tests (etapa 3)** en `shipyard-fill.test.ts`, para `shipyard(createRng(seed))` con `seed ∈ {7, 8}`:
-  - `"yard: 3..5 stock groups inside the yard, none above 3"`: `fill.yard.length - 1 ∈ [3, 5]` cuando entran (semilla 7: `≥ 3`); todo sólido de los grupos tiene la caja dentro de `x 104..192, y −59..−36` y `max.z ≤ 3`.
+  - `"yard: up to 5 stock groups inside the yard, none above 3"`: `fill.yard.length - 1 ≤ 5`; con `world(7).shipyard` `≥ 3` (si la semilla del sitio coloca menos, el issue lo permite ("desistir si no entra"): se baja el mínimo a lo medido y se anota en el PR); todo sólido de los grupos tiene la caja dentro de `x 104..192, y −59..−36` y `max.z ≤ 3`.
   - `"yard gantry: two rails, two steel legs 1×1×9 on the rails, a 1×24×1 beam at z 9 and a rust trolley at z 8"`: la primera pieza de `fill.yard` tiene dos `strip` `rail` con `path` de `(104, y)` a `(192, y)` para `y ∈ {−59.5, −35.5}`; patas `prism steel` `w 1 d 1 h 9` en `at (150, −59.5, 0)` y `(150, −36.5, 0)`, y cada una contiene en `[min.y, max.y]` la `y` de un riel; viga `prism steel` `at (150, −59.5, 9)` `1×24×1`; carro `prism rust 2×2×1` `at.z === 8` con la caja en `y −58.5..−36.5`, sin solaparse con las patas.
   - `"yard pieces do not overlap each other or the old solids"` (decisión 5).
-  - En `shipyard.test.ts`, ajustes: el test de la banda norte pasa a `min.y ≥ −60`. El test `"material yard…"` pasa de igualdad a `arrayContaining` en chapas, caños, bobinas y secciones, y `pipes` a `≥ 12`. `yard()` del test de grupos disjuntos suma `fill.yard.flat()` sin tiras, y su caja queda en `x 104..192, y −60..−35.5`. Siguen siendo cinco grupos disjuntos.
+  - Los tests de esta tarea y de las tareas 3 y 4 usan `world(7).shipyard` (la semilla del sitio, y la fábrica para las chimneys) y `shipyard(createRng(8))` para la segunda semilla.
+  - En `shipyard.test.ts`, ajustes: el test de la banda norte pasa a `min.y ≥ −60`. El test `"material yard…"` pasa de igualdad a `arrayContaining` en chapas, caños, bobinas y secciones, y `pipes` a `≥ 12`. `yard()` del test de grupos disjuntos suma `fill.yard.flat()` sin tiras, y su caja queda en `x 104..192, y −60..−35.5`. Siguen siendo cinco grupos disjuntos. Las igualdades exactas del patio viejo **se conservan** filtrando primero los sólidos de `fill` (un `Set` de `fill.yard.flat()`): `prisms(s)`/`cylinders(s)` del test excluyen el relleno.
 - [ ] **Paso 2:** `npx vitest run src/scenes/shipyard-fill.test.ts src/scenes/shipyard.test.ts` → FALLA (no existe el módulo).
 - [ ] **Paso 3:** `yardFill` arma el puente grúa (rieles `strip` de ancho 0.5 a `z 0.05`, como los del pórtico; carro en `at (149.5, −48.5, 8)`) y después `rng.int(3, 5)` grupos. Cada grupo es `rng.pick` de cuatro hacedores que tiran su tamaño una vez: `sheetStack(at, rng.int(2, 4))`, `pipeBundle(at, rng.int(8, 14))`, `coils(at, rng.int(2, 4))`, `hullSections(at, rng.int(1, 2))`. La colocación sigue la decisión 6 dentro de `YARD`. `shipyard()` crea `fill` y lo devuelve en el `Scene`.
 - [ ] **Paso 4:** los tests de la tarea pasan y `npm test` no rompe nada más (selva: `≥ 5` conos). Commit `feat(#324): material yard fill and yard gantry`.
@@ -97,7 +98,7 @@
 - Produce: `export const SERVICE = { x0: 112, y0: 76.5, x1: 196, y1: 79.5, skip: [147, 156] }`; `export function serviceStrip(out: Solid[], rng: Rng): Solid[][]` → 12 piezas como máximo: 2 depósitos, 2 autoelevadores (`prism rust 2×3×2`), 3 pilas de pallets (`prism deck 1.2×1×0.5` × `rng.int(1, 4)` apilados), 3 baños químicos (`prism boxBlue 1×1×2.2`) y 2 contenedores de herramientas (`stackContainers(…, 1, "x", rng)`).
 
 - [ ] **Paso 1: tests (etapa 3)**
-  - `"service strip: inside x 112..196, y 76.5..79.5, never in x 147..156, none above 3"`, semillas 7 y 8; con la semilla 7 se colocan las 12 piezas. Las cuentas por tipo se verifican por forma.
+  - `"service strip: inside x 112..196, y 76.5..79.5, never in x 147..156, none above 3"`, con `world(7).shipyard` y `shipyard(createRng(8))`; con `world(7)` se colocan las 12 piezas (75 u libres para unas 31 u de piezas). Las cuentas por tipo se verifican por forma.
   - `"the fill does not overlap itself or the old solids"`: decisión 5 sobre `[...yard, ...dock, ...service]`.
   - `"the fill does not cover the gantry, the dry dock hull or the chimneys on screen"`: decisión 10.
 - [ ] **Paso 2:** FALLA.
@@ -113,13 +114,12 @@
 - Produce: `export interface WindowCandidate { pts: Vec3[]; owner: Solid; hidden: boolean }`; `export function windowCandidates(solids: Solid[]): WindowCandidate[]`; `export function portfolioWindows(solids: Solid[], rng: Rng): Accent[]`. Facades: naves `{ floors: 1, cols: 12 }`, talleres `{ floors: 1, cols: 5 }`, galpones `{ floors: 1, cols: 10 }`.
 
 - [ ] **Paso 1: tests (etapa 3)**, con `world(7)` y `windowCandidates(w.shipyard!.solids)`:
-  - `"candidates: south walls of the halls, east and south of the workshops, east of the sheds"`: 64 candidatas, 36 visibles (las medidas de la decisión 7).
-  - `"25..35 % of the visible candidates are lit, all windowCool polys with WINDOW_ALPHA"`: las `poly windowCool` de `w.shipyard.accents` son `round(0.3·36)`; cada una tiene `alpha === WINDOW_ALPHA` y coincide punto a punto con una candidata visible.
+  - `"candidates: south walls of the halls, east and south of the workshops, east of the sheds"`: 64 candidatas (2·12 + 2·(5+5) + 2·10) y `≥ 20` visibles. No se fija 36: el relleno podría tapar alguna.
+  - `"25..35 % of the visible candidates are lit, all windowCool polys with WINDOW_ALPHA"`: las `poly windowCool` de `w.shipyard.accents` son `round(0.3·visibles)` y caen entre el 25 % y el 35 % de las visibles; cada una tiene `alpha === WINDOW_ALPHA` y coincide punto a punto con una candidata visible.
   - `"no lit window is hidden by another raised shipyard solid"`.
-  - `"no lit window is hidden by a raised factory solid"` (Review Focus 1).
   - `"deterministic by seed"`: `portfolioWindows(solids, createRng(5))` da lo mismo dos veces y algo distinto con `createRng(6)`.
 - [ ] **Paso 2:** FALLA.
-- [ ] **Paso 3:** `windowCandidates` aplica las decisiones 7–9. `portfolioWindows` toma las visibles, saca una clave `rng.next()` por ventana en orden y enciende las `round(0.3·n)` de clave menor, conservando el orden de las candidatas. `shipyard()`, al final, hace `accents.push(...portfolioWindows(raised, createRng(rng.int(0, 2 ** 32 - 1))))`. Si falla el test de la fábrica: no se cambia la firma; se anota el caso y lo decide la etapa 5/6.
+- [ ] **Paso 3:** `windowCandidates` aplica las decisiones 7–9. `portfolioWindows` toma las visibles, saca una clave `rng.next()` por ventana en orden y enciende las `round(0.3·n)` de clave menor, conservando el orden de las candidatas. `shipyard()`, al final, hace `accents.push(...portfolioWindows(raised, createRng(rng.int(0, 2 ** 32 - 1))))`.
 - [ ] **Paso 4:** pasa. Commit `feat(#324): windowCool windows in halls, workshops and sheds`.
 
 ### Tarea 6: guard por reglas y presupuestos
@@ -144,3 +144,22 @@
 ## Verificación visual (etapa 4)
 
 `npm run dev -- --host --port 5173`. Con agent-browser a 1600×900 escala 2: `/lab/portfolio.html?speed=5` (patio, puente grúa, andamios, grúas chicas, franja de servicio, ventanas frías y chispas naranjas en las cuadernas); `/lab/world.html` (tecla `1`); `/lab/storybook.html#naves`, `#gradas` y `#calle-faroles`.
+
+## Assumptions
+
+Decisiones técnicas tomadas en la revisión del plan (van al PR):
+
+- **Medidas del test de ventanas:** 64 candidatas y `≥ 20` visibles, no 36 exactas. Rechazada: fijar 36, la medida hecha antes del relleno.
+- **Chispas:** se quita `chance(0.6)`. Rechazada: dejar una tirada muerta solo para conservar el consumo del rng, que ningún test fija.
+- **Galpones por posición:** `gable` con `at.x ≥ 300`, sin medidas. Rechazado: importar constantes de `shipyard.ts` (ciclo de imports).
+- **Pata del pórtico:** si la franja de servicio la tapa, se agrega un rechazo por pantalla. Rechazado: ensanchar el salto `147..156` que fija el issue.
+- **Patio viejo:** las igualdades exactas se conservan restando `fill`. Rechazado: pasarlas a `arrayContaining`.
+- **Mínimo de grupos del patio:** `≥ 3` con `world(7)`. Si no entran, se baja a lo medido, porque el issue permite desistir.
+
+## Grilling
+
+- Rondas: 1 (los cambios no agregan ni quitan tareas, ni cambian una costura: no hace falta una segunda).
+- Preguntas: 18. Por fuente: ISSUE 7, CODE 10, DOC 0, NO SOURCE 6 (5 supuestos técnicos y 1 fuera de alcance).
+- Supuestos: los de la sección anterior.
+- Issues abiertos: #332 (la oclusión de las ventanas no mira la fábrica).
+- Estado: `ok`.
