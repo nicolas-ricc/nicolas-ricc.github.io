@@ -445,3 +445,44 @@ describe("openDock details", () => {
     }
   });
 });
+
+describe("reconversion edges", () => {
+  const inLot = (s: Solid, lot: Lot): boolean => {
+    const b = bounds(s);
+    return b.min.x >= lot.x - 0.8 - EPS && b.min.y >= lot.y - 0.8 - EPS && b.max.x <= lot.x + lot.w + 0.8 + EPS && b.max.y <= lot.y + lot.d + 0.8 + EPS
+      && b.min.z >= lot.z - EPS && b.max.z <= lot.z + Math.min(lot.maxH, 18) + EPS;
+  };
+  const SIZES = [{ w: 21, d: 15 }, { w: 24, d: 18 }];
+
+  it("every frontage recipe honours open[0] on all four sides", () => {
+    for (const size of SIZES) for (const side of ["n", "e", "w"] as const) for (const name of NAMES) for (const seed of SEEDS) {
+      const lot: Lot = { x: 1.5, y: 1.5, ...size, z: 0, open: [side], maxH: 24 };
+      const p = recipe(name)(lot, createRng(seed), name === "freightShed" || name === "openDock" ? STYLES.freight : STYLES.warehouses);
+      for (const s of p.solids) expect(inLot(s, lot), `${name} ${side} ${size.w}x${size.d} s${seed}`).toBe(true);
+      if (name === "brewery") {
+        expect(p.slots.length).toBeGreaterThan(0);
+        for (const sl of p.slots) expect(sl.side).toBe(side);
+      }
+      if (name === "coveredMarket") {
+        for (const s of p.solids) if (touches(s, lot, side) && height(s) >= 3) expect(isPillar(s)).toBe(true);
+      }
+    }
+  });
+
+  it("a 15×21 lot keeps the contract", () => {
+    for (const side of ["s", "e", "n", "w"] as const) for (const name of NAMES) for (const seed of SEEDS) {
+      const lot: Lot = { x: 1.5, y: 1.5, w: 15, d: 21, z: 0, open: [side], maxH: 24 };
+      const p = recipe(name)(lot, createRng(seed), name === "freightShed" || name === "openDock" ? STYLES.freight : STYLES.warehouses);
+      for (const s of [...p.solids, ...p.ground]) expect(inLot(s, lot), `${name} ${side} s${seed}`).toBe(true);
+    }
+  });
+
+  it("no open side falls back to the south", () => {
+    for (const name of ["brewery", "vaultLoft"]) for (const size of SIZES) for (const seed of SEEDS) {
+      const lot: Lot = { x: 1.5, y: 1.5, ...size, z: 0, open: [], maxH: 24 };
+      const a = recipe(name)(lot, createRng(seed), STYLES.warehouses);
+      const b = recipe(name)({ ...lot, open: ["s"] }, createRng(seed), STYLES.warehouses);
+      expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+    }
+  });
+});
