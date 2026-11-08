@@ -6,7 +6,7 @@ import { v3 } from "../../iso/geometry";
 import { createRng } from "../../map/seed";
 import { LAB_LOTS, RECIPES, recipe } from "../index";
 import { STYLES } from "../styles";
-import { plateWindows } from "./reconversion";
+import { frontFrame, plateWindows } from "./reconversion";
 import type { Lot, Side } from "../types";
 
 const LOTS: Lot[] = [
@@ -73,7 +73,50 @@ describe("loftHall", () => {
   });
 });
 
+describe("frontFrame", () => {
+  const lot: Lot = { x: 0, y: 0, w: 20, d: 10, z: 0, open: [], maxH: 24 };
+  const at = (side: Side) => frontFrame({ ...lot, open: [side] });
+  it("maps rect(0, 0, 2, 1) to the strip against the front edge on all four sides", () => {
+    expect(at("s").rect(0, 0, 2, 1)).toEqual({ x: 0, y: 9, w: 2, d: 1 });
+    expect(at("n").rect(0, 0, 2, 1)).toEqual({ x: 0, y: 0, w: 2, d: 1 });
+    expect(at("e").rect(0, 0, 2, 1)).toEqual({ x: 19, y: 0, w: 1, d: 2 });
+    expect(at("w").rect(0, 0, 2, 1)).toEqual({ x: 0, y: 0, w: 1, d: 2 });
+  });
+
+  it("falls back to the south and reports wall index, length and depth", () => {
+    expect(frontFrame({ ...lot, open: [] })).toMatchObject({ side: "s", wall: 2, len: 20, depth: 10 });
+    expect(at("e")).toMatchObject({ side: "e", wall: 1, len: 10, depth: 20 });
+    expect(at("e").point(3, 2)).toEqual({ x: 18, y: 3 });
+    expect(at("s").point(3, 2)).toEqual({ x: 3, y: 8 });
+  });
+});
+
 describe("vaultLoft", () => {
+  it("has a vault with the roof material, based on the body top, along the front's axis, and a deck sticking out 1 from the front wall", () => {
+    for (const [open, axis] of [["s", "x"], ["n", "x"], ["e", "y"], ["w", "y"]] as const) for (const seed of SEEDS) {
+      const lot: Lot = { ...LOTS[0]!, open: [open] };
+      const p = recipe("vaultLoft")(lot, createRng(seed), STYLES.warehouses);
+      const vault = p.solids.find((s) => s.kind === "vault");
+      if (!vault || vault.kind !== "vault") throw new Error("no vault");
+      expect(vault.mat).toBe("sheetGreen");
+      expect(vault.axis).toBe(axis);
+      expect(vault.len).toBeLessThanOrEqual(18);
+      const body = p.solids.find((s) => s.kind === "prism" && plates(s).some((q) => q.mat === "glass"));
+      if (!body || body.kind !== "prism") throw new Error("no body");
+      expect(vault.at.z).toBeCloseTo(body.at.z + body.h, 9);
+      const glass = plates(body).find((q) => q.mat === "glass")!;
+      expect(glass.toneOffset).toBe(1);
+      expect(glass.wall).toBe(WALL[open]);
+      const deck = p.solids.find((s) => s.kind === "prism" && s.mat === "deck");
+      if (!deck || deck.kind !== "prism") throw new Error("no deck");
+      expect(deck.h).toBeCloseTo(0.3, 9);
+      expect(deck.at.z).toBeCloseTo(lot.z + 2.5, 9);
+      const db = bounds(deck), bb = bounds(body);
+      const out = { s: db.max.y - bb.max.y, n: bb.min.y - db.min.y, e: db.max.x - bb.max.x, w: bb.min.x - db.min.x }[open];
+      expect(out).toBeCloseTo(1, 9);
+    }
+  });
+
   it("has a vault and a glass plate on the open[0] wall", () => {
     for (const lot of LOTS) for (const seed of SEEDS) {
       const p = recipe("vaultLoft")(lot, createRng(seed), STYLES.warehouses);
