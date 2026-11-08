@@ -31,7 +31,7 @@
    - blog: `Isometric Blog: the sea, the lighthouse and the ships sailing away; the whole world around. <HELP>`
    - resume: `Isometric Resume: the office city and the shipyard. <HELP>`
    - portfolio: `Isometric shipyard. <HELP>`
-4. **What "mentions a key" means in the test.** A helper `labelKeys(label: string): Set<string>` collects the keys the label names: every `a..b` digit range expands to `a`..`b` inclusive, and every `Key N` / `Keys N` names `N`. The test asserts that every key of `WORLD_KEYS.split(" ")` is in that set. A bare digit elsewhere (`100`, `?speed=0`) does not count, so world's `?speed=0` cannot pass for key 0.
+4. **What "mentions a key" means in the test.** A helper `labelKeys(label: string): Set<string>` collects the keys the label names: every `a..b` digit range expands to `a`..`b` inclusive, and every `Key N` / `Keys N` names `N`. The test asserts that every key of `WORLD_KEYS.split(" ")` is in that set. A bare digit elsewhere (`100`, `?speed=0`) does not count, so world's `?speed=0` cannot pass for key 0. Exact, case-sensitive regexes: ranges `/\b(\d)\.\.(\d)\b/g` (single digits on both sides; `a > b` expands to nothing; `0..100` does not match because `\b` fails inside `100`), keys `/\bKeys? (\d)\b/g` (`Keys 0..4` names `0` through this rule and `0..4` through the range rule; the set absorbs the overlap).
 5. **Pinning "what each does".** The same test asserts that the label contains `WORLD_HELP` verbatim (a `const` in the test file next to `WORLD_KEYS`). That is the drift guard for the meaning; `labelKeys` alone would pass a label that names a key with the wrong action.
 6. **Which pages.** A separate `for (const page of WORLD_PAGES)` after the existing loop, with `WORLD_PAGES = Object.keys(SHORTCUTS).filter((p) => SHORTCUTS[p] === WORLD_KEYS)`. A fifth world page added to `SHORTCUTS` gets the test with no edit, and `kit` / `storybook` stay out.
 
@@ -73,4 +73,17 @@
 - [ ] **Step 2: run and see it fail.** `npx vitest run src/lab/host-keyboard.test.ts`. Expected: the four `aria-label names every key` tests FAIL (world misses 4, resume 4..6, blog 5..6, portfolio all); the `labelKeys` test passes.
 - [ ] **Step 3: edit the four `aria-label`s** to the exact text of decision 3. Nothing else in the files changes.
 - [ ] **Step 4: run and see it pass.** `npx vitest run src/lab/host-keyboard.test.ts`: all PASS. Then `npm test` and `npm run typecheck`: green.
-- [ ] **Step 5: commit.** `git add lab/world.html lab/blog.html lab/resume.html lab/portfolio.html && git commit -m "fix(#302): world lab labels name keys 0..6"`
+- [ ] **Step 5: commit.** The test file was already committed in the evals stage (`test(#302): evals`, the stage before implementation in this pipeline); this commit carries the HTML only. `git add lab/world.html lab/blog.html lab/resume.html lab/portfolio.html && git commit -m "fix(#302): world lab labels name keys 0..6"`
+
+## Assumptions
+
+- `WORLD_HELP` pinned verbatim in the test (decision 5) instead of only checking key mentions. Rejected alternative: key mentions only, which would let a label name a key with the wrong action. The issue asks for every key "with what each does" (criterion 1); the verbatim form is the engineering choice that makes it checkable. A coordinated wrong edit of `WORLD_HELP` and the four HTML files is not guarded; it would also have to keep `page.test.ts:39` (`Key 6 rotates the bloom: off, on, fallback.`) green.
+- `labelKeys` regexes as written in decision 4.
+- Portfolio's description gains a final period (decision 2), so the help text starts its own sentence.
+
+## Grilling
+
+- Rounds: 1 (the answers did not change the seam or add or remove steps). Questions: 13.
+- Sources: ISSUE 3 (Q1 pipeline/brief, Q8, Q12), CODE 9 (Q2 `src/lab/page.ts:12` `KEY_ZONE` and `:76-80` listener, all four `src/lab/{world,blog,resume,portfolio}.ts` call `bootWorldPage`; Q3 no runtime write of `aria-label` in `src/lab/` (grep: only `src/content/render.ts`, the site); Q4 `host-keyboard.test.ts:21-27` `mountHost` reads `lab/<page>.html` from disk; Q5 `host-keyboard.test.ts:11` `Record<string, string>`, `tsconfig.json:7` `noUncheckedIndexedAccess` makes `SHORTCUTS[p]` `string | undefined`, comparable with `===`; Q6 `lab/*.html:16`; Q9 `src/lab/page.test.ts:74-84` pins both `?bloom=` and `?speed=` sentences; Q10 `host-keyboard.test.ts:45-47` compares the real attribute with `SHORTCUTS[page]`, i.e. `WORLD_KEYS`; Q11 `page.test.ts:39` and `storybook.test.ts:30` pin `Key 6 rotates the bloom: off, on, fallback.`, kept; `host.test.ts:14` only requires a non-empty label; Q13 one `describe` at `host-keyboard.test.ts:35`), technical assumption 1 (Q7 regex, now in decision 4), DOC 0. Q8 also feeds the first assumption.
+- Spec ambiguities: none. Follow-up issues opened: none.
+- Result: `ok`.
