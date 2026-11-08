@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { buildRenderList } from "../iso/render-list";
 import type { Accent } from "../iso/accent";
-import { bounds, type Solid } from "../iso/solids";
+import { bounds, isFlat, type Solid } from "../iso/solids";
 import { WORLD, inStationLand, northCoastY } from "../map/geo";
 import { allIsoColors } from "../map/palette-iso";
 import { createRng } from "../map/seed";
+import { windowCandidates } from "./portfolio-lights";
 import { AREA_H, AREA_W, STREET_EDGE, shipyard, type Scene } from "./shipyard";
 import { YARD } from "./shipyard-east";
 import { BUFFER_X, ESPLANADE, STATION } from "./station";
@@ -52,7 +53,8 @@ describe("shipyard", () => {
     // poly: the building's windows, lantern and dials (#278), located by their first vertex
     const where = (a: Accent) => (a.kind === "dot" ? a.at : a.pts[0]!);
     const inStation = (a: Accent) => { const p = where(a); return p.x >= 110 && p.x <= STATION.x1 && p.y >= 100 && p.y <= STATION.y1; };
-    const outside = s.accents.filter((a) => !inStation(a)), inside = s.accents.filter(inStation);
+    const facade = new Set(windowCandidates(s.solids).map((c) => JSON.stringify(c.pts))); // #324: the windows of halls, workshops and sheds
+    const outside = s.accents.filter((a) => !inStation(a) && !(a.kind === "poly" && facade.has(JSON.stringify(a.pts)))), inside = s.accents.filter(inStation);
     expect(outside.length).toBeGreaterThanOrEqual(7); // five street lamps and two quay lamps
     // #323: the one exception is the window of the container yard gatehouse
     const windows = outside.filter((a) => a.kind === "poly");
@@ -85,7 +87,7 @@ describe("shipyard part 2", () => {
   it("jungle: cones in the east strip and the station esplanade, none south of 90 outside the station land", () => {
     const s = scene();
     const cones = s.solids.filter((x): x is Solid & { kind: "cone" } => x.kind === "cone" && (x.mat === "leaf" || x.mat === "leafDark"));
-    expect(cones.length).toBeGreaterThanOrEqual(5); // measured 5 (seed 7) after the cuts
+    expect(cones.length).toBeGreaterThanOrEqual(6); // measured 6 (seed 7) after the #324 fill
     // the palms of the station esplanade (#278) are at x 190..197, outside the shipyard slab
     for (const c of cones) {
       expect(c.at.x > 300 || (c.at.x > ESPLANADE.x0 && c.at.x < ESPLANADE.x1), `cone ${c.at.x},${c.at.y}`).toBe(true);
@@ -159,8 +161,10 @@ describe("shipyard without the new region (#242)", () => {
 });
 
 describe("shipyard in the north band (#247)", () => {
-  const prisms = (s: Scene) => s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism");
-  const cylinders = (s: Scene) => s.solids.filter((x): x is Solid & { kind: "cylinder" } => x.kind === "cylinder");
+  // the yard fill (#324) is left out: these tests pin the old pieces exactly
+  const old = (s: Scene) => { const fill = new Set(s.fill.yard.flat()); return s.solids.filter((x) => !fill.has(x)); };
+  const prisms = (s: Scene) => old(s).filter((x): x is Solid & { kind: "prism" } => x.kind === "prism");
+  const cylinders = (s: Scene) => old(s).filter((x): x is Solid & { kind: "cylinder" } => x.kind === "cylinder");
   const at = (x: Solid & { kind: "prism" }) => [x.at.x, x.at.y, x.at.z];
   const box = (ss: Solid[]) => {
     const bs = ss.map(bounds);
@@ -176,6 +180,7 @@ describe("shipyard in the north band (#247)", () => {
   const yard = (s: Scene): Solid[] => [
     ...prisms(s).filter((x) => (x.w === 10 && x.d === 2 && x.h === 0.5) || (x.w === 14 && x.d === 1 && x.h === 1) || (x.roof === "step" && x.w === 9 && x.d === 4 && x.h === 3)),
     ...cylinders(s).filter((c) => (c.r === 1.5 && c.h === 1.5) || (c.mat === "concrete" && ((c.at.x === 174 && c.at.y === -54) || (c.at.x === 186 && c.at.y === -42)))),
+    ...s.fill.yard.flat().filter((x) => !isFlat(x)), // #324: stock groups and the yard gantry
   ];
   const band = (s: Scene) => s.solids.filter((x) => x.kind !== "cone" && bounds(x).max.y < 0 && bounds(x).min.x < 198);
 
@@ -212,7 +217,7 @@ describe("shipyard in the north band (#247)", () => {
     expect(tanks).toEqual([[174, -54, 5, 8], [186, -42, 4, 6]]);
     const b = box(yard(s));
     expect(b.x0).toBeGreaterThanOrEqual(104); expect(b.x1).toBeLessThanOrEqual(192);
-    expect(b.y0).toBeGreaterThanOrEqual(-59); expect(b.y1).toBeLessThanOrEqual(-35.7);
+    expect(b.y0).toBeGreaterThanOrEqual(-60); expect(b.y1).toBeLessThanOrEqual(-35.5); // #324: the yard gantry legs stand on the rails at y −59.5 and −35.5
   });
 
   it("the rng (seed 7): no prefabricated sections, nothing of the parking lot or the scrap (#319)", () => {
@@ -251,13 +256,13 @@ describe("shipyard in the north band (#247)", () => {
     for (let i = 0; i < groups.length; i++) for (let j = i + 1; j < groups.length; j++) expect(apart(groups[i]!, groups[j]!), `${i} ↔ ${j}`).toBe(true);
   });
 
-  it("the north band: every solid with max.y < 0 (except quay, bollards and cones) falls in x 10..192, y −59..−13 and does not exceed z 22", () => {
+  it("the north band: every solid with max.y < 0 (except quay, bollards and cones) falls in x 10..192, y −60..−13 and does not exceed z 22", () => {
     const bs = band(scene()).map(bounds);
     expect(bs.length).toBeGreaterThanOrEqual(40); // halls, forklifts, workshops, equipment and yard: without this it would pass empty
     for (const b of bs) {
       const where = JSON.stringify(b);
       expect(b.min.x, where).toBeGreaterThanOrEqual(10); expect(b.max.x, where).toBeLessThanOrEqual(192);
-      expect(b.min.y, where).toBeGreaterThanOrEqual(-59); expect(b.max.y, where).toBeLessThanOrEqual(-13);
+      expect(b.min.y, where).toBeGreaterThanOrEqual(-60); expect(b.max.y, where).toBeLessThanOrEqual(-13); // −60: the yard gantry (#324)
       expect(b.max.z, where).toBeLessThanOrEqual(22);
     }
   });

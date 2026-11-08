@@ -2,9 +2,11 @@ import type { Accent } from "../iso/accent";
 import { v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { bounds, type Solid } from "../iso/solids";
 import { BOTTOM, DOCK, QUAY_W, QUAY_X, WORLD, ZONE_SPLIT_Y, eastBank, northCoastY } from "../map/geo";
-import type { Rng } from "../map/seed";
+import { createRng, type Rng } from "../map/seed";
 import { jungle as flora } from "./flora";
 import { RIPRAP_KEEP_OUT, shipyardEast } from "./shipyard-east";
+import { portfolioWindows } from "./portfolio-lights";
+import { dockWorks, serviceStrip, yardFill, type Fill } from "./shipyard-fill";
 import { station } from "./station";
 import { clearOfWater } from "./terrain-classify";
 
@@ -28,6 +30,7 @@ export interface Scene {
   trolley: Solid & { kind: "prism" };
   trolleyRange: [number, number];
   weldSpots: Vec3[];
+  fill: Fill;           // yard, dock and service pieces (same objects as in `solids`; the yard rails are in `ground`)
 }
 
 export const AREA_W = 344, AREA_H = 146;
@@ -42,6 +45,7 @@ const SLIP_X = 110;
 export const RAIL_Y = [131, 134] as const; // west tracks: the station draws them from x 96, Resume and the hinterland west of it
 const GANTRY_X = 150, GANTRY_H = 24;
 const WATER_Z = -1;
+const SEED_MAX = 2 ** 32 - 1; // seed of a derived Rng (no 0x… literal: the palette guard would take it for a color)
 
 // ---------------------------------------------------------------- pieces
 
@@ -59,6 +63,7 @@ function quay(out: Solid[], accents: Accent[]): void {
   }
 }
 
+/** `portfolio-lights.ts` finds the halls and the workshops by these measures to light their windows. */
 function halls(out: Solid[]): void {
   for (const y of HALL_ROWS_Y) {
     out.push(prism(HALL_X, y, 0, HALL_W, ROW_H, HALL_H, "concrete", "gable"));
@@ -98,16 +103,16 @@ function slipways(out: Solid[], weldSpots: Vec3[]): void {
   });
 }
 
-function gantry(out: Solid[]): { trolley: Solid & { kind: "prism" }; range: [number, number] } {
+function gantry(out: Solid[]): { trolley: Solid & { kind: "prism" }; range: [number, number]; legs: Solid[] } {
   const y0 = ROW_Y[0] - 3, y1 = ROW_Y[1] + ROW_H + 1;
   out.push(strip([{ x: SLIP_X, y: y0 + 1.5 }, { x: QUAY_X, y: y0 + 1.5 }], 0.5, 0.05, "rail"));
   out.push(strip([{ x: SLIP_X, y: y1 + 1.5 }, { x: QUAY_X, y: y1 + 1.5 }], 0.5, 0.05, "rail"));
-  out.push(prism(GANTRY_X, y0, 0, 3, 3, GANTRY_H, "steel"));
-  out.push(prism(GANTRY_X, y1, 0, 3, 3, GANTRY_H, "steel"));
+  const legs = [prism(GANTRY_X, y0, 0, 3, 3, GANTRY_H, "steel"), prism(GANTRY_X, y1, 0, 3, 3, GANTRY_H, "steel")];
+  out.push(...legs);
   out.push(prism(GANTRY_X, y0, GANTRY_H, 3, y1 + 3 - y0, 2, "steel")); // beam
   const range: [number, number] = [y0 + 5, y1 - 6];
   const trolley = prism(GANTRY_X - 1, range[0], GANTRY_H + 2, 5, 4, 2, "rust");
-  return { trolley, range };
+  return { trolley, range, legs };
 }
 
 // ---------------------------------------------------------------- material yard (north band)
@@ -147,6 +152,7 @@ function dryDock(out: Solid[], ground: Solid[]): void {
 
 // ---------------------------------------------------------------- workshops (north band)
 
+/** Measures keyed by `portfolio-lights.ts` too (windows): see `halls()`. */
 function workshops(out: Solid[]): void {
   for (const x of [106, 134]) {
     out.push(prism(x, -33, 0, 24, 14, 7, "concrete", "step"));
@@ -217,11 +223,15 @@ export function shipyard(rng: Rng): Scene {
   workshops(solids);
   station(solids, accents);
   siloAndRiprap(solids);
+  const yard = yardFill(solids, rng);
+  const dock = dockWorks(solids, accents, rng);
+  const fill: Fill = { yard, dock, service: serviceStrip(solids, rng, g.legs.map(bounds)) };
   jungle(solids, rng);
   lamps(solids, accents);
   seamFence(solids, accents);
   shipyardEast(solids, accents, weldSpots, rng);
   ground.push(...solids.filter((s) => s.kind === "strip"));
   const raised = solids.filter((s) => s.kind !== "strip");
-  return { ground, solids: raised, accents, trolley: g.trolley, trolleyRange: g.range, weldSpots };
+  accents.push(...portfolioWindows(raised, createRng(rng.int(0, SEED_MAX))));
+  return { ground, solids: raised, accents, trolley: g.trolley, trolleyRange: g.range, weldSpots, fill };
 }
