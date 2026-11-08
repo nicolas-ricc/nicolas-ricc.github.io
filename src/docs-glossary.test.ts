@@ -33,7 +33,7 @@ describe("domain glossary (#194, #196, #126)", () => {
   });
   for (const term of ["Veil", "Zone", "Accent", "Animator", "Deck piece", "Side piece", "Hull rule", "Frame", "Lanes", "Exhibit", "Plinth", ...KIT_TERMS]) {
     it(`defines ${term}`, () => {
-      expect(glossary).toMatch(new RegExp(`^### ${term}\\b`, "m"));
+      expect(glossary).toMatch(new RegExp(`^### ${escape(term)}\\b`, "m"));
     });
   }
 });

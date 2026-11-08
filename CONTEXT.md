@@ -75,7 +75,7 @@ Code: `src/kit/piece.ts` (`seat`, `liftPiece`), `src/scenes/city-pieces.ts` (`PL
 Code: `src/kit/types.ts` (`Lot`, `Side`), `src/city/zoning.ts` (`Placed`, `waterTowerLot`, `FOOTBRIDGE_LOT`), `src/lab/kit-scene.ts` (`KIT_LOT`).
 
 ### Piece
-(Pieza.) What a recipe returns: `solids`, `ground` (painted before every solid), `accents`, plus the `walls`, `windows` and `slots` it publishes for the lights, an optional `courtyard` and an optional `landmarkTop`. `emptyPiece` starts one; `addBuilding` adds a solid and publishes its walls and windows; `liftPiece` raises it; `seat` sets it on its lot (see Plinth). `src/city/lights.ts` reads `windows`, `slots` and `walls`. Not to be confused with a deck piece or side piece, which are solids placed against a ship's hull.
+(Pieza.) What a recipe returns: `solids`, `ground` (painted before every solid), `accents`, plus the `walls`, `windows` and `slots` it publishes for the lights, an optional `courtyard` and an optional `landmarkTop`. `emptyPiece` starts one; `addBuilding` adds a solid and publishes its walls and windows; `liftPiece` raises it; `seat` sets it on its lot (see Plinth). `src/city/lights.ts` reads `windows`, `slots` and `walls`. Not to be confused with a deck piece or side piece, which are solids placed against a ship's hull, nor with an Exhibit of kind `piece`, a structure the storybook builds at the origin.
 Code: `src/kit/types.ts` (`Piece`), `src/kit/piece.ts` (`emptyPiece`, `addBuilding`, `liftPiece`, `seat`), `src/city/lights.ts`.
 
 ### Recipe
@@ -83,7 +83,7 @@ Code: `src/kit/types.ts` (`Piece`), `src/kit/piece.ts` (`emptyPiece`, `addBuildi
 Code: `src/kit/types.ts` (`Recipe`, `RecipeDef`), `src/kit/index.ts` (`RECIPES`, `recipe`, `LAB_LOTS`), `src/kit/piece.ts` (`RECIPE_MAX_H`, `recipeCap`), `src/scenes/city.ts`.
 
 ### Landmark recipe
-(Receta landmark.) Not the Landmark of a zone, above: a `RecipeDef` with `landmark: true`. They are the seven of `src/kit/forms/landmarks.ts` (`LANDMARKS`) and three of `modern.ts` (`glassTower`, `classic`, `constructionSite`). Its cap is `LANDMARK_MAX_H` (24) instead of 18; `fitToCap` flattens a piece in z, relative to `lot.z`, so it fits `min(lot.maxH, LANDMARK_MAX_H)`. It publishes `Piece.landmarkTop`, its highest point, which `fitToCap` and `liftPiece` carry along; no scene code reads `landmarkTop` or the `landmark` flag today; only tests do (`kit.test.ts` uses the flag to choose the cap, and the family tests assert it). `src/city/zoning.ts` gives the fixed blocks and the `district` neighborhood a height ceiling of `LANDMARK_MAX_H` (the lot's `maxH` is the lower of that and the block's own cap), and sets `maxH` to `LANDMARK_MAX_H` in `waterTowerLot` and `FOOTBRIDGE_LOT`.
+(Receta landmark.) Not the Landmark of a zone, above: a `RecipeDef` with `landmark: true`. They are the seven of `src/kit/forms/landmarks.ts` (`LANDMARKS`) and three of `modern.ts` (`glassTower`, `classic`, `constructionSite`). Its cap is `LANDMARK_MAX_H` (24) instead of 18; `fitToCap` flattens a piece in z, relative to `lot.z`, so it fits `min(lot.maxH, LANDMARK_MAX_H)`. It publishes `Piece.landmarkTop`, the point it gives as its top (the highest point of the piece for the `landmarks` family, which `landmarks.test.ts` asserts; `glassTower` gives its roof, below the beacon), which `fitToCap` and `liftPiece` carry along; no scene code reads `landmarkTop` or the `landmark` flag today; only tests do (`kit.test.ts` uses the flag to choose the cap, and the family tests assert it). `src/city/zoning.ts` gives the fixed blocks and the `district` neighborhood a height ceiling of `LANDMARK_MAX_H` (the lot's `maxH` is the lower of that and the block's own cap), and sets `maxH` to `LANDMARK_MAX_H` in `waterTowerLot` and `FOOTBRIDGE_LOT`.
 Code: `src/kit/piece.ts` (`LANDMARK_MAX_H`, `fitToCap`), `src/kit/types.ts` (`RecipeDef.landmark`, `Piece.landmarkTop`), `src/kit/forms/landmarks.ts` (`LANDMARKS`), `src/kit/forms/modern.ts`, `src/city/zoning.ts`.
 
 ### Style
@@ -91,7 +91,7 @@ Code: `src/kit/piece.ts` (`LANDMARK_MAX_H`, `fitToCap`), `src/kit/types.ts` (`Re
 Code: `src/kit/types.ts` (`Style`, `StyleId`), `src/kit/styles.ts` (`STYLES`), `src/scenes/city.ts`.
 
 ### Wall
-(Pared.) A facade that faces the camera, published by `addBuilding` for each wall of the solid (`visibleWalls`) whose normal has x > 0 or y > 0: `pts`, `normal`, `floorH` (the wall height over the facade's floors) and `building` (index of the solid in `Piece.solids`). The civic neighborhood's bathed facades read them.
+(Pared.) A facade that faces the camera, published by `addBuilding` for each wall of the solid (`visibleWalls`) whose normal has x > 0 or y > 0: `pts`, `normal`, `floorH` (the wall's height divided by its facade's floors: the height of one floor) and `building` (index of the solid in `Piece.solids`). The civic neighborhood's bathed facades read them.
 Code: `src/kit/types.ts` (`Wall`), `src/kit/piece.ts` (`addBuilding`), `src/iso/solids.ts` (`visibleWalls`), `src/city/lights.ts`.
 
 ### Window
@@ -99,5 +99,5 @@ Code: `src/kit/types.ts` (`Wall`), `src/kit/piece.ts` (`addBuilding`), `src/iso/
 Code: `src/kit/types.ts` (`Window`), `src/iso/facade.ts` (`facadeWindows`), `src/kit/piece.ts` (`addBuilding`), `src/city/lights.ts`.
 
 ### Slot
-A place for a neon or a sign on a wall (the specs say "slot"; there is no Spanish name): `pts`, `wall` (normal), `side`, `kind` (`neon` or `sign`) and `shop` (index of the ground-floor shop). `lowrise` publishes `neon` slots per shop when the lot has open sides; `southSign` builds the south-face `sign` slot of towers at least `SIGN_MIN_H` (12) high. `src/city/lights.ts` lights the bars' neons; `src/scenes/city.ts` lights the district's signs.
+A place for a neon or a sign on a wall (the specs say "slot"; there is no Spanish name): `pts`, `wall` (normal), `side`, `kind` (`neon` or `sign`) and `shop` (index of the ground-floor shop). `shopRow` (`lowrise`) publishes `neon` slots per shop when the lot has open sides; `southSign` builds the south-face `sign` slot of towers at least `SIGN_MIN_H` (12) high. `src/city/lights.ts` lights the bars' neons; `src/scenes/city.ts` lights the district's signs.
 Code: `src/kit/types.ts` (`Slot`), `src/kit/piece.ts` (`southSign`, `SIGN_MIN_H`), `src/kit/forms/lowrise.ts`, `src/city/lights.ts`, `src/scenes/city.ts`.
