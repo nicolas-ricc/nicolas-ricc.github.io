@@ -41,7 +41,7 @@ for (const [name, make, isWorld] of SEEDS) {
       const on = l.windows.filter((w) => w.on);
       expect(on.length).toBeGreaterThan(100);
       for (const w of on) expect(hidden(lightBox(w.window.pts), bs, hs, ownSolid(w))).toBe(false);
-    }, 10_000); // ~1.8 s alone since the strip blocks of #320; the full parallel suite stretches it past the default 5 s
+    }, 20_000); // ~1.9 s alone since the strip blocks of #320 and the warehouses of #325; the full parallel suite stretched it past 10 s
 
     it("no neon is hidden by a solid (brute-force oracle)", () => {
       for (const n of l.neons) expect(hidden(lightBox(n.slot.pts), bs, hs)).toBe(false);

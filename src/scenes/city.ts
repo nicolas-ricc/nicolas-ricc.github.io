@@ -58,10 +58,10 @@ export function city(rng: Rng, districtRng: Rng, lightsRng: Rng): CityScene {
   add(recipe("footbridge")(FOOTBRIDGE_LOT, rng, STYLES.residential));
   streets(ground, solids, accents);
   railLands(ground, solids);
-  freightYard(ground, solids, accents, rng);
   bridge(solids, accents);
   westQuay(solids, accents);
   harbor(solids, accents, rng);
+  freightYard(ground, solids, accents, rng);
   const promenadeLights = promenade(solids, accents);
   collapsed(solids, rng);
   greenery(solids, rng);
