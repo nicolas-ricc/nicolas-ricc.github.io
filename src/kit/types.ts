@@ -23,4 +23,4 @@ export interface Slot { pts: Vec3[]; wall: Vec3; side: Side; kind: "neon" | "sig
 export interface Wall { pts: Vec3[]; normal: Vec3; floorH: number; building: number }
 export interface Piece { solids: Solid[]; ground: Solid[]; accents: Accent[]; windows: Window[]; slots: Slot[]; walls: Wall[]; courtyard?: Rect; landmarkTop?: Vec3 }
 export type Recipe = (lot: Lot, rng: Rng, style: Style) => Piece;
-export interface RecipeDef { name: string; recipe: Recipe; family: "modern" | "courtyard" | "composite" | "curved" | "lowrise" | "landmarks" | "industrial" | "reconversion"; landmark?: boolean }
+export interface RecipeDef { name: string; recipe: Recipe; family: "modern" | "courtyard" | "composite" | "curved" | "lowrise" | "landmarks" | "industrial" | "reconversion" | "harbor"; landmark?: boolean }
