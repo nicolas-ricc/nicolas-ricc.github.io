@@ -5,6 +5,7 @@ import { bounds, isFlat, type Solid } from "../iso/solids";
 import { WORLD, inStationLand, northCoastY } from "../map/geo";
 import { allIsoColors } from "../map/palette-iso";
 import { createRng } from "../map/seed";
+import { windowCandidates } from "./portfolio-lights";
 import { AREA_H, AREA_W, STREET_EDGE, shipyard, type Scene } from "./shipyard";
 import { YARD } from "./shipyard-east";
 import { BUFFER_X, ESPLANADE, STATION } from "./station";
@@ -52,7 +53,8 @@ describe("shipyard", () => {
     // poly: the building's windows, lantern and dials (#278), located by their first vertex
     const where = (a: Accent) => (a.kind === "dot" ? a.at : a.pts[0]!);
     const inStation = (a: Accent) => { const p = where(a); return p.x >= 110 && p.x <= STATION.x1 && p.y >= 100 && p.y <= STATION.y1; };
-    const outside = s.accents.filter((a) => !inStation(a) && a.color !== "windowCool"), inside = s.accents.filter(inStation);
+    const facade = new Set(windowCandidates(s.solids).map((c) => JSON.stringify(c.pts))); // #324: the windows of halls, workshops and sheds
+    const outside = s.accents.filter((a) => !inStation(a) && !(a.kind === "poly" && facade.has(JSON.stringify(a.pts)))), inside = s.accents.filter(inStation);
     expect(outside.length).toBeGreaterThanOrEqual(7); // five street lamps and two quay lamps
     // #323: the one exception is the window of the container yard gatehouse
     const windows = outside.filter((a) => a.kind === "poly");

@@ -11,8 +11,9 @@ const w = world(7);
 const sy = w.shipyard!;
 const cands = windowCandidates(sy.solids);
 const visible = cands.filter((c) => !c.hidden);
-const lit = sy.accents.filter((a): a is Extract<Accent, { kind: "poly" }> => a.kind === "poly" && a.color === "windowCool");
 const same = (a: { x: number; y: number; z: number }[], b: { x: number; y: number; z: number }[]) => a.length === b.length && a.every((p, i) => p.x === b[i]!.x && p.y === b[i]!.y && p.z === b[i]!.z);
+// the facade windows only: #323's gatehouse window is also a windowCool poly
+const lit = sy.accents.filter((a): a is Extract<Accent, { kind: "poly" }> => a.kind === "poly" && a.color === "windowCool" && cands.some((c) => same(c.pts, a.pts)));
 
 describe("Portfolio windowCool windows", () => {
   it("candidates: south walls of the halls, east and south of the workshops, east of the sheds", () => {
