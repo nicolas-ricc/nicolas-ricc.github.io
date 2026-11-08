@@ -14,7 +14,7 @@ export const KIT_STEP = { x: 30, y: 24 } as const;
 /**
  * Every recipe in the registry, one row per family in registry order.
  * As in the city: `seat` decides the plinth by ground presence. A recipe with no ground
- * sits on a paving prism plinth of PLINTH_H; one that brings `ground` (campus, eatenRuin, library, courtyardO with a paved patio) goes at z 0
+ * sits on a paving prism plinth of PLINTH_H; one that brings `ground` goes at z 0
  * with no plinth (a prism would cover its ground, which is painted before any solid).
  * The `LAB_LOTS` recipes go in their own lot, centered in the cell; the one that brings its own `z`
  * (the bridge, which in the city rests on the water) goes with no plinth.
