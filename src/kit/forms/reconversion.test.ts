@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { hides } from "../../iso/depth";
 import { bounds, type Solid } from "../../iso/solids";
 import { lightBox } from "../../city/lights";
+import { v3 } from "../../iso/geometry";
 import { createRng } from "../../map/seed";
 import { LAB_LOTS, RECIPES, recipe } from "../index";
 import { STYLES } from "../styles";
+import { plateWindows } from "./reconversion";
 import type { Lot, Side } from "../types";
 
 const LOTS: Lot[] = [
@@ -170,5 +172,25 @@ describe("openDock", () => {
       const p = recipe("openDock")(lot, createRng(seed), STYLES.freight);
       for (const s of p.solids) expect(bounds(s).max.z).toBeLessThanOrEqual(lot.z + 3 + EPS);
     }
+  });
+});
+
+describe("plateWindows", () => {
+  const plate = { wall: 2, shape: "rect" as const, u0: 0.2, u1: 0.4, z0: 1, z1: 2, mat: "glass" as const };
+  it("puts the window on the plate's wall edge, outward normal", () => {
+    const [w] = plateWindows({ at: v3(0, 0, 0), w: 10, d: 4 }, plate, 2, 5);
+    expect(w!.pts).toEqual([v3(8, 4, 1), v3(6, 4, 1), v3(6, 4, 2), v3(8, 4, 2)]);
+    expect(w!.wall).toEqual(v3(0, 1, 0));
+    expect(w!.floor).toBe(2);
+    expect(w!.building).toBe(5);
+  });
+
+  it("splits into panes 0.2 apart that do not overlap", () => {
+    const ws = plateWindows({ at: v3(0, 0, 0), w: 10, d: 4 }, plate, 1, 0, 2);
+    expect(ws).toHaveLength(2);
+    const span = (i: number) => [ws[i]!.pts[0]!.x, ws[i]!.pts[1]!.x];
+    expect(span(0)[1]).toBeGreaterThan(span(1)[0]!); // x decreases along wall 2
+    expect(span(0)[0]! - span(0)[1]! + (span(1)[0]! - span(1)[1]!)).toBeCloseTo(0.2 * 10 - 0.2, 9);
+    expect(span(0)[1]! - span(1)[0]!).toBeCloseTo(0.2, 9);
   });
 });
