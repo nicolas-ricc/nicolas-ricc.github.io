@@ -34,8 +34,8 @@ describe("zoning", () => {
     expect(cells("residential")).toEqual(sorted([[12, 164], [12, 188], [12, 218], [12, 242], [42, 164], [42, 188], [-48, 92], [-18, 92], [12, 92], [42, 92], [72, 92]]));
     expect(cells("civic")).toEqual(sorted([[72, 218], [162, 218], [42, 242]]));
     expect(neighborhoodOf(blocks().find((b) => b.kind === "plaza")!)).toBe("civic");
-    expect(cells("riverside")).toEqual(blocks().filter((b) => b.bank === "east").map(key).sort());
-    expect(cells("riverside")).toEqual(expect.arrayContaining(["280,116", "280,140"])); // provisional (#320): the harbor comes later
+    expect(cells("riverside")).toEqual(blocks().filter((b) => b.bank === "east" && b.row !== -1).map(key).sort());
+    expect(cells("harbor")).toEqual(["280,116", "280,140"]); // the two east blocks of the strip, by the inlet (#326)
     expect(neighborhoodOf(blocks().find((b) => b.kind === "collapsed")!)).toBe("riverside");
     expect(cells("district")).toEqual(blocks().filter((b) => b.kind === "district" || b.kind === "site").map(key).sort());
     expect(cells("district")).toHaveLength(24);
@@ -49,6 +49,8 @@ describe("zoning", () => {
     expect(at("civicPalace")).toEqual(["162,218"]);
     expect(at("library")).toEqual(["42,242"]);
     expect(at("constructionSite")).toEqual([key(SITE)]);
+    expect(at("fishMarket")).toEqual(["280,116"]);
+    expect(at("foodHall")).toEqual(["280,140"]);
     expect(FIXED.find((f) => key(f) === key(WATER_TOWER_BLOCK))?.recipe).toBe("patioResidential");
     for (const f of FIXED) expect(RECIPES.some((r) => r.name === f.recipe)).toBe(true);
   });
@@ -70,7 +72,7 @@ describe("zoning", () => {
     expect(weights("industrial")).toEqual({});
     expect(weights("warehouses")).toEqual({ loftHall: 30, vaultLoft: 20, brewery: 25, sheetLoft: 15, derelictHall: 10 });
     expect(weights("freight")).toEqual({ freightShed: 60, openDock: 40 });
-    expect(weights("harbor")).toEqual({});
+    expect(weights("harbor")).toEqual({}); // only fixed pieces (#326)
     const lights = Object.fromEntries(NEIGHBORHOODS.map((z) => [z, CATALOGUE[z].lights]));
     expect(lights).toEqual({
       downtown: { on: 0.45, warm: 0.3 }, bars: { on: 0.7, warm: 0.9 }, residential: { on: 0.55, warm: 0.95 },
