@@ -25,13 +25,22 @@
 1. **Frente del mercado.** `openSides((72, 92))` devuelve `["e", "s"]`: `coveredMarket` toma `open[0]` como frente (guirnalda y filas de puestos), y el issue lo pone "frente a la calle de la estación". El resto de la fila 92 sigue en `["s"]`.
 2. **Manzanas sin receta.** `isBare(b: Block): boolean` en `zoning.ts`: `neighborhoodOf(b) === "harbor"` y sin entrada en `FIXED`. `assign()` las salta; `city.ts` les pone el zócalo `paving` 24×18 que antes ponía el bucle de la receta. Reemplaza el bucle de zócalos de `freight` de `city.ts`, que ahora reciben zócalo por el camino normal.
 3. **`openDock` sin zócalo.** El issue pide `z: PLINTH_H` en el lote de carga y a la vez `NO_PLINTH` con `openDock`. Manda la regla general de `assign()` (`z = NO_PLINTH.includes(recipe) ? 0 : PLINTH_H`, que `zoning.test` ya verifica): un `openDock` va a `z 0` sin zócalo, un `freightShed` a `z PLINTH_H` sobre el suyo 24×13. El resto del lote (`x/y + SIDEWALK`, `w 21`, `d 10`, `open ["s"]`, `maxH 18`) sale de la fórmula general sin caso especial.
-4. **Andén cortado en los cruces.** El poste sur de cada paso a nivel (`(c.x1 + 0.3, 137.8)`, 0.3×0.3×2, de #320) cae dentro del andén `y 136.3..138`. El andén se parte en tramos y salta cada cruce de `c.x0` a `c.x1 + 0.6`: tramos `[−50, −24]`, `[−17.4, 6]`, `[12.6, 36]`, `[42.6, 66]` (el cruce `66..72` corta el último en 66). Así además la calle N-S sigue pasando.
-5. **Cerco sur abierto en el cambio de vía.** Los rieles del cambio cruzan `y 136` en `x ≈ 74.2` y `79.4`. El cerco sur pierde el tramo `x 72..81`: sus tramos pasan a `[−54, −24], [−18, 6], [12, 36], [42, 66], [81, 96]`. El norte no cambia.
+4. **Andén cortado en los cruces.** El poste sur de cada paso a nivel (`(c.x1 + 0.3, 137.8)`, 0.3×0.3×2, de #320) cae dentro del andén `y 136.3..138`. El andén se parte en tramos y salta cada cruce de `c.x0` a `c.x1 + 0.6`: tramos `[−50, −24]`, `[−17.4, 6]`, `[12.6, 36]`, `[42.6, 66]` (el cruce `66..72` corta el último en 66).
+5. **Cerco sur abierto en el cambio de vía.** Los ejes de los rieles del cambio (offset ±1.5 perpendicular a `(82, 132.5) → (70, 141)`, normal `(−0.578, −0.816)`) cruzan la franja del cerco `y 136..136.3` en `x ≈ 74.5..74.0` y `79.7..79.2`. El cerco sur pierde el tramo `x 72..81`: sus tramos pasan a `[−54, −24], [−18, 6], [12, 36], [42, 66], [81, 96]`. El norte no cambia.
 6. **Tren de carga:** la locomotora va en el extremo oeste, `x0..x0 + 9`, y los cinco vagones al este con 1 de separación (largo total 54, termina en `x0 + 54 ≤ 34`). `x0 = rng.int(−46, −20)`. Todos con base en `z 0` (los durmientes, de 0.3, quedan debajo como en la vía principal); vagones alternados `rust`, `steel`, `rust`, … empezando por `rust`.
 7. **Solape AABB:** "ningún par se solapa" se mide entre sólidos de `h > 0.4` (los durmientes y tablones son piso, como en la vía principal), con intersección estricta de cajas 3D (tocarse no es solaparse).
 8. **Huecos fijos para el rng.** Camiones: lugares `x = −40 + 10k`, `k = 0..9` (caja 6 + cabina 2 al este, todo dentro de `x −40..60`), se eligen 3 distintos con el rng. Contenedores: lugares `x = −50 + 7k`, `k = 0..19`, en cada una de las filas `y 150` y `153.5`, descartando en la fila 150 los que tocan un farol (`[lx, lx + 0.6]`); `n = rng.int(6, 8)` lugares distintos con el rng, cada uno `stackContainers(v3(x, y, 0), 1, "x", rng)`. Pallets: lugares `x = −48 + 6k` cuyo `[x, x + 1.2]` cae entero en un tramo del andén, cada uno con `rng.chance(0.5)`, en `y 137`, `z 1`.
 9. **Rng de la playa:** el mismo `rng` de `city()`, en la llamada `freightYard(ground, solids, accents, rng)` inmediatamente después de `railLands(ground, solids)`.
 10. **Exhibits:** `galpones` y `playa-carga` toman el `h` que pida `exhibits.test` ("framing" y "neighbors"); se anota el valor medido en el comentario de `exhibits.ts`, como hoy.
+
+## Supuestos (del grilling)
+
+- **Atribución de commits:** el issue pide `Co-Authored-By: Claude Fable 5.1`; el agente que implementa es otro modelo y usa la línea que le indica su entorno (`Claude Opus 5.5`), para no atribuir falsamente. Alternativa descartada: copiar la del issue.
+- **Calles N-S al sur de la vía:** siguen pintadas de `y 137` a `206` (`streets.ts` `lanes`). El issue fija el tren en `x0 ∈ −46..−20` (siempre tapa el cruce `−24..−18`) y los rangos de camiones y contenedores sin excluir calles, así que los lugares del rng no excluyen las columnas de las calles. El andén se corta en los cruces solo por el choque con los postes (decisión 4).
+- **Unión del cambio con el desvío:** los rieles diagonales terminan en `(70 ± 0.87, 141 ± 1.22)` y los del desvío en `x 70`, `y 139.5/142.5`: la misma simplificación sin corazón que `ladder()` en `station.ts` (el issue: "como `LADDER`"). `132.5` es el eje de la vía principal (`RAIL_Y = [131, 134]`, `TRACKS_Y[2]`).
+- **Materiales nuevos de `city.test`:** los que usan `STYLES.warehouses/freight` y los literales de `reconversion.ts`, `industrial.ts` (`box*` de `stackContainers`) y `props.ts`; el test fija la lista explícita.
+- **Brecha del cerco en `railLands`:** `city.ts` es el único que llama a `railLands` y siempre llama después a `freightYard`.
+- **Neones de galpones:** solo `brewery` publica slots (dos, `shop` 0 y 1); con cuatro manzanas sorteadas el máximo real es 8, el tope 10 del issue no muerde con la grilla actual (lo prueba el sintético).
 
 ## Foco de revisión
 
@@ -60,7 +69,7 @@
   - "harbor without a fixed recipe is bare": `isBare(blockAt(280, 116))` y `(280, 140)` `true`; ninguna `Placed` de `assign()` tiene `neighborhood "harbor"`; `isBare` es `false` para todo bloque no `harbor`.
   - `NO_PLINTH` contiene `"openDock"`. El test "assign is deterministic …" filtra con `b.kind !== "plaza" && b.kind !== "collapsed" && !isBare(b)`.
 - [ ] **Paso 2: tests que fallan** en `city.test.ts`:
-  - "the covered market stands on (72, 92)": en `scene()`, `placed` tiene `recipe "coveredMarket"` en el bloque `(72, 92)`; entre sus sólidos hay ≥ 4 `prism` `steel` con `w 0.4`, `d 0.4`; hay ≥ 6 puestos (`prism` `h 1.8`); todos sus sólidos caen en `x 73.5..94.5, y 93.5..108.5` (+1e-6).
+  - "the covered market stands on (72, 92)": en `scene()`, `placed` tiene `recipe "coveredMarket"` en el bloque `(72, 92)`; entre sus sólidos hay ≥ 4 `prism` `steel` con `w 0.4`, `d 0.4`; hay ≥ 6 puestos (`prism` `h 1.8`); todos sus sólidos caen en el lote `x 73.5..94.5, y 93.5..108.5` agrandado 0.8 (los toldos cuelgan 0.8 hacia afuera: contrato del kit, `reconversion.ts` `coveredMarket`).
   - el test "freight lots (#320) …" pasa a: cada lote tiene una `Placed` con `freightShed`/`openDock`; zócalo `paving` 24×13 en `z 0` en los lotes con `freightShed` y ninguno en los de `openDock`.
   - zócalo 24×18 en `(280, 116)` y `(280, 140)` y ningún otro sólido elevado dentro de esas dos manzanas salvo autos (`CAR`).
   - `CITY_MATS` suma los materiales del kit de reconversión que aparezcan (`brick`, `sheetGreen`, `sheetTeal`, `concrete`, `whitewash`, `glass`, `box*`, …: los que el test reporte); la regla "steel/rust solo en prism, cylinder, vault" suma `beam` (vigas del `derelictHall`).
@@ -104,6 +113,7 @@
   - camiones: exactamente 3 cajas 6×2.4×2.8 en `y 146` con su cabina `steel` 2×2.4×2.2 pegada al este, todo en `x −40..60`.
   - contenedores: 6..8 sólidos de 6×2.4×2.6 en `y 150` o `153.5`, todos en `x −50..90`.
   - faroles: 4 postes `steel` 0.6×0.6×5 en `(x, 150)`, `x ∈ {−40, 0, 40, 80}`, y 4 acentos `dot` `amber` `r 0.6` en `accents`.
+  - el cambio pasa por la brecha: los dos `strip` diagonales cruzan `y 136..136.3` dentro de `x 72..81` (calculado sobre los puntos del path).
   - cerco sur: tramos `[−54, −24], [−18, 6], [12, 36], [42, 66], [81, 96]` (el test de #320 de cercos se ajusta para el sur; el norte no cambia).
   - caja: todo sólido de `freightYard` en `x −54..94`, `y 136..157.5`; ninguno con `h > 0.4` en `y 134.2..136`.
   - regla del tren sobre todos los sólidos de `railLands` + `freightYard` (el test existente se amplía a ese conjunto).
@@ -113,3 +123,10 @@
 - [ ] **Paso 3: implementar** `freightYard` en `rail-lands.ts` con los valores del issue y las decisiones 4–8 (rieles y diagonales a `ground`, como `railLands`; el cambio con el patrón de `ladder()` de `station.ts`); la brecha del cerco sur va en `railLands` (constante `SWITCH_GAP = { x0: 72, x1: 81 }`, solo cerco sur). En `city.ts`, `freightYard(ground, solids, accents, rng)` justo después de `railLands(ground, solids)`.
 - [ ] **Paso 4:** `seam-90.test` "the new strip …": admitir los sólidos de la playa (`b.min.y >= 136 && b.max.y <= 157.5 && b.max.x <= 94`, `b.max.z <= 5`) además de lo que ya admite. `exhibits.test`: poner el `h` mínimo entero que pase para `playa-carga` (el farol llega a 5 + bulbo) y anotarlo en el comentario.
 - [ ] **Paso 5:** `npx vitest run src/city src/scenes src/lab` → PASA, incluidos `train-occlusion.test` y `city-budget.test`. `npm test`, `npm run typecheck` → verde. Commit `feat(#325): freight yard with siding, parked freight train, dock, trucks, containers and lamps`.
+
+## Grilling
+
+- Rondas: 1 (los cambios fueron correcciones puntuales: frase de la decisión 4, cifras de la decisión 5, margen 0.8 del mercado, test de la brecha del cambio; ningún paso agregado ni quitado).
+- Preguntas: 18. Fuentes: ISSUE 7, CODE 15, DOC 2 (varias respuestas citan más de una); NO SOURCE 4, todas supuestos técnicos.
+- Supuestos: los de la sección "Supuestos (del grilling)".
+- Issues abiertos: ninguno (nada quedó fuera de alcance; ninguna ambigüedad de producto).
