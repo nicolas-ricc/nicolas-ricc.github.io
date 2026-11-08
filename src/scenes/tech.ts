@@ -4,7 +4,7 @@ import { v3, type Vec2, type Vec3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
-import { WORLD, ZONE_SPLIT_Y } from "../map/geo";
+import { WORLD } from "../map/geo";
 import { BLOCK_W, BOULEVARD, CITY_EDGE, SIDEWALK } from "./city-grid";
 import { campus } from "../kit/forms/modern";
 import { beacon, lamp, place, sign, streetTree } from "../kit/props";
@@ -155,7 +155,7 @@ export function tech(rng: Rng): TechScene {
   });
   avenue(ground, solids, accents);
   waterfront(ctx);
-  // +5: the maximum cone radius (4) does not cross the zone cut; no cones in front of the train (#280)
-  jungle(solids, rng, { x0: -238, x1: WORLD.x0 - 2, y0: ZONE_SPLIT_Y + 5, y1: GREEN_BELT.y1 - 2 }, 2, 0.4, { y: RAIL_Y, train: TRAIN_CLEAR });
+  // the green belt west of the content, around the west line: no cones in front of the train (#280)
+  jungle(solids, rng, { x0: -238, x1: WORLD.x0 - 2, y0: GREEN_BELT.y0 + 2, y1: GREEN_BELT.y1 - 2 }, 48, 0.4, { y: RAIL_Y, train: TRAIN_CLEAR });
   return { ground, solids, accents, towers, signs, homes, telecom: telecomTop, neon: { crowns, mastRing: [3, 6, 9].map((dz) => v3(telecomTop.x, telecomTop.y + 0.6, telecomTop.z - dz)) } };
 }

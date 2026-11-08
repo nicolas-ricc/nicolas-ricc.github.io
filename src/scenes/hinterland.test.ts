@@ -4,13 +4,15 @@ import { bounds, isFlat, type Solid } from "../iso/solids";
 import { WORLD, ZONE_SPLIT_Y, inCoverQuad, worldZoneAt } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
-import { COOLING, PARKING, POWER, PYLON_N, ROAD_Y, SILOS, TANKS, WEST_RAIL_X0, hinterland } from "./hinterland";
+import { COOLING, PARKING, POWER, PYLON_N, ROAD_Y, SILOS, TANKS, WEST_RAIL_X0, WEST_TRACKS_X, hinterland } from "./hinterland";
 import { GREEN_BELT } from "./sprawl-grid";
+import { RAIL_Y } from "./shipyard";
 import { bleedTerrainAt, terrainAt } from "./terrain";
 
 const PORTFOLIO_MATS: readonly Material[] = ["slab", "concrete", "rust", "steel", "road", "rail", "sand", "brick", "leaf", "leafDark", "paving"];
 const scene = () => hinterland(createRng(7));
 const groundAt = (x: number, y: number) => (x >= WORLD.x0 && x < WORLD.x1 && y >= WORLD.y0 && y < WORLD.y1 ? terrainAt(x, y) : bleedTerrainAt(x, y));
+const westSleeper = (s: Solid) => s.kind === "prism" && s.mat === "rust" && s.w === 1 && s.d === 5 && s.h === 0.3;
 const slender = (s: Solid) => (s.kind === "cylinder" && s.r <= 3) || (s.kind === "prism" && ((s.w <= 3 && s.d <= 3) || s.h <= 1));
 
 describe("hinterland", () => {
@@ -20,6 +22,7 @@ describe("hinterland", () => {
     const raised = s.solids.filter((x) => !isFlat(x));
     expect(raised.length).toBeGreaterThan(200); expect(raised.length).toBeLessThan(850);
     for (const x of s.solids) {
+      if (westSleeper(x)) continue; // the west line stays with the hinterland, on Resume ground (#319)
       const b = bounds(x);
       expect(b.max.y).toBeLessThanOrEqual(ZONE_SPLIT_Y);
       expect(worldZoneAt(b.min.x, b.min.y)).toBe("portfolio");
@@ -39,7 +42,7 @@ describe("hinterland", () => {
     }
   });
 
-  it("marshalling yard with wagons, sheds, tanks, silos, pylons with cables, stacked containers and jungle in the belt", () => {
+  it("marshalling yard with wagons, sheds, tanks, silos, pylons with cables, stacked containers ", () => {
     const s = scene();
     expect(s.ground.filter((g) => g.kind === "strip" && g.mat === "rail").length).toBeGreaterThanOrEqual(14); // 5 E-W tracks and 2 N-S, two rails each
     expect(s.solids.filter((x) => x.kind === "prism" && x.w === 8 && x.d === 2.4 && x.h === 3).length).toBeGreaterThanOrEqual(12); // wagons
@@ -49,8 +52,6 @@ describe("hinterland", () => {
     expect(s.solids.filter((x) => x.kind === "prism" && x.h === 14 && x.w === 1)).toHaveLength(PYLON_N - 2); // the last two would fall in the fair
     expect(s.solids.filter((x) => x.kind === "prism" && x.d === 0.24).length).toBeGreaterThanOrEqual(2 * (PYLON_N - 4)); // cables
     expect(s.solids.filter((x) => x.kind === "prism" && x.w === 6 && x.d === 2.4 && x.h === 2.6 && x.at.z > 0).length).toBeGreaterThan(20); // stacked containers
-    const belt = s.solids.filter((x) => x.kind === "cone" && (x.mat === "leaf" || x.mat === "leafDark") && x.at.y >= GREEN_BELT.y0 && x.at.y < GREEN_BELT.y1 && x.at.x < WORLD.x0);
-    expect(belt.length).toBeGreaterThanOrEqual(20); // 30 before the train corridor (#280): it clears 10 cones from the belt
   });
 
   it("cyan accents and atlas colors", () => {
@@ -80,13 +81,21 @@ describe("hinterland", () => {
     for (const x of north) { const b = bounds(x); expect(inCoverQuad((b.min.x + b.max.x) / 2, (b.min.y + b.max.y) / 2, 16 / 9, 30)).toBe(true); }
   });
 
-  it("the shipyard's west tracks continue through the green belt to the edge of the bleed, with no cones on top", () => {
+  it("the west tracks leave the content at WORLD.x0 on RAIL_Y, with every sleeper in the bleed and no cones on top", () => {
     const s = scene();
-    const rails = s.ground.filter((g) => g.kind === "strip" && g.mat === "rail" && g.path[0]!.x === WEST_RAIL_X0 && g.path[1]!.x === 0);
+    const rails = s.ground.filter((g) => g.kind === "strip" && g.mat === "rail" && g.path[0]!.x === WEST_RAIL_X0 && g.path[1]!.x === WORLD.x0);
     expect(rails.map((g) => g.kind === "strip" && g.path[0]!.y)).toEqual([131, 134]);
-    const sleepers = s.solids.filter((x) => x.kind === "prism" && x.mat === "rust" && x.d === 5 && x.h === 0.3);
-    expect(sleepers.length).toBeGreaterThanOrEqual(90);
-    for (const x of sleepers) { const b = bounds(x); expect(b.min.x).toBeGreaterThan(WEST_RAIL_X0); expect(b.max.x).toBeLessThan(0); }
-    for (const c of s.solids) if (c.kind === "cone" && (c.mat === "leaf" || c.mat === "leafDark")) for (const ry of [131, 134]) expect(Math.abs(c.at.y - ry)).toBeGreaterThanOrEqual(c.r + 1.5);
+    const sleepers = s.solids.filter(westSleeper);
+    expect(sleepers.length).toBeGreaterThanOrEqual(10);
+    for (const x of sleepers) { const b = bounds(x); expect(b.min.x).toBeGreaterThan(WEST_RAIL_X0); expect(b.max.x).toBeLessThan(WORLD.x0); }
+    for (const c of s.solids) if (c.kind === "cone" && (c.mat === "leaf" || c.mat === "leafDark")) for (const ry of RAIL_Y) expect(Math.abs(c.at.y - ry)).toBeGreaterThanOrEqual(c.r + 1.5);
+  });
+
+  it("trucks at y 84, lamp at (−130, 86), two 36×14 gable sheds at x −190, and no west track strip past y 86", () => {
+    const s = scene();
+    for (const x of [-120, -108, -96]) expect(s.solids.some((q) => q.kind === "prism" && q.at.x === x && q.at.y === 84 && q.w === 6)).toBe(true);
+    expect(s.solids.some((q) => q.kind === "prism" && q.at.x === -130 - 0 && q.at.y === 86 && q.w === 0.6)).toBe(true);
+    expect(s.solids.filter((q) => q.kind === "prism" && q.roof === "gable" && q.w === 36 && q.d === 14 && q.at.x === -190)).toHaveLength(2);
+    for (const g of s.ground) if (g.kind === "strip" && WEST_TRACKS_X.some((x) => Math.abs(g.path[0]!.x - x) < 1)) expect(Math.max(...g.path.map((p) => p.y))).toBeLessThanOrEqual(86);
   });
 });

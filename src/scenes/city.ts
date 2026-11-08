@@ -8,6 +8,7 @@ import type { Piece } from "../kit/types";
 import { prism, PLINTH_H } from "./city-pieces";
 import { lights, WINDOW_ALPHA, type CityLights } from "../city/lights";
 import { streets } from "../city/streets";
+import { railLands } from "../city/rail-lands";
 import { bridge, collapsed, cars, greenery, promenade, plazaAndTower, westQuay, type TowerLights } from "../city/fixed";
 import { FOOTBRIDGE_LOT, NO_PLINTH, WATER_TOWER_BLOCK, assign, waterTowerLot, type Placed } from "../city/zoning";
 
@@ -53,6 +54,7 @@ export function city(rng: Rng, districtRng: Rng, lightsRng: Rng): CityScene {
   add(recipe("waterTower")(waterTowerLot(host.piece.courtyard, host.placed.lot.z), rng, STYLES.residential));
   add(recipe("footbridge")(FOOTBRIDGE_LOT, rng, STYLES.residential));
   streets(ground, solids, accents);
+  railLands(ground, solids);
   bridge(solids, accents);
   westQuay(solids, accents);
   const promenadeLights = promenade(solids, accents);

@@ -110,7 +110,7 @@ describe("Portfolio south of y 90 (#319)", () => {
     expect(sy.ground.some((g) => g.kind === "strip" && g.mat === "road" && g.width === 26)).toBe(false);
     expect(prisms(sy.solids).some((p) => p.w === 3 && p.d === 4 && p.h === 1.5)).toBe(false);
     expect(prisms(sy.solids).some((p) => p.mat === "rust" && p.w === 3 && p.d === 2 && p.h === 1)).toBe(false);
-    for (const c of [...sy.solids, ...fa.solids]) if (c.kind === "cone" && (c.mat === "leaf" || c.mat === "leafDark")) expect(c.at.y, `cone ${c.at.x},${c.at.y}`).toBeLessThanOrEqual(ZONE_SPLIT_Y);
+    for (const c of [...sy.solids, ...fa.solids]) if (c.kind === "cone" && (c.mat === "leaf" || c.mat === "leafDark") && !inStationLand(c.at.x, c.at.y)) expect(c.at.y, `cone ${c.at.x},${c.at.y}`).toBeLessThanOrEqual(ZONE_SPLIT_Y);
   });
 
   it("fitting-out sheds d 56 at y 24, silo at (310, 86), riprap only north of 90", () => {

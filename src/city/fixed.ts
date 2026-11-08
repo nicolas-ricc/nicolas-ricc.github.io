@@ -3,11 +3,9 @@ import { facadeAccents, windowPatches, type Facade } from "../iso/facade";
 import { centroid, v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { bounds, visibleWalls, type Solid } from "../iso/solids";
 import type { Rng } from "../map/seed";
-import { QUAY_X, WORLD, ZONE_SPLIT_Y, islandWestX } from "../map/geo";
+import { ESTUARY_Y0, QUAY_X, ZONE_SPLIT_Y, islandWestX } from "../map/geo";
 import { AVENUE, BLOCK_W, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_RING, FALLEN_BLOCK, LIT_FLOOR, PROMENADE, PLAZA, ROWS, SIDEWALK, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, inCrater } from "../scenes/city-grid";
 import { jungle, type Rails } from "../scenes/flora";
-import { RAIL_Y } from "../scenes/shipyard";
-import { TRAIN_CLEAR } from "../scenes/station";
 import { CAR, awning, bench, bollard, car, chair, dockCrane, fountain, garland, kiosk, lamp, place, puddle, stoneArch, table } from "../kit/props";
 import { PLINTH_H, plazaTone, prism, tiles } from "../scenes/city-pieces";
 
@@ -103,7 +101,7 @@ export function bridge(solids: Solid[], accents: Accent[]): void {
 
 export function westQuay(solids: Solid[], accents: Accent[]): void {
   const { x0, x1 } = WEST_QUAY, w = x1 - x0;
-  solids.push(prism(x0, CITY_EDGE.north, -1, w, 194 - CITY_EDGE.north, 1.6, "plaza"), prism(x0, 200, -1, w, CITY_EDGE.south - 200, 1.6, "plaza"));
+  solids.push(prism(x0, ESTUARY_Y0, -1, w, 194 - ESTUARY_Y0, 1.6, "plaza"), prism(x0, 200, -1, w, CITY_EDGE.south - 200, 1.6, "plaza"));
   solids.push({ kind: "ramp", at: v3(x0, 194, -1), w, d: 6, h: 1.6, mat: "plaza", dir: "e" }); // stairs to the water
   // sheds right at the water's edge (x 193..198): this way the bollards at x 192.5 fit in the free strip next to them
   for (const y of [164, 178]) solids.push({ kind: "vault", at: v3(193, y, 0.6), len: 12, w: 5, h: 2.5, axis: "y", mat: "rust", segments: 6 });
@@ -172,7 +170,8 @@ function jungleOnLand(out: Solid[], rng: Rng, rect: { x0: number; x1: number; y0
 }
 
 export function greenery(solids: Solid[], rng: Rng): void {
-  jungleOnLand(solids, rng, { x0: WORLD.x0 + 3, x1: 340, y0: ZONE_SPLIT_Y + 1, y1: CITY_EDGE.north - 2 }, 30, 0.4, { y: RAIL_Y, train: TRAIN_CLEAR });      // seam belt, without stepping on the estuary
+  // east bank of the seam strip: terrain there is jungle (x ≥ 306, y < ESTUARY_Y0), so it is planted; the strip west of the station stays empty asphalt (#319)
+  jungleOnLand(solids, rng, { x0: 308, x1: 338, y0: ZONE_SPLIT_Y + 3, y1: ESTUARY_Y0 - 4 }, 10, 0.4);
   for (let y = ROWS[0]; y < COLLAPSED.y; y += 8) {                                                        // east bank of the estuary, old city
     const x0 = Math.ceil(islandWestX(y + 6)) + 2, x1 = EAST_RING.x0 - 3;
     if (x1 - x0 >= 2) jungleOnLand(solids, rng, { x0, x1, y0: y, y1: y + 6 }, rng.int(1, 2));

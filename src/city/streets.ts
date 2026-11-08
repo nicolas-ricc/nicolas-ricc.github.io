@@ -2,7 +2,7 @@ import type { Accent } from "../iso/accent";
 import { v3, type Vec2 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
-import { QUAY_X } from "../map/geo";
+import { ESTUARY_Y0, QUAY_X, STATION_LAND } from "../map/geo";
 import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_COLS, EAST_RING, PROMENADE, PLAZA, ROWS, STREET, WEST_COLS, WEST_QUAY, estuaryEast, estuaryReaches, inBlock, inCrater } from "../scenes/city-grid";
 import { lamp, place, streetTree, trafficLight } from "../kit/props";
 import { PLINTH_H, prism } from "../scenes/city-pieces";
@@ -73,12 +73,12 @@ const LANE_X = [...WEST_LANE_X, ...EAST_LANE_X];
 function lanes(ground: Solid[]): void {
   for (const cx of LANE_X) {
     const line = cx === RING_X ? dashes : centerLine; // the east ring keeps the dashed lanes
-    line(ground, { x: cx, y: CITY_EDGE.north }, { x: cx, y: AVENUE.y0 });
+    line(ground, { x: cx, y: cx < STATION_LAND.x0 ? CITY_EDGE.north : ESTUARY_Y0 + 12 }, { x: cx, y: AVENUE.y0 }); // the city does not stripe the station
     // south of the avenue the east ring is cut where the estuary comes in, and goes no further than where the east bank turns to jungle: the ground is drawn on top of the water
     const yEnd = cx > QUAY_X ? Math.min(DISTRICT_BANK_Y, estuaryReaches(cx) - 1) : CITY_EDGE.south;
     if (yEnd > AVENUE.y1 + 3) line(ground, { x: cx, y: AVENUE.y1 }, { x: cx, y: yEnd });
   }
-  const rowsY = [CITY_EDGE.north + STREET / 2, ...ROWS.slice(1).map((y) => y - STREET / 2), CITY_EDGE.south - 2].filter((y) => y < AVENUE.y0 || y > AVENUE.y1); // 161, 185, 239, 269, 299, 322 (the south street is 4 wide)
+  const rowsY = [...ROWS.slice(1).map((y) => y - STREET / 2), CITY_EDGE.south - 2].filter((y) => y < AVENUE.y0 || y > AVENUE.y1); // 185, 239, 269, 299, 322 (the south street is 4 wide)
   for (const cy of rowsY) {
     centerLine(ground, { x: CITY_EDGE.west, y: cy }, { x: WEST_QUAY.x0, y: cy });
     if (cy < DISTRICT_ROWS[0] - STREET) centerLine(ground, { x: Math.max(EAST_RING.x0, Math.ceil(estuaryEast(cy)) + 1), y: cy }, { x: PROMENADE.x0, y: cy }); // starts on land; south of the district the east bank is jungle
