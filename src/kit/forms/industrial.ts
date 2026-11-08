@@ -69,7 +69,7 @@ export const CONTAINER = { len: 6, w: 2.4, h: 2.6 } as const;
 export const CONTAINER_COLORS: readonly { mat: Material; weight: number }[] = [
   { mat: "boxRust", weight: 30 }, { mat: "boxBlue", weight: 25 }, { mat: "boxGrey", weight: 20 }, { mat: "boxGreen", weight: 15 }, { mat: "boxOrange", weight: 10 },
 ];
-export const STACK_HEIGHTS: readonly { n: number; weight: number }[] = [{ n: 1, weight: 30 }, { n: 2, weight: 35 }, { n: 3, weight: 25 }, { n: 4, weight: 10 }];
+export const STACK_HEIGHTS: readonly { n: number; weight: number }[] = [{ n: 1, weight: 35 }, { n: 2, weight: 40 }, { n: 3, weight: 25 }];
 
 /** One item drawn by cumulative weight. */
 function pickWeighted<T extends { weight: number }>(rng: Rng, items: readonly T[]): T {

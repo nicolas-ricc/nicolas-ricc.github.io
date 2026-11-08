@@ -111,11 +111,11 @@ describe("containerStack and stackContainers", () => {
     for (const { mat, weight } of CONTAINER_COLORS) expect(Math.abs((seen[mat] ?? 0) / n - weight / 100)).toBeLessThanOrEqual(0.05);
   });
 
-  it("stack heights follow their weights over 2000 draws (±5 %) and never exceed 4", () => {
+  it("stack heights follow their weights over 2000 draws (±5 %) and never exceed 3 (budget cut of #328)", () => {
     const rng = createRng(2), n = 2000, seen: Record<number, number> = {};
     for (let i = 0; i < n; i++) { const h = stackHeight(rng); seen[h] = (seen[h] ?? 0) + 1; }
-    expect(STACK_HEIGHTS).toEqual([{ n: 1, weight: 30 }, { n: 2, weight: 35 }, { n: 3, weight: 25 }, { n: 4, weight: 10 }]);
-    expect(Object.keys(seen).map(Number).every((h) => h >= 1 && h <= 4)).toBe(true);
+    expect(STACK_HEIGHTS).toEqual([{ n: 1, weight: 35 }, { n: 2, weight: 40 }, { n: 3, weight: 25 }]);
+    expect(Object.keys(seen).map(Number).every((h) => h >= 1 && h <= 3)).toBe(true);
     for (const { n: h, weight } of STACK_HEIGHTS) expect(Math.abs((seen[h] ?? 0) / n - weight / 100)).toBeLessThanOrEqual(0.05);
   });
 
