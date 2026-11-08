@@ -85,6 +85,19 @@ describe("bridge", () => {
     expect(solids.some((s) => s.kind === "prism" && s.mat === "steel" && s.h === 5)).toBe(false);
   });
 
+  it("each obelisk point owns exactly its obelisk prism and its cone (#171)", () => {
+    const solids: Solid[] = [], lights: FixedLight[] = [];
+    bridge(solids, lights);
+    expect(lights).toHaveLength(4);
+    for (const l of lights) {
+      const [from, to] = l.own, [o, cap] = [solids[from]!, solids[from + 1]!];
+      expect(to - from).toBe(2);
+      expect(o).toMatchObject({ kind: "prism", mat: "stone", w: 1.2, d: 1.2, h: 4 });
+      expect(cap).toMatchObject({ kind: "cone", mat: "stone" });
+      if (o.kind === "prism") { expect(l.at.x).toBeCloseTo(o.at.x + 0.6, 6); expect(l.at.y).toBeCloseTo(o.at.y + 0.6, 6); }
+    }
+  });
+
   it("two cars of the size of props.car", () => {
     expect(built().solids.filter((s) => s.kind === "prism" && (s.mat === "steel" || s.mat === "rust") && s.h === 1.2)).toHaveLength(2);
   });

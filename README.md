@@ -23,7 +23,7 @@ chimneys with marker bands, an outdoor substation and a bucket-wheel
 excavator with an animated wheel, `factory.wheel`), `city.ts`
 (the Resume orchestrator) and `sea.ts` (point, lighthouse and ships of Blog). The pieces of
 Resume live in `src/city/` (`zoning.ts` neighborhoods, `fixed.ts` fixed pieces,
-`streets.ts` streets, `lights.ts` windows, neon signs and washed facades) and in the
+`streets.ts` streets, `lights.ts` windows, neon signs, washed facades and the box occlusion of the fixed pieces' lights) and in the
 kit `src/kit/` (explored in `lab/kit.html`). At the end
 of the west track, where the shipyard's boiler shop used to be, stands the
 terminal station (`station.ts`, modeled on Tigre Station of the Mitre

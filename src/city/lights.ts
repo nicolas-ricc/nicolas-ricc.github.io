@@ -11,7 +11,8 @@ import { CATALOGUE, type Neighborhood } from "./zoning";
 /**
  * Resume lights (spec §7, issue #45): which windows light up (with an exact
  * quota per neighborhood), which are animatable, the neons of the bar street and
- * the bathed facades of the civic buildings. Pure module: city.ts pours the result.
+ * the bathed facades of the civic buildings; and which lights of the fixed pieces
+ * (lamps, obelisks, garlands, puddles) are visible (#171). Pure module: city.ts pours the result.
  * What is hidden is decided with `hides` (silhouette on screen); what is covered (centroid
  * on another solid's box, contact included) is decided in 3D. Neither is published.
  */
@@ -36,7 +37,13 @@ interface Target { box: Bounds; sb: ScreenBounds; hull: Vec2[]; own: readonly [n
 const target = (pts: Vec3[], own: readonly [number, number]): Target => { const box = lightBox(pts); return { box, sb: screenBounds(box), hull: screenHull(box), own }; };
 
 /** Box, bounds and screen silhouette of each solid, computed once. */
-interface Boxes { boxes: Bounds[]; sbs: ScreenBounds[]; hulls: Vec2[][] }
+export interface Boxes { boxes: Bounds[]; sbs: ScreenBounds[]; hulls: Vec2[][] }
+
+/** The `Boxes` of a scene's solids: `city()` builds them once for `visibleLights` and `lights`. */
+export function solidBoxes(solids: Solid[]): Boxes {
+  const boxes = solids.map(bounds);
+  return { boxes, sbs: boxes.map(screenBounds), hulls: boxes.map(screenHull) };
+}
 
 /** Sweep by screen `minX`: `true` if some solid other than its own hides the target. Equivalent to testing all pairs. */
 function occluded(ts: Target[], { boxes, sbs, hulls }: Boxes): boolean[] {
@@ -74,8 +81,9 @@ export interface FixedLight { accents: Accent[]; at: Vec3; own: readonly [number
 
 /** Each dot is a light at its `at`; all the polys together are one light (a puddle) at the centroid of the first. */
 export function fixedLights(accents: Accent[], own: readonly [number, number] = [0, 0]): FixedLight[] {
-  const polys = accents.filter((a) => a.kind === "poly");
-  return [...accents.flatMap((a): FixedLight[] => (a.kind === "dot" ? [{ accents: [a], at: a.at, own }] : [])), ...(polys.length ? [{ accents: polys, at: centroid((polys[0] as Extract<Accent, { kind: "poly" }>).pts), own }] : [])];
+  const dots = accents.flatMap((a): FixedLight[] => (a.kind === "dot" ? [{ accents: [a], at: a.at, own }] : []));
+  const polys = accents.filter((a): a is Extract<Accent, { kind: "poly" }> => a.kind === "poly");
+  return polys.length ? [...dots, { accents: polys, at: centroid(polys[0]!.pts), own }] : dots;
 }
 
 /** Pushes the solids of `lit` and its lights, whose own range is that of those solids. */
@@ -86,13 +94,13 @@ export function placeLit(solids: Solid[], out: FixedLight[], lit: Lit): void {
 }
 
 /** Accents of the lights that no foreign solid hides, in input order. */
-export function visibleLights(ls: FixedLight[], solids: Solid[]): Accent[] {
-  const boxes = solids.map(bounds), hid = occluded(ls.map((l) => target([l.at], l.own)), { boxes, sbs: boxes.map(screenBounds), hulls: boxes.map(screenHull) });
+export function visibleLights(ls: FixedLight[], solids: Boxes): Accent[] {
+  const hid = occluded(ls.map((l) => target([l.at], l.own)), solids);
   return ls.flatMap((l, i) => (hid[i] ? [] : l.accents));
 }
 
-export function lights(scene: Pick<CityScene, "solids" | "placed">, rng: Rng): CityLights {
-  const boxes = scene.solids.map(bounds), solids: Boxes = { boxes, sbs: boxes.map(screenBounds), hulls: boxes.map(screenHull) };
+export function lights(scene: Pick<CityScene, "solids" | "placed">, rng: Rng, solids: Boxes = solidBoxes(scene.solids)): CityLights {
+  const { boxes } = solids;
   const neighborhoods = Object.keys(CATALOGUE) as Neighborhood[];
   const counts = Object.fromEntries(neighborhoods.map((b) => [b, { candidates: 0, on: 0, warm: 0 }])) as CityLights["counts"];
 
@@ -137,9 +145,9 @@ export function lights(scene: Pick<CityScene, "solids" | "placed">, rng: Rng): C
     return true;
   });
   if (free.length > MAX_NEONS) { const pick = new Set(sample(free, MAX_NEONS, rng)); free = free.filter((s) => pick.has(s)); }
-  // A puddle hidden by a solid is dropped (only the rings); the neon stays.
+  // A puddle hidden by a solid outside its owner piece is dropped (only the rings); the neon stays.
   const pud = free.map(({ slot, owner }) => { const c = centroid(slot.pts); return v3(c.x + slot.wall.x, c.y + slot.wall.y, scene.placed[owner]!.placed.lot.z); });
-  const phid = occluded(pud.map((q) => target([q], [0, 0])), solids);
+  const phid = occluded(free.map(({ owner }, i) => { const p = scene.placed[owner]!; return target([pud[i]!], [p.solidOffset, p.solidOffset + p.piece.solids.length]); }), solids);
   const neons: StreetNeon[] = free.map(({ slot, owner }, i) => {
     const r = rng.next() * 100, color = r < 50 ? "amber" : r < 80 ? "magenta" : "cyan";
     return { accents: [...neonAccents(slot.pts, color), ...(phid[i] ? [] : puddle(pud[i]!.x, pud[i]!.y, `${color}Bleed`, pud[i]!.z))], color, owner, slot };

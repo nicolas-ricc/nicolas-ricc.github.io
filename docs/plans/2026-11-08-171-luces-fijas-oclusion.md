@@ -135,6 +135,11 @@ World seed (`city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv
 - [ ] With the dev server (`npm run dev -- --host --port 5173`) and `agent-browser`, capture `/lab/resume.html` zoomed on the bridge's east head (x 264..282, y 207..224) and on the avenue's north sidewalk by the tower (x 90..125, y 200..210), on `origin/main` and on the branch. Save to `docs/superpowers/specs/assets/171-fixed-lights/` (`bridge-before.png`, `bridge-after.png`, `avenue-before.png`, `avenue-after.png`), as #142–#144 did.
 - [ ] Commit `captures(#171): before/after screenshots`.
 
+## Code review (stage 6)
+
+- The neon puddle now exempts the owner piece's solids, `[solidOffset, solidOffset + piece.solids.length)`, and no longer uses `[0, 0]`. This follows the brief's "el edificio dueño del neón" literally (finding 1). `Slot` records no building index, so the whole owner piece is exempt. No hash moves.
+- `solidBoxes(solids)` is built once in `city()` and shared by `visibleLights` and `lights` (finding 2). It took 16.6 ms of the 70 ms `city()` build.
+
 ## Grilling
 
 One round (griller model: fable). The revisions added assumptions and test assertions and kept the same seam, so no second round was run.

@@ -9,7 +9,7 @@ import { city, type CityScene, type PlacedPiece } from "../scenes/city";
 import { zoneRng } from "../scenes/world";
 import { SEED } from "../map/seed";
 import { garland, lamp, puddle } from "../kit/props";
-import { fixedLights, lightBox, lights, placeLit, visibleLights, MAX_ANIMABLE, MAX_NEONS, WINDOW_ALPHA, type FixedLight } from "./lights";
+import { fixedLights, lightBox, lights, placeLit, solidBoxes, visibleLights, MAX_ANIMABLE, MAX_NEONS, WINDOW_ALPHA, type FixedLight } from "./lights";
 import { CATALOGUE, type Neighborhood } from "./zoning";
 
 const NEIGHBORHOODS = Object.keys(CATALOGUE) as Neighborhood[];
@@ -293,6 +293,14 @@ describe("lights (synthetic scenes)", () => {
     expect(n.accents.some((x) => x.kind === "poly" && x.pts.length === 8)).toBe(false);
   });
 
+  it("neons: a solid of the owner piece does not hide its puddle", () => {
+    const a = emptyPiece();
+    a.solids.push(prism(0, 0, 0.3, 24, 18, 6), prism(10.5, 20, 0, 2, 1, 1)); // the same low prism as above, now part of the owner piece
+    a.slots.push(neonSlot(10, 0));
+    const [n] = lights({ solids: a.solids, placed: [placedAt("bars", a, 0)] }, createRng(3)).neons;
+    expect(n!.accents.filter((x) => x.kind === "poly" && x.pts.length === 8)).toHaveLength(3);
+  });
+
   it("neons: colors with weights amber 50, magenta 30, cyan 20", () => {
     const tally = { amber: 0, magenta: 0, cyan: 0 };
     for (let seed = 1; seed <= 40; seed++) {
@@ -313,20 +321,20 @@ describe("fixed lights", () => {
     const s: Solid[] = [], out: FixedLight[] = [];
     placeLit(s, out, lamp(v3(0, 0, 0)));
     s.push(prism(1, 1, 0, 1, 1, 10));
-    expect(visibleLights(out, s)).toEqual([]);
+    expect(visibleLights(out, solidBoxes(s))).toEqual([]);
   });
 
   it("its own post does not hide the lamp", () => {
     const s: Solid[] = [], out: FixedLight[] = [];
     placeLit(s, out, lamp(v3(0, 0, 0)));
     expect(out[0]!.own).toEqual([0, 1]);
-    expect(visibleLights(out, s)).toEqual(lamp(v3(0, 0, 0)).accents);
+    expect(visibleLights(out, solidBoxes(s))).toEqual(lamp(v3(0, 0, 0)).accents);
   });
 
   it("a solid inside the own range is exempt, the same solid outside it hides", () => {
     const wall = prism(1, 1, 0, 1, 1, 10), dot = lamp(v3(0, 0, 0)).accents;
-    expect(visibleLights(fixedLights(dot, [0, 1]), [wall])).toEqual(dot);
-    expect(visibleLights(fixedLights(dot), [wall])).toEqual([]);
+    expect(visibleLights(fixedLights(dot, [0, 1]), solidBoxes([wall]))).toEqual(dot);
+    expect(visibleLights(fixedLights(dot), solidBoxes([wall]))).toEqual([]);
   });
 
   it("a puddle is one light, kept or dropped whole", () => {
@@ -334,8 +342,8 @@ describe("fixed lights", () => {
     expect(ls).toHaveLength(1);
     expect(ls[0]!.at.x).toBeCloseTo(5, 6); expect(ls[0]!.at.y).toBeCloseTo(5, 6); expect(ls[0]!.at.z).toBeCloseTo(0.12, 6);
     expect(ls[0]!.own).toEqual([0, 0]);
-    expect(visibleLights(ls, [prism(6, 6, 0, 2, 2, 10)])).toEqual([]);
-    expect(visibleLights(ls, [])).toEqual(rings);
+    expect(visibleLights(ls, solidBoxes([prism(6, 6, 0, 2, 2, 10)]))).toEqual([]);
+    expect(visibleLights(ls, solidBoxes([]))).toEqual(rings);
   });
 
   it("a garland is one light per dot", () => {
