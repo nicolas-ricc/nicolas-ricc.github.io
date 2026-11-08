@@ -18,11 +18,13 @@
 - `src/iso/` y `src/scenes/` no importan Pixi.
 - Ninguna escena cambia: `world(7)` produce los mismos sólidos y acentos que en `origin/feature/56-costura-90`.
 - Contrato del kit (`kit.test.ts`): todo sólido dentro del lote ±0.8, nada bajo `lot.z`, altura ≤ `min(lot.maxH, RECIPE_MAX_H)` (también con `maxH 10`), determinismo, ventanas y paredes solo de caras que miran a la cámara de un edificio con fachada, ningún acento `windowWarm`/`windowCool`, nada en huecos cóncavos, y `lot.z + 0.3` desplaza la salida exactamente 0.3 en z.
-- Tono por pieza: `tone = style.tone + rng.int(−1, 1)`, recortado con `shiftTone` a −2..+2, aplicado a todos los sólidos de la pieza (se omite el campo cuando vale 0, como hace `prism`).
+- Tono por pieza: `tone = style.tone + rng.int(−1, 1)` (primera tirada del `rng` en cada receta), recortado con `shiftTone` a −2..+2, aplicado al final de cada receta a todos sus sólidos con un helper interno `tonePiece(p: Piece, tone: number): Piece` (se omite el campo cuando vale 0, como hace `prism`). Los builders exportados no llevan tono: lo pone la receta (o la escena que los reuse).
+- Cada tarea registra en `INDUSTRIAL` solo las recetas que implementa; cada commit deja `npm test` en verde salvo los tests de la etapa 3 de tareas aún no hechas.
 - Commits `feat(#321): …` / `test(#321): …` con `Co-Authored-By`.
 
 ## Decisiones técnicas declaradas (el issue no las fija o se contradice)
 
+0. **Fuentes:** `recipeCap` es altura sobre `lot.z` (`src/kit/piece.ts`: "Height cap above `lot.z`"); `RECIPE_MAX_H = 18`; `addBuilding` calcula `floorH = alto de la pared / f.floors`; paredes de `prism`: 0 N, 1 E, 2 S, 3 O (`src/iso/plate.ts`); `TO_SUN` apunta al OSO (`src/iso/light.ts`), así que sur y oeste son `lit`; `palette-guard.test` no mira `*.test.ts`; los tests de paleta recorren `Object.keys(ISO_TONES)`; `kitScene` ya arma una fila por familia; `neighborhoodOf` nunca devuelve `industrial` y `lights.ts` no tira del `rng` por barrio, así que sumar el barrio no cambia `world(7)`.
 1. **Dientes de sierra:** en `RampDir`, `"e"` quiere decir "baja hacia el este" (arista alta al oeste, ver `ramp()` en `solids.ts`). Con `dir: "e"` la cara vertical queda al **oeste**, y una placa en `wall 1` (este) cae sobre la pared de altura 0 y `tessellate` la descarta. El issue pide "cara vertical al este" y la placa `glass` en `wall 1`: se respeta la cara y se usa **`dir: "w"`**.
 2. **`foodTruck` dentro de 5×2.2:** caja de carga `mat` de 3.8 de largo + cabina `steel` de 1.2 de largo y 2 de alto en el extremo este (`dir: "s"`) o sur (`dir: "e"`). Entre las dos ocupan 5×2.2×2.6 sin solaparse. El toldo y la ventanilla sobresalen hasta 0.8 hacia `dir`.
 3. **Puertas de contenedor:** una placa puerta en la cara visible de **cada contenedor** de la pila: la cara del extremo, este si `along: "x"` y sur si `along: "y"`.
@@ -69,12 +71,12 @@
 - Produce: `export const RIB_W = 0.5, RIB_STEP = 1, RIB_MAX = 24, RIB_MIN_LEN = 6;` y `export function ribs(wall: number, len: number, z0: number, z1: number, lit: boolean, mat: Material): Plate[]`.
 
 - [ ] **Paso 1: tests (etapa 3)**, en `describe("ribs")`:
-  - `len 5.9` → `[]`; `len 6` → 6 franjas.
+  - `len 5.9`, `0`, `−3` y `NaN` → `[]`; `len 6` → 6 franjas.
   - `len 10` → 10 franjas, la k-ésima con `u0 = k/10`, `u1 = u0 + 0.05`, `shape "rect"`, `wall`, `mat`, `z0`, `z1` los pasados.
   - `len 100` → exactamente 24 franjas, paso `100/24` en unidades (`u0 = k·(100/24)/100`), todas con `0 ≤ u0 < u1 ≤ 1`.
   - Tonos: sin `lit`, `toneOffset` alterna `0, −1, 0, −1…`; con `lit`, `1, 0, 1, 0…`.
 - [ ] **Paso 2:** `npx vitest run src/iso/plate.test.ts` → FALLA.
-- [ ] **Paso 3:** implementar. `n = min(RIB_MAX, floor(len / RIB_STEP))`, `step = max(RIB_STEP, len / RIB_MAX)`; franja k: `u0 = k·step/len`, `u1 = u0 + RIB_W/len`; `toneOffset = (lit ? 1 : 0) − (k % 2)`. Docstring: corrugated sheet; `lit` es la pared con `shadeTone(normal) === "lit"`.
+- [ ] **Paso 3:** implementar. Si `!(len >= RIB_MIN_LEN)` (incluye `NaN` y negativos) devuelve `[]`; si no, `n = min(RIB_MAX, floor(len / RIB_STEP))`, `step = max(RIB_STEP, len / RIB_MAX)`; franja k: `u0 = k·step/len`, `u1 = u0 + RIB_W/len`; `toneOffset = (lit ? 1 : 0) − (k % 2)`. Docstring: corrugated sheet; `lit` es la pared con `shadeTone(normal) === "lit"`.
 - [ ] **Paso 4:** PASA.
 - [ ] **Paso 5:** commit `feat(#321): ribs plate generator`.
 
@@ -115,7 +117,7 @@
 - [ ] **Paso 1: tests (etapa 3)**
   - `zoning.test` "catalogues": `NEIGHBORHOODS` suma `"industrial"`, `weights("industrial")` es `{}` y `lights.industrial` es `{ on: 0.3, warm: 0 }`.
   - `kit-scene.test`: `"the industrial row is there, in the industrial style, whatever the chosen style"`: los lotes de las ocho recetas comparten una fila `y`; con `kitScene(7, "downtown")` el cuerpo de `sawtoothHall` (el prisma con `facade`) es de `concrete`.
-  - `industrial.test`: el registro tiene las ocho recetas de la familia en orden; `STYLES.industrial` es el del issue; `sawtoothHall` (lote 21×15, 20 semillas, estilo `industrial`): publica ventanas, hay `floor(lado/4)` rampas `dir "w"` sobre el cuerpo y cada una lleva una placa `glass` en `wall 1` con z al 30–90 % del diente; `sawtooth` sobre un rect de 3 de ancho no empuja nada; `sheetHall`: prisma `gable` `sheetGreen` o `sheetTeal` con placas `ribs` (algún `toneOffset ≠ 0`) en cada pared larga de largo ≥ 6, la del sur con `lit` (offsets `1/0`) y la del norte sin él (`0/−1`), y una placa puerta `toneOffset −2` de 4 de ancho en el lado `open[0]`; `storeroom`: un prisma 4×3×2.6 `sheetGreen` o `steel` con una placa puerta `toneOffset −2`.
+  - `industrial.test`: (verde recién en la tarea 6) el registro tiene las ocho recetas de la familia en orden; `STYLES.industrial` es el del issue; `sawtoothHall` (lote 21×15, 20 semillas, estilo `industrial`): publica ventanas, hay `floor(lado/4)` rampas `dir "w"` sobre el cuerpo y cada una lleva una placa `glass` en `wall 1` con z al 30–90 % del diente; `sawtooth` sobre un rect de 3 de ancho no empuja nada; `sheetHall`: prisma `gable` `sheetGreen` o `sheetTeal` con placas `ribs` (algún `toneOffset ≠ 0`) en cada pared larga de largo ≥ 6, la del sur con `lit` (offsets `1/0`) y la del norte sin él (`0/−1`), y una placa puerta `toneOffset −2` de 4 de ancho en el lado `open[0]`; `storeroom`: un prisma 4×3×2.6 `sheetGreen` o `steel` con una placa puerta `toneOffset −2`.
 - [ ] **Paso 2:** FALLA.
 - [ ] **Paso 3:** tipos, estilo, catálogo, `kit-scene` y las tres recetas:
   - `sawtoothHall`: `toothH = 2`, `h = min(rng.int(6, 9), cap − toothH)` con `cap = recipeCap(lot)`; cuerpo `prism` `style.mat` que llena el lote con `facade { floors: 1, cols: max(1, round(w/4)) }` vía `addBuilding`; dientes con `sawtooth(..., style.roof, "glass")`.
@@ -144,7 +146,7 @@
 - [ ] **Paso 2:** FALLA.
 - [ ] **Paso 3:**
   - `containerStack`: contenedores según x en bloques de 6 de largo separados por pasillos de 4 en x, centrados en el lote; en cada bloque, pilas contiguas en y cada 2.6 (2.4 + 0.2). Alto `min(stackHeight(rng), floor(cap / 2.6))`.
-  - `stockpile`: elegir `rng.int(3, 6)` grupos de `rng.pick` sobre los cuatro builders (capas 2..4, caños `len` 8..14, bobinas 2..4, secciones 1..2) y ubicarlos por rechazo (hasta 60 intentos por grupo) dentro del lote y a ≥ 1 de los ya puestos. Si quedan menos de 3, rellenar con `coils(at, 2)` o `sheetStack(at, 2)` donde entren. El huelgo interno de cada builder es < 0.5 (caños 0.2, bobinas 0.4, secciones 0.4).
+  - `stockpile`: elegir `rng.int(3, 6)` grupos de `rng.pick` sobre los cuatro builders (capas 2..4, caños `len` 8..14, bobinas 2..4, secciones 1..2) y ubicarlos por rechazo (hasta 60 intentos por grupo) dentro del lote y a ≥ 1 de los ya puestos. Para que siempre haya ≥ 3, los tres primeros grupos se ubican antes que el resto y, si alguno no entra en 60 intentos, se reemplaza por `coils(at, 2)` (6.4×3) y luego `sheetStack(at, 2)` (10.4×2.4); el test de 20 semillas en los dos lotes lo comprueba empíricamente. El huelgo interno de cada builder es < 0.5 (caños 0.2, bobinas 0.4, secciones 0.4).
 - [ ] **Paso 4:** PASA (más el contrato genérico).
 - [ ] **Paso 5:** commit `feat(#321): container stack and stockpile recipes`.
 
@@ -160,13 +162,13 @@
 - Produce: `export function rtgAt(x0: number, x1: number, y: number, out: Solid[], z = 0): void` — patas 1.2×1.2 en `x0` y `x1` (esquina NO), pares en `y` e `y + 6`; rueda `cylinder` `rust` r 0.6 h 1.2 bajo cada pata; patas de z 1.2 a 9; dos vigas transversales `steel` de `x0` a `x1 + 1.2`, 1.2 de profundidad, z 9..10, en `y` e `y + 6`; carro `rust` 3×(6 − 1.2)×1.4 entre las vigas, centrado en x, a z 8.6..10. Alto total 10.
 
 - [ ] **Paso 1: tests (etapa 3)**
-  - `quayCrane` (lote propio, 20 semillas, cualquier estilo): `max z ≤ lot.z + 18` y `> lot.z + 16`; exactamente un acento, `dot` `cyan` de r 1; con `open: ["e"]` la punta queda al este del centro y con `["n"]` al oeste.
+  - `quayCrane` (lote propio con `maxH 24`, 20 semillas, cualquier estilo): `max z ≤ lot.z + 18` y `> lot.z + 16`; con `maxH 10`, `max z ≤ lot.z + 10`; exactamente un acento, `dot` `cyan` de r 1; con `open: ["e"]` la punta queda al este del centro y con `["n"]` al oeste.
   - `rtgGantry`: `max z === lot.z + 10` (±1e-9) y cuatro cilindros `rust` de r 0.6.
   - `tankGroup` (dos lotes del contrato, 20 semillas): 1..3 cilindros principales `steel` o `rust` de r 3..5 y h 4..8 (con h recortado al tope), cada uno con un anillo de `r + 0.2` y h 0.3 a media altura, y un `strip` que los rodea.
 - [ ] **Paso 2:** FALLA.
 - [ ] **Paso 3:**
   - `tankGroup`: `n = rng.int(1, 3)`, radios `rng.int(3, 5)` y alto `min(rng.int(4, 8), cap)`; si no entran en fila según el lado largo con 1 de separación y 1 de margen para el muro, bajar `n` (y si con uno no entra, recortar `r` al lado corto). Escalera: prisma 0.3×0.3 de alto h pegado al lado sur de cada tanque y travesaños `beam` 0.1×0.1 cada 1 de alto. Muro: `strip` `concrete` de ancho 0.6 cerrado alrededor del grupo, a `lot.z + 0.02`.
-  - `quayCrane`: `quayCraneAt` en el centro del lote, `dir` = `open[0]` si es `w`, `e` o `s`, si no `"w"`.
+  - `quayCrane`: `quayCraneAt` en el centro del lote, y la pieza pasa por `fitToCap(p, lot)` (con `maxH 10` la grúa se aplana a 10), `dir` = `open[0]` si es `w`, `e` o `s`, si no `"w"`.
   - `rtgGantry`: `rtgAt(lot.x + 0.5, lot.x + lot.w − 1.7, lot.y + (lot.d − 7.2)/2, …)` y debajo, entre las patas, una pila `stackContainers` según x de `min(stackHeight(rng), 3)`.
 - [ ] **Paso 4:** PASA (más el contrato genérico).
 - [ ] **Paso 5:** commit `feat(#321): tank group, quay crane and RTG gantry recipes`.
@@ -176,3 +178,20 @@
 - `npm test` y `npm run typecheck` en verde.
 - Hash de `JSON.stringify(world(7))` igual al de la base.
 - `lab/kit.html` con agent-browser a 1600×900 escala 2: la fila `industrial` muestra las ocho recetas (script en `.scratch/evals-321.md`).
+
+## Assumptions
+
+- `dir: "w"` en los dientes (la cara vertical al este que pide el issue); rechazado: `dir: "e"` literal, que deja la cara vertical al oeste, invisible, y la placa de `wall 1` descartada.
+- `foodTruck` = caja de 3.8 + cabina de 1.2 dentro de 5×2.2; rechazado: caja de 5 con cabina solapada (dos sólidos solapados rompen el orden por profundidad) o cabina fuera de 5×2.2.
+- Una puerta por contenedor; rechazado: una sola puerta por pila.
+- `z` opcional al final de `quayCraneAt`/`rtgAt`; rechazado: forzar `z = 0` (rompe el contrato `lot.z + 0.3`).
+- `glass: Material` en `sawtooth`; rechazado: un booleano.
+- La fila `industrial` del lab siempre con `STYLES.industrial` (el issue: "fila `industrial` en `lab/kit.html`, con el estilo `industrial`"); rechazado: seguir las teclas `1..4`.
+- `quayCrane` pasa por `fitToCap`: con tope < 18 se aplana; rechazado: dejarla en 18 (rompe el contrato del kit).
+- Tono por pieza aplicado al final de la receta (`tonePiece`); los builders no llevan tono.
+
+## Grilling
+
+- Rondas: 1 (los cambios fueron correcciones dentro de las tareas existentes, sin tareas nuevas ni quitadas). Griller: `fable`.
+- Preguntas: 16. Respondidas con ISSUE: 4 (9, 10, 15, y parte de 1); CODE: 10 (1, 3, 4, 7, 11, 12, 13, 14, 15, 16); NO SOURCE → supuesto técnico: 4 (2, 5, 6, 8), registrados arriba y corregidos en el plan.
+- Issues abiertos: ninguno (nada quedó fuera de alcance ni ambiguo en la spec).
