@@ -160,7 +160,7 @@ export function collapsed(solids: Solid[], rng: Rng): void {
  * estuary, whose shore is `islandWestX` (it consumes the rng in the same order,
  * so it doesn't misalign the seed).
  */
-function jungleOnLand(out: Solid[], rng: Rng, rect: { x0: number; x1: number; y0: number; y1: number }, n: number, z = 0.4, rails?: Rails): void {
+export function jungleOnLand(out: Solid[], rng: Rng, rect: { x0: number; x1: number; y0: number; y1: number }, n: number, z = 0.4, rails?: Rails): void {
   const tmp: Solid[] = [];
   jungle(tmp, rng, rect, n, z, rails);
   for (const s of tmp) {

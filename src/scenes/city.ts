@@ -18,7 +18,7 @@ import { FOOTBRIDGE_LOT, NO_PLINTH, WATER_TOWER_BLOCK, assign, waterTowerLot, ty
  * Resume: orchestrator of the city. The zoning (src/city/zoning.ts) assigns
  * neighborhood, recipe, lot and tone per block; here each piece is built with
  * the kit, the fixed pieces are added (plaza and tower, bridge, riverside,
- * promenade, collapse, jungle, cars; src/city/fixed.ts) and the streets. The
+ * promenade, collapse, jungle, cars; src/city/fixed.ts; the inlet works, src/city/harbor.ts) and the streets. The
  * terrain (terrain.ts) is the asphalt.
  * Spec: docs/superpowers/specs/2026-10-15-resume-nivel-2-kit-zonificacion-luces-design.md §6.
  */

@@ -33,7 +33,7 @@ const isTowerPiece = (s: Solid) => {
 // the south row in front of the tower: PLAZA.x - 6 .. PLAZA.x + PLAZA.w + 6, the band that the controller's ruling caps at 10
 const ROW_SOUTH = ROWS[4], FRONT_X0 = PLAZA.x - 6, FRONT_X1 = PLAZA.x + PLAZA.w + 6;
 
-const CITY_MATS: readonly Material[] = ["office", "officeDark", "glass", "asphalt", "paving", "plaza", "curtain", "stone", "copper", "leaf", "leafDark", "water", "steel", "rust", "plaster", "terracotta", "marble", "awning", "deck", "rail", "brick", "sheetTeal", "concrete", "hull", "whitewash"];
+const CITY_MATS: readonly Material[] = ["office", "officeDark", "glass", "asphalt", "paving", "plaza", "curtain", "stone", "copper", "leaf", "leafDark", "water", "steel", "rust", "plaster", "terracotta", "marble", "awning", "deck", "rail", "brick", "sheetTeal", "concrete", "hull", "whitewash", "rock"];
 
 describe("city", () => {
   it("is deterministic per seed", () => {
@@ -228,7 +228,7 @@ describe("city", () => {
 
   it("cars: a single size, they do not fall on a block or a crater, and none overlaps another", () => {
     const s = scene();
-    const cars = s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism" && (x.mat === "steel" || x.mat === "rust") && x.h === 1.2 && x.w !== 0.6); // not the fish market scale (#326)
+    const cars = s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism" && (x.mat === "steel" || x.mat === "rust") && x.h === 1.2 && !(x.w === 0.6 && x.d === 0.6 && x.at.y >= 116 && x.at.y < 117.5)); // not the fish market bollard (#326)
     expect(cars.length).toBeGreaterThanOrEqual(20);
     expect(new Set(cars.map((c) => `${c.w}x${c.d}x${c.h}`))).toEqual(new Set([`${CAR.w}x${CAR.d}x1.2`]));
     for (const c of cars) {

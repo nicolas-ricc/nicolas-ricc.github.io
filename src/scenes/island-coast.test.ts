@@ -80,7 +80,7 @@ describe("island coast", () => {
     const sy = shipyard(createRng(7));
     const cs = city(createRng(7), createRng(8), createRng(9));
     const onIsland = (s: Solid) => bounds(s).max.x >= 276;
-    const breakwater = (s: Solid) => s.kind === "cone" && s.mat === "rock"; // shipyard.ts: the shipyard's only `rock`
+    const breakwater = (s: Solid) => s.kind === "cone" && s.mat === "rock"; // the `rock` cones: the shipyard's breakwater (shipyard.ts) and the inlet's riprap (city/harbor.ts)
     // #323: the quay cranes, their rails and the container yard stand on the cove quay on purpose (the issue fixes them at y ≥ 30, by the cove water);
     // they are checked apart, below: each footprint centre on land
     const cranes: Solid[] = []; quayCranes(cranes, []);
@@ -99,7 +99,7 @@ describe("island coast", () => {
       ...[...sy.solids, ...sy.ground].filter((s) => onIsland(s) && !breakwater(s) && !onQuay(s)),
       // of the city, only what lies north of the promenade (y < 158): to the south the estuary bank only gains land
       // (islandWestX ≤ estuaryEast, geo.test.ts) and seawall, bridge and collapse are in the water on purpose
-      ...cs.solids.filter((s) => onIsland(s) && bounds(s).max.y < PROMENADE.y0 && !atInlet(s)),
+      ...cs.solids.filter((s) => onIsland(s) && bounds(s).max.y < PROMENADE.y0 && !atInlet(s) && !breakwater(s)),
     ];
     // #319 removed the shipyard's southern island content (the scrap, the southern jungle clusters) and the city seam belt;
     // the remaining shipyard island solids (sheds, silo, east jungle) keep the check from being vacuous.
