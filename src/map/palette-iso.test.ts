@@ -121,7 +121,7 @@ describe("isometric palette", () => {
   });
 
   it("accent triads per zone: cyan, amber and magenta, all in the atlas", () => {
-    expect(ACCENT_COLORS).toEqual(["cyan", "cyanMid", "cyanBleed", "amber", "amberMid", "amberBleed", "magenta", "magentaMid", "magentaBleed", "windowWarm", "windowCool"]);
+    expect(ACCENT_COLORS).toEqual(["cyan", "cyanMid", "cyanBleed", "amber", "amberMid", "amberBleed", "magenta", "magentaMid", "magentaBleed", "windowWarm", "windowCool", "spark"]);
     const all = allIsoColors();
     for (const c of ACCENT_COLORS) expect(all.has(ISO_COLORS[c])).toBe(true);
     // the core is lighter than the mid and the mid lighter than the bleed
@@ -156,8 +156,13 @@ describe("late dusk", () => {
     channelsClose(ISO_COLORS.sky, darken(BASE_SKY, DARKEN));
   });
 
-  it("the eleven accents are not darkened", () => {
-    expect(ACCENT_COLORS.map((c) => ISO_COLORS[c])).toEqual([0x7cf5ff, 0x27b3c9, 0x134a52, 0xffc457, 0xd08a1e, 0x5a3d14, 0xff5ee0, 0xc42a9d, 0x54173f, 0xffd9a0, 0xa8d8ff]);
+  it("the twelve accents are not darkened", () => {
+    expect(ACCENT_COLORS.map((c) => ISO_COLORS[c])).toEqual([0x7cf5ff, 0x27b3c9, 0x134a52, 0xffc457, 0xd08a1e, 0x5a3d14, 0xff5ee0, 0xc42a9d, 0x54173f, 0xffd9a0, 0xa8d8ff, 0xffb347]);
+  });
+
+  it("spark (#321): the welding accent, in the atlas and not darkened", () => {
+    expect(ISO_COLORS.spark).toBe(0xffb347);
+    expect(allIsoColors().has(ISO_COLORS.spark)).toBe(true);
   });
 });
 

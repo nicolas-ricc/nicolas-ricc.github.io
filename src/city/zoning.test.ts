@@ -14,7 +14,7 @@ const cells = (neighborhood: Neighborhood): string[] => blocks().filter((b) => b
 const sorted = (xs: [number, number][]): string[] => xs.map(([x, y]) => key({ x, y })).sort();
 const worldAssign = (): Placed[] => assign(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1));
 const sceneAssign = (): Placed[] => assign(createRng(7), createRng(8));
-const NEIGHBORHOODS: readonly Neighborhood[] = ["downtown", "bars", "residential", "civic", "riverside", "district"];
+const NEIGHBORHOODS: readonly Neighborhood[] = ["downtown", "bars", "residential", "civic", "riverside", "district", "industrial"];
 
 describe("zoning", () => {
   it("every block has a neighborhood and the union of neighborhoods reproduces blocks()", () => {
@@ -67,10 +67,12 @@ describe("zoning", () => {
     expect(weights("civic")).toEqual({});
     expect(weights("riverside")).toEqual({ classic: 30, lTower: 30, eatenRuin: 40 });
     expect(weights("district")).toEqual({ glassTower: 30, twinTowers: 20, classic: 20, campus: 20, cylinderTower: 10 });
+    expect(weights("industrial")).toEqual({});
     const lights = Object.fromEntries(NEIGHBORHOODS.map((z) => [z, CATALOGUE[z].lights]));
     expect(lights).toEqual({
       downtown: { on: 0.45, warm: 0.3 }, bars: { on: 0.7, warm: 0.9 }, residential: { on: 0.55, warm: 0.95 },
       civic: { on: 0.6, warm: 0.7 }, riverside: { on: 0.25, warm: 0.5 }, district: { on: 0.4, warm: 0.15 },
+      industrial: { on: 0.3, warm: 0 },
     });
     for (const z of NEIGHBORHOODS) {
       expect(CATALOGUE[z].style).toBe(z);

@@ -61,6 +61,7 @@ export const CATALOGUE = {
   civic: { recipes: [], style: "civic", lights: { on: 0.6, warm: 0.7 } },
   riverside: { recipes: [{ name: "classic", weight: 30 }, { name: "lTower", weight: 30 }, { name: "eatenRuin", weight: 40 }], style: "riverside", lights: { on: 0.25, warm: 0.5 } },
   district: { recipes: [{ name: "glassTower", weight: 30 }, { name: "twinTowers", weight: 20 }, { name: "classic", weight: 20 }, { name: "campus", weight: 20 }, { name: "cylinderTower", weight: 10 }], style: "district", lights: { on: 0.4, warm: 0.15 } },
+  industrial: { recipes: [], style: "industrial", lights: { on: 0.3, warm: 0 } },
 } as const satisfies Record<Neighborhood, Catalogue>;
 
 /** Water-tower block: a residential courtyard to which fixed.ts adds the tower. */

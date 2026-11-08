@@ -45,6 +45,14 @@ export const BASE_TONES = {
   livery:    { top: 0x2457b8, lit: 0x1e4072, shade: 0x0e256e, up: 0x2a61bc, down: 0x1f4dad },
   // tile: the one from the coastal neighborhood (#240), shared with the station (#239)
   tile:      { top: 0xb0603c, lit: 0x904725, shade: 0x462824, up: 0xcc6c3d, down: 0x975438 },
+  // #56: corrugated sheet and containers
+  sheetGreen:{ top: 0x6a7a6e, lit: 0x575a44, shade: 0x2a3342, up: 0x7b8970, down: 0x5b6b67 },
+  sheetTeal: { top: 0x4a6a76, lit: 0x3d4e49, shade: 0x1e2d47, up: 0x567778, down: 0x405d6f },
+  boxRust:   { top: 0x8a4a32, lit: 0x71371f, shade: 0x371f1e, up: 0xa05333, down: 0x77412f },
+  boxBlue:   { top: 0x3e5c80, lit: 0x33444f, shade: 0x19274d, up: 0x486783, down: 0x355178 },
+  boxGreen:  { top: 0x4e6e4a, lit: 0x40512e, shade: 0x1f2e2c, up: 0x5a7b4b, down: 0x436146 },
+  boxGrey:   { top: 0x707070, lit: 0x5c5345, shade: 0x2d2f43, up: 0x827d72, down: 0x606369 },
+  boxOrange: { top: 0xb0703a, lit: 0x905324, shade: 0x462f23, up: 0xcc7d3b, down: 0x976337 },
 } as const;
 
 export const BASE_SHADOW = 0x2a1a3a;
