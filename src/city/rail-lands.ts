@@ -20,9 +20,9 @@ const underCrossing = (x: number, w: number): boolean => CROSSINGS.some((c) => x
 
 /**
  * Main line of the train through the asphalt of Resume (y 129..137): two rails over a ballast bed,
- * rust sleepers every 4 u in step with the shipyard's (none under a crossing: the planks are its floor), steel fences on both sides with a gap at each
- * level crossing, deck planks over the sleepers at the crossings and a steel post on each side of
- * them. Sleepers and planks are at most 0.3 high, so the train passes over them; the fences keep
+ * rust sleepers every 4 u in step with the shipyard's (none under a crossing: the planks are its
+ * floor), steel fences on both sides with a gap at each level crossing, deck planks at the
+ * crossings and a steel post on each side of them. Sleepers and planks are at most 0.3 high, so the train passes over them; the fences keep
  * the train rule (south ones far enough from the track). The siding comes with the district.
  * Rails and ballast go to `ground`; the rest to `solids`.
  */
