@@ -83,6 +83,23 @@ describe("kit: the concave-gap oracle", () => {
     const tower: Solid = { kind: "prism", at: { x: 0, y: 0, z: 6.4 }, w: 4, d: 4, h: 8, mat: "plaster" };
     expect(concaveIntruders([L, slab, tower])).toBe(0);
   });
+
+  it("detects a thin slab crossing the gap of an L", () => {
+    const L: Solid = { kind: "poly", footprint: [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 4 }, { x: 4, y: 4 }, { x: 4, y: 14 }, { x: 0, y: 14 }], z: 0, h: 6, mat: "plaster" };
+    const slab: Solid = { kind: "prism", at: { x: -6, y: 12, z: 0 }, w: 40, d: 0.5, h: 0.4, mat: "stone" };
+    expect(concaveIntruders([L, slab])).toBe(1);
+  });
+
+  it("measures the gap with either winding of the footprint, and ignores what lies outside the hull", () => {
+    const ccw = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 4 }, { x: 4, y: 4 }, { x: 4, y: 10 }, { x: 0, y: 10 }];
+    for (const footprint of [ccw, [...ccw].reverse()]) {
+      const L: Solid = { kind: "poly", footprint, z: 0, h: 6, mat: "plaster" };
+      const roof: Solid = { kind: "prism", at: { x: -1, y: -1, z: 6 }, w: 12, d: 12, h: 0.4, mat: "stone" };
+      const outside: Solid = { kind: "prism", at: { x: 12, y: 12, z: 0 }, w: 2, d: 2, h: 2, mat: "stone" };
+      expect(concaveIntruders([L, roof])).toBe(1);
+      expect(concaveIntruders([L, outside])).toBe(0);
+    }
+  });
 });
 
 describe("kit: contract of every registered recipe", () => {

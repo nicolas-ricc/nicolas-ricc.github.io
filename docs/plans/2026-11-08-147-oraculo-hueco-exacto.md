@@ -81,7 +81,7 @@ The two existing tests ("detects a solid inside the gap of an L and not one rest
 - [ ] **Step 2: Run to verify the slab test fails**
 
 Run: `npx vitest run src/kit/kit.test.ts -t "concave-gap oracle"`
-Expected: "detects a thin slab crossing the gap of an L" FAILS (`expected 0 to be 1`): no grid point of the slab's box lands in the gap (the one at x 4 is on the footprint's edge). "… either winding …" also FAILS (`expected 4 to be 1`): the old oracle counts sample points, not pairs. The two existing tests pass.
+Expected: "detects a thin slab crossing the gap of an L" FAILS (`expected 0 to be 1`): no grid point of the slab's box lands in the gap (the one at x 4 is on the footprint's edge). "… either winding …" also FAILS (`expected 3 to be 1`): the old oracle counts sample points, not pairs. The two existing tests pass.
 
 - [ ] **Step 3: Implement** in `src/kit/kit.test.ts`, replacing `inPoly`, `onEdge` and the body of `concaveIntruders`:
   - `const GAP_AREA_EPS = 1e-6;`
