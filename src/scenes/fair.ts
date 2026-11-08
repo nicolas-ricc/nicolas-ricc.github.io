@@ -1,5 +1,5 @@
 import type { Accent } from "../iso/accent";
-import { foodTruck, garland } from "../kit/props";
+import { chair, foodTruck, garland, place, table } from "../kit/props";
 import { polyline, v3, type PolyPoint, type Vec2, type Vec3 } from "../iso/geometry";
 import type { Facade } from "../iso/facade";
 import { bounds, type Bounds, type Plate, type Solid } from "../iso/solids";
@@ -11,7 +11,8 @@ import { FAIR, bayShoreX, bayWater, fairAt } from "./sprawl-grid";
  * The beach fair, north of the factory over the bay (Coney Island
  * look): boardwalk with street lamps, pier with pavilion, Ferris
  * wheel, wooden roller coaster, carousel, drop tower, arcade hall,
- * booths, bumper cars, umbrellas, gate. It is the only place with
+ * ghost train, mirror house, giant slide, log flume (animated logs),
+ * varied booth row, food court, bumper cars, umbrellas, gate. It is the only place with
  * accents of all three colors. The moving pieces (wheel, train, tower
  * gondola) are assembled by the animator with the pure builders here.
  * Spec: docs/superpowers/specs/2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md §4.3.
@@ -46,6 +47,8 @@ export const FLUME_X1: number = Math.min(...Array.from({ length: 7 }, (_, k) => 
 export const FLUME_DROP_X0: number = FLUME_X1 - 6;
 const FLUME_LIFT_X1 = 172;
 export const FLUME_PATH: readonly Vec3[] = [v3(FLUME.x0, FLUME_AXIS, 2.5), v3(FLUME_LIFT_X1, FLUME_AXIS, 6), v3(FLUME_DROP_X0, FLUME_AXIS, 6), v3(FLUME_X1, FLUME_AXIS, 0.2)];
+/** Food-truck court at the entrance, south of the arcade: poles at the corners and the middle are centers, 0.65 u outside the box. */
+export const FOOD_COURT = { x0: 100, x1: 160, y0: -176, y1: -170 } as const;
 export const FAIR_MATS: readonly Material[] = ["shallow", "deck", "whitewash", "rust", "steel", "copper", "stone", "concrete", "plaza", "paving", "sand", "rail", "glass", "hull", "leaf", "leafDark", "signal", "livery", "safety", "awning"];
 const WATER_Z = -1;
 
@@ -245,6 +248,19 @@ export function flume(out: Solid[], accents: Accent[]): void {
   for (let k = 0; k < 6; k++) { const py = y + 0.5 + (k % 3); accents.push(dot(Math.max(FLUME_X1 + 1.5 + k * 0.5, bayShoreX(py) + 0.5), py, 0.3 + (k % 2) * 0.7, 0.3, "windowCool")); } // over the water, east of the drop
 }
 
+/** Food-truck court: five trucks facing south, 8 tables with 2 chairs each, three poles with a bulb garland at z 3. */
+export function foodCourt(out: Solid[], accents: Accent[]): void {
+  const mats: Material[] = ["signal", "copper", "whitewash", "rust", "livery"];
+  mats.forEach((mat, k) => place(out, accents, foodTruck(v3(102 + 12 * k, -176, 0), mat, "s")));
+  for (let k = 0; k < 8; k++) {
+    const x = 103 + 7.5 * k;
+    out.push(...table(v3(x, -172.5, 0)), ...chair(v3(x - 0.7, -172.25, 0)), ...chair(v3(x + 1.2, -172.25, 0)));
+  }
+  const poles = [v3(100, -176.5, 3), v3(130, -170.5, 3), v3(160, -176.5, 3)];
+  for (const p of poles) out.push(prism(p.x - 0.15, p.y - 0.15, 0, 0.3, 0.3, 3, "steel"));
+  accents.push(...garland(poles));
+}
+
 function dropTower(out: Solid[], accents: Accent[]): void {
   out.push(prism(DROP.x - 2, DROP.y - 2, 0, 4, 4, 0.6, "concrete"), prism(DROP.x - 0.5, DROP.y - 0.5, 0.6, 1, 1, DROP.h, "steel"));
   accents.push(dot(DROP.x, DROP.y, DROP.h + 0.8, 0.8, "cyan"));
@@ -398,7 +414,7 @@ export function fair(rng: Rng, opts: { legacyOnly?: boolean } = {}): FairScene {
   dropTower(solids, accents);
   const arcadeSigns = arcade(solids);
   bumperCars(solids, accents);
-  if (!opts.legacyOnly) { ghostTrain(solids, accents); mirrorHouse(solids, accents); slide(solids, accents); flume(solids, accents); }
+  if (!opts.legacyOnly) { ghostTrain(solids, accents); mirrorHouse(solids, accents); slide(solids, accents); flume(solids, accents); foodCourt(solids, accents); }
   beach(solids, rng); // after the static solids: the boats look for free space among them
   if (!opts.legacyOnly) boothRow(solids, accents, rng); // after the beach: its rng sequence (and the pinned boats) do not move
   gate(solids, accents);
