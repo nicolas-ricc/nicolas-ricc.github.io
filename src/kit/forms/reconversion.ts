@@ -7,7 +7,7 @@ import type { Rect } from "../../scenes/city-grid";
 import { prism } from "../../scenes/city-pieces";
 import { jungle } from "../../scenes/flora";
 import type { Rng } from "../../map/seed";
-import { chair, garland, rooftopGarden, table } from "../props";
+import { awning, chair, garland, rooftopGarden, table } from "../props";
 import { gableRoof } from "../roofs";
 import { addBuilding, emptyPiece, recipeCap, shiftTone } from "../piece";
 import type { Lot, Piece, RecipeDef, Side, Style, Window } from "../types";
@@ -191,10 +191,53 @@ export function derelictHall(lot: Lot, rng: Rng, style: Style): Piece {
   return t;
 }
 
+/**
+ * Covered market: no closed body. Thin walls on the sides that are not open, steel pillars and awnings on `open[0]`/`open[1]`,
+ * a roof slab with sawtooth teeth (windows on floor 1), a garland under the front and 6..9 stalls in rows parallel to it.
+ */
+export function coveredMarket(lot: Lot, rng: Rng, style: Style): Piece {
+  const tone = shiftTone(style.tone, rng.int(-1, 1));
+  const p = emptyPiece(), { x, y, w, d, z } = lot, wallT = 0.3, post = 0.4;
+  const h = Math.min(6, recipeCap(lot) - 2), f = frontFrame(lot);
+  const open = new Set<Side>([f.side, ...(lot.open[1] ? [lot.open[1]] : [])]);
+  const wx0 = x + (open.has("w") ? post : 0), wx1 = x + w - (open.has("e") ? post : 0);
+  const wy0 = y + (open.has("n") ? post : 0), wy1 = y + d - (open.has("s") ? post : 0);
+  if (!open.has("n")) p.solids.push(prism(wx0, y, z, wx1 - wx0, wallT, h - 0.3, style.mat));
+  if (!open.has("s")) p.solids.push(prism(wx0, y + d - wallT, z, wx1 - wx0, wallT, h - 0.3, style.mat));
+  if (!open.has("w")) p.solids.push(prism(x, wy0, z, wallT, wy1 - wy0, h - 0.3, style.mat));
+  if (!open.has("e")) p.solids.push(prism(x + w - wallT, wy0, z, wallT, wy1 - wy0, h - 0.3, style.mat));
+  const seen = new Set<string>();
+  for (const side of open) {
+    const g = frontFrame({ ...lot, open: [side] }), n = Math.max(1, Math.round(g.len / 3.5)), step = g.len / n;
+    for (let i = 0; i <= n; i++) {
+      const r = g.rect(Math.min(Math.max(i * step - post / 2, 0), g.len - post), 0, post, post), key = `${r.x.toFixed(3)},${r.y.toFixed(3)}`;
+      if (!seen.has(key)) { seen.add(key); p.solids.push(prism(r.x, r.y, z, r.w, r.d, h - 0.3, "steel")); }
+      if (i < n) { const a = g.rect(i * step + post / 2, -0.8, step - post, 0.8); p.solids.push(...awning(v3(a.x, a.y, z + 3), step - post, side)); }
+    }
+  }
+  p.solids.push(prism(x, y, z + h - 0.3, w, d, 0.3, style.trim));
+  const first = p.solids.length;
+  sawtooth(p.solids, { x, y, w, d }, z, h, 2, style.roof, "glass");
+  for (let i = first; i < p.solids.length; i++) publishGlass(p, i, 1, toothPanes(d));
+  const line = (u: number): Vec3 => { const q = f.point(u, 0.2); return v3(q.x, q.y, z + h - 0.6); };
+  p.accents.push(...garland([line(0.2), line(f.len - 0.2)]));
+  const bays = Math.max(1, Math.round(f.len / 3.5)), bay = f.len / bays;
+  const rows: number[] = [];
+  for (let v = 2; v + 1.5 <= f.depth - wallT; v += 3.5) rows.push(v);
+  const spots = rows.flatMap((v) => Array.from({ length: bays }, (_, k) => ({ v, u: (k + 0.5) * bay })));
+  const count = Math.min(rng.int(6, 9), spots.length);
+  for (const { v, u } of spots.slice(0, count)) {
+    const s = f.rect(u - 1, v, 2, 1.5);
+    p.solids.push(prism(s.x, s.y, z, s.w, s.d, 1.8, rng.pick<Material>(["whitewash", "copper", "rust"])));
+  }
+  return tonePiece(p, tone);
+}
+
 export const RECONVERSION: readonly RecipeDef[] = [
   { name: "loftHall", recipe: loftHall, family: "reconversion" },
   { name: "vaultLoft", recipe: vaultLoft, family: "reconversion" },
   { name: "brewery", recipe: brewery, family: "reconversion" },
   { name: "sheetLoft", recipe: sheetLoft, family: "reconversion" },
   { name: "derelictHall", recipe: derelictHall, family: "reconversion" },
+  { name: "coveredMarket", recipe: coveredMarket, family: "reconversion" },
 ];

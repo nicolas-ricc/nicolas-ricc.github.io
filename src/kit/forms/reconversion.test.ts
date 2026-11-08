@@ -244,6 +244,26 @@ describe("coveredMarket", () => {
   });
 });
 
+describe("coveredMarket details", () => {
+  it("publishes floor-1 tooth windows from ramps, hidden by nothing, with awnings, garland, 6..9 stalls and everything inside the lot", () => {
+    for (const lot of [...LOTS, { ...LOTS[0]!, open: ["e"] as Side[] }, { ...LOTS[0]!, open: [] as Side[] }]) for (const seed of SEEDS) {
+      const p = recipe("coveredMarket")(lot, createRng(seed), STYLES.warehouses);
+      expect(p.windows.length).toBeGreaterThanOrEqual(4);
+      for (const w of p.windows) {
+        expect(w.floor).toBe(1);
+        expect(p.solids[w.building]!.kind).toBe("ramp");
+        const box = lightBox(w.pts);
+        p.solids.forEach((s, i) => { if (i !== w.building) expect(hides(box, bounds(s))).toBe(false); });
+      }
+      expect(p.solids.some((s) => s.kind === "ramp" && s.mat === "awning")).toBe(true);
+      expect(p.accents.some((a) => a.kind === "dot")).toBe(true);
+      const stalls = p.solids.filter((s) => s.kind === "prism" && Math.abs(s.h - 1.8) < 1e-6 && ["whitewash", "copper", "rust"].includes(s.mat));
+      expect(stalls.length).toBeGreaterThanOrEqual(6);
+      expect(stalls.length).toBeLessThanOrEqual(9);
+    }
+  });
+});
+
 describe("freightShed", () => {
   it("on a 21×10 lot: loading dock on the front, trucks perpendicular to it, everything inside the lot", () => {
     for (const seed of SEEDS) {
