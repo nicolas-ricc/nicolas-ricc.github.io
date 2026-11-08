@@ -76,6 +76,7 @@
 - [ ] **Paso 2:** `npx vitest run src/kit` → FALLA.
 - [ ] **Paso 3:** implementar ayudantes, `loftHall` y el registro.
 - [ ] **Paso 4:** `npm test && npm run typecheck` → verde (el genérico corre `loftHall`).
+- [ ] **Paso 4b:** `npx tsx .scratch/world-hash.ts` → mismo hash que la base (primer commit que toca `RECIPES`).
 - [ ] **Paso 5:** commit `feat(#322): loftHall and windows from glass plates`.
 
 ### Tarea 3: `vaultLoft` y marco del frente
@@ -136,7 +137,7 @@
 
 **Interfaces:** Consume `frontFrame`, `publishGlass`, `ribs`, `stackContainers`, `storeroom`, `fence`. Produce `freightShed`, `openDock` (decisiones 11 y 12).
 
-- [ ] **Paso 1: tests que fallan** (lote `{ x: 1.5, y: 1.5, w: 21, d: 10, z: 0, open: ["s"], maxH: 24 }`, 20 semillas, `STYLES.freight`): `freightShed` tiene un `prism` `concrete` h 1.2 de 1.5 de fondo pegado al borde sur y de largo 21; 2..3 camiones (`prism` 6 de largo en y, 2.4, 2.8, `rust`/`steel`) cada uno con una cabina `steel` 2×2.4×2.2 alineada, perpendiculares al andén (largo en y) y con la culata en `y = lot.y + lot.d − 1.5`; una nave `gable` con 2 placas `glass` por pared larga y ventanas publicadas; los camiones no se solapan en planta con la nave; todo dentro del lote sin margen (`min ≥ lot − 1e-9`, `max ≤ lot + w/d + 1e-9`). `openDock`: `max.z ≤ lot.z + 3` de todo sólido; 2..3 contenedores; un `prism` `rust` 2×3×2; exactamente 3 tramos de cerco `officeDark` h 1.2 y ninguno sobre el borde del frente; las cajas en planta de contenedores, depósito y autoelevador no se solapan. `LAB_LOTS` con los dos lotes.
+- [ ] **Paso 1: tests que fallan** (lote `{ x: 1.5, y: 1.5, w: 21, d: 10, z: 0, open: ["s"], maxH: 24 }`, 20 semillas, `STYLES.freight`): `freightShed` tiene un `prism` `concrete` h 1.2 de 1.5 de fondo pegado al borde sur y de largo 21; 2..3 camiones (`prism` 6 de largo en y, 2.4, 2.8, `rust`/`steel`) cada uno con una cabina `steel` 2×2.4×2.2 alineada, perpendiculares al andén (largo en y) y con la culata en `y = lot.y + lot.d − 1.5`; una nave `gable` con 2 placas `glass` por pared larga y ventanas publicadas; los camiones no se solapan en planta con la nave; todo dentro del lote sin margen (`min ≥ lot − 1e-9`, `max ≤ lot + w/d + 1e-9`). `openDock`: `max.z ≤ lot.z + 3` de todo sólido; 2..3 contenedores; un `prism` `rust` 2×3×2; exactamente 3 tramos de cerco `officeDark` h 1.2 y ninguno sobre el borde del frente; las cajas en planta de contenedores, depósito y autoelevador no se solapan. `LAB_LOTS` con los dos lotes. Además, `freightShed` en 21×15 y 24×18 con `open` `["s"]`, `["e"]`, `["n"]`, `["w"]`: andén, nave, camiones y pallets no se solapan en planta (salvo pallets sobre el andén) y toda placa tiene `0 ≤ u0 < u1 ≤ 1`.
 - [ ] **Paso 2:** FALLA. **Paso 3:** implementar y registrar. **Paso 4:** verde (el genérico los corre en 21×10).
 - [ ] **Paso 5:** commit `feat(#322): freightShed and openDock`.
 
@@ -150,3 +151,21 @@
 - [ ] **Paso 2:** FALLA. **Paso 3:** implementar. **Paso 4:** `npm test && npm run typecheck` verde.
 - [ ] **Paso 5:** `npx tsx .scratch/world-hash.ts` en la base y en la rama → mismo hash (decisión 14).
 - [ ] **Paso 6:** commit `feat(#322): warehouses and freight catalogues and the reconversion row in the kit lab`.
+
+## Supuestos
+
+Decisiones técnicas tomadas en la revisión del plan (alternativa descartada entre paréntesis):
+
+- **Imports:** `hides` de `src/iso/depth.ts`, `lightBox` de `src/city/lights.ts`, `bounds` de `src/iso/solids.ts`, `shiftTone`/`recipeCap` de `src/kit/piece.ts`, `jungle` de `src/scenes/flora.ts` (ya exportados; el kit ya importa de `src/scenes/`, p. ej. `lowrise.ts` usa `jungle` y `prism`). Los conos de `jungle` se copian con `r`/`h` acotados después de generarlos (no se toca `flora.ts`).
+- **`neonSlot`** se llama con `z = lot.z`: suma `NEON_Z0 2.4` y `NEON_H 1.2` y resuelve los cuatro lados con `wallOf` (no se escribe un slot propio).
+- **`coveredMarket` y `open`:** `Lot.open` es `Side[]`; solo `open[0]` y `open[1]` se abren (pilares y toldos en ambos, aunque sean opuestos); la guirnalda va solo bajo `open[0]` (descartado: abrir todos los lados de `open`).
+- **Alturas bajo 18:** el genérico prueba `maxH 10` (`kit.test.ts`), que es el tope más bajo de la ciudad (`FRONT_CAP_H`); las fórmulas acotan con `cap` y el `vault` mide su `h` (3). No se agrega un caso de `maxH < 10`.
+- **Hash del mundo:** se mide después de la tarea 2 (primer cambio de `RECIPES`) y en la tarea 9; `RECIPES` solo lo recorre `kitScene` fuera de los tests, y la ciudad elige por `CATALOGUE[barrio].recipes`. Si cambiara, cada tarea es un commit y se revierte el culpable.
+- **`CONTEXT.md` y la spec:** este hijo toca solo `README.md`; el glosario y la spec los actualiza el cierre (#328), como dice el plan de #56.
+
+## Grilling
+
+- Rondas: 1 (los cambios fueron menores: un paso de verificación, un test más en la tarea 8 y la sección de supuestos).
+- Preguntas: 16. Fuentes: CODE 13, ISSUE 3, DOC 0, NO SOURCE 4 (todas supuestos técnicos, arriba).
+- Supuestos nuevos: imports, `neonSlot` con `lot.z`, apertura de `coveredMarket`, alturas bajo 18, hash intermedio, `CONTEXT.md` en #328.
+- Issues abiertos: ninguno. Ambigüedades de spec: ninguna (el desvío de `freightShed`, decisión 11, sigue la regla del issue: "anotar en el PR todo desvío respecto de este issue o de la spec").
