@@ -14,14 +14,22 @@ const SHORTCUTS: Record<string, string> = {
   kit: "s 1 2 3 4",
 };
 
+function parsePage(page: string): Document {
+  return new DOMParser().parseFromString(readFileSync(`${ROOT}lab/${page}.html`, "utf8"), "text/html");
+}
+
 /** Mounts only the page's host into the document, so its module script never runs. */
 function mountHost(page: string): HTMLElement {
-  const html = readFileSync(`${ROOT}lab/${page}.html`, "utf8");
-  const host = new DOMParser().parseFromString(html, "text/html").getElementById("lab-host");
+  const host = parsePage(page).getElementById("lab-host");
   if (!host) throw new Error(`lab/${page}.html has no #lab-host`);
   const mounted = document.importNode(host, true);
   document.body.replaceChildren(mounted);
   return mounted;
+}
+
+/** The text of every `<style>` block of the page. */
+function pageStyle(page: string): string {
+  return [...parsePage(page).querySelectorAll("style")].map((s) => s.textContent ?? "").join("\n");
 }
 
 describe("lab host keyboard access (#167)", () => {
@@ -36,6 +44,15 @@ describe("lab host keyboard access (#167)", () => {
     });
     it(`lab/${page}.html: aria-keyshortcuts lists the keys its listener handles`, () => {
       expect(mountHost(page).getAttribute("aria-keyshortcuts")).toBe(keys);
+    });
+    it(`lab/${page}.html: keyboard focus ring is drawn inside #lab-host (#303)`, () => {
+      const css = pageStyle(page);
+      expect(css).toContain("#lab-host {");
+      const offset = css.match(/#lab-host:focus-visible\s*\{[^}]*\boutline-offset:\s*(-?[\d.]+)px/)?.[1];
+      expect(offset, "outline-offset of #lab-host:focus-visible").toBeDefined();
+      expect(Number.parseFloat(offset!)).toBeLessThan(0);
+      // mouse focus (:focus without -visible) keeps the browser default
+      expect(css).not.toMatch(/#lab-host:focus(?!-visible)/);
     });
   }
   it("covers every page in lab/", () => {
