@@ -87,7 +87,7 @@ export function containerYard(out: Solid[], accents: Accent[], rng: Rng): void {
 
 /** Two quay cranes facing west, on two long rails (x 281 and 287) running the length of the quay. */
 export function quayCranes(out: Solid[], accents: Accent[]): void {
-  for (const c of QUAY_CRANES) quayCraneAt(c, "w", out, accents);
+  for (const c of QUAY_CRANES) quayCraneAt(c, "w", out, accents, 0, false); // only the long rails below: the kit's short ones would reach the cove water at y 30
   for (const x of CRANE_RAILS.x) {
     out.push({ kind: "strip", path: [{ x, y: CRANE_RAILS.y0 }, { x, y: CRANE_RAILS.y1 }], width: 0.5, z: 0.02, mat: "rail" });
   }

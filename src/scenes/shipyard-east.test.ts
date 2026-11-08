@@ -164,6 +164,7 @@ describe("quay cranes", () => {
     const rails = cranes().out.filter((s): s is Solid & { kind: "strip" } => s.kind === "strip" && s.mat === "rail" && s.width === 0.5);
     expect(rails.map((r) => r.path.map((p) => [p.x, p.y]))).toEqual(CRANE_RAILS.x.map((x) => [[x, CRANE_RAILS.y0], [x, CRANE_RAILS.y1]]));
     expect(CRANE_RAILS).toEqual({ x: [281, 287], y0: 31, y1: 82 });
+    expect(cranes().out.filter((s) => s.kind === "strip" && s.width !== 0.5)).toEqual([]); // the kit's own short rails are off: they would reach the cove water at y 30
   });
 
   it("no crane leg and no yard solid touches a riprap rock", () => {

@@ -155,9 +155,9 @@ function workshops(out: Solid[]): void {
   }
 }
 
-// ---------------------------------------------------------------- fitting-out quay (E)
+// ---------------------------------------------------------------- east bank: silo and riprap (the sheds, the yard and the cranes are in shipyard-east.ts)
 
-function fittingOut(out: Solid[]): void {
+function siloAndRiprap(out: Solid[]): void {
   out.push({ kind: "cylinder", at: v3(310, 86, 0), r: 4, h: 6, mat: "concrete" });
   const riprap = (x: number, y: number): void => { // skips rocks over the yard slab or the crane legs
     const rock: Solid = { kind: "cone", at: v3(x, y, 0), r: 1.6, h: 1.2, mat: "rock", sides: 5 }, b = bounds(rock);
@@ -216,7 +216,7 @@ export function shipyard(rng: Rng): Scene {
   const g = gantry(solids);
   workshops(solids);
   station(solids, accents);
-  fittingOut(solids);
+  siloAndRiprap(solids);
   jungle(solids, rng);
   lamps(solids, accents);
   seamFence(solids, accents);
