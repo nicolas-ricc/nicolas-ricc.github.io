@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { bounds, isFlat, type Bounds, type Solid } from "../iso/solids";
+import { CAR } from "../kit/props";
 import { CELL, ESTUARY_Y0, QUAY_W, QUAY_X, SEAM_CY, STATION_LAND, WORLD, ZONE_SPLIT_Y, eastBank, estuaryEast, inStationLand, worldZoneAt } from "../map/geo";
 import { SEED } from "../map/seed";
 import { veilCells } from "../world/veil";
@@ -198,12 +199,12 @@ describe("Resume after the seam (#319)", () => {
   it("the new strip west of the station holds only what #320 allows: row 92 and freight blocks with their buildings, cars, rail lands", () => {
     const strip = blocks().filter((k) => k.x + k.w <= STATION_LAND.x0 && k.y >= 90 && k.y < 164);
     const inBlock = (b: Bounds) => strip.some((k) => b.min.x >= k.x - 0.5 && b.max.x <= k.x + k.w + 0.5 && b.min.y >= k.y - 0.5 && b.max.y <= k.y + k.d + 0.5);
-    const isCar = (b: Bounds) => b.max.z - b.min.z <= 2 && b.max.x - b.min.x <= 4 && b.max.y - b.min.y <= 4;
-    const onRails = (b: Bounds) => b.min.y >= 128 && b.max.y <= 138; // main line, sleepers, fences, crossings, posts
+    const isCar = (s: Solid) => s.kind === "prism" && s.w === CAR.w && s.d === CAR.d && s.h === 1.2;
+    const onRails = (b: Bounds) => b.min.y >= 128 && b.max.y <= 138.2 && b.max.z <= 3; // main line, sleepers, fences, crossings, posts
     for (const s of raised(ci.solids)) {
       const b = bounds(s);
       if (b.min.x >= STATION_LAND.x0 || b.max.y > 158 || b.min.y < 90) continue;
-      expect(inBlock(b) || isCar(b) || onRails(b), `${s.kind}/${s.mat} ${b.min.x},${b.min.y}`).toBe(true);
+      expect(inBlock(b) || isCar(s) || onRails(b), `${s.kind}/${s.mat} ${b.min.x},${b.min.y}`).toBe(true);
     }
   });
 
