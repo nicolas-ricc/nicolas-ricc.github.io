@@ -18,6 +18,8 @@ export const LAB_LOTS: Readonly<Record<string, { w: number; d: number; z?: numbe
   storeroom: { w: 6, d: 5 },
   quayCrane: { w: 8, d: 8 },
   rtgGantry: { w: 12, d: 18 },
+  freightShed: { w: 21, d: 10 },
+  openDock: { w: 21, d: 10 },
 };
 
 export function recipe(name: string): Recipe {

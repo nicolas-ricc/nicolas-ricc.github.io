@@ -7,11 +7,11 @@ import type { Rect } from "../../scenes/city-grid";
 import { prism } from "../../scenes/city-pieces";
 import { jungle } from "../../scenes/flora";
 import type { Rng } from "../../map/seed";
-import { awning, chair, garland, rooftopGarden, table } from "../props";
+import { awning, chair, fence, garland, rooftopGarden, table } from "../props";
 import { gableRoof } from "../roofs";
 import { addBuilding, emptyPiece, recipeCap, shiftTone } from "../piece";
 import type { Lot, Piece, RecipeDef, Side, Style, Window } from "../types";
-import { sawtooth, tonePiece } from "./industrial";
+import { sawtooth, stackContainers, storeroom, tonePiece } from "./industrial";
 import { neonSlot } from "./lowrise";
 
 /**
@@ -233,6 +233,72 @@ export function coveredMarket(lot: Lot, rng: Rng, style: Style): Piece {
   return tonePiece(p, tone);
 }
 
+/**
+ * Freight shed: a loading dock along the whole front, a gable hall at the back on the west (north for e/w fronts) side
+ * and 2..3 trucks parked head-on to the dock in the side yard. The trucks do not stand in front of the shed: a 8-long
+ * truck does not fit in the 3-deep strip of a 21×10 lot.
+ */
+export function freightShed(lot: Lot, rng: Rng, style: Style): Piece {
+  const tone = shiftTone(style.tone, rng.int(-1, 1));
+  const p = emptyPiece(), { z } = lot, f = frontFrame(lot), dockH = 1.2, dockD = 1.5, strip = 3;
+  const h = Math.min(rng.int(5, 7), recipeCap(lot) / (1 + GABLE_RATIO));
+  let n = rng.int(2, 3);
+  const yardFor = (k: number): number => k * 2.4 + (k - 1) + 1;
+  while (n > 1 && yardFor(n) > f.len - 6) n--;
+  const yard = yardFor(n), shedLen = f.len - yard;
+  const r = f.rect(0, strip, shedLen, f.depth - strip);
+  const hall = prism(r.x, r.y, z, r.w, r.d, h, style.mat, { roof: "gable", roofMat: style.mat });
+  const wallsFor = r.w >= r.d ? [0, 2] : [3, 1], len = Math.max(r.w, r.d), half = 0.75 / len;
+  const hp: Plate[] = [];
+  for (const wall of wallsFor) hp.push(...ribs(wall, len, z, z + h, shadeTone(WALL_NORMALS[wall]!) === "lit", style.mat));
+  for (const wall of wallsFor) for (let k = 0; k < 2; k++) {
+    const c = (k + 1) / 3;
+    hp.push({ wall, shape: "rect", u0: c - half, u1: c + half, z0: z + 1, z1: z + h - 1, mat: "glass" });
+  }
+  hall.plates = hp;
+  p.solids.push(hall);
+  publishGlass(p, 0, 1);
+  const dock = f.rect(0, 0, f.len, dockD);
+  p.solids.push(prism(dock.x, dock.y, z, dock.w, dock.d, dockH, "concrete"));
+  for (let k = 0; k < n; k++) {
+    const u = shedLen + 0.5 + k * 3.4, box = f.rect(u, dockD, 2.4, 6), cab = f.rect(u, dockD + 6, 2.4, 2);
+    p.solids.push(prism(box.x, box.y, z, box.w, box.d, 2.8, rng.pick<Material>(["rust", "steel"])));
+    p.solids.push(prism(cab.x, cab.y, z, cab.w, cab.d, 2.2, "steel"));
+  }
+  const pallets = rng.int(2, 4), gap = (f.len - 2 * 1.5) / pallets;
+  for (let k = 0; k < pallets; k++) {
+    const q = f.rect(1.5 + k * gap + (gap - 1.2) / 2, 0.25, 1.2, 1);
+    p.solids.push(prism(q.x, q.y, z + dockH, q.w, q.d, 0.5, "deck"));
+  }
+  return tonePiece(p, tone);
+}
+
+/** Open dock: storeroom in the back-west corner, 2..3 one-high containers in a row, a forklift and pallets on the front strip, fenced on three sides (not the front). Nothing over 3. */
+export function openDock(lot: Lot, rng: Rng, style: Style): Piece {
+  const tone = shiftTone(style.tone, rng.int(-1, 1));
+  const p = emptyPiece(), { x, y, w, d, z } = lot, f = frontFrame(lot), along = f.side === "n" || f.side === "s" ? "x" : "y";
+  const fenced = fence(v3(x, y, z), w, d);
+  fenced.splice({ n: 0, s: 1, w: 2, e: 3 }[f.side], 1);
+  p.solids.push(...fenced);
+  const n = Math.min(rng.int(2, 3), Math.max(1, Math.floor((f.len + 1) / 7))), u0 = (f.len - (6 * n + (n - 1))) / 2;
+  for (let k = 0; k < n; k++) {
+    const c = f.rect(u0 + k * 7, f.depth / 2 - 2.4, 6, 2.4);
+    p.solids.push(...stackContainers(v3(c.x, c.y, z), 1, along, rng));
+  }
+  const fk = f.rect(1, 0.3, 3, 2);
+  p.solids.push(prism(fk.x, fk.y, z, fk.w, fk.d, 2, "rust"));
+  const pallets = Math.min(rng.int(2, 4), Math.floor((f.len - 7.2) / 3.5) + 1);
+  for (let k = 0; k < pallets; k++) {
+    const q = f.rect(6 + k * 3.5, 0.4, 1.2, 1);
+    p.solids.push(prism(q.x, q.y, z, q.w, q.d, 0.5, "deck"));
+  }
+  const t = tonePiece(p, tone);
+  const sub = f.rect(0, f.depth - 5, 6, 5);
+  const room = storeroom({ ...lot, x: sub.x, y: sub.y, w: sub.w, d: sub.d, open: [] }, rng, style);
+  t.solids.push(...room.solids);
+  return t;
+}
+
 export const RECONVERSION: readonly RecipeDef[] = [
   { name: "loftHall", recipe: loftHall, family: "reconversion" },
   { name: "vaultLoft", recipe: vaultLoft, family: "reconversion" },
@@ -240,4 +306,6 @@ export const RECONVERSION: readonly RecipeDef[] = [
   { name: "sheetLoft", recipe: sheetLoft, family: "reconversion" },
   { name: "derelictHall", recipe: derelictHall, family: "reconversion" },
   { name: "coveredMarket", recipe: coveredMarket, family: "reconversion" },
+  { name: "freightShed", recipe: freightShed, family: "reconversion" },
+  { name: "openDock", recipe: openDock, family: "reconversion" },
 ];

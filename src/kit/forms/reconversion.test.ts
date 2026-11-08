@@ -349,3 +349,99 @@ describe("plateWindows", () => {
     expect(span(0)[1]! - span(1)[0]!).toBeCloseTo(0.2, 9);
   });
 });
+
+/** Plan box of a solid. */
+const plan = (s: Solid) => { const b = bounds(s); return { x0: b.min.x, x1: b.max.x, y0: b.min.y, y1: b.max.y }; };
+const overlap = (a: Solid, b: Solid): boolean => {
+  const p = plan(a), q = plan(b);
+  return p.x0 < q.x1 - EPS && q.x0 < p.x1 - EPS && p.y0 < q.y1 - EPS && q.y0 < p.y1 - EPS;
+};
+const isTruckBox = (s: Solid): boolean => s.kind === "prism" && Math.abs(s.h - 2.8) < 1e-6 && ["rust", "steel"].includes(s.mat);
+const isCab = (s: Solid): boolean => s.kind === "prism" && Math.abs(s.h - 2.2) < 1e-6 && s.mat === "steel";
+
+describe("freightShed details", () => {
+  it("cabin 2×2.4×2.2 steel behind each truck box, aligned; one gable shed with 2 glass plates of 1.5 per long wall", () => {
+    for (const seed of SEEDS) {
+      const p = recipe("freightShed")(FREIGHT_LOT, createRng(seed), STYLES.freight);
+      const trucks = p.solids.filter(isTruckBox), cabs = p.solids.filter(isCab);
+      expect(cabs).toHaveLength(trucks.length);
+      for (const t of trucks) {
+        if (t.kind !== "prism") throw new Error("no prism");
+        const c = cabs.find((q) => q.kind === "prism" && Math.abs(q.at.x - t.at.x) < EPS);
+        if (!c || c.kind !== "prism") throw new Error("no cab");
+        expect(c.w).toBeCloseTo(2.4, 9);
+        expect(c.d).toBeCloseTo(2, 9);
+        expect(c.at.y + c.d).toBeCloseTo(t.at.y, 9);
+      }
+      const sheds = p.solids.filter((s) => s.kind === "prism" && s.roof === "gable");
+      expect(sheds).toHaveLength(1);
+      const shed = sheds[0]!;
+      if (shed.kind !== "prism") throw new Error("no prism");
+      for (const wall of shed.w >= shed.d ? [0, 2] : [3, 1]) {
+        const glass = plates(shed).filter((q) => q.wall === wall && q.mat === "glass");
+        expect(glass).toHaveLength(2);
+        for (const q of glass) expect((q.u1 - q.u0) * Math.max(shed.w, shed.d)).toBeCloseTo(1.5, 9);
+      }
+      const pallets = p.solids.filter((s) => s.kind === "prism" && s.mat === "deck");
+      expect(pallets.length).toBeGreaterThanOrEqual(2);
+      expect(pallets.length).toBeLessThanOrEqual(4);
+    }
+  });
+
+  it("dock, shed, trucks and pallets do not overlap in plan on larger lots and all four fronts", () => {
+    const sizes = [{ w: 21, d: 15 }, { w: 24, d: 18 }];
+    for (const size of sizes) for (const side of ["s", "e", "n", "w"] as const) for (const seed of SEEDS) {
+      const lot: Lot = { x: 1.5, y: 1.5, ...size, z: 0, open: [side], maxH: 24 };
+      const p = recipe("freightShed")(lot, createRng(seed), STYLES.freight);
+      const body = p.solids.filter((s) => (s.kind === "prism" && s.roof === "gable") || isTruckBox(s) || isCab(s) || (s.kind === "prism" && s.mat === "concrete"));
+      for (let i = 0; i < body.length; i++) for (let j = i + 1; j < body.length; j++) expect(overlap(body[i]!, body[j]!)).toBe(false);
+      const pallets = p.solids.filter((s) => s.kind === "prism" && s.mat === "deck");
+      for (const a of pallets) for (const b of body) if (!(b.kind === "prism" && b.mat === "concrete")) expect(overlap(a, b)).toBe(false);
+      for (const s of p.solids) {
+        const b = bounds(s);
+        expect(b.min.x).toBeGreaterThanOrEqual(lot.x - EPS);
+        expect(b.min.y).toBeGreaterThanOrEqual(lot.y - EPS);
+        expect(b.max.x).toBeLessThanOrEqual(lot.x + lot.w + EPS);
+        expect(b.max.y).toBeLessThanOrEqual(lot.y + lot.d + EPS);
+        for (const q of plates(s)) { expect(q.u0).toBeGreaterThanOrEqual(0); expect(q.u1).toBeLessThanOrEqual(1); expect(q.u0).toBeLessThan(q.u1); }
+      }
+      expect(p.windows.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("openDock details", () => {
+  it("2..3 containers, one forklift 2×3×2, 3 fence runs none on the front edge, no overlaps in plan", () => {
+    for (const side of ["s", "e", "n", "w"] as const) for (const lot0 of [FREIGHT_LOT, ...LOTS]) for (const seed of SEEDS) {
+      const lot: Lot = { ...lot0, open: [side] };
+      if ((side === "e" || side === "w" ? lot.d : lot.w) < 13) continue; // two containers need 13 along the front
+      const p = recipe("openDock")(lot, createRng(seed), STYLES.freight);
+      const boxes = p.solids.filter((s) => s.kind === "prism" && s.mat.startsWith("box"));
+      expect(boxes.length).toBeGreaterThanOrEqual(2);
+      expect(boxes.length).toBeLessThanOrEqual(3);
+      const forks = p.solids.filter((s) => s.kind === "prism" && s.mat === "rust");
+      expect(forks).toHaveLength(1);
+      const fk = forks[0]!;
+      if (fk.kind !== "prism") throw new Error("no prism");
+      expect([fk.w, fk.d].sort()).toEqual([2, 3]);
+      expect(fk.h).toBeCloseTo(2, 9);
+      const fence = p.solids.filter((s) => s.kind === "prism" && s.mat === "officeDark" && Math.abs(s.h - 1.2) < 1e-6);
+      expect(fence).toHaveLength(3);
+      for (const f of fence) { // a run ON the front edge would be thin across it and span the lot along it; the side runs only end there
+        const b = bounds(f), across = side === "n" || side === "s" ? b.max.y - b.min.y : b.max.x - b.min.x;
+        if (touches(f, lot, side)) expect(across).toBeGreaterThan(0.3 + EPS);
+      }
+      const shed = p.solids.filter((s) => s.kind === "prism" && s.h > 2.5 && (s.mat === "sheetGreen" || s.mat === "steel"));
+      expect(shed).toHaveLength(1);
+      const things = [...boxes, ...shed, fk];
+      for (let i = 0; i < things.length; i++) for (let j = i + 1; j < things.length; j++) expect(overlap(things[i]!, things[j]!), `${side} ${lot.w}x${lot.d} s${seed} ${JSON.stringify([plan(things[i]!), plan(things[j]!)])}`).toBe(false);
+      for (const s of p.solids) {
+        const b = bounds(s);
+        expect(b.min.x).toBeGreaterThanOrEqual(lot.x - EPS);
+        expect(b.min.y).toBeGreaterThanOrEqual(lot.y - EPS);
+        expect(b.max.x).toBeLessThanOrEqual(lot.x + lot.w + EPS);
+        expect(b.max.y).toBeLessThanOrEqual(lot.y + lot.d + EPS);
+      }
+    }
+  });
+});
