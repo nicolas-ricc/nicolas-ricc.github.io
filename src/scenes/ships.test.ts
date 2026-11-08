@@ -2,6 +2,9 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { sortByDepth } from "../iso/depth";
 import { bounds, isFlat, tessellateAll, type Solid } from "../iso/solids";
+import type { Vec2 } from "../iso/geometry";
+import { LANE_BACK, LANE_OUT } from "./sea-anim";
+import { FLOATING_DOCK } from "./shipyard-east";
 import { SHIP_MATS, SHIP_SPECS, ship, shipAt, wake, type ShipKind } from "./ships";
 
 const KINDS: ShipKind[] = ["cargo", "tug", "barge", "ferry"];
@@ -314,5 +317,28 @@ describe("pusher beam and freeboard (#153)", () => {
     const house = white.filter((x) => bounds(x).min.x < -10 && x.h === 1.55);
     expect(knees).toHaveLength(2); expect(house).toHaveLength(1);
     for (const x of [...knees, ...house]) expect(x.z).toBe(pDeck);
+  });
+});
+
+describe("lanes and the floating dock (#323)", () => {
+  type Rect = { x0: number; y0: number; x1: number; y1: number };
+  const inside = (p: Vec2, r: Rect) => p.x >= r.x0 && p.x <= r.x1 && p.y >= r.y0 && p.y <= r.y1;
+  const cross = (a: Vec2, b: Vec2, c: Vec2, d: Vec2): boolean => {
+    const o = (p: Vec2, q: Vec2, r: Vec2) => Math.sign((q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x));
+    return o(a, b, c) !== o(a, b, d) && o(c, d, a) !== o(c, d, b);
+  };
+  const cuts = (a: Vec2, b: Vec2, r: Rect): boolean => {
+    if (inside(a, r) || inside(b, r)) return true;
+    const k = [{ x: r.x0, y: r.y0 }, { x: r.x1, y: r.y0 }, { x: r.x1, y: r.y1 }, { x: r.x0, y: r.y1 }];
+    return k.some((p, i) => cross(a, b, p, k[(i + 1) % 4]!));
+  };
+
+  it("the segment test sees a crossing and a miss", () => {
+    expect(cuts({ x: 200, y: 80 }, { x: 250, y: 80 }, FLOATING_DOCK)).toBe(true);
+    expect(cuts({ x: 300, y: 0 }, { x: 300, y: 100 }, FLOATING_DOCK)).toBe(false);
+  });
+
+  it("no segment of LANE_OUT or LANE_BACK cuts the floating dock box", () => {
+    for (const lane of [LANE_OUT, LANE_BACK]) for (let i = 1; i < lane.length; i++) expect(cuts(lane[i - 1]!, lane[i]!, FLOATING_DOCK), `segment ${i}`).toBe(false);
   });
 });

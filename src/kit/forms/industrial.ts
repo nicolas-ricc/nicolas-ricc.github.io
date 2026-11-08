@@ -23,7 +23,7 @@ const SIDES: readonly Side[] = ["n", "e", "s", "w"];
 const tonePiece = (p: Piece, tone: number): Piece => (tone === 0 ? p : { ...p, solids: p.solids.map((s) => ({ ...s, tone })) });
 
 /** Door plate centered on a wall of length `len`: `width` wide (at most the wall) and `h` tall from `z0`, `mat` that of the wall, two tones darker. */
-function door(wall: number, len: number, width: number, z0: number, h: number, mat: Material): Plate {
+export function door(wall: number, len: number, width: number, z0: number, h: number, mat: Material): Plate {
   const k = Math.min(width, len) / len, u0 = (1 - k) / 2;
   return { wall, shape: "rect", u0, u1: u0 + k, z0, z1: z0 + h, mat, toneOffset: -2 };
 }
@@ -209,8 +209,8 @@ export function tankGroup(lot: Lot, rng: Rng, style: Style): Piece {
   return tonePiece(p, tone);
 }
 
-/** Quay crane centered on `at`: four-legged steel gantry on two rails, cabin, mast, boom toward `dir` with a stay and a cyan light on the tip. Nothing above `z + 18`. */
-export function quayCraneAt(at: Vec2, dir: "w" | "e" | "s", out: Solid[], accents: Accent[], z = 0): void {
+/** Quay crane centered on `at`: four-legged steel gantry on two rails, cabin, mast, boom toward `dir` with a stay and a cyan light on the tip. Nothing above `z + 18`. With `rails` false it lays no rails of its own (the scene lays longer ones). */
+export function quayCraneAt(at: Vec2, dir: "w" | "e" | "s", out: Solid[], accents: Accent[], z = 0, rails = true): void {
   const sx = dir === "e" ? 1 : dir === "w" ? -1 : 0, sy = dir === "s" ? 1 : 0;
   // `r` runs along the rails (perpendicular to dir), `l` across them.
   const P = (l: number, r: number, zz: number): Vec3 => (sx !== 0 ? v3(at.x + l, at.y + r, zz) : v3(at.x + r, at.y + l, zz));
@@ -218,7 +218,7 @@ export function quayCraneAt(at: Vec2, dir: "w" | "e" | "s", out: Solid[], accent
   for (const l of [-3, 3]) {
     for (const r of [-3, 3]) { const c = P(l, r, z); out.push(prism(c.x - 0.4, c.y - 0.4, z, 0.8, 0.8, 9.2, "steel")); }
     out.push({ kind: "beam", from: P(l, -3, z + 9.6), to: P(l, 3, z + 9.6), w: 0.8, h: 0.8, mat: "steel" });
-    out.push({ kind: "strip", path: [xy(P(l, -4, 0)), xy(P(l, 4, 0))], width: 0.6, z: z + 0.02, mat: "rail" });
+    if (rails) out.push({ kind: "strip", path: [xy(P(l, -4, 0)), xy(P(l, 4, 0))], width: 0.6, z: z + 0.02, mat: "rail" });
   }
   out.push(prism(at.x - 1, at.y - 1, z + 10, 2, 2, 2, "steel"));
   out.push(prism(at.x - 0.2, at.y - 0.2, z + 12, 0.4, 0.4, 3, "steel"));

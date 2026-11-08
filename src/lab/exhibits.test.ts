@@ -20,7 +20,7 @@ const regions = EXHIBITS.flatMap((e) => (e.kind === "region" ? [e] : []));
 // the index of spec §3, in order; pieces (#94) do not count
 const CATALOG: Record<GroupId, string[]> = {
   factory: ["planta", "chimeneas", "subestacion", "playa-camiones", "playa-vias", "excavadora"],
-  shipyard: ["gradas", "darsena", "grua-portico", "calle-faroles", "naves", "punta-norte", "estacion", "paso-a-nivel"],
+  shipyard: ["gradas", "darsena", "grua-portico", "calle-faroles", "naves", "punta-norte", "estacion", "paso-a-nivel", "dique-flotante", "patio-contenedores"],
   hinterland: ["central-termica", "tanques", "silos", "alta-tension", "playa-contenedores"],
   fair: ["noria", "montana-rusa", "torre-caida", "carrusel", "arcade", "autitos-chocadores", "muelle"],
   city: ["plaza", "torre", "puente", "malecon", "manzana-derrumbada", "manzana-distrito", "obra", "punta-sur", "galpones", "playa-carga"],
@@ -82,6 +82,22 @@ describe("exhibit catalog", () => {
   it("the rail yard exhibit ends at the seam, y 90", () => {
     const e = EXHIBITS.find((x) => x.id === "playa-vias")!;
     expect(e.kind === "region" && e.box.y1).toBe(90);
+  });
+  it("the basin ends at y 72, where the floating dock begins (#323)", () => {
+    const e = EXHIBITS.find((x) => x.id === "darsena")!;
+    expect(e.kind === "region" && e.box.y1).toBe(72);
+  });
+  it("the east bank exhibits of #323: two regions after paso-a-nivel and the quay crane piece on concrete", () => {
+    const ids = EXHIBITS.map((e) => e.id);
+    expect(ids.slice(ids.indexOf("paso-a-nivel") + 1, ids.indexOf("paso-a-nivel") + 4)).toEqual(["dique-flotante", "patio-contenedores", "grua-muelle"]);
+    const box = (id: string) => { const e = EXHIBITS.find((x) => x.id === id)!; return e.kind === "region" ? e.box : null; };
+    expect(box("dique-flotante")).toEqual({ x0: 202, y0: 72, x1: 248, y1: 90 });
+    expect(box("patio-contenedores")).toEqual({ x0: 278, y0: 27, x1: 305, y1: 84 });
+    const crane = pieces.find((x) => x.id === "grua-muelle")!;
+    expect(crane.pad).toBe("concrete");
+    const accents: Accent[] = [];
+    crane.build([], accents);
+    expect(accents.filter((a) => a.kind === "dot" && a.color === "cyan")).toHaveLength(1);
   });
   it("every box falls inside the world plus the bleed and is not inverted", () => {
     for (const { id, box } of regions) {
@@ -170,9 +186,9 @@ describe("selection by hash", () => {
 const pieces = EXHIBITS.flatMap((e) => (e.kind === "piece" ? [e] : []));
 
 describe("piece exhibits", () => {
-  it("the eleven pieces, each in its zone", () => {
+  it("the twelve pieces, each in its zone", () => {
     expect(Object.fromEntries(pieces.map((e) => [e.id, e.zone]))).toEqual({
-      "tanque-agua": "portfolio", "grua-torre": "portfolio", "farol": "portfolio", "tren": "portfolio",
+      "tanque-agua": "portfolio", "grua-muelle": "portfolio", "grua-torre": "portfolio", "farol": "portfolio", "tren": "portfolio",
       "campus": "cv", "selva": "cv",
       "viga": "blog", "carguero": "blog", "remolcador": "blog", "convoy": "blog", "lancha": "blog",
     });
