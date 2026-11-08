@@ -6,6 +6,7 @@ import { WORLD, inStationLand, northCoastY } from "../map/geo";
 import { allIsoColors } from "../map/palette-iso";
 import { createRng } from "../map/seed";
 import { AREA_H, AREA_W, STREET_EDGE, shipyard, type Scene } from "./shipyard";
+import { YARD } from "./shipyard-east";
 import { BUFFER_X, ESPLANADE, STATION } from "./station";
 
 const scene = (): Scene => shipyard(createRng(7));
@@ -53,9 +54,16 @@ describe("shipyard", () => {
     const inStation = (a: Accent) => { const p = where(a); return p.x >= 110 && p.x <= STATION.x1 && p.y >= 100 && p.y <= STATION.y1; };
     const outside = s.accents.filter((a) => !inStation(a)), inside = s.accents.filter(inStation);
     expect(outside.length).toBeGreaterThanOrEqual(7); // five street lamps and two quay lamps
-    expect(outside.every((a) => a.kind === "dot" && a.color === "cyan" && a.at.z > 0)).toBe(true);
+    // #323: the one exception is the window of the container yard gatehouse
+    const windows = outside.filter((a) => a.kind === "poly");
+    expect(windows.map((a) => a.color)).toEqual(["windowCool"]);
+    expect(outside.filter((a) => a.kind === "dot").every((a) => a.kind === "dot" && a.color === "cyan" && a.at.z > 0)).toBe(true);
     expect(inside.length).toBeGreaterThanOrEqual(11); // eight canopy lights and three buffer lights
     expect(inside.every((a) => a.kind === "dot" ? ["cyan", "cyanMid", "magenta", "amber"].includes(a.color) && a.at.z > 0 : ["amber", "amberBleed", "cyanBleed"].includes(a.color))).toBe(true);
+  });
+
+  it("raised solids of the shipyard ≤ 900 (#323)", () => {
+    expect(scene().solids.length).toBeLessThanOrEqual(900);
   });
 
   it("the whole render uses atlas colors", () => {
@@ -89,8 +97,10 @@ describe("shipyard part 2", () => {
     const s = scene();
     const sheds = s.solids.filter((x) => x.kind === "prism" && x.roof === "gable" && x.at.x > 300);
     expect(sheds).toHaveLength(2);
+    expect(sheds.every((x) => x.mat === "sheetTeal")).toBe(true); // #323: corrugated sheet
     const rocks = s.solids.filter((x) => x.kind === "cone" && x.mat === "rock");
-    expect(rocks.length).toBeGreaterThan(20); // measured 27 (seed 7) with the riprap only north of 90
+    expect(rocks.length).toBeGreaterThan(20); // measured 24 (seed 7): the riprap only north of 90 and off the container yard and the quay crane legs (#323)
+    for (const r of rocks.map(bounds)) expect(r.max.x <= YARD.x0 || r.min.x >= YARD.x1 || r.max.y <= YARD.y0 || r.min.y >= YARD.y1, JSON.stringify(r)).toBe(true);
   });
 
   it("the riprap borders the new coast of the north headland", () => {
