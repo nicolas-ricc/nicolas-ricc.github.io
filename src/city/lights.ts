@@ -96,13 +96,13 @@ export function lights(scene: Pick<CityScene, "solids" | "placed">, rng: Rng): C
   }
   for (const w of sample(windows.filter((w) => ["downtown", "residential"].includes(scene.placed[w.owner]!.placed.neighborhood)), MAX_ANIMABLE, rng)) w.animable = true;
 
-  // Neons of the bars neighborhood: open frontage, 2.4..3.6 above the lot, in view and one per shop
+  // Neons of the bars neighborhood: open frontage facing the camera, 2.4..3.6 above the lot, in view and one per shop
   // (deduplicated after occlusion: if the front of a corner shop is hidden, its other side counts).
   const slots: { slot: Slot; owner: number }[] = [];
   scene.placed.forEach((p, owner) => {
     if (p.placed.neighborhood !== "bars") return;
     for (const slot of p.piece.slots) {
-      if (slot.kind !== "neon" || !p.placed.lot.open.includes(slot.side)) continue;
+      if (slot.kind !== "neon" || !p.placed.lot.open.includes(slot.side) || (slot.wall.x <= 0 && slot.wall.y <= 0)) continue;
       if (slot.pts.every((q) => q.z - p.placed.lot.z >= NEON_Z[0] - EPS && q.z - p.placed.lot.z <= NEON_Z[1] + EPS)) slots.push({ slot, owner });
     }
   });
