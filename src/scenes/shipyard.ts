@@ -5,6 +5,7 @@ import { BOTTOM, DOCK, QUAY_W, QUAY_X, WORLD, ZONE_SPLIT_Y, eastBank, northCoast
 import type { Rng } from "../map/seed";
 import { jungle as flora } from "./flora";
 import { RIPRAP_KEEP_OUT, shipyardEast } from "./shipyard-east";
+import { yardFill, type Fill } from "./shipyard-fill";
 import { station } from "./station";
 import { clearOfWater } from "./terrain-classify";
 
@@ -28,6 +29,7 @@ export interface Scene {
   trolley: Solid & { kind: "prism" };
   trolleyRange: [number, number];
   weldSpots: Vec3[];
+  fill: Fill;           // yard, dock and service pieces (same objects as in `solids`)
 }
 
 export const AREA_W = 344, AREA_H = 146;
@@ -217,11 +219,12 @@ export function shipyard(rng: Rng): Scene {
   workshops(solids);
   station(solids, accents);
   siloAndRiprap(solids);
+  const fill: Fill = { yard: yardFill(solids, rng), dock: [], service: [] };
   jungle(solids, rng);
   lamps(solids, accents);
   seamFence(solids, accents);
   shipyardEast(solids, accents, weldSpots, rng);
   ground.push(...solids.filter((s) => s.kind === "strip"));
   const raised = solids.filter((s) => s.kind !== "strip");
-  return { ground, solids: raised, accents, trolley: g.trolley, trolleyRange: g.range, weldSpots };
+  return { ground, solids: raised, accents, trolley: g.trolley, trolleyRange: g.range, weldSpots, fill };
 }
