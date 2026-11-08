@@ -9,7 +9,7 @@ Personal site: a night-time isometric map with three zones (Portfolio, Resume, B
 
 No public license: `private: true`, the `license` field (ISC) is a leftover of the scaffold and does not apply — the repo is not published to npm.
 
-Domain vocabulary (veil, zone, accent, animator, deck and side pieces, hull rule, frame, lanes, exhibit) is defined in `CONTEXT.md`; architecture decisions are recorded in `docs/adr/`.
+Domain vocabulary (veil, zone, accent, animator, deck and side pieces, hull rule, frame, lanes, exhibit, lot, piece, recipe, style, wall, window, slot, plinth) is defined in `CONTEXT.md`; architecture decisions are recorded in `docs/adr/`.
 
 Editable content lives in `content/*.json`. `public/cv.pdf` is a copy of the CV from `riccomini-multiverse` (`cv/cv.pdf`); it is updated by hand with `gh api repos/nicolas-ricc/riccomini-multiverse/contents/cv/cv.pdf -H "Accept: application/vnd.github.raw" > public/cv.pdf`. Design in `docs/superpowers/specs/`. Plans live in two folders: `docs/plans/` (agent runs) and `docs/superpowers/plans/`; they are not moved, so as not to break links from issues and PRs.
 
