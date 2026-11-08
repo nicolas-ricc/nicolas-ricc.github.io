@@ -26,6 +26,16 @@
 2. **Helpers local to `kit.test.ts`** (`clipToBox`, `area`). No production code needs polygon clipping; promoting them to `src/iso/geometry.ts` would add API with a single test caller (YAGNI).
 3. **Degenerate boxes contribute 0.** A box with zero width or depth in plan has area 0 and can never be an intruder. Every `Solid` kind that a recipe emits has positive plan extent (`beam` and `strip` have `w`/`width`), so this does not hide a case today.
 
+## Assumptions
+
+Technical decisions taken during plan review (stage 2), each with the rejected alternative. All go to the PR description.
+
+1. **The solid is represented by its plan box `bounds(o)`, not its body.** Rejected: clipping against the solid's real outline. The issue fixes the box: "El oráculo mide el área del hueco que cae en la caja del sólido". A diagonal `beam` or a concave foreign `poly` could be a false positive; the triage run found none in the current recipes.
+2. **Footprints are simple open rings.** Rejected: validating or repairing self-intersecting / closed-ring footprints in the oracle. The only concave footprints come from `lFootprint`, `chamferedRect`, `chamfered` and `offsetFootprint` (`src/kit/forms/composite.ts:78,114-115,136`, `src/kit/forms/landmarks.ts:117-118`); `convexHull` drops collinear points (`src/iso/geometry.ts:36`).
+3. **If a registered recipe turns out red, the red test is committed and the PR reports it**, as the issue asks ("Si alguna falla, el PR lo reporta en vez de relajar el test"); the recipe is not touched (out of scope: "cambios en las recetas").
+4. **Either-winding and outside-hull cases are added although no criterion names them**: they are Review Focus items, cheap to pin, and guard the absolute area.
+5. **`GAP_AREA_EPS = 1e-6` in squared world units**, the value the issue proposes ("por ejemplo 1e-6"). Recipe coordinates are multiples of 0.1–0.5, so a computed flush face leaves residues around 1e-14, far below it.
+
 ## Review Focus
 
 1. A thin slab crossing the gap between grid rows (the issue's L and slab): must be an intruder. Pinned by Task 1's new test.
@@ -48,7 +58,7 @@
 - [ ] **Step 1: Write the failing tests** in `describe("kit: the concave-gap oracle")`:
 
 ```ts
-it("detects a thin slab crossing the gap between two rows of a 5×5 grid", () => {
+it("detects a thin slab crossing the gap of an L", () => {
   const L: Solid = { kind: "poly", footprint: [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 4 }, { x: 4, y: 4 }, { x: 4, y: 14 }, { x: 0, y: 14 }], z: 0, h: 6, mat: "plaster" };
   const slab: Solid = { kind: "prism", at: { x: -6, y: 12, z: 0 }, w: 40, d: 0.5, h: 0.4, mat: "stone" };
   expect(concaveIntruders([L, slab])).toBe(1);
@@ -71,11 +81,11 @@ The two existing tests ("detects a solid inside the gap of an L and not one rest
 - [ ] **Step 2: Run to verify the slab test fails**
 
 Run: `npx vitest run src/kit/kit.test.ts -t "concave-gap oracle"`
-Expected: "detects a thin slab …" FAILS (`expected 0 to be 1`): no grid point of the slab's box lands in the gap (the one at x 4 is on the footprint's edge). "… either winding …" also FAILS (`expected 4 to be 1`): the old oracle counts sample points, not pairs. The two existing tests pass.
+Expected: "detects a thin slab crossing the gap of an L" FAILS (`expected 0 to be 1`): no grid point of the slab's box lands in the gap (the one at x 4 is on the footprint's edge). "… either winding …" also FAILS (`expected 4 to be 1`): the old oracle counts sample points, not pairs. The two existing tests pass.
 
 - [ ] **Step 3: Implement** in `src/kit/kit.test.ts`, replacing `inPoly`, `onEdge` and the body of `concaveIntruders`:
   - `const GAP_AREA_EPS = 1e-6;`
-  - `function area(poly: Vec2[]): number` — absolute shoelace area.
+  - `function area(poly: Vec2[]): number` — absolute shoelace area; 0 for fewer than three points (what the shoelace gives anyway).
   - `function clipToBox(poly: Vec2[], min: Vec2, max: Vec2): Vec2[]` — Sutherland-Hodgman against the four half-planes `x ≥ min.x`, `x ≤ max.x`, `y ≥ min.y`, `y ≤ max.y` in turn; intersection points on the boundary line computed by linear interpolation; returns `[]` when everything is clipped.
   - `concaveIntruders` keeps its outer loops and the `hull.length === footprint.length` convexity skip; per foreign solid it computes the gap area in `bounds(o)` (only `.x`/`.y` of `min`/`max`) and adds 1 when it is `> GAP_AREA_EPS`. Doc comment says what it measures and that flush faces contribute 0.
   - Remove the now unused `inPoly`/`onEdge`.
@@ -96,3 +106,10 @@ Expected: both green.
 git add src/kit/kit.test.ts
 git commit -m "fix(#147): exact concave-gap oracle by rectangle clipping"
 ```
+
+## Grilling
+
+- Rounds: 1 (the revisions did not change the seam or the task list, so no second round).
+- Questions: 15. Sources: ISSUE 5, CODE 8, DOC 1, NO SOURCE 4 (all technical assumptions, Assumptions 2, 4, 5 and the test renaming).
+- Assumptions: the five under "Assumptions"; the new slab test was renamed so it names the behaviour, not the deleted sampling.
+- Spec ambiguities: none. Follow-up issues opened: none.
