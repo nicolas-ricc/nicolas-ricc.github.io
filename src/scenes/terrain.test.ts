@@ -62,7 +62,7 @@ describe("classification", () => {
     expect(terrainAt(150, 100)).toBe("slab");                  // station land
     expect(terrainAt(220, 100)).toBe("water");                 // channel
     expect(terrainAt(260, 100)).toBe("water");
-    expect(terrainAt(290, 100)).toBe("asphalt");               // east bank, between the ring and x 306
+    expect(terrainAt(303, 100)).toBe("asphalt");               // east bank, between the ring and x 306
     expect(terrainAt(320, 100)).toBe("jungle");
     expect(terrainAt(-56, 200)).toBe("asphalt");               // west edge: the tech district continues straight from the city
     expect(terrainAt(100, 330)).toBe("asphalt");               // south edge, likewise

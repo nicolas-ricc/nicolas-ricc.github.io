@@ -4,7 +4,7 @@ import { centroid, v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { bounds, visibleWalls, type Solid } from "../iso/solids";
 import type { Rng } from "../map/seed";
 import { ESTUARY_Y0, QUAY_X, islandWestX } from "../map/geo";
-import { AVENUE, BLOCK_W, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_RING, FALLEN_BLOCK, LIT_FLOOR, PROMENADE, PLAZA, ROWS, SIDEWALK, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, inCrater } from "../scenes/city-grid";
+import { AVENUE, BLOCK_W, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_COLS, EAST_RING, FALLEN_BLOCK, FREIGHT_ROW, LIT_FLOOR, PROMENADE, PLAZA, ROWS, SIDEWALK, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, inCrater } from "../scenes/city-grid";
 import { jungle, type Rails } from "../scenes/flora";
 import { CAR, awning, bench, bollard, car, chair, dockCrane, fountain, garland, kiosk, lamp, place, puddle, stoneArch, table } from "../kit/props";
 import { PLINTH_H, plazaTone, prism, tiles } from "../scenes/city-pieces";
@@ -194,6 +194,7 @@ export function cars(solids: Solid[], rng: Rng): void {
     for (let i = 0; i < n; i++) {
       const x = b.x + rng.int(2, b.w - 5);
       const y = rng.chance(0.5) ? b.y + b.d + 0.4 : b.y - 1.9; // south or north sidewalk of the block
+      if (b.x === EAST_COLS[0] && b.y === FREIGHT_ROW.y && y < b.y) continue; // its north sidewalk is the south wall of the dock inlet (#326)
       if (y < CITY_EDGE.north || y + 1.5 > CITY_EDGE.south) continue;
       if (b.y === ROWS[0] && y < b.y) continue;                // row 92 has the seam fence to the north, not a street
       if (y >= AVENUE.y0 - 2 && y <= AVENUE.y1) continue;      // the avenue has no cars at the curb
