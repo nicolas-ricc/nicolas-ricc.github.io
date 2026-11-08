@@ -3,6 +3,7 @@ import { v3, type Vec3 } from "../iso/geometry";
 import type { Plate } from "../iso/plate";
 import type { Solid } from "../iso/solids";
 import type { Rng } from "../map/seed";
+import { rtgAt, stackContainers, stackHeight } from "../kit/forms/industrial";
 import { prism } from "./city-pieces";
 
 /**
@@ -19,7 +20,9 @@ export const YARD_LANES_X: readonly number[] = [289, 294, 299];
 export const YARD_SLOTS_Y: readonly number[] = [32, 39, 46, 53, 60, 67, 74];
 export const QUAY_CRANES: readonly { x: number; y: number }[] = [{ x: 284, y: 34 }, { x: 284, y: 62 }];
 export const CRANE_RAILS = { x: [281, 287], y0: 31, y1: 82 } as const;
-export const RIPRAP_KEEP_OUT = [] as readonly { x0: number; y0: number; x1: number; y1: number }[];
+/** Plan boxes the riprap must stay out of: the yard slab and the footprints of the quay crane legs. */
+export const RIPRAP_KEEP_OUT: readonly { x0: number; y0: number; x1: number; y1: number }[] =
+  [YARD, ...QUAY_CRANES.map((c) => ({ x0: c.x - 3.4, y0: c.y - 3.4, x1: c.x + 3.4, y1: c.y + 3.4 }))];
 
 /** Four safety/asphalt stripes along a wall of the dock. */
 const stripes = (wall: number): Plate[] => (["safety", "asphalt", "safety", "asphalt"] as const)
@@ -46,12 +49,45 @@ export function floatingDock(out: Solid[], accents: Accent[], weldSpots: Vec3[])
   for (const [x, y] of [[218, 77.5], [228, 77.5], [218, 84.5], [228, 84.5]] as const) weldSpots.push(v3(x, y, 5.3));
 }
 
-export function containerYard(_out: Solid[], _accents: Accent[], _rng: Rng): void { /* Task 2 */ }
+const SLAB_TOP = 0.2, STACK_CAP_UNDER_RTG = 3;
+
+/** Straddle carrier over slot (x, y): four legs at the frame corners, a safety frame and a cab on the north end. */
+function straddleCarrier(out: Solid[], x: number, y: number): void {
+  const cx = x + 1.2;
+  for (const lx of [cx - 1.5, cx + 1.1]) for (const ly of [y - 0.5, y + 6.1]) out.push(prism(lx, ly, SLAB_TOP, 0.4, 0.4, 5, "steel"));
+  out.push(prism(cx - 1.5, y - 0.5, 5.2, 3, 7, 0.6, "safety"));
+  out.push(prism(cx - 0.5, y - 0.5, 5.8, 1, 1, 1, "steel"));
+}
+
+/** Container yard: slab, 3 lanes x 7 slots (19 stacks, 2 straddle carriers), an RTG over lanes 2-3, a gatehouse and two lamps. */
+export function containerYard(out: Solid[], accents: Accent[], rng: Rng): void {
+  out.push(prism(YARD.x0, YARD.y0, 0, YARD.x1 - YARD.x0, YARD.y1 - YARD.y0, SLAB_TOP, "concrete"));
+  // Slots are indexed lane-major: index = lane * YARD_SLOTS_Y.length + slot.
+  const n = YARD_LANES_X.length * YARD_SLOTS_Y.length;
+  const a = rng.int(0, n - 1);
+  let b = rng.int(0, n - 2);
+  if (b >= a) b++;
+  for (let i = 0; i < n; i++) {
+    const lane = Math.floor(i / YARD_SLOTS_Y.length), x = YARD_LANES_X[lane]!, y = YARD_SLOTS_Y[i % YARD_SLOTS_Y.length]!;
+    if (i === a || i === b) { straddleCarrier(out, x, y); continue; }
+    const under = lane >= 1 && (y === 46 || y === 53); // beneath the RTG beam
+    const h = stackHeight(rng);
+    out.push(...stackContainers(v3(x, y, SLAB_TOP), under ? Math.min(h, STACK_CAP_UNDER_RTG) : h, "y", rng));
+  }
+  rtgAt(292.1, 302.1, 50, out, SLAB_TOP);
+  out.push(prism(296, 81, 0, 3, 3, 2.8, "concrete"));
+  accents.push({ kind: "poly", pts: [v3(296.8, 84, 1.2), v3(298.2, 84, 1.2), v3(298.2, 84, 2.2), v3(296.8, 84, 2.2)], color: "windowCool", alpha: 0.85 });
+  for (const [px, py] of [[288.5, 30.5], [303, 79]] as const) {
+    out.push(prism(px, py, SLAB_TOP, 0.6, 0.6, 5, "steel"));
+    accents.push({ kind: "dot", at: v3(px + 0.3, py + 0.3, SLAB_TOP + 5), r: 1.2, color: "cyan" });
+  }
+}
 
 export function quayCranes(_out: Solid[], _accents: Accent[]): void { /* Task 3 */ }
 
 export function fittingOutSheds(_out: Solid[]): void { /* Task 4 */ }
 
-export function shipyardEast(out: Solid[], accents: Accent[], weldSpots: Vec3[], _rng: Rng): void {
+export function shipyardEast(out: Solid[], accents: Accent[], weldSpots: Vec3[], rng: Rng): void {
   floatingDock(out, accents, weldSpots);
+  containerYard(out, accents, rng);
 }

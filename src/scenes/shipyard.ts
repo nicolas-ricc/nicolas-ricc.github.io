@@ -4,7 +4,7 @@ import { bounds, type Solid } from "../iso/solids";
 import { BOTTOM, DOCK, QUAY_W, QUAY_X, WORLD, ZONE_SPLIT_Y, eastBank, northCoastY } from "../map/geo";
 import type { Rng } from "../map/seed";
 import { jungle as flora } from "./flora";
-import { shipyardEast } from "./shipyard-east";
+import { RIPRAP_KEEP_OUT, shipyardEast } from "./shipyard-east";
 import { station } from "./station";
 import { clearOfWater } from "./terrain-classify";
 
@@ -160,12 +160,15 @@ function workshops(out: Solid[]): void {
 function fittingOut(out: Solid[]): void {
   for (const x of [304, 316]) out.push(prism(x, 24, 0, 8, 56, 6, "concrete", "gable"));
   out.push({ kind: "cylinder", at: v3(310, 86, 0), r: 4, h: 6, mat: "concrete" });
-  const rock = (x: number, y: number): Solid => ({ kind: "cone", at: v3(x, y, 0), r: 1.6, h: 1.2, mat: "rock", sides: 5 });
+  const riprap = (x: number, y: number): void => { // skips rocks over the yard slab or the crane legs
+    const rock: Solid = { kind: "cone", at: v3(x, y, 0), r: 1.6, h: 1.2, mat: "rock", sides: 5 }, b = bounds(rock);
+    if (!RIPRAP_KEEP_OUT.some((k) => b.min.x < k.x1 && k.x0 < b.max.x && b.min.y < k.y1 && k.y0 < b.max.y)) out.push(rock);
+  };
   for (let y = 0; y < AREA_H; y += 3) { // river riprap: only where there is already land
     const x = eastBank(y) + 1.5;
-    if (y < ZONE_SPLIT_Y && y >= northCoastY(x)) out.push(rock(x, y));
+    if (y < ZONE_SPLIT_Y && y >= northCoastY(x)) riprap(x, y);
   }
-  for (let x = Math.ceil(eastBank(30)) + 6; x < 300; x += 3) out.push(rock(x, northCoastY(x) + 1.5)); // cove riprap; starts 6 u east of the bank (eastBank(30) = 277) so as not to cover the river's last cone
+  for (let x = Math.ceil(eastBank(30)) + 6; x < 300; x += 3) riprap(x, northCoastY(x) + 1.5); // cove riprap; starts 6 u east of the bank (eastBank(30) = 277) so as not to cover the river's last cone
 }
 
 // ---------------------------------------------------------------- jungle and lamps
