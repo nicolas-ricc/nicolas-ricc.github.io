@@ -61,7 +61,7 @@ describe("geography of the seam at y 90 (#319)", () => {
   });
 
   it("terrain: the new strip is asphalt, the station keeps its slab, the river and east bank north of 146", () => {
-    for (const [x, y] of [[50, 94], [-30, 100], [50, 140], [98, 100], [290, 100]] as const) expect(terrainAt(x, y), `${x},${y}`).toBe("asphalt");
+    for (const [x, y] of [[50, 94], [-30, 100], [50, 140], [98, 100], [303, 100]] as const) expect(terrainAt(x, y), `${x},${y}`).toBe("asphalt");
     expect(terrainAt(150, 100)).toBe("slab");
     expect(terrainAt(220, 100)).toBe("water");
     expect(terrainAt(260, 100)).toBe("water");

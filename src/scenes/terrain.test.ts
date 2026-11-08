@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BLEED, MOUTH_Y, SHORE_W, distToHeadland, inHeadland, STATION_LAND, inStationLand, TIP_BOX, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, riverCenter, worldZoneAt } from "../map/geo";
 import { createRng } from "../map/seed";
 import type { Solid, Tri } from "../iso/solids";
-import { BLEED_WATER, clearOfWater } from "./terrain-classify";
+import { BLEED_WATER, clearOfWater, isWaterAt } from "./terrain-classify";
 import { CELL, baseToneAt, bleedTerrainAt, bleedZ, buildTerrain, seaTerrainAt, shipyardTerrainAt, terrainAt, waterBand } from "./terrain";
 
 const tris = (s: Solid): Tri[] => (s.kind === "ground" ? s.tris : []);
@@ -11,6 +11,13 @@ const SEAM_Y = Math.floor(ZONE_SPLIT_Y / CELL) * CELL;
 const allTris = (m: ReturnType<typeof buildTerrain>): Tri[] => [...m.ground, ...m.water].flatMap(tris);
 
 describe("classification", () => {
+  it("the inlet is water open to the river (#326)", () => {
+    expect(terrainAt(291, 105)).toBe("water");
+    expect(terrainAt(291, 120)).toBe("asphalt");
+    expect(terrainAt(279, 100)).toBe("water"); // the river, west of the inlet
+    expect(terrainAt(310, 100)).toBe("jungle");
+    expect(isWaterAt(291, 105)).toBe(true);
+  });
   it("the seam is aligned to the 6 u and 18 u grids", () => {
     expect(ZONE_SPLIT_Y % 6).toBe(0);
     expect(ZONE_SPLIT_Y % 18).toBe(0);
@@ -55,7 +62,7 @@ describe("classification", () => {
     expect(terrainAt(150, 100)).toBe("slab");                  // station land
     expect(terrainAt(220, 100)).toBe("water");                 // channel
     expect(terrainAt(260, 100)).toBe("water");
-    expect(terrainAt(290, 100)).toBe("asphalt");               // east bank, between the ring and x 306
+    expect(terrainAt(303, 100)).toBe("asphalt");               // east bank, between the ring and x 306
     expect(terrainAt(320, 100)).toBe("jungle");
     expect(terrainAt(-56, 200)).toBe("asphalt");               // west edge: the tech district continues straight from the city
     expect(terrainAt(100, 330)).toBe("asphalt");               // south edge, likewise

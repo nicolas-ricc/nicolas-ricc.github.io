@@ -56,6 +56,13 @@ for (const [name, make, isWorld] of SEEDS) {
       }
     });
 
+    it("harbor lights 60 % of its visible candidates, 85 % of them warm (#326)", () => {
+      const c = l.counts.harbor;
+      expect(c.candidates).toBeGreaterThan(0);
+      expect(c.on).toBe(Math.round(0.6 * c.candidates));
+      expect(c.warm).toBe(Math.round(0.85 * c.on));
+    });
+
     it("counts match the windows per neighborhood", () => {
       for (const b of NEIGHBORHOODS) {
         const ws = l.windows.filter((w) => s.placed[w.owner]!.placed.neighborhood === b);

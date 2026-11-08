@@ -10,6 +10,7 @@ import { blocks } from "./city-grid";
 import { lights, WINDOW_ALPHA, type CityLights } from "../city/lights";
 import { streets } from "../city/streets";
 import { railLands } from "../city/rail-lands";
+import { harbor } from "../city/harbor";
 import { bridge, collapsed, cars, greenery, promenade, plazaAndTower, westQuay, type TowerLights } from "../city/fixed";
 import { FOOTBRIDGE_LOT, NO_PLINTH, WATER_TOWER_BLOCK, assign, waterTowerLot, type Placed } from "../city/zoning";
 
@@ -17,7 +18,7 @@ import { FOOTBRIDGE_LOT, NO_PLINTH, WATER_TOWER_BLOCK, assign, waterTowerLot, ty
  * Resume: orchestrator of the city. The zoning (src/city/zoning.ts) assigns
  * neighborhood, recipe, lot and tone per block; here each piece is built with
  * the kit, the fixed pieces are added (plaza and tower, bridge, riverside,
- * promenade, collapse, jungle, cars; src/city/fixed.ts) and the streets. The
+ * promenade, collapse, jungle, cars; src/city/fixed.ts; the inlet works, src/city/harbor.ts) and the streets. The
  * terrain (terrain.ts) is the asphalt.
  * Spec: docs/superpowers/specs/2026-10-15-resume-nivel-2-kit-zonificacion-luces-design.md §6.
  */
@@ -59,6 +60,7 @@ export function city(rng: Rng, districtRng: Rng, lightsRng: Rng): CityScene {
   railLands(ground, solids);
   bridge(solids, accents);
   westQuay(solids, accents);
+  harbor(solids, accents, rng);
   const promenadeLights = promenade(solids, accents);
   collapsed(solids, rng);
   greenery(solids, rng);

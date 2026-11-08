@@ -4,6 +4,7 @@ import { sortByDepth } from "../iso/depth";
 import { bounds, isFlat, tessellateAll, type Solid } from "../iso/solids";
 import type { Vec2 } from "../iso/geometry";
 import { LANE_BACK, LANE_OUT } from "./sea-anim";
+import { DARSENA } from "./city-grid";
 import { FLOATING_DOCK } from "./shipyard-east";
 import { SHIP_MATS, SHIP_SPECS, ship, shipAt, wake, type ShipKind } from "./ships";
 
@@ -340,5 +341,9 @@ describe("lanes and the floating dock (#323)", () => {
 
   it("no segment of LANE_OUT or LANE_BACK cuts the floating dock box", () => {
     for (const lane of [LANE_OUT, LANE_BACK]) for (let i = 1; i < lane.length; i++) expect(cuts(lane[i - 1]!, lane[i]!, FLOATING_DOCK), `segment ${i}`).toBe(false);
+  });
+
+  it("no segment of LANE_OUT or LANE_BACK cuts the inlet (#326)", () => {
+    for (const lane of [LANE_OUT, LANE_BACK]) for (let i = 1; i < lane.length; i++) expect(cuts(lane[i - 1]!, lane[i]!, DARSENA), `segment ${i}`).toBe(false);
   });
 });

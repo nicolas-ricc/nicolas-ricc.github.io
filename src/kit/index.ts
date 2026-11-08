@@ -6,10 +6,11 @@ import { CURVED } from "./forms/curved";
 import { LANDMARKS } from "./forms/landmarks";
 import { INDUSTRIAL } from "./forms/industrial";
 import { RECONVERSION } from "./forms/reconversion";
+import { HARBOR } from "./forms/harbor";
 import type { Recipe, RecipeDef } from "./types";
 
 /** All the kit's recipes. Each new family adds its line; the generic test (kit.test.ts) covers it once registered. */
-export const RECIPES: readonly RecipeDef[] = [...MODERN, ...COURTYARD, ...LOWRISE, ...COMPOSITE, ...CURVED, ...LANDMARKS, ...INDUSTRIAL, ...RECONVERSION];
+export const RECIPES: readonly RecipeDef[] = [...MODERN, ...COURTYARD, ...LOWRISE, ...COMPOSITE, ...CURVED, ...LANDMARKS, ...INDUSTRIAL, ...RECONVERSION, ...HARBOR];
 
 /** Own lot for the recipes that don't use the standard lot: the lab and the generic test use it. `z`: where it rests (the bridge, in the estuary water). */
 export const LAB_LOTS: Readonly<Record<string, { w: number; d: number; z?: number }>> = {

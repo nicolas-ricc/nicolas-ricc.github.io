@@ -37,8 +37,10 @@ export const CITY_EDGE = { west: -54, north: 90, south: 324 } as const; // the c
 export const DISTRICT_BANK_Y = 264; // east bank of the district from here; a multiple of CELL (classifies terrain)
 export const PROMENADE_STREET_X = 336; // promenade street; a multiple of CELL (classifies terrain)
 
-/** Future harbor (a later child of #56): from the east ring to x 306, between the seam and the estuary. Asphalt today. */
+/** Harbor strip (#326): from the east ring to x 306, between the seam and the estuary. Asphalt, except the inlet. */
 export const HARBOR = { x0: EAST_RING.x0, x1: 306, y0: ZONE_SPLIT_Y, y1: ESTUARY_Y0 } as const;
+/** Water inlet (#326) cut into the harbor strip, open to the river on its west side. Half-open: x0 <= x < x1, y0 <= y < y1. */
+export const DARSENA = { x0: 282, x1: 300, y0: 96, y1: 114 } as const;
 
 export const PLAZA: Rect = { x: 102, y: 218, w: 54, d: 18 }; // joins two columns of the south row of the avenue
 export const TOWER: Rect = { x: 121, y: 220, w: 16, d: 14 }; // centered at (129, 227)

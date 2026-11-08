@@ -12,13 +12,13 @@ export const KIT_STEP = { x: 30, y: 24 } as const;
 
 /** Style of a lab row: `industrial` and `reconversion` ignore the chosen one (freight for the freight pair, warehouses for the rest of the latter). */
 function rowStyle(family: string, name: string, chosen: StyleId): StyleId {
-  if (family === "industrial") return "industrial";
+  if (family === "industrial" || family === "harbor") return family;
   if (family === "reconversion") return name === "freightShed" || name === "openDock" ? "freight" : "warehouses";
   return chosen;
 }
 
 /**
- * Every recipe in the registry, one row per family in registry order (the `industrial` row always uses the industrial style; the `reconversion` row, warehouses or freight).
+ * Every recipe in the registry, one row per family in registry order (the `industrial` and `harbor` rows always use their own style; the `reconversion` row, warehouses or freight).
  * As in the city: the recipe sits on a paving prism plinth of PLINTH_H,
  * except the one that brings its own `ground` (the campus), which goes at z 0
  * with no plinth (a prism would cover its ground, which is painted before any solid).

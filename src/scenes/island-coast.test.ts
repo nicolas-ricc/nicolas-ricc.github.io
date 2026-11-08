@@ -3,7 +3,7 @@ import { bounds, type Solid, type Tri } from "../iso/solids";
 import { WORLD } from "../map/geo";
 import { createRng } from "../map/seed";
 import { city } from "./city";
-import { PROMENADE } from "./city-grid";
+import { DARSENA, PROMENADE } from "./city-grid";
 import { shipyard } from "./shipyard";
 import { QUAY_CRANES, YARD, quayCranes } from "./shipyard-east";
 import { buildTerrain } from "./terrain";
@@ -80,7 +80,7 @@ describe("island coast", () => {
     const sy = shipyard(createRng(7));
     const cs = city(createRng(7), createRng(8), createRng(9));
     const onIsland = (s: Solid) => bounds(s).max.x >= 276;
-    const breakwater = (s: Solid) => s.kind === "cone" && s.mat === "rock"; // shipyard.ts: the shipyard's only `rock`
+    const breakwater = (s: Solid) => s.kind === "cone" && s.mat === "rock"; // the `rock` cones: the shipyard's breakwater (shipyard.ts) and the inlet's riprap (city/harbor.ts)
     // #323: the quay cranes, their rails and the container yard stand on the cove quay on purpose (the issue fixes them at y ≥ 30, by the cove water);
     // they are checked apart, below: each footprint centre on land
     const cranes: Solid[] = []; quayCranes(cranes, []);
@@ -89,11 +89,17 @@ describe("island coast", () => {
     const onQuay = (s: Solid) => craneJson.has(JSON.stringify(s)) || inYard(s);
     const quay = [...sy.solids, ...sy.ground].filter(onQuay);
     expect(quay.length).toBeGreaterThan(QUAY_CRANES.length * 10);
+    // #326: the dock inlet (DARSENA) is built on purpose at its edge (walls, bollards, boats, nets, crates, crane, lamps, the plinth of the block
+    // facing it, the market and its awning): every non-cone city solid whose plan box cuts DARSENA grown by 4 is exempt; the rest stays checked
+    const atInlet = (s: Solid) => {
+      const b = bounds(s), g = 4;
+      return s.kind !== "cone" && b.max.x > DARSENA.x0 - g && b.min.x < DARSENA.x1 + g && b.max.y > DARSENA.y0 - g && b.min.y < DARSENA.y1 + g;
+    };
     const candidates = [
       ...[...sy.solids, ...sy.ground].filter((s) => onIsland(s) && !breakwater(s) && !onQuay(s)),
       // of the city, only what lies north of the promenade (y < 158): to the south the estuary bank only gains land
       // (islandWestX ≤ estuaryEast, geo.test.ts) and seawall, bridge and collapse are in the water on purpose
-      ...cs.solids.filter((s) => onIsland(s) && bounds(s).max.y < PROMENADE.y0),
+      ...cs.solids.filter((s) => onIsland(s) && bounds(s).max.y < PROMENADE.y0 && !atInlet(s) && !breakwater(s)),
     ];
     // #319 removed the shipyard's southern island content (the scrap, the southern jungle clusters) and the city seam belt;
     // the remaining shipyard island solids (sheds, silo, east jungle) keep the check from being vacuous.

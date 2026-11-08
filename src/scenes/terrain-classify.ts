@@ -1,5 +1,5 @@
 import { BOTTOM, CELL, DOCK, QUAY_X, SHORE_W, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, ESTUARY_Y0, abyssX, distToHeadland, eastBank, inHeadland, inMouth, inStationLand, islandEastX, islandWestX, shoreWidth } from "../map/geo";
-import { CITY_EDGE, DISTRICT_BANK_Y, EAST_RING, PROMENADE_STREET_X, inCrater } from "./city-grid";
+import { CITY_EDGE, DARSENA, DISTRICT_BANK_Y, EAST_RING, PROMENADE_STREET_X, inCrater } from "./city-grid";
 import { bayWater, builtAt, estuaryWater } from "./sprawl-grid";
 
 /**
@@ -31,7 +31,10 @@ export function shipyardTerrainAt(x: number, y: number): Terrain {
 
 export function cityTerrainAt(x: number, y: number): Terrain {
   if (x >= QUAY_X && x <= (y < ESTUARY_Y0 ? eastBank(y) : islandWestX(y))) return "water"; // north of ESTUARY_Y0 the channel is the shipyard's
-  if (y < ESTUARY_Y0 && x > QUAY_X) return x < EAST_RING.x0 ? "jungle" : x < 306 ? "asphalt" : "jungle"; // east bank of the channel
+  if (y < ESTUARY_Y0 && x > QUAY_X) {
+    if (x >= DARSENA.x0 && x < DARSENA.x1 && y >= DARSENA.y0 && y < DARSENA.y1) return "water"; // the dock inlet (#326)
+    return x < EAST_RING.x0 ? "jungle" : x < 306 ? "asphalt" : "jungle"; // east bank of the channel
+  }
   if (y >= DISTRICT_BANK_Y && x > QUAY_X) return x >= PROMENADE_STREET_X ? "asphalt" : "jungle"; // east bank of the district: jungle, and the promenade street
   if (y >= CITY_EDGE.south || x < CITY_EDGE.west) return "asphalt"; // west and south edges: the bleed's tech district continues straight on from the city
   if (x > QUAY_X && x < EAST_RING.x0) return "jungle";
