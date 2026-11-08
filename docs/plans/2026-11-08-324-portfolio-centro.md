@@ -154,6 +154,7 @@ Decisiones técnicas tomadas en la revisión del plan (van al PR):
 - **Galpones por posición:** `gable` con `at.x ≥ 300`, sin medidas. Rechazado: importar constantes de `shipyard.ts` (ciclo de imports).
 - **Pata del pórtico:** si la franja de servicio la tapa, se agrega un rechazo por pantalla. Rechazado: ensanchar el salto `147..156` que fija el issue.
 - **Patio viejo:** las igualdades exactas se conservan restando `fill`. Rechazado: pasarlas a `arrayContaining`.
+- **Implementación (etapa 4):** el pórtico del patio va en `x 149`, no en 150, porque la pata en `(150, −36.5)` pisa la sección de casco vieja `(150, −40)`. La cota del patio es `h` nominal `≤ 3`, y el techo escalonado llega a 4.05. `world(7)` coloca 2 grupos. La franja de servicio suma un barrido first-fit determinista (paso 0.5) después de los 30 intentos, como el `must` de `stockpile`. Rechazado: quedarse con 11 de 12 piezas. Selva medida: 6 conos. `calle-faroles` pasa de `h 7` a 14.
 - **Mínimo de grupos del patio:** `≥ 3` con `world(7)`. Si no entran, se baja a lo medido, porque el issue permite desistir.
 
 ## Grilling
