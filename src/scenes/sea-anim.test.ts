@@ -383,3 +383,70 @@ describe("beam: own vertex (#149)", () => {
     expect(apex(a.beam()[0]!)).toEqual(before);
   });
 });
+
+describe("fair launch tick chunking", () => {
+  const w = world(7);
+  const fresh = () => createSeaAnim(w.sea!, { reducedMotion: false });
+  const hullOf = (f: ReturnType<ReturnType<typeof fresh>["ferry"]>) => {
+    const h = f.solids.find((s) => s.kind === "hull");
+    if (!h || h.kind !== "hull") throw new Error("expected a hull");
+    return { x: h.at.x, y: h.at.y, heading: h.heading! };
+  };
+  const expectSameHull = (a: ReturnType<typeof hullOf>, b: ReturnType<typeof hullOf>) => {
+    expect(a.x).toBeCloseTo(b.x, 6);
+    expect(a.y).toBeCloseTo(b.y, 6);
+    expect(a.heading).toBeCloseTo(b.heading, 6);
+  };
+  const L = polyline(FERRY_ROUTE).length;
+  const start = FERRY_ROUTE[0]!, end = FERRY_ROUTE[FERRY_ROUTE.length - 1]!;
+
+  it("position and heading after one tick match the 100 ms chunking", () => {
+    for (const T of [5000, 60000, 600000]) {
+      const one = fresh(), chunked = fresh();
+      one.tick(T);
+      for (let t = 0; t < T; t += 100) chunked.tick(100);
+      expectSameHull(hullOf(one.ferry()), hullOf(chunked.ferry()));
+    }
+  });
+
+  it("the leftover of the pause is spent moving", () => {
+    const a = fresh();
+    a.tick(FERRY_PAUSE_MS - 100);
+    expect(a.tick(1100).ferry).toBe(true);
+    const h = hullOf(a.ferry());
+    expect(Math.hypot(h.x - start.x, h.y - start.y)).toBeCloseTo(FERRY_SPEED, 6);
+  });
+
+  it("the leftover at an end comes off the next pause", () => {
+    const a = fresh();
+    a.tick(FERRY_PAUSE_MS + (L / FERRY_SPEED) * 1000 + 500);
+    const atEnd = hullOf(a.ferry());
+    expect(atEnd.x).toBeCloseTo(end.x, 6);
+    expect(atEnd.y).toBeCloseTo(end.y, 6);
+    expect(a.tick(FERRY_PAUSE_MS - 501).ferry).toBe(false);
+    expectSameHull(hullOf(a.ferry()), atEnd);
+    a.tick(1001);
+    const back = hullOf(a.ferry());
+    expect(Math.hypot(back.x - end.x, back.y - end.y)).toBeCloseTo(FERRY_SPEED, 6);
+  });
+
+  it("a non-finite first tick does not use up the first-tick marking", () => {
+    const a = fresh();
+    expect(a.tick(NaN)).toEqual({ ships: [false, false, false], beam: false, buoys: false, ferry: false, neon: false });
+    const c = a.tick(100);
+    expect(c.buoys).toBe(true);
+    expect(c.neon).toBe(true);
+    expect(c.ferry).toBe(true);
+  });
+
+  it("tick(NaN) and tick(Infinity) change nothing", { timeout: 2000 }, () => {
+    const a = fresh();
+    a.tick(4500);
+    const snap = () => JSON.stringify([a.ferry(), a.beam(), a.buoys(), a.neon(), [0, 1, 2].map((k) => a.state(k))]);
+    const before = snap();
+    const none = { ships: [false, false, false], beam: false, buoys: false, ferry: false, neon: false };
+    expect(a.tick(NaN)).toEqual(none);
+    expect(a.tick(Infinity)).toEqual(none);
+    expect(snap()).toBe(before);
+  });
+});
