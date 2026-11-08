@@ -6,7 +6,7 @@ import { CELL, ESTUARY_Y0, QUAY_W, QUAY_X, SEAM_CY, STATION_LAND, WORLD, ZONE_SP
 import { SEED } from "../map/seed";
 import { veilCells } from "../world/veil";
 import { boxFrame, zoneFrame } from "../world/frame";
-import { CITY_EDGE, RING_Y0, ROWS, blocks, estuaryReaches } from "./city-grid";
+import { CITY_EDGE, ROWS, blocks, estuaryReaches } from "./city-grid";
 import { EXCAVATOR, excavatorBox } from "./excavator";
 import { RAIL_YARD_X } from "./factory";
 import { WEST_RAIL_X0, WEST_TRACKS_X } from "./hinterland";
@@ -213,13 +213,13 @@ describe("Resume after the seam (#319)", () => {
     expect(Math.min(...walls.map((p) => p.at.y))).toBe(ESTUARY_Y0);
   });
 
-  it("street lines (#320): N-S from 90 west of the station skipping 128..137, ring from RING_Y0, others from 158; E-W north of ROWS[1] only y 113 and 137", () => {
+  it("street lines (#320): N-S from 90 west of the station skipping 128..137, others from 158; E-W north of ROWS[1] only y 113 and 137", () => {
     const lines = ci.ground.filter((g): g is Solid & { kind: "strip" } => g.kind === "strip" && g.width === 0.3);
     for (const g of lines) {
       const [a, b] = [g.path[0]!, g.path[g.path.length - 1]!];
       const minY = Math.min(a.y, b.y), maxY = Math.max(a.y, b.y);
       if (Math.abs(a.x - b.x) < 1e-9) {
-        expect(minY, `N-S ${a.x}`).toBeGreaterThanOrEqual(a.x < STATION_LAND.x0 ? 90 : a.x === 273 ? RING_Y0 : ESTUARY_Y0 + 12);
+        expect(minY, `N-S ${a.x}`).toBeGreaterThanOrEqual(a.x < STATION_LAND.x0 ? 90 : ESTUARY_Y0 + 12);
         if (a.x < STATION_LAND.x0) expect(maxY <= 128 || minY >= 137, `N-S ${a.x} crosses the track`).toBe(true);
       } else if (minY < ROWS[1]!) expect([113, 137], `E-W ${a.y}`).toContain(a.y);
     }
