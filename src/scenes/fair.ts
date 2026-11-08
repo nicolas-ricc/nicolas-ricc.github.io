@@ -1,4 +1,5 @@
 import type { Accent } from "../iso/accent";
+import { garland } from "../kit/props";
 import { polyline, v3, type PolyPoint, type Vec2, type Vec3 } from "../iso/geometry";
 import type { Facade } from "../iso/facade";
 import { bounds, type Bounds, type Plate, type Solid } from "../iso/solids";
@@ -15,7 +16,7 @@ import { FAIR, bayShoreX, bayWater, fairAt } from "./sprawl-grid";
  * gondola) are assembled by the animator with the pure builders here.
  * Spec: docs/superpowers/specs/2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md §4.3.
  */
-export interface FairScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; wheelAxis: Vec3; drop: { at: Vec3; h: number }; neon: { marquee: Vec3[]; lift: Vec3[]; column: Vec3[]; ghost: Vec3[] }; arcadeSigns: [Accent, Accent] }
+export interface FairScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; wheelAxis: Vec3; drop: { at: Vec3; h: number }; neon: { marquee: Vec3[]; lift: Vec3[]; column: Vec3[]; ghost: Vec3[]; mirror: Vec3[] }; arcadeSigns: [Accent, Accent] }
 
 /** On the southeast beach, between the carousel and the boardwalk: 20 u radius so it reads from the cover. Position chosen so nothing static ends up in front of it on screen (the test's rule). */
 export const WHEEL = { x: 216, y: -204, r: 20, hub: 23, sides: 20 } as const;
@@ -33,6 +34,8 @@ export const BUMPER = { x: 130, y: -194 } as const;
 const GATE_SIGN = { x0: 86.5, x1: 93.5, y: -177.98, z0: 6.1, z1: 7 } as const;
 /** Ghost train: stone hall on the boardwalk side of the pier, doors and track on its south face. */
 export const GHOST = { x: 98, y: -258, w: 20, d: 12 } as const;
+/** Mirror house: whitewash hall next to the ghost train, glass-mirror pediment on its south face. */
+export const MIRRORS = { x: 124, y: -258, w: 16, d: 12 } as const;
 export const FAIR_MATS: readonly Material[] = ["deck", "whitewash", "rust", "steel", "copper", "stone", "concrete", "plaza", "paving", "sand", "rail", "glass", "hull", "leaf", "leafDark"];
 const BOOTH_MATS: readonly Material[] = ["whitewash", "rust", "copper"];
 const WATER_Z = -1;
@@ -157,6 +160,7 @@ function neon(drop: { at: Vec3; h: number }): FairScene["neon"] {
     lift: COASTER_PATH.slice(0, LIFT_SEGMENTS + 1).map((p) => v3(p.x, p.y, p.z + 0.8)),
     column: Array.from({ length: 6 }, (_, k) => v3(DROP.x, DROP.y + 0.8, z0 + (k * (z1 - z0)) / 5)),
     ghost: Array.from({ length: 8 }, (_, k) => v3(GHOST.x + 0.5 + (k * 19) / 7, GHOST.y + GHOST.d + 1.48, 6.6)),
+    mirror: Array.from({ length: 6 }, (_, k) => v3(MIRRORS.x + 1.5 + (k * 13) / 5, MIRRORS.y + MIRRORS.d + 0.02, 7.8)),
   };
 }
 
@@ -172,6 +176,15 @@ export function ghostTrain(out: Solid[], accents: Accent[]): void {
   }
   const sx = x + 18, sz = 7, ps = Array.from({ length: 8 }, (_, k) => { const a = (k / 8) * Math.PI * 2 + Math.PI / 8; return v3(sx + 1.2 * Math.cos(a), ys - 0.02, sz + 1.2 * Math.sin(a)); });
   accents.push({ kind: "poly", pts: ps, color: "windowCool", alpha: 0.9 });
+}
+
+/** Mirror house: arcade-faced whitewash hall, pediment with three glass mirrors and an amber garland. */
+export function mirrorHouse(out: Solid[], accents: Accent[]): void {
+  const { x, y, w, d } = MIRRORS, ys = y + d; // ys: south face
+  out.push(prism(x, y, 0, w, d, 6, "whitewash", { facade: { floors: 1, cols: 4, base: "arcade" } }));
+  const mirrors: Plate[] = ([[0.1, 0.3], [0.4, 0.6], [0.7, 0.9]] as const).map(([u0, u1]) => ({ wall: 2, shape: "rect", u0, u1, z0: 6.2, z1: 7.3, mat: "glass", toneOffset: 2 }));
+  out.push(prism(x, ys - 1, 6, w, 1, 1.5, "whitewash", { plates: mirrors }));
+  accents.push(...garland([v3(x, ys + 0.1, 7.5), v3(x + 8, ys + 0.1, 6.9), v3(x + 16, ys + 0.1, 7.5)]));
 }
 
 function dropTower(out: Solid[], accents: Accent[]): void {
@@ -261,7 +274,7 @@ export function fair(rng: Rng, opts: { legacyOnly?: boolean } = {}): FairScene {
   const arcadeSigns = arcade(solids);
   booths(solids, accents);
   bumperCars(solids, accents);
-  if (!opts.legacyOnly) ghostTrain(solids, accents);
+  if (!opts.legacyOnly) { ghostTrain(solids, accents); mirrorHouse(solids, accents); }
   beach(solids, rng); // after the static solids: the boats look for free space among them
   gate(solids, accents);
   const drop = { at: v3(DROP.x, DROP.y, 1), h: DROP.h };
