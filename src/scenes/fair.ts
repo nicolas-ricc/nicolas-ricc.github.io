@@ -1,5 +1,5 @@
 import type { Accent } from "../iso/accent";
-import { garland } from "../kit/props";
+import { foodTruck, garland } from "../kit/props";
 import { polyline, v3, type PolyPoint, type Vec2, type Vec3 } from "../iso/geometry";
 import type { Facade } from "../iso/facade";
 import { bounds, type Bounds, type Plate, type Solid } from "../iso/solids";
@@ -46,8 +46,7 @@ export const FLUME_X1: number = Math.min(...Array.from({ length: 7 }, (_, k) => 
 export const FLUME_DROP_X0: number = FLUME_X1 - 6;
 const FLUME_LIFT_X1 = 172;
 export const FLUME_PATH: readonly Vec3[] = [v3(FLUME.x0, FLUME_AXIS, 2.5), v3(FLUME_LIFT_X1, FLUME_AXIS, 6), v3(FLUME_DROP_X0, FLUME_AXIS, 6), v3(FLUME_X1, FLUME_AXIS, 0.2)];
-export const FAIR_MATS: readonly Material[] = ["shallow", "deck", "whitewash", "rust", "steel", "copper", "stone", "concrete", "plaza", "paving", "sand", "rail", "glass", "hull", "leaf", "leafDark"];
-const BOOTH_MATS: readonly Material[] = ["whitewash", "rust", "copper"];
+export const FAIR_MATS: readonly Material[] = ["shallow", "deck", "whitewash", "rust", "steel", "copper", "stone", "concrete", "plaza", "paving", "sand", "rail", "glass", "hull", "leaf", "leafDark", "signal", "livery", "safety", "awning"];
 const WATER_Z = -1;
 
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material, extra: { roof?: "gable"; facade?: Facade; plates?: Plate[] } = {}): Solid => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat, ...extra });
@@ -259,14 +258,79 @@ function arcade(out: Solid[]): [Accent, Accent] {
   return [sign(x + 7.3, x + 16.7, y + 11.42, 6.3, 8.1, "magenta"), sign(x + 7.3, x + 16.7, y + 11.42, 6.3, 8.1, "amber")]; // only the animated layer `fair.signs` draws them
 }
 
-function booths(out: Solid[], accents: Accent[]): void {
-  for (let k = 0; k < 8; k++) {
-    const y = -294 + k * 12, x = bayShoreX(y + 1.5) - 16 - 6;
-    if (!onFair(x, y, 4, 3)) continue;
-    out.push(prism(x, y, 0, 4, 3, 2.8, BOOTH_MATS[k % 3]!, { roof: "gable" }));
-    accents.push(sign(x + 0.8, x + 3.2, y + 3.02, 1.2, 2, "amber"));
-    accents.push(dot(x + 2, y + 3.2, 2.9, 0.4, k % 3 === 2 ? "magenta" : "cyan"));
+export const BOOTH_ROW = { y0: -294, y1: -210, step: 6 } as const;
+export type BoothType = "food" | "foodTruck" | "shooting" | "cottonCandy" | "fortune" | "tickets" | "rings";
+export const BOOTH_TYPES: readonly BoothType[] = ["food", "foodTruck", "shooting", "cottonCandy", "fortune", "tickets", "rings"];
+const BOOTH_WEIGHTS: Readonly<Record<BoothType, number>> = { food: 30, foodTruck: 20, shooting: 15, cottonCandy: 10, fortune: 10, tickets: 10, rings: 5 };
+const BOOTH_TONES: readonly Material[] = ["whitewash", "rust", "copper"];
+const TRUCK_TONES: readonly Material[] = ["signal", "copper", "whitewash", "rust", "livery"];
+
+/** West corners of the booth row's slots (each one owns the box `x..x+4, y−1..y+5`): none under the flume channel, and shifted west when the boardwalk is in the way. */
+export function boothSlots(): Vec2[] {
+  const slots: Vec2[] = [];
+  for (let y: number = BOOTH_ROW.y0; y <= BOOTH_ROW.y1; y += BOOTH_ROW.step) {
+    if (y + 5 > FLUME.y && y - 1 < FLUME.y + FLUME.w && bayShoreX(y + 1.5) - 22 + 4 > FLUME.x0) continue; // under the channel
+    let x = bayShoreX(y + 1.5) - 22, k = 0;
+    const onWalk = (): boolean => { for (let wy = -300; wy < -172; wy += 18) { const wx = boardwalkX(wy); if (onFair(wx, wy, BOARDWALK_W, 18) && x < wx + BOARDWALK_W && wx < x + 4 && y - 1 < wy + 18 && wy < y + 5) return true; } return false; };
+    while (onWalk() && k++ < 20) x -= 0.5;
+    if (!onWalk() && onFair(x, y - 1, 4, 6)) slots.push({ x, y });
   }
+  return slots;
+}
+
+/** One type per slot: weighted draw; a repeat of the previous one is redrawn up to 5 times, then the next in the catalog. */
+export function boothTypes(rng: Rng, n: number = boothSlots().length): BoothType[] {
+  const total = BOOTH_TYPES.reduce((a, t) => a + BOOTH_WEIGHTS[t], 0);
+  const draw = (): BoothType => { let r = rng.next() * total; for (const t of BOOTH_TYPES) { r -= BOOTH_WEIGHTS[t]; if (r < 0) return t; } return BOOTH_TYPES[BOOTH_TYPES.length - 1]!; };
+  const out: BoothType[] = [];
+  for (let i = 0; i < n; i++) {
+    let t = draw();
+    for (let tries = 0; tries < 5 && t === out[i - 1]; tries++) t = draw();
+    if (t === out[i - 1]) t = BOOTH_TYPES[(BOOTH_TYPES.indexOf(t) + 1) % BOOTH_TYPES.length]!;
+    out.push(t);
+  }
+  return out;
+}
+
+/** Row of varied booths along the shore. `types` (one per slot) replaces the draw; the tones always come from `rng`. */
+export function boothRow(out: Solid[], accents: Accent[], rng: Rng, types: BoothType[] = boothTypes(rng)): void {
+  boothSlots().forEach(({ x, y }, k) => {
+    const type = types[k]!, cx = x + 2, cy = y + 1.5;
+    let face = y + 3, dotY: number | null = null, signX = cx; // south face where the sign hangs
+    switch (type) {
+      case "food": {
+        out.push(prism(x, y, 0, 4, 3, 2.8, rng.pick(BOOTH_TONES), { roof: "gable" }));
+        const first = rng.chance(0.5);
+        for (let i = 0; i < 2; i++) out.push({ kind: "ramp", at: v3(x + i * 2, y + 3, 1.8), w: 2, d: 0.8, h: 0.4, mat: (i === 0) === first ? "signal" : "whitewash", dir: "s" });
+        break;
+      }
+      case "foodTruck": {
+        const t = foodTruck(v3(x + 1, y - 1, 0), rng.pick(TRUCK_TONES), "e");
+        out.push(...t.solids); accents.push(...t.accents); face = y + 4; signX = x + 2.2;
+        break;
+      }
+      case "shooting":
+        out.push(prism(x, y, 0, 4, 3, 2.6, "rust"));
+        for (let i = 0; i < 4; i++) out.push(prism(x + 0.5 + i * 0.9, y + 1.3, 2.6, 0.4, 0.4, 0.4, "safety"));
+        break;
+      case "cottonCandy":
+        out.push(cyl(cx, cy, 0, 1.5, 2.5, "whitewash"), cone(cx, cy, 2.5, 1.8, 1.2, "signal"));
+        break;
+      case "fortune":
+        out.push(cone(cx, cy, 0, 2, 3.5, "copper")); face = cy + 1.15; dotY = cy + 0.5;
+        break;
+      case "tickets":
+        out.push(prism(x + 1, y + 0.5, 0, 2, 2, 2.8, rng.pick(BOOTH_TONES), { roof: "gable" })); face = y + 2.5;
+        break;
+      case "rings":
+        out.push(prism(x, y, 0, 4, 3, 0.8, "deck"), prism(x + 0.4, y + 2.8, 0.8, 3.2, 0.2, 1.4, "rust"));
+        for (let i = 0; i < 6; i++) out.push(cyl(x + 0.5 + i * 0.6, y + 0.8, 0.8, 0.15, 1.2, "steel"));
+        for (let i = 0; i < 3; i++) out.push(cyl(x + 0.8 + i * 1.2, y + 1.9, 0.8, 0.5, 0.6, "rust"));
+        break;
+    }
+    accents.push(sign(signX - 1.2, signX + 1.2, face + 0.02, 1.2, 2, "amber"));
+    accents.push(dot(signX, dotY ?? face + 0.2, 2.9, 0.4, type === "fortune" || k % 3 === 2 ? "magenta" : "cyan"));
+  });
 }
 
 function bumperCars(out: Solid[], accents: Accent[]): void {
@@ -333,10 +397,10 @@ export function fair(rng: Rng, opts: { legacyOnly?: boolean } = {}): FairScene {
   carousel(solids, accents);
   dropTower(solids, accents);
   const arcadeSigns = arcade(solids);
-  booths(solids, accents);
   bumperCars(solids, accents);
   if (!opts.legacyOnly) { ghostTrain(solids, accents); mirrorHouse(solids, accents); slide(solids, accents); flume(solids, accents); }
   beach(solids, rng); // after the static solids: the boats look for free space among them
+  if (!opts.legacyOnly) boothRow(solids, accents, rng); // after the beach: its rng sequence (and the pinned boats) do not move
   gate(solids, accents);
   const drop = { at: v3(DROP.x, DROP.y, 1), h: DROP.h };
   return { ground: [], solids, accents, wheelAxis: v3(WHEEL.x, WHEEL.y, WHEEL.hub), drop, neon: neon(drop), arcadeSigns };
