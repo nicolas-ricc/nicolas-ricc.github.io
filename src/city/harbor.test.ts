@@ -145,8 +145,8 @@ describe("inlet works", () => {
     const onSouthWall = (s: Solid) => s.kind === "prism" && s.at.y >= 114 - EPS && s.at.y + s.d <= 115 + EPS && Math.abs(s.at.z - 0.5) < EPS;
     expect(solids.filter((s) => isPrism(s, "rust", 2, 1, 0.4) && onSouthWall(s))).toHaveLength(3);
     expect(solids.filter((s) => isPrism(s, "deck", 1, 1, 0.8) && onSouthWall(s)).length).toBeGreaterThanOrEqual(2);
-    const crane = JSON.stringify(dockCrane(v3(298, 95, 0.5), "w"));
-    for (const c of JSON.parse(crane) as Solid[]) expect(solids.map((s) => JSON.stringify(s))).toContain(JSON.stringify(c));
+    const placed = solids.map((s) => JSON.stringify(s));
+    for (const c of dockCrane(v3(298, 95, 0.5), "w")) expect(placed).toContain(JSON.stringify(c));
     const posts = solids.filter((s) => isPrism(s, "steel", 0.6, 0.6, 5)).map((s) => (s.kind === "prism" ? `${s.at.x},${s.at.y},${s.at.z}` : ""));
     expect(posts.sort()).toEqual(["283,115.2,0", "299,94,0"]);
     expect(accents.filter((a) => a.kind === "dot" && a.color === "amber")).toHaveLength(2);
