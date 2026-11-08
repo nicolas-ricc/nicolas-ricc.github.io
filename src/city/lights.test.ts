@@ -8,10 +8,11 @@ import { blocks } from "../scenes/city-grid";
 import { city, type CityScene, type PlacedPiece } from "../scenes/city";
 import { zoneRng } from "../scenes/world";
 import { SEED } from "../map/seed";
-import { lightBox, lights, MAX_ANIMABLE, MAX_NEONS, WINDOW_ALPHA } from "./lights";
+import { lightBox, lights, MAX_ANIMABLE, NEON_CAPS, WINDOW_ALPHA } from "./lights";
 import { CATALOGUE, type Neighborhood } from "./zoning";
 
 const NEIGHBORHOODS = Object.keys(CATALOGUE) as Neighborhood[];
+const CAPPED = Object.keys(NEON_CAPS) as Neighborhood[];
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number): Solid => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat: "plaster" });
 const quad = (x0: number, x1: number, y: number, z0: number, z1: number): Vec3[] => [v3(x0, y, z0), v3(x1, y, z0), v3(x1, y, z1), v3(x0, y, z1)];
 const emptyPiece = (): Piece => ({ solids: [], ground: [], accents: [], windows: [], slots: [], walls: [] });
@@ -40,7 +41,7 @@ for (const [name, make, isWorld] of SEEDS) {
       const on = l.windows.filter((w) => w.on);
       expect(on.length).toBeGreaterThan(100);
       for (const w of on) expect(hidden(lightBox(w.window.pts), bs, hs, ownSolid(w))).toBe(false);
-    }, 10_000); // ~1.8 s alone since the strip blocks of #320; the full parallel suite stretches it past the default 5 s
+    }, 20_000); // ~1.9 s alone since the strip blocks of #320 and the warehouses of #325; the full parallel suite stretched it past 10 s
 
     it("no neon is hidden by a solid (brute-force oracle)", () => {
       for (const n of l.neons) expect(hidden(lightBox(n.slot.pts), bs, hs)).toBe(false);
@@ -86,13 +87,13 @@ for (const [name, make, isWorld] of SEEDS) {
       for (const w of anim) expect(["downtown", "residential"]).toContain(s.placed[w.owner]!.placed.neighborhood);
     });
 
-    it("neons: only in bars, ≤ 24, open frontage, one per shop, z 2.4..3.6 above the lot, colors with their halos and puddle", () => {
-      expect(l.neons.length).toBeLessThanOrEqual(MAX_NEONS);
+    it("neons: only in capped neighborhoods (bars ≤ 24, warehouses ≤ 10), open frontage, one per shop, z 2.4..3.6 above the lot, colors with their halos and puddle", () => {
+      for (const b of NEIGHBORHOODS) expect(l.neons.filter((n) => s.placed[n.owner]!.placed.neighborhood === b).length, b).toBeLessThanOrEqual(NEON_CAPS[b] ?? 0);
       if (isWorld) expect(l.neons.length).toBeGreaterThanOrEqual(3);
       const seen = new Set<string>();
       for (const n of l.neons) {
         const p = s.placed[n.owner]!;
-        expect(p.placed.neighborhood).toBe("bars");
+        expect(CAPPED).toContain(p.placed.neighborhood);
         expect(n.slot.kind).toBe("neon");
         expect(p.piece.slots).toContain(n.slot);
         expect(p.placed.lot.open).toContain(n.slot.side);
@@ -128,12 +129,16 @@ for (const [name, make, isWorld] of SEEDS) {
       });
     });
 
-    it("flicker is a valid index into neons (or null without neons) and the chosen neon is in bars", () => {
+    if (!isWorld) it("fixed seed (7, 8, 9; the world seed draws no brewery): at least one warehouses neon (#325)", () => {
+      expect(l.neons.filter((n) => s.placed[n.owner]!.placed.neighborhood === "warehouses").length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("flicker is a valid index into neons (or null without neons) and the chosen neon is in a capped neighborhood", () => {
       if (l.neons.length === 0) { expect(l.flicker).toBeNull(); return; }
       expect(Number.isInteger(l.flicker)).toBe(true);
       expect(l.flicker!).toBeGreaterThanOrEqual(0);
       expect(l.flicker!).toBeLessThan(l.neons.length);
-      expect(s.placed[l.neons[l.flicker!]!.owner]!.placed.neighborhood).toBe("bars");
+      expect(CAPPED).toContain(s.placed[l.neons[l.flicker!]!.owner]!.placed.neighborhood);
     });
 
     it("the static lit windows, the neons except the flickering one and the bathed ones go to scene.accents", () => {
@@ -201,8 +206,29 @@ describe("lights (synthetic scenes)", () => {
     for (let k = 0; k < 30; k++) a.slots.push(neonSlot(k * 4, k));
     a.slots.push(neonSlot(1, 0)); // second slot of shop 0: doesn't count
     const l = lights({ solids: a.solids, placed: [placedAt("bars", a, 0)] }, createRng(3));
-    expect(l.neons).toHaveLength(MAX_NEONS);
-    expect(new Set(l.neons.map((n) => n.slot.shop)).size).toBe(MAX_NEONS);
+    expect(l.neons).toHaveLength(24);
+    expect(new Set(l.neons.map((n) => n.slot.shop)).size).toBe(24);
+  });
+
+  it("neon caps per neighborhood (#325): bars 24 and warehouses 10, sampled separately", () => {
+    expect(NEON_CAPS).toEqual({ bars: 24, warehouses: 10 });
+    const bars = emptyPiece(), sheds = emptyPiece();
+    bars.solids.push(prism(0, 0, 0.3, 120, 18, 6));
+    for (let k = 0; k < 30; k++) bars.slots.push(neonSlot(k * 4, k));
+    sheds.solids.push(prism(0, 0, 0.3, 60, 18, 6));
+    for (let k = 0; k < 15; k++) sheds.slots.push(neonSlot(k * 4, k));
+    const l = lights({ solids: [...bars.solids, ...sheds.solids], placed: [placedAt("bars", bars, 0), placedAt("warehouses", sheds, 1)] }, createRng(3));
+    const of = (owner: number) => l.neons.filter((n) => n.owner === owner);
+    expect(of(0)).toHaveLength(24);
+    expect(of(1)).toHaveLength(10);
+    expect(new Set(of(1).map((n) => n.slot.shop)).size).toBe(10);
+  });
+
+  it("neons: a neighborhood without a cap gets none, even with open slots (#325)", () => {
+    const a = emptyPiece();
+    a.solids.push(prism(0, 0, 0.3, 40, 18, 6));
+    for (let k = 0; k < 5; k++) a.slots.push(neonSlot(k * 4, k));
+    expect(lights({ solids: a.solids, placed: [placedAt("downtown", a, 0)] }, createRng(3)).neons).toEqual([]);
   });
 
   it("neons: slots outside 2.4..3.6 above the lot, those on closed sides, those of another neighborhood and signs are discarded", () => {

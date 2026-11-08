@@ -10,7 +10,7 @@ import { CATALOGUE, type Neighborhood } from "./zoning";
 
 /**
  * Resume lights (spec §7, issue #45): which windows light up (with an exact
- * quota per neighborhood), which are animatable, the neons of the bar street and
+ * quota per neighborhood), which are animatable, the neons of the bar street and the breweries (capped per neighborhood) and
  * the bathed facades of the civic buildings. Pure module: city.ts pours the result.
  * What is hidden is decided with `hides` (silhouette on screen) and is not published.
  */
@@ -19,7 +19,8 @@ export interface StreetNeon { accents: Accent[]; color: "amber" | "magenta" | "c
 export interface CityLights { windows: LitWindow[]; neons: StreetNeon[]; flicker: number | null; bathed: Accent[]; counts: Record<Neighborhood, { candidates: number; on: number; warm: number }> }
 
 export const MAX_ANIMABLE = 40;
-export const MAX_NEONS = 24;
+/** Neon cap per neighborhood; only these neighborhoods carry neons. Key order is the sampling order. */
+export const NEON_CAPS: Partial<Record<Neighborhood, number>> = { bars: 24, warehouses: 10 };
 export const WINDOW_ALPHA = 0.85;
 const PAD = 0.05;
 const NEON_Z = [2.4, 3.6] as const;
@@ -88,11 +89,11 @@ export function lights(scene: Pick<CityScene, "solids" | "placed">, rng: Rng): C
   }
   for (const w of sample(windows.filter((w) => ["downtown", "residential"].includes(scene.placed[w.owner]!.placed.neighborhood)), MAX_ANIMABLE, rng)) w.animable = true;
 
-  // Neons of the bars neighborhood: open frontage, 2.4..3.6 above the lot, in view and one per shop
+  // Neons of the capped neighborhoods (NEON_CAPS): open frontage, 2.4..3.6 above the lot, in view and one per shop
   // (deduplicated after occlusion: if the front of a corner shop is hidden, its other side counts).
   const slots: { slot: Slot; owner: number }[] = [];
   scene.placed.forEach((p, owner) => {
-    if (p.placed.neighborhood !== "bars") return;
+    if (NEON_CAPS[p.placed.neighborhood] === undefined) return;
     for (const slot of p.piece.slots) {
       if (slot.kind !== "neon" || !p.placed.lot.open.includes(slot.side)) continue;
       if (slot.pts.every((q) => q.z - p.placed.lot.z >= NEON_Z[0] - EPS && q.z - p.placed.lot.z <= NEON_Z[1] + EPS)) slots.push({ slot, owner });
@@ -105,7 +106,10 @@ export function lights(scene: Pick<CityScene, "solids" | "placed">, rng: Rng): C
     seen.add(key);
     return true;
   });
-  if (free.length > MAX_NEONS) { const pick = new Set(sample(free, MAX_NEONS, rng)); free = free.filter((s) => pick.has(s)); }
+  for (const b of Object.keys(NEON_CAPS) as Neighborhood[]) {
+    const cap = NEON_CAPS[b]!, ofB = free.filter((s) => scene.placed[s.owner]!.placed.neighborhood === b);
+    if (ofB.length > cap) { const pick = new Set(sample(ofB, cap, rng)); free = free.filter((s) => scene.placed[s.owner]!.placed.neighborhood !== b || pick.has(s)); }
+  }
   const neons: StreetNeon[] = free.map(({ slot, owner }) => {
     const r = rng.next() * 100, color = r < 50 ? "amber" : r < 80 ? "magenta" : "cyan";
     const c = centroid(slot.pts);

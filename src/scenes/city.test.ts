@@ -34,7 +34,10 @@ const isTowerPiece = (s: Solid) => {
 // the south row in front of the tower: PLAZA.x - 6 .. PLAZA.x + PLAZA.w + 6, the band that the controller's ruling caps at 10
 const ROW_SOUTH = ROWS[4], FRONT_X0 = PLAZA.x - 6, FRONT_X1 = PLAZA.x + PLAZA.w + 6;
 
-const CITY_MATS: readonly Material[] = ["office", "officeDark", "glass", "asphalt", "paving", "plaza", "curtain", "stone", "copper", "leaf", "leafDark", "water", "steel", "rust", "plaster", "terracotta", "marble", "awning", "deck", "rail", "brick", "sheetTeal", "concrete", "hull", "whitewash", "rock"];
+const CITY_MATS: readonly Material[] = ["office", "officeDark", "glass", "asphalt", "paving", "plaza", "curtain", "stone", "copper", "leaf", "leafDark", "water", "steel", "rust", "plaster", "terracotta", "marble", "awning", "deck", "rail",
+  "brick", "sheetTeal", "concrete", "hull", "whitewash", "rock", // dock inlet (#326)
+  // warehouses and freight yard (#325): reconversion kit, containers and the dock
+  "sheetGreen", "boxRust", "boxBlue", "boxGrey", "boxGreen", "boxOrange"];
 
 describe("city", () => {
   it("is deterministic per seed", () => {
@@ -49,7 +52,7 @@ describe("city", () => {
       expect(b.max.y).toBeLessThanOrEqual(WORLD.y1 + 1);
       if (s.kind !== "cone") expect(b.min.y).toBeGreaterThanOrEqual(ZONE_SPLIT_Y - 1);
       expect(CITY_MATS).toContain(s.mat);
-      if (s.mat === "steel" || s.mat === "rust") expect(["prism", "cylinder", "vault"]).toContain(s.kind); // only furniture, cars and the quay sheds
+      if (s.mat === "steel" || s.mat === "rust") expect(["prism", "cylinder", "vault", "beam"]).toContain(s.kind); // only furniture, cars, the quay sheds and the derelict hall's trusses
     }
     const mats = new Set(all(scene()).map((s) => s.mat));
     for (const m of ["plaster", "terracotta", "marble", "awning"] as const) expect(mats.has(m)).toBe(true);
@@ -69,15 +72,24 @@ describe("city", () => {
     }
   });
 
-  it("freight lots (#320): one 24 × 13 paving plinth each and nothing else on them but the level-crossing posts", () => {
+  it("freight lots (#325): a freightShed or openDock each, a 24 × 13 paving plinth only under the sheds", () => {
     const s = scene(), lots = blocks().filter((b) => b.kind === "freight");
     const plinths = s.solids.filter((x) => x.kind === "prism" && x.mat === "paving" && x.h === PLINTH_H && x.at.z === 0 && x.w === 24 && x.d === FREIGHT_ROW.d);
-    expect(plinths.map((x) => x.kind === "prism" && `${x.at.x},${x.at.y}`)).toEqual(lots.map((b) => `${b.x},${b.y}`));
-    for (const x of s.solids) {
-      const b = bounds(x), lot = lots.find((l) => inRect(b, l));
-      if (!lot || plinths.includes(x)) continue;
-      expect(x.kind === "prism" && x.mat === "steel" && x.w === 0.3 && x.d === 0.3, JSON.stringify(x).slice(0, 120)).toBe(true); // north post of a level crossing
-    }
+    const placed = lots.map((b) => s.placed.find((p) => p.placed.block.x === b.x && p.placed.block.y === b.y)!);
+    for (const p of placed) expect(["freightShed", "openDock"]).toContain(p.placed.recipe);
+    const sheds = placed.filter((p) => p.placed.recipe === "freightShed").map((p) => `${p.placed.block.x},${p.placed.block.y}`);
+    expect(plinths.map((x) => x.kind === "prism" && `${x.at.x},${x.at.y}`)).toEqual(sheds);
+  });
+
+  it("the covered market stands on (72, 92): steel 0.4² pillars, stalls inside, everything within its lot (+0.8 awnings) (#325)", () => {
+    const s = scene(), m = s.placed.find((p) => p.placed.block.x === 72 && p.placed.block.y === ROWS[0])!;
+    expect(m.placed.recipe).toBe("coveredMarket");
+    const own = s.solids.slice(m.solidOffset, m.solidOffset + m.piece.solids.length);
+    expect(own.filter((q) => q.kind === "prism" && q.mat === "steel" && q.w === 0.4 && q.d === 0.4).length).toBeGreaterThanOrEqual(4);
+    expect(own.filter((q) => q.kind === "prism" && q.h === 1.8).length).toBeGreaterThanOrEqual(6);
+    const lot = m.placed.lot;
+    expect(lot).toMatchObject({ x: 73.5, y: 93.5, w: 21, d: 15 });
+    for (const q of own) expect(inRect(bounds(q), { x: lot.x - 0.8, y: lot.y - 0.8, w: lot.w + 1.6, d: lot.d + 1.6 }), JSON.stringify(q).slice(0, 100)).toBe(true);
   });
 
   it("no car on the railyards or the freight lots (#320)", () => {
@@ -188,7 +200,8 @@ describe("city", () => {
     for (const l of lamps) {
       if (l.kind !== "dot") continue;
       const onAvenue = l.at.y >= AVENUE.y0 - 3 && l.at.y <= AVENUE.y1 + 3, onPromenade = l.at.x >= PROMENADE.x0, onPlaza = inRect({ min: l.at, max: l.at }, PLAZA), onInlet = l.at.x >= DARSENA.x0 - 2 && l.at.x <= DARSENA.x1 + 2 && l.at.y >= DARSENA.y0 - 2 && l.at.y <= DARSENA.y1 + 2; // the two lamps of the inlet walls (#326)
-      expect(onAvenue || onPromenade || onPlaza || onInlet || inFootbridge(l.at.x, l.at.y) || inBlockXY(l.at.x, l.at.y)).toBe(true); // the kit recipes bring their own lights (construction site, helipad, beacon, station lamps)
+      const onYard = l.at.y === 150.3 && [-39.7, 0.3, 40.3, 80.3].includes(l.at.x); // the four lamps of the freight yard (#325)
+      expect(onAvenue || onPromenade || onPlaza || onInlet || onYard || inFootbridge(l.at.x, l.at.y) || inBlockXY(l.at.x, l.at.y)).toBe(true); // the kit recipes bring their own lights (construction site, helipad, beacon, station lamps)
     }
   });
 
@@ -229,7 +242,7 @@ describe("city", () => {
 
   it("cars: a single size, they do not fall on a block or a crater, and none overlaps another", () => {
     const s = scene();
-    const cars = s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism" && (x.mat === "steel" || x.mat === "rust") && x.h === 1.2 && !(x.at.x === MARKET_SCALE.x && x.at.y === MARKET_SCALE.y && x.w === MARKET_SCALE.w)); // not the fish market scale (#326)
+    const cars = s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism" && (x.mat === "steel" || x.mat === "rust") && x.h === 1.2 && !(x.at.x === MARKET_SCALE.x && x.at.y === MARKET_SCALE.y && x.w === MARKET_SCALE.w) && !(x.w === 1.5 && x.d === 3)); // not the fish market scale (#326) nor the buffer stop of the siding (#325)
     expect(cars.length).toBeGreaterThanOrEqual(20);
     expect(new Set(cars.map((c) => `${c.w}x${c.d}x${c.h}`))).toEqual(new Set([`${CAR.w}x${CAR.d}x1.2`]));
     for (const c of cars) {
@@ -245,7 +258,7 @@ describe("city", () => {
 
   it("the main line crosses the strip: two rails and a ballast bed from WORLD.x0 to the station land (#319)", () => {
     const rails = scene().ground.filter((g) => g.kind === "strip" && g.mat === "rail");
-    expect(rails.filter((g) => g.kind === "strip" && g.width === 0.5).map((g) => g.kind === "strip" && g.path[0]!.y).sort()).toEqual([131, 134]);
+    expect(rails.filter((g) => g.kind === "strip" && g.width === 0.5 && g.path[0]!.x === WORLD.x0).map((g) => g.kind === "strip" && g.path[0]!.y).sort()).toEqual([131, 134]);
     expect(rails.some((g) => g.kind === "strip" && g.width === 5)).toBe(true);
   });
 

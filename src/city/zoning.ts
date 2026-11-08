@@ -40,10 +40,12 @@ const CIVIC = [[72, 218], [162, 218], [42, 242]] as const;
 const DOWNTOWN = [[72, 164], [72, 188], [42, 218], [72, 242], [102, 242], [132, 242], [162, 242]] as const;
 const isAt = (b: Block, cells: readonly (readonly [number, number])[]): boolean => cells.some(([x, y]) => b.x === x && b.y === y);
 
-/** Neighborhood of a block: district and construction site, civic plaza, harbor (the two east blocks beside the dock inlet), east bank (collapse included: fixed.ts draws it), dock, civic, downtown and the rest residential. */
+/** Neighborhood of a block: district and construction site, civic plaza, freight lots, row 92 warehouses, harbor (the two east blocks beside the dock inlet), east bank (collapse included: fixed.ts draws it), dock, civic, downtown and the rest residential. */
 export function neighborhoodOf(b: Block): Neighborhood {
   if (b.kind === "district" || b.kind === "site") return "district";
   if (b.kind === "plaza") return "civic";
+  if (b.kind === "freight") return "freight";
+  if (b.y === ROWS[0]) return "warehouses";
   if (b.bank === "east" && b.row === -1) return "harbor";
   if (b.bank === "east") return "riverside";
   if (BARS_X.includes(b.x) && BARS_Y.includes(b.y)) return "bars";
@@ -70,12 +72,17 @@ export const CATALOGUE = {
 
 /** Water-tower block: a residential courtyard to which fixed.ts adds the tower. */
 export const WATER_TOWER_BLOCK = { x: 12, y: 164 } as const;
-/** Blocks with a fixed recipe (market, fish market, food hall, station, civic buildings and the construction site). */
+/** Covered market block: fixed, its front toward the station street (east). */
+export const COVERED_MARKET_BLOCK = { x: 72, y: ROWS[0] } as const;
+/** Blocks with a fixed recipe (markets, fish market, food hall, station, civic buildings and the construction site). */
 export const FIXED: readonly { x: number; y: number; recipe: string }[] = [
   { x: -18, y: 188, recipe: "station" }, { x: 280, y: 188, recipe: "market" }, { x: 280, y: 116, recipe: "fishMarket" }, { x: 280, y: 140, recipe: "foodHall" }, { x: 72, y: 218, recipe: "theatre" },
   { x: 162, y: 218, recipe: "civicPalace" }, { x: 42, y: 242, recipe: "library" }, { x: SITE.x, y: SITE.y, recipe: "constructionSite" },
-  { ...WATER_TOWER_BLOCK, recipe: "patioResidential" },
+  { ...WATER_TOWER_BLOCK, recipe: "patioResidential" }, { ...COVERED_MARKET_BLOCK, recipe: "coveredMarket" },
 ];
+
+/** Harbor block with no fixed recipe: it gets only the plinth (city.ts), no building. */
+export const isBare = (b: Block): boolean => neighborhoodOf(b) === "harbor" && !FIXED.some((f) => f.x === b.x && f.y === b.y);
 
 /** Cap of the row facing the plaza: a tall building there would hide the tower's lit floor or the fountain (fixed.ts). */
 export const maxHeightFor = (b: Block, top = MAX_BUILDING_H): number => (b.y === PLAZA.y + PLAZA.d + STREET && b.x >= 96 && b.x + b.w <= 186 ? FRONT_CAP_H : top);
@@ -95,8 +102,10 @@ export function openSides(b: Block): Side[] {
   const out: Side[] = [];
   if (b.y + b.d === AVENUE.y0) out.push("s");
   if (b.y === AVENUE.y1) out.push("n");
+  if (b.x === COVERED_MARKET_BLOCK.x && b.y === COVERED_MARKET_BLOCK.y) out.push("e"); // covered market: front toward the station street
   if (b.y === ROWS[0] && !out.includes("s")) out.push("s");                                  // row 92 faces the freight lots and the main line
   if (b.x === EAST_COLS[0] && b.y === FREIGHT_ROW.y && !out.includes("n")) out.push("n");   // east block at the north end of the strip
+  if (b.kind === "freight" && !out.includes("s")) out.push("s");                             // freight lots face the main line
   if (b.x + b.w + STREET === WEST_QUAY.x0) out.push("e");
   if (b.bank === "east" && b.x === EAST_COLS[0]) out.push("w");
   const plaza = facing(b, PLAZA);
@@ -105,7 +114,7 @@ export function openSides(b: Block): Side[] {
 }
 
 /** Recipes that bring their own plinth: they do not rest on the block's. */
-export const NO_PLINTH: readonly string[] = ["eatenRuin", "campus"];
+export const NO_PLINTH: readonly string[] = ["eatenRuin", "campus", "openDock"];
 
 /** Weighted recipe with a single draw from `rng`. */
 function pick(rng: Rng, recipes: readonly { name: string; weight: number }[]): string {
@@ -122,7 +131,7 @@ export interface Placed { block: Block; neighborhood: Neighborhood; recipe: stri
 
 /**
  * Assigns a recipe to each block in the order of `blocks()`. Skips the plaza and the
- * collapse (fixed.ts draws them). Fixed ones take their recipe without drawing; the
+ * collapse (fixed.ts draws them) and the bare blocks (`isBare`: city.ts gives them only a plinth). Fixed ones take their recipe without drawing; the
  * district draws with `districtRng` (its sequence doesn't change if another neighborhood's does) and the
  * rest with `rng`. Residential retries up to 5 times if it repeats the recipe
  * of an already assigned adjacent block.
@@ -130,7 +139,7 @@ export interface Placed { block: Block; neighborhood: Neighborhood; recipe: stri
 export function assign(rng: Rng, districtRng: Rng): Placed[] {
   const out: Placed[] = [];
   for (const b of blocks()) {
-    if (b.kind === "plaza" || b.kind === "collapsed" || b.kind === "freight") continue;
+    if (b.kind === "plaza" || b.kind === "collapsed" || isBare(b)) continue;
     const neighborhood = neighborhoodOf(b), fixed = FIXED.find((f) => f.x === b.x && f.y === b.y);
     const r = neighborhood === "district" ? districtRng : rng;
     let recipe = fixed?.recipe ?? pick(r, CATALOGUE[neighborhood].recipes);

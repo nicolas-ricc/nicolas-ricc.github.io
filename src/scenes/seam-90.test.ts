@@ -196,15 +196,16 @@ describe("Resume after the seam (#319)", () => {
     expect(sleepers.map((p) => p.at.x)).toEqual(Array.from({ length: 39 }, (_, i) => -58 + 4 * i).filter((x) => ![-22, 6, 10, 38, 66, 70].includes(x))); // none under the four level crossings (#320)
   });
 
-  it("the new strip west of the station holds only what #320 allows: row 92 and freight blocks with their buildings, cars, rail lands", () => {
+  it("the new strip west of the station holds only what #320 allows: row 92 and freight blocks with their buildings, cars, rail lands, freight yard", () => {
     const strip = blocks().filter((k) => k.x + k.w <= STATION_LAND.x0 && k.y >= 90 && k.y < 164);
     const inBlock = (b: Bounds) => strip.some((k) => b.min.x >= k.x - 0.5 && b.max.x <= k.x + k.w + 0.5 && b.min.y >= k.y - 0.5 && b.max.y <= k.y + k.d + 0.5);
     const isCar = (s: Solid) => s.kind === "prism" && s.w === CAR.w && s.d === CAR.d && s.h === 1.2;
     const onRails = (b: Bounds) => b.min.y >= 128 && b.max.y <= 138.2 && b.max.z <= 3; // (south post ends at 137.8 + 0.3 = 138.1) main line, sleepers, fences, crossings, posts
+    const onYard = (b: Bounds) => b.min.y >= 136 && b.max.y <= 157.5 && b.max.x <= 94 && b.max.z <= 5; // freight yard (#325): siding, train, dock, trucks, containers, lamps
     for (const s of raised(ci.solids)) {
       const b = bounds(s);
       if (b.min.x >= STATION_LAND.x0 || b.max.y > 158 || b.min.y < 90) continue;
-      expect(inBlock(b) || isCar(s) || onRails(b), `${s.kind}/${s.mat} ${b.min.x},${b.min.y}`).toBe(true);
+      expect(inBlock(b) || isCar(s) || onRails(b) || onYard(b), `${s.kind}/${s.mat} ${b.min.x},${b.min.y}`).toBe(true);
     }
   });
 
