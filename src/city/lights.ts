@@ -57,8 +57,10 @@ function occluded(ts: Target[], { boxes, sbs, hulls }: Boxes): boolean[] {
 }
 
 /** `true` if the point lies on or inside the box of a solid other than `own` (x/y with contact, z strictly inside). */
-const covered = (c: Vec3, own: number, boxes: Bounds[]): boolean =>
-  boxes.some((b, i) => i !== own && b.min.x - EPS <= c.x && c.x <= b.max.x + EPS && b.min.y - EPS <= c.y && c.y <= b.max.y + EPS && b.min.z + EPS < c.z && c.z < b.max.z - EPS);
+const covered = (c: Vec3, own: number, boxes: Bounds[]): boolean => boxes.some((b, i) => {
+  const inXY = b.min.x - EPS <= c.x && c.x <= b.max.x + EPS && b.min.y - EPS <= c.y && c.y <= b.max.y + EPS;
+  return i !== own && inXY && b.min.z + EPS < c.z && c.z < b.max.z - EPS;
+});
 
 /** Sampling without replacement of `k` elements (partial Fisher–Yates) with the rng. */
 function sample<T>(xs: T[], k: number, rng: Rng): T[] {
@@ -75,14 +77,12 @@ export function lights(scene: Pick<CityScene, "solids" | "placed">, rng: Rng): C
   const cands: { window: Window; owner: number }[] = [], ts: Target[] = [];
   scene.placed.forEach((p, owner) => p.piece.windows.forEach((window) => { cands.push({ window, owner }); ts.push(target(window.pts, p.solidOffset + window.building)); }));
   const hid = occluded(ts, solids);
-  const vis = cands.filter((_, i) => !hid[i]), own = ts.filter((_, i) => !hid[i]).map((t) => t.own);
-  const drawn = vis.map(() => rng.next());
-  // Covered windows are dropped after drawing, each free window keeps its key.
-  const keep = vis.map((c, i) => !covered(centroid(c.window.pts), own[i]!, boxes));
-  const keys = drawn.filter((_, i) => keep[i]);
+  const vis = cands.flatMap((c, i) => (hid[i] ? [] : [{ ...c, own: ts[i]!.own, key: rng.next() }]));
+  // Covered windows are dropped after drawing, so each free window keeps its key.
+  const kept = vis.filter((v) => !covered(centroid(v.window.pts), v.own, boxes)), keys = kept.map((v) => v.key);
 
   // Exact quota per neighborhood: by key, the first `on` light up and the warm proportion is split between lit and unlit.
-  const windows: LitWindow[] = vis.filter((_, i) => keep[i]).map((c) => ({ ...c, color: "windowCool", on: false, animable: false }));
+  const windows: LitWindow[] = kept.map(({ window, owner }) => ({ window, owner, color: "windowCool", on: false, animable: false }));
   for (const b of neighborhoods) {
     const idx = windows.map((_, i) => i).filter((i) => scene.placed[windows[i]!.owner]!.placed.neighborhood === b).sort((i, j) => keys[i]! - keys[j]!);
     const n = idx.length, { on, warm } = CATALOGUE[b].lights;
@@ -102,7 +102,8 @@ export function lights(scene: Pick<CityScene, "solids" | "placed">, rng: Rng): C
   scene.placed.forEach((p, owner) => {
     if (p.placed.neighborhood !== "bars") return;
     for (const slot of p.piece.slots) {
-      if (slot.kind !== "neon" || !p.placed.lot.open.includes(slot.side) || (slot.wall.x <= 0 && slot.wall.y <= 0)) continue;
+      if (slot.kind !== "neon" || !p.placed.lot.open.includes(slot.side)) continue;
+      if (slot.wall.x <= 0 && slot.wall.y <= 0) continue; // the wall faces away from the camera
       if (slot.pts.every((q) => q.z - p.placed.lot.z >= NEON_Z[0] - EPS && q.z - p.placed.lot.z <= NEON_Z[1] + EPS)) slots.push({ slot, owner });
     }
   });

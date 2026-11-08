@@ -205,6 +205,17 @@ describe("lights (synthetic scenes)", () => {
     expect(l.counts.downtown.candidates).toBe(1);
   });
 
+  it("a touching solid of another piece covers the window; one whose top only reaches the window's centroid does not", () => {
+    const a = emptyPiece(), b = emptyPiece();
+    a.solids.push(prism(0, 0, 0, 12, 10, 10));
+    const win = (x0: number, x1: number): Window => ({ pts: quad(x0, x1, 10, 2, 4), floor: 0, wall: v3(0, 1, 0), building: 0 });
+    const low = win(8, 10);
+    a.windows.push(win(1, 3), low);
+    b.solids.push(prism(0, 10, 0, 4, 4, 10), prism(6, 10, 0, 6, 4, 3)); // tall neighbour on x 0..4; low wall on x 6..12 with top at z 3 = centroid z
+    const l = lights({ solids: [...a.solids, ...b.solids], placed: [placedAt("downtown", a, 0), placedAt("downtown", b, 1)] }, createRng(1));
+    expect(l.windows.map((w) => w.window)).toEqual([low]);
+  });
+
   const neonSlot = (x: number, shop: number, z0 = 2.7): Slot => ({ pts: quad(x, x + 2, 18, z0, z0 + 1.2), wall: v3(0, 1, 0), side: "s", kind: "neon", shop });
 
   it("neons: at most 24 even with 30 open slots, and one per shop", () => {
