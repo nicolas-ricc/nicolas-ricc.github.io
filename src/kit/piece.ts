@@ -1,7 +1,9 @@
 import { v3, type Vec3 } from "../iso/geometry";
 import { facadeWindows, type Facade } from "../iso/facade";
 import { bounds, visibleWalls, type Solid } from "../iso/solids";
-import type { Lot, Piece, Slot, Style } from "./types";
+import type { Rng } from "../map/seed";
+import { PLINTH_H } from "../scenes/city-pieces";
+import type { Lot, Piece, Recipe, Slot, Style } from "./types";
 
 /** Height cap above `lot.z` for a common recipe and for a `landmark`. */
 export const RECIPE_MAX_H = 18;
@@ -66,4 +68,36 @@ export function fitToCap(p: Piece, lot: Lot): Piece {
     slots: p.slots.map((s) => ({ ...s, pts: s.pts.map(P) })),
     ...(p.landmarkTop ? { landmarkTop: P(p.landmarkTop) } : {}),
   };
+}
+
+/** Piece with every z raised by `dz`; heights, normals (`wall`, `Wall.normal`) and `courtyard` unchanged. */
+export function liftPiece(p: Piece, dz: number): Piece {
+  const P = (q: Vec3): Vec3 => v3(q.x, q.y, q.z + dz);
+  const solid = (s: Solid): Solid => {
+    switch (s.kind) {
+      case "poly": case "strip": return { ...s, z: s.z + dz };
+      case "ground": return { ...s, tris: s.tris.map((t) => ({ ...t, pts: [P(t.pts[0]), P(t.pts[1]), P(t.pts[2])] })) };
+      case "wheel": return { ...s, at: P(s.at) };
+      case "beam": return { ...s, from: P(s.from), to: P(s.to) };
+      default: return { ...s, at: P(s.at) };
+    }
+  };
+  return {
+    ...p,
+    solids: p.solids.map(solid),
+    ground: p.ground.map(solid),
+    accents: p.accents.map((a) => (a.kind === "dot" ? { ...a, at: P(a.at) } : { ...a, pts: a.pts.map(P) })),
+    windows: p.windows.map((w) => ({ ...w, pts: w.pts.map(P) })),
+    walls: p.walls.map((w) => ({ ...w, pts: w.pts.map(P) })),
+    slots: p.slots.map((s) => ({ ...s, pts: s.pts.map(P) })),
+    ...(p.landmarkTop ? { landmarkTop: P(p.landmarkTop) } : {}),
+  };
+}
+
+/** A recipe's piece on its lot: with `ground` it stays at street level; without, it sits on a `PLINTH_H` plinth (piece and lot lifted). */
+export interface Seated { piece: Piece; lot: Lot; plinth: boolean }
+export function seat(recipe: Recipe, lot: Lot, rng: Rng, style: Style): Seated {
+  const piece = recipe(lot, rng, style);
+  if (piece.ground.length > 0) return { piece, lot, plinth: false };
+  return { piece: liftPiece(piece, PLINTH_H), lot: { ...lot, z: lot.z + PLINTH_H }, plinth: true };
 }
