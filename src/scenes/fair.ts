@@ -36,6 +36,8 @@ const GATE_SIGN = { x0: 86.5, x1: 93.5, y: -177.98, z0: 6.1, z1: 7 } as const;
 export const GHOST = { x: 98, y: -258, w: 20, d: 12 } as const;
 /** Mirror house: whitewash hall next to the ghost train, glass-mirror pediment on its south face. */
 export const MIRRORS = { x: 124, y: -258, w: 16, d: 12 } as const;
+/** Giant slide: deck tower at the north end of the fair, helical ramp of 24 treads (3 turns) around it. */
+export const SLIDE = { x: 118, y: -292, r: 5, h: 14 } as const;
 export const FAIR_MATS: readonly Material[] = ["deck", "whitewash", "rust", "steel", "copper", "stone", "concrete", "plaza", "paving", "sand", "rail", "glass", "hull", "leaf", "leafDark"];
 const BOOTH_MATS: readonly Material[] = ["whitewash", "rust", "copper"];
 const WATER_Z = -1;
@@ -187,6 +189,21 @@ export function mirrorHouse(out: Solid[], accents: Accent[]): void {
   accents.push(...garland([v3(x, ys + 0.1, 7.5), v3(x + 8, ys + 0.1, 6.9), v3(x + 16, ys + 0.1, 7.5)]));
 }
 
+/** Giant slide: deck tower with a copper cap and a ladder, 24 stepped treads spiralling down from z 13 to 0.5 with outer rails, amber tip light. */
+export function slide(out: Solid[], accents: Accent[]): void {
+  const { x, y, r, h } = SLIDE, n = 24;
+  out.push(prism(x - 2, y - 2, 0, 4, 4, h, "deck"), cone(x, y, h, 3, 2, "copper"), prism(x - 2.6, y - 1, 0, 0.6, 2, h, "steel"));
+  for (let z = 2; z <= h; z += 2) out.push({ kind: "beam", from: v3(x - 2.7, y - 1, z), to: v3(x - 2.7, y + 1, z), w: 0.1, h: 0.1, mat: "steel" });
+  for (let k = 0; k < n; k++) {
+    const a = (6 * Math.PI * (k + 0.5)) / n, z = 13 - (12.5 * k) / (n - 1);
+    const cx = x + r * Math.cos(a), cy = y + r * Math.sin(a);
+    out.push(rotBox(cx, cy, 2.2, 1.2, a + Math.PI / 2, z, 0.3, "deck"));
+    const hw = 1.1, tx = -Math.sin(a), ty = Math.cos(a), ox = x + 5.6 * Math.cos(a), oy = y + 5.6 * Math.sin(a); // rail at radius 5.6, tangent to the tread
+    out.push({ kind: "beam", from: v3(ox - tx * hw, oy - ty * hw, z + 0.8), to: v3(ox + tx * hw, oy + ty * hw, z + 0.8), w: 0.1, h: 0.1, mat: "steel" });
+  }
+  accents.push({ kind: "dot", at: v3(x, y, 16.3), r: 0.5, color: "amber" });
+}
+
 function dropTower(out: Solid[], accents: Accent[]): void {
   out.push(prism(DROP.x - 2, DROP.y - 2, 0, 4, 4, 0.6, "concrete"), prism(DROP.x - 0.5, DROP.y - 0.5, 0.6, 1, 1, DROP.h, "steel"));
   accents.push(dot(DROP.x, DROP.y, DROP.h + 0.8, 0.8, "cyan"));
@@ -274,7 +291,7 @@ export function fair(rng: Rng, opts: { legacyOnly?: boolean } = {}): FairScene {
   const arcadeSigns = arcade(solids);
   booths(solids, accents);
   bumperCars(solids, accents);
-  if (!opts.legacyOnly) { ghostTrain(solids, accents); mirrorHouse(solids, accents); }
+  if (!opts.legacyOnly) { ghostTrain(solids, accents); mirrorHouse(solids, accents); slide(solids, accents); }
   beach(solids, rng); // after the static solids: the boats look for free space among them
   gate(solids, accents);
   const drop = { at: v3(DROP.x, DROP.y, 1), h: DROP.h };
