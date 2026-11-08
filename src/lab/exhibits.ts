@@ -153,6 +153,18 @@ export const EXHIBITS: readonly Exhibit[] = [
   // the pier starts at x 227 (bayShoreX in fair.ts, private)
   { id: "muelle", title: "Fair pier", zone: "portfolio", group: "fair", kind: "region",
     box: { x0: 227 - M, y0: PIER.y - M, x1: 227 + PIER.len + M, y1: PIER.y + PIER.d + 6 }, h: 10 },
+  // the gothic tower and its cone reach z 18 (accents 0.7); nothing cut by the edge (0.05)
+  { id: "tren-fantasma", title: "Ghost train", zone: "portfolio", group: "fair", kind: "region",
+    box: { x0: 96, y0: -260, x1: 120, y1: -244 }, h: 18 },
+  // the pediment reaches z 7.5 (accents 2.1); nothing cut by the edge
+  { id: "casa-espejos", title: "Mirror house", zone: "portfolio", group: "fair", kind: "region",
+    box: { x0: 122, y0: -260, x1: 142, y1: -244 }, h: 8 },
+  // the tower is z 14, the roof cone 16, the lamp 16.3 (solids 16, accents 12.1); nothing cut by the edge
+  { id: "tobogan", title: "Giant slide", zone: "portfolio", group: "fair", kind: "region",
+    box: { x0: 111, y0: -299, x1: 125, y1: -285 }, h: 16 },
+  // the trough top is z 6, the water prism 6.05 (logs 6.75 in the animator, neighbors up to 2.7); the 6 splash dots are inside the box
+  { id: "tronco-acuatico", title: "Log flume", zone: "portfolio", group: "fair", kind: "region",
+    box: { x0: 158, y0: -300, x1: 226, y1: -290 }, h: 7 },
   // the office tower is at the center of the plaza: it stays inside
   { id: "plaza", title: "Plaza", zone: "cv", group: "city", kind: "region",
     box: { x0: PLAZA.x - M, y0: PLAZA.y - M, x1: PLAZA.x + PLAZA.w + M, y1: PLAZA.y + PLAZA.d + M }, h: TOWER_H + 8 },
