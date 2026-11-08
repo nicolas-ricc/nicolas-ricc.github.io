@@ -5,6 +5,7 @@ import { createRng } from "../map/seed";
 import { city } from "./city";
 import { PROMENADE } from "./city-grid";
 import { shipyard } from "./shipyard";
+import { QUAY_CRANES, YARD, quayCranes } from "./shipyard-east";
 import { buildTerrain } from "./terrain";
 import { isWaterAt, terrainAt } from "./terrain-classify";
 
@@ -80,8 +81,16 @@ describe("island coast", () => {
     const cs = city(createRng(7), createRng(8), createRng(9));
     const onIsland = (s: Solid) => bounds(s).max.x >= 276;
     const breakwater = (s: Solid) => s.kind === "cone" && s.mat === "rock"; // shipyard.ts: the shipyard's only `rock`
+    // #323: the quay cranes, their rails and the container yard stand on the cove quay on purpose (the issue fixes them at y ≥ 30, by the cove water);
+    // they are checked apart, below: each footprint centre on land
+    const cranes: Solid[] = []; quayCranes(cranes, []);
+    const craneJson = new Set(cranes.map((s) => JSON.stringify(s)));
+    const inYard = (s: Solid) => { const b = bounds(s); return b.min.x >= YARD.x0 && b.max.x <= YARD.x1 && b.min.y >= YARD.y0 && b.max.y <= 84; }; // the gatehouse reaches y 84
+    const onQuay = (s: Solid) => craneJson.has(JSON.stringify(s)) || inYard(s);
+    const quay = [...sy.solids, ...sy.ground].filter(onQuay);
+    expect(quay.length).toBeGreaterThan(QUAY_CRANES.length * 10);
     const candidates = [
-      ...[...sy.solids, ...sy.ground].filter((s) => onIsland(s) && !breakwater(s)),
+      ...[...sy.solids, ...sy.ground].filter((s) => onIsland(s) && !breakwater(s) && !onQuay(s)),
       // of the city, only what lies north of the promenade (y < 158): to the south the estuary bank only gains land
       // (islandWestX ≤ estuaryEast, geo.test.ts) and seawall, bridge and collapse are in the water on purpose
       ...cs.solids.filter((s) => onIsland(s) && bounds(s).max.y < PROMENADE.y0),
@@ -91,6 +100,7 @@ describe("island coast", () => {
     expect(candidates.length).toBeGreaterThan(4);
     const wet = candidates.filter(nearWater).map((s) => { const b = bounds(s); return `${s.kind}/${s.mat} ${b.min.x.toFixed(1)},${b.min.y.toFixed(1)}..${b.max.x.toFixed(1)},${b.max.y.toFixed(1)}`; });
     expect(wet).toEqual([]);
+    for (const s of quay) { const b = bounds(s); expect(terrainAt((b.min.x + b.max.x) / 2, (b.min.y + b.max.y) / 2), `${s.kind}/${s.mat}`).not.toBe("water"); }
   });
 
   it("the coast is pure: two seeds give the same island", () => {

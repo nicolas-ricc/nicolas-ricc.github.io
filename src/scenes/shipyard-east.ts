@@ -78,7 +78,8 @@ export function containerYard(out: Solid[], accents: Accent[], rng: Rng): void {
   rtgAt(292.1, 302.1, 50, out, SLAB_TOP);
   out.push(prism(296, 81, 0, 3, 3, 2.8, "concrete"));
   accents.push({ kind: "poly", pts: [v3(296.8, 84, 1.2), v3(298.2, 84, 1.2), v3(298.2, 84, 2.2), v3(296.8, 84, 2.2)], color: "windowCool", alpha: 0.85 });
-  for (const [px, py] of [[288.5, 30.5], [303, 79]] as const) {
+  // NW lamp in the 2.6 gap between lanes 1 and 2: the issue's (288.5, 30.5) stands on the cove water (terrainAt(288.8, 30.8) is water)
+  for (const [px, py] of [[292.4, 30.5], [303, 79]] as const) {
     out.push(prism(px, py, SLAB_TOP, 0.6, 0.6, 5, "steel"));
     accents.push({ kind: "dot", at: v3(px + 0.3, py + 0.3, SLAB_TOP + 5), r: 1.2, color: "cyan" });
   }
