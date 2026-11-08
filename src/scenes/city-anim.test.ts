@@ -3,7 +3,7 @@ import type { Accent } from "../iso/accent";
 import { createRng } from "../map/seed";
 import { WINDOW_ALPHA } from "../city/lights";
 import { city, type CityScene } from "./city";
-import { type CityAnim, ANTENNA_STEP_MS, BLINK_GAP_MS, PROMENADE_STEP_MS, NEON_STEP_MS, PAPER_RANGE, PAPER_SIDE, PAPER_SPEED, SIGN_GAP_MS, createCityAnim } from "./city-anim";
+import { type CityAnim, ANTENNA_STEP_MS, BLINK_GAP_MS, FLICKER_ALPHA, FLICKER_GAP_MS, PROMENADE_STEP_MS, NEON_STEP_MS, PAPER_RANGE, PAPER_SIDE, PAPER_SPEED, SIGN_GAP_MS, WINDOW_GAP_MS, createCityAnim } from "./city-anim";
 
 const setup = (reducedMotion = false) => {
   const scene = city(createRng(7), createRng(8), createRng(9));
@@ -202,6 +202,8 @@ describe("city-anim", () => {
         expect(Math.abs(anim.windows().length - target)).toBeLessThanOrEqual(1);
       }
       expect(changes).toBeGreaterThan(0);
+      anim.tick(600000); // many events in one tick, each one within the band
+      expect(Math.abs(anim.windows().length - target)).toBeLessThanOrEqual(1);
     }
   });
 
@@ -279,7 +281,7 @@ describe("city-anim", () => {
 
   it("fired counts the floor blackouts and the sign events", () => {
     const { anim } = setup();
-    expect(anim.fired()).toEqual({ lit: 0, neon: 0, papers: 0 });
+    expect(anim.fired()).toEqual({ lit: 0, neon: 0, papers: 0, windows: 0, flicker: 0 });
     let offs = 0;
     for (let t = 0; t < 60000; t += 33) { anim.tick(33); if (anim.lit().length === 0) offs++; }
     expect(anim.fired().lit).toBe(offs); // at 33 ms each firing is one tick off
@@ -290,14 +292,14 @@ describe("city-anim", () => {
   it("fired counts nothing with reduced-motion, with dt <= 0 or with a non-finite dt", () => {
     const still = setup(true).anim;
     still.tick(60000);
-    expect(still.fired()).toEqual({ lit: 0, neon: 0, papers: 0 });
+    expect(still.fired()).toEqual({ lit: 0, neon: 0, papers: 0, windows: 0, flicker: 0 });
     const { anim } = setup();
     anim.tick(0); anim.tick(-5000);
-    expect(anim.fired()).toEqual({ lit: 0, neon: 0, papers: 0 });
+    expect(anim.fired()).toEqual({ lit: 0, neon: 0, papers: 0, windows: 0, flicker: 0 });
     // without the guard, an infinite dt would never end the while (the lab already discards it in speedFromSearch)
     expect(anim.tick(Infinity)).toEqual({ lit: false, papers: false, antenna: false, neon: false, windows: false });
     expect(anim.tick(NaN)).toEqual({ lit: false, papers: false, antenna: false, neon: false, windows: false });
-    expect(anim.fired()).toEqual({ lit: 0, neon: 0, papers: 0 });
+    expect(anim.fired()).toEqual({ lit: 0, neon: 0, papers: 0, windows: 0, flicker: 0 });
   });
 
   it("blink: tick(7000) and seven tick(1000) fire the same, and so do 60 s in one or in 60", () => {
@@ -375,5 +377,79 @@ describe("city-anim: papers with wall time (#124, #125)", () => {
     const anim = chunked([600000]), n = anim.papers().length;
     expect(anim.fired().papers).toBeGreaterThanOrEqual(n * 600000 / (PAPER_RANGE / (PAPER_SPEED * 0.8)) - n); // minimum speed: each paper recycles at least once every PAPER_RANGE / (PAPER_SPEED · 0.8) ms
     for (const p of anim.papers().map(dot)) expect(Math.hypot(p.at.x - w.x, p.at.y - w.y)).toBeLessThanOrEqual(PAPER_RANGE + PAPER_SIDE);
+  });
+});
+
+describe("city-anim: windows and street neon with wall time (#192)", () => {
+  const irregular = (total: number) => { // irregular chunks that add up to `total`
+    const dts = [16, 33, 100, 250, 1000, 5000, 7000, 33, 2571];
+    const out: number[] = [];
+    for (let left = total, i = 0; left > 0; i++) { const dt = Math.min(left, dts[i % dts.length]!); out.push(dt); left -= dt; }
+    return out;
+  };
+  const frontOf = (scene: CityScene, layer: Accent[]) => {
+    const front = scene.lights.neons[scene.lights.flicker!]!.accents[1]!;
+    return layer.find((x) => x.kind === "poly" && front.kind === "poly" && x.pts === front.pts)!;
+  };
+
+  it("windows: 60 s and 10 min at once fire the same as chunked into 1000 ms, 100 ms and irregularly", () => {
+    for (const total of [60000, 600000]) {
+      const once = chunked([total]).fired().windows;
+      expect(once).toBeGreaterThanOrEqual(total / WINDOW_GAP_MS[1] - 1);
+      expect(once).toBeLessThanOrEqual(total / WINDOW_GAP_MS[0]);
+      expect(chunked(repeat(total / 1000, 1000)).fired().windows).toBe(once);
+      expect(chunked(repeat(total / 100, 100)).fired().windows).toBe(once);
+      expect(chunked(irregular(total)).fired().windows).toBe(once);
+    }
+  });
+
+  it("windows: with 50 seeds, windows() after [7000] equals after 7 × 1000 ms", () => {
+    for (let seed = 0; seed < 50; seed++) expect(chunked([7000], seed).windows()).toEqual(chunked(repeat(7, 1000), seed).windows());
+  });
+
+  it("windows: after 10 min the lit count stays within target ± tol, at once and chunked", () => {
+    const anim = chunked([0]); // builds the shared scene
+    const animable = chunkedScene!.lights.windows.filter((w) => w.animable);
+    const target = animable.filter((w) => w.on).length, tol = Math.max(1, Math.round(0.05 * animable.length));
+    expect(anim.windows()).toHaveLength(target);
+    for (const a of [chunked([600000]), chunked(repeat(6000, 100))]) expect(Math.abs(a.windows().length - target)).toBeLessThanOrEqual(tol);
+  });
+
+  it("windows: a long tick with no animatable windows does not hang and counts nothing", () => {
+    const scene = city(createRng(7), createRng(8), createRng(9));
+    const anim = createCityAnim({ ...scene, lights: { ...scene.lights, windows: [] } }, createRng(3), { reducedMotion: false });
+    expect(anim.tick(600000).windows).toBe(false);
+    expect(anim.fired().windows).toBe(0);
+  });
+
+  it("flicker: 60 s and 10 min at once fire the same as chunked into 1000 ms, 100 ms and irregularly", () => {
+    for (const total of [60000, 600000]) {
+      const once = chunked([total]).fired().flicker;
+      expect(once).toBeGreaterThanOrEqual(total / FLICKER_GAP_MS[1] - 1);
+      expect(once).toBeLessThanOrEqual(total / FLICKER_GAP_MS[0]);
+      expect(chunked(repeat(total / 1000, 1000)).fired().flicker).toBe(once);
+      expect(chunked(repeat(total / 100, 100)).fired().flicker).toBe(once);
+      expect(chunked(irregular(total)).fired().flicker).toBe(once);
+    }
+  });
+
+  it("flicker: a long tick with no street neon does not hang and counts nothing", () => {
+    const scene = city(createRng(7), createRng(8), createRng(9));
+    const anim = createCityAnim({ ...scene, lights: { ...scene.lights, flicker: null } }, createRng(3), { reducedMotion: false });
+    anim.tick(600000);
+    expect(anim.fired().flicker).toBe(0);
+  });
+
+  it("flicker: after a long tick that fires, the street neon is dim, and one NEON_STEP_MS later it is back", () => {
+    let restored = 0;
+    for (let seed = 0; seed < 20; seed++) {
+      const anim = chunked([FLICKER_GAP_MS[1]], seed); // the first pause surely runs out within this tick
+      expect(anim.fired().flicker).toBeGreaterThan(0);
+      expect(frontOf(chunkedScene!, anim.neon())).toMatchObject({ alpha: FLICKER_ALPHA });
+      const n = anim.fired().flicker;
+      expect(anim.tick(NEON_STEP_MS).neon).toBe(true);
+      if (anim.fired().flicker === n) { expect(frontOf(chunkedScene!, anim.neon())).toMatchObject({ alpha: 1 }); restored++; }
+    }
+    expect(restored).toBeGreaterThan(0);
   });
 });
