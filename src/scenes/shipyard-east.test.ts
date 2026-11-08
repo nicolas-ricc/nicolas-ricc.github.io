@@ -104,10 +104,14 @@ describe("container yard", () => {
     expect(slab[0]).toMatchObject({ at: { x: YARD.x0, y: YARD.y0, z: 0 }, w: 16, d: 50 });
   });
 
-  it("RTG with four legs reaching z 10.2", () => {
-    const legs = prisms(yard().out).filter((p) => p.mat === "steel" && p.w === 1.2 && p.d === 1.2 && p.h === 7.8);
+  it("RTG with four legs on wheels and beams on top, 10 tall over the slab", () => {
+    const ps = prisms(yard().out);
+    const legs = ps.filter((p) => p.mat === "steel" && p.w === 1.2 && p.d === 1.2 && p.h === 7.8);
     expect(legs).toHaveLength(4);
-    for (const l of legs) expect(bounds(l).max.z).toBeCloseTo(10.2, 9);
+    for (const l of legs) expect(bounds(l).max.z).toBeCloseTo(9.2, 9);
+    const beams = ps.filter((p) => p.mat === "steel" && p.d === 1.2 && p.h === 1 && p.at.z === 9.2);
+    expect(beams).toHaveLength(2);
+    for (const b of beams) expect(bounds(b).max.z).toBeCloseTo(10.2, 9);
   });
 
   it("two straddle carriers on slots without a stack", () => {
