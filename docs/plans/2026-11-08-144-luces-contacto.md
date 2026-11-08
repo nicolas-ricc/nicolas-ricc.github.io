@@ -15,7 +15,7 @@
 - `hides()`, `isBehind()` and `hullsOverlap()` in `src/iso/depth.ts` keep their semantics (no edit to their code).
 - Covered = centroid `c` of `window.pts` against box `b` of a solid other than the window's own building (`p.solidOffset + window.building`): `b.min.x - EPS <= c.x <= b.max.x + EPS`, same for y, and `b.min.z + EPS < c.z < b.max.z - EPS`, with `EPS = 1e-6` (the module constant). The box is `bounds(solid)` (`src/iso/solids.ts`), the same the occlusion already uses.
 - Neon slots with `wall.x <= 0 && wall.y <= 0` never produce a `StreetNeon`, whatever `lot.open` says.
-- Windows on free faces do not change: the existing tests of `lights.test.ts` stay as they are.
+- Windows on free faces do not change: they stay candidates, with the same quota key they draw today (keys are drawn over the not-occluded windows *before* the covered filter), so only the quota boundary moves (`round(on · n)` with the smaller `n`). The existing tests of `lights.test.ts` stay as they are.
 - Changed hashes in `src/scenes/world-baseline.test.ts` are re-recorded only where the lights change (the `accents` of `WORLD`, `ZONES.cv`, `RESUME_LAB`), with a `// #144:` comment line, and justified in the PR with before/after screenshots.
 - Out of scope: changing `hides()`/`isBehind()`, more open frontages for bars (#165), occlusion of the fixed pieces' lights (#171).
 - `npm test` and `npm run typecheck` green.
@@ -45,7 +45,10 @@ Oracle above, own building excluded, over `scene.lights.windows`:
 - Brute force (windows × solids) for the covered test: ~1300 × a few thousand box comparisons, once per city build. The sweep in `occluded` is not reused because covered is not a screen-space relation.
 - Neons do not get the covered test: the brief asks it only of windows, and slots stand 0.4 in front of their wall.
 - The stage-3 evals write the failing tests of tasks 1 and 2 ahead of the implementation; in stage 4 step 1 of each task is "confirm the test exists and fails".
-- No `CONTEXT.md` entry and no ADR: no new domain term.
+- No `CONTEXT.md` entry and no ADR: no new domain term (`CONTEXT.md` has no hidden/occluded entry either; "covered" stays a docstring word in `lights.ts`).
+- Quota keys are drawn before the covered filter (grilling Q1): the brief wants quotas "recalculados sobre las candidatas visibles" and free windows unchanged; drawing keys after the filter would shift every later key and relight the whole city. Rejected: drawing keys over the filtered list (today's code shape).
+- No build-time budget is documented; `city()` runs once per `world()` build (`src/scenes/world.ts:62`). Brute force accepted; the implementer reports `lights()` time before/after in the task report.
+- The seed test asserts an empty offender list, so the 29 vs 34 count difference does not matter; the oracle follows the brief's words ("borde incluido", "estrictamente dentro de su rango z") with `EPS = 1e-6` for float noise.
 
 ## Review Focus
 
@@ -71,7 +74,7 @@ Oracle above, own building excluded, over `scene.lights.windows`:
   - Inside the `for (const [name, make, isWorld] of SEEDS)` describe: `"no lit window sits on the face of another solid (centroid in its x/y range, strictly inside its z)"`: for every `w` of `l.windows.filter((w) => w.on)`, with `c = centroid(w.window.pts)`, no `i !== ownSolid(w)` such that `bs[i]` contains `c` per the oracle of Global Constraints. Assert the list of offending windows is empty (`toEqual([])`, so the failure shows how many).
   - In `describe("lights (synthetic scenes)")`: `"two touching prisms of the same piece: covered windows of the back one are not candidates, the protruding ones are"`: piece with `prism(0, 0, 0, 12, 10, 10)` (building 0) and `prism(0, 10, 0, 6, 4, 10)` (building 1, touching its +y face on x 0..6); windows of building 0 on its +y face (y = 10, `wall` (0,1,0)): `quad(1, 3, 10, 2, 4)` and `quad(3.5, 5.5, 10, 2, 4)` (covered) and `quad(8, 10, 10, 2, 4)` (protruding). `lights(...)` in `downtown`: `l.windows.map((w) => w.window)` equals the protruding window only, and `l.counts.downtown.candidates === 1`.
 - [ ] **Step 2: Run** `npx vitest run src/city/lights.test.ts`. Expected: FAIL (world seed 34 offending windows, other seed 19; synthetic 3 windows instead of 1).
-- [ ] **Step 3: Implement** in `lights.ts` a private `covered(c: Vec3, own: number, boxes: Bounds[]): boolean` with the Global Constraints oracle, and filter candidates with `!hid[i] && !covered(centroid(w.pts), own, boxes)`. Update the module docstring: what is hidden (`hides`) or covered (centroid on another solid's box, contact included) is not published.
+- [ ] **Step 3: Implement** in `lights.ts` a private `covered(c: Vec3, own: number, boxes: Bounds[]): boolean` with the Global Constraints oracle, and filter candidates with `!covered(centroid(w.pts), own, boxes)` *after* drawing the quota keys over the not-occluded windows (`vis`), keeping each window paired with its key, so the rng sequence and the keys of free windows do not move. Update the module docstring: what is hidden (`hides`) or covered (centroid on another solid's box, contact included) is not published.
 - [ ] **Step 4: Run** `npx vitest run src/city`. Expected: PASS, including the unchanged quota tests.
 - [ ] **Step 5: Re-record the baseline:** run `npx vitest run src/scenes/world-baseline.test.ts`; only the `accents` of `WORLD`, `ZONES.cv` and `RESUME_LAB` may differ. Update those three values and add `// #144: windows on faces covered by a touching solid are not lit; accents re-recorded once.` above `WORLD`. If any other hash moves, stop and report.
 - [ ] **Step 6: Run** `npm test && npm run typecheck`. Expected: PASS.
@@ -101,3 +104,13 @@ Run by the orchestrating session (it owns `.scratch/evals-144.md`), not by a fre
 
 - [ ] **Step 1:** With the dev server, capture `http://localhost:5173/lab/resume.html` zoomed on the `patioResidential` window at (32.25, 176, 1.8) and the `courtyardO` window at (104.1, 175.5, 1.8), before (worktree of `origin/main`, another port) and after. Follow `.scratch/evals-144.md`.
 - [ ] **Step 2: Commit** `docs(#144): before/after screenshots of covered windows`.
+
+## Grilling
+
+- Rounds: 1 (griller model: fable). Questions: 17. The revision (quota keys drawn before the covered filter) does not change tasks or seams, so no second round.
+- Sources: CODE 9, ISSUE 4, DOC 0, NO SOURCE 4 (all technical assumptions; no spec ambiguity, nothing out of scope).
+  CODE answers: `city.ts:63-66` is the only consumer that turns `CityLights.windows` into drawing (lit, non-animable → accents) and `city-anim.ts:82` takes the animable ones; unlit windows draw nothing (the facade comes from the solid's `facade`, `src/iso/solids.ts:19-22`), so only accents hashes can move; `world.ts:62` builds the single city with `zoneRng(seed, "cv")` whenever `cv` is in the zones, so `WORLD`, `ZONES.cv` and `RESUME_LAB` share it and `portfolio`/`blog` do not include it; `lights.test.ts:15-16,35-36` already define `prism`, `quad`, `bs`, `ownSolid` and `centroid` is `src/iso/geometry.ts:27`; `lights()` receives every city solid (`city.ts:63`), and the `station`/`theatre` covering cases are kit recipes covered by their own piece, not #171's fixed pieces; plinths span z 0..0.3 (`city.ts:44`) and the lifted windows sit above the lot, so a plinth cannot contain a centroid strictly in z (the measurement lists no `paving` covering solid); `piece.ts:22-28` publishes windows per solid only for walls with `x > 0 || y > 0`, the same camera convention as the neon rule; tasks run one at a time under subagent-driven-development, task 1 committed before task 2; a red step 5 is reverted with `git restore`; `docs/superpowers/specs/assets/142-plinth-ground/` and `195-ferry-fender/` are the precedent for PNGs (`.gitattributes` only marks `*.pdf`).
+  ISSUE answers: the oracle ("dentro del rango x/y de su caja (borde incluido) y estrictamente dentro de su rango z"), same-piece covering ("sea de la misma pieza o de una vecina"), the neon rule (`wall.x <= 0 && wall.y <= 0`) and the screenshot coordinates (32.25, 176, 1.8) and (104.1, 175.5, 1.8), measured on the world seed, which is the city of `lab/resume.html`.
+- Assumptions: see `## Assumptions` (quota keys, brute force, oracle tolerance, tree boxes).
+- Issues opened: none.
+- Status: ok.
