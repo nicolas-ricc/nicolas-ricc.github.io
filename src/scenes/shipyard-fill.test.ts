@@ -138,7 +138,11 @@ it("the site's service strip places all 12 pieces: 2 storerooms, 2 forklifts, 3 
 
 describe("the fill does not cover the landmarks on screen", () => {
   const fa = w.factory!;
-  const stacks = fa.solids.filter((x) => x.kind === "cylinder" && STACKS.some((k) => x.at.x === k.x && x.at.y === k.y && x.r === k.r));
+  // a chimney has several cylinders at the same x/y/r: keep the tallest one per stack
+  const stacks = STACKS.flatMap((k) => {
+    const cs = fa.solids.filter((x) => x.kind === "cylinder" && x.at.x === k.x && x.at.y === k.y && x.r === k.r);
+    return cs.length ? [cs.reduce((a, b) => (bounds(b).max.z > bounds(a).max.z ? b : a))] : [];
+  });
   const gantry = prisms(site.solids).filter((x) => x.mat === "steel" && x.at.x === 150 && (x.h === 24 || x.at.z === 24));
   const trolleys = site.trolleyRange.map((y) => bounds({ ...site.trolley, at: { ...site.trolley.at, y } }));
   const dockShip = site.solids.filter((x) => (x.kind === "hull" && x.at.z === -DOCK.depth) || (x.kind === "prism" && x.at.z === -DOCK.depth + 5 && x.w === 8 && x.d === 5));

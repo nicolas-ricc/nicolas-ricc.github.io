@@ -5,7 +5,7 @@ import { BOTTOM, DOCK, QUAY_W, QUAY_X, WORLD, ZONE_SPLIT_Y, eastBank, northCoast
 import type { Rng } from "../map/seed";
 import { jungle as flora } from "./flora";
 import { RIPRAP_KEEP_OUT, shipyardEast } from "./shipyard-east";
-import { dockWorks, yardFill, type Fill } from "./shipyard-fill";
+import { dockWorks, serviceStrip, yardFill, type Fill } from "./shipyard-fill";
 import { station } from "./station";
 import { clearOfWater } from "./terrain-classify";
 
@@ -220,7 +220,8 @@ export function shipyard(rng: Rng): Scene {
   station(solids, accents);
   siloAndRiprap(solids);
   const yard = yardFill(solids, rng);
-  const fill: Fill = { yard, dock: dockWorks(solids, accents, rng), service: [] };
+  const dock = dockWorks(solids, accents, rng);
+  const fill: Fill = { yard, dock, service: serviceStrip(solids, rng) };
   jungle(solids, rng);
   lamps(solids, accents);
   seamFence(solids, accents);

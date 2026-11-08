@@ -85,7 +85,7 @@ describe("shipyard part 2", () => {
   it("jungle: cones in the east strip and the station esplanade, none south of 90 outside the station land", () => {
     const s = scene();
     const cones = s.solids.filter((x): x is Solid & { kind: "cone" } => x.kind === "cone" && (x.mat === "leaf" || x.mat === "leafDark"));
-    expect(cones.length).toBeGreaterThanOrEqual(5); // measured 5 (seed 7) after the cuts
+    expect(cones.length).toBeGreaterThanOrEqual(6); // measured 6 (seed 7) after the #324 fill
     // the palms of the station esplanade (#278) are at x 190..197, outside the shipyard slab
     for (const c of cones) {
       expect(c.at.x > 300 || (c.at.x > ESPLANADE.x0 && c.at.x < ESPLANADE.x1), `cone ${c.at.x},${c.at.y}`).toBe(true);
