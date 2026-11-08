@@ -12,7 +12,7 @@ import { streets } from "../city/streets";
 import { railLands } from "../city/rail-lands";
 import { harbor } from "../city/harbor";
 import { bridge, collapsed, cars, greenery, promenade, plazaAndTower, westQuay, type TowerLights } from "../city/fixed";
-import { FOOTBRIDGE_LOT, NO_PLINTH, WATER_TOWER_BLOCK, assign, waterTowerLot, type Placed } from "../city/zoning";
+import { FOOTBRIDGE_LOT, NO_PLINTH, WATER_TOWER_BLOCK, assign, isBare, waterTowerLot, type Placed } from "../city/zoning";
 
 /**
  * Resume: orchestrator of the city. The zoning (src/city/zoning.ts) assigns
@@ -50,7 +50,7 @@ export function city(rng: Rng, districtRng: Rng, lightsRng: Rng): CityScene {
     // the sign consumes the rng after the recipe, so the recipe draws do not depend on how many slots there are
     if (p.neighborhood === "district") for (const s of piece.slots) if (s.kind === "sign") signs.push({ kind: "poly", pts: s.pts, color: districtRng.chance(0.5) ? "cyan" : "magenta", alpha: 1 });
   }
-  for (const b of blocks()) if (b.kind === "freight") solids.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
+  for (const b of blocks()) if (isBare(b)) solids.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
   const tower = plazaAndTower(solids, ground, accents, rng);
   const host = placed.find((q) => q.placed.block.x === WATER_TOWER_BLOCK.x && q.placed.block.y === WATER_TOWER_BLOCK.y);
   if (!host?.piece.courtyard) throw new Error("the water tower block has no courtyard");
