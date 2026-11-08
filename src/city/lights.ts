@@ -137,10 +137,12 @@ export function lights(scene: Pick<CityScene, "solids" | "placed">, rng: Rng): C
     return true;
   });
   if (free.length > MAX_NEONS) { const pick = new Set(sample(free, MAX_NEONS, rng)); free = free.filter((s) => pick.has(s)); }
-  const neons: StreetNeon[] = free.map(({ slot, owner }) => {
+  // A puddle hidden by a solid is dropped (only the rings); the neon stays.
+  const pud = free.map(({ slot, owner }) => { const c = centroid(slot.pts); return v3(c.x + slot.wall.x, c.y + slot.wall.y, scene.placed[owner]!.placed.lot.z); });
+  const phid = occluded(pud.map((q) => target([q], [0, 0])), solids);
+  const neons: StreetNeon[] = free.map(({ slot, owner }, i) => {
     const r = rng.next() * 100, color = r < 50 ? "amber" : r < 80 ? "magenta" : "cyan";
-    const c = centroid(slot.pts);
-    return { accents: [...neonAccents(slot.pts, color), ...puddle(c.x + slot.wall.x, c.y + slot.wall.y, `${color}Bleed`, scene.placed[owner]!.placed.lot.z)], color, owner, slot };
+    return { accents: [...neonAccents(slot.pts, color), ...(phid[i] ? [] : puddle(pud[i]!.x, pud[i]!.y, `${color}Bleed`, pud[i]!.z))], color, owner, slot };
   });
 
   const flicker = neons.length > 0 ? rng.int(0, neons.length - 1) : null;
