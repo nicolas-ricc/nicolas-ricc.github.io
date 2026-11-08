@@ -7,7 +7,7 @@ describe("ribs", () => {
   });
 
   it("a wall shorter than 6 (or not a length) gets no ribs", () => {
-    for (const len of [5.9, 0, -3, Number.NaN]) expect(ribs(0, len, 0, 5, false, "sheetGreen")).toEqual([]);
+    for (const len of [5.9, 0, -3, Number.NaN, Infinity]) expect(ribs(0, len, 0, 5, false, "sheetGreen")).toEqual([]);
     expect(ribs(0, 6, 0, 5, false, "sheetGreen")).toHaveLength(6);
   });
 

@@ -194,6 +194,12 @@ describe("tankGroup", () => {
         expect(ring!.at.z + 0.15).toBeCloseTo(t.at.z + t.h / 2, 6);
       }
       expect(p.solids.some((s) => s.kind === "strip")).toBe(true);
+      // the ladder post stands against the octagon's south flat, not floating off it
+      for (const t of tanks) {
+        if (t.kind !== "cylinder") continue;
+        const post = p.solids.find((s) => s.kind === "prism" && s.w === 0.3 && Math.abs(s.at.x - (t.at.x - 0.15)) < EPS);
+        expect(post?.kind === "prism" && post.at.y).toBeCloseTo(t.at.y + t.r * Math.cos(Math.PI / 8), 9);
+      }
     }
   });
 });
@@ -232,6 +238,11 @@ describe("rtgGantry", () => {
       expect(topZ(p.solids)).toBeCloseTo(lot.z + 10, 9);
       expect(p.solids.filter((s) => s.kind === "cylinder" && s.mat === "rust" && Math.abs(s.r - 0.6) < EPS)).toHaveLength(4);
     }
+  });
+
+  it("flattened to the cap under a low maxH", () => {
+    const lot = ownLot("rtgGantry", { maxH: 8 });
+    expect(topZ(recipe("rtgGantry")(lot, createRng(1), STYLES.industrial).solids)).toBeLessThanOrEqual(lot.z + 8 + EPS);
   });
 });
 

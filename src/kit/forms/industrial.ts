@@ -22,10 +22,10 @@ const SIDES: readonly Side[] = ["n", "e", "s", "w"];
 /** The piece with `tone` on every solid (the field is omitted when 0, as `prism` does). */
 const tonePiece = (p: Piece, tone: number): Piece => (tone === 0 ? p : { ...p, solids: p.solids.map((s) => ({ ...s, tone })) });
 
-/** Door plate centered on a wall of length `len`: `width` wide and `h` tall from `z0`, `mat` that of the wall, two tones darker. */
-export function door(wall: number, len: number, width: number, z0: number, h: number, mat: Material): Plate {
-  const u0 = (1 - width / len) / 2;
-  return { wall, shape: "rect", u0, u1: u0 + width / len, z0, z1: z0 + h, mat, toneOffset: -2 };
+/** Door plate centered on a wall of length `len`: `width` wide (at most the wall) and `h` tall from `z0`, `mat` that of the wall, two tones darker. */
+function door(wall: number, len: number, width: number, z0: number, h: number, mat: Material): Plate {
+  const k = Math.min(width, len) / len, u0 = (1 - k) / 2;
+  return { wall, shape: "rect", u0, u1: u0 + k, z0, z1: z0 + h, mat, toneOffset: -2 };
 }
 
 /** Sawtooth roof: floor(w/4) ramps 4 wide descending west (vertical face east) from `z + h`, centered in x, each with a glazed plate on that face. */
@@ -71,7 +71,7 @@ export const CONTAINER_COLORS: readonly { mat: Material; weight: number }[] = [
 ];
 export const STACK_HEIGHTS: readonly { n: number; weight: number }[] = [{ n: 1, weight: 30 }, { n: 2, weight: 35 }, { n: 3, weight: 25 }, { n: 4, weight: 10 }];
 
-/** One item drawn by cumulative weight (weights sum to 100). */
+/** One item drawn by cumulative weight. */
 function pickWeighted<T extends { weight: number }>(rng: Rng, items: readonly T[]): T {
   let r = rng.next() * items.reduce((a, i) => a + i.weight, 0);
   for (const i of items) if ((r -= i.weight) < 0) return i;
@@ -88,13 +88,13 @@ export function stackContainers(at: Vec3, n: number, along: "x" | "y", rng: Rng)
   for (let k = 0; k < n; k++) {
     const mat = containerColor(rng), z = at.z + k * h;
     const c = prism(at.x, at.y, z, x ? len : w, x ? w : len, h, mat);
-    c.plates = [{ ...door(x ? 1 : 2, w, 0.8 * w, z + 0.05 * h, 0.9 * h, mat) }];
+    c.plates = [door(x ? 1 : 2, w, 0.8 * w, z + 0.05 * h, 0.9 * h, mat)];
     out.push(c);
   }
   return out;
 }
 
-/** Container yard: blocks of 6 along x with 4-wide aisles, centered; each block a row of stacks every 2.6 in y. */
+/** Container yard: blocks of 6 along x with 4-wide aisles, centered; each block a row of stacks every 2.6 in y. Empty on a lot under 6×2.4 or a cap under 2.6. */
 export function containerStack(lot: Lot, rng: Rng, style: Style): Piece {
   const tone = shiftTone(style.tone, rng.int(-1, 1));
   const p = emptyPiece(), { x, y, w, d, z } = lot, { len, w: cw, h } = CONTAINER, pitch = cw + 0.2, aisle = 4;
@@ -138,7 +138,7 @@ function footprint(build: YardGroup): { fw: number; fd: number; ox: number; oy: 
   return { fw: Math.max(...bs.map((b) => b.max.x)) - x0, fd: Math.max(...bs.map((b) => b.max.y)) - y0, ox: x0, oy: y0 };
 }
 
-/** Open storage: 3..6 groups of sheets, pipes, coils or hull sections, placed by rejection at least 1 apart. */
+/** Open storage: 3..6 groups of sheets, pipes, coils or hull sections, placed by rejection at least 1 apart. Up to about 4 tall (hull sections): needs a cap of that. */
 export function stockpile(lot: Lot, rng: Rng, style: Style): Piece {
   const tone = shiftTone(style.tone, rng.int(-1, 1));
   const p = emptyPiece(), { x, y, w, d, z } = lot;
@@ -176,13 +176,16 @@ export function stockpile(lot: Lot, rng: Rng, style: Style): Piece {
   return tonePiece(p, tone);
 }
 
+/** How far the ladder's rungs reach south of the tank ring (r + 0.2): the wall leaves room for them. */
+const LADDER_OUT = 0.25;
+
 /** Row of 1..3 steel or rust tanks along the long side, each with a mid-height ring and a south ladder, inside a closed concrete wall. */
 export function tankGroup(lot: Lot, rng: Rng, style: Style): Piece {
   const tone = shiftTone(style.tone, rng.int(-1, 1));
   const p = emptyPiece(), { x, y, w, d, z } = lot, long = w >= d, along = long ? w : d, short = long ? d : w;
   const n0 = rng.int(1, 3), rCap = (short - 2.9) / 2, cap = recipeCap(lot);
   const tanks = Array.from({ length: n0 }, () => ({ r: Math.min(rng.int(3, 5), rCap), h: Math.min(rng.int(4, 8), cap), mat: rng.pick<Material>(["steel", "rust"]) }));
-  const used = (n: number): number => tanks.slice(0, n).reduce((a, t) => a + 2 * t.r + 0.4, 0) + (n - 1) + 2;
+  const used = (n: number): number => tanks.slice(0, n).reduce((a, t) => a + 2 * t.r + 0.4, 0) + (n - 1) + 2 + (long ? 0 : LADDER_OUT); // along y the last ladder sticks out south
   let n = n0;
   while (n > 1 && used(n) > along) n--;
   let a = (long ? x : y) + (along - (used(n) - 2)) / 2;
@@ -195,12 +198,13 @@ export function tankGroup(lot: Lot, rng: Rng, style: Style): Piece {
   for (const { cx, cy, r, h, mat } of placed) {
     p.solids.push({ kind: "cylinder", at: v3(cx, cy, z), r, h, mat });
     p.solids.push({ kind: "cylinder", at: v3(cx, cy, z + h / 2 - 0.15), r: r + 0.2, h: 0.3, mat });
-    p.solids.push(prism(cx - 0.15, cy + r, z, 0.3, 0.3, h, "steel"));
-    for (let k = 1; k < h; k++) p.solids.push({ kind: "beam", from: v3(cx - 0.15, cy + r + 0.35, z + k), to: v3(cx + 0.15, cy + r + 0.35, z + k), w: 0.1, h: 0.1, mat: "steel" });
+    const wall = cy + r * Math.cos(Math.PI / 8); // the octagon's south flat
+    p.solids.push(prism(cx - 0.15, wall, z, 0.3, 0.3, h, "steel"));
+    for (let k = 1; k < h; k++) p.solids.push({ kind: "beam", from: v3(cx - 0.15, wall + 0.35, z + k), to: v3(cx + 0.15, wall + 0.35, z + k), w: 0.1, h: 0.1, mat: "steel" });
   }
   const m = 0.7;
   const gx0 = Math.min(...placed.map((t) => t.cx - t.r - 0.2)) - m, gx1 = Math.max(...placed.map((t) => t.cx + t.r + 0.2)) + m;
-  const gy0 = Math.min(...placed.map((t) => t.cy - t.r - 0.2)) - m, gy1 = Math.max(...placed.map((t) => t.cy + t.r + 0.45)) + m;
+  const gy0 = Math.min(...placed.map((t) => t.cy - t.r - 0.2)) - m, gy1 = Math.max(...placed.map((t) => t.cy + t.r + 0.2 + LADDER_OUT)) + m;
   p.solids.push({ kind: "strip", path: [{ x: gx0, y: gy0 }, { x: gx1, y: gy0 }, { x: gx1, y: gy1 }, { x: gx0, y: gy1 }, { x: gx0, y: gy0 }], width: 0.6, z: z + 0.02, mat: "concrete" });
   return tonePiece(p, tone);
 }
@@ -253,7 +257,7 @@ export function rtgGantry(lot: Lot, rng: Rng, style: Style): Piece {
   rtgAt(x0, x1, y0, p.solids, z);
   const sx = (x0 + 1.2 + x1) / 2 - CONTAINER.len / 2;
   p.solids.push(...stackContainers(v3(sx, y0 + 1.2 + (4.8 - CONTAINER.w) / 2, z), Math.min(stackHeight(rng), 3), "x", rng));
-  return tonePiece(p, tone);
+  return tonePiece(fitToCap(p, lot), tone);
 }
 
 /** Small shed 4×3×2.6 centered in the lot, with a door on the south face. */

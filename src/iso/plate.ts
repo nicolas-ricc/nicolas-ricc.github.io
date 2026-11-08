@@ -33,7 +33,7 @@ export const RIB_W = 0.5, RIB_STEP = 1, RIB_MAX = 24, RIB_MIN_LEN = 6;
 
 /** Corrugated sheet: vertical stripes `RIB_W` wide every `RIB_STEP` along a wall of length `len` (none if shorter than `RIB_MIN_LEN`); `lit` is the wall with `shadeTone(normal) === "lit"`. */
 export function ribs(wall: number, len: number, z0: number, z1: number, lit: boolean, mat: Material): Plate[] {
-  if (!(len >= RIB_MIN_LEN)) return [];
+  if (!(Number.isFinite(len) && len >= RIB_MIN_LEN)) return [];
   const n = Math.min(RIB_MAX, Math.floor(len / RIB_STEP)), step = Math.max(RIB_STEP, len / RIB_MAX);
   return Array.from({ length: n }, (_, k) => {
     const u0 = (k * step) / len;

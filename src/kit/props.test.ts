@@ -203,8 +203,10 @@ describe("foodTruck (#321)", () => {
       const roof = t.solids.find((s) => s.kind === "ramp" && s.mat === "awning");
       if (!box || !cab || !roof || roof.kind !== "ramp") throw new Error("missing part");
       expect(bounds(box).max.z - AT.z).toBeCloseTo(2.6, 9);
-      const cb = bounds(cab);
+      const cb = bounds(cab), bb0 = bounds(box);
       expect(cb.max[long] - cb.min[long]).toBeCloseTo(1.2, 9);
+      expect(bb0.max[long] - bb0.min[long]).toBeCloseTo(3.8, 9);
+      expect(bb0.max[long]).toBeLessThanOrEqual(cb.min[long] + 1e-9); // box then cab, disjoint
       // box and cab together: 5 along the truck, 2.2 across, from the NW corner
       const parts = [bounds(box), cb];
       const min = { x: Math.min(...parts.map((b) => b.min.x)), y: Math.min(...parts.map((b) => b.min.y)) };
