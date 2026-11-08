@@ -143,6 +143,13 @@ describe("world", () => {
     expect(w.factory!.solids.filter((s) => !west(bounds(s)) && !sidingAndCrane(bounds(s)) && !inNewRegion(bounds(s))).map((s) => JSON.stringify(s).slice(0, 90))).toEqual([]);
   });
 
+  it("Portfolio budget: shipyard ≤ 900 raised solids, shipyard + factory ≤ 1 700 (#324)", () => {
+    const w = world(7);
+    const sy = w.shipyard!.solids.filter((s) => !isFlat(s)).length, fa = w.factory!.solids.filter((s) => !isFlat(s)).length;
+    expect(sy).toBeLessThanOrEqual(900);
+    expect(sy + fa).toBeLessThanOrEqual(1700);
+  });
+
   it("the city lights come from zoneRng(seed, \"cv\", 3)", () => {
     const w = world(7, { zones: ["cv"] });
     expect(w.city!.lights.windows.length).toBeGreaterThan(0);
