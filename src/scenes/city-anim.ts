@@ -84,9 +84,11 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
   const windowRng = createRng(rng.int(0, SEED_MAX)); // own stream, for the same reason as blinkRng
   let windowTimer = windowRng.int(WINDOW_GAP_MS[0], WINDOW_GAP_MS[1]);
   let windowEvents = 0;
+  const flickerRng = createRng(rng.int(0, SEED_MAX)); // own stream; derived even with no street neon, so the shared rng does not depend on it
+  let flickers = 0;
   // street neon: after the windows so as not to reorder their draws
   const street = scene.lights.flicker === null ? null : scene.lights.neons[scene.lights.flicker]!;
-  let flickerTimer = street ? rng.int(FLICKER_GAP_MS[0], FLICKER_GAP_MS[1]) : 0;
+  let flickerTimer = street ? flickerRng.int(FLICKER_GAP_MS[0], FLICKER_GAP_MS[1]) : 0;
   let flickerUntil = -1;
 
   const paperAt = (p: Paper): Accent => {
@@ -115,7 +117,7 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
       return [...on, ...lights, ...st];
     },
     windows: () => wins.filter((x) => x.on).map(({ w: lw }): Accent => ({ kind: "poly", pts: lw.window.pts, color: lw.color, alpha: WINDOW_ALPHA })),
-    fired: () => ({ lit: blinks, neon: signEvents, papers: recycled, windows: windowEvents, flicker: 0 }),
+    fired: () => ({ lit: blinks, neon: signEvents, papers: recycled, windows: windowEvents, flicker: flickers }),
     tick(dtMs) {
       if (opts.reducedMotion || !Number.isFinite(dtMs) || dtMs <= 0) return NONE; // NaN or Infinity would hang the while loops
       clock += dtMs;
@@ -168,7 +170,7 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
       if (street) {
         if (flickerUntil >= 0 && clock >= flickerUntil) { flickerUntil = -1; c.neon = true; }
         flickerTimer -= dtMs;
-        if (flickerTimer <= 0) { flickerUntil = clock + NEON_STEP_MS; flickerTimer = rng.int(FLICKER_GAP_MS[0], FLICKER_GAP_MS[1]); c.neon = true; }
+        while (flickerTimer <= 0) { flickerUntil = clock + NEON_STEP_MS; flickerTimer += flickerRng.int(FLICKER_GAP_MS[0], FLICKER_GAP_MS[1]); flickers++; c.neon = true; }
       }
       return c;
     },
