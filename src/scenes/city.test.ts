@@ -296,8 +296,9 @@ describe("city", () => {
 
   // Fingerprints measured on 860a582, before #142: lifting must reproduce the plinth pieces of then.
   // A deliberate change to a recipe without ground moves them; re-record then, as with world-baseline.
-// #143: courtyardO paves with 2×2 tiles (more rng draws): seeds 1, 2 and 4 re-recorded once.
-  it("pieces without ground are identical to main's plinth pieces (fingerprints measured on 860a582)", () => {
+  // #143: a recipe with ground drawing more rng (courtyardO's 2×2 patio tiles) moves the pieces after it too;
+  // seeds 1, 2 and 4 (the ones with a paved courtyardO) re-recorded once.
+  it("pieces without ground are identical to the pinned plinth pieces (860a582; seeds 1, 2, 4 re-recorded at #143)", () => {
     const MAIN = ["106b1005", "9e2c087f", "46251f13", "12dc7a05", "8841fb6b"];
     for (let s = 1; s <= 5; s++) {
       const c = city(createRng(s), createRng(s + 1), createRng(s + 2));
