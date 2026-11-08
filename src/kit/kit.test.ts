@@ -35,20 +35,21 @@ function area(poly: Vec2[]): number {
 
 /** Sutherland-Hodgman clip of a polygon to the box [min, max]; `[]` when everything is clipped. */
 function clipToBox(poly: Vec2[], min: Vec2, max: Vec2): Vec2[] {
-  const planes: { v: (p: Vec2) => number; at: number; keep: 1 | -1 }[] = [
-    { v: (p) => p.x, at: min.x, keep: 1 }, { v: (p) => p.x, at: max.x, keep: -1 },
-    { v: (p) => p.y, at: min.y, keep: 1 }, { v: (p) => p.y, at: max.y, keep: -1 },
+  const planes: { axis: "x" | "y"; at: number; keep: 1 | -1 }[] = [
+    { axis: "x", at: min.x, keep: 1 }, { axis: "x", at: max.x, keep: -1 },
+    { axis: "y", at: min.y, keep: 1 }, { axis: "y", at: max.y, keep: -1 },
   ];
   let out = poly;
-  for (const { v, at, keep } of planes) {
-    const inp = out;
+  for (const { axis, at, keep } of planes) {
+    const inp = out, other = axis === "x" ? "y" : "x";
     out = [];
-    const inside = (p: Vec2) => (v(p) - at) * keep >= 0;
+    const inside = (p: Vec2) => (p[axis] - at) * keep >= 0;
     for (let i = 0; i < inp.length; i++) {
       const a = inp[i]!, b = inp[(i + 1) % inp.length]!;
       if (inside(a) !== inside(b)) {
-        const t = (at - v(a)) / (v(b) - v(a));
-        out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+        const t = (at - a[axis]) / (b[axis] - a[axis]), q = { x: at, y: at }; // on the plane exactly, not 1 ulp off
+        q[other] = a[other] + (b[other] - a[other]) * t;
+        out.push(q);
       }
       if (inside(b)) out.push(b);
     }
@@ -103,7 +104,7 @@ describe("kit: the concave-gap oracle", () => {
     expect(concaveIntruders([L, slab])).toBe(1);
   });
 
-  it("measures the gap with either winding of the footprint, and ignores what lies outside the hull", () => {
+  it("measures the gap with either winding of the footprint, and ignores a solid entirely outside the hull", () => {
     const ccw = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 4 }, { x: 4, y: 4 }, { x: 4, y: 10 }, { x: 0, y: 10 }];
     for (const footprint of [ccw, [...ccw].reverse()]) {
       const L: Solid = { kind: "poly", footprint, z: 0, h: 6, mat: "plaster" };
