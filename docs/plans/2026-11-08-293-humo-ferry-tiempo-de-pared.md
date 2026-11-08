@@ -39,9 +39,9 @@
 ## Review Focus
 
 1. Tick muy largo, `tick(600000)`, en los dos animadores (el lab multiplica `deltaMS` por `?speed=`): termina y coincide con su troceo. En el humo, cada uno se recicla ~40 veces dentro del tick. Tests en las Tasks 1 y 2 (`[600000]`; para el humo, la invariante `dist < PUFF_RANGE` tras `tick(600000)`).
-2. Tick que termina en mitad de la pausa y otro que la cruza: `tick(3900)` y luego `tick(1100)` dejan la lancha a `FERRY_SPEED · 1 s` del muelle de salida, y ese segundo tick marca `ferry: true`. Test en la Task 2.
+2. Tick que termina en mitad de la pausa y otro que la cruza: `tick(FERRY_PAUSE_MS - 100)` y luego `tick(1100)` dejan la lancha a `FERRY_SPEED · 1 s` del muelle de salida, y ese segundo tick marca `ferry: true`. Test en la Task 2.
 3. Tick que cruza un extremo: el sobrante se descuenta de la pausa siguiente. La lancha sigue en el extremo, con el rumbo invertido, hasta que se agota la pausa. Lo cubre el troceo `[60000]` (L ≈ 179 u, ~60 s por tramo), y además hay un test explícito en la Task 2: tras llegar, un tick de `FERRY_PAUSE_MS - 1` no la mueve y marca `ferry: false`.
-4. `tick(NaN)` o `tick(Infinity)` después de algunos ticks normales, no solo en el estado inicial: no cambia `puffs`/`ferry`/`beam`/`state` y devuelve todo en `false`. Tests en las Tasks 1 y 2.
+4. `tick(NaN)` o `tick(Infinity)` después de algunos ticks normales y también como primer tick: no cambia `puffs`/`ferry`/`beam`/`state`, devuelve todo en `false` y no consume el marcado del primer tick. Tests en las Tasks 1 y 2.
 5. Reduced motion: sin cambios (ya cubierto por los tests actuales de los dos archivos).
 
 ---
@@ -58,11 +58,11 @@
 
 - [ ] **Step 1: tests que fallan** (se escriben en la etapa de evals). Dentro de un `describe("smoke tick chunking", …)`, con un helper `run(chunks: number[])` que crea `createFactoryAnim(stacks, createRng(1), { reducedMotion: false })`, aplica los ticks y devuelve el animador, y un helper `chop(total, pattern)` que repite `pattern` y cierra con el resto para sumar `total` exacto:
   - `"one 60 s tick leaves the puffs where 600 × 100 ms and an irregular chunking do"`: para `k` en `[0, 1]` y cada puff, `at.x`, `at.y`, `at.z` y `r` de `run([60000])` son `toBeCloseTo(…, 6)` a los de `run(Array(600).fill(100))` y a los de `run(chop(60000, [16, 33, 100, 250, 1000, 5000, 7000, 33]))`.
-  - `"no puff goes past PUFF_RANGE, even after one 600 s tick"`: tras `tick(60000)` y, en otra instancia, `tick(600000)`, para cada puff de los dos stacks, la distancia horizontal a la boca dividida por `Math.hypot(0.45, -0.893)` (NNE no es unitario) es ≤ `PUFF_RANGE + PUFF_SIDE`, y su radio `r` es < `PUFF_R1` (r crece linealmente con `dist`, así que `r < PUFF_R1` ⇔ `dist < PUFF_RANGE`).
+  - `"no puff goes past PUFF_RANGE, even after one 600 s tick"`: tras `tick(60000)` y, en otra instancia, `tick(600000)`, para cada puff de los dos stacks, su radio `r` es < `PUFF_R1`. `r` es función solo de `dist` (`factory-anim.ts:34,37`: `t = p.dist / PUFF_RANGE`, `r = PUFF_R0 + (PUFF_R1 - PUFF_R0) * t`), así que `r < PUFF_R1` ⇔ `dist < PUFF_RANGE`. `NNE` no se exporta y el test no lo usa.
   - `"tick(NaN) and tick(Infinity) change nothing"`: tras `tick(1234)`, se guarda `JSON.stringify([a.puffs(0), a.puffs(1), a.angle()])`; `a.tick(NaN)` y `a.tick(Infinity)` devuelven `{ smoke: false, wheel: false }` y el snapshot sigue idéntico; un `tick(100)` posterior sigue devolviendo `smoke: true`.
 - [ ] **Step 2:** `npx vitest run src/scenes/factory-anim.test.ts`. Debe dar FAIL en los dos primeros tests (el tick largo recicla una sola vez y deja humos a ~120 u). El de NaN/Infinity también falla o cuelga: `Infinity` deja `dist` en `Infinity`. Si cuelga, el test lleva `{ timeout: 2000 }`.
 - [ ] **Step 3: implementar** las decisiones 1 y 2 y la guarda en `src/scenes/factory-anim.ts`. Comentario corto junto a `puffRngs`: "one per puff, last: recycling does not depend on the chunking" (como `city-anim.ts:78`).
-- [ ] **Step 4:** `npx vitest run src/scenes/factory-anim.test.ts src/scenes/excavator.test.ts src/scenes/animators.test.ts` en PASS.
+- [ ] **Step 4:** `npx vitest run src/scenes/factory-anim.test.ts src/scenes/excavator.test.ts src/scenes/animators.test.ts src/lab/exhibits.test.ts` en PASS (los otros llamadores de `createFactoryAnim`/`factoryAnimator`), después `npm test` y `npm run typecheck`.
 - [ ] **Step 5: commit** `fix(#293): factory smoke by remaining time, one Rng per puff`.
 
 ### Task 2: lancha del ferry
@@ -77,10 +77,26 @@
 
 - [ ] **Step 1: tests que fallan** (en la etapa de evals). Dentro de `describe("fair launch tick chunking", …)`, con un helper `hullOf(f: ShipFrame)` que devuelve `{ x, y, heading }` del sólido `kind: "hull"` (el rumbo viaja en `hull.heading`):
   - `"position and heading after one tick match the 100 ms chunking"`: para `T` en `[5000, 60000, 600000]`, `hullOf(a.ferry())` tras `a.tick(T)` y tras `T / 100` ticks de 100 en otra instancia tienen `x`, `y` y `heading` `toBeCloseTo(…, 6)`.
-  - `"the leftover of the pause is spent moving"`: `tick(3900)` y luego `tick(1100)`: el casco está a `toBeCloseTo(FERRY_SPEED, 6)` u de `FERRY_ROUTE[0]` y el segundo tick devuelve `ferry: true`.
+  - `"the leftover of the pause is spent moving"`: `tick(FERRY_PAUSE_MS - 100)` y luego `tick(1100)` (la lancha arranca con `ferryPause = FERRY_PAUSE_MS`, `sea-anim.ts:139`): el casco está a `toBeCloseTo(FERRY_SPEED, 6)` u de `FERRY_ROUTE[0]` y el segundo tick devuelve `ferry: true`.
   - `"the leftover at an end comes off the next pause"`: con `L` = longitud de `polyline(FERRY_ROUTE)` y `tArrive = FERRY_PAUSE_MS + (L / FERRY_SPEED) * 1000`, `tick(tArrive + 500)` deja el casco en el último punto de `FERRY_ROUTE` (`toBeCloseTo(…, 6)`); luego `tick(FERRY_PAUSE_MS - 501)` devuelve `ferry: false` y no lo mueve; y otro `tick(1001)` lo deja a `toBeCloseTo(FERRY_SPEED, 6)` u del extremo, de vuelta.
+  - `"a non-finite first tick does not use up the first-tick marking"`: en una instancia nueva, `tick(NaN)` devuelve todo en `false` y el `tick(100)` siguiente devuelve `buoys: true`, `neon: true`, `ferry: true` (el "primer tick marca todo", `sea-anim.ts:188-192`).
   - `"tick(NaN) and tick(Infinity) change nothing"`: tras `tick(4500)`, se guarda `JSON.stringify([a.ferry(), a.beam(), a.buoys(), a.neon(), [0, 1, 2].map(a.state)])`; `tick(NaN)` y `tick(Infinity)` devuelven `{ ships: [false, false, false], beam: false, buoys: false, ferry: false, neon: false }` y el snapshot sigue idéntico.
 - [ ] **Step 2:** `npx vitest run src/scenes/sea-anim.test.ts`: FAIL en los troceos (la pausa descarta lo que sobra) y en el de NaN/Infinity (`clock` se vuelve NaN).
 - [ ] **Step 3: implementar** la decisión 4 y la guarda en `src/scenes/sea-anim.ts`. El comentario del bloque dice que el tiempo que sobra de la pausa y del tramo pasa a la fase siguiente dentro del mismo tick.
 - [ ] **Step 4:** `npx vitest run src/scenes/sea-anim.test.ts src/scenes/sea-animator.test.ts` en PASS, después `npm test` y `npm run typecheck`.
 - [ ] **Step 5: commit** `fix(#293): ferry pause and route by remaining time`.
+
+## Assumptions
+
+- **`SEED_MAX` local.** Se declara en el archivo, como ya hacen `city-anim.ts:37`, `tech-anim.ts:27` y `shipyard-anim.ts:19`. Alternativa rechazada: exportarlo de `map/seed.ts`, que sería un refactor de tres archivos fuera del diff.
+- **La guarda corta todo el `tick` de `sea-anim`**, no solo el ferry: barcos, haz, boyas y neón tampoco avanzan con `NaN`/`Infinity`, porque el issue pide "`tick(NaN)` y `tick(Infinity)` no cambian nada". La forma del retorno es la de hoy con `dtMs <= 0` (`sea-anim.ts:187`). Alternativa rechazada: proteger solo el bucle del ferry y dejar que `clock` se vuelva NaN.
+- **Terminación.** `fresh` da `speed ∈ [0.8, 1.2)` (`factory-anim.ts:28`, con `next() ∈ [0, 1)` según `map/seed.ts:13-19`), así que `toEnd > 0` y cada vuelta recicla o termina. Para el ferry, `ferryLen = polyline(FERRY_ROUTE).length` ≈ 179 u > 0 y `FERRY_PAUSE_MS = 4000` (`sea-anim.ts:74-75`, constantes del módulo). No se protege `ferryLen === 0` ni una pausa de 0: no son estados alcanzables.
+- **Sin chequeo en el lab.** La verificación es por tests unitarios. El time-lapse de CLAUDE.md no lo pide el issue y la lógica es pura, sin Pixi.
+
+## Grilling
+
+- Rondas: 1, con 15 preguntas. El plan solo cambió en detalles de los tests y en los comandos de verificación, sin pasos nuevos ni otra costura, así que no hubo segunda ronda.
+- Fuentes: CODE 13, ISSUE 3 (Q5, Q15 y el criterio de NaN), DOC 0. Q13 y Q15b quedaron como NO SOURCE, en el bucket de supuesto técnico.
+- Supuestos: los de la sección anterior.
+- Ambigüedades de spec: ninguna. Issues abiertos: ninguno.
+- Cambios al plan: `FERRY_PAUSE_MS - 100` en lugar de 3900; el test del radio ya no depende de `NNE`; test del primer tick no finito; `exhibits.test.ts` y la suite completa en la Task 1.
