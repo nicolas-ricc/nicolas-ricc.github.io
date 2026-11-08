@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { bounds, isFlat, type Solid } from "../iso/solids";
-import { ESTUARY_Y0, QUAY_W, QUAY_X, SEAM_CY, STATION_LAND, WORLD, ZONE_SPLIT_Y, eastBank, estuaryEast, inStationLand, worldZoneAt } from "../map/geo";
+import { CELL, ESTUARY_Y0, QUAY_W, QUAY_X, SEAM_CY, STATION_LAND, WORLD, ZONE_SPLIT_Y, eastBank, estuaryEast, inStationLand, worldZoneAt } from "../map/geo";
 import { SEED } from "../map/seed";
 import { veilCells } from "../world/veil";
 import { boxFrame, zoneFrame } from "../world/frame";
@@ -14,7 +14,6 @@ import { GREEN_BELT, builtAt, urbanAt } from "./sprawl-grid";
 import { BUFFER_X, TRACK_X0 } from "./station";
 import { bleedTerrainAt, terrainAt } from "./terrain";
 import { world } from "./world";
-import { CELL } from "../map/geo";
 
 // Evals of #319 (story #56 · 1): the Portfolio/Resume seam moves from y 146 to y 90; the station stays in Portfolio.
 const w = world(SEED);
