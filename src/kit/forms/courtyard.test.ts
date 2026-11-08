@@ -86,6 +86,25 @@ describe("kit: courtyard family", () => {
     expect(green).toBeGreaterThan(0);
   });
 
+  it("courtyardO paves its patio with tiles of side ≤ 2 on the block lot (#143)", () => {
+    let paved = 0;
+    for (const seed of SEEDS) {
+      const p = recipe("courtyardO")(LOTS[0]!, createRng(seed), STYLES.residential);
+      if (p.ground.length === 0) continue;
+      paved++;
+      let area = 0;
+      for (const g of p.ground) for (const t of g.kind === "ground" ? g.tris : []) {
+        const xs = t.pts.map((q) => q.x), ys = t.pts.map((q) => q.y);
+        expect(Math.max(...xs) - Math.min(...xs)).toBeLessThanOrEqual(2 + 1e-9);
+        expect(Math.max(...ys) - Math.min(...ys)).toBeLessThanOrEqual(2 + 1e-9);
+        const [a, b, c] = t.pts;
+        area += Math.abs((b!.x - a!.x) * (c!.y - a!.y) - (c!.x - a!.x) * (b!.y - a!.y)) / 2;
+      }
+      expect(area).toBeCloseTo(p.courtyard!.w * p.courtyard!.d, 6);
+    }
+    expect(paved).toBeGreaterThan(0);
+  });
+
   it("courtyardU: open toward open[0] (south without open), two trees and a bench", () => {
     for (const open of [["e"], ["s"], ["n"], ["w"], []] as const) for (const seed of SEEDS) {
       const lot: Lot = { x: 0, y: 0, w: 21, d: 15, z: 0, open: [...open], maxH: 24 }, side = open[0] ?? "s";

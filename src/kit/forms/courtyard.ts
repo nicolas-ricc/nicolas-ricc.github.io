@@ -2,7 +2,7 @@ import { v3 } from "../../iso/geometry";
 import type { Facade } from "../../iso/facade";
 import type { Rng } from "../../map/seed";
 import type { Rect } from "../../scenes/city-grid";
-import { prism, tiles } from "../../scenes/city-pieces";
+import { brokenTone, prism, tiles } from "../../scenes/city-pieces";
 import { RECIPE_MAX_H, addBuilding, emptyPiece } from "../piece";
 import { bench, patioTree } from "../props";
 import { CORNICE_H, HIP_ROOF_H, cornice, hipRoof } from "../roofs";
@@ -53,7 +53,7 @@ export function courtyardO(lot: Lot, rng: Rng, style: Style): Piece {
     wing(p, { ...rect, w: half }, lot.z, h, cols, style, { flush: "e" });
     wing(p, { ...rect, x: rect.x + half + PASSAGE, w: half }, lot.z, h, cols, style, { flush: "w" });
   }
-  if (rng.chance(0.5)) p.ground.push(tiles(rng, patio, lot.z + 0.05, "paving"));
+  if (rng.chance(0.5)) p.ground.push(tiles(rng, patio, lot.z + 0.05, "paving", brokenTone, 2));
   else { p.solids.push(prism(patio.x, patio.y, lot.z, patio.w, patio.d, 0.3, "leafDark")); patioTrees(p, rng, patio, rng.int(2, 3), lot.z + 0.3); }
   p.courtyard = patio;
   return p;
