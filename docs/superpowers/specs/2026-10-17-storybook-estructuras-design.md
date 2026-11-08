@@ -70,10 +70,10 @@ Lista inicial, agrupada por zona (el orden es el del índice):
 | Zona | Exhibits región | Exhibits pieza |
 |---|---|---|
 | Portfolio: fábrica | planta, chimeneas y torre de enfriamiento, subestación, playa de camiones, playa de vías, cinta transportadora | — |
-| Portfolio: astillero | gradas, dársena, grúa pórtico, calle de faroles, naves, punta norte, estación, paso a nivel | grúa torre, farol, tren |
+| Portfolio: astillero | gradas, dársena, grúa pórtico, calle de faroles, naves, punta norte, estación, paso a nivel, dique flotante, patio de contenedores | grúa torre, farol, tren, grúa de muelle |
 | Portfolio: hinterland | central térmica y torre de enfriamiento, tanques, silos, línea de torres de alta tensión, playa de contenedores | — |
-| Portfolio: feria | noria, montaña rusa, torre de caída, carrusel, arcade, autitos chocadores, muelle | — |
-| Resume: ciudad | plaza, torre, puente, malecón, manzana derrumbada, manzana del distrito, obra, punta sur | campus, selva |
+| Portfolio: feria | noria, montaña rusa, torre de caída, carrusel, arcade, autitos chocadores, muelle, tren fantasma, casa de espejos, tobogán, tronco acuático | — |
+| Resume: ciudad | plaza, torre, puente, malecón, manzana derrumbada, manzana del distrito, obra, punta sur, galpones, playa de carga, mercado de pescado | campus, selva |
 | Resume: tecnológico | mástil de telecomunicaciones, arena, auditorio, torres, monoblock, casas con techo de teja, escuela, club, plaza de barrio, costanera, barrio costero | — |
 | Blog: mar | faro, casa del farero, boyas, pecio | carguero, remolcador, convoy con barcaza, lancha colectiva |
 

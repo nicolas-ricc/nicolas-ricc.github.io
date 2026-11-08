@@ -29,7 +29,7 @@ export function plateFaces(wall: Face, a: Vec2, b: Vec2, plates: readonly Plate[
   return plates.map((p) => ({ pts: plateOutline(p).map((q) => at(q.x, q.y)), normal: wall.normal, mat: p.mat, tone: wall.tone, toneOffset: p.toneOffset ?? 0 }));
 }
 
-export const RIB_W = 0.5, RIB_STEP = 1, RIB_MAX = 24, RIB_MIN_LEN = 6;
+export const RIB_W = 0.5, RIB_STEP = 1.5, RIB_MAX = 24, RIB_MIN_LEN = 6;
 
 /** Corrugated sheet: vertical stripes `RIB_W` wide every `RIB_STEP` along a wall of length `len` (none if shorter than `RIB_MIN_LEN`); `lit` is the wall with `shadeTone(normal) === "lit"`. */
 export function ribs(wall: number, len: number, z0: number, z1: number, lit: boolean, mat: Material): Plate[] {

@@ -1,7 +1,7 @@
 # Costura en y 90: Portfolio denso, barrio de galpones, dársena y feria — diseño
 
 **Fecha:** 2026-10-15
-**Estado:** en implementación (#56, plan en el comentario de la historia)
+**Estado:** implementada (#56, hijos #319–#327 y este cierre, #328; medición y desvíos en §12)
 **Antecede:** `2026-10-15-resume-nivel-2-kit-zonificacion-luces-design.md` (kit,
 paleta de nueve tonos, zonificación, luces por ventana),
 `2026-09-14-mundo-2-fabrica-distrito-blog-design.md` (fábrica),
@@ -327,44 +327,74 @@ Tope de sólidos de la feria: de 278 a 520.
 
 ## 9. Tests
 
-- `geo.test`: `ZONE_SPLIT_Y = 90`; `worldZoneAt` en la punta es `portfolio`,
+- [x] `geo.test`: `ZONE_SPLIT_Y = 90`; `worldZoneAt` en la punta es `portfolio`,
   en `x 300, y 120` es `cv`, en `x 100, y 80` es `portfolio`, en `x 100, y 95`
-  es `cv`.
-- `city-grid.test`: `estuaryEast(146)` igual a hoy (el río no se movió);
-  `ROWS` empieza en 92; ninguna manzana de `EAST_COLS` pisa la punta.
-- `terrain.test`: la franja `y 90..146` al oeste del río es ciudad; el canal
+  es `cv`. Cubierto por `src/map/geo.test.ts` y `src/scenes/seam-90.test.ts`;
+  la estación (§0 a) queda en Portfolio por `STATION_LAND`, con su prueba en
+  `geo.test.ts` ("estuary anchor and station land").
+- [x] `city-grid.test`: `estuaryEast(146)` igual a hoy (el río no se movió);
+  `ROWS` empieza en 92; ninguna manzana de `EAST_COLS` pisa la punta. Cubierto
+  por `src/scenes/city-grid.test.ts`.
+- [x] `terrain.test`: la franja `y 90..146` al oeste del río es ciudad; el canal
   `QUAY_X..eastBank` sigue siendo agua; la dársena es agua; los vértices de la
-  costura comparten grilla (múltiplos de 6 y 18).
-- `shipyard/zoning.test`: toda pieza de Portfolio cae en una subzona; las fijas
+  costura comparten grilla (múltiplos de 6 y de 18). Cubierto por
+  `src/scenes/terrain.test.ts` (ver desvíos de #319 en §12.0).
+- [x] `shipyard/zoning.test`: toda pieza de Portfolio cae en una subzona; las fijas
   donde dice §4.1; nada de Portfolio en `y ≥ 90` salvo la punta y P9 (el
   dique flotante termina en `y 88`); sólidos 520..700; nada tapa la grúa
-  pórtico, el dique seco ni las chimeneas.
-- `ships.test` (suma): la ruta de los barcos no cruza el dique flotante ni la
-  dársena.
-- `portfolio-accents.test`: reglas de §4.4 en lugar de cantidades.
-- `kit.test` (suma): las recetas industriales y de reconversión cumplen las
+  pórtico, el dique seco ni las chimeneas. El archivo `shipyard/zoning.ts` no
+  existe: el astillero se llena en `src/scenes/shipyard-fill.ts` y
+  `shipyard-east.ts`. Lo que quedó se cubre en `src/scenes/seam-90.test.ts`
+  (nada de Portfolio al sur de `y 90.5` salvo la estación y su muelle),
+  `src/scenes/shipyard-fill.test.ts` y `src/scenes/shipyard-east.test.ts`
+  (oclusión de la grúa pórtico, el dique seco y las chimeneas). Los sólidos
+  pasan de 520..700 a Portfolio en contenido ≤ 1 700 y topes por escena
+  (§0 g, §12.2) en `src/scenes/world.test.ts` y `src/scenes/city-budget.test.ts`.
+- [x] `ships.test` (suma): la ruta de los barcos no cruza el dique flotante ni la
+  dársena. Cubierto por `src/scenes/ships.test.ts` ("lanes and the floating
+  dock").
+- [x] `portfolio-accents.test`: reglas de §4.4 en lugar de cantidades. Cubierto
+  por `src/scenes/portfolio-accents.test.ts`.
+- [x] `kit.test` (suma): las recetas industriales y de reconversión cumplen las
   reglas del kit (dentro del lote, determinismo, ventanas solo en paredes que
-  miran a la cámara).
-- `zoning.test` (Resume, suma): las 24 manzanas nuevas tienen barrio; la
+  miran a la cámara). Cubierto por `src/kit/kit.test.ts`,
+  `src/kit/forms/industrial.test.ts` y `src/kit/forms/reconversion.test.ts`
+  (con el desvío de #322 sobre ventanas de vidrio en §12.0).
+- [x] `zoning.test` (Resume, suma): las 24 manzanas nuevas tienen barrio; la
   plaza de la chimenea y el mercado de los galpones son fijos; neones de
-  cervecerías ≤ 10 y solo en lados `open`.
-- `fair.test` (suma): las piezas nuevas existen; ninguna huella nueva pisa
+  cervecerías ≤ 10 y solo en lados `open`. Con §0 (b, c) no hay 24 manzanas
+  nuevas ni plaza de la chimenea: queda la fila `92` y el mercado cubierto fijo
+  en `(72, 92)`; lo cubren `src/city/zoning.test.ts`,
+  `src/city/lights.test.ts` (neones ≤ 10 y solo en frentes abiertos) y
+  `src/scenes/city-grid.test.ts`.
+- [x] `fair.test` (suma): las piezas nuevas existen; ninguna huella nueva pisa
   otra; nada estático delante de la rueda; puestos 12..16 sin tipo repetido en
-  vecinos.
-- `hinterland.test` / `tech.test`: nada industrial en `y ≥ 66` del sangrado;
-  manzanas del distrito tecnológico en las filas nuevas.
-- `palette-iso.test`: los materiales nuevos con nueve tonos y luminancia
-  monótona; `spark` presente.
+  vecinos. Cubierto por `src/scenes/fair.test.ts`.
+- [x] `hinterland.test` / `tech.test`: nada industrial en `y ≥ 66` del sangrado;
+  manzanas del distrito tecnológico en las filas nuevas. Con §0 (e) el
+  cinturón verde es `y 116..158` y el tecnológico no suma filas nuevas (#320,
+  §12.0); lo cubren `src/scenes/hinterland.test.ts`, `src/scenes/tech.test.ts`
+  y `src/scenes/seam-90.test.ts` ("bleed after the seam").
+- [x] `palette-iso.test`: los materiales nuevos con nueve tonos y luminancia
+  monótona; `spark` presente. Cubierto por `src/map/palette-iso.test.ts`.
 
 ### Presupuesto global
 
-| Métrica | Tope de Resume nivel 2 | Tope nuevo |
-|---|---|---|
-| Polígonos estáticos del mundo | 46 000 | 56 000 |
-| Primer dibujo caliente, lab `world.html` (mediana de 10) | 230 ms | 260 ms |
-| Primer dibujo caliente, sitio `/` (mediana de 5) | 270 ms | 300 ms |
-| Peor redibujo en 5 s, lab | 22 ms | 22 ms |
-| Bloom: promedio tick + render en 60 frames | ≤ 15 ms | ≤ 15 ms |
+| Métrica | Tope de Resume nivel 2 | Tope nuevo | Medido |
+|---|---|---|---|
+| Polígonos estáticos del mundo | 46 000 | 56 000 | 44 789 ✓ |
+| Primer dibujo caliente, lab `world.html` (mediana de 10) | 230 ms | 260 ms | 476.0 ms (mediana de 10), fuera de tope |
+| Primer dibujo caliente, sitio `/` (mediana de 5) | 270 ms | 300 ms | 799.1 ms (mediana de 5), fuera de tope |
+| Peor redibujo en 5 s, lab | 22 ms | 22 ms | 20.1 ms ✓ |
+| Bloom: promedio tick + render en 60 frames | ≤ 15 ms | ≤ 15 ms | 13.7–14.2 ms lab, 14.1 ms sitio, `on` ✓ |
+
+Los tres recortes (`ribs` cada 1.5, pilas de contenedores a 3 alturas, mitad
+de la franja de servicio) se aplicaron en ese orden y los primeros dibujos
+siguieron sobre el tope. Como indica el issue, se deja asentado como medición
+fuera de tope y no se tocó más código. La base previa a la historia (`860a582`)
+en el mismo host también da lab 437.3 ms y sitio 715.1 ms, por encima de sus
+topes viejos (230 / 270): el host (compartido, carga de 9 a 18 desde fuera del
+contenedor, swiftshader) domina la medida. Ver §12.1.
 
 Si se pasa: recortar primero `ribs` (franjas cada 1.5), después las pilas de
 contenedores a 3 alturas, después el relleno de P7; nunca las subzonas.
@@ -392,3 +422,396 @@ Después de los pasos 1–3 de Resume nivel 2. Cada paso deja `npm test` y
 - Blog y el mar; la punta del faro.
 - Rotar luz o cámara, texturas, shaders, sonido.
 - Mover el río o el estuario.
+
+## 12. Desvíos
+
+Lo que cambió al implementar respecto de lo escrito arriba. Cada viñeta cita
+el issue hijo donde está la decisión (#319–#327; este cierre es #328).
+
+### 12.0 Lista
+
+Completa la lista (a)–(h) de §0, que sigue valiendo tal cual.
+
+**Costura y geografía (#319)**
+
+- **§3, acopios de la fábrica con `rng.int(38, 78)`, no `(44, 78)` (#319):** la
+  excavadora mudada (`excavatorBox()`, y 49.2..88.4) toca todo sorteo con
+  y ≥ 44 y el reintento lanza. La cantidad de llamadas al rng no cambia.
+- **§4.1 P1, palés de chapa de la fábrica 1 u al norte (#319):** y 86..88. El
+  farol del cerco fijado en x 24, y 88.2 atravesaba uno (el issue suponía que
+  no).
+- **§0 a, la regla de Portfolio acepta también el muro del muelle (#319):**
+  `min.x ≥ 95.5 && max.x ≤ QUAY_X + QUAY_W + 0.5 && max.y ≤ 146.5`. El muro
+  (x 198..202, y −60..142) es la ribera de la estación.
+- **§7, segunda fila de galpones oeste del hinterland de y 76 a 75 (#319):** su
+  borde en y 90 ya es suelo urbano y `onIndustrial` lo habría descartado.
+- **§7, durmientes de la vía oeste del hinterland exentos (#319):** de su
+  chequeo "cae en Portfolio"; como el tren, están sobre suelo de Resume.
+- **Pruebas (#319):** la guarda de no vacuidad de `island-coast.test` baja de
+  `> 10` a `> 4` (el issue borra el contenido de la isla sur; quedan 5
+  candidatos); dos chequeos de `terrain.test` se acotan (el barrido solo-cv
+  salta la punta y su orilla, que son Portfolio por geografía; la altura de la
+  costura compara solo triángulos de suelo, porque el agua queda en z −1 sobre
+  el vértice de la orilla).
+- **§3, sin línea central de calle en y 161 por ahora (#319):** `rowsY` pierde
+  `CITY_EDGE.north + STREET/2`; #320 antepone la fila 92 a `ROWS` y
+  `ROWS.slice(1)` la restituye.
+- **§0 a, consecuencias conocidas (#319, ADR 0002):** la columna del muelle
+  x 198..202, y 90..142 se clica y vela como Resume porque `STATION_LAND.x1 =
+  198` está fijado; `/lab/portfolio.html` muestra el tren corriendo sobre suelo
+  vacío en x −60..96, porque la vía principal ya es de Resume.
+
+**Franja nueva de Resume (#320)**
+
+- **§5.1, `ROWS` suma 92 al frente sin cambiar a los demás consumidores
+  (#320):** `sprawl-grid.ts` itera `ROWS.slice(1)` (el tecnológico no gana fila
+  en y 92); los árboles de la ribera este arrancan en `ROWS[1]`; la muestra
+  `torres` usa `ROWS[2]`; `rowsY` usa `ROWS.slice(2)` (sin línea nueva en 161);
+  `tech-zoning.rowStep` no cambia.
+- **§5.2, la fila 92 nunca es `district` (#320),** ni en `DISTRICT_COLS`. Los
+  lotes de carga y las dos manzanas nuevas del este llevan `row: −1`.
+- **`maxHeightFor` por coordenada (#320):** compara `b.y === PLAZA.y + PLAZA.d +
+  STREET` (242) en vez de un índice de fila.
+- **Fila 92 estaciona autos solo en el cordón sur (#320):** su lado norte es el
+  cerco de la costura, no una calle.
+- **Durmientes en x −22, 6, 10, 38, 66 y 70 quitados bajo los cruces (#320):**
+  tablones y durmientes tienen la misma altura y el orden por profundidad
+  pintaba los durmientes sobre los tablones.
+- **Regla del tren (#320):** el tablón sur (`y 134.3`, h 0.3) queda exento, como
+  todo sólido ≤ 0.4 en `train-occlusion.test`; cercos y postes mantienen
+  `y_min − 1.4·z_max ≥ 134.5`.
+- **Pruebas (#320):** las aserciones de "franja vacía" de `seam-90.test` (#319)
+  se reescriben contra la lista permitida de #320 (manzanas de la franja,
+  autos, banda ferroviaria); el oráculo de ventanas encendidas de
+  `lights.test` gana un timeout de 10 s (tarda 1.8 s solo y vencía en
+  paralelo).
+- **Observación sin cambio (#320):** la línea E-O de y 137 arranca en
+  `ceil(eastBank(137)) + 1 = 247`, como fija el issue; en x 247..270 el
+  terreno es selva, así que unas 23 u de esa línea se pintan sobre selva. Las
+  demás líneas del este se recortan a `EAST_RING.x0`.
+
+**Kit industrial (#321)**
+
+- **§4.3, los dientes de sierra usan `RampDir "w"` (#321):** en el código `"e"`
+  es "baja hacia el este", que deja la cara vertical al oeste y mete una placa
+  en `wall 1`. Con `"w"` sale lo pedido: cara vertical al este, con vidrio en
+  `wall 1` al 30–90 % del diente.
+- **§5.2, `foodTruck` de caja 3.8 más cabina 1.2 (#321):** el camión entra en
+  5×2.2 sin sólidos superpuestos. El toldo y la ventanilla sobresalen hasta
+  0.8 hacia `dir`.
+- **§4.3, una puerta por contenedor (#321),** en la cara de testa (este si
+  yace en x, sur si yace en y).
+- **Firmas (#321):** `z` opcional al final de `quayCraneAt` y `rtgAt`;
+  `glass: Material` en `sawtooth`.
+- **§4.3, paso de bobinas 3.2, no 3.4 (#321):** el cilindro de 8 lados mide
+  2.78 y 3.2 deja la separación interna del grupo bajo 0.5. `stockpile` cae a
+  grupos chicos y luego a un barrido de grilla, así que siempre hay al menos 3
+  grupos.
+- **§4.3, grúa de muelle (#321):** pluma de 0.4 de espesor y un prisma de
+  carcasa de luz en z 17.5..18, porque `fitToCap` escala los extremos de las
+  vigas y no su espesor; con `maxH 10` la grúa se aplana en 10 exactos.
+  `rtgGantry` también pasa por `fitToCap`.
+- **Pruebas (#321):** el oráculo `shiftZ` de `kit.test.ts` desplaza también
+  `z0`/`z1` de las placas (z absolutos), con lo que es más estricto.
+
+**Kit de reconversión (#322)**
+
+- **§5.2, `freightShed`: los camiones en un patio al costado, no al frente
+  (#322):** un camión de testa al muelle mide 8 (caja 6 más cabina 2) y la
+  franja libre del frente es de 3; en un lote de 21×10 no entran. Ponerlos
+  fuera del lote rompería el contrato del kit y la regla del tren
+  (`y_max ≤ 130.8`). El muelle (`concrete`, h 1.2, 1.5 de fondo) recorre todo
+  el frente; la nave ocupa el fondo de un lado y deja 3 libres al frente; los
+  2..3 camiones van en el patio lateral, perpendiculares al muelle.
+- **§5.2, ventanas desde placas de vidrio (#322):** los dientes (`ramp`) y las
+  naves `gable` no llevan `facade`; sus ventanas publicadas apuntan al sólido
+  que lleva la placa `glass`. El contrato de `kit.test` acepta ahora un sólido
+  con `facade` **o** una placa `glass`.
+- **§5.2, `loftHall` (#322):** en un lote de 21 de ancho, dos tercios del techo
+  llevan 3 dientes; el vidrio de cada uno publica `max(2, round(0.9·d/4))`
+  paños, así que hay al menos 4 ventanas en el piso 2. Dientes al este (dos
+  tercios) y terraza al oeste (un tercio).
+- **§5.2, `brewery` (#322):** un prisma `gable` no dibuja fachada; la "nave a
+  dos aguas con fachada" es un cuerpo plano con `facade { floors: 1, cols: 3 }`
+  y `gableRoof` 1.5 encima. Los slots de neón usan `shop` 0 y 1 porque
+  `lights.ts` deduplica por `shop`.
+- **§5.2, `derelictHall` (#322):** cumbrera y cabios paran en base + 1.85, no
+  + 2 (una viga de 0.3 centrada pasaría el tope con `maxH` 10); los conos de
+  selva se acotan a `r ≤ 2` y al tope; el tono del cuerpo baja un paso
+  (`shiftTone(tone, −1)`).
+- **§5.2, `coveredMarket` (#322):** solo abren `open[0]` y `open[1]` (pilares y
+  toldos en ambas); la guirnalda cuelga solo bajo `open[0]`; las ventanas de
+  los dientes van en el piso 1.
+- **§5.2, `openDock` (#322):** el cerco es el `fence` del kit sin su tramo
+  frontal.
+- **Límite conocido (#322):** en un lote de 21×10 con frente **este u oeste**
+  (10 sobre el frente), `freightShed` aloja un camión y `openDock` un
+  contenedor. La fila de carga mira al sur, donde entran 2..3.
+- **Estilo `harbor` (#326, rebasado sobre #322):** ver más abajo.
+
+**Portfolio este (#323)**
+
+Medido con la semilla 7 (plan `docs/plans/2026-11-08-323-portfolio-este.md`).
+
+- **§4.1 P11, grúas de muelle 1 u al este, en x 284 (#323):** la pata oeste en
+  x 283 corta la roca del río en x ≤ 279.79.
+- **§4.1 P10, escollera de la caleta cede (#323):** tres rocas (x 284–293,
+  y 27–34) estaban bajo la pata este de la grúa norte y en la esquina NO de la
+  losa; correr las grúas 1 u no las libera.
+- **§4.1 P11, rieles sobre los ejes de las patas, x 281 / 287, de y 31 a 82
+  (#323):** los x 280.5 / 285.5 del issue no caen bajo las patas, y arrancar en
+  y 28 pondría el riel este sobre agua de la caleta. Las grúas de la ribera
+  este no dibujan los rieles cortos del kit.
+- **§4.1 P10, el RTG abarca los carriles 2 y 3 (#323):** `rtgAt(292.1, 302.1,
+  50, out, 0.2)`. Con `rtgAt(288.4, 296.6, 50)` la pata oeste caería dentro del
+  carril 1, sobre pilas. Las pilas bajo la viga se acotan a 3.
+- **§4.1 P10, todo sobre la losa parte de z 0.2 (#323).**
+- **§4.1 P10, la prueba del patio usa y 30..84, no 30..82 (#323):** la garita en
+  (296, 81), de 3×3, llega a y 84, que también es el `y1` de la muestra.
+- **§4.4, cian +6, no +4 (#323):** cuentan también las dos luces de punta de
+  las grúas; `windowCool` +1.
+- **§4.1 P9, torres de servicio del dique sobre la cubierta (#323),** contra la
+  cara sur del muro norte (y 75.5); en y 74 se superponen con el muro y
+  `sortByDepth` no ordena cajas superpuestas.
+- **Oclusión (#323):** la prueba agrega `hullsOverlap(screenHull)` a
+  `overlaps(screenBounds)`, lo que evita los falsos positivos de solo
+  rectángulos vistos en #83.
+- **Kit (#323):** `door` se exporta del kit.
+- **§4.4, farol NO del patio en (292.4, 30.5), no en (288.5, 30.5) (#323):** el
+  punto del issue es agua de la caleta.
+- **Pruebas (#323):** `island-coast.test` exime a las grúas, sus rieles y el
+  patio de la regla "a menos de 3 u del agua", como ya hace con la escollera;
+  en cambio el centro de cada una debe estar sobre tierra.
+- **Resto conocido (#323):** la esquina NO de la losa (x 288..290, y 30..31) y
+  una esquina de la pata NE de la grúa norte pisan el agua de la caleta por
+  menos de 1 u; ambas vienen de las coordenadas del issue.
+
+**Relleno de Portfolio oeste (#324)**
+
+- **§4.1 P4, pórtico del patio en x 149, no 150 (#324):** una pata en
+  (150, −36.5) pisa la sección de casco vieja en (150, −40) en y −36.5..−36.
+- **§4.2, `h ≤ 3` del patio es la `h` nominal (#324):** las secciones de casco
+  escalonadas, de la misma forma que las viejas, llegan a z 4.05.
+- **§4.1 P4 y P7, barrido de primer ajuste tras los 30 intentos de rng (#324):**
+  el issue dice "30 intentos y se rinde"; el patio y la franja de servicio
+  hacen ahora un barrido determinista de primer ajuste (paso 0.5, sin rng), como
+  `stockpile` del kit. Sin él, `world(7)` ubicaba 2 grupos del patio y 11/12
+  piezas de servicio.
+- **§4.1 P7, veto de la franja de servicio (#324):** rechaza también cajas que
+  quedarían delante de las patas del pórtico en pantalla (decisión 11 del
+  plan). El salto de 147..156 no cambia.
+- **§4.1 P5, `dockWorks(out, accents, rng)` (#324):** la firma del issue no
+  lleva `rng`, pero `stackContainers` lo necesita.
+- **§4.1 P5, tablones del andamio (#324):** junto a los postes, del lado del
+  foso, para no superponerlos.
+- **§4.4, hastiales excluidos (#324):** las ventanas van solo en paredes
+  rectangulares de planta baja; los hastiales de las naves quedan fuera.
+- **Selva (#324):** el relleno consume el rng del astillero antes de `jungle()`,
+  así que la selva se mueve; el piso de los conos se midió de nuevo en 6.
+- **Muestra `calle-faroles`, `h` de 7 a 14 (#324):** el contrapeso de la pluma
+  de la grúa en y 31 entra en la caja.
+
+**Ribera este y dársena (#326)**
+
+- **§5.3, `STYLES.harbor` / `CATALOGUE.harbor` / `StyleId "harbor"` agregados en
+  #326 (#326):** el issue los describía como existentes, pero #322 seguía
+  abierto. Tras rebasar sobre #322 queda una sola copia, con los valores de
+  #322.
+- **§5.3, botes de `len 5`, no 6 (#326):** con centros a 6, dos botes de `len
+  6` se tocan aun con rumbo 0, y el yaw de ±0.15 los superpone.
+- **§5.3, botes amarrados a 1.5 del muro norte (`y 98`), no del sur, y la grúa
+  en la esquina noreste (#326):** `dockCrane(v3(298, 95, 0.5), "w")`. En las
+  posiciones del issue el techo del mercado de pescado (desde `y 117.5`, 7.3 de
+  alto) ocultaba dos botes y medio y casi toda la grúa en la cámara iso, lo que
+  rompía el criterio de aceptación; una prueba lo fija ahora: ningún sólido de
+  la ciudad oculta un bote.
+- **§5.3, farol en `(283, 115.2)` (#326):** a 115.5 el poste entraba en el
+  zócalo de la manzana.
+- **§5.3, cajones y balanza del mercado en la vereda norte de la manzana, dibujados
+  por `harbor()` (#326):** el cuerpo de 21×15 llena el lote y el contrato del
+  kit solo admite lote + 0.8.
+- **§5.3, mesas del food hall bajo el patio techado (#326):** los galpones y el
+  patio llenan el lote y `open[0]` es `"w"`, que es pared de galpón.
+- **§5.3, escollera (#326):** sin rocas en la boca de la dársena (`y 96..114`);
+  una roca cuyo centro cae en una celda dibujada como agua se desliza al este
+  hasta la celda de tierra siguiente, para no flotar.
+- **Selva (#326):** ambas plantaciones se filtran también con
+  `clearOfWater(…, 3)` y descartan todo cono que oculte un bote.
+- **Pruebas (#326):** `island-coast.test` exime a los sólidos construidos al
+  borde de la dársena (todo lo que corta `x 278..304, y 92..118`) y a los
+  conos de roca de la ciudad, como a la escollera del astillero.
+- **§5.3, autos (#326):** no estacionan en la vereda norte de `(280, 116)`, que
+  es el muro de la dársena.
+
+**Barrio de galpones (#325)**
+
+- **§5.2, el mundo no muestra neón de cervecería (#325):** con la semilla del
+  mundo la fila 92 dibuja `vaultLoft, loftHall×3` más el mercado, así que no
+  hay cervecería ni neón de galpones en el sitio ni en `lab/resume.html`. La
+  prueba usa la alternativa que permite el issue: una semilla fija (7/8/9) que
+  sí dibuja una cervecería, con 2 neones. Los pesos y `FIXED` son vinculantes y
+  no se tocaron; si una captura debe mostrar el neón, el dueño puede fijar una
+  cervecería en la fila 92 o ajustar los pesos.
+- **§5.2, el muelle abierto se corta en los pasos a nivel (#325):** (`c.x0..c.x1
+  + 0.6`), con tramos `[−50,−24] [−17.4,6] [12.6,36] [42.6,66]`. Los postes
+  sur de #320 en `(c.x1+0.3, 137.8)` caen dentro de `y 136.3..138`.
+- **§5.2, el cerco sur abierto en x 72..81 (#325),** donde lo cruzan los
+  cambios de vía.
+- **§5.2, `openDock` en z 0 sin zócalo (#325):** sigue la regla general
+  `NO_PLINTH`; el literal del lote en el issue dice `z: PLINTH_H`, que la
+  contradice.
+- **§5.2, el tren estacionado sobre los durmientes del apartadero (z 0.3)
+  (#325):** cumple la regla (139.8 − 1.4·3.7 = 134.62 ≥ 134.5); la locomotora
+  va al extremo oeste.
+- **§5.2, camiones, contenedores y palés por rng entre ranuras fijas (#325):**
+  no esquivan los carriles N-S pintados en la calle, que el issue no excluye.
+
+**Feria (#327)**
+
+- **§8, perfil del tronco acuático (#327):** el issue pide "un canal en z 2.5
+  hasta la costa" y también "un tramo plano en z 6 hasta la caída"; el canal en
+  z 2.5 no puede sostener el plano en z 6. Se sigue la ruta de los troncos que
+  fija el issue: la subida arranca en z 2.5, el canal corre plano en z 6 y la
+  caída baja de z 6 a 0.2.
+- **§8, fin del canal `FLUME_X1 = min(bayShoreX en la banda) − 1` (#327),** o
+  sea 219: el `bayShoreX(FLUME.y) − 2` del issue da 221, que cae sobre agua en
+  y −293.
+- **§8, agua del canal como `prism shallow` fino (z 6..6.05), no `strip`
+  (#327):** `buildRenderList` pinta todo `strip` en la capa de suelo, bajo los
+  sólidos elevados (`src/iso/render-list.ts:26-29`), y el canal lo taparía.
+- **§8, los troncos (#327):** la ruta es abierta; un tronco que cayó a la
+  bahía reaparece en la estación.
+- **§8, torre del tren fantasma sobre el techo (#327):** z 6..14, aguja hasta
+  18, no anidada en el cuerpo, para que el orden por AABB siga funcionando. La
+  calavera va en la cara sur de la torre.
+- **§8, hilera de puestos (#327):** la ranura de y −294 queda bajo el canal y
+  se salta; una ranura que toca el paseo corre al oeste de a 0.5 u hasta 10 u
+  (el máximo usado es 9; con tope 6 solo entran 11 puestos y el issue pide al
+  menos 12); los carteles van en la cara sur de cada puesto (bajo el toldo en
+  los de comida, z 1..1.7; en el tambor de la adivina, z 0.4..1.2; en la mesa
+  de aros, z 0.1..0.7); el tiro al blanco queda abierto al este, hecho de
+  paredes y una losa de techo.
+- **§8, orden del rng (#327):** `boothRow` corre después de `beach()`, así que
+  la secuencia del rng de la playa no cambia. Una sombrilla bajo el canal se
+  corre al sur, no se descarta. La búsqueda de bote prueba 9..6 u del agua
+  primero y 5..4 solo como reserva: en la semilla 31 el canal ocupó el único
+  lugar libre. Los botes de la semilla 7 y del sitio no cambian.
+- **§8, peldaños del tobogán (#327):** conservan el `rotBox(…, 2.2, 1.2, …)` del
+  issue; con 3.9 u de arco por peldaño la hélice se lee escalonada y no como
+  rampa continua. La revisión de código lo señaló y se dejó el valor fijo del
+  issue.
+- **§8, postes del patio de food trucks (#327):** los de y −176.5 quedan 0.65 u
+  fuera de `FOOD_COURT`; se dejan donde los pone el issue y la prueba de
+  contención admite 0.7 u de margen.
+
+**Cierre (#328)**
+
+- **§9 Presupuesto global, los tres recortes se aplicaron (#328):**
+  `RIB_STEP` de 1 a 1.5 (`src/iso/plate.ts`); `STACK_HEIGHTS` 1:35 / 2:40 /
+  3:25 (`src/kit/forms/industrial.ts`), usado por `containerStack` y por el
+  patio de Portfolio; la franja de servicio de `src/scenes/shipyard-fill.ts`
+  baja a la mitad, de 12 a 6 piezas (1 pañol, 1 autoelevador, 2 pilas de
+  palés, 1 baño químico, 1 contenedor de herramientas).
+- **Efecto lateral (#328):** Portfolio ya no usa `sheetGreen` con la semilla del
+  sitio (el pañol quitado era el único); la lista de materiales compartidos de
+  `world.test.ts` lo pierde.
+- **Primer dibujo fuera de tope (#328):** tras los tres recortes el primer
+  dibujo del lab y del sitio sigue sobre el tope; como pide el issue, queda
+  asentado como medición fuera de tope y no se tocó más código (§12.1).
+- **Prueba nueva (#328):** `src/scenes/city-budget.test.ts` fija topes de
+  sólidos elevados por escena (§12.2).
+
+### 12.1 Medición
+
+**Protocolo.** Chrome headless 156 vía agent-browser 0.27.0, sin GPU
+(swiftshader), DPR 2 (viewport de 1600×900 fijado antes de abrir), sin la
+extensión de DevTools. El navegador se cierra entre carga y carga. Compuerta
+antes de cada carga: carga de 1 min < 6 y CPU ociosa ≥ 60 % durante 3 s. El
+host es compartido: la carga sube a 9–18 entre cargas por procesos de fuera del
+contenedor. El redibujo y el bloom necesitan 60 frames (≈ 30 s reales a 2 fps),
+así que se leen en cargas largas de 60 s.
+
+**Lecturas fuera de compuerta.** La serie del recorte 1 se tomó antes de la
+compuerta de CPU ociosa, solo con la carga de 1 min, y su 9.ª carga corrió con
+carga 21.08. En la base, `baselab-8` (250.0 ms, carga 20.97) y `basesite-1`
+(740.2 ms, carga 7.39) pasaron la compuerta solo por CPU ociosa, sin bajar de 6
+en tres minutos. Las tres lecturas quedan en las medianas publicadas; sin ellas
+la del recorte 1 es 307.4 ms (8 cargas), la base del lab 455.5 ms (7) y la del
+sitio 714.6 ms (4): todas siguen sobre el tope.
+
+**Primera pasada, antes de los recortes** (44 862 polígonos estáticos): lab
+mediana de 10 = 271.8 ms (255–273 en siete cargas, 502–523 en tres); sitio
+mediana de 5 = 478.1 ms (404–877); peor redibujo 33.3 ms en una corrida del lab
+cuyo bloom había caído a 15.3 ms, y 14.3–18.7 ms en las otras siete ventanas.
+
+**Primer dibujo del lab, mediana después de cada recorte** (el sitio se midió
+solo al final, después del recorte 3):
+
+| Después de | Polígonos | Mediana lab | Valores (ms) |
+|---|---|---|---|
+| recorte 1 (`ribs` cada 1.5) | 44 842 | 323.9 (9 cargas) | 258.6 501.1 503.8 258.5 323.9 290.8 1090.0 272.5 556.7 |
+| recorte 2 (pilas hasta 3) | 44 818 | 269.75 (10 cargas) | 265.6 288.6 262.3 264.6 271.0 268.8 270.4 500.0 458.7 269.1 |
+| recorte 3 (franja de servicio a la mitad) | 44 789 | 476.0 (10 cargas) | 499.0 267.5 265.7 271.8 517.6 518.0 453.0 255.8 512.5 504.4 |
+
+El primer dibujo del lab es **bimodal**, ≈ 265 ms o ≈ 510 ms, y la mediana cae
+de un lado u otro según cuántas cargas caen en cada modo: con 6 de 10 en el
+modo lento, la del recorte 3 es 476.0.
+
+**Tabla final** (después de los tres recortes, con la base previa a la historia
+en `860a582`, medida con el mismo protocolo en el mismo host):
+
+| Métrica | Tope | Después | Base `860a582` |
+|---|---|---|---|
+| Polígonos estáticos | ≤ 56 000 | 44 789 | 41 507 |
+| Primer dibujo lab, mediana de 10 | ≤ 260 ms | 476.0 ms (255.8–518.0; bimodal ≈ 265 / ≈ 510) | 437.3 ms (mediana de 8; 244.9–481.8) |
+| Primer dibujo sitio, mediana de 5 (4 cargas cortas + la 1.ª larga) | ≤ 300 ms | 799.1 ms (370.1–887.7; con la 2.ª larga, 765.1, la mediana de 6 es 782.1) | 715.1 ms (690.9–811.0) |
+| Peor redibujo en 5 s, lab (3 cargas largas, 6 ventanas) | ≤ 22 ms | 20.1 ms (15.1–20.1) | no medido |
+| Bloom lab | ≤ 15 ms, `on` | 14.2 / 14.0 / 13.7 ms, `on` ×3 | no medido |
+| Bloom sitio | ≤ 15 ms, `on` | 14.1 / 14.1 ms, `on` ×2 | no medido |
+
+**Lectura.** Los polígonos, el peor redibujo y el bloom están dentro del tope.
+Los dos primeros dibujos están fuera, pero la base previa a la historia, en el
+mismo host, también está sobre sus topes viejos (230 / 270 ms): 437.3 ms en el
+lab y 715.1 ms en el sitio. La diferencia entre la base y el estado final del
+lab (437.3 contra 476.0) cae dentro del ruido de la bimodalidad; la del sitio
+(715.1 contra 799.1) es de 12 %. Con la carga ajena del host y el renderizado
+por software, el primer dibujo mide el host más que el código.
+
+### 12.2 Sólidos por escena
+
+Sólidos elevados con la semilla 7 (`SEED`). Las cifras de "antes" se
+reprodujeron exactamente en `860a582` con el mismo script.
+
+| Escena | Antes de la historia | Después de la historia | Después de los recortes | Tope |
+|---|---|---|---|---|
+| astillero | 423 | 553 | 543 | 600 |
+| fábrica | 778 | 775 | 775 | 900 |
+| ciudad | 1 121 | 1 431 | 1 431 | 1 600 |
+| feria | 278 | 452 | 452 | 500 |
+| hinterland | 503 | 456 | 456 | 500 |
+| tecnológico | 1 489 | 1 514 | 1 514 | 1 700 |
+| Portfolio en contenido (astillero + fábrica) | 1 201 | 1 328 | 1 318 | 1 700 (`world.test`) |
+| Resume, acentos estáticos | 707 | 835 | 835 | 1 150 |
+| Resume, `strip` | 137 | 152 | 152 | 190 |
+| Polígonos estáticos del mundo | 41 507 | 44 862 | 44 789 | 56 000 |
+
+Los topes de las seis escenas en `src/scenes/city-budget.test.ts` son lo
+medido por 1.1, redondeado a la centena; los de Portfolio en contenido (1 700,
+§0 g) y de Resume (1 150 acentos, 190 `strip`) son los que ya existían. Los
+recortes quitaron 10 sólidos al astillero (553 a 549 por las pilas a 3 alturas,
+549 a 543 por la franja de servicio de 12 a 6 piezas) y 73 polígonos al total;
+`RIB_STEP` 1.5 solo cambia la cuenta de polígonos (44 862 a 44 842).
+
+### 12.3 Capturas
+
+Cuatro vistas, antes y después de la historia, a 1600×900 con DPR 2. Las
+"antes" entraron con #319 (tomadas sobre `860a582`, la base de la rama, antes de
+sus cambios) y no se regeneraron; las "después" son el estado de este cierre,
+con 3 s de espera tras abrir.
+
+| Vista | Página | Antes | Después |
+|---|---|---|---|
+| Portfolio | `/lab/portfolio.html` | ![portfolio antes](assets/2026-10-15-costura-90/portfolio-antes.png) | ![portfolio después](assets/2026-10-15-costura-90/portfolio-despues.png) |
+| Resume | `/lab/resume.html` | ![resume antes](assets/2026-10-15-costura-90/resume-antes.png) | ![resume después](assets/2026-10-15-costura-90/resume-despues.png) |
+| Mundo | `/lab/world.html` | ![mundo antes](assets/2026-10-15-costura-90/mundo-antes.png) | ![mundo después](assets/2026-10-15-costura-90/mundo-despues.png) |
+| Portada | `/` | ![portada antes](assets/2026-10-15-costura-90/cover-antes.png) | ![portada después](assets/2026-10-15-costura-90/cover-despues.png) |

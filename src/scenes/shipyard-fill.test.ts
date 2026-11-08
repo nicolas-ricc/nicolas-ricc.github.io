@@ -109,7 +109,7 @@ describe.each(scenes)("dry dock works (%s)", (_, s) => {
 describe.each(scenes)("service strip (%s)", (_, s) => {
   it("service strip: inside x 112..196, y 76.5..79.5, never in x 147..156, none above 3", () => {
     expect(SERVICE).toEqual({ x0: 112, y0: 76.5, x1: 196, y1: 79.5, skip: [147, 156] });
-    expect(s.fill.service.length).toBeLessThanOrEqual(12);
+    expect(s.fill.service.length).toBeLessThanOrEqual(6);
     for (const x of s.fill.service.flat()) {
       const b = bounds(x), where = JSON.stringify(b);
       expect(b.min.x, where).toBeGreaterThanOrEqual(112); expect(b.max.x, where).toBeLessThanOrEqual(196);
@@ -122,17 +122,17 @@ describe.each(scenes)("service strip (%s)", (_, s) => {
   it("the fill does not overlap itself or the old solids", () => expect(overlapsOf(s, [...s.fill.yard, ...s.fill.dock, ...s.fill.service])).toEqual([]));
 });
 
-it("the site's service strip places all 12 pieces: 2 storerooms, 2 forklifts, 3 pallet stacks, 3 toilets, 2 tool containers", () => {
+it("the site's service strip places all 6 pieces (halved by the budget cut of #328): 1 storeroom, 1 forklift, 2 pallet stacks, 1 toilet, 1 tool container", () => {
   const ps = site.fill.service;
-  expect(ps).toHaveLength(12);
+  expect(ps).toHaveLength(6);
   const one = (p: Solid[]) => (p.length === 1 && p[0]!.kind === "prism" ? p[0]! : null);
   const count = (f: (x: Solid & { kind: "prism" }) => boolean) => ps.filter((p) => { const x = one(p); return x !== null && x.kind === "prism" && f(x); }).length;
-  expect(count((x) => x.w === 4 && x.d === 3 && x.h === 2.6)).toBe(2);
-  expect(count((x) => x.mat === "rust" && x.w === 2 && x.d === 3 && x.h === 2)).toBe(2);
-  expect(count((x) => x.mat === "boxBlue" && x.w === 1 && x.d === 1 && x.h === 2.2)).toBe(3);
-  expect(count((x) => x.w === 6 && x.d === 2.4 && x.h === 2.6)).toBe(2);
+  expect(count((x) => x.w === 4 && x.d === 3 && x.h === 2.6)).toBe(1);
+  expect(count((x) => x.mat === "rust" && x.w === 2 && x.d === 3 && x.h === 2)).toBe(1);
+  expect(count((x) => x.mat === "boxBlue" && x.w === 1 && x.d === 1 && x.h === 2.2)).toBe(1);
+  expect(count((x) => x.w === 6 && x.d === 2.4 && x.h === 2.6)).toBe(1);
   const pallets = ps.filter((p) => p.length >= 1 && p.every((x) => x.kind === "prism" && x.mat === "deck" && x.w === 1.2 && x.d === 1 && x.h === 0.5));
-  expect(pallets).toHaveLength(3);
+  expect(pallets).toHaveLength(2);
   for (const p of pallets) {
     expect(p.length).toBeGreaterThanOrEqual(1);
     expect(p.length).toBeLessThanOrEqual(4);
