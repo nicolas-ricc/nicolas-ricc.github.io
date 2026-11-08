@@ -191,7 +191,7 @@ export const islandWestX = (y: number): number => estuaryEast(y) - estuaryInset(
  * beyond (-Infinity from y 380: all water).
  * - North of 146 it oscillates between `lo` and `hi`: `lo` = 331 leaves 3 u of
  *   footing to sheds (x ≤ 324) and scrap (x ≤ 329); between y 134 (base of the
- *   lighthouse headland) and 146 (zone seam) it rises to 344, and `hi` = 344 +
+ *   lighthouse headland) and 146 (`ESTUARY_Y0`, the zone seam before #56) it rises to 344, and `hi` = 344 +
  *   shoreWidth − 1.5 leaves no land that clicks Blog (`worldZoneAt`).
  * - Between 146 and 158 (start of the seawall) it interpolates to 344.
  * - South tip: an ellipse 44 u long from WORLD.y1 over the width of the

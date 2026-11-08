@@ -19,6 +19,7 @@ const REEF_W = 6;
 export const WATER_TERRAIN = new Set<Terrain>(["water", "sea", "shore", "abyss"]);
 export const BLEED_WATER = new Set<BleedTerrain>(["sea", "shore", "abyss", "river"]);
 
+/** Portfolio ground. Through `terrainAt` it only sees `y < ZONE_SPLIT_Y` and the station land, so the jungle branches at `y ≥ 100` below are only reached by direct calls. */
 export function shipyardTerrainAt(x: number, y: number): Terrain {
   if (inStationLand(x, y) && x < 100) return "asphalt"; // the strip west of the station track, level with the city street
   if (x < 0) return y < 110 ? "slab" : "jungle"; // west column: rail yard and piles, jungle to the south

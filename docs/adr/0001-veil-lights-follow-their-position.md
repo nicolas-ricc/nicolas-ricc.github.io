@@ -30,6 +30,6 @@ The decision lives in one pure function, `accentsByZone(accents, zone?)` in `src
 - Other layers that declared a zone later for the same reason follow the exception: the train and the level crossing (`rail.lights`, `rail.crossing`, `rail.signals` and the storybook's `tren.lights`, all in `src/scenes/rail-animator.ts`) declare `"portfolio"`. Any new layer of lights that must not change zone with its position has to declare one; a layer that declares none is split by position.
 - Since #56 the train crosses the Resume strip (`x -54..96, y 129..136`) and its layers keep declaring `portfolio`, like a vehicle (see 0002).
 - Cost: a layer without a declared zone has three Graphics (one per zone), most of them empty, instead of one. The bloom mirror is taken from the same list of Graphics, so it needs no change.
-- Out of scope, and still true: moving the zone seam, veiling animated solids or water by position, and optimizing the sea's redraw (#71).
+- Out of scope, and still true: veiling animated solids or water by position, and optimizing the sea's redraw (#71).
 
 Sources: `src/world/veil.ts` (`accentsByZone`, `accentZone`), `src/world/stage.ts`, `src/scenes/animator.ts` (`AnimLayer.zone`), `src/scenes/sea-animator.ts`, `src/scenes/rail-animator.ts`; plan `docs/plans/2026-10-19-26-velo-luces-por-posicion.md`.
