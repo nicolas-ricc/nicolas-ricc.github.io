@@ -133,7 +133,10 @@ it("the site's service strip places all 12 pieces: 2 storerooms, 2 forklifts, 3 
   expect(count((x) => x.w === 6 && x.d === 2.4 && x.h === 2.6)).toBe(2);
   const pallets = ps.filter((p) => p.length >= 1 && p.every((x) => x.kind === "prism" && x.mat === "deck" && x.w === 1.2 && x.d === 1 && x.h === 0.5));
   expect(pallets).toHaveLength(3);
-  for (const p of pallets) expect(p.length).toBeGreaterThanOrEqual(1), expect(p.length).toBeLessThanOrEqual(4);
+  for (const p of pallets) {
+    expect(p.length).toBeGreaterThanOrEqual(1);
+    expect(p.length).toBeLessThanOrEqual(4);
+  }
 });
 
 describe("the fill does not cover the landmarks on screen", () => {

@@ -21,11 +21,7 @@ const planOf = (ss: Solid[]): Plan => {
   return { x0: Math.min(...bs.map((b) => b.min.x)), y0: Math.min(...bs.map((b) => b.min.y)), x1: Math.max(...bs.map((b) => b.max.x)), y1: Math.max(...bs.map((b) => b.max.y)) };
 };
 
-/**
- * Rejection placement of a `fw`×`fd` footprint in `area`, 0.5 clear of `taken`: 30 tries (x, then y if the area is deeper
- * than the footprint, from `rng.next()`), then a first fit from the north-west every 0.5 without rng (tight areas). `ok` may veto.
- * Records the footprint in `taken`; `null` if nothing fits.
- */
+/** Places a `fw`×`fd` footprint in `area` clear of `taken` (recorded on success). Random tries first; the rng-free scan covers tight areas. `ok` may veto. */
 function place(taken: Plan[], area: Plan, fw: number, fd: number, rng: Rng, ok: (x: number, y: number) => boolean = () => true): { x: number; y: number } | null {
   const free = (x: number, y: number) => !taken.some((q) => x - 0.5 < q.x1 && q.x0 - 0.5 < x + fw && y - 0.5 < q.y1 && q.y0 - 0.5 < y + fd) && ok(x, y);
   const take = (x: number, y: number) => { taken.push({ x0: x, y0: y, x1: x + fw, y1: y + fd }); return { x, y }; };
@@ -38,7 +34,7 @@ function place(taken: Plan[], area: Plan, fw: number, fd: number, rng: Rng, ok: 
   return null;
 }
 
-/** Gantry over the yard, at x 149 (the old hull sections start at x 150): rails y −59.5 and −35.5, legs 1×1×9 beam 1×24×1 at z 9, trolley at z 8. */
+/** Gantry over the yard, at x 149 because the old hull sections start at x 150. */
 function yardGantry(out: Solid[]): Solid[] {
   const rail = (y: number): Solid => ({ kind: "strip", path: [{ x: YARD.x0, y }, { x: YARD.x1, y }], width: 0.5, z: 0.05, mat: "rail" });
   const piece = [
@@ -51,7 +47,7 @@ function yardGantry(out: Solid[]): Solid[] {
   return piece;
 }
 
-/** Up to 5 stock groups placed inside `YARD`, 0.5 clear of everything already in `out`; a group that fits nowhere is dropped. */
+/** Stock groups inside `YARD`, clear of everything already in `out`; a group that fits nowhere is dropped. */
 export function yardFill(out: Solid[], rng: Rng): Solid[][] {
   const pieces = [yardGantry(out)];
   const makers: ((at: Vec3) => Solid[])[] = [];
@@ -71,13 +67,13 @@ export function yardFill(out: Solid[], rng: Rng): Solid[][] {
   return pieces;
 }
 
-/** Scaffolding row along the dock: 7 steel posts 0.4×0.4 every 8 from x 128, z −6..0.5, and 6 deck planks 8×0.6×0.2 at z 0 on the pit side of the posts. */
+/** Scaffolding row along the dock; planks sit on the pit side of the posts. */
 function scaffold(postY: number, plankY: number): Solid[] {
   const xs = [0, 1, 2, 3, 4, 5, 6].map((i) => 128 + 8 * i);
   return [...xs.map((x) => prism(x, postY, -6, 0.4, 0.4, 6.5, "steel")), ...xs.slice(0, -1).map((x) => prism(x, plankY, 0, 8, 0.6, 0.2, "deck"))];
 }
 
-/** Dry dock works: scaffolding rows (north y 8.5, south y 27), tower cranes at (116, 5) and (116, 31) with a cyan light, and two site containers on the slab north of the dock. */
+/** Dry dock works: scaffolding, tower cranes with a cyan light, and site containers on the slab north of the dock. */
 export function dockWorks(out: Solid[], accents: Accent[], rng: Rng): Solid[][] {
   const pieces = [scaffold(8.5, 8.9), scaffold(27, 26.4)];
   for (const y of [5, 31]) {
@@ -90,7 +86,7 @@ export function dockWorks(out: Solid[], accents: Accent[], rng: Rng): Solid[][] 
   return pieces;
 }
 
-/** Service strip between the slipways and the station: up to 12 pieces (2 storerooms, 2 forklifts, 3 pallet stacks, 3 toilets, 2 tool containers) at y 76.5, never across `SERVICE.skip` nor in front of `protect` (the gantry legs) on screen. */
+/** Service strip between the slipways and the station, never across `SERVICE.skip` nor hiding `protect` (the gantry legs) on screen. */
 export function serviceStrip(out: Solid[], rng: Rng, protect: Bounds[]): Solid[][] {
   const pallets = (x: number, y: number) => Array.from({ length: rng.int(1, 4) }, (_, k) => prism(x, y, k * 0.5, 1.2, 1, 0.5, "deck"));
   const items: { fw: number; fd: number; fh: number; build: (x: number, y: number) => Solid[] }[] = [

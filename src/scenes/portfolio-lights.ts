@@ -21,8 +21,7 @@ const WORKSHOP: Facade = { floors: 1, cols: 5 };
 const SHED: Facade = { floors: 1, cols: 10 };
 
 /** Facade of a window owner, or `null`. Halls and workshops by their literal measures in shipyard.ts. */
-function facadeOf(s: Solid): Facade | null {
-  if (s.kind !== "prism") return null;
+function facadeOf(s: Solid & { kind: "prism" }): Facade | null {
   if (s.roof === "gable" && s.at.x >= SHED_X) return SHED;
   if (s.mat !== "concrete") return null;
   if (s.roof === "gable" && s.w === 90 && s.d === 16 && s.h === 10) return HALL;
@@ -34,8 +33,9 @@ export function windowCandidates(solids: Solid[]): WindowCandidate[] {
   const occluders = solids.filter((s) => !isFlat(s)).map((s) => ({ s, b: bounds(s), sb: screenBounds(bounds(s)) }));
   const out: WindowCandidate[] = [];
   for (const owner of solids) {
+    if (owner.kind !== "prism") continue;
     const facade = facadeOf(owner);
-    if (!facade || owner.kind !== "prism") continue;
+    if (!facade) continue;
     const shed = facade === SHED;
     for (const wall of visibleWalls(owner)) {
       const [p0, p1] = [wall.pts[0]!, wall.pts[1]!];
@@ -54,6 +54,7 @@ export function windowCandidates(solids: Solid[]): WindowCandidate[] {
 export function portfolioWindows(solids: Solid[], rng: Rng): Accent[] {
   const vis = windowCandidates(solids).filter((c) => !c.hidden);
   const keys = vis.map(() => rng.next());
-  const on = new Set(keys.map((k, i) => ({ k, i })).sort((a, b) => a.k - b.k).slice(0, Math.round(LIT * vis.length)).map((e) => e.i));
+  const lowest = keys.map((k, i) => ({ k, i })).sort((a, b) => a.k - b.k).slice(0, Math.round(LIT * vis.length));
+  const on = new Set(lowest.map((e) => e.i));
   return vis.filter((_, i) => on.has(i)).map((c): Accent => ({ kind: "poly", pts: c.pts, color: "windowCool", alpha: WINDOW_ALPHA }));
 }
