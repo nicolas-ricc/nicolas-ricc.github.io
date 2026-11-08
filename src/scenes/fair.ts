@@ -15,7 +15,8 @@ import { FAIR, bayShoreX, bayWater, fairAt } from "./sprawl-grid";
  * varied booth row, food court, bumper cars, umbrellas, gate. It is the only place with
  * accents of all three colors. The moving pieces (wheel, train, tower
  * gondola) are assembled by the animator with the pure builders here.
- * Spec: docs/superpowers/specs/2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md §4.3.
+ * Spec: docs/superpowers/specs/2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md §4.3;
+ * the attractions, booth row and food court: docs/superpowers/specs/2026-10-15-costura-90-portfolio-denso-galpones-feria-design.md §8 (#327).
  */
 export interface FairScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; wheelAxis: Vec3; drop: { at: Vec3; h: number }; neon: { marquee: Vec3[]; lift: Vec3[]; column: Vec3[]; ghost: Vec3[]; mirror: Vec3[] }; arcadeSigns: [Accent, Accent] }
 
@@ -220,7 +221,7 @@ export function mirrorHouse(out: Solid[], accents: Accent[]): void {
 export function slide(out: Solid[], accents: Accent[]): void {
   const { x, y, r, h } = SLIDE, n = 24;
   out.push(prism(x - 2, y - 2, 0, 4, 4, h, "deck"), cone(x, y, h, 3, 2, "copper"), prism(x - 2.6, y - 1, 0, 0.6, 2, h, "steel"));
-  for (let z = 2; z <= h; z += 2) out.push({ kind: "beam", from: v3(x - 2.7, y - 1, z), to: v3(x - 2.7, y + 1, z), w: 0.1, h: 0.1, mat: "steel" });
+  for (let z = 2; z <= h; z += 2) out.push({ kind: "beam", from: v3(x - 2.65, y - 1, z), to: v3(x - 2.65, y + 1, z), w: 0.1, h: 0.1, mat: "steel" });
   for (let k = 0; k < n; k++) {
     const a = (6 * Math.PI * (k + 0.5)) / n, z = 13 - (12.5 * k) / (n - 1);
     const cx = x + r * Math.cos(a), cy = y + r * Math.sin(a);
@@ -310,42 +311,48 @@ export function boothTypes(rng: Rng, n: number = boothSlots().length): BoothType
 
 /** Row of varied booths along the shore. `types` (one per slot) replaces the draw; the tones always come from `rng`. */
 export function boothRow(out: Solid[], accents: Accent[], rng: Rng, types: BoothType[] = boothTypes(rng)): void {
-  boothSlots().forEach(({ x, y }, k) => {
+  const slots = boothSlots();
+  if (types.length !== slots.length) throw new Error(`boothRow: ${types.length} types for ${slots.length} slots`);
+  slots.forEach(({ x, y }, k) => {
     const type = types[k]!, cx = x + 2, cy = y + 1.5;
-    let face = y + 3, dotY: number | null = null, signX = cx; // south face where the sign hangs
+    // south face where the sign hangs, its half width and height band
+    let face = y + 3, signX = cx, half = 1.2, z0 = 1.2, z1 = 2;
     switch (type) {
       case "food": {
         out.push(prism(x, y, 0, 4, 3, 2.8, rng.pick(BOOTH_TONES), { roof: "gable" }));
         const first = rng.chance(0.5);
         for (let i = 0; i < 2; i++) out.push({ kind: "ramp", at: v3(x + i * 2, y + 3, 1.8), w: 2, d: 0.8, h: 0.4, mat: (i === 0) === first ? "signal" : "whitewash", dir: "s" });
+        z0 = 1; z1 = 1.7; // under the awning (z 1.8)
         break;
       }
       case "foodTruck": {
         const t = foodTruck(v3(x + 1, y - 1, 0), rng.pick(TRUCK_TONES), "e");
-        out.push(...t.solids); accents.push(...t.accents); face = y + 4; signX = x + 2.2;
+        out.push(...t.solids); accents.push(...t.accents); face = y + 4; signX = x + 2.1; half = 1;
         break;
       }
-      case "shooting":
-        out.push(prism(x, y, 0, 4, 3, 2.6, "rust"));
-        for (let i = 0; i < 4; i++) out.push(prism(x + 0.5 + i * 0.9, y + 1.3, 2.6, 0.4, 0.4, 0.4, "safety"));
+      case "shooting": // rust stall 4×3×2.6 open to the east: back (west) wall, north and south walls, roof; prizes hanging under the roof
+        out.push(prism(x, y, 0, 4, 0.3, 2.6, "rust"), prism(x, y + 2.7, 0, 4, 0.3, 2.6, "rust"), prism(x, y + 0.3, 0, 0.3, 2.4, 2.6, "rust"), prism(x, y, 2.6, 4, 3, 0.2, "rust"));
+        for (let i = 0; i < 4; i++) out.push(prism(x + 0.9 + i * 0.75, y + 1.3, 2.2, 0.4, 0.4, 0.4, i % 2 === 0 ? "safety" : "whitewash"));
         break;
       case "cottonCandy":
-        out.push(cyl(cx, cy, 0, 1.5, 2.5, "whitewash"), cone(cx, cy, 2.5, 1.8, 1.2, "signal"));
+        out.push(cyl(cx, cy, 0, 1.5, 2.5, "whitewash"), cone(cx, cy, 2.5, 1.8, 1, "signal"));
         break;
       case "fortune":
-        out.push(cone(cx, cy, 0, 2, 3.5, "copper")); face = cy + 1.15; dotY = cy + 0.5;
+        out.push(cyl(cx, cy, 0, 2, 1.5, "copper"), cone(cx, cy, 1.5, 2, 3.5, "copper")); face = cy + 2; z0 = 0.4; z1 = 1.2; // sign on the drum
+        accents.push(dot(cx, cy, 5.2, 0.4, "magenta")); // the tent's tip
         break;
       case "tickets":
-        out.push(prism(x + 1, y + 0.5, 0, 2, 2, 2.8, rng.pick(BOOTH_TONES), { roof: "gable" })); face = y + 2.5;
+        out.push(prism(x + 1, y + 0.5, 0, 2, 2, 2.8, rng.pick(BOOTH_TONES), { roof: "gable" })); face = y + 2.5; half = 0.8;
         break;
       case "rings":
-        out.push(prism(x, y, 0, 4, 3, 0.8, "deck"), prism(x + 0.4, y + 2.8, 0.8, 3.2, 0.2, 1.4, "rust"));
-        for (let i = 0; i < 6; i++) out.push(cyl(x + 0.5 + i * 0.6, y + 0.8, 0.8, 0.15, 1.2, "steel"));
-        for (let i = 0; i < 3; i++) out.push(cyl(x + 0.8 + i * 1.2, y + 1.9, 0.8, 0.5, 0.6, "rust"));
+        out.push(prism(x, y, 0, 4, 3, 0.8, "deck"));
+        for (let i = 0; i < 6; i++) out.push(cyl(x + 0.5 + i * 0.6, y + 0.8, 0.8, 0.15, 0.8, "steel"));
+        for (let i = 0; i < 3; i++) out.push(cyl(x + 0.8 + i * 1.2, y + 1.9, 0.8, 0.5, 0.3, "rust"));
+        z0 = 0.1; z1 = 0.7; // on the table's south face
         break;
     }
-    accents.push(sign(signX - 1.2, signX + 1.2, face + 0.02, 1.2, 2, "amber"));
-    accents.push(dot(signX, dotY ?? face + 0.2, 2.9, 0.4, type === "fortune" || k % 3 === 2 ? "magenta" : "cyan"));
+    accents.push(sign(signX - half, signX + half, face + 0.02, z0, z1, "amber"));
+    accents.push(dot(signX, face + 0.2, z1 + 0.9, 0.4, k % 3 === 2 ? "magenta" : "cyan"));
   });
 }
 

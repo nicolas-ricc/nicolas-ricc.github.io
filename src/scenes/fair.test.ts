@@ -273,16 +273,21 @@ describe("booth row (#327)", () => {
     has((x) => x.kind === "prism" && x.roof === "gable" && x.w === 4 && x.d === 3 && x.h === 2.8); // food
     expect(solids.filter((x) => x.kind === "ramp" && (x.mat === "signal" || x.mat === "whitewash")).length).toBeGreaterThanOrEqual(2); // food awning
     expect(accents.filter((a) => a.kind === "poly" && a.color === "amber" && a.alpha === 0.9).length).toBeGreaterThanOrEqual(1); // foodTruck hatch
-    has((x) => x.kind === "prism" && x.mat === "rust" && x.w === 4 && x.d === 3 && x.h === 2.6); // shooting
-    expect(solids.filter((x) => x.kind === "prism" && x.w === 0.4 && x.d === 0.4 && x.h === 0.4).length).toBeGreaterThanOrEqual(4); // prizes
+    has((x) => x.kind === "prism" && x.mat === "rust" && x.w === 4 && x.d === 3 && x.at.z === 2.6); // shooting: roof over a stall open to the east
+    expect(solids.some((x) => x.kind === "prism" && x.mat === "rust" && x.w === 4 && x.d === 3 && x.h === 2.6)).toBe(false); // not a closed box
+    const prizes = solids.filter((x) => x.kind === "prism" && x.w === 0.4 && x.d === 0.4 && x.h === 0.4);
+    expect(prizes.length).toBeGreaterThanOrEqual(4);
+    for (const p of prizes) { expect(p.kind === "prism" && p.at.z).toBe(2.2); expect(["safety", "whitewash"]).toContain(p.mat); }
     has((x) => x.kind === "cylinder" && x.mat === "whitewash" && x.r === 1.5 && x.h === 2.5); // cottonCandy
-    has((x) => x.kind === "cone" && x.mat === "signal" && x.r === 1.8);
-    has((x) => x.kind === "cone" && x.mat === "copper" && x.r === 2 && x.h === 3.5); // fortune
+    has((x) => x.kind === "cone" && x.mat === "signal" && x.r === 1.8 && x.h === 1);
+    has((x) => x.kind === "cone" && x.mat === "copper" && x.r === 2 && x.h === 3.5 && x.at.z === 1.5); // fortune: tent on its drum
+    has((x) => x.kind === "cylinder" && x.mat === "copper" && x.r === 2 && x.h === 1.5);
     expect(accents.some((a) => a.kind === "dot" && a.color === "magenta")).toBe(true);
-    has((x) => x.kind === "prism" && x.mat === "whitewash" && x.roof === "gable" && x.w === 2 && x.d === 2 && x.h === 2.8); // tickets
+    has((x) => x.kind === "prism" && x.roof === "gable" && x.w === 2 && x.d === 2 && x.h === 2.8); // tickets
     has((x) => x.kind === "prism" && x.mat === "deck" && x.w === 4 && x.d === 3 && x.h === 0.8); // rings
-    expect(solids.filter((x) => x.kind === "cylinder" && x.mat === "steel" && x.r === 0.15).length).toBeGreaterThanOrEqual(6);
-    expect(solids.filter((x) => x.kind === "cylinder" && x.mat === "rust" && x.r === 0.5).length).toBeGreaterThanOrEqual(3);
+    expect(solids.filter((x) => x.kind === "cylinder" && x.mat === "steel" && x.r === 0.15 && x.h === 0.8).length).toBeGreaterThanOrEqual(6);
+    expect(solids.filter((x) => x.kind === "cylinder" && x.mat === "rust" && x.r === 0.5 && x.h === 0.3).length).toBeGreaterThanOrEqual(3);
+    expect(() => boothRow([], [], createRng(7), types.slice(1))).toThrow();
   });
   it("every booth keeps an amber sign and a cyan or magenta dot; no booth touches another or the boardwalk", () => {
     for (const r of seeds()) {

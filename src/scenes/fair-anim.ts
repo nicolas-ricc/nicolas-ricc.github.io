@@ -9,11 +9,13 @@ import { DROP, LIFT_SEGMENTS, WHEEL, coasterAt, coasterLength, dropSolids, flume
  * The fair in motion, without Pixi: the Ferris wheel turns (one turn every
  * 40 s) with four lights running along the rim, the train runs the
  * circuit (slow on the climb, fast afterwards), the tower gondola rises,
- * waits and falls, the hall's two signs alternate and the neons run:
- * marquee, climb and tower column (which follows the gondola). Frame 0 =
- * wheel at 0, train at the station, gondola down, four fixed lights, magenta
+ * waits and falls, the hall's two signs alternate, the two logs ride the
+ * flume (2 u/s on the lift, 4 on the flat, 12 down the drop, then back to
+ * the station) and the neons run: marquee, climb, tower column (which
+ * follows the gondola), ghost train and mirror house. Frame 0 = wheel at 0,
+ * train and logs at the station, gondola down, four fixed lights, magenta
  * sign and neons at their step 0 (four marquee lights, two climb lights,
- * column at rest).
+ * column at rest, four ghost lights, two mirror lights).
  */
 export const WHEEL_PERIOD_MS = 40000, WHEEL_STEP_MS = 250, WHEEL_LIGHT_STEP_MS = 150, WHEEL_LIT = 4;
 export const TRAIN_SPEED = 9, TRAIN_LIFT_SPEED = 3;
