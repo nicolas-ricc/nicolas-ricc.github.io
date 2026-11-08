@@ -209,8 +209,6 @@ export function tankGroup(lot: Lot, rng: Rng, style: Style): Piece {
   return tonePiece(p, tone);
 }
 
-export const QUAY_CRANE_H = 18, RTG_H = 10;
-
 /** Quay crane centered on `at`: four-legged steel gantry on two rails, cabin, mast, boom toward `dir` with a stay and a cyan light on the tip. Nothing above `z + 18`. */
 export function quayCraneAt(at: Vec2, dir: "w" | "e" | "s", out: Solid[], accents: Accent[], z = 0): void {
   const sx = dir === "e" ? 1 : dir === "w" ? -1 : 0, sy = dir === "s" ? 1 : 0;
