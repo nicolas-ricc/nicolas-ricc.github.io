@@ -59,7 +59,6 @@ export function loftHall(lot: Lot, rng: Rng, style: Style): Piece {
   return tonePiece(p, tone);
 }
 
-
 /**
  * Frame of the front `open[0]` (south without `open`): `u` runs along it (+x for n/s, +y for e/w), `v` goes inward from its edge.
  * `wall` is the plate index of that side.
@@ -234,7 +233,7 @@ export function coveredMarket(lot: Lot, rng: Rng, style: Style): Piece {
 
 /**
  * Freight shed: a loading dock along the whole front, a gable hall at the back on the west (north for e/w fronts) side
- * and 2..3 trucks parked head-on to the dock in the side yard. The trucks do not stand in front of the shed: a 8-long
+ * and 2..3 trucks parked head-on to the dock in the side yard. The trucks do not stand in front of the shed: an 8-long
  * truck does not fit in the 3-deep strip of a 21×10 lot.
  */
 export function freightShed(lot: Lot, rng: Rng, style: Style): Piece {
