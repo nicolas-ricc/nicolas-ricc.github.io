@@ -338,7 +338,7 @@ Tope de sólidos de la feria: de 278 a 520.
 - [x] `terrain.test`: la franja `y 90..146` al oeste del río es ciudad; el canal
   `QUAY_X..eastBank` sigue siendo agua; la dársena es agua; los vértices de la
   costura comparten grilla (múltiplos de 6 y de 18). Cubierto por
-  `src/scenes/terrain.test.ts` (ver desvíos de #319 y #326 en §12.0).
+  `src/scenes/terrain.test.ts` (ver desvíos de #319 en §12.0).
 - [x] `shipyard/zoning.test`: toda pieza de Portfolio cae en una subzona; las fijas
   donde dice §4.1; nada de Portfolio en `y ≥ 90` salvo la punta y P9 (el
   dique flotante termina en `y 88`); sólidos 520..700; nada tapa la grúa
@@ -383,7 +383,7 @@ Tope de sólidos de la feria: de 278 a 520.
 | Métrica | Tope de Resume nivel 2 | Tope nuevo | Medido |
 |---|---|---|---|
 | Polígonos estáticos del mundo | 46 000 | 56 000 | 44 789 ✓ |
-| Primer dibujo caliente, lab `world.html` (mediana de 10) | 230 ms | 260 ms | 476.2 ms (mediana de 10), fuera de tope |
+| Primer dibujo caliente, lab `world.html` (mediana de 10) | 230 ms | 260 ms | 476.0 ms (mediana de 10), fuera de tope |
 | Primer dibujo caliente, sitio `/` (mediana de 5) | 270 ms | 300 ms | 799.1 ms (mediana de 5), fuera de tope |
 | Peor redibujo en 5 s, lab | 22 ms | 22 ms | 20.1 ms ✓ |
 | Bloom: promedio tick + render en 60 frames | ≤ 15 ms | ≤ 15 ms | 13.7–14.2 ms lab, 14.1 ms sitio, `on` ✓ |
@@ -392,7 +392,7 @@ Los tres recortes (`ribs` cada 1.5, pilas de contenedores a 3 alturas, mitad
 de la franja de servicio) se aplicaron en ese orden y los primeros dibujos
 siguieron sobre el tope. Como indica el issue, se deja asentado como medición
 fuera de tope y no se tocó más código. La base previa a la historia (`860a582`)
-en el mismo host también da lab 437.3 ms y sitio 714.0 ms, por encima de sus
+en el mismo host también da lab 437.3 ms y sitio 715.1 ms, por encima de sus
 topes viejos (230 / 270): el host (compartido, carga de 9 a 18 desde fuera del
 contenedor, swiftshader) domina la medida. Ver §12.1.
 
@@ -740,13 +740,13 @@ cuyo bloom había caído a 15.3 ms, y 14.3–18.7 ms en las otras siete ventanas
 
 | Después de | Polígonos | Mediana lab | Valores (ms) |
 |---|---|---|---|
-| recorte 1 (`ribs` cada 1.5) | 44 842 | ≈ 290.8 (9 cargas) | 258.6 501.1 503.8 258.5 323.9 290.8 1090.0 272.5 556.7 |
-| recorte 2 (pilas hasta 3) | 44 818 | ≈ 269.9 (10 cargas) | 265.6 288.6 262.3 264.6 271.0 268.8 270.4 500.0 458.7 269.1 |
-| recorte 3 (franja de servicio a la mitad) | 44 789 | 476.2 (10 cargas) | ver abajo |
+| recorte 1 (`ribs` cada 1.5) | 44 842 | 323.9 (9 cargas) | 258.6 501.1 503.8 258.5 323.9 290.8 1090.0 272.5 556.7 |
+| recorte 2 (pilas hasta 3) | 44 818 | 269.75 (10 cargas) | 265.6 288.6 262.3 264.6 271.0 268.8 270.4 500.0 458.7 269.1 |
+| recorte 3 (franja de servicio a la mitad) | 44 789 | 476.0 (10 cargas) | 499.0 267.5 265.7 271.8 517.6 518.0 453.0 255.8 512.5 504.4 |
 
 El primer dibujo del lab es **bimodal**, ≈ 265 ms o ≈ 510 ms, y la mediana cae
 de un lado u otro según cuántas cargas caen en cada modo: con 6 de 10 en el
-modo lento, la del recorte 3 es 476.2.
+modo lento, la del recorte 3 es 476.0.
 
 **Tabla final** (después de los tres recortes, con la base previa a la historia
 en `860a582`, medida con el mismo protocolo en el mismo host):
@@ -754,8 +754,8 @@ en `860a582`, medida con el mismo protocolo en el mismo host):
 | Métrica | Tope | Después | Base `860a582` |
 |---|---|---|---|
 | Polígonos estáticos | ≤ 56 000 | 44 789 | 41 507 |
-| Primer dibujo lab, mediana de 10 | ≤ 260 ms | 476.2 ms (255.8–518.0; bimodal ≈ 265 / ≈ 510) | 437.3 ms (mediana de 8; 244.9–481.8) |
-| Primer dibujo sitio, mediana de 5 | ≤ 300 ms | 799.1 ms (370.1–887.7) | 714.0 ms (690.9–811.0) |
+| Primer dibujo lab, mediana de 10 | ≤ 260 ms | 476.0 ms (255.8–518.0; bimodal ≈ 265 / ≈ 510) | 437.3 ms (mediana de 8; 244.9–481.8) |
+| Primer dibujo sitio, mediana de 5 | ≤ 300 ms | 799.1 ms (370.1–887.7) | 715.1 ms (690.9–811.0) |
 | Peor redibujo en 5 s, lab (3 cargas largas, 6 ventanas) | ≤ 22 ms | 20.1 ms (15.1–20.1) | no medido |
 | Bloom lab | ≤ 15 ms, `on` | 14.2 / 14.0 / 13.7 ms, `on` ×3 | no medido |
 | Bloom sitio | ≤ 15 ms, `on` | 14.1 / 14.1 ms, `on` ×2 | no medido |
@@ -763,9 +763,9 @@ en `860a582`, medida con el mismo protocolo en el mismo host):
 **Lectura.** Los polígonos, el peor redibujo y el bloom están dentro del tope.
 Los dos primeros dibujos están fuera, pero la base previa a la historia, en el
 mismo host, también está sobre sus topes viejos (230 / 270 ms): 437.3 ms en el
-lab y 714.0 ms en el sitio. La diferencia entre la base y el estado final del
-lab (437.3 contra 476.2) cae dentro del ruido de la bimodalidad; la del sitio
-(714.0 contra 799.1) es de 12 %. Con la carga ajena del host y el renderizado
+lab y 715.1 ms en el sitio. La diferencia entre la base y el estado final del
+lab (437.3 contra 476.0) cae dentro del ruido de la bimodalidad; la del sitio
+(715.1 contra 799.1) es de 12 %. Con la carga ajena del host y el renderizado
 por software, el primer dibujo mide el host más que el código.
 
 ### 12.2 Sólidos por escena
@@ -773,7 +773,7 @@ por software, el primer dibujo mide el host más que el código.
 Sólidos elevados con la semilla 7 (`SEED`). Las cifras de "antes" se
 reprodujeron exactamente en `860a582` con el mismo script.
 
-| Escena | Antes de la historia | Después de la historia | Después de los recortes | Tope (`city-budget.test`) |
+| Escena | Antes de la historia | Después de la historia | Después de los recortes | Tope |
 |---|---|---|---|---|
 | astillero | 423 | 553 | 543 | 600 |
 | fábrica | 778 | 775 | 775 | 900 |
@@ -781,16 +781,17 @@ reprodujeron exactamente en `860a582` con el mismo script.
 | feria | 278 | 452 | 452 | 500 |
 | hinterland | 503 | 456 | 456 | 500 |
 | tecnológico | 1 489 | 1 514 | 1 514 | 1 700 |
-| Portfolio en contenido (astillero + fábrica) | 1 201 | 1 328 | 1 318 | 1 700 |
+| Portfolio en contenido (astillero + fábrica) | 1 201 | 1 328 | 1 318 | 1 700 (`world.test`) |
 | Resume, acentos estáticos | 707 | 835 | 835 | 1 150 |
 | Resume, `strip` | 137 | 152 | 152 | 190 |
 | Polígonos estáticos del mundo | 41 507 | 44 862 | 44 789 | 56 000 |
 
-Los topes por escena de `src/scenes/city-budget.test.ts` son lo medido por 1.1,
-redondeado a la centena. Los recortes quitaron 10 sólidos al astillero (553 a
-543: la franja de servicio de 12 a 6 piezas) y 73 polígonos al total; las
-pilas a 3 alturas y `RIB_STEP` 1.5 no cambian la cuenta de sólidos, solo la de
-polígonos.
+Los topes de las seis escenas en `src/scenes/city-budget.test.ts` son lo
+medido por 1.1, redondeado a la centena; los de Portfolio en contenido (1 700,
+§0 g) y de Resume (1 150 acentos, 190 `strip`) son los que ya existían. Los
+recortes quitaron 10 sólidos al astillero (553 a 549 por las pilas a 3 alturas,
+549 a 543 por la franja de servicio de 12 a 6 piezas) y 73 polígonos al total;
+`RIB_STEP` 1.5 solo cambia la cuenta de polígonos (44 862 a 44 842).
 
 ### 12.3 Capturas
 
