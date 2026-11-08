@@ -5,7 +5,7 @@ import { LANDMARK_MAX_H } from "../kit/piece";
 import type { Lot, Side, StyleId } from "../kit/types";
 import type { Rng } from "../map/seed";
 import { PLINTH_H } from "../scenes/city-pieces";
-import { AVENUE, BLOCK_D, BLOCK_W, EAST_COLS, LIT_FLOOR, PLAZA, SIDEWALK, SITE, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, type Block, type Rect } from "../scenes/city-grid";
+import { AVENUE, BLOCK_D, BLOCK_W, EAST_COLS, LIT_FLOOR, PLAZA, ROWS, SIDEWALK, SITE, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, type Block, type Rect } from "../scenes/city-grid";
 
 /**
  * Resume zoning: which neighborhood each block belongs to, which recipes
@@ -73,7 +73,7 @@ export const FIXED: readonly { x: number; y: number; recipe: string }[] = [
 ];
 
 /** Cap of the row facing the plaza: a tall building there would hide the tower's lit floor or the fountain (fixed.ts). */
-export const maxHeightFor = (b: Block, top = MAX_BUILDING_H): number => (b.row === 3 && b.x >= 96 && b.x + b.w <= 186 ? FRONT_CAP_H : top);
+export const maxHeightFor = (b: Block, top = MAX_BUILDING_H): number => (b.y === ROWS[4] && b.x >= 96 && b.x + b.w <= 186 ? FRONT_CAP_H : top);
 
 /** Side of `b` that faces `r` across a street, if they overlap on the other axis. */
 function facing(b: Rect, r: Rect): Side | undefined {
