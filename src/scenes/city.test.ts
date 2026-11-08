@@ -228,7 +228,7 @@ describe("city", () => {
 
   it("cars: a single size, they do not fall on a block or a crater, and none overlaps another", () => {
     const s = scene();
-    const cars = s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism" && (x.mat === "steel" || x.mat === "rust") && x.h === 1.2 && !(x.w === 0.6 && x.d === 0.6 && x.at.y >= 116 && x.at.y < 117.5)); // not the fish market bollard (#326)
+    const cars = s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism" && (x.mat === "steel" || x.mat === "rust") && x.h === 1.2 && !(x.w === 0.6 && x.d === 0.6 && x.at.y >= 116 && x.at.y < 117.5)); // not the fish market scale (#326)
     expect(cars.length).toBeGreaterThanOrEqual(20);
     expect(new Set(cars.map((c) => `${c.w}x${c.d}x${c.h}`))).toEqual(new Set([`${CAR.w}x${CAR.d}x1.2`]));
     for (const c of cars) {
