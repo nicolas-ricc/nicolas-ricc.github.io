@@ -149,6 +149,46 @@ describe("brewery", () => {
   });
 });
 
+describe("brewery details", () => {
+  it("has tanks with copper caps, a glass window strip, two steel posts, and the body in the back half", () => {
+    for (const lot of LOTS) for (const seed of SEEDS) {
+      const p = recipe("brewery")(lot, createRng(seed), STYLES.warehouses);
+      const tanks = p.solids.filter((s) => s.kind === "cylinder" && s.mat === "copper");
+      for (const t of tanks) {
+        if (t.kind !== "cylinder") continue;
+        expect(t.r).toBeCloseTo(1.2, 9);
+        expect(t.h).toBeCloseTo(4.5, 9);
+        expect(p.solids.some((s) => s.kind === "cone" && s.mat === "copper" && s.at.x === t.at.x && s.at.y === t.at.y && Math.abs(s.at.z - (t.at.z + 4.5)) < 1e-6)).toBe(true);
+      }
+      const glass = p.solids.filter((s) => s.kind === "prism" && s.mat === "glass");
+      expect(glass).toHaveLength(1);
+      const g = glass[0]!;
+      if (g.kind !== "prism") throw new Error("no glass");
+      expect(Math.min(g.w, g.d)).toBeCloseTo(0.3, 9);
+      expect(g.h).toBeCloseTo(4, 9);
+      const posts = p.solids.filter((s) => s.kind === "prism" && s.mat === "steel" && Math.abs(s.h - 3) < 1e-6);
+      expect(posts).toHaveLength(2);
+      const body = p.solids.find((s) => s.kind === "prism" && s.facade);
+      if (!body || body.kind !== "prism") throw new Error("no body");
+      expect(body.facade).toMatchObject({ floors: 1, cols: 3 });
+      expect(body.d).toBeCloseTo(lot.d / 2, 9);
+      expect(body.at.y).toBeCloseTo(lot.y, 9);
+    }
+  });
+
+  it("puts the slots on the east face of the glass strip with open e", () => {
+    const lot: Lot = { ...LOTS[0]!, open: ["e"] };
+    const p = recipe("brewery")(lot, createRng(3), STYLES.warehouses);
+    const g = p.solids.find((s) => s.kind === "prism" && s.mat === "glass")!;
+    const face = bounds(g).max.x;
+    expect(p.slots).toHaveLength(2);
+    for (const s of p.slots) {
+      expect(s.side).toBe("e");
+      for (const q of s.pts) expect(q.x).toBeCloseTo(face, 9);
+    }
+  });
+});
+
 describe("derelictHall", () => {
   it("leaves 1..2 teeth missing with exposed steel beams in their place", () => {
     for (const lot of LOTS) for (const seed of SEEDS) {

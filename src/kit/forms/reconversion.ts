@@ -3,10 +3,12 @@ import type { Plate } from "../../iso/plate";
 import type { Rect } from "../../scenes/city-grid";
 import { prism } from "../../scenes/city-pieces";
 import type { Rng } from "../../map/seed";
-import { rooftopGarden } from "../props";
+import { chair, garland, rooftopGarden, table } from "../props";
+import { gableRoof } from "../roofs";
 import { addBuilding, emptyPiece, recipeCap, shiftTone } from "../piece";
 import type { Lot, Piece, RecipeDef, Side, Style, Window } from "../types";
 import { sawtooth, tonePiece } from "./industrial";
+import { neonSlot } from "./lowrise";
 
 /**
  * `reconversion` family (#322): industrial buildings given a new use. Windows of the
@@ -100,7 +102,41 @@ export function vaultLoft(lot: Lot, rng: Rng, style: Style): Piece {
   return tonePiece(p, tone);
 }
 
+/**
+ * Brewery: a terrace with tables under a garland on the front, a glazed strip with two neon signs, copper tanks
+ * and a gable hall (flat body with facade, gable roof on top) in the back half.
+ */
+export function brewery(lot: Lot, rng: Rng, style: Style): Piece {
+  const tone = shiftTone(style.tone, rng.int(-1, 1));
+  const p = emptyPiece(), { z } = lot, f = frontFrame(lot), glassH = 4, roofH = 1.5;
+  const h = Math.min(6, recipeCap(lot) - 2.1);
+  const hall = f.rect(0, f.depth / 2, f.len, f.depth / 2);
+  const facade = { floors: 1, cols: 3 };
+  addBuilding(p, prism(hall.x, hall.y, z, hall.w, hall.d, h, style.mat, { facade }), facade);
+  p.solids.push(...gableRoof({ ...hall, z: z + h }, roofH, style.roof));
+  const strip = f.rect(0, 2.5, f.len, 0.3);
+  p.solids.push(prism(strip.x, strip.y, z, strip.w, strip.d, glassH, "glass"));
+  const n = Math.min(rng.int(3, 5), Math.floor((f.len + 1) / 3.4));
+  const u0 = (f.len - (n * 2.4 + (n - 1))) / 2 + 1.2;
+  for (let k = 0; k < n; k++) {
+    const c = f.point(u0 + k * 3.4, 4.2), at = v3(c.x, c.y, z);
+    p.solids.push({ kind: "cylinder", at, r: 1.2, h: 4.5, mat: "copper" }, { kind: "cone", at: v3(c.x, c.y, z + 4.5), r: 1.2, h: 1, mat: "copper" });
+  }
+  const post = (u: number): void => { const r = f.rect(u - 0.1, 0.4, 0.2, 0.2); p.solids.push(prism(r.x, r.y, z, r.w, r.d, 3, "steel")); };
+  post(1); post(f.len - 1);
+  const top = (u: number, dz: number): Vec3 => { const q = f.point(u, 0.5); return v3(q.x, q.y, z + 3 - dz); };
+  p.accents.push(...garland([top(1, 0), top(f.len / 2, 0.4), top(f.len - 1, 0)]));
+  const tables = rng.int(2, 3), span = f.len - 5;
+  for (let k = 0; k < tables; k++) {
+    const u = 2.5 + (span * (k + 0.5)) / tables, t = f.rect(u - 0.5, 0.8, 1, 1), c1 = f.rect(u - 0.25, 0.2, 0.5, 0.5), c2 = f.rect(u - 0.25, 1.9, 0.5, 0.5);
+    p.solids.push(...table(v3(t.x, t.y, z)), ...chair(v3(c1.x, c1.y, z)), ...chair(v3(c2.x, c2.y, z)));
+  }
+  [0, 1].forEach((shop) => p.slots.push(neonSlot(f.rect(shop * f.len / 2, 2.5, f.len / 2, 0.3), f.side, 3, z, shop)));
+  return tonePiece(p, tone);
+}
+
 export const RECONVERSION: readonly RecipeDef[] = [
   { name: "loftHall", recipe: loftHall, family: "reconversion" },
   { name: "vaultLoft", recipe: vaultLoft, family: "reconversion" },
+  { name: "brewery", recipe: brewery, family: "reconversion" },
 ];
