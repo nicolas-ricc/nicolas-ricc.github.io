@@ -16,7 +16,8 @@
 - `src/iso/` y `src/scenes/` no importan Pixi; colores solo por `Material` de `src/map/palette-iso.ts`; nada de literales hex; nada de `Math.random` (toda aleatoriedad del `Rng` recibido). Sin dependencias nuevas. `noUnusedLocals`.
 - Regla del tren: todo sólido estático con altura > 0.4 y `y_min > 134.2` cumple `y_min − 1.4·z_max ≥ 134.5`; al norte de la vía, `y_max ≤ 130.8` (salvo altura ≤ 0.4). `src/scenes/train-occlusion.test.ts` barre el mundo.
 - Presupuesto (`src/scenes/city-budget.test.ts`): sólidos elevados ≤ 2 900, `strip` ≤ 190, acentos estáticos ≤ 1 150, polígonos estáticos del mundo ≤ 56 000. No subir topes; si no entra, recortar.
-- Decisiones del issue "no reabrir": se copian tal cual en cada tarea.
+- Decisiones del issue "no reabrir" (sección "Decisiones" de #320): sus valores están copiados en el bloque **Interfaces** y en los pasos de cada tarea; ante una duda, manda el texto del issue.
+- Commits intermedios: los tests de etapa 3 (evals) entran en rojo antes de la Tarea 1; al cerrar cada tarea tienen que pasar los tests que esa tarea nombra en su paso 4, y pueden seguir en rojo los que pertenecen a tareas posteriores. `npm test` completo en verde se exige al final de la Tarea 5.
 - Commits en inglés, `feat(#320): …` / `test(#320): …`.
 
 ## Review Focus
@@ -39,14 +40,14 @@
 - Consumes: `STATION_LAND`, `ZONE_SPLIT_Y`, `ESTUARY_Y0`, `eastBank`, `distToHeadland`, `SHORE_W` de `src/map/geo.ts`.
 - Produces: `ROWS = [92, 164, 188, 218, 242, 272, 302] as const`; `FREIGHT_ROW = { y: 116, d: 13 } as const`; `RAIL_LANDS = { y0: 129, y1: 158 } as const`; `RING_Y0 = 120`; `HARBOR = { x0: EAST_RING.x0, x1: 306, y0: ZONE_SPLIT_Y, y1: ESTUARY_Y0 } as const`; `BlockKind` con `"freight"`; `blocks()` con las manzanas nuevas; `PLAZA` sigue siendo `Rect` y el bloque plaza sale con `row: 3`.
 
-- [ ] **Step 1: Tests (ya en la rama desde la etapa de evals; si no, escribirlos)** en `city-grid.test.ts`:
+- [ ] **Step 1: Tests (los escribe la etapa 3 del pipeline, en rojo, antes de esta tarea)** en `city-grid.test.ts`:
   - `ROWS[0] === 92`; las manzanas con `y === 92` son cinco, `x` = `[−48, −18, 12, 42, 72]`, todas `kind "block"`, `bank "west"` y `x + w ≤ STATION_LAND.x0`.
   - cinco `kind === "freight"` con `y 116`, `d 13`, `w 24`, `bank "west"`, `row −1`, mismas `x`; `FREIGHT_ROW`, `RAIL_LANDS`, `RING_Y0`, `HARBOR` con `toEqual` de los valores de arriba.
   - existen `(280, 116)` y `(280, 140)` `bank "east"`, `kind "block"`; no existe `(280, 92)`; ninguna del este con `y < ROWS[1]` tiene `x ≥ 310`.
   - ninguna manzana se superpone a `STATION_LAND`; las cuatro esquinas de toda manzana tienen `distToHeadland ≥ SHORE_W`.
   - la de calle mínima (≥ `STREET` entre vecinas) sigue igual y cubre los `freight` (distan 6 de la fila 92).
   - `blocks().filter(kind === "block")` tiene 36; `ROWS[2] + BLOCK_D === AVENUE.y0`, `ROWS[3] === AVENUE.y1`; el bloque plaza tiene `row 3` y `ROWS[3] === PLAZA.y`.
-  - "every block falls on city land": `b.y ≥ CITY_EDGE.north + 2` (la fila 92 queda a 2 de la costura; el resto sigue a ≥ 6, comprobarlo con `b.y === ROWS[0] || b.y ≥ CITY_EDGE.north + STREET`); para el este con `b.y < ESTUARY_Y0`, `b.x ≥ eastBank(b.y) + 1` en lugar de `estuaryEast` (`eastBank(116) = 273`).
+  - "every block falls on city land": `b.y ≥ CITY_EDGE.north + 2` (la fila 92 queda a 2 de la costura; el resto sigue a ≥ 6, comprobarlo con `b.y === ROWS[0] || b.y ≥ CITY_EDGE.north + STREET`); para el este con `b.y < ESTUARY_Y0`, `b.x ≥ max(eastBank(b.y), eastBank(b.y + b.d)) + 1` en lugar de `estuaryEast` (`eastBank` 273 en 116, 251 en 134, 242 en 140, 222 en 158: la orilla se retira al oeste hacia el sur).
 - [ ] **Step 2:** `npx vitest run src/scenes/city-grid.test.ts` → FAIL.
 - [ ] **Step 3: Implementar en `city-grid.ts`.** En `blocks()`: la fila `ROWS[0]` solo pone columnas oeste con `x + BLOCK_W <= STATION_LAND.x0`, siempre `kind "block"` (el distrito empieza en `ROWS[1]`); el este, para `y < ROWS[1]`, solo `(280, 116)` y `(280, 140)`, con `row: −1` como los `freight` (no están en `ROWS`; el único lector de `row` era `maxHeightFor`, que pasa a comparar `y`); los cinco `freight` con `row: −1`; la plaza con `row: 3`. Comentario corto en cada constante nueva.
 - [ ] **Step 4:** `npx vitest run src/scenes/city-grid.test.ts` → PASS.
@@ -62,7 +63,7 @@
 - Consumes: Tarea 1 (`ROWS`, `blocks()`, `kind "freight"`).
 - Produces: `assign()` sin `freight`; `maxHeightFor(b)` por `b.y === 242`; `openSides(b)` con `"s"` para `b.y === ROWS[0]` y `"n"` para `(280, 116)`.
 
-- [ ] **Step 1: Tests.** `zoning.test.ts`: el helper `cells` excluye `plaza` **y** `freight`; `residential` pasa a incluir las cinco de la fila 92 (comentario: provisorio, #322 cambia el barrio); `riverside` sigue siendo todo el este (incluye las dos nuevas); `openSides(blockAt(12, 92))` contiene `"s"`; `openSides(blockAt(280, 116))` contiene `"n"` y `"w"`; `maxHeightFor(blockAt(102, 242)) === FRONT_CAP_H`; ningún `Placed` de `assign()` tiene `block.kind === "freight"`. `city.test.ts`: `ROW_SOUTH = ROWS[4]`; zócalos `24 × 18` ≥ 45; exactamente cinco zócalos `paving` `24 × 13` de `PLINTH_H` en `z 0`, en `y 116`; ningún sólido no cono con `min.y < 89` (ya existe con `ZONE_SPLIT_Y − 1`); ningún auto (`car`) toca un `freight`.
+- [ ] **Step 1: Tests.** `zoning.test.ts`: el helper `cells` excluye `plaza` **y** `freight`; `residential` pasa a incluir las cinco de la fila 92 (comentario: provisorio, #322 cambia el barrio); `riverside` sigue siendo todo el este (incluye las dos nuevas); `openSides(blockAt(12, 92))` contiene `"s"`; `openSides(blockAt(280, 116))` contiene `"n"` y `"w"`; `maxHeightFor(blockAt(102, 242)) === FRONT_CAP_H`; ningún `Placed` de `assign()` tiene `block.kind === "freight"`. `city.test.ts`: `ROW_SOUTH = ROWS[4]`; zócalos `24 × 18` ≥ 45; exactamente cinco zócalos `paving` `24 × 13` de `PLINTH_H` en `z 0`, en `y 116`; ningún sólido no cono con `min.y < 89` (ya existe con `ZONE_SPLIT_Y − 1`); dentro de la huella de cada `freight` solo quedan su zócalo y los postes norte de los pasos a nivel de la Tarea 3 (`y 128.6..128.9`): ninguna pieza de receta, auto ni farol.
 - [ ] **Step 2:** `npx vitest run src/city/zoning.test.ts src/scenes/city.test.ts` → FAIL.
 - [ ] **Step 3: Implementar.** `zoning.ts`: `assign()` salta `kind === "freight"` junto a `plaza` y `collapsed`; `maxHeightFor` compara `b.y === 242`; `openSides` suma las dos reglas (sin duplicar lados). `city.ts`: después del bucle de `assign()`, recorrer `blocks()` y por cada `freight` empujar `prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving")`. `fixed.ts` `cars()`: `if (b.kind === "freight") continue;` junto a la plaza. `neighborhoodOf` no cambia.
 - [ ] **Step 4:** `npm test` → los tests de esta tarea en verde; si `fixed.test` / `lights.test` fallan solo por valores de tirada (receta o conteo en una celda), actualizar el valor esperado y anotarlo en el commit; si fallan por una regla, arreglar el código.
@@ -76,7 +77,7 @@
 
 **Interfaces:**
 - Consumes: `RAIL_LANDS` (Tarea 1), `MAIN_LINE`, `RAIL_Y`.
-- Produces: `railLands(ground, solids)` con la misma firma; exporta `CROSSINGS: readonly { x0: number; x1: number }[] = [{−24, −18}, {6, 12}, {36, 42}, {66, 72}]` (calles N-S del barrio) para el test y para `streets.ts` si le sirve.
+- Produces: `railLands(ground, solids)` con la misma firma; exporta `CROSSINGS: readonly { x0: number; x1: number }[] = [{−24, −18}, {6, 12}, {36, 42}, {66, 72}]` (calles N-S del barrio) y `CROSSING_GAP = { y0: 128, y1: 137 } as const` (el tramo de calle que ocupan cercos y tablones, "saltando y 128..137" del issue); `streets.ts` importa `CROSSING_GAP`.
 
 - [ ] **Step 1: Tests** en `rail-lands.test.ts` (los existentes de rieles/balasto quedan; el de durmientes filtra `mat === "rust"`; el de "nothing taller than 0.4" pasa a mirar solo durmientes y tablones):
   - cerco norte: prismas `steel` `h 1`, `at.y 129.5`, `d 0.3`, que cubren `[−54, 96]` menos los cuatro huecos exactos `CROSSINGS` (cinco tramos: `[−54,−24]`, `[−18,6]`, `[12,36]`, `[42,66]`, `[72,96]`); cerco sur igual en `at.y 136`.
@@ -95,7 +96,7 @@
 - Test: `src/city/streets.test.ts`
 
 **Interfaces:**
-- Consumes: `ROWS`, `RING_Y0`, `HARBOR`, `RAIL_LANDS` (Tarea 1), `eastBank`, `ESTUARY_Y0`, `STATION_LAND`.
+- Consumes: `ROWS`, `RING_Y0`, `HARBOR` (Tarea 1), `CROSSING_GAP` (Tarea 3), `eastBank`, `ESTUARY_Y0`, `STATION_LAND`.
 - Produces: `streets()` con la misma firma.
 
 - [ ] **Step 1: Tests** en `streets.test.ts`:
@@ -107,7 +108,7 @@
   - no hay E-O en `y 161`; el test "no E-W line north of the first block row" queda con `ROWS[0]`.
   - el conteo total sigue en `[80, 150]`.
 - [ ] **Step 2:** `npx vitest run src/city/streets.test.ts` → FAIL.
-- [ ] **Step 3: Implementar** en `lanes()`: N-S de `cx < STATION_LAND.x0` en dos tramos `[CITY_EDGE.north, 128]` y `[137, AVENUE.y0]`; el anillo desde `RING_Y0`; el resto desde `ESTUARY_Y0 + 12`. `rowsY` = `ROWS.slice(2)` − 3 más `CITY_EDGE.south − 2` (las de hoy); aparte, la 113 de `CITY_EDGE.west` a `STATION_LAND.x0` y la 137 de `ceil(eastBank(137)) + 1` a `HARBOR.x1 − 2`. Para el inicio este de las E-O con `cy < ESTUARY_Y0` usar `eastBank(cy)`, si no `estuaryEast(cy)`. Nombrar `128`/`137` como constantes locales derivadas de los tablones (`RAIL_LANDS`/`CROSSINGS` de la Tarea 3 si encaja; si no, literales con comentario).
+- [ ] **Step 3: Implementar** en `lanes()`: N-S de `cx < STATION_LAND.x0` en dos tramos `[CITY_EDGE.north, 128]` y `[137, AVENUE.y0]`; el anillo desde `RING_Y0`; el resto desde `ESTUARY_Y0 + 12`. `rowsY` = `ROWS.slice(2)` − 3 más `CITY_EDGE.south − 2` (las de hoy); aparte, la 113 de `CITY_EDGE.west` a `STATION_LAND.x0` y la 137 de `ceil(eastBank(137)) + 1` a `HARBOR.x1 − 2`. Para el inicio este de las E-O con `cy < ESTUARY_Y0` usar `eastBank(cy)`, si no `estuaryEast(cy)`. El corte usa `CROSSING_GAP` de `src/city/rail-lands.ts` (Tarea 3).
 - [ ] **Step 4:** `npx vitest run src/city/streets.test.ts src/scenes/city-budget.test.ts` → PASS.
 - [ ] **Step 5:** commit `feat(#320): streets of the new strip`.
 
@@ -127,3 +128,21 @@
 - [ ] **Step 4:** `rowStep` de `tech-zoning.ts`: con `ROWS` de largo 7, `k − ROWS.length` da −6..−1 para las filas viejas (igual que antes) y −7 para la 92; no cambia nada. Correr `npx vitest run src/scenes/tech` → PASS.
 - [ ] **Step 5:** `npm test` y `npm run typecheck` → todo verde, presupuesto incluido.
 - [ ] **Step 6:** commit `feat(#320): galpones and playa-carga exhibits`.
+
+## Assumptions
+
+Decisiones técnicas tomadas en el grilling (sin fuente en el issue; cualquier opción cumple #320):
+
+1. **Fila 92 nunca es `district`** aunque caiga en `DISTRICT_COLS`: el issue pide 36 `block` y cinco `residential` (descartado: dejar que `isDistrict` las marque).
+2. **`row: −1` para los `freight` y las dos manzanas del este** fuera de `ROWS` (descartado: el índice de la fila vecina). `maxHeightFor` deja de leer `row`; `rowStep` (`tech-zoning.ts`) usa `ROWS.indexOf(y)` y no `b.row`.
+3. **Commits intermedios en rojo** para tests de tareas posteriores (descartado: un único commit gigante); verde completo al final de la Tarea 5.
+4. **Tirada vs. regla:** un test que fija una receta, un color o un conteo en una celda concreta por semilla es "tirada" y se actualiza con el valor nuevo, nombrando el test en el cuerpo del commit; un test de invariante (límites, alturas, solapes, presupuesto, oclusión) que falla es "regla" y se arregla el código.
+5. **Regla del tren solo para altura > 0.4** en `rail-lands.test` (como `train-occlusion.test.ts`): el tablón sur `y 134.3` (h 0.3) queda exento. El viejo test "nothing taller than 0.4" de #319 se reemplaza por el de la regla, que es el que protege al tren; los cercos (h 1) y postes (h 3 / 2) los fija el issue.
+6. **`CROSSING_GAP = { y0: 128, y1: 137 }` exportado de `rail-lands.ts`** e importado por `streets.ts` (descartado: literales sueltos en las dos).
+7. **Recorte por presupuesto:** hoy Resume tiene 1 156 sólidos elevados / 138 `strip` / 711 acentos y el mundo 41 301 polígonos; los cercos son prismas (sólidos elevados). Si un tope se excede, se recorta primero lo decorativo de la franja (autos de las manzanas nuevas), nunca lo que fija el issue.
+
+## Grilling
+
+- Rondas: 1 (la revisión no cambió tareas ni costuras: precisó tests, constantes compartidas y supuestos).
+- Preguntas: 18. Fuentes: ISSUE 9 (1, 2, 8, 9, 13, 15, 16, 18, parte de 3), CODE 6 (3, 5, 10, 11, 14, 17), DOC 0, NO SOURCE 7 → supuestos técnicos 1–7 (preguntas 4, 6, 7, 12 y la mitad técnica de 9, 14, 16).
+- Ambigüedades de spec: ninguna. Issues abiertos: ninguno.
