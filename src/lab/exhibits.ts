@@ -3,6 +3,7 @@ import { v3 } from "../iso/geometry";
 import { shadowPolygon } from "../iso/light";
 import { Z_SCALE } from "../iso/project";
 import { campus } from "../kit/forms/modern";
+import { quayCraneAt } from "../kit/forms/industrial";
 import { lamp, place } from "../kit/props";
 import { STYLES } from "../kit/styles";
 import type { Solid } from "../iso/solids";
@@ -93,19 +94,25 @@ export const EXHIBITS: readonly Exhibit[] = [
   // the constants of shipyard.ts are private: boxes by hand
   // slipways x 110..QUAY_X, y 36..72; the gantry (x 150) straddles them and stays inside
   { id: "gradas", title: "Slipways", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 108, y0: 33, x1: QUAY_X + 2, y1: 75 }, h: 28 },
-  // the water between the quay and the breakwater, from the river mouth; no ships since #87 (the lanes start at the river mouth)
-  { id: "darsena", title: "Basin", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: QUAY_X - 2, y0: MOUTH_Y, x1: 275, y1: 80 }, h: 5 },
+  // the water between the quay and the breakwater, from the river mouth; no ships since #87 (the lanes start at the river mouth); h 2 since #323 (inside and neighbor 1.5, no accents), the box ends at y 72 where the floating dock begins
+  { id: "darsena", title: "Basin", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: QUAY_X - 2, y0: MOUTH_Y, x1: 275, y1: 72 }, h: 2 },
   { id: "grua-portico", title: "Gantry crane", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 146, y0: 30, x1: 156, y1: 78 }, h: 28 },
   // transfer street x 100..108 with the lamps at 108.5; west of the slipways (x ≥ 110)
   { id: "calle-faroles", title: "Lamp street", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 99, y0: 8, x1: 111, y1: 128 }, h: 7 },
   // the two assembly halls: x 10..100, rows y −52 and −32 of 16; y1 −14 leaves out the crane counterweight (y −13..−11, z 18.5..20) and x1 102 the yard (x ≥ 104)
   { id: "naves", title: "Assembly halls", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 7, y0: -55, x1: 102, y1: -14 }, h: 14 },
-  // the island's north coast facing the sheds: x 270..350, y 0..60; h is the smallest integer that passes framing and neighbors (measured with the `measure` of exhibits.test.ts)
-  { id: "punta-norte", title: "North point of the island", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 270, y0: 0, x1: 350, y1: 60 }, h: 9 },
+  // the island's north coast facing the sheds: x 270..350, y 0..60; h is the smallest integer that passes framing and neighbors (measured with the `measure` of exhibits.test.ts): 18 since #323, set by the quay crane and stacks it now crops (inside 18, accents 3.5)
+  { id: "punta-norte", title: "North point of the island", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 270, y0: 0, x1: 350, y1: 60 }, h: 18 },
   // the terminal station: x 108..198, y 98..143; h measured as in punta-norte: set by the top of the clock tower, z 29 (the station emits no smoke)
   { id: "estacion", title: "Terminal station", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 108, y0: 98, x1: 198, y1: 143 }, h: 29 },
   // the level crossing: x 95..112, y 124..142; x0 95 (not 98) so the entry signal (pole at x 96.1..96.4) is inside: without that `cropAnimators` drops the train animator at ms 0; h measured the same way: set by the street lamp at (108.5, 124), at z 5 (the crossing posts reach z 3 and the entry signal 4.7; the exit one is outside)
   { id: "paso-a-nivel", title: "Level crossing", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 95, y0: 124, x1: 112, y1: 142 }, h: 5 },
+  // the floating dock: x 204..246, y 74..88 (the water there is cove water); h measured as in punta-norte: set by the quay crane and the stacks (inside 14.3, accents 13.15)
+  { id: "dique-flotante", title: "Floating dock", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 202, y0: 72, x1: 248, y1: 90 }, h: 15 },
+  // the east bank container yard: x 288..304, y 30..84, with the quay cranes at x 284; h measured as in punta-norte: set by the stacks, inside 18 (accents 16)
+  { id: "patio-contenedores", title: "Container yard (east bank)", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 278, y0: 27, x1: 305, y1: 84 }, h: 18 },
+  { id: "grua-muelle", title: "Quay crane", zone: "portfolio", group: "shipyard", kind: "piece", pad: "concrete",
+    build: (out, accents) => quayCraneAt({ x: 0, y: 0 }, "w", out, accents) },
   // jib 24 to the east and counter-jib 8 to the west: with the mast at x −8 it spans −16..16
   { id: "grua-torre", title: "Tower crane", zone: "portfolio", group: "shipyard", kind: "piece",
     build: (out, accents) => towerCrane(out, accents, { at: { x: -8, y: 0 }, mastH: 20, jibLen: 24, dir: "e", light: "amber" }) },
@@ -164,9 +171,9 @@ export const EXHIBITS: readonly Exhibit[] = [
     box: { x0: DISTRICT_COLS[0] - M, y0: DISTRICT_ROWS[1] - M, x1: DISTRICT_COLS[0] + BLOCK_W + M, y1: DISTRICT_ROWS[1] + BLOCK_D + M }, h: 20 },
   { id: "obra", title: "Construction site", zone: "cv", group: "city", kind: "region",
     box: { x0: SITE.x - M, y0: SITE.y - M, x1: SITE.x + SITE.w + M, y1: SITE.y + SITE.d + M }, h: 25 },
-  // the south point: x 270..380, y 300..400; it needs the world with no zone filter (the storybook builds it with `assembleWorld(undefined, …)`); h is the smallest integer that passes framing and neighbors (measured with the `measure` of exhibits.test.ts)
+  // the south point: x 270..380, y 300..400; it needs the world with no zone filter (the storybook builds it with `assembleWorld(undefined, …)`); h is the smallest integer that passes framing and neighbors (measured with the `measure` of exhibits.test.ts): 18 since #323, set by the quay crane and stacks it now crops (inside 18, accents 3.5)
   { id: "punta-sur", title: "South point of the island", zone: "cv", group: "city", kind: "region", box: { x0: 270, y0: 300, x1: 380, y1: 400 }, h: 10 },
-  // the warehouse strip and the freight railyard: x -54..98, west of the station; h is the smallest integer that passes framing and neighbors (measured with the `measure` of exhibits.test.ts); galpones: inside 11.325, so h 12; playa-carga: inside 4.7, so h 5 (the cut neighbor, 0.3, does not matter)
+  // the warehouse strip and the freight railyard: x -54..98, west of the station; h is the smallest integer that passes framing and neighbors (measured with the `measure` of exhibits.test.ts): 18 since #323, set by the quay crane and stacks it now crops (inside 18, accents 3.5); galpones: inside 11.325, so h 12; playa-carga: inside 4.7, so h 5 (the cut neighbor, 0.3, does not matter)
   { id: "galpones", title: "Warehouse strip", zone: "cv", group: "city", kind: "region", box: { x0: -54, y0: 90, x1: 98, y1: 130 }, h: 12 },
   { id: "playa-carga", title: "Freight railyard", zone: "cv", group: "city", kind: "region", box: { x0: -54, y0: 126, x1: 98, y1: 160 }, h: 5 },
   // `campus` recipe of the kit on a district block; the piece's ground goes to `out` with the solids
