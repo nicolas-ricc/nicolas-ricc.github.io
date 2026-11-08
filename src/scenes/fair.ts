@@ -193,7 +193,7 @@ function neon(drop: { at: Vec3; h: number }): FairScene["neon"] {
   };
 }
 
-/** Ghost train: stone hall with a gothic tower on its roof (SE corner), copper marquee, two doors with a track each and a skull sign. */
+/** Ghost train: stone hall with a gothic tower on its roof (southeast corner), copper marquee, two doors with a track each and a skull sign. */
 export function ghostTrain(out: Solid[], accents: Accent[]): void {
   const { x, y, w, d } = GHOST, ys = y + d; // ys: south face
   out.push(prism(x, y, 0, w, d, 6, "stone", { facade: { floors: 1, cols: 5, base: "portico" } }));
