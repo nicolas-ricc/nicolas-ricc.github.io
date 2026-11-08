@@ -25,7 +25,8 @@
  * `glow = up × (1.12, 1.08, 1.02)` clamped to 255, `pale` = mean of `up` and `glow` (so
  * luminance rises strictly along the ladder). `shadeTone` still returns
  * only `shade lit down top up`. The four Resume level 2 materials (`plaster`,
- * `terracotta`, `marble`, `awning`) follow the city/coast rule.
+ * `terracotta`, `marble`, `awning`) follow the city/coast rule, and so do the #56
+ * corrugated sheet and container materials (`sheetGreen` ... `boxOrange`).
  * To adjust, edit the base and run `npm run palette`, which prints the literals to paste here.
  * `sky` and `ink` are also hand-written in the `<style>` of `lab/*.html`; `palette-guard.test.ts`
  * requires every hex in those pages to be a value of this palette.
@@ -78,6 +79,14 @@ export const ISO_TONES = {
   livery:    { deep: 0x07133e, shade: 0x0a1a4d, dim: 0x0f244e, lit: 0x152d50, down: 0x163679, top: 0x193d81, up: 0x1d4484, pale: 0x1f4785, glow: 0x214a86 }, // train: cobalt blue of the livery
   // coastal neighborhood (#240) and station (#239): tile
   tile:      { deep: 0x221414, shade: 0x311c19, dim: 0x4b271a, lit: 0x65321a, down: 0x6a3b27, top: 0x7b432a, up: 0x8f4c2b, pale: 0x974f2b, glow: 0xa0522b },
+  // #56: corrugated sheet and containers
+  sheetGreen:{ deep: 0x141a25, shade: 0x1d242e, dim: 0x2e322f, lit: 0x3d3f30, down: 0x404b48, top: 0x4a554d, up: 0x56604e, pale: 0x5c644f, glow: 0x616850 },
+  sheetTeal: { deep: 0x0f1628, shade: 0x151f32, dim: 0x202b32, lit: 0x2b3733, down: 0x2d414e, top: 0x344a53, up: 0x3c5354, pale: 0x405755, glow: 0x435a55 },
+  boxRust:   { deep: 0x1b0f11, shade: 0x271615, dim: 0x3b1e16, lit: 0x4f2716, down: 0x532e21, top: 0x613423, up: 0x703a24, pale: 0x773d24, glow: 0x7d3f24 },
+  boxBlue:   { deep: 0x0d142b, shade: 0x121b36, dim: 0x1b2637, lit: 0x243037, down: 0x253954, top: 0x2b405a, up: 0x32485c, pale: 0x364b5d, glow: 0x394e5e },
+  boxGreen:  { deep: 0x0f1719, shade: 0x16201f, dim: 0x222d1f, lit: 0x2d3920, down: 0x2f4431, top: 0x374d34, up: 0x3f5635, pale: 0x435a35, glow: 0x475d36 },
+  boxGrey:   { deep: 0x161826, shade: 0x1f212f, dim: 0x302e30, lit: 0x403a30, down: 0x43454a, top: 0x4e4e4e, up: 0x5b5850, pale: 0x615b51, glow: 0x665f51 },
+  boxOrange: { deep: 0x221814, shade: 0x312119, dim: 0x4b2e19, lit: 0x653a19, down: 0x6a4527, top: 0x7b4e29, up: 0x8f5829, pale: 0x975b2a, glow: 0xa05f2a },
 } as const;
 
 export const ISO_COLORS = {
@@ -95,13 +104,14 @@ export const ISO_COLORS = {
   // Resume level 2: per-window lights (warm and cool)
   windowWarm: 0xffd9a0,
   windowCool: 0xa8d8ff,
+  spark: 0xffb347, // welding sparks (animated only); not darkened
   ink: 0xd8d4e8, // text of the lab pages (lab/*.html); not darkened
 } as const;
 
 export type Material = keyof typeof ISO_TONES;
 export type Tone = "deep" | "shade" | "dim" | "lit" | "down" | "top" | "up" | "pale" | "glow";
 export type AccentColor = Exclude<keyof typeof ISO_COLORS, "shadow" | "sky" | "ink">;
-export const ACCENT_COLORS: readonly AccentColor[] = ["cyan", "cyanMid", "cyanBleed", "amber", "amberMid", "amberBleed", "magenta", "magentaMid", "magentaBleed", "windowWarm", "windowCool"];
+export const ACCENT_COLORS: readonly AccentColor[] = ["cyan", "cyanMid", "cyanBleed", "amber", "amberMid", "amberBleed", "magenta", "magentaMid", "magentaBleed", "windowWarm", "windowCool", "spark"];
 
 /** Dark to light. `stepTone` moves along this. */
 export const TONE_LADDER: readonly Tone[] = ["deep", "shade", "dim", "lit", "down", "top", "up", "pale", "glow"];
