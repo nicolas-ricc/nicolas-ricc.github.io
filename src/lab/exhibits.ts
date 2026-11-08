@@ -107,9 +107,9 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "estacion", title: "Terminal station", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 108, y0: 98, x1: 198, y1: 143 }, h: 29 },
   // the level crossing: x 95..112, y 124..142; x0 95 (not 98) so the entry signal (pole at x 96.1..96.4) is inside: without that `cropAnimators` drops the train animator at ms 0; h measured the same way: set by the street lamp at (108.5, 124), at z 5 (the crossing posts reach z 3 and the entry signal 4.7; the exit one is outside)
   { id: "paso-a-nivel", title: "Level crossing", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 95, y0: 124, x1: 112, y1: 142 }, h: 5 },
-  // the floating dock: x 204..246, y 74..88 (the water there is cove water); h measured as in punta-norte: set by the quay crane and the stacks (inside 14.3, accents 13.15)
+  // the floating dock in the river: x 204..246, y 74..88, with its gangway to the quay at x 202; h measured as in punta-norte: set by the lamp posts on the service towers (inside 14.3, accents 13.15), so h 15
   { id: "dique-flotante", title: "Floating dock", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 202, y0: 72, x1: 248, y1: 90 }, h: 15 },
-  // the east bank container yard: x 288..304, y 30..84, with the quay cranes at x 284; h measured as in punta-norte: set by the stacks, inside 18 (accents 16)
+  // the east bank container yard: x 288..304, y 30..84, with the two quay cranes (x 280.6..287.4) inside; h measured as in punta-norte: set by the quay cranes (inside 18, accents 16), so h 18
   { id: "patio-contenedores", title: "Container yard (east bank)", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 278, y0: 27, x1: 305, y1: 84 }, h: 18 },
   // the quay crane facing west, centered at the origin, nothing above z 18; one cyan dot on the boom tip
   { id: "grua-muelle", title: "Quay crane", zone: "portfolio", group: "shipyard", kind: "piece", pad: "concrete",
