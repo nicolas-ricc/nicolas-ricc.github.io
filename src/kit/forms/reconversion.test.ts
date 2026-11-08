@@ -258,6 +258,35 @@ describe("openDock", () => {
   });
 });
 
+describe("sheetLoft", () => {
+  it("is a sheet gable with ribs, 3 glass plates of 2.5 per long wall and windows from exactly those", () => {
+    for (const lot of LOTS) for (const seed of SEEDS) {
+      const p = recipe("sheetLoft")(lot, createRng(seed), STYLES.warehouses);
+      const hall = p.solids[0]!;
+      if (hall.kind !== "prism") throw new Error("no prism");
+      expect(hall.roof).toBe("gable");
+      expect(["sheetGreen", "sheetTeal"]).toContain(hall.mat);
+      const walls = lot.w >= lot.d ? [0, 2] : [3, 1];
+      const len = lot.w >= lot.d ? lot.w : lot.d;
+      for (const wall of walls) {
+        const on = plates(hall).filter((q) => q.wall === wall);
+        expect(on.filter((q) => q.mat === hall.mat).length).toBeGreaterThanOrEqual(6);
+        const glass = on.filter((q) => q.mat === "glass");
+        expect(glass).toHaveLength(3);
+        glass.forEach((q, k) => {
+          expect((q.u1 - q.u0) * len).toBeCloseTo(2.5, 9);
+          expect((q.u0 + q.u1) / 2).toBeCloseTo((k + 0.5) / 3, 9);
+          expect(q.z0).toBeCloseTo(lot.z + 1, 9);
+          expect(q.z1).toBeLessThanOrEqual(lot.z + 4.5 + EPS);
+        });
+      }
+      const expected = plates(hall).filter((q) => q.mat === "glass" && (q.wall === 1 || q.wall === 2)).flatMap((q) => plateWindows(hall, q, 1, 0));
+      expect(p.windows).toEqual(expected);
+      expect(p.windows.length).toBeGreaterThan(0);
+    }
+  });
+});
+
 describe("plateWindows", () => {
   const plate = { wall: 2, shape: "rect" as const, u0: 0.2, u1: 0.4, z0: 1, z1: 2, mat: "glass" as const };
   it("puts the window on the plate's wall edge, outward normal", () => {

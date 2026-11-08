@@ -1,5 +1,8 @@
 import { v3, type Vec2, type Vec3 } from "../../iso/geometry";
-import type { Plate } from "../../iso/plate";
+import { shadeTone } from "../../iso/light";
+import { ribs, type Plate } from "../../iso/plate";
+import { GABLE_RATIO } from "../../iso/solids";
+import type { Material } from "../../map/palette-iso";
 import type { Rect } from "../../scenes/city-grid";
 import { prism } from "../../scenes/city-pieces";
 import type { Rng } from "../../map/seed";
@@ -135,8 +138,29 @@ export function brewery(lot: Lot, rng: Rng, style: Style): Piece {
   return tonePiece(p, tone);
 }
 
+/** Sheet gable hall turned loft: ribs on the long walls and three 2.5-wide glass plates on each, no door. */
+export function sheetLoft(lot: Lot, rng: Rng, style: Style): Piece {
+  const tone = shiftTone(style.tone, rng.int(-1, 1));
+  const p = emptyPiece(), { x, y, w, d, z } = lot;
+  const h = Math.min(6, recipeCap(lot) / (1 + GABLE_RATIO));
+  const mat = rng.pick<Material>(["sheetGreen", "sheetTeal"]);
+  const hall = prism(x, y, z, w, d, h, mat, { roof: "gable", roofMat: mat });
+  const plates: Plate[] = [], len = w >= d ? w : d, z1 = z + Math.min(4.5, h - 0.5);
+  const walls = w >= d ? [0, 2] : [3, 1];
+  for (const wall of walls) plates.push(...ribs(wall, len, z, z + h, shadeTone(WALL_NORMALS[wall]!) === "lit", mat));
+  for (const wall of walls) for (let k = 0; k < 3; k++) {
+    const c = (k + 0.5) / 3, half = 1.25 / len;
+    plates.push({ wall, shape: "rect", u0: c - half, u1: c + half, z0: z + 1, z1, mat: "glass" });
+  }
+  hall.plates = plates;
+  p.solids.push(hall);
+  publishGlass(p, 0, 1);
+  return tonePiece(p, tone);
+}
+
 export const RECONVERSION: readonly RecipeDef[] = [
   { name: "loftHall", recipe: loftHall, family: "reconversion" },
   { name: "vaultLoft", recipe: vaultLoft, family: "reconversion" },
   { name: "brewery", recipe: brewery, family: "reconversion" },
+  { name: "sheetLoft", recipe: sheetLoft, family: "reconversion" },
 ];
