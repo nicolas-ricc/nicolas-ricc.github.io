@@ -9,4 +9,7 @@ export const STYLES: Record<StyleId, Style> = {
   riverside: { id: "riverside", mat: "office", trim: "officeDark", roof: "officeDark", tone: 0, floorH: 3, window: "windowWarm" },
   district: { id: "district", mat: "curtain", trim: "officeDark", roof: "copper", tone: 0, floorH: 3, window: "windowCool" },
   industrial: { id: "industrial", mat: "concrete", trim: "steel", roof: "sheetGreen", tone: 0, floorH: 4, window: "windowCool" },
+  warehouses: { id: "warehouses", mat: "brick", trim: "steel", roof: "sheetGreen", tone: 0, floorH: 3.5, window: "windowWarm" },
+  freight: { id: "freight", mat: "sheetGreen", trim: "steel", roof: "sheetTeal", tone: 0, floorH: 3, window: "windowCool" },
+  harbor: { id: "harbor", mat: "brick", trim: "copper", roof: "sheetTeal", tone: 0, floorH: 3, window: "windowWarm" },
 };

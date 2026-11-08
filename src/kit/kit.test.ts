@@ -132,7 +132,7 @@ describe("kit: contract of every registered recipe", () => {
             expect(w.wall.x > EPS || w.wall.y > EPS).toBe(true);
             expect(w.floor).toBeGreaterThanOrEqual(0);
             const s = p.solids[w.building];
-            expect(s && "facade" in s && s.facade).toBeTruthy();
+            expect(s && (("facade" in s && s.facade) || ("plates" in s && s.plates?.some((q) => q.mat === "glass")))).toBeTruthy();
           }
           for (const w of p.walls) {
             expect(w.normal.x > EPS || w.normal.y > EPS).toBe(true);

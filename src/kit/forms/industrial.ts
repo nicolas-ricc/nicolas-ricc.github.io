@@ -16,11 +16,11 @@ import type { Lot, Piece, RecipeDef, Side, Style } from "../types";
  * no tone: the recipe (or the scene that reuses them) applies it.
  */
 const TOOTH_W = 4;
-const WALL_NORMALS = [v3(0, -1, 0), v3(1, 0, 0), v3(0, 1, 0), v3(-1, 0, 0)]; // plate wall index: 0 N, 1 E, 2 S, 3 W
-const SIDES: readonly Side[] = ["n", "e", "s", "w"];
+export const WALL_NORMALS = [v3(0, -1, 0), v3(1, 0, 0), v3(0, 1, 0), v3(-1, 0, 0)]; // plate wall index: 0 N, 1 E, 2 S, 3 W
+export const SIDES: readonly Side[] = ["n", "e", "s", "w"];
 
 /** The piece with `tone` on every solid (the field is omitted when 0, as `prism` does). */
-const tonePiece = (p: Piece, tone: number): Piece => (tone === 0 ? p : { ...p, solids: p.solids.map((s) => ({ ...s, tone })) });
+export const tonePiece = (p: Piece, tone: number): Piece => (tone === 0 ? p : { ...p, solids: p.solids.map((s) => ({ ...s, tone })) });
 
 /** Door plate centered on a wall of length `len`: `width` wide (at most the wall) and `h` tall from `z0`, `mat` that of the wall, two tones darker. */
 export function door(wall: number, len: number, width: number, z0: number, h: number, mat: Material): Plate {
