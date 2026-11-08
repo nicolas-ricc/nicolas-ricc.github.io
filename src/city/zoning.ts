@@ -102,7 +102,7 @@ export function openSides(b: Block): Side[] {
   const out: Side[] = [];
   if (b.y + b.d === AVENUE.y0) out.push("s");
   if (b.y === AVENUE.y1) out.push("n");
-  if (b.x === COVERED_MARKET_BLOCK.x && b.y === COVERED_MARKET_BLOCK.y) out.push("e");                                          // covered market: front toward the station street
+  if (b.x === COVERED_MARKET_BLOCK.x && b.y === COVERED_MARKET_BLOCK.y) out.push("e"); // covered market: front toward the station street
   if (b.y === ROWS[0] && !out.includes("s")) out.push("s");                                  // row 92 faces the freight lots and the main line
   if (b.x === EAST_COLS[0] && b.y === FREIGHT_ROW.y && !out.includes("n")) out.push("n");   // east block at the north end of the strip
   if (b.kind === "freight" && !out.includes("s")) out.push("s");                             // freight lots face the main line

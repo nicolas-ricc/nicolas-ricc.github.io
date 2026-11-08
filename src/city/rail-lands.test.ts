@@ -91,7 +91,6 @@ describe("rail lands (#319)", () => {
     };
     const y1 = yard(1);
     const ps = (xs: Solid[]): Prism[] => xs.filter((s): s is Prism => s.kind === "prism");
-    const box = (s: Solid): Bounds => bounds(s);
     const sized = (xs: Solid[], w: number, d: number, h: number) => ps(xs).filter((s) => s.w === w && s.d === d && s.h === h);
     const strips = y1.ground.filter((g): g is Solid & { kind: "strip" } => g.kind === "strip");
 
@@ -182,11 +181,11 @@ describe("rail lands (#319)", () => {
 
     it("everything stays in x −54..94, y 136..157.5, and nothing taller than 0.4 between y 134.2 and 136", () => {
       for (const s of [...y1.base, ...y1.solids]) {
-        const b = box(s);
+        const b = bounds(s);
         if (b.max.z - b.min.z > 0.4) expect(b.max.y <= 134.2 || b.min.y >= 136, JSON.stringify(s)).toBe(true);
       }
       for (const s of y1.solids) {
-        const b = box(s);
+        const b = bounds(s);
         expect(b.min.x, JSON.stringify(s)).toBeGreaterThanOrEqual(-54); expect(b.max.x).toBeLessThanOrEqual(94);
         expect(b.min.y, JSON.stringify(s)).toBeGreaterThanOrEqual(136); expect(b.max.y).toBeLessThanOrEqual(157.5);
       }
@@ -196,7 +195,7 @@ describe("rail lands (#319)", () => {
       for (const seed of [1, 2, 3]) {
         const { base, solids: s } = yard(seed);
         for (const x of [...base, ...s]) {
-          const b = box(x);
+          const b = bounds(x);
           if (b.max.z - b.min.z <= 0.4) continue;
           if (b.min.y > 134.2) expect(b.min.y - 1.4 * b.max.z, JSON.stringify(x)).toBeGreaterThanOrEqual(134.5 - 1e-9);
           else expect(b.max.y, JSON.stringify(x)).toBeLessThanOrEqual(130.8);
@@ -207,7 +206,7 @@ describe("rail lands (#319)", () => {
     it("no two solids taller than 0.4 of railLands + freightYard overlap (strict 3D AABB)", () => {
       for (const seed of [1, 2, 3]) {
         const { base, solids: s } = yard(seed);
-        const tall = [...base, ...s].map(box).filter((b) => b.max.z - b.min.z > 0.4);
+        const tall = [...base, ...s].map((s) => bounds(s)).filter((b) => b.max.z - b.min.z > 0.4);
         const e = 1e-9, cut = (a: Bounds, b: Bounds) => a.min.x < b.max.x - e && b.min.x < a.max.x - e && a.min.y < b.max.y - e && b.min.y < a.max.y - e && a.min.z < b.max.z - e && b.min.z < a.max.z - e;
         for (let i = 0; i < tall.length; i++) for (let j = i + 1; j < tall.length; j++) expect(cut(tall[i]!, tall[j]!), `seed ${seed}: ${JSON.stringify(tall[i])} × ${JSON.stringify(tall[j])}`).toBe(false);
       }
