@@ -1,10 +1,11 @@
 import { v3, type Vec2, type Vec3 } from "../../iso/geometry";
 import { shadeTone } from "../../iso/light";
 import { ribs, type Plate } from "../../iso/plate";
-import { GABLE_RATIO } from "../../iso/solids";
+import { GABLE_RATIO, type Solid } from "../../iso/solids";
 import type { Material } from "../../map/palette-iso";
 import type { Rect } from "../../scenes/city-grid";
 import { prism } from "../../scenes/city-pieces";
+import { jungle } from "../../scenes/flora";
 import type { Rng } from "../../map/seed";
 import { chair, garland, rooftopGarden, table } from "../props";
 import { gableRoof } from "../roofs";
@@ -158,9 +159,42 @@ export function sheetLoft(lot: Lot, rng: Rng, style: Style): Piece {
   return tonePiece(p, tone);
 }
 
+/** Abandoned sawtooth hall: 1..2 teeth gone leaving ridge beam and rafters, jungle growing through the gaps; no facade, walls one tone darker. */
+export function derelictHall(lot: Lot, rng: Rng, style: Style): Piece {
+  const tone = shiftTone(style.tone, rng.int(-1, 1));
+  const p = emptyPiece(), { x, y, w, d, z } = lot, toothH = 2, cap = recipeCap(lot);
+  const h = Math.min(rng.int(6, 9), cap - 2), base = z + h;
+  p.solids.push(prism(x, y, z, w, d, h, style.mat));
+  const n = Math.min(rng.int(4, 5), Math.floor(w / 4)), x0 = x + (w - 4 * n) / 2;
+  const teeth: Solid[] = [];
+  sawtooth(teeth, { x: x0, y, w: 4 * n, d }, z, h, toothH, style.roof, "glass");
+  const gone = new Set<number>(), missing = Math.min(rng.int(1, 2), n - 1);
+  while (gone.size < missing) gone.add(rng.int(0, n - 1));
+  const gaps = [...gone].sort((a, b) => a - b);
+  teeth.forEach((t, k) => { if (!gone.has(k)) p.solids.push(t); });
+  for (const k of gaps) {
+    const ridge = x0 + 4 * (k + 1), top = base + 2 - 0.15; // beam is 0.3 thick, centred on its axis: top stays within the cap
+    p.solids.push({ kind: "beam", from: v3(ridge, y, top), to: v3(ridge, y + d, top), w: 0.3, h: 0.3, mat: "steel" });
+    for (const yj of [y + 0.5, y + d - 0.5]) p.solids.push({ kind: "beam", from: v3(x0 + 4 * k, yj, base), to: v3(ridge, yj, top), w: 0.3, h: 0.3, mat: "steel" });
+  }
+  const first = p.solids.length;
+  for (let i = rng.int(4, 6); i > 0; i--) {
+    const cx = x0 + 4 * rng.pick(gaps) + 2;
+    jungle(p.solids, rng, { x0: cx, x1: cx, y0: y + 2, y1: y + d - 2 }, 1, base);
+  }
+  for (let i = first; i < p.solids.length; i++) {
+    const c = p.solids[i]!;
+    if (c.kind === "cone") p.solids[i] = { ...c, r: Math.min(c.r, 2), h: Math.min(c.h, cap - h) };
+  }
+  const t = tonePiece(p, tone);
+  t.solids[0] = { ...t.solids[0]!, tone: tone - 1 };
+  return t;
+}
+
 export const RECONVERSION: readonly RecipeDef[] = [
   { name: "loftHall", recipe: loftHall, family: "reconversion" },
   { name: "vaultLoft", recipe: vaultLoft, family: "reconversion" },
   { name: "brewery", recipe: brewery, family: "reconversion" },
   { name: "sheetLoft", recipe: sheetLoft, family: "reconversion" },
+  { name: "derelictHall", recipe: derelictHall, family: "reconversion" },
 ];

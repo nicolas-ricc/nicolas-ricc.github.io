@@ -5,6 +5,7 @@ import { lightBox } from "../../city/lights";
 import { v3 } from "../../iso/geometry";
 import { createRng } from "../../map/seed";
 import { LAB_LOTS, RECIPES, recipe } from "../index";
+import { shiftTone } from "../piece";
 import { STYLES } from "../styles";
 import { frontFrame, plateWindows } from "./reconversion";
 import type { Lot, Side } from "../types";
@@ -201,6 +202,28 @@ describe("derelictHall", () => {
       expect(ramps.length + ridges.length).toBeLessThanOrEqual(5);
       for (const r of ridges) if (r.kind === "beam") expect(ramps.some((t) => t.kind === "ramp" && Math.abs(t.at.x + 4 - r.from.x) < 1e-6)).toBe(false);
       expect(p.windows).toEqual([]);
+    }
+  });
+
+  it("grows 4..6 jungle cones of radius at most 2 inside the lot, no facade, body one tone darker than the piece", () => {
+    for (const lot of LOTS) for (const seed of SEEDS) {
+      const p = recipe("derelictHall")(lot, createRng(seed), STYLES.warehouses);
+      const cones = p.solids.filter((s) => s.kind === "cone");
+      expect(cones.length).toBeGreaterThanOrEqual(4);
+      expect(cones.length).toBeLessThanOrEqual(6);
+      for (const c of cones) {
+        if (c.kind !== "cone") continue;
+        expect(c.r).toBeLessThanOrEqual(2);
+        const b = bounds(c);
+        expect(b.min.x).toBeGreaterThanOrEqual(lot.x - EPS);
+        expect(b.max.x).toBeLessThanOrEqual(lot.x + lot.w + EPS);
+        expect(b.min.y).toBeGreaterThanOrEqual(lot.y - EPS);
+        expect(b.max.y).toBeLessThanOrEqual(lot.y + lot.d + EPS);
+        expect(b.max.z - lot.z).toBeLessThanOrEqual(Math.min(lot.maxH, 18) + EPS);
+      }
+      expect(p.solids.some((s) => s.kind === "prism" && !!s.facade)).toBe(false);
+      const body = p.solids.find((s) => s.kind === "prism");
+      expect(body?.tone).toBe(shiftTone(0, createRng(seed).int(-1, 1)) - 1);
     }
   });
 });
