@@ -6,11 +6,11 @@ import { PLINTH_H } from "../scenes/city-pieces";
 import { BLOCK_D, BLOCK_W, ROWS, SIDEWALK, SITE, STREET, TOWER, WEST_QUAY, blocks, estuaryEast, type Block } from "../scenes/city-grid";
 import { zoneRng } from "../scenes/world";
 import { SEED } from "../map/seed";
-import { CATALOGUE, FIXED, FRONT_CAP_H, FOOTBRIDGE_LOT, MAX_BUILDING_H, MAX_DISTRICT_H, NO_PLINTH, WATER_TOWER_BLOCK, assign, neighborhoodOf, maxDistrictHeight, maxHeightFor, openSides, waterTowerLot, type Neighborhood, type Placed } from "./zoning";
+import { CATALOGUE, FIXED, FRONT_CAP_H, FOOTBRIDGE_LOT, MAX_BUILDING_H, MAX_DISTRICT_H, NO_PLINTH, WATER_TOWER_BLOCK, assign, isBare, neighborhoodOf, maxDistrictHeight, maxHeightFor, openSides, waterTowerLot, type Neighborhood, type Placed } from "./zoning";
 
 const key = (b: { x: number; y: number }): string => `${b.x},${b.y}`;
 const blockAt = (x: number, y: number): Block => blocks().find((b) => b.x === x && b.y === y && b.kind !== "plaza")!;
-const cells = (neighborhood: Neighborhood): string[] => blocks().filter((b) => b.kind !== "plaza" && b.kind !== "freight" && neighborhoodOf(b) === neighborhood).map(key).sort(); // freight lots get no recipe (assign skips them)
+const cells = (neighborhood: Neighborhood): string[] => blocks().filter((b) => b.kind !== "plaza" && neighborhoodOf(b) === neighborhood).map(key).sort();
 const sorted = (xs: [number, number][]): string[] => xs.map(([x, y]) => key({ x, y })).sort();
 const worldAssign = (): Placed[] => assign(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1));
 const sceneAssign = (): Placed[] => assign(createRng(7), createRng(8));
@@ -30,8 +30,7 @@ describe("zoning", () => {
 
   it("downtown, residential, civic, riverside and district according to the table", () => {
     expect(cells("downtown")).toEqual(sorted([[72, 164], [72, 188], [42, 218], [72, 242], [102, 242], [132, 242], [162, 242]]));
-    // row 92 is residential for now (#320): its own neighborhood comes with #322
-    expect(cells("residential")).toEqual(sorted([[12, 164], [12, 188], [12, 218], [12, 242], [42, 164], [42, 188], [-48, 92], [-18, 92], [12, 92], [42, 92], [72, 92]]));
+    expect(cells("residential")).toEqual(sorted([[12, 164], [12, 188], [12, 218], [12, 242], [42, 164], [42, 188]]));
     expect(cells("civic")).toEqual(sorted([[72, 218], [162, 218], [42, 242]]));
     expect(neighborhoodOf(blocks().find((b) => b.kind === "plaza")!)).toBe("civic");
     expect(cells("riverside")).toEqual(blocks().filter((b) => b.bank === "east" && b.row !== -1).map(key).sort());
@@ -124,14 +123,54 @@ describe("zoning", () => {
     expect(maxHeightFor(blockAt(42, 92))).toBe(MAX_BUILDING_H);
   });
 
-  it("assign never places a freight lot (#320)", () => {
-    for (const placed of [worldAssign(), sceneAssign()]) expect(placed.some((p) => p.block.kind === "freight")).toBe(false);
+  describe("warehouses, freight and harbor (#325)", () => {
+    it("row 92 is warehouses, the freight lots are freight and the two east blocks of the strip are harbor", () => {
+      expect(cells("warehouses")).toEqual(sorted([[-48, 92], [-18, 92], [12, 92], [42, 92], [72, 92]]));
+      expect(cells("freight")).toEqual(blocks().filter((b) => b.kind === "freight").map(key).sort());
+      expect(cells("freight")).toHaveLength(5);
+      expect(cells("harbor")).toEqual(["280,116", "280,140"]);
+    });
+
+    it("the covered market is fixed at (72, 92) and opens east (frontage) and south", () => {
+      expect(FIXED.filter((f) => f.recipe === "coveredMarket").map(key)).toEqual(["72,92"]);
+      expect(openSides(blockAt(72, 92))).toEqual(["e", "s"]);
+      expect(openSides(blockAt(12, 92))).toEqual(["s"]);
+      expect(openSides(blocks().find((b) => b.kind === "freight" && b.x === 12)!)).toEqual(["s"]);
+    });
+
+    it("with the world seed the five blocks of row 92 use ≥ 3 distinct recipes", () => {
+      const row = worldAssign().filter((p) => p.block.y === ROWS[0]);
+      expect(row).toHaveLength(5);
+      expect(new Set(row.map((p) => p.recipe)).size).toBeGreaterThanOrEqual(3);
+    });
+
+    it("freight lots get freightShed or openDock on a 21 × 10 lot open to the south", () => {
+      for (const placed of [worldAssign(), sceneAssign()]) {
+        const lots = placed.filter((p) => p.block.kind === "freight");
+        expect(lots).toHaveLength(5);
+        for (const p of lots) {
+          expect(["freightShed", "openDock"]).toContain(p.recipe);
+          expect(p.neighborhood).toBe("freight");
+          expect(p.lot).toMatchObject({ x: p.block.x + SIDEWALK, y: p.block.y + SIDEWALK, w: 21, d: 10, open: ["s"], maxH: MAX_BUILDING_H });
+        }
+      }
+    });
+
+    it("openDock brings its own floor (NO_PLINTH)", () => {
+      expect(NO_PLINTH).toContain("openDock");
+    });
+
+    it("only a harbor block without a fixed recipe is bare; since #326 both harbor blocks are fixed, so none is", () => {
+      for (const b of blocks()) expect(isBare(b), key(b)).toBe(false);
+      expect(isBare({ ...blockAt(280, 116), x: 310 })).toBe(true); // a harbor block outside FIXED would be skipped
+      for (const placed of [worldAssign(), sceneAssign()]) expect(placed.filter((p) => p.neighborhood === "harbor").map((p) => p.recipe).sort()).toEqual(["fishMarket", "foodHall"]);
+    });
   });
 
   it("assign is deterministic, skips plaza and collapse, and builds lots with sidewalk, plinth and cap", () => {
     expect(JSON.stringify(sceneAssign())).toBe(JSON.stringify(sceneAssign()));
     const placed = sceneAssign();
-    expect(placed.map((p) => `${key(p.block)},${p.block.kind}`)).toEqual(blocks().filter((b) => b.kind !== "plaza" && b.kind !== "collapsed" && b.kind !== "freight").map((b) => `${key(b)},${b.kind}`));
+    expect(placed.map((p) => `${key(p.block)},${p.block.kind}`)).toEqual(blocks().filter((b) => b.kind !== "plaza" && b.kind !== "collapsed" && !isBare(b)).map((b) => `${key(b)},${b.kind}`));
     for (const p of placed) {
       const b = p.block, fixed = FIXED.some((f) => key(f) === key(b));
       expect(p.neighborhood).toBe(neighborhoodOf(b));
