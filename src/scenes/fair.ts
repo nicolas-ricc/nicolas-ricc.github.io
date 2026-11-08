@@ -38,7 +38,15 @@ export const GHOST = { x: 98, y: -258, w: 20, d: 12 } as const;
 export const MIRRORS = { x: 124, y: -258, w: 16, d: 12 } as const;
 /** Giant slide: deck tower at the north end of the fair, helical ramp of 24 treads (3 turns) around it. */
 export const SLIDE = { x: 118, y: -292, r: 5, h: 14 } as const;
-export const FAIR_MATS: readonly Material[] = ["deck", "whitewash", "rust", "steel", "copper", "stone", "concrete", "plaza", "paving", "sand", "rail", "glass", "hull", "leaf", "leafDark"];
+/** Log flume: deck channel over the north beach, from `x0` (station, z 2.5) over the boardwalk (flat at z 6) and a drop into the bay. */
+export const FLUME = { x0: 160, y: -296, w: 3 } as const;
+const FLUME_AXIS = FLUME.y + FLUME.w / 2;
+/** East end of the drop: 1 u from the lowest shore point of the channel's band (the shore recedes toward y −293). */
+export const FLUME_X1: number = Math.min(...Array.from({ length: 7 }, (_, k) => bayShoreX(FLUME.y + k * 0.5))) - 1;
+export const FLUME_DROP_X0: number = FLUME_X1 - 6;
+const FLUME_LIFT_X1 = 172;
+export const FLUME_PATH: readonly Vec3[] = [v3(FLUME.x0, FLUME_AXIS, 2.5), v3(FLUME_LIFT_X1, FLUME_AXIS, 6), v3(FLUME_DROP_X0, FLUME_AXIS, 6), v3(FLUME_X1, FLUME_AXIS, 0.2)];
+export const FAIR_MATS: readonly Material[] = ["shallow", "deck", "whitewash", "rust", "steel", "copper", "stone", "concrete", "plaza", "paving", "sand", "rail", "glass", "hull", "leaf", "leafDark"];
 const BOOTH_MATS: readonly Material[] = ["whitewash", "rust", "copper"];
 const WATER_Z = -1;
 
@@ -101,11 +109,28 @@ export function dropSolids(z: number): Solid[] {
   return out;
 }
 
+const FLUME_LINE = polyline(FLUME_PATH);
+const FLUME_LENGTH = FLUME_LINE.length;
+export const flumeLength = (): number => FLUME_LENGTH;
+
+/** Point and heading of the channel at `dist` from the station (interpolated z); the logs jump from the bay back to the start, so the distance wraps. */
+export function flumeAt(dist: number): PolyPoint {
+  return FLUME_LINE.at(((dist % FLUME_LENGTH) + FLUME_LENGTH) % FLUME_LENGTH);
+}
+
+/** Two logs at `dist` and `dist − 8` along the channel. */
+export function logSolids(dist: number): Solid[] {
+  return [0, 8].map((back) => { const p = flumeAt(dist - back); return { kind: "hull", at: v3(p.x, p.y, p.z), len: 2.4, beam: 1, h: 0.6, mat: "deck", heading: p.heading } as Solid; });
+}
+
 // ---------------------------------------------------------------- static scene
+
+/** West edge of the plank stretch that starts at `y`: the shore shifts up to 25 u over 18 of length, so the whole stretch stays on sand. */
+const boardwalkX = (y: number): number => Math.min(bayShoreX(y), bayShoreX(y + 9), bayShoreX(y + 18)) - 16;
 
 function boardwalk(out: Solid[], accents: Accent[]): void {
   for (let y = -300; y < -172; y += 18) {
-    const x = Math.min(bayShoreX(y), bayShoreX(y + 9), bayShoreX(y + 18)) - 16; // the shore shifts up to 25 u over 18 of length: the whole stretch stays on sand
+    const x = boardwalkX(y);
     if (!onFair(x, y, BOARDWALK_W, 18)) continue;
     out.push(prism(x, y, 0, BOARDWALK_W, 18, 0.6, "deck"));
     for (let py = y + 3; py < y + 18; py += 6) out.push(prism(x + BOARDWALK_W - 0.4, py, 0.6, 0.3, 0.3, 1, "steel")); // railing on the water side
@@ -204,6 +229,22 @@ export function slide(out: Solid[], accents: Accent[]): void {
   accents.push({ kind: "dot", at: v3(x, y, 16.3), r: 0.5, color: "amber" });
 }
 
+/** Log flume: raised deck channel (lift ramp, flat with water over the boardwalk, drop ramp to the bay), pillars and splash. */
+export function flume(out: Solid[], accents: Accent[]): void {
+  const { x0, y } = FLUME, ay = FLUME_AXIS;
+  out.push({ kind: "ramp", at: v3(x0, y, 2.5), w: FLUME_LIFT_X1 - x0, d: FLUME.w, h: 3.5, mat: "deck", dir: "w" });
+  out.push({ kind: "beam", from: v3(x0, ay, 2.5), to: v3(FLUME_LIFT_X1, ay, 6), w: 0.3, h: 0.3, mat: "rust" });
+  out.push(prism(FLUME_LIFT_X1, y, 5.4, FLUME_DROP_X0 - FLUME_LIFT_X1, FLUME.w, 0.6, "deck"));
+  out.push({ kind: "strip", path: [{ x: FLUME_LIFT_X1, y: ay }, { x: FLUME_DROP_X0, y: ay }], width: 2, z: 6.02, mat: "shallow" });
+  out.push({ kind: "ramp", at: v3(FLUME_DROP_X0, y, 0.2), w: 6, d: FLUME.w, h: 5.8, mat: "deck", dir: "e" });
+  const walkY = -300 + 18 * Math.floor((ay + 300) / 18), walkX = boardwalkX(walkY); // the plank stretch under the axis
+  for (let x = x0; x < FLUME_DROP_X0; x += 6) {
+    if (x + 0.2 > walkX && x - 0.2 < walkX + BOARDWALK_W) continue; // no pillar through the boardwalk
+    out.push(prism(x - 0.2, ay - 0.2, 0, 0.4, 0.4, x < FLUME_LIFT_X1 ? 2.5 : 5.4, "steel"));
+  }
+  for (let k = 0; k < 6; k++) { const py = y + 0.5 + (k % 3); accents.push(dot(Math.max(FLUME_X1 + 1.5 + k * 0.5, bayShoreX(py) + 0.5), py, 0.3 + (k % 2) * 0.7, 0.3, "windowCool")); } // over the water, east of the drop
+}
+
 function dropTower(out: Solid[], accents: Accent[]): void {
   out.push(prism(DROP.x - 2, DROP.y - 2, 0, 4, 4, 0.6, "concrete"), prism(DROP.x - 0.5, DROP.y - 0.5, 0.6, 1, 1, DROP.h, "steel"));
   accents.push(dot(DROP.x, DROP.y, DROP.h + 0.8, 0.8, "cyan"));
@@ -244,7 +285,7 @@ const onSand = (b: Bounds): boolean => {
 };
 
 /**
- * Stranded boat near `y0`: walks the shore (dy 0, +1, −1 … ±14) and, at each y, from 9 to 6 u from the water, until the
+ * Stranded boat near `y0`: walks the shore (dy 0, +1, −1 … ±14) and, at each y, from 9 to 4 u from the water, until the
  * hull sits entirely on the fair's sand (`onSand`) and its footprint touches nothing in `taken`. At 9 u from the water it falls inside
  * the boardwalk (16 to 8 u from the shore) except where the shore shifts, so it moves closer to the water before
  * moving away in y. `null` if there is no room.
@@ -252,7 +293,7 @@ const onSand = (b: Bounds): boolean => {
 function boatAt(y0: number, heading: number, taken: readonly Bounds[]): Solid | null {
   for (let i = 0; i <= 28; i++) {
     const y = y0 + (i % 2 ? (i + 1) / 2 : -i / 2);
-    for (const back of [9, 8, 7, 6]) {
+    for (const back of [9, 8, 7, 6, 5, 4]) {
       const hull: Solid = { kind: "hull", at: v3(bayShoreX(y) - back, y, 0), len: 5, beam: 1.8, h: 0.8, mat: "whitewash", heading, sheer: 0.3 };
       const b = bounds(hull);
       if (onSand(b) && taken.every((t) => !touch(t, b))) return hull;
@@ -264,8 +305,9 @@ function boatAt(y0: number, heading: number, taken: readonly Bounds[]): Solid | 
 function beach(out: Solid[], rng: Rng): void {
   let placed = 0, tries = 0;
   while (placed < 12 && tries++ < 200) {
-    const y = rng.int(-298, -176), x = bayShoreX(y) - rng.int(3, 7);
+    let y = rng.int(-298, -176), x = bayShoreX(y) - rng.int(3, 7);
     if (!fairAt(x, y) || bayWater(x, y)) continue;
+    if (x + 1.6 > FLUME.x0 && x - 1.6 < FLUME_X1 && y + 1.6 > FLUME.y && y - 1.6 < FLUME.y + FLUME.w) { y = -291.4; x = Math.min(x, bayShoreX(y) - 3); } // out from under the channel (and back from the shore there); no extra rng, so the boats' headings do not move
     out.push(prism(x - 0.12, y - 0.12, 0, 0.25, 0.25, 2, "steel"), cone(x, y, 2, 1.6, 0.7, rng.chance(0.5) ? "whitewash" : "rust", 8));
     placed++;
   }
@@ -291,7 +333,7 @@ export function fair(rng: Rng, opts: { legacyOnly?: boolean } = {}): FairScene {
   const arcadeSigns = arcade(solids);
   booths(solids, accents);
   bumperCars(solids, accents);
-  if (!opts.legacyOnly) { ghostTrain(solids, accents); mirrorHouse(solids, accents); slide(solids, accents); }
+  if (!opts.legacyOnly) { ghostTrain(solids, accents); mirrorHouse(solids, accents); slide(solids, accents); flume(solids, accents); }
   beach(solids, rng); // after the static solids: the boats look for free space among them
   gate(solids, accents);
   const drop = { at: v3(DROP.x, DROP.y, 1), h: DROP.h };
