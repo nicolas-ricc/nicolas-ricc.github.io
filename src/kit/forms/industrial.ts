@@ -1,4 +1,5 @@
-import { v3, type Vec3 } from "../../iso/geometry";
+import type { Accent } from "../../iso/accent";
+import { v3, type Vec2, type Vec3 } from "../../iso/geometry";
 import { shadeTone } from "../../iso/light";
 import { ribs, type Plate } from "../../iso/plate";
 import { GABLE_RATIO, bounds, type Solid } from "../../iso/solids";
@@ -6,7 +7,7 @@ import type { Material } from "../../map/palette-iso";
 import type { Rng } from "../../map/seed";
 import type { Rect } from "../../scenes/city-grid";
 import { prism } from "../../scenes/city-pieces";
-import { addBuilding, emptyPiece, recipeCap, shiftTone } from "../piece";
+import { addBuilding, emptyPiece, fitToCap, recipeCap, shiftTone } from "../piece";
 import type { Lot, Piece, RecipeDef, Side, Style } from "../types";
 
 /**
@@ -175,6 +176,86 @@ export function stockpile(lot: Lot, rng: Rng, style: Style): Piece {
   return tonePiece(p, tone);
 }
 
+/** Row of 1..3 steel or rust tanks along the long side, each with a mid-height ring and a south ladder, inside a closed concrete wall. */
+export function tankGroup(lot: Lot, rng: Rng, style: Style): Piece {
+  const tone = shiftTone(style.tone, rng.int(-1, 1));
+  const p = emptyPiece(), { x, y, w, d, z } = lot, long = w >= d, along = long ? w : d, short = long ? d : w;
+  const n0 = rng.int(1, 3), rCap = (short - 2.9) / 2, cap = recipeCap(lot);
+  const tanks = Array.from({ length: n0 }, () => ({ r: Math.min(rng.int(3, 5), rCap), h: Math.min(rng.int(4, 8), cap), mat: rng.pick<Material>(["steel", "rust"]) }));
+  const used = (n: number): number => tanks.slice(0, n).reduce((a, t) => a + 2 * t.r + 0.4, 0) + (n - 1) + 2;
+  let n = n0;
+  while (n > 1 && used(n) > along) n--;
+  let a = (long ? x : y) + (along - (used(n) - 2)) / 2;
+  const cc = long ? y + d / 2 : x + w / 2;
+  const placed = tanks.slice(0, n).map((t) => {
+    const c = a + t.r + 0.2;
+    a += 2 * t.r + 0.4 + 1;
+    return { ...t, cx: long ? c : cc, cy: long ? cc : c };
+  });
+  for (const { cx, cy, r, h, mat } of placed) {
+    p.solids.push({ kind: "cylinder", at: v3(cx, cy, z), r, h, mat });
+    p.solids.push({ kind: "cylinder", at: v3(cx, cy, z + h / 2 - 0.15), r: r + 0.2, h: 0.3, mat });
+    p.solids.push(prism(cx - 0.15, cy + r, z, 0.3, 0.3, h, "steel"));
+    for (let k = 1; k < h; k++) p.solids.push({ kind: "beam", from: v3(cx - 0.15, cy + r + 0.35, z + k), to: v3(cx + 0.15, cy + r + 0.35, z + k), w: 0.1, h: 0.1, mat: "steel" });
+  }
+  const m = 0.7;
+  const gx0 = Math.min(...placed.map((t) => t.cx - t.r - 0.2)) - m, gx1 = Math.max(...placed.map((t) => t.cx + t.r + 0.2)) + m;
+  const gy0 = Math.min(...placed.map((t) => t.cy - t.r - 0.2)) - m, gy1 = Math.max(...placed.map((t) => t.cy + t.r + 0.45)) + m;
+  p.solids.push({ kind: "strip", path: [{ x: gx0, y: gy0 }, { x: gx1, y: gy0 }, { x: gx1, y: gy1 }, { x: gx0, y: gy1 }, { x: gx0, y: gy0 }], width: 0.6, z: z + 0.02, mat: "concrete" });
+  return tonePiece(p, tone);
+}
+
+export const QUAY_CRANE_H = 18, RTG_H = 10;
+
+/** Quay crane centered on `at`: four-legged steel gantry on two rails, cabin, mast, boom toward `dir` with a stay and a cyan light on the tip. Nothing above `z + 18`. */
+export function quayCraneAt(at: Vec2, dir: "w" | "e" | "s", out: Solid[], accents: Accent[], z = 0): void {
+  const sx = dir === "e" ? 1 : dir === "w" ? -1 : 0, sy = dir === "s" ? 1 : 0;
+  // `r` runs along the rails (perpendicular to dir), `l` across them.
+  const P = (l: number, r: number, zz: number): Vec3 => (sx !== 0 ? v3(at.x + l, at.y + r, zz) : v3(at.x + r, at.y + l, zz));
+  const xy = (q: Vec3): Vec2 => ({ x: q.x, y: q.y });
+  for (const l of [-3, 3]) {
+    for (const r of [-3, 3]) { const c = P(l, r, z); out.push(prism(c.x - 0.4, c.y - 0.4, z, 0.8, 0.8, 9.2, "steel")); }
+    out.push({ kind: "beam", from: P(l, -3, z + 9.6), to: P(l, 3, z + 9.6), w: 0.8, h: 0.8, mat: "steel" });
+    out.push({ kind: "strip", path: [xy(P(l, -4, 0)), xy(P(l, 4, 0))], width: 0.6, z: z + 0.02, mat: "rail" });
+  }
+  out.push(prism(at.x - 1, at.y - 1, z + 10, 2, 2, 2, "steel"));
+  out.push(prism(at.x - 0.2, at.y - 0.2, z + 12, 0.4, 0.4, 3, "steel"));
+  const tip = v3(at.x + 4.4 * sx, at.y + 4.4 * sy, z + 17.5);
+  out.push({ kind: "beam", from: v3(at.x + sx, at.y + sy, z + 12), to: tip, w: 0.6, h: 0.4, mat: "steel" });
+  out.push({ kind: "beam", from: v3(at.x, at.y, z + 15), to: tip, w: 0.2, h: 0.2, mat: "steel" });
+  out.push(prism(tip.x - 0.2, tip.y - 0.2, z + 17.5, 0.4, 0.4, 0.5, "steel")); // light housing: the topmost solid, so flattening is exact
+  accents.push({ kind: "dot", at: tip, r: 1, color: "cyan" });
+}
+
+/** Quay crane at the lot center, boom toward `open[0]` when it is w, e or s, else west; flattened to the cap. */
+export function quayCrane(lot: Lot, rng: Rng, style: Style): Piece {
+  const tone = shiftTone(style.tone, rng.int(-1, 1));
+  const p = emptyPiece(), first = lot.open[0];
+  quayCraneAt({ x: lot.x + lot.w / 2, y: lot.y + lot.d / 2 }, first === "w" || first === "e" || first === "s" ? first : "w", p.solids, p.accents, lot.z);
+  return tonePiece(fitToCap(p, lot), tone);
+}
+
+/** RTG gantry: four 1.2 legs on rust wheels at `x0`/`x1` (NW corner) in pairs at `y` and `y + 6`, two cross beams and a rust trolley between them. 10 tall. */
+export function rtgAt(x0: number, x1: number, y: number, out: Solid[], z = 0): void {
+  for (const x of [x0, x1]) for (const yy of [y, y + 6]) {
+    out.push({ kind: "cylinder", at: v3(x + 0.6, yy + 0.6, z), r: 0.6, h: 1.2, mat: "rust" });
+    out.push(prism(x, yy, z + 1.2, 1.2, 1.2, 7.8, "steel"));
+  }
+  const span = x1 + 1.2 - x0;
+  for (const yy of [y, y + 6]) out.push(prism(x0, yy, z + 9, span, 1.2, 1, "steel"));
+  out.push(prism(x0 + span / 2 - 1.5, y + 1.2, z + 8.6, 3, 6 - 1.2, 1.4, "rust"));
+}
+
+/** RTG gantry over a stack of up to 3 containers lengthwise along x between its legs. */
+export function rtgGantry(lot: Lot, rng: Rng, style: Style): Piece {
+  const tone = shiftTone(style.tone, rng.int(-1, 1));
+  const p = emptyPiece(), { x, y, w, d, z } = lot, x0 = x + 0.5, x1 = x + w - 1.7, y0 = y + (d - 7.2) / 2;
+  rtgAt(x0, x1, y0, p.solids, z);
+  const sx = (x0 + 1.2 + x1) / 2 - CONTAINER.len / 2;
+  p.solids.push(...stackContainers(v3(sx, y0 + 1.2 + (4.8 - CONTAINER.w) / 2, z), Math.min(stackHeight(rng), 3), "x", rng));
+  return tonePiece(p, tone);
+}
+
 /** Small shed 4×3×2.6 centered in the lot, with a door on the south face. */
 export function storeroom(lot: Lot, rng: Rng, style: Style): Piece {
   const tone = shiftTone(style.tone, rng.int(-1, 1));
@@ -191,5 +272,8 @@ export const INDUSTRIAL: readonly RecipeDef[] = [
   { name: "sheetHall", recipe: sheetHall, family: "industrial" },
   { name: "containerStack", recipe: containerStack, family: "industrial" },
   { name: "stockpile", recipe: stockpile, family: "industrial" },
+  { name: "tankGroup", recipe: tankGroup, family: "industrial" },
+  { name: "quayCrane", recipe: quayCrane, family: "industrial" },
+  { name: "rtgGantry", recipe: rtgGantry, family: "industrial" },
   { name: "storeroom", recipe: storeroom, family: "industrial" },
 ];

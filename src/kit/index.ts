@@ -15,6 +15,8 @@ export const LAB_LOTS: Readonly<Record<string, { w: number; d: number; z?: numbe
   waterTower: { w: 6, d: 6 },
   footbridge: { w: 54, d: 5, z: -1 },
   storeroom: { w: 6, d: 5 },
+  quayCrane: { w: 8, d: 8 },
+  rtgGantry: { w: 12, d: 18 },
 };
 
 export function recipe(name: string): Recipe {
