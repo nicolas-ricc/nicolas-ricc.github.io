@@ -4,6 +4,7 @@ import { bounds, type Solid } from "../iso/solids";
 import { BOTTOM, DOCK, QUAY_W, QUAY_X, WORLD, ZONE_SPLIT_Y, eastBank, northCoastY } from "../map/geo";
 import type { Rng } from "../map/seed";
 import { jungle as flora } from "./flora";
+import { shipyardEast } from "./shipyard-east";
 import { station } from "./station";
 import { clearOfWater } from "./terrain-classify";
 
@@ -217,6 +218,7 @@ export function shipyard(rng: Rng): Scene {
   jungle(solids, rng);
   lamps(solids, accents);
   seamFence(solids, accents);
+  shipyardEast(solids, accents, weldSpots, rng);
   ground.push(...solids.filter((s) => s.kind === "strip"));
   const raised = solids.filter((s) => s.kind !== "strip");
   return { ground, solids: raised, accents, trolley: g.trolley, trolleyRange: g.range, weldSpots };
