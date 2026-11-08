@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { RECIPES } from "../kit/index";
 import { kitScene } from "./kit-scene";
 
 // Own file: the mock wraps every recipe of the registry with a counter and must not leak into kit-scene.test.ts.
@@ -13,6 +14,7 @@ describe("kit lab scene: recipe calls", () => {
     for (let s = 1; s <= 5; s++) {
       for (const k of Object.keys(calls)) delete calls[k];
       kitScene(s, "downtown");
+      expect(Object.keys(calls).sort()).toEqual(RECIPES.map((r) => r.name).sort()); // the mock applied: every recipe was counted
       for (const [name, n] of Object.entries(calls)) expect(n, `seed ${s} ${name}`).toBe(1);
     }
   });

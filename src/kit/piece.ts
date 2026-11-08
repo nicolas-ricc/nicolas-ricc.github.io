@@ -47,7 +47,16 @@ export function fitToCap(p: Piece, lot: Lot): Piece {
   const cap = Math.min(lot.maxH, LANDMARK_MAX_H);
   const top = Math.max(...[...p.solids, ...p.ground].map((s) => bounds(s).max.z)) - lot.z;
   if (top <= cap) return p;
-  const k = cap / top, z = (n: number): number => lot.z + (n - lot.z) * k, P = (q: Vec3): Vec3 => v3(q.x, q.y, z(q.z));
+  const k = cap / top;
+  return mapZ(p, (n) => lot.z + (n - lot.z) * k, k);
+}
+
+/** Piece with every z raised by `dz`; heights, normals (`wall`, `Wall.normal`) and `courtyard` unchanged. */
+export const liftPiece = (p: Piece, dz: number): Piece => mapZ(p, (n) => n + dz, 1);
+
+/** Piece with every z coordinate through `z` and every height scaled by `k`; normals and `courtyard` unchanged. */
+function mapZ(p: Piece, z: (n: number) => number, k: number): Piece {
+  const P = (q: Vec3): Vec3 => v3(q.x, q.y, z(q.z));
   const solid = (s: Solid): Solid => {
     switch (s.kind) {
       case "poly": return { ...s, z: z(s.z), h: s.h * k };
@@ -65,30 +74,6 @@ export function fitToCap(p: Piece, lot: Lot): Piece {
     accents: p.accents.map((a) => (a.kind === "dot" ? { ...a, at: P(a.at) } : { ...a, pts: a.pts.map(P) })),
     windows: p.windows.map((w) => ({ ...w, pts: w.pts.map(P) })),
     walls: p.walls.map((w) => ({ ...w, pts: w.pts.map(P), floorH: w.floorH * k })),
-    slots: p.slots.map((s) => ({ ...s, pts: s.pts.map(P) })),
-    ...(p.landmarkTop ? { landmarkTop: P(p.landmarkTop) } : {}),
-  };
-}
-
-/** Piece with every z raised by `dz`; heights, normals (`wall`, `Wall.normal`) and `courtyard` unchanged. */
-export function liftPiece(p: Piece, dz: number): Piece {
-  const P = (q: Vec3): Vec3 => v3(q.x, q.y, q.z + dz);
-  const solid = (s: Solid): Solid => {
-    switch (s.kind) {
-      case "poly": case "strip": return { ...s, z: s.z + dz };
-      case "ground": return { ...s, tris: s.tris.map((t) => ({ ...t, pts: [P(t.pts[0]), P(t.pts[1]), P(t.pts[2])] })) };
-      case "wheel": return { ...s, at: P(s.at) };
-      case "beam": return { ...s, from: P(s.from), to: P(s.to) };
-      default: return { ...s, at: P(s.at) };
-    }
-  };
-  return {
-    ...p,
-    solids: p.solids.map(solid),
-    ground: p.ground.map(solid),
-    accents: p.accents.map((a) => (a.kind === "dot" ? { ...a, at: P(a.at) } : { ...a, pts: a.pts.map(P) })),
-    windows: p.windows.map((w) => ({ ...w, pts: w.pts.map(P) })),
-    walls: p.walls.map((w) => ({ ...w, pts: w.pts.map(P) })),
     slots: p.slots.map((s) => ({ ...s, pts: s.pts.map(P) })),
     ...(p.landmarkTop ? { landmarkTop: P(p.landmarkTop) } : {}),
   };

@@ -294,6 +294,8 @@ describe("city", () => {
     expect(seen.library).toBeGreaterThan(0);
   });
 
+  // Fingerprints measured on 860a582, before #142: lifting must reproduce the plinth pieces of then.
+  // A deliberate change to a recipe without ground moves them; re-record then, as with world-baseline.
   it("pieces without ground are identical to main's plinth pieces (fingerprints measured on 860a582)", () => {
     const MAIN = ["c5fafd27", "0e4fe4d3", "46251f13", "fff40466", "8841fb6b"];
     for (let s = 1; s <= 5; s++) {
