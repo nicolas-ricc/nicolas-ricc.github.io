@@ -129,7 +129,7 @@ for (const [name, make, isWorld] of SEEDS) {
       });
     });
 
-    if (isWorld) it("world seed: at least one warehouses neon (#325)", () => {
+    if (!isWorld) it("fixed seed (7, 8, 9; the world seed draws no brewery): at least one warehouses neon (#325)", () => {
       expect(l.neons.filter((n) => s.placed[n.owner]!.placed.neighborhood === "warehouses").length).toBeGreaterThanOrEqual(1);
     });
 
