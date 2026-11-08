@@ -76,7 +76,10 @@ describe("smoke tick chunking", () => {
     // r grows linearly with dist and reaches PUFF_R1 at PUFF_RANGE
     for (const T of [60000, 600000]) {
       const a = run([T]);
-      for (const k of [0, 1]) for (const s of a.puffs(k)) expect(s.kind === "cylinder" && s.r).toBeLessThan(PUFF_R1);
+      for (const k of [0, 1]) for (const s of a.puffs(k)) {
+        if (s.kind !== "cylinder") throw new Error("expected cylinders");
+        expect(s.r).toBeLessThan(PUFF_R1);
+      }
     }
   });
 
