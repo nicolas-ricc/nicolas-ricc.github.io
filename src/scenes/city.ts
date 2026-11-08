@@ -10,6 +10,7 @@ import { blocks } from "./city-grid";
 import { lights, WINDOW_ALPHA, type CityLights } from "../city/lights";
 import { streets } from "../city/streets";
 import { railLands } from "../city/rail-lands";
+import { harbor } from "../city/harbor";
 import { bridge, collapsed, cars, greenery, promenade, plazaAndTower, westQuay, type TowerLights } from "../city/fixed";
 import { FOOTBRIDGE_LOT, NO_PLINTH, WATER_TOWER_BLOCK, assign, waterTowerLot, type Placed } from "../city/zoning";
 
@@ -59,6 +60,7 @@ export function city(rng: Rng, districtRng: Rng, lightsRng: Rng): CityScene {
   railLands(ground, solids);
   bridge(solids, accents);
   westQuay(solids, accents);
+  harbor(solids, accents, rng);
   const promenadeLights = promenade(solids, accents);
   collapsed(solids, rng);
   greenery(solids, rng);
