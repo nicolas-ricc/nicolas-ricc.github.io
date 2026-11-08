@@ -7,6 +7,7 @@ import { awning, dockCrane } from "../kit/props";
 import { createRng } from "../map/seed";
 import { AVENUE, BLOCK_W, BRIDGE, COLLAPSED, EAST_RING, PROMENADE, PLAZA, SIDEWALK, STREET, TOWER, WEST_QUAY, blocks, estuaryEast } from "../scenes/city-grid";
 import { plazaTone, tiles } from "../scenes/city-pieces";
+import type { FixedLight } from "./lights";
 import { bridge, collapsed, promenade, plazaAndTower, towerWindows, westQuay } from "./fixed";
 
 const EPS = 1e-6;
@@ -22,7 +23,7 @@ const prisms = (solids: Solid[]) => solids.filter((s): s is Solid & { kind: "pri
 const dots = (accents: Accent[]) => accents.filter((a): a is Accent & { kind: "dot" } => a.kind === "dot");
 
 describe("bridge", () => {
-  const built = () => { const solids: Solid[] = [], accents: Accent[] = []; bridge(solids, accents); return { solids, accents }; };
+  const built = () => { const solids: Solid[] = [], lights: FixedLight[] = []; bridge(solids, lights); return { solids, accents: lights.flatMap((l) => l.accents) }; };
   const top = BRIDGE.z + BRIDGE.deckH;
 
   it("deck, ramps and abutment as today; without the plaza piles", () => {
@@ -84,6 +85,19 @@ describe("bridge", () => {
     expect(solids.some((s) => s.kind === "prism" && s.mat === "steel" && s.h === 5)).toBe(false);
   });
 
+  it("each obelisk point owns exactly its obelisk prism and its cone (#171)", () => {
+    const solids: Solid[] = [], lights: FixedLight[] = [];
+    bridge(solids, lights);
+    expect(lights).toHaveLength(4);
+    for (const l of lights) {
+      const [from, to] = l.own, [o, cap] = [solids[from]!, solids[from + 1]!];
+      expect(to - from).toBe(2);
+      expect(o).toMatchObject({ kind: "prism", mat: "stone", w: 1.2, d: 1.2, h: 4 });
+      expect(cap).toMatchObject({ kind: "cone", mat: "stone" });
+      if (o.kind === "prism") { expect(l.at.x).toBeCloseTo(o.at.x + 0.6, 6); expect(l.at.y).toBeCloseTo(o.at.y + 0.6, 6); }
+    }
+  });
+
   it("two cars of the size of props.car", () => {
     expect(built().solids.filter((s) => s.kind === "prism" && (s.mat === "steel" || s.mat === "rust") && s.h === 1.2)).toHaveLength(2);
   });
@@ -127,7 +141,7 @@ describe("collapsed", () => {
 });
 
 describe("promenade", () => {
-  const built = () => { const solids: Solid[] = [], accents: Accent[] = []; const bulbs = promenade(solids, accents); return { solids, accents, bulbs }; };
+  const built = () => { const solids: Solid[] = [], lights: FixedLight[] = []; const bulbs = promenade(solids, lights); return { solids, accents: lights.flatMap((l) => l.accents), bulbs }; };
   const { x0, x1, y0, y1, z } = PROMENADE;
 
   it("the two long walls carry an arcade over the water", () => {
@@ -168,7 +182,7 @@ describe("promenade", () => {
 });
 
 describe("westQuay", () => {
-  const built = () => { const solids: Solid[] = [], accents: Accent[] = []; westQuay(solids, accents); return { solids, accents }; };
+  const built = () => { const solids: Solid[] = [], lights: FixedLight[] = []; westQuay(solids, lights); return { solids, accents: lights.flatMap((l) => l.accents) }; };
   const { x0, x1 } = WEST_QUAY;
   const inQuay = (b: Bounds) => b.min.x >= x0 - EPS && b.max.x <= x1 + EPS;
 
@@ -232,8 +246,8 @@ describe("westQuay", () => {
   });
 
   it("a table facing a shop window that already has an awning doesn't add another on top", () => {
-    const solids: Solid[] = [...awning(v3(184.5, 166, 2.3), 5, "e")], accents: Accent[] = [];
-    westQuay(solids, accents);
+    const solids: Solid[] = [...awning(v3(184.5, 166, 2.3), 5, "e")], lights: FixedLight[] = [];
+    westQuay(solids, lights);
     const awnings = solids.filter((s) => s.kind === "ramp" && s.mat === "awning");
     expect(awnings).toHaveLength(6); // the shop window's plus five of the six tables
     expect(overlapping(awnings)).toEqual([]);
@@ -248,7 +262,7 @@ describe("westQuay", () => {
 });
 
 describe("plazaAndTower", () => {
-  const built = () => { const solids: Solid[] = [], ground: Solid[] = [], accents: Accent[] = []; const tower = plazaAndTower(solids, ground, accents, createRng(7)); return { solids, ground, accents, tower }; };
+  const built = () => { const solids: Solid[] = [], ground: Solid[] = [], lights: FixedLight[] = []; const tower = plazaAndTower(solids, ground, lights, createRng(7)); return { solids, ground, accents: lights.flatMap((l) => l.accents), tower }; };
   const fountainOf = (solids: Solid[]) => solids.filter((s): s is Solid & { kind: "cylinder" } => s.kind === "cylinder" && s.mat === "marble" && s.r === 3);
   const kiosksOf = (solids: Solid[]) => prisms(solids).filter((s) => s.mat === "officeDark" && s.w === 2 && s.d === 2 && s.h === 2.4);
 

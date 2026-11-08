@@ -1,4 +1,7 @@
 import { readFileSync } from "node:fs";
+import type { Accent } from "../iso/accent";
+import { hides, screenHull } from "../iso/depth";
+import { lightBox, type FixedLight } from "../city/lights";
 import { describe, expect, it } from "vitest";
 import { buildRenderList } from "../iso/render-list";
 import { bounds, type Solid } from "../iso/solids";
@@ -338,5 +341,42 @@ describe("city", () => {
       const wall = s.solids.find((w) => w.kind === "prism" && !!w.facade && inDistrict(w) && Math.abs(w.at.y + w.d + 0.4 - y) < 1e-6);
       expect(wall).toBeDefined();
     }
+  });
+});
+
+describe("fixed lights (world seed, #171)", () => {
+  const s = city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3));
+  const bs = s.solids.map(bounds), hs = bs.map(screenHull), published = new Set(s.accents);
+  const hiddenLight = (f: FixedLight): boolean => {
+    const box = lightBox([f.at]), back = screenHull(box);
+    return bs.some((b, i) => (i < f.own[0] || i >= f.own[1]) && hides(box, b, { back, front: hs[i]! }));
+  };
+
+  it("no fixed light left in the accents is hidden, and each is published whole or not at all (brute-force oracle)", () => {
+    expect(s.fixedLights.length).toBeGreaterThan(50);
+    for (const f of s.fixedLights) {
+      const n = f.accents.filter((a) => published.has(a)).length;
+      expect([0, f.accents.length]).toContain(n);
+      expect(n === f.accents.length).toBe(!hiddenLight(f));
+    }
+  });
+
+  it("the obelisk point behind the block is gone", () => {
+    const near = (a: Accent) => a.kind === "dot" && Math.hypot(a.at.x - 275.4, a.at.y - 216.4, a.at.z - 7.1) < 0.05;
+    expect(s.fixedLights.some((f) => f.accents.some(near))).toBe(true);
+    expect(s.accents.some(near)).toBe(false);
+  });
+
+  it("tower puddles, fountain and plaza lamps stay", () => {
+    const inPlazaRect = (a: Accent) => a.kind === "poly" && a.pts.every((q) => q.x >= PLAZA.x && q.x <= PLAZA.x + PLAZA.w && q.y >= PLAZA.y && q.y <= PLAZA.y + PLAZA.d);
+    expect(s.accents.filter((a) => inPlazaRect(a) && a.color === "amberBleed" && a.kind === "poly" && a.alpha === 0.25)).toHaveLength(6);
+    expect(s.accents.filter((a) => inPlazaRect(a) && a.color === "amberBleed" && a.kind === "poly" && a.alpha === 0.35)).toHaveLength(3);
+    for (const x of [PLAZA.x + 2.3, PLAZA.x + PLAZA.w - 2.3]) {
+      expect(s.accents.some((a) => a.kind === "dot" && Math.hypot(a.at.x - x, a.at.y - (PLAZA.y + PLAZA.d / 2 + 0.3), a.at.z - 5.05) < 1e-6)).toBe(true);
+    }
+  });
+
+  it("kit accents unchanged", () => {
+    for (const p of s.placed) for (const a of p.piece.accents) expect(published.has(a)).toBe(true);
   });
 });
