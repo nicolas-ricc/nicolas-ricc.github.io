@@ -3,7 +3,7 @@ import { accentItem, type Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
 import { project } from "../iso/project";
 import type { Layer, RenderItem } from "../iso/render-list";
-import { WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, coverQuad, type WorldZone } from "../map/geo";
+import { WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, STATION_LAND, coverQuad, type WorldZone } from "../map/geo";
 
 export const FRAME_H = 30; // reference height so the landmarks fit
 
@@ -25,7 +25,7 @@ export function zoneFrame(frame: Frame): RenderItem[] {
   if (frame === "cover") return coverFrame(16 / 9);
   const box = {
     all: [WORLD.x0, WORLD.y0, WORLD.x1, WORLD.y1],
-    portfolio: [WORLD.x0, WORLD.y0, ZONE_SPLIT_X, ZONE_SPLIT_Y],
+    portfolio: [WORLD.x0, WORLD.y0, ZONE_SPLIT_X, STATION_LAND.y1],
     cv: [WORLD.x0, ZONE_SPLIT_Y, ZONE_SPLIT_X, WORLD.y1],
     blog: [ZONE_SPLIT_X, WORLD.y0, WORLD.x1, WORLD.y1],
   }[frame];

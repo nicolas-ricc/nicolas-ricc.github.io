@@ -4,6 +4,10 @@ import { CITY_EDGE, estuaryEast } from "./city-grid";
 import { GREEN_BELT, REACH, bayShoreX, builtAt, fairAt, reachAt, suburbBlocks, urbanAt } from "./sprawl-grid";
 import { bleedTerrainAt, bleedZ, terrainAt } from "./terrain";
 
+describe("green belt", () => {
+  it("is y 116..158", () => { expect(GREEN_BELT).toEqual({ y0: 116, y1: 158 }); });
+});
+
 describe("sprawl-grid", () => {
   it("the reach undulates between REACH and REACH + 36 and is never straight", () => {
     const xs = Array.from({ length: 40 }, (_, i) => reachAt("s", -300 + i * 20));
@@ -13,6 +17,9 @@ describe("sprawl-grid", () => {
 
   it("builtAt: industrial north and west of Portfolio, urban west and south of Resume, nothing over water or in the green belt", () => {
     expect(builtAt(-100, 0)).toBe("industrial");
+    expect(builtAt(-100, 100)).toBe("urban");
+    expect(builtAt(-100, 80)).toBe("industrial");
+    expect(builtAt(-100, 134)).toBeNull();          // green belt
     expect(builtAt(100, -100)).toBe("industrial");
     expect(builtAt(-100, 250)).toBe("urban");
     expect(builtAt(100, 500)).toBe("urban");
@@ -37,7 +44,7 @@ describe("sprawl-grid", () => {
     expect(urbanAt(100, 330)).toBe(true);
     expect(urbanAt(-100, 200)).toBe(true);
     expect(urbanAt(100, 200)).toBe(false);  // old city
-    expect(urbanAt(-57, 150)).toBe(false);  // seam belt
+    expect(urbanAt(-57, 150)).toBe(false);  // green belt
     expect(urbanAt(250, 400)).toBe(false);  // estuary
   });
 

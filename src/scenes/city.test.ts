@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildRenderList } from "../iso/render-list";
 import { bounds, type Solid } from "../iso/solids";
-import { QUAY_X, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y } from "../map/geo";
+import { ESTUARY_Y0, QUAY_X, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng, SEED } from "../map/seed";
 import { AVENUE, BOULEVARD, BRIDGE, CITY_EDGE, COLLAPSED, ROWS, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_RING, FALLEN_BLOCK, PROMENADE, PLAZA, TOWER, WEST_QUAY, blocks, estuaryEast, inBlock, inCrater } from "./city-grid";
@@ -33,7 +33,7 @@ const isTowerPiece = (s: Solid) => {
 // the south row in front of the tower: PLAZA.x - 6 .. PLAZA.x + PLAZA.w + 6, the band that the controller's ruling caps at 10
 const ROW_SOUTH = ROWS[3], FRONT_X0 = PLAZA.x - 6, FRONT_X1 = PLAZA.x + PLAZA.w + 6;
 
-const CITY_MATS: readonly Material[] = ["office", "officeDark", "glass", "asphalt", "paving", "plaza", "curtain", "stone", "copper", "leaf", "leafDark", "water", "steel", "rust", "plaster", "terracotta", "marble", "awning", "deck"];
+const CITY_MATS: readonly Material[] = ["office", "officeDark", "glass", "asphalt", "paving", "plaza", "curtain", "stone", "copper", "leaf", "leafDark", "water", "steel", "rust", "plaster", "terracotta", "marble", "awning", "deck", "rail"];
 
 describe("city", () => {
   it("is deterministic per seed", () => {
@@ -41,7 +41,7 @@ describe("city", () => {
     expect(JSON.stringify(city(createRng(7), createRng(8), createRng(9)))).not.toBe(JSON.stringify(city(createRng(8), createRng(8), createRng(9))));
   });
 
-  it("everything falls in the Resume zone except the belt jungle, and uses only city materials", () => {
+  it("everything falls in the Resume zone except the cones, and uses only city materials", () => {
     for (const s of all(scene())) {
       const b = bounds(s);
       expect(b.min.x).toBeGreaterThanOrEqual(WORLD.x0 - 3); expect(b.max.x).toBeLessThanOrEqual(ZONE_SPLIT_X + 1); // the district grows up to the west edge of the world
@@ -106,7 +106,7 @@ describe("city", () => {
     for (const c of s.solids) {
       if (c.kind !== "cone" || (c.mat === "stone" && c.at.x >= BRIDGE.x0 && c.at.x <= BRIDGE.x1 && c.at.y >= BRIDGE.y0 && c.at.y <= BRIDGE.y1)) continue; // the finials of the bridge obelisks are stone, not trees
       // south of the district the east bank is jungle with no grid (there are no blocks on the east side anymore)
-      const onCity = c.at.x >= CITY_EDGE.west && c.at.x < PROMENADE.x0 && c.at.y >= CITY_EDGE.north && c.at.y < CITY_EDGE.south && !(c.at.x > QUAY_X && c.at.x < EAST_RING.x0) && !(c.at.x > EAST_RING.x0 && c.at.y >= DISTRICT_BANK_Y);
+      const onCity = c.at.x >= CITY_EDGE.west && c.at.x < PROMENADE.x0 && c.at.y >= ESTUARY_Y0 + 12 && c.at.y < CITY_EDGE.south && !(c.at.x > QUAY_X && c.at.x < EAST_RING.x0) && !(c.at.x > EAST_RING.x0 && c.at.y >= DISTRICT_BANK_Y);
       if (onCity) expect(inBlock(c.at.x, c.at.y) || inCrater(c.at.x, c.at.y) || (c.at.y >= BOULEVARD.y0 && c.at.y <= BOULEVARD.y1)).toBe(true);
     }
     expect(s.accents.length).toBeGreaterThan(6);
@@ -140,7 +140,7 @@ describe("city", () => {
 
   it("avenue: boulevard, lanes, crosswalks and traffic lights; street lamps only on avenue, bridge, plaza and promenade", () => {
     const s = scene();
-    const strips = s.ground.filter((g) => g.kind === "strip");
+    const strips = s.ground.filter((g) => g.kind === "strip" && g.mat !== "rail"); // the main line (#319) is counted apart
     expect(strips.length).toBeGreaterThan(60);
     expect(strips.length).toBeLessThanOrEqual(150);
     expect(strips.every((g) => g.kind === "strip" && g.mat === "paving" && g.z > 0 && g.z < 0.1)).toBe(true);
@@ -222,11 +222,17 @@ describe("city", () => {
     }
   });
 
-  it("jungle: north belt, east bank and craters, more than 60 cones (the west and south edges belong to the tech district)", () => {
+  it("the main line crosses the strip: two rails and a ballast bed from WORLD.x0 to the station land (#319)", () => {
+    const rails = scene().ground.filter((g) => g.kind === "strip" && g.mat === "rail");
+    expect(rails.filter((g) => g.kind === "strip" && g.width === 0.5).map((g) => g.kind === "strip" && g.path[0]!.y).sort()).toEqual([131, 134]);
+    expect(rails.some((g) => g.kind === "strip" && g.width === 5)).toBe(true);
+  });
+
+  it("jungle: east bank and craters, more than 60 cones (the west and south edges belong to the tech district)", () => {
     const s = scene();
     const cones = s.solids.filter((x) => x.kind === "cone" && (x.mat === "leaf" || x.mat === "leafDark"));
     expect(cones.length).toBeGreaterThan(60);
-    expect(cones.some((c) => c.kind === "cone" && c.at.y < CITY_EDGE.north)).toBe(true);        // belt
+    expect(cones.some((c) => c.kind === "cone" && c.at.y < ROWS[0]! && c.at.x < QUAY_X)).toBe(false); // no seam belt since #319: the new strip is empty asphalt
     expect(cones.some((c) => c.kind === "cone" && c.at.x < CITY_EDGE.west)).toBe(false);        // west edge: asphalt of the tech district
     expect(cones.some((c) => c.kind === "cone" && c.at.x > QUAY_X && c.at.x < EAST_RING.x0)).toBe(true); // east bank
     for (const cr of CRATERS) expect(cones.some((c) => c.kind === "cone" && inCrater(c.at.x, c.at.y) && Math.hypot(c.at.x - cr.x, c.at.y - cr.y) <= cr.r)).toBe(true);

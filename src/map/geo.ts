@@ -53,9 +53,9 @@ export function coverQuad(aspect: number, inset = COVER_INSET): [number, number]
 export function inCoverQuad(x: number, y: number, aspect = 16 / 9, margin = 0): boolean {
   return pointInPolygon(x, y, coverQuad(aspect, COVER_INSET - margin).flat());
 }
-/** Blog is everything east of ZONE_SPLIT_X (visually); Resume, what is south of ZONE_SPLIT_Y on the west side. */
+/** Blog is everything east of ZONE_SPLIT_X (visually); Resume, what is south of ZONE_SPLIT_Y on the west side, except the station land, which stays Portfolio. */
 export const ZONE_SPLIT_X = 344;
-export const ZONE_SPLIT_Y = 146;
+export const ZONE_SPLIT_Y = 90;
 /** Clear water at this distance from land. */
 export const SHORE_W = 12;
 const SHORE_WOBBLE = 5;
@@ -69,12 +69,14 @@ export type WorldZone = "portfolio" | "cv" | "blog";
 /**
  * Clickable zone (the site's hover and click), by geography and not by split:
  * the headland, the reef and its shore are Portfolio (the lighthouse caps the
- * shipyard), the seawall shore is Resume and Blog is only the open sea.
+ * shipyard), the seawall shore is Resume and Blog is only the open sea. West of
+ * the split, land south of `ZONE_SPLIT_Y` is Resume except `STATION_LAND`, the
+ * terminal station, which stays Portfolio.
  * The visual terrain (terrain.ts) does not use this to classify the sea.
  */
 export function worldZoneAt(x: number, y: number): WorldZone {
   if (inHeadland(x, y) || distToHeadland(x, y) < SHORE_W) return "portfolio";
-  if (x < ZONE_SPLIT_X + shoreWidth(y)) return y >= ZONE_SPLIT_Y ? "cv" : "portfolio";
+  if (x < ZONE_SPLIT_X + shoreWidth(y)) return y >= ZONE_SPLIT_Y && !inStationLand(x, y) ? "cv" : "portfolio";
   return "blog";
 }
 
@@ -160,14 +162,21 @@ export function northCoastY(x: number): number {
 
 /**
  * Part 1 ruling: the estuary inherits the width of the shipyard channel in the
- * last row of cells before the seam (center y = 141) and opens toward the
+ * last row of cells before ESTUARY_Y0 (center y = 141) and opens toward the
  * south, instead of following the riverCenter meander.
  */
-export const SEAM_CY = Math.floor(ZONE_SPLIT_Y / CELL) * CELL - CELL / 2;
+export const ESTUARY_Y0 = 146; // where the estuary starts to open; independent of the zone seam
+export const SEAM_CY = Math.floor(ESTUARY_Y0 / CELL) * CELL - CELL / 2;
 export const ESTUARY_FLARE = 0.35; // how much the east riverside opens per unit toward the south
-export const estuaryEast = (y: number): number => eastBank(SEAM_CY) + Math.max(0, y - ZONE_SPLIT_Y) * ESTUARY_FLARE;
+export const estuaryEast = (y: number): number => eastBank(SEAM_CY) + Math.max(0, y - ESTUARY_Y0) * ESTUARY_FLARE;
 
-/** How far the island's land reaches over the estuary water, in [0, 10]; 0 north of y 152 (seam), at y 196..222 (bridge) and at y 238..262 (collapsed block). */
+/** Land of the station, Portfolio side of the seam. Half-open: x0 ≤ x < x1 && y0 ≤ y < y1. */
+export const STATION_LAND = { x0: 96, y0: 90, x1: 198, y1: 146 } as const;
+export function inStationLand(x: number, y: number): boolean {
+  return x >= STATION_LAND.x0 && x < STATION_LAND.x1 && y >= STATION_LAND.y0 && y < STATION_LAND.y1;
+}
+
+/** How far the island's land reaches over the estuary water, in [0, 10]; 0 north of y 152 (just south of ESTUARY_Y0), at y 196..222 (bridge) and at y 238..262 (collapsed block). */
 export function estuaryInset(y: number): number {
   const env = ramp(y, 152, 160) * (1 - ramp(y, 188, 196)) + ramp(y, 222, 226) * (1 - ramp(y, 234, 238)) + ramp(y, 262, 266);
   return env * (6 + 2.5 * Math.sin(y / 7.6 + 0.4) + 1.5 * Math.sin(y / 2.5 + 1.1));
@@ -182,7 +191,7 @@ export const islandWestX = (y: number): number => estuaryEast(y) - estuaryInset(
  * beyond (-Infinity from y 380: all water).
  * - North of 146 it oscillates between `lo` and `hi`: `lo` = 331 leaves 3 u of
  *   footing to sheds (x ≤ 324) and scrap (x ≤ 329); between y 134 (base of the
- *   lighthouse headland) and 146 (zone seam) it rises to 344, and `hi` = 344 +
+ *   lighthouse headland) and 146 (`ESTUARY_Y0`, the zone seam before #56) it rises to 344, and `hi` = 344 +
  *   shoreWidth − 1.5 leaves no land that clicks Blog (`worldZoneAt`).
  * - Between 146 and 158 (start of the seawall) it interpolates to 344.
  * - South tip: an ellipse 44 u long from WORLD.y1 over the width of the

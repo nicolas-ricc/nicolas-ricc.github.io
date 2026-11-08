@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { QUAY_X, ZONE_SPLIT_X, ZONE_SPLIT_Y } from "../map/geo";
+import { ESTUARY_Y0, QUAY_X, ZONE_SPLIT_X } from "../map/geo";
 import { AVENUE, BLOCK_D, BLOCK_W, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_COLS, DISTRICT_ROWS, EAST_RING, PROMENADE, PLAZA, ROWS, STREET, TOWER, WEST_QUAY, blocks, estuaryEast, estuaryReaches, inBlock, inCrater } from "./city-grid";
 
 const overlaps = (a: { x: number; y: number; w: number; d: number }, b: { x: number; y: number; w: number; d: number }) =>
@@ -67,9 +67,9 @@ describe("city-grid", () => {
   });
 
   it("the estuary inherits the channel at the seam and opens toward the south", () => {
-    expect(estuaryEast(ZONE_SPLIT_Y)).toBeGreaterThan(QUAY_X + 30);
-    expect(estuaryEast(ZONE_SPLIT_Y)).toBeLessThan(QUAY_X + 60);
-    expect(estuaryEast(260) - estuaryEast(ZONE_SPLIT_Y)).toBeCloseTo((260 - ZONE_SPLIT_Y) * 0.35, 6);
+    expect(estuaryEast(ESTUARY_Y0)).toBeGreaterThan(QUAY_X + 30);
+    expect(estuaryEast(ESTUARY_Y0)).toBeLessThan(QUAY_X + 60);
+    expect(estuaryEast(260) - estuaryEast(ESTUARY_Y0)).toBeCloseTo((260 - ESTUARY_Y0) * 0.35, 6);
     expect(estuaryEast(270)).toBeLessThan(ZONE_SPLIT_X - 40);
     expect(estuaryReaches(estuaryEast(240))).toBeCloseTo(240, 6);            // inverse
     expect(estuaryReaches(EAST_RING.x0 + STREET / 2)).toBeGreaterThan(AVENUE.y1); // the axis of the ring steps on water only south of the avenue
@@ -84,7 +84,7 @@ describe("city-grid", () => {
     expect(d.every((b) => (DISTRICT_COLS as readonly number[]).includes(b.x) || (DISTRICT_ROWS as readonly number[]).includes(b.y))).toBe(true);
     expect(blocks().filter((b) => b.bank === "east").every((b) => b.y < DISTRICT_ROWS[0])).toBe(true);
     expect(blocks().filter((b) => b.kind === "block")).toHaveLength(29); // the 30 old blocks minus the collapsed one: no old block changed kind
-    expect(CITY_EDGE).toEqual({ west: -54, north: 158, south: 324 });
+    expect(CITY_EDGE).toEqual({ west: -54, north: 90, south: 324 });
     expect(PROMENADE.y1).toBe(326);
   });
 });

@@ -10,15 +10,15 @@ import { zoneRng } from "./world";
 const resume = () => city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3));
 
 describe("Resume level 2 budget", () => {
-  it("raised solids ≤ 2 200, strip ≤ 150, static accents ≤ 900", () => {
+  it("raised solids ≤ 2 900, strip ≤ 190, static accents ≤ 1 150", () => {
     const s = resume();
-    expect(s.solids.filter((x) => !isFlat(x)).length).toBeLessThanOrEqual(2200);
-    expect(s.ground.filter((g) => g.kind === "strip").length).toBeLessThanOrEqual(150);
-    expect(s.accents.length).toBeLessThanOrEqual(900);
+    expect(s.solids.filter((x) => !isFlat(x)).length).toBeLessThanOrEqual(2900);
+    expect(s.ground.filter((g) => g.kind === "strip").length).toBeLessThanOrEqual(190);
+    expect(s.accents.length).toBeLessThanOrEqual(1150);
   });
 
-  it("static polygons of the world ≤ 46 000 (same computation as stage.staticCount)", () => {
+  it("static polygons of the world ≤ 56 000 (same computation as stage.staticCount)", () => {
     const w = assembleWorld(undefined, { reducedMotion: true }).scene;
-    expect(buildRenderList([...w.terrain.ground, ...w.ground, ...w.solids]).length).toBeLessThanOrEqual(46000);
+    expect(buildRenderList([...w.terrain.ground, ...w.ground, ...w.solids]).length).toBeLessThanOrEqual(56000);
   });
 });

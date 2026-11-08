@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Vec2 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
-import { AVENUE, BLOCK_W, BOULEVARD, EAST_COLS, EAST_RING, PLAZA, STREET, WEST_COLS, inCrater } from "../scenes/city-grid";
+import { ESTUARY_Y0, STATION_LAND } from "../map/geo";
+import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, EAST_COLS, EAST_RING, PLAZA, ROWS, STREET, WEST_COLS, inCrater } from "../scenes/city-grid";
 import { streets } from "./streets";
 
 type Strip = Solid & { kind: "strip" };
@@ -53,6 +54,16 @@ describe("streets", () => {
       expect(inPlazaStrict(m)).toBe(false);
       for (const p of s.path) expect(inPlazaStrict(p)).toBe(false);
     }
+  });
+
+  it("N-S center lines start at CITY_EDGE.north west of the station land and at ESTUARY_Y0 + 12 for the rest (#319)", () => {
+    const northmost = (cx: number) => Math.min(...scene().filter((s) => isVertical(s) && s.path[0]!.x === cx).map((s) => Math.min(s.path[0]!.y, s.path[1]!.y)));
+    for (const x of WEST_LANE_X) expect(northmost(x)).toBe(x < STATION_LAND.x0 ? CITY_EDGE.north : ESTUARY_Y0 + 12);
+    expect(northmost(RING_X)).toBe(ESTUARY_Y0 + 12);
+  });
+
+  it("no E-W line north of the first block row (#319)", () => {
+    for (const s of scene().filter(isHorizontal)) expect(s.path[0]!.y).toBeGreaterThanOrEqual(ROWS[0]!);
   });
 
   it("every west N-S street has a center line", () => {
