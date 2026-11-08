@@ -1,9 +1,10 @@
 import type { Accent } from "../iso/accent";
 import { v3, type Vec3 } from "../iso/geometry";
-import type { Plate } from "../iso/plate";
+import { shadeTone } from "../iso/light";
+import { ribs, type Plate } from "../iso/plate";
 import type { Solid } from "../iso/solids";
 import type { Rng } from "../map/seed";
-import { quayCraneAt, rtgAt, stackContainers, stackHeight } from "../kit/forms/industrial";
+import { door, quayCraneAt, rtgAt, stackContainers, stackHeight } from "../kit/forms/industrial";
 import { prism } from "./city-pieces";
 
 /**
@@ -91,10 +92,22 @@ export function quayCranes(out: Solid[], accents: Accent[]): void {
   }
 }
 
-export function fittingOutSheds(_out: Solid[]): void { /* Task 4 */ }
+/** Two corrugated teal gable sheds east of the cove: ribs on the long east wall and the south end, a 4-wide door on the south. */
+export function fittingOutSheds(out: Solid[]): void {
+  for (const x of [304, 316]) {
+    const shed = prism(x, 24, 0, 8, 56, 6, "sheetTeal", { roof: "gable", roofMat: "sheetTeal" });
+    shed.plates = [
+      ...ribs(1, 56, 0, 6, shadeTone(v3(1, 0, 0)) === "lit", "sheetTeal"),
+      ...ribs(2, 8, 0, 6, shadeTone(v3(0, 1, 0)) === "lit", "sheetTeal"),
+      door(2, 8, 4, 0, 4, "sheetTeal"),
+    ];
+    out.push(shed);
+  }
+}
 
 export function shipyardEast(out: Solid[], accents: Accent[], weldSpots: Vec3[], rng: Rng): void {
   floatingDock(out, accents, weldSpots);
   containerYard(out, accents, rng);
   quayCranes(out, accents);
+  fittingOutSheds(out);
 }

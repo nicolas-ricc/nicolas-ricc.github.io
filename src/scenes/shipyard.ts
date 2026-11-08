@@ -158,7 +158,6 @@ function workshops(out: Solid[]): void {
 // ---------------------------------------------------------------- fitting-out quay (E)
 
 function fittingOut(out: Solid[]): void {
-  for (const x of [304, 316]) out.push(prism(x, 24, 0, 8, 56, 6, "concrete", "gable"));
   out.push({ kind: "cylinder", at: v3(310, 86, 0), r: 4, h: 6, mat: "concrete" });
   const riprap = (x: number, y: number): void => { // skips rocks over the yard slab or the crane legs
     const rock: Solid = { kind: "cone", at: v3(x, y, 0), r: 1.6, h: 1.2, mat: "rock", sides: 5 }, b = bounds(rock);

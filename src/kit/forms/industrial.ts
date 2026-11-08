@@ -23,7 +23,7 @@ const SIDES: readonly Side[] = ["n", "e", "s", "w"];
 const tonePiece = (p: Piece, tone: number): Piece => (tone === 0 ? p : { ...p, solids: p.solids.map((s) => ({ ...s, tone })) });
 
 /** Door plate centered on a wall of length `len`: `width` wide (at most the wall) and `h` tall from `z0`, `mat` that of the wall, two tones darker. */
-function door(wall: number, len: number, width: number, z0: number, h: number, mat: Material): Plate {
+export function door(wall: number, len: number, width: number, z0: number, h: number, mat: Material): Plate {
   const k = Math.min(width, len) / len, u0 = (1 - k) / 2;
   return { wall, shape: "rect", u0, u1: u0 + k, z0, z1: z0 + h, mat, toneOffset: -2 };
 }
