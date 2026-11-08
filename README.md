@@ -64,7 +64,7 @@ zone) and `view.ts` (pure camera: `coverView`, `zoneView`, `clampToBleed`,
 `#canvas-host`), not with `coverFrame(16/9)` like the lab.
 In Resume, `city-anim.ts` adds the `city.windows` layer (up to 40 windows of
 downtown and the residential area that switch on and off keeping the percentage
-±5 %) and, inside `city.neon`, the flickering neon sign of a bar on the pier; the
+±5 %) and, inside `city.neon`, the flickering neon sign of a bar on the pier or a brewery of row 92; the
 rest of the windows and neon signs go to the static accents.
 
 `npm run dev` and open `/lab/world.html` for the lab: thin

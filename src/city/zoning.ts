@@ -72,11 +72,13 @@ export const CATALOGUE = {
 
 /** Water-tower block: a residential courtyard to which fixed.ts adds the tower. */
 export const WATER_TOWER_BLOCK = { x: 12, y: 164 } as const;
-/** Blocks with a fixed recipe (market, fish market, food hall, station, civic buildings and the construction site). */
+/** Covered market block: fixed, its front toward the station street (east). */
+export const COVERED_MARKET_BLOCK = { x: 72, y: ROWS[0] } as const;
+/** Blocks with a fixed recipe (markets, fish market, food hall, station, civic buildings and the construction site). */
 export const FIXED: readonly { x: number; y: number; recipe: string }[] = [
   { x: -18, y: 188, recipe: "station" }, { x: 280, y: 188, recipe: "market" }, { x: 280, y: 116, recipe: "fishMarket" }, { x: 280, y: 140, recipe: "foodHall" }, { x: 72, y: 218, recipe: "theatre" },
   { x: 162, y: 218, recipe: "civicPalace" }, { x: 42, y: 242, recipe: "library" }, { x: SITE.x, y: SITE.y, recipe: "constructionSite" },
-  { ...WATER_TOWER_BLOCK, recipe: "patioResidential" }, { x: 72, y: 92, recipe: "coveredMarket" },
+  { ...WATER_TOWER_BLOCK, recipe: "patioResidential" }, { ...COVERED_MARKET_BLOCK, recipe: "coveredMarket" },
 ];
 
 /** Harbor block with no fixed recipe: it gets only the plinth (city.ts), no building. */
@@ -100,7 +102,7 @@ export function openSides(b: Block): Side[] {
   const out: Side[] = [];
   if (b.y + b.d === AVENUE.y0) out.push("s");
   if (b.y === AVENUE.y1) out.push("n");
-  if (b.x === 72 && b.y === ROWS[0]) out.push("e");                                          // covered market: front toward the station street
+  if (b.x === COVERED_MARKET_BLOCK.x && b.y === COVERED_MARKET_BLOCK.y) out.push("e");                                          // covered market: front toward the station street
   if (b.y === ROWS[0] && !out.includes("s")) out.push("s");                                  // row 92 faces the freight lots and the main line
   if (b.x === EAST_COLS[0] && b.y === FREIGHT_ROW.y && !out.includes("n")) out.push("n");   // east block at the north end of the strip
   if (b.kind === "freight" && !out.includes("s")) out.push("s");                             // freight lots face the main line
@@ -129,7 +131,7 @@ export interface Placed { block: Block; neighborhood: Neighborhood; recipe: stri
 
 /**
  * Assigns a recipe to each block in the order of `blocks()`. Skips the plaza and the
- * collapse (fixed.ts draws them). Fixed ones take their recipe without drawing; the
+ * collapse (fixed.ts draws them) and the bare blocks (`isBare`: city.ts gives them only a plinth). Fixed ones take their recipe without drawing; the
  * district draws with `districtRng` (its sequence doesn't change if another neighborhood's does) and the
  * rest with `rng`. Residential retries up to 5 times if it repeats the recipe
  * of an already assigned adjacent block.

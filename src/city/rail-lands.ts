@@ -5,6 +5,7 @@ import { lamp, place } from "../kit/props";
 import { CONTAINER, stackContainers } from "../kit/forms/industrial";
 import { STATION_LAND, WORLD } from "../map/geo";
 import type { Rng } from "../map/seed";
+import type { Material } from "../map/palette-iso";
 import { CITY_EDGE, RAIL_LANDS } from "../scenes/city-grid";
 import { RAIL_Y } from "../scenes/shipyard";
 import { GAUGE, RAIL_W, RAIL_Z } from "../scenes/station";
@@ -68,7 +69,7 @@ const LAMPS_X = [-40, 0, 40, 80] as const, LAMP_Y = 150;
 /** `n` distinct items of `items`, drawn by the rng. */
 function draw<T>(rng: Rng, items: readonly T[], n: number): T[] {
   const left = [...items], out: T[] = [];
-  for (let k = 0; k < n; k++) out.push(left.splice(rng.int(0, left.length - 1), 1)[0]!);
+  for (let k = 0; k < Math.min(n, items.length); k++) out.push(left.splice(rng.int(0, left.length - 1), 1)[0]!);
   return out;
 }
 
@@ -87,22 +88,24 @@ export function freightYard(ground: Solid[], solids: Solid[], accents: Accent[],
   for (let k = 0; k < 30; k++) solids.push(prism(SIDING_X0 + 4 * k, SIDING_Y - 2.5, 0, 1, 5, 0.3, "rust"));
   solids.push(prism(SIDING_X0 - 1.5, SIDING_Y - 1.5, 0, 1.5, 3, 1.2, "steel"));
 
-  const x0 = rng.int(-46, -20), ty = SIDING_Y - 1.2;
-  solids.push(prism(x0, ty, 0, 9, 2.4, 3.4, "steel"));
-  for (let k = 0; k < 5; k++) solids.push(prism(x0 + 10 + 9 * k, ty, 0, 8, 2.4, 3, k % 2 === 0 ? "rust" : "steel"));
+  // the train stands on the sleepers (z 0.3): a static train must not sink into them; 139.8 − 1.4·3.7 = 134.62 keeps the train rule
+  const x0 = rng.int(-46, -20), ty = SIDING_Y - 1.2, tz = 0.3;
+  solids.push(prism(x0, ty, tz, 9, 2.4, 3.4, "steel"));
+  for (let k = 0; k < 5; k++) solids.push(prism(x0 + 10 + 9 * k, ty, tz, 8, 2.4, 3, k % 2 === 0 ? "rust" : "steel"));
 
-  // dock: skips each crossing (its south post stands at c.x1 + 0.3)
+  // dock along the siding: skips each crossing (its south post stands at c.x1 + 0.3)
   const spans: [number, number][] = [];
   let x = SIDING_X0;
-  for (const c of CROSSINGS) {
-    if (c.x0 > x) spans.push([x, c.x0]);
+  for (const c of [...CROSSINGS, { x0: SIDING_X1, x1: Infinity }]) {
+    if (x >= SIDING_X1) break;
+    if (c.x0 > x) spans.push([x, Math.min(c.x0, SIDING_X1)]);
     x = c.x1 + 0.6;
   }
   for (const [u, v] of spans) solids.push(prism(u, 136.3, 0, v - u, 1.7, 1, "concrete"));
 
   for (const k of draw(rng, Array.from({ length: 10 }, (_, k) => k), 3)) {
     const tx = -40 + 10 * k;
-    solids.push(prism(tx, 146, 0, 6, 2.4, 2.8, "boxGrey"), prism(tx + 6, 146, 0, 2, 2.4, 2.2, "steel"));
+    solids.push(prism(tx, 146, 0, 6, 2.4, 2.8, rng.pick<Material>(["rust", "steel"])), prism(tx + 6, 146, 0, 2, 2.4, 2.2, "steel"));
   }
 
   const slots = [...Array.from({ length: 20 }, (_, k) => ({ x: -50 + 7 * k, y: LAMP_Y })).filter((s) => !LAMPS_X.some((lx) => s.x < lx + 0.6 && s.x + CONTAINER.len > lx)),

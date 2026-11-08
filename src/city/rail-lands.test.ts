@@ -126,7 +126,7 @@ describe("rail lands (#319)", () => {
       expect(sized(y1.solids, 1.5, 3, 1.2).map((s) => [s.mat, s.at.x, s.at.y, s.at.z])).toEqual([["steel", -51.5, 139.5, 0]]);
     });
 
-    it("parked freight train: locomotive 9×2.4×3.4 west, five 8×2.4×3 wagons rust/steel alternating, 1 apart, y 139.8..142.2", () => {
+    it("parked freight train: locomotive 9×2.4×3.4 west, five 8×2.4×3 wagons rust/steel alternating, 1 apart, y 139.8..142.2, standing on the sleepers", () => {
       for (const seed of [1, 2, 3]) {
         const s = yard(seed).solids, loco = sized(s, 9, 2.4, 3.4), wagons = sized(s, 8, 2.4, 3).sort((u, v) => u.at.x - v.at.x);
         expect(loco).toHaveLength(1);
@@ -135,7 +135,7 @@ describe("rail lands (#319)", () => {
         expect(x0).toBeGreaterThanOrEqual(-46); expect(x0).toBeLessThanOrEqual(-20);
         expect(loco[0]!.mat).toBe("steel");
         expect(wagons.map((w) => [w.at.x, w.mat])).toEqual([0, 1, 2, 3, 4].map((k) => [x0 + 10 + 9 * k, k % 2 === 0 ? "rust" : "steel"]));
-        for (const c of [...loco, ...wagons]) expect([c.at.y, c.at.z]).toEqual([139.8, 0]);
+        for (const c of [...loco, ...wagons]) expect([c.at.y, c.at.z]).toEqual([139.8, 0.3]); // on the sleepers
       }
     });
 
@@ -181,6 +181,10 @@ describe("rail lands (#319)", () => {
     });
 
     it("everything stays in x −54..94, y 136..157.5, and nothing taller than 0.4 between y 134.2 and 136", () => {
+      for (const s of [...y1.base, ...y1.solids]) {
+        const b = box(s);
+        if (b.max.z - b.min.z > 0.4) expect(b.max.y <= 134.2 || b.min.y >= 136, JSON.stringify(s)).toBe(true);
+      }
       for (const s of y1.solids) {
         const b = box(s);
         expect(b.min.x, JSON.stringify(s)).toBeGreaterThanOrEqual(-54); expect(b.max.x).toBeLessThanOrEqual(94);

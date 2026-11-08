@@ -10,7 +10,7 @@ import { CATALOGUE, type Neighborhood } from "./zoning";
 
 /**
  * Resume lights (spec §7, issue #45): which windows light up (with an exact
- * quota per neighborhood), which are animatable, the neons of the bar street and
+ * quota per neighborhood), which are animatable, the neons of the bar street and the breweries (capped per neighborhood) and
  * the bathed facades of the civic buildings. Pure module: city.ts pours the result.
  * What is hidden is decided with `hides` (silhouette on screen) and is not published.
  */
