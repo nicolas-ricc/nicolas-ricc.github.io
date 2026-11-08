@@ -28,6 +28,15 @@
 3. **The window loop is guarded by `wins.length > 0`, and the flicker loop runs only when `street !== null`.** Without that guard, an empty set would loop forever. A timer that is never consumed just keeps going down, as `signTimer` does with no signs.
 4. **The sequence that a given seed produces in `windows()` and in the street-neon dim changes compared with today**, because the source stream changes. No test pins the old sequence: the window and flicker tests assert bands, counts and durations.
 
+## Assumptions
+
+These are technical decisions taken during the plan review (stage 2). Each one names the rejected alternative, and all of them go to the PR description.
+
+1. **No guard against a gap with a lower bound of 0.** Rejected: an assertion that `GAP[0] > 0`. Today the bounds are `WINDOW_GAP_MS = [300, 900]` and `FLICKER_GAP_MS = [1000, 3000]` (`src/scenes/city-anim.ts:33-34`), and `rng.int` is inclusive on `[min, max]` (`src/map/seed.ts:22`). The issue puts changing those constants out of scope. `blinkTimer` and `signTimer` have no such guard either.
+2. **A rejected pick still counts as one event.** Rejected: counting only the window that was drawn first. The code toggles exactly one window per event, either the one drawn or one from `other` when the band rejects it (`src/scenes/city-anim.ts:156-159`). `fired().windows` counts toggles, which equal events.
+3. **The dim of a flicker fired inside a long tick is anchored to the end of the tick** (Declared decision 2). Rejected: anchoring it to the exact firing instant (`clock + timer`), which would leave the dim already over inside long ticks. The criteria only pin `fired()`, `windows()` and the band.
+4. **The committed stage-3 tests are authoritative** over the descriptions in this plan. A listed test that already passes before the implementation is recorded in the stage-4 comment.
+
 ## Review Focus
 
 1. A long tick with no animatable windows (`lights.windows: []`) must not hang, and must count `fired().windows === 0`. Pinned in Task 1.
@@ -59,7 +68,7 @@ Note for executors: stage 3 of the pipeline already commits the failing tests li
   - Update the existing `fired()` `toEqual` assertions to include `windows: 0, flicker: 0`.
 - [ ] **Step 2: Run** `npx vitest run src/scenes/city-anim.test.ts`. Expected: the new windows tests FAIL (`fired().windows` is undefined, or the counts differ).
 - [ ] **Step 3: Implement.** Add `const windowRng = createRng(rng.int(0, SEED_MAX))` right after `paperRngs`, and draw the initial `windowTimer` from it. In `tick`, replace `if (windowTimer <= 0 && wins.length > 0)` with `while (windowTimer <= 0 && wins.length > 0)`: the body is the same pick and band check, but uses `windowRng`, ends with `windowTimer += windowRng.int(...)` and `windowEvents++`, and sets `c.windows = true`. Then extend `fired()` and the `CityAnim` type.
-- [ ] **Step 4: Run** `npx vitest run src/scenes/city-anim.test.ts src/scenes/city-animator.test.ts`. Expected: everything PASSES except the flicker tests of Task 2.
+- [ ] **Step 4: Run** `npm test && npm run typecheck`. Expected: everything passes except the flicker tests of Task 2, which stage 3 committed red. CI (`.github/workflows/deploy.yml`) runs only on push and pull request, not on each local commit, so an intermediate red commit on the branch is acceptable.
 - [ ] **Step 5: Commit** `feat(#192): windows on wall time with their own stream`.
 
 ### Task 2: Street-neon flicker on wall time with its own stream
@@ -81,3 +90,18 @@ Note for executors: stage 3 of the pipeline already commits the failing tests li
 - [ ] **Step 3: Implement.** Add `const flickerRng = createRng(rng.int(0, SEED_MAX))` right after `windowRng`, unconditionally. Draw the initial `flickerTimer` from it when `street` exists (otherwise `0`). In `tick`, replace the `if (flickerTimer <= 0)` with `while (flickerTimer <= 0)`: the body sets `flickerUntil = clock + NEON_STEP_MS`, does `flickerTimer += flickerRng.int(...)` and `flickers++`, and sets `c.neon = true`.
 - [ ] **Step 4: Run** `npm test && npm run typecheck`. Expected: all green.
 - [ ] **Step 5: Commit** `feat(#192): street-neon flicker on wall time with its own stream`.
+
+## Grilling
+
+- Rounds: 1 (griller model: fable). The plan did not change substantially: Task 1 step 4 was widened to the full suite, and `## Assumptions` was added. So no second round was needed.
+- Questions: 16. Sources: CODE 14, ISSUE 3, DOC 2, NO SOURCE 3 (all technical assumptions, listed above). Several answers cite more than one source, so the counts add up to more than 16.
+- Key answers:
+  - Today `windowTimer` and `flickerTimer` are drawn from the shared `rng` after `paperRngs` (`src/scenes/city-anim.ts:84,87`). The earlier streams are drawn at `:51`, `:67`, `:76` and `:78`. Swapping those draws for `rng.int(0, SEED_MAX)` at the same position keeps every earlier stream.
+  - The only draws from the shared `rng` inside `tick` are at `:156`, `:158`, `:160` and `:168`. Tasks 1 and 2 remove all four. The papers use `paperRngs[i]` (`:133`).
+  - The issue asks for the own streams in so many words: "Cada temporizador tiene su propio stream `createRng(rng.int(0, SEED_MAX))`, derivado después de los existentes (`blinkRng`, `signRng`, `paperRngs`) para no reordenar sus sorteos" (Agent Brief).
+  - `CityAnimChanges` already has `windows` (`:42`). `city-animator.ts:26` reads only `tick`, and nothing outside `city-anim.ts` and its test calls `fired()` on the city.
+  - There are no snapshot tests for the city. `city-animator.test.ts:36-40` only checks that `city.windows` reports a change.
+  - The pattern being copied is `blinkTimer` and `signTimer` with `+=` (`:126`, `:146`). The sign blackout is `s.offUntil = clock + NEON_STEP_MS` (`:145`). The flicker block is already inside `if (street)` (`:165`). The dim is evaluated when `neon()` is read (`:111`). The guard for reduced-motion and non-finite `dt` is at `:118`. `fired().neon` counts only sign events (`:116`), and the plan leaves it as it is.
+  - The test helpers `chunked(dts, seed = 3)` and `repeat` exist (`city-anim.test.ts:19-25`), the default scene has a street neon (test "the chosen street neon…"), and `lights` overrides are spread as `{ ...scene, lights: { ...scene.lights, … } }`.
+  - On conventions: identifiers and tests are in English, like `city-anim.ts`. Plan filenames are in Spanish, following the precedent in `docs/plans/`. Commits use `type(#N): …`, as in `git log`. There is no ADR about `Rng`; the only one is `docs/adr/0001`, about the veil.
+- Issues opened: none.
