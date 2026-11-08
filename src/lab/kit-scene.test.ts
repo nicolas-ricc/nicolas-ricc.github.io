@@ -57,7 +57,7 @@ describe("kit lab scene", () => {
 
   it("the industrial row (#321) is there, in the industrial style whatever the chosen style", () => {
     const { solids, lots } = kitScene(7, "downtown");
-    const row = lots.filter((l, i) => RECIPES[i]!.family === "industrial");
+    const row = lots.filter((_, i) => RECIPES[i]!.family === "industrial");
     expect(row.map((l) => l.name)).toEqual(["sawtoothHall", "sheetHall", "containerStack", "stockpile", "tankGroup", "quayCrane", "rtgGantry", "storeroom"]);
     expect(new Set(row.map((l) => l.y)).size).toBe(1);
     const l = row[0]!;
