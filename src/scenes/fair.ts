@@ -237,7 +237,7 @@ export function flume(out: Solid[], accents: Accent[]): void {
   out.push({ kind: "ramp", at: v3(x0, y, 2.5), w: FLUME_LIFT_X1 - x0, d: FLUME.w, h: 3.5, mat: "deck", dir: "w" });
   out.push({ kind: "beam", from: v3(x0, ay, 2.5), to: v3(FLUME_LIFT_X1, ay, 6), w: 0.3, h: 0.3, mat: "rust" });
   out.push(prism(FLUME_LIFT_X1, y, 5.4, FLUME_DROP_X0 - FLUME_LIFT_X1, FLUME.w, 0.6, "deck"));
-  out.push({ kind: "strip", path: [{ x: FLUME_LIFT_X1, y: ay }, { x: FLUME_DROP_X0, y: ay }], width: 2, z: 6.02, mat: "shallow" });
+  out.push(prism(FLUME_LIFT_X1, ay - 1, 6, FLUME_DROP_X0 - FLUME_LIFT_X1, 2, 0.05, "shallow")); // water: a thin raised solid on the trough (flat strips are drawn in the ground layer, under it)
   out.push({ kind: "ramp", at: v3(FLUME_DROP_X0, y, 0.2), w: 6, d: FLUME.w, h: 5.8, mat: "deck", dir: "e" });
   const walkY = -300 + 18 * Math.floor((ay + 300) / 18), walkX = boardwalkX(walkY); // the plank stretch under the axis
   for (let x = x0; x < FLUME_DROP_X0; x += 6) {

@@ -162,7 +162,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   // the tower is z 14, the roof cone 16, the lamp 16.3 (solids 16, accents 12.1); nothing cut by the edge
   { id: "tobogan", title: "Giant slide", zone: "portfolio", group: "fair", kind: "region",
     box: { x0: 111, y0: -299, x1: 125, y1: -285 }, h: 16 },
-  // the flat deck reaches z 6.14 (logs 6.75 in the animator, neighbors up to 2.7); the water has no accents
+  // the trough top is z 6, the water prism 6.05 (logs 6.75 in the animator, neighbors up to 2.7); the 6 splash dots are inside the box
   { id: "tronco-acuatico", title: "Log flume", zone: "portfolio", group: "fair", kind: "region",
     box: { x0: 158, y0: -300, x1: 226, y1: -290 }, h: 7 },
   // the office tower is at the center of the plaza: it stays inside

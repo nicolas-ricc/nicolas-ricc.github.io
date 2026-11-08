@@ -217,7 +217,7 @@ describe("log flume (#327)", () => {
     expect(FAIR_MATS).toContain("shallow");
     expect(FLUME_DROP_X0).toBeCloseTo(FLUME_X1 - 6, 9);
     const { solids, accents } = build(flume);
-    expect(solids.some((x) => x.kind === "strip" && x.mat === "shallow" && x.z >= 6)).toBe(true);
+    expect(solids.some((x) => x.kind === "prism" && x.mat === "shallow" && x.at.z >= 6 && x.d === 2)).toBe(true);
     expect(solids.some((x) => x.kind === "ramp" && x.mat === "deck" && x.at.x === 160 && x.at.z === 2.5 && x.h === 3.5)).toBe(true);
     const drop = solids.find((x) => x.kind === "ramp" && x.mat === "deck" && x.w === 6 && x.at.z === 0.2 && x.h === 5.8);
     expect(drop).toBeDefined();
@@ -320,7 +320,7 @@ describe("footprints of the new pieces (#327)", () => {
   it("legacyOnly builds the fair without the new pieces", () => {
     const old = fair(createRng(7), { legacyOnly: true });
     expect(old.solids.some((x) => x.kind === "prism" && x.mat === "deck" && x.h === 14)).toBe(false);
-    expect(old.solids.some((x) => x.kind === "strip" && x.mat === "shallow")).toBe(false);
+    expect(old.solids.some((x) => x.mat === "shallow")).toBe(false);
     expect(old.solids.some((x) => x.kind === "prism" && x.mat === "copper" && x.w === 20)).toBe(false);
   });
   it("no new footprint overlaps an old one (the channel crosses the boardwalk overhead), nor another new one", () => {
