@@ -22,12 +22,12 @@ const CATALOG: Record<GroupId, string[]> = {
   factory: ["planta", "chimeneas", "subestacion", "playa-camiones", "playa-vias", "excavadora"],
   shipyard: ["gradas", "darsena", "grua-portico", "calle-faroles", "naves", "punta-norte", "estacion", "paso-a-nivel", "dique-flotante", "patio-contenedores"],
   hinterland: ["central-termica", "tanques", "silos", "alta-tension", "playa-contenedores"],
-  fair: ["noria", "montana-rusa", "torre-caida", "carrusel", "arcade", "autitos-chocadores", "muelle"],
+  fair: ["noria", "montana-rusa", "torre-caida", "carrusel", "arcade", "autitos-chocadores", "muelle", "tren-fantasma", "casa-espejos", "tobogan", "tronco-acuatico"],
   city: ["plaza", "torre", "puente", "malecon", "manzana-derrumbada", "manzana-distrito", "obra", "punta-sur", "galpones", "playa-carga", "mercado-pescado"],
   tech: ["mastil", "arena", "auditorio", "torres", "monoblock", "casas", "escuela", "club", "plaza-barrio", "costanera", "barrio"],
   sea: ["faro", "casa-farero", "boyas", "pecio"],
 };
-const ANIMATED = ["chimeneas", "excavadora", "noria", "torre", "faro", "estacion", "paso-a-nivel", "playa-carga"];
+const ANIMATED = ["chimeneas", "excavadora", "noria", "torre", "faro", "estacion", "paso-a-nivel", "playa-carga", "tronco-acuatico"];
 const SLACK = 8; // any taller than this above the structure and it looks small in the frame
 
 const { scene, animators } = assembleWorld(undefined, { reducedMotion: false });
@@ -98,6 +98,16 @@ describe("exhibit catalog", () => {
     const accents: Accent[] = [];
     crane.build([], accents);
     expect(accents.filter((a) => a.kind === "dot" && a.color === "cyan")).toHaveLength(1);
+  });
+  it("the fair attractions of #327: four regions after muelle with the issue's boxes; the flume crops the logs layer", () => {
+    const box = (id: string) => { const e = EXHIBITS.find((x) => x.id === id)!; return e.kind === "region" ? e.box : null; };
+    expect(box("tren-fantasma")).toEqual({ x0: 96, y0: -260, x1: 120, y1: -244 });
+    expect(box("casa-espejos")).toEqual({ x0: 122, y0: -260, x1: 142, y1: -244 });
+    expect(box("tobogan")).toEqual({ x0: 111, y0: -299, x1: 125, y1: -285 });
+    expect(box("tronco-acuatico")).toEqual({ x0: 158, y0: -300, x1: 226, y1: -290 });
+    const fl = cropAnimators(animators, box("tronco-acuatico")!).find((a) => a.ids.includes("fair.logs"))!;
+    const logs = fl.layer("fair.logs");
+    expect(logs.kind === "solid" && logs.solids.length).toBe(2);
   });
   it("every box falls inside the world plus the bleed and is not inverted", () => {
     for (const { id, box } of regions) {

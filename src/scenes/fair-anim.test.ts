@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import type { Vec3 } from "../iso/geometry";
-import { bounds, wheelPoint } from "../iso/solids";
+import { bounds, wheelPoint, type Solid } from "../iso/solids";
 import { createRng } from "../map/seed";
-import { DROP, WHEEL, coasterAt, coasterLength, fair } from "./fair";
-import { DROP_CYCLE_MS, DROP_RISE_MS, NEON_STEP_MS, WHEEL_LIGHT_STEP_MS, WHEEL_PERIOD_MS, WHEEL_STEP_MS, createFairAnim } from "./fair-anim";
+import { DROP, FLUME_PATH, WHEEL, coasterAt, coasterLength, fair, flume, flumeAt, flumeLength } from "./fair";
+import { DROP_CYCLE_MS, DROP_RISE_MS, LOG_DROP_SPEED, LOG_LIFT_SPEED, LOG_SPEED, NEON_STEP_MS, WHEEL_LIGHT_STEP_MS, WHEEL_PERIOD_MS, WHEEL_STEP_MS, createFairAnim } from "./fair-anim";
 
 const setup = (reducedMotion = false) => createFairAnim(fair(createRng(7)), { reducedMotion });
 
@@ -59,7 +59,7 @@ describe("fair-anim", () => {
     const a = setup();
     const s0 = a.signs()[0]!.color; a.tick(500); expect(a.signs()[0]!.color).not.toBe(s0);
     const r = setup(true);
-    expect(r.tick(1000)).toEqual({ wheel: false, lights: false, train: false, drop: false, signs: false, neon: false });
+    expect(r.tick(1000)).toEqual({ wheel: false, lights: false, train: false, drop: false, signs: false, neon: false, logs: false });
     expect(r.wheelLights()).toHaveLength(4); expect(r.angle()).toBe(0);
   });
 });
@@ -115,5 +115,70 @@ describe("fair-anim neon", () => {
     const b = createFairAnim(s, { reducedMotion: false });
     for (let t = 0; t < DROP_RISE_MS / 2; t += 100) b.tick(100);
     expect(new Set(on(s.neon.column, b.neon()).map((d) => d.color))).toEqual(new Set(["magenta", "magentaBleed"]));
+  });
+});
+
+describe("fair-anim #327: ghost and mirror neons", () => {
+  it("ghost: four of 8 lit at frame 0, magenta/magentaMid by position, runs with the clock; still under reduced motion", () => {
+    const s = fair(createRng(7)), a = createFairAnim(s, { reducedMotion: false }), r = createFairAnim(s, { reducedMotion: true });
+    const g0 = on(s.neon.ghost, a.neon());
+    expect(g0).toHaveLength(4);
+    for (const d of g0) { const k = s.neon.ghost.findIndex((p) => p.x === d.at.x); expect(d.color).toBe(k % 2 === 0 ? "magenta" : "magentaMid"); }
+    expect(on(s.neon.ghost, r.neon())).toEqual(g0);
+    a.tick(NEON_STEP_MS);
+    expect(on(s.neon.ghost, a.neon())).not.toEqual(g0);
+  });
+  it("mirror: chase of 2 cyan lights over 6", () => {
+    const s = fair(createRng(7)), a = createFairAnim(s, { reducedMotion: false });
+    const idx = () => on(s.neon.mirror, a.neon()).map((d) => s.neon.mirror.findIndex((p) => p.x === d.at.x)).sort((x, y) => x - y);
+    expect(idx()).toEqual([0, 1]);
+    a.tick(NEON_STEP_MS); expect(idx()).toEqual([1, 2]);
+    for (const d of on(s.neon.mirror, a.neon())) expect(d.color).toBe("cyan");
+  });
+});
+
+describe("fair-anim #327: logs", () => {
+  const L = flumeLength();
+  it("frame 0 at the start; tick(1000) moves logDist by 2 on the lift and marks the layer", () => {
+    const a = setup();
+    expect(a.logDist()).toBe(0);
+    const head = a.logs()[0]!;
+    expect(head.kind === "hull" && head.at).toEqual(FLUME_PATH[0]);
+    const c = a.tick(1000);
+    expect(c.logs).toBe(true);
+    expect(a.logDist()).toBeCloseTo(LOG_LIFT_SPEED, 9);
+  });
+  it("4 u/s on the flat, 12 on the drop, and back to the start after the bay", () => {
+    expect([LOG_SPEED, LOG_LIFT_SPEED, LOG_DROP_SPEED]).toEqual([4, 2, 12]);
+    const a = setup();
+    let prev = a.logDist(), wrapped = false;
+    for (let t = 0; t < 200; t++) {
+      const seg = flumeAt(prev).seg;
+      a.tick(100);
+      const d = a.logDist(), moved = (((d - prev) % L) + L) % L;
+      expect(d).toBeGreaterThanOrEqual(0); expect(d).toBeLessThan(L);
+      expect(moved).toBeCloseTo([LOG_LIFT_SPEED, LOG_SPEED, LOG_DROP_SPEED][seg]! / 10, 6);
+      if (d < prev) wrapped = true;
+      prev = d;
+    }
+    expect(wrapped).toBe(true);
+    const b = setup(); b.tick(5000); b.tick(5000); expect(b.logDist()).toBeLessThan(L);
+  });
+  it("reduced motion: logs stay at the start and the layer is never marked", () => {
+    const r = setup(true);
+    const l0 = r.logs();
+    expect(r.tick(1000).logs).toBe(false);
+    expect(r.logDist()).toBe(0); expect(r.logs()).toEqual(l0);
+  });
+  it("logs never cross a foreign static solid (only the flume's and the boardwalk they ride over)", () => {
+    const s = fair(createRng(7)), a = createFairAnim(s, { reducedMotion: false });
+    const own: Solid[] = []; flume(own, []);
+    const ownB = own.map(bounds);
+    const same = (b: ReturnType<typeof bounds>) => ownB.some((o) => o.min.x === b.min.x && o.min.y === b.min.y && o.max.x === b.max.x && o.max.y === b.max.y && o.min.z === b.min.z);
+    const foreign = s.solids.map(bounds).filter((b) => !same(b));
+    for (let t = 0; t < 60; t++) {
+      for (const l of a.logs()) { const lb = bounds(l); for (const f of foreign) { const hit = lb.min.x < f.max.x && f.min.x < lb.max.x && lb.min.y < f.max.y && f.min.y < lb.max.y && lb.min.z < f.max.z && f.min.z < lb.max.z; expect(hit).toBe(false); } }
+      a.tick(500);
+    }
   });
 });
