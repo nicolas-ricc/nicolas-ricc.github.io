@@ -50,7 +50,7 @@ describe("lab host keyboard access (#167)", () => {
       expect(css).toContain("#lab-host {");
       const offset = css.match(/#lab-host:focus-visible\s*\{[^}]*\boutline-offset:\s*(-?[\d.]+)px/)?.[1];
       expect(offset, "outline-offset of #lab-host:focus-visible").toBeDefined();
-      expect(Number.parseFloat(offset!)).toBeLessThan(0);
+      expect(Number.parseFloat(offset ?? "")).toBeLessThan(0);
       // the ring stays the browser's own: the rule must not switch it off
       expect(css).not.toMatch(/#lab-host:focus-visible\s*\{[^}]*\boutline\s*:\s*(none|0)\b/);
       // mouse focus (:focus without -visible) keeps the browser default
