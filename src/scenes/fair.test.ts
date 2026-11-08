@@ -223,7 +223,7 @@ describe("log flume (#327)", () => {
     expect(drop).toBeDefined();
     expect(drop!.kind === "ramp" && drop!.at.x + drop!.w).toBeCloseTo(FLUME_X1, 9);
     for (let y = FLUME.y; y <= FLUME.y + FLUME.w; y += 0.5) { expect(fairAt(FLUME_X1, y)).toBe(true); expect(bayWater(FLUME_X1, y)).toBe(false); }
-    expect(bayWater(FLUME_X1 + 1, FLUME.y + FLUME.w / 2)).toBe(true); // ends within 1 of the water
+    expect(bayWater(FLUME_X1 + 1, FLUME.y + FLUME.w)).toBe(true); // ends within 1 of the water where the shore comes closest (the band's south edge)
     const splash = accents.filter((a) => a.kind === "dot" && a.color === "windowCool");
     expect(splash).toHaveLength(6);
     for (const d of splash) if (d.kind === "dot") expect(bayWater(d.at.x, d.at.y)).toBe(true);
