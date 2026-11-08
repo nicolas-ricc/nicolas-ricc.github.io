@@ -239,8 +239,9 @@ export function flume(out: Solid[], accents: Accent[]): void {
   out.push({ kind: "ramp", at: v3(FLUME_DROP_X0, y, 0.2), w: 6, d: FLUME.w, h: 5.8, mat: "deck", dir: "e" });
   const walkY = -300 + 18 * Math.floor((ay + 300) / 18), walkX = boardwalkX(walkY); // the plank stretch under the axis
   for (let x = x0; x < FLUME_DROP_X0; x += 6) {
-    if (x + 0.2 > walkX && x - 0.2 < walkX + BOARDWALK_W) continue; // no pillar through the boardwalk
-    out.push(prism(x - 0.2, ay - 0.2, 0, 0.4, 0.4, x < FLUME_LIFT_X1 ? 2.5 : 5.4, "steel"));
+    const cx = x < FLUME_LIFT_X1 ? x : Math.max(x, FLUME_LIFT_X1 + 0.2); // flat-section pillars start clear of the lift ramp's end
+    if (cx + 0.2 > walkX && cx - 0.2 < walkX + BOARDWALK_W) continue; // no pillar through the boardwalk
+    out.push(prism(cx - 0.2, ay - 0.2, 0, 0.4, 0.4, x < FLUME_LIFT_X1 ? 2.5 : 5.4, "steel"));
   }
   for (let k = 0; k < 6; k++) { const py = y + 0.5 + (k % 3); accents.push(dot(Math.max(FLUME_X1 + 1.5 + k * 0.5, bayShoreX(py) + 0.5), py, 0.3 + (k % 2) * 0.7, 0.3, "windowCool")); } // over the water, east of the drop
 }
@@ -285,15 +286,16 @@ const onSand = (b: Bounds): boolean => {
 };
 
 /**
- * Stranded boat near `y0`: walks the shore (dy 0, +1, −1 … ±14) and, at each y, from 9 to 4 u from the water, until the
+ * Stranded boat near `y0`: walks the shore (dy 0, +1, −1 … ±14) and, at each y, from 9 to 6 u from the water, until the
  * hull sits entirely on the fair's sand (`onSand`) and its footprint touches nothing in `taken`. At 9 u from the water it falls inside
  * the boardwalk (16 to 8 u from the shore) except where the shore shifts, so it moves closer to the water before
- * moving away in y. `null` if there is no room.
+ * moving away in y. Only if that pass finds nothing does a second one try 5 and 4 u from the water (a spot taken by a
+ * big attraction), so boats of scenes that already had room do not move. `null` if there is no room.
  */
 function boatAt(y0: number, heading: number, taken: readonly Bounds[]): Solid | null {
-  for (let i = 0; i <= 28; i++) {
+  for (const backs of [[9, 8, 7, 6], [5, 4]]) for (let i = 0; i <= 28; i++) {
     const y = y0 + (i % 2 ? (i + 1) / 2 : -i / 2);
-    for (const back of [9, 8, 7, 6, 5, 4]) {
+    for (const back of backs) {
       const hull: Solid = { kind: "hull", at: v3(bayShoreX(y) - back, y, 0), len: 5, beam: 1.8, h: 0.8, mat: "whitewash", heading, sheer: 0.3 };
       const b = bounds(hull);
       if (onSand(b) && taken.every((t) => !touch(t, b))) return hull;

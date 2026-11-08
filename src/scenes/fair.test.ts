@@ -36,7 +36,7 @@ describe("fair", () => {
       const pier = x.kind === "prism" && x.mat === "deck" && x.at.z === -1;
       const onPier = b.min.y >= PIER.y - 0.5 && b.max.y <= PIER.y + PIER.d + 1 && b.min.x > bayShoreX(PIER.y) - 16; // piles (south side) and garland over the pier
       const pavilionCone = x.kind === "cone" && x.mat === "copper" && x.r === 5.6; // the pavilion roof, at the tip of the pier
-      const flumeDrop = x.mat === "deck" && b.min.z <= 0.2 && b.min.x >= bayShoreX(-296) - 6 && b.min.y >= -298 && b.max.y <= -294 + 1; // #327: the log flume drop, over the shore
+      const flumeDrop = x.mat === "deck" && b.min.z <= 0.2 && b.min.x >= FLUME_DROP_X0 - 0.01 && b.min.y >= -298 && b.max.y <= -294 + 1; // #327: the log flume drop, over the shore
       if (!pier && !onPier && !pavilionCone && !flumeDrop) expect(bayWater(cx, cy)).toBe(false);
       if (!slender(x)) expect(b.max.z).toBeLessThanOrEqual(18.5);
     }
