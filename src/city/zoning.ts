@@ -73,7 +73,7 @@ export const FIXED: readonly { x: number; y: number; recipe: string }[] = [
 ];
 
 /** Cap of the row facing the plaza: a tall building there would hide the tower's lit floor or the fountain (fixed.ts). */
-export const maxHeightFor = (b: Block, top = MAX_BUILDING_H): number => (b.y === ROWS[4] && b.x >= 96 && b.x + b.w <= 186 ? FRONT_CAP_H : top);
+export const maxHeightFor = (b: Block, top = MAX_BUILDING_H): number => (b.y === PLAZA.y + PLAZA.d + STREET && b.x >= 96 && b.x + b.w <= 186 ? FRONT_CAP_H : top);
 
 /** Side of `b` that faces `r` across a street, if they overlap on the other axis. */
 function facing(b: Rect, r: Rect): Side | undefined {

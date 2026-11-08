@@ -37,7 +37,7 @@ export const CITY_EDGE = { west: -54, north: 90, south: 324 } as const; // the c
 export const DISTRICT_BANK_Y = 264; // east bank of the district from here; a multiple of CELL (classifies terrain)
 export const PROMENADE_STREET_X = 336; // promenade street; a multiple of CELL (classifies terrain)
 
-/** Harbor water: from the east ring to x 306, between the seam and the estuary. */
+/** Future harbor (a later child of #56): from the east ring to x 306, between the seam and the estuary. Asphalt today. */
 export const HARBOR = { x0: EAST_RING.x0, x1: 306, y0: ZONE_SPLIT_Y, y1: ESTUARY_Y0 } as const;
 
 export const PLAZA: Rect = { x: 102, y: 218, w: 54, d: 18 }; // joins two columns of the south row of the avenue

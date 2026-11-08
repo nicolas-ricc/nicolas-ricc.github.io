@@ -193,7 +193,7 @@ describe("Resume after the seam (#319)", () => {
     for (const y of RAIL_Y) expect(ci.ground.some((g) => g.kind === "strip" && g.mat === "rail" && g.width === 0.5 && g.path[0]!.y === y && g.path[0]!.x === WORLD.x0 && g.path[1]!.x === STATION_LAND.x0), `rail ${y}`).toBe(true);
     expect(ci.ground.some((g) => g.kind === "strip" && g.mat === "rail" && g.width === 5 && g.path[0]!.y === 132.5)).toBe(true);
     const sleepers = prisms(ci.solids).filter((p) => p.mat === "rust" && p.w === 1 && p.d === 5 && p.h === 0.3 && p.at.y === 130);
-    expect(sleepers.map((p) => p.at.x)).toEqual(Array.from({ length: 39 }, (_, i) => -58 + 4 * i));
+    expect(sleepers.map((p) => p.at.x)).toEqual(Array.from({ length: 39 }, (_, i) => -58 + 4 * i).filter((x) => ![-22, 6, 10, 38, 66, 70].includes(x))); // none under the four level crossings (#320)
   });
 
   it("the new strip west of the station holds only what #320 allows: row 92 and freight blocks with their buildings, cars, rail lands", () => {

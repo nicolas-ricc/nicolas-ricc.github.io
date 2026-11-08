@@ -169,12 +169,12 @@ describe("promenade", () => {
 });
 
 describe("greenery (#319)", () => {
-  it("no jungle cone north of the first block row west of the estuary: the seam belt is gone", () => {
+  it("no jungle cone north of the old first block row (164) west of the estuary: the seam belt is gone and the new strip is city (#320)", () => {
     const solids: Solid[] = [];
     greenery(solids, createRng(7));
     const cones = solids.filter((s) => s.kind === "cone" && (s.mat === "leaf" || s.mat === "leafDark"));
     expect(cones.length).toBeGreaterThan(0);
-    expect(cones.filter((c) => c.kind === "cone" && c.at.y < ROWS[0]! && c.at.x < QUAY_X)).toEqual([]);
+    expect(cones.filter((c) => c.kind === "cone" && c.at.y < ROWS[1]! && c.at.x < QUAY_X)).toEqual([]);
   });
 });
 

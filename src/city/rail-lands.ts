@@ -1,6 +1,7 @@
 import { v3, type Vec2 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import { STATION_LAND, WORLD } from "../map/geo";
+import { CITY_EDGE, RAIL_LANDS } from "../scenes/city-grid";
 import { RAIL_Y } from "../scenes/shipyard";
 
 /** The west main line across Resume's new strip: from the west edge of the content to the station land. */
@@ -14,11 +15,12 @@ export const CROSSINGS: readonly { x0: number; x1: number }[] = [{ x0: -24, x1: 
 /** Stretch of street (y) taken by the fences, planks and posts of a crossing. */
 export const CROSSING_GAP = { y0: 128, y1: 137 } as const;
 
-const FENCE = { x0: -54, x1: 96 } as const;
+const FENCE = { x0: CITY_EDGE.west, x1: MAIN_LINE.x1, north: RAIL_LANDS.y0 + 0.5, south: 136 } as const; // the south one keeps the train rule: 136 − 1.4·1 ≥ 134.5
+const underCrossing = (x: number, w: number): boolean => CROSSINGS.some((c) => x + w > c.x0 && x < c.x1);
 
 /**
  * Main line of the train through the asphalt of Resume (y 129..137): two rails over a ballast bed,
- * rust sleepers every 4 u in step with the shipyard's, steel fences on both sides with a gap at each
+ * rust sleepers every 4 u in step with the shipyard's (none under a crossing: the planks are its floor), steel fences on both sides with a gap at each
  * level crossing, deck planks over the sleepers at the crossings and a steel post on each side of
  * them. Sleepers and planks are at most 0.3 high, so the train passes over them; the fences keep
  * the train rule (south ones far enough from the track). The siding comes with the district.
@@ -28,7 +30,7 @@ export function railLands(ground: Solid[], solids: Solid[]): void {
   const span = (y: number): Vec2[] => [{ x: MAIN_LINE.x0, y }, { x: MAIN_LINE.x1, y }];
   ground.push({ kind: "strip", path: span(BALLAST_Y), width: 5, z: 0.03, mat: "rail" });
   for (const y of RAIL_Y) ground.push({ kind: "strip", path: span(y), width: 0.5, z: 0.05, mat: "rail" });
-  for (let x = MAIN_LINE.x0 + 2; x < MAIN_LINE.x1; x += 4) solids.push({ kind: "prism", at: v3(x, RAIL_Y[0] - 1, 0), w: 1, d: 5, h: 0.3, mat: "rust" });
+  for (let x = MAIN_LINE.x0 + 2; x < MAIN_LINE.x1; x += 4) if (!underCrossing(x, 1)) solids.push({ kind: "prism", at: v3(x, RAIL_Y[0] - 1, 0), w: 1, d: 5, h: 0.3, mat: "rust" });
   const fence = (y: number): void => {
     let x: number = FENCE.x0;
     for (const c of [...CROSSINGS, { x0: FENCE.x1, x1: FENCE.x1 }]) {
@@ -36,8 +38,8 @@ export function railLands(ground: Solid[], solids: Solid[]): void {
       x = c.x1;
     }
   };
-  fence(129.5);
-  fence(136);
+  fence(FENCE.north);
+  fence(FENCE.south);
   for (const c of CROSSINGS) {
     const w = c.x1 - c.x0;
     for (const [y, d] of [[129.6, 1.1], [131.3, 2.4], [134.3, 1.1]] as const) solids.push({ kind: "prism", at: v3(c.x0, y, 0), w, d, h: 0.3, mat: "deck" });

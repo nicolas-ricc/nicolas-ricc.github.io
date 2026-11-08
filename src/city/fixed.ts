@@ -195,6 +195,7 @@ export function cars(solids: Solid[], rng: Rng): void {
       const x = b.x + rng.int(2, b.w - 5);
       const y = rng.chance(0.5) ? b.y + b.d + 0.4 : b.y - 1.9; // south or north sidewalk of the block
       if (y < CITY_EDGE.north || y + 1.5 > CITY_EDGE.south) continue;
+      if (b.y === ROWS[0] && y < b.y) continue;                // row 92 has the seam fence to the north, not a street
       if (y >= AVENUE.y0 - 2 && y <= AVENUE.y1) continue;      // the avenue has no cars at the curb
       if (inCrater(x + 1.5, y + 0.75) || CRATERS.some((c) => Math.hypot(x + 1.5 - c.x, y + 0.75 - c.y) <= c.r + 2)) continue;
       if (x > QUAY_X && x <= estuaryEast(y) + 1) continue;    // over the estuary there is no sidewalk where to leave a car

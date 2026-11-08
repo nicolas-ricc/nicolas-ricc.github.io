@@ -84,7 +84,7 @@ describe("city", () => {
       if (!(x.kind === "prism" && x.w === CAR.w && x.d === CAR.d && x.h === 1.2)) continue;
       const b = bounds(x);
       if (b.max.x > 96) continue;
-      expect(b.max.y <= ROWS[0] + 20 || b.min.y >= 158, `${b.min.x},${b.min.y}`).toBe(true);
+      expect(b.min.y >= ROWS[0] && (b.max.y <= ROWS[0] + 20 || b.min.y >= 158), `${b.min.x},${b.min.y}`).toBe(true); // row 92 parks only on its south curb (y 110.4..111.9): its north side is the seam fence
     }
   });
 
@@ -252,7 +252,7 @@ describe("city", () => {
     const s = scene();
     const cones = s.solids.filter((x) => x.kind === "cone" && (x.mat === "leaf" || x.mat === "leafDark"));
     expect(cones.length).toBeGreaterThan(60);
-    expect(cones.some((c) => c.kind === "cone" && c.at.y < ROWS[0]! && c.at.x < QUAY_X)).toBe(false); // no seam belt since #319: the new strip is empty asphalt
+    for (const c of cones) if (c.kind === "cone" && c.at.y < ROWS[1]! && c.at.x < QUAY_X) expect(inBlock(c.at.x, c.at.y), `${c.at.x},${c.at.y}`).toBe(true); // no seam belt since #319: in the new strip only the courtyard trees of its blocks (#320)
     expect(cones.some((c) => c.kind === "cone" && c.at.x < CITY_EDGE.west)).toBe(false);        // west edge: asphalt of the tech district
     expect(cones.some((c) => c.kind === "cone" && c.at.x > QUAY_X && c.at.x < EAST_RING.x0)).toBe(true); // east bank
     for (const cr of CRATERS) expect(cones.some((c) => c.kind === "cone" && inCrater(c.at.x, c.at.y) && Math.hypot(c.at.x - cr.x, c.at.y - cr.y) <= cr.r)).toBe(true);

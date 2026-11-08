@@ -23,10 +23,11 @@ describe("rail lands (#319)", () => {
   const sleepers = solids.filter((s) => s.mat === "rust");
   const prisms = (mat: string, h: number) => solids.filter((s): s is Solid & { kind: "prism" } => s.kind === "prism" && s.mat === mat && s.h === h);
 
-  it("sleepers: rust 1×5×0.3 at (x, 130) every 4 from −58 to 94 (x ≡ 2 mod 4)", () => {
+  it("sleepers: rust 1×5×0.3 at (x, 130) every 4 from −58 to 94 (x ≡ 2 mod 4), none under a crossing (the planks are its floor)", () => {
     expect(sleepers.every((s) => s.kind === "prism" && s.mat === "rust" && s.w === 1 && s.d === 5 && s.h === 0.3 && s.at.y === 130 && s.at.z === 0)).toBe(true);
     const xs = sleepers.map((s) => (s.kind === "prism" ? s.at.x : NaN));
-    expect(xs).toEqual(Array.from({ length: 39 }, (_, i) => -58 + 4 * i));
+    expect(xs).toEqual(Array.from({ length: 39 }, (_, i) => -58 + 4 * i).filter((x) => !CROSSINGS.some((c) => x + 1 > c.x0 && x < c.x1)));
+    expect(xs).toHaveLength(33); // six under the crossings: −22, 6, 10, 38, 66, 70
     for (const x of xs) expect(((x % 4) + 4) % 4).toBe(2);
   });
 

@@ -85,7 +85,7 @@ function lanes(ground: Solid[]): void {
   const rowsY = [...ROWS.slice(2).map((y) => y - STREET / 2), CITY_EDGE.south - 2].filter((y) => y < AVENUE.y0 || y > AVENUE.y1); // 185, 239, 269, 299, 322 (the south street is 4 wide)
   for (const cy of rowsY) {
     centerLine(ground, { x: CITY_EDGE.west, y: cy }, { x: WEST_QUAY.x0, y: cy });
-    if (cy < DISTRICT_ROWS[0] - STREET) centerLine(ground, { x: Math.max(EAST_RING.x0, Math.ceil(cy < ESTUARY_Y0 ? eastBank(cy) : estuaryEast(cy)) + 1), y: cy }, { x: PROMENADE.x0, y: cy }); // starts on land; south of the district the east bank is jungle
+    if (cy < DISTRICT_ROWS[0] - STREET) centerLine(ground, { x: Math.max(EAST_RING.x0, Math.ceil(cy < ESTUARY_Y0 ? eastBank(cy) : estuaryEast(cy)) + 1), y: cy }, { x: PROMENADE.x0, y: cy }); // starts on land; south of the district the east bank is jungle; eastBank north of the estuary is defensive (every cy here is ≥ 185 today)
   }
   centerLine(ground, { x: CITY_EDGE.west, y: 113 }, { x: STATION_LAND.x0, y: 113 }); // north of the railyard, west of the station
   centerLine(ground, { x: Math.ceil(eastBank(137)) + 1, y: 137 }, { x: HARBOR.x1 - 2, y: 137 }); // between the east blocks
