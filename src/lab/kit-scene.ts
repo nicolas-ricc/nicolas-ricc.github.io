@@ -11,8 +11,15 @@ import { PLINTH_H, prism } from "../scenes/city-pieces";
 export const KIT_LOT = { w: 24, d: 18 } as const;
 export const KIT_STEP = { x: 30, y: 24 } as const;
 
+/** Style of a lab row: `industrial` and `reconversion` ignore the chosen one (freight for the freight pair, warehouses for the rest of the latter). */
+function rowStyle(family: string, name: string, chosen: StyleId): StyleId {
+  if (family === "industrial" || family === "harbor") return family;
+  if (family === "reconversion") return name === "freightShed" || name === "openDock" ? "freight" : "warehouses";
+  return chosen;
+}
+
 /**
- * Every recipe in the registry, one row per family in registry order.
+ * Every recipe in the registry, one row per family in registry order (the `industrial` and `harbor` rows always use their own style; the `reconversion` row, warehouses or freight).
  * As in the city: `seat` decides the plinth by ground presence. A recipe with no ground
  * sits on a paving prism plinth of PLINTH_H; one that brings `ground` goes at z 0
  * with no plinth (a prism would cover its ground, which is painted before any solid).
@@ -27,11 +34,11 @@ export function kitScene(seed: number, style: StyleId): { solids: Solid[]; accen
     const x = RECIPES.filter((r) => r.family === def.family).indexOf(def) * KIT_STEP.x, y = families.indexOf(def.family) * KIT_STEP.y;
     const own = LAB_LOTS[def.name], w = own?.w ?? KIT_LOT.w, d = own?.d ?? KIT_LOT.d;
     const lot: Lot = { x: x + Math.max(0, (KIT_LOT.w - w) / 2), y: y + (KIT_LOT.d - d) / 2, w, d, z: own?.z ?? 0, open: ["s", "e"], maxH: 24 };
-    const rng = createRng(seed * 1000 + i);
+    const rng = createRng(seed * 1000 + i), st = STYLES[rowStyle(def.family, def.name, style)];
     let p: Piece;
-    if (own?.z !== undefined) p = def.recipe(lot, rng, STYLES[style]);
+    if (own?.z !== undefined) p = def.recipe(lot, rng, st);
     else {
-      const seated = seat(def.recipe, lot, rng, STYLES[style]);
+      const seated = seat(def.recipe, lot, rng, st);
       p = seated.piece;
       if (seated.plinth) solids.push(prism(lot.x, lot.y, 0, w, d, PLINTH_H, "paving"));
     }

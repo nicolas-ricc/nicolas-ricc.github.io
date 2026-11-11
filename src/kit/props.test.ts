@@ -3,7 +3,7 @@ import type { Accent } from "../iso/accent";
 import { centroid, v3 } from "../iso/geometry";
 import { bounds, type Solid } from "../iso/solids";
 import { createRng } from "../map/seed";
-import { antenna, awning, beacon, bench, bollard, car, chair, clock, container, dockCrane, fence, fountain, garland, helipad, kiosk, lamp, machineRoom, neon, patioTree, puddle, roofShrub, rooftopGarden, sign, solarPanel, stoneArch, ARCH_SLABS, streetTree, table, trafficLight, waterTank } from "./props";
+import { antenna, awning, beacon, bench, bollard, car, chair, clock, container, dockCrane, fence, foodTruck, fountain, garland, helipad, kiosk, lamp, machineRoom, neon, patioTree, puddle, roofShrub, rooftopGarden, sign, solarPanel, stoneArch, ARCH_SLABS, streetTree, table, trafficLight, waterTank } from "./props";
 
 const AT = v3(10, 20, 0.3);
 const size = (s: Solid) => { const b = bounds(s); return [b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z].map((n) => Math.round(n * 100) / 100); };
@@ -191,4 +191,50 @@ describe("stoneArch", () => {
       expect(sl.at.z + sl.h).toBeCloseTo(3, 9);
     });
   });
+});
+
+describe("foodTruck (#321)", () => {
+  for (const dir of ["s", "e"] as const) {
+    it(`dir ${dir}: box and steel cab within 5×2.2, awning toward ${dir} at z 2.2 and a lit amber hatch on the ${dir} face`, () => {
+      const t = foodTruck(AT, "boxOrange", dir);
+      const long = dir === "s" ? "x" : "y", face = dir === "s" ? "y" : "x";
+      const box = t.solids.find((s) => s.kind === "prism" && s.mat === "boxOrange");
+      const cab = t.solids.find((s) => s.kind === "prism" && s.mat === "steel");
+      const roof = t.solids.find((s) => s.kind === "ramp" && s.mat === "awning");
+      if (!box || !cab || !roof || roof.kind !== "ramp") throw new Error("missing part");
+      expect(bounds(box).max.z - AT.z).toBeCloseTo(2.6, 9);
+      const cb = bounds(cab), bb0 = bounds(box);
+      expect(cb.max[long] - cb.min[long]).toBeCloseTo(1.2, 9);
+      expect(bb0.max[long] - bb0.min[long]).toBeCloseTo(3.8, 9);
+      expect(bb0.max[long]).toBeLessThanOrEqual(cb.min[long] + 1e-9); // box then cab, disjoint
+      // box and cab together: 5 along the truck, 2.2 across, from the NW corner
+      const parts = [bounds(box), cb];
+      const min = { x: Math.min(...parts.map((b) => b.min.x)), y: Math.min(...parts.map((b) => b.min.y)) };
+      const max = { x: Math.max(...parts.map((b) => b.max.x)), y: Math.max(...parts.map((b) => b.max.y)) };
+      expect(min.x).toBeCloseTo(AT.x, 9);
+      expect(min.y).toBeCloseTo(AT.y, 9);
+      expect(max[long] - min[long]).toBeCloseTo(5, 9);
+      expect(max[face] - min[face]).toBeCloseTo(2.2, 9);
+      // awning: 0.8 overhang toward dir, base at z 2.2, flush with the dir face
+      expect(roof.dir).toBe(dir);
+      expect(roof.at.z).toBeCloseTo(AT.z + 2.2, 9);
+      expect(roof.at[face]).toBeCloseTo(AT[face] + 2.2, 9);
+      expect(dir === "s" ? roof.d : roof.w).toBeCloseTo(0.8, 9);
+      // hatch: one amber poly, alpha 0.9, 1.6 wide, z 1.2..2, 0.02 in front of the dir face, over the cargo box
+      expect(t.accents).toHaveLength(1);
+      const a = t.accents[0]!;
+      if (a.kind !== "poly") throw new Error("hatch is not a poly");
+      expect(a.color).toBe("amber");
+      expect(a.alpha).toBe(0.9);
+      expect(a.pts).toHaveLength(4);
+      for (const q of a.pts) expect(q[face]).toBeCloseTo(AT[face] + 2.2 + 0.02, 9);
+      const along = a.pts.map((q) => q[long]), zs = a.pts.map((q) => q.z);
+      expect(Math.max(...along) - Math.min(...along)).toBeCloseTo(1.6, 9);
+      expect(Math.min(...zs)).toBeCloseTo(AT.z + 1.2, 9);
+      expect(Math.max(...zs)).toBeCloseTo(AT.z + 2, 9);
+      const bb = bounds(box);
+      expect(Math.min(...along)).toBeGreaterThanOrEqual(bb.min[long] - 1e-9);
+      expect(Math.max(...along)).toBeLessThanOrEqual(bb.max[long] + 1e-9);
+    });
+  }
 });

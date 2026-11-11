@@ -6,9 +6,11 @@ import { fairAnimator } from "./fair-animator";
 describe("fairAnimator", () => {
   it("exposes wheel, lights, train, tower and signs; with reduced-motion it returns no ids", () => {
     const a = fairAnimator(fair(createRng(7)), { reducedMotion: false });
-    expect([...a.ids].sort()).toEqual(["fair.drop", "fair.neon", "fair.signs", "fair.train", "fair.wheel", "fair.wheelLights"]);
+    expect([...a.ids].sort()).toEqual(["fair.drop", "fair.logs", "fair.neon", "fair.signs", "fair.train", "fair.wheel", "fair.wheelLights"]);
+    expect(a.layer("fair.logs").kind).toBe("solid");
     expect(a.layer("fair.wheel").kind).toBe("solid"); expect(a.layer("fair.wheelLights").kind).toBe("accent");
     expect(a.tick(250).has("fair.wheel")).toBe(true);
+    expect(a.tick(1000).has("fair.logs")).toBe(true);
     expect(fairAnimator(fair(createRng(7)), { reducedMotion: true }).tick(1000).size).toBe(0);
   });
   it("fair.neon is a cyan/magenta accent layer that changes as the clock advances", () => {

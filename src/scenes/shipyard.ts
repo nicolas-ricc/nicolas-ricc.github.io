@@ -1,22 +1,26 @@
 import type { Accent } from "../iso/accent";
 import { v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { bounds, type Solid } from "../iso/solids";
-import { BOTTOM, DOCK, QUAY_W, QUAY_X, WORLD, eastBank, northCoastY } from "../map/geo";
-import type { Rng } from "../map/seed";
-import { jungle as flora, type Rails } from "./flora";
-import { TRAIN_CLEAR, station } from "./station";
+import { BOTTOM, DOCK, QUAY_W, QUAY_X, WORLD, ZONE_SPLIT_Y, eastBank, northCoastY } from "../map/geo";
+import { createRng, type Rng } from "../map/seed";
+import { jungle as flora } from "./flora";
+import { RIPRAP_KEEP_OUT, shipyardEast } from "./shipyard-east";
+import { portfolioWindows } from "./portfolio-lights";
+import { dockWorks, serviceStrip, yardFill, type Fill } from "./shipyard-fill";
+import { station } from "./station";
 import { clearOfWater } from "./terrain-classify";
 
 
 /**
  * Portfolio: 2.5D shipyard. Same plan as terrain.ts: slipways east of
  * the N-S transfer street, ending in the water; dredged straight
- * bank at QUAY_X, dry dock to the NE, parking lot to the SW, fitting-out quay on the
+ * bank at QUAY_X, dry dock to the NE, fitting-out quay on the
  * other side of the river. The assembly halls, the workshops and the material
  * yard go north, behind the factory, in the band `y −58..−16`; the
  * Portfolio factory sits between the street and the rail yard. South of the
  * slipways, at the end of the west track, is the terminus station
- * (`station.ts`). Coordinates in old-map units (1 u ≈ 1 px).
+ * (`station.ts`). The Portfolio/Resume seam is at `y 90` (a steel fence marks it from
+ * x −60 to 96) and the station land (`STATION_LAND`) is the only part of Portfolio south of it. Coordinates in old-map units (1 u ≈ 1 px).
  */
 
 export interface Scene {
@@ -26,6 +30,7 @@ export interface Scene {
   trolley: Solid & { kind: "prism" };
   trolleyRange: [number, number];
   weldSpots: Vec3[];
+  fill: Fill;           // yard, dock and service pieces (same objects as in `solids`; the yard rails are in `ground`)
 }
 
 export const AREA_W = 344, AREA_H = 146;
@@ -37,9 +42,10 @@ const ROW_H = 16;
 const HALL_X = 10, HALL_W = 90, HALL_H = 10;
 const HALL_ROWS_Y = [-52, -32] as const; // assembly halls, in the north band
 const SLIP_X = 110;
-export const RAIL_Y = [131, 134] as const; // west tracks; the hinterland extends them west to the edge of the bleed
+export const RAIL_Y = [131, 134] as const; // west tracks: the station draws them from x 96, Resume and the hinterland west of it
 const GANTRY_X = 150, GANTRY_H = 24;
 const WATER_Z = -1;
+const SEED_MAX = 2 ** 32 - 1; // seed of a derived Rng (no 0x… literal: the palette guard would take it for a color)
 
 // ---------------------------------------------------------------- pieces
 
@@ -57,6 +63,7 @@ function quay(out: Solid[], accents: Accent[]): void {
   }
 }
 
+/** `portfolio-lights.ts` finds the halls and the workshops by these measures to light their windows. */
 function halls(out: Solid[]): void {
   for (const y of HALL_ROWS_Y) {
     out.push(prism(HALL_X, y, 0, HALL_W, ROW_H, HALL_H, "concrete", "gable"));
@@ -96,16 +103,16 @@ function slipways(out: Solid[], weldSpots: Vec3[]): void {
   });
 }
 
-function gantry(out: Solid[]): { trolley: Solid & { kind: "prism" }; range: [number, number] } {
+function gantry(out: Solid[]): { trolley: Solid & { kind: "prism" }; range: [number, number]; legs: Solid[] } {
   const y0 = ROW_Y[0] - 3, y1 = ROW_Y[1] + ROW_H + 1;
   out.push(strip([{ x: SLIP_X, y: y0 + 1.5 }, { x: QUAY_X, y: y0 + 1.5 }], 0.5, 0.05, "rail"));
   out.push(strip([{ x: SLIP_X, y: y1 + 1.5 }, { x: QUAY_X, y: y1 + 1.5 }], 0.5, 0.05, "rail"));
-  out.push(prism(GANTRY_X, y0, 0, 3, 3, GANTRY_H, "steel"));
-  out.push(prism(GANTRY_X, y1, 0, 3, 3, GANTRY_H, "steel"));
+  const legs = [prism(GANTRY_X, y0, 0, 3, 3, GANTRY_H, "steel"), prism(GANTRY_X, y1, 0, 3, 3, GANTRY_H, "steel")];
+  out.push(...legs);
   out.push(prism(GANTRY_X, y0, GANTRY_H, 3, y1 + 3 - y0, 2, "steel")); // beam
   const range: [number, number] = [y0 + 5, y1 - 6];
   const trolley = prism(GANTRY_X - 1, range[0], GANTRY_H + 2, 5, 4, 2, "rust");
-  return { trolley, range };
+  return { trolley, range, legs };
 }
 
 // ---------------------------------------------------------------- material yard (north band)
@@ -145,6 +152,7 @@ function dryDock(out: Solid[], ground: Solid[]): void {
 
 // ---------------------------------------------------------------- workshops (north band)
 
+/** Measures keyed by `portfolio-lights.ts` too (windows): see `halls()`. */
 function workshops(out: Solid[]): void {
   for (const x of [106, 134]) {
     out.push(prism(x, -33, 0, 24, 14, 7, "concrete", "step"));
@@ -153,56 +161,50 @@ function workshops(out: Solid[]): void {
   }
 }
 
-// ---------------------------------------------------------------- parking lot and rails (SW)
+// ---------------------------------------------------------------- east bank: silo and riprap (the sheds, the yard and the cranes are in shipyard-east.ts)
 
-function parkingAndRails(out: Solid[], rng: Rng): void {
-  out.push(strip([{ x: 46, y: 113 }, { x: 98, y: 113 }], 26, -0.4, "road")); // parking lot
-  for (let x = 48; x < 98; x += 4) out.push(strip([{ x, y: 102 }, { x, y: 106 }], 0.4, -0.3, "rail")); // lines
-  for (let i = 0; i < 5; i++) {
-    const x = 49 + rng.int(0, 11) * 4, y = rng.chance(0.5) ? 102 : 116;
-    out.push(prism(x, y, 0, 3, 4, 1.5, rng.chance(0.5) ? "steel" : "rust"));
-  }
-  for (const y of RAIL_Y) out.push(strip([{ x: 0, y }, { x: STREET_X + 4, y }], 0.5, 0.05, "rail")); // west tracks
-  for (let x = 2; x < STREET_X; x += 4) out.push(prism(x, RAIL_Y[0] - 1, 0, 1, 5, 0.3, "rust")); // sleepers
-}
-
-// ---------------------------------------------------------------- fitting-out quay (E)
-
-function fittingOut(out: Solid[], rng: Rng): void {
-  for (const x of [304, 316]) out.push(prism(x, 24, 0, 8, 92, 6, "concrete", "gable"));
-  out.push({ kind: "cylinder", at: v3(310, 122, 0), r: 4, h: 6, mat: "concrete" });
-  for (let i = 0; i < 6; i++) out.push(prism(302 + rng.int(0, 24), 130 + rng.int(0, 10), 0, 3, 2, 1, "rust")); // scrap
-  const rock = (x: number, y: number): Solid => ({ kind: "cone", at: v3(x, y, 0), r: 1.6, h: 1.2, mat: "rock", sides: 5 });
+function siloAndRiprap(out: Solid[]): void {
+  out.push({ kind: "cylinder", at: v3(310, 86, 0), r: 4, h: 6, mat: "concrete" });
+  const riprap = (x: number, y: number): void => { // skips rocks over the yard slab or the crane legs
+    const rock: Solid = { kind: "cone", at: v3(x, y, 0), r: 1.6, h: 1.2, mat: "rock", sides: 5 }, b = bounds(rock);
+    if (!RIPRAP_KEEP_OUT.some((k) => b.min.x < k.x1 && k.x0 < b.max.x && b.min.y < k.y1 && k.y0 < b.max.y)) out.push(rock);
+  };
   for (let y = 0; y < AREA_H; y += 3) { // river riprap: only where there is already land
     const x = eastBank(y) + 1.5;
-    if (y >= northCoastY(x)) out.push(rock(x, y));
+    if (y < ZONE_SPLIT_Y && y >= northCoastY(x)) riprap(x, y);
   }
-  for (let x = Math.ceil(eastBank(30)) + 6; x < 300; x += 3) out.push(rock(x, northCoastY(x) + 1.5)); // cove riprap; starts 6 u east of the bank (eastBank(30) = 277) so as not to cover the river's last cone
+  for (let x = Math.ceil(eastBank(30)) + 6; x < 300; x += 3) riprap(x, northCoastY(x) + 1.5); // cove riprap; starts 6 u east of the bank (eastBank(30) = 277) so as not to cover the river's last cone
 }
 
 // ---------------------------------------------------------------- jungle and lamps
 
 function jungle(out: Solid[], rng: Rng): void {
   // seeds the same (the rng does not move) and discards whatever ends up within 3 u of the water
-  const cluster = (x0: number, x1: number, y0: number, y1: number, n: number, rails?: Rails) => {
+  const cluster = (x0: number, x1: number, y0: number, y1: number, n: number) => {
     const tmp: Solid[] = [];
-    flora(tmp, rng, { x0, x1, y0, y1 }, n, 0.4, rails);
+    flora(tmp, rng, { x0, x1, y0, y1 }, n, 0.4);
     for (const s of tmp) {
       const b = bounds(s);
       if (clearOfWater(b.min.x, b.min.y, b.max.x, b.max.y, 3)) out.push(s);
     }
   };
-  cluster(3, 39, 102, 125, 10);   // SW, north of the tracks (r ≤ 4: never covers them)
-  cluster(3, 39, 139, 143, 4, { y: RAIL_Y, train: TRAIN_CLEAR }); // SW, south of the tracks (the train corridor empties it, #280)
-  cluster(332, 340, 50, 94, 6);   // east edge, between the bay and the headland (y0 50, Task 6: leaves out of the diagonal reach of the freighter leaving the bay)
-  cluster(332, 340, 136, 143, 2); // south of the headland
-  cluster(301, 328, 127, 143, 6); // south of the sheds, not covering the base of the headland (x ≥ 330)
+  cluster(332, 340, 50, 88, 6);   // east edge, between the bay and the headland (y0 50, Task 6: leaves out of the diagonal reach of the freighter leaving the bay)
 }
 
 function lamps(out: Solid[], accents: Accent[]): void {
   for (const y of [12, 40, 68, 96, 124]) {
     out.push(prism(STREET_EDGE + 0.5, y, 0, 0.6, 0.6, 5, "steel"));
     accents.push({ kind: "dot", at: v3(STREET_EDGE + 0.8, y + 0.3, 5), r: 1.2, color: "cyan" });
+  }
+}
+
+/** Steel mesh fence on the seam, x −60..96 at y 89.4, with posts and six cyan lamps on the Portfolio side. */
+function seamFence(out: Solid[], accents: Accent[]): void {
+  out.push(prism(-60, 89.4, 0, 156, 0.6, 1.2, "steel"));
+  for (let x = -60; x < 96; x += 6) out.push(prism(x, 89.3, 0, 0.3, 0.3, 1.6, "steel")); // posts every 6 u (26)
+  for (const x of [-48, -24, 0, 24, 48, 72]) {
+    out.push(prism(x, 88.2, 0, 0.6, 0.6, 5, "steel"));
+    accents.push({ kind: "dot", at: v3(x + 0.3, 88.5, 5), r: 1.2, color: "cyan" });
   }
 }
 
@@ -219,12 +221,17 @@ export function shipyard(rng: Rng): Scene {
   slipways(solids, weldSpots);
   const g = gantry(solids);
   workshops(solids);
-  parkingAndRails(solids, rng);
   station(solids, accents);
-  fittingOut(solids, rng);
+  siloAndRiprap(solids);
+  const yard = yardFill(solids, rng);
+  const dock = dockWorks(solids, accents, rng);
+  const fill: Fill = { yard, dock, service: serviceStrip(solids, rng, g.legs.map(bounds)) };
   jungle(solids, rng);
   lamps(solids, accents);
+  seamFence(solids, accents);
+  shipyardEast(solids, accents, weldSpots, rng);
   ground.push(...solids.filter((s) => s.kind === "strip"));
   const raised = solids.filter((s) => s.kind !== "strip");
-  return { ground, solids: raised, accents, trolley: g.trolley, trolleyRange: g.range, weldSpots };
+  accents.push(...portfolioWindows(raised, createRng(rng.int(0, SEED_MAX))));
+  return { ground, solids: raised, accents, trolley: g.trolley, trolleyRange: g.range, weldSpots, fill };
 }

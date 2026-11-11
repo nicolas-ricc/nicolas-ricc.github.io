@@ -51,7 +51,16 @@ meet. The factory takes the place the shipyard sheds had,
 between the rail yard and the transfer street, in front of the siding, with the
 inclined belt going down to the truck yard (the long belt is gone); the
 assembly halls, the workshops and the material yard of the shipyard lie to the
-north, behind the factory.
+north, behind the factory. The seam between Portfolio and Resume lies at `y 90`
+(`ZONE_SPLIT_Y`), with the terminal station as the exception: its land
+(`STATION_LAND`, the station land) stays Portfolio. South of the seam, west of
+the station, a new strip of Resume holds a row of reconverted warehouses with
+the covered market (row 92), a freight row and the rail lands, a fenced band
+around the west track with a siding and a parked freight train; on the east
+bank, the dock inlet has a fish market, a food hall and fishing boats. The
+shipyard gains a floating dock, a container yard, quay cranes and sheet metal.
+The fair gains a ghost train, a mirror house, a slide, a log flume, booths and
+food trucks.
 
 The runtime that builds and animates that world lives in `src/world/` and is shared by the
 site and the lab: `stage.ts` (layers, veils and lights per zone: each light, static or
@@ -64,7 +73,7 @@ zone) and `view.ts` (pure camera: `coverView`, `zoneView`, `clampToBleed`,
 `#canvas-host`), not with `coverFrame(16/9)` like the lab.
 In Resume, `city-anim.ts` adds the `city.windows` layer (up to 40 windows of
 downtown and the residential area that switch on and off keeping the percentage
-±5 %) and, inside `city.neon`, the flickering neon sign of a bar on the pier; the
+±5 %) and, inside `city.neon`, the flickering neon sign of a bar on the pier or a brewery of row 92; the
 rest of the windows and neon signs go to the static accents.
 
 `npm run dev` and open `/lab/world.html` for the lab: thin
@@ -80,9 +89,11 @@ off, Portfolio, Resume and Blog; `6` rotates the lights' bloom among
 The keys frame; they do not crop: when focusing a zone the neighboring ones peek in
 at the edge. `/lab/kit.html` shows every recipe of the kit
 (`src/kit/`) on a grid, one row per family (`modern`, `courtyard`,
-`lowrise`, `composite`, `curved` and `landmarks`, see `src/kit/forms/`); key
-`s` changes the seed and `1..4` the style (downtown, bars, residential,
-civic). It is not part of the production build. To change a scene,
+`lowrise`, `composite`, `curved`, `landmarks`, `industrial`, `reconversion` and `harbor`, see
+`src/kit/forms/`); key `s` changes the seed and `1..4` the style (downtown,
+bars, residential, civic), except on the `industrial` and `harbor` rows, which always
+use their own style, and on the `reconversion` row, which always uses the
+warehouses style (freight for `freightShed` and `openDock`). It is not part of the production build. To change a scene,
 edit its list of solids; for the look, `src/map/palette-iso.ts`.
 Specs in `docs/superpowers/specs/`
 (`2026-09-13-portfolio-isometrico-design.md`, `2026-09-14-mundo-isometrico-design.md`,
@@ -93,6 +104,7 @@ Specs in `docs/superpowers/specs/`
 `2026-09-15-reintegracion-mundo-iso-design.md`,
 `2026-10-14-cyberpunk-crepusculo-neones-bloom-design.md`,
 `2026-10-15-resume-nivel-2-kit-zonificacion-luces-design.md`,
+`2026-10-15-costura-90-portfolio-denso-galpones-feria-design.md`,
 `2026-10-16-barcos-referencia.md`,
 `2026-10-17-barcos-inventario.md`,
 `2026-10-17-storybook-estructuras-design.md`,
@@ -111,7 +123,10 @@ The URL hash picks the exhibit (`#faro`); arrows (`←`/`→`, `↑`/`↓`)
 or `j`/`k` move to the next or the previous one; `g`, `h` and `a` hide or
 show ground, shadows and accents; `6` rotates the bloom, `?bloom=` forces it and
 `?speed=` scales the animation clock up to 100 (`?speed=0`
-freezes it; above 100 it is 1).
+freezes it; above 100 it is 1). The seam at 90 added ten exhibits:
+`#dique-flotante`, `#patio-contenedores` and `#grua-muelle` (shipyard),
+`#tren-fantasma`, `#casa-espejos`, `#tobogan` and `#tronco-acuatico` (fair),
+and `#galpones`, `#playa-carga` and `#mercado-pescado` (city).
 
 The lights' bloom is not part of the first draw: the site and the lab
 enable it after Pixi's first real render (the `postrender` of

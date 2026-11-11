@@ -4,11 +4,12 @@ import { fingerprint } from "../iso/fingerprint";
 import { v3 } from "../iso/geometry";
 import { bounds, type Bounds, type Solid } from "../iso/solids";
 import { awning, dockCrane } from "../kit/props";
+import { ESTUARY_Y0, QUAY_X } from "../map/geo";
 import { createRng } from "../map/seed";
-import { AVENUE, BLOCK_W, BRIDGE, COLLAPSED, EAST_RING, PROMENADE, PLAZA, SIDEWALK, STREET, TOWER, WEST_QUAY, blocks, estuaryEast } from "../scenes/city-grid";
+import { AVENUE, BLOCK_W, BRIDGE, COLLAPSED, EAST_RING, PROMENADE, PLAZA, ROWS, SIDEWALK, STREET, TOWER, WEST_QUAY, blocks, estuaryEast } from "../scenes/city-grid";
 import { plazaTone, tiles } from "../scenes/city-pieces";
 import type { FixedLight } from "./lights";
-import { bridge, collapsed, promenade, plazaAndTower, towerWindows, westQuay } from "./fixed";
+import { bridge, collapsed, greenery, promenade, plazaAndTower, towerWindows, westQuay } from "./fixed";
 
 const EPS = 1e-6;
 /** Strict box overlap: two solids that only touch (one resting on the other) don't count. */
@@ -181,6 +182,16 @@ describe("promenade", () => {
   });
 });
 
+describe("greenery (#319)", () => {
+  it("no jungle cone north of the old first block row (164) west of the estuary: the seam belt is gone and the new strip is city (#320)", () => {
+    const solids: Solid[] = [];
+    greenery(solids, createRng(7));
+    const cones = solids.filter((s) => s.kind === "cone" && (s.mat === "leaf" || s.mat === "leafDark"));
+    expect(cones.length).toBeGreaterThan(0);
+    expect(cones.filter((c) => c.kind === "cone" && c.at.y < ROWS[1]! && c.at.x < QUAY_X)).toEqual([]);
+  });
+});
+
 describe("westQuay", () => {
   const built = () => { const solids: Solid[] = [], lights: FixedLight[] = []; westQuay(solids, lights); return { solids, accents: lights.flatMap((l) => l.accents) }; };
   const { x0, x1 } = WEST_QUAY;
@@ -190,6 +201,11 @@ describe("westQuay", () => {
     const { solids } = built();
     expect(prisms(solids).filter((s) => s.mat === "plaza" && s.at.x === x0 && s.at.z === -1 && s.w === x1 - x0 && s.h === 1.6)).toHaveLength(2);
     expect(solids.filter((s) => s.kind === "ramp" && s.mat === "plaza" && s.at.y === 194 && s.at.z === -1 && s.d === 6)).toHaveLength(1);
+  });
+
+  it("the wall starts at ESTUARY_Y0, not at the seam (#319)", () => {
+    const wall = prisms(built().solids).filter((s) => s.mat === "plaza" && s.at.x === x0 && s.at.z === -1);
+    expect(Math.min(...wall.map((s) => s.at.y))).toBe(ESTUARY_Y0);
   });
 
   it("two vault rust sheds on the quay, at y 164..176 and 178..190, within 192..198 and not overlapping", () => {

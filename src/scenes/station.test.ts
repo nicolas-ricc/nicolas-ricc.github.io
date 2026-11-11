@@ -34,7 +34,7 @@ describe("station: constants (contract with the children of #239)", () => {
     expect(STATION).toEqual({ x0: 100, y0: 80, x1: 197, y1: 142 });
     expect([GAUGE, RAIL_W, RAIL_Z]).toEqual([3, 0.5, 0.05]);
     expect(TRACKS_Y).toEqual([112.5, 122.5, 132.5]);
-    expect(TRACK_X0).toEqual([134, 121, 104]);
+    expect(TRACK_X0).toEqual([134, 121, 96]);
     expect(LADDER).toEqual([{ x: 108, y: 132.5 }, { x: 134, y: 112.5 }]);
     expect([BUFFER_X, BUFFER_H, STOP_X]).toEqual([160, 1.2, 158]);
     expect(ISLAND).toEqual({ x0: 123, x1: 160, y0: 125.5, y1: 129.5 });
@@ -287,10 +287,6 @@ describe("station: neighbors (disjoint boxes, 1e-9)", () => {
       const b = bounds(prisms.find((p) => p.at.x === post.x && p.at.y === post.y)!);
       expect(b.max.x <= CROSSING.x0 + 1e-9 || b.min.x >= CROSSING.x1 - 1e-9).toBe(true);
     }
-  });
-
-  it("station ↔ parking lot (x 46..98, y 100..126)", () => {
-    for (const s of raised) expect(apart(bounds(s), flatBox(46, 100, 98, 126))).toBe(true);
   });
 
   it("station ↔ street lamps (x 108.5, y 12/40/68/96/124) and truck (105, 88)", () => {

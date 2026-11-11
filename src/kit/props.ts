@@ -1,7 +1,7 @@
 import type { Accent } from "../iso/accent";
 import { centroid, polyline, v3, type Vec3 } from "../iso/geometry";
 import type { RampDir, Solid } from "../iso/solids";
-import type { AccentColor } from "../map/palette-iso";
+import type { AccentColor, Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { prism } from "../scenes/city-pieces";
 
@@ -166,4 +166,18 @@ export function stoneArch(x: number, y: number, w: number, d: number, zTop: numb
 export function dockCrane(at: Vec3, dir: "e" | "w"): Solid[] {
   const jibX = dir === "e" ? at.x : at.x + 1 - 6;
   return [prism(at.x, at.y, at.z, 1, 1, 6, "steel"), prism(jibX, at.y + 0.2, at.z + 5.5, 6, 0.6, 0.5, "steel")];
+}
+
+/** Food truck, 5×2.2: `mat` cargo box of 3.8, steel cab of 1.2 at the east (`dir` "s") or south ("e") end, awning and amber hatch on the `dir` face. */
+export function foodTruck(at: Vec3, mat: Material, dir: "s" | "e"): Lit {
+  const s = dir === "s";
+  const box = s ? prism(at.x, at.y, at.z, 3.8, 2.2, 2.6, mat) : prism(at.x, at.y, at.z, 2.2, 3.8, 2.6, mat);
+  const cab = s ? prism(at.x + 3.8, at.y, at.z, 1.2, 2.2, 2, "steel") : prism(at.x, at.y + 3.8, at.z, 2.2, 1.2, 2, "steel");
+  const roof = awning(s ? v3(at.x, at.y + 2.2, at.z + 2.2) : v3(at.x + 2.2, at.y, at.z + 2.2), 3.8, dir);
+  const z0 = at.z + 1.2, z1 = at.z + 2;
+  const pts = s
+    ? [1.1, 2.7].flatMap((u) => [v3(at.x + u, at.y + 2.22, z0), v3(at.x + u, at.y + 2.22, z1)])
+    : [1.1, 2.7].flatMap((u) => [v3(at.x + 2.22, at.y + u, z0), v3(at.x + 2.22, at.y + u, z1)]);
+  // [lo-bottom, lo-top, hi-bottom, hi-top] -> perimeter order
+  return { solids: [box, cab, ...roof], accents: [{ kind: "poly", pts: [pts[0]!, pts[2]!, pts[3]!, pts[1]!], color: "amber", alpha: 0.9 }] };
 }

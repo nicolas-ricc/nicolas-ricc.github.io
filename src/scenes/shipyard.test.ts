@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { buildRenderList } from "../iso/render-list";
 import type { Accent } from "../iso/accent";
-import { bounds, type Solid } from "../iso/solids";
-import { WORLD, northCoastY } from "../map/geo";
+import { bounds, isFlat, type Solid } from "../iso/solids";
+import { WORLD, inStationLand, northCoastY } from "../map/geo";
 import { allIsoColors } from "../map/palette-iso";
 import { createRng } from "../map/seed";
+import { windowCandidates } from "./portfolio-lights";
 import { AREA_H, AREA_W, STREET_EDGE, shipyard, type Scene } from "./shipyard";
+import { YARD } from "./shipyard-east";
 import { BUFFER_X, ESPLANADE, STATION } from "./station";
 
 const scene = (): Scene => shipyard(createRng(7));
@@ -51,11 +53,19 @@ describe("shipyard", () => {
     // poly: the building's windows, lantern and dials (#278), located by their first vertex
     const where = (a: Accent) => (a.kind === "dot" ? a.at : a.pts[0]!);
     const inStation = (a: Accent) => { const p = where(a); return p.x >= 110 && p.x <= STATION.x1 && p.y >= 100 && p.y <= STATION.y1; };
-    const outside = s.accents.filter((a) => !inStation(a)), inside = s.accents.filter(inStation);
+    const facade = new Set(windowCandidates(s.solids).map((c) => JSON.stringify(c.pts))); // #324: the windows of halls, workshops and sheds
+    const outside = s.accents.filter((a) => !inStation(a) && !(a.kind === "poly" && facade.has(JSON.stringify(a.pts)))), inside = s.accents.filter(inStation);
     expect(outside.length).toBeGreaterThanOrEqual(7); // five street lamps and two quay lamps
-    expect(outside.every((a) => a.kind === "dot" && a.color === "cyan" && a.at.z > 0)).toBe(true);
+    // #323: the one exception is the window of the container yard gatehouse
+    const windows = outside.filter((a) => a.kind === "poly");
+    expect(windows.map((a) => a.color)).toEqual(["windowCool"]);
+    expect(outside.filter((a) => a.kind === "dot").every((a) => a.kind === "dot" && a.color === "cyan" && a.at.z > 0)).toBe(true);
     expect(inside.length).toBeGreaterThanOrEqual(11); // eight canopy lights and three buffer lights
     expect(inside.every((a) => a.kind === "dot" ? ["cyan", "cyanMid", "magenta", "amber"].includes(a.color) && a.at.z > 0 : ["amber", "amberBleed", "cyanBleed"].includes(a.color))).toBe(true);
+  });
+
+  it("raised solids of the shipyard ≤ 900 (#323)", () => {
+    expect(scene().solids.length).toBeLessThanOrEqual(900);
   });
 
   it("the whole render uses atlas colors", () => {
@@ -74,26 +84,25 @@ describe("shipyard part 2", () => {
     expect(s.ground.some((g) => g.kind === "ground" && g.tris.length > 0 && g.tris.every((t) => t.pts.every((p) => p.z === -6)))).toBe(true);
   });
 
-  it("cars in the parking lot", () => {
-    const s = scene();
-    const cars = s.solids.filter((x) => x.kind === "prism" && x.h === 1.5 && x.w === 3);
-    expect(cars.length).toBeGreaterThanOrEqual(3);
-  });
-
-  it("jungle: cones in the SW and in the east strip, never over the slab", () => {
+  it("jungle: cones in the east strip and the station esplanade, none south of 90 outside the station land", () => {
     const s = scene();
     const cones = s.solids.filter((x): x is Solid & { kind: "cone" } => x.kind === "cone" && (x.mat === "leaf" || x.mat === "leafDark"));
-    expect(cones.length).toBeGreaterThanOrEqual(20);
+    expect(cones.length).toBeGreaterThanOrEqual(6); // measured 6 (seed 7) after the #324 fill
     // the palms of the station esplanade (#278) are at x 190..197, outside the shipyard slab
-    for (const c of cones) expect(c.at.x < 42 || c.at.x > 300 || (c.at.x > ESPLANADE.x0 && c.at.x < ESPLANADE.x1)).toBe(true);
+    for (const c of cones) {
+      expect(c.at.x > 300 || (c.at.x > ESPLANADE.x0 && c.at.x < ESPLANADE.x1), `cone ${c.at.x},${c.at.y}`).toBe(true);
+      expect(c.at.y <= 90 || inStationLand(c.at.x, c.at.y), `cone ${c.at.x},${c.at.y}`).toBe(true);
+    }
   });
 
   it("fitting-out quay: gable sheds east of the river and riprap", () => {
     const s = scene();
     const sheds = s.solids.filter((x) => x.kind === "prism" && x.roof === "gable" && x.at.x > 300);
     expect(sheds).toHaveLength(2);
+    expect(sheds.every((x) => x.mat === "sheetTeal")).toBe(true); // #323: corrugated sheet
     const rocks = s.solids.filter((x) => x.kind === "cone" && x.mat === "rock");
-    expect(rocks.length).toBeGreaterThan(30);
+    expect(rocks.length).toBeGreaterThan(20); // measured 24 (seed 7): the riprap only north of 90 and off the container yard and the quay crane legs (#323)
+    for (const r of rocks.map(bounds)) expect(r.max.x <= YARD.x0 || r.min.x >= YARD.x1 || r.max.y <= YARD.y0 || r.min.y >= YARD.y1, JSON.stringify(r)).toBe(true);
   });
 
   it("the riprap borders the new coast of the north headland", () => {
@@ -114,10 +123,11 @@ describe("shipyard without the new region (#242)", () => {
   const prisms = (s: Scene) => s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism");
   const rails = (s: Scene) => s.ground.filter((x): x is Solid & { kind: "strip" } => x.kind === "strip" && x.mat === "rail");
 
-  it("the new region (x 4..99, y −4..99) stays empty except for jungle cones", () => {
+  it("the new region (x 4..99, y −4..99) stays empty except for jungle cones and the seam fence", () => {
     for (const x of scene().solids) {
       if (x.kind === "cone") continue;
       const b = bounds(x);
+      if (b.min.y >= 88.2) continue; // the seam fence and its lamps (#319)
       expect(b.min.x < 99 && b.max.x > 4 && b.min.y < 99 && b.max.y > -4, JSON.stringify(b)).toBe(false);
     }
   });
@@ -139,21 +149,22 @@ describe("shipyard without the new region (#242)", () => {
     expect(cyl.filter((c) => (c.at.x === 80 && c.at.y === 10) || (c.at.x === 92 && c.at.y === 22))).toEqual([]); // tanks of the old yard
   });
 
-  it("the west track reaches x 104 in parkingAndRails and the station continues it to 160; the street truck remains", () => {
+  it("no shipyard rail west of 96 and the station draws track 3 from 96 to the buffer; the street truck remains", () => {
     const s = scene();
+    for (const r of rails(s)) expect(Math.min(...r.path.map((p) => p.x))).toBeGreaterThanOrEqual(96);
     for (const y of [131, 134]) {
-      expect(rails(s).some((r) => r.path.length === 2 && r.path[0]!.x === 0 && r.path[0]!.y === y && r.path[1]!.x === 104 && r.path[1]!.y === y), `track y ${y}`).toBe(true);
-      expect(rails(s).some((r) => r.path.length === 2 && r.path[0]!.x === 104 && r.path[0]!.y === y && r.path[1]!.x === BUFFER_X && r.path[1]!.y === y), `station y ${y}`).toBe(true);
-      expect(rails(s).filter((r) => r.path.every((p) => p.y === y)).flatMap((r) => r.path.map((p) => p.x)).sort((a, b) => a - b)).toEqual([0, 104, 104, BUFFER_X]); // no gap or overlap
+      expect(rails(s).some((r) => r.path.length === 2 && r.path[0]!.x === 96 && r.path[0]!.y === y && r.path[1]!.x === BUFFER_X && r.path[1]!.y === y), `station y ${y}`).toBe(true);
     }
-    expect(prisms(s).filter((x) => x.mat === "rust" && x.w === 1 && x.d === 5 && x.h === 0.3 && x.at.y === 130).length).toBeGreaterThanOrEqual(20);
+    expect(prisms(s).filter((x) => x.mat === "rust" && x.w === 1 && x.d === 5 && x.h === 0.3 && x.at.y === 130).length).toBe(13); // the station sleepers, x 110..158 (the west ones are the hinterland and Resume)
     expect(prisms(s).some((x) => x.mat === "rust" && x.at.x === 105 && x.at.y === 88 && x.w === 3 && x.d === 7 && x.h === 2.5)).toBe(true);
   });
 });
 
 describe("shipyard in the north band (#247)", () => {
-  const prisms = (s: Scene) => s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism");
-  const cylinders = (s: Scene) => s.solids.filter((x): x is Solid & { kind: "cylinder" } => x.kind === "cylinder");
+  // the yard fill (#324) is left out: these tests pin the old pieces exactly
+  const old = (s: Scene) => { const fill = new Set(s.fill.yard.flat()); return s.solids.filter((x) => !fill.has(x)); };
+  const prisms = (s: Scene) => old(s).filter((x): x is Solid & { kind: "prism" } => x.kind === "prism");
+  const cylinders = (s: Scene) => old(s).filter((x): x is Solid & { kind: "cylinder" } => x.kind === "cylinder");
   const at = (x: Solid & { kind: "prism" }) => [x.at.x, x.at.y, x.at.z];
   const box = (ss: Solid[]) => {
     const bs = ss.map(bounds);
@@ -169,6 +180,7 @@ describe("shipyard in the north band (#247)", () => {
   const yard = (s: Scene): Solid[] => [
     ...prisms(s).filter((x) => (x.w === 10 && x.d === 2 && x.h === 0.5) || (x.w === 14 && x.d === 1 && x.h === 1) || (x.roof === "step" && x.w === 9 && x.d === 4 && x.h === 3)),
     ...cylinders(s).filter((c) => (c.r === 1.5 && c.h === 1.5) || (c.mat === "concrete" && ((c.at.x === 174 && c.at.y === -54) || (c.at.x === 186 && c.at.y === -42)))),
+    ...s.fill.yard.flat().filter((x) => !isFlat(x)), // #324: stock groups and the yard gantry
   ];
   const band = (s: Scene) => s.solids.filter((x) => x.kind !== "cone" && bounds(x).max.y < 0 && bounds(x).min.x < 198);
 
@@ -205,15 +217,14 @@ describe("shipyard in the north band (#247)", () => {
     expect(tanks).toEqual([[174, -54, 5, 8], [186, -42, 4, 6]]);
     const b = box(yard(s));
     expect(b.x0).toBeGreaterThanOrEqual(104); expect(b.x1).toBeLessThanOrEqual(192);
-    expect(b.y0).toBeGreaterThanOrEqual(-59); expect(b.y1).toBeLessThanOrEqual(-35.7);
+    expect(b.y0).toBeGreaterThanOrEqual(-60); expect(b.y1).toBeLessThanOrEqual(-35.5); // #324: the yard gantry legs stand on the rails at y −59.5 and −35.5
   });
 
-  it("the rng (seed 7): cars as on main, no prefabricated sections and with the scrap re-measured (#277)", () => {
-    // cars: values from origin/main (a34dec0), seeded before the loop that was removed; scrap measured with tsx without the eight `chance` calls of the prefabricated ones
+  it("the rng (seed 7): no prefabricated sections, nothing of the parking lot or the scrap (#319)", () => {
     const ps = prisms(scene());
-    expect(ps.filter((x) => x.h === 1.5 && x.w === 3).map((x) => [x.at.x, x.at.y, x.mat])).toEqual([[65, 102, "steel"], [73, 116, "steel"], [53, 116, "rust"], [57, 102, "steel"], [73, 102, "rust"]]);
     expect(ps.filter((x) => x.mat === "steel" && x.w === 9 && x.d === 5 && x.h === 3)).toEqual([]);
-    expect(ps.filter((x) => x.w === 3 && x.d === 2 && x.h === 1 && x.at.x >= 302).map((x) => [x.at.x, x.at.y])).toEqual([[308, 139], [306, 131], [305, 133], [315, 138], [303, 140], [315, 136]]);
+    expect(ps.filter((x) => x.h === 1.5 && x.w === 3)).toEqual([]);
+    expect(ps.filter((x) => x.w === 3 && x.d === 2 && x.h === 1 && x.at.x >= 302)).toEqual([]);
   });
 
   it("nothing is left of the boiler shop (#277)", () => {
@@ -245,13 +256,13 @@ describe("shipyard in the north band (#247)", () => {
     for (let i = 0; i < groups.length; i++) for (let j = i + 1; j < groups.length; j++) expect(apart(groups[i]!, groups[j]!), `${i} ↔ ${j}`).toBe(true);
   });
 
-  it("the north band: every solid with max.y < 0 (except quay, bollards and cones) falls in x 10..192, y −59..−13 and does not exceed z 22", () => {
+  it("the north band: every solid with max.y < 0 (except quay, bollards and cones) falls in x 10..192, y −60..−13 and does not exceed z 22", () => {
     const bs = band(scene()).map(bounds);
     expect(bs.length).toBeGreaterThanOrEqual(40); // halls, forklifts, workshops, equipment and yard: without this it would pass empty
     for (const b of bs) {
       const where = JSON.stringify(b);
       expect(b.min.x, where).toBeGreaterThanOrEqual(10); expect(b.max.x, where).toBeLessThanOrEqual(192);
-      expect(b.min.y, where).toBeGreaterThanOrEqual(-59); expect(b.max.y, where).toBeLessThanOrEqual(-13);
+      expect(b.min.y, where).toBeGreaterThanOrEqual(-60); expect(b.max.y, where).toBeLessThanOrEqual(-13); // −60: the yard gantry (#324)
       expect(b.max.z, where).toBeLessThanOrEqual(22);
     }
   });

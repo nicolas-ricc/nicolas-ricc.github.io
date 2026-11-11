@@ -5,14 +5,15 @@ import { lightBox, type FixedLight } from "../city/lights";
 import { describe, expect, it } from "vitest";
 import { buildRenderList } from "../iso/render-list";
 import { bounds, type Solid } from "../iso/solids";
-import { QUAY_X, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y } from "../map/geo";
+import { ESTUARY_Y0, QUAY_X, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng, SEED } from "../map/seed";
-import { AVENUE, BOULEVARD, BRIDGE, CITY_EDGE, COLLAPSED, ROWS, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_RING, FALLEN_BLOCK, PROMENADE, PLAZA, TOWER, WEST_QUAY, blocks, estuaryEast, inBlock, inCrater } from "./city-grid";
+import { AVENUE, BOULEVARD, DARSENA, BRIDGE, CITY_EDGE, COLLAPSED, FREIGHT_ROW, ROWS, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_RING, FALLEN_BLOCK, PROMENADE, PLAZA, TOWER, WEST_QUAY, blocks, estuaryEast, inBlock, inCrater } from "./city-grid";
 import { PLINTH_H, TOWER_H, city, type CityScene } from "./city";
 import { CAR } from "../kit/props";
 import { FIXED, FOOTBRIDGE_LOT, MAX_BUILDING_H, WATER_TOWER_BLOCK, assign } from "../city/zoning";
 import { zoneRng } from "./world";
+import { MARKET_SCALE } from "../city/harbor";
 import { fingerprint } from "../iso/fingerprint";
 
 const scene = (): CityScene => city(createRng(7), createRng(8), createRng(9));
@@ -35,9 +36,12 @@ const isTowerPiece = (s: Solid) => {
 };
 
 // the south row in front of the tower: PLAZA.x - 6 .. PLAZA.x + PLAZA.w + 6, the band that the controller's ruling caps at 10
-const ROW_SOUTH = ROWS[3], FRONT_X0 = PLAZA.x - 6, FRONT_X1 = PLAZA.x + PLAZA.w + 6;
+const ROW_SOUTH = ROWS[4], FRONT_X0 = PLAZA.x - 6, FRONT_X1 = PLAZA.x + PLAZA.w + 6;
 
-const CITY_MATS: readonly Material[] = ["office", "officeDark", "glass", "asphalt", "paving", "plaza", "curtain", "stone", "copper", "leaf", "leafDark", "water", "steel", "rust", "plaster", "terracotta", "marble", "awning", "deck"];
+const CITY_MATS: readonly Material[] = ["office", "officeDark", "glass", "asphalt", "paving", "plaza", "curtain", "stone", "copper", "leaf", "leafDark", "water", "steel", "rust", "plaster", "terracotta", "marble", "awning", "deck", "rail",
+  "brick", "sheetTeal", "concrete", "hull", "whitewash", "rock", // dock inlet (#326)
+  // warehouses and freight yard (#325): reconversion kit, containers and the dock
+  "sheetGreen", "boxRust", "boxBlue", "boxGrey", "boxGreen", "boxOrange"];
 
 describe("city", () => {
   it("is deterministic per seed", () => {
@@ -45,14 +49,14 @@ describe("city", () => {
     expect(JSON.stringify(city(createRng(7), createRng(8), createRng(9)))).not.toBe(JSON.stringify(city(createRng(8), createRng(8), createRng(9))));
   });
 
-  it("everything falls in the Resume zone except the belt jungle, and uses only city materials", () => {
+  it("everything falls in the Resume zone except the cones, and uses only city materials", () => {
     for (const s of all(scene())) {
       const b = bounds(s);
       expect(b.min.x).toBeGreaterThanOrEqual(WORLD.x0 - 3); expect(b.max.x).toBeLessThanOrEqual(ZONE_SPLIT_X + 1); // the district grows up to the west edge of the world
       expect(b.max.y).toBeLessThanOrEqual(WORLD.y1 + 1);
       if (s.kind !== "cone") expect(b.min.y).toBeGreaterThanOrEqual(ZONE_SPLIT_Y - 1);
       expect(CITY_MATS).toContain(s.mat);
-      if (s.mat === "steel" || s.mat === "rust") expect(["prism", "cylinder", "vault"]).toContain(s.kind); // only furniture, cars and the quay sheds
+      if (s.mat === "steel" || s.mat === "rust") expect(["prism", "cylinder", "vault", "beam"]).toContain(s.kind); // only furniture, cars, the quay sheds and the derelict hall's trusses
     }
     const mats = new Set(all(scene()).map((s) => s.mat));
     for (const m of ["plaster", "terracotta", "marble", "awning"] as const) expect(mats.has(m)).toBe(true);
@@ -61,7 +65,7 @@ describe("city", () => {
   it("there is one plinth per built block and the buildings with a facade fall in their block", () => {
     const s = scene();
     const plinths = s.solids.filter((x) => x.kind === "prism" && x.mat === "paving" && x.h === PLINTH_H && x.at.z === 0 && x.w === 24 && x.d === 18);
-    expect(plinths.length).toBeGreaterThanOrEqual(40);
+    expect(plinths.length).toBeGreaterThanOrEqual(45); // 40 old ones plus row 92 and the two new east blocks (#320), minus the recipes with their own plinth
     const buildings = s.solids.filter((x) => (x.kind === "prism" || x.kind === "poly" || x.kind === "cylinder") && x.facade !== undefined);
     expect(buildings.length).toBeGreaterThanOrEqual(90);
     for (const b of buildings) {
@@ -69,6 +73,35 @@ describe("city", () => {
       if (b.kind === "prism" && b.mat === "paving" && b.at.z === -1) continue; // the promenade walls carry an arcade, they are not buildings
       expect(b.kind !== "prism" || b.h <= (inDistrict(b) || inFixed(b) ? 24 : MAX_BUILDING_H)).toBe(true);
       expect(blocks().some((blk) => inRect(bounds(b), blk))).toBe(true); // inside a block
+    }
+  });
+
+  it("freight lots (#325): a freightShed or openDock each, each on a 24 × 13 paving plinth (#142: neither brings ground)", () => {
+    const s = scene(), lots = blocks().filter((b) => b.kind === "freight");
+    const plinths = s.solids.filter((x) => x.kind === "prism" && x.mat === "paving" && x.h === PLINTH_H && x.at.z === 0 && x.w === 24 && x.d === FREIGHT_ROW.d);
+    const placed = lots.map((b) => s.placed.find((p) => p.placed.block.x === b.x && p.placed.block.y === b.y)!);
+    for (const p of placed) expect(["freightShed", "openDock"]).toContain(p.placed.recipe);
+    expect(placed.every((p) => p.piece.ground.length === 0)).toBe(true);
+    expect(plinths.map((x) => x.kind === "prism" && `${x.at.x},${x.at.y}`)).toEqual(lots.map((b) => `${b.x},${b.y}`));
+  });
+
+  it("the covered market stands on (72, 92): steel 0.4² pillars, stalls inside, everything within its lot (+0.8 awnings) (#325)", () => {
+    const s = scene(), m = s.placed.find((p) => p.placed.block.x === 72 && p.placed.block.y === ROWS[0])!;
+    expect(m.placed.recipe).toBe("coveredMarket");
+    const own = s.solids.slice(m.solidOffset, m.solidOffset + m.piece.solids.length);
+    expect(own.filter((q) => q.kind === "prism" && q.mat === "steel" && q.w === 0.4 && q.d === 0.4).length).toBeGreaterThanOrEqual(4);
+    expect(own.filter((q) => q.kind === "prism" && q.h === 1.8).length).toBeGreaterThanOrEqual(6);
+    const lot = m.placed.lot;
+    expect(lot).toMatchObject({ x: 73.5, y: 93.5, w: 21, d: 15 });
+    for (const q of own) expect(inRect(bounds(q), { x: lot.x - 0.8, y: lot.y - 0.8, w: lot.w + 1.6, d: lot.d + 1.6 }), JSON.stringify(q).slice(0, 100)).toBe(true);
+  });
+
+  it("no car on the railyards or the freight lots (#320)", () => {
+    for (const x of scene().solids) {
+      if (!(x.kind === "prism" && x.w === CAR.w && x.d === CAR.d && x.h === 1.2)) continue;
+      const b = bounds(x);
+      if (b.max.x > 96) continue;
+      expect(b.min.y >= ROWS[0] && (b.max.y <= ROWS[0] + 20 || b.min.y >= 158), `${b.min.x},${b.min.y}`).toBe(true); // row 92 parks only on its south curb (y 110.4..111.9): its north side is the seam fence
     }
   });
 
@@ -110,7 +143,7 @@ describe("city", () => {
     for (const c of s.solids) {
       if (c.kind !== "cone" || (c.mat === "stone" && c.at.x >= BRIDGE.x0 && c.at.x <= BRIDGE.x1 && c.at.y >= BRIDGE.y0 && c.at.y <= BRIDGE.y1)) continue; // the finials of the bridge obelisks are stone, not trees
       // south of the district the east bank is jungle with no grid (there are no blocks on the east side anymore)
-      const onCity = c.at.x >= CITY_EDGE.west && c.at.x < PROMENADE.x0 && c.at.y >= CITY_EDGE.north && c.at.y < CITY_EDGE.south && !(c.at.x > QUAY_X && c.at.x < EAST_RING.x0) && !(c.at.x > EAST_RING.x0 && c.at.y >= DISTRICT_BANK_Y);
+      const onCity = c.at.x >= CITY_EDGE.west && c.at.x < PROMENADE.x0 && c.at.y >= ESTUARY_Y0 + 12 && c.at.y < CITY_EDGE.south && !(c.at.x > QUAY_X && c.at.x < EAST_RING.x0) && !(c.at.x > EAST_RING.x0 && c.at.y >= DISTRICT_BANK_Y);
       if (onCity) expect(inBlock(c.at.x, c.at.y) || inCrater(c.at.x, c.at.y) || (c.at.y >= BOULEVARD.y0 && c.at.y <= BOULEVARD.y1)).toBe(true);
     }
     expect(s.accents.length).toBeGreaterThan(6);
@@ -144,7 +177,7 @@ describe("city", () => {
 
   it("avenue: boulevard, lanes, crosswalks and traffic lights; street lamps only on avenue, bridge, plaza and promenade", () => {
     const s = scene();
-    const strips = s.ground.filter((g) => g.kind === "strip");
+    const strips = s.ground.filter((g) => g.kind === "strip" && g.mat !== "rail"); // the main line (#319) is counted apart
     expect(strips.length).toBeGreaterThan(60);
     expect(strips.length).toBeLessThanOrEqual(150);
     expect(strips.every((g) => g.kind === "strip" && g.mat === "paving" && g.z > 0 && g.z < 0.1)).toBe(true);
@@ -170,8 +203,9 @@ describe("city", () => {
     expect(lamps.length).toBeGreaterThanOrEqual(20);
     for (const l of lamps) {
       if (l.kind !== "dot") continue;
-      const onAvenue = l.at.y >= AVENUE.y0 - 3 && l.at.y <= AVENUE.y1 + 3, onPromenade = l.at.x >= PROMENADE.x0, onPlaza = inRect({ min: l.at, max: l.at }, PLAZA);
-      expect(onAvenue || onPromenade || onPlaza || inFootbridge(l.at.x, l.at.y) || inBlockXY(l.at.x, l.at.y)).toBe(true); // the kit recipes bring their own lights (construction site, helipad, beacon, station lamps)
+      const onAvenue = l.at.y >= AVENUE.y0 - 3 && l.at.y <= AVENUE.y1 + 3, onPromenade = l.at.x >= PROMENADE.x0, onPlaza = inRect({ min: l.at, max: l.at }, PLAZA), onInlet = l.at.x >= DARSENA.x0 - 2 && l.at.x <= DARSENA.x1 + 2 && l.at.y >= DARSENA.y0 - 2 && l.at.y <= DARSENA.y1 + 2; // the two lamps of the inlet walls (#326)
+      const onYard = l.at.y === 150.3 && [-39.7, 0.3, 40.3, 80.3].includes(l.at.x); // the four lamps of the freight yard (#325)
+      expect(onAvenue || onPromenade || onPlaza || onInlet || onYard || inFootbridge(l.at.x, l.at.y) || inBlockXY(l.at.x, l.at.y)).toBe(true); // the kit recipes bring their own lights (construction site, helipad, beacon, station lamps)
     }
   });
 
@@ -212,7 +246,7 @@ describe("city", () => {
 
   it("cars: a single size, they do not fall on a block or a crater, and none overlaps another", () => {
     const s = scene();
-    const cars = s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism" && (x.mat === "steel" || x.mat === "rust") && x.h === 1.2);
+    const cars = s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism" && (x.mat === "steel" || x.mat === "rust") && x.h === 1.2 && !(x.at.x === MARKET_SCALE.x && x.at.y === MARKET_SCALE.y && x.w === MARKET_SCALE.w) && !(x.w === 1.5 && x.d === 3)); // not the fish market scale (#326) nor the buffer stop of the siding (#325)
     expect(cars.length).toBeGreaterThanOrEqual(20);
     expect(new Set(cars.map((c) => `${c.w}x${c.d}x${c.h}`))).toEqual(new Set([`${CAR.w}x${CAR.d}x1.2`]));
     for (const c of cars) {
@@ -226,11 +260,17 @@ describe("city", () => {
     }
   });
 
-  it("jungle: north belt, east bank and craters, more than 60 cones (the west and south edges belong to the tech district)", () => {
+  it("the main line crosses the strip: two rails and a ballast bed from WORLD.x0 to the station land (#319)", () => {
+    const rails = scene().ground.filter((g) => g.kind === "strip" && g.mat === "rail");
+    expect(rails.filter((g) => g.kind === "strip" && g.width === 0.5 && g.path[0]!.x === WORLD.x0).map((g) => g.kind === "strip" && g.path[0]!.y).sort()).toEqual([131, 134]);
+    expect(rails.some((g) => g.kind === "strip" && g.width === 5)).toBe(true);
+  });
+
+  it("jungle: east bank and craters, more than 60 cones (the west and south edges belong to the tech district)", () => {
     const s = scene();
     const cones = s.solids.filter((x) => x.kind === "cone" && (x.mat === "leaf" || x.mat === "leafDark"));
     expect(cones.length).toBeGreaterThan(60);
-    expect(cones.some((c) => c.kind === "cone" && c.at.y < CITY_EDGE.north)).toBe(true);        // belt
+    for (const c of cones) if (c.kind === "cone" && c.at.y < ROWS[1]! && c.at.x < QUAY_X) expect(inBlock(c.at.x, c.at.y), `${c.at.x},${c.at.y}`).toBe(true); // no seam belt since #319: in the new strip only the courtyard trees of its blocks (#320)
     expect(cones.some((c) => c.kind === "cone" && c.at.x < CITY_EDGE.west)).toBe(false);        // west edge: asphalt of the tech district
     expect(cones.some((c) => c.kind === "cone" && c.at.x > QUAY_X && c.at.x < EAST_RING.x0)).toBe(true); // east bank
     for (const cr of CRATERS) expect(cones.some((c) => c.kind === "cone" && inCrater(c.at.x, c.at.y) && Math.hypot(c.at.x - cr.x, c.at.y - cr.y) <= cr.r)).toBe(true);
@@ -301,8 +341,10 @@ describe("city", () => {
   // A deliberate change to a recipe without ground moves them; re-record then, as with world-baseline.
   // #143: a recipe with ground drawing more rng (courtyardO's 2×2 patio tiles) moves the pieces after it too;
   // seeds 1, 2 and 4 (the ones with a paved courtyardO) re-recorded once.
-  it("pieces without ground are identical to the pinned plinth pieces (860a582; seeds 1, 2, 4 re-recorded at #143)", () => {
-    const MAIN = ["106b1005", "9e2c087f", "46251f13", "12dc7a05", "8841fb6b"];
+  // #56: the seam at y 90 adds rows, neighbourhoods and recipes (and openDock goes onto a plinth); all five re-recorded once.
+  // That lifting equals running the recipe PLINTH_H higher is checked per recipe in piece.test.
+  it("pieces without ground are identical to the pinned plinth pieces (860a582; re-recorded at #143 and #56)", () => {
+    const MAIN = ["0a1e592f", "7a46f239", "ff800453", "c9c106ac", "1db2537f"];
     for (let s = 1; s <= 5; s++) {
       const c = city(createRng(s), createRng(s + 1), createRng(s + 2));
       const plain = c.placed.filter((q) => q.piece.ground.length === 0).map((q) => q.piece);

@@ -79,6 +79,16 @@ describe("shipyard-anim", () => {
     expect(maxFrames).toBeLessThanOrEqual(3);
   });
 
+  it("the sparks are spark dots of r 0.6", () => {
+    const { anim } = setup();
+    let seen = 0;
+    for (let t = 0; t < 20000; t += 100) {
+      anim.tick(100);
+      for (const a of anim.sparks()) { seen++; expect(a).toMatchObject({ kind: "dot", r: 0.6, color: "spark" }); }
+    }
+    expect(seen).toBeGreaterThan(5);
+  });
+
   it("with reduced-motion nothing ever changes", () => {
     const { scene, anim } = setup(true);
     const y = scene.trolley.at.y;

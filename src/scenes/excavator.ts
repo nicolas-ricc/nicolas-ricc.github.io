@@ -7,7 +7,7 @@ import type { Box } from "../world/frame";
 
 /** SRs 1300 bucket-wheel excavator (TAKRAF) in the rail yard: chassis at `at`, bow to the NE (`heading`); the wheel axle sits `axleDx` from the chassis, at z `axleZ`. */
 export const EXCAVATOR = {
-  at: { x: -30, y: 76 }, heading: -Math.PI / 4, axleDx: 16 * Math.SQRT2, // ≈ 22.63: chosen so the axle lands at (−14, 60)
+  at: { x: -30, y: 70 }, heading: -Math.PI / 4, axleDx: 16 * Math.SQRT2, // ≈ 22.63: chosen so the axle lands at (−14, 54), 6 north so `excavatorBox()` ends at y ≤ 88.4, north of the seam fence
   axleZ: 9.2,
   wheel: { r: 5.5, width: 0.5, sides: 28, slots: 28, buckets: { n: 14, depth: 1.2, teeth: 2 } },
   pile: { r: 6.5, h: 4.5 },

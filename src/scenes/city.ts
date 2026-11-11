@@ -7,16 +7,19 @@ import { seat } from "../kit/piece";
 import { STYLES } from "../kit/styles";
 import type { Piece } from "../kit/types";
 import { prism, PLINTH_H } from "./city-pieces";
+import { blocks } from "./city-grid";
 import { lights, solidBoxes, visibleLights, WINDOW_ALPHA, type CityLights, type FixedLight } from "../city/lights";
 import { streets } from "../city/streets";
+import { freightYard, railLands } from "../city/rail-lands";
+import { harbor } from "../city/harbor";
 import { bridge, collapsed, cars, greenery, promenade, plazaAndTower, westQuay, type TowerLights } from "../city/fixed";
-import { FOOTBRIDGE_LOT, WATER_TOWER_BLOCK, assign, waterTowerLot, type Placed } from "../city/zoning";
+import { FOOTBRIDGE_LOT, WATER_TOWER_BLOCK, assign, isBare, waterTowerLot, type Placed } from "../city/zoning";
 
 /**
  * Resume: orchestrator of the city. The zoning (src/city/zoning.ts) assigns
  * neighborhood, recipe, lot and tone per block; here each piece is built with
  * the kit, the fixed pieces are added (plaza and tower, bridge, riverside,
- * promenade, collapse, jungle, cars; src/city/fixed.ts) and the streets. The
+ * promenade, collapse, jungle, cars; src/city/fixed.ts; the inlet works, src/city/harbor.ts) and the streets. The
  * terrain (terrain.ts) is the asphalt.
  * Spec: docs/superpowers/specs/2026-10-15-resume-nivel-2-kit-zonificacion-luces-design.md §6.
  */
@@ -49,14 +52,18 @@ export function city(rng: Rng, districtRng: Rng, lightsRng: Rng): CityScene {
     // the sign consumes the rng after the recipe, so the recipe draws do not depend on how many slots there are
     if (p.neighborhood === "district") for (const s of piece.slots) if (s.kind === "sign") signs.push({ kind: "poly", pts: s.pts, color: districtRng.chance(0.5) ? "cyan" : "magenta", alpha: 1 });
   }
+  for (const b of blocks()) if (isBare(b)) solids.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
   const tower = plazaAndTower(solids, ground, fixed, rng);
   const host = placed.find((q) => q.placed.block.x === WATER_TOWER_BLOCK.x && q.placed.block.y === WATER_TOWER_BLOCK.y);
   if (!host?.piece.courtyard) throw new Error("the water tower block has no courtyard");
   add(recipe("waterTower")(waterTowerLot(host.piece.courtyard, host.placed.lot.z), rng, STYLES.residential));
   add(recipe("footbridge")(FOOTBRIDGE_LOT, rng, STYLES.residential));
   streets(ground, solids, fixed);
+  railLands(ground, solids);
   bridge(solids, fixed);
   westQuay(solids, fixed);
+  harbor(solids, fixed, rng);
+  freightYard(ground, solids, fixed, rng);
   const promenadeLights = promenade(solids, fixed);
   collapsed(solids, rng);
   greenery(solids, rng);

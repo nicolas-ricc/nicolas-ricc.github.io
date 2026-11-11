@@ -1,6 +1,8 @@
 import type { Accent } from "../iso/accent";
+import { chair, foodTruck, garland, place, table } from "../kit/props";
 import { polyline, v3, type PolyPoint, type Vec2, type Vec3 } from "../iso/geometry";
-import { bounds, type Bounds, type Solid } from "../iso/solids";
+import type { Facade } from "../iso/facade";
+import { bounds, type Bounds, type Plate, type Solid } from "../iso/solids";
 import type { AccentColor, Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { FAIR, bayShoreX, bayWater, fairAt } from "./sprawl-grid";
@@ -9,12 +11,14 @@ import { FAIR, bayShoreX, bayWater, fairAt } from "./sprawl-grid";
  * The beach fair, north of the factory over the bay (Coney Island
  * look): boardwalk with street lamps, pier with pavilion, Ferris
  * wheel, wooden roller coaster, carousel, drop tower, arcade hall,
- * booths, bumper cars, umbrellas, gate. It is the only place with
+ * ghost train, mirror house, giant slide, log flume (animated logs),
+ * varied booth row, food court, bumper cars, umbrellas, gate. It is the only place with
  * accents of all three colors. The moving pieces (wheel, train, tower
  * gondola) are assembled by the animator with the pure builders here.
- * Spec: docs/superpowers/specs/2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md §4.3.
+ * Spec: docs/superpowers/specs/2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md §4.3;
+ * the attractions, booth row and food court: docs/superpowers/specs/2026-10-15-costura-90-portfolio-denso-galpones-feria-design.md §8 (#327).
  */
-export interface FairScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; wheelAxis: Vec3; drop: { at: Vec3; h: number }; neon: { marquee: Vec3[]; lift: Vec3[]; column: Vec3[] }; arcadeSigns: [Accent, Accent] }
+export interface FairScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; wheelAxis: Vec3; drop: { at: Vec3; h: number }; neon: { marquee: Vec3[]; lift: Vec3[]; column: Vec3[]; ghost: Vec3[]; mirror: Vec3[] }; arcadeSigns: [Accent, Accent] }
 
 /** On the southeast beach, between the carousel and the boardwalk: 20 u radius so it reads from the cover. Position chosen so nothing static ends up in front of it on screen (the test's rule). */
 export const WHEEL = { x: 216, y: -204, r: 20, hub: 23, sides: 20 } as const;
@@ -30,11 +34,26 @@ export const ARCADE = { x: 96, y: -192 } as const;
 export const BUMPER = { x: 130, y: -194 } as const;
 /** Amber sign of the gate (south face): the neon marquee lines up with it. */
 const GATE_SIGN = { x0: 86.5, x1: 93.5, y: -177.98, z0: 6.1, z1: 7 } as const;
-export const FAIR_MATS: readonly Material[] = ["deck", "whitewash", "rust", "steel", "copper", "stone", "concrete", "plaza", "paving", "sand", "rail", "glass", "hull", "leaf", "leafDark"];
-const BOOTH_MATS: readonly Material[] = ["whitewash", "rust", "copper"];
+/** Ghost train: stone hall on the boardwalk side of the pier, doors and track on its south face. */
+export const GHOST = { x: 98, y: -258, w: 20, d: 12 } as const;
+/** Mirror house: whitewash hall next to the ghost train, glass-mirror pediment on its south face. */
+export const MIRRORS = { x: 124, y: -258, w: 16, d: 12 } as const;
+/** Giant slide: deck tower at the north end of the fair, helical ramp of 24 treads (3 turns) around it. */
+export const SLIDE = { x: 118, y: -292, r: 5, h: 14 } as const;
+/** Log flume: deck channel over the north beach, from `x0` (station, z 2.5) over the boardwalk (flat at z 6) and a drop into the bay. */
+export const FLUME = { x0: 160, y: -296, w: 3 } as const;
+const FLUME_AXIS = FLUME.y + FLUME.w / 2;
+/** East end of the drop: 1 u from the lowest shore point of the channel's band (the shore recedes toward y −293). */
+export const FLUME_X1: number = Math.min(...Array.from({ length: 7 }, (_, k) => bayShoreX(FLUME.y + k * 0.5))) - 1;
+export const FLUME_DROP_X0: number = FLUME_X1 - 6;
+const FLUME_LIFT_X1 = 172;
+export const FLUME_PATH: readonly Vec3[] = [v3(FLUME.x0, FLUME_AXIS, 2.5), v3(FLUME_LIFT_X1, FLUME_AXIS, 6), v3(FLUME_DROP_X0, FLUME_AXIS, 6), v3(FLUME_X1, FLUME_AXIS, 0.2)];
+/** Food-truck court at the entrance, south of the arcade: poles at the corners and the middle are centers, 0.65 u outside the box. */
+export const FOOD_COURT = { x0: 100, x1: 160, y0: -176, y1: -170 } as const;
+export const FAIR_MATS: readonly Material[] = ["shallow", "deck", "whitewash", "rust", "steel", "copper", "stone", "concrete", "plaza", "paving", "sand", "rail", "glass", "hull", "leaf", "leafDark", "signal", "livery", "safety", "awning"];
 const WATER_Z = -1;
 
-const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material, extra: { roof?: "gable"; facade?: { floors: number; cols: number; base?: "glass" } } = {}): Solid => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat, ...extra });
+const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material, extra: { roof?: "gable"; facade?: Facade; plates?: Plate[] } = {}): Solid => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat, ...extra });
 const cyl = (x: number, y: number, z: number, r: number, h: number, mat: Material, sides = 8): Solid => ({ kind: "cylinder", at: v3(x, y, z), r, h, mat, sides });
 const cone = (x: number, y: number, z: number, r: number, h: number, mat: Material, sides = 8): Solid => ({ kind: "cone", at: v3(x, y, z), r, h, mat, sides });
 const dot = (x: number, y: number, z: number, r: number, color: AccentColor): Accent => ({ kind: "dot", at: v3(x, y, z), r, color });
@@ -93,11 +112,28 @@ export function dropSolids(z: number): Solid[] {
   return out;
 }
 
+const FLUME_LINE = polyline(FLUME_PATH);
+const FLUME_LENGTH = FLUME_LINE.length;
+export const flumeLength = (): number => FLUME_LENGTH;
+
+/** Point and heading of the channel at `dist` from the station (interpolated z); the logs jump from the bay back to the start, so the distance wraps. */
+export function flumeAt(dist: number): PolyPoint {
+  return FLUME_LINE.at(((dist % FLUME_LENGTH) + FLUME_LENGTH) % FLUME_LENGTH);
+}
+
+/** Two logs at `dist` and `dist − 8` along the channel. */
+export function logSolids(dist: number): Solid[] {
+  return [0, 8].map((back): Solid => { const p = flumeAt(dist - back); return { kind: "hull", at: v3(p.x, p.y, p.z), len: 2.4, beam: 1, h: 0.6, mat: "deck", heading: p.heading }; });
+}
+
 // ---------------------------------------------------------------- static scene
+
+/** West edge of the plank stretch that starts at `y`: the shore shifts up to 25 u over 18 of length, so the whole stretch stays on sand. */
+const boardwalkX = (y: number): number => Math.min(bayShoreX(y), bayShoreX(y + 9), bayShoreX(y + 18)) - 16;
 
 function boardwalk(out: Solid[], accents: Accent[]): void {
   for (let y = -300; y < -172; y += 18) {
-    const x = Math.min(bayShoreX(y), bayShoreX(y + 9), bayShoreX(y + 18)) - 16; // the shore shifts up to 25 u over 18 of length: the whole stretch stays on sand
+    const x = boardwalkX(y);
     if (!onFair(x, y, BOARDWALK_W, 18)) continue;
     out.push(prism(x, y, 0, BOARDWALK_W, 18, 0.6, "deck"));
     for (let py = y + 3; py < y + 18; py += 6) out.push(prism(x + BOARDWALK_W - 0.4, py, 0.6, 0.3, 0.3, 1, "steel")); // railing on the water side
@@ -153,7 +189,76 @@ function neon(drop: { at: Vec3; h: number }): FairScene["neon"] {
     marquee: Array.from({ length: 8 }, (_, k) => v3(GATE_SIGN.x0 + (k * (GATE_SIGN.x1 - GATE_SIGN.x0)) / 7, GATE_SIGN.y - 0.02, 7.6)),
     lift: COASTER_PATH.slice(0, LIFT_SEGMENTS + 1).map((p) => v3(p.x, p.y, p.z + 0.8)),
     column: Array.from({ length: 6 }, (_, k) => v3(DROP.x, DROP.y + 0.8, z0 + (k * (z1 - z0)) / 5)),
+    ghost: Array.from({ length: 8 }, (_, k) => v3(GHOST.x + 0.5 + (k * 19) / 7, GHOST.y + GHOST.d + 1.48, 6.6)),
+    mirror: Array.from({ length: 6 }, (_, k) => v3(MIRRORS.x + 1.5 + (k * 13) / 5, MIRRORS.y + MIRRORS.d + 0.02, 7.8)),
   };
+}
+
+/** Ghost train: stone hall with a gothic tower on its roof (southeast corner), copper marquee, two doors with a track each and a skull sign. */
+export function ghostTrain(out: Solid[], accents: Accent[]): void {
+  const { x, y, w, d } = GHOST, ys = y + d; // ys: south face
+  out.push(prism(x, y, 0, w, d, 6, "stone", { facade: { floors: 1, cols: 5, base: "portico" } }));
+  out.push(prism(x + 16, ys - 4, 6, 4, 4, 8, "stone"), cone(x + 18, ys - 2, 14, 3, 4, "stone", 4)); // tower on the roof: two boxes nested would break the AABB order
+  out.push(prism(x, ys, 6, w, 1.5, 0.4, "copper"));
+  for (const dx of [4, 14]) {
+    out.push(rotBox(x + dx - 0.6, ys + 0.4, 1.2, 0.2, 0.5, 0, 2, "rust"), rotBox(x + dx + 0.6, ys + 0.4, 1.2, 0.2, -0.5, 0, 2, "rust"));
+    out.push({ kind: "strip", path: [{ x: x + dx, y: ys }, { x: x + dx, y: ys + 3 }], width: 0.5, z: 0.05, mat: "rail" });
+  }
+  const sx = x + 18, sz = 7, ps = Array.from({ length: 8 }, (_, k) => { const a = (k / 8) * Math.PI * 2 + Math.PI / 8; return v3(sx + 1.2 * Math.cos(a), ys - 0.02, sz + 1.2 * Math.sin(a)); });
+  accents.push({ kind: "poly", pts: ps, color: "windowCool", alpha: 0.9 });
+}
+
+/** Mirror house: arcade-faced whitewash hall, pediment with three glass mirrors and an amber garland. */
+export function mirrorHouse(out: Solid[], accents: Accent[]): void {
+  const { x, y, w, d } = MIRRORS, ys = y + d; // ys: south face
+  out.push(prism(x, y, 0, w, d, 6, "whitewash", { facade: { floors: 1, cols: 4, base: "arcade" } }));
+  const mirrors: Plate[] = ([[0.1, 0.3], [0.4, 0.6], [0.7, 0.9]] as const).map(([u0, u1]) => ({ wall: 2, shape: "rect", u0, u1, z0: 6.2, z1: 7.3, mat: "glass", toneOffset: 2 }));
+  out.push(prism(x, ys - 1, 6, w, 1, 1.5, "whitewash", { plates: mirrors }));
+  accents.push(...garland([v3(x, ys + 0.1, 7.5), v3(x + 8, ys + 0.1, 6.9), v3(x + 16, ys + 0.1, 7.5)]));
+}
+
+/** Giant slide: deck tower with a copper cap and a ladder, 24 stepped treads spiralling down from z 13 to 0.5 with outer rails, amber tip light. */
+export function slide(out: Solid[], accents: Accent[]): void {
+  const { x, y, r, h } = SLIDE, n = 24;
+  out.push(prism(x - 2, y - 2, 0, 4, 4, h, "deck"), cone(x, y, h, 3, 2, "copper"), prism(x - 2.6, y - 1, 0, 0.6, 2, h, "steel"));
+  for (let z = 2; z <= h; z += 2) out.push({ kind: "beam", from: v3(x - 2.65, y - 1, z), to: v3(x - 2.65, y + 1, z), w: 0.1, h: 0.1, mat: "steel" });
+  for (let k = 0; k < n; k++) {
+    const a = (6 * Math.PI * (k + 0.5)) / n, z = 13 - (12.5 * k) / (n - 1);
+    const cx = x + r * Math.cos(a), cy = y + r * Math.sin(a);
+    out.push(rotBox(cx, cy, 2.2, 1.2, a + Math.PI / 2, z, 0.3, "deck"));
+    const hw = 1.1, tx = -Math.sin(a), ty = Math.cos(a), ox = x + 5.6 * Math.cos(a), oy = y + 5.6 * Math.sin(a); // rail at radius 5.6, tangent to the tread
+    out.push({ kind: "beam", from: v3(ox - tx * hw, oy - ty * hw, z + 0.8), to: v3(ox + tx * hw, oy + ty * hw, z + 0.8), w: 0.1, h: 0.1, mat: "steel" });
+  }
+  accents.push(dot(x, y, 16.3, 0.5, "amber"));
+}
+
+/** Log flume: raised deck channel (lift ramp, flat with water over the boardwalk, drop ramp to the bay), pillars and splash. */
+export function flume(out: Solid[], accents: Accent[]): void {
+  const { x0, y } = FLUME, ay = FLUME_AXIS;
+  out.push({ kind: "ramp", at: v3(x0, y, 2.5), w: FLUME_LIFT_X1 - x0, d: FLUME.w, h: 3.5, mat: "deck", dir: "w" });
+  out.push({ kind: "beam", from: v3(x0, ay, 2.5), to: v3(FLUME_LIFT_X1, ay, 6), w: 0.3, h: 0.3, mat: "rust" });
+  out.push(prism(FLUME_LIFT_X1, y, 5.4, FLUME_DROP_X0 - FLUME_LIFT_X1, FLUME.w, 0.6, "deck"));
+  out.push(prism(FLUME_LIFT_X1, ay - 1, 6, FLUME_DROP_X0 - FLUME_LIFT_X1, 2, 0.05, "shallow")); // water: a thin raised solid on the trough (flat strips are drawn in the ground layer, under it)
+  out.push({ kind: "ramp", at: v3(FLUME_DROP_X0, y, 0.2), w: 6, d: FLUME.w, h: 5.8, mat: "deck", dir: "e" });
+  const walkY = -300 + 18 * Math.floor((ay + 300) / 18), walkX = boardwalkX(walkY); // the plank stretch under the axis
+  for (let x = x0; x < FLUME_DROP_X0; x += 6) {
+    const cx = x < FLUME_LIFT_X1 ? x : Math.max(x, FLUME_LIFT_X1 + 0.2); // flat-section pillars start clear of the lift ramp's end
+    if (cx + 0.2 > walkX && cx - 0.2 < walkX + BOARDWALK_W) continue; // no pillar through the boardwalk
+    out.push(prism(cx - 0.2, ay - 0.2, 0, 0.4, 0.4, x < FLUME_LIFT_X1 ? 2.5 : 5.4, "steel"));
+  }
+  for (let k = 0; k < 6; k++) { const py = y + 0.5 + (k % 3); accents.push(dot(Math.max(FLUME_X1 + 1.5 + k * 0.5, bayShoreX(py) + 0.5), py, 0.3 + (k % 2) * 0.7, 0.3, "windowCool")); } // over the water, east of the drop
+}
+
+/** Food-truck court: five trucks facing south, 8 tables with 2 chairs each, three poles with a bulb garland at z 3. */
+export function foodCourt(out: Solid[], accents: Accent[]): void {
+  TRUCK_TONES.forEach((mat, k) => place(out, accents, foodTruck(v3(102 + 12 * k, -176, 0), mat, "s")));
+  for (let k = 0; k < 8; k++) {
+    const x = 103 + 7.5 * k;
+    out.push(...table(v3(x, -172.5, 0)), ...chair(v3(x - 0.7, -172.25, 0)), ...chair(v3(x + 1.2, -172.25, 0)));
+  }
+  const poles = [v3(100, -176.5, 3), v3(130, -170.5, 3), v3(160, -176.5, 3)];
+  for (const p of poles) out.push(prism(p.x - 0.15, p.y - 0.15, 0, 0.3, 0.3, 3, "steel"));
+  accents.push(...garland(poles));
 }
 
 function dropTower(out: Solid[], accents: Accent[]): void {
@@ -169,14 +274,85 @@ function arcade(out: Solid[]): [Accent, Accent] {
   return [sign(x + 7.3, x + 16.7, y + 11.42, 6.3, 8.1, "magenta"), sign(x + 7.3, x + 16.7, y + 11.42, 6.3, 8.1, "amber")]; // only the animated layer `fair.signs` draws them
 }
 
-function booths(out: Solid[], accents: Accent[]): void {
-  for (let k = 0; k < 8; k++) {
-    const y = -294 + k * 12, x = bayShoreX(y + 1.5) - 16 - 6;
-    if (!onFair(x, y, 4, 3)) continue;
-    out.push(prism(x, y, 0, 4, 3, 2.8, BOOTH_MATS[k % 3]!, { roof: "gable" }));
-    accents.push(sign(x + 0.8, x + 3.2, y + 3.02, 1.2, 2, "amber"));
-    accents.push(dot(x + 2, y + 3.2, 2.9, 0.4, k % 3 === 2 ? "magenta" : "cyan"));
+export const BOOTH_ROW = { y0: -294, y1: -210, step: 6 } as const;
+export type BoothType = "food" | "foodTruck" | "shooting" | "cottonCandy" | "fortune" | "tickets" | "rings";
+export const BOOTH_TYPES: readonly BoothType[] = ["food", "foodTruck", "shooting", "cottonCandy", "fortune", "tickets", "rings"];
+const BOOTH_WEIGHTS: Readonly<Record<BoothType, number>> = { food: 30, foodTruck: 20, shooting: 15, cottonCandy: 10, fortune: 10, tickets: 10, rings: 5 };
+const BOOTH_TONES: readonly Material[] = ["whitewash", "rust", "copper"];
+const TRUCK_TONES: readonly Material[] = ["signal", "copper", "whitewash", "rust", "livery"];
+
+/** West corners of the booth row's slots (each one owns the box `x..x+4, y−1..y+5`): none under the flume channel, and shifted west when the boardwalk is in the way. */
+export function boothSlots(): Vec2[] {
+  const slots: Vec2[] = [];
+  for (let y: number = BOOTH_ROW.y0; y <= BOOTH_ROW.y1; y += BOOTH_ROW.step) {
+    if (y + 5 > FLUME.y && y - 1 < FLUME.y + FLUME.w && bayShoreX(y + 1.5) - 22 + 4 > FLUME.x0) continue; // under the channel
+    let x = bayShoreX(y + 1.5) - 22, k = 0;
+    const onWalk = (): boolean => { for (let wy = -300; wy < -172; wy += 18) { const wx = boardwalkX(wy); if (onFair(wx, wy, BOARDWALK_W, 18) && x < wx + BOARDWALK_W && wx < x + 4 && y - 1 < wy + 18 && wy < y + 5) return true; } return false; };
+    while (onWalk() && k++ < 20) x -= 0.5;
+    if (!onWalk() && onFair(x, y - 1, 4, 6)) slots.push({ x, y });
   }
+  return slots;
+}
+
+/** One type per slot: weighted draw; a repeat of the previous one is redrawn up to 5 times, then the next in the catalog. */
+export function boothTypes(rng: Rng, n: number = boothSlots().length): BoothType[] {
+  const total = BOOTH_TYPES.reduce((a, t) => a + BOOTH_WEIGHTS[t], 0);
+  const draw = (): BoothType => { let r = rng.next() * total; for (const t of BOOTH_TYPES) { r -= BOOTH_WEIGHTS[t]; if (r < 0) return t; } return BOOTH_TYPES[BOOTH_TYPES.length - 1]!; };
+  const out: BoothType[] = [];
+  for (let i = 0; i < n; i++) {
+    let t = draw();
+    for (let tries = 0; tries < 5 && t === out[i - 1]; tries++) t = draw();
+    if (t === out[i - 1]) t = BOOTH_TYPES[(BOOTH_TYPES.indexOf(t) + 1) % BOOTH_TYPES.length]!;
+    out.push(t);
+  }
+  return out;
+}
+
+/** Row of varied booths along the shore. `types` (one per slot) replaces the draw; the tones always come from `rng`. */
+export function boothRow(out: Solid[], accents: Accent[], rng: Rng, types: BoothType[] = boothTypes(rng)): void {
+  const slots = boothSlots();
+  if (types.length !== slots.length) throw new Error(`boothRow: ${types.length} types for ${slots.length} slots`);
+  slots.forEach(({ x, y }, k) => {
+    const type = types[k]!, cx = x + 2, cy = y + 1.5;
+    // south face where the sign hangs, its half width and height band
+    let face = y + 3, signX = cx, half = 1.2, z0 = 1.2, z1 = 2;
+    switch (type) {
+      case "food": {
+        out.push(prism(x, y, 0, 4, 3, 2.8, rng.pick(BOOTH_TONES), { roof: "gable" }));
+        const first = rng.chance(0.5);
+        for (let i = 0; i < 2; i++) out.push({ kind: "ramp", at: v3(x + i * 2, y + 3, 1.8), w: 2, d: 0.8, h: 0.4, mat: (i === 0) === first ? "signal" : "whitewash", dir: "s" });
+        z0 = 1; z1 = 1.7; // under the awning (z 1.8)
+        break;
+      }
+      case "foodTruck": {
+        const t = foodTruck(v3(x + 1, y - 1, 0), rng.pick(TRUCK_TONES), "e");
+        out.push(...t.solids); accents.push(...t.accents); face = y + 4; signX = x + 2.1; half = 1;
+        break;
+      }
+      case "shooting": // rust stall 4×3×2.6 open to the east: back (west) wall, north and south walls, roof; prizes hanging under the roof
+        out.push(prism(x, y, 0, 4, 0.3, 2.6, "rust"), prism(x, y + 2.7, 0, 4, 0.3, 2.6, "rust"), prism(x, y + 0.3, 0, 0.3, 2.4, 2.6, "rust"), prism(x, y, 2.6, 4, 3, 0.2, "rust"));
+        for (let i = 0; i < 4; i++) out.push(prism(x + 0.9 + i * 0.75, y + 1.3, 2.2, 0.4, 0.4, 0.4, i % 2 === 0 ? "safety" : "whitewash"));
+        break;
+      case "cottonCandy":
+        out.push(cyl(cx, cy, 0, 1.5, 2.5, "whitewash"), cone(cx, cy, 2.5, 1.8, 1, "signal"));
+        break;
+      case "fortune":
+        out.push(cyl(cx, cy, 0, 2, 1.5, "copper"), cone(cx, cy, 1.5, 2, 3.5, "copper")); face = cy + 2; z0 = 0.4; z1 = 1.2; // sign on the drum
+        accents.push(dot(cx, cy, 5.2, 0.4, "magenta")); // the tent's tip
+        break;
+      case "tickets":
+        out.push(prism(x + 1, y + 0.5, 0, 2, 2, 2.8, rng.pick(BOOTH_TONES), { roof: "gable" })); face = y + 2.5; half = 0.8;
+        break;
+      case "rings":
+        out.push(prism(x, y, 0, 4, 3, 0.8, "deck"));
+        for (let i = 0; i < 6; i++) out.push(cyl(x + 0.5 + i * 0.6, y + 0.8, 0.8, 0.15, 0.8, "steel"));
+        for (let i = 0; i < 3; i++) out.push(cyl(x + 0.8 + i * 1.2, y + 1.9, 0.8, 0.5, 0.3, "rust"));
+        z0 = 0.1; z1 = 0.7; // on the table's south face
+        break;
+    }
+    accents.push(sign(signX - half, signX + half, face + 0.02, z0, z1, "amber"));
+    accents.push(dot(signX, face + 0.2, z1 + 0.9, 0.4, k % 3 === 2 ? "magenta" : "cyan"));
+  });
 }
 
 function bumperCars(out: Solid[], accents: Accent[]): void {
@@ -199,12 +375,13 @@ const onSand = (b: Bounds): boolean => {
  * Stranded boat near `y0`: walks the shore (dy 0, +1, −1 … ±14) and, at each y, from 9 to 6 u from the water, until the
  * hull sits entirely on the fair's sand (`onSand`) and its footprint touches nothing in `taken`. At 9 u from the water it falls inside
  * the boardwalk (16 to 8 u from the shore) except where the shore shifts, so it moves closer to the water before
- * moving away in y. `null` if there is no room.
+ * moving away in y. Only if that pass finds nothing does a second one try 5 and 4 u from the water (a spot taken by a
+ * big attraction), so boats of scenes that already had room do not move. `null` if there is no room.
  */
 function boatAt(y0: number, heading: number, taken: readonly Bounds[]): Solid | null {
-  for (let i = 0; i <= 28; i++) {
+  for (const backs of [[9, 8, 7, 6], [5, 4]]) for (let i = 0; i <= 28; i++) {
     const y = y0 + (i % 2 ? (i + 1) / 2 : -i / 2);
-    for (const back of [9, 8, 7, 6]) {
+    for (const back of backs) {
       const hull: Solid = { kind: "hull", at: v3(bayShoreX(y) - back, y, 0), len: 5, beam: 1.8, h: 0.8, mat: "whitewash", heading, sheer: 0.3 };
       const b = bounds(hull);
       if (onSand(b) && taken.every((t) => !touch(t, b))) return hull;
@@ -216,8 +393,9 @@ function boatAt(y0: number, heading: number, taken: readonly Bounds[]): Solid | 
 function beach(out: Solid[], rng: Rng): void {
   let placed = 0, tries = 0;
   while (placed < 12 && tries++ < 200) {
-    const y = rng.int(-298, -176), x = bayShoreX(y) - rng.int(3, 7);
+    let y = rng.int(-298, -176), x = bayShoreX(y) - rng.int(3, 7);
     if (!fairAt(x, y) || bayWater(x, y)) continue;
+    if (x + 1.6 > FLUME.x0 && x - 1.6 < FLUME_X1 && y + 1.6 > FLUME.y && y - 1.6 < FLUME.y + FLUME.w) { y = -291.4; x = Math.min(x, bayShoreX(y) - 3); } // out from under the channel (and back from the shore there); no extra rng, so the boats' headings do not move
     out.push(prism(x - 0.12, y - 0.12, 0, 0.25, 0.25, 2, "steel"), cone(x, y, 2, 1.6, 0.7, rng.chance(0.5) ? "whitewash" : "rust", 8));
     placed++;
   }
@@ -232,7 +410,7 @@ function gate(out: Solid[], accents: Accent[]): void {
   for (const [y0, y1] of [[FAIR.y0 + 8, -182], [-172, FAIR.y1]] as const) if (y1 > y0) out.push(prism(FAIR.x0, y0, 0, 0.3, y1 - y0, 1.2, "steel"));
 }
 
-export function fair(rng: Rng): FairScene {
+export function fair(rng: Rng, opts: { legacyOnly?: boolean } = {}): FairScene {
   const solids: Solid[] = [], accents: Accent[] = [];
   boardwalk(solids, accents);
   pier(solids, accents);
@@ -241,9 +419,10 @@ export function fair(rng: Rng): FairScene {
   carousel(solids, accents);
   dropTower(solids, accents);
   const arcadeSigns = arcade(solids);
-  booths(solids, accents);
   bumperCars(solids, accents);
+  if (!opts.legacyOnly) { ghostTrain(solids, accents); mirrorHouse(solids, accents); slide(solids, accents); flume(solids, accents); foodCourt(solids, accents); }
   beach(solids, rng); // after the static solids: the boats look for free space among them
+  if (!opts.legacyOnly) boothRow(solids, accents, rng); // after the beach: its rng sequence (and the pinned boats) do not move
   gate(solids, accents);
   const drop = { at: v3(DROP.x, DROP.y, 1), h: DROP.h };
   return { ground: [], solids, accents, wheelAxis: v3(WHEEL.x, WHEEL.y, WHEEL.hub), drop, neon: neon(drop), arcadeSigns };

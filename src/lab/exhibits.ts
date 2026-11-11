@@ -3,6 +3,7 @@ import { v3 } from "../iso/geometry";
 import { shadowPolygon } from "../iso/light";
 import { Z_SCALE } from "../iso/project";
 import { campus } from "../kit/forms/modern";
+import { quayCraneAt } from "../kit/forms/industrial";
 import { lamp, place } from "../kit/props";
 import { STYLES } from "../kit/styles";
 import type { Solid } from "../iso/solids";
@@ -86,26 +87,33 @@ export const EXHIBITS: readonly Exhibit[] = [
   // by hand {2, 76, 98, 92}: trucks and pallets of truckYard; the hopper (z 13.5) crosses the north edge; the tallest trestle inside reaches 8.3; the crane is gone
   { id: "playa-camiones", title: "Truck yard", zone: "portfolio", group: "factory", kind: "region", box: { x0: 2, y0: 76, x1: 98, y1: 92 }, h: 16 },
   { id: "playa-vias", title: "Rail yard", zone: "portfolio", group: "factory", kind: "region",
-    box: { x0: RAIL_YARD_X[0] - 4, y0: 40, x1: -4, y1: 100 }, h: 21 }, // by hand in y: the ore stockpiles (rng, x −25..−13, y 44..96, private in factory.ts) with tracks and wagons; h covers the excavator (≈20.3)
+    box: { x0: RAIL_YARD_X[0] - 4, y0: 28, x1: -4, y1: 90 }, h: 21 }, // by hand in y: the ore stockpiles (rng, x −25..−13, centres y 38..78, r ≤ 9, private in factory.ts) with tracks and wagons; h covers the excavator (≈20.3)
   // x1 capped at 4, west edge of the new region: the shadow falls ENE over the shipyard
   { id: "excavadora", title: "Bucket-wheel excavator", zone: "portfolio", group: "factory", kind: "region",
     box: { x0: excavatorExtent.x0 - M, y0: excavatorExtent.y0 - M, x1: Math.min(excavatorExtent.x1 + M, 4), y1: excavatorExtent.y1 + M }, h: 21 }, // box + shadows; h covers the machine (≈20.3), which is an animated layer
   // the constants of shipyard.ts are private: boxes by hand
   // slipways x 110..QUAY_X, y 36..72; the gantry (x 150) straddles them and stays inside
   { id: "gradas", title: "Slipways", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 108, y0: 33, x1: QUAY_X + 2, y1: 75 }, h: 28 },
-  // the water between the quay and the breakwater, from the river mouth; no ships since #87 (the lanes start at the river mouth)
-  { id: "darsena", title: "Basin", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: QUAY_X - 2, y0: MOUTH_Y, x1: 275, y1: 80 }, h: 5 },
+  // the water between the quay and the breakwater, from the river mouth; no ships since #87 (the lanes start at the river mouth); h 2 since #323 (inside and neighbor 1.5, no accents), the box ends at y 72 where the floating dock begins
+  { id: "darsena", title: "Basin", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: QUAY_X - 2, y0: MOUTH_Y, x1: 275, y1: 72 }, h: 2 },
   { id: "grua-portico", title: "Gantry crane", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 146, y0: 30, x1: 156, y1: 78 }, h: 28 },
   // transfer street x 100..108 with the lamps at 108.5; west of the slipways (x ≥ 110)
-  { id: "calle-faroles", title: "Lamp street", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 99, y0: 8, x1: 111, y1: 128 }, h: 7 },
+  { id: "calle-faroles", title: "Lamp street", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 99, y0: 8, x1: 111, y1: 128 }, h: 14 }, // #324: the counter-jib and counterweight of the y 31 tower crane (x 108..116, top z 13.8–14) reach into x ≤ 111
   // the two assembly halls: x 10..100, rows y −52 and −32 of 16; y1 −14 leaves out the crane counterweight (y −13..−11, z 18.5..20) and x1 102 the yard (x ≥ 104)
   { id: "naves", title: "Assembly halls", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 7, y0: -55, x1: 102, y1: -14 }, h: 14 },
-  // the island's north coast facing the sheds: x 270..350, y 0..60; h is the smallest integer that passes framing and neighbors (measured with the `measure` of exhibits.test.ts)
-  { id: "punta-norte", title: "North point of the island", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 270, y0: 0, x1: 350, y1: 60 }, h: 9 },
+  // the island's north coast facing the sheds: x 270..350, y 0..60; h is the smallest integer that passes framing and neighbors (measured with the `measure` of exhibits.test.ts): 18 since #323, set by the quay crane and stacks it now crops (inside 18, accents 3.5)
+  { id: "punta-norte", title: "North point of the island", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 270, y0: 0, x1: 350, y1: 60 }, h: 18 },
   // the terminal station: x 108..198, y 98..143; h measured as in punta-norte: set by the top of the clock tower, z 29 (the station emits no smoke)
   { id: "estacion", title: "Terminal station", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 108, y0: 98, x1: 198, y1: 143 }, h: 29 },
   // the level crossing: x 95..112, y 124..142; x0 95 (not 98) so the entry signal (pole at x 96.1..96.4) is inside: without that `cropAnimators` drops the train animator at ms 0; h measured the same way: set by the street lamp at (108.5, 124), at z 5 (the crossing posts reach z 3 and the entry signal 4.7; the exit one is outside)
   { id: "paso-a-nivel", title: "Level crossing", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 95, y0: 124, x1: 112, y1: 142 }, h: 5 },
+  // the floating dock in the river: x 204..246, y 74..88, with its gangway to the quay at x 202; h measured as in punta-norte: set by the lamp posts on the service towers (inside 14.3, accents 13.15), so h 15
+  { id: "dique-flotante", title: "Floating dock", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 202, y0: 72, x1: 248, y1: 90 }, h: 15 },
+  // the east bank container yard: x 288..304, y 30..84, with the two quay cranes (x 280.6..287.4) inside; h measured as in punta-norte: set by the quay cranes (inside 18, accents 16), so h 18
+  { id: "patio-contenedores", title: "Container yard (east bank)", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 278, y0: 27, x1: 305, y1: 84 }, h: 18 },
+  // the quay crane facing west, centered at the origin, nothing above z 18; one cyan dot on the boom tip
+  { id: "grua-muelle", title: "Quay crane", zone: "portfolio", group: "shipyard", kind: "piece", pad: "concrete",
+    build: (out, accents) => quayCraneAt({ x: 0, y: 0 }, "w", out, accents) },
   // jib 24 to the east and counter-jib 8 to the west: with the mast at x −8 it spans −16..16
   { id: "grua-torre", title: "Tower crane", zone: "portfolio", group: "shipyard", kind: "piece",
     build: (out, accents) => towerCrane(out, accents, { at: { x: -8, y: 0 }, mastH: 20, jibLen: 24, dir: "e", light: "amber" }) },
@@ -145,6 +153,18 @@ export const EXHIBITS: readonly Exhibit[] = [
   // the pier starts at x 227 (bayShoreX in fair.ts, private)
   { id: "muelle", title: "Fair pier", zone: "portfolio", group: "fair", kind: "region",
     box: { x0: 227 - M, y0: PIER.y - M, x1: 227 + PIER.len + M, y1: PIER.y + PIER.d + 6 }, h: 10 },
+  // the gothic tower and its cone reach z 18 (accents 0.7); nothing cut by the edge (0.05)
+  { id: "tren-fantasma", title: "Ghost train", zone: "portfolio", group: "fair", kind: "region",
+    box: { x0: 96, y0: -260, x1: 120, y1: -244 }, h: 18 },
+  // the pediment reaches z 7.5 (accents 2.1); nothing cut by the edge
+  { id: "casa-espejos", title: "Mirror house", zone: "portfolio", group: "fair", kind: "region",
+    box: { x0: 122, y0: -260, x1: 142, y1: -244 }, h: 8 },
+  // the tower is z 14, the roof cone 16, the lamp 16.3 (solids 16, accents 12.1); nothing cut by the edge
+  { id: "tobogan", title: "Giant slide", zone: "portfolio", group: "fair", kind: "region",
+    box: { x0: 111, y0: -299, x1: 125, y1: -285 }, h: 16 },
+  // the trough top is z 6, the water prism 6.05 (logs 6.75 in the animator, neighbors up to 2.7); the 6 splash dots are inside the box
+  { id: "tronco-acuatico", title: "Log flume", zone: "portfolio", group: "fair", kind: "region",
+    box: { x0: 158, y0: -300, x1: 226, y1: -290 }, h: 7 },
   // the office tower is at the center of the plaza: it stays inside
   { id: "plaza", title: "Plaza", zone: "cv", group: "city", kind: "region",
     box: { x0: PLAZA.x - M, y0: PLAZA.y - M, x1: PLAZA.x + PLAZA.w + M, y1: PLAZA.y + PLAZA.d + M }, h: TOWER_H + 8 },
@@ -166,6 +186,11 @@ export const EXHIBITS: readonly Exhibit[] = [
     box: { x0: SITE.x - M, y0: SITE.y - M, x1: SITE.x + SITE.w + M, y1: SITE.y + SITE.d + M }, h: 25 },
   // the south point: x 270..380, y 300..400; it needs the world with no zone filter (the storybook builds it with `assembleWorld(undefined, …)`); h is the smallest integer that passes framing and neighbors (measured with the `measure` of exhibits.test.ts)
   { id: "punta-sur", title: "South point of the island", zone: "cv", group: "city", kind: "region", box: { x0: 270, y0: 300, x1: 380, y1: 400 }, h: 10 },
+  // the warehouse strip and the freight railyard: x -54..98, west of the station; h is the smallest integer that passes framing and neighbors (measured with the `measure` of exhibits.test.ts); galpones (#325, warehouses and freight lots): h 12; playa-carga (#325, freight yard): the lamps top out at 5, so h 5
+  { id: "galpones", title: "Warehouse strip", zone: "cv", group: "city", kind: "region", box: { x0: -54, y0: 90, x1: 98, y1: 130 }, h: 12 },
+  { id: "playa-carga", title: "Freight railyard", zone: "cv", group: "city", kind: "region", box: { x0: -54, y0: 126, x1: 98, y1: 160 }, h: 5 },
+  // the dock inlet of #326 (x 276..306, east bank): measured the same way, inside 7.3, accents 0, cut neighbor 1.2, so h 8
+  { id: "mercado-pescado", title: "Fish market and dock inlet", zone: "cv", group: "city", kind: "region", box: { x0: 276, y0: 92, x1: 306, y1: 160 }, h: 8 },
   // `campus` recipe of the kit on a district block; the piece's ground goes to `out` with the solids
   { id: "campus", title: "Campus", zone: "cv", group: "city", kind: "piece",
     build: (out, accents) => {
@@ -181,9 +206,9 @@ export const EXHIBITS: readonly Exhibit[] = [
     box: { x0: ARENA.x - M, y0: ARENA.y - M, x1: ARENA.x + BLOCK_W + M, y1: ARENA.y + BLOCK_D + M }, h: 15 },
   { id: "auditorio", title: "Auditorium", zone: "cv", group: "tech", kind: "region",
     box: { x0: AUDITORIUM.x - M, y0: AUDITORIUM.y - M, x1: AUDITORIUM.x + BLOCK_W + M, y1: AUDITORIUM.y + BLOCK_D + M }, h: 14 },
-  // the two towers of row ROWS[1], columns SUBURB_COLS[1] and [0]; the height comes from the rng: the test watches it
+  // the two towers of row ROWS[2], columns SUBURB_COLS[1] and [0]; the height comes from the rng: the test watches it
   { id: "torres", title: "Tech district towers", zone: "cv", group: "tech", kind: "region",
-    box: { x0: SUBURB_COLS[1] - M, y0: ROWS[1] - M, x1: SUBURB_COLS[0] + BLOCK_W + M, y1: ROWS[1] + BLOCK_D + M }, h: 22 },
+    box: { x0: SUBURB_COLS[1] - M, y0: ROWS[2] - M, x1: SUBURB_COLS[0] + BLOCK_W + M, y1: ROWS[2] + BLOCK_D + M }, h: 22 },
   { id: "monoblock", title: "Monoblock", zone: "cv", group: "tech", kind: "region",
     box: { x0: 132 - M, y0: 448 - M, x1: 132 + BLOCK_W + M, y1: 448 + BLOCK_D + M }, h: 23.6 },
   { id: "casas", title: "Houses with tile roofs", zone: "cv", group: "tech", kind: "region",

@@ -14,11 +14,11 @@ describe("veilCells", () => {
   it("each cell is in the zone of its center according to worldZoneAt", () => {
     for (const c of cells) expect(c.zone).toBe(worldZoneAt(c.x + c.size / 2, c.y + c.size / 2));
   });
-  it("the seams are subdivided to 6: there are small cells near x 344 and y 146 and none far away", () => {
+  it("the seams are subdivided to 6: there are small cells near x 344 and y 90 and none far away", () => {
     const small = cells.filter((c) => c.size === CELL);
     expect(small.length).toBeGreaterThan(50);
     expect(small.some((c) => Math.abs(c.x - 344) < 40)).toBe(true);
-    expect(small.some((c) => Math.abs(c.y - 146) < 40 && c.x < 300)).toBe(true);
+    expect(small.some((c) => Math.abs(c.y - 90) < 40 && c.x < 300)).toBe(true);
     expect(cells.filter((c) => c.size === CELL_BLEED && c.x < -300 && c.y < -300).length).toBeGreaterThan(20);
   });
   it("the lighthouse headland and its reef are Portfolio, the open sea is Blog", () => {
@@ -27,6 +27,13 @@ describe("veilCells", () => {
     expect(at(404, 118)).toBe("portfolio");
     expect(at(500, 200)).toBe("blog");
     expect(at(-30, 300)).toBe("cv");
+  });
+  it("station land goes with Portfolio and the strip west of it with Resume; the cell 144..150 is classified by its centre", () => {
+    const cell = (x: number, y: number) => cells.find((c) => x >= c.x && x < c.x + c.size && y >= c.y && y < c.y + c.size)!;
+    expect(cell(99, 117).zone).toBe("portfolio");
+    expect(cell(60, 95).zone).toBe("cv");
+    expect(cell(150, 141)).toMatchObject({ size: CELL, zone: "portfolio" });
+    expect(cell(150, 147)).toMatchObject({ size: CELL, zone: "cv" });
   });
 });
 

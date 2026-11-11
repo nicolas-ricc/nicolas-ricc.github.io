@@ -67,9 +67,13 @@ describe("world", () => {
       cv = mats(w.city!.solids), blog = mats(w.sea!.solids);
     // Exact equality (#218): fails if one stops being shared or another appears. office: lilac gray of the excavator (decision of #207);
     // asphalt: heads of the station's traffic lights (#277) and lantern caps (#278); stone: shaft of the clock tower and paving: esplanade slab (#278);
-    // deck: level-crossing planks (#277) and terraces of the Resume pier (#190).
+    // deck: level-crossing planks (#277) and terraces of the Resume pier (#190);
+    // brick: factory/station walls, the harbor buildings of the Resume (#326) and the reconversion kit of the warehouses strip (#325); sheetTeal: fitting-out sheds of the shipyard (#323) and vaults of the harbor buildings (#326);
+    // concrete: walls of the Resume inlet (#326), the freight dock (#325) and the factory/shipyard buildings; hull: fishing boats of the Resume inlet (#326) and the ships of the shipyard;
+    // boxBlue/boxGreen/boxRust: containers of the freight lot recipes and of the freight yard (#325; which box colours appear depends on the draw) (stackContainers, shared with the shipyard's container yard); whitewash: reconversion kit (#325), also used by the factory;
+    // sheetGreen left the list with the budget cut of #328: the service strip keeps one storeroom, and with seed 7 it is not green.
     // No glass: the city only has glass in facade faces, not as the mat of a solid.
-    const sharedWithCity = ["asphalt", "deck", "office", "paving", "rust", "steel", "stone"];
+    const sharedWithCity = ["asphalt", "boxBlue", "boxGreen", "boxRust", "brick", "concrete", "deck", "hull", "office", "paving", "rust", "sheetTeal", "steel", "stone", "whitewash"];
     expect([...portfolio].filter((m) => cv.has(m)).sort()).toEqual([...sharedWithCity].sort());
     const sharedWithBlog = ["steel", "rust", "hull", "rock", "glass", "whitewash", "deck"]; // glass: the lighthouse lantern (spec §7); whitewash: porcelain and finials of the factory (#207); deck: level-crossing planks (#277), ship decks and terraces of the Resume pier (#190)
     for (const other of [portfolio, cv]) for (const m of blog) if (other.has(m)) expect(sharedWithBlog).toContain(m);
@@ -100,8 +104,11 @@ describe("world", () => {
     const w = world(7);
     const mine = new Set(w.factory!.solids);
     const others = w.solids.filter((s) => !isFlat(s) && !mine.has(s));
-    const areas = [{ x0: PLANT.x, x1: STAIR_TOWER.x1, y0: PLANT.y - 0.6, y1: PLANT.y + PLANT.d + 1.5 }, { x0: PLANT.x, x1: STAIR_TOWER.x1, y0: PLANT.y + PLANT.d + 1.5, y1: PLANT.y + PLANT.d + 16 }]; // roof from the north eave to the plinth; yard to the south
+    const areas = [{ x0: PLANT.x, x1: STAIR_TOWER.x1, y0: PLANT.y - 0.6, y1: PLANT.y + PLANT.d + 1.5 }, { x0: PLANT.x, x1: STAIR_TOWER.x1, y0: PLANT.y + PLANT.d + 1.5, y1: PLANT.y + PLANT.d + 16 }]; // roof from the north eave to the plinth; yard to the south, 
+    // the seam fence of #319 (steel wall at y 89.4, posts at y 89.3, lamp poles at y 88.2) runs along the south edge of the yard on purpose
+    const isFence = (s: Solid) => s.kind === "prism" && s.mat === "steel" && ((s.at.y === 89.4 && s.w === 156) || (s.at.y === 89.3 && s.w === 0.3) || (s.at.y === 88.2 && s.w === 0.6 && s.h === 5));
     for (const s of others) {
+      if (isFence(s)) continue;
       const b = bounds(s);
       for (const a of areas) expect(b.max.x <= a.x0 || b.min.x >= a.x1 || b.max.y <= a.y0 || b.min.y >= a.y1, JSON.stringify(s).slice(0, 90)).toBe(true);
     }
@@ -138,6 +145,13 @@ describe("world", () => {
     const sidingAndCrane = (b: ReturnType<typeof bounds>) => b.min.y >= -13.1 && b.max.y <= -6.7; // siding and tower crane, which stay
     const inNewRegion = (b: ReturnType<typeof bounds>) => b.min.x >= 4 && b.max.x <= 98.7 && b.min.y >= -4 && b.max.y <= 99; // region the shipyard leaves (#238); x ≤ 98.7 for every solid, stricter than the issue (which asks it for anything over 7 tall)
     expect(w.factory!.solids.filter((s) => !west(bounds(s)) && !sidingAndCrane(bounds(s)) && !inNewRegion(bounds(s))).map((s) => JSON.stringify(s).slice(0, 90))).toEqual([]);
+  });
+
+  it("Portfolio budget: shipyard ≤ 900 raised solids, shipyard + factory ≤ 1 700 (#324)", () => {
+    const w = world(7);
+    const sy = w.shipyard!.solids.filter((s) => !isFlat(s)).length, fa = w.factory!.solids.filter((s) => !isFlat(s)).length;
+    expect(sy).toBeLessThanOrEqual(900);
+    expect(sy + fa).toBeLessThanOrEqual(1700);
   });
 
   it("the city lights come from zoneRng(seed, \"cv\", 3)", () => {

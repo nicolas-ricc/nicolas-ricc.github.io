@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { HEADLAND, MOUTH_Y, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, abyssX, distToHeadland, estuaryEast, estuaryInset, inHeadland, inMouth, islandEastX, islandWestX, northCoastY, pointInPolygon, riverCenter, shoreWidth, worldZoneAt } from "./geo";
+import { ESTUARY_Y0, HEADLAND, MOUTH_Y, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, abyssX, distToHeadland, estuaryEast, estuaryInset, eastBank, inHeadland, inMouth, inStationLand, islandEastX, islandWestX, northCoastY, pointInPolygon, riverCenter, SEAM_CY, shoreWidth, worldZoneAt } from "./geo";
 
 describe("world", () => {
   it("the content has a negative origin and sides that are multiples of 18", () => {
     expect(WORLD).toEqual({ x0: -60, y0: -60, x1: 570, y1: 336 });
-    expect([ZONE_SPLIT_X, ZONE_SPLIT_Y]).toEqual([344, 146]);
+    expect([ZONE_SPLIT_X, ZONE_SPLIT_Y]).toEqual([344, 90]);
     expect((WORLD.x1 - WORLD.x0) % 18).toBe(0);
     expect((WORLD.y1 - WORLD.y0) % 18).toBe(0);
   });
@@ -19,6 +19,14 @@ describe("world", () => {
     expect(worldZoneAt(350, 100)).toBe("portfolio");   // shipyard shore
     expect(worldZoneAt(350, 200)).toBe("cv");          // seawall shore
     expect(worldZoneAt(500, 200)).toBe("blog");
+    expect(worldZoneAt(100, 80)).toBe("portfolio");    // shipyard, north of the seam
+    expect(worldZoneAt(150, 130)).toBe("portfolio");   // station land
+    expect(worldZoneAt(100, 95)).toBe("portfolio");    // station land, first row
+    expect(worldZoneAt(98, 120)).toBe("portfolio");    // station strip x 96..100
+    expect(worldZoneAt(300, 120)).toBe("cv");          // east of the station land
+    expect(worldZoneAt(60, 95)).toBe("cv");            // new strip west of the station
+    expect(worldZoneAt(-30, 100)).toBe("cv");
+    expect(worldZoneAt(290, 100)).toBe("cv");
     expect(worldZoneAt(400, 10)).toBe("blog");
     expect(worldZoneAt(400, 260)).toBe("blog");
     for (let y = -60; y < 336; y += 6) expect(worldZoneAt(ZONE_SPLIT_X + shoreWidth(y) - 0.5, y)).not.toBe("blog");
@@ -99,5 +107,21 @@ describe("island coast", () => {
     for (let y = 238; y <= 262; y += 2) expect(estuaryInset(y)).toBe(0); // collapsed block: ramp and sunken slabs
     expect(estuaryInset(230)).toBeGreaterThan(2);                        // between the bridge and the collapse the riverside also reaches in
     for (let y = 146; y <= 400; y++) expect(islandWestX(y)).toBeLessThanOrEqual(estuaryEast(y));
+  });
+});
+
+describe("estuary anchor and station land", () => {
+  it("the estuary is anchored at ESTUARY_Y0, independent of the zone seam", () => {
+    expect(ESTUARY_Y0).toBe(146);
+    expect(SEAM_CY).toBe(141);
+    expect(estuaryEast(ESTUARY_Y0)).toBe(eastBank(SEAM_CY));
+    expect(estuaryEast(200)).toBeCloseTo(259.9, 9); // value measured on main before the change
+  });
+
+  it("inStationLand is half-open on x 96..198, y 90..146", () => {
+    expect(inStationLand(96, 90)).toBe(true);
+    expect(inStationLand(95.9, 90)).toBe(false);
+    expect(inStationLand(150, 146)).toBe(false);
+    expect(inStationLand(198, 120)).toBe(false);
   });
 });

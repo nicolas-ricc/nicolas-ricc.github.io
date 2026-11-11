@@ -55,6 +55,38 @@ describe("kit lab scene", () => {
     expect(l.x + 54).toBeLessThanOrEqual(l.x + 2 * KIT_STEP.x);
   });
 
+  it("the industrial row (#321) is there, in the industrial style whatever the chosen style", () => {
+    const { solids, lots } = kitScene(7, "downtown");
+    const row = lots.filter((_, i) => RECIPES[i]!.family === "industrial");
+    expect(row.map((l) => l.name)).toEqual(["sawtoothHall", "sheetHall", "containerStack", "stockpile", "tankGroup", "quayCrane", "rtgGantry", "storeroom"]);
+    expect(new Set(row.map((l) => l.y)).size).toBe(1);
+    const l = row[0]!;
+    const body = solids.find((s) => s.kind === "prism" && !!s.facade && s.at.x >= l.x && s.at.x < l.x + KIT_STEP.x && s.at.y >= l.y && s.at.y < l.y + KIT_STEP.y);
+    expect(body?.mat).toBe("concrete");
+  });
+
+  it("the reconversion row (#322): eight recipes in one row, warehouses style except the freight pair, whatever the chosen style", () => {
+    const { solids, lots } = kitScene(7, "downtown");
+    const row = lots.filter((_, i) => RECIPES[i]!.family === "reconversion");
+    expect(row.map((l) => l.name)).toEqual(["loftHall", "vaultLoft", "brewery", "sheetLoft", "derelictHall", "coveredMarket", "freightShed", "openDock"]);
+    expect(new Set(row.map((l) => l.y)).size).toBe(1);
+    const inCell = (l: { x: number; y: number }) => solids.filter((s) => s.kind === "prism" && s.at.x >= l.x && s.at.x < l.x + KIT_STEP.x && s.at.y >= l.y && s.at.y < l.y + KIT_STEP.y);
+    const loft = inCell(row[0]!).find((s) => s.kind === "prism" && !!s.facade);
+    expect(loft?.mat).toBe("brick");
+    const shed = inCell(row[6]!).find((s) => s.kind === "prism" && s.roof === "gable");
+    expect(shed?.mat).toBe("sheetGreen");
+  });
+
+  it("the harbor row (#326) is there, in the harbor style whatever the chosen style", () => {
+    const { solids, lots } = kitScene(7, "downtown");
+    const row = lots.filter((_, i) => RECIPES[i]!.family === "harbor");
+    expect(row.map((l) => l.name)).toEqual(["fishMarket", "foodHall"]);
+    expect(new Set(row.map((l) => l.y)).size).toBe(1);
+    const l = row[0]!;
+    const body = solids.find((s) => s.kind === "prism" && !!s.facade && s.at.x >= l.x && s.at.x < l.x + KIT_STEP.x && s.at.y >= l.y && s.at.y < l.y + KIT_STEP.y);
+    expect(body?.mat).toBe("brick");
+  });
+
   it("the seed and the style change the scene; the same pair repeats it", () => {
     const a = JSON.stringify(kitScene(7, "downtown"));
     expect(JSON.stringify(kitScene(7, "downtown"))).toBe(a);

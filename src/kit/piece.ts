@@ -57,7 +57,9 @@ export const liftPiece = (p: Piece, dz: number): Piece => mapZ(p, (n) => n + dz,
 /** Piece with every z coordinate through `z` and every height scaled by `k`; normals and `courtyard` unchanged. */
 function mapZ(p: Piece, z: (n: number) => number, k: number): Piece {
   const P = (q: Vec3): Vec3 => v3(q.x, q.y, z(q.z));
-  const solid = (s: Solid): Solid => {
+  const solid = (s0: Solid): Solid => {
+    // plate heights are absolute z, like `at`
+    const s = "plates" in s0 && s0.plates ? { ...s0, plates: s0.plates.map((q) => ({ ...q, z0: z(q.z0), z1: z(q.z1) })) } as Solid : s0;
     switch (s.kind) {
       case "poly": return { ...s, z: z(s.z), h: s.h * k };
       case "strip": return { ...s, z: z(s.z) };

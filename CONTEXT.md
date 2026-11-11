@@ -7,8 +7,12 @@ The site is an isometric night map in three zones (Portfolio, Resume, Blog). The
 Code: `src/world/veil.ts` (`VEIL_ALPHA`, `ACCENT_DIM`, `focusAlphas`, `veilPolygons`, `accentsByZone`), `src/world/stage.ts` (`setFocus`).
 
 ### Zone
-(Zona.) One of the three clickable regions of the world, `"portfolio"`, `"cv"` (Resume) or `"blog"`; the ids are also the routes. A point belongs to a zone by geography, not by a straight split: `worldZoneAt(x, y)` returns Portfolio for the headland, the reef and its shore (the lighthouse caps the shipyard), Resume for the seawall shore, and Blog only for the open sea. The main split is `ZONE_SPLIT_X` (344) plus `shoreWidth(y)`: land west of it is Portfolio for y < `ZONE_SPLIT_Y` (146) and Resume for y >= 146; east of it is Blog. The same function classifies the veil cells, the static lights and the hit test.
-Code: `src/map/geo.ts` (`WorldZone`, `worldZoneAt`), `src/world/veil.ts` (`WORLD_ZONES`).
+(Zona.) One of the three clickable regions of the world, `"portfolio"`, `"cv"` (Resume) or `"blog"`; the ids are also the routes. A point belongs to a zone by geography, not by a straight split: `worldZoneAt(x, y)` returns Portfolio for the headland, the reef and its shore (the lighthouse caps the shipyard), Resume for the seawall shore, and Blog only for the open sea. The main split is `ZONE_SPLIT_X` (344) plus `shoreWidth(y)`: land west of it is Portfolio for y < `ZONE_SPLIT_Y` (90) and Resume for y >= 90, except `STATION_LAND` (the terminal station, x 96..198, y 90..146), which stays Portfolio; east of it is Blog. The same function classifies the veil cells, the static lights and the hit test.
+Code: `src/map/geo.ts` (`WorldZone`, `worldZoneAt`, `ZONE_SPLIT_Y`, `STATION_LAND`), `src/world/veil.ts` (`WORLD_ZONES`).
+
+### Rail lands
+(Playas ferroviarias.) The band `y 129..158` of Resume around the west train track, just south of the seam and the station land: freight lots, a siding with a parked freight train and a fence on its edges. The fence and everything south of the track obey the train's occlusion rule of the station (south of the track, `y_min − 1.4·z_max ≥ 134.5`), so that nothing hides the stopped or moving train.
+Code: `src/city/rail-lands.ts`, `src/scenes/station.ts` (the train rule, `TRAIN_CLEAR`).
 
 ### Accent
 (Acento.) An artificial light, drawn on top of everything with additive blend: a `dot` (lamp, spark: position `at`, radius `r`, color) or a `poly` (lit window, beam: points, color, optional alpha). Accents are not solids and cast no shadow; the bloom (or its `fallback` halo) is drawn around them. Each accent belongs to a zone for the veil (`accentZone`: the point of a dot or the first vertex of a polygon, through `worldZoneAt`).

@@ -1,5 +1,5 @@
-import { BOTTOM, CELL, DOCK, QUAY_X, SHORE_W, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, abyssX, distToHeadland, eastBank, inHeadland, inMouth, islandEastX, islandWestX, shoreWidth } from "../map/geo";
-import { CITY_EDGE, DISTRICT_BANK_Y, EAST_RING, PROMENADE_STREET_X, inCrater } from "./city-grid";
+import { BOTTOM, CELL, DOCK, QUAY_X, SHORE_W, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, ESTUARY_Y0, abyssX, distToHeadland, eastBank, inHeadland, inMouth, inStationLand, islandEastX, islandWestX, shoreWidth } from "../map/geo";
+import { CITY_EDGE, DARSENA, DISTRICT_BANK_Y, EAST_RING, PROMENADE_STREET_X, inCrater } from "./city-grid";
 import { bayWater, builtAt, estuaryWater } from "./sprawl-grid";
 
 /**
@@ -19,7 +19,9 @@ const REEF_W = 6;
 export const WATER_TERRAIN = new Set<Terrain>(["water", "sea", "shore", "abyss"]);
 export const BLEED_WATER = new Set<BleedTerrain>(["sea", "shore", "abyss", "river"]);
 
+/** Portfolio ground. Through `terrainAt` it only sees `y < ZONE_SPLIT_Y` and the station land, so the jungle branches at `y ≥ 100` below are only reached by direct calls. */
 export function shipyardTerrainAt(x: number, y: number): Terrain {
+  if (inStationLand(x, y) && x < 100) return "asphalt"; // the strip west of the station track, level with the city street
   if (x < 0) return y < 110 ? "slab" : "jungle"; // west column: rail yard and piles, jungle to the south
   if (x >= DOCK.x && x < DOCK.x + DOCK.w && y >= DOCK.y && y < DOCK.y + DOCK.d) return "dock";
   if (x < QUAY_X) return x < 42 && y > 100 ? "jungle" : y >= BOTTOM ? "jungle" : "slab"; // the north band (y < 0) is factory slab
@@ -28,8 +30,11 @@ export function shipyardTerrainAt(x: number, y: number): Terrain {
 }
 
 export function cityTerrainAt(x: number, y: number): Terrain {
-  if (x >= QUAY_X && x <= islandWestX(y)) return "water";
-  if (y < CITY_EDGE.north) return "jungle"; // seam belt with the shipyard
+  if (x >= QUAY_X && x <= (y < ESTUARY_Y0 ? eastBank(y) : islandWestX(y))) return "water"; // north of ESTUARY_Y0 the channel is the shipyard's
+  if (y < ESTUARY_Y0 && x > QUAY_X) {
+    if (x >= DARSENA.x0 && x < DARSENA.x1 && y >= DARSENA.y0 && y < DARSENA.y1) return "water"; // the dock inlet (#326)
+    return x < EAST_RING.x0 ? "jungle" : x < 306 ? "asphalt" : "jungle"; // east bank of the channel
+  }
   if (y >= DISTRICT_BANK_Y && x > QUAY_X) return x >= PROMENADE_STREET_X ? "asphalt" : "jungle"; // east bank of the district: jungle, and the promenade street
   if (y >= CITY_EDGE.south || x < CITY_EDGE.west) return "asphalt"; // west and south edges: the bleed's tech district continues straight on from the city
   if (x > QUAY_X && x < EAST_RING.x0) return "jungle";
@@ -49,7 +54,7 @@ export function seaTerrainAt(x: number, y: number): Terrain {
 /** Dispatches by geography, not by clickable zone: the sea and the headland belong to seaTerrainAt even if they click through to Portfolio or Resume. */
 export function terrainAt(x: number, y: number): Terrain {
   if (inHeadland(x, y) || x >= islandEastX(y)) return seaTerrainAt(x, y);
-  return y >= ZONE_SPLIT_Y ? cityTerrainAt(x, y) : shipyardTerrainAt(x, y);
+  return y >= ZONE_SPLIT_Y && !inStationLand(x, y) ? cityTerrainAt(x, y) : shipyardTerrainAt(x, y);
 }
 
 /**

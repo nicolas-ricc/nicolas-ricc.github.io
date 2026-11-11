@@ -6,11 +6,9 @@ import type { Rng } from "../map/seed";
 import { WORLD } from "../map/geo";
 import { boilerHouse, HALL } from "./boiler-house";
 import { EXCAVATOR, excavator, excavatorBox, local } from "./excavator";
-import { jungle } from "./flora";
 import { MALT, maltings, waterTower } from "./maltings";
 import { towerCrane } from "./pieces";
 import { PLANT_SHIFT, emitPlant } from "./plant-frame";
-import { TRAIN_CLEAR } from "./station";
 import { SUBSTATION, substation } from "./substation";
 
 /**
@@ -24,8 +22,8 @@ import { SUBSTATION, substation } from "./substation";
  * set into the street, the flatcars and the hall→slipway rails.
  * The north band (`x > 0, y −60..−4`) keeps the rail siding, the tower crane and, behind the factory, the assembly
  * halls, the workshops and the shipyard's material yard (`shipyard.ts`). West column `x ≤ 0` (`x -60..0,
- * y 0..146`), as before: rail yard, bucket-wheel excavator and ore piles, jungle to the south
- * and the lamp at (−30, 20). The terrain is `slab`.
+ * y 0..90`): rail yard with buffers at y 86, bucket-wheel excavator and ore piles, no jungle to the south
+ * (the column ends at y 90, the Portfolio/Resume seam) and the lamp at (−30, 20). The terrain is `slab`.
  * Spec: docs/superpowers/specs/2026-09-14-mundo-2-fabrica-distrito-blog-design.md §5.
  * Plant, chimney, substation and excavator detail: docs/superpowers/specs/2026-10-24-fabrica-detalle-design.md.
  * Move: docs/superpowers/specs/2026-10-27-fabrica-mudanza-design.md.
@@ -110,15 +108,17 @@ function siding(out: Solid[]): void {
 function truckYard(out: Solid[], accents: Accent[]): void {
   emitPlant(out, (o, a) => {
     for (const [x, y] of [[40, -12], [70, -6], [95, -12]] as const) { o.push(prism(x, y, 0, 6, 2.4, 2.8, "rust")); o.push(prism(x + 6, y, 0, 2, 2.4, 2.2, "steel")); } // box and cab
-    for (let i = 0; i < 6; i++) o.push(prism(22 + i * 4, -3, 0, 3, 2, 0.5 + (i % 3) * 0.4, "steel")); // sheet-metal pallets by the west gate
+    for (let i = 0; i < 6; i++) o.push(prism(22 + i * 4, -4, 0, 3, 2, 0.5 + (i % 3) * 0.4, "steel")); // sheet-metal pallets by the west gate
     for (const [x, y] of [[20, -14], [110, -3]] as const) lamp(o, a, x, y);
   }, accents);
 }
 
-/** West column: three N-S tracks that join the shipyard's west tracks, the excavator (in `machine`: drawn separately, in its own frame), ore piles east of them, jungle to the south. */
+/** West column: three N-S tracks that end at y 86 in buffer stops, the excavator (in `machine`: drawn separately, in its own frame) and ore piles east of them; nothing raised south of the seam fence. */
 function railYard(out: Solid[], machine: Solid[], accents: Accent[], rng: Rng): void {
-  for (const x of RAIL_YARD_X) for (const dx of [-0.8, 0.8]) out.push(strip([{ x: x + dx, y: WORLD.y0 }, { x: x + dx, y: 128 }], 0.4, 0.1, "steel"));
-  for (const dy of [-0.8, 0.8]) out.push(strip([{ x: -40 + dy, y: 128 }, { x: -30, y: 132.5 + dy }, { x: 2, y: 132.5 + dy }], 0.4, 0.1, "steel")); // junction
+  for (const x of RAIL_YARD_X) {
+    for (const dx of [-0.8, 0.8]) out.push(strip([{ x: x + dx, y: WORLD.y0 }, { x: x + dx, y: 86 }], 0.4, 0.1, "steel"));
+    out.push(prism(x - 1.5, 86, 0, 3, 1.5, 1.2, "steel")); // buffer stop, y 86..87.5
+  }
   excavator(machine, accents);
   const axle = local(EXCAVATOR.axleDx, 0);
   out.push({ kind: "cone", at: v3(axle.x, axle.y, 0), r: EXCAVATOR.pile.r, h: EXCAVATOR.pile.h, mat: "rust", sides: 7 }); // fixed pile under the wheel
@@ -127,14 +127,13 @@ function railYard(out: Solid[], machine: Solid[], accents: Accent[], rng: Rng): 
     const big = i < 3;
     for (let tries = 0; ; tries++) {
       if (tries >= 1000) throw new Error("railYard: no room for a pile outside the excavator");
-      const x = rng.int(-25, -13), y = rng.int(44, 96), r = big ? rng.int(6, 9) : 5, h = big ? rng.int(4, 6) : 3;
+      const x = rng.int(-25, -13), y = rng.int(38, 78), r = big ? rng.int(6, 9) : 5, h = big ? rng.int(4, 6) : 3;
       if (x + r > box.x0 - 1 && x - r < box.x1 + 1 && y + r > box.y0 - 1 && y - r < box.y1 + 1) continue; // touches the box inflated by 1: the whole draw is repeated
       out.push({ kind: "cone", at: v3(x, y, 0), r, h, mat: big ? "rust" : "sand", sides: 7 });
       break;
     }
   }
   for (let i = 0; i < 8; i++) out.push(prism(RAIL_YARD_X[i % 3]! - 1.1, -46 + i * 14, 0, 2.2, 7, 2.8, i % 2 === 0 ? "rust" : "steel")); // wagons parked N-S on the tracks; -46: the third ends at y -11, not touching the E-W siding (y -9.2..-6.8)
-  jungle(out, rng, { x0: -58, x1: -6, y0: 110, y1: 140 }, 14, 0.4, { y: [128, 131, 134], train: TRAIN_CLEAR }); // y1 140: a cone of r 4 cannot cross the seam y = 146; no cone covers the junction or the west tracks
 }
 
 function lamps(out: Solid[], accents: Accent[]): void {

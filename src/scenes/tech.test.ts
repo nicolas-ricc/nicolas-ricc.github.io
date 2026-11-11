@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { bounds, isFlat, tessellate, type Solid } from "../iso/solids";
+import { RAIL_Y } from "./shipyard";
 import { WORLD, ZONE_SPLIT_Y, worldZoneAt } from "../map/geo";
 import type { Material } from "../map/palette-iso";
 import { createRng, SEED } from "../map/seed";
-import { suburbBlocks, type SprawlBlock } from "./sprawl-grid";
+import { GREEN_BELT, suburbBlocks, type SprawlBlock } from "./sprawl-grid";
 import { ARENA, AUDITORIUM, MAX_TECH_H, TECH_MATS, TELECOM, tech } from "./tech";
 import { techAnimator } from "./tech-animator";
 import { ACCENT_CAP, NEIGHBORHOOD_REGION, WATERFRONT_RECT, FACE_CAPS, REGION_FACES_BEFORE, TECH_FACES_BEFORE, blockRect, facesIn, insideInflated } from "./tech-budget";
@@ -29,6 +30,12 @@ describe("tech", () => {
       expect(worldZoneAt(b.min.x, b.min.y)).toBe("cv");
       expect(TECH_MATS).toContain(x.mat);
     }
+  });
+
+  it("the green belt's jungle west of the content: at least 20 cones inside GREEN_BELT, none within r + 1.5 of the west line", () => {
+    const belt = scene().solids.filter((x): x is Solid & { kind: "cone" } => x.kind === "cone" && (x.mat === "leaf" || x.mat === "leafDark") && x.at.x < WORLD.x0 && x.at.y >= GREEN_BELT.y0 && x.at.y < GREEN_BELT.y1);
+    expect(belt.length).toBeGreaterThanOrEqual(20);
+    for (const c of belt) for (const ry of RAIL_Y) expect(Math.abs(c.at.y - ry)).toBeGreaterThanOrEqual(c.r + 1.5);
   });
 
   it("nothing rests on water; nothing non-slender exceeds MAX_TECH_H + plinth", () => {

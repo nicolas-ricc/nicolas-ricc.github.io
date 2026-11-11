@@ -39,8 +39,8 @@ export const estuaryWater = (x: number, y: number): boolean => y > WORLD.y1 && x
 
 /**
  * Built land at a point outside the content, or null if it is jungle, hill
- * or water. Industrial to the north and west of Portfolio (`y < ZONE_SPLIT_Y`),
- * urban to the west and south of Resume. At the corners the reach of the side
+ * or water. Industrial to the north and west of Portfolio (`y < ZONE_SPLIT_Y`, 90),
+ * urban to the west and south of Resume (`y ≥ 90`, except the green belt). At the corners the reach of the side
  * that corresponds to each axis rules: the NW corner is industrial, the SW
  * one urban. Inside `FAIR`, east of the industrial and west of the bay, it is
  * the sand fair.
@@ -61,13 +61,13 @@ export function builtAt(x: number, y: number): Built | null {
 /** The fair: strip of sand in the north bleed, between the factory and the bay. */
 export const fairAt = (x: number, y: number): boolean => builtAt(x, y) === "fair";
 
-/** Green belt between the hinterland and the tech district: extends the jungle south of the rail yard (`y ≥ 110`) and the seam belt of the city (up to `CITY_EDGE.north`). */
-export const GREEN_BELT = { y0: 110, y1: CITY_EDGE.north } as const;
+/** Green belt west of the content, y 116..158: jungle between the hinterland (rail yard, Portfolio) and the tech district; no built land and no urban ground. */
+export const GREEN_BELT = { y0: 116, y1: 158 } as const;
 
 /** Urban ground at a point, inside or outside the content: the tech district builds blocks only where this holds at the four corners and the center. */
 export function urbanAt(x: number, y: number): boolean {
   if (x < WORLD.x0 || y > WORLD.y1) return builtAt(x, y) === "urban";
-  if (x >= QUAY_X || y < CITY_EDGE.north) return false;
+  if (x >= QUAY_X || y < CITY_EDGE.north || (x < CITY_EDGE.west && y >= GREEN_BELT.y0 && y < GREEN_BELT.y1)) return false;
   return x < CITY_EDGE.west || y >= CITY_EDGE.south; // the city edges that turned to asphalt
 }
 
@@ -90,7 +90,7 @@ const blockAt = (x: number, y: number): SprawlBlock | null => {
 /** Blocks of the tech district: the western ones follow the rows of the city (and respect the avenue), the southern ones add the columns of the city. No rng. */
 export function suburbBlocks(): SprawlBlock[] {
   const out: SprawlBlock[] = [];
-  for (const y of ROWS) for (const x of SUBURB_COLS) { const b = blockAt(x, y); if (b) out.push(b); }
+  for (const y of ROWS.slice(1)) for (const x of SUBURB_COLS) { const b = blockAt(x, y); if (b) out.push(b); }
   for (const y of SUBURB_ROWS) for (const x of [...SUBURB_COLS, ...WEST_COLS]) { const b = blockAt(x, y); if (b) out.push(b); }
   return out;
 }

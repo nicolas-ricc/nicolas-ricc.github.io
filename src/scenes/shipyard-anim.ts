@@ -52,7 +52,7 @@ export function createShipyardAnim(scene: Scene, rng: Rng, opts: { reducedMotion
     live = [];
     const n = sparkRng.int(4, 6);
     for (let i = 0; i < n; i++) {
-      live.push({ kind: "dot", at: v3(s.x + (sparkRng.next() * 2 - 1) * 1.5, s.y + (sparkRng.next() * 2 - 1) * 1.5, s.z + sparkRng.next() * 1.5), r: 0.6, color: sparkRng.chance(0.6) ? "cyan" : "cyanMid" });
+      live.push({ kind: "dot", at: v3(s.x + (sparkRng.next() * 2 - 1) * 1.5, s.y + (sparkRng.next() * 2 - 1) * 1.5, s.z + sparkRng.next() * 1.5), r: 0.6, color: "spark" });
     }
   };
 

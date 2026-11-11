@@ -3,12 +3,10 @@ import { v3, type Vec2, type Vec3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
-import { BLEED, WORLD, ZONE_SPLIT_Y, inCoverQuad } from "../map/geo";
-import { jungle } from "./flora";
+import { BLEED, WORLD, inCoverQuad } from "../map/geo";
 import { towerCrane } from "./pieces";
 import { RAIL_Y } from "./shipyard";
-import { COVER_MARGIN, GREEN_BELT, builtAt } from "./sprawl-grid";
-import { TRAIN_CLEAR } from "./station";
+import { COVER_MARGIN, builtAt } from "./sprawl-grid";
 
 /**
  * Industrial hinterland of Portfolio, on the bleed north and west
@@ -125,7 +123,7 @@ function pier(out: Solid[], accents: Accent[]): void {
 
 /** West column: two more N-S tracks, container yard with two gantries, sheds, water tank and trucks. */
 function containerYard(out: Solid[], rng: Rng): void {
-  for (const x of WEST_TRACKS_X) for (const dx of [-0.8, 0.8]) out.push(strip([{ x: x + dx, y: -200 }, { x: x + dx, y: 100 }], 0.4, 0.1, "rail"));
+  for (const x of WEST_TRACKS_X) for (const dx of [-0.8, 0.8]) out.push(strip([{ x: x + dx, y: -200 }, { x: x + dx, y: 86 }], 0.4, 0.1, "rail"));
   for (let i = 0; i < 6; i++) out.push(prism(WEST_TRACKS_X[i % 2]! - 1.1, -30 + i * 16, 0, 2.2, 7, 2.8, i % 2 === 0 ? "rust" : "steel"));
   const { x0, x1, y0, rows, rowStep } = CONTAINER_YARD;
   for (let r = 0; r < rows; r++) {
@@ -143,24 +141,23 @@ function containerYard(out: Solid[], rng: Rng): void {
   }
 }
 
-/** West sheds, water tank and the green belt's jungle. */
-function westHalls(out: Solid[], accents: Accent[], rng: Rng): void {
-  for (const y of [50, 76]) { if (onIndustrial(-190, y, 36, 14)) { out.push(prism(-190, y, 0, 36, 14, 7, "concrete", "gable")); out.push(prism(-152, y + 2, 0, 3, 2, 2, "steel")); } }
+/** West sheds, water tank and lamps. */
+function westHalls(out: Solid[], accents: Accent[]): void {
+  for (const y of [50, 75]) { if (onIndustrial(-190, y, 36, 14)) { out.push(prism(-190, y, 0, 36, 14, 7, "concrete", "gable")); out.push(prism(-152, y + 2, 0, 3, 2, 2, "steel")); } }
   if (onIndustrial(-140, 58, 60, 24)) out.push(prism(-140, 58, 0, 60, 24, 9, "brick")); // brick hall
-  for (const [x, y] of [[-120, 92], [-108, 92], [-96, 92]] as const) { out.push(prism(x, y, 0, 6, 2.4, 2.8, "rust")); out.push(prism(x + 6, y, 0, 2, 2.4, 2.2, "steel")); }
+  for (const [x, y] of [[-120, 84], [-108, 84], [-96, 84]] as const) { out.push(prism(x, y, 0, 6, 2.4, 2.8, "rust")); out.push(prism(x + 6, y, 0, 2, 2.4, 2.2, "steel")); }
   const wx = -100, wy = 40, legH = 8; // water tank
   for (const [dx, dy] of [[-2, -2], [2, -2], [2, 2], [-2, 2]] as const) out.push(prism(wx + dx - 0.3, wy + dy - 0.3, 0, 0.6, 0.6, legH, "steel"));
   out.push({ kind: "cylinder", at: v3(wx, wy, legH), r: 3, h: 4, mat: "steel", sides: 10 });
   accents.push({ kind: "dot", at: v3(wx, wy, legH + 4.2), r: 0.6, color: "cyanMid" });
-  for (const [x, y] of [[-190, 44], [-130, 96], [-70, 20], [-150, -50], [-180, 10]] as const) lamp(out, accents, x, y);
-  jungle(out, rng, { x0: -238, x1: WORLD.x0 - 2, y0: GREEN_BELT.y0 + 2, y1: ZONE_SPLIT_Y - 5 }, 60, 0.4, { y: RAIL_Y, train: TRAIN_CLEAR }); // the Portfolio half of the green belt (r ≤ 4: no cone crosses the seam y = 146); 60 are seeded because those that would fall on the west tracks are discarded (~20 remain after clearing the train corridor, #280)
+  for (const [x, y] of [[-190, 44], [-130, 86], [-70, 20], [-150, -50], [-180, 10]] as const) lamp(out, accents, x, y);
 }
 
 /** The shipyard's west tracks continue through the green belt to the edge of the bleed: on screen they leave to the left, as if they never ended. */
 export const WEST_RAIL_X0 = WORLD.x0 - BLEED.x;
 function westRails(out: Solid[]): void {
-  for (const y of RAIL_Y) out.push(strip([{ x: WEST_RAIL_X0, y }, { x: 0, y }], 0.5, 0.05, "rail"));
-  for (let x = -2; x > WEST_RAIL_X0; x -= 4) out.push(prism(x, RAIL_Y[0] - 1, 0, 1, 5, 0.3, "rust")); // sleepers, in step with the shipyard's
+  for (const y of RAIL_Y) out.push(strip([{ x: WEST_RAIL_X0, y }, { x: WORLD.x0, y }], 0.5, 0.05, "rail"));
+  for (let x = WORLD.x0 - 2; x > WEST_RAIL_X0; x -= 4) out.push(prism(x, RAIL_Y[0] - 1, 0, 1, 5, 0.3, "rust")); // sleepers, in step with the shipyard's
 }
 
 export const POWER = { x: 34, y: -276, w: 40, d: 16 } as const;
@@ -213,7 +210,7 @@ export function hinterland(rng: Rng): HinterlandScene {
   trucks(solids, accents);
   pier(solids, accents);
   containerYard(solids, rng);
-  westHalls(solids, accents, rng);
+  westHalls(solids, accents);
   westRails(solids);
   powerPlant(solids, accents, stacks, rng);
   fairRoad(solids, accents, rng);

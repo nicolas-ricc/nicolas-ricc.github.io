@@ -248,7 +248,7 @@ describe("fair launch", () => {
         for (const s of statics) { const sb = bounds(s); if (overlaps(screenBounds(box), screenBounds(sb))) expect(isBehind(box, sb)).toBe(false); }
       }
     }
-  });
+  }, 15_000); // ~3 s alone since the freight yard of #325 adds solids to the world; the full parallel suite stretches it past the default 5 s
 });
 
 describe("sea, beam and buoys", () => {

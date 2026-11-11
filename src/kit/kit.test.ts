@@ -73,11 +73,11 @@ function concaveIntruders(solids: Solid[]): number {
   return n;
 }
 
-/** Copy with `dz` added to every z coordinate; the normals (`wall`, `normal`) don't move. */
+/** Copy with `dz` added to every z coordinate (`z`, and `z0`/`z1` of the plates); the normals (`wall`, `normal`) don't move. */
 function shiftZ(v: unknown, dz: number, key = ""): unknown {
   if (key === "wall" || key === "normal") return v;
   if (Array.isArray(v)) return v.map((x) => shiftZ(x, dz));
-  if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, k === "z" && typeof x === "number" ? x + dz : shiftZ(x, dz, k)]));
+  if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, (k === "z" || k === "z0" || k === "z1") && typeof x === "number" ? x + dz : shiftZ(x, dz, k)]));
   return v;
 }
 const rounded = (v: unknown) => JSON.stringify(v, (_, x) => (typeof x === "number" ? Math.round(x * 1e6) / 1e6 : x));
@@ -163,7 +163,7 @@ describe("kit: contract of every registered recipe", () => {
             expect(w.wall.x > EPS || w.wall.y > EPS).toBe(true);
             expect(w.floor).toBeGreaterThanOrEqual(0);
             const s = p.solids[w.building];
-            expect(s && "facade" in s && s.facade).toBeTruthy();
+            expect(s && (("facade" in s && s.facade) || ("plates" in s && s.plates?.some((q) => q.mat === "glass")))).toBeTruthy();
           }
           for (const w of p.walls) {
             expect(w.normal.x > EPS || w.normal.y > EPS).toBe(true);
