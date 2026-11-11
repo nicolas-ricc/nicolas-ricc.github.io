@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { Accent } from "../iso/accent";
 import { bounds, type Bounds, type Solid } from "../iso/solids";
 import { createRng } from "../map/seed";
 import { STATION_LAND, WORLD } from "../map/geo";
 import { RAIL_Y } from "../scenes/shipyard";
 import { CROSSINGS, CROSSING_GAP, MAIN_LINE, SIDING_Y, SWITCH, freightYard, railLands } from "./rail-lands";
+import type { FixedLight } from "./lights";
 
 describe("rail lands (#319)", () => {
   const ground: Solid[] = [], solids: Solid[] = [];
@@ -83,11 +83,11 @@ describe("rail lands (#319)", () => {
   describe("freight yard (#325)", () => {
     type Prism = Solid & { kind: "prism" };
     const yard = (seed: number) => {
-      const g: Solid[] = [], base: Solid[] = [], out: Solid[] = [], acc: Accent[] = [];
+      const g: Solid[] = [], base: Solid[] = [], out: Solid[] = [], fixed: FixedLight[] = [];
       railLands(g, base);
       const n0 = g.length;
-      freightYard(g, out, acc, createRng(seed));
-      return { ground: g.slice(n0), base, solids: out, accents: acc };
+      freightYard(g, out, fixed, createRng(seed));
+      return { ground: g.slice(n0), base, solids: out, accents: fixed.flatMap((l) => l.accents) };
     };
     const y1 = yard(1);
     const ps = (xs: Solid[]): Prism[] => xs.filter((s): s is Prism => s.kind === "prism");

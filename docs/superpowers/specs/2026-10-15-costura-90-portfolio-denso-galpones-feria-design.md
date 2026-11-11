@@ -660,6 +660,9 @@ Medido con la semilla 7 (plan `docs/plans/2026-11-08-323-portfolio-este.md`).
 - **§5.2, `openDock` en z 0 sin zócalo (#325):** sigue la regla general
   `NO_PLINTH`; el literal del lote en el issue dice `z: PLINTH_H`, que la
   contradice.
+  Al integrar `main` (#142, zócalo decidido por `ground`), `NO_PLINTH`
+  desaparece: `openDock` no trae `ground`, así que va sobre su zócalo a
+  `z PLINTH_H`, como pedía el literal del issue.
 - **§5.2, el tren estacionado sobre los durmientes del apartadero (z 0.3)
   (#325):** cumple la regla (139.8 − 1.4·3.7 = 134.62 ≥ 134.5); la locomotora
   va al extremo oeste.

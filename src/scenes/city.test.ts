@@ -1,4 +1,7 @@
 import { readFileSync } from "node:fs";
+import type { Accent } from "../iso/accent";
+import { hides, screenHull } from "../iso/depth";
+import { lightBox, type FixedLight } from "../city/lights";
 import { describe, expect, it } from "vitest";
 import { buildRenderList } from "../iso/render-list";
 import { bounds, type Solid } from "../iso/solids";
@@ -11,6 +14,7 @@ import { CAR } from "../kit/props";
 import { FIXED, FOOTBRIDGE_LOT, MAX_BUILDING_H, WATER_TOWER_BLOCK, assign } from "../city/zoning";
 import { zoneRng } from "./world";
 import { MARKET_SCALE } from "../city/harbor";
+import { fingerprint } from "../iso/fingerprint";
 
 const scene = (): CityScene => city(createRng(7), createRng(8), createRng(9));
 const all = (s: CityScene): Solid[] => [...s.ground, ...s.solids];
@@ -72,13 +76,13 @@ describe("city", () => {
     }
   });
 
-  it("freight lots (#325): a freightShed or openDock each, a 24 × 13 paving plinth only under the sheds", () => {
+  it("freight lots (#325): a freightShed or openDock each, each on a 24 × 13 paving plinth (#142: neither brings ground)", () => {
     const s = scene(), lots = blocks().filter((b) => b.kind === "freight");
     const plinths = s.solids.filter((x) => x.kind === "prism" && x.mat === "paving" && x.h === PLINTH_H && x.at.z === 0 && x.w === 24 && x.d === FREIGHT_ROW.d);
     const placed = lots.map((b) => s.placed.find((p) => p.placed.block.x === b.x && p.placed.block.y === b.y)!);
     for (const p of placed) expect(["freightShed", "openDock"]).toContain(p.placed.recipe);
-    const sheds = placed.filter((p) => p.placed.recipe === "freightShed").map((p) => `${p.placed.block.x},${p.placed.block.y}`);
-    expect(plinths.map((x) => x.kind === "prism" && `${x.at.x},${x.at.y}`)).toEqual(sheds);
+    expect(placed.every((p) => p.piece.ground.length === 0)).toBe(true);
+    expect(plinths.map((x) => x.kind === "prism" && `${x.at.x},${x.at.y}`)).toEqual(lots.map((b) => `${b.x},${b.y}`));
   });
 
   it("the covered market stands on (72, 92): steel 0.4² pillars, stalls inside, everything within its lot (+0.8 awnings) (#325)", () => {
@@ -315,10 +319,44 @@ describe("city", () => {
     }
   });
 
+  it("plinth by ground presence, seeds 1..5: no ground piece on a plinth, eatenRuin and campus without one, placed.lot.z is the resolved z", () => {
+    const seen = { courtyardO: 0, library: 0 };
+    for (let s = 1; s <= 5; s++) {
+      const c = city(createRng(s), createRng(s + 1), createRng(s + 2));
+      for (const q of c.placed) {
+        const b = q.placed.block, ground = q.piece.ground.length > 0;
+        const onPlinth = c.solids.some((x) => x.kind === "prism" && x.mat === "paving" && x.at.x === b.x && x.at.y === b.y && x.at.z === 0 && x.w === b.w && x.d === b.d && x.h === PLINTH_H);
+        const id = `seed ${s} ${q.placed.recipe}@${b.x},${b.y}`;
+        expect(onPlinth, id).toBe(!ground);
+        expect(q.placed.lot.z, id).toBe(onPlinth ? PLINTH_H : 0);
+        if (q.placed.recipe === "eatenRuin" || q.placed.recipe === "campus") expect(onPlinth, id).toBe(false);
+        if ((q.placed.recipe === "courtyardO" || q.placed.recipe === "library") && ground) seen[q.placed.recipe]++;
+      }
+    }
+    expect(seen.courtyardO).toBeGreaterThan(0);
+    expect(seen.library).toBeGreaterThan(0);
+  });
+
+  // Fingerprints measured on 860a582, before #142: lifting must reproduce the plinth pieces of then.
+  // A deliberate change to a recipe without ground moves them; re-record then, as with world-baseline.
+  // #143: a recipe with ground drawing more rng (courtyardO's 2×2 patio tiles) moves the pieces after it too;
+  // seeds 1, 2 and 4 (the ones with a paved courtyardO) re-recorded once.
+  // #56: the seam at y 90 adds rows, neighbourhoods and recipes (and openDock goes onto a plinth); all five re-recorded once.
+  // That lifting equals running the recipe PLINTH_H higher is checked per recipe in piece.test.
+  it("pieces without ground are identical to the pinned plinth pieces (860a582; re-recorded at #143 and #56)", () => {
+    const MAIN = ["0a1e592f", "7a46f239", "ff800453", "c9c106ac", "1db2537f"];
+    for (let s = 1; s <= 5; s++) {
+      const c = city(createRng(s), createRng(s + 1), createRng(s + 2));
+      const plain = c.placed.filter((q) => q.piece.ground.length === 0).map((q) => q.piece);
+      expect(fingerprint(plain as unknown as Solid[]), `seed ${s}`).toBe(MAIN[s - 1]);
+    }
+  });
+
   it("water tower in the courtyard of (12, 164) and stone footbridge over the estuary", () => {
     const s = scene();
     const host = s.placed.find((p) => p.placed.block.x === WATER_TOWER_BLOCK.x && p.placed.block.y === WATER_TOWER_BLOCK.y)!;
     expect(host.placed.recipe).toBe("patioResidential");
+    expect(host.placed.lot.z).toBe(PLINTH_H); // the host brings no ground: it stays on its plinth, and so does the tower
     const court = host.piece.courtyard!;
     const tank = s.solids.find((x) => x.kind === "dome" && x.mat === "copper" && x.r === 2.2);
     expect(tank).toBeDefined();
@@ -345,5 +383,42 @@ describe("city", () => {
       const wall = s.solids.find((w) => w.kind === "prism" && !!w.facade && inDistrict(w) && Math.abs(w.at.y + w.d + 0.4 - y) < 1e-6);
       expect(wall).toBeDefined();
     }
+  });
+});
+
+describe("fixed lights (world seed, #171)", () => {
+  const s = city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3));
+  const bs = s.solids.map(bounds), hs = bs.map(screenHull), published = new Set(s.accents);
+  const hiddenLight = (f: FixedLight): boolean => {
+    const box = lightBox([f.at]), back = screenHull(box);
+    return bs.some((b, i) => (i < f.own[0] || i >= f.own[1]) && hides(box, b, { back, front: hs[i]! }));
+  };
+
+  it("no fixed light left in the accents is hidden, and each is published whole or not at all (brute-force oracle)", () => {
+    expect(s.fixedLights.length).toBeGreaterThan(50);
+    for (const f of s.fixedLights) {
+      const n = f.accents.filter((a) => published.has(a)).length;
+      expect([0, f.accents.length]).toContain(n);
+      expect(n === f.accents.length).toBe(!hiddenLight(f));
+    }
+  });
+
+  it("the obelisk point behind the block is gone", () => {
+    const near = (a: Accent) => a.kind === "dot" && Math.hypot(a.at.x - 275.4, a.at.y - 216.4, a.at.z - 7.1) < 0.05;
+    expect(s.fixedLights.some((f) => f.accents.some(near))).toBe(true);
+    expect(s.accents.some(near)).toBe(false);
+  });
+
+  it("tower puddles, fountain and plaza lamps stay", () => {
+    const inPlazaRect = (a: Accent) => a.kind === "poly" && a.pts.every((q) => q.x >= PLAZA.x && q.x <= PLAZA.x + PLAZA.w && q.y >= PLAZA.y && q.y <= PLAZA.y + PLAZA.d);
+    expect(s.accents.filter((a) => inPlazaRect(a) && a.color === "amberBleed" && a.kind === "poly" && a.alpha === 0.25)).toHaveLength(6);
+    expect(s.accents.filter((a) => inPlazaRect(a) && a.color === "amberBleed" && a.kind === "poly" && a.alpha === 0.35)).toHaveLength(3);
+    for (const x of [PLAZA.x + 2.3, PLAZA.x + PLAZA.w - 2.3]) {
+      expect(s.accents.some((a) => a.kind === "dot" && Math.hypot(a.at.x - x, a.at.y - (PLAZA.y + PLAZA.d / 2 + 0.3), a.at.z - 5.05) < 1e-6)).toBe(true);
+    }
+  });
+
+  it("kit accents unchanged", () => {
+    for (const p of s.placed) for (const a of p.piece.accents) expect(published.has(a)).toBe(true);
   });
 });

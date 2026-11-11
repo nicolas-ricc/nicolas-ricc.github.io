@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { hides, screenHull } from "../iso/depth";
-import { v3, type Vec2, type Vec3 } from "../iso/geometry";
+import { centroid, v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { bounds, type Bounds, type Solid } from "../iso/solids";
 import type { Piece, Slot, Window } from "../kit/types";
 import { createRng } from "../map/seed";
@@ -8,7 +8,8 @@ import { blocks } from "../scenes/city-grid";
 import { city, type CityScene, type PlacedPiece } from "../scenes/city";
 import { zoneRng } from "../scenes/world";
 import { SEED } from "../map/seed";
-import { lightBox, lights, MAX_ANIMABLE, NEON_CAPS, WINDOW_ALPHA } from "./lights";
+import { garland, lamp, puddle } from "../kit/props";
+import { fixedLights, lightBox, lights, placeLit, solidBoxes, visibleLights, MAX_ANIMABLE, NEON_CAPS, WINDOW_ALPHA, type FixedLight } from "./lights";
 import { CATALOGUE, type Neighborhood } from "./zoning";
 
 const NEIGHBORHOODS = Object.keys(CATALOGUE) as Neighborhood[];
@@ -42,6 +43,14 @@ for (const [name, make, isWorld] of SEEDS) {
       expect(on.length).toBeGreaterThan(100);
       for (const w of on) expect(hidden(lightBox(w.window.pts), bs, hs, ownSolid(w))).toBe(false);
     }, 20_000); // ~1.9 s alone since the strip blocks of #320 and the warehouses of #325; the full parallel suite stretched it past 10 s
+
+    it("no lit window sits on the face of another solid (centroid in its x/y range, strictly inside its z)", () => {
+      const E = 1e-6;
+      const onFace = (c: Vec3, b: Bounds): boolean =>
+        c.x >= b.min.x - E && c.x <= b.max.x + E && c.y >= b.min.y - E && c.y <= b.max.y + E && c.z > b.min.z + E && c.z < b.max.z - E;
+      const bad = l.windows.filter((w) => w.on).filter((w) => { const c = centroid(w.window.pts); return bs.some((b, i) => i !== ownSolid(w) && onFace(c, b)); });
+      expect(bad.map((w) => centroid(w.window.pts))).toEqual([]);
+    });
 
     it("no neon is hidden by a solid (brute-force oracle)", () => {
       for (const n of l.neons) expect(hidden(lightBox(n.slot.pts), bs, hs)).toBe(false);
@@ -107,7 +116,14 @@ for (const [name, make, isWorld] of SEEDS) {
         expect(["amber", "magenta", "cyan"]).toContain(n.color);
         expect(n.accents.some((a) => a.kind === "poly" && a.color === n.color && a.alpha === 1 && a.pts === n.slot.pts)).toBe(true);
         expect(n.accents.every((a) => a.color === n.color || a.color === `${n.color}Bleed`)).toBe(true);
-        expect(n.accents.filter((a) => a.kind === "poly" && a.alpha === 0.25 && a.color === `${n.color}Bleed`)).toHaveLength(3); // the puddle
+        expect([0, 3]).toContain(n.accents.filter((a) => a.kind === "poly" && a.alpha === 0.25 && a.color === `${n.color}Bleed`).length); // the puddle, unless hidden
+      }
+    });
+
+    it("no neon puddle is hidden (brute-force oracle)", () => {
+      for (const n of l.neons) {
+        const ring = n.accents.find((a) => a.kind === "poly" && a.pts.length === 8);
+        if (ring?.kind === "poly") expect(hidden(lightBox([centroid(ring.pts)]), bs, hs)).toBe(false);
       }
     });
 
@@ -198,6 +214,28 @@ describe("lights (synthetic scenes)", () => {
     for (const b of NEIGHBORHOODS) if (b !== "residential") expect(l.counts[b]).toEqual({ candidates: 0, on: 0, warm: 0 });
   });
 
+  it("two touching prisms of the same piece: covered windows of the back one are not candidates, the protruding ones are", () => {
+    const a = emptyPiece();
+    a.solids.push(prism(0, 0, 0, 12, 10, 10), prism(0, 10, 0, 6, 4, 10)); // the front one touches the +y face of the back one on x 0..6
+    const win = (x0: number, x1: number): Window => ({ pts: quad(x0, x1, 10, 2, 4), floor: 0, wall: v3(0, 1, 0), building: 0 });
+    const free = win(8, 10);
+    a.windows.push(win(1, 3), win(3.5, 5.5), free);
+    const l = lights({ solids: a.solids, placed: [placedAt("downtown", a, 0)] }, createRng(1));
+    expect(l.windows.map((w) => w.window)).toEqual([free]);
+    expect(l.counts.downtown.candidates).toBe(1);
+  });
+
+  it("a touching solid of another piece covers the window; one whose top only reaches the window's centroid does not", () => {
+    const a = emptyPiece(), b = emptyPiece();
+    a.solids.push(prism(0, 0, 0, 12, 10, 10));
+    const win = (x0: number, x1: number): Window => ({ pts: quad(x0, x1, 10, 2, 4), floor: 0, wall: v3(0, 1, 0), building: 0 });
+    const low = win(8, 10);
+    a.windows.push(win(1, 3), low);
+    b.solids.push(prism(0, 10, 0, 4, 4, 10), prism(6, 10, 0, 6, 4, 3)); // tall neighbour on x 0..4; low wall on x 6..12 with top at z 3 = centroid z
+    const l = lights({ solids: [...a.solids, ...b.solids], placed: [placedAt("downtown", a, 0), placedAt("downtown", b, 1)] }, createRng(1));
+    expect(l.windows.map((w) => w.window)).toEqual([low]);
+  });
+
   const neonSlot = (x: number, shop: number, z0 = 2.7): Slot => ({ pts: quad(x, x + 2, 18, z0, z0 + 1.2), wall: v3(0, 1, 0), side: "s", kind: "neon", shop });
 
   it("neons: at most 24 even with 30 open slots, and one per shop", () => {
@@ -249,6 +287,17 @@ describe("lights (synthetic scenes)", () => {
     expect(l.neons.map((n) => n.slot.side)).toEqual(["e"]);
   });
 
+  it("neons: a slot whose wall faces away from the camera produces no neon, even on an open side", () => {
+    const a = emptyPiece();
+    a.solids.push(prism(0, 0, 0.3, 24, 18, 6));
+    a.slots.push(
+      { pts: quad(10, 12, 0, 2.7, 3.9), wall: v3(0, -1, 0), side: "n", kind: "neon", shop: 0 },
+      { pts: [v3(0, 8, 2.7), v3(0, 10, 2.7), v3(0, 10, 3.9), v3(0, 8, 3.9)], wall: v3(-1, 0, 0), side: "w", kind: "neon", shop: 1 },
+    );
+    const l = lights({ solids: a.solids, placed: [placedAt("bars", a, 0, ["n", "w"])] }, createRng(3));
+    expect(l.neons).toEqual([]);
+  });
+
   it("neons: the puddle falls 1 outward from the wall, at the lot's z", () => {
     const a = emptyPiece();
     a.solids.push(prism(0, 0, 0.3, 24, 18, 6));
@@ -264,6 +313,27 @@ describe("lights (synthetic scenes)", () => {
     }
   });
 
+  it("neons: a hidden puddle is dropped, the neon stays", () => {
+    const a = emptyPiece(), b = emptyPiece();
+    a.solids.push(prism(0, 0, 0.3, 24, 18, 6));
+    a.slots.push(neonSlot(10, 0));
+    b.solids.push(prism(10.5, 20, 0, 2, 1, 1)); // low prism on the camera side of the puddle (11, 19, 0.3), below the slot
+    const l = lights({ solids: [...a.solids, ...b.solids], placed: [placedAt("bars", a, 0), placedAt("downtown", b, 1)] }, createRng(3));
+    expect(l.neons).toHaveLength(1);
+    const n = l.neons[0]!;
+    expect(n.accents).toHaveLength(2);
+    expect(n.accents.some((x) => x.kind === "poly" && x.pts === n.slot.pts)).toBe(true);
+    expect(n.accents.some((x) => x.kind === "poly" && x.pts.length === 8)).toBe(false);
+  });
+
+  it("neons: a solid of the owner piece does not hide its puddle", () => {
+    const a = emptyPiece();
+    a.solids.push(prism(0, 0, 0.3, 24, 18, 6), prism(10.5, 20, 0, 2, 1, 1)); // the same low prism as above, now part of the owner piece
+    a.slots.push(neonSlot(10, 0));
+    const [n] = lights({ solids: a.solids, placed: [placedAt("bars", a, 0)] }, createRng(3)).neons;
+    expect(n!.accents.filter((x) => x.kind === "poly" && x.pts.length === 8)).toHaveLength(3);
+  });
+
   it("neons: colors with weights amber 50, magenta 30, cyan 20", () => {
     const tally = { amber: 0, magenta: 0, cyan: 0 };
     for (let seed = 1; seed <= 40; seed++) {
@@ -276,5 +346,42 @@ describe("lights (synthetic scenes)", () => {
     expect(Math.abs(tally.amber / total - 0.5)).toBeLessThan(0.05);
     expect(Math.abs(tally.magenta / total - 0.3)).toBeLessThan(0.05);
     expect(Math.abs(tally.cyan / total - 0.2)).toBeLessThan(0.05);
+  });
+});
+
+describe("fixed lights", () => {
+  it("a lamp with a foreign prism in front disappears", () => {
+    const s: Solid[] = [], out: FixedLight[] = [];
+    placeLit(s, out, lamp(v3(0, 0, 0)));
+    s.push(prism(1, 1, 0, 1, 1, 10));
+    expect(visibleLights(out, solidBoxes(s))).toEqual([]);
+  });
+
+  it("its own post does not hide the lamp", () => {
+    const s: Solid[] = [], out: FixedLight[] = [];
+    placeLit(s, out, lamp(v3(0, 0, 0)));
+    expect(out[0]!.own).toEqual([0, 1]);
+    expect(visibleLights(out, solidBoxes(s))).toEqual(lamp(v3(0, 0, 0)).accents);
+  });
+
+  it("a solid inside the own range is exempt, the same solid outside it hides", () => {
+    const wall = prism(1, 1, 0, 1, 1, 10), dot = lamp(v3(0, 0, 0)).accents;
+    expect(visibleLights(fixedLights(dot, [0, 1]), solidBoxes([wall]))).toEqual(dot);
+    expect(visibleLights(fixedLights(dot), solidBoxes([wall]))).toEqual([]);
+  });
+
+  it("a puddle is one light, kept or dropped whole", () => {
+    const rings = puddle(5, 5, "amberBleed"), ls = fixedLights(rings);
+    expect(ls).toHaveLength(1);
+    expect(ls[0]!.at.x).toBeCloseTo(5, 6); expect(ls[0]!.at.y).toBeCloseTo(5, 6); expect(ls[0]!.at.z).toBeCloseTo(0.12, 6);
+    expect(ls[0]!.own).toEqual([0, 0]);
+    expect(visibleLights(ls, solidBoxes([prism(6, 6, 0, 2, 2, 10)]))).toEqual([]);
+    expect(visibleLights(ls, solidBoxes([]))).toEqual(rings);
+  });
+
+  it("a garland is one light per dot", () => {
+    const dots = garland([v3(0, 0, 3), v3(0, 3, 3)]);
+    expect(fixedLights(dots)).toHaveLength(dots.length);
+    expect(fixedLights(dots).map((l) => l.accents)).toEqual(dots.map((d) => [d]));
   });
 });

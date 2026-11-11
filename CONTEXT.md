@@ -59,7 +59,7 @@ Code: `src/scenes/sea-anim.ts` (`LANE_OUT`, `LANE_BACK`, `LANE_SPEED`, `shipStat
 Code: `src/lab/exhibits.ts` (`Exhibit`, `EXHIBITS`, `GROUPS`, `pickExhibit`, `stepExhibit`), `src/lab/storybook.ts`.
 
 ### Landmark
-The one reference point per zone used to frame it: the gantry crane for Portfolio, the office tower for Resume and the lighthouse for Blog, in world coordinates.
+The one reference point per zone used to frame it: the gantry crane for Portfolio, the office tower for Resume and the lighthouse for Blog, in world coordinates. Not to be confused with a landmark recipe (see Landmark recipe).
 Code: `src/scenes/world.ts` (`LANDMARKS`, `WorldScene.landmarks`).
 
 ### Bleed
@@ -69,3 +69,39 @@ Code: `src/map/geo.ts` (`BLEED`, `CELL_BLEED`), `src/world/veil.ts` (`veilCells`
 ### Cover frame
 The largest 16:9 rectangle that fits inside the projected content plus bleed, pulled in by `COVER_INSET` so it does not expose sky at the edge. It is the camera of the site (`coverView(w, h)`, which uses the real aspect of the host) and of lab key `4` (`coverFrame(16/9)`).
 Code: `src/map/geo.ts` (`coverQuad`, `inCoverQuad`, `COVER_INSET`), `src/world/frame.ts` (`coverFrame`), `src/world/view.ts` (`coverView`).
+
+### Plinth
+(Zócalo.) The `PLINTH_H` (0.3) paving prism under a city block. A recipe rests on it unless its piece brings `ground` (painted before every solid, the plinth would hide it): `seat` runs the recipe once at street level and lifts the piece `PLINTH_H` when it has no ground.
+Code: `src/kit/piece.ts` (`seat`, `liftPiece`), `src/scenes/city-pieces.ts` (`PLINTH_H`), `src/scenes/city.ts`, `src/lab/kit-scene.ts`.
+
+### Lot
+(Lote.) The rectangle a recipe draws inside: `x y w d`, the surface height `z` it rests on, the `open` sides (`Side`: `n`, `s`, `e`, `w`; avenue, water or plaza frontage) and `maxH`, the height cap above `z`. The zoning hands out one per block (`Placed.lot`); `waterTowerLot` and `FOOTBRIDGE_LOT` are their own lots. The lab uses 24 x 18 lots (`KIT_LOT`), or the `LAB_LOTS` size for the recipes that need one.
+Code: `src/kit/types.ts` (`Lot`, `Side`), `src/city/zoning.ts` (`Placed`, `waterTowerLot`, `FOOTBRIDGE_LOT`), `src/lab/kit-scene.ts` (`KIT_LOT`).
+
+### Piece
+(Pieza.) What a recipe returns: `solids`, `ground` (painted before every solid), `accents`, plus the `walls`, `windows` and `slots` it publishes for the lights, an optional `courtyard` and an optional `landmarkTop`. `emptyPiece` starts one; `addBuilding` adds a solid and publishes its walls and windows; `liftPiece` raises it; `seat` sets it on its lot (see Plinth). `src/city/lights.ts` reads `windows`, `slots` and `walls`. Not to be confused with a deck piece or side piece, which are solids placed against a ship's hull, nor with an Exhibit of kind `piece`, a structure the storybook builds at the origin.
+Code: `src/kit/types.ts` (`Piece`), `src/kit/piece.ts` (`emptyPiece`, `addBuilding`, `liftPiece`, `seat`), `src/city/lights.ts`.
+
+### Recipe
+(Receta.) `Recipe = (lot, rng, style) => Piece`: a function that draws a piece relative to `lot.z`. `RecipeDef` registers one: `name`, `recipe`, `family` (`modern`, `courtyard`, `composite`, `curved`, `lowrise`, `landmarks`) and the optional `landmark` flag. `RECIPES` concatenates the six families; `recipe(name)` looks one up and throws on an unknown name. A common recipe stays under `recipeCap(lot)` = `min(lot.maxH, RECIPE_MAX_H)` (18). The geometric helpers the recipes use (`prism`, `tiles`, `PLINTH_H`) come from `src/scenes/city-pieces.ts`. `src/scenes/city.ts` seats `recipe(p.recipe)` per placed block.
+Code: `src/kit/types.ts` (`Recipe`, `RecipeDef`), `src/kit/index.ts` (`RECIPES`, `recipe`, `LAB_LOTS`), `src/kit/piece.ts` (`RECIPE_MAX_H`, `recipeCap`), `src/scenes/city.ts`.
+
+### Landmark recipe
+(Receta landmark.) Not the Landmark of a zone, above: a `RecipeDef` with `landmark: true`. They are the seven of `src/kit/forms/landmarks.ts` (`LANDMARKS`) and three of `modern.ts` (`glassTower`, `classic`, `constructionSite`). Its cap is `LANDMARK_MAX_H` (24) instead of 18; `fitToCap` flattens a piece in z, relative to `lot.z`, so it fits `min(lot.maxH, LANDMARK_MAX_H)`. It publishes `Piece.landmarkTop`, the point it gives as its top (the highest point of the piece for the `landmarks` family, which `landmarks.test.ts` asserts; `glassTower` gives its roof, below the beacon), which `fitToCap` and `liftPiece` carry along; no scene code reads `landmarkTop` or the `landmark` flag today; only tests do (`kit.test.ts` uses the flag to choose the cap, and the family tests assert it). `src/city/zoning.ts` gives the fixed blocks and the `district` neighborhood a height ceiling of `LANDMARK_MAX_H` (the lot's `maxH` is the lower of that and the block's own cap), and sets `maxH` to `LANDMARK_MAX_H` in `waterTowerLot` and `FOOTBRIDGE_LOT`.
+Code: `src/kit/piece.ts` (`LANDMARK_MAX_H`, `fitToCap`), `src/kit/types.ts` (`RecipeDef.landmark`, `Piece.landmarkTop`), `src/kit/forms/landmarks.ts` (`LANDMARKS`), `src/kit/forms/modern.ts`, `src/city/zoning.ts`.
+
+### Style
+(Estilo.) The look a recipe receives: `id` (`StyleId`: `downtown`, `bars`, `residential`, `civic`, `riverside`, `district`), `mat`, `trim`, `roof`, `tone`, `floorH` and `window` (`windowWarm` or `windowCool`). `STYLES` holds one per neighborhood with `tone` 0; `src/scenes/city.ts` overrides `tone` per block.
+Code: `src/kit/types.ts` (`Style`, `StyleId`), `src/kit/styles.ts` (`STYLES`), `src/scenes/city.ts`.
+
+### Wall
+(Pared.) A facade that faces the camera, published by `addBuilding` for each wall of the solid (`visibleWalls`) whose normal has x > 0 or y > 0: `pts`, `normal`, `floorH` (the wall's height divided by its facade's floors: the height of one floor) and `building` (index of the solid in `Piece.solids`). The civic neighborhood's bathed facades read them.
+Code: `src/kit/types.ts` (`Wall`), `src/kit/piece.ts` (`addBuilding`), `src/iso/solids.ts` (`visibleWalls`), `src/city/lights.ts`.
+
+### Window
+(Ventana.) A lit-window candidate on a wall, from `facadeWindows`: `pts`, `floor`, `wall` (the wall normal) and `building`. `src/city/lights.ts` picks which are lit.
+Code: `src/kit/types.ts` (`Window`), `src/iso/facade.ts` (`facadeWindows`), `src/kit/piece.ts` (`addBuilding`), `src/city/lights.ts`.
+
+### Slot
+A place for a neon or a sign on a wall (the specs say "slot"; there is no Spanish name): `pts`, `wall` (normal), `side`, `kind` (`neon` or `sign`) and `shop` (index of the ground-floor shop). `shopRow` (`lowrise`) publishes `neon` slots per shop when the lot has open sides; `southSign` builds the south-face `sign` slot of towers at least `SIGN_MIN_H` (12) high. `src/city/lights.ts` lights the bars' neons; `src/scenes/city.ts` lights the district's signs.
+Code: `src/kit/types.ts` (`Slot`), `src/kit/piece.ts` (`southSign`, `SIGN_MIN_H`), `src/kit/forms/lowrise.ts`, `src/city/lights.ts`, `src/scenes/city.ts`.

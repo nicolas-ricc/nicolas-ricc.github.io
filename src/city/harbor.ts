@@ -1,14 +1,14 @@
-import type { Accent } from "../iso/accent";
 import { hides, screenHull } from "../iso/depth";
 import { v3 } from "../iso/geometry";
 import { bounds, type Solid } from "../iso/solids";
-import { bollard, dockCrane, lamp, place } from "../kit/props";
+import { bollard, dockCrane, lamp } from "../kit/props";
 import { CELL, WORLD, eastBank } from "../map/geo";
 import type { Rng } from "../map/seed";
 import { DARSENA, EAST_RING } from "../scenes/city-grid";
 import { PLINTH_H, prism } from "../scenes/city-pieces";
 import { clearOfWater, isWaterAt } from "../scenes/terrain-classify";
 import { jungleOnLand } from "./fixed";
+import { placeLit, type FixedLight } from "./lights";
 
 /**
  * Fishing boats: `xs` are the centres (a hull's `at` is its stern), all on `y`. Moored 1.5 off the north wall,
@@ -27,7 +27,7 @@ function onLandCell(x: number, y: number): number {
 }
 
 /** Works of the Resume east bank inlet (spec issue #326): walls, fishing boats, old crane, lamps, the fish market's crates, riprap and jungle to the point. */
-export function harbor(solids: Solid[], accents: Accent[], rng: Rng): void {
+export function harbor(solids: Solid[], lights: FixedLight[], rng: Rng): void {
   // boats first: later draws of the shared rng append after these
   const boats: Solid[] = [];
   for (const cx of BOATS.xs) {
@@ -42,8 +42,8 @@ export function harbor(solids: Solid[], accents: Accent[], rng: Rng): void {
   for (const x of [282.5, 286.5, 292.5]) solids.push(prism(x, 114, 0.5, 2, 1, 0.4, "rust"));
   for (const x of [289, 295]) solids.push(prism(x, 114, 0.5, 1, 1, 0.8, "deck"));
   solids.push(...dockCrane(v3(298, 95, 0.5), "w")); // north-east corner: on the south wall the market hides it
-  place(solids, accents, lamp(v3(283, 115.2, 0)));
-  place(solids, accents, lamp(v3(299, 94, 0)));
+  placeLit(solids, lights, lamp(v3(283, 115.2, 0)));
+  placeLit(solids, lights, lamp(v3(299, 94, 0)));
   // fish market frontage, on the north sidewalk of block 280,116
   for (const x of [286, 288, 290, 292]) solids.push(prism(x, 116.3, PLINTH_H, 1, 1, 0.8, "deck"));
   solids.push(prism(MARKET_SCALE.x, MARKET_SCALE.y, PLINTH_H, MARKET_SCALE.w, MARKET_SCALE.w, MARKET_SCALE.h, "steel"));

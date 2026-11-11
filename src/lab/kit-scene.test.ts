@@ -19,7 +19,7 @@ describe("kit lab scene", () => {
   it("standard lots of recipes without ground carry a 24×18×PLINTH_H paving prism plinth at their origin", () => {
     const { solids, lots } = kitScene(7, "downtown");
     // same lot and rng as kitScene: some recipes bring ground depending on the seed (courtyardO)
-    const hasGround = (i: number): boolean => RECIPES[i]!.recipe({ x: lots[i]!.x, y: lots[i]!.y, w: KIT_LOT.w, d: KIT_LOT.d, z: PLINTH_H, open: ["s", "e"], maxH: 24 }, createRng(7 * 1000 + i), STYLES.downtown).ground.length > 0;
+    const hasGround = (i: number): boolean => RECIPES[i]!.recipe({ x: lots[i]!.x, y: lots[i]!.y, w: KIT_LOT.w, d: KIT_LOT.d, z: 0, open: ["s", "e"], maxH: 24 }, createRng(7 * 1000 + i), STYLES.downtown).ground.length > 0;
     const plain = lots.filter((l, i) => !LAB_LOTS[l.name] && !hasGround(i));
     expect(plain.length).toBeLessThan(lots.length); // campus and eatenRuin bring ground
     for (const l of plain) {

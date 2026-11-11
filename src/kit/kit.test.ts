@@ -21,26 +21,43 @@ const STYLE_IDS = ["downtown", "bars", "residential", "civic"] as const;
 const SEEDS = Array.from({ length: 20 }, (_, i) => i + 1);
 const EPS = 1e-9;
 
-/** Point strictly inside a polygon (ray casting). */
-function inPoly(p: Vec2, poly: Vec2[]): boolean {
-  let inside = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const a = poly[i]!, b = poly[j]!;
-    if ((a.y > p.y) !== (b.y > p.y) && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x) inside = !inside;
+const GAP_AREA_EPS = 1e-6;
+
+/** Absolute shoelace area. */
+function area(poly: Vec2[]): number {
+  let a = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const p = poly[i]!, q = poly[(i + 1) % poly.length]!;
+    a += p.x * q.y - q.x * p.y;
   }
-  return inside;
+  return Math.abs(a) / 2;
 }
 
-/** Point on some side of the polygon (within 1e-6): it is on the footprint, not in the gap. */
-function onEdge(p: Vec2, poly: Vec2[]): boolean {
-  return poly.some((a, i) => {
-    const b = poly[(i + 1) % poly.length]!, dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
-    const t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2;
-    return t >= -1e-9 && t <= 1 + 1e-9 && Math.abs(dx * (p.y - a.y) - dy * (p.x - a.x)) / Math.sqrt(l2) < 1e-6;
-  });
+/** Sutherland-Hodgman clip of a polygon to the box [min, max]; `[]` when everything is clipped. */
+function clipToBox(poly: Vec2[], min: Vec2, max: Vec2): Vec2[] {
+  const planes: { axis: "x" | "y"; at: number; keep: 1 | -1 }[] = [
+    { axis: "x", at: min.x, keep: 1 }, { axis: "x", at: max.x, keep: -1 },
+    { axis: "y", at: min.y, keep: 1 }, { axis: "y", at: max.y, keep: -1 },
+  ];
+  let out = poly;
+  for (const { axis, at, keep } of planes) {
+    const inp = out, other = axis === "x" ? "y" : "x";
+    out = [];
+    const inside = (p: Vec2) => (p[axis] - at) * keep >= 0;
+    for (let i = 0; i < inp.length; i++) {
+      const a = inp[i]!, b = inp[(i + 1) % inp.length]!;
+      if (inside(a) !== inside(b)) {
+        const t = (at - a[axis]) / (b[axis] - a[axis]), q = { x: at, y: at }; // on the plane exactly, not 1 ulp off
+        q[other] = a[other] + (b[other] - a[other]) * t;
+        out.push(q);
+      }
+      if (inside(b)) out.push(b);
+    }
+  }
+  return out;
 }
 
-/** For each concave poly, no other solid of the piece has part of its box in the gap (convex hull minus footprint). */
+/** For each concave poly, no other solid of the piece has box area in the gap (convex hull minus footprint); faces flush with the footprint contribute 0. */
 function concaveIntruders(solids: Solid[]): number {
   let n = 0;
   for (const s of solids) {
@@ -49,11 +66,8 @@ function concaveIntruders(solids: Solid[]): number {
     if (hull.length === s.footprint.length) continue; // convex
     for (const o of solids) {
       if (o === s) continue;
-      const b = bounds(o);
-      for (let i = 0; i <= 4; i++) for (let j = 0; j <= 4; j++) {
-        const p = { x: b.min.x + ((b.max.x - b.min.x) * i) / 4, y: b.min.y + ((b.max.y - b.min.y) * j) / 4 };
-        if (inPoly(p, hull) && !inPoly(p, s.footprint) && !onEdge(p, s.footprint)) n++;
-      }
+      const { min, max } = bounds(o);
+      if (area(clipToBox(hull, min, max)) - area(clipToBox(s.footprint, min, max)) > GAP_AREA_EPS) n++;
     }
   }
   return n;
@@ -82,6 +96,23 @@ describe("kit: the concave-gap oracle", () => {
     const slab: Solid = { kind: "prism", at: { x: -0.5, y: -0.5, z: 6 }, w: 11, d: 4.5, h: 0.4, mat: "stone" };
     const tower: Solid = { kind: "prism", at: { x: 0, y: 0, z: 6.4 }, w: 4, d: 4, h: 8, mat: "plaster" };
     expect(concaveIntruders([L, slab, tower])).toBe(0);
+  });
+
+  it("detects a thin slab crossing the gap of an L", () => {
+    const L: Solid = { kind: "poly", footprint: [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 4 }, { x: 4, y: 4 }, { x: 4, y: 14 }, { x: 0, y: 14 }], z: 0, h: 6, mat: "plaster" };
+    const slab: Solid = { kind: "prism", at: { x: -6, y: 12, z: 0 }, w: 40, d: 0.5, h: 0.4, mat: "stone" };
+    expect(concaveIntruders([L, slab])).toBe(1);
+  });
+
+  it("measures the gap with either winding of the footprint, and ignores a solid entirely outside the hull", () => {
+    const ccw = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 4 }, { x: 4, y: 4 }, { x: 4, y: 10 }, { x: 0, y: 10 }];
+    for (const footprint of [ccw, [...ccw].reverse()]) {
+      const L: Solid = { kind: "poly", footprint, z: 0, h: 6, mat: "plaster" };
+      const roof: Solid = { kind: "prism", at: { x: -1, y: -1, z: 6 }, w: 12, d: 12, h: 0.4, mat: "stone" };
+      const outside: Solid = { kind: "prism", at: { x: 12, y: 12, z: 0 }, w: 2, d: 2, h: 2, mat: "stone" };
+      expect(concaveIntruders([L, roof])).toBe(1);
+      expect(concaveIntruders([L, outside])).toBe(0);
+    }
   });
 });
 

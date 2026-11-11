@@ -3,16 +3,17 @@ import type { Vec3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import type { Rng } from "../map/seed";
 import { recipe } from "../kit";
+import { seat } from "../kit/piece";
 import { STYLES } from "../kit/styles";
 import type { Piece } from "../kit/types";
 import { prism, PLINTH_H } from "./city-pieces";
 import { blocks } from "./city-grid";
-import { lights, WINDOW_ALPHA, type CityLights } from "../city/lights";
+import { lights, solidBoxes, visibleLights, WINDOW_ALPHA, type CityLights, type FixedLight } from "../city/lights";
 import { streets } from "../city/streets";
 import { freightYard, railLands } from "../city/rail-lands";
 import { harbor } from "../city/harbor";
 import { bridge, collapsed, cars, greenery, promenade, plazaAndTower, westQuay, type TowerLights } from "../city/fixed";
-import { FOOTBRIDGE_LOT, NO_PLINTH, WATER_TOWER_BLOCK, assign, isBare, waterTowerLot, type Placed } from "../city/zoning";
+import { FOOTBRIDGE_LOT, WATER_TOWER_BLOCK, assign, isBare, waterTowerLot, type Placed } from "../city/zoning";
 
 /**
  * Resume: orchestrator of the city. The zoning (src/city/zoning.ts) assigns
@@ -31,7 +32,8 @@ export interface PlacedPiece { placed: Placed; piece: Piece; solidOffset: number
 export interface CityScene {
   ground: Solid[];   // plaza tiles, ground of devoured blocks, lanes
   solids: Solid[];
-  accents: Accent[]; // street lamps, light spill, fixed lit windows, bar neons and bathed facades of lights(); the animatable windows, the flickering neon (lights().flicker), the lit floor of the tower and the antenna are animated by city-anim
+  accents: Accent[]; // kit accents, visible lights of the fixed pieces (street lamps, plaza, garlands, puddles), fixed lit windows, bar neons and bathed facades of lights(); the animatable windows, the flickering neon (lights().flicker), the lit floor of the tower and the antenna are animated by city-anim
+  fixedLights: FixedLight[]; // every light of the fixed pieces, hidden ones included; `accents` has only those `visibleLights` lets through
   tower: TowerLights;
   neon: { signs: Accent[]; promenade: Vec3[] }; // signs of the district and lights of the promenade; city-anim animates them
   placed: PlacedPiece[];
@@ -39,36 +41,38 @@ export interface CityScene {
 }
 
 export function city(rng: Rng, districtRng: Rng, lightsRng: Rng): CityScene {
-  const ground: Solid[] = [], solids: Solid[] = [], accents: Accent[] = [], signs: Accent[] = [], placed: PlacedPiece[] = [];
+  const fixed: FixedLight[] = [], ground: Solid[] = [], solids: Solid[] = [], accents: Accent[] = [], signs: Accent[] = [], placed: PlacedPiece[] = [];
   const add = (piece: Piece): void => { solids.push(...piece.solids); ground.push(...piece.ground); accents.push(...piece.accents); };
   for (const p of assign(rng, districtRng)) {
     const b = p.block, r = p.neighborhood === "district" ? districtRng : rng;
-    if (!NO_PLINTH.includes(p.recipe)) solids.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
-    const piece = recipe(p.recipe)(p.lot, r, { ...STYLES[p.neighborhood], tone: p.tone });
-    placed.push({ placed: p, piece, solidOffset: solids.length });
+    const { piece, lot, plinth } = seat(recipe(p.recipe), p.lot, r, { ...STYLES[p.neighborhood], tone: p.tone });
+    if (plinth) solids.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
+    placed.push({ placed: { ...p, lot }, piece, solidOffset: solids.length });
     add(piece);
     // the sign consumes the rng after the recipe, so the recipe draws do not depend on how many slots there are
     if (p.neighborhood === "district") for (const s of piece.slots) if (s.kind === "sign") signs.push({ kind: "poly", pts: s.pts, color: districtRng.chance(0.5) ? "cyan" : "magenta", alpha: 1 });
   }
   for (const b of blocks()) if (isBare(b)) solids.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
-  const tower = plazaAndTower(solids, ground, accents, rng);
+  const tower = plazaAndTower(solids, ground, fixed, rng);
   const host = placed.find((q) => q.placed.block.x === WATER_TOWER_BLOCK.x && q.placed.block.y === WATER_TOWER_BLOCK.y);
   if (!host?.piece.courtyard) throw new Error("the water tower block has no courtyard");
   add(recipe("waterTower")(waterTowerLot(host.piece.courtyard, host.placed.lot.z), rng, STYLES.residential));
   add(recipe("footbridge")(FOOTBRIDGE_LOT, rng, STYLES.residential));
-  streets(ground, solids, accents);
+  streets(ground, solids, fixed);
   railLands(ground, solids);
-  bridge(solids, accents);
-  westQuay(solids, accents);
-  harbor(solids, accents, rng);
-  freightYard(ground, solids, accents, rng);
-  const promenadeLights = promenade(solids, accents);
+  bridge(solids, fixed);
+  westQuay(solids, fixed);
+  harbor(solids, fixed, rng);
+  freightYard(ground, solids, fixed, rng);
+  const promenadeLights = promenade(solids, fixed);
   collapsed(solids, rng);
   greenery(solids, rng);
   cars(solids, rng);
-  const lit = lights({ solids, placed }, lightsRng);
+  const boxes = solidBoxes(solids);
+  accents.push(...visibleLights(fixed, boxes));
+  const lit = lights({ solids, placed }, lightsRng, boxes);
   for (const w of lit.windows) if (w.on && !w.animable) accents.push({ kind: "poly", pts: w.window.pts, color: w.color, alpha: WINDOW_ALPHA });
   lit.neons.forEach((n, i) => { if (i !== lit.flicker) accents.push(...n.accents); });
   accents.push(...lit.bathed);
-  return { ground, solids, accents, tower, neon: { signs, promenade: promenadeLights }, placed, lights: lit };
+  return { ground, solids, accents, fixedLights: fixed, tower, neon: { signs, promenade: promenadeLights }, placed, lights: lit };
 }

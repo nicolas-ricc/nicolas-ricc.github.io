@@ -15,6 +15,7 @@ import { PLINTH_H } from "../scenes/city-pieces";
 import { clearOfWater, isWaterAt, terrainAt } from "../scenes/terrain-classify";
 import { zoneRng } from "../scenes/world";
 import { BOATS, harbor } from "./harbor";
+import type { FixedLight } from "./lights";
 
 /** Inlet and dock basin of the Resume east bank (#326). */
 const CITY_LOT: Lot = { x: 281.5, y: 117.5, w: 21, d: 15, z: 0.3, open: ["n", "w"], maxH: 24 };
@@ -26,9 +27,9 @@ const SCENES: readonly [string, () => CityScene][] = [
   ["site seed", () => city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3))],
 ];
 const works = (seed: number): { solids: Solid[]; accents: Accent[] } => {
-  const solids: Solid[] = [], accents: Accent[] = [];
-  harbor(solids, accents, createRng(seed));
-  return { solids, accents };
+  const solids: Solid[] = [], fixed: FixedLight[] = [];
+  harbor(solids, fixed, createRng(seed));
+  return { solids, accents: fixed.flatMap((l) => l.accents) };
 };
 /** Plan overlap with positive area (touching edges do not count). */
 const planCut = (a: Bounds, b: Bounds): boolean => a.min.x < b.max.x - EPS && b.min.x < a.max.x - EPS && a.min.y < b.max.y - EPS && b.min.y < a.max.y - EPS;

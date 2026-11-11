@@ -6,7 +6,7 @@ import { PLINTH_H } from "../scenes/city-pieces";
 import { BLOCK_D, BLOCK_W, ROWS, SIDEWALK, SITE, STREET, TOWER, WEST_QUAY, blocks, estuaryEast, type Block } from "../scenes/city-grid";
 import { zoneRng } from "../scenes/world";
 import { SEED } from "../map/seed";
-import { CATALOGUE, FIXED, FRONT_CAP_H, FOOTBRIDGE_LOT, MAX_BUILDING_H, MAX_DISTRICT_H, NO_PLINTH, WATER_TOWER_BLOCK, assign, isBare, neighborhoodOf, maxDistrictHeight, maxHeightFor, openSides, waterTowerLot, type Neighborhood, type Placed } from "./zoning";
+import { CATALOGUE, FIXED, FRONT_CAP_H, FOOTBRIDGE_LOT, MAX_BUILDING_H, MAX_DISTRICT_H, WATER_TOWER_BLOCK, assign, isBare, neighborhoodOf, maxDistrictHeight, maxHeightFor, openSides, waterTowerLot, type Neighborhood, type Placed } from "./zoning";
 
 const key = (b: { x: number; y: number }): string => `${b.x},${b.y}`;
 const blockAt = (x: number, y: number): Block => blocks().find((b) => b.x === x && b.y === y && b.kind !== "plaza")!;
@@ -156,10 +156,6 @@ describe("zoning", () => {
       }
     });
 
-    it("openDock brings its own floor (NO_PLINTH)", () => {
-      expect(NO_PLINTH).toContain("openDock");
-    });
-
     it("only a harbor block without a fixed recipe is bare; since #326 both harbor blocks are fixed, so none is", () => {
       for (const b of blocks()) expect(isBare(b), key(b)).toBe(false);
       expect(isBare({ ...blockAt(280, 116), x: 310 })).toBe(true); // a harbor block outside FIXED would be skipped
@@ -167,7 +163,7 @@ describe("zoning", () => {
     });
   });
 
-  it("assign is deterministic, skips plaza and collapse, and builds lots with sidewalk, plinth and cap", () => {
+  it("assign is deterministic, skips plaza and collapse, and builds street-level lots with sidewalk and cap", () => {
     expect(JSON.stringify(sceneAssign())).toBe(JSON.stringify(sceneAssign()));
     const placed = sceneAssign();
     expect(placed.map((p) => `${key(p.block)},${p.block.kind}`)).toEqual(blocks().filter((b) => b.kind !== "plaza" && b.kind !== "collapsed" && !isBare(b)).map((b) => `${key(b)},${b.kind}`));
@@ -177,7 +173,7 @@ describe("zoning", () => {
       if (!fixed) expect(CATALOGUE[p.neighborhood].recipes.map((r) => r.name)).toContain(p.recipe);
       expect([-1, 0, 1]).toContain(p.tone);
       expect(p.lot).toMatchObject({ x: b.x + SIDEWALK, y: b.y + SIDEWALK, w: b.w - 2 * SIDEWALK, d: b.d - 2 * SIDEWALK, open: openSides(b) });
-      expect(p.lot.z).toBe(NO_PLINTH.includes(p.recipe) ? 0 : PLINTH_H);
+      expect(p.lot.z).toBe(0); // street level: city() decides the plinth (seat)
       const top = fixed || p.neighborhood === "district" ? LANDMARK_MAX_H : MAX_BUILDING_H;
       expect(p.lot.maxH).toBe(Math.min(maxHeightFor(b, top), maxDistrictHeight(b)));
     }

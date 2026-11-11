@@ -1,7 +1,6 @@
-import type { Accent } from "../iso/accent";
 import { v3, type Vec2 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
-import { lamp, place } from "../kit/props";
+import { lamp } from "../kit/props";
 import { CONTAINER, stackContainers } from "../kit/forms/industrial";
 import { STATION_LAND, WORLD } from "../map/geo";
 import type { Rng } from "../map/seed";
@@ -10,6 +9,7 @@ import { CITY_EDGE, RAIL_LANDS } from "../scenes/city-grid";
 import { RAIL_Y } from "../scenes/shipyard";
 import { GAUGE, RAIL_W, RAIL_Z } from "../scenes/station";
 import { prism } from "../scenes/city-pieces";
+import { placeLit, type FixedLight } from "./lights";
 
 /** The west main line across Resume's new strip: from the west edge of the content to the station land. */
 export const MAIN_LINE = { x0: WORLD.x0, x1: STATION_LAND.x0 } as const;
@@ -78,9 +78,9 @@ function draw<T>(rng: Rng, items: readonly T[], n: number): T[] {
  * sleepers, buffer stop) fed by a switch that crosses the south fence through its gap, a parked
  * freight train (locomotive at the west end, five wagons), a concrete loading dock cut at the
  * level crossings with pallets, three trucks, 6..8 loose containers and four lamps.
- * Rails go to `ground`; the rest to `solids`/`accents`. Rng order: train, trucks, containers, pallets.
+ * Rails go to `ground`; the rest to `solids`/`lights`. Rng order: train, trucks, containers, pallets.
  */
-export function freightYard(ground: Solid[], solids: Solid[], accents: Accent[], rng: Rng): void {
+export function freightYard(ground: Solid[], solids: Solid[], lights: FixedLight[], rng: Rng): void {
   const rail = (a: Vec2, b: Vec2): void => { ground.push({ kind: "strip", path: [a, b], width: RAIL_W, z: RAIL_Z, mat: "rail" }); };
   for (const dy of [-GAUGE / 2, GAUGE / 2]) rail({ x: SIDING_X0, y: SIDING_Y + dy }, { x: SIDING_X1, y: SIDING_Y + dy });
   const [a, b] = SWITCH, len = Math.hypot(b.x - a.x, b.y - a.y), nx = -(b.y - a.y) / len, ny = (b.x - a.x) / len;
@@ -117,5 +117,5 @@ export function freightYard(ground: Solid[], solids: Solid[], accents: Accent[],
     if (rng.chance(0.5)) solids.push(prism(px, 137, 1, 1.2, 1, 0.5, "deck"));
   }
 
-  for (const lx of LAMPS_X) place(solids, accents, lamp(v3(lx, LAMP_Y, 0)));
+  for (const lx of LAMPS_X) placeLit(solids, lights, lamp(v3(lx, LAMP_Y, 0)));
 }

@@ -40,7 +40,7 @@ const NNE = { x: 0.45, y: -0.893 }; // unit: north-northeast (y grows to the sou
 const PERP = { x: -NNE.y, y: NNE.x }; // perpendicular to the drift: opens the fan
 
 export interface CityAnimChanges { lit: boolean; papers: boolean; antenna: boolean; neon: boolean; windows: boolean }
-export interface CityAnim { lit(): Accent[]; papers(): Accent[]; antenna(): Accent; neon(): Accent[]; windows(): Accent[]; tick(dtMs: number): CityAnimChanges; fired(): { lit: number; neon: number; papers: number } }
+export interface CityAnim { lit(): Accent[]; papers(): Accent[]; antenna(): Accent; neon(): Accent[]; windows(): Accent[]; tick(dtMs: number): CityAnimChanges; fired(): { lit: number; neon: number; papers: number; windows: number; flicker: number } }
 
 const NONE: CityAnimChanges = { lit: false, papers: false, antenna: false, neon: false, windows: false };
 
@@ -81,10 +81,14 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
   // windows: after papers and signs so as not to reorder their draws
   const wins = scene.lights.windows.filter((x) => x.animable).map((x) => ({ w: x, on: x.on }));
   const target = wins.filter((x) => x.on).length, tol = Math.max(1, Math.round(0.05 * wins.length));
-  let windowTimer = rng.int(WINDOW_GAP_MS[0], WINDOW_GAP_MS[1]);
+  const windowRng = createRng(rng.int(0, SEED_MAX)); // own stream, for the same reason as blinkRng
+  let windowTimer = windowRng.int(WINDOW_GAP_MS[0], WINDOW_GAP_MS[1]);
+  let windowEvents = 0;
   // street neon: after the windows so as not to reorder their draws
+  const flickerRng = createRng(rng.int(0, SEED_MAX)); // own stream; derived even with no street neon, so the shared rng does not depend on it
+  let flickers = 0;
   const street = scene.lights.flicker === null ? null : scene.lights.neons[scene.lights.flicker]!;
-  let flickerTimer = street ? rng.int(FLICKER_GAP_MS[0], FLICKER_GAP_MS[1]) : 0;
+  let flickerTimer = street ? flickerRng.int(FLICKER_GAP_MS[0], FLICKER_GAP_MS[1]) : 0;
   let flickerUntil = -1;
 
   const paperAt = (p: Paper): Accent => {
@@ -113,7 +117,7 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
       return [...on, ...lights, ...st];
     },
     windows: () => wins.filter((x) => x.on).map(({ w: lw }): Accent => ({ kind: "poly", pts: lw.window.pts, color: lw.color, alpha: WINDOW_ALPHA })),
-    fired: () => ({ lit: blinks, neon: signEvents, papers: recycled }),
+    fired: () => ({ lit: blinks, neon: signEvents, papers: recycled, windows: windowEvents, flicker: flickers }),
     tick(dtMs) {
       if (opts.reducedMotion || !Number.isFinite(dtMs) || dtMs <= 0) return NONE; // NaN or Infinity would hang the while loops
       clock += dtMs;
@@ -152,12 +156,13 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
 
       // windows: one turns on or off; if that takes the count out of the band, one of the other state changes
       windowTimer -= dtMs;
-      if (windowTimer <= 0 && wins.length > 0) {
-        let x = wins[rng.int(0, wins.length - 1)]!;
+      while (windowTimer <= 0 && wins.length > 0) { // a long tick can bring several changes
+        let x = wins[windowRng.int(0, wins.length - 1)]!;
         const lit = wins.filter((y) => y.on).length;
-        if (Math.abs(lit + (x.on ? -1 : 1) - target) > tol) { const other = wins.filter((y) => y.on !== x.on); x = other[rng.int(0, other.length - 1)]!; }
+        if (Math.abs(lit + (x.on ? -1 : 1) - target) > tol) { const other = wins.filter((y) => y.on !== x.on); x = other[windowRng.int(0, other.length - 1)]!; }
         x.on = !x.on;
-        windowTimer = rng.int(WINDOW_GAP_MS[0], WINDOW_GAP_MS[1]);
+        windowTimer += windowRng.int(WINDOW_GAP_MS[0], WINDOW_GAP_MS[1]);
+        windowEvents++;
         c.windows = true;
       }
 
@@ -165,7 +170,12 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
       if (street) {
         if (flickerUntil >= 0 && clock >= flickerUntil) { flickerUntil = -1; c.neon = true; }
         flickerTimer -= dtMs;
-        if (flickerTimer <= 0) { flickerUntil = clock + NEON_STEP_MS; flickerTimer = rng.int(FLICKER_GAP_MS[0], FLICKER_GAP_MS[1]); c.neon = true; }
+        while (flickerTimer <= 0) { // a long tick can bring several flickers; they share one dim step
+          flickerUntil = clock + NEON_STEP_MS;
+          flickerTimer += flickerRng.int(FLICKER_GAP_MS[0], FLICKER_GAP_MS[1]);
+          flickers++;
+          c.neon = true;
+        }
       }
       return c;
     },

@@ -1,11 +1,11 @@
-import type { Accent } from "../iso/accent";
 import { v3, type Vec2 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
 import { ESTUARY_Y0, QUAY_X, STATION_LAND, eastBank } from "../map/geo";
 import { CROSSING_GAP } from "./rail-lands";
 import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_COLS, EAST_RING, HARBOR, PROMENADE, PLAZA, RING_Y0, ROWS, STREET, WEST_COLS, WEST_QUAY, estuaryEast, estuaryReaches, inBlock, inCrater } from "../scenes/city-grid";
-import { lamp, place, streetTree, trafficLight } from "../kit/props";
+import { lamp, streetTree, trafficLight } from "../kit/props";
+import { placeLit, type FixedLight } from "./lights";
 import { PLINTH_H, prism } from "../scenes/city-pieces";
 
 /**
@@ -109,24 +109,24 @@ function avenue(ground: Solid[], solids: Solid[]): void {
 }
 
 /** Street lamps every 12 u on the avenue's north sidewalk, in the stretch `[x0, x1]`. */
-function lampRow(solids: Solid[], accents: Accent[], [x0, x1]: readonly [number, number]): void {
+function lampRow(solids: Solid[], lights: FixedLight[], [x0, x1]: readonly [number, number]): void {
   const y = AVENUE.y0 - 1.3;
-  for (let x = x0 + 6; x < x1 - 6; x += 12) place(solids, accents, lamp(v3(x, y, postZ(x, y))));
+  for (let x = x0 + 6; x < x1 - 6; x += 12) placeLit(solids, lights, lamp(v3(x, y, postZ(x, y))));
 }
 
 /** Traffic lights (off) at the avenue's corners and street lamps on its north sidewalk. */
-function streetFurniture(solids: Solid[], accents: Accent[]): void {
+function streetFurniture(solids: Solid[], lights: FixedLight[]): void {
   for (const cx of LANE_X) for (const [x, y] of [[cx - 3.5, AVENUE.y0 - 1], [cx + 3, AVENUE.y1 + 0.5]] as const) {
     if (inQuayWall(x)) continue; // a post there would fall inside the dock wall
     const z = postZ(x, y);
     solids.push(...trafficLight(v3(x, y, z)));
   }
-  for (const range of [[CITY_EDGE.west, WEST_QUAY.x0], [EAST_RING.x1, PROMENADE.x0]] as const) lampRow(solids, accents, range);
+  for (const range of [[CITY_EDGE.west, WEST_QUAY.x0], [EAST_RING.x1, PROMENADE.x0]] as const) lampRow(solids, lights, range);
 }
 
 /** Lanes, avenue and avenue furniture. Goes after the plaza: the ground is painted in insertion order. */
-export function streets(ground: Solid[], solids: Solid[], accents: Accent[]): void {
+export function streets(ground: Solid[], solids: Solid[], lights: FixedLight[]): void {
   lanes(ground);
   avenue(ground, solids);
-  streetFurniture(solids, accents);
+  streetFurniture(solids, lights);
 }

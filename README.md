@@ -9,7 +9,7 @@ Personal site: a night-time isometric map with three zones (Portfolio, Resume, B
 
 No public license: `private: true`, the `license` field (ISC) is a leftover of the scaffold and does not apply — the repo is not published to npm.
 
-Domain vocabulary (veil, zone, accent, animator, deck and side pieces, hull rule, frame, lanes, exhibit) is defined in `CONTEXT.md`; architecture decisions are recorded in `docs/adr/`.
+Domain vocabulary (veil, zone, accent, animator, deck and side pieces, hull rule, frame, lanes, exhibit, lot, piece, recipe, style, wall, window, slot, plinth) is defined in `CONTEXT.md`; architecture decisions are recorded in `docs/adr/`.
 
 Editable content lives in `content/*.json`. `public/cv.pdf` is a copy of the CV from `riccomini-multiverse` (`cv/cv.pdf`); it is updated by hand with `gh api repos/nicolas-ricc/riccomini-multiverse/contents/cv/cv.pdf -H "Accept: application/vnd.github.raw" > public/cv.pdf`. Design in `docs/superpowers/specs/`. Plans live in two folders: `docs/plans/` (agent runs) and `docs/superpowers/plans/`; they are not moved, so as not to break links from issues and PRs.
 
@@ -23,7 +23,7 @@ chimneys with marker bands, an outdoor substation and a bucket-wheel
 excavator with an animated wheel, `factory.wheel`), `city.ts`
 (the Resume orchestrator) and `sea.ts` (point, lighthouse and ships of Blog). The pieces of
 Resume live in `src/city/` (`zoning.ts` neighborhoods, `fixed.ts` fixed pieces,
-`streets.ts` streets, `lights.ts` windows, neon signs and washed facades) and in the
+`streets.ts` streets, `lights.ts` windows, neon signs, washed facades and the box occlusion of the fixed pieces' lights) and in the
 kit `src/kit/` (explored in `lab/kit.html`). At the end
 of the west track, where the shipyard's boiler shop used to be, stands the
 terminal station (`station.ts`, modeled on Tigre Station of the Mitre
