@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { fingerprint } from "../../iso/fingerprint";
 import { bounds, type Solid } from "../../iso/solids";
 import { createRng } from "../../map/seed";
 import { PLINTH_H } from "../../scenes/city-pieces";
@@ -61,11 +62,8 @@ describe("kit: lowrise family", () => {
 
     it("the roof of each shop carries its body's tone", () => {
       for (const seed of SEEDS) {
-        const p = shopRow(["s"], seed, LOT), shops = faced(p);
-        for (const s of shops) {
-          const b = bounds(s), roof = p.solids.find((q) => q.kind === "prism" && q !== s && Math.abs(q.at.z - b.max.z) < TOL && q.at.x < b.max.x && q.at.x + q.w > b.min.x && Math.abs(q.at.x + q.w / 2 - (b.min.x + b.max.x) / 2) < TOL);
-          expect(roof?.tone ?? 0).toBe(s.tone ?? 0);
-        }
+        const p = shopRow(["s"], seed, LOT), shops = faced(p), roofs = p.solids.filter((q) => q.kind === "prism" && !("facade" in q && q.facade));
+        shops.forEach((s, i) => expect(roofs[i]?.tone ?? 0).toBe(s.tone ?? 0));
       }
     });
 
@@ -102,6 +100,28 @@ describe("kit: lowrise family", () => {
         for (const w of widths) { expect(w).toBeGreaterThanOrEqual(4 - TOL); expect(w).toBeLessThanOrEqual(6 + TOL); }
         expect(widths.reduce((a, b) => a + b, 0)).toBeCloseTo(26, 6);
       }
+    });
+
+    it("shopRow: a roof or cornice is flush on the side of a taller neighbour and overhangs 0.5 elsewhere", () => {
+      for (const open of [["s"], ["e"], ["s", "e"]] as Side[][]) for (const seed of SEEDS) for (const style of Object.values(STYLES)) {
+        const p = recipe("shopRow")({ ...LOT, open }, createRng(seed), style);
+        const bodies = faced(p).map(bounds), roofs = p.solids.filter((s) => s.kind === "prism" && !("facade" in s && s.facade)).map(bounds);
+        expect(roofs).toHaveLength(bodies.length);
+        const ax = open[0] === "s" ? "x" : "y", cross = ax === "x" ? "y" : "x";
+        bodies.forEach((b, k) => {
+          const r = roofs[k]!, lowTaller = k > 0 && bodies[k - 1]!.max.z > b.max.z + TOL, highTaller = k + 1 < bodies.length && bodies[k + 1]!.max.z > b.max.z + TOL;
+          expect(Math.abs(b.min[ax] - r.min[ax] - (lowTaller ? 0 : 0.5))).toBeLessThanOrEqual(TOL);
+          expect(Math.abs(r.max[ax] - b.max[ax] - (highTaller ? 0 : 0.5))).toBeLessThanOrEqual(TOL);
+          expect(Math.abs(b.min[cross] - r.min[cross] - 0.5)).toBeLessThanOrEqual(TOL);
+          expect(Math.abs(r.max[cross] - b.max[cross] - 0.5)).toBeLessThanOrEqual(TOL);
+        });
+      }
+    });
+
+    it("shopRow: the bodies are the ones before #152 (rng order unchanged)", () => {
+      // recorded on 3a15116, before #152
+      const want = ["71aa6d4c", "11baa06b", "d09edfac"];
+      [1, 2, 3].forEach((seed, i) => expect(fingerprint(faced(recipe("shopRow")(LOT, createRng(seed), STYLES.downtown)))).toBe(want[i]));
     });
   });
 
@@ -162,6 +182,14 @@ describe("kit: lowrise family", () => {
         expect(p.windows).toEqual([]);
         expect(p.walls).toEqual([]);
         expect(p.slots).toEqual([]);
+      }
+    });
+
+    it("eatenRuin: slabs, ruin block and jungle interlock", () => {
+      for (const seed of SEEDS) {
+        const p = recipe("eatenRuin")(LOT, createRng(seed), STYLES.downtown);
+        expect(p.solids.length).toBeGreaterThan(0);
+        for (const q of p.solids) expect(q.interlocks).toBe(true);
       }
     });
   });

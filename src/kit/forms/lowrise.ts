@@ -5,7 +5,7 @@ import type { Rng } from "../../map/seed";
 import type { Rect } from "../../scenes/city-grid";
 import { PLINTH_H, prism, tiles } from "../../scenes/city-pieces";
 import { jungle } from "../../scenes/flora";
-import { RECIPE_MAX_H, addBuilding, emptyPiece } from "../piece";
+import { RECIPE_MAX_H, addBuilding, emptyPiece, interlock } from "../piece";
 import { awning, patioTree } from "../props";
 import { HIP_ROOF_H, cornice, hipRoof } from "../roofs";
 import type { Lot, Piece, RecipeDef, Side, Slot, Style } from "../types";
@@ -83,14 +83,22 @@ export function shopRow(lot: Lot, rng: Rng, style: Style): Piece {
   const ws = shopWidths(rng, frontLen(lot, front));
   const corner = second ? cornerLocal(front, second, ws.length) : undefined;
   const neons = lot.open.length > 0; // no open frontage: south without neons
+  const shops = ws.map(() => { // rng draws per shop, in this order
+    const floors = Math.min(rng.int(2, 3), Math.max(1, Math.floor((cap - HIP_ROOF_H) / style.floorH))), tone = style.tone + rng.int(-1, 1);
+    return { floors, tone, hip: rng.chance(0.5) };
+  });
   let s0 = 0;
   ws.forEach((lw, k) => {
     const r = frontRect(lot, front, s0, s0 + lw, SHOP_BACK); s0 += lw;
-    const floors = Math.min(rng.int(2, 3), Math.max(1, Math.floor((cap - HIP_ROOF_H) / style.floorH))), h = floors * style.floorH;
-    const facade: Facade = { floors, cols: Math.max(1, Math.round(lw / 2.5)), base: "glass" }, tone = style.tone + rng.int(-1, 1);
+    const { floors, tone, hip } = shops[k]!, h = floors * style.floorH;
+    const facade: Facade = { floors, cols: Math.max(1, Math.round(lw / 2.5)), base: "glass" };
     addBuilding(p, prism(r.x, r.y, lot.z, r.w, r.d, h, style.mat, { facade, tone }), facade);
-    const roof = { ...r, z: lot.z + h };
-    p.solids.push(...toned(rng.chance(0.5) ? hipRoof(roof, style.roof) : cornice(roof, style.trim), tone));
+    // The 0.5 overhang ends flush against a taller neighbour, or it would sink into its body.
+    const lowCut = k > 0 && shops[k - 1]!.floors > floors ? 0.5 : 0, highCut = k + 1 < ws.length && shops[k + 1]!.floors > floors ? 0.5 : 0;
+    const roof = alongX(front)
+      ? { ...r, x: r.x + lowCut, w: r.w - lowCut - highCut, z: lot.z + h }
+      : { ...r, y: r.y + lowCut, d: r.d - lowCut - highCut, z: lot.z + h };
+    p.solids.push(...toned(hip ? hipRoof(roof, style.roof) : cornice(roof, style.trim), tone));
     p.solids.push(...shopAwning(r, front, lw - 1, lot.z));
     if (!neons) return;
     p.slots.push(neonSlot(r, front, lw - 1, lot.z, k));
@@ -138,10 +146,12 @@ export function rowHouses(lot: Lot, rng: Rng, style: Style): Piece {
 export function eatenRuin(lot: Lot, rng: Rng, _style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;
   p.ground.push(tiles(rng, lot, z + 0.05, "leafDark"));
-  p.solids.push(prism(x, y, z, 0.4 * w, 0.4 * d, PLINTH_H, "paving"), prism(x + 0.6 * w, y + 0.55 * d, z, 0.4 * w, 0.45 * d, PLINTH_H, "paving"));
-  if (rng.chance(0.5)) p.solids.push(prism(x, y + 0.65 * d, z, 0.3 * w, 0.35 * d, PLINTH_H, "paving"));
-  p.solids.push(prism(x + 0.45 * w, y + 1, z + 0.05, 5, 4, rng.int(2, 3), "officeDark")); // ruin, not stepping on any slab
-  jungle(p.solids, rng, { x0: x + 4, x1: x + w - 4, y0: y + 4, y1: y + d - 4 }, rng.int(6, 9), z + 0.05); // r ≤ 4: no cone leaves the lot
+  p.solids.push(interlock(prism(x, y, z, 0.4 * w, 0.4 * d, PLINTH_H, "paving")), interlock(prism(x + 0.6 * w, y + 0.55 * d, z, 0.4 * w, 0.45 * d, PLINTH_H, "paving")));
+  if (rng.chance(0.5)) p.solids.push(interlock(prism(x, y + 0.65 * d, z, 0.3 * w, 0.35 * d, PLINTH_H, "paving")));
+  p.solids.push(interlock(prism(x + 0.45 * w, y + 1, z + 0.05, 5, 4, rng.int(2, 3), "officeDark"))); // ruin, not stepping on any slab
+  const plants: Solid[] = [];
+  jungle(plants, rng, { x0: x + 4, x1: x + w - 4, y0: y + 4, y1: y + d - 4 }, rng.int(6, 9), z + 0.05); // r ≤ 4: no cone leaves the lot
+  p.solids.push(...plants.map(interlock)); // vegetation grows through slabs and ruin
   return p;
 }
 
