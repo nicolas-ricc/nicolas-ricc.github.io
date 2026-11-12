@@ -32,10 +32,12 @@ function facadeOf(s: Solid & { kind: "prism" }): Facade | null {
 type Occluder = { s: Solid; b: ReturnType<typeof bounds>; sb: ReturnType<typeof screenBounds> };
 const occluderList = (solids: Solid[]): Occluder[] => solids.filter((s) => !isFlat(s)).map((s) => ({ s, b: bounds(s), sb: screenBounds(bounds(s)) }));
 
+type Scanned = Omit<WindowCandidate, "hidden"> & { own: boolean; extra: boolean };
+
 /** Candidates in order, each with whether `solids` hides it (`own`) and, if not, whether the extras do (`extra`). */
-function scan(solids: Solid[], extraOccluders: Solid[]): (Omit<WindowCandidate, "hidden"> & { own: boolean; extra: boolean })[] {
+function scan(solids: Solid[], extraOccluders: Solid[]): Scanned[] {
   const own = occluderList(solids), extra = occluderList(extraOccluders);
-  const out: (Omit<WindowCandidate, "hidden"> & { own: boolean; extra: boolean })[] = [];
+  const out: Scanned[] = [];
   for (const owner of solids) {
     if (owner.kind !== "prism") continue;
     const facade = facadeOf(owner);

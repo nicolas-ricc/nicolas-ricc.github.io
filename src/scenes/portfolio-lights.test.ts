@@ -21,7 +21,7 @@ type Poly = Extract<Accent, { kind: "poly" }>;
 const facadeLit = (accents: Accent[], cs: { pts: Poly["pts"] }[]): Poly[] => accents.filter((a): a is Poly => a.kind === "poly" && a.color === "windowCool" && cs.some((c) => same(c.pts, a.pts)));
 const lit = facadeLit(sy.accents, cands);
 const SEEDS = Array.from({ length: 12 }, (_, i) => i + 1);
-const seeded = new Map<number, ReturnType<typeof world>>(); // built once in beforeAll, shared by the seed sweeps
+const seeded = new Map<number, ReturnType<typeof world>>();
 const portfolio = (seed: number) => seeded.get(seed)!;
 const hiddenBy = (pts: Poly["pts"], s: Solid): boolean => {
   const box = lightBox(pts), b = bounds(s);
