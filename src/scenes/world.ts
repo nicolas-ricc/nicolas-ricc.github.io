@@ -54,8 +54,8 @@ export function world(seed: number, opts: { zones?: readonly WorldZone[] } = {})
   const ground: Solid[] = [], solids: Solid[] = [], accents: Accent[] = [];
   let sy: Scene | null = null, ct: CityScene | null = null, fa: FactoryScene | null = null;
   if (zones.includes("portfolio")) {
-    sy = shipyard(zoneRng(seed, "portfolio"));
     fa = factory(zoneRng(seed, "portfolio", 1));
+    sy = shipyard(zoneRng(seed, "portfolio"), fa.solids);
     for (const sc of [sy, fa]) { ground.push(...sc.ground); solids.push(...sc.solids); accents.push(...sc.accents); }
   }
   if (zones.includes("cv")) {
