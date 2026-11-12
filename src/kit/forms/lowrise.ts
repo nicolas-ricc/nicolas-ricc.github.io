@@ -11,8 +11,10 @@ import { HIP_ROOF_H, cornice, hipRoof } from "../roofs";
 import type { Lot, Piece, RecipeDef, Side, Slot, Style } from "../types";
 
 /**
- * `lowrise` family: a row of shops with a neon per shop, row houses with a
- * back garden, and the block eaten by the jungle. Spec §5 and §6.
+ * `lowrise` family: a row of shops with a neon per shop (and one on the corner
+ * shop of each open side perpendicular to the front), row houses with a back
+ * garden, and the block eaten by the jungle. Spec §5 and §6. `neonRun` is the
+ * neon-per-bay helper shared with the `courtyard` and `curved` families.
  */
 const SHOP_MIN = 4, SHOP_MAX = 6, SHOP_BACK = 3, NEON_Z0 = 2.4, NEON_H = 1.2, AWNING_Z = 2;
 
@@ -48,6 +50,18 @@ export function neonSlot(r: Rect, side: Side, width: number, z: number, shop: nu
   return { pts: [at(t0, z0), at(t1, z0), at(t1, z1), at(t0, z1)], wall: normal, side, kind: "neon", shop };
 }
 
+/** The sides the camera sees (south and east faces): only they get neon runs. */
+export const CAMERA_SIDES: readonly Side[] = ["s", "e"];
+
+/** Neons along face `side` of `r`: `max(1, round(len / SHOP_MIN))` equal bays, one slot each, numbered from `shop0` (the dedup key in `lights`, so runs on one piece must not share it). */
+export function neonRun(r: Rect, side: Side, z: number, shop0: number): Slot[] {
+  const len = alongX(side) ? r.w : r.d, n = Math.max(1, Math.round(len / SHOP_MIN)), bay = len / n;
+  return Array.from({ length: n }, (_, k) => {
+    const part = alongX(side) ? { ...r, x: r.x + k * bay, w: bay } : { ...r, y: r.y + k * bay, d: bay };
+    return neonSlot(part, side, bay - 1, z, shop0 + k);
+  });
+}
+
 /** Awning of `len` centered on wall `side` of `r`, sloping down toward the street. */
 function shopAwning(r: Rect, side: Side, len: number, z: number): Solid[] {
   const { a } = wallOf(r, side), pad = (alongX(side) ? r.w : r.d) / 2 - len / 2, za = z + AWNING_Z;
@@ -79,9 +93,8 @@ function cornerLocal(front: Side, second: Side, n: number): number | undefined {
 }
 
 export function shopRow(lot: Lot, rng: Rng, style: Style): Piece {
-  const p = emptyPiece(), cap = Math.min(lot.maxH, RECIPE_MAX_H), front = lot.open[0] ?? "s", second = lot.open[1];
+  const p = emptyPiece(), cap = Math.min(lot.maxH, RECIPE_MAX_H), front = lot.open[0] ?? "s";
   const ws = shopWidths(rng, frontLen(lot, front));
-  const corner = second ? cornerLocal(front, second, ws.length) : undefined;
   const neons = lot.open.length > 0; // no open frontage: south without neons
   const shops = ws.map(() => { // rng draws per shop, in this order
     const floors = Math.min(rng.int(2, 3), Math.max(1, Math.floor((cap - HIP_ROOF_H) / style.floorH))), tone = style.tone + rng.int(-1, 1);
@@ -102,7 +115,7 @@ export function shopRow(lot: Lot, rng: Rng, style: Style): Piece {
     p.solids.push(...shopAwning(r, front, lw - 1, lot.z));
     if (!neons) return;
     p.slots.push(neonSlot(r, front, lw - 1, lot.z, k));
-    if (second && k === corner) p.slots.push(neonSlot(r, second, lw - 1, lot.z, k));
+    for (const side of lot.open.slice(1)) if (k === cornerLocal(front, side, ws.length)) p.slots.push(neonSlot(r, side, lw - 1, lot.z, k));
   });
   return p;
 }
