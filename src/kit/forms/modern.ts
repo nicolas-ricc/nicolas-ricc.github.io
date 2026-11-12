@@ -124,8 +124,9 @@ export function constructionSite(lot: Lot, _rng: Rng, _style: Style): Piece {
   for (let k = 1; k <= 5 && 3 * k <= cap; k++) p.solids.push(interlock(prism(sx, sy, z + 3 * k - 0.3, k === 5 ? 8 : sw, sd, 0.3, "paving"))); // slabs; the last one half-built
   for (const [cx, cy] of [[0, 0], [8, 0], [16, 0], [0, 12], [8, 12], [16, 12]] as const) p.solids.push(interlock(prism(sx + cx - 0.3, sy + cy - 0.3, z, 0.6, 0.6, Math.min(15, cap), "steel")));
   p.solids.push(interlock(prism(sx + 6, sy + 4, z, 4, 4, Math.min(16, cap), "officeDark"))); // core
-  // mast 8 from the east edge (the counter-jib ends at the lot edge, the jib at the west edge), south of the slabs and the column line (the hook, 0.6 either side of the jib, hangs clear of the columns)
-  const mast = { x: x + w - 8, y: sy + sd + 1 };
+  // mast at sx + 11 (8 from the east edge in the city lot): the counter-jib ends at sx + 19, the jib at sx - 2 = x; just south of the slabs (touching their edge)
+  // so the hook and cable hang clear of them, and clear of the columns and the south fence
+  const mast = { x: sx + 11, y: sy + sd + 0.6 };
   const crane: Solid[] = [];
   towerCrane(crane, p.accents, { at: mast, z, mastH: Math.min(22, cap), jibLen: 13, dir: "w", light: "amber" });
   // towerCrane pushes mast, jib, counter-jib, counterweight, cab (steel joints: marked), then cable and hook (hang free: not marked)

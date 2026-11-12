@@ -346,6 +346,11 @@ describe("kit: modern family", () => {
       expect(slabs).toHaveLength(5);
       expect(columns).toHaveLength(6);
       for (const s of [...slabs, ...columns, core]) expect(s.interlocks).toBe(true);
+      const overlap = (a: Solid, b: Solid) => (["x", "y", "z"] as const).every((ax) => Math.min(bounds(a).max[ax], bounds(b).max[ax]) - Math.max(bounds(a).min[ax], bounds(b).min[ax]) > 1e-6);
+      const fence = prisms.filter((s) => s.mat === "officeDark" && s.h === 1.2);
+      expect(fence).toHaveLength(4);
+      for (const o of [...fence, ...slabs]) expect(overlap(mast, o), "mast").toBe(false);
+      for (const o of [...columns, ...slabs]) { expect(overlap(hook, o), "hook").toBe(false); expect(overlap(cable, o), "cable").toBe(false); }
     }
   });
 });
