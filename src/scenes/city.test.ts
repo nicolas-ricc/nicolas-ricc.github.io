@@ -345,7 +345,7 @@ describe("city", () => {
   // #152: the interlocks mark enters the JSON; shopRow, tankGroup, constructionSite and derelictHall change geometry; all five re-recorded once.
   // That lifting equals running the recipe PLINTH_H higher is checked per recipe in piece.test.
   it("pieces without ground are identical to the pinned plinth pieces (860a582; re-recorded at #143, #56 and #152)", () => {
-    const MAIN = ["8633be94", "fa06402b", "f48e0dd8", "93a16b53", "7f74319b"];
+    const MAIN = ["bc41bf70", "fa06402b", "f48e0dd8", "d5dea574", "7f74319b"];
     for (let s = 1; s <= 5; s++) {
       const c = city(createRng(s), createRng(s + 1), createRng(s + 2));
       const plain = c.placed.filter((q) => q.piece.ground.length === 0).map((q) => q.piece);

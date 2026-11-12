@@ -6,8 +6,8 @@ import { EXHIBITS } from "../lab/exhibits";
 
 // Render baseline for #194 (English codebase): the guard on the world, zone and lab-scene hashes has done
 // its job; #56 moves the seam and changes all geometry on purpose. Only the pieces stay: they must not move.
-// On a mismatch, find what changed; never re-record.
-// #152: the interlocks mark enters the JSON; campus drops the trees that stood on its tables, grua-muelle only gains marks.
+// On a mismatch, find what changed; re-record only a deliberate change, saying why here.
+// #152 (re-recorded once): the interlocks mark enters the JSON; campus drops the trees that stood on its tables, grua-muelle only gains marks.
 const hash = (v: unknown): string => fingerprint(v as Solid[]);
 
 // keyed by exhibit id (kept in Spanish: it is the storybook URL hash); value is solids/accents

@@ -157,6 +157,9 @@ export function sheetLoft(lot: Lot, rng: Rng, style: Style): Piece {
   return tonePiece(p, tone);
 }
 
+/** Largest jungle radius in a derelict gap: the octagon's box (r·cos(π/8) from the gap centre) stays clear of the ridge beam, whose box starts 0.3 short of the next tooth. */
+const GAP_CONE_R = 1.8;
+
 /** Abandoned sawtooth hall: 1..2 teeth gone leaving ridge beam and rafters, jungle growing through the gaps; no facade, walls one tone darker. */
 export function derelictHall(lot: Lot, rng: Rng, style: Style): Piece {
   const tone = shiftTone(style.tone, rng.int(-1, 1));
@@ -182,7 +185,7 @@ export function derelictHall(lot: Lot, rng: Rng, style: Style): Piece {
   }
   for (let i = first; i < p.solids.length; i++) {
     const c = p.solids[i]!;
-    if (c.kind === "cone") p.solids[i] = interlock({ ...c, r: Math.min(c.r, 2), h: Math.min(c.h, cap - h) });
+    if (c.kind === "cone") p.solids[i] = interlock({ ...c, r: Math.min(c.r, GAP_CONE_R), h: Math.min(c.h, cap - h) });
   }
   const t = tonePiece(p, tone);
   t.solids[0] = { ...t.solids[0]!, tone: shiftTone(tone, -1) };

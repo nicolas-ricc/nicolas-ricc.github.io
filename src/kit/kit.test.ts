@@ -4,7 +4,7 @@ import { prism } from "../scenes/city-pieces";
 import { bounds, type Solid } from "../iso/solids";
 import { createRng } from "../map/seed";
 import { LAB_LOTS, RECIPES, recipe } from "./index";
-import { LANDMARK_MAX_H, RECIPE_MAX_H } from "./piece";
+import { LANDMARK_MAX_H, RECIPE_MAX_H, interlock } from "./piece";
 import { cornice, hipRoof } from "./roofs";
 import { STYLES } from "./styles";
 import type { Lot, Piece } from "./types";
@@ -138,15 +138,14 @@ describe("kit: the concave-gap oracle", () => {
 
 describe("kit: the interpenetration oracle", () => {
   const a: Solid = prism(0, 0, 0, 2, 2, 2, "stone"), b: Solid = prism(1, 1, 1, 2, 2, 2, "stone");
-  const marked = (s: Solid): Solid => ({ ...s, interlocks: true });
 
   it("two marked solids that overlap pass", () => {
-    expect(interpenetrations([marked(a), marked(b)])).toEqual([]);
+    expect(interpenetrations([interlock(a), interlock(b)])).toEqual([]);
   });
 
   it("only one marked fails", () => {
-    expect(interpenetrations([marked(a), b])).toEqual([[0, 1]]);
-    expect(interpenetrations([a, marked(b)])).toEqual([[0, 1]]);
+    expect(interpenetrations([interlock(a), b])).toEqual([[0, 1]]);
+    expect(interpenetrations([a, interlock(b)])).toEqual([[0, 1]]);
   });
 
   it("neither marked fails", () => {
@@ -174,8 +173,8 @@ describe("kit: contract of every registered recipe", () => {
   for (const def of RECIPES) {
     describe(def.name, () => {
       const cap = (lot: Lot) => Math.min(lot.maxH, def.landmark ? LANDMARK_MAX_H : RECIPE_MAX_H);
-      const runs = (fn: (p: Piece, lot: Lot) => void) => {
-        for (const lot of lotsFor(def.name)) for (const id of STYLE_IDS) for (const seed of SEEDS) fn(def.recipe(lot, createRng(seed), STYLES[id]), lot);
+      const runs = (fn: (p: Piece, lot: Lot, id: (typeof STYLE_IDS)[number], seed: number) => void) => {
+        for (const lot of lotsFor(def.name)) for (const id of STYLE_IDS) for (const seed of SEEDS) fn(def.recipe(lot, createRng(seed), STYLES[id]), lot, id, seed);
       };
 
       it("every solid inside the lot + 0.8, nothing below lot.z, height within the cap", () => {
@@ -230,7 +229,7 @@ describe("kit: contract of every registered recipe", () => {
       });
 
       it("no pair of solids interpenetrates unless both interlock (sortByDepth sorts by box)", () => {
-        runs((p, lot) => expect(interpenetrations(p.solids), `${def.name} on ${lot.x},${lot.y}`).toEqual([]));
+        runs((p, lot, id, seed) => expect(interpenetrations(p.solids), `${def.name} on ${lot.x},${lot.y} ${id} seed ${seed}`).toEqual([]));
       });
 
       it("no body with a facade or a published wall carries interlocks", () => {
@@ -345,10 +344,11 @@ describe("kit: modern family", () => {
     for (const lot of LOTS) for (const seed of SEEDS) {
       const p = recipe("constructionSite")(lot, createRng(seed), STYLES.district), sy = lot.y + 1.5, sd = 12;
       const prisms = p.solids.filter((s) => s.kind === "prism");
-      const mast = prisms.find((s) => s.h === 22 && s.w === 1.2)!, jib = prisms.find((s) => s.w === 13)!, hook = prisms.find((s) => s.mat === "rust" && s.w === 1.2 && s.d === 1.2 && s.h === 1)!;
-      const cab = prisms.find((s) => s.w === 1.6 && s.h === 1.6)!, cable = prisms.find((s) => s.w === 0.6 && s.mat === "steel" && s.h < 10)!;
+      const part = (label: string, test: (s: (typeof prisms)[number]) => boolean) => { const s = prisms.find(test); expect(s, label).toBeDefined(); return s!; };
+      const mast = part("mast", (s) => s.h === 22 && s.w === 1.2), jib = part("jib", (s) => s.w === 13), hook = part("hook", (s) => s.mat === "rust" && s.w === 1.2 && s.d === 1.2 && s.h === 1);
+      const cab = part("cab", (s) => s.w === 1.6 && s.h === 1.6), cable = part("cable", (s) => s.w === 0.6 && s.mat === "steel" && s.h < 10);
       expect(bounds(mast).min.y).toBeGreaterThanOrEqual(sy + sd - 1e-9);
-      const counterJib = prisms.find((s) => s.w === 8 && s.mat === "steel")!, counterweight = prisms.find((s) => s.w === 2 && s.d === 2 && s.h === 1.5)!;
+      const counterJib = part("counter-jib", (s) => s.w === 8 && s.mat === "steel"), counterweight = part("counterweight", (s) => s.w === 2 && s.d === 2 && s.h === 1.5);
       for (const s of [mast, jib, counterJib, counterweight, cab]) expect(s.interlocks).toBe(true);
       const containers = prisms.filter((s) => s.mat === "rust" && s.w === 6 && s.d === 2.4 && s.h === 2.4);
       expect(containers).toHaveLength(2);
@@ -356,7 +356,7 @@ describe("kit: modern family", () => {
       expect(hook.interlocks).toBeUndefined();
       expect(cable.interlocks).toBeUndefined();
       const slabs = prisms.filter((s) => s.mat === "paving" && s.h === 0.3), columns = prisms.filter((s) => s.mat === "steel" && s.w === 0.6 && s.d === 0.6 && s.h === 15);
-      const core = prisms.find((s) => s.mat === "officeDark")!;
+      const core = part("core", (s) => s.mat === "officeDark" && s.w === 4 && s.d === 4);
       expect(slabs).toHaveLength(5);
       expect(columns).toHaveLength(6);
       for (const s of [...slabs, ...columns, core]) expect(s.interlocks).toBe(true);
