@@ -89,9 +89,9 @@ describe("Portfolio windowCool windows", () => {
       const ws = world(seed, { zones: ["portfolio"] });
       const s = ws.shipyard!.solids, f = ws.factory!.solids;
       const vis = windowCandidates(s, f).filter((c) => !c.hidden);
-      const a = portfolioWindows(s, createRng(seed), f);
-      const b = portfolioWindows(s, createRng(seed)).filter((x) => vis.some((c) => same(c.pts, x.pts))) as Poly[];
-      expect(subset(a as Poly[], b) || subset(b, a as Poly[]), `seed ${seed}`).toBe(true);
+      const a = portfolioWindows(s, createRng(seed), f) as Poly[];
+      const b = (portfolioWindows(s, createRng(seed)) as Poly[]).filter((x) => vis.some((c) => same(c.pts, x.pts)));
+      expect(subset(a, b) || subset(b, a), `seed ${seed}`).toBe(true);
     }
   });
 
