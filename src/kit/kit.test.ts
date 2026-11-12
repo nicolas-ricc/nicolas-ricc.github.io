@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { convexHull, type Vec2 } from "../iso/geometry";
+import { prism } from "../scenes/city-pieces";
 import { bounds, type Solid } from "../iso/solids";
 import { createRng } from "../map/seed";
 import { LAB_LOTS, RECIPES, recipe } from "./index";
 import { LANDMARK_MAX_H, RECIPE_MAX_H } from "./piece";
+import { cornice, hipRoof } from "./roofs";
 import { STYLES } from "./styles";
 import type { Lot, Piece } from "./types";
 
@@ -73,6 +75,24 @@ function concaveIntruders(solids: Solid[]): number {
   return n;
 }
 
+const OVERLAP_EPS = 1e-6;
+
+/**
+ * Pairs `[i, j]` (i < j) whose boxes interpenetrate by more than `OVERLAP_EPS` on all three axes: `sortByDepth` sorts by box,
+ * so such a pair can be painted in the wrong order. Faces that touch do not count. A pair is excused only if both solids carry
+ * `interlocks` (same-material joints, posts through slabs, tree × tree, a ruin's vegetation, neighbouring roofs); a body is
+ * never marked, so roof × body and cornice × body still fail.
+ */
+function interpenetrations(solids: Solid[]): [number, number][] {
+  const boxes = solids.map(bounds), out: [number, number][] = [];
+  for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+    if (solids[i]!.interlocks && solids[j]!.interlocks) continue;
+    const a = boxes[i]!, b = boxes[j]!;
+    if ((["x", "y", "z"] as const).every((k) => Math.min(a.max[k], b.max[k]) - Math.max(a.min[k], b.min[k]) > OVERLAP_EPS)) out.push([i, j]);
+  }
+  return out;
+}
+
 /** Copy with `dz` added to every z coordinate (`z`, and `z0`/`z1` of the plates); the normals (`wall`, `normal`) don't move. */
 function shiftZ(v: unknown, dz: number, key = ""): unknown {
   if (key === "wall" || key === "normal") return v;
@@ -113,6 +133,34 @@ describe("kit: the concave-gap oracle", () => {
       expect(concaveIntruders([L, roof])).toBe(1);
       expect(concaveIntruders([L, outside])).toBe(0);
     }
+  });
+});
+
+describe("kit: the interpenetration oracle", () => {
+  const a: Solid = prism(0, 0, 0, 2, 2, 2, "stone"), b: Solid = prism(1, 1, 1, 2, 2, 2, "stone");
+  const marked = (s: Solid): Solid => ({ ...s, interlocks: true });
+
+  it("two marked solids that overlap pass", () => {
+    expect(interpenetrations([marked(a), marked(b)])).toEqual([]);
+  });
+
+  it("only one marked fails", () => {
+    expect(interpenetrations([marked(a), b])).toEqual([[0, 1]]);
+    expect(interpenetrations([a, marked(b)])).toEqual([[0, 1]]);
+  });
+
+  it("neither marked fails", () => {
+    expect(interpenetrations([a, b])).toEqual([[0, 1]]);
+  });
+
+  it("faces that touch do not count", () => {
+    expect(interpenetrations([a, prism(2, 0, 0, 2, 2, 2, "stone")])).toEqual([]);
+  });
+
+  it("a cornice or hip roof over a taller neighbour body still fails", () => {
+    const body: Solid = prism(4, 0, 0, 4, 4, 6, "plaster", { facade: { floors: 2, cols: 2 } });
+    expect(interpenetrations([...cornice({ x: 0, y: 0, w: 4, d: 4, z: 3 }, "stone"), body])).toEqual([[0, 1]]);
+    expect(interpenetrations([...hipRoof({ x: 0, y: 0, w: 4, d: 4, z: 3 }, "stone"), body])).toEqual([[0, 1]]);
   });
 });
 
@@ -179,6 +227,10 @@ describe("kit: contract of every registered recipe", () => {
 
       it("no foreign solid inside the gap of a concave poly", () => {
         runs((p) => expect(concaveIntruders(p.solids)).toBe(0));
+      });
+
+      it("no pair of solids interpenetrates unless both interlock (sortByDepth sorts by box)", () => {
+        runs((p, lot) => expect(interpenetrations(p.solids), `${def.name} on ${lot.x},${lot.y}`).toEqual([]));
       });
 
       it("with lot.z = 0.3 the output is that of lot.z = 0 shifted 0.3 in z", () => {
