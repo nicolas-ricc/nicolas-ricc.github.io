@@ -175,8 +175,8 @@ export function derelictHall(lot: Lot, rng: Rng, style: Style): Piece {
   teeth.forEach((t, k) => { if (!gone.has(k)) p.solids.push(t); });
   for (const k of gaps) {
     const ridge = x0 + 4 * (k + 1), top = base + 2 - 0.15; // beam is 0.3 thick, centred on its axis: top stays within the cap; the ridge sits 0.15 inside the gap so its box does not reach the next tooth
-    p.solids.push(interlock<Solid>({ kind: "beam", from: v3(ridge - 0.15, y, top), to: v3(ridge - 0.15, y + d, top), w: 0.3, h: 0.3, mat: "steel" }));
-    for (const yj of [y + 0.5, y + d - 0.5]) p.solids.push(interlock<Solid>({ kind: "beam", from: v3(x0 + 4 * k + 0.15, yj, base + 0.15), to: v3(ridge - 0.15, yj, top), w: 0.3, h: 0.3, mat: "steel" })); // ends inset by the half thickness: the box stays on the wall top and in its gap
+    p.solids.push(interlock({ kind: "beam", from: v3(ridge - 0.15, y, top), to: v3(ridge - 0.15, y + d, top), w: 0.3, h: 0.3, mat: "steel" }));
+    for (const yj of [y + 0.5, y + d - 0.5]) p.solids.push(interlock({ kind: "beam", from: v3(x0 + 4 * k + 0.15, yj, base + 0.15), to: v3(ridge - 0.15, yj, top), w: 0.3, h: 0.3, mat: "steel" })); // ends inset by the half thickness: the box stays on the wall top and in its gap
   }
   const first = p.solids.length;
   for (let i = gaps.length > 0 ? rng.int(4, 6) : 0; i > 0; i--) { // no gap (a lot under 8 wide): no jungle
