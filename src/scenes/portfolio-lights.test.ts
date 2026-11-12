@@ -21,6 +21,8 @@ type Poly = Extract<Accent, { kind: "poly" }>;
 const facadeLit = (accents: Accent[], cs: { pts: Poly["pts"] }[]): Poly[] => accents.filter((a): a is Poly => a.kind === "poly" && a.color === "windowCool" && cs.some((c) => same(c.pts, a.pts)));
 const lit = facadeLit(sy.accents, cands);
 const SEEDS = Array.from({ length: 12 }, (_, i) => i + 1);
+const seeded = new Map<number, ReturnType<typeof world>>();
+const portfolio = (seed: number) => seeded.get(seed) ?? seeded.set(seed, world(seed, { zones: ["portfolio"] })).get(seed)!; // built once, shared by the seed sweeps
 const hiddenBy = (pts: Poly["pts"], s: Solid): boolean => {
   const box = lightBox(pts), b = bounds(s);
   return overlaps(screenBounds(box), screenBounds(b)) && hides(box, b);
@@ -50,7 +52,7 @@ describe("Portfolio windowCool windows", () => {
 
   it("no lit window is hidden by another raised shipyard or factory solid", () => {
     for (const seed of SEEDS) {
-      const ws = world(seed, { zones: ["portfolio"] });
+      const ws = portfolio(seed);
       const own = windowCandidates(ws.shipyard!.solids);
       const occluders = [...ws.shipyard!.solids, ...ws.factory!.solids].filter((s) => !isFlat(s));
       for (const a of facadeLit(ws.shipyard!.accents, own)) {
@@ -58,7 +60,7 @@ describe("Portfolio windowCool windows", () => {
         for (const s of occluders) if (s !== owner) expect(hiddenBy(a.pts, s), `seed ${seed}: ${JSON.stringify(bounds(s))}`).toBe(false);
       }
     }
-  });
+  }, 20_000); // builds the 12 seeded worlds the sweeps share (~2.3 s alone); the full parallel suite stretched it past 8 s
 
   it("factory solids hide the 2 factory-only candidates of world(7)", () => {
     expect(candsF).toHaveLength(64);
@@ -86,7 +88,7 @@ describe("Portfolio windowCool windows", () => {
 
   it("windows visible before keep their rank", () => {
     for (const seed of SEEDS) {
-      const ws = world(seed, { zones: ["portfolio"] });
+      const ws = portfolio(seed);
       const s = ws.shipyard!.solids, f = ws.factory!.solids;
       const vis = windowCandidates(s, f).filter((c) => !c.hidden);
       const a = portfolioWindows(s, createRng(seed), f) as Poly[];
@@ -98,7 +100,7 @@ describe("Portfolio windowCool windows", () => {
   it("world() passes the factory to the shipyard windows", () => {
     let differs = false;
     for (const seed of SEEDS) {
-      const ws = world(seed, { zones: ["portfolio"] });
+      const ws = portfolio(seed);
       const got = JSON.stringify(ws.shipyard!.accents);
       expect(got, `seed ${seed}`).toBe(JSON.stringify(shipyard(zoneRng(seed, "portfolio"), ws.factory!.solids).accents));
       if (got !== JSON.stringify(shipyard(zoneRng(seed, "portfolio")).accents)) differs = true;
