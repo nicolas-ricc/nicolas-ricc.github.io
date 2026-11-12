@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { centroid, v3 } from "../iso/geometry";
 import { bounds, type Solid } from "../iso/solids";
-import { createRng } from "../map/seed";
-import { antenna, awning, beacon, bench, bollard, car, chair, clock, container, dockCrane, fence, foodTruck, fountain, garland, helipad, kiosk, lamp, machineRoom, neon, patioTree, puddle, roofShrub, rooftopGarden, sign, solarPanel, stoneArch, ARCH_SLABS, streetTree, table, trafficLight, waterTank } from "./props";
+import { createRng, type Rng } from "../map/seed";
+import { antenna, awning, beacon, bench, bollard, car, chair, clock, container, dockCrane, fence, foodTruck, fountain, garland, helipad, industrialLamp, kiosk, lamp, machineRoom, neon, patioTree, puddle, roofShrub, rooftopGarden, sign, solarPanel, stoneArch, ARCH_SLABS, streetTree, table, trafficLight, waterTank } from "./props";
 
 const AT = v3(10, 20, 0.3);
 const size = (s: Solid) => { const b = bounds(s); return [b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z].map((n) => Math.round(n * 100) / 100); };
@@ -16,6 +16,26 @@ describe("props", () => {
     const bulb = v3(AT.x + 0.3, AT.y + 0.3, AT.z + 5);
     expect(l.accents).toEqual([{ kind: "dot", at: bulb, r: 0.6, color: "amber" }]);
     expect(l.bulb).toEqual(bulb);
+  });
+
+  it("industrialLamp: steel post 0.6×0.6×5 and cyan bulb r 1.2 on top of the post", () => {
+    const l = industrialLamp(AT);
+    expect(only(l.solids)).toEqual({ kind: "prism", at: AT, w: 0.6, d: 0.6, h: 5, mat: "steel" });
+    const bulb = v3(AT.x + 0.3, AT.y + 0.3, AT.z + 5);
+    expect(l.accents).toEqual([{ kind: "dot", at: bulb, r: 1.2, color: "cyan" }]);
+    expect(l.bulb).toEqual(bulb);
+  });
+
+  it("industrialLamp: post height and `at` on the post's axis", () => {
+    const l = industrialLamp(v3(195.5, 102, 0.15), { h: 6, center: true });
+    const post = only(l.solids);
+    expect(post).toMatchObject({ kind: "prism", w: 0.6, d: 0.6, h: 6, mat: "steel" });
+    if (post.kind !== "prism") throw new Error("not a prism");
+    expect(post.at.x).toBeCloseTo(195.2, 9);
+    expect(post.at.y).toBeCloseTo(101.7, 9);
+    expect(post.at.z).toBe(0.15);
+    expect(l.accents).toEqual([{ kind: "dot", at: v3(195.5, 102, 6.15), r: 1.2, color: "cyan" }]);
+    expect(l.bulb).toEqual(v3(195.5, 102, 6.15));
   });
 
   it("traffic light: post 0.3×0.3×4 and officeDark box 0.5×0.5×1.2 on top", () => {
@@ -145,6 +165,32 @@ describe("props", () => {
       expect(c.at.x).toBeGreaterThanOrEqual(11);
       expect(c.at.x).toBeLessThanOrEqual(17);
     }
+  });
+
+  it("helipad: optional radius, 3 by default", () => {
+    expect(helipad(AT)).toEqual(helipad(AT, 3));
+    const hp = helipad(AT, 2.5);
+    expect(only(hp.solids)).toEqual({ kind: "cylinder", at: AT, r: 2.5, h: 0.3, mat: "paving", sides: 8 });
+    expect(hp.accents).toEqual(helipad(AT).accents);
+  });
+
+  it("green terrace: optional cone range, 3..5 by default", () => {
+    for (let s = 1; s <= 20; s++) expect(rooftopGarden(AT, 8, 6, createRng(s))).toEqual(rooftopGarden(AT, 8, 6, createRng(s), [3, 5]));
+    const counts = new Set<number>();
+    for (let s = 1; s <= 50; s++) counts.add(rooftopGarden(AT, 8, 6, createRng(s), [1, 3]).length - 1);
+    expect([...counts].sort()).toEqual([1, 2, 3]);
+  });
+
+  it("green terrace: draws int(min, max) and then two next() per cone", () => {
+    const calls: string[] = [], base = createRng(5);
+    const spy: Rng = {
+      next: () => { calls.push("next"); return base.next(); },
+      int: (a, b) => { calls.push(`int(${a},${b})`); return base.int(a, b); },
+      chance: (p) => { calls.push("chance"); return base.chance(p); },
+      pick: (arr) => { calls.push("pick"); return base.pick(arr); },
+    };
+    const n = rooftopGarden(AT, 8, 6, spy, [1, 3]).length - 1;
+    expect(calls).toEqual(["int(1,3)", ...Array.from({ length: 2 * n }, () => "next")]);
   });
 
   it("solar panel, fence and container", () => {
