@@ -7,6 +7,7 @@ import { WORLD } from "../map/geo";
 import { boilerHouse, HALL } from "./boiler-house";
 import { EXCAVATOR, excavator, excavatorBox, local } from "./excavator";
 import { MALT, maltings, waterTower } from "./maltings";
+import { industrialLamp, place } from "../kit/props";
 import { towerCrane } from "./pieces";
 import { PLANT_SHIFT, emitPlant } from "./plant-frame";
 import { SUBSTATION, substation } from "./substation";
@@ -38,15 +39,9 @@ const DECK_H = 0.3; // slab of the chimney platform
 export const SIDING_Y = -8;
 export const RAIL_YARD_X = [-56, -48, -40] as const; // N-S tracks of the yard; the piles go east of them
 export const COOLING = { x: 40, y: 14, r: 9 } as const; // cooling tower: north of the hall's old spot, x 31..49, y 5..23
-const LAMP_H = 5;
 
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material): Solid => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat });
 const strip = (path: Vec2[], width: number, z: number, mat: Material): Solid => ({ kind: "strip", path, width, z, mat });
-
-function lamp(out: Solid[], accents: Accent[], x: number, y: number): void {
-  out.push(prism(x, y, 0, 0.6, 0.6, LAMP_H, "steel"));
-  accents.push({ kind: "dot", at: v3(x + 0.3, y + 0.3, LAMP_H), r: 1.2, color: "cyan" });
-}
 
 function plant(out: Solid[]): void {
   maltings(out);
@@ -109,7 +104,7 @@ function truckYard(out: Solid[], accents: Accent[]): void {
   emitPlant(out, (o, a) => {
     for (const [x, y] of [[40, -12], [70, -6], [95, -12]] as const) { o.push(prism(x, y, 0, 6, 2.4, 2.8, "rust")); o.push(prism(x + 6, y, 0, 2, 2.4, 2.2, "steel")); } // box and cab
     for (let i = 0; i < 6; i++) o.push(prism(22 + i * 4, -4, 0, 3, 2, 0.5 + (i % 3) * 0.4, "steel")); // sheet-metal pallets by the west gate
-    for (const [x, y] of [[20, -14], [110, -3]] as const) lamp(o, a, x, y);
+    for (const [x, y] of [[20, -14], [110, -3]] as const) place(o, a, industrialLamp(v3(x, y, 0)));
   }, accents);
 }
 
@@ -137,9 +132,9 @@ function railYard(out: Solid[], machine: Solid[], accents: Accent[], rng: Rng): 
 }
 
 function lamps(out: Solid[], accents: Accent[]): void {
-  emitPlant(out, (o, a) => { for (const [x, y] of [[24, -13], [64, -13], [50, -13.5]] as const) lamp(o, a, x, y); }, accents); // the plant's three, in the local frame
+  emitPlant(out, (o, a) => { for (const [x, y] of [[24, -13], [64, -13], [50, -13.5]] as const) place(o, a, industrialLamp(v3(x, y, 0))); }, accents); // the plant's three, in the local frame
   // the fourth lamp is the substation's: SW corner of the fence
-  for (const [x, y] of [[SUBSTATION.x0 - 1, SUBSTATION.y1 + 1], [-30, 20]] as const) lamp(out, accents, x, y);
+  for (const [x, y] of [[SUBSTATION.x0 - 1, SUBSTATION.y1 + 1], [-30, 20]] as const) place(out, accents, industrialLamp(v3(x, y, 0)));
 }
 
 export function factory(rng: Rng): FactoryScene {

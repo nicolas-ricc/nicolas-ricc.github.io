@@ -4,6 +4,7 @@ import type { Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { BLEED, WORLD, inCoverQuad } from "../map/geo";
+import { industrialLamp, place } from "../kit/props";
 import { towerCrane } from "./pieces";
 import { RAIL_Y } from "./shipyard";
 import { COVER_MARGIN, builtAt } from "./sprawl-grid";
@@ -25,18 +26,13 @@ export const TANKS: readonly Vec2[] = [{ x: 118, y: -140 }, { x: 144, y: -140 },
 export const SILOS = { x0: 36, y0: -176, cols: 3, rows: 2, step: 7, r: 3, h: 16 } as const;
 export const PYLON_Y = -196, PYLON_X0 = -190, PYLON_STEP = 48, PYLON_N = 8, PYLON_H = 14;
 export const CONTAINER_YARD = { x0: -198, x1: -104, y0: -46, rows: 6, rowStep: 12 } as const;
-const LAMP_H = 5, WATER_Z = -1;
+const WATER_Z = -1;
 
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material, roof?: "gable"): Solid => (roof ? { kind: "prism", at: v3(x, y, z), w, d, h, mat, roof } : { kind: "prism", at: v3(x, y, z), w, d, h, mat });
 const strip = (path: Vec2[], width: number, z: number, mat: Material): Solid => ({ kind: "strip", path, width, z, mat });
 /** A whole footprint on industrial land of the bleed (or on the content, which is already slab). */
 const onIndustrial = (x: number, y: number, w: number, d: number): boolean =>
   [[x, y], [x + w, y], [x + w, y + d], [x, y + d]].every(([px, py]) => (px! >= WORLD.x0 && px! <= WORLD.x1 && py! >= WORLD.y0 && py! <= WORLD.y1) || builtAt(px!, py!) === "industrial");
-
-function lamp(out: Solid[], accents: Accent[], x: number, y: number): void {
-  out.push(prism(x, y, 0, 0.6, 0.6, LAMP_H, "steel"));
-  accents.push({ kind: "dot", at: v3(x + 0.3, y + 0.3, LAMP_H), r: 1.2, color: "cyan" });
-}
 
 /** Marshalling yard: five E-W tracks north of the factory, with wagons in 10 u slots chosen by rng. */
 function marshallingYard(out: Solid[], rng: Rng): void {
@@ -107,7 +103,7 @@ function stockpiles(out: Solid[], rng: Rng): void {
 /** Trucks waiting in front of the sheds and cyan lamps. */
 function trucks(out: Solid[], accents: Accent[]): void {
   for (const [x, y] of [[-30, -104], [-16, -104], [40, -104], [54, -104], [70, -104]] as const) { out.push(prism(x, y, 0, 6, 2.4, 2.8, "rust")); out.push(prism(x + 6, y, 0, 2, 2.4, 2.2, "steel")); }
-  for (const [x, y] of [[-190, -66], [-120, -66], [-40, -92], [60, -92], [130, -66], [100, -150], [190, -104], [-120, -150], [30, -150]] as const) if (onIndustrial(x, y, 1, 1)) lamp(out, accents, x, y);
+  for (const [x, y] of [[-190, -66], [-120, -66], [-40, -92], [60, -92], [130, -66], [100, -150], [190, -104], [-120, -150], [30, -150]] as const) if (onIndustrial(x, y, 1, 1)) place(out, accents, industrialLamp(v3(x, y, 0)));
 }
 
 /** Bulk pier over the bay, north of the shipyard: concrete platform, bollards, tower crane and containers. */
@@ -118,7 +114,7 @@ function pier(out: Solid[], accents: Accent[]): void {
   for (let py = y + 4; py < y + d; py += 8) out.push({ kind: "cylinder", at: v3(x + w - 1.5, py, 1.5), r: 0.7, h: 1, mat: "steel", sides: 6 });
   towerCrane(out, accents, { at: { x: x + 6, y: y + 12 }, z: 1.5, mastH: 16, jibLen: 14, dir: "e", light: "cyan" });
   for (const [dx, dy, k] of [[1, 20, 2], [1, 24, 1], [8, 26, 3]] as const) for (let i = 0; i < k; i++) out.push(prism(x + dx, y + dy, 1.5 + i * 2.6, 6, 2.4, 2.6, i % 2 === 0 ? "rust" : "steel"));
-  lamp(out, accents, x + 2, y + 2);
+  place(out, accents, industrialLamp(v3(x + 2, y + 2, 0)));
 }
 
 /** West column: two more N-S tracks, container yard with two gantries, sheds, water tank and trucks. */
@@ -150,7 +146,7 @@ function westHalls(out: Solid[], accents: Accent[]): void {
   for (const [dx, dy] of [[-2, -2], [2, -2], [2, 2], [-2, 2]] as const) out.push(prism(wx + dx - 0.3, wy + dy - 0.3, 0, 0.6, 0.6, legH, "steel"));
   out.push({ kind: "cylinder", at: v3(wx, wy, legH), r: 3, h: 4, mat: "steel", sides: 10 });
   accents.push({ kind: "dot", at: v3(wx, wy, legH + 4.2), r: 0.6, color: "cyanMid" });
-  for (const [x, y] of [[-190, 44], [-130, 86], [-70, 20], [-150, -50], [-180, 10]] as const) lamp(out, accents, x, y);
+  for (const [x, y] of [[-190, 44], [-130, 86], [-70, 20], [-150, -50], [-180, 10]] as const) place(out, accents, industrialLamp(v3(x, y, 0)));
 }
 
 /** The shipyard's west tracks continue through the green belt to the edge of the bleed: on screen they leave to the left, as if they never ended. */
@@ -182,14 +178,14 @@ function powerPlant(out: Solid[], accents: Accent[], stacks: Vec3[], rng: Rng): 
   }
   for (let i = 0; i < 6; i++) { const tx = 40 + (i % 3) * 10, ty = -252 + Math.floor(i / 3) * 6; if (!ok(tx, ty, 3, 2)) continue; out.push(prism(tx, ty, 0, 3, 2, 3, "steel")); for (const dx of [0.5, 1.5, 2.5]) out.push({ kind: "cylinder", at: v3(tx + dx, ty + 1, 3), r: 0.4, h: 1, mat: "rust", sides: 6 }); }
   if (ok(38, -254, 32.3, 14.3)) for (const [fx, fy, fw, fd] of [[38, -254, 32, 0.3], [38, -240, 32, 0.3], [38, -254, 0.3, 14], [70, -254, 0.3, 14]] as const) out.push(prism(fx, fy, 0, fw, fd, 1.2, "steel")); // fence, as a single footprint
-  for (const [lx, ly] of [[38, -256], [72, -238]] as const) if (ok(lx, ly, 0.6, 0.6)) lamp(out, accents, lx, ly);
+  for (const [lx, ly] of [[38, -256], [72, -238]] as const) if (ok(lx, ly, 0.6, 0.6)) place(out, accents, industrialLamp(v3(lx, ly, 0)));
 }
 
 /** Street from the power plant to the fair, waiting trucks and the fair's parking lot on the industrial side. */
 function fairRoad(out: Solid[], accents: Accent[], rng: Rng): void {
   if (ok(0, ROAD_Y - 4, 83.9, 7)) { // the street and its lamps, as a single footprint (83.9: the edge x=84 is already the fair)
     out.push(strip([{ x: 0, y: ROAD_Y }, { x: 84, y: ROAD_Y }], 6, 0.1, "road"));
-    for (const x of [4, 32, 60]) lamp(out, accents, x, ROAD_Y - 4);
+    for (const x of [4, 32, 60]) place(out, accents, industrialLamp(v3(x, ROAD_Y - 4, 0)));
   }
   for (const x of [8, 18, 28]) if (ok(x, ROAD_Y + 3.5, 8, 2.4)) { out.push(prism(x, ROAD_Y + 3.5, 0, 6, 2.4, 2.8, "rust")); out.push(prism(x + 6, ROAD_Y + 3.5, 0, 2, 2.4, 2.2, "steel")); }
   const { x, y, w, d } = PARKING;
