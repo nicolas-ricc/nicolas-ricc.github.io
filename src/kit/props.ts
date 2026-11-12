@@ -21,6 +21,14 @@ export function lamp(at: Vec3): Lit & { bulb: Vec3 } {
   return { solids: [prism(at.x, at.y, at.z, 0.6, 0.6, 5, "steel")], accents: [{ kind: "dot", at: bulb, r: 0.6, color: "amber" }], bulb };
 }
 
+/** Industrial lamp of Portfolio: steel post and cyan bulb r 1.2; `center` puts `at` on the post's axis. */
+export function industrialLamp(at: Vec3, opts: { h?: number; center?: boolean } = {}): Lit & { bulb: Vec3 } {
+  const h = opts.h ?? 5, center = opts.center;
+  const px = center ? at.x - 0.3 : at.x, py = center ? at.y - 0.3 : at.y; // post corner
+  const bulb = center ? v3(at.x, at.y, at.z + h) : v3(at.x + 0.3, at.y + 0.3, at.z + h); // from `at`, not the corner: exact on the axis
+  return { solids: [prism(px, py, at.z, 0.6, 0.6, h, "steel")], accents: [{ kind: "dot", at: bulb, r: 1.2, color: "cyan" }], bulb };
+}
+
 /** Traffic light, off: post and dark box. */
 export const trafficLight = (at: Vec3): Solid[] => [prism(at.x, at.y, at.z, 0.3, 0.3, 4, "steel"), prism(at.x - 0.1, at.y - 0.1, at.z + 4, 0.5, 0.5, 1.2, "officeDark")];
 
@@ -116,18 +124,18 @@ export const machineRoom = (at: Vec3): Solid[] => [prism(at.x, at.y, at.z, 4, 3,
 /** Base of the antenna. */
 export const antenna = (at: Vec3): Solid[] => [{ kind: "cylinder", at, r: 0.2, h: ANTENNA_H, mat: "steel", sides: 4 }];
 
-/** Center. */
-export const helipad = (at: Vec3): Lit => ({
-  solids: [{ kind: "cylinder", at, r: 3, h: HELIPAD_H, mat: "paving", sides: 8 }],
+/** Center. Radius `r` (3). */
+export const helipad = (at: Vec3, r = 3): Lit => ({
+  solids: [{ kind: "cylinder", at, r, h: HELIPAD_H, mat: "paving", sides: 8 }],
   accents: [{ kind: "dot", at: v3(at.x, at.y, at.z + HELIPAD_H), r: 0.6, color: "amberMid" }],
 });
 
 export const beacon = (at: Vec3): Lit => ({ solids: [], accents: [{ kind: "dot", at, r: 0.5, color: "amberMid" }] });
 
-/** Green terrace: thin jungle slab (a `ground` cannot sit on a roof) and 3..5 cones on it, 1 from the edge. */
-export function rooftopGarden(at: Vec3, w: number, d: number, rng: Rng): Solid[] {
+/** Green terrace: thin jungle slab (a `ground` cannot sit on a roof) and `cones` cones (3..5) on it, 1 from the edge. */
+export function rooftopGarden(at: Vec3, w: number, d: number, rng: Rng, cones: readonly [number, number] = [3, 5]): Solid[] {
   const out: Solid[] = [prism(at.x, at.y, at.z, w, d, 0.3, "leafDark")];
-  for (let k = 0, n = rng.int(3, 5); k < n; k++) out.push({ kind: "cone", at: v3(at.x + 1 + rng.next() * (w - 2), at.y + 1 + rng.next() * (d - 2), at.z + 0.3), r: 1, h: 2, mat: "leaf" });
+  for (let k = 0, n = rng.int(cones[0], cones[1]); k < n; k++) out.push({ kind: "cone", at: v3(at.x + 1 + rng.next() * (w - 2), at.y + 1 + rng.next() * (d - 2), at.z + 0.3), r: 1, h: 2, mat: "leaf" });
   return out;
 }
 

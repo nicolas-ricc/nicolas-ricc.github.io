@@ -3,6 +3,7 @@ import { v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { bounds, type Solid } from "../iso/solids";
 import { BOTTOM, DOCK, QUAY_W, QUAY_X, WORLD, ZONE_SPLIT_Y, eastBank, northCoastY } from "../map/geo";
 import { createRng, type Rng } from "../map/seed";
+import { industrialLamp, place } from "../kit/props";
 import { jungle as flora } from "./flora";
 import { RIPRAP_KEEP_OUT, shipyardEast } from "./shipyard-east";
 import { portfolioWindows } from "./portfolio-lights";
@@ -57,10 +58,7 @@ const strip = (path: Vec2[], width: number, z: number, mat: Solid["mat"]): Solid
 function quay(out: Solid[], accents: Accent[]): void {
   out.push(prism(QUAY_X, WORLD.y0, WATER_Z, QUAY_W, BOTTOM - WORLD.y0, 1.5, "concrete"));
   for (let y = WORLD.y0 + 6; y < BOTTOM; y += 12) out.push({ kind: "cylinder", at: v3(QUAY_X + 2, y, 0.5), r: 0.7, h: 1, mat: "steel", sides: 6 });
-  for (const y of [20, 80]) { // lamps
-    out.push(prism(QUAY_X - 1.4, y, 0, 0.6, 0.6, 5, "steel"));
-    accents.push({ kind: "dot", at: v3(QUAY_X - 1.4 + 0.3, y + 0.3, 5), r: 1.2, color: "cyan" });
-  }
+  for (const y of [20, 80]) place(out, accents, industrialLamp(v3(QUAY_X - 1.4, y, 0))); // lamps
 }
 
 /** `portfolio-lights.ts` finds the halls and the workshops by these measures to light their windows. */
@@ -192,20 +190,14 @@ function jungle(out: Solid[], rng: Rng): void {
 }
 
 function lamps(out: Solid[], accents: Accent[]): void {
-  for (const y of [12, 40, 68, 96, 124]) {
-    out.push(prism(STREET_EDGE + 0.5, y, 0, 0.6, 0.6, 5, "steel"));
-    accents.push({ kind: "dot", at: v3(STREET_EDGE + 0.8, y + 0.3, 5), r: 1.2, color: "cyan" });
-  }
+  for (const y of [12, 40, 68, 96, 124]) place(out, accents, industrialLamp(v3(STREET_EDGE + 0.5, y, 0)));
 }
 
 /** Steel mesh fence on the seam, x −60..96 at y 89.4, with posts and six cyan lamps on the Portfolio side. */
 function seamFence(out: Solid[], accents: Accent[]): void {
   out.push(prism(-60, 89.4, 0, 156, 0.6, 1.2, "steel"));
   for (let x = -60; x < 96; x += 6) out.push(prism(x, 89.3, 0, 0.3, 0.3, 1.6, "steel")); // posts every 6 u (26)
-  for (const x of [-48, -24, 0, 24, 48, 72]) {
-    out.push(prism(x, 88.2, 0, 0.6, 0.6, 5, "steel"));
-    accents.push({ kind: "dot", at: v3(x + 0.3, 88.5, 5), r: 1.2, color: "cyan" });
-  }
+  for (const x of [-48, -24, 0, 24, 48, 72]) place(out, accents, industrialLamp(v3(x, 88.2, 0)));
 }
 
 /** `occluders`: solids of other scenes (the factory) that can hide the lit windows; they are not added to the scene. */
