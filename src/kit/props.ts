@@ -123,18 +123,18 @@ export const machineRoom = (at: Vec3): Solid[] => [prism(at.x, at.y, at.z, 4, 3,
 /** Base of the antenna. */
 export const antenna = (at: Vec3): Solid[] => [{ kind: "cylinder", at, r: 0.2, h: ANTENNA_H, mat: "steel", sides: 4 }];
 
-/** Center. */
-export const helipad = (at: Vec3): Lit => ({
-  solids: [{ kind: "cylinder", at, r: 3, h: HELIPAD_H, mat: "paving", sides: 8 }],
+/** Center. Radius `r` (3). */
+export const helipad = (at: Vec3, r = 3): Lit => ({
+  solids: [{ kind: "cylinder", at, r, h: HELIPAD_H, mat: "paving", sides: 8 }],
   accents: [{ kind: "dot", at: v3(at.x, at.y, at.z + HELIPAD_H), r: 0.6, color: "amberMid" }],
 });
 
 export const beacon = (at: Vec3): Lit => ({ solids: [], accents: [{ kind: "dot", at, r: 0.5, color: "amberMid" }] });
 
-/** Green terrace: thin jungle slab (a `ground` cannot sit on a roof) and 3..5 cones on it, 1 from the edge. */
-export function rooftopGarden(at: Vec3, w: number, d: number, rng: Rng): Solid[] {
+/** Green terrace: thin jungle slab (a `ground` cannot sit on a roof) and `cones` cones (3..5) on it, 1 from the edge. */
+export function rooftopGarden(at: Vec3, w: number, d: number, rng: Rng, cones: readonly [number, number] = [3, 5]): Solid[] {
   const out: Solid[] = [prism(at.x, at.y, at.z, w, d, 0.3, "leafDark")];
-  for (let k = 0, n = rng.int(3, 5); k < n; k++) out.push({ kind: "cone", at: v3(at.x + 1 + rng.next() * (w - 2), at.y + 1 + rng.next() * (d - 2), at.z + 0.3), r: 1, h: 2, mat: "leaf" });
+  for (let k = 0, n = rng.int(cones[0], cones[1]); k < n; k++) out.push({ kind: "cone", at: v3(at.x + 1 + rng.next() * (w - 2), at.y + 1 + rng.next() * (d - 2), at.z + 0.3), r: 1, h: 2, mat: "leaf" });
   return out;
 }
 

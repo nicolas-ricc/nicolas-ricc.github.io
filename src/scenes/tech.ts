@@ -7,7 +7,7 @@ import type { Rng } from "../map/seed";
 import { WORLD } from "../map/geo";
 import { BLOCK_W, BOULEVARD, CITY_EDGE, SIDEWALK } from "./city-grid";
 import { campus } from "../kit/forms/modern";
-import { beacon, lamp, place, sign, streetTree } from "../kit/props";
+import { beacon, helipad, lamp, place, rooftopGarden, sign, streetTree } from "../kit/props";
 import { STYLES } from "../kit/styles";
 import { PLINTH_H, brokenTone, prism, tiles } from "./city-pieces";
 import { jungle } from "./flora";
@@ -69,8 +69,8 @@ function tower(out: Solid[], accents: Accent[], signs: Accent[], crowns: Accent[
     out.push(prism(tx - 0.3, ty - 0.3, z + th1, tw + 0.6, td + 0.6, 0.3, "officeDark"));
     z += th1 + 0.3;
   }
-  if (rng.chance(0.5)) { out.push({ kind: "cylinder", at: v3(tx + tw / 2, ty + td / 2, z), r: 2.5, h: 0.3, mat: "paving", sides: 8 }); accents.push({ kind: "dot", at: v3(tx + tw / 2, ty + td / 2, z + 0.3), r: 0.6, color: "amberMid" }); }
-  else { out.push(prism(tx + 0.5, ty + 0.5, z, tw - 1, td - 1, 0.3, "leafDark")); for (let k = 0, n = rng.int(1, 3); k < n; k++) out.push({ kind: "cone", at: v3(tx + 1.5 + rng.next() * (tw - 3), ty + 1.5 + rng.next() * (td - 3), z + 0.3), r: 1, h: 2, mat: "leaf" }); }
+  if (rng.chance(0.5)) place(out, accents, helipad(v3(tx + tw / 2, ty + td / 2, z), 2.5));
+  else out.push(...rooftopGarden(v3(tx + 0.5, ty + 0.5, z), tw - 1, td - 1, rng, [1, 3]));
   place(out, signs, sign(v3(tx + tw / 2 - 3, ty + td - 0.4, z), 6, 1.6)); // rooftop sign on the south edge
   crowns.push(crown(k, tx, ty + td + 0.02, z - 0.3, tw));
   if (h >= 18) accents.push(...beacon(v3(tx + tw, ty, z + 0.5)).accents);
