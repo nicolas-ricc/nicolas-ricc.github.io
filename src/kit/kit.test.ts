@@ -305,4 +305,47 @@ describe("kit: modern family", () => {
       for (const s of p.solids) if ("facade" in s && s.facade) expect(s.tone).toBe(1);
     }
   });
+  it("classic: the ground-floor pilasters interlock (corner pair), the body and cornice do not", () => {
+    for (const lot of LOTS) for (const seed of SEEDS) {
+      const p = recipe("classic")(lot, createRng(seed), STYLES.district);
+      const pilasters = p.solids.filter((s) => s.kind === "prism" && s.w === 0.4 && s.d === 0.4);
+      expect(pilasters.length).toBeGreaterThan(8);
+      for (const s of pilasters) expect(s.interlocks).toBe(true);
+      for (const s of p.solids) if (("facade" in s && s.facade) || (s.kind === "prism" && s.h === 1)) expect(s.interlocks).toBeUndefined();
+    }
+  });
+
+  it("campus: no tree box touches a table box; trees interlock", () => {
+    for (const lot of LOTS) for (const seed of SEEDS) {
+      const p = recipe("campus")(lot, createRng(seed), STYLES.district);
+      const trees = p.solids.filter((s) => s.kind === "cone"), tables = p.solids.filter((s) => s.kind === "prism" && s.h === 0.7);
+      expect(tables.length).toBeGreaterThan(0);
+      for (const t of trees) {
+        expect(t.interlocks).toBe(true);
+        const a = bounds(t);
+        for (const q of tables) {
+          const b = bounds(q);
+          expect(Math.min(a.max.x, b.max.x) - Math.max(a.min.x, b.min.x) > 1e-6 && Math.min(a.max.y, b.max.y) - Math.max(a.min.y, b.min.y) > 1e-6).toBe(false);
+        }
+      }
+    }
+  });
+
+  it("constructionSite: slabs, columns, core and the crane joints interlock; hook, cable and containers do not and stay clear of every slab and column", () => {
+    for (const lot of LOTS) for (const seed of SEEDS) {
+      const p = recipe("constructionSite")(lot, createRng(seed), STYLES.district), sy = lot.y + 1.5, sd = 12;
+      const prisms = p.solids.filter((s) => s.kind === "prism");
+      const mast = prisms.find((s) => s.h === 22 && s.w === 1.2)!, jib = prisms.find((s) => s.w === 13)!, hook = prisms.find((s) => s.mat === "rust")!;
+      const cab = prisms.find((s) => s.w === 1.6 && s.h === 1.6)!, cable = prisms.find((s) => s.w === 0.6 && s.mat === "steel" && s.h < 10)!;
+      expect(bounds(mast).min.y).toBeGreaterThanOrEqual(sy + sd - 1e-9);
+      for (const s of [mast, jib, cab]) expect(s.interlocks).toBe(true);
+      expect(hook.interlocks).toBeUndefined();
+      expect(cable.interlocks).toBeUndefined();
+      const slabs = prisms.filter((s) => s.mat === "paving" && s.h === 0.3), columns = prisms.filter((s) => s.mat === "steel" && s.w === 0.6 && s.d === 0.6 && s.h === 15);
+      const core = prisms.find((s) => s.mat === "officeDark")!;
+      expect(slabs).toHaveLength(5);
+      expect(columns).toHaveLength(6);
+      for (const s of [...slabs, ...columns, core]) expect(s.interlocks).toBe(true);
+    }
+  });
 });

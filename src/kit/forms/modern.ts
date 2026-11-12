@@ -1,10 +1,11 @@
 import { v3 } from "../../iso/geometry";
+import { bounds, type Solid } from "../../iso/solids";
 import type { Facade } from "../../iso/facade";
 import { GABLE_RATIO } from "../../iso/solids";
 import type { Rng } from "../../map/seed";
 import { PLINTH_H, prism, tiles } from "../../scenes/city-pieces";
 import { towerCrane } from "../../scenes/pieces";
-import { LANDMARK_MAX_H, SIGN_MIN_H, addBuilding, emptyPiece, southSign } from "../piece";
+import { LANDMARK_MAX_H, SIGN_MIN_H, addBuilding, emptyPiece, interlock, southSign } from "../piece";
 import { beacon, clock, container, fence, helipad, sign, table } from "../props";
 import { gableRoof, greenRoof } from "../roofs";
 import type { Lot, Piece, RecipeDef, Style } from "../types";
@@ -70,8 +71,8 @@ export function classic(lot: Lot, rng: Rng, style: Style): Piece {
   const facade: Facade = { floors, cols, base: "portico" };
   addBuilding(p, prism(bx, by, lot.z, bw, bd, h, "stone", { facade, tone: style.tone }), facade);
   for (let k = 0; k <= cols; k++) { // ground-floor pilasters on the visible faces (east and south)
-    p.solids.push(prism(bx + bw, by + (bd * k) / cols - 0.2, lot.z, 0.4, 0.4, fh, "stone"));
-    p.solids.push(prism(bx + (bw * k) / cols - 0.2, by + bd, lot.z, 0.4, 0.4, fh, "stone"));
+    p.solids.push(interlock(prism(bx + bw, by + (bd * k) / cols - 0.2, lot.z, 0.4, 0.4, fh, "stone"))); // the corner pair (k = cols) overlaps
+    p.solids.push(interlock(prism(bx + (bw * k) / cols - 0.2, by + bd, lot.z, 0.4, 0.4, fh, "stone")));
   }
   const top = lot.z + h;
   p.solids.push(prism(bx - 0.8, by - 0.8, top, bw + 1.6, bd + 1.6, 1, style.trim)); // heavy cornice
@@ -99,10 +100,16 @@ export function campus(lot: Lot, rng: Rng, style: Style): Piece {
   bldg(x, y + 6, 6, d - 6, rng.int(6, 8));
   bldg(x + w - 6, y + 6, 6, d - 6, rng.int(6, 8));
   const px0 = x + 6, px1 = x + w - 6, py0 = y + 6, py1 = y + d; // courtyard
-  for (let k = 0, n = rng.int(4, 6); k < n; k++) p.solids.push({ kind: "cone", at: v3(px0 + 1.5 + rng.next() * (px1 - px0 - 3), py0 + 1.5 + rng.next() * (py1 - py0 - 3), z + 0.05), r: 1 + rng.next() * 0.5, h: 2 + rng.next(), mat: "leaf" });
+  const tables = [[1, 1], [px1 - px0 - 2, 1], [1, py1 - py0 - 2], [px1 - px0 - 2, py1 - py0 - 2]].flatMap(([dx, dy]) => table(v3(px0 + dx!, py0 + dy!, z + 0.05)));
+  const tableBoxes = tables.map(bounds);
+  for (let k = 0, n = rng.int(4, 6); k < n; k++) { // a tree whose plan box overlaps a table is dropped; its rng values are still drawn
+    const at = v3(px0 + 1.5 + rng.next() * (px1 - px0 - 3), py0 + 1.5 + rng.next() * (py1 - py0 - 3), z + 0.05), r = 1 + rng.next() * 0.5, h = 2 + rng.next();
+    const hits = tableBoxes.some((b) => Math.min(at.x + r, b.max.x) - Math.max(at.x - r, b.min.x) > 1e-6 && Math.min(at.y + r, b.max.y) - Math.max(at.y - r, b.min.y) > 1e-6);
+    if (!hits) p.solids.push(interlock({ kind: "cone", at, r, h, mat: "leaf" }));
+  }
   p.ground.push({ kind: "strip", path: [{ x: (px0 + px1) / 2, y: y + 5 }, { x: (px0 + px1) / 2, y: py1 }], width: 1, z: z + 0.08, mat: "paving" });
   p.ground.push({ kind: "strip", path: [{ x: px0, y: (py0 + py1) / 2 }, { x: px1, y: (py0 + py1) / 2 }], width: 1, z: z + 0.08, mat: "paving" });
-  for (const [dx, dy] of [[1, 1], [px1 - px0 - 2, 1], [1, py1 - py0 - 2], [px1 - px0 - 2, py1 - py0 - 2]] as const) p.solids.push(...table(v3(px0 + dx, py0 + dy, z + 0.05)));
+  p.solids.push(...tables);
   const s = sign(v3(x + w / 2 - 2, y + 4.1, topN), 4, 1.2); // on the south edge of the north building's roof
   p.solids.push(...s.solids);
   p.accents.push(...s.accents);
@@ -114,14 +121,17 @@ export function constructionSite(lot: Lot, _rng: Rng, _style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;
   const cap = Math.min(lot.maxH, LANDMARK_MAX_H);
   const sx = x + 2, sy = y + 1.5, sw = 16, sd = 12;
-  for (let k = 1; k <= 5 && 3 * k <= cap; k++) p.solids.push(prism(sx, sy, z + 3 * k - 0.3, k === 5 ? 8 : sw, sd, 0.3, "paving")); // slabs; the last one half-built
-  for (const [cx, cy] of [[0, 0], [8, 0], [16, 0], [0, 12], [8, 12], [16, 12]] as const) p.solids.push(prism(sx + cx - 0.3, sy + cy - 0.3, z, 0.6, 0.6, Math.min(15, cap), "steel"));
-  p.solids.push(prism(sx + 6, sy + 4, z, 4, 4, Math.min(16, cap), "officeDark")); // core
-  // mast 8 from the east edge: the counter-jib (8) ends at the lot edge and the jib (13) at the west edge
-  const mast = { x: x + w - 8, y: y + d - 2 };
-  towerCrane(p.solids, p.accents, { at: mast, z, mastH: Math.min(22, cap), jibLen: 13, dir: "w", light: "amber" });
+  for (let k = 1; k <= 5 && 3 * k <= cap; k++) p.solids.push(interlock(prism(sx, sy, z + 3 * k - 0.3, k === 5 ? 8 : sw, sd, 0.3, "paving"))); // slabs; the last one half-built
+  for (const [cx, cy] of [[0, 0], [8, 0], [16, 0], [0, 12], [8, 12], [16, 12]] as const) p.solids.push(interlock(prism(sx + cx - 0.3, sy + cy - 0.3, z, 0.6, 0.6, Math.min(15, cap), "steel")));
+  p.solids.push(interlock(prism(sx + 6, sy + 4, z, 4, 4, Math.min(16, cap), "officeDark"))); // core
+  // mast 8 from the east edge (the counter-jib ends at the lot edge, the jib at the west edge), south of the slabs and the column line (the hook, 0.6 either side of the jib, hangs clear of the columns)
+  const mast = { x: x + w - 8, y: sy + sd + 1 };
+  const crane: Solid[] = [];
+  towerCrane(crane, p.accents, { at: mast, z, mastH: Math.min(22, cap), jibLen: 13, dir: "w", light: "amber" });
+  // towerCrane pushes mast, jib, counter-jib, counterweight, cab (steel joints: marked), then cable and hook (hang free: not marked)
+  crane.forEach((s, i) => p.solids.push(i < 5 ? interlock(s) : s));
   for (const dx of [2, 6, 10]) p.accents.push({ kind: "dot", at: v3(sx + dx, sy + 6, z + Math.min(15, cap) + 0.3), r: 0.5, color: "amber" }); // site lights
-  p.solids.push(...fence(v3(x, y, z), w, d), ...container(v3(x + 0.5, y + d - 3, z)), ...container(v3(x + 7, y + d - 3, z)));
+  p.solids.push(...fence(v3(x, y, z), w, d), ...container(v3(x + 0.5, sy + sd - 2.8, z)), ...container(v3(x + 7, sy + sd - 2.8, z)));
   p.landmarkTop = v3(mast.x, mast.y, z + Math.min(22, cap));
   return p;
 }
