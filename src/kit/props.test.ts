@@ -178,7 +178,7 @@ describe("props", () => {
     for (let s = 1; s <= 20; s++) expect(rooftopGarden(AT, 8, 6, createRng(s))).toEqual(rooftopGarden(AT, 8, 6, createRng(s), [3, 5]));
     const counts = new Set<number>();
     for (let s = 1; s <= 50; s++) counts.add(rooftopGarden(AT, 8, 6, createRng(s), [1, 3]).length - 1);
-    expect([...counts].sort()).toEqual([1, 2, 3]);
+    expect([...counts].sort((a, b) => a - b)).toEqual([1, 2, 3]);
   });
 
   it("green terrace: draws int(min, max) and then two next() per cone", () => {

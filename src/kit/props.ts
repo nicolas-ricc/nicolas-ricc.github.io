@@ -23,9 +23,10 @@ export function lamp(at: Vec3): Lit & { bulb: Vec3 } {
 
 /** Industrial lamp of Portfolio: steel post and cyan bulb r 1.2; `center` puts `at` on the post's axis. */
 export function industrialLamp(at: Vec3, opts: { h?: number; center?: boolean } = {}): Lit & { bulb: Vec3 } {
-  const h = opts.h ?? 5, c = opts.center === true;
-  const bulb = c ? v3(at.x, at.y, at.z + h) : v3(at.x + 0.3, at.y + 0.3, at.z + h);
-  return { solids: [prism(c ? at.x - 0.3 : at.x, c ? at.y - 0.3 : at.y, at.z, 0.6, 0.6, h, "steel")], accents: [{ kind: "dot", at: bulb, r: 1.2, color: "cyan" }], bulb };
+  const h = opts.h ?? 5, center = opts.center === true;
+  const px = center ? at.x - 0.3 : at.x, py = center ? at.y - 0.3 : at.y; // post corner
+  const bulb = center ? v3(at.x, at.y, at.z + h) : v3(at.x + 0.3, at.y + 0.3, at.z + h); // from `at`, not the corner: exact on the axis
+  return { solids: [prism(px, py, at.z, 0.6, 0.6, h, "steel")], accents: [{ kind: "dot", at: bulb, r: 1.2, color: "cyan" }], bulb };
 }
 
 /** Traffic light, off: post and dark box. */
