@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { lightBox, WINDOW_ALPHA } from "../city/lights";
 import type { Accent } from "../iso/accent";
 import { hides, overlaps, screenBounds } from "../iso/depth";
@@ -21,8 +21,8 @@ type Poly = Extract<Accent, { kind: "poly" }>;
 const facadeLit = (accents: Accent[], cs: { pts: Poly["pts"] }[]): Poly[] => accents.filter((a): a is Poly => a.kind === "poly" && a.color === "windowCool" && cs.some((c) => same(c.pts, a.pts)));
 const lit = facadeLit(sy.accents, cands);
 const SEEDS = Array.from({ length: 12 }, (_, i) => i + 1);
-const seeded = new Map<number, ReturnType<typeof world>>();
-const portfolio = (seed: number) => seeded.get(seed) ?? seeded.set(seed, world(seed, { zones: ["portfolio"] })).get(seed)!; // built once, shared by the seed sweeps
+const seeded = new Map<number, ReturnType<typeof world>>(); // built once in beforeAll, shared by the seed sweeps
+const portfolio = (seed: number) => seeded.get(seed)!;
 const hiddenBy = (pts: Poly["pts"], s: Solid): boolean => {
   const box = lightBox(pts), b = bounds(s);
   return overlaps(screenBounds(box), screenBounds(b)) && hides(box, b);
@@ -30,6 +30,7 @@ const hiddenBy = (pts: Poly["pts"], s: Solid): boolean => {
 const subset = (a: Poly[], b: Poly[]) => a.every((x) => b.some((y) => same(x.pts, y.pts)));
 
 describe("Portfolio windowCool windows", () => {
+  beforeAll(() => { for (const seed of SEEDS) seeded.set(seed, world(seed, { zones: ["portfolio"] })); }, 20_000); // ~2.3 s alone; the full parallel suite stretched it past 8 s
   it("candidates: south walls of the halls, east and south of the workshops, east of the sheds", () => {
     expect(cands).toHaveLength(2 * 12 + 2 * (5 + 5) + 2 * 10);
     expect(new Set(cands.map((c) => c.owner)).size).toBe(6);
@@ -60,7 +61,7 @@ describe("Portfolio windowCool windows", () => {
         for (const s of occluders) if (s !== owner) expect(hiddenBy(a.pts, s), `seed ${seed}: ${JSON.stringify(bounds(s))}`).toBe(false);
       }
     }
-  }, 20_000); // builds the 12 seeded worlds the sweeps share (~2.3 s alone); the full parallel suite stretched it past 8 s
+  });
 
   it("factory solids hide the 2 factory-only candidates of world(7)", () => {
     expect(candsF).toHaveLength(64);
