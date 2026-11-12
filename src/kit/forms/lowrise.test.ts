@@ -6,6 +6,7 @@ import { PLINTH_H } from "../../scenes/city-pieces";
 import { RECIPES, recipe } from "../index";
 import { STYLES } from "../styles";
 import type { Lot, Piece, Side } from "../types";
+import { neonRun } from "./lowrise";
 
 const LOT: Lot = { x: 1.5, y: 1.5, w: 21, d: 15, z: 0, open: ["s"], maxH: 24 };
 const SEEDS = Array.from({ length: 20 }, (_, i) => i + 1);
@@ -192,5 +193,39 @@ describe("kit: lowrise family", () => {
         for (const q of p.solids) expect(q.interlocks).toBe(true);
       }
     });
+  });
+});
+
+describe("kit: neon runs (#165)", () => {
+  it("neonRun splits a 15-long face into 4 bays, numbered from shop0, 2.75 wide, 2.4 above z", () => {
+    const slots = neonRun({ x: 0, y: 0, w: 15, d: 5 }, "s", 0.3, 2);
+    expect(slots.map((s) => s.shop)).toEqual([2, 3, 4, 5]);
+    for (const s of slots) {
+      expect(s).toMatchObject({ kind: "neon", side: "s", wall: { x: 0, y: 1, z: 0 } });
+      expect(Math.abs(s.pts[1]!.x - s.pts[0]!.x - 2.75)).toBeLessThanOrEqual(TOL);
+      expect(Math.abs(s.pts[0]!.z - 2.7)).toBeLessThanOrEqual(TOL);
+      for (const q of s.pts) expect(Math.abs(q.y - 5)).toBeLessThanOrEqual(TOL);
+    }
+  });
+
+  it("every open side perpendicular to the front gets its corner shop's slot", () => {
+    for (const seed of SEEDS) {
+      const slots = shopRow(["s", "e", "w"], seed).slots, last = Math.max(...slots.map((s) => s.shop));
+      const east = slots.filter((s) => s.side === "e"), west = slots.filter((s) => s.side === "w");
+      expect(east).toHaveLength(1);
+      expect(east[0]!.shop).toBe(last);
+      expect(west).toHaveLength(1);
+      expect(west[0]!.shop).toBe(0);
+      for (const q of west[0]!.pts) expect(Math.abs(q.x - LOT.x)).toBeLessThanOrEqual(TOL);
+    }
+  });
+
+  it("a front on e with s open puts the corner slot on the last shop", () => {
+    for (const seed of SEEDS) {
+      const slots = shopRow(["e", "s"], seed).slots, south = slots.filter((s) => s.side === "s");
+      expect(south).toHaveLength(1);
+      expect(south[0]!.shop).toBe(Math.max(...slots.map((s) => s.shop)));
+      for (const q of south[0]!.pts) expect(Math.abs(q.y - (LOT.y + LOT.d))).toBeLessThanOrEqual(TOL);
+    }
   });
 });

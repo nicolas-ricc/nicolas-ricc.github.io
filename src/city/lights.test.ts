@@ -98,7 +98,7 @@ for (const [name, make, isWorld] of SEEDS) {
 
     it("neons: only in capped neighborhoods (bars ≤ 24, warehouses ≤ 10), open frontage, one per shop, z 2.4..3.6 above the lot, colors with their halos and puddle", () => {
       for (const b of NEIGHBORHOODS) expect(l.neons.filter((n) => s.placed[n.owner]!.placed.neighborhood === b).length, b).toBeLessThanOrEqual(NEON_CAPS[b] ?? 0);
-      if (isWorld) expect(l.neons.length).toBeGreaterThanOrEqual(3);
+      if (isWorld) expect(l.neons.length).toBeGreaterThanOrEqual(8);
       const seen = new Set<string>();
       for (const n of l.neons) {
         const p = s.placed[n.owner]!;
@@ -118,6 +118,11 @@ for (const [name, make, isWorld] of SEEDS) {
         expect(n.accents.every((a) => a.color === n.color || a.color === `${n.color}Bleed`)).toBe(true);
         expect([0, 3]).toContain(n.accents.filter((a) => a.kind === "poly" && a.alpha === 0.25 && a.color === `${n.color}Bleed`).length); // the puddle, unless hidden
       }
+    });
+
+    if (isWorld) it("world seed: the bar street shows neons from more than shopRow (#165)", () => {
+      const bars = l.neons.filter((n) => s.placed[n.owner]!.placed.neighborhood === "bars");
+      expect(bars.some((n) => s.placed[n.owner]!.placed.recipe !== "shopRow")).toBe(true);
     });
 
     it("no neon puddle is hidden (brute-force oracle)", () => {

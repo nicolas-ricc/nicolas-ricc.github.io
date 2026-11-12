@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { hides, screenHull } from "../../iso/depth";
 import { bounds } from "../../iso/solids";
+import { lightBox } from "../../city/lights";
 import { createRng } from "../../map/seed";
 import { RECIPES, recipe } from "../index";
 import { RECIPE_MAX_H } from "../piece";
@@ -90,6 +92,28 @@ describe("kit: curved family", () => {
       expect(p.solids.some((s) => s.kind === "prism" && s.roof === "hip" && s.mat === STYLES.civic.roof && s.at.z === upper!.at.z + upper!.h)).toBe(true);
       expect(p.windows.length).toBeGreaterThan(0);
       expect(p.windows.every((w) => w.building === p.solids.indexOf(upper!))).toBe(true);
+    }
+  });
+
+  it("gallery publishes neon slots on its open camera-facing sides, starting on the arcade face (#165)", () => {
+    for (const lot of [LOT, SMALL]) for (const seed of SEEDS) {
+      const p = recipe("gallery")({ ...lot, z: 0.3, open: ["s", "e"] }, createRng(seed), STYLES.bars);
+      expect(p.slots.some((s) => s.side === "s")).toBe(true);
+      expect(p.slots.some((s) => s.side === "e")).toBe(true);
+      expect([...p.slots.map((s) => s.shop)].sort((a, b) => a - b)).toEqual(p.slots.map((_, i) => i));
+      for (const s of p.slots) {
+        expect(s.kind).toBe("neon");
+        expect(Math.min(...s.pts.map((q) => q.z))).toBeLessThanOrEqual(0.3 + 3 + EPS);
+        for (const q of s.pts) {
+          if (s.side === "s") expect(Math.abs(q.y - (lot.y + lot.d - 1))).toBeLessThanOrEqual(EPS);
+          else expect(Math.abs(q.x - (lot.x + lot.w - 1))).toBeLessThanOrEqual(EPS);
+          expect(q.z - 0.3).toBeGreaterThanOrEqual(2.4 - EPS);
+          expect(q.z - 0.3).toBeLessThanOrEqual(3.6 + EPS);
+        }
+        const box = lightBox(s.pts);
+        for (const solid of p.solids) expect(hides(box, bounds(solid), { back: screenHull(box), front: screenHull(bounds(solid)) })).toBe(false);
+      }
+      expect(recipe("gallery")({ ...lot, open: ["n", "w"] }, createRng(seed), STYLES.bars).slots).toEqual([]);
     }
   });
 });

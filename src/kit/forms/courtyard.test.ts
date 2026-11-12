@@ -4,7 +4,9 @@ import { createRng } from "../../map/seed";
 import type { Rect } from "../../scenes/city-grid";
 import { RECIPES, recipe } from "../index";
 import { STYLES } from "../styles";
-import type { Lot, Piece } from "../types";
+import type { Lot, Piece, Side, Slot } from "../types";
+import { hides, screenHull } from "../../iso/depth";
+import { lightBox } from "../../city/lights";
 
 /** Usable lot of the city, the lab's, and the minimum every recipe has to withstand. */
 const LOTS: Lot[] = [
@@ -135,5 +137,79 @@ describe("kit: courtyard family", () => {
       expect(cones(p).length).toBeGreaterThanOrEqual(2);
       expect(cones(p).length).toBeLessThanOrEqual(4);
     });
+  });
+});
+
+describe("kit: courtyard neon slots (#165)", () => {
+  const NEON = ["patioResidential", "courtyardO"] as const;
+  const make = (name: string, lot: Lot, open: Side[], seed: number): Piece => recipe(name)({ ...lot, open }, createRng(seed), STYLES.bars);
+  const width = (s: Slot): number => Math.hypot(s.pts[1]!.x - s.pts[0]!.x, s.pts[1]!.y - s.pts[0]!.y);
+
+  for (const name of NEON) {
+    it(`${name} publishes neon slots only on open camera-facing sides`, () => {
+      for (const lot of LOTS) for (const seed of SEEDS) {
+        const slots = make(name, lot, ["s", "e"], seed).slots;
+        expect(slots.some((s) => s.side === "s")).toBe(true);
+        expect(slots.some((s) => s.side === "e")).toBe(true);
+        for (const s of slots) {
+          expect(s.kind).toBe("neon");
+          expect(s.wall).toEqual(s.side === "s" ? { x: 0, y: 1, z: 0 } : { x: 1, y: 0, z: 0 });
+        }
+        expect(make(name, lot, ["n", "w"], seed).slots).toEqual([]);
+        expect(make(name, lot, [], seed).slots).toEqual([]);
+      }
+    });
+
+    it(`${name}: neon slots lie on the lot face, 2.4..3.6 above lot.z, one per shop`, () => {
+      for (const lot of LOTS) for (const seed of SEEDS) {
+        const slots = make(name, lot, ["s", "e"], seed).slots;
+        expect([...slots.map((s) => s.shop)].sort((a, b) => a - b)).toEqual(slots.map((_, i) => i));
+        for (const s of slots) {
+          expect(width(s)).toBeGreaterThan(0);
+          for (const q of s.pts) {
+            if (s.side === "s") { expect(Math.abs(q.y - (lot.y + lot.d))).toBeLessThanOrEqual(TOL); expect(q.x).toBeGreaterThanOrEqual(lot.x - TOL); expect(q.x).toBeLessThanOrEqual(lot.x + lot.w + TOL); }
+            else { expect(Math.abs(q.x - (lot.x + lot.w))).toBeLessThanOrEqual(TOL); expect(q.y).toBeGreaterThanOrEqual(lot.y - TOL); expect(q.y).toBeLessThanOrEqual(lot.y + lot.d + TOL); }
+            expect(q.z - lot.z).toBeGreaterThanOrEqual(2.4 - TOL);
+            expect(q.z - lot.z).toBeLessThanOrEqual(3.6 + TOL);
+          }
+        }
+      }
+    });
+
+    it(`${name}: no neon slot is hidden by its own piece`, () => {
+      for (const lot of LOTS) for (const seed of SEEDS) {
+        const p = make(name, lot, ["s", "e"], seed);
+        for (const s of p.slots) {
+          const box = lightBox(s.pts);
+          for (const solid of p.solids) expect(hides(box, bounds(solid), { back: screenHull(box), front: screenHull(bounds(solid)) })).toBe(false);
+        }
+      }
+    });
+  }
+
+  it("courtyardO puts no neon over the south passage", () => {
+    for (const lot of LOTS) for (const seed of SEEDS) {
+      const x0 = lot.x + (lot.w - 3) / 2, x1 = lot.x + (lot.w + 3) / 2;
+      for (const s of make("courtyardO", lot, ["s"], seed).slots) {
+        const xs = s.pts.map((q) => q.x);
+        expect(overlaps(Math.min(...xs), Math.max(...xs), x0, x1)).toBe(false);
+      }
+    }
+  });
+
+  it("courtyardO half-faces give slots wider than 0 on every lot", () => {
+    for (const lot of LOTS) for (const seed of SEEDS) {
+      const slots = make("courtyardO", lot, ["s"], seed).slots;
+      expect(slots.length).toBeGreaterThanOrEqual(2);
+      for (const s of slots) expect(width(s)).toBeGreaterThan(0);
+    }
+  });
+
+  it("bay count follows the face length", () => {
+    const lot = LOTS[0]!; // 21 × 15
+    for (const seed of SEEDS) {
+      expect(make("patioResidential", lot, ["e"], seed).slots).toHaveLength(4);
+      expect(make("patioResidential", lot, ["s"], seed).slots).toHaveLength(5);
+    }
   });
 });
