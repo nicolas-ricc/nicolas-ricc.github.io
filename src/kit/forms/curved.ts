@@ -3,10 +3,10 @@ import type { Facade } from "../../iso/facade";
 import type { Rng } from "../../map/seed";
 import { prism } from "../../scenes/city-pieces";
 import { addBuilding, emptyPiece, floorsFor, recipeCap, shiftTone } from "../piece";
-import { CAMERA_SIDES, neonRun } from "./lowrise";
 import { HELIPAD_H, helipad, place } from "../props";
 import { CORNICE_H, HIP_ROOF_H, domeRoof, hipRoof } from "../roofs";
 import type { Lot, Piece, RecipeDef, Style } from "../types";
+import { CAMERA_SIDES, neonRun } from "./lowrise";
 
 /** `curved` family (spec §5, issue #41): cylinders, domes and vaults. Heights capped at min(lot.maxH, 18) counting the toppers. */
 

@@ -4,10 +4,10 @@ import type { Rng } from "../../map/seed";
 import type { Rect } from "../../scenes/city-grid";
 import { brokenTone, prism, tiles } from "../../scenes/city-pieces";
 import { RECIPE_MAX_H, addBuilding, emptyPiece } from "../piece";
-import { CAMERA_SIDES, neonRun } from "./lowrise";
 import { bench, patioTree } from "../props";
 import { CORNICE_H, HIP_ROOF_H, cornice, hipRoof } from "../roofs";
 import type { Lot, Piece, RecipeDef, Side, Style } from "../types";
+import { CAMERA_SIDES, neonRun } from "./lowrise";
 
 /**
  * `courtyard` family: blocks with an interior courtyard (O with a passage, open U,

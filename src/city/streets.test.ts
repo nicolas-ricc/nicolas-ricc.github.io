@@ -173,7 +173,7 @@ describe("avenue lamps around the bars (#165)", () => {
     const lamps = steel.filter((s) => s.w === 0.6 && s.d === 0.6 && s.h === 5), traffic = solids.filter((s) => s.kind === "prism" && ((s.mat === "steel" && s.w === 0.3) || (s.mat === "officeDark" && s.w === 0.5)));
     expect(lamps.length).toBeGreaterThan(0);
     expect(traffic.length).toBeGreaterThan(0);
-    const box = (s: Solid) => bounds(s), hit = (a: Solid, b: Solid) => { const p = box(a), q = box(b); return p.min.x < q.max.x && q.min.x < p.max.x && p.min.y < q.max.y && q.min.y < p.max.y; };
+    const hit = (a: Solid, b: Solid) => { const p = bounds(a), q = bounds(b); return p.min.x < q.max.x && q.min.x < p.max.x && p.min.y < q.max.y && q.min.y < p.max.y; };
     for (const l of lamps) for (const t of traffic) expect(hit(l, t), `lamp at ${l.at.x}`).toBe(false);
   });
 
