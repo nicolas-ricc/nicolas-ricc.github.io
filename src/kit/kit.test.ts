@@ -235,7 +235,7 @@ describe("kit: contract of every registered recipe", () => {
 
       it("no body with a facade or a published wall carries interlocks", () => {
         runs((p) => {
-          for (const s of p.solids) if (s.kind === "prism" && s.facade) expect(s.interlocks).toBeUndefined();
+          for (const s of p.solids) if ("facade" in s && s.facade) expect(s.interlocks).toBeUndefined();
           for (const w of p.walls) expect(p.solids[w.building]!.interlocks).toBeUndefined();
         });
       });

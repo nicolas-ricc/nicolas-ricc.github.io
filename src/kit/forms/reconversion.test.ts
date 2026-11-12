@@ -228,24 +228,27 @@ describe("derelictHall", () => {
   });
 });
 
+/** The boxes of the two solids share volume (touching faces do not count). */
+const overlaps = (a: Solid, b: Solid): boolean => {
+  const p = bounds(a), q = bounds(b);
+  return (["x", "y", "z"] as const).every((k) => Math.min(p.max[k], q.max[k]) - Math.max(p.min[k], q.min[k]) > 1e-6);
+};
+
 describe("reconversion interlocks", () => {
   it("derelictHall: rafters rest on the wall top and stay inside their gap; beams and jungle interlock", () => {
     for (const lot of LOTS) for (const seed of SEEDS) {
       const p = recipe("derelictHall")(lot, createRng(seed), STYLES.warehouses);
       const base = bounds(p.solids[0]!).max.z;
-      const beams = p.solids.filter((s) => s.kind === "beam");
+      const beams = p.solids.filter((s): s is Extract<Solid, { kind: "beam" }> => s.kind === "beam");
       expect(beams.length).toBeGreaterThan(0);
       for (const b of beams) {
         expect(b.interlocks).toBe(true);
         expect(bounds(b).min.z).toBeGreaterThanOrEqual(base - EPS);
+        for (const t of p.solids) if (t.kind === "ramp") expect(overlaps(b, t), `beam ${b.from.x},${b.from.y} overlaps ramp ${t.at.x},${t.at.y}`).toBe(false);
       }
-      const ridges = beams.filter((b) => b.kind === "beam" && Math.abs(b.from.y - b.to.y) > 1e-6);
-      for (const r of beams) if (r.kind === "beam") {
-        const b = bounds(r);
-        for (const t of p.solids) if (t.kind === "ramp") expect(Math.min(b.max.x, bounds(t).max.x) - Math.max(b.min.x, bounds(t).min.x) <= 1e-6 || b.min.z >= bounds(t).max.z - 1e-6 || b.max.z <= bounds(t).min.z + 1e-6 || Math.min(b.max.y, bounds(t).max.y) - Math.max(b.min.y, bounds(t).min.y) <= 1e-6).toBe(true);
-      }
-      for (const r of ridges) if (r.kind === "beam") {
-        const rafters = beams.filter((b) => b.kind === "beam" && Math.abs(b.from.y - b.to.y) < 1e-6 && Math.abs(b.to.x - r.from.x) < 0.2);
+      const ridges = beams.filter((b) => Math.abs(b.from.y - b.to.y) > 1e-6);
+      for (const r of ridges) {
+        const rafters = beams.filter((b) => Math.abs(b.from.y - b.to.y) < 1e-6 && Math.abs(b.to.x - r.from.x) < 0.2);
         for (const f of rafters) { const b = bounds(f); expect(b.min.x).toBeGreaterThanOrEqual(r.from.x + 0.15 - 4 - EPS); expect(b.max.x).toBeLessThanOrEqual(r.from.x + 0.15 + EPS); }
       }
       for (const c of p.solids.filter((s) => s.kind === "cone")) expect(c.interlocks).toBe(true);
