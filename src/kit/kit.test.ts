@@ -316,10 +316,12 @@ describe("kit: modern family", () => {
   });
 
   it("campus: no tree box touches a table box; trees interlock", () => {
+    let treeCount = 0;
     for (const lot of LOTS) for (const seed of SEEDS) {
       const p = recipe("campus")(lot, createRng(seed), STYLES.district);
       const trees = p.solids.filter((s) => s.kind === "cone"), tables = p.solids.filter((s) => s.kind === "prism" && s.h === 0.7);
       expect(tables.length).toBeGreaterThan(0);
+      treeCount += trees.length;
       for (const t of trees) {
         expect(t.interlocks).toBe(true);
         const a = bounds(t);
@@ -329,16 +331,21 @@ describe("kit: modern family", () => {
         }
       }
     }
+    expect(treeCount).toBeGreaterThan(0);
   });
 
   it("constructionSite: slabs, columns, core and the crane joints interlock; hook, cable and containers do not and stay clear of every slab and column", () => {
     for (const lot of LOTS) for (const seed of SEEDS) {
       const p = recipe("constructionSite")(lot, createRng(seed), STYLES.district), sy = lot.y + 1.5, sd = 12;
       const prisms = p.solids.filter((s) => s.kind === "prism");
-      const mast = prisms.find((s) => s.h === 22 && s.w === 1.2)!, jib = prisms.find((s) => s.w === 13)!, hook = prisms.find((s) => s.mat === "rust")!;
+      const mast = prisms.find((s) => s.h === 22 && s.w === 1.2)!, jib = prisms.find((s) => s.w === 13)!, hook = prisms.find((s) => s.mat === "rust" && s.w === 1.2 && s.d === 1.2 && s.h === 1)!;
       const cab = prisms.find((s) => s.w === 1.6 && s.h === 1.6)!, cable = prisms.find((s) => s.w === 0.6 && s.mat === "steel" && s.h < 10)!;
       expect(bounds(mast).min.y).toBeGreaterThanOrEqual(sy + sd - 1e-9);
-      for (const s of [mast, jib, cab]) expect(s.interlocks).toBe(true);
+      const counterJib = prisms.find((s) => s.w === 8 && s.mat === "steel")!, counterweight = prisms.find((s) => s.w === 2 && s.d === 2 && s.h === 1.5)!;
+      for (const s of [mast, jib, counterJib, counterweight, cab]) expect(s.interlocks).toBe(true);
+      const containers = prisms.filter((s) => s.mat === "rust" && s.w === 6 && s.d === 2.4 && s.h === 2.4);
+      expect(containers).toHaveLength(2);
+      for (const c of containers) expect(c.interlocks).toBeUndefined();
       expect(hook.interlocks).toBeUndefined();
       expect(cable.interlocks).toBeUndefined();
       const slabs = prisms.filter((s) => s.mat === "paving" && s.h === 0.3), columns = prisms.filter((s) => s.mat === "steel" && s.w === 0.6 && s.d === 0.6 && s.h === 15);
@@ -350,6 +357,7 @@ describe("kit: modern family", () => {
       const fence = prisms.filter((s) => s.mat === "officeDark" && s.h === 1.2);
       expect(fence).toHaveLength(4);
       for (const o of [...fence, ...slabs]) expect(overlap(mast, o), "mast").toBe(false);
+      for (const c of containers) for (const o of [...columns, ...slabs]) expect(overlap(c, o), "container").toBe(false);
       for (const o of [...columns, ...slabs]) { expect(overlap(hook, o), "hook").toBe(false); expect(overlap(cable, o), "cable").toBe(false); }
     }
   });

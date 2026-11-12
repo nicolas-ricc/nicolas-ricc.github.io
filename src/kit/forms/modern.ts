@@ -100,7 +100,7 @@ export function campus(lot: Lot, rng: Rng, style: Style): Piece {
   bldg(x, y + 6, 6, d - 6, rng.int(6, 8));
   bldg(x + w - 6, y + 6, 6, d - 6, rng.int(6, 8));
   const px0 = x + 6, px1 = x + w - 6, py0 = y + 6, py1 = y + d; // courtyard
-  const tables = [[1, 1], [px1 - px0 - 2, 1], [1, py1 - py0 - 2], [px1 - px0 - 2, py1 - py0 - 2]].flatMap(([dx, dy]) => table(v3(px0 + dx!, py0 + dy!, z + 0.05)));
+  const tables = ([[1, 1], [px1 - px0 - 2, 1], [1, py1 - py0 - 2], [px1 - px0 - 2, py1 - py0 - 2]] as const).flatMap(([dx, dy]) => table(v3(px0 + dx, py0 + dy, z + 0.05)));
   const tableBoxes = tables.map(bounds);
   for (let k = 0, n = rng.int(4, 6); k < n; k++) { // a tree whose plan box overlaps a table is dropped; its rng values are still drawn
     const at = v3(px0 + 1.5 + rng.next() * (px1 - px0 - 3), py0 + 1.5 + rng.next() * (py1 - py0 - 3), z + 0.05), r = 1 + rng.next() * 0.5, h = 2 + rng.next();
