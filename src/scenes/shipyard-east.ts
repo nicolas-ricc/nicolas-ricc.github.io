@@ -5,6 +5,7 @@ import { ribs, type Plate } from "../iso/plate";
 import type { Solid } from "../iso/solids";
 import type { Rng } from "../map/seed";
 import { door, quayCraneAt, rtgAt, stackContainers, stackHeight } from "../kit/forms/industrial";
+import { industrialLamp, place } from "../kit/props";
 import { prism } from "./city-pieces";
 
 /**
@@ -43,8 +44,7 @@ export function floatingDock(out: Solid[], accents: Accent[], weldSpots: Vec3[])
   for (const x of [204, 243]) {
     out.push(prism(x, 75.5, DECK_Z, TOWER, TOWER, TOWER_H, "steel"));
     const top = DECK_Z + TOWER_H, px = x + 1.2, py = 75.5 + 1.2;
-    out.push(prism(px, py, top, 0.6, 0.6, 5, "steel"));
-    accents.push({ kind: "dot", at: v3(px + 0.3, py + 0.3, top + 5), r: 1.2, color: "cyan" });
+    place(out, accents, industrialLamp(v3(px, py, top)));
   }
   out.push(prism(202, 80, DECK_Z, 2, 1.5, 0.3, "steel"));
   for (const [x, y] of [[218, 77.5], [228, 77.5], [218, 84.5], [228, 84.5]] as const) weldSpots.push(v3(x, y, 5.3));
@@ -80,8 +80,7 @@ export function containerYard(out: Solid[], accents: Accent[], rng: Rng): void {
   accents.push({ kind: "poly", pts: [v3(296.8, 84, 1.2), v3(298.2, 84, 1.2), v3(298.2, 84, 2.2), v3(296.8, 84, 2.2)], color: "windowCool", alpha: 0.85 });
   // NW lamp in the 2.6 gap between lanes 1 and 2: the issue's (288.5, 30.5) stands on the cove water (terrainAt(288.8, 30.8) is water)
   for (const [px, py] of [[292.4, 30.5], [303, 79]] as const) {
-    out.push(prism(px, py, SLAB_TOP, 0.6, 0.6, 5, "steel"));
-    accents.push({ kind: "dot", at: v3(px + 0.3, py + 0.3, SLAB_TOP + 5), r: 1.2, color: "cyan" });
+    place(out, accents, industrialLamp(v3(px, py, SLAB_TOP)));
   }
 }
 

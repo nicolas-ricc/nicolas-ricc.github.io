@@ -2,6 +2,7 @@ import type { Accent } from "../iso/accent";
 import { v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { plateOutline, type Plate } from "../iso/plate";
 import type { Solid } from "../iso/solids";
+import { industrialLamp, place } from "../kit/props";
 import { emu, trainLen } from "./train";
 
 /**
@@ -256,8 +257,7 @@ function esplanade(out: Solid[], accents: Accent[]): void {
   out.push(prism(ESPLANADE.x0, ESPLANADE.y0, 0, ESPLANADE.x1 - ESPLANADE.x0, ESPLANADE.y1 - ESPLANADE.y0, 0.15, "paving"));
   // lamps: the coordinate is the center of the post
   for (const y of [102, 130]) {
-    out.push(prism(195.5 - 0.3, y - 0.3, 0.15, 0.6, 0.6, 6, "steel"));
-    accents.push({ kind: "dot", at: v3(195.5, y, 6.15), r: 1.2, color: "cyan" });
+    place(out, accents, industrialLamp(v3(195.5, y, 0.15), { h: 6, center: true }));
   }
   // palms: the middle one at 195.6 so the crown does not cross the sign (A6)
   for (const [x, y] of [[195.5, 108], [195.6, 116.5], [195.5, 125]] as const) {
