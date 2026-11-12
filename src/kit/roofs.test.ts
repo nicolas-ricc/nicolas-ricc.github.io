@@ -53,4 +53,10 @@ describe("roofs", () => {
     expect((a.x - 10) * Math.SQRT1_2 + (a.y - 4) * Math.SQRT1_2).toBeCloseTo(0.5, 9);
     expect((b.x - 6) * Math.SQRT1_2 + (b.y - 8) * Math.SQRT1_2).toBeCloseTo(0.5, 9);
   });
+
+  it("cornice and hipRoof interlock; gable, step, pyramid and dome do not", () => {
+    expect(cornice(F, "stone").every((s) => s.interlocks === true)).toBe(true);
+    expect(hipRoof(F, "terracotta").every((s) => s.interlocks === true)).toBe(true);
+    for (const s of [...gableRoof(F, 2, "terracotta"), ...stepRoof(F, 2, "stone"), ...pyramid(F, 2, "stone"), ...domeRoof(F, 2, "stone")]) expect(s.interlocks).toBeUndefined();
+  });
 });
