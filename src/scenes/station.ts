@@ -256,9 +256,7 @@ function tower(out: Solid[], accents: Accent[]): void {
 function esplanade(out: Solid[], accents: Accent[]): void {
   out.push(prism(ESPLANADE.x0, ESPLANADE.y0, 0, ESPLANADE.x1 - ESPLANADE.x0, ESPLANADE.y1 - ESPLANADE.y0, 0.15, "paving"));
   // lamps: the coordinate is the center of the post
-  for (const y of [102, 130]) {
-    place(out, accents, industrialLamp(v3(195.5, y, 0.15), { h: 6, center: true }));
-  }
+  for (const y of [102, 130]) place(out, accents, industrialLamp(v3(195.5, y, 0.15), { h: 6, center: true }));
   // palms: the middle one at 195.6 so the crown does not cross the sign (A6)
   for (const [x, y] of [[195.5, 108], [195.6, 116.5], [195.5, 125]] as const) {
     out.push({ kind: "cylinder", at: v3(x, y, 0.15), r: 0.25, h: 6, mat: "deck", sides: 6 });
