@@ -7,7 +7,7 @@ import type { Material } from "../../map/palette-iso";
 import type { Rng } from "../../map/seed";
 import type { Rect } from "../../scenes/city-grid";
 import { prism } from "../../scenes/city-pieces";
-import { addBuilding, emptyPiece, fitToCap, recipeCap, shiftTone } from "../piece";
+import { addBuilding, emptyPiece, fitToCap, interlock, recipeCap, shiftTone } from "../piece";
 import type { Lot, Piece, RecipeDef, Side, Style } from "../types";
 
 /**
@@ -196,10 +196,13 @@ export function tankGroup(lot: Lot, rng: Rng, style: Style): Piece {
     return { ...t, cx: long ? c : cc, cy: long ? cc : c };
   });
   for (const { cx, cy, r, h, mat } of placed) {
-    p.solids.push({ kind: "cylinder", at: v3(cx, cy, z), r, h, mat });
-    p.solids.push({ kind: "cylinder", at: v3(cx, cy, z + h / 2 - 0.15), r: r + 0.2, h: 0.3, mat });
+    const half = h / 2 - 0.15, upperZ = z + h / 2 + 0.15; // the body and the post are split so the ring does not cut into them
+    p.solids.push({ kind: "cylinder", at: v3(cx, cy, z), r, h: half, mat });
+    p.solids.push({ kind: "cylinder", at: v3(cx, cy, z + half), r: r + 0.2, h: 0.3, mat });
+    p.solids.push({ kind: "cylinder", at: v3(cx, cy, upperZ), r, h: half, mat });
     const wall = cy + r * Math.cos(Math.PI / 8); // the octagon's south flat
-    p.solids.push(prism(cx - 0.15, wall, z, 0.3, 0.3, h, "steel"));
+    p.solids.push(prism(cx - 0.15, wall, z, 0.3, 0.3, half, "steel"));
+    p.solids.push(prism(cx - 0.15, wall, upperZ, 0.3, 0.3, half, "steel"));
     for (let k = 1; k < h; k++) p.solids.push({ kind: "beam", from: v3(cx - 0.15, wall + 0.35, z + k), to: v3(cx + 0.15, wall + 0.35, z + k), w: 0.1, h: 0.1, mat: "steel" });
   }
   const m = 0.7;
@@ -220,12 +223,12 @@ export function quayCraneAt(at: Vec2, dir: "w" | "e" | "s", out: Solid[], accent
     out.push({ kind: "beam", from: P(l, -3, z + 9.6), to: P(l, 3, z + 9.6), w: 0.8, h: 0.8, mat: "steel" });
     if (rails) out.push({ kind: "strip", path: [xy(P(l, -4, 0)), xy(P(l, 4, 0))], width: 0.6, z: z + 0.02, mat: "rail" });
   }
-  out.push(prism(at.x - 1, at.y - 1, z + 10, 2, 2, 2, "steel"));
-  out.push(prism(at.x - 0.2, at.y - 0.2, z + 12, 0.4, 0.4, 3, "steel"));
+  out.push(interlock(prism(at.x - 1, at.y - 1, z + 10, 2, 2, 2, "steel")));
+  out.push(interlock(prism(at.x - 0.2, at.y - 0.2, z + 12, 0.4, 0.4, 3, "steel")));
   const tip = v3(at.x + 4.4 * sx, at.y + 4.4 * sy, z + 17.5);
-  out.push({ kind: "beam", from: v3(at.x + sx, at.y + sy, z + 12), to: tip, w: 0.6, h: 0.4, mat: "steel" });
-  out.push({ kind: "beam", from: v3(at.x, at.y, z + 15), to: tip, w: 0.2, h: 0.2, mat: "steel" });
-  out.push(prism(tip.x - 0.2, tip.y - 0.2, z + 17.5, 0.4, 0.4, 0.5, "steel")); // light housing: the topmost solid, so flattening is exact
+  out.push(interlock({ kind: "beam", from: v3(at.x + sx, at.y + sy, z + 12), to: tip, w: 0.6, h: 0.4, mat: "steel" }));
+  out.push(interlock({ kind: "beam", from: v3(at.x, at.y, z + 15), to: tip, w: 0.2, h: 0.2, mat: "steel" }));
+  out.push(interlock(prism(tip.x - 0.2, tip.y - 0.2, z + 17.5, 0.4, 0.4, 0.5, "steel"))); // light housing: the topmost solid, so flattening is exact
   accents.push({ kind: "dot", at: tip, r: 1, color: "cyan" });
 }
 

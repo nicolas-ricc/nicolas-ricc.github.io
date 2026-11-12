@@ -56,9 +56,22 @@ describe("props", () => {
 
   it("bollard, trees and terrace shrub", () => {
     expect(only(bollard(AT))).toEqual({ kind: "cylinder", at: AT, r: 0.4, h: 0.8, mat: "rust", sides: 6 });
-    expect(only(streetTree(AT))).toEqual({ kind: "cone", at: AT, r: 1.5, h: 4, mat: "leaf" });
-    expect(only(patioTree(AT))).toEqual({ kind: "cone", at: AT, r: 1, h: 2.5, mat: "leaf" });
-    expect(only(roofShrub(AT))).toEqual({ kind: "cone", at: AT, r: 1.2, h: 2.5, mat: "leaf" });
+    expect(only(streetTree(AT))).toEqual({ kind: "cone", at: AT, r: 1.5, h: 4, mat: "leaf", interlocks: true });
+    expect(only(patioTree(AT))).toEqual({ kind: "cone", at: AT, r: 1, h: 2.5, mat: "leaf", interlocks: true });
+    expect(only(roofShrub(AT))).toEqual({ kind: "cone", at: AT, r: 1.2, h: 2.5, mat: "leaf", interlocks: true });
+  });
+
+  it("rooftopGarden: the cones interlock, the slab does not; fence segments interlock", () => {
+    const garden = rooftopGarden(AT, 8, 8, createRng(1));
+    const cones = garden.filter((s) => s.kind === "cone"), slab = garden.filter((s) => s.kind !== "cone");
+    expect(cones.length).toBeGreaterThan(0);
+    expect(cones.every((s) => s.interlocks === true)).toBe(true);
+    expect(slab).toHaveLength(1);
+    expect(slab[0]!.interlocks).toBeUndefined();
+    const segs = fence(AT, 6, 5);
+    expect(segs).toHaveLength(4);
+    expect(segs.every((s) => s.interlocks === true)).toBe(true);
+    for (const s of [...container(AT), ...table(AT), ...bench(AT), ...lamp(AT).solids]) expect(s.interlocks).toBeUndefined();
   });
 
   it("awning: awning ramp with 0.8 overhang and 0.4 height toward the street", () => {

@@ -4,6 +4,7 @@ import type { RampDir, Solid } from "../iso/solids";
 import type { AccentColor, Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { prism } from "../scenes/city-pieces";
+import { interlock } from "./piece";
 
 /**
  * Kit props: one function per prop and a single measure per role (spec §5).
@@ -41,11 +42,11 @@ export const chair = (at: Vec3): Solid[] => [prism(at.x, at.y, at.z, 0.5, 0.5, 0
 /** Center. */
 export const bollard = (at: Vec3): Solid[] => [{ kind: "cylinder", at, r: 0.4, h: 0.8, mat: "rust", sides: 6 }];
 /** Center. */
-export const streetTree = (at: Vec3): Solid[] => [{ kind: "cone", at, r: 1.5, h: 4, mat: "leaf" }];
+export const streetTree = (at: Vec3): Solid[] => [interlock({ kind: "cone", at, r: 1.5, h: 4, mat: "leaf" })];
 /** Center. */
-export const patioTree = (at: Vec3): Solid[] => [{ kind: "cone", at, r: 1, h: 2.5, mat: "leaf" }];
+export const patioTree = (at: Vec3): Solid[] => [interlock({ kind: "cone", at, r: 1, h: 2.5, mat: "leaf" })];
 /** Center. The jungle that grows on a terrace of the old city. */
-export const roofShrub = (at: Vec3): Solid[] => [{ kind: "cone", at, r: 1.2, h: 2.5, mat: "leaf" }];
+export const roofShrub = (at: Vec3): Solid[] => [interlock({ kind: "cone", at, r: 1.2, h: 2.5, mat: "leaf" })];
 
 /** Awning of `len` along the facade, with 0.8 overhang, sloping down toward the street (`dir`). */
 export function awning(at: Vec3, len: number, dir: RampDir): Solid[] {
@@ -135,7 +136,7 @@ export const beacon = (at: Vec3): Lit => ({ solids: [], accents: [{ kind: "dot",
 /** Green terrace: thin jungle slab (a `ground` cannot sit on a roof) and `cones` cones (3..5) on it, 1 from the edge. */
 export function rooftopGarden(at: Vec3, w: number, d: number, rng: Rng, cones: readonly [number, number] = [3, 5]): Solid[] {
   const out: Solid[] = [prism(at.x, at.y, at.z, w, d, 0.3, "leafDark")];
-  for (let k = 0, n = rng.int(cones[0], cones[1]); k < n; k++) out.push({ kind: "cone", at: v3(at.x + 1 + rng.next() * (w - 2), at.y + 1 + rng.next() * (d - 2), at.z + 0.3), r: 1, h: 2, mat: "leaf" });
+  for (let k = 0, n = rng.int(cones[0], cones[1]); k < n; k++) out.push(interlock({ kind: "cone", at: v3(at.x + 1 + rng.next() * (w - 2), at.y + 1 + rng.next() * (d - 2), at.z + 0.3), r: 1, h: 2, mat: "leaf" }));
   return out;
 }
 
@@ -143,7 +144,7 @@ export const solarPanel = (at: Vec3): Solid[] => [{ kind: "ramp", at, w: 3, d: 1
 
 /** Construction fence 0.3 thick, inside the rectangle. */
 export function fence(at: Vec3, w: number, d: number): Solid[] {
-  return ([[0, 0, w, 0.3], [0, d - 0.3, w, 0.3], [0, 0, 0.3, d], [w - 0.3, 0, 0.3, d]] as const).map(([dx, dy, fw, fd]) => prism(at.x + dx, at.y + dy, at.z, fw, fd, 1.2, "officeDark"));
+  return ([[0, 0, w, 0.3], [0, d - 0.3, w, 0.3], [0, 0, 0.3, d], [w - 0.3, 0, 0.3, d]] as const).map(([dx, dy, fw, fd]) => interlock(prism(at.x + dx, at.y + dy, at.z, fw, fd, 1.2, "officeDark")));
 }
 
 export const container = (at: Vec3): Solid[] => [prism(at.x, at.y, at.z, 6, 2.4, 2.4, "rust")];

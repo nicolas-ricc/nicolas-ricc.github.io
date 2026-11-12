@@ -4,7 +4,7 @@ import { bounds } from "../iso/solids";
 import { PLINTH_H, prism } from "../scenes/city-pieces";
 import { createRng } from "../map/seed";
 import { LAB_LOTS, RECIPES } from "./index";
-import { emptyPiece, fitToCap, liftPiece, seat, shiftTone } from "./piece";
+import { emptyPiece, fitToCap, interlock, liftPiece, seat, shiftTone } from "./piece";
 import { STYLES } from "./styles";
 import type { Lot, Piece, Recipe } from "./types";
 
@@ -103,5 +103,12 @@ describe("seat", () => {
     expect(s.plinth).toBe(false);
     expect(s.lot).toBe(STREET);
     expect(s.piece.solids[0]).toMatchObject({ at: { z: 0 } });
+  });
+
+  it("interlock marks a copy and keeps the rest", () => {
+    const s = prism(0, 0, 0, 1, 1, 1, "stone"), m = interlock(s);
+    expect(m).toMatchObject(s);
+    expect(m.interlocks).toBe(true);
+    expect(s.interlocks).toBeUndefined();
   });
 });

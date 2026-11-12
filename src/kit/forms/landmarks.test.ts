@@ -37,17 +37,6 @@ describe("kit: landmarks family", () => {
     }
   });
 
-  it("no pair of solids of a recipe interpenetrates (sortByDepth sorts by box)", () => {
-    for (const def of RECIPES.filter((r) => r.family === "landmarks")) for (const lot of LAB_LOTS[def.name] ? [lotFor(def.name)] : [LOT, LAB]) {
-      const boxes = recipe(def.name)(lot, createRng(1), STYLES.civic).solids.map(bounds);
-      for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
-        const a = boxes[i]!, b = boxes[j]!;
-        const inside = (["x", "y", "z"] as const).every((k) => Math.min(a.max[k], b.max[k]) - Math.max(a.min[k], b.min[k]) > 1e-6);
-        expect(inside, `${def.name}: solids ${i} and ${j}`).toBe(false);
-      }
-    }
-  });
-
   it("market, station, theatre and palace have at least one dome or vault", () => {
     for (const name of ["market", "station", "theatre", "civicPalace"]) {
       const p = recipe(name)(LOT, createRng(1), STYLES.civic);

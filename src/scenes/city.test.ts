@@ -342,9 +342,10 @@ describe("city", () => {
   // #143: a recipe with ground drawing more rng (courtyardO's 2×2 patio tiles) moves the pieces after it too;
   // seeds 1, 2 and 4 (the ones with a paved courtyardO) re-recorded once.
   // #56: the seam at y 90 adds rows, neighbourhoods and recipes (and openDock goes onto a plinth); all five re-recorded once.
+  // #152: the interlocks mark enters the JSON; shopRow, tankGroup, constructionSite and derelictHall change geometry; all five re-recorded once.
   // That lifting equals running the recipe PLINTH_H higher is checked per recipe in piece.test.
-  it("pieces without ground are identical to the pinned plinth pieces (860a582; re-recorded at #143 and #56)", () => {
-    const MAIN = ["0a1e592f", "7a46f239", "ff800453", "c9c106ac", "1db2537f"];
+  it("pieces without ground are identical to the pinned plinth pieces (860a582; re-recorded at #143, #56 and #152)", () => {
+    const MAIN = ["bc41bf70", "fa06402b", "f48e0dd8", "d5dea574", "7f74319b"];
     for (let s = 1; s <= 5; s++) {
       const c = city(createRng(s), createRng(s + 1), createRng(s + 2));
       const plain = c.placed.filter((q) => q.piece.ground.length === 0).map((q) => q.piece);

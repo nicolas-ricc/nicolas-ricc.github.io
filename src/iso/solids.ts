@@ -28,7 +28,11 @@ export type Solid = (
   | { kind: "strip"; path: Vec2[]; width: number; z: number; mat: Material }
   | { kind: "ground"; tris: Tri[]; mat: Material }
   | { kind: "wheel"; at: Vec3; r: number; width: number; mat: Material; sides: number; angle: number; gondolas?: { mat: Material; w: number; d: number; h: number }; hollow?: boolean; slots?: number; buckets?: { n: number; depth: number; teeth: number; mat: Material } }
-) & { tone?: number /* integer, −2..+2 */ };
+) & {
+  tone?: number /* integer, −2..+2 */;
+  /** Kit test metadata: two solids whose boxes interpenetrate on purpose pass the kit's interpenetration check only if both carry it; rendering ignores it. */
+  interlocks?: true;
+};
 
 /** Which way the ramp descends: "e" has its high edge on the west, "s" has it on the north. */
 export type RampDir = "e" | "w" | "n" | "s";

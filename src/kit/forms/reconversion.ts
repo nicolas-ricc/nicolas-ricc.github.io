@@ -9,7 +9,7 @@ import { jungle } from "../../scenes/flora";
 import type { Rng } from "../../map/seed";
 import { awning, chair, fence, garland, rooftopGarden, table } from "../props";
 import { gableRoof } from "../roofs";
-import { addBuilding, emptyPiece, recipeCap, shiftTone } from "../piece";
+import { addBuilding, emptyPiece, interlock, recipeCap, shiftTone } from "../piece";
 import type { Lot, Piece, RecipeDef, Side, Style, Window } from "../types";
 import { SIDES, WALL_NORMALS, sawtooth, stackContainers, storeroom, tonePiece } from "./industrial";
 import { neonSlot } from "./lowrise";
@@ -157,6 +157,9 @@ export function sheetLoft(lot: Lot, rng: Rng, style: Style): Piece {
   return tonePiece(p, tone);
 }
 
+/** Largest jungle radius in a derelict gap: the octagon's box (r·cos(π/8) from the gap centre) stays clear of the ridge beam, whose box starts 0.3 short of the next tooth. */
+const GAP_CONE_R = 1.8;
+
 /** Abandoned sawtooth hall: 1..2 teeth gone leaving ridge beam and rafters, jungle growing through the gaps; no facade, walls one tone darker. */
 export function derelictHall(lot: Lot, rng: Rng, style: Style): Piece {
   const tone = shiftTone(style.tone, rng.int(-1, 1));
@@ -171,9 +174,9 @@ export function derelictHall(lot: Lot, rng: Rng, style: Style): Piece {
   const gaps = [...gone].sort((a, b) => a - b);
   teeth.forEach((t, k) => { if (!gone.has(k)) p.solids.push(t); });
   for (const k of gaps) {
-    const ridge = x0 + 4 * (k + 1), top = base + 2 - 0.15; // beam is 0.3 thick, centred on its axis: top stays within the cap
-    p.solids.push({ kind: "beam", from: v3(ridge, y, top), to: v3(ridge, y + d, top), w: 0.3, h: 0.3, mat: "steel" });
-    for (const yj of [y + 0.5, y + d - 0.5]) p.solids.push({ kind: "beam", from: v3(x0 + 4 * k, yj, base), to: v3(ridge, yj, top), w: 0.3, h: 0.3, mat: "steel" });
+    const ridge = x0 + 4 * (k + 1), top = base + 2 - 0.15; // beam is 0.3 thick, centred on its axis: top stays within the cap; the ridge sits 0.15 inside the gap so its box does not reach the next tooth
+    p.solids.push(interlock({ kind: "beam", from: v3(ridge - 0.15, y, top), to: v3(ridge - 0.15, y + d, top), w: 0.3, h: 0.3, mat: "steel" }));
+    for (const yj of [y + 0.5, y + d - 0.5]) p.solids.push(interlock({ kind: "beam", from: v3(x0 + 4 * k + 0.15, yj, base + 0.15), to: v3(ridge - 0.15, yj, top), w: 0.3, h: 0.3, mat: "steel" })); // ends inset by the half thickness: the box stays on the wall top and in its gap
   }
   const first = p.solids.length;
   for (let i = gaps.length > 0 ? rng.int(4, 6) : 0; i > 0; i--) { // no gap (a lot under 8 wide): no jungle
@@ -182,7 +185,7 @@ export function derelictHall(lot: Lot, rng: Rng, style: Style): Piece {
   }
   for (let i = first; i < p.solids.length; i++) {
     const c = p.solids[i]!;
-    if (c.kind === "cone") p.solids[i] = { ...c, r: Math.min(c.r, 2), h: Math.min(c.h, cap - h) };
+    if (c.kind === "cone") p.solids[i] = interlock({ ...c, r: Math.min(c.r, GAP_CONE_R), h: Math.min(c.h, cap - h) });
   }
   const t = tonePiece(p, tone);
   t.solids[0] = { ...t.solids[0]!, tone: shiftTone(tone, -1) };
@@ -200,10 +203,10 @@ export function coveredMarket(lot: Lot, rng: Rng, style: Style): Piece {
   const open = new Set<Side>([f.side, ...(lot.open[1] ? [lot.open[1]] : [])]);
   const wx0 = x + (open.has("w") ? post : 0), wx1 = x + w - (open.has("e") ? post : 0);
   const wy0 = y + (open.has("n") ? post : 0), wy1 = y + d - (open.has("s") ? post : 0);
-  if (!open.has("n")) p.solids.push(prism(wx0, y, z, wx1 - wx0, wallT, h - 0.3, style.mat));
-  if (!open.has("s")) p.solids.push(prism(wx0, y + d - wallT, z, wx1 - wx0, wallT, h - 0.3, style.mat));
-  if (!open.has("w")) p.solids.push(prism(x, wy0, z, wallT, wy1 - wy0, h - 0.3, style.mat));
-  if (!open.has("e")) p.solids.push(prism(x + w - wallT, wy0, z, wallT, wy1 - wy0, h - 0.3, style.mat));
+  if (!open.has("n")) p.solids.push(interlock(prism(wx0, y, z, wx1 - wx0, wallT, h - 0.3, style.mat)));
+  if (!open.has("s")) p.solids.push(interlock(prism(wx0, y + d - wallT, z, wx1 - wx0, wallT, h - 0.3, style.mat)));
+  if (!open.has("w")) p.solids.push(interlock(prism(x, wy0, z, wallT, wy1 - wy0, h - 0.3, style.mat)));
+  if (!open.has("e")) p.solids.push(interlock(prism(x + w - wallT, wy0, z, wallT, wy1 - wy0, h - 0.3, style.mat)));
   const seen = new Set<string>();
   for (const side of open) {
     const g = frontFrame({ ...lot, open: [side] }), n = Math.max(1, Math.round(g.len / 3.5)), step = g.len / n;

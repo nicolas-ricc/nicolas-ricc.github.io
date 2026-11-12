@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { convexHull, type Vec2 } from "../iso/geometry";
+import { prism } from "../scenes/city-pieces";
 import { bounds, type Solid } from "../iso/solids";
 import { createRng } from "../map/seed";
 import { LAB_LOTS, RECIPES, recipe } from "./index";
-import { LANDMARK_MAX_H, RECIPE_MAX_H } from "./piece";
+import { LANDMARK_MAX_H, RECIPE_MAX_H, interlock } from "./piece";
+import { cornice, hipRoof } from "./roofs";
 import { STYLES } from "./styles";
 import type { Lot, Piece } from "./types";
 
@@ -73,6 +75,24 @@ function concaveIntruders(solids: Solid[]): number {
   return n;
 }
 
+const OVERLAP_EPS = 1e-6;
+
+/**
+ * Pairs `[i, j]` (i < j) whose boxes interpenetrate by more than `OVERLAP_EPS` on all three axes: `sortByDepth` sorts by box,
+ * so such a pair can be painted in the wrong order. Faces that touch do not count. A pair is excused only if both solids carry
+ * `interlocks` (same-material joints, posts through slabs, tree × tree, a ruin's vegetation, neighbouring roofs); a body is
+ * never marked, so roof × body and cornice × body still fail.
+ */
+function interpenetrations(solids: Solid[]): [number, number][] {
+  const boxes = solids.map(bounds), out: [number, number][] = [];
+  for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+    if (solids[i]!.interlocks && solids[j]!.interlocks) continue;
+    const a = boxes[i]!, b = boxes[j]!;
+    if ((["x", "y", "z"] as const).every((k) => Math.min(a.max[k], b.max[k]) - Math.max(a.min[k], b.min[k]) > OVERLAP_EPS)) out.push([i, j]);
+  }
+  return out;
+}
+
 /** Copy with `dz` added to every z coordinate (`z`, and `z0`/`z1` of the plates); the normals (`wall`, `normal`) don't move. */
 function shiftZ(v: unknown, dz: number, key = ""): unknown {
   if (key === "wall" || key === "normal") return v;
@@ -116,6 +136,33 @@ describe("kit: the concave-gap oracle", () => {
   });
 });
 
+describe("kit: the interpenetration oracle", () => {
+  const a: Solid = prism(0, 0, 0, 2, 2, 2, "stone"), b: Solid = prism(1, 1, 1, 2, 2, 2, "stone");
+
+  it("two marked solids that overlap pass", () => {
+    expect(interpenetrations([interlock(a), interlock(b)])).toEqual([]);
+  });
+
+  it("only one marked fails", () => {
+    expect(interpenetrations([interlock(a), b])).toEqual([[0, 1]]);
+    expect(interpenetrations([a, interlock(b)])).toEqual([[0, 1]]);
+  });
+
+  it("neither marked fails", () => {
+    expect(interpenetrations([a, b])).toEqual([[0, 1]]);
+  });
+
+  it("faces that touch do not count", () => {
+    expect(interpenetrations([a, prism(2, 0, 0, 2, 2, 2, "stone")])).toEqual([]);
+  });
+
+  it("a cornice or hip roof over a taller neighbour body still fails", () => {
+    const body: Solid = prism(4, 0, 0, 4, 4, 6, "plaster", { facade: { floors: 2, cols: 2 } });
+    expect(interpenetrations([...cornice({ x: 0, y: 0, w: 4, d: 4, z: 3 }, "stone"), body])).toEqual([[0, 1]]);
+    expect(interpenetrations([...hipRoof({ x: 0, y: 0, w: 4, d: 4, z: 3 }, "stone"), body])).toEqual([[0, 1]]);
+  });
+});
+
 describe("kit: contract of every registered recipe", () => {
   it("the registry has unique names and recipe() finds them", () => {
     expect(new Set(RECIPES.map((r) => r.name)).size).toBe(RECIPES.length);
@@ -126,8 +173,8 @@ describe("kit: contract of every registered recipe", () => {
   for (const def of RECIPES) {
     describe(def.name, () => {
       const cap = (lot: Lot) => Math.min(lot.maxH, def.landmark ? LANDMARK_MAX_H : RECIPE_MAX_H);
-      const runs = (fn: (p: Piece, lot: Lot) => void) => {
-        for (const lot of lotsFor(def.name)) for (const id of STYLE_IDS) for (const seed of SEEDS) fn(def.recipe(lot, createRng(seed), STYLES[id]), lot);
+      const runs = (fn: (p: Piece, lot: Lot, id: (typeof STYLE_IDS)[number], seed: number) => void) => {
+        for (const lot of lotsFor(def.name)) for (const id of STYLE_IDS) for (const seed of SEEDS) fn(def.recipe(lot, createRng(seed), STYLES[id]), lot, id, seed);
       };
 
       it("every solid inside the lot + 0.8, nothing below lot.z, height within the cap", () => {
@@ -179,6 +226,17 @@ describe("kit: contract of every registered recipe", () => {
 
       it("no foreign solid inside the gap of a concave poly", () => {
         runs((p) => expect(concaveIntruders(p.solids)).toBe(0));
+      });
+
+      it("no pair of solids interpenetrates unless both interlock (sortByDepth sorts by box)", () => {
+        runs((p, lot, id, seed) => expect(interpenetrations(p.solids), `${def.name} on ${lot.x},${lot.y} ${id} seed ${seed}`).toEqual([]));
+      });
+
+      it("no body with a facade or a published wall carries interlocks", () => {
+        runs((p) => {
+          for (const s of p.solids) if ("facade" in s && s.facade) expect(s.interlocks).toBeUndefined();
+          for (const w of p.walls) expect(p.solids[w.building]!.interlocks).toBeUndefined();
+        });
       });
 
       it("with lot.z = 0.3 the output is that of lot.z = 0 shifted 0.3 in z", () => {
@@ -251,6 +309,63 @@ describe("kit: modern family", () => {
       const gable = p.solids.find((s) => s.kind === "prism" && s.roof === "gable");
       if (gable) expect(gable.mat).toBe("terracotta");
       for (const s of p.solids) if ("facade" in s && s.facade) expect(s.tone).toBe(1);
+    }
+  });
+  it("classic: the ground-floor pilasters interlock (corner pair), the body and cornice do not", () => {
+    for (const lot of LOTS) for (const seed of SEEDS) {
+      const p = recipe("classic")(lot, createRng(seed), STYLES.district);
+      const pilasters = p.solids.filter((s) => s.kind === "prism" && s.w === 0.4 && s.d === 0.4);
+      expect(pilasters.length).toBeGreaterThan(8);
+      for (const s of pilasters) expect(s.interlocks).toBe(true);
+      for (const s of p.solids) if (("facade" in s && s.facade) || (s.kind === "prism" && s.h === 1)) expect(s.interlocks).toBeUndefined();
+    }
+  });
+
+  it("campus: no tree box touches a table box; trees interlock", () => {
+    let treeCount = 0;
+    for (const lot of LOTS) for (const seed of SEEDS) {
+      const p = recipe("campus")(lot, createRng(seed), STYLES.district);
+      const trees = p.solids.filter((s) => s.kind === "cone"), tables = p.solids.filter((s) => s.kind === "prism" && s.h === 0.7);
+      expect(tables.length).toBeGreaterThan(0);
+      treeCount += trees.length;
+      for (const t of trees) {
+        expect(t.interlocks).toBe(true);
+        const a = bounds(t);
+        for (const q of tables) {
+          const b = bounds(q);
+          expect(Math.min(a.max.x, b.max.x) - Math.max(a.min.x, b.min.x) > 1e-6 && Math.min(a.max.y, b.max.y) - Math.max(a.min.y, b.min.y) > 1e-6).toBe(false);
+        }
+      }
+    }
+    expect(treeCount).toBeGreaterThan(0);
+  });
+
+  it("constructionSite: slabs, columns, core and the crane joints interlock; hook, cable and containers do not and stay clear of every slab and column", () => {
+    for (const lot of LOTS) for (const seed of SEEDS) {
+      const p = recipe("constructionSite")(lot, createRng(seed), STYLES.district), sy = lot.y + 1.5, sd = 12;
+      const prisms = p.solids.filter((s) => s.kind === "prism");
+      const part = (label: string, test: (s: (typeof prisms)[number]) => boolean) => { const s = prisms.find(test); expect(s, label).toBeDefined(); return s!; };
+      const mast = part("mast", (s) => s.h === 22 && s.w === 1.2), jib = part("jib", (s) => s.w === 13), hook = part("hook", (s) => s.mat === "rust" && s.w === 1.2 && s.d === 1.2 && s.h === 1);
+      const cab = part("cab", (s) => s.w === 1.6 && s.h === 1.6), cable = part("cable", (s) => s.w === 0.6 && s.mat === "steel" && s.h < 10);
+      expect(bounds(mast).min.y).toBeGreaterThanOrEqual(sy + sd - 1e-9);
+      const counterJib = part("counter-jib", (s) => s.w === 8 && s.mat === "steel"), counterweight = part("counterweight", (s) => s.w === 2 && s.d === 2 && s.h === 1.5);
+      for (const s of [mast, jib, counterJib, counterweight, cab]) expect(s.interlocks).toBe(true);
+      const containers = prisms.filter((s) => s.mat === "rust" && s.w === 6 && s.d === 2.4 && s.h === 2.4);
+      expect(containers).toHaveLength(2);
+      for (const c of containers) expect(c.interlocks).toBeUndefined();
+      expect(hook.interlocks).toBeUndefined();
+      expect(cable.interlocks).toBeUndefined();
+      const slabs = prisms.filter((s) => s.mat === "paving" && s.h === 0.3), columns = prisms.filter((s) => s.mat === "steel" && s.w === 0.6 && s.d === 0.6 && s.h === 15);
+      const core = part("core", (s) => s.mat === "officeDark" && s.w === 4 && s.d === 4);
+      expect(slabs).toHaveLength(5);
+      expect(columns).toHaveLength(6);
+      for (const s of [...slabs, ...columns, core]) expect(s.interlocks).toBe(true);
+      const overlap = (a: Solid, b: Solid) => (["x", "y", "z"] as const).every((ax) => Math.min(bounds(a).max[ax], bounds(b).max[ax]) - Math.max(bounds(a).min[ax], bounds(b).min[ax]) > 1e-6);
+      const fence = prisms.filter((s) => s.mat === "officeDark" && s.h === 1.2);
+      expect(fence).toHaveLength(4);
+      for (const o of [...fence, ...slabs]) expect(overlap(mast, o), "mast").toBe(false);
+      for (const c of containers) for (const o of [...columns, ...slabs]) expect(overlap(c, o), "container").toBe(false);
+      for (const o of [...columns, ...slabs]) { expect(overlap(hook, o), "hook").toBe(false); expect(overlap(cable, o), "cable").toBe(false); }
     }
   });
 });

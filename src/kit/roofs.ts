@@ -3,6 +3,7 @@ import { GABLE_RATIO, STEP_INSET, type Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { prism } from "../scenes/city-pieces";
+import { interlock } from "./piece";
 import { rooftopGarden } from "./props";
 
 /**
@@ -18,7 +19,7 @@ const HIP_EAVE = 1.5;
 /** Total height of `hipRoof`: the eave plus the ridge, which rises `GABLE_RATIO` of the eave. */
 export const HIP_ROOF_H = HIP_EAVE * (1 + GABLE_RATIO);
 
-export const cornice = (f: Footprint, mat: Material): Solid[] => [prism(f.x - 0.5, f.y - 0.5, f.z, f.w + 1, f.d + 1, CORNICE_H, mat)];
+export const cornice = (f: Footprint, mat: Material): Solid[] => [interlock(prism(f.x - 0.5, f.y - 0.5, f.z, f.w + 1, f.d + 1, CORNICE_H, mat))];
 
 /** Footprint shifted `m` outward (mitered at each vertex): the overhang of a `poly`'s cornice. Keeps the vertex order; assumes a simple polygon with no repeated vertices or sides that fold back on themselves. */
 export function offsetFootprint(fp: Vec2[], m: number): Vec2[] {
@@ -47,7 +48,7 @@ export function stepRoof(f: Footprint, h: number, mat: Material): Solid[] {
 export const gableRoof = (f: Footprint, h: number, mat: Material): Solid[] => [prism(f.x, f.y, f.z, f.w, f.d, h, mat, { roof: "gable" })];
 
 /** Hip roof of 1.5 with 0.5 overhang. */
-export const hipRoof = (f: Footprint, mat: Material): Solid[] => [prism(f.x - 0.5, f.y - 0.5, f.z, f.w + 1, f.d + 1, HIP_EAVE, mat, { roof: "hip" })];
+export const hipRoof = (f: Footprint, mat: Material): Solid[] => [interlock(prism(f.x - 0.5, f.y - 0.5, f.z, f.w + 1, f.d + 1, HIP_EAVE, mat, { roof: "hip" }))];
 
 /** Green terrace 0.5 from the edge. */
 export const greenRoof = (f: Footprint, rng: Rng): Solid[] => rooftopGarden(v3(f.x + 0.5, f.y + 0.5, f.z), f.w - 1, f.d - 1, rng);

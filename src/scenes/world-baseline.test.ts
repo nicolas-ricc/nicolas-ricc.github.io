@@ -6,15 +6,16 @@ import { EXHIBITS } from "../lab/exhibits";
 
 // Render baseline for #194 (English codebase): the guard on the world, zone and lab-scene hashes has done
 // its job; #56 moves the seam and changes all geometry on purpose. Only the pieces stay: they must not move.
-// On a mismatch, find what changed; never re-record.
+// On a mismatch, find what changed; re-record only a deliberate change, saying why here.
+// #152 (re-recorded once): the interlocks mark enters the JSON; campus drops the trees that stood on its tables, grua-muelle only gains marks.
 const hash = (v: unknown): string => fingerprint(v as Solid[]);
 
 // keyed by exhibit id (kept in Spanish: it is the storybook URL hash); value is solids/accents
 const PIECES: Record<string, string> = {
   "tanque-agua": "d0fbfe32/741638a5", "grua-torre": "1b24d1ba/b6ded264", farol: "af0034c3/b3c5d09b", tren: "acc6e446/741638a5",
-  campus: "2a791f89/dcd2e4b1", selva: "97e30e40/741638a5", viga: "9f08a4fc/741638a5", carguero: "2eeb07a8/89ab3362",
+  campus: "b68f62d8/dcd2e4b1", selva: "97e30e40/741638a5", viga: "9f08a4fc/741638a5", carguero: "2eeb07a8/89ab3362",
   remolcador: "98fd0f53/687d5415", convoy: "63361eab/35f8cf27", lancha: "8a99e66f/f2a9b6e3",
-  "grua-muelle": "c5dcfb88/d3db2853",
+  "grua-muelle": "624cfd88/d3db2853",
 };
 
 describe("render baseline (#194)", () => {

@@ -34,6 +34,9 @@ export function southSign(x: number, southY: number, w: number, z0: number): Slo
   return { pts: [v3(x + 1, y, z0), v3(x + w - 1, y, z0), v3(x + w - 1, y, z1), v3(x + 1, y, z1)], wall: v3(0, 1, 0), side: "s", kind: "sign", shop: 0 };
 }
 
+/** Copy of `s` marked as interpenetrating on purpose (see `Solid.interlocks`). */
+export const interlock = <S extends Solid>(s: S): S => ({ ...s, interlocks: true });
+
 /** Tone shifted by `k` and clamped to the range of `Solid.tone` (−2..+2). */
 export const shiftTone = (t: number, k: number): number => Math.max(-2, Math.min(2, t + k));
 
