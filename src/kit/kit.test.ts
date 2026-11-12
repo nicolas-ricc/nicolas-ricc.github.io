@@ -233,6 +233,13 @@ describe("kit: contract of every registered recipe", () => {
         runs((p, lot) => expect(interpenetrations(p.solids), `${def.name} on ${lot.x},${lot.y}`).toEqual([]));
       });
 
+      it("no body with a facade or a published wall carries interlocks", () => {
+        runs((p) => {
+          for (const s of p.solids) if (s.kind === "prism" && s.facade) expect(s.interlocks).toBeUndefined();
+          for (const w of p.walls) expect(p.solids[w.building]!.interlocks).toBeUndefined();
+        });
+      });
+
       it("with lot.z = 0.3 the output is that of lot.z = 0 shifted 0.3 in z", () => {
         for (const lot of lotsFor(def.name)) for (const seed of SEEDS.slice(0, 5)) {
           const base = def.recipe(lot, createRng(seed), STYLES.downtown);

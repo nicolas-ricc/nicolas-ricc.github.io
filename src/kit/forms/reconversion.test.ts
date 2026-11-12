@@ -228,6 +228,42 @@ describe("derelictHall", () => {
   });
 });
 
+describe("reconversion interlocks", () => {
+  it("derelictHall: rafters rest on the wall top and stay inside their gap; beams and jungle interlock", () => {
+    for (const lot of LOTS) for (const seed of SEEDS) {
+      const p = recipe("derelictHall")(lot, createRng(seed), STYLES.warehouses);
+      const base = bounds(p.solids[0]!).max.z;
+      const beams = p.solids.filter((s) => s.kind === "beam");
+      expect(beams.length).toBeGreaterThan(0);
+      for (const b of beams) {
+        expect(b.interlocks).toBe(true);
+        expect(bounds(b).min.z).toBeGreaterThanOrEqual(base - EPS);
+      }
+      const ridges = beams.filter((b) => b.kind === "beam" && Math.abs(b.from.y - b.to.y) > 1e-6);
+      for (const r of beams) if (r.kind === "beam") {
+        const b = bounds(r);
+        for (const t of p.solids) if (t.kind === "ramp") expect(Math.min(b.max.x, bounds(t).max.x) - Math.max(b.min.x, bounds(t).min.x) <= 1e-6 || b.min.z >= bounds(t).max.z - 1e-6 || b.max.z <= bounds(t).min.z + 1e-6 || Math.min(b.max.y, bounds(t).max.y) - Math.max(b.min.y, bounds(t).min.y) <= 1e-6).toBe(true);
+      }
+      for (const r of ridges) if (r.kind === "beam") {
+        const rafters = beams.filter((b) => b.kind === "beam" && Math.abs(b.from.y - b.to.y) < 1e-6 && Math.abs(b.to.x - r.from.x) < 0.2);
+        for (const f of rafters) { const b = bounds(f); expect(b.min.x).toBeGreaterThanOrEqual(r.from.x + 0.15 - 4 - EPS); expect(b.max.x).toBeLessThanOrEqual(r.from.x + 0.15 + EPS); }
+      }
+      for (const c of p.solids.filter((s) => s.kind === "cone")) expect(c.interlocks).toBe(true);
+      expect(p.solids[0]!.interlocks).toBeUndefined();
+    }
+  });
+
+  it("coveredMarket: the thin walls interlock at the corners, pillars and stalls do not", () => {
+    for (const lot of [...LOTS, { ...LOTS[0]!, open: ["e"] as Side[] }]) for (const seed of SEEDS) {
+      const p = recipe("coveredMarket")(lot, createRng(seed), STYLES.warehouses);
+      const walls = p.solids.filter((s) => s.kind === "prism" && s.mat === STYLES.warehouses.mat && Math.min(s.w, s.d) < 0.31);
+      expect(walls.length).toBeGreaterThan(0);
+      for (const w of walls) expect(w.interlocks).toBe(true);
+      for (const s of p.solids) if (isPillar(s) || (s.kind === "prism" && Math.abs(s.h - 1.8) < 1e-6)) expect(s.interlocks).toBeUndefined();
+    }
+  });
+});
+
 describe("coveredMarket", () => {
   it("has no wall on open[0] (no solid 3 or taller touches that edge besides the pillars) and at least 6 stalls", () => {
     for (const lot of [...LOTS, { ...LOTS[0]!, open: ["e"] as Side[] }]) for (const seed of SEEDS) {
