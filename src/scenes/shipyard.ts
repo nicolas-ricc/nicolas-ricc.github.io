@@ -208,7 +208,8 @@ function seamFence(out: Solid[], accents: Accent[]): void {
   }
 }
 
-export function shipyard(rng: Rng): Scene {
+/** `occluders`: solids of other scenes (the factory) that can hide the lit windows; they are not added to the scene. */
+export function shipyard(rng: Rng, occluders: Solid[] = []): Scene {
   const ground: Solid[] = [];
   const solids: Solid[] = [];
   const accents: Accent[] = [];
@@ -232,6 +233,6 @@ export function shipyard(rng: Rng): Scene {
   shipyardEast(solids, accents, weldSpots, rng);
   ground.push(...solids.filter((s) => s.kind === "strip"));
   const raised = solids.filter((s) => s.kind !== "strip");
-  accents.push(...portfolioWindows(raised, createRng(rng.int(0, SEED_MAX))));
+  accents.push(...portfolioWindows(raised, createRng(rng.int(0, SEED_MAX)), occluders));
   return { ground, solids: raised, accents, trolley: g.trolley, trolleyRange: g.range, weldSpots, fill };
 }

@@ -10,7 +10,7 @@ import { lightBox, WINDOW_ALPHA } from "../city/lights";
  * windowCool windows of the Portfolio halls, workshops and sheds. Only ground-floor rectangular
  * walls count (`facadeWindows` assumes the base on `pts[0]→pts[1]`: gables and the second
  * step level are out). Pure module: shipyard() pours the result. Windows hidden by another
- * raised solid are not lit; the factory is out of scope (#332).
+ * raised solid, or by `extraOccluders` (the factory, #332), are not lit; extras never own windows.
  */
 export interface WindowCandidate { pts: Vec3[]; owner: Solid; hidden: boolean }
 
@@ -29,9 +29,15 @@ function facadeOf(s: Solid & { kind: "prism" }): Facade | null {
   return null;
 }
 
-export function windowCandidates(solids: Solid[]): WindowCandidate[] {
-  const occluders = solids.filter((s) => !isFlat(s)).map((s) => ({ s, b: bounds(s), sb: screenBounds(bounds(s)) }));
-  const out: WindowCandidate[] = [];
+type Occluder = { s: Solid; b: ReturnType<typeof bounds>; sb: ReturnType<typeof screenBounds> };
+const occluderList = (solids: Solid[]): Occluder[] => solids.filter((s) => !isFlat(s)).map((s) => ({ s, b: bounds(s), sb: screenBounds(bounds(s)) }));
+
+type Scanned = Omit<WindowCandidate, "hidden"> & { own: boolean; extra: boolean };
+
+/** Candidates in order, each with whether `solids` hides it (`own`) and, if not, whether the extras do (`extra`). */
+function scan(solids: Solid[], extraOccluders: Solid[]): Scanned[] {
+  const own = occluderList(solids), extra = occluderList(extraOccluders);
+  const out: Scanned[] = [];
   for (const owner of solids) {
     if (owner.kind !== "prism") continue;
     const facade = facadeOf(owner);
@@ -43,18 +49,26 @@ export function windowCandidates(solids: Solid[]): WindowCandidate[] {
       if (shed ? wall.normal.x <= 0 : wall.normal.x <= 0 && wall.normal.y <= 0) continue;
       for (const { pts } of facadeWindows(wall, facade)) {
         const box = lightBox(pts), sb = screenBounds(box);
-        out.push({ pts, owner, hidden: occluders.some((o) => o.s !== owner && overlaps(sb, o.sb) && hides(box, o.b)) });
+        const hit = (o: Occluder) => o.s !== owner && overlaps(sb, o.sb) && hides(box, o.b);
+        const byOwn = own.some(hit);
+        out.push({ pts, owner, own: byOwn, extra: !byOwn && extra.some(hit) });
       }
     }
   }
   return out;
 }
 
-/** Lights 30 % of the visible candidates: the `round(0.3 n)` of lowest rng key, in candidate order. */
-export function portfolioWindows(solids: Solid[], rng: Rng): Accent[] {
-  const vis = windowCandidates(solids).filter((c) => !c.hidden);
-  const keys = vis.map(() => rng.next());
-  const lowest = keys.map((k, i) => ({ k, i })).sort((a, b) => a.k - b.k).slice(0, Math.round(LIT * vis.length));
-  const on = new Set(lowest.map((e) => e.i));
-  return vis.filter((_, i) => on.has(i)).map((c): Accent => ({ kind: "poly", pts: c.pts, color: "windowCool", alpha: WINDOW_ALPHA }));
+export function windowCandidates(solids: Solid[], extraOccluders: Solid[] = []): WindowCandidate[] {
+  return scan(solids, extraOccluders).map(({ pts, owner, own, extra }) => ({ pts, owner, hidden: own || extra }));
+}
+
+/**
+ * Lights 30 % of the candidates visible with `extraOccluders`: the `round(0.3 n)` of lowest rng key, in
+ * candidate order. Keys are drawn over the candidates `solids` alone leaves visible (one each, in order),
+ * so those hidden only by the extras still burn a key and are never lit: ranks do not shift.
+ */
+export function portfolioWindows(solids: Solid[], rng: Rng, extraOccluders: Solid[] = []): Accent[] {
+  const vis = scan(solids, extraOccluders).filter((c) => !c.own).map((c) => ({ c, k: rng.next() })).filter((e) => !e.c.extra);
+  const on = new Set([...vis].sort((a, b) => a.k - b.k).slice(0, Math.round(LIT * vis.length)));
+  return vis.filter((e) => on.has(e)).map((e): Accent => ({ kind: "poly", pts: e.c.pts, color: "windowCool", alpha: WINDOW_ALPHA }));
 }
