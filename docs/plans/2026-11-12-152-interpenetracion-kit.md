@@ -60,8 +60,8 @@
 1. **Una marca que excusa de rebote:** dos sólidos marcados por casos distintos que se cruzan sin ser ninguno de los casos. Por ejemplo, el mástil de la grúa (marcado) atraviesa una losa (marcada): hoy pasa en el lote de la ciudad, y la tarea 3 lo saca moviendo el mástil. Lo cubren el invariante "ningún cuerpo con `facade` lleva la marca" de la tarea 6 y el test de la tarea 3 que fija el mástil fuera de las losas.
 2. **shopRow con la fachada en `e`/`w`:** la fila corre en y y los vecinos están al norte y al sur. El contrato solo usa `open: ["s"]` y `["s", "e"]`. El test de la tarea 4 agrega `open: ["e"]`.
 3. **El orden del rng de shopRow:** pre-calcular las alturas no debe correr el rng. El test de la tarea 4 fija el `fingerprint` de los cuerpos grabado en `main`.
-4. **tankGroup en estilos no `industrial`:** los tests de familia usan `STYLES.industrial` y el contrato los otros cuatro. El test reescrito de la tarea 5 recorre los lotes y las semillas de la familia.
-5. **`maxH 10`:** el chequeo no corre en el test de cap 10, y el brief pide los lotes del contrato. No se agrega.
+4. **tankGroup en estilos no `industrial`:** el test de familia reescrito usa `STYLES.industrial` (`industrial.test.ts:181`), con los `LOTS` y `SEEDS` de la familia. El chequeo genérico cubre downtown, bars, residential y civic con `bounds()`, que incluye el octógono real del anillo y los semicuerpos.
+5. **`maxH 10`:** el chequeo no corre en el test de cap 10, y el brief pide los lotes del contrato. No se agrega: es el follow-up #354.
 
 ---
 
@@ -123,7 +123,7 @@
   - `"campus: no tree box touches a table box; trees interlock"`: semillas 1..20 × los dos `LOTS` × `STYLES.district`.
   - `"constructionSite: slabs, columns, core and the crane joints interlock; hook, cable and containers do not and stay clear of every slab and column"`:
     - mástil `h 22`, `w 1.2`, con `bounds.min.y >= sy + sd − 1e-9` (`sy + sd = lot.y + 13.5`);
-    - el gancho (`rust`, `1.2×1.2×1`) y el cable no llevan la marca.
+    - el gancho (`rust`, `1.2×1.2×1`) y el cable no llevan la marca, y el mástil, la pluma y la cabina sí. Se buscan con predicados de forma, como `src/scenes/pieces.test.ts:6-30`, no por índice: si `towerCrane` cambia de orden, este test falla en lugar de marcar el gancho.
 - [ ] **Step 2:** FAIL.
 - [ ] **Step 3: implementar.**
   - classic: las dos pilastras de cada `k`, con `interlock`.
@@ -205,7 +205,7 @@
 - `CONTEXT.md`
 - `docs/superpowers/specs/assets/152-interlocks/*.png`
 
-- [ ] **Step 1:** `npm test`. Se espera que falle solo en `PIECES` (`campus`, `grua-muelle`) y `MAIN`. Si falla otra cosa, se para y se investiga.
+- [ ] **Step 1:** `npm test`. Se espera que falle solo en `PIECES` (`campus`, `grua-muelle`) y `MAIN`; el test de props de los árboles ya se actualizó en la tarea 1. Con el prototipo de marcas, la suite completa dio exactamente esos tres fallos. Si falla otra cosa, se para y se investiga.
 - [ ] **Step 2: re-grabar.**
   - `PIECES` y `MAIN`, con un comentario `#152: …` como los de #143/#56: marcas `interlocks` en todas; campus pierde los árboles que pisaban mesas; las piezas sin suelo cambian por shopRow, tankGroup, constructionSite y derelictHall.
   - `grua-muelle` cambia solo por las marcas: la geometría es la misma, como muestran sus capturas.
@@ -216,3 +216,37 @@
   - Se guardan como `<nombre>-before.png` / `<nombre>-after.png`.
 - [ ] **Step 5:** `npm test` y `npm run typecheck`: verdes.
 - [ ] **Step 6:** commit `fix(#152): re-record piece hashes, glossary and before/after captures`.
+
+## Assumptions
+
+Decididas en el grilling. Van también a la descripción del PR.
+
+1. **Grúas.** Las uniones de la grúa torre y de la grúa de muelle cuentan como "uniones del mismo material", como el brief lista para quayCrane y derelictHall. Se marcan solo las piezas de acero que se unen: el gancho (`rust`) y el cable no se marcan, y se corrigen moviendo el mástil. Rechazado: marcar toda la grúa.
+2. **El núcleo de constructionSite** es un poste que atraviesa las losas. Rechazado: partirlo entre losas, que cambia la pieza más que la marca.
+3. **`fence` y `roofShrub`.**
+   - `fence` se marca porque los dos solapes que el brief nombra con cercos (las esquinas de constructionSite y openDock, en "postes o pilares dobles en esquina") son esquinas del cerco, y openDock no tiene otro solape (medido).
+   - `roofShrub` y `streetTree` son árboles (`props.ts:36-40`), y la marca de árbol va en el constructor.
+   - Rechazado: marcar en cada receta, que duplica.
+4. **Rebote entre marcas.** Se midió sobre la muestra del contrato con el prototipo de marcas. Todos los pares excusados son de los casos listados:
+   - cono × cono, cornisa × cornisa, hip × hip, cornisa × hip;
+   - pilastras, paredes de coveredMarket, cerco, losa × columna/núcleo, uniones de grúa;
+   - la vegetación de eatenRuin y derelictHall (árbol × losa, bloque o viga).
+
+   El único rebote fue mástil × losa en constructionSite, y lo saca el traslado del mástil. Rechazado: una lista blanca de pares de materiales en el test, que el brief no pide.
+5. **campus puede quedar con menos árboles,** incluso cero en una semilla rara. Ningún test fija la cantidad (`kit.test.ts:202-212`): el patio y su suelo `leafDark` siguen ahí. Rechazado: re-sortear la posición, que consume rng variable.
+6. **Cabios de derelictHall.** En `beam()` (`src/iso/solids.ts:261-273`), `w` va por `side` (y, horizontal) y `h` por `up`, en el plano xz del cabio. La caja se corre `0.15·sinθ` en x y `0.15·cosθ` en z, los dos ≤ 0.15. Por eso el corrimiento de 0.15 de los extremos alcanza para toda pendiente.
+7. **El chequeo de landmarks que se borra** corría `createRng(1)` × `STYLES.civic` × (LOT, LAB o el lote propio), con 1e-6 y sin excepciones (`landmarks.test.ts:40-50`). El nuevo usa más semillas y estilos, pero excusa los pares marcados. Medido: ninguna receta landmark aparece en la lista de excusados, así que en esta muestra no se pierde nada.
+8. **Lo que el traslado del mástil deja dentro del lote** lo cubre el test existente del contrato "every solid inside the lot + 0.8" (`kit.test.ts:120-131`).
+9. **Bordes al ras en shopRow.** `r.x + r.w` del vecino y `r.x` de la tienda siguiente salen de los mismos `s0`, así que difieren a lo sumo en un ulp, muy por debajo de 1e-6. `hipRoof` y `cornice` suman exactamente 0.5 (`roofs.ts:21,50`).
+10. **Capturas.** `lab/kit.html` en su estado inicial (sin teclas: el README dice que `s` cambia la semilla y `1..4` el estilo) y los exhibits del storybook. Son escenas estáticas: no hace falta time-lapse.
+
+## Grilling
+
+- Rondas: 1 (los cambios fueron menores: un test por predicados para la grúa, el follow-up de `maxH 10`, assumptions). Griller `fable`.
+- Preguntas: 18.
+  - ISSUE: 4 (1, 4, 17, 2 en parte);
+  - CODE: 9 (5, 7, 8, 9, 10, 12, 13, 14, 15);
+  - DOC: 1 (16, README);
+  - NO SOURCE → assumptions: 6 (2, 3, 6, 11, 18; la convención de commits la fija el pipeline: `test(#152)` para los evals y `fix(#152)` porque el issue es un `bug`, como los `fix(#…)` de `git log`).
+- Spec ambiguities: 0.
+- Issues abiertos: #354 (el chequeo con `maxH 10`, fuera de alcance).
