@@ -6,6 +6,7 @@ import { addBuilding, emptyPiece, floorsFor, recipeCap, shiftTone } from "../pie
 import { HELIPAD_H, helipad, place } from "../props";
 import { CORNICE_H, HIP_ROOF_H, domeRoof, hipRoof } from "../roofs";
 import type { Lot, Piece, RecipeDef, Style } from "../types";
+import { CAMERA_SIDES, neonRun } from "./lowrise";
 
 /** `curved` family (spec §5, issue #41): cylinders, domes and vaults. Heights capped at min(lot.maxH, 18) counting the toppers. */
 
@@ -57,7 +58,7 @@ export function vaultedHall(lot: Lot, _rng: Rng, style: Style): Piece {
 
 const ARCADE_H = 3;
 
-/** Gallery: ground floor with an arcade of 3 and two floors above (two solids: the floors of one facade are equal), hip roof. */
+/** Gallery: ground floor with an arcade of 3 and two floors above (two solids: the floors of one facade are equal), hip roof. Neon runs on its open camera-facing faces, from the top of the arcade face up. */
 export function gallery(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;
   const bx = x + 1, by = y + 1, bw = w - 2, bd = d - 2, tone = shiftTone(style.tone, 1);
@@ -67,6 +68,7 @@ export function gallery(lot: Lot, rng: Rng, style: Style): Piece {
   const uf: Facade = { floors: 2, cols: rng.int(4, 5) };
   addBuilding(p, prism(bx, by, z + ARCADE_H, bw, bd, 2 * fh, style.mat, { facade: uf, tone }), uf);
   p.solids.push(...hipRoof({ x: bx, y: by, w: bw, d: bd, z: z + ARCADE_H + 2 * fh }, style.roof));
+  for (const side of CAMERA_SIDES) if (lot.open.includes(side)) p.slots.push(...neonRun({ x: bx, y: by, w: bw, d: bd }, side, z, p.slots.length));
   return p;
 }
 

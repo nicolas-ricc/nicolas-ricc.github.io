@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { Vec2 } from "../iso/geometry";
-import type { Solid } from "../iso/solids";
+import { bounds, type Solid } from "../iso/solids";
 import { ESTUARY_Y0, STATION_LAND, eastBank } from "../map/geo";
-import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, EAST_COLS, EAST_RING, HARBOR, PLAZA, RING_Y0, ROWS, STREET, WEST_COLS, inCrater } from "../scenes/city-grid";
-import { streets } from "./streets";
+import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, EAST_COLS, EAST_RING, HARBOR, PLAZA, RING_Y0, ROWS, STREET, WEST_COLS, WEST_QUAY, inCrater } from "../scenes/city-grid";
+import { BAR_FRONTS, LAMP_MIN_GAP, lampXs, streets, type BarFront } from "./streets";
 
 type Strip = Solid & { kind: "strip" };
 
@@ -131,5 +131,53 @@ describe("streets", () => {
       }
     }
     expect(zebras).toHaveLength((CROSSINGS.length - 1) * 3);
+  });
+});
+
+describe("avenue lamps around the bars (#165)", () => {
+  const RANGE = [CITY_EDGE.west, WEST_QUAY.x0] as const;
+  const regular = (): number[] => { const out: number[] = []; for (let x = RANGE[0] + 6; x < RANGE[1] - 6; x += 12) out.push(x); return out; };
+  const crosses = (x: number, f: BarFront): boolean => x + 0.6 > f.x0 && x < f.x1;
+
+  it("BAR_FRONTS are the three bar blocks on the avenue", () => {
+    expect(BAR_FRONTS.map((f) => f.x0)).toEqual([103.5, 133.5, 163.5]);
+    for (const f of BAR_FRONTS) expect(f.x1 - f.x0).toBeCloseTo(BLOCK_W - 3);
+  });
+
+  it("no lamp post crosses a bar front", () => {
+    const xs = lampXs(RANGE, BAR_FRONTS);
+    for (const x of xs) for (const f of BAR_FRONTS) expect(crosses(x, f), `${x}`).toBe(false);
+  });
+
+  it("lamps outside the bar fronts keep their place and the avenue stays lit", () => {
+    const xs = lampXs(RANGE, BAR_FRONTS);
+    for (const x of regular()) if (!BAR_FRONTS.some((f) => crosses(x, f))) expect(xs).toContain(x);
+    for (const f of BAR_FRONTS) for (const c of f.corners) expect(xs.some((x) => Math.abs(x - c) < LAMP_MIN_GAP)).toBe(true);
+    for (let i = 1; i < xs.length; i++) {
+      expect(xs[i]! - xs[i - 1]!).toBeLessThanOrEqual(BLOCK_W);
+      expect(xs[i]! - xs[i - 1]!).toBeGreaterThanOrEqual(0.6);
+    }
+  });
+
+  it("matches today's layout", () => {
+    const xs = lampXs(RANGE, BAR_FRONTS).filter((x) => x >= 96 && x <= 186);
+    const want = [96, 102, 124.5, 132, 156, 162, 184.5];
+    expect(xs).toHaveLength(want.length);
+    xs.forEach((x, i) => expect(x).toBeCloseTo(want[i]!));
+  });
+
+  it("no lamp post overlaps a traffic light", () => {
+    const solids: Solid[] = [];
+    streets([], solids, []);
+    const steel = solids.filter((s): s is Solid & { kind: "prism" } => s.kind === "prism" && s.mat === "steel");
+    const lamps = steel.filter((s) => s.w === 0.6 && s.d === 0.6 && s.h === 5), traffic = solids.filter((s) => s.kind === "prism" && ((s.mat === "steel" && s.w === 0.3) || (s.mat === "officeDark" && s.w === 0.5)));
+    expect(lamps.length).toBeGreaterThan(0);
+    expect(traffic.length).toBeGreaterThan(0);
+    const hit = (a: Solid, b: Solid) => { const p = bounds(a), q = bounds(b); return p.min.x < q.max.x && q.min.x < p.max.x && p.min.y < q.max.y && q.min.y < p.max.y; };
+    for (const l of lamps) for (const t of traffic) expect(hit(l, t), `lamp at ${l.at.x}`).toBe(false);
+  });
+
+  it("without bar fronts the lamps keep the 12 u step", () => {
+    expect(lampXs(RANGE, [])).toEqual(regular());
   });
 });

@@ -3,10 +3,11 @@ import type { Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
 import { ESTUARY_Y0, QUAY_X, STATION_LAND, eastBank } from "../map/geo";
 import { CROSSING_GAP } from "./rail-lands";
-import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_COLS, EAST_RING, HARBOR, PROMENADE, PLAZA, RING_Y0, ROWS, STREET, WEST_COLS, WEST_QUAY, estuaryEast, estuaryReaches, inBlock, inCrater } from "../scenes/city-grid";
+import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_COLS, EAST_RING, HARBOR, PROMENADE, PLAZA, RING_Y0, ROWS, SIDEWALK, STREET, WEST_COLS, WEST_QUAY, blocks, estuaryEast, estuaryReaches, inBlock, inCrater } from "../scenes/city-grid";
 import { lamp, streetTree, trafficLight } from "../kit/props";
 import { placeLit, type FixedLight } from "./lights";
 import { PLINTH_H, prism } from "../scenes/city-pieces";
+import { neighborhoodOf } from "./zoning";
 
 /**
  * Resume streets: lanes, avenue with dashed lanes and crosswalks,
@@ -108,10 +109,34 @@ function avenue(ground: Solid[], solids: Solid[]): void {
   }
 }
 
-/** Street lamps every 12 u on the avenue's north sidewalk, in the stretch `[x0, x1]`. */
-function lampRow(solids: Solid[], lights: FixedLight[], [x0, x1]: readonly [number, number]): void {
+export const LAMP_MIN_GAP = 3; // a displaced post is dropped if it lands closer than this to another
+const LAMP_W = 0.6;
+
+/** Free stretch `[x0, x1]` of a bar block on the avenue, and the two x of its corner posts (the east one at `x1`, clear of the traffic light at `b.x + 23.5`). */
+export interface BarFront { x0: number; x1: number; corners: readonly [number, number] }
+
+export const BAR_FRONTS: readonly BarFront[] = blocks()
+  .filter((b) => neighborhoodOf(b) === "bars" && b.y + b.d === AVENUE.y0)
+  .map((b) => ({ x0: b.x + SIDEWALK, x1: b.x + BLOCK_W - SIDEWALK, corners: [b.x, b.x + BLOCK_W - SIDEWALK] as const }));
+
+/** Lamp post x in `[x0, x1]`: every 12 u; posts crossing a bar front move to its nearest corner (dropped if < LAMP_MIN_GAP from another). Sorted. */
+export function lampXs([x0, x1]: readonly [number, number], fronts: readonly BarFront[]): number[] {
+  const kept: number[] = [];
+  const moved: number[] = [];
+  for (let x = x0 + 6; x < x1 - 6; x += 12) {
+    const f = fronts.find((f) => x + LAMP_W > f.x0 && x < f.x1);
+    if (!f) { kept.push(x); continue; }
+    const [a, b] = f.corners;
+    moved.push(Math.abs(x - a) <= Math.abs(x - b) ? a : b);
+  }
+  for (const x of moved) if (kept.every((k) => Math.abs(k - x) >= LAMP_MIN_GAP)) kept.push(x);
+  return kept.sort((a, b) => a - b);
+}
+
+/** Street lamps on the avenue's north sidewalk, in the stretch `[x0, x1]`: every 12 u, except in front of the bar shops (their neons), where they step aside to the block corners. */
+function lampRow(solids: Solid[], lights: FixedLight[], range: readonly [number, number]): void {
   const y = AVENUE.y0 - 1.3;
-  for (let x = x0 + 6; x < x1 - 6; x += 12) placeLit(solids, lights, lamp(v3(x, y, postZ(x, y))));
+  for (const x of lampXs(range, BAR_FRONTS)) placeLit(solids, lights, lamp(v3(x, y, postZ(x, y))));
 }
 
 /** Traffic lights (off) at the avenue's corners and street lamps on its north sidewalk. */

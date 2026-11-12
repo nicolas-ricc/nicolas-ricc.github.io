@@ -7,11 +7,14 @@ import { RECIPE_MAX_H, addBuilding, emptyPiece } from "../piece";
 import { bench, patioTree } from "../props";
 import { CORNICE_H, HIP_ROOF_H, cornice, hipRoof } from "../roofs";
 import type { Lot, Piece, RecipeDef, Side, Style } from "../types";
+import { CAMERA_SIDES, neonRun } from "./lowrise";
 
 /**
  * `courtyard` family: blocks with an interior courtyard (O with a passage, open U,
  * C with two courtyards and a residential courtyard with hip roofs). Each recipe
- * publishes its courtyard in `Piece.courtyard`. Spec §5 and §6.
+ * publishes its courtyard in `Piece.courtyard`. `courtyardO` and `patioResidential`
+ * also publish neon runs on their open camera-facing faces (`CAMERA_SIDES`);
+ * the south run of the O skips the passage. Spec §5 and §6.
  */
 const PASSAGE = 3;
 
@@ -50,9 +53,12 @@ export function courtyardO(lot: Lot, rng: Rng, style: Style): Piece {
     const cols = rng.int(3, 4);
     if (side !== "s") { wing(p, rect, lot.z, h, cols, style); continue; }
     const half = (rect.w - PASSAGE) / 2; // centered passage: the back is the courtyard
-    wing(p, { ...rect, w: half }, lot.z, h, cols, style, { flush: "e" });
-    wing(p, { ...rect, x: rect.x + half + PASSAGE, w: half }, lot.z, h, cols, style, { flush: "w" });
+    const west = { ...rect, w: half }, east = { ...rect, x: rect.x + half + PASSAGE, w: half };
+    wing(p, west, lot.z, h, cols, style, { flush: "e" });
+    wing(p, east, lot.z, h, cols, style, { flush: "w" });
+    if (lot.open.includes("s")) for (const r of [west, east]) p.slots.push(...neonRun(r, "s", lot.z, p.slots.length));
   }
+  if (lot.open.includes("e")) p.slots.push(...neonRun(lot, "e", lot.z, p.slots.length));
   if (rng.chance(0.5)) p.ground.push(tiles(rng, patio, lot.z + 0.05, "paving", brokenTone, 2));
   else { p.solids.push(prism(patio.x, patio.y, lot.z, patio.w, patio.d, 0.3, "leafDark")); patioTrees(p, rng, patio, rng.int(2, 3), lot.z + 0.3); }
   p.courtyard = patio;
@@ -93,6 +99,7 @@ export function patioResidential(lot: Lot, rng: Rng, style: Style): Piece {
   const { wings, patio } = ring(lot, 4.5, ["n", "s", "w", "e"]);
   for (const { rect } of wings) wing(p, rect, lot.z, h, rng.int(2, 3), style, { hip: true });
   patioTrees(p, rng, patio, rng.int(2, 4), lot.z);
+  for (const side of CAMERA_SIDES) if (lot.open.includes(side)) p.slots.push(...neonRun(lot, side, lot.z, p.slots.length));
   p.courtyard = patio;
   return p;
 }
