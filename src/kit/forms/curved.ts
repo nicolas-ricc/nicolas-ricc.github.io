@@ -58,7 +58,7 @@ export function vaultedHall(lot: Lot, _rng: Rng, style: Style): Piece {
 
 const ARCADE_H = 3;
 
-/** Gallery: ground floor with an arcade of 3 and two floors above (two solids: the floors of one facade are equal), hip roof. Neon runs on its open camera-facing faces, under the arcade. */
+/** Gallery: ground floor with an arcade of 3 and two floors above (two solids: the floors of one facade are equal), hip roof. Neon runs on its open camera-facing faces, from the top of the arcade face up. */
 export function gallery(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;
   const bx = x + 1, by = y + 1, bw = w - 2, bd = d - 2, tone = shiftTone(style.tone, 1);

@@ -112,12 +112,12 @@ function avenue(ground: Solid[], solids: Solid[]): void {
 export const LAMP_MIN_GAP = 3; // a displaced post is dropped if it lands closer than this to another
 const LAMP_W = 0.6;
 
-/** Free stretch `[x0, x1]` of a bar block on the avenue, and the two x of its corner posts. */
+/** Free stretch `[x0, x1]` of a bar block on the avenue, and the two x of its corner posts (the east one at `x1`, clear of the traffic light at `b.x + 23.5`). */
 export interface BarFront { x0: number; x1: number; corners: readonly [number, number] }
 
 export const BAR_FRONTS: readonly BarFront[] = blocks()
   .filter((b) => neighborhoodOf(b) === "bars" && b.y + b.d === AVENUE.y0)
-  .map((b) => ({ x0: b.x + SIDEWALK, x1: b.x + BLOCK_W - SIDEWALK, corners: [b.x, b.x + BLOCK_W - LAMP_W] as const }));
+  .map((b) => ({ x0: b.x + SIDEWALK, x1: b.x + BLOCK_W - SIDEWALK, corners: [b.x, b.x + BLOCK_W - SIDEWALK] as const }));
 
 /** Lamp post x in `[x0, x1]`: every 12 u; posts crossing a bar front move to its nearest corner (dropped if < LAMP_MIN_GAP from another). Sorted. */
 export function lampXs([x0, x1]: readonly [number, number], fronts: readonly BarFront[]): number[] {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Vec2 } from "../iso/geometry";
-import type { Solid } from "../iso/solids";
+import { bounds, type Solid } from "../iso/solids";
 import { ESTUARY_Y0, STATION_LAND, eastBank } from "../map/geo";
 import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, EAST_COLS, EAST_RING, HARBOR, PLAZA, RING_Y0, ROWS, STREET, WEST_COLS, WEST_QUAY, inCrater } from "../scenes/city-grid";
 import { BAR_FRONTS, LAMP_MIN_GAP, lampXs, streets, type BarFront } from "./streets";
@@ -161,9 +161,20 @@ describe("avenue lamps around the bars (#165)", () => {
 
   it("matches today's layout", () => {
     const xs = lampXs(RANGE, BAR_FRONTS).filter((x) => x >= 96 && x <= 186);
-    const want = [96, 102, 125.4, 132, 156, 162, 185.4];
+    const want = [96, 102, 124.5, 132, 156, 162, 184.5];
     expect(xs).toHaveLength(want.length);
     xs.forEach((x, i) => expect(x).toBeCloseTo(want[i]!));
+  });
+
+  it("no lamp post overlaps a traffic light", () => {
+    const solids: Solid[] = [];
+    streets([], solids, []);
+    const steel = solids.filter((s): s is Solid & { kind: "prism" } => s.kind === "prism" && s.mat === "steel");
+    const lamps = steel.filter((s) => s.w === 0.6 && s.d === 0.6 && s.h === 5), traffic = solids.filter((s) => s.kind === "prism" && ((s.mat === "steel" && s.w === 0.3) || (s.mat === "officeDark" && s.w === 0.5)));
+    expect(lamps.length).toBeGreaterThan(0);
+    expect(traffic.length).toBeGreaterThan(0);
+    const box = (s: Solid) => bounds(s), hit = (a: Solid, b: Solid) => { const p = box(a), q = box(b); return p.min.x < q.max.x && q.min.x < p.max.x && p.min.y < q.max.y && q.min.y < p.max.y; };
+    for (const l of lamps) for (const t of traffic) expect(hit(l, t), `lamp at ${l.at.x}`).toBe(false);
   });
 
   it("without bar fronts the lamps keep the 12 u step", () => {

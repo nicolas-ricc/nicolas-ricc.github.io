@@ -156,6 +156,9 @@ describe("kit: courtyard neon slots (#165)", () => {
           expect(s.wall).toEqual(s.side === "s" ? { x: 0, y: 1, z: 0 } : { x: 1, y: 0, z: 0 });
         }
         expect(make(name, lot, ["n", "w"], seed).slots).toEqual([]);
+        const mixed = make(name, lot, ["s", "w"], seed).slots; // one camera-facing open side, one back side
+        expect(mixed.length).toBeGreaterThan(0);
+        expect(mixed.every((s) => s.side === "s")).toBe(true);
         expect(make(name, lot, [], seed).slots).toEqual([]);
       }
     });

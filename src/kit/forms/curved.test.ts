@@ -114,6 +114,9 @@ describe("kit: curved family", () => {
         for (const solid of p.solids) expect(hides(box, bounds(solid), { back: screenHull(box), front: screenHull(bounds(solid)) })).toBe(false);
       }
       expect(recipe("gallery")({ ...lot, open: ["n", "w"] }, createRng(seed), STYLES.bars).slots).toEqual([]);
+      const mixed = recipe("gallery")({ ...lot, open: ["e", "n"] }, createRng(seed), STYLES.bars).slots; // one camera-facing open side, one back side
+      expect(mixed.length).toBeGreaterThan(0);
+      expect(mixed.every((s) => s.side === "e")).toBe(true);
     }
   });
 });
