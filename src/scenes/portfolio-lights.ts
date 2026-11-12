@@ -29,9 +29,13 @@ function facadeOf(s: Solid & { kind: "prism" }): Facade | null {
   return null;
 }
 
-export function windowCandidates(solids: Solid[], extraOccluders: Solid[] = []): WindowCandidate[] {
-  const occluders = [...solids, ...extraOccluders].filter((s) => !isFlat(s)).map((s) => ({ s, b: bounds(s), sb: screenBounds(bounds(s)) }));
-  const out: WindowCandidate[] = [];
+type Occluder = { s: Solid; b: ReturnType<typeof bounds>; sb: ReturnType<typeof screenBounds> };
+const occluderList = (solids: Solid[]): Occluder[] => solids.filter((s) => !isFlat(s)).map((s) => ({ s, b: bounds(s), sb: screenBounds(bounds(s)) }));
+
+/** Candidates in order, each with whether `solids` hides it (`own`) and, if not, whether the extras do (`extra`). */
+function scan(solids: Solid[], extraOccluders: Solid[]): (Omit<WindowCandidate, "hidden"> & { own: boolean; extra: boolean })[] {
+  const own = occluderList(solids), extra = occluderList(extraOccluders);
+  const out: (Omit<WindowCandidate, "hidden"> & { own: boolean; extra: boolean })[] = [];
   for (const owner of solids) {
     if (owner.kind !== "prism") continue;
     const facade = facadeOf(owner);
@@ -43,11 +47,17 @@ export function windowCandidates(solids: Solid[], extraOccluders: Solid[] = []):
       if (shed ? wall.normal.x <= 0 : wall.normal.x <= 0 && wall.normal.y <= 0) continue;
       for (const { pts } of facadeWindows(wall, facade)) {
         const box = lightBox(pts), sb = screenBounds(box);
-        out.push({ pts, owner, hidden: occluders.some((o) => o.s !== owner && overlaps(sb, o.sb) && hides(box, o.b)) });
+        const hit = (o: Occluder) => o.s !== owner && overlaps(sb, o.sb) && hides(box, o.b);
+        const byOwn = own.some(hit);
+        out.push({ pts, owner, own: byOwn, extra: !byOwn && extra.some(hit) });
       }
     }
   }
   return out;
+}
+
+export function windowCandidates(solids: Solid[], extraOccluders: Solid[] = []): WindowCandidate[] {
+  return scan(solids, extraOccluders).map(({ pts, owner, own, extra }) => ({ pts, owner, hidden: own || extra }));
 }
 
 /**
@@ -56,10 +66,7 @@ export function windowCandidates(solids: Solid[], extraOccluders: Solid[] = []):
  * so those hidden only by the extras still burn a key and are never lit: ranks do not shift.
  */
 export function portfolioWindows(solids: Solid[], rng: Rng, extraOccluders: Solid[] = []): Accent[] {
-  const all = windowCandidates(solids), withExtra = windowCandidates(solids, extraOccluders);
-  const drawn = all.map((c, i) => ({ c: withExtra[i]!, k: c.hidden ? null : rng.next() })).filter((e) => e.k !== null);
-  const vis = drawn.filter((e) => !e.c.hidden);
-  const lowest = [...vis].sort((a, b) => a.k! - b.k!).slice(0, Math.round(LIT * vis.length));
-  const on = new Set(lowest);
+  const vis = scan(solids, extraOccluders).filter((c) => !c.own).map((c) => ({ c, k: rng.next() })).filter((e) => !e.c.extra);
+  const on = new Set([...vis].sort((a, b) => a.k - b.k).slice(0, Math.round(LIT * vis.length)));
   return vis.filter((e) => on.has(e)).map((e): Accent => ({ kind: "poly", pts: e.c.pts, color: "windowCool", alpha: WINDOW_ALPHA }));
 }

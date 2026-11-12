@@ -58,7 +58,7 @@ describe("Portfolio windowCool windows", () => {
       const occluders = [...ws.shipyard!.solids, ...ws.factory!.solids].filter((s) => !isFlat(s));
       for (const a of facadeLit(ws.shipyard!.accents, own)) {
         const owner = own.find((c) => same(c.pts, a.pts))!.owner;
-        for (const s of occluders) if (s !== owner) expect(hiddenBy(a.pts, s), `seed ${seed}: ${JSON.stringify(bounds(s))}`).toBe(false);
+        expect(occluders.filter((s) => s !== owner && hiddenBy(a.pts, s)).map(bounds), `seed ${seed}`).toEqual([]);
       }
     }
   });
@@ -74,6 +74,7 @@ describe("Portfolio windowCool windows", () => {
 
   it("extra occluders never own windows", () => {
     expect(windowCandidates([], sy.solids)).toEqual([]);
+    expect(windowCandidates(sy.solids, sy.solids)).toEqual(cands); // extras add no owners, and an owner never hides its own windows
   });
 
   it("an extra occluder in front of a window hides it", () => {
