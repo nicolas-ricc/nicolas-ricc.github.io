@@ -35,7 +35,7 @@
 
 ---
 
-### Tarea 1: `extraOccluders` en `portfolio-lights.ts`
+### Task 1: `extraOccluders` en `portfolio-lights.ts`
 
 **Archivos:**
 - Modificar: `src/scenes/portfolio-lights.ts`
@@ -54,7 +54,7 @@
 - [ ] **Paso 3:** `occluders` = los no planos de `solids` y de `extraOccluders`; los dueños se siguen sacando solo de `solids` y se excluyen por referencia (`o.s !== owner`). `portfolioWindows` aplica la decisión 3. El docstring del módulo deja de decir que la fábrica está fuera (#332).
 - [ ] **Paso 4:** pasa. Commit `feat(#332): extra occluders for the Portfolio windows`.
 
-### Tarea 2: la fábrica llega a `shipyard()` desde `world()`
+### Task 2: la fábrica llega a `shipyard()` desde `world()`
 
 **Archivos:**
 - Modificar: `src/scenes/shipyard.ts` (`shipyard`), `src/scenes/world.ts` (`world`)
