@@ -10,7 +10,7 @@ import { lightBox, WINDOW_ALPHA } from "../city/lights";
  * windowCool windows of the Portfolio halls, workshops and sheds. Only ground-floor rectangular
  * walls count (`facadeWindows` assumes the base on `pts[0]→pts[1]`: gables and the second
  * step level are out). Pure module: shipyard() pours the result. Windows hidden by another
- * raised solid are not lit; the factory is out of scope (#332).
+ * raised solid, or by `extraOccluders` (the factory, #332), are not lit; extras never own windows.
  */
 export interface WindowCandidate { pts: Vec3[]; owner: Solid; hidden: boolean }
 
@@ -29,8 +29,8 @@ function facadeOf(s: Solid & { kind: "prism" }): Facade | null {
   return null;
 }
 
-export function windowCandidates(solids: Solid[]): WindowCandidate[] {
-  const occluders = solids.filter((s) => !isFlat(s)).map((s) => ({ s, b: bounds(s), sb: screenBounds(bounds(s)) }));
+export function windowCandidates(solids: Solid[], extraOccluders: Solid[] = []): WindowCandidate[] {
+  const occluders = [...solids, ...extraOccluders].filter((s) => !isFlat(s)).map((s) => ({ s, b: bounds(s), sb: screenBounds(bounds(s)) }));
   const out: WindowCandidate[] = [];
   for (const owner of solids) {
     if (owner.kind !== "prism") continue;
@@ -50,11 +50,16 @@ export function windowCandidates(solids: Solid[]): WindowCandidate[] {
   return out;
 }
 
-/** Lights 30 % of the visible candidates: the `round(0.3 n)` of lowest rng key, in candidate order. */
-export function portfolioWindows(solids: Solid[], rng: Rng): Accent[] {
-  const vis = windowCandidates(solids).filter((c) => !c.hidden);
-  const keys = vis.map(() => rng.next());
-  const lowest = keys.map((k, i) => ({ k, i })).sort((a, b) => a.k - b.k).slice(0, Math.round(LIT * vis.length));
-  const on = new Set(lowest.map((e) => e.i));
-  return vis.filter((_, i) => on.has(i)).map((c): Accent => ({ kind: "poly", pts: c.pts, color: "windowCool", alpha: WINDOW_ALPHA }));
+/**
+ * Lights 30 % of the candidates visible with `extraOccluders`: the `round(0.3 n)` of lowest rng key, in
+ * candidate order. Keys are drawn over the candidates `solids` alone leaves visible (one each, in order),
+ * so those hidden only by the extras still burn a key and are never lit: ranks do not shift.
+ */
+export function portfolioWindows(solids: Solid[], rng: Rng, extraOccluders: Solid[] = []): Accent[] {
+  const all = windowCandidates(solids), withExtra = windowCandidates(solids, extraOccluders);
+  const drawn = all.map((c, i) => ({ c: withExtra[i]!, k: c.hidden ? null : rng.next() })).filter((e) => e.k !== null);
+  const vis = drawn.filter((e) => !e.c.hidden);
+  const lowest = [...vis].sort((a, b) => a.k! - b.k!).slice(0, Math.round(LIT * vis.length));
+  const on = new Set(lowest);
+  return vis.filter((e) => on.has(e)).map((e): Accent => ({ kind: "poly", pts: e.c.pts, color: "windowCool", alpha: WINDOW_ALPHA }));
 }
