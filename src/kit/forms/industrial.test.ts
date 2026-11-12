@@ -176,30 +176,45 @@ describe("stockpile", () => {
 });
 
 describe("tankGroup", () => {
-  it("1..3 steel or rust tanks r 3..5, each with a ring r + 0.2 h 0.3 at mid height, and a strip around them", () => {
+  it("1..3 steel or rust tanks r 3..5 in two halves around a ring r + 0.2 h 0.3 at mid height, a split ladder post, and a strip around them", () => {
     for (const lot of LOTS) for (const seed of SEEDS) {
       const p = recipe("tankGroup")(lot, createRng(seed), STYLES.industrial);
       const cyl = p.solids.filter((s) => s.kind === "cylinder");
-      const tanks = cyl.filter((s) => s.kind === "cylinder" && s.h > 0.3 + EPS && s.r >= 3 - EPS);
-      expect(tanks.length).toBeGreaterThanOrEqual(1);
-      expect(tanks.length).toBeLessThanOrEqual(3);
-      for (const t of tanks) {
-        if (t.kind !== "cylinder") continue;
-        expect(["steel", "rust"]).toContain(t.mat);
-        expect(t.r).toBeLessThanOrEqual(5 + EPS);
-        expect(t.h).toBeGreaterThanOrEqual(4 - EPS);
-        expect(t.h).toBeLessThanOrEqual(8 + EPS);
-        const ring = cyl.find((s) => s.kind === "cylinder" && s.at.x === t.at.x && s.at.y === t.at.y && Math.abs(s.r - (t.r + 0.2)) < EPS && Math.abs(s.h - 0.3) < EPS);
-        expect(ring).toBeDefined();
-        expect(ring!.at.z + 0.15).toBeCloseTo(t.at.z + t.h / 2, 6);
+      const rings = cyl.filter((s) => Math.abs(s.h - 0.3) < EPS);
+      expect(rings.length).toBeGreaterThanOrEqual(1);
+      expect(rings.length).toBeLessThanOrEqual(3);
+      expect(cyl).toHaveLength(rings.length * 3);
+      for (const ring of rings) {
+        if (ring.kind !== "cylinder") continue;
+        const r = ring.r - 0.2;
+        const halves = cyl.filter((s) => s.kind === "cylinder" && s !== ring && s.at.x === ring.at.x && s.at.y === ring.at.y);
+        expect(halves).toHaveLength(2);
+        const [lower, upper] = halves.sort((a, b) => a.at.z - b.at.z);
+        if (lower!.kind !== "cylinder" || upper!.kind !== "cylinder") throw new Error("not cylinders");
+        expect(r).toBeGreaterThanOrEqual(3 - EPS);
+        expect(r).toBeLessThanOrEqual(5 + EPS);
+        expect(["steel", "rust"]).toContain(lower!.mat);
+        expect(upper!.mat).toBe(lower!.mat);
+        expect(lower!.r).toBeCloseTo(r, 9);
+        expect(upper!.r).toBeCloseTo(r, 9);
+        const H = 2 * (lower!.h + 0.15);
+        expect(H).toBeGreaterThanOrEqual(4 - EPS);
+        expect(H).toBeLessThanOrEqual(8 + EPS);
+        expect(upper!.h).toBeCloseTo(lower!.h, 9);
+        expect(lower!.at.z).toBeCloseTo(lot.z, 9);
+        expect(ring.at.z).toBeCloseTo(lot.z + H / 2 - 0.15, 9);
+        expect(upper!.at.z).toBeCloseTo(lot.z + H / 2 + 0.15, 9);
+        // two 0.3 posts against the octagon's south flat, below and above the ring
+        const posts = p.solids.filter((s): s is Extract<Solid, { kind: "prism" }> => s.kind === "prism" && s.w === 0.3 && s.d === 0.3 && Math.abs(s.at.x - (ring.at.x - 0.15)) < EPS);
+        expect(posts).toHaveLength(2);
+        for (const post of posts) expect(post.at.y).toBeCloseTo(ring.at.y + r * Math.cos(Math.PI / 8), 9);
+        const [low, high] = posts.sort((a, b) => a.at.z - b.at.z);
+        expect(low!.at.z).toBeCloseTo(lot.z, 9);
+        expect(low!.h).toBeCloseTo(lower!.h, 9);
+        expect(high!.at.z).toBeCloseTo(upper!.at.z, 9);
+        expect(high!.h).toBeCloseTo(upper!.h, 9);
       }
       expect(p.solids.some((s) => s.kind === "strip")).toBe(true);
-      // the ladder post stands against the octagon's south flat, not floating off it
-      for (const t of tanks) {
-        if (t.kind !== "cylinder") continue;
-        const post = p.solids.find((s) => s.kind === "prism" && s.w === 0.3 && Math.abs(s.at.x - (t.at.x - 0.15)) < EPS);
-        expect(post?.kind === "prism" && post.at.y).toBeCloseTo(t.at.y + t.r * Math.cos(Math.PI / 8), 9);
-      }
     }
   });
 });
@@ -216,6 +231,18 @@ describe("quayCrane", () => {
       const low = recipe("quayCrane")({ ...lot, maxH: 10 }, createRng(seed), STYLES.industrial);
       expect(topZ(low.solids)).toBeLessThanOrEqual(lot.z + 10 + EPS);
     }
+  });
+
+  it("the cabin, mast, boom, stay and light housing interlock; legs and cross beams do not", () => {
+    const p = recipe("quayCrane")(ownLot("quayCrane"), createRng(1), STYLES.industrial);
+    const marked = p.solids.filter((s) => s.interlocks);
+    expect(marked).toHaveLength(5);
+    expect(marked.filter((s) => s.kind === "prism")).toHaveLength(3);
+    expect(marked.filter((s) => s.kind === "beam")).toHaveLength(2);
+    const unmarked = p.solids.filter((s) => !s.interlocks);
+    expect(unmarked.filter((s) => s.kind === "prism")).toHaveLength(4);
+    expect(unmarked.filter((s) => s.kind === "beam")).toHaveLength(2);
+    expect(unmarked.filter((s) => s.kind === "strip")).toHaveLength(2);
   });
 
   it("the boom points to open[0], or west when open[0] is north", () => {
