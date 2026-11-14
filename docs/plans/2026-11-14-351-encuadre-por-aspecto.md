@@ -28,9 +28,21 @@
 5. **Tests existentes que se quedan** y que se comprobaron con un prototipo de la regla: `zoneView("portfolio", 390, 338).scale > coverView(390, 338).scale·1.05` sigue (cociente 1,0509) y el hito de 640×900 (`(129, 227)`) sigue adentro (279, 427). Si un implementador ve que fallan, es una regresión, no un test a relajar.
 6. **El 1,01 de `ZONE_MIN_ZOOM` no cambia**: el spec dice que `zoneView` hereda el piso nuevo sin tocarlo.
 
+## Assumptions
+
+Decididas en la revisión del plan (etapa 2), sin fuente escrita; cualquier opción razonable cumple el issue.
+
+1. **Host degenerado (`w` o `h` = 0, NaN).** No se agrega guarda. Hoy `coverView(0, 0)` ya da NaN (`coverQuad(NaN)`), y con `h = 0` y `w > 0` el aspecto es `Infinity`, así que entra a la rama `a ≥ A`, el mismo código de hoy. La regla nueva no empeora ningún caso. Se descartó una guarda que devuelva `{0, 0, 1}`: es comportamiento nuevo que nadie pidió.
+2. **`clamp` con `lo > hi`.** `clamp` (`view.ts:34`) es `Math.min(hi, Math.max(lo, v))` y con `lo > hi` devuelve `hi`. En `clampToCover`, la condición `ancho·s ≥ w` es algebraicamente `w − qx1·s ≤ −qx0·s`, así que los límites solo se cruzan por redondeo (~1e-13 px) y el resultado sigue en el borde. No se agrega caso especial.
+3. **"1600×900 y 1920×955 idénticas a hoy"** se verifica de dos maneras. La primera es el código: la rama `a ≥ A` es la de hoy y la fijan los tests de la tarea 1 (`toEqual` en anchas, 1e-6 en 1600×900). La segunda es leer en el navegador la transformada del contenedor del mundo (`position` y `scale` del primer hijo de `__PIXI_DEVTOOLS_WRAPPER__.stage`) en la rama y en `main` y compararlas. No se hace un diff de píxeles: el ticker headless corre a ~2 fps y las animaciones no quedan congeladas igual en las dos corridas (`CLAUDE.md`). Las capturas quedan para mirarlas a ojo.
+4. **"La ciudad en al menos un tercio del ancho"** se mide sobre la captura de 390×750: el ancho de pantalla que ocupan los edificios de Resume. Un muestreo geométrico de `worldZoneAt(...) === "cv"` por columna ya da 0,73 hoy, así que no distingue, y por eso no se lo usa como test.
+5. **Zonas y cuadro.** Los cuatro marcos de `zoneFrame` (`portfolio`, `cv`, `blog`, `all`) caen dentro de la caja proyectada de `coverFrame(16/9)` (medido). En una dimensión, si la ventana contiene la zona y es más angosta que el cuadro, correrla lo mínimo para que entre en el cuadro la deja conteniendo la zona. Así `clampToCover` no saca de pantalla una zona que el ajuste ya mostraba entera. No se agrega un test aparte.
+6. **Sin ADR nuevo.** `docs/adr/` solo tiene 0001 (velo) y 0002 (costura); ninguno trata del encuadre. El cambio sigue un spec aprobado.
+7. **Capturas** en `docs/superpowers/specs/assets/351-encuadre/`, `before`/`after` en PNG, como en `assets/165-neones/`.
+
 ## Review Focus
 
-1. **Aspecto exactamente 16:9 con píxeles que no dan 16:9 exacto** (p. ej. 1920×1080 vs. 1919×1080, o 1600×900 donde `w/h` puede no ser bit a bit `16/9`): la rama `a < A` con `w ≈ vw` debe dar `off ≈ 0` y la misma vista que hoy (continuidad). Test: `coverView(1919, 1080)` a 1e-3 de `fitTransform(coverFrame(16/9), 1919, 1080, 0)` en escala y en `y`, y `x` dentro de 1 px (tarea 1).
+1. **Aspecto exactamente 16:9 con píxeles que no dan 16:9 exacto** (p. ej. 1920×1080 vs. 1919×1080, o 1600×900 donde `w/h` puede no ser bit a bit `16/9`): la rama `a < A` con `w ≈ vw` debe dar `off ≈ 0` y la misma vista que hoy (continuidad). Test: `coverView(1919, 1080)` contra la salida de la regla vieja, `fitTransform(coverFrame(1919 / 1080), 1919, 1080, 0)`: escala a menos de 1e-3 relativo, `x` e `y` a menos de 1 px (medido: Δscale 4,4e-4, Δx 0,45, Δy 0,09) (tarea 1).
 2. **Pantallas más anchas que 16:9** (2100×900, 1920×955): `coverView` idéntico al de hoy, comparado con `toEqual` contra `fitTransform(coverFrame(w/h), w, h, 0)` (tarea 1).
 3. **Host diminuto o degenerado** (`w` muy chico, p. ej. 50×900): `vw − w > 0`, el acotado a `[0, vw − w]` no se invierte; las esquinas siguen dentro del cuadro. Test en tarea 1 con 50×900.
 4. **`zoneView` en anchas, donde el cuadro no entra en ancho** (1920×955, 2100×900): `clampToCover` no toca x y `clampToBleed` manda como hoy; las esquinas siguen dentro del sangrado con `VIEW_INSET`. Lo cubre el test 5 (tarea 2), que solo exige el cuadro en los ejes donde entra.
@@ -51,10 +63,10 @@
 - [ ] **Step 1: tests que fallan**, en `describe("coverView")`:
   - `COVER_SIZES = [...SIZES, [390, 750], [820, 1180], [900, 900], [1280, 900], [50, 900]]`.
   - `it.each(COVER_SIZES)("%i×%i: corners inside the bleed, and inside the 16:9 cover when the host is not wider")`: las cuatro esquinas de `viewCorners(coverView(w, h), w, h)` cumplen `insideBleed`; si `w / h <= 16 / 9 + 1e-9`, además `inCoverQuad(c.x, c.y, 16 / 9, 1e-6)`.
-  - `"16:9 is continuous with the old rule"`: `coverView(1600, 900)` coincide a 1e-6 (x, y, scale) con `fitTransform(coverFrame(16 / 9), 1600, 900, 0)`; y `coverView(1919, 1080)` coincide con `fitTransform(coverFrame(16 / 9), 1919, 1080, 0)` en `scale` y `y` a 1e-3 y en `x` a menos de 1 px. El test existente del ancho 1600 se queda.
+  - `"16:9 is continuous with the old rule"`: `coverView(1600, 900)` coincide a 1e-6 (x, y, scale) con `fitTransform(coverFrame(16 / 9), 1600, 900, 0)`; y `coverView(1919, 1080)` queda a menos de 1e-3 relativo en `scale` y a menos de 1 px en `x` e `y` de `fitTransform(coverFrame(1919 / 1080), 1919, 1080, 0)` (la regla vieja). El test existente del ancho 1600 se queda.
   - `"wider than 16:9 is unchanged"`: para 2100×900 y 1920×955, `coverView(w, h)` `toEqual` `fitTransform(coverFrame(w / h), w, h, 0)`.
   - `"390×750 centers on COVER_FOCUS_U of the 16:9 cover"`: con `qx0`, `qx1` = extremos x proyectados de `coverFrame(16 / 9)[0].pts`, el punto `qx0 + COVER_FOCUS_U·(qx1 − qx0)` cae en `x·scale + v.x ≈ 195` (a 1e-6).
-  - `"1280×900 is clamped to a cover edge"`: `qx0·s + v.x ≈ 0` o `qx1·s + v.x ≈ 1280` (a 1e-6), y el cuadro cubre `[0, 1280]` (`qx0·s + v.x <= 1e-6`, `qx1·s + v.x >= 1280 − 1e-6`).
+  - `"1280×900 is clamped to a cover edge"` (válido mientras `COVER_FOCUS_U ≤ 0,40`: con 4:3 la ventana es el 80 % del cuadro, spec §2.1; si la tarea 3 sube el foco por encima, este test se reescribe): `qx0·s + v.x ≈ 0` o `qx1·s + v.x ≈ 1280` (a 1e-6), y el cuadro cubre `[0, 1280]` (`qx0·s + v.x <= 1e-6`, `qx1·s + v.x >= 1280 − 1e-6`).
   - `it.each` de los tamaños con `a < 16/9`: `"%i×%i: never zooms out compared with the old rule"`, `coverView(w, h).scale >= fitTransform(coverFrame(w / h), w, h, 0).scale − 1e-9`.
   - Además `"the 16:9 cover fills the height on narrow hosts"`: para 390×750, `(qy1 − qy0)·scale ≈ 750` (a 1e-6).
 - [ ] **Step 2:** `npx vitest run src/world/view.test.ts` → fallan los de foco, cuadro y escala (y el import de `COVER_FOCUS_U`).
@@ -90,4 +102,12 @@ No es código: lo corre el orquestador con agent-browser después de las tareas 
 - [ ] **Step 1:** con `npm run dev -- --host --port 5173`, capturas de `http://localhost:5173/` en 390×750, 820×1180, 900×900, 1280×900, 1600×900, 1920×955 y de `/area/resume/`, `/area/portfolio/`, `/area/blog/` en 1920×955 y 390×750. Las de 1600×900 y 1920×955 también sobre `main` (worktree en `origin/main`) para compararlas píxel a píxel.
 - [ ] **Step 2:** criterios §5: sin franja de suelo pelado o selva arriba en mapas con aspecto ≤ 16:9; en 390×750 la ciudad (ventanas encendidas) ocupa al menos un tercio del ancho y los tres rótulos están dentro del host; 1600×900 y 1920×955 idénticas a `main`.
 - [ ] **Step 3:** si 0,35 no cumple el segundo criterio, ajustar `COVER_FOCUS_U`, rehacer las tareas 1–2 en verde y anotar valor y motivo en el PR.
-- [ ] **Step 4:** las capturas van al PR (commit en `docs/superpowers/specs/assets/2026-11-11-encuadre-por-aspecto/` o adjuntas en el cuerpo).
+- [ ] **Step 4:** las capturas van al PR (commit en `docs/superpowers/specs/assets/351-encuadre/`, enlazadas desde el cuerpo).
+
+## Grilling
+
+- Rondas: 1 (los cambios fueron de tolerancias y supuestos, sin pasos nuevos ni otra costura, así que no hizo falta una segunda). Griller: `fable`.
+- Preguntas: 16. Respondidas con fuente: 11 (CODE 9, ISSUE 1, DOC 1). NO SOURCE: 5, todas supuestos técnicos (Assumptions 1–4 y 7).
+- Corrección de un error del plan: la continuidad en 1919×1080 se comparaba con `coverFrame(16/9)` a 1e-3 en `y`, que no se cumple (0,28 px). Ahora se compara con la salida de la regla vieja, a 1 px y 1e-3 relativo.
+- Aclarado: el test de 1280×900 vale para `COVER_FOCUS_U ≤ 0,40`.
+- Issues abiertos: ninguno. Ambigüedades del spec: ninguna.
