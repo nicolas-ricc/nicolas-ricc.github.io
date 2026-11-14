@@ -245,6 +245,23 @@ describe("quayCrane", () => {
     expect(unmarked.filter((s) => s.kind === "strip")).toHaveLength(2);
   });
 
+  it("under maxH 10 the cross beams sit flush on the legs and under the cabin", () => {
+    for (const seed of SEEDS) for (const open of [["w"], ["e"], ["s"]] as Lot["open"][]) for (const z of [0, 0.3]) {
+      const lot = ownLot("quayCrane", { open, z });
+      const low = recipe("quayCrane")({ ...lot, maxH: 10 }, createRng(seed), STYLES.industrial);
+      const cross = low.solids.filter((s) => s.kind === "beam" && !s.interlocks);
+      const legs = low.solids.filter((s) => s.kind === "prism" && !s.interlocks);
+      const cab = low.solids.find((s) => s.kind === "prism" && s.interlocks)!;
+      expect(cross).toHaveLength(2);
+      for (const b of cross) {
+        expect(bounds(b).min.z).toBeCloseTo(bounds(legs[0]!).max.z, 9);
+        expect(bounds(b).max.z).toBeCloseTo(bounds(cab).min.z, 9);
+      }
+      const marked = low.solids.filter((s) => s.kind === "beam" && s.interlocks).map((s) => (s.kind === "beam" ? s.h : 0));
+      expect(marked).toEqual([0.4, 0.2]);
+    }
+  });
+
   it("the boom points to open[0], or west when open[0] is north", () => {
     const tipX = (open: Lot["open"]) => {
       const lot = ownLot("quayCrane", { open }), a = recipe("quayCrane")(lot, createRng(1), STYLES.industrial).accents[0]!;
