@@ -201,6 +201,7 @@ describe("kit: contract of every registered recipe", () => {
         for (const base of lotsFor(def.name)) for (const id of STYLE_IDS) for (const seed of SEEDS) {
           const lot = { ...base, maxH: 10 }, p = def.recipe(lot, createRng(seed), STYLES[id]);
           for (const s of [...p.solids, ...p.ground]) expect(bounds(s).max.z).toBeLessThanOrEqual(lot.z + cap(lot) + EPS);
+          expect(interpenetrations(p.solids), `${def.name} on ${lot.x},${lot.y} ${id} seed ${seed} maxH 10`).toEqual([]);
         }
       });
 
