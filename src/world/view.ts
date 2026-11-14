@@ -65,17 +65,34 @@ export function clampToBleed(v: View, w: number, h: number): View {
   return Math.abs(x - v.x) < 1e-9 && Math.abs(y - v.y) < 1e-9 ? { ...v } : { x, y, scale: s };
 }
 
+const [CQX0, CQX1, CQY0, CQY1] = (() => {
+  const pts = coverFrame(COVER_ASPECT)[0]!.pts;
+  const xs = pts.filter((_, i) => i % 2 === 0), ys = pts.filter((_, i) => i % 2 === 1);
+  return [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)] as const;
+})();
+
+/**
+ * Clamps per axis to the 16:9 cover (its projected box) wherever the cover fits at that scale:
+ * the viewport stays inside it. On an axis where the cover is smaller than the viewport, it is left as is.
+ */
+export function clampToCover(v: View, w: number, h: number): View {
+  const s = v.scale;
+  const x = (CQX1 - CQX0) * s >= w ? clamp(v.x, w - CQX1 * s, -CQX0 * s) : v.x;
+  const y = (CQY1 - CQY0) * s >= h ? clamp(v.y, h - CQY1 * s, -CQY0 * s) : v.y;
+  return Math.abs(x - v.x) < 1e-9 && Math.abs(y - v.y) < 1e-9 ? { ...v } : { x, y, scale: s };
+}
+
 function frameCenter(zone: WorldZone): { x: number; y: number } {
   const pts = zoneFrame(zone)[0]!.pts;
   const xs = pts.filter((_, i) => i % 2 === 0), ys = pts.filter((_, i) => i % 2 === 1);
   return { x: (Math.min(...xs) + Math.max(...xs)) / 2, y: (Math.min(...ys) + Math.max(...ys)) / 2 };
 }
 
-/** The zone's box fitted with a 4 % margin; if that falls below cover × ZONE_MIN_ZOOM, that scale centered on the box. Always inside the bleed. */
+/** The zone's box fitted with a 4 % margin; if that falls below cover × ZONE_MIN_ZOOM, that scale centered on the box. Inside the bleed, and inside the 16:9 cover on each axis it covers. */
 export function zoneView(zone: WorldZone, w: number, h: number): View {
   const floor = coverView(w, h).scale * ZONE_MIN_ZOOM;
   const fit = fitTransform(zoneFrame(zone), w, h, 0.04);
-  if (fit.scale >= floor) return clampToBleed(fit, w, h);
+  if (fit.scale >= floor) return clampToBleed(clampToCover(fit, w, h), w, h);
   const c = frameCenter(zone);
-  return clampToBleed({ x: w / 2 - c.x * floor, y: h / 2 - c.y * floor, scale: floor }, w, h);
+  return clampToBleed(clampToCover({ x: w / 2 - c.x * floor, y: h / 2 - c.y * floor, scale: floor }, w, h), w, h);
 }
