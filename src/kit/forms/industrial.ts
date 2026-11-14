@@ -237,7 +237,10 @@ export function quayCrane(lot: Lot, rng: Rng, style: Style): Piece {
   const tone = shiftTone(style.tone, rng.int(-1, 1));
   const p = emptyPiece(), first = lot.open[0];
   quayCraneAt({ x: lot.x + lot.w / 2, y: lot.y + lot.d / 2 }, first === "w" || first === "e" || first === "s" ? first : "w", p.solids, p.accents, lot.z);
-  return tonePiece(fitToCap(p, lot), tone);
+  const fit = fitToCap(p, lot), top = (q: Piece): number => Math.max(...q.solids.map((s) => bounds(s).max.z)) - lot.z, k = fit === p ? 1 : top(fit) / top(p);
+  // fitToCap scales a beam's axis, not its section: flatten the cross beams' h too so they stay flush on the legs
+  if (fit !== p) fit.solids = fit.solids.map((s) => (s.kind === "beam" && s.from.z === s.to.z ? { ...s, h: s.h * k } : s));
+  return tonePiece(fit, tone);
 }
 
 /** RTG gantry: four 1.2 legs on rust wheels at `x0`/`x1` (NW corner) in pairs at `y` and `y + 6`, two cross beams and a rust trolley between them. 10 tall. */
