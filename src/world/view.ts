@@ -26,12 +26,25 @@ export function viewCorners(v: View, w: number, h: number): { x: number; y: numb
   return [[0, 0], [w, 0], [w, h], [0, h]].map(([px, py]) => pointerToWorld(v, px!, py!));
 }
 
-/** Cover framing: the rectangle with the host's aspect inscribed in the bleed (coverQuad) fills the host exactly. No sky. */
-export function coverView(w: number, h: number): View {
-  return fitTransform(coverFrame(w / h), w, h, 0);
-}
-
 const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
+
+const COVER_ASPECT = 16 / 9;
+/** Fraction of the 16:9 cover's width, from its left edge, where narrow screens center the view. Chosen so the city, the factory and the island fit. */
+export const COVER_FOCUS_U = 0.35;
+
+/**
+ * Cover framing, no sky. At 16:9 or wider, the rectangle with the host's aspect inscribed in the
+ * bleed (coverQuad) fills the host exactly. Narrower: the 16:9 cover fills the height and the
+ * host is a window of it, centered on COVER_FOCUS_U and clamped to the cover's edges.
+ */
+export function coverView(w: number, h: number): View {
+  const a = w / h;
+  if (a >= COVER_ASPECT) return fitTransform(coverFrame(a), w, h, 0);
+  const vw = h * COVER_ASPECT;
+  const base = fitTransform(coverFrame(COVER_ASPECT), vw, h, 0);
+  const off = clamp(COVER_FOCUS_U * vw - w / 2, 0, vw - w);
+  return { x: base.x - off, y: base.y, scale: base.scale };
+}
 
 /**
  * Shifts the view the minimum needed for the four corners of the viewport to fall
