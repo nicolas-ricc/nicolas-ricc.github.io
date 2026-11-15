@@ -48,8 +48,8 @@ export function fillPolygon(mask: Uint8Array, w: number, h: number, poly: Vec2[]
 
 /** Sets to 1 the pixels of `mask` (w×h) whose centers are within `r` of `c`. */
 export function fillDisc(mask: Uint8Array, w: number, h: number, c: Vec2, r: number): void {
-  for (let j = Math.max(0, Math.floor(c.y - r - 1)); j <= Math.min(h - 1, Math.ceil(c.y + r)); j++) {
-    for (let i = Math.max(0, Math.floor(c.x - r - 1)); i <= Math.min(w - 1, Math.ceil(c.x + r)); i++) if (Math.hypot(i + 0.5 - c.x, j + 0.5 - c.y) <= r) mask[j * w + i] = 1;
+  for (let j = Math.max(0, Math.floor(c.y - r)); j <= Math.min(h - 1, Math.ceil(c.y + r)); j++) {
+    for (let i = Math.max(0, Math.floor(c.x - r)); i <= Math.min(w - 1, Math.ceil(c.x + r)); i++) if (Math.hypot(i + 0.5 - c.x, j + 0.5 - c.y) <= r) mask[j * w + i] = 1;
   }
 }
 
@@ -94,13 +94,13 @@ export function luminances(px: Uint8Array | Uint8ClampedArray, mask: Uint8Array)
   return out;
 }
 
-/** Median luminances of core, ring and holes, contrast (core+.05)/(ring+.05) and halo holes/core. */
+/** Median luminances of core, ring and holes; contrast = (lighter+.05)/(darker+.05) of core and ring, symmetric as WCAG; halo = holes/core, which assumes light ink (neon). */
 export interface Measures { core: number; ring: number; holes: number; contrast: number; halo: number }
 
 /** Level-3 measures of the RGBA pixels `px` inside the masks `m`. */
 export function measure(px: Uint8Array | Uint8ClampedArray, m: Masks): Measures {
   const core = median(luminances(px, m.core)), ring = median(luminances(px, m.ring)), holes = median(luminances(px, m.holes));
-  return { core, ring, holes, contrast: (core + 0.05) / (ring + 0.05), halo: holes / core };
+  return { core, ring, holes, contrast: (Math.max(core, ring) + 0.05) / (Math.min(core, ring) + 0.05), halo: holes / core };
 }
 
 /** OCR input: RGBA ×3 nearest; pixels on the core side of (core+ring)/2 are black, the rest white. */
@@ -126,9 +126,10 @@ export const normalizeOcr = (s: string): string => s.replace(/\s+/g, "");
 /** One row of a report table. */
 export interface Row { metric: string; value: string; limit: string; ok: boolean }
 
-/** The three rows (contraste, halo, OCR) of a sign at `scale`; NaN fails. */
+/** The three rows (contraste, halo, OCR) of a sign at `scale`; NaN fails. Throws on a scale with no rules. */
 export function verdicts(m: Measures, ocr: string, text: string, scale: number): Row[] {
-  const min = scale === COVER_LAPTOP ? LEVEL3.contrast[COVER_LAPTOP] : LEVEL3.contrast[COVER_PHONE], exact = scale === COVER_LAPTOP, got = normalizeOcr(ocr);
+  if (scale !== COVER_LAPTOP && scale !== COVER_PHONE) throw new Error(`legibility: no level-3 rules for scale ${scale}`);
+  const min = LEVEL3.contrast[scale], exact = scale === COVER_LAPTOP, got = normalizeOcr(ocr);
   return [
     { metric: "contraste", value: `${m.contrast.toFixed(2)}:1`, limit: `≥ ${min}:1`, ok: m.contrast >= min },
     { metric: "halo", value: m.halo.toFixed(2), limit: `≤ ${LEVEL3.halo}`, ok: m.halo <= LEVEL3.halo },
@@ -154,7 +155,7 @@ export function renderReport(r: { date: string; viewport: string; entries: Repor
     out.push("", `![${e.id} ${e.scale}](${e.crop}) ![OCR](${e.ocrCrop})`, "");
   }
   out.push("## Nivel 2 (checkSign)", "");
-  const bullets = r.violations.flatMap((v) => v.list.map((x) => `- ${v.id} a ${v.scale}: ${x.rule} = ${Number(x.value.toFixed(2))} (${x.limit})`));
+  const bullets = r.violations.flatMap((v) => v.list.map((x) => `- ${v.id} a ${v.scale}: ${x.rule} = ${Number(x.value.toFixed(2))} (${x.limit})${x.detail ? `, ${x.detail}` : ""}`));
   out.push(...(bullets.length ? bullets : ["Sin violaciones."]), "");
   return out.join("\n");
 }
@@ -172,7 +173,9 @@ export function parseEval<T>(stdout: string): T {
 export function pickContexts(exhibits: readonly Exhibit[], argv: readonly string[]): ContextExhibit[] {
   const all = exhibits.filter((e): e is ContextExhibit => e.kind === "context"), i = argv.indexOf("--only");
   if (i < 0) return all;
-  const id = argv[i + 1], hit = all.filter((e) => e.id === id);
+  const id = argv[i + 1];
+  if (id === undefined || id.startsWith("--")) throw new Error("legibility: --only needs an exhibit id");
+  const hit = all.filter((e) => e.id === id);
   if (!hit.length) throw new Error(`legibility: unknown context "${id}"; choose one of: ${all.map((e) => e.id).join(", ")}`);
   return hit;
 }

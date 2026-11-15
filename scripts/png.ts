@@ -23,6 +23,7 @@ function chunk(type: string, data: Uint8Array): Buffer {
 
 /** RGBA 8-bit PNG (color type 6, filter 0 on every row). */
 export function encodePng(rgba: Uint8Array | Uint8ClampedArray, width: number, height: number): Buffer {
+  if (!(Number.isInteger(width) && Number.isInteger(height) && width >= 1 && height >= 1)) throw new Error(`encodePng: size must be positive integers, got ${width}×${height}`);
   if (rgba.length !== width * height * 4) throw new Error(`encodePng: ${rgba.length} bytes, expected ${width * height * 4}`);
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(width, 0);

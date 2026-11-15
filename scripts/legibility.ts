@@ -32,7 +32,7 @@ const PORT = 5179, ORIGIN = `http://localhost:${PORT}`, ROOT = resolve(import.me
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const ab = (...args: string[]): string =>
-  execFileSync("agent-browser", args, { env: { ...process.env, AGENT_BROWSER_SESSION: "legibility" }, maxBuffer: 64 * 1024 * 1024, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  execFileSync("agent-browser", args, { env: { ...process.env, AGENT_BROWSER_SESSION: "legibility" }, maxBuffer: 64 * 1024 * 1024, timeout: 30_000, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 const evalJson = <T>(js: string): T => parseEval<T>(ab("eval", js));
 
 async function startVite(): Promise<ChildProcess> {
@@ -63,12 +63,12 @@ async function main(): Promise<void> {
     const entries: ReportEntry[] = [], violations: { id: string; scale: number; list: ReturnType<typeof checkSign> }[] = [];
     for (const e of picked) {
       ab("open", `${ORIGIN}/lab/storybook.html?bloom=on&speed=0#${e.id}`);
-      let ready = false;
+      let ready = false, last = "";
       for (const t0 = Date.now(); Date.now() - t0 < 30_000 && !ready; ) {
-        try { ready = evalJson<boolean>(`window.__lab?.exhibitId === '${e.id}' && window.__lab.bloom === 'on'`); } catch { /* page not ready */ }
+        try { ready = evalJson<boolean>(`window.__lab?.exhibitId === '${e.id}' && window.__lab.bloom === 'on'`); } catch (err) { last = String(err).split("\n")[0]!; } // page not ready
         if (!ready) await sleep(500);
       }
-      if (!ready) throw new Error(`legibility: window.__lab did not appear for ${e.id} in 30 s`);
+      if (!ready) throw new Error(`legibility: window.__lab did not appear for ${e.id} in 30 s${last ? ` (last error: ${last})` : ""}`);
       for (const scale of [COVER_LAPTOP, COVER_PHONE]) {
         evalJson(`(window.__lab.setCoverScale(${scale}), true)`);
         const fit = evalJson<Fit | null>("window.__lab.fit()"), host = evalJson<{ w: number; h: number }>("window.__lab.hostSize()");

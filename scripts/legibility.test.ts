@@ -1,6 +1,7 @@
 import { crc32, inflateSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { v3 } from "../src/iso/geometry";
+import { toWorld } from "../src/kit/lettering";
 import { project } from "../src/iso/project";
 import { COVER_LAPTOP, COVER_PHONE, relativeLuminance } from "../src/kit/legibility";
 import { EXHIBITS } from "../src/lab/exhibits";
@@ -48,6 +49,10 @@ describe("png", () => {
   });
   it("throws when the bytes do not match the size", () => {
     expect(() => encodePng(new Uint8Array(5), 1, 1)).toThrow();
+  });
+  it("throws on an empty or fractional size", () => {
+    expect(() => encodePng(new Uint8Array(0), 0, 0)).toThrow();
+    expect(() => encodePng(new Uint8Array(8), 0.5, 4)).toThrow();
   });
 });
 
@@ -102,6 +107,14 @@ describe("masks", () => {
     expect(crop.w).toBeGreaterThan(0);
     expect(crop.x + crop.w).toBeLessThanOrEqual(host.w);
   });
+  it("the ring is the 1w–3w band around the ink box", () => {
+    const host = { w: 1600, h: 900 }, fit = centered(COVER_LAPTOP, host.w, host.h), crop = wordCrop(BLOG_SIGN, fit, host);
+    const m = signMasks(BLOG_SIGN, fit, crop), g = BLOG_SIGN.glyphs[0]!, w = BLOG_SIGN.width, mid = (g.layout.box.y0 + g.layout.box.y1) / 2;
+    const at = (a: number) => { const p = toImage(toWorld(g.plane, a, mid), fit, crop); return Math.floor(p.y) * m.w + Math.floor(p.x); };
+    expect(m.ring[at(g.layout.box.x0 - 2 * w)]).toBe(1);
+    expect(m.ring[at(g.layout.box.x0 - 0.5 * w)]).toBe(0);
+    expect(m.ring[at(g.layout.box.x0 - 3.5 * w)]).toBe(0);
+  });
   it("signMasks of the Blog sign: core, ring and holes are disjoint and non-empty; counters land in holes", () => {
     const host = { w: 1600, h: 900 }, fit = centered(COVER_LAPTOP, host.w, host.h), crop = wordCrop(BLOG_SIGN, fit, host);
     const m = signMasks(BLOG_SIGN, fit, crop);
@@ -136,6 +149,10 @@ describe("metrics", () => {
     expect(r.contrast).toBeCloseTo(1.05 / 0.05);
     expect(r.halo).toBeCloseTo(relativeLuminance(0x808080));
   });
+  it("measure: contrast is symmetric, dark letters on a light ring score like light on dark", () => {
+    const { px, m } = strip([0, 255, 128], ["core", "ring", "holes"]);
+    expect(measure(px, m).contrast).toBeCloseTo(1.05 / 0.05);
+  });
   it("measure with an empty mask gives NaN", () => {
     const { px, m } = strip([255, 0], ["core", "ring"]);
     expect(measure(px, m).halo).toBeNaN();
@@ -164,6 +181,7 @@ describe("metrics", () => {
     expect(row(verdicts({ ...ok, halo: 0.51 }, "Blog", "Blog", COVER_LAPTOP), "halo").ok).toBe(false);
     const nan = verdicts({ core: NaN, ring: 0, holes: 0, contrast: NaN, halo: NaN }, "Blog", "Blog", COVER_LAPTOP);
     expect([row(nan, "contraste").ok, row(nan, "halo").ok]).toEqual([false, false]);
+    expect(() => verdicts(ok, "Blog", "Blog", 1)).toThrow(/legibility: no level-3 rules for scale 1/);
     expect(LEVEL3.halo).toBe(0.5);
     expect([LEVEL3.contrast[COVER_LAPTOP], LEVEL3.contrast[COVER_PHONE]]).toEqual([4.5, 3]);
   });
@@ -179,6 +197,7 @@ describe("metrics", () => {
     expect(pickContexts(EXHIBITS, ["--only", "plataforma-escena"]).map((e) => e.id)).toEqual(["plataforma-escena"]);
     expect(() => pickContexts(EXHIBITS, ["--only", "faro"])).toThrow(/plataforma-escena/);
     expect(() => pickContexts(EXHIBITS, ["--only", "nope"])).toThrow(/plataforma-escena/);
+    expect(() => pickContexts(EXHIBITS, ["--only"])).toThrow(/--only needs an exhibit id/);
   });
 });
 
@@ -198,6 +217,8 @@ describe("report", () => {
   });
   it("renders the date, viewport, preprocess, one table per entry, the crops and the level-2 footer", () => {
     const md = renderReport({ date: "2026-11-15", viewport: "1600×900 @2", entries, violations: [] });
+    expect(md).toMatch(/^# Legibilidad, nivel 3\n/);
+    expect(md).toContain("Generado por `npm run legibility`; no se edita a mano.");
     expect(md).toContain("2026-11-15");
     expect(md).toContain("1600×900 @2");
     expect(md).toContain(PREPROCESS);
@@ -208,9 +229,9 @@ describe("report", () => {
     expect(md).toContain("Sin violaciones.");
   });
   it("lists level-2 violations", () => {
-    const md = renderReport({ date: "d", viewport: "v", entries, violations: [{ id: "plataforma-escena", scale: COVER_PHONE, list: [{ rule: "air", value: 1.2, limit: "≥ 1.5 px" }] }] });
+    const md = renderReport({ date: "d", viewport: "v", entries, violations: [{ id: "plataforma-escena", scale: COVER_PHONE, list: [{ rule: "air", value: 1.2, limit: "≥ 1.5 px", detail: "Bl" }] }] });
     expect(md).not.toContain("Sin violaciones.");
-    expect(md).toMatch(/plataforma-escena a 0\.83: air = 1\.2/);
+    expect(md).toMatch(/plataforma-escena a 0\.83: air = 1\.2 \(≥ 1\.5 px\), Bl/);
   });
   it("reportFails on a ✗ row or a violation", () => {
     expect(reportFails({ entries: entries.slice(0, 1), violations: [] })).toBe(false);

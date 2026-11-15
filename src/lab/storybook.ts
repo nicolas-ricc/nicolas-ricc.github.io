@@ -21,8 +21,11 @@ import { buildIndex, markCurrent, mountStorybook, renderReadout } from "./storyb
  * scales the clock up to 100 (?speed=0 freezes it), as in page.ts. g, h and a
  * hide or show ground, shadows and accents (with the bloom) and are remembered
  * across exhibits. c cycles the exhibit scale: real, 1.17 and 0.83, the cover scales
- * of a laptop and a phone. In development the page publishes `window.__lab` (exhibit id, cover scale and its setter, bloom mode, last fit, host size and `pixels`, the stage's RGBA at resolution 2 with filters) for `npm run legibility`.
+ * of a laptop and a phone. In development the page publishes `window.__lab` (exhibit
+ * id, cover scale and its setter, bloom mode, last fit, host size and `pixels`, the
+ * stage's RGBA at resolution 2 with filters) for `npm run legibility`.
  */
+/** The DEV page hook `npm run legibility` drives: `pixels` takes host CSS px and returns base64 RGBA at resolution 2. */
 export interface LabHook {
   readonly exhibitId: string | null; readonly coverScale: number | null; setCoverScale(s: number | null): void;
   readonly bloom: BloomMode | null; fit(): Fit | null; hostSize(): { w: number; h: number };
@@ -97,20 +100,22 @@ mountStorybook(document, ({ host, nav, panel }) => {
       if (e !== current) show(e);
     };
     fromHash();
-    if (import.meta.env.DEV) window.__lab = {
-      get exhibitId() { return current?.id ?? null; },
-      get coverScale() { return coverScale; },
-      setCoverScale(s) { coverScale = s; fit(); },
-      get bloom() { return stage?.bloom ?? null; },
-      fit: () => lastFit,
-      hostSize: () => ({ w: host.clientWidth, h: host.clientHeight }),
-      async pixels(x, y, w, h) {
-        const { pixels } = app.renderer.extract.pixels({ target: app.stage, frame: new Rectangle(x, y, w, h), resolution: 2, clearColor: ISO_COLORS.sky });
-        let bin = "";
-        for (let i = 0; i < pixels.length; i += 0x8000) bin += String.fromCharCode(...pixels.subarray(i, i + 0x8000));
-        return btoa(bin);
-      },
-    };
+    if (import.meta.env.DEV) {
+      window.__lab = {
+        get exhibitId() { return current?.id ?? null; },
+        get coverScale() { return coverScale; },
+        setCoverScale(s) { coverScale = s; fit(); },
+        get bloom() { return stage?.bloom ?? null; },
+        fit: () => lastFit,
+        hostSize: () => ({ w: host.clientWidth, h: host.clientHeight }),
+        async pixels(x, y, w, h) {
+          const { pixels } = app.renderer.extract.pixels({ target: app.stage, frame: new Rectangle(x, y, w, h), resolution: 2, clearColor: ISO_COLORS.sky, antialias: true });
+          let bin = "";
+          for (let i = 0; i < pixels.length; i += 0x8000) bin += String.fromCharCode(...pixels.subarray(i, i + 0x8000));
+          return btoa(bin);
+        },
+      };
+    }
     window.addEventListener("hashchange", fromHash);
     app.renderer.on("resize", fit);
     // deferred like page.ts; later stages inherit the mode in show()
