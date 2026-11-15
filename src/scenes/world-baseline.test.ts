@@ -18,11 +18,12 @@ const PIECES: Record<string, string> = {
   "grua-muelle": "624cfd88/d3db2853",
   // #360: the four sign placeholders are new pieces; the earlier twelve did not move
   // #362: grafiti replaces its placeholder; the other pieces did not move
-  grafiti: "af24e5db/92a7faa4",
+  // #375: gap 2 and KERN respace the words of the four signs (and the platform posts move in)
+  grafiti: "79ccab1e/251611e9",
   // #361: the helipad sign replaces its two placeholders (A, word on the pad; B, rooftop tube sign)
-  "cartel-helipuerto": "7a35f7fb/d01b8a7f", "cartel-helipuerto-b": "afe0dfb1/8911f963",
+  "cartel-helipuerto": "7a35f7fb/fb7f1528", "cartel-helipuerto-b": "5a24759f/1e5e066f",
   // #363: plataforma replaces its placeholder (platform, railing, ladder, hut, beacon, Blog sign)
-  plataforma: "a55abbc7/1f865c26",
+  plataforma: "a7e8108d/218c4bdc",
 };
 
 describe("render baseline (#194)", () => {

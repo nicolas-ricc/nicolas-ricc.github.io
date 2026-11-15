@@ -112,8 +112,8 @@ describe("helipad sign A: the anamorphic word on the pad (#361)", () => {
   const { width: W } = measureText("Resume", ROOF_WORD_SIZE);
   const m = 10 - W / (2 * Math.SQRT2), origin = v3(m - D.x * W / 2, m - D.y * W / 2, 32.95);
 
-  it("the largest cap height whose word rectangle fits the south-east triangle inset 1 u (≈ 3.490)", () => {
-    expect(ROOF_WORD_SIZE).toBeCloseTo(3.490, 3);
+  it("the largest cap height whose word rectangle fits the south-east triangle inset 1 u (≈ 3.188)", () => {
+    expect(ROOF_WORD_SIZE).toBeCloseTo(3.188, 3);
     const plane = roofDiagonal(origin), s = ROOF_WORD_SIZE;
     const [b0, b1, t0, t1] = [toWorld(plane, 0, 0), toWorld(plane, W, 0), toWorld(plane, 0, s), toWorld(plane, W, s)];
     for (const p of [b0, b1, t0, t1]) {
