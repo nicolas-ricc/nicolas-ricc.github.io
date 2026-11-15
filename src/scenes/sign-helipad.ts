@@ -61,6 +61,5 @@ export function helipadTubeSign(out: Solid[], accents: Accent[]): void {
     for (let i = 0; i < 20; i++) off = 0.1 * (lo - TOP) / Math.hypot(run - off, lo - TOP);
     out.push(beam(e, edge === "x" ? v3(11 + off, e.y, TOP) : v3(e.x, 11 + off, TOP), 0.2));
   }
-  const o = at(-width / 2, 34.3);
-  for (const q of strokeText(WORD, diagonalWall(o), TUBE_WORD_SIZE, 1)) accents.push(...neon(q, "green"));
+  for (const q of strokeText(WORD, diagonalWall(at(-width / 2, 34.3)), TUBE_WORD_SIZE, 1)) accents.push(...neon(q, "green"));
 }
