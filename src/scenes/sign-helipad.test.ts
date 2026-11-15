@@ -112,7 +112,7 @@ describe("helipad sign A: the anamorphic word on the pad (#361)", () => {
   const { width: W } = measureText("Resume", ROOF_WORD_SIZE);
   const m = 10 - W / (2 * Math.SQRT2), origin = v3(m - D.x * W / 2, m - D.y * W / 2, 32.95);
 
-  it("the largest cap height whose word rectangle fits the SE triangle inset 1 u (≈ 3.490)", () => {
+  it("the largest cap height whose word rectangle fits the south-east triangle inset 1 u (≈ 3.490)", () => {
     expect(ROOF_WORD_SIZE).toBeCloseTo(3.490, 3);
     const plane = roofDiagonal(origin), s = ROOF_WORD_SIZE;
     const [b0, b1, t0, t1] = [toWorld(plane, 0, 0), toWorld(plane, W, 0), toWorld(plane, 0, s), toWorld(plane, W, s)];
@@ -127,7 +127,7 @@ describe("helipad sign A: the anamorphic word on the pad (#361)", () => {
     expect(t1.x + t1.y).toBeCloseTo(Math.SQRT2, 6);
   });
 
-  it("every polygon of the word lies at z 32.95, its centroid in the SE half, in green tube and greenBleed halo", () => {
+  it("every polygon of the word lies at z 32.95, its centroid in the south-east half, in green tube and greenBleed halo", () => {
     expect(word.length).toBeGreaterThan(0);
     for (const a of word) {
       for (const p of a.pts) expect(Math.abs(p.z - 32.95)).toBeLessThan(EPS);
@@ -150,7 +150,7 @@ describe("helipad sign B: the rooftop tube sign (#361)", () => {
   const C = TUBE_FRAME_CENTER, L = measureText("Resume", 8.55).width + 2;
   const at = (s: number, z: number) => v3(C.x + D.x * s, C.y + D.y * s, z);
 
-  it("the frame center is 10.56 u SE of the slab's center, where the slab chord is 10 u", () => {
+  it("the frame center is 10.56 u south-east of the slab's center, where the slab chord is 10 u", () => {
     expect(C.x).toBeCloseTo(11 - 5 / Math.SQRT2, 9);
     expect(C.y).toBeCloseTo(11 - 5 / Math.SQRT2, 9);
   });
@@ -193,14 +193,14 @@ describe("helipad sign B: the rooftop tube sign (#361)", () => {
     expect(len(upper[0]!.from, upper[0]!.to)).toBeCloseTo(L, 9);
   });
 
-  it("three steel posts 0.25² at s = −4, 0, +4 along the frame, from the slab up", () => {
+  it("three steel posts 0.25² at s = −4, 0, +4 along the frame, from the pad up", () => {
     const posts = prisms(out).filter((s) => s.w === 0.25 && s.d === 0.25);
     expect(posts).toHaveLength(3);
     const want = [-4, 0, 4].map((s) => at(s, 0));
     for (const p of posts) {
       expect(p.mat).toBe("steel");
       expect(p.interlocks).toBe(true);
-      expect(p.at.z).toBeCloseTo(TOP, 9);
+      expect(p.at.z).toBeCloseTo(32.95, 9); // on the disc's top: the middle post stands inside the disc's bounds box
       expect(p.at.z + p.h).toBeGreaterThanOrEqual(43.65 - EPS);
       const cx = p.at.x + 0.125, cy = p.at.y + 0.125;
       expect(want.some((w) => Math.hypot(w.x - cx, w.y - cy) < EPS)).toBe(true);
