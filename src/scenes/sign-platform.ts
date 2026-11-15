@@ -43,8 +43,8 @@ function ladder(out: Solid[]): void {
 
 /** Sea platform: six steel piles, a deck with railing, ladder, hut and beacon mast; "Blog" in cyan neon on the diagonal plane at z 2.8 is still the #360 placeholder (#363 replaces it). */
 export function seaPlatform(out: Solid[], accents: Accent[]): void {
-  for (const x of [-HALF_X + PILE_INSET + PILE_R, 0, HALF_X - PILE_INSET - PILE_R]) {
-    for (const y of [-HALF_Y + PILE_INSET + PILE_R, HALF_Y - PILE_INSET - PILE_R]) out.push({ kind: "cylinder", at: v3(x, y, WATER_Z), r: PILE_R, h: PILE_TOP - WATER_Z, sides: 6, mat: "steel" });
+  for (const x of [-HALF_X + PILE_INSET, 0, HALF_X - PILE_INSET]) {
+    for (const y of [-HALF_Y + PILE_INSET, HALF_Y - PILE_INSET]) out.push({ kind: "cylinder", at: v3(x, y, WATER_Z), r: PILE_R, h: PILE_TOP - WATER_Z, sides: 6, mat: "steel" });
   }
   out.push(prism(-HALF_X, -HALF_Y, PILE_TOP, 2 * HALF_X, 2 * HALF_Y, DECK_TOP - PILE_TOP, "deck"));
   railing(out);

@@ -21,6 +21,13 @@ describe("sea platform (#363)", () => {
     expect(piles).toHaveLength(6);
   });
 
+  it("the six pile centers sit 0.6 inside the deck edge: x ∈ {−6.4, 0, 6.4} × y ∈ {−5.4, 5.4}", () => {
+    const piles = build().out.filter((s) => isPile(s) && s.kind === "cylinder");
+    const want = [-6.4, 0, 6.4].flatMap((x) => [-5.4, 5.4].map((y) => [x, y]));
+    for (const [x, y] of want) expect(piles.some((s) => s.kind === "cylinder" && near(s.at.x, x!) && near(s.at.y, y!))).toBe(true);
+    expect(piles).toHaveLength(6);
+  });
+
   it("a 14 × 12 deck prism with its top at z 1.6", () => {
     const decks = prisms(build().out).filter((s) => s.mat === "deck" && s.w === 14 && s.d === 12);
     expect(decks).toHaveLength(1);
