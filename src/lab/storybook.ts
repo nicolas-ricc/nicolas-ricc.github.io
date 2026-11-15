@@ -5,6 +5,7 @@ import { assembleWorld, tag, type ZonedAnimator } from "../world/assemble";
 import { afterFirstRender } from "../world/bloom";
 import { attachBloom, type BloomProbe } from "../world/bloom-runtime";
 import { type Box, boxFrame, fitTransform } from "../world/frame";
+import { fixedScaleFit, nextCoverScale } from "./cover-scale";
 import { type BloomMode, buildStage, type Stage, type StageLayer } from "../world/stage";
 import { runBoot } from "./boot";
 import { cropAnimators, cropScene, pieceScene, readout, solidsBox } from "./crop";
@@ -18,7 +19,8 @@ import { buildIndex, markCurrent, mountStorybook, renderReadout } from "./storyb
  * and j/k only write the hash. 6 rotates the bloom; ?bloom= forces it and ?speed=
  * scales the clock up to 100 (?speed=0 freezes it), as in page.ts. g, h and a
  * hide or show ground, shadows and accents (with the bloom) and are remembered
- * across exhibits.
+ * across exhibits. c cycles the exhibit scale: real, 1.17 and 0.83, the cover scales
+ * of a laptop and a phone.
  */
 mountStorybook(document, ({ host, nav, panel }) => {
   const log = import.meta.env.DEV;
@@ -40,9 +42,12 @@ mountStorybook(document, ({ host, nav, panel }) => {
     let stage: Stage | null = null, current: Exhibit | null = null, bloom: BloomProbe | null = null;
     let frame: { box: Box; h?: number } | null = null;
     const layers: Record<StageLayer, boolean> = { ground: true, shadow: true, accents: true };
+    let coverScale: number | null = null;
     const fit = (): void => {
       if (!stage || !frame) return;
-      const f = fitTransform(boxFrame(frame.box, frame.h), host.clientWidth, host.clientHeight);
+      const w = host.clientWidth, h = host.clientHeight;
+      const real = fitTransform(boxFrame(frame.box, frame.h), w, h);
+      const f = coverScale === null ? real : fixedScaleFit(real, w, h, coverScale);
       stage.container.position.set(f.x, f.y);
       stage.container.scale.set(f.scale);
     };
@@ -90,6 +95,7 @@ mountStorybook(document, ({ host, nav, panel }) => {
       if (current && (NEXT.has(ev.key) || PREV.has(ev.key))) { ev.preventDefault(); location.hash = stepExhibit(current.id, NEXT.has(ev.key) ? 1 : -1).id; }
       const layer = LAYER_KEY[ev.key];
       if (layer && stage && !ev.repeat) { layers[layer] = !layers[layer]; stage.setLayer(layer, layers[layer]); if (log) console.info(`[storybook] ${layer}: ${layers[layer] ? "visible" : "hidden"}`); }
+      if (ev.key === "c" && !ev.repeat) { coverScale = nextCoverScale(coverScale); fit(); if (log) console.info(`[storybook] cover scale: ${coverScale ?? "real"}`); }
       if (ev.key === "6" && stage) { stage.setBloom(nextBloomMode(stage.bloom)); if (log) console.info(`[storybook] bloom by hand: ${stage.bloom}`); }
     });
 

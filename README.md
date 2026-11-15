@@ -121,7 +121,8 @@ piece whose lights flip ends every 4 s), with its
 animation and a readout panel (solids, ground, faces, accents, box, materials).
 The URL hash picks the exhibit (`#faro`); arrows (`←`/`→`, `↑`/`↓`)
 or `j`/`k` move to the next or the previous one; `g`, `h` and `a` hide or
-show ground, shadows and accents; `6` rotates the bloom, `?bloom=` forces it and
+show ground, shadows and accents; `6` rotates the bloom; `c` cycles the exhibit
+scale (real, 1.17 and 0.83, the cover scales of a laptop and a phone); `?bloom=` forces it and
 `?speed=` scales the animation clock up to 100 (`?speed=0`
 freezes it; above 100 it is 1). The seam at 90 added ten exhibits:
 `#dique-flotante`, `#patio-contenedores` and `#grua-muelle` (shipyard),
