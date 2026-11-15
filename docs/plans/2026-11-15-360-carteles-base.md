@@ -29,7 +29,7 @@
 - **Glyph design** is free within the grid rules of the issue. Use polylines (4–8 vertices for the curves of `o e s g P R B`), no zero-length segments, and the `i` dot as its own polyline in y 6..6.6.
 - **Placeholders are centered.** `helipadSign` centers the word's (width × capHeight) text rectangle on the slab center. `helipadTubeSign` and `seaPlatform` center the word's width on the origin of their plane (baseline at the stated z). The placeholders are not supposed to fit their bases: children #361–#363 replace them.
 - **Platform piles** stand at x ∈ {−6.5, 0, 6.5}, y ∈ {−5.5, 5.5}, `at.z = −1`, `h = 2.2`. The deck is `prism` at (−7, −6, 1.2), 14 × 12 × 0.4.
-- **Graffiti wall** at c = (0, 0), d = (1, −1)/√2, n = (1, 1)/√2, footprint `[D, C, B, A]` with D = c − d·L/2 + n·t/2, C = c + d·L/2 + n·t/2, B = c + d·L/2 − n·t/2, A = c − d·L/2 − n·t/2, `z: 0`, `h: 11.5`.
+- **Graffiti wall** with L = `measureText("Portfolio", 8.55).width + 5` and t = 1.2 (both from the issue), at c = (0, 0), d = (1, −1)/√2, n = (1, 1)/√2, footprint `[D, C, B, A]` with D = c − d·L/2 + n·t/2, C = c + d·L/2 + n·t/2, B = c + d·L/2 − n·t/2, A = c − d·L/2 − n·t/2, `z: 0`, `h: 11.5`.
 - **`ribs` and `door`** return `PlateBox` / `PlateBox[]`. Every function that reads `u0/u1/z0/z1` takes `PlateBox` (`plateWindows` in `reconversion.ts`). `publishGlass` skips `poly` plates. Test helpers that build rect plates use `PlateBox`.
 - **Cover-scale log:** `[storybook] cover scale: ${coverScale ?? "real"}` (prints `real`, `1.17`, `0.83`).
 
@@ -49,7 +49,7 @@
 - Create: `src/kit/lettering.ts`
 - Test: `src/kit/lettering.test.ts`
 - Modify: `CONTEXT.md` (append `### Lettering`), `README.md` (the kit paragraph, around line 91, gets one sentence naming `src/kit/lettering.ts`)
-- Test: `src/docs-glossary.test.ts` (Lettering: defined, and its `Code:` refs exist and name identifiers)
+- Test: `src/docs-glossary.test.ts` (Lettering: defined, and its `Code:` refs exist and name identifiers). Add a `SIGN_TERMS = ["Sign", "Lettering"]` loop that reuses `section`/`codeRefs`/`hasIdent`; `KIT_TERMS` and its order test are not touched
 
 **Interfaces:**
 - Produces: `TextPlane { origin: Vec3; u: Vec3; v: Vec3 }`, `toWorld(plane, a, b): Vec3`, `diagonalWall(at: Vec3): TextPlane`, `roofDiagonal(at: Vec3): TextPlane`, `facade(a: Vec2, b: Vec2, z0: number): TextPlane`, `GRID`, `GLYPHS: Readonly<Record<string, { width: number; strokes: readonly Vec2[][] }>>`, `measureText(text, size): { width; capHeight; xHeight; descender }`, `strokeText(text, plane, size, width): Vec3[][]`, `fillText(text, size, width): Vec2[][]`, `xHeightPx(size, scale): number`, `sizeForXHeight(px, scale): number`.
@@ -89,7 +89,7 @@
 ### Task 3: `poly` plate
 
 **Files:**
-- Modify: `src/iso/plate.ts`, `src/iso/solids.ts` (re-export `PlateBox`, `PlatePoly`), `src/kit/piece.ts:65`, `src/kit/forms/reconversion.ts` (`plateWindows` takes `PlateBox`; `publishGlass` skips `poly`), `src/kit/forms/industrial.ts` (`door` returns `PlateBox`), plus any other file `tsc` flags for reading box fields off a `Plate`
+- Modify: `src/iso/plate.ts`, `src/iso/solids.ts` (re-export `PlateBox`, `PlatePoly`), `src/kit/piece.ts:65`, `src/kit/forms/reconversion.ts` (`plateWindows` takes `PlateBox`; `publishGlass` skips `poly`), `src/kit/forms/industrial.ts` (`door` returns `PlateBox`), plus the test helpers that build rect plates through `Partial<Plate>` (`src/iso/solids.test.ts:1295`, `:1399`) and read `u0` off `ribs` (`src/iso/plate.test.ts`). A grep of `.u0`/`z0`/`: Plate` shows that the only non-test readers of box fields are `piece.ts:65` and `reconversion.ts:24-32`. `src/scenes/station.ts:150` reads `plateOutline`, which already works for `poly`. Every other file only builds `rect`/`disc` literals, which a union accepts
 - Test: `src/iso/plate.test.ts`, `src/iso/solids.test.ts`, `src/kit/piece.test.ts`
 
 **Interfaces:**
@@ -146,3 +146,17 @@
 - [ ] **Step 3:** Implement the three modules (geometry per the issue §5 and the Decisions above; text quads become accents through `accents.push(...neon(q, color[, alpha]))`). Register the four exhibits. Append `### Sign` to `CONTEXT.md` with a `Code:` line naming `src/scenes/sign-helipad.ts` (`helipadSign`, `helipadTubeSign`), `src/scenes/sign-graffiti.ts` (`graffitiWall`), `src/scenes/sign-platform.ts` (`seaPlatform`), `src/lab/exhibits.ts` (`EXHIBITS`).
 - [ ] **Step 4:** `npm test` and `npm run typecheck` → green. `git diff --stat origin/feature/352-carteles-zona -- src/world src/main.ts index.html src/style.css` → empty.
 - [ ] **Step 5:** Commit `feat(#360): sign placeholder exhibits`.
+
+## Assumptions (from grilling)
+
+- **Stroke thickness in text space**, not world space. Rejected: offsetting in world units inside the plane, which on `roofDiagonal` would make the strokes along v look 1.98× thinner on screen than on `diagonalWall`, against the issue's "en pantalla el aspecto es idéntico al de `diagonalWall`".
+- **Quad corner order and axis-aligned vertex squares.** Rejected: squares rotated to the segment. The issue only says "un cuadrado de lado `width` centrado en cada vértice interior".
+- **Space** advances by `GRID.space` and draws nothing. Rejected: throwing on `" "`, which would make `GRID.space` dead.
+- **Placeholder placement** (centered) and **pile positions** (x ∈ {−6.5, 0, 6.5}, y ∈ {−5.5, 5.5}). The issue gives sizes and z but not plan positions; children #361–#363 replace both.
+- **Sign/Lettering glossary check** is a new `SIGN_TERMS` loop in `docs-glossary.test.ts`. Rejected: appending them to `KIT_TERMS`, which would change the "kit entries in order" test.
+
+## Grilling
+
+- Rounds: 1 (no substantial change to the plan: one Decisions line, one Files line and one test line refined). Griller model: fable.
+- Questions: 20. Sources: ISSUE 13 (Q1 grid/measure values, Q2, Q3 partial, Q5, Q6, Q9, Q10 `repeat`, Q12, Q13, Q14 untouched files, Q15, Q16, Q17), CODE 11 (Q4 `plate.ts` `plateFaces`/`plateOutline`; Q5 `plate.ts` doc comment; Q7 grep; Q8 `solids.test.ts` inline snapshots and `__snapshots__/solids.test.ts.snap` cover existing solids only; Q10 `storybook.ts:89` alt/ctrl/meta early return; Q11 `host-keyboard.test.ts:13`, `storybook.ts:92` `!ev.repeat` on layers; Q13 contiguity in `exhibits.test.ts`; Q14 `ACCENT_COLORS` is only read by `ships-reference.test.ts:90` as membership; Q15 `props.ts:84-88` halo 0.6, no caller can pass a 3rd arg today; Q18 `src/iso/project.ts:4` exports `Z_SCALE`; Q19 `docs-glossary.test.ts` `codeRefs` reads several files on one line), NO SOURCE 4 → technical assumptions (Q1 corner order/squares/space, Q3 text-space thickness, Q12 pile positions, Q20 one commit per task, `tsc` points at each missed reader).
+- Spec ambiguities: none. Out of scope / follow-ups: none.
