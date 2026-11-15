@@ -38,7 +38,7 @@ Decididas en la revisión del plan (etapa 2), sin fuente escrita; cualquier opci
 4. **"La ciudad en al menos un tercio del ancho"** se mide sobre la captura de 390×750: el ancho de pantalla que ocupan los edificios de Resume. Un muestreo geométrico de `worldZoneAt(...) === "cv"` por columna ya da 0,73 hoy, así que no distingue, y por eso no se lo usa como test.
 5. **Zonas y cuadro.** Los cuatro marcos de `zoneFrame` (`portfolio`, `cv`, `blog`, `all`) caen dentro de la caja proyectada de `coverFrame(16/9)` (medido). En una dimensión, si la ventana contiene la zona y es más angosta que el cuadro, correrla lo mínimo para que entre en el cuadro la deja conteniendo la zona. Así `clampToCover` no saca de pantalla una zona que el ajuste ya mostraba entera. No se agrega un test aparte.
 6. **Sin ADR nuevo.** `docs/adr/` solo tiene 0001 (velo) y 0002 (costura); ninguno trata del encuadre. El cambio sigue un spec aprobado.
-7. **Capturas** en `docs/superpowers/specs/assets/351-encuadre/`, `before`/`after` en PNG, como en `assets/165-neones/`.
+7. **Capturas** en `docs/superpowers/specs/assets/351-encuadre/`, `before`/`after` en JPEG (calidad 80, para no sumar 12 MB de PNG), con la convención `before`/`after` de `assets/165-neones/`.
 
 ## Review Focus
 
