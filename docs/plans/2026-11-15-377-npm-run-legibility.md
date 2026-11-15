@@ -29,6 +29,17 @@
 - **Exit code 1** when any table row is ✗ or any level-2 `Violation` is listed.
 - **agent-browser `eval`** prints the JSON of the evaluated value (promises awaited) and exits ≠ 0 on a page error; the script parses stdout with `JSON.parse`.
 
+## Assumptions
+
+From the grilling (stage 2). Each one records the alternative that was rejected.
+
+- `agent-browser eval` stdout is the JSON of the value (strings quoted, promises awaited, exit ≠ 0 on page error). This was observed with agent-browser 0.27.0 (`eval 'JSON.stringify({a:1})'` → `"{\"a\":1}"`, `eval 'Promise.resolve("ab")'` → `"ab"`); no document states it. It is parsed by the tested `parseEval` (rejected: returning `JSON.stringify` from the page and stripping quotes by hand).
+- `eng` data `4.0.0_best_int`, see Decisions (rejected: `tessdata_fast` from GitHub. It is not the tesseract.js default `langPath`, which is what the issue says to download from).
+- tesseract.js honours `tessedit_char_whitelist` in LSTM mode (Tesseract ≥ 4.1). If the OCR reads characters outside the whitelist, the run shows it in the report's OCR row and Task 7 reports it instead of tuning the sign (rejected: legacy OEM, which needs the 10.9 MB data).
+- An empty `holes` mask gives NaN and a ✗. Blog has counters (`B`, `o`, `g`) and air between every pair; a sign with neither would be a design to review, not a pass (rejected: skipping the halo row).
+- If Task 7 is still ✗ after three rounds, the edits that improved the numbers are kept, the report is committed as it is, and the PR states which row fails (rejected: reverting them, which hides the evidence).
+- The vite child is `node …/vite.js`, not the `.bin` wrapper, so that `kill()` stops it (rejected: `npx vite`, whose grandchild survives the kill).
+
 ## File map
 
 - Modify `src/lab/storybook.ts` (hook + header), `src/lab/storybook.test.ts` (hook test).
@@ -67,7 +78,7 @@
 - [ ] **Step 1: Write the failing test** in `storybook.test.ts`, `describe("lab hook (#377)")`:
   - `src` contains `if (import.meta.env.DEV)` followed (same block) by `window.__lab = `.
   - `src` matches `/interface LabHook/` and `/declare global \{\s*interface Window \{\s*__lab\?: LabHook/`.
-  - for each of `exhibitId coverScale setCoverScale bloom fit hostSize pixels`: `src` matches `new RegExp(`\\b${k}\\b`)` inside the `window.__lab = {…}` literal (slice from `window.__lab = ` to the next `};`).
+  - for each of `exhibitId coverScale setCoverScale bloom fit hostSize pixels`: the `interface LabHook { … }` body (slice from `interface LabHook {` to the first `\n}`) declares it; `tsc` then guarantees the `window.__lab = {…}` literal implements every member (the global `Window.__lab?: LabHook` types it).
   - `src` contains `extract.pixels(` and `resolution: 2`.
   - header comment (joined as in the `c` test) contains `window.__lab`.
 - [ ] **Step 2:** `npx vitest run src/lab/storybook.test.ts` → the new tests FAIL.
@@ -113,7 +124,7 @@
 
 - [ ] **Step 1: Failing tests:**
   - `fillPolygon` of the square (2,1)–(5,4) on a 8×6 mask fills exactly the 9 pixels with i ∈ {2,3,4}, j ∈ {1,2,3}; a triangle fills a pixel whose center is on its edge.
-  - `fillDisc` center (4,4) r 1.5 on an 8×8 mask fills exactly the pixels whose center satisfies `hypot(i + 0.5 − 4, j + 0.5 − 4) ≤ 1.5` (the 4×4 block i, j ∈ {2..5} minus nothing: assert against that brute-force set).
+  - `fillDisc` center (4,4) r 1.5 on an 8×8 mask fills exactly the pixels whose center satisfies `hypot(i + 0.5 − 4, j + 0.5 − 4) ≤ 1.5` (assert against that brute-force set; it is the 2×2 block i, j ∈ {3, 4}).
   - `toImage(v3(0,0,0), {x:10,y:20,scale:2}, {x:4,y:6,w:…})` = `{x:12, y:28}`; a point with z = 1 moves up by `1.4·2·2` image px.
   - `wordCrop` of `BLOG_SIGN` at a fit that places it fully inside contains every projected quad point with ≥ `3·1.35·1.4·scale − 1` CSS px of margin; with a fit that pushes it past the left edge, `x === 0`.
   - `signMasks(BLOG_SIGN, fit, crop)`: core, ring and holes are pairwise disjoint; each is non-empty; at least one pixel at each `counters[*].at` mapped point is in `holes`.
@@ -142,11 +153,12 @@
   export const normalizeOcr = (s: string): string => …; // removes all whitespace
   export interface Row { metric: string; value: string; limit: string; ok: boolean }
   export function verdicts(m: Measures, ocr: string, text: string, scale: number): Row[]; // three rows: contrast, halo, OCR
+  export function parseEval<T>(stdout: string): T; // JSON.parse of trimmed stdout; throws `legibility: unexpected eval output: <first 80 chars>`
   export function pickContexts(exhibits: readonly Exhibit[], argv: readonly string[]): ContextExhibit[]; // --only <id>; throws with the list of context ids when unknown
   ```
   Rows: `contraste` value `x.xx:1`, limit `≥ 4.5:1` / `≥ 3:1`; `halo` value `0.xx`, limit `≤ 0.5`; `OCR` value the normalized text in backticks, limit `` = `Blog` `` at 1.17 and `` ≈ `Blog` (sin mayúsculas) `` at 0.83. `NaN` makes a row ✗.
 
-- [ ] **Step 1: Failing tests:** `median([3,1,2]) === 2`, `median([1,2,3,4]) === 2.5`, `median([])` is NaN; `measure` on a synthetic 4×1 image (core white, ring black, holes 50 % gray) gives contrast `(1.05)/(0.05)` and halo ≈ `relativeLuminance(0x808080)`; `ocrImage` on a 2×1 image [white, black] with core 1, ring 0 gives 6×3 with the left 3 columns black (0,0,0,255) and the right 3 white; with core 0, ring 1 (dark letters) the left 3 columns are white; `normalizeOcr(" Bl og\n") === "Blog"`; `verdicts` at 1.17 with OCR `"blog"` and text `"Blog"` → OCR row ✗, at 0.83 ✓; contrast 4.4 at 1.17 ✗ and at 0.83 ✓; halo 0.51 ✗; NaN core → contrast and halo ✗; `pickContexts(EXHIBITS, [])` returns every context, `["--only","plataforma-escena"]` returns that one, `["--only","faro"]` and `["--only","nope"]` throw with a message containing `plataforma-escena`.
+- [ ] **Step 1: Failing tests:** `median([3,1,2]) === 2`, `median([1,2,3,4]) === 2.5`, `median([])` is NaN; `measure` on a synthetic 4×1 image (core white, ring black, holes 50 % gray) gives contrast `(1.05)/(0.05)` and halo ≈ `relativeLuminance(0x808080)`; `ocrImage` on a 2×1 image [white, black] with core 1, ring 0 gives 6×3 with the left 3 columns black (0,0,0,255) and the right 3 white; with core 0, ring 1 (dark letters) the left 3 columns are white; `normalizeOcr(" Bl og\n") === "Blog"`; `verdicts` at 1.17 with OCR `"blog"` and text `"Blog"` → OCR row ✗, at 0.83 ✓; contrast 4.4 at 1.17 ✗ and at 0.83 ✓; halo 0.51 ✗; NaN core → contrast and halo ✗; `parseEval('"ab"\n') === "ab"`, `parseEval('{"x":1,"y":2,"scale":3}')` deep-equals the object, `parseEval("true") === true`, `parseEval("[object Object]")` throws; `pickContexts(EXHIBITS, [])` returns every context, `["--only","plataforma-escena"]` returns that one, `["--only","faro"]` and `["--only","nope"]` throw with a message containing `plataforma-escena`.
 - [ ] **Step 2:** run → FAIL. **Step 3:** implement. **Step 4:** run → PASS, typecheck PASS.
 - [ ] **Step 5: Commit** `feat(#377): level-3 metrics, OCR preprocess and verdicts`.
 
@@ -162,7 +174,7 @@
   ```ts
   export interface ReportEntry { id: string; text: string; scale: number; rows: Row[]; crop: string; ocrCrop: string } // file names, relative to the report
   export const PREPROCESS: string; // the one-paragraph description written in the report and the script header
-  export function scaleTag(scale: number): string;  // 1.17 → "117", 0.83 → "083"
+  export function scaleTag(scale: number): string;  // String(Math.round(scale·100)).padStart(3, "0"): 1.17 → "117", 0.83 → "083"
   export function renderReport(r: { date: string; viewport: string; entries: ReportEntry[]; violations: { id: string; scale: number; list: Violation[] }[] }): string;
   export const reportFails = (r: { entries: ReportEntry[]; violations: { list: Violation[] }[] }): boolean => …;
   ```
@@ -182,11 +194,11 @@
 - Consumes: everything in Tasks 1–5; `checkSign`, `COVER_LAPTOP`, `COVER_PHONE`; `contextScene` (`src/lab/crop.ts`) and `assembleWorld` for the level-2 footer (as in `src/lab/signs.test.ts`).
 
 - [ ] **Step 1:** `npm i -D tesseract.js@7.0.0`; `package.json` script `"legibility": "tsx scripts/legibility.ts"`. Download `https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz` to `scripts/tessdata/` (re-read the default `langPath` in `node_modules/tesseract.js/src/worker-script/index.js` first; if it changed, use the new one and say so in the PR).
-- [ ] **Step 2: Implement `scripts/legibility.ts`.** Header comment: what it does, that it is level 3 of spec §4.3, that it does not run in CI, the preprocess (`PREPROCESS`), the session and the port. Flow, in `main()` wrapped in `try/finally` (finally: `agent-browser close`, kill vite):
+- [ ] **Step 2: Implement `scripts/legibility.ts`.** Header comment: what it does, that it is level 3 of spec §4.3, that it does not run in CI, the preprocess (`PREPROCESS`), the session and the port. Flow, in `main()` wrapped in `try/finally` (finally: `agent-browser close` with its errors ignored, since the session may never have opened; then kill vite):
   1. `pickContexts(EXHIBITS, process.argv.slice(2))` (before anything starts). Check `agent-browser --version` runs, else throw `"legibility: agent-browser not found on PATH"`.
-  2. spawn `node_modules/.bin/vite --port 5179 --strictPort` (cwd repo root); poll `fetch("http://localhost:5179/lab/storybook.html")` until 200, 30 s max.
+  2. spawn `process.execPath` with `node_modules/vite/bin/vite.js --port 5179 --strictPort` (cwd repo root; no `.bin` shell wrapper, so `kill()` reaches vite itself); poll `fetch("http://localhost:5179/lab/storybook.html")` every 250 ms until 200, 30 s max, and fail at once with vite's stderr if the child exits first (port taken).
   3. `ab(...args)` = `execFileSync("agent-browser", args, { env: { ...process.env, AGENT_BROWSER_SESSION: "legibility" }, maxBuffer: 64 MB })`; `evalJson<T>(js)` = `JSON.parse(stdout)`. `ab("set","viewport","1600","900","2")`.
-  4. per exhibit and scale `[COVER_LAPTOP, COVER_PHONE]`: `open "http://localhost:5179/lab/storybook.html?bloom=on&speed=0#<id>"`; poll `evalJson("window.__lab?.exhibitId === '<id>' && window.__lab.bloom === 'on'")` every 500 ms up to 30 s, else throw `legibility: window.__lab did not appear for <id> in 30 s`; `setCoverScale(scale)`; read `fit()` and `hostSize()`; `wordCrop`, `signMasks`; `pixels` → `Buffer.from(b64, "base64")`; `measure`; `ocrImage`; OCR with one worker created once: `createWorker("eng", OEM.LSTM_ONLY, { langPath: <abs scripts/tessdata>, gzip: true, cacheMethod: "none" })`, `setParameters({ tessedit_pageseg_mode: PSM.SINGLE_WORD, tessedit_char_whitelist: OCR_WHITELIST })`, `recognize(pngBuffer of the OCR image)`; `normalizeOcr`; `verdicts`.
+  4. per exhibit and scale `[COVER_LAPTOP, COVER_PHONE]`: `open "http://localhost:5179/lab/storybook.html?bloom=on&speed=0#<id>"`; poll `evalJson("window.__lab?.exhibitId === '<id>' && window.__lab.bloom === 'on'")` every 500 ms up to 30 s, else throw `legibility: window.__lab did not appear for <id> in 30 s`; `setCoverScale(scale)`; read `fit()` and `hostSize()`; `wordCrop`, `signMasks`; `pixels` → `Buffer.from(b64, "base64")`, throw if its length ≠ `crop.w·RES · crop.h·RES · 4` (masks and pixels must share the grid); `measure`; `ocrImage`; OCR with one worker created once: `createWorker("eng", OEM.LSTM_ONLY, { langPath: <abs scripts/tessdata>, gzip: true, cacheMethod: "none" })`, `setParameters({ tessedit_pageseg_mode: PSM.SINGLE_WORD, tessedit_char_whitelist: OCR_WHITELIST })`, `recognize(pngBuffer of the OCR image)`; `normalizeOcr`; `verdicts`.
   5. write the four PNGs and `REPORT.md` (`renderReport`, date `new Date().toISOString().slice(0,10)`, viewport `1600×900 @2`) into `docs/superpowers/specs/assets/carteles-legibilidad/` (mkdir -p); level-2 footer: `checkSign(e.sign, scale, contextScene(scene, e).solids)` for every picked exhibit and scale. Print one line per entry; `process.exitCode = reportFails(...) ? 1 : 0`. Any thrown error: print `legibility: <message>` and exit 1.
 - [ ] **Step 3:** README, under the scripts list: `` - `npm run legibility` — level 3 of the sign legibility guardrails: starts its own vite on 5179, opens every context exhibit in agent-browser at 1.17 and 0.83 with bloom, measures contrast, halo and OCR in pixels and writes `docs/superpowers/specs/assets/carteles-legibilidad/REPORT.md` with the crops. Needs agent-browser; not run in CI. ``
 - [ ] **Step 4: Verify:** `npm run typecheck` PASS; `npm test` PASS; `npm run legibility -- --only nope` exits 1 listing `plataforma-escena` without starting vite; `npm run legibility` runs end to end and writes the report (✓ or ✗; Task 7 owns the ✓); `ss -ltn | grep 5179` empty afterwards; with network blocked for the run (`unshare -n` is not needed: check that `REPORT.md` was produced with `langPath` local and grep the script for `http` outside `localhost`).
@@ -202,3 +214,17 @@
 - [ ] **Step 2:** If halo or contrast fail, change only the Blog sign: the `neon` alpha (0.75), drop the tube's `Bleed` halo, darken the panel with `toneOffset`. If OCR fails, adjust glyphs in `src/kit/lettering.ts` keeping `legibility.test.ts`, `lettering.test.ts` and `signs.test.ts` green (`SIGN_FONT` unchanged). Never the world's bloom, never the thresholds. Re-run `npm test` and `npm run legibility`; at most three rounds, then document what fails.
 - [ ] **Step 3:** look at the crops (Read the PNGs) to confirm a person reads `Blog`.
 - [ ] **Step 4: Commit** the report and the crops: `feat(#377): Blog sign at ✓ in level 3 (REPORT.md and crops)`.
+
+## Grilling
+
+- Rounds: 1. The griller's model was `fable`. Revisions after the round were local (one test seam, `parseEval`, plus process and size checks; no task added or removed), so no second round.
+- Questions: 18. Answered from **ISSUE**: 6 (extract applies filters; the `1.4·scale` radius and margin; the halo/contrast definitions; the AC mapping for `--only`, footer and exit 1; report and crops in the PR; DEV-only hook). From **CODE**: 8:
+  - `storybook.ts`: `fit` goes on `stage.container`, `resolution`/`autoDensity`; `coverScale`; `ISO_COLORS` already imported.
+  - `vitest.config.ts` and `tsconfig.json` include `scripts`; `signs.test.ts` imports `exhibits`/`crop` under node, and so does tsx.
+  - `page.ts` `bloomFromSearch`/`speedFromSearch`; `BloomMode` in `stage.ts`.
+  - `COVER_LAPTOP`/`COVER_PHONE` are literals in `legibility.ts:45-47`.
+  - The tesseract `langPath` and local `readCache` at `worker-script/index.js:130-151`.
+  - `signSpec`'s `glyphPlane` and the convex segment quads/squares in `lettering.ts`.
+
+  **NO SOURCE → technical assumption**: 4 (eval stdout format, vite process handling, three failed rounds, the hook test's slice), plus 3 partial ones (best_int vs fast, the LSTM whitelist, empty holes). All are in `## Assumptions`.
+- Spec ambiguities: 0. Follow-up issues opened: none.
