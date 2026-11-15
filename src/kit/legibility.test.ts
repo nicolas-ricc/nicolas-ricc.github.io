@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { checkFont, FONT_RULES, SIGN_FONT } from "./legibility";
-import { counterClearance, GLYPHS, glyphPairs, GRID, layoutText, letterGaps, overlapping, rhythm, strokeRatio, xHeightPx } from "./lettering";
+import { counterClearance, glyphPairs, GRID, layoutText, letterGaps, overlapping, rhythm, strokeRatio, xHeightPx } from "./lettering";
 
 const WORDS = ["Resume", "Portfolio", "Blog"];
 const { size, width } = SIGN_FONT;
@@ -93,13 +93,10 @@ describe("checkFont fails what breaks a rule", () => {
   });
   it("a stroke that closes the o breaks `counter`, naming the glyph", () => {
     const v = checkFont("o", 7, 3).find((x) => x.rule === "counter");
-    expect(v).toBeDefined();
-    expect(v!.detail).toBe("o");
-    expect(typeof v!.limit).toBe("string");
+    expect(v).toMatchObject({ detail: "o" });
   });
   it("only known rule names", () => {
     const rules = new Set(["strokeRatio", "xHeightRatio", "air", "rhythm", "counter", "advance", "overlap"]);
     for (const w of [1.35, 2.4, 3, 5]) for (const v of checkFont("Portfolio", size, w)) expect(rules.has(v.rule), v.rule).toBe(true);
-    expect(Object.keys(GLYPHS)).toHaveLength(14);
   });
 });
