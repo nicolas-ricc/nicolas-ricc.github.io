@@ -10,12 +10,12 @@ import { PLANT, factory } from "../scenes/factory";
 import { BEAM_PERIOD_MS } from "../scenes/sea-anim";
 import { graffitiWall } from "../scenes/sign-graffiti";
 import { helipadSign, helipadTubeSign } from "../scenes/sign-helipad";
-import { seaPlatform } from "../scenes/sign-platform";
+import { BLOG_SIGN, seaPlatform, seaPlatformAt } from "../scenes/sign-platform";
 import { trainLen } from "../scenes/train";
 import { createRng } from "../map/seed";
 import { assembleWorld } from "../world/assemble";
 import { type Box, FRAME_H, HALO_BASE } from "../world/frame";
-import { cropAnimators, cropScene } from "./crop";
+import { contextAnimators, contextScene, cropAnimators, cropScene } from "./crop";
 import { EXHIBITS, GROUPS, type GroupId, outOfView, pickExhibit, stepExhibit } from "./exhibits";
 
 const regions = EXHIBITS.flatMap((e) => (e.kind === "region" ? [e] : []));
@@ -377,5 +377,64 @@ describe("chimneys box (#245)", () => {
       }
       anim.tick(33);
     }
+  });
+});
+
+const contexts = EXHIBITS.flatMap((e) => (e.kind === "context" ? [e] : []));
+
+describe("context exhibits (#376)", () => {
+  const built = (e: (typeof contexts)[number]) => { const out: Solid[] = [], accents: Accent[] = []; e.build(out, accents); return { out, accents }; };
+  /** Like `measure`, on the context scene: the crop plus the sign built whole; its accents and animator count too. */
+  function measureContext(e: (typeof contexts)[number]): { inside: number; withAnim: number; neighbor: number; accents: number } {
+    const cs = contextScene(scene, e), fixed = [...cs.ground, ...cs.solids];
+    const anim = contextAnimators(animators, e).flatMap((a) => a.ids.flatMap((id) => { const l = a.layer(id); return l.kind === "solid" ? l.solids : []; }));
+    const north = (e.box.x0 + e.box.y0) / 2;
+    const own = built(e).accents.flatMap((a) => (a.kind === "dot" ? [(north - project(a.at).y + a.r * HALO_K) / Z_SCALE] : a.pts.map((p) => (north - project(p).y) / Z_SCALE)));
+    const inside = top(fixed.filter((s) => within(s, e.box)));
+    return {
+      inside,
+      withAnim: Math.max(inside, top(anim.filter((s) => within(s, e.box)))),
+      neighbor: top(fixed.filter((s) => s.kind !== "ground" && !within(s, e.box))),
+      accents: Math.max(accentReach(e.box), ...own),
+    };
+  }
+
+  it("at least one: plataforma-escena", () => {
+    expect(contexts.map((e) => e.id)).toContain("plataforma-escena");
+  });
+  it("ids match the hash pattern, zone is the group's", () => {
+    for (const e of contexts) {
+      expect(e.id).toMatch(/^[a-z0-9-]+$/);
+      expect(e.zone, e.id).toBe(GROUPS.find((g) => g.id === e.group)!.zone);
+    }
+  });
+  it("build is deterministic", () => {
+    for (const e of contexts) expect(built(e), e.id).toEqual(built(e));
+  });
+  it("every solid and every accent point of build falls inside the box", () => {
+    for (const e of contexts) {
+      const { out, accents } = built(e);
+      expect(out.length, e.id).toBeGreaterThan(0);
+      for (const s of out) expect(within(s, e.box), `${e.id} ${s.kind}/${s.mat}`).toBe(true);
+      for (const a of accents) for (const p of a.kind === "dot" ? [a.at] : a.pts) {
+        expect(p.x >= e.box.x0 && p.x <= e.box.x1 && p.y >= e.box.y0 && p.y <= e.box.y1, `${e.id} ${a.color}`).toBe(true);
+      }
+    }
+  });
+  it("framing: h covers the structure and its accents and exceeds them by no more than SLACK", () => {
+    for (const e of contexts) {
+      const h = e.h ?? FRAME_H, m = measureContext(e);
+      expect(h, e.id).toBeGreaterThanOrEqual(Math.max(m.inside, m.accents));
+      expect(h, e.id).toBeLessThanOrEqual(Math.max(m.withAnim, m.accents) + SLACK);
+    }
+  });
+  it("neighbors: no solid cut by the edge rises above h", () => {
+    for (const e of contexts) expect(measureContext(e).neighbor, e.id).toBeLessThanOrEqual(e.h ?? FRAME_H);
+  });
+  it("plataforma-escena: after plataforma, in the sea, the issue's box, built by seaPlatformAt, signed BLOG_SIGN", () => {
+    const ids = EXHIBITS.map((e) => e.id);
+    expect(ids.indexOf("plataforma-escena")).toBe(ids.indexOf("plataforma") + 1);
+    const e = contexts.find((x) => x.id === "plataforma-escena")!;
+    expect(e).toMatchObject({ title: "Blog platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 372, y0: 142, x1: 428, y1: 198 }, build: seaPlatformAt, sign: BLOG_SIGN });
   });
 });

@@ -4,6 +4,7 @@ import { shadowPolygon } from "../iso/light";
 import { Z_SCALE } from "../iso/project";
 import { campus } from "../kit/forms/modern";
 import { quayCraneAt } from "../kit/forms/industrial";
+import type { SignSpec } from "../kit/legibility";
 import { lamp, place } from "../kit/props";
 import { STYLES } from "../kit/styles";
 import type { Solid } from "../iso/solids";
@@ -27,7 +28,7 @@ import { BEAM_LEN } from "../scenes/sea-anim";
 import { ship, shipAt, type ShipKind } from "../scenes/ships";
 import { graffitiWall } from "../scenes/sign-graffiti";
 import { helipadSign, helipadTubeSign } from "../scenes/sign-helipad";
-import { seaPlatform } from "../scenes/sign-platform";
+import { BLOG_SIGN, seaPlatform, seaPlatformAt } from "../scenes/sign-platform";
 import { SUBURB_COLS } from "../scenes/sprawl-grid";
 import { SUBSTATION } from "../scenes/substation";
 import { ARENA, AUDITORIUM, TELECOM } from "../scenes/tech";
@@ -47,11 +48,14 @@ export const GROUPS: readonly { id: GroupId; zone: WorldZone; title: string }[] 
   { id: "sea", zone: "blog", title: "Blog: sea" },
 ];
 
-/** A structure to look at on its own: a box over the real world or a relocatable piece built at the origin (with optional `pad`: the ground material under it, and optional `animate`: its animator, which the storybook tags with the exhibit's zone). */
+/** A structure to look at on its own: a box over the real world, a relocatable piece built at the origin (with optional `pad`: the ground material under it, and optional `animate`: its animator, which the storybook tags with the exhibit's zone), or a context exhibit: a crop of the real world plus a sign built whole in world coordinates (`build` adds to the crop; `sign` is what the level-2 oracle checks). */
 export type Exhibit = { id: string; title: string; zone: WorldZone; group: GroupId } & (
   | { kind: "region"; box: Box; h?: number }
   | { kind: "piece"; build: (out: Solid[], accents: Accent[]) => void; pad?: Material; animate?: (opts: { reducedMotion: boolean }) => Animator }
+  | { kind: "context"; box: Box; h?: number; build: (out: Solid[], accents: Accent[]) => void; sign: SignSpec; animate?: (opts: { reducedMotion: boolean }) => Animator }
 );
+
+export type ContextExhibit = Extract<Exhibit, { kind: "context" }>;
 
 const M = 3; // margin: sidewalks, street lamps and short shadows
 
@@ -250,6 +254,8 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "convoy", title: "Convoy with barge", zone: "blog", group: "sea", kind: "piece", build: vessel("barge"), pad: "water" },
   { id: "lancha", title: "Tigre river bus", zone: "blog", group: "sea", kind: "piece", build: vessel("ferry"), pad: "water" },
   { id: "plataforma", title: "Blog platform sign", zone: "blog", group: "sea", kind: "piece", build: seaPlatform, pad: "water" },
+  // h 21: the tallest solid in the box is the sign's upper beam and posts (≈ 20.82); the camera frames it, nothing is clipped.
+  { id: "plataforma-escena", title: "Blog platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 372, y0: 142, x1: 428, y1: 198 }, h: 21, build: seaPlatformAt, sign: BLOG_SIGN },
 ];
 
 /** The exhibit of the hash (`#id` or `id`); empty or unknown, the first. */

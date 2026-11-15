@@ -23,7 +23,8 @@ const PIECES: Record<string, string> = {
   // #361: the helipad sign replaces its two placeholders (A, word on the pad; B, rooftop tube sign)
   "cartel-helipuerto": "7a35f7fb/fb7f1528", "cartel-helipuerto-b": "5a24759f/1e5e066f",
   // #363: plataforma replaces its placeholder (platform, railing, ladder, hut, beacon, Blog sign)
-  plataforma: "a7e8108d/218c4bdc",
+  // #376: the Blog sign uses SIGN_FONT, gains a backing panel and a raised frame, and is built at its site and then translated
+  plataforma: "26c397da/240f731e",
 };
 
 describe("render baseline (#194)", () => {

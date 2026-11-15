@@ -1,11 +1,13 @@
 import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
-import { diagonalWall, measureText, strokeText } from "../kit/lettering";
+import { translate, translateAccent } from "../iso/translate";
+import { SIGN_FONT, signSpec, type SignSpec } from "../kit/legibility";
+import { diagonalWall, measureText } from "../kit/lettering";
 import { neon } from "../kit/props";
 import { prism } from "./city-pieces";
 
-export const SIGN_SIZE = 8.55, SIGN_TUBE = 1.0;
+export const SIGN_SIZE = SIGN_FONT.size, SIGN_TUBE = SIGN_FONT.width;
 export const DECK_TOP = 1.6, HALF_X = 7, HALF_Y = 6, RAIL_POST = 0.15;
 const RAIL_H = 1.0, HANDRAIL_Z = 2.5, HANDRAIL = 0.1;
 const WATER_Z = -1, PILE_TOP = 1.2, PILE_R = 0.3, PILE_INSET = 0.6;
@@ -41,26 +43,53 @@ function ladder(out: Solid[]): void {
   }
 }
 
-const SIGN_BEAM = 0.15, SIGN_POST = 0.2, SIGN_Z = 2.8, WORD_Z = 3.0, POST_INSET = 2, SIGN_MARGIN = 1;
+const SIGN_BEAM = 0.15, SIGN_POST = 0.2, SIGN_Z = 2.8, POST_INSET = 6.5, SIGN_MARGIN = 3;
+const PANEL_PAD = 1.6, PANEL_INSET = 0.4, PANEL_GAP = 0.06, PANEL_T = 0.3;
+
+/** Where the Blog platform stands in the world (open sea between the two buoys): the sign is audited here, in its scene. */
+export const PLATFORM_SITE = v3(400, 170, 0);
+
+const U = v3(Math.SQRT1_2, -Math.SQRT1_2, 0), N = v3(Math.SQRT1_2, Math.SQRT1_2, 0);
 
 /**
- * Blog sign: two steel beams along u = (1, -1, 0)/√2 frame the cyan neon word (L = word width + SIGN_MARGIN), held by two posts that stand behind
- * the frame (toward -n, n = (1, 1, 0)/√2), inset POST_INSET from the beam ends and flush with the beam boxes, as far south-east as the railing's inner faces allow.
+ * Frame geometry of the Blog sign, shared by `sign()` and `BLOG_SIGN`: two steel beams along u = (1, -1, 0)/√2 frame the word and its backing panel
+ * (L = word width + 2·SIGN_MARGIN), held by two posts that stand behind the frame (toward -n, n = (1, 1, 0)/√2), inset POST_INSET from the beam ends and
+ * flush with the beam boxes, as far south-east as the railing's inner faces allow. `c` is the frame center at the origin (add the site for the world).
  */
-function sign(out: Solid[], accents: Accent[]): void {
-  const { width } = measureText("Blog", SIGN_SIZE), L = width + SIGN_MARGIN, u = v3(Math.SQRT1_2, -Math.SQRT1_2, 0), n = v3(Math.SQRT1_2, Math.SQRT1_2, 0);
+const FRAME = (() => {
+  const { width } = measureText("Blog", SIGN_FONT.size), L = width + 2 * SIGN_MARGIN;
   const a = (L / 2 - POST_INSET) * Math.SQRT1_2, d = POST_INSET + (SIGN_POST / 2 + (SIGN_BEAM / 2) * Math.SQRT1_2) * Math.SQRT2;
   const mx = HALF_X - RAIL_POST - SIGN_POST / 2 - a, my = HALF_Y - RAIL_POST - SIGN_POST / 2 - a; // post midpoint: right post at the railing's inner x, left post at its inner y
-  const c = v3(mx + n.x * d, my + n.y * d, 0);
-  const upperZ = SIGN_Z + SIGN_SIZE + SIGN_TUBE;
-  for (const z of [SIGN_Z, upperZ]) out.push({ kind: "beam", from: v3(c.x - (u.x * L) / 2, c.y - (u.y * L) / 2, z), to: v3(c.x + (u.x * L) / 2, c.y + (u.y * L) / 2, z), w: SIGN_BEAM, h: SIGN_BEAM, mat: "steel" });
-  for (const s of [-1, 1]) out.push(prism(mx + s * a - SIGN_POST / 2, my - s * a - SIGN_POST / 2, DECK_TOP, SIGN_POST, SIGN_POST, upperZ + SIGN_BEAM / 2 - DECK_TOP, "steel"));
-  const origin = v3(c.x - (u.x * width) / 2, c.y - (u.y * width) / 2, WORD_Z);
-  for (const q of strokeText("Blog", diagonalWall(origin), SIGN_SIZE, SIGN_TUBE)) accents.push(...neon(q, "cyan", 0.75));
+  const c = v3(mx + N.x * d, my + N.y * d, 0);
+  const panelZ0 = SIGN_Z + SIGN_BEAM / 2; // top face of the lower beam
+  const wordZ = panelZ0 + PANEL_PAD + (2 * SIGN_FONT.size) / 7 + SIGN_FONT.width / 2; // the g's descender (2 grid units) clears the lower beam by PANEL_PAD
+  const panelZ1 = wordZ + SIGN_FONT.size + SIGN_FONT.width / 2 + PANEL_PAD; // bottom face of the upper beam
+  return { width, L, a, mx, my, c, panelZ0, wordZ, panelZ1, upperZ: panelZ1 + SIGN_BEAM / 2 };
+})();
+
+const SITED_C = v3(PLATFORM_SITE.x + FRAME.c.x, PLATFORM_SITE.y + FRAME.c.y, 0);
+const WORD_ORIGIN = v3(SITED_C.x - (U.x * FRAME.width) / 2, SITED_C.y - (U.y * FRAME.width) / 2, FRAME.wordZ);
+
+/** The backing panel of the word: dark, along u, 0.3 thick, PANEL_GAP behind the tube plane, from the lower beam's top face to the upper beam's bottom face. */
+const PANEL: Solid & { kind: "poly" } = (() => {
+  const half = FRAME.L / 2 - PANEL_INSET, P = (s: number, b: number) => ({ x: SITED_C.x + U.x * s - N.x * b, y: SITED_C.y + U.y * s - N.y * b });
+  return { kind: "poly", footprint: [P(-half, PANEL_GAP), P(half, PANEL_GAP), P(half, PANEL_GAP + PANEL_T), P(-half, PANEL_GAP + PANEL_T)], z: FRAME.panelZ0, h: FRAME.panelZ1 - FRAME.panelZ0, mat: "officeDark" };
+})();
+
+/** The Blog sign as the legibility oracle sees it: the word on the frame's diagonal plane at the site, backed by the panel. */
+export const BLOG_SIGN: SignSpec = signSpec({ id: "plataforma", text: "Blog", ...SIGN_FONT, color: "cyan", plane: diagonalWall(WORD_ORIGIN), style: "stroke", backing: [PANEL] });
+
+/** The sign at the site: frame, posts and panel as solids, the word as cyan neon accents of `BLOG_SIGN`. */
+function sign(out: Solid[], accents: Accent[]): void {
+  const { L, a, mx, my, upperZ } = FRAME, { x: cx, y: cy } = SITED_C, ox = PLATFORM_SITE.x, oy = PLATFORM_SITE.y;
+  for (const z of [SIGN_Z, upperZ]) out.push({ kind: "beam", from: v3(cx - (U.x * L) / 2, cy - (U.y * L) / 2, z), to: v3(cx + (U.x * L) / 2, cy + (U.y * L) / 2, z), w: SIGN_BEAM, h: SIGN_BEAM, mat: "steel" });
+  for (const s of [-1, 1]) out.push(prism(ox + mx + s * a - SIGN_POST / 2, oy + my - s * a - SIGN_POST / 2, DECK_TOP, SIGN_POST, SIGN_POST, upperZ + SIGN_BEAM / 2 - DECK_TOP, "steel"));
+  out.push({ ...PANEL, footprint: PANEL.footprint.map((q) => ({ ...q })) }); // copies: a consumer that mutates the scene must not reach BLOG_SIGN
+  for (const g of BLOG_SIGN.glyphs) for (const q of g.quads) accents.push(...neon(q.map((c) => ({ ...c })), "cyan", 0.75));
 }
 
-/** Sea platform: six steel piles, a deck with railing, ladder, hut and beacon mast; and the Blog sign: cyan neon word in a two-beam steel frame on two posts. */
-export function seaPlatform(out: Solid[], accents: Accent[]): void {
+/** Sea platform at the origin: six steel piles, a deck with railing, ladder, hut and beacon mast. */
+function platform(out: Solid[], accents: Accent[]): void {
   for (const x of [-HALF_X + PILE_INSET, 0, HALF_X - PILE_INSET]) {
     for (const y of [-HALF_Y + PILE_INSET, HALF_Y - PILE_INSET]) out.push({ kind: "cylinder", at: v3(x, y, WATER_Z), r: PILE_R, h: PILE_TOP - WATER_Z, sides: 6, mat: "steel" });
   }
@@ -76,6 +105,21 @@ export function seaPlatform(out: Solid[], accents: Accent[]): void {
   const mast = v3(6.6, -5.6, DECK_TOP), mastH = 4;
   out.push({ kind: "cylinder", at: mast, r: 0.15, h: mastH, sides: 6, mat: "steel" });
   accents.push({ kind: "dot", at: v3(mast.x, mast.y, mast.z + mastH), r: 0.5, color: "cyan" });
+}
 
+/** The whole platform at `PLATFORM_SITE`: the deck and its fittings built at the origin and moved there, the Blog sign built at the site. */
+export function seaPlatformAt(out: Solid[], accents: Accent[]): void {
+  const solids: Solid[] = [], dots: Accent[] = [];
+  platform(solids, dots);
+  for (const s of solids) out.push(translate(s, PLATFORM_SITE.x, PLATFORM_SITE.y));
+  for (const d of dots) accents.push(translateAccent(d, PLATFORM_SITE.x, PLATFORM_SITE.y));
   sign(out, accents);
+}
+
+/** Sea platform with its Blog sign at the origin (a relocatable piece): `seaPlatformAt` moved by −PLATFORM_SITE. */
+export function seaPlatform(out: Solid[], accents: Accent[]): void {
+  const solids: Solid[] = [], dots: Accent[] = [];
+  seaPlatformAt(solids, dots);
+  for (const s of solids) out.push(translate(s, -PLATFORM_SITE.x, -PLATFORM_SITE.y));
+  for (const d of dots) accents.push(translateAccent(d, -PLATFORM_SITE.x, -PLATFORM_SITE.y));
 }

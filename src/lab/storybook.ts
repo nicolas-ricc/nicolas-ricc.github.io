@@ -8,14 +8,15 @@ import { type Box, boxFrame, fitTransform } from "../world/frame";
 import { type BloomMode, buildStage, type Stage, type StageLayer } from "../world/stage";
 import { runBoot } from "./boot";
 import { fixedScaleFit, nextCoverScale } from "./cover-scale";
-import { cropAnimators, cropScene, pieceScene, readout, solidsBox } from "./crop";
+import { contextAnimators, contextScene, cropAnimators, cropScene, pieceScene, readout, solidsBox } from "./crop";
 import { EXHIBITS, type Exhibit, GROUPS, pickExhibit, stepExhibit } from "./exhibits";
 import { bloomFromSearch, nextBloomMode, speedFromSearch } from "./page";
 import { buildIndex, markCurrent, mountStorybook, renderReadout } from "./storybook-ui";
 
 /**
  * Structures storybook: one exhibit at a time, cropped from the world by its
- * box or built alone at the origin (pieces). The hash picks the exhibit; arrows
+ * box or built alone at the origin (pieces); context exhibits are the crop plus
+ * a sign built whole in world coordinates. The hash picks the exhibit; arrows
  * and j/k only write the hash. 6 rotates the bloom; ?bloom= forces it and ?speed=
  * scales the clock up to 100 (?speed=0 freezes it), as in page.ts. g, h and a
  * hide or show ground, shadows and accents (with the bloom) and are remembered
@@ -59,6 +60,10 @@ mountStorybook(document, ({ host, nav, panel }) => {
       if (e.kind === "region") {
         // the same box for both: the crop memo is keyed by Box identity
         src = [cropScene(scene, e.box), cropAnimators(animators, e.box)];
+        stage = buildStage(...src);
+        frame = { box: e.box, h: e.h };
+      } else if (e.kind === "context") {
+        src = [contextScene(scene, e), contextAnimators(animators, e, reducedMotion)];
         stage = buildStage(...src);
         frame = { box: e.box, h: e.h };
       } else {

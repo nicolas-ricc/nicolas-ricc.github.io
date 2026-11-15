@@ -156,7 +156,7 @@ function insideConvex(q: Vec2, P: Vec2[]): boolean {
 }
 
 /** Distance between convex polygons: 0 when they cross or nest, else the least point-to-segment distance over edge pairs. */
-function polygonDistance(A: Vec2[], B: Vec2[]): number {
+export function polygonDistance(A: Vec2[], B: Vec2[]): number {
   const edges = (P: Vec2[]) => P.map((v, i) => [v, P[(i + 1) % P.length]!] as const);
   if (A.some((v) => insideConvex(v, B)) || B.some((v) => insideConvex(v, A))) return 0;
   let best = Infinity;
