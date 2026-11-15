@@ -279,9 +279,9 @@ describe("contextScene / contextAnimators (#376)", () => {
   // the sign straddles the east edge; its accent has a single point inside
   const signSolid = prism(9, 4, 3);
   const signAccent: Accent = { kind: "poly", pts: [v3(9.5, 5, 2), v3(30, 5, 2), v3(30, 6, 2)], color: "cyan", alpha: 0.75 };
-  const base = { id: "test-escena", title: "Test", zone: "blog", group: "sea", kind: "context", box, h: 6,
+  const base: ContextExhibit = { id: "test-escena", title: "Test", zone: "blog", group: "sea", kind: "context", box, h: 6,
     build: (out: Solid[], accents: Accent[]) => { out.push(signSolid); accents.push(signAccent); },
-    sign: { id: "test", text: "l", size: 10.3, width: 1.35, color: "cyan", glyphs: [], backing: [] } } as const;
+    sign: { id: "test", text: "l", size: 10.3, width: 1.35, color: "cyan", glyphs: [], backing: [] } };
   const e: ContextExhibit = { ...base };
 
   it("the crop of the world plus what build emits, whole", () => {

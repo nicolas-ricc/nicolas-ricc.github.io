@@ -28,7 +28,7 @@ import { BEAM_LEN } from "../scenes/sea-anim";
 import { ship, shipAt, type ShipKind } from "../scenes/ships";
 import { graffitiWall } from "../scenes/sign-graffiti";
 import { helipadSign, helipadTubeSign } from "../scenes/sign-helipad";
-import { seaPlatform } from "../scenes/sign-platform";
+import { BLOG_SIGN, seaPlatform, seaPlatformAt } from "../scenes/sign-platform";
 import { SUBURB_COLS } from "../scenes/sprawl-grid";
 import { SUBSTATION } from "../scenes/substation";
 import { ARENA, AUDITORIUM, TELECOM } from "../scenes/tech";
@@ -254,6 +254,8 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "convoy", title: "Convoy with barge", zone: "blog", group: "sea", kind: "piece", build: vessel("barge"), pad: "water" },
   { id: "lancha", title: "Tigre river bus", zone: "blog", group: "sea", kind: "piece", build: vessel("ferry"), pad: "water" },
   { id: "plataforma", title: "Blog platform sign", zone: "blog", group: "sea", kind: "piece", build: seaPlatform, pad: "water" },
+  // h 21: the tallest solid in the box is the sign's upper beam and posts (≈ 20.82); the camera frames it, nothing is clipped.
+  { id: "plataforma-escena", title: "Blog platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 372, y0: 142, x1: 428, y1: 198 }, h: 21, build: seaPlatformAt, sign: BLOG_SIGN },
 ];
 
 /** The exhibit of the hash (`#id` or `id`); empty or unknown, the first. */
