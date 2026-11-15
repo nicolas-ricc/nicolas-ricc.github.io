@@ -53,6 +53,9 @@ describe("lettering grid and glyphs", () => {
     const dotLine = GLYPHS.i!.strokes.find((s) => s.every((p) => p.y >= 6 && p.y <= 6.6));
     expect(dotLine).toBeDefined();
   });
+  it("curve polylines (o e s g P R B) have at most 8 vertices", () => {
+    for (const c of "oesgPRB") for (const s of GLYPHS[c]!.strokes) expect(s.length, c).toBeLessThanOrEqual(8);
+  });
   it("an unknown character throws", () => {
     expect(() => measureText("x", 7)).toThrow();
     expect(() => strokeText("Box", diagonalWall(v3(0, 0, 0)), 7, 1)).toThrow();
@@ -81,6 +84,9 @@ describe("text planes", () => {
     expect(r.u.y).toBeCloseTo(-Math.SQRT1_2, 12);
     const aspect = (p: TextPlane) => { const s = screenAxes(p); return Math.hypot(s.b.x, s.b.y) / Math.hypot(s.a.x, s.a.y); };
     expect(Math.abs(aspect(r) / aspect(diagonalWall(v3(0, 0, 0))) - 1)).toBeLessThan(0.02);
+  });
+  it("facade with coincident points throws", () => {
+    expect(() => facade({ x: 1, y: 1 }, { x: 1, y: 1 }, 0)).toThrow();
   });
   it("facade along x: origin (a, z0), u = (1, 0, 0), v = (0, 0, 1)", () => {
     const f = facade({ x: 0, y: 0 }, { x: 5, y: 0 }, 2);
