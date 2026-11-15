@@ -135,6 +135,65 @@ export function advances(text: string, size: number): number[] {
   return out;
 }
 
+const cross = (o: Vec2, a: Vec2, b: Vec2): number => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+
+/** True when segments a-b and c-d intersect, touching included. */
+function segmentsCross(a: Vec2, b: Vec2, c: Vec2, d: Vec2): boolean {
+  const d1 = cross(a, b, c), d2 = cross(a, b, d), d3 = cross(c, d, a), d4 = cross(c, d, b);
+  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return true;
+  const on = (o: Vec2, e: Vec2, q: Vec2, s: number) => s === 0 && Math.min(o.x, e.x) <= q.x && q.x <= Math.max(o.x, e.x) && Math.min(o.y, e.y) <= q.y && q.y <= Math.max(o.y, e.y);
+  return on(a, b, c, d1) || on(a, b, d, d2) || on(c, d, a, d3) || on(c, d, b, d4);
+}
+
+/** True when `q` lies inside or on convex polygon `P`. */
+function insideConvex(q: Vec2, P: Vec2[]): boolean {
+  const s = P.map((v, i) => cross(v, P[(i + 1) % P.length]!, q));
+  return s.every((x) => x >= 0) || s.every((x) => x <= 0);
+}
+
+/** Distance between convex polygons: 0 when they cross or nest, else the least point-to-segment distance over edge pairs. */
+function polygonDistance(A: Vec2[], B: Vec2[]): number {
+  const edges = (P: Vec2[]) => P.map((v, i) => [v, P[(i + 1) % P.length]!] as const);
+  if (A.some((v) => insideConvex(v, B)) || B.some((v) => insideConvex(v, A))) return 0;
+  let best = Infinity;
+  for (const [a, b] of edges(A)) for (const [c, d] of edges(B)) {
+    if (segmentsCross(a, b, c, d)) return 0;
+    best = Math.min(best, distToSegment(a, c, d), distToSegment(b, c, d), distToSegment(c, a, b), distToSegment(d, a, b));
+  }
+  return best;
+}
+
+/** Air between each pair of consecutive glyphs (never across a space), measured between their fill polygons; 0 when they touch or overlap, never negative. */
+export function letterGaps(text: string, size: number, width: number): number[] {
+  const chars = [...text], lay = layoutText(text, size, width), out: number[] = [];
+  let gi = 0;
+  chars.forEach((c, i) => {
+    if (c === " ") return;
+    if (chars[i + 1] !== undefined && chars[i + 1] !== " ") {
+      const A = lay[gi]!.fill, B = lay[gi + 1]!.fill;
+      out.push(Math.min(...A.flatMap((a) => B.map((b) => polygonDistance(a, b)))));
+    }
+    gi++;
+  });
+  return out;
+}
+
+/** Widest over narrowest gap of `letterGaps`; 1 with fewer than 2 pairs. Infinity when the narrowest gap is 0 (an overlap, or all gaps 0): never 0/0. */
+export function rhythm(text: string, size: number, width: number): number {
+  const g = letterGaps(text, size, width);
+  if (g.length < 2) return 1;
+  const lo = Math.min(...g);
+  return lo === 0 ? Infinity : Math.max(...g) / lo;
+}
+
+/** Clear diameter (2·r) of every counter probe of `text`, in glyph order. Negative when the stroke swallows the probe. */
+export function counterClearance(text: string, size: number, width: number): { char: string; clearance: number }[] {
+  return layoutText(text, size, width).flatMap((g) => g.counters.map((c) => ({ char: g.char, clearance: 2 * c.r })));
+}
+
+/** True when some pair of consecutive glyphs touches or overlaps (gap 0). */
+export const overlapping = (text: string, size: number, width: number): boolean => letterGaps(text, size, width).some((g) => g === 0);
+
 /** Cap height over stroke width: how many strokes tall a capital stands. */
 export const strokeRatio = (size: number, width: number): number => size / width;
 
