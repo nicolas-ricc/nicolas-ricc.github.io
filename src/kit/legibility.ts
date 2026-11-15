@@ -116,16 +116,16 @@ export function signMetrics(spec: SignSpec, scale: number): { xHeightPx: number;
 
 type Cover = { face: Face; poly: number[] };
 const covers = (solids: readonly Solid[]): Cover[] => solids.flatMap(tessellate).map((face) => ({ face, poly: face.pts.flatMap((q) => { const r = project(q); return [r.x, r.y]; }) }));
+const sub3 = (a: Vec3, b: Vec3): Vec3 => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z });
 /** Signed depth of `p` against the face's plane along the view ray: > 0 the face is in front of `p`, < 0 behind. */
 const depth = (f: Face, p: Vec3) => dot(f.normal, sub3(f.pts[0]!, p)) / dot(f.normal, VIEW_DIR);
-const sub3 = (a: Vec3, b: Vec3): Vec3 => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z });
 /** Faces among `cs` that cover the projection of `p`, with their depth `t`. */
 const hits = (cs: Cover[], p: Vec3) => { const r = project(p); return cs.filter((c) => pointInPolygon(r.x, r.y, c.poly)).map((c) => ({ face: c.face, t: depth(c.face, p) })); };
 const SAMPLES = 7;
 
 /** Min WCAG contrast of the sign color against the nearest backing face behind each glyph's ink-box center (1 with no face, Infinity with no glyphs). */
-export function staticContrast(spec: SignSpec): number {
-  const back = covers(spec.backing);
+export const staticContrast = (spec: SignSpec): number => contrastOf(spec, covers(spec.backing));
+function contrastOf(spec: SignSpec, back: Cover[]): number {
   return Math.min(Infinity, ...spec.glyphs.map((g) => {
     const { x0, y0, x1, y1 } = g.layout.box, behind = hits(back, toWorld(g.plane, (x0 + x1) / 2, (y0 + y1) / 2)).filter((h) => h.t < 0);
     if (!behind.length) return 1;
@@ -135,8 +135,9 @@ export function staticContrast(spec: SignSpec): number {
 }
 
 /** Share of a 7×7 grid per glyph, over its ink box grown by `backingW·width`, that has backing behind and nothing in front (1 with no glyphs). */
-export function backingMargin(spec: SignSpec, solids: readonly Solid[]): number {
-  const back = covers(spec.backing), front = covers(solids), m = SIGN_RULES.backingW * spec.width;
+export const backingMargin = (spec: SignSpec, solids: readonly Solid[]): number => marginOf(spec, covers(spec.backing), covers(solids));
+function marginOf(spec: SignSpec, back: Cover[], front: Cover[]): number {
+  const m = SIGN_RULES.backingW * spec.width;
   let ok = 0, total = 0;
   for (const g of spec.glyphs) {
     const { x0, y0, x1, y1 } = g.layout.box;
@@ -150,8 +151,8 @@ export function backingMargin(spec: SignSpec, solids: readonly Solid[]): number 
 }
 
 /** Share of the quad corners and centroids of the sign that some solid covers from in front (0 with no samples). */
-export function occlusionRatio(spec: SignSpec, solids: readonly Solid[]): number {
-  const front = covers(solids);
+export const occlusionRatio = (spec: SignSpec, solids: readonly Solid[]): number => occlusionOf(spec, covers(solids));
+function occlusionOf(spec: SignSpec, front: Cover[]): number {
   let n = 0, total = 0;
   for (const q of spec.glyphs.flatMap((g) => g.quads)) {
     const c = { x: 0, y: 0, z: 0 };
@@ -166,7 +167,8 @@ export function checkSign(spec: SignSpec, scale: number, solids: readonly Solid[
   const R = SIGN_RULES, S = scale === COVER_LAPTOP || scale === COVER_PHONE ? R[scale] : undefined;
   if (!S) throw new Error(`legibility: no sign rules for scale ${scale}`);
   const m = signMetrics(spec, scale), out: Violation[] = [], bad = (rule: string, value: number, limit: string) => out.push({ rule, value, limit });
-  const baseLimit = spec.facade ? R.facadeBaselineDeg : R.baselineDeg, bm = backingMargin(spec, solids), oc = occlusionRatio(spec, solids), sc = staticContrast(spec);
+  const baseLimit = spec.facade ? R.facadeBaselineDeg : R.baselineDeg, back = covers(spec.backing), front = covers(solids);
+  const bm = marginOf(spec, back, front), oc = occlusionOf(spec, front), sc = contrastOf(spec, back);
   if (m.xHeightPx < S.xHeightPx) bad("xHeight", m.xHeightPx, `≥ ${S.xHeightPx} px`);
   if (m.strokePx < S.strokePx) bad("stroke", m.strokePx, `≥ ${S.strokePx} px`);
   if (m.airPx < S.airPx) bad("air", m.airPx, `≥ ${S.airPx} px`);

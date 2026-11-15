@@ -71,7 +71,7 @@ const SITED_C = v3(PLATFORM_SITE.x + FRAME.c.x, PLATFORM_SITE.y + FRAME.c.y, 0);
 const WORD_ORIGIN = v3(SITED_C.x - (U.x * FRAME.width) / 2, SITED_C.y - (U.y * FRAME.width) / 2, FRAME.wordZ);
 
 /** The backing panel of the word: dark, along u, 0.3 thick, PANEL_GAP behind the tube plane, from the lower beam's top face to the upper beam's bottom face. */
-const PANEL: Solid = (() => {
+const PANEL: Solid & { kind: "poly" } = (() => {
   const half = FRAME.L / 2 - PANEL_INSET, P = (s: number, b: number) => ({ x: SITED_C.x + U.x * s - N.x * b, y: SITED_C.y + U.y * s - N.y * b });
   return { kind: "poly", footprint: [P(-half, PANEL_GAP), P(half, PANEL_GAP), P(half, PANEL_GAP + PANEL_T), P(-half, PANEL_GAP + PANEL_T)], z: FRAME.panelZ0, h: FRAME.panelZ1 - FRAME.panelZ0, mat: "officeDark" };
 })();
@@ -84,8 +84,8 @@ function sign(out: Solid[], accents: Accent[]): void {
   const { L, a, mx, my, upperZ } = FRAME, { x: cx, y: cy } = SITED_C, ox = PLATFORM_SITE.x, oy = PLATFORM_SITE.y;
   for (const z of [SIGN_Z, upperZ]) out.push({ kind: "beam", from: v3(cx - (U.x * L) / 2, cy - (U.y * L) / 2, z), to: v3(cx + (U.x * L) / 2, cy + (U.y * L) / 2, z), w: SIGN_BEAM, h: SIGN_BEAM, mat: "steel" });
   for (const s of [-1, 1]) out.push(prism(ox + mx + s * a - SIGN_POST / 2, oy + my - s * a - SIGN_POST / 2, DECK_TOP, SIGN_POST, SIGN_POST, upperZ + SIGN_BEAM / 2 - DECK_TOP, "steel"));
-  out.push(PANEL);
-  for (const g of BLOG_SIGN.glyphs) for (const q of g.quads) accents.push(...neon(q, "cyan", 0.75));
+  out.push({ ...PANEL, footprint: PANEL.footprint.map((q) => ({ ...q })) }); // copies: a consumer that mutates the scene must not reach BLOG_SIGN
+  for (const g of BLOG_SIGN.glyphs) for (const q of g.quads) accents.push(...neon(q.map((c) => ({ ...c })), "cyan", 0.75));
 }
 
 /** Sea platform at the origin: six steel piles, a deck with railing, ladder, hut and beacon mast. */
