@@ -1,7 +1,8 @@
-import type { Vec2, Vec3 } from "../iso/geometry";
-import { project } from "../iso/project";
-import type { Solid } from "../iso/solids";
-import type { AccentColor } from "../map/palette-iso";
+import { dot, type Vec2, type Vec3 } from "../iso/geometry";
+import { VIEW_DIR, project } from "../iso/project";
+import { tessellate, type Face, type Solid } from "../iso/solids";
+import { pointInPolygon } from "../map/geo";
+import { ISO_COLORS, stepTone, toneColor, type AccentColor } from "../map/palette-iso";
 import { GRID, counterClearance, glyphPairs, layoutText, letterGaps, polygonDistance, rhythm, strokeRatio, toWorld, type GlyphLayout, type TextPlane } from "./lettering";
 
 /** The measure every sign shares: cap height and stroke width in text units. */
@@ -113,12 +114,68 @@ export function signMetrics(spec: SignSpec, scale: number): { xHeightPx: number;
   return { xHeightPx, strokePx, airPx, baselineDeg, verticalDeg, aspectError };
 }
 
-const pending = (): never => { throw new Error("legibility: not implemented"); };
-/** Task 2 stub. */
-export const staticContrast = (_spec: SignSpec): number => pending();
-/** Task 2 stub. */
-export const backingMargin = (_spec: SignSpec, _solids: Solid[]): number => pending();
-/** Task 2 stub. */
-export const occlusionRatio = (_spec: SignSpec, _solids: Solid[]): number => pending();
-/** Task 2 stub. */
-export const checkSign = (_spec: SignSpec, _scale: number, _solids: Solid[]): Violation[] => pending();
+type Cover = { face: Face; poly: number[] };
+const covers = (solids: readonly Solid[]): Cover[] => solids.flatMap(tessellate).map((face) => ({ face, poly: face.pts.flatMap((q) => { const r = project(q); return [r.x, r.y]; }) }));
+/** Signed depth of `p` against the face's plane along the view ray: > 0 the face is in front of `p`, < 0 behind. */
+const depth = (f: Face, p: Vec3) => dot(f.normal, sub3(f.pts[0]!, p)) / dot(f.normal, VIEW_DIR);
+const sub3 = (a: Vec3, b: Vec3): Vec3 => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z });
+/** Faces among `cs` that cover the projection of `p`, with their depth `t`. */
+const hits = (cs: Cover[], p: Vec3) => { const r = project(p); return cs.filter((c) => pointInPolygon(r.x, r.y, c.poly)).map((c) => ({ face: c.face, t: depth(c.face, p) })); };
+const SAMPLES = 7;
+
+/** Min WCAG contrast of the sign color against the nearest backing face behind each glyph's ink-box center (1 with no face, Infinity with no glyphs). */
+export function staticContrast(spec: SignSpec): number {
+  const back = covers(spec.backing);
+  return Math.min(Infinity, ...spec.glyphs.map((g) => {
+    const { x0, y0, x1, y1 } = g.layout.box, behind = hits(back, toWorld(g.plane, (x0 + x1) / 2, (y0 + y1) / 2)).filter((h) => h.t < 0);
+    if (!behind.length) return 1;
+    const f = behind.reduce((a, b) => (b.t > a.t ? b : a)).face;
+    return contrastRatio(ISO_COLORS[spec.color], toneColor(f.mat, stepTone(f.tone, f.toneOffset)));
+  }));
+}
+
+/** Share of a 7×7 grid per glyph, over its ink box grown by `backingW·width`, that has backing behind and nothing in front (1 with no glyphs). */
+export function backingMargin(spec: SignSpec, solids: readonly Solid[]): number {
+  const back = covers(spec.backing), front = covers(solids), m = SIGN_RULES.backingW * spec.width;
+  let ok = 0, total = 0;
+  const bs = spec.glyphs.map((g) => g.layout.box), box = { x0: Math.min(...bs.map((b) => b.x0)), y0: Math.min(...bs.map((b) => b.y0)), x1: Math.max(...bs.map((b) => b.x1)), y1: Math.max(...bs.map((b) => b.y1)) };
+  for (const g of spec.glyphs) {
+    const { x0, y0, x1, y1 } = box;
+    for (let i = 0; i < SAMPLES; i++) for (let j = 0; j < SAMPLES; j++) {
+      const p = toWorld(g.plane, x0 - m + ((x1 - x0 + 2 * m) * i) / (SAMPLES - 1), y0 - m + ((y1 - y0 + 2 * m) * j) / (SAMPLES - 1));
+      total++;
+      if (hits(back, p).some((h) => h.t < 0) && !hits(front, p).some((h) => h.t > 1e-6)) ok++;
+    }
+  }
+  return total ? ok / total : 1;
+}
+
+/** Share of the quad corners and centroids of the sign that some solid covers from in front (0 with no samples). */
+export function occlusionRatio(spec: SignSpec, solids: readonly Solid[]): number {
+  const front = covers(solids);
+  let n = 0, total = 0;
+  for (const q of spec.glyphs.flatMap((g) => g.quads)) {
+    const c = { x: 0, y: 0, z: 0 };
+    for (const p of q) { c.x += p.x / q.length; c.y += p.y / q.length; c.z += p.z / q.length; }
+    for (const p of [...q, c]) { total++; if (hits(front, p).some((h) => h.t > 1e-6)) n++; }
+  }
+  return total ? n / total : 0;
+}
+
+/** Level-2 rules `spec` breaks at cover `scale` against `solids`; [] when it passes. Throws on a scale with no rules. */
+export function checkSign(spec: SignSpec, scale: number, solids: readonly Solid[]): Violation[] {
+  const R = SIGN_RULES, S = scale === COVER_LAPTOP || scale === COVER_PHONE ? R[scale] : undefined;
+  if (!S) throw new Error(`legibility: no sign rules for scale ${scale}`);
+  const m = signMetrics(spec, scale), out: Violation[] = [], bad = (rule: string, value: number, limit: string) => out.push({ rule, value, limit });
+  const baseLimit = spec.facade ? R.facadeBaselineDeg : R.baselineDeg, bm = backingMargin(spec, solids), oc = occlusionRatio(spec, solids), sc = staticContrast(spec);
+  if (m.xHeightPx < S.xHeightPx) bad("xHeight", m.xHeightPx, `≥ ${S.xHeightPx} px`);
+  if (m.strokePx < S.strokePx) bad("stroke", m.strokePx, `≥ ${S.strokePx} px`);
+  if (m.airPx < S.airPx) bad("air", m.airPx, `≥ ${S.airPx} px`);
+  if (m.baselineDeg > baseLimit) bad("baseline", m.baselineDeg, `≤ ${baseLimit}°`);
+  if (m.verticalDeg > R.verticalDeg) bad("vertical", m.verticalDeg, `≤ ${R.verticalDeg}°`);
+  if (m.aspectError > R.aspectTol) bad("aspect", m.aspectError, `≤ ${R.aspectTol}`);
+  if (sc < S.contrast) bad("contrast", sc, `≥ ${S.contrast}:1`);
+  if (bm < 1) bad("backing", bm, "= 1");
+  if (oc > R.occlusion) bad("occlusion", oc, `≤ ${R.occlusion}`);
+  return out;
+}
