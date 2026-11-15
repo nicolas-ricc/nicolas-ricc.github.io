@@ -17,7 +17,8 @@ const PIECES: Record<string, string> = {
   remolcador: "98fd0f53/687d5415", convoy: "63361eab/35f8cf27", lancha: "8a99e66f/f2a9b6e3",
   "grua-muelle": "624cfd88/d3db2853",
   // #360: the four sign placeholders are new pieces; the earlier twelve did not move
-  grafiti: "41fe9a41/741638a5", "cartel-helipuerto": "2bac19e3/083e6023", "cartel-helipuerto-b": "2bac19e3/02ba8886", plataforma: "5ac3ea9b/9df76d38",
+  // #362: grafiti replaces its placeholder; the other pieces did not move
+  grafiti: "db8dbb6d/10da6bb2", "cartel-helipuerto": "2bac19e3/083e6023", "cartel-helipuerto-b": "2bac19e3/02ba8886", plataforma: "5ac3ea9b/9df76d38",
 };
 
 describe("render baseline (#194)", () => {
