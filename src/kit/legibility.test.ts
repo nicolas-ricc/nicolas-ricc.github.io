@@ -239,7 +239,7 @@ describe("backingMargin", () => {
     expect(backingMargin(blog([flush]), [])).toBeLessThan(1);
   });
   it("below 1 when a solid in front hides the band around the letters", () => {
-    const ink = INK("Blog"), p = at(ink.x0 - 1, ink.y0 - 1, 2);
+    const b = layoutText("Blog", size, width)[0]!.box, p = at(b.x0 - 1, b.y0 - 1, 2); // the band below-left of the B
     const front: Solid = { kind: "prism", at: v3(p.x - 1, p.y - 1, p.z - 1), w: 2, d: 2, h: 4, mat: "steel" };
     expect(backingMargin(blog(), [front])).toBeLessThan(1);
   });
