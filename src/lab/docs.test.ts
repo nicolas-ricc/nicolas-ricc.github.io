@@ -487,6 +487,8 @@ describe("zone signs closing documentation (#364)", () => {
     const ids = new Set(EXHIBITS.map((e) => e.id));
     for (const id of IDS) {
       expect(storybook, id).toContain(`#${id}\``);
+      // #378 retired cartel-helipuerto(-b) from the storybook; #380 updates the README
+      if (id === "cartel-helipuerto" || id === "cartel-helipuerto-b") continue;
       expect(ids.has(id), id).toBe(true);
     }
     expect(storybook).toContain("`c`");
