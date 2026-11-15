@@ -58,7 +58,11 @@ export function fitToCap(p: Piece, lot: Lot): Piece {
 /** Piece with every z raised by `dz`; heights, normals (`wall`, `Wall.normal`) and `courtyard` unchanged. */
 export const liftPiece = (p: Piece, dz: number): Piece => mapZ(p, (n) => n + dz, 1);
 
-/** Piece with every z coordinate through `z` and every height scaled by `k`, including the section `h` of a horizontal beam (`from.z === to.z`); a sloped or vertical beam keeps `h`, which is not a height. Normals and `courtyard` unchanged. */
+/**
+ * Piece with every z coordinate through `z` and every height scaled by `k`, including the section `h`
+ * of a horizontal beam (exactly `from.z === to.z`: build both ends' z from one expression); a sloped
+ * or vertical beam keeps `h`, which is not a height. Normals and `courtyard` unchanged.
+ */
 function mapZ(p: Piece, z: (n: number) => number, k: number): Piece {
   const P = (q: Vec3): Vec3 => v3(q.x, q.y, z(q.z));
   const solid = (s0: Solid): Solid => {
