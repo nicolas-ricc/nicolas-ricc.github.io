@@ -96,6 +96,12 @@ describe("graffiti wall (#362): wall, cap and throw-up paint", () => {
     if (first.kind === "poly") expect(Math.min(...first.pts.map((p) => along(p) + L / 2))).toBeCloseTo(2.5 - 0.5, 9);
   });
 
+  it("the amber core keeps its bloom: one amberBleed halo (alpha 0.6 · 0.75) per tube", () => {
+    const halos = build().accents.filter((a) => a.color === "amberBleed" && a.kind === "poly" && a.alpha !== 0.12);
+    expect(halos).toHaveLength(strokeText("Portfolio", diagonalWall(v3(0, 0, 1.5)), 8.55, 1.0).length);
+    for (const a of halos) expect(a.kind === "poly" && a.alpha).toBeCloseTo(0.45, 9);
+  });
+
   it("legibility: x-height ≥ 10 px and interior stroke ≥ 1.5 px at 1.17", () => {
     expect(xHeightPx(8.55, 1.17)).toBeGreaterThanOrEqual(10);
     expect(INNER).toBe(1.0);
