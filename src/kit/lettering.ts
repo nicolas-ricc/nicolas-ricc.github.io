@@ -45,7 +45,7 @@ export const GLYPHS: Readonly<Record<string, { width: number; strokes: readonly 
   P: glyph(3, line(0, 0, 0, 7), pBowl),
   o: glyph(3, bowl),
   r: glyph(3, line(0, 0, 0, 5), line(0, 3, 1, 4.5, 2, 5, 3, 5)),
-  t: glyph(3, line(1, 6.5, 1, 1, 1.5, 0, 3, 0), line(0, 5, 3, 5)),
+  t: glyph(3, line(1, 6, 1, 1, 1.5, 0, 3, 0), line(0, 5, 3, 5)),
   f: glyph(3, line(1, 0, 1, 6, 2, 7, 3, 7), line(0, 5, 3, 5)),
   l: glyph(1, line(0, 0, 0, 7)),
   i: glyph(1, line(0, 0, 0, 5), line(0, 6, 0, 6.6)),

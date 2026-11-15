@@ -21,4 +21,9 @@ describe("cover scale (#360)", () => {
     }
     expect(fixedScaleFit(fit, w, h, fit.scale)).toEqual(fit);
   });
+  it("fixedScaleFit on an empty host (fit scale 0) stays finite (#360 review)", () => {
+    const f = fixedScaleFit({ x: 0, y: 0, scale: 0 }, 0, 0, 1.17);
+    expect(f.scale).toBe(1.17);
+    expect(Number.isFinite(f.x) && Number.isFinite(f.y)).toBe(true);
+  });
 });

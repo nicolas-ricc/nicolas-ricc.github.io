@@ -132,7 +132,7 @@ describe("boiler hall: gable end and metal chimneys", () => {
     for (const s of steps) {
       expect(near(s.h, 1.2)).toBe(true);
       expect(prisms(g).some((c) => c.mat === "whitewash" && c.at.x === E - 0.5 && c.at.y === s.at.y && c.d === s.d && near(c.at.z, s.at.z + 1.2) && near(c.h, 0.3))).toBe(true);
-      expect((s.plates ?? []).filter(isBox).filter((p) => p.wall === 1 && p.toneOffset === -2).length).toBeGreaterThan(0);
+      expect((s.plates ?? []).filter((p) => p.wall === 1 && p.toneOffset === -2).length).toBeGreaterThan(0);
     }
     for (const s of g) expect(bounds(s).max.z).toBeLessThanOrEqual(20);
   });

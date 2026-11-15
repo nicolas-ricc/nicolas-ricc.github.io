@@ -56,6 +56,12 @@ describe("lettering grid and glyphs", () => {
   it("curve polylines (o e s g P R B) have at most 8 vertices", () => {
     for (const c of "oesgPRB") for (const s of GLYPHS[c]!.strokes) expect(s.length, c).toBeLessThanOrEqual(8);
   });
+  it("ascenders: lowercase up to 5, t up to 6, f, l and capitals up to 7 (#360 review)", () => {
+    const top = (c: string) => Math.max(...GLYPHS[c]!.strokes.flat().map((p) => p.y));
+    for (const c of "oresumg") expect(top(c), c).toBe(5);
+    expect(top("t")).toBe(6);
+    for (const c of "flPRB") expect(top(c), c).toBe(7);
+  });
   it("an unknown character throws", () => {
     expect(() => measureText("x", 7)).toThrow();
     expect(() => strokeText("Box", diagonalWall(v3(0, 0, 0)), 7, 1)).toThrow();

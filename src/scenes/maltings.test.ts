@@ -104,9 +104,9 @@ describe("maltings", () => {
   });
 
   it("four stacked loading doors and a double gate on the south wall of the prism (D6)", () => {
-    const plates = (walls[0]!.plates ?? []).filter(isBox);
-    expect(plates).toHaveLength(5);
-    expect(plates.every((p) => p.wall === 2 && p.shape === "rect" && p.mat === "steel")).toBe(true);
+    const raw = walls[0]!.plates ?? [], plates = raw.filter(isBox);
+    expect(raw).toHaveLength(5);
+    expect(raw.every((p) => p.wall === 2 && p.shape === "rect" && p.mat === "steel")).toBe(true);
     const doors = plates.filter((p) => p.toneOffset === -1).sort((a, b) => a.z0 - b.z0);
     expect(doors).toHaveLength(4);
     doors.forEach((d, i) => {

@@ -10,7 +10,6 @@ const SIZE = 8.55;
 export function seaPlatform(out: Solid[], accents: Accent[]): void {
   for (const x of [-6.5, 0, 6.5]) for (const y of [-5.5, 5.5]) out.push({ kind: "cylinder", at: v3(x, y, -1), r: 0.3, h: 2.2, sides: 6, mat: "steel" });
   out.push({ kind: "prism", at: v3(-7, -6, 1.2), w: 14, d: 12, h: 0.4, mat: "deck" });
-  const plane = diagonalWall(v3(0, 0, 2.8)), { width } = measureText("Blog", SIZE);
-  plane.origin = v3(-plane.u.x * width / 2, -plane.u.y * width / 2, 2.8);
-  for (const q of strokeText("Blog", plane, SIZE, 1)) accents.push(...neon(q, "cyan", 0.75));
+  const { width } = measureText("Blog", SIZE), half = (width / 2) * Math.SQRT1_2; // centered: origin = (0, 0, 2.8) − u·width/2
+  for (const q of strokeText("Blog", diagonalWall(v3(-half, half, 2.8)), SIZE, 1)) accents.push(...neon(q, "cyan", 0.75));
 }

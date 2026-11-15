@@ -14,8 +14,9 @@ export function nextCoverScale(current: number | null): number | null {
   return COVER_SCALES[i + 1] ?? null;
 }
 
-/** `fit` at another scale, keeping the world point at the host center where it was. */
+/** `fit` at another scale, keeping the world point at the host center where it was; an empty host (scale 0) only takes the scale. */
 export function fixedScaleFit(fit: Fit, w: number, h: number, scale: number): Fit {
+  if (!(fit.scale > 0)) return { ...fit, scale };
   const k = scale / fit.scale;
   return { x: w / 2 - (w / 2 - fit.x) * k, y: h / 2 - (h / 2 - fit.y) * k, scale };
 }

@@ -76,7 +76,7 @@ describe("monoblocks of the Simón Bolívar neighborhood (#250)", () => {
   });
 
   it("no glass plate or pilaster falls on wall 0 or wall 3", () => {
-    for (const b of monos) for (const p of of(b).bodies) for (const q of (p.plates ?? []).filter(isBox)) expect([1, 2]).toContain(q.wall);
+    for (const b of monos) for (const p of of(b).bodies) for (const q of p.plates ?? []) expect([1, 2]).toContain(q.wall);
   });
 
   it("tank tower: each body with ≥ 2 concrete tanks 2×2 resting on its roof and a steel antenna on a tank", () => {
