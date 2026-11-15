@@ -37,7 +37,7 @@ function line(...c: number[]): Vec2[] {
   return out;
 }
 const glyph = (width: number, ...strokes: Vec2[][]) => ({ width, strokes });
-const bowl = line(1.5, 0, 3, 1, 3, 4, 1.5, 5, 0, 4, 0, 1, 1.5, 0); // closed at a mid-edge point so the fill has no notch
+const bowl = line(3, 2.5, 3, 4, 1.5, 5, 0, 4, 0, 1, 1.5, 0, 3, 1, 3, 2.5); // closes mid-edge on the straight right side, so the fill has no notch
 const pBowl = line(0, 7, 2, 7, 3, 6, 3, 5, 2, 4, 0, 4);
 
 /** Stroke font: polylines on the grid (x right, y up, baseline 0); only `g` descends, the `i` dot is its own polyline. */

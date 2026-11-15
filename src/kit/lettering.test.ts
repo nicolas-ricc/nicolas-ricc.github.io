@@ -139,6 +139,13 @@ describe("measure, stroke and fill", () => {
     const q = quads[0]!;
     expect(Math.hypot(q[0]!.x - q[3]!.x, q[0]!.y - q[3]!.y, q[0]!.z - q[3]!.z)).toBeCloseTo(0.5, 9);
   });
+  it("closed polylines close on a straight edge: first and last segments are collinear", () => {
+    for (const [c, g] of Object.entries(GLYPHS)) for (const s of g.strokes) {
+      const a = s[0]!, b = s[1]!, y = s[s.length - 2]!, z = s[s.length - 1]!;
+      if (a.x !== z.x || a.y !== z.y) continue;
+      expect((b.x - a.x) * (z.y - y.y) - (b.y - a.y) * (z.x - y.x), c).toBe(0);
+    }
+  });
   it("fillText: one quad per segment plus one square per interior vertex, all finite, in text space", () => {
     for (const w of WORDS) {
       const out = fillText(w, 8.55, 1.6);
