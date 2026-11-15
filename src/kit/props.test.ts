@@ -126,6 +126,16 @@ describe("props", () => {
     expect(ch.y).toBeLessThan(ct.y);
   });
 
+  it("neon(pts, color, alpha) (#360): green triad, alpha scales halo 0.6·alpha and tube 1·alpha, order unchanged", () => {
+    const front = [v3(0, 5, 1), v3(2, 5, 1), v3(2, 5, 2), v3(0, 5, 2)];
+    const [halo, tube] = neon(front, "green", 0.5) as [Accent & { kind: "poly" }, Accent & { kind: "poly" }];
+    expect(halo).toMatchObject({ kind: "poly", color: "greenBleed" });
+    expect(halo.alpha).toBeCloseTo(0.3, 12);
+    expect(tube).toMatchObject({ kind: "poly", pts: front, color: "green", alpha: 0.5 });
+    const [h1, t1] = neon(front, "cyan") as [Accent & { kind: "poly" }, Accent & { kind: "poly" }];
+    expect([h1.color, h1.alpha, t1.color, t1.alpha]).toEqual(["cyanBleed", 0.6, "cyan", 1]);
+  });
+
   it("fountain: marble basin r 3 h 0.6, spout r 0.6 h 1.5 and amberBleed puddle on the water", () => {
     const f = fountain(AT);
     expect(f.solids[0]).toMatchObject({ kind: "cylinder", at: AT, r: 3, h: 0.6, mat: "marble" });

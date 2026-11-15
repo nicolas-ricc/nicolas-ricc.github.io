@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isBehind, overlaps, screenBounds, sortByDepth } from "../iso/depth";
-import { bounds, type Plate, type Solid } from "../iso/solids";
+import { bounds, type Solid } from "../iso/solids";
+import { isBox } from "../iso/plate";
 import { fingerprint, r6 } from "../iso/fingerprint";
 import { translate } from "../iso/translate";
 import { MALT, WATER_TOWER, maltings, waterTower } from "./maltings";
@@ -26,7 +27,7 @@ function dims(s: Solid): number[] {
   }
 }
 function plateDims(s: Solid): number[] {
-  const plates: Plate[] = "plates" in s && s.plates ? s.plates : [];
+  const plates = ("plates" in s && s.plates ? s.plates : []).filter(isBox);
   if (s.kind !== "prism" && s.kind !== "ramp") return [];
   return plates.flatMap((p) => [(p.u1 - p.u0) * (p.wall % 2 === 0 ? s.w : s.d), p.z1 - p.z0]);
 }
@@ -89,7 +90,7 @@ describe("maltings", () => {
 
   it("oculi: on the south face of each w 6 ramp, stockbrick ring and then glass, inside the gable (D4)", () => {
     for (const r of ramps.filter((x) => x.w === 6)) {
-      const p = r.plates ?? [];
+      const p = (r.plates ?? []).filter(isBox);
       expect(p).toHaveLength(2);
       expect(p[0]).toMatchObject({ wall: 2, shape: "disc", mat: "stockbrick" });
       expect(p[1]).toMatchObject({ wall: 2, shape: "disc", mat: "glass" });
@@ -103,9 +104,9 @@ describe("maltings", () => {
   });
 
   it("four stacked loading doors and a double gate on the south wall of the prism (D6)", () => {
-    const plates = walls[0]!.plates ?? [];
-    expect(plates).toHaveLength(5);
-    expect(plates.every((p) => p.wall === 2 && p.shape === "rect" && p.mat === "steel")).toBe(true);
+    const raw = walls[0]!.plates ?? [], plates = raw.filter(isBox);
+    expect(raw).toHaveLength(5);
+    expect(raw.every((p) => p.wall === 2 && p.shape === "rect" && p.mat === "steel")).toBe(true);
     const doors = plates.filter((p) => p.toneOffset === -1).sort((a, b) => a.z0 - b.z0);
     expect(doors).toHaveLength(4);
     doors.forEach((d, i) => {

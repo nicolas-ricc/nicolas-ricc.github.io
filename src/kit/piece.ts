@@ -1,5 +1,6 @@
 import { v3, type Vec3 } from "../iso/geometry";
 import { facadeWindows, type Facade } from "../iso/facade";
+import { shiftPlateZ } from "../iso/plate";
 import { bounds, visibleWalls, type Solid } from "../iso/solids";
 import type { Rng } from "../map/seed";
 import { PLINTH_H } from "../scenes/city-pieces";
@@ -67,7 +68,7 @@ function mapZ(p: Piece, z: (n: number) => number, k: number): Piece {
   const P = (q: Vec3): Vec3 => v3(q.x, q.y, z(q.z));
   const solid = (s0: Solid): Solid => {
     // plate heights are absolute z, like `at`
-    const s = "plates" in s0 && s0.plates ? { ...s0, plates: s0.plates.map((q) => ({ ...q, z0: z(q.z0), z1: z(q.z1) })) } as Solid : s0;
+    const s = "plates" in s0 && s0.plates ? { ...s0, plates: s0.plates.map((q) => shiftPlateZ(q, z)) } as Solid : s0;
     switch (s.kind) {
       case "poly": return { ...s, z: z(s.z), h: s.h * k };
       case "strip": return { ...s, z: z(s.z) };

@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { facadeFaces } from "./facade";
 import { dot, v3, type Vec3 } from "./geometry";
 import { shadeTone } from "./light";
-import { bounds, GABLE_RATIO, isFlat, tessellate, tessellateAll, WHEEL_NORMAL, WHEEL_U, type Face, type Plate, type Solid } from "./solids";
+import { project } from "./project";
+import { bounds, GABLE_RATIO, isFlat, tessellate, tessellateAll, WHEEL_NORMAL, WHEEL_U, type Face, type Plate, type PlateBox, type Solid } from "./solids";
 
 const prism: Solid = { kind: "prism", at: v3(0, 0, 0), w: 2, d: 3, h: 4, mat: "concrete" };
 
@@ -1292,7 +1293,7 @@ describe("plates non-regression", () => {
 
 describe("plates", () => {
   const P: Solid & { kind: "prism" } = { kind: "prism", at: v3(0, 0, 0), w: 4, d: 3, h: 6, mat: "brick" };
-  const plate = (wall: number, extra: Partial<Plate> = {}): Plate => ({ wall, shape: "rect", u0: 0.25, u1: 0.75, z0: 1, z1: 3, mat: "steel", ...extra });
+  const plate = (wall: number, extra: Partial<PlateBox> = {}): PlateBox => ({ wall, shape: "rect", u0: 0.25, u1: 0.75, z0: 1, z1: 3, mat: "steel", ...extra });
   const near = (a: number, lo: number, hi: number) => a >= lo - 1e-9 && a <= hi + 1e-9;
   const isSouth = (f: Face) => f.mat === "brick" && f.pts.every((p) => p.y === 3) && Math.abs(f.normal.z) < 1e-6;
 
@@ -1310,6 +1311,32 @@ describe("plates", () => {
       for (const p of pl.pts) { expect(p.y).toBe(3); expect(near(p.x, 1, 3)).toBe(true); expect(near(p.z, 1, 3)).toBe(true); }
       expect(faces.filter((f) => f.mat === "steel")).toHaveLength(1);
     }
+  });
+
+  it("poly plate (#360): a triangle on the south wall gives one face at at(u, z), with the wall's normal and its material", () => {
+    const pts = [{ x: 0.2, y: 1 }, { x: 0.8, y: 1 }, { x: 0.5, y: 3 }];
+    const all = tessellateAll({ ...P, plates: [{ wall: 2, shape: "poly", pts, mat: "safety" }] });
+    const south = all.find(isSouth)!, face = all.find((f) => f.mat === "safety")!;
+    // wall 2 runs from (4, 3) to (0, 3)
+    expect(face.pts).toEqual(pts.map((q) => v3(4 - 4 * q.x, 3, q.y)));
+    expect(face.normal).toEqual(south.normal);
+    expect(all.filter((f) => f.mat === "safety")).toHaveLength(1);
+  });
+
+  it("poly plate (#360) on a poly solid with a footprint rotated 45°: wall 0 is the face of normal (1, 1)/√2, u runs left to right", () => {
+    const L = 10, t = 1.2, d = { x: Math.SQRT1_2, y: -Math.SQRT1_2 }, n = { x: Math.SQRT1_2, y: Math.SQRT1_2 };
+    const pt = (sd: number, sn: number) => ({ x: d.x * sd * L / 2 + n.x * sn * t / 2, y: d.y * sd * L / 2 + n.y * sn * t / 2 });
+    const footprint = [pt(-1, 1), pt(1, 1), pt(1, -1), pt(-1, -1)]; // [D, C, B, A]
+    const pts = [{ x: 0, y: 1 }, { x: 0.5, y: 1 }, { x: 0.5, y: 3 }, { x: 1, y: 3 }];
+    const all = tessellateAll({ kind: "poly", footprint, z: 0, h: 5, mat: "concrete", plates: [{ wall: 0, shape: "poly", pts, mat: "safety" }] });
+    const face = all.find((f) => f.mat === "safety")!;
+    expect(face.normal.x).toBeCloseTo(Math.SQRT1_2, 6);
+    expect(face.normal.y).toBeCloseTo(Math.SQRT1_2, 6);
+    expect(face.normal.z).toBeCloseTo(0, 9);
+    const wall = all.find((f) => f.mat === "concrete" && Math.abs(f.normal.x - Math.SQRT1_2) < 1e-6 && Math.abs(f.normal.y - Math.SQRT1_2) < 1e-6)!;
+    expect(wall).toBeDefined();
+    for (const p of face.pts) expect(p.x + p.y).toBeCloseTo(Math.SQRT2 * t / 2, 9); // on the front plane n·p = t/2
+    expect(project(face.pts[0]!).x).toBeLessThan(project(face.pts[3]!).x);
   });
 
   it("the plate's toneOffset is honored", () => {
@@ -1396,7 +1423,7 @@ describe("plates", () => {
 
   describe("on ramp", () => {
     const R: Solid & { kind: "ramp" } = { kind: "ramp", at: v3(0, 0, 0), w: 4, d: 2, h: 2, mat: "steel", dir: "n" };
-    const rp = (wall: number, extra: Partial<Plate> = {}): Plate => plate(wall, { mat: "glass", z0: 0.2, z1: 0.8, ...extra });
+    const rp = (wall: number, extra: Partial<PlateBox> = {}): PlateBox => plate(wall, { mat: "glass", z0: 0.2, z1: 0.8, ...extra });
     const wallOf = (faces: Face[], pred: (p: Vec3) => boolean) => faces.findIndex((f) => f.mat === "steel" && Math.abs(f.normal.z) < 1e-6 && f.pts.every(pred));
 
     it("plate on wall 2: comes after the south side, in tessellateAll and in tessellate", () => {

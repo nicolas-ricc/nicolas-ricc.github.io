@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { sortByDepth } from "../iso/depth";
-import { bounds, type Plate, type Solid } from "../iso/solids";
+import { bounds, type Solid } from "../iso/solids";
+import { isBox } from "../iso/plate";
 import { fingerprint } from "../iso/fingerprint";
 import { translate } from "../iso/translate";
 import { BAY, BAYS, METAL_STACK_X, HALL, STAIR_TOWER, boilerHouse, gableEnd, inclineBelt, metalStacks, hallBody, stairTower } from "./boiler-house";
@@ -80,7 +81,7 @@ describe("boiler hall: body", () => {
 
   it("checkerboard brick lattice band under the eave, on the south and east walls of the tall prism", () => {
     const upper = prisms(body).find((p) => p.mat === "brick" && p.at.z === 7 && p.w === HALL.w)!;
-    const plates: Plate[] = upper.plates ?? [];
+    const plates = (upper.plates ?? []).filter(isBox);
     const on = (wall: number) => plates.filter((p) => p.wall === wall && p.mat === "brick" && p.toneOffset === -2 && p.z0 === 12.8 && p.z1 === 13.6);
     expect(on(2)).toHaveLength(HALL.w);
     expect(on(1)).toHaveLength(HALL.d);
@@ -223,7 +224,7 @@ describe("complete boiler hall", () => {
     for (const s of all) for (const d of dims(s)) expect(d, JSON.stringify(s).slice(0, 80)).toBeGreaterThanOrEqual(0.15 - 1e-9);
     for (const s of all) {
       if (s.kind !== "prism" || !s.plates) continue;
-      for (const p of s.plates) {
+      for (const p of s.plates.filter(isBox)) {
         const len = p.wall % 2 === 0 ? s.w : s.d;
         expect((p.u1 - p.u0) * len).toBeGreaterThanOrEqual(0.15 - 1e-9);
         expect(p.z1 - p.z0).toBeGreaterThanOrEqual(0.15 - 1e-9);

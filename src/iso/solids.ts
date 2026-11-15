@@ -6,7 +6,7 @@ import { shadeTone } from "./light";
 import { plateFaces, type Plate } from "./plate";
 import { VIEW_DIR } from "./project";
 
-export type { Plate } from "./plate";
+export type { Plate, PlateBox, PlatePoly } from "./plate";
 
 export interface Tri { pts: [Vec3, Vec3, Vec3]; toneOffset?: number; baseTone?: number }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
-import type { Plate } from "../iso/plate";
+import { isBox, type Plate, type PlateBox } from "../iso/plate";
 import { bounds, isFlat, tessellate, tessellateAll, type Bounds, type Solid } from "../iso/solids";
 import { BUFFER_H, BUFFER_X, CROSSING, FENCE_Y, GAUGE, HEAD, ISLAND, LADDER, RAIL_W, RAIL_Z, SIDE, SIGNALS, STATION, STOP_X, TRACK_X0, TRACKS_Y, TRAIN_CLEAR, PARKED, station, building, HALL, WING_N, WING_S, LINK, SERVICE, TOWER, PORTICO, ESPLANADE } from "./station";
 import { emu, trainLen } from "./train";
@@ -132,7 +132,7 @@ describe("station", () => {
       expect(close(fascia[0]!.at.z + fascia[0]!.h, 4.2)).toBe(true);
       for (const r of mine) expect(tessellate(r).some((f) => f.mat === "whitewash" && f.normal.x > 0), `east fascia ${r.dir}`).toBe(true);
       for (const r of mine) { // the east plate goes on the half of the wall taller than 0.25 (A3)
-        const east = (r.plates ?? []).filter((p) => p.wall === 1 && p.mat === "whitewash");
+        const east = (r.plates ?? []).filter(isBox).filter((p) => p.wall === 1 && p.mat === "whitewash");
         expect(east.map((p) => [p.u0, p.u1, p.z0, p.z1]), `east fascia ${r.dir}`).toEqual([r.dir === "n" ? [0.5, 1, 4.2, 4.45] : [0, 0.5, 4.2, 4.45]]);
       }
       const lights = dots.filter((d) => d.color === "cyanMid" && d.at.y === ym && d.at.z === 3.9 && d.r === 0.8).map((d) => d.at.x).sort((a, b) => a - b);
@@ -150,7 +150,7 @@ describe("station", () => {
     expect(sorted(buffers.map((p) => [p.at.y, p.d]))).toEqual(sorted(TRACKS_Y.map((y) => [y - 1.5, 3])));
     for (const b of buffers) {
       for (const wall of [1, 2]) {
-        const ps = (b.plates ?? []).filter((p) => p.wall === wall && p.shape === "rect").sort((p, q) => p.u0 - q.u0);
+        const ps = (b.plates ?? []).filter(isBox).filter((p) => p.wall === wall && p.shape === "rect").sort((p, q) => p.u0 - q.u0);
         expect(ps.map((p) => p.mat), `wall ${wall}`).toEqual(["safety", "asphalt", "safety", "asphalt"]);
         expect(ps.map((p) => [p.u0, p.u1, p.z0, p.z1]), `stripes ${wall}`).toEqual([0, 1, 2, 3].map((k) => [k / 4, (k + 1) / 4, 0, BUFFER_H]));
       }
@@ -307,8 +307,8 @@ describe("station: building, tower and esplanade (#278)", () => {
   const find = (c: { x: number; y: number; w: number; d: number }, h: number, z = 0) => { const r = bPrisms.filter(at(c, h, z)); expect(r, JSON.stringify(c)).toHaveLength(1); return r[0]!; };
   const hall = () => find(HALL, HALL.h), wingN = () => find(WING_N, WING_N.h), wingS = () => find(WING_S, WING_S.h);
   const shaft = () => find({ x: TOWER.x, y: TOWER.y, w: TOWER.w, d: TOWER.d }, TOWER.h);
-  const on = (s: { plates?: Plate[] }, wall: number, mat: string, shape = "rect") => (s.plates ?? []).filter((p) => p.wall === wall && p.mat === mat && p.shape === shape);
-  const span = (p: Plate) => [p.u0, p.u1, p.z0, p.z1].map((v) => Math.round(v * 1e6) / 1e6);
+  const on = (s: { plates?: Plate[] }, wall: number, mat: string, shape = "rect") => (s.plates ?? []).filter(isBox).filter((p) => p.wall === wall && p.mat === mat && p.shape === shape);
+  const span = (p: PlateBox) => [p.u0, p.u1, p.z0, p.z1].map((v) => Math.round(v * 1e6) / 1e6);
   const wallLen = (s: { w: number; d: number }, wall: number) => (wall % 2 === 0 ? s.w : s.d);
   const samePts = (a: { x: number; y: number; z: number }[], b: { x: number; y: number; z: number }[]) =>
     a.length === b.length && a.every((p) => b.some((q) => close(p.x, q.x) && close(p.y, q.y) && close(p.z, q.z)));
@@ -471,7 +471,7 @@ describe("station: building, tower and esplanade (#278)", () => {
       const b = bounds(s), where = JSON.stringify(s).slice(0, 120);
       for (const k of ["x", "y", "z"] as const) expect(b.max[k] - b.min[k], `${where} ${k}`).toBeGreaterThanOrEqual(0.15 - 1e-9);
       if (s.kind !== "prism" && s.kind !== "ramp") continue;
-      for (const p of s.plates ?? []) {
+      for (const p of (s.plates ?? []).filter(isBox)) {
         expect((p.u1 - p.u0) * wallLen(s, p.wall), `${where} plate u`).toBeGreaterThanOrEqual(0.15 - 1e-9);
         expect(p.z1 - p.z0, `${where} plate z`).toBeGreaterThanOrEqual(0.15 - 1e-9);
       }

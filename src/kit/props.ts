@@ -80,11 +80,11 @@ export function clock(cx: number, southY: number, cz: number): Accent {
 
 const NEON_HALO = 1.3, NEON_BACK = 0.05;
 
-/** Neon tube: the `Bleed` halo (1.3× around the center, just behind) and the tube on top. city-anim flickers these two by position: do not reorder. */
-export function neon(pts: Vec3[], color: "amber" | "cyan" | "magenta"): Accent[] {
+/** Neon tube: the `Bleed` halo (1.3× around the center, just behind) and the tube on top; `alpha` scales both. city-anim flickers these two by position: do not reorder. */
+export function neon(pts: Vec3[], color: "amber" | "cyan" | "magenta" | "green", alpha = 1): Accent[] {
   const c = centroid(pts);
   const halo = pts.map((p) => v3(c.x + (p.x - c.x) * NEON_HALO - NEON_BACK, c.y + (p.y - c.y) * NEON_HALO - NEON_BACK, c.z + (p.z - c.z) * NEON_HALO));
-  return [{ kind: "poly", pts: halo, color: `${color}Bleed`, alpha: 0.6 }, { kind: "poly", pts, color, alpha: 1 }];
+  return [{ kind: "poly", pts: halo, color: `${color}Bleed`, alpha: 0.6 * alpha }, { kind: "poly", pts, color, alpha }];
 }
 
 const PUDDLE_ALPHA = 0.25, FOUNTAIN_ALPHA = 0.35; // the fountain is not confused with the tower's two puddles

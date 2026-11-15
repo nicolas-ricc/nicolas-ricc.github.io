@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
-import type { Plate } from "../iso/plate";
+import { isBox, type PlateBox } from "../iso/plate";
 import { bounds, tessellate, type Bounds, type Solid } from "../iso/solids";
 import { CAR_H, CAR_LEN, CAR_W, COUPLER, FLOOR_Z, GAP, TRAIN_TOP, emu, trainBox, trainLen, type Lead } from "./train";
 
@@ -10,9 +10,9 @@ const close = (a: number, b: number, eps = 1e-9) => Math.abs(a - b) < eps;
 const prisms = (ss: Solid[]) => ss.filter((s): s is Prism => s.kind === "prism");
 const is = (mat: string, w: number, d: number, h: number, z: number) => (p: Prism) => p.mat === mat && close(p.w, w) && close(p.d, d) && close(p.h, h) && close(p.at.z, z);
 const carX = (k: number) => X0 + COUPLER + k * (CAR_LEN + GAP);
-const span = (p: Plate) => [p.u0, p.u1, p.z0, p.z1].map((v) => Math.round(v * 1e6) / 1e6);
+const span = (p: PlateBox) => [p.u0, p.u1, p.z0, p.z1].map((v) => Math.round(v * 1e6) / 1e6);
 const sorted = <T>(xs: T[]) => [...xs].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
-const on = (p: Prism, wall: number, mat: string) => (p.plates ?? []).filter((q) => q.wall === wall && q.mat === mat);
+const on = (p: Prism, wall: number, mat: string) => (p.plates ?? []).filter(isBox).filter((q) => q.wall === wall && q.mat === mat);
 const wallLen = (s: { w: number; d: number }, wall: number) => (wall % 2 === 0 ? s.w : s.d);
 const apart = (a: Bounds, b: Bounds) =>
   a.max.x <= b.min.x + 1e-9 || b.max.x <= a.min.x + 1e-9 || a.max.y <= b.min.y + 1e-9 || b.max.y <= a.min.y + 1e-9 || a.max.z <= b.min.z + 1e-9 || b.max.z <= a.min.z + 1e-9;
@@ -89,7 +89,7 @@ describe("emu", () => {
   it("cab fronts: windshield, upper half and livery stripe on wall 1 of the last car and wall 3 of the first", () => {
     const bodies = prisms(emu(X0, Y, { cars: 4, lead: "e", lit: true }).solids).filter(is("whitewash", 11, 3.4, 4, 1)).sort((a, b) => a.at.x - b.at.x);
     const front = [[0.1, 0.9, 2.6, 4.3, "asphalt"], [0, 1, 4.3, 5, "livery"], [0, 1, 1.6, 2.6, "livery"]];
-    const plates = (p: Prism, wall: number) => sorted((p.plates ?? []).filter((q) => q.wall === wall).map((q) => [...span(q), q.mat]));
+    const plates = (p: Prism, wall: number) => sorted((p.plates ?? []).filter(isBox).filter((q) => q.wall === wall).map((q) => [...span(q), q.mat]));
     expect(plates(bodies[3]!, 1)).toEqual(sorted(front));
     expect(plates(bodies[0]!, 3)).toEqual(sorted(front));
     for (const [k, b] of bodies.entries()) {
@@ -108,7 +108,7 @@ describe("emu", () => {
       const b = bounds(s), where = JSON.stringify(s).slice(0, 100);
       for (const k of ["x", "y", "z"] as const) expect(b.max[k] - b.min[k], `${where} ${k}`).toBeGreaterThanOrEqual(0.15 - 1e-9);
       if (s.kind !== "prism") continue;
-      for (const p of s.plates ?? []) {
+      for (const p of (s.plates ?? []).filter(isBox)) {
         expect((p.u1 - p.u0) * wallLen(s, p.wall), `${where} plate u`).toBeGreaterThanOrEqual(0.15 - 1e-9);
         expect(p.z1 - p.z0, `${where} plate z`).toBeGreaterThanOrEqual(0.15 - 1e-9);
       }
