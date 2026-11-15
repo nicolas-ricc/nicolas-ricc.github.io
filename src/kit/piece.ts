@@ -44,7 +44,8 @@ export const shiftTone = (t: number, k: number): number => Math.max(-2, Math.min
  * If the piece exceeds the cap `min(lot.maxH, LANDMARK_MAX_H)`, it flattens it in z
  * (relative to `lot.z`) so it fits exactly: a landmark of fixed dimensions
  * thus respects a capped block. Normals don't change, nor do the measures
- * that aren't heights (the radius of `wheel`, the sheer of `hull`).
+ * that aren't heights (the radius of `wheel`, the sheer of `hull`). A horizontal beam
+ * resting flush on a solid stays flush: its section `h` is flattened too.
  */
 export function fitToCap(p: Piece, lot: Lot): Piece {
   const cap = Math.min(lot.maxH, LANDMARK_MAX_H);
@@ -57,7 +58,11 @@ export function fitToCap(p: Piece, lot: Lot): Piece {
 /** Piece with every z raised by `dz`; heights, normals (`wall`, `Wall.normal`) and `courtyard` unchanged. */
 export const liftPiece = (p: Piece, dz: number): Piece => mapZ(p, (n) => n + dz, 1);
 
-/** Piece with every z coordinate through `z` and every height scaled by `k`; normals and `courtyard` unchanged. */
+/**
+ * Piece with every z coordinate through `z` and every height scaled by `k`, including the section `h`
+ * of a horizontal beam (exactly `from.z === to.z`: build both ends' z from one expression); a sloped
+ * or vertical beam keeps `h`, which is not a height. Normals and `courtyard` unchanged.
+ */
 function mapZ(p: Piece, z: (n: number) => number, k: number): Piece {
   const P = (q: Vec3): Vec3 => v3(q.x, q.y, z(q.z));
   const solid = (s0: Solid): Solid => {
@@ -68,7 +73,7 @@ function mapZ(p: Piece, z: (n: number) => number, k: number): Piece {
       case "strip": return { ...s, z: z(s.z) };
       case "ground": return { ...s, tris: s.tris.map((t) => ({ ...t, pts: [P(t.pts[0]), P(t.pts[1]), P(t.pts[2])] })) };
       case "wheel": return { ...s, at: P(s.at) };
-      case "beam": return { ...s, from: P(s.from), to: P(s.to) };
+      case "beam": return { ...s, from: P(s.from), to: P(s.to), h: s.from.z === s.to.z ? s.h * k : s.h };
       default: return { ...s, at: P(s.at), h: s.h * k };
     }
   };
