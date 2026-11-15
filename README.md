@@ -117,6 +117,11 @@ Specs in `docs/superpowers/specs/`
 `2026-10-27-barrio-costero-design.md`,
 `2026-11-11-carteles-de-zona-assets-design.md`).
 
+The lab pages are also built and deployed with the site (every
+`lab/*.html` is a Vite input), so the storybook can be seen at
+https://myxomatosis.xyz/lab/storybook.html without running the dev server;
+they carry `noindex`.
+
 `/lab/storybook.html` is the structures storybook: it shows one building or
 structure at a time, cropped from the world by its box (or built alone at the
 origin, for relocatable pieces such as ships and the tower crane; the station
