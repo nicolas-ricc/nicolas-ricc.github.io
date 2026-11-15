@@ -29,7 +29,7 @@ import { buildIndex, markCurrent, mountStorybook, renderReadout } from "./storyb
 export interface LabHook {
   readonly exhibitId: string | null; readonly coverScale: number | null; setCoverScale(s: number | null): void;
   readonly bloom: BloomMode | null; fit(): Fit | null; hostSize(): { w: number; h: number };
-  pixels(x: number, y: number, w: number, h: number): Promise<string>; // base64 RGBA, resolution 2
+  pixels(x: number, y: number, w: number, h: number): Promise<string>;
 }
 declare global {
   interface Window { __lab?: LabHook }

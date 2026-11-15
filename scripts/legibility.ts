@@ -24,7 +24,7 @@ import type { Fit } from "../src/world/frame";
 import { assembleWorld } from "../src/world/assemble";
 import { encodePng } from "./png";
 import {
-  measure, normalizeOcr, ocrImage, OCR_WHITELIST, parseEval, pickContexts, renderReport, reportFails, RES, scaleTag, signMasks, verdicts, wordCrop,
+  measure, ocrImage, OCR_WHITELIST, parseEval, pickContexts, renderReport, reportFails, RES, scaleTag, signMasks, verdicts, wordCrop,
   type ReportEntry,
 } from "./legibility-measure";
 
@@ -79,7 +79,7 @@ async function main(): Promise<void> {
         if (px.length !== w * h * 4) throw new Error(`legibility: ${e.id} at ${scale}: got ${px.length} bytes, expected ${w * h * 4}`);
         const m = measure(px, masks), img = ocrImage(px, w, h, m.core, m.ring);
         const ocrPng = encodePng(img.data, img.w, img.h), rawPng = encodePng(px, w, h);
-        const text = normalizeOcr((await worker.recognize(Buffer.from(ocrPng))).data.text);
+        const text = (await worker.recognize(ocrPng)).data.text;
         const tag = `${e.id}-${scaleTag(scale)}`;
         writeFileSync(resolve(OUT, `${tag}.png`), rawPng);
         writeFileSync(resolve(OUT, `${tag}-ocr.png`), ocrPng);
@@ -100,6 +100,7 @@ async function main(): Promise<void> {
 }
 
 main().catch((err: unknown) => {
-  console.error(err instanceof Error && err.message.startsWith("legibility:") ? err.message : `legibility: ${err instanceof Error ? err.message : String(err)}`);
+  const msg = err instanceof Error ? err.message : String(err);
+  console.error(msg.startsWith("legibility:") ? msg : `legibility: ${msg}`);
   process.exitCode = 1;
 });
