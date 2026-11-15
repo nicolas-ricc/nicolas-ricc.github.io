@@ -138,9 +138,8 @@ export function staticContrast(spec: SignSpec): number {
 export function backingMargin(spec: SignSpec, solids: readonly Solid[]): number {
   const back = covers(spec.backing), front = covers(solids), m = SIGN_RULES.backingW * spec.width;
   let ok = 0, total = 0;
-  const bs = spec.glyphs.map((g) => g.layout.box), box = { x0: Math.min(...bs.map((b) => b.x0)), y0: Math.min(...bs.map((b) => b.y0)), x1: Math.max(...bs.map((b) => b.x1)), y1: Math.max(...bs.map((b) => b.y1)) };
   for (const g of spec.glyphs) {
-    const { x0, y0, x1, y1 } = box;
+    const { x0, y0, x1, y1 } = g.layout.box;
     for (let i = 0; i < SAMPLES; i++) for (let j = 0; j < SAMPLES; j++) {
       const p = toWorld(g.plane, x0 - m + ((x1 - x0 + 2 * m) * i) / (SAMPLES - 1), y0 - m + ((y1 - y0 + 2 * m) * j) / (SAMPLES - 1));
       total++;
