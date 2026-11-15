@@ -103,7 +103,7 @@ describe("seat", () => {
     expect(q.solids.map((s) => (s.kind === "beam" ? [s.h, s.from.z, s.to.z] : []))).toEqual([[0.8, 5, 5], [0.4, 5, 11]]);
   });
 
-  const STREET: Lot ={ x: 0, y: 0, w: 10, d: 10, z: 0, open: ["s"], maxH: 10 };
+  const STREET: Lot = { x: 0, y: 0, w: 10, d: 10, z: 0, open: ["s"], maxH: 10 };
   const counting = (withGround: boolean): { recipe: Recipe; calls: () => number } => {
     let n = 0;
     const recipe: Recipe = (l) => {
