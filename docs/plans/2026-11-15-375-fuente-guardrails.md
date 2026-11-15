@@ -10,6 +10,14 @@
 
 **Spec:** issue #375 (body: "Qué hacer", "Decisiones que hereda", "Criterios de aceptación"). Story context: #374 and `docs/superpowers/specs/2026-11-15-carteles-de-zona-rediseno-design.md` §1 and §4.1. Where they differ, the issue wins.
 
+## Acceptance criteria → tasks
+
+- `GRID.gap` = 2, `KERN` exported, every glyph with `counters` → Task 1.
+- `layoutText`, `letterGaps`, `rhythm`, `counterClearance`, `strokeRatio`, `advances`, `overlapping` exported and tested → Task 1 (`layoutText`, `advances`, `strokeRatio`) and Task 2 (the rest).
+- `src/kit/legibility.ts` with `SIGN_FONT`, `FONT_RULES`, `Violation`, `checkFont`; `checkFont` = `[]` for the three words; each rule asserted on its own → Task 3.
+- The air regression (a stroke that leaves 0.22 w) fails `air` → Task 3.
+- `npm test` and `npm run typecheck` green; the four sign exhibits still build, with only the literals that depended on the old spacing adjusted → Task 1, Step 4, and the end of every task.
+
 ## Global Constraints
 
 - Nothing in `src/world/`, `src/main.ts`, `index.html` or `src/style.css` changes.
@@ -70,7 +78,8 @@
   - `advances("Blog", 7)` = [5, 2, 5, 3] (B 3 + 2, l 1 + 2 − 1, o 3 + 2, g 3), and its sum equals `measureText("Blog", 7).width`;
   - `strokeRatio(10.3, 1.35)` ≈ 7.63;
   - the existing count, coplanarity and thickness tests of `strokeText` and `fillText` stay green;
-  - the old test "GRID: cap 7, … gap 1" is replaced, and the "sum of widths + 3 gaps" literal in `measureText` becomes the gap-2-plus-kern value.
+  - the old test "GRID: cap 7, x-height 5, descender 2, gap 1, space 3" is replaced. In "measureText(\"Blog\", 7): sum of widths + 3 gaps", `sum + 3` becomes `sum + 3·2 + KERN.lo`. In "space advances by GRID.space…", `2 * blog + 3 + 2` becomes `2 * blog + 3 + 2·GRID.gap`;
+  - every counter probe sits inside its counter. For `o e P R B g`, the probe is inside the closed outline of its bowl (a ray-casting point-in-polygon test, written in the test file, over the bowl polyline, closed back to its first point). For `m` and `u`, the probe's x lies strictly between two stems and its y lies in (0, 5).
 - [ ] **Step 2:** `npx vitest run src/kit/lettering.test.ts` → FAIL (gap 1, `layoutText` not exported).
 - [ ] **Step 3:** Implement in `src/kit/lettering.ts`: `gap: 2`, `KERN` (see Decisions), `counters` on every glyph (the `glyph()` helper takes them), `GlyphLayout`, `layoutText`, `advances` and `strokeRatio`. `measureText`, `strokeText` and `fillText` are rebuilt on `layoutText`; `layout`/`quadsOf` go away if nothing else uses them.
 - [ ] **Step 4:** Run `npx vitest run` (whole suite). Fix only literals that depended on gap 1 in `src/scenes/sign-*.test.ts` and `src/lab/exhibits.test.ts`, plus `POST_INSET = 2` in `sign-platform.ts`. Each change gets a one-line reason in the commit message.
@@ -114,8 +123,28 @@
   - each rule on its own: `strokeRatio` in [6, 10]; `GRID.xHeight / GRID.cap` in [0.68, 0.76]; each gap in [1·w, 3·w]; `rhythm` ≤ 1.8; each `clearance` ≥ 1·w; each advance of a non-exempt lowercase glyph (`layoutText(...).advance / size`) in [0.45, 0.80]; `overlapping` false;
   - `xHeightPx(10.3, 1.17)` ≥ 12 and `xHeightPx(10.3, 0.83)` ≥ 8;
   - regression: `GRID.gap >= 2`, and with `width = 1.22 · 10.3 / 7`, `checkFont("Resume", 10.3, width)` contains a violation with `rule: "air"` and a `detail`;
-  - a violation per broken rule: `checkFont("Resume", 10.3, 3)` contains `strokeRatio`, and `checkFont("Resume", 7, 5)` contains `overlap`.
+  - a violation per broken rule that a size and width can break: `checkFont("Resume", 10.3, 3)` contains `strokeRatio`; `checkFont("Resume", 7, 5)` contains `overlap`; `checkFont("Portfolio", 10.3, 2.4)` contains `rhythm` (the prototype gives 5.4); `checkFont("o", 7, 3)` contains `counter` with `detail: "o"`. `xHeightRatio` and `advance` depend only on the grid (`GRID` and the glyph widths, not on `size` or `width`), so they cannot be broken from outside: they are asserted by value only (see Assumptions).
 - [ ] **Step 2:** `npx vitest run src/kit/legibility.test.ts` → FAIL (module missing).
 - [ ] **Step 3:** Implement `checkFont` as one pass per rule, in the order of the table, pushing a `Violation` per pair, glyph or word that breaks a rule. Keep the module pure: it imports only `./lettering`.
 - [ ] **Step 4:** Update the Lettering `Code:` line in `CONTEXT.md`; `npm test && npm run typecheck` green.
 - [ ] **Step 5:** Commit `feat(#375): legibility.ts with SIGN_FONT, FONT_RULES and checkFont`.
+
+## Assumptions
+
+Decided during the plan grilling (stage 2). Each one lists the alternative it rejected.
+
+- **Kerning table** `{ lo, li, io: -1; rt, tf: -0.5 }` instead of changing the widths of `i` and `l`. The issue allows either; kerning keeps the existing width test. For `l`·`o`, the kern of −1 brings `o`'s left side to 2 grid units from `l`'s stem: 2k − w = 1.18 w.
+- **Values from a prototype** (`.scratch/proto.ts`, not committed). The tests in Tasks 2 and 3 are what pins them.
+- **`letterGaps` measures over the `fill` polygons**, not over the stroke quads alone. The fill is the outer contour of both renderings. The polygons are all convex: rectangles from non-zero-length segments (the existing "no zero-length segment" test) and axis-aligned squares.
+- **`POST_INSET` from 1 to 2 in `sign-platform.ts`.** The issue allows "lo mínimo que el nuevo espaciado rompa". With gap 2 the posts left the deck and the lower beam ran into the hut and the mast. Moving the posts inward is the smallest change that keeps the design (word, colour, two-beam frame on two posts). The alternative of moving the hut or the mast changes more geometry. If a geometric assertion (not a literal) in a sign test fails, the same rule applies: the smallest constant in that sign module that restores it, recorded in the commit.
+- **`KERN` values in (−2, 0]**: a kern at or below −`GRID.gap` would let two boxes touch. This is a sanity bound for the test, not a rule from the spec.
+- **Rule names** of `Violation.rule` (`strokeRatio`, `xHeightRatio`, `air`, `rhythm`, `counter`, `advance`, `overlap`): only `air` is fixed by the issue. The rest follow the keys of `FONT_RULES`.
+- **`xHeightRatio` and `advance` are not exercised as violations**: no `size` or `width` can break them with the current glyphs. They are asserted by value, as the issue asks ("cada regla afirmada por separado").
+- **The last glyph's `advance`** in `layoutText` includes the gap: the issue says "advance = ancho + gap + kern con el siguiente", and `FONT_RULES` says "el avance incluye el gap". `advances()` drops it for the last glyph, as the issue says.
+
+## Grilling
+
+- Rounds: 1 (griller model: fable). Questions: 18.
+- Sources: ISSUE 9, CODE 7, DOC 1, NO SOURCE → technical assumption 6 (some questions cite more than one source).
+- The answers changed the plan without changing its seams, so there is no second round. Added: the criteria → tasks map; violation tests for `rhythm` and `counter`; a test that each probe sits inside its counter; the exact literals of the old `measureText` tests; this Assumptions section.
+- Spec ambiguities: none. Out of scope: none. No issues opened.
