@@ -51,7 +51,7 @@
   - En `describe("fitToCap")`, `it("a sloped or vertical beam keeps its section when flattened")`: viga inclinada `from` (0,0,2) → `to` (4,0,20), `h` 0.4; viga vertical `from` (5,5,2) → `to` (5,5,20), `h` 0.3; tras `fitToCap(p, LOT)`, `h` 0.4 y 0.3 exactos.
   - En `describe("seat")` (donde viven los tests de `liftPiece`, p. ej. "liftPiece does not move normals and does not mutate its input"), `it("liftPiece keeps the section of horizontal and sloped beams")`: viga horizontal `h` 0.8 y una inclinada `h` 0.4; `liftPiece(p, 2)` deja `h` 0.8 y 0.4 y sube las z 2.
 - [ ] **Step 2:** `npx vitest run src/kit/piece.test.ts` — falla solo el test de la viga horizontal (h 0.8 ≠ 0.444…); los otros dos pasan ya (fijan comportamiento).
-- [ ] **Step 3: foto previa.** Antes de tocar código, volcar el JSON redondeado a 1e-6 (como el `rounded` local de `piece.test.ts`, que no está exportado: se copia) de `def.recipe(lot, createRng(seed), STYLES[id])` para todo `RECIPES`, con los lotes del contrato (`lotsFor` de `kit.test.ts`: los dos `LOTS` con z 0, o los de `LAB_LOTS`, que incluyen `footbridge` con z −1), maxH 10 y 24, todos los `STYLES`, semillas 1..5. Script temporal en `.scratch/` (excluido en `.git/info/exclude`) con su propia config de Vitest, porque la `include` del repo es `src/**/*.test.ts`; no se commitea.
+- [ ] **Step 3: foto previa.** Antes de tocar código, volcar el JSON redondeado a 1e-6 (como el `rounded` local de `piece.test.ts`, que no está exportado: se copia) de `def.recipe(lot, createRng(seed), STYLES[id])` para todo `RECIPES`, con los lotes del contrato (`lotsFor` de `kit.test.ts`: los dos `LOTS` con z 0, o los de `LAB_LOTS`, que incluyen `footbridge` con z −1), maxH 10 y 24, todos los `STYLES`, semillas 1..5. Script temporal `.scratch/dump-358.ts` (excluido en `.git/info/exclude`), corrido con `npx tsx` como los scripts de `package.json`; no se commitea.
 - [ ] **Step 4:** en `mapZ`, caso `beam`: `h: s.from.z === s.to.z ? s.h * k : s.h`. Doc comment de `mapZ`: "every height scaled by `k`, including the section `h` of a horizontal beam (`from.z === to.z`); a sloped or vertical beam keeps `h`, which is not a height". Doc comment de `fitToCap`: una viga horizontal apoyada a ras sigue a ras.
 - [ ] **Step 5:** en `quayCrane`, quitar `const fit`, `if (fit === p)`, el comentario, `top`/`k` y el `map` de vigas: queda `return tonePiece(fitToCap(p, lot), tone);`. `bounds` sigue usado en `industrial.ts:136`; `noUnusedLocals` está activo en `tsconfig.json`, así que el typecheck avisa si quedara sin uso.
 - [ ] **Step 6:** repetir el volcado y compararlo con el previo: idéntico. Si algo difiere, es un hallazgo: anotarlo en el comentario de la etapa.
@@ -72,7 +72,7 @@ Dos rondas (griller `fable`), 16 + 15 preguntas. Respuestas por fuente, sumando 
 Respuestas que corrigieron el plan:
 
 - Ronda 1, escalado doble entre tareas: era cierto (`industrial.test.ts`, "under maxH 10 the cross beams sit flush…", compara `bounds(b).min.z` con el tope de las patas a 9 decimales). Las dos tareas se fundieron en una.
-- Ronda 1, `.scratch/` y Vitest: `vitest.config.ts` incluye solo `src/**/*.test.ts` y `scripts/**/*.test.ts`; `.scratch/` va en `.git/info/exclude`.
+- Rondas 1 y 2, `.scratch/`: `vitest.config.ts` incluye solo `src/**/*.test.ts` y `scripts/**/*.test.ts`, así que el volcado es un script `tsx`; `.scratch/` va en `.git/info/exclude`.
 - Ronda 1, commits: los tests en rojo van en `test(#358): evals` (prompt del pipeline, etapa 3).
 
 Respuestas con fuente que no cambiaron el plan:
@@ -86,6 +86,6 @@ Respuestas con fuente que no cambiaron el plan:
 - `noUnusedLocals: true` (`tsconfig.json:8`); `bounds` se usa en `industrial.ts:136`, fuera de `quayCrane`.
 - La dirección de la pluma sale de `lot.open[0]`, no del rng (`industrial.ts:239`); el volcado usa los `open` del contrato (`s`), y las tres direcciones las cubre el test existente que recorre `[["w"], ["e"], ["s"]]` (`industrial.test.ts:249`).
 
-Supuestos (NO SOURCE): el volcado antes/después usa Vitest con config propia en vez de `tsx` (el repo ya resuelve los módulos con Vite; `tsx` no está en las dependencias). Su resultado queda en el comentario de la etapa 4.
+Supuestos (NO SOURCE): el volcado antes/después es un script `tsx` (ya en `devDependencies`, usado por `npm run validate`) en vez de un test de Vitest con config propia. Su resultado queda en el comentario de la etapa 4.
 
 Issues abiertos: ninguno. Resultado: `ok`.
