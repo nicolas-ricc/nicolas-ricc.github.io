@@ -1,3 +1,4 @@
+import { COVER_LAPTOP, COVER_PHONE } from "../kit/legibility";
 import type { Fit } from "../world/frame";
 
 /**
@@ -5,7 +6,7 @@ import type { Fit } from "../world/frame";
  * 1366-wide laptop with browser chrome, aspect 2.12; 0.83 = phone 390×750; see
  * `2026-11-11-encuadre-por-aspecto-design.md` §1.
  */
-export const COVER_SCALES = [1.17, 0.83] as const;
+export const COVER_SCALES = [COVER_LAPTOP, COVER_PHONE] as const;
 
 /** Next step of the cycle real (null) → 1.17 → 0.83 → real. */
 export function nextCoverScale(current: number | null): number | null {
