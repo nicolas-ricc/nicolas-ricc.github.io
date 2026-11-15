@@ -41,7 +41,25 @@ function ladder(out: Solid[]): void {
   }
 }
 
-/** Sea platform: six steel piles, a deck with railing, ladder, hut and beacon mast; "Blog" in cyan neon on the diagonal plane at z 2.8 is still the #360 placeholder (#363 replaces it). */
+const SIGN_BEAM = 0.15, SIGN_POST = 0.2, SIGN_Z = 2.8, WORD_Z = 3.0, POST_INSET = 1;
+
+/**
+ * Blog sign: two steel beams along u = (1, -1, 0)/√2 frame the cyan neon word (L = word width + 1), held by two posts that stand behind
+ * the frame (toward -n, n = (1, 1, 0)/√2), inset POST_INSET from the beam ends and flush with the beam boxes, as far south-east as the deck allows.
+ */
+function sign(out: Solid[], accents: Accent[]): void {
+  const { width } = measureText("Blog", SIGN_SIZE), L = width + 1, u = v3(Math.SQRT1_2, -Math.SQRT1_2, 0), n = v3(Math.SQRT1_2, Math.SQRT1_2, 0);
+  const a = (L / 2 - POST_INSET) * Math.SQRT1_2, d = POST_INSET + (SIGN_POST / 2 + (SIGN_BEAM / 2) * Math.SQRT1_2) * Math.SQRT2;
+  const mx = HALF_X - RAIL_POST - SIGN_POST / 2 - a, my = HALF_Y - RAIL_POST - SIGN_POST / 2 - a; // post midpoint: right post at the railing's inner x, left post at its inner y
+  const c = v3(mx + n.x * d, my + n.y * d, 0);
+  const upperZ = SIGN_Z + SIGN_SIZE + SIGN_TUBE;
+  for (const z of [SIGN_Z, upperZ]) out.push({ kind: "beam", from: v3(c.x - (u.x * L) / 2, c.y - (u.y * L) / 2, z), to: v3(c.x + (u.x * L) / 2, c.y + (u.y * L) / 2, z), w: SIGN_BEAM, h: SIGN_BEAM, mat: "steel" });
+  for (const s of [-1, 1]) out.push(prism(mx + s * a - SIGN_POST / 2, my - s * a - SIGN_POST / 2, DECK_TOP, SIGN_POST, SIGN_POST, upperZ + SIGN_BEAM / 2 - DECK_TOP, "steel"));
+  const origin = v3(c.x - (u.x * width) / 2, c.y - (u.y * width) / 2, WORD_Z);
+  for (const q of strokeText("Blog", diagonalWall(origin), SIGN_SIZE, SIGN_TUBE)) accents.push(...neon(q, "cyan", 0.75));
+}
+
+/** Sea platform: six steel piles, a deck with railing, ladder, hut and beacon mast; and the Blog sign: cyan neon word in a two-beam steel frame on two posts. */
 export function seaPlatform(out: Solid[], accents: Accent[]): void {
   for (const x of [-HALF_X + PILE_INSET, 0, HALF_X - PILE_INSET]) {
     for (const y of [-HALF_Y + PILE_INSET, HALF_Y - PILE_INSET]) out.push({ kind: "cylinder", at: v3(x, y, WATER_Z), r: PILE_R, h: PILE_TOP - WATER_Z, sides: 6, mat: "steel" });
@@ -59,6 +77,5 @@ export function seaPlatform(out: Solid[], accents: Accent[]): void {
   out.push({ kind: "cylinder", at: mast, r: 0.15, h: mastH, sides: 6, mat: "steel" });
   accents.push({ kind: "dot", at: v3(mast.x, mast.y, mast.z + mastH), r: 0.5, color: "cyan" });
 
-  const { width } = measureText("Blog", SIGN_SIZE), half = (width / 2) * Math.SQRT1_2; // centered: origin = (0, 0, 2.8) − u·width/2
-  for (const q of strokeText("Blog", diagonalWall(v3(-half, half, 2.8)), SIGN_SIZE, SIGN_TUBE)) accents.push(...neon(q, "cyan", 0.75));
+  sign(out, accents);
 }
