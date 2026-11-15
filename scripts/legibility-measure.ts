@@ -1,7 +1,7 @@
 /** Pure parts of npm run legibility (level 3 of the sign guardrails): mapping, masks, metrics, OCR preprocess and report. scripts/legibility.ts drives the browser. */
 import type { Vec2, Vec3 } from "../src/iso/geometry";
 import { project, Z_SCALE } from "../src/iso/project";
-import { COVER_LAPTOP, COVER_PHONE, relativeLuminance, type SignSpec } from "../src/kit/legibility";
+import { COVER_LAPTOP, COVER_PHONE, relativeLuminance, type SignSpec, type Violation } from "../src/kit/legibility";
 import type { ContextExhibit, Exhibit } from "../src/lab/exhibits";
 import { GRID, toWorld } from "../src/kit/lettering";
 import type { Fit } from "../src/world/frame";
@@ -135,6 +135,33 @@ export function verdicts(m: Measures, ocr: string, text: string, scale: number):
     { metric: "OCR", value: `\`${got}\``, limit: exact ? `= \`${text}\`` : `≈ \`${text}\` (sin mayúsculas)`, ok: exact ? got === text : got.toLowerCase() === text.toLowerCase() },
   ];
 }
+
+/** One sign at one scale in the report; file names are relative to the report. */
+export interface ReportEntry { id: string; text: string; scale: number; rows: Row[]; crop: string; ocrCrop: string }
+
+/** The fixed OCR preprocess, as written in the report. */
+export const PREPROCESS = "Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) por píxel, escalado ×3 por vecino más cercano y umbral binario en el punto medio entre la mediana del núcleo y la del anillo; la tinta (el lado del núcleo) queda negra sobre blanco. tesseract.js con datos `eng` 4.0.0_best_int locales, modo de página palabra única (PSM 8) y lista blanca A–Z a–z.";
+
+/** File-name tag of a scale: 1.17 → "117", 0.83 → "083". */
+export const scaleTag = (scale: number): string => String(Math.round(scale * 100)).padStart(3, "0");
+
+/** The whole REPORT.md. */
+export function renderReport(r: { date: string; viewport: string; entries: ReportEntry[]; violations: { id: string; scale: number; list: Violation[] }[] }): string {
+  const out = ["# Legibilidad, nivel 3", "", "Generado por `npm run legibility`; no se edita a mano.", "", `Fecha: ${r.date}`, "", `Viewport: ${r.viewport}`, "", PREPROCESS, ""];
+  for (const e of r.entries) {
+    out.push(`## ${e.id} a ${e.scale}`, "", "| Métrica | Valor | Umbral | ✓/✗ |", "| --- | --- | --- | --- |");
+    for (const row of e.rows) out.push(`| ${row.metric} | ${row.value} | ${row.limit} | ${row.ok ? "✓" : "✗"} |`);
+    out.push("", `![${e.id} ${e.scale}](${e.crop}) ![OCR](${e.ocrCrop})`, "");
+  }
+  out.push("## Nivel 2 (checkSign)", "");
+  const bullets = r.violations.flatMap((v) => v.list.map((x) => `- ${v.id} a ${v.scale}: ${x.rule} = ${Number(x.value.toFixed(2))} (${x.limit})`));
+  out.push(...(bullets.length ? bullets : ["Sin violaciones."]), "");
+  return out.join("\n");
+}
+
+/** True when any table row is ✗ or any level-2 violation exists. */
+export const reportFails = (r: { entries: ReportEntry[]; violations: { list: Violation[] }[] }): boolean =>
+  r.entries.some((e) => e.rows.some((x) => !x.ok)) || r.violations.some((v) => v.list.length > 0);
 
 /** Parses `agent-browser eval` stdout (the JSON of the value). */
 export function parseEval<T>(stdout: string): T {
