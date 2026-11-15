@@ -76,8 +76,7 @@ function frameBox(items: RenderItem[]): [number, number, number, number] {
 const [CQX0, CQX1, CQY0, CQY1] = frameBox(coverFrame(COVER_ASPECT));
 
 /**
- * Clamps per axis to the 16:9 cover (its projected box) wherever the cover fits at that scale:
- * the viewport stays inside it. On an axis where the cover is smaller than the viewport, it is left as is.
+ * Clamps per axis to the 16:9 cover (its projected box), only where the cover fits at that scale.
  */
 export function clampToCover(v: View, w: number, h: number): View {
   const s = v.scale;
