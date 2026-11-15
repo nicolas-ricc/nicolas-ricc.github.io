@@ -10,7 +10,7 @@ const ROOT = `${resolve(import.meta.dirname, "../..")}/`;
 const WORLD_KEYS = "0 1 2 3 4 5 6";
 const SHORTCUTS: Record<string, string> = {
   world: WORLD_KEYS, blog: WORLD_KEYS, resume: WORLD_KEYS, portfolio: WORLD_KEYS,
-  storybook: "ArrowRight ArrowDown ArrowLeft ArrowUp j k g h a 6",
+  storybook: "ArrowRight ArrowDown ArrowLeft ArrowUp j k g h a 6 c",
   kit: "s 1 2 3 4",
 };
 /** Pages booted by `bootWorldPage`, whose host shares `WORLD_KEYS`. */

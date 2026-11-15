@@ -76,6 +76,32 @@ describe("kit vocabulary (#126)", () => {
   });
 });
 
+const SIGN_TERMS = ["Sign", "Lettering"];
+
+describe("sign vocabulary (#360)", () => {
+  const glossary = read("CONTEXT.md");
+  for (const term of SIGN_TERMS) {
+    it(`defines ${term}, and every Code: file exists and names identifiers it holds`, () => {
+      expect(glossary).toMatch(new RegExp(`^### ${escape(term)}$`, "m"));
+      const refs = codeRefs(section(glossary, term));
+      expect(refs.length).toBeGreaterThan(0);
+      for (const { file, idents } of refs) {
+        expect(existsSync(`${ROOT}${file}`), file).toBe(true);
+        const text = read(file);
+        for (const id of idents) expect(hasIdent(text, id), `${id} in ${file}`).toBe(true);
+      }
+    });
+  }
+  it("Lettering names the lettering API and Sign the four exhibits", () => {
+    const lettering = section(glossary, "Lettering"), sign = section(glossary, "Sign");
+    for (const id of ["TextPlane", "diagonalWall", "roofDiagonal", "facade", "strokeText", "fillText", "measureText", "GLYPHS"]) expect(lettering).toContain(id);
+    for (const id of ["cartel-helipuerto", "cartel-helipuerto-b", "grafiti", "plataforma", "src/scenes/sign-"]) expect(sign).toContain(id);
+  });
+  it("the kit's README paragraph names src/kit/lettering.ts", () => {
+    expect(read("README.md")).toContain("src/kit/lettering.ts");
+  });
+});
+
 describe("veil ADR (#194, #26)", () => {
   const dir = `${ROOT}docs/adr/`;
   const name = existsSync(dir) ? readdirSync(dir).find((f) => /^0001-.*\.md$/.test(f)) : undefined;

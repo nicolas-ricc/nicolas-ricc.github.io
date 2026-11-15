@@ -1,0 +1,35 @@
+import { describe, expect, it } from "vitest";
+import type { Accent } from "../iso/accent";
+import type { Solid } from "../iso/solids";
+import { helipadSign, helipadTubeSign } from "./sign-helipad";
+
+const build = (f: (out: Solid[], accents: Accent[]) => void) => { const out: Solid[] = [], accents: Accent[] = []; f(out, accents); return { out, accents }; };
+const SLAB = { kind: "prism", at: { x: -11, y: -11, z: 0 }, w: 22, d: 22, h: 0.5, mat: "concrete" };
+
+describe("helipad sign placeholders (#360)", () => {
+  for (const f of [helipadSign, helipadTubeSign]) {
+    it(`${f.name}: the 22 × 22 × 0.5 concrete slab centered at the origin, green neon text, deterministic`, () => {
+      const { out, accents } = build(f);
+      expect(out.length).toBeGreaterThanOrEqual(1);
+      expect(out).toContainEqual(expect.objectContaining(SLAB));
+      expect(accents.length).toBeGreaterThan(0);
+      for (const a of accents) {
+        expect(a.kind).toBe("poly");
+        expect(["green", "greenBleed"]).toContain(a.color);
+      }
+      expect(accents.filter((a) => a.color === "green")).toHaveLength(accents.length / 2);
+      expect(build(f)).toEqual(build(f));
+    });
+  }
+  it("helipadSign: the word lies flat on the slab at z 0.55", () => {
+    const tubes = build(helipadSign).accents.filter((a) => a.kind === "poly" && a.color === "green");
+    for (const a of tubes) if (a.kind === "poly") for (const p of a.pts) expect(p.z).toBeCloseTo(0.55, 9);
+  });
+  it("helipadTubeSign: the word stands on the vertical diagonal plane x + y = 0, from the baseline z 1.5 up", () => {
+    const tubes = build(helipadTubeSign).accents.filter((a) => a.kind === "poly" && a.color === "green");
+    const zs = tubes.flatMap((a) => (a.kind === "poly" ? a.pts.map((p) => p.z) : []));
+    for (const a of tubes) if (a.kind === "poly") for (const p of a.pts) expect(Math.abs(p.x + p.y)).toBeLessThan(1e-9);
+    expect(Math.min(...zs)).toBeGreaterThanOrEqual(1.5 - 0.5 - 1e-9); // a stroke 1.0 thick around the baseline
+    expect(Math.max(...zs)).toBeGreaterThan(1.5 + 8.55 - 0.1);
+  });
+});

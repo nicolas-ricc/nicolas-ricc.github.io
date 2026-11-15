@@ -120,12 +120,13 @@ describe("isometric palette", () => {
     expect(() => waterAndGlint(tones, DARKEN)).toThrow(/expected/);
   });
 
-  it("accent triads per zone: cyan, amber and magenta, all in the atlas", () => {
-    expect(ACCENT_COLORS).toEqual(["cyan", "cyanMid", "cyanBleed", "amber", "amberMid", "amberBleed", "magenta", "magentaMid", "magentaBleed", "windowWarm", "windowCool", "spark"]);
+  it("accent triads per zone: cyan, amber, magenta and green, all in the atlas", () => {
+    expect(ACCENT_COLORS).toEqual(["cyan", "cyanMid", "cyanBleed", "amber", "amberMid", "amberBleed", "magenta", "magentaMid", "magentaBleed", "green", "greenMid", "greenBleed", "windowWarm", "windowCool", "spark"]);
+    expect([ISO_COLORS.green, ISO_COLORS.greenMid, ISO_COLORS.greenBleed]).toEqual([0x8ec07c, 0x5a8c3e, 0x263d1d]);
     const all = allIsoColors();
     for (const c of ACCENT_COLORS) expect(all.has(ISO_COLORS[c])).toBe(true);
     // the core is lighter than the mid and the mid lighter than the bleed
-    for (const base of ["cyan", "amber", "magenta"] as const) {
+    for (const base of ["cyan", "amber", "magenta", "green"] as const) {
       expect(lum(ISO_COLORS[base])).toBeGreaterThan(lum(ISO_COLORS[`${base}Mid`]));
       expect(lum(ISO_COLORS[`${base}Mid`])).toBeGreaterThan(lum(ISO_COLORS[`${base}Bleed`]));
     }
@@ -156,8 +157,8 @@ describe("late dusk", () => {
     channelsClose(ISO_COLORS.sky, darken(BASE_SKY, DARKEN));
   });
 
-  it("the twelve accents are not darkened", () => {
-    expect(ACCENT_COLORS.map((c) => ISO_COLORS[c])).toEqual([0x7cf5ff, 0x27b3c9, 0x134a52, 0xffc457, 0xd08a1e, 0x5a3d14, 0xff5ee0, 0xc42a9d, 0x54173f, 0xffd9a0, 0xa8d8ff, 0xffb347]);
+  it("the fifteen accents are not darkened", () => {
+    expect(ACCENT_COLORS.map((c) => ISO_COLORS[c])).toEqual([0x7cf5ff, 0x27b3c9, 0x134a52, 0xffc457, 0xd08a1e, 0x5a3d14, 0xff5ee0, 0xc42a9d, 0x54173f, 0x8ec07c, 0x5a8c3e, 0x263d1d, 0xffd9a0, 0xa8d8ff, 0xffb347]);
   });
 
   it("spark (#321): the welding accent, in the atlas and not darkened", () => {

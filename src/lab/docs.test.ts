@@ -37,7 +37,7 @@ describe("storybook documentation (#97)", () => {
     expect(story).not.toContain("/lab/world.html");
   });
   it("README names the storybook keys and parameters", () => {
-    for (const k of ["←", "→", "`j`", "`k`", "`g`", "`h`", "`a`", "`6`", "?bloom=", "?speed="]) expect(story).toContain(k);
+    for (const k of ["←", "→", "`j`", "`k`", "`g`", "`h`", "`a`", "`6`", "`c`", "?bloom=", "?speed="]) expect(story).toContain(k);
   });
   it("README lists the storybook spec among the lab specs", () => {
     const lab = readme.split(/\n\s*\n/).find((p) => p.includes("/lab/world.html")) ?? "";
