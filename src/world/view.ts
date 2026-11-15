@@ -1,5 +1,6 @@
 import { BLEED, COVER_INSET, WORLD, type WorldZone } from "../map/geo";
 import { coverFrame, fitTransform, zoneFrame } from "./frame";
+import type { RenderItem } from "../iso/render-list";
 
 /** Camera state of the world container: `screen = projected_world × scale + (x, y)`. Same as CameraState. */
 export interface View { x: number; y: number; scale: number }
@@ -65,11 +66,14 @@ export function clampToBleed(v: View, w: number, h: number): View {
   return Math.abs(x - v.x) < 1e-9 && Math.abs(y - v.y) < 1e-9 ? { ...v } : { x, y, scale: s };
 }
 
-const [CQX0, CQX1, CQY0, CQY1] = (() => {
-  const pts = coverFrame(COVER_ASPECT)[0]!.pts;
+/** Projected box [x0, x1, y0, y1] of a single-item frame. */
+function frameBox(items: RenderItem[]): [number, number, number, number] {
+  const pts = items[0]!.pts;
   const xs = pts.filter((_, i) => i % 2 === 0), ys = pts.filter((_, i) => i % 2 === 1);
-  return [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)] as const;
-})();
+  return [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+}
+
+const [CQX0, CQX1, CQY0, CQY1] = frameBox(coverFrame(COVER_ASPECT));
 
 /**
  * Clamps per axis to the 16:9 cover (its projected box) wherever the cover fits at that scale:
@@ -83,9 +87,8 @@ export function clampToCover(v: View, w: number, h: number): View {
 }
 
 function frameCenter(zone: WorldZone): { x: number; y: number } {
-  const pts = zoneFrame(zone)[0]!.pts;
-  const xs = pts.filter((_, i) => i % 2 === 0), ys = pts.filter((_, i) => i % 2 === 1);
-  return { x: (Math.min(...xs) + Math.max(...xs)) / 2, y: (Math.min(...ys) + Math.max(...ys)) / 2 };
+  const [x0, x1, y0, y1] = frameBox(zoneFrame(zone));
+  return { x: (x0 + x1) / 2, y: (y0 + y1) / 2 };
 }
 
 /** The zone's box fitted with a 4 % margin; if that falls below cover × ZONE_MIN_ZOOM, that scale centered on the box. Inside the bleed, and inside the 16:9 cover on each axis it covers. */
