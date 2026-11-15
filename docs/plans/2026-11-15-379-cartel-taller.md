@@ -42,6 +42,18 @@ These follow from the issue's numbers and the existing oracles; each was checked
 11. **Site.** `TINKER_SITE` starts at `v3(60, −24, 13.5)`. Task 4 measures `checkSign` at 1.17 and 0.83 against the context crop; if it fails on occlusion or backing (the factory chimneys stand in front), `x` moves along the ridge within 40..80 to the passing value nearest 60; if none passes, the north ridge `(x, −44, 13.5)`. The value that passes is exported and pinned by a test.
 12. **Old docs tests.** `src/lab/docs.test.ts`'s #364 block asserts that every id the old README names exists in `EXHIBITS`; `grafiti` stops existing here while the README is closed by #380. That `ids.has` check skips ids in a `DELETED_BY_374` list (`["grafiti"]`), and the credits-index test stops listing `grafiti`.
 
+## Assumptions
+
+From the grilling (stage 2). Each records the rejected alternative.
+
+- Hall constants are copied from `src/scenes/shipyard.ts:43-44,67` (`HALL_X 10`, `HALL_W 90`, `ROW_H 16`, `HALL_H 10`, `HALL_ROWS_Y [-52, -32]`) and pinned against the assembled world by a test (rejected: exporting them from `shipyard.ts`, which the issue keeps unchanged).
+- `?speed=0` calls `tick(0)` every frame (`src/lab/storybook.ts:136-141`), so `tick(0)` must be a no-op (rejected: relying on tick never being called).
+- Level 2 audits only `SignSpec` geometry (`src/kit/legibility.ts`, `checkSign`), so the animated lights do not change it; level 3 sees them because the storybook adds `contextAnimators` (`src/lab/storybook.ts:79`, `src/lab/crop.ts:101-103`) (rejected: drawing the moving lights statically too).
+- The floodlight is recoloured on the fresh `Lit` that `industrialLamp` returns (`src/kit/props.ts:23-28` builds new arrays per call) (rejected: a new lamp prop in `props.ts`).
+- The `docs.test.ts` README check skips `grafiti` until #380 rewrites README and its test (the issue hands README to "otra tarea") (rejected: editing README here, which would collide with #380).
+- If the sign moves to the north ridge, Task 4 Step 3 also revisits `box`, `FLOOD_N` and the ladder end; the post test reads the halls the plan crosses (rejected: a south-only test).
+- Turn limits were computed by hand from `signMetrics` (`aspectError` uses the turned ink-box corners; `verticalDeg` the plane's `v`); the `checkSign` tests in Task 1 pin them (rejected: a separate scratch computation kept in the repo).
+
 ## Review Focus
 
 1. **The sign through the world's own solids** at `TINKER_SITE` (a post or the ladder foot planted inside a crane, a container or a fence south of the hall): no sign solid overlaps a crop solid except posts and lamp on a hall roof (decision 7). Test in Task 4.
@@ -110,10 +122,13 @@ These follow from the issue's numbers and the existing oracles; each was checked
 
 - [ ] **Step 1: Write the failing tests** (`describe("tinker sign scaffold (#379)")`), with `piece()` = `hallStandIn` + `tinkerSign(…, v3(0, 0, 13.5), [STAND_IN_HALL])` and `site()` = `tinkerSign(…, TINKER_SITE)`:
   - `roofZ`: 13.5 on a ridge, 10 at an eave, 11.75 halfway, 0 outside every hall.
+  - `SHIPYARD_HALLS` matches the world: the concrete gable prisms 90 × 16 of `assembleWorld(...).scene.solids` are exactly the two halls (same x0, y0, x1, y1, eave 10), so a later move of a hall in `shipyard.ts` fails here.
+  - No post foot straddles a hall edge: each 0.3² foot lies wholly inside one hall plan or wholly outside every hall (posts are nudged off an edge, never across it).
   - `hallStandIn` is one concrete gable prism 40 × 16 × 10 centred at the origin (ridge y 0, z 13.5).
-  - Posts: ≥ 8 steel prisms 0.3², all `interlocks`; each base equals `max roofZ` over its four foot corners (within 1e-9), i.e. on a slope or at z 0; at the site, at least one stands on each hall and at least one on the ground.
+  - Posts: ≥ 8 steel prisms 0.3², all `interlocks`; each base equals `max roofZ` over its four foot corners (within 1e-9), i.e. on a slope or at z 0; at the site, posts stand on every hall the sign's plan crosses and on the ground where it leaves them (computed from `SHIPYARD_HALLS`, not hard-coded, so the north-ridge fallback keeps the test meaningful).
   - Ladder (two inclined steel beams with ≥ 3 rungs) whose top reaches the deck at the `P` end; two cables, each two steel beams 0.08² meeting at a point lower than both ends; two chains 0.08² from the top beam to the `l` panel top.
   - Floodlight: one `industrialLamp` post h 1.2 standing on `roofZ`, one `amber` dot r 1.2 (and no `cyan` dot anywhere); its projected disc keeps a distance > 0 from every projected letter quad of the spec.
+  - The sign's own solids do not hide or unback it: `checkSign(tinkerSpec(PIECE), s, piece solids)` is `[]` at 1.17 and 0.83 (top beam, chains, end posts, scaffold, stand-in hall).
   - No interpenetration: the sign alone, and the sign plus `hallStandIn` (decision 7 for pairs with the hall); every solid with `interlocks` is `steel`.
   - Everything above the deck except panels, chains, end posts and top beam: none (the scaffold stays under the deck).
   - Deterministic.
@@ -136,8 +151,9 @@ Timing (deterministic): the bulb goes dark (alpha 0) for 120 ms at the end of ea
 
 - [ ] **Step 1: Write the failing tests** (`describe("tinker animator (#379)")`):
   - At t = 0 the layer's accents equal `tinkerLights(at)` (every light on) for `at` = `TINKER_SITE` and `v3(0, 0, 13.5)`.
+  - `tick(0)` (what the storybook calls every frame with `?speed=0`, `src/lab/storybook.ts:136-141`) returns an empty set and leaves the layer at its t = 0 state.
   - With `reducedMotion: true`, 250 ticks of 20 ms each return an empty set and the layer stays equal to its t = 0 state.
-  - Without it, over 5 s in 20 ms ticks, the bulb's alpha reaches 0 at least once, the `l` tube's alpha reaches 0.3 at least once, and the two are never low in the same tick during the first 20 s.
+  - Without it, over 5 s in 20 ms ticks, the bulb's alpha reaches 0 at least once, the `l` tube's alpha reaches 0.3 at least once, and, over 20 s in 20 ms ticks, the two are never low in the same tick (the `l` phase offset is chosen so this holds).
   - Two animators fed the same ticks give equal layers (deterministic).
 - [ ] **Step 2: Run** — FAIL.
 - [ ] **Step 3: Implement** with `layerLookup("tinkerAnimator", …)`.
@@ -173,7 +189,7 @@ Timing (deterministic): the bulb goes dark (alpha 0) for 120 ms at the end of ea
 - Create: `docs/superpowers/specs/assets/carteles-refs/taller/` (4–8 `NN-<topic>.jpg`, `CREDITS.md`, `INVENTORY.md`)
 - Possibly modify: `src/scenes/sign-tinker.ts` (alphas, bulb radius, panel materials), `src/kit/lettering.ts` (only if the OCR fails)
 
-- [ ] **Step 1:** `npm run legibility -- --only cartel-taller-escena`. Expected: every row ✓ at 1.17 and 0.83. If not, adjust the sign within the Global Constraints, re-run `npx vitest run src/scenes/sign-tinker.test.ts src/lab/signs.test.ts` and the script; at most three rounds, then document the failing row in the PR.
+- [ ] **Step 1:** `npm run legibility -- --only cartel-taller-escena`. Expected: every row ✓ at 1.17 and 0.83. If not, adjust the sign within the Global Constraints, re-run `npx vitest run src/scenes/sign-tinker.test.ts src/lab/signs.test.ts` and the script; at most three rounds (the pipeline's limit for the browser script); a row still ✗ after that is reported on the issue and in the PR as the unmet criterion, with the edits that improved it kept.
 - [ ] **Step 2:** `npm run legibility` (all contexts) to regenerate `REPORT.md` whole.
 - [ ] **Step 3:** Captures with agent-browser (viewport 1600 × 900 × 2, `?bloom=on&speed=0`): `#cartel-taller-escena` after one and two presses of `c` (1.17, 0.83) → `cartel-taller-escena-117.png`, `-083.png`; `#cartel-taller` at real scale → `cartel-taller-real.png`; plus two `?speed=10` shots of the piece for the flicker item (kept in `.scratch/`, not committed). Each committed capture is 3200 × 1800.
 - [ ] **Step 4:** References: query the Commons API (`list=search`, namespace 6) for hand-made scrap signs (rusted cut-sheet letters, marquee bulb letters, neon on a workshop or shed, welded iron letters, signs on scaffolds or containers); keep 4–8 with a free licence (CC0 / CC BY / CC BY-SA / public domain) read from `imageinfo&iiprop=extmetadata`; download `thumburl` with `iiurlwidth=1280&iiurlheight=1280` using `curl -A "mapa-refs/1.0 (github.com/nicolas-ricc)"` into a fresh empty temp directory, check each is a JPEG ≤ 1280 px on its long side, move them as `NN-<topic>.jpg`. Write `CREDITS.md` (`| Archivo | Autor | Licencia | Origen |`) and `INVENTORY.md` with the issue's six boxes, ticked, each naming the capture that shows it.
@@ -183,3 +199,10 @@ Timing (deterministic): the bulb goes dark (alpha 0) for 120 ms at the end of ea
 
 - Spec coverage: §1 of the issue → Tasks 1–4; §2 → Task 5 Step 4; §3 → Task 5 Steps 1–3; acceptance criteria 1–2 → Tasks 1–4, 3 → Task 5, 4 → Task 5, 5 → Task 4, 6 → every task.
 - Not covered by an automatic test (go to the PR as manual verification): that a person reads "Portfolio" in the captures, and the flicker seen in two `?speed=10` captures.
+
+## Grilling
+
+- Rounds: 1 (the revisions add assertions to existing steps; no step was added or removed and the seams did not change, so no second round).
+- Questions: 18. Sources: CODE 13 (`shipyard.ts:43-44,67`; `signs.test.ts:1-27` runs only `checkFont`/`checkSign`; `legibility.ts` `backingMargin` samples the glyph plane in world units grown by `backingW·width` and casts along the view; `storybook.ts:79,136-141`; `crop.ts:93-103`; `props.ts:23-28`; `plate.ts:6-14` (u fraction along any footprint edge, diagonal walls already used by the graffiti wall); `piece.ts:38-39` (`interlock` is test metadata only); `exhibits.test.ts` framing test pins `h` of every context exhibit; `exhibits.ts` punta-norte comment records the `h` procedure), ISSUE 3 (credits index handed to the closing task; "se ajusta este cartel" on level-3 failure; the default technique map), DOC 1 (CONTEXT.md **Interlock**), NO SOURCE 1 → technical assumption (docs.test README skip).
+- Assumptions: see `## Assumptions`.
+- Issues opened: none. Spec ambiguities: none.
