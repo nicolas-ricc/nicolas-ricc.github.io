@@ -79,7 +79,6 @@ const STYLE_CSS_ALLOWLIST: ReadonlySet<string> = new Set<string>([
   "#9aa7b2", // --muted: secondary UI text
   "#22303c", // border under #content h2
   "#000", // text-shadow behind #hud and #titulo
-  "#8ec07c", // Resume label: the blog's accent green (myxomatosis.xyz/blog)
 ]);
 
 function styleCssOffenders(text: string): string[] {

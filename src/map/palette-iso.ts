@@ -101,6 +101,9 @@ export const ISO_COLORS = {
   magenta: 0xff5ee0,
   magentaMid: 0xc42a9d,
   magentaBleed: 0x54173f,
+  green: 0x8ec07c,
+  greenMid: 0x5a8c3e,
+  greenBleed: 0x263d1d,
   // Resume level 2: per-window lights (warm and cool)
   windowWarm: 0xffd9a0,
   windowCool: 0xa8d8ff,
@@ -111,7 +114,7 @@ export const ISO_COLORS = {
 export type Material = keyof typeof ISO_TONES;
 export type Tone = "deep" | "shade" | "dim" | "lit" | "down" | "top" | "up" | "pale" | "glow";
 export type AccentColor = Exclude<keyof typeof ISO_COLORS, "shadow" | "sky" | "ink">;
-export const ACCENT_COLORS: readonly AccentColor[] = ["cyan", "cyanMid", "cyanBleed", "amber", "amberMid", "amberBleed", "magenta", "magentaMid", "magentaBleed", "windowWarm", "windowCool", "spark"];
+export const ACCENT_COLORS: readonly AccentColor[] = ["cyan", "cyanMid", "cyanBleed", "amber", "amberMid", "amberBleed", "magenta", "magentaMid", "magentaBleed", "green", "greenMid", "greenBleed", "windowWarm", "windowCool", "spark"];
 
 /** Dark to light. `stepTone` moves along this. */
 export const TONE_LADDER: readonly Tone[] = ["deep", "shade", "dim", "lit", "down", "top", "up", "pale", "glow"];
