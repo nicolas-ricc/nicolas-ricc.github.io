@@ -41,7 +41,7 @@ function ladder(out: Solid[]): void {
   }
 }
 
-const SIGN_BEAM = 0.15, SIGN_POST = 0.2, SIGN_Z = 2.8, WORD_Z = 3.0, POST_INSET = 1, SIGN_MARGIN = 1;
+const SIGN_BEAM = 0.15, SIGN_POST = 0.2, SIGN_Z = 2.8, WORD_Z = 3.0, POST_INSET = 2, SIGN_MARGIN = 1;
 
 /**
  * Blog sign: two steel beams along u = (1, -1, 0)/√2 frame the cyan neon word (L = word width + SIGN_MARGIN), held by two posts that stand behind
