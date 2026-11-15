@@ -85,10 +85,12 @@ const ALLOW: Record<string, RegExp[]> = {
   "src/lab/docs.test.ts": [
     /casas con techo de teja|plaza de barrio|barrio costero|estación|paso a nivel|peor redibujo( en 5 s)?/g,
     EXHIBIT_IDS,
+    // the zone signs closing (#364): its status line and an exhibit name of the storybook table
+    /integración pendiente|plataforma con cartel/g,
     /\*\*Estado:\*\*|implementad|sin implementar|pendiente|listo para agente/g,
     /Desvíos( y medición)?|Reglas de modelado|## 2\. Decisiones|\| Tema \| Decisión \|/g,
     /\*Desvío[^"*]*\*?/g,
-    /\| (Resume: tecnológico|Portfolio: astillero) \|/g,
+    /\| (Resume: tecnológico|Portfolio: astillero|Resume: ciudad|Blog: mar) \|/g,
     // old asset names of those specs: `<view>-antes`, `<view>-despues`, and their folders
     /[\w-]*-(antes|despues)\b|assets\/[\w.-]*(fabrica|barrio|estacion|costura)[\w.-]*\//g,
     // the old spec mundo-3
