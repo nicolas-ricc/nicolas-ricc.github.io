@@ -93,7 +93,7 @@ at the edge. `/lab/kit.html` shows every recipe of the kit
 `src/kit/forms/`); key `s` changes the seed and `1..4` the style (downtown,
 bars, residential, civic), except on the `industrial` and `harbor` rows, which always
 use their own style, and on the `reconversion` row, which always uses the
-warehouses style (freight for `freightShed` and `openDock`). It is not part of the production build. To change a scene,
+warehouses style (freight for `freightShed` and `openDock`). It is not part of the production build. `src/kit/lettering.ts` holds the text planes and the stroke font that the zone signs are lettered with. To change a scene,
 edit its list of solids; for the look, `src/map/palette-iso.ts`.
 Specs in `docs/superpowers/specs/`
 (`2026-09-13-portfolio-isometrico-design.md`, `2026-09-14-mundo-isometrico-design.md`,

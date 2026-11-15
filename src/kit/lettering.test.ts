@@ -21,9 +21,9 @@ describe("lettering grid and glyphs", () => {
   it("GRID: cap 7, x-height 5, descender 2, gap 1, space 3", () => {
     expect(GRID).toEqual({ cap: 7, xHeight: 5, descender: 2, gap: 1, space: 3 });
   });
-  it("glyphs exactly for the 15 letters of Portfolio, Resume and Blog", () => {
+  it("glyphs exactly for the 14 letters of Portfolio, Resume and Blog", () => {
     expect(Object.keys(GLYPHS).sort()).toEqual([...new Set(LETTERS)].sort());
-    expect(Object.keys(GLYPHS)).toHaveLength(15);
+    expect(Object.keys(GLYPHS)).toHaveLength(14);
     for (const w of WORDS) for (const c of w) expect(GLYPHS[c], c).toBeDefined();
   });
   it("widths: 3, except m 5 and i, l 1", () => {
