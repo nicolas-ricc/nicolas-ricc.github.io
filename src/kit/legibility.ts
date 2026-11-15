@@ -86,7 +86,6 @@ export function contrastRatio(a: number, b: number): number {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 }
 
-const sub = (a: Vec2, b: Vec2): Vec2 => ({ x: a.x - b.x, y: a.y - b.y });
 const deg = (rad: number) => (rad * 180) / Math.PI;
 
 /** Projected metrics of a sign at a screen `scale`: x-height, stroke and air in px (minima), baseline and vertical angles in degrees, aspect error (maxima). */
@@ -105,7 +104,7 @@ export function signMetrics(spec: SignSpec, scale: number): { xHeightPx: number;
     const sxx = pts.reduce((s, q) => s + (q.x - mx) ** 2, 0), sxy = pts.reduce((s, q) => s + (q.x - mx) * (q.y - my), 0);
     baselineDeg = sxx === 0 ? 90 : Math.abs(deg(Math.atan(sxy / sxx)));
   }
-  const verticalDeg = Math.max(...G.map((g) => { const d = sub(at(g, 0, 1), at(g, 0, 0)); return deg(Math.atan2(Math.abs(d.x), -d.y)); }));
+  const verticalDeg = Math.max(...G.map((g) => { const u = at(g, 0, 1), o = at(g, 0, 0); return deg(Math.atan2(Math.abs(u.x - o.x), o.y - u.y)); }));
   const aspectError = Math.max(...G.map((g) => {
     const { x0, y0, x1, y1 } = g.layout.box, c = [at(g, x0, y0), at(g, x1, y0), at(g, x1, y1), at(g, x0, y1)];
     const xs = c.map((q) => q.x), ys = c.map((q) => q.y);
@@ -116,9 +115,8 @@ export function signMetrics(spec: SignSpec, scale: number): { xHeightPx: number;
 
 type Cover = { face: Face; poly: number[] };
 const covers = (solids: readonly Solid[]): Cover[] => solids.flatMap(tessellate).map((face) => ({ face, poly: face.pts.flatMap((q) => { const r = project(q); return [r.x, r.y]; }) }));
-const sub3 = (a: Vec3, b: Vec3): Vec3 => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z });
 /** Signed depth of `p` against the face's plane along the view ray: > 0 the face is in front of `p`, < 0 behind. */
-const depth = (f: Face, p: Vec3) => dot(f.normal, sub3(f.pts[0]!, p)) / dot(f.normal, VIEW_DIR);
+const depth = (f: Face, p: Vec3) => dot(f.normal, { x: f.pts[0]!.x - p.x, y: f.pts[0]!.y - p.y, z: f.pts[0]!.z - p.z }) / dot(f.normal, VIEW_DIR);
 /** Faces among `cs` that cover the projection of `p`, with their depth `t`. */
 const hits = (cs: Cover[], p: Vec3) => { const r = project(p); return cs.filter((c) => pointInPolygon(r.x, r.y, c.poly)).map((c) => ({ face: c.face, t: depth(c.face, p) })); };
 const SAMPLES = 7;
