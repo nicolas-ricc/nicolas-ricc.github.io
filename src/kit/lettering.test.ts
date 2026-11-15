@@ -18,6 +18,10 @@ const screenAxes = (p: TextPlane) => {
 };
 
 describe("lettering grid and glyphs", () => {
+  it("m: no stroke or fill quad of Resume at SIGN_FONT has a side shorter than the stroke (#378, level-2 stroke)", () => {
+    const side = (q: Vec2[]) => Math.min(...q.map((c, i) => Math.hypot(c.x - q[(i + 1) % q.length]!.x, c.y - q[(i + 1) % q.length]!.y)));
+    for (const g of layoutText("Resume", 10.3, 1.35)) for (const q of [...g.quads, ...g.fill]) expect(side(q), g.char).toBeGreaterThanOrEqual(1.35 - 1e-9);
+  });
   it("GRID: cap 7, x-height 5, descender 2, gap 2, space 3 (#375)", () => {
     expect(GRID).toEqual({ cap: 7, xHeight: 5, descender: 2, gap: 2, space: 3 });
   });
