@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 
-describe("lab outside production", () => {
+describe("lab in the build", () => {
   it("the dev entries exist", () => {
     for (const page of ["portfolio", "resume", "blog", "world", "kit", "storybook"]) expect(existsSync(`${ROOT}lab/${page}.html`)).toBe(true);
   });
@@ -15,9 +15,12 @@ describe("lab outside production", () => {
       expect(html).toMatch(new RegExp(`src="/src/lab/${f.replace(".html", "")}\\.ts"`));
     }
   });
-  it("vite.config does not add the lab to the build", () => {
+  it("vite.config adds every lab page to the build, next to index.html", () => {
+    // The lab is deployed at /lab/<page>.html so the storybook can be seen
+    // without the dev server; the noindex above keeps it out of search.
     const cfg = readFileSync(`${ROOT}vite.config.ts`, "utf8");
-    expect(cfg).not.toMatch(/rollupOptions|input\s*:/);
+    expect(cfg).toMatch(/input:\s*\{\s*main:.*index\.html.*\.\.\.lab/);
+    expect(cfg).toMatch(/readdirSync\(.*"lab"\)/);
   });
   it("prerender does not copy it", () => {
     // \blab\b so it does not match "slab" or "label".
