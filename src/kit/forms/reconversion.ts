@@ -1,6 +1,6 @@
 import { v3, type Vec2, type Vec3 } from "../../iso/geometry";
 import { shadeTone } from "../../iso/light";
-import { ribs, type Plate } from "../../iso/plate";
+import { isBox, ribs, type Plate, type PlateBox } from "../../iso/plate";
 import { GABLE_RATIO, type Solid } from "../../iso/solids";
 import type { Material } from "../../map/palette-iso";
 import type { Rect } from "../../scenes/city-grid";
@@ -21,7 +21,7 @@ import { neonSlot } from "./lowrise";
 const PANE_GAP = 0.2;
 
 /** Windows of `plate` on the edge `plate.wall` of the rectangle (wall 0 north, 1 east, 2 south, 3 west, each running clockwise as in `rect`), split into `panes` equal ones along the plate, `PANE_GAP` apart. */
-export function plateWindows(r: { at: Vec3; w: number; d: number }, plate: Plate, floor: number, building: number, panes = 1): Window[] {
+export function plateWindows(r: { at: Vec3; w: number; d: number }, plate: PlateBox, floor: number, building: number, panes = 1): Window[] {
   const { x, y } = r.at, x1 = x + r.w, y1 = y + r.d;
   const [a, b] = [[{ x, y }, { x: x1, y }], [{ x: x1, y }, { x: x1, y: y1 }], [{ x: x1, y: y1 }, { x, y: y1 }], [{ x, y: y1 }, { x, y }]][plate.wall]!;
   const len = Math.hypot(b!.x - a!.x, b!.y - a!.y), span = (plate.u1 - plate.u0) * len;
@@ -38,7 +38,7 @@ export function publishGlass(p: Piece, building: number, floor: number, panes = 
   const s = p.solids[building];
   if (!s || !("plates" in s) || !s.plates || !("w" in s) || !("d" in s)) return;
   for (const plate of s.plates) {
-    if (plate.mat === "glass" && (plate.wall === 1 || plate.wall === 2)) p.windows.push(...plateWindows(s, plate, floor, building, panes));
+    if (isBox(plate) && plate.mat === "glass" && (plate.wall === 1 || plate.wall === 2)) p.windows.push(...plateWindows(s, plate, floor, building, panes));
   }
 }
 

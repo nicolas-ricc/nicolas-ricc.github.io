@@ -1,12 +1,12 @@
 // src/iso/solids-gable.test.ts
 import { describe, expect, it } from "vitest";
 import { v3, type Vec3 } from "./geometry";
-import { bounds, GABLE_RATIO, tessellate, tessellateAll, type Face, type Plate, type Solid } from "./solids";
+import { bounds, GABLE_RATIO, tessellate, tessellateAll, type Face, type PlateBox, type Solid } from "./solids";
 
 type Prism = Solid & { kind: "prism" };
 const WIDE: Prism = { kind: "prism", at: v3(0, 0, 0), w: 10, d: 4, h: 4, mat: "brick", roof: "gable" };
 const DEEP: Prism = { ...WIDE, w: 4, d: 10 };
-const plate = (wall: number, extra: Partial<Plate> = {}): Plate => ({ wall, shape: "rect", u0: 0.25, u1: 0.75, z0: 1, z1: 3, mat: "steel", ...extra });
+const plate = (wall: number, extra: Partial<PlateBox> = {}): PlateBox => ({ wall, shape: "rect", u0: 0.25, u1: 0.75, z0: 1, z1: 3, mat: "steel", ...extra });
 const sloped = (f: Face) => Math.abs(f.normal.z) > 1e-6 && Math.abs(f.normal.z) < 1 - 1e-6;
 const on = (f: Face, pred: (p: Vec3) => boolean) => f.pts.every(pred);
 

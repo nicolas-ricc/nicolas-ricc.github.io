@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { v3 } from "../../iso/geometry";
 import { shadeTone } from "../../iso/light";
 import { bounds, type Bounds, type Solid } from "../../iso/solids";
+import { isBox } from "../../iso/plate";
 import { createRng } from "../../map/seed";
 import { LAB_LOTS, RECIPES, recipe } from "../index";
 import { STYLES } from "../styles";
@@ -16,7 +17,7 @@ const SEEDS = Array.from({ length: 20 }, (_, i) => i + 1);
 const EPS = 1e-9;
 const ownLot = (name: string, extra: Partial<Lot> = {}): Lot => ({ ...LOTS[0]!, w: LAB_LOTS[name]!.w, d: LAB_LOTS[name]!.d, ...extra });
 const topZ = (ss: Solid[]): number => Math.max(...ss.map((s) => bounds(s).max.z));
-const plates = (s: Solid) => ("plates" in s && s.plates) || [];
+const plates = (s: Solid) => (("plates" in s && s.plates) || []).filter(isBox);
 /** Wall normals of a prism by plate index: 0 N, 1 E, 2 S, 3 W. */
 const WALL_NORMAL = [v3(0, -1, 0), v3(1, 0, 0), v3(0, 1, 0), v3(-1, 0, 0)];
 

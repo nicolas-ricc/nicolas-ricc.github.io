@@ -8,11 +8,20 @@ import type { Face } from "./solids";
  * east walls, right to left on screen), `z0..z1` absolute. `rect` is the rectangle, `disc` the octagon inscribed in it, `tri` an isosceles with base at `z0` and apex at `z1`.
  * Emitted after its wall (and the facade), with the wall's normal and tone.
  */
-export interface Plate { wall: number; shape: "rect" | "disc" | "tri"; u0: number; u1: number; z0: number; z1: number; mat: Material; toneOffset?: number }
+export interface PlateBox { wall: number; shape: "rect" | "disc" | "tri"; u0: number; u1: number; z0: number; z1: number; mat: Material; toneOffset?: number }
+
+/** Free polygon on a wall: `pts` in (u, z) coordinates (u 0..1 along the edge, z absolute), in the order given. */
+export interface PlatePoly { wall: number; shape: "poly"; pts: Vec2[]; mat: Material; toneOffset?: number }
+
+export type Plate = PlateBox | PlatePoly;
+
+/** True for the plates with `u0..u1` / `z0..z1` boxes (everything but `poly`). */
+export const isBox = (p: Plate): p is PlateBox => p.shape !== "poly";
 
 /** Outline of the plate in (u, z) coordinates. */
 export function plateOutline(p: Plate): Vec2[] {
   switch (p.shape) {
+    case "poly": return p.pts;
     case "rect": return [{ x: p.u0, y: p.z0 }, { x: p.u1, y: p.z0 }, { x: p.u1, y: p.z1 }, { x: p.u0, y: p.z1 }];
     case "tri": return [{ x: p.u0, y: p.z0 }, { x: p.u1, y: p.z0 }, { x: (p.u0 + p.u1) / 2, y: p.z1 }];
     case "disc": {
@@ -21,6 +30,11 @@ export function plateOutline(p: Plate): Vec2[] {
       return Array.from({ length: 8 }, (_, i) => ({ x: cu + ru * Math.cos(Math.PI / 8 + (i * Math.PI) / 4), y: cz + rz * Math.sin(Math.PI / 8 + (i * Math.PI) / 4) }));
     }
   }
+}
+
+/** Copy of `p` with every absolute z (`z0/z1`, or the `y` of the `pts`) through `z`. */
+export function shiftPlateZ(p: Plate, z: (z: number) => number): Plate {
+  return p.shape === "poly" ? { ...p, pts: p.pts.map((q) => ({ x: q.x, y: z(q.y) })) } : { ...p, z0: z(p.z0), z1: z(p.z1) };
 }
 
 /** One face per plate, in order, on the edge a→b. `plates` arrives already filtered to those of that edge. */
@@ -32,7 +46,7 @@ export function plateFaces(wall: Face, a: Vec2, b: Vec2, plates: readonly Plate[
 export const RIB_W = 0.5, RIB_STEP = 1.5, RIB_MAX = 24, RIB_MIN_LEN = 6;
 
 /** Corrugated sheet: vertical stripes `RIB_W` wide every `RIB_STEP` along a wall of length `len` (none if shorter than `RIB_MIN_LEN`); `lit` is the wall with `shadeTone(normal) === "lit"`. */
-export function ribs(wall: number, len: number, z0: number, z1: number, lit: boolean, mat: Material): Plate[] {
+export function ribs(wall: number, len: number, z0: number, z1: number, lit: boolean, mat: Material): PlateBox[] {
   if (!(Number.isFinite(len) && len >= RIB_MIN_LEN)) return [];
   const n = Math.min(RIB_MAX, Math.floor(len / RIB_STEP)), step = Math.max(RIB_STEP, len / RIB_MAX);
   return Array.from({ length: n }, (_, k) => {

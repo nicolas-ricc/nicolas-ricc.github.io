@@ -55,6 +55,13 @@ describe("seat", () => {
     }
   });
 
+  it("liftPiece shifts the z (y) of the pts of a poly plate (#360)", () => {
+    const p = emptyPiece();
+    p.solids.push({ kind: "poly", footprint: [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 1 }, { x: 0, y: 1 }], z: 0, h: 5, mat: "concrete",
+      plates: [{ wall: 0, shape: "poly", pts: [{ x: 0.1, y: 1 }, { x: 0.5, y: 1 }, { x: 0.3, y: 2 }], mat: "safety" }] });
+    const q = liftPiece(p, 2).solids[0]!;
+    expect(q.kind === "poly" && q.plates).toEqual([{ wall: 0, shape: "poly", pts: [{ x: 0.1, y: 3 }, { x: 0.5, y: 3 }, { x: 0.3, y: 4 }], mat: "safety" }]);
+  });
   it("liftPiece does not move normals and does not mutate its input", () => {
     const p = emptyPiece();
     p.solids.push(prism(0, 0, 0, 4, 4, 6, "stone"));

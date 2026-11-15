@@ -25,6 +25,9 @@ import { pieceTrain, trainPieceAnimator } from "../scenes/rail-animator";
 import { BUOYS, DRUM_R0, KEEPER, LANTERN_Z, LIGHTHOUSE, WRECK } from "../scenes/sea";
 import { BEAM_LEN } from "../scenes/sea-anim";
 import { ship, shipAt, type ShipKind } from "../scenes/ships";
+import { graffitiWall } from "../scenes/sign-graffiti";
+import { helipadSign, helipadTubeSign } from "../scenes/sign-helipad";
+import { seaPlatform } from "../scenes/sign-platform";
 import { SUBURB_COLS } from "../scenes/sprawl-grid";
 import { SUBSTATION } from "../scenes/substation";
 import { ARENA, AUDITORIUM, TELECOM } from "../scenes/tech";
@@ -122,6 +125,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "tren", title: "Mitre EMU train", zone: "portfolio", group: "shipyard", kind: "piece", pad: "paving",
     build: (out) => { out.push(...pieceTrain("e").solids); },
     animate: trainPieceAnimator },
+  { id: "grafiti", title: "Portfolio graffiti wall", zone: "portfolio", group: "shipyard", kind: "piece", pad: "concrete", build: graffitiWall },
   { id: "central-termica", title: "Power plant and cooling tower", zone: "portfolio", group: "hinterland", kind: "region",
     box: { x0: COOLING.x - COOLING.r - M, y0: POWER.y - M, x1: STACKS_N[0].x + 2 + M, y1: COOLING.y + COOLING.r + M }, h: 30 }, // 28-high chimneys
   // tank radius rng 7..9
@@ -199,6 +203,8 @@ export const EXHIBITS: readonly Exhibit[] = [
       accents.push(...p.accents);
     } },
   { id: "selva", title: "Jungle", zone: "cv", group: "city", kind: "piece", build: (out) => jungle(out, createRng(SEED), { x0: -12, x1: 12, y0: -12, y1: 12 }, 14, 0) },
+  { id: "cartel-helipuerto", title: "Resume helipad sign (word on the pad)", zone: "cv", group: "city", kind: "piece", build: helipadSign },
+  { id: "cartel-helipuerto-b", title: "Resume rooftop tube sign (variant B)", zone: "cv", group: "city", kind: "piece", build: helipadTubeSign },
   // tech district: each structure takes one block BLOCK_W × BLOCK_D
   { id: "mastil", title: "Telecom mast", zone: "cv", group: "tech", kind: "region",
     box: { x0: TELECOM.x - M, y0: TELECOM.y - M, x1: TELECOM.x + BLOCK_W + M, y1: TELECOM.y + BLOCK_D + M }, h: 26 },
@@ -243,6 +249,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "remolcador", title: "Tug", zone: "blog", group: "sea", kind: "piece", build: vessel("tug"), pad: "water" },
   { id: "convoy", title: "Convoy with barge", zone: "blog", group: "sea", kind: "piece", build: vessel("barge"), pad: "water" },
   { id: "lancha", title: "Tigre river bus", zone: "blog", group: "sea", kind: "piece", build: vessel("ferry"), pad: "water" },
+  { id: "plataforma", title: "Blog platform sign", zone: "blog", group: "sea", kind: "piece", build: seaPlatform, pad: "water" },
 ];
 
 /** The exhibit of the hash (`#id` or `id`); empty or unknown, the first. */

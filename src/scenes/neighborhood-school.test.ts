@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
-import { bounds, type Plate, type Solid } from "../iso/solids";
+import { bounds, type Solid } from "../iso/solids";
+import { isBox, type PlateBox } from "../iso/plate";
 import { createRng, SEED } from "../map/seed";
 import { blockAt, newCtx } from "./neighborhood-fixtures";
 import { school } from "./neighborhood-school";
@@ -34,7 +35,7 @@ const mast = find((s) => s.mat === "whitewash" && s.w === 0.2 && s.d === 0.2)[0]
 const flag = find((s) => s.mat === "whitewash" && s.w === 1.2 && s.d === 0.15)[0];
 const trees = own.filter((s): s is Solid & { kind: "cone" } => s.kind === "cone" && s.mat === "leaf");
 const lampPost = find((s) => s.mat === "steel" && s.w === 0.6 && s.d === 0.6 && s.h === 5);
-const plates = (s: Prism | undefined, wall: number, f: (p: Plate) => boolean = () => true): Plate[] => (s?.plates ?? []).filter((p) => p.wall === wall && f(p));
+const plates = (s: Prism | undefined, wall: number, f: (p: PlateBox) => boolean = () => true): PlateBox[] => (s?.plates ?? []).filter(isBox).filter((p) => p.wall === wall && f(p));
 const inRect = (a: Accent): boolean => { const p = a.kind === "dot" ? a.at : a.pts[0]!; return p.x >= rect.x0 && p.x <= rect.x1 && p.y >= rect.y0 && p.y <= rect.y1; };
 
 describe("Ameghino school (#252), over the world", () => {

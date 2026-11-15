@@ -33,3 +33,14 @@ describe("storybook logs (#132)", () => {
     expect(src).toMatch(/bloom\?\.tick\(dt\);\s*if \(log\) \{\s*worst = Math\.max\(worst, dt\);\s*since \+= ticker\.deltaMS;\s*if \(since > 5000\) \{.*worst = 0; since = 0; \}\s*\}/);
   });
 });
+
+describe("cover-scale key c (#360)", () => {
+  it("the header comment and the aria-label document the c key", () => {
+    expect(src.replace(/\n\s*\*\s*/g, " ")).toContain("c cycles the exhibit scale: real, 1.17 and 0.83, the cover scales of a laptop and a phone");
+    expect(readFileSync(new URL("../../lab/storybook.html", import.meta.url), "utf8")).toMatch(/aria-label="[^"]*Key c cycles the exhibit scale: real, 1\.17 \(laptop cover\) and 0\.83 \(phone cover\)\.[^"]*"/);
+  });
+  it("c ignores held keys and logs the mode", () => {
+    expect(src).toMatch(/ev\.key === "c" && !ev\.repeat/);
+    expect(src).toContain("[storybook] cover scale: ");
+  });
+});

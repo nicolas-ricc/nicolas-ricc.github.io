@@ -7,6 +7,7 @@ import { createRng } from "../map/seed";
 import { EXCAVATOR, excavator, excavatorBox, excavatorWheel, local } from "./excavator";
 import { factory } from "./factory";
 import { factoryAnimator } from "./factory-animator";
+import { isBox } from "../iso/plate";
 
 const animator = (reducedMotion: boolean) => factoryAnimator(factory(createRng(7)), createRng(3), { reducedMotion });
 const wheelLayer = (a: ReturnType<typeof animator>) => { const l = a.layer("factory.wheel"); if (l.kind !== "solid") throw new Error("factory.wheel is not a solid layer"); return l.solids; };
@@ -108,7 +109,7 @@ describe("excavator chassis and platform", () => {
       if (c.kind !== "poly") throw new Error();
       expect(c.h).toBeCloseTo(1.6, 6);
       expect(c.plates).toHaveLength(12);
-      c.plates!.forEach((p, k) => {
+      c.plates!.filter(isBox).forEach((p, k) => {
         expect(p).toMatchObject({ wall: 2, shape: "rect", mat: "rust", toneOffset: -2, z0: 0, z1: 1.6 });
         expect((p.u1 - p.u0) * 10).toBeCloseTo(0.3, 6);
         expect(p.u0 * 10).toBeCloseTo(0.2 + 0.8 * k, 6);
@@ -243,7 +244,7 @@ describe("excavator superstructure, booms and cab", () => {
     expect(sup.facade).toEqual({ floors: 1, cols: 4, window: { w: 0.7, h: 0.4 }, grid: { cols: 2, rows: 1 } });
     const l = lbox({ ...sup, facade: undefined, plates: undefined }); near(l.dx0, -6); near(l.dx1, 3); near(l.dy0, -3); near(l.dy1, 3);
     expect(sup.plates).toHaveLength(1);
-    const p = sup.plates![0]!;
+    const p = sup.plates!.filter(isBox)[0]!;
     expect(p).toMatchObject({ wall: 2, shape: "rect", mat: "whitewash", z0: 14.6, z1: 15.6 });
     near((p.u1 - p.u0) * 9, 3); near((p.u0 + p.u1) / 2, 0.5);
   });

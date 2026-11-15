@@ -93,7 +93,7 @@ at the edge. `/lab/kit.html` shows every recipe of the kit
 `src/kit/forms/`); key `s` changes the seed and `1..4` the style (downtown,
 bars, residential, civic), except on the `industrial` and `harbor` rows, which always
 use their own style, and on the `reconversion` row, which always uses the
-warehouses style (freight for `freightShed` and `openDock`). It is not part of the production build. To change a scene,
+warehouses style (freight for `freightShed` and `openDock`). It is not part of the production build. `src/kit/lettering.ts` holds the text planes and the stroke font that the zone signs are lettered with. To change a scene,
 edit its list of solids; for the look, `src/map/palette-iso.ts`.
 Specs in `docs/superpowers/specs/`
 (`2026-09-13-portfolio-isometrico-design.md`, `2026-09-14-mundo-isometrico-design.md`,
@@ -121,7 +121,8 @@ piece whose lights flip ends every 4 s), with its
 animation and a readout panel (solids, ground, faces, accents, box, materials).
 The URL hash picks the exhibit (`#faro`); arrows (`←`/`→`, `↑`/`↓`)
 or `j`/`k` move to the next or the previous one; `g`, `h` and `a` hide or
-show ground, shadows and accents; `6` rotates the bloom, `?bloom=` forces it and
+show ground, shadows and accents; `6` rotates the bloom; `c` cycles the exhibit
+scale (real, 1.17 and 0.83, the cover scales of a laptop and a phone); `?bloom=` forces the bloom and
 `?speed=` scales the animation clock up to 100 (`?speed=0`
 freezes it; above 100 it is 1). The seam at 90 added ten exhibits:
 `#dique-flotante`, `#patio-contenedores` and `#grua-muelle` (shipyard),

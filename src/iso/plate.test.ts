@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RIB_MAX, RIB_MIN_LEN, RIB_STEP, RIB_W, ribs } from "./plate";
+import { plateOutline, RIB_MAX, RIB_MIN_LEN, RIB_STEP, RIB_W, ribs, shiftPlateZ, type PlateBox, type PlatePoly } from "./plate";
 
 describe("ribs", () => {
   it("constants of the corrugated sheet", () => {
@@ -35,5 +35,27 @@ describe("ribs", () => {
   it("tones alternate 0/−1, or +1/0 on the wall facing the sun", () => {
     expect(ribs(0, 8, 0, 5, false, "sheetGreen").map((p) => p.toneOffset)).toEqual([0, -1, 0, -1, 0]);
     expect(ribs(0, 8, 0, 5, true, "sheetGreen").map((p) => p.toneOffset)).toEqual([1, 0, 1, 0, 1]);
+  });
+});
+
+describe("poly plate (#360)", () => {
+  const poly: PlatePoly = { wall: 0, shape: "poly", pts: [{ x: 0.1, y: 1 }, { x: 0.4, y: 1 }, { x: 0.3, y: 2.5 }], mat: "safety", toneOffset: -1 };
+  const box: PlateBox = { wall: 2, shape: "rect", u0: 0.2, u1: 0.6, z0: 1, z1: 3, mat: "steel", toneOffset: 1 };
+
+  it("plateOutline of a poly returns its points as they are", () => {
+    expect(plateOutline(poly)).toEqual(poly.pts);
+  });
+  it("shiftPlateZ moves z0/z1 of a box plate and nothing else", () => {
+    expect(shiftPlateZ(box, (z) => z + 2)).toEqual({ ...box, z0: 3, z1: 5 });
+  });
+  it("shiftPlateZ moves the y (z) of every poly point and keeps u, wall, mat and toneOffset", () => {
+    expect(shiftPlateZ(poly, (z) => z + 2)).toEqual({ ...poly, pts: [{ x: 0.1, y: 3 }, { x: 0.4, y: 3 }, { x: 0.3, y: 4.5 }] });
+  });
+  it("shiftPlateZ does not mutate its input", () => {
+    const b = structuredClone(box), q = structuredClone(poly);
+    shiftPlateZ(box, (z) => z * 3);
+    shiftPlateZ(poly, (z) => z * 3);
+    expect(box).toEqual(b);
+    expect(poly).toEqual(q);
   });
 });

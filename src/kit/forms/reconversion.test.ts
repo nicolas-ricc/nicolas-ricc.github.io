@@ -9,6 +9,7 @@ import { shiftTone } from "../piece";
 import { STYLES } from "../styles";
 import { frontFrame, plateWindows } from "./reconversion";
 import type { Lot, Side } from "../types";
+import { isBox } from "../../iso/plate";
 
 const LOTS: Lot[] = [
   { x: 1.5, y: 1.5, w: 21, d: 15, z: 0, open: ["s"], maxH: 24 },
@@ -18,7 +19,7 @@ const FREIGHT_LOT: Lot = { x: 1.5, y: 1.5, w: 21, d: 10, z: 0, open: ["s"], maxH
 const SEEDS = Array.from({ length: 20 }, (_, i) => i + 1);
 const EPS = 1e-9;
 const NAMES = ["loftHall", "vaultLoft", "brewery", "sheetLoft", "derelictHall", "coveredMarket", "freightShed", "openDock"];
-const plates = (s: Solid) => ("plates" in s && s.plates) || [];
+const plates = (s: Solid) => (("plates" in s && s.plates) || []).filter(isBox);
 const height = (s: Solid): number => { const b = bounds(s); return b.max.z - b.min.z; };
 const WALL: Record<Side, number> = { n: 0, e: 1, s: 2, w: 3 };
 /** The solid's box reaches the lot edge on `side`. */

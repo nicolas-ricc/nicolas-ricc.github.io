@@ -8,6 +8,7 @@ import { MAX_TECH_H, tech } from "./tech";
 import { FACE_CAPS, blockRect, facesIn, insideInflated } from "./tech-budget";
 import { CLUB } from "./tech-zoning";
 import { zoneRng } from "./world";
+import { isBox } from "../iso/plate";
 
 type Prism = Solid & { kind: "prism" };
 type Ramp = Solid & { kind: "ramp" };
@@ -47,7 +48,7 @@ const trees = () => own.filter((s): s is Cone => s.kind === "cone" && s.mat === 
 
 describe("Pedro Echagüe club (#253), over the world", () => {
   it("stone front 10×6 h 9 with blue and yellow sign and staircase window on the south wall", () => {
-    const f = front(), ps = f.plates ?? [];
+    const f = front(), ps = (f.plates ?? []).filter(isBox);
     expect(f.at.x).toBeCloseTo(x + 2, 9); expect(f.at.y).toBeCloseTo(y + 11, 9); expect(f.at.z).toBeCloseTo(0.3, 9);
     const blue = ps.findIndex((p) => p.wall === 2 && p.mat === "hullBlue" && near(p.u0, 0.08) && near(p.u1, 0.72) && near(p.z0, 7.3) && near(p.z1, 8.7));
     const yellow = ps.findIndex((p) => p.wall === 2 && p.mat === "safety" && near(p.u0, 0.14) && near(p.u1, 0.66) && near(p.z0, 7.55) && near(p.z1, 8.45));
@@ -66,7 +67,7 @@ describe("Pedro Echagüe club (#253), over the world", () => {
     for (const v of vs) expect(v.at.z).toBeCloseTo(5, 9);
     expect(vs.map((v) => v.dir).sort()).toEqual(["n", "s"]);
     expect(ridge().at.z).toBeCloseTo(6.6, 9);
-    for (const wall of [1, 2]) expect(g.plates?.some((p) => p.wall === wall && p.mat === "glass" && near(p.z0, 3.6) && near(p.z1, 4.6)), `wall ${wall}`).toBe(true);
+    for (const wall of [1, 2]) expect(g.plates?.filter(isBox).some((p) => p.wall === wall && p.mat === "glass" && near(p.z0, 3.6) && near(p.z1, 4.6)), `wall ${wall}`).toBe(true);
   });
 
   it("club lights: all on, staircase and gym", () => {
