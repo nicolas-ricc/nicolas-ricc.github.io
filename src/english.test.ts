@@ -80,15 +80,17 @@ const ALLOW: Record<string, RegExp[]> = {
   "README.md": [/Fábrica de Luz/g],
   // the anchor of a link into an old Spanish spec, whose heading stays in Spanish (decision 3)
   "CLAUDE.md": [/#método-del-time-lapse/g],
-  // the docs test pins prose of the old Spanish specs in `docs/superpowers/specs/`, which stay untouched (decision 3): each entry is a
-  // literal of one of those specs (status line, headings, deviation notes, table rows, log text, exhibit names) or an exhibit id
+  // the docs test pins prose of the Spanish specs in `docs/superpowers/specs/` (the old ones stay untouched, decision 3; the sign spec is
+  // closed by #364): each entry is a literal of one of those specs (status line, headings, deviation notes, table rows, log text, exhibit names) or an exhibit id
   "src/lab/docs.test.ts": [
     /casas con techo de teja|plaza de barrio|barrio costero|estación|paso a nivel|peor redibujo( en 5 s)?/g,
     EXHIBIT_IDS,
+    // the zone signs closing (#364): its status line and an exhibit name of the storybook table
+    /integración pendiente|plataforma con cartel/g,
     /\*\*Estado:\*\*|implementad|sin implementar|pendiente|listo para agente/g,
     /Desvíos( y medición)?|Reglas de modelado|## 2\. Decisiones|\| Tema \| Decisión \|/g,
     /\*Desvío[^"*]*\*?/g,
-    /\| (Resume: tecnológico|Portfolio: astillero) \|/g,
+    /\| (Resume: tecnológico|Portfolio: astillero|Resume: ciudad|Blog: mar) \|/g,
     // old asset names of those specs: `<view>-antes`, `<view>-despues`, and their folders
     /[\w-]*-(antes|despues)\b|assets\/[\w.-]*(fabrica|barrio|estacion|costura)[\w.-]*\//g,
     // the old spec mundo-3

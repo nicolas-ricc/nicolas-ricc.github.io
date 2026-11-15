@@ -423,3 +423,75 @@ describe("seam at 90 documentation (#56)", () => {
     }
   });
 });
+
+describe("zone signs closing documentation (#364)", () => {
+  const SPECS = `${ROOT}docs/superpowers/specs/`;
+  const spec = readFileSync(`${SPECS}2026-11-11-carteles-de-zona-assets-design.md`, "utf8");
+  const story = readFileSync(`${SPECS}2026-10-17-storybook-estructuras-design.md`, "utf8");
+  const REFS = `${SPECS}assets/carteles-refs/`;
+  const index = existsSync(`${REFS}CREDITS.md`) ? readFileSync(`${REFS}CREDITS.md`, "utf8") : "";
+  const paragraphs = readme.split(/\n\s*\n/);
+  const storybook = paragraphs.find((p) => p.includes("/lab/storybook.html")) ?? "";
+  const lab = paragraphs.find((p) => p.includes("/lab/world.html")) ?? "";
+  const at = spec.search(/^## 8\. Desvíos y medición$/m);
+  const dev = at < 0 ? "" : spec.slice(at);
+  const IDS = ["cartel-helipuerto", "cartel-helipuerto-b", "grafiti", "plataforma"];
+  const SUFFIXES = ["real-bloom", "real-nobloom", "117-bloom", "117-nobloom", "083"];
+
+  it("the sign spec says implemented, pending integration", () => {
+    const status = spec.split("\n").find((l) => l.startsWith("**Estado:**")) ?? "";
+    expect(status).toBe("**Estado:** implementado (storybook; integración pendiente, §7)");
+  });
+  it("§6 is ticked off", () => {
+    const criteria = spec.slice(spec.search(/^## 6\. /m), spec.search(/^## 7\. /m));
+    expect(criteria).not.toMatch(/- \[ \]/);
+    expect(criteria.match(/- \[x\]/g)?.length ?? 0).toBe(8);
+  });
+  it("§8 carries the three legibility tables with the measured values", () => {
+    expect(at).toBeGreaterThan(spec.search(/^## 7\. /m));
+    expect(dev).toMatch(/^### 8\.1 /m);
+    for (const n of ["**3.490**", "**4.08 px** ✗", "**10.0035 px** ✓", "**10.003 px** ✓", "**10.00 px** ✓", "8.55", "30.54", "37.86", "15.879"]) expect(dev, n).toContain(n);
+    for (const re of [/^\| \*\*A\*\* \(pista\) \|/m, /^\| \*\*B\*\* \(tubo\) \|/m, /^\| Portfolio \|/m, /^\| Blog \|/m]) expect(dev).toMatch(re);
+  });
+  it("§8 lists the story deviations and each child's", () => {
+    for (const s of ["(−1.4, −1.4, 0)", "fillText", "\"≈ 6.8 u\"", "CREDITS.md", "1366×768"]) expect(dev, s).toContain(s);
+    expect(dev).toMatch(/1\.27\s+\(1\.272\)/);
+    for (const n of [360, 361, 362, 363, 367, 368, 369, 370]) expect(dev, `#${n}`).toContain(`#${n}`);
+  });
+  it("§8 names the twenty captures and the stale placeholders", () => {
+    for (const id of IDS) for (const s of SUFFIXES) expect(dev).toContain(`assets/352-carteles/${id}-${s}.png`);
+    expect(dev).toContain("real-base");
+  });
+  it("the credits index links each folder's CREDITS.md with its photo count", () => {
+    for (const dir of ["helipuerto", "grafiti", "plataforma"]) {
+      const n = readdirSync(`${REFS}${dir}`).filter((f) => f.endsWith(".jpg")).length;
+      const line = index.split("\n").find((l) => l.includes(`](${dir}/CREDITS.md)`)) ?? "";
+      expect(line, dir).toContain(`${n} fotos`);
+      expect(line, dir).toMatch(/CC BY-SA/);
+    }
+  });
+  it("the twenty sign captures are 3200×1800 PNGs", () => {
+    for (const id of IDS) for (const s of SUFFIXES) {
+      const png = readFileSync(`${SPECS}assets/352-carteles/${id}-${s}.png`);
+      expect(png.subarray(1, 4).toString()).toBe("PNG");
+      expect([png.readUInt32BE(16), png.readUInt32BE(20)], `${id}-${s}`).toEqual([3200, 1800]);
+    }
+  });
+  it("the storybook index names the signs in the shipyard, city and sea rows", () => {
+    const cell = (start: string) => (story.split("\n").find((l) => l.startsWith(start)) ?? "").split("|").at(-2) ?? "";
+    expect(cell("| Portfolio: astillero |")).toContain("muro grafiteado");
+    expect(cell("| Resume: ciudad |")).toContain("cartel helipuerto (A y B)");
+    expect(cell("| Blog: mar |")).toContain("plataforma con cartel");
+  });
+  it("README names the four sign exhibits and the c key in the storybook paragraph", () => {
+    const ids = new Set(EXHIBITS.map((e) => e.id));
+    for (const id of IDS) {
+      expect(storybook, id).toContain(`#${id}\``);
+      expect(ids.has(id), id).toBe(true);
+    }
+    expect(storybook).toContain("`c`");
+  });
+  it("README lists the sign spec among the lab specs", () => {
+    expect(lab).toContain("2026-11-11-carteles-de-zona-assets-design.md");
+  });
+});

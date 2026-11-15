@@ -111,7 +111,8 @@ Specs in `docs/superpowers/specs/`
 `2026-10-24-fabrica-detalle-design.md`,
 `2026-10-27-fabrica-mudanza-design.md`,
 `2026-10-27-estacion-terminal-design.md`,
-`2026-10-27-barrio-costero-design.md`).
+`2026-10-27-barrio-costero-design.md`,
+`2026-11-11-carteles-de-zona-assets-design.md`).
 
 `/lab/storybook.html` is the structures storybook: it shows one building or
 structure at a time, cropped from the world by its box (or built alone at the
@@ -128,6 +129,10 @@ freezes it; above 100 it is 1). The seam at 90 added ten exhibits:
 `#dique-flotante`, `#patio-contenedores` and `#grua-muelle` (shipyard),
 `#tren-fantasma`, `#casa-espejos`, `#tobogan` and `#tronco-acuatico` (fair),
 and `#galpones`, `#playa-carga` and `#mercado-pescado` (city).
+The zone signs of #352 are four pieces: `#cartel-helipuerto` and
+`#cartel-helipuerto-b` (Resume, the helipad with the word on the pad and the
+rooftop tube variant), `#grafiti` (Portfolio, the harbour graffiti wall) and
+`#plataforma` (Blog, the sea platform); judge them at the cover scales with `c`.
 
 The lights' bloom is not part of the first draw: the site and the lab
 enable it after Pixi's first real render (the `postrender` of
