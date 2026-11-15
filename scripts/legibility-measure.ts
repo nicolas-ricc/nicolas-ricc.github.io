@@ -1,14 +1,13 @@
 /** Pure parts of npm run legibility (level 3 of the sign guardrails): mapping, masks, metrics, OCR preprocess and report. scripts/legibility.ts drives the browser. */
 import type { Vec2, Vec3 } from "../src/iso/geometry";
-import { project } from "../src/iso/project";
-import type { SignSpec } from "../src/kit/legibility";
+import { project, Z_SCALE } from "../src/iso/project";
+import { COVER_LAPTOP, COVER_PHONE, relativeLuminance, type SignSpec } from "../src/kit/legibility";
+import type { ContextExhibit, Exhibit } from "../src/lab/exhibits";
 import { GRID, toWorld } from "../src/kit/lettering";
 import type { Fit } from "../src/world/frame";
 
 /** Image px per CSS px. */
 export const RES = 2;
-/** Vertical foreshortening of z in `project` (the 1.4 of the world), for the crop margin. */
-const Z_PX = 1.4;
 
 /** Crop of the host in CSS px, integers. */
 export interface Crop { x: number; y: number; w: number; h: number }
@@ -24,7 +23,7 @@ export function toImage(p: Vec3, fit: Fit, crop: Crop): Vec2 {
 /** Bounding box of every projected quad point of the sign ± 3·width·1.4·scale, in integer CSS px clamped to the host. */
 export function wordCrop(sign: SignSpec, fit: Fit, host: { w: number; h: number }): Crop {
   const pts = sign.glyphs.flatMap((g) => g.quads.flat()).map((p) => { const q = project(p); return { x: q.x * fit.scale + fit.x, y: q.y * fit.scale + fit.y }; });
-  const m = 3 * sign.width * Z_PX * fit.scale;
+  const m = 3 * sign.width * Z_SCALE * fit.scale;
   const x0 = Math.max(0, Math.floor(Math.min(...pts.map((p) => p.x)) - m)), y0 = Math.max(0, Math.floor(Math.min(...pts.map((p) => p.y)) - m));
   const x1 = Math.min(host.w, Math.ceil(Math.max(...pts.map((p) => p.x)) + m)), y1 = Math.min(host.h, Math.ceil(Math.max(...pts.map((p) => p.y)) + m));
   return { x: x0, y: y0, w: Math.max(0, x1 - x0), h: Math.max(0, y1 - y0) };
@@ -65,7 +64,7 @@ export function signMasks(sign: SignSpec, fit: Fit, crop: Crop): Masks {
     return [[x0 - m, y0 - m], [x1 + m, y0 - m], [x1 + m, y1 + m], [x0 - m, y1 + m]].map(([a, b]) => img(toWorld(g.plane, a!, b!)));
   };
   for (const g of G) { fillPolygon(outer, w, h, grown(g, 3)); fillPolygon(inner, w, h, grown(g, 1)); }
-  for (const g of G) for (const c of g.counters) fillDisc(holes, w, h, img(c.at), c.r * Z_PX * fit.scale * RES);
+  for (const g of G) for (const c of g.counters) fillDisc(holes, w, h, img(c.at), c.r * Z_SCALE * fit.scale * RES);
   for (let i = 0; i + 1 < G.length; i++) {
     const a = G[i]!, b = G[i + 1]!;
     if (a.layout.box.x1 < b.layout.box.x0) fillPolygon(holes, w, h, [toWorld(a.plane, a.layout.box.x1, 0), toWorld(b.plane, b.layout.box.x0, 0), toWorld(b.plane, b.layout.box.x0, xH), toWorld(a.plane, a.layout.box.x1, xH)].map(img));
@@ -76,4 +75,77 @@ export function signMasks(sign: SignSpec, fit: Fit, crop: Crop): Masks {
     ring[i] = outer[i] && !inner[i] && !core[i] && !holes[i] ? 1 : 0;
   }
   return { w, h, core, ring, holes };
+}
+
+/** Level-3 thresholds (§4.3): contrast per scale, halo ceiling. */
+export const LEVEL3 = { contrast: { [COVER_LAPTOP]: 4.5, [COVER_PHONE]: 3 }, halo: 0.5 } as const;
+
+/** Median; NaN for an empty list. */
+export function median(xs: readonly number[]): number {
+  if (!xs.length) return NaN;
+  const s = [...xs].sort((a, b) => a - b), m = s.length >> 1;
+  return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
+}
+
+/** Relative luminance of each RGB pixel inside `mask`. */
+export function luminances(px: Uint8Array | Uint8ClampedArray, mask: Uint8Array): number[] {
+  const out: number[] = [];
+  for (let i = 0; i < mask.length; i++) if (mask[i]) out.push(relativeLuminance((px[i * 4]! << 16) | (px[i * 4 + 1]! << 8) | px[i * 4 + 2]!));
+  return out;
+}
+
+/** Median luminances of core, ring and holes, contrast (core+.05)/(ring+.05) and halo holes/core. */
+export interface Measures { core: number; ring: number; holes: number; contrast: number; halo: number }
+
+/** Level-3 measures of the RGBA pixels `px` inside the masks `m`. */
+export function measure(px: Uint8Array | Uint8ClampedArray, m: Masks): Measures {
+  const core = median(luminances(px, m.core)), ring = median(luminances(px, m.ring)), holes = median(luminances(px, m.holes));
+  return { core, ring, holes, contrast: (core + 0.05) / (ring + 0.05), halo: holes / core };
+}
+
+/** OCR input: RGBA ×3 nearest; pixels on the core side of (core+ring)/2 are black, the rest white. */
+export function ocrImage(px: Uint8Array | Uint8ClampedArray, w: number, h: number, core: number, ring: number): { data: Uint8Array; w: number; h: number } {
+  const k = 3, W = w * k, H = h * k, t = (core + ring) / 2, data = new Uint8Array(W * H * 4);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const s = (Math.floor(y / k) * w + Math.floor(x / k)) * 4;
+      const lum = relativeLuminance((px[s]! << 16) | (px[s + 1]! << 8) | px[s + 2]!), v = (lum - t) * (core - ring) > 0 ? 0 : 255, o = (y * W + x) * 4;
+      data[o] = data[o + 1] = data[o + 2] = v;
+      data[o + 3] = 255;
+    }
+  }
+  return { data, w: W, h: H };
+}
+
+/** Characters the OCR may emit. */
+export const OCR_WHITELIST = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+/** OCR text without any whitespace. */
+export const normalizeOcr = (s: string): string => s.replace(/\s+/g, "");
+
+/** One row of a report table. */
+export interface Row { metric: string; value: string; limit: string; ok: boolean }
+
+/** The three rows (contraste, halo, OCR) of a sign at `scale`; NaN fails. */
+export function verdicts(m: Measures, ocr: string, text: string, scale: number): Row[] {
+  const min = scale === COVER_LAPTOP ? LEVEL3.contrast[COVER_LAPTOP] : LEVEL3.contrast[COVER_PHONE], exact = scale === COVER_LAPTOP, got = normalizeOcr(ocr);
+  return [
+    { metric: "contraste", value: `${m.contrast.toFixed(2)}:1`, limit: `≥ ${min}:1`, ok: m.contrast >= min },
+    { metric: "halo", value: m.halo.toFixed(2), limit: `≤ ${LEVEL3.halo}`, ok: m.halo <= LEVEL3.halo },
+    { metric: "OCR", value: `\`${got}\``, limit: exact ? `= \`${text}\`` : `≈ \`${text}\` (sin mayúsculas)`, ok: exact ? got === text : got.toLowerCase() === text.toLowerCase() },
+  ];
+}
+
+/** Parses `agent-browser eval` stdout (the JSON of the value). */
+export function parseEval<T>(stdout: string): T {
+  try { return JSON.parse(stdout.trim()) as T; } catch { throw new Error(`legibility: unexpected eval output: ${stdout.trim().slice(0, 80)}`); }
+}
+
+/** Context exhibits to measure: all, or the one of `--only <id>`; throws listing the context ids when unknown. */
+export function pickContexts(exhibits: readonly Exhibit[], argv: readonly string[]): ContextExhibit[] {
+  const all = exhibits.filter((e): e is ContextExhibit => e.kind === "context"), i = argv.indexOf("--only");
+  if (i < 0) return all;
+  const id = argv[i + 1], hit = all.filter((e) => e.id === id);
+  if (!hit.length) throw new Error(`legibility: unknown context "${id}"; choose one of: ${all.map((e) => e.id).join(", ")}`);
+  return hit;
 }
