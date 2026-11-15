@@ -206,7 +206,7 @@ Veredicto: Blog ✓.
 
 La cuenta del criterio: `sizeForXHeight(10, 1.17)` ≈ 8.547…, y se usa 8.55
 literal porque `xHeightPx(8.547…)` da 9.999999999999996, menos de 10 en coma
-flotante. Con 8.55 B da 10.0035 px, Portfolio 10.003 px y Blog 10.00 px.
+flotante. Con 8.55 B da 10.0035 px, Portfolio 10.003 px y Blog 10.00 px: es el mismo `xHeightPx(8.55, 1.17)`, redondeado distinto en cada PR.
 
 A 0.83, B, Portfolio y Blog se reconocen. A es una mancha verde chica sobre
 la pista. La elección entre A y B queda para el usuario (§3.1).
@@ -216,7 +216,7 @@ la pista. La elección entre A y B queda para el usuario (§3.1).
 - **Factor anamórfico exacto.** El plano `roofDiagonal` usa `(−1.4, −1.4, 0)`
   (es decir `(−Z_SCALE, −Z_SCALE, 0)`) y no "· 2".
 - **`fillText` deriva el relleno del trazo.** Es un cuadrilátero por segmento
-  más un cuadrado en cada vértice, no una fuente de contorno.
+  más un cuadrado en cada vértice interior, no una fuente de contorno.
 - **Un `CREDITS.md` por carpeta de fotos**, más el índice en
   `assets/carteles-refs/`.
 - **La tecla `c` fija 1.17 y 0.83 como constantes.** `coverView` dio 1.27
@@ -258,7 +258,7 @@ la pista. La elección entre A y B queda para el usuario (§3.1).
   - El descendente de la `g` baja del marco, hasta z ≈ 0.06.
   - Lo "discreto" sale del alpha 0.75, no del tamaño.
   - La baliza queda en parte detrás de la `g`.
-- **Nota de tamaño.** Todos los carteles son grandes frente a su base: B mide
+- **Nota de tamaño.** Todos los carteles son grandes frente a su base: la palabra de B mide
   30.5 u sobre una torre de 16 × 14, el muro 42.9 u y el marco de Blog
   10.8 u sobre una cubierta de 14 × 12. Es un dato para la integración (§4).
 
