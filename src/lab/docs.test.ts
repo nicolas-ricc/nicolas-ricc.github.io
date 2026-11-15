@@ -450,11 +450,12 @@ describe("zone signs closing documentation (#364)", () => {
   it("§8 carries the three legibility tables with the measured values", () => {
     expect(at).toBeGreaterThan(spec.search(/^## 7\. /m));
     expect(dev).toMatch(/^### 8\.1 /m);
-    for (const n of ["3.490", "4.08", "10.0035", "10.003", "10.00", "8.55", "30.54", "37.86", "15.879"]) expect(dev, n).toContain(n);
+    for (const n of ["**3.490**", "**4.08 px** ✗", "**10.0035 px** ✓", "**10.003 px** ✓", "**10.00 px** ✓", "8.55", "30.54", "37.86", "15.879"]) expect(dev, n).toContain(n);
     for (const re of [/^\| \*\*A\*\* \(pista\) \|/m, /^\| \*\*B\*\* \(tubo\) \|/m, /^\| Portfolio \|/m, /^\| Blog \|/m]) expect(dev).toMatch(re);
   });
   it("§8 lists the story deviations and each child's", () => {
-    for (const s of ["(−1.4, −1.4, 0)", "fillText", "6.8", "CREDITS.md", "1.27", "1366×768"]) expect(dev, s).toContain(s);
+    for (const s of ["(−1.4, −1.4, 0)", "fillText", "\"≈ 6.8 u\"", "CREDITS.md", "1366×768"]) expect(dev, s).toContain(s);
+    expect(dev).toMatch(/1\.27\s+\(1\.272\)/);
     for (const n of [360, 361, 362, 363, 367, 368, 369, 370]) expect(dev, `#${n}`).toContain(`#${n}`);
   });
   it("§8 names the twenty captures and the stale placeholders", () => {

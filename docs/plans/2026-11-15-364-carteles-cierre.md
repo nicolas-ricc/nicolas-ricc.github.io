@@ -102,7 +102,7 @@
 - **The §6 box "Nada de `src/world/`… cambia"** is checked against the merge base with `main` (65f73a5), not against `origin/main`. `main` gained #365 (`src/world/view.ts`) and #366 after the story branched; that diff is empty for the story.
 - **The 1.27 of `coverView`** was measured on the story's base, before #365 reworked `coverView` on `main` (plan comment of #352: "`coverView(w, h)` hoy da 1.272 en 1366×768"). §8.2 says it was measured before #365. Rejected: re-measuring on `main`, because the story does not integrate the signs and the `c` constants do not depend on it.
 - **The Spanish literals in the test** are added to `ALLOW["src/lab/docs.test.ts"]`. The comment above that entry already says the docs test pins literals of the Spanish specs (status line, headings, table rows, exhibit names). Rejected: a fixture file, because no other docs test uses one.
-- **The `<id>-real-base.png` captures** of #360 stay as they are, named in §8.4 as captures of the placeholders. The issue asks for the twenty, not for those four. Rejected: deleting them, because PR #367 links them.
+- **The `<id>-real-base.png` captures** of #360 stay as they are, named in §8.4 as captures of the placeholders. The issue asks for the twenty, not for those four. Rejected: re-shooting or deleting them, because the issue scopes the captures to the twenty (PR #368 deferred refreshing `grafiti-real-base.png` to #364, but #364's body does not take it up); the #367 links are commit-pinned blob URLs either way.
 
 ## Grilling
 
