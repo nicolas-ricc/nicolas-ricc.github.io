@@ -69,8 +69,11 @@ the ship's zone),
 `assemble.ts` (scene + animators tagged by zone), `frame.ts`
 (pure framings, `zoneFrame`/`coverFrame`), `veil.ts` (veil polygons per
 zone) and `view.ts` (pure camera: `coverView`, `zoneView`, `clampToBleed`,
-`unproject`). The site frames with `coverView(host)` (the real aspect ratio of
-`#canvas-host`), not with `coverFrame(16/9)` like the lab.
+`clampToCover`, `unproject`). The site frames with `coverView(host)`: at 16:9 or
+wider, the cover rectangle with the real aspect ratio of `#canvas-host`;
+narrower, the 16:9 cover fills the host's height and the host is a window of
+it, centered on `COVER_FOCUS_U` and clamped to its edges (#351). `zoneView`
+stays inside the 16:9 cover on each axis it covers (`clampToCover`).
 In Resume, `city-anim.ts` adds the `city.windows` layer (up to 40 windows of
 downtown and the residential area that switch on and off keeping the percentage
 ±5 %) and, inside `city.neon`, the flickering neon sign of a bar on the pier or a brewery of row 92; the
