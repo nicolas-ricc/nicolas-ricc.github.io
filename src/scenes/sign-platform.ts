@@ -41,14 +41,14 @@ function ladder(out: Solid[]): void {
   }
 }
 
-const SIGN_BEAM = 0.15, SIGN_POST = 0.2, SIGN_Z = 2.8, WORD_Z = 3.0, POST_INSET = 1;
+const SIGN_BEAM = 0.15, SIGN_POST = 0.2, SIGN_Z = 2.8, WORD_Z = 3.0, POST_INSET = 1, SIGN_MARGIN = 1;
 
 /**
- * Blog sign: two steel beams along u = (1, -1, 0)/√2 frame the cyan neon word (L = word width + 1), held by two posts that stand behind
- * the frame (toward -n, n = (1, 1, 0)/√2), inset POST_INSET from the beam ends and flush with the beam boxes, as far south-east as the deck allows.
+ * Blog sign: two steel beams along u = (1, -1, 0)/√2 frame the cyan neon word (L = word width + SIGN_MARGIN), held by two posts that stand behind
+ * the frame (toward -n, n = (1, 1, 0)/√2), inset POST_INSET from the beam ends and flush with the beam boxes, as far south-east as the railing's inner faces allow.
  */
 function sign(out: Solid[], accents: Accent[]): void {
-  const { width } = measureText("Blog", SIGN_SIZE), L = width + 1, u = v3(Math.SQRT1_2, -Math.SQRT1_2, 0), n = v3(Math.SQRT1_2, Math.SQRT1_2, 0);
+  const { width } = measureText("Blog", SIGN_SIZE), L = width + SIGN_MARGIN, u = v3(Math.SQRT1_2, -Math.SQRT1_2, 0), n = v3(Math.SQRT1_2, Math.SQRT1_2, 0);
   const a = (L / 2 - POST_INSET) * Math.SQRT1_2, d = POST_INSET + (SIGN_POST / 2 + (SIGN_BEAM / 2) * Math.SQRT1_2) * Math.SQRT2;
   const mx = HALF_X - RAIL_POST - SIGN_POST / 2 - a, my = HALF_Y - RAIL_POST - SIGN_POST / 2 - a; // post midpoint: right post at the railing's inner x, left post at its inner y
   const c = v3(mx + n.x * d, my + n.y * d, 0);

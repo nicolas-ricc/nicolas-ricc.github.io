@@ -45,6 +45,13 @@ describe("sea platform (#363)", () => {
     for (const r of rails) expect(Math.min(r.from.x, r.to.x)).toBeGreaterThanOrEqual(7);
   });
 
+  it("a handrail per railing span at z 2.5, the boxGrey hut 2.4 × 1.8 × 1.4 and the steel mast r 0.15 h 4 on the deck", () => {
+    const { out } = build();
+    expect(beams(out).filter((b) => b.mat === "steel" && near(b.from.z, 2.5) && near(b.to.z, 2.5) && near(b.w, 0.1))).toHaveLength(13);
+    expect(prisms(out).filter((s) => s.mat === "boxGrey" && near(s.w, 2.4) && near(s.d, 1.8) && near(s.h, 1.4) && near(s.at.z, 1.6))).toHaveLength(1);
+    expect(out.filter((s) => s.kind === "cylinder" && s.mat === "steel" && s.r === 0.15 && s.h === 4 && near(s.at.z, 1.6))).toHaveLength(1);
+  });
+
   it("exactly one cyan dot (the beacon, z ≥ 5.5) and one cyanMid dot (the hut light)", () => {
     const dots = build().accents.flatMap((a) => (a.kind === "dot" ? [a] : []));
     const cyan = dots.filter((d) => d.color === "cyan");
