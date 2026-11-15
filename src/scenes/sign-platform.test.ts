@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
-import { bounds, type Solid } from "../iso/solids";
-import { xHeightPx } from "../kit/lettering";
-import { SIGN_SIZE, SIGN_TUBE, seaPlatform } from "./sign-platform";
+import { translate, translateAccent } from "../iso/translate";
+import { bounds, tessellate, type Solid } from "../iso/solids";
+import { SIGN_FONT } from "../kit/legibility";
+import { layoutText } from "../kit/lettering";
+import { neon } from "../kit/props";
+import { BLOG_SIGN, PLATFORM_SITE, SIGN_SIZE, SIGN_TUBE, seaPlatform, seaPlatformAt } from "./sign-platform";
 
 const build = () => { const out: Solid[] = [], accents: Accent[] = []; seaPlatform(out, accents); return { out, accents }; };
 const near = (a: number, b: number) => Math.abs(a - b) <= 1e-6;
@@ -69,8 +72,9 @@ describe("sea platform (#363)", () => {
       const k = a.pts[0]!.x + a.pts[0]!.y;
       for (const p of a.pts) expect(Math.abs(p.x + p.y - k)).toBeLessThan(1e-9);
     }
-    const frame = beams(out).filter((b) => near(b.from.z, 2.8) || near(b.from.z, 2.8 + 8.55 + 1));
+    const frame = beams(out).filter((b) => b.mat === "steel" && near(b.w, 0.15) && near(b.from.z, b.to.z) && b.from.z >= 2.8 - 1e-9);
     expect(frame).toHaveLength(2);
+    expect(Math.min(...frame.map((b) => b.from.z))).toBeCloseTo(2.8, 9);
     const plane = (frame[0]!.from.x + frame[0]!.to.x + frame[0]!.from.y + frame[0]!.to.y) / 2;
     for (const b of frame) expect((b.from.x + b.to.x + b.from.y + b.to.y) / 2).toBeCloseTo(plane, 9);
     for (const a of polys.filter((p) => p.color === "cyan")) expect(a.pts[0]!.x + a.pts[0]!.y).toBeCloseTo(plane, 9);
@@ -88,10 +92,8 @@ describe("sea platform (#363)", () => {
     }
   });
 
-  it("readable at cover scale 1.17: x-height ≥ 10 px, tube ≥ 1.5 px", () => {
-    expect(SIGN_SIZE).toBe(8.55);
-    expect(xHeightPx(SIGN_SIZE, 1.17)).toBeGreaterThanOrEqual(10);
-    expect(SIGN_TUBE * 1.17 * 1.4).toBeGreaterThanOrEqual(1.5);
+  it("the common sign measure: SIGN_SIZE and SIGN_TUBE are SIGN_FONT (#376)", () => {
+    expect([SIGN_SIZE, SIGN_TUBE]).toEqual([SIGN_FONT.size, SIGN_FONT.width]);
   });
 
   it("no solid interpenetrates another (boxes disjoint on x, y or z within 1e-6), except the piles with the deck", () => {
@@ -108,5 +110,79 @@ describe("sea platform (#363)", () => {
 
   it("deterministic: two builds are equal", () => {
     expect(build()).toEqual(build());
+  });
+});
+
+const site = () => { const out: Solid[] = [], accents: Accent[] = []; seaPlatformAt(out, accents); return { out, accents }; };
+const isPanel = (s: Solid) => s.kind === "poly" && s.mat === "officeDark";
+const N = { x: Math.SQRT1_2, y: Math.SQRT1_2 };
+
+describe("Blog sign at SIGN_FONT, with its backing panel (#376)", () => {
+  it("PLATFORM_SITE is (400, 170, 0)", () => {
+    expect(PLATFORM_SITE).toEqual({ x: 400, y: 170, z: 0 });
+  });
+  it("BLOG_SIGN: Blog, SIGN_FONT, cyan, stroke quads of the layout, on one diagonal plane", () => {
+    expect(BLOG_SIGN).toMatchObject({ id: "plataforma", text: "Blog", size: SIGN_FONT.size, width: SIGN_FONT.width, color: "cyan" });
+    expect(BLOG_SIGN.facade).toBeUndefined();
+    expect(BLOG_SIGN.glyphs.map((g) => g.char)).toEqual(["B", "l", "o", "g"]);
+    const lay = layoutText("Blog", SIGN_FONT.size, SIGN_FONT.width);
+    BLOG_SIGN.glyphs.forEach((g, i) => {
+      expect(g.plane.u.x).toBeCloseTo(Math.SQRT1_2, 12); expect(g.plane.u.y).toBeCloseTo(-Math.SQRT1_2, 12);
+      expect(g.plane.v).toEqual({ x: 0, y: 0, z: 1 });
+      expect(g.quads).toHaveLength(lay[i]!.quads.length);
+    });
+  });
+  it("seaPlatformAt draws the sign from BLOG_SIGN: its cyan accents are the spec's quads through neon(…, 0.75)", () => {
+    const want = BLOG_SIGN.glyphs.flatMap((g) => g.quads).flatMap((q) => neon(q, "cyan", 0.75));
+    const got = site().accents.filter((a) => a.kind === "poly" && (a.color === "cyan" || a.color === "cyanBleed"));
+    expect(got).toEqual(want);
+  });
+  it("the backing is one officeDark poly, the same one seaPlatformAt builds", () => {
+    expect(BLOG_SIGN.backing).toHaveLength(1);
+    expect(isPanel(BLOG_SIGN.backing[0]!)).toBe(true);
+    const panels = site().out.filter(isPanel);
+    expect(panels).toEqual(BLOG_SIGN.backing);
+  });
+  it("the panel is 0.3 thick, 0.06 behind the tube plane", () => {
+    const p = BLOG_SIGN.backing[0]!;
+    if (p.kind !== "poly") throw new Error("panel");
+    const tube = BLOG_SIGN.glyphs[0]!.quads[0]![0]!, k = tube.x * N.x + tube.y * N.y;
+    const ks = p.footprint.map((q) => q.x * N.x + q.y * N.y);
+    expect(Math.max(...ks)).toBeCloseTo(k - 0.06, 9);
+    expect(Math.min(...ks)).toBeCloseTo(k - 0.36, 9);
+  });
+  it("the panel exceeds every letter's ink box, the g's descender included, by ≥ 1 w on every side", () => {
+    const p = BLOG_SIGN.backing[0]!;
+    if (p.kind !== "poly") throw new Error("panel");
+    const plane = BLOG_SIGN.glyphs[0]!.plane, w = SIGN_FONT.width;
+    const along = p.footprint.map((q) => (q.x - plane.origin.x) * plane.u.x + (q.y - plane.origin.y) * plane.u.y);
+    const a0 = Math.min(...along), a1 = Math.max(...along), b0 = p.z - plane.origin.z, b1 = p.z + p.h - plane.origin.z;
+    for (const g of BLOG_SIGN.glyphs) {
+      expect(g.layout.box.x0 - a0, g.char).toBeGreaterThanOrEqual(w);
+      expect(a1 - g.layout.box.x1, g.char).toBeGreaterThanOrEqual(w);
+      expect(g.layout.box.y0 - b0, g.char).toBeGreaterThanOrEqual(w);
+      expect(b1 - g.layout.box.y1, g.char).toBeGreaterThanOrEqual(w);
+    }
+    expect(BLOG_SIGN.glyphs.find((g) => g.char === "g")!.layout.box.y0).toBeLessThan(0);
+  });
+  it("the panel shows the camera its shaded front face", () => {
+    expect(tessellate(BLOG_SIGN.backing[0]!).some((f) => f.mat === "officeDark" && f.tone === "shade")).toBe(true);
+  });
+  it("the frame grows with the word: beams span the panel", () => {
+    const p = BLOG_SIGN.backing[0]!;
+    const frame = beams(site().out).filter((b) => near(b.w, 0.15) && near(b.from.z, b.to.z) && b.from.z >= 2.8 - 1e-9);
+    expect(frame).toHaveLength(2);
+    const len = (b: (typeof frame)[number]) => Math.hypot(b.to.x - b.from.x, b.to.y - b.from.y);
+    const pb = bounds(p);
+    for (const b of frame) expect(len(b)).toBeGreaterThan(Math.hypot(pb.max.x - pb.min.x, pb.max.y - pb.min.y) / Math.SQRT2);
+    const [lo, hi] = [...frame].sort((a, b) => a.from.z - b.from.z);
+    expect(pb.min.z).toBeCloseTo(lo!.from.z + 0.075, 9);
+    expect(pb.max.z).toBeCloseTo(hi!.from.z - 0.075, 9);
+  });
+  it("seaPlatform is seaPlatformAt moved by −PLATFORM_SITE, solid by solid and accent by accent", () => {
+    const o = build(), s = site();
+    const r = (v: unknown) => JSON.parse(JSON.stringify(v, (_k, x: unknown) => (typeof x === "number" ? Math.round(x * 1e9) / 1e9 + 0 : x)));
+    expect(r(o.out)).toEqual(r(s.out.map((x) => translate(x, -PLATFORM_SITE.x, -PLATFORM_SITE.y))));
+    expect(r(o.accents)).toEqual(r(s.accents.map((x) => translateAccent(x, -PLATFORM_SITE.x, -PLATFORM_SITE.y))));
   });
 });
