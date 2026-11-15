@@ -44,3 +44,26 @@ describe("cover-scale key c (#360)", () => {
     expect(src).toContain("[storybook] cover scale: ");
   });
 });
+
+describe("lab hook (#377)", () => {
+  it("publishes window.__lab only under import.meta.env.DEV", () => {
+    expect(src).toMatch(/if \(import\.meta\.env\.DEV\)\s*\{?\s*window\.__lab = /);
+  });
+  it("declares LabHook on Window in the module", () => {
+    expect(src).toMatch(/interface LabHook/);
+    expect(src).toMatch(/declare global \{\s*interface Window \{\s*__lab\?: LabHook/);
+  });
+  it("LabHook has every member the legibility script reads", () => {
+    const start = src.indexOf("interface LabHook {");
+    const body = src.slice(start, src.indexOf("\n}", start));
+    for (const k of ["exhibitId", "coverScale", "setCoverScale", "bloom", "fit", "hostSize", "pixels"]) expect(body).toMatch(new RegExp(`\\b${k}\\b`));
+  });
+  it("pixels reads the stage through extract.pixels at resolution 2", () => {
+    expect(src).toContain("extract.pixels(");
+    expect(src).toContain("resolution: 2");
+  });
+  it("the header comment documents window.__lab", () => {
+    const header = src.slice(src.indexOf("/**"), src.indexOf("*/")).replace(/\n\s*\*\s*/g, " ");
+    expect(header).toContain("window.__lab");
+  });
+});
