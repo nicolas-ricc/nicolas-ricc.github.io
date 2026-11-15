@@ -59,7 +59,7 @@ describe("graffiti wall (#362): wall, cap and throw-up paint", () => {
     const faces = tessellate(w), bare = tessellate({ ...w, plates: undefined });
     const extra = faces.slice(bare.length);
     expect(extra).toHaveLength(plates.length);
-    for (const f of extra) expect(Math.abs(f.normal.x * n.x + f.normal.y * n.y + f.normal.z * 0 - 1)).toBeLessThan(1e-6);
+    for (const f of extra) expect(Math.abs(f.normal.x * n.x + f.normal.y * n.y - 1)).toBeLessThan(1e-6);
   });
 
   it("shadow (hull), outline (officeDark) and fill (safety) from fillText, 2.5 in and baseline 1.5", () => {
@@ -194,6 +194,7 @@ const disjoint = (a: Bounds, b: Bounds) => (["x", "y", "z"] as const).some((k) =
 const corners = (b: Bounds) => [b.min.x, b.max.x].flatMap((x) => [b.min.y, b.max.y].flatMap((y) => [b.min.z, b.max.z].map((z) => v3(x, y, z))));
 /** Screen y' of the word's baseline (z 1.5 on the face) at screen x'. */
 const baselineY = (x: number) => project(face(x / Math.SQRT2 + L / 2, 1.5)).y;
+
 describe("graffiti wall (#362): floodlights, beams, drums and container", () => {
   const props = (out: Solid[]) => out.filter((s) => s !== wallOf(out) && s !== capOf(out));
   const drums = (out: Solid[]) => out.filter((s) => s.kind === "cylinder" && s.mat === "rust");
