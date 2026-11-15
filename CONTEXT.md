@@ -113,3 +113,7 @@ Code: `src/kit/types.ts` (`Slot`), `src/kit/piece.ts` (`southSign`, `SIGN_MIN_H`
 ### Lettering
 (Rotulado.) Pixi-free stroke font on a 7-unit grid (cap 7, x-height 5, descender 2, gap 1, space 3) and the generators that turn text into geometry. A `TextPlane` (`origin`, `u`, `v`) hosts the text: `diagonalWall` and `facade` for walls, `roofDiagonal` for roofs, stretched so the text reads like `diagonalWall`'s on screen. `strokeText` gives world quads on a plane, `fillText` gives text-space quads (segments plus a square on each interior vertex) for a Graphics fill, `measureText` the extent, and `GLYPHS` the 14 letters of Portfolio, Resume and Blog; any other character throws, except the space.
 Code: `src/kit/lettering.ts` (`TextPlane`, `diagonalWall`, `roofDiagonal`, `facade`, `strokeText`, `fillText`, `measureText`, `GLYPHS`).
+
+### Sign
+(Cartel.) A world object that writes a zone's name: today the four storybook `piece` exhibits `cartel-helipuerto`, `cartel-helipuerto-b`, `grafiti` and `plataforma`, built by `src/scenes/sign-*.ts`; they are not in the world.
+Code: `src/scenes/sign-helipad.ts` (`helipadSign`, `helipadTubeSign`), `src/scenes/sign-graffiti.ts` (`graffitiWall`), `src/scenes/sign-platform.ts` (`seaPlatform`), `src/lab/exhibits.ts` (`EXHIBITS`).
