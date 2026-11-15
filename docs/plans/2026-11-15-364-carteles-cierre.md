@@ -40,7 +40,7 @@
   - `"the sign spec says implemented, pending integration"`: the `**Estado:**` line equals `**Estado:** implementado (storybook; integración pendiente, §7)`.
   - `"§6 is ticked off"`: the slice between `## 6.` and `## 7.` has no `- [ ]` and has 8 `- [x]`.
   - `"§8 carries the three legibility tables with the measured values"`: `at` > the index of `## 7.`; `dev` contains `### 8.1`; for each of `3.490`, `4.08`, `10.0035`, `10.003`, `10.00`, `8.55`, `30.54`, `37.86`, `15.879` → `toContain`; the rows `| **A** (pista) |`, `| **B** (tubo) |`, `| Portfolio |` and `| Blog |` match `^…` (multiline).
-  - `"§8 lists the story deviations and each child's"`: `dev` contains `(−1.4, −1.4, 0)`, `fillText`, `CREDITS.md`, `1.27`, `1366×768`, and `#360`, `#361`, `#362`, `#363`, `#367`, `#368`, `#369`, `#370`.
+  - `"§8 lists the story deviations and each child's"`: `dev` contains `(−1.4, −1.4, 0)`, `fillText`, `6.8` (the forecast, quoted as not fitting; the result asserted is `3.490`), `CREDITS.md`, `1.27`, `1366×768`, and `#360`, `#361`, `#362`, `#363`, `#367`, `#368`, `#369`, `#370`.
   - `"§8 names the twenty captures and the stale placeholders"`: for each of the four ids and each of the five suffixes, `dev` contains `assets/352-carteles/<id>-<suffix>.png`; it also contains `real-base`.
   - In `src/english.test.ts`, widen the docs.test entry of `ALLOW` with **only** the literals the guard rejects: add `Resume: ciudad|Blog: mar` to the existing row regex, and add one regex for the new Spanish literals the test quotes (at least `plataforma con cartel` and `integración pendiente, §7`; run the guard to find the rest). Extend the comment above the entry if the new literals fall outside what it lists.
 
@@ -48,7 +48,7 @@
 
 - [ ] **Step 3: Edit the spec.**
   - `**Estado:**` line as above.
-  - Tick all eight §6 boxes. All of them are delivered by #360–#363 (the lettering, plate `poly`, exhibits and `c` key from #360; the measurements and inventories from #361–#363; the glossary entries; the empty diff of `src/world/` etc. against `main`, which you verify with `git diff --stat origin/main -- src/world src/main.ts index.html src/style.css`).
+  - Tick all eight §6 boxes. All of them are delivered by #360–#363 (the lettering, plate `poly`, exhibits and `c` key from #360; the measurements and inventories from #361–#363; the glossary entries; the empty diff of `src/world/` etc. against `main`, which you verify with `git diff --stat $(git merge-base origin/main HEAD) HEAD -- src/world src/main.ts index.html src/style.css` (against the merge base: `main` moved on with #365/#366 after the story branched, so a plain `origin/main` diff shows their changes, not the story's)).
   - Append `## 8. Desvíos y medición`, in Spanish:
     - **8.1** The three tables, copied from the PRs. Helipad (A and B, the #370 table with its columns), Portfolio (the #368 row), Blog (the #369 table). Each one carries a verdict line: A ✗ (4.08 px < 10 at 1.17, the largest cap height that fits on the pad, 3.490 u; the "≈ 6.8 u" of the plan does not fit its own rule), B ✓, Portfolio ✓, Blog ✓. Add the criterion's arithmetic: `sizeForXHeight(10, 1.17)` ≈ 8.547 → 8.55 literal, because `xHeightPx(8.547…)` < 10 in floating point. Add what 0.83 shows: B, Portfolio and Blog are recognizable; A is a small green smudge. The A/B choice stays with the user (§3.1).
     - **8.2** The story deviations listed in the issue: the exact anamorphic factor `(−1.4, −1.4, 0)` instead of "· 2"; `fillText` fill derived from the stroke (quad per segment plus a square at each vertex), not an outline font; one `CREDITS.md` per photo folder plus the index; the `c` key fixes 1.17/0.83 as constants (`coverView` gives 1.27 at a whole 1366×768).
@@ -95,3 +95,25 @@
   - In the lab paragraph's spec list, add `2026-11-11-carteles-de-zona-assets-design.md` after `2026-10-27-barrio-costero-design.md`, before the closing `)`.
 - [ ] **Step 4: Run** `npm test` and `npm run typecheck`. Expected: all green.
 - [ ] **Step 5: Commit** `docs(#364): storybook index and README name the signs`.
+
+## Assumptions
+
+- **Evals land before the docs.** Stage 3 commits every test of the three tasks at once, failing. So the intermediate commits of Tasks 1–2 are red on the tests of the later tasks, and the branch is green from Task 3 on. Rejected: one test commit per task, because the pipeline asks for a single `test(#364): evals` commit.
+- **The §6 box "Nada de `src/world/`… cambia"** is checked against the merge base with `main` (65f73a5), not against `origin/main`. `main` gained #365 (`src/world/view.ts`) and #366 after the story branched; that diff is empty for the story.
+- **The 1.27 of `coverView`** was measured on the story's base, before #365 reworked `coverView` on `main` (plan comment of #352: "`coverView(w, h)` hoy da 1.272 en 1366×768"). §8.2 says it was measured before #365. Rejected: re-measuring on `main`, because the story does not integrate the signs and the `c` constants do not depend on it.
+- **The Spanish literals in the test** are added to `ALLOW["src/lab/docs.test.ts"]`. The comment above that entry already says the docs test pins literals of the Spanish specs (status line, headings, table rows, exhibit names). Rejected: a fixture file, because no other docs test uses one.
+- **The `<id>-real-base.png` captures** of #360 stay as they are, named in §8.4 as captures of the placeholders. The issue asks for the twenty, not for those four. Rejected: deleting them, because PR #367 links them.
+
+## Grilling
+
+- Rounds: 1 (griller model: fable). Questions: 17.
+- Sources:
+  - ISSUE: 6 (1, 3, 4, 8, 12, 17);
+  - CODE: 7 (5, 6, 9, 10, 11, 14, 16);
+  - DOC: 3 (2, 7, 15);
+  - NO SOURCE → technical assumption: 1 (13).
+- Plan changes:
+  - the §6 diff is taken against the merge base (question 14 found that the plain `origin/main` diff is not empty);
+  - `6.8` is asserted (question 12);
+  - the Assumptions section above was added.
+- No spec ambiguity. No follow-up issues opened.
