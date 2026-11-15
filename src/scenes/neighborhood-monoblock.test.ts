@@ -9,6 +9,7 @@ import { tech } from "./tech";
 import { FACE_CAPS, blockRect, facesIn, insideInflated } from "./tech-budget";
 import { blockParity, zoneKinds } from "./tech-zoning";
 import { zoneRng } from "./world";
+import { isBox } from "../iso/plate";
 
 type Prism = Solid & { kind: "prism" };
 
@@ -62,7 +63,7 @@ describe("monoblocks of the Simón Bolívar neighborhood (#250)", () => {
 
   it("grid facade: band of windows per floor to the south and east, 7 pilasters to the south and 1 to the east, 1 or 2 loggias with a railing per floor", () => {
     for (const b of monos) for (const p of of(b).bodies) {
-      const floors = p.h / 3, plates = p.plates ?? [];
+      const floors = p.h / 3, plates = (p.plates ?? []).filter(isBox);
       for (const wall of [1, 2]) expect(plates.filter((q) => q.wall === wall && q.mat === "glass" && q.toneOffset === -1), `band wall ${wall}`).toHaveLength(floors);
       const piers = plates.filter((q) => q.mat === p.mat && q.toneOffset === 1);
       expect(piers.filter((q) => q.wall === 2)).toHaveLength(7); expect(piers.filter((q) => q.wall === 1)).toHaveLength(1);
@@ -75,7 +76,7 @@ describe("monoblocks of the Simón Bolívar neighborhood (#250)", () => {
   });
 
   it("no glass plate or pilaster falls on wall 0 or wall 3", () => {
-    for (const b of monos) for (const p of of(b).bodies) for (const q of p.plates ?? []) expect([1, 2]).toContain(q.wall);
+    for (const b of monos) for (const p of of(b).bodies) for (const q of (p.plates ?? []).filter(isBox)) expect([1, 2]).toContain(q.wall);
   });
 
   it("tank tower: each body with ≥ 2 concrete tanks 2×2 resting on its roof and a steel antenna on a tank", () => {

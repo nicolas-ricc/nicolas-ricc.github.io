@@ -4,7 +4,7 @@ import { facadeFaces } from "./facade";
 import { dot, v3, type Vec3 } from "./geometry";
 import { shadeTone } from "./light";
 import { project } from "./project";
-import { bounds, GABLE_RATIO, isFlat, tessellate, tessellateAll, WHEEL_NORMAL, WHEEL_U, type Face, type Plate, type Solid } from "./solids";
+import { bounds, GABLE_RATIO, isFlat, tessellate, tessellateAll, WHEEL_NORMAL, WHEEL_U, type Face, type Plate, type PlateBox, type Solid } from "./solids";
 
 const prism: Solid = { kind: "prism", at: v3(0, 0, 0), w: 2, d: 3, h: 4, mat: "concrete" };
 
@@ -1293,7 +1293,7 @@ describe("plates non-regression", () => {
 
 describe("plates", () => {
   const P: Solid & { kind: "prism" } = { kind: "prism", at: v3(0, 0, 0), w: 4, d: 3, h: 6, mat: "brick" };
-  const plate = (wall: number, extra: Partial<Plate> = {}): Plate => ({ wall, shape: "rect", u0: 0.25, u1: 0.75, z0: 1, z1: 3, mat: "steel", ...extra });
+  const plate = (wall: number, extra: Partial<PlateBox> = {}): PlateBox => ({ wall, shape: "rect", u0: 0.25, u1: 0.75, z0: 1, z1: 3, mat: "steel", ...extra });
   const near = (a: number, lo: number, hi: number) => a >= lo - 1e-9 && a <= hi + 1e-9;
   const isSouth = (f: Face) => f.mat === "brick" && f.pts.every((p) => p.y === 3) && Math.abs(f.normal.z) < 1e-6;
 
@@ -1423,7 +1423,7 @@ describe("plates", () => {
 
   describe("on ramp", () => {
     const R: Solid & { kind: "ramp" } = { kind: "ramp", at: v3(0, 0, 0), w: 4, d: 2, h: 2, mat: "steel", dir: "n" };
-    const rp = (wall: number, extra: Partial<Plate> = {}): Plate => plate(wall, { mat: "glass", z0: 0.2, z1: 0.8, ...extra });
+    const rp = (wall: number, extra: Partial<PlateBox> = {}): PlateBox => plate(wall, { mat: "glass", z0: 0.2, z1: 0.8, ...extra });
     const wallOf = (faces: Face[], pred: (p: Vec3) => boolean) => faces.findIndex((f) => f.mat === "steel" && Math.abs(f.normal.z) < 1e-6 && f.pts.every(pred));
 
     it("plate on wall 2: comes after the south side, in tessellateAll and in tessellate", () => {

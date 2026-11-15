@@ -3,6 +3,7 @@ import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
 import { hides, screenHull } from "../iso/depth";
 import { bounds, isFlat, type Bounds, type Solid } from "../iso/solids";
+import { isBox } from "../iso/plate";
 import { RECIPES, recipe } from "../kit/index";
 import { CAR, dockCrane } from "../kit/props";
 import { STYLES } from "../kit/styles";
@@ -35,7 +36,7 @@ const works = (seed: number): { solids: Solid[]; accents: Accent[] } => {
 const planCut = (a: Bounds, b: Bounds): boolean => a.min.x < b.max.x - EPS && b.min.x < a.max.x - EPS && a.min.y < b.max.y - EPS && b.min.y < a.max.y - EPS;
 const isPrism = (s: Solid, mat: string, w: number, d: number, h: number): boolean =>
   s.kind === "prism" && s.mat === mat && Math.abs(s.w - w) < EPS && Math.abs(s.d - d) < EPS && Math.abs(s.h - h) < EPS;
-const plates = (s: Solid) => ("plates" in s && s.plates) || [];
+const plates = (s: Solid) => (("plates" in s && s.plates) || []).filter(isBox);
 
 describe("harbor family", () => {
   it("registers fishMarket and foodHall in the harbor family, with the harbor style", () => {

@@ -1,7 +1,7 @@
 import type { Accent } from "../../iso/accent";
 import { v3, type Vec2, type Vec3 } from "../../iso/geometry";
 import { shadeTone } from "../../iso/light";
-import { ribs, type Plate } from "../../iso/plate";
+import { ribs, type Plate, type PlateBox } from "../../iso/plate";
 import { GABLE_RATIO, bounds, type Solid } from "../../iso/solids";
 import type { Material } from "../../map/palette-iso";
 import type { Rng } from "../../map/seed";
@@ -23,7 +23,7 @@ export const SIDES: readonly Side[] = ["n", "e", "s", "w"];
 export const tonePiece = (p: Piece, tone: number): Piece => (tone === 0 ? p : { ...p, solids: p.solids.map((s) => ({ ...s, tone })) });
 
 /** Door plate centered on a wall of length `len`: `width` wide (at most the wall) and `h` tall from `z0`, `mat` that of the wall, two tones darker. */
-export function door(wall: number, len: number, width: number, z0: number, h: number, mat: Material): Plate {
+export function door(wall: number, len: number, width: number, z0: number, h: number, mat: Material): PlateBox {
   const k = Math.min(width, len) / len, u0 = (1 - k) / 2;
   return { wall, shape: "rect", u0, u1: u0 + k, z0, z1: z0 + h, mat, toneOffset: -2 };
 }
@@ -32,7 +32,7 @@ export function door(wall: number, len: number, width: number, z0: number, h: nu
 export function sawtooth(out: Solid[], rect: Rect, z: number, h: number, toothH: number, mat: Material, glass: Material): void {
   const n = Math.floor(rect.w / TOOTH_W), x0 = rect.x + (rect.w - n * TOOTH_W) / 2, base = z + h;
   for (let k = 0; k < n; k++) {
-    const plate: Plate = { wall: 1, shape: "rect", u0: 0.05, u1: 0.95, z0: base + 0.3 * toothH, z1: base + 0.9 * toothH, mat: glass };
+    const plate: PlateBox = { wall: 1, shape: "rect", u0: 0.05, u1: 0.95, z0: base + 0.3 * toothH, z1: base + 0.9 * toothH, mat: glass };
     out.push({ kind: "ramp", at: v3(x0 + k * TOOTH_W, rect.y, base), w: TOOTH_W, d: rect.d, h: toothH, mat, dir: "w", plates: [plate] });
   }
 }
