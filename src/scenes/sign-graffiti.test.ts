@@ -97,7 +97,7 @@ describe("graffiti wall (#362): wall, cap and throw-up paint", () => {
   });
 
   it("the amber core keeps its bloom: one amberBleed halo (alpha 0.6 · 0.75) per tube", () => {
-    const halos = build().accents.filter((a) => a.color === "amberBleed" && a.kind === "poly" && a.alpha !== 0.12);
+    const halos = build().accents.filter((a) => a.color === "amberBleed" && a.kind === "poly" && Math.abs((a.alpha ?? 1) - 0.45) < 1e-9);
     expect(halos).toHaveLength(strokeText("Portfolio", diagonalWall(v3(0, 0, 1.5)), 8.55, 1.0).length);
     for (const a of halos) expect(a.kind === "poly" && a.alpha).toBeCloseTo(0.45, 9);
   });
@@ -194,29 +194,17 @@ const disjoint = (a: Bounds, b: Bounds) => (["x", "y", "z"] as const).some((k) =
 const corners = (b: Bounds) => [b.min.x, b.max.x].flatMap((x) => [b.min.y, b.max.y].flatMap((y) => [b.min.z, b.max.z].map((z) => v3(x, y, z))));
 /** Screen y' of the word's baseline (z 1.5 on the face) at screen x'. */
 const baselineY = (x: number) => project(face(x / Math.SQRT2 + L / 2, 1.5)).y;
-/** Point-in-convex-polygon on screen, with a tolerance. */
-function insideConvex(pt: Vec2, poly: Vec2[], eps: number): boolean {
-  let sign = 0;
-  for (let i = 0; i < poly.length; i++) {
-    const a = poly[i]!, b = poly[(i + 1) % poly.length]!;
-    const len = Math.hypot(b.x - a.x, b.y - a.y), c = ((b.x - a.x) * (pt.y - a.y) - (b.y - a.y) * (pt.x - a.x)) / len;
-    if (Math.abs(c) <= eps) continue;
-    if (sign === 0) sign = Math.sign(c); else if (Math.sign(c) !== sign) return false;
-  }
-  return true;
-}
-
 describe("graffiti wall (#362): floodlights, beams, drums and container", () => {
   const props = (out: Solid[]) => out.filter((s) => s !== wallOf(out) && s !== capOf(out));
   const drums = (out: Solid[]) => out.filter((s) => s.kind === "cylinder" && s.mat === "rust");
   const containerOf = (out: Solid[]) => out.filter((s) => s.kind === "prism" && s.mat === "rust");
   const posts = (out: Solid[]) => out.filter((s) => s.kind === "prism" && s.mat === "steel");
 
-  it("3 floodlight dots at z 5, 4 u in front of the face, at u 0.2, 0.5 and 0.8", () => {
+  it("3 floodlight dots at z 1.2, 4 u in front of the face, at u 0.2, 0.5 and 0.8", () => {
     const dots = build().accents.filter((a): a is Accent & { kind: "dot" } => a.kind === "dot");
     expect(dots).toHaveLength(3);
     dots.forEach((a, i) => {
-      expect(a.at.z).toBeCloseTo(5, 9);
+      expect(a.at.z).toBeCloseTo(1.2, 9);
       expect(front(a.at)).toBeCloseTo(4.6, 9);
       expect(along(a.at)).toBeCloseTo(([0.2, 0.5, 0.8][i]! - 0.5) * L, 9);
     });
@@ -236,8 +224,17 @@ describe("graffiti wall (#362): floodlights, beams, drums and container", () => 
       expect(near).toHaveLength(2);
       expect(onFace).toHaveLength(2);
       expect(Math.abs(along(onFace[0]!) - along(onFace[1]!))).toBeCloseTo(8, 9);
-      expect(insideConvex(project(bulb), b.pts.map(project), 0.3)).toBe(true);
+      const s = near.map(along).sort((x, y) => x - y); // the near edge straddles the bulb along the wall
+      expect(s[0]!).toBeCloseTo(along(bulb) - 0.3, 9);
+      expect(s[1]!).toBeCloseTo(along(bulb) + 0.3, 9);
     });
+  });
+
+  it("no bulb covers the paint: each projected dot (radius r) lies below the lowest paint point on screen", () => {
+    const { out, accents } = build();
+    const paint = platesOf(out).filter((p): p is PlatePoly => p.shape === "poly" && p.mat !== "signal");
+    const lowest = Math.max(...paint.flatMap((p) => plateWorld(p).map((q) => project(q).y)));
+    for (const a of accents) if (a.kind === "dot") expect(project(a.at).y - a.r).toBeGreaterThan(lowest);
   });
 
   it("3 rust drums r 1.1 h 1.6, 6 sides, and a 6 × 2.4 × 2.4 container: low and in front of the face", () => {
