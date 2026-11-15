@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
-import { convexHull, v3, type Vec3 } from "../iso/geometry";
+import { convexHull, v3 } from "../iso/geometry";
 import { hullsOverlap } from "../iso/depth";
 import { project } from "../iso/project";
 import { bounds, tessellateAll, type Solid } from "../iso/solids";
@@ -60,7 +60,7 @@ describe("tower crown: the sign (#378)", () => {
     for (const g of RESUME_SIGN.glyphs) expect(g.quads.length).toBe(g.layout.fill.length);
   });
 
-  it("one officeDark panel along (1, −1), 0.6 thick, its SE face 0.06 behind the letters; it is the sign's backing", () => {
+  it("one officeDark panel along (1, −1), 0.6 thick, its south-east face 0.06 behind the letters; it is the sign's backing", () => {
     expect(panel).toHaveLength(1);
     const p = panel[0]!;
     expect(RESUME_SIGN.backing).toEqual([p]);
