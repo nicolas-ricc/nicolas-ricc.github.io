@@ -15,6 +15,7 @@
     "feed": "tsx scripts/fetch-blog-feed.ts",
     "prerender": "tsx scripts/prerender.ts",
     "palette": "tsx scripts/darken-palette.ts",
+    "legibility": "tsx scripts/legibility.ts",
     "prebuild": "npm run validate && npm run feed",
     "predev": "npm run feed"
   },
@@ -29,6 +30,7 @@
   "devDependencies": {
     "@types/node": "^22.20.2",
     "happy-dom": "^21.0.4",
+    "tesseract.js": "^7.0.0",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
