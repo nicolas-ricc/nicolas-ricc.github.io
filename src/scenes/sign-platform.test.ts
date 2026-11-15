@@ -16,15 +16,14 @@ describe("sea platform (#363)", () => {
     const { out } = build();
     expect(Math.min(...out.map((s) => bounds(s).min.z))).toBeCloseTo(-1, 9);
     const steel = out.filter((s) => s.kind === "cylinder" && s.mat === "steel");
-    expect(steel.length).toBeGreaterThanOrEqual(6);
     const piles = steel.filter((s) => s.kind === "cylinder" && s.r === 0.3 && s.at.z === -1 && near(s.at.z + s.h, 1.2));
     expect(piles).toHaveLength(6);
   });
 
   it("the six pile centers sit 0.6 inside the deck edge: x ∈ {−6.4, 0, 6.4} × y ∈ {−5.4, 5.4}", () => {
     const piles = build().out.filter((s) => isPile(s) && s.kind === "cylinder");
-    const want = [-6.4, 0, 6.4].flatMap((x) => [-5.4, 5.4].map((y) => [x, y]));
-    for (const [x, y] of want) expect(piles.some((s) => s.kind === "cylinder" && near(s.at.x, x!) && near(s.at.y, y!))).toBe(true);
+    const want = [-6.4, 0, 6.4].flatMap((x) => [-5.4, 5.4].map((y) => ({ x, y })));
+    for (const { x, y } of want) expect(piles.some((s) => s.kind === "cylinder" && near(s.at.x, x) && near(s.at.y, y))).toBe(true);
     expect(piles).toHaveLength(6);
   });
 
