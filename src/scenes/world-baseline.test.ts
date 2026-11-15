@@ -18,7 +18,9 @@ const PIECES: Record<string, string> = {
   "grua-muelle": "624cfd88/d3db2853",
   // #360: the four sign placeholders are new pieces; the earlier twelve did not move
   // #362: grafiti replaces its placeholder; the other pieces did not move
-  grafiti: "af24e5db/92a7faa4", "cartel-helipuerto": "2bac19e3/083e6023", "cartel-helipuerto-b": "2bac19e3/02ba8886",
+  grafiti: "af24e5db/92a7faa4",
+  // #361: the helipad sign replaces its two placeholders (A, word on the pad; B, rooftop tube sign)
+  "cartel-helipuerto": "7a35f7fb/d01b8a7f", "cartel-helipuerto-b": "afe0dfb1/8911f963",
   // #363: plataforma replaces its placeholder (platform, railing, ladder, hut, beacon, Blog sign)
   plataforma: "a55abbc7/1f865c26",
 };
