@@ -32,6 +32,25 @@ describe("fitToCap", () => {
     expect(q.walls[0]!.normal).toEqual(v3(1, 0, 0));
     expect(q.landmarkTop!.z).toBeCloseTo(12, 9);
   });
+
+  it("a horizontal beam resting on a prism is flattened with its section and stays flush on it", () => {
+    const p = emptyPiece();
+    p.solids.push(prism(0, 0, 2, 1, 1, 17.2, "steel"), { kind: "beam", from: v3(0.5, 0, 19.6), to: v3(0.5, 6, 19.6), w: 0.8, h: 0.8, mat: "steel" });
+    const [post, beam] = fitToCap(p, LOT).solids;
+    if (beam?.kind !== "beam") throw new Error("not a beam");
+    expect(beam.h).toBeCloseTo((0.8 * 10) / 18, 9);
+    expect(bounds(beam).min.z).toBeCloseTo(bounds(post!).max.z, 9);
+    expect(bounds(beam).max.z).toBeCloseTo(12, 9);
+  });
+
+  it("a sloped or vertical beam keeps its section when flattened", () => {
+    const p = emptyPiece();
+    p.solids.push(
+      { kind: "beam", from: v3(0, 0, 2), to: v3(4, 0, 20), w: 0.4, h: 0.4, mat: "steel" },
+      { kind: "beam", from: v3(5, 5, 2), to: v3(5, 5, 20), w: 0.3, h: 0.3, mat: "steel" },
+    );
+    expect(fitToCap(p, LOT).solids.map((s) => (s.kind === "beam" ? s.h : 0))).toEqual([0.4, 0.3]);
+  });
 });
 
 describe("piece", () => {
@@ -74,7 +93,17 @@ describe("seat", () => {
     expect(q.walls[0]!.floorH).toBe(3);
   });
 
-  const STREET: Lot = { x: 0, y: 0, w: 10, d: 10, z: 0, open: ["s"], maxH: 10 };
+  it("liftPiece keeps the section of horizontal and sloped beams", () => {
+    const p = emptyPiece();
+    p.solids.push(
+      { kind: "beam", from: v3(0, 0, 3), to: v3(6, 0, 3), w: 0.8, h: 0.8, mat: "steel" },
+      { kind: "beam", from: v3(0, 0, 3), to: v3(4, 0, 9), w: 0.4, h: 0.4, mat: "steel" },
+    );
+    const q = liftPiece(p, 2);
+    expect(q.solids.map((s) => (s.kind === "beam" ? [s.h, s.from.z, s.to.z] : []))).toEqual([[0.8, 5, 5], [0.4, 5, 11]]);
+  });
+
+  const STREET: Lot ={ x: 0, y: 0, w: 10, d: 10, z: 0, open: ["s"], maxH: 10 };
   const counting = (withGround: boolean): { recipe: Recipe; calls: () => number } => {
     let n = 0;
     const recipe: Recipe = (l) => {
