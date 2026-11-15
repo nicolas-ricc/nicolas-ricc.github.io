@@ -200,7 +200,7 @@ describe("helipad sign B: the rooftop tube sign (#361)", () => {
     for (const p of posts) {
       expect(p.mat).toBe("steel");
       expect(p.interlocks).toBe(true);
-      expect(p.at.z).toBeCloseTo(32.95, 9); // on the disc's top: the middle post stands inside the disc's bounds box
+      expect(p.at.z).toBeCloseTo(32.95, 9); // at the disc's top level: the middle post stands inside the disc's bounds box
       expect(p.at.z + p.h).toBeGreaterThanOrEqual(43.65 - EPS);
       const cx = p.at.x + 0.125, cy = p.at.y + 0.125;
       expect(want.some((w) => Math.hypot(w.x - cx, w.y - cy) < EPS)).toBe(true);
