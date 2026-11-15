@@ -18,6 +18,7 @@ const PIECES: Record<string, string> = {
   "grua-muelle": "624cfd88/d3db2853",
   // #360: the four sign placeholders are new pieces; the earlier twelve did not move
   // #362: grafiti replaces its placeholder; the other pieces did not move
+  // #375: gap 2 and KERN respace the words of the four signs (and the platform posts move in)
   grafiti: "79ccab1e/251611e9",
   // #361: the helipad sign replaces its two placeholders (A, word on the pad; B, rooftop tube sign)
   "cartel-helipuerto": "7a35f7fb/fb7f1528", "cartel-helipuerto-b": "5a24759f/1e5e066f",

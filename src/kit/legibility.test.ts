@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { checkFont, FONT_RULES, SIGN_FONT } from "./legibility";
-import { counterClearance, GLYPHS, GRID, layoutText, letterGaps, overlapping, rhythm, strokeRatio, xHeightPx } from "./lettering";
+import { counterClearance, GLYPHS, glyphPairs, GRID, layoutText, letterGaps, overlapping, rhythm, strokeRatio, xHeightPx } from "./lettering";
 
 const WORDS = ["Resume", "Portfolio", "Blog"];
 const { size, width } = SIGN_FONT;
@@ -74,8 +74,19 @@ describe("checkFont fails what breaks a rule", () => {
   it("a thick stroke breaks `strokeRatio`", () => {
     expect(checkFont("Resume", size, 3).map((v) => v.rule)).toContain("strokeRatio");
   });
-  it("a huge stroke breaks `overlap`", () => {
-    expect(checkFont("Resume", 7, 5).map((v) => v.rule)).toContain("overlap");
+  it("a huge stroke breaks `overlap`, one violation per glued pair", () => {
+    const overlap = checkFont("Resume", 7, 5).filter((v) => v.rule === "overlap");
+    expect(overlap.map((v) => v.detail)).toEqual(glyphPairs("Resume"));
+    for (const v of overlap) expect(v).toMatchObject({ value: 0, limit: "> 0" });
+  });
+  it("air details name the right pairs across words", () => {
+    const air = checkFont("Blog Blog", size, (1.22 * size) / GRID.cap).filter((v) => v.rule === "air");
+    expect(air.map((v) => v.detail)).toEqual(["Bl", "lo", "og", "Bl", "lo", "og"]);
+  });
+  it("limits are read from FONT_RULES; word rules carry no detail key", () => {
+    const v = checkFont("Resume", size, 3).find((x) => x.rule === "strokeRatio")!;
+    expect(v.limit).toBe(`[${FONT_RULES.strokeRatio[0]}, ${FONT_RULES.strokeRatio[1]}]`);
+    expect("detail" in v).toBe(false);
   });
   it("a thick stroke on Portfolio breaks `rhythm`", () => {
     expect(checkFont("Portfolio", size, 2.4).map((v) => v.rule)).toContain("rhythm");

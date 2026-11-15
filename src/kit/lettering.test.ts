@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { project, Z_SCALE } from "../iso/project";
-import { advances, counterClearance, diagonalWall, facade, fillText, GLYPHS, GRID, KERN, layoutText, letterGaps, measureText, overlapping, rhythm, roofDiagonal, sizeForXHeight, strokeRatio, strokeText, toWorld, xHeightPx, type TextPlane } from "./lettering";
+import { advances, counterClearance, diagonalWall, facade, fillText, glyphPairs, GLYPHS, GRID, KERN, layoutText, letterGaps, measureText, overlapping, rhythm, roofDiagonal, sizeForXHeight, strokeRatio, strokeText, toWorld, xHeightPx, type TextPlane } from "./lettering";
 
 const WORDS = ["Portfolio", "Resume", "Blog"];
 const LETTERS = "PortfliResumBg";
@@ -300,6 +300,17 @@ describe("measurements (#375)", () => {
       const [g] = letterGaps("ll", size, w);
       expect(g, `${size} ${w}`).toBeCloseTo(((1 + GRID.gap + (KERN.ll ?? 0)) * size) / GRID.cap - w, 9);
     }
+  });
+  it("glyphPairs: the chars of each pair letterGaps measures, none across a space", () => {
+    expect(glyphPairs("Blog Blog")).toEqual(["Bl", "lo", "og", "Bl", "lo", "og"]);
+    expect(glyphPairs("B")).toEqual([]);
+    expect(glyphPairs("")).toEqual([]);
+    expect(glyphPairs("Resume")).toHaveLength(letterGaps("Resume", 10.3, 1.35).length);
+  });
+  it("letterGaps measures the fill (joint squares included), not the bare quads: R·e meets at the bowl joint (3, 5) and e's corner (0, 4)", () => {
+    // R's square at (3, 5)·k and e's at (5, 4)·k: corner to corner, (2k − w) across and (k − w) up; the quads alone would read ≈ 0.37 more
+    const size = 10.3, w = 1.35, k = size / GRID.cap;
+    expect(letterGaps("Re", size, w)[0]).toBeCloseTo(Math.hypot(2 * k - w, k - w), 9);
   });
   it("rhythm: max / min of letterGaps, 1 with fewer than two pairs", () => {
     expect(rhythm("B", 10.3, 1.35)).toBe(1);

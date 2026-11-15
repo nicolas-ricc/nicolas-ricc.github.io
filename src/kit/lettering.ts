@@ -130,8 +130,12 @@ export function layoutText(text: string, size: number, width: number): GlyphLayo
 
 /** Advance of each glyph of `text` (spaces skipped) at cap height `size`, gap and kern included except after the last glyph. */
 export function advances(text: string, size: number): number[] {
-  const out = layoutText(text, size, 0).map((g) => g.advance), chars = [...text];
-  if (out.length) out[out.length - 1] = glyphOf(chars.filter((c) => c !== " ").at(-1)!).width * size / GRID.cap;
+  const chars = [...text], k = size / GRID.cap, out: number[] = [];
+  chars.forEach((c, i) => {
+    if (c === " ") return;
+    const last = chars.slice(i + 1).every((n) => n === " ");
+    out.push((last ? glyphOf(c).width : gridAdvance(c, chars[i + 1]!)) * k);
+  });
   return out;
 }
 
@@ -163,19 +167,28 @@ function polygonDistance(A: Vec2[], B: Vec2[]): number {
   return best;
 }
 
-/** Air between each pair of consecutive glyphs (never across a space), measured between their fill polygons; 0 when they touch or overlap, never negative. */
-export function letterGaps(text: string, size: number, width: number): number[] {
-  const chars = [...text], lay = layoutText(text, size, width), out: number[] = [];
+/** Index among the glyphs (spaces skipped) of each glyph followed directly by another: the pairs `letterGaps` measures. */
+function adjacentGlyphs(text: string): number[] {
+  const chars = [...text], out: number[] = [];
   let gi = 0;
   chars.forEach((c, i) => {
     if (c === " ") return;
-    if (chars[i + 1] !== undefined && chars[i + 1] !== " ") {
-      const A = lay[gi]!.fill, B = lay[gi + 1]!.fill;
-      out.push(Math.min(...A.flatMap((a) => B.map((b) => polygonDistance(a, b)))));
-    }
+    if (chars[i + 1] !== undefined && chars[i + 1] !== " ") out.push(gi);
     gi++;
   });
   return out;
+}
+
+/** The two chars of each pair `letterGaps` measures, in the same order. */
+export function glyphPairs(text: string): string[] {
+  const glyphs = [...text].filter((c) => c !== " ");
+  return adjacentGlyphs(text).map((i) => glyphs[i]! + glyphs[i + 1]!);
+}
+
+/** Air between each pair of consecutive glyphs (never across a space), measured between their fill polygons; 0 when they touch or overlap, never negative. */
+export function letterGaps(text: string, size: number, width: number): number[] {
+  const lay = layoutText(text, size, width);
+  return adjacentGlyphs(text).map((i) => Math.min(...lay[i]!.fill.flatMap((a) => lay[i + 1]!.fill.map((b) => polygonDistance(a, b)))));
 }
 
 /** Widest over narrowest gap of `letterGaps`; 1 with fewer than 2 pairs. Infinity when the narrowest gap is 0 (an overlap, or all gaps 0): never 0/0. */
