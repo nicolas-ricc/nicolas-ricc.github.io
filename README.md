@@ -137,6 +137,11 @@ The zone signs of #352 are four pieces: `#cartel-helipuerto` and
 rooftop tube variant), `#grafiti` (Portfolio, the harbour graffiti wall) and
 `#plataforma` (Blog, the sea platform); judge them at the cover scales with `c`.
 
+The lab pages are also built and deployed with the site (every
+`lab/*.html` is a Vite input), so the storybook can be seen at
+https://myxomatosis.xyz/lab/storybook.html without running the dev server;
+they carry `noindex`.
+
 The lights' bloom is not part of the first draw: the site and the lab
 enable it after Pixi's first real render (the `postrender` of
 `app.renderer`), in the following task (`afterFirstRender`,
