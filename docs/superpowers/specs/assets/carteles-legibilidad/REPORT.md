@@ -8,25 +8,25 @@ Viewport: 1600×900 @2
 
 Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) por píxel, escalado ×3 por vecino más cercano y umbral binario en el punto medio entre la mediana del núcleo y la del anillo; la tinta (el lado del núcleo) queda negra sobre blanco. tesseract.js con datos `eng` 4.0.0_best_int locales, modo de página palabra única (PSM 8) y lista blanca A–Z a–z.
 
-## cartel-torre-escena a 1.17
+## cartel-taller-escena a 1.17
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 11.75:1 | ≥ 4.5:1 | ✓ |
+| contraste | 9.77:1 | ≥ 4.5:1 | ✓ |
 | halo | 0.07 | ≤ 0.5 | ✓ |
-| OCR | `Resume` | = `Resume` | ✓ |
+| OCR | `Portfolio` | = `Portfolio` | ✓ |
 
-![cartel-torre-escena 1.17](cartel-torre-escena-117.png) ![OCR](cartel-torre-escena-117-ocr.png)
+![cartel-taller-escena 1.17](cartel-taller-escena-117.png) ![OCR](cartel-taller-escena-117-ocr.png)
 
-## cartel-torre-escena a 0.83
+## cartel-taller-escena a 0.83
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 11.09:1 | ≥ 3:1 | ✓ |
-| halo | 0.05 | ≤ 0.5 | ✓ |
-| OCR | `Resume` | ≈ `Resume` (sin mayúsculas) | ✓ |
+| contraste | 9.24:1 | ≥ 3:1 | ✓ |
+| halo | 0.06 | ≤ 0.5 | ✓ |
+| OCR | `Portfolio` | ≈ `Portfolio` (sin mayúsculas) | ✓ |
 
-![cartel-torre-escena 0.83](cartel-torre-escena-083.png) ![OCR](cartel-torre-escena-083-ocr.png)
+![cartel-taller-escena 0.83](cartel-taller-escena-083.png) ![OCR](cartel-taller-escena-083-ocr.png)
 
 ## plataforma-escena a 1.17
 

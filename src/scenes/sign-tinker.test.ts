@@ -93,7 +93,7 @@ describe("tinker sign letters (#379)", () => {
         case "cutout": expect(own).toEqual(fill(0.9)); break;
         case "neon": expect(own).toEqual(tube); break;
         case "marquee": {
-          expect(polys(own)).toEqual(fill(0.5));
+          expect(polys(own)).toEqual(fill(0.7));
           const bulbs = [...dots(own), ...(i === 8 ? dots(lights) : [])];
           expect(bulbs.length).toBeGreaterThanOrEqual(4);
           for (const d of bulbs) {

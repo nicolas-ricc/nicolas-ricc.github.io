@@ -117,7 +117,7 @@ function build(at: Vec3): { spec: SignSpec; modules: TinkerModule[]; lights: Acc
     let accents: Accent[] = [];
     switch (L.technique) {
       case "cutout": accents = fill(0.9); break;
-      case "marquee": accents = [...fill(0.5), ...bulbs(g.layout, g.plane).filter((_, k) => i !== 8 || k !== BULB_AT)]; break;
+      case "marquee": accents = [...fill(0.7), ...bulbs(g.layout, g.plane).filter((_, k) => i !== 8 || k !== BULB_AT)]; break;
       case "neon": accents = L.hung ? [] : tube; break;
       case "painted": accents = fill(0.6); break;
       case "welded":
