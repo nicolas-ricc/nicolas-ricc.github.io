@@ -179,7 +179,7 @@ export function hallStandIn(out: Solid[]): void {
 }
 
 const POST = 0.3, FRAME_W = 0.25, TOP_W = 0.25, PLANK_W = 0.6, PLANK_H = 0.15, PLANK_LEN = 1.4, PLANK_STEP = 2, POST_STEP = 6, CHAIN_W = 0.08, CABLE_W = 0.08, CABLE_DROP = 1.4, CABLE_SAG = 0.6;
-const ROD_W = 0.12, RUNG_W = 0.1, RUNG_STEP = 1, LADDER_RUN = 0.8, LADDER_B = -1.7, LADDER_GAP = 0.35, TOP_CLEAR = 0.5, FLOOD_N = 3.5, FLOOD_H = 1.2, LAMP_W = 0.6;
+const ROD_W = 0.12, RUNG_W = 0.1, RUNG_STEP = 1, LADDER_RUN = 0.8, LADDER_B = -2, LADDER_GAP = 0.35, TOP_CLEAR = 0.5, FLOOD_N = 3.5, FLOOD_H = 1.2, LAMP_W = 0.6;
 const B_REAR = -3.45, B_FRONT = 0, PLANK_B = [-3, -0.6], EDGE = 1e-3;
 
 const at3 = (at: Vec3, s: number, b: number, z: number): Vec3 => v3(at.x + U.x * s + N.x * b, at.y + U.y * s + N.y * b, z);
@@ -228,12 +228,12 @@ function scaffold(out: Solid[], at: Vec3, halls: readonly Hall[]): void {
   const hung = panels[6]!, hb = bounds(hung), hs = hung.footprint.map(sOf), chainZ = top - TOP_W / 2;
   for (const s of [Math.min(...hs) + 0.5, Math.max(...hs) - 0.5]) beam(out, at3(at, s, B_REAR, hb.max.z), at3(at, s, B_REAR, chainZ), CHAIN_W, CHAIN_W);
 
-  const sT = sMin - 0.2, foot = (d: number) => at3(at, sT - LADDER_RUN, LADDER_B + d * LADDER_GAP, 0), zOf = (d: number) => roofUnder(foot(d).x - ROD_W / 2, foot(d).y - ROD_W / 2, ROD_W, halls), zFoot = Math.max(zOf(-1), zOf(1));
-  for (const d of [-1, 1]) beam(out, at3(at, sT, LADDER_B + d * LADDER_GAP, deck), at3(at, sT - LADDER_RUN, LADDER_B + d * LADDER_GAP, zOf(d)), ROD_W, ROD_W);
+  const sT = sMin - 0.9, bT = LADDER_B, foot = (d: number) => at3(at, sT + d * LADDER_GAP, bT + LADDER_RUN, 0), zOf = (d: number) => roofUnder(foot(d).x - ROD_W / 2, foot(d).y - ROD_W / 2, ROD_W, halls), zFoot = Math.max(zOf(-1), zOf(1));
+  for (const d of [-1, 1]) beam(out, at3(at, sT + d * LADDER_GAP, bT, deck), at3(at, sT + d * LADDER_GAP, bT + LADDER_RUN, zOf(d)), ROD_W, ROD_W); // rails spaced along u, foot toward the camera
   const rungs = Math.floor((deck - zFoot) / RUNG_STEP);
   for (let k = 1; k < rungs; k++) {
-    const f = k / rungs, s = sT - LADDER_RUN * f, z = deck + (zFoot - deck) * f, inner = LADDER_GAP - ROD_W / 2;
-    beam(out, at3(at, s, LADDER_B - inner, z), at3(at, s, LADDER_B + inner, z), RUNG_W, RUNG_W);
+    const f = k / rungs, b = bT + LADDER_RUN * f, z = deck + (zFoot - deck) * f, inner = LADDER_GAP - ROD_W / 2;
+    beam(out, at3(at, sT - inner, b, z), at3(at, sT + inner, b, z), RUNG_W, RUNG_W); // rungs along u: horizontal on screen
   }
   for (const k of [1, n - 2]) {
     const a = at3(at, sk[k]!, B_FRONT, deck - CABLE_DROP), c = at3(at, sk[k + 1]!, B_FRONT, deck - CABLE_DROP), m = v3((a.x + c.x) / 2, (a.y + c.y) / 2, a.z - CABLE_SAG);
