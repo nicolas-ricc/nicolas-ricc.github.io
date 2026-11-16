@@ -4,7 +4,9 @@ import type { Plate } from "../iso/plate";
 import { VIEW_DIR } from "../iso/project";
 import { bounds, type Solid } from "../iso/solids";
 import { SIGN_FONT, signSpec, type SignSpec } from "../kit/legibility";
-import { diagonalWall, layoutText, measureText, toWorld, type GlyphLayout, type TextPlane } from "../kit/lettering";
+import { diagonalWall, toWorld, type GlyphLayout, type TextPlane } from "../kit/lettering";
+import { BUILDER_FACE, contourQuads, marqueeLayout } from "../kit/marquee";
+import { BUILDER_PORTFOLIO } from "../kit/builder-portfolio";
 import { interlock } from "../kit/piece";
 import { industrialLamp, neon, place } from "../kit/props";
 import type { Material } from "../map/palette-iso";
@@ -19,17 +21,17 @@ export const PIECE_AT = v3(0, 0, 13.5);
 /** How a letter is lit: a cut-out slab, a bulb marquee, a neon tube, paint on a plate, or welded bars with a tube. */
 export type Technique = "cutout" | "marquee" | "neon" | "painted" | "welded";
 
-/** The nine letters of "Portfolio": technique, panel material, turn (degrees, positive counter-clockwise on screen), z and depth offsets, and whether the panel hangs from the top beam. */
+/** The nine letters of "PORTFOLIO": technique, panel material, turn (degrees, positive counter-clockwise on screen), z and depth offsets, and whether the panel hangs from the top beam. */
 export const TINKER_LETTERS: readonly { char: string; technique: Technique; panel: Material; turnDeg: number; dz: number; dn: number; hung?: true }[] = [
   { char: "P", technique: "cutout", panel: "rust", turnDeg: -2, dz: 0.2, dn: 0.1 },
-  { char: "o", technique: "marquee", panel: "officeDark", turnDeg: 3, dz: -0.3, dn: -0.05 },
-  { char: "r", technique: "neon", panel: "boxGrey", turnDeg: -2.5, dz: 0.3, dn: 0 },
-  { char: "t", technique: "painted", panel: "sheetTeal", turnDeg: 2, dz: -0.2, dn: -0.1 },
-  { char: "f", technique: "welded", panel: "steel", turnDeg: -1.5, dz: 0.5, dn: 0.05 },
-  { char: "o", technique: "cutout", panel: "rust", turnDeg: 2.5, dz: -0.4, dn: -0.08 },
-  { char: "l", technique: "neon", panel: "officeDark", turnDeg: 0.4, dz: 0.4, dn: 0.1, hung: true },
-  { char: "i", technique: "painted", panel: "sheetTeal", turnDeg: -0.5, dz: -0.1, dn: -0.05 },
-  { char: "o", technique: "marquee", panel: "officeDark", turnDeg: 2, dz: 0.1, dn: 0 },
+  { char: "O", technique: "marquee", panel: "officeDark", turnDeg: 3, dz: 0.1, dn: -0.05 },
+  { char: "R", technique: "neon", panel: "boxGrey", turnDeg: -2.5, dz: 0.3, dn: 0 },
+  { char: "T", technique: "painted", panel: "sheetTeal", turnDeg: 2, dz: -0.2, dn: -0.1 },
+  { char: "F", technique: "welded", panel: "steel", turnDeg: -1.5, dz: 0.5, dn: 0.05 },
+  { char: "O", technique: "cutout", panel: "rust", turnDeg: 2.5, dz: -0.4, dn: -0.08 },
+  { char: "L", technique: "neon", panel: "officeDark", turnDeg: 0.4, dz: 0.4, dn: 0.1, hung: true },
+  { char: "I", technique: "painted", panel: "sheetTeal", turnDeg: -0.5, dz: -0.1, dn: -0.05 },
+  { char: "O", technique: "marquee", panel: "officeDark", turnDeg: 2, dz: 0.1, dn: 0 },
 ];
 
 /** Height of the deck top above the ridge point (3.5: lifts the word clear of the factory gantry at y -12.5, which hid its bottom margin at 2.6; guarded by the checkSign gate in src/lab/signs.test.ts for cartel-taller-escena). */
@@ -38,9 +40,12 @@ export const DECK_RISE = 3.5;
 export const deckTop = (at: Vec3): number => at.z + DECK_RISE;
 
 const U = v3(Math.SQRT1_2, -Math.SQRT1_2, 0), N = v3(Math.SQRT1_2, Math.SQRT1_2, 0);
-const TEXT = "Portfolio", FAR_GAP = 3.3, NEAR_GAP = 0.06, FAR_T = 0.5, NEAR_T = 0.3, SLACK = 0.15, HANG = 0.6, BAR = 0.25, BAR_BACK = 0.8, BULB = 0.3, BULB_STEP = 1, BULB_AT = 2;
+/** Cap height of the CNRGN Builder word (about as wide as the stroke-font "Portfolio" it replaced) and the tracking that opens its air to ≥ 1 face. */
+export const TINKER_CAP = 9.2, TINKER_TRACKING = 0.08;
+const TUBE = 0.45, FRAME = 0.75; // neon tube along the contours of a letter; scale of the welded frame about the letter centre
+const TEXT = "PORTFOLIO", FAR_GAP = 3.3, NEAR_GAP = 0.06, FAR_T = 0.5, NEAR_T = 0.3, SLACK = 0.15, HANG = 0.6, BAR = 0.25, BAR_BACK = 0.8, BULB = 0.3, BULB_STEP = 1, BULB_AT = 2;
 const SINK = VIEW_DIR.z / dot(VIEW_DIR, N); // z drop per unit of depth along n when a point slides along the view ray
-const LAYOUT = layoutText(TEXT, SIGN_FONT.size, SIGN_FONT.width), WORD_W = measureText(TEXT, SIGN_FONT.size).width;
+const LAYOUT = marqueeLayout(TINKER_CAP, TINKER_TRACKING, BUILDER_PORTFOLIO), WORD_W = LAYOUT[0]!.box.x0 + LAYOUT.at(-1)!.box.x1; // the ink is centred on `at`
 
 const far = (i: number) => i % 2 === 0, gapOf = (i: number) => (far(i) ? FAR_GAP : NEAR_GAP), thickOf = (i: number) => (far(i) ? FAR_T : NEAR_T);
 const centre = (g: GlyphLayout) => ({ x: (g.box.x0 + g.box.x1) / 2, y: (g.box.y0 + g.box.y1) / 2 });
@@ -62,7 +67,7 @@ function reach(at: Vec3, g: GlyphLayout, plane: TextPlane, gap: number): { s0: n
   return { s0: Math.min(...s) - SLACK, s1: Math.max(...s) + SLACK, z0: Math.min(...z) - SLACK, z1: Math.max(...z) + SLACK };
 }
 
-/** The unturned word plane: "Portfolio" centred on `at` along u, its baseline where every panel bottom (but the hung one's) reaches the deck top. */
+/** The unturned word plane: "PORTFOLIO" centred on `at` along u, its baseline where every panel bottom (but the hung one's) reaches the deck top. */
 export function tinkerWordPlane(at: Vec3): TextPlane {
   const flat = wordPlane(at, 0);
   const low = Math.min(...LAYOUT.flatMap((g, i) => (TINKER_LETTERS[i]!.hung ? [] : [reach(at, g, turned(i, g, flat), gapOf(i)).z0])));
@@ -83,14 +88,6 @@ function bulbs(g: GlyphLayout, plane: TextPlane): Accent[] {
   });
 }
 
-/** A fill quad whose segment is shorter than the stroke (the dot of the i) becomes the square of side `w` on its centre: at 0.88 u its short edge would break the level-2 stroke rule. */
-function squareDot(q: Vec2[]): Vec2[] {
-  const [a, b, c] = q as [Vec2, Vec2, Vec2], w = SIGN_FONT.width;
-  if (Math.hypot(b.x - a.x, b.y - a.y) >= w || Math.hypot(c.x - b.x, c.y - b.y) > w + 1e-9) return q;
-  const x = (a.x + c.x) / 2, y = (a.y + c.y) / 2, h = w / 2;
-  return [{ x: x - h, y: y - h }, { x: x + h, y: y - h }, { x: x + h, y: y + h }, { x: x - h, y: y + h }];
-}
-
 /** One letter with everything it adds: the panel, the solids (panel first, then welded bars) and its static accents. */
 export interface TinkerModule { char: string; technique: Technique; panel: Solid & { kind: "poly" }; solids: Solid[]; accents: Accent[] }
 
@@ -101,19 +98,21 @@ function build(at: Vec3): { spec: SignSpec; modules: TinkerModule[]; lights: Acc
     const L = TINKER_LETTERS[i]!, gap = gapOf(i), r = reach(at, g, planes[i]!, gap), bf = L.dn - gap, bb = bf - thickOf(i);
     const P = (s: number, b: number) => ({ x: at.x + U.x * s + N.x * b, y: at.y + U.y * s + N.y * b });
     const z0 = L.hung ? Math.max(top, Math.min(r.z0, top + HANG)) : top;
-    const plates: Plate[] = L.technique !== "painted" ? [] : g.fill.map(squareDot).map((q) => ({
+    const plates: Plate[] = L.technique !== "painted" ? [] : g.fill.map((q) => ({
       wall: 0, shape: "poly", mat: "safety",
       pts: q.map((c): Vec2 => { const p = toWorld(planes[i]!, c.x, c.y); return { x: (r.s1 - dot(v3(p.x - at.x, p.y - at.y, 0), U)) / (r.s1 - r.s0), y: p.z - SINK * gap }; }),
     }));
     const slab: Solid & { kind: "poly" } = { kind: "poly", footprint: [P(r.s1, bf), P(r.s0, bf), P(r.s0, bb), P(r.s1, bb)], z: z0, h: r.z1 - z0, mat: L.panel, ...(plates.length ? { plates } : {}) };
     return L.panel === "steel" ? interlock(slab) : slab; // the steel panel and its welded bars interpenetrate on purpose
   });
-  const base = signSpec({ id: "cartel-taller", text: TEXT, ...SIGN_FONT, color: "amber", plane: word, style: "fill", backing: panels, glyphPlane: (i) => planes[i]! });
-  const spec: SignSpec = { ...base, glyphs: base.glyphs.map((g) => ({ ...g, quads: g.layout.fill.map((q) => squareDot(q).map((c) => toWorld(g.plane, c.x, c.y))) })) };
+  const spec = signSpec({
+    id: "cartel-taller", text: TEXT, size: TINKER_CAP, width: SIGN_FONT.width, color: "amber", plane: word, style: "fill", backing: panels, glyphPlane: (i) => planes[i]!,
+    layouts: LAYOUT, xHeight: TINKER_CAP, stroke: BUILDER_FACE * TINKER_CAP,
+  });
   const bulb = bulbs(LAYOUT[8]!, planes[8]!)[BULB_AT]!;
   const modules = spec.glyphs.map((g, i): TinkerModule => {
     const L = TINKER_LETTERS[i]!, panel = panels[i]!, fill = (alpha: number): Accent[] => g.quads.map((pts) => ({ kind: "poly", pts, color: "amber", alpha }));
-    const tube = g.layout.quads.flatMap((q) => neon(q.map((c) => toWorld(g.plane, c.x, c.y)), "amber", 0.9));
+    const tube = contourQuads(g.layout, TUBE).flatMap((q) => neon(q.map((c) => toWorld(g.plane, c.x, c.y)), "amber", 0.9));
     const solids: Solid[] = [panel];
     let accents: Accent[] = [];
     switch (L.technique) {
@@ -122,8 +121,12 @@ function build(at: Vec3): { spec: SignSpec; modules: TinkerModule[]; lights: Acc
       case "neon": accents = L.hung ? [] : tube; break;
       case "painted": accents = fill(0.6); break;
       case "welded":
+        // the frame follows the letter's contours shrunk by FRAME about its ink centre, so the bars stay behind the face and off the neighbours' panels
         for (const s of g.layout.strokes) for (let j = 1; j < s.length; j++) {
-          const e = (c: Vec2): Vec3 => { const p = toWorld(g.plane, c.x, c.y); return v3(p.x - N.x * BAR_BACK, p.y - N.y * BAR_BACK, p.z - SINK * BAR_BACK); };
+          const o = centre(g.layout), e = (c: Vec2): Vec3 => {
+            const p = toWorld(g.plane, o.x + (c.x - o.x) * FRAME, o.y + (c.y - o.y) * FRAME);
+            return v3(p.x - N.x * BAR_BACK, p.y - N.y * BAR_BACK, p.z - SINK * BAR_BACK);
+          };
           solids.push({ kind: "beam", from: e(s[j - 1]!), to: e(s[j]!), w: BAR, h: BAR, mat: "steel", interlocks: true });
         }
         accents = tube;
@@ -131,11 +134,11 @@ function build(at: Vec3): { spec: SignSpec; modules: TinkerModule[]; lights: Acc
     }
     return { char: L.char, technique: L.technique, panel, solids, accents };
   });
-  const lights: Accent[] = [...LAYOUT[6]!.quads.flatMap((q) => neon(q.map((c) => toWorld(planes[6]!, c.x, c.y)), "amber", 0.9)), bulb];
+  const lights: Accent[] = [...contourQuads(LAYOUT[6]!, TUBE).flatMap((q) => neon(q.map((c) => toWorld(planes[6]!, c.x, c.y)), "amber", 0.9)), bulb];
   return { spec, modules, lights };
 }
 
-/** The sign's spec at `at`: "Portfolio" in amber on nine panels, each letter turned and shifted a little on its own plane. */
+/** The sign's spec at `at`: "PORTFOLIO" (CNRGN Builder) in amber on nine panels, each letter turned and shifted a little on its own plane. */
 export const tinkerSpec = (at: Vec3): SignSpec => build(at).spec;
 
 /** The sign as the oracles see it, at its site. */

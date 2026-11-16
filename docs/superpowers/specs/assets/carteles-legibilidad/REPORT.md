@@ -12,9 +12,9 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 9.76:1 | ≥ 4.5:1 | ✓ |
-| halo | 0.07 | ≤ 0.5 | ✓ |
-| OCR | `Portfolio` | = `Portfolio` | ✓ |
+| contraste | 6.72:1 | ≥ 4.5:1 | ✓ |
+| halo | 0.08 | ≤ 0.5 | ✓ |
+| OCR | `PORTFOLIO` | = `PORTFOLIO` | ✓ |
 
 ![cartel-taller-escena 1.17](cartel-taller-escena-117.png) ![OCR](cartel-taller-escena-117-ocr.png)
 
@@ -22,9 +22,9 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 9.25:1 | ≥ 3:1 | ✓ |
-| halo | 0.06 | ≤ 0.5 | ✓ |
-| OCR | `Portfolio` | ≈ `Portfolio` (sin mayúsculas) | ✓ |
+| contraste | 6.10:1 | ≥ 3:1 | ✓ |
+| halo | 0.08 | ≤ 0.5 | ✓ |
+| OCR | `PORTFOLIO` | ≈ `PORTFOLIO` (sin mayúsculas) | ✓ |
 
 ![cartel-taller-escena 0.83](cartel-taller-escena-083.png) ![OCR](cartel-taller-escena-083-ocr.png)
 

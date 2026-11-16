@@ -23,7 +23,8 @@ const PIECES: Record<string, string> = {
   // RESUME in Neon Light: greenMid marquee faces and warm bulbs on a glass panel replace the stroke-font "Resume" (panel and frame follow the new cap height)
   "cartel-torre": "65afa18c/8c310d6c",
   // #379: the tinker sign (cartel-taller, on its hall stand-in) replaces grafiti; re-recorded after the ladder fix and the closed-bowl bulbs (stage 6)
-  "cartel-taller": "76a030a1/e2283d64",
+  // PORTFOLIO in CNRGN Builder: filled block letters (marquee bulbs, neon tube and welded frame follow the contours)
+  "cartel-taller": "772e9714/7342397f",
   // #363: plataforma replaces its placeholder (platform, railing, ladder, hut, beacon, Blog sign)
   // #376: the Blog sign uses SIGN_FONT, gains a backing panel and a raised frame, and is built at its site and then translated
   plataforma: "26c397da/240f731e",

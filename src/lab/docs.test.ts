@@ -498,7 +498,7 @@ describe("zone signs redesign documentation (#374)", () => {
   const CONTEXTS = ["cartel-torre-escena", "cartel-taller-escena", "plataforma-escena"];
   const SCALES = [["117", COVER_LAPTOP], ["083", COVER_PHONE]] as const;
   const DELETED = ["cartel-helipuerto", "grafiti"];
-  const WORDS = { RESUME: "cartel-torre-escena", Portfolio: "cartel-taller-escena", Blog: "plataforma-escena" } as const;
+  const WORDS = { RESUME: "cartel-torre-escena", PORTFOLIO: "cartel-taller-escena", Blog: "plataforma-escena" } as const;
   const f = (n: number) => n.toFixed(2);
   const report = read("assets/carteles-legibilidad/REPORT.md");
   const spec = read("2026-11-15-carteles-de-zona-rediseno-design.md");
@@ -518,7 +518,7 @@ describe("zone signs redesign documentation (#374)", () => {
   const rect = (x0: number, y0: number, x1: number, y1: number) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(([x, y]) => ({ x: x!, y: y!, z: 0 }));
   const HOSTS = {
     RESUME: rect(TOWER.x, TOWER.y, TOWER.x + TOWER.w, TOWER.y + TOWER.d),
-    Portfolio: rect(SHIPYARD_HALLS[1]!.x0, SHIPYARD_HALLS[1]!.y0, SHIPYARD_HALLS[1]!.x1, SHIPYARD_HALLS[1]!.y1),
+    PORTFOLIO: rect(SHIPYARD_HALLS[1]!.x0, SHIPYARD_HALLS[1]!.y0, SHIPYARD_HALLS[1]!.x1, SHIPYARD_HALLS[1]!.y1),
     Blog: rect(-HALF_X, -HALF_Y, HALF_X, HALF_Y),
   };
 

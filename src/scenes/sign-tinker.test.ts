@@ -6,11 +6,12 @@ import { project } from "../iso/project";
 import { bounds, type Bounds, type Solid } from "../iso/solids";
 import { backingMargin, checkSign, COVER_LAPTOP, COVER_PHONE, SIGN_FONT, type SignGlyph } from "../kit/legibility";
 import { polygonDistance, toWorld } from "../kit/lettering";
+import { BUILDER_FACE, contourQuads } from "../kit/marquee";
 import { neon } from "../kit/props";
 import { HALO_BASE } from "../world/frame";
 import { assembleWorld } from "../world/assemble";
 import {
-  hallStandIn, PIECE_AT, roofUnder, roofZ, SHIPYARD_HALLS, STAND_IN_HALL, TINKER_LETTERS, TINKER_SIGN, TINKER_SITE, tinkerAnimator, tinkerLights, tinkerModules,
+  hallStandIn, PIECE_AT, roofUnder, roofZ, SHIPYARD_HALLS, STAND_IN_HALL, TINKER_CAP, TINKER_LETTERS, TINKER_SIGN, TINKER_SITE, tinkerAnimator, tinkerLights, tinkerModules,
   tinkerSign, tinkerSpec, tinkerWordPlane, type Hall,
 } from "./sign-tinker";
 
@@ -19,7 +20,8 @@ const SCALES = [COVER_LAPTOP, COVER_PHONE];
 const AT = [["site", TINKER_SITE], ["piece", PIECE_AT]] as const;
 const deg = (r: number) => (r * 180) / Math.PI;
 const sub = (a: Vec3, b: Vec3) => v3(a.x - b.x, a.y - b.y, a.z - b.z);
-const strokeQuads = (g: SignGlyph) => g.layout.quads.map((q) => q.map((c) => toWorld(g.plane, c.x, c.y)));
+/** The neon tube of a glyph: 0.45-wide quads along its contours, in the world. */
+const tubeQuads = (g: SignGlyph) => contourQuads(g.layout, 0.45).map((q) => q.map((c) => toWorld(g.plane, c.x, c.y)));
 const center = (g: SignGlyph, plane = g.plane) => { const b = g.layout.box; return toWorld(plane, (b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2); };
 const overlap = (A: Bounds, B: Bounds) => (["x", "y", "z"] as const).every((k) => Math.min(A.max[k], B.max[k]) - Math.max(A.min[k], B.min[k]) > 1e-6);
 const polys = (a: Accent[]) => a.flatMap((x) => (x.kind === "poly" ? [x] : []));
@@ -52,15 +54,15 @@ function clashes(out: Solid[], halls: readonly { solid: Solid; hall: Hall }[] = 
 }
 
 describe("tinker sign letters (#379)", () => {
-  it("TINKER_SIGN: Portfolio at SIGN_FONT in amber, built by tinkerSpec at TINKER_SITE", () => {
-    expect(TINKER_SIGN).toMatchObject({ id: "cartel-taller", text: "Portfolio", size: SIGN_FONT.size, width: SIGN_FONT.width, color: "amber" });
-    expect(TINKER_SIGN.glyphs.map((g) => g.char)).toEqual([..."Portfolio"]);
+  it("TINKER_SIGN: PORTFOLIO in CNRGN Builder, amber, capitals (x-height = cap) and the face as stroke, built by tinkerSpec at TINKER_SITE", () => {
+    expect(TINKER_SIGN).toMatchObject({ id: "cartel-taller", text: "PORTFOLIO", size: TINKER_CAP, width: SIGN_FONT.width, color: "amber", xHeight: TINKER_CAP, stroke: BUILDER_FACE * TINKER_CAP });
+    expect(TINKER_SIGN.glyphs.map((g) => g.char)).toEqual([..."PORTFOLIO"]);
     expect(tinkerSpec(TINKER_SITE)).toEqual(TINKER_SIGN);
   });
 
   it.each(AT)("nine modules at the %s, each with its own panel in its letter's material, no two neighbours alike", (_n, at) => {
     const spec = tinkerSpec(at), mods = tinkerModules(at);
-    expect(mods.map((m) => m.char)).toEqual([..."Portfolio"]);
+    expect(mods.map((m) => m.char)).toEqual([..."PORTFOLIO"]);
     expect(spec.backing).toHaveLength(9);
     mods.forEach((m, i) => {
       expect(m.panel.kind).toBe("poly");
@@ -80,15 +82,15 @@ describe("tinker sign letters (#379)", () => {
     expect(t).toEqual(["cutout", "marquee", "neon", "painted", "welded", "cutout", "neon", "painted", "marquee"]);
     expect(new Set(t).size).toBe(5);
     for (let i = 1; i < t.length; i++) expect(t[i]).not.toBe(t[i - 1]);
-    expect(TINKER_LETTERS.filter((l) => l.hung).map((l) => l.char)).toEqual(["l"]);
+    expect(TINKER_LETTERS.filter((l) => l.hung).map((l) => l.char)).toEqual(["L"]);
   });
 
   it.each(AT)("each module draws its technique from the spec's glyph (%s)", (_n, at) => {
     const spec = tinkerSpec(at), mods = tinkerModules(at), lights = tinkerLights(at);
     mods.forEach((m, i) => {
       const g = spec.glyphs[i]!, fill = (alpha: number) => g.quads.map((q) => ({ kind: "poly", pts: q, color: "amber", alpha }));
-      const tube = strokeQuads(g).flatMap((q) => neon(q, "amber", 0.9));
-      const own = [...m.accents, ...(m.char === "l" ? lights.filter((a) => a.kind === "poly") : [])];
+      const tube = tubeQuads(g).flatMap((q) => neon(q, "amber", 0.9));
+      const own = [...m.accents, ...(m.char === "L" ? lights.filter((a) => a.kind === "poly") : [])];
       switch (TINKER_LETTERS[i]!.technique) {
         case "cutout": expect(own).toEqual(fill(0.9)); break;
         case "neon": expect(own).toEqual(tube); break;
@@ -111,7 +113,7 @@ describe("tinker sign letters (#379)", () => {
         case "welded": {
           expect(own).toEqual(tube);
           const bars = beams(m.solids, 0.25);
-          expect(bars).toHaveLength(g.layout.quads.length);
+          expect(bars).toHaveLength(g.layout.strokes.reduce((n, c) => n + c.length - 1, 0)); // one bar per contour segment
           for (const b of bars) {
             expect(b.h).toBeCloseTo(0.25, 9);
             for (const p of [b.from, b.to]) expect(dot(sub(p, g.plane.origin), N)).toBeLessThan(-0.125 + 1e-9);
@@ -122,9 +124,9 @@ describe("tinker sign letters (#379)", () => {
     });
   });
 
-  it("the moving lights: the whole l tube, then one marquee bulb of the last o", () => {
+  it("the moving lights: the whole L tube, then one marquee bulb of the last O", () => {
     const g = TINKER_SIGN.glyphs[6]!, lights = tinkerLights(TINKER_SITE);
-    expect(polys(lights)).toEqual(strokeQuads(g).flatMap((q) => neon(q, "amber", 0.9)));
+    expect(polys(lights)).toEqual(tubeQuads(g).flatMap((q) => neon(q, "amber", 0.9)));
     expect(dots(lights)).toHaveLength(1);
     expect(lights.at(-1)).toMatchObject({ kind: "dot", color: "amberMid", r: 0.3 });
   });

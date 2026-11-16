@@ -245,27 +245,28 @@ salen de los oráculos de `src/kit/` y de `REPORT.md`; los tests de
 Nivel 2 (`signMetrics`, `staticContrast`) y nivel 3 (`npm run legibility`,
 tal como lo escribe `REPORT.md`) de cada exhibit en contexto, a 1.17 y a
 0.83. Respaldo 1 y oclusión 0 en los seis casos. Base, verticales y error de
-aspecto: Resume 0°, 0°, 0.010; Portfolio 0.03°, 3.03°, 0.075; Blog 0°, 0°,
+aspecto: RESUME 0°, 0°, 0.010; PORTFOLIO 0.23°, 3.03°, 0.077; Blog 0°, 0°,
 0.010.
 
 | Exhibit | Escala | Alto de x (px) | Trazo (px) | Aire (px) | Contraste estático | Contraste (px) | Halo | OCR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `cartel-torre-escena` | 1.17 | 14.25 | 2.31 | 2.95 | 4.70 | 10.61:1 | 0.05 | `RESUME` |
 | `cartel-torre-escena` | 0.83 | 10.11 | 1.64 | 2.10 | 4.70 | 9.07:1 | 0.05 | `RESUME` |
-| `cartel-taller-escena` | 1.17 | 12.05 | 2.21 | 2.15 | 8.06 | 9.76:1 | 0.07 | `Portfolio` |
-| `cartel-taller-escena` | 0.83 | 8.55 | 1.57 | 1.52 | 8.06 | 9.25:1 | 0.06 | `Portfolio` |
+| `cartel-taller-escena` | 1.17 | 15.07 | 2.40 | 2.29 | 8.06 | 6.72:1 | 0.08 | `PORTFOLIO` |
+| `cartel-taller-escena` | 0.83 | 10.69 | 1.70 | 1.62 | 8.06 | 6.10:1 | 0.08 | `PORTFOLIO` |
 | `plataforma-escena` | 1.17 | 12.05 | 2.21 | 2.64 | 13.26 | 8.96:1 | 0.12 | `Blog` |
 | `plataforma-escena` | 0.83 | 8.55 | 1.57 | 1.87 | 13.26 | 8.96:1 | 0.07 | `Blog` |
 
 Nivel 1 con `SIGN_FONT` (tamaño 10.3, trazo w = 1.35 u). Aire mínimo y máximo
-entre letras, ritmo y la contraforma más ajustada, todo en w. `RESUME` va en
-Neon Light (§8.2): su fila se mide con `checkLayouts` sobre sus propios
-glifos (caja alta 8.7, w = la cara de la letra, 1.41 u).
+entre letras, ritmo y la contraforma más ajustada, todo en w. `RESUME` (Neon Light) y
+`PORTFOLIO` (CNRGN Builder) van en fuentes de exhibición (§8.2): sus filas se
+miden con `checkLayouts` sobre sus propios glifos, con w = la cara de la
+letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2).
 
 | Palabra | Aire mín. (w) | Aire máx. (w) | Ritmo | Contraforma más ajustada (w) |
 | --- | --- | --- | --- | --- |
 | RESUME | 1.27 | 1.47 | 1.16 | 1.56 (`R`) |
-| Portfolio | 1.18 | 1.68 | 1.43 | 2.08 (`P`) |
+| PORTFOLIO | 1.19 | 1.19 | 1.01 | 1.19 (`P`) |
 | Blog | 1.18 | 1.18 | 1.00 | 2.24 (`B`) |
 
 ### 8.2 Desvíos de la historia
@@ -315,8 +316,27 @@ glifos (caja alta 8.7, w = la cara de la letra, 1.41 u).
   `scripts/marquee-word.py`; `src/kit/marquee.ts` la triangula (earcut) y
   `checkLayouts` le aplica el nivel 1. En el nivel 2 el alto de x es la caja
   alta (`xHeight`) y el trazo, la cara de la letra (`stroke`).
+- **PORTFOLIO en CNRGN Builder (después del cierre).** La palabra del
+  *tinker* pasa a mayúsculas, `PORTFOLIO`, con
+  [CNRGN Builder](https://justfreefonts.com/fonts/cnrgn-builder/) (Brylle
+  Conrad Co, gratis para uso personal y comercial; la licencia no autoriza a
+  redistribuirla, así que tampoco se versiona el TTF: solo
+  `src/kit/builder-portfolio.ts`, generada por `scripts/marquee-word.py`).
+  La fuente es pesada (cara 0.175 cajas altas: proporción 5.7 y contraformas
+  de 0.99 w), así que el generador la afina 0.0075 cajas altas por lado
+  (cara 0.159) para entrar en las reglas de §4.1 sin aflojarlas. Caja alta
+  `TINKER_CAP` 9.2 y `TINKER_TRACKING` 0.08. Cada letra conserva su técnica:
+  la cara llena para el recorte y la pintura; la marquesina, el tubo de neón
+  (0.45 de ancho) y el bastidor soldado siguen los contornos de la letra (el
+  bastidor, achicado a 0.75 sobre el centro para no tocar los paneles
+  vecinos). La primera `O` sube (`dz` 0.1, antes −0.3) porque un poste del
+  pórtico le tapaba una esquina del margen. Las capturas de detalle y de
+  titileo de §8.4 (`cartel-taller-detalle*`, `cartel-taller-titila-*`)
+  siguen mostrando la `Portfolio` de trazos; las de escena y escala real
+  están al día.
 - **Seguimiento: #382.** `strokePx` sigue la letra del issue (el lado más
-  corto de cada cuad proyectado) y el punto de la `i` lo tensiona.
+  corto de cada cuad proyectado) y el punto de la `i` lo tensiona. Con
+  `PORTFOLIO` en CNRGN Builder ya no hay punto de la `i` en ningún cartel.
 
 ### 8.3 Tamaño frente al host
 
@@ -328,7 +348,7 @@ cubierta (`PLATFORM_SITE`); el de Portfolio cabe en el galpón (`TINKER_SITE`).
 | Cartel | Palabra (u) | Palabra (px a 1.17) | Anfitrión | Anfitrión (px a 1.17) |
 | --- | --- | --- | --- | --- |
 | RESUME | 43.89 | 72.62 | `TOWER` 16 × 14 | 35.10 |
-| Portfolio | 52.97 | 90.34 | galpón de montaje sur 90 × 16 (`SHIPYARD_HALLS[1]`) | 124.02 |
+| PORTFOLIO | 52.74 | 87.73 | galpón de montaje sur 90 × 16 (`SHIPYARD_HALLS[1]`) | 124.02 |
 | Blog | 22.07 | 38.75 | cubierta 14 × 12 (`HALF_X`, `HALF_Y`) | 30.42 |
 
 ### 8.4 Capturas

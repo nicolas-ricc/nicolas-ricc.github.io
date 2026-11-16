@@ -2,7 +2,10 @@ import earcut from "earcut";
 import type { Vec2 } from "../iso/geometry";
 import { pointInPolygon } from "../map/geo";
 import type { GlyphLayout } from "./lettering";
-import { MARQUEE_RESUME, type MarqueeLetter } from "./marquee-resume";
+import { MARQUEE_RESUME } from "./marquee-resume";
+
+/** A filled letter: `outline`, `counters` cut out of it and the bulbs along its face (none outside marquee fonts), in cap heights (cap 1, baseline 0). */
+export interface MarqueeLetter { char: string; outline: Vec2[]; counters: Vec2[][]; bulbs: Vec2[] }
 
 /** A word of filled marquee letters, as `scripts/marquee-word.py` writes it: everything in cap heights. */
 export interface MarqueeWord { text: string; width: number; bulbRadius: number; letters: readonly MarqueeLetter[] }
@@ -10,8 +13,19 @@ export interface MarqueeWord { text: string; width: number; bulbRadius: number; 
 /** Width of the face of a Neon Light letter (stems, bars and the M diagonals), in cap heights. */
 export const MARQUEE_FACE = 0.162;
 
-/** A marquee glyph: a `GlyphLayout` whose `quads` and `fill` are the triangles of the face (counters cut out), plus its bulbs. */
+/** A filled glyph: a `GlyphLayout` whose `quads` and `fill` are the triangles of the face (counters cut out), whose `strokes` are its contours (closed, outline first), plus its bulbs. */
 export interface MarqueeGlyph extends GlyphLayout { bulbs: Vec2[] }
+
+/** Width of the face of a CNRGN Builder letter as `BUILDER_PORTFOLIO` holds it (eroded from 0.175), in cap heights. */
+export const BUILDER_FACE = 0.159;
+
+/** One quad `w` wide along each segment of the glyph's contours: a tube that outlines the letter. */
+export function contourQuads(g: GlyphLayout, w: number): Vec2[][] {
+  return g.strokes.flatMap((s) => s.slice(1).map((b, j) => {
+    const a = s[j]!, len = Math.hypot(b.x - a.x, b.y - a.y), nx = (-(b.y - a.y) / len) * (w / 2), ny = ((b.x - a.x) / len) * (w / 2);
+    return [{ x: a.x + nx, y: a.y + ny }, { x: b.x + nx, y: b.y + ny }, { x: b.x - nx, y: b.y - ny }, { x: a.x - nx, y: a.y - ny }];
+  }));
+}
 
 /** Distance from `c` to segment a→b. */
 function distToSegment(c: Vec2, a: Vec2, b: Vec2): number {
@@ -51,7 +65,7 @@ export function marqueeLayout(size: number, tracking = 0, word: MarqueeWord = MA
     const xs = outline.map((q) => q.x), ys = outline.map((q) => q.y);
     const next = lefts[i + 1] ?? word.width + i * tracking;
     return {
-      char: l.char, left: lefts[i]! * size, advance: (next - lefts[i]!) * size, strokes: [], quads: tris, fill: tris,
+      char: l.char, left: lefts[i]! * size, advance: (next - lefts[i]!) * size, strokes: rings.map((r) => [...r, r[0]!]), quads: tris, fill: tris,
       box: { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) },
       counters: counters.map(largestDisc),
       bulbs: l.bulbs.map(s),
