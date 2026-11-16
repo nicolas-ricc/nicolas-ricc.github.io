@@ -10,7 +10,7 @@ import { neon } from "../kit/props";
 import { HALO_BASE } from "../world/frame";
 import { assembleWorld } from "../world/assemble";
 import {
-  hallStandIn, PIECE_AT, roofZ, SHIPYARD_HALLS, STAND_IN_HALL, TINKER_LETTERS, TINKER_SIGN, TINKER_SITE, tinkerAnimator, tinkerLights, tinkerModules,
+  hallStandIn, PIECE_AT, roofUnder, roofZ, SHIPYARD_HALLS, STAND_IN_HALL, TINKER_LETTERS, TINKER_SIGN, TINKER_SITE, tinkerAnimator, tinkerLights, tinkerModules,
   tinkerSign, tinkerSpec, tinkerWordPlane, type Hall,
 } from "./sign-tinker";
 
@@ -35,7 +35,7 @@ function piece() { const out: Solid[] = [], accents: Accent[] = []; hallStandIn(
 /** Pairs of solids whose boxes interpenetrate, both-interlocked pairs and (solid, hall) pairs whose solid stands on the roof excused. */
 function clashes(out: Solid[], halls: readonly { solid: Solid; hall: Hall }[] = []): string[] {
   const b = out.map(bounds), bad: string[] = [];
-  const onRoof = (s: Solid, h: Hall) => s.kind === "prism" && foot(s).every((p) => inHall(p, h) && s.at.z >= roofZ(p.x, p.y, [h]) - 1e-9);
+  const onRoof = (s: Solid, h: Hall) => s.kind === "prism" && foot(s).every((p) => inHall(p, h) && s.at.z >= roofUnder(s.at.x, s.at.y, s.w, [h]) - 1e-9);
   for (let i = 0; i < out.length; i++) for (let j = i + 1; j < out.length; j++) {
     const a = out[i]!, c = out[j]!;
     if (a.interlocks && c.interlocks) continue;
@@ -191,7 +191,7 @@ describe("tinker sign scaffold (#379)", () => {
       expect(s.interlocks).toBe(true);
       const f = foot(s), hall = halls.find((h) => f.every((p) => inHall(p, h)));
       expect(hall !== undefined || f.every((p) => halls.every((h) => !inHall(p, h))), `post at ${s.at.x}, ${s.at.y}`).toBe(true);
-      expect(s.at.z).toBeCloseTo(Math.max(...f.map((p) => roofZ(p.x, p.y, halls))), 9);
+      expect(s.at.z).toBeCloseTo(roofUnder(s.at.x, s.at.y, s.w, halls), 9);
       where.add(hall ? `${hall.y0}` : "ground");
     }
     const crossed = halls.filter((h) => [-30, -20, -10, 0, 10, 20, 30].some((s) => inHall({ x: at.x + U.x * s, y: at.y + U.y * s }, h)));

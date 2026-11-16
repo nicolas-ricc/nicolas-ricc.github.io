@@ -165,6 +165,12 @@ export function roofZ(x: number, y: number, halls: readonly Hall[]): number {
   return z;
 }
 
+/** Highest roof point under the square foot of side `w` at (x, y): its corners and the ridge line where it crosses the foot. */
+export function roofUnder(x: number, y: number, w: number, halls: readonly Hall[]): number {
+  const pts = [[x, y], [x + w, y], [x + w, y + w], [x, y + w]].concat(halls.flatMap((h) => { const r = Math.min(Math.max((h.y0 + h.y1) / 2, y), y + w); return [[x, r], [x + w, r]]; }));
+  return Math.max(...pts.map(([a, b]) => roofZ(a!, b!, halls)));
+}
+
 /** A concrete gable hall 40 × 16 × 10 centred at the origin, ridge along x at z 13.5: what the piece exhibit stands the sign on. */
 export function hallStandIn(out: Solid[]): void {
   const { x0, y0, x1, y1 } = STAND_IN_HALL;
@@ -173,7 +179,7 @@ export function hallStandIn(out: Solid[]): void {
 
 const POST = 0.3, FRAME_W = 0.25, TOP_W = 0.25, PLANK_W = 0.6, PLANK_H = 0.15, PLANK_LEN = 1.4, PLANK_STEP = 2, POST_STEP = 6, CHAIN_W = 0.08, CABLE_W = 0.08, CABLE_DROP = 1.4, CABLE_SAG = 0.6;
 const ROD_W = 0.12, RUNG_W = 0.1, RUNG_STEP = 1, LADDER_RUN = 0.8, LADDER_B = -1.7, LADDER_GAP = 0.35, TOP_CLEAR = 0.5, FLOOD_N = 3.5, FLOOD_H = 1.2, LAMP_W = 0.6;
-const B_REAR = -3.45, B_FRONT = 0, PLANK_B = [-3, -0.9], EDGE = 1e-3;
+const B_REAR = -3.45, B_FRONT = 0, PLANK_B = [-3, -0.6], EDGE = 1e-3;
 
 const at3 = (at: Vec3, s: number, b: number, z: number): Vec3 => v3(at.x + U.x * s + N.x * b, at.y + U.y * s + N.y * b, z);
 const inPlan = (x: number, y: number, h: Hall) => x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1;
@@ -192,7 +198,7 @@ function footAt(cx: number, cy: number, halls: readonly Hall[]): { x: number; y:
 
 /** Steel post 0.3² standing on the roof or ground (the highest roof point under its foot) up to `top`, nudged off any hall edge. */
 function post(out: Solid[], cx: number, cy: number, top: number, halls: readonly Hall[]): void {
-  const f = footAt(cx, cy, halls), base = Math.max(...corners(f.x, f.y, POST).map(([a, b]) => roofZ(a, b, halls)));
+  const f = footAt(cx, cy, halls), base = roofUnder(f.x, f.y, POST, halls);
   out.push(interlock(prism(f.x, f.y, base, POST, POST, top - base, "steel")));
 }
 
@@ -221,8 +227,8 @@ function scaffold(out: Solid[], at: Vec3, halls: readonly Hall[]): void {
   const hung = panels[6]!, hb = bounds(hung), hs = hung.footprint.map(sOf), chainZ = top - TOP_W / 2;
   for (const s of [Math.min(...hs) + 0.5, Math.max(...hs) - 0.5]) beam(out, at3(at, s, B_REAR, hb.max.z), at3(at, s, B_REAR, chainZ), CHAIN_W, CHAIN_W);
 
-  const sT = sMin - 0.2, foot = at3(at, sT - LADDER_RUN, LADDER_B, 0), zFoot = roofZ(foot.x, foot.y, halls);
-  for (const d of [-1, 1]) beam(out, at3(at, sT, LADDER_B + d * LADDER_GAP, deck), at3(at, sT - LADDER_RUN, LADDER_B + d * LADDER_GAP, zFoot), ROD_W, ROD_W);
+  const sT = sMin - 0.2, foot = (d: number) => at3(at, sT - LADDER_RUN, LADDER_B + d * LADDER_GAP, 0), zOf = (d: number) => roofUnder(foot(d).x - ROD_W / 2, foot(d).y - ROD_W / 2, ROD_W, halls), zFoot = Math.max(zOf(-1), zOf(1));
+  for (const d of [-1, 1]) beam(out, at3(at, sT, LADDER_B + d * LADDER_GAP, deck), at3(at, sT - LADDER_RUN, LADDER_B + d * LADDER_GAP, zOf(d)), ROD_W, ROD_W);
   const rungs = Math.floor((deck - zFoot) / RUNG_STEP);
   for (let k = 1; k < rungs; k++) {
     const f = k / rungs, s = sT - LADDER_RUN * f, z = deck + (zFoot - deck) * f, inner = LADDER_GAP - ROD_W / 2;
@@ -238,7 +244,7 @@ function scaffold(out: Solid[], at: Vec3, halls: readonly Hall[]): void {
 /** The Portfolio sign at `at` over `halls`: the scaffold, a floodlight on the roof in front of the word, and the nine letters. */
 export function tinkerSign(out: Solid[], accents: Accent[], at: Vec3, halls: readonly Hall[] = SHIPYARD_HALLS): void {
   scaffold(out, at, halls);
-  const c = at3(at, 0, FLOOD_N, 0), base = Math.max(...corners(c.x - LAMP_W / 2, c.y - LAMP_W / 2, LAMP_W).map(([a, b]) => roofZ(a, b, halls)));
+  const c = at3(at, 0, FLOOD_N, 0), base = roofUnder(c.x - LAMP_W / 2, c.y - LAMP_W / 2, LAMP_W, halls);
   const lit = industrialLamp(v3(c.x, c.y, base), { h: FLOOD_H, center: true });
   place(out, accents, { solids: lit.solids, accents: lit.accents.map((a) => (a.kind === "dot" ? { ...a, color: "amber" } : a)) });
   tinkerLetters(out, accents, at);
