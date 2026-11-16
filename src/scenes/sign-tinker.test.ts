@@ -27,6 +27,11 @@ const dots = (a: Accent[]) => a.flatMap((x) => (x.kind === "dot" ? [x] : []));
 const steelPosts = (out: Solid[]) => out.flatMap((s) => (s.kind === "prism" && s.mat === "steel" && Math.abs(s.w - 0.3) < 1e-9 && Math.abs(s.d - 0.3) < 1e-9 ? [s] : []));
 const beams = (out: Solid[], w: number) => out.flatMap((s) => (s.kind === "beam" && s.mat === "steel" && Math.abs(s.w - w) < 1e-9 ? [s] : []));
 const foot = (s: { at: Vec3; w: number; d: number }) => [v3(s.at.x, s.at.y, 0), v3(s.at.x + s.w, s.at.y, 0), v3(s.at.x + s.w, s.at.y + s.d, 0), v3(s.at.x, s.at.y + s.d, 0)];
+/** Independent oracle: the highest roof under a square foot, sampled on an 11 × 11 grid plus each hall's ridge line clamped into the foot. */
+const maxRoof = (x: number, y: number, w: number, halls: readonly Hall[]) => {
+  const ys = [...Array.from({ length: 11 }, (_, k) => y + (w * k) / 10), ...halls.map((h) => Math.min(Math.max((h.y0 + h.y1) / 2, y), y + w))];
+  return Math.max(...ys.flatMap((b) => Array.from({ length: 11 }, (_, k) => roofZ(x + (w * k) / 10, b, halls))));
+};
 const inHall = (p: { x: number; y: number }, h: Hall) => p.x >= h.x0 && p.x <= h.x1 && p.y >= h.y0 && p.y <= h.y1;
 
 function sign(at: Vec3, halls: readonly Hall[] = SHIPYARD_HALLS) { const out: Solid[] = [], accents: Accent[] = []; tinkerSign(out, accents, at, halls); return { out, accents }; }
@@ -35,7 +40,7 @@ function piece() { const out: Solid[] = [], accents: Accent[] = []; hallStandIn(
 /** Pairs of solids whose boxes interpenetrate, both-interlocked pairs and (solid, hall) pairs whose solid stands on the roof excused. */
 function clashes(out: Solid[], halls: readonly { solid: Solid; hall: Hall }[] = []): string[] {
   const b = out.map(bounds), bad: string[] = [];
-  const onRoof = (s: Solid, h: Hall) => s.kind === "prism" && foot(s).every((p) => inHall(p, h) && s.at.z >= roofUnder(s.at.x, s.at.y, s.w, [h]) - 1e-9);
+  const onRoof = (s: Solid, h: Hall) => s.kind === "prism" && foot(s).every((p) => inHall(p, h) && s.at.z >= maxRoof(s.at.x, s.at.y, s.w, [h]) - 1e-9);
   for (let i = 0; i < out.length; i++) for (let j = i + 1; j < out.length; j++) {
     const a = out[i]!, c = out[j]!;
     if (a.interlocks && c.interlocks) continue;
@@ -168,6 +173,7 @@ describe("tinker sign scaffold (#379)", () => {
     expect(roofZ(0, 9, h)).toBe(0);
     expect(roofZ(60, -24, SHIPYARD_HALLS)).toBeCloseTo(13.5, 12);
     expect(roofZ(60, -34, SHIPYARD_HALLS)).toBe(0);
+    expect(roofUnder(-0.15, -0.15, 0.3, h)).toBeCloseTo(13.5, 12);
   });
 
   it("SHIPYARD_HALLS are the world's two assembly halls (concrete gable prisms 90 × 16 × 10)", () => {
@@ -191,7 +197,7 @@ describe("tinker sign scaffold (#379)", () => {
       expect(s.interlocks).toBe(true);
       const f = foot(s), hall = halls.find((h) => f.every((p) => inHall(p, h)));
       expect(hall !== undefined || f.every((p) => halls.every((h) => !inHall(p, h))), `post at ${s.at.x}, ${s.at.y}`).toBe(true);
-      expect(s.at.z).toBeCloseTo(roofUnder(s.at.x, s.at.y, s.w, halls), 9);
+      expect(Math.abs(s.at.z - maxRoof(s.at.x, s.at.y, s.w, halls))).toBeLessThan(1e-9);
       where.add(hall ? `${hall.y0}` : "ground");
     }
     const crossed = halls.filter((h) => [-30, -20, -10, 0, 10, 20, 30].some((s) => inHall({ x: at.x + U.x * s, y: at.y + U.y * s }, h)));
@@ -218,6 +224,13 @@ describe("tinker sign scaffold (#379)", () => {
       expect(mid.z).toBeLessThan(Math.min(a.from.z, b.to.z));
     }
     expect(out.filter((x) => x.interlocks).every((x) => x.mat === "steel")).toBe(true);
+  });
+
+  it.each(AT)("every rust plank rests on a steel beam under it (%s)", (_n, at) => {
+    const { out } = sign(at), steel = out.filter((s) => s.kind === "beam" && s.mat === "steel").map(bounds);
+    for (const p of out.filter((s) => s.kind === "beam" && s.mat === "rust").map(bounds)) {
+      expect(steel.some((b) => Math.abs(b.max.z - p.min.z) < 1e-9 && b.min.x < p.max.x && p.min.x < b.max.x && b.min.y < p.max.y && p.min.y < b.max.y)).toBe(true);
+    }
   });
 
   it.each(AT)("floodlight: one amber bulb r 1.2 on a 1.2 post on the roof, no cyan, its halo clear of every letter (%s)", (_n, at) => {
