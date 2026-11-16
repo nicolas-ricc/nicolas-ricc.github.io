@@ -176,8 +176,9 @@ describe("tower crown: structure and helipad (#378)", () => {
     const lower = of(crown.out, "beam").find((b) => b.w === 0.3 && Math.abs(b.from.z - (PANEL_Z0 - 0.15)) < EPS)!;
     for (const t of tensors) {
       expect([lower.from, lower.to].some((e) => Math.hypot(e.x - t.from.x, e.y - t.from.y, e.z - t.from.z) < EPS)).toBe(true);
-      const cx = Math.min(CORNICE.x1, Math.max(CORNICE.x0, t.from.x)), cy = Math.min(CORNICE.y1, Math.max(CORNICE.y0, t.from.y));
-      expect(t.to.x).toBeCloseTo(cx, 9); expect(t.to.y).toBeCloseTo(cy, 9);
+      // the nearest cornice point, moved inward by the half section so the foot does not overhang the cornice
+      const clamp = (v: number, lo: number, hi: number) => (v > hi ? hi - 0.1 : v < lo ? lo + 0.1 : v);
+      expect(t.to.x).toBeCloseTo(clamp(t.from.x, CORNICE.x0, CORNICE.x1), 9); expect(t.to.y).toBeCloseTo(clamp(t.from.y, CORNICE.y0, CORNICE.y1), 9);
       expect(Math.abs(bounds(t).min.z - (at.z + 0.4))).toBeLessThan(EPS);
     }
   });
@@ -220,6 +221,11 @@ describe("tower crown: structure and helipad (#378)", () => {
     const lampPosts = of(crown.out, "prism").filter((s) => s.mat === "steel" && s.w === 0.6 && s.h === 1);
     expect(lampPosts).toHaveLength(2);
     for (const p of lampPosts) expect(p.at.z).toBeCloseTo(slab[0]!.at.z + 0.5, 9);
+    const lights = dots(crown.accents).filter((a) => a.color === "greenMid");
+    for (const p of lampPosts) for (const l of lights) { // no edge light sits on a lamp post
+      const dx = Math.max(p.at.x - l.at.x, 0, l.at.x - (p.at.x + p.w)), dy = Math.max(p.at.y - l.at.y, 0, l.at.y - (p.at.y + p.d));
+      expect(Math.hypot(dx, dy)).toBeGreaterThan(l.r);
+    }
   });
 
   it("no two solids interpenetrate, alone or on the stand-in tower; only steel interlocks", () => {

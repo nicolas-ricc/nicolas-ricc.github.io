@@ -61,8 +61,7 @@ function tensor(from: Vec3, corner: { x: number; y: number }, floor: number): So
 /** The crown at the rooftop center `at`: sign panel and letters, steel frame, raised helipad with its pad marks, edge lights, net and floodlights. */
 export function towerCrown(out: Solid[], accents: Accent[], at: Vec3): void {
   const { pp, z0, z1, slabZ, pad } = frame(at), floor = at.z + CORNICE_TOP;
-  const panel = panelAt(at);
-  out.push({ ...panel, footprint: panel.footprint.map((q) => ({ ...q })) }); // copies: a consumer that mutates the scene must not reach RESUME_SIGN
+  out.push(panelAt(at)); // a fresh panel: a consumer that mutates the scene does not reach RESUME_SIGN's backing
   const [dx, dy, dz] = [at.x - CROWN_SITE.x, at.y - CROWN_SITE.y, at.z - CROWN_SITE.z];
   for (const g of RESUME_SIGN.glyphs) for (const q of g.quads) accents.push({ kind: "poly", pts: q.map((c) => v3(c.x + dx, c.y + dy, c.z + dz)), color: "green", alpha: 1 });
 
@@ -75,10 +74,9 @@ export function towerCrown(out: Solid[], accents: Accent[], at: Vec3): void {
 
   const mid = -PANEL_GAP - PANEL_T / 2, lowZ = z0 - BEAM / 2, ends = [-L / 2, L / 2].map((t) => on(pp, t, mid, lowZ));
   out.push(beam(ends[0]!, ends[1]!, BEAM), beam(on(pp, -L / 2, mid, z1 + BEAM / 2), on(pp, L / 2, mid, z1 + BEAM / 2), BEAM));
-  for (const e of ends) { // to the nearest point of the cornice's edge
-    const x = Math.min(at.x + CORNICE_X, Math.max(at.x - CORNICE_X, e.x)), y = Math.min(at.y + CORNICE_Y, Math.max(at.y - CORNICE_Y, e.y));
-    out.push(tensor(e, { x, y }, floor));
-  }
+  // to the nearest point of the cornice's edge, moved inward by the half section so the foot does not overhang it
+  const foot = (v: number, c: number, half: number) => (v > c + half ? c + half - TENSOR / 2 : v < c - half ? c - half + TENSOR / 2 : v);
+  for (const e of ends) out.push(tensor(e, { x: foot(e.x, at.x, CORNICE_X), y: foot(e.y, at.y, CORNICE_Y) }, floor));
 
   const ring = (r: number, deg: number, z: number): Vec3 => v3(at.x + r * Math.cos((deg * Math.PI) / 180), at.y + r * Math.sin((deg * Math.PI) / 180), z);
   out.push({ kind: "cylinder", at: v3(at.x, at.y, slabZ), r: SLAB_R, h: SLAB_H, sides: SIDES, mat: "concrete" });
@@ -89,7 +87,7 @@ export function towerCrown(out: Solid[], accents: Accent[], at: Vec3): void {
     accents.push({ kind: "dot", at: ring(6.4, k * 22.5, pad), r: 0.25, color: "greenMid" });
     out.push(beam(ring(SLAB_R - 0.06, k * 22.5, pad + 0.3), ring(SLAB_R - 0.06, (k + 1) * 22.5, pad + 0.3), 0.12, 0.6));
   }
-  for (const deg of [205, 245]) {
+  for (const deg of [213.75, 236.25]) { // on the NW edge, midway between edge lights
     const lit = industrialLamp(ring(6.2, deg, pad), { center: true, h: 1 });
     place(out, accents, { solids: lit.solids, accents: lit.accents.map((a) => ({ ...a, color: "amber" as const })) });
   }
