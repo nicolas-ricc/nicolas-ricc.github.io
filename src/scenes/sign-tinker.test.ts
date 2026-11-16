@@ -326,6 +326,7 @@ describe("tinker animator (#379)", () => {
 describe("tinker sign in its scene (#379)", () => {
   const { scene } = assembleWorld(undefined, { reducedMotion: true });
   it("TINKER_SITE is on a ridge of an assembly hall, x within 40..80", () => {
+    expect(TINKER_SITE).toEqual({ x: 60, y: -24, z: 13.5 });
     expect(TINKER_SITE.z).toBe(13.5);
     expect([-24, -44]).toContain(TINKER_SITE.y);
     expect(TINKER_SITE.x).toBeGreaterThanOrEqual(40);
