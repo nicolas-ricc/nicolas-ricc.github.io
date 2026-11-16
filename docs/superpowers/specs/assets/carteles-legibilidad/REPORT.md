@@ -12,7 +12,7 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 9.77:1 | ≥ 4.5:1 | ✓ |
+| contraste | 9.76:1 | ≥ 4.5:1 | ✓ |
 | halo | 0.07 | ≤ 0.5 | ✓ |
 | OCR | `Portfolio` | = `Portfolio` | ✓ |
 
@@ -22,7 +22,7 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 9.24:1 | ≥ 3:1 | ✓ |
+| contraste | 9.25:1 | ≥ 3:1 | ✓ |
 | halo | 0.06 | ≤ 0.5 | ✓ |
 | OCR | `Portfolio` | ≈ `Portfolio` (sin mayúsculas) | ✓ |
 
