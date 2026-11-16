@@ -138,8 +138,9 @@ The zone signs of #374 are three pairs of exhibits: `#cartel-torre` and
 `#cartel-torre-escena` (Resume), `#cartel-taller` and `#cartel-taller-escena`
 (Portfolio) and `#plataforma` and `#plataforma-escena` (Blog). The piece builds
 the sign at the origin (the crown and the tinker sign on a stand-in of their
-host); the one "in its scene" shows it at its candidate site in the real world. Judge them at the cover scales with `c`. `npm run legibility`
-measures contrast, halo and OCR with a browser; it does not run in CI.
+host); the one "in its scene" shows it at its candidate site in the real world.
+Judge them at the cover scales with `c`. `npm run legibility` measures contrast,
+halo and OCR with a browser; it does not run in CI.
 
 The lab pages are also built and deployed with the site (every
 `lab/*.html` is a Vite input), so the storybook can be seen at
