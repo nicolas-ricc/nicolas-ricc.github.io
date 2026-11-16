@@ -97,15 +97,17 @@ Sites: `CROWN_SITE` = (129, 227, 30), `TINKER_SITE` = (60, −24, 13.5), `PLATFO
   - §6 (from `## 6. ` to `## 7. `) has no `- [ ]` and exactly 9 `- [x]`.
   - §5 (from `## 5. ` to `## 6. `) contains `CROWN_SITE`, `(129, 227, 30)`, `TINKER_SITE`, `(60, −24, 13.5)`, `PLATFORM_SITE`, `(400, 170)`.
   - `dev` exists after `## 7. ` and has headings `### 8.1 `, `### 8.2 `, `### 8.3 `, `### 8.4 `; contains `REPORT.md`, `SIGN_FONT`, the three `-escena` ids, `CROWN_SITE`, `TINKER_SITE`, `PLATFORM_SITE`.
-  - level 2 pinned live: for each context exhibit `e` and scale `s` in [1.17, 0.83], `m = signMetrics(e.sign, s)`: `dev` contains `f(m.xHeightPx)`, `f(m.strokePx)`, `f(m.airPx)`; and contains `f(staticContrast(e.sign))`.
-  - level 1 pinned live: for each of `Resume`, `Portfolio`, `Blog` at `SIGN_FONT`: `dev` contains `f(min(letterGaps)/width)`, `f(max(letterGaps)/width)`, `f(rhythm)`, `f(min counterClearance/width)` and `f(measureText(word, size).width)`.
-  - level 3: every `| contraste | X | … |`, `| halo | X | … |` value of `REPORT.md` (parse the second cell of those rows) appears in `dev`.
+  - **Row-wise pins** (a number must sit in its own row, not anywhere in §8). `row(prefix)` = the single line of `dev` that starts with `prefix`.
+  - level 2 pinned live: §8.1 has one row per exhibit and scale, starting `` | `<id>` | 1.17 | `` / `` | `<id>` | 0.83 | ``. For each context exhibit `e` and scale `s`, `m = signMetrics(e.sign, s)`: that row contains `f(m.xHeightPx)`, `f(m.strokePx)`, `f(m.airPx)`, `f(staticContrast(e.sign))`.
+  - level 3 pinned against `REPORT.md` parsed at test time: for each section `## <id> a <s>` of `REPORT.md`, the second cell of its `| contraste |` and `| halo |` rows (e.g. `9.76:1`, `0.07`) and the OCR word appear in the same §8.1 row `` | `<id>` | <s> | ``.
+  - level 1 pinned live: a font table with rows starting `| Resume |`, `| Portfolio |`, `| Blog |`; with `width = SIGN_FONT.width` (1.35 u, the stroke), each row contains `f(Math.min(...letterGaps(w, size, width)) / width)`, `f(Math.max(...)/width)`, `f(rhythm(w, size, width))`, `f(Math.min(...counterClearance(w, size, width).map(c => c.clearance)) / width)`.
+  - §8.3 pinned live: a sizes table with rows `| Resume |`, `| Portfolio |`, `| Blog |` (in the 8.3 slice) containing `f(measureText(w, size).width)` and the word's screen width `f(xExtent(sign quads) * 1.17)` and the host's `f(xExtent(rect) * 1.17)`, where `xExtent` = max − min of `project(p).x` (`src/iso/project.ts`) and the rects are `TOWER` (`src/scenes/city-grid.ts`), `SHIPYARD_HALLS[1]` (`src/scenes/sign-tinker.ts`) and ±`HALF_X`, ±`HALF_Y` (`src/scenes/sign-platform.ts`).
   - 8.4 names `assets/374-carteles/<id>-117.png` and `-083.png` for the three context ids, and `carteles-legibilidad/` crops `<id>-117.png`, `<id>-083.png`.
 - [ ] **Step 2:** run the block; expect FAIL on status/§5/§6/§8.
 - [ ] **Step 3: Edit the spec.** Status line as above. §5: append a bullet list "Sitios candidatos" with the three constants, their values, their module (`src/scenes/sign-crown.ts`, `sign-tinker.ts`, `sign-platform.ts`) and one line each on what the site is (center of the real tower's rooftop; ridge of the south assembly hall; open sea between the two buoys). §6: tick all nine. New `## 8. Desvíos y medición` with:
-  - **8.1 Medición**: one table per sign with both scales — level 2 (alto de x, trazo, aire in px; static contrast; backing; occlusion; baseline/verticals/aspect) and level 3 (contraste, halo, OCR as in `REPORT.md`); then the font measures for the three words (air min–max in w, rhythm, tightest counter in w), values from "Measured facts".
+  - **8.1 Medición**: one table, one row per exhibit and scale (`` | `<id>` | 1.17 | … ``) — level 2 (alto de x, trazo, aire in px; static contrast; backing; occlusion; baseline/verticals/aspect) and level 3 (contraste, halo, OCR as in `REPORT.md`); then a font table, rows `| Resume |`, `| Portfolio |`, `| Blog |` (air min–max in w, rhythm, tightest counter in w), values from "Measured facts".
   - **8.2 Desvíos de la historia**, one bullet each: `SIGN_FONT` 10.3/1.35 with `GRID.gap` 2 and `KERN` (#375); Blog's `officeDark` backing panel inside the frame, frame longer than the deck and `POST_INSET` 6.5 (#376); the crown as a panel along (1, −1) with the helipad slab on top, panel bottom +3.2, slab r 7 (#378); the tinker's host is the south assembly hall ridge, site kept at `TINKER_SITE` with `DECK_RISE` 3.5 because of the factory gantry (#379); counters measured by probe points, not raster (#375); occlusion and backing by flat faces (`tessellate`) and ray depth, not AABB (#376); level-3 pixels via `extract.pixels` through `window.__lab` (#377); glyph changes: `m` arch tops 1 grid unit (#378) and the `i` dot squared to the stroke width (#379); marquee alpha 0.7 (#379); the real antenna light shows through the crown panel (#378, for the integration); follow-up #382 (`strokePx` and the `i` dot).
-  - **8.3 Tamaño frente al host**: the sizes table from "Measured facts".
+  - **8.3 Tamaño frente al host**: the sizes table from "Measured facts", rows `| Resume |`, `| Portfolio |`, `| Blog |`.
   - **8.4 Capturas**: list of `assets/374-carteles/*.png` (all twelve, 3200 × 1800) and `assets/carteles-legibilidad/*.png` (six crops plus six `-ocr`), with `REPORT.md` linked.
 - [ ] **Step 4:** run the block; PASS. `npx vitest run src/english.test.ts` PASS (add ALLOW regexes only for literals this task's tests cite).
 - [ ] **Step 5:** commit `docs(#380): close the story spec — §5 sites, §6, §8 deviations and measurement`.
@@ -119,7 +121,7 @@ Sites: `CROWN_SITE` = (129, 227, 30), `TINKER_SITE` = (60, −24, 13.5), `PLATFO
 - Modify: `src/english.test.ts` (ALLOW)
 
 - [ ] **Step 1: Failing tests:**
-  - old spec: the first paragraph after the `### 3.1 ` heading and after `### 3.2 ` starts with `*Desvío (2026-11-15):` and (whitespace collapsed) contains `2026-11-15-carteles-de-zona-rediseno-design.md`; the 3.1 note contains `cartel-torre`, the 3.2 note contains `cartel-taller`. The first paragraph after `### 3.3 ` starts with `*Desvío (2026-11-15):` and contains `respaldo`.
+  - old spec: paragraphs split on `/\n\s*\n/` (as in the #238 test); the first paragraph after the `### 3.1 ` heading and after `### 3.2 ` starts with `*Desvío (2026-11-15):` and (whitespace collapsed) contains `2026-11-15-carteles-de-zona-rediseno-design.md`; the 3.1 note contains `cartel-torre`, the 3.2 note contains `cartel-taller`. The first paragraph after `### 3.3 ` starts with `*Desvío (2026-11-15):` and contains `respaldo`.
   - old spec §8 unchanged: the existing #364 assertions on §8 keep passing (no edit).
   - storybook spec: last cell of `| Portfolio: astillero |` contains `cartel-taller` and `cartel-taller-escena` and not `grafiteado`; `| Resume: ciudad |` contains `cartel-torre`, `cartel-torre-escena` and not `helipuerto`; `| Blog: mar |` contains `plataforma` and `plataforma-escena`.
   - delete the #364 `it` on the rows (it pins the deleted pieces).
@@ -136,7 +138,7 @@ Sites: `CROWN_SITE` = (129, 227, 30), `TINKER_SITE` = (60, −24, 13.5), `PLATFO
 
 - [ ] **Step 1: Failing tests** (`storybook`, `lab` = README paragraphs as the existing tests find them, whitespace collapsed where matching phrases):
   - storybook paragraph contains `` `#<id>` `` for the six ids `cartel-torre`, `cartel-torre-escena`, `cartel-taller`, `cartel-taller-escena`, `plataforma`, `plataforma-escena`, each in `EXHIBITS`; contains `in its scene`, `candidate site`, `npm run legibility`, `contrast`, `halo`, `OCR`, `not in CI` (or `does not run in CI`: pick `does not run in CI`), and `` `c` ``; does not contain `cartel-helipuerto` nor `grafiti`.
-  - lab paragraph contains `2026-11-15-carteles-de-zona-rediseno-design.md`; the sentence naming `src/kit/lettering.ts` also names `src/kit/legibility.ts` (same paragraph).
+  - lab paragraph (the one containing `/lab/world.html`, as the existing tests find it) contains `2026-11-15-carteles-de-zona-rediseno-design.md`, `src/kit/lettering.ts` and `src/kit/legibility.ts`. The storybook paragraph is the one containing `/lab/storybook.html`.
   - delete the #364 README-ids `it` and its `DELETED_BY_374` set.
 - [ ] **Step 2:** FAIL.
 - [ ] **Step 3:** Replace the "The zone signs of #352 are four pieces…" sentence with one naming the three pairs, saying the "in its scene" exhibits show each sign at its candidate site in the real world, that `c` judges them at the cover scales, and that `npm run legibility` measures contrast, halo and OCR with a browser and does not run in CI. Add the spec to the lab list (after `2026-11-11-…`). Extend the lettering sentence: "…lettered with, and `src/kit/legibility.ts` the legibility guardrails they are checked against."
@@ -178,3 +180,15 @@ Sites: `CROWN_SITE` = (129, 227, 30), `TINKER_SITE` = (60, −24, 13.5), `PLATFO
 - `npm run legibility` is run in Task 1 on this branch, which already contains #378 and #379; all six rows pass today and the output is byte-identical to the committed one, so there may be nothing to commit.
 - The storybook spec rows use the exhibits' ids in parentheses so the test can match them exactly; the table keeps its three columns.
 - `scripts/legibility.ts` identifiers named in CONTEXT.md must exist in that file (`main`, `startVite`).
+- If `npm run legibility` ever shows a ✗, the issue authorises fixing that sign or the font ("se corrige ese cartel o la fuente hasta que los tres pasen"); the live pins of Task 2 then fail until §8 is rewritten from the new measures. Rejected: hardcoding §8 numbers in the test.
+- §8.2 deviation bullets are prose sourced from the sibling PR descriptions (#381, #383, #384, #385, #386) and the code constants (`POST_INSET`, `DECK_RISE`, …); only headings and identifiers are pinned. Rejected: pinning every prose number.
+- The #364 `it`s on the storybook rows and the README ids are replaced by the #374 ones in the same commit that changes those documents; the other #364 `it`s (old status, §6, §8 tables and captures, helipuerto/plataforma credits, lab spec list) keep passing unchanged. Stage 3 commits all new tests failing on purpose (pipeline), so "green per commit" applies from the implementation commits on.
+- Unicode: the spec writes the minus as U+2212 (`−24`), like the existing specs (`−18, 188`); tests use the same literal. Whitespace collapsing does not touch it.
+- `tesseract.js` was missing from `node_modules` (installed from `main`); `npm ci` on this branch installs it. If the script cannot run, Task 1 stops and the run is blocked (the ✓ is a criterion).
+
+## Grilling
+
+- Rounds: 1 (griller model: fable). Questions: 18.
+- Sources: ISSUE 5 (1, 7, 8, 13, 16 partly), CODE 11 (2, 3, 5, 6, 10, 11, 12, 13, 14, 15, 17), technical assumption 5 (1, 4, 9, 16, 18). No spec ambiguity, nothing out of scope.
+- Plan changes: §8.1, font and §8.3 pins are row-wise (Q4); level 3 parsed from `REPORT.md` at test time (Q5, Q6); §8.3 pinned live (Q15); paragraph anchors made explicit (Q10, Q11); assumptions above.
+- Issues opened: none.
