@@ -32,8 +32,8 @@ export const TINKER_LETTERS: readonly { char: string; technique: Technique; pane
   { char: "o", technique: "marquee", panel: "officeDark", turnDeg: 2, dz: 0.1, dn: 0 },
 ];
 
-/** Height of the deck top above the ridge point. */
-export const DECK_RISE = 2.6;
+/** Height of the deck top above the ridge point (3.5: lifts the word clear of the factory gantry at y -12.5, which hid its bottom margin at 2.6). */
+export const DECK_RISE = 3.5;
 /** Deck (plank) top above the ridge point `at`. */
 export const deckTop = (at: Vec3): number => at.z + DECK_RISE;
 

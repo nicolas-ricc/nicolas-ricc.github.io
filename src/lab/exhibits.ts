@@ -27,8 +27,8 @@ import { BUOYS, DRUM_R0, KEEPER, LANTERN_Z, LIGHTHOUSE, WRECK } from "../scenes/
 import { BEAM_LEN } from "../scenes/sea-anim";
 import { ship, shipAt, type ShipKind } from "../scenes/ships";
 import { CROWN_SITE, RESUME_SIGN, towerCrown, towerStandIn } from "../scenes/sign-crown";
-import { graffitiWall } from "../scenes/sign-graffiti";
 import { BLOG_SIGN, seaPlatform, seaPlatformAt } from "../scenes/sign-platform";
+import { hallStandIn, PIECE_AT, STAND_IN_HALL, TINKER_SIGN, TINKER_SITE, tinkerAnimator, tinkerSign } from "../scenes/sign-tinker";
 import { SUBURB_COLS } from "../scenes/sprawl-grid";
 import { SUBSTATION } from "../scenes/substation";
 import { ARENA, AUDITORIUM, TELECOM } from "../scenes/tech";
@@ -129,7 +129,12 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "tren", title: "Mitre EMU train", zone: "portfolio", group: "shipyard", kind: "piece", pad: "paving",
     build: (out) => { out.push(...pieceTrain("e").solids); },
     animate: trainPieceAnimator },
-  { id: "grafiti", title: "Portfolio graffiti wall", zone: "portfolio", group: "shipyard", kind: "piece", pad: "concrete", build: graffitiWall },
+  { id: "cartel-taller", title: "Portfolio tinker sign", zone: "portfolio", group: "shipyard", kind: "piece", pad: "concrete",
+    build: (out, accents) => { hallStandIn(out); tinkerSign(out, accents, PIECE_AT, [STAND_IN_HALL]); },
+    animate: (o) => tinkerAnimator({ ...o, at: PIECE_AT }) },
+  // h 34: the structure and the sign's accents reach ≈ 33.41 u (the smallest integer that frames them); the neighbours cut by the edge are lower.
+  { id: "cartel-taller-escena", title: "Portfolio tinker sign in its scene", zone: "portfolio", group: "shipyard", kind: "context", box: { x0: 20, y0: -58, x1: 100, y1: 0 }, h: 34,
+    build: (out, accents) => tinkerSign(out, accents, TINKER_SITE), sign: TINKER_SIGN, animate: tinkerAnimator },
   { id: "central-termica", title: "Power plant and cooling tower", zone: "portfolio", group: "hinterland", kind: "region",
     box: { x0: COOLING.x - COOLING.r - M, y0: POWER.y - M, x1: STACKS_N[0].x + 2 + M, y1: COOLING.y + COOLING.r + M }, h: 30 }, // 28-high chimneys
   // tank radius rng 7..9
