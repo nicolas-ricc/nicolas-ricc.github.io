@@ -8,6 +8,7 @@ import { diagonalWall, layoutText, measureText, toWorld, type GlyphLayout, type 
 import { interlock } from "../kit/piece";
 import { industrialLamp, neon, place } from "../kit/props";
 import type { Material } from "../map/palette-iso";
+import { layerLookup, type AnimLayer, type Animator } from "./animator";
 import { prism } from "./city-pieces";
 
 /** Where the Portfolio sign stands: on the ridge of the south assembly hall, in the middle of its length. */
@@ -248,4 +249,42 @@ export function tinkerSign(out: Solid[], accents: Accent[], at: Vec3, halls: rea
   const lit = industrialLamp(v3(c.x, c.y, base), { h: FLOOD_H, center: true });
   place(out, accents, { solids: lit.solids, accents: lit.accents.map((a) => (a.kind === "dot" ? { ...a, color: "amber" } : a)) });
   tinkerLetters(out, accents, at);
+}
+
+const BULB_CYCLE_MS = [1500, 2300, 1800, 2500, 2000] as const, BULB_DARK_MS = 120;
+const L_BRIGHT_MS = 3400, L_DIM_MS = 300, L_PERIOD_MS = L_BRIGHT_MS + L_DIM_MS, L_DIM_ALPHA = 0.3;
+/** Delay of the `l` clock, chosen by computing so its dips keep at least 190 ms from every bulb blackout in the first 20 s. */
+const L_PHASE_MS = 2390;
+const BULB_CYCLE_TOTAL = BULB_CYCLE_MS.reduce((a, b) => a + b, 0);
+
+/** Whether the bulb is dark at `t` ms: the last 120 ms of each period of the cycle. */
+function bulbDark(t: number): boolean {
+  let r = t % BULB_CYCLE_TOTAL;
+  for (const p of BULB_CYCLE_MS) { if (r < p) return r >= p - BULB_DARK_MS; r -= p; }
+  return false;
+}
+
+/** Whether the `l` is dimmed at `t` ms: the last 300 ms of each 3.7 s period, shifted by `L_PHASE_MS`. */
+const lDim = (t: number): boolean => ((t - L_PHASE_MS) % L_PERIOD_MS + L_PERIOD_MS) % L_PERIOD_MS >= L_BRIGHT_MS;
+
+/** Animates the sign's lights: the bulb of the last `o` blinks out now and then, the `l` dips on its own beat. Deterministic; with reduced motion it never redraws. */
+export function tinkerAnimator(opts: { reducedMotion: boolean; at?: Vec3 }): Animator {
+  const lit = tinkerLights(opts.at ?? TINKER_SITE), bulb = lit[lit.length - 1]!, tube = lit.slice(0, -1);
+  const dim = tube.map((a): Accent => a.kind === "poly" ? { ...a, alpha: a.color === "amber" ? L_DIM_ALPHA : 0.6 * L_DIM_ALPHA } : a);
+  const states = (d: boolean, l: boolean): Accent[] => [...(l ? dim : tube), ...(d ? [] : [bulb])];
+  const cache = new Map<number, Accent[]>();
+  const accents = (d: boolean, l: boolean): Accent[] => { const k = (d ? 1 : 0) | (l ? 2 : 0); let v = cache.get(k); if (!v) cache.set(k, v = states(d, l)); return v; };
+  let t = 0, d = false, l = false;
+  const layers: Record<string, () => AnimLayer> = { "tinker.lights": () => ({ kind: "accent", accents: accents(d, l) }) };
+  return {
+    ids: Object.keys(layers),
+    layer: layerLookup("tinkerAnimator", layers),
+    tick(dtMs) {
+      if (opts.reducedMotion || dtMs <= 0) return new Set<string>();
+      t += dtMs;
+      const nd = bulbDark(t), nl = lDim(t), changed = nd !== d || nl !== l;
+      d = nd; l = nl;
+      return new Set(changed ? ["tinker.lights"] : []);
+    },
+  };
 }
