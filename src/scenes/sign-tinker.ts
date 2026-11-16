@@ -98,7 +98,7 @@ export interface TinkerModule { char: string; technique: Technique; panel: Solid
 function build(at: Vec3): { spec: SignSpec; modules: TinkerModule[]; lights: Accent[] } {
   const word = tinkerWordPlane(at), planes = LAYOUT.map((g, i) => turned(i, g, word));
   const top = deckTop(at), panels = LAYOUT.map((g, i): Solid & { kind: "poly" } => {
-    const L = TINKER_LETTERS[i]!, gap = gapOf(i), r = reach(at, g, planes[i]!, gap), bf = TINKER_LETTERS[i]!.dn - gap, bb = bf - thickOf(i);
+    const L = TINKER_LETTERS[i]!, gap = gapOf(i), r = reach(at, g, planes[i]!, gap), bf = L.dn - gap, bb = bf - thickOf(i);
     const P = (s: number, b: number) => ({ x: at.x + U.x * s + N.x * b, y: at.y + U.y * s + N.y * b });
     const z0 = L.hung ? Math.max(top, Math.min(r.z0, top + HANG)) : top;
     const plates: Plate[] = L.technique !== "painted" ? [] : g.fill.map(squareDot).map((q) => ({
