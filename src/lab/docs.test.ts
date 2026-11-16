@@ -436,6 +436,8 @@ describe("zone signs closing documentation (#364)", () => {
   const at = spec.search(/^## 8\. Desvíos y medición$/m);
   const dev = at < 0 ? "" : spec.slice(at);
   const IDS = ["cartel-helipuerto", "cartel-helipuerto-b", "grafiti", "plataforma"];
+  /** Exhibits #374 deleted while the README still names them until the closing task (#380) rewrites it. */
+  const DELETED_BY_374 = new Set(["cartel-helipuerto", "cartel-helipuerto-b", "grafiti"]);
   const SUFFIXES = ["real-bloom", "real-nobloom", "117-bloom", "117-nobloom", "083"];
 
   it("the sign spec says implemented, pending integration", () => {
@@ -463,7 +465,7 @@ describe("zone signs closing documentation (#364)", () => {
     expect(dev).toContain("real-base");
   });
   it("the credits index links each folder's CREDITS.md with its photo count", () => {
-    for (const dir of ["helipuerto", "grafiti", "plataforma"]) {
+    for (const dir of ["helipuerto", "plataforma"]) {
       const n = readdirSync(`${REFS}${dir}`).filter((f) => f.endsWith(".jpg")).length;
       const line = index.split("\n").find((l) => l.includes(`](${dir}/CREDITS.md)`)) ?? "";
       expect(line, dir).toContain(`${n} fotos`);
@@ -487,9 +489,7 @@ describe("zone signs closing documentation (#364)", () => {
     const ids = new Set(EXHIBITS.map((e) => e.id));
     for (const id of IDS) {
       expect(storybook, id).toContain(`#${id}\``);
-      // #378 retired cartel-helipuerto(-b) from the storybook; #380 updates the README
-      if (id === "cartel-helipuerto" || id === "cartel-helipuerto-b") continue;
-      expect(ids.has(id), id).toBe(true);
+      if (!DELETED_BY_374.has(id)) expect(ids.has(id), id).toBe(true);
     }
     expect(storybook).toContain("`c`");
   });

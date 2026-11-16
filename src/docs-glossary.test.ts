@@ -95,8 +95,9 @@ describe("sign vocabulary (#360)", () => {
   it("Lettering names the lettering API and Sign the exhibits", () => {
     const lettering = section(glossary, "Lettering"), sign = section(glossary, "Sign");
     for (const id of ["TextPlane", "diagonalWall", "roofDiagonal", "facade", "strokeText", "fillText", "measureText", "GLYPHS"]) expect(lettering).toContain(id);
-    for (const id of ["cartel-torre", "cartel-torre-escena", "grafiti", "plataforma", "src/scenes/sign-", "src/scenes/sign-crown.ts", "towerCrown", "RESUME_SIGN", "CROWN_SITE"]) expect(sign).toContain(id);
+    for (const id of ["cartel-torre", "cartel-torre-escena", "cartel-taller", "cartel-taller-escena", "plataforma", "src/scenes/sign-", "src/scenes/sign-crown.ts", "towerCrown", "RESUME_SIGN", "CROWN_SITE"]) expect(sign).toContain(id);
     expect(sign).not.toContain("cartel-helipuerto");
+    expect(sign).not.toContain("grafiti");
   });
   it("the kit's README paragraph names src/kit/lettering.ts", () => {
     expect(read("README.md")).toContain("src/kit/lettering.ts");
