@@ -1,7 +1,7 @@
 # Carteles de zona, segunda vuelta: integrados a la escena y legibles con garantías
 
 **Fecha:** 2026-11-15
-**Estado:** diseño
+**Estado:** implementado (storybook; integración pendiente, §7)
 **Reemplaza en parte a:** `2026-11-11-carteles-de-zona-assets-design.md` (#352).
 El cartel de Blog (`#plataforma`) se queda; el de Resume y el de Portfolio se
 rehacen. La integración a `#zonas` del sitio (§7 de esa spec) sigue fuera de
@@ -195,27 +195,36 @@ exhibit.
   constante exportada) para la historia de integración.
 - La tecla `c` del storybook sigue fijando 1.17 y 0.83.
 
+Sitios candidatos (constantes exportadas, para la historia de integración):
+
+- `CROWN_SITE` = (129, 227, 30), en `src/scenes/sign-crown.ts`: el centro de
+  la azotea de la torre corporativa real de Resume.
+- `TINKER_SITE` = (60, −24, 13.5), en `src/scenes/sign-tinker.ts`: la cumbrera
+  del galpón de montaje sur del astillero.
+- `PLATFORM_SITE` = (400, 170), en `src/scenes/sign-platform.ts`: el mar
+  abierto entre las dos boyas.
+
 ## 6. Criterios de aceptación
 
-- [ ] La fuente pasa §4.1 para las tres palabras con los `size` y `width` de
+- [x] La fuente pasa §4.1 para las tres palabras con los `size` y `width` de
       cada cartel; los tests fallan si se vuelve a `gap` 1 con tubo de 1.0.
-- [ ] Resume (§3.1) está rehecho como la corona de una torre corporativa con
+- [x] Resume (§3.1) está rehecho como la corona de una torre corporativa con
       helipuerto, en una sola versión; `#cartel-helipuerto-b` y su función
       se borran o se reemplazan.
-- [ ] Portfolio (§3.2) está rehecho como el cartel caótico del *tinker*,
+- [x] Portfolio (§3.2) está rehecho como el cartel caótico del *tinker*,
       montado sobre algo del astillero; `#grafiti` y `sign-graffiti.ts` se
       borran.
-- [ ] Blog (§3.3) mantiene su diseño y pasa §4.
-- [ ] Cada cartel tiene su exhibit en contexto (§5) y pasa §4.2 en vitest.
-- [ ] `npm run legibility` existe, y `REPORT.md` muestra ✓ en las tres
+- [x] Blog (§3.3) mantiene su diseño y pasa §4.
+- [x] Cada cartel tiene su exhibit en contexto (§5) y pasa §4.2 en vitest.
+- [x] `npm run legibility` existe, y `REPORT.md` muestra ✓ en las tres
       palabras a 1.17 y a 0.83, con los recortes versionados.
-- [ ] Referencias fotográficas nuevas (Commons, licencia libre, 1280 px,
+- [x] Referencias fotográficas nuevas (Commons, licencia libre, 1280 px,
       `CREDITS.md`) para la corona corporativa con helipuerto y para carteles
       hechos a mano con chatarra o lamparitas, con un inventario tildado
       contra capturas, como en #352.
-- [ ] `CONTEXT.md` (entrada *Sign*) y el README del storybook quedan al día
+- [x] `CONTEXT.md` (entrada *Sign*) y el README del storybook quedan al día
       con los ids nuevos.
-- [ ] `npm test` y `npm run typecheck` en verde.
+- [x] `npm test` y `npm run typecheck` en verde.
 
 ## 7. Fuera de alcance
 
@@ -223,3 +232,104 @@ exhibit.
   velo, foco). Va en la historia de integración, que usa las posiciones
   candidatas de §5.
 - Tocar el bloom global.
+
+## 8. Desvíos y medición
+
+Cierre de la historia (#374, tareas #375–#380). Lo que sigue es lo que se
+midió en la rama y en qué se apartó la implementación de §1–§7. Los números
+salen de los oráculos de `src/kit/` y de `REPORT.md`; los tests de
+`src/lab/docs.test.ts` los recalculan.
+
+### 8.1 Medición
+
+Nivel 2 (`signMetrics`, `staticContrast`) y nivel 3 (`npm run legibility`,
+tal como lo escribe `REPORT.md`) de cada exhibit en contexto, a 1.17 y a
+0.83. Respaldo 1 y oclusión 0 en los seis casos. Base, verticales y error de
+aspecto: Resume 0°, 0°, 0.010; Portfolio 0.03°, 3.03°, 0.075; Blog 0°, 0°,
+0.010.
+
+| Exhibit | Escala | Alto de x (px) | Trazo (px) | Aire (px) | Contraste estático | Contraste (px) | Halo | OCR |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `cartel-torre-escena` | 1.17 | 12.05 | 2.21 | 2.64 | 8.09 | 11.75:1 | 0.07 | `Resume` |
+| `cartel-torre-escena` | 0.83 | 8.55 | 1.57 | 1.87 | 8.09 | 11.09:1 | 0.05 | `Resume` |
+| `cartel-taller-escena` | 1.17 | 12.05 | 2.21 | 2.15 | 8.06 | 9.76:1 | 0.07 | `Portfolio` |
+| `cartel-taller-escena` | 0.83 | 8.55 | 1.57 | 1.52 | 8.06 | 9.25:1 | 0.06 | `Portfolio` |
+| `plataforma-escena` | 1.17 | 12.05 | 2.21 | 2.64 | 13.26 | 8.96:1 | 0.12 | `Blog` |
+| `plataforma-escena` | 0.83 | 8.55 | 1.57 | 1.87 | 13.26 | 8.96:1 | 0.07 | `Blog` |
+
+Nivel 1 con `SIGN_FONT` (tamaño 10.3, trazo w = 1.35 u). Aire mínimo y máximo
+entre letras, ritmo y la contraforma más ajustada, todo en w.
+
+| Palabra | Aire mín. (w) | Aire máx. (w) | Ritmo | Contraforma más ajustada (w) |
+| --- | --- | --- | --- | --- |
+| Resume | 1.18 | 1.18 | 1.00 | 1.40 (`e`) |
+| Portfolio | 1.18 | 1.68 | 1.43 | 2.08 (`P`) |
+| Blog | 1.18 | 1.18 | 1.00 | 2.24 (`B`) |
+
+### 8.2 Desvíos de la historia
+
+- **Fuente (#375).** `SIGN_FONT` queda en tamaño 10.3 y trazo 1.35, con
+  `GRID.gap` 2 y una tabla `KERN` por par (`lo`, `li`, `io` en −1; `rt`, `tf`
+  en −0.5), en vez de ensanchar `i` y `l`. Antes el aire era 0.22 w.
+- **Contraformas por puntos de sondeo (#375).** Las contraformas se miden con
+  puntos de sondeo dentro de cada una, no sobre un raster.
+- **Blog (#376).** Lleva un panel de respaldo `officeDark` dentro del marco;
+  el marco es más largo que la cubierta (palabra más 3 por lado, L = 28.07) y
+  los postes se mueven hacia el centro (`POST_INSET` 6.5) para seguir sobre la
+  cubierta.
+- **Oclusión y respaldo por caras planas (#376).** Se calculan con las caras
+  planas de `tessellate` y la profundidad del rayo de cámara, no con cajas
+  AABB.
+- **Nivel 3 con `extract.pixels` (#377).** Los píxeles salen de
+  `extract.pixels` del stage a través de `window.__lab` (solo en DEV), con
+  bloom.
+- **Resume (#378).** La corona es un panel a lo largo de (1, −1) con la losa
+  del helipuerto encima: el fondo del panel queda a +3.2 de la azotea (no
+  +2.4, para no cortar la sala de máquinas) y la losa tiene r 7.
+- **Glifo `m` (#378).** Los topes planos de los arcos pasan a 1 unidad de
+  grilla; con 0.5 el trazo medía 1.22 px a 1.17 y no pasaba la regla de nivel 2.
+- **Luz de la antena real (#378).** Se ve a través del panel de la corona
+  (los acentos se dibujan sobre todo sólido). El mundo no cambia en esta
+  historia: la decide la integración.
+- **Portfolio (#379).** El anfitrión es la cumbrera del galpón de montaje sur
+  del astillero. El sitio se mantiene en `TINKER_SITE` y la cubierta sube
+  `DECK_RISE` 3.5 (no 2.6), porque el pórtico de la fábrica tapaba los márgenes
+  de `r` y `t`.
+- **Punto de la `i` (#379).** Se cuadra al ancho del trazo (1.35) para que
+  valga la regla de 2 px a 1.17.
+- **Marquesina (#379).** Alpha 0.7 en vez de 0.5: con 0.5 el OCR leía
+  `Portfolic`.
+- **Seguimiento: #382.** `strokePx` sigue la letra del issue (el lado más
+  corto de cada cuad proyectado) y el punto de la `i` lo tensiona.
+
+### 8.3 Tamaño frente al host
+
+Ancho de la palabra y del anfitrión en pantalla a 1.17 (extensión en x de la
+proyección por 1.17). Dato para la integración: el cartel de Resume es más del
+doble de ancho que su torre (`CROWN_SITE`), y el de Blog es más ancho que su
+cubierta (`PLATFORM_SITE`); el de Portfolio cabe en el galpón (`TINKER_SITE`).
+
+| Cartel | Palabra (u) | Palabra (px a 1.17) | Anfitrión | Anfitrión (px a 1.17) |
+| --- | --- | --- | --- | --- |
+| Resume | 44.14 | 75.27 | `TOWER` 16 × 14 | 35.10 |
+| Portfolio | 52.97 | 90.34 | galpón de montaje sur 90 × 16 (`SHIPYARD_HALLS[1]`) | 124.02 |
+| Blog | 22.07 | 38.75 | cubierta 14 × 12 (`HALF_X`, `HALF_Y`) | 30.42 |
+
+### 8.4 Capturas
+
+Capturas (3200 × 1800; las seis `-escena` con bloom) en
+`docs/superpowers/specs/assets/374-carteles/`:
+
+- `assets/374-carteles/cartel-torre-escena-117.png` y `assets/374-carteles/cartel-torre-escena-083.png`
+- `assets/374-carteles/cartel-taller-escena-117.png` y `assets/374-carteles/cartel-taller-escena-083.png`
+- `assets/374-carteles/plataforma-escena-117.png` y `assets/374-carteles/plataforma-escena-083.png`
+- `assets/374-carteles/cartel-torre-real.png` y `assets/374-carteles/cartel-taller-real.png` (escala real)
+- `assets/374-carteles/cartel-taller-detalle.png`, `assets/374-carteles/cartel-taller-detalle-sinacentos.png`, `assets/374-carteles/cartel-taller-titila-a.png` y `assets/374-carteles/cartel-taller-titila-b.png`
+
+Recortes del nivel 3 y la imagen que vio el OCR (`-ocr`), con
+[`REPORT.md`](assets/carteles-legibilidad/REPORT.md), en
+`docs/superpowers/specs/assets/`:
+
+- `assets/carteles-legibilidad/cartel-torre-escena-117.png` y `assets/carteles-legibilidad/cartel-torre-escena-083.png` (más los `-ocr` de cada uno)
+- `assets/carteles-legibilidad/cartel-taller-escena-117.png` y `assets/carteles-legibilidad/cartel-taller-escena-083.png` (más los `-ocr` de cada uno)
+- `assets/carteles-legibilidad/plataforma-escena-117.png` y `assets/carteles-legibilidad/plataforma-escena-083.png` (más los `-ocr` de cada uno)

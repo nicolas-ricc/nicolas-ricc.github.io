@@ -1,27 +1,40 @@
-import { Application } from "pixi.js";
+import { Application, Rectangle } from "pixi.js";
 import { ISO_COLORS } from "../map/palette-iso";
 import type { WorldScene } from "../scenes/world";
 import { assembleWorld, tag, type ZonedAnimator } from "../world/assemble";
 import { afterFirstRender } from "../world/bloom";
 import { attachBloom, type BloomProbe } from "../world/bloom-runtime";
-import { type Box, boxFrame, fitTransform } from "../world/frame";
+import { type Box, boxFrame, type Fit, fitTransform } from "../world/frame";
 import { type BloomMode, buildStage, type Stage, type StageLayer } from "../world/stage";
 import { runBoot } from "./boot";
 import { fixedScaleFit, nextCoverScale } from "./cover-scale";
-import { cropAnimators, cropScene, pieceScene, readout, solidsBox } from "./crop";
+import { contextAnimators, contextScene, cropAnimators, cropScene, pieceScene, readout, solidsBox } from "./crop";
 import { EXHIBITS, type Exhibit, GROUPS, pickExhibit, stepExhibit } from "./exhibits";
 import { bloomFromSearch, nextBloomMode, speedFromSearch } from "./page";
 import { buildIndex, markCurrent, mountStorybook, renderReadout } from "./storybook-ui";
 
 /**
  * Structures storybook: one exhibit at a time, cropped from the world by its
- * box or built alone at the origin (pieces). The hash picks the exhibit; arrows
+ * box or built alone at the origin (pieces); context exhibits are the crop plus
+ * a sign built whole in world coordinates. The hash picks the exhibit; arrows
  * and j/k only write the hash. 6 rotates the bloom; ?bloom= forces it and ?speed=
  * scales the clock up to 100 (?speed=0 freezes it), as in page.ts. g, h and a
  * hide or show ground, shadows and accents (with the bloom) and are remembered
  * across exhibits. c cycles the exhibit scale: real, 1.17 and 0.83, the cover scales
- * of a laptop and a phone.
+ * of a laptop and a phone. In development the page publishes `window.__lab` (exhibit
+ * id, cover scale and its setter, bloom mode, last fit, host size and `pixels`, the
+ * stage's RGBA at resolution 2 with filters) for `npm run legibility`.
  */
+/** The DEV page hook `npm run legibility` drives: `pixels` takes host CSS px and returns base64 RGBA at resolution 2. */
+export interface LabHook {
+  readonly exhibitId: string | null; readonly coverScale: number | null; setCoverScale(s: number | null): void;
+  readonly bloom: BloomMode | null; fit(): Fit | null; hostSize(): { w: number; h: number };
+  pixels(x: number, y: number, w: number, h: number): Promise<string>;
+}
+declare global {
+  interface Window { __lab?: LabHook }
+}
+
 mountStorybook(document, ({ host, nav, panel }) => {
   const log = import.meta.env.DEV;
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -42,7 +55,7 @@ mountStorybook(document, ({ host, nav, panel }) => {
     let stage: Stage | null = null, current: Exhibit | null = null, bloom: BloomProbe | null = null;
     let frame: { box: Box; h?: number } | null = null;
     const layers: Record<StageLayer, boolean> = { ground: true, shadow: true, accents: true };
-    let coverScale: number | null = null;
+    let coverScale: number | null = null, lastFit: Fit | null = null;
     const fit = (): void => {
       if (!stage || !frame) return;
       const w = host.clientWidth, h = host.clientHeight;
@@ -50,6 +63,7 @@ mountStorybook(document, ({ host, nav, panel }) => {
       const f = coverScale === null ? real : fixedScaleFit(real, w, h, coverScale);
       stage.container.position.set(f.x, f.y);
       stage.container.scale.set(f.scale);
+      lastFit = f;
     };
     const show = (e: Exhibit): void => {
       const mode = stage?.bloom ?? "off";
@@ -59,6 +73,10 @@ mountStorybook(document, ({ host, nav, panel }) => {
       if (e.kind === "region") {
         // the same box for both: the crop memo is keyed by Box identity
         src = [cropScene(scene, e.box), cropAnimators(animators, e.box)];
+        stage = buildStage(...src);
+        frame = { box: e.box, h: e.h };
+      } else if (e.kind === "context") {
+        src = [contextScene(scene, e), contextAnimators(animators, e, reducedMotion)];
         stage = buildStage(...src);
         frame = { box: e.box, h: e.h };
       } else {
@@ -82,6 +100,22 @@ mountStorybook(document, ({ host, nav, panel }) => {
       if (e !== current) show(e);
     };
     fromHash();
+    if (import.meta.env.DEV) {
+      window.__lab = {
+        get exhibitId() { return current?.id ?? null; },
+        get coverScale() { return coverScale; },
+        setCoverScale(s) { coverScale = s; fit(); },
+        get bloom() { return stage?.bloom ?? null; },
+        fit: () => lastFit,
+        hostSize: () => ({ w: host.clientWidth, h: host.clientHeight }),
+        async pixels(x, y, w, h) {
+          const { pixels } = app.renderer.extract.pixels({ target: app.stage, frame: new Rectangle(x, y, w, h), resolution: 2, clearColor: ISO_COLORS.sky, antialias: true });
+          let bin = "";
+          for (let i = 0; i < pixels.length; i += 0x8000) bin += String.fromCharCode(...pixels.subarray(i, i + 0x8000));
+          return btoa(bin);
+        },
+      };
+    }
     window.addEventListener("hashchange", fromHash);
     app.renderer.on("resize", fit);
     // deferred like page.ts; later stages inherit the mode in show()

@@ -8,14 +8,14 @@ import { WATER_TOWER, waterTower } from "../scenes/maltings";
 import { createFactoryAnim } from "../scenes/factory-anim";
 import { PLANT, factory } from "../scenes/factory";
 import { BEAM_PERIOD_MS } from "../scenes/sea-anim";
-import { graffitiWall } from "../scenes/sign-graffiti";
-import { helipadSign, helipadTubeSign } from "../scenes/sign-helipad";
-import { seaPlatform } from "../scenes/sign-platform";
+import { CROWN_SITE, RESUME_SIGN, towerCrown } from "../scenes/sign-crown";
+import { PIECE_AT, TINKER_SIGN } from "../scenes/sign-tinker";
+import { BLOG_SIGN, seaPlatform, seaPlatformAt } from "../scenes/sign-platform";
 import { trainLen } from "../scenes/train";
 import { createRng } from "../map/seed";
 import { assembleWorld } from "../world/assemble";
 import { type Box, FRAME_H, HALO_BASE } from "../world/frame";
-import { cropAnimators, cropScene } from "./crop";
+import { contextAnimators, contextScene, cropAnimators, cropScene } from "./crop";
 import { EXHIBITS, GROUPS, type GroupId, outOfView, pickExhibit, stepExhibit } from "./exhibits";
 
 const regions = EXHIBITS.flatMap((e) => (e.kind === "region" ? [e] : []));
@@ -199,25 +199,26 @@ describe("selection by hash", () => {
 const pieces = EXHIBITS.flatMap((e) => (e.kind === "piece" ? [e] : []));
 
 describe("piece exhibits", () => {
-  it("the sixteen pieces, each in its zone", () => {
+  it("the fifteen pieces, each in its zone", () => {
     expect(Object.fromEntries(pieces.map((e) => [e.id, e.zone]))).toEqual({
-      "tanque-agua": "portfolio", "grua-muelle": "portfolio", "grua-torre": "portfolio", "farol": "portfolio", "tren": "portfolio", "grafiti": "portfolio",
-      "campus": "cv", "selva": "cv", "cartel-helipuerto": "cv", "cartel-helipuerto-b": "cv",
+      "tanque-agua": "portfolio", "grua-muelle": "portfolio", "grua-torre": "portfolio", "farol": "portfolio", "tren": "portfolio", "cartel-taller": "portfolio",
+      "campus": "cv", "selva": "cv", "cartel-torre": "cv",
       "viga": "blog", "carguero": "blog", "remolcador": "blog", "convoy": "blog", "lancha": "blog", "plataforma": "blog",
     });
   });
-  it("the four sign placeholders (#360): at the end of their group's run, with their titles, groups, pads and builders", () => {
+  it("the sign pieces (#360, #378): at the end of their group's run, with their titles, groups, pads and builders", () => {
     const ids = EXHIBITS.map((e) => e.id);
-    expect(ids.indexOf("grafiti")).toBe(ids.indexOf("tren") + 1);
-    expect(ids.indexOf("cartel-helipuerto")).toBe(ids.indexOf("selva") + 1);
-    expect(ids.indexOf("cartel-helipuerto-b")).toBe(ids.indexOf("selva") + 2);
+    expect(ids.indexOf("cartel-taller")).toBe(ids.indexOf("tren") + 1);
+    expect(ids.indexOf("cartel-torre")).toBe(ids.indexOf("selva") + 1);
     expect(ids.indexOf("plataforma")).toBe(ids.indexOf("lancha") + 1);
     const get = (id: string) => pieces.find((e) => e.id === id)!;
-    expect(get("grafiti")).toMatchObject({ title: "Portfolio graffiti wall", zone: "portfolio", group: "shipyard", kind: "piece", pad: "concrete", build: graffitiWall });
-    expect(get("cartel-helipuerto")).toMatchObject({ title: "Resume helipad sign (word on the pad)", zone: "cv", group: "city", kind: "piece", build: helipadSign });
-    expect(get("cartel-helipuerto-b")).toMatchObject({ title: "Resume rooftop tube sign (variant B)", zone: "cv", group: "city", kind: "piece", build: helipadTubeSign });
-    expect(get("cartel-helipuerto").pad).toBeUndefined();
-    expect(get("cartel-helipuerto-b").pad).toBeUndefined();
+    expect(get("cartel-taller")).toMatchObject({ title: "Portfolio tinker sign", zone: "portfolio", group: "shipyard", kind: "piece", pad: "concrete" });
+    expect(get("cartel-taller").animate).toBeDefined();
+    expect(get("cartel-torre")).toMatchObject({ title: "Resume tower crown with helipad", zone: "cv", group: "city", kind: "piece" });
+    expect(get("cartel-torre").pad).toBeUndefined();
+    expect(ids).not.toContain("cartel-helipuerto");
+    expect(ids).not.toContain("cartel-helipuerto-b");
+    expect(ids).not.toContain("grafiti");
     expect(get("plataforma")).toMatchObject({ title: "Blog platform sign", zone: "blog", group: "sea", kind: "piece", pad: "water", build: seaPlatform });
   });
   it("the beam is a single-solid beam piece, before the freighter", () => {
@@ -377,5 +378,84 @@ describe("chimneys box (#245)", () => {
       }
       anim.tick(33);
     }
+  });
+});
+
+const contexts = EXHIBITS.flatMap((e) => (e.kind === "context" ? [e] : []));
+
+describe("context exhibits (#376)", () => {
+  const built = (e: (typeof contexts)[number]) => { const out: Solid[] = [], accents: Accent[] = []; e.build(out, accents); return { out, accents }; };
+  /** Like `measure`, on the context scene: the crop plus the sign built whole; its accents and animator count too. */
+  function measureContext(e: (typeof contexts)[number]): { inside: number; withAnim: number; neighbor: number; accents: number } {
+    const cs = contextScene(scene, e), fixed = [...cs.ground, ...cs.solids];
+    const anim = contextAnimators(animators, e).flatMap((a) => a.ids.flatMap((id) => { const l = a.layer(id); return l.kind === "solid" ? l.solids : []; }));
+    const north = (e.box.x0 + e.box.y0) / 2;
+    const own = built(e).accents.flatMap((a) => (a.kind === "dot" ? [(north - project(a.at).y + a.r * HALO_K) / Z_SCALE] : a.pts.map((p) => (north - project(p).y) / Z_SCALE)));
+    const inside = top(fixed.filter((s) => within(s, e.box)));
+    return {
+      inside,
+      withAnim: Math.max(inside, top(anim.filter((s) => within(s, e.box)))),
+      neighbor: top(fixed.filter((s) => s.kind !== "ground" && !within(s, e.box))),
+      accents: Math.max(accentReach(e.box), ...own),
+    };
+  }
+
+  it("at least one: plataforma-escena", () => {
+    expect(contexts.map((e) => e.id)).toContain("plataforma-escena");
+  });
+  it("ids match the hash pattern, zone is the group's", () => {
+    for (const e of contexts) {
+      expect(e.id).toMatch(/^[a-z0-9-]+$/);
+      expect(e.zone, e.id).toBe(GROUPS.find((g) => g.id === e.group)!.zone);
+    }
+  });
+  it("build is deterministic", () => {
+    for (const e of contexts) expect(built(e), e.id).toEqual(built(e));
+  });
+  it("every solid and every accent point of build falls inside the box", () => {
+    for (const e of contexts) {
+      const { out, accents } = built(e);
+      expect(out.length, e.id).toBeGreaterThan(0);
+      for (const s of out) expect(within(s, e.box), `${e.id} ${s.kind}/${s.mat}`).toBe(true);
+      for (const a of accents) for (const p of a.kind === "dot" ? [a.at] : a.pts) {
+        expect(p.x >= e.box.x0 && p.x <= e.box.x1 && p.y >= e.box.y0 && p.y <= e.box.y1, `${e.id} ${a.color}`).toBe(true);
+      }
+    }
+  });
+  it("framing: h covers the structure and its accents and exceeds them by no more than SLACK", () => {
+    for (const e of contexts) {
+      const h = e.h ?? FRAME_H, m = measureContext(e);
+      expect(h, e.id).toBeGreaterThanOrEqual(Math.max(m.inside, m.accents));
+      expect(h, e.id).toBeLessThanOrEqual(Math.max(m.withAnim, m.accents) + SLACK);
+    }
+  });
+  it("neighbors: no solid cut by the edge rises above h", () => {
+    for (const e of contexts) expect(measureContext(e).neighbor, e.id).toBeLessThanOrEqual(e.h ?? FRAME_H);
+  });
+  it("cartel-taller-escena (#379): after cartel-taller, in the shipyard, signed TINKER_SIGN, animated", () => {
+    const ids = EXHIBITS.map((e) => e.id);
+    expect(ids.indexOf("cartel-taller-escena")).toBe(ids.indexOf("cartel-taller") + 1);
+    const e = contexts.find((x) => x.id === "cartel-taller-escena")!;
+    expect(e).toMatchObject({ title: "Portfolio tinker sign in its scene", zone: "portfolio", group: "shipyard", kind: "context", sign: TINKER_SIGN });
+    expect(e.animate).toBeDefined();
+    expect(PIECE_AT).toEqual({ x: 0, y: 0, z: 13.5 });
+  });
+  it("plataforma-escena: after plataforma, in the sea, the issue's box, built by seaPlatformAt, signed BLOG_SIGN", () => {
+    const ids = EXHIBITS.map((e) => e.id);
+    expect(ids.indexOf("plataforma-escena")).toBe(ids.indexOf("plataforma") + 1);
+    const e = contexts.find((x) => x.id === "plataforma-escena")!;
+    expect(e).toMatchObject({ title: "Blog platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 372, y0: 142, x1: 428, y1: 198 }, build: seaPlatformAt, sign: BLOG_SIGN });
+  });
+});
+
+describe("cartel-torre-escena (#378)", () => {
+  it("after cartel-torre, in the city, the issue's box, built by towerCrown at CROWN_SITE, signed RESUME_SIGN", () => {
+    const ids = EXHIBITS.map((e) => e.id);
+    expect(ids.indexOf("cartel-torre-escena")).toBe(ids.indexOf("cartel-torre") + 1);
+    const e = contexts.find((x) => x.id === "cartel-torre-escena")!;
+    expect(e).toMatchObject({ title: "Resume tower crown in its scene", zone: "cv", group: "city", kind: "context", box: { x0: 108, y0: 206, x1: 150, y1: 248 }, sign: RESUME_SIGN });
+    const a: Solid[] = [], b: Accent[] = [], c: Solid[] = [], d: Accent[] = [];
+    e.build(a, b); towerCrown(c, d, CROWN_SITE);
+    expect({ a, b }).toEqual({ a: c, b: d });
   });
 });

@@ -5,8 +5,9 @@ import { bounds, type Bounds, type Solid, type Tri, tessellate } from "../iso/so
 import type { AccentColor, Material } from "../map/palette-iso";
 import type { Animator, AnimLayer } from "../scenes/animator";
 import type { WorldScene } from "../scenes/world";
-import type { ZonedAnimator } from "../world/assemble";
+import { tag, type ZonedAnimator } from "../world/assemble";
 import type { Box } from "../world/frame";
+import type { ContextExhibit } from "./exhibits";
 
 /** Overlap in x and y, edges included; z does not count. */
 export function overlaps(b: Bounds, box: Box): boolean {
@@ -86,6 +87,19 @@ export function cropAnimators(animators: readonly ZonedAnimator[], box: Box): Zo
     if (a.ids.every((id) => isEmpty(layer(id)))) return [];
     return [{ zone: a.zone, ids: a.ids, claims: a.claims && cropSolids(a.claims, box, cropShared), layer, tick: (dt: number) => a.tick(dt) }];
   });
+}
+
+/** The crop of the world plus what the exhibit builds whole (even past the box edge). Fresh arrays: the world scene is never mutated. */
+export function contextScene(scene: WorldScene, e: ContextExhibit): WorldScene {
+  const cropped = cropScene(scene, e.box);
+  const solids = [...cropped.solids], accents = [...cropped.accents];
+  e.build(solids, accents);
+  return { ...cropped, solids, accents };
+}
+
+/** `cropAnimators` plus the exhibit's own animator, tagged with its zone. */
+export function contextAnimators(animators: readonly ZonedAnimator[], e: ContextExhibit, reducedMotion = false): ZonedAnimator[] {
+  return [...cropAnimators(animators, e.box), ...(e.animate ? [tag(e.animate({ reducedMotion }), e.zone)] : [])];
 }
 
 const PAD_M = 3; // margin of the pad around the piece, the same as the regions'

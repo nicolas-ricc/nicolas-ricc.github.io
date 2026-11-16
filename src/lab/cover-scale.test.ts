@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { COVER_LAPTOP, COVER_PHONE } from "../kit/legibility";
 import { COVER_SCALES, fixedScaleFit, nextCoverScale } from "./cover-scale";
 
 describe("cover scale (#360)", () => {
   it("the cover scales of a laptop and a phone", () => {
     expect(COVER_SCALES).toEqual([1.17, 0.83]);
+    expect(COVER_SCALES).toEqual([COVER_LAPTOP, COVER_PHONE]);
   });
   it("cycles real → 1.17 → 0.83 → real", () => {
     expect(nextCoverScale(null)).toBe(1.17);

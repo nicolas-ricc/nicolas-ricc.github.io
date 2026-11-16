@@ -18,11 +18,14 @@ const PIECES: Record<string, string> = {
   "grua-muelle": "624cfd88/d3db2853",
   // #360: the four sign placeholders are new pieces; the earlier twelve did not move
   // #362: grafiti replaces its placeholder; the other pieces did not move
-  grafiti: "af24e5db/92a7faa4",
-  // #361: the helipad sign replaces its two placeholders (A, word on the pad; B, rooftop tube sign)
-  "cartel-helipuerto": "7a35f7fb/d01b8a7f", "cartel-helipuerto-b": "afe0dfb1/8911f963",
+  // #375: gap 2 and KERN respace the words of the four signs (and the platform posts move in)
+  // #378: cartel-torre (tower crown with helipad) replaces the two cartel-helipuerto placeholders
+  "cartel-torre": "76848b7a/636e210a",
+  // #379: the tinker sign (cartel-taller, on its hall stand-in) replaces grafiti; re-recorded after the ladder fix and the closed-bowl bulbs (stage 6)
+  "cartel-taller": "76a030a1/e2283d64",
   // #363: plataforma replaces its placeholder (platform, railing, ladder, hut, beacon, Blog sign)
-  plataforma: "a55abbc7/1f865c26",
+  // #376: the Blog sign uses SIGN_FONT, gains a backing panel and a raised frame, and is built at its site and then translated
+  plataforma: "26c397da/240f731e",
 };
 
 describe("render baseline (#194)", () => {

@@ -6,8 +6,8 @@ import { bounds, type Solid, type Tri, tessellate } from "../iso/solids";
 import type { Animator } from "../scenes/animator";
 import type { WorldScene } from "../scenes/world";
 import type { ZonedAnimator } from "../world/assemble";
-import { cropAccents, cropAnimators, cropScene, cropShared, overlaps, pieceScene, readout, solidsBox } from "./crop";
-import { EXHIBITS } from "./exhibits";
+import { contextAnimators, contextScene, cropAccents, cropAnimators, cropScene, cropShared, overlaps, pieceScene, readout, solidsBox } from "./crop";
+import { EXHIBITS, type ContextExhibit } from "./exhibits";
 
 const box = { x0: 0, y0: 0, x1: 10, y1: 10 };
 const prism = (x: number, y: number, w = 2): Solid => ({ kind: "prism", at: v3(x, y, 0), w, d: w, h: 3, mat: "concrete" });
@@ -264,5 +264,56 @@ describe("readout", () => {
   it("a scene with no solids or animators gives a null box and empty lists", () => {
     const empty = { ...scene, ground: [], solids: [], accents: [] } as WorldScene;
     expect(readout(empty, [])).toEqual({ solids: 0, ground: 0, faces: 0, accents: 0, box: null, materials: [], accentColors: [] });
+  });
+});
+
+describe("contextScene / contextAnimators (#376)", () => {
+  const scene = {
+    terrain: { ground: [], bleed: [], water: [], foam: { kind: "ground", mat: "foam", tris: [] } },
+    ground: [prism(1, 1), prism(30, 30)],
+    solids: [prism(9, 9, 4), prism(20, 20)],
+    accents: [{ kind: "dot", at: v3(5, 5, 1), r: 1, color: "amber" }, { kind: "dot", at: v3(50, 5, 1), r: 1, color: "amber" }],
+    landmarks: { portfolio: v3(0, 0, 0), cv: v3(0, 0, 0), blog: v3(0, 0, 0) },
+    shipyard: null, city: null, factory: null, sea: null, hinterland: null, tech: null, fair: null,
+  } as unknown as WorldScene;
+  // the sign straddles the east edge; its accent has a single point inside
+  const signSolid = prism(9, 4, 3);
+  const signAccent: Accent = { kind: "poly", pts: [v3(9.5, 5, 2), v3(30, 5, 2), v3(30, 6, 2)], color: "cyan", alpha: 0.75 };
+  const base: ContextExhibit = { id: "test-escena", title: "Test", zone: "blog", group: "sea", kind: "context", box, h: 6,
+    build: (out: Solid[], accents: Accent[]) => { out.push(signSolid); accents.push(signAccent); },
+    sign: { id: "test", text: "l", size: 10.3, width: 1.35, color: "cyan", glyphs: [], backing: [] } };
+  const e: ContextExhibit = { ...base };
+
+  it("the crop of the world plus what build emits, whole", () => {
+    const cs = contextScene(scene, e), crop = cropScene(scene, box);
+    expect(cs.solids).toEqual([...crop.solids, signSolid]);
+    expect(cs.accents).toEqual([...crop.accents, signAccent]);
+    expect(cs.ground).toEqual(crop.ground);
+    expect(cs.terrain).toEqual(crop.terrain);
+  });
+  it("does not mutate the world scene", () => {
+    contextScene(scene, e);
+    expect(scene.solids).toHaveLength(2);
+    expect(scene.accents).toHaveLength(2);
+  });
+  const toy = (x: number, zone: ZonedAnimator["zone"]): ZonedAnimator => ({
+    zone, ids: ["toy"], layer: () => ({ kind: "solid", solids: [prism(x, 1)] }), tick: () => new Set(),
+  });
+  it("without animate: the same as cropAnimators", () => {
+    const got = contextAnimators([toy(1, "portfolio"), toy(40, "portfolio")], e);
+    expect(got.map((a) => a.ids)).toEqual(cropAnimators([toy(1, "portfolio")], box).map((a) => a.ids));
+    expect(got).toHaveLength(1);
+  });
+  it("with animate: appended, tagged with the exhibit's zone, given reducedMotion", () => {
+    const seen: boolean[] = [];
+    const own: Animator = { ids: ["own"], layer: () => ({ kind: "accent", accents: [] }), tick: () => new Set(["own"]) };
+    const withAnim: ContextExhibit = { ...base, animate: ({ reducedMotion }) => { seen.push(reducedMotion); return own; } };
+    const got = contextAnimators([toy(1, "portfolio")], withAnim, true);
+    expect(got).toHaveLength(2);
+    expect(got[1]!.zone).toBe("blog");
+    expect(got[1]!.ids).toEqual(["own"]);
+    expect(seen).toEqual([true]);
+    contextAnimators([], withAnim);
+    expect(seen).toEqual([true, false]);
   });
 });
