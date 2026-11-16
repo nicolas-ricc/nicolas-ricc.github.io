@@ -63,8 +63,9 @@ uno sale de §4, no de esta tabla.
 
 *Desvío (2026-11-15): el helipuerto A/B de abajo quedó reemplazado en la
 segunda vuelta por la corona de la torre corporativa (`cartel-torre`; en
-escena, `cartel-torre-escena`), según `2026-11-15-carteles-de-zona-rediseno-design.md`. Lo que sigue queda como
-registro.*
+escena, `cartel-torre-escena`), según
+[`2026-11-15-carteles-de-zona-rediseno-design.md`](2026-11-15-carteles-de-zona-rediseno-design.md).
+Lo que sigue queda como registro.*
 
 Una azotea con helipuerto, como los de las torres de oficinas, donde el
 cartel es la propia pista:
@@ -92,7 +93,9 @@ helipuerto). El storybook muestra las dos (`cartel-helipuerto` y
 
 *Desvío (2026-11-15): el muro grafiteado de abajo quedó reemplazado en la
 segunda vuelta por el cartel del tinker (`cartel-taller`; en escena,
-`cartel-taller-escena`), según `2026-11-15-carteles-de-zona-rediseno-design.md`. Lo que sigue queda como registro.*
+`cartel-taller-escena`), según
+[`2026-11-15-carteles-de-zona-rediseno-design.md`](2026-11-15-carteles-de-zona-rediseno-design.md).
+Lo que sigue queda como registro.*
 
 Un muro de hormigón suelto en la zona portuaria, girado 45° en planta para
 mirar a la cámara (sólido `poly` con huella de rectángulo rotado):
@@ -113,9 +116,11 @@ mirar a la cámara (sólido `poly` con huella de rectángulo rotado):
 
 ### 3.3 Blog: plataforma en el agua (`plataforma`, grupo `sea`)
 
-*Desvío (2026-11-15): en la segunda vuelta el Blog ganó el panel
-`officeDark` de respaldo dentro del marco, y su exhibit en escena
-(`plataforma-escena`), según `2026-11-15-carteles-de-zona-rediseno-design.md`. Lo que sigue queda como registro.*
+*Desvío (2026-11-15): en la segunda vuelta el cartel de Blog ganó un panel
+`officeDark` de respaldo dentro del marco; el diseño es el mismo y se suma
+el exhibit en escena `plataforma-escena`, según
+[`2026-11-15-carteles-de-zona-rediseno-design.md`](2026-11-15-carteles-de-zona-rediseno-design.md).
+Lo que sigue queda como registro.*
 
 Una plataforma baja en mar abierto, discreta: no tiene que competir con el
 faro.

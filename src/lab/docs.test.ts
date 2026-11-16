@@ -5,8 +5,9 @@ import { project } from "../iso/project";
 import { COVER_LAPTOP, COVER_PHONE, SIGN_FONT, signMetrics, staticContrast } from "../kit/legibility";
 import { counterClearance, letterGaps, measureText, rhythm } from "../kit/lettering";
 import { TOWER } from "../scenes/city-grid";
-import { HALF_X, HALF_Y } from "../scenes/sign-platform";
-import { SHIPYARD_HALLS } from "../scenes/sign-tinker";
+import { CROWN_SITE } from "../scenes/sign-crown";
+import { HALF_X, HALF_Y, PLATFORM_SITE } from "../scenes/sign-platform";
+import { SHIPYARD_HALLS, TINKER_SITE } from "../scenes/sign-tinker";
 import { EXHIBITS } from "./exhibits";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
@@ -543,7 +544,9 @@ describe("zone signs redesign documentation (#374)", () => {
   });
   it("§5 records the three candidate sites with their values", () => {
     const sites = between(spec, /^## 5\. /m, /^## 6\. /m);
-    for (const s of ["CROWN_SITE", "(129, 227, 30)", "TINKER_SITE", "(60, −24, 13.5)", "PLATFORM_SITE", "(400, 170)"]) expect(sites, s).toContain(s);
+    // built from the constants, with the spec's U+2212 minus, so a moved site fails here
+    const at = (v: { x: number; y: number; z: number }, z = true) => `(${[v.x, v.y, ...(z ? [v.z] : [])].join(", ").replace(/-/g, "−")})`;
+    for (const s of ["CROWN_SITE", at(CROWN_SITE), "TINKER_SITE", at(TINKER_SITE), "PLATFORM_SITE", at(PLATFORM_SITE, false)]) expect(sites, s).toContain(s);
   });
   it("§8 exists after §7 with its four parts and names the report, the font, the contexts and the sites", () => {
     expect(spec.search(/^## 8\. Desvíos y medición$/m)).toBeGreaterThan(spec.search(/^## 7\. /m));

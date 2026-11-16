@@ -317,7 +317,7 @@ cubierta (`PLATFORM_SITE`); el de Portfolio cabe en el galpón (`TINKER_SITE`).
 
 ### 8.4 Capturas
 
-Capturas de escena (3200 × 1800, con bloom) en
+Capturas (3200 × 1800; las seis `-escena` con bloom) en
 `docs/superpowers/specs/assets/374-carteles/`:
 
 - `assets/374-carteles/cartel-torre-escena-117.png` y `assets/374-carteles/cartel-torre-escena-083.png`
