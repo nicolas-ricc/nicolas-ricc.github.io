@@ -2,15 +2,20 @@ import type { Accent } from "../iso/accent";
 import { v3, type Vec3 } from "../iso/geometry";
 import { bounds, type Solid } from "../iso/solids";
 import { SIGN_FONT, signSpec, type SignSpec } from "../kit/legibility";
-import { diagonalWall, measureText } from "../kit/lettering";
+import { diagonalWall, toWorld } from "../kit/lettering";
+import { MARQUEE_FACE, marqueeLayout } from "../kit/marquee";
+import { MARQUEE_RESUME } from "../kit/marquee-resume";
 import { interlock } from "../kit/piece";
 import { industrialLamp, place } from "../kit/props";
 import { prism } from "./city-pieces";
 import { TOWER, TOWER_H } from "./city-grid";
 
-const WORD = "Resume", R2 = Math.SQRT1_2;
+/** Cap height of the marquee word (about as wide as the stroke-font "Resume" it replaced) and the tracking that opens its air to ≥ 1.2 faces. */
+export const CROWN_CAP = 8.7, CROWN_TRACKING = 0.07;
+const R2 = Math.SQRT1_2, BULB_R = 0.35;
 const U = v3(R2, -R2, 0), N = v3(R2, R2, 0); // along the sign, toward the camera
-const W = measureText(WORD, SIGN_FONT.size).width, L = W + 2 * 3; // word width; panel length (3 of margin on each side)
+const LAYOUT = marqueeLayout(CROWN_CAP, CROWN_TRACKING), INK_X0 = LAYOUT[0]!.box.x0, INK_X1 = LAYOUT.at(-1)!.box.x1;
+const W = INK_X1 - INK_X0, L = W + 2 * 3; // ink width; panel length (3 of margin on each side)
 
 const PP_OFFSET = 4, PANEL_LIFT = 3.2, MARGIN = 2.7, PANEL_GAP = 0.06, PANEL_T = 0.6; // PANEL_LIFT: above the machine room (2.9) plus the lower beam (0.3)
 const BEAM = 0.3, POST = 0.3, PILLAR = 0.6, TENSOR = 0.2, CORNICE_TOP = 0.4, CORNICE_X = 8.5, CORNICE_Y = 7.5;
@@ -22,25 +27,32 @@ export const CROWN_SITE = v3(TOWER.x + TOWER.w / 2, TOWER.y + TOWER.d / 2, TOWER
 /** Geometry that depends only on the rooftop center `at`: letter-plane center `pp`, the z of the panel, the baseline and the slab. */
 function frame(at: Vec3) {
   const pp = v3(at.x + PP_OFFSET * N.x, at.y + PP_OFFSET * N.y, at.z);
-  const z0 = at.z + PANEL_LIFT, baseline = z0 + MARGIN, z1 = baseline + SIGN_FONT.size + MARGIN, slabZ = z1 + SLAB_GAP;
+  const z0 = at.z + PANEL_LIFT, baseline = z0 + MARGIN, z1 = baseline + CROWN_CAP + MARGIN, slabZ = z1 + SLAB_GAP;
   return { pp, z0, baseline, z1, slabZ, pad: slabZ + SLAB_H };
 }
 
 /** Point at `t` along U and `n` along N from `pp`. */
 const on = (pp: Vec3, t: number, n: number, z: number): Vec3 => v3(pp.x + U.x * t + N.x * n, pp.y + U.y * t + N.y * n, z);
 
-/** The dark panel behind the word: along U over ±L/2, from 0.06 to 0.66 behind the letter plane, up to the margins that hold the ink. */
+/** The dark glass panel behind the word: along U over ±L/2, from 0.06 to 0.66 behind the letter plane, up to the margins that hold the ink. */
 function panelAt(at: Vec3): Solid & { kind: "poly" } {
   const { pp, z0, z1 } = frame(at), P = (t: number, b: number) => on(pp, t, -b, 0);
-  return { kind: "poly", footprint: [P(-L / 2, PANEL_GAP), P(L / 2, PANEL_GAP), P(L / 2, PANEL_GAP + PANEL_T), P(-L / 2, PANEL_GAP + PANEL_T)].map(({ x, y }) => ({ x, y })), z: z0, h: z1 - z0, mat: "officeDark" };
+  return { kind: "poly", footprint: [P(-L / 2, PANEL_GAP), P(L / 2, PANEL_GAP), P(L / 2, PANEL_GAP + PANEL_T), P(-L / 2, PANEL_GAP + PANEL_T)].map(({ x, y }) => ({ x, y })), z: z0, h: z1 - z0, mat: "glass" };
 }
 
 const SITE = frame(CROWN_SITE), PANEL = panelAt(CROWN_SITE);
 
-/** The Resume sign as the legibility oracle sees it: filled green letters on the diagonal plane at the site, backed by the dark panel. */
+/**
+ * The Resume sign as the legibility oracle sees it: RESUME in Neon Light marquee letters (filled green faces) on the diagonal plane at the
+ * site, backed by the dark panel. All capitals, so its x-height is the cap height; its stroke is the face width.
+ */
 export const RESUME_SIGN: SignSpec = signSpec({
-  id: "cartel-torre", text: WORD, ...SIGN_FONT, color: "green", plane: diagonalWall(on(SITE.pp, -W / 2, 0, SITE.baseline)), style: "fill", backing: [PANEL],
+  id: "cartel-torre", text: MARQUEE_RESUME.text, size: CROWN_CAP, width: SIGN_FONT.width, color: "greenMid", plane: diagonalWall(on(SITE.pp, -W / 2 - INK_X0, 0, SITE.baseline)),
+  style: "fill", backing: [PANEL], layouts: LAYOUT, xHeight: CROWN_CAP, stroke: MARQUEE_FACE * CROWN_CAP,
 });
+
+/** The bulbs of the marquee letters in the world at the site, just in front of the faces. */
+const BULBS = LAYOUT.flatMap((g, i) => g.bulbs.map((b) => toWorld(RESUME_SIGN.glyphs[i]!.plane, b.x, b.y)));
 
 const steel = (x: number, y: number, z: number, w: number, h: number) => interlock(prism(x, y, z, w, w, h, "steel"));
 const beam = (from: Vec3, to: Vec3, w: number, h = w): Solid => interlock({ kind: "beam", from, to, w, h, mat: "steel" });
@@ -63,7 +75,8 @@ export function towerCrown(out: Solid[], accents: Accent[], at: Vec3): void {
   const { pp, z0, z1, slabZ, pad } = frame(at), floor = at.z + CORNICE_TOP;
   out.push(panelAt(at)); // a fresh panel: a consumer that mutates the scene does not reach RESUME_SIGN's backing
   const [dx, dy, dz] = [at.x - CROWN_SITE.x, at.y - CROWN_SITE.y, at.z - CROWN_SITE.z];
-  for (const g of RESUME_SIGN.glyphs) for (const q of g.quads) accents.push({ kind: "poly", pts: q.map((c) => v3(c.x + dx, c.y + dy, c.z + dz)), color: "green", alpha: 1 });
+  for (const g of RESUME_SIGN.glyphs) for (const q of g.quads) accents.push({ kind: "poly", pts: q.map((c) => v3(c.x + dx, c.y + dy, c.z + dz)), color: "greenMid", alpha: 1 });
+  for (const b of BULBS) accents.push({ kind: "dot", at: v3(b.x + dx, b.y + dy, b.z + dz), r: BULB_R, color: "windowWarm" });
 
   const back = -PANEL_GAP - PANEL_T - (POST / 2) * Math.SQRT2; // post axes sit just behind the panel's back face
   for (const t of [-5, 0, 5]) {

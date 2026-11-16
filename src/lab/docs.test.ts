@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { project } from "../iso/project";
-import { COVER_LAPTOP, COVER_PHONE, SIGN_FONT, signMetrics, staticContrast } from "../kit/legibility";
+import { COVER_LAPTOP, COVER_PHONE, layoutGaps, SIGN_FONT, signMetrics, staticContrast } from "../kit/legibility";
 import { counterClearance, letterGaps, measureText, rhythm } from "../kit/lettering";
 import { TOWER } from "../scenes/city-grid";
 import { CROWN_SITE } from "../scenes/sign-crown";
@@ -498,7 +498,7 @@ describe("zone signs redesign documentation (#374)", () => {
   const CONTEXTS = ["cartel-torre-escena", "cartel-taller-escena", "plataforma-escena"];
   const SCALES = [["117", COVER_LAPTOP], ["083", COVER_PHONE]] as const;
   const DELETED = ["cartel-helipuerto", "grafiti"];
-  const WORDS = { Resume: "cartel-torre-escena", Portfolio: "cartel-taller-escena", Blog: "plataforma-escena" } as const;
+  const WORDS = { RESUME: "cartel-torre-escena", Portfolio: "cartel-taller-escena", Blog: "plataforma-escena" } as const;
   const f = (n: number) => n.toFixed(2);
   const report = read("assets/carteles-legibilidad/REPORT.md");
   const spec = read("2026-11-15-carteles-de-zona-rediseno-design.md");
@@ -517,7 +517,7 @@ describe("zone signs redesign documentation (#374)", () => {
   const xExtent = (pts: { x: number; y: number; z: number }[]) => { const xs = pts.map((p) => project(p).x); return Math.max(...xs) - Math.min(...xs); };
   const rect = (x0: number, y0: number, x1: number, y1: number) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(([x, y]) => ({ x: x!, y: y!, z: 0 }));
   const HOSTS = {
-    Resume: rect(TOWER.x, TOWER.y, TOWER.x + TOWER.w, TOWER.y + TOWER.d),
+    RESUME: rect(TOWER.x, TOWER.y, TOWER.x + TOWER.w, TOWER.y + TOWER.d),
     Portfolio: rect(SHIPYARD_HALLS[1]!.x0, SHIPYARD_HALLS[1]!.y0, SHIPYARD_HALLS[1]!.x1, SHIPYARD_HALLS[1]!.y1),
     Blog: rect(-HALF_X, -HALF_Y, HALF_X, HALF_Y),
   };
@@ -573,18 +573,29 @@ describe("zone signs redesign documentation (#374)", () => {
   });
   it("§8.1 carries the font measures of the three words at SIGN_FONT", () => {
     const { size: sz, width: w } = SIGN_FONT;
-    for (const word of Object.keys(WORDS)) {
-      const line = row(measures, `| ${word} |`), gaps = letterGaps(word, sz, w);
-      const counter = Math.min(...counterClearance(word, sz, w).map((c) => c.clearance));
+    for (const [word, id] of Object.entries(WORDS)) {
+      const sign = context(id).sign, line = row(measures, `| ${word} |`);
       expect(line, word).not.toBe("");
-      for (const v of [Math.min(...gaps) / w, Math.max(...gaps) / w, rhythm(word, sz, w), counter / w]) expect(line, `${word} ${f(v)}`).toContain(f(v));
+      // a marquee word (RESUME, Neon Light) is measured on its own layouts, with its face as w
+      const vals = sign.stroke !== undefined
+        ? (() => {
+          const fw = sign.stroke!, gaps = layoutGaps(sign.glyphs.map((g) => g.layout)), counter = Math.min(...sign.glyphs.flatMap((g) => g.layout.counters.map((c) => 2 * c.r)));
+          return [Math.min(...gaps) / fw, Math.max(...gaps) / fw, Math.max(...gaps) / Math.min(...gaps), counter / fw];
+        })()
+        : (() => {
+          const gaps = letterGaps(word, sz, w), counter = Math.min(...counterClearance(word, sz, w).map((c) => c.clearance));
+          return [Math.min(...gaps) / w, Math.max(...gaps) / w, rhythm(word, sz, w), counter / w];
+        })();
+      for (const v of vals) expect(line, `${word} ${f(v)}`).toContain(f(v));
     }
   });
   it("§8.3 compares each word with its host on screen at 1.17", () => {
     for (const [word, id] of Object.entries(WORDS)) {
       const line = row(sizes, `| ${word} |`), quads = context(id).sign.glyphs.flatMap((g) => g.quads.flat());
       expect(line, word).not.toBe("");
-      const vals = [measureText(word, SIGN_FONT.size).width, xExtent(quads) * COVER_LAPTOP, xExtent(HOSTS[word as keyof typeof HOSTS]) * COVER_LAPTOP];
+      const sign = context(id).sign, box = sign.glyphs.map((g) => g.layout.box);
+      const width = sign.stroke !== undefined ? box.at(-1)!.x1 - box[0]!.x0 : measureText(word, SIGN_FONT.size).width;
+      const vals = [width, xExtent(quads) * COVER_LAPTOP, xExtent(HOSTS[word as keyof typeof HOSTS]) * COVER_LAPTOP];
       for (const v of vals) expect(line, `${word} ${f(v)}`).toContain(f(v));
     }
   });

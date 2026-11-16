@@ -6,9 +6,10 @@ import { project } from "../iso/project";
 import { bounds, tessellateAll, type Solid } from "../iso/solids";
 import { translate, translateAccent } from "../iso/translate";
 import { SIGN_FONT } from "../kit/legibility";
-import { measureText, toWorld } from "../kit/lettering";
+import { toWorld } from "../kit/lettering";
+import { MARQUEE_FACE, marqueeLayout } from "../kit/marquee";
 import { TOWER, TOWER_H } from "./city-grid";
-import { CROWN_SITE, RESUME_SIGN, towerCrown, towerStandIn } from "./sign-crown";
+import { CROWN_CAP, CROWN_SITE, CROWN_TRACKING, RESUME_SIGN, towerCrown, towerStandIn } from "./sign-crown";
 
 const EPS = 1e-6, R2 = Math.SQRT1_2;
 const N = v3(R2, R2, 0), U = v3(R2, -R2, 0);
@@ -17,8 +18,8 @@ const crown = build((o, a) => towerCrown(o, a, CROWN_SITE));
 const piece = build((o, a) => { towerStandIn(o, a); towerCrown(o, a, v3(0, 0, TOWER_H)); });
 
 const at = CROWN_SITE, pp = v3(at.x + 4 * N.x, at.y + 4 * N.y, at.z);
-const W = measureText("Resume", SIGN_FONT.size).width, L = W + 6;
-const PANEL_Z0 = at.z + 3.2, BASE = PANEL_Z0 + 2.7, PANEL_Z1 = BASE + SIGN_FONT.size + 2.7;
+const INK = RESUME_SIGN.glyphs.map((g) => g.layout.box), W = INK.at(-1)!.x1 - INK[0]!.x0, L = W + 6;
+const PANEL_Z0 = at.z + 3.2, BASE = PANEL_Z0 + 2.7, PANEL_Z1 = BASE + CROWN_CAP + 2.7;
 const along = (p: { x: number; y: number }) => (p.x - pp.x) * U.x + (p.y - pp.y) * U.y; // t along U from pp
 const across = (p: { x: number; y: number }) => (p.x - pp.x) * N.x + (p.y - pp.y) * N.y; // offset along N from pp
 const CORNICE = { x0: TOWER.x - 0.5, y0: TOWER.y - 0.5, x1: TOWER.x + TOWER.w + 0.5, y1: TOWER.y + TOWER.d + 0.5 };
@@ -45,7 +46,7 @@ function interpenetrations(solids: Solid[]): string[] {
   return out;
 }
 
-const panel = of(crown.out, "poly").filter((s) => s.mat === "officeDark");
+const panel = of(crown.out, "poly").filter((s) => s.mat === "glass");
 const slab = of(crown.out, "cylinder").filter((s) => s.mat === "concrete");
 
 describe("tower crown: the sign (#378)", () => {
@@ -54,13 +55,26 @@ describe("tower crown: the sign (#378)", () => {
     expect(CROWN_SITE).toEqual(v3(129, 227, 30));
   });
 
-  it("RESUME_SIGN: 'Resume' in green at SIGN_FONT, filled letters", () => {
-    expect(RESUME_SIGN).toMatchObject({ id: "cartel-torre", text: "Resume", size: SIGN_FONT.size, width: SIGN_FONT.width, color: "green" });
-    expect(RESUME_SIGN.glyphs.map((g) => g.char).join("")).toBe("Resume");
+  it("RESUME_SIGN: 'RESUME' in Neon Light marquee letters, green, capitals (x-height = cap) and the face as stroke", () => {
+    expect(RESUME_SIGN).toMatchObject({ id: "cartel-torre", text: "RESUME", size: CROWN_CAP, width: SIGN_FONT.width, color: "greenMid", xHeight: CROWN_CAP, stroke: MARQUEE_FACE * CROWN_CAP });
+    expect(RESUME_SIGN.glyphs.map((g) => g.char).join("")).toBe("RESUME");
     for (const g of RESUME_SIGN.glyphs) expect(g.quads.length).toBe(g.layout.fill.length);
+    for (const g of RESUME_SIGN.glyphs) for (const q of g.quads) expect(q).toHaveLength(3);
   });
 
-  it("one officeDark panel along (1, −1), 0.6 thick, its south-east face 0.06 behind the letters; it is the sign's backing", () => {
+  it("the word is centered on the panel and its baseline sits 2.7 above the panel's bottom", () => {
+    const ends = [toWorld(RESUME_SIGN.glyphs[0]!.plane, INK[0]!.x0, 0), toWorld(RESUME_SIGN.glyphs[0]!.plane, INK.at(-1)!.x1, 0)];
+    expect(along(ends[0]!)).toBeCloseTo(-W / 2, 9); expect(along(ends[1]!)).toBeCloseTo(W / 2, 9);
+    expect(ends[0]!.z).toBeCloseTo(BASE, 9);
+  });
+
+  it("one warm bulb dot per marquee bulb, on the letter plane", () => {
+    const bulbs = dots(crown.accents).filter((d) => d.color === "windowWarm");
+    expect(bulbs).toHaveLength(marqueeLayout(CROWN_CAP, CROWN_TRACKING).reduce((n, g) => n + g.bulbs.length, 0));
+    for (const d of bulbs) expect(Math.abs(across(d.at))).toBeLessThan(EPS);
+  });
+
+  it("one dark glass panel along (1, −1), 0.6 thick, its south-east face 0.06 behind the letters; it is the sign's backing", () => {
     expect(panel).toHaveLength(1);
     const p = panel[0]!;
     expect(RESUME_SIGN.backing).toEqual([p]);
@@ -87,8 +101,8 @@ describe("tower crown: the sign (#378)", () => {
     }
   });
 
-  it("the letters: the fill quads of RESUME_SIGN as green alpha-1 polys, coplanar 0.06 in front of the panel, no halo", () => {
-    const green = polys(crown.accents).filter((a) => a.color === "green");
+  it("the letters: the fill quads of RESUME_SIGN as greenMid alpha-1 polys, coplanar 0.06 in front of the panel, no halo", () => {
+    const green = polys(crown.accents).filter((a) => a.color === "greenMid");
     expect(green.map((a) => a.pts)).toEqual(RESUME_SIGN.glyphs.flatMap((g) => g.quads));
     for (const a of green) {
       expect(a.alpha).toBe(1);

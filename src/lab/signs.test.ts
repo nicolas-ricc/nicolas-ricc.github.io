@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkFont, checkSign, COVER_LAPTOP, COVER_PHONE } from "../kit/legibility";
+import { checkSign, checkSignFont, COVER_LAPTOP, COVER_PHONE } from "../kit/legibility";
 import { assembleWorld } from "../world/assemble";
 import { contextScene } from "./crop";
 import { EXHIBITS } from "./exhibits";
@@ -14,8 +14,8 @@ describe("sign gate: levels 1 and 2 on every context exhibit", () => {
     expect(contexts.length).toBeGreaterThan(0);
   });
   describe.each(contexts.map((e) => [e.id, e] as const))("%s", (_id, e) => {
-    it("checkFont = []", () => {
-      expect(checkFont(e.sign.text, e.sign.size, e.sign.width)).toEqual([]);
+    it("checkSignFont = []", () => {
+      expect(checkSignFont(e.sign)).toEqual([]);
     });
     const solids = contextScene(scene, e).solids;
     for (const scale of [COVER_LAPTOP, COVER_PHONE]) {

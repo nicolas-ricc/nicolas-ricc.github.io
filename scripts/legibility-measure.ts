@@ -1,9 +1,9 @@
 /** Pure parts of npm run legibility (level 3 of the sign guardrails): mapping, masks, metrics, OCR preprocess and report. scripts/legibility.ts drives the browser. */
 import type { Vec2, Vec3 } from "../src/iso/geometry";
 import { project, Z_SCALE } from "../src/iso/project";
-import { COVER_LAPTOP, COVER_PHONE, relativeLuminance, type SignSpec, type Violation } from "../src/kit/legibility";
+import { COVER_LAPTOP, COVER_PHONE, relativeLuminance, signXHeight, type SignSpec, type Violation } from "../src/kit/legibility";
 import type { ContextExhibit, Exhibit } from "../src/lab/exhibits";
-import { GRID, toWorld } from "../src/kit/lettering";
+import { toWorld } from "../src/kit/lettering";
 import type { Fit } from "../src/world/frame";
 
 /** Image px per CSS px. */
@@ -57,7 +57,7 @@ export function fillDisc(mask: Uint8Array, w: number, h: number, c: Vec2, r: num
 export function signMasks(sign: SignSpec, fit: Fit, crop: Crop): Masks {
   const w = crop.w * RES, h = crop.h * RES, n = w * h, img = (p: Vec3) => toImage(p, fit, crop);
   const core = new Uint8Array(n), holes = new Uint8Array(n), outer = new Uint8Array(n), inner = new Uint8Array(n);
-  const xH = (GRID.xHeight * sign.size) / GRID.cap, G = sign.glyphs;
+  const xH = signXHeight(sign), G = sign.glyphs;
   for (const g of G) for (const q of g.quads) fillPolygon(core, w, h, q.map(img));
   const grown = (g: (typeof G)[number], k: number) => {
     const { x0, y0, x1, y1 } = g.layout.box, m = k * sign.width;

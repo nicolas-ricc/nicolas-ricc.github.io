@@ -41,6 +41,36 @@ export function checkFont(text: string, size: number, width: number): Violation[
   return out;
 }
 
+/**
+ * Level 1 for filled letters that do not come from the stroke font (marquee): the same rules on the glyph layouts, with `width` the face width.
+ * Stroke ratio, air between the fills of consecutive glyphs, rhythm, counters and overlap; no x-height or lowercase advance rule (capitals only).
+ */
+export function checkLayouts(layouts: readonly GlyphLayout[], size: number, width: number): Violation[] {
+  const out: Violation[] = [], R = FONT_RULES;
+  const push = (rule: string, value: number, limit: string, detail?: string) => out.push(detail === undefined ? { rule, value, limit } : { rule, value, limit, detail });
+  const sr = strokeRatio(size, width);
+  if (outside(sr, R.strokeRatio)) push("strokeRatio", sr, range(R.strokeRatio));
+  const gaps = layoutGaps(layouts);
+  gaps.forEach((g, i) => {
+    const pair = layouts[i]!.char + layouts[i + 1]!.char;
+    if (g === 0) push("overlap", g, "> 0", pair);
+    else if (outside(g / width, R.airW)) push("air", g / width, range(R.airW, "·w"), pair);
+  });
+  const lo = Math.min(...gaps), rh = gaps.length < 2 ? 1 : lo === 0 ? Infinity : Math.max(...gaps) / lo;
+  if (rh > R.rhythm) push("rhythm", rh, `≤ ${R.rhythm}`);
+  for (const g of layouts) for (const c of g.counters) if ((2 * c.r) / width < R.counterW) push("counter", (2 * c.r) / width, `≥ ${R.counterW}·w`, g.char);
+  return out;
+}
+
+/** Air between the fills of each pair of consecutive layouts; 0 when they touch or overlap. */
+export function layoutGaps(layouts: readonly GlyphLayout[]): number[] {
+  return layouts.slice(1).map((b, i) => Math.min(...layouts[i]!.fill.flatMap((p) => b.fill.map((q) => polygonDistance(p, q)))));
+}
+
+/** Level 1 of a sign: `checkLayouts` on its own glyphs when it has a face width (`stroke`), else `checkFont` on its text. */
+export const checkSignFont = (spec: SignSpec): Violation[] =>
+  spec.stroke !== undefined ? checkLayouts(spec.glyphs.map((g) => g.layout), spec.size, spec.stroke) : checkFont(spec.text, spec.size, spec.width);
+
 /** Cover scale of a 1366-wide laptop with browser chrome. */
 export const COVER_LAPTOP = 1.17;
 /** Cover scale of a 390×750 phone. */
@@ -56,20 +86,30 @@ export const SIGN_RULES = {
 /** One glyph of a sign in the world: its plane, text-space layout, quads that draw it and counter probes. */
 export interface SignGlyph { char: string; plane: TextPlane; layout: GlyphLayout; quads: Vec3[][]; counters: { at: Vec3; r: number }[] }
 
-/** A sign to audit: text at `size` and `width`, accent `color`, per-glyph placement and the solids that back it. `facade` relaxes the baseline limit. */
-export interface SignSpec { id: string; text: string; size: number; width: number; color: AccentColor; facade?: boolean; glyphs: SignGlyph[]; backing: Solid[] }
+/**
+ * A sign to audit: text at `size` and `width`, accent `color`, per-glyph placement and the solids that back it. `facade` relaxes the baseline limit.
+ * `xHeight` (text units) replaces the font grid's x-height, for a word in capitals; `stroke` (text units) is the face width of filled letters,
+ * whose quads are a triangulation rather than stroke segments.
+ */
+export interface SignSpec { id: string; text: string; size: number; width: number; color: AccentColor; facade?: boolean; xHeight?: number; stroke?: number; glyphs: SignGlyph[]; backing: Solid[] }
 
-/** Builds a `SignSpec`: glyph `i` sits on `glyphPlane?.(i, g) ?? plane`; quads are the stroke quads (`stroke`) or the fill polygons (`fill`) taken to the world. */
+/** The x-height of `spec` in text units: its own `xHeight`, else the font grid's at its size. */
+export const signXHeight = (spec: SignSpec): number => spec.xHeight ?? (GRID.xHeight * spec.size) / GRID.cap;
+
+/**
+ * Builds a `SignSpec`: glyph `i` sits on `glyphPlane?.(i, g) ?? plane`; quads are the stroke quads (`stroke`) or the fill polygons (`fill`) taken to
+ * the world. `layouts` replaces the stroke font's layout (marquee letters); `xHeight` and `stroke` go to the spec as they are.
+ */
 export function signSpec(o: {
   id: string; text: string; size: number; width: number; color: AccentColor; plane: TextPlane; style: "stroke" | "fill"; backing: Solid[]; facade?: boolean;
-  glyphPlane?: (i: number, g: GlyphLayout) => TextPlane;
+  glyphPlane?: (i: number, g: GlyphLayout) => TextPlane; layouts?: GlyphLayout[]; xHeight?: number; stroke?: number;
 }): SignSpec {
-  const glyphs = layoutText(o.text, o.size, o.width).map((layout, i): SignGlyph => {
+  const glyphs = (o.layouts ?? layoutText(o.text, o.size, o.width)).map((layout, i): SignGlyph => {
     const plane = o.glyphPlane?.(i, layout) ?? o.plane, w = (c: Vec2) => toWorld(plane, c.x, c.y);
     return { char: layout.char, plane, layout, quads: (o.style === "stroke" ? layout.quads : layout.fill).map((q) => q.map(w)), counters: layout.counters.map((c) => ({ at: w(c.at), r: c.r })) };
   });
   const { id, text, size, width, color, backing } = o;
-  return { id, text, size, width, color, ...(o.facade ? { facade: true } : {}), glyphs, backing };
+  return { id, text, size, width, color, ...(o.facade ? { facade: true } : {}), ...(o.xHeight === undefined ? {} : { xHeight: o.xHeight }), ...(o.stroke === undefined ? {} : { stroke: o.stroke }), glyphs, backing };
 }
 
 const toSrgb = (c: number) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
@@ -88,13 +128,17 @@ export function contrastRatio(a: number, b: number): number {
 
 const deg = (rad: number) => (rad * 180) / Math.PI;
 
-/** Projected metrics of a sign at a screen `scale`: x-height, stroke and air in px (minima), baseline and vertical angles in degrees, aspect error (maxima). */
+/**
+ * Projected metrics of a sign at a screen `scale`: x-height, stroke and air in px (minima), baseline and vertical angles in degrees, aspect error (maxima).
+ * With `spec.stroke` the stroke is that face width projected along the plane's two axes, not the quads' sides.
+ */
 export function signMetrics(spec: SignSpec, scale: number): { xHeightPx: number; strokePx: number; airPx: number; baselineDeg: number; verticalDeg: number; aspectError: number } {
-  const xH = (GRID.xHeight * spec.size) / GRID.cap, G = spec.glyphs;
+  const xH = signXHeight(spec), G = spec.glyphs;
   const at = (g: SignGlyph, a: number, b: number) => project(toWorld(g.plane, a, b));
   const proj = (g: SignGlyph) => g.quads.map((q) => q.map(project));
   const xHeightPx = Math.min(...G.map((g) => Math.hypot(at(g, 0, xH).x - at(g, 0, 0).x, at(g, 0, xH).y - at(g, 0, 0).y) * scale));
-  const strokePx = Math.min(...G.flatMap(proj).flatMap((q) => q.map((c, i) => Math.hypot(c.x - q[(i + 1) % q.length]!.x, c.y - q[(i + 1) % q.length]!.y))).map((d) => d * scale));
+  const len = (g: SignGlyph, a: number, b: number) => Math.hypot(at(g, a, b).x - at(g, 0, 0).x, at(g, a, b).y - at(g, 0, 0).y) * scale;
+  const strokePx = spec.stroke !== undefined ? Math.min(...G.flatMap((g) => [len(g, spec.stroke!, 0), len(g, 0, spec.stroke!)])) : Math.min(...G.flatMap(proj).flatMap((q) => q.map((c, i) => Math.hypot(c.x - q[(i + 1) % q.length]!.x, c.y - q[(i + 1) % q.length]!.y))).map((d) => d * scale));
   let airPx = Infinity;
   for (let i = 0; i + 1 < G.length; i++) for (const a of proj(G[i]!)) for (const b of proj(G[i + 1]!)) airPx = Math.min(airPx, polygonDistance(a, b) * scale);
   const pts = G.map((g) => at(g, g.layout.left, 0)), n = pts.length;

@@ -250,19 +250,21 @@ aspecto: Resume 0°, 0°, 0.010; Portfolio 0.03°, 3.03°, 0.075; Blog 0°, 0°,
 
 | Exhibit | Escala | Alto de x (px) | Trazo (px) | Aire (px) | Contraste estático | Contraste (px) | Halo | OCR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `cartel-torre-escena` | 1.17 | 12.05 | 2.21 | 2.64 | 8.09 | 11.75:1 | 0.07 | `Resume` |
-| `cartel-torre-escena` | 0.83 | 8.55 | 1.57 | 1.87 | 8.09 | 11.09:1 | 0.05 | `Resume` |
+| `cartel-torre-escena` | 1.17 | 14.25 | 2.31 | 2.95 | 4.70 | 10.61:1 | 0.05 | `RESUME` |
+| `cartel-torre-escena` | 0.83 | 10.11 | 1.64 | 2.10 | 4.70 | 9.07:1 | 0.05 | `RESUME` |
 | `cartel-taller-escena` | 1.17 | 12.05 | 2.21 | 2.15 | 8.06 | 9.76:1 | 0.07 | `Portfolio` |
 | `cartel-taller-escena` | 0.83 | 8.55 | 1.57 | 1.52 | 8.06 | 9.25:1 | 0.06 | `Portfolio` |
 | `plataforma-escena` | 1.17 | 12.05 | 2.21 | 2.64 | 13.26 | 8.96:1 | 0.12 | `Blog` |
 | `plataforma-escena` | 0.83 | 8.55 | 1.57 | 1.87 | 13.26 | 8.96:1 | 0.07 | `Blog` |
 
 Nivel 1 con `SIGN_FONT` (tamaño 10.3, trazo w = 1.35 u). Aire mínimo y máximo
-entre letras, ritmo y la contraforma más ajustada, todo en w.
+entre letras, ritmo y la contraforma más ajustada, todo en w. `RESUME` va en
+Neon Light (§8.2): su fila se mide con `checkLayouts` sobre sus propios
+glifos (caja alta 8.7, w = la cara de la letra, 1.41 u).
 
 | Palabra | Aire mín. (w) | Aire máx. (w) | Ritmo | Contraforma más ajustada (w) |
 | --- | --- | --- | --- | --- |
-| Resume | 1.18 | 1.18 | 1.00 | 1.40 (`e`) |
+| RESUME | 1.27 | 1.47 | 1.16 | 1.56 (`R`) |
 | Portfolio | 1.18 | 1.68 | 1.43 | 2.08 (`P`) |
 | Blog | 1.18 | 1.18 | 1.00 | 2.24 (`B`) |
 
@@ -299,6 +301,20 @@ entre letras, ritmo y la contraforma más ajustada, todo en w.
   valga la regla de 2 px a 1.17.
 - **Marquesina (#379).** Alpha 0.7 en vez de 0.5: con 0.5 el OCR leía
   `Portfolic`.
+- **RESUME en Neon Light (después del cierre).** La palabra de la corona
+  pasa a mayúsculas, `RESUME`, con la fuente de marquesina
+  [Neon Light](https://www.1001fonts.com/neon-light-font.html) (Font
+  Bundles): cara llena `greenMid` con una hilera de lamparitas
+  `windowWarm`, sobre un panel de vidrio oscuro (`glass`, no `officeDark`:
+  con `greenMid` el panel `officeDark` daba 4.26:1 de contraste estático).
+  Caja alta `CROWN_CAP` 8.7 (la palabra mide lo mismo que la `Resume` de
+  trazos) y `CROWN_TRACKING` 0.07 cajas altas, porque el espaciado de la
+  fuente deja 0.83 w de aire. La licencia (*Premium License*) prohíbe
+  distribuir la fuente o convertirla, así que el TTF no se versiona: solo la
+  palabra compuesta, `src/kit/marquee-resume.ts`, generada por
+  `scripts/marquee-word.py`; `src/kit/marquee.ts` la triangula (earcut) y
+  `checkLayouts` le aplica el nivel 1. En el nivel 2 el alto de x es la caja
+  alta (`xHeight`) y el trazo, la cara de la letra (`stroke`).
 - **Seguimiento: #382.** `strokePx` sigue la letra del issue (el lado más
   corto de cada cuad proyectado) y el punto de la `i` lo tensiona.
 
@@ -311,7 +327,7 @@ cubierta (`PLATFORM_SITE`); el de Portfolio cabe en el galpón (`TINKER_SITE`).
 
 | Cartel | Palabra (u) | Palabra (px a 1.17) | Anfitrión | Anfitrión (px a 1.17) |
 | --- | --- | --- | --- | --- |
-| Resume | 44.14 | 75.27 | `TOWER` 16 × 14 | 35.10 |
+| RESUME | 43.89 | 72.62 | `TOWER` 16 × 14 | 35.10 |
 | Portfolio | 52.97 | 90.34 | galpón de montaje sur 90 × 16 (`SHIPYARD_HALLS[1]`) | 124.02 |
 | Blog | 22.07 | 38.75 | cubierta 14 × 12 (`HALF_X`, `HALF_Y`) | 30.42 |
 
