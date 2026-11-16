@@ -26,8 +26,8 @@ import { pieceTrain, trainPieceAnimator } from "../scenes/rail-animator";
 import { BUOYS, DRUM_R0, KEEPER, LANTERN_Z, LIGHTHOUSE, WRECK } from "../scenes/sea";
 import { BEAM_LEN } from "../scenes/sea-anim";
 import { ship, shipAt, type ShipKind } from "../scenes/ships";
+import { CROWN_SITE, RESUME_SIGN, towerCrown, towerStandIn } from "../scenes/sign-crown";
 import { graffitiWall } from "../scenes/sign-graffiti";
-import { helipadSign, helipadTubeSign } from "../scenes/sign-helipad";
 import { BLOG_SIGN, seaPlatform, seaPlatformAt } from "../scenes/sign-platform";
 import { SUBURB_COLS } from "../scenes/sprawl-grid";
 import { SUBSTATION } from "../scenes/substation";
@@ -207,8 +207,10 @@ export const EXHIBITS: readonly Exhibit[] = [
       accents.push(...p.accents);
     } },
   { id: "selva", title: "Jungle", zone: "cv", group: "city", kind: "piece", build: (out) => jungle(out, createRng(SEED), { x0: -12, x1: 12, y0: -12, y1: 12 }, 14, 0) },
-  { id: "cartel-helipuerto", title: "Resume helipad sign (word on the pad)", zone: "cv", group: "city", kind: "piece", build: helipadSign },
-  { id: "cartel-helipuerto-b", title: "Resume rooftop tube sign (variant B)", zone: "cv", group: "city", kind: "piece", build: helipadTubeSign },
+  { id: "cartel-torre", title: "Resume tower crown with helipad", zone: "cv", group: "city", kind: "piece",
+    build: (out, accents) => { towerStandIn(out, accents); towerCrown(out, accents, v3(0, 0, TOWER_H)); } },
+  // h 52: the tallest solid in the box is the helipad's floodlight posts (top ≈ 51.8 u); framing needs h ≥ 51.8, so 52 is the smallest integer that passes.
+  { id: "cartel-torre-escena", title: "Resume tower crown in its scene", zone: "cv", group: "city", kind: "context", box: { x0: 108, y0: 206, x1: 150, y1: 248 }, h: 52, build: (out, accents) => towerCrown(out, accents, CROWN_SITE), sign: RESUME_SIGN },
   // tech district: each structure takes one block BLOCK_W × BLOCK_D
   { id: "mastil", title: "Telecom mast", zone: "cv", group: "tech", kind: "region",
     box: { x0: TELECOM.x - M, y0: TELECOM.y - M, x1: TELECOM.x + BLOCK_W + M, y1: TELECOM.y + BLOCK_D + M }, h: 26 },

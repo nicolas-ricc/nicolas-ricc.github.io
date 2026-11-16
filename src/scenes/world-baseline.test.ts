@@ -20,8 +20,8 @@ const PIECES: Record<string, string> = {
   // #362: grafiti replaces its placeholder; the other pieces did not move
   // #375: gap 2 and KERN respace the words of the four signs (and the platform posts move in)
   grafiti: "79ccab1e/251611e9",
-  // #361: the helipad sign replaces its two placeholders (A, word on the pad; B, rooftop tube sign)
-  "cartel-helipuerto": "7a35f7fb/fb7f1528", "cartel-helipuerto-b": "5a24759f/1e5e066f",
+  // #378: cartel-torre (tower crown with helipad) replaces the two cartel-helipuerto placeholders
+  "cartel-torre": "76848b7a/636e210a",
   // #363: plataforma replaces its placeholder (platform, railing, ladder, hut, beacon, Blog sign)
   // #376: the Blog sign uses SIGN_FONT, gains a backing panel and a raised frame, and is built at its site and then translated
   plataforma: "26c397da/240f731e",
