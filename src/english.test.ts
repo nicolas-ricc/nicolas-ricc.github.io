@@ -87,6 +87,8 @@ const ALLOW: Record<string, RegExp[]> = {
     EXHIBIT_IDS,
     // the zone signs closing (#364): its status line and an exhibit name of the storybook table
     /integración pendiente|plataforma con cartel/g,
+    // the zone signs redesign closing (#380): the level-2 line of the generated legibility report
+    /Sin violaciones\./g,
     /\*\*Estado:\*\*|implementad|sin implementar|pendiente|listo para agente/g,
     /Desvíos( y medición)?|Reglas de modelado|## 2\. Decisiones|\| Tema \| Decisión \|/g,
     /\*Desvío[^"*]*\*?/g,

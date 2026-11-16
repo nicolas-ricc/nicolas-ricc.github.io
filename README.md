@@ -97,7 +97,7 @@ at the edge. `/lab/kit.html` shows every recipe of the kit
 `src/kit/forms/`); key `s` changes the seed and `1..4` the style (downtown,
 bars, residential, civic), except on the `industrial` and `harbor` rows, which always
 use their own style, and on the `reconversion` row, which always uses the
-warehouses style (freight for `freightShed` and `openDock`). It is not part of the production build. `src/kit/lettering.ts` holds the text planes and the stroke font that the zone signs are lettered with. To change a scene,
+warehouses style (freight for `freightShed` and `openDock`). It is not part of the production build. `src/kit/lettering.ts` holds the text planes and the stroke font that the zone signs are lettered with, and `src/kit/legibility.ts` the legibility guardrails they are checked against. To change a scene,
 edit its list of solids; for the look, `src/map/palette-iso.ts`.
 Specs in `docs/superpowers/specs/`
 (`2026-09-13-portfolio-isometrico-design.md`, `2026-09-14-mundo-isometrico-design.md`,
@@ -116,7 +116,8 @@ Specs in `docs/superpowers/specs/`
 `2026-10-27-fabrica-mudanza-design.md`,
 `2026-10-27-estacion-terminal-design.md`,
 `2026-10-27-barrio-costero-design.md`,
-`2026-11-11-carteles-de-zona-assets-design.md`).
+`2026-11-11-carteles-de-zona-assets-design.md`,
+`2026-11-15-carteles-de-zona-rediseno-design.md`).
 
 `/lab/storybook.html` is the structures storybook: it shows one building or
 structure at a time, cropped from the world by its box (or built alone at the
@@ -133,10 +134,13 @@ freezes it; above 100 it is 1). The seam at 90 added ten exhibits:
 `#dique-flotante`, `#patio-contenedores` and `#grua-muelle` (shipyard),
 `#tren-fantasma`, `#casa-espejos`, `#tobogan` and `#tronco-acuatico` (fair),
 and `#galpones`, `#playa-carga` and `#mercado-pescado` (city).
-The zone signs of #352 are four pieces: `#cartel-helipuerto` and
-`#cartel-helipuerto-b` (Resume, the helipad with the word on the pad and the
-rooftop tube variant), `#grafiti` (Portfolio, the harbour graffiti wall) and
-`#plataforma` (Blog, the sea platform); judge them at the cover scales with `c`.
+The zone signs of #374 are three pairs of exhibits: `#cartel-torre` and
+`#cartel-torre-escena` (Resume), `#cartel-taller` and `#cartel-taller-escena`
+(Portfolio) and `#plataforma` and `#plataforma-escena` (Blog). The piece builds
+the sign at the origin (the crown and the tinker sign on a stand-in of their
+host); the one "in its scene" shows it at its candidate site in the real world.
+Judge them at the cover scales with `c`. `npm run legibility` measures contrast,
+halo and OCR with a browser; it does not run in CI.
 
 The lab pages are also built and deployed with the site (every
 `lab/*.html` is a Vite input), so the storybook can be seen at

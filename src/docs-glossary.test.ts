@@ -15,10 +15,10 @@ function section(text: string, title: string): string {
   const next = rest.search(/^### /m);
   return next < 0 ? rest : rest.slice(0, next);
 }
-/** Each backticked `src/` path of the entry's `Code:` line, with the backticked identifiers in the parenthesis right after it. */
+/** Each backticked `src/` or `scripts/` path of the entry's `Code:` line, with the backticked identifiers in the parenthesis right after it. */
 function codeRefs(sec: string): { file: string; idents: string[] }[] {
   const line = sec.split("\n").find((l) => l.startsWith("Code:")) ?? "";
-  return [...line.matchAll(/`(src\/[^`]+)`(?:\s*\(([^)]*)\))?/g)].map((m) => ({
+  return [...line.matchAll(/`((?:src|scripts)\/[^`]+)`(?:\s*\(([^)]*)\))?/g)].map((m) => ({
     file: m[1]!,
     idents: [...(m[2] ?? "").matchAll(/`([^`]+)`/g)].map((i) => i[1]!),
   }));
@@ -73,10 +73,11 @@ describe("kit vocabulary (#126)", () => {
       { file: "src/a.ts", idents: ["A", "B.c"] },
       { file: "src/b.ts", idents: [] },
     ]);
+    expect(codeRefs("Code: `scripts/a.ts` (`X`).")).toEqual([{ file: "scripts/a.ts", idents: ["X"] }]);
   });
 });
 
-const SIGN_TERMS = ["Sign", "Lettering"];
+const SIGN_TERMS = ["Sign", "Lettering", "Legibility"];
 
 describe("sign vocabulary (#360)", () => {
   const glossary = read("CONTEXT.md");
@@ -95,9 +96,17 @@ describe("sign vocabulary (#360)", () => {
   it("Lettering names the lettering API and Sign the exhibits", () => {
     const lettering = section(glossary, "Lettering"), sign = section(glossary, "Sign");
     for (const id of ["TextPlane", "diagonalWall", "roofDiagonal", "facade", "strokeText", "fillText", "measureText", "GLYPHS"]) expect(lettering).toContain(id);
-    for (const id of ["cartel-torre", "cartel-torre-escena", "cartel-taller", "cartel-taller-escena", "plataforma", "src/scenes/sign-", "src/scenes/sign-crown.ts", "towerCrown", "RESUME_SIGN", "CROWN_SITE"]) expect(sign).toContain(id);
+    for (const id of ["gap 2", "KERN", "layoutText", "letterGaps", "rhythm", "counterClearance", "probe"]) expect(lettering, id).toContain(id);
+    for (const id of ["cartel-torre", "cartel-torre-escena", "cartel-taller", "cartel-taller-escena", "plataforma", "plataforma-escena", "src/scenes/sign-", "src/scenes/sign-crown.ts", "towerCrown", "RESUME_SIGN", "CROWN_SITE"]) expect(sign).toContain(id);
+    for (const id of ["TINKER_SITE", "PLATFORM_SITE", "src/lab/signs.test.ts", "npm run legibility"]) expect(sign, id).toContain(id);
     expect(sign).not.toContain("cartel-helipuerto");
     expect(sign).not.toContain("grafiti");
+  });
+  it("Legibility names the three levels, the oracle API and the level-3 script", () => {
+    const legibility = section(glossary, "Legibility");
+    for (const s of ["level 1", "level 2", "level 3", "SIGN_FONT", "checkFont", "SignSpec", "checkSign", "SIGN_RULES", "npm run legibility"]) expect(legibility, s).toContain(s);
+    const files = codeRefs(legibility).map((r) => r.file);
+    for (const f of ["src/kit/legibility.ts", "scripts/legibility.ts"]) expect(files, f).toContain(f);
   });
   it("the kit's README paragraph names src/kit/lettering.ts", () => {
     expect(read("README.md")).toContain("src/kit/lettering.ts");
