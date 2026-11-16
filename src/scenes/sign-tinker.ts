@@ -69,11 +69,12 @@ export function tinkerWordPlane(at: Vec3): TextPlane {
   return wordPlane(at, deckTop(at) - low);
 }
 
-/** Amber bulbs every `BULB_STEP` along the stroke polylines, ends included. */
+/** Amber bulbs every `BULB_STEP` along the stroke polylines, ends included (once on a closed polyline). */
 function bulbs(g: GlyphLayout, plane: TextPlane): Accent[] {
   return g.strokes.flatMap((s) => {
     const len = s.slice(1).reduce((n, q, j) => n + Math.hypot(q.x - s[j]!.x, q.y - s[j]!.y), 0), k = Math.max(1, Math.round(len / BULB_STEP));
-    return Array.from({ length: k + 1 }, (_, n): Accent => {
+    const closed = s[0]!.x === s.at(-1)!.x && s[0]!.y === s.at(-1)!.y;
+    return Array.from({ length: closed ? k : k + 1 }, (_, n): Accent => {
       let d = (n * len) / k, j = 0;
       while (j < s.length - 2 && d > Math.hypot(s[j + 1]!.x - s[j]!.x, s[j + 1]!.y - s[j]!.y)) { d -= Math.hypot(s[j + 1]!.x - s[j]!.x, s[j + 1]!.y - s[j]!.y); j++; }
       const a = s[j]!, b = s[j + 1]!, f = d / Math.hypot(b.x - a.x, b.y - a.y);
@@ -159,17 +160,19 @@ export const SHIPYARD_HALLS: readonly Hall[] = [{ x0: 10, y0: -52, x1: 100, y1: 
 export const STAND_IN_HALL: Hall = { x0: -20, y0: -8, x1: 20, y1: 8 };
 
 const EAVE = 10, RIDGE_RISE = 3.5;
+const inPlan = (x: number, y: number, h: Hall) => x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1;
+const corners = (x: number, y: number, w: number): [number, number][] => [[x, y], [x + w, y], [x + w, y + w], [x, y + w]];
 /** Height of the roof surface at (x, y): the gable of the hall whose plan holds the point, 0 on the ground outside every hall. */
 export function roofZ(x: number, y: number, halls: readonly Hall[]): number {
   let z = 0;
-  for (const h of halls) if (x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1) z = Math.max(z, EAVE + RIDGE_RISE * (1 - Math.abs(y - (h.y0 + h.y1) / 2) / ((h.y1 - h.y0) / 2)));
+  for (const h of halls) if (inPlan(x, y, h)) z = Math.max(z, EAVE + RIDGE_RISE * (1 - Math.abs(y - (h.y0 + h.y1) / 2) / ((h.y1 - h.y0) / 2)));
   return z;
 }
 
 /** Highest roof point under the square foot of side `w` at (x, y): its corners and the ridge line where it crosses the foot. */
 export function roofUnder(x: number, y: number, w: number, halls: readonly Hall[]): number {
-  const pts = [[x, y], [x + w, y], [x + w, y + w], [x, y + w]].concat(halls.flatMap((h) => { const r = Math.min(Math.max((h.y0 + h.y1) / 2, y), y + w); return [[x, r], [x + w, r]]; }));
-  return Math.max(...pts.map(([a, b]) => roofZ(a!, b!, halls)));
+  const pts = corners(x, y, w).concat(halls.flatMap((h): [number, number][] => { const r = Math.min(Math.max((h.y0 + h.y1) / 2, y), y + w); return [[x, r], [x + w, r]]; }));
+  return Math.max(...pts.map(([a, b]) => roofZ(a, b, halls)));
 }
 
 /** A concrete gable hall 40 × 16 × 10 centred at the origin, ridge along x at z 13.5: what the piece exhibit stands the sign on. */
@@ -183,8 +186,6 @@ const ROD_W = 0.12, RUNG_W = 0.1, RUNG_STEP = 1, LADDER_RUN = 0.8, LADDER_B = -2
 const B_REAR = -3.45, B_FRONT = 0, PLANK_B = [-3, -0.6], EDGE = 1e-3;
 
 const at3 = (at: Vec3, s: number, b: number, z: number): Vec3 => v3(at.x + U.x * s + N.x * b, at.y + U.y * s + N.y * b, z);
-const inPlan = (x: number, y: number, h: Hall) => x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1;
-const corners = (x: number, y: number, w: number) => [[x, y], [x + w, y], [x + w, y + w], [x, y + w]] as const;
 const straddles = (x: number, y: number, halls: readonly Hall[]) => halls.some((h) => { const k = corners(x, y, POST).filter(([a, b]) => inPlan(a, b, h)).length; return k > 0 && k < 4; });
 
 /** Top-left corner of a 0.3² foot centred near (cx, cy), nudged by the smallest shift in x or y that takes it off every hall edge: wholly in a plan or wholly out of all of them. */

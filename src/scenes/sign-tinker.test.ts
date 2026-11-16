@@ -96,6 +96,7 @@ describe("tinker sign letters (#379)", () => {
           expect(polys(own)).toEqual(fill(0.7));
           const bulbs = [...dots(own), ...(i === 8 ? dots(lights) : [])];
           expect(bulbs.length).toBeGreaterThanOrEqual(4);
+          expect(new Set(bulbs.map((d) => JSON.stringify(d.at))).size, "no two bulbs on one spot").toBe(bulbs.length);
           for (const d of bulbs) {
             expect(d).toMatchObject({ color: "amberMid", r: 0.3 });
             expect(Math.abs(dot(sub(d.at, g.plane.origin), N))).toBeLessThan(0.01);
@@ -316,6 +317,18 @@ describe("tinker animator (#379)", () => {
     expect(both).toBe(false);
   });
 
+  it("tick returns tinker.lights exactly when the layer changes, and it changes within 5 s", () => {
+    const b = tinkerAnimator({ reducedMotion: false });
+    let prev = JSON.stringify(layer(b)), redraws = 0;
+    for (let t = 20; t <= 5000; t += 20) {
+      const ids = b.tick(20), now = JSON.stringify(layer(b));
+      expect([...ids], `t ${t}`).toEqual(now === prev ? [] : ["tinker.lights"]);
+      if (ids.size) redraws++;
+      prev = now;
+    }
+    expect(redraws).toBeGreaterThan(0);
+  });
+
   it("deterministic: two animators fed the same ticks agree", () => {
     const a = tinkerAnimator({ reducedMotion: false }), b = tinkerAnimator({ reducedMotion: false });
     for (let k = 0; k < 400; k++) { expect(a.tick(17)).toEqual(b.tick(17)); }
@@ -332,6 +345,11 @@ describe("tinker sign in its scene (#379)", () => {
     expect(TINKER_SITE.x).toBeGreaterThanOrEqual(40);
     expect(TINKER_SITE.x).toBeLessThanOrEqual(80);
   });
+  it("levels 1–2 against the world beyond the exhibit's crop, the factory chimneys (y 26..32) included", () => {
+    const near = scene.solids.filter((s) => { const b = bounds(s); return b.max.x >= 0 && b.min.x <= 130 && b.max.y >= -70 && b.min.y <= 60; });
+    const all = [...near, ...sign(TINKER_SITE).out];
+    for (const s of SCALES) expect(checkSign(TINKER_SIGN, s, all)).toEqual([]);
+  }, 20_000);
   it("no sign solid overlaps a world solid, posts and floodlight on a hall roof excused", () => {
     const own = sign(TINKER_SITE).out, world = scene.solids.filter((s) => s.kind !== "ground" && s.kind !== "strip");
     const halls = world.flatMap((s) => { const h = SHIPYARD_HALLS.find((x) => s.kind === "prism" && s.roof === "gable" && s.at.x === x.x0 && s.at.y === x.y0); return h ? [{ solid: s, hall: h }] : []; });

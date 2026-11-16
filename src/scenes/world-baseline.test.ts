@@ -21,8 +21,8 @@ const PIECES: Record<string, string> = {
   // #375: gap 2 and KERN respace the words of the four signs (and the platform posts move in)
   // #378: cartel-torre (tower crown with helipad) replaces the two cartel-helipuerto placeholders
   "cartel-torre": "76848b7a/636e210a",
-  // #379: the tinker sign (cartel-taller, on its hall stand-in) replaces grafiti
-  "cartel-taller": "76a030a1/f6579441",
+  // #379: the tinker sign (cartel-taller, on its hall stand-in) replaces grafiti; re-recorded after the ladder fix and the closed-bowl bulbs (stage 6)
+  "cartel-taller": "76a030a1/e2283d64",
   // #363: plataforma replaces its placeholder (platform, railing, ladder, hut, beacon, Blog sign)
   // #376: the Blog sign uses SIGN_FONT, gains a backing panel and a raised frame, and is built at its site and then translated
   plataforma: "26c397da/240f731e",
