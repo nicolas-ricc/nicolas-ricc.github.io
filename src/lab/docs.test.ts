@@ -1,6 +1,12 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { project } from "../iso/project";
+import { COVER_LAPTOP, COVER_PHONE, SIGN_FONT, signMetrics, staticContrast } from "../kit/legibility";
+import { counterClearance, letterGaps, measureText, rhythm } from "../kit/lettering";
+import { TOWER } from "../scenes/city-grid";
+import { HALF_X, HALF_Y } from "../scenes/sign-platform";
+import { SHIPYARD_HALLS } from "../scenes/sign-tinker";
 import { EXHIBITS } from "./exhibits";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
@@ -427,17 +433,13 @@ describe("seam at 90 documentation (#56)", () => {
 describe("zone signs closing documentation (#364)", () => {
   const SPECS = `${ROOT}docs/superpowers/specs/`;
   const spec = readFileSync(`${SPECS}2026-11-11-carteles-de-zona-assets-design.md`, "utf8");
-  const story = readFileSync(`${SPECS}2026-10-17-storybook-estructuras-design.md`, "utf8");
   const REFS = `${SPECS}assets/carteles-refs/`;
   const index = existsSync(`${REFS}CREDITS.md`) ? readFileSync(`${REFS}CREDITS.md`, "utf8") : "";
   const paragraphs = readme.split(/\n\s*\n/);
-  const storybook = paragraphs.find((p) => p.includes("/lab/storybook.html")) ?? "";
   const lab = paragraphs.find((p) => p.includes("/lab/world.html")) ?? "";
   const at = spec.search(/^## 8\. Desvíos y medición$/m);
   const dev = at < 0 ? "" : spec.slice(at);
   const IDS = ["cartel-helipuerto", "cartel-helipuerto-b", "grafiti", "plataforma"];
-  /** Exhibits #374 deleted while the README still names them until the closing task (#380) rewrites it. */
-  const DELETED_BY_374 = new Set(["cartel-helipuerto", "cartel-helipuerto-b", "grafiti"]);
   const SUFFIXES = ["real-bloom", "real-nobloom", "117-bloom", "117-nobloom", "083"];
 
   it("the sign spec says implemented, pending integration", () => {
@@ -479,21 +481,162 @@ describe("zone signs closing documentation (#364)", () => {
       expect([png.readUInt32BE(16), png.readUInt32BE(20)], `${id}-${s}`).toEqual([3200, 1800]);
     }
   });
-  it("the storybook index names the signs in the shipyard, city and sea rows", () => {
-    const cell = (start: string) => (story.split("\n").find((l) => l.startsWith(start)) ?? "").split("|").at(-2) ?? "";
-    expect(cell("| Portfolio: astillero |")).toContain("muro grafiteado");
-    expect(cell("| Resume: ciudad |")).toContain("cartel helipuerto (A y B)");
-    expect(cell("| Blog: mar |")).toContain("plataforma con cartel");
-  });
-  it("README names the four sign exhibits and the c key in the storybook paragraph", () => {
-    const ids = new Set(EXHIBITS.map((e) => e.id));
-    for (const id of IDS) {
-      expect(storybook, id).toContain(`#${id}\``);
-      if (!DELETED_BY_374.has(id)) expect(ids.has(id), id).toBe(true);
-    }
-    expect(storybook).toContain("`c`");
-  });
   it("README lists the sign spec among the lab specs", () => {
     expect(lab).toContain("2026-11-11-carteles-de-zona-assets-design.md");
+  });
+});
+
+describe("zone signs redesign documentation (#374)", () => {
+  const SPECS = `${ROOT}docs/superpowers/specs/`;
+  const read = (rel: string) => (existsSync(`${SPECS}${rel}`) ? readFileSync(`${SPECS}${rel}`, "utf8") : "");
+  const size = (rel: string) => {
+    const b = readFileSync(`${SPECS}${rel}`);
+    expect(b.subarray(1, 4).toString(), rel).toBe("PNG");
+    return [b.readUInt32BE(16), b.readUInt32BE(20)];
+  };
+  const CONTEXTS = ["cartel-torre-escena", "cartel-taller-escena", "plataforma-escena"];
+  const SCALES = [["117", COVER_LAPTOP], ["083", COVER_PHONE]] as const;
+  const DELETED = ["cartel-helipuerto", "grafiti"];
+  const WORDS = { Resume: "cartel-torre-escena", Portfolio: "cartel-taller-escena", Blog: "plataforma-escena" } as const;
+  const f = (n: number) => n.toFixed(2);
+  const report = read("assets/carteles-legibilidad/REPORT.md");
+  const spec = read("2026-11-15-carteles-de-zona-rediseno-design.md");
+  const between = (txt: string, from: RegExp, to?: RegExp) => {
+    const i = txt.search(from);
+    if (i < 0) return "";
+    const rest = txt.slice(i), j = to ? rest.search(to) : -1;
+    return j < 0 ? rest : rest.slice(0, j);
+  };
+  const dev = between(spec, /^## 8\. Desvíos y medición$/m);
+  const measures = between(dev, /^### 8\.1 /m, /^### 8\.2 /m), sizes = between(dev, /^### 8\.3 /m, /^### 8\.4 /m);
+  /** The single line of `txt` that starts with `prefix` ("" when none or several). */
+  const row = (txt: string, prefix: string) => { const ls = txt.split("\n").filter((l) => l.startsWith(prefix)); return ls.length === 1 ? ls[0]! : ""; };
+  const context = (id: string) => { const e = EXHIBITS.find((x) => x.id === id); if (e?.kind !== "context") throw new Error(id); return e; };
+  /** Screen width of a set of world points: the x extent of their projection. */
+  const xExtent = (pts: { x: number; y: number; z: number }[]) => { const xs = pts.map((p) => project(p).x); return Math.max(...xs) - Math.min(...xs); };
+  const rect = (x0: number, y0: number, x1: number, y1: number) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(([x, y]) => ({ x: x!, y: y!, z: 0 }));
+  const HOSTS = {
+    Resume: rect(TOWER.x, TOWER.y, TOWER.x + TOWER.w, TOWER.y + TOWER.d),
+    Portfolio: rect(SHIPYARD_HALLS[1]!.x0, SHIPYARD_HALLS[1]!.y0, SHIPYARD_HALLS[1]!.x1, SHIPYARD_HALLS[1]!.y1),
+    Blog: rect(-HALF_X, -HALF_Y, HALF_X, HALF_Y),
+  };
+
+  it("REPORT.md exists, has every context at both scales and no failure mark", () => {
+    expect(report).not.toBe("");
+    // the header cell is `✓/✗`: the verdict is the last cell of each metric row
+    expect(report).not.toMatch(/\| ✗ \|$/m);
+    expect(report.match(/^\| (contraste|halo|OCR) \|.*\| ✓ \|$/gm)?.length ?? 0).toBe(18);
+    for (const id of CONTEXTS) for (const s of ["1.17", "0.83"]) expect(report).toMatch(new RegExp(`^## ${id} a ${s.replace(".", "\\.")}$`, "m"));
+    expect(report).toContain("Sin violaciones.");
+  });
+  it("the six level-3 crops are PNGs and the six scene captures are 3200×1800", () => {
+    for (const id of CONTEXTS) for (const [s] of SCALES) {
+      size(`assets/carteles-legibilidad/${id}-${s}.png`);
+      expect(size(`assets/374-carteles/${id}-${s}.png`), `${id}-${s}`).toEqual([3200, 1800]);
+    }
+  });
+  it("the redesign spec says implemented, pending integration, and §6 is ticked off", () => {
+    expect(spec.split("\n").find((l) => l.startsWith("**Estado:**"))).toBe("**Estado:** implementado (storybook; integración pendiente, §7)");
+    const criteria = between(spec, /^## 6\. /m, /^## 7\. /m);
+    expect(criteria).not.toMatch(/- \[ \]/);
+    expect(criteria.match(/- \[x\]/g)?.length ?? 0).toBe(9);
+  });
+  it("§5 records the three candidate sites with their values", () => {
+    const sites = between(spec, /^## 5\. /m, /^## 6\. /m);
+    for (const s of ["CROWN_SITE", "(129, 227, 30)", "TINKER_SITE", "(60, −24, 13.5)", "PLATFORM_SITE", "(400, 170)"]) expect(sites, s).toContain(s);
+  });
+  it("§8 exists after §7 with its four parts and names the report, the font, the contexts and the sites", () => {
+    expect(spec.search(/^## 8\. Desvíos y medición$/m)).toBeGreaterThan(spec.search(/^## 7\. /m));
+    for (const h of [/^### 8\.1 /m, /^### 8\.2 /m, /^### 8\.3 /m, /^### 8\.4 /m]) expect(dev).toMatch(h);
+    for (const s of ["REPORT.md", "SIGN_FONT", ...CONTEXTS, "CROWN_SITE", "TINKER_SITE", "PLATFORM_SITE"]) expect(dev, s).toContain(s);
+  });
+  it("§8.1 carries the level-2 measures of each context and scale, as the oracle computes them", () => {
+    for (const id of CONTEXTS) for (const [tag, s] of SCALES) {
+      const line = row(measures, `| \`${id}\` | ${s} |`), m = signMetrics(context(id).sign, s);
+      expect(line, `${id} ${tag}`).not.toBe("");
+      for (const v of [m.xHeightPx, m.strokePx, m.airPx, staticContrast(context(id).sign)]) expect(line, `${id} ${tag} ${f(v)}`).toContain(f(v));
+    }
+  });
+  it("§8.1 carries the level-3 measures of REPORT.md in the same rows", () => {
+    for (const id of CONTEXTS) for (const s of ["1.17", "0.83"]) {
+      const sec = between(report, new RegExp(`^## ${id} a ${s.replace(".", "\\.")}$`, "m")).split(/\n(?=## )/)[0]!;
+      const cell = (name: string) => row(sec, `| ${name} |`).split("|")[2]?.trim() ?? "";
+      const line = row(measures, `| \`${id}\` | ${s} |`);
+      for (const v of [cell("contraste"), cell("halo"), cell("OCR")]) {
+        expect(v, `${id} ${s}`).not.toBe("");
+        expect(line, `${id} ${s} ${v}`).toContain(v);
+      }
+    }
+  });
+  it("§8.1 carries the font measures of the three words at SIGN_FONT", () => {
+    const { size: sz, width: w } = SIGN_FONT;
+    for (const word of Object.keys(WORDS)) {
+      const line = row(measures, `| ${word} |`), gaps = letterGaps(word, sz, w);
+      const counter = Math.min(...counterClearance(word, sz, w).map((c) => c.clearance));
+      expect(line, word).not.toBe("");
+      for (const v of [Math.min(...gaps) / w, Math.max(...gaps) / w, rhythm(word, sz, w), counter / w]) expect(line, `${word} ${f(v)}`).toContain(f(v));
+    }
+  });
+  it("§8.3 compares each word with its host on screen at 1.17", () => {
+    for (const [word, id] of Object.entries(WORDS)) {
+      const line = row(sizes, `| ${word} |`), quads = context(id).sign.glyphs.flatMap((g) => g.quads.flat());
+      expect(line, word).not.toBe("");
+      const vals = [measureText(word, SIGN_FONT.size).width, xExtent(quads) * COVER_LAPTOP, xExtent(HOSTS[word as keyof typeof HOSTS]) * COVER_LAPTOP];
+      for (const v of vals) expect(line, `${word} ${f(v)}`).toContain(f(v));
+    }
+  });
+  it("§8.4 lists the scene captures and the level-3 crops", () => {
+    const caps = between(dev, /^### 8\.4 /m);
+    for (const id of CONTEXTS) for (const [s] of SCALES) {
+      expect(caps).toContain(`assets/374-carteles/${id}-${s}.png`);
+      expect(caps).toContain(`carteles-legibilidad/${id}-${s}.png`);
+    }
+  });
+  it("the first-pass spec opens §3.1, §3.2 and §3.3 with a deviation note", () => {
+    const old = read("2026-11-11-carteles-de-zona-assets-design.md");
+    const note = (h: RegExp) => (between(old, h).split(/\n\s*\n/)[1] ?? "").replace(/\s+/g, " ");
+    const notes = { "3\\.1": "cartel-torre", "3\\.2": "cartel-taller", "3\\.3": "respaldo" };
+    for (const [n, word] of Object.entries(notes)) {
+      const text = note(new RegExp(`^### ${n} `, "m"));
+      expect(text.startsWith("*Desvío (2026-11-15):"), n).toBe(true);
+      expect(text, n).toContain("2026-11-15-carteles-de-zona-rediseno-design.md");
+      expect(text, n).toContain(word);
+    }
+  });
+  it("the storybook index names the new piece and scene exhibits, not the deleted ones", () => {
+    const story = read("2026-10-17-storybook-estructuras-design.md");
+    const cell = (start: string) => (story.split("\n").find((l) => l.startsWith(start)) ?? "").split("|").at(-2) ?? "";
+    const rows = { "| Portfolio: astillero |": "cartel-taller", "| Resume: ciudad |": "cartel-torre", "| Blog: mar |": "plataforma" };
+    for (const [start, id] of Object.entries(rows)) {
+      expect(cell(start), start).toContain(`\`${id}\``);
+      expect(cell(start), start).toContain(`\`${id}-escena\``);
+    }
+    expect(cell("| Portfolio: astillero |")).not.toMatch(/grafit/);
+    expect(cell("| Resume: ciudad |")).not.toMatch(/helipuerto/);
+  });
+  it("README's storybook paragraph names the three sign pairs and npm run legibility, not the deleted exhibits", () => {
+    const paragraphs = readme.split(/\n\s*\n/);
+    const story = (paragraphs.find((p) => p.includes("/lab/storybook.html")) ?? "").replace(/\s+/g, " ");
+    const ids = new Set(EXHIBITS.map((e) => e.id));
+    for (const id of ["cartel-torre", "cartel-taller", "plataforma"].flatMap((i) => [i, `${i}-escena`])) {
+      expect(story, id).toContain(`\`#${id}\``);
+      expect(ids.has(id), id).toBe(true);
+    }
+    for (const s of ["in its scene", "candidate site", "npm run legibility", "contrast", "halo", "OCR", "does not run in CI", "`c`"]) expect(story, s).toContain(s);
+    for (const id of DELETED) expect(story, id).not.toContain(id);
+  });
+  it("README's lab paragraph lists the redesign spec and names the legibility guardrails next to the lettering", () => {
+    const lab = readme.split(/\n\s*\n/).find((p) => p.includes("/lab/world.html")) ?? "";
+    for (const s of ["2026-11-15-carteles-de-zona-rediseno-design.md", "src/kit/lettering.ts", "src/kit/legibility.ts"]) expect(lab, s).toContain(s);
+  });
+  it("the credits index lists helipuerto, corona, taller and plataforma with their photo counts", () => {
+    const index = read("assets/carteles-refs/CREDITS.md");
+    for (const dir of ["helipuerto", "corona", "taller", "plataforma"]) {
+      const n = readdirSync(`${SPECS}assets/carteles-refs/${dir}`).filter((x) => x.endsWith(".jpg")).length;
+      const line = index.split("\n").find((l) => l.includes(`](${dir}/CREDITS.md)`)) ?? "";
+      expect(line, dir).toContain(`${n} fotos`);
+      expect(line, dir).toMatch(/CC BY-SA/);
+    }
+    expect(index).not.toContain("grafiti/");
   });
 });
