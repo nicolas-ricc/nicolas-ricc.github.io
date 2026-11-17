@@ -261,7 +261,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "convoy", title: "Convoy with barge", zone: "blog", group: "sea", kind: "piece", build: vessel("barge"), pad: "water" },
   { id: "lancha", title: "Tigre river bus", zone: "blog", group: "sea", kind: "piece", build: vessel("ferry"), pad: "water" },
   { id: "plataforma", title: "Writing platform sign", zone: "blog", group: "sea", kind: "piece", build: seaPlatform, pad: "water" },
-  // h 24: the tallest solid in the box is the platform's sign (top ≈ 23.21, smallest integer above it); no accents, and the crop cuts nothing taller. The platform and its sign come from the world: no `build`.
+  // h 24: the tallest solid in the box is the platform's sign (top ≈ 23.21, smallest integer above it); its accents (letters, hut and mast) reach no higher, and the crop cuts nothing taller. The platform and its sign come from the world: no `build`.
   { id: "plataforma-escena", title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 358, y0: 144, x1: 426, y1: 212 }, h: 24, sign: BLOG_SIGN },
 ];
 
