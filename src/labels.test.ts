@@ -10,7 +10,8 @@ describe("applyLabel (#393)", () => {
     expect(a.classList.contains("on-sign")).toBe(true);
     expect(a.classList.contains("on-edge")).toBe(false);
     expect(a.style.transform).toBe("translate(10.0px, 20.0px)");
-    expect(a.style.width).toBe("73.0px");
+    // the CSSOM serializes 73.0px as 73px: compare the rounded number and the unit
+    expect(a.style.width).toMatch(/^73(\.0)?px$/);
     expect(a.style.height).toBe("14.3px");
   });
 
