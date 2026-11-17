@@ -27,13 +27,7 @@ function emitShadow(out: RenderItem[], layer: Layer, hull: Vec2[] | null, clip?:
   if (!clip || poly.length >= 3) out.push(shadowItem(layer, poly));
 }
 
-/**
- * With `clip` (a rectangle in world coordinates), each shadow hull is cut to it
- * before projecting; the hull is convex, so the result is the exact
- * intersection. A hull left with fewer than 3 points emits nothing. Solid and
- * ground faces are not clipped here (the crop does that). Without `clip` the
- * list is unchanged.
- */
+/** With `clip` (world rectangle) each convex shadow hull is cut to it; hulls left under 3 points are dropped. Solid and ground faces are not clipped here. */
 export function buildRenderList(solids: Solid[], heading?: number, clip?: ClipRect): RenderItem[] {
   const ground: RenderItem[] = [], shadow: RenderItem[] = [], solid: RenderItem[] = [];
   const raised: Solid[] = [];
