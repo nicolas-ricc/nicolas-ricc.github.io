@@ -43,6 +43,8 @@ const ALLOW: Record<string, RegExp[]> = {
   "src/lab/exhibits.ts": [/\bid: "[a-z0-9-]+"/g],
   // the test names the exhibits by their (Spanish) ids and reads the animator layer `tren.lights`; only the ids of the catalog are stripped, as whole tokens
   "src/lab/exhibits.test.ts": [EXHIBIT_IDS],
+  // #403: the 0-dot gate lists the exhibits by id
+  "src/lab/no-dots.test.ts": [EXHIBIT_IDS],
   // `faro` is an exhibit id (decision 2b); the test names it in its title
   "src/lab/frame.test.ts": [EXHIBIT_IDS, /real world: faro covers/g],
   // `sin` is the trig function in two geometry comments (it is also the Spanish word for "without")

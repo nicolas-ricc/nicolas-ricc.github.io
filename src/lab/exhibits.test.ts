@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { spotOf } from "../iso/spot-fixtures";
 import type { Accent } from "../iso/accent";
 import { project, Z_SCALE } from "../iso/project";
 import { bounds, tessellate, type Solid } from "../iso/solids";
@@ -265,7 +266,8 @@ describe("piece exhibits", () => {
       const l = a.layer("tren.lights");
       if (l.kind !== "accent") throw new Error("tren.lights");
       expect(l.zone).toBe("portfolio");
-      return l.accents.flatMap((x) => (x.kind === "dot" && x.color === "cyan" ? [x.at.x] : []));
+      expect(l.accents.filter((x) => x.kind === "dot")).toEqual([]); // #403: the lights are spots
+      return l.accents.flatMap((x) => { const p = spotOf(x); return p && p.color === "cyan" ? [p.at.x] : []; });
     };
     const a = e.animate!({ reducedMotion: false });
     expect([...a.ids]).toEqual(["tren.lights"]);

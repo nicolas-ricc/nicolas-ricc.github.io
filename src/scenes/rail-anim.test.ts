@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { spotOf } from "../iso/spot-fixtures";
 import type { Accent } from "../iso/accent";
 import { hullsIntersect, isBehind, overlaps, screenBounds, screenHull } from "../iso/depth";
 import { bounds, tessellate } from "../iso/solids";
@@ -22,7 +23,9 @@ const firstMs = (from: number, to: number, pred: (ms: number) => boolean): numbe
 const samples = (step: number): number[] => { const out: number[] = []; for (let ms = 0; ms < CYCLE_MS; ms += step) out.push(ms); return out; };
 /** Animator advanced to `ms` of the cycle (a single tick, which is the first). */
 const animAt = (ms: number) => { const a = createRailAnim({ reducedMotion: false }); a.tick(ms); return a; };
-const dots = (as: Accent[], color: string) => as.filter((a): a is Accent & { kind: "dot" } => a.kind === "dot" && a.color === color);
+/** The spots (#403: haloless polys, never dots) of one color, as `{ at, r, color }`. */
+const spots = (as: Accent[], color: string) => as.flatMap((a) => { const s = spotOf(a); return s && s.color === color ? [s] : []; });
+const spot = (a: Accent) => { const s = spotOf(a); if (!s) throw new Error("expected a spot"); return s; };
 
 describe("rail-anim: constants", () => {
   it("values from the issue", () => {
@@ -199,8 +202,11 @@ describe("createRailAnim: train lights", () => {
   };
   it("entering: cyan headlights on the east end, magenta red lights on the west; amber sign on both", () => {
     const { t, west, east } = ends(15000);
-    const cyan = dots(t.lights, "cyan"), mag = dots(t.lights, "magenta");
+    const cyan = spots(t.lights, "cyan"), mag = spots(t.lights, "magenta");
     expect(cyan.length).toBe(2); expect(mag.length).toBe(2);
+    expect(t.lights.filter((a) => a.kind === "dot")).toEqual([]);
+    for (const d of cyan) expect(d.r).toBeCloseTo(0.3, 9);
+    for (const d of mag) expect(d.r).toBeCloseTo(0.25, 9);
     for (const d of cyan) expect(Math.abs(d.at.x - east)).toBeLessThan(1);
     for (const d of mag) expect(Math.abs(d.at.x - west)).toBeLessThan(1);
     const amber = t.lights.filter((a) => a.color === "amber").map((a) => (a.kind === "poly" ? a.pts[0]!.x : a.at.x));
@@ -209,8 +215,8 @@ describe("createRailAnim: train lights", () => {
   });
   it("leaving: reversed", () => {
     const { t, west, east } = ends(phaseStart("out") + 8000);
-    for (const d of dots(t.lights, "cyan")) expect(Math.abs(d.at.x - west)).toBeLessThan(1);
-    for (const d of dots(t.lights, "magenta")) expect(Math.abs(d.at.x - east)).toBeLessThan(1);
+    for (const d of spots(t.lights, "cyan")) expect(Math.abs(d.at.x - west)).toBeLessThan(1);
+    for (const d of spots(t.lights, "magenta")) expect(Math.abs(d.at.x - east)).toBeLessThan(1);
   });
   it("saloon lit and state alpha", () => {
     const a = animAt(15000);
@@ -222,41 +228,40 @@ describe("createRailAnim: train lights", () => {
 
 describe("createRailAnim: level crossing and signals (accents)", () => {
   const pre = IN_MS + DWELL_MS - PRE_DEPART_MS;
-  it("active: one magenta dot r 0.45 per post at z h − 0.4, alternating 1 u in y every BLINK_MS", () => {
+  it("active: one magenta spot r 0.45 per post at z h − 0.4, alternating 1 u in y every BLINK_MS", () => {
     const a = animAt(pre + 10);
     const c0 = a.crossing();
     expect(c0).toHaveLength(2);
     const posts = [CROSSING.north, CROSSING.south];
-    c0.forEach((d, k) => {
-      if (d.kind !== "dot") throw new Error("dot");
+    c0.map(spot).forEach((d, k) => {
       const p = posts[k]!;
-      expect(d.color).toBe("magenta"); expect(d.r).toBe(0.45);
+      expect(d.color).toBe("magenta"); expect(d.r).toBeCloseTo(0.45, 9);
       expect(d.at.z).toBeCloseTo(p.h - 0.4, 9);
       expect(d.at.x).toBeCloseTo(p.x + 0.15, 9);
       expect(Math.abs(d.at.y - (p.y + 0.15))).toBeCloseTo(0.5, 9);
     });
     a.tick(BLINK_MS);
     const c1 = a.crossing();
-    c1.forEach((d, k) => {
-      const d0 = c0[k]!;
-      if (d.kind !== "dot" || d0.kind !== "dot") throw new Error("dot");
-      expect(d.at.x).toBe(d0.at.x);
+    c1.map(spot).forEach((d, k) => {
+      const d0 = spot(c0[k]!);
+      expect(d.at.x).toBeCloseTo(d0.at.x, 9);
       expect(Math.abs(d.at.y - d0.at.y)).toBeCloseTo(1, 9);
     });
   });
   it("inactive: empty", () => {
     expect(animAt(IN_MS + 1000).crossing()).toEqual([]);
   });
-  it("signals: red magenta r 0.4 at z 4.4, green cyanMid r 0.4 at z 3.9, at the center of the post", () => {
+  it("signals (spots): red magenta r 0.4 at z 4.4, green cyanMid r 0.4 at z 3.9, at the center of the post", () => {
     const check = (ms: number, want: { in: "red" | "green"; out: "red" | "green" }) => {
       const s = animAt(ms).signals();
       expect(s).toHaveLength(2);
       [SIGNALS.in, SIGNALS.out].forEach((p, k) => {
-        const d = s[k]!, red = (k === 0 ? want.in : want.out) === "red";
-        if (d.kind !== "dot") throw new Error("dot");
+        const d = spot(s[k]!), red = (k === 0 ? want.in : want.out) === "red";
         expect(d.color).toBe(red ? "magenta" : "cyanMid");
-        expect(d.r).toBe(0.4);
-        expect(d.at).toEqual({ x: p.x + 0.25, y: p.y + 0.25, z: red ? 4.4 : 3.9 });
+        expect(d.r).toBeCloseTo(0.4, 9);
+        expect(d.at.x).toBeCloseTo(p.x + 0.25, 9);
+        expect(d.at.y).toBeCloseTo(p.y + 0.25, 9);
+        expect(d.at.z).toBeCloseTo(red ? 4.4 : 3.9, 9);
       });
     };
     check(1000, { in: "green", out: "red" });

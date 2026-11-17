@@ -1,4 +1,4 @@
-import type { Accent } from "../iso/accent";
+import { spot, type Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
 import type { Bounds, Plate, Solid } from "../iso/solids";
 
@@ -79,8 +79,8 @@ export function emu(x0: number, y: number, opts: EmuOpts): { solids: Solid[]; li
   if (opts.lead) {
     const head = opts.lead === "e" ? xE : xW, tail = opts.lead === "e" ? xW : xE;
     for (const dy of [-1.3, 1.3]) {
-      lights.push({ kind: "dot", at: v3(head, y + dy, 1.8), r: 0.3, color: "cyan" }); // headlights
-      lights.push({ kind: "dot", at: v3(tail, y + dy, 1.8), r: 0.25, color: "magenta" }); // red lights
+      lights.push(spot(v3(head, y + dy, 1.8), 0.3, "cyan")); // headlights
+      lights.push(spot(v3(tail, y + dy, 1.8), 0.25, "magenta")); // red lights
     }
   }
   return { solids, lights };

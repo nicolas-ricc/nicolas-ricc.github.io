@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { spotOf } from "../iso/spot-fixtures";
 import { depthAt } from "./depth-map";
 import type { Accent } from "../iso/accent";
 import { hullsIntersect, isBehind, overlaps, screenBounds, screenHull } from "../iso/depth";
@@ -298,14 +299,18 @@ describe("sea, beam and buoys", () => {
 
 describe("neons", () => {
   const dots = (xs: Accent[], color: string) => xs.filter((x): x is Extract<Accent, { kind: "dot" }> => x.kind === "dot" && x.color === color);
-  const sign = (xs: Accent[]) => xs.find((x) => x.kind === "poly")!;
+  // #403: the gallery lights are haloless spots (polys); the coast lights stay dots
+  const spots = (xs: Accent[], color: string) => xs.flatMap((x) => { const s = spotOf(x); return s && s.color === color ? [s] : []; });
+  const round = (v: { x: number; y: number; z: number }) => [v.x, v.y, v.z].map((c) => Math.round(c * 1e6) / 1e6);
+  const sign = (xs: Accent[]) => xs.find((x) => x.kind === "poly" && spotOf(x) === null)!;
 
   it("frame 0 = reduced motion state: two gallery lights, coast at full, cyan sign; only cyan/magenta", () => {
     const { w, a } = setup(), r = setup(true).a;
     const n0 = a.neon();
     expect(n0).toEqual(r.neon());
-    expect(dots(n0, "magenta").map((d) => d.at)).toEqual([w.sea!.neon.gallery[0], w.sea!.neon.gallery[1]]);
-    for (const d of dots(n0, "magenta")) expect(d.r).toBe(0.45);
+    expect(spots(n0, "magenta").map((d) => round(d.at))).toEqual([w.sea!.neon.gallery[0]!, w.sea!.neon.gallery[1]!].map(round));
+    for (const d of spots(n0, "magenta")) expect(d.r).toBeCloseTo(0.45, 9);
+    expect(dots(n0, "magenta")).toEqual([]);
     expect(dots(n0, "cyan").map((d) => d.r)).toEqual(w.sea!.neon.coast.map(() => 0.6));
     expect(sign(n0).color).toBe("cyan");
     for (const x of n0) expect(x.color).toMatch(/^(cyan|magenta)/);
@@ -314,7 +319,7 @@ describe("neons", () => {
   it("the gallery runs opposite to the beam, one place per 200 ms step", () => {
     const { w, a } = setup();
     expect(a.tick(NEON_STEP_MS).neon).toBe(true);
-    expect(dots(a.neon(), "magenta").map((d) => d.at)).toEqual([w.sea!.neon.gallery[0], w.sea!.neon.gallery[7]]);
+    expect(spots(a.neon(), "magenta").map((d) => round(d.at))).toEqual([w.sea!.neon.gallery[0]!, w.sea!.neon.gallery[7]!].map(round));
     expect(a.tick(NEON_STEP_MS / 2).neon).toBe(false); // within the same step: nothing to redraw
   });
 

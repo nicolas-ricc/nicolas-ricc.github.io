@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { hullsOverlap, isBehind, overlaps, screenBounds, screenHull } from "../iso/depth";
-import type { Vec3 } from "../iso/geometry";
 import { bounds, isFlat, type Bounds, type Solid } from "../iso/solids";
 import { DOCK } from "../map/geo";
 import { createRng } from "../map/seed";
@@ -19,7 +18,7 @@ const intersect = (a: Bounds, b: Bounds): boolean =>
   a.min.x < b.max.x - 1e-9 && b.min.x < a.max.x - 1e-9 && a.min.y < b.max.y - 1e-9 && b.min.y < a.max.y - 1e-9 && a.min.z < b.max.z - 1e-9 && b.min.z < a.max.z - 1e-9;
 const planCut = (a: Bounds, b: Bounds): boolean => a.min.x < b.max.x && b.min.x < a.max.x && a.min.y < b.max.y && b.min.y < a.max.y;
 
-const dock = () => { const out: Solid[] = [], accents: Accent[] = [], weld: Vec3[] = []; floatingDock(out, accents, weld); return { out, accents, weld }; };
+const dock = () => { const out: Solid[] = [], accents: Accent[] = []; floatingDock(out, accents); return { out, accents }; };
 const yard = (seed = 7) => { const out: Solid[] = [], accents: Accent[] = []; containerYard(out, accents, createRng(seed)); return { out, accents }; };
 const cranes = () => { const out: Solid[] = [], accents: Accent[] = []; quayCranes(out, accents); return { out, accents }; };
 const sheds = () => { const out: Solid[] = []; fittingOutSheds(out); return out; };
@@ -68,12 +67,8 @@ describe("floating dock", () => {
     expect(bounds(g[0]!).min.x).toBe(202); expect(bounds(g[0]!).max.x).toBe(204);
   });
 
-  it("four new weld spots on the hull sides, also in the shipyard scene", () => {
-    const { weld } = dock();
-    expect(weld).toHaveLength(4);
-    for (const w of weld) expect(w.z).toBe(5.3);
-    const all = shipyard(createRng(7)).weldSpots;
-    for (const w of weld) expect(all).toContainEqual(w);
+  it("no weld spots (#403: the sparks are gone): the dock adds only its two tower lamps as accents", () => {
+    expect(dock().accents).toHaveLength(2);
   });
 
   it("everything but the gangway floats, and nothing passes y 88.5", () => {
@@ -202,7 +197,7 @@ describe("fitting-out sheds", () => {
 describe("occlusion of the landmarks (#323)", () => {
   it("nothing new hides the gantry crane, the dry dock or the factory chimneys", () => {
     const fresh: Solid[] = [];
-    floatingDock(fresh, [], []); containerYard(fresh, [], createRng(7)); quayCranes(fresh, []); fittingOutSheds(fresh);
+    floatingDock(fresh, []); containerYard(fresh, [], createRng(7)); quayCranes(fresh, []); fittingOutSheds(fresh);
     const news = fresh.filter((s) => !isFlat(s)).map(bounds);
     const sy = shipyard(createRng(7)).solids.filter((s) => !isFlat(s));
     const gantry = sy.filter((s) => { const b = bounds(s); return b.min.x >= 150 && b.max.x <= 153 && b.max.z >= 24; });

@@ -5,6 +5,7 @@ import { isBox, type Plate, type PlateBox } from "../iso/plate";
 import { bounds, isFlat, tessellate, tessellateAll, type Bounds, type Solid } from "../iso/solids";
 import { BUFFER_H, BUFFER_X, CROSSING, FENCE_Y, GAUGE, HEAD, ISLAND, LADDER, RAIL_W, RAIL_Z, SIDE, SIGNALS, STATION, STOP_X, TRACK_X0, TRACKS_Y, TRAIN_CLEAR, PARKED, station, building, HALL, WING_N, WING_S, LINK, SERVICE, TOWER, PORTICO, ESPLANADE } from "./station";
 import { emu, trainLen } from "./train";
+import { spotOf } from "../iso/spot-fixtures";
 
 const build = (): { out: Solid[]; accents: Accent[] } => { const out: Solid[] = [], accents: Accent[] = []; station(out, accents); return { out, accents }; };
 const { out, accents } = build();
@@ -152,10 +153,13 @@ describe("station", () => {
         expect(ps.map((p) => [p.u0, p.u1, p.z0, p.z1]), `stripes ${wall}`).toEqual([0, 1, 2, 3].map((k) => [k / 4, (k + 1) / 4, 0, BUFFER_H]));
       }
     }
-    const reds = dots.filter((d) => d.color === "magenta" && d.r === 0.35);
+    // #403: the red lights are haloless spots, not dots
+    const reds = accents.flatMap((a) => { const s = spotOf(a); return s && s.color === "magenta" ? [s] : []; });
     expect(reds).toHaveLength(3);
-    expect(sorted(reds.map((d) => [d.at.x, d.at.y, d.at.z, d.r]))).toEqual(sorted(TRACKS_Y.map((y) => [160.75, y, 1.5, 0.35])));
+    expect(sorted(reds.map((d) => [d.at.x, d.at.y, d.at.z, d.r].map((v) => Math.round(v * 1e6) / 1e6)))).toEqual(sorted(TRACKS_Y.map((y) => [160.75, y, 1.5, 0.35])));
   });
+
+  it("no dot at all (#403): the station's functional lights are spots", () => expect(dots).toEqual([]));
 
   it("south fence at FENCE_Y, h ≤ 1, and nothing else south of track 3 except the level crossing", () => {
     expect(prisms.filter((p) => p.mat === "steel" && p.at.y === FENCE_Y).map(box)).toEqual([[110, 136, 0, 50, 0.3, 1]]);

@@ -1,4 +1,4 @@
-import type { Accent } from "../iso/accent";
+import { spot, type Accent } from "../iso/accent";
 import { v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { plateOutline, type Plate } from "../iso/plate";
 import type { Solid } from "../iso/solids";
@@ -116,7 +116,7 @@ function buffers(out: Solid[], accents: Accent[]): void {
     .map((mat, k) => ({ wall, shape: "rect", u0: k / 4, u1: (k + 1) / 4, z0: 0, z1: BUFFER_H, mat }));
   for (const axis of TRACKS_Y) {
     out.push(prism(BUFFER_X, axis - 1.5, 0, 1.5, 3, BUFFER_H, "steel", [...stripes(1), ...stripes(2)]));
-    accents.push({ kind: "dot", at: v3(BUFFER_X + 0.75, axis, 1.5), r: 0.35, color: "magenta" });
+    accents.push(spot(v3(BUFFER_X + 0.75, axis, 1.5), 0.35, "magenta"));
   }
 }
 

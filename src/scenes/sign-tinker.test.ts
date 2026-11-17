@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { spotOf } from "../iso/spot-fixtures";
 import type { Accent } from "../iso/accent";
 import { isBehind } from "../iso/depth";
 import { dot, v3, type Vec3 } from "../iso/geometry";
@@ -23,8 +24,11 @@ const sub = (a: Vec3, b: Vec3) => v3(a.x - b.x, a.y - b.y, a.z - b.z);
 const tubeQuads = (g: SignGlyph) => contourQuads(g.layout, 0.45).map((q) => q.map((c) => toWorld(g.plane, c.x, c.y)));
 const center = (g: SignGlyph, plane = g.plane) => { const b = g.layout.box; return toWorld(plane, (b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2); };
 const overlap = (A: Bounds, B: Bounds) => (["x", "y", "z"] as const).every((k) => Math.min(A.max[k], B.max[k]) - Math.max(A.min[k], B.min[k]) > 1e-6);
-const polys = (a: Accent[]) => a.flatMap((x) => (x.kind === "poly" ? [x] : []));
+/** The polys that are not bulbs: fills and tubes. */
+const polys = (a: Accent[]) => a.flatMap((x) => (x.kind === "poly" && spotOf(x) === null ? [x] : []));
 const dots = (a: Accent[]) => a.flatMap((x) => (x.kind === "dot" ? [x] : []));
+/** The marquee bulbs: haloless spots since #403. */
+const bulbsOf = (a: Accent[]) => a.flatMap((x) => { const s = spotOf(x); return s ? [s] : []; });
 const steelPosts = (out: Solid[]) => out.flatMap((s) => (s.kind === "prism" && s.mat === "steel" && Math.abs(s.w - 0.3) < 1e-9 && Math.abs(s.d - 0.3) < 1e-9 ? [s] : []));
 const beams = (out: Solid[], w: number) => out.flatMap((s) => (s.kind === "beam" && s.mat === "steel" && Math.abs(s.w - w) < 1e-9 ? [s] : []));
 const foot = (s: { at: Vec3; w: number; d: number }) => [v3(s.at.x, s.at.y, 0), v3(s.at.x + s.w, s.at.y, 0), v3(s.at.x + s.w, s.at.y + s.d, 0), v3(s.at.x, s.at.y + s.d, 0)];
@@ -89,17 +93,19 @@ describe("tinker sign letters (#379)", () => {
     mods.forEach((m, i) => {
       const g = spec.glyphs[i]!, fill = (alpha: number) => g.quads.map((q) => ({ kind: "poly", pts: q, color: "amber", alpha }));
       const tube = tubeQuads(g).flatMap((q) => neon(q, "amber", 0.9));
-      const own = [...m.accents, ...(m.char === "L" ? lights.filter((a) => a.kind === "poly") : [])];
+      const own = [...m.accents, ...(m.char === "L" ? polys(lights) : [])];
       switch (TINKER_LETTERS[i]!.technique) {
         case "cutout": expect(own).toEqual(fill(0.9)); break;
         case "neon": expect(own).toEqual(tube); break;
         case "marquee": {
           expect(polys(own)).toEqual(fill(0.7));
-          const bulbs = [...dots(own), ...(i === 8 ? dots(lights) : [])];
+          expect(dots(own)).toEqual([]);
+          const bulbs = [...bulbsOf(own), ...(i === 8 ? bulbsOf(lights) : [])];
           expect(bulbs.length).toBeGreaterThanOrEqual(4);
           expect(new Set(bulbs.map((d) => JSON.stringify(d.at))).size, "no two bulbs on one spot").toBe(bulbs.length);
           for (const d of bulbs) {
-            expect(d).toMatchObject({ color: "amberMid", r: 0.3 });
+            expect(d.color).toBe("amberMid");
+            expect(d.r).toBeCloseTo(0.3, 9);
             expect(Math.abs(dot(sub(d.at, g.plane.origin), N))).toBeLessThan(0.01);
           }
           break;
@@ -126,8 +132,11 @@ describe("tinker sign letters (#379)", () => {
   it("the moving lights: the whole L tube, then one marquee bulb of the last O", () => {
     const g = TINKER_SIGN.glyphs[6]!, lights = tinkerLights(TINKER_SITE);
     expect(polys(lights)).toEqual(tubeQuads(g).flatMap((q) => neon(q, "amber", 0.9)));
-    expect(dots(lights)).toHaveLength(1);
-    expect(lights.at(-1)).toMatchObject({ kind: "dot", color: "amberMid", r: 0.3 });
+    expect(dots(lights)).toEqual([]);
+    expect(bulbsOf(lights)).toHaveLength(1);
+    const bulb = spotOf(lights.at(-1)!)!;
+    expect(bulb.color).toBe("amberMid");
+    expect(bulb.r).toBeCloseTo(0.3, 9);
   });
 
   it.each(AT)("glyph planes: turned ≤ 3° within the word plane, moved ≤ 0.5 in z and ≤ 0.4 along n (%s)", (_n, at) => {
@@ -302,7 +311,7 @@ describe("tinker animator (#379)", () => {
     const a = tinkerAnimator({ reducedMotion: false }), n = polys(tinkerLights(TINKER_SITE)).length;
     let bulbOff = false, lLow = false, both = false;
     run(a, 20_000, (t) => {
-      const acc = layer(a), dark = dots(acc).length === 0, tube = polys(acc).slice(0, n).find((p) => p.color === "amber");
+      const acc = layer(a), dark = bulbsOf(acc).length === 0, tube = polys(acc).slice(0, n).find((p) => p.color === "amber");
       const low = tube !== undefined && Math.abs((tube.alpha ?? 1) - 0.3) < 1e-9;
       if (t <= 5000) { bulbOff ||= dark; lLow ||= low; }
       both ||= dark && low;

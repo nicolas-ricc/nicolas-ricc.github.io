@@ -1,5 +1,5 @@
 import type { Accent } from "../iso/accent";
-import { v3, type Vec2, type Vec3 } from "../iso/geometry";
+import { v3, type Vec2 } from "../iso/geometry";
 import { bounds, type Solid } from "../iso/solids";
 import { BOTTOM, DOCK, QUAY_W, QUAY_X, WORLD, ZONE_SPLIT_Y, eastBank, northCoastY } from "../map/geo";
 import { createRng, type Rng } from "../map/seed";
@@ -30,7 +30,6 @@ export interface Scene {
   accents: Accent[];
   trolley: Solid & { kind: "prism" };
   trolleyRange: [number, number];
-  weldSpots: Vec3[];
   fill: Fill;           // yard, dock and service pieces (same objects as in `solids`; the yard rails are in `ground`)
 }
 
@@ -75,7 +74,7 @@ function street(out: Solid[]): void {
   out.push(prism(STREET_X + 5, 88, -0.4, 3, 7, 2.5, "rust"));     // truck going down the street
 }
 
-function slipways(out: Solid[], weldSpots: Vec3[]): void {
+function slipways(out: Solid[]): void {
   const w = QUAY_X - SLIP_X, deckZ = 1.5;
   ROW_Y.forEach((y, i) => {
     out.push({ kind: "ramp", at: v3(SLIP_X, y, 0), w, d: ROW_H, h: deckZ, mat: "concrete", dir: "e" });
@@ -87,8 +86,6 @@ function slipways(out: Solid[], weldSpots: Vec3[]): void {
         const t = (x - SLIP_X - 12) / 68;
         const half = t > 0.75 ? Math.max(1, 5 * (1 - t) / 0.25) : 5;
         out.push(prism(x, cy - half, deckZ, 0.6, half * 2, 4, "rust"));
-        weldSpots.push(v3(x + 0.3, cy - half, deckZ + 4));
-        weldSpots.push(v3(x + 0.3, cy + half, deckZ + 4));
       }
     } else {
       out.push({ kind: "hull", at: v3(SLIP_X + 8, cy, deckZ), len: 74, beam: 10, h: 4, mat: "hull" });
@@ -205,13 +202,12 @@ export function shipyard(rng: Rng, occluders: Solid[] = []): Scene {
   const ground: Solid[] = [];
   const solids: Solid[] = [];
   const accents: Accent[] = [];
-  const weldSpots: Vec3[] = [];
   quay(solids, accents);
   materialYard(solids, rng);
   dryDock(solids, ground);
   halls(solids);
   street(solids);
-  slipways(solids, weldSpots);
+  slipways(solids);
   const g = gantry(solids);
   workshops(solids);
   station(solids, accents);
@@ -222,9 +218,9 @@ export function shipyard(rng: Rng, occluders: Solid[] = []): Scene {
   jungle(solids, rng);
   lamps(solids, accents);
   seamFence(solids, accents);
-  shipyardEast(solids, accents, weldSpots, rng);
+  shipyardEast(solids, accents, rng);
   ground.push(...solids.filter((s) => s.kind === "strip"));
   const raised = solids.filter((s) => s.kind !== "strip");
   accents.push(...portfolioWindows(raised, createRng(rng.int(0, SEED_MAX)), occluders));
-  return { ground, solids: raised, accents, trolley: g.trolley, trolleyRange: g.range, weldSpots, fill };
+  return { ground, solids: raised, accents, trolley: g.trolley, trolleyRange: g.range, fill };
 }
