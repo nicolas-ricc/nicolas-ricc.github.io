@@ -1,15 +1,17 @@
 import { Application, Rectangle } from "pixi.js";
+import type { RenderItem } from "../iso/render-list";
 import { ISO_COLORS } from "../map/palette-iso";
 import type { WorldScene } from "../scenes/world";
 import { assembleWorld, tag, type ZonedAnimator } from "../world/assemble";
 import { afterFirstRender } from "../world/bloom";
 import { attachBloom, type BloomProbe } from "../world/bloom-runtime";
-import { type Box, boxFrame, type Fit, fitTransform } from "../world/frame";
+import { type Box, type Fit, fitTransform } from "../world/frame";
 import { type BloomMode, buildStage, type Stage, type StageLayer } from "../world/stage";
 import { runBoot } from "./boot";
 import { fixedScaleFit, nextCoverScale } from "./cover-scale";
 import { contextAnimators, contextScene, cropAnimators, cropScene, pieceScene, readout, solidsBox } from "./crop";
 import { EXHIBITS, type Exhibit, GROUPS, pickExhibit, stepExhibit } from "./exhibits";
+import { contentFrame } from "./frame";
 import { bloomFromSearch, nextBloomMode, speedFromSearch } from "./page";
 import { buildIndex, markCurrent, mountStorybook, renderReadout } from "./storybook-ui";
 
@@ -21,14 +23,19 @@ import { buildIndex, markCurrent, mountStorybook, renderReadout } from "./storyb
  * scales the clock up to 100 (?speed=0 freezes it), as in page.ts. g, h and a
  * hide or show ground, shadows and accents (with the bloom) and are remembered
  * across exhibits. c cycles the exhibit scale: real, 1.17 and 0.83, the cover scales
- * of a laptop and a phone. In development the page publishes `window.__lab` (exhibit
- * id, cover scale and its setter, bloom mode, last fit, host size and `pixels`, the
- * stage's RGBA at resolution 2 with filters) for `npm run legibility`.
+ * of a laptop and a phone. The frame is the projected bounds of what is drawn (contentFrame),
+ * sampling the animation 16 times over 8 s, which moves the shared clock 8 s on each exhibit
+ * change (accepted); it is computed once per show and resize, c and the cover scale reuse it.
+ * In development the page publishes `window.__lab` (exhibit id, cover scale and its setter,
+ * bloom mode, last fit, host size, `tick(dtMs)` to advance the stage and render, for
+ * time-lapse checks in headless, and `pixels`, the stage's RGBA at resolution 2 with
+ * filters) for `npm run legibility`.
  */
 /** The DEV page hook `npm run legibility` drives: `pixels` takes host CSS px and returns base64 RGBA at resolution 2. */
 export interface LabHook {
   readonly exhibitId: string | null; readonly coverScale: number | null; setCoverScale(s: number | null): void;
   readonly bloom: BloomMode | null; fit(): Fit | null; hostSize(): { w: number; h: number };
+  tick(dtMs: number): void;
   pixels(x: number, y: number, w: number, h: number): Promise<string>;
 }
 declare global {
@@ -53,13 +60,13 @@ mountStorybook(document, ({ host, nav, panel }) => {
     app.ticker.maxFPS = 30;
 
     let stage: Stage | null = null, current: Exhibit | null = null, bloom: BloomProbe | null = null;
-    let frame: { box: Box; h?: number } | null = null;
+    let content: RenderItem[] | null = null;
     const layers: Record<StageLayer, boolean> = { ground: true, shadow: true, accents: true };
     let coverScale: number | null = null, lastFit: Fit | null = null;
     const fit = (): void => {
-      if (!stage || !frame) return;
+      if (!stage || !content) return;
       const w = host.clientWidth, h = host.clientHeight;
-      const real = fitTransform(boxFrame(frame.box, frame.h), w, h);
+      const real = fitTransform(content, w, h);
       const f = coverScale === null ? real : fixedScaleFit(real, w, h, coverScale);
       stage.container.position.set(f.x, f.y);
       stage.container.scale.set(f.scale);
@@ -69,22 +76,22 @@ mountStorybook(document, ({ host, nav, panel }) => {
       const mode = stage?.bloom ?? "off";
       stage?.destroy();
       const t0 = performance.now();
-      let src: [WorldScene, ZonedAnimator[]];
+      let src: [WorldScene, ZonedAnimator[]], opts: { box: Box; h?: number; clip?: Box };
       if (e.kind === "region") {
-        // the same box for both: the crop memo is keyed by Box identity
         src = [cropScene(scene, e.box), cropAnimators(animators, e.box)];
-        stage = buildStage(...src, { clip: e.box });
-        frame = { box: e.box, h: e.h };
+        opts = { box: e.box, h: e.h, clip: e.box };
       } else if (e.kind === "context") {
         src = [contextScene(scene, e), contextAnimators(animators, e, reducedMotion)];
-        stage = buildStage(...src, { clip: e.box });
-        frame = { box: e.box, h: e.h };
+        opts = { box: e.box, h: e.h, clip: e.box };
       } else {
         const piece = pieceScene(e.build, e.pad);
         src = [piece, e.animate ? [tag(e.animate({ reducedMotion }), e.zone)] : []];
-        stage = buildStage(...src);
-        frame = solidsBox([...piece.ground, ...piece.solids]);
+        opts = solidsBox([...piece.ground, ...piece.solids]);
       }
+      // before buildStage: it draws each animated layer once, so it starts from the sampled state
+      content = contentFrame(src[0], src[1], opts);
+      // the same box for both: the crop memo is keyed by Box identity
+      stage = buildStage(...src, opts.clip ? { clip: opts.clip } : {});
       app.stage.addChild(stage.container);
       for (const l of Object.keys(layers) as StageLayer[]) stage.setLayer(l, layers[l]);
       if (log) console.info(`[storybook] ${e.id}: first draw ${(performance.now() - t0).toFixed(1)} ms, ${stage.staticCount} static polygons`);
@@ -107,6 +114,7 @@ mountStorybook(document, ({ host, nav, panel }) => {
         setCoverScale(s) { coverScale = s; fit(); },
         get bloom() { return stage?.bloom ?? null; },
         fit: () => lastFit,
+        tick(dtMs) { stage?.tick(dtMs); app.render(); },
         hostSize: () => ({ w: host.clientWidth, h: host.clientHeight }),
         async pixels(x, y, w, h) {
           const { pixels } = app.renderer.extract.pixels({ target: app.stage, frame: new Rectangle(x, y, w, h), resolution: 2, clearColor: ISO_COLORS.sky, antialias: true });
