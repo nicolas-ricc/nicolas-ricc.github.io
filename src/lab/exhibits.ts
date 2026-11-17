@@ -79,7 +79,7 @@ const vessel = (kind: ShipKind) => (out: Solid[], accents: Accent[]): void => {
 };
 
 export const EXHIBITS: readonly Exhibit[] = [
-  // {2, 41, 98, 76}: x1 = east edge of the stair tower (STAIR_TOWER.x1); plinth and hopper inside; street lamps and trucks outside except the lamp at (5, 76), which touches the south edge (y1 76); chimneys (y ≤ 36.05) and tank (y ≤ 36.8, with the stairs) outside to the north; h 26: apex of the malting kiln
+  // {2, 41, 98, 76}: x1 = east edge of the stair tower (STAIR_TOWER.x1); plinth and hopper inside; street lamps and trucks outside, the lamp at (5, 76) included: it touches the south edge (y1 76) and the strict crop leaves it out; chimneys (y ≤ 36.05) and tank (y ≤ 36.8, with the stairs) outside to the north; h 26: apex of the malting kiln
   { id: "planta", title: "Boiler house and malting", zone: "portfolio", group: "factory", kind: "region",
     box: { x0: PLANT.x - M, y0: PLANT.y - M, x1: STAIR_TOWER.x1, y1: PLANT.y + PLANT.d + 2 }, h: 26 },
   // the tank (WATER_TOWER, north of the malting) is outside the plant box: alone, you can see legs, bracing, stairs and walkway

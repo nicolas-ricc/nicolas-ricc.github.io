@@ -125,6 +125,10 @@ origin, for relocatable pieces such as ships and the tower crane; the station
 is `#estacion` and `#paso-a-nivel`, regions with the animated train, and `#tren`, the
 piece whose lights flip ends every 4 s), with its
 animation and a readout panel (solids, ground, faces, accents, box, materials).
+A region or context exhibit crops strictly (a solid that only touches the
+edge of the box stays out): strips and long flat prisms (fences, quay edges,
+rails) are cut to the box, terrain triangles are clipped to it and the shadows
+are clipped to it too; piece exhibits and the site are not clipped.
 The URL hash picks the exhibit (`#faro`); arrows (`←`/`→`, `↑`/`↓`)
 or `j`/`k` move to the next or the previous one; `g`, `h` and `a` hide or
 show ground, shadows and accents; `6` rotates the bloom; `c` cycles the exhibit

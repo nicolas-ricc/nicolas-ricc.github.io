@@ -10,7 +10,10 @@ vi.mock("pixi.js", async (importOriginal) => {
 import type { Container, Graphics } from "pixi.js";
 import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
+import { project } from "../iso/project";
+import type { Solid } from "../iso/solids";
 import type { AnimLayer } from "../scenes/animator";
+import type { WorldScene } from "../scenes/world";
 import { assembleWorld, type ZonedAnimator } from "./assemble";
 import { HALO_BASE, HALO_FALLBACK } from "./frame";
 import { BLOOM_FILTER, buildStage, nextHalo } from "./stage";
@@ -258,6 +261,50 @@ describe("veil of the animated lights", () => {
       s.setFocus(f); s.tick(10_000);
       const statics = accentSlotOf(s.container).children.slice(0, 3);
       expect(statics.map((g) => g.alpha)).toEqual(WORLD_ZONES.map((z) => focusAlphas(f)[z].accents));
+    }
+  });
+});
+
+describe("clip (#399)", () => {
+  const box = { x0: 0, y0: 0, x1: 10, y1: 10 };
+  const tall = (x: number, y: number): Solid => ({ kind: "prism", at: v3(x, y, 0), w: 1, d: 1, h: 10, mat: "concrete" });
+  const scene = {
+    terrain: { ground: [], bleed: [], water: [], foam: { kind: "ground", mat: "foam", tris: [] } },
+    ground: [], solids: [tall(8, 4)], accents: [],
+    landmarks: { portfolio: v3(0, 0, 0), cv: v3(0, 0, 0), blog: v3(0, 0, 0) },
+    shipyard: null, city: null, factory: null, sea: null, hinterland: null, tech: null, fair: null,
+  } as unknown as WorldScene;
+  const anim = (): ZonedAnimator => ({ zone: "portfolio", ids: ["toy"], layer: () => ({ kind: "solid", solids: [tall(7, 7)] }), tick: () => new Set(["toy"]) });
+  // children 3 and 4 of the stage: the full band and the core, each a container with an AlphaFilter (static Graphics first, then one per animated solid layer)
+  const shadowPoints = (c: Container): number[][] => [3, 4].flatMap((i) => (c.children[i] as Container).children.flatMap((g) =>
+    (g as Graphics).context.instructions.flatMap((ins) => (ins.data as { path: { instructions: { data: unknown[] }[] } }).path.instructions.map((p) => p.data[0] as number[]))));
+  const inRhombus = (pts: number[]): boolean => {
+    const q = [[box.x0, box.y0], [box.x1, box.y0], [box.x1, box.y1], [box.x0, box.y1]].map(([x, y]) => project(v3(x!, y!, 0)));
+    for (let i = 0; i < pts.length; i += 2) {
+      let pos = false, neg = false;
+      for (let k = 0; k < 4; k++) {
+        const a = q[k]!, b = q[(k + 1) % 4]!;
+        const c = (b.x - a.x) * (pts[i + 1]! - a.y) - (b.y - a.y) * (pts[i]! - a.x);
+        if (c > 1e-9) pos = true;
+        if (c < -1e-9) neg = true;
+      }
+      if (pos && neg) return false;
+    }
+    return true;
+  };
+
+  it("without clip the static and animated shadows leave the box (the control)", () => {
+    const polys = shadowPoints(buildStage(scene, [anim()]).container);
+    expect(polys).toHaveLength(4);
+    expect(polys.every(inRhombus)).toBe(false);
+  });
+  it("with clip the static and animated shadows fall inside the projected rhombus of the box, also after a tick", () => {
+    const s = buildStage(scene, [anim()], { clip: box });
+    for (let k = 0; k < 2; k++) {
+      const polys = shadowPoints(s.container);
+      expect(polys).toHaveLength(4);
+      for (const p of polys) expect(inRhombus(p), JSON.stringify(p)).toBe(true);
+      s.tick(16);
     }
   });
 });

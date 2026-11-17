@@ -5,7 +5,7 @@ import { ISO_COLORS } from "../map/palette-iso";
 import type { AnimLayer } from "../scenes/animator";
 import type { WorldScene } from "../scenes/world";
 import type { ZonedAnimator } from "./assemble";
-import { HALO_BASE, HALO_FALLBACK, drawAccents, drawLayer, type HaloStyle } from "./frame";
+import { type Box, HALO_BASE, HALO_FALLBACK, drawAccents, drawLayer, type HaloStyle } from "./frame";
 import { WORLD_ZONES, accentsByZone, focusAlphas, veilPolygons } from "./veil";
 
 export type BloomMode = "off" | "on" | "fallback";
@@ -47,8 +47,9 @@ interface AccentGraphics { g: Graphics; zone: WorldZone; base: number; draw: () 
  * The bloom is lazy: it starts at `off`, without a `bloomSlot`; the first `setBloom("on")`
  * builds it (mirrors of the accents with a filter) and inserts it right below `accentSlot`.
  * A `bloomSlot` built after `setLayer("accents", false)` is born hidden.
+ * `opts.clip` cuts the shadow hulls (static and animated solids) to that box.
  */
-export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage {
+export function buildStage(scene: WorldScene, animators: ZonedAnimator[], opts: { clip?: Box } = {}): Stage {
   const container = new Container();
   let bloom: BloomMode = "off", halo: HaloStyle = HALO_BASE, bloomSlot: Container | null = null, accentsVisible = true, destroyed = false;
   const gBleed = new Graphics(), gGround = new Graphics(), gShadow = new Graphics(), gCore = new Graphics(), gSolid = new Graphics();
@@ -63,7 +64,7 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage
 
   const { terrain } = scene;
   drawLayer(gBleed, buildRenderList(terrain.bleed), "ground");
-  const staticItems = buildRenderList([...terrain.ground, ...scene.ground, ...scene.solids]);
+  const staticItems = buildRenderList([...terrain.ground, ...scene.ground, ...scene.solids], undefined, opts.clip);
   drawLayer(gGround, staticItems, "ground");
   drawLayer(gShadow, staticItems, "shadow");
   drawLayer(gCore, staticItems, "shadowCore");
@@ -109,7 +110,7 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[]): Stage
     } else if (kind === "solid") {
       const gs = new Graphics(), gc = new Graphics(), g = new Graphics();
       shadowSlot.addChild(gs); coreSlot.addChild(gc); solidSlot.addChild(g);
-      redraw.set(id, () => { const l = a.layer(id) as AnimLayer & { kind: "solid" }; const items = buildRenderList(l.solids, l.heading); drawLayer(gs, items, "shadow"); drawLayer(gc, items, "shadowCore"); drawLayer(g, items, "solid"); const al = l.alpha ?? 1; gs.alpha = gc.alpha = g.alpha = al; });
+      redraw.set(id, () => { const l = a.layer(id) as AnimLayer & { kind: "solid" }; const items = buildRenderList(l.solids, l.heading, opts.clip); drawLayer(gs, items, "shadow"); drawLayer(gc, items, "shadowCore"); drawLayer(g, items, "solid"); const al = l.alpha ?? 1; gs.alpha = gc.alpha = g.alpha = al; });
     } else {
       // one Graphics per zone: each light is veiled with the zone it is in, unless the layer declares its own (ships)
       const declared = (a.layer(id) as AnimLayer & { kind: "accent" }).zone;

@@ -1,5 +1,6 @@
 import type { Accent } from "../iso/accent";
-import { v3, type Vec3 } from "../iso/geometry";
+import { v3, type Vec2, type Vec3 } from "../iso/geometry";
+import { clipPolygon, clipSegment, lerp2, lerp3 } from "../iso/clip";
 import { shadowPolygon } from "../iso/light";
 import { bounds, type Bounds, type Solid, type Tri, tessellate } from "../iso/solids";
 import type { AccentColor, Material } from "../map/palette-iso";
@@ -9,42 +10,100 @@ import { tag, type ZonedAnimator } from "../world/assemble";
 import type { Box } from "../world/frame";
 import type { ContextExhibit } from "./exhibits";
 
-/** Overlap in x and y, edges included; z does not count. */
+/** Overlap in x and y, strict: a bounds that only touches the box edge does not overlap; z does not count. */
 export function overlaps(b: Bounds, box: Box): boolean {
-  return b.min.x <= box.x1 && b.max.x >= box.x0 && b.min.y <= box.y1 && b.max.y >= box.y0;
+  return b.min.x < box.x1 && b.max.x > box.x0 && b.min.y < box.y1 && b.max.y > box.y0;
 }
 
-const inside = (p: Vec3, box: Box): boolean => p.x >= box.x0 && p.x <= box.x1 && p.y >= box.y0 && p.y <= box.y1;
+const inside = (p: Vec2, box: Box): boolean => p.x >= box.x0 && p.x <= box.x1 && p.y >= box.y0 && p.y <= box.y1;
 
-// no intermediate arrays: runs every tick over the water bands of the whole world
+// strict overlap of the triangle's AABB; no intermediate arrays: runs every tick over the water bands of the whole world
 function triOverlaps({ pts: [a, b, c] }: Tri, box: Box): boolean {
-  return Math.min(a.x, b.x, c.x) <= box.x1 && Math.max(a.x, b.x, c.x) >= box.x0 && Math.min(a.y, b.y, c.y) <= box.y1 && Math.max(a.y, b.y, c.y) >= box.y0;
+  return Math.min(a.x, b.x, c.x) < box.x1 && Math.max(a.x, b.x, c.x) > box.x0 && Math.min(a.y, b.y, c.y) < box.y1 && Math.max(a.y, b.y, c.y) > box.y0;
+}
+
+/** A long, thin, plain prism (fence, quay edge, plinth): the only prisms the crop cuts; the rest stay whole. */
+export function isLongPrism(s: Solid): boolean {
+  if (s.kind !== "prism" || (s.roof !== undefined && s.roof !== "flat") || s.facade || s.plates) return false;
+  const long = Math.max(s.w, s.d), short = Math.min(s.w, s.d);
+  return long >= 30 && long >= 3 * short;
+}
+
+function cropStrip(s: Solid & { kind: "strip" }, box: Box): Solid[] {
+  if (s.path.every((p) => inside(p, box))) return [s];
+  const out: Solid[] = [];
+  let run: Vec2[] = [];
+  let open = false; // the last segment ended exactly at its end point (t1 === 1)
+  const flush = (): void => {
+    if (run.length >= 2) out.push({ ...s, path: run });
+    run = [];
+  };
+  for (let i = 0; i + 1 < s.path.length; i++) {
+    const a = s.path[i]!, b = s.path[i + 1]!;
+    const c = clipSegment(a, b, box);
+    if (!c) { flush(); open = false; continue; }
+    if (!open || c.t0 !== 0) { flush(); run.push(c.t0 === 0 ? a : lerp2(a, b, c.t0)); }
+    run.push(c.t1 === 1 ? b : lerp2(a, b, c.t1));
+    open = c.t1 === 1;
+  }
+  flush();
+  return out;
+}
+
+function cropLongPrism(s: Solid & { kind: "prism" }, box: Box): Solid[] {
+  const nx0 = Math.max(s.at.x, box.x0), nx1 = Math.min(s.at.x + s.w, box.x1);
+  const ny0 = Math.max(s.at.y, box.y0), ny1 = Math.min(s.at.y + s.d, box.y1);
+  const wholeX = nx0 === s.at.x && nx1 === s.at.x + s.w, wholeY = ny0 === s.at.y && ny1 === s.at.y + s.d;
+  if (wholeX && wholeY) return [s];
+  // an axis the box does not cut keeps its exact size (no float drift from subtracting)
+  return [{ ...s, at: v3(nx0, ny0, s.at.z), w: wholeX ? s.w : nx1 - nx0, d: wholeY ? s.d : ny1 - ny0 }];
+}
+
+function cropGround(s: Solid & { kind: "ground" }, box: Box): Solid[] {
+  let tris: Tri[] | undefined; // built lazily: stays undefined while every triangle passes whole
+  for (let i = 0; i < s.tris.length; i++) {
+    const t = s.tris[i]!;
+    const [a, b, c] = t.pts;
+    if (inside(a, box) && inside(b, box) && inside(c, box)) { tris?.push(t); continue; }
+    tris ??= s.tris.slice(0, i);
+    if (!triOverlaps(t, box)) continue;
+    const poly = clipPolygon(t.pts, box, lerp3);
+    for (let j = 1; j + 1 < poly.length; j++) tris.push({ ...t, pts: [poly[0]!, poly[j]!, poly[j + 1]!] });
+  }
+  // an empty mesh passes by identity, as before #399
+  if (!tris) return [s];
+  return tris.length ? [{ ...s, tris }] : [];
 }
 
 /**
- * A solid inside the box: whole if it overlaps, `null` if not. The `ground`
- * meshes (terrain, water, foam) cover the whole world: they are filtered by
- * triangle, without cutting any.
+ * A solid cut to the box; an empty array if nothing of it is inside. Strips are
+ * cut on their centerline (a strip that leaves and re-enters gives several), long
+ * prisms are fitted to the box, `ground` meshes are cut triangle by triangle.
+ * Everything else (houses, ships, cylinders...) comes whole if it overlaps, and
+ * what is already inside passes by identity.
  */
-export function cropSolid(s: Solid, box: Box): Solid | null {
-  if (s.kind !== "ground") return overlaps(bounds(s), box) ? s : null;
-  const tris = s.tris.filter((t) => triOverlaps(t, box));
-  return tris.length === s.tris.length ? s : tris.length ? { ...s, tris } : null;
+export function cropSolid(s: Solid, box: Box): Solid[] {
+  if (s.kind === "ground") return cropGround(s, box); // before `bounds`: it tessellates every triangle, and this runs every tick over the water bands
+  if (!overlaps(bounds(s), box)) return [];
+  if (s.kind === "strip") return cropStrip(s, box);
+  if (s.kind === "prism" && isLongPrism(s)) return cropLongPrism(s, box);
+  return [s];
 }
 
-// the stage recognizes the claimed water by identity: terrain and claims must crop to the same object
-const memo = new WeakMap<Box, WeakMap<Solid, Solid | null>>();
+// the stage recognizes the claimed water by identity: terrain and claims must crop to the same objects
+const memo = new WeakMap<Box, WeakMap<Solid, Solid[]>>();
 
 /** `cropSolid` memoized by (box, solid), for the terrain and the claims. Animated layers are not: they mutate their solids. The box is compared by identity: `cropScene` and `cropAnimators` must receive the same object. */
-export function cropShared(s: Solid, box: Box): Solid | null {
+export function cropShared(s: Solid, box: Box): Solid[] {
   let m = memo.get(box);
   if (!m) memo.set(box, (m = new WeakMap()));
-  if (!m.has(s)) m.set(s, cropSolid(s, box));
-  return m.get(s)!;
+  let r = m.get(s);
+  if (!r) m.set(s, (r = cropSolid(s, box)));
+  return r;
 }
 
 export function cropSolids(solids: readonly Solid[], box: Box, crop = cropSolid): Solid[] {
-  return solids.flatMap((s) => crop(s, box) ?? []);
+  return solids.flatMap((s) => crop(s, box));
 }
 
 export function cropAccents(accents: readonly Accent[], box: Box): Accent[] {
@@ -60,7 +119,7 @@ export function cropScene(scene: WorldScene, box: Box): WorldScene {
       ground: cropSolids(terrain.ground, box, cropShared),
       bleed: cropSolids(terrain.bleed, box, cropShared),
       water: cropSolids(terrain.water, box, cropShared),
-      foam: cropShared(terrain.foam, box) ?? { kind: "ground", mat: "foam", tris: [] },
+      foam: cropShared(terrain.foam, box)[0] ?? { kind: "ground", mat: "foam", tris: [] },
     },
     ground: cropSolids(scene.ground, box),
     solids: cropSolids(scene.solids, box),
