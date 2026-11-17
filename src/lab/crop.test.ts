@@ -116,6 +116,11 @@ describe("cropSolid: terrain triangles cut to the box (#399)", () => {
     expect(mixed.tris[0]).toBe(whole);
     expect(mixed.tris).toContain(onEdge);
   });
+  it("an empty mesh passes by identity, as before", () => {
+    const empty = mesh([]);
+    expect(cropSolid(empty, box)).toEqual([empty]);
+    expect(cropSolid(empty, box)[0]).toBe(empty);
+  });
   it("a mesh whose only triangle touches the edge from outside is dropped", () => {
     expect(cropSolid(mesh([{ pts: [v3(10, 2, 0), v3(14, 2, 0), v3(10, 6, 0)] }]), box)).toEqual([]);
   });

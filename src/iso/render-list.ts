@@ -1,7 +1,7 @@
 import { ISO_COLORS, stepTone, toneColor } from "../map/palette-iso";
 import { clipPolygon, lerp2, type ClipRect } from "./clip";
 import { sortByDepth } from "./depth";
-import { v3, type Vec3 } from "./geometry";
+import { v3, type Vec2, type Vec3 } from "./geometry";
 import { SHADOW_CORE_H, shadowPolygon } from "./light";
 import { project } from "./project";
 import { isFlat, tessellate, type Face, type Solid } from "./solids";
@@ -21,6 +21,12 @@ const flatten = (pts: Vec3[]): number[] => pts.flatMap((p) => { const s = projec
 const faceItem = (layer: Layer, f: Face): RenderItem => ({ layer, pts: flatten(f.pts), color: toneColor(f.mat, stepTone(f.tone, f.toneOffset)) });
 const shadowItem = (layer: Layer, poly: { x: number; y: number }[]): RenderItem => ({ layer, pts: flatten(poly.map((p) => v3(p.x, p.y, 0))), color: ISO_COLORS.shadow });
 
+function emitShadow(out: RenderItem[], layer: Layer, hull: Vec2[] | null, clip?: ClipRect): void {
+  if (!hull) return;
+  const poly = clip ? clipPolygon(hull, clip, lerp2) : hull;
+  if (!clip || poly.length >= 3) out.push(shadowItem(layer, poly));
+}
+
 /**
  * With `clip` (a rectangle in world coordinates), each shadow hull is cut to it
  * before projecting; the hull is convex, so the result is the exact
@@ -39,11 +45,8 @@ export function buildRenderList(solids: Solid[], heading?: number, clip?: ClipRe
   }
   for (const s of raised) {
     const full = shadowPolygon(s), core = shadowPolygon(s, SHADOW_CORE_H);
-    for (const [layer, hull] of [["shadow", full], ["shadowCore", core]] as const) {
-      if (!hull) continue;
-      const poly = clip ? clipPolygon(hull, clip, lerp2) : hull;
-      if (poly.length >= 3) shadow.push(shadowItem(layer, poly));
-    }
+    emitShadow(shadow, "shadow", full, clip);
+    emitShadow(shadow, "shadowCore", core, clip);
   }
   for (const s of sortByDepth(raised, heading)) for (const f of tessellate(s)) solid.push(faceItem("solid", f));
   return [...ground, ...shadow, ...solid];

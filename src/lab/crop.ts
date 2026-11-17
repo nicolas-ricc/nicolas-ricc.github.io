@@ -23,7 +23,7 @@ function triOverlaps({ pts: [a, b, c] }: Tri, box: Box): boolean {
 }
 
 /** A long, thin, plain prism (fence, quay edge, plinth): the only prisms the crop cuts; the rest stay whole. */
-export function isLongPrism(s: Solid): s is Solid & { kind: "prism" } {
+export function isLongPrism(s: Solid): boolean {
   if (s.kind !== "prism" || (s.roof !== undefined && s.roof !== "flat") || s.facade || s.plates) return false;
   const long = Math.max(s.w, s.d), short = Math.min(s.w, s.d);
   return long >= 30 && long >= 3 * short;
@@ -64,18 +64,14 @@ function cropGround(s: Solid & { kind: "ground" }, box: Box): Solid[] {
   for (let i = 0; i < s.tris.length; i++) {
     const t = s.tris[i]!;
     const [a, b, c] = t.pts;
-    let kept: Tri[] | null = null; // null: passes whole
-    if (!(inside(a, box) && inside(b, box) && inside(c, box))) {
-      kept = [];
-      if (triOverlaps(t, box)) {
-        const poly = clipPolygon(t.pts, box, lerp3);
-        for (let j = 1; j + 1 < poly.length; j++) kept.push({ ...t, pts: [poly[0]!, poly[j]!, poly[j + 1]!] });
-      }
-    }
-    if (kept && !tris) tris = s.tris.slice(0, i);
-    if (tris) { if (kept) tris.push(...kept); else tris.push(t); }
+    if (inside(a, box) && inside(b, box) && inside(c, box)) { tris?.push(t); continue; }
+    tris ??= s.tris.slice(0, i);
+    if (!triOverlaps(t, box)) continue;
+    const poly = clipPolygon(t.pts, box, lerp3);
+    for (let j = 1; j + 1 < poly.length; j++) tris.push({ ...t, pts: [poly[0]!, poly[j]!, poly[j + 1]!] });
   }
-  if (!tris) return s.tris.length ? [s] : [];
+  // an empty mesh passes by identity, as before #399
+  if (!tris) return [s];
   return tris.length ? [{ ...s, tris }] : [];
 }
 
@@ -90,7 +86,7 @@ export function cropSolid(s: Solid, box: Box): Solid[] {
   if (s.kind === "ground") return cropGround(s, box); // before `bounds`: it tessellates every triangle, and this runs every tick over the water bands
   if (!overlaps(bounds(s), box)) return [];
   if (s.kind === "strip") return cropStrip(s, box);
-  if (isLongPrism(s)) return cropLongPrism(s, box);
+  if (s.kind === "prism" && isLongPrism(s)) return cropLongPrism(s, box);
   return [s];
 }
 
