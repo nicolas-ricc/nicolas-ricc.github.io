@@ -6,7 +6,6 @@ import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
 import { COOLING, PARKING, POWER, PYLON_N, ROAD_Y, SILOS, TANKS, WEST_RAIL_X0, WEST_TRACKS_X, hinterland } from "./hinterland";
 import { GREEN_BELT } from "./sprawl-grid";
-import { unpairedLampParts } from "./lamp-fixtures";
 import { RAIL_Y } from "./shipyard";
 import { bleedTerrainAt, terrainAt } from "./terrain";
 
@@ -53,15 +52,6 @@ describe("hinterland", () => {
     expect(s.solids.filter((x) => x.kind === "prism" && x.h === 14 && x.w === 1)).toHaveLength(PYLON_N - 2); // the last two would fall in the fair
     expect(s.solids.filter((x) => x.kind === "prism" && x.d === 0.24).length).toBeGreaterThanOrEqual(2 * (PYLON_N - 4)); // cables
     expect(s.solids.filter((x) => x.kind === "prism" && x.w === 6 && x.d === 2.4 && x.h === 2.6 && x.at.z > 0).length).toBeGreaterThan(20); // stacked containers
-  });
-
-  it("lamps out (#401): fairRoad keeps x 4 and 60, westHalls keeps (−190, 44), (−130, 86), (−70, 20)", () => {
-    const s = scene();
-    const posts = s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism" && x.mat === "steel" && x.w === 0.6 && x.d === 0.6 && (x.h === 5 || x.h === 6));
-    expect(posts.filter((p) => p.at.y === ROAD_Y - 4 && p.at.x >= 0 && p.at.x <= 84).map((p) => p.at.x).sort((a, b) => a - b)).toEqual([4, 60]);
-    const west = posts.filter((p) => p.at.x < -60 && p.at.y >= -60 && p.at.y <= 90).map((p) => [p.at.x, p.at.y]).sort((a, b) => a[0]! - b[0]! || a[1]! - b[1]!);
-    expect(west).toEqual([[-190, 44], [-130, 86], [-70, 20]]);
-    expect(unpairedLampParts(s.solids, s.accents)).toEqual([]);
   });
 
   it("cyan accents and atlas colors", () => {

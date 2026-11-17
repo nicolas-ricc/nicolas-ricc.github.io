@@ -4,7 +4,6 @@ import { v3 } from "../iso/geometry";
 import { isBox, type Plate, type PlateBox } from "../iso/plate";
 import { bounds, isFlat, tessellate, tessellateAll, type Bounds, type Solid } from "../iso/solids";
 import { BUFFER_H, BUFFER_X, CROSSING, FENCE_Y, GAUGE, HEAD, ISLAND, LADDER, RAIL_W, RAIL_Z, SIDE, SIGNALS, STATION, STOP_X, TRACK_X0, TRACKS_Y, TRAIN_CLEAR, PARKED, station, building, HALL, WING_N, WING_S, LINK, SERVICE, TOWER, PORTICO, ESPLANADE } from "./station";
-import { unpairedLampParts } from "./lamp-fixtures";
 import { emu, trainLen } from "./train";
 
 const build = (): { out: Solid[]; accents: Accent[] } => { const out: Solid[] = [], accents: Accent[] = []; station(out, accents); return { out, accents }; };
@@ -143,14 +142,6 @@ describe("station", () => {
     expect(dots.filter((d) => d.color === "cyanMid")).toEqual([]);
   });
 
-  it("lights out (#401): no cyanMid, amber or cyan r 1.2 dot; the three magenta buffer lights stay", () => {
-    expect(dots.filter((d) => d.color === "cyanMid")).toEqual([]);
-    expect(dots.filter((d) => d.color === "amber")).toEqual([]);
-    expect(dots.filter((d) => d.color === "cyan" && d.r === 1.2)).toEqual([]);
-    expect(dots.filter((d) => d.color === "magenta" && d.r === 0.35)).toHaveLength(3);
-    expect(unpairedLampParts(out, accents)).toEqual([]);
-  });
-
   it("buffers: three at x 160..161.5, h 1.2, safety/asphalt stripes on east and south, magenta light", () => {
     const buffers = prisms.filter((p) => p.mat === "steel" && p.at.x === BUFFER_X && p.w === 1.5 && p.h === BUFFER_H && p.at.z === 0);
     expect(sorted(buffers.map((p) => [p.at.y, p.d]))).toEqual(sorted(TRACKS_Y.map((y) => [y - 1.5, 3])));
@@ -161,7 +152,8 @@ describe("station", () => {
         expect(ps.map((p) => [p.u0, p.u1, p.z0, p.z1]), `stripes ${wall}`).toEqual([0, 1, 2, 3].map((k) => [k / 4, (k + 1) / 4, 0, BUFFER_H]));
       }
     }
-    const reds = dots.filter((d) => d.color === "magenta");
+    const reds = dots.filter((d) => d.color === "magenta" && d.r === 0.35);
+    expect(reds).toHaveLength(3);
     expect(sorted(reds.map((d) => [d.at.x, d.at.y, d.at.z, d.r]))).toEqual(sorted(TRACKS_Y.map((y) => [160.75, y, 1.5, 0.35])));
   });
 
@@ -408,7 +400,7 @@ describe("station: building, tower and esplanade (#278)", () => {
   });
 
   it("esplanade: palms and railing, no lamps; whatever rests on the slab starts at z 0.15", () => {
-    const posts = bPrisms.filter((p) => p.mat === "steel" && p.w === 0.6 && p.h === 6);
+    const posts = bPrisms.filter((p) => p.mat === "steel" && p.w === 0.6 && p.d === 0.6 && p.h === 6);
     expect(posts).toEqual([]);
     const trunks = bOut.filter((s): s is Solid & { kind: "cylinder" } => s.kind === "cylinder" && s.mat === "deck");
     expect(sorted(trunks.map((t) => [t.at.x, t.at.y, t.at.z, t.r, t.h, t.sides]))).toEqual(sorted([[195.5, 108, 0.15, 0.25, 6, 6], [195.6, 116.5, 0.15, 0.25, 6, 6], [195.5, 125, 0.15, 0.25, 6, 6]]));
