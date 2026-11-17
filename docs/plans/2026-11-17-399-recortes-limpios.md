@@ -28,7 +28,20 @@
 4. **Terrain triangles** (every `kind: "ground"` solid, wherever it comes from: terrain, `scene.ground`, `water` layers, claims): a triangle with all three vertices inside passes by identity (same `Tri` object); one that does not overlap strictly is dropped; otherwise `clipPolygon` (z interpolated along the cut edges) and a fan from vertex 0: `{ ...t, pts: [p0, pi, pi+1] }`, so `toneOffset`/`baseTone` are kept. Fewer than 3 clipped vertices → dropped. The mesh whose triangles all passed by identity is returned as the same object; none left → `null`. No intermediate arrays for the triangles that pass whole (the per-tick path over the water bands).
 5. **Shadows:** `buildRenderList(solids, heading?, clip?: ClipRect)` clips each shadow hull (full and core) with `clipPolygon` before projecting (the hull is convex, so the result is the exact intersection); a result with fewer than 3 points emits no item.
 6. **Stage:** `buildStage(scene, animators, opts: { clip?: Box } = {})`. `clip` reaches the static list and every `solid` layer redraw; bleed and water lists carry no shadows, so they do not need it.
+8. **Shadows of what the crop drops or cuts.** A solid dropped by the crop casts no shadow into the box (as today: `cropSolid` already drops non-overlapping solids, `src/lab/crop.ts:29-33`); a long prism cut at the edge loses the shadow its outside part would cast inward. Both are low (fences 1.2, quay edges, plinths 0.3) and the issue asks for the crop, not for neighbour shadows. Rejected: keeping uncut copies only for shadows (two geometries per solid, against decision 3 of the issue).
+9. **No red commit inside stage 4.** Task 2 owns everything the strict crop breaks (`planta` test, exhibit heights), so each task commit leaves `npm test` green except the stage-3 evals of later tasks.
+10. **Visual check** is not a plan task: the pipeline's stage-3 agent-browser script (`.scratch/evals-399.md`, URLs from the issue's "Cómo probarlo") is run in stage 4 after Task 5, and the PR carries `#playa-camiones` and `#gradas` captures.
 7. **Real-world assertions** live in `src/lab/exhibits.test.ts` (it already assembles the world once), new `describe("clean crops (#399)")`.
+
+## Criteria → tasks
+
+- `overlaps`/`triOverlaps` strict → Task 2. Unit tests for strips, prisms, triangles → Tasks 1–2; `buildRenderList` with `clip` → Task 3.
+- Real-world tests (plinths, strips and long prisms, terrain in the 11 exhibits) → Task 5.
+- `exhibits.test.ts` green, `h`, `planta` test and lamp comment → Task 2.
+- `stage.test.ts` with `clip` (static and animated shadows) → Task 4.
+- No per-tick cost regression (`Tri` identity) → Task 2.
+- Comments in English in `crop.ts`, `render-list.ts`, README paragraph → Tasks 2, 3, 5. `npm test`/`npm run typecheck` → every task.
+- Visual check and captures → pipeline stages 3–4 and the PR (decision 10).
 
 ## Review Focus
 
@@ -53,7 +66,7 @@
   - `export function clipPolygon<T extends Vec2>(pts: readonly T[], r: ClipRect, lerp: (a: T, b: T, t: number) => T): T[]` — Sutherland–Hodgman of a convex polygon against the four edges; returns `[]` when nothing is left.
   - `export const lerp2 = (a: Vec2, b: Vec2, t: number): Vec2` and `export const lerp3 = (a: Vec3, b: Vec3, t: number): Vec3` (z interpolated).
 
-- [ ] **Step 1: tests** in `src/iso/clip.test.ts`: segment crossing the rect left→right (`(−5, 5)→(15, 5)` in `{0,0,10,10}` → `t0 0.25`, `t1 0.75`); segment fully inside → `{0, 1}`; fully outside → `null`; diagonal through a corner region; zero-length inside → `{0,1}`, outside → `null`. Polygon: triangle fully inside comes back with the same points; triangle crossing one edge comes back with all points inside (1e-9) and the expected area (shoelace); square larger than the rect comes back as the rect; polygon outside → `[]`; `lerp3` keeps z linear on a sloped triangle (clipped point z equals the plane's z at that x/y).
+- [ ] **Step 1: tests** in `src/iso/clip.test.ts`: segment crossing the rect left→right (`(−5, 5)→(15, 5)` in `{0,0,10,10}` → `t0 0.25`, `t1 0.75`); segment fully inside → `{0, 1}`; fully outside → `null`; diagonal through a corner region; zero-length inside → `{0,1}`, outside → `null`. Polygon: triangle fully inside comes back with the same points; triangle crossing one edge comes back with all points inside (1e-9) and the expected area (shoelace); square larger than the rect comes back as the rect; polygon outside → `[]`; triangle with one vertex exactly on `x1` and one outside → no two consecutive equal points; `lerp3` keeps z linear on a sloped triangle (clipped point z equals the plane's z at that x/y).
 - [ ] **Step 2:** `npx vitest run src/iso/clip.test.ts` → FAIL (module missing).
 - [ ] **Step 3:** implement `src/iso/clip.ts` (no imports beyond `./geometry`).
 - [ ] **Step 4:** `npx vitest run src/iso/clip.test.ts src/iso/pixi-free.test.ts` → PASS.
@@ -62,8 +75,8 @@
 ### Task 2: Strict, geometric crop in `crop.ts`
 
 **Files:**
-- Modify: `src/lab/crop.ts` (`overlaps`, `triOverlaps`, `cropSolid`, comments)
-- Test: `src/lab/crop.test.ts`
+- Modify: `src/lab/crop.ts` (`overlaps`, `triOverlaps`, `cropSolid`, comments), `src/lab/exhibits.ts` (`planta` comment, any `h` the strict crop pushes out of `SLACK`)
+- Test: `src/lab/crop.test.ts`, `src/lab/exhibits.test.ts` (`planta` test)
 
 **Interfaces:**
 - Consumes: `clipSegment`, `clipPolygon`, `lerp3` from Task 1.
@@ -81,9 +94,11 @@
   - a mesh whose only triangle touches the edge from outside → `null`.
   - `cropAnimators` water layer: a triangle fully inside comes back by identity after `layer()`.
   - update the existing `cropScene` test "the terrain is filtered by triangle" (no change expected: `tri(2, 2)` is inside) and keep "keeps whole a solid that crosses the edge" (prism(9, 9, 4) is short).
-- [ ] **Step 2:** `npx vitest run src/lab/crop.test.ts` → the new cases FAIL.
+  - `exhibits.test.ts` `planta`: the street lamp at (5, 76) is no longer in (`toEqual([])`); rename the test and rewrite the `exhibits.ts` comment to say it touches the south edge and stays out.
+- [ ] **Step 2:** `npx vitest run src/lab/crop.test.ts src/lab/exhibits.test.ts` → the new cases FAIL.
 - [ ] **Step 3:** implement. `inside(p, box)` already exists; `triOverlaps` strict, no arrays; the ground branch loops once, building the output array lazily only when the first non-identity triangle appears.
-- [ ] **Step 4:** `npx vitest run src/lab/crop.test.ts` → PASS.
+- [ ] **Step 3b:** run `npx vitest run src/lab` and, for each region/context whose framing test now fails, set `h` to the smallest integer that satisfies `max(inside, accents) <= h <= max(withAnim, accents) + SLACK` and `neighbor <= h` (`measure`, `measureContext`, `SLACK` in `src/lab/exhibits.test.ts`), updating its comment. No commit leaves `src/lab` red (decision 9).
+- [ ] **Step 4:** `npx vitest run src/lab` → PASS.
 - [ ] **Step 5:** commit `feat(#399): strict crop that cuts strips, long prisms and terrain`.
 
 ### Task 3: Shadows clipped in `buildRenderList`
@@ -121,7 +136,7 @@
 ### Task 5: Real-world assertions, exhibit heights, comments and README
 
 **Files:**
-- Modify: `src/lab/exhibits.test.ts`, `src/lab/exhibits.ts` (`planta` comment, any `h` that the strict crop pushes out of `SLACK`), `README.md` (storybook paragraph)
+- Modify: `src/lab/exhibits.test.ts`, `README.md` (storybook paragraph)
 - Test: `src/lab/exhibits.test.ts`
 
 **Interfaces:**
@@ -131,8 +146,16 @@
   - `playa-camiones`: no `prism` with `mat "paving"`, `h === PLINTH_H` (exported by `src/scenes/city-pieces.ts`) and `at.y === 92`.
   - for `playa-camiones`, `gradas`, `estacion`, `silos` (cropScene) and `cartel-taller-escena` (contextScene): every `strip` in `ground` and `solids` has all path points inside the box (1e-9) and bounds within the box grown by `width / 2`; every `isLongPrism` solid has bounds within the box.
   - for `playa-camiones`, `gradas`, `estacion`, `patio-contenedores`, `cartel-taller-escena`, `silos`, `playa-contenedores`, `autitos-chocadores`, `faro`, `pecio`: every vertex of every triangle of `terrain.ground/bleed/water/foam` of the crop is inside the box (1e-9), and so is every triangle of the cropped animators' `water` layers.
-  - `planta`: the street lamp at (5, 76) is no longer in (`toEqual([])`); rename the test and rewrite the `exhibits.ts` comment to say it touches the south edge and stays out.
-- [ ] **Step 2:** run → the planta test and any `h` outside `SLACK` FAIL until adjusted.
-- [ ] **Step 3:** adjust: for each region/context whose framing test fails, set `h` to the smallest integer that satisfies `max(inside, accents) <= h <= max(withAnim, accents) + SLACK` and `neighbor <= h`, and update its comment. README: one or two sentences in the storybook paragraph saying the crop is strict and that strips, long prisms, terrain triangles and shadows are cut to the box (pieces and the site are not).
+- [ ] **Step 2:** run → expected PASS already (Task 2 implements the crop); a failure here is a Task 2 bug, fixed there.
+- [ ] **Step 3:** README: one or two sentences in the storybook paragraph saying the crop is strict and that strips, long prisms, terrain triangles and shadows are cut to the box (pieces and the site are not).
 - [ ] **Step 4:** `npm test` and `npm run typecheck` → PASS.
 - [ ] **Step 5:** commit `feat(#399): real-world clean-crop checks and exhibit heights`.
+
+## Grilling
+
+One round (griller model: fable), 16 questions.
+
+- Sourced from CODE: 11 (Q3 `src/iso/light.ts` `shadowPolygon` returns `convexHull` for every kind; Q4 `src/iso/solids.ts:28` prism type has no rotation; Q6 `solids.ts:20,37` `Tri` is `{ pts, toneOffset?, baseTone? }`, strip is `{ path, width, z, mat }` plus `tone`: no parallel arrays; Q7 only `storybook.ts` builds crops, `storybook-ui.ts` imports the `Readout` type only; Q8 `crop.ts` `cropLayer` uses unmemoized `cropSolid`, called per redraw (`stage.ts` water redraw): no memo growth; Q10 `stage.ts` calls `buildRenderList` for bleed, static, static water, water layers and solid layers, shadows only from static and solid; Q11 `stage.ts` `addChild` order and its docstring, `stage.test.ts:22` already reads `context.instructions`; Q12 `exhibits.test.ts` `measure`/`SLACK`; Q13 `light.ts` `SHADOW_DIR = (0.894, −0.447)` ENE; Q15 `Box` in `src/world/frame.ts`, `PLINTH_H` in `src/scenes/city-pieces.ts:14`, `scene`/`animators` at module level of `exhibits.test.ts`; Q16 `src/iso/pixi-free.test.ts` enforces the layering; there is no ADR on it and CONTEXT.md does not define crop/clip).
+- Sourced from ISSUE: 3 (Q1 criteria list, now mapped in "Criteria → tasks"; Q4 thresholds: "Largo = `kind: \"prism\"`, `roof` ausente o `\"flat\"`, sin `facade` ni `plates`, lado mayor ≥ 30 u y ≥ 3× el menor"; Q5 "se recortan segmento a segmento (Liang–Barsky contra el rectángulo de la caja)"; base branch: "Rama base: `feature/395-storybook-luces-encuadre`").
+- Technical assumptions (no source): Q2 → decision 8; Q9 → `clipPolygon` dedupes consecutive points; Q14 → decision 9 (heights and `planta` moved into Task 2); Q12 visual → decision 10; Q5 strip on the edge itself → decision 2 (inclusive inside: passes whole, half-width overhang tolerated by the test).
+- Spec ambiguities: none. Follow-up issues opened: none.
