@@ -80,7 +80,7 @@ export function containerYard(out: Solid[], accents: Accent[], rng: Rng): void {
   accents.push({ kind: "poly", pts: [v3(296.8, 84, 1.2), v3(298.2, 84, 1.2), v3(298.2, 84, 2.2), v3(296.8, 84, 2.2)], color: "windowCool", alpha: 0.85 });
 }
 
-/** Two quay cranes facing west, on two long rails (x 281 and 287) running the length of the quay; booms end at x 276 with no tip light (#402). */
+/** Two quay cranes facing west, on two long rails (x 281 and 287) running the length of the quay; booms end at x 276, no tip light. */
 export function quayCranes(out: Solid[], accents: Accent[]): void {
   for (const c of QUAY_CRANES) quayCraneAt(c, "w", out, accents, { rails: false, light: false }); // only the long rails below: the kit's short ones would reach the cove water at y 30
   for (const x of CRANE_RAILS.x) {
