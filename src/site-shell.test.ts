@@ -33,7 +33,7 @@ describe("site shell: the zone links over the signs (#393)", () => {
 
   it("style.css hides the text on the sign but keeps it in the tree", () => {
     const b = block(CSS, "#zonas a.on-sign");
-    for (const d of ["color: transparent", "background: none", "padding: 0", "box-sizing: border-box"]) expect(b).toContain(d);
+    for (const d of ["color: transparent", "background: none", "padding: 0", "box-sizing: border-box", "overflow: hidden"]) expect(b).toContain(d);
     for (const d of ["display: none", "visibility: hidden", "font-size: 0"]) expect(b).not.toContain(d);
   });
 
@@ -52,7 +52,12 @@ describe("site shell: the zone links over the signs (#393)", () => {
 
   it("style.css resets the sign size without a canvas", () => {
     const b = block(CSS, ".no-canvas #zonas a");
-    for (const d of ["width: auto", "height: auto", "position: static"]) expect(b).toContain(d);
+    for (const d of ["width: auto !important", "height: auto !important", "position: static"]) expect(b).toContain(d);
+  });
+
+  // review finding: a visible edge label of another zone dims with it (the 0.35 of ACCENT_DIM), as .dim did
+  it("style.css dims the edge label of a zone that is not the active one", () => {
+    expect(block(CSS, 'body.zone #zonas a.on-edge:not([aria-current="page"])')).toContain("opacity: 0.35");
   });
 
   // A8: the opacity transition served .dim only

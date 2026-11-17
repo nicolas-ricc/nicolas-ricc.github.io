@@ -7,7 +7,7 @@ import { Camera } from "./camera";
 import { mergeBlogFeed } from "./content/blog-feed";
 import { renderContent } from "./content/render";
 import type { ZoneContent } from "./content/types";
-import { applyLabel, markCurrent } from "./labels";
+import { markCurrent, placeLabel } from "./labels";
 import { ISO_COLORS } from "./map/palette-iso";
 import { zoneById, ZONE_IDS, type ZoneId } from "./map/zones";
 import { pathForZone, zoneFromPath } from "./router";
@@ -16,7 +16,7 @@ import { assembleWorld } from "./world/assemble";
 import { afterFirstRender } from "./world/bloom";
 import { attachBloom, type BloomProbe } from "./world/bloom-runtime";
 import { buildStage } from "./world/stage";
-import { labelLayout, signBox, SIGNS, zoneAtScreen } from "./world/signs";
+import { signBox, SIGNS, zoneAtScreen } from "./world/signs";
 import { coverView, zoneView, type View } from "./world/view";
 
 const CONTENT: Record<ZoneId, ZoneContent> = {
@@ -58,8 +58,7 @@ async function boot(): Promise<void> {
   const placeLabels = (v: View): void => {
     for (const [id, a] of labels) {
       // over its sign; if the sign leaves the host (narrow screens), the label sticks to the nearest edge: always visible and focusable
-      const pad = { hw: a.offsetWidth / 2 + LABEL_MARGIN, hh: a.offsetHeight / 2 + LABEL_MARGIN };
-      applyLabel(a, labelLayout(signBox(SIGNS[id]), v, { w: host.clientWidth, h: host.clientHeight }, pad));
+      placeLabel(a, signBox(SIGNS[id]), v, { w: host.clientWidth, h: host.clientHeight }, LABEL_MARGIN);
     }
   };
 

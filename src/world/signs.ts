@@ -2,6 +2,7 @@
  * The three 3D signs as the site's zone controls (#393): their screen polygons for the hit test and
  * the layout of the HTML label over each one. Pure geometry: no Pixi, no page.
  */
+import type { ScreenBounds } from "../iso/depth";
 import { project } from "../iso/project";
 import { tessellate } from "../iso/solids";
 import { toWorld } from "../kit/lettering";
@@ -19,7 +20,7 @@ export const SIGNS: Record<ZoneId, SignSpec> = { portfolio: TINKER_SIGN, cv: RES
 export const SIGN_ORDER: readonly ZoneId[] = ["portfolio", "cv", "blog"];
 
 /** Axis-aligned box in projected (scale 1) screen space. */
-export interface ScreenBox { minX: number; minY: number; maxX: number; maxY: number }
+export type ScreenBox = ScreenBounds;
 
 const polygons = new WeakMap<SignSpec, number[][]>();
 const boxes = new WeakMap<SignSpec, ScreenBox>();
