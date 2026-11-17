@@ -33,6 +33,8 @@
 9. **No red commit inside stage 4.** Task 2 owns everything the strict crop breaks (`planta` test, exhibit heights), so each task commit leaves `npm test` green except the stage-3 evals of later tasks.
 10. **Visual check** is not a plan task: the pipeline's stage-3 agent-browser script (`.scratch/evals-399.md`, URLs from the issue's "Cómo probarlo") is run in stage 4 after Task 5, and the PR carries `#playa-camiones` and `#gradas` captures.
 
+11. **`cropSolid` returns `Solid[]`** (empty = dropped) instead of `Solid | null`, because a strip that leaves and re-enters yields two strips. `cropShared` memoizes the array, so terrain and claims still share element identity; `cropScene` takes `cropShared(foam, box)[0]` for the foam. Found while writing the stage-3 evals. Rejected: `Solid | Solid[] | null` (three shapes for every caller).
+
 ## Criteria → tasks
 
 - `overlaps`/`triOverlaps` strict → Task 2. Unit tests for strips, prisms, triangles → Tasks 1–2; `buildRenderList` with `clip` → Task 3.
@@ -80,7 +82,7 @@
 
 **Interfaces:**
 - Consumes: `clipSegment`, `clipPolygon`, `lerp3` from Task 1.
-- Produces: `overlaps(b, box)` strict; `export function isLongPrism(s: Solid): boolean`; `cropSolid(s, box)` per decisions 2–4 (signature unchanged); `cropShared`, `cropSolids`, `cropScene`, `cropAnimators` unchanged in signature.
+- Produces: `overlaps(b, box)` strict; `export function isLongPrism(s: Solid): boolean`; `cropSolid(s: Solid, box: Box): Solid[]` per decisions 2–4 (decision 11); `cropShared(s, box): Solid[]` memoized the same way; `cropSolids`, `cropScene`, `cropAnimators` unchanged in signature.
 
 - [ ] **Step 1: tests** in `crop.test.ts`:
   - `overlaps`: the "touches the edge" case becomes `false` (rename the test to "touching the edge does not overlap; crossing it does").
