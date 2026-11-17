@@ -77,8 +77,8 @@ it, centered on `COVER_FOCUS_U` and clamped to its edges (#351). `zoneView`
 stays inside the 16:9 cover on each axis it covers (`clampToCover`).
 The 3D zone signs are the navigation (`src/world/signs.ts`): `zoneAtScreen` hit-tests
 their polygons before the geography, the links are invisible over them, and
-`labelLayout` moves a link to the edge when its sign does not fit in the host
-(Writing, on a phone); there is no external font, the lettering is drawn by the kit.
+`labelLayout` moves a link to the edge when less than half of its word is inside
+the host (Writing, on a phone); there is no external font, the lettering is drawn by the kit.
 In Resume, `city-anim.ts` adds the `city.windows` layer (up to 40 windows of
 downtown and the residential area that switch on and off keeping the percentage
 ±5 %) and, inside `city.neon`, the flickering neon sign of a bar on the pier or a brewery of row 92; the
