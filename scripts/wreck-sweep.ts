@@ -11,12 +11,12 @@
  * Usage: npm run wreck-sweep [-- --frames 40 --modes off,on,fallback --viewports 900x1015,412x915 --origin <url> --hide 3,4].
  * --hide sets `visible = false` on those children of the Stage container (slot order: src/world/stage.ts buildStage) to bisect
  * which layer draws the line; it needs the PixiJS DevTools extension (see CLAUDE.md), loaded on launch when installed.
- * Exit code 1 when any row has off-sky pixels.
+ * `off-sky px` is summed over the frames (pixel-frames). Exit code 0 when clean, 1 when any row has off-sky pixels, 2 on a crash.
  *
  * Notes: `pixels` re-renders the stage through extract, so compositor artifacts are not seen. Where the page has no
  * `__lab.tick` (main) the clock is "live" (`?speed=20`, 250 ms sleeps): those frames are not comparable one by one.
  */
-import { execFileSync, spawn, type ChildProcess } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
@@ -25,29 +25,11 @@ import { EXHIBITS } from "../src/lab/exhibits";
 import { contentFrame } from "../src/lab/frame";
 import { assembleWorld } from "../src/world/assemble";
 import { boxFrame, type Fit } from "../src/world/frame";
-import { parseEval } from "./legibility-measure";
+import { agentBrowser, sleep, startVite } from "./lab-browser";
 import { envelopeOf, formatSweepRow, offSky, parseSweepArgs, pickFrame, toScreen } from "./wreck-sweep-measure";
 
-const PORT = 5180, ROOT = resolve(import.meta.dirname, ".."), EXT = resolve(homedir(), ".agent-browser/extensions/pixijs-devtools/ext");
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-const ab = (...args: string[]): string =>
-  execFileSync("agent-browser", args, { env: { ...process.env, AGENT_BROWSER_SESSION: "wreck-sweep" }, maxBuffer: 64 * 1024 * 1024, timeout: 30_000, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
-const evalJson = <T>(js: string): T => parseEval<T>(ab("eval", js));
-
-async function startVite(origin: string): Promise<ChildProcess> {
-  const child = spawn(process.execPath, [resolve(ROOT, "node_modules/vite/bin/vite.js"), "--port", String(PORT), "--strictPort"], { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"] });
-  let err = "", exited = false;
-  child.stderr.on("data", (d) => { err += d; });
-  child.stdout.resume();
-  child.on("exit", () => { exited = true; });
-  for (const t0 = Date.now(); Date.now() - t0 < 30_000; await sleep(250)) {
-    if (exited) throw new Error(`wreck-sweep: vite exited early: ${err.trim()}`);
-    try { if ((await fetch(`${origin}/lab/storybook.html`)).status === 200) return child; } catch { /* not up yet */ }
-  }
-  child.kill();
-  throw new Error("wreck-sweep: vite did not answer in 30 s");
-}
+const PORT = 5180, EXT = resolve(homedir(), ".agent-browser/extensions/pixijs-devtools/ext");
+const { ab, evalJson } = agentBrowser("wreck-sweep", "wreck-sweep");
 
 /** Launches the browser before any `set viewport` (a running daemon ignores --extension/--args); loads the DevTools extension when installed. */
 function launch(needExt: boolean): void {
@@ -86,7 +68,7 @@ async function main(): Promise<void> {
   const origin = args.origin ?? `http://localhost:${PORT}`;
   let vite: ChildProcess | null = null, dirty = false;
   try {
-    if (!args.origin) vite = await startVite(origin);
+    if (!args.origin) vite = await startVite(PORT, "wreck-sweep");
     launch(args.hide.length > 0);
     for (const [vw, vh] of args.viewports) {
       ab("set", "viewport", String(vw), String(vh), "2");
@@ -130,5 +112,5 @@ async function main(): Promise<void> {
 main().catch((err: unknown) => {
   const msg = err instanceof Error ? err.message : String(err);
   console.error(msg.startsWith("wreck-sweep:") ? msg : `wreck-sweep: ${msg}`);
-  process.exitCode = 1;
+  process.exitCode = 2;
 });

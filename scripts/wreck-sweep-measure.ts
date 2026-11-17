@@ -27,7 +27,7 @@ export function envelopeOf(items: readonly RenderItem[], fit: Fit, box: Box): En
   };
 }
 
-/** Counts the non-sky texture pixels (w·res × h·res RGBA) whose footprint (i/res..(i+1)/res) does not overlap the envelope below its ceiling (a straddling pixel may carry antialiased coverage); `first` in integer host CSS px, row order. */
+/** Counts the non-sky texture pixels (w·res × h·res RGBA) whose footprint (i/res..(i+1)/res) does not overlap the envelope below its ceiling (a straddling pixel may carry antialiased coverage; so the ceiling has an effective margin of about 2 + 1/res px); `first` in integer host CSS px, row order. */
 export function offSky(rgba: Uint8Array, host: { w: number; h: number }, res: number, env: Envelope): { count: number; first: { x: number; y: number } | null } {
   const wPx = host.w * res, hPx = host.h * res;
   if (rgba.length !== wPx * hPx * 4) throw new Error(`expected ${wPx * hPx * 4} bytes, got ${rgba.length}`);
@@ -72,7 +72,7 @@ export function parseSweepArgs(argv: readonly string[]): SweepArgs {
   for (let i = 0; i < argv.length; i += 2) {
     const flag = argv[i]!, v = argv[i + 1];
     if (v === undefined || v.startsWith("--")) throw new Error(`wreck-sweep: ${flag} needs a value`);
-    if (flag === "--origin") out.origin = v;
+    if (flag === "--origin") out.origin = v.replace(/\/+$/, "");
     else if (flag === "--frames") out.frames = int(v, 1, "--frames");
     else if (flag === "--modes") out.modes = v.split(",").map((m) => {
       if (!MODES.includes(m as BloomMode)) throw new Error(`wreck-sweep: unknown mode "${m}"; choose from ${MODES.join(", ")}`);
@@ -81,6 +81,7 @@ export function parseSweepArgs(argv: readonly string[]): SweepArgs {
     else if (flag === "--viewports") out.viewports = v.split(",").map((s) => {
       const m = /^(\d+)x(\d+)$/.exec(s);
       if (!m) throw new Error(`wreck-sweep: bad viewport "${s}", expected WxH`);
+      if (Number(m[1]) < 1 || Number(m[2]) < 1) throw new Error(`wreck-sweep: viewport "${s}" must be at least 1x1`);
       return [Number(m[1]), Number(m[2])] as [number, number];
     });
     else if (flag === "--hide") out.hide = v.split(",").map((s) => int(s, 0, "--hide index"));

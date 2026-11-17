@@ -99,6 +99,13 @@ describe("parseSweepArgs", () => {
     expect(() => parseSweepArgs(["--nope"])).toThrow();
     expect(() => parseSweepArgs(["--frames", "0"])).toThrow();
   });
+  it("strips trailing slashes from --origin", () => {
+    expect(parseSweepArgs(["--origin", "http://localhost:5181//"]).origin).toBe("http://localhost:5181");
+  });
+  it("rejects viewport dimensions below 1", () => {
+    expect(() => parseSweepArgs(["--viewports", "0x915"])).toThrow();
+    expect(() => parseSweepArgs(["--viewports", "900x0"])).toThrow();
+  });
 });
 
 describe("formatSweepRow", () => {
