@@ -56,6 +56,20 @@ describe("clipPolygon", () => {
       expect(p.x === q.x && p.y === q.y, JSON.stringify(out)).toBe(false);
     }
   });
+  it("an edge from outside to exactly on an edge leaves no near-equal consecutive points", () => {
+    const tri = [{ x: 12, y: 2 }, { x: 10, y: 5 }, { x: 5, y: 5 }];
+    for (const poly of [tri, [...tri].reverse()]) {
+      const out = clipPolygon(poly, r, lerp2);
+      for (let i = 0; i < out.length; i++) {
+        const p = out[i]!, q = out[(i + 1) % out.length]!;
+        expect(Math.hypot(p.x - q.x, p.y - q.y)).toBeGreaterThan(1e-12);
+      }
+    }
+  });
+  it("fewer than 3 points left → []", () => {
+    expect(clipPolygon([{ x: 10, y: 2 }, { x: 14, y: 2 }, { x: 14, y: 6 }], r, lerp2)).toEqual([]);
+    expect(clipPolygon([{ x: 10, y: 10 }, { x: 14, y: 10 }, { x: 14, y: 14 }], r, lerp2)).toEqual([]);
+  });
   it("lerp3 keeps z on the plane of a sloped triangle", () => {
     const z = (x: number, y: number): number => 0.5 * x + 0.25 * y + 1;
     const pts = [v3(-4, 2, z(-4, 2)), v3(6, 2, z(6, 2)), v3(2, 14, z(2, 14))];

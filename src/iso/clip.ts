@@ -22,7 +22,7 @@ export function clipSegment(a: Vec2, b: Vec2, r: ClipRect): { t0: number; t1: nu
   return { t0, t1 };
 }
 
-/** Sutherland–Hodgman of a convex polygon against the four edges of r; [] when nothing is left. */
+/** Sutherland–Hodgman of a convex polygon against the four edges of r; [] when fewer than 3 points are left. */
 export function clipPolygon<T extends Vec2>(pts: readonly T[], r: ClipRect, lerp: (a: T, b: T, t: number) => T): T[] {
   // each edge: signed distance, >= 0 inside
   const edges: ((p: Vec2) => number)[] = [p => p.x - r.x0, p => r.x1 - p.x, p => p.y - r.y0, p => r.y1 - p.y];
@@ -38,10 +38,10 @@ export function clipPolygon<T extends Vec2>(pts: readonly T[], r: ClipRect, lerp
       const a = cur[i]!, b = cur[(i + 1) % cur.length]!;
       const da = dist(a), db = dist(b);
       if (da >= 0) push(a);
-      if ((da >= 0) !== (db >= 0)) push(lerp(a, b, da / (da - db)));
+      if ((da < 0 && db > 0) || (da > 0 && db < 0)) push(lerp(a, b, da / (da - db)));
     }
     while (out.length > 1 && out[0]!.x === out[out.length - 1]!.x && out[0]!.y === out[out.length - 1]!.y) out.pop();
     cur = out;
   }
-  return cur;
+  return cur.length < 3 ? [] : cur;
 }
