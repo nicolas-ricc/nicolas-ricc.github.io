@@ -245,7 +245,7 @@ salen de los oráculos de `src/kit/` y de `REPORT.md`; los tests de
 Nivel 2 (`signMetrics`, `staticContrast`) y nivel 3 (`npm run legibility`,
 tal como lo escribe `REPORT.md`) de cada exhibit en contexto, a 1.17 y a
 0.83. Respaldo 1 y oclusión 0 en los seis casos. Base, verticales y error de
-aspecto: RESUME 0°, 0°, 0.010; PORTFOLIO 0.23°, 3.03°, 0.077; Blog 0°, 0°,
+aspecto: RESUME 0°, 0°, 0.010; PORTFOLIO 0.23°, 3.03°, 0.077; Writing 0°, 0°,
 0.010.
 
 | Exhibit | Escala | Alto de x (px) | Trazo (px) | Aire (px) | Contraste estático | Contraste (px) | Halo | OCR |
@@ -254,20 +254,21 @@ aspecto: RESUME 0°, 0°, 0.010; PORTFOLIO 0.23°, 3.03°, 0.077; Blog 0°, 0°,
 | `cartel-torre-escena` | 0.83 | 10.11 | 1.64 | 2.10 | 4.70 | 9.07:1 | 0.05 | `RESUME` |
 | `cartel-taller-escena` | 1.17 | 15.07 | 2.40 | 2.29 | 8.06 | 6.72:1 | 0.08 | `PORTFOLIO` |
 | `cartel-taller-escena` | 0.83 | 10.69 | 1.70 | 1.62 | 8.06 | 6.10:1 | 0.08 | `PORTFOLIO` |
-| `plataforma-escena` | 1.17 | 12.05 | 2.21 | 2.64 | 13.26 | 8.96:1 | 0.12 | `Blog` |
-| `plataforma-escena` | 0.83 | 8.55 | 1.57 | 1.87 | 13.26 | 8.96:1 | 0.07 | `Blog` |
+| `plataforma-escena` | 1.17 | 12.20 | 2.57 | 2.96 | 13.26 | 11.72:1 | 0.07 | `Writing` |
+| `plataforma-escena` | 0.83 | 8.65 | 1.82 | 2.10 | 13.26 | 11.60:1 | 0.05 | `Writing` |
 
-Nivel 1 con `SIGN_FONT` (tamaño 10.3, trazo w = 1.35 u). Aire mínimo y máximo
-entre letras, ritmo y la contraforma más ajustada, todo en w. `RESUME` (Neon Light) y
-`PORTFOLIO` (CNRGN Builder) van en fuentes de exhibición (§8.2): sus filas se
+Nivel 1: aire mínimo y máximo entre letras, ritmo y la contraforma más
+ajustada, todo en w. Las tres palabras van en fuentes de exhibición (§8.2),
+así que ya ninguna usa `SIGN_FONT` (tamaño 10.3, trazo 1.35 u): sus filas se
 miden con `checkLayouts` sobre sus propios glifos, con w = la cara de la
-letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2).
+letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2;
+1.57 u en Writing, el asta principal de Black Chancery, caja alta 11.2).
 
 | Palabra | Aire mín. (w) | Aire máx. (w) | Ritmo | Contraforma más ajustada (w) |
 | --- | --- | --- | --- | --- |
 | RESUME | 1.27 | 1.47 | 1.16 | 1.56 (`R`) |
 | PORTFOLIO | 1.19 | 1.19 | 1.01 | 1.19 (`P`) |
-| Blog | 1.18 | 1.18 | 1.00 | 2.24 (`B`) |
+| Writing | 1.14 | 1.14 | 1.00 | 1.81 (`g`) |
 
 ### 8.2 Desvíos de la historia
 
@@ -334,6 +335,25 @@ letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2).
   titileo de §8.4 (`cartel-taller-detalle*`, `cartel-taller-titila-*`)
   siguen mostrando la `Portfolio` de trazos; las de escena y escala real
   están al día.
+- **Writing en Black Chancery (después del cierre).** La sección Blog pasa
+  a llamarse Writing (nombre de la zona, título del contenido y menú; el id
+  `blog` y la ruta `/area/blog/` no cambian). El cartel de la plataforma dice
+  `Writing` en [Black Chancery](https://www.1001fonts.com/blackchancery-font.html)
+  (dominio público; igual que con las otras dos, solo se versiona la palabra
+  compuesta, `src/kit/chancery-writing.ts`). Las letras se espacian por el
+  aire entre caras (0.16 cajas altas, `scripts/marquee-word.py`), no por los
+  avances de la fuente, porque el remate de la W se mete debajo de la `r`.
+  Para que la altura de x (0.665 cajas altas) llegue a 12 px a 1.17, la caja
+  alta es `WRITING_CAP` 11.2 y la palabra mide 59.5 u, contra 22 u de Blog:
+  la plataforma se rehízo como una cubierta larga sobre la diagonal del
+  cartel (`PLATFORM_DECK`, el marco más 6 por punta), con pilotes cada ≤ 10
+  sobre los dos bordes largos, postes del marco cada ≤ 16, baranda al frente
+  y en las puntas (postes y pasamanos con `interlock`), la escalera al frente
+  y la casilla y el mástil en las puntas. El exhibit en contexto pasa a la
+  caja 366..434 × 136..204. `checkLayouts` no mira la proporción de altura
+  de x (0.665, la regla pide 0.68) ni los avances de minúsculas; los trazos
+  finos y los remates de la caligrafía tampoco cuentan para el trazo, que es
+  el asta principal.
 - **Seguimiento: #382.** `strokePx` sigue la letra del issue (el lado más
   corto de cada cuad proyectado) y el punto de la `i` lo tensiona. Con
   `PORTFOLIO` en CNRGN Builder ya no hay punto de la `i` en ningún cartel.
@@ -342,14 +362,15 @@ letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2).
 
 Ancho de la palabra y del anfitrión en pantalla a 1.17 (extensión en x de la
 proyección por 1.17). Dato para la integración: el cartel de Resume es más del
-doble de ancho que su torre (`CROWN_SITE`), y el de Blog es más ancho que su
-cubierta (`PLATFORM_SITE`); el de Portfolio cabe en el galpón (`TINKER_SITE`).
+doble de ancho que su torre (`CROWN_SITE`); el de Writing cabe en su
+cubierta, que desde la segunda vuelta se estira a lo largo del cartel
+(`PLATFORM_SITE`); el de Portfolio cabe en el galpón (`TINKER_SITE`).
 
 | Cartel | Palabra (u) | Palabra (px a 1.17) | Anfitrión | Anfitrión (px a 1.17) |
 | --- | --- | --- | --- | --- |
 | RESUME | 43.89 | 72.62 | `TOWER` 16 × 14 | 35.10 |
 | PORTFOLIO | 52.74 | 87.73 | galpón de montaje sur 90 × 16 (`SHIPYARD_HALLS[1]`) | 124.02 |
-| Blog | 22.07 | 38.75 | cubierta 14 × 12 (`HALF_X`, `HALF_Y`) | 30.42 |
+| Writing | 59.54 | 98.52 | cubierta 77.5 × 10 a lo largo de u (`PLATFORM_DECK`) | 128.30 |
 
 ### 8.4 Capturas
 

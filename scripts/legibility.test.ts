@@ -110,10 +110,12 @@ describe("masks", () => {
   it("the ring is the 1w–3w band around the ink box", () => {
     const host = { w: 1600, h: 900 }, fit = centered(COVER_LAPTOP, host.w, host.h), crop = wordCrop(BLOG_SIGN, fit, host);
     const m = signMasks(BLOG_SIGN, fit, crop), g = BLOG_SIGN.glyphs[0]!, w = BLOG_SIGN.width, mid = (g.layout.box.y0 + g.layout.box.y1) / 2;
-    const at = (a: number) => { const p = toImage(toWorld(g.plane, a, mid), fit, crop); return Math.floor(p.y) * m.w + Math.floor(p.x); };
+    const px = (a: number) => toImage(toWorld(g.plane, a, mid), fit, crop), at = (a: number) => { const p = px(a); return Math.floor(p.y) * m.w + Math.floor(p.x); };
     expect(m.ring[at(g.layout.box.x0 - 2 * w)]).toBe(1);
     expect(m.ring[at(g.layout.box.x0 - 0.5 * w)]).toBe(0);
-    expect(m.ring[at(g.layout.box.x0 - 3.5 * w)]).toBe(0);
+    // beyond 3 w: not ring, or already outside the crop (whose margin is 3 w; an index there would wrap to the row above)
+    const far = px(g.layout.box.x0 - 3.5 * w);
+    if (far.x >= 0) expect(m.ring[at(g.layout.box.x0 - 3.5 * w)]).toBe(0);
   });
   it("signMasks of the Blog sign: core, ring and holes are disjoint and non-empty; counters land in holes", () => {
     const host = { w: 1600, h: 900 }, fit = centered(COVER_LAPTOP, host.w, host.h), crop = wordCrop(BLOG_SIGN, fit, host);

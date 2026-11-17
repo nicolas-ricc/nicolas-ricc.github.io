@@ -219,7 +219,7 @@ describe("piece exhibits", () => {
     expect(ids).not.toContain("cartel-helipuerto");
     expect(ids).not.toContain("cartel-helipuerto-b");
     expect(ids).not.toContain("grafiti");
-    expect(get("plataforma")).toMatchObject({ title: "Blog platform sign", zone: "blog", group: "sea", kind: "piece", pad: "water", build: seaPlatform });
+    expect(get("plataforma")).toMatchObject({ title: "Writing platform sign", zone: "blog", group: "sea", kind: "piece", pad: "water", build: seaPlatform });
   });
   it("the beam is a single-solid beam piece, before the freighter", () => {
     const ids = EXHIBITS.map((e) => e.id);
@@ -444,7 +444,7 @@ describe("context exhibits (#376)", () => {
     const ids = EXHIBITS.map((e) => e.id);
     expect(ids.indexOf("plataforma-escena")).toBe(ids.indexOf("plataforma") + 1);
     const e = contexts.find((x) => x.id === "plataforma-escena")!;
-    expect(e).toMatchObject({ title: "Blog platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 372, y0: 142, x1: 428, y1: 198 }, build: seaPlatformAt, sign: BLOG_SIGN });
+    expect(e).toMatchObject({ title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 366, y0: 136, x1: 434, y1: 204 }, build: seaPlatformAt, sign: BLOG_SIGN });
   });
 });
 

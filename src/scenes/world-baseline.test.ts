@@ -27,7 +27,8 @@ const PIECES: Record<string, string> = {
   "cartel-taller": "772e9714/7342397f",
   // #363: plataforma replaces its placeholder (platform, railing, ladder, hut, beacon, Blog sign)
   // #376: the Blog sign uses SIGN_FONT, gains a backing panel and a raised frame, and is built at its site and then translated
-  plataforma: "26c397da/240f731e",
+  // Writing (Black Chancery) replaces Blog: a deck strip along the sign, posts every ≤ 16, filled cyan letters
+  plataforma: "ebaa8a89/86e21d29",
 };
 
 describe("render baseline (#194)", () => {

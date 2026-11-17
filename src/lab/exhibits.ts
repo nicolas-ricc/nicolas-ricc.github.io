@@ -260,9 +260,9 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "remolcador", title: "Tug", zone: "blog", group: "sea", kind: "piece", build: vessel("tug"), pad: "water" },
   { id: "convoy", title: "Convoy with barge", zone: "blog", group: "sea", kind: "piece", build: vessel("barge"), pad: "water" },
   { id: "lancha", title: "Tigre river bus", zone: "blog", group: "sea", kind: "piece", build: vessel("ferry"), pad: "water" },
-  { id: "plataforma", title: "Blog platform sign", zone: "blog", group: "sea", kind: "piece", build: seaPlatform, pad: "water" },
+  { id: "plataforma", title: "Writing platform sign", zone: "blog", group: "sea", kind: "piece", build: seaPlatform, pad: "water" },
   // h 21: the tallest solid in the box is the sign's upper beam and posts (≈ 20.82); the camera frames it, nothing is clipped.
-  { id: "plataforma-escena", title: "Blog platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 372, y0: 142, x1: 428, y1: 198 }, h: 21, build: seaPlatformAt, sign: BLOG_SIGN },
+  { id: "plataforma-escena", title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 366, y0: 136, x1: 434, y1: 204 }, h: 24, build: seaPlatformAt, sign: BLOG_SIGN },
 ];
 
 /** The exhibit of the hash (`#id` or `id`); empty or unknown, the first. */

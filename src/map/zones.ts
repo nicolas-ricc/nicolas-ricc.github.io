@@ -16,7 +16,7 @@ export interface ZoneDef {
 export const ZONES: readonly ZoneDef[] = [
   { id: "portfolio", name: "Portfolio", path: "area/portfolio", accent: "cyan" },
   { id: "cv", name: "Resume", path: "area/resume", accent: "amber" },
-  { id: "blog", name: "Blog", path: "area/blog", accent: "magenta" },
+  { id: "blog", name: "Writing", path: "area/blog", accent: "magenta" },
 ];
 
 export function zoneById(id: ZoneId): ZoneDef {

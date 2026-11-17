@@ -4,8 +4,11 @@ import { pointInPolygon } from "../map/geo";
 import type { GlyphLayout } from "./lettering";
 import { MARQUEE_RESUME } from "./marquee-resume";
 
-/** A filled letter: `outline`, `counters` cut out of it and the bulbs along its face (none outside marquee fonts), in cap heights (cap 1, baseline 0). */
-export interface MarqueeLetter { char: string; outline: Vec2[]; counters: Vec2[][]; bulbs: Vec2[] }
+/**
+ * A filled letter: `outline`, `counters` cut out of it, other solid `parts` (the dot of an i) and the bulbs along its face (none outside
+ * marquee fonts), in cap heights (cap 1, baseline 0).
+ */
+export interface MarqueeLetter { char: string; outline: Vec2[]; parts?: Vec2[][]; counters: Vec2[][]; bulbs: Vec2[] }
 
 /** A word of filled marquee letters, as `scripts/marquee-word.py` writes it: everything in cap heights. */
 export interface MarqueeWord { text: string; width: number; bulbRadius: number; letters: readonly MarqueeLetter[] }
@@ -19,6 +22,9 @@ export interface MarqueeGlyph extends GlyphLayout { bulbs: Vec2[] }
 /** Width of the face of a CNRGN Builder letter as `BUILDER_PORTFOLIO` holds it (eroded from 0.175), in cap heights. */
 export const BUILDER_FACE = 0.159;
 
+/** Width of the main stems of a Black Chancery letter and its x-height (the top of the `r`), in cap heights; the hairlines and swashes are thinner. */
+export const CHANCERY_FACE = 0.14, CHANCERY_X = 0.665;
+
 /** One quad `w` wide along each segment of the glyph's contours: a tube that outlines the letter. */
 export function contourQuads(g: GlyphLayout, w: number): Vec2[][] {
   return g.strokes.flatMap((s) => s.slice(1).map((b, j) => {
@@ -31,6 +37,15 @@ export function contourQuads(g: GlyphLayout, w: number): Vec2[][] {
 function distToSegment(c: Vec2, a: Vec2, b: Vec2): number {
   const dx = b.x - a.x, dy = b.y - a.y, t = Math.max(0, Math.min(1, ((c.x - a.x) * dx + (c.y - a.y) * dy) / (dx * dx + dy * dy)));
   return Math.hypot(c.x - (a.x + t * dx), c.y - (a.y + t * dy));
+}
+
+/** Triangles of the polygon whose first ring is the outer contour and the rest its holes. */
+function triangulate(rings: Vec2[][]): Vec2[][] {
+  const flat = rings.flat(), holes: number[] = [], out: Vec2[][] = [];
+  rings.slice(1).reduce((n, r) => (holes.push(n), n + r.length), rings[0]!.length);
+  const idx = earcut(flat.flatMap((q) => [q.x, q.y]), holes);
+  for (let k = 0; k < idx.length; k += 3) out.push([flat[idx[k]!]!, flat[idx[k + 1]!]!, flat[idx[k + 2]!]!]);
+  return out;
 }
 
 /** The largest disc inside polygon `c`, searched on a 24×24 grid over its box: the counter probe the legibility rules measure. */
@@ -57,12 +72,9 @@ export function marqueeLayout(size: number, tracking = 0, word: MarqueeWord = MA
   const lefts = word.letters.map((l, i) => Math.min(...l.outline.map((q) => q.x)) + i * tracking);
   return word.letters.map((l, i): MarqueeGlyph => {
     const s = (q: Vec2): Vec2 => ({ x: (q.x + i * tracking) * size, y: q.y * size });
-    const outline = l.outline.map(s), counters = l.counters.map((c) => c.map(s)), rings = [outline, ...counters];
-    const flat = rings.flat(), holes: number[] = [];
-    rings.slice(1).reduce((n, r) => (holes.push(n), n + r.length), outline.length);
-    const idx = earcut(flat.flatMap((q) => [q.x, q.y]), holes), tris: Vec2[][] = [];
-    for (let k = 0; k < idx.length; k += 3) tris.push([flat[idx[k]!]!, flat[idx[k + 1]!]!, flat[idx[k + 2]!]!]);
-    const xs = outline.map((q) => q.x), ys = outline.map((q) => q.y);
+    const outline = l.outline.map(s), counters = l.counters.map((c) => c.map(s)), parts = (l.parts ?? []).map((c) => c.map(s));
+    const rings = [outline, ...counters, ...parts], tris = [...triangulate([outline, ...counters]), ...parts.flatMap((q) => triangulate([q]))];
+    const xs = [outline, ...parts].flat().map((q) => q.x), ys = [outline, ...parts].flat().map((q) => q.y);
     const next = lefts[i + 1] ?? word.width + i * tracking;
     return {
       char: l.char, left: lefts[i]! * size, advance: (next - lefts[i]!) * size, strokes: rings.map((r) => [...r, r[0]!]), quads: tris, fill: tris,

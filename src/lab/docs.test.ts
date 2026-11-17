@@ -6,7 +6,7 @@ import { COVER_LAPTOP, COVER_PHONE, layoutGaps, SIGN_FONT, signMetrics, staticCo
 import { counterClearance, letterGaps, measureText, rhythm } from "../kit/lettering";
 import { TOWER } from "../scenes/city-grid";
 import { CROWN_SITE } from "../scenes/sign-crown";
-import { HALF_X, HALF_Y, PLATFORM_SITE } from "../scenes/sign-platform";
+import { PLATFORM_DECK, PLATFORM_SITE } from "../scenes/sign-platform";
 import { SHIPYARD_HALLS, TINKER_SITE } from "../scenes/sign-tinker";
 import { EXHIBITS } from "./exhibits";
 
@@ -498,7 +498,7 @@ describe("zone signs redesign documentation (#374)", () => {
   const CONTEXTS = ["cartel-torre-escena", "cartel-taller-escena", "plataforma-escena"];
   const SCALES = [["117", COVER_LAPTOP], ["083", COVER_PHONE]] as const;
   const DELETED = ["cartel-helipuerto", "grafiti"];
-  const WORDS = { RESUME: "cartel-torre-escena", PORTFOLIO: "cartel-taller-escena", Blog: "plataforma-escena" } as const;
+  const WORDS = { RESUME: "cartel-torre-escena", PORTFOLIO: "cartel-taller-escena", Writing: "plataforma-escena" } as const;
   const f = (n: number) => n.toFixed(2);
   const report = read("assets/carteles-legibilidad/REPORT.md");
   const spec = read("2026-11-15-carteles-de-zona-rediseno-design.md");
@@ -519,7 +519,7 @@ describe("zone signs redesign documentation (#374)", () => {
   const HOSTS = {
     RESUME: rect(TOWER.x, TOWER.y, TOWER.x + TOWER.w, TOWER.y + TOWER.d),
     PORTFOLIO: rect(SHIPYARD_HALLS[1]!.x0, SHIPYARD_HALLS[1]!.y0, SHIPYARD_HALLS[1]!.x1, SHIPYARD_HALLS[1]!.y1),
-    Blog: rect(-HALF_X, -HALF_Y, HALF_X, HALF_Y),
+    Writing: PLATFORM_DECK.map((q) => ({ x: q.x, y: q.y, z: 0 })),
   };
 
   it("REPORT.md exists, has every context at both scales and no failure mark", () => {

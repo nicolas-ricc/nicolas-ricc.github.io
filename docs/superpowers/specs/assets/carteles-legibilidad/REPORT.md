@@ -2,7 +2,7 @@
 
 Generado por `npm run legibility`; no se edita a mano.
 
-Fecha: 2026-11-16
+Fecha: 2026-11-17
 
 Viewport: 1600×900 @2
 
@@ -52,9 +52,9 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 8.96:1 | ≥ 4.5:1 | ✓ |
-| halo | 0.12 | ≤ 0.5 | ✓ |
-| OCR | `Blog` | = `Blog` | ✓ |
+| contraste | 11.72:1 | ≥ 4.5:1 | ✓ |
+| halo | 0.07 | ≤ 0.5 | ✓ |
+| OCR | `Writing` | = `Writing` | ✓ |
 
 ![plataforma-escena 1.17](plataforma-escena-117.png) ![OCR](plataforma-escena-117-ocr.png)
 
@@ -62,9 +62,9 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 8.96:1 | ≥ 3:1 | ✓ |
-| halo | 0.07 | ≤ 0.5 | ✓ |
-| OCR | `Blog` | ≈ `Blog` (sin mayúsculas) | ✓ |
+| contraste | 11.60:1 | ≥ 3:1 | ✓ |
+| halo | 0.05 | ≤ 0.5 | ✓ |
+| OCR | `Writing` | ≈ `Writing` (sin mayúsculas) | ✓ |
 
 ![plataforma-escena 0.83](plataforma-escena-083.png) ![OCR](plataforma-escena-083-ocr.png)
 
