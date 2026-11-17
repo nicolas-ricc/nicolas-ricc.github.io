@@ -271,9 +271,9 @@ describe("shipyard in the north band (#247)", () => {
   });
 
   it("the north band: every solid with max.y < 0 (except quay, bollards and cones) falls in x 10..192, y −60..−13 and does not exceed z 22 (the tinker sign aside, #392)", () => {
-    const all = band(scene()), own = all.filter(ofSign);
+    const inBand = band(scene()), own = inBand.filter(ofSign);
     expect(own).toHaveLength(SIGN_SOLIDS.length); // the exemption matches the sign and nothing else
-    const bs = all.filter((x) => !ofSign(x)).map(bounds);
+    const bs = inBand.filter((x) => !ofSign(x)).map(bounds);
     expect(bs.length).toBeGreaterThanOrEqual(40); // halls, forklifts, workshops, equipment and yard: without this it would pass empty
     for (const b of bs) {
       const where = JSON.stringify(b);
