@@ -75,7 +75,7 @@ describe("world", () => {
     // No glass: the city only has glass in facade faces, not as the mat of a solid.
     const sharedWithCity = ["asphalt", "boxBlue", "boxGreen", "boxRust", "brick", "concrete", "deck", "hull", "office", "paving", "rust", "sheetTeal", "steel", "stone", "whitewash"];
     expect([...portfolio].filter((m) => cv.has(m)).sort()).toEqual([...sharedWithCity].sort());
-    const sharedWithBlog = ["steel", "rust", "hull", "rock", "glass", "whitewash", "deck"]; // glass: the lighthouse lantern (spec §7); whitewash: porcelain and finials of the factory (#207); deck: level-crossing planks (#277), ship decks and terraces of the Resume pier (#190)
+    const sharedWithBlog = ["steel", "rust", "hull", "rock", "glass", "whitewash", "deck", "boxGrey", "officeDark"]; // boxGrey, officeDark: hut and sign panel of the Writing platform in the sea (#390); glass: the lighthouse lantern (spec §7); whitewash: porcelain and finials of the factory (#207); deck: level-crossing planks (#277), ship decks and terraces of the Resume pier (#190)
     for (const other of [portfolio, cv]) for (const m of blog) if (other.has(m)) expect(sharedWithBlog).toContain(m);
   });
 
