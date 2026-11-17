@@ -32,7 +32,8 @@ Las de #389 (agrupadas como las hereda #394):
    `plazaAndTower`, `shipyard()` llama `tinkerSign` y `assembleWorld` suma
    `tinkerAnimator` etiquetado `portfolio`, `sea()` llama `seaPlatformAt`. Así el
    velo y los filtros de zona clasifican cada cartel por posición.
-2. La antena sale de la corona (#391).
+2. La antena de la torre real sale, con su luz (capa `city.antenna`): la corona
+   remata la torre (#391).
 3. El sitio de la plataforma se mueve de (400, 170) a (392, 178): a 8,2 u de
    `LANE_OUT` fallaba la regla de oclusión de barcos en 90 muestras; en
    (392, 178) quedan 14,7 u al carril y 10,6 u a cada boya.
@@ -77,8 +78,10 @@ cover: laptop 1,1757; teléfono 1,2420.
 | teléfono 390×750 | `cv` | RESUME | `89.4..166.5 × 278.0..293.1` | `sign` |
 | teléfono 390×750 | `blog` | Writing | `463.2..567.8 × 447.6..477.1` | `edge` |
 
-En la laptop caben los tres. En el teléfono PORTFOLIO queda cortado unos 11 px a la derecha pero sigue en `sign` (más de la mitad dentro). En el teléfono (390 px) no caben a ningún
-`COVER_FOCUS_U`: Writing queda fuera de la ventana y su rótulo cae al borde.
+En la laptop caben los tres. En el teléfono (390 px) no caben a ningún
+`COVER_FOCUS_U`: Writing queda fuera de la ventana y su rótulo cae al borde;
+PORTFOLIO queda cortado unos 11 px a la derecha pero sigue en `sign` (más de
+la mitad de su caja queda dentro).
 
 ## 5. Presupuesto y frame
 
@@ -121,7 +124,7 @@ exige. Los topes (56 000 polígonos, 2 600 acentos) sí los vigilan los tests.
   el único rótulo que no queda sobre su cartel.
 - **La plataforma no está donde la spec del 2026-11-15 §5 la puso primero.** (400, 170)
   pasa a (392, 178) por la regla de oclusión de barcos (§2.3).
-- **La antena ya no existe.** Salió de la corona en #391.
+- **La antena ya no existe.** La corona ocupa su lugar en la azotea de la torre (#391).
 
 ## 7. Capturas
 
