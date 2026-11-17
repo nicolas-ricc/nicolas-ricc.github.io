@@ -191,3 +191,99 @@ sprite o filtro. Se elimina en el origen.
    sombra corresponde a lo que se ve.
 7. La línea vertical del Wreck no aparece.
 8. `npm test` y `npm run typecheck` pasan.
+
+## §5 — diagnóstico
+
+Criterio 7: "la línea vertical del Wreck no aparece" (#404). Resultado: **no reproducible en Chrome headless 148**. Ni la rama ni `origin/main` dibujan nada en la zona donde la captura muestra la línea. La confirmación en el teléfono sigue siendo manual.
+
+### Qué se probó
+
+El barrido mide el exhibit `#pecio` con un oráculo de píxeles (`scripts/wreck-sweep-measure.ts`, runner en `scripts/wreck-sweep.ts`).
+
+- **Envolvente**: el rectángulo proyectado de `contentFrame`.
+- **Techo**: min(vértice norte, techos de los sólidos) − 2 px.
+- **Cielo**: color exacto `#100e19`.
+- **Regla**: un píxel cuenta como `off-sky px` solo si su huella (footprint) cae fuera de la envolvente o por encima del techo y no es cielo exacto.
+- **Reloj**: time-lapse con `?speed=0&bloom=<modo>` y `__lab.tick(250)`, 40 frames (10 s simulados) por combinación, 3 modos (`off`, `on`, `fallback`) × 2 disposiciones (900×1015 y 412×915).
+
+La regla de la huella salió de un hallazgo: antes de afinar el oráculo (3b7a952) el smoke daba 4 px en el host (108, 292), pantalla del mundo (196.97, 387.80), el vértice oeste del agua recortada, `project(485, 288, -1)`. Era el fleco de antialiasing a caballo del borde de la envolvente (centro del píxel 108.25 contra x0 108.265). Ahora el píxel cuenta solo si su huella no toca la envolvente.
+
+### Cómo correrlo
+
+```
+npm run wreck-sweep
+npm run wreck-sweep -- --origin http://localhost:5181 --modes on,off --viewports 900x1015
+```
+
+| Flag | Qué hace |
+| --- | --- |
+| `--origin` | usa un servidor ya levantado en vez de su vite propio (5180) |
+| `--modes` | modos de bloom, lista separada por comas (`off,on,fallback`) |
+| `--viewports` | disposiciones `WxH` separadas por comas |
+| `--frames` | frames de `tick(250)` por combinación (40) |
+| `--hide` | índices de hijos de `stage.container` a esconder (bisección por capa; necesita la extensión PixiJS DevTools) |
+
+Código de salida 0 si no hay `off-sky px` en ninguna combinación; 1 si hay alguno. Necesita agent-browser; no corre en CI.
+
+### Rama (`agent/404-wreck-linea`, con #399, #400, #401)
+
+`npm run wreck-sweep` con los defaults, 5 min 11 s, salida 0:
+
+```
+> tsx scripts/wreck-sweep.ts
+
+900x1015 envelope {"x0":108.26509803921567,"y0":20.480000000000018,"x1":791.7349019607843,"y1":491.52,"ceiling":134.85458823529416} fit {"scale":9.23607843137255,"x":-1711.2423529411765,"y":-3289.7305098039214} host 900x512
+900x1015 off tick content 40 frames: 0 off-sky px
+900x1015 on tick content 40 frames: 0 off-sky px
+900x1015 fallback tick content 40 frames: 0 off-sky px
+412x915 envelope {"x0":16.479999999999905,"y0":97.38486486486477,"x1":395.51999999999987,"y1":358.61513513513523,"ceiling":159.92410810810816} fit {"scale":5.122162162162162,"x":-992.585945945946,"y":-1738.398054054054} host 412x456
+412x915 off tick content 40 frames: 0 off-sky px
+412x915 on tick content 40 frames: 0 off-sky px
+412x915 fallback tick content 40 frames: 0 off-sky px
+```
+
+Cero en 3 modos × 2 disposiciones × 40 frames.
+
+### Bisección en `origin/main`
+
+Worktree de `origin/main` (331c0c2), vite en 5181. Allí no existe `__lab.tick`: el reloj es el vivo (`?speed=20`) y el encuadre es `boxFrame(box, 9)`. El host mide 480×1015 porque la grilla de `main` no tiene media query. Los relojes no se comparan frame a frame: se compara presencia o ausencia.
+
+```
+> tsx scripts/wreck-sweep.ts --origin http://localhost:5181 --modes on,off --viewports 900x1015
+
+900x1015 envelope {"x0":19.200000000000045,"y0":359.5043243243242,"x1":460.8000000000002,"y1":655.4956756756758,"ceiling":432.6956756756756} fit {"scale":5.967567567567568,"x":-1156.4108108108107,"y":-1779.271891891892} host 480x1015
+900x1015 on live box 40 frames: 1094560 off-sky px, first at (203, 413)
+  first offender at frame 0, world screen (227.80, 367.36)
+900x1015 off live box 40 frames: 1094560 off-sky px, first at (203, 413)
+  first offender at frame 0, world screen (227.80, 367.36)
+```
+
+Son 27.364 `off-sky px` por frame, idénticos en los 40 frames. Ocultando capas con `--hide` (4 frames cada una, modo `on`; orden de `main`: 0 gBleed, 1 waterSlot, 2 gGround, 3 shadowSlot, 4 coreSlot, 5 gSolid, 6 solidSlot, 7 veilSlot, 8 accentSlot):
+
+| `--hide` | Capas | `off-sky px` |
+| --- | --- | --- |
+| 0,1,2 | bleed, agua, suelo | 0 |
+| 3,4 | sombras con AlphaFilter | 109456 (sin cambio: 27.364 por frame) |
+| 0,1,2,3,4 | todo lo anterior | 0 |
+| 0,1,2,3,4,5,6 | más sólidos | 0 |
+
+Sonda en la página (`main`, bloom `on`, 6 lecturas separadas 400 ms): 2.888 píxeles no-cielo por encima del techo (y < 432 px CSS) por frame, el más alto en y 413 px CSS, columnas ~201–205, o sea el vértice norte de la caja (pantalla del mundo (228, 371)). Son triángulos de terreno enteros que el recorte de `main` (`triOverlaps`) conserva y que sobresalen hasta ~3,6 unidades de pantalla sobre la esquina norte. No hay nada más arriba: ningún píxel en la franja de cielo donde la captura muestra la línea (≈ 85–165 px CSS sobre el vértice norte del rombo, encima del mástil; en y ≈ 270–350).
+
+En `main` todos los píxeles fuera de la envolvente vienen de los slots de terreno. #399 (terreno recortado a la caja con Sutherland–Hodgman) los elimina: rama = 0. Esos píxeles no llegan a la posición de la línea, así que no la explican; son lo único que `main` dibuja fuera de la envolvente en headless.
+
+### Qué se descartó
+
+| Candidato | Dato |
+| --- | --- |
+| Sombras + AlphaFilter | `--hide 3,4` no cambia nada en `main`; rama 0 en los 3 modos |
+| Sólidos y velos (alpha 0) | ocultos junto con terreno y sombras: 0 en `main` |
+| Accents y bloom | con terreno y sombras ocultos `main` da 0 en modo `on`; rama 0 en `on` y `fallback` |
+| Agua animada | capas de agua de `cropAnimators`, 40 frames de tick en la rama: 0 |
+| Polígonos con antialias en `drawLayer` | el único fleco de AA está en el borde de la envolvente en el vértice oeste, dentro de la huella |
+| Terreno que se escapa de la caja | real en `main` (27.364 px por frame), pero corto de la línea; #399 lo elimina |
+
+### Candidato que queda
+
+Un artefacto del GPU o del compositor del dispositivo, por ejemplo los bordes de las render-textures de los filtros en un GPU móvil. En `main` las áreas del AlphaFilter de las sombras se dimensionaban con sombras sin recortar; en la rama las sombras se recortan a la caja (#399), lo que achica esas áreas a la caja. Eso es lo que la rama acota. Desde headless no se puede observar: `__lab.pixels` usa `renderer.extract`, y el compositor queda fuera de alcance.
+
+No hay cambio en `src/`: no se encontró causa en el código. Confirmar en el teléfono sigue siendo manual (el plan de #395 dejó la confirmación en el dispositivo fuera de los criterios de las historias hijas).

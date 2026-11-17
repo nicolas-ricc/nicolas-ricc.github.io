@@ -7,6 +7,7 @@ Personal site: a night-time isometric map with three zones (Portfolio, Resume, B
 - `npm run build` — validates `content/*.json`, downloads the feed, builds and prerenders `/portfolio/`, `/cv/`, `/blog/`.
 - `npm run typecheck` — `tsc --noEmit`. In a fresh clone run `npm run feed` first: `content/blog.generated.json` is gitignored and `src/main.ts` imports it (`predev`/`prebuild` already do it for you).
 - `npm run legibility` — level 3 of the sign legibility guardrails: starts its own vite on 5179, opens every context exhibit in agent-browser at 1.17 and 0.83 with bloom, measures contrast, halo and OCR in pixels and writes `docs/superpowers/specs/assets/carteles-legibilidad/REPORT.md` with the crops. Needs agent-browser; not run in CI.
+- `npm run wreck-sweep` — sweeps the `#pecio` exhibit in agent-browser: 3 bloom modes × 2 phone/foldable layouts × 40 frames of `__lab.tick(250)`, and counts the non-sky pixels outside the content envelope. Starts its own vite on 5180, or uses `--origin`; `--hide` needs the PixiJS DevTools extension. Needs agent-browser; not run in CI.
 
 No public license: `private: true`, the `license` field (ISC) is a leftover of the scaffold and does not apply — the repo is not published to npm.
 
