@@ -7,9 +7,7 @@ import { Camera } from "./camera";
 import { mergeBlogFeed } from "./content/blog-feed";
 import { renderContent } from "./content/render";
 import type { ZoneContent } from "./content/types";
-import { v3, type Vec3 } from "./iso/geometry";
-import { project } from "./iso/project";
-import { worldZoneAt } from "./map/geo";
+import { applyLabel, markCurrent } from "./labels";
 import { ISO_COLORS } from "./map/palette-iso";
 import { zoneById, ZONE_IDS, type ZoneId } from "./map/zones";
 import { pathForZone, zoneFromPath } from "./router";
@@ -18,7 +16,8 @@ import { assembleWorld } from "./world/assemble";
 import { afterFirstRender } from "./world/bloom";
 import { attachBloom, type BloomProbe } from "./world/bloom-runtime";
 import { buildStage } from "./world/stage";
-import { coverView, pointerToWorld, zoneView, type View } from "./world/view";
+import { labelLayout, signBox, SIGNS, zoneAtScreen } from "./world/signs";
+import { coverView, zoneView, type View } from "./world/view";
 
 const CONTENT: Record<ZoneId, ZoneContent> = {
   portfolio: portfolioJson as ZoneContent,
@@ -26,19 +25,8 @@ const CONTENT: Record<ZoneId, ZoneContent> = {
   blog: mergeBlogFeed(blogJson as ZoneContent, feed.items),
 };
 
-/**
- * Where each label goes (world, at ground level): centered on that point,
- * set apart from the landmark so it does not cover it. Portfolio over the long
- * shed of the harbor, Resume in the city next to the plaza, Blog on the open sea.
- */
-const LABEL_AT: Record<ZoneId, Vec3> = {
-  portfolio: v3(66, -128, 0),
-  cv: v3(76, 446, 0),
-  blog: v3(633, 145, 0),
-};
 /** Minimum gap (px) between a label and the edge of the host. */
 const LABEL_MARGIN = 8;
-const clamp = (n: number, lo: number, hi: number): number => Math.min(Math.max(n, lo), Math.max(lo, hi));
 
 async function boot(): Promise<void> {
   const host = document.getElementById("canvas-host") as HTMLDivElement;
@@ -69,11 +57,9 @@ async function boot(): Promise<void> {
 
   const placeLabels = (v: View): void => {
     for (const [id, a] of labels) {
-      const p = project(LABEL_AT[id]);
-      // if its spot falls outside the host (narrow screens), the label sticks to the nearest edge: always visible and focusable
-      const hw = a.offsetWidth / 2 + LABEL_MARGIN, hh = a.offsetHeight / 2 + LABEL_MARGIN;
-      const sx = clamp(p.x * v.scale + v.x, hw, host.clientWidth - hw), sy = clamp(p.y * v.scale + v.y, hh, host.clientHeight - hh);
-      a.style.transform = `translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px) translate(-50%, -50%)`;
+      // over its sign; if the sign leaves the host (narrow screens), the label sticks to the nearest edge: always visible and focusable
+      const pad = { hw: a.offsetWidth / 2 + LABEL_MARGIN, hh: a.offsetHeight / 2 + LABEL_MARGIN };
+      applyLabel(a, labelLayout(signBox(SIGNS[id]), v, { w: host.clientWidth, h: host.clientHeight }, pad));
     }
   };
 
@@ -93,7 +79,7 @@ async function boot(): Promise<void> {
     } else {
       showMap();
     }
-    for (const [lid, a] of labels) a.classList.toggle("dim", id !== null && id !== lid);
+    markCurrent(labels, id);
     refreshFocus();
     const t = targetFor(id);
     if (animate) void camera.tweenTo(t); else camera.jumpTo(t);
@@ -108,11 +94,10 @@ async function boot(): Promise<void> {
     render(id, true);
   }
 
-  // hover and click on the canvas: pointer → world at z 0 → zone by geography
+  // hover and click on the canvas: pointer → the sign under it, else the zone by geography
   const zoneUnder = (e: PointerEvent | MouseEvent): ZoneId => {
     const r = app.canvas.getBoundingClientRect();
-    const p = pointerToWorld(camera.state, e.clientX - r.left, e.clientY - r.top);
-    return worldZoneAt(p.x, p.y);
+    return zoneAtScreen(camera.state, e.clientX - r.left, e.clientY - r.top);
   };
   app.canvas.style.cursor = "pointer";
   app.canvas.addEventListener("pointermove", (e) => { const z = zoneUnder(e); if (z !== hot) { hot = z; refreshFocus(); } });
