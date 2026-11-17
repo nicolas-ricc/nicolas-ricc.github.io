@@ -97,6 +97,8 @@ const ALLOW: Record<string, RegExp[]> = {
     /[\w-]*-(antes|despues)\b|assets\/[\w.-]*(fabrica|barrio|estacion|costura)[\w.-]*\//g,
     // the old spec mundo-3
     /\bmundo-3\b/g,
+    // the zone signs integration closing (#394): status line, framing row label and frame table rows of its spec
+    /integración al sitio|teléfono|veredicto del bloom|bloom, promedio|polígonos estáticos|acentos estáticos del mundo/g,
   ],
   "src/scenes/world-baseline.test.ts": [/"?[a-z-]+"?: "[0-9a-f]{8}\/[0-9a-f]{8}"/g],
 };
