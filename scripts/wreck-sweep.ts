@@ -49,13 +49,12 @@ async function startVite(origin: string): Promise<ChildProcess> {
   throw new Error("wreck-sweep: vite did not answer in 30 s");
 }
 
-let launched = false;
-/** First open of the session loads the DevTools extension (headless forced) when installed; later opens just navigate. */
-function open(url: string, needExt: boolean): void {
-  if (!launched && existsSync(EXT)) ab("--extension", EXT, "--args", "--headless=new", "open", url);
-  else if (!launched && needExt) throw new Error(`wreck-sweep: --hide needs the PixiJS DevTools extension at ${EXT} (see CLAUDE.md)`);
-  else ab("open", url);
-  launched = true;
+/** Launches the browser before any `set viewport` (a running daemon ignores --extension/--args); loads the DevTools extension when installed. */
+function launch(needExt: boolean): void {
+  try { ab("close"); } catch { /* no session yet */ }
+  if (existsSync(EXT)) ab("--extension", EXT, "--args", "--headless=new", "open", "about:blank");
+  else if (needExt) throw new Error(`wreck-sweep: --hide needs the PixiJS DevTools extension at ${EXT} (see CLAUDE.md)`);
+  else ab("open", "about:blank");
 }
 
 async function ready(mode: string): Promise<void> {
@@ -88,16 +87,19 @@ async function main(): Promise<void> {
   let vite: ChildProcess | null = null, dirty = false;
   try {
     if (!args.origin) vite = await startVite(origin);
+    launch(args.hide.length > 0);
     for (const [vw, vh] of args.viewports) {
       ab("set", "viewport", String(vw), String(vh), "2");
       const viewport = `${vw}x${vh}`;
       let envLine = false;
       for (const mode of args.modes) {
         const url = (speed: number) => `${origin}/lab/storybook.html?speed=${speed}&bloom=${mode}#pecio`;
-        open(url(0), args.hide.length > 0);
+        ab("open", url(0));
         await ready(mode);
         let clock: "tick" | "live" = "tick";
-        if (!evalJson<boolean>("typeof window.__lab.tick === 'function'")) { clock = "live"; open(url(20), args.hide.length > 0); await ready(mode); }
+        if (!evalJson<boolean>("typeof window.__lab.tick === 'function'")) { clock = "live"; ab("open", url(20)); await ready(mode); }
+        const lay = evalJson<number[]>("[innerWidth, innerHeight, devicePixelRatio]");
+        if (lay[0] !== vw || lay[1] !== vh || lay[2] !== 2) throw new Error(`wreck-sweep: viewport is ${lay[0]}x${lay[1]}@${lay[2]}, expected ${vw}x${vh}@2`);
         hide(args.hide);
         const fit = evalJson<Fit | null>("window.__lab.fit()"), host = evalJson<{ w: number; h: number }>("window.__lab.hostSize()");
         if (!fit) throw new Error(`wreck-sweep: no fit for pecio at ${viewport}`);
