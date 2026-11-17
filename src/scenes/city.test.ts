@@ -15,6 +15,7 @@ import { FIXED, FOOTBRIDGE_LOT, MAX_BUILDING_H, WATER_TOWER_BLOCK, assign } from
 import { zoneRng } from "./world";
 import { MARKET_SCALE } from "../city/harbor";
 import { fingerprint } from "../iso/fingerprint";
+import { CROWN_SITE, towerCrown } from "./sign-crown";
 
 const scene = (): CityScene => city(createRng(7), createRng(8), createRng(9));
 const all = (s: CityScene): Solid[] => [...s.ground, ...s.solids];
@@ -29,10 +30,15 @@ const inBlockXY = (x: number, y: number) => blocks().some((b) => x >= b.x - 1 &&
 const FIXED_BLOCKS = blocks().filter((b) => b.kind !== "plaza" && FIXED.some((f) => f.x === b.x && f.y === b.y));
 const inFixed = (s: Solid) => FIXED_BLOCKS.some((b) => inRect(bounds(s), b));
 const inFootbridge = (x: number, y: number) => x >= FOOTBRIDGE_LOT.x && x <= FOOTBRIDGE_LOT.x + FOOTBRIDGE_LOT.w && y >= FOOTBRIDGE_LOT.y && y <= FOOTBRIDGE_LOT.y + FOOTBRIDGE_LOT.d;
-/** The four pieces that can exceed 21: the tower prism, its cornice, the machine room and the mast. The cones and the vines at the base are not exempt. */
+/** The Resume crown on the tower roof (#391), built alone: its solids are matched by value in the city. */
+const CROWN: Solid[] = [], CROWN_ACCENTS: Accent[] = [];
+towerCrown(CROWN, CROWN_ACCENTS, CROWN_SITE);
+const CROWN_KEYS = new Set(CROWN.map((s) => JSON.stringify(s)));
+const isCrownPiece = (s: Solid) => CROWN_KEYS.has(JSON.stringify(s));
+/** The pieces that can exceed 21: the tower prism, its cornice, the machine room and the Resume crown (#391). The cones and the vines at the base are not exempt. */
 const isTowerPiece = (s: Solid) => {
   const b = bounds(s);
-  return s.kind !== "cone" && b.min.x >= TOWER.x - 0.6 && b.max.x <= TOWER.x + TOWER.w + 0.6 && b.min.y >= TOWER.y - 0.6 && b.max.y <= TOWER.y + TOWER.d + 0.6;
+  return isCrownPiece(s) || (s.kind !== "cone" && b.min.x >= TOWER.x - 0.6 && b.max.x <= TOWER.x + TOWER.w + 0.6 && b.min.y >= TOWER.y - 0.6 && b.max.y <= TOWER.y + TOWER.d + 0.6);
 };
 
 // the south row in front of the tower: PLAZA.x - 6 .. PLAZA.x + PLAZA.w + 6, the band that the controller's ruling caps at 10
@@ -114,9 +120,16 @@ describe("city", () => {
     expect(inRect(bounds(tower), PLAZA)).toBe(true);
     expect(s.tower.litWindows.length).toBe(8); // 4 columns × 2 visible walls
     expect(s.tower.litWindows.every((a) => a.kind === "poly" && a.color === "amber")).toBe(true);
-    expect(s.tower.antenna.z).toBeGreaterThan(TOWER_H + 5);
+    expect(s.tower).not.toHaveProperty("antenna"); // the Resume crown tops the tower (#391)
     expect(s.tower.paperWindow.x).toBeCloseTo(TOWER.x + TOWER.w, 6); // east wall
     for (const x of s.solids) if (!isTowerPiece(x)) expect(bounds(x).max.z).toBeLessThanOrEqual(inDistrict(x) || inFixed(x) ? 25 : 21); // the district and the landmarks reach 24 above the plinth, with a finial
+    expect(s.solids.filter(isCrownPiece)).toHaveLength(CROWN.length); // the crown exemption matches the crown and nothing else
+  });
+
+  it("city() builds the Resume crown at CROWN_SITE: its solids and accents are towerCrown's (#391)", () => {
+    const s = scene();
+    for (const x of CROWN) expect(s.solids).toContainEqual(x);
+    for (const a of CROWN_ACCENTS) expect(s.accents).toContainEqual(a);
   });
 
   it("in front of the tower no building exceeds 10 and nothing reaches 15 (the lit windows are painted on top of everything)", () => {
@@ -148,7 +161,8 @@ describe("city", () => {
     }
     expect(s.accents.length).toBeGreaterThan(6);
     const NEON = ["magenta", "magentaBleed", "cyan", "cyanBleed"];
-    expect(s.accents.every((a) => a.color.startsWith("amber") || a.color === "windowWarm" || a.color === "windowCool" || NEON.includes(a.color))).toBe(true);
+    // greenMid: RESUME letters and helipad edge lights of the crown (#391)
+    expect(s.accents.every((a) => a.color.startsWith("amber") || a.color === "windowWarm" || a.color === "windowCool" || a.color === "greenMid" || NEON.includes(a.color))).toBe(true);
     expect(s.accents.filter((a) => a.color === "windowWarm" || a.color === "windowCool").length).toBeGreaterThanOrEqual(100);
   });
 

@@ -458,13 +458,15 @@ describe("context exhibits (#376)", () => {
 });
 
 describe("cartel-torre-escena (#378)", () => {
-  it("after cartel-torre, in the city, the issue's box, built by towerCrown at CROWN_SITE, signed RESUME_SIGN", () => {
+  it("after cartel-torre, in the city, the issue's box, a crop of the world (no build), signed RESUME_SIGN", () => {
     const ids = EXHIBITS.map((e) => e.id);
     expect(ids.indexOf("cartel-torre-escena")).toBe(ids.indexOf("cartel-torre") + 1);
     const e = contexts.find((x) => x.id === "cartel-torre-escena")!;
     expect(e).toMatchObject({ title: "Resume tower crown in its scene", zone: "cv", group: "city", kind: "context", box: { x0: 108, y0: 206, x1: 150, y1: 248 }, sign: RESUME_SIGN });
-    const a: Solid[] = [], b: Accent[] = [], c: Solid[] = [], d: Accent[] = [];
-    e.build!(a, b); towerCrown(c, d, CROWN_SITE);
-    expect({ a, b }).toEqual({ a: c, b: d });
+    expect(e.build).toBeUndefined();
+    const c: Solid[] = [], d: Accent[] = [], cs = contextScene(scene, e);
+    towerCrown(c, d, CROWN_SITE);
+    for (const s of c) expect(cs.solids).toContainEqual(s);
+    for (const a of d) expect(cs.accents).toContainEqual(a);
   });
 });

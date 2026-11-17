@@ -4,9 +4,9 @@ import { city } from "./city";
 import { cityAnimator } from "./city-animator";
 
 describe("city-animator", () => {
-  it("exposes five accent layers and returns only those that changed", () => {
+  it("exposes four accent layers and returns only those that changed", () => {
     const a = cityAnimator(city(createRng(7), createRng(8), createRng(9)), createRng(3), { reducedMotion: false });
-    expect([...a.ids].sort()).toEqual(["city.antenna", "city.lit", "city.neon", "city.papers", "city.windows"]);
+    expect([...a.ids].sort()).toEqual(["city.lit", "city.neon", "city.papers", "city.windows"]);
     for (const id of a.ids) expect(a.layer(id).kind).toBe("accent");
     const changed = a.tick(33);
     expect(changed.has("city.papers")).toBe(true);
