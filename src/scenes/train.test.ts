@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { spotOf } from "../iso/spot-fixtures";
 import type { Accent } from "../iso/accent";
 import { isBox, type PlateBox } from "../iso/plate";
 import { bounds, tessellate, type Bounds, type Solid } from "../iso/solids";
@@ -124,7 +125,8 @@ describe("emu", () => {
 });
 
 describe("emu: lights", () => {
-  const dots = (ls: Accent[], color: string) => ls.filter((a): a is Accent & { kind: "dot" } => a.kind === "dot" && a.color === color);
+  // #403: headlights and red lights are haloless spots (polys), never dots
+  const dots = (ls: Accent[], color: string) => ls.flatMap((a) => { const s = spotOf(a); return s && s.color === color ? [s] : []; });
   const polys = (ls: Accent[], color: string) => ls.filter((a): a is Accent & { kind: "poly" } => a.kind === "poly" && a.color === color);
   const east = X0 + trainLen(4);
 
@@ -132,8 +134,9 @@ describe("emu: lights", () => {
     const { lights } = emu(X0, Y, { cars: 4, lead, lit: true });
     const cyan = dots(lights, "cyan"), red = dots(lights, "magenta");
     expect(cyan).toHaveLength(2); expect(red).toHaveLength(2);
-    for (const d of cyan) { expect(Math.abs(d.at.x - head)).toBeLessThanOrEqual(0.5); expect(d.r).toBe(0.3); expect(d.at.z).toBe(1.8); }
-    for (const d of red) { expect(Math.abs(d.at.x - tail)).toBeLessThanOrEqual(0.5); expect(d.r).toBe(0.25); expect(d.at.z).toBe(1.8); }
+    expect(lights.filter((a) => a.kind === "dot")).toEqual([]);
+    for (const d of cyan) { expect(Math.abs(d.at.x - head)).toBeLessThanOrEqual(0.5); expect(d.r).toBeCloseTo(0.3, 9); expect(d.at.z).toBeCloseTo(1.8, 9); }
+    for (const d of red) { expect(Math.abs(d.at.x - tail)).toBeLessThanOrEqual(0.5); expect(d.r).toBeCloseTo(0.25, 9); expect(d.at.z).toBeCloseTo(1.8, 9); }
     for (const d of [...cyan, ...red]) expect(Math.abs(Math.abs(d.at.y - Y) - 1.3)).toBeLessThan(1e-9);
     expect(sorted(cyan.map((d) => Math.sign(d.at.y - Y)))).toEqual([-1, 1]);
   });
@@ -142,6 +145,7 @@ describe("emu: lights", () => {
     const { lights } = emu(X0, Y, { cars: 4, lead: null, lit: true });
     expect(dots(lights, "cyan")).toEqual([]);
     expect(dots(lights, "magenta")).toEqual([]);
+    expect(lights.filter((a) => a.kind === "dot")).toEqual([]);
   });
 
   it("saloon: no cyanBleed when off; 4 per car when lit, each over a run of the window band", () => {

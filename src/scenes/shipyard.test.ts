@@ -39,7 +39,6 @@ describe("shipyard", () => {
     expect(gables.filter((x) => x.kind === "prism" && x.at.x > 300)).toHaveLength(2); // the sheds of the fitting-out quay
     expect(kinds("ramp").filter((r) => r.kind === "ramp" && r.at.z === 0)).toHaveLength(2); // the slipways; the sawtooth roofs go up high
     expect(kinds("hull").length).toBeGreaterThanOrEqual(1);
-    expect(s.weldSpots.length).toBeGreaterThan(10);
     const tall = s.solids.filter((x) => bounds(x).max.z >= 24);
     expect(tall.length).toBeGreaterThanOrEqual(3); // two legs and the beam
   });
@@ -51,7 +50,7 @@ describe("shipyard", () => {
     expect(s.trolley.at.y).toBe(s.trolleyRange[0]);
   });
 
-  it("the shipyard accents outside the station are cyan; those of the station are magenta dots or polys", () => {
+  it("the shipyard accents outside the station are cyan; those of the station are polys (spots and windows)", () => {
     const s = scene();
     // poly: the building's windows, lantern and dials (#278), located by their first vertex
     const where = (a: Accent) => (a.kind === "dot" ? a.at : a.pts[0]!);
@@ -65,7 +64,8 @@ describe("shipyard", () => {
     expect(windows.map((a) => a.color)).toEqual(["windowCool"]);
     expect(outside.filter((a) => a.kind === "dot").every((a) => a.kind === "dot" && a.color === "cyan" && a.at.z > 0)).toBe(true);
     expect(inside.length).toBeGreaterThanOrEqual(3); // three buffer lights, plus the station's polys
-    expect(inside.every((a) => a.kind === "dot" ? a.color === "magenta" && a.at.z > 0 : ["amber", "amberBleed", "cyanBleed"].includes(a.color))).toBe(true);
+    // #403: the buffer lights are magenta spots, so the station has no dot
+    expect(inside.every((a) => a.kind === "poly" && ["amber", "amberBleed", "cyanBleed", "magenta"].includes(a.color))).toBe(true);
   });
 
   it("raised solids of the shipyard ≤ 900 (#323)", () => {

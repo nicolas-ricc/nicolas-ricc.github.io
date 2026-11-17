@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
-import { createRng } from "../map/seed";
 import { excavatorBox } from "./excavator";
 import { STACKS } from "./factory";
 import { shipyardAnimator } from "./shipyard-animator";
@@ -43,7 +42,7 @@ describe("Portfolio accents", () => {
 
   it("rule 2: 31 cyan dots across the three scenes (#401, #402: no quay crane tips)", () => expect(portfolio.filter((a) => a.kind === "dot" && a.color === "cyan").length).toBe(31));
 
-  // #321: spark is only for the animated welding layer, never a static light
+  // #321: spark was only for the animated welding layer (gone in #403), never a static light
   it("rule 3: no static accent of the world is spark", () => expect(w.accents.filter((a) => a.color === "spark")).toEqual([]));
 
   it("rule 4: windowCool only as poly, at least 6 in the shipyard", () => {
@@ -52,16 +51,11 @@ describe("Portfolio accents", () => {
     expect(w.shipyard!.accents.filter((a) => a.color === "windowCool").length).toBeGreaterThanOrEqual(6);
   });
 
-  it("rule 5: the shipyard.sparks layer only emits spark", () => {
-    const anim = shipyardAnimator(world(7).shipyard!, createRng(3), { reducedMotion: false });
-    let seen = 0;
+  it("rule 5: the shipyard animator has no accent layer (#403: no trolley lamp, no sparks)", () => {
+    const anim = shipyardAnimator(world(7).shipyard!, { reducedMotion: false });
     for (let t = 0; t < 20000; t += 100) {
       anim.tick(100);
-      const l = anim.layer("sparks");
-      if (l.kind !== "accent") throw new Error("sparks is an accent layer");
-      if (l.accents.length > 0) seen++;
-      for (const a of l.accents) expect(a.color).toBe("spark");
+      for (const id of anim.ids) expect(anim.layer(id).kind, id).not.toBe("accent");
     }
-    expect(seen).toBeGreaterThan(0);
   });
 });
