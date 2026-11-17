@@ -10,8 +10,10 @@ import { BUILDER_PORTFOLIO } from "../kit/builder-portfolio";
 import { interlock } from "../kit/piece";
 import { industrialLamp, neon, place } from "../kit/props";
 import type { Material } from "../map/palette-iso";
+import { WORLD } from "../map/geo";
 import { layerLookup, type AnimLayer, type Animator } from "./animator";
 import { prism } from "./city-pieces";
+import { SIDING_Y } from "./factory";
 
 /** Where the Portfolio sign stands: on the ridge of the south assembly hall, in the middle of its length. */
 export const TINKER_SITE = v3(60, -24, 13.5);
@@ -201,9 +203,30 @@ function footAt(cx: number, cy: number, halls: readonly Hall[]): { x: number; y:
   return best;
 }
 
-/** Steel post 0.3² standing on the roof or ground (the highest roof point under its foot) up to `top`, nudged off any hall edge. */
-function post(out: Solid[], cx: number, cy: number, top: number, halls: readonly Hall[]): void {
-  const f = footAt(cx, cy, halls), base = roofUnder(f.x, f.y, POST, halls);
+/** A plan rectangle a ground post keeps off. */
+export type Track = Hall;
+/** The factory siding as one plan rectangle, its loading gauge: `siding()` in `factory.ts` lays rails at `SIDING_Y` ± 0.8 from the world's west edge to x 110, and its locomotive spans `SIDING_Y` ± 1.3; a test pins it. */
+export const SIDING_TRACKS: readonly Track[] = [{ x0: WORLD.x0, y0: SIDING_Y - 1.3, x1: 110, y1: SIDING_Y + 1.3 }];
+
+const onTrack = (x: number, y: number, t: Track) => x < t.x1 && x + POST > t.x0 && y < t.y1 && y + POST > t.y0;
+
+/** Centre (cx, cy) slid along u by the smallest shift that takes the 0.3² foot off every track it overlaps. */
+function offTracks(cx: number, cy: number, tracks: readonly Track[]): { x: number; y: number } {
+  let t = 0;
+  for (const r of tracks) {
+    const x = cx - POST / 2 + U.x * t, y = cy - POST / 2 + U.y * t;
+    if (!onTrack(x, y, r)) continue;
+    const ds = [(r.x0 - x - POST - EDGE) / U.x, (r.x1 - x + EDGE) / U.x, (r.y0 - y - POST - EDGE) / U.y, (r.y1 - y + EDGE) / U.y];
+    t += ds.sort((a, b) => Math.abs(a) - Math.abs(b))[0]!;
+  }
+  return { x: cx + U.x * t, y: cy + U.y * t };
+}
+
+/** Steel post 0.3² standing on the roof or ground (the highest roof point under its foot) up to `top`, slid along u off any track, nudged off any hall edge. */
+function post(out: Solid[], cx: number, cy: number, top: number, halls: readonly Hall[], tracks: readonly Track[]): void {
+  const c = offTracks(cx, cy, tracks), f = footAt(c.x, c.y, halls);
+  if (tracks.some((r) => onTrack(f.x, f.y, r))) throw new Error("tinkerSign: no post position clear of the tracks");
+  const base = roofUnder(f.x, f.y, POST, halls);
   out.push(interlock(prism(f.x, f.y, base, POST, POST, top - base, "steel")));
 }
 
@@ -213,21 +236,21 @@ const beam = (out: Solid[], from: Vec3, to: Vec3, w: number, h: number, mat: "st
 };
 
 /** Scaffold under the deck: two rows of posts, beams along and across, rust planks every 2 u, a ladder at the first end, two sagging cables, end posts with a top beam and two chains holding the `l`. */
-function scaffold(out: Solid[], at: Vec3, halls: readonly Hall[]): void {
+function scaffold(out: Solid[], at: Vec3, halls: readonly Hall[], tracks: readonly Track[]): void {
   const panels = tinkerSpec(at).backing.map((p) => { if (p.kind !== "poly") throw new Error("tinkerSign: panel"); return p; });
   const sOf = (p: { x: number; y: number }) => (p.x - at.x) * U.x + (p.y - at.y) * U.y;
   const sMin = Math.min(...panels.flatMap((p) => p.footprint.map(sOf))), sMax = Math.max(...panels.flatMap((p) => p.footprint.map(sOf)));
   const deck = deckTop(at), zBeam = deck - PLANK_H - FRAME_W / 2, zPost = zBeam - FRAME_W / 2;
   const n = Math.round((sMax - sMin) / POST_STEP), sk = Array.from({ length: n + 1 }, (_, k) => sMin + ((sMax - sMin) * k) / n);
   for (const b of [B_REAR, B_FRONT]) {
-    for (const s of sk) { const c = at3(at, s, b, 0); post(out, c.x, c.y, zPost, halls); }
+    for (const s of sk) { const c = at3(at, s, b, 0); post(out, c.x, c.y, zPost, halls, tracks); }
     for (let k = 0; k < n; k++) beam(out, at3(at, sk[k]!, b, zBeam), at3(at, sk[k + 1]!, b, zBeam), FRAME_W, FRAME_W); // one beam per span: a long diagonal beam's box would cover half the neighbourhood
   }
   for (const s of sk) beam(out, at3(at, s, B_REAR, zBeam), at3(at, s, B_FRONT, zBeam), FRAME_W, FRAME_W);
   for (let s = sMin + PLANK_W / 2 + 0.3; s <= sMax - PLANK_W / 2; s += PLANK_STEP) for (const b of PLANK_B) beam(out, at3(at, s, b - PLANK_LEN / 2, deck - PLANK_H / 2), at3(at, s, b + PLANK_LEN / 2, deck - PLANK_H / 2), PLANK_W, PLANK_H, "rust");
 
   const top = Math.max(...panels.map((p) => bounds(p).max.z)) + TOP_CLEAR + TOP_W / 2, sEnd = [sMin - 0.5, sMax + 0.5];
-  for (const s of sEnd) { const c = at3(at, s, B_REAR, 0); post(out, c.x, c.y, top, halls); }
+  for (const s of sEnd) { const c = at3(at, s, B_REAR, 0); post(out, c.x, c.y, top, halls, tracks); }
   beam(out, at3(at, sEnd[0]!, B_REAR, top), at3(at, sEnd[1]!, B_REAR, top), TOP_W, TOP_W);
   const hung = panels[6]!, hb = bounds(hung), hs = hung.footprint.map(sOf), chainZ = top - TOP_W / 2;
   for (const s of [Math.min(...hs) + 0.5, Math.max(...hs) - 0.5]) beam(out, at3(at, s, B_REAR, hb.max.z), at3(at, s, B_REAR, chainZ), CHAIN_W, CHAIN_W);
@@ -247,8 +270,8 @@ function scaffold(out: Solid[], at: Vec3, halls: readonly Hall[]): void {
 }
 
 /** The Portfolio sign at `at` over `halls`: the scaffold, a floodlight on the roof in front of the word, and the nine letters. */
-export function tinkerSign(out: Solid[], accents: Accent[], at: Vec3, halls: readonly Hall[] = SHIPYARD_HALLS): void {
-  scaffold(out, at, halls);
+export function tinkerSign(out: Solid[], accents: Accent[], at: Vec3, halls: readonly Hall[] = SHIPYARD_HALLS, tracks: readonly Track[] = SIDING_TRACKS): void {
+  scaffold(out, at, halls, tracks);
   const c = at3(at, 0, FLOOD_N, 0), base = roofUnder(c.x - LAMP_W / 2, c.y - LAMP_W / 2, LAMP_W, halls);
   const lit = industrialLamp(v3(c.x, c.y, base), { h: FLOOD_H, center: true });
   place(out, accents, { solids: lit.solids, accents: lit.accents.map((a) => (a.kind === "dot" ? { ...a, color: "amber" } : a)) });

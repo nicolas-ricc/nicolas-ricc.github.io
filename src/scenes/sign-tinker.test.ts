@@ -3,7 +3,7 @@ import type { Accent } from "../iso/accent";
 import { isBehind } from "../iso/depth";
 import { dot, v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { project } from "../iso/project";
-import { bounds, type Bounds, type Solid } from "../iso/solids";
+import { bounds, isFlat, type Bounds, type Solid } from "../iso/solids";
 import { backingMargin, checkSign, COVER_LAPTOP, COVER_PHONE, SIGN_FONT, type SignGlyph } from "../kit/legibility";
 import { polygonDistance, toWorld } from "../kit/lettering";
 import { BUILDER_FACE, contourQuads } from "../kit/marquee";
@@ -11,13 +11,14 @@ import { neon } from "../kit/props";
 import { HALO_BASE } from "../world/frame";
 import { assembleWorld } from "../world/assemble";
 import {
-  hallStandIn, PIECE_AT, roofUnder, roofZ, SHIPYARD_HALLS, STAND_IN_HALL, TINKER_CAP, TINKER_LETTERS, TINKER_SIGN, TINKER_SITE, tinkerAnimator, tinkerLights, tinkerModules,
-  tinkerSign, tinkerSpec, tinkerWordPlane, type Hall,
+  hallStandIn, PIECE_AT, roofUnder, roofZ, SHIPYARD_HALLS, SIDING_TRACKS, STAND_IN_HALL, TINKER_CAP, TINKER_LETTERS, TINKER_SIGN, TINKER_SITE, tinkerAnimator, tinkerLights, tinkerModules,
+  tinkerSign, tinkerSpec, tinkerWordPlane, type Hall, type Track,
 } from "./sign-tinker";
+import { world } from "./world";
 
 const U = v3(Math.SQRT1_2, -Math.SQRT1_2, 0), N = v3(Math.SQRT1_2, Math.SQRT1_2, 0);
 const SCALES = [COVER_LAPTOP, COVER_PHONE];
-const AT = [["site", TINKER_SITE], ["piece", PIECE_AT]] as const;
+const AT = [["site", TINKER_SITE, SIDING_TRACKS], ["piece", PIECE_AT, []]] as const; // the piece at the origin has no siding: no track
 const deg = (r: number) => (r * 180) / Math.PI;
 const sub = (a: Vec3, b: Vec3) => v3(a.x - b.x, a.y - b.y, a.z - b.z);
 /** The neon tube of a glyph: 0.45-wide quads along its contours, in the world. */
@@ -36,8 +37,9 @@ const maxRoof = (x: number, y: number, w: number, halls: readonly Hall[]) => {
 };
 const inHall = (p: { x: number; y: number }, h: Hall) => p.x >= h.x0 && p.x <= h.x1 && p.y >= h.y0 && p.y <= h.y1;
 
-function sign(at: Vec3, halls: readonly Hall[] = SHIPYARD_HALLS) { const out: Solid[] = [], accents: Accent[] = []; tinkerSign(out, accents, at, halls); return { out, accents }; }
-function piece() { const out: Solid[] = [], accents: Accent[] = []; hallStandIn(out); tinkerSign(out, accents, PIECE_AT, [STAND_IN_HALL]); return { out, accents }; }
+function sign(at: Vec3, halls: readonly Hall[] = SHIPYARD_HALLS, tracks: readonly Track[] = SIDING_TRACKS) { const out: Solid[] = [], accents: Accent[] = []; tinkerSign(out, accents, at, halls, tracks); return { out, accents }; }
+function piece() { const out: Solid[] = [], accents: Accent[] = []; hallStandIn(out); tinkerSign(out, accents, PIECE_AT, [STAND_IN_HALL], []); return { out, accents }; }
+const planApart = (a: Bounds, r: Track) => a.max.x <= r.x0 + 1e-9 || r.x1 <= a.min.x + 1e-9 || a.max.y <= r.y0 + 1e-9 || r.y1 <= a.min.y + 1e-9;
 
 /** Pairs of solids whose boxes interpenetrate, both-interlocked pairs and (solid, hall) pairs whose solid stands on the roof excused. */
 function clashes(out: Solid[], halls: readonly { solid: Solid; hall: Hall }[] = []): string[] {
@@ -192,8 +194,8 @@ describe("tinker sign scaffold (#379)", () => {
     expect(STAND_IN_HALL).toEqual({ x0: -20, y0: -8, x1: 20, y1: 8 });
   });
 
-  it.each([["site", TINKER_SITE, SHIPYARD_HALLS], ["piece", PIECE_AT, [STAND_IN_HALL]]] as const)("posts: interlocked steel 0.3², based on the roof or the ground, none across a hall edge (%s)", (_n, at, halls) => {
-    const posts = steelPosts(sign(at, halls).out);
+  it.each([["site", TINKER_SITE, SHIPYARD_HALLS, SIDING_TRACKS], ["piece", PIECE_AT, [STAND_IN_HALL], []]] as const)("posts: interlocked steel 0.3², based on the roof or the ground, none across a hall edge (%s)", (_n, at, halls, tracks) => {
+    const posts = steelPosts(sign(at, halls, tracks).out);
     expect(posts.length).toBeGreaterThanOrEqual(8);
     const where = new Set<string>();
     for (const s of posts) {
@@ -229,15 +231,15 @@ describe("tinker sign scaffold (#379)", () => {
     expect(out.filter((x) => x.interlocks).every((x) => x.mat === "steel")).toBe(true);
   });
 
-  it.each(AT)("every rust plank rests on a steel beam under it (%s)", (_n, at) => {
-    const { out } = sign(at), steel = out.filter((s) => s.kind === "beam" && s.mat === "steel").map(bounds);
+  it.each(AT)("every rust plank rests on a steel beam under it (%s)", (_n, at, tracks) => {
+    const { out } = sign(at, SHIPYARD_HALLS, tracks), steel = out.filter((s) => s.kind === "beam" && s.mat === "steel").map(bounds);
     for (const p of out.filter((s) => s.kind === "beam" && s.mat === "rust").map(bounds)) {
       expect(steel.some((b) => Math.abs(b.max.z - p.min.z) < 1e-9 && b.min.x < p.max.x && p.min.x < b.max.x && b.min.y < p.max.y && p.min.y < b.max.y)).toBe(true);
     }
   });
 
-  it.each(AT)("floodlight: one amber bulb r 1.2 on a 1.2 post on the roof, no cyan, its halo clear of every letter (%s)", (_n, at) => {
-    const halls = at === PIECE_AT ? [STAND_IN_HALL] : SHIPYARD_HALLS, { out, accents } = sign(at, halls);
+  it.each(AT)("floodlight: one amber bulb r 1.2 on a 1.2 post on the roof, no cyan, its halo clear of every letter (%s)", (_n, at, tracks) => {
+    const halls = at === PIECE_AT ? [STAND_IN_HALL] : SHIPYARD_HALLS, { out, accents } = sign(at, halls, tracks);
     expect(accents.some((a) => a.color === "cyan")).toBe(false);
     const bulbs = dots(accents).filter((d) => d.color === "amber");
     expect(bulbs).toHaveLength(1);
@@ -338,6 +340,43 @@ describe("tinker animator (#379)", () => {
   });
 });
 
+describe("tinker sign off the factory siding (#408)", () => {
+  it("SIDING_TRACKS spans both rails and the siding's wagons and locomotive, the track's loading gauge", () => {
+    const f = world(7).factory!;
+    const rails = f.ground.filter((s) => s.kind === "strip").map(bounds).filter((b) => b.min.y >= -9.01 && b.max.y <= -6.99);
+    const stock = f.solids.filter((s) => !isFlat(s)).map(bounds).filter((b) => b.min.y >= -9.31 && b.max.y <= -6.69 && b.max.z <= 5); // wagons, locomotive and cab
+    expect(rails).toHaveLength(2);
+    expect(stock.length).toBeGreaterThanOrEqual(8);
+    expect(SIDING_TRACKS).toHaveLength(1);
+    const t = SIDING_TRACKS[0]!, all = [...rails, ...stock];
+    for (const r of all) expect(r.min.x >= t.x0 - 1e-9 && r.max.x <= t.x1 + 1e-9 && r.min.y >= t.y0 - 1e-9 && r.max.y <= t.y1 + 1e-9, JSON.stringify(r)).toBe(true);
+    expect(t.y0).toBeCloseTo(Math.min(...all.map((r) => r.min.y)), 9);
+    expect(t.y1).toBeCloseTo(Math.max(...all.map((r) => r.max.y)), 9);
+  });
+
+  it("no ground solid of the sign stands on the siding track", () => {
+    const low = sign(TINKER_SITE).out.map(bounds).filter((b) => b.min.z < 0.1 + 1e-9); // below the rail top
+    expect(low.length).toBeGreaterThanOrEqual(8);
+    for (const b of low) for (const t of SIDING_TRACKS) expect(planApart(b, t), JSON.stringify(b)).toBe(true);
+  });
+
+  it("posts moved off the track stay in their rows: two slide along u, by less than 1.5, the beam ends still over them", () => {
+    const free = steelPosts(sign(TINKER_SITE, SHIPYARD_HALLS, []).out), kept = steelPosts(sign(TINKER_SITE).out);
+    expect(kept).toHaveLength(free.length);
+    const moved = free.flatMap((s, i) => (s.at.x !== kept[i]!.at.x || s.at.y !== kept[i]!.at.y ? [[s, kept[i]!] as const] : []));
+    // the post on the north rail (#408), and a rear post grazing the locomotive's side of the gauge
+    expect(moved.map(([a]) => [a.at.x, a.at.y])).toEqual([[expect.closeTo(37.56, 2), expect.closeTo(-6.74, 2)], [expect.closeTo(44.41, 2), expect.closeTo(-8.71, 2)]]);
+    const s = (p: Vec3) => dot(sub(p, TINKER_SITE), U);
+    for (const [a, b] of moved) {
+      const d = sub(b.at, a.at);
+      expect(Math.abs(dot(d, N))).toBeLessThan(1e-9);
+      expect(Math.hypot(d.x, d.y)).toBeLessThan(1.5);
+      expect(Math.abs(s(b.at))).toBeLessThan(Math.abs(s(a.at)) + 0.15); // at most half a post outward: the beam end still rests on it
+      expect(planApart(bounds(b), SIDING_TRACKS[0]!)).toBe(true);
+    }
+  });
+});
+
 describe("tinker sign in its scene (#379)", () => {
   const { scene } = assembleWorld(undefined, { reducedMotion: true });
   it("TINKER_SITE is on a ridge of an assembly hall, x within 40..80", () => {
@@ -351,15 +390,15 @@ describe("tinker sign in its scene (#379)", () => {
     expect(near).toEqual(expect.arrayContaining(sign(TINKER_SITE).out)); // the world holds the sign since #392: no extra copy
     for (const s of SCALES) expect(checkSign(TINKER_SIGN, s, near)).toEqual([]);
   }, 20_000);
-  it("no sign solid overlaps a world solid, posts and floodlight on a hall roof excused", () => {
+  it("no sign solid overlaps a world solid, strips (the siding rails, #408) included, posts and floodlight on a hall roof excused", () => {
     const own = sign(TINKER_SITE).out, ownKeys = new Set(own.map((s) => JSON.stringify(s)));
-    const raised = scene.solids.filter((s) => s.kind !== "ground" && s.kind !== "strip");
-    expect(raised.filter((s) => ownKeys.has(JSON.stringify(s)))).toHaveLength(own.length); // the world's copy of the sign (#392), and nothing else
-    const world = raised.filter((s) => !ownKeys.has(JSON.stringify(s)));
-    const halls = world.flatMap((s) => { const h = SHIPYARD_HALLS.find((x) => s.kind === "prism" && s.roof === "gable" && s.at.x === x.x0 && s.at.y === x.y0); return h ? [{ solid: s, hall: h }] : []; });
+    const placed = [...scene.ground, ...scene.solids].filter((s) => s.kind !== "ground"); // the strips (rails, roads) live in `ground`
+    expect(placed.filter((s) => ownKeys.has(JSON.stringify(s)))).toHaveLength(own.length); // the world's copy of the sign (#392), and nothing else
+    const others = placed.filter((s) => !ownKeys.has(JSON.stringify(s)));
+    const halls = others.flatMap((s) => { const h = SHIPYARD_HALLS.find((x) => s.kind === "prism" && s.roof === "gable" && s.at.x === x.x0 && s.at.y === x.y0); return h ? [{ solid: s, hall: h }] : []; });
     const ownB = own.map(bounds), bad: string[] = [];
-    for (const w of world) {
-      const wb = bounds(w), hall = halls.find((x) => x.solid === w);
+    for (const w of others) {
+      const b = bounds(w), wb = w.kind === "strip" ? { min: { ...b.min, z: 0 }, max: b.max } : b, hall = halls.find((x) => x.solid === w); // a strip lies on the ground up to its top
       own.forEach((s, i) => {
         if (!overlap(wb, ownB[i]!)) return;
         if (hall && clashes([w, s], [hall]).length === 0) return;

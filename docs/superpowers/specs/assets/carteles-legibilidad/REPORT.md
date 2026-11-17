@@ -12,7 +12,7 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 6.99:1 | ≥ 4.5:1 | ✓ |
+| contraste | 7.00:1 | ≥ 4.5:1 | ✓ |
 | halo | 0.08 | ≤ 0.5 | ✓ |
 | OCR | `PORTFOLIO` | = `PORTFOLIO` | ✓ |
 
