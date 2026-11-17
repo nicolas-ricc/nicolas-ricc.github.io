@@ -133,7 +133,6 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
         }
       });
 
-
       for (const s of signs) if (s.offUntil >= 0 && clock >= s.offUntil) { s.offUntil = -1; c.neon = true; } // the tube comes back
       signTimer -= dtMs;
       while (signTimer <= 0 && signs.length > 0) { // a long tick can bring several events
