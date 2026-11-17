@@ -23,7 +23,7 @@
 ## Decisions (technical assumptions, declared)
 
 1. **"Nothing references `after-encuadre`"** is checked over `README.md`, `CONTEXT.md`, `docs/superpowers/specs/**/*.md` and `src/**`. `docs/plans/` is excluded: plans are the record of past runs (`docs/plans/2026-11-17-400-encuadre-por-contenido.md` Task 4 names the folder it produced then); rewriting history is out of the issue.
-2. **Beam-north frame.** "Cómo probarlo" asks for an extra `#faro` frame with the beam toward the north. It goes to `after/faro-norte.png` (desktop, 1600×900), linked under the table. It is not one of the 22. The beam angle comes from `angleAt` (`src/scenes/sea-anim.ts`); the controller advances with `__lab.tick` until the beam's far vertex has the smallest screen y.
+2. **Beam-north frame.** "Cómo probarlo" asks for an extra `#faro` frame with the beam toward the north. It goes to `after/faro-norte-{phone,desktop}.png` (both viewports), linked under the table. It is not one of the 22. `__lab.tick(dtMs)` (`src/lab/storybook.ts:119`) calls `stage.tick` directly, so it advances under `?speed=0` (speed only scales the Pixi ticker, `storybook.ts:151`). The beam is not exposed to the page: the controller computes offline, from `angleAt` (`src/scenes/sea-anim.ts:156`) and the beam builder, the `dt` at which the far vertex has the smallest projected screen y, and calls `__lab.tick(dt)` once. `contentFrame` ticks the animators a whole `BEAM_PERIOD_MS` (`src/lab/frame.ts:39`), so the beam starts each show at the same phase as a fresh clock.
 3. **Table shape.** One `## Capturas antes y después` section before "Criterios de aceptación"; one row per exhibit: `| N | Exhibit | [antes](assets/…/NN.jpg) | [teléfono](assets/…/after/phone-NN.png) | [escritorio](assets/…/after/desktop-NN.png) |`.
 4. **"Desvíos"** is a `## Desvíos` section after the table, one bullet per inherited deviation (issue decision 2), each naming the child issue where it happened.
 5. **README world section** gains one sentence on the STS boom (nearly horizontal, over the water to the west, no tip light on the east bank) where it names "quay cranes". It names no sparks today (`grep -n "spark\|welding" README.md` is empty); the test pins that it stays so.
@@ -48,11 +48,12 @@
 - Modify: `src/docs-glossary.test.ts` (new `describe("storybook vocabulary (#405)")`)
 
 - [ ] **Step 1: Write the tests** in `docs.test.ts`:
+  - `"the 11 capture ids are storybook exhibits"`: each of the 11 ids of Global Constraints is an `EXHIBITS` id (so `#<id>` does not fall back to the first exhibit, `pickExhibit`, `src/lab/exhibits.ts:269-273`).
   - `"the 22 final captures exist as PNGs of the viewport size"`: for NN 01..11 and `phone` (412×915) / `desktop` (1600×900), the file exists and its IHDR (bytes 16–23, big-endian) gives that width and height.
-  - `"after-encuadre/ is gone and nothing references it"`: the folder does not exist; no file in `README.md`, `CONTEXT.md`, `docs/superpowers/specs/**/*.md`, `src/**/*.ts` (except this test file) contains `after-encuadre`.
+  - `"after-encuadre/ is gone and nothing references it"`: the folder does not exist; no file in `README.md`, `CONTEXT.md`, `vite.config.ts`, `docs/superpowers/specs/**/*.md`, `src/**`, `lab/**`, `scripts/**` contains the needle. The needle is built as `"after-" + "encuadre"`, so the test file needs no exclusion.
   - `"the spec says implemented on its second line"`: `spec.split("\n")[1] === "**Estado:** implementado (#395)"`.
-  - `"the spec carries a before/after table with the three captures per exhibit"`: section `## Capturas antes y después` exists; for each NN a single line contains `assets/2026-11-16-storybook-luces/NN.jpg`, `after/phone-NN.png` and `after/desktop-NN.png`; it links `after/faro-norte.png`, which exists.
-  - `"the spec lists its deviations"`: section `## Desvíos` exists and contains `poly`, `light: true`, `boyas`, `24`, `48`, `72`, `(32, −180)`, `(−150, −50)`, `(−180, 10)`, `terreno`, `sombras`, `` `h` ``.
+  - `"the spec carries a before/after table with the three captures per exhibit"`: section `## Capturas antes y después` exists; for each NN a single line contains `assets/2026-11-16-storybook-luces/NN.jpg`, `after/phone-NN.png` and `after/desktop-NN.png`, and the `NN.jpg` exists on disk; it links `after/faro-norte-phone.png` and `after/faro-norte-desktop.png`, which exist with the viewport sizes.
+  - `"the spec lists its deviations"`: section `## Desvíos` exists and contains `poly`, `light: true`, `boyas`, `24`, `48`, `72`, `40`, `68`, `124`, `(32, −180)`, `(−150, −50)`, `(−180, 10)`, `terreno`, `sombras`, `` `h` ``.
   - `"README's storybook paragraph names __lab.tick, shadows, halos and animation"`.
   - `"README's world section describes the STS boom and no sparks"`: the `## Isometric world` section matches `/STS/` and `/boom/`; whole README does not match `/spark|welding/i`.
   - `"README lists the lights spec among the lab specs"`: lab paragraph contains `2026-11-16-storybook-luces-y-encuadre-design.md`.
@@ -73,8 +74,8 @@
 
 Not a subagent task: needs the dev server and agent-browser.
 
-- [ ] `npm run dev -- --host --port 5173`; for each viewport, for each id in order, open `…/storybook.html?speed=0#<id>`, wait for the bloom to attach (2 s), `agent-browser screenshot` to `after/{phone,desktop}-NN.png`.
-- [ ] `#faro` at 1600×900: `__lab.tick` until the beam points north (decision 2), screenshot to `after/faro-norte.png`.
+- [ ] `npm run dev -- --host --port 5173`; for each viewport, for each id in order, open `…/storybook.html?speed=0#<id>`, poll until `window.__lab.exhibitId === id` and `window.__lab.fit()` is not null, then wait 3 s (bloom attaches after the first render, `storybook.ts:134`; headless runs at ~2 fps), `agent-browser screenshot` to `after/{phone,desktop}-NN.png`.
+- [ ] `#faro` in both viewports: `__lab.tick(dt)` with the beam pointing north (decision 2), screenshot to `after/faro-norte-{phone,desktop}.png`.
 - [ ] `git rm -r …/after-encuadre`; look at every capture (nothing cut by the canvas edge).
 - [ ] Commit `docs(#405): final captures; after-encuadre removed`.
 
@@ -82,7 +83,7 @@ Not a subagent task: needs the dev server and agent-browser.
 
 **Files:** Modify `docs/superpowers/specs/2026-11-16-storybook-luces-y-encuadre-design.md`, `docs/superpowers/specs/2026-10-17-storybook-estructuras-design.md`.
 
-- [ ] **Step 1:** status line (line 2), `## Capturas antes y después` (decision 3, links `after/faro-norte.png`), `## Desvíos` (decision 4) with these bullets: marquee bulbs to `poly` (open question resolved by capture 06, #403); signals and crossing, all four converted (shared builder, #403); shoal buoys and coast lights stay dots (not in the 11 exhibits); kit quay crane keeps its tip light with `light: true` (#402); inventory corrected: seam fence lamps x 24/48/72, transfer street y 40/68/124, hinterland (32, −180), (−150, −50), (−180, 10) (#401); terrain and shadows clipped to the box besides strips and long prisms (#399); `h` kept as a reserve in the content frame (#400).
+- [ ] **Step 1:** status line (line 2), `## Capturas antes y después` (decision 3, links `after/faro-norte-{phone,desktop}.png`), `## Desvíos` (decision 4) with these bullets: marquee bulbs to `poly` (open question resolved by capture 06, #403); signals and crossing, all four converted (shared builder, #403); shoal buoys and coast lights stay dots (not in the 11 exhibits); kit quay crane keeps its tip light with `light: true` (#402); inventory corrected: seam fence lamps x 24/48/72, transfer street y 40/68/124, hinterland (32, −180), (−150, −50), (−180, 10) (#401); terrain and shadows clipped to the box besides strips and long prisms (#399); `h` kept as a reserve in the content frame (#400).
 - [ ] **Step 2:** in the 2026-10-17 spec, after the `**Encuadre.**` paragraph of §6, a paragraph `*Desvío (2026-11-17, #395): …*` saying the frame is now `contentFrame` (projected bounds, clipped shadows, halos, animation samples) and pointing to `2026-11-16-storybook-luces-y-encuadre-design.md`. Status line untouched.
 - [ ] **Step 3: Run** `npm test && npm run typecheck && npm run build` → PASS.
 - [ ] **Step 4: Commit** `docs(#405): spec status, before/after table and deviations`.
@@ -94,3 +95,21 @@ Not a subagent task: needs the dev server and agent-browser.
 3. **Glossary `Code:` identifiers that do not exist** (e.g. `spot` misspelled): Task 1 Step 2 checks them.
 4. **English guard on Spanish literals in the tests** (`Capturas antes y después`, `antes`, `teléfono`): `english.test.ts` reads string and regex text of `docs.test.ts`. `Desvíos`, `*Desvío…*`, `**Estado:**` and `implementad` are already allowed (`src/english.test.ts` ALLOW for `src/lab/docs.test.ts`); other Spanish literals use `\u` escapes, as the #404 test does (`diagnóstico`). Task 1 Step 3 runs `src/english.test.ts` too.
 5. **A `src/` file mentioning `after-encuadre`** (the test itself): excluded by path.
+
+## Assumptions
+
+Recorded after the stage-2 grilling (engineering choices; any option satisfies the issue):
+
+1. `docs/plans/` is excluded from "nothing references `after-encuadre`": plan files are the record of past runs (`docs/plans/2026-11-17-400-encuadre-por-contenido.md` Task 4 names the folder it produced). Rejected: rewriting a past run's plan.
+2. Capture readiness: poll `__lab.exhibitId` and `__lab.fit()`, then a fixed 3 s for the bloom and a couple of frames at ~2 fps; each image is looked at. Rejected: a new readiness flag in `storybook.ts` (code change for a docs issue).
+3. Beam-north `dt` computed offline from `angleAt`, since the page does not expose the beam geometry. Rejected: exposing the beam on `__lab`.
+4. The beam-north frame in both viewports (the issue does not say which; both is the superset).
+5. Intermediate commits with red docs tests are acceptable: CI runs on the pull request head (`.github/workflows/deploy.yml`, `pull_request` → `npm test`), and the pipeline commits the failing evals first by design. The branch is merged only after Task 4.
+6. Paragraphs in docs tests are blank-line splits (`/\n\s*\n/`, as in `src/lab/docs.test.ts:41`); sections are sliced at the next heading of the same level (`/\n(?=## )/`, `docs.test.ts:332`).
+
+## Grilling
+
+- Rounds: 1 (the revision added three assertions and made the beam-north frame two files; no step added or removed). Griller model: fable.
+- Questions: 18. Sources: ISSUE 4 (Q1 criterion text, Q8 decision 2 lists all seven deviations verbatim, Q16 "Cómo probarlo", Q17 decision 1 "scale factor 1 para que pesen poco"; the `NN.jpg` are phone photos, not same-scale renders), CODE 12 (Q3/Q4 `storybook.ts:119,151`, `sea-anim.ts:156`; Q5 `exhibits.ts:269-273`; Q6 the eleven `NN.jpg` on disk; Q7 `shipyard.ts:193`, `shipyard.ts:198-200`, `hinterland.ts:149,188` as cited in the #395 plan; Q9 `accent.ts:5,11` `spot(at: Vec3, r, color, alpha = 1): Accent`, a `poly`; Q10 `docs-glossary.test.ts` helpers are module-local and `codeRefs` already parses `` `file` (`ident`) `` (its own test); Q11 `README.md:18`, `docs.test.ts:332`; Q12 `2026-10-17-storybook-estructuras-design.md:141`, one `**Encuadre.**`; Q13 `english.test.ts:89-102` (allow-list), `:179` (scans every `src/**/*.ts`, so `docs-glossary.test.ts` too; its new literals are English); Q18 `english.test.ts:179-180`), NO SOURCE 4 (Q2, Q14, Q15, Q18's needle → assumptions 2, 5, 1).
+- Assumptions: 1–6 above.
+- Issues opened: none. Spec ambiguities: none.
