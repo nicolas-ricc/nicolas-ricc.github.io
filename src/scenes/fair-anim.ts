@@ -1,9 +1,8 @@
 import type { Accent } from "../iso/accent";
-import type { Vec3 } from "../iso/geometry";
 import type { AccentColor } from "../map/palette-iso";
 import { bounds, tessellateAll, wheelPoint, type Bounds, type Solid } from "../iso/solids";
 import { isBehind } from "../iso/depth";
-import { convexHull } from "../iso/geometry";
+import { convexHull, type Vec3 } from "../iso/geometry";
 import { project } from "../iso/project";
 import { pointInPolygon } from "../map/geo";
 import { chase, flip } from "./neon";
@@ -39,12 +38,19 @@ export function dropEase(ms: number): number {
   return f < 1 ? 1 - f * f : 0;
 }
 
-/** The gondola hides the column light `at` if the point is within its height band (plan position is not checked: the column points sit 0.8 from the axis, inside the octagon's inscribed radius) or sits behind a solid whose screen silhouette covers it. Silhouettes and bounds are computed once per call by the caller. */
-function gondolaHides(at: Vec3, gondola: { b: Bounds; flat: number[] }[]): boolean {
-  if (!gondola.length) return false;
-  if (at.z >= Math.min(...gondola.map((s) => s.b.min.z)) && at.z <= Math.max(...gondola.map((s) => s.b.max.z))) return true;
+interface GondolaShape { lo: number; hi: number; parts: { b: Bounds; flat: number[] }[] }
+
+/** Height band and screen silhouettes of the gondola at height `z`. Computed once per frame, not per point. */
+function gondolaShape(z: number): GondolaShape {
+  const parts = dropSolids(z).map((s) => ({ b: bounds(s), flat: convexHull(tessellateAll(s).flatMap((f) => f.pts.map(project))).flatMap((q) => [q.x, q.y]) }));
+  return { lo: Math.min(...parts.map((p) => p.b.min.z)), hi: Math.max(...parts.map((p) => p.b.max.z)), parts };
+}
+
+/** The gondola hides a column light inside its height band. Plan position is not checked: the column points sit 0.8 from the axis, inside the octagon's inscribed radius. Outside the band it hides the light if it is behind a solid whose silhouette covers it. */
+function gondolaHides(at: Vec3, g: GondolaShape): boolean {
+  if (at.z >= g.lo && at.z <= g.hi) return true;
   const p = project(at);
-  return gondola.some((s) => isBehind({ min: at, max: at }, s.b) && pointInPolygon(p.x, p.y, s.flat));
+  return g.parts.some((s) => isBehind({ min: at, max: at }, s.b) && pointInPolygon(p.x, p.y, s.flat));
 }
 
 export function createFairAnim(scene: FairScene, opts: { reducedMotion: boolean }): FairAnim {
@@ -66,7 +72,7 @@ export function createFairAnim(scene: FairScene, opts: { reducedMotion: boolean 
     signs: () => [scene.arcadeSigns[signStep % 2]!],
     // The column lights up (magenta) below the gondola; above it stays at rest (magentaBleed). The gondola hides the lights it covers.
     neon: () => {
-      const z = dropZ(), g = dropSolids(z).map((s) => ({ b: bounds(s), flat: convexHull(tessellateAll(s).flatMap((f) => f.pts.map(project))).flatMap((q) => [q.x, q.y]) }));
+      const z = dropZ(), g = gondolaShape(z);
       return [
         ...run(scene.neon.marquee, 4, (k) => flip(k, "cyan", "magenta")),
         ...run(scene.neon.ghost, 4, (k) => flip(k, "magenta", "magentaMid")),
