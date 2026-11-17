@@ -4,12 +4,15 @@ import { worldZoneAt } from "../map/geo";
 import { ACCENT_DIM, WORLD_ZONES, accentsByZone, focusAlphas } from "./veil";
 
 describe("assembleWorld", () => {
-  it("the whole world brings the eight animators, each with its zone; the water has no zone", () => {
+  it("the whole world brings the nine animators, each with its zone; the water has no zone", () => {
     const { scene, animators } = assembleWorld(undefined, { reducedMotion: true });
     expect(scene.terrain.bleed.length).toBeGreaterThan(0);
     const zones = animators.map((a) => a.zone);
     expect(zones.filter((z) => z === null)).toHaveLength(1);
-    expect(zones.filter((z) => z === "portfolio")).toHaveLength(4); // shipyard, train, factory, fair
+    expect(zones.filter((z) => z === "portfolio")).toHaveLength(5); // shipyard, train, tinker sign, factory, fair
+    const tinker = animators.filter((a) => a.ids.includes("tinker.lights"));
+    expect(tinker).toHaveLength(1);
+    expect(tinker[0]!.zone).toBe("portfolio");
     expect(zones.filter((z) => z === "cv")).toHaveLength(2);        // city, tech
     expect(zones.filter((z) => z === "blog")).toHaveLength(1);      // sea
     const water = animators.find((a) => a.zone === null)!;
@@ -22,7 +25,12 @@ describe("assembleWorld", () => {
   it("with a zone filter only the animators of those zones plus the water come", () => {
     const { animators } = assembleWorld(["portfolio"], { reducedMotion: true });
     expect(new Set(animators.map((a) => a.zone))).toEqual(new Set([null, "portfolio"]));
-    expect(animators.filter((a) => a.zone === "portfolio")).toHaveLength(3); // shipyard, train and factory: without the fair (it lives in the bleed)
+    expect(animators.filter((a) => a.zone === "portfolio")).toHaveLength(4); // shipyard, train, tinker sign and factory: without the fair (it lives in the bleed)
+    expect(animators.some((a) => a.ids.includes("tinker.lights"))).toBe(true);
+  });
+  it("with the [\"cv\"] filter no animator carries tinker.lights", () => {
+    const { animators } = assembleWorld(["cv"], { reducedMotion: true });
+    expect(animators.some((a) => a.ids.includes("tinker.lights"))).toBe(false);
   });
   it("the train lives in a Portfolio animator and its three light layers declare zone portfolio", () => {
     const { animators } = assembleWorld(undefined, { reducedMotion: true });
@@ -65,6 +73,14 @@ describe("assembleWorld", () => {
   it("the fair.neon layer lives in the fair animator, in Portfolio, and is dimmed by its veil", () => {
     const { animators } = assembleWorld(undefined, { reducedMotion: true });
     const a = animators.find((x) => x.ids.includes("fair.neon"));
+    expect(a?.zone).toBe("portfolio");
+    expect(focusAlphas("cv").portfolio.accents).toBe(ACCENT_DIM);
+    expect(focusAlphas("blog").portfolio.accents).toBe(ACCENT_DIM);
+    expect(a!.tick(1000).size).toBe(0);
+  });
+  it("the tinker.lights layer lives in a Portfolio animator, is dimmed by the veil and with reducedMotion never redraws (#392)", () => {
+    const { animators } = assembleWorld(undefined, { reducedMotion: true });
+    const a = animators.find((x) => x.ids.includes("tinker.lights"));
     expect(a?.zone).toBe("portfolio");
     expect(focusAlphas("cv").portfolio.accents).toBe(ACCENT_DIM);
     expect(focusAlphas("blog").portfolio.accents).toBe(ACCENT_DIM);
