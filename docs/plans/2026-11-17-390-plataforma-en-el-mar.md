@@ -96,3 +96,31 @@
 - [ ] **Step 1:** `npm run dev -- --host --port 5173`; agent-browser `set viewport 1366 657 2`, open `http://localhost:5173/`, wait ~3 s, screenshot to the path above.
 - [ ] **Step 2: Verify**: PNG header size is 2732 × 1314; looking at it, the platform with "Writing" stands in the sea between the two buoys.
 - [ ] **Step 3: Commit** `docs(#390): site capture of the Writing platform`.
+
+## Assumptions
+
+- **Accent count of `sea()`** (technical): the issue's "4 `dot` (the two of today plus hut and mast)" is pinned as total `4 + signTris` with the real kinds (3 dots, 1 + signTris polys), because one of "the two of today" is the keeper's window, a `poly` (`src/scenes/sea.ts` `keeperHouse`). Rejected: asserting 4 dots, which contradicts the code.
+- **Sea materials** (technical): `SEA_MATS` gains `boxGrey` and `officeDark`, and `sharedWithBlog` gains only what `world.test.ts` rejects (`boxGrey`, the hut; `officeDark` only appears in the tech district, which that test does not compare). Rejected: changing the hut's material, which would move the `plataforma` piece hash the issue forbids touching.
+- **CONTEXT.md** (technical): the Sign and Exhibit entries are corrected now (site (392, 178), Blog sign in the world, `build` optional) so the glossary does not lie between children; the full rewrite stays in #394.
+- **Level 3 failure** (technical): if `npm run legibility` reports a ✗ or aborts, its outputs are restored with `git checkout -- docs/superpowers/specs/assets/carteles-legibilidad` and the stage is reported as blocked; no half-regenerated report is committed.
+
+## Grilling
+
+Round 1 (griller: fable), 16 questions. Sources: ISSUE 7, CODE 13, DOC 0 (several answers cite both), NO SOURCE 2 → technical assumptions (Q3 accent count, Q11 level-3 failure handling). No spec ambiguity, no out-of-scope issue opened. The plan did not change substantially (only `## Assumptions` added): no second round.
+
+1. Lane measurement at (392, 178) — ISSUE: "Con el centro en **(392, 178)**: 14,7 u al carril, 0 muestras detrás, ninguna pieza de barco … cruza el rectángulo de pantalla de las letras". The planning spike also ran `npm test` with the site moved and `sea()` building the platform: `sea-anim.test.ts` passed.
+2. Baseline — CODE: `src/scenes/world-baseline.test.ts:14-45` hashes only `piece` exhibits (`if (e.kind !== "piece") continue`); no world/sea hash exists.
+3. NO SOURCE → assumption (accent count). ISSUE: "los acentos estáticos del mar son 4 `dot` (los dos de hoy más casilla y mástil) y tantos `poly` como triángulos"; CODE `sea.ts` `keeperHouse` pushes a `poly`.
+4. CODE: `src/lab/crop.ts:28-31` `cropSolid` returns the solid whole when its bounds overlap the box (no clipping). The panel is inside: ISSUE "caja AABB de los sólidos x 361..423, y 147..209" ⊂ 358..426 × 144..212.
+5. CODE: `src/scenes/sea.ts` `sea()` only `push`es in order; the tests call `sea(rng)` directly (`sea.test.ts` `scene()`), not `assembleWorld`.
+6. CODE: `src/lab/signs.test.ts:20` uses `contextScene(scene, e).solids`, not `e.build`.
+7. CODE: `src/lab/storybook.ts:79` goes through `contextScene`/`contextAnimators`; `scripts/legibility.ts` imports only `contextScene` (no `e.build`/`e.animate`). `signs.test.ts` and `exhibits.test.ts` exercise `contextScene` with the `build`-less exhibit.
+8. CODE: `src/map/geo.ts` `worldZoneAt`; ISSUE: "toda la cubierta y todos los acentos en zona `blog`… En (391, 179) la esquina SO ya es `cv`: no correr más". Pinned by the new `veil.test.ts` test.
+9. CODE: `src/lab/exhibits.test.ts:34` `SLACK = 8`; `:144-152` "framing…" and "neighbors…" (and `:425-434` for contexts); `src/lab/exhibits.ts:251-252` `boyas` `h: 4`. The spike failed both rules for `boyas`.
+10. CODE: `src/scenes/sea-anim.test.ts:5-12` already imports `hullsIntersect`, `screenHull` (`../iso/depth`), `project`, `bounds`, `laneAt`, `laneLength`, `SHIPS` (`./sea-anim`), `ship`, `shipAt` (`./ships`). Nothing to create.
+11. CODE: `src/lab/docs.test.ts:525-531` counts 18 = 3 contexts × 2 scales × 3 metrics; failure handling → assumption.
+12. CODE: `src/scenes/world.test.ts:78-79` — every Blog material that Portfolio or the city also uses must be in `sharedWithBlog`; `officeDark` is not in it and is not used by those scenes.
+13. CODE: `src/lab/exhibits.ts:265` `plataforma-escena` has no `animate`; ISSUE: "los acentos del cartel son estáticos y van a `SeaScene.accents`".
+14. CODE: `src/lab/docs.test.ts:545-550` matches `PLATFORM_SITE` and `(392, 178)` built from the constant inside §5; `grep "400, 170"` finds only §5 line 204 in the spec, plus CONTEXT.md and the code.
+15. CODE: branch created from `origin/feature/389-carteles-en-el-mapa` (6d5f569); `src/scenes/sign-platform.ts:25` `PLATFORM_SITE = v3(400, 170, 0)`, `src/lab/exhibits.ts:265` `plataforma-escena` with `build: seaPlatformAt`.
+16. ISSUE: "se espera ~3 s y se captura; la plataforma con Writing se ve en el mar entre las boyas"; ISSUE (#389 plan comment, factory): "en `coverView(1366, 657)` … los tres carteles entran enteros". Task 4 verifies by looking at the capture.
