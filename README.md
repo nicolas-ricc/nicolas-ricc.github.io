@@ -75,6 +75,10 @@ wider, the cover rectangle with the real aspect ratio of `#canvas-host`;
 narrower, the 16:9 cover fills the host's height and the host is a window of
 it, centered on `COVER_FOCUS_U` and clamped to its edges (#351). `zoneView`
 stays inside the 16:9 cover on each axis it covers (`clampToCover`).
+The 3D zone signs are the navigation (`src/world/signs.ts`): `zoneAtScreen` hit-tests
+their polygons before the geography, the links are invisible over them, and
+`labelLayout` moves a link to the edge when less than half of its word is inside
+the host (Writing, on a phone); there is no external font, the lettering is drawn by the kit.
 In Resume, `city-anim.ts` adds the `city.windows` layer (up to 40 windows of
 downtown and the residential area that switch on and off keeping the percentage
 ±5 %) and, inside `city.neon`, the flickering neon sign of a bar on the pier or a brewery of row 92; the
@@ -117,7 +121,8 @@ Specs in `docs/superpowers/specs/`
 `2026-10-27-estacion-terminal-design.md`,
 `2026-10-27-barrio-costero-design.md`,
 `2026-11-11-carteles-de-zona-assets-design.md`,
-`2026-11-15-carteles-de-zona-rediseno-design.md`).
+`2026-11-15-carteles-de-zona-rediseno-design.md`,
+`2026-11-17-carteles-de-zona-integracion-design.md`).
 
 `/lab/storybook.html` is the structures storybook: it shows one building or
 structure at a time, cropped from the world by its box (or built alone at the
@@ -138,7 +143,7 @@ The zone signs of #374 are three pairs of exhibits: `#cartel-torre` and
 `#cartel-torre-escena` (Resume), `#cartel-taller` and `#cartel-taller-escena`
 (Portfolio) and `#plataforma` and `#plataforma-escena` (Blog). The piece builds
 the sign at the origin (the crown and the tinker sign on a stand-in of their
-host); the one "in its scene" shows it at its candidate site in the real world.
+host); the one "in its scene" is a crop of the real world with its sign.
 Judge them at the cover scales with `c`. `npm run legibility` measures contrast,
 halo and OCR with a browser; it does not run in CI.
 

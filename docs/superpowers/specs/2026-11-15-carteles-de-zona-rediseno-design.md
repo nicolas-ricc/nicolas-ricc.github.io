@@ -1,11 +1,11 @@
 # Carteles de zona, segunda vuelta: integrados a la escena y legibles con garantías
 
 **Fecha:** 2026-11-15
-**Estado:** implementado (storybook; integración pendiente, §7)
+**Estado:** implementado (storybook e integración al sitio: #389, spec 2026-11-17)
 **Reemplaza en parte a:** `2026-11-11-carteles-de-zona-assets-design.md` (#352).
 El cartel de Blog (`#plataforma`) se queda; el de Resume y el de Portfolio se
 rehacen. La integración a `#zonas` del sitio (§7 de esa spec) sigue fuera de
-alcance.
+alcance (hecha después en #389; ver §7).
 
 ## 1. Qué salió mal en #352
 
@@ -229,6 +229,8 @@ Sitios candidatos (constantes exportadas, para la historia de integración):
 - [x] `npm test` y `npm run typecheck` en verde.
 
 ## 7. Fuera de alcance
+
+*Desvío (2026-11-17): integrado en #389; ver 2026-11-17-carteles-de-zona-integracion-design.md.*
 
 - Poner los carteles en el mundo del sitio y reemplazar `#zonas` (hit test,
   velo, foco). Va en la historia de integración, que usa las posiciones
