@@ -278,7 +278,7 @@ En `main` todos los píxeles fuera de la envolvente vienen de los slots de terre
 | Sombras + AlphaFilter | `--hide 3,4` no cambia nada en `main`; rama 0 en los 3 modos |
 | Sólidos y velos (alpha 0) | visibles, con terreno y sombras ocultos (`--hide 0,1,2,3,4`): 0 en `main`, modo `on`; rama 0 en los 3 modos |
 | Accents y bloom | visibles, con terreno y sombras ocultos (`--hide 0,1,2,3,4`): 0 en `main`, modo `on`; rama 0 en `on` y `fallback` |
-| Agua animada | capas de agua de `cropAnimators`, 40 frames de tick en la rama: 0; en `main`, `--hide 0,1,2` (incluye el agua) da 0 |
+| Agua animada | capas de agua de `cropAnimators`, 40 frames de tick en la rama: 0. En `main` el agua está en los slots de terreno (0–2), que explican todos los píxeles fuera de la envolvente, y ninguno sube más allá de y 413 px CSS (la línea estaba en 270–350) |
 | Polígonos con antialias en `drawLayer` | el único fleco de AA está en el borde de la envolvente en el vértice oeste, dentro de la huella |
 | Terreno que se escapa de la caja | real en `main` (27.364 px por frame), pero corto de la línea; #399 lo elimina |
 
