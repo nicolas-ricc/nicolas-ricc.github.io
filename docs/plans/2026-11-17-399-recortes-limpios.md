@@ -28,10 +28,10 @@
 4. **Terrain triangles** (every `kind: "ground"` solid, wherever it comes from: terrain, `scene.ground`, `water` layers, claims): a triangle with all three vertices inside passes by identity (same `Tri` object); one that does not overlap strictly is dropped; otherwise `clipPolygon` (z interpolated along the cut edges) and a fan from vertex 0: `{ ...t, pts: [p0, pi, pi+1] }`, so `toneOffset`/`baseTone` are kept. Fewer than 3 clipped vertices → dropped. The mesh whose triangles all passed by identity is returned as the same object; none left → `null`. No intermediate arrays for the triangles that pass whole (the per-tick path over the water bands).
 5. **Shadows:** `buildRenderList(solids, heading?, clip?: ClipRect)` clips each shadow hull (full and core) with `clipPolygon` before projecting (the hull is convex, so the result is the exact intersection); a result with fewer than 3 points emits no item.
 6. **Stage:** `buildStage(scene, animators, opts: { clip?: Box } = {})`. `clip` reaches the static list and every `solid` layer redraw; bleed and water lists carry no shadows, so they do not need it.
+7. **Real-world assertions** live in `src/lab/exhibits.test.ts` (it already assembles the world once), new `describe("clean crops (#399)")`.
 8. **Shadows of what the crop drops or cuts.** A solid dropped by the crop casts no shadow into the box (as today: `cropSolid` already drops non-overlapping solids, `src/lab/crop.ts:29-33`); a long prism cut at the edge loses the shadow its outside part would cast inward. Both are low (fences 1.2, quay edges, plinths 0.3) and the issue asks for the crop, not for neighbour shadows. Rejected: keeping uncut copies only for shadows (two geometries per solid, against decision 3 of the issue).
 9. **No red commit inside stage 4.** Task 2 owns everything the strict crop breaks (`planta` test, exhibit heights), so each task commit leaves `npm test` green except the stage-3 evals of later tasks.
 10. **Visual check** is not a plan task: the pipeline's stage-3 agent-browser script (`.scratch/evals-399.md`, URLs from the issue's "Cómo probarlo") is run in stage 4 after Task 5, and the PR carries `#playa-camiones` and `#gradas` captures.
-7. **Real-world assertions** live in `src/lab/exhibits.test.ts` (it already assembles the world once), new `describe("clean crops (#399)")`.
 
 ## Criteria → tasks
 
