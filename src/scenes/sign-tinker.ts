@@ -8,7 +8,7 @@ import { diagonalWall, toWorld, type GlyphLayout, type TextPlane } from "../kit/
 import { BUILDER_FACE, contourQuads, marqueeLayout } from "../kit/marquee";
 import { BUILDER_PORTFOLIO } from "../kit/builder-portfolio";
 import { interlock } from "../kit/piece";
-import { industrialLamp, neon, place } from "../kit/props";
+import { neon } from "../kit/props";
 import type { Material } from "../map/palette-iso";
 import { layerLookup, type AnimLayer, type Animator } from "./animator";
 import { prism } from "./city-pieces";
@@ -185,7 +185,7 @@ export function hallStandIn(out: Solid[]): void {
 }
 
 const POST = 0.3, FRAME_W = 0.25, TOP_W = 0.25, PLANK_W = 0.6, PLANK_H = 0.15, PLANK_LEN = 1.4, PLANK_STEP = 2, POST_STEP = 6, CHAIN_W = 0.08, CABLE_W = 0.08, CABLE_DROP = 1.4, CABLE_SAG = 0.6;
-const ROD_W = 0.12, RUNG_W = 0.1, RUNG_STEP = 1, LADDER_RUN = 0.8, LADDER_B = -2, LADDER_GAP = 0.35, TOP_CLEAR = 0.5, FLOOD_N = 3.5, FLOOD_H = 1.2, LAMP_W = 0.6;
+const ROD_W = 0.12, RUNG_W = 0.1, RUNG_STEP = 1, LADDER_RUN = 0.8, LADDER_B = -2, LADDER_GAP = 0.35, TOP_CLEAR = 0.5;
 const B_REAR = -3.45, B_FRONT = 0, PLANK_B = [-3, -0.6], EDGE = 1e-3;
 
 const at3 = (at: Vec3, s: number, b: number, z: number): Vec3 => v3(at.x + U.x * s + N.x * b, at.y + U.y * s + N.y * b, z);
@@ -246,12 +246,9 @@ function scaffold(out: Solid[], at: Vec3, halls: readonly Hall[]): void {
   }
 }
 
-/** The Portfolio sign at `at` over `halls`: the scaffold, a floodlight on the roof in front of the word, and the nine letters. */
+/** The Portfolio sign at `at` over `halls`: the scaffold and the nine letters. */
 export function tinkerSign(out: Solid[], accents: Accent[], at: Vec3, halls: readonly Hall[] = SHIPYARD_HALLS): void {
   scaffold(out, at, halls);
-  const c = at3(at, 0, FLOOD_N, 0), base = roofUnder(c.x - LAMP_W / 2, c.y - LAMP_W / 2, LAMP_W, halls);
-  const lit = industrialLamp(v3(c.x, c.y, base), { h: FLOOD_H, center: true });
-  place(out, accents, { solids: lit.solids, accents: lit.accents.map((a) => (a.kind === "dot" ? { ...a, color: "amber" } : a)) });
   tinkerLetters(out, accents, at);
 }
 

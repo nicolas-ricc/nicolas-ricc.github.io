@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { isBehind } from "../iso/depth";
-import { dot, v3, type Vec2, type Vec3 } from "../iso/geometry";
-import { project } from "../iso/project";
+import { dot, v3, type Vec3 } from "../iso/geometry";
 import { bounds, type Bounds, type Solid } from "../iso/solids";
 import { backingMargin, checkSign, COVER_LAPTOP, COVER_PHONE, SIGN_FONT, type SignGlyph } from "../kit/legibility";
-import { polygonDistance, toWorld } from "../kit/lettering";
+import { toWorld } from "../kit/lettering";
 import { BUILDER_FACE, contourQuads } from "../kit/marquee";
 import { neon } from "../kit/props";
-import { HALO_BASE } from "../world/frame";
+import { unpairedLampParts } from "./lamp-fixtures";
 import { assembleWorld } from "../world/assemble";
 import {
   hallStandIn, PIECE_AT, roofUnder, roofZ, SHIPYARD_HALLS, STAND_IN_HALL, TINKER_CAP, TINKER_LETTERS, TINKER_SIGN, TINKER_SITE, tinkerAnimator, tinkerLights, tinkerModules,
@@ -236,18 +235,12 @@ describe("tinker sign scaffold (#379)", () => {
     }
   });
 
-  it.each(AT)("floodlight: one amber bulb r 1.2 on a 1.2 post on the roof, no cyan, its halo clear of every letter (%s)", (_n, at) => {
+  it.each(AT)("no floodlight (#401): no steel 0.6 × 0.6 prism and no amber r 1.2 dot, no cyan accent (%s)", (_n, at) => {
     const halls = at === PIECE_AT ? [STAND_IN_HALL] : SHIPYARD_HALLS, { out, accents } = sign(at, halls);
     expect(accents.some((a) => a.color === "cyan")).toBe(false);
-    const bulbs = dots(accents).filter((d) => d.color === "amber");
-    expect(bulbs).toHaveLength(1);
-    expect(bulbs[0]!.r).toBe(1.2);
-    const post = out.find((s) => s.kind === "prism" && s.mat === "steel" && s.w === 0.6 && s.h === 1.2);
-    expect(post).toBeDefined();
-    if (post?.kind === "prism") expect(post.at.z).toBeCloseTo(Math.max(...foot(post).map((p) => roofZ(p.x, p.y, halls))), 9);
-    const c = project(bulbs[0]!.at), R = 1.2 * Math.max(...HALO_BASE.map((h) => h.k));
-    const disc: Vec2[] = Array.from({ length: 16 }, (_, k) => ({ x: c.x + R * Math.cos((k * Math.PI) / 8), y: c.y + R * Math.sin((k * Math.PI) / 8) }));
-    for (const q of tinkerSpec(at).glyphs.flatMap((g) => g.quads)) expect(polygonDistance(disc, q.map(project))).toBeGreaterThan(0);
+    expect(out.filter((x) => x.kind === "prism" && x.mat === "steel" && x.w === 0.6 && x.d === 0.6)).toEqual([]);
+    expect(dots(accents).filter((d) => d.color === "amber" && d.r === 1.2)).toEqual([]);
+    expect(unpairedLampParts(out, accents)).toEqual([]);
   });
 
   it("the scaffold stays under the deck: above the lowest panel bottom only panels, steel beams (chains, top beam, welded bars) and 0.3² posts", () => {
@@ -351,7 +344,7 @@ describe("tinker sign in its scene (#379)", () => {
     const all = [...near, ...sign(TINKER_SITE).out];
     for (const s of SCALES) expect(checkSign(TINKER_SIGN, s, all)).toEqual([]);
   }, 20_000);
-  it("no sign solid overlaps a world solid, posts and floodlight on a hall roof excused", () => {
+  it("no sign solid overlaps a world solid, posts on a hall roof excused", () => {
     const own = sign(TINKER_SITE).out, world = scene.solids.filter((s) => s.kind !== "ground" && s.kind !== "strip");
     const halls = world.flatMap((s) => { const h = SHIPYARD_HALLS.find((x) => s.kind === "prism" && s.roof === "gable" && s.at.x === x.x0 && s.at.y === x.y0); return h ? [{ solid: s, hall: h }] : []; });
     const ownB = own.map(bounds), bad: string[] = [];
