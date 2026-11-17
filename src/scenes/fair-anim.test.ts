@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
-import type { Vec3 } from "../iso/geometry";
-import { bounds, wheelPoint, type Solid } from "../iso/solids";
+import { isBehind } from "../iso/depth";
+import { convexHull, type Vec3 } from "../iso/geometry";
+import { project } from "../iso/project";
+import { bounds, tessellateAll, wheelPoint, type Solid } from "../iso/solids";
+import { pointInPolygon } from "../map/geo";
 import { createRng } from "../map/seed";
-import { DROP, FLUME_PATH, WHEEL, coasterAt, coasterLength, fair, flume, flumeAt, flumeLength } from "./fair";
-import { DROP_CYCLE_MS, DROP_RISE_MS, LOG_DROP_SPEED, LOG_LIFT_SPEED, LOG_SPEED, NEON_STEP_MS, WHEEL_LIGHT_STEP_MS, WHEEL_PERIOD_MS, WHEEL_STEP_MS, createFairAnim } from "./fair-anim";
+import { DROP, FLUME_PATH, WHEEL, coasterAt, coasterLength, dropSolids, fair, flume, flumeAt, flumeLength } from "./fair";
+import { DROP_CYCLE_MS, DROP_RISE_MS, DROP_STEP_MS, LOG_DROP_SPEED, LOG_LIFT_SPEED, LOG_SPEED, NEON_OFF_R, NEON_R, NEON_STEP_MS, WHEEL_LIGHT_STEP_MS, WHEEL_PERIOD_MS, WHEEL_STEP_MS, createFairAnim } from "./fair-anim";
 
 const setup = (reducedMotion = false) => createFairAnim(fair(createRng(7)), { reducedMotion });
 
@@ -68,12 +71,13 @@ const dots = (a: Accent[]) => a.flatMap((x) => (x.kind === "dot" ? [x] : []));
 const on = (pts: Vec3[], a: Accent[]) => dots(a).filter((d) => pts.some((p) => p.x === d.at.x && p.y === d.at.y && p.z === d.at.z));
 
 describe("fair-anim neon", () => {
-  it("frame 0 and reduced motion: 4 marquee, 2 climb, whole column in magentaBleed; only cyan/magenta", () => {
+  it("frame 0 and reduced motion: 4 marquee, 2 climb, the column at rest in magentaBleed (except the light inside the gondola); only cyan/magenta", () => {
     const s = fair(createRng(7)), a = createFairAnim(s, { reducedMotion: false }), r = createFairAnim(s, { reducedMotion: true });
     const f0 = a.neon();
     expect(on(s.neon.marquee, f0)).toHaveLength(4);
     expect(on(s.neon.lift, f0)).toHaveLength(2);
-    expect(on(s.neon.column, f0).map((d) => [d.color, d.r])).toEqual(Array(6).fill(["magentaBleed", 0.25]));
+    // the lowest light (z 3) is inside the gondola at the base (z 1 to 3.2): hidden (#396)
+    expect(on(s.neon.column, f0).map((d) => [d.color, d.r])).toEqual(Array(5).fill(["magentaBleed", 0.25]));
     for (const x of f0) expect(x.color).toMatch(/^(cyan|magenta)/);
     expect(r.neon()).toEqual(f0);
     expect(r.tick(1000).neon).toBe(false);
@@ -108,8 +112,8 @@ describe("fair-anim neon", () => {
   it("the column rises with the gondola: at the top the five lower ones in magenta, at the base none", () => {
     const s = fair(createRng(7)), a = createFairAnim(s, { reducedMotion: false });
     for (let t = 0; t < DROP_RISE_MS + 500; t += 100) a.tick(100);
-    // the gondola reaches DROP.h − 3 = 21 and the last light is at drop.h − 2 = 22: it never lights up
-    expect(on(s.neon.column, a.neon()).map((d) => d.color)).toEqual([...Array(5).fill("magenta"), "magentaBleed"]);
+    // the gondola reaches DROP.h − 3 = 21 and the last light is at drop.h − 2 = 22: inside the gondola, hidden (#396)
+    expect(on(s.neon.column, a.neon()).map((d) => d.color)).toEqual(Array(5).fill("magenta"));
     for (let t = 0; t < DROP_CYCLE_MS - DROP_RISE_MS - 500 + 100; t += 100) a.tick(100);
     expect(on(s.neon.column, a.neon()).every((d) => d.color === "magentaBleed")).toBe(true);
     const b = createFairAnim(s, { reducedMotion: false });
@@ -180,5 +184,53 @@ describe("fair-anim #327: logs", () => {
       for (const l of a.logs()) { const lb = bounds(l); for (const f of foreign) { const hit = lb.min.x < f.max.x && f.min.x < lb.max.x && lb.min.y < f.max.y && f.min.y < lb.max.y && lb.min.z < f.max.z && f.min.z < lb.max.z; expect(hit).toBe(false); } }
       a.tick(500);
     }
+  });
+});
+
+/** Oracle of #396: inside the gondola's z span, or projected inside the silhouette of one of its solids while behind it. */
+function hidden(at: Vec3, gondola: Solid[]): boolean {
+  const bs = gondola.map(bounds);
+  if (Math.min(...bs.map((b) => b.min.z)) <= at.z && at.z <= Math.max(...bs.map((b) => b.max.z))) return true;
+  return byProjection(at, gondola);
+}
+function byProjection(at: Vec3, gondola: Solid[]): boolean {
+  const p = project(at);
+  return gondola.some((s) => {
+    const hull = convexHull(tessellateAll(s).flatMap((f) => f.pts.map(project)));
+    return isBehind({ min: at, max: at }, bounds(s)) && pointInPolygon(p.x, p.y, hull.flatMap((q) => [q.x, q.y]));
+  });
+}
+
+describe("fair-anim #396: the gondola hides the column lights", () => {
+  it("over the whole cycle no column dot is emitted inside or behind the gondola silhouette, and the rest still are", () => {
+    const s = fair(createRng(7)), a = createFairAnim(s, { reducedMotion: false });
+    for (const p of s.neon.column) { expect(p.x).toBe(DROP.x); expect(p.y).toBe(DROP.y + 0.8); }
+    let projOnly = 0, any = 0;
+    for (let t = 0; t < DROP_CYCLE_MS; t += DROP_STEP_MS) {
+      const z = a.dropZ(), g = dropSolids(z), col = on(s.neon.column, a.neon());
+      for (const d of col) expect(hidden(d.at, g)).toBe(false);
+      expect(col).toEqual(s.neon.column.filter((p) => !hidden(p, g)).map((p) => (p.z <= z ? { kind: "dot", at: p, r: NEON_R, color: "magenta" } : { kind: "dot", at: p, r: NEON_OFF_R, color: "magentaBleed" })));
+      if (s.neon.column.some((p) => hidden(p, g))) any++;
+      if (s.neon.column.some((p) => (p.z < z || p.z > z + 2.2) && byProjection(p, g))) projOnly++;
+      a.tick(DROP_STEP_MS);
+    }
+    expect(any).toBeGreaterThan(0);
+    expect(projOnly).toBeGreaterThan(0);
+  });
+  it("halfway up (3000 ms, z = 11) only the 10.6 dot is hidden, by projection", () => {
+    const s = fair(createRng(7)), a = createFairAnim(s, { reducedMotion: false });
+    for (let t = 0; t < 3000; t += 100) a.tick(100);
+    expect(a.dropZ()).toBeCloseTo(11, 9);
+    // ray from (150, −263.2, 10.6) toward the camera reaches z 11 at (0.56, 1.36) from the axis: 1.47 < 2.22, inside the ring
+    const idx = on(s.neon.column, a.neon()).map((d) => [s.neon.column.findIndex((p) => p.z === d.at.z), d.color]);
+    expect(idx).toEqual([[0, "magenta"], [1, "magenta"], [3, "magentaBleed"], [4, "magentaBleed"], [5, "magentaBleed"]]);
+  });
+  it("reduced motion: same as today except the dot inside the gondola at the base", () => {
+    const s = fair(createRng(7)), a = createFairAnim(s, { reducedMotion: false }), r = createFairAnim(s, { reducedMotion: true });
+    expect(on(s.neon.column, r.neon())).toEqual(s.neon.column.slice(1).map((at) => ({ kind: "dot", at, r: NEON_OFF_R, color: "magentaBleed" })));
+    const rest = (x: Accent[]) => x.filter((d) => !on(s.neon.column, [d]).length);
+    expect(rest(r.neon())).toEqual(rest(a.neon()));
+    expect(on(s.neon.marquee, r.neon())).toHaveLength(4); expect(on(s.neon.lift, r.neon())).toHaveLength(2);
+    expect(on(s.neon.ghost, r.neon())).toHaveLength(4); expect(on(s.neon.mirror, r.neon())).toHaveLength(2);
   });
 });
