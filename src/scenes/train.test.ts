@@ -126,13 +126,13 @@ describe("emu", () => {
 
 describe("emu: lights", () => {
   // #403: headlights and red lights are haloless spots (polys), never dots
-  const dots = (ls: Accent[], color: string) => ls.flatMap((a) => { const s = spotOf(a); return s && s.color === color ? [s] : []; });
+  const spots = (ls: Accent[], color: string) => ls.flatMap((a) => { const s = spotOf(a); return s && s.color === color ? [s] : []; });
   const polys = (ls: Accent[], color: string) => ls.filter((a): a is Accent & { kind: "poly" } => a.kind === "poly" && a.color === color);
   const east = X0 + trainLen(4);
 
   it.each([["e", east, X0], ["w", X0, east]] as const)("lead %s: cyan headlights in front, magenta red lights behind", (lead, head, tail) => {
     const { lights } = emu(X0, Y, { cars: 4, lead, lit: true });
-    const cyan = dots(lights, "cyan"), red = dots(lights, "magenta");
+    const cyan = spots(lights, "cyan"), red = spots(lights, "magenta");
     expect(cyan).toHaveLength(2); expect(red).toHaveLength(2);
     expect(lights.filter((a) => a.kind === "dot")).toEqual([]);
     for (const d of cyan) { expect(Math.abs(d.at.x - head)).toBeLessThanOrEqual(0.5); expect(d.r).toBeCloseTo(0.3, 9); expect(d.at.z).toBeCloseTo(1.8, 9); }
@@ -143,8 +143,8 @@ describe("emu: lights", () => {
 
   it("lead null: neither headlights nor red lights", () => {
     const { lights } = emu(X0, Y, { cars: 4, lead: null, lit: true });
-    expect(dots(lights, "cyan")).toEqual([]);
-    expect(dots(lights, "magenta")).toEqual([]);
+    expect(spots(lights, "cyan")).toEqual([]);
+    expect(spots(lights, "magenta")).toEqual([]);
     expect(lights.filter((a) => a.kind === "dot")).toEqual([]);
   });
 

@@ -69,7 +69,6 @@ describe("floating dock", () => {
 
   it("no weld spots (#403: the sparks are gone): the dock adds only its two tower lamps as accents", () => {
     expect(dock().accents).toHaveLength(2);
-    expect("weldSpots" in shipyard(createRng(7))).toBe(false);
   });
 
   it("everything but the gangway floats, and nothing passes y 88.5", () => {

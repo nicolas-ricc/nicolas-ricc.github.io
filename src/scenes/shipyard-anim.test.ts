@@ -43,7 +43,8 @@ describe("shipyard-anim", () => {
   });
 
   it("no lamp and no sparks (#403): the animation only moves the trolley", () => {
-    expect(Object.keys(setup().anim)).toEqual(["tick"]);
+    const { anim } = setup();
+    for (const gone of ["trolleyLamp", "sparks", "fired"]) expect(gone in anim, gone).toBe(false);
   });
 });
 

@@ -24,7 +24,7 @@ const samples = (step: number): number[] => { const out: number[] = []; for (let
 /** Animator advanced to `ms` of the cycle (a single tick, which is the first). */
 const animAt = (ms: number) => { const a = createRailAnim({ reducedMotion: false }); a.tick(ms); return a; };
 /** The spots (#403: haloless polys, never dots) of one color, as `{ at, r, color }`. */
-const dots = (as: Accent[], color: string) => as.flatMap((a) => { const s = spotOf(a); return s && s.color === color ? [s] : []; });
+const spots = (as: Accent[], color: string) => as.flatMap((a) => { const s = spotOf(a); return s && s.color === color ? [s] : []; });
 const spot = (a: Accent) => { const s = spotOf(a); if (!s) throw new Error("expected a spot"); return s; };
 
 describe("rail-anim: constants", () => {
@@ -202,7 +202,7 @@ describe("createRailAnim: train lights", () => {
   };
   it("entering: cyan headlights on the east end, magenta red lights on the west; amber sign on both", () => {
     const { t, west, east } = ends(15000);
-    const cyan = dots(t.lights, "cyan"), mag = dots(t.lights, "magenta");
+    const cyan = spots(t.lights, "cyan"), mag = spots(t.lights, "magenta");
     expect(cyan.length).toBe(2); expect(mag.length).toBe(2);
     expect(t.lights.filter((a) => a.kind === "dot")).toEqual([]);
     for (const d of cyan) expect(d.r).toBeCloseTo(0.3, 9);
@@ -215,8 +215,8 @@ describe("createRailAnim: train lights", () => {
   });
   it("leaving: reversed", () => {
     const { t, west, east } = ends(phaseStart("out") + 8000);
-    for (const d of dots(t.lights, "cyan")) expect(Math.abs(d.at.x - west)).toBeLessThan(1);
-    for (const d of dots(t.lights, "magenta")) expect(Math.abs(d.at.x - east)).toBeLessThan(1);
+    for (const d of spots(t.lights, "cyan")) expect(Math.abs(d.at.x - west)).toBeLessThan(1);
+    for (const d of spots(t.lights, "magenta")) expect(Math.abs(d.at.x - east)).toBeLessThan(1);
   });
   it("saloon lit and state alpha", () => {
     const a = animAt(15000);

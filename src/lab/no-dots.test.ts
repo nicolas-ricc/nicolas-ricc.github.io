@@ -12,8 +12,11 @@ import { EXHIBITS } from "./exhibits";
 const GATE = ["playa-camiones", "gradas", "estacion", "patio-contenedores", "grua-muelle", "cartel-taller-escena", "silos", "playa-contenedores", "autitos-chocadores", "faro", "pecio"];
 const FRAMES = 32;
 
-/** Static accents plus 32 frames of the accent layers across one beam turn (8 s), built the way `storybook.ts` builds the exhibit; fresh world per call. */
+/** Static accents plus 32 frames of the accent layers across one beam turn (8 s), built the way `storybook.ts` builds the exhibit; fresh world per exhibit, memoized (nothing mutates the result). */
+const memo = new Map<string, Accent[]>();
 function lights(id: string): Accent[] {
+  const hit = memo.get(id);
+  if (hit) return hit;
   const e = EXHIBITS.find((x) => x.id === id);
   if (!e) throw new Error(`no exhibit ${id}`);
   const { scene, animators } = assembleWorld(undefined, { reducedMotion: false });
@@ -25,6 +28,7 @@ function lights(id: string): Accent[] {
     for (const a of anims) for (const lid of a.ids) { const l = a.layer(lid); if (l.kind === "accent") out.push(...l.accents); }
     for (const a of anims) a.tick(BEAM_PERIOD_MS / FRAMES);
   }
+  memo.set(id, out);
   return out;
 }
 
@@ -72,5 +76,5 @@ describe("no round haloed lights in the 11 exhibits (#403)", () => {
       expect(accentZone(a), `${s.color} at ${s.at.x}, ${s.at.y}`).toBe(worldZoneAt(s.at.x, s.at.y));
     }
     expect(n).toBeGreaterThan(0);
-  }, 30_000); // builds the 11 exhibits x 32 frames plus the world; ~5 s alone, more under load
+  }, 30_000); // the 11 exhibits come from the memo, but the world build alone can pass 5 s under load
 });
