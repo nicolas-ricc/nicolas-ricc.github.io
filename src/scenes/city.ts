@@ -32,7 +32,7 @@ export interface PlacedPiece { placed: Placed; piece: Piece; solidOffset: number
 export interface CityScene {
   ground: Solid[];   // plaza tiles, ground of devoured blocks, lanes
   solids: Solid[];
-  accents: Accent[]; // kit accents, visible lights of the fixed pieces (street lamps, plaza, garlands, puddles), fixed lit windows, bar neons and bathed facades of lights(); the animatable windows, the flickering neon (lights().flicker), the lit floor of the tower and the antenna are animated by city-anim
+  accents: Accent[]; // kit accents, visible lights of the fixed pieces (street lamps, plaza, garlands, puddles), fixed lit windows, bar neons and bathed facades of lights(); the animatable windows, the flickering neon (lights().flicker), the lit floor of the tower are animated by city-anim
   fixedLights: FixedLight[]; // every light of the fixed pieces, hidden ones included; `accents` has only those `visibleLights` lets through
   tower: TowerLights;
   neon: { signs: Accent[]; promenade: Vec3[] }; // signs of the district and lights of the promenade; city-anim animates them

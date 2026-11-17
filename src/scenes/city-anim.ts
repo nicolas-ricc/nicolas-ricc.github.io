@@ -8,7 +8,7 @@ import { chase } from "./neon";
 /**
  * The city animations, without Pixi and with their own state: the lit floor
  * blinks (it goes off for one tick every 4..9 s), papers fly out of a window
- * toward the NNE, the antenna light pulses and the district neons change: a
+ * toward the NNE and the district neons change: a
  * sign every 3..7 s changes color or goes off for a step, and two lights run
  * along the promenade. Also, windows of the buildings turn on and off, and a
  * street neon on the quay flickers. Pauses are measured in wall time, not in
@@ -21,7 +21,6 @@ export const PAPER_SPEED = 4 / 1000; // u per ms
 export const PAPER_RANGE = 30;
 export const PAPER_AMP = 1.5;
 export const PAPER_PERIOD_MS = 2000;
-export const ANTENNA_STEP_MS = 100;
 export const PAPER_R = 0.4, PAPER_R_END = 0.12; // the paper thins in the last third, so there is no "pop" when recycling
 export const PAPER_FADE_FROM = 2 / 3; // fraction of PAPER_RANGE where it starts to thin
 export const PAPER_LIFT = 0.15; // z it gains per unit traveled (the wind lifts it)
@@ -35,14 +34,13 @@ export const FLICKER_GAP_MS: [number, number] = [1000, 3000]; // between one fli
 export const FLICKER_ALPHA = 0.3; // halo and front of the street neon while it flickers
 export const PROMENADE_R = 0.35;
 const SEED_MAX = 2 ** 32 - 1; // seed of a derived Rng (no 0x… literal: the palette guard would take it for a color)
-const ANTENNA_BASE_R = 0.8, ANTENNA_PULSE_R = 0.3, ANTENNA_PERIOD = 1200; // r = 0.8 + 0.3·(1 + Math.sin(t / 1200))
 const NNE = { x: 0.45, y: -0.893 }; // unit: north-northeast (y grows to the south); on screen it goes up to the right
 const PERP = { x: -NNE.y, y: NNE.x }; // perpendicular to the drift: opens the fan
 
-export interface CityAnimChanges { lit: boolean; papers: boolean; antenna: boolean; neon: boolean; windows: boolean }
-export interface CityAnim { lit(): Accent[]; papers(): Accent[]; antenna(): Accent; neon(): Accent[]; windows(): Accent[]; tick(dtMs: number): CityAnimChanges; fired(): { lit: number; neon: number; papers: number; windows: number; flicker: number } }
+export interface CityAnimChanges { lit: boolean; papers: boolean; neon: boolean; windows: boolean }
+export interface CityAnim { lit(): Accent[]; papers(): Accent[]; neon(): Accent[]; windows(): Accent[]; tick(dtMs: number): CityAnimChanges; fired(): { lit: number; neon: number; papers: number; windows: number; flicker: number } }
 
-const NONE: CityAnimChanges = { lit: false, papers: false, antenna: false, neon: false, windows: false };
+const NONE: CityAnimChanges = { lit: false, papers: false, neon: false, windows: false };
 
 export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights">, rng: Rng, opts: { reducedMotion: boolean }): CityAnim {
   const { tower, neon } = scene;
@@ -54,7 +52,6 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
   let clock = 0;
   let off = false;
   let blinkTimer = nextGap();
-  let antennaStep = 0;
   interface Paper { dist: number; phase: number; side: number; speed: number }
   const respawn = (p: Paper, r: Rng): void => {
     p.dist = 0;
@@ -102,12 +99,10 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
       color: "amberMid",
     };
   };
-  const antennaR = (): number => ANTENNA_BASE_R + ANTENNA_PULSE_R * (1 + Math.sin((antennaStep * ANTENNA_STEP_MS) / ANTENNA_PERIOD));
 
   return {
     lit: () => (off ? [] : [...tower.litWindows]), // copy: the consumer cannot touch the scene
     papers: () => papers.map(paperAt),
-    antenna: () => ({ kind: "dot", at: tower.antenna, r: antennaR(), color: "amberMid" }),
     neon: () => {
       const on = signs.filter((s) => s.offUntil <= clock).map((s) => ({ ...s.a, color: s.color }));
       const lit = promenadeStep === 0 ? null : chase(neon.promenade.length, promenadeStep, 2);
@@ -121,7 +116,7 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
     tick(dtMs) {
       if (opts.reducedMotion || !Number.isFinite(dtMs) || dtMs <= 0) return NONE; // NaN or Infinity would hang the while loops
       clock += dtMs;
-      const c: CityAnimChanges = { lit: false, papers: true, antenna: false, neon: false, windows: false };
+      const c: CityAnimChanges = { lit: false, papers: true, neon: false, windows: false };
 
       // blink: one tick off (two in a row only with ticks ≥ 4 s); the next pause counts from the
       // firing, and a long tick can fire several
@@ -138,8 +133,6 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
         }
       });
 
-      const step = Math.floor(clock / ANTENNA_STEP_MS);
-      if (step !== antennaStep) { antennaStep = step; c.antenna = true; }
 
       for (const s of signs) if (s.offUntil >= 0 && clock >= s.offUntil) { s.offUntil = -1; c.neon = true; } // the tube comes back
       signTimer -= dtMs;

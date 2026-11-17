@@ -12,8 +12,8 @@ import { PLINTH_H, plazaTone, prism, tiles } from "../scenes/city-pieces";
 
 // ---------------------------------------------------------------- plaza and tower
 
-/** Windows of the lit floor, tip of the antenna and the paper window: city-anim animates them. */
-export interface TowerLights { litWindows: Accent[]; antenna: Vec3; paperWindow: Vec3 }
+/** Windows of the lit floor and the paper window: city-anim animates them. */
+export interface TowerLights { litWindows: Accent[]; paperWindow: Vec3 }
 
 /** Lit windows and paper window from the raw visible walls of the tower, so `tone` does not matter. */
 export function towerWindows(tower: Solid, facade: Facade): { litWindows: Accent[]; paperWindow: Vec3 } {
@@ -36,8 +36,6 @@ export function plazaAndTower(solids: Solid[], ground: Solid[], lights: FixedLig
   solids.push(tower);
   solids.push(prism(TOWER.x - 0.5, TOWER.y - 0.5, TOWER_H, TOWER.w + 1, TOWER.d + 1, 0.4, "office"));       // cornice
   solids.push(prism(TOWER.x + 5, TOWER.y + 5, TOWER_H + 0.4, 6, 4, 2.5, "officeDark"));                     // machine room
-  const mast = v3(TOWER.x + 8, TOWER.y + 7, TOWER_H + 2.9);
-  solids.push({ kind: "cylinder", at: mast, r: 0.3, h: 5, mat: "steel", sides: 4 });                        // antenna
   // climbing jungle: cones at the base and two thin prisms on the northwest and southeast edges
   for (const [dx, dy] of [[-1.5, -1.5], [TOWER.w + 1.5, -1.5], [TOWER.w + 1.5, TOWER.d + 1.5], [-1.5, TOWER.d + 1.5]] as const) solids.push({ kind: "cone", at: v3(TOWER.x + dx, TOWER.y + dy, 0.05), r: 2.5, h: 6, mat: "leaf" });
   solids.push(prism(TOWER.x - 0.6, TOWER.y - 0.6, 0, 0.6, 0.6, 12, "leaf"), prism(TOWER.x + TOWER.w, TOWER.y + TOWER.d, 0, 0.6, 0.6, 12, "leaf"));
@@ -57,7 +55,7 @@ export function plazaAndTower(solids: Solid[], ground: Solid[], lights: FixedLig
   for (const x of [PLAZA.x + 1.4, PLAZA.x + PLAZA.w - 3.4]) solids.push(...kiosk(v3(x, PLAZA.y + 1.4, 0.05)));
   placeLit(solids, lights, lamp(v3(PLAZA.x + 2, PLAZA.y + PLAZA.d / 2, 0.05)));
   placeLit(solids, lights, lamp(v3(PLAZA.x + PLAZA.w - 2.6, PLAZA.y + PLAZA.d / 2, 0.05)));
-  return { litWindows, antenna: v3(mast.x, mast.y, mast.z + 5), paperWindow };
+  return { litWindows, paperWindow };
 }
 
 // ---------------------------------------------------------------- bridge, west quay and promenade
