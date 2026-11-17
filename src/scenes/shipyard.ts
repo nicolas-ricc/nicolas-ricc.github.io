@@ -190,14 +190,14 @@ function jungle(out: Solid[], rng: Rng): void {
 }
 
 function lamps(out: Solid[], accents: Accent[]): void {
-  for (const y of [12, 40, 68, 96, 124]) place(out, accents, industrialLamp(v3(STREET_EDGE + 0.5, y, 0)));
+  for (const y of [12, 96]) place(out, accents, industrialLamp(v3(STREET_EDGE + 0.5, y, 0)));
 }
 
-/** Steel mesh fence on the seam, x −60..96 at y 89.4, with posts and six cyan lamps on the Portfolio side. */
+/** Steel mesh fence on the seam, x −60..96 at y 89.4, with posts and three cyan lamps on the Portfolio side. */
 function seamFence(out: Solid[], accents: Accent[]): void {
   out.push(prism(-60, 89.4, 0, 156, 0.6, 1.2, "steel"));
   for (let x = -60; x < 96; x += 6) out.push(prism(x, 89.3, 0, 0.3, 0.3, 1.6, "steel")); // posts every 6 u (26)
-  for (const x of [-48, -24, 0, 24, 48, 72]) place(out, accents, industrialLamp(v3(x, 88.2, 0)));
+  for (const x of [-48, -24, 0]) place(out, accents, industrialLamp(v3(x, 88.2, 0)));
 }
 
 /** `occluders`: solids of other scenes (the factory) that can hide the lit windows; they are not added to the scene. */

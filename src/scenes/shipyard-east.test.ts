@@ -126,13 +126,14 @@ describe("container yard", () => {
     }
   });
 
-  it("gatehouse with a cool window", () => {
+  it("gatehouse with a cool window, and no lamps", () => {
     const { out, accents } = yard();
     expect(prisms(out).filter((p) => p.mat === "concrete" && p.w === 3 && p.d === 3 && p.h === 2.8)).toHaveLength(1);
     const win = accents.filter((a) => a.kind === "poly" && a.color === "windowCool");
     expect(win).toHaveLength(1);
     expect(win[0]!.kind === "poly" && win[0]!.alpha).toBe(0.85);
-    expect(accents.filter((a) => a.kind === "dot" && a.color === "cyan")).toHaveLength(2);
+    expect(accents.filter((a) => a.kind === "dot" && a.color === "cyan")).toHaveLength(0); // #401: the yard's two lamps are gone
+    expect(prisms(out).filter((p) => p.mat === "steel" && p.w === 0.6 && p.d === 0.6 && p.h === 5)).toEqual([]);
   });
 
   it("nothing overlaps (pairs of boxes, 1e-9), with seed 7 and seeds 1..40", () => {

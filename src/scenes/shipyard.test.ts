@@ -5,12 +5,15 @@ import { bounds, isFlat, type Solid } from "../iso/solids";
 import { WORLD, inStationLand, northCoastY } from "../map/geo";
 import { allIsoColors } from "../map/palette-iso";
 import { createRng } from "../map/seed";
+import { unpairedLampParts } from "./lamp-fixtures";
 import { windowCandidates } from "./portfolio-lights";
 import { AREA_H, AREA_W, STREET_EDGE, shipyard, type Scene } from "./shipyard";
 import { YARD } from "./shipyard-east";
 import { BUFFER_X, ESPLANADE, STATION } from "./station";
 
 const scene = (): Scene => shipyard(createRng(7));
+/** Slipway scaffolding (`slipways`): steel 0.6 × 0.6 h 5 on the slipway deck (z 1.5), not a lamp. */
+const isSlipScaffold = (s: Solid) => s.kind === "prism" && s.mat === "steel" && s.w === 0.6 && s.h === 5 && s.at.z === 1.5;
 const all = (s: Scene): Solid[] => [...s.ground, ...s.solids, s.trolley];
 
 describe("shipyard", () => {
@@ -55,7 +58,8 @@ describe("shipyard", () => {
     const inStation = (a: Accent) => { const p = where(a); return p.x >= 110 && p.x <= STATION.x1 && p.y >= 100 && p.y <= STATION.y1; };
     const facade = new Set(windowCandidates(s.solids).map((c) => JSON.stringify(c.pts))); // #324: the windows of halls, workshops and sheds
     const outside = s.accents.filter((a) => !inStation(a) && !(a.kind === "poly" && facade.has(JSON.stringify(a.pts)))), inside = s.accents.filter(inStation);
-    expect(outside.length).toBeGreaterThanOrEqual(7); // five street lamps and two quay lamps
+    // #401: 13 dots: street lamps y 12 and 96 (2), quay lamps y 20 and 80 (2), seam fence lamps x −48, −24, 0 (3), floating dock towers and quay crane tips (6); plus the container yard window (poly)
+    expect(outside.filter((a) => a.kind === "dot")).toHaveLength(13);
     // #323: the one exception is the window of the container yard gatehouse
     const windows = outside.filter((a) => a.kind === "poly");
     expect(windows.map((a) => a.color)).toEqual(["windowCool"]);
@@ -111,11 +115,12 @@ describe("shipyard part 2", () => {
     for (const r of rocks) expect(r.at.y).toBeGreaterThanOrEqual(northCoastY(r.at.x) - 2);
   });
 
-  it("lamps: steel post with cyan light on top", () => {
+  it("lamps: two street posts (y 12, 96), each with its cyan light on top, and no post without a light", () => {
     const s = scene();
     const poles = s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism" && x.w === 0.6 && x.h === 5 && x.at.x > STREET_EDGE && x.at.x < STREET_EDGE + 2);
-    expect(poles.length).toBeGreaterThanOrEqual(5);
+    expect(poles.map((p) => p.at.y).sort((a, b) => a - b)).toEqual([12, 96]); // #401: only y 12 and 96 keep their lamp
     for (const p of poles) expect(s.accents.some((a) => a.kind === "dot" && Math.abs(a.at.x - p.at.x) < 1 && Math.abs(a.at.y - p.at.y) < 1 && a.at.z === 5)).toBe(true);
+    expect(unpairedLampParts(s.solids.filter((x) => !isSlipScaffold(x)), s.accents)).toEqual([]); // the slipway scaffolding is not a lamp
   });
 });
 
