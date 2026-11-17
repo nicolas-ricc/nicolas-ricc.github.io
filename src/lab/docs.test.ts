@@ -705,7 +705,7 @@ describe("storybook lights closing (#405)", () => {
       for (const n of NN) expect(pngSize(`${ASSETS}after/${name}-${n}.png`), `${name}-${n}`).toEqual([...size]);
     }
   });
-  it("the after-encuadre folder is gone and nothing references it", () => {
+  it("the intermediate framing captures folder is gone and nothing references it", () => {
     const needle = "after-" + "encuadre";
     expect(existsSync(`${ASSETS}${needle}`)).toBe(false);
     const walk = (dir: string): string[] => readdirSync(`${ROOT}${dir}`, { withFileTypes: true }).flatMap((d) => {
