@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { isBehind } from "../iso/depth";
 import { convexHull, type Vec3 } from "../iso/geometry";
-import { project } from "../iso/project";
+import { Z_SCALE, project } from "../iso/project";
 import { bounds, tessellateAll, wheelPoint, type Solid } from "../iso/solids";
 import { pointInPolygon } from "../map/geo";
 import { createRng } from "../map/seed";
@@ -201,6 +201,18 @@ function byProjection(at: Vec3, gondola: Solid[]): boolean {
   });
 }
 
+/** Independent cross-check: march the ray toward the camera (Z_SCALE, Z_SCALE, 1) through the ring octagon in plan and the seat boxes, with no projection or hull. */
+function rayHits(at: Vec3, z: number): boolean {
+  const ring = Array.from({ length: 8 }, (_, i) => { const a = (i / 8) * Math.PI * 2 + Math.PI / 8; return [DROP.x + 2.4 * Math.cos(a), DROP.y + 2.4 * Math.sin(a)]; }).flat();
+  const seats = dropSolids(z).slice(1).map(bounds);
+  for (let t = 1e-3; t < 6; t += 2e-3) {
+    const q = { x: at.x + Z_SCALE * t, y: at.y + Z_SCALE * t, z: at.z + t };
+    if (q.z > z && q.z < z + 1.4 && pointInPolygon(q.x, q.y, ring)) return true;
+    if (seats.some((b) => b.min.x < q.x && q.x < b.max.x && b.min.y < q.y && q.y < b.max.y && b.min.z < q.z && q.z < b.max.z)) return true;
+  }
+  return false;
+}
+
 describe("fair-anim #396: the gondola hides the column lights", () => {
   it("over the whole cycle no column dot is emitted inside or behind the gondola silhouette, and the rest still are", () => {
     const s = fair(createRng(7)), a = createFairAnim(s, { reducedMotion: false });
@@ -212,6 +224,7 @@ describe("fair-anim #396: the gondola hides the column lights", () => {
       expect(col).toEqual(s.neon.column.filter((p) => !hidden(p, g)).map((p) => (p.z <= z ? { kind: "dot", at: p, r: NEON_R, color: "magenta" } : { kind: "dot", at: p, r: NEON_OFF_R, color: "magentaBleed" })));
       if (s.neon.column.some((p) => hidden(p, g))) any++;
       if (s.neon.column.some((p) => (p.z < z || p.z > z + 2.2) && byProjection(p, g))) projOnly++;
+      for (const p of s.neon.column) if (p.z < z || p.z > z + 2.2) expect(byProjection(p, g)).toBe(rayHits(p, z));
       a.tick(DROP_STEP_MS);
     }
     expect(any).toBeGreaterThan(0);

@@ -46,7 +46,7 @@ function gondolaShape(z: number): GondolaShape {
   return { lo: Math.min(...parts.map((p) => p.b.min.z)), hi: Math.max(...parts.map((p) => p.b.max.z)), parts };
 }
 
-/** The gondola hides a column light inside its height band. Plan position is not checked: the column points sit 0.8 from the axis, inside the octagon's inscribed radius. Outside the band it hides the light if it is behind a solid whose silhouette covers it. */
+/** The gondola hides a column light inside its height band. Plan position is not checked: the column points sit 0.8 from the axis, inside the octagon's inscribed radius. Outside the band it hides the light if a solid's silhouette covers it and an axis plane separates them with the light on the far side (`isBehind`): then the ray toward the camera crosses that solid. In practice only the ring does: no seat silhouette reaches the column. */
 function gondolaHides(at: Vec3, g: GondolaShape): boolean {
   if (at.z >= g.lo && at.z <= g.hi) return true;
   const p = project(at);
