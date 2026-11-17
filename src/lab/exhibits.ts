@@ -172,9 +172,9 @@ export const EXHIBITS: readonly Exhibit[] = [
   // the pediment reaches z 7.5 (accents 2.1); nothing cut by the edge
   { id: "casa-espejos", title: "Mirror house", zone: "portfolio", group: "fair", kind: "region",
     box: { x0: 122, y0: -260, x1: 142, y1: -244 }, h: 8 },
-  // the tower is z 14, the roof cone 16, the lamp 16.3 (solids 16, accents 12.1); nothing cut by the edge
+  // the mast tops out at z 16.62; plan extent x 112.6…123.9, y −297.6…−286 (steps and mats included) plus 1 u, rounded out; nothing cut by the edge
   { id: "tobogan", title: "Giant slide", zone: "portfolio", group: "fair", kind: "region",
-    box: { x0: 111, y0: -299, x1: 125, y1: -285 }, h: 16 },
+    box: { x0: 111, y0: -299, x1: 125, y1: -285 }, h: 16.7 },
   // the trough top is z 6, the water prism 6.05 (logs 6.75 in the animator, neighbors up to 2.7); the 6 splash dots are inside the box
   { id: "tronco-acuatico", title: "Log flume", zone: "portfolio", group: "fair", kind: "region",
     box: { x0: 158, y0: -300, x1: 226, y1: -290 }, h: 7 },
