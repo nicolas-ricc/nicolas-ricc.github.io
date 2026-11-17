@@ -223,7 +223,7 @@ npm run wreck-sweep -- --origin http://localhost:5181 --modes on,off --viewports
 | `--frames` | frames de `tick(250)` por combinación (40) |
 | `--hide` | índices de hijos de `stage.container` a esconder (bisección por capa; necesita la extensión PixiJS DevTools) |
 
-Código de salida 0 si no hay `off-sky px` en ninguna combinación; 1 si hay alguno. Necesita agent-browser; no corre en CI.
+Códigos de salida: 0 limpio, 1 hay `off-sky px`, 2 el runner se cayó. Necesita agent-browser; no corre en CI.
 
 ### Rama (`agent/404-wreck-linea`, con #399, #400, #401)
 
@@ -267,7 +267,7 @@ Son 27.364 `off-sky px` por frame, idénticos en los 40 frames. Ocultando capas 
 | 0,1,2,3,4 | todo lo anterior | 0 |
 | 0,1,2,3,4,5,6 | más sólidos | 0 |
 
-Sonda en la página (`main`, bloom `on`, 6 lecturas separadas 400 ms): 2.888 píxeles no-cielo por encima del techo (y < 432 px CSS) por frame, el más alto en y 413 px CSS, columnas ~201–205, o sea el vértice norte de la caja (pantalla del mundo (228, 371)). Son triángulos de terreno enteros que el recorte de `main` (`triOverlaps`) conserva y que sobresalen hasta ~3,6 unidades de pantalla sobre la esquina norte. No hay nada más arriba: ningún píxel en la franja de cielo donde la captura muestra la línea (≈ 85–165 px CSS sobre el vértice norte del rombo, encima del mástil; en y ≈ 270–350).
+Sonda en la página (`main`, bloom `on`, 6 lecturas separadas 400 ms): 2.888 píxeles no-cielo por encima del techo (y < 432 px CSS) por frame, el más alto en y 413 px CSS (todas las coordenadas y son px CSS del host de 480×1015 de `main`, la disposición de la captura), columnas ~201–205, o sea el vértice norte de la caja (pantalla del mundo (228, 371)). Son triángulos de terreno enteros que el recorte de `main` (`triOverlaps`) conserva y que sobresalen hasta ~3,6 unidades de pantalla sobre la esquina norte. No hay nada más arriba: ningún píxel en la franja de cielo donde la captura muestra la línea (≈ 85–165 px CSS sobre el vértice norte del rombo, encima del mástil; en y ≈ 270–350).
 
 En `main` todos los píxeles fuera de la envolvente vienen de los slots de terreno. #399 (terreno recortado a la caja con Sutherland–Hodgman) los elimina: rama = 0. Esos píxeles no llegan a la posición de la línea, así que no la explican; son lo único que `main` dibuja fuera de la envolvente en headless.
 
@@ -276,9 +276,9 @@ En `main` todos los píxeles fuera de la envolvente vienen de los slots de terre
 | Candidato | Dato |
 | --- | --- |
 | Sombras + AlphaFilter | `--hide 3,4` no cambia nada en `main`; rama 0 en los 3 modos |
-| Sólidos y velos (alpha 0) | ocultos junto con terreno y sombras: 0 en `main` |
-| Accents y bloom | con terreno y sombras ocultos `main` da 0 en modo `on`; rama 0 en `on` y `fallback` |
-| Agua animada | capas de agua de `cropAnimators`, 40 frames de tick en la rama: 0 |
+| Sólidos y velos (alpha 0) | visibles, con terreno y sombras ocultos (`--hide 0,1,2,3,4`): 0 en `main`, modo `on`; rama 0 en los 3 modos |
+| Accents y bloom | visibles, con terreno y sombras ocultos (`--hide 0,1,2,3,4`): 0 en `main`, modo `on`; rama 0 en `on` y `fallback` |
+| Agua animada | capas de agua de `cropAnimators`, 40 frames de tick en la rama: 0; en `main`, `--hide 0,1,2` (incluye el agua) da 0 |
 | Polígonos con antialias en `drawLayer` | el único fleco de AA está en el borde de la envolvente en el vértice oeste, dentro de la huella |
 | Terreno que se escapa de la caja | real en `main` (27.364 px por frame), pero corto de la línea; #399 lo elimina |
 
