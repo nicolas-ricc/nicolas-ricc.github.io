@@ -252,8 +252,8 @@ aspecto: RESUME 0°, 0°, 0.010; PORTFOLIO 0.23°, 3.03°, 0.077; Writing 0°, 0
 
 | Exhibit | Escala | Alto de x (px) | Trazo (px) | Aire (px) | Contraste estático | Contraste (px) | Halo | OCR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `cartel-torre-escena` | 1.17 | 14.25 | 2.31 | 2.95 | 4.70 | 10.61:1 | 0.05 | `RESUME` |
-| `cartel-torre-escena` | 0.83 | 10.11 | 1.64 | 2.10 | 4.70 | 9.07:1 | 0.05 | `RESUME` |
+| `cartel-torre-escena` | 1.17 | 14.25 | 2.31 | 2.95 | 4.70 | 10.13:1 | 0.06 | `RESUME` |
+| `cartel-torre-escena` | 0.83 | 10.11 | 1.64 | 2.10 | 4.70 | 8.89:1 | 0.05 | `RESUME` |
 | `cartel-taller-escena` | 1.17 | 15.07 | 2.40 | 2.29 | 8.06 | 6.72:1 | 0.08 | `PORTFOLIO` |
 | `cartel-taller-escena` | 0.83 | 10.69 | 1.70 | 1.62 | 8.06 | 6.10:1 | 0.08 | `PORTFOLIO` |
 | `plataforma-escena` | 1.17 | 12.20 | 2.57 | 2.96 | 13.26 | 11.79:1 | 0.07 | `Writing` |
@@ -296,7 +296,8 @@ letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2;
   grilla; con 0.5 el trazo medía 1.22 px a 1.17 y no pasaba la regla de nivel 2.
 - **Luz de la antena real (#378).** Se ve a través del panel de la corona
   (los acentos se dibujan sobre todo sólido). El mundo no cambia en esta
-  historia: la decide la integración.
+  historia: la decide la integración. #391 quitó la antena y su luz: la corona
+  remata la torre.
 - **Portfolio (#379).** El anfitrión es la cumbrera del galpón de montaje sur
   del astillero. El sitio se mantiene en `TINKER_SITE` y la cubierta sube
   `DECK_RISE` 3.5 (no 2.6), porque el pórtico de la fábrica tapaba los márgenes
