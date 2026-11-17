@@ -247,6 +247,20 @@ export function slide(out: Solid[], _accents: Accent[]): void {
   const bx0 = x - (chuteR(CHUTE.z0) + CHUTE.w), bx1 = x - rAt(10.5) * Math.cos(Math.PI / 16) - 0.01, rz = CHUTE.z0 + 0.8; // balcony: its east face is west of the top band's AABB
   out.push(prism(bx0, y, CHUTE.z0, bx1 - bx0, 2, 0.15, "deck"));
   out.push({ kind: "beam", from: v3(bx0 + 0.04, y, rz), to: v3(bx0 + 0.04, y + 2, rz), w: 0.08, h: 0.08, mat: "steel" }, { kind: "beam", from: v3(bx0, y + 1.96, rz), to: v3(bx1, y + 1.96, rz), w: 0.08, h: 0.08, mat: "steel" });
+  const n = CHUTE.perTurn * SLIDE.turns, th = (k: number): number => Math.PI + (2 * Math.PI * SLIDE.turns * k) / n, zk = (k: number): number => CHUTE.z1 + (CHUTE.z0 - CHUTE.z1) * (1 - k / n) ** 1.2;
+  const at = (k: number, r: number, dz: number): Vec3 => v3(x + r * Math.cos(th(k)), y + r * Math.sin(th(k)), zk(k) + dz);
+  const chains = [{ mat: "signal", w: CHUTE.w, h: 0.15, ro: CHUTE.w / 2, dz: 0.075 }, { mat: "signal", w: 0.15, h: 0.5, ro: CHUTE.w - 0.075, dz: 0.4 }, { mat: "whitewash", w: 0.2, h: 0.08, ro: CHUTE.w - 0.075, dz: 0.69 }] as const;
+  for (const c of chains) {
+    const pt = (k: number): Vec3 => at(k, chuteR(zk(k)) + c.ro, c.dz);
+    for (let k = 0; k < n; k++) out.push({ kind: "beam", from: pt(k), to: pt(k + 1), w: c.w, h: c.h, mat: c.mat });
+    const p = pt(n); // run-out: tangent at the east point, heading south
+    out.push({ kind: "beam", from: p, to: v3(p.x, p.y + CHUTE.exit, p.z), w: c.w, h: c.h, mat: c.mat });
+  }
+  out.push(prism(x + chuteR(CHUTE.z1), y, 0, CHUTE.w, CHUTE.exit, CHUTE.z1, "deck"));
+  for (let k = 0; k <= n; k += 2) { // brackets from the trunk wall to the bed, except under the door (θ ≡ 90°)
+    if (zk(k) < 1.2 || k === 28) continue;
+    out.push({ kind: "beam", from: at(k, rAt(zk(k) - 1) * Math.cos(Math.PI / 16) + 0.02, -1), to: at(k, chuteR(zk(k)) + 0.4, -0.05), w: 0.15, h: 0.15, mat: "steel" });
+  }
 }
 
 /** Log flume: raised deck channel (lift ramp, flat with water over the boardwalk, drop ramp to the bay), pillars and splash. */
