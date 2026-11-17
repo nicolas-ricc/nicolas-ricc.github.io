@@ -6,7 +6,7 @@ import { bounds, type Solid, type Tri, tessellate } from "../iso/solids";
 import type { Animator } from "../scenes/animator";
 import type { WorldScene } from "../scenes/world";
 import type { ZonedAnimator } from "../world/assemble";
-import { contextAnimators, contextScene, cropAccents, cropAnimators, cropScene, cropShared, overlaps, pieceScene, readout, solidsBox } from "./crop";
+import { contextAnimators, contextScene, cropAccents, cropAnimators, cropScene, cropShared, cropSolid, isLongPrism, overlaps, pieceScene, readout, solidsBox } from "./crop";
 import { EXHIBITS, type ContextExhibit } from "./exhibits";
 
 const box = { x0: 0, y0: 0, x1: 10, y1: 10 };
@@ -14,10 +14,123 @@ const prism = (x: number, y: number, w = 2): Solid => ({ kind: "prism", at: v3(x
 const tri = (x: number, y: number): Tri => ({ pts: [v3(x, y, 0), v3(x + 1, y, 0), v3(x, y + 1, 0)] });
 
 describe("overlaps", () => {
-  it("a box that touches the edge overlaps; a separate one does not", () => {
-    expect(overlaps({ min: v3(10, 3, 0), max: v3(12, 4, 9) }, box)).toBe(true);
+  it("touching the edge does not overlap; crossing it does; a separate one does not (#399)", () => {
+    expect(overlaps({ min: v3(10, 3, 0), max: v3(12, 4, 9) }, box)).toBe(false);
+    expect(overlaps({ min: v3(3, 10, 0), max: v3(4, 12, 9) }, box)).toBe(false);
+    expect(overlaps({ min: v3(9.9, 3, 0), max: v3(12, 4, 9) }, box)).toBe(true);
     expect(overlaps({ min: v3(10.1, 3, 0), max: v3(12, 4, 9) }, box)).toBe(false);
     expect(overlaps({ min: v3(3, -5, 0), max: v3(4, -0.1, 0) }, box)).toBe(false);
+  });
+});
+
+const EPS = 1e-9;
+const insideBox = (p: { x: number; y: number }): boolean => p.x >= box.x0 - EPS && p.x <= box.x1 + EPS && p.y >= box.y0 - EPS && p.y <= box.y1 + EPS;
+const triArea = ({ pts: [a, b, c] }: Tri): number => Math.abs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y)) / 2;
+type Strip = Solid & { kind: "strip" };
+type Ground = Solid & { kind: "ground" };
+type Prism = Solid & { kind: "prism" };
+
+describe("cropSolid: strips cut to the box (#399)", () => {
+  const strip = (path: { x: number; y: number }[]): Strip => ({ kind: "strip", path, width: 0.3, z: 0.02, mat: "paving", tone: 1 });
+  const crop = (s: Solid): Solid[] => cropSolid(s, box);
+
+  it("a strip that crosses the box comes out cut to it, with the same width, z, mat and tone", () => {
+    const out = crop(strip([{ x: -5, y: 5 }, { x: 15, y: 5 }])) as Strip[];
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ kind: "strip", width: 0.3, z: 0.02, mat: "paving", tone: 1 });
+    expect(out[0]!.path).toHaveLength(2);
+    expect(out[0]!.path[0]!.x).toBeCloseTo(0, 12); expect(out[0]!.path[0]!.y).toBeCloseTo(5, 12);
+    expect(out[0]!.path[1]!.x).toBeCloseTo(10, 12); expect(out[0]!.path[1]!.y).toBeCloseTo(5, 12);
+  });
+  it("a strip that goes in and out twice gives two strips", () => {
+    const out = crop(strip([{ x: -5, y: 2 }, { x: 5, y: 2 }, { x: 5, y: 20 }, { x: 8, y: 20 }, { x: 8, y: 5 }, { x: 15, y: 5 }])) as Strip[];
+    expect(out).toHaveLength(2);
+    const round = (s: Strip) => s.path.map((p) => [Math.round(p.x * 1e9) / 1e9, Math.round(p.y * 1e9) / 1e9]);
+    expect(round(out[0]!)).toEqual([[0, 2], [5, 2], [5, 10]]);
+    expect(round(out[1]!)).toEqual([[8, 10], [8, 5], [10, 5]]);
+    for (const s of out) expect(s).toMatchObject({ width: 0.3, z: 0.02, mat: "paving", tone: 1 });
+  });
+  it("a strip whole inside passes by identity; one that only touches the edge, or is outside, is dropped", () => {
+    const s = strip([{ x: 1, y: 1 }, { x: 9, y: 1 }, { x: 9, y: 9 }]);
+    const [only, ...rest] = cropSolid(s, box);
+    expect(only).toBe(s);
+    expect(rest).toEqual([]);
+    expect(cropSolid(strip([{ x: 10, y: 5 }, { x: 20, y: 5 }]), box)).toEqual([]);
+    expect(cropSolid(strip([{ x: 20, y: 1 }, { x: 30, y: 1 }]), box)).toEqual([]);
+  });
+});
+
+describe("cropSolid: long prisms cut to the box (#399)", () => {
+  const p = (w: number, d: number, extra: Partial<Prism> = {}): Prism => ({ kind: "prism", at: v3(-60, 4, 0), w, d, h: 1.2, mat: "steel", ...extra });
+
+  it("isLongPrism: flat roof, no facade or plates, long side ≥ 30 and ≥ 3× the short one", () => {
+    expect(isLongPrism(p(156, 0.6))).toBe(true);
+    expect(isLongPrism(p(156, 0.6, { roof: "flat" }))).toBe(true);
+    expect(isLongPrism(p(0.6, 40))).toBe(true);
+    expect(isLongPrism(p(29, 0.6))).toBe(false);
+    expect(isLongPrism(p(40, 14))).toBe(false);
+    expect(isLongPrism(p(156, 0.6, { roof: "gable" }))).toBe(false);
+    expect(isLongPrism(p(156, 0.6, { facade: { floors: 1, cols: 4 } }))).toBe(false);
+    expect(isLongPrism(p(156, 0.6, { plates: [{ wall: 0, shape: "rect", u0: 0, u1: 1, z0: 0, z1: 1, mat: "rust" }] }))).toBe(false);
+    expect(isLongPrism({ kind: "cylinder", at: v3(0, 0, 0), r: 40, h: 1, mat: "steel" })).toBe(false);
+  });
+  it("a 156 × 0.6 prism that crosses the box comes out with at.x and w fitted to it; z, h, mat, tone kept", () => {
+    const [out] = cropSolid(p(156, 0.6, { tone: -1 }), box) as Prism[];
+    expect(out).toMatchObject({ kind: "prism", at: { x: 0, y: 4, z: 0 }, w: 10, d: 0.6, h: 1.2, mat: "steel", tone: -1 });
+  });
+  it("cut in y as well when it crosses a corner", () => {
+    const [out] = cropSolid({ kind: "prism", at: v3(8, -30, 0), w: 4, d: 35, h: 1, mat: "concrete" }, box) as Prism[];
+    expect(out).toMatchObject({ at: { x: 8, y: 0, z: 0 }, w: 2, d: 5 });
+  });
+  it("a truck (6 × 2.4), a gable prism and a prism with plates that cross the box come in whole", () => {
+    const truck: Prism = { kind: "prism", at: v3(7, 3, 0), w: 6, d: 2.4, h: 2.8, mat: "steel" };
+    const gable = p(40, 2, { roof: "gable", at: v3(-10, 3, 0) });
+    const plated = p(40, 2, { at: v3(-10, 3, 0), plates: [{ wall: 0, shape: "rect", u0: 0, u1: 1, z0: 0, z1: 1, mat: "rust" }] });
+    for (const s of [truck, gable, plated]) { const out = cropSolid(s, box); expect(out).toHaveLength(1); expect(out[0]).toBe(s); }
+  });
+  it("a long prism whole inside passes by identity", () => {
+    const s: Prism = { kind: "prism", at: v3(0, 0, 0), w: 0.3, d: 10, h: 1, mat: "steel" };
+    const big = { x0: -50, y0: -50, x1: 50, y1: 50 };
+    expect(cropSolid(s, big)[0]).toBe(s);
+  });
+});
+
+describe("cropSolid: terrain triangles cut to the box (#399)", () => {
+  const mesh = (tris: Tri[]): Ground => ({ kind: "ground", mat: "concrete", tris });
+
+  it("a triangle that crosses the box comes out as triangles inside it, with the same tone offset and the area of the intersection", () => {
+    const [out] = cropSolid(mesh([{ pts: [v3(-2, 2, 0), v3(6, 2, 0), v3(2, 8, 0)], toneOffset: -1, baseTone: 2 }]), box) as Ground[];
+    expect(out.tris.length).toBeGreaterThan(0);
+    for (const t of out.tris) {
+      for (const q of t.pts) expect(insideBox(q), JSON.stringify(q)).toBe(true);
+      expect(t.toneOffset).toBe(-1);
+      expect(t.baseTone).toBe(2);
+    }
+    expect(out.tris.reduce((a, t) => a + triArea(t), 0)).toBeCloseTo(21, 9);
+  });
+  it("a triangle whole inside, or with a vertex on the edge, passes by identity; a mesh of only those is the same object", () => {
+    const whole = tri(2, 2), onEdge: Tri = { pts: [v3(9, 5, 0), v3(10, 5, 0), v3(9, 6, 0)] };
+    const m = mesh([whole, onEdge]);
+    expect(cropSolid(m, box)[0]).toBe(m);
+    const [mixed] = cropSolid(mesh([whole, { pts: [v3(8, 8, 0), v3(14, 8, 0), v3(8, 14, 0)] }, onEdge]), box) as Ground;
+    expect(mixed.tris[0]).toBe(whole);
+    expect(mixed.tris).toContain(onEdge);
+  });
+  it("a mesh whose only triangle touches the edge from outside is dropped", () => {
+    expect(cropSolid(mesh([{ pts: [v3(10, 2, 0), v3(14, 2, 0), v3(10, 6, 0)] }]), box)).toEqual([]);
+  });
+  it("cropAnimators: a water triangle whole inside comes back by identity, every tick", () => {
+    const inside = tri(3, 3);
+    const water = mesh([inside, { pts: [v3(8, 8, 0), v3(14, 8, 0), v3(8, 14, 0)] }]);
+    const a0: ZonedAnimator = { zone: null, ids: ["w"], layer: () => ({ kind: "water", water: [water] }), tick: () => new Set(["w"]) };
+    const [a] = cropAnimators([a0], box);
+    for (let i = 0; i < 2; i++) {
+      const l = a!.layer("w");
+      const tris = l.kind === "water" ? (l.water[0] as Ground).tris : [];
+      expect(tris[0]).toBe(inside);
+      for (const t of tris) for (const q of t.pts) expect(insideBox(q)).toBe(true);
+      a!.tick(16);
+    }
   });
 });
 
@@ -47,7 +160,7 @@ describe("cropScene", () => {
     expect(out.terrain.foam).toMatchObject({ kind: "ground", mat: "foam", tris: [] });
   });
   it("the same solid and the same box return the same crop", () => {
-    expect(cropShared(water, box)).toBe(out.terrain.water[0]);
+    expect(cropShared(water, box)[0]).toBe(out.terrain.water[0]);
   });
 });
 
@@ -93,8 +206,8 @@ describe("cropAnimators", () => {
     const water: Solid = { kind: "ground", mat: "water", tris: [tri(1, 1), tri(50, 50)] };
     const far: Solid = { kind: "ground", mat: "water", tris: [tri(50, 50)] };
     const [a] = cropAnimators([toy(1, [water, far])], box);
-    expect(a!.claims).toEqual([cropShared(water, box)]);
-    expect(a!.claims![0]).toBe(cropShared(water, box));
+    expect(a!.claims).toEqual(cropShared(water, box));
+    expect(a!.claims![0]).toBe(cropShared(water, box)[0]);
   });
   it("a layer that reassigns the triangles of the same solid is cropped again on every call", () => {
     const glint: Solid & { kind: "ground" } = { kind: "ground", mat: "glint", tris: [tri(1, 1)] };

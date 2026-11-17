@@ -1,0 +1,66 @@
+import { describe, expect, it } from "vitest";
+import { clipPolygon, clipSegment, lerp2, lerp3 } from "./clip";
+import { v3, type Vec2 } from "./geometry";
+
+const r = { x0: 0, y0: 0, x1: 10, y1: 10 };
+const EPS = 1e-9;
+const inside = (p: Vec2): boolean => p.x >= r.x0 - EPS && p.x <= r.x1 + EPS && p.y >= r.y0 - EPS && p.y <= r.y1 + EPS;
+const area = (pts: Vec2[]): number => { let a = 0; for (let i = 0; i < pts.length; i++) { const p = pts[i]!, q = pts[(i + 1) % pts.length]!; a += p.x * q.y - q.x * p.y; } return Math.abs(a) / 2; };
+
+describe("clipSegment", () => {
+  it("a segment that crosses the rectangle gets the parameters of its inside part", () => {
+    const c = clipSegment({ x: -5, y: 5 }, { x: 15, y: 5 }, r)!;
+    expect(c.t0).toBeCloseTo(0.25, 12);
+    expect(c.t1).toBeCloseTo(0.75, 12);
+  });
+  it("whole inside → 0..1; whole outside → null", () => {
+    expect(clipSegment({ x: 1, y: 1 }, { x: 9, y: 9 }, r)).toEqual({ t0: 0, t1: 1 });
+    expect(clipSegment({ x: 11, y: 1 }, { x: 19, y: 9 }, r)).toBeNull();
+  });
+  it("a diagonal that misses the corner is null; one that cuts it gets both ends on the edges", () => {
+    expect(clipSegment({ x: 8, y: 13 }, { x: 13, y: 8 }, r)).toBeNull();
+    const c = clipSegment({ x: 5, y: 12 }, { x: 12, y: 5 }, r)!;
+    expect(c.t0).toBeCloseTo(2 / 7, 12); // enters at y 10
+    expect(c.t1).toBeCloseTo(5 / 7, 12); // leaves at x 10
+  });
+  it("a zero-length segment: inside 0..1, outside null, no NaN", () => {
+    expect(clipSegment({ x: 3, y: 3 }, { x: 3, y: 3 }, r)).toEqual({ t0: 0, t1: 1 });
+    expect(clipSegment({ x: 30, y: 3 }, { x: 30, y: 3 }, r)).toBeNull();
+  });
+});
+
+describe("clipPolygon", () => {
+  it("a triangle whole inside comes back with the same points", () => {
+    const tri = [{ x: 1, y: 1 }, { x: 5, y: 1 }, { x: 1, y: 5 }];
+    expect(clipPolygon(tri, r, lerp2)).toEqual(tri);
+  });
+  it("a triangle that crosses an edge: all points inside, the area of the intersection", () => {
+    const out = clipPolygon([{ x: -2, y: 2 }, { x: 6, y: 2 }, { x: 2, y: 8 }], r, lerp2);
+    expect(out.every(inside)).toBe(true);
+    // the triangle (area 24) minus the part west of x 0: (−2, 2), (0, 2), (0, 5), area 3
+    expect(area(out)).toBeCloseTo(21, 9);
+  });
+  it("a square larger than the rectangle comes back as the rectangle", () => {
+    const out = clipPolygon([{ x: -5, y: -5 }, { x: 15, y: -5 }, { x: 15, y: 15 }, { x: -5, y: 15 }], r, lerp2);
+    expect(area(out)).toBeCloseTo(100, 9);
+    expect(out).toHaveLength(4);
+  });
+  it("a polygon outside → []", () => {
+    expect(clipPolygon([{ x: 11, y: 1 }, { x: 15, y: 1 }, { x: 11, y: 5 }], r, lerp2)).toEqual([]);
+  });
+  it("a vertex exactly on an edge does not leave two equal consecutive points", () => {
+    const out = clipPolygon([{ x: 5, y: 5 }, { x: 10, y: 5 }, { x: 12, y: 8 }], r, lerp2);
+    expect(out.length).toBeGreaterThanOrEqual(3);
+    for (let i = 0; i < out.length; i++) {
+      const p = out[i]!, q = out[(i + 1) % out.length]!;
+      expect(p.x === q.x && p.y === q.y, JSON.stringify(out)).toBe(false);
+    }
+  });
+  it("lerp3 keeps z on the plane of a sloped triangle", () => {
+    const z = (x: number, y: number): number => 0.5 * x + 0.25 * y + 1;
+    const pts = [v3(-4, 2, z(-4, 2)), v3(6, 2, z(6, 2)), v3(2, 14, z(2, 14))];
+    const out = clipPolygon(pts, r, lerp3);
+    expect(out.length).toBeGreaterThanOrEqual(3);
+    for (const p of out) { expect(inside(p)).toBe(true); expect(p.z).toBeCloseTo(z(p.x, p.y), 9); }
+  });
+});
