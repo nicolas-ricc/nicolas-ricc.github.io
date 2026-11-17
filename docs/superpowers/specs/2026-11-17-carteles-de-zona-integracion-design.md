@@ -97,7 +97,7 @@ Cada cartel construido solo en su sitio:
 | Writing (plataforma) | `PLATFORM_SITE` (392, 178) | 75 | 224 | 656 (654 poly + 2 dot) |
 | Total | | 262 | 750 | 1 256 |
 
-Acentos estáticos del mundo: 1 222 antes (planificación de #389), 2 451
+Acentos estáticos del mundo: 1 222 antes (planificación de #389), 2 450
 después; 26 luces de la ciudad quedan ocultas tras la corona (#391). Tope
 2 600.
 
@@ -109,11 +109,11 @@ después (rama). agent-browser headless,
 | | antes | después |
 |---|---|---|
 | first draw (ms) | 1111.5 | 1096.5 |
-| polígonos estáticos | 45 309 | 45 887 |
+| polígonos estáticos | 45 309 | 46 576 |
 | bloom, promedio (ms) | 41.0 | 42.1 |
 | veredicto del bloom | `fallback` | `fallback` |
 | peor redibujo en 5 s (ms) | 65.20 | 54.80 |
-| acentos estáticos del mundo | 1 222 (plan de #389) | 2 451 |
+| acentos estáticos del mundo | 1 222 (plan de #389) | 2 450 |
 
 Bloom, tick + render: antes 25,3 + 15,7; después 25,8 + 16,3. Primera corrida
 (fría): `main` first draw 2395,8, bloom 63,4 (37,6 + 25,9) `fallback`, peor
@@ -121,6 +121,11 @@ redibujo 161,50; rama 726,4, bloom 25,9 (15,8 + 10,1) `fallback`, peor 27,10.
 La dispersión entre corridas es mayor que la diferencia entre lados: el GL por
 software del headless (~2 fps) no es representativo (#229). Se registra, no se
 exige. Los topes (56 000 polígonos, 2 600 acentos) sí los vigilan los tests.
+
+Polígonos estáticos después: la rama medida imprimió 45 887; al integrar
+`main` (que trae #398) quedan 46 576, el número que imprime hoy el log
+(`[mapa] first draw`) y que recalcula `docs.test.ts`; los acentos estáticos del
+mundo, 2 451 en la rama, quedan en 2 450.
 
 ## 6. Desvíos
 

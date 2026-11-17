@@ -38,8 +38,10 @@ const GATE_SIGN = { x0: 86.5, x1: 93.5, y: -177.98, z0: 6.1, z1: 7 } as const;
 export const GHOST = { x: 98, y: -258, w: 20, d: 12 } as const;
 /** Mirror house: whitewash hall next to the ghost train, glass-mirror pediment on its south face. */
 export const MIRRORS = { x: 124, y: -258, w: 16, d: 12 } as const;
-/** Giant slide: deck tower at the north end of the fair, helical ramp of 24 treads (3 turns) around it. */
-export const SLIDE = { x: 118, y: -292, r: 5, h: 14 } as const;
+/** Giant slide, a helter skelter: striped conical trunk (radius `r` at the ground → `rTop` at `trunk`), lantern and gored roof (tip at `h`), chute of `turns` turns around it. */
+export const SLIDE = { x: 118, y: -292, r: 3.5, rTop: 2.1, trunk: 12, h: 15.9, turns: 2.5 } as const;
+/** Chute of the helter skelter: bed from z `z0` (balcony) down to `z1`, width `w`, inner radius `k` times the tower's, `perTurn` segments per turn, straight run-out of `exit` u. */
+export const CHUTE = { z0: 11.5, z1: 0.4, w: 1.1, k: 1.25, perTurn: 16, exit: 5 } as const;
 /** Log flume: deck channel over the north beach, from `x0` (station, z 2.5) over the boardwalk (flat at z 6) and a drop into the bay. */
 export const FLUME = { x0: 160, y: -296, w: 3 } as const;
 const FLUME_AXIS = FLUME.y + FLUME.w / 2;
@@ -217,19 +219,56 @@ export function mirrorHouse(out: Solid[], accents: Accent[]): void {
   accents.push(...garland([v3(x, ys + 0.1, 7.5), v3(x + 8, ys + 0.1, 6.9), v3(x + 16, ys + 0.1, 7.5)]));
 }
 
-/** Giant slide: deck tower with a copper cap and a ladder, 24 stepped treads spiralling down from z 13 to 0.5 with outer rails, amber tip light. */
-export function slide(out: Solid[], accents: Accent[]): void {
-  const { x, y, r, h } = SLIDE, n = 24;
-  out.push(prism(x - 2, y - 2, 0, 4, 4, h, "deck"), cone(x, y, h, 3, 2, "copper"), prism(x - 2.6, y - 1, 0, 0.6, 2, h, "steel"));
-  for (let z = 2; z <= h; z += 2) out.push({ kind: "beam", from: v3(x - 2.65, y - 1, z), to: v3(x - 2.65, y + 1, z), w: 0.1, h: 0.1, mat: "steel" });
-  for (let k = 0; k < n; k++) {
-    const a = (6 * Math.PI * (k + 0.5)) / n, z = 13 - (12.5 * k) / (n - 1);
-    const cx = x + r * Math.cos(a), cy = y + r * Math.sin(a);
-    out.push(rotBox(cx, cy, 2.2, 1.2, a + Math.PI / 2, z, 0.3, "deck"));
-    const hw = 1.1, tx = -Math.sin(a), ty = Math.cos(a), ox = x + 5.6 * Math.cos(a), oy = y + 5.6 * Math.sin(a); // rail at radius 5.6, tangent to the tread
-    out.push({ kind: "beam", from: v3(ox - tx * hw, oy - ty * hw, z + 0.8), to: v3(ox + tx * hw, oy + ty * hw, z + 0.8), w: 0.1, h: 0.1, mat: "steel" });
+/** Radius of the conical trunk at height z. */
+const rAt = (z: number): number => SLIDE.r - ((SLIDE.r - SLIDE.rTop) * z) / SLIDE.trunk;
+/** Inner radius of the chute bed at height z: `CHUTE.k` times the trunk's, plus a small allowance for the step between bands. */
+const chuteR = (z: number): number => CHUTE.k * (rAt(z) + (SLIDE.r - SLIDE.rTop) / 8);
+
+/** Giant slide (helter skelter), tower: 7 whitewash bands with signal stripes, lantern with glass windows, gored roof, mast and flag, balcony where the chute starts. */
+export function slide(out: Solid[], _accents: Accent[]): void {
+  const { x, y, trunk, h } = SLIDE, edges = [0, 3, 4.5, 6, 7.5, 9, 10.5, trunk];
+  for (let k = 0; k < 7; k++) {
+    const z0 = edges[k]!, z1 = edges[k + 1]!, mid = (z0 + z1) / 2, plates: Plate[] = [];
+    for (let i = 0; i < 16; i += 2) {
+      plates.push({ wall: i, shape: "rect", u0: 0, u1: 1, z0, z1, mat: "signal" });
+      if (k % 2) plates.push({ wall: i, shape: "poly", pts: [{ x: 0.5, y: z0 + 0.2 }, { x: 0.8, y: mid }, { x: 0.5, y: z1 - 0.2 }, { x: 0.2, y: mid }], mat: "safety" });
+    }
+    if (k === 0) plates.push({ wall: 3, shape: "rect", u0: 0.2, u1: 0.8, z0: 0.8, z1: 2.2, mat: "hull" }, { wall: 3, shape: "rect", u0: 0.15, u1: 0.85, z0: 2.3, z1: 2.8, mat: "safety" }); // south door and its sign
+    out.push({ kind: "cylinder", at: v3(x, y, z0), r: rAt(z0), h: z1 - z0, mat: "whitewash", sides: 16, plates });
   }
-  accents.push(dot(x, y, 16.3, 0.5, "amber"));
+  const roofH = 1.5, lanternH = h - roofH - trunk, mast = 0.3 * lanternH, fz = h + mast - 0.55; // lantern up to the roof; mast 0.3 × the lantern; cloth hangs 0.5 from its top
+  const windows: Plate[] = Array.from({ length: 8 }, (_, k) => ({ wall: 2 * k, shape: "poly", pts: [{ x: 0.25, y: trunk + 0.6 }, { x: 0.75, y: trunk + 0.6 }, { x: 0.75, y: trunk + 1.5 }, { x: 0.5, y: trunk + 1.9 }, { x: 0.25, y: trunk + 1.5 }], mat: "glass" }));
+  windows.push({ wall: 7, shape: "rect", u0: 0.2, u1: 0.8, z0: trunk, z1: trunk + 1.6, mat: "hull" }); // west wall: exit door onto the balcony
+  out.push({ kind: "cylinder", at: v3(x, y, trunk), r: 1.9, h: lanternH, mat: "whitewash", sides: 16, plates: windows });
+  out.push({ kind: "dome", at: v3(x, y, h - roofH), r: 2.08, h: roofH, mat: "signal", alt: "whitewash", sides: 16, rings: 3 }); // 9.5 % eave
+  out.push({ kind: "beam", from: v3(x, y, h), to: v3(x, y, h + mast), w: 0.1, h: 0.1, mat: "steel" });
+  const cloth: Plate[] = [
+    { wall: 2, shape: "rect", u0: 0.4, u1: 0.6, z0: fz, z1: fz + 0.5, mat: "whitewash" }, { wall: 2, shape: "rect", u0: 0, u1: 1, z0: fz + 0.17, z1: fz + 0.33, mat: "whitewash" },
+    { wall: 2, shape: "rect", u0: 0.45, u1: 0.55, z0: fz, z1: fz + 0.5, mat: "signal" }, { wall: 2, shape: "rect", u0: 0, u1: 1, z0: fz + 0.21, z1: fz + 0.29, mat: "signal" },
+  ];
+  out.push({ kind: "poly", footprint: [{ x: x + 0.05, y: y - 0.03 }, { x: x + 0.9, y: y - 0.03 }, { x: x + 0.9, y: y + 0.03 }, { x: x + 0.05, y: y + 0.03 }], z: fz, h: 0.5, mat: "livery", plates: cloth });
+  const bx0 = x - (chuteR(CHUTE.z0) + CHUTE.w), bx1 = x - rAt(10.5) * Math.cos(Math.PI / 16) - 0.01, rz = CHUTE.z0 + 0.8; // balcony: its east face is west of the top band's AABB
+  out.push(prism(bx0, y, CHUTE.z0, bx1 - bx0, 2, 0.15, "deck"));
+  out.push({ kind: "beam", from: v3(bx0 + 0.04, y, rz), to: v3(bx0 + 0.04, y + 2, rz), w: 0.08, h: 0.08, mat: "steel" }, { kind: "beam", from: v3(bx0, y + 1.96, rz), to: v3(bx1, y + 1.96, rz), w: 0.08, h: 0.08, mat: "steel" });
+  const n = CHUTE.perTurn * SLIDE.turns, th = (k: number): number => Math.PI + (2 * Math.PI * SLIDE.turns * k) / n, zk = (k: number): number => CHUTE.z1 + (CHUTE.z0 - CHUTE.z1) * (1 - k / n) ** 1.2;
+  const at = (k: number, r: number, dz: number): Vec3 => v3(x + r * Math.cos(th(k)), y + r * Math.sin(th(k)), zk(k) + dz);
+  const chains = [{ mat: "signal", w: CHUTE.w, h: 0.15, ro: CHUTE.w / 2, dz: 0.075 }, { mat: "signal", w: 0.15, h: 0.5, ro: CHUTE.w - 0.075, dz: 0.4 }, { mat: "whitewash", w: 0.2, h: 0.08, ro: CHUTE.w - 0.075, dz: 0.69 }] as const;
+  for (const c of chains) {
+    const pt = (k: number): Vec3 => at(k, chuteR(zk(k)) + c.ro, c.dz);
+    for (let k = 0; k < n; k++) out.push({ kind: "beam", from: pt(k), to: pt(k + 1), w: c.w, h: c.h, mat: c.mat });
+    const p = pt(n); // run-out: θ(n) ≡ 0 (east point), so the tangent heads +y (south)
+    out.push({ kind: "beam", from: p, to: v3(p.x, p.y + CHUTE.exit, p.z), w: c.w, h: c.h, mat: c.mat });
+  }
+  out.push(prism(x + chuteR(CHUTE.z1), y, 0, CHUTE.w, CHUTE.exit, CHUTE.z1, "deck"));
+  const dy = y + SLIDE.r * Math.cos(Math.PI / 16), sy = (j: number): number => dy + 0.001 + 0.2 * j; // door wall and step j's y (0 next to the door)
+  for (let j = 0; j < 8; j++) out.push(prism(x - 0.6, sy(j), 0, 1.2, 0.2, 0.8 - 0.1 * j, "deck"));
+  for (const hx of [x - 0.65, x + 0.65]) out.push({ kind: "beam", from: v3(hx, sy(7), 0.9), to: v3(hx, dy, 1.7), w: 0.08, h: 0.08, mat: "steel" }); // handrails rising toward the door
+  const endX = x + chuteR(CHUTE.z1) + CHUTE.w / 2, endY = y + CHUTE.exit;
+  for (const [mx, my] of [[endX - 0.7, endY + 0.1], [x - 2.3, sy(7) - 0.3]] as const) for (let m = 0; m < 3; m++) out.push({ ...prism(mx + 0.1 * (m % 2), my + 0.1 * (m % 2), 0.15 * m, 1.4, 0.8, 0.15, "deck"), tone: m % 2 ? -1 : 0 }); // two mat piles, south of the run-out and west of the steps
+  for (let k = 0; k <= n; k += 2) { // brackets from the trunk wall to the bed, except under the door (θ ≡ 90°)
+    if (zk(k) < 1.2 || (Math.sin(th(k)) > 0.999 && zk(k) - 1 < edges[1]!)) continue; // the door faces south: no bracket in front of it (band 0 tops out at edges[1])
+    out.push({ kind: "beam", from: at(k, rAt(zk(k) - 1) * Math.cos(Math.PI / 16) + 0.02, -1), to: at(k, chuteR(zk(k)) + 0.4, -0.05), w: 0.15, h: 0.15, mat: "steel" });
+  }
 }
 
 /** Log flume: raised deck channel (lift ramp, flat with water over the boardwalk, drop ramp to the bay), pillars and splash. */

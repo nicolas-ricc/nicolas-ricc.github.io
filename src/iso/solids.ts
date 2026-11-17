@@ -19,9 +19,9 @@ export type Solid = (
   | { kind: "prism"; at: Vec3; w: number; d: number; h: number; mat: Material; roofMat?: Material; roof?: "flat" | "gable" | "step" | "hip"; facade?: Facade; plates?: Plate[] }
   | { kind: "poly"; footprint: Vec2[]; z: number; h: number; mat: Material; facade?: Facade; plates?: Plate[] }
   | { kind: "ramp"; at: Vec3; w: number; d: number; h: number; mat: Material; dir: RampDir; plates?: Plate[] }
-  | { kind: "cylinder"; at: Vec3; r: number; h: number; mat: Material; sides?: number; facade?: Facade }
+  | { kind: "cylinder"; at: Vec3; r: number; h: number; mat: Material; sides?: number; facade?: Facade; plates?: Plate[] }
   | { kind: "cone"; at: Vec3; r: number; h: number; mat: Material; sides?: number }
-  | { kind: "dome"; at: Vec3; r: number; h: number; mat: Material; sides?: number; rings?: number }
+  | { kind: "dome"; at: Vec3; r: number; h: number; mat: Material; sides?: number; rings?: number; alt?: Material }
   | { kind: "vault"; at: Vec3; len: number; w: number; h: number; axis: "x" | "y"; mat: Material; segments?: number }
   | { kind: "beam"; from: Vec3; to: Vec3; w: number; h: number; mat: Material }
   | { kind: "hull"; at: Vec3; len: number; beam: number; h: number; mat: Material; topMat?: Material; heading?: number; sheer?: number }
@@ -223,8 +223,8 @@ function cone(at: Vec3, r: number, h: number, sides: number, mat: Material): Fac
   return out;
 }
 
-/** Dome: rings at increasing polar angle (radius r·cos φ, height h·sin φ), quadrilaterals between rings and triangles to the apex. */
-function dome(at: Vec3, r: number, h: number, sides: number, rings: number, mat: Material): Face[] {
+/** Dome: rings at increasing polar angle (radius r·cos φ, height h·sin φ), quadrilaterals between rings and triangles to the apex. Odd sides (every ring) take `alt` if given: gores. */
+function dome(at: Vec3, r: number, h: number, sides: number, rings: number, mat: Material, alt: Material = mat): Face[] {
   const ring = (k: number): Vec3[] => {
     const phi = (k / rings) * (Math.PI / 2), z = at.z + h * Math.sin(phi);
     return regular(at.x, at.y, r * Math.cos(phi), sides).map((p) => v3(p.x, p.y, z));
@@ -236,7 +236,7 @@ function dome(at: Vec3, r: number, h: number, sides: number, rings: number, mat:
     const lo = ring(k), hi = k < rings - 1 ? ring(k + 1) : null;
     for (let i = 0; i < sides; i++) {
       const j = (i + 1) % sides;
-      out.push(face(hi ? [lo[i]!, lo[j]!, hi[j]!, hi[i]!] : [lo[i]!, lo[j]!, apex], mat, c));
+      out.push(face(hi ? [lo[i]!, lo[j]!, hi[j]!, hi[i]!] : [lo[i]!, lo[j]!, apex], i % 2 ? alt : mat, c));
     }
   }
   return out;
@@ -419,7 +419,7 @@ function facesOf(s: Solid): Face[] {
     case "ramp": return withPlates(ramp(s.at, s.w, s.d, s.h, s.dir, s.mat), rect(s.at.x, s.at.y, s.w, s.d), { plates: s.plates }, (k) => RAMP_WALL_EDGE[k]!);
     case "cylinder": { const fp = regular(s.at.x, s.at.y, s.r, s.sides ?? 8); return withPlates(extrude(fp, s.at.z, s.h, s.mat), fp, s); }
     case "cone": return cone(s.at, s.r, s.h, s.sides ?? 6, s.mat);
-    case "dome": return dome(s.at, s.r, s.h, s.sides ?? 12, s.rings ?? 3, s.mat);
+    case "dome": return dome(s.at, s.r, s.h, s.sides ?? 12, s.rings ?? 3, s.mat, s.alt);
     case "vault": return vault(s);
     case "beam": return beam(s);
     case "hull": return hull(s);
