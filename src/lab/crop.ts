@@ -23,7 +23,7 @@ function triOverlaps({ pts: [a, b, c] }: Tri, box: Box): boolean {
 }
 
 /** A long, thin, plain prism (fence, quay edge, plinth): the only prisms the crop cuts; the rest stay whole. */
-export function isLongPrism(s: Solid): boolean {
+export function isLongPrism(s: Solid): s is Solid & { kind: "prism" } {
   if (s.kind !== "prism" || (s.roof !== undefined && s.roof !== "flat") || s.facade || s.plates) return false;
   const long = Math.max(s.w, s.d), short = Math.min(s.w, s.d);
   return long >= 30 && long >= 3 * short;
@@ -87,10 +87,10 @@ function cropGround(s: Solid & { kind: "ground" }, box: Box): Solid[] {
  * what is already inside passes by identity.
  */
 export function cropSolid(s: Solid, box: Box): Solid[] {
+  if (s.kind === "ground") return cropGround(s, box); // before `bounds`: it tessellates every triangle, and this runs every tick over the water bands
   if (!overlaps(bounds(s), box)) return [];
-  if (s.kind === "ground") return cropGround(s, box);
   if (s.kind === "strip") return cropStrip(s, box);
-  if (isLongPrism(s)) return cropLongPrism(s as Solid & { kind: "prism" }, box);
+  if (isLongPrism(s)) return cropLongPrism(s, box);
   return [s];
 }
 
