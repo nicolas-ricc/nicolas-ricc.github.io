@@ -394,10 +394,10 @@ describe("tinker sign in its scene (#379)", () => {
     const own = sign(TINKER_SITE).out, ownKeys = new Set(own.map((s) => JSON.stringify(s)));
     const placed = [...scene.ground, ...scene.solids].filter((s) => s.kind !== "ground"); // the strips (rails, roads) live in `ground`
     expect(placed.filter((s) => ownKeys.has(JSON.stringify(s)))).toHaveLength(own.length); // the world's copy of the sign (#392), and nothing else
-    const world = placed.filter((s) => !ownKeys.has(JSON.stringify(s)));
-    const halls = world.flatMap((s) => { const h = SHIPYARD_HALLS.find((x) => s.kind === "prism" && s.roof === "gable" && s.at.x === x.x0 && s.at.y === x.y0); return h ? [{ solid: s, hall: h }] : []; });
+    const others = placed.filter((s) => !ownKeys.has(JSON.stringify(s)));
+    const halls = others.flatMap((s) => { const h = SHIPYARD_HALLS.find((x) => s.kind === "prism" && s.roof === "gable" && s.at.x === x.x0 && s.at.y === x.y0); return h ? [{ solid: s, hall: h }] : []; });
     const ownB = own.map(bounds), bad: string[] = [];
-    for (const w of world) {
+    for (const w of others) {
       const b = bounds(w), wb = w.kind === "strip" ? { min: { ...b.min, z: 0 }, max: b.max } : b, hall = halls.find((x) => x.solid === w); // a strip lies on the ground up to its top
       own.forEach((s, i) => {
         if (!overlap(wb, ownB[i]!)) return;
