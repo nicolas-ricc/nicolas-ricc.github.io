@@ -180,6 +180,8 @@ del storybook.
 
 ## 7. Fuera de alcance (historia siguiente)
 
+*Desvío (2026-11-17): integrado en #389; ver 2026-11-17-carteles-de-zona-integracion-design.md.*
+
 La integración: dónde va cada cartel (la torre para Resume, el puerto para
 Portfolio, el mar para Blog), el reemplazo visual de `#zonas` (los `<a>`
 quedan como controles accesibles invisibles y el foco ilumina el cartel), el

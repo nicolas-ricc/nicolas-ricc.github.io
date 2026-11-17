@@ -15,10 +15,11 @@ import { buildIndex, markCurrent, mountStorybook, renderReadout } from "./storyb
 
 /**
  * Structures storybook: one exhibit at a time, cropped from the world by its
- * box or built alone at the origin (pieces); context exhibits are the crop plus
- * a sign built whole in world coordinates. The hash picks the exhibit; arrows
- * and j/k only write the hash. 6 rotates the bloom; ?bloom= forces it and ?speed=
- * scales the clock up to 100 (?speed=0 freezes it), as in page.ts. g, h and a
+ * box or built alone at the origin (pieces); context exhibits are the crop, plus
+ * a sign built whole in world coordinates when the world does not already
+ * have it. The hash picks the exhibit; arrows and j/k only write the hash.
+ * 6 rotates the bloom; ?bloom= forces it and ?speed= scales the clock up to
+ * 100 (?speed=0 freezes it), as in page.ts. g, h and a
  * hide or show ground, shadows and accents (with the bloom) and are remembered
  * across exhibits. c cycles the exhibit scale: real, 1.17 and 0.83, the cover scales
  * of a laptop and a phone. In development the page publishes `window.__lab` (exhibit
@@ -76,7 +77,7 @@ mountStorybook(document, ({ host, nav, panel }) => {
         stage = buildStage(...src);
         frame = { box: e.box, h: e.h };
       } else if (e.kind === "context") {
-        src = [contextScene(scene, e), contextAnimators(animators, e, reducedMotion)];
+        src = [contextScene(scene, e), contextAnimators(animators, e)];
         stage = buildStage(...src);
         frame = { box: e.box, h: e.h };
       } else {

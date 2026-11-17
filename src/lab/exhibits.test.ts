@@ -9,8 +9,8 @@ import { createFactoryAnim } from "../scenes/factory-anim";
 import { PLANT, factory } from "../scenes/factory";
 import { BEAM_PERIOD_MS } from "../scenes/sea-anim";
 import { CROWN_SITE, RESUME_SIGN, towerCrown } from "../scenes/sign-crown";
-import { PIECE_AT, TINKER_SIGN } from "../scenes/sign-tinker";
-import { BLOG_SIGN, seaPlatform, seaPlatformAt } from "../scenes/sign-platform";
+import { PIECE_AT, TINKER_SIGN, TINKER_SITE, tinkerSign } from "../scenes/sign-tinker";
+import { BLOG_SIGN, seaPlatform } from "../scenes/sign-platform";
 import { trainLen } from "../scenes/train";
 import { createRng } from "../map/seed";
 import { assembleWorld } from "../world/assemble";
@@ -384,19 +384,16 @@ describe("chimneys box (#245)", () => {
 const contexts = EXHIBITS.flatMap((e) => (e.kind === "context" ? [e] : []));
 
 describe("context exhibits (#376)", () => {
-  const built = (e: (typeof contexts)[number]) => { const out: Solid[] = [], accents: Accent[] = []; e.build(out, accents); return { out, accents }; };
-  /** Like `measure`, on the context scene: the crop plus the sign built whole; its accents and animator count too. */
+  /** Like `measure`, on the context scene (a crop of the world, #392). */
   function measureContext(e: (typeof contexts)[number]): { inside: number; withAnim: number; neighbor: number; accents: number } {
     const cs = contextScene(scene, e), fixed = [...cs.ground, ...cs.solids];
     const anim = contextAnimators(animators, e).flatMap((a) => a.ids.flatMap((id) => { const l = a.layer(id); return l.kind === "solid" ? l.solids : []; }));
-    const north = (e.box.x0 + e.box.y0) / 2;
-    const own = built(e).accents.flatMap((a) => (a.kind === "dot" ? [(north - project(a.at).y + a.r * HALO_K) / Z_SCALE] : a.pts.map((p) => (north - project(p).y) / Z_SCALE)));
     const inside = top(fixed.filter((s) => within(s, e.box)));
     return {
       inside,
       withAnim: Math.max(inside, top(anim.filter((s) => within(s, e.box)))),
       neighbor: top(fixed.filter((s) => s.kind !== "ground" && !within(s, e.box))),
-      accents: Math.max(accentReach(e.box), ...own),
+      accents: accentReach(e.box),
     };
   }
 
@@ -409,17 +406,10 @@ describe("context exhibits (#376)", () => {
       expect(e.zone, e.id).toBe(GROUPS.find((g) => g.id === e.group)!.zone);
     }
   });
-  it("build is deterministic", () => {
-    for (const e of contexts) expect(built(e), e.id).toEqual(built(e));
-  });
-  it("every solid and every accent point of build falls inside the box", () => {
+  it("no context exhibit has build or animate: the sign and its animator come from the world (#392)", () => {
     for (const e of contexts) {
-      const { out, accents } = built(e);
-      expect(out.length, e.id).toBeGreaterThan(0);
-      for (const s of out) expect(within(s, e.box), `${e.id} ${s.kind}/${s.mat}`).toBe(true);
-      for (const a of accents) for (const p of a.kind === "dot" ? [a.at] : a.pts) {
-        expect(p.x >= e.box.x0 && p.x <= e.box.x1 && p.y >= e.box.y0 && p.y <= e.box.y1, `${e.id} ${a.color}`).toBe(true);
-      }
+      expect("build" in e, e.id).toBe(false);
+      expect("animate" in e, e.id).toBe(false);
     }
   });
   it("framing: h covers the structure and its accents and exceeds them by no more than SLACK", () => {
@@ -432,30 +422,44 @@ describe("context exhibits (#376)", () => {
   it("neighbors: no solid cut by the edge rises above h", () => {
     for (const e of contexts) expect(measureContext(e).neighbor, e.id).toBeLessThanOrEqual(e.h ?? FRAME_H);
   });
-  it("cartel-taller-escena (#379): after cartel-taller, in the shipyard, signed TINKER_SIGN, animated", () => {
+  it("every solid of sign.backing is in the crop (#390)", () => {
+    for (const e of contexts) {
+      const solids = contextScene(scene, e).solids;
+      for (const s of e.sign.backing) expect(solids, e.id).toContainEqual(s);
+    }
+  });
+  it("cartel-taller-escena (#379, #392): after cartel-taller, in the shipyard, the issue's box, a crop of the world with the sign and its animator", () => {
     const ids = EXHIBITS.map((e) => e.id);
     expect(ids.indexOf("cartel-taller-escena")).toBe(ids.indexOf("cartel-taller") + 1);
     const e = contexts.find((x) => x.id === "cartel-taller-escena")!;
-    expect(e).toMatchObject({ title: "Portfolio tinker sign in its scene", zone: "portfolio", group: "shipyard", kind: "context", sign: TINKER_SIGN });
-    expect(e.animate).toBeDefined();
+    expect(e).toMatchObject({ title: "Portfolio tinker sign in its scene", zone: "portfolio", group: "shipyard", kind: "context", box: { x0: 20, y0: -58, x1: 100, y1: 0 }, sign: TINKER_SIGN });
     expect(PIECE_AT).toEqual({ x: 0, y: 0, z: 13.5 });
+    const c: Solid[] = [], d: Accent[] = [], cs = contextScene(scene, e);
+    tinkerSign(c, d, TINKER_SITE);
+    for (const s of c) expect(cs.solids).toContainEqual(s);
+    for (const a of d) expect(cs.accents).toContainEqual(a);
+    const lit = contextAnimators(animators, e).find((x) => x.ids.includes("tinker.lights"));
+    expect(lit?.zone).toBe("portfolio");
   });
-  it("plataforma-escena: after plataforma, in the sea, the issue's box, built by seaPlatformAt, signed BLOG_SIGN", () => {
+  it("plataforma-escena: after plataforma, in the sea, the issue's box, a crop of the world (no build), signed BLOG_SIGN", () => {
     const ids = EXHIBITS.map((e) => e.id);
     expect(ids.indexOf("plataforma-escena")).toBe(ids.indexOf("plataforma") + 1);
     const e = contexts.find((x) => x.id === "plataforma-escena")!;
-    expect(e).toMatchObject({ title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 366, y0: 136, x1: 434, y1: 204 }, build: seaPlatformAt, sign: BLOG_SIGN });
+    expect(e).toMatchObject({ title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 358, y0: 144, x1: 426, y1: 212 }, sign: BLOG_SIGN });
+    expect("build" in e).toBe(false);
   });
 });
 
 describe("cartel-torre-escena (#378)", () => {
-  it("after cartel-torre, in the city, the issue's box, built by towerCrown at CROWN_SITE, signed RESUME_SIGN", () => {
+  it("after cartel-torre, in the city, the issue's box, a crop of the world (no build), signed RESUME_SIGN", () => {
     const ids = EXHIBITS.map((e) => e.id);
     expect(ids.indexOf("cartel-torre-escena")).toBe(ids.indexOf("cartel-torre") + 1);
     const e = contexts.find((x) => x.id === "cartel-torre-escena")!;
     expect(e).toMatchObject({ title: "Resume tower crown in its scene", zone: "cv", group: "city", kind: "context", box: { x0: 108, y0: 206, x1: 150, y1: 248 }, sign: RESUME_SIGN });
-    const a: Solid[] = [], b: Accent[] = [], c: Solid[] = [], d: Accent[] = [];
-    e.build(a, b); towerCrown(c, d, CROWN_SITE);
-    expect({ a, b }).toEqual({ a: c, b: d });
+    expect("build" in e).toBe(false);
+    const c: Solid[] = [], d: Accent[] = [], cs = contextScene(scene, e);
+    towerCrown(c, d, CROWN_SITE);
+    for (const s of c) expect(cs.solids).toContainEqual(s);
+    for (const a of d) expect(cs.accents).toContainEqual(a);
   });
 });

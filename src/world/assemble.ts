@@ -7,6 +7,7 @@ import { fairAnimator } from "../scenes/fair-animator";
 import { railAnimator } from "../scenes/rail-animator";
 import { seaAnimator } from "../scenes/sea-animator";
 import { shipyardAnimator } from "../scenes/shipyard-animator";
+import { tinkerAnimator } from "../scenes/sign-tinker";
 import { techAnimator } from "../scenes/tech-animator";
 import { waterAnimator } from "../scenes/water-animator";
 import { world, type WorldScene } from "../scenes/world";
@@ -25,6 +26,7 @@ export function assembleWorld(zones: readonly WorldZone[] | undefined, opts: { r
   if (scene.shipyard) animators.push(tag(shipyardAnimator(scene.shipyard, createRng(SEED + 1), { reducedMotion }), "portfolio"));
   // the train runs along the shipyard track; its tail leaves the terrain on the west (the lab), so it goes even with the ["portfolio"] filter
   if (scene.shipyard) animators.push(tag(railAnimator({ reducedMotion }), "portfolio"));
+  if (scene.shipyard) animators.push(tag(tinkerAnimator({ reducedMotion }), "portfolio"));
   if (scene.city) animators.push(tag(cityAnimator(scene.city, createRng(SEED + 2), { reducedMotion }), "cv"));
   if (scene.factory) animators.push(tag(factoryAnimator({ ...scene.factory, stacks: [...scene.factory.stacks, ...(scene.hinterland?.stacks ?? [])] }, createRng(SEED + 4), { reducedMotion }), "portfolio"));
   if (scene.tech) animators.push(tag(techAnimator(scene.tech, createRng(SEED + 5), { reducedMotion }), "cv"));
