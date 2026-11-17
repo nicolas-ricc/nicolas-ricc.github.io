@@ -24,7 +24,7 @@
 ## Decisions (technical assumptions, declared)
 
 1. **Orphan rule, one formula for both lamp shapes.** A lamp post is a `prism` with `mat === "steel"`, `w === 0.6`, `d === 0.6` and `h` 5 or 6 (or 1.2 in the tinker sign, before this change); its bulb is a `dot` at `(at.x + 0.3, at.y + 0.3, at.z + h)` within 1e-9. That holds for `center` too (`industrialLamp` puts the post corner at `at − 0.3` and the bulb at `at + h`). The reverse direction looks at every `dot` with `r === 1.2` (the `industrialLamp` signature; the tinker floodlight was an amber r 1.2). `lamp()` posts (amber r 0.6) satisfy the post rule as well.
-2. **Exact new counts** (measured on the prototype, seed 7): Portfolio cyan dots across shipyard + factory + hinterland of `world(7)` go from 52 to **33** (−6 factory, −6 shipyard, −2 east yard, −2 esplanade, −3 hinterland). Hinterland cyan dots north of `ROAD_Y` go from 5 to **4**. The fair's dot count is pinned to whatever exact number it has after Task 5 (the implementer reads it from a failing assertion and writes it with a comment listing what remains).
+2. **Exact new counts** (measured on the prototype, seed 7): Portfolio cyan dots across shipyard + factory + hinterland of `world(7)` go from 52 to **33** (−6 factory, −6 shipyard, −2 east yard, −2 esplanade, −3 hinterland). Hinterland cyan dots north of `ROAD_Y` go from 5 to **4**. The fair's dot count (`fair(createRng(7))`) goes from 120 to exactly **114** (the 6 bumper car dots).
 3. **`world-baseline.test.ts`** pins a fingerprint per piece exhibit; `cartel-taller` (the tinker sign on its stand-in hall) changes because its floodlight goes. Re-record **only** that entry, with a comment `// #401: floodlight removed`. Every other entry must stay identical.
 4. **Exhibit framing.** The prototype showed `src/lab/exhibits.test.ts` (`framing`/`neighbors` per `h`, SLACK 8) still passes after the removals; if it fails, lower that region's `h` in `src/lab/exhibits.ts` to the measured value + ≤ 8 and update its comment, as the issue says.
 5. `roofUnder` in `sign-tinker.ts` stays (the scaffold uses it at lines ~206 and ~235). `FLOOD_N`, `FLOOD_H`, `LAMP_W` go, and the `industrialLamp`/`place` imports there.
@@ -36,6 +36,17 @@
 3. Over-removal: a functional light (buffers, quay lamps, floating dock, substation lamp (53, 12), (−30, 20)) or a non-scope tower crane light disappearing. Tests assert those still exist.
 4. Seed dependence: hinterland `fairRoad` is guarded by `ok(...)`; tests use the same seeds as today's tests (`createRng(7)` / `world(7)`).
 5. Fingerprint drift outside `cartel-taller` in `world-baseline.test.ts` would mean a piece exhibit changed by accident (e.g. `torre-grua`, which keeps `light: "amber"`).
+
+## Assumptions
+
+Recorded in the plan review (stage 2); each one is an engineering choice any reasonable option of which satisfies the issue.
+
+- **A1. Exhibit coverage.** The issue's "Sitios a tocar" maps to the exhibits as: `playa-camiones` (Task 2 plant-frame lamps, Task 3 seam fence x 24/48/72), `gradas` and `estacion` (Task 3 street lamps y 40/68/124, Task 4), `patio-contenedores` (Task 3 east yard), `cartel-taller-escena` (Task 2 crane light, Task 6 floodlight), `silos` (Task 5 `fairRoad` x 32), `playa-contenedores` (Task 5 `westHalls`), `autitos-chocadores` (Task 5). `grua-muelle`, `faro` and `pecio` only carry functional lights: siblings #402/#403 handle them (issue, inherited decision 3). Rejected: touching them here.
+- **A2. Slipway scaffolding is not a lamp.** `src/scenes/shipyard.ts:97-100` emits steel 0.6 × 0.6 h 5 prisms (scaffolding, no light) that match the issue's post rule literally. The shipyard test excludes them with a local `isSlipScaffold` predicate (posts on the slipway deck, `at.z > 0` and inside the slipway rows) named in a comment; the fixture itself stays the issue's rule. Rejected: adding dots to the scaffolding, or weakening the fixture for every scene.
+- **A3. Only `industrialLamp` emits r 1.2 dots.** `grep "r: 1.2"` over `src/scenes` and `src/kit` finds the dot only in `src/kit/props.ts:30`; the station's other dots are cyanMid r 0.8, amber r 0.9/0.5 (`station.ts:210-211`) and magenta r 0.35; the tower crane tip is r 1 (`pieces.ts:29`). So the reverse rule flags no functional light. The Portfolio rule 2 counts every `color === "cyan"` dot regardless of radius (`portfolio-accents.test.ts:44`), so the crane tip counts: factory −6 = 5 lamps + the crane tip.
+- **A4. Every task commit is green.** Each task runs `npm test` and `npm run typecheck` before its commit; a task whose change breaks another test file rewrites that test in the same task. The rollback unit is the task commit.
+- **A5. Line numbers** are from the branch `agent/401-industrial-lamps` at the plan commit (base `feature/395-storybook-luces-encuadre` at 111303d); the PR targets that base.
+- **A6. Baselines.** `world-baseline.test.ts` fingerprints only `kind === "piece"` exhibits (`world-baseline.test.ts:38`); region `h` values and the scene builders (`factory`, `fair`, `station`, `hinterland`) are not in it, so only `cartel-taller` (which builds `tinkerSign`) can drift; `torre-grua` keeps `light: "amber"` (`exhibits.ts:126`).
 
 ---
 
@@ -72,9 +83,9 @@
   - `pieces.test.ts`: new `it("light null: same solids, no accent")` — same call as the first test with `light: null` → `accents` is `[]` and `out` deep-equals the `light: "cyan"` output.
   - `factory.test.ts`: rewrite "7 lamps…" to "2 lamps: the substation's (53, 12) and the one at (−30, 20); each with its cyan accent on top" — sorted positions `[[-30, 20], [53, 12]]`, the same per-lamp accent check. Rewrite "the lamp at (58, −16)…" to "the plant frame lamps are gone: none at (5, 76), (9, 77), (35, 76.5), (49, 77) or (95, 87)". In "the inclined belt…" the `toHaveLength(7)` becomes `2`. New: "the tower crane has no tip light": no `dot` with `color === "cyan"`, `r === 1` at `(90, −12, 19.4)` (1e-9), and `unpairedLampParts(s.solids, s.accents)` is `[]`.
 - [ ] **Step 2:** `npx vitest run src/scenes/pieces.test.ts src/scenes/factory.test.ts` → the new/rewritten tests FAIL.
-- [ ] **Step 3:** `TowerCrane.light: AccentColor | null`; push the tip dot only when `c.light !== null`; update the doc comment ("…and, unless `light` is null, a light at the tip"). In `factory.ts`: delete the lamp line of `truckYard` and the `emitPlant(...)` line of `lamps()` with its comment (keep the substation/(−30, 20) loop and its comment); `towerCrane(..., light: null)`. `truckYard` loses its `accents` parameter if it becomes unused (and the `emitPlant` accents argument with it: check `emitPlant`'s signature, keep it unchanged).
+- [ ] **Step 3:** `TowerCrane.light: AccentColor | null`; push the tip dot only when `c.light !== null`; update the doc comment ("…and, unless `light` is null, a light at the tip"). In `factory.ts`: delete the lamp line of `truckYard` and the `emitPlant(...)` line of `lamps()` with its comment (keep the substation/(−30, 20) loop and its comment); `towerCrane(..., light: null)`. `emitPlant(out, build, accents?)` (`src/scenes/plant-frame.ts:15`) takes `accents` as optional and throws only when the build emits accents without a destination: `truckYard` becomes `truckYard(out: Solid[])`, calls `emitPlant(out, (o) => { … })` without the third argument, and `factory()` calls `truckYard(solids)`. `plant-frame.ts` does not change.
 - [ ] **Step 4:** Same command → PASS; `npm run typecheck` → clean.
-- [ ] **Step 5:** Commit `feat(#401): factory without plant-frame lamps or crane light`.
+- [ ] **Step 5:** `npm test` and `npm run typecheck` → all green (every commit of this plan is green, Assumption A4). Commit `feat(#401): factory without plant-frame lamps or crane light`.
 
 ### Task 3: Shipyard street, seam fence and east container yard
 
@@ -84,12 +95,12 @@
 
 - [ ] **Step 1: Write the failing tests.**
   - `seam-90.test.ts`: title "… ≥ 26 posts, three cyan lamps at y 88.2 (x −48, −24, 0)"; the lamp poles at y 88.2 (`w 0.6`, `h 5`) have exactly the x set `[-48, -24, 0]`; the cyan dots at y 88.5, z 5 have exactly x `[-47.7, -23.7, 0.3]` (1e-9); the fence posts check (≥ 26) unchanged.
-  - `shipyard.test.ts` "lamps…": the street poles (`x` in `STREET_EDGE..STREET_EDGE + 2`) have y exactly `[12, 96]`, each with its dot; new assertion `unpairedLampParts(s.solids, s.accents)` is `[]` (this scene includes the station and the east bank).
+  - `shipyard.test.ts` "lamps…": the street poles (`x` in `STREET_EDGE..STREET_EDGE + 2`) have y exactly `[12, 96]`, each with its dot; new assertion `unpairedLampParts(s.solids.filter((x) => !isSlipScaffold(x)), s.accents)` is `[]` (this scene includes the station and the east bank; Assumption A2 for `isSlipScaffold`). Rewrite the `outside` part of the test at ~51–62 here: the comment "five street lamps and two quay lamps" and `≥ 7` become the exact number of `outside` dots after this task with a comment listing them (street y 12/96, quay y 20/80, seam fence x −48/−24/0, floating dock towers, quay crane tips).
   - `shipyard-east.test.ts` "gatehouse…": the yard's cyan dots → `toHaveLength(0)`, and no steel 0.6 × 0.6 h 5 prism in `yard().out`. The "quay cranes" test (cyan tips) and the floating dock "two service towers" test stay as they are.
 - [ ] **Step 2:** `npx vitest run src/scenes/seam-90.test.ts src/scenes/shipyard.test.ts src/scenes/shipyard-east.test.ts` → FAIL.
 - [ ] **Step 3:** `lamps()`: `[12, 96]`. `seamFence`: `[-48, -24, 0]`. `containerYard`: delete the lamp line and the comment above it; drop the `industrialLamp`/`place` import only if `floatingDock` no longer needs it (it does: keep it). If `containerYard`'s `accents` stays used (gatehouse window) keep the signature.
 - [ ] **Step 4:** Same command → PASS.
-- [ ] **Step 5:** Commit `feat(#401): shipyard street, seam fence and east yard lamps out`.
+- [ ] **Step 5:** `npm test` and `npm run typecheck` → all green (every commit of this plan is green, Assumption A4). Commit `feat(#401): shipyard street, seam fence and east yard lamps out`.
 
 ### Task 4: Terminal station
 
@@ -103,11 +114,11 @@
   - Esplanade test: title "esplanade: palms and railing, no lamps; …"; steel 0.6 × 0.6 posts with h 6 → `[]`; the z 0.15 check stays.
   - Night lights test: title "night lights: lantern, fanlight, windows and dials"; drop the portico/wall-lamp/cyan expectations and assert `bDots` has no `amber` and no `cyan`; the polys (dials, fanlight…) stay.
   - "station ↔ street lamps": title and list `y 12/96`.
-  - `shipyard.test.ts` ~51–64: title "…; those of the station are magenta dots or polys"; `inside` keeps `toBeGreaterThanOrEqual(3)` with the comment "three buffer lights, plus the station's polys"; the dot color list for the station becomes `["magenta"]` (the parked train has `lead: null`, so `emu()` emits no headlight or red-light dots; its saloon and LED sign are polys); comment of `outside` "three street lamps (y 12, 96) and two quay lamps" with `toBeGreaterThanOrEqual(5)`.
+  - `shipyard.test.ts` ~51–64: title "…; those of the station are magenta dots or polys"; `inside` keeps `toBeGreaterThanOrEqual(3)` with the comment "three buffer lights, plus the station's polys"; the dot color list for the station becomes `["magenta"]` (the parked train has `lead: null`, so `emu()` emits no headlight or red-light dots; its saloon and LED sign are polys); the `outside` part was already rewritten in Task 3.
 - [ ] **Step 2:** `npx vitest run src/scenes/station.test.ts src/scenes/shipyard.test.ts` → FAIL.
 - [ ] **Step 3:** Delete the two cyanMid loops of `canopies`, the two amber loops (and their comment) of `portico`, the lamp loop (and its comment) of `esplanade`. Drop the `accents` parameter of each function that no longer uses it and its call site argument; fix the doc comments ("…white fascia and lights" → "…and white fascia"; "light sign and night lights" → "and light sign"; "two tall lamps" out of `esplanade`'s). Remove the `../kit/props` import if unused.
 - [ ] **Step 4:** Same command → PASS; `npm run typecheck` clean.
-- [ ] **Step 5:** Commit `feat(#401): station without canopy, portico or esplanade lights`.
+- [ ] **Step 5:** `npm test` and `npm run typecheck` → all green (every commit of this plan is green, Assumption A4). Commit `feat(#401): station without canopy, portico or esplanade lights`.
 
 ### Task 5: Hinterland and bumper cars
 
@@ -121,7 +132,7 @@
 - [ ] **Step 2:** `npx vitest run src/scenes/hinterland.test.ts src/scenes/fair.test.ts` → FAIL.
 - [ ] **Step 3:** `fairRoad`: `[4, 60]`. `westHalls`: drop `[-150, -50], [-180, 10]`. `bumperCars`: delete the dot loop and the now-unused `accents` parameter (and its call-site argument).
 - [ ] **Step 4:** Same command → PASS.
-- [ ] **Step 5:** Commit `feat(#401): hinterland lamps and bumper car dots out`.
+- [ ] **Step 5:** `npm test` and `npm run typecheck` → all green (every commit of this plan is green, Assumption A4). Commit `feat(#401): hinterland lamps and bumper car dots out`.
 
 ### Task 6: Tinker sign floodlight, Portfolio count and baselines
 
@@ -138,3 +149,10 @@
 - [ ] **Step 4:** Re-record only `cartel-taller` in `world-baseline.test.ts` from the assertion's received value, with the comment of Decision 3. Run `npx vitest run src/scenes/sign-tinker.test.ts src/scenes/portfolio-accents.test.ts src/scenes/world-baseline.test.ts src/lab/exhibits.test.ts` → PASS (Decision 4 if exhibits fails).
 - [ ] **Step 5:** `npm test` and `npm run typecheck` → all green.
 - [ ] **Step 6:** Commit `feat(#401): tinker sign without its floodlight`.
+
+## Grilling
+
+- Rounds: 1 (the revision added assumptions, pinned the fair count, moved one test rewrite from Task 4 to Task 3 and made every task commit green; no task was added or removed, so no second round).
+- Questions: 18. Sources: CODE 14, ISSUE 3 (scope mapping, inherited decisions 2–3, the "Sitios a tocar" list), DOC 0, NO SOURCE 1 → technical assumption (A2: slipway scaffolding posts `shipyard.ts:97-100`, deck z 1.5, match the post rule without being lamps).
+- Assumptions: A1–A6 above.
+- Spec ambiguities: none. Follow-up issues opened: none.
