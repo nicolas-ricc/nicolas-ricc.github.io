@@ -456,12 +456,13 @@ describe("zone signs and the lanes (#390, #394)", () => {
   it("no ship piece or launch piece crosses the letters of any sign on screen", () => {
     // the letters are accents, drawn over every solid: a ship crossing them would show behind them
     const rects = SIGN_ORDER.map((id) => {
-      const { minX: x0, minY: y0, maxX: x1, maxY: y1 } = signBox(SIGNS[id]);
-      return { id, rect: [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }] as Vec2[] };
+      const box = signBox(SIGNS[id]), { minX: x0, minY: y0, maxX: x1, maxY: y1 } = box;
+      return { id, box, rect: [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }] as Vec2[] };
     });
     const bad: string[] = [];
     const probe = (solids: Solid[], what: string) => {
-      for (const { id, rect } of rects) if (solids.some((s) => hullsIntersect(screenHull(bounds(s)), rect))) bad.push(`${id}: ${what}`);
+      const parts = solids.map(bounds).map((b) => ({ b, sb: screenBounds(b) }));
+      for (const { id, box, rect } of rects) if (parts.some((p) => overlaps(p.sb, box) && hullsIntersect(screenHull(p.b), rect))) bad.push(`${id}: ${what}`);
     };
     let samples = 0;
     for (const lane of ["out", "back"] as const) for (const kind of new Set(SHIPS.map((s) => s.kind))) {
@@ -480,5 +481,5 @@ describe("zone signs and the lanes (#390, #394)", () => {
     }
     expect(samples).toBeGreaterThan(0);
     expect(bad).toEqual([]);
-  });
+  }, 15_000); // ~1 s alone; the full parallel suite stretches it past the default 5 s
 });
