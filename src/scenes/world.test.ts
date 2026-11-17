@@ -6,7 +6,6 @@ import { allIsoColors } from "../map/palette-iso";
 import { STAIR_TOWER } from "./boiler-house";
 import { city } from "./city";
 import { PLANT } from "./factory";
-import { TINKER_SITE, tinkerSign } from "./sign-tinker";
 import { SUBSTATION } from "./substation";
 import { LANDMARKS, world, zoneRng } from "./world";
 
@@ -122,19 +121,15 @@ describe("world", () => {
     const pieces = w.factory!.solids.filter((s) => !isFlat(s)).map(bounds).filter((b) => b.min.y >= -13.1 && b.max.y <= -6.7); // wagons, locomotive and tower crane
     expect(siding).toHaveLength(2);
     expect(pieces.length).toBeGreaterThanOrEqual(8);
-    // the tinker sign (#392) stands over the siding at z ≥ 16.6 but for one ground post on its north rail: exempt here, follow-up #408
-    const sign: Solid[] = [];
-    tinkerSign(sign, [], TINKER_SITE);
-    const signKeys = new Set(sign.map((s) => JSON.stringify(s)));
-    const all = w.shipyard!.solids.filter((s) => s.kind !== "cone" && bounds(s).max.y < 0 && bounds(s).min.x < 198); // without pier or bollards
-    expect(all.filter((s) => signKeys.has(JSON.stringify(s)))).toHaveLength(sign.length); // the exemption matches the sign and nothing else
-    const band = all.filter((s) => !signKeys.has(JSON.stringify(s)));
+    const band = w.shipyard!.solids.filter((s) => s.kind !== "cone" && bounds(s).max.y < 0 && bounds(s).min.x < 198); // without pier or bollards
     expect(band.length).toBeGreaterThanOrEqual(40);
     for (const s of band) {
       const b = bounds(s), where = JSON.stringify(s).slice(0, 90);
       expect(b.min.y, where).toBeGreaterThanOrEqual(-60);
+      // apart in plan, or wholly above or below: the tinker sign's deck, beams and panels cross the siding and the crane's counterweight overhead (#408)
       for (const o of [...siding, ...pieces]) {
-        expect(b.max.x <= o.min.x + 1e-9 || o.max.x <= b.min.x + 1e-9 || b.max.y <= o.min.y + 1e-9 || o.max.y <= b.min.y + 1e-9, where).toBe(true);
+        const apart = b.max.x <= o.min.x + 1e-9 || o.max.x <= b.min.x + 1e-9 || b.max.y <= o.min.y + 1e-9 || o.max.y <= b.min.y + 1e-9;
+        expect(apart || b.min.z >= o.max.z - 1e-9 || b.max.z <= o.min.z + 1e-9, where).toBe(true);
       }
     }
   });
