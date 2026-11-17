@@ -34,9 +34,10 @@ Las de #389 (agrupadas como las hereda #394):
    velo y los filtros de zona clasifican cada cartel por posición.
 2. La antena de la torre real sale, con su luz (capa `city.antenna`): la corona
    remata la torre (#391).
-3. El sitio de la plataforma se mueve de (400, 170) a (392, 178): a 8,2 u de
-   `LANE_OUT` fallaba la regla de oclusión de barcos en 90 muestras; en
-   (392, 178) quedan 14,7 u al carril y 10,6 u a cada boya.
+3. El sitio de la plataforma se mueve de (400, 170) a (392, 178): con la
+   cubierta a 8,2 u de `LANE_OUT` fallaba la regla de oclusión de barcos en 90
+   muestras; en (392, 178) la cubierta queda a 14,7 u del carril y a 10,6 u de
+   cada boya.
 4. Los exhibits de contexto son recortes del mundo real (`cropScene`/
    `cropAnimators`); el `kind: "context"` pierde `build`/`animate`.
 5. El hit test va del cartel a la geografía (`zoneAtScreen`).
@@ -50,6 +51,8 @@ Las de #389 (agrupadas como las hereda #394):
    "ninguna pieza de barco ni de la lancha cruza las letras de ningún cartel"
    (`sea-anim.test.ts`), y `checkSign` de cada cartel contra los sólidos del
    mundo que cruzan su caja de pantalla, a 1.17 y 0.83 (`src/lab/signs.test.ts`).
+   Las compuertas miran los sólidos estáticos, los barcos y la lancha; el humo
+   de la fábrica queda fuera (§6).
 10. Presupuesto con topes en tests: acentos estáticos del mundo ≤ 2 600
     (`city-budget.test.ts`), polígonos estáticos ≤ 56 000, acentos de ciudad
     ≤ 1 300, sólidos elevados del astillero ≤ 800.
@@ -98,7 +101,8 @@ Acentos estáticos del mundo: 1 222 antes (planificación de #389), 2 451
 después; 26 luces de la ciudad quedan ocultas tras la corona (#391). Tope
 2 600.
 
-Frame, antes (`main` 331c0c2) y después (rama). agent-browser headless,
+Frame, antes (`main` 331c0c2, que además trae #398, ausente en la rama) y
+después (rama). agent-browser headless,
 1366×657 @2, servidor dev de vite, 2026-11-17; valores de la segunda corrida
 (caliente) de cada lado.
 
@@ -125,6 +129,16 @@ exige. Los topes (56 000 polígonos, 2 600 acentos) sí los vigilan los tests.
 - **La plataforma no está donde la spec del 2026-11-15 §5 la puso primero.** (400, 170)
   pasa a (392, 178) por la regla de oclusión de barcos (§2.3).
 - **La antena ya no existe.** La corona ocupa su lugar en la azotea de la torre (#391).
+- **El humo de la fábrica pasa delante de PORTFOLIO.** Las bocanadas de
+  `factory.smoke0/1` (`src/scenes/factory-anim.ts`: cilindros opacos que suben
+  hacia el NNE hasta `PUFF_RANGE` = 28 u desde las chimeneas en (58, 32) y
+  (72, 26)) cruzan la caja de pantalla de las letras del *tinker* en 753 de
+  1 200 cuadros (300 s cada 250 ms); en esos cuadros `checkSign` a 1.17 marca
+  respaldo < 1 (mínimo 0,955) y el neón se dibuja encima del humo. Ninguna
+  compuerta lo ve: la del mundo prueba los sólidos estáticos y la de
+  `sea-anim.test.ts`, barcos y lancha. Corregirlo cambia el animador del humo
+  (deriva, alcance o alfa), fuera del alcance de este cierre, que no toca
+  código de ejecución.
 
 ## 7. Capturas
 
