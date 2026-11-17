@@ -16,7 +16,7 @@
 - `npm test`, `npm run typecheck` green after every task; `npm run build` green at the end.
 - Code, comments, strings, identifiers in `src/`, `lab/`, `scripts/`, README and CLAUDE.md in **English** (`src/english.test.ts`); exhibit ids and `docs/` (specs) in Spanish; ADRs in English (format of 0002).
 - `src/iso`, `src/kit`, `src/scenes` Pixi-free (`src/iso/pixi-free.test.ts`); deterministic (no `Math.random`); no hex outside `src/map/palette-iso.ts`.
-- No change to `src/scenes/`, `src/world/`, `src/main.ts`, the camera or the sign specs: this issue only guards and documents.
+- No change to runtime sources (`src/scenes/*.ts`, `src/world/*.ts`, `src/main.ts`, the camera, the sign specs): this issue only guards and documents. Test files (`*.test.ts`) anywhere in `src/` may change.
 - Negative numbers in spec tables use U+2212 (`−`), as `2026-11-15` §5 does.
 - `REPORT.md` is only ever written by `npm run legibility`.
 
@@ -31,7 +31,7 @@ So the gates of Task 1 pass on arrival: they guard what decisions 3 and 8 of #38
 
 ## Technical assumptions (declared)
 
-- A1. The letters' screen box of a sign is `signBox(spec)` from `src/world/signs.ts` (box of `project` over every `glyphs[].quads` point): exactly the issue's "caja de `project` sobre `glyphs[].quads`". `src/lab/signs.test.ts` imports it. `src/scenes/sea-anim.test.ts` does not import from `src/world/` (scenes stay below world); it keeps its inline box and iterates `[RESUME_SIGN, TINKER_SIGN, BLOG_SIGN]` (the issue allows "o los tres specs").
+- A1. The letters' screen box of a sign is `signBox(spec)` from `src/world/signs.ts` (box of `project` over every `glyphs[].quads` point): exactly the issue's "caja de `project` sobre `glyphs[].quads`". Both `src/lab/signs.test.ts` and `src/scenes/sea-anim.test.ts` import it with `SIGNS`, so the two gates share one box (scene tests already import from `src/world/`: `city-budget.test.ts`, `sea-animator.test.ts`, `seam-90.test.ts`, `sign-tinker.test.ts`). The inline box of today's Writing test goes away.
 - A2. "Ampliada 4 unidades de pantalla por lado" = scale-1 screen units (the unit of `screenBounds`), 4 on each of the four sides.
 - A3. The launch is built as `createSeaAnim` builds it: `ship("ferry", p, heading)` at the route point (no `shipAt`), heading of the leg from `polyline(FERRY_ROUTE).at(d)`, and also that heading + π (the way back).
 - A4. The world accent gate counts `assembleWorld(undefined, { reducedMotion: true }).scene.accents.length` (same world as the static polygon test next to it).
@@ -39,6 +39,31 @@ So the gates of Task 1 pass on arrival: they guard what decisions 3 and 8 of #38
 - A6. §4 framing rows are recomputed in `docs.test.ts` as `coverView(w, h)` + `signBox(SIGNS[id])` → host px `x0..x1 × y0..y1` with `toFixed(1)` and the mode of `labelLayout(box, v, host, { hw: 0, hh: 0 })` (the mode does not depend on the pad).
 - A7. The 2026-11-11 spec keeps its `**Estado:**` line (the issue asks only for its §7 note; its test literal stays). The 2026-11-15 `**Estado:**` literal changes in `docs.test.ts`.
 - A8. The README storybook paragraph drops "candidate site" (the sites are final) for "crop of the real world"; the #374 README test is updated accordingly.
+
+## Assumptions (from the plan review)
+
+- A9. The "prove it bites" negative runs are not committed fixtures: the issue asks for gates over the real world, and a synthetic occluder test would duplicate `src/kit/legibility.test.ts`'s own occlusion cases. Evidence goes to the stage-4 comment. Rejected: committed negative fixtures.
+- A10. The ×1.05 margin and the 2 600 cap come from the issue verbatim. The 27-accent gap between the issue's 2 478 and today's 2 451 (same value with `reducedMotion` true or false) is mostly the 26 city lights the crown hides (`city-budget.test.ts` comment of #391); the cap holds either way.
+- A11. `grow(b, d)` is a local helper in `signs.test.ts` (scale-1 screen units, like `screenBounds`); no shared export.
+- A12. `checkSign`'s occlusion and backing are ray tests in world space (`occlusionOf`, `marginOf` in `src/kit/legibility.ts`), independent of draw order and of the scale; selecting `near` once at scale 1 is exact for both scales because the projection scales uniformly.
+- A13. The "after" static polygon count in `docs.test.ts` retypes `stage.staticCount`'s computation as `city-budget.test.ts` already does; the dev log's `N static polygons` is the same number, so the spec row and the console must agree.
+- A14. `docs/adr/` is outside `src/english.test.ts` (`FILES` = `src/**/*.ts|css`, `lab/*.html`, README, CLAUDE.md); the ADR's English is checked in review. Rejected: widening the guard (not asked).
+- A15. Frame measurement: one run per side; the numbers carry no pass/fail (issue: "El tiempo de frame headless se anota, no se exige"). `origin/main` and the branch share `package.json`/`package-lock.json` (empty diff), so the symlinked `node_modules` is main's. The worktree and both servers are removed in Task 2 Step 3 even when a capture fails; `.scratch/` is in `.git/info/exclude`.
+- A16. A `REPORT.md` with fewer than 18 ✓ is a blocker (acceptance criterion), not a reason to change runtime code inside this issue.
+- A17. The §7 notes are inserted as a new paragraph right after the `## 7. ` heading's blank line, so `split(/\n\s*\n/)[1]` lands on them (today 2026-11-15 §7 starts with a list, 2026-11-11 §7 with a paragraph).
+
+## Criteria → tasks
+
+| #394 criterion | Task |
+| --- | --- |
+| `signs.test.ts` world gate, `sea-anim.test.ts` three signs + launch, `city-budget.test.ts` ≤ 2 600 | 1 |
+| Spec 2026-11-17 §1–§7, §3/§4 cross-checked, frame table | 2, 3 |
+| Estado and §7 of 2026-11-15, §7 of 2026-11-11, `docs.test.ts` | 4 |
+| ADR 0003 | 5 |
+| README and CONTEXT.md, glossary/docs/english tests | 6 |
+| `REPORT.md` 18 ✓ | 7.1 |
+| test, typecheck, build | 7.2 |
+| "Qué hacer" 7, final report in the PR (per-sign table) | 7.3 |
 
 ## Review Focus
 
@@ -58,12 +83,12 @@ So the gates of Task 1 pass on arrival: they guard what decisions 3 and 8 of #38
 - Modify: `src/scenes/city-budget.test.ts`
 
 **Interfaces:**
-- Consumes: `signBox`, `SIGNS` (`src/world/signs.ts`); `screenBounds`, `overlaps`, `screenHull`, `hullsIntersect` (`src/iso/depth.ts`); `bounds` (`src/iso/solids.ts`); `polyline` (`src/iso/geometry.ts`); `FERRY_ROUTE`, `SHIPS`, `laneAt`, `laneLength` (`sea-anim.ts`); `ship`, `shipAt` (`ships.ts`); `RESUME_SIGN`, `TINKER_SIGN`, `BLOG_SIGN`.
+- Consumes: `signBox`, `SIGNS` (`src/world/signs.ts`); `screenBounds`, `overlaps`, `screenHull`, `hullsIntersect` (`src/iso/depth.ts`); `bounds` (`src/iso/solids.ts`); `polyline` (`src/iso/geometry.ts`); `FERRY_ROUTE`, `SHIPS`, `laneAt`, `laneLength` (`sea-anim.ts`); `ship`, `shipAt` (`ships.ts`); `SIGNS`.
 - Produces: nothing for later tasks.
 
 - [ ] **Step 1: `signs.test.ts`** — inside the existing `describe.each`, add a block: `near` = `scene.solids.filter((s) => overlaps(screenBounds(bounds(s)), grow(signBox(e.sign), 4)))`; test `"near world solids: some overlap the letters' box"` (`near.length > 0`); for each scale, test `` `checkSign against the whole world at ${scale} = []` `` (`checkSign(e.sign, scale, near)` → `[]`). Comment: crop gate vs. world gate.
-- [ ] **Step 2: prove it bites (not committed)** — temporarily feed `checkSign` a `near` that adds a tall box in front of the letters (or shift `signBox` onto a lane in the ship gate) and see the test go red; revert.
-- [ ] **Step 3: `sea-anim.test.ts`** — rename the describe to `"zone signs and the lanes (#390, #394)"`; the test `"no ship piece or launch piece crosses the letters of any sign on screen"` builds one rect per sign from `[RESUME_SIGN, TINKER_SIGN, BLOG_SIGN]` (inline box as today), runs both lanes × the three `SHIPS` kinds every 2 u, and the launch every 2 u along `polyline(FERRY_ROUTE)` with heading and heading + π (A3). `bad` entries name sign word, lane/kind or `ferry`, and distance; expect `bad` `[]`.
+- [ ] **Step 2: prove it bites (not committed)** — temporarily feed `checkSign` a `near` that adds a tall box in front of the letters, and shift one rect onto `LANE_OUT` in the ship gate; see both go red; revert. The red output is quoted in the stage-4 issue comment (A9).
+- [ ] **Step 3: `sea-anim.test.ts`** — rename the describe to `"zone signs and the lanes (#390, #394)"`; the test `"no ship piece or launch piece crosses the letters of any sign on screen"` builds one rect per sign from `SIGNS` (`signBox(SIGNS[id])` as a rect, A1), runs both lanes × the three `SHIPS` kinds every 2 u, and the launch every 2 u along `polyline(FERRY_ROUTE)` with heading and heading + π (A3). `bad` entries name sign word, lane/kind or `ferry`, and distance; expect `bad` `[]`.
 - [ ] **Step 4: `city-budget.test.ts`** — new test `"static accents of the whole world ≤ 2 600"` in the "Resume level 2 budget" describe (or its own describe `"world accents (#394)"`), over `assembleWorld(undefined, { reducedMotion: true }).scene.accents.length`. Comment with the count: 2 478 measured in #389 planning (1 222 world + 1 256 signs: crown 238 poly + 164 dot, tinker 114 + 84, platform 654 + 2; the tinker's 19 animated lights are not static), ×1.05.
 - [ ] **Step 5:** `npx vitest run src/lab/signs.test.ts src/scenes/sea-anim.test.ts src/scenes/city-budget.test.ts` → PASS. Commit `test(#394): world-wide sign gates`.
 
@@ -134,3 +159,10 @@ So the gates of Task 1 pass on arrival: they guard what decisions 3 and 8 of #38
 - [ ] **Step 1:** `npm run legibility`; `REPORT.md` must have 18 ✓; if it changed, the §8.1 rows of 2026-11-15 follow (docs test). Commit only if regenerated content differs beyond the date.
 - [ ] **Step 2:** `npm test`, `npm run typecheck`, `npm run build` → green.
 - [ ] **Step 3:** compute the per-sign table (site, solids, faces, static accents) for the PR body.
+
+## Grilling
+
+- Rounds: 1 (griller model: fable). Questions: 17. The revision changed no step and no seam (A1 now shares `signBox` between the two gates), so no second round.
+- Answers by source: ISSUE 5 (Q1, Q5, Q7 cap, Q9, Q16), CODE 9 (Q2, Q3, Q4, Q10, Q11, Q12, Q13, Q15, Q17), NO SOURCE → technical assumption 3 (Q6/Q8 → A1/A9, Q14 → A11) plus the decisions recorded as A10–A17.
+- Assumptions added: A9–A17 (above).
+- Spec ambiguities: none. Follow-up issues opened: none.
