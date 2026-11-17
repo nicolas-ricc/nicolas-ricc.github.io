@@ -3,6 +3,7 @@ import type { RenderItem } from "../src/iso/render-list";
 import { v3 } from "../src/iso/geometry";
 import { project } from "../src/iso/project";
 import { ISO_COLORS } from "../src/map/palette-iso";
+import type { BloomMode } from "../src/world/stage";
 import { fitTransform, type Box, type Fit } from "../src/world/frame";
 
 /** ISO_COLORS.sky as RGB. */
@@ -57,4 +58,41 @@ export function pickFrame<T extends { name: string; items: readonly RenderItem[]
     const f = fitTransform([...c.items], host.w, host.h);
     return same(f.x, fit.x) && same(f.y, fit.y) && same(f.scale, fit.scale);
   }) ?? null;
+}
+
+export interface SweepArgs { origin: string | null; frames: number; modes: BloomMode[]; viewports: [number, number][]; hide: number[] }
+
+const MODES: readonly BloomMode[] = ["off", "on", "fallback"];
+
+/** Parses the runner's flags (`--origin`, `--frames`, `--modes a,b`, `--viewports WxH,…`, `--hide i,j`); throws on an unknown flag or value. */
+export function parseSweepArgs(argv: readonly string[]): SweepArgs {
+  const out: SweepArgs = { origin: null, frames: 40, modes: [...MODES], viewports: [[900, 1015], [412, 915]], hide: [] };
+  const int = (s: string, min: number, what: string): number => {
+    if (!/^\d+$/.test(s) || Number(s) < min) throw new Error(`wreck-sweep: bad ${what} "${s}"`);
+    return Number(s);
+  };
+  for (let i = 0; i < argv.length; i += 2) {
+    const flag = argv[i]!, v = argv[i + 1];
+    if (v === undefined || v.startsWith("--")) throw new Error(`wreck-sweep: ${flag} needs a value`);
+    if (flag === "--origin") out.origin = v;
+    else if (flag === "--frames") out.frames = int(v, 1, "--frames");
+    else if (flag === "--modes") out.modes = v.split(",").map((m) => {
+      if (!MODES.includes(m as BloomMode)) throw new Error(`wreck-sweep: unknown mode "${m}"; choose from ${MODES.join(", ")}`);
+      return m as BloomMode;
+    });
+    else if (flag === "--viewports") out.viewports = v.split(",").map((s) => {
+      const m = /^(\d+)x(\d+)$/.exec(s);
+      if (!m) throw new Error(`wreck-sweep: bad viewport "${s}", expected WxH`);
+      return [Number(m[1]), Number(m[2])] as [number, number];
+    });
+    else if (flag === "--hide") out.hide = v.split(",").map((s) => int(s, 0, "--hide index"));
+    else throw new Error(`wreck-sweep: unknown flag "${flag}"`);
+  }
+  return out;
+}
+
+/** One output line per viewport × mode combination. */
+export function formatSweepRow(r: { viewport: string; mode: string; clock: "tick" | "live"; frame: string; frames: number; count: number; first: { x: number; y: number } | null }): string {
+  const head = `${r.viewport} ${r.mode} ${r.clock} ${r.frame} ${r.frames} frames: ${r.count} off-sky px`;
+  return r.first ? `${head}, first at (${r.first.x}, ${r.first.y})` : head;
 }

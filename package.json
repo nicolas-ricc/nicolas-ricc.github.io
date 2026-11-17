@@ -16,6 +16,7 @@
     "prerender": "tsx scripts/prerender.ts",
     "palette": "tsx scripts/darken-palette.ts",
     "legibility": "tsx scripts/legibility.ts",
+    "wreck-sweep": "tsx scripts/wreck-sweep.ts",
     "prebuild": "npm run validate && npm run feed",
     "predev": "npm run feed"
   },
