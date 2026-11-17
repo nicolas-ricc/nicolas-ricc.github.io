@@ -60,9 +60,9 @@ the station, a new strip of Resume holds a row of reconverted warehouses with
 the covered market (row 92), a freight row and the rail lands, a fenced band
 around the west track with a siding and a parked freight train; on the east
 bank, the dock inlet has a fish market, a food hall and fishing boats. The
-shipyard gains a floating dock, a container yard, quay cranes and sheet metal. The STS booms of the quay cranes are nearly
-horizontal and reach over the water to the west; they have no tip light on the
-east bank.
+shipyard gains a floating dock, a container yard, quay cranes and sheet metal.
+The STS booms of the quay cranes are nearly horizontal and reach over the water
+to the west; they have no tip light on the east bank.
 The fair gains a ghost train, a mirror house, a slide, a log flume, booths and
 food trucks.
 

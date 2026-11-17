@@ -738,7 +738,7 @@ describe("storybook lights closing (#405)", () => {
   it("the spec lists its deviations", () => {
     const dev = h2(spec, DEVIATIONS);
     expect(dev).not.toBe("");
-    for (const s of ["poly", "light: true", "boyas", "24", "48", "72", "40", "68", "124", "(32, −180)", "(−150, −50)", "(−180, 10)", "terreno", "sombras", "`h`"]) expect(dev, s).toContain(s);
+    for (const s of ["poly", "light: true", "boyas", "24/48/72", "40/68/124", "(32, −180)", "(−150, −50)", "(−180, 10)", "terreno", "sombras", "`h`"]) expect(dev, s).toContain(s);
   });
   it("README's storybook paragraph names __lab.tick, shadows, halos and animation", () => {
     const story = (readme.split(/\n\s*\n/).find((p) => p.includes("/lab/storybook.html")) ?? "").replace(/\s+/g, " ");

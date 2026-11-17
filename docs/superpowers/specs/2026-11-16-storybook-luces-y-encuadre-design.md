@@ -199,7 +199,7 @@ Haz del faro hacia el norte (`#faro`, `?speed=0`, `__lab.tick(5000)`):
 ![faro, haz al norte, teléfono](assets/2026-11-16-storybook-luces/after/faro-norte-phone.png)
 ![faro, haz al norte, escritorio](assets/2026-11-16-storybook-luces/after/faro-norte-desktop.png)
 
-Tomadas con agent-browser en viewports `412 915 1` y `1600 900 1`.
+Tomadas con agent-browser en viewports `412 915 1` y `1600 900 1`, cada una desde una carga nueva de la página (el reloj del mar sigue entre exhibits: dos `tick` en la misma página dan otro ángulo).
 
 ## Desvíos
 
@@ -344,3 +344,5 @@ En `main` todos los píxeles fuera de la envolvente vienen de los slots de terre
 Un artefacto del GPU o del compositor del dispositivo, por ejemplo los bordes de las render-textures de los filtros en un GPU móvil. En `main` las áreas del AlphaFilter de las sombras se dimensionaban con sombras sin recortar; en la rama las sombras se recortan a la caja (#399), lo que achica esas áreas a la caja. Eso es lo que la rama acota. Desde headless no se puede observar: `__lab.pixels` usa `renderer.extract`, y el compositor queda fuera de alcance.
 
 No hay cambio en `src/`: no se encontró causa en el código. Confirmar en el teléfono sigue siendo manual (el plan de #395 dejó la confirmación en el dispositivo fuera de los criterios de las historias hijas).
+
+Observación del cierre (#405): en `after/faro-norte-desktop.png` (1600×900, haz al norte, bloom por defecto) se ve una línea vertical tenue, ámbar, a la derecha de la galería (x ≈ 848). No aparece en `after/desktop-10.png` (haz al este) ni en las capturas de teléfono. Es la misma familia de artefacto que la de la captura 11 y sí se ve en Chrome headless; la causa queda sin diagnosticar en esta historia.
