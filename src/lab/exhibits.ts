@@ -108,7 +108,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "calle-faroles", title: "Lamp street", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 99, y0: 8, x1: 111, y1: 128 }, h: 14 }, // #324: the counter-jib and counterweight of the y 31 tower crane (x 108..116, top z 13.8–14) reach into x ≤ 111
   // the two assembly halls: x 10..100, rows y −52 and −32 of 16; y1 −14 leaves out the crane counterweight (y −13..−11, z 18.5..20) and x1 102 the yard (x ≥ 104)
   { id: "naves", title: "Assembly halls", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 7, y0: -55, x1: 102, y1: -14 }, h: 14 },
-  // the island's north coast facing the sheds: x 270..350, y 0..60; h is the smallest integer that passes framing and neighbors (measured with the `measure` of exhibits.test.ts): 18 since #323, set by the quay crane and stacks it now crops (inside 18, accents 3.5)
+  // the island's north coast facing the sheds: x 270..350, y 0..60; h is the smallest integer that passes framing and neighbors (measured with the `measure` of exhibits.test.ts): 18 since #323, set by the mast of the quay crane at y 34 (z 17.5; the one at y 62 is outside) (inside 17.5, accents 0 since #402)
   { id: "punta-norte", title: "North point of the island", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 270, y0: 0, x1: 350, y1: 60 }, h: 18 },
   // the terminal station: x 108..198, y 98..143; h measured as in punta-norte: set by the top of the clock tower, z 29 (the station emits no smoke)
   { id: "estacion", title: "Terminal station", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 108, y0: 98, x1: 198, y1: 143 }, h: 29 },
@@ -116,11 +116,11 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "paso-a-nivel", title: "Level crossing", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 95, y0: 124, x1: 112, y1: 142 }, h: 5 },
   // the floating dock in the river: x 204..246, y 74..88, with its gangway to the quay at x 202; h measured as in punta-norte: set by the lamp posts on the service towers (inside 14.3, accents 13.15), so h 15
   { id: "dique-flotante", title: "Floating dock", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 202, y0: 72, x1: 248, y1: 90 }, h: 15 },
-  // the east bank container yard: x 288..304, y 30..84, with the two quay cranes (x 280.6..287.4) inside; h measured as in punta-norte: set by the quay cranes (inside 18, accents 16), so h 18
+  // the east bank container yard: x 288..304, y 30..84, with the two quay cranes (x 280.6..287.4) inside; h measured as in punta-norte: set by the quay cranes (inside 17.5, accents 0.48 since #402), so h 18
   { id: "patio-contenedores", title: "Container yard (east bank)", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 278, y0: 27, x1: 305, y1: 84 }, h: 18 },
-  // the quay crane facing west, centered at the origin, nothing above z 18; one cyan dot on the boom tip
+  // the quay crane facing west, centered at the origin, nothing above z 17.5 (the mast head); no accents, since the tip light went in #402
   { id: "grua-muelle", title: "Quay crane", zone: "portfolio", group: "shipyard", kind: "piece", pad: "concrete",
-    build: (out, accents) => quayCraneAt({ x: 0, y: 0 }, "w", out, accents) },
+    build: (out, accents) => quayCraneAt({ x: 0, y: 0 }, "w", out, accents, { light: false }) },
   // jib 24 to the east and counter-jib 8 to the west: with the mast at x −8 it spans −16..16
   { id: "grua-torre", title: "Tower crane", zone: "portfolio", group: "shipyard", kind: "piece",
     build: (out, accents) => towerCrane(out, accents, { at: { x: -8, y: 0 }, mastH: 20, jibLen: 24, dir: "e", light: "amber" }) },

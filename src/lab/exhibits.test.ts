@@ -99,9 +99,10 @@ describe("exhibit catalog", () => {
     expect(box("patio-contenedores")).toEqual({ x0: 278, y0: 27, x1: 305, y1: 84 });
     const crane = pieces.find((x) => x.id === "grua-muelle")!;
     expect(crane.pad).toBe("concrete");
-    const accents: Accent[] = [];
-    crane.build([], accents);
-    expect(accents.filter((a) => a.kind === "dot" && a.color === "cyan")).toHaveLength(1);
+    const solids: Solid[] = [], accents: Accent[] = [];
+    crane.build(solids, accents);
+    expect(accents).toEqual([]);
+    expect(top(solids)).toBeCloseTo(17.5, 9);
   });
   it("the fair attractions of #327: four regions after muelle with the issue's boxes; the flume crops the logs layer", () => {
     const box = (id: string) => { const e = EXHIBITS.find((x) => x.id === id)!; return e.kind === "region" ? e.box : null; };

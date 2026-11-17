@@ -155,11 +155,19 @@ describe("container yard", () => {
 });
 
 describe("quay cranes", () => {
-  it("two gantries at x 284 with a cyan light at the west tip", () => {
+  it("two gantries at x 284 whose booms end at x 276, z 14, with no dot", () => {
     expect(QUAY_CRANES).toEqual([{ x: 284, y: 34 }, { x: 284, y: 62 }]);
-    const tips = cranes().accents.filter((a) => a.kind === "dot" && a.color === "cyan");
-    expect(tips).toHaveLength(2);
-    for (const t of tips) expect(t.kind === "dot" && t.at.x).toBeLessThan(280);
+    const { out, accents } = cranes();
+    const booms = out.filter((s): s is Solid & { kind: "beam" } => s.kind === "beam" && s.w === 0.6 && s.h === 0.5);
+    expect(booms).toHaveLength(2);
+    for (const b of booms) {
+      expect(b.to.x).toBeCloseTo(276, 9);
+      expect(b.to.z).toBeCloseTo(14, 9);
+      expect(b.to.x).toBeLessThan(280); // over the water, west of the quay
+      expect(b.to.x).toBeGreaterThan(275); // outside `darsena` (x1 275)
+    }
+    expect(booms.map((b) => b.to.y).sort((a, b) => a - b)).toEqual([34, 62]);
+    expect(accents.filter((a) => a.kind === "dot")).toEqual([]);
   });
 
   it("rails from y 31 to 82 under the legs", () => {
