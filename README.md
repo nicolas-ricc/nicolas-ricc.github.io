@@ -140,7 +140,10 @@ The zone signs of #374 are three pairs of exhibits: `#cartel-torre` and
 the sign at the origin (the crown and the tinker sign on a stand-in of their
 host); the one "in its scene" shows it at its candidate site in the real world.
 Judge them at the cover scales with `c`. `npm run legibility` measures contrast,
-halo and OCR with a browser; it does not run in CI.
+halo and OCR with a browser; it does not run in CI. A region or context exhibit crops strictly (a solid that only touches the
+edge of the box stays out): strips and long flat prisms (fences, quay edges,
+rails) are cut to the box, terrain triangles are clipped to it and the shadows
+are clipped to it too; piece exhibits and the site are not clipped.
 
 The lab pages are also built and deployed with the site (every
 `lab/*.html` is a Vite input), so the storybook can be seen at
