@@ -212,8 +212,9 @@ export function tankGroup(lot: Lot, rng: Rng, style: Style): Piece {
   return tonePiece(p, tone);
 }
 
-/** Quay crane centered on `at`: four-legged steel gantry on two rails, cabin, mast, boom toward `dir` with a stay and a cyan light on the tip. Nothing above `z + 18`. With `rails` false it lays no rails of its own (the scene lays longer ones). */
-export function quayCraneAt(at: Vec2, dir: "w" | "e" | "s", out: Solid[], accents: Accent[], z = 0, rails = true): void {
+/** Quay crane centered on `at`: four-legged steel gantry on two rails, cabin, mast, and an STS boom toward `dir` that runs 3 behind the center to `reach` (default 8) ahead of it, rising 1.7, held by two stays from the mast head. The stays anchor at `z + 17.3`, not 17.5: a sloped beam's bounds rise half a section above its axis end, so 17.5 would top out at about 17.59 and the mast would not be the topmost solid, and flattened under a low cap (fitToCap keeps the stays' section while their slope flattens) a stay anchored at 17.4 pokes about 0.03 over the cap. Nothing above `z + 17.5`. `rails` false lays no rails of its own (the scene lays longer ones). `light` false drops the cyan dot on the boom tip. */
+export function quayCraneAt(at: Vec2, dir: "w" | "e" | "s", out: Solid[], accents: Accent[], opts: { z?: number; rails?: boolean; light?: boolean; reach?: number } = {}): void {
+  const { z = 0, rails = true, light = true, reach = 8 } = opts;
   const sx = dir === "e" ? 1 : dir === "w" ? -1 : 0, sy = dir === "s" ? 1 : 0;
   // `r` runs along the rails (perpendicular to dir), `l` across them.
   const P = (l: number, r: number, zz: number): Vec3 => (sx !== 0 ? v3(at.x + l, at.y + r, zz) : v3(at.x + r, at.y + l, zz));
@@ -224,19 +225,19 @@ export function quayCraneAt(at: Vec2, dir: "w" | "e" | "s", out: Solid[], accent
     if (rails) out.push({ kind: "strip", path: [xy(P(l, -4, 0)), xy(P(l, 4, 0))], width: 0.6, z: z + 0.02, mat: "rail" });
   }
   out.push(interlock(prism(at.x - 1, at.y - 1, z + 10, 2, 2, 2, "steel")));
-  out.push(interlock(prism(at.x - 0.2, at.y - 0.2, z + 12, 0.4, 0.4, 3, "steel")));
-  const tip = v3(at.x + 4.4 * sx, at.y + 4.4 * sy, z + 17.5);
-  out.push(interlock({ kind: "beam", from: v3(at.x + sx, at.y + sy, z + 12), to: tip, w: 0.6, h: 0.4, mat: "steel" }));
-  out.push(interlock({ kind: "beam", from: v3(at.x, at.y, z + 15), to: tip, w: 0.2, h: 0.2, mat: "steel" }));
-  out.push(interlock(prism(tip.x - 0.2, tip.y - 0.2, z + 17.5, 0.4, 0.4, 0.5, "steel"))); // light housing: the topmost solid, so flattening is exact
-  accents.push({ kind: "dot", at: tip, r: 1, color: "cyan" });
+  out.push(interlock(prism(at.x - 0.2, at.y - 0.2, z + 12, 0.4, 0.4, 5.5, "steel")));
+  const tail = v3(at.x - 3 * sx, at.y - 3 * sy, z + 12.3), tip = v3(at.x + reach * sx, at.y + reach * sy, z + 14), head = v3(at.x, at.y, z + 17.3);
+  out.push(interlock({ kind: "beam", from: tail, to: tip, w: 0.6, h: 0.5, mat: "steel" }));
+  for (const to of [tip, tail]) out.push(interlock({ kind: "beam", from: head, to, w: 0.2, h: 0.2, mat: "steel" }));
+  if (light) accents.push({ kind: "dot", at: tip, r: 1, color: "cyan" });
 }
 
-/** Quay crane at the lot center, boom toward `open[0]` when it is w, e or s, else west; flattened to the cap. */
+/** Quay crane at the lot center, boom toward `open[0]` when it is w, e or s, else west, its reach clamped to half the lot along it minus 0.5 (at most 8); flattened to the cap. */
 export function quayCrane(lot: Lot, rng: Rng, style: Style): Piece {
   const tone = shiftTone(style.tone, rng.int(-1, 1));
   const p = emptyPiece(), first = lot.open[0];
-  quayCraneAt({ x: lot.x + lot.w / 2, y: lot.y + lot.d / 2 }, first === "w" || first === "e" || first === "s" ? first : "w", p.solids, p.accents, lot.z);
+  const dir = first === "w" || first === "e" || first === "s" ? first : "w";
+  quayCraneAt({ x: lot.x + lot.w / 2, y: lot.y + lot.d / 2 }, dir, p.solids, p.accents, { z: lot.z, reach: Math.min(8, (dir === "s" ? lot.d : lot.w) / 2 - 0.5) });
   return tonePiece(fitToCap(p, lot), tone);
 }
 
