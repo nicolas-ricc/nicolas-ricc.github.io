@@ -3,6 +3,7 @@ import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import { BLEED, CELL, CELL_BLEED, WORLD, worldZoneAt } from "../map/geo";
+import { CROWN_SITE, towerCrown } from "../scenes/sign-crown";
 import { seaPlatformAt } from "../scenes/sign-platform";
 import { ACCENT_DIM, VEIL_ALPHA, accentZone, accentsByZone, focusAlphas, veilCells, veilPolygons, veilRuns } from "./veil";
 
@@ -111,5 +112,14 @@ describe("Writing platform accents (#390)", () => {
     seaPlatformAt(out, accents);
     expect(accents.some((a) => a.kind === "dot") && accents.some((a) => a.kind === "poly")).toBe(true);
     for (const a of accents) expect(accentZone(a)).toBe("blog");
+  });
+});
+
+describe("Resume crown accents (#391)", () => {
+  it("every accent of the crown at CROWN_SITE (dots and polys) is Resume", () => {
+    const out: Solid[] = [], accents: Accent[] = [];
+    towerCrown(out, accents, CROWN_SITE);
+    expect(accents.some((a) => a.kind === "dot") && accents.some((a) => a.kind === "poly")).toBe(true);
+    for (const a of accents) expect(accentZone(a)).toBe("cv");
   });
 });

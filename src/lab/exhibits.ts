@@ -26,7 +26,7 @@ import { pieceTrain, trainPieceAnimator } from "../scenes/rail-animator";
 import { BUOYS, DRUM_R0, KEEPER, LANTERN_Z, LIGHTHOUSE, WRECK } from "../scenes/sea";
 import { BEAM_LEN } from "../scenes/sea-anim";
 import { ship, shipAt, type ShipKind } from "../scenes/ships";
-import { CROWN_SITE, RESUME_SIGN, towerCrown, towerStandIn } from "../scenes/sign-crown";
+import { RESUME_SIGN, towerCrown, towerStandIn } from "../scenes/sign-crown";
 import { BLOG_SIGN, seaPlatform } from "../scenes/sign-platform";
 import { hallStandIn, PIECE_AT, STAND_IN_HALL, TINKER_SIGN, TINKER_SITE, tinkerAnimator, tinkerSign } from "../scenes/sign-tinker";
 import { SUBURB_COLS } from "../scenes/sprawl-grid";
@@ -179,11 +179,12 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "tronco-acuatico", title: "Log flume", zone: "portfolio", group: "fair", kind: "region",
     box: { x0: 158, y0: -300, x1: 226, y1: -290 }, h: 7 },
   // the office tower is at the center of the plaza: it stays inside
+  // h 51: the Resume crown (#391) tops out at z ≈ 50.2; smallest integer that passes framing and neighbors
   { id: "plaza", title: "Plaza", zone: "cv", group: "city", kind: "region",
-    box: { x0: PLAZA.x - M, y0: PLAZA.y - M, x1: PLAZA.x + PLAZA.w + M, y1: PLAZA.y + PLAZA.d + M }, h: TOWER_H + 8 },
-  // h + 8: the antenna reaches z 37.9
+    box: { x0: PLAZA.x - M, y0: PLAZA.y - M, x1: PLAZA.x + PLAZA.w + M, y1: PLAZA.y + PLAZA.d + M }, h: 51 },
+  // h 51: the Resume crown (#391) tops out at z ≈ 50.2; smallest integer that passes framing and neighbors
   { id: "torre", title: "Office tower", zone: "cv", group: "city", kind: "region",
-    box: { x0: TOWER.x - M, y0: TOWER.y - M, x1: TOWER.x + TOWER.w + M, y1: TOWER.y + TOWER.d + M }, h: TOWER_H + 8 },
+    box: { x0: TOWER.x - M, y0: TOWER.y - M, x1: TOWER.x + TOWER.w + M, y1: TOWER.y + TOWER.d + M }, h: 51 },
   // from ramp to ramp; to the west and east flush with the neighboring blocks (buildings up to 10.7), to the north the riverside trees
   { id: "puente", title: "Bridge", zone: "cv", group: "city", kind: "region",
     box: { x0: WEST_COLS[WEST_COLS.length - 1]! + BLOCK_W + 0.5, y0: BRIDGE.y0 - 1, x1: EAST_COLS[0]! + 1, y1: BRIDGE.y1 + M }, h: 8 },
@@ -214,8 +215,8 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "selva", title: "Jungle", zone: "cv", group: "city", kind: "piece", build: (out) => jungle(out, createRng(SEED), { x0: -12, x1: 12, y0: -12, y1: 12 }, 14, 0) },
   { id: "cartel-torre", title: "Resume tower crown with helipad", zone: "cv", group: "city", kind: "piece",
     build: (out, accents) => { towerStandIn(out, accents); towerCrown(out, accents, v3(0, 0, TOWER_H)); } },
-  // h 52: the tallest solid in the box is the helipad's floodlight posts (top ≈ 51.8 u); framing needs h ≥ 51.8, so 52 is the smallest integer that passes.
-  { id: "cartel-torre-escena", title: "Resume tower crown in its scene", zone: "cv", group: "city", kind: "context", box: { x0: 108, y0: 206, x1: 150, y1: 248 }, h: 52, build: (out, accents) => towerCrown(out, accents, CROWN_SITE), sign: RESUME_SIGN },
+  // h 51: the tallest solid in the crop of the world is ≈ 50.2 u; framing needs h ≥ that, so 51 is the smallest integer that passes. The crown comes from the world (city() builds it, #391): no `build`.
+  { id: "cartel-torre-escena", title: "Resume tower crown in its scene", zone: "cv", group: "city", kind: "context", box: { x0: 108, y0: 206, x1: 150, y1: 248 }, h: 51, sign: RESUME_SIGN },
   // tech district: each structure takes one block BLOCK_W × BLOCK_D
   { id: "mastil", title: "Telecom mast", zone: "cv", group: "tech", kind: "region",
     box: { x0: TELECOM.x - M, y0: TELECOM.y - M, x1: TELECOM.x + BLOCK_W + M, y1: TELECOM.y + BLOCK_D + M }, h: 26 },

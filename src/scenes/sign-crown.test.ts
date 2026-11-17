@@ -268,7 +268,7 @@ describe("tower crown: structure and helipad (#378)", () => {
 describe("tower stand-in (#378)", () => {
   const { out, accents } = build(towerStandIn);
 
-  it("the real tower's geometry at the origin: body, cornice, machine room and antenna, no facade, no lights", () => {
+  it("the tower the crown was audited on in #378, at the origin: body, cornice, machine room and antenna, no facade, no lights", () => {
     expect(accents).toEqual([]);
     expect(out).toEqual([
       expect.objectContaining({ kind: "prism", at: v3(-8, -7, 0), w: 16, d: 14, h: 30, mat: "officeDark" }),
