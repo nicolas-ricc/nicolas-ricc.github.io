@@ -10,7 +10,7 @@
  *
  * Usage: npm run wreck-sweep [-- --frames 40 --modes off,on,fallback --viewports 900x1015,412x915 --origin <url> --hide 3,4].
  * --hide sets `visible = false` on those children of the Stage container (slot order: src/world/stage.ts buildStage) to bisect
- * which layer draws the line; it needs the PixiJS DevTools extension (see CLAUDE.md), loaded on launch when installed.
+ * which layer draws the line (with bloom on, `bloomSlot` is inserted right below `accentSlot`, which moves up one index); it needs the PixiJS DevTools extension (see CLAUDE.md), loaded on launch when installed.
  * `off-sky px` is summed over the frames (pixel-frames). Exit code 0 when clean, 1 when any row has off-sky pixels, 2 on a crash.
  *
  * Notes: `pixels` re-renders the stage through extract, so compositor artifacts are not seen. Where the page has no

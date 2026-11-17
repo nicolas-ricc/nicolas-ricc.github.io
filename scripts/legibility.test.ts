@@ -192,6 +192,7 @@ describe("metrics", () => {
     expect(parseEval('{"x":1,"y":2,"scale":3}')).toEqual({ x: 1, y: 2, scale: 3 });
     expect(parseEval("true")).toBe(true);
     expect(() => parseEval("[object Object]")).toThrow(/legibility: unexpected eval output/);
+    expect(() => parseEval("[object Object]", "wreck-sweep")).toThrow(/^wreck-sweep: unexpected eval output/);
   });
   it("pickContexts: every context, --only one, unknown or non-context ids throw listing the contexts", () => {
     const all = EXHIBITS.filter((e) => e.kind === "context");

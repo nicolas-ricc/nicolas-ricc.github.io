@@ -170,6 +170,8 @@ diagnosticarla en el storybook (screenshot con agent-browser y la API de
 (el haz del faro, `sea-anim.ts:181`) que pasa por el recorte, o un borde de
 sprite o filtro. Se elimina en el origen.
 
+Diagnóstico (#404): ver [§5 — diagnóstico](#5--diagnóstico) al final.
+
 ## Criterios de aceptación
 
 1. En los 11 exhibits no queda ningún accent `dot`. Se verifica con un test
@@ -244,6 +246,20 @@ Códigos de salida: 0 limpio, 1 hay `off-sky px`, 2 el runner se cayó. Necesita
 
 Cero en 3 modos × 2 disposiciones × 40 frames.
 
+En la rama, 900×1015 ya no da el host de la captura: la media query de #400 (`max-width: 60rem`) apila la grilla y el host queda 900×512 (y 960×1015 da 960×512). Para barrer una geometría como la de la captura (host angosto y alto, con una franja de cielo grande arriba del rombo) se corrió también 961×1015, el primer ancho con las tres columnas:
+
+```
+> mapa@1.0.0 wreck-sweep
+> tsx scripts/wreck-sweep.ts --viewports 961x1015
+
+961x1015 envelope {"x0":21.639999999999873,"y0":335.98837837837846,"x1":519.3599999999999,"y1":679.0116216216215,"ceiling":418.7352972972976} fit {"scale":6.725945945945947,"x":-1303.3713513513517,"y":-2074.5906486486488} host 541x1015
+961x1015 off tick content 40 frames: 0 off-sky px
+961x1015 on tick content 40 frames: 0 off-sky px
+961x1015 fallback tick content 40 frames: 0 off-sky px
+```
+
+También cero.
+
 ### Bisección en `origin/main`
 
 Worktree de `origin/main` (331c0c2), vite en 5181. Allí no existe `__lab.tick`: el reloj es el vivo (`?speed=20`) y el encuadre es `boxFrame(box, 9)`. El host mide 480×1015 porque la grilla de `main` no tiene media query. Los relojes no se comparan frame a frame: se compara presencia o ausencia.
@@ -258,7 +274,7 @@ Worktree de `origin/main` (331c0c2), vite en 5181. Allí no existe `__lab.tick`:
   first offender at frame 0, world screen (227.80, 367.36)
 ```
 
-Son 27.364 `off-sky px` por frame, idénticos en los 40 frames. Ocultando capas con `--hide` (4 frames cada una, modo `on`; orden de `main`: 0 gBleed, 1 waterSlot, 2 gGround, 3 shadowSlot, 4 coreSlot, 5 gSolid, 6 solidSlot, 7 veilSlot, 8 accentSlot):
+Son 27.364 `off-sky px` por frame, idénticos en los 40 frames. Ocultando capas con `--hide` (4 frames cada una, modo `on`; orden de `main` con bloom `off`: 0 gBleed, 1 waterSlot, 2 gGround, 3 shadowSlot, 4 coreSlot, 5 gSolid, 6 solidSlot, 7 veilSlot, 8 accentSlot; con bloom `on` el `bloomSlot` entra en el 8 y `accentSlot` pasa al 9, lo que no toca los índices 0–6 usados acá):
 
 | `--hide` | Capas | `off-sky px` |
 | --- | --- | --- |

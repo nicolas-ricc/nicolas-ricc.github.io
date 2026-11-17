@@ -26,11 +26,6 @@ export async function startVite(port: number, label: string): Promise<ChildProce
 export function agentBrowser(session: string, label: string, timeoutMs = 30_000): { ab(...args: string[]): string; evalJson<T>(js: string): T } {
   const ab = (...args: string[]): string =>
     execFileSync("agent-browser", args, { env: { ...process.env, AGENT_BROWSER_SESSION: session }, maxBuffer: 64 * 1024 * 1024, timeout: timeoutMs, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
-  const evalJson = <T>(js: string): T => {
-    try { return parseEval<T>(ab("eval", js)); } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      throw new Error(msg.replace(/^legibility:/, `${label}:`));
-    }
-  };
+  const evalJson = <T>(js: string): T => parseEval<T>(ab("eval", js), label);
   return { ab, evalJson };
 }
