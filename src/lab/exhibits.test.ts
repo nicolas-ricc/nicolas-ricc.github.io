@@ -106,7 +106,7 @@ describe("exhibit catalog", () => {
     const box = (id: string) => { const e = EXHIBITS.find((x) => x.id === id)!; return e.kind === "region" ? e.box : null; };
     expect(box("tren-fantasma")).toEqual({ x0: 96, y0: -260, x1: 120, y1: -244 });
     expect(box("casa-espejos")).toEqual({ x0: 122, y0: -260, x1: 142, y1: -244 });
-    expect(box("tobogan")).toEqual({ x0: 111, y0: -299, x1: 127, y1: -284 });
+    expect(box("tobogan")).toEqual({ x0: 111, y0: -299, x1: 125, y1: -285 });
     expect(box("tronco-acuatico")).toEqual({ x0: 158, y0: -300, x1: 226, y1: -290 });
     const fl = cropAnimators(animators, box("tronco-acuatico")!).find((a) => a.ids.includes("fair.logs"))!;
     const logs = fl.layer("fair.logs");

@@ -233,6 +233,7 @@ export function slide(out: Solid[], _accents: Accent[]): void {
       plates.push({ wall: i, shape: "rect", u0: 0, u1: 1, z0, z1, mat: "signal" });
       if (k % 2) plates.push({ wall: i, shape: "poly", pts: [{ x: 0.5, y: z0 + 0.2 }, { x: 0.8, y: mid }, { x: 0.5, y: z1 - 0.2 }, { x: 0.2, y: mid }], mat: "safety" });
     }
+    if (k === 0) plates.push({ wall: 3, shape: "rect", u0: 0.2, u1: 0.8, z0: 0.8, z1: 2.2, mat: "hull" }, { wall: 3, shape: "rect", u0: 0.15, u1: 0.85, z0: 2.3, z1: 2.8, mat: "safety" }); // south door and its sign
     out.push({ kind: "cylinder", at: v3(x, y, z0), r: rAt(z0), h: z1 - z0, mat: "whitewash", sides: 16, plates });
   }
   const windows: Plate[] = Array.from({ length: 8 }, (_, k) => ({ wall: 2 * k, shape: "poly", pts: [{ x: 0.25, y: 12.6 }, { x: 0.75, y: 12.6 }, { x: 0.75, y: 13.5 }, { x: 0.5, y: 13.9 }, { x: 0.25, y: 13.5 }], mat: "glass" }));
@@ -257,6 +258,11 @@ export function slide(out: Solid[], _accents: Accent[]): void {
     out.push({ kind: "beam", from: p, to: v3(p.x, p.y + CHUTE.exit, p.z), w: c.w, h: c.h, mat: c.mat });
   }
   out.push(prism(x + chuteR(CHUTE.z1), y, 0, CHUTE.w, CHUTE.exit, CHUTE.z1, "deck"));
+  const dy = y + SLIDE.r * Math.cos(Math.PI / 16), sy = (j: number): number => dy + 0.001 + 0.2 * j; // door wall and step j's y (0 next to the door)
+  for (let j = 0; j < 8; j++) out.push(prism(x - 0.6, sy(j), 0, 1.2, 0.2, 0.8 - 0.1 * j, "deck"));
+  for (const hx of [x - 0.65, x + 0.65]) out.push({ kind: "beam", from: v3(hx, sy(7), 0.9), to: v3(hx, dy, 1.7), w: 0.08, h: 0.08, mat: "steel" }); // handrails rising toward the door
+  const endX = x + chuteR(CHUTE.z1) + CHUTE.w / 2, endY = y + CHUTE.exit;
+  for (const [mx, my] of [[endX - 0.7, endY + 0.1], [x - 2.3, sy(7) - 0.3]] as const) for (let m = 0; m < 3; m++) out.push({ ...prism(mx + 0.1 * (m % 2), my + 0.1 * (m % 2), 0.15 * m, 1.4, 0.8, 0.15, "deck"), tone: m % 2 ? -1 : 0 }); // two mat piles, south of the run-out and west of the steps
   for (let k = 0; k <= n; k += 2) { // brackets from the trunk wall to the bed, except under the door (θ ≡ 90°)
     if (zk(k) < 1.2 || (Math.sin(th(k)) > 0.999 && zk(k) - 1 < edges[1]!)) continue; // the door faces south: no bracket in front of it (band 0 tops out at edges[1])
     out.push({ kind: "beam", from: at(k, rAt(zk(k) - 1) * Math.cos(Math.PI / 16) + 0.02, -1), to: at(k, chuteR(zk(k)) + 0.4, -0.05), w: 0.15, h: 0.15, mat: "steel" });
