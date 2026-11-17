@@ -10,7 +10,7 @@ import { PLANT, factory } from "../scenes/factory";
 import { BEAM_PERIOD_MS } from "../scenes/sea-anim";
 import { CROWN_SITE, RESUME_SIGN, towerCrown } from "../scenes/sign-crown";
 import { PIECE_AT, TINKER_SIGN } from "../scenes/sign-tinker";
-import { BLOG_SIGN, seaPlatform, seaPlatformAt } from "../scenes/sign-platform";
+import { BLOG_SIGN, seaPlatform } from "../scenes/sign-platform";
 import { trainLen } from "../scenes/train";
 import { createRng } from "../map/seed";
 import { assembleWorld } from "../world/assemble";
@@ -384,7 +384,9 @@ describe("chimneys box (#245)", () => {
 const contexts = EXHIBITS.flatMap((e) => (e.kind === "context" ? [e] : []));
 
 describe("context exhibits (#376)", () => {
-  const built = (e: (typeof contexts)[number]) => { const out: Solid[] = [], accents: Accent[] = []; e.build(out, accents); return { out, accents }; };
+  const built = (e: (typeof contexts)[number]) => { const out: Solid[] = [], accents: Accent[] = []; e.build?.(out, accents); return { out, accents }; };
+  /** Contexts that still build their sign on top of the crop (#390: the others take it from the world). */
+  const builders = contexts.filter((e) => e.build);
   /** Like `measure`, on the context scene: the crop plus the sign built whole; its accents and animator count too. */
   function measureContext(e: (typeof contexts)[number]): { inside: number; withAnim: number; neighbor: number; accents: number } {
     const cs = contextScene(scene, e), fixed = [...cs.ground, ...cs.solids];
@@ -410,10 +412,10 @@ describe("context exhibits (#376)", () => {
     }
   });
   it("build is deterministic", () => {
-    for (const e of contexts) expect(built(e), e.id).toEqual(built(e));
+    for (const e of builders) expect(built(e), e.id).toEqual(built(e));
   });
   it("every solid and every accent point of build falls inside the box", () => {
-    for (const e of contexts) {
+    for (const e of builders) {
       const { out, accents } = built(e);
       expect(out.length, e.id).toBeGreaterThan(0);
       for (const s of out) expect(within(s, e.box), `${e.id} ${s.kind}/${s.mat}`).toBe(true);
@@ -432,6 +434,12 @@ describe("context exhibits (#376)", () => {
   it("neighbors: no solid cut by the edge rises above h", () => {
     for (const e of contexts) expect(measureContext(e).neighbor, e.id).toBeLessThanOrEqual(e.h ?? FRAME_H);
   });
+  it("every solid of sign.backing is in the crop (#390)", () => {
+    for (const e of contexts) {
+      const solids = contextScene(scene, e).solids;
+      for (const s of e.sign.backing) expect(solids, e.id).toContainEqual(s);
+    }
+  });
   it("cartel-taller-escena (#379): after cartel-taller, in the shipyard, signed TINKER_SIGN, animated", () => {
     const ids = EXHIBITS.map((e) => e.id);
     expect(ids.indexOf("cartel-taller-escena")).toBe(ids.indexOf("cartel-taller") + 1);
@@ -440,11 +448,12 @@ describe("context exhibits (#376)", () => {
     expect(e.animate).toBeDefined();
     expect(PIECE_AT).toEqual({ x: 0, y: 0, z: 13.5 });
   });
-  it("plataforma-escena: after plataforma, in the sea, the issue's box, built by seaPlatformAt, signed BLOG_SIGN", () => {
+  it("plataforma-escena: after plataforma, in the sea, the issue's box, a crop of the world (no build), signed BLOG_SIGN", () => {
     const ids = EXHIBITS.map((e) => e.id);
     expect(ids.indexOf("plataforma-escena")).toBe(ids.indexOf("plataforma") + 1);
     const e = contexts.find((x) => x.id === "plataforma-escena")!;
-    expect(e).toMatchObject({ title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 366, y0: 136, x1: 434, y1: 204 }, build: seaPlatformAt, sign: BLOG_SIGN });
+    expect(e).toMatchObject({ title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 358, y0: 144, x1: 426, y1: 212 }, sign: BLOG_SIGN });
+    expect(e.build).toBeUndefined();
   });
 });
 
@@ -455,7 +464,7 @@ describe("cartel-torre-escena (#378)", () => {
     const e = contexts.find((x) => x.id === "cartel-torre-escena")!;
     expect(e).toMatchObject({ title: "Resume tower crown in its scene", zone: "cv", group: "city", kind: "context", box: { x0: 108, y0: 206, x1: 150, y1: 248 }, sign: RESUME_SIGN });
     const a: Solid[] = [], b: Accent[] = [], c: Solid[] = [], d: Accent[] = [];
-    e.build(a, b); towerCrown(c, d, CROWN_SITE);
+    e.build!(a, b); towerCrown(c, d, CROWN_SITE);
     expect({ a, b }).toEqual({ a: c, b: d });
   });
 });

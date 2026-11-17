@@ -1,15 +1,19 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import type { Accent } from "../iso/accent";
 import { buildRenderList } from "../iso/render-list";
 import { bounds, isFlat, type Solid } from "../iso/solids";
 import { ZONE_SPLIT_X, abyssX, inHeadland, worldZoneAt } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
 import { BUOYS, CAP_R, COAST, COAST_Z, GALLERY_DECK_R, GALLERY_LIGHT_Z, GALLERY_POSTS, GALLERY_R, KEEPER, LANTERN_R, LANTERN_Z, LIGHTHOUSE, POST_H, POST_W, WRECK, WRECK_BUOY, sea, type SeaScene } from "./sea";
+import { BLOG_SIGN, seaPlatformAt } from "./sign-platform";
 import { headlandZ, terrainAt } from "./terrain";
 
 const scene = (): SeaScene => sea(createRng(7));
-const SEA_MATS: readonly Material[] = ["rock", "whitewash", "rust", "steel", "glass", "hull", "deck", "foam", "leaf", "leafDark"];
+/** What `seaPlatformAt` builds on its own. */
+const platform = () => { const out: Solid[] = [], accents: Accent[] = []; seaPlatformAt(out, accents); return { out, accents }; };
+const SEA_MATS: readonly Material[] = ["rock", "whitewash", "rust", "steel", "glass", "hull", "deck", "foam", "leaf", "leafDark", "boxGrey", "officeDark"]; // #390: boxGrey = hut and officeDark = sign panel of the Writing platform
 const water = new Set(["water", "sea", "shore", "abyss", "reef"]);
 type Cyl = Extract<Solid, { kind: "cylinder" }>;
 type Prism = Extract<Solid, { kind: "prism" }>;
@@ -89,12 +93,19 @@ describe("sea", () => {
     expect(s.solids.filter((x) => x.kind === "cone" && x.mat === "rock" && x.h === 1.5)).toHaveLength(20); // boulders on the point
   });
 
+  it("sea() builds the Writing platform at PLATFORM_SITE (#390): its solids and accents are seaPlatformAt's", () => {
+    const s = scene(), { out, accents } = platform();
+    for (const x of out) expect(s.solids).toContainEqual(x);
+    expect(s.accents.slice(-accents.length)).toEqual(accents);
+  });
+
   it("buoys and wreck on the water; the wreck's buoy has a fixed light and a foam ring", () => {
     const s = scene();
     for (const b of BUOYS) expect(s.solids.some((x) => x.kind === "cylinder" && x.mat === "rust" && x.at.x === b.x && x.at.y === b.y && x.at.z === -1)).toBe(true);
     expect(s.buoys).toHaveLength(2);
     expect(s.solids.some((x) => x.kind === "cylinder" && x.mat === "steel" && x.at.x === WRECK_BUOY.x)).toBe(true);
-    expect(s.accents).toEqual([{ kind: "poly", pts: expect.any(Array), color: "magentaBleed", alpha: expect.any(Number) }, { kind: "dot", at: { x: WRECK_BUOY.x, y: WRECK_BUOY.y, z: 1 }, r: 1, color: "magentaMid" }]);
+    expect(s.accents.slice(0, 2)).toEqual([{ kind: "poly", pts: expect.any(Array), color: "magentaBleed", alpha: expect.any(Number) }, { kind: "dot", at: { x: WRECK_BUOY.x, y: WRECK_BUOY.y, z: 1 }, r: 1, color: "magentaMid" }]);
+    expect(s.accents.slice(2)).toEqual(platform().accents); // the rest is the Writing platform
     expect(s.ground.some((g) => g.kind === "ground" && g.mat === "foam" && g.tris.length === 8)).toBe(true);
     // wreck (#83): no whole hull afloat; the bow sticks out (rust wedge with deck) and the stern house (deckhouse with windows, funnel, mast), all above the water
     expect(s.solids.some((x) => x.kind === "hull")).toBe(false);
@@ -140,7 +151,11 @@ describe("sea", () => {
     expect(Math.min(...zs)).toBeCloseTo(z + 4, 6); // resting on the eave
     for (const y of ys) expect(y).toBeCloseTo(KEEPER.y + 6.42, 6); // front of the box, on the south face
     expect(s.solids.some((x) => x.kind === "prism" && x.mat === "steel" && x.at.y === KEEPER.y + 6 && x.at.z <= z + 4 && x.at.z + x.h >= z + 5 && x.at.x <= Math.min(...xs) && x.at.x + x.w >= Math.max(...xs))).toBe(true); // dark box behind
-    expect(s.accents).toHaveLength(2); // the static accents do not change
+    // the static accents: keeper's window (poly) and wreck buoy (dot), plus the Writing platform's hut and mast (dots) and one poly per sign triangle (#390)
+    const signTris = BLOG_SIGN.glyphs.flatMap((g) => g.quads).length;
+    expect(s.accents).toHaveLength(4 + signTris);
+    expect(s.accents.filter((a) => a.kind === "dot")).toHaveLength(3);
+    expect(s.accents.filter((a) => a.kind === "poly")).toHaveLength(1 + signTris);
   });
 
   it("the whole render uses atlas colors", () => {
