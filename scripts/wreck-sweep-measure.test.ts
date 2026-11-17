@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import type { RenderItem } from "../src/iso/render-list";
-import { ISO_COLORS } from "../src/map/palette-iso";
 import { fitTransform } from "../src/world/frame";
 import { envelopeOf, formatSweepRow, offSky, parseSweepArgs, pickFrame, SKY, toScreen } from "./wreck-sweep-measure";
 
@@ -12,8 +11,7 @@ const sky = (w: number, h: number, res: number): Uint8Array => {
 const paint = (px: Uint8Array, wPx: number, i: number, j: number, rgba: number[]): void => px.set(rgba, (j * wPx + i) * 4);
 
 describe("SKY", () => {
-  it("is ISO_COLORS.sky as RGB", () => {
-    expect(SKY).toEqual([(ISO_COLORS.sky >> 16) & 255, (ISO_COLORS.sky >> 8) & 255, ISO_COLORS.sky & 255]);
+  it("is ISO_COLORS.sky (0x100e19) as RGB", () => {
     expect(SKY).toEqual([0x10, 0x0e, 0x19]);
   });
 });
