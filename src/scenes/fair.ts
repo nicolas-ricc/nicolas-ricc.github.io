@@ -253,12 +253,12 @@ export function slide(out: Solid[], _accents: Accent[]): void {
   for (const c of chains) {
     const pt = (k: number): Vec3 => at(k, chuteR(zk(k)) + c.ro, c.dz);
     for (let k = 0; k < n; k++) out.push({ kind: "beam", from: pt(k), to: pt(k + 1), w: c.w, h: c.h, mat: c.mat });
-    const p = pt(n); // run-out: tangent at the east point, heading south
+    const p = pt(n); // run-out: θ(n) ≡ 0 (east point), so the tangent heads +y (south)
     out.push({ kind: "beam", from: p, to: v3(p.x, p.y + CHUTE.exit, p.z), w: c.w, h: c.h, mat: c.mat });
   }
   out.push(prism(x + chuteR(CHUTE.z1), y, 0, CHUTE.w, CHUTE.exit, CHUTE.z1, "deck"));
   for (let k = 0; k <= n; k += 2) { // brackets from the trunk wall to the bed, except under the door (θ ≡ 90°)
-    if (zk(k) < 1.2 || k === 28) continue;
+    if (zk(k) < 1.2 || (Math.sin(th(k)) > 0.999 && zk(k) - 1 < edges[1]!)) continue; // the door faces south: no bracket in front of it (band 0 tops out at edges[1])
     out.push({ kind: "beam", from: at(k, rAt(zk(k) - 1) * Math.cos(Math.PI / 16) + 0.02, -1), to: at(k, chuteR(zk(k)) + 0.4, -0.05), w: 0.15, h: 0.15, mat: "steel" });
   }
 }
