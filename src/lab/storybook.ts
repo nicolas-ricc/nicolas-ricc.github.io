@@ -73,11 +73,11 @@ mountStorybook(document, ({ host, nav, panel }) => {
       if (e.kind === "region") {
         // the same box for both: the crop memo is keyed by Box identity
         src = [cropScene(scene, e.box), cropAnimators(animators, e.box)];
-        stage = buildStage(...src);
+        stage = buildStage(...src, { clip: e.box });
         frame = { box: e.box, h: e.h };
       } else if (e.kind === "context") {
         src = [contextScene(scene, e), contextAnimators(animators, e, reducedMotion)];
-        stage = buildStage(...src);
+        stage = buildStage(...src, { clip: e.box });
         frame = { box: e.box, h: e.h };
       } else {
         const piece = pieceScene(e.build, e.pad);
