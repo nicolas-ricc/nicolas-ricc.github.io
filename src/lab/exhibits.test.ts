@@ -464,7 +464,7 @@ describe("cartel-torre-escena (#378)", () => {
     const e = contexts.find((x) => x.id === "cartel-torre-escena")!;
     expect(e).toMatchObject({ title: "Resume tower crown in its scene", zone: "cv", group: "city", kind: "context", box: { x0: 108, y0: 206, x1: 150, y1: 248 }, sign: RESUME_SIGN });
     const a: Solid[] = [], b: Accent[] = [], c: Solid[] = [], d: Accent[] = [];
-    e.build(a, b); towerCrown(c, d, CROWN_SITE);
+    e.build!(a, b); towerCrown(c, d, CROWN_SITE);
     expect({ a, b }).toEqual({ a: c, b: d });
   });
 });

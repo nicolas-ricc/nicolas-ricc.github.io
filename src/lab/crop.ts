@@ -89,15 +89,15 @@ export function cropAnimators(animators: readonly ZonedAnimator[], box: Box): Zo
   });
 }
 
-/** The crop of the world plus what the exhibit builds whole (even past the box edge). Fresh arrays: the world scene is never mutated. */
+/** The crop of the world plus, if the exhibit has a `build`, what it builds whole (even past the box edge); without `build` the sign is already in the crop. Fresh arrays: the world scene is never mutated. */
 export function contextScene(scene: WorldScene, e: ContextExhibit): WorldScene {
   const cropped = cropScene(scene, e.box);
   const solids = [...cropped.solids], accents = [...cropped.accents];
-  e.build(solids, accents);
+  e.build?.(solids, accents);
   return { ...cropped, solids, accents };
 }
 
-/** `cropAnimators` plus the exhibit's own animator, tagged with its zone. */
+/** `cropAnimators` plus the exhibit's own animator, if it has one, tagged with its zone. */
 export function contextAnimators(animators: readonly ZonedAnimator[], e: ContextExhibit, reducedMotion = false): ZonedAnimator[] {
   return [...cropAnimators(animators, e.box), ...(e.animate ? [tag(e.animate({ reducedMotion }), e.zone)] : [])];
 }

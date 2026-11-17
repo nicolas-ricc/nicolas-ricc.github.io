@@ -15,8 +15,8 @@ import { buildIndex, markCurrent, mountStorybook, renderReadout } from "./storyb
 
 /**
  * Structures storybook: one exhibit at a time, cropped from the world by its
- * box or built alone at the origin (pieces); context exhibits are the crop plus
- * a sign built whole in world coordinates. The hash picks the exhibit; arrows
+ * box or built alone at the origin (pieces); context exhibits are the crop, plus
+ * a sign built whole in world coordinates when the world does not already have it. The hash picks the exhibit; arrows
  * and j/k only write the hash. 6 rotates the bloom; ?bloom= forces it and ?speed=
  * scales the clock up to 100 (?speed=0 freezes it), as in page.ts. g, h and a
  * hide or show ground, shadows and accents (with the bloom) and are remembered
