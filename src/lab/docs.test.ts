@@ -661,7 +661,7 @@ describe("zone signs redesign documentation (#374)", () => {
 
 describe("wreck vertical line diagnosis (#404)", () => {
   const spec = readFileSync(`${ROOT}docs/superpowers/specs/2026-11-16-storybook-luces-y-encuadre-design.md`, "utf8");
-  const diagnosis = spec.split(/^## /m).find((s) => s.startsWith("§5 — diagnóstico")) ?? "";
+  const diagnosis = spec.split(/^## /m).find((s) => s.startsWith("§5 — diagn\u00f3stico")) ?? "";
   it("the storybook lights spec has a §5 diagnosis section that names the sweep and its result", () => {
     expect(diagnosis).not.toBe("");
     expect(diagnosis).toContain("npm run wreck-sweep");
