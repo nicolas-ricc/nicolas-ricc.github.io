@@ -1,6 +1,6 @@
 import type { Scene } from "./shipyard";
 
-/** What a tick moved: only the trolley (#403: no lamp and no sparks since the cyan lamp and the welding sparks were dots). */
+/** What a tick moved: only the trolley (#403: the trolley lamp and welding sparks were dots, removed). */
 export interface AnimChanges { trolley: boolean }
 export interface ShipyardAnim {
   tick(dtMs: number): AnimChanges;
@@ -20,7 +20,7 @@ function trolleyPhase(ms: number): number {
   return 1 - easeInOut((t - 2 * TROLLEY_PAUSE_MS - move) / move);
 }
 
-/** Shipyard animation: the gantry trolley runs along its beam (pause, outbound, pause, return). Frozen with reduced motion; a non-finite or non-positive dt changes nothing. */
+/** Gantry trolley along its beam. Frozen with reduced motion; a non-finite or non-positive dt changes nothing. */
 export function createShipyardAnim(scene: Scene, opts: { reducedMotion: boolean }): ShipyardAnim {
   const [y0, y1] = scene.trolleyRange;
   let clock = 0;
