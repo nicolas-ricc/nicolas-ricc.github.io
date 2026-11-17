@@ -25,7 +25,7 @@ import { buildIndex, markCurrent, mountStorybook, renderReadout } from "./storyb
  * across exhibits. c cycles the exhibit scale: real, 1.17 and 0.83, the cover scales
  * of a laptop and a phone. The frame is the projected bounds of what is drawn (contentFrame),
  * sampling the animation 16 times over 8 s, which moves the shared clock 8 s on each exhibit
- * change (accepted); it is computed once per show and resize, c and the cover scale reuse it.
+ * change (accepted); it is computed once per show; resize, c and the cover scale reuse it.
  * In development the page publishes `window.__lab` (exhibit id, cover scale and its setter,
  * bloom mode, last fit, host size, `tick(dtMs)` to advance the stage and render, for
  * time-lapse checks in headless, and `pixels`, the stage's RGBA at resolution 2 with
@@ -78,6 +78,7 @@ mountStorybook(document, ({ host, nav, panel }) => {
       const t0 = performance.now();
       let src: [WorldScene, ZonedAnimator[]], opts: { box: Box; h?: number; clip?: Box };
       if (e.kind === "region") {
+        // the same box for both: the crop memo is keyed by Box identity
         src = [cropScene(scene, e.box), cropAnimators(animators, e.box)];
         opts = { box: e.box, h: e.h, clip: e.box };
       } else if (e.kind === "context") {
@@ -89,12 +90,13 @@ mountStorybook(document, ({ host, nav, panel }) => {
         opts = solidsBox([...piece.ground, ...piece.solids]);
       }
       // before buildStage: it draws each animated layer once, so it starts from the sampled state
+      const tf = performance.now();
       content = contentFrame(src[0], src[1], opts);
-      // the same box for both: the crop memo is keyed by Box identity
-      stage = buildStage(...src, opts.clip ? { clip: opts.clip } : {});
+      const frameMs = performance.now() - tf;
+      stage = buildStage(...src, { clip: opts.clip });
       app.stage.addChild(stage.container);
       for (const l of Object.keys(layers) as StageLayer[]) stage.setLayer(l, layers[l]);
-      if (log) console.info(`[storybook] ${e.id}: first draw ${(performance.now() - t0).toFixed(1)} ms, ${stage.staticCount} static polygons`);
+      if (log) console.info(`[storybook] ${e.id}: first draw ${(performance.now() - t0 - frameMs).toFixed(1)} ms (frame ${frameMs.toFixed(1)} ms), ${stage.staticCount} static polygons`);
       renderReadout(panel, readout(...src));
       stage.setBloom(mode);
       current = e;
