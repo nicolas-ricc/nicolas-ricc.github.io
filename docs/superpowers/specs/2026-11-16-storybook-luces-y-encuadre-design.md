@@ -1,4 +1,5 @@
 # Storybook: fuera las luces redondas, encuadre y recortes limpios
+**Estado:** implementado (#395)
 
 Fecha: 2026-11-16. Origen: 11 capturas del storybook (`/lab/storybook.html`)
 en un teléfono plegable, en `assets/2026-11-16-storybook-luces/01..11.jpg`.
@@ -171,6 +172,46 @@ diagnosticarla en el storybook (screenshot con agent-browser y la API de
 sprite o filtro. Se elimina en el origen.
 
 Diagnóstico (#404): ver [§5 — diagnóstico](#5--diagnóstico) al final.
+
+## Capturas antes y después
+
+Antes: las fotos del teléfono plegable. Después: renders del storybook con
+`?speed=0`, bloom por defecto.
+
+| # | Exhibit | Antes | Teléfono | Escritorio |
+|---|---------|-------|----------|------------|
+| 1 | Truck yard | [antes](assets/2026-11-16-storybook-luces/01.jpg) | [teléfono](assets/2026-11-16-storybook-luces/after/phone-01.png) | [escritorio](assets/2026-11-16-storybook-luces/after/desktop-01.png) |
+| 2 | Slipways | [antes](assets/2026-11-16-storybook-luces/02.jpg) | [teléfono](assets/2026-11-16-storybook-luces/after/phone-02.png) | [escritorio](assets/2026-11-16-storybook-luces/after/desktop-02.png) |
+| 3 | Terminal station | [antes](assets/2026-11-16-storybook-luces/03.jpg) | [teléfono](assets/2026-11-16-storybook-luces/after/phone-03.png) | [escritorio](assets/2026-11-16-storybook-luces/after/desktop-03.png) |
+| 4 | Container yard (east bank) | [antes](assets/2026-11-16-storybook-luces/04.jpg) | [teléfono](assets/2026-11-16-storybook-luces/after/phone-04.png) | [escritorio](assets/2026-11-16-storybook-luces/after/desktop-04.png) |
+| 5 | Quay crane | [antes](assets/2026-11-16-storybook-luces/05.jpg) | [teléfono](assets/2026-11-16-storybook-luces/after/phone-05.png) | [escritorio](assets/2026-11-16-storybook-luces/after/desktop-05.png) |
+| 6 | Portfolio tinker sign in its scene | [antes](assets/2026-11-16-storybook-luces/06.jpg) | [teléfono](assets/2026-11-16-storybook-luces/after/phone-06.png) | [escritorio](assets/2026-11-16-storybook-luces/after/desktop-06.png) |
+| 7 | Silos | [antes](assets/2026-11-16-storybook-luces/07.jpg) | [teléfono](assets/2026-11-16-storybook-luces/after/phone-07.png) | [escritorio](assets/2026-11-16-storybook-luces/after/desktop-07.png) |
+| 8 | Container yard (hinterland) | [antes](assets/2026-11-16-storybook-luces/08.jpg) | [teléfono](assets/2026-11-16-storybook-luces/after/phone-08.png) | [escritorio](assets/2026-11-16-storybook-luces/after/desktop-08.png) |
+| 9 | Bumper cars | [antes](assets/2026-11-16-storybook-luces/09.jpg) | [teléfono](assets/2026-11-16-storybook-luces/after/phone-09.png) | [escritorio](assets/2026-11-16-storybook-luces/after/desktop-09.png) |
+| 10 | Lighthouse | [antes](assets/2026-11-16-storybook-luces/10.jpg) | [teléfono](assets/2026-11-16-storybook-luces/after/phone-10.png) | [escritorio](assets/2026-11-16-storybook-luces/after/desktop-10.png) |
+| 11 | Wreck | [antes](assets/2026-11-16-storybook-luces/11.jpg) | [teléfono](assets/2026-11-16-storybook-luces/after/phone-11.png) | [escritorio](assets/2026-11-16-storybook-luces/after/desktop-11.png) |
+
+Haz del faro hacia el norte (`#faro`, `?speed=0`, `__lab.tick(5000)`):
+[teléfono](assets/2026-11-16-storybook-luces/after/faro-norte-phone.png) y
+[escritorio](assets/2026-11-16-storybook-luces/after/faro-norte-desktop.png).
+
+![faro, haz al norte, teléfono](assets/2026-11-16-storybook-luces/after/faro-norte-phone.png)
+![faro, haz al norte, escritorio](assets/2026-11-16-storybook-luces/after/faro-norte-desktop.png)
+
+Tomadas con agent-browser en viewports `412 915 1` y `1600 900 1`.
+
+## Desvíos
+
+Lo que difiere del texto original:
+
+- Bombitas de marquesina a `poly`: la pregunta abierta quedó resuelta por la captura 06 (#403).
+- Señales y cruce ferroviarios: se convirtieron los cuatro, con un constructor compartido (#403).
+- Las boyas del bajo y luces de la costa siguen como dots: no están en los 11 exhibits.
+- La grúa del kit (`quayCraneAt`) conserva la luz de la punta con `light: true` (#402).
+- Inventario corregido (#401): lámparas de la costura x 24/48/72, calle de transferencia y 40/68/124, hinterland (32, −180), (−150, −50), (−180, 10).
+- El terreno y las sombras se recortan a la caja, además de las tiras y los prismas largos (#399).
+- `h` se conserva como reserva en el encuadre por contenido (#400).
 
 ## Criterios de aceptación
 

@@ -143,6 +143,8 @@ cuatro vértices de la caja proyectados, con `h` en la esquina norte como hace
 `zoneFrame`. Para `piece`, la caja viene de `bounds` de sus sólidos. Se ajusta
 con `fitTransform` y el margen por defecto; se reencuadra en `resize`.
 
+*Desvío (2026-11-17, #395): el encuadre es ahora `contentFrame` (límites proyectados, sombras recortadas, halos y muestras de animación), no `boxFrame` solo; ver `2026-11-16-storybook-luces-y-encuadre-design.md`.*
+
 **Selección.** El hash elige el exhibit; sin hash o con uno desconocido, el
 primero (y se corrige el hash). `hashchange` cambia el exhibit, así los
 enlaces del índice y las flechas comparten camino: las teclas solo escriben
