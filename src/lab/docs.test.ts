@@ -687,12 +687,10 @@ describe("storybook lights closing (#405)", () => {
     const b = readFileSync(path);
     return b.toString("latin1", 1, 4) === "PNG" ? [b.readUInt32BE(16), b.readUInt32BE(20)] : null;
   };
-  /** The `## <heading>` section up to the next `## ` heading. */
   const h2 = (txt: string, heading: RegExp): string => {
     const at = txt.search(heading);
     return at < 0 ? "" : txt.slice(at).split(/\n(?=## )/)[0]!;
   };
-  // Spanish headings and words of the spec, escaped for the English guard
   const TABLE = /^## Capturas antes y después$/m;
   const DEVIATIONS = /^## Desvíos$/m;
 
