@@ -1,4 +1,4 @@
-import type { Accent } from "../iso/accent";
+import { spot, type Accent } from "../iso/accent";
 import { polyline, v3, type Polyline, type Vec2, type Vec3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import type { SeaScene } from "./sea";
@@ -167,7 +167,7 @@ export function createSeaAnim(scene: SeaScene, opts: { reducedMotion: boolean })
     const { gallery, coast, keeperSign } = scene.neon, at = neonStep * NEON_STEP_MS;
     const on = chase(gallery.length, -neonStep, GALLERY_LIT);
     return [
-      ...gallery.filter((_, k) => on[k]).map((p): Accent => ({ kind: "dot", at: p, r: GALLERY_R_DOT, color: "magenta" })),
+      ...gallery.filter((_, k) => on[k]).map((p): Accent => spot(p, GALLERY_R_DOT, "magenta")),
       ...coast.map((p, k): Accent => ({ kind: "dot", at: p, r: 0.3 + 0.3 * (neonStep === 0 ? 1 : pulse(at, COAST_PERIOD_MS, k / coast.length)), color: "cyan" })),
       { ...keeperSign, color: flip(Math.floor(at / KEEPER_SIGN_MS), "cyan", "magenta") },
     ];
