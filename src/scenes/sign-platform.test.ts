@@ -114,8 +114,8 @@ const isPanel = (s: Solid) => s.kind === "poly" && s.mat === "officeDark";
 const N = { x: Math.SQRT1_2, y: Math.SQRT1_2 };
 
 describe("Writing sign in Black Chancery, with its backing panel", () => {
-  it("PLATFORM_SITE is (400, 170, 0)", () => {
-    expect(PLATFORM_SITE).toEqual({ x: 400, y: 170, z: 0 });
+  it("PLATFORM_SITE is (392, 178, 0)", () => {
+    expect(PLATFORM_SITE).toEqual({ x: 392, y: 178, z: 0 });
   });
   it("BLOG_SIGN: Writing in Black Chancery, cyan, the font's x-height and stem as stroke, on one diagonal plane", () => {
     expect(BLOG_SIGN).toMatchObject({ id: "plataforma", text: "Writing", size: WRITING_CAP, width: SIGN_FONT.width, color: "cyan", xHeight: CHANCERY_X * WRITING_CAP, stroke: CHANCERY_FACE * WRITING_CAP });

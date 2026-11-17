@@ -9,6 +9,7 @@ import { bounds, hullRings, isFlat, type Bounds, type Solid } from "../iso/solid
 import { WORLD, inCoverQuad, worldZoneAt } from "../map/geo";
 import { BEAM_INNER, BEAM_LEN, BEAM_PERIOD_MS, CYCLE_MS, FADE_U, FERRY_PAUSE_MS, FERRY_ROUTE, FERRY_SPEED, KEEPER_SIGN_MS, LANE_BACK, LANE_OUT, LANE_SPEED, NEON_STEP_MS, OFF_MS, PORT_MS, SHIPS, alphaAt, createSeaAnim, laneAt, laneLength, type ShipFrame } from "./sea-anim";
 import { SHIP_SPECS, ship, shipAt } from "./ships";
+import { BLOG_SIGN } from "./sign-platform";
 import { bleedTerrainAt, terrainAt } from "./terrain";
 import { world } from "./world";
 
@@ -448,5 +449,23 @@ describe("fair launch tick chunking", () => {
     expect(a.tick(NaN)).toEqual(none);
     expect(a.tick(Infinity)).toEqual(none);
     expect(snap()).toBe(before);
+  });
+});
+
+describe("Writing sign and the lanes (#390)", () => {
+  it("no ship piece crosses the Writing letters on screen", () => {
+    // the letters are accents, drawn over every solid: a ship crossing them would show behind them
+    const pts = BLOG_SIGN.glyphs.flatMap((g) => g.quads.flat()).map(project);
+    const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
+    const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    const rect: Vec2[] = [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }];
+    const bad: string[] = [];
+    for (const lane of ["out", "back"] as const) for (const kind of new Set(SHIPS.map((s) => s.kind))) {
+      for (let d = 0; d <= laneLength(lane); d += 2) {
+        const p = laneAt(lane, d);
+        if (ship(kind, shipAt(kind, p, p.heading), p.heading).solids.some((s) => hullsIntersect(screenHull(bounds(s)), rect))) bad.push(`${lane} ${kind} ${d}`);
+      }
+    }
+    expect(bad).toEqual([]);
   });
 });
