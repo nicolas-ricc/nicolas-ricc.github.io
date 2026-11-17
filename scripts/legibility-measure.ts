@@ -164,9 +164,9 @@ export function renderReport(r: { date: string; viewport: string; entries: Repor
 export const reportFails = (r: { entries: ReportEntry[]; violations: { list: Violation[] }[] }): boolean =>
   r.entries.some((e) => e.rows.some((x) => !x.ok)) || r.violations.some((v) => v.list.length > 0);
 
-/** Parses `agent-browser eval` stdout (the JSON of the value). */
-export function parseEval<T>(stdout: string): T {
-  try { return JSON.parse(stdout.trim()) as T; } catch { throw new Error(`legibility: unexpected eval output: ${stdout.trim().slice(0, 80)}`); }
+/** Parses `agent-browser eval` stdout (the JSON of the value); errors are prefixed `${label}:`. */
+export function parseEval<T>(stdout: string, label = "legibility"): T {
+  try { return JSON.parse(stdout.trim()) as T; } catch { throw new Error(`${label}: unexpected eval output: ${stdout.trim().slice(0, 80)}`); }
 }
 
 /** Context exhibits to measure: all, or the one of `--only <id>`; throws listing the context ids when unknown. */

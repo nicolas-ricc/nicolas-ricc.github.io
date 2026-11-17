@@ -13,7 +13,7 @@
  *
  * Usage: npm run legibility [-- --only <context id>]. Exit code 1 when any row is a failure or level 2 lists a violation.
  */
-import { execFileSync, spawn, type ChildProcess } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createWorker, OEM, PSM } from "tesseract.js";
@@ -23,38 +23,21 @@ import { EXHIBITS } from "../src/lab/exhibits";
 import type { Fit } from "../src/world/frame";
 import { assembleWorld } from "../src/world/assemble";
 import { encodePng } from "./png";
+import { agentBrowser, sleep, startVite } from "./lab-browser";
 import {
-  measure, ocrImage, OCR_WHITELIST, parseEval, pickContexts, renderReport, reportFails, RES, scaleTag, signMasks, verdicts, wordCrop,
+  measure, ocrImage, OCR_WHITELIST, pickContexts, renderReport, reportFails, RES, scaleTag, signMasks, verdicts, wordCrop,
   type ReportEntry,
 } from "./legibility-measure";
 
 const PORT = 5179, ORIGIN = `http://localhost:${PORT}`, ROOT = resolve(import.meta.dirname, ".."), OUT = resolve(ROOT, "docs/superpowers/specs/assets/carteles-legibilidad");
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-const ab = (...args: string[]): string =>
-  execFileSync("agent-browser", args, { env: { ...process.env, AGENT_BROWSER_SESSION: "legibility" }, maxBuffer: 64 * 1024 * 1024, timeout: 30_000, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
-const evalJson = <T>(js: string): T => parseEval<T>(ab("eval", js));
-
-async function startVite(): Promise<ChildProcess> {
-  const child = spawn(process.execPath, [resolve(ROOT, "node_modules/vite/bin/vite.js"), "--port", String(PORT), "--strictPort"], { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"] });
-  let err = "", exited = false;
-  child.stderr.on("data", (d) => { err += d; });
-  child.stdout.resume();
-  child.on("exit", () => { exited = true; });
-  for (const t0 = Date.now(); Date.now() - t0 < 30_000; await sleep(250)) {
-    if (exited) throw new Error(`legibility: vite exited early: ${err.trim()}`);
-    try { if ((await fetch(`${ORIGIN}/lab/storybook.html`)).status === 200) return child; } catch { /* not up yet */ }
-  }
-  child.kill();
-  throw new Error("legibility: vite did not answer in 30 s");
-}
+const { ab, evalJson } = agentBrowser("legibility", "legibility");
 
 async function main(): Promise<void> {
   const picked = pickContexts(EXHIBITS, process.argv.slice(2));
   try { ab("--version"); } catch { throw new Error("legibility: agent-browser not found on PATH"); }
   let vite: ChildProcess | null = null, worker: Awaited<ReturnType<typeof createWorker>> | null = null;
   try {
-    vite = await startVite();
+    vite = await startVite(PORT, "legibility");
     ab("set", "viewport", "1600", "900", "2");
     worker = await createWorker("eng", OEM.LSTM_ONLY, { langPath: resolve(ROOT, "scripts/tessdata"), gzip: true, cacheMethod: "none" });
     await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_WORD, tessedit_char_whitelist: OCR_WHITELIST });
