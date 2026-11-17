@@ -5,6 +5,7 @@ import type { Solid } from "../iso/solids";
 import { BLEED, CELL, CELL_BLEED, WORLD, worldZoneAt } from "../map/geo";
 import { CROWN_SITE, towerCrown } from "../scenes/sign-crown";
 import { seaPlatformAt } from "../scenes/sign-platform";
+import { TINKER_SITE, tinkerAnimator, tinkerSign } from "../scenes/sign-tinker";
 import { ACCENT_DIM, VEIL_ALPHA, accentZone, accentsByZone, focusAlphas, veilCells, veilPolygons, veilRuns } from "./veil";
 
 describe("veilCells", () => {
@@ -121,5 +122,17 @@ describe("Resume crown accents (#391)", () => {
     towerCrown(out, accents, CROWN_SITE);
     expect(accents.some((a) => a.kind === "dot") && accents.some((a) => a.kind === "poly")).toBe(true);
     for (const a of accents) expect(accentZone(a)).toBe("cv");
+  });
+});
+
+describe("Portfolio tinker sign accents (#392)", () => {
+  it("every accent of the tinker sign at TINKER_SITE and of its tinker.lights layer is Portfolio", () => {
+    const out: Solid[] = [], accents: Accent[] = [];
+    tinkerSign(out, accents, TINKER_SITE);
+    expect(accents.some((a) => a.kind === "dot") && accents.some((a) => a.kind === "poly")).toBe(true);
+    const l = tinkerAnimator({ reducedMotion: true }).layer("tinker.lights");
+    if (l.kind !== "accent") throw new Error("tinker.lights is an accent layer");
+    expect(l.accents.length).toBeGreaterThan(0);
+    for (const a of [...accents, ...l.accents]) expect(accentZone(a)).toBe("portfolio");
   });
 });

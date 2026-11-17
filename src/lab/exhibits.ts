@@ -28,7 +28,7 @@ import { BEAM_LEN } from "../scenes/sea-anim";
 import { ship, shipAt, type ShipKind } from "../scenes/ships";
 import { RESUME_SIGN, towerCrown, towerStandIn } from "../scenes/sign-crown";
 import { BLOG_SIGN, seaPlatform } from "../scenes/sign-platform";
-import { hallStandIn, PIECE_AT, STAND_IN_HALL, TINKER_SIGN, TINKER_SITE, tinkerAnimator, tinkerSign } from "../scenes/sign-tinker";
+import { hallStandIn, PIECE_AT, STAND_IN_HALL, TINKER_SIGN, tinkerAnimator, tinkerSign } from "../scenes/sign-tinker";
 import { SUBURB_COLS } from "../scenes/sprawl-grid";
 import { SUBSTATION } from "../scenes/substation";
 import { ARENA, AUDITORIUM, TELECOM } from "../scenes/tech";
@@ -48,11 +48,11 @@ export const GROUPS: readonly { id: GroupId; zone: WorldZone; title: string }[] 
   { id: "sea", zone: "blog", title: "Blog: sea" },
 ];
 
-/** A structure to look at on its own: a box over the real world, a relocatable piece built at the origin (with optional `pad`: the ground material under it, and optional `animate`: its animator, which the storybook tags with the exhibit's zone), or a context exhibit: a crop of the real world, optionally plus a sign built whole in world coordinates (`build` adds to the crop, and is absent when the world already has the sign; `sign` is what the level-2 oracle checks). */
+/** A structure to look at on its own: a box over the real world, a relocatable piece built at the origin (with optional `pad`: the ground material under it, and optional `animate`: its animator, which the storybook tags with the exhibit's zone), or a context exhibit: a crop of the real world (the sign is already in it, so it has no `build` or `animate`); `sign` is what the level-2 oracle checks. */
 export type Exhibit = { id: string; title: string; zone: WorldZone; group: GroupId } & (
   | { kind: "region"; box: Box; h?: number }
   | { kind: "piece"; build: (out: Solid[], accents: Accent[]) => void; pad?: Material; animate?: (opts: { reducedMotion: boolean }) => Animator }
-  | { kind: "context"; box: Box; h?: number; build?: (out: Solid[], accents: Accent[]) => void; sign: SignSpec; animate?: (opts: { reducedMotion: boolean }) => Animator }
+  | { kind: "context"; box: Box; h?: number; sign: SignSpec }
 );
 
 export type ContextExhibit = Extract<Exhibit, { kind: "context" }>;
@@ -107,7 +107,8 @@ export const EXHIBITS: readonly Exhibit[] = [
   // transfer street x 100..108 with the lamps at 108.5; west of the slipways (x ≥ 110)
   { id: "calle-faroles", title: "Lamp street", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 99, y0: 8, x1: 111, y1: 128 }, h: 14 }, // #324: the counter-jib and counterweight of the y 31 tower crane (x 108..116, top z 13.8–14) reach into x ≤ 111
   // the two assembly halls: x 10..100, rows y −52 and −32 of 16; y1 −14 leaves out the crane counterweight (y −13..−11, z 18.5..20) and x1 102 the yard (x ≥ 104)
-  { id: "naves", title: "Assembly halls", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 7, y0: -55, x1: 102, y1: -14 }, h: 14 },
+  // h 32: the tinker sign (#392) tops out at z ≈ 31.76 (its top beam, cut by the box); smallest integer that passes framing and neighbors
+  { id: "naves", title: "Assembly halls", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 7, y0: -55, x1: 102, y1: -14 }, h: 32 },
   // the island's north coast facing the sheds: x 270..350, y 0..60; h is the smallest integer that passes framing and neighbors (measured with the `measure` of exhibits.test.ts): 18 since #323, set by the quay crane and stacks it now crops (inside 18, accents 3.5)
   { id: "punta-norte", title: "North point of the island", zone: "portfolio", group: "shipyard", kind: "region", box: { x0: 270, y0: 0, x1: 350, y1: 60 }, h: 18 },
   // the terminal station: x 108..198, y 98..143; h measured as in punta-norte: set by the top of the clock tower, z 29 (the station emits no smoke)
@@ -132,9 +133,9 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "cartel-taller", title: "Portfolio tinker sign", zone: "portfolio", group: "shipyard", kind: "piece", pad: "concrete",
     build: (out, accents) => { hallStandIn(out); tinkerSign(out, accents, PIECE_AT, [STAND_IN_HALL]); },
     animate: (o) => tinkerAnimator({ ...o, at: PIECE_AT }) },
-  // h 34: the structure and the sign's accents reach ≈ 33.41 u (the smallest integer that frames them); the neighbours cut by the edge are lower.
-  { id: "cartel-taller-escena", title: "Portfolio tinker sign in its scene", zone: "portfolio", group: "shipyard", kind: "context", box: { x0: 20, y0: -58, x1: 100, y1: 0 }, h: 34,
-    build: (out, accents) => tinkerSign(out, accents, TINKER_SITE), sign: TINKER_SIGN, animate: tinkerAnimator },
+  // h 32: the sign's top beam reaches z ≈ 31.76, smallest integer that passes framing and neighbors; the sign and its animator come from the world (shipyard() and assembleWorld, #392): no build, no animate
+  { id: "cartel-taller-escena", title: "Portfolio tinker sign in its scene", zone: "portfolio", group: "shipyard", kind: "context", box: { x0: 20, y0: -58, x1: 100, y1: 0 }, h: 32,
+    sign: TINKER_SIGN },
   { id: "central-termica", title: "Power plant and cooling tower", zone: "portfolio", group: "hinterland", kind: "region",
     box: { x0: COOLING.x - COOLING.r - M, y0: POWER.y - M, x1: STACKS_N[0].x + 2 + M, y1: COOLING.y + COOLING.r + M }, h: 30 }, // 28-high chimneys
   // tank radius rng 7..9

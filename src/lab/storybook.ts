@@ -77,7 +77,7 @@ mountStorybook(document, ({ host, nav, panel }) => {
         stage = buildStage(...src);
         frame = { box: e.box, h: e.h };
       } else if (e.kind === "context") {
-        src = [contextScene(scene, e), contextAnimators(animators, e, reducedMotion)];
+        src = [contextScene(scene, e), contextAnimators(animators, e)];
         stage = buildStage(...src);
         frame = { box: e.box, h: e.h };
       } else {
