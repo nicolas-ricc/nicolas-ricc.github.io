@@ -14,7 +14,8 @@ describe("Resume level 2 budget", () => {
     const s = resume();
     expect(s.solids.filter((x) => !isFlat(x)).length).toBeLessThanOrEqual(2900);
     expect(s.ground.filter((g) => g.kind === "strip").length).toBeLessThanOrEqual(190);
-    // accents: 789 + the crown's 402 (238 poly + 164 dot) = 1 191 measured (#391), ×1.1 rounded to the hundred
+    // accents: 1 165 measured (#391): 789 before, + the crown's 402 (238 poly + 164 dot), − 26 city lights the crown now hides from the camera
+    // (2 avenue lamps and lit windows behind its panel); ×1.1 rounded to the hundred
     expect(s.accents.length).toBeLessThanOrEqual(1300);
   });
 

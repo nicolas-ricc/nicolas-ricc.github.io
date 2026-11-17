@@ -297,7 +297,10 @@ letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2;
 - **Luz de la antena real (#378).** Se ve a través del panel de la corona
   (los acentos se dibujan sobre todo sólido). El mundo no cambia en esta
   historia: la decide la integración. #391 quitó la antena y su luz: la corona
-  remata la torre.
+  remata la torre. Sus sólidos tapan 2 faroles de la avenida y unas 40
+  ventanas candidatas de la ciudad, y como `lights()` sortea solo las
+  candidatas visibles, el reparto de ventanas encendidas cambia en toda la
+  zona Resume (determinista).
 - **Portfolio (#379).** El anfitrión es la cumbrera del galpón de montaje sur
   del astillero. El sitio se mantiene en `TINKER_SITE` y la cubierta sube
   `DECK_RISE` 3.5 (no 2.6), porque el pórtico de la fábrica tapaba los márgenes

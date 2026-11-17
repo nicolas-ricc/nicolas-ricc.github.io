@@ -19,7 +19,7 @@ import { FOOTBRIDGE_LOT, WATER_TOWER_BLOCK, assign, isBare, waterTowerLot, type 
 /**
  * Resume: orchestrator of the city. The zoning (src/city/zoning.ts) assigns
  * neighborhood, recipe, lot and tone per block; here each piece is built with
- * the kit, the fixed pieces are added (plaza and tower (crowned by the Resume sign, src/scenes/sign-crown.ts), bridge, riverside,
+ * the kit, the fixed pieces are added (plaza and tower, crowned by the Resume sign of src/scenes/sign-crown.ts; bridge, riverside,
  * promenade, collapse, jungle, cars; src/city/fixed.ts; the inlet works, src/city/harbor.ts) and the streets. The
  * terrain (terrain.ts) is the asphalt.
  * Spec: docs/superpowers/specs/2026-10-15-resume-nivel-2-kit-zonificacion-luces-design.md §6.
@@ -33,7 +33,7 @@ export interface PlacedPiece { placed: Placed; piece: Piece; solidOffset: number
 export interface CityScene {
   ground: Solid[];   // plaza tiles, ground of devoured blocks, lanes
   solids: Solid[];
-  accents: Accent[]; // kit accents, visible lights of the fixed pieces (street lamps, plaza, garlands, puddles), the crown's letters, bulbs and lights, fixed lit windows, bar neons and bathed facades of lights(); the animatable windows, the flickering neon (lights().flicker), the lit floor of the tower are animated by city-anim
+  accents: Accent[]; // kit accents, visible lights of the fixed pieces (street lamps, plaza, garlands, puddles), the crown's letters, bulbs and lights, fixed lit windows, bar neons and bathed facades of lights(); the animatable windows, the flickering neon (lights().flicker) and the lit floor of the tower are animated by city-anim
   fixedLights: FixedLight[]; // every light of the fixed pieces, hidden ones included; `accents` has only those `visibleLights` lets through
   tower: TowerLights;
   neon: { signs: Accent[]; promenade: Vec3[] }; // signs of the district and lights of the promenade; city-anim animates them
