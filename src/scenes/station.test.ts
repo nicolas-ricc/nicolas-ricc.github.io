@@ -4,6 +4,7 @@ import { v3 } from "../iso/geometry";
 import { isBox, type Plate, type PlateBox } from "../iso/plate";
 import { bounds, isFlat, tessellate, tessellateAll, type Bounds, type Solid } from "../iso/solids";
 import { BUFFER_H, BUFFER_X, CROSSING, FENCE_Y, GAUGE, HEAD, ISLAND, LADDER, RAIL_W, RAIL_Z, SIDE, SIGNALS, STATION, STOP_X, TRACK_X0, TRACKS_Y, TRAIN_CLEAR, PARKED, station, building, HALL, WING_N, WING_S, LINK, SERVICE, TOWER, PORTICO, ESPLANADE } from "./station";
+import { unpairedLampParts } from "./lamp-fixtures";
 import { emu, trainLen } from "./train";
 
 const build = (): { out: Solid[]; accents: Accent[] } => { const out: Solid[] = [], accents: Accent[] = []; station(out, accents); return { out, accents }; };
@@ -26,8 +27,8 @@ const flatBox = (x0: number, y0: number, x1: number, y1: number, z0 = -1, z1 = 1
 const horizontal = (s: Solid & { kind: "strip" }, y: number, x0: number, x1: number) =>
   s.path.length === 2 && close(s.path[0]!.y, y) && close(s.path[1]!.y, y) && close(Math.min(s.path[0]!.x, s.path[1]!.x), x0) && close(Math.max(s.path[0]!.x, s.path[1]!.x), x1);
 const SLEEPERS: number[][] = [range(136, 158, 4, (x) => x < BUFFER_X - 1), range(123, 158, 4, (x) => x < BUFFER_X - 1), range(110, 158, 4, () => true)];
-const CANOPIES = [{ x0: 125, x1: 158, p: ISLAND, cols: [127.5, 132.5, 137.5, 142.5, 147.5, 152.5, 157.5], lights: [130, 140, 150] },
-  { x0: 138, x1: 158, p: SIDE, cols: [140.5, 145.5, 150.5, 155.5], lights: [143, 153] }];
+const CANOPIES = [{ x0: 125, x1: 158, p: ISLAND, cols: [127.5, 132.5, 137.5, 142.5, 147.5, 152.5, 157.5] },
+  { x0: 138, x1: 158, p: SIDE, cols: [140.5, 145.5, 150.5, 155.5] }];
 
 describe("station: constants (contract with the children of #239)", () => {
   it("exact values from the issue", () => {
@@ -112,7 +113,7 @@ describe("station", () => {
     expect(prisms.filter((p) => p.mat === "canopy" && p.at.z === 1).map(box)).toEqual([[165.8, 104, 1, 0.2, 27, 1]]);
   });
 
-  it("canopies: low gable, columns every 5 u, trusses, fascias and cyanMid lights", () => {
+  it("canopies: low gable, columns every 5 u, trusses, fascias and no cyanMid light", () => {
     for (const c of CANOPIES) {
       const ym = (c.p.y0 + c.p.y1) / 2, half = (c.p.y1 - c.p.y0) / 2;
       const mine = ramps.filter((r) => r.mat === "canopy" && r.at.x === c.x0 && r.w === c.x1 - c.x0 && r.at.z === 4.2 && r.h === 0.5 && r.d === half);
@@ -135,14 +136,19 @@ describe("station", () => {
         const east = (r.plates ?? []).filter(isBox).filter((p) => p.wall === 1 && p.mat === "whitewash");
         expect(east.map((p) => [p.u0, p.u1, p.z0, p.z1]), `east fascia ${r.dir}`).toEqual([r.dir === "n" ? [0.5, 1, 4.2, 4.45] : [0, 0.5, 4.2, 4.45]]);
       }
-      const lights = dots.filter((d) => d.color === "cyanMid" && d.at.y === ym && d.at.z === 3.9 && d.r === 0.8).map((d) => d.at.x).sort((a, b) => a - b);
-      expect(lights).toEqual(c.lights);
     }
     expect(prisms.filter((p) => p.mat === "canopy" && p.at.z === 3.5).map(box)).toEqual([[161.5, 104, 3.5, 4.5, 27, 0.3]]);
     const headCols = prisms.filter((p) => p.mat === "steel" && p.at.x === 161.8 && p.w === 0.3 && p.d === 0.3 && p.at.z === 1 && close(p.h, 2.5));
     expect(headCols.map((p) => p.at.y).sort((a, b) => a - b)).toEqual([104, 110, 116, 122, 128]);
-    expect(sorted(dots.filter((d) => d.color === "cyanMid" && d.at.z === 3.4).map((d) => [d.at.x, d.at.y]))).toEqual(sorted([[163.75, 109], [163.75, 119], [163.75, 129]]));
-    expect(dots.filter((d) => d.color === "cyanMid")).toHaveLength(8);
+    expect(dots.filter((d) => d.color === "cyanMid")).toEqual([]);
+  });
+
+  it("lights out (#401): no cyanMid, amber or cyan r 1.2 dot; the three magenta buffer lights stay", () => {
+    expect(dots.filter((d) => d.color === "cyanMid")).toEqual([]);
+    expect(dots.filter((d) => d.color === "amber")).toEqual([]);
+    expect(dots.filter((d) => d.color === "cyan" && d.r === 1.2)).toEqual([]);
+    expect(dots.filter((d) => d.color === "magenta" && d.r === 0.35)).toHaveLength(3);
+    expect(unpairedLampParts(out, accents)).toEqual([]);
   });
 
   it("buffers: three at x 160..161.5, h 1.2, safety/asphalt stripes on east and south, magenta light", () => {
@@ -289,8 +295,8 @@ describe("station: neighbors (disjoint boxes, 1e-9)", () => {
     }
   });
 
-  it("station ↔ street lamps (x 108.5, y 12/40/68/96/124) and truck (105, 88)", () => {
-    const others = [...[12, 40, 68, 96, 124].map((y) => flatBox(108.5, y, 109.1, y + 0.6, 0, 5)), flatBox(105, 88, 108, 95, -0.4, 2.1)];
+  it("station ↔ street lamps (x 108.5, y 12/96) and truck (105, 88)", () => {
+    const others = [...[12, 96].map((y) => flatBox(108.5, y, 109.1, y + 0.6, 0, 5)), flatBox(105, 88, 108, 95, -0.4, 2.1)];
     for (const s of raised) for (const o of others) expect(apart(bounds(s), o)).toBe(true);
   });
 });
@@ -401,9 +407,9 @@ describe("station: building, tower and esplanade (#278)", () => {
     for (const r of eRamps) { expect(r.at.y).toBeGreaterThanOrEqual(WING_N.y - 1e-9); expect(r.at.y + r.d).toBeLessThanOrEqual(WING_N.y + WING_N.d + 1e-9); }
   });
 
-  it("esplanade: tall lamps, palms and railing; whatever rests on the slab starts at z 0.15", () => {
+  it("esplanade: palms and railing, no lamps; whatever rests on the slab starts at z 0.15", () => {
     const posts = bPrisms.filter((p) => p.mat === "steel" && p.w === 0.6 && p.h === 6);
-    expect(sorted(posts.map((p) => [Math.round((p.at.x + 0.3) * 1e6) / 1e6, Math.round((p.at.y + 0.3) * 1e6) / 1e6, p.at.z]))).toEqual(sorted([[195.5, 102, 0.15], [195.5, 130, 0.15]]));
+    expect(posts).toEqual([]);
     const trunks = bOut.filter((s): s is Solid & { kind: "cylinder" } => s.kind === "cylinder" && s.mat === "deck");
     expect(sorted(trunks.map((t) => [t.at.x, t.at.y, t.at.z, t.r, t.h, t.sides]))).toEqual(sorted([[195.5, 108, 0.15, 0.25, 6, 6], [195.6, 116.5, 0.15, 0.25, 6, 6], [195.5, 125, 0.15, 0.25, 6, 6]]));
     const crowns = bOut.filter((s): s is Solid & { kind: "cone" } => s.kind === "cone" && s.mat === "leaf");
@@ -441,11 +447,8 @@ describe("station: building, tower and esplanade (#278)", () => {
     for (const g of gables) expect(on(g, outWall(g), "asphalt").map(span), `vent ${outWall(g)}`).toEqual([[0.3125, 0.6875, 24.5, 24.8]]);
   });
 
-  it("night lights: portico, lantern, fanlight, windows, dials and lamps", () => {
-    const portico = bDots.filter((d) => d.color === "amber" && d.at.x > 190 && d.at.x < 194 && d.at.y > 110 && d.at.y < 122 && d.at.z < 5.2);
-    expect(portico.length).toBeGreaterThanOrEqual(3);
-    expect(sorted(bDots.filter((d) => d.color === "amber" && d.r === 0.5).map((d) => [d.at.x, d.at.y, d.at.z]))).toEqual(sorted([[190.05, 109, 3.2], [190.05, 123, 3.2]]));
-    expect(sorted(bDots.filter((d) => d.color === "cyan").map((d) => [d.at.x, d.at.y, d.at.z, d.r]))).toEqual(sorted([[195.5, 102, 6.15, 1.2], [195.5, 130, 6.15, 1.2]]));
+  it("night lights: lantern, fanlight, windows and dials", () => {
+    expect(bDots.filter((d) => d.color === "amber" || d.color === "cyan")).toEqual([]);
     // each poly falls on a wall plate (same outline in the world)
     const t = shaft(), h = hall();
     const faces = (s: Solid, mat: string, shape: string) => tessellateAll(s).filter((f) => f.mat === mat && f.pts.length === (shape === "disc" ? 8 : 4));

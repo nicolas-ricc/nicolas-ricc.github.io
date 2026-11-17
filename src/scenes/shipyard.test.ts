@@ -51,7 +51,7 @@ describe("shipyard", () => {
     expect(s.trolley.at.y).toBe(s.trolleyRange[0]);
   });
 
-  it("the shipyard accents outside the station are cyan; those of the station are cyan, cyanMid or magenta", () => {
+  it("the shipyard accents outside the station are cyan; those of the station are magenta dots or polys", () => {
     const s = scene();
     // poly: the building's windows, lantern and dials (#278), located by their first vertex
     const where = (a: Accent) => (a.kind === "dot" ? a.at : a.pts[0]!);
@@ -64,8 +64,8 @@ describe("shipyard", () => {
     const windows = outside.filter((a) => a.kind === "poly");
     expect(windows.map((a) => a.color)).toEqual(["windowCool"]);
     expect(outside.filter((a) => a.kind === "dot").every((a) => a.kind === "dot" && a.color === "cyan" && a.at.z > 0)).toBe(true);
-    expect(inside.length).toBeGreaterThanOrEqual(11); // eight canopy lights and three buffer lights
-    expect(inside.every((a) => a.kind === "dot" ? ["cyan", "cyanMid", "magenta", "amber"].includes(a.color) && a.at.z > 0 : ["amber", "amberBleed", "cyanBleed"].includes(a.color))).toBe(true);
+    expect(inside.length).toBeGreaterThanOrEqual(3); // three buffer lights, plus the station's polys
+    expect(inside.every((a) => a.kind === "dot" ? ["magenta"].includes(a.color) && a.at.z > 0 : ["amber", "amberBleed", "cyanBleed"].includes(a.color))).toBe(true);
   });
 
   it("raised solids of the shipyard ≤ 900 (#323)", () => {
