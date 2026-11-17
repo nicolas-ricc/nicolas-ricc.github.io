@@ -1,4 +1,5 @@
 import { ISO_COLORS, stepTone, toneColor } from "../map/palette-iso";
+import { clipPolygon, lerp2, type ClipRect } from "./clip";
 import { sortByDepth } from "./depth";
 import { v3, type Vec3 } from "./geometry";
 import { SHADOW_CORE_H, shadowPolygon } from "./light";
@@ -20,7 +21,14 @@ const flatten = (pts: Vec3[]): number[] => pts.flatMap((p) => { const s = projec
 const faceItem = (layer: Layer, f: Face): RenderItem => ({ layer, pts: flatten(f.pts), color: toneColor(f.mat, stepTone(f.tone, f.toneOffset)) });
 const shadowItem = (layer: Layer, poly: { x: number; y: number }[]): RenderItem => ({ layer, pts: flatten(poly.map((p) => v3(p.x, p.y, 0))), color: ISO_COLORS.shadow });
 
-export function buildRenderList(solids: Solid[], heading?: number): RenderItem[] {
+/**
+ * With `clip` (a rectangle in world coordinates), each shadow hull is cut to it
+ * before projecting; the hull is convex, so the result is the exact
+ * intersection. A hull left with fewer than 3 points emits nothing. Solid and
+ * ground faces are not clipped here (the crop does that). Without `clip` the
+ * list is unchanged.
+ */
+export function buildRenderList(solids: Solid[], heading?: number, clip?: ClipRect): RenderItem[] {
   const ground: RenderItem[] = [], shadow: RenderItem[] = [], solid: RenderItem[] = [];
   const raised: Solid[] = [];
   // The ground is painted in insertion order, not sorted by depth: sunken
@@ -31,8 +39,11 @@ export function buildRenderList(solids: Solid[], heading?: number): RenderItem[]
   }
   for (const s of raised) {
     const full = shadowPolygon(s), core = shadowPolygon(s, SHADOW_CORE_H);
-    if (full) shadow.push(shadowItem("shadow", full));
-    if (core) shadow.push(shadowItem("shadowCore", core));
+    for (const [layer, hull] of [["shadow", full], ["shadowCore", core]] as const) {
+      if (!hull) continue;
+      const poly = clip ? clipPolygon(hull, clip, lerp2) : hull;
+      if (poly.length >= 3) shadow.push(shadowItem(layer, poly));
+    }
   }
   for (const s of sortByDepth(raised, heading)) for (const f of tessellate(s)) solid.push(faceItem("solid", f));
   return [...ground, ...shadow, ...solid];
