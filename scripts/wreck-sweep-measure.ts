@@ -27,18 +27,16 @@ export function envelopeOf(items: readonly RenderItem[], fit: Fit, box: Box): En
   };
 }
 
-/** Counts the non-sky texture pixels (w·res × h·res RGBA) whose centre lies outside the envelope or above its ceiling; `first` in integer host CSS px, row order. */
+/** Counts the non-sky texture pixels (w·res × h·res RGBA) whose footprint (i/res..(i+1)/res) does not overlap the envelope below its ceiling (a straddling pixel may carry antialiased coverage); `first` in integer host CSS px, row order. */
 export function offSky(rgba: Uint8Array, host: { w: number; h: number }, res: number, env: Envelope): { count: number; first: { x: number; y: number } | null } {
   const wPx = host.w * res, hPx = host.h * res;
   if (rgba.length !== wPx * hPx * 4) throw new Error(`expected ${wPx * hPx * 4} bytes, got ${rgba.length}`);
   let count = 0, first: { x: number; y: number } | null = null;
   for (let j = 0; j < hPx; j++) {
-    const y = (j + 0.5) / res;
     for (let i = 0; i < wPx; i++) {
       const o = (j * wPx + i) * 4;
       if (rgba[o] === SKY[0] && rgba[o + 1] === SKY[1] && rgba[o + 2] === SKY[2]) continue;
-      const x = (i + 0.5) / res;
-      if (x >= env.x0 && x <= env.x1 && y >= env.y0 && y <= env.y1 && y >= env.ceiling) continue;
+      if ((i + 1) / res > env.x0 && i / res < env.x1 && (j + 1) / res > Math.max(env.y0, env.ceiling) && j / res < env.y1) continue;
       count++;
       first ??= { x: Math.floor(i / res), y: Math.floor(j / res) };
     }

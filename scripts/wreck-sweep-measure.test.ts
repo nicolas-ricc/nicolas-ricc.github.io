@@ -49,6 +49,12 @@ describe("offSky", () => {
     expect(offSky(px, host, res, { x0: 0, y0: 0, x1: 4, y1: 3, ceiling: 0 }).count).toBe(0);
     expect(offSky(px, host, res, { x0: 0, y0: 0, x1: 4, y1: 3, ceiling: 1 }).count).toBe(1);
   });
+  it("lets the antialiased fringe of a pixel that straddles the envelope edge through", () => {
+    const px = sky(4, 3, 2);
+    paint(px, wPx, 1, 2, [17, 14, 25, 255]); // footprint x [0.5, 1], centre 0.75
+    expect(offSky(px, host, res, { x0: 0.9, y0: 0, x1: 4, y1: 3, ceiling: 0 }).count).toBe(0);
+    expect(offSky(px, host, res, { x0: 1, y0: 0, x1: 4, y1: 3, ceiling: 0 }).count).toBe(1);
+  });
   it("reports the first offender in row order", () => {
     const px = sky(4, 3, 2);
     paint(px, wPx, 1, 4, [0, 0, 0, 255]);
