@@ -146,7 +146,7 @@ function westHalls(out: Solid[], accents: Accent[]): void {
   for (const [dx, dy] of [[-2, -2], [2, -2], [2, 2], [-2, 2]] as const) out.push(prism(wx + dx - 0.3, wy + dy - 0.3, 0, 0.6, 0.6, legH, "steel"));
   out.push({ kind: "cylinder", at: v3(wx, wy, legH), r: 3, h: 4, mat: "steel", sides: 10 });
   accents.push({ kind: "dot", at: v3(wx, wy, legH + 4.2), r: 0.6, color: "cyanMid" });
-  for (const [x, y] of [[-190, 44], [-130, 86], [-70, 20], [-150, -50], [-180, 10]] as const) place(out, accents, industrialLamp(v3(x, y, 0)));
+  for (const [x, y] of [[-190, 44], [-130, 86], [-70, 20]] as const) place(out, accents, industrialLamp(v3(x, y, 0)));
 }
 
 /** The shipyard's west tracks continue through the green belt to the edge of the bleed: on screen they leave to the left, as if they never ended. */
@@ -185,7 +185,7 @@ function powerPlant(out: Solid[], accents: Accent[], stacks: Vec3[], rng: Rng): 
 function fairRoad(out: Solid[], accents: Accent[], rng: Rng): void {
   if (ok(0, ROAD_Y - 4, 83.9, 7)) { // the street and its lamps, as a single footprint (83.9: the edge x=84 is already the fair)
     out.push(strip([{ x: 0, y: ROAD_Y }, { x: 84, y: ROAD_Y }], 6, 0.1, "road"));
-    for (const x of [4, 32, 60]) place(out, accents, industrialLamp(v3(x, ROAD_Y - 4, 0)));
+    for (const x of [4, 60]) place(out, accents, industrialLamp(v3(x, ROAD_Y - 4, 0)));
   }
   for (const x of [8, 18, 28]) if (ok(x, ROAD_Y + 3.5, 8, 2.4)) { out.push(prism(x, ROAD_Y + 3.5, 0, 6, 2.4, 2.8, "rust")); out.push(prism(x + 6, ROAD_Y + 3.5, 0, 2, 2.4, 2.2, "steel")); }
   const { x, y, w, d } = PARKING;

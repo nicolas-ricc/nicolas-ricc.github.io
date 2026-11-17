@@ -4,7 +4,7 @@ import { bounds, isFlat, type Bounds, type Solid } from "../iso/solids";
 import { worldZoneAt } from "../map/geo";
 import { createRng, SEED } from "../map/seed";
 import type { Accent } from "../iso/accent";
-import { BOOTH_ROW, BOOTH_TYPES, COASTER_PROFILE, DROP, FAIR_MATS, FLUME, FLUME_DROP_X0, FLUME_PATH, FLUME_X1, FOOD_COURT, GHOST, LIFT_SEGMENTS, MIRRORS, PIER, SLIDE, WHEEL, boothRow, boothSlots, boothTypes, coasterPath, dropSolids, fair, flume, foodCourt, ghostTrain, logSolids, mirrorHouse, slide, trainSolids, wheelSolid } from "./fair";
+import { BOOTH_ROW, BUMPER, BOOTH_TYPES, COASTER_PROFILE, DROP, FAIR_MATS, FLUME, FLUME_DROP_X0, FLUME_PATH, FLUME_X1, FOOD_COURT, GHOST, LIFT_SEGMENTS, MIRRORS, PIER, SLIDE, WHEEL, boothRow, boothSlots, boothTypes, coasterPath, dropSolids, fair, flume, foodCourt, ghostTrain, logSolids, mirrorHouse, slide, trainSolids, wheelSolid } from "./fair";
 import { FAIR, bayShoreX, bayWater, fairAt } from "./sprawl-grid";
 import { bleedTerrainAt } from "./terrain";
 import { zoneRng } from "./world";
@@ -52,8 +52,13 @@ describe("fair", () => {
     expect(s.solids.filter((x) => x.kind === "cone" && x.r === 1.6).length).toBeGreaterThanOrEqual(10); // umbrellas
     expect(s.solids.filter((x) => x.kind === "prism" && x.mat === "stone" && x.h === 6 && x.w === 1.5)).toHaveLength(2); // gate
     expect(s.solids.filter((x) => x.kind === "hull").length).toBeGreaterThanOrEqual(3); // stranded boats
-    expect(s.accents.filter((a) => a.kind === "dot").length).toBeGreaterThan(30);
+    expect(s.accents.filter((a) => a.kind === "dot")).toHaveLength(114); // 120 before #401, minus the 6 bumper car dots
     expect(new Set(s.accents.map((a) => a.color)).size).toBeGreaterThanOrEqual(3); // amber, cyan and magenta
+  });
+
+  it("bumper cars: no dot over the floor", () => {
+    const s = scene();
+    expect(s.accents.filter((a) => a.kind === "dot" && a.at.x >= BUMPER.x && a.at.x <= BUMPER.x + 14 && a.at.y >= BUMPER.y && a.at.y <= BUMPER.y + 10)).toEqual([]);
   });
 
   it("Ferris wheel: on the beach, axis at 23, r 20, 20 gondolas; nothing static ends up in front of it on screen", () => {

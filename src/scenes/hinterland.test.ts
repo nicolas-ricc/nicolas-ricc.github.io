@@ -6,6 +6,7 @@ import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
 import { COOLING, PARKING, POWER, PYLON_N, ROAD_Y, SILOS, TANKS, WEST_RAIL_X0, WEST_TRACKS_X, hinterland } from "./hinterland";
 import { GREEN_BELT } from "./sprawl-grid";
+import { unpairedLampParts } from "./lamp-fixtures";
 import { RAIL_Y } from "./shipyard";
 import { bleedTerrainAt, terrainAt } from "./terrain";
 
@@ -54,6 +55,15 @@ describe("hinterland", () => {
     expect(s.solids.filter((x) => x.kind === "prism" && x.w === 6 && x.d === 2.4 && x.h === 2.6 && x.at.z > 0).length).toBeGreaterThan(20); // stacked containers
   });
 
+  it("lamps out (#401): fairRoad keeps x 4 and 60, westHalls keeps (−190, 44), (−130, 86), (−70, 20)", () => {
+    const s = scene();
+    const posts = s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism" && x.mat === "steel" && x.w === 0.6 && x.d === 0.6 && (x.h === 5 || x.h === 6));
+    expect(posts.filter((p) => p.at.y === ROAD_Y - 4 && p.at.x >= 0 && p.at.x <= 84).map((p) => p.at.x).sort((a, b) => a - b)).toEqual([4, 60]);
+    const west = posts.filter((p) => p.at.x < -60 && p.at.y >= -60 && p.at.y <= 90).map((p) => [p.at.x, p.at.y]).sort((a, b) => a[0]! - b[0]! || a[1]! - b[1]!);
+    expect(west).toEqual([[-190, 44], [-130, 86], [-70, 20]]);
+    expect(unpairedLampParts(s.solids, s.accents)).toEqual([]);
+  });
+
   it("cyan accents and atlas colors", () => {
     const s = scene();
     expect(s.accents.length).toBeGreaterThanOrEqual(8);
@@ -75,7 +85,7 @@ describe("hinterland", () => {
     expect(s.solids.filter((x) => x.kind === "cone" && x.mat === "rust" && bounds(x).max.y < -204)).toHaveLength(3); // coal piles
     expect(s.ground.filter((g) => g.kind === "strip" && g.mat === "steel" && g.width === 0.8)).toHaveLength(1); // conveyor belt
     expect(s.solids.filter((x) => x.kind === "prism" && x.h === 1.2 && x.w !== 2.2 && x.mat === "steel" && bounds(x).max.y < -204)).toHaveLength(4); // power plant fence
-    expect(s.accents.filter((a) => a.kind === "dot" && a.color === "cyan" && a.at.y < ROAD_Y)).toHaveLength(5); // 2 lamps of the transformer yard + 3 of the street
+    expect(s.accents.filter((a) => a.kind === "dot" && a.color === "cyan" && a.at.y < ROAD_Y)).toHaveLength(4); // 2 lamps of the transformer yard + 2 of the street (x 4 and 60)
     const north = s.solids.filter((x) => bounds(x).max.y < -204 && !isFlat(x));
     expect(north.length).toBeGreaterThan(30); expect(north.length).toBeLessThanOrEqual(250);
     for (const x of north) { const b = bounds(x); expect(inCoverQuad((b.min.x + b.max.x) / 2, (b.min.y + b.max.y) / 2, 16 / 9, 30)).toBe(true); }
