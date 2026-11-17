@@ -101,6 +101,8 @@ const ALLOW: Record<string, RegExp[]> = {
     /[\w-]*-(antes|despues)\b|assets\/[\w.-]*(fabrica|barrio|estacion|costura)[\w.-]*\//g,
     // the old spec mundo-3
     /\bmundo-3\b/g,
+    // the storybook lights closing (#405): its asset folder, the beam-north captures and the before/after table heading
+    /2026-11-16-storybook-luces\/|faro-norte|Capturas antes y después/g,
   ],
   "src/scenes/world-baseline.test.ts": [/"?[a-z-]+"?: "[0-9a-f]{8}\/[0-9a-f]{8}"/g],
 };

@@ -673,3 +673,93 @@ describe("wreck vertical line diagnosis (#404)", () => {
     expect(scripts).toContain("npm run wreck-sweep");
   });
 });
+
+describe("storybook lights closing (#405)", () => {
+  const SPECS = `${ROOT}docs/superpowers/specs/`;
+  const ASSETS = `${SPECS}assets/2026-11-16-storybook-luces/`;
+  const spec = readFileSync(`${SPECS}2026-11-16-storybook-luces-y-encuadre-design.md`, "utf8");
+  const IDS = ["playa-camiones", "gradas", "estacion", "patio-contenedores", "grua-muelle", "cartel-taller-escena", "silos", "playa-contenedores", "autitos-chocadores", "faro", "pecio"];
+  const NN = IDS.map((_, k) => String(k + 1).padStart(2, "0"));
+  const VIEWPORTS = { phone: [412, 915], desktop: [1600, 900] } as const;
+  /** Width and height from a PNG's IHDR chunk, or null when the file is missing or not a PNG. */
+  const pngSize = (path: string): [number, number] | null => {
+    if (!existsSync(path)) return null;
+    const b = readFileSync(path);
+    return b.toString("latin1", 1, 4) === "PNG" ? [b.readUInt32BE(16), b.readUInt32BE(20)] : null;
+  };
+  const h2 = (txt: string, heading: RegExp): string => {
+    const at = txt.search(heading);
+    return at < 0 ? "" : txt.slice(at).split(/\n(?=## )/)[0]!;
+  };
+  const TABLE = /^## Capturas antes y después$/m;
+  const DEVIATIONS = /^## Desvíos$/m;
+
+  it("the 11 capture ids are storybook exhibits", () => {
+    const ids = new Set(EXHIBITS.map((e) => e.id));
+    for (const id of IDS) expect(ids.has(id), id).toBe(true);
+  });
+  it("the 22 final captures exist as PNGs of the viewport size", () => {
+    for (const [name, size] of Object.entries(VIEWPORTS)) {
+      for (const n of NN) expect(pngSize(`${ASSETS}after/${name}-${n}.png`), `${name}-${n}`).toEqual([...size]);
+    }
+  });
+  it("the intermediate framing captures folder is gone and nothing references it", () => {
+    const needle = "after-" + "encuadre";
+    expect(existsSync(`${ASSETS}${needle}`)).toBe(false);
+    const walk = (dir: string): string[] => readdirSync(`${ROOT}${dir}`, { withFileTypes: true }).flatMap((d) => {
+      const rel = `${dir}/${d.name}`;
+      return d.isDirectory() ? walk(rel) : [rel];
+    });
+    const files = ["README.md", "CONTEXT.md", "vite.config.ts",
+      ...walk("docs/superpowers/specs").filter((f) => f.endsWith(".md")),
+      ...["src", "lab", "scripts"].flatMap(walk).filter((f) => /\.(ts|html|css|json|md)$/.test(f))];
+    for (const f of files) expect(readFileSync(`${ROOT}${f}`, "utf8").includes(needle), f).toBe(false);
+  });
+  it("the spec says implemented on its second line", () => {
+    expect(spec.split("\n")[1]).toBe("**Estado:** implementado (#395)");
+  });
+  it("the spec carries a before/after table with the three captures per exhibit", () => {
+    const table = h2(spec, TABLE);
+    expect(table).not.toBe("");
+    for (const n of NN) {
+      const row = table.split("\n").filter((l) => l.includes(`after/phone-${n}.png`));
+      expect(row.length, n).toBe(1);
+      expect(row[0], n).toContain(`assets/2026-11-16-storybook-luces/${n}.jpg`);
+      expect(row[0], n).toContain(`assets/2026-11-16-storybook-luces/after/desktop-${n}.png`);
+      expect(existsSync(`${ASSETS}${n}.jpg`), `${n}.jpg`).toBe(true);
+    }
+    for (const [name, size] of Object.entries(VIEWPORTS)) {
+      expect(table).toContain(`assets/2026-11-16-storybook-luces/after/faro-norte-${name}.png`);
+      expect(pngSize(`${ASSETS}after/faro-norte-${name}.png`), name).toEqual([...size]);
+    }
+  });
+  it("the spec lists its deviations", () => {
+    const dev = h2(spec, DEVIATIONS);
+    expect(dev).not.toBe("");
+    for (const s of ["poly", "light: true", "boyas", "24/48/72", "40/68/124", "(32, −180)", "(−150, −50)", "(−180, 10)", "terreno", "sombras", "`h`"]) expect(dev, s).toContain(s);
+  });
+  it("README's storybook paragraph names __lab.tick, shadows, halos and animation", () => {
+    const story = (readme.split(/\n\s*\n/).find((p) => p.includes("/lab/storybook.html")) ?? "").replace(/\s+/g, " ");
+    for (const s of ["`__lab.tick`", "shadows", "halos", "animation"]) expect(story, s).toContain(s);
+  });
+  it("README's world section describes the STS boom and no sparks", () => {
+    const world = h2(readme, /^## Isometric world$/m);
+    expect(world).toMatch(/STS/);
+    expect(world).toMatch(/boom/);
+    expect(readme).not.toMatch(/spark|welding/i);
+  });
+  it("README lists the lights spec among the lab specs", () => {
+    const lab = readme.split(/\n\s*\n/).find((p) => p.includes("/lab/world.html")) ?? "";
+    expect(lab).toContain("2026-11-16-storybook-luces-y-encuadre-design.md");
+  });
+  it("the 2026-10-17 storybook spec notes the deviation after its framing paragraph", () => {
+    const old = readFileSync(`${SPECS}2026-10-17-storybook-estructuras-design.md`, "utf8");
+    const paras = old.split(/\n\s*\n/);
+    const at = paras.findIndex((p) => p.startsWith("**Encuadre.**"));
+    expect(at).toBeGreaterThanOrEqual(0);
+    const note = (paras[at + 1] ?? "").replace(/\s+/g, " ");
+    expect(note.startsWith("*Desvío (2026-11-17")).toBe(true);
+    expect(note).toContain("2026-11-16-storybook-luces-y-encuadre-design.md");
+    expect(old.split("\n").find((l) => l.startsWith("**Estado:**"))).toMatch(/implementad/);
+  });
+});
