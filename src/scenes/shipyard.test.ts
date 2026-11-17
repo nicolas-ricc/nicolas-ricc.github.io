@@ -9,12 +9,18 @@ import { unpairedLampParts } from "./lamp-fixtures";
 import { windowCandidates } from "./portfolio-lights";
 import { AREA_H, AREA_W, STREET_EDGE, shipyard, type Scene } from "./shipyard";
 import { YARD } from "./shipyard-east";
+import { TINKER_SITE, tinkerSign } from "./sign-tinker";
 import { BUFFER_X, ESPLANADE, STATION } from "./station";
 
 const scene = (): Scene => shipyard(createRng(7));
 /** Slipway scaffolding (`slipways`): steel 0.6 × 0.6 h 5 on the slipway deck (z 1.5), not a lamp. */
 const isSlipScaffold = (s: Solid) => s.kind === "prism" && s.mat === "steel" && s.w === 0.6 && s.h === 5 && s.at.z === 1.5;
 const all = (s: Scene): Solid[] => [...s.ground, ...s.solids, s.trolley];
+/** The tinker sign as shipyard() builds it (#392): local rules exempt exactly these solids and accents, by deep equality. */
+const SIGN_SOLIDS: Solid[] = [], SIGN_ACCENTS: Accent[] = [];
+tinkerSign(SIGN_SOLIDS, SIGN_ACCENTS, TINKER_SITE);
+const signKeys = new Set([...SIGN_SOLIDS, ...SIGN_ACCENTS].map((x) => JSON.stringify(x)));
+const ofSign = (x: Solid | Accent): boolean => signKeys.has(JSON.stringify(x));
 
 describe("shipyard", () => {
   it("is deterministic by seed", () => {
@@ -50,8 +56,16 @@ describe("shipyard", () => {
     expect(s.trolley.at.y).toBe(s.trolleyRange[0]);
   });
 
-  it("the shipyard accents outside the station are cyan; those of the station are polys (spots and windows)", () => {
+  it("shipyard() builds the PORTFOLIO tinker sign at TINKER_SITE: its solids and accents are tinkerSign's (#392)", () => {
     const s = scene();
+    for (const x of SIGN_SOLIDS) expect(s.solids).toContainEqual(x);
+    for (const a of SIGN_ACCENTS) expect(s.accents).toContainEqual(a);
+  });
+
+  it("the shipyard accents outside the station are cyan; those of the station are polys (spots and windows); the tinker sign's are its own (#392)", () => {
+    const s0 = scene(), own = s0.accents.filter(ofSign);
+    expect(own).toHaveLength(SIGN_ACCENTS.length); // the exemption matches the sign and nothing else
+    const s = { ...s0, accents: s0.accents.filter((a) => !ofSign(a)) };
     // poly: the building's windows, lantern and dials (#278), located by their first vertex
     const where = (a: Accent) => (a.kind === "dot" ? a.at : a.pts[0]!);
     const inStation = (a: Accent) => { const p = where(a); return p.x >= 110 && p.x <= STATION.x1 && p.y >= 100 && p.y <= STATION.y1; };
@@ -261,8 +275,10 @@ describe("shipyard in the north band (#247)", () => {
     for (let i = 0; i < groups.length; i++) for (let j = i + 1; j < groups.length; j++) expect(apart(groups[i]!, groups[j]!), `${i} ↔ ${j}`).toBe(true);
   });
 
-  it("the north band: every solid with max.y < 0 (except quay, bollards and cones) falls in x 10..192, y −60..−13 and does not exceed z 22", () => {
-    const bs = band(scene()).map(bounds);
+  it("the north band: every solid with max.y < 0 (except quay, bollards and cones) falls in x 10..192, y −60..−13 and does not exceed z 22 (the tinker sign aside, #392)", () => {
+    const inBand = band(scene()), own = inBand.filter(ofSign);
+    expect(own).toHaveLength(SIGN_SOLIDS.length); // the exemption matches the sign and nothing else
+    const bs = inBand.filter((x) => !ofSign(x)).map(bounds);
     expect(bs.length).toBeGreaterThanOrEqual(40); // halls, forklifts, workshops, equipment and yard: without this it would pass empty
     for (const b of bs) {
       const where = JSON.stringify(b);

@@ -350,11 +350,14 @@ describe("tinker sign in its scene (#379)", () => {
   });
   it("levels 1–2 against the world beyond the exhibit's crop, the factory chimneys (y 26..32) included", () => {
     const near = scene.solids.filter((s) => { const b = bounds(s); return b.max.x >= 0 && b.min.x <= 130 && b.max.y >= -70 && b.min.y <= 60; });
-    const all = [...near, ...sign(TINKER_SITE).out];
-    for (const s of SCALES) expect(checkSign(TINKER_SIGN, s, all)).toEqual([]);
+    expect(near).toEqual(expect.arrayContaining(sign(TINKER_SITE).out)); // the world holds the sign since #392: no extra copy
+    for (const s of SCALES) expect(checkSign(TINKER_SIGN, s, near)).toEqual([]);
   }, 20_000);
   it("no sign solid overlaps a world solid, posts on a hall roof excused", () => {
-    const own = sign(TINKER_SITE).out, world = scene.solids.filter((s) => s.kind !== "ground" && s.kind !== "strip");
+    const own = sign(TINKER_SITE).out, ownKeys = new Set(own.map((s) => JSON.stringify(s)));
+    const raised = scene.solids.filter((s) => s.kind !== "ground" && s.kind !== "strip");
+    expect(raised.filter((s) => ownKeys.has(JSON.stringify(s)))).toHaveLength(own.length); // the world's copy of the sign (#392), and nothing else
+    const world = raised.filter((s) => !ownKeys.has(JSON.stringify(s)));
     const halls = world.flatMap((s) => { const h = SHIPYARD_HALLS.find((x) => s.kind === "prism" && s.roof === "gable" && s.at.x === x.x0 && s.at.y === x.y0); return h ? [{ solid: s, hall: h }] : []; });
     const ownB = own.map(bounds), bad: string[] = [];
     for (const w of world) {

@@ -1,20 +1,30 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
+import { bounds, type Solid } from "../iso/solids";
 import { excavatorBox } from "./excavator";
 import { STACKS } from "./factory";
 import { shipyardAnimator } from "./shipyard-animator";
+import { TINKER_SITE, tinkerSign } from "./sign-tinker";
 import { STATION } from "./station";
 import { world } from "./world";
 
-const STATIC_COLORS = new Set(["cyan", "cyanMid", "cyanBleed", "windowCool", "amber", "amberBleed", "magenta"]);
-const WARM = new Set(["amber", "amberBleed", "magenta"]);
+const STATIC_COLORS = new Set(["cyan", "cyanMid", "cyanBleed", "windowCool", "amber", "amberMid", "amberBleed", "magenta"]);
+const WARM = new Set(["amber", "amberMid", "amberBleed", "magenta"]);
 const STACK_MOUTH_Z = 20;
+
+/** Plan box (x/y, every z) of the tinker sign's solids at TINKER_SITE: its amber is Portfolio's dominant color by design (spec 2026-11-15 §3.2, #392). */
+const TINKER_BOX = (() => {
+  const out: Solid[] = [];
+  tinkerSign(out, [], TINKER_SITE);
+  const bs = out.map(bounds);
+  return { x0: Math.min(...bs.map((b) => b.min.x)), y0: Math.min(...bs.map((b) => b.min.y)), x1: Math.max(...bs.map((b) => b.max.x)), y1: Math.max(...bs.map((b) => b.max.y)) };
+})();
 
 /** Point of an accent: a dot's position or a polygon's first vertex (as `accentZone` does). */
 const where = (a: Accent) => (a.kind === "dot" ? a.at : a.pts[0]!);
 
-/** Rule 1: Portfolio's static palette, and the warm colors only at the station, the chimney mouths or on the excavator. */
+/** Rule 1: Portfolio's static palette, and the warm colors only at the station, the chimney mouths, on the excavator or in the tinker sign's plan box. */
 function ruleViolations(accents: Accent[]): string[] {
   const ex = excavatorBox();
   return accents.flatMap((a) => {
@@ -24,7 +34,8 @@ function ruleViolations(accents: Accent[]): string[] {
     const station = p.x >= STATION.x0 && p.x <= STATION.x1 && p.y >= STATION.y0 && p.y <= STATION.y1;
     const excavator = p.x >= ex.x0 && p.x <= ex.x1 && p.y >= ex.y0 && p.y <= ex.y1;
     const stackMouth = p.z >= STACK_MOUTH_Z && STACKS.some((k) => Math.hypot(p.x - k.x, p.y - k.y) <= k.r + 1);
-    return station || stackMouth || excavator ? [] : [`place ${at}`];
+    const tinker = p.x >= TINKER_BOX.x0 && p.x <= TINKER_BOX.x1 && p.y >= TINKER_BOX.y0 && p.y <= TINKER_BOX.y1;
+    return station || stackMouth || excavator || tinker ? [] : [`place ${at}`];
   });
 }
 
@@ -36,8 +47,10 @@ describe("Portfolio accents", () => {
   it("rule 1: static colors of shipyard, factory and hinterland", () => expect(ruleViolations(portfolio)).toEqual([]));
 
   it("rule 1 catches intruders", () => {
-    const intruders: Accent[] = [{ kind: "dot", at: v3(150, -50, 1), r: 1, color: "amber" }, { kind: "dot", at: v3(150, 50, 5), r: 1, color: "spark" }, { kind: "dot", at: v3(151, 50, 26), r: 1, color: "magenta" }];
-    expect(ruleViolations(intruders)).toHaveLength(3); // the last one is high, but on the gantry beam, not at a chimney mouth
+    const intruders: Accent[] = [{ kind: "dot", at: v3(150, -50, 1), r: 1, color: "amber" }, { kind: "dot", at: v3(150, 50, 5), r: 1, color: "spark" }, { kind: "dot", at: v3(151, 50, 26), r: 1, color: "magenta" },
+      { kind: "dot", at: v3(TINKER_BOX.x1 + 1, -24, 20), r: 1, color: "amber" }]; // just east of the tinker sign's box (#392)
+    expect(ruleViolations(intruders)).toHaveLength(4); // the third one is high, but on the gantry beam, not at a chimney mouth
+    expect(ruleViolations([{ kind: "dot", at: v3(60, -24, 20), r: 1, color: "amberMid" }])).toEqual([]); // inside the sign's box
   });
 
   it("rule 2: 31 cyan dots across the three scenes (#401, #402: no quay crane tips)", () => expect(portfolio.filter((a) => a.kind === "dot" && a.color === "cyan").length).toBe(31));

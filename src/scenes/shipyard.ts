@@ -8,6 +8,7 @@ import { jungle as flora } from "./flora";
 import { RIPRAP_KEEP_OUT, shipyardEast } from "./shipyard-east";
 import { portfolioWindows } from "./portfolio-lights";
 import { dockWorks, serviceStrip, yardFill, type Fill } from "./shipyard-fill";
+import { TINKER_SITE, tinkerSign } from "./sign-tinker";
 import { station } from "./station";
 import { clearOfWater } from "./terrain-classify";
 
@@ -22,6 +23,7 @@ import { clearOfWater } from "./terrain-classify";
  * slipways, at the end of the west track, is the terminus station
  * (`station.ts`). The Portfolio/Resume seam is at `y 90` (a steel fence marks it from
  * x −60 to 96) and the station land (`STATION_LAND`) is the only part of Portfolio south of it. Coordinates in old-map units (1 u ≈ 1 px).
+ * The PORTFOLIO tinker sign stands on the south hall's ridge (`sign-tinker.ts`, #392).
  */
 
 export interface Scene {
@@ -206,6 +208,7 @@ export function shipyard(rng: Rng, occluders: Solid[] = []): Scene {
   materialYard(solids, rng);
   dryDock(solids, ground);
   halls(solids);
+  tinkerSign(solids, accents, TINKER_SITE);
   street(solids);
   slipways(solids);
   const g = gantry(solids);

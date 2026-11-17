@@ -8,6 +8,10 @@ import { TOWER } from "../scenes/city-grid";
 import { CROWN_SITE } from "../scenes/sign-crown";
 import { PLATFORM_DECK, PLATFORM_SITE } from "../scenes/sign-platform";
 import { SHIPYARD_HALLS, TINKER_SITE } from "../scenes/sign-tinker";
+import { buildRenderList } from "../iso/render-list";
+import { assembleWorld } from "../world/assemble";
+import { labelLayout, signBox, SIGN_ORDER, SIGNS } from "../world/signs";
+import { coverView } from "../world/view";
 import { EXHIBITS } from "./exhibits";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
@@ -540,8 +544,8 @@ describe("zone signs redesign documentation (#374)", () => {
       expect(size(`assets/374-carteles/${id}-${s}.png`), `${id}-${s}`).toEqual([3200, 1800]);
     }
   });
-  it("the redesign spec says implemented, pending integration, and §6 is ticked off", () => {
-    expect(spec.split("\n").find((l) => l.startsWith("**Estado:**"))).toBe("**Estado:** implementado (storybook; integración pendiente, §7)");
+  it("the redesign spec says implemented in the storybook and on the site, and §6 is ticked off", () => {
+    expect(spec.split("\n").find((l) => l.startsWith("**Estado:**"))).toBe("**Estado:** implementado (storybook e integración al sitio: #389, spec 2026-11-17)");
     const criteria = between(spec, /^## 6\. /m, /^## 7\. /m);
     expect(criteria).not.toMatch(/- \[ \]/);
     expect(criteria.match(/- \[x\]/g)?.length ?? 0).toBe(9);
@@ -640,7 +644,7 @@ describe("zone signs redesign documentation (#374)", () => {
       expect(story, id).toContain(`\`#${id}\``);
       expect(ids.has(id), id).toBe(true);
     }
-    for (const s of ["in its scene", "candidate site", "npm run legibility", "contrast", "halo", "OCR", "does not run in CI", "`c`"]) expect(story, s).toContain(s);
+    for (const s of ["in its scene", "crop of the real world", "npm run legibility", "contrast", "halo", "OCR", "does not run in CI", "`c`"]) expect(story, s).toContain(s);
     for (const id of DELETED) expect(story, id).not.toContain(id);
   });
   it("README's lab paragraph lists the redesign spec and names the legibility guardrails next to the lettering", () => {
@@ -761,5 +765,94 @@ describe("storybook lights closing (#405)", () => {
     expect(note.startsWith("*Desvío (2026-11-17")).toBe(true);
     expect(note).toContain("2026-11-16-storybook-luces-y-encuadre-design.md");
     expect(old.split("\n").find((l) => l.startsWith("**Estado:**"))).toMatch(/implementad/);
+  });
+});
+
+describe("zone signs integration (#394)", () => {
+  const SPECS = `${ROOT}docs/superpowers/specs/`;
+  const NAME = "2026-11-17-carteles-de-zona-integracion-design.md";
+  const read = (rel: string) => (existsSync(`${SPECS}${rel}`) ? readFileSync(`${SPECS}${rel}`, "utf8") : "");
+  const spec = read(NAME);
+  const between = (txt: string, from: RegExp, to?: RegExp) => {
+    const i = txt.search(from);
+    if (i < 0) return "";
+    const rest = txt.slice(i), j = to ? rest.search(to) : -1;
+    return j < 0 ? rest : rest.slice(0, j);
+  };
+  const part = (n: number) => between(spec, new RegExp(`^## ${n}\\. `, "m"), new RegExp(`^## ${n + 1}\\. `, "m"));
+  /** The single line of `txt` that starts with `prefix` ("" when none or several). */
+  const row = (txt: string, prefix: string) => { const ls = txt.split("\n").filter((l) => l.startsWith(prefix)); return ls.length === 1 ? ls[0]! : ""; };
+  /** Cells of a table row, trimmed, without the outer pipes. */
+  const cells = (line: string) => line.split("|").slice(1, -1).map((c) => c.trim());
+  /** Value as the specs write it: comma-separated, U+2212 for the minus. */
+  const at = (v: { x: number; y: number; z: number }, z = true) => `(${[v.x, v.y, ...(z ? [v.z] : [])].join(", ").replace(/-/g, "−")})`;
+  const CAPTURES = ["plataforma-sitio.png", "corona-sitio.png", "tinker-sitio.png", "sitio-laptop.png", "sitio-laptop-resume.png", "sitio-foco.png", "sitio-telefono.png"];
+
+  it("the integration spec exists, dated 2026-11-17 and implemented, with §1 to §7 in order", () => {
+    expect(spec).not.toBe("");
+    expect(spec).toMatch(/^\*\*Fecha:\*\* 2026-11-17$/m);
+    expect(spec).toMatch(/^\*\*Estado:\*\* implementado$/m);
+    const heads = [1, 2, 3, 4, 5, 6, 7].map((n) => spec.search(new RegExp(`^## ${n}\\. `, "m")));
+    for (const h of heads) expect(h).toBeGreaterThanOrEqual(0);
+    for (let k = 1; k < heads.length; k++) expect(heads[k]!).toBeGreaterThan(heads[k - 1]!);
+  });
+  it("§3 carries the final site of each sign, as the constants say", () => {
+    const sites = part(3);
+    const rows = { CROWN_SITE: at(CROWN_SITE), TINKER_SITE: at(TINKER_SITE), PLATFORM_SITE: at(PLATFORM_SITE, false) };
+    for (const [name, value] of Object.entries(rows)) expect(row(sites, `| \`${name}\` |`), name).toContain(value);
+  });
+  it("§4 carries each sign's screen box and label mode on the laptop and the phone, as coverView and signBox compute them", () => {
+    const framing = part(4);
+    for (const [label, w, h] of [["laptop", 1366, 657], ["teléfono", 390, 750]] as const) {
+      const v = coverView(w, h);
+      for (const id of SIGN_ORDER) {
+        const b = signBox(SIGNS[id]);
+        const px = (n: number, o: number) => (n * v.scale + o).toFixed(1);
+        const box = `${px(b.minX, v.x)}..${px(b.maxX, v.x)} × ${px(b.minY, v.y)}..${px(b.maxY, v.y)}`;
+        const mode = labelLayout(b, v, { w, h }, { hw: 0, hh: 0 }).mode;
+        const line = row(framing, `| ${label} ${w}×${h} | \`${id}\` |`);
+        expect(line, `${label} ${id}`).not.toBe("");
+        expect(line, `${label} ${id} ${box}`).toContain(box);
+        expect(line, `${label} ${id} ${mode}`).toContain(`\`${mode}\``);
+      }
+    }
+  });
+  it("§5 carries the frame table before and after, the static polygons and the world accents", () => {
+    const budget = part(5);
+    const num = (c: string) => Number(c.replace(/\s/g, "").replace(",", "."));
+    for (const name of ["first draw (ms)", "bloom, promedio (ms)", "peor redibujo en 5 s (ms)"]) {
+      const c = cells(row(budget, `| ${name} |`));
+      expect(c.length, name).toBe(3);
+      for (const v of c.slice(1)) expect(Number.isFinite(num(v)) && num(v) > 0, `${name} ${v}`).toBe(true);
+    }
+    const verdict = cells(row(budget, "| veredicto del bloom |"));
+    expect(verdict.length).toBe(3);
+    for (const v of verdict.slice(1)) expect(v).toMatch(/^`(on|fallback)`$/);
+    const { scene } = assembleWorld(undefined, { reducedMotion: true });
+    // same computation as stage.staticCount, which the dev log prints as "N static polygons"
+    const polygons = buildRenderList([...scene.terrain.ground, ...scene.ground, ...scene.solids]).length;
+    expect(num(cells(row(budget, "| polígonos estáticos |")).at(-1) ?? "")).toBe(polygons);
+    expect(num(cells(row(budget, "| acentos estáticos del mundo |")).at(-1) ?? "")).toBe(scene.accents.length);
+  });
+  it("§7 lists the seven site captures, and they exist", () => {
+    const caps = part(7);
+    for (const f of CAPTURES) {
+      expect(caps, f).toContain(`assets/389-carteles-sitio/${f}`);
+      expect(existsSync(`${SPECS}assets/389-carteles-sitio/${f}`), f).toBe(true);
+    }
+  });
+  it("§7 of both previous sign specs opens with the integration note", () => {
+    const NOTE = "*Desvío (2026-11-17): integrado en #389; ver 2026-11-17-carteles-de-zona-integracion-design.md.*";
+    for (const old of ["2026-11-15-carteles-de-zona-rediseno-design.md", "2026-11-11-carteles-de-zona-assets-design.md"]) {
+      const first = (between(read(old), /^## 7\. /m).split(/\n\s*\n/)[1] ?? "").replace(/\s+/g, " ").trim();
+      expect(first, old).toBe(NOTE);
+    }
+  });
+  it("README lists the integration spec among the lab specs and tells the sign navigation in the runtime paragraph", () => {
+    const paragraphs = readme.split(/\n\s*\n/);
+    const lab = paragraphs.find((p) => p.includes("/lab/world.html")) ?? "";
+    expect(lab).toContain(NAME);
+    const runtime = (paragraphs.find((p) => p.includes("coverView(host)")) ?? "").replace(/\s+/g, " ");
+    for (const s of ["src/world/signs.ts", "zoneAtScreen", "labelLayout", "edge", "no external font"]) expect(runtime, s).toContain(s);
   });
 });

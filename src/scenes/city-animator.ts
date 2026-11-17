@@ -9,7 +9,6 @@ export function cityAnimator(scene: CityScene, rng: Rng, opts: { reducedMotion: 
   const layers: Record<string, () => AnimLayer> = {
     "city.lit": () => ({ kind: "accent", accents: anim.lit() }),
     "city.papers": () => ({ kind: "accent", accents: anim.papers() }),
-    "city.antenna": () => ({ kind: "accent", accents: [anim.antenna()] }),
     "city.neon": () => ({ kind: "accent", accents: anim.neon() }),
     "city.windows": () => ({ kind: "accent", accents: anim.windows() }),
   };
@@ -21,7 +20,6 @@ export function cityAnimator(scene: CityScene, rng: Rng, opts: { reducedMotion: 
       const out = new Set<string>();
       if (c.lit) out.add("city.lit");
       if (c.papers) out.add("city.papers");
-      if (c.antenna) out.add("city.antenna");
       if (c.neon) out.add("city.neon");
       if (c.windows) out.add("city.windows");
       return out;

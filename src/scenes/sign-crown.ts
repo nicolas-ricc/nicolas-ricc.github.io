@@ -106,7 +106,7 @@ export function towerCrown(out: Solid[], accents: Accent[], at: Vec3): void {
   }
 }
 
-/** The real tower's geometry at the origin (body, cornice, machine room, antenna; no facade, no lights): the context the crown is audited on. */
+/** The tower as the crown was audited on it in #378, at the origin (body, cornice, machine room, antenna; no facade, no lights). The real tower lost its antenna in #391. */
 export function towerStandIn(out: Solid[], _accents: Accent[]): void {
   out.push(prism(-8, -7, 0, 16, 14, 30, "officeDark"), prism(-8.5, -7.5, 30, 17, 15, 0.4, "office"), prism(-3, -2, 30.4, 6, 4, 2.5, "officeDark"));
   out.push({ kind: "cylinder", at: v3(0, 0, 32.9), r: 0.3, h: 5, mat: "steel", sides: 4 });

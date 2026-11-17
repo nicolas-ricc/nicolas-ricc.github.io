@@ -8,6 +8,7 @@ import { convexHull, polyline, v3, type Vec2 } from "../iso/geometry";
 import { project } from "../iso/project";
 import { bounds, hullRings, isFlat, type Bounds, type Solid } from "../iso/solids";
 import { WORLD, inCoverQuad, worldZoneAt } from "../map/geo";
+import { signBox, SIGN_ORDER, SIGNS } from "../world/signs";
 import { BEAM_INNER, BEAM_LEN, BEAM_PERIOD_MS, CYCLE_MS, FADE_U, FERRY_PAUSE_MS, FERRY_ROUTE, FERRY_SPEED, KEEPER_SIGN_MS, LANE_BACK, LANE_OUT, LANE_SPEED, NEON_STEP_MS, OFF_MS, PORT_MS, SHIPS, alphaAt, createSeaAnim, laneAt, laneLength, type ShipFrame } from "./sea-anim";
 import { SHIP_SPECS, ship, shipAt } from "./ships";
 import { bleedTerrainAt, terrainAt } from "./terrain";
@@ -454,4 +455,36 @@ describe("fair launch tick chunking", () => {
     expect(a.tick(Infinity)).toEqual(none);
     expect(snap()).toBe(before);
   });
+});
+
+describe("zone signs and the lanes (#390, #394)", () => {
+  it("no ship piece or launch piece crosses the letters of any sign on screen", () => {
+    // the letters are accents, drawn over every solid: a ship crossing them would show behind them
+    const rects = SIGN_ORDER.map((id) => {
+      const box = signBox(SIGNS[id]), { minX: x0, minY: y0, maxX: x1, maxY: y1 } = box;
+      return { id, box, rect: [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }] as Vec2[] };
+    });
+    const bad: string[] = [];
+    const probe = (solids: Solid[], what: string) => {
+      const parts = solids.map(bounds).map((b) => ({ b, sb: screenBounds(b) }));
+      for (const { id, box, rect } of rects) if (parts.some((p) => overlaps(p.sb, box) && hullsIntersect(screenHull(p.b), rect))) bad.push(`${id}: ${what}`);
+    };
+    let samples = 0;
+    for (const lane of ["out", "back"] as const) for (const kind of new Set(SHIPS.map((s) => s.kind))) {
+      for (let d = 0; d <= laneLength(lane); d += 2) {
+        const p = laneAt(lane, d);
+        probe(ship(kind, shipAt(kind, p, p.heading), p.heading).solids, `${lane} ${kind} ${d}`);
+        samples++;
+      }
+    }
+    // the launch is built at its route point, heading along the leg, and reversed on the way back (createSeaAnim)
+    const route = polyline(FERRY_ROUTE);
+    for (let d = 0; d <= route.length; d += 2) {
+      const pt = route.at(d);
+      for (const heading of [pt.heading, pt.heading + Math.PI]) probe(ship("ferry", { x: pt.x, y: pt.y }, heading).solids, `ferry ${d}`);
+      samples++;
+    }
+    expect(samples).toBeGreaterThan(0);
+    expect(bad).toEqual([]);
+  }, 15_000); // ~1 s alone; the full parallel suite stretches it past the default 5 s
 });

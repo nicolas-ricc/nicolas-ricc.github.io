@@ -1,7 +1,10 @@
 import type { Accent } from "../iso/accent";
-import type { Vec3 } from "../iso/geometry";
 import type { AccentColor } from "../map/palette-iso";
-import { wheelPoint, type Solid } from "../iso/solids";
+import { bounds, tessellateAll, wheelPoint, type Bounds, type Solid } from "../iso/solids";
+import { isBehind } from "../iso/depth";
+import { convexHull, type Vec3 } from "../iso/geometry";
+import { project } from "../iso/project";
+import { pointInPolygon } from "../map/geo";
 import { chase, flip } from "./neon";
 import { DROP, LIFT_SEGMENTS, WHEEL, coasterAt, coasterLength, dropSolids, flumeAt, flumeLength, logSolids, trainSolids, wheelSolid, type FairScene } from "./fair";
 
@@ -35,6 +38,21 @@ export function dropEase(ms: number): number {
   return f < 1 ? 1 - f * f : 0;
 }
 
+interface GondolaShape { lo: number; hi: number; parts: { b: Bounds; flat: number[] }[] }
+
+/** Height band and screen silhouettes of the gondola at height `z`. Computed once per frame, not per point. */
+function gondolaShape(z: number): GondolaShape {
+  const parts = dropSolids(z).map((s) => ({ b: bounds(s), flat: convexHull(tessellateAll(s).flatMap((f) => f.pts.map(project))).flatMap((q) => [q.x, q.y]) }));
+  return { lo: Math.min(...parts.map((p) => p.b.min.z)), hi: Math.max(...parts.map((p) => p.b.max.z)), parts };
+}
+
+/** Hides a column light inside the gondola height band, or covered by a solid's silhouette while behind it (`isBehind`). Plan position is not checked: the column sits 0.8 from the axis, inside the octagon. In practice only the ring covers it: no seat silhouette reaches the column. */
+function gondolaHides(at: Vec3, g: GondolaShape): boolean {
+  if (at.z >= g.lo && at.z <= g.hi) return true;
+  const p = project(at);
+  return g.parts.some((s) => isBehind({ min: at, max: at }, s.b) && pointInPolygon(p.x, p.y, s.flat));
+}
+
 export function createFairAnim(scene: FairScene, opts: { reducedMotion: boolean }): FairAnim {
   const L = coasterLength(), base = scene.drop.at.z, top = DROP.h - 3;
   let clock = 0, wheelStep = 0, lightStep = 0, dropStep = 0, signStep = 0, neonStep = 0, dist = 0, logD = 0;
@@ -52,15 +70,15 @@ export function createFairAnim(scene: FairScene, opts: { reducedMotion: boolean 
     logs: () => logSolids(logD),
     drop: () => dropSolids(dropZ()),
     signs: () => [scene.arcadeSigns[signStep % 2]!],
-    // The column lights up (magenta) below the gondola; above it stays at rest (magentaBleed).
+    // The column lights up (magenta) below the gondola; above it stays at rest (magentaBleed). The gondola hides the lights it covers.
     neon: () => {
-      const z = dropZ();
+      const z = dropZ(), g = gondolaShape(z);
       return [
         ...run(scene.neon.marquee, 4, (k) => flip(k, "cyan", "magenta")),
         ...run(scene.neon.ghost, 4, (k) => flip(k, "magenta", "magentaMid")),
         ...run(scene.neon.mirror, 2, () => "cyan"),
         ...run(scene.neon.lift, 2, () => "cyanMid"),
-        ...scene.neon.column.map((at) => (at.z <= z ? { kind: "dot" as const, at, r: NEON_R, color: "magenta" as const } : { kind: "dot" as const, at, r: NEON_OFF_R, color: "magentaBleed" as const })),
+        ...scene.neon.column.filter((at) => !gondolaHides(at, g)).map((at) => (at.z <= z ? { kind: "dot" as const, at, r: NEON_R, color: "magenta" as const } : { kind: "dot" as const, at, r: NEON_OFF_R, color: "magentaBleed" as const })),
       ];
     },
     angle, trainDist: () => dist, logDist: () => logD, dropZ,

@@ -21,8 +21,8 @@ const PANEL_PAD = 1.6, PANEL_INSET = 0.4, PANEL_GAP = 0.06, PANEL_T = 0.3;
 /** The deck runs along the sign: the frame plus END on each side (hut and mast stand there), DECK_W deep, from DECK_BACK behind the letters' plane. */
 const END = 6, DECK_W = 10, DECK_BACK = 5;
 
-/** Where the Writing platform stands in the world (open sea between the two buoys): the sign is audited here, in its scene. */
-export const PLATFORM_SITE = v3(400, 170, 0);
+/** Where the Writing platform stands in the world (open sea between the two buoys): the sign is audited here, in its scene. Moved from (400, 170) in #389: at 8.2 u from `LANE_OUT` the ship occlusion rule failed. */
+export const PLATFORM_SITE = v3(392, 178, 0);
 
 const U = v3(Math.SQRT1_2, -Math.SQRT1_2, 0), N = v3(Math.SQRT1_2, Math.SQRT1_2, 0);
 /** Point `s` along u and `b` along n from the platform center, at the origin. */

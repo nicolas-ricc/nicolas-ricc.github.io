@@ -3,7 +3,7 @@ import type { Accent } from "../iso/accent";
 import { createRng } from "../map/seed";
 import { WINDOW_ALPHA } from "../city/lights";
 import { city, type CityScene } from "./city";
-import { type CityAnim, ANTENNA_STEP_MS, BLINK_GAP_MS, FLICKER_ALPHA, FLICKER_GAP_MS, PROMENADE_STEP_MS, NEON_STEP_MS, PAPER_RANGE, PAPER_SIDE, PAPER_SPEED, SIGN_GAP_MS, WINDOW_GAP_MS, createCityAnim } from "./city-anim";
+import { type CityAnim, BLINK_GAP_MS, FLICKER_ALPHA, FLICKER_GAP_MS, PROMENADE_STEP_MS, NEON_STEP_MS, PAPER_RANGE, PAPER_SIDE, PAPER_SPEED, SIGN_GAP_MS, WINDOW_GAP_MS, createCityAnim } from "./city-anim";
 
 const setup = (reducedMotion = false) => {
   const scene = city(createRng(7), createRng(8), createRng(9));
@@ -28,7 +28,7 @@ const signsOf = (a: Accent[]) => a.filter((x): x is Kind<"poly"> => x.kind === "
 const dot = (a: Accent): Extract<Accent, { kind: "dot" }> => { if (a.kind !== "dot") throw new Error("expected dot"); return a; };
 
 describe("city-anim", () => {
-  it("frame 0: lit floor, papers staggered from the window, antenna at radius 1.1", () => {
+  it("frame 0: lit floor, papers staggered from the window", () => {
     const { tower, anim } = setup();
     const w = tower.paperWindow;
     expect(anim.lit()).toEqual(tower.litWindows);
@@ -42,8 +42,6 @@ describe("city-anim", () => {
       expect(d.r).toBeGreaterThanOrEqual(0.12 - 1e-6);
       expect(d.r).toBeLessThanOrEqual(0.4 + 1e-6);
     }
-    expect(dot(anim.antenna()).r).toBeCloseTo(1.1, 6);
-    expect(dot(anim.antenna()).color).toBe("amberMid");
   });
 
   it("the floor goes off one tick at a time, never two in a row, and goes off at least 5 times in 60 s", () => {
@@ -78,22 +76,10 @@ describe("city-anim", () => {
     expect(driftedNNE).toBe(true);
   });
 
-  it("the antenna pulses between 0.8 and 1.4 and reports a change only every ANTENNA_STEP_MS", () => {
-    const { anim } = setup();
-    let changes = 0;
-    for (let t = 0; t < 10000; t += 33) {
-      if (anim.tick(33).antenna) changes++;
-      const r = dot(anim.antenna()).r;
-      expect(r).toBeGreaterThanOrEqual(0.8 - 1e-6); expect(r).toBeLessThanOrEqual(1.4 + 1e-6);
-    }
-    expect(changes).toBeGreaterThan(10000 / ANTENNA_STEP_MS - 5);
-    expect(changes).toBeLessThanOrEqual(10000 / ANTENNA_STEP_MS + 1);
-  });
-
   it("with reduced-motion nothing changes", () => {
     const { tower, anim } = setup(true);
     const before = JSON.stringify(anim.papers());
-    for (let t = 0; t < 5000; t += 33) expect(anim.tick(33)).toEqual({ lit: false, papers: false, antenna: false, neon: false, windows: false });
+    for (let t = 0; t < 5000; t += 33) expect(anim.tick(33)).toEqual({ lit: false, papers: false, neon: false, windows: false });
     expect(anim.lit()).toEqual(tower.litWindows);
     expect(JSON.stringify(anim.papers())).toBe(before); // the trail stays frozen where it started
   });
@@ -297,8 +283,8 @@ describe("city-anim", () => {
     anim.tick(0); anim.tick(-5000);
     expect(anim.fired()).toEqual({ lit: 0, neon: 0, papers: 0, windows: 0, flicker: 0 });
     // without the guard, an infinite dt would never end the while (the lab already discards it in speedFromSearch)
-    expect(anim.tick(Infinity)).toEqual({ lit: false, papers: false, antenna: false, neon: false, windows: false });
-    expect(anim.tick(NaN)).toEqual({ lit: false, papers: false, antenna: false, neon: false, windows: false });
+    expect(anim.tick(Infinity)).toEqual({ lit: false, papers: false, neon: false, windows: false });
+    expect(anim.tick(NaN)).toEqual({ lit: false, papers: false, neon: false, windows: false });
     expect(anim.fired()).toEqual({ lit: 0, neon: 0, papers: 0, windows: 0, flicker: 0 });
   });
 

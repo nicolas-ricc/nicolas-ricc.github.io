@@ -170,3 +170,47 @@ describe("storybook vocabulary (#405)", () => {
     refsHold("Frame");
   });
 });
+
+describe("signs as the navigation (#394)", () => {
+  const glossary = read("CONTEXT.md");
+  const dir = `${ROOT}docs/adr/`;
+  const adr = read("docs/adr/0003-signs-are-the-navigation.md");
+  it("docs/adr/0003-signs-are-the-navigation.md has Status, Context, Decision and Consequences, in order", () => {
+    expect(existsSync(`${dir}0003-signs-are-the-navigation.md`)).toBe(true);
+    const at = ["Status", "Context", "Decision", "Consequences"].map((h) => adr.search(new RegExp(`^## ${h}$`, "m")));
+    for (const i of at) expect(i).toBeGreaterThanOrEqual(0);
+    for (let k = 1; k < at.length; k++) expect(at[k]!).toBeGreaterThan(at[k - 1]!);
+  });
+  it("the ADR names the hit test, the labels and the camera, and every src/ path it cites exists", () => {
+    for (const s of ["zoneAtScreen", "worldZoneAt", "src/world/signs.ts", "labelLayout", "coverView", "edge", "phone"]) expect(adr, s).toContain(s);
+    const paths = [...adr.matchAll(/`(src\/[^`\s]+\.ts)`/g)].map((m) => m[1]!);
+    expect(paths.length).toBeGreaterThan(0);
+    for (const p of paths) expect(existsSync(`${ROOT}${p}`), p).toBe(true);
+  });
+  it("Sign tells where each scene builds its sign and how the site navigates by them", () => {
+    const sign = section(glossary, "Sign");
+    for (const s of ["assembleWorld", "tinkerAnimator", "src/world/signs.ts", "SIGNS", "zoneAtScreen", "labelLayout"]) expect(sign, s).toContain(s);
+    expect(sign).not.toContain("None is in the world yet");
+    expect(codeRefs(sign).find((r) => r.file === "src/world/signs.ts")?.idents).toEqual(expect.arrayContaining(["SIGNS", "zoneAtScreen", "labelLayout"]));
+  });
+  it("Zone says the site's hit test tries the signs first", () => {
+    const zone = section(glossary, "Zone");
+    expect(zone).toContain("zoneAtScreen");
+    expect(codeRefs(zone).find((r) => r.file === "src/world/signs.ts")?.idents).toContain("zoneAtScreen");
+  });
+  it("Exhibit says a context carries the sign the lab audits, cropped from the world", () => {
+    const exhibit = section(glossary, "Exhibit");
+    for (const s of ["`sign`", "cropScene", "contextScene", "contextAnimators"]) expect(exhibit, s).toContain(s);
+  });
+  for (const term of ["Zone", "Exhibit"]) {
+    it(`${term}: every Code: file exists and names identifiers it holds`, () => {
+      const refs = codeRefs(section(glossary, term));
+      expect(refs.length).toBeGreaterThan(0);
+      for (const { file, idents } of refs) {
+        expect(existsSync(`${ROOT}${file}`), file).toBe(true);
+        const text = read(file);
+        for (const id of idents) expect(hasIdent(text, id), `${id} in ${file}`).toBe(true);
+      }
+    });
+  }
+});

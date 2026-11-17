@@ -1633,3 +1633,24 @@ describe("vault", () => {
     expect(gables.map((g) => [g.normal.x, g.normal.y]).sort((a, b) => a[1]! - b[1]!)).toEqual([[expect.closeTo(0, 9), -1], [expect.closeTo(0, 9), 1]]);
   });
 });
+
+describe("cylinder plates and dome gores (#398)", () => {
+  it("a cylinder carries plates on its walls; bounds ignore them", () => {
+    const C: Solid = { kind: "cylinder", at: v3(0, 0, 0), r: 3, h: 2, mat: "whitewash", sides: 16 };
+    const S = { ...C, plates: [{ wall: 3, shape: "rect", u0: 0, u1: 1, z0: 0, z1: 1, mat: "signal" }] } as Solid;
+    const plain = tessellateAll(C), plated = tessellateAll(S);
+    expect(plated).toHaveLength(plain.length + 1);
+    const red = plated.filter((f) => f.mat === "signal");
+    expect(red).toHaveLength(1);
+    expect(red[0]!.normal.y).toBeGreaterThan(0.9); // wall 3 faces south
+    expect(bounds(S)).toEqual(bounds(C));
+  });
+  it("a dome paints its odd sides in alt", () => {
+    const D = { kind: "dome", at: v3(0, 0, 0), r: 2, h: 1.5, mat: "signal", sides: 8, rings: 2, alt: "whitewash" } as Solid;
+    const sides = tessellateAll(D).slice(1);
+    expect(sides).toHaveLength(16);
+    sides.forEach((f, k) => expect(f.mat, `face ${k}`).toBe(k % 2 ? "whitewash" : "signal"));
+    const { alt: _alt, ...plain } = D as Solid & { alt?: string };
+    for (const f of tessellateAll(plain as Solid)) expect(f.mat).toBe("signal");
+  });
+});

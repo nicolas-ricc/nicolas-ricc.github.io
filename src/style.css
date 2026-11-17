@@ -49,22 +49,16 @@ body.zone #content { opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
   #app, #content { transition: none; }
 }
-/* Zone labels: the nav is always in the DOM (crawlable links, navigable without
-   JS) and is the label layer over the canvas: main.ts positions each link over
-   the projected landmark of its zone on every frame. The links are the map's
-   accessible controls: natural tab order, native visible focus. */
+/* Zone controls: the nav is always in the DOM (crawlable links, navigable without
+   JS) and is the layer of accessible controls over the 3D signs: main.ts places
+   each link over its sign on every frame. The links are the map's accessible
+   controls: natural tab order, native visible focus. */
 #zonas { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
 #zonas ul { list-style: none; margin: 0; padding: 0; }
 #zonas a {
-  position: absolute; left: 0; top: 0; pointer-events: auto; will-change: transform;
-  font-family: "Rubik Doodle Shadow", system-ui, sans-serif;
-  /* the font only ships weight 400: no synthetic bold; larger and less spaced so the double stroke reads */
-  font-size: 1.3rem; font-weight: 400; letter-spacing: 0.06em; text-transform: uppercase; text-decoration: none;
-  transition: opacity 200ms ease;
-  /* dark, square, translucent plate: the label reads over any zone of the map (no text-shadow: it dirties the font's hollow letters) */
-  padding: 0.4rem 0.7rem; background: rgba(8, 10, 18, 0.62); border-radius: 0;
+  position: absolute; left: 0; top: 0; pointer-events: auto; will-change: transform; text-decoration: none;
 }
-/* hidden until main.ts places them over their landmark (the camera's first
+/* hidden until main.ts places them over their sign (the camera's first
    jumpTo): otherwise they show stacked in the corner and jump into place. Only
    with JS present: without JS nobody will position them, so they stay visible
    and accessible from the first render (prerendered, no canvas). Without a
@@ -74,10 +68,23 @@ body.zone #content { opacity: 1; }
 /* Resume carries the blog's accent green (myxomatosis.xyz/blog); Blog, the cyan */
 #zonas a[data-zone="cv"] { color: #8ec07c; }
 #zonas a[data-zone="blog"] { color: #7cf5ff; }
-/* no underline: hover already lights up the whole zone on the map */
-#zonas a:hover, #zonas a:focus-visible { filter: brightness(1.25); }
+/* on-sign: invisible over its sign (the 3D text is the label). Only the color
+   changes: the text stays in the accessibility tree. After the zone colors so
+   that transparent wins at equal specificity. overflow: the transparent text is
+   taller than a small sign's box and would take pointer hits outside it. */
+#zonas a.on-sign {
+  box-sizing: border-box; padding: 0; background: none; color: transparent; overflow: hidden;
+}
+/* on-edge: the visible label when less than half of the sign's box is inside the host: dark, square, translucent plate */
+#zonas a.on-edge {
+  font: 600 0.9rem/1 system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 0.4rem 0.7rem; background: rgba(8, 10, 18, 0.62); border-radius: 0;
+}
+/* no underline; brightness only on the visible edge label (over a sign, hover already lights up the zone on the map) */
+#zonas a.on-edge:hover, #zonas a.on-edge:focus-visible { filter: brightness(1.25); }
 #zonas a:focus-visible { outline: 2px solid var(--fg); outline-offset: 4px; }
-#zonas a.dim { opacity: 0.35; }
+/* with a zone active, a visible edge label of another zone dims with it (ACCENT_DIM, see veil.ts) */
+body.zone #zonas a.on-edge:not([aria-current="page"]) { opacity: 0.35; }
 #titulo { position: absolute; left: 1rem; bottom: 0.75rem; margin: 0; z-index: 1; pointer-events: none; font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; color: #ffc457; text-shadow: 0 0 6px #000, 0 1px 2px #000; transition: opacity 200ms ease; }
 body.zone #titulo { opacity: 0; }
 .no-canvas, .no-canvas body { height: auto; overflow: auto; }
@@ -88,4 +95,4 @@ body.zone #titulo { opacity: 0; }
 .no-canvas #content { opacity: 1; }
 .no-canvas #zonas { position: static; pointer-events: auto; padding: 2rem clamp(1rem, 4vw, 3rem) 0; }
 .no-canvas #zonas ul { display: flex; gap: 1.5rem; flex-wrap: wrap; }
-.no-canvas #zonas a { position: static; transform: none !important; visibility: visible; padding: 0; background: none; font-family: inherit; font-size: 1.1rem; letter-spacing: 0; text-transform: none; text-decoration: underline; }
+.no-canvas #zonas a { position: static; transform: none !important; visibility: visible; width: auto !important; height: auto !important; padding: 0; background: none; font-size: 1.1rem; text-decoration: underline; }

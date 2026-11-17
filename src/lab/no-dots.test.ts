@@ -3,6 +3,7 @@ import type { Accent } from "../iso/accent";
 import { spotOf } from "../iso/spot-fixtures";
 import { worldZoneAt } from "../map/geo";
 import { BEAM_PERIOD_MS } from "../scenes/sea-anim";
+import { TINKER_SITE, tinkerSign } from "../scenes/sign-tinker";
 import { assembleWorld, tag } from "../world/assemble";
 import { accentZone } from "../world/veil";
 import { contextAnimators, contextScene, cropAnimators, cropScene, pieceScene } from "./crop";
@@ -57,7 +58,12 @@ describe("no round haloed lights in the 11 exhibits (#403)", () => {
     const found = spots(scene.accents).map((s) => `${s.color} ${Math.round(s.r * 1e6) / 1e6}`);
     expect(found.filter((k) => k === "magenta 0.35")).toHaveLength(3); // the station buffers
     expect(found.filter((k) => k === "magentaMid 1")).toHaveLength(1); // the wreck buoy
-    expect(found.filter((k) => !["magenta 0.35", "magentaMid 1"].includes(k))).toEqual([]); // the tinker sign is built only in the lab, not in the world
+    // the tinker sign's marquee bulbs: the world builds the sign at TINKER_SITE since #392
+    const sign: Accent[] = [];
+    tinkerSign([], sign, TINKER_SITE);
+    const bulbs = spots(sign).map((s) => `${s.color} ${Math.round(s.r * 1e6) / 1e6}`);
+    expect(bulbs.length).toBeGreaterThan(0);
+    expect(found.filter((k) => !["magenta 0.35", "magentaMid 1"].includes(k)).sort()).toEqual(bulbs.sort());
   });
 
   it("the rest of the world keeps its dots", () => {

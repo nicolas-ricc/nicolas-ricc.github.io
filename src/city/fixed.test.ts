@@ -6,7 +6,7 @@ import { bounds, type Bounds, type Solid } from "../iso/solids";
 import { awning, dockCrane } from "../kit/props";
 import { ESTUARY_Y0, QUAY_X } from "../map/geo";
 import { createRng } from "../map/seed";
-import { AVENUE, BLOCK_W, BRIDGE, COLLAPSED, EAST_RING, PROMENADE, PLAZA, ROWS, SIDEWALK, STREET, TOWER, WEST_QUAY, blocks, estuaryEast } from "../scenes/city-grid";
+import { AVENUE, BLOCK_W, BRIDGE, COLLAPSED, EAST_RING, PROMENADE, PLAZA, ROWS, SIDEWALK, STREET, TOWER, TOWER_H, WEST_QUAY, blocks, estuaryEast } from "../scenes/city-grid";
 import { plazaTone, tiles } from "../scenes/city-pieces";
 import type { FixedLight } from "./lights";
 import { bridge, collapsed, greenery, promenade, plazaAndTower, towerWindows, westQuay } from "./fixed";
@@ -304,11 +304,12 @@ describe("plazaAndTower", () => {
     expect(Math.max(...ks.map((k) => k.at.x))).toBeGreaterThan(PLAZA.x + PLAZA.w - 6);
   });
 
-  it("the tower as before: 8 lit windows, antenna and the paper window on the east wall", () => {
-    const { tower } = built();
+  it("the tower: 8 lit windows, the paper window on the east wall and no antenna", () => {
+    const { tower, solids } = built();
     expect(tower.litWindows).toHaveLength(8);
     expect(tower.paperWindow.x).toBeCloseTo(TOWER.x + TOWER.w, 6);
-    expect(tower.antenna.z).toBeGreaterThan(35);
+    expect(tower).not.toHaveProperty("antenna");
+    expect(solids.some((s) => s.kind === "cylinder" && s.mat === "steel" && bounds(s).min.z >= TOWER_H)).toBe(false); // no steel cylinder on the roof (#391)
   });
 
   const towerOf = (solids: Solid[]) => prisms(solids).find((s) => s.mat === "officeDark" && s.facade)!;

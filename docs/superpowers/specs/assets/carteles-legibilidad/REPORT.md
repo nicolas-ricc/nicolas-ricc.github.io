@@ -12,7 +12,7 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 6.72:1 | ≥ 4.5:1 | ✓ |
+| contraste | 6.99:1 | ≥ 4.5:1 | ✓ |
 | halo | 0.08 | ≤ 0.5 | ✓ |
 | OCR | `PORTFOLIO` | = `PORTFOLIO` | ✓ |
 
@@ -22,7 +22,7 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 6.10:1 | ≥ 3:1 | ✓ |
+| contraste | 5.93:1 | ≥ 3:1 | ✓ |
 | halo | 0.08 | ≤ 0.5 | ✓ |
 | OCR | `PORTFOLIO` | ≈ `PORTFOLIO` (sin mayúsculas) | ✓ |
 
@@ -32,8 +32,8 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 10.61:1 | ≥ 4.5:1 | ✓ |
-| halo | 0.05 | ≤ 0.5 | ✓ |
+| contraste | 10.13:1 | ≥ 4.5:1 | ✓ |
+| halo | 0.06 | ≤ 0.5 | ✓ |
 | OCR | `RESUME` | = `RESUME` | ✓ |
 
 ![cartel-torre-escena 1.17](cartel-torre-escena-117.png) ![OCR](cartel-torre-escena-117-ocr.png)
@@ -42,7 +42,7 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 9.07:1 | ≥ 3:1 | ✓ |
+| contraste | 8.89:1 | ≥ 3:1 | ✓ |
 | halo | 0.05 | ≤ 0.5 | ✓ |
 | OCR | `RESUME` | ≈ `RESUME` (sin mayúsculas) | ✓ |
 
@@ -52,7 +52,7 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 11.72:1 | ≥ 4.5:1 | ✓ |
+| contraste | 11.79:1 | ≥ 4.5:1 | ✓ |
 | halo | 0.07 | ≤ 0.5 | ✓ |
 | OCR | `Writing` | = `Writing` | ✓ |
 

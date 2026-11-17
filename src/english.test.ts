@@ -103,6 +103,8 @@ const ALLOW: Record<string, RegExp[]> = {
     /\bmundo-3\b/g,
     // the storybook lights closing (#405): its asset folder, the beam-north captures and the before/after table heading
     /2026-11-16-storybook-luces\/|faro-norte|Capturas antes y después/g,
+    // the zone signs integration closing (#394): status line, framing row label and frame table rows of its spec
+    /integración al sitio|teléfono|veredicto del bloom|bloom, promedio|polígonos estáticos|acentos estáticos del mundo/g,
   ],
   "src/scenes/world-baseline.test.ts": [/"?[a-z-]+"?: "[0-9a-f]{8}\/[0-9a-f]{8}"/g],
 };
