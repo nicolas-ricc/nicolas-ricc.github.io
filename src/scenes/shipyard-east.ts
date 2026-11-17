@@ -60,7 +60,7 @@ function straddleCarrier(out: Solid[], x: number, y: number): void {
   out.push(prism(cx - 0.5, y - 0.5, 5.8, 1, 1, 1, "steel"));
 }
 
-/** Container yard: slab, 3 lanes x 7 slots (19 stacks, 2 straddle carriers), an RTG over lanes 2-3, a gatehouse and two lamps. */
+/** Container yard: slab, 3 lanes x 7 slots (19 stacks, 2 straddle carriers), an RTG over lanes 2-3, and a gatehouse. */
 export function containerYard(out: Solid[], accents: Accent[], rng: Rng): void {
   out.push(prism(YARD.x0, YARD.y0, 0, YARD.x1 - YARD.x0, YARD.y1 - YARD.y0, SLAB_TOP, "concrete"));
   // Slots are indexed lane-major: index = lane * YARD_SLOTS_Y.length + slot.
@@ -78,8 +78,6 @@ export function containerYard(out: Solid[], accents: Accent[], rng: Rng): void {
   rtgAt(292.1, 302.1, 50, out, SLAB_TOP);
   out.push(prism(296, 81, 0, 3, 3, 2.8, "concrete"));
   accents.push({ kind: "poly", pts: [v3(296.8, 84, 1.2), v3(298.2, 84, 1.2), v3(298.2, 84, 2.2), v3(296.8, 84, 2.2)], color: "windowCool", alpha: 0.85 });
-  // NW lamp in the 2.6 gap between lanes 1 and 2: the issue's (288.5, 30.5) stands on the cove water (terrainAt(288.8, 30.8) is water)
-  for (const [px, py] of [[292.4, 30.5], [303, 79]] as const) place(out, accents, industrialLamp(v3(px, py, SLAB_TOP)));
 }
 
 /** Two quay cranes facing west, on two long rails (x 281 and 287) running the length of the quay. */

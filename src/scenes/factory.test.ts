@@ -8,6 +8,7 @@ import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
 import { BAYS, boilerHouse, gableEnd, inclineBelt, metalStacks, HALL, hallBody, STAIR_TOWER, stairTower } from "./boiler-house";
 import { WATER_TOWER, maltings, waterTower } from "./maltings";
+import { unpairedLampParts } from "./lamp-fixtures";
 import { PLANT_SHIFT } from "./plant-frame";
 import { COOLING, MALT, PLANT, RAIL_YARD_X, STACKS, STACK_BASE_H, chimney, factory, type FactoryScene, type Stack } from "./factory";
 import { towerCrane } from "./pieces";
@@ -135,7 +136,7 @@ describe("factory", () => {
     const s = scene();
     expect(s.solids.filter(isTruck)).toHaveLength(6);
     expect(s.solids.filter(isPallet)).toHaveLength(6);
-    expect(s.solids.filter(isLamp)).toHaveLength(7);
+    expect(s.solids.filter(isLamp)).toHaveLength(2);
     expectApart(build(inclineBelt), [...s.solids.filter(isTruck), ...s.solids.filter(isPallet), ...s.solids.filter(isLamp)]);
   });
 
@@ -214,11 +215,17 @@ describe("factory", () => {
     expect([u.min.x, u.max.x, u.min.y, u.max.y]).toEqual([7, 30, 86, 88]);
   });
 
-  it("7 lamps: the plant's five moved, the substation's and the one at (−30, 20); each with its cyan accent on top", () => {
+  it("2 lamps: the substation's (53, 12) and the one at (−30, 20); each with its cyan accent on top", () => {
     const s = scene();
     const at = s.solids.filter(isLamp).map((l) => [l.at.x, l.at.y]);
-    expect([...at].sort((a, b) => a[0]! - b[0]! || a[1]! - b[1]!)).toEqual([[-30, 20], [5, 76], [9, 77], [35, 76.5], [49, 77], [53, 12], [95, 87]]);
+    expect([...at].sort((a, b) => a[0]! - b[0]! || a[1]! - b[1]!)).toEqual([[-30, 20], [53, 12]]);
     for (const [x, y] of at) expect(s.accents.filter((a) => a.kind === "dot" && a.color === "cyan" && Math.abs(a.at.x - (x! + 0.3)) < 1e-9 && Math.abs(a.at.y - (y! + 0.3)) < 1e-9 && a.at.z === 5)).toHaveLength(1); // the move shifts x by an ε
+  });
+
+  it("the tower crane has no tip light", () => {
+    const s = scene();
+    expect(s.accents.filter((a) => a.kind === "dot" && a.color === "cyan" && a.r === 1 && Math.abs(a.at.x - 90) < 1e-9 && Math.abs(a.at.y + 12) < 1e-9 && Math.abs(a.at.z - 19.4) < 1e-9)).toEqual([]);
+    expect(unpairedLampParts(s.solids, s.accents)).toEqual([]);
   });
 
   it("every solid of the factory outside the west column and the siding with the crane falls in x 4..98.7, y −4..99", () => {
@@ -234,11 +241,9 @@ describe("factory", () => {
     for (const x of [...build(maltings), ...build(waterTower)]) expect(bounds(x).max.z).toBeLessThanOrEqual(26 + 1e-9);
   });
 
-  it("the lamp at (58, −16) goes to (50, −13.5), and with the move to (35, 76.5)", () => {
+  it("the plant frame lamps are gone: none at (5, 76), (9, 77), (35, 76.5), (49, 77) or (95, 87)", () => {
     const at = scene().solids.filter(isLamp).map((l) => [l.at.x, l.at.y]);
-    expect(at).toContainEqual([50 + PLANT_SHIFT.x, -13.5 + PLANT_SHIFT.y]);
-    expect(at).toContainEqual([35, 76.5]);
-    expect(at).not.toContainEqual([58 + PLANT_SHIFT.x, -16 + PLANT_SHIFT.y]);
+    for (const p of [[5, 76], [9, 77], [35, 76.5], [49, 77], [95, 87]]) expect(at).not.toContainEqual(p);
   });
 
   it("siding with six wagons and locomotive, no long belt, substation, trucks and rail yard with piles", () => {

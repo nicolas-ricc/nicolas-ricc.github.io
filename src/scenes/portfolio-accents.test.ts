@@ -41,7 +41,7 @@ describe("Portfolio accents", () => {
     expect(ruleViolations(intruders)).toHaveLength(3); // the last one is high, but on the gantry beam, not at a chimney mouth
   });
 
-  it("rule 2: at least 30 cyan dots across the three scenes", () => expect(portfolio.filter((a) => a.kind === "dot" && a.color === "cyan").length).toBeGreaterThanOrEqual(30));
+  it("rule 2: 33 cyan dots across the three scenes (#401)", () => expect(portfolio.filter((a) => a.kind === "dot" && a.color === "cyan").length).toBe(33));
 
   // #321: spark is only for the animated welding layer, never a static light
   it("rule 3: no static accent of the world is spark", () => expect(w.accents.filter((a) => a.color === "spark")).toEqual([]));

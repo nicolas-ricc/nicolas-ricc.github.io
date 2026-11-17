@@ -15,9 +15,9 @@ import { SUBSTATION, substation } from "./substation";
 /**
  * Portfolio factory, where the shipyard sheds used to stand (region x 4..98.7, y −4..99). The plant
  * (Mistley's maltings, x 5..29, y 44..74; the boiler hall of the Fábrica de Luz, x 29..92, y 44..74, with its
- * stair tower at x 93..98; the water tower on legs at (15, 32)), the truck yard and its lamps are
- * built in the local frame and moved with `PLANT_SHIFT` from `plant-frame.ts`: the truck yard and the lamps
- * sit at y 76..89, with the inclined belt running down to it from the hopper (y 74..76). North of the plant,
+ * stair tower at x 93..98; the water tower on legs at (15, 32)) and the truck yard are
+ * built in the local frame and moved with `PLANT_SHIFT` from `plant-frame.ts`: the truck yard
+ * sits at y 76..89, with the inclined belt running down to it from the hopper (y 74..76). North of the plant,
  * three smoking chimneys (at (58, 32), (72, 26) and (86, 32)), the cooling tower at (40, 14) and the outdoor
  * substation (`substation.ts`, x 54..95, y −2..11). Gone are the long belt, the `SPUR_Y` spur, the spur
  * set into the street, the flatcars and the hall→slipway rails.
@@ -100,12 +100,11 @@ function siding(out: Solid[]): void {
   out.push(prism(6, SIDING_Y - 1.3, 0, 9, 2.6, 3.6, "steel"), prism(12, SIDING_Y - 1.3, 3.6, 3, 2.6, 1, "steel"));      // locomotive and cab
 }
 
-function truckYard(out: Solid[], accents: Accent[]): void {
-  emitPlant(out, (o, a) => {
+function truckYard(out: Solid[]): void {
+  emitPlant(out, (o) => {
     for (const [x, y] of [[40, -12], [70, -6], [95, -12]] as const) { o.push(prism(x, y, 0, 6, 2.4, 2.8, "rust")); o.push(prism(x + 6, y, 0, 2, 2.4, 2.2, "steel")); } // box and cab
     for (let i = 0; i < 6; i++) o.push(prism(22 + i * 4, -4, 0, 3, 2, 0.5 + (i % 3) * 0.4, "steel")); // sheet-metal pallets by the west gate
-    for (const [x, y] of [[20, -14], [110, -3]] as const) place(o, a, industrialLamp(v3(x, y, 0)));
-  }, accents);
+  });
 }
 
 /** West column: three N-S tracks that end at y 86 in buffer stops, the excavator (in `machine`: drawn separately, in its own frame) and ore piles east of them; nothing raised south of the seam fence. */
@@ -132,8 +131,7 @@ function railYard(out: Solid[], machine: Solid[], accents: Accent[], rng: Rng): 
 }
 
 function lamps(out: Solid[], accents: Accent[]): void {
-  emitPlant(out, (o, a) => { for (const [x, y] of [[24, -13], [64, -13], [50, -13.5]] as const) place(o, a, industrialLamp(v3(x, y, 0))); }, accents); // the plant's three, in the local frame
-  // the fourth lamp is the substation's: SW corner of the fence
+  // the substation's lamp (SW corner of the fence) and the one at (−30, 20)
   for (const [x, y] of [[SUBSTATION.x0 - 1, SUBSTATION.y1 + 1], [-30, 20]] as const) place(out, accents, industrialLamp(v3(x, y, 0)));
 }
 
@@ -142,10 +140,10 @@ export function factory(rng: Rng): FactoryScene {
   plant(solids);
   const stacks = chimneys(solids, accents);
   coolingTower(solids);
-  towerCrane(solids, accents, { at: { x: 60, y: -12 }, mastH: 20, jibLen: 30, dir: "e", light: "cyan" });
+  towerCrane(solids, accents, { at: { x: 60, y: -12 }, mastH: 20, jibLen: 30, dir: "e", light: null });
   siding(solids);
   substation(solids);
-  truckYard(solids, accents);
+  truckYard(solids);
   const machine: Solid[] = [];
   railYard(solids, machine, accents, rng);
   lamps(solids, accents);
