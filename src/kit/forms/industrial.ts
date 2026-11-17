@@ -212,7 +212,11 @@ export function tankGroup(lot: Lot, rng: Rng, style: Style): Piece {
   return tonePiece(p, tone);
 }
 
-/** Quay crane centered on `at`: four-legged steel gantry on two rails, cabin, mast, and an STS boom toward `dir` that runs 3 behind the center to `reach` (default 8) ahead of it, rising 1.7, held by two stays from the mast head. The stays anchor at `z + 17.3`, not 17.5: a sloped beam's bounds rise half a section above its axis end, so 17.5 would top out at about 17.59 and the mast would not be the topmost solid, and flattened under a low cap (fitToCap keeps the stays' section while their slope flattens) a stay anchored at 17.4 pokes about 0.03 over the cap. Nothing above `z + 17.5`. `rails` false lays no rails of its own (the scene lays longer ones). `light` false drops the cyan dot on the boom tip. */
+/**
+ * Quay crane centered on `at`: four-legged steel gantry on two rails, cabin, mast, and an STS boom toward `dir` that runs 3 behind the
+ * center to `reach` (default 8) ahead of it, rising 1.7, held by two stays from the mast head. Nothing above `z + 17.5`, the mast top.
+ * `rails` false lays no rails of its own (the scene lays longer ones); `light` false drops the cyan dot on the boom tip.
+ */
 export function quayCraneAt(at: Vec2, dir: "w" | "e" | "s", out: Solid[], accents: Accent[], opts: { z?: number; rails?: boolean; light?: boolean; reach?: number } = {}): void {
   const { z = 0, rails = true, light = true, reach = 8 } = opts;
   const sx = dir === "e" ? 1 : dir === "w" ? -1 : 0, sy = dir === "s" ? 1 : 0;
@@ -226,6 +230,8 @@ export function quayCraneAt(at: Vec2, dir: "w" | "e" | "s", out: Solid[], accent
   }
   out.push(interlock(prism(at.x - 1, at.y - 1, z + 10, 2, 2, 2, "steel")));
   out.push(interlock(prism(at.x - 0.2, at.y - 0.2, z + 12, 0.4, 0.4, 5.5, "steel")));
+  // stays anchor at 17.3, not 17.5: a sloped beam's bounds rise h/2·cos θ above its axis end (17.5 would top out at 17.59, above the
+  // mast), and fitToCap keeps that section while it flattens the slope (17.4 overshoots maxH 10 by 0.03; 17.3 holds down to a cap of ~8.6)
   const tail = v3(at.x - 3 * sx, at.y - 3 * sy, z + 12.3), tip = v3(at.x + reach * sx, at.y + reach * sy, z + 14), head = v3(at.x, at.y, z + 17.3);
   out.push(interlock({ kind: "beam", from: tail, to: tip, w: 0.6, h: 0.5, mat: "steel" }));
   for (const to of [tip, tail]) out.push(interlock({ kind: "beam", from: head, to, w: 0.2, h: 0.2, mat: "steel" }));
