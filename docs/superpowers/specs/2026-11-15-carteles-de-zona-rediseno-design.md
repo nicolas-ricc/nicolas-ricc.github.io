@@ -201,8 +201,10 @@ Sitios candidatos (constantes exportadas, para la historia de integración):
   la azotea de la torre corporativa real de Resume.
 - `TINKER_SITE` = (60, −24, 13.5), en `src/scenes/sign-tinker.ts`: la cumbrera
   del galpón de montaje sur del astillero.
-- `PLATFORM_SITE` = (400, 170), en `src/scenes/sign-platform.ts`: el mar
-  abierto entre las dos boyas.
+- `PLATFORM_SITE` = (392, 178), en `src/scenes/sign-platform.ts`: el mar
+  abierto entre las dos boyas (movida a (392, 178) en #389: a 8,2 u del
+  carril de salida fallaba la regla de oclusión de los barcos; #390 la
+  integra al mundo).
 
 ## 6. Criterios de aceptación
 
@@ -254,7 +256,7 @@ aspecto: RESUME 0°, 0°, 0.010; PORTFOLIO 0.23°, 3.03°, 0.077; Writing 0°, 0
 | `cartel-torre-escena` | 0.83 | 10.11 | 1.64 | 2.10 | 4.70 | 9.07:1 | 0.05 | `RESUME` |
 | `cartel-taller-escena` | 1.17 | 15.07 | 2.40 | 2.29 | 8.06 | 6.72:1 | 0.08 | `PORTFOLIO` |
 | `cartel-taller-escena` | 0.83 | 10.69 | 1.70 | 1.62 | 8.06 | 6.10:1 | 0.08 | `PORTFOLIO` |
-| `plataforma-escena` | 1.17 | 12.20 | 2.57 | 2.96 | 13.26 | 11.72:1 | 0.07 | `Writing` |
+| `plataforma-escena` | 1.17 | 12.20 | 2.57 | 2.96 | 13.26 | 11.79:1 | 0.07 | `Writing` |
 | `plataforma-escena` | 0.83 | 8.65 | 1.82 | 2.10 | 13.26 | 11.60:1 | 0.05 | `Writing` |
 
 Nivel 1: aire mínimo y máximo entre letras, ritmo y la contraforma más
@@ -354,6 +356,10 @@ letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2;
   de x (0.665, la regla pide 0.68) ni los avances de minúsculas; los trazos
   finos y los remates de la caligrafía tampoco cuentan para el trazo, que es
   el asta principal.
+- **Writing en el mundo (#390).** `PLATFORM_SITE` pasó a (392, 178) en #389:
+  a 8,2 u del carril de salida fallaba la regla de oclusión de los barcos.
+  `sea()` construye la plataforma ahí y `plataforma-escena` es un recorte
+  del mundo (caja 358..426 × 144..212, sin `build`).
 - **Seguimiento: #382.** `strokePx` sigue la letra del issue (el lado más
   corto de cada cuad proyectado) y el punto de la `i` lo tensiona. Con
   `PORTFOLIO` en CNRGN Builder ya no hay punto de la `i` en ningún cartel.
