@@ -4,7 +4,7 @@
 
 **Goal:** un barrido reproducible (`npm run wreck-sweep`) que recorre el exhibit `#pecio` con time-lapse en 3 modos de bloom × 2 disposiciones × 40 frames y cuenta los píxeles no-cielo fuera de la envolvente; con él, bisecar contra `main` y escribir el diagnóstico en el spec (§5 — diagnóstico).
 
-**Architecture:** un módulo puro `scripts/sky-oracle.ts` (envolvente en px CSS del host a partir de los ítems de encuadre y el `Fit`; conteo de píxeles no-cielo en la zona prohibida; elección del encuadre que reproduce el `Fit` de la página) con sus tests, y un runner `scripts/wreck-sweep.ts` que copia el patrón de `scripts/legibility.ts` (vite propio, agent-browser, `window.__lab`). El runner calcula en Node el encuadre del `pecio` y lo valida contra `__lab.fit()`; si la página no tiene `__lab.tick` (como `main`), cae a modo vivo (`?speed=20`, una lectura cada 250 ms). El código del motor no cambia salvo que el barrido encuentre una causa.
+**Architecture:** un módulo puro `scripts/wreck-sweep-measure.ts` (envolvente en px CSS del host a partir de los ítems de encuadre y el `Fit`; conteo de píxeles no-cielo en la zona prohibida; elección del encuadre que reproduce el `Fit` de la página) con sus tests, y un runner `scripts/wreck-sweep.ts` que copia el patrón de `scripts/legibility.ts` (vite propio, agent-browser, `window.__lab`). El runner calcula en Node el encuadre del `pecio` y lo valida contra `__lab.fit()`; si la página no tiene `__lab.tick` (como `main`), cae a modo vivo (`?speed=20`, una lectura cada 250 ms). El código del motor no cambia salvo que el barrido encuentre una causa.
 
 **Tech Stack:** TypeScript, Vitest, tsx, agent-browser 0.26 con Chrome headless 148, PixiJS v8 (solo en la página).
 
@@ -29,10 +29,10 @@
 ## Decisiones técnicas (declaradas)
 
 1. **Zona prohibida.** Fuera del rectángulo de la envolvente (bounds de los ítems de encuadre en px del host), o dentro con `y < ceiling`, donde `ceiling = min(y del vértice norte a z 0, min y de los ítems `layer: "solid"`) − 2` en px del host. Comparación exacta con sky (tolerancia 0 por canal).
-2. **Encuadre validado, no supuesto.** El runner arma candidatos `contentFrame(cropScene, cropAnimators, { box, h, clip: box })` y `boxFrame(box, h)` (este es el de `main`), y `pickFrame` elige el que reproduce `__lab.fit()` (|Δ| ≤ 1e-6 en x, y, scale). Si ninguno coincide, el runner falla: la envolvente sería mentira.
-3. **Modo vivo para `main`.** Sin `__lab.tick` se abre con `?speed=20` y se lee cada 250 ms reales; el resultado dice `live`. El Ticker en headless da ~0.2·N s simulados por segundo real: se declara en el diagnóstico.
+2. **Encuadre validado, no supuesto.** El runner arma candidatos `contentFrame(cropScene, cropAnimators, { box, h, clip: box })` y `boxFrame(box, h)` (este es el de `main`), y `pickFrame` elige el que reproduce `__lab.fit()` (|Δ| ≤ 1e-6·max(1, |valor|) en x, y, scale). Si ninguno coincide, el runner falla: la envolvente sería mentira.
+3. **Modo vivo para `main`.** Sin `__lab.tick` se abre con `?speed=20` y se espera 250 ms reales entre lecturas (más ~1 s de la lectura misma); el resultado dice `live`. El Ticker en headless da ~0.2·N s simulados por segundo real: se declara en el diagnóstico.
 4. **Alcance del oráculo.** `pixels` re-renderiza `app.stage` con `extract`; no ve artefactos del compositor del dispositivo. Se declara en el diagnóstico.
-5. **Datos por capa.** Si la rama da 0 en todo, el diagnóstico igual lista los candidatos (bordes de filtro de bloom y `AlphaFilter`, velos alpha 0, antialias de `drawLayer`, dispositivo) con el dato que los descarta, incluido un barrido con `stage.children[i].visible = false` por slot (opción `--hide <i,…>` del runner).
+5. **Datos por capa.** Si la rama da 0 en todo, el diagnóstico igual lista los candidatos (bordes de filtro de bloom y `AlphaFilter`, velos alpha 0, antialias de `drawLayer`, dispositivo) con el dato que los descarta, incluido un barrido con `stage.children[i].visible = false` por slot (opción `--hide <i,…>` del runner: índices de `stage.container.children`, alcanzado como `__PIXI_DEVTOOLS_WRAPPER__.stage.children[0]`; por eso el runner lanza agent-browser con la extensión de DevTools como indica `CLAUDE.md`).
 
 ## Review Focus
 
@@ -44,11 +44,11 @@
 
 ---
 
-### Task 1: oráculo de píxeles (`scripts/sky-oracle.ts`)
+### Task 1: oráculo de píxeles (`scripts/wreck-sweep-measure.ts`)
 
 **Files:**
-- Create: `scripts/sky-oracle.ts`
-- Test: `scripts/sky-oracle.test.ts`
+- Create: `scripts/wreck-sweep-measure.ts`
+- Test: `scripts/wreck-sweep-measure.test.ts`
 
 **Interfaces:**
 - Consumes: `RenderItem` (`src/iso/render-list`), `Fit`, `Box`, `fitTransform` (`src/world/frame`), `project`, `v3`.
@@ -57,17 +57,19 @@
   - `export interface Envelope { x0: number; y0: number; x1: number; y1: number; ceiling: number }` (px CSS del host).
   - `export function envelopeOf(items: readonly RenderItem[], fit: Fit, box: Box): Envelope`
   - `export function offSky(rgba: Uint8Array, host: { w: number; h: number }, res: number, env: Envelope): { count: number; first: { x: number; y: number } | null }` — recorre en orden de filas; un píxel de textura `(i, j)` se evalúa en su centro en px CSS, `((i + 0.5)/res, (j + 0.5)/res)`: es prohibido si cae fuera de `[x0, x1] × [y0, y1]` o si su `y < ceiling`; `first` en px CSS enteros (`floor(i / res)`, `floor(j / res)`).
+  - `export function toScreen(p: { x: number; y: number }, fit: Fit): { x: number; y: number }` — px CSS del host → coordenadas de pantalla del mundo (`(p − (x, y)) / scale`), para nombrar en el diagnóstico qué hay en la coordenada ofensora.
   - `export function pickFrame<T extends { name: string; items: readonly RenderItem[] }>(candidates: readonly T[], fit: Fit, host: { w: number; h: number }): T | null`
 
-- [ ] **Step 1: tests que fallan** en `scripts/sky-oracle.test.ts`:
+- [ ] **Step 1: tests que fallan** en `scripts/wreck-sweep-measure.test.ts`:
   - `envelopeOf` con un ítem ground `[0,0, 10,0, 10,10, 0,10]`, uno solid `[4,2, 6,2, 6,8]`, `fit {x:5, y:7, scale:2}`, caja `{x0:0,y0:0,x1:2,y1:2}` (vértice norte y=0) → `{ x0: 5, y0: 7, x1: 25, y1: 27, ceiling: 5 }` (min(0, 2)·2 + 7 − 2).
   - `offSky` sobre un host 4×3 a res 2 todo sky → `{ count: 0, first: null }`.
   - un píxel `[17,14,25,255]` en (6, 1) de la textura, fuera de una envolvente `{x0:0,y0:0,x1:2,y1:3,ceiling:0}` → `count 1`, `first {x:3, y:0}`.
   - el mismo píxel dentro de la envolvente y por debajo del techo → `count 0`; dentro y por encima del techo → `count 1` (envolvente `{x0:0,y0:0,x1:4,y1:3}` con `ceiling: 0` → 0 y con `ceiling: 1` → 1; el centro del píxel está en (3.25, 0.75)).
   - envolvente más grande que el host (`x0: -10, x1: 99`) → no lanza, cuenta 0 sobre sky.
   - `rgba` de largo equivocado → lanza `/bytes/`.
+  - `toScreen({x: 25, y: 27}, {x:5, y:7, scale:2})` → `{x: 10, y: 10}`.
   - `pickFrame`: dos candidatos, el `Fit` de `fitTransform(b.items, 900, 512)` → devuelve `b`; un `Fit` arbitrario → `null`.
-- [ ] **Step 2:** `npx vitest run scripts/sky-oracle.test.ts` → FAIL (módulo no existe).
+- [ ] **Step 2:** `npx vitest run scripts/wreck-sweep-measure.test.ts` → FAIL (módulo no existe).
 - [ ] **Step 3:** implementar las firmas de arriba.
 - [ ] **Step 4:** el mismo comando → PASS; `npm run typecheck` limpio.
 - [ ] **Step 5:** commit `feat(#404): sky oracle for the wreck sweep`.
@@ -76,17 +78,17 @@
 
 **Files:**
 - Create: `scripts/wreck-sweep.ts`
-- Modify: `scripts/sky-oracle.ts` (agrega `parseSweepArgs`, `formatSweepRow`), `scripts/sky-oracle.test.ts`, `package.json` (`"wreck-sweep": "tsx scripts/wreck-sweep.ts"`)
+- Modify: `scripts/wreck-sweep-measure.ts` (agrega `parseSweepArgs`, `formatSweepRow`, como `legibility-measure.ts` tiene `parseEval` y `pickContexts`), `scripts/wreck-sweep-measure.test.ts`, `package.json` (`"wreck-sweep": "tsx scripts/wreck-sweep.ts"`)
 
 **Interfaces:**
-- Consumes: Task 1; `contentFrame` (`src/lab/frame`), `cropScene`/`cropAnimators` (`src/lab/crop`), `EXHIBITS`, `assembleWorld`, `boxFrame`, `parseEval` (`scripts/legibility-measure`).
+- Consumes: Task 1; `window.__lab` de la página (`exhibitId`, `bloom`, `fit()`, `hostSize()` en px CSS del host, `pixels`, y `tick` solo en la rama); `contentFrame` (`src/lab/frame`), `cropScene`/`cropAnimators` (`src/lab/crop`), `EXHIBITS`, `assembleWorld`, `boxFrame`, `parseEval` (`scripts/legibility-measure`).
 - Produces:
   - `export interface SweepArgs { origin: string | null; frames: number; modes: BloomMode[]; viewports: [number, number][]; hide: number[] }`
   - `export function parseSweepArgs(argv: readonly string[]): SweepArgs` — defaults: `origin null` (vite propio en 5180), `frames 40`, `modes ["off","on","fallback"]`, `viewports [[900,1015],[412,915]]`, `hide []`. Flags `--origin <url>`, `--frames <n>`, `--modes a,b`, `--viewports 900x1015,412x915`, `--hide 3,4`. Valor desconocido → lanza.
   - `export function formatSweepRow(r: { viewport: string; mode: string; clock: "tick" | "live"; frame: string; frames: number; count: number; first: { x: number; y: number } | null }): string` → p. ej. `900x1015 on tick content 40 frames: 0 off-sky px` o `…: 12 off-sky px, first at (420, 270)`.
 
 - [ ] **Step 1: tests que fallan** para `parseSweepArgs` (defaults; `--modes on,off --frames 5 --origin http://localhost:5181 --viewports 900x1015 --hide 3`; `--modes bogus` lanza) y `formatSweepRow` (las dos formas de arriba).
-- [ ] **Step 2:** `npx vitest run scripts/sky-oracle.test.ts` → FAIL.
+- [ ] **Step 2:** `npx vitest run scripts/wreck-sweep-measure.test.ts` → FAIL.
 - [ ] **Step 3:** implementar ambas y `scripts/wreck-sweep.ts`: sesión agent-browser `wreck-sweep`, por disposición `set viewport W H 2`, por modo `open <origin>/lab/storybook.html?speed=0&bloom=<modo>#pecio` (o `?speed=20` si `typeof __lab.tick !== "function"`), esperar listo, aplicar `--hide`, `pickFrame` sobre `[content, box]`, `envelopeOf`, 40 × (`tick(250)` o `sleep(250)` + `pixels(0,0,w,h)` + `offSky`), una línea por combinación con `formatSweepRow`, código de salida 1 si algún `count > 0`. Comentario de cabecera como el de `legibility.ts` (uso y qué mide).
 - [ ] **Step 4:** tests → PASS; typecheck limpio; `npm run wreck-sweep -- --frames 2 --modes off --viewports 900x1015` corre y escribe una fila con 0.
 - [ ] **Step 5:** commit `feat(#404): wreck sweep runner`.
@@ -102,3 +104,22 @@
 - [ ] **Step 3:** `git worktree add /tmp/main-404 origin/main`, `npm ci`/symlink de `node_modules`, `npm run feed`, vite en 5181; `npm run wreck-sweep -- --origin http://localhost:5181 --modes on,off --viewports 900x1015` (modo vivo); si aparece, repetir ocultando slots para nombrar la capa y el cambio de la rama que la elimina; si no, barrido con `--hide` por slot para los candidatos.
 - [ ] **Step 4:** escribir §5 — diagnóstico (qué se probó, qué se descartó con los datos, causa o "no reproducible en Chrome headless 148; candidatos descartados: …", qué cambio la elimina) y la línea del README. Tests → PASS.
 - [ ] **Step 5:** commit `docs(#404): wreck vertical line diagnosis`.
+
+## Assumptions
+
+Decididas en la revisión del plan (ronda 1); van a la descripción del PR.
+
+1. **Halo del bloom y la zona prohibida.** El blur del bloom puede pasar los bordes de los ítems. Se supone que no llega a la zona prohibida, porque la única luz del `pecio` (la boya, a y ≈ 379 con su halo) queda ≈ 8 u de pantalla por debajo del techo (371) y lejos de los bordes de la envolvente. Si una fila `on` da conteo > 0, `first` + `toScreen` dicen si es el halo de la boya, y el diagnóstico lo trata como hallazgo. Se descartó la alternativa de una tolerancia por canal: escondería justo una línea tenue.
+2. **Los dos relojes no se comparan frame a frame.** En `main` el modo vivo cubre muchos más segundos simulados (`?speed=20`, ~0.2·N s por segundo real según `CLAUDE.md`) que los 10 s de `tick(250)`. La bisección compara presencia o ausencia, no frames. Se descartó la alternativa de portar `tick` a un worktree de `main`, porque eso ya no sería `main`.
+3. **Tolerancia de `pickFrame`.** Es relativa (1e-6·max(1, |v|)). El `Fit` sale de la misma `fitTransform` sobre enteros `clientWidth`/`clientHeight` (`src/lab/storybook.ts`, `fit()`), y en `main` sobre `boxFrame` (`origin/main:src/lab/storybook.ts:59-67`).
+4. **Disposición 412 en `main`.** No se barre: allí el host mide 0 px de ancho (`grid-template-columns: 14rem 1fr 16rem` sin media query, `origin/main:lab/storybook.html:10`). El issue pide 900 × 1015 para la bisección.
+5. **Módulo puro aparte.** El código puro va en `scripts/wreck-sweep-measure.ts`, como `scripts/legibility-measure.ts` junto a `scripts/legibility.ts`. Se descartó la alternativa de un solo archivo, porque el runner necesita un navegador y no se puede testear.
+6. **Limpieza.** El runner cierra su sesión de agent-browser y mata su vite en un `finally`. El worktree de `main` se borra con `git worktree remove` al terminar la tarea 3. Si el `package-lock.json` de `main` difiere del de la rama, se corre `npm ci` en el worktree en vez de enlazar `node_modules`.
+7. **Idioma.** `english.test.ts` revisa `src/`, `lab/*.html`, README y CLAUDE.md. `scripts/` igual se escribe en inglés, como `legibility.ts`. La sección del spec va en castellano, como el resto del spec.
+8. **Cierre sin línea.** El issue acepta como resultado "no reproducible en Chrome headless 148; candidatos descartados: …". El plan de la historia (#395) deja fuera de los criterios la confirmación en el dispositivo.
+
+## Grilling
+
+- Rondas: 1 (los cambios no agregaron ni quitaron tareas: renombre del módulo, `toScreen`, `--hide` vía DevTools, tolerancia relativa).
+- Preguntas: 16. Fuentes: ISSUE 3 (1, 2 parcial, 8 parcial), CODE 10 (2, 4, 5, 7, 9, 10, 11, 12, 13, 16), DOC 2 (8, 12: `CLAUDE.md`), NO SOURCE → supuesto técnico 6 (3, 6, 7, 13, 14, 15).
+- Ambigüedades de spec: ninguna. Issues abiertos: ninguno.
