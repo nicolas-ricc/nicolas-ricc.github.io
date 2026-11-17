@@ -28,4 +28,12 @@ describe("towerCrane", () => {
     expect(bounds(out.find((s) => s.kind === "prism" && s.h === 22)!).min.z).toBe(0.3);
     expect(accents[0]!.kind === "dot" && accents[0]!.at.x).toBe(-20);
   });
+  it("light null: same solids, no accent", () => {
+    const base = { at: { x: 100, y: 50 }, mastH: 20, jibLen: 30, dir: "e" as const };
+    const lit: Solid[] = [], litAccents: Accent[] = [], out: Solid[] = [], accents: Accent[] = [];
+    towerCrane(lit, litAccents, { ...base, light: "cyan" });
+    towerCrane(out, accents, { ...base, light: null });
+    expect(accents).toEqual([]);
+    expect(out).toEqual(lit);
+  });
 });
