@@ -73,7 +73,7 @@ sobra por completo.
 
 Pregunta abierta para quien implemente: si las bombitas de la marquesina del
 cartel PORTFOLIO se ven con halo en la captura 06, tratalas igual que el resto
-(poly sin halo) y no las borres. Las letras se tienen que seguir leyendo.
+(poly sin halo) y no las borres. Las letras se tienen que seguir leyendo (resuelta: ver Desvíos).
 
 ### Tests que fijan estas luces (hay que actualizarlos, no borrarlos)
 
@@ -208,7 +208,7 @@ Lo que difiere del texto original:
 - Bombitas de marquesina a `poly`: la pregunta abierta quedó resuelta por la captura 06 (#403).
 - Señales y cruce ferroviarios: se convirtieron los cuatro, con un constructor compartido (#403).
 - Las boyas del bajo y luces de la costa siguen como dots: no están en los 11 exhibits.
-- La grúa del kit (`quayCraneAt`) conserva la luz de la punta con `light: true` (#402).
+- La grúa del kit (`quayCraneAt`) conserva por defecto la luz de la punta (`light: true`); los exhibits la apagan con `light: false` (`exhibits.ts:123`, `shipyard-east.ts:84`) (#402).
 - Inventario corregido (#401): lámparas de la costura x 24/48/72, calle de transferencia y 40/68/124, hinterland (32, −180), (−150, −50), (−180, 10).
 - El terreno y las sombras se recortan a la caja, además de las tiras y los prismas largos (#399).
 - `h` se conserva como reserva en el encuadre por contenido (#400).
