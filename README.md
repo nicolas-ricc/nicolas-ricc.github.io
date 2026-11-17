@@ -60,8 +60,9 @@ the station, a new strip of Resume holds a row of reconverted warehouses with
 the covered market (row 92), a freight row and the rail lands, a fenced band
 around the west track with a siding and a parked freight train; on the east
 bank, the dock inlet has a fish market, a food hall and fishing boats. The
-shipyard gains a floating dock, a container yard, quay cranes and sheet metal. The STS boom of the quay crane is nearly horizontal and
-reaches over the water to the west; it has no tip light on the east bank.
+shipyard gains a floating dock, a container yard, quay cranes and sheet metal. The STS booms of the quay cranes are nearly
+horizontal and reach over the water to the west; they have no tip light on the
+east bank.
 The fair gains a ghost train, a mirror house, a slide, a log flume, booths and
 food trucks.
 
@@ -141,7 +142,8 @@ or `j`/`k` move to the next or the previous one; `g`, `h` and `a` hide or
 show ground, shadows and accents; `6` rotates the bloom; `c` cycles the exhibit
 scale (real, 1.17 and 0.83, the cover scales of a laptop and a phone); `?bloom=` forces the bloom and
 `?speed=` scales the animation clock up to 100 (`?speed=0`
-freezes it; above 100 it is 1). In dev, `__lab.tick` advances the stage and renders it, for headless time-lapses. The seam at 90 added ten exhibits:
+freezes it; above 100 it is 1). In dev, `__lab.tick` advances the stage and renders it,
+for headless time-lapses. The seam at 90 added ten exhibits:
 `#dique-flotante`, `#patio-contenedores` and `#grua-muelle` (shipyard),
 `#tren-fantasma`, `#casa-espejos`, `#tobogan` and `#tronco-acuatico` (fair),
 and `#galpones`, `#playa-carga` and `#mercado-pescado` (city).
