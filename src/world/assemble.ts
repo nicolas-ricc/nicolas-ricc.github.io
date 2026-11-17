@@ -23,7 +23,7 @@ export function assembleWorld(zones: readonly WorldZone[] | undefined, opts: { r
   const { reducedMotion } = opts;
   const scene = world(SEED, zones ? { zones } : {});
   const animators: ZonedAnimator[] = [tag(waterAnimator(scene.terrain, { reducedMotion }), null)];
-  if (scene.shipyard) animators.push(tag(shipyardAnimator(scene.shipyard, createRng(SEED + 1), { reducedMotion }), "portfolio"));
+  if (scene.shipyard) animators.push(tag(shipyardAnimator(scene.shipyard, { reducedMotion }), "portfolio"));
   // the train runs along the shipyard track; its tail leaves the terrain on the west (the lab), so it goes even with the ["portfolio"] filter
   if (scene.shipyard) animators.push(tag(railAnimator({ reducedMotion }), "portfolio"));
   if (scene.shipyard) animators.push(tag(tinkerAnimator({ reducedMotion }), "portfolio"));

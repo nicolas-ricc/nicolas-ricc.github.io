@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { hullsOverlap, isBehind, overlaps, screenBounds, screenHull } from "../iso/depth";
-import type { Vec3 } from "../iso/geometry";
 import { bounds, isFlat, type Bounds, type Solid } from "../iso/solids";
 import { DOCK } from "../map/geo";
 import { createRng } from "../map/seed";
 import { STACKS, factory } from "./factory";
 import { shipyard } from "./shipyard";
+import { isLampPost } from "./lamp-fixtures";
 import { CRANE_RAILS, FLOATING_DOCK, QUAY_CRANES, RIPRAP_KEEP_OUT, YARD, YARD_LANES_X, YARD_SLOTS_Y, containerYard, fittingOutSheds, floatingDock, quayCranes } from "./shipyard-east";
 import { terrainAt } from "./terrain-classify";
 
@@ -18,7 +18,7 @@ const intersect = (a: Bounds, b: Bounds): boolean =>
   a.min.x < b.max.x - 1e-9 && b.min.x < a.max.x - 1e-9 && a.min.y < b.max.y - 1e-9 && b.min.y < a.max.y - 1e-9 && a.min.z < b.max.z - 1e-9 && b.min.z < a.max.z - 1e-9;
 const planCut = (a: Bounds, b: Bounds): boolean => a.min.x < b.max.x && b.min.x < a.max.x && a.min.y < b.max.y && b.min.y < a.max.y;
 
-const dock = () => { const out: Solid[] = [], accents: Accent[] = [], weld: Vec3[] = []; floatingDock(out, accents, weld); return { out, accents, weld }; };
+const dock = () => { const out: Solid[] = [], accents: Accent[] = []; floatingDock(out, accents); return { out, accents }; };
 const yard = (seed = 7) => { const out: Solid[] = [], accents: Accent[] = []; containerYard(out, accents, createRng(seed)); return { out, accents }; };
 const cranes = () => { const out: Solid[] = [], accents: Accent[] = []; quayCranes(out, accents); return { out, accents }; };
 const sheds = () => { const out: Solid[] = []; fittingOutSheds(out); return out; };
@@ -67,12 +67,8 @@ describe("floating dock", () => {
     expect(bounds(g[0]!).min.x).toBe(202); expect(bounds(g[0]!).max.x).toBe(204);
   });
 
-  it("four new weld spots on the hull sides, also in the shipyard scene", () => {
-    const { weld } = dock();
-    expect(weld).toHaveLength(4);
-    for (const w of weld) expect(w.z).toBe(5.3);
-    const all = shipyard(createRng(7)).weldSpots;
-    for (const w of weld) expect(all).toContainEqual(w);
+  it("no weld spots (#403: the sparks are gone): the dock adds only its two tower lamps as accents", () => {
+    expect(dock().accents).toHaveLength(2);
   });
 
   it("everything but the gangway floats, and nothing passes y 88.5", () => {
@@ -126,13 +122,14 @@ describe("container yard", () => {
     }
   });
 
-  it("gatehouse with a cool window", () => {
+  it("gatehouse with a cool window, and no lamps", () => {
     const { out, accents } = yard();
     expect(prisms(out).filter((p) => p.mat === "concrete" && p.w === 3 && p.d === 3 && p.h === 2.8)).toHaveLength(1);
     const win = accents.filter((a) => a.kind === "poly" && a.color === "windowCool");
     expect(win).toHaveLength(1);
     expect(win[0]!.kind === "poly" && win[0]!.alpha).toBe(0.85);
-    expect(accents.filter((a) => a.kind === "dot" && a.color === "cyan")).toHaveLength(2);
+    expect(accents.filter((a) => a.kind === "dot" && a.color === "cyan")).toHaveLength(0); // #401: the yard's two lamps are gone
+    expect(out.filter(isLampPost)).toEqual([]);
   });
 
   it("nothing overlaps (pairs of boxes, 1e-9), with seed 7 and seeds 1..40", () => {
@@ -153,11 +150,19 @@ describe("container yard", () => {
 });
 
 describe("quay cranes", () => {
-  it("two gantries at x 284 with a cyan light at the west tip", () => {
+  it("two gantries at x 284 whose booms end at x 276, z 14, with no dot", () => {
     expect(QUAY_CRANES).toEqual([{ x: 284, y: 34 }, { x: 284, y: 62 }]);
-    const tips = cranes().accents.filter((a) => a.kind === "dot" && a.color === "cyan");
-    expect(tips).toHaveLength(2);
-    for (const t of tips) expect(t.kind === "dot" && t.at.x).toBeLessThan(280);
+    const { out, accents } = cranes();
+    const booms = out.filter((s): s is Solid & { kind: "beam" } => s.kind === "beam" && s.w === 0.6 && s.h === 0.5);
+    expect(booms).toHaveLength(2);
+    for (const b of booms) {
+      expect(b.to.x).toBeCloseTo(276, 9);
+      expect(b.to.z).toBeCloseTo(14, 9);
+      expect(b.to.x).toBeLessThan(280); // over the water, west of the quay
+      expect(b.to.x).toBeGreaterThan(275); // outside `darsena` (x1 275)
+    }
+    expect(booms.map((b) => b.to.y).sort((a, b) => a - b)).toEqual([34, 62]);
+    expect(accents.filter((a) => a.kind === "dot")).toEqual([]);
   });
 
   it("rails from y 31 to 82 under the legs", () => {
@@ -192,7 +197,7 @@ describe("fitting-out sheds", () => {
 describe("occlusion of the landmarks (#323)", () => {
   it("nothing new hides the gantry crane, the dry dock or the factory chimneys", () => {
     const fresh: Solid[] = [];
-    floatingDock(fresh, [], []); containerYard(fresh, [], createRng(7)); quayCranes(fresh, []); fittingOutSheds(fresh);
+    floatingDock(fresh, []); containerYard(fresh, [], createRng(7)); quayCranes(fresh, []); fittingOutSheds(fresh);
     const news = fresh.filter((s) => !isFlat(s)).map(bounds);
     const sy = shipyard(createRng(7)).solids.filter((s) => !isFlat(s));
     const gantry = sy.filter((s) => { const b = bounds(s); return b.min.x >= 150 && b.max.x <= 153 && b.max.z >= 24; });

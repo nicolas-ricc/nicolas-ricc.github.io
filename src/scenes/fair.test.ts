@@ -54,7 +54,7 @@ describe("fair", () => {
     expect(s.solids.filter((x) => x.kind === "cone" && x.r === 1.6).length).toBeGreaterThanOrEqual(10); // umbrellas
     expect(s.solids.filter((x) => x.kind === "prism" && x.mat === "stone" && x.h === 6 && x.w === 1.5)).toHaveLength(2); // gate
     expect(s.solids.filter((x) => x.kind === "hull").length).toBeGreaterThanOrEqual(3); // stranded boats
-    expect(s.accents.filter((a) => a.kind === "dot").length).toBeGreaterThan(30);
+    expect(s.accents.filter((a) => a.kind === "dot")).toHaveLength(113); // 120 before #401, minus the 6 bumper car dots and the slide's lamp (#398)
     expect(new Set(s.accents.map((a) => a.color)).size).toBeGreaterThanOrEqual(3); // amber, cyan and magenta
   });
 

@@ -6,24 +6,20 @@ import { shipyardAnimator } from "./shipyard-animator";
 
 const setup = (reducedMotion = false) => {
   const scene = shipyard(createRng(7));
-  return { scene, anim: shipyardAnimator(scene, createRng(3), { reducedMotion }) };
+  return { scene, anim: shipyardAnimator(scene, { reducedMotion }) };
 };
 
 describe("shipyardAnimator", () => {
-  it("exposes three named layers of the right kind", () => {
+  it("exposes one solid layer, the trolley (#403: no lamp, no sparks)", () => {
     const { scene, anim } = setup();
-    expect([...anim.ids].sort()).toEqual(["sparks", "trolley", "trolleyLamp"]);
+    expect([...anim.ids]).toEqual(["trolley"]);
     const t = anim.layer("trolley");
     expect(t.kind === "solid" && t.solids).toEqual([scene.trolley]);
-    expect(anim.layer("trolleyLamp").kind).toBe("accent");
-    expect(anim.layer("sparks").kind).toBe("accent");
   });
 
-  it("when the trolley moves, trolley and lamp change", () => {
+  it("when the trolley moves, the trolley changes", () => {
     const { anim } = setup();
-    const c = anim.tick(TROLLEY_CYCLE_MS / 2);
-    expect(c.has("trolley")).toBe(true);
-    expect(c.has("trolleyLamp")).toBe(true);
+    expect([...anim.tick(TROLLEY_CYCLE_MS / 2)]).toEqual(["trolley"]);
   });
 
   it("with reduced-motion nothing changes", () => {

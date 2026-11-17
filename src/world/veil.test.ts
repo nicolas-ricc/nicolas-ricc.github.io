@@ -129,7 +129,8 @@ describe("Portfolio tinker sign accents (#392)", () => {
   it("every accent of the tinker sign at TINKER_SITE and of its tinker.lights layer is Portfolio", () => {
     const out: Solid[] = [], accents: Accent[] = [];
     tinkerSign(out, accents, TINKER_SITE);
-    expect(accents.some((a) => a.kind === "dot") && accents.some((a) => a.kind === "poly")).toBe(true);
+    expect(accents.some((a) => a.kind === "poly")).toBe(true); // lettering polys and the marquee bulbs, spots since #403
+    expect(accents.filter((a) => a.kind === "dot")).toEqual([]);
     const l = tinkerAnimator({ reducedMotion: true }).layer("tinker.lights");
     if (l.kind !== "accent") throw new Error("tinker.lights is an accent layer");
     expect(l.accents.length).toBeGreaterThan(0);

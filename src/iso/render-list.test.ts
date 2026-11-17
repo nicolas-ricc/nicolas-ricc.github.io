@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ISO_COLORS, ISO_TONES, allIsoColors } from "../map/palette-iso";
 import { v3 } from "./geometry";
+import { project } from "./project";
 import { buildRenderList, type Layer } from "./render-list";
 import type { Solid } from "./solids";
 
@@ -57,5 +58,47 @@ describe("buildRenderList", () => {
     const nearY = Math.max(...items.slice(3).flatMap((i) => i.pts.filter((_, k) => k % 2 === 1)));
     const farY = Math.max(...items.slice(0, 3).flatMap((i) => i.pts.filter((_, k) => k % 2 === 1)));
     expect(farY).toBeLessThan(nearY);
+  });
+});
+
+/** Every (x, y) of `pts` inside the projected rhombus of the rectangle (convex, tolerance 1e-9). */
+function inRhombus(pts: number[], r: { x0: number; y0: number; x1: number; y1: number }): boolean {
+  const q = [[r.x0, r.y0], [r.x1, r.y0], [r.x1, r.y1], [r.x0, r.y1]].map(([x, y]) => project(v3(x!, y!, 0)));
+  for (let i = 0; i < pts.length; i += 2) {
+    const px = pts[i]!, py = pts[i + 1]!;
+    let pos = false, neg = false;
+    for (let k = 0; k < 4; k++) {
+      const a = q[k]!, b = q[(k + 1) % 4]!;
+      const c = (b.x - a.x) * (py - a.y) - (b.y - a.y) * (px - a.x);
+      if (c > 1e-9) pos = true;
+      if (c < -1e-9) neg = true;
+    }
+    if (pos && neg) return false;
+  }
+  return true;
+}
+
+describe("buildRenderList with clip (#399)", () => {
+  const clip = { x0: 0, y0: 0, x1: 10, y1: 10 };
+  const tall: Solid = { kind: "prism", at: v3(8, 4, 0), w: 1, d: 1, h: 10, mat: "concrete" };
+  const shadows = (items: ReturnType<typeof buildRenderList>) => items.filter((i) => i.layer === "shadow" || i.layer === "shadowCore");
+
+  it("without clip the shadow of a tall prism near the east edge leaves the box (the control)", () => {
+    const s = shadows(buildRenderList([tall]));
+    expect(s).toHaveLength(2);
+    expect(s.every((i) => inRhombus(i.pts, clip))).toBe(false);
+  });
+  it("with clip both shadow bands fall inside the projected rhombus of the box", () => {
+    const s = shadows(buildRenderList([tall], undefined, clip));
+    expect(s).toHaveLength(2);
+    for (const i of s) expect(inRhombus(i.pts, clip), JSON.stringify(i.pts)).toBe(true);
+  });
+  it("a shadow entirely outside the box emits no shadow item", () => {
+    const far: Solid = { ...tall, at: v3(40, 40, 0) } as Solid;
+    expect(shadows(buildRenderList([far], undefined, clip))).toEqual([]);
+  });
+  it("the solid faces are not clipped", () => {
+    const solids = (items: ReturnType<typeof buildRenderList>) => items.filter((i) => i.layer === "solid");
+    expect(solids(buildRenderList([tall], undefined, clip))).toEqual(solids(buildRenderList([tall])));
   });
 });

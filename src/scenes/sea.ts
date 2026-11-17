@@ -1,4 +1,4 @@
-import type { Accent } from "../iso/accent";
+import { spot, type Accent } from "../iso/accent";
 import { v3, type Vec2, type Vec3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
@@ -119,7 +119,7 @@ function rocks(out: Solid[], rng: Rng): void {
 function buoysAndWreck(out: Solid[], ground: Solid[], accents: Accent[]): Vec3[] {
   const bases = BUOYS.map((b) => { out.push(cyl(b.x, b.y, WATER_Z, 0.8, 1.5, "rust", 6)); return v3(b.x, b.y, WATER_Z + 1.5); });
   out.push(cyl(WRECK_BUOY.x, WRECK_BUOY.y, WATER_Z, 1, 2, "steel", 6));
-  accents.push({ kind: "dot", at: v3(WRECK_BUOY.x, WRECK_BUOY.y, 1), r: 1, color: "magentaMid" });
+  accents.push(spot(v3(WRECK_BUOY.x, WRECK_BUOY.y, 1), 1, "magentaMid"));
   const ring = Array.from({ length: 8 }, (_, k): { pts: [Vec3, Vec3, Vec3] } => {
     const a0 = (k / 8) * Math.PI * 2, a1 = ((k + 1) / 8) * Math.PI * 2, r0 = 1.6, r1 = 2.5;
     return { pts: [v3(WRECK_BUOY.x + r0 * Math.cos(a0), WRECK_BUOY.y + r0 * Math.sin(a0), -0.95), v3(WRECK_BUOY.x + r1 * Math.cos(a0), WRECK_BUOY.y + r1 * Math.sin(a0), -0.95), v3(WRECK_BUOY.x + r1 * Math.cos(a1), WRECK_BUOY.y + r1 * Math.sin(a1), -0.95)] };

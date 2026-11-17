@@ -7,11 +7,11 @@ import type { AccentColor, Material } from "../map/palette-iso";
 
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number, mat: Material): Solid => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat });
 
-export interface TowerCrane { at: Vec2; z?: number; mastH: number; jibLen: number; dir: "e" | "w"; light: AccentColor }
+export interface TowerCrane { at: Vec2; z?: number; mastH: number; jibLen: number; dir: "e" | "w"; light: AccentColor | null }
 
 /**
  * Steel tower crane: slender mast, jib with counter-jib and counterweight,
- * cab, cable with hook block at mid-jib and a light at the tip.
+ * cab, cable with hook block at mid-jib and, unless `light` is null, a light at the tip.
  * The factory and the district's construction site share it.
  */
 export function towerCrane(out: Solid[], accents: Accent[], c: TowerCrane): void {
@@ -26,5 +26,5 @@ export function towerCrane(out: Solid[], accents: Accent[], c: TowerCrane): void
   const hx = x + s * (c.jibLen / 2), cable = c.mastH * 0.4;
   out.push(prism(hx - 0.3, y - 0.3, top - 1 - cable, 0.6, 0.6, cable, "steel"));              // cable
   out.push(prism(hx - 0.6, y - 0.6, top - 2 - cable, 1.2, 1.2, 1, "rust"));                   // hook block
-  accents.push({ kind: "dot", at: v3(x + s * c.jibLen, y, top - 0.6), r: 1, color: c.light });
+  if (c.light !== null) accents.push({ kind: "dot", at: v3(x + s * c.jibLen, y, top - 0.6), r: 1, color: c.light });
 }

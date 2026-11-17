@@ -120,15 +120,15 @@ describe("Portfolio south of y 90 (#319)", () => {
     for (const s of sy.solids) if (s.kind === "cone" && s.mat === "rock" && s.at.x > QUAY_X) expect(s.at.y).toBeLessThan(ZONE_SPLIT_Y);
   });
 
-  it("seam fence: steel mesh x −60..96 at y 89.4 h 1.2, ≥ 26 posts, six cyan lamps at y 88.2", () => {
+  it("seam fence: steel mesh x −60..96 at y 89.4 h 1.2, ≥ 26 posts, three cyan lamps at y 88.2 (x −48, −24, 0)", () => {
     expect(prisms(sy.solids).some((p) => p.mat === "steel" && p.at.x === -60 && p.at.y === 89.4 && p.w === 156 && p.d === 0.6 && p.h === 1.2)).toBe(true);
     const posts = prisms(sy.solids).filter((p) => p.mat === "steel" && p.at.y === 89.3 && p.w === 0.3 && p.d === 0.3 && p.h === 1.6);
     expect(posts.length).toBeGreaterThanOrEqual(26);
-    const xs = [-48, -24, 0, 24, 48, 72];
-    for (const x of xs) {
-      expect(prisms(sy.solids).some((p) => p.mat === "steel" && p.at.x === x && p.at.y === 88.2 && p.w === 0.6 && p.h === 5), `pole ${x}`).toBe(true);
-      expect(dots(sy.accents).some((a) => a.color === "cyan" && Math.abs(a.at.x - x - 0.3) < 1e-9 && Math.abs(a.at.y - 88.5) < 1e-9 && a.at.z === 5), `lamp ${x}`).toBe(true);
-    }
+    const poles = prisms(sy.solids).filter((p) => p.mat === "steel" && p.at.y === 88.2 && p.w === 0.6 && p.h === 5);
+    expect(poles.map((p) => p.at.x).sort((a, b) => a - b)).toEqual([-48, -24, 0]);
+    const lights = dots(sy.accents).filter((a) => a.color === "cyan" && Math.abs(a.at.y - 88.5) < 1e-9 && a.at.z === 5).map((a) => a.at.x).sort((a, b) => a - b);
+    expect(lights).toHaveLength(3);
+    [-47.7, -23.7, 0.3].forEach((x, i) => expect(lights[i]).toBeCloseTo(x, 9));
   });
 
   it("the shipyard draws no west track west of 96; station track 3 runs from 96 to the buffer", () => {

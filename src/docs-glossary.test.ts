@@ -143,6 +143,34 @@ describe("README points at the glossary and the ADRs (#194)", () => {
   });
 });
 
+describe("storybook vocabulary (#405)", () => {
+  const glossary = read("CONTEXT.md");
+  const refsHold = (term: string): void => {
+    for (const { file, idents } of codeRefs(section(glossary, term))) {
+      expect(existsSync(`${ROOT}${file}`), file).toBe(true);
+      const text = read(file);
+      for (const id of idents) expect(hasIdent(text, id), `${id} in ${file}`).toBe(true);
+    }
+  };
+  it("Accent names spot() and its Code: line points at it", () => {
+    const accent = section(glossary, "Accent");
+    expect(accent).toContain("spot()");
+    expect(codeRefs(accent)).toContainEqual(expect.objectContaining({ file: "src/iso/accent.ts", idents: expect.arrayContaining(["spot"]) }));
+    refsHold("Accent");
+  });
+  it("Exhibit names contentFrame and the clip of the regions, and its Code: line points at src/lab/frame.ts", () => {
+    const exhibit = section(glossary, "Exhibit");
+    expect(exhibit).toContain("contentFrame");
+    expect(exhibit).toContain("clip");
+    expect(codeRefs(exhibit)).toContainEqual({ file: "src/lab/frame.ts", idents: ["contentFrame"] });
+    refsHold("Exhibit");
+  });
+  it("Frame names contentFrame", () => {
+    expect(section(glossary, "Frame")).toContain("contentFrame");
+    refsHold("Frame");
+  });
+});
+
 describe("signs as the navigation (#394)", () => {
   const glossary = read("CONTEXT.md");
   const dir = `${ROOT}docs/adr/`;

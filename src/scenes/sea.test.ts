@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { spotOf } from "../iso/spot-fixtures";
 import type { Accent } from "../iso/accent";
 import { buildRenderList } from "../iso/render-list";
 import { bounds, isFlat, type Solid } from "../iso/solids";
@@ -104,7 +105,12 @@ describe("sea", () => {
     for (const b of BUOYS) expect(s.solids.some((x) => x.kind === "cylinder" && x.mat === "rust" && x.at.x === b.x && x.at.y === b.y && x.at.z === -1)).toBe(true);
     expect(s.buoys).toHaveLength(2);
     expect(s.solids.some((x) => x.kind === "cylinder" && x.mat === "steel" && x.at.x === WRECK_BUOY.x)).toBe(true);
-    expect(s.accents.slice(0, 2)).toEqual([{ kind: "poly", pts: expect.any(Array), color: "magentaBleed", alpha: expect.any(Number) }, { kind: "dot", at: { x: WRECK_BUOY.x, y: WRECK_BUOY.y, z: 1 }, r: 1, color: "magentaMid" }]);
+    // #403: the wreck buoy's light is a haloless spot of r 1, not a dot; the rest is the Writing platform (#390)
+    expect(s.accents[0]).toEqual({ kind: "poly", pts: expect.any(Array), color: "magentaBleed", alpha: expect.any(Number) });
+    const buoy = spotOf(s.accents[1]!)!;
+    expect(buoy).toMatchObject({ color: "magentaMid", alpha: 1 });
+    expect(buoy.r).toBeCloseTo(1, 9);
+    expect([buoy.at.x, buoy.at.y, buoy.at.z].map((c) => Math.round(c * 1e6) / 1e6)).toEqual([WRECK_BUOY.x, WRECK_BUOY.y, 1]);
     expect(s.accents.slice(2)).toEqual(platform().accents); // the rest is the Writing platform
     expect(s.ground.some((g) => g.kind === "ground" && g.mat === "foam" && g.tris.length === 8)).toBe(true);
     // wreck (#83): no whole hull afloat; the bow sticks out (rust wedge with deck) and the stern house (deckhouse with windows, funnel, mast), all above the water
@@ -151,11 +157,11 @@ describe("sea", () => {
     expect(Math.min(...zs)).toBeCloseTo(z + 4, 6); // resting on the eave
     for (const y of ys) expect(y).toBeCloseTo(KEEPER.y + 6.42, 6); // front of the box, on the south face
     expect(s.solids.some((x) => x.kind === "prism" && x.mat === "steel" && x.at.y === KEEPER.y + 6 && x.at.z <= z + 4 && x.at.z + x.h >= z + 5 && x.at.x <= Math.min(...xs) && x.at.x + x.w >= Math.max(...xs))).toBe(true); // dark box behind
-    // the static accents: keeper's window (poly) and wreck buoy (dot), plus the Writing platform's hut and mast (dots) and one poly per sign triangle (#390)
+    // the static accents: keeper's window (poly) and wreck buoy (spot, a poly since #403), plus the Writing platform's hut and mast (dots) and one poly per sign triangle (#390)
     const signTris = BLOG_SIGN.glyphs.flatMap((g) => g.quads).length;
     expect(s.accents).toHaveLength(4 + signTris);
-    expect(s.accents.filter((a) => a.kind === "dot")).toHaveLength(3);
-    expect(s.accents.filter((a) => a.kind === "poly")).toHaveLength(1 + signTris);
+    expect(s.accents.filter((a) => a.kind === "dot")).toHaveLength(2);
+    expect(s.accents.filter((a) => a.kind === "poly")).toHaveLength(2 + signTris);
   });
 
   it("the whole render uses atlas colors", () => {

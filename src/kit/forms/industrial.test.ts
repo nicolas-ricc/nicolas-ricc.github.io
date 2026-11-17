@@ -7,7 +7,8 @@ import { createRng } from "../../map/seed";
 import { LAB_LOTS, RECIPES, recipe } from "../index";
 import { STYLES } from "../styles";
 import type { Lot } from "../types";
-import { CONTAINER, CONTAINER_COLORS, STACK_HEIGHTS, containerColor, sawtooth, stackContainers, stackHeight } from "./industrial";
+import type { Accent } from "../../iso/accent";
+import { CONTAINER, CONTAINER_COLORS, STACK_HEIGHTS, containerColor, quayCraneAt, sawtooth, stackContainers, stackHeight } from "./industrial";
 
 const LOTS: Lot[] = [
   { x: 1.5, y: 1.5, w: 21, d: 15, z: 0, open: ["s"], maxH: 24 },
@@ -234,12 +235,12 @@ describe("quayCrane", () => {
     }
   });
 
-  it("the cabin, mast, boom, stay and light housing interlock; legs and cross beams do not", () => {
+  it("the cabin, mast, boom and both stays interlock; legs and cross beams do not", () => {
     const p = recipe("quayCrane")(ownLot("quayCrane"), createRng(1), STYLES.industrial);
     const marked = p.solids.filter((s) => s.interlocks);
     expect(marked).toHaveLength(5);
-    expect(marked.filter((s) => s.kind === "prism")).toHaveLength(3);
-    expect(marked.filter((s) => s.kind === "beam")).toHaveLength(2);
+    expect(marked.filter((s) => s.kind === "prism")).toHaveLength(2);
+    expect(marked.filter((s) => s.kind === "beam")).toHaveLength(3);
     const unmarked = p.solids.filter((s) => !s.interlocks);
     expect(unmarked.filter((s) => s.kind === "prism")).toHaveLength(4);
     expect(unmarked.filter((s) => s.kind === "beam")).toHaveLength(2);
@@ -259,7 +260,68 @@ describe("quayCrane", () => {
         expect(bounds(b).max.z).toBeCloseTo(bounds(cab).min.z, 9);
       }
       const marked = low.solids.filter((s) => s.kind === "beam" && s.interlocks).map((s) => (s.kind === "beam" ? s.h : 0));
-      expect(marked).toEqual([0.4, 0.2]);
+      expect(marked).toEqual([0.5, 0.2, 0.2]);
+    }
+  });
+
+  type Beam = Solid & { kind: "beam" };
+  const DIRS = { w: v3(-1, 0, 0), e: v3(1, 0, 0), s: v3(0, 1, 0) } as const;
+  const crane = (dir: keyof typeof DIRS, opts: Parameters<typeof quayCraneAt>[4] = {}) => {
+    const out: Solid[] = [], accents: Accent[] = [];
+    quayCraneAt({ x: 10, y: 20 }, dir, out, accents, opts);
+    return { out, accents };
+  };
+  const boomOf = (ss: Solid[]): Beam => {
+    const booms = ss.filter((s): s is Beam => s.kind === "beam" && s.w === 0.6 && s.h === 0.5);
+    expect(booms).toHaveLength(1);
+    return booms[0]!;
+  };
+
+  it("quayCraneAt: the boom is a beam 3 + reach long in plan, its far end reach from the centre, rising 1.7", () => {
+    for (const dir of ["w", "e", "s"] as const) for (const z of [0, 0.3]) for (const reach of [8, 5]) {
+      const f = DIRS[dir], b = boomOf(crane(dir, reach === 8 ? { z } : { z, reach }).out);
+      expect(Math.hypot(b.to.x - b.from.x, b.to.y - b.from.y)).toBeCloseTo(3 + reach, 9);
+      expect(b.to.x).toBeCloseTo(10 + reach * f.x, 9); expect(b.to.y).toBeCloseTo(20 + reach * f.y, 9);
+      expect(b.from.x).toBeCloseTo(10 - 3 * f.x, 9); expect(b.from.y).toBeCloseTo(20 - 3 * f.y, 9);
+      expect(b.from.z).toBeCloseTo(z + 12.3, 9);
+      expect(b.to.z - b.from.z).toBeCloseTo(1.7, 9);
+    }
+  });
+
+  it("quayCraneAt: the mast is the topmost solid at z + 17.5 and both stays end at the boom ends", () => {
+    for (const dir of ["w", "e", "s"] as const) for (const z of [0, 0.3]) {
+      const { out } = crane(dir, { z }), b = boomOf(out);
+      expect(topZ(out)).toBeCloseTo(z + 17.5, 9);
+      const tops = out.filter((s) => bounds(s).max.z > z + 17.5 - EPS);
+      expect(tops).toHaveLength(1);
+      expect(tops[0]).toMatchObject({ kind: "prism", w: 0.4, d: 0.4 });
+      const stays = out.filter((s): s is Beam => s.kind === "beam" && s.w === 0.2 && s.h === 0.2);
+      expect(stays).toHaveLength(2);
+      const ends = stays.map((s) => s.to);
+      for (const e of [b.to, b.from]) expect(ends.some((q) => Math.hypot(q.x - e.x, q.y - e.y, q.z - e.z) < EPS)).toBe(true);
+      expect(out.some((s) => s.kind === "prism" && s.w === 0.4 && s.d === 0.4 && s.h === 0.5)).toBe(false); // the light housing is gone
+    }
+  });
+
+  it("quayCraneAt: light false emits no accents; light true one cyan dot r 1 at the tip", () => {
+    expect(crane("w", { light: false }).accents).toEqual([]);
+    const { out, accents } = crane("w");
+    expect(accents).toHaveLength(1);
+    expect(accents[0]).toMatchObject({ kind: "dot", color: "cyan", r: 1, at: boomOf(out).to });
+  });
+
+  it("the recipe clamps reach to the lot: half the lot along dir minus 0.5, at most 8", () => {
+    const cases: [Lot, number][] = [
+      [ownLot("quayCrane", { open: ["w"] }), 3.5],
+      [{ ...LOTS[1]!, open: ["s"] }, 8],
+      [ownLot("quayCrane", { w: 6, open: ["w"] }), 2.5],
+    ];
+    for (const [lot, reach] of cases) {
+      const p = recipe("quayCrane")(lot, createRng(1), STYLES.industrial), tip = boomOf(p.solids).to;
+      const cx = lot.x + lot.w / 2, cy = lot.y + lot.d / 2;
+      expect(Math.hypot(tip.x - cx, tip.y - cy)).toBeCloseTo(reach, 9);
+      expect(tip.x).toBeGreaterThanOrEqual(lot.x - EPS); expect(tip.x).toBeLessThanOrEqual(lot.x + lot.w + EPS);
+      expect(tip.y).toBeGreaterThanOrEqual(lot.y - EPS); expect(tip.y).toBeLessThanOrEqual(lot.y + lot.d + EPS);
     }
   });
 

@@ -75,7 +75,7 @@ describe("hinterland", () => {
     expect(s.solids.filter((x) => x.kind === "cone" && x.mat === "rust" && bounds(x).max.y < -204)).toHaveLength(3); // coal piles
     expect(s.ground.filter((g) => g.kind === "strip" && g.mat === "steel" && g.width === 0.8)).toHaveLength(1); // conveyor belt
     expect(s.solids.filter((x) => x.kind === "prism" && x.h === 1.2 && x.w !== 2.2 && x.mat === "steel" && bounds(x).max.y < -204)).toHaveLength(4); // power plant fence
-    expect(s.accents.filter((a) => a.kind === "dot" && a.color === "cyan" && a.at.y < ROAD_Y)).toHaveLength(5); // 2 lamps of the transformer yard + 3 of the street
+    expect(s.accents.filter((a) => a.kind === "dot" && a.color === "cyan" && a.at.y < ROAD_Y)).toHaveLength(4); // 2 lamps of the transformer yard + 2 of the street (x 4 and 60)
     const north = s.solids.filter((x) => bounds(x).max.y < -204 && !isFlat(x));
     expect(north.length).toBeGreaterThan(30); expect(north.length).toBeLessThanOrEqual(250);
     for (const x of north) { const b = bounds(x); expect(inCoverQuad((b.min.x + b.max.x) / 2, (b.min.y + b.max.y) / 2, 16 / 9, 30)).toBe(true); }

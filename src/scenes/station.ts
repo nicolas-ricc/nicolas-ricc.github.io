@@ -1,8 +1,7 @@
-import type { Accent } from "../iso/accent";
+import { spot, type Accent } from "../iso/accent";
 import { v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { plateOutline, type Plate } from "../iso/plate";
 import type { Solid } from "../iso/solids";
-import { industrialLamp, place } from "../kit/props";
 import { emu, trainLen } from "./train";
 
 /**
@@ -91,8 +90,8 @@ function platforms(out: Solid[]): void {
   out.push(prism(165.8, HEAD.y0, 1, 0.2, HEAD.y1 - HEAD.y0, 1, "canopy"));
 }
 
-/** Low gable canopies on columns with a truss, white fascia and lights; flat roof over the cross platform. */
-function canopies(out: Solid[], accents: Accent[]): void {
+/** Low gable canopies on columns with a truss, and white fascia; flat roof over the cross platform. */
+function canopies(out: Solid[]): void {
   for (const [p, x0, x1] of [[ISLAND, 125, 158], [SIDE, 138, 158]] as const) {
     const ym = (p.y0 + p.y1) / 2, half = (p.y1 - p.y0) / 2;
     // east fascia only where the wall exceeds 0.25 (the high half); the height-0 wall takes no plate
@@ -106,11 +105,9 @@ function canopies(out: Solid[], accents: Accent[]): void {
       // diagonals 0.01 from the edge: the slanted end ring does not enter the south fascia
       for (const y of [p.y0 + 0.01, p.y1 - 0.01]) out.push({ kind: "beam", from: v3(x, y, 4), to: v3(x, ym, 4.1), w: 0.15, h: 0.15, mat: "steel" });
     }
-    for (let x = x0 + 5; x < x1; x += 10) accents.push({ kind: "dot", at: v3(x, ym, 3.9), r: 0.8, color: "cyanMid" });
   }
   out.push(prism(HEAD.x0, HEAD.y0, 3.5, HEAD.x1 - HEAD.x0, HEAD.y1 - HEAD.y0, 0.3, "canopy"));
   for (let y = HEAD.y0; y < HEAD.y1; y += 6) out.push(prism(161.8, y, 1, 0.3, 0.3, 2.5, "steel"));
-  for (const y of [109, 119, 129]) accents.push({ kind: "dot", at: v3(163.75, y, 3.4), r: 0.8, color: "cyanMid" });
 }
 
 /** Buffers of the three tracks: four safety/asphalt stripes on the east and south faces, red light (magenta) on top. */
@@ -119,7 +116,7 @@ function buffers(out: Solid[], accents: Accent[]): void {
     .map((mat, k) => ({ wall, shape: "rect", u0: k / 4, u1: (k + 1) / 4, z0: 0, z1: BUFFER_H, mat }));
   for (const axis of TRACKS_Y) {
     out.push(prism(BUFFER_X, axis - 1.5, 0, 1.5, 3, BUFFER_H, "steel", [...stripes(1), ...stripes(2)]));
-    accents.push({ kind: "dot", at: v3(BUFFER_X + 0.75, axis, 1.5), r: 0.35, color: "magenta" });
+    accents.push(spot(v3(BUFFER_X + 0.75, axis, 1.5), 0.35, "magenta"));
   }
 }
 
@@ -199,16 +196,13 @@ function hall(out: Solid[], accents: Accent[]): void {
   accents.push({ kind: "poly", pts: [v3(188, 115.6, 10.8), v3(172, 115.6, 10.8), v3(172, 115.6, 11.6), v3(188, 115.6, 11.6)], color: "amberBleed", alpha: 0.6 });
 }
 
-/** Access portico: glass canopy, two columns, light sign and night lights. */
-function portico(out: Solid[], accents: Accent[]): void {
+/** Access portico: glass canopy, two columns, and light sign. */
+function portico(out: Solid[]): void {
   // canopy with a glass strip on its east and south faces
   const glass = (wall: number) => rect(wall, 0.02, 0.98, 5.3, 5.5, "glass");
   out.push(prism(PORTICO.x, PORTICO.y, PORTICO.z, PORTICO.w, PORTICO.d, 0.4, "canopy", [glass(1), glass(2)]));
   for (const y of [111.5, 120.5]) out.push({ kind: "cylinder", at: v3(193.4, y, 0.15), r: 0.3, h: 5.05, mat: "canopy", sides: 8 });
   out.push(prism(193.85, 111, 5.6, 0.15, 10, 1, "whitewash"));
-  // three lights under the canopy and two wall lamps on either side of the entrance
-  for (const y of [112, 116, 120]) accents.push({ kind: "dot", at: v3(192, y, 5.1), r: 0.9, color: "amber" });
-  for (const y of [109, 123]) accents.push({ kind: "dot", at: v3(190.05, y, 3.2), r: 0.5, color: "amber" });
 }
 
 /** Wings and service: plinth, shopfronts and red awnings (two east of WING_N, four south of WING_S). */
@@ -252,11 +246,9 @@ function tower(out: Solid[], accents: Accent[]): void {
   }
 }
 
-/** Esplanade: slab, two tall lamps, three palms and railing to the east. */
-function esplanade(out: Solid[], accents: Accent[]): void {
+/** Esplanade: slab, three palms and railing to the east. */
+function esplanade(out: Solid[]): void {
   out.push(prism(ESPLANADE.x0, ESPLANADE.y0, 0, ESPLANADE.x1 - ESPLANADE.x0, ESPLANADE.y1 - ESPLANADE.y0, 0.15, "paving"));
-  // lamps: the coordinate is the center of the post
-  for (const y of [102, 130]) place(out, accents, industrialLamp(v3(195.5, y, 0.15), { h: 6, center: true }));
   // palms: the middle one at 195.6 so the crown does not cross the sign (A6)
   for (const [x, y] of [[195.5, 108], [195.6, 116.5], [195.5, 125]] as const) {
     out.push({ kind: "cylinder", at: v3(x, y, 0.15), r: 0.25, h: 6, mat: "deck", sides: 6 });
@@ -268,10 +260,10 @@ function esplanade(out: Solid[], accents: Accent[]): void {
 /** Passenger building, clock tower and esplanade. Deterministic, no rng. */
 export function building(out: Solid[], accents: Accent[]): void {
   hall(out, accents);
-  portico(out, accents);
+  portico(out);
   wings(out);
   tower(out, accents);
-  esplanade(out, accents);
+  esplanade(out);
 }
 
 /** Consist parked on track 2, against the buffer: saloon lit, no headlights or red lights. */
@@ -285,7 +277,7 @@ export function station(out: Solid[], accents: Accent[]): void {
   tracks(out);
   ladder(out);
   platforms(out);
-  canopies(out, accents);
+  canopies(out);
   buffers(out, accents);
   signals(out);
   crossing(out);

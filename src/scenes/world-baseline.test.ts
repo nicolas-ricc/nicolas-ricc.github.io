@@ -15,7 +15,8 @@ const PIECES: Record<string, string> = {
   "tanque-agua": "d0fbfe32/741638a5", "grua-torre": "1b24d1ba/b6ded264", farol: "af0034c3/b3c5d09b", tren: "acc6e446/741638a5",
   campus: "b68f62d8/dcd2e4b1", selva: "97e30e40/741638a5", viga: "9f08a4fc/741638a5", carguero: "2eeb07a8/89ab3362",
   remolcador: "98fd0f53/687d5415", convoy: "63361eab/35f8cf27", lancha: "8a99e66f/f2a9b6e3",
-  "grua-muelle": "624cfd88/d3db2853",
+  // #402: STS boom (3 behind to 8 ahead, rising 1.7), taller mast, two stays, no light housing; the piece passes light: false, so its accents are empty
+  "grua-muelle": "2d079796/741638a5",
   // #360: the four sign placeholders are new pieces; the earlier twelve did not move
   // #362: grafiti replaces its placeholder; the other pieces did not move
   // #375: gap 2 and KERN respace the words of the four signs (and the platform posts move in)
@@ -24,7 +25,8 @@ const PIECES: Record<string, string> = {
   "cartel-torre": "65afa18c/8c310d6c",
   // #379: the tinker sign (cartel-taller, on its hall stand-in) replaces grafiti; re-recorded after the ladder fix and the closed-bowl bulbs (stage 6)
   // PORTFOLIO in CNRGN Builder: filled block letters (marquee bulbs, neon tube and welded frame follow the contours)
-  "cartel-taller": "772e9714/7342397f",
+  // #401: floodlight removed
+  "cartel-taller": "731f8dfa/1b320f27", // #403: marquee bulbs as spots
   // #363: plataforma replaces its placeholder (platform, railing, ladder, hut, beacon, Blog sign)
   // #376: the Blog sign uses SIGN_FONT, gains a backing panel and a raised frame, and is built at its site and then translated
   // Writing (Black Chancery) replaces Blog: a deck strip along the sign, posts every ≤ 16, filled cyan letters

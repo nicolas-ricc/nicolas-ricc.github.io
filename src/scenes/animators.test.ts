@@ -24,7 +24,7 @@ const animators: [string, () => Animator][] = [
   ["fairAnimator", () => fairAnimator(fair(createRng(7)), opts)],
   ["railAnimator", () => railAnimator(opts)],
   ["seaAnimator", () => seaAnimator(w.sea!, opts)],
-  ["shipyardAnimator", () => shipyardAnimator(shipyard(createRng(7)), createRng(3), opts)],
+  ["shipyardAnimator", () => shipyardAnimator(shipyard(createRng(7)), opts)],
   ["techAnimator", () => techAnimator(tech(createRng(7)), createRng(3), opts)],
   ["waterAnimator", () => waterAnimator(w.terrain, opts)],
 ];

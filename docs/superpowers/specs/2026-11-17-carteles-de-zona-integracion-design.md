@@ -109,11 +109,13 @@ después (rama). agent-browser headless,
 | | antes | después |
 |---|---|---|
 | first draw (ms) | 1111.5 | 1096.5 |
-| polígonos estáticos | 45 309 | 46 576 |
+| polígonos estáticos | 45 309 | 46 481 |
 | bloom, promedio (ms) | 41.0 | 42.1 |
 | veredicto del bloom | `fallback` | `fallback` |
 | peor redibujo en 5 s (ms) | 65.20 | 54.80 |
-| acentos estáticos del mundo | 1 222 (plan de #389) | 2 450 |
+| acentos estáticos del mundo | 1 222 (plan de #389) | 2 409 |
+
+Polígonos y acentos estáticos recalculados al integrar #395 en `main` (lámparas industriales y dots fuera, pluma STS): la rama de #389 medía 46 576 y 2 450; los tiempos son los de esa medición.
 
 Bloom, tick + render: antes 25,3 + 15,7; después 25,8 + 16,3. Primera corrida
 (fría): `main` first draw 2395,8, bloom 63,4 (37,6 + 25,9) `fallback`, peor

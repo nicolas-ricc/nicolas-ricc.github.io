@@ -394,13 +394,12 @@ export function boothRow(out: Solid[], accents: Accent[], rng: Rng, types: Booth
   });
 }
 
-function bumperCars(out: Solid[], accents: Accent[]): void {
+function bumperCars(out: Solid[]): void {
   const { x, y } = BUMPER;
   out.push(prism(x, y, 0, 14, 10, 0.3, "plaza"));
   for (const [dx, dy] of [[0, 0], [7, 0], [14, 0], [0, 10], [7, 10], [14, 10], [0, 5], [14, 5]] as const) out.push(prism(x + dx - 0.2, y + dy - 0.2, 0.3, 0.4, 0.4, 4, "steel"));
   out.push(prism(x - 0.3, y - 0.3, 4.3, 14.6, 10.6, 0.4, "steel"), prism(x - 0.3, y + 10, 3.7, 14.6, 0.3, 0.6, "rust"));
   for (let i = 0; i < 6; i++) out.push(prism(x + 1.5 + (i % 3) * 4, y + 2 + Math.floor(i / 3) * 4, 0.3, 1.8, 1.2, 0.8, i % 2 === 0 ? "rust" : "steel"));
-  for (let i = 0; i < 6; i++) accents.push(dot(x + 2 + (i % 3) * 5, y + 2.5 + Math.floor(i / 3) * 5, 3.6, 0.4, "cyan"));
 }
 
 /** Footprints (boxes in x and y) that overlap with a non-empty interior. */
@@ -458,7 +457,7 @@ export function fair(rng: Rng, opts: { legacyOnly?: boolean } = {}): FairScene {
   carousel(solids, accents);
   dropTower(solids, accents);
   const arcadeSigns = arcade(solids);
-  bumperCars(solids, accents);
+  bumperCars(solids);
   if (!opts.legacyOnly) { ghostTrain(solids, accents); mirrorHouse(solids, accents); slide(solids, accents); flume(solids, accents); foodCourt(solids, accents); }
   beach(solids, rng); // after the static solids: the boats look for free space among them
   if (!opts.legacyOnly) boothRow(solids, accents, rng); // after the beach: its rng sequence (and the pinned boats) do not move

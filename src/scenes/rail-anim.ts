@@ -1,4 +1,4 @@
-import type { Accent } from "../iso/accent";
+import { spot, type Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import { WEST_RAIL_X0 } from "./hinterland";
@@ -136,15 +136,15 @@ export function createRailAnim(opts: { reducedMotion: boolean }): RailAnim {
       if (!active()) return [];
       const step = blinkStep();
       // a single light per post, alternating sides: the two are never lit at once
-      return [CROSSING.north, CROSSING.south].map((p): Accent => ({ kind: "dot", at: v3(p.x + 0.15, p.y + 0.15 + flip(step, -0.5, 0.5), p.h - 0.4), r: CROSSING_R_DOT, color: "magenta" }));
+      return [CROSSING.north, CROSSING.south].map((p): Accent => spot(v3(p.x + 0.15, p.y + 0.15 + flip(step, -0.5, 0.5), p.h - 0.4), CROSSING_R_DOT, "magenta"));
     },
     signals: () => {
       const a = aspects();
-      const dot = (p: { x: number; y: number }, asp: Aspect): Accent => {
+      const light = (p: { x: number; y: number }, asp: Aspect): Accent => {
         const red = asp === "red";
-        return { kind: "dot", at: v3(p.x + 0.25, p.y + 0.25, red ? 4.4 : 3.9), r: SIGNAL_R_DOT, color: red ? "magenta" : "cyanMid" };
+        return spot(v3(p.x + 0.25, p.y + 0.25, red ? 4.4 : 3.9), SIGNAL_R_DOT, red ? "magenta" : "cyanMid");
       };
-      return [dot(SIGNALS.in, a.in), dot(SIGNALS.out, a.out)];
+      return [light(SIGNALS.in, a.in), light(SIGNALS.out, a.out)];
     },
     state: () => s,
     tick(dtMs) {

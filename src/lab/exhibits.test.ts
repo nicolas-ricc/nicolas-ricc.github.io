@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { spotOf } from "../iso/spot-fixtures";
 import type { Accent } from "../iso/accent";
 import { project, Z_SCALE } from "../iso/project";
 import { bounds, tessellate, type Solid } from "../iso/solids";
@@ -15,7 +16,8 @@ import { trainLen } from "../scenes/train";
 import { createRng } from "../map/seed";
 import { assembleWorld } from "../world/assemble";
 import { type Box, FRAME_H, HALO_BASE } from "../world/frame";
-import { contextAnimators, contextScene, cropAnimators, cropScene } from "./crop";
+import { PLINTH_H } from "../scenes/city-pieces";
+import { contextAnimators, contextScene, cropAnimators, cropScene, isLongPrism } from "./crop";
 import { EXHIBITS, GROUPS, type GroupId, outOfView, pickExhibit, stepExhibit } from "./exhibits";
 
 const regions = EXHIBITS.flatMap((e) => (e.kind === "region" ? [e] : []));
@@ -98,9 +100,10 @@ describe("exhibit catalog", () => {
     expect(box("patio-contenedores")).toEqual({ x0: 278, y0: 27, x1: 305, y1: 84 });
     const crane = pieces.find((x) => x.id === "grua-muelle")!;
     expect(crane.pad).toBe("concrete");
-    const accents: Accent[] = [];
-    crane.build([], accents);
-    expect(accents.filter((a) => a.kind === "dot" && a.color === "cyan")).toHaveLength(1);
+    const solids: Solid[] = [], accents: Accent[] = [];
+    crane.build(solids, accents);
+    expect(accents).toEqual([]);
+    expect(top(solids)).toBeCloseTo(17.5, 9);
   });
   it("the fair attractions of #327: four regions after muelle with the issue's boxes; the flume crops the logs layer", () => {
     const box = (id: string) => { const e = EXHIBITS.find((x) => x.id === id)!; return e.kind === "region" ? e.box : null; };
@@ -263,7 +266,8 @@ describe("piece exhibits", () => {
       const l = a.layer("tren.lights");
       if (l.kind !== "accent") throw new Error("tren.lights");
       expect(l.zone).toBe("portfolio");
-      return l.accents.flatMap((x) => (x.kind === "dot" && x.color === "cyan" ? [x.at.x] : []));
+      expect(l.accents.filter((x) => x.kind === "dot")).toEqual([]); // #403: the lights are spots
+      return l.accents.flatMap((x) => { const p = spotOf(x); return p && p.color === "cyan" ? [p.at.x] : []; });
     };
     const a = e.animate!({ reducedMotion: false });
     expect([...a.ids]).toEqual(["tren.lights"]);
@@ -334,12 +338,12 @@ describe("plant box with malting (#214, #246)", () => {
     expect(cs.solids.some((s) => s.kind === "cylinder" && s.r === 4.6)).toBe(false);
   });
 
-  it("plinth and hopper are in; trucks and street lamps are out, except the one at (5, 76), which touches the south edge (cropSolid includes edges)", () => {
+  it("plinth and hopper are in; trucks and street lamps are out, the one at (5, 76) too: it only touches the south edge (#399)", () => {
     const cs = cropScene(scene, e.box);
     expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "whitewash" && s.h === 3.5)).toBe(true); // plinth
     expect(cs.solids.some((s) => s.kind === "prism" && s.mat === "rust" && s.w === 3 && s.d === 2 && s.h === 2.5)).toBe(true); // hopper
     expect(cs.solids.some((s) => s.kind === "prism" && s.d === 2.4 && s.h === 2.8)).toBe(false); // trucks
-    expect(cs.solids.flatMap((s) => (s.kind === "prism" && s.mat === "steel" && s.w === 0.6 && s.d === 0.6 && s.h === 5 ? [[s.at.x, s.at.y]] : []))).toEqual([[5, 76]]); // street lamps
+    expect(cs.solids.flatMap((s) => (s.kind === "prism" && s.mat === "steel" && s.w === 0.6 && s.d === 0.6 && s.h === 5 ? [[s.at.x, s.at.y]] : []))).toEqual([]); // street lamps
   });
 });
 
@@ -461,5 +465,47 @@ describe("cartel-torre-escena (#378)", () => {
     towerCrown(c, d, CROWN_SITE);
     for (const s of c) expect(cs.solids).toContainEqual(s);
     for (const a of d) expect(cs.accents).toContainEqual(a);
+  });
+});
+
+describe("clean crops (#399)", () => {
+  const EPS = 1e-9;
+  const byId = (id: string) => EXHIBITS.find((e) => e.id === id)!;
+  const boxOf = (id: string): Box => { const e = byId(id); if (e.kind === "piece") throw new Error(id); return e.box; };
+  const cropOf = (id: string) => { const e = byId(id); return e.kind === "context" ? contextScene(scene, e) : cropScene(scene, boxOf(id)); };
+  const animsOf = (id: string) => { const e = byId(id); return e.kind === "context" ? contextAnimators(animators, e) : cropAnimators(animators, boxOf(id)); };
+  const inside = (p: { x: number; y: number }, b: Box, m = 0): boolean => p.x >= b.x0 - m - EPS && p.x <= b.x1 + m + EPS && p.y >= b.y0 - m - EPS && p.y <= b.y1 + m + EPS;
+  const SPEC_REGIONS = ["playa-camiones", "gradas", "estacion", "patio-contenedores", "cartel-taller-escena", "silos", "playa-contenedores", "autitos-chocadores", "faro", "pecio"];
+
+  it("playa-camiones: no city plinth (paving, PLINTH_H) at y 92 creeps in by touching the south edge", () => {
+    const cs = cropOf("playa-camiones");
+    expect([...cs.ground, ...cs.solids].filter((s) => s.kind === "prism" && s.mat === "paving" && s.h === PLINTH_H && s.at.y === 92)).toEqual([]);
+  });
+
+  it.each(["playa-camiones", "gradas", "estacion", "cartel-taller-escena", "silos"])("%s: every strip and every long prism of the crop stays inside the box", (id) => {
+    const b = boxOf(id), cs = cropOf(id);
+    const all = [...cs.ground, ...cs.solids, ...animsOf(id).flatMap((a) => a.ids.flatMap((i) => { const l = a.layer(i); return l.kind === "solid" ? l.solids : []; }))];
+    let strips = 0;
+    for (const s of all) {
+      if (s.kind === "strip") {
+        strips++;
+        for (const p of s.path) expect(inside(p, b), `${id} strip ${s.mat} ${JSON.stringify(p)}`).toBe(true);
+        const r = bounds(s);
+        expect(inside(r.min, b, s.width / 2) && inside(r.max, b, s.width / 2), `${id} strip ${s.mat} bounds`).toBe(true);
+      } else if (isLongPrism(s)) {
+        const r = bounds(s);
+        expect(inside(r.min, b) && inside(r.max, b), `${id} long prism ${s.mat} ${JSON.stringify(r)}`).toBe(true);
+      }
+    }
+    if (id !== "silos") expect(strips, id).toBeGreaterThan(0);
+  });
+
+  it.each(SPEC_REGIONS)("%s: every terrain triangle of the crop, static and animated water, has its vertices inside the box", (id) => {
+    const b = boxOf(id), { terrain } = cropOf(id);
+    const meshes = [...terrain.ground, ...terrain.bleed, ...terrain.water, terrain.foam,
+      ...animsOf(id).flatMap((a) => a.ids.flatMap((i) => { const l = a.layer(i); return l.kind === "water" ? l.water : []; }))];
+    let n = 0;
+    for (const m of meshes) if (m.kind === "ground") for (const t of m.tris) for (const p of t.pts) { n++; expect(inside(p, b), `${id} ${m.mat} ${JSON.stringify(p)}`).toBe(true); }
+    expect(n, id).toBeGreaterThan(0);
   });
 });

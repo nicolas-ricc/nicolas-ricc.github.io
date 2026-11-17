@@ -43,6 +43,10 @@ const ALLOW: Record<string, RegExp[]> = {
   "src/lab/exhibits.ts": [/\bid: "[a-z0-9-]+"/g],
   // the test names the exhibits by their (Spanish) ids and reads the animator layer `tren.lights`; only the ids of the catalog are stripped, as whole tokens
   "src/lab/exhibits.test.ts": [EXHIBIT_IDS],
+  // #403: the 0-dot gate lists the exhibits by id
+  "src/lab/no-dots.test.ts": [EXHIBIT_IDS],
+  // `faro` is an exhibit id (decision 2b); the test names it in its title
+  "src/lab/frame.test.ts": [EXHIBIT_IDS, /real world: faro covers/g],
   // `sin` is the trig function in two geometry comments (it is also the Spanish word for "without")
   "src/iso/solids.ts": [/\bsin(?= φ|\(π\))/g],
   // `"se"` is the southeast corner id of the chamfer recipe (it collides with the Spanish word "se"); the guard sees string text without its quotes
@@ -97,6 +101,8 @@ const ALLOW: Record<string, RegExp[]> = {
     /[\w-]*-(antes|despues)\b|assets\/[\w.-]*(fabrica|barrio|estacion|costura)[\w.-]*\//g,
     // the old spec mundo-3
     /\bmundo-3\b/g,
+    // the storybook lights closing (#405): its asset folder, the beam-north captures and the before/after table heading
+    /2026-11-16-storybook-luces\/|faro-norte|Capturas antes y después/g,
     // the zone signs integration closing (#394): status line, framing row label and frame table rows of its spec
     /integración al sitio|teléfono|veredicto del bloom|bloom, promedio|polígonos estáticos|acentos estáticos del mundo/g,
   ],

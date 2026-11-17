@@ -1,5 +1,5 @@
 import type { Accent } from "../iso/accent";
-import { v3, type Vec3 } from "../iso/geometry";
+import { v3 } from "../iso/geometry";
 import { shadeTone } from "../iso/light";
 import { ribs, type Plate } from "../iso/plate";
 import type { Solid } from "../iso/solids";
@@ -31,7 +31,7 @@ const stripes = (wall: number): Plate[] => (["safety", "asphalt", "safety", "asp
   .map((mat, k) => ({ wall, shape: "rect", u0: k / 4, u1: (k + 1) / 4, z0: 0, z1: WALL_H, mat }));
 
 /** Floating dock: pontoon, two striped walls, half-painted hull, two lit service towers and a gangway to the quay. */
-export function floatingDock(out: Solid[], accents: Accent[], weldSpots: Vec3[]): void {
+export function floatingDock(out: Solid[], accents: Accent[]): void {
   const { x0, y0 } = FLOATING_DOCK, w = FLOATING_DOCK.x1 - x0, d = FLOATING_DOCK.y1 - y0;
   out.push(prism(x0, y0, -1.2, w, d, 2.5, "steel"));
   for (const y of [y0, y0 + d - WALL_D]) {
@@ -47,7 +47,6 @@ export function floatingDock(out: Solid[], accents: Accent[], weldSpots: Vec3[])
     place(out, accents, industrialLamp(v3(px, py, top)));
   }
   out.push(prism(202, 80, DECK_Z, 2, 1.5, 0.3, "steel"));
-  for (const [x, y] of [[218, 77.5], [228, 77.5], [218, 84.5], [228, 84.5]] as const) weldSpots.push(v3(x, y, 5.3));
 }
 
 const SLAB_TOP = 0.2, STACK_CAP_UNDER_RTG = 3;
@@ -60,7 +59,7 @@ function straddleCarrier(out: Solid[], x: number, y: number): void {
   out.push(prism(cx - 0.5, y - 0.5, 5.8, 1, 1, 1, "steel"));
 }
 
-/** Container yard: slab, 3 lanes x 7 slots (19 stacks, 2 straddle carriers), an RTG over lanes 2-3, a gatehouse and two lamps. */
+/** Container yard: slab, 3 lanes x 7 slots (19 stacks, 2 straddle carriers), an RTG over lanes 2-3, and a gatehouse. */
 export function containerYard(out: Solid[], accents: Accent[], rng: Rng): void {
   out.push(prism(YARD.x0, YARD.y0, 0, YARD.x1 - YARD.x0, YARD.y1 - YARD.y0, SLAB_TOP, "concrete"));
   // Slots are indexed lane-major: index = lane * YARD_SLOTS_Y.length + slot.
@@ -78,13 +77,11 @@ export function containerYard(out: Solid[], accents: Accent[], rng: Rng): void {
   rtgAt(292.1, 302.1, 50, out, SLAB_TOP);
   out.push(prism(296, 81, 0, 3, 3, 2.8, "concrete"));
   accents.push({ kind: "poly", pts: [v3(296.8, 84, 1.2), v3(298.2, 84, 1.2), v3(298.2, 84, 2.2), v3(296.8, 84, 2.2)], color: "windowCool", alpha: 0.85 });
-  // NW lamp in the 2.6 gap between lanes 1 and 2: the issue's (288.5, 30.5) stands on the cove water (terrainAt(288.8, 30.8) is water)
-  for (const [px, py] of [[292.4, 30.5], [303, 79]] as const) place(out, accents, industrialLamp(v3(px, py, SLAB_TOP)));
 }
 
-/** Two quay cranes facing west, on two long rails (x 281 and 287) running the length of the quay. */
+/** Two quay cranes facing west, on two long rails (x 281 and 287) running the length of the quay; booms end at x 276, no tip light. */
 export function quayCranes(out: Solid[], accents: Accent[]): void {
-  for (const c of QUAY_CRANES) quayCraneAt(c, "w", out, accents, 0, false); // only the long rails below: the kit's short ones would reach the cove water at y 30
+  for (const c of QUAY_CRANES) quayCraneAt(c, "w", out, accents, { rails: false, light: false }); // only the long rails below: the kit's short ones would reach the cove water at y 30
   for (const x of CRANE_RAILS.x) {
     out.push({ kind: "strip", path: [{ x, y: CRANE_RAILS.y0 }, { x, y: CRANE_RAILS.y1 }], width: 0.5, z: 0.02, mat: "rail" });
   }
@@ -103,8 +100,8 @@ export function fittingOutSheds(out: Solid[]): void {
   }
 }
 
-export function shipyardEast(out: Solid[], accents: Accent[], weldSpots: Vec3[], rng: Rng): void {
-  floatingDock(out, accents, weldSpots);
+export function shipyardEast(out: Solid[], accents: Accent[], rng: Rng): void {
+  floatingDock(out, accents);
   containerYard(out, accents, rng);
   quayCranes(out, accents);
   fittingOutSheds(out);

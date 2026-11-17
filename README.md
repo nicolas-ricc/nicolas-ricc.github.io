@@ -7,6 +7,7 @@ Personal site: a night-time isometric map with three zones (Portfolio, Resume, B
 - `npm run build` — validates `content/*.json`, downloads the feed, builds and prerenders `/portfolio/`, `/cv/`, `/blog/`.
 - `npm run typecheck` — `tsc --noEmit`. In a fresh clone run `npm run feed` first: `content/blog.generated.json` is gitignored and `src/main.ts` imports it (`predev`/`prebuild` already do it for you).
 - `npm run legibility` — level 3 of the sign legibility guardrails: starts its own vite on 5179, opens every context exhibit in agent-browser at 1.17 and 0.83 with bloom, measures contrast, halo and OCR in pixels and writes `docs/superpowers/specs/assets/carteles-legibilidad/REPORT.md` with the crops. Needs agent-browser; not run in CI.
+- `npm run wreck-sweep` — sweeps the `#pecio` exhibit in agent-browser: 3 bloom modes × 2 phone/foldable layouts × 40 frames of `__lab.tick(250)`, and counts the non-sky pixels outside the content envelope. Starts its own vite on 5180, or uses `--origin`; `--hide` needs the PixiJS DevTools extension. Needs agent-browser; not run in CI.
 
 No public license: `private: true`, the `license` field (ISC) is a leftover of the scaffold and does not apply — the repo is not published to npm.
 
@@ -60,6 +61,8 @@ the covered market (row 92), a freight row and the rail lands, a fenced band
 around the west track with a siding and a parked freight train; on the east
 bank, the dock inlet has a fish market, a food hall and fishing boats. The
 shipyard gains a floating dock, a container yard, quay cranes and sheet metal.
+The STS booms of the quay cranes are nearly horizontal and reach over the water
+to the west; they have no tip light on the east bank.
 The fair gains a ghost train, a mirror house, a slide, a log flume, booths and
 food trucks.
 
@@ -122,6 +125,7 @@ Specs in `docs/superpowers/specs/`
 `2026-10-27-barrio-costero-design.md`,
 `2026-11-11-carteles-de-zona-assets-design.md`,
 `2026-11-15-carteles-de-zona-rediseno-design.md`,
+`2026-11-16-storybook-luces-y-encuadre-design.md`,
 `2026-11-17-carteles-de-zona-integracion-design.md`).
 
 `/lab/storybook.html` is the structures storybook: it shows one building or
@@ -130,12 +134,21 @@ origin, for relocatable pieces such as ships and the tower crane; the station
 is `#estacion` and `#paso-a-nivel`, regions with the animated train, and `#tren`, the
 piece whose lights flip ends every 4 s), with its
 animation and a readout panel (solids, ground, faces, accents, box, materials).
+A region or context exhibit crops strictly (a solid that only touches the
+edge of the box stays out): strips and long flat prisms (fences, quay edges,
+rails) are cut to the box, terrain triangles are clipped to it and the shadows
+are clipped to it too; piece exhibits and the site are not clipped.
+The frame takes the projected bounds of what is drawn (faces, ground, the
+clipped shadows, the halos and 16 samples of the animation over 8 s), plus the
+box rhombus up to its `h`. The layout is responsive: under 60rem the index goes
+above the canvas and the readout below it, and the canvas takes the full width.
 The URL hash picks the exhibit (`#faro`); arrows (`←`/`→`, `↑`/`↓`)
 or `j`/`k` move to the next or the previous one; `g`, `h` and `a` hide or
 show ground, shadows and accents; `6` rotates the bloom; `c` cycles the exhibit
 scale (real, 1.17 and 0.83, the cover scales of a laptop and a phone); `?bloom=` forces the bloom and
 `?speed=` scales the animation clock up to 100 (`?speed=0`
-freezes it; above 100 it is 1). The seam at 90 added ten exhibits:
+freezes it; above 100 it is 1). In dev, `__lab.tick` advances the stage and renders it,
+for headless time-lapses. The seam at 90 added ten exhibits:
 `#dique-flotante`, `#patio-contenedores` and `#grua-muelle` (shipyard),
 `#tren-fantasma`, `#casa-espejos`, `#tobogan` and `#tronco-acuatico` (fair),
 and `#galpones`, `#playa-carga` and `#mercado-pescado` (city).
