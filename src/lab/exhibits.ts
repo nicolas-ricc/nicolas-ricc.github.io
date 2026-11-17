@@ -133,7 +133,6 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "cartel-taller", title: "Portfolio tinker sign", zone: "portfolio", group: "shipyard", kind: "piece", pad: "concrete",
     build: (out, accents) => { hallStandIn(out); tinkerSign(out, accents, PIECE_AT, [STAND_IN_HALL]); },
     animate: (o) => tinkerAnimator({ ...o, at: PIECE_AT }) },
-  // h 34: the structure and the sign's accents reach ≈ 33.41 u (the smallest integer that frames them); the neighbours cut by the edge are lower.
   // h 32: the sign's top beam reaches z ≈ 31.76, smallest integer that passes framing and neighbors; the sign and its animator come from the world (shipyard() and assembleWorld, #392): no build, no animate
   { id: "cartel-taller-escena", title: "Portfolio tinker sign in its scene", zone: "portfolio", group: "shipyard", kind: "context", box: { x0: 20, y0: -58, x1: 100, y1: 0 }, h: 32,
     sign: TINKER_SIGN },
