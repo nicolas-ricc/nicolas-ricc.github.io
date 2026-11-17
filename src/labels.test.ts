@@ -39,7 +39,7 @@ describe("placeLabel (#393)", () => {
   }
   const V = { x: 0, y: 0, scale: 1 }, HOST = { w: 546, h: 657 };
 
-  // review finding: the pad came from the sign box of the previous frame on the pass that flips to edge
+  // the pad came from the sign box of the previous frame on the pass that flips to edge
   it("a link flipping from sign to edge is clamped with its plate size, not the old sign box", () => {
     const a = link();
     placeLabel(a, { minX: 100, minY: 100, maxX: 240, maxY: 130 }, V, HOST, 8);

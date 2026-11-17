@@ -58,7 +58,7 @@ describe("signPolygons (#393)", () => {
     }
   });
 
-  // A1: on the row of the word's vertical center, 3 units past the extremes of every polygon point
+  // on the row of the word's vertical center, 3 units past the extremes of every polygon point
   it("a point 3 u beyond either end of the panel is outside the sign", () => {
     for (const [id, s] of ALL) {
       const b = boundsOf(signPolygons(s)), w = signBox(s), y = (w.minY + w.maxY) / 2;
@@ -67,7 +67,7 @@ describe("signPolygons (#393)", () => {
     }
   });
 
-  // A7: a View is a uniform scale plus an offset, so disjoint at scale 1 means disjoint at every camera
+  // a View is a uniform scale plus an offset, so disjoint at scale 1 means disjoint at every camera
   it("the three signs' polygons are disjoint", () => {
     const boxes = ALL.map(([, s]) => boundsOf(signPolygons(s)));
     for (let i = 0; i < boxes.length; i++) {
@@ -121,7 +121,7 @@ describe("zoneAtScreen (#393)", () => {
     expect(zoneAtScreen(ID, found!.x, found!.y)).toBe("blog");
   });
 
-  // A2: a 20 px grid of the laptop host, without the points over a sign
+  // a 20 px grid of the laptop host, without the points over a sign
   it("zoneAtScreen away from the signs equals worldZoneAt(pointerToWorld(…))", () => {
     const v = coverView(1366, 657);
     let checked = 0;
@@ -154,7 +154,7 @@ describe("labelLayout (#393)", () => {
     }
   });
 
-  // A6: Writing falls outside the phone window and sticks to its right edge
+  // Writing falls outside the phone window and sticks to its right edge
   it("labelLayout at coverView(390, 750): RESUME and PORTFOLIO on their sign, Writing on the right edge", () => {
     const v = coverView(390, 750), host = { w: 390, h: 750 };
     expect(labelLayout(signBox(RESUME_SIGN), v, host, PAD).mode).toBe("sign");
@@ -166,14 +166,14 @@ describe("labelLayout (#393)", () => {
     expect(w.y).toBeLessThanOrEqual(750 - PAD.hh);
   });
 
-  // A3: exactly half inside on both axes still counts as on the sign
+  // exactly half inside on both axes still counts as on the sign
   it("labelLayout keeps the sign when exactly half of the box is inside", () => {
     const l = labelLayout({ minX: 90, minY: -10, maxX: 110, maxY: 10 }, ID, { w: 100, h: 100 }, PAD);
     expect(l).toEqual({ mode: "sign", x: 90, y: -10, w: 20, h: 20 });
     expect(labelLayout({ minX: 91, minY: 0, maxX: 111, maxY: 10 }, ID, { w: 100, h: 100 }, PAD).mode).toBe("edge");
   });
 
-  // Review Focus 2 / A5: a host smaller than the label clamps to the low end, as placeLabels did
+  // a host smaller than the label clamps to the low end, as placeLabels did
   it("labelLayout clamps the edge label to lo when the host is smaller than the label", () => {
     const l = labelLayout({ minX: 500, minY: 500, maxX: 600, maxY: 520 }, ID, { w: 40, h: 40 }, { hw: 50, hh: 30 });
     expect(l).toEqual({ mode: "edge", x: 50, y: 30 });
@@ -181,7 +181,7 @@ describe("labelLayout (#393)", () => {
 });
 
 describe("signs.ts stays pure (#393)", () => {
-  // A9: pixi-free.test.ts does not cover src/world (stage.ts is Pixi), so this module guards itself
+  // pixi-free.test.ts does not cover src/world (stage.ts is Pixi), so this module guards itself
   it("signs.ts imports neither pixi.js nor the DOM", () => {
     const src = readFileSync(fileURLToPath(new URL("./signs.ts", import.meta.url)), "utf8");
     expect(src).not.toMatch(/["']pixi\.js["']/);

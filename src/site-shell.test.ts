@@ -55,12 +55,12 @@ describe("site shell: the zone links over the signs (#393)", () => {
     for (const d of ["width: auto !important", "height: auto !important", "position: static"]) expect(b).toContain(d);
   });
 
-  // review finding: a visible edge label of another zone dims with it (the 0.35 of ACCENT_DIM), as .dim did
+  // a visible edge label of another zone dims with it (the 0.35 of ACCENT_DIM), as .dim did
   it("style.css dims the edge label of a zone that is not the active one", () => {
     expect(block(CSS, 'body.zone #zonas a.on-edge:not([aria-current="page"])')).toContain("opacity: 0.35");
   });
 
-  // A8: the opacity transition served .dim only
+  // the opacity transition served .dim only
   it("#zonas a has no opacity transition", () => {
     expect(block(CSS, "#zonas a")).not.toContain("transition");
   });
