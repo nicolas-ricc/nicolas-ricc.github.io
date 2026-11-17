@@ -5,7 +5,7 @@ const EPS = 1e-9;
 const near = (a: number, b: number): boolean => Math.abs(a - b) < EPS;
 
 /** Steel 0.6 × 0.6 post of h 5 or 6: the shape of `lamp()` and `industrialLamp()`. */
-const isLampPost = (s: Solid): s is Solid & { kind: "prism" } =>
+export const isLampPost = (s: Solid): s is Solid & { kind: "prism" } =>
   s.kind === "prism" && s.mat === "steel" && near(s.w, 0.6) && near(s.d, 0.6) && (near(s.h, 5) || near(s.h, 6));
 
 /**

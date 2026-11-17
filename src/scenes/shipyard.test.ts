@@ -65,7 +65,7 @@ describe("shipyard", () => {
     expect(windows.map((a) => a.color)).toEqual(["windowCool"]);
     expect(outside.filter((a) => a.kind === "dot").every((a) => a.kind === "dot" && a.color === "cyan" && a.at.z > 0)).toBe(true);
     expect(inside.length).toBeGreaterThanOrEqual(3); // three buffer lights, plus the station's polys
-    expect(inside.every((a) => a.kind === "dot" ? ["magenta"].includes(a.color) && a.at.z > 0 : ["amber", "amberBleed", "cyanBleed"].includes(a.color))).toBe(true);
+    expect(inside.every((a) => a.kind === "dot" ? a.color === "magenta" && a.at.z > 0 : ["amber", "amberBleed", "cyanBleed"].includes(a.color))).toBe(true);
   });
 
   it("raised solids of the shipyard ≤ 900 (#323)", () => {

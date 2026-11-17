@@ -7,6 +7,7 @@ import { DOCK } from "../map/geo";
 import { createRng } from "../map/seed";
 import { STACKS, factory } from "./factory";
 import { shipyard } from "./shipyard";
+import { isLampPost } from "./lamp-fixtures";
 import { CRANE_RAILS, FLOATING_DOCK, QUAY_CRANES, RIPRAP_KEEP_OUT, YARD, YARD_LANES_X, YARD_SLOTS_Y, containerYard, fittingOutSheds, floatingDock, quayCranes } from "./shipyard-east";
 import { terrainAt } from "./terrain-classify";
 
@@ -133,7 +134,7 @@ describe("container yard", () => {
     expect(win).toHaveLength(1);
     expect(win[0]!.kind === "poly" && win[0]!.alpha).toBe(0.85);
     expect(accents.filter((a) => a.kind === "dot" && a.color === "cyan")).toHaveLength(0); // #401: the yard's two lamps are gone
-    expect(prisms(out).filter((p) => p.mat === "steel" && p.w === 0.6 && p.d === 0.6 && p.h === 5)).toEqual([]);
+    expect(out.filter(isLampPost)).toEqual([]);
   });
 
   it("nothing overlaps (pairs of boxes, 1e-9), with seed 7 and seeds 1..40", () => {
