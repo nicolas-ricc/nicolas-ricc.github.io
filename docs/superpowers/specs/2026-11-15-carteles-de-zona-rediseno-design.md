@@ -256,7 +256,7 @@ aspecto: RESUME 0°, 0°, 0.010; PORTFOLIO 0.23°, 3.03°, 0.077; Writing 0°, 0
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `cartel-torre-escena` | 1.17 | 14.25 | 2.31 | 2.95 | 4.70 | 10.13:1 | 0.06 | `RESUME` |
 | `cartel-torre-escena` | 0.83 | 10.11 | 1.64 | 2.10 | 4.70 | 8.89:1 | 0.05 | `RESUME` |
-| `cartel-taller-escena` | 1.17 | 15.07 | 2.40 | 2.29 | 8.06 | 6.99:1 | 0.08 | `PORTFOLIO` |
+| `cartel-taller-escena` | 1.17 | 15.07 | 2.40 | 2.29 | 8.06 | 7.00:1 | 0.08 | `PORTFOLIO` |
 | `cartel-taller-escena` | 0.83 | 10.69 | 1.70 | 1.62 | 8.06 | 5.93:1 | 0.08 | `PORTFOLIO` |
 | `plataforma-escena` | 1.17 | 12.20 | 2.57 | 2.96 | 13.26 | 11.79:1 | 0.07 | `Writing` |
 | `plataforma-escena` | 0.83 | 8.65 | 1.82 | 2.10 | 13.26 | 11.60:1 | 0.05 | `Writing` |

@@ -129,7 +129,7 @@ describe("world", () => {
       // apart in plan, or wholly above or below: the tinker sign's deck, beams and panels cross the siding and the crane's counterweight overhead (#408)
       for (const o of [...siding, ...pieces]) {
         const apart = b.max.x <= o.min.x + 1e-9 || o.max.x <= b.min.x + 1e-9 || b.max.y <= o.min.y + 1e-9 || o.max.y <= b.min.y + 1e-9;
-        expect(apart || b.min.z >= o.max.z - 1e-9 || b.max.z <= o.min.z + 1e-9, where).toBe(true);
+        expect(apart || b.min.z > o.max.z + 1e-9 || b.max.z < o.min.z - 1e-9, where).toBe(true);
       }
     }
   });

@@ -95,3 +95,7 @@
 - Rounds: 1 (fixes were local: test design of the moved post, z-disjoint both ways, observed red; no seam changed, so no second round).
 - Questions: 16. Sources: ISSUE 3 (Q2, Q3, Q10 with the stage-0 comment), CODE 11 (Q1 `world.test.ts:133-141`, Q4 `world.test.ts:128` — `all` is shipyard solids without cones, x < 198, y < 0, not factory strips; Q5 `world-baseline.test.ts:14-31` only piece hashes; Q6 `sign-tinker.ts:200`; Q8 `sign-tinker.ts:206-207` axis-aligned `prism(f.x, f.y, base, POST, POST…)`; Q9 `factory.ts:97-101`; Q12 `sign-tinker.test.ts:18`; Q13 `sign-tinker.ts:250`, `factory.ts:1-13`; Q14 vitest strips types, red now observed in evals; Q16 `sign-tinker.ts:250` four params today, branch at 45193b3), DOC 0, NO SOURCE 2 (Q7 → A5, Q15 → A8; both technical assumptions).
 - Assumptions: A1–A8 above. Issues opened: none. Status: ok.
+
+## Review (stage 6)
+
+- A3 widened: the keep-out is the siding's loading gauge, y `SIDING_Y ± 1.3` (the locomotive's width, `factory.ts:100`; wagons ± 1.2), not the rails ± 1: the stage-5 review showed the post at y −9.30..−9.00 stood inside the wagons' swept path. Two posts now move: the rail post slides ≈ 1.26 u inward, and a rear post at y −6.74 slides 0.058 u outward (at most half a post: its beam end still rests on it). "Only the one post moves, by < 1 u" in Global Constraints is superseded by this.

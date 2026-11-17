@@ -10,8 +10,8 @@ import { BUILDER_PORTFOLIO } from "../kit/builder-portfolio";
 import { interlock } from "../kit/piece";
 import { industrialLamp, neon, place } from "../kit/props";
 import type { Material } from "../map/palette-iso";
-import { layerLookup, type AnimLayer, type Animator } from "./animator";
 import { WORLD } from "../map/geo";
+import { layerLookup, type AnimLayer, type Animator } from "./animator";
 import { prism } from "./city-pieces";
 import { SIDING_Y } from "./factory";
 
@@ -205,8 +205,8 @@ function footAt(cx: number, cy: number, halls: readonly Hall[]): { x: number; y:
 
 /** A plan rectangle a ground post keeps off. */
 export type Track = Hall;
-/** The factory siding's rails as one plan rectangle: `siding()` in `factory.ts` lays strips at `SIDING_Y` ± 0.8, 0.4 wide, from the world's west edge to x 110; a test pins it. */
-export const SIDING_TRACKS: readonly Track[] = [{ x0: WORLD.x0, y0: SIDING_Y - 1, x1: 110, y1: SIDING_Y + 1 }];
+/** The factory siding as one plan rectangle, its loading gauge: `siding()` in `factory.ts` lays rails at `SIDING_Y` ± 0.8 from the world's west edge to x 110, and its locomotive spans `SIDING_Y` ± 1.3; a test pins it. */
+export const SIDING_TRACKS: readonly Track[] = [{ x0: WORLD.x0, y0: SIDING_Y - 1.3, x1: 110, y1: SIDING_Y + 1.3 }];
 
 const onTrack = (x: number, y: number, t: Track) => x < t.x1 && x + POST > t.x0 && y < t.y1 && y + POST > t.y0;
 
