@@ -44,7 +44,7 @@
 - [ ] **Step 1: Write the failing tests** in `sign-tinker.test.ts`
   - `SIDING_TRACKS` matches the factory's rails: for `world(7).factory!.ground` strips with y in −9.01..−6.99, every rail's plan box lies inside `SIDING_TRACKS[0]`, and the track's y extent equals the union of the rails' (−9, −7).
   - "no ground solid of the sign stands on the siding track": every solid of `sign(TINKER_SITE).out` with `bounds(s).min.z < 0.1 + 1e-9` (rail top) has a plan box disjoint from every `SIDING_TRACKS` rect (touching allowed, 1e-9).
-  - "a post moved off a track stays in its row": with a track rect that covers the B_FRONT post nearest `s = 0` (build it from that post's unmoved centre `at3(at, s, 0, 0)` ± 0.5), the post's centre has `dot(centre − at, N)` equal to its row's `b` (0 or −3.45) within 1e-9, and its plan box clears the rect.
+  - "a post moved off a track stays in its row": build `sign(TINKER_SITE)` with `tracks = []` and with the default tracks; exactly one steel post differs between the two (the one at x 44.41, y −8.41 in the `[]` build); its displacement `d` has `dot(d, N) ≈ 0` (1e-9, slid along `U` only), `|d| < 1`, and its new plan box clears `SIDING_TRACKS[0]`. Uses only the exported API and the test file's own `U`/`N` (`sign-tinker.test.ts:18`); no internals are exported.
   - "no sign solid overlaps a world solid…": drop `&& s.kind !== "strip"` from the `raised` filter (rename it `world`/`others`), so strips count.
   - Existing: the `sign()` helper keeps `SHIPYARD_HALLS` and the default tracks; `piece()` and the `["piece", PIECE_AT, [STAND_IN_HALL]]` cases pass `[]` for tracks.
 - [ ] **Step 2: Run** `npx vitest run src/scenes/sign-tinker.test.ts` → the track tests and the overlap test FAIL (post at y −8.71..−8.41 on the north rail).
@@ -60,8 +60,8 @@
 **Interfaces:**
 - Consumes: Task 1 (no ground post on the track).
 
-- [ ] **Step 1:** Remove the identity exemption (the `sign`/`signKeys` block, its comment and the count check) and the now-unused `TINKER_SITE`/`tinkerSign` imports if nothing else uses them. `band` = all of `all`. For each `(s, o)` pair the assertion becomes: disjoint in plan (as today) **or** `b.min.z >= o.max.z - 1e-9` (passes wholly above). Comment: the sign's deck, beams and panels cross the siding and the crane's counterweight overhead (#408).
-- [ ] **Step 2: Run** `npx vitest run src/scenes/world.test.ts` → PASS with Task 1; with Task 1 reverted it must FAIL on the `prism/steel` post (check once by `git stash` of `sign-tinker.ts` only, or by reasoning recorded in the commit body).
+- [ ] **Step 1:** Remove the identity exemption (the `sign`/`signKeys` block, its comment and the count check) and the now-unused `TINKER_SITE`/`tinkerSign` imports if nothing else uses them. `band` = all of `all`. For each `(s, o)` pair (the loop runs band solid `s` against obstacle `o` in one direction only) the assertion becomes: disjoint in plan (as today) **or** disjoint in z — `b.min.z >= o.max.z - 1e-9` (wholly above) or `b.max.z <= o.min.z + 1e-9` (wholly below: the sign's beam at z 16.6..16.85 under the crane counterweight at z 18.5..20). Comment: the sign's deck, beams and panels cross the siding and the crane's counterweight overhead (#408).
+- [ ] **Step 2: Run** `npx vitest run src/scenes/world.test.ts` → PASS with Task 1. The red is observed, not reasoned: in the evals stage this test change is committed before Task 1 and must FAIL on the `prism/steel` post at x 44.41.
 - [ ] **Step 3: Commit** `test(#408): #247 rule covers the tinker sign, overhead parts allowed`.
 
 ### Task 3: Regenerate `REPORT.md`
@@ -74,7 +74,24 @@
 - [ ] **Step 2:** `npx vitest run src/lab/docs.test.ts` → PASS; if it fails, sync the §8.1 cells with `REPORT.md`.
 - [ ] **Step 3:** `npm test && npm run typecheck` → green. Commit `docs(#408): REPORT.md regenerated`.
 
+## Assumptions
+
+- A1 (scope): "no sign solid overlaps either rail in plan" = no sign solid stands on the track. Source: the issue's own options ("que `footAt` también esquive las vías del desvío, o mover/quitar ese poste. Después habría que retirar la exención") fix only the post, and "Out of scope: … redesigning the sign or its scaffold"; the deck crosses the siding overhead by design (`world.test.ts:125`: "stands over the siding at z ≥ 16.6 but for one ground post"). Rejected: moving the whole sign off the siding.
+- A2: #247 forbids touching ("does not touch the siding, the wagons, the locomotive or the tower crane", `world.test.ts:119`); a solid wholly above or below an obstacle does not touch it, so the rule becomes plan-disjoint or z-disjoint for every band solid. Rejected: keeping a sign-only exemption (the issue asks to remove it).
+- A3: the keep-out is the whole track (rails and gauge, `factory.ts:98`: rails at `SIDING_Y ± 0.8`, 0.4 wide, x `WORLD.x0`..110); the siding lays no other strip. Rejected: only the rail strips (would leave the post between the rails).
+- A4: the post slides along `U`, not axis-aligned, so it stays under its longitudinal beam. Rejected: `footAt`-style axis nudge.
+- A5: an unclearable post throws, like `footAt` already does (`sign-tinker.ts:200`): the geometry is deterministic, so the whole-world tests turn it into a CI failure, never a production crash. A final track check after `footAt` catches a hall nudge back onto the track; no such case exists in the real geometry, so no dedicated test.
+- A6: `tracks` defaults to `SIDING_TRACKS`, mirroring `halls = SHIPYARD_HALLS` (`sign-tinker.ts:250`). `sign-tinker → factory` is an acyclic import (`factory.ts:1-13` imports neither `shipyard` nor `sign-tinker`); no ADR covers scene layering (`docs/adr/` has 0001 veil, 0002 seam).
+- A7: if counting `strip` in the overlap test exposes a non-rail strip (road, path) under a ground post, that is fixed the same way (keep-out) if it is a track, or recorded in the stage comment and narrowed in the test with a reason if it is pavement a post may stand on.
+- A8: `REPORT.md` and its crops are committed as `npm run legibility` writes them (`scripts/legibility.ts:2-14`), noise included, as #392 did.
+
 ## Self-review
 
 - Criteria → tasks: "#392 merged" → base branch; "no sign solid on either rail in plan; #247 without exemption" → T1 + T2 (overhead parts allowed by z, see Review Focus 3); "world-overlap check includes `strip`" → T1; "#379 unchanged, `footAt` hall tests pass" → T1 (factory untouched, hall tests kept); "`REPORT.md` regenerated, test + typecheck" → T3.
 - Assumption A1: "no sign solid overlaps either rail in plan" is read as "no sign solid stands on the track": the deck and the word span the siding overhead by design (#392), and redesigning the sign is out of scope.
+
+## Grilling
+
+- Rounds: 1 (fixes were local: test design of the moved post, z-disjoint both ways, observed red; no seam changed, so no second round).
+- Questions: 16. Sources: ISSUE 3 (Q2, Q3, Q10 with the stage-0 comment), CODE 11 (Q1 `world.test.ts:133-141`, Q4 `world.test.ts:128` — `all` is shipyard solids without cones, x < 198, y < 0, not factory strips; Q5 `world-baseline.test.ts:14-31` only piece hashes; Q6 `sign-tinker.ts:200`; Q8 `sign-tinker.ts:206-207` axis-aligned `prism(f.x, f.y, base, POST, POST…)`; Q9 `factory.ts:97-101`; Q12 `sign-tinker.test.ts:18`; Q13 `sign-tinker.ts:250`, `factory.ts:1-13`; Q14 vitest strips types, red now observed in evals; Q16 `sign-tinker.ts:250` four params today, branch at 45193b3), DOC 0, NO SOURCE 2 (Q7 → A5, Q15 → A8; both technical assumptions).
+- Assumptions: A1–A8 above. Issues opened: none. Status: ok.
