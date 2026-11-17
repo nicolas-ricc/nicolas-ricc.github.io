@@ -68,7 +68,7 @@
   - `city.test.ts`: `it("city() builds the Resume crown at CROWN_SITE: its solids and accents are towerCrown's (#391)")` → with `c: Solid[] = [], a: Accent[] = []; towerCrown(c, a, CROWN_SITE)`: each `s of c` → `expect(s_.solids).toContainEqual(s)`; each `x of a` → `expect(s_.accents).toContainEqual(x)`.
   - `city-budget.test.ts`: title `"raised solids ≤ 2 900, strip ≤ 190, static accents ≤ 1 300"`, cap `1300`, comment: `// accents: 789 + the crown's 402 (238 poly + 164 dot) = 1 191 measured (#391), ×1.1 rounded to the hundred`.
   - `veil.test.ts`: `describe("Resume crown accents (#391)")`, `it("every accent of the crown at CROWN_SITE is Resume")` → accents of `towerCrown([], acc, CROWN_SITE)`: both kinds present; each `expect(accentZone(a)).toBe("cv")`.
-  - `city.test.ts` "the tower is 30 tall…": `isTowerPiece` also accepts a solid deep-equal to one of `towerCrown([], [], CROWN_SITE)` (build once at module level, compare by `JSON.stringify` key set); doc comment of `isTowerPiece` lists the crown instead of the mast.
+  - `city.test.ts` "the tower is 30 tall…": `isTowerPiece` also accepts a solid deep-equal to one of `towerCrown([], [], CROWN_SITE)` (build once at module level, compare by `JSON.stringify` key set) and assert, in the same test, that the number of city solids matched this way equals `towerCrown([], [], CROWN_SITE)`'s length (the exemption matches the crown and nothing else); doc comment of `isTowerPiece` lists the crown instead of the mast.
   - `city.test.ts` accents colour rule: `NEON` check gains `a.color === "greenMid"` with comment `// greenMid: RESUME letters and helipad edge lights of the crown (#391)`.
   - `world.test.ts`: `sharedWithCity` gains `"glass"`; the "No glass: …" comment becomes `glass: the crown panel of the tower (#391); the city's other glass is facade faces, not a solid mat`.
 - [ ] **Step 2: Run** `npx vitest run src/scenes/city.test.ts src/scenes/city-budget.test.ts src/world/veil.test.ts src/scenes/world.test.ts` → the "builds the Resume crown" test FAILS; the veil test passes already (pure function of `towerCrown`), that is fine.
@@ -111,3 +111,33 @@
 - [ ] **Step 1:** `npm run dev -- --host --port 5173`; agent-browser `set viewport 1366 657 2`, open `http://localhost:5173/`, wait ~3 s, screenshot to the path.
 - [ ] **Step 2: Verify:** PNG is 2732 × 1314; looking at it, the crown with RESUME tops the plaza tower and there is no antenna.
 - [ ] **Step 3: Commit** `docs(#391): site capture of the Resume crown`.
+
+## Assumptions
+
+- **Height-rule exemption** (technical): crown solids are exempted from "nothing else exceeds 21" by deep equality with `towerCrown([], [], CROWN_SITE)`, with a count check so it matches exactly the crown. Rejected: widening the `isTowerPiece` footprint, which would also exempt unrelated solids near the tower.
+- **`plaza` / `torre` `h`** (technical): the smallest integer that passes the framing and neighbour rules of `exhibits.test.ts` (spike: 51). Rejected: the issue's "≈ 52", which also passes but is not the smallest.
+- **§8.2 note** (technical): the "Luz de la antena real (#378)" bullet in the 2026-11-15 spec says the integration decides; one sentence records that #391 removed it. Rejected: leaving a stale statement until #394.
+- **Level 3 failure** (technical): if `npm run legibility` reports a ✗ or aborts, its outputs are restored with `git checkout -- docs/superpowers/specs/assets/carteles-legibilidad` and the stage is reported as blocked; no half-regenerated report is committed.
+
+## Grilling
+
+Round 1 (griller: fable), 18 questions. Sources: ISSUE 6, CODE 14, DOC 0 (some answers cite both), NO SOURCE 3 → technical assumptions (Q4 exemption, Q12 level-3 failure, Q2 §8.2 note). No spec ambiguity and no out-of-scope issue opened. The plan changed only slightly (count check in Task 2, `## Assumptions`): no second round.
+
+1. CODE: `src/world/veil.ts:87-90` — `accentZone` = `worldZoneAt(p.x, p.y)` of the first point, z ignored; ISSUE: "`accentZone` (`src/world/veil.ts`) de todos los acentos de la corona da `cv`". `src/world/` does not change.
+2. ISSUE acceptance criteria → tasks: capture `corona-sitio.png` → T5; no antenna / 4 layers → T1; `city()` builds the crown, budget ≤ 1 300, `veil.test` → T2; `cartel-torre-escena` without `build`, `torre`/`plaza` `h`, baseline → T2 + T3; `REPORT.md` and §8.1 → T4; `npm test`/typecheck → every task. The §8.2 note is not asked: assumption.
+3. CODE: `src/lab/exhibits.test.ts:413` "build is deterministic" runs today on `cartel-torre-escena`'s `build` = `towerCrown(…, CROWN_SITE)`; `src/scenes/sign-crown.ts` only builds from constants and `at`.
+4. NO SOURCE → assumption; the count check is added to Task 2.
+5. CODE: `grep -rn "city\.antenna\|\.antenna\b" src lab scripts` (non-test) hits only `src/scenes/city-anim.ts:110,142` and `src/scenes/city-animator.ts:12,24`; consumers iterate `animator.ids`. In the spike, `src/world/stage.test.ts` failed at runtime while the antenna was half-removed, so a stale consumer fails the suite.
+6. CODE: `src/lab/exhibits.ts:55` (`build?`), `src/lab/crop.ts:93-98` (`cropScene(scene, e.box)` then `e.build?.(…)`); `src/lab/exhibits.test.ts` "plataforma-escena: … a crop of the world (no build)" and the framing/`sign.backing` tests over every context cover that path.
+7. ISSUE stage 1 comment records the spike (h 38 fails, 51 passes; plaza inside 50.2, cut neighbour 47.6). CODE: `src/scenes/world-baseline.test.ts:8` "Only the pieces stay": it hashes `piece` exhibits only, not regions.
+8. CODE: `src/scenes/city-budget.test.ts:28` "Caps are measured ×1.1 rounded to the nearest hundred"; ISSUE: "sólidos elevados de la ciudad ≤ 1 600 (1 431 + 33: entra)". The 2 900 cap passed in the spike.
+9. CODE: `src/scenes/world-baseline.test.ts:8` (pieces only); the `cartel-torre` piece does not change.
+10. CODE: `grep -rln CityAnimChanges src lab scripts` → only `src/scenes/city-anim.ts`; `src/main.ts` never names the antenna.
+11. CODE: `src/scenes/world.test.ts:77` exact equality of Portfolio ∩ city materials with `sharedWithCity`; in the spike only that assertion failed, on `glass`.
+12. CODE: `src/lab/docs.test.ts` counts 18 = 3 contexts × 2 scales × 3 metrics; failure handling: assumption.
+13. Task 2 "city() builds the Resume crown" proves the same accents (same positions) are in `city().accents`; `accentZone` depends only on position (Q1), so the veil zone is the same.
+14. CODE: `src/lab/exhibits.test.ts:34` `SLACK = 8`, `:144-152`; `withAnim` = max(inside, animated solids): still defined without the antenna.
+15. ISSUE: "`/` en agent-browser, viewport 1366×657 a 2x (2732×1314), tras ~3 s". It is a one-off artefact, as `plataforma-sitio.png` was in #390.
+16. CODE: branch from `origin/feature/389-carteles-en-el-mapa` at 0d81f79; `src/scenes/sign-crown.ts` exports `towerCrown(out, accents, at)` and `CROWN_SITE` there.
+17. In the spike, a crown in the world and the `build` in the exhibit together left the suite green (the second copy lives only in the lab crop). Each task is its own commit: rollback = revert it.
+18. CODE: `src/lab/exhibits.test.ts:460` already names "cartel-torre-escena (#378)" in an English title; `english.test.ts` passes on it today.
