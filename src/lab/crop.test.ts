@@ -99,7 +99,7 @@ describe("cropSolid: terrain triangles cut to the box (#399)", () => {
   const mesh = (tris: Tri[]): Ground => ({ kind: "ground", mat: "concrete", tris });
 
   it("a triangle that crosses the box comes out as triangles inside it, with the same tone offset and the area of the intersection", () => {
-    const [out] = cropSolid(mesh([{ pts: [v3(-2, 2, 0), v3(6, 2, 0), v3(2, 8, 0)], toneOffset: -1, baseTone: 2 }]), box) as Ground[];
+    const [out] = cropSolid(mesh([{ pts: [v3(-2, 2, 0), v3(6, 2, 0), v3(2, 8, 0)], toneOffset: -1, baseTone: 2 }]), box) as [Ground];
     expect(out.tris.length).toBeGreaterThan(0);
     for (const t of out.tris) {
       for (const q of t.pts) expect(insideBox(q), JSON.stringify(q)).toBe(true);
@@ -112,7 +112,7 @@ describe("cropSolid: terrain triangles cut to the box (#399)", () => {
     const whole = tri(2, 2), onEdge: Tri = { pts: [v3(9, 5, 0), v3(10, 5, 0), v3(9, 6, 0)] };
     const m = mesh([whole, onEdge]);
     expect(cropSolid(m, box)[0]).toBe(m);
-    const [mixed] = cropSolid(mesh([whole, { pts: [v3(8, 8, 0), v3(14, 8, 0), v3(8, 14, 0)] }, onEdge]), box) as Ground;
+    const [mixed] = cropSolid(mesh([whole, { pts: [v3(8, 8, 0), v3(14, 8, 0), v3(8, 14, 0)] }, onEdge]), box) as [Ground];
     expect(mixed.tris[0]).toBe(whole);
     expect(mixed.tris).toContain(onEdge);
   });
