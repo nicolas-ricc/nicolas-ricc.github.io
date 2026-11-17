@@ -107,7 +107,7 @@ export const ISO_COLORS = {
   // Resume level 2: per-window lights (warm and cool)
   windowWarm: 0xffd9a0,
   windowCool: 0xa8d8ff,
-  spark: 0xffb347, // welding sparks (animated only); not darkened
+  spark: 0xffb347, // welding sparks; no emitter since #403
   ink: 0xd8d4e8, // text of the lab pages (lab/*.html); not darkened
 } as const;
 

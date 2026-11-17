@@ -198,7 +198,7 @@ describe("fitting-out sheds", () => {
 describe("occlusion of the landmarks (#323)", () => {
   it("nothing new hides the gantry crane, the dry dock or the factory chimneys", () => {
     const fresh: Solid[] = [];
-    floatingDock(fresh, [], []); containerYard(fresh, [], createRng(7)); quayCranes(fresh, []); fittingOutSheds(fresh);
+    floatingDock(fresh, []); containerYard(fresh, [], createRng(7)); quayCranes(fresh, []); fittingOutSheds(fresh);
     const news = fresh.filter((s) => !isFlat(s)).map(bounds);
     const sy = shipyard(createRng(7)).solids.filter((s) => !isFlat(s));
     const gantry = sy.filter((s) => { const b = bounds(s); return b.min.x >= 150 && b.max.x <= 153 && b.max.z >= 24; });

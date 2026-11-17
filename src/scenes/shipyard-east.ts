@@ -1,5 +1,5 @@
 import type { Accent } from "../iso/accent";
-import { v3, type Vec3 } from "../iso/geometry";
+import { v3 } from "../iso/geometry";
 import { shadeTone } from "../iso/light";
 import { ribs, type Plate } from "../iso/plate";
 import type { Solid } from "../iso/solids";
@@ -31,7 +31,7 @@ const stripes = (wall: number): Plate[] => (["safety", "asphalt", "safety", "asp
   .map((mat, k) => ({ wall, shape: "rect", u0: k / 4, u1: (k + 1) / 4, z0: 0, z1: WALL_H, mat }));
 
 /** Floating dock: pontoon, two striped walls, half-painted hull, two lit service towers and a gangway to the quay. */
-export function floatingDock(out: Solid[], accents: Accent[], weldSpots: Vec3[]): void {
+export function floatingDock(out: Solid[], accents: Accent[]): void {
   const { x0, y0 } = FLOATING_DOCK, w = FLOATING_DOCK.x1 - x0, d = FLOATING_DOCK.y1 - y0;
   out.push(prism(x0, y0, -1.2, w, d, 2.5, "steel"));
   for (const y of [y0, y0 + d - WALL_D]) {
@@ -47,7 +47,6 @@ export function floatingDock(out: Solid[], accents: Accent[], weldSpots: Vec3[])
     place(out, accents, industrialLamp(v3(px, py, top)));
   }
   out.push(prism(202, 80, DECK_Z, 2, 1.5, 0.3, "steel"));
-  for (const [x, y] of [[218, 77.5], [228, 77.5], [218, 84.5], [228, 84.5]] as const) weldSpots.push(v3(x, y, 5.3));
 }
 
 const SLAB_TOP = 0.2, STACK_CAP_UNDER_RTG = 3;
@@ -101,8 +100,8 @@ export function fittingOutSheds(out: Solid[]): void {
   }
 }
 
-export function shipyardEast(out: Solid[], accents: Accent[], weldSpots: Vec3[], rng: Rng): void {
-  floatingDock(out, accents, weldSpots);
+export function shipyardEast(out: Solid[], accents: Accent[], rng: Rng): void {
+  floatingDock(out, accents);
   containerYard(out, accents, rng);
   quayCranes(out, accents);
   fittingOutSheds(out);
