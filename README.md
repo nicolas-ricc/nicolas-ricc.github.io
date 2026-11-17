@@ -60,7 +60,8 @@ the station, a new strip of Resume holds a row of reconverted warehouses with
 the covered market (row 92), a freight row and the rail lands, a fenced band
 around the west track with a siding and a parked freight train; on the east
 bank, the dock inlet has a fish market, a food hall and fishing boats. The
-shipyard gains a floating dock, a container yard, quay cranes and sheet metal.
+shipyard gains a floating dock, a container yard, quay cranes and sheet metal. The STS boom of the quay crane is nearly horizontal and
+reaches over the water to the west; it has no tip light on the east bank.
 The fair gains a ghost train, a mirror house, a slide, a log flume, booths and
 food trucks.
 
@@ -118,7 +119,8 @@ Specs in `docs/superpowers/specs/`
 `2026-10-27-estacion-terminal-design.md`,
 `2026-10-27-barrio-costero-design.md`,
 `2026-11-11-carteles-de-zona-assets-design.md`,
-`2026-11-15-carteles-de-zona-rediseno-design.md`).
+`2026-11-15-carteles-de-zona-rediseno-design.md`,
+`2026-11-16-storybook-luces-y-encuadre-design.md`).
 
 `/lab/storybook.html` is the structures storybook: it shows one building or
 structure at a time, cropped from the world by its box (or built alone at the
@@ -139,7 +141,7 @@ or `j`/`k` move to the next or the previous one; `g`, `h` and `a` hide or
 show ground, shadows and accents; `6` rotates the bloom; `c` cycles the exhibit
 scale (real, 1.17 and 0.83, the cover scales of a laptop and a phone); `?bloom=` forces the bloom and
 `?speed=` scales the animation clock up to 100 (`?speed=0`
-freezes it; above 100 it is 1). The seam at 90 added ten exhibits:
+freezes it; above 100 it is 1). In dev, `__lab.tick` advances the stage and renders it, for headless time-lapses. The seam at 90 added ten exhibits:
 `#dique-flotante`, `#patio-contenedores` and `#grua-muelle` (shipyard),
 `#tren-fantasma`, `#casa-espejos`, `#tobogan` and `#tronco-acuatico` (fair),
 and `#galpones`, `#playa-carga` and `#mercado-pescado` (city).
