@@ -1,4 +1,4 @@
-import type { Accent } from "../iso/accent";
+import { spot, type Accent } from "../iso/accent";
 import { dot, v3, type Vec2, type Vec3 } from "../iso/geometry";
 import type { Plate } from "../iso/plate";
 import { VIEW_DIR } from "../iso/project";
@@ -74,7 +74,7 @@ export function tinkerWordPlane(at: Vec3): TextPlane {
   return wordPlane(at, deckTop(at) - low);
 }
 
-/** Amber bulbs every `BULB_STEP` along the stroke polylines, ends included (once on a closed polyline). */
+/** Amber bulb spots every `BULB_STEP` along the stroke polylines, ends included (once on a closed polyline). */
 function bulbs(g: GlyphLayout, plane: TextPlane): Accent[] {
   return g.strokes.flatMap((s) => {
     const len = s.slice(1).reduce((n, q, j) => n + Math.hypot(q.x - s[j]!.x, q.y - s[j]!.y), 0), k = Math.max(1, Math.round(len / BULB_STEP));
@@ -83,7 +83,7 @@ function bulbs(g: GlyphLayout, plane: TextPlane): Accent[] {
       let d = (n * len) / k, j = 0;
       while (j < s.length - 2 && d > Math.hypot(s[j + 1]!.x - s[j]!.x, s[j + 1]!.y - s[j]!.y)) { d -= Math.hypot(s[j + 1]!.x - s[j]!.x, s[j + 1]!.y - s[j]!.y); j++; }
       const a = s[j]!, b = s[j + 1]!, f = d / Math.hypot(b.x - a.x, b.y - a.y);
-      return { kind: "dot", at: toWorld(plane, a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f), r: BULB, color: "amberMid" };
+      return spot(toWorld(plane, a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f), BULB, "amberMid");
     });
   });
 }
