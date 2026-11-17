@@ -53,8 +53,7 @@ describe("no round haloed lights in the 11 exhibits (#403)", () => {
     const found = spots(scene.accents).map((s) => `${s.color} ${Math.round(s.r * 1e6) / 1e6}`);
     expect(found.filter((k) => k === "magenta 0.35")).toHaveLength(3); // the station buffers
     expect(found.filter((k) => k === "magentaMid 1")).toHaveLength(1); // the wreck buoy
-    expect(found.filter((k) => k === "amberMid 0.3").length).toBeGreaterThan(0); // the marquee bulbs of the tinker sign
-    expect(found.filter((k) => !["magenta 0.35", "magentaMid 1", "amberMid 0.3"].includes(k))).toEqual([]);
+    expect(found.filter((k) => !["magenta 0.35", "magentaMid 1"].includes(k))).toEqual([]); // the tinker sign is built only in the lab, not in the world
   });
 
   it("the rest of the world keeps its dots", () => {
@@ -73,5 +72,5 @@ describe("no round haloed lights in the 11 exhibits (#403)", () => {
       expect(accentZone(a), `${s.color} at ${s.at.x}, ${s.at.y}`).toBe(worldZoneAt(s.at.x, s.at.y));
     }
     expect(n).toBeGreaterThan(0);
-  });
+  }, 30_000); // builds the 11 exhibits x 32 frames plus the world; ~5 s alone, more under load
 });
