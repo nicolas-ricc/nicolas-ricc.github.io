@@ -58,7 +58,7 @@ describe("shipyard", () => {
     const inStation = (a: Accent) => { const p = where(a); return p.x >= 110 && p.x <= STATION.x1 && p.y >= 100 && p.y <= STATION.y1; };
     const facade = new Set(windowCandidates(s.solids).map((c) => JSON.stringify(c.pts))); // #324: the windows of halls, workshops and sheds
     const outside = s.accents.filter((a) => !inStation(a) && !(a.kind === "poly" && facade.has(JSON.stringify(a.pts)))), inside = s.accents.filter(inStation);
-    // #401: 13 dots: street lamps y 12 and 96 (2), quay lamps y 20 and 80 (2), seam fence lamps x −48, −24, 0 (3), floating dock towers and quay crane tips (6); plus the container yard window (poly)
+    // #401: 13 dots: street lamps y 12 and 96 (2), quay lamps y 20 and 80 (2), seam fence lamps x −48, −24, 0 (3), floating dock towers (2), quay crane tips (2) and shipyard-fill tower crane tips at (128, 5) and (128, 31) (2); plus the container yard window (poly)
     expect(outside.filter((a) => a.kind === "dot")).toHaveLength(13);
     // #323: the one exception is the window of the container yard gatehouse
     const windows = outside.filter((a) => a.kind === "poly");

@@ -15,7 +15,7 @@ import { SUBSTATION, substation } from "./substation";
 /**
  * Portfolio factory, where the shipyard sheds used to stand (region x 4..98.7, y −4..99). The plant
  * (Mistley's maltings, x 5..29, y 44..74; the boiler hall of the Fábrica de Luz, x 29..92, y 44..74, with its
- * stair tower at x 93..98; the water tower on legs at (15, 32)), the truck yard are
+ * stair tower at x 93..98; the water tower on legs at (15, 32)) and the truck yard are
  * built in the local frame and moved with `PLANT_SHIFT` from `plant-frame.ts`: the truck yard
  * sits at y 76..89, with the inclined belt running down to it from the hopper (y 74..76). North of the plant,
  * three smoking chimneys (at (58, 32), (72, 26) and (86, 32)), the cooling tower at (40, 14) and the outdoor
