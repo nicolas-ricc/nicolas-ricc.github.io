@@ -38,7 +38,7 @@ const has = (as: readonly Accent[], color: string, r: number) => spots(as).some(
 describe("no round haloed lights in the 11 exhibits (#403)", () => {
   it.each(GATE)("%s draws no dot", (id) => {
     expect(lights(id).filter((a) => a.kind === "dot")).toEqual([]);
-  });
+  }, 30_000); // one world build plus 32 frames per exhibit
 
   it("the wreck, lighthouse, station and train exhibits show their replacement spots", () => {
     expect(has(lights("pecio"), "magentaMid", 1)).toBe(true); // wreck buoy
