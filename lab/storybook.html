@@ -20,6 +20,15 @@
       #readout dl { margin: 0; }
       #readout dt { font-size: 0.8rem; text-transform: uppercase; opacity: 0.6; margin-top: 0.6rem; }
       #readout dd { margin: 0.1rem 0 0; font-variant-numeric: tabular-nums; }
+      @media (max-width: 60rem) {
+        body {
+          grid-template-columns: 1fr;
+          grid-template-rows: auto minmax(0, 1fr) auto;
+        }
+        #exhibits { max-height: 22vh; }
+        #readout { max-height: 22vh; }
+        #lab-host { height: auto; min-height: 0; }
+      }
     </style>
   </head>
   <body>

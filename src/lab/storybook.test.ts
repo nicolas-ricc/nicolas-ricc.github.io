@@ -56,7 +56,7 @@ describe("lab hook (#377)", () => {
   it("LabHook has every member the legibility script reads", () => {
     const start = src.indexOf("interface LabHook {");
     const body = src.slice(start, src.indexOf("\n}", start));
-    for (const k of ["exhibitId", "coverScale", "setCoverScale", "bloom", "fit", "hostSize", "pixels"]) expect(body).toMatch(new RegExp(`\\b${k}\\b`));
+    for (const k of ["exhibitId", "coverScale", "setCoverScale", "bloom", "fit", "hostSize", "pixels", "tick"]) expect(body).toMatch(new RegExp(`\\b${k}\\b`));
   });
   it("pixels reads the stage through extract.pixels at resolution 2", () => {
     expect(src).toContain("extract.pixels(");
@@ -65,5 +65,41 @@ describe("lab hook (#377)", () => {
   it("the header comment documents window.__lab", () => {
     const header = src.slice(src.indexOf("/**"), src.indexOf("*/")).replace(/\n\s*\*\s*/g, " ");
     expect(header).toContain("window.__lab");
+  });
+});
+
+describe("content framing and tick (#400)", () => {
+  const code = src.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
+  it("fits contentFrame, not the box rhombus", () => {
+    expect(code).toMatch(/fitTransform\(\s*content\b/);
+    expect(code).not.toMatch(/fitTransform\(\s*boxFrame\(/);
+  });
+  it("contentFrame is computed once per show, before buildStage", () => {
+    expect(code.match(/contentFrame\(/g)).toHaveLength(1);
+    const show = code.slice(code.indexOf("const show = "), code.indexOf("const fromHash"));
+    expect(show.indexOf("contentFrame(")).toBeGreaterThan(-1);
+    expect(show.indexOf("contentFrame(")).toBeLessThan(show.indexOf("buildStage("));
+  });
+  it("tick redraws the stage and renders", () => {
+    expect(code).toMatch(/tick\(dtMs\)\s*\{\s*stage\?\.tick\(dtMs\);\s*app\.render\(\);\s*\}/);
+  });
+  it("the header documents tick and the 8 s clock advance", () => {
+    const header = src.slice(src.indexOf("/**"), src.indexOf("*/")).replace(/\n\s*\*\s*/g, " ");
+    expect(header).toMatch(/\btick\b/);
+    expect(header).toContain("8 s");
+  });
+});
+
+describe("responsive layout (#400)", () => {
+  const html = readFileSync(new URL("../../lab/storybook.html", import.meta.url), "utf8").replace(/\s+/g, " ");
+  it("under 60rem the index, the canvas and the readout stack in one column", () => {
+    expect(html).toContain("@media (max-width: 60rem) { body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) auto; } #exhibits { max-height: 22vh; } #readout { max-height: 22vh; } #lab-host { height: auto; min-height: 0; } }");
+  });
+  it("keeps the three columns, the hidden overflow and the element order", () => {
+    expect(html).toContain("grid-template-columns: 14rem 1fr 16rem");
+    expect(html).toMatch(/html, body \{[^}]*overflow: hidden/);
+    const order = ["id=\"exhibits\"", "id=\"lab-host\"", "id=\"readout\""].map((k) => html.indexOf(k));
+    expect(order.every((i) => i > 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
 });

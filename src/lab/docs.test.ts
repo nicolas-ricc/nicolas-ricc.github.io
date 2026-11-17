@@ -46,6 +46,10 @@ describe("storybook documentation (#97)", () => {
   it("README names the storybook keys and parameters", () => {
     for (const k of ["←", "→", "`j`", "`k`", "`g`", "`h`", "`a`", "`6`", "`c`", "?bloom=", "?speed="]) expect(story).toContain(k);
   });
+  it("README says the frame takes the projected bounds and the layout is responsive (#400)", () => {
+    expect(story).toContain("projected bounds");
+    expect(story).toContain("responsive");
+  });
   it("README lists the storybook spec among the lab specs", () => {
     const lab = readme.split(/\n\s*\n/).find((p) => p.includes("/lab/world.html")) ?? "";
     expect(lab).toContain("2026-10-17-storybook-estructuras-design.md");
