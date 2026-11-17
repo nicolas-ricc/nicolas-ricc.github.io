@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { isBehind, overlaps, screenBounds } from "../iso/depth";
-import { bounds, isFlat, type Bounds, type Solid } from "../iso/solids";
+import { hullsOverlap, isBehind, overlaps, screenBounds, sortByDepth } from "../iso/depth";
+import { convexHull } from "../iso/geometry";
+import { project } from "../iso/project";
+import { bounds, isFlat, tessellateAll, type Bounds, type Solid } from "../iso/solids";
 import { worldZoneAt } from "../map/geo";
 import { createRng, SEED } from "../map/seed";
 import type { Accent } from "../iso/accent";
-import { BOOTH_ROW, BOOTH_TYPES, COASTER_PROFILE, DROP, FAIR_MATS, FLUME, FLUME_DROP_X0, FLUME_PATH, FLUME_X1, FOOD_COURT, GHOST, LIFT_SEGMENTS, MIRRORS, PIER, SLIDE, WHEEL, boothRow, boothSlots, boothTypes, coasterPath, dropSolids, fair, flume, foodCourt, ghostTrain, logSolids, mirrorHouse, slide, trainSolids, wheelSolid } from "./fair";
+import { BOOTH_ROW, BOOTH_TYPES, CHUTE, COASTER_PROFILE, DROP, FAIR_MATS, FLUME, FLUME_DROP_X0, FLUME_PATH, FLUME_X1, FOOD_COURT, GHOST, LIFT_SEGMENTS, MIRRORS, PIER, SLIDE, WHEEL, boothRow, boothSlots, boothTypes, coasterPath, dropSolids, fair, flume, foodCourt, ghostTrain, logSolids, mirrorHouse, slide, trainSolids, wheelSolid } from "./fair";
 import { FAIR, bayShoreX, bayWater, fairAt } from "./sprawl-grid";
 import { bleedTerrainAt } from "./terrain";
 import { zoneRng } from "./world";
@@ -191,23 +193,152 @@ describe("mirror house (#327)", () => {
   });
 });
 
-describe("giant slide (#327)", () => {
-  it("deck tower h 14, ≥ 24 deck treads descending from z 13 to 0.5 around it, railings and a tip light", () => {
-    expect(SLIDE).toEqual({ x: 118, y: -292, r: 5, h: 14 });
-    const { solids, accents } = build(slide);
-    expect(solids.some((x) => x.kind === "prism" && x.mat === "deck" && x.w === 4 && x.d === 4 && x.h === 14)).toBe(true);
-    expect(solids.some((x) => x.kind === "cone" && x.mat === "copper" && x.r === 3 && x.h === 2)).toBe(true);
-    const treads = solids.flatMap((x) => {
-      if (x.kind !== "poly" || x.mat !== "deck") return [];
-      const cx = x.footprint.reduce((a, p) => a + p.x, 0) / x.footprint.length, cy = x.footprint.reduce((a, p) => a + p.y, 0) / x.footprint.length;
-      return Math.abs(Math.hypot(cx - SLIDE.x, cy - SLIDE.y) - SLIDE.r) < 0.01 ? [x.z] : [];
-    });
-    expect(treads.length).toBeGreaterThanOrEqual(24);
-    expect(treads[0]).toBeCloseTo(13, 9); expect(treads[treads.length - 1]).toBeCloseTo(0.5, 9);
-    for (let k = 1; k < treads.length; k++) expect(treads[k]!).toBeLessThan(treads[k - 1]!);
-    expect(solids.filter((x) => x.kind === "beam" && x.mat === "steel").length).toBeGreaterThanOrEqual(24);
-    expect(accents.some((a) => a.kind === "dot" && a.color === "amber" && a.at.z > 16)).toBe(true);
-    expect(A().solids.filter((x) => x.kind === "prism" && x.mat === "deck" && x.h === 14)).toHaveLength(1);
+describe("giant slide: helter skelter (#398)", () => {
+  const piece = () => build(slide);
+  const angle = (p: { x: number; y: number }) => Math.atan2(p.y - SLIDE.y, p.x - SLIDE.x);
+  const radius = (p: { x: number; y: number }) => Math.hypot(p.x - SLIDE.x, p.y - SLIDE.y);
+  const beams = (solids: Solid[]) => solids.filter((x): x is Solid & { kind: "beam" } => x.kind === "beam");
+  const chain = (mat: string, w: number) => beams(piece().solids).filter((x) => x.mat === mat && x.w === w);
+  const bands = () => piece().solids.filter((x): x is Solid & { kind: "cylinder" } => x.kind === "cylinder" && x.mat === "whitewash" && x.sides === 16 && x.at.z < SLIDE.trunk).sort((a, b) => a.at.z - b.at.z);
+  const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+  const close = (a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }) => { expect(a.x).toBeCloseTo(b.x, 6); expect(a.y).toBeCloseTo(b.y, 6); expect(a.z).toBeCloseTo(b.z, 6); };
+
+  it("SLIDE: base r 3.5, top r 2.1, trunk 12, roof tip 15.9, 2.5 turns", () => {
+    expect(SLIDE).toEqual({ x: 118, y: -292, r: 3.5, rTop: 2.1, trunk: 12, h: 15.9, turns: 2.5 });
+  });
+
+  it("trunk: 16-sided whitewash bands whose radius shrinks with height, signal stripes on alternate walls", () => {
+    const bs = bands();
+    expect(bs.length).toBeGreaterThanOrEqual(3);
+    expect(bs[0]!.at.z).toBe(0); expect(bs[0]!.r).toBe(SLIDE.r);
+    expect(bs[bs.length - 1]!.at.z + bs[bs.length - 1]!.h).toBeCloseTo(SLIDE.trunk, 9);
+    for (let k = 1; k < bs.length; k++) { expect(bs[k]!.r).toBeLessThan(bs[k - 1]!.r); expect(bs[k]!.at.z).toBeCloseTo(bs[k - 1]!.at.z + bs[k - 1]!.h, 9); }
+    for (const b of bs) {
+      expect(b.r).toBeGreaterThanOrEqual(SLIDE.rTop);
+      const walls = new Set((b.plates ?? []).filter((p) => p.mat === "signal" && p.shape === "rect" && p.u0 === 0 && p.u1 === 1 && Math.abs(p.z0 - b.at.z) < 1e-9 && Math.abs(p.z1 - b.at.z - b.h) < 1e-9).map((p) => p.wall));
+      expect([...walls].sort((x, y) => x - y)).toEqual([0, 2, 4, 6, 8, 10, 12, 14]);
+    }
+  });
+
+  it("lantern with 8 windows, gored roof at 15.9, flag ≤ 18.5", () => {
+    const { solids } = piece();
+    const lantern = solids.filter((x): x is Solid & { kind: "cylinder" } => x.kind === "cylinder" && x.mat === "whitewash" && x.at.z === SLIDE.trunk);
+    expect(lantern).toHaveLength(1);
+    expect(lantern[0]!.r).toBeLessThan(SLIDE.rTop);
+    expect((lantern[0]!.plates ?? []).filter((p) => p.mat === "glass")).toHaveLength(8);
+    const roof = solids.filter((x): x is Solid & { kind: "dome" } => x.kind === "dome" && x.alt !== undefined);
+    expect(roof).toHaveLength(1);
+    expect(roof[0]!.at.z + roof[0]!.h).toBeCloseTo(SLIDE.h, 9);
+    expect(roof[0]!.r).toBeGreaterThan(lantern[0]!.r);
+    const top = solids.reduce((a, x) => (bounds(x).max.z > bounds(a).max.z ? x : a));
+    expect(bounds(top).max.z).toBeGreaterThan(SLIDE.h); expect(bounds(top).max.z).toBeLessThanOrEqual(18.5);
+    expect(["beam", "poly"]).toContain(top.kind);
+  });
+
+  it("no dot accents", () => {
+    expect(piece().accents.filter((a) => a.kind === "dot")).toHaveLength(0);
+  });
+
+  it("chute: three continuous chains of ≥ 2 turns, z strictly decreasing, radius growing as it descends", () => {
+    for (const [mat, w] of [["signal", CHUTE.w], ["signal", 0.15], ["whitewash", 0.2]] as const) {
+      const all = chain(mat, w), helix = all.slice(0, -1);
+      expect(helix.length, `${mat} ${w}`).toBe(CHUTE.perTurn * SLIDE.turns);
+      let turn = 0;
+      helix.forEach((b, k) => {
+        expect(b.to.z).toBeLessThan(b.from.z);
+        expect(radius(b.to)).toBeGreaterThan(radius(b.from));
+        turn += wrap(angle(b.to) - angle(b.from));
+        if (k > 0) close(helix[k - 1]!.to, b.from);
+      });
+      expect(Math.abs(turn)).toBeGreaterThanOrEqual(2 * 2 * Math.PI);
+      expect(Math.abs(turn)).toBeCloseTo(SLIDE.turns * 2 * Math.PI, 6);
+    }
+    const bed = chain("signal", CHUTE.w);
+    expect(bed[0]!.from.z - 0.075).toBeCloseTo(CHUTE.z0, 9);
+    expect(bed[bed.length - 2]!.to.z - 0.075).toBeCloseTo(CHUTE.z1, 9);
+  });
+
+  it("run-out: straight, tangent at the helix end, at z ≤ 0.6, over a low deck", () => {
+    for (const [mat, w] of [["signal", CHUTE.w], ["signal", 0.15], ["whitewash", 0.2]] as const) {
+      const all = chain(mat, w), out = all[all.length - 1]!, end = all[all.length - 2]!;
+      close(end.to, out.from);
+      expect(out.to.z).toBe(out.from.z);
+      const dx = out.to.x - out.from.x, dy = out.to.y - out.from.y;
+      expect(Math.hypot(dx, dy)).toBeCloseTo(CHUTE.exit, 9);
+      expect(Math.abs(dx * (out.from.x - SLIDE.x) + dy * (out.from.y - SLIDE.y))).toBeLessThan(1e-6);
+    }
+    const bed = chain("signal", CHUTE.w), out = bed[bed.length - 1]!;
+    expect(out.from.z - 0.075).toBeCloseTo(CHUTE.z1, 9); expect(out.from.z - 0.075).toBeLessThanOrEqual(0.6);
+    const deck = piece().solids.find((x) => x.kind === "prism" && x.mat === "deck" && x.at.z === 0 && x.h === CHUTE.z1);
+    expect(deck).toBeDefined();
+    const db = bounds(deck!);
+    for (const p of [out.from, out.to]) { expect(p.x).toBeGreaterThanOrEqual(db.min.x); expect(p.x).toBeLessThanOrEqual(db.max.x); expect(p.y).toBeGreaterThanOrEqual(db.min.y - 1e-9); expect(p.y).toBeLessThanOrEqual(db.max.y + 1e-9); }
+  });
+
+  it("steel brackets every ~45° from the trunk to the bed", () => {
+    const br = beams(piece().solids).filter((x) => x.mat === "steel" && x.w === 0.15);
+    expect(br.length).toBeGreaterThanOrEqual(15);
+    for (const b of br) { expect(b.to.z).toBeGreaterThan(b.from.z); expect(radius(b.to)).toBeGreaterThan(radius(b.from)); }
+    const steps = br.slice(1).map((b, k) => { const d = angle(b.to) - angle(br[k]!.to); return ((d % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI); });
+    const wide = steps.filter((d) => d > (50 * Math.PI) / 180);
+    expect(wide.length).toBeLessThanOrEqual(1);
+    for (const d of wide) expect(d).toBeCloseTo(Math.PI / 2, 6);
+  });
+
+  it("depth: chute and brackets facing the camera are drawn after the trunk, those facing away before (whole fair sort)", () => {
+    const s = A();
+    const inBox = (x: Solid) => { const b = bounds(x); return b.min.x >= 108 && b.max.x <= 128 && b.min.y >= -310 && b.max.y <= -272; };
+    const mine = s.solids.filter(inBox);
+    const tower = mine.filter((x) => x.kind === "cylinder" && x.mat === "whitewash" && x.sides === 16);
+    const bs = beams(mine).filter((b) => !(b.from.x === b.to.x && b.from.y === b.to.y));
+    const order = sortByDepth(s.solids), idx = new Map(order.map((x, i) => [x, i]));
+    const sil = (x: Solid) => convexHull(tessellateAll(x).flatMap((f) => f.pts.map(project)));
+    let checked = 0;
+    for (const b of bs) {
+      const bb = bounds(b), f = Math.cos(Math.atan2((bb.min.y + bb.max.y) / 2 - SLIDE.y, (bb.min.x + bb.max.x) / 2 - SLIDE.x) - Math.PI / 4);
+      if (Math.abs(f) <= 0.02) continue;
+      for (const c of tower) {
+        const cb = bounds(c);
+        if (!(bb.min.z < cb.max.z && cb.min.z < bb.max.z) || !hullsOverlap(sil(b), sil(c))) continue;
+        checked++;
+        if (f > 0) expect(idx.get(b)!, `beam at (${bb.min.x.toFixed(1)}, ${bb.min.y.toFixed(1)}, ${bb.min.z.toFixed(1)}) after band z ${cb.min.z}`).toBeGreaterThan(idx.get(c)!);
+        else expect(idx.get(b)!, `beam at (${bb.min.x.toFixed(1)}, ${bb.min.y.toFixed(1)}, ${bb.min.z.toFixed(1)}) before band z ${cb.min.z}`).toBeLessThan(idx.get(c)!);
+      }
+    }
+    expect(checked).toBeGreaterThan(50);
+  });
+
+  it("door with sign on the south wall, 8 steps with handrails, two mat piles", () => {
+    const { solids } = piece();
+    const b0 = bands()[0]!, plates = (b0.plates ?? []).filter((p) => p.wall === 3 && p.shape === "rect");
+    const door = plates.find((p) => p.mat === "hull");
+    expect(door).toBeDefined();
+    const d = door as { z0: number; z1: number };
+    expect(d.z0).toBeGreaterThanOrEqual(0.6); expect(d.z1).toBeLessThanOrEqual(2.4);
+    const sign = plates.find((p) => p.mat === "safety") as { z0: number; z1: number } | undefined;
+    expect(sign).toBeDefined(); expect(sign!.z0).toBeGreaterThan(d.z1); expect(sign!.z1).toBeLessThanOrEqual(3);
+    const steps = solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism" && x.mat === "deck" && x.d === 0.2);
+    expect(steps).toHaveLength(8);
+    expect(steps[0]!.at.y).toBeGreaterThanOrEqual(SLIDE.y + SLIDE.r * Math.cos(Math.PI / 16));
+    for (let k = 1; k < 8; k++) { expect(steps[k]!.at.y).toBeGreaterThan(steps[k - 1]!.at.y); expect(steps[k]!.h).toBeLessThan(steps[k - 1]!.h); }
+    const rails = beams(solids).filter((x) => x.mat === "steel" && x.w === 0.08 && Math.max(x.from.z, x.to.z) < 3);
+    expect(rails).toHaveLength(2);
+    for (const r of rails) { const [lo, hi] = r.from.z < r.to.z ? [r.from, r.to] : [r.to, r.from]; expect(hi.y).toBeLessThan(lo.y); }
+    const mats = solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism" && x.mat === "deck" && x.w === 1.4 && x.d === 0.8 && x.h === 0.15);
+    expect(mats).toHaveLength(6);
+    const piles: (typeof mats)[] = [];
+    for (const m of mats) { const p = piles.find((g) => g.some((o) => touch2(bounds(o), bounds(m)))); if (p) p.push(m); else piles.push([m]); }
+    expect(piles).toHaveLength(2);
+    for (const p of piles) expect(p.map((m) => m.at.z).sort((x, y) => x - y)).toEqual([0, 0.15, 0.3]);
+    const centre = (g: typeof mats) => ({ x: g[0]!.at.x + 0.7, y: g[0]!.at.y + 0.4 });
+    const bed = chain("signal", CHUTE.w), end = bed[bed.length - 1]!.to, far = steps[7]!;
+    const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
+    expect(piles.some((g) => dist(centre(g), end) <= 2)).toBe(true);
+    expect(piles.some((g) => dist(centre(g), { x: far.at.x + far.w / 2, y: far.at.y }) <= 2)).toBe(true);
+  });
+
+  it("footprint: the whole piece inside x 108…128, y −310…−272", () => {
+    for (const x of piece().solids) { const b = bounds(x); expect(b.min.x).toBeGreaterThanOrEqual(108); expect(b.max.x).toBeLessThanOrEqual(128); expect(b.min.y).toBeGreaterThanOrEqual(-310); expect(b.max.y).toBeLessThanOrEqual(-272); }
   });
 });
 
@@ -324,7 +455,8 @@ describe("footprints of the new pieces (#327)", () => {
   ];
   it("legacyOnly builds the fair without the new pieces", () => {
     const old = fair(createRng(7), { legacyOnly: true });
-    expect(old.solids.some((x) => x.kind === "prism" && x.mat === "deck" && x.h === 14)).toBe(false);
+    expect(old.solids.some((x) => x.kind === "cylinder" && x.mat === "whitewash" && x.sides === 16)).toBe(false);
+    expect(old.solids.some((x) => x.kind === "dome" && x.alt !== undefined)).toBe(false);
     expect(old.solids.some((x) => x.mat === "shallow")).toBe(false);
     expect(old.solids.some((x) => x.kind === "prism" && x.mat === "copper" && x.w === 20)).toBe(false);
   });
