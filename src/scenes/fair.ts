@@ -236,15 +236,17 @@ export function slide(out: Solid[], _accents: Accent[]): void {
     if (k === 0) plates.push({ wall: 3, shape: "rect", u0: 0.2, u1: 0.8, z0: 0.8, z1: 2.2, mat: "hull" }, { wall: 3, shape: "rect", u0: 0.15, u1: 0.85, z0: 2.3, z1: 2.8, mat: "safety" }); // south door and its sign
     out.push({ kind: "cylinder", at: v3(x, y, z0), r: rAt(z0), h: z1 - z0, mat: "whitewash", sides: 16, plates });
   }
-  const windows: Plate[] = Array.from({ length: 8 }, (_, k) => ({ wall: 2 * k, shape: "poly", pts: [{ x: 0.25, y: 12.6 }, { x: 0.75, y: 12.6 }, { x: 0.75, y: 13.5 }, { x: 0.5, y: 13.9 }, { x: 0.25, y: 13.5 }], mat: "glass" }));
-  out.push({ kind: "cylinder", at: v3(x, y, trunk), r: 1.9, h: 2.4, mat: "whitewash", sides: 16, plates: windows });
-  out.push({ kind: "dome", at: v3(x, y, 14.4), r: 2.1, h: 1.5, mat: "signal", alt: "whitewash", sides: 16, rings: 3 });
-  out.push({ kind: "beam", from: v3(x, y, h), to: v3(x, y, 17.6), w: 0.1, h: 0.1, mat: "steel" });
+  const roofH = 1.5, lanternH = h - roofH - trunk, mast = 0.3 * lanternH, fz = h + mast - 0.55; // lantern up to the roof; mast 0.3 × the lantern; cloth hangs 0.5 from its top
+  const windows: Plate[] = Array.from({ length: 8 }, (_, k) => ({ wall: 2 * k, shape: "poly", pts: [{ x: 0.25, y: trunk + 0.6 }, { x: 0.75, y: trunk + 0.6 }, { x: 0.75, y: trunk + 1.5 }, { x: 0.5, y: trunk + 1.9 }, { x: 0.25, y: trunk + 1.5 }], mat: "glass" }));
+  windows.push({ wall: 7, shape: "rect", u0: 0.2, u1: 0.8, z0: trunk, z1: trunk + 1.6, mat: "hull" }); // west wall: exit door onto the balcony
+  out.push({ kind: "cylinder", at: v3(x, y, trunk), r: 1.9, h: lanternH, mat: "whitewash", sides: 16, plates: windows });
+  out.push({ kind: "dome", at: v3(x, y, h - roofH), r: 2.08, h: roofH, mat: "signal", alt: "whitewash", sides: 16, rings: 3 }); // 9.5 % eave
+  out.push({ kind: "beam", from: v3(x, y, h), to: v3(x, y, h + mast), w: 0.1, h: 0.1, mat: "steel" });
   const cloth: Plate[] = [
-    { wall: 2, shape: "rect", u0: 0.4, u1: 0.6, z0: 16.9, z1: 17.5, mat: "whitewash" }, { wall: 2, shape: "rect", u0: 0, u1: 1, z0: 17.1, z1: 17.3, mat: "whitewash" },
-    { wall: 2, shape: "rect", u0: 0.45, u1: 0.55, z0: 16.9, z1: 17.5, mat: "signal" }, { wall: 2, shape: "rect", u0: 0, u1: 1, z0: 17.15, z1: 17.25, mat: "signal" },
+    { wall: 2, shape: "rect", u0: 0.4, u1: 0.6, z0: fz, z1: fz + 0.5, mat: "whitewash" }, { wall: 2, shape: "rect", u0: 0, u1: 1, z0: fz + 0.17, z1: fz + 0.33, mat: "whitewash" },
+    { wall: 2, shape: "rect", u0: 0.45, u1: 0.55, z0: fz, z1: fz + 0.5, mat: "signal" }, { wall: 2, shape: "rect", u0: 0, u1: 1, z0: fz + 0.21, z1: fz + 0.29, mat: "signal" },
   ];
-  out.push({ kind: "poly", footprint: [{ x: x + 0.05, y: y - 0.03 }, { x: x + 1, y: y - 0.03 }, { x: x + 1, y: y + 0.03 }, { x: x + 0.05, y: y + 0.03 }], z: 16.9, h: 0.6, mat: "livery", plates: cloth });
+  out.push({ kind: "poly", footprint: [{ x: x + 0.05, y: y - 0.03 }, { x: x + 0.9, y: y - 0.03 }, { x: x + 0.9, y: y + 0.03 }, { x: x + 0.05, y: y + 0.03 }], z: fz, h: 0.5, mat: "livery", plates: cloth });
   const bx0 = x - (chuteR(CHUTE.z0) + CHUTE.w), bx1 = x - rAt(10.5) * Math.cos(Math.PI / 16) - 0.01, rz = CHUTE.z0 + 0.8; // balcony: its east face is west of the top band's AABB
   out.push(prism(bx0, y, CHUTE.z0, bx1 - bx0, 2, 0.15, "deck"));
   out.push({ kind: "beam", from: v3(bx0 + 0.04, y, rz), to: v3(bx0 + 0.04, y + 2, rz), w: 0.08, h: 0.08, mat: "steel" }, { kind: "beam", from: v3(bx0, y + 1.96, rz), to: v3(bx1, y + 1.96, rz), w: 0.08, h: 0.08, mat: "steel" });

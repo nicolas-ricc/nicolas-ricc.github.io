@@ -134,3 +134,11 @@
 - Sources: CODE 12 (`solids.ts:262-279` beam axis and vertical axis; `solids.ts:420` cylinder → `withPlates(…, s)`; `solids.ts:227-245` dome face order: base, then ring by ring in side order, the last ring as triangles to the apex; `plate.ts:7,13` plate z absolute; `project.ts:11` `VIEW_DIR = (1.4, 1.4, 1)`, camera at azimuth 45° from +x toward +y; `fair.test.ts:15,41` slender and 18.5; `depth.ts` exports `sortByDepth`, `hullsOverlap`; `geometry.ts:37` `convexHull`; `fair.test.ts` already defines `build` and `A`; `exhibits.test.ts:144-153` framing and neighbors are independent of the pinned box). DOC 2 (`docs/adr/` has only 0001 and 0002; spec §Profundidad offers the mitigations and asks for visual verification). NO SOURCE 4, all technical assumptions (see Assumptions): the clearance factor, the prototype, gores via `alt`, and `.scratch/` captures run by the same session in stages 3–4.
 - Plan corrections: the run-out z check applies to the bed only (Q1). Only the low bracket at the door is skipped (Q4). Rails are w 0.08 (Q5). The depth tolerance went from 0.1 to 0.02 (Q3). Mats have their own signature (Q15). Every task ends with `npm test` green (Q9). The projected count is stated (Q13). The 18.5 wording is fixed (Q12). Spanish quotes stay in the plan, never in code (Q18; `src/english.test.ts` guards it).
 - Follow-up issues opened: none. Spec ambiguities: none.
+
+## Review fixes (stage 6)
+
+- Mast shortened to 0.3 × the lantern height (spec table): 15.9 → 16.62, cloth 16.07–16.57. Exhibit `h` 16.7.
+- Exit door (`hull` plate) on the lantern's west wall (wall 7), facing the balcony (spec: "balcón … que sale de la linterna").
+- Dome r 2.08: a 9.5 % eave, inside the spec's 5–10 %.
+- Lantern, window, roof and flag heights derived from `SLIDE.trunk` / `SLIDE.h`.
+- Phone captures: at 412×915 the storybook draws no canvas (layout predates this change, same on 060e2c6), so before and after were captured at 900×1015 @2× (the owner's foldable).
