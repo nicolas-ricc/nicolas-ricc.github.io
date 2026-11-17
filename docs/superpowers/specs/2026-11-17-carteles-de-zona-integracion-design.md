@@ -9,16 +9,16 @@ Integra los carteles de `2026-11-15-carteles-de-zona-rediseno-design.md` y
 ## 1. Contexto
 
 Los carteles existían solo en el storybook (`/lab/storybook.html`). El sitio
-usaba otros marcadores de zona y la navegación no pasaba por ellos. #389
-planteó cuatro riesgos de montarlos en el mundo:
+usaba los rótulos HTML de `#zonas` en Rubik Doodle Shadow y la navegación no
+pasaba por los carteles. #389 planteó cuatro riesgos de montarlos en el mundo:
 
 - **Carriles:** un cartel en el agua no puede invadir el carril de los barcos
   (`LANE_OUT`) ni quedar tapado por ellos.
-- **Encuadre:** la cámara cover (`coverView`) tiene que mostrar los tres
-  carteles, o dar una salida legible cuando no caben.
-- **Rendimiento:** más sólidos y acentos estáticos, con el bloom ya cerca del
-  límite.
-- **Guardrails:** legibilidad, oclusión y topes de presupuesto con tests.
+- **Encuadre:** que los tres entren en `coverView` y no tapen hitos.
+- **Rendimiento:** medir contra el presupuesto de frame del mundo (#229); solo
+  la plataforma suma unos 650 acentos.
+- **Guardrails:** niveles 1 y 2 de legibilidad; `npm run legibility` debe
+  seguir pasando con los carteles en el mundo real, a 1.17 y 0.83.
 
 Se resolvió en cuatro hijos: plataforma (#390), corona (#391), tinker con su
 animador (#392) y navegación por carteles (#393). Esta spec registra el
@@ -26,20 +26,29 @@ resultado y lo medido.
 
 ## 2. Decisiones
 
-Las diez de #389:
+Las de #389 (agrupadas como las hereda #394):
 
-1. Cada escena construye su cartel (`signBox`, `SIGNS`, `SIGN_ORDER`); el
-   mundo los ensambla en `assembleWorld`.
+1. Cada escena construye su cartel: `city()` llama `towerCrown` tras
+   `plazaAndTower`, `shipyard()` llama `tinkerSign` y `assembleWorld` suma
+   `tinkerAnimator` etiquetado `portfolio`, `sea()` llama `seaPlatformAt`. Así el
+   velo y los filtros de zona clasifican cada cartel por posición.
 2. La antena sale de la corona (#391).
 3. El sitio de la plataforma se mueve de (400, 170) a (392, 178): a 8,2 u de
    `LANE_OUT` fallaba la regla de oclusión de barcos en 90 muestras; en
    (392, 178) quedan 14,7 u al carril y 10,6 u a cada boya.
-4. Los exhibits de contexto son recortes (crops) de la escena, no copias.
+4. Los exhibits de contexto son recortes del mundo real (`cropScene`/
+   `cropAnimators`); el `kind: "context"` pierde `build`/`animate`.
 5. El hit test va del cartel a la geografía (`zoneAtScreen`).
-6. Los enlaces son invisibles; si el rótulo no cabe, cae al borde (`edge`).
+6. Los enlaces son invisibles; cuando menos de la mitad de la caja del cartel
+   queda dentro del host, el link vuelve a ser el rótulo visible pegado al
+   borde (`edge`, `labelLayout`). `aria-current="page"` reemplaza a `.dim`.
 7. La cámara no cambia: `coverView` y `COVER_FOCUS_U` quedan como estaban.
 8. Rubik sale de la navegación (#393).
-9. La oclusión se decide por posición y por puertas, no por render.
+9. Oclusión: no cambia el dibujo (los acentos van encima de todo). Se resuelve
+   por posición (3.) y la guardan compuertas puras: la regla de carriles y
+   "ninguna pieza de barco ni de la lancha cruza las letras de ningún cartel"
+   (`sea-anim.test.ts`), y `checkSign` de cada cartel contra los sólidos del
+   mundo que cruzan su caja de pantalla, a 1.17 y 0.83 (`src/lab/signs.test.ts`).
 10. Presupuesto con topes en tests: acentos estáticos del mundo ≤ 2 600
     (`city-budget.test.ts`), polígonos estáticos ≤ 56 000, acentos de ciudad
     ≤ 1 300, sólidos elevados del astillero ≤ 800.
@@ -48,9 +57,9 @@ Las diez de #389:
 
 | Constante | Archivo | Valor | Lugar |
 |---|---|---|---|
-| `CROWN_SITE` | `src/world/signs.ts` | (129, 227, 30) | corona, sobre la ciudad |
-| `TINKER_SITE` | `src/world/signs.ts` | (60, −24, 13.5) | sala sur, taller tinker |
-| `PLATFORM_SITE` | `src/world/signs.ts` | (392, 178) | plataforma, agua libre |
+| `CROWN_SITE` | `src/scenes/sign-crown.ts` | (129, 227, 30) | corona, sobre la ciudad |
+| `TINKER_SITE` | `src/scenes/sign-tinker.ts` | (60, −24, 13.5) | galpón de montaje sur del astillero |
+| `PLATFORM_SITE` | `src/scenes/sign-platform.ts` | (392, 178) | plataforma, agua libre |
 
 La plataforma no está donde la spec del 2026-11-15 (§5) la puso primero; ver §6.
 
@@ -68,7 +77,7 @@ cover: laptop 1,1757; teléfono 1,2420.
 | teléfono 390×750 | `cv` | RESUME | `89.4..166.5 × 278.0..293.1` | `sign` |
 | teléfono 390×750 | `blog` | Writing | `463.2..567.8 × 447.6..477.1` | `edge` |
 
-En la laptop caben los tres. En el teléfono (390 px) no caben a ningún
+En la laptop caben los tres. En el teléfono PORTFOLIO queda cortado unos 11 px a la derecha pero sigue en `sign` (más de la mitad dentro). En el teléfono (390 px) no caben a ningún
 `COVER_FOCUS_U`: Writing queda fuera de la ventana y su rótulo cae al borde.
 
 ## 5. Presupuesto y frame
@@ -97,11 +106,11 @@ Frame, antes (`main` 331c0c2) y después (rama). agent-browser headless,
 | bloom, promedio (ms) | 41.0 | 42.1 |
 | veredicto del bloom | `fallback` | `fallback` |
 | peor redibujo en 5 s (ms) | 65.20 | 54.80 |
-| acentos estáticos del mundo | 1 222 | 2 451 |
+| acentos estáticos del mundo | 1 222 (plan de #389) | 2 451 |
 
 Bloom, tick + render: antes 25,3 + 15,7; después 25,8 + 16,3. Primera corrida
-(fría): `main` first draw 2395.8, bloom 63.4 (37,6 + 25,9) `fallback`, peor
-redibujo 161.50; rama 726.4, bloom 25.9 (15,8 + 10,1) `fallback`, peor 27.10.
+(fría): `main` first draw 2395,8, bloom 63,4 (37,6 + 25,9) `fallback`, peor
+redibujo 161,50; rama 726,4, bloom 25,9 (15,8 + 10,1) `fallback`, peor 27,10.
 La dispersión entre corridas es mayor que la diferencia entre lados: el GL por
 software del headless (~2 fps) no es representativo (#229). Se registra, no se
 exige. Los topes (56 000 polígonos, 2 600 acentos) sí los vigilan los tests.
@@ -110,7 +119,7 @@ exige. Los topes (56 000 polígonos, 2 600 acentos) sí los vigilan los tests.
 
 - **No caben los tres en el teléfono.** Writing sale en modo `edge` (§4); es
   el único rótulo que no queda sobre su cartel.
-- **La plataforma no está donde la spec del 2026-11-15 §5 la puso.** (400, 170)
+- **La plataforma no está donde la spec del 2026-11-15 §5 la puso primero.** (400, 170)
   pasa a (392, 178) por la regla de oclusión de barcos (§2.3).
 - **La antena ya no existe.** Salió de la corona en #391.
 
