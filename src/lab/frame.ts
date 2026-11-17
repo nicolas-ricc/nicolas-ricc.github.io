@@ -4,7 +4,7 @@ import { buildRenderList, type RenderItem } from "../iso/render-list";
 import type { Animator } from "../scenes/animator";
 import { BEAM_PERIOD_MS } from "../scenes/sea-anim";
 import type { WorldScene } from "../scenes/world";
-import { type Box, boxFrame, FRAME_H, HALO_FALLBACK } from "../world/frame";
+import { type Box, boxFrame, HALO_FALLBACK } from "../world/frame";
 
 /** Animation samples per frame: 16 steps of `BEAM_PERIOD_MS / 16` make one full 8 s turn. */
 export const FRAME_SAMPLES = 16;
@@ -20,7 +20,7 @@ function accentItems(accents: readonly Accent[]): RenderItem[] {
   });
 }
 
-/** Items for `fitTransform` covering what an exhibit draws: the static list (terrain, ground, solids, shadows clipped to `clip`), static accents with halos, 16 animation samples (ticks the animators 8 s) and `boxFrame(box, h ?? FRAME_H)`. */
+/** Items for `fitTransform` covering what an exhibit draws: the static list (terrain, ground, solids, shadows clipped to `clip`), static accents with halos, 16 animation samples (ticks the animators 8 s) and `boxFrame(box, h)`. */
 export function contentFrame(
   scene: Pick<WorldScene, "terrain" | "ground" | "solids" | "accents">,
   animators: readonly Animator[],
@@ -38,6 +38,6 @@ export function contentFrame(
     }
     for (const an of animators) an.tick(BEAM_PERIOD_MS / FRAME_SAMPLES);
   }
-  if (box) out.push(...boxFrame(box, h ?? FRAME_H));
+  if (box) out.push(...boxFrame(box, h));
   return out;
 }
