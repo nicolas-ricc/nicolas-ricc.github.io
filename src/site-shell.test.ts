@@ -70,3 +70,31 @@ describe("site shell: the zone links over the signs (#393)", () => {
     expect(MAIN).not.toMatch(/["']dim["']/);
   });
 });
+
+describe("site shell: navigable map (#438)", () => {
+  it("the map host is a focusable region that names its controls", () => {
+    expect(HTML).toContain(`<div id="canvas-host" role="region" tabindex="0" aria-label="Mapa: arrastrá o usá las flechas para recorrerlo">`);
+  });
+
+  it("the recenter button starts hidden inside the host", () => {
+    const btn = HTML.indexOf(`<button id="recentrar" type="button" hidden>Centrar vista</button>`);
+    expect(btn).toBeGreaterThan(HTML.indexOf(`id="canvas-host"`));
+    expect(btn).toBeLessThan(HTML.indexOf(`<main id="content"`));
+  });
+
+  it("style.css puts the button in the top-right corner with a focus ring", () => {
+    const b = block(CSS, "#recentrar");
+    for (const d of ["position: absolute", "inset: 1rem 1rem auto auto", "z-index: 2"]) expect(b).toContain(d);
+    expect(block(CSS, "#recentrar:focus-visible")).toContain("outline: 2px solid var(--fg)");
+  });
+
+  it("style.css gives the focused host an inset ring", () => {
+    const b = block(CSS, "#canvas-host:focus-visible");
+    expect(b).toContain("outline: 2px solid var(--fg)");
+    expect(b).toContain("outline-offset: -2px");
+  });
+
+  it("style.css hides the button without a canvas", () => {
+    expect(block(CSS, ".no-canvas #recentrar")).toContain("display: none");
+  });
+});

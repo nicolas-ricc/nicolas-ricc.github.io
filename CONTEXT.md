@@ -70,6 +70,10 @@ Code: `src/map/geo.ts` (`BLEED`, `CELL_BLEED`), `src/world/veil.ts` (`veilCells`
 The largest 16:9 rectangle that fits inside the projected content plus bleed, pulled in by `COVER_INSET` so it does not expose sky at the edge. It is the camera of the site (`coverView(w, h)`: at 16:9 or wider, the same rectangle with the real aspect of the host; narrower, the 16:9 one fills the host's height and the host shows a window of it centered on `COVER_FOCUS_U`, 0.39, the column of signs, #428) and of lab key `4` (`coverFrame(16/9)`). `zoneView` is clamped to it on each axis it covers (`clampToCover`).
 Code: `src/map/geo.ts` (`coverQuad`, `inCoverQuad`, `COVER_INSET`), `src/world/frame.ts` (`coverFrame`), `src/world/view.ts` (`coverView`, `COVER_FOCUS_U`, `clampToCover`).
 
+### Pan
+(Arrastre.) The visitor moving the map view by dragging (mouse, touch or pen), with the arrow keys, or `0`/`Home` to recenter; map only, never in a zone. The Main view is `coverView(w, h)`, the one the map opens with and the one the recenter button («Centrar vista») tweens back to. The view is Moved when it differs from the Main view (`sameView`); only then the button shows. A pan always stays inside the bleed, and a move of at least `DRAG_THRESHOLD` px is a drag, which does not navigate, even when it starts on a sign link.
+Code: `src/world/view.ts` (`panView`, `sameView`, `clampToBleed`), `src/pan.ts` (`attachPan`, `keyPan`, `DRAG_THRESHOLD`, `KEY_STEP`), `src/main.ts`.
+
 ### Plinth
 (Zócalo.) The `PLINTH_H` (0.3) paving prism under a city block. A recipe rests on it unless its piece brings `ground` (painted before every solid, the plinth would hide it): `seat` runs the recipe once at street level and lifts the piece `PLINTH_H` when it has no ground.
 Code: `src/kit/piece.ts` (`seat`, `liftPiece`), `src/scenes/city-pieces.ts` (`PLINTH_H`), `src/scenes/city.ts`, `src/lab/kit-scene.ts`.

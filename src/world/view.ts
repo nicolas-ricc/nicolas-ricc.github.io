@@ -68,6 +68,16 @@ export function clampToBleed(v: View, w: number, h: number): View {
   return Math.abs(x - v.x) < 1e-9 && Math.abs(y - v.y) < 1e-9 ? { ...v } : { x, y, scale: s };
 }
 
+/** Drags the view by (dx, dy) host px, stopped at the bleed edge (scale unchanged). */
+export function panView(v: View, dx: number, dy: number, w: number, h: number): View {
+  return clampToBleed({ x: v.x + dx, y: v.y + dy, scale: v.scale }, w, h);
+}
+
+/** True when the views differ by at most 0.5 px on x/y and 1e-9 relative on scale. */
+export function sameView(a: View, b: View): boolean {
+  return Math.abs(a.x - b.x) <= 0.5 && Math.abs(a.y - b.y) <= 0.5 && Math.abs(a.scale - b.scale) <= 1e-9 * b.scale;
+}
+
 /** Projected box [x0, x1, y0, y1] of a single-item frame. */
 function frameBox(items: RenderItem[]): [number, number, number, number] {
   const pts = items[0]!.pts;

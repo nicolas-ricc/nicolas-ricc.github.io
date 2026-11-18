@@ -5,7 +5,7 @@ import { BLEED, WORLD, ZONE_SPLIT_X, inCoverQuad, type WorldZone } from "../map/
 import { boxFrame, coverFrame, fitTransform, zoneFrame, type Frame } from "./frame";
 import { BLOG_SIGNS, type WritingSite } from "../scenes/sign-platform";
 import { signBox, writingSite } from "./signs";
-import { COVER_FOCUS_U, VIEW_INSET, ZONE_MIN_ZOOM, clampToBleed, clampToCover, coverView, pointerToWorld, unproject, viewCorners, zoneView, type View } from "./view";
+import { COVER_FOCUS_U, VIEW_INSET, ZONE_MIN_ZOOM, clampToBleed, clampToCover, coverView, panView, pointerToWorld, sameView, unproject, viewCorners, zoneView, type View } from "./view";
 
 const X0 = WORLD.x0 - BLEED.x, X1 = WORLD.x1 + BLEED.x, Y0 = WORLD.y0 - BLEED.y, Y1 = WORLD.y1 + BLEED.y;
 const insideBleed = (p: { x: number; y: number }, inset = 0, tol = 1e-6) =>
@@ -194,5 +194,65 @@ describe("zoneFrame and zoneView with the Writing site (#428)", () => {
     const floor = coverView(w, h).scale * ZONE_MIN_ZOOM, fit = fitTransform(zoneFrame("blog"), w, h, 0.04);
     expect(fit.scale).toBeGreaterThanOrEqual(floor);
     expect(zoneView("blog", w, h, "wide")).toEqual(clampToBleed(clampToCover(fit, w, h), w, h));
+  });
+});
+
+describe("panView (#438)", () => {
+  const PAN_SIZES: [number, number][] = [[390, 750], [820, 1180], [1600, 900]];
+  const DIRS: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+  const inside = (v: View, w: number, h: number) => viewCorners(v, w, h).every((c) => insideBleed(c, VIEW_INSET));
+
+  it.each(PAN_SIZES)("%i×%i: no sequence of drags leaves a corner outside the bleed", (w, h) => {
+    let seed = 438;
+    const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32) * 2 - 1;
+    const cover = coverView(w, h);
+    let v = cover;
+    for (let i = 0; i < 200; i++) {
+      v = panView(v, rnd() * 0.6 * w, rnd() * 0.6 * h, w, h);
+      expect(inside(v, w, h)).toBe(true);
+      expect(v.scale).toBe(cover.scale);
+    }
+  });
+
+  it.each(PAN_SIZES)("%i×%i: a large drag stops at the edge", (w, h) => {
+    for (const [ux, uy] of DIRS) {
+      const once = panView(coverView(w, h), ux * 1e5, uy * 1e5, w, h);
+      expect(inside(once, w, h)).toBe(true);
+      expect(panView(once, ux * 1e5, uy * 1e5, w, h)).toEqual(once);
+    }
+  });
+
+  it.each(PAN_SIZES)("%i×%i: every edge of the bleed is reachable", (w, h) => {
+    const corners = DIRS.flatMap(([ux, uy]) => viewCorners(panView(coverView(w, h), ux * 1e5, uy * 1e5, w, h), w, h));
+    const touches = (k: "x" | "y", edge: number) => corners.some((c) => Math.abs(c[k] - edge) < 1e-6);
+    expect(touches("x", X0 + VIEW_INSET)).toBe(true);
+    expect(touches("x", X1 - VIEW_INSET)).toBe(true);
+    expect(touches("y", Y0 + VIEW_INSET)).toBe(true);
+    expect(touches("y", Y1 - VIEW_INSET)).toBe(true);
+  });
+
+  it("panView(v, 0, 0) returns v when it is already inside", () => {
+    for (const [w, h] of PAN_SIZES) {
+      const v = coverView(w, h);
+      expect(panView(v, 0, 0, w, h)).toEqual(v);
+    }
+  });
+
+  it("a moved view stays inside after the host shrinks", () => {
+    const v = panView(coverView(1600, 900), 4000, 4000, 1600, 900);
+    expect(inside(clampToBleed(v, 1200, 900), 1200, 900)).toBe(true);
+  });
+});
+
+describe("sameView (#438)", () => {
+  const v = coverView(390, 750);
+  it("is true for the same view and within 0.5 px", () => {
+    expect(sameView(v, { ...v })).toBe(true);
+    expect(sameView({ ...v, x: v.x + 0.4 }, v)).toBe(true);
+  });
+  it("is false past 0.5 px or with another scale", () => {
+    expect(sameView({ ...v, x: v.x + 0.6 }, v)).toBe(false);
+    expect(sameView({ ...v, y: v.y + 0.6 }, v)).toBe(false);
+    expect(sameView({ ...v, scale: v.scale * (1 + 1e-6) }, v)).toBe(false);
   });
 });

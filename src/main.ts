@@ -18,7 +18,8 @@ import { attachBloom, type BloomProbe } from "./world/bloom-runtime";
 import { buildStage } from "./world/stage";
 import type { WritingSite } from "./scenes/sign-platform";
 import { signBox, WRITING_SITE_MARGIN, writingSite, zoneAtScreen, zoneSigns } from "./world/signs";
-import { coverView, zoneView, type View } from "./world/view";
+import { attachPan, keyPan } from "./pan";
+import { clampToBleed, coverView, panView, sameView, zoneView, type View } from "./world/view";
 
 const CONTENT: Record<ZoneId, ZoneContent> = {
   portfolio: portfolioJson as ZoneContent,
@@ -81,7 +82,34 @@ async function boot(): Promise<void> {
 
   const refreshFocus = (): void => { stage.setFocus(current ?? hot); };
 
+  const recenter = document.getElementById("recentrar") as HTMLButtonElement;
+  let moved = false;
+  const syncMoved = (): void => {
+    moved = current === null && !sameView(camera.state, coverView(host.clientWidth, host.clientHeight));
+    recenter.hidden = !moved;
+  };
+  // on the host, not the canvas: a drag may start on a sign link or the button over the canvas
+  const pan = attachPan(host, {
+    // jumping to the current state ends any active tween, so the drag wins
+    onStart: () => camera.jumpTo(camera.state),
+    onPan: (dx, dy) => { camera.jumpTo(panView(camera.state, dx, dy, host.clientWidth, host.clientHeight)); syncMoved(); },
+  });
+  const recenterView = (): void => {
+    // the button is about to hide: keep keyboard focus on the map instead of dropping it to <body>
+    const hadFocus = document.activeElement === recenter;
+    moved = false;
+    recenter.hidden = true;
+    void camera.tweenTo(coverView(host.clientWidth, host.clientHeight));
+    if (hadFocus) host.focus();
+  };
+
   function render(id: ZoneId | null, animate: boolean): void {
+    pan.setEnabled(id === null);
+    // both branches aim at their main view (zoneView or coverView): nothing is moved any more
+    moved = false;
+    recenter.hidden = true;
+    // in a zone the host's drag and arrow controls are off: out of the tab order
+    host.tabIndex = id === null ? 0 : -1;
     if (id) {
       const prerendered = document.body.dataset.zone === id && document.getElementById("content")!.childElementCount > 0;
       showZone(id, zoneById(id).name, prerendered ? null : renderContent(CONTENT[id]));
@@ -108,31 +136,45 @@ async function boot(): Promise<void> {
     const r = app.canvas.getBoundingClientRect();
     return zoneAtScreen(camera.state, e.clientX - r.left, e.clientY - r.top, site);
   };
-  app.canvas.style.cursor = "pointer";
-  app.canvas.addEventListener("pointermove", (e) => { const z = zoneUnder(e); if (z !== hot) { hot = z; refreshFocus(); } });
-  app.canvas.addEventListener("pointerleave", () => { hot = null; refreshFocus(); });
-  app.canvas.addEventListener("click", (e) => navigate(zoneUnder(e), true));
+  // hover is frozen while dragging: the hot zone stays what it was at drag start
+  app.canvas.addEventListener("pointermove", (e) => { if (pan.dragging) return; const z = zoneUnder(e); if (z !== hot) { hot = z; refreshFocus(); } });
+  app.canvas.addEventListener("pointerleave", () => { if (pan.dragging) return; hot = null; refreshFocus(); });
+  app.canvas.addEventListener("click", (e) => { if (pan.consumeClick()) return; navigate(zoneUnder(e), true); });
+  recenter.addEventListener("click", () => { if (!pan.consumeClick()) recenterView(); });
 
   // the nav links are the accessible controls: focus or hover light up their zone
   for (const [id, a] of labels) {
-    a.addEventListener("mouseenter", () => { hot = id; refreshFocus(); });
+    // a native link drag would cancel the pointer: the map drag owns the gesture
+    a.draggable = false;
+    a.addEventListener("mouseenter", () => { if (pan.dragging) return; hot = id; refreshFocus(); });
     a.addEventListener("focus", () => { hot = id; refreshFocus(); });
-    a.addEventListener("mouseleave", () => { hot = null; refreshFocus(); });
+    a.addEventListener("mouseleave", () => { if (pan.dragging) return; hot = null; refreshFocus(); });
     a.addEventListener("blur", () => { hot = null; refreshFocus(); });
-    a.addEventListener("click", (e) => { e.preventDefault(); navigate(id, true); });
+    a.addEventListener("click", (e) => { e.preventDefault(); if (pan.consumeClick()) return; navigate(id, true); });
   }
 
   // The host resizes through CSS during the transition: follow it frame by frame.
   new ResizeObserver(() => {
     app.resize();
     syncSite();
-    const t = targetFor(current);
-    if (camera.isTweening) camera.retarget(t); else camera.jumpTo(t);
+    if (camera.isTweening) camera.retarget(targetFor(current));
+    else if (moved) { camera.jumpTo(clampToBleed(camera.state, host.clientWidth, host.clientHeight)); syncMoved(); } // keep the moved view, clamped to the new size
+    else camera.jumpTo(targetFor(current));
   }).observe(host);
 
   window.addEventListener("popstate", () => { current = zoneFromPath(location.pathname); render(current, true); });
   document.getElementById("back")!.addEventListener("click", (e) => { e.preventDefault(); navigate(null, true); });
-  window.addEventListener("keydown", (e) => { if (e.key === "Escape" && current) navigate(null, true); });
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && current) navigate(null, true);
+    // arrows and 0/Home act on the map only, and never steal keys from the zone content
+    if (current !== null || document.getElementById("content")!.contains(document.activeElement)) return;
+    const k = keyPan(e, host.clientWidth, host.clientHeight);
+    if (k === null) return;
+    e.preventDefault();
+    if (k === "home") { recenterView(); return; }
+    camera.jumpTo(panView(camera.state, k.dx, k.dy, host.clientWidth, host.clientHeight));
+    syncMoved();
+  });
   document.addEventListener("visibilitychange", () => { if (document.hidden) app.ticker.stop(); else app.ticker.start(); });
 
   let worst = 0, since = 0;
@@ -168,4 +210,7 @@ boot().catch((e: unknown) => {
   // of .no-canvas reveals the <nav id="zonas"> and the prerendered content.
   console.error(e);
   document.documentElement.classList.add("no-canvas");
+  // no canvas: drop the host's tab stop, role and label, they would promise a drag that does not exist
+  const host = document.getElementById("canvas-host");
+  for (const attr of ["tabindex", "role", "aria-label"]) host?.removeAttribute(attr);
 });
