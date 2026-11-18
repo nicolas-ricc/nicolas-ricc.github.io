@@ -118,9 +118,9 @@ describe("accentsByZone", () => {
 });
 
 describe("Writing platform accents (#390)", () => {
-  it("every accent of the Writing platform (dots and polys) is Blog", () => {
+  it.each(["wide", "tall"] as const)("every accent of the Writing platform (dots and polys) is Blog at the %s site (#427)", (site) => {
     const out: Solid[] = [], accents: Accent[] = [];
-    seaPlatformAt(out, accents);
+    seaPlatformAt(out, accents, site);
     expect(accents.some((a) => a.kind === "dot") && accents.some((a) => a.kind === "poly")).toBe(true);
     for (const a of accents) expect(accentZone(a)).toBe("blog");
   });

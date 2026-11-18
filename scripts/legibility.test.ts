@@ -5,7 +5,10 @@ import { toWorld } from "../src/kit/lettering";
 import { project } from "../src/iso/project";
 import { COVER_LAPTOP, COVER_PHONE, relativeLuminance } from "../src/kit/legibility";
 import { EXHIBITS } from "../src/lab/exhibits";
-import { BLOG_SIGN } from "../src/scenes/sign-platform";
+import { BLOG_SIGNS } from "../src/scenes/sign-platform";
+
+/** The Writing sign at the wide site (#427), the one the site shows on a laptop. */
+const BLOG_SIGN = BLOG_SIGNS.wide;
 import type { Fit } from "../src/world/frame";
 import {
   fillDisc, fillPolygon, LEVEL3, measure, median, normalizeOcr, ocrImage, parseEval, pickContexts, PREPROCESS, renderReport, reportFails,

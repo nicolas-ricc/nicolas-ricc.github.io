@@ -5,8 +5,10 @@ import { SHADOW_CORE_H, shadowPolygon } from "../iso/light";
 import { bounds, type Solid, type Tri, tessellate } from "../iso/solids";
 import type { Animator } from "../scenes/animator";
 import type { WorldScene } from "../scenes/world";
-import type { ZonedAnimator } from "../world/assemble";
-import { contextAnimators, contextScene, cropAccents, cropAnimators, cropScene, cropShared, cropSolid, isLongPrism, overlaps, pieceScene, readout, solidsBox } from "./crop";
+import { platformAnimator } from "../scenes/platform-animator";
+import { seaPlatformAt } from "../scenes/sign-platform";
+import { tag, type ZonedAnimator } from "../world/assemble";
+import { contextAnimators, contextScene, cropAccents, cropAnimators, cropSolids, cropScene, cropShared, cropSolid, isLongPrism, overlaps, pieceScene, readout, solidsBox } from "./crop";
 import { EXHIBITS, type ContextExhibit } from "./exhibits";
 
 const box = { x0: 0, y0: 0, x1: 10, y1: 10 };
@@ -412,5 +414,26 @@ describe("contextScene / contextAnimators (#376, #392)", () => {
     const got = contextAnimators([toy(1, "portfolio"), toy(40, "portfolio")], e);
     expect(got.map((a) => a.ids)).toEqual(cropAnimators([toy(1, "portfolio")], box).map((a) => a.ids));
     expect(got).toHaveLength(1);
+  });
+  const TALL_BOX = { x0: 406, y0: 366, x1: 474, y1: 434 };
+  const toyAt = (b: typeof TALL_BOX): Animator => ({ ids: ["toy.lit"], layer: () => ({ kind: "solid", solids: [prism(b.x0 + 1, b.y0 + 1)] }), tick: () => new Set() });
+  // #427: a Writing exhibit carries its site; the platform of that site joins the crop and the platform animator leaves it
+  const tall: ContextExhibit = { ...e, id: "test-escena-angosta", box: TALL_BOX, writingSite: "tall" };
+  it("with writingSite, the crop of the world plus the cropped platform of that site", () => {
+    const solids: Solid[] = [], accents: Accent[] = [];
+    seaPlatformAt(solids, accents, "tall");
+    const base = cropScene(scene, TALL_BOX), got = contextScene(scene, tall);
+    expect(got.solids).toEqual([...base.solids, ...cropSolids(solids, TALL_BOX)]);
+    expect(got.accents).toEqual([...base.accents, ...cropAccents(accents, TALL_BOX)]);
+    expect(got.solids.length).toBeGreaterThan(base.solids.length);
+    expect(scene.solids).toHaveLength(2);
+  });
+  it("with writingSite, the platform animator is dropped and the others stay", () => {
+    const platform = platformAnimator({ site: "tall" }), lit: ZonedAnimator = { ...toyAt(TALL_BOX), zone: "blog" };
+    const got = contextAnimators([tag(platform, "blog"), lit], tall);
+    expect(got.some((a) => a.ids.includes("platform.solid"))).toBe(false);
+    expect(got).toHaveLength(1);
+    // without writingSite the platform animator is cropped like any other
+    expect(contextAnimators([tag(platformAnimator({ site: "tall" }), "blog")], { ...tall, writingSite: undefined }).some((a) => a.ids.includes("platform.solid"))).toBe(true);
   });
 });

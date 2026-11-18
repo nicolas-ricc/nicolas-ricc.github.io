@@ -23,13 +23,22 @@ describe("Resume level 2 budget", () => {
     const w = assembleWorld(undefined, { reducedMotion: true }).scene;
     expect(buildRenderList([...w.terrain.ground, ...w.ground, ...w.solids]).length).toBeLessThanOrEqual(56000);
   });
+
+  it("the Writing platform left the static world (#427): static polygons drop below the 46 518 of feature/423 before it", () => {
+    const w = assembleWorld(undefined, { reducedMotion: true }).scene;
+    expect(buildRenderList([...w.terrain.ground, ...w.ground, ...w.solids]).length).toBeLessThan(46518);
+  });
 });
 
 describe("world accents (#394)", () => {
   it("static accents of the whole world ≤ 2 600", () => {
     // 2 478 measured while planning #389: 1 222 of the world + 1 256 of the three signs (crown 238 poly + 164 dot,
-    // tinker 114 + 84, platform 654 + 2; the tinker's 19 lights in `tinker.lights` are animated, not static); ×1.05
+    // tinker 114 + 84, platform 654 + 2; the tinker's 19 lights in `tinker.lights` are animated, not static); ×1.05.
+    // Since #427 the platform's 656 lights are animated too (`platform.lights` of platformAnimator), not static.
     expect(assembleWorld(undefined, { reducedMotion: true }).scene.accents.length).toBeLessThanOrEqual(2600);
+  });
+  it("the platform's lights left the static world (#427): fewer than the 2 409 of feature/423 before it", () => {
+    expect(assembleWorld(undefined, { reducedMotion: true }).scene.accents.length).toBeLessThan(2409);
   });
 });
 
