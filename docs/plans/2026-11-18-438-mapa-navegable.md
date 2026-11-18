@@ -19,7 +19,7 @@
 - One pointer only: a second `pointerId` is ignored while the first one is down.
 - Cursor `grab` at rest and `grabbing` while dragging, map only. `touch-action: none` on the canvas while the map is shown, and `""` in a zone.
 - Arrow keys pan by `KEY_STEP = 0.1` of the host side (width for ←/→, height for ↑/↓) per keydown, so native key repeat repeats it. `0` or `Home` recenters. They act only on the map and when focus is not inside `#content`, and they `preventDefault`.
-- `#canvas-host` gets `tabindex="0"` and `aria-label="Mapa: arrastrá o usá las flechas para recorrerlo"`. The `#zonas` links stay the accessible navigation (ADR 0003).
+- `#canvas-host` gets `role="region"`, `tabindex="0"` and `aria-label="Mapa: arrastrá o usá las flechas para recorrerlo"`. The `#zonas` links stay the accessible navigation (ADR 0003).
 - `#recentrar` is a `<button type="button">` with the text `Centrar vista`, `hidden` while the view matches `coverView`. Clicking it runs `camera.tweenTo(coverView(w, h))`, which jumps when reduced motion is on, and hides it again. It has the look of `#back` and a visible focus ring.
 - Visitor-facing Spanish lives in `index.html` only. Code, comments and test names are in English (`src/english.test.ts`).
 - Labels follow the camera through `apply`: nothing extra for `placeLabels`.
@@ -34,8 +34,34 @@
 6. **Focus after recentering.** If `#recentrar` had focus when it was activated, focus moves to `#canvas-host`, so a keyboard user does not land on `<body>` once the button hides.
 7. **The hover is frozen while dragging.** `main.ts`'s `pointermove` and `pointerleave` handlers return early while `pan.dragging`. The `hot` zone stays whatever it was when the drag started.
 8. **Mouse buttons.** Only `button === 0` starts a drag. The right button and the middle button do nothing.
-9. **`pointercancel`** ends a drag like `pointerup`, but never arms the click suppression (no click follows a cancel).
-10. **`#canvas-host` focus ring:** `#canvas-host:focus-visible { outline: 2px solid var(--fg); outline-offset: -2px; }`. The negative offset keeps the ring visible inside the `overflow: clip` box.
+9. **`setPointerCapture` failures are tolerated.** It is wrapped in `try`/`catch`: it throws `NotFoundError` for a pointer that is no longer active, and for the synthetic `PointerEvent`s the browser check dispatches. Without capture the drag still works while the pointer stays over the canvas. Test: a fake whose `setPointerCapture` throws still drags.
+10. **`pointercancel`** ends a drag like `pointerup`, but never arms the click suppression (no click follows a cancel).
+11. **`#canvas-host` focus ring:** `#canvas-host:focus-visible { outline: 2px solid var(--fg); outline-offset: -2px; }`. The negative offset keeps the ring visible inside the `overflow: clip` box.
+
+## Acceptance criteria → tasks
+
+| Criterion of #438 | Where |
+|---|---|
+| Every edge of the bleed reachable at 390×750, 820×1180 and 1600×900, never sky | Task 1 tests; eval E1 |
+| A click without a drag navigates, a drag does not | Task 2 tests; Task 4 wiring; eval E2 |
+| Touch: one-finger drag moves the view, the page does not scroll | Task 2 (`touch-action`); eval E3 |
+| Arrows pan, `0`/`Home` recenters, no key acts in `#content` or in a zone | Task 2 `keyPan`; Task 4 keydown; eval E4 |
+| «Centrar vista» appears after a move, animates to `coverView`, disappears | Tasks 3 and 4; eval E5 |
+| With the view moved, a resize keeps it inside the bleed and does not reset it | Task 1 test; Task 4 observer; eval E6 |
+| In a zone nothing drags and the cursor and behaviour are today's | Task 2 `setEnabled`; Task 4 `render`; eval E7 |
+| `npm test` and `npm run typecheck` pass, with new tests for `panView` and `src/pan.ts` | Tasks 1 and 2; full suite |
+| Before/after captures on a phone and a desktop in the PR | Task 4 Step 3 |
+| README paragraph next to `coverView`; CONTEXT terms | Task 4 Step 4 |
+
+The evals file `.scratch/evals-438.md` (E1–E7, URL, steps and expected outcome) is written in pipeline stage 3, before Task 1, and `.scratch/` is in `.git/info/exclude`. It drives real mouse input with `agent-browser mouse` and touch with synthetic `PointerEvent`s (`pointerType: "touch"`) dispatched by `eval`, because headless Chromium has no real touch input. It reads the camera through `window.__PIXI_DEVTOOLS_WRAPPER__.stage.children[0].position` (CLAUDE.md) and checks the corners against the bleed by reproducing `viewCorners` in the page.
+
+## Assumptions (from the plan grilling)
+
+- **The arrow direction follows the look metaphor** (ArrowRight shows the right). The issue says only "Las flechas mueven la vista". Rejected: moving the scene in the key's direction, because that is the inverse of how a page scrolls with the arrows.
+- **`role="region"` on `#canvas-host`**, so the `aria-label` is announced. ARIA does not name a generic `div`, and the issue only asks for `tabindex="0"` and an `aria-label`. Rejected: `role="application"`, which takes the screen reader out of browse mode and would hide the `#zonas` links that ADR 0003 makes the navigation.
+- **The `main.ts` wiring has no unit test.** No test imports `main.ts`: `site-shell.test.ts` only reads it as text, and it needs Pixi and the DOM. The logic is cut into `panView`/`sameView`/`attachPan`/`keyPan`, which are tested, and the remaining glue is covered by evals E2 and E4–E7 in the browser. Rejected: pulling the resize branch out into a function of its own, whose test would be one tautological line.
+- **Top-right corner for «Centrar vista».** The issue asks for "una esquina que no tape los carteles ni #titulo". `#titulo` is bottom-left (style.css), `#hud` top-left and only in a zone (views.ts). The check is to force the button visible at cover (`hidden = false` by `eval`) at 390×750 and 1600×900 and confirm with a screenshot that it overlaps no sign.
+- **`setPointerCapture` inside `try`/`catch`** (decision 9).
 
 ## Review Focus
 
@@ -105,6 +131,7 @@
   - `"the next pointerdown clears a pending suppression"`: drag, up, new down/up without moving → `consumeClick()` false.
   - `"a second pointer is ignored"`: pointer 1 down (0,0), pointer 2 down (100,100), pointer 2 move (200,200) → no `onPan`. Pointer 1 move (10,0) → `onPan(10, 0)`. Pointer 2 up → still `dragging`.
   - `"pointercancel ends the drag without suppressing a click"`: drag, cancel → `dragging` false, `consumeClick()` false.
+  - `"a throwing setPointerCapture does not stop the drag"`: the fake's `setPointerCapture` throws, and down, move 10 px → `onPan(10, 0)`.
   - `"only the main mouse button drags"`: down with `button: 2`, move 50 px → no `onPan`.
   - `"setEnabled(false) mid-drag ends it"`: drag, `setEnabled(false)` → `dragging` false, cursor `pointer`, a later move → no `onPan`.
   - `keyPan` at 400×800: `ArrowRight` → `{ dx: -40, dy: 0 }`, `ArrowLeft` → `{ dx: 40, dy: 0 }`, `ArrowDown` → `{ dx: 0, dy: -80 }`, `ArrowUp` → `{ dx: 0, dy: 80 }`, `"0"` and `"Home"` → `"home"`, `"a"` → `null`, `ArrowRight` with `ctrlKey` (and with `altKey`, and with `metaKey`) → `null`.
@@ -121,10 +148,10 @@
 - Test: `src/site-shell.test.ts` (new `describe("site shell: navigable map (#438)")`)
 
 **Interfaces:**
-- Produces: `#canvas-host[tabindex="0"]` with the aria-label, and `<button id="recentrar" type="button" hidden>Centrar vista</button>` inside `#canvas-host`. Task 4 uses both ids.
+- Produces: `#canvas-host[role="region"][tabindex="0"]` with the aria-label, and `<button id="recentrar" type="button" hidden>Centrar vista</button>` inside `#canvas-host`. Task 4 uses both ids.
 
 - [ ] **Step 1: Write the failing tests** with the existing `block()` helper:
-  - `HTML` contains `<div id="canvas-host" tabindex="0" aria-label="Mapa: arrastrá o usá las flechas para recorrerlo">`.
+  - `HTML` contains `<div id="canvas-host" role="region" tabindex="0" aria-label="Mapa: arrastrá o usá las flechas para recorrerlo">`.
   - `HTML` contains `<button id="recentrar" type="button" hidden>Centrar vista</button>`, and its index is between the indexes of `id="canvas-host"` and `<main id="content"`.
   - `block(CSS, "#recentrar")` contains `position: absolute`, `inset: 1rem 1rem auto auto` and `z-index: 2`.
   - `block(CSS, "#recentrar:focus-visible")` contains `outline: 2px solid var(--fg)`.
@@ -156,5 +183,11 @@
   - `ResizeObserver`: after `app.resize(); syncSite();`: if `camera.isTweening`, `camera.retarget(targetFor(current))`; else if `moved`, `camera.jumpTo(clampToBleed(camera.state, w, h))` then `syncMoved()`; else `camera.jumpTo(targetFor(current))`.
 - [ ] **Step 2: Run** `npm test` and `npm run typecheck`. Expected: all green.
 - [ ] **Step 3: Browser check.** Start `npm run dev -- --host --port 5173` and run `.scratch/evals-438.md` with agent-browser. Every step must pass. Take the four captures (before and after a drag, at 390×750 with touch and at 1600×900 with the mouse) into `docs/superpowers/specs/assets/438-mapa-navegable/` and check that `#recentrar` covers no sign.
-- [ ] **Step 4: Docs.** In the README, after the `coverView` paragraph: on the map the visitor can drag the scene (Pointer Events: mouse, touch, pen; arrows by 10 % of the host; `0`/`Home`) with `panView`, always inside the bleed (`clampToBleed`) and with no zoom or inertia; a drag over 5 px does not navigate; «Centrar vista» tweens back to `coverView`; a resize keeps a moved view, clamped; in a zone the camera is fixed (`src/pan.ts`, #438). In `CONTEXT.md`, `### Pan` defines Pan (the visitor moving the map view, map only), Main view (`coverView`, which «Centrar vista» returns to) and Moved, with `Code: \`src/world/view.ts\` (\`panView\`, \`sameView\`, \`clampToBleed\`), \`src/pan.ts\` (\`attachPan\`, \`keyPan\`, \`DRAG_THRESHOLD\`, \`KEY_STEP\`), \`src/main.ts\``. Run `npx vitest run src/docs-glossary.test.ts src/english.test.ts`. Expected: PASS.
+- [ ] **Step 4: Docs.** In `src/docs-glossary.test.ts` add `"Pan"` to the list of the `defines ${term}` test (it is a fixed list, not discovered). In the README, after the `coverView` paragraph: on the map the visitor can drag the scene (Pointer Events: mouse, touch, pen; arrows by 10 % of the host; `0`/`Home`) with `panView`, always inside the bleed (`clampToBleed`) and with no zoom or inertia; a drag over 5 px does not navigate; «Centrar vista» tweens back to `coverView`; a resize keeps a moved view, clamped; in a zone the camera is fixed (`src/pan.ts`, #438). In `CONTEXT.md`, `### Pan` defines Pan (the visitor moving the map view, map only), Main view (`coverView`, which «Centrar vista» returns to) and Moved, with `Code: \`src/world/view.ts\` (\`panView\`, \`sameView\`, \`clampToBleed\`), \`src/pan.ts\` (\`attachPan\`, \`keyPan\`, \`DRAG_THRESHOLD\`, \`KEY_STEP\`), \`src/main.ts\``. Run `npx vitest run src/docs-glossary.test.ts src/english.test.ts`. Expected: PASS.
 - [ ] **Step 5: Commit** `feat(#438): wire pan, keyboard and recenter into the site`.
+
+## Grilling
+
+- Rounds: 1 (griller model: fable). The revision added an acceptance-criteria table, two assumptions with a test, `role="region"` and the evals reference. It added no steps, removed none and kept the same seams, so I did not run a second round.
+- Questions: 18. By source: ISSUE 9 (1, 3, 4, 8, 10, 11, 12, 17 in part, 18 in part), CODE 9 (1, 6, 7, 12, 14, 15), DOC 2 (16 CLAUDE.md, 13 ADR 0003). NO SOURCE 5, all technical assumptions (arrow direction, `role="region"`, no unit test for the `main.ts` glue, top-right corner, `setPointerCapture` in `try`/`catch`).
+- Spec ambiguities: none. Follow-up issues opened: none.
