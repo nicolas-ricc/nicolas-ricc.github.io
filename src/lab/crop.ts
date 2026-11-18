@@ -5,6 +5,7 @@ import { shadowPolygon } from "../iso/light";
 import { bounds, type Bounds, type Solid, type Tri, tessellate } from "../iso/solids";
 import type { AccentColor, Material } from "../map/palette-iso";
 import type { Animator, AnimLayer } from "../scenes/animator";
+import { PLATFORM_LAYERS } from "../scenes/platform-animator";
 import { seaPlatformAt, type WritingSite } from "../scenes/sign-platform";
 import type { WorldScene } from "../scenes/world";
 import type { ZonedAnimator } from "../world/assemble";
@@ -167,7 +168,7 @@ export function contextScene(scene: WorldScene, e: ContextExhibit): WorldScene {
 
 /** The context exhibit's animators: `cropAnimators` over its box; the sign's own animator comes from `assembleWorld`. With `writingSite`, the world's platform animator (`platform.solid`) is dropped: `contextScene` already carries the platform of that site, and the world's is at the other one. */
 export function contextAnimators(animators: readonly ZonedAnimator[], e: ContextExhibit): ZonedAnimator[] {
-  return cropAnimators(e.writingSite ? animators.filter((a) => !a.ids.includes("platform.solid")) : animators, e.box);
+  return cropAnimators(e.writingSite ? animators.filter((a) => !a.ids.includes(PLATFORM_LAYERS.solid)) : animators, e.box);
 }
 
 const PAD_M = 3; // margin of the pad around the piece, the same as the regions'

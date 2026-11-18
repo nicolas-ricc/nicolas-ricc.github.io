@@ -79,8 +79,9 @@ function sign(out: Solid[], accents: Accent[], c: Vec2, spec: SignSpec): void {
     const q = at(s, postB, c);
     out.push(prism(q.x - SIGN_POST / 2, q.y - SIGN_POST / 2, DECK_TOP, SIGN_POST, SIGN_POST, upperZ + SIGN_BEAM / 2 - DECK_TOP, "steel"));
   }
-  const back = spec.backing[0] as Solid & { kind: "poly" }; // copy: a consumer that mutates the scene must not reach BLOG_SIGNS
-  out.push({ ...back, footprint: back.footprint.map((q) => ({ ...q })) });
+  const back = spec.backing[0]!;
+  if (back.kind !== "poly") throw new Error("the Writing panel is a poly");
+  out.push({ ...back, footprint: back.footprint.map((q) => ({ ...q })) }); // copy: a consumer that mutates the scene must not reach BLOG_SIGNS
   for (const g of spec.glyphs) for (const q of g.quads) accents.push({ kind: "poly", pts: q.map((c) => ({ ...c })), color: "cyan", alpha: 0.85 });
 }
 

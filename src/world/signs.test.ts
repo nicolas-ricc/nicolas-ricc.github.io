@@ -113,9 +113,9 @@ describe("zoneAtScreen (#393)", () => {
     }
   });
 
-  // A10: a sign wins over the geography beneath it. Since #427 the Writing sites stand over Blog sea, so no point of any sign lies over another zone's
-  // geography (measured: 0 of ~22 000 probes); every point of every sign is probed and must answer its own zone
-  it("zoneAtScreen prefers the sign over the geography beneath it", () => {
+  // A10: since #427 every sign stands over its own zone's geography (0 of ~22 000 probes lie over another), so precedence over the geography
+  // is checked with a mocked geography in signs-precedence.test.ts; here every point of every sign must answer its own zone
+  it("every point of every sign answers its zone", () => {
     for (const [id, s, site] of ALL) {
       const b = boundsOf(signPolygons(s));
       for (let x = b.minX; x <= b.maxX; x += 0.5) for (let y = b.minY; y <= b.maxY; y += 0.5) {

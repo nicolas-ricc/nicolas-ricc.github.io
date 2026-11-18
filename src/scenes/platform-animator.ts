@@ -3,6 +3,9 @@ import type { Solid } from "../iso/solids";
 import { layerLookup, type AnimLayer, type Animator } from "./animator";
 import { seaPlatformAt, type WritingSite } from "./sign-platform";
 
+/** Layer ids of the platform animator: its solids, then its lights. */
+export const PLATFORM_LAYERS = { solid: "platform.solid", lights: "platform.lights" } as const;
+
 /** Animator of the Writing platform: it can be moved between the two Writing sites. */
 export interface PlatformAnimator extends Animator {
   readonly site: WritingSite;
@@ -20,8 +23,8 @@ export function platformAnimator(opts: { site?: WritingSite } = {}): PlatformAni
     return v;
   };
   const layers: Record<string, () => AnimLayer> = {
-    "platform.solid": () => ({ kind: "solid", solids: at().solids }),
-    "platform.lights": () => ({ kind: "accent", accents: at().accents }),
+    [PLATFORM_LAYERS.solid]: () => ({ kind: "solid", solids: at().solids }),
+    [PLATFORM_LAYERS.lights]: () => ({ kind: "accent", accents: at().accents }),
   };
   return {
     ids: Object.keys(layers),

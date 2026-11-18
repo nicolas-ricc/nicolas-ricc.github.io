@@ -26,7 +26,7 @@ import { ship as buildShip, shipAt, wake, type ShipKind } from "./ships";
 // y ≈ 86, where the lighthouse point stood until #426 moved it to the island's east coast (the site is open
 // water now; the vertices were left as they were). From (434, 176) it goes down east of the
 // moved headland (37 u from its tip) and of the narrow Writing site (21.5 u from its deck): x ≥ 456 at y 290 and
-// x ≥ 499 at y 400. Turns on screen of 6°, 7°, 22°, 13°, −18°, 2°, −23°, 19° and 1°. The vertices at y 290 and 350 were moved (+4, +8 u) in #427:
+// x ≥ 499 at y 400. Turns on screen of 6°, 7°, 22°, 13°, −18°, 2°, −23°, 19° and 1°. In #427 (452, 290) moved to (456, 290) and (478, 350) to (486, 347):
 // with the platform drawn at both sites, a freighter at the old ones ended up behind the narrow site's deck on screen.
 //
 // The sea end (523, 510) is set so the edge of the 16:9 cover (x + y ≈ 997) falls `FADE_U` from the
@@ -36,13 +36,13 @@ import { ship as buildShip, shipAt, wake, type ShipKind } from "./ships";
 // launch (> 20 u). That is why the buoys and the wreck were moved in sea.ts: a ship west or north
 // of a solid that overlaps it on screen ends up behind. Do not move vertices more than 4 u without revalidating.
 export const LANE_OUT: readonly Readonly<Vec2>[] = [{ x: 362, y: -16 }, { x: 398, y: 40 }, { x: 424, y: 86 }, { x: 437, y: 114 }, { x: 440, y: 142 }, { x: 434, y: 176 }, { x: 446, y: 232 }, { x: 456, y: 290 }, { x: 486, y: 347 }, { x: 500, y: 405 }, { x: 523, y: 510 }];
-// Return lane, in the direction of travel (sea → harbor mouth): the northern leg is the outbound lane shifted 42 u
-// east and reversed; the southern one is not a copy: it passes east of the wreck (17.6 u from its bow, in front of it
+// Return lane, in the direction of travel (sea → harbor mouth): the northern leg is the outbound lane shifted about 42 u
+// east (40 u at y 144 since #427) and reversed; the southern one is not a copy: it passes east of the wreck (21.9 u from its bow since #427, in front of it
 // on screen, the safe side for occlusion) and west of the wide Writing site (31.5 u from its deck, x ≤ 479 at y 125);
 // the start (564, 467) is set on the cover edge like the outbound end. Turns on screen of 4°, −32°, −2°, 31° (the
-// sharpest, at (512, 200)), −22°, −8° and −6°. The vertices (546, 262), (512, 200) and (480, 144) were moved in #427 for the same occlusion reason. Why 42 u and not ~30: the on-screen silhouette of a freighter (60 u
-// long) is ~55 px tall, and with 30 or 36 u of lateral separation two freighters side by side overlap; 42 u is
-// the minimum without overlap (minimum separation between centers 41.2 u). The launch stays far. Validated like
+// sharpest, at (512, 200)), −22°, −8° and −6°. The vertices (546, 262), (512, 200) and (480, 144) were moved in #427 for the same occlusion reason. Why ~42 u and not ~30: the on-screen silhouette of a freighter (60 u
+// long) is ~55 px tall, and with 30 or 36 u of lateral separation two freighters side by side overlap; ~40 u is
+// about the minimum without overlap (minimum separation between centers 39.8 u at (480, 139), 41.2 u before #427). The launch stays far. Validated like
 // the outbound lane and with the silhouettes of two freighters, one per lane, that never touch on screen.
 export const LANE_BACK: readonly Readonly<Vec2>[] = [{ x: 564, y: 467 }, { x: 548, y: 330 }, { x: 546, y: 262 }, { x: 512, y: 200 }, { x: 480, y: 144 }, { x: 477, y: 102 }, { x: 461, y: 66 }, { x: 434, y: 18 }, { x: 397, y: -39 }];
 export const SHIPS: readonly { kind: ShipKind; phase: number }[] = [{ kind: "cargo", phase: 0 }, { kind: "tug", phase: 1 / 3 }, { kind: "barge", phase: 2 / 3 }];

@@ -263,7 +263,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "convoy", title: "Convoy with barge", zone: "blog", group: "sea", kind: "piece", build: vessel("barge"), pad: "water" },
   { id: "lancha", title: "Tigre river bus", zone: "blog", group: "sea", kind: "piece", build: vessel("ferry"), pad: "water" },
   { id: "plataforma", title: "Writing platform sign", zone: "blog", group: "sea", kind: "piece", build: seaPlatform, pad: "water" },
-  // h 24 (both): the tallest solid in each box is the platform's sign (top ≈ 23.21, smallest integer above it); its accents (letters, hut and mast) reach no higher, and the crop cuts nothing taller. The platform of `writingSite` is added by `contextScene`, its sign and lights come from the world's animators: no `build`.
+  // h 24 (both): the tallest solid in each box is the platform's sign (top ≈ 23.21, smallest integer above it); its accents (letters, hut and mast) reach no higher, and the crop cuts nothing taller. The platform of `writingSite`, its sign and its lights are added by `contextScene`, and the world's platform animator is dropped (`contextAnimators`): no `build`.
   { id: "plataforma-escena", title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 516, y0: 91, x1: 584, y1: 159 }, h: 24, sign: BLOG_SIGNS.wide, writingSite: "wide" },
   { id: "plataforma-escena-angosta", title: "Writing platform sign in its scene, tall site", zone: "blog", group: "sea", kind: "context", box: { x0: 406, y0: 366, x1: 474, y1: 434 }, h: 24, sign: BLOG_SIGNS.tall, writingSite: "tall" },
 ];

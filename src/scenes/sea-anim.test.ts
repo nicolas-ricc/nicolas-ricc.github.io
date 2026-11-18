@@ -11,7 +11,7 @@ import { HEADLAND, WORLD, inCoverQuad, pointInPolygon, worldZoneAt } from "../ma
 import { signBox, SIGN_ORDER, zoneSigns } from "../world/signs";
 import { BEAM_INNER, BEAM_LEN, BEAM_PERIOD_MS, CYCLE_MS, FADE_U, FERRY_PAUSE_MS, FERRY_ROUTE, FERRY_SPEED, KEEPER_SIGN_MS, LANE_BACK, LANE_OUT, LANE_SPEED, NEON_STEP_MS, OFF_MS, PORT_MS, SHIPS, alphaAt, createSeaAnim, laneAt, laneLength, type ShipFrame } from "./sea-anim";
 import { SHIP_SPECS, ship, shipAt } from "./ships";
-import { PLATFORM_DECK, seaPlatformAt } from "./sign-platform";
+import { PLATFORM_DECK, PLATFORM_SITES, seaPlatformAt } from "./sign-platform";
 import { bleedTerrainAt, terrainAt } from "./terrain";
 import { world } from "./world";
 
@@ -129,8 +129,8 @@ describe("two lanes", () => {
   });
 
   it("the lanes leave ≥ 14 u to the Writing decks at both sites and ≥ 14 u to the moved headland polygon (#423)", () => {
-    // the sites of #423 (sign-platform.ts adopts them in a later child) and the headland moved in #426
-    const SITES: Vec2[] = [{ x: 550, y: 125 }, { x: 440, y: 400 }];
+    // the two Writing sites (#427) and the headland moved in #426
+    const SITES: Vec2[] = Object.values(PLATFORM_SITES);
     const MOVED_HEADLAND: Vec2[] = HEADLAND.map(([x, y]) => ({ x, y }));
     const decks = SITES.map((s) => PLATFORM_DECK.map((q) => ({ x: q.x + s.x, y: q.y + s.y })));
     const toSeg = (p: Vec2, a: Vec2, b: Vec2): number => {
