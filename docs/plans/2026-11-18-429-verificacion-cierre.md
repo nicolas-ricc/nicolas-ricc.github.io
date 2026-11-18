@@ -1,6 +1,6 @@
 # Visual verification, level-3 legibility, ADR 0004 and closing docs (#429) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: `.agents/skills/subagent-driven-development/SKILL.md` (listed in `AGENTS.md`); each implementer uses `.agents/skills/test-driven-development/SKILL.md`. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Close story #423: take the "after" captures and the no-reload rotation, judge them, regenerate the level-3 legibility report with the four context exhibits, write ADR 0004 and bring the spec, `README.md`, `CONTEXT.md` and `src/lab/docs.test.ts` up to date with the code already on the branch.
 
@@ -16,7 +16,7 @@
 - Map captures `mapa-WxH.png` for 390×750, 430×932, 820×1180, 1024×768, 1366×1024, 1600×900, 1920×955; `blog-1920x955.png`, `blog-390x750.png` (`/area/blog/`); `boca-lab-1600x900.png` (`/lab/world.html`, key `1`). Viewport scale 2: every PNG is 2W×2H.
 - Rotation: `rotacion-900x1440.png` → `set viewport 1440 900 2` without reopening, wait 1 s → `rotacion-1440x900.png`; and back (`rotacion-1440x900-ida…` naming is free, but the two required names must exist).
 - URL `http://localhost:5173/` (never `127.0.0.1`); wait for `mapa-listo`, then ≥ 3 s (the `antes/README.md` sequence: also the `[mapa] bloom:` console line).
-- Desktop ship check: `/lab/world.html?speed=50`, key `4`, 1600×900, four captures 5 s apart (or three map captures ≥ 60 s apart). If a ship crosses or visibly competes with Writing, move `PLATFORM_SITES.wide` by (+5, −5) per step, at most 20 u, with `npm test` green and the `plataforma-escena` box moved the same.
+- Desktop ship check: `/lab/world.html`, key `4` (cover 16:9), 1600×900, four captures. Headless runs at ~2 fps and the Ticker clamps `deltaMS` to 100 ms (`CLAUDE.md`), so `?speed=50` with 5 s spacing is not trusted to reach a ship: the clock is advanced with the time-lapse method of `CLAUDE.md` (call the ticker listener with a fixed `deltaMS`) to the simulated times at which a ship is closest to the wide site (see assumption A3). If a ship crosses or visibly competes with Writing, move `PLATFORM_SITES.wide` by (+5, −5) per step, at most 20 u, with `npm test` green and the `plataforma-escena` box moved the same.
 - `npm run legibility` exits 0; `REPORT.md` has `## <id> a 1.17` / `a 0.83` for `cartel-torre-escena`, `cartel-taller-escena`, `plataforma-escena`, `plataforma-escena-angosta`, all rows `✓`; crops `plataforma-escena-angosta-117.png`, `-083.png`, `-117-ocr.png`, `-083-ocr.png` exist.
 - ADR 0004 path `docs/adr/0004-writing-site-follows-the-host.md`, title "The Writing site depends on the host", format of ADR 0003 (Status, Context, Decision, Consequences, Sources), in English.
 - Spec 2026-11-18: `**Estado:** implementado (#423)`; final section `## 8. Desvíos y medición`. The spec and the assets READMEs are Spanish; `README.md`, `CONTEXT.md`, ADRs and code are English (`src/english.test.ts` checks `README.md` and `src/`).
@@ -27,8 +27,26 @@
 
 1. **Counts "after"** are computed with the same expressions as `src/scenes/city-budget.test.ts` (`buildRenderList([...w.terrain.ground, ...w.ground, ...w.solids]).length` and `assembleWorld(undefined, { reducedMotion: true }).scene.accents.length`) and written in §8 as literals; `docs.test.ts` recomputes them and checks §8 contains them, so the spec cannot drift.
 2. **The level-3 numbers of `plataforma-escena` are pinned in the 2026-11-15 spec §8.1** by the test "§8.1 carries the level-3 measures of REPORT.md in the same rows". If the regenerated report changes them (the exhibit moved to the wide site in #427), that test keeps checking only `cartel-torre-escena` and `cartel-taller-escena` against the 2026-11-15 spec, and the new §8 of the 2026-11-18 spec carries the level-3 rows of the two Writing contexts, checked by a new test. The 2026-11-15 spec is history and is not rewritten. The "18 metric rows" count becomes 24.
-3. **`SIGNS` grep**: checked as a whole identifier (`` `SIGNS` `` or `\bSIGNS\b`), so `BLOG_SIGNS`/`zoneSigns` are allowed; `PLATFORM_SITE` as `\bPLATFORM_SITE\b` (so `PLATFORM_SITES` is allowed); `BLOG_SIGN` as `\bBLOG_SIGN\b`.
-4. **The rotation check** stores a marker (`window.__rot429 = Date.now()`) and the `transform` (computed style) of `a[data-zone="blog"]` before resizing; after: marker equal, transform different. The values go into the `despues/README.md`.
+3. **`SIGNS` grep**: checked as a whole identifier with `/(?<![A-Za-z_])SIGNS\b/` (the same regex in Task 4), so `BLOG_SIGNS`/`zoneSigns` are allowed; `PLATFORM_SITE` as `\bPLATFORM_SITE\b` (so `PLATFORM_SITES` is allowed); `BLOG_SIGN` as `\bBLOG_SIGN\b`.
+4. **The rotation check** stores a marker (`window.__rot429 = Date.now()`) and the inline `style.transform` of `#zonas a[data-zone="blog"]` (set by `placeLabel`, `src/labels.ts:12-16`) before resizing; after: marker equal, transform different. Because a rescale alone also changes the transform, the check also records the centre of the link's `getBoundingClientRect()` as a fraction of the viewport and compares it with the site table of the parent's story comment: tall at 900×1440 (Writing ≈ x 0.5–0.65, y ≈ 0.84), wide at 1440×900 (≈ 0.87, 0.70), ±0.05. The values go into the `despues/README.md`.
+
+## Criteria map
+
+| Issue #429 | Task |
+|---|---|
+| Qué hacer 1, 2, 3; criteria 1 and 2 (captures, rotation, judgement) | Task 1 |
+| Qué hacer 4; criterion 3 (`REPORT.md`, exit 0, crops) | Task 2 |
+| Qué hacer 5; criterion 4 (ADR 0004, ADR 0003 → 0004) | Task 3 |
+| Qué hacer 6; criteria 5 and 6 (spec §8, README, CONTEXT, greps, `docs.test.ts`, suite) | Task 4 (suite also at the end of every task) |
+
+## Assumptions
+
+- A1. A level-3 row that fails cannot be fixed here: spec §7 puts "Cambiar el diseño de los carteles o su legibilidad" out of scope and §4 keeps levels 1–3 unchanged. If it happens the run is blocked (issue comment naming the stage). Rejected: loosening thresholds.
+- A2. If the rotation does not change the link (Review Focus 1), it is a regression of #428's wiring that this issue cannot close without, so it is in scope: minimal fix in `src/main.ts` with a test. Rejected: capturing with a reload.
+- A3. Ship-check times: `shipStateAt`/`laneAt` (`src/scenes/sea-anim.ts`) give, per ship, the simulated times at which its hull is closest to `PLATFORM_SITES.wide`; the four captures are taken at the closest approaches found in one `CYCLE_MS`, using the time-lapse method. Rejected: wall-clock spacing at ~2 fps.
+- A4. Thousands separator in §8: an ordinary space (`46 481`), as written in issue #429; the test collapses whitespace before matching.
+- A5. ADR language: English like ADRs 0001–0003 (no test covers `docs/adr/`; the reviewer checks).
+- A6. "`LANE_OUT` goes down toward the lower-left" stays: `project()` maps +y to screen left-down (`src/iso/project.ts:14-16`) and the lane runs mostly +y; the #87 test is untouched.
 
 ## Review Focus
 
@@ -53,7 +71,7 @@
 - [ ] **Step 2:** Start `npm run dev -- --host --port 5173` (foreground-safe: started in the background by the shell with `nohup`/`&` and polled with `curl` until it answers; killed at the end of the task). Take the 10 captures with the `antes/README.md` sequence (reopen per size).
 - [ ] **Step 3:** Rotation 900×1440 → 1440×900 → 900×1440 without reopening, per decision 4; captures `rotacion-900x1440.png`, `rotacion-1440x900.png` (and the return pair `rotacion-vuelta-*.png`).
 - [ ] **Step 4:** Desktop ship check (four lab captures, `barcos-lab-1600x900-{1..4}.png`). Look at every capture (Read the PNG).
-- [ ] **Step 5 (only if a ship crosses Writing):** shift `PLATFORM_SITES.wide` (+5, −5) per round, max 4 rounds, moving the `plataforma-escena` box the same; `npm test` green; retake `mapa-1600x900.png`, `mapa-1920x955.png`, `blog-1920x955.png` and the ship check. Record the final value and the reason.
+- [ ] **Step 5 (only if a ship crosses Writing):** shift `PLATFORM_SITES.wide` (+5, −5) per round, max 4 rounds, moving the `plataforma-escena` box the same and every test that pins (550, 125); `npm test` green (lanes, gates, criteria 1–3); retake **all** captures of step 2–4 (the move can shift the aspect threshold). Record the final value and the reason.
 - [ ] **Step 6:** Write `despues/README.md` in Spanish, same layout as `antes/README.md` (date, commit, viewport and scale, how it waited, command sequence, "Qué se ve" with one line per capture judging: three signs and the headland with its lighthouse; Writing lower right; at 390×750 no edge label; the mouth without holes or loose terrain; on desktop no ship over Writing). Include the rotation section with marker and transforms.
 - [ ] **Step 7:** Docs test PASS; commit `docs(#429): capturas después y rotación`.
 
@@ -87,7 +105,7 @@
 - Test (new, in "#423 closing (#429)"):
   - `**Estado:**` line contains "implementado (#423)".
   - `## 8. Desvíos y medición` exists after `## 7.` and contains: `HEADLAND_SHIFT` with `(${x}, ${y})` from the constant; `PLATFORM_SITES` with both sites from the constant; `COVER_FOCUS_U` formatted with comma decimal (`0,39`); every vertex of `LANE_OUT` and `LANE_BACK` as `(x, y)`; `1,48`; `900×1440` and `1440×900`; `46 481`, `2 409`, and the after counts recomputed (decision 1) formatted with a thin/normal space thousands separator as written.
-  - README and CONTEXT do not match `/\bPLATFORM_SITE\b/`, `/\bBLOG_SIGN\b/`, `/(?<![A-Z_])SIGNS\b/`, `/0[.,]35/` near "focus"/`COVER_FOCUS_U` (simply: no `0.35`/`0,35` in the README; in CONTEXT only the veil's `ACCENT_DIM` (0.35) is allowed), `/caps the shipyard/`.
+  - README and CONTEXT do not match `/\bPLATFORM_SITE\b/`, `/\bBLOG_SIGN\b/`, `/(?<![A-Za-z_])SIGNS\b/`, `/0[.,]35/` near "focus"/`COVER_FOCUS_U` (simply: no `0.35`/`0,35` in the README; in CONTEXT only the veil's `ACCENT_DIM` (0.35) is allowed), `/caps the shipyard/`.
   - README's runtime paragraph (`coverView(host)`) contains "0.39".
 
 - [ ] **Step 1:** Tests FAIL.
@@ -95,3 +113,9 @@
 - [ ] **Step 3:** README: runtime paragraph says the focus is 0.39 and why; storybook paragraph keeps the Writing ids; world paragraph describes the headland on the east coast (Blog) with the lighthouse, and the lanes (outbound east of the headland and the narrow site, return west of the wide site); fix "`LANE_OUT` goes down toward the lower-left" only if it contradicts the code (the #87 test requires "lower-left": keep the phrase if still true on screen).
 - [ ] **Step 4:** CONTEXT pass: Zone, Lanes, Sign, Cover frame, Landmark coherent with each other and with the code (site values, focus, headland position, lighthouse (410, 290)).
 - [ ] **Step 5:** `npm test` and `npm run typecheck` green; commit `docs(#429): spec §8, README y CONTEXT`.
+
+## Grilling
+
+- Rounds: 1 (the revisions add a criteria map, assumptions and sharper checks; no task or seam changed, so no second round).
+- Questions: 16. Sources: ISSUE 7 (Q1, Q3, Q8, Q9, Q11, Q14 and the issue's "set viewport no recarga" in Q4), CODE 6 (Q4 `src/labels.ts:12-16` and `src/main.ts:54`; Q6 `REPORT.md` dated 2026-11-17 with 3 contexts × 2 scales × 3 metrics = 18; Q7 `src/scenes/city-budget.test.ts:27-41`; Q10 `size()` in `src/lab/docs.test.ts:497-501`; Q12 `src/iso/project.ts:14-16`; Q13 a grep shows that README/CONTEXT already lack the forbidden identifiers, and CONTEXT's only 0.35 is `ACCENT_DIM`), DOC 3 (Q5 and Q15 `CLAUDE.md`, the headless fps and `localhost`, plus `vite.config.ts:22-23`; Q16 `AGENTS.md` skill list), NO SOURCE 4, all resolved as technical assumptions (A1 to A4; A5 and A6 are recorded too).
+- Spec ambiguities: none. Follow-up issues opened: none.
