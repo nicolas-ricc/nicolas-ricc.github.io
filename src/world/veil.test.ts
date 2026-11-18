@@ -6,6 +6,7 @@ import { BLEED, CELL, CELL_BLEED, WORLD, worldZoneAt } from "../map/geo";
 import { CROWN_SITE, towerCrown } from "../scenes/sign-crown";
 import { seaPlatformAt } from "../scenes/sign-platform";
 import { TINKER_SITE, tinkerAnimator, tinkerSign } from "../scenes/sign-tinker";
+import { world } from "../scenes/world";
 import { ACCENT_DIM, VEIL_ALPHA, accentZone, accentsByZone, focusAlphas, veilCells, veilPolygons, veilRuns } from "./veil";
 
 describe("veilCells", () => {
@@ -25,12 +26,21 @@ describe("veilCells", () => {
     expect(small.some((c) => Math.abs(c.y - 90) < 40 && c.x < 300)).toBe(true);
     expect(cells.filter((c) => c.size === CELL_BLEED && c.x < -300 && c.y < -300).length).toBeGreaterThan(20);
   });
-  it("the lighthouse headland and its reef are Portfolio, the open sea is Blog", () => {
+  it("the lighthouse headland and its reef are Blog (#426), the promenade west of it stays Resume, the open sea is Blog", () => {
     const at = (x: number, y: number) => cells.find((c) => x >= c.x && x < c.x + c.size && y >= c.y && y < c.y + c.size)!.zone;
-    expect(at(380, 118)).toBe("portfolio");
-    expect(at(404, 118)).toBe("portfolio");
+    expect(at(410, 290)).toBe("blog");
+    expect(at(420, 290)).toBe("blog");
+    expect(at(341, 284)).toBe("cv");
+    // cells are classified by their centre: the 6 u cell x 342..348 straddles the headland base (x 344) and goes
+    // with Blog, taking the last 2 u of the promenade parapet with it (like the 144..150 cell of ADR 0002)
+    expect(at(343, 284)).toBe("blog");
     expect(at(500, 200)).toBe("blog");
     expect(at(-30, 300)).toBe("cv");
+  });
+  it("the promenade lamps next to the moved headland veil with Resume (#426)", () => {
+    const lamps = world(7).accents.filter((a): a is Extract<Accent, { kind: "dot" }> => a.kind === "dot" && a.at.x >= 341 && a.at.x <= 341.6 && a.at.y >= 266 && a.at.y <= 326);
+    expect(lamps.length).toBeGreaterThanOrEqual(3);
+    for (const a of lamps) expect(accentZone(a), `${a.at.x},${a.at.y}`).toBe("cv");
   });
   it("station land goes with Portfolio and the strip west of it with Resume; the cell 144..150 is classified by its centre", () => {
     const cell = (x: number, y: number) => cells.find((c) => x >= c.x && x < c.x + c.size && y >= c.y && y < c.y + c.size)!;
@@ -95,7 +105,7 @@ describe("accentZone", () => {
 
 describe("accentsByZone", () => {
   const dot = (x: number, y: number): Accent => ({ kind: "dot", at: v3(x, y, 1), r: 1, color: "amber" });
-  const port = dot(380, 118), blog = dot(500, 200), cv = dot(-30, 300);
+  const port = dot(100, 80), blog = dot(500, 200), cv = dot(-30, 300);
   it("without a zone, each light goes to the zone of its position (accentZone)", () => {
     expect(accentsByZone([port, blog, cv])).toEqual({ portfolio: [port], cv: [cv], blog: [blog] });
   });
@@ -108,9 +118,9 @@ describe("accentsByZone", () => {
 });
 
 describe("Writing platform accents (#390)", () => {
-  it("every accent of the Writing platform (dots and polys) is Blog", () => {
+  it.each(["wide", "tall"] as const)("every accent of the Writing platform (dots and polys) is Blog at the %s site (#427)", (site) => {
     const out: Solid[] = [], accents: Accent[] = [];
-    seaPlatformAt(out, accents);
+    seaPlatformAt(out, accents, site);
     expect(accents.some((a) => a.kind === "dot") && accents.some((a) => a.kind === "poly")).toBe(true);
     for (const a of accents) expect(accentZone(a)).toBe("blog");
   });

@@ -7,15 +7,18 @@ import { hullsIntersect, isBehind, overlaps, screenBounds, screenHull } from "..
 import { convexHull, polyline, v3, type Vec2 } from "../iso/geometry";
 import { project } from "../iso/project";
 import { bounds, hullRings, isFlat, type Bounds, type Solid } from "../iso/solids";
-import { WORLD, inCoverQuad, worldZoneAt } from "../map/geo";
-import { signBox, SIGN_ORDER, SIGNS } from "../world/signs";
+import { HEADLAND, WORLD, inCoverQuad, pointInPolygon, worldZoneAt } from "../map/geo";
+import { signBox, SIGN_ORDER, zoneSigns } from "../world/signs";
 import { BEAM_INNER, BEAM_LEN, BEAM_PERIOD_MS, CYCLE_MS, FADE_U, FERRY_PAUSE_MS, FERRY_ROUTE, FERRY_SPEED, KEEPER_SIGN_MS, LANE_BACK, LANE_OUT, LANE_SPEED, NEON_STEP_MS, OFF_MS, PORT_MS, SHIPS, alphaAt, createSeaAnim, laneAt, laneLength, type ShipFrame } from "./sea-anim";
 import { SHIP_SPECS, ship, shipAt } from "./ships";
+import { PLATFORM_DECK, PLATFORM_SITES, seaPlatformAt } from "./sign-platform";
 import { bleedTerrainAt, terrainAt } from "./terrain";
 import { world } from "./world";
 
 const WATER = new Set(["water", "sea", "shore", "abyss"]);
 type Static = { b: Bounds; sb: ReturnType<typeof screenBounds>; sh: Vec2[] };
+/** The Writing platform's solids at both sites (#427): it left the static world for platformAnimator, and the lanes must clear it at either site. */
+const platforms = (): Solid[] => (["wide", "tall"] as const).flatMap((site) => { const out: Solid[] = []; seaPlatformAt(out, [], site); return out; });
 const staticsOf = (solids: Solid[]): Static[] => solids.map((s) => { const b = bounds(s); return { b, sb: screenBounds(b), sh: screenHull(b) }; });
 /** Alignment box of the freighter centered at `p` (z −1..13) and a check that no static solid overlapping it on screen covers it. */
 const expectNotBehind = (statics: Static[], p: { x: number; y: number }, heading: number): void => {
@@ -33,7 +36,7 @@ describe("route", () => {
     const end = LANE_OUT[LANE_OUT.length - 1]!;
     expect(inCoverQuad(end.x, end.y)).toBe(false);
     const L = laneLength("out");
-    expect(Math.abs(L - 687.9)).toBeLessThan(5); // slack to move vertices up to 2 u
+    expect(Math.abs(L - 560.7)).toBeLessThan(5); // slack to move vertices up to 4 u
     for (let d = 0; d <= L; d += 1) {
       const p = laneAt("out", d);
       const t = inWorld(p.x, p.y) ? terrainAt(p.x, p.y) : bleedTerrainAt(p.x, p.y);
@@ -46,7 +49,7 @@ describe("route", () => {
   });
 
   it("no point of the lane ends up behind a static solid that overlaps it on screen", () => {
-    const statics = staticsOf(world(7).solids);
+    const statics = staticsOf([...world(7).solids, ...platforms()]);
     for (let d = 0; d <= laneLength("out"); d += 4) {
       const p = laneAt("out", d);
       expectNotBehind(statics, p, p.heading);
@@ -77,12 +80,12 @@ const silhouette = (p: { x: number; y: number }, heading: number): Vec2[] => {
 
 describe("two lanes", () => {
   it("LANE_BACK starts outside the cover and ends at the harbor mouth (397, −39); water, depth ≥ 6, Blog for x ≥ 380; the sea fade falls in the bleed", () => {
-    expect(LANE_BACK[0]).toEqual({ x: 424, y: 600 });
-    expect(inCoverQuad(424, 600)).toBe(false);
+    expect(LANE_BACK[0]).toEqual({ x: 564, y: 467 });
+    expect(inCoverQuad(564, 467)).toBe(false);
     expect(LANE_BACK[LANE_BACK.length - 1]).toEqual({ x: 397, y: -39 });
     expect(inCoverQuad(397, -39)).toBe(true);
     const L = laneLength("back");
-    expect(Math.abs(L - 664.9)).toBeLessThan(5); // slack to move vertices up to 2 u
+    expect(Math.abs(L - 543.9)).toBeLessThan(5); // slack to move vertices up to 4 u
     for (let d = 0; d <= L; d += 1) {
       const p = laneAt("back", d);
       const t = inWorld(p.x, p.y) ? terrainAt(p.x, p.y) : bleedTerrainAt(p.x, p.y);
@@ -94,7 +97,7 @@ describe("two lanes", () => {
   });
 
   it("no point of LANE_BACK ends up behind a static solid that overlaps it on screen", () => {
-    const statics = staticsOf(world(7).solids);
+    const statics = staticsOf([...world(7).solids, ...platforms()]);
     for (let d = 0; d <= laneLength("back"); d += 4) {
       const p = laneAt("back", d);
       expectNotBehind(statics, p, p.heading);
@@ -122,7 +125,34 @@ describe("two lanes", () => {
   it("laneAt('back') interpolates the heading at the vertices and at the end arrives with the heading of the last leg", () => {
     const Lb = laneLength("back"), last = Math.atan2(-39 - 18, 397 - 434);
     expect(laneAt("back", Lb).heading).toBeCloseTo(last, 6);
-    expect(laneAt("back", 0).heading).toBeCloseTo(Math.atan2(237 - 600, 462 - 424), 6);
+    expect(laneAt("back", 0).heading).toBeCloseTo(Math.atan2(330 - 467, 548 - 564), 6);
+  });
+
+  it("the lanes leave ≥ 14 u to the Writing decks at both sites and ≥ 14 u to the moved headland polygon (#423)", () => {
+    // the two Writing sites (#427) and the headland moved in #426
+    const SITES: Vec2[] = Object.values(PLATFORM_SITES);
+    const MOVED_HEADLAND: Vec2[] = HEADLAND.map(([x, y]) => ({ x, y }));
+    const decks = SITES.map((s) => PLATFORM_DECK.map((q) => ({ x: q.x + s.x, y: q.y + s.y })));
+    const toSeg = (p: Vec2, a: Vec2, b: Vec2): number => {
+      const dx = b.x - a.x, dy = b.y - a.y, t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy)));
+      return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy);
+    };
+    /** 0 inside the polygon, otherwise the distance to its nearest side. */
+    const distToPolygon = (p: Vec2, poly: Vec2[]): number =>
+      pointInPolygon(p.x, p.y, poly.flatMap((q) => [q.x, q.y])) ? 0 : Math.min(...poly.map((a, i) => toSeg(p, a, poly[(i + 1) % poly.length]!)));
+    expect(distToPolygon({ x: 380, y: 288 }, MOVED_HEADLAND)).toBe(0);
+    const samples = { out: [] as Vec2[], back: [] as Vec2[] };
+    for (const lane of ["out", "back"] as const) for (let d = 0; d <= laneLength(lane); d += 1) {
+      const p = laneAt(lane, d);
+      for (const [k, deck] of decks.entries()) expect(distToPolygon(p, deck), `${lane} ${d} deck ${k}`).toBeGreaterThanOrEqual(14);
+      expect(distToPolygon(p, MOVED_HEADLAND), `${lane} ${d} headland`).toBeGreaterThanOrEqual(14);
+      samples[lane].push(p);
+    }
+    const at = (lane: "out" | "back", y: number) => samples[lane].filter((p) => Math.abs(p.y - y) < 0.5);
+    for (const [lane, y, ok] of [["out", 290, (x: number) => x >= 440], ["out", 400, (x: number) => x >= 481], ["back", 125, (x: number) => x <= 500]] as const) {
+      expect(at(lane, y).length, `${lane} at y ${y}`).toBeGreaterThan(0);
+      for (const p of at(lane, y)) expect(ok(p.x), `${lane} x ${p.x} at y ${y}`).toBe(true);
+    }
   });
 
   it("coverage: over 2·T, always one in out and one in back (and one at full alpha in each), each ship goes out → offscreen → back → offscreen in order, and two in the same lane are ≥ 100 u apart", () => {
@@ -460,8 +490,10 @@ describe("fair launch tick chunking", () => {
 describe("zone signs and the lanes (#390, #394)", () => {
   it("no ship piece or launch piece crosses the letters of any sign on screen", () => {
     // the letters are accents, drawn over every solid: a ship crossing them would show behind them
-    const rects = SIGN_ORDER.map((id) => {
-      const box = signBox(SIGNS[id]), { minX: x0, minY: y0, maxX: x1, maxY: y1 } = box;
+    // both Writing sites (#427); the Resume and Portfolio signs are the same at both, so they are probed once
+    const signs = [...new Map((["wide", "tall"] as const).flatMap((site) => SIGN_ORDER.map((id) => [zoneSigns(site)[id], `${site} ${id}`] as const))).entries()];
+    const rects = signs.map(([sign, id]) => {
+      const box = signBox(sign), { minX: x0, minY: y0, maxX: x1, maxY: y1 } = box;
       return { id, box, rect: [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }] as Vec2[] };
     });
     const bad: string[] = [];
@@ -487,4 +519,16 @@ describe("zone signs and the lanes (#390, #394)", () => {
     expect(samples).toBeGreaterThan(0);
     expect(bad).toEqual([]);
   }, 15_000); // ~1 s alone; the full parallel suite stretches it past the default 5 s
+  it("no ship piece's screen box reaches the box of the Writing word at the wide site (#429)", () => {
+    // stricter than the hull test above: at (550, 125) the return cargo's masts entered the word's box and competed with it on screen
+    const box = signBox(zoneSigns("wide").blog);
+    const hits: string[] = [];
+    for (const lane of ["out", "back"] as const) for (const kind of new Set(SHIPS.map((s) => s.kind))) {
+      for (let d = 0; d <= laneLength(lane); d += 2) {
+        const p = laneAt(lane, d);
+        if (ship(kind, shipAt(kind, p, p.heading), p.heading).solids.some((s) => overlaps(screenBounds(bounds(s)), box))) hits.push(`${lane} ${kind} ${d}`);
+      }
+    }
+    expect(hits).toEqual([]);
+  }, 15_000);
 });

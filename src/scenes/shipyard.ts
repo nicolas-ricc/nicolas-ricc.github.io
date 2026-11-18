@@ -185,7 +185,7 @@ function jungle(out: Solid[], rng: Rng): void {
       if (clearOfWater(b.min.x, b.min.y, b.max.x, b.max.y, 3)) out.push(s);
     }
   };
-  cluster(332, 340, 50, 88, 6);   // east edge, between the bay and the headland (y0 50, Task 6: leaves out of the diagonal reach of the freighter leaving the bay)
+  cluster(332, 340, 50, 88, 6);   // east edge, south of the bay, by the old headland site (empty since #426) (y0 50, Task 6: leaves out of the diagonal reach of the freighter leaving the bay)
 }
 
 function lamps(out: Solid[], accents: Accent[]): void {

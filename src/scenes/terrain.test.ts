@@ -3,7 +3,7 @@ import { BLEED, MOUTH_Y, SHORE_W, distToHeadland, inHeadland, STATION_LAND, inSt
 import { createRng } from "../map/seed";
 import type { Solid, Tri } from "../iso/solids";
 import { BLEED_WATER, clearOfWater, isWaterAt } from "./terrain-classify";
-import { CELL, baseToneAt, bleedTerrainAt, bleedZ, buildTerrain, seaTerrainAt, shipyardTerrainAt, terrainAt, waterBand } from "./terrain";
+import { CELL, baseToneAt, bleedTerrainAt, bleedZ, buildTerrain, headlandZ, seaTerrainAt, shipyardTerrainAt, terrainAt, waterBand } from "./terrain";
 
 const tris = (s: Solid): Tri[] => (s.kind === "ground" ? s.tris : []);
 // The row of vertices at ZONE_SPLIT_Y = 90 is shared by the last row of shipyard cells (center 87) and the first of the city (center 93).
@@ -36,15 +36,31 @@ describe("classification", () => {
     expect(shipyardTerrainAt(50, -30)).toBe("slab");     // factory band
     expect(shipyardTerrainAt(300, -30)).toBe("water");   // the bay continues to the north
   });
+  it("#426: the headland ramp follows the shift (z 1 at the base x 344, 7 from x 369) and nothing of the point is left at the old site", () => {
+    expect(headlandZ(330)).toBe(1);
+    expect(headlandZ(344)).toBe(1);
+    expect(headlandZ(369)).toBe(7);
+    expect(headlandZ(356.5)).toBeCloseTo(4, 9);
+    const left: string[] = [];
+    for (let y = WORLD.y0 + CELL / 2; y < 200; y += CELL) for (let x = WORLD.x0 + CELL / 2; x < WORLD.x1; x += CELL) {
+      const t = terrainAt(x, y);
+      if (t === "headland" || t === "reef") left.push(`${x},${y} ${t}`);
+    }
+    expect(left).toEqual([]);
+  });
   it("shipyard: the new north coast, with land in front of the sheds, cove and NE point", () => {
     expect(terrainAt(300, 18)).toBe("east");   // new land in front of the sheds (formerly water: coast at y 21)
     expect(terrainAt(286, 27)).toBe("water");  // cove to the NW
     expect(terrainAt(339, 9)).not.toBe("water"); // NE point
   });
   it("sea: point, reef, shore and open sea", () => {
-    expect(terrainAt(380, 118)).toBe("headland");
-    expect(terrainAt(336, 115)).toBe("headland");          // the base of the point wins in the shipyard zone
-    expect(seaTerrainAt(404, 118)).toBe("reef");
+    expect(terrainAt(380, 290)).toBe("headland");          // #426: the headland rests on the island's east coast
+    expect(terrainAt(350, 287)).toBe("headland");          // the base of the point wins over the seawall coast
+    expect(terrainAt(340, 285)).toBe("asphalt");           // the promenade, west of the base
+    expect(["shore", "sea"]).toContain(terrainAt(380, 118)); // the old site is water
+    expect(["shore", "sea"]).toContain(terrainAt(396, 118));
+    expect(terrainAt(335, 115)).toBe("jungle");            // the strip west of islandEastX at the old site is land again
+    expect(seaTerrainAt(418, 290)).toBe("reef");
     expect(seaTerrainAt(350, 60)).toBe("shore");           // next to the shipyard coast
     expect(seaTerrainAt(400, 200)).toBe("sea");
     expect(seaTerrainAt(350, 10)).toBe("shore");           // in front of the bay there is a shoal
@@ -79,9 +95,15 @@ describe("classification", () => {
     expect(terrainAt(300, 267)).toBe("jungle");
     expect(terrainAt(335, 300)).toBe("jungle");
   });
-  it("in the cv zone there is only asphalt, jungle and water", () => {
+  it("in the cv zone there is only asphalt, jungle, water and the east shore", () => {
     const seen = new Set<string>();
-    for (let y = ZONE_SPLIT_Y + 3; y < WORLD.y1; y += CELL) for (let x = WORLD.x0 + 3; x < ZONE_SPLIT_X; x += CELL) if (!inStationLand(x, y) && !inHeadland(x, y) && distToHeadland(x, y) >= SHORE_W) seen.add(terrainAt(x, y));
+    for (let y = ZONE_SPLIT_Y + 3; y < WORLD.y1; y += CELL) for (let x = WORLD.x0 + 3; x < ZONE_SPLIT_X; x += CELL) {
+      if (inStationLand(x, y) || inHeadland(x, y) || distToHeadland(x, y) < SHORE_W) continue;
+      const t = terrainAt(x, y);
+      // "shore" only where islandEastX swings (x >= 331, y < 146): the wavy east coast the headland used to hide before #426
+      if (t === "shore") expect(x >= 331 && y < 146, `shore at ${x},${y}`).toBe(true);
+      else seen.add(t);
+    }
     expect([...seen].sort()).toEqual(["asphalt", "jungle", "water"]);
   });
   it("the water is continuous at the seam and the estuary does not reach the border with Blog", () => {
@@ -99,12 +121,12 @@ describe("classification", () => {
     // at the far south the estuary still leaves land before x = 344
     expect(terrainAt(ZONE_SPLIT_X - 3, WORLD.y1 - 3)).not.toBe("water");
   });
-  it("no land point clicks through to Blog and the whole trench clicks through to Blog", () => {
-    const land = new Set(["slab", "east", "jungle", "dock", "asphalt", "headland", "reef"]);
+  it("no land point clicks through to Blog, except the moved headland and its reef (#426); the whole trench clicks through to Blog", () => {
+    const land = new Set(["slab", "east", "jungle", "dock", "asphalt"]);
     for (let y = WORLD.y0 + 3; y < WORLD.y1; y += CELL) for (let x = WORLD.x0 + 3; x < WORLD.x1; x += CELL) {
       const t = terrainAt(x, y), z = worldZoneAt(x, y);
       if (z === "blog") expect(land.has(t)).toBe(false);
-      if (t === "abyss") expect(z).toBe("blog");
+      if (t === "abyss" || t === "headland" || t === "reef") expect(z, `${t} at ${x},${y}`).toBe("blog");
     }
   });
   it("bleed: built land near the content, jungle and hills beyond; the estuary and the sea continue to the south, the bay to the north", () => {
@@ -234,8 +256,8 @@ describe("buildTerrain", () => {
     const rock = m.ground.filter((g) => g.kind === "ground" && g.mat === "rock").flatMap(tris);
     const high = rock.filter((t) => t.pts.every((p) => p.z >= 4));
     expect(high.length).toBeGreaterThan(20);
-    // the base of the point (x < 340) is low: nothing tall next to the quay sheds
-    const base = rock.filter((t) => t.pts.every((p) => p.x <= 340 && p.y > 96 && p.y < 136));
+    // the base of the point (x < 348 = 334 + shift, #426) is low: nothing tall next to the seawall
+    const base = rock.filter((t) => t.pts.every((p) => p.x <= 348 && p.y > 268 && p.y < 308));
     expect(base.length).toBeGreaterThan(0);
     expect(base.every((t) => t.pts.every((p) => p.z < 4))).toBe(true);
     const inDock = allTris(m).filter((t) => t.pts.every((p) => p.x > 122 && p.x < 190 && p.y > 8 && p.y < 28));
@@ -250,7 +272,7 @@ describe("buildTerrain", () => {
     expect([...a.keys()].filter((k) => b.has(k)).length).toBeGreaterThan(10);
     for (const [k, z] of a) if (b.has(k)) expect(b.get(k)).toBe(z);
     const { x0, x1, y1 } = STATION_LAND;
-    expect(allTris(p).every((t) => t.pts.every((v) => v.y <= ZONE_SPLIT_Y + CELL || (v.y <= y1 + CELL && v.x >= x0 - CELL && v.x <= x1 + CELL) || distToHeadland(v.x, v.y) < SHORE_W + CELL))).toBe(true); // or the headland and its shore, Portfolio by geography
+    expect(allTris(p).every((t) => t.pts.every((v) => v.y <= ZONE_SPLIT_Y + CELL || (v.y <= y1 + CELL && v.x >= x0 - CELL && v.x <= x1 + CELL)))).toBe(true);
   });
   it("the asphalt is nearly flat and comes out as its own ground", () => {
     const m = buildTerrain(createRng(7), ["cv"]);

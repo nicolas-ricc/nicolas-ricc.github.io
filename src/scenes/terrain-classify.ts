@@ -51,7 +51,7 @@ export function seaTerrainAt(x: number, y: number): Terrain {
   return x >= abyssX(y) ? "abyss" : "sea";
 }
 
-/** Dispatches by geography, not by clickable zone: the sea and the headland belong to seaTerrainAt even if they click through to Portfolio or Resume. */
+/** Dispatches by geography, not by clickable zone: the sea and the headland belong to seaTerrainAt whatever zone they click through to (the seawall shore is Resume). */
 export function terrainAt(x: number, y: number): Terrain {
   if (inHeadland(x, y) || x >= islandEastX(y)) return seaTerrainAt(x, y);
   return y >= ZONE_SPLIT_Y && !inStationLand(x, y) ? cityTerrainAt(x, y) : shipyardTerrainAt(x, y);

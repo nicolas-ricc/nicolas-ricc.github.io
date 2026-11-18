@@ -6,12 +6,14 @@ import { COVER_LAPTOP, COVER_PHONE, layoutGaps, SIGN_FONT, signMetrics, staticCo
 import { counterClearance, letterGaps, measureText, rhythm } from "../kit/lettering";
 import { TOWER } from "../scenes/city-grid";
 import { CROWN_SITE } from "../scenes/sign-crown";
-import { PLATFORM_DECK, PLATFORM_SITE } from "../scenes/sign-platform";
-import { SHIPYARD_HALLS, TINKER_SITE } from "../scenes/sign-tinker";
+import { PLATFORM_DECK, PLATFORM_SITES } from "../scenes/sign-platform";
+import { LANE_BACK, LANE_OUT } from "../scenes/sea-anim";
+import { HEADLAND_SHIFT } from "../map/geo";
 import { buildRenderList } from "../iso/render-list";
 import { assembleWorld } from "../world/assemble";
-import { labelLayout, signBox, SIGN_ORDER, SIGNS } from "../world/signs";
-import { coverView } from "../world/view";
+import { COVER_FOCUS_U } from "../world/view";
+import { writingSite } from "../world/signs";
+import { SHIPYARD_HALLS, TINKER_SITE } from "../scenes/sign-tinker";
 import { EXHIBITS } from "./exhibits";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
@@ -534,8 +536,9 @@ describe("zone signs redesign documentation (#374)", () => {
     expect(report).not.toBe("");
     // the header cell is `✓/✗`: the verdict is the last cell of each metric row
     expect(report).not.toMatch(/\| ✗ \|$/m);
-    expect(report.match(/^\| (contraste|halo|OCR) \|.*\| ✓ \|$/gm)?.length ?? 0).toBe(18);
-    for (const id of CONTEXTS) for (const s of ["1.17", "0.83"]) expect(report).toMatch(new RegExp(`^## ${id} a ${s.replace(".", "\\.")}$`, "m"));
+    // 3 metrics × 2 scales × 4 contexts: plataforma-escena-angosta joined in #429
+    expect(report.match(/^\| (contraste|halo|OCR) \|.*\| ✓ \|$/gm)?.length ?? 0).toBe(24);
+    for (const id of [...CONTEXTS, "plataforma-escena-angosta"]) for (const s of ["1.17", "0.83"]) expect(report).toMatch(new RegExp(`^## ${id} a ${s.replace(".", "\\.")}$`, "m"));
     expect(report).toContain("Sin violaciones.");
   });
   it("the six level-3 crops are PNGs and the six scene captures are 3200×1800", () => {
@@ -552,9 +555,10 @@ describe("zone signs redesign documentation (#374)", () => {
   });
   it("§5 records the three candidate sites with their values", () => {
     const sites = between(spec, /^## 5\. /m, /^## 6\. /m);
-    // built from the constants, with the spec's U+2212 minus, so a moved site fails here
-    const at = (v: { x: number; y: number; z: number }, z = true) => `(${[v.x, v.y, ...(z ? [v.z] : [])].join(", ").replace(/-/g, "−")})`;
-    for (const s of ["CROWN_SITE", at(CROWN_SITE), "TINKER_SITE", at(TINKER_SITE), "PLATFORM_SITE", at(PLATFORM_SITE, false)]) expect(sites, s).toContain(s);
+    // built from the constants, with the spec's U+2212 minus, so a moved site fails here; the platform's is a literal since #427
+    // (it left PLATFORM_SITE for two sites, PLATFORM_SITES, and this spec records the site of its time)
+    const at = (v: { x: number; y: number; z: number }) => `(${[v.x, v.y, v.z].join(", ").replace(/-/g, "−")})`;
+    for (const s of ["CROWN_SITE", at(CROWN_SITE), "TINKER_SITE", at(TINKER_SITE), "PLATFORM_SITE", "(392, 178)"]) expect(sites, s).toContain(s);
   });
   it("§8 exists after §7 with its four parts and names the report, the font, the contexts and the sites", () => {
     expect(spec.search(/^## 8\. Desvíos y medición$/m)).toBeGreaterThan(spec.search(/^## 7\. /m));
@@ -568,11 +572,14 @@ describe("zone signs redesign documentation (#374)", () => {
       for (const v of [m.xHeightPx, m.strokePx, m.airPx, staticContrast(context(id).sign)]) expect(line, `${id} ${tag} ${f(v)}`).toContain(f(v));
     }
   });
-  it("§8.1 carries the level-3 measures of REPORT.md in the same rows", () => {
-    for (const id of CONTEXTS) for (const s of ["1.17", "0.83"]) {
+  // since #429 the current level-3 measures live in the 2026-11-18 spec §8; the 2026-11-15 §8.1 keeps those of 2026-11-17
+  it("the 2026-11-18 spec §8 carries the level-3 measures of REPORT.md for the four contexts", () => {
+    const next = readFileSync(`${SPECS}2026-11-18-composicion-responsive-design.md`, "utf8");
+    const table = between(next, /^## 8\. Desvíos y medición$/m);
+    for (const id of [...CONTEXTS, "plataforma-escena-angosta"]) for (const s of ["1.17", "0.83"]) {
       const sec = between(report, new RegExp(`^## ${id} a ${s.replace(".", "\\.")}$`, "m")).split(/\n(?=## )/)[0]!;
       const cell = (name: string) => row(sec, `| ${name} |`).split("|")[2]?.trim() ?? "";
-      const line = row(measures, `| \`${id}\` | ${s} |`);
+      const line = row(table, `| \`${id}\` | ${s} |`);
       for (const v of [cell("contraste"), cell("halo"), cell("OCR")]) {
         expect(v, `${id} ${s}`).not.toBe("");
         expect(line, `${id} ${s} ${v}`).toContain(v);
@@ -792,29 +799,34 @@ describe("zone signs integration (#394)", () => {
     expect(spec).not.toBe("");
     expect(spec).toMatch(/^\*\*Fecha:\*\* 2026-11-17$/m);
     expect(spec).toMatch(/^\*\*Estado:\*\* implementado$/m);
+    const lines = spec.split("\n"), estado = lines.indexOf("**Estado:** implementado");
+    expect(lines[estado + 1]).toBe("**Superada en parte:** #423 (spec 2026-11-18) muda la plataforma de Writing a dos sitios y cambia `COVER_FOCUS_U`; las tablas de §3, §4 y §5 describen el estado en #394.");
     const heads = [1, 2, 3, 4, 5, 6, 7].map((n) => spec.search(new RegExp(`^## ${n}\\. `, "m")));
     for (const h of heads) expect(h).toBeGreaterThanOrEqual(0);
     for (let k = 1; k < heads.length; k++) expect(heads[k]!).toBeGreaterThan(heads[k - 1]!);
   });
   it("§3 carries the final site of each sign, as the constants say", () => {
     const sites = part(3);
-    const rows = { CROWN_SITE: at(CROWN_SITE), TINKER_SITE: at(TINKER_SITE), PLATFORM_SITE: at(PLATFORM_SITE, false) };
+    // the platform's row is a literal since #427: the spec is history, and the platform now has two sites (PLATFORM_SITES)
+    const rows = { CROWN_SITE: at(CROWN_SITE), TINKER_SITE: at(TINKER_SITE), PLATFORM_SITE: "(392, 178)" };
     for (const [name, value] of Object.entries(rows)) expect(row(sites, `| \`${name}\` |`), name).toContain(value);
   });
-  it("§4 carries each sign's screen box and label mode on the laptop and the phone, as coverView and signBox compute them", () => {
+  // literals since #428: COVER_FOCUS_U moved to 0.39 and Writing has two sites, so the live boxes no longer match; the spec is history
+  it("§4 carries each sign's screen box and label mode on the laptop and the phone, as #394 measured them", () => {
     const framing = part(4);
-    for (const [label, w, h] of [["laptop", 1366, 657], ["teléfono", 390, 750]] as const) {
-      const v = coverView(w, h);
-      for (const id of SIGN_ORDER) {
-        const b = signBox(SIGNS[id]);
-        const px = (n: number, o: number) => (n * v.scale + o).toFixed(1);
-        const box = `${px(b.minX, v.x)}..${px(b.maxX, v.x)} × ${px(b.minY, v.y)}..${px(b.maxY, v.y)}`;
-        const mode = labelLayout(b, v, { w, h }, { hw: 0, hh: 0 }).mode;
-        const line = row(framing, `| ${label} ${w}×${h} | \`${id}\` |`);
-        expect(line, `${label} ${id}`).not.toBe("");
-        expect(line, `${label} ${id} ${box}`).toContain(box);
-        expect(line, `${label} ${id} ${mode}`).toContain(`\`${mode}\``);
-      }
+    const ROWS = [
+      ["laptop 1366×657", "portfolio", "600.1..688.3 × 69.6..86.1", "sign"],
+      ["laptop 1366×657", "cv", "393.7..466.7 × 236.7..251.0", "sign"],
+      ["laptop 1366×657", "blog", "747.5..846.5 × 397.2..425.2", "sign"],
+      ["teléfono 390×750", "portfolio", "307.4..400.6 × 101.5..118.9", "sign"],
+      ["teléfono 390×750", "cv", "89.4..166.5 × 278.0..293.1", "sign"],
+      ["teléfono 390×750", "blog", "463.2..567.8 × 447.6..477.1", "edge"],
+    ] as const;
+    for (const [screen, id, box, mode] of ROWS) {
+      const line = row(framing, `| ${screen} | \`${id}\` |`);
+      expect(line, `${screen} ${id}`).not.toBe("");
+      expect(line, `${screen} ${id} ${box}`).toContain(box);
+      expect(line, `${screen} ${id} ${mode}`).toContain(`\`${mode}\``);
     }
   });
   it("§5 carries the frame table before and after, the static polygons and the world accents", () => {
@@ -828,11 +840,9 @@ describe("zone signs integration (#394)", () => {
     const verdict = cells(row(budget, "| veredicto del bloom |"));
     expect(verdict.length).toBe(3);
     for (const v of verdict.slice(1)) expect(v).toMatch(/^`(on|fallback)`$/);
-    const { scene } = assembleWorld(undefined, { reducedMotion: true });
-    // same computation as stage.staticCount, which the dev log prints as "N static polygons"
-    const polygons = buildRenderList([...scene.terrain.ground, ...scene.ground, ...scene.solids]).length;
-    expect(num(cells(row(budget, "| polígonos estáticos |")).at(-1) ?? "")).toBe(polygons);
-    expect(num(cells(row(budget, "| acentos estáticos del mundo |")).at(-1) ?? "")).toBe(scene.accents.length);
+    // literals since #427: the spec is history, and the Writing platform left the static world (platformAnimator), so the live counts dropped
+    expect(num(cells(row(budget, "| polígonos estáticos |")).at(-1) ?? "")).toBe(46518);
+    expect(num(cells(row(budget, "| acentos estáticos del mundo |")).at(-1) ?? "")).toBe(2409);
   });
   it("§7 lists the seven site captures, and they exist", () => {
     const caps = part(7);
@@ -854,5 +864,141 @@ describe("zone signs integration (#394)", () => {
     expect(lab).toContain(NAME);
     const runtime = (paragraphs.find((p) => p.includes("coverView(host)")) ?? "").replace(/\s+/g, " ");
     for (const s of ["src/world/signs.ts", "zoneAtScreen", "labelLayout", "edge", "no external font"]) expect(runtime, s).toContain(s);
+  });
+});
+
+describe("Writing with two sites (#427)", () => {
+  const ASSETS = `${ROOT}docs/superpowers/specs/assets/423-composicion-responsive/`;
+  it("README's storybook paragraph lists the three Writing exhibits", () => {
+    const p = readme.split(/\n\s*\n/).find((x) => x.includes("zone signs of #374")) ?? "";
+    for (const id of ["`#plataforma`", "`#plataforma-escena`", "`#plataforma-escena-angosta`"]) expect(p, id).toContain(id);
+  });
+  it.each(["plataforma-escena-angosta-117.png", "sitio-1600x900-ancho.png"])("capture %s exists, 1600×900 @2", (f) => {
+    expect(existsSync(`${ASSETS}${f}`), f).toBe(true);
+    const b = readFileSync(`${ASSETS}${f}`);
+    expect(b.subarray(1, 4).toString(), f).toBe("PNG");
+    expect([b.readUInt32BE(16), b.readUInt32BE(20)]).toEqual([3200, 1800]);
+  });
+});
+
+describe("#app decides Writing's site (#428)", () => {
+  const glossary = readFileSync(`${ROOT}CONTEXT.md`, "utf8");
+  /** The CONTEXT.md entry `### <title>` up to the next `### `. */
+  const entry = (title: string) => { const at = glossary.indexOf(`### ${title}\n`); const rest = glossary.slice(at + title.length + 5); const next = rest.search(/^### /m); return at < 0 ? "" : next < 0 ? rest : rest.slice(0, next); };
+  it("CONTEXT.md Cover frame names COVER_FOCUS_U at 0.39", () => {
+    const e = entry("Cover frame");
+    expect(e).toContain("`COVER_FOCUS_U`");
+    expect(e).toContain("0.39");
+  });
+  it("CONTEXT.md Sign tells writingSite, WRITING_SITE_MARGIN and #app, and the site is no longer pinned", () => {
+    const e = entry("Sign");
+    for (const s of ["`writingSite`", "`WRITING_SITE_MARGIN`", "`#app`"]) expect(e, s).toContain(s);
+    expect(e).not.toContain("pinned to `wide`");
+  });
+  it("README's runtime paragraph tells writingSite and #app", () => {
+    const runtime = (readme.split(/\n\s*\n/).find((p) => p.includes("coverView(host)")) ?? "").replace(/\s+/g, " ");
+    for (const s of ["writingSite", "#app"]) expect(runtime, s).toContain(s);
+    expect(runtime).not.toContain("(Writing, on a phone)");
+  });
+});
+
+describe("#423 closing (#429)", () => {
+  const SPECS = `${ROOT}docs/superpowers/specs/`;
+  const AFTER = `${SPECS}assets/423-composicion-responsive/despues/`;
+  const read = (path: string) => (existsSync(path) ? readFileSync(path, "utf8") : "");
+  const png = (path: string) => {
+    expect(existsSync(path), path).toBe(true);
+    const b = readFileSync(path);
+    expect(b.subarray(1, 4).toString(), path).toBe("PNG");
+    return [b.readUInt32BE(16), b.readUInt32BE(20)];
+  };
+  /** `WxH` of a capture name such as `mapa-390x750.png`. */
+  const viewport = (name: string) => name.match(/(\d+)x(\d+)/)!.slice(1).map(Number);
+  const CAPTURES = [
+    ...["390x750", "430x932", "820x1180", "1024x768", "1366x1024", "1600x900", "1920x955"].map((s) => `mapa-${s}.png`),
+    "blog-1920x955.png", "blog-390x750.png", "boca-lab-1600x900.png", "rotacion-900x1440.png", "rotacion-1440x900.png",
+  ];
+  const glossary = read(`${ROOT}CONTEXT.md`);
+  const adr4 = read(`${ROOT}docs/adr/0004-writing-site-follows-the-host.md`);
+  const adr3 = read(`${ROOT}docs/adr/0003-signs-are-the-navigation.md`);
+  const spec = read(`${SPECS}2026-11-18-composicion-responsive-design.md`);
+  const at8 = spec.search(/^## 8\. Desvíos y medición$/m);
+  const dev = (at8 < 0 ? "" : spec.slice(at8)).replace(/\s+/g, " ");
+  /** The measured aspect threshold of the Writing site at 900 px high, as the spec writes it (comma decimal). */
+  const threshold = () => { let w = 900; while (writingSite(w, 900) !== "wide") w++; return (w / 900).toFixed(2).replace(".", ","); };
+  /** A count as the spec writes it: thousands separated by a space. */
+  const count = (n: number) => n.toLocaleString("en").replace(/,/g, " ");
+
+  it.each(CAPTURES)("capture %s exists at 2W×2H", (name) => {
+    const [w, h] = viewport(name);
+    expect(png(`${AFTER}${name}`)).toEqual([2 * w!, 2 * h!]);
+  });
+  it("every PNG of despues/ is 2W×2H of the viewport in its name", () => {
+    for (const name of readdirSync(AFTER).filter((f) => f.endsWith(".png") && /\d+x\d+/.test(f))) {
+      const [w, h] = viewport(name);
+      expect(png(`${AFTER}${name}`), name).toEqual([2 * w!, 2 * h!]);
+    }
+  });
+  it("despues/README.md judges every capture on a line of its own and records the rotation", () => {
+    const lines = read(`${AFTER}README.md`).split("\n");
+    for (const name of CAPTURES) expect(lines.filter((l) => l.startsWith(`- \`${name}\``)), name).toHaveLength(1);
+    const text = lines.join("\n");
+    for (const s of ["transform", "900×1440", "1440×900", "sin recargar"]) expect(text, s).toContain(s);
+  });
+  it("REPORT.md has plataforma-escena-angosta at both scales, every row ok, and its four crops", () => {
+    const report = read(`${SPECS}assets/carteles-legibilidad/REPORT.md`);
+    for (const sc of ["1.17", "0.83"]) {
+      const sec = report.slice(report.indexOf(`## plataforma-escena-angosta a ${sc}\n`)).split(/\n(?=## )/)[0]!;
+      expect(report, sc).toContain(`## plataforma-escena-angosta a ${sc}\n`);
+      expect(sec.match(/^\| (contraste|halo|OCR) \|.*\| ✓ \|$/gm)?.length ?? 0, sc).toBe(3);
+    }
+    for (const s of ["117", "083", "117-ocr", "083-ocr"]) png(`${SPECS}assets/carteles-legibilidad/plataforma-escena-angosta-${s}.png`);
+  });
+  it("ADR 0004 exists with its title, the five parts in order and the story in its status", () => {
+    expect(adr4.split("\n")[0]).toBe("# 0004. The Writing site depends on the host");
+    const heads = ["## Status", "## Context", "## Decision", "## Consequences"].map((h) => adr4.search(new RegExp(`^${h}$`, "m")));
+    for (const i of heads) expect(i).toBeGreaterThan(0);
+    expect([...heads].sort((a, b) => a - b)).toEqual(heads);
+    expect(adr4.search(/^Sources: /m)).toBeGreaterThan(heads[3]!);
+    const status = adr4.slice(heads[0]!, heads[1]!);
+    for (const s of ["Accepted", "2026-11-18", "#423"]) expect(status, s).toContain(s);
+    for (const s of ["writingSite", "platformAnimator", "#app", "ResizeObserver", "seaPlatformAt", "ADR 0002", "zoneFrame"]) expect(adr4, s).toContain(s);
+  });
+  it("ADR 0003 says under Consequences that 0004 revises it", () => {
+    const cons = adr3.slice(adr3.search(/^## Consequences$/m));
+    expect(cons).toMatch(/^- Revised by 0004: /m);
+  });
+  it("the spec says implemented and §8 carries the final values, the threshold, the rotation and the counts", () => {
+    expect(spec.split("\n").find((l) => l.startsWith("**Estado:**"))).toContain("implementado (#423)");
+    expect(at8).toBeGreaterThan(spec.search(/^## 7\. /m));
+    const v = (p: { x: number; y: number }) => `(${p.x}, ${p.y})`;
+    const needles = [
+      "HEADLAND_SHIFT", `(+${HEADLAND_SHIFT.x}, +${HEADLAND_SHIFT.y})`,
+      "PLATFORM_SITES", v(PLATFORM_SITES.wide), v(PLATFORM_SITES.tall),
+      "COVER_FOCUS_U", String(COVER_FOCUS_U).replace(".", ","),
+      "LANE_OUT", "LANE_BACK", ...LANE_OUT.map(v), ...LANE_BACK.map(v),
+      threshold(), "900×1440", "1440×900", "46 481", "2 409",
+    ];
+    for (const s of needles) expect(dev, s).toContain(s);
+  });
+  it("§8 carries the static polygons and accents of the world after the story, as the budget tests count them", () => {
+    const w = assembleWorld(undefined, { reducedMotion: true }).scene;
+    const polys = buildRenderList([...w.terrain.ground, ...w.ground, ...w.solids]).length;
+    for (const n of [polys, w.accents.length]) expect(dev, String(n)).toContain(count(n));
+  });
+  it("README and CONTEXT.md name no old identifier, no 0.35 focus and no headland capping the shipyard", () => {
+    for (const [name, txt] of [["README.md", readme], ["CONTEXT.md", glossary]] as const) {
+      for (const re of [/\bPLATFORM_SITE\b/, /\bBLOG_SIGN\b/, /(?<![A-Za-z_])SIGNS\b/, /caps the shipyard/]) expect(txt, `${name} ${re}`).not.toMatch(re);
+      // the veil's ACCENT_DIM is 0.35 too: it is the only 0.35 allowed
+      expect(txt.replace("`ACCENT_DIM` (0.35)", ""), name).not.toMatch(/0[.,]35/);
+    }
+  });
+  it("README's runtime paragraph gives the focus, 0.39", () => {
+    const runtime = (readme.split(/\n\s*\n/).find((p) => p.includes("coverView(host)")) ?? "").replace(/\s+/g, " ");
+    expect(runtime).toContain("`COVER_FOCUS_U` (0.39");
+  });
+  it("README describes the headland on the island's east coast as Blog, and the lanes between the two Writing sites", () => {
+    const world = (readme.split(/\n\s*\n/).find((p) => p.includes("`LANE_OUT`")) ?? "").replace(/\s+/g, " ");
+    for (const s of ["east coast", "Blog", "tall site", "wide site"]) expect(world, s).toContain(s);
   });
 });

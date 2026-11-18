@@ -11,13 +11,13 @@ import { PLANT, factory } from "../scenes/factory";
 import { BEAM_PERIOD_MS } from "../scenes/sea-anim";
 import { CROWN_SITE, RESUME_SIGN, towerCrown } from "../scenes/sign-crown";
 import { PIECE_AT, TINKER_SIGN, TINKER_SITE, tinkerSign } from "../scenes/sign-tinker";
-import { BLOG_SIGN, seaPlatform } from "../scenes/sign-platform";
+import { BLOG_SIGNS, seaPlatform, seaPlatformAt } from "../scenes/sign-platform";
 import { trainLen } from "../scenes/train";
 import { createRng } from "../map/seed";
 import { assembleWorld } from "../world/assemble";
 import { type Box, FRAME_H, HALO_BASE } from "../world/frame";
 import { PLINTH_H } from "../scenes/city-pieces";
-import { contextAnimators, contextScene, cropAnimators, cropScene, isLongPrism } from "./crop";
+import { contextAnimators, contextScene, cropAnimators, cropScene, isLongPrism, readout } from "./crop";
 import { EXHIBITS, GROUPS, type GroupId, outOfView, pickExhibit, stepExhibit } from "./exhibits";
 
 const regions = EXHIBITS.flatMap((e) => (e.kind === "region" ? [e] : []));
@@ -445,12 +445,27 @@ describe("context exhibits (#376)", () => {
     const lit = contextAnimators(animators, e).find((x) => x.ids.includes("tinker.lights"));
     expect(lit?.zone).toBe("portfolio");
   });
-  it("plataforma-escena: after plataforma, in the sea, the issue's box, a crop of the world (no build), signed BLOG_SIGN", () => {
+  it("plataforma-escena and plataforma-escena-angosta (#427): after plataforma, in the sea, one per Writing site, crops of the world (no build)", () => {
     const ids = EXHIBITS.map((e) => e.id);
     expect(ids.indexOf("plataforma-escena")).toBe(ids.indexOf("plataforma") + 1);
-    const e = contexts.find((x) => x.id === "plataforma-escena")!;
-    expect(e).toMatchObject({ title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 358, y0: 144, x1: 426, y1: 212 }, sign: BLOG_SIGN });
-    expect("build" in e).toBe(false);
+    expect(ids.indexOf("plataforma-escena-angosta")).toBe(ids.indexOf("plataforma") + 2);
+    const wide = contexts.find((x) => x.id === "plataforma-escena")!, tall = contexts.find((x) => x.id === "plataforma-escena-angosta")!;
+    expect(wide).toMatchObject({ title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 536, y0: 71, x1: 604, y1: 139 }, h: 24, sign: BLOG_SIGNS.wide, writingSite: "wide" });
+    expect(tall).toMatchObject({ title: "Writing platform sign in its scene, tall site", zone: "blog", group: "sea", kind: "context", box: { x0: 406, y0: 366, x1: 474, y1: 434 }, h: 24, sign: BLOG_SIGNS.tall, writingSite: "tall" });
+    for (const e of [wide, tall]) expect("build" in e, e.id).toBe(false);
+  });
+  it.each(["plataforma-escena", "plataforma-escena-angosta"])("%s shows the platform once: 75 platform solids, one deck, no platform animator (#427)", (id) => {
+    const e = contexts.find((x) => x.id === id)!;
+    const own: Solid[] = [];
+    seaPlatformAt(own, [], e.writingSite!);
+    expect(own).toHaveLength(75);
+    const cs = contextScene(scene, e), anims = contextAnimators(animators, e);
+    expect(anims.some((a) => a.ids.includes("platform.solid"))).toBe(false);
+    const layered = anims.flatMap((a) => a.ids.flatMap((lid) => { const l = a.layer(lid); return l.kind === "solid" ? l.solids : []; }));
+    const all = [...cs.solids, ...layered];
+    expect(all.filter((s) => s.kind === "poly" && s.mat === "deck")).toHaveLength(1);
+    expect(own.filter((p) => all.some((s) => JSON.stringify(s) === JSON.stringify(p)))).toHaveLength(75);
+    expect(readout(cs, anims).solids).toBe(all.length);
   });
 });
 

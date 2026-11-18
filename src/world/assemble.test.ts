@@ -4,7 +4,7 @@ import { worldZoneAt } from "../map/geo";
 import { ACCENT_DIM, WORLD_ZONES, accentsByZone, focusAlphas } from "./veil";
 
 describe("assembleWorld", () => {
-  it("the whole world brings the nine animators, each with its zone; the water has no zone", () => {
+  it("the whole world brings the ten animators, each with its zone; the water has no zone", () => {
     const { scene, animators } = assembleWorld(undefined, { reducedMotion: true });
     expect(scene.terrain.bleed.length).toBeGreaterThan(0);
     const zones = animators.map((a) => a.zone);
@@ -14,9 +14,23 @@ describe("assembleWorld", () => {
     expect(tinker).toHaveLength(1);
     expect(tinker[0]!.zone).toBe("portfolio");
     expect(zones.filter((z) => z === "cv")).toHaveLength(2);        // city, tech
-    expect(zones.filter((z) => z === "blog")).toHaveLength(1);      // sea
+    expect(zones.filter((z) => z === "blog")).toHaveLength(2);      // Writing platform, sea
     const water = animators.find((a) => a.zone === null)!;
     expect(water.claims?.length ?? 0).toBeGreaterThan(0);
+  });
+  it("the Writing platform animator (#427): returned as platform, Blog, wide at first, registered right before the sea animator", () => {
+    const { animators, platform } = assembleWorld(undefined, { reducedMotion: true });
+    expect(platform).not.toBeNull();
+    expect(platform!.site).toBe("wide");
+    expect(platform!.ids).toEqual(["platform.solid", "platform.lights"]);
+    const at = (animators as readonly unknown[]).indexOf(platform);
+    expect(at).toBeGreaterThanOrEqual(0);
+    expect(animators[at]!.zone).toBe("blog");
+    expect(at).toBe(animators.findIndex((a) => a.ids.includes("sea.beam")) - 1);
+  });
+  it("platform is null without the sea and present with the [\"blog\"] filter", () => {
+    expect(assembleWorld(["portfolio"], { reducedMotion: true }).platform).toBeNull();
+    expect(assembleWorld(["blog"], { reducedMotion: true }).platform).not.toBeNull();
   });
   it("with reducedMotion no animator redraws", () => {
     const { animators } = assembleWorld(undefined, { reducedMotion: true });
@@ -89,7 +103,7 @@ describe("assembleWorld", () => {
   it("each fixed animated light (beam, neons) is assigned to worldZoneAt of its position", () => {
     const { animators } = assembleWorld(undefined, { reducedMotion: false });
     const sea = animators.find((a) => a.ids.includes("sea.beam"))!;
-    let port = 0;
+    let blog = 0;
     for (let t = 0; t < 40; t++) {
       sea.tick(250);
       for (const id of ["sea.beam", "sea.neon"]) {
@@ -99,10 +113,10 @@ describe("assembleWorld", () => {
         for (const z of WORLD_ZONES) for (const a of byZone[z]) {
           const p = a.kind === "dot" ? a.at : a.pts[0]!;
           expect(z).toBe(worldZoneAt(p.x, p.y));
-          if (z === "portfolio") port++;
+          if (z === "blog") blog++;
         }
       }
     }
-    expect(port).toBeGreaterThan(0); // the beam and the gallery are in Portfolio
+    expect(blog).toBeGreaterThan(0); // the beam and the gallery are in Blog (the moved headland, #426)
   });
 });

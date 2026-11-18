@@ -21,7 +21,7 @@ const STEMS = new Set(("barrio barrios costanera escuela casa casas fila filas a
 /** Content JSON keys (decision 2a): the TS fields that mirror `content/*.json`. */
 const CONTENT_KEYS = /\b(titulo|subtitulo|descripcion|nombre|proyectos|articulos|secciones)\b/g;
 /** The ids of the storybook exhibits (the URL hash), as whole tokens; `tren.lights` is the id of the train animator's light layer. */
-const EXHIBIT_IDS = /(?<=["'`#])(planta|tanque-agua|chimeneas|subestacion|playa-camiones|playa-vias|excavadora|gradas|darsena|grua-portico|calle-faroles|naves|punta-norte|estacion|paso-a-nivel|dique-flotante|patio-contenedores|grua-muelle|grua-torre|farol|tren(\.lights)?|central-termica|tanques|silos|alta-tension|playa-contenedores|noria|montana-rusa|torre-caida|carrusel|arcade|autitos-chocadores|muelle|tren-fantasma|casa-espejos|tobogan|tronco-acuatico|plaza|torre|puente|malecon|manzana-derrumbada|manzana-distrito|obra|punta-sur|galpones|playa-carga|mercado-pescado|campus|selva|cartel-helipuerto(-b)?|grafiti|plataforma(-escena)?|cartel-torre(-escena)?|cartel-taller(-escena)?|mastil|arena|auditorio|torres|monoblock|casas|escuela|club|plaza-barrio|costanera|barrio|faro|casa-farero|boyas|pecio|viga|carguero|remolcador|convoy|lancha)(?=["'`.\]),\s:])/g;
+const EXHIBIT_IDS = /(?<=["'`#])(planta|tanque-agua|chimeneas|subestacion|playa-camiones|playa-vias|excavadora|gradas|darsena|grua-portico|calle-faroles|naves|punta-norte|estacion|paso-a-nivel|dique-flotante|patio-contenedores|grua-muelle|grua-torre|farol|tren(\.lights)?|central-termica|tanques|silos|alta-tension|playa-contenedores|noria|montana-rusa|torre-caida|carrusel|arcade|autitos-chocadores|muelle|tren-fantasma|casa-espejos|tobogan|tronco-acuatico|plaza|torre|puente|malecon|manzana-derrumbada|manzana-distrito|obra|punta-sur|galpones|playa-carga|mercado-pescado|campus|selva|cartel-helipuerto(-b)?|grafiti|plataforma(-escena(-angosta)?)?|cartel-torre(-escena)?|cartel-taller(-escena)?|mastil|arena|auditorio|torres|monoblock|casas|escuela|club|plaza-barrio|costanera|barrio|faro|casa-farero|boyas|pecio|viga|carguero|remolcador|convoy|lancha)(?=["'`.\]),\s:])/g;
 /** Strings shown to the visitor or kept as data. */
 const ALLOW: Record<string, RegExp[]> = {
   "*": [/Nicolás Riccomini/g, /\[mapa\]/g],
@@ -96,6 +96,10 @@ const ALLOW: Record<string, RegExp[]> = {
     /\*\*Estado:\*\*|implementad|sin implementar|pendiente|listo para agente/g,
     /Desvíos( y medición)?|Reglas de modelado|## 2\. Decisiones|\| Tema \| Decisión \|/g,
     /\*Desvío[^"*]*\*?/g,
+    // the history note of the 2026-11-17 spec (#427), quoted whole
+    /\*\*Superada en parte:\*\* #423[^"]*/g,
+    // the #423 closing (#429): the after-captures folder and a phrase its README must carry
+    /423-composicion-responsive\/despues\/|despues\/ is|sin recargar/g,
     /\| (Resume: tecnológico|Portfolio: astillero|Resume: ciudad|Blog: mar) \|/g,
     // old asset names of those specs: `<view>-antes`, `<view>-despues`, and their folders
     /[\w-]*-(antes|despues)\b|assets\/[\w.-]*(fabrica|barrio|estacion|costura)[\w.-]*\//g,

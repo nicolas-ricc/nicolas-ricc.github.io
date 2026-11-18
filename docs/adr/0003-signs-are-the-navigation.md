@@ -25,5 +25,6 @@ The 3D sign is the control of its zone.
 - The accents draw over everything, so a sign can show through what stands in front of it. Occlusion is solved by position (the platform moved to (392, 178)) and held by pure gates: the ship lanes and "no ship piece crosses the letters" in `src/scenes/sea-anim.test.ts`, and `checkSign` against the world's solids in `src/lab/signs.test.ts`, at scales 1.17 and 0.83. Those gates see static solids, ships and the launch only: the factory smoke (`src/scenes/factory-anim.ts`) drifts in front of the PORTFOLIO sign in most frames and is a known moving occluder outside them (spec §6).
 - The sign is part of the world, so it counts in the budgets (static accents, polygons, raised solids), capped in tests.
 - The old antenna of the tower is gone: the crown takes its place.
+- Revised by 0004: Writing no longer falls outside the portrait phone, because its platform moves to a second site chosen from the host (`writingSite`).
 
 Sources: `src/world/signs.ts` (`SIGNS`, `signPolygons`, `signBox`, `zoneAtScreen`, `labelLayout`), `src/labels.ts` (`placeLabel`, `markCurrent`), `src/main.ts`, `src/world/view.ts` (`coverView`, `COVER_FOCUS_U`); spec `docs/superpowers/specs/2026-11-17-carteles-de-zona-integracion-design.md`; issues #389, #394.

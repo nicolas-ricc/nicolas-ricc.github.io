@@ -37,8 +37,11 @@ again (`rail.train`, `rail-anim.ts`). The three ships (Damen Combi
 Freighter 3850, Damen ASD Tug 2810 and a river pusher with a Jumbo barge)
 appear at the river mouth and run along two lanes, nearly straight: `LANE_OUT` goes down
 toward the lower-left of the screen until it leaves
-the cover and `LANE_BACK` returns to the river mouth, where they fade out ("coming
-into port"); they neither anchor nor turn in place. The fair's boat is a Tigre
+the cover, east of the lighthouse headland and of Writing's tall site, and `LANE_BACK`
+comes back west of the wide site to the river mouth, where they fade out ("coming
+into port"). The lanes pass between Writing's two sites. The headland is on the
+island's east coast, Blog's, with the lighthouse at its tip, (410, 290). The ships
+neither anchor nor turn in place. The fair's boat is a Tigre
 river bus and the wreck in the trench, a coaster split in two. The
 world has its origin at `(-60, -60)` and a terrain bleed around all
 the content, so that the *cover* camera never shows sky; on the
@@ -76,12 +79,15 @@ zone) and `view.ts` (pure camera: `coverView`, `zoneView`, `clampToBleed`,
 `clampToCover`, `unproject`). The site frames with `coverView(host)`: at 16:9 or
 wider, the cover rectangle with the real aspect ratio of `#canvas-host`;
 narrower, the 16:9 cover fills the host's height and the host is a window of
-it, centered on `COVER_FOCUS_U` and clamped to its edges (#351). `zoneView`
+it, centered on `COVER_FOCUS_U` (0.39, the column of signs) and clamped to its edges (#351, #428). `zoneView`
 stays inside the 16:9 cover on each axis it covers (`clampToCover`).
 The 3D zone signs are the navigation (`src/world/signs.ts`): `zoneAtScreen` hit-tests
 their polygons before the geography, the links are invisible over them, and
 `labelLayout` moves a link to the edge when less than half of its word is inside
-the host (Writing, on a phone); there is no external font, the lettering is drawn by the kit.
+the host (the fallback for a host where a sign does not fit); `main.ts` passes
+the size of `#app` to `writingSite`, which picks the Writing site: the wide one
+when its sign fits, else the tall one; there is no external font, the lettering
+is drawn by the kit.
 In Resume, `city-anim.ts` adds the `city.windows` layer (up to 40 windows of
 downtown and the residential area that switch on and off keeping the percentage
 ±5 %) and, inside `city.neon`, the flickering neon sign of a bar on the pier or a brewery of row 92; the
@@ -154,7 +160,8 @@ for headless time-lapses. The seam at 90 added ten exhibits:
 and `#galpones`, `#playa-carga` and `#mercado-pescado` (city).
 The zone signs of #374 are three pairs of exhibits: `#cartel-torre` and
 `#cartel-torre-escena` (Resume), `#cartel-taller` and `#cartel-taller-escena`
-(Portfolio) and `#plataforma` and `#plataforma-escena` (Blog). The piece builds
+(Portfolio) and `#plataforma` and `#plataforma-escena` (Blog, wide site),
+plus `#plataforma-escena-angosta` (Blog, tall site). The piece builds
 the sign at the origin (the crown and the tinker sign on a stand-in of their
 host); the one "in its scene" is a crop of the real world with its sign.
 Judge them at the cover scales with `c`. `npm run legibility` measures contrast,

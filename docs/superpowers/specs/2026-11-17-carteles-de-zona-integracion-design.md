@@ -2,6 +2,7 @@
 
 **Fecha:** 2026-11-17
 **Estado:** implementado
+**Superada en parte:** #423 (spec 2026-11-18) muda la plataforma de Writing a dos sitios y cambia `COVER_FOCUS_U`; las tablas de §3, §4 y §5 describen el estado en #394.
 **Cierra:** #389 (hijos #390, #391, #392, #393) y #394.
 Integra los carteles de `2026-11-15-carteles-de-zona-rediseno-design.md` y
 `2026-11-11-carteles-de-zona-assets-design.md` a la escena del sitio.
@@ -109,13 +110,13 @@ después (rama). agent-browser headless,
 | | antes | después |
 |---|---|---|
 | first draw (ms) | 1111.5 | 1096.5 |
-| polígonos estáticos | 45 309 | 46 481 |
+| polígonos estáticos | 45 309 | 46 518 |
 | bloom, promedio (ms) | 41.0 | 42.1 |
 | veredicto del bloom | `fallback` | `fallback` |
 | peor redibujo en 5 s (ms) | 65.20 | 54.80 |
 | acentos estáticos del mundo | 1 222 (plan de #389) | 2 409 |
 
-Polígonos y acentos estáticos recalculados al integrar #395 en `main` (lámparas industriales y dots fuera, pluma STS): la rama de #389 medía 46 576 y 2 450; los tiempos son los de esa medición.
+Polígonos y acentos estáticos recalculados al integrar #395 en `main` (lámparas industriales y dots fuera, pluma STS): la rama de #389 medía 46 576 y 2 450; los tiempos son los de esa medición. Polígonos recalculados al mudar el cabo del faro (#426): 46 481 pasa a 46 518.
 
 Bloom, tick + render: antes 25,3 + 15,7; después 25,8 + 16,3. Primera corrida
 (fría): `main` first draw 2395,8, bloom 63,4 (37,6 + 25,9) `fallback`, peor

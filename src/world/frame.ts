@@ -3,6 +3,7 @@ import { accentItem, type Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
 import { project } from "../iso/project";
 import type { Layer, RenderItem } from "../iso/render-list";
+import type { WritingSite } from "../scenes/sign-platform";
 import { WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, STATION_LAND, coverQuad, type WorldZone } from "../map/geo";
 
 export const FRAME_H = 30; // reference height so the landmarks fit
@@ -20,14 +21,14 @@ export function boxFrame(box: Box, h = FRAME_H): RenderItem[] {
   return [{ layer: "ground", pts, color: 0 }];
 }
 
-/** Projected box of a zone (or of the world), as a RenderItem for fitTransform. `cover` is the 16:9 rectangle inscribed in the bleed rhombus. */
-export function zoneFrame(frame: Frame): RenderItem[] {
+/** Projected box of a zone (or of the world), as a RenderItem for fitTransform. `cover` is the 16:9 rectangle inscribed in the bleed rhombus. Blog stops at y 440 when Writing is at the `tall` site. */
+export function zoneFrame(frame: Frame, site: WritingSite = "wide"): RenderItem[] {
   if (frame === "cover") return coverFrame(16 / 9);
   const box = {
     all: [WORLD.x0, WORLD.y0, WORLD.x1, WORLD.y1],
     portfolio: [WORLD.x0, WORLD.y0, ZONE_SPLIT_X, STATION_LAND.y1],
     cv: [WORLD.x0, ZONE_SPLIT_Y, ZONE_SPLIT_X, WORLD.y1],
-    blog: [ZONE_SPLIT_X, WORLD.y0, WORLD.x1, WORLD.y1],
+    blog: [ZONE_SPLIT_X, WORLD.y0, WORLD.x1, site === "tall" ? 440 : WORLD.y1],
   }[frame];
   const [x0, y0, x1, y1] = box as [number, number, number, number];
   return boxFrame({ x0, y0, x1, y1 });

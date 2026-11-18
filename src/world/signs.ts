@@ -10,12 +10,20 @@ import type { SignSpec } from "../kit/legibility";
 import { pointInPolygon, worldZoneAt } from "../map/geo";
 import type { ZoneId } from "../map/zones";
 import { RESUME_SIGN } from "../scenes/sign-crown";
-import { BLOG_SIGN } from "../scenes/sign-platform";
+import { BLOG_SIGNS, type WritingSite } from "../scenes/sign-platform";
 import { TINKER_SIGN } from "../scenes/sign-tinker";
-import { unproject, type View } from "./view";
+import { signBox, WRITING_SITE_MARGIN } from "./sign-box";
+import { coverView, unproject, type View } from "./view";
 
-/** Sign of each zone. */
-export const SIGNS: Record<ZoneId, SignSpec> = { portfolio: TINKER_SIGN, cv: RESUME_SIGN, blog: BLOG_SIGN };
+export { signBox, WRITING_SITE_MARGIN } from "./sign-box";
+
+const bySite = new Map<WritingSite, Record<ZoneId, SignSpec>>();
+/** Sign of each zone with the Writing platform at `site` (#427). Memoized per site: `signBox`/`signPolygons` memoize by identity. */
+export function zoneSigns(site: WritingSite): Record<ZoneId, SignSpec> {
+  let out = bySite.get(site);
+  if (!out) bySite.set(site, out = { portfolio: TINKER_SIGN, cv: RESUME_SIGN, blog: BLOG_SIGNS[site] });
+  return out;
+}
 /** Tab and hit-test order. */
 export const SIGN_ORDER: readonly ZoneId[] = ["portfolio", "cv", "blog"];
 
@@ -23,7 +31,6 @@ export const SIGN_ORDER: readonly ZoneId[] = ["portfolio", "cv", "blog"];
 export type ScreenBox = ScreenBounds;
 
 const polygons = new WeakMap<SignSpec, number[][]>();
-const boxes = new WeakMap<SignSpec, ScreenBox>();
 
 /** Flat projected polygons of a sign: its tessellated backing faces, then one quad per glyph ink box. Memoized. */
 export function signPolygons(spec: SignSpec): number[][] {
@@ -42,22 +49,18 @@ export function signPolygons(spec: SignSpec): number[][] {
   return out;
 }
 
-/** Screen box of the projected glyph quads (the word itself). Memoized. */
-export function signBox(spec: SignSpec): ScreenBox {
-  let b = boxes.get(spec);
-  if (!b) {
-    const pts = spec.glyphs.flatMap((g) => g.quads.flat()).map(project);
-    const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
-    b = { minX: Math.min(...xs), minY: Math.min(...ys), maxX: Math.max(...xs), maxY: Math.max(...ys) };
-    boxes.set(spec, b);
-  }
-  return b;
+/** Writing's site for a host of `w`×`h`: "wide" if its word fits the host with `WRITING_SITE_MARGIN` under `coverView`, else "tall" (#428). */
+export function writingSite(w: number, h: number): WritingSite {
+  const v = coverView(w, h), b = signBox(BLOG_SIGNS.wide), m = WRITING_SITE_MARGIN;
+  const x0 = b.minX * v.scale + v.x, x1 = b.maxX * v.scale + v.x, y0 = b.minY * v.scale + v.y, y1 = b.maxY * v.scale + v.y;
+  return x0 >= m && y0 >= m && x1 <= w - m && y1 <= h - m ? "wide" : "tall";
 }
 
 /** Zone under a host point: a sign wins over the geography beneath it. */
-export function zoneAtScreen(v: View, px: number, py: number): ZoneId {
+export function zoneAtScreen(v: View, px: number, py: number, site: WritingSite): ZoneId {
+  const signs = zoneSigns(site);
   const sx = (px - v.x) / v.scale, sy = (py - v.y) / v.scale;
-  for (const id of SIGN_ORDER) if (signPolygons(SIGNS[id]).some((p) => pointInPolygon(sx, sy, p))) return id;
+  for (const id of SIGN_ORDER) if (signPolygons(signs[id]).some((p) => pointInPolygon(sx, sy, p))) return id;
   const g = unproject(sx, sy);
   return worldZoneAt(g.x, g.y);
 }

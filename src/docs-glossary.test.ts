@@ -98,7 +98,10 @@ describe("sign vocabulary (#360)", () => {
     for (const id of ["TextPlane", "diagonalWall", "roofDiagonal", "facade", "strokeText", "fillText", "measureText", "GLYPHS"]) expect(lettering).toContain(id);
     for (const id of ["gap 2", "KERN", "layoutText", "letterGaps", "rhythm", "counterClearance", "probe"]) expect(lettering, id).toContain(id);
     for (const id of ["cartel-torre", "cartel-torre-escena", "cartel-taller", "cartel-taller-escena", "plataforma", "plataforma-escena", "src/scenes/sign-", "src/scenes/sign-crown.ts", "towerCrown", "RESUME_SIGN", "CROWN_SITE"]) expect(sign).toContain(id);
-    for (const id of ["TINKER_SITE", "PLATFORM_SITE", "src/lab/signs.test.ts", "npm run legibility"]) expect(sign, id).toContain(id);
+    for (const id of ["TINKER_SITE", "PLATFORM_SITES", "BLOG_SIGNS", "plataforma-escena-angosta", "src/lab/signs.test.ts", "npm run legibility"]) expect(sign, id).toContain(id);
+    // #427: one site became two
+    expect(sign).not.toMatch(/\bPLATFORM_SITE\b/);
+    expect(sign).not.toMatch(/\bBLOG_SIGN\b/);
     expect(sign).not.toContain("cartel-helipuerto");
     expect(sign).not.toContain("grafiti");
   });
@@ -189,9 +192,23 @@ describe("signs as the navigation (#394)", () => {
   });
   it("Sign tells where each scene builds its sign and how the site navigates by them", () => {
     const sign = section(glossary, "Sign");
-    for (const s of ["assembleWorld", "tinkerAnimator", "src/world/signs.ts", "SIGNS", "zoneAtScreen", "labelLayout"]) expect(sign, s).toContain(s);
+    for (const s of ["assembleWorld", "tinkerAnimator", "src/world/signs.ts", "zoneSigns", "zoneAtScreen", "labelLayout"]) expect(sign, s).toContain(s);
     expect(sign).not.toContain("None is in the world yet");
-    expect(codeRefs(sign).find((r) => r.file === "src/world/signs.ts")?.idents).toEqual(expect.arrayContaining(["SIGNS", "zoneAtScreen", "labelLayout"]));
+    expect(sign).not.toMatch(/\bSIGNS\b/);
+    expect(codeRefs(sign).find((r) => r.file === "src/world/signs.ts")?.idents).toEqual(expect.arrayContaining(["zoneSigns", "zoneAtScreen", "labelLayout"]));
+  });
+  it("Sign and Animator tell the relocatable Writing platform (#427)", () => {
+    const sign = section(glossary, "Sign"), animator = section(glossary, "Animator");
+    for (const s of ["platformAnimator", "platform.solid", "platform.lights", "setSite", "sea()"]) expect(sign, s).toContain(s);
+    expect(codeRefs(sign).find((r) => r.file === "src/scenes/platform-animator.ts")?.idents).toEqual(expect.arrayContaining(["platformAnimator"]));
+    for (const s of ["platform", "PlatformAnimator"]) expect(animator, s).toContain(s);
+  });
+  it("Zone and Landmark follow the moved headland (#426): Blog, no longer capping the shipyard, lighthouse at (410, 290)", () => {
+    const zone = section(glossary, "Zone");
+    expect(zone).toContain("Blog for the headland");
+    expect(zone).not.toContain("caps the shipyard");
+    expect(codeRefs(zone).find((r) => r.file === "src/map/geo.ts")?.idents).toEqual(expect.arrayContaining(["HEADLAND", "HEADLAND_SHIFT"]));
+    expect(section(glossary, "Landmark")).toContain("(410, 290)");
   });
   it("Zone says the site's hit test tries the signs first", () => {
     const zone = section(glossary, "Zone");
