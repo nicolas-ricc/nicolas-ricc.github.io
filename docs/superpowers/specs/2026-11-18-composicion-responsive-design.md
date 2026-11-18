@@ -1,7 +1,7 @@
 # Composición responsive: el faro, los carriles y Writing para pantallas angostas
 
 **Fecha:** 2026-11-18
-**Estado:** aprobado, listo para agente
+**Estado:** implementado (#423)
 **Alcance:** recomponer la escena para que el recorte de pantallas angostas
 (celular, tablet vertical, 4:3, tablet horizontal) muestre los tres carteles y
 el faro sin generar nada propio de esas pantallas. Para eso se muda el cabo
@@ -288,3 +288,61 @@ hacia el noreste (más arriba a la derecha en pantalla) y se anota en el PR.
   galpones.
 - Cambiar el diseño de los carteles o su legibilidad.
 - El humo de la fábrica sobre PORTFOLIO (ADR 0003, conocido).
+
+## 8. Desvíos y medición
+
+Cierre de #423 (verificación en #429). Las capturas "después" y su juicio están
+en `assets/423-composicion-responsive/despues/README.md`; la tabla de
+legibilidad, en `assets/carteles-legibilidad/REPORT.md`.
+
+### 8.1 Valores finales
+
+- `HEADLAND_SHIFT` = (+14, +172), como en la spec: el cabo quedó en x 344..414,
+  y 269..306, con el faro en (410, 290). No hubo que correrlo al norte ni al sur.
+- `PLATFORM_SITES`: ancho (550, 125) y angosto (440, 400), los de partida de
+  §3.2. El sitio ancho no se movió: ningún barco cruza Writing en 1600×900
+  (la pasada más cercana, 70 u; ver `despues/README.md`).
+- `COVER_FOCUS_U` = 0,39, como en §3.1.
+- Carriles, tal como quedaron en `src/scenes/sea-anim.ts` (no los borradores del
+  comentario de la historia):
+  - `LANE_OUT`: (362, -16), (398, 40), (424, 86), (437, 114), (440, 142),
+    (434, 176), (446, 232), (456, 290), (486, 347), (500, 405), (523, 510).
+  - `LANE_BACK`: (564, 467), (548, 330), (546, 262), (512, 200), (480, 144),
+    (477, 102), (461, 66), (434, 18), (397, -39).
+- Umbral del sitio: medido con `writingSite(w, 900)`, el sitio ancho aparece
+  desde w = 1330, es decir un aspecto de 1,48 (1330/900). Por debajo, el
+  angosto. No es un umbral elegido: sale de la regla de §2.4.
+- Rotación: 900×1440 usa el sitio angosto y 1440×900 el ancho. Al girar sin
+  recargar la página, el `transform` del enlace de Writing cambia en los dos
+  sentidos y el marcador de la página se mantiene.
+
+### 8.2 Presupuesto del mundo
+
+Polígonos estáticos (`buildRenderList` de `terrain.ground`, `ground` y
+`solids`) y acentos estáticos de `assembleWorld(undefined, { reducedMotion: true })`,
+contados como en `src/scenes/city-budget.test.ts`:
+
+| | Polígonos | Acentos |
+|---|---|---|
+| Antes (issue) | 46 481 | 2 409 |
+| Después | 46 146 | 1 753 |
+
+Los dos bajan respecto del número de la issue (criterio 7 de §5, cumplido).
+
+### 8.3 Legibilidad, nivel 3
+
+Desde #429 las medidas vigentes de nivel 3 viven aquí; el §8.1 de la spec
+2026-11-15 conserva las del 2026-11-17. Los valores de los contextos viejos
+cambiaron respecto de 2026-11-17 porque cambió su entorno (cabo, carriles y
+sitios de la plataforma), y todos siguen en ✓.
+
+| Contexto | Escala | Contraste | Halo | OCR |
+|---|---|---|---|---|
+| `cartel-torre-escena` | 1.17 | 10.44:1 | 0.05 | `RESUME` |
+| `cartel-torre-escena` | 0.83 | 9.58:1 | 0.04 | `RESUME` |
+| `cartel-taller-escena` | 1.17 | 6.60:1 | 0.08 | `PORTFOLIO` |
+| `cartel-taller-escena` | 0.83 | 5.75:1 | 0.08 | `PORTFOLIO` |
+| `plataforma-escena` | 1.17 | 12.27:1 | 0.07 | `Writing` |
+| `plataforma-escena` | 0.83 | 12.20:1 | 0.04 | `Writing` |
+| `plataforma-escena-angosta` | 1.17 | 12.16:1 | 0.07 | `Writing` |
+| `plataforma-escena-angosta` | 0.83 | 12.08:1 | 0.04 | `Writing` |

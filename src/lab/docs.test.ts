@@ -571,11 +571,14 @@ describe("zone signs redesign documentation (#374)", () => {
       for (const v of [m.xHeightPx, m.strokePx, m.airPx, staticContrast(context(id).sign)]) expect(line, `${id} ${tag} ${f(v)}`).toContain(f(v));
     }
   });
-  it("§8.1 carries the level-3 measures of REPORT.md in the same rows", () => {
-    for (const id of CONTEXTS) for (const s of ["1.17", "0.83"]) {
+  // since #429 the current level-3 measures live in the 2026-11-18 spec §8; the 2026-11-15 §8.1 keeps those of 2026-11-17
+  it("the 2026-11-18 spec §8 carries the level-3 measures of REPORT.md for the four contexts", () => {
+    const next = readFileSync(`${SPECS}2026-11-18-composicion-responsive-design.md`, "utf8");
+    const table = between(next, /^## 8\. Desvíos y medición$/m);
+    for (const id of [...CONTEXTS, "plataforma-escena-angosta"]) for (const s of ["1.17", "0.83"]) {
       const sec = between(report, new RegExp(`^## ${id} a ${s.replace(".", "\\.")}$`, "m")).split(/\n(?=## )/)[0]!;
       const cell = (name: string) => row(sec, `| ${name} |`).split("|")[2]?.trim() ?? "";
-      const line = row(measures, `| \`${id}\` | ${s} |`);
+      const line = row(table, `| \`${id}\` | ${s} |`);
       for (const v of [cell("contraste"), cell("halo"), cell("OCR")]) {
         expect(v, `${id} ${s}`).not.toBe("");
         expect(line, `${id} ${s} ${v}`).toContain(v);
