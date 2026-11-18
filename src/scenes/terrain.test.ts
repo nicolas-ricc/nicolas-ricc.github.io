@@ -3,7 +3,7 @@ import { BLEED, MOUTH_Y, SHORE_W, distToHeadland, inHeadland, STATION_LAND, inSt
 import { createRng } from "../map/seed";
 import type { Solid, Tri } from "../iso/solids";
 import { BLEED_WATER, clearOfWater, isWaterAt } from "./terrain-classify";
-import { CELL, baseToneAt, bleedTerrainAt, bleedZ, buildTerrain, seaTerrainAt, shipyardTerrainAt, terrainAt, waterBand } from "./terrain";
+import { CELL, baseToneAt, bleedTerrainAt, bleedZ, buildTerrain, headlandZ, seaTerrainAt, shipyardTerrainAt, terrainAt, waterBand } from "./terrain";
 
 const tris = (s: Solid): Tri[] => (s.kind === "ground" ? s.tris : []);
 // The row of vertices at ZONE_SPLIT_Y = 90 is shared by the last row of shipyard cells (center 87) and the first of the city (center 93).
@@ -36,15 +36,31 @@ describe("classification", () => {
     expect(shipyardTerrainAt(50, -30)).toBe("slab");     // factory band
     expect(shipyardTerrainAt(300, -30)).toBe("water");   // the bay continues to the north
   });
+  it("#426: the headland ramp follows the shift (z 1 at the base x 344, 7 from x 369) and nothing of the point is left at the old site", () => {
+    expect(headlandZ(330)).toBe(1);
+    expect(headlandZ(344)).toBe(1);
+    expect(headlandZ(369)).toBe(7);
+    expect(headlandZ(356.5)).toBeCloseTo(4, 9);
+    const left: string[] = [];
+    for (let y = WORLD.y0 + CELL / 2; y < 200; y += CELL) for (let x = WORLD.x0 + CELL / 2; x < WORLD.x1; x += CELL) {
+      const t = terrainAt(x, y);
+      if (t === "headland" || t === "reef") left.push(`${x},${y} ${t}`);
+    }
+    expect(left).toEqual([]);
+  });
   it("shipyard: the new north coast, with land in front of the sheds, cove and NE point", () => {
     expect(terrainAt(300, 18)).toBe("east");   // new land in front of the sheds (formerly water: coast at y 21)
     expect(terrainAt(286, 27)).toBe("water");  // cove to the NW
     expect(terrainAt(339, 9)).not.toBe("water"); // NE point
   });
   it("sea: point, reef, shore and open sea", () => {
-    expect(terrainAt(380, 118)).toBe("headland");
-    expect(terrainAt(336, 115)).toBe("headland");          // the base of the point wins in the shipyard zone
-    expect(seaTerrainAt(404, 118)).toBe("reef");
+    expect(terrainAt(380, 290)).toBe("headland");          // #426: the headland rests on the island's east coast
+    expect(terrainAt(350, 287)).toBe("headland");          // the base of the point wins over the seawall coast
+    expect(terrainAt(340, 285)).toBe("asphalt");           // the promenade, west of the base
+    expect(["shore", "sea"]).toContain(terrainAt(380, 118)); // the old site is water
+    expect(["shore", "sea"]).toContain(terrainAt(396, 118));
+    expect(terrainAt(335, 115)).toBe("jungle");            // the strip west of islandEastX at the old site is land again
+    expect(seaTerrainAt(420, 290)).toBe("reef");
     expect(seaTerrainAt(350, 60)).toBe("shore");           // next to the shipyard coast
     expect(seaTerrainAt(400, 200)).toBe("sea");
     expect(seaTerrainAt(350, 10)).toBe("shore");           // in front of the bay there is a shoal

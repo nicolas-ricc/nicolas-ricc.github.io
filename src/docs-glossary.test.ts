@@ -193,6 +193,13 @@ describe("signs as the navigation (#394)", () => {
     expect(sign).not.toContain("None is in the world yet");
     expect(codeRefs(sign).find((r) => r.file === "src/world/signs.ts")?.idents).toEqual(expect.arrayContaining(["SIGNS", "zoneAtScreen", "labelLayout"]));
   });
+  it("Zone and Landmark follow the moved headland (#426): Blog, no longer capping the shipyard, lighthouse at (410, 290)", () => {
+    const zone = section(glossary, "Zone");
+    expect(zone).toContain("Blog for the headland");
+    expect(zone).not.toContain("caps the shipyard");
+    expect(codeRefs(zone).find((r) => r.file === "src/map/geo.ts")?.idents).toEqual(expect.arrayContaining(["HEADLAND", "HEADLAND_SHIFT"]));
+    expect(section(glossary, "Landmark")).toContain("(410, 290)");
+  });
   it("Zone says the site's hit test tries the signs first", () => {
     const zone = section(glossary, "Zone");
     expect(zone).toContain("zoneAtScreen");
