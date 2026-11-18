@@ -108,8 +108,8 @@ function keepSignInside(v: View, w: number, h: number, site: WritingSite): View 
 export function zoneView(zone: WorldZone, w: number, h: number, site: WritingSite = "wide"): View {
   const floor = coverView(w, h).scale * ZONE_MIN_ZOOM;
   const fit = fitTransform(zoneFrame(zone, site), w, h, 0.04);
-  const clamp = (v: View): View => clampToBleed(clampToCover(v, w, h), w, h);
+  const inside = (v: View): View => clampToBleed(clampToCover(v, w, h), w, h);
   let v = fit;
   if (fit.scale < floor) { const c = frameCenter(zone, site); v = { x: w / 2 - c.x * floor, y: h / 2 - c.y * floor, scale: floor }; }
-  return zone === "blog" ? clamp(keepSignInside(clamp(v), w, h, site)) : clamp(v);
+  return zone === "blog" ? inside(keepSignInside(inside(v), w, h, site)) : inside(v);
 }
