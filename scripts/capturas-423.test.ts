@@ -17,8 +17,8 @@ function pngSize(file: URL): { w: number; h: number } | null {
 }
 
 const cssSize = (name: string): { w: number; h: number } => {
-  const [w, h] = name.slice(name.lastIndexOf("-") + 1).split("x").map(Number);
-  return { w: w!, h: h! };
+  const [w = 0, h = 0] = name.slice(name.lastIndexOf("-") + 1).split("x").map(Number);
+  return { w, h };
 };
 
 describe("capturas antes de recomponer (#424)", () => {
