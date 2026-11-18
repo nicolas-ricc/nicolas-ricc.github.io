@@ -33,6 +33,8 @@
 
 ---
 
+**Importers of the removed names** (grep on the base branch): `PLATFORM_SITE` — `src/lab/docs.test.ts`, `src/scenes/sign-platform.test.ts`; `BLOG_SIGN` — `src/world/signs.ts`, `src/lab/exhibits.ts`, `src/lab/exhibits.test.ts`, `src/scenes/sea.test.ts`, `src/world/signs.test.ts`, `scripts/legibility.test.ts`; `SIGNS` — `src/main.ts`, `src/scenes/sea-anim.test.ts`, `src/lab/docs.test.ts`, `src/world/signs.test.ts`; `seaPlatformAt` — `src/scenes/sea.ts`, `src/world/veil.test.ts`, `src/scenes/sea.test.ts`. `zoneAtScreen` has one runtime caller, `src/main.ts:99`. Other `assembleWorld` callers (`src/lab/page.ts`, `src/lab/storybook.ts`, `scripts/legibility.ts`, `scripts/wreck-sweep.ts`) destructure `{ scene, animators }` and need no change: the new `platform` field is additive, and the platform is in `animators`.
+
 **Ordering note.** Tasks 1–4 are one migration: Task 1 removes `PLATFORM_SITE`/`BLOG_SIGN`, so typecheck and the files importing them stay red until Task 4 ends. Each task runs its own test files; `npm test` and `npm run typecheck` must be green from the end of Task 4 on. Tasks 5 and 6 keep them green.
 
 ### Task 1: Two sites in `sign-platform.ts`
@@ -91,7 +93,7 @@
   - `sea.test.ts`: "sea() no longer builds the Writing platform": no solid of `seaPlatformAt` at either site is `toContainEqual`-ed in `sea(rng).solids`, no `deck`-poly / `boxGrey` solid, and `s.accents` has length 2 (keeper's window poly, wreck buoy spot); `world(7).solids`/`.accents` contain none of either site's platform pieces. Drop the old `4 + signTris` count and `slice(2)` platform check. `SEA_MATS` loses `boxGrey`, `officeDark`.
   - `veil.test.ts`: every accent of `seaPlatformAt(…, site)` is `blog` for `wide` and `tall`.
   - `assemble.test.ts`: whole world → `platform` non-null, `platform.site === "wide"`, `animators` includes it with `zone === "blog"`, `animators.indexOf(platform) === animators.findIndex((a) => a.ids.includes("sea.beam")) - 1`; blog count becomes 2 (sea, platform). `assembleWorld(["portfolio"])` → `platform === null`; `assembleWorld(["blog"])` → non-null.
-  - `city-budget.test.ts`: limits stay (≤ 56 000, ≤ 2600); the comment drops "platform 654 + 2" and says the platform is animated (`platform.lights`), not static.
+  - `city-budget.test.ts`: limits stay (≤ 56 000, ≤ 2600) and two new assertions pin the drop: static polygons `< 46518` and static accents `< 2409` (the base branch's values, issue: "los valores bajan respecto de `main`"); the comment drops "platform 654 + 2" and says the platform is animated (`platform.lights`), not static. Expected: accents 2409 − 656 = 1753.
   - `world.test.ts`: `sharedWithBlog` loses `boxGrey` and `officeDark` (and their comment) if the test then fails because blog no longer has them — keep the list exact to what the test measures.
   - `sea-anim.test.ts`: the two occlusion tests use `staticsOf([...world(7).solids, ...platformSolids("wide"), ...platformSolids("tall")])`; "no ship piece … crosses the letters" iterates the letters of `zoneSigns("wide")` and `zoneSigns("tall")` (dedupe the shared portfolio/cv signs; name failures `${site} ${id}`).
   - `world/signs.test.ts`: `zoneSigns(site)` maps portfolio → `TINKER_SIGN`, cv → `RESUME_SIGN`, blog → `BLOG_SIGNS[site]` for both sites and returns the same object on repeated calls; `ALL` covers both sites; `zoneAtScreen` tests take a site (the "sign wins over geography" test searches each site's blog sign for a point whose `worldZoneAt` differs from `blog`, or over a non-blog sign if no such point exists — keep the assertion that the sign wins); the 390×750 `labelLayout` test uses `zoneSigns("wide").blog` and asserts the mode the code computes (record the measured mode in the test comment).
@@ -143,6 +145,21 @@
 - Test: `src/lab/docs.test.ts`
 
 - [ ] **Step 1: Failing test:** both PNGs exist and are 3200×1800 (use the `size()` helper of `docs.test.ts`).
-- [ ] **Step 2: Capture** with agent-browser (`agent-browser set viewport 1600 900 2`, dev server `npm run dev -- --host --port 5173`): `http://localhost:5173/lab/storybook.html?bloom=on#plataforma-escena-angosta`, press `c` until the cover scale reads 1.17, screenshot; then `http://localhost:5173/` after the first render, screenshot. Look at both: the tall exhibit shows the platform with sea around; the site shows the platform at (550, 125) bottom right and the rest as before.
+- [ ] **Step 2: Capture** with agent-browser (`agent-browser set viewport 1600 900 2`, dev server `npm run dev -- --host --port 5173`): `http://localhost:5173/lab/storybook.html?bloom=on#plataforma-escena-angosta`, press `c` until the cover scale reads 1.17, screenshot; then `http://localhost:5173/` after the first render, screenshot. "First render" = the `[mapa] first draw` / `[storybook]` console line has been printed and `__PIXI_DEVTOOLS_WRAPPER__.stage.children.length > 0`, then wait 3 s. Pass criterion: the tall exhibit shows the platform with sea around; the site shows the platform at (550, 125) bottom right and the rest as before.
 - [ ] **Step 3: Run** `npm test` — green.
 - [ ] **Step 4: Commit** `docs(#427): captures of the tall exhibit and the site at 1600×900`.
+
+## Assumptions
+
+- **Red typecheck between Tasks 1 and 4.** The per-task commits of the migration may leave `npm run typecheck` red; the branch is squash-merged (one commit lands on the story branch), so no red commit reaches `feature/423-composicion-responsive`. Rejected: keeping `PLATFORM_SITE`/`BLOG_SIGN` as temporary aliases (dead code at an old site the issue deletes). Rollback unit: the agent branch.
+- **Budget drop asserted.** `city-budget.test.ts` pins `< 46518` and `< 2409` (base-branch values) besides the caps. Rejected: only reporting the numbers in the PR.
+- **`blog` rows of the 2026-11-17 §4 table pinned as literals, laptop included.** The issue expected the laptop row to keep passing, but the sign moved from (392, 178) to (550, 125), so its live screen box moved too; the issue's intent ("es historia", pin the literals the spec already has) decides. Recorded in the PR.
+- **Platform build in the storybook crop.** `contextScene` builds `seaPlatformAt(…, writingSite)` on its own (memoised per site in `crop.ts`), separate from the animator's cache; both come from the same builder, and `BLOG_SIGNS` stays the single definition of the sign. Rejected: reading the platform from the world's animator (the tall exhibit needs the tall build while the animator sits on wide).
+- **Capture readiness signal.** Console line of the first draw plus a stage with children, then 3 s.
+
+## Grilling
+
+- Rounds: 1 (the plan changed by additions only: an importer list, two budget assertions, a capture criterion; no task added or removed, so no second round).
+- Questions: 18. Sources: ISSUE 4 (Q2 "los valores bajan respecto de `main`", Q4 boxes and sites quoted from the issue's design items 1 and 5, Q10 "Si el hash de `plataforma` … cambia por ruido flotante, regrabalo", Q14 "es historia"), CODE 9 (Q3 `src/world/stage.ts:111-113,133,184`; Q5 `src/lab/page.ts:47`, `src/lab/storybook.ts:49`, `scripts/legibility.ts:45`, `scripts/wreck-sweep.ts:62`; Q6 `src/lab/crop.ts` `cropLayer` returns fresh arrays, no in-place writes to layer solids in `src/world`, `src/iso`, `src/lab`, same cache pattern as `src/scenes/sign-tinker.ts:276-277`; Q7 `src/world/signs.ts:25-26` WeakMaps keyed by the `SignSpec`, and `TINKER_SIGN`/`RESUME_SIGN` are the same objects in both records; Q8 `src/main.ts:99`; Q9 `src/world/stage.ts:133`; Q11 `src/scenes/sign-tinker.ts:284` (per-animator) and `src/world/stage.ts:184` (the host ticks every animator); Q13 sea-group exhibit boxes in `src/lab/exhibits.ts:246-267`, only `boyas` and `plataforma-escena` contain (392, 178); Q15 `src/world/stage.ts:115-118`, `src/world/veil.ts:87-99`, `src/map/geo.ts:78-81`), DOC 1 (Q18 `src/english.test.ts` guard on exhibit ids, README anchors get a test in Task 5), NO SOURCE 4 → technical assumptions (Q1 with Q17, Q12, Q16); 0 spec ambiguities; 0 out of scope.
+- Assumptions: see above.
+- Issues opened: none.
