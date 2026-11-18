@@ -519,4 +519,16 @@ describe("zone signs and the lanes (#390, #394)", () => {
     expect(samples).toBeGreaterThan(0);
     expect(bad).toEqual([]);
   }, 15_000); // ~1 s alone; the full parallel suite stretches it past the default 5 s
+  it("no ship piece's screen box reaches the box of the Writing word at the wide site (#429)", () => {
+    // stricter than the hull test above: at (550, 125) the return cargo's masts entered the word's box and competed with it on screen
+    const box = signBox(zoneSigns("wide").blog);
+    const hits: string[] = [];
+    for (const lane of ["out", "back"] as const) for (const kind of new Set(SHIPS.map((s) => s.kind))) {
+      for (let d = 0; d <= laneLength(lane); d += 2) {
+        const p = laneAt(lane, d);
+        if (ship(kind, shipAt(kind, p, p.heading), p.heading).solids.some((s) => overlaps(screenBounds(bounds(s)), box))) hits.push(`${lane} ${kind} ${d}`);
+      }
+    }
+    expect(hits).toEqual([]);
+  }, 15_000);
 });

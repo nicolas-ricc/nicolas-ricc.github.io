@@ -12,6 +12,7 @@ import { HEADLAND_SHIFT } from "../map/geo";
 import { buildRenderList } from "../iso/render-list";
 import { assembleWorld } from "../world/assemble";
 import { COVER_FOCUS_U } from "../world/view";
+import { writingSite } from "../world/signs";
 import { SHIPYARD_HALLS, TINKER_SITE } from "../scenes/sign-tinker";
 import { EXHIBITS } from "./exhibits";
 
@@ -923,6 +924,8 @@ describe("#423 closing (#429)", () => {
   const spec = read(`${SPECS}2026-11-18-composicion-responsive-design.md`);
   const at8 = spec.search(/^## 8\. Desvíos y medición$/m);
   const dev = (at8 < 0 ? "" : spec.slice(at8)).replace(/\s+/g, " ");
+  /** The measured aspect threshold of the Writing site at 900 px high, as the spec writes it (comma decimal). */
+  const threshold = () => { let w = 900; while (writingSite(w, 900) !== "wide") w++; return (w / 900).toFixed(2).replace(".", ","); };
   /** A count as the spec writes it: thousands separated by a space. */
   const count = (n: number) => n.toLocaleString("en").replace(/,/g, " ");
 
@@ -974,7 +977,7 @@ describe("#423 closing (#429)", () => {
       "PLATFORM_SITES", v(PLATFORM_SITES.wide), v(PLATFORM_SITES.tall),
       "COVER_FOCUS_U", String(COVER_FOCUS_U).replace(".", ","),
       "LANE_OUT", "LANE_BACK", ...LANE_OUT.map(v), ...LANE_BACK.map(v),
-      "1,48", "900×1440", "1440×900", "46 481", "2 409",
+      threshold(), "900×1440", "1440×900", "46 481", "2 409",
     ];
     for (const s of needles) expect(dev, s).toContain(s);
   });

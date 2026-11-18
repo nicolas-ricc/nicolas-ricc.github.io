@@ -299,9 +299,15 @@ legibilidad, en `assets/carteles-legibilidad/REPORT.md`.
 
 - `HEADLAND_SHIFT` = (+14, +172), como en la spec: el cabo quedó en x 344..414,
   y 269..306, con el faro en (410, 290). No hubo que correrlo al norte ni al sur.
-- `PLATFORM_SITES`: ancho (550, 125) y angosto (440, 400), los de partida de
-  §3.2. El sitio ancho no se movió: ningún barco cruza Writing en 1600×900
-  (la pasada más cercana, 70 u; ver `despues/README.md`).
+- `PLATFORM_SITES`: ancho (570, 105) y angosto (440, 400). El angosto es el de
+  partida de §3.2. El ancho se corrió 20 u al noreste desde (550, 125), el
+  máximo que permite #429: en su pasada de vuelta, a t ≈ 790..810 s, el
+  carguero entraba en la caja de la palabra Writing en pantalla. No cruzaba
+  las letras, pero competía con ellas a simple vista. Con 5, 10 y 15 u la caja
+  seguía tocada; con 20 u queda a 2,9 u proyectadas. Lo fija el test "no ship
+  piece's screen box reaches the box of the Writing word at the wide site" de
+  `src/scenes/sea-anim.test.ts`. La caja del exhibit `plataforma-escena` se
+  corrió igual, a x 536..604, y 71..139. Las capturas están en `despues/README.md`.
 - `COVER_FOCUS_U` = 0,39, como en §3.1.
 - Carriles, tal como quedaron en `src/scenes/sea-anim.ts` (no los borradores del
   comentario de la historia):
@@ -309,12 +315,13 @@ legibilidad, en `assets/carteles-legibilidad/REPORT.md`.
     (434, 176), (446, 232), (456, 290), (486, 347), (500, 405), (523, 510).
   - `LANE_BACK`: (564, 467), (548, 330), (546, 262), (512, 200), (480, 144),
     (477, 102), (461, 66), (434, 18), (397, -39).
-- Umbral del sitio: medido con `writingSite(w, 900)`, el sitio ancho aparece
-  desde w = 1330, es decir un aspecto de 1,48 (1330/900). Por debajo, el
-  angosto. No es un umbral elegido: sale de la regla de §2.4.
+- Umbral del sitio: medido con `writingSite(w, 900)`. El sitio ancho aparece
+  desde w = 1390, un aspecto de 1,54 (1390/900); por debajo, el angosto. Con
+  el sitio en (550, 125) era w = 1330 (1,48). No es un umbral elegido: sale de
+  la decisión 4 de §2.
 - Rotación: 900×1440 usa el sitio angosto y 1440×900 el ancho. Al girar sin
   recargar la página, el `transform` del enlace de Writing cambia en los dos
-  sentidos y el marcador de la página se mantiene.
+  sentidos y el marcador `window.__rot429` se mantiene (no hubo recarga).
 
 ### 8.2 Presupuesto del mundo
 
@@ -343,6 +350,6 @@ sitios de la plataforma), y todos siguen en ✓.
 | `cartel-taller-escena` | 1.17 | 6.60:1 | 0.08 | `PORTFOLIO` |
 | `cartel-taller-escena` | 0.83 | 5.75:1 | 0.08 | `PORTFOLIO` |
 | `plataforma-escena` | 1.17 | 12.27:1 | 0.07 | `Writing` |
-| `plataforma-escena` | 0.83 | 12.20:1 | 0.04 | `Writing` |
+| `plataforma-escena` | 0.83 | 12.19:1 | 0.04 | `Writing` |
 | `plataforma-escena-angosta` | 1.17 | 12.16:1 | 0.07 | `Writing` |
 | `plataforma-escena-angosta` | 0.83 | 12.08:1 | 0.04 | `Writing` |

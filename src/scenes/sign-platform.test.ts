@@ -125,8 +125,9 @@ const isPanel = (s: Solid) => s.kind === "poly" && s.mat === "officeDark";
 const N = { x: Math.SQRT1_2, y: Math.SQRT1_2 };
 
 describe("the two Writing sites (#427)", () => {
-  it("PLATFORM_SITES: wide (550, 125, 0) and tall (440, 400, 0)", () => {
-    expect(PLATFORM_SITES).toEqual({ wide: { x: 550, y: 125, z: 0 }, tall: { x: 440, y: 400, z: 0 } });
+  it("PLATFORM_SITES: wide (570, 105, 0) and tall (440, 400, 0)", () => {
+    // wide moved 20 u north-east from (550, 125) in #429: the return cargo's screen box crossed the word's box (sea-anim.test.ts)
+    expect(PLATFORM_SITES).toEqual({ wide: { x: 570, y: 105, z: 0 }, tall: { x: 440, y: 400, z: 0 } });
   });
 });
 
