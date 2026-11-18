@@ -871,7 +871,7 @@ describe("Writing with two sites (#427)", () => {
   });
 });
 
-describe("the host decides Writing's site (#428)", () => {
+describe("#app decides Writing's site (#428)", () => {
   const glossary = readFileSync(`${ROOT}CONTEXT.md`, "utf8");
   /** The CONTEXT.md entry `### <title>` up to the next `### `. */
   const entry = (title: string) => { const at = glossary.indexOf(`### ${title}\n`); const rest = glossary.slice(at + title.length + 5); const next = rest.search(/^### /m); return at < 0 ? "" : next < 0 ? rest : rest.slice(0, next); };

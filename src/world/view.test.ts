@@ -62,6 +62,7 @@ describe("coverView", () => {
   it("COVER_FOCUS_U is 0.39: the phone window is centered on the column of signs (#428)", () => {
     expect(COVER_FOCUS_U).toBe(0.39);
   });
+  // since #428 the focus (0.39) centers the phone window on the column of signs: PORTFOLIO, RESUME and Writing fit
   it("390×750 centers on COVER_FOCUS_U of the 16:9 cover", () => {
     const v = coverView(390, 750);
     expect((QX0 + COVER_FOCUS_U * (QX1 - QX0)) * v.scale + v.x).toBeCloseTo(195, 6);

@@ -3,7 +3,7 @@ import type { ScreenBounds } from "../iso/depth";
 import { project } from "../iso/project";
 import type { SignSpec } from "../kit/legibility";
 
-/** Minimum host px between Writing's word and every host edge (#428). */
+/** Minimum host px between Writing's word and every host edge (#428); also the margin of the zone links to the host edge in `main.ts`. */
 export const WRITING_SITE_MARGIN = 8;
 
 const boxes = new WeakMap<SignSpec, ScreenBounds>();

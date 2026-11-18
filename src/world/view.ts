@@ -1,8 +1,8 @@
 import { BLEED, COVER_INSET, WORLD, type WorldZone } from "../map/geo";
+import type { RenderItem } from "../iso/render-list";
+import { BLOG_SIGNS, type WritingSite } from "../scenes/sign-platform";
 import { coverFrame, fitTransform, zoneFrame } from "./frame";
 import { WRITING_SITE_MARGIN, signBox } from "./sign-box";
-import { BLOG_SIGNS, type WritingSite } from "../scenes/sign-platform";
-import type { RenderItem } from "../iso/render-list";
 
 /** Camera state of the world container: `screen = projected_world × scale + (x, y)`. Same as CameraState. */
 export interface View { x: number; y: number; scale: number }
@@ -108,8 +108,8 @@ function keepSignInside(v: View, w: number, h: number, site: WritingSite): View 
 export function zoneView(zone: WorldZone, w: number, h: number, site: WritingSite = "wide"): View {
   const floor = coverView(w, h).scale * ZONE_MIN_ZOOM;
   const fit = fitTransform(zoneFrame(zone, site), w, h, 0.04);
-  const c = frameCenter(zone, site);
-  const v = fit.scale >= floor ? fit : { x: w / 2 - c.x * floor, y: h / 2 - c.y * floor, scale: floor };
-  const clamped = clampToBleed(clampToCover(v, w, h), w, h);
-  return zone === "blog" ? clampToBleed(clampToCover(keepSignInside(clamped, w, h, site), w, h), w, h) : clamped;
+  const clamp = (v: View): View => clampToBleed(clampToCover(v, w, h), w, h);
+  let v = fit;
+  if (fit.scale < floor) { const c = frameCenter(zone, site); v = { x: w / 2 - c.x * floor, y: h / 2 - c.y * floor, scale: floor }; }
+  return zone === "blog" ? clamp(keepSignInside(clamp(v), w, h, site)) : clamp(v);
 }
