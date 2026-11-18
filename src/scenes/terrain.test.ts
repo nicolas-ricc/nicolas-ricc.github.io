@@ -60,7 +60,7 @@ describe("classification", () => {
     expect(["shore", "sea"]).toContain(terrainAt(380, 118)); // the old site is water
     expect(["shore", "sea"]).toContain(terrainAt(396, 118));
     expect(terrainAt(335, 115)).toBe("jungle");            // the strip west of islandEastX at the old site is land again
-    expect(seaTerrainAt(420, 290)).toBe("reef");
+    expect(seaTerrainAt(418, 290)).toBe("reef");
     expect(seaTerrainAt(350, 60)).toBe("shore");           // next to the shipyard coast
     expect(seaTerrainAt(400, 200)).toBe("sea");
     expect(seaTerrainAt(350, 10)).toBe("shore");           // in front of the bay there is a shoal
@@ -95,10 +95,11 @@ describe("classification", () => {
     expect(terrainAt(300, 267)).toBe("jungle");
     expect(terrainAt(335, 300)).toBe("jungle");
   });
-  it("in the cv zone there is only asphalt, jungle and water", () => {
+  it("in the cv zone there is only asphalt, jungle, water and the east shore", () => {
     const seen = new Set<string>();
     for (let y = ZONE_SPLIT_Y + 3; y < WORLD.y1; y += CELL) for (let x = WORLD.x0 + 3; x < ZONE_SPLIT_X; x += CELL) if (!inStationLand(x, y) && !inHeadland(x, y) && distToHeadland(x, y) >= SHORE_W) seen.add(terrainAt(x, y));
-    expect([...seen].sort()).toEqual(["asphalt", "jungle", "water"]);
+    // "shore": the wavy east coast at y 129..135, which the headland used to hide before #426
+    expect([...seen].sort()).toEqual(["asphalt", "jungle", "shore", "water"]);
   });
   it("the water is continuous at the seam and the estuary does not reach the border with Blog", () => {
     // the last row of shipyard cells (center 141) and the first of the city (center 147) wet the same columns
@@ -250,8 +251,8 @@ describe("buildTerrain", () => {
     const rock = m.ground.filter((g) => g.kind === "ground" && g.mat === "rock").flatMap(tris);
     const high = rock.filter((t) => t.pts.every((p) => p.z >= 4));
     expect(high.length).toBeGreaterThan(20);
-    // the base of the point (x < 340) is low: nothing tall next to the quay sheds
-    const base = rock.filter((t) => t.pts.every((p) => p.x <= 340 && p.y > 96 && p.y < 136));
+    // the base of the point (x < 348 = 334 + shift, #426) is low: nothing tall next to the seawall
+    const base = rock.filter((t) => t.pts.every((p) => p.x <= 348 && p.y > 268 && p.y < 308));
     expect(base.length).toBeGreaterThan(0);
     expect(base.every((t) => t.pts.every((p) => p.z < 4))).toBe(true);
     const inDock = allTris(m).filter((t) => t.pts.every((p) => p.x > 122 && p.x < 190 && p.y > 8 && p.y < 28));

@@ -7,7 +7,7 @@ import { city, type CityScene } from "./city";
 import { factory, type FactoryScene } from "./factory";
 import { fair, type FairScene } from "./fair";
 import { hinterland, type HinterlandScene } from "./hinterland";
-import { sea, type SeaScene } from "./sea";
+import { LIGHTHOUSE, sea, type SeaScene } from "./sea";
 import { shipyard, type Scene } from "./shipyard";
 import { tech, type TechScene } from "./tech";
 import { buildTerrain, type TerrainMesh } from "./terrain";
@@ -39,7 +39,7 @@ const ZONE_INDEX: Record<WorldZone, number> = { portfolio: 1, cv: 2, blog: 3 };
 export const LANDMARKS: Record<WorldZone, Vec3> = {
   portfolio: v3(150, 50, 0),
   cv: v3(129, 227, 0),
-  blog: v3(470, 160, 0),
+  blog: v3(LIGHTHOUSE.x, LIGHTHOUSE.y, 0),
 };
 
 /** Rng per zone and part (0 = main scene, 1 = secondary scene: factory, district; 2 = margin: hinterland, tech district; 3 = city lights). Tweaking one does not reorder the others. */

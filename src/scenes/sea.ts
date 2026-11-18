@@ -3,13 +3,13 @@ import { v3, type Vec2, type Vec3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
-import { inHeadland } from "../map/geo";
+import { HEADLAND_SHIFT, inHeadland } from "../map/geo";
 import { seaPlatformAt } from "./sign-platform";
 import { headlandZ, terrainAt } from "./terrain";
 
 /**
- * Blog, static part: the rock point with the lighthouse and the keeper's house
- * (they click through to Portfolio), the reef, two buoys, and in the trench the wreck with its
+ * Blog, static part: the rock point with the lighthouse and the keeper's house, on the island's east coast
+ * (the zone they click through to is decided by `worldZoneAt`), the reef, two buoys, and in the trench the wreck with its
  * buoy (Blog landmark): a coaster split in two with the bow and
  * the stern house sticking out. The Writing sign platform (sign-platform.ts) stands in the open sea
  * between the buoys; `sea()` builds it last (#390). The ships and the animated sea are in sea-anim.ts.
@@ -17,8 +17,8 @@ import { headlandZ, terrainAt } from "./terrain";
  */
 export interface SeaScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; lantern: Vec3; buoys: Vec3[]; neon: { gallery: Vec3[]; coast: Vec3[]; keeperSign: Accent } }
 
-export const LIGHTHOUSE = { x: 396, y: 118, z: 7 } as const;
-export const KEEPER = { x: 372, y: 108 } as const;
+export const LIGHTHOUSE = { x: 396 + HEADLAND_SHIFT.x, y: 118 + HEADLAND_SHIFT.y, z: 7 } as const;
+export const KEEPER = { x: 372 + HEADLAND_SHIFT.x, y: 108 + HEADLAND_SHIFT.y } as const;
 // Relocated in #87: the outbound leg went through the old buoy (420, 80) and a ship west or north of a solid
 // that overlaps it on screen ends up behind. The buoys mark the shoal south of the point, west of
 // the outbound leg (40 and 46 u from the lane: the ships pass in front). The wreck stays in the trench (its stern sits
@@ -48,10 +48,10 @@ export const GALLERY_DECK_R = GALLERY_R + POST_W;
 /** Lantern set back from the last drum; the cap covers it with a 0.2 overhang. */
 export const LANTERN_R = DRUM_TOP_R - 0.6, CAP_R = LANTERN_R + 0.2;
 /**
- * Coast beacons: arc at ~12.8 u from the point, from the northeast to the southeast along the east. The point and its shore
- * (12 u) are Portfolio for `worldZoneAt`; at this distance it is already Blog (sea.test.ts pins it).
+ * Coast beacons: arc at ~12.8 u from the point, from the northeast to the southeast along the east, moved with it
+ * (the point's zone is decided by `worldZoneAt`).
  */
-export const COAST: readonly Vec2[] = [{ x: 397.5, y: 99.5 }, { x: 403, y: 101.5 }, { x: 408, y: 104 }, { x: 411.5, y: 108.5 }, { x: 413, y: 114.5 }, { x: 413, y: 120.5 }, { x: 412, y: 126.5 }, { x: 408.5, y: 131.5 }];
+export const COAST: readonly Vec2[] = [{ x: 397.5 + HEADLAND_SHIFT.x, y: 99.5 + HEADLAND_SHIFT.y }, { x: 403 + HEADLAND_SHIFT.x, y: 101.5 + HEADLAND_SHIFT.y }, { x: 408 + HEADLAND_SHIFT.x, y: 104 + HEADLAND_SHIFT.y }, { x: 411.5 + HEADLAND_SHIFT.x, y: 108.5 + HEADLAND_SHIFT.y }, { x: 413 + HEADLAND_SHIFT.x, y: 114.5 + HEADLAND_SHIFT.y }, { x: 413 + HEADLAND_SHIFT.x, y: 120.5 + HEADLAND_SHIFT.y }, { x: 412 + HEADLAND_SHIFT.x, y: 126.5 + HEADLAND_SHIFT.y }, { x: 408.5 + HEADLAND_SHIFT.x, y: 131.5 + HEADLAND_SHIFT.y }];
 export const COAST_Z = 1.2;
 const REEF_CELLS = 20, BOULDERS = 20; // two cones per reef cell: up to 40
 
@@ -86,7 +86,7 @@ function keeperHouse(out: Solid[], accents: Accent[]): Accent {
 
 /** Rock path from the breakwater to the lighthouse: ten stretches, each at the height of the point at its center (the point rises from 1 to 7). */
 function path(ground: Solid[]): void {
-  const from = { x: 332, y: 115 }, to = { x: 393, y: 118 }, n = 10;
+  const from = { x: 332 + HEADLAND_SHIFT.x, y: 115 + HEADLAND_SHIFT.y }, to = { x: 393 + HEADLAND_SHIFT.x, y: 118 + HEADLAND_SHIFT.y }, n = 10;
   for (let i = 0; i < n; i++) {
     const a = { x: from.x + ((to.x - from.x) * i) / n, y: from.y + ((to.y - from.y) * i) / n };
     const b = { x: from.x + ((to.x - from.x) * (i + 1)) / n, y: from.y + ((to.y - from.y) * (i + 1)) / n };
@@ -95,20 +95,21 @@ function path(ground: Solid[]): void {
 }
 
 function rocks(out: Solid[], rng: Rng): void {
-  for (const [cx, cy, r] of [[350, 112, 4], [362, 124, 3.5], [385, 110, 4.5], [378, 126, 3], [340, 104, 3], [392, 126, 2.5]] as const) { // outcrops
+  for (const [ox, oy, r] of [[350, 112, 4], [362, 124, 3.5], [385, 110, 4.5], [378, 126, 3], [340, 104, 3], [392, 126, 2.5]] as const) { // outcrops
+    const cx = ox + HEADLAND_SHIFT.x, cy = oy + HEADLAND_SHIFT.y;
     const n = rng.int(5, 6);
     const footprint: Vec2[] = Array.from({ length: n }, (_, k) => { const a = (k / n) * Math.PI * 2; const rr = r * (0.7 + rng.next() * 0.3); return { x: cx + rr * Math.cos(a), y: cy + rr * Math.sin(a) }; });
     out.push({ kind: "poly", footprint, z: headlandZ(cx) - 1.5, h: rng.int(2, 3), mat: "rock" });
   }
-  let placed = 0; // boulders: small cones on the point, not stepping on the path (y 113..120) or the lighthouse
+  let placed = 0; // boulders: small cones on the point, not stepping on the path (y 285..292) or the lighthouse
   while (placed < BOULDERS) {
-    const x = rng.int(340, 398), y = rng.int(99, 133);
-    if (!inHeadland(x, y) || (y > 112 && y < 121) || Math.hypot(x - LIGHTHOUSE.x, y - LIGHTHOUSE.y) < 5) continue;
+    const x = rng.int(340 + HEADLAND_SHIFT.x, 398 + HEADLAND_SHIFT.x), y = rng.int(99 + HEADLAND_SHIFT.y, 133 + HEADLAND_SHIFT.y);
+    if (!inHeadland(x, y) || (y > 112 + HEADLAND_SHIFT.y && y < 121 + HEADLAND_SHIFT.y) || Math.hypot(x - LIGHTHOUSE.x, y - LIGHTHOUSE.y) < 5) continue;
     out.push({ kind: "cone", at: v3(x, y, headlandZ(x) - 0.5), r: 1, h: 1.5, mat: "rock", sides: 5 });
     placed++;
   }
   const cells: Vec2[] = [];
-  for (let y = 87; y < 147; y += 6) for (let x = 327; x < 417; x += 6) if (terrainAt(x, y) === "reef") cells.push({ x, y });
+  for (let y = 87 + HEADLAND_SHIFT.y; y < 147 + HEADLAND_SHIFT.y; y += 6) for (let x = 327 + HEADLAND_SHIFT.x; x < 417 + HEADLAND_SHIFT.x; x += 6) if (terrainAt(x, y) === "reef") cells.push({ x, y });
   for (let i = cells.length - 1; i > 0; i--) { const j = rng.int(0, i); [cells[i], cells[j]] = [cells[j]!, cells[i]!]; } // shuffle
   for (const c of cells.slice(0, REEF_CELLS)) for (let k = 0; k < 2; k++) {
     const x = c.x + (rng.next() - 0.5) * 2, y = c.y + (rng.next() - 0.5) * 2;

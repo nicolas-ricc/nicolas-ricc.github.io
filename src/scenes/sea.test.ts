@@ -137,7 +137,7 @@ describe("sea", () => {
     const bow = parts.find((x) => x.kind === "poly" && x.mat === "hull" && x.footprint.length === 5)!, house = parts.find((x) => x.kind === "poly" && x.mat === "whitewash" && x.facade)!;
     const bb = bounds(bow), hb = bounds(house);
     expect(Math.hypot((bb.min.x + bb.max.x) / 2 - (hb.min.x + hb.max.x) / 2, (bb.min.y + bb.max.y) / 2 - (hb.min.y + hb.max.y) / 2)).toBeGreaterThan(20); // split in two: the center is sunk
-    for (const x of s.solids) if (x.kind === "cylinder" || x.kind === "hull") if (bounds(x).min.x > ZONE_SPLIT_X + 60) expect(water.has(terrainAt(x.at.x, x.at.y))).toBe(true);
+    for (const x of s.solids) if (x.kind === "cylinder" || x.kind === "hull") if (bounds(x).min.x > ZONE_SPLIT_X + 60 && !inHeadland(x.at.x, x.at.y)) expect(water.has(terrainAt(x.at.x, x.at.y))).toBe(true);
   });
 
   it("neons: gallery of eight lights around the shaft, coast beacons in Blog and the keeper's cyan sign", () => {

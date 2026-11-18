@@ -92,10 +92,13 @@ export function inMouth(x: number, y: number): boolean {
 /** Reference latitude of the mouth (used by the darsena exhibit and the tests); the real coast is northCoastY. */
 export const MOUTH_Y = 24;
 
-/** Lighthouse headland: starts at the fitting-out quay (x 330..344) and narrows to x = 400. Clockwise. */
-export const HEADLAND: readonly [number, number][] = [
+/** Displacement of the lighthouse headland from its original site (#426): it moved as a rigid block. */
+export const HEADLAND_SHIFT = { x: 14, y: 172 } as const;
+const HEADLAND_BASE: readonly [number, number][] = [
   [330, 100], [344, 97], [372, 104], [400, 114], [400, 122], [372, 132], [344, 134], [330, 130],
 ];
+/** Lighthouse headland: rests on the east coast (base at x 344) and narrows to x = 414. Clockwise. */
+export const HEADLAND: readonly [number, number][] = HEADLAND_BASE.map(([x, y]): [number, number] => [x + HEADLAND_SHIFT.x, y + HEADLAND_SHIFT.y]);
 const HEADLAND_FLAT = HEADLAND.flat();
 
 export function inHeadland(x: number, y: number): boolean {
@@ -190,8 +193,8 @@ export const islandWestX = (y: number): number => estuaryEast(y) - estuaryInset(
  * y 158, straight (seawall) between 158 and WORLD.y1 and a rounded south tip
  * beyond (-Infinity from y 380: all water).
  * - North of 146 it oscillates between `lo` and `hi`: `lo` = 331 leaves 3 u of
- *   footing to sheds (x ≤ 324) and scrap (x ≤ 329); between y 134 (base of the
- *   lighthouse headland) and 146 (`ESTUARY_Y0`, the zone seam before #56) it rises to 344, and `hi` = 344 +
+ *   footing to sheds (x ≤ 324) and scrap (x ≤ 329); between y 134 (just a bound of the
+ *   coast, no longer the base of the lighthouse headland) and 146 (`ESTUARY_Y0`, the zone seam before #56) it rises to 344, and `hi` = 344 +
  *   shoreWidth − 1.5 leaves no land that clicks Blog (`worldZoneAt`).
  * - Between 146 and 158 (start of the seawall) it interpolates to 344.
  * - South tip: an ellipse 44 u long from WORLD.y1 over the width of the
