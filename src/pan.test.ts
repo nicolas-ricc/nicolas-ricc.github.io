@@ -25,7 +25,6 @@ function setup(opts: { throwOnCapture?: boolean } = {}) {
   return { el, pan, onStart, onPan };
 }
 
-/** Down at (0, 0), past the threshold to (10, 0). */
 function drag(el: ReturnType<typeof fakeTarget>) {
   el.fire("pointerdown", 0, 0);
   el.fire("pointermove", 10, 0);

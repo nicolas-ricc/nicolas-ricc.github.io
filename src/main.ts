@@ -83,7 +83,6 @@ async function boot(): Promise<void> {
   const refreshFocus = (): void => { stage.setFocus(current ?? hot); };
 
   const recenter = document.getElementById("recentrar") as HTMLButtonElement;
-  /** the map view differs from coverView: the recenter button shows */
   let moved = false;
   const syncMoved = (): void => {
     moved = current === null && !sameView(camera.state, coverView(host.clientWidth, host.clientHeight));
