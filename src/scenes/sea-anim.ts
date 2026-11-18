@@ -11,7 +11,7 @@ import { ship as buildShip, shipAt, wake, type ShipKind } from "./ships";
  * the gallery runs opposite to the beam, the coast ripples and the keeper's sign alternates.
  *
  * Two semi-straight lanes between the harbor mouth and the southern edge of the cover: the outbound leg (`LANE_OUT`)
- * starts at the harbor mouth (362, −16), skirts the point on the east and heads south-southeast, east of the moved
+ * starts at the harbor mouth (362, −16), runs off the island's east coast and heads south-southeast, east of the moved
  * headland and of the narrow Writing site, until it leaves the cover; the return leg (`LANE_BACK`) enters from below,
  * passes east of the wreck and west of the wide Writing site, and ends at the harbor mouth (397, −39); its northern leg
  * runs 42 u east of the outbound leg (the southern stretches keep clear of the Writing sites, #423). The ships appear
