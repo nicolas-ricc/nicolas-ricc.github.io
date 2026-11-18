@@ -102,7 +102,7 @@ function rocks(out: Solid[], rng: Rng): void {
     const footprint: Vec2[] = Array.from({ length: n }, (_, k) => { const a = (k / n) * Math.PI * 2; const rr = r * (0.7 + rng.next() * 0.3); return { x: cx + rr * Math.cos(a), y: cy + rr * Math.sin(a) }; });
     out.push({ kind: "poly", footprint, z: headlandZ(cx) - 1.5, h: rng.int(2, 3), mat: "rock" });
   }
-  let placed = 0; // boulders: small cones on the point, not stepping on the path (y 285..292) or the lighthouse
+  let placed = 0; // boulders: small cones on the point, not stepping on the path band or the lighthouse
   while (placed < BOULDERS) {
     const x = rng.int(340 + HEADLAND_SHIFT.x, 398 + HEADLAND_SHIFT.x), y = rng.int(99 + HEADLAND_SHIFT.y, 133 + HEADLAND_SHIFT.y);
     if (!inHeadland(x, y) || (y > 112 + HEADLAND_SHIFT.y && y < 121 + HEADLAND_SHIFT.y) || Math.hypot(x - LIGHTHOUSE.x, y - LIGHTHOUSE.y) < 5) continue;

@@ -22,9 +22,9 @@ import { ship as buildShip, shipAt, wake, type ShipKind } from "./ships";
  */
 // Outbound lane: the path of the hull's CENTER (see `shipAt` in ships.ts), so the three ship sizes
 // share the same lane. It starts at the harbor mouth (362, −16), inside the cover, and leaves toward the
-// south-southeast (on screen, down and slightly left). It skirts the lighthouse point on the east at
-// ~25 u from its shore: the point and its 12 u shore are Portfolio and the reef cones on the north
-// face (x 397..404, y 109..111) force passing at x ≥ 424 at y ≈ 86. From (434, 176) it goes down east of the
+// south-southeast (on screen, down and slightly left). Its northern stretch keeps x ≥ 424 at
+// y ≈ 86, where the lighthouse point stood until #426 moved it to the island's east coast (the site is open
+// water now; the vertices were left as they were). From (434, 176) it goes down east of the
 // moved headland (37 u from its tip) and of the narrow Writing site (16.3 u from its deck): x ≥ 440 at y 290 and
 // x ≥ 481 at y 400. Turns on screen of 6°, 7°, 22°, 13°, −18°, 6°, −20°, 2° and 11°.
 //

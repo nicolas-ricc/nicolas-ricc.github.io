@@ -44,7 +44,8 @@ describe("world", () => {
 
   it("the trench starts at x ≈ 392 in the north, more than 30 u from the headland, and opens east toward the south", () => {
     expect(abyssX(-60)).toBeCloseTo(392 + 6 * Math.sin(-60 / 17), 6);
-    expect(abyssX(118) - 400).toBeGreaterThan(30);
+    const [tipX, tipY] = HEADLAND.reduce((a, b) => (b[0] > a[0] ? b : a));
+    expect(abyssX(tipY) - tipX).toBeGreaterThan(30); // from the moved headland's tip (#426)
     expect(abyssX(336)).toBeGreaterThan(abyssX(-60) + 90);
     expect(shoreWidth(0)).toBeGreaterThan(4);
   });

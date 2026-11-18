@@ -147,7 +147,7 @@ describe("world", () => {
     expect(world(7, { zones: ["portfolio"] }).terrain.bleed).toEqual([]);
   });
 
-  it("#426: only the sea's solids have a box corner inside the moved headland, and nothing else stands within 2 u of it", () => {
+  it("#426: only the sea's solids have a box corner inside the moved headland, and nothing else stands within 2.3 u of it", () => {
     const w = world(7), own = new Set(w.sea!.solids), flat = HEADLAND.flat();
     const inside: string[] = [], close: string[] = [];
     for (const s of w.solids) {
@@ -155,7 +155,7 @@ describe("world", () => {
       const b = bounds(s), corners = [[b.min.x, b.min.y], [b.max.x, b.min.y], [b.min.x, b.max.y], [b.max.x, b.max.y]] as const;
       const where = `${s.kind} ${b.min.x.toFixed(1)},${b.min.y.toFixed(1)}`;
       if (corners.some(([x, y]) => pointInPolygon(x, y, flat))) inside.push(where);
-      else if (Math.min(...corners.map(([x, y]) => distToHeadland(x, y))) < 2) close.push(where);
+      else if (Math.min(...corners.map(([x, y]) => distToHeadland(x, y))) < 2.3) close.push(where);
     }
     expect(inside).toEqual([]);
     expect(close).toEqual([]); // the promenade lamps (x 341..341.6) are the nearest, at 2.4 u

@@ -31,6 +31,9 @@ describe("veilCells", () => {
     expect(at(410, 290)).toBe("blog");
     expect(at(420, 290)).toBe("blog");
     expect(at(341, 284)).toBe("cv");
+    // cells are classified by their centre: the 6 u cell x 342..348 straddles the headland base (x 344) and goes
+    // with Blog, taking the last 2 u of the promenade parapet with it (like the 144..150 cell of ADR 0002)
+    expect(at(343, 284)).toBe("blog");
     expect(at(500, 200)).toBe("blog");
     expect(at(-30, 300)).toBe("cv");
   });
