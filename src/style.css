@@ -40,6 +40,10 @@ body.zone #content { opacity: 1; }
 #hud { position: absolute; inset: 1rem auto auto 1rem; z-index: 2; text-shadow: 0 1px 2px #000; }
 #hud a { color: var(--fg); text-decoration: none; font-size: 0.9rem; }
 #hud h1 { margin: 0.25rem 0 0; font-size: 1.5rem; }
+/* Recenter button: top-right of the map host, looks like #back; hidden until the view moves. */
+#recentrar { position: absolute; inset: 1rem 1rem auto auto; z-index: 2; color: var(--fg); font: inherit; font-size: 0.9rem; text-shadow: 0 1px 2px #000; background: none; border: 0; padding: 0.25rem 0; cursor: pointer; }
+#recentrar:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+#canvas-host:focus-visible { outline: 2px solid var(--fg); outline-offset: -2px; }
 @media (max-width: 767px) {
   #app { grid-template-columns: 1fr; grid-template-rows: 1fr 0fr; transition-property: grid-template-rows; }
   body.zone #app { grid-template-columns: 1fr; grid-template-rows: 40vh 1fr; }
@@ -91,6 +95,7 @@ body.zone #titulo { opacity: 0; }
 /* without a canvas the host only holds the nav, in flow */
 .no-canvas #canvas-host { height: auto; overflow: visible; }
 .no-canvas #canvas-host canvas, .no-canvas #hud, .no-canvas #titulo { display: none; }
+.no-canvas #recentrar { display: none; }
 .no-canvas #app { display: block; height: auto; }
 .no-canvas #content { opacity: 1; }
 .no-canvas #zonas { position: static; pointer-events: auto; padding: 2rem clamp(1rem, 4vw, 3rem) 0; }
