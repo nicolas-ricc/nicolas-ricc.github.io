@@ -102,7 +102,7 @@ describe("accentZone", () => {
 
 describe("accentsByZone", () => {
   const dot = (x: number, y: number): Accent => ({ kind: "dot", at: v3(x, y, 1), r: 1, color: "amber" });
-  const port = dot(380, 118), blog = dot(500, 200), cv = dot(-30, 300);
+  const port = dot(100, 80), blog = dot(500, 200), cv = dot(-30, 300);
   it("without a zone, each light goes to the zone of its position (accentZone)", () => {
     expect(accentsByZone([port, blog, cv])).toEqual({ portfolio: [port], cv: [cv], blog: [blog] });
   });

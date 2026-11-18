@@ -51,7 +51,8 @@ export const LANTERN_R = DRUM_TOP_R - 0.6, CAP_R = LANTERN_R + 0.2;
  * Coast beacons: arc at ~12.8 u from the point, from the northeast to the southeast along the east, moved with it
  * (the point's zone is decided by `worldZoneAt`).
  */
-export const COAST: readonly Vec2[] = [{ x: 397.5 + HEADLAND_SHIFT.x, y: 99.5 + HEADLAND_SHIFT.y }, { x: 403 + HEADLAND_SHIFT.x, y: 101.5 + HEADLAND_SHIFT.y }, { x: 408 + HEADLAND_SHIFT.x, y: 104 + HEADLAND_SHIFT.y }, { x: 411.5 + HEADLAND_SHIFT.x, y: 108.5 + HEADLAND_SHIFT.y }, { x: 413 + HEADLAND_SHIFT.x, y: 114.5 + HEADLAND_SHIFT.y }, { x: 413 + HEADLAND_SHIFT.x, y: 120.5 + HEADLAND_SHIFT.y }, { x: 412 + HEADLAND_SHIFT.x, y: 126.5 + HEADLAND_SHIFT.y }, { x: 408.5 + HEADLAND_SHIFT.x, y: 131.5 + HEADLAND_SHIFT.y }];
+const COAST_BASE: readonly Vec2[] = [{ x: 397.5, y: 99.5 }, { x: 403, y: 101.5 }, { x: 408, y: 104 }, { x: 411.5, y: 108.5 }, { x: 413, y: 114.5 }, { x: 413, y: 120.5 }, { x: 412, y: 126.5 }, { x: 408.5, y: 131.5 }];
+export const COAST: readonly Vec2[] = COAST_BASE.map((p) => ({ x: p.x + HEADLAND_SHIFT.x, y: p.y + HEADLAND_SHIFT.y }));
 export const COAST_Z = 1.2;
 const REEF_CELLS = 20, BOULDERS = 20; // two cones per reef cell: up to 40
 
@@ -84,7 +85,7 @@ function keeperHouse(out: Solid[], accents: Accent[]): Accent {
   return { kind: "poly", pts: [v3(sx, fy, z + 4), v3(sx + 2, fy, z + 4), v3(sx + 2, fy, z + 5), v3(sx, fy, z + 5)], color: "cyan", alpha: 1 };
 }
 
-/** Rock path from the breakwater to the lighthouse: ten stretches, each at the height of the point at its center (the point rises from 1 to 7). */
+/** Rock path from the base on the island's east coast, by the promenade, to the lighthouse: ten stretches, each at the height of the point at its center (the point rises from 1 to 7). */
 function path(ground: Solid[]): void {
   const from = { x: 332 + HEADLAND_SHIFT.x, y: 115 + HEADLAND_SHIFT.y }, to = { x: 393 + HEADLAND_SHIFT.x, y: 118 + HEADLAND_SHIFT.y }, n = 10;
   for (let i = 0; i < n; i++) {

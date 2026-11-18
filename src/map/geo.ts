@@ -68,14 +68,14 @@ export type WorldZone = "portfolio" | "cv" | "blog";
 
 /**
  * Clickable zone (the site's hover and click), by geography and not by split:
- * the headland, the reef and its shore are Portfolio (the lighthouse caps the
- * shipyard), the seawall shore is Resume and Blog is only the open sea. West of
- * the split, land south of `ZONE_SPLIT_Y` is Resume except `STATION_LAND`, the
+ * the moved headland (#426), its reef and its shore east of the split are Blog
+ * (the `x >= ZONE_SPLIT_X` guard leaves the promenade in Resume), the seawall
+ * shore is Resume and the rest of the sea is Blog. West of the split, land south of `ZONE_SPLIT_Y` is Resume except `STATION_LAND`, the
  * terminal station, which stays Portfolio.
  * The visual terrain (terrain.ts) does not use this to classify the sea.
  */
 export function worldZoneAt(x: number, y: number): WorldZone {
-  if (inHeadland(x, y) || distToHeadland(x, y) < SHORE_W) return "portfolio";
+  if (inHeadland(x, y) || (x >= ZONE_SPLIT_X && distToHeadland(x, y) < SHORE_W)) return "blog";
   if (x < ZONE_SPLIT_X + shoreWidth(y)) return y >= ZONE_SPLIT_Y && !inStationLand(x, y) ? "cv" : "portfolio";
   return "blog";
 }

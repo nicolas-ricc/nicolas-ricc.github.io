@@ -89,7 +89,7 @@ describe("assembleWorld", () => {
   it("each fixed animated light (beam, neons) is assigned to worldZoneAt of its position", () => {
     const { animators } = assembleWorld(undefined, { reducedMotion: false });
     const sea = animators.find((a) => a.ids.includes("sea.beam"))!;
-    let port = 0;
+    let blog = 0;
     for (let t = 0; t < 40; t++) {
       sea.tick(250);
       for (const id of ["sea.beam", "sea.neon"]) {
@@ -99,10 +99,10 @@ describe("assembleWorld", () => {
         for (const z of WORLD_ZONES) for (const a of byZone[z]) {
           const p = a.kind === "dot" ? a.at : a.pts[0]!;
           expect(z).toBe(worldZoneAt(p.x, p.y));
-          if (z === "portfolio") port++;
+          if (z === "blog") blog++;
         }
       }
     }
-    expect(port).toBeGreaterThan(0); // the beam and the gallery are in Portfolio
+    expect(blog).toBeGreaterThan(0); // the beam and the gallery are in Blog (the moved headland, #426)
   });
 });

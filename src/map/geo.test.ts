@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ESTUARY_Y0, HEADLAND, HEADLAND_SHIFT, MOUTH_Y, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, abyssX, distToHeadland, estuaryEast, estuaryInset, eastBank, inHeadland, inMouth, inStationLand, islandEastX, islandWestX, northCoastY, pointInPolygon, riverCenter, SEAM_CY, shoreWidth, worldZoneAt } from "./geo";
+import { ESTUARY_Y0, HEADLAND, HEADLAND_SHIFT, MOUTH_Y, RIVER_HALF, SHORE_W, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, abyssX, distToHeadland, estuaryEast, estuaryInset, eastBank, inHeadland, inMouth, inStationLand, islandEastX, islandWestX, northCoastY, pointInPolygon, riverCenter, SEAM_CY, shoreWidth, worldZoneAt } from "./geo";
 
 describe("world", () => {
   it("the content has a negative origin and sides that are multiples of 18", () => {
@@ -9,7 +9,7 @@ describe("world", () => {
     expect((WORLD.y1 - WORLD.y0) % 18).toBe(0);
   });
 
-  it("clickable zone: the headland and its shore are Portfolio, the seawall shore Resume, the open sea Blog", () => {
+  it("clickable zone: the moved headland, its reef and shore are Blog, the promenade and the seawall shore Resume, the open sea Blog", () => {
     expect(worldZoneAt(10, 10)).toBe("portfolio");
     expect(worldZoneAt(-30, -30)).toBe("portfolio");   // factory band
     expect(worldZoneAt(10, 200)).toBe("cv");
@@ -34,7 +34,11 @@ describe("world", () => {
     expect(worldZoneAt(290, 100)).toBe("cv");
     expect(worldZoneAt(400, 10)).toBe("blog");
     expect(worldZoneAt(400, 260)).toBe("blog");
-    for (let y = -60; y < 336; y += 6) expect(worldZoneAt(ZONE_SPLIT_X + shoreWidth(y) - 0.5, y)).not.toBe("blog");
+    // the seawall shore is never Blog, except where the moved headland's own shore (Blog, #426) takes it
+    for (let y = -60; y < 336; y += 6) {
+      const x = ZONE_SPLIT_X + shoreWidth(y) - 0.5;
+      if (!inHeadland(x, y) && distToHeadland(x, y) >= SHORE_W) expect(worldZoneAt(x, y), `${x},${y}`).not.toBe("blog");
+    }
   });
 
   it("the trench starts at x ≈ 392 in the north, more than 30 u from the headland, and opens east toward the south", () => {

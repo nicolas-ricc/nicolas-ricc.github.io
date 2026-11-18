@@ -225,7 +225,7 @@ describe("destroy", () => {
 
 describe("veil of the animated lights", () => {
   const dot = (x: number, y: number): Accent => ({ kind: "dot", at: v3(x, y, 1), r: 1, color: "amber" });
-  const port = dot(380, 118), blog = dot(500, 200);
+  const port = dot(100, 80), blog = dot(500, 200);
   const toy = (layer: () => AnimLayer): ZonedAnimator => ({ zone: "blog", ids: ["lights"], layer, tick: () => new Set(["lights"]) });
   const stageWith = (a: ZonedAnimator) => buildStage(assembleWorld(["portfolio"], { reducedMotion: true }).scene, [a]);
   // animated Graphics: the ones that follow the three static ones in accentSlot
