@@ -14,10 +14,10 @@ import { ship as buildShip, shipAt, wake, type ShipKind } from "./ships";
  * starts at the harbor mouth (362, −16), skirts the point on the east and heads south-southeast, east of the moved
  * headland and of the narrow Writing site, until it leaves the cover; the return leg (`LANE_BACK`) enters from below,
  * passes east of the wreck and west of the wide Writing site, and ends at the harbor mouth (397, −39); its northern leg
- * runs 42 u east of the outbound leg (the southern stretches keep clear of the Writing sites, #423). The ships appear and fade right there (`FADE_U` fade at both ends), with no
- * trip around the bay or turn in place. Each ship rotates `out → offscreen (OFF_MS) → back →
- * offscreen (PORT_MS, "enters port")` at the same speed and ship k at phase k·T/3 of the
- * period T = `CYCLE_MS` (≈ 966 s). The water itself (split by depth in `terrain.ts`) is not
+ * runs 42 u east of the outbound leg (the southern stretches keep clear of the Writing sites, #423). The ships appear
+ * and fade right there (`FADE_U` fade at both ends), with no trip around the bay or turn in place. Each ship
+ * rotates `out → offscreen (OFF_MS) → back → offscreen (PORT_MS, "enters port")` at the same speed and ship k at
+ * phase k·T/3 of the period T = `CYCLE_MS` (≈ 966 s). The water itself (split by depth in `terrain.ts`) is not
  * this file's business: `water-animator.ts` animates it. Spec §7; semi-straight routes in #87.
  */
 // Outbound lane: the path of the hull's CENTER (see `shipAt` in ships.ts), so the three ship sizes
@@ -26,7 +26,8 @@ import { ship as buildShip, shipAt, wake, type ShipKind } from "./ships";
 // ~25 u from its shore: the point and its 12 u shore are Portfolio and the reef cones on the north
 // face (x 397..404, y 109..111) force passing at x ≥ 424 at y ≈ 86. From (434, 176) it goes down east of the
 // moved headland (37 u from its tip) and of the narrow Writing site (16.3 u from its deck): x ≥ 440 at y 290 and
-// x ≥ 481 at y 400. Gentle turns on screen all along.
+// x ≥ 481 at y 400. Turns on screen of 6°, 7°, 22°, 13°, −18°, 6°, −20°, 2° and 11°: the southern stretch
+// weaves slightly between the headland tip and the narrow site.
 //
 // The sea end (523, 510) is set so the edge of the 16:9 cover (x + y ≈ 997) falls `FADE_U` from the
 // end: that fade happens in the bleed. The harbor-mouth one is visible, on purpose. Validated against water,
@@ -38,8 +39,9 @@ export const LANE_OUT: readonly Readonly<Vec2>[] = [{ x: 362, y: -16 }, { x: 398
 // Return lane, in the direction of travel (sea → harbor mouth): the northern leg is the outbound lane shifted 42 u
 // east and reversed; the southern one is not a copy: it passes east of the wreck (17.6 u from its bow, in front of it
 // on screen, the safe side for occlusion) and west of the wide Writing site (27.9 u from its deck, x ≤ 500 at y 125);
-// the start (564, 467) is set on the cover edge like the outbound end. Why 42 u and not ~30: the on-screen silhouette of a freighter (60 u long) is
-// ~55 px tall, and with 30 or 36 u of lateral separation two freighters side by side overlap; 42 u is
+// the start (564, 467) is set on the cover edge like the outbound end. Turns on screen of 0°, −12°, −25°, 37° (the
+// sharpest, at (520, 200)), −20°, −8° and −6°. Why 42 u and not ~30: the on-screen silhouette of a freighter (60 u
+// long) is ~55 px tall, and with 30 or 36 u of lateral separation two freighters side by side overlap; 42 u is
 // the minimum without overlap (minimum separation between centers 41.2 u). The launch stays far. Validated like
 // the outbound lane and with the silhouettes of two freighters, one per lane, that never touch on screen.
 export const LANE_BACK: readonly Readonly<Vec2>[] = [{ x: 564, y: 467 }, { x: 548, y: 330 }, { x: 540, y: 262 }, { x: 520, y: 200 }, { x: 482, y: 144 }, { x: 477, y: 102 }, { x: 461, y: 66 }, { x: 434, y: 18 }, { x: 397, y: -39 }];

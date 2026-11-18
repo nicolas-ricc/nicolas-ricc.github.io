@@ -127,6 +127,8 @@ La posición de `antes-cover` se verificó también en el lab real a 1600 × 900
 
 ## Después
 
+*Nota (#425): los carriles cambiaron su tramo sur en #425 (la vuelta pasa ahora al este del pecio). Esta sección registra los de #87; el test de la tabla de capturas instantáneas la valida contra esa geometría, fijada como literales.*
+
 Las capturas "después" se tomaron en el lab real, `http://localhost:5173/lab/world.html`, con agent-browser, PixiJS DevTools 2.3.1 y el ticker detenido con el método A del "antes" (método del time-lapse), a 1600 × 900 a 2x (PNG de 3200 × 1800). Las del "antes" salieron en su mayoría del sitio, no del lab; el encuadre cover es el mismo (contenedor en (625,63; 157,14), escala 1,4904), así que son comparables. La discrepancia de base de URL (`CLAUDE.md` dice `/map/` y `vite.config.ts` fija `/`) está registrada en #99. La cota del reloj inicial de los animadores antes de enganchar el ticker fue de 13,0 s reales en el time-lapse, 5,9 s en las instantáneas y 7,0 s en las de conjunto, muy por debajo de los 25 s que el margen de las capturas tolera.
 
 ### Inventario después
@@ -187,8 +189,6 @@ Lectura: dos trazas paralelas parten de la bocana, a la derecha de la punta del 
 Los dos pares comparativos del issue: `antes-cover.png` contra [despues-cover-1](assets/85-barcos/despues-cover-1.png), y [antes-recorrido](assets/85-barcos/antes-recorrido.png) contra [despues-recorrido](assets/85-barcos/despues-recorrido.png).
 
 ### Capturas instantáneas
-
-*Nota (#425): los carriles cambiaron su tramo sur en #425. Esta tabla registra los de #87; su test la valida contra esa geometría, fijada como literales.*
 
 Seis capturas del cover con el ticker detenido, separadas 196 s (T/6 = 195,4 s). Los estados salen de `shipStateAt((fase·CYCLE_MS + t) % CYCLE_MS)`, con el script de abajo; la distancia es la recorrida a lo largo del carril. En todas las capturas los tres barcos están a alpha 1, a 55 s o más de un borde de estado o de fade. "Yendo" y "Volviendo" listan los barcos a alpha 1 en cada carril. Las 18 posiciones en pantalla vistas coinciden con las proyectadas (error de unos 15 px sobre 2000).
 
