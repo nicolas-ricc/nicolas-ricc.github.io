@@ -249,7 +249,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   // the house is 8 × 6 (private in sea.ts)
   { id: "casa-farero", title: "Keeper's house", zone: "blog", group: "sea", kind: "region",
     box: { x0: KEEPER.x - M, y0: KEEPER.y - M, x1: KEEPER.x + 8 + M, y1: KEEPER.y + 6 + M }, h: 13 }, // on the point, z ≈ 7
-  // the two buoys of the shoal south of the point, 50 u apart
+  // the two buoys of the open sea off the east coast, west of the outbound lane and well north of the moved point (y ≈ 290), 50 u apart
   { id: "boyas", title: "Buoys", zone: "blog", group: "sea", kind: "region",
     box: { x0: Math.min(...buoysX) - 5, y0: Math.min(...buoysY) - 5, x1: Math.max(...buoysX) + 5, y1: Math.max(...buoysY) + 5 }, h: 24 }, // the Writing platform sign (top 23.21) falls in the box: h is the smallest integer above it
   // the hull is 40 u long at 30°: it reaches (WRECK.x + 35, WRECK.y + 20); the wreck's buoy is inside

@@ -7,8 +7,8 @@ The site is an isometric night map in three zones (Portfolio, Resume, Blog). The
 Code: `src/world/veil.ts` (`VEIL_ALPHA`, `ACCENT_DIM`, `focusAlphas`, `veilPolygons`, `accentsByZone`), `src/world/stage.ts` (`setFocus`).
 
 ### Zone
-(Zona.) One of the three clickable regions of the world, `"portfolio"`, `"cv"` (Resume) or `"blog"`; the ids are also the routes. A point belongs to a zone by geography, not by a straight split: `worldZoneAt(x, y)` returns Portfolio for the headland, the reef and its shore (the lighthouse caps the shipyard), Resume for the seawall shore, and Blog only for the open sea. The site's hit test tries the signs first (`zoneAtScreen`) and falls back to `worldZoneAt`. The main split is `ZONE_SPLIT_X` (344) plus `shoreWidth(y)`: land west of it is Portfolio for y < `ZONE_SPLIT_Y` (90) and Resume for y >= 90, except `STATION_LAND` (the terminal station, x 96..198, y 90..146), which stays Portfolio; east of it is Blog. The same function classifies the veil cells, the static lights and the hit test.
-Code: `src/map/geo.ts` (`WorldZone`, `worldZoneAt`, `ZONE_SPLIT_Y`, `STATION_LAND`), `src/world/veil.ts` (`WORLD_ZONES`), `src/world/signs.ts` (`zoneAtScreen`).
+(Zona.) One of the three clickable regions of the world, `"portfolio"`, `"cv"` (Resume) or `"blog"`; the ids are also the routes. A point belongs to a zone by geography, not by a straight split: `worldZoneAt(x, y)` returns Blog for the headland, its reef and its shore east of `ZONE_SPLIT_X` (the headland moved to the island's east coast in #426, and the `x >= ZONE_SPLIT_X` guard keeps the promenade in Resume), Resume for the seawall shore, and Blog for the open sea. The site's hit test tries the signs first (`zoneAtScreen`) and falls back to `worldZoneAt`. The main split is `ZONE_SPLIT_X` (344) plus `shoreWidth(y)`: land west of it is Portfolio for y < `ZONE_SPLIT_Y` (90) and Resume for y >= 90, except `STATION_LAND` (the terminal station, x 96..198, y 90..146), which stays Portfolio; east of it is Blog. The same function classifies the veil cells, the static lights and the hit test.
+Code: `src/map/geo.ts` (`WorldZone`, `worldZoneAt`, `ZONE_SPLIT_Y`, `STATION_LAND`, `HEADLAND`, `HEADLAND_SHIFT`), `src/world/veil.ts` (`WORLD_ZONES`), `src/world/signs.ts` (`zoneAtScreen`).
 
 ### Rail lands
 (Playas ferroviarias.) The band `y 129..158` of Resume around the west train track, just south of the seam and the station land: freight lots, a siding with a parked freight train and a fence on its edges. The fence and everything south of the track obey the train's occlusion rule of the station (south of the track, `y_min − 1.4·z_max ≥ 134.5`), so that nothing hides the stopped or moving train.
@@ -59,7 +59,7 @@ Code: `src/scenes/sea-anim.ts` (`LANE_OUT`, `LANE_BACK`, `LANE_SPEED`, `shipStat
 Code: `src/lab/exhibits.ts` (`Exhibit`, `EXHIBITS`, `GROUPS`, `pickExhibit`, `stepExhibit`), `src/lab/crop.ts` (`contextScene`, `contextAnimators`), `src/lab/frame.ts` (`contentFrame`), `src/lab/storybook.ts`.
 
 ### Landmark
-The one reference point per zone used to frame it: the gantry crane for Portfolio, the office tower for Resume and the lighthouse for Blog, in world coordinates. Not to be confused with a landmark recipe (see Landmark recipe).
+The one reference point per zone used to frame it: the gantry crane for Portfolio, the office tower for Resume and the lighthouse for Blog (at (410, 290) since #426), in world coordinates. Not to be confused with a landmark recipe (see Landmark recipe).
 Code: `src/scenes/world.ts` (`LANDMARKS`, `WorldScene.landmarks`).
 
 ### Bleed

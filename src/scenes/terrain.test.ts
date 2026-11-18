@@ -272,7 +272,7 @@ describe("buildTerrain", () => {
     expect([...a.keys()].filter((k) => b.has(k)).length).toBeGreaterThan(10);
     for (const [k, z] of a) if (b.has(k)) expect(b.get(k)).toBe(z);
     const { x0, x1, y1 } = STATION_LAND;
-    expect(allTris(p).every((t) => t.pts.every((v) => v.y <= ZONE_SPLIT_Y + CELL || (v.y <= y1 + CELL && v.x >= x0 - CELL && v.x <= x1 + CELL) || distToHeadland(v.x, v.y) < SHORE_W + CELL))).toBe(true); // or the headland and its shore, Blog by geography (#426)
+    expect(allTris(p).every((t) => t.pts.every((v) => v.y <= ZONE_SPLIT_Y + CELL || (v.y <= y1 + CELL && v.x >= x0 - CELL && v.x <= x1 + CELL)))).toBe(true);
   });
   it("the asphalt is nearly flat and comes out as its own ground", () => {
     const m = buildTerrain(createRng(7), ["cv"]);

@@ -38,6 +38,7 @@ describe("world", () => {
     for (let y = -60; y < 336; y += 6) {
       const x = ZONE_SPLIT_X + shoreWidth(y) - 0.5;
       if (!inHeadland(x, y) && distToHeadland(x, y) >= SHORE_W) expect(worldZoneAt(x, y), `${x},${y}`).not.toBe("blog");
+      else expect(worldZoneAt(x, y), `${x},${y}`).toBe("blog");
     }
   });
 

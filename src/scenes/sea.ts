@@ -20,7 +20,7 @@ export interface SeaScene { ground: Solid[]; solids: Solid[]; accents: Accent[];
 export const LIGHTHOUSE = { x: 396 + HEADLAND_SHIFT.x, y: 118 + HEADLAND_SHIFT.y, z: 7 } as const;
 export const KEEPER = { x: 372 + HEADLAND_SHIFT.x, y: 108 + HEADLAND_SHIFT.y } as const;
 // Relocated in #87: the outbound leg went through the old buoy (420, 80) and a ship west or north of a solid
-// that overlaps it on screen ends up behind. The buoys mark the shoal south of the point, west of
+// that overlaps it on screen ends up behind. The buoys stay at their site (the point moved south to y ≈ 290 in #426), west of
 // the outbound leg (40 and 46 u from the lane: the ships pass in front). The wreck stays in the trench (its stern sits
 // ~16 u east of the slope, `abyssX(262)` ≈ 474) and the return leg passes east of it,
 // 17.6 u from its bow, in front of it on screen.
