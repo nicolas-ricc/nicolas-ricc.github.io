@@ -8,7 +8,7 @@ import { SIGN_FONT } from "../kit/legibility";
 import { CHANCERY_FACE, CHANCERY_X, marqueeLayout } from "../kit/marquee";
 import { CHANCERY_WRITING } from "../kit/chancery-writing";
 import { pointInPolygon } from "../map/geo";
-import { BLOG_SIGN, DECK_HALF, PLATFORM_DECK, PLATFORM_SITE, WRITING_CAP, seaPlatform, seaPlatformAt } from "./sign-platform";
+import { BLOG_SIGNS, DECK_HALF, PLATFORM_DECK, PLATFORM_SITES, WRITING_CAP, seaPlatform, seaPlatformAt, type WritingSite } from "./sign-platform";
 
 const build = () => { const out: Solid[] = [], accents: Accent[] = []; seaPlatform(out, accents); return { out, accents }; };
 const near = (a: number, b: number) => Math.abs(a - b) <= 1e-6;
@@ -19,6 +19,17 @@ const isDeck = (s: Solid) => s.kind === "poly" && s.mat === "deck";
 const DECK = PLATFORM_DECK.flatMap((q) => [q.x, q.y]);
 /** True when the plan of `s` (its tessellated points) lies on the deck at the origin. */
 const onDeck = (s: Solid) => tessellateAll(s).every((f) => f.pts.every((p) => pointInPolygon(p.x, p.y, DECK)));
+
+/** Same JSON shape and keys, every number within 1e-9, every other leaf equal. */
+function expectClose(a: unknown, b: unknown, path = "$"): void {
+  if (typeof a === "number" && typeof b === "number") { expect(Math.abs(a - b), path).toBeLessThanOrEqual(1e-9); return; }
+  if (a !== null && b !== null && typeof a === "object" && typeof b === "object") {
+    expect(Object.keys(a).sort(), path).toEqual(Object.keys(b).sort());
+    for (const k of Object.keys(a)) expectClose((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k], `${path}.${k}`);
+    return;
+  }
+  expect(a, path).toEqual(b);
+}
 
 describe("sea platform (Writing, after #374)", () => {
   it("the deck is a strip along u = (1, −1)/√2, 2·DECK_HALF long and 10 deep, its top at z 1.6", () => {
@@ -109,18 +120,23 @@ describe("sea platform (Writing, after #374)", () => {
   });
 });
 
-const site = () => { const out: Solid[] = [], accents: Accent[] = []; seaPlatformAt(out, accents); return { out, accents }; };
+const at = (w: WritingSite) => { const out: Solid[] = [], accents: Accent[] = []; seaPlatformAt(out, accents, w); return { out, accents }; };
 const isPanel = (s: Solid) => s.kind === "poly" && s.mat === "officeDark";
 const N = { x: Math.SQRT1_2, y: Math.SQRT1_2 };
 
-describe("Writing sign in Black Chancery, with its backing panel", () => {
-  it("PLATFORM_SITE is (392, 178, 0)", () => {
-    expect(PLATFORM_SITE).toEqual({ x: 392, y: 178, z: 0 });
+describe("the two Writing sites (#427)", () => {
+  it("PLATFORM_SITES: wide (550, 125, 0) and tall (440, 400, 0)", () => {
+    expect(PLATFORM_SITES).toEqual({ wide: { x: 550, y: 125, z: 0 }, tall: { x: 440, y: 400, z: 0 } });
   });
-  it("BLOG_SIGN: Writing in Black Chancery, cyan, the font's x-height and stem as stroke, on one diagonal plane", () => {
+});
+
+describe.each(["wide", "tall"] as const)("Writing sign in Black Chancery, with its backing panel, %s site", (w) => {
+  const BLOG_SIGN = BLOG_SIGNS[w], site = () => at(w), SITE = PLATFORM_SITES[w];
+  it("BLOG_SIGNS[site]: Writing in Black Chancery, cyan, the font's x-height and stem as stroke, on one diagonal plane", () => {
     expect(BLOG_SIGN).toMatchObject({ id: "plataforma", text: "Writing", size: WRITING_CAP, width: SIGN_FONT.width, color: "cyan", xHeight: CHANCERY_X * WRITING_CAP, stroke: CHANCERY_FACE * WRITING_CAP });
     expect(BLOG_SIGN.facade).toBeUndefined();
     expect(BLOG_SIGN.glyphs.map((g) => g.char).join("")).toBe("Writing");
+    expect(BLOG_SIGN.glyphs).toHaveLength(7);
     const lay = marqueeLayout(WRITING_CAP, 0, CHANCERY_WRITING);
     BLOG_SIGN.glyphs.forEach((g, i) => {
       expect(g.plane.u.x).toBeCloseTo(Math.SQRT1_2, 12); expect(g.plane.u.y).toBeCloseTo(-Math.SQRT1_2, 12);
@@ -128,7 +144,7 @@ describe("Writing sign in Black Chancery, with its backing panel", () => {
       expect(g.quads).toHaveLength(lay[i]!.quads.length);
     });
   });
-  it("seaPlatformAt draws the sign from BLOG_SIGN: its cyan polys are the spec's triangles at 0.85", () => {
+  it("seaPlatformAt draws the sign from BLOG_SIGNS[site]: its cyan polys are the spec's triangles at 0.85", () => {
     const want = BLOG_SIGN.glyphs.flatMap((g) => g.quads).map((pts) => ({ kind: "poly", pts, color: "cyan", alpha: 0.85 }));
     expect(site().accents.filter((a) => a.kind === "poly")).toEqual(want);
   });
@@ -137,6 +153,7 @@ describe("Writing sign in Black Chancery, with its backing panel", () => {
     expect(isPanel(BLOG_SIGN.backing[0]!)).toBe(true);
     const panels = site().out.filter(isPanel);
     expect(panels).toEqual(BLOG_SIGN.backing);
+    expect(panels[0]).not.toBe(BLOG_SIGN.backing[0]); // a copy: a consumer that mutates the layer must not reach BLOG_SIGNS
   });
   it("the panel is 0.3 thick, 0.06 behind the letters' plane", () => {
     const p = BLOG_SIGN.backing[0]!;
@@ -174,10 +191,11 @@ describe("Writing sign in Black Chancery, with its backing panel", () => {
     expect(pb.min.z).toBeCloseTo(lo!.from.z + 0.075, 9);
     expect(pb.max.z).toBeCloseTo(hi!.from.z - 0.075, 9);
   });
-  it("seaPlatform is seaPlatformAt moved by −PLATFORM_SITE, solid by solid and accent by accent", () => {
+  it("seaPlatform is seaPlatformAt(site) moved by −PLATFORM_SITES[site], solid by solid and accent by accent", () => {
     const o = build(), s = site();
-    const r = (v: unknown) => JSON.parse(JSON.stringify(v, (_k, x: unknown) => (typeof x === "number" ? Math.round(x * 1e9) / 1e9 + 0 : x)));
-    expect(r(o.out)).toEqual(r(s.out.map((x) => translate(x, -PLATFORM_SITE.x, -PLATFORM_SITE.y))));
-    expect(r(o.accents)).toEqual(r(s.accents.map((x) => translateAccent(x, -PLATFORM_SITE.x, -PLATFORM_SITE.y))));
+    // compared with a tolerance: rounding to 1e-9 hit a boundary case (a value at x.xxxxxxxx5)
+    const r = (v: unknown) => JSON.parse(JSON.stringify(v)) as unknown;
+    expectClose(r(o.out), r(s.out.map((x) => translate(x, -SITE.x, -SITE.y))));
+    expectClose(r(o.accents), r(s.accents.map((x) => translateAccent(x, -SITE.x, -SITE.y))));
   });
 });

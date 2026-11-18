@@ -5,14 +5,16 @@ import { project } from "../iso/project";
 import { tessellate } from "../iso/solids";
 import type { SignSpec } from "../kit/legibility";
 import { pointInPolygon, worldZoneAt } from "../map/geo";
-import { ZONE_IDS } from "../map/zones";
-import { BLOG_SIGN } from "../scenes/sign-platform";
+import { ZONE_IDS, type ZoneId } from "../map/zones";
+import { BLOG_SIGNS, type WritingSite } from "../scenes/sign-platform";
 import { RESUME_SIGN } from "../scenes/sign-crown";
 import { TINKER_SIGN } from "../scenes/sign-tinker";
-import { labelLayout, SIGN_ORDER, signBox, signPolygons, SIGNS, zoneAtScreen, type ScreenBox } from "./signs";
-import { coverView, pointerToWorld, unproject, type View } from "./view";
+import { labelLayout, SIGN_ORDER, signBox, signPolygons, zoneAtScreen, zoneSigns, type ScreenBox } from "./signs";
+import { coverView, pointerToWorld, type View } from "./view";
 
-const ALL = Object.entries(SIGNS) as [keyof typeof SIGNS, SignSpec][];
+const SITES: readonly WritingSite[] = ["wide", "tall"];
+/** Every sign at either Writing site, once (#427): the Resume and Portfolio signs are the same at both. */
+const ALL: (readonly [ZoneId, SignSpec, WritingSite])[] = [...new Map(SITES.flatMap((site) => SIGN_ORDER.map((id) => [zoneSigns(site)[id], [id, zoneSigns(site)[id], site]] as const))).values()];
 const ID: View = { x: 0, y: 0, scale: 1 };
 
 /** Screen bounding box of a set of flat polygons. */
@@ -24,11 +26,15 @@ const inSign = (s: SignSpec, x: number, y: number): boolean => signPolygons(s).s
 const toHost = (b: ScreenBox, v: View): ScreenBox =>
   ({ minX: b.minX * v.scale + v.x, minY: b.minY * v.scale + v.y, maxX: b.maxX * v.scale + v.x, maxY: b.maxY * v.scale + v.y });
 
-describe("SIGNS (#393)", () => {
-  it("SIGNS maps each zone to its sign and SIGN_ORDER is portfolio, cv, blog", () => {
-    expect(SIGNS.portfolio).toBe(TINKER_SIGN);
-    expect(SIGNS.cv).toBe(RESUME_SIGN);
-    expect(SIGNS.blog).toBe(BLOG_SIGN);
+describe("zoneSigns (#393, #427)", () => {
+  it("zoneSigns(site) maps each zone to its sign, Writing at that site, and SIGN_ORDER is portfolio, cv, blog", () => {
+    for (const site of SITES) {
+      expect(zoneSigns(site).portfolio).toBe(TINKER_SIGN);
+      expect(zoneSigns(site).cv).toBe(RESUME_SIGN);
+      expect(zoneSigns(site).blog).toBe(BLOG_SIGNS[site]);
+      expect(zoneSigns(site)).toBe(zoneSigns(site)); // one record per site: the signBox/signPolygons memos stay warm
+    }
+    expect(ALL).toHaveLength(4);
     expect(SIGN_ORDER).toEqual(["portfolio", "cv", "blog"]);
     expect([...SIGN_ORDER].sort()).toEqual([...ZONE_IDS].sort());
   });
@@ -68,7 +74,7 @@ describe("signPolygons (#393)", () => {
   });
 
   // a View is a uniform scale plus an offset, so disjoint at scale 1 means disjoint at every camera
-  it("the three signs' polygons are disjoint", () => {
+  it("the signs' polygons are disjoint, both Writing sites included", () => {
     const boxes = ALL.map(([, s]) => boundsOf(signPolygons(s)));
     for (let i = 0; i < boxes.length; i++) {
       for (let j = i + 1; j < boxes.length; j++) {
@@ -100,37 +106,35 @@ describe("signBox (#393)", () => {
 describe("zoneAtScreen (#393)", () => {
   it("zoneAtScreen on the center of each word returns its zone", () => {
     for (const v of [ID, coverView(1366, 657)]) {
-      for (const [id, s] of ALL) {
+      for (const [id, s, site] of ALL) {
         const b = toHost(signBox(s), v);
-        expect(zoneAtScreen(v, (b.minX + b.maxX) / 2, (b.minY + b.maxY) / 2), `${id} at scale ${v.scale}`).toBe(id);
+        expect(zoneAtScreen(v, (b.minX + b.maxX) / 2, (b.minY + b.maxY) / 2, site), `${site} ${id} at scale ${v.scale}`).toBe(id);
       }
     }
   });
 
-  // A10: the Writing platform stands over ground that the geography gives to Resume
-  it("zoneAtScreen prefers the sign over the geography beneath it", () => {
-    const b = boundsOf(signPolygons(BLOG_SIGN));
-    let found: { x: number; y: number } | undefined;
-    for (let x = b.minX; x <= b.maxX && !found; x += 0.5) {
-      for (let y = b.minY; y <= b.maxY && !found; y += 0.5) {
-        const g = unproject(x, y);
-        if (inSign(BLOG_SIGN, x, y) && worldZoneAt(g.x, g.y) === "cv") found = { x, y };
+  // A10: since #427 every sign stands over its own zone's geography (0 of ~22 000 probes lie over another), so precedence over the geography
+  // is checked with a mocked geography in signs-precedence.test.ts; here every point of every sign must answer its own zone
+  it("every point of every sign answers its zone", () => {
+    for (const [id, s, site] of ALL) {
+      const b = boundsOf(signPolygons(s));
+      for (let x = b.minX; x <= b.maxX; x += 0.5) for (let y = b.minY; y <= b.maxY; y += 0.5) {
+        if (!inSign(s, x, y)) continue;
+        expect(zoneAtScreen(ID, x, y, site), `${site} ${id} ${x},${y}`).toBe(id);
       }
     }
-    expect(found).toBeDefined();
-    expect(zoneAtScreen(ID, found!.x, found!.y)).toBe("blog");
   });
 
   // a 20 px grid of the laptop host, without the points over a sign
-  it("zoneAtScreen away from the signs equals worldZoneAt(pointerToWorld(…))", () => {
-    const v = coverView(1366, 657);
+  it.each(SITES)("zoneAtScreen away from the signs equals worldZoneAt(pointerToWorld(…)), %s site", (site) => {
+    const v = coverView(1366, 657), signs = Object.values(zoneSigns(site));
     let checked = 0;
     for (let px = 0; px <= 1366; px += 20) {
       for (let py = 0; py <= 657; py += 20) {
         const sx = (px - v.x) / v.scale, sy = (py - v.y) / v.scale;
-        if (ALL.some(([, s]) => inSign(s, sx, sy))) continue;
+        if (signs.some((s) => inSign(s, sx, sy))) continue;
         const g = pointerToWorld(v, px, py);
-        expect(zoneAtScreen(v, px, py), `${px},${py}`).toBe(worldZoneAt(g.x, g.y));
+        expect(zoneAtScreen(v, px, py, site), `${px},${py}`).toBe(worldZoneAt(g.x, g.y));
         checked++;
       }
     }
@@ -141,9 +145,9 @@ describe("zoneAtScreen (#393)", () => {
 describe("labelLayout (#393)", () => {
   const PAD = { hw: 50, hh: 20 };
 
-  it("labelLayout at coverView(1366, 657) puts the three on their sign", () => {
+  it("labelLayout at coverView(1366, 657) puts the three on their sign, Writing at the wide site", () => {
     const v = coverView(1366, 657);
-    for (const [id, s] of ALL) {
+    for (const [id, s] of Object.entries(zoneSigns("wide"))) {
       const b = signBox(s), l = labelLayout(b, v, { w: 1366, h: 657 }, PAD);
       expect(l.mode, id).toBe("sign");
       if (l.mode !== "sign") continue;
@@ -154,12 +158,12 @@ describe("labelLayout (#393)", () => {
     }
   });
 
-  // Writing falls outside the phone window and sticks to its right edge
+  // Writing at the wide site falls outside the phone window and sticks to its right edge (the tall site, its fix, is chosen in #428)
   it("labelLayout at coverView(390, 750): RESUME and PORTFOLIO on their sign, Writing on the right edge", () => {
     const v = coverView(390, 750), host = { w: 390, h: 750 };
     expect(labelLayout(signBox(RESUME_SIGN), v, host, PAD).mode).toBe("sign");
     expect(labelLayout(signBox(TINKER_SIGN), v, host, PAD).mode).toBe("sign");
-    const w = labelLayout(signBox(BLOG_SIGN), v, host, PAD);
+    const w = labelLayout(signBox(BLOG_SIGNS.wide), v, host, PAD);
     expect(w.mode).toBe("edge");
     expect(w.x).toBe(390 - PAD.hw);
     expect(w.y).toBeGreaterThanOrEqual(PAD.hh);

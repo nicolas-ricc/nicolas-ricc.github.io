@@ -4,6 +4,7 @@ import type { Animator } from "../scenes/animator";
 import { cityAnimator } from "../scenes/city-animator";
 import { factoryAnimator } from "../scenes/factory-animator";
 import { fairAnimator } from "../scenes/fair-animator";
+import { platformAnimator, type PlatformAnimator } from "../scenes/platform-animator";
 import { railAnimator } from "../scenes/rail-animator";
 import { seaAnimator } from "../scenes/sea-animator";
 import { shipyardAnimator } from "../scenes/shipyard-animator";
@@ -14,7 +15,7 @@ import { world, type WorldScene } from "../scenes/world";
 
 /** An animator with its zone of origin (the lab's and the crops'); `null` is the water. The lights' veil does not use it: it goes by the position of each light or by the zone the layer declares. */
 export type ZonedAnimator = Animator & { zone: WorldZone | null };
-export interface Assembled { scene: WorldScene; animators: ZonedAnimator[] }
+export interface Assembled { scene: WorldScene; animators: ZonedAnimator[]; platform: PlatformAnimator | null }
 
 export const tag = (a: Animator, zone: WorldZone | null): ZonedAnimator => Object.assign(a, { zone });
 
@@ -31,6 +32,9 @@ export function assembleWorld(zones: readonly WorldZone[] | undefined, opts: { r
   if (scene.factory) animators.push(tag(factoryAnimator({ ...scene.factory, stacks: [...scene.factory.stacks, ...(scene.hinterland?.stacks ?? [])] }, createRng(SEED + 4), { reducedMotion }), "portfolio"));
   if (scene.tech) animators.push(tag(techAnimator(scene.tech, createRng(SEED + 5), { reducedMotion }), "cv"));
   if (scene.fair) animators.push(tag(fairAnimator(scene.fair, { reducedMotion }), "portfolio"));
+  // the Writing platform: relocatable (#427), so it lives in its own animator, right before the sea's
+  const platform = scene.sea ? platformAnimator() : null;
+  if (platform) animators.push(tag(platform, "blog"));
   if (scene.sea) animators.push(tag(seaAnimator(scene.sea, { reducedMotion }), "blog"));
-  return { scene, animators };
+  return { scene, animators, platform };
 }

@@ -8,15 +8,17 @@ import { convexHull, polyline, v3, type Vec2 } from "../iso/geometry";
 import { project } from "../iso/project";
 import { bounds, hullRings, isFlat, type Bounds, type Solid } from "../iso/solids";
 import { HEADLAND, WORLD, inCoverQuad, pointInPolygon, worldZoneAt } from "../map/geo";
-import { signBox, SIGN_ORDER, SIGNS } from "../world/signs";
+import { signBox, SIGN_ORDER, zoneSigns } from "../world/signs";
 import { BEAM_INNER, BEAM_LEN, BEAM_PERIOD_MS, CYCLE_MS, FADE_U, FERRY_PAUSE_MS, FERRY_ROUTE, FERRY_SPEED, KEEPER_SIGN_MS, LANE_BACK, LANE_OUT, LANE_SPEED, NEON_STEP_MS, OFF_MS, PORT_MS, SHIPS, alphaAt, createSeaAnim, laneAt, laneLength, type ShipFrame } from "./sea-anim";
 import { SHIP_SPECS, ship, shipAt } from "./ships";
-import { PLATFORM_DECK } from "./sign-platform";
+import { PLATFORM_DECK, PLATFORM_SITES, seaPlatformAt } from "./sign-platform";
 import { bleedTerrainAt, terrainAt } from "./terrain";
 import { world } from "./world";
 
 const WATER = new Set(["water", "sea", "shore", "abyss"]);
 type Static = { b: Bounds; sb: ReturnType<typeof screenBounds>; sh: Vec2[] };
+/** The Writing platform's solids at both sites (#427): it left the static world for platformAnimator, and the lanes must clear it at either site. */
+const platforms = (): Solid[] => (["wide", "tall"] as const).flatMap((site) => { const out: Solid[] = []; seaPlatformAt(out, [], site); return out; });
 const staticsOf = (solids: Solid[]): Static[] => solids.map((s) => { const b = bounds(s); return { b, sb: screenBounds(b), sh: screenHull(b) }; });
 /** Alignment box of the freighter centered at `p` (z −1..13) and a check that no static solid overlapping it on screen covers it. */
 const expectNotBehind = (statics: Static[], p: { x: number; y: number }, heading: number): void => {
@@ -47,7 +49,7 @@ describe("route", () => {
   });
 
   it("no point of the lane ends up behind a static solid that overlaps it on screen", () => {
-    const statics = staticsOf(world(7).solids);
+    const statics = staticsOf([...world(7).solids, ...platforms()]);
     for (let d = 0; d <= laneLength("out"); d += 4) {
       const p = laneAt("out", d);
       expectNotBehind(statics, p, p.heading);
@@ -95,7 +97,7 @@ describe("two lanes", () => {
   });
 
   it("no point of LANE_BACK ends up behind a static solid that overlaps it on screen", () => {
-    const statics = staticsOf(world(7).solids);
+    const statics = staticsOf([...world(7).solids, ...platforms()]);
     for (let d = 0; d <= laneLength("back"); d += 4) {
       const p = laneAt("back", d);
       expectNotBehind(statics, p, p.heading);
@@ -127,8 +129,8 @@ describe("two lanes", () => {
   });
 
   it("the lanes leave ≥ 14 u to the Writing decks at both sites and ≥ 14 u to the moved headland polygon (#423)", () => {
-    // the sites of #423 (sign-platform.ts adopts them in a later child) and the headland moved in #426
-    const SITES: Vec2[] = [{ x: 550, y: 125 }, { x: 440, y: 400 }];
+    // the two Writing sites (#427) and the headland moved in #426
+    const SITES: Vec2[] = Object.values(PLATFORM_SITES);
     const MOVED_HEADLAND: Vec2[] = HEADLAND.map(([x, y]) => ({ x, y }));
     const decks = SITES.map((s) => PLATFORM_DECK.map((q) => ({ x: q.x + s.x, y: q.y + s.y })));
     const toSeg = (p: Vec2, a: Vec2, b: Vec2): number => {
@@ -488,8 +490,10 @@ describe("fair launch tick chunking", () => {
 describe("zone signs and the lanes (#390, #394)", () => {
   it("no ship piece or launch piece crosses the letters of any sign on screen", () => {
     // the letters are accents, drawn over every solid: a ship crossing them would show behind them
-    const rects = SIGN_ORDER.map((id) => {
-      const box = signBox(SIGNS[id]), { minX: x0, minY: y0, maxX: x1, maxY: y1 } = box;
+    // both Writing sites (#427); the Resume and Portfolio signs are the same at both, so they are probed once
+    const signs = [...new Map((["wide", "tall"] as const).flatMap((site) => SIGN_ORDER.map((id) => [zoneSigns(site)[id], `${site} ${id}`] as const))).entries()];
+    const rects = signs.map(([sign, id]) => {
+      const box = signBox(sign), { minX: x0, minY: y0, maxX: x1, maxY: y1 } = box;
       return { id, box, rect: [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }] as Vec2[] };
     });
     const bad: string[] = [];

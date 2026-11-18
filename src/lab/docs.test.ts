@@ -6,11 +6,9 @@ import { COVER_LAPTOP, COVER_PHONE, layoutGaps, SIGN_FONT, signMetrics, staticCo
 import { counterClearance, letterGaps, measureText, rhythm } from "../kit/lettering";
 import { TOWER } from "../scenes/city-grid";
 import { CROWN_SITE } from "../scenes/sign-crown";
-import { PLATFORM_DECK, PLATFORM_SITE } from "../scenes/sign-platform";
+import { PLATFORM_DECK } from "../scenes/sign-platform";
 import { SHIPYARD_HALLS, TINKER_SITE } from "../scenes/sign-tinker";
-import { buildRenderList } from "../iso/render-list";
-import { assembleWorld } from "../world/assemble";
-import { labelLayout, signBox, SIGN_ORDER, SIGNS } from "../world/signs";
+import { labelLayout, signBox, SIGN_ORDER, zoneSigns } from "../world/signs";
 import { coverView } from "../world/view";
 import { EXHIBITS } from "./exhibits";
 
@@ -552,9 +550,10 @@ describe("zone signs redesign documentation (#374)", () => {
   });
   it("§5 records the three candidate sites with their values", () => {
     const sites = between(spec, /^## 5\. /m, /^## 6\. /m);
-    // built from the constants, with the spec's U+2212 minus, so a moved site fails here
-    const at = (v: { x: number; y: number; z: number }, z = true) => `(${[v.x, v.y, ...(z ? [v.z] : [])].join(", ").replace(/-/g, "−")})`;
-    for (const s of ["CROWN_SITE", at(CROWN_SITE), "TINKER_SITE", at(TINKER_SITE), "PLATFORM_SITE", at(PLATFORM_SITE, false)]) expect(sites, s).toContain(s);
+    // built from the constants, with the spec's U+2212 minus, so a moved site fails here; the platform's is a literal since #427
+    // (it left PLATFORM_SITE for two sites, PLATFORM_SITES, and this spec records the site of its time)
+    const at = (v: { x: number; y: number; z: number }) => `(${[v.x, v.y, v.z].join(", ").replace(/-/g, "−")})`;
+    for (const s of ["CROWN_SITE", at(CROWN_SITE), "TINKER_SITE", at(TINKER_SITE), "PLATFORM_SITE", "(392, 178)"]) expect(sites, s).toContain(s);
   });
   it("§8 exists after §7 with its four parts and names the report, the font, the contexts and the sites", () => {
     expect(spec.search(/^## 8\. Desvíos y medición$/m)).toBeGreaterThan(spec.search(/^## 7\. /m));
@@ -792,21 +791,32 @@ describe("zone signs integration (#394)", () => {
     expect(spec).not.toBe("");
     expect(spec).toMatch(/^\*\*Fecha:\*\* 2026-11-17$/m);
     expect(spec).toMatch(/^\*\*Estado:\*\* implementado$/m);
+    const lines = spec.split("\n"), estado = lines.indexOf("**Estado:** implementado");
+    expect(lines[estado + 1]).toBe("**Superada en parte:** #423 (spec 2026-11-18) muda la plataforma de Writing a dos sitios y cambia `COVER_FOCUS_U`; las tablas de §3, §4 y §5 describen el estado en #394.");
     const heads = [1, 2, 3, 4, 5, 6, 7].map((n) => spec.search(new RegExp(`^## ${n}\\. `, "m")));
     for (const h of heads) expect(h).toBeGreaterThanOrEqual(0);
     for (let k = 1; k < heads.length; k++) expect(heads[k]!).toBeGreaterThan(heads[k - 1]!);
   });
   it("§3 carries the final site of each sign, as the constants say", () => {
     const sites = part(3);
-    const rows = { CROWN_SITE: at(CROWN_SITE), TINKER_SITE: at(TINKER_SITE), PLATFORM_SITE: at(PLATFORM_SITE, false) };
+    // the platform's row is a literal since #427: the spec is history, and the platform now has two sites (PLATFORM_SITES)
+    const rows = { CROWN_SITE: at(CROWN_SITE), TINKER_SITE: at(TINKER_SITE), PLATFORM_SITE: "(392, 178)" };
     for (const [name, value] of Object.entries(rows)) expect(row(sites, `| \`${name}\` |`), name).toContain(value);
   });
   it("§4 carries each sign's screen box and label mode on the laptop and the phone, as coverView and signBox compute them", () => {
     const framing = part(4);
     for (const [label, w, h] of [["laptop", 1366, 657], ["teléfono", 390, 750]] as const) {
       const v = coverView(w, h);
+      // the blog rows are literals since #427: the Writing sign left (392, 178), so its live box no longer matches the spec, which is history
+      const BLOG = { laptop: ["747.5..846.5 × 397.2..425.2", "sign"], "teléfono": ["463.2..567.8 × 447.6..477.1", "edge"] } as const;
       for (const id of SIGN_ORDER) {
-        const b = signBox(SIGNS[id]);
+        if (id === "blog") {
+          const [box, mode] = BLOG[label], line = row(framing, `| ${label} ${w}×${h} | \`blog\` |`);
+          expect(line, `${label} blog ${box}`).toContain(box);
+          expect(line, `${label} blog ${mode}`).toContain(`\`${mode}\``);
+          continue;
+        }
+        const b = signBox(zoneSigns("wide")[id]);
         const px = (n: number, o: number) => (n * v.scale + o).toFixed(1);
         const box = `${px(b.minX, v.x)}..${px(b.maxX, v.x)} × ${px(b.minY, v.y)}..${px(b.maxY, v.y)}`;
         const mode = labelLayout(b, v, { w, h }, { hw: 0, hh: 0 }).mode;
@@ -828,11 +838,9 @@ describe("zone signs integration (#394)", () => {
     const verdict = cells(row(budget, "| veredicto del bloom |"));
     expect(verdict.length).toBe(3);
     for (const v of verdict.slice(1)) expect(v).toMatch(/^`(on|fallback)`$/);
-    const { scene } = assembleWorld(undefined, { reducedMotion: true });
-    // same computation as stage.staticCount, which the dev log prints as "N static polygons"
-    const polygons = buildRenderList([...scene.terrain.ground, ...scene.ground, ...scene.solids]).length;
-    expect(num(cells(row(budget, "| polígonos estáticos |")).at(-1) ?? "")).toBe(polygons);
-    expect(num(cells(row(budget, "| acentos estáticos del mundo |")).at(-1) ?? "")).toBe(scene.accents.length);
+    // literals since #427: the spec is history, and the Writing platform left the static world (platformAnimator), so the live counts dropped
+    expect(num(cells(row(budget, "| polígonos estáticos |")).at(-1) ?? "")).toBe(46518);
+    expect(num(cells(row(budget, "| acentos estáticos del mundo |")).at(-1) ?? "")).toBe(2409);
   });
   it("§7 lists the seven site captures, and they exist", () => {
     const caps = part(7);
@@ -854,5 +862,19 @@ describe("zone signs integration (#394)", () => {
     expect(lab).toContain(NAME);
     const runtime = (paragraphs.find((p) => p.includes("coverView(host)")) ?? "").replace(/\s+/g, " ");
     for (const s of ["src/world/signs.ts", "zoneAtScreen", "labelLayout", "edge", "no external font"]) expect(runtime, s).toContain(s);
+  });
+});
+
+describe("Writing with two sites (#427)", () => {
+  const ASSETS = `${ROOT}docs/superpowers/specs/assets/423-composicion-responsive/`;
+  it("README's storybook paragraph lists the three Writing exhibits", () => {
+    const p = readme.split(/\n\s*\n/).find((x) => x.includes("zone signs of #374")) ?? "";
+    for (const id of ["`#plataforma`", "`#plataforma-escena`", "`#plataforma-escena-angosta`"]) expect(p, id).toContain(id);
+  });
+  it.each(["plataforma-escena-angosta-117.png", "sitio-1600x900-ancho.png"])("capture %s exists, 1600×900 @2", (f) => {
+    expect(existsSync(`${ASSETS}${f}`), f).toBe(true);
+    const b = readFileSync(`${ASSETS}${f}`);
+    expect(b.subarray(1, 4).toString(), f).toBe("PNG");
+    expect([b.readUInt32BE(16), b.readUInt32BE(20)]).toEqual([3200, 1800]);
   });
 });

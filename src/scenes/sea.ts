@@ -4,14 +4,13 @@ import type { Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { HEADLAND_SHIFT, inHeadland } from "../map/geo";
-import { seaPlatformAt } from "./sign-platform";
 import { headlandZ, terrainAt } from "./terrain";
 
 /**
  * Blog, static part: the rock point with the lighthouse and the keeper's house, on the island's east coast, the reef, two buoys, and in the trench the wreck with its
  * buoy (Blog landmark): a coaster split in two with the bow and
- * the stern house sticking out. The Writing sign platform (sign-platform.ts) stands in the open sea
- * between the buoys; `sea()` builds it last (#390). The ships and the animated sea are in sea-anim.ts.
+ * the stern house sticking out. The Writing sign platform is not here: it is relocatable, so
+ * platformAnimator (platform-animator.ts) draws it (#427). The ships and the animated sea are in sea-anim.ts.
  * Spec §7.
  */
 export interface SeaScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; lantern: Vec3; buoys: Vec3[]; neon: { gallery: Vec3[]; coast: Vec3[]; keeperSign: Accent } }
@@ -22,7 +21,7 @@ export const KEEPER = { x: 372 + HEADLAND_SHIFT.x, y: 108 + HEADLAND_SHIFT.y } a
 // that overlaps it on screen ends up behind. The buoys stay at their site (the point moved south to y ≈ 290 in #426), west of
 // the outbound leg (40 and 46 u from the lane: the ships pass in front). The wreck stays in the trench (its stern sits
 // ~16 u east of the slope, `abyssX(262)` ≈ 474) and the return leg passes east of it,
-// 17.6 u from its bow, in front of it on screen.
+// 21.9 u from its bow (17.6 u before #427), in front of it on screen.
 export const BUOYS: readonly Vec2[] = [{ x: 398, y: 150 }, { x: 392, y: 200 }];
 export const WRECK_BUOY = { x: 498, y: 272 } as const;
 export const WRECK = { x: 490, y: 262, heading: Math.PI / 6 } as const;
@@ -133,7 +132,7 @@ function buoysAndWreck(out: Solid[], ground: Solid[], accents: Accent[]): Vec3[]
 /**
  * Wreck (#83): a 40 u coaster split in two and sunk in the trench. The stern (`WRECK`) sits
  * ~16 u east of the slope (`abyssX(262)` ≈ 474) and the whole hull falls in `abyss`. It is not moved up to the
- * slope: that would require revalidating the lanes with the #87 validator, because the return leg passes 17.6 u east of its bow.
+ * slope: that would require revalidating the lanes with the #87 validator, because the return leg passes 21.9 u east of its bow.
  * The center of the hull is underwater; the bow sticks out (a rusty wedge with its deck and the bitt) and the
  * stern house (rusty hull band, whitewashed deckhouse with windows, funnel and mast). Local coordinates as
  * in the ships.ts kit: x from stern (0) to bow (`WRECK_LEN`), y to starboard, rotated by `WRECK.heading`.
@@ -176,7 +175,6 @@ export function sea(rng: Rng): SeaScene {
   path(ground);
   rocks(solids, rng);
   const buoys = buoysAndWreck(solids, ground, accents);
-  seaPlatformAt(solids, accents); // #390: the Writing platform, last so the accents before it keep their order
   const gallery = Array.from({ length: GALLERY_POSTS }, (_, k) => { const a = (k / GALLERY_POSTS) * Math.PI * 2; return v3(LIGHTHOUSE.x + GALLERY_R * Math.cos(a), LIGHTHOUSE.y + GALLERY_R * Math.sin(a), GALLERY_LIGHT_Z); });
   return { ground, solids, accents, lantern, buoys, neon: { gallery, coast: COAST.map((p) => v3(p.x, p.y, COAST_Z)), keeperSign } };
 }

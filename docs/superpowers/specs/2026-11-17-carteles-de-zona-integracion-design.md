@@ -2,6 +2,7 @@
 
 **Fecha:** 2026-11-17
 **Estado:** implementado
+**Superada en parte:** #423 (spec 2026-11-18) muda la plataforma de Writing a dos sitios y cambia `COVER_FOCUS_U`; las tablas de §3, §4 y §5 describen el estado en #394.
 **Cierra:** #389 (hijos #390, #391, #392, #393) y #394.
 Integra los carteles de `2026-11-15-carteles-de-zona-rediseno-design.md` y
 `2026-11-11-carteles-de-zona-assets-design.md` a la escena del sitio.

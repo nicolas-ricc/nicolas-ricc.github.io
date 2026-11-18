@@ -10,12 +10,17 @@ import type { SignSpec } from "../kit/legibility";
 import { pointInPolygon, worldZoneAt } from "../map/geo";
 import type { ZoneId } from "../map/zones";
 import { RESUME_SIGN } from "../scenes/sign-crown";
-import { BLOG_SIGN } from "../scenes/sign-platform";
+import { BLOG_SIGNS, type WritingSite } from "../scenes/sign-platform";
 import { TINKER_SIGN } from "../scenes/sign-tinker";
 import { unproject, type View } from "./view";
 
-/** Sign of each zone. */
-export const SIGNS: Record<ZoneId, SignSpec> = { portfolio: TINKER_SIGN, cv: RESUME_SIGN, blog: BLOG_SIGN };
+const bySite = new Map<WritingSite, Record<ZoneId, SignSpec>>();
+/** Sign of each zone with the Writing platform at `site` (#427). Memoized per site: `signBox`/`signPolygons` memoize by identity. */
+export function zoneSigns(site: WritingSite): Record<ZoneId, SignSpec> {
+  let out = bySite.get(site);
+  if (!out) bySite.set(site, out = { portfolio: TINKER_SIGN, cv: RESUME_SIGN, blog: BLOG_SIGNS[site] });
+  return out;
+}
 /** Tab and hit-test order. */
 export const SIGN_ORDER: readonly ZoneId[] = ["portfolio", "cv", "blog"];
 
@@ -55,9 +60,10 @@ export function signBox(spec: SignSpec): ScreenBox {
 }
 
 /** Zone under a host point: a sign wins over the geography beneath it. */
-export function zoneAtScreen(v: View, px: number, py: number): ZoneId {
+export function zoneAtScreen(v: View, px: number, py: number, site: WritingSite): ZoneId {
+  const signs = zoneSigns(site);
   const sx = (px - v.x) / v.scale, sy = (py - v.y) / v.scale;
-  for (const id of SIGN_ORDER) if (signPolygons(SIGNS[id]).some((p) => pointInPolygon(sx, sy, p))) return id;
+  for (const id of SIGN_ORDER) if (signPolygons(signs[id]).some((p) => pointInPolygon(sx, sy, p))) return id;
   const g = unproject(sx, sy);
   return worldZoneAt(g.x, g.y);
 }

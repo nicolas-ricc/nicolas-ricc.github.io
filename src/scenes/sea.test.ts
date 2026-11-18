@@ -8,13 +8,14 @@ import { HEADLAND_SHIFT, ZONE_SPLIT_X, abyssX, inHeadland, worldZoneAt } from ".
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
 import { BUOYS, CAP_R, COAST, COAST_Z, GALLERY_DECK_R, GALLERY_LIGHT_Z, GALLERY_POSTS, GALLERY_R, KEEPER, LANTERN_R, LANTERN_Z, LIGHTHOUSE, POST_H, POST_W, WRECK, WRECK_BUOY, sea, type SeaScene } from "./sea";
-import { BLOG_SIGN, seaPlatformAt } from "./sign-platform";
+import { seaPlatformAt, type WritingSite } from "./sign-platform";
+import { world } from "./world";
 import { headlandZ, terrainAt } from "./terrain";
 
 const scene = (): SeaScene => sea(createRng(7));
-/** What `seaPlatformAt` builds on its own. */
-const platform = () => { const out: Solid[] = [], accents: Accent[] = []; seaPlatformAt(out, accents); return { out, accents }; };
-const SEA_MATS: readonly Material[] = ["rock", "whitewash", "rust", "steel", "glass", "hull", "deck", "foam", "leaf", "leafDark", "boxGrey", "officeDark"]; // #390: boxGrey = hut and officeDark = sign panel of the Writing platform
+/** What `seaPlatformAt` builds on its own at `site`. */
+const platform = (site: WritingSite) => { const out: Solid[] = [], accents: Accent[] = []; seaPlatformAt(out, accents, site); return { out, accents }; };
+const SEA_MATS: readonly Material[] = ["rock", "whitewash", "rust", "steel", "glass", "hull", "deck", "foam", "leaf", "leafDark"]; // #427: the Writing platform (boxGrey hut, officeDark panel) left sea() for platformAnimator
 const water = new Set(["water", "sea", "shore", "abyss", "reef"]);
 type Cyl = Extract<Solid, { kind: "cylinder" }>;
 type Prism = Extract<Solid, { kind: "prism" }>;
@@ -104,24 +105,27 @@ describe("sea", () => {
     expect(s.solids.filter((x) => x.kind === "cone" && x.mat === "rock" && x.h === 1.5)).toHaveLength(20); // boulders on the point
   });
 
-  it("sea() builds the Writing platform at PLATFORM_SITE (#390): its solids and accents are seaPlatformAt's", () => {
-    const s = scene(), { out, accents } = platform();
-    for (const x of out) expect(s.solids).toContainEqual(x);
-    expect(s.accents.slice(-accents.length)).toEqual(accents);
-  });
+  it("sea() no longer builds the Writing platform (#427): it lives in platformAnimator", () => {
+    const s = scene(), w = world(7);
+    for (const site of ["wide", "tall"] as const) {
+      const { out, accents } = platform(site);
+      for (const x of out) { expect(s.solids, site).not.toContainEqual(x); expect(w.solids, site).not.toContainEqual(x); }
+      for (const a of accents) { expect(s.accents, site).not.toContainEqual(a); expect(w.accents, site).not.toContainEqual(a); }
+    }
+    expect(s.solids.some((x) => x.mat === "boxGrey" || x.mat === "officeDark")).toBe(false);
+  }, 30_000); // toContainEqual deep-compares every platform piece against every solid of the world: ~6 s
 
   it("buoys and wreck on the water; the wreck's buoy has a fixed light and a foam ring", () => {
     const s = scene();
     for (const b of BUOYS) expect(s.solids.some((x) => x.kind === "cylinder" && x.mat === "rust" && x.at.x === b.x && x.at.y === b.y && x.at.z === -1)).toBe(true);
     expect(s.buoys).toHaveLength(2);
     expect(s.solids.some((x) => x.kind === "cylinder" && x.mat === "steel" && x.at.x === WRECK_BUOY.x)).toBe(true);
-    // #403: the wreck buoy's light is a haloless spot of r 1, not a dot; the rest is the Writing platform (#390)
+    // #403: the wreck buoy's light is a haloless spot of r 1, not a dot
     expect(s.accents[0]).toEqual({ kind: "poly", pts: expect.any(Array), color: "magentaBleed", alpha: expect.any(Number) });
     const buoy = spotOf(s.accents[1]!)!;
     expect(buoy).toMatchObject({ color: "magentaMid", alpha: 1 });
     expect(buoy.r).toBeCloseTo(1, 9);
     expect([buoy.at.x, buoy.at.y, buoy.at.z].map((c) => Math.round(c * 1e6) / 1e6)).toEqual([WRECK_BUOY.x, WRECK_BUOY.y, 1]);
-    expect(s.accents.slice(2)).toEqual(platform().accents); // the rest is the Writing platform
     expect(s.ground.some((g) => g.kind === "ground" && g.mat === "foam" && g.tris.length === 8)).toBe(true);
     // wreck (#83): no whole hull afloat; the bow sticks out (rust wedge with deck) and the stern house (deckhouse with windows, funnel, mast), all above the water
     expect(s.solids.some((x) => x.kind === "hull")).toBe(false);
@@ -167,11 +171,9 @@ describe("sea", () => {
     expect(Math.min(...zs)).toBeCloseTo(z + 4, 6); // resting on the eave
     for (const y of ys) expect(y).toBeCloseTo(KEEPER.y + 6.42, 6); // front of the box, on the south face
     expect(s.solids.some((x) => x.kind === "prism" && x.mat === "steel" && x.at.y === KEEPER.y + 6 && x.at.z <= z + 4 && x.at.z + x.h >= z + 5 && x.at.x <= Math.min(...xs) && x.at.x + x.w >= Math.max(...xs))).toBe(true); // dark box behind
-    // the static accents: keeper's window (poly) and wreck buoy (spot, a poly since #403), plus the Writing platform's hut and mast (dots) and one poly per sign triangle (#390)
-    const signTris = BLOG_SIGN.glyphs.flatMap((g) => g.quads).length;
-    expect(s.accents).toHaveLength(4 + signTris);
-    expect(s.accents.filter((a) => a.kind === "dot")).toHaveLength(2);
-    expect(s.accents.filter((a) => a.kind === "poly")).toHaveLength(2 + signTris);
+    // the static accents: keeper's window (poly) and wreck buoy (spot, a poly since #403); the Writing platform's lights are in platformAnimator (#427)
+    expect(s.accents).toHaveLength(2);
+    expect(s.accents.every((a) => a.kind === "poly")).toBe(true);
   });
 
   it("the whole render uses atlas colors", () => {
