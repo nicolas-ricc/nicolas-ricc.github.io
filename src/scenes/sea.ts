@@ -8,8 +8,7 @@ import { seaPlatformAt } from "./sign-platform";
 import { headlandZ, terrainAt } from "./terrain";
 
 /**
- * Blog, static part: the rock point with the lighthouse and the keeper's house, on the island's east coast
- * (the zone they click through to is decided by `worldZoneAt`), the reef, two buoys, and in the trench the wreck with its
+ * Blog, static part: the rock point with the lighthouse and the keeper's house, on the island's east coast, the reef, two buoys, and in the trench the wreck with its
  * buoy (Blog landmark): a coaster split in two with the bow and
  * the stern house sticking out. The Writing sign platform (sign-platform.ts) stands in the open sea
  * between the buoys; `sea()` builds it last (#390). The ships and the animated sea are in sea-anim.ts.
@@ -48,8 +47,7 @@ export const GALLERY_DECK_R = GALLERY_R + POST_W;
 /** Lantern set back from the last drum; the cap covers it with a 0.2 overhang. */
 export const LANTERN_R = DRUM_TOP_R - 0.6, CAP_R = LANTERN_R + 0.2;
 /**
- * Coast beacons: arc at ~12.8 u from the point, from the northeast to the southeast along the east, moved with it
- * (the point's zone is decided by `worldZoneAt`).
+ * Coast beacons: arc at ~12.8 u from the point, from the northeast to the southeast along the east, moved with it.
  */
 const COAST_BASE: readonly Vec2[] = [{ x: 397.5, y: 99.5 }, { x: 403, y: 101.5 }, { x: 408, y: 104 }, { x: 411.5, y: 108.5 }, { x: 413, y: 114.5 }, { x: 413, y: 120.5 }, { x: 412, y: 126.5 }, { x: 408.5, y: 131.5 }];
 export const COAST: readonly Vec2[] = COAST_BASE.map((p) => ({ x: p.x + HEADLAND_SHIFT.x, y: p.y + HEADLAND_SHIFT.y }));
