@@ -131,7 +131,7 @@ describe("documento del inventario, después (#88)", () => {
   it("capturas instantáneas: seis, separadas ≥ T/6, con lo anotado igual al estado con los carriles de #87 y ≥ 1 a pleno en cada carril", () => {
     const header = subsection(/^### Capturas instant[aá]neas/m).split("\n").find((l) => l.startsWith("| Captura")) ?? "";
     expect(cells(header).slice(2, 5)).toEqual(SHIPS.map((s) => s.kind));
-    expect(CYCLE_87).toBeCloseTo(1_172_343, 0); // "Ciclo después" in the document
+    expect(CYCLE_87).toBeCloseTo(1_172_343, 0); // "Ciclo después" del documento
     const rows = snapshotRows();
     expect(rows).toHaveLength(6);
     const times = rows.map((r) => Number(r[1]) * 1000);

@@ -26,8 +26,7 @@ import { ship as buildShip, shipAt, wake, type ShipKind } from "./ships";
 // ~25 u from its shore: the point and its 12 u shore are Portfolio and the reef cones on the north
 // face (x 397..404, y 109..111) force passing at x ≥ 424 at y ≈ 86. From (434, 176) it goes down east of the
 // moved headland (37 u from its tip) and of the narrow Writing site (16.3 u from its deck): x ≥ 440 at y 290 and
-// x ≥ 481 at y 400. Turns on screen of 6°, 7°, 22°, 13°, −18°, 6°, −20°, 2° and 11°: the southern stretch
-// weaves slightly between the headland tip and the narrow site.
+// x ≥ 481 at y 400. Turns on screen of 6°, 7°, 22°, 13°, −18°, 6°, −20°, 2° and 11°.
 //
 // The sea end (523, 510) is set so the edge of the 16:9 cover (x + y ≈ 997) falls `FADE_U` from the
 // end: that fade happens in the bleed. The harbor-mouth one is visible, on purpose. Validated against water,
