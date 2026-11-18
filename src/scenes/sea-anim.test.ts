@@ -7,10 +7,11 @@ import { hullsIntersect, isBehind, overlaps, screenBounds, screenHull } from "..
 import { convexHull, polyline, v3, type Vec2 } from "../iso/geometry";
 import { project } from "../iso/project";
 import { bounds, hullRings, isFlat, type Bounds, type Solid } from "../iso/solids";
-import { WORLD, inCoverQuad, worldZoneAt } from "../map/geo";
+import { WORLD, inCoverQuad, pointInPolygon, worldZoneAt } from "../map/geo";
 import { signBox, SIGN_ORDER, SIGNS } from "../world/signs";
 import { BEAM_INNER, BEAM_LEN, BEAM_PERIOD_MS, CYCLE_MS, FADE_U, FERRY_PAUSE_MS, FERRY_ROUTE, FERRY_SPEED, KEEPER_SIGN_MS, LANE_BACK, LANE_OUT, LANE_SPEED, NEON_STEP_MS, OFF_MS, PORT_MS, SHIPS, alphaAt, createSeaAnim, laneAt, laneLength, type ShipFrame } from "./sea-anim";
 import { SHIP_SPECS, ship, shipAt } from "./ships";
+import { PLATFORM_DECK } from "./sign-platform";
 import { bleedTerrainAt, terrainAt } from "./terrain";
 import { world } from "./world";
 
@@ -33,7 +34,7 @@ describe("route", () => {
     const end = LANE_OUT[LANE_OUT.length - 1]!;
     expect(inCoverQuad(end.x, end.y)).toBe(false);
     const L = laneLength("out");
-    expect(Math.abs(L - 687.9)).toBeLessThan(5); // slack to move vertices up to 2 u
+    expect(Math.abs(L - 560.7)).toBeLessThan(5); // slack to move vertices up to 4 u
     for (let d = 0; d <= L; d += 1) {
       const p = laneAt("out", d);
       const t = inWorld(p.x, p.y) ? terrainAt(p.x, p.y) : bleedTerrainAt(p.x, p.y);
@@ -77,12 +78,12 @@ const silhouette = (p: { x: number; y: number }, heading: number): Vec2[] => {
 
 describe("two lanes", () => {
   it("LANE_BACK starts outside the cover and ends at the harbor mouth (397, −39); water, depth ≥ 6, Blog for x ≥ 380; the sea fade falls in the bleed", () => {
-    expect(LANE_BACK[0]).toEqual({ x: 424, y: 600 });
-    expect(inCoverQuad(424, 600)).toBe(false);
+    expect(LANE_BACK[0]).toEqual({ x: 564, y: 467 });
+    expect(inCoverQuad(564, 467)).toBe(false);
     expect(LANE_BACK[LANE_BACK.length - 1]).toEqual({ x: 397, y: -39 });
     expect(inCoverQuad(397, -39)).toBe(true);
     const L = laneLength("back");
-    expect(Math.abs(L - 664.9)).toBeLessThan(5); // slack to move vertices up to 2 u
+    expect(Math.abs(L - 543.9)).toBeLessThan(5); // slack to move vertices up to 4 u
     for (let d = 0; d <= L; d += 1) {
       const p = laneAt("back", d);
       const t = inWorld(p.x, p.y) ? terrainAt(p.x, p.y) : bleedTerrainAt(p.x, p.y);
@@ -122,7 +123,34 @@ describe("two lanes", () => {
   it("laneAt('back') interpolates the heading at the vertices and at the end arrives with the heading of the last leg", () => {
     const Lb = laneLength("back"), last = Math.atan2(-39 - 18, 397 - 434);
     expect(laneAt("back", Lb).heading).toBeCloseTo(last, 6);
-    expect(laneAt("back", 0).heading).toBeCloseTo(Math.atan2(237 - 600, 462 - 424), 6);
+    expect(laneAt("back", 0).heading).toBeCloseTo(Math.atan2(330 - 467, 548 - 564), 6);
+  });
+
+  it("the lanes leave ≥ 14 u to the Writing decks at both sites and ≥ 14 u to the moved headland polygon (#423)", () => {
+    // the sites and the headland of #423; sign-platform.ts and geo.ts adopt them in later children
+    const SITES: Vec2[] = [{ x: 550, y: 125 }, { x: 440, y: 400 }];
+    const MOVED_HEADLAND: Vec2[] = [[344, 272], [358, 269], [386, 276], [414, 286], [414, 294], [386, 304], [358, 306], [344, 302]].map(([x, y]) => ({ x: x!, y: y! }));
+    const decks = SITES.map((s) => PLATFORM_DECK.map((q) => ({ x: q.x + s.x, y: q.y + s.y })));
+    const toSeg = (p: Vec2, a: Vec2, b: Vec2): number => {
+      const dx = b.x - a.x, dy = b.y - a.y, t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy)));
+      return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy);
+    };
+    /** 0 inside the polygon, otherwise the distance to its nearest side. */
+    const distToPolygon = (p: Vec2, poly: Vec2[]): number =>
+      pointInPolygon(p.x, p.y, poly.flatMap((q) => [q.x, q.y])) ? 0 : Math.min(...poly.map((a, i) => toSeg(p, a, poly[(i + 1) % poly.length]!)));
+    expect(distToPolygon({ x: 380, y: 288 }, MOVED_HEADLAND)).toBe(0);
+    const samples = { out: [] as Vec2[], back: [] as Vec2[] };
+    for (const lane of ["out", "back"] as const) for (let d = 0; d <= laneLength(lane); d += 1) {
+      const p = laneAt(lane, d);
+      for (const [k, deck] of decks.entries()) expect(distToPolygon(p, deck), `${lane} ${d} deck ${k}`).toBeGreaterThanOrEqual(14);
+      expect(distToPolygon(p, MOVED_HEADLAND), `${lane} ${d} headland`).toBeGreaterThanOrEqual(14);
+      samples[lane].push(p);
+    }
+    const at = (lane: "out" | "back", y: number) => samples[lane].filter((p) => Math.abs(p.y - y) < 0.5);
+    for (const [lane, y, ok] of [["out", 290, (x: number) => x >= 440], ["out", 400, (x: number) => x >= 481], ["back", 125, (x: number) => x <= 500]] as const) {
+      expect(at(lane, y).length, `${lane} at y ${y}`).toBeGreaterThan(0);
+      for (const p of at(lane, y)) expect(ok(p.x), `${lane} x ${p.x} at y ${y}`).toBe(true);
+    }
   });
 
   it("coverage: over 2·T, always one in out and one in back (and one at full alpha in each), each ship goes out → offscreen → back → offscreen in order, and two in the same lane are ≥ 100 u apart", () => {

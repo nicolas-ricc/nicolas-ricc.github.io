@@ -21,8 +21,9 @@ export const LIGHTHOUSE = { x: 396, y: 118, z: 7 } as const;
 export const KEEPER = { x: 372, y: 108 } as const;
 // Relocated in #87: the outbound leg went through the old buoy (420, 80) and a ship west or north of a solid
 // that overlaps it on screen ends up behind. The buoys mark the shoal south of the point, west of
-// the outbound leg (35 and 40 u from the lane: the ships pass in front). The wreck stays in the trench (its stern sits
-// ~16 u east of the slope, `abyssX(262)` ≈ 474), 30 u east of the return leg; no ship covers it or is covered by it.
+// the outbound leg (40 and 46 u from the lane: the ships pass in front). The wreck stays in the trench (its stern sits
+// ~16 u east of the slope, `abyssX(262)` ≈ 474) and the return leg passes east of it,
+// 17.6 u from its bow, in front of it on screen.
 export const BUOYS: readonly Vec2[] = [{ x: 398, y: 150 }, { x: 392, y: 200 }];
 export const WRECK_BUOY = { x: 498, y: 272 } as const;
 export const WRECK = { x: 490, y: 262, heading: Math.PI / 6 } as const;
@@ -132,7 +133,7 @@ function buoysAndWreck(out: Solid[], ground: Solid[], accents: Accent[]): Vec3[]
 /**
  * Wreck (#83): a 40 u coaster split in two and sunk in the trench. The stern (`WRECK`) sits
  * ~16 u east of the slope (`abyssX(262)` ≈ 474) and the whole hull falls in `abyss`. It is not moved up to the
- * slope: that would require revalidating the lanes with the #87 validator, because the return leg passes 30 u from the wreck.
+ * slope: that would require revalidating the lanes with the #87 validator, because the return leg passes 17.6 u east of its bow.
  * The center of the hull is underwater; the bow sticks out (a rusty wedge with its deck and the bitt) and the
  * stern house (rusty hull band, whitewashed deckhouse with windows, funnel and mast). Local coordinates as
  * in the ships.ts kit: x from stern (0) to bow (`WRECK_LEN`), y to starboard, rotated by `WRECK.heading`.
