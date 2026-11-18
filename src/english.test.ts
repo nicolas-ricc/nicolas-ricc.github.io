@@ -39,6 +39,8 @@ const ALLOW: Record<string, RegExp[]> = {
     // the RSS fixture stands in for a Spanish blog post
     /Rawls como puente/g, /¿Puede un (&amp;quot;|")velo(&amp;quot;|")/g, /dar cuenta del mundo\?/g],
   "src/style.css": [/\.(externo|proyectos|articulos)\b/g],
+  // #438: the shell test pins the map host's Spanish aria-label, shown to the visitor
+  "src/site-shell.test.ts": [/Mapa: arrastrá o usá las flechas para recorrerlo/g],
   // exhibit ids are the storybook URL hash, cited by the old specs (decision 2b)
   "src/lab/exhibits.ts": [/\bid: "[a-z0-9-]+"/g],
   // the test names the exhibits by their (Spanish) ids and reads the animator layer `tren.lights`; only the ids of the catalog are stripped, as whole tokens
