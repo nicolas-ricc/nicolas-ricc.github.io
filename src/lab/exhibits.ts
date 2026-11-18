@@ -27,7 +27,7 @@ import { BUOYS, DRUM_R0, KEEPER, LANTERN_Z, LIGHTHOUSE, WRECK } from "../scenes/
 import { BEAM_LEN } from "../scenes/sea-anim";
 import { ship, shipAt, type ShipKind } from "../scenes/ships";
 import { RESUME_SIGN, towerCrown, towerStandIn } from "../scenes/sign-crown";
-import { BLOG_SIGN, seaPlatform } from "../scenes/sign-platform";
+import { BLOG_SIGNS, seaPlatform, type WritingSite } from "../scenes/sign-platform";
 import { hallStandIn, PIECE_AT, STAND_IN_HALL, TINKER_SIGN, tinkerAnimator, tinkerSign } from "../scenes/sign-tinker";
 import { SUBURB_COLS } from "../scenes/sprawl-grid";
 import { SUBSTATION } from "../scenes/substation";
@@ -48,11 +48,11 @@ export const GROUPS: readonly { id: GroupId; zone: WorldZone; title: string }[] 
   { id: "sea", zone: "blog", title: "Blog: sea" },
 ];
 
-/** A structure to look at on its own: a box over the real world, a relocatable piece built at the origin (with optional `pad`: the ground material under it, and optional `animate`: its animator, which the storybook tags with the exhibit's zone), or a context exhibit: a crop of the real world (the sign is already in it, so it has no `build` or `animate`); `sign` is what the level-2 oracle checks. */
+/** A structure to look at on its own: a box over the real world, a relocatable piece built at the origin (with optional `pad`: the ground material under it, and optional `animate`: its animator, which the storybook tags with the exhibit's zone), or a context exhibit: a crop of the real world (the sign is already in it, so it has no `build` or `animate`; with `writingSite`, the Writing platform of that site is added to the crop, since the world no longer carries it: see `contextScene`); `sign` is what the level-2 oracle checks. */
 export type Exhibit = { id: string; title: string; zone: WorldZone; group: GroupId } & (
   | { kind: "region"; box: Box; h?: number }
   | { kind: "piece"; build: (out: Solid[], accents: Accent[]) => void; pad?: Material; animate?: (opts: { reducedMotion: boolean }) => Animator }
-  | { kind: "context"; box: Box; h?: number; sign: SignSpec }
+  | { kind: "context"; box: Box; h?: number; sign: SignSpec; writingSite?: WritingSite }
 );
 
 export type ContextExhibit = Extract<Exhibit, { kind: "context" }>;
@@ -251,7 +251,7 @@ export const EXHIBITS: readonly Exhibit[] = [
     box: { x0: KEEPER.x - M, y0: KEEPER.y - M, x1: KEEPER.x + 8 + M, y1: KEEPER.y + 6 + M }, h: 13 }, // on the point, z ≈ 7
   // the two buoys of the open sea off the east coast, west of the outbound lane and well north of the moved point (y ≈ 290), 50 u apart
   { id: "boyas", title: "Buoys", zone: "blog", group: "sea", kind: "region",
-    box: { x0: Math.min(...buoysX) - 5, y0: Math.min(...buoysY) - 5, x1: Math.max(...buoysX) + 5, y1: Math.max(...buoysY) + 5 }, h: 24 }, // the Writing platform sign (top 23.21) falls in the box: h is the smallest integer above it
+    box: { x0: Math.min(...buoysX) - 5, y0: Math.min(...buoysY) - 5, x1: Math.max(...buoysX) + 5, y1: Math.max(...buoysY) + 5 }, h: 1 }, // the tallest thing in the box is a buoy (top 0.5; accents reach no higher): h is the smallest integer above it. The Writing platform sign (top 23.21) left the box with #427: it is no longer in the world scene
   // the hull is 40 u long at 30°: it reaches (WRECK.x + 35, WRECK.y + 20); the wreck's buoy is inside
   { id: "pecio", title: "Wreck", zone: "blog", group: "sea", kind: "region",
     box: { x0: WRECK.x - 5, y0: WRECK.y - 5, x1: WRECK.x + 38, y1: WRECK.y + 26 }, h: 9 },
@@ -263,8 +263,9 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "convoy", title: "Convoy with barge", zone: "blog", group: "sea", kind: "piece", build: vessel("barge"), pad: "water" },
   { id: "lancha", title: "Tigre river bus", zone: "blog", group: "sea", kind: "piece", build: vessel("ferry"), pad: "water" },
   { id: "plataforma", title: "Writing platform sign", zone: "blog", group: "sea", kind: "piece", build: seaPlatform, pad: "water" },
-  // h 24: the tallest solid in the box is the platform's sign (top ≈ 23.21, smallest integer above it); its accents (letters, hut and mast) reach no higher, and the crop cuts nothing taller. The platform and its sign come from the world: no `build`.
-  { id: "plataforma-escena", title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 358, y0: 144, x1: 426, y1: 212 }, h: 24, sign: BLOG_SIGN },
+  // h 24 (both): the tallest solid in each box is the platform's sign (top ≈ 23.21, smallest integer above it); its accents (letters, hut and mast) reach no higher, and the crop cuts nothing taller. The platform of `writingSite` is added by `contextScene`, its sign and lights come from the world's animators: no `build`.
+  { id: "plataforma-escena", title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 516, y0: 91, x1: 584, y1: 159 }, h: 24, sign: BLOG_SIGNS.wide, writingSite: "wide" },
+  { id: "plataforma-escena-angosta", title: "Writing platform sign in its scene, tall site", zone: "blog", group: "sea", kind: "context", box: { x0: 406, y0: 366, x1: 474, y1: 434 }, h: 24, sign: BLOG_SIGNS.tall, writingSite: "tall" },
 ];
 
 /** The exhibit of the hash (`#id` or `id`); empty or unknown, the first. */

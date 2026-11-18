@@ -5,6 +5,7 @@ import { shadowPolygon } from "../iso/light";
 import { bounds, type Bounds, type Solid, type Tri, tessellate } from "../iso/solids";
 import type { AccentColor, Material } from "../map/palette-iso";
 import type { Animator, AnimLayer } from "../scenes/animator";
+import { seaPlatformAt, type WritingSite } from "../scenes/sign-platform";
 import type { WorldScene } from "../scenes/world";
 import type { ZonedAnimator } from "../world/assemble";
 import type { Box } from "../world/frame";
@@ -148,14 +149,25 @@ export function cropAnimators(animators: readonly ZonedAnimator[], box: Box): Zo
   });
 }
 
-/** The context exhibit's scene: a crop of the world, nothing added (the sign is already in the world). Fresh arrays: the world scene is never mutated. */
-export function contextScene(scene: WorldScene, e: ContextExhibit): WorldScene {
-  return cropScene(scene, e.box);
+const platforms = new Map<WritingSite, { solids: Solid[]; accents: Accent[] }>();
+
+function platformAt(site: WritingSite): { solids: Solid[]; accents: Accent[] } {
+  let p = platforms.get(site);
+  if (!p) { p = { solids: [], accents: [] }; seaPlatformAt(p.solids, p.accents, site); platforms.set(site, p); }
+  return p;
 }
 
-/** The context exhibit's animators: `cropAnimators` over its box; the sign's own animator comes from `assembleWorld`. */
+/** The context exhibit's scene: a crop of the world; with `writingSite`, plus the cropped Writing platform of that site (#427: the world carries it in an animator, not in `solids`). Fresh arrays: the world scene is never mutated. */
+export function contextScene(scene: WorldScene, e: ContextExhibit): WorldScene {
+  const cropped = cropScene(scene, e.box);
+  if (!e.writingSite) return cropped;
+  const p = platformAt(e.writingSite);
+  return { ...cropped, solids: [...cropped.solids, ...cropSolids(p.solids, e.box)], accents: [...cropped.accents, ...cropAccents(p.accents, e.box)] };
+}
+
+/** The context exhibit's animators: `cropAnimators` over its box; the sign's own animator comes from `assembleWorld`. With `writingSite`, the world's platform animator (`platform.solid`) is dropped: `contextScene` already carries the platform of that site, and the world's is at the other one. */
 export function contextAnimators(animators: readonly ZonedAnimator[], e: ContextExhibit): ZonedAnimator[] {
-  return cropAnimators(animators, e.box);
+  return cropAnimators(e.writingSite ? animators.filter((a) => !a.ids.includes("platform.solid")) : animators, e.box);
 }
 
 const PAD_M = 3; // margin of the pad around the piece, the same as the regions'
