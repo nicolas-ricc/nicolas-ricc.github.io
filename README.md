@@ -154,7 +154,7 @@ for headless time-lapses. The seam at 90 added ten exhibits:
 and `#galpones`, `#playa-carga` and `#mercado-pescado` (city).
 The zone signs of #374 are three pairs of exhibits: `#cartel-torre` and
 `#cartel-torre-escena` (Resume), `#cartel-taller` and `#cartel-taller-escena`
-(Portfolio) and `#plataforma` and `#plataforma-escena` (Blog). The piece builds
+(Portfolio) and `#plataforma` and `#plataforma-escena` (Blog, wide site), plus `#plataforma-escena-angosta` (Blog, tall site). The piece builds
 the sign at the origin (the crown and the tinker sign on a stand-in of their
 host); the one "in its scene" is a crop of the real world with its sign.
 Judge them at the cover scales with `c`. `npm run legibility` measures contrast,
