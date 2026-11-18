@@ -100,6 +100,27 @@ describe("attachPan (#438)", () => {
     expect(pan.consumeClick()).toBe(false);
   });
 
+  it("disabling clears a pending suppression", () => {
+    const { el, pan } = setup();
+    pan.setEnabled(true);
+    drag(el);
+    el.fire("pointerup", 10, 0);
+    pan.setEnabled(false);
+    el.fire("pointerdown", 30, 30);
+    el.fire("pointerup", 30, 30);
+    expect(pan.consumeClick()).toBe(false);
+  });
+
+  it("re-enabling clears a pending suppression", () => {
+    const { el, pan } = setup();
+    pan.setEnabled(true);
+    drag(el);
+    el.fire("pointerup", 10, 0);
+    pan.setEnabled(false);
+    pan.setEnabled(true);
+    expect(pan.consumeClick()).toBe(false);
+  });
+
   it("a second pointer is ignored", () => {
     const { el, pan, onPan } = setup();
     pan.setEnabled(true);

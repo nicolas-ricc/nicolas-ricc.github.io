@@ -14,7 +14,7 @@ export interface PanOptions { onStart(): void; onPan(dx: number, dy: number): vo
 export interface Pan {
   readonly dragging: boolean;
   setEnabled(on: boolean): void;
-  /** True once after a drag ended; the next pointerdown resets it. */
+  /** True once after a drag ended; the next pointerdown or enable change resets it. */
   consumeClick(): boolean;
 }
 
@@ -34,8 +34,8 @@ export function attachPan(el: PanTarget, opts: PanOptions): Pan {
   };
   rest();
   el.addEventListener("pointerdown", (e) => {
-    if (!enabled) return;
     suppress = false;
+    if (!enabled) return;
     if (id !== null || e.button !== 0) return;
     id = e.pointerId;
     startX = lastX = e.clientX;
@@ -61,6 +61,7 @@ export function attachPan(el: PanTarget, opts: PanOptions): Pan {
     setEnabled(on) {
       if (on === enabled) return;
       end(false);
+      suppress = false;
       enabled = on;
       el.style.touchAction = on ? "none" : "";
       rest();
