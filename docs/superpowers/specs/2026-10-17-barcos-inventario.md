@@ -188,6 +188,8 @@ Los dos pares comparativos del issue: `antes-cover.png` contra [despues-cover-1]
 
 ### Capturas instantáneas
 
+*Nota (#425): los carriles cambiaron su tramo sur en #425. Esta tabla registra los de #87; su test la valida contra esa geometría, fijada como literales.*
+
 Seis capturas del cover con el ticker detenido, separadas 196 s (T/6 = 195,4 s). Los estados salen de `shipStateAt((fase·CYCLE_MS + t) % CYCLE_MS)`, con el script de abajo; la distancia es la recorrida a lo largo del carril. En todas las capturas los tres barcos están a alpha 1, a 55 s o más de un borde de estado o de fade. "Yendo" y "Volviendo" listan los barcos a alpha 1 en cada carril. Las 18 posiciones en pantalla vistas coinciden con las proyectadas (error de unos 15 px sobre 2000).
 
 | Captura | t simulado (s) | cargo | tug | barge | Yendo | Volviendo |
