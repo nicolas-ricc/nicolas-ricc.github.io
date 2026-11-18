@@ -113,7 +113,7 @@ describe("sea", () => {
       for (const a of accents) { expect(s.accents, site).not.toContainEqual(a); expect(w.accents, site).not.toContainEqual(a); }
     }
     expect(s.solids.some((x) => x.mat === "boxGrey" || x.mat === "officeDark")).toBe(false);
-  });
+  }, 30_000); // toContainEqual deep-compares every platform piece against every solid of the world: ~6 s
 
   it("buoys and wreck on the water; the wreck's buoy has a fixed light and a foam ring", () => {
     const s = scene();

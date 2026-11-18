@@ -16,7 +16,8 @@ import { assembleWorld } from "./world/assemble";
 import { afterFirstRender } from "./world/bloom";
 import { attachBloom, type BloomProbe } from "./world/bloom-runtime";
 import { buildStage } from "./world/stage";
-import { signBox, SIGNS, zoneAtScreen } from "./world/signs";
+import type { WritingSite } from "./scenes/sign-platform";
+import { signBox, zoneAtScreen, zoneSigns } from "./world/signs";
 import { coverView, zoneView, type View } from "./world/view";
 
 const CONTENT: Record<ZoneId, ZoneContent> = {
@@ -39,7 +40,9 @@ async function boot(): Promise<void> {
   app.ticker.maxFPS = 30;
 
   const t0 = performance.now();
-  const { scene, animators } = assembleWorld(undefined, { reducedMotion: reduced });
+  const { scene, animators, platform } = assembleWorld(undefined, { reducedMotion: reduced });
+  const site: WritingSite = "wide"; // the host rule is wired by a later child (#428)
+  platform?.setSite(site);
   const stage = buildStage(scene, animators);
   app.stage.addChild(stage.container);
   if (log) console.info(`[mapa] first draw: ${(performance.now() - t0).toFixed(1)} ms, ${stage.staticCount} static polygons`);
@@ -58,7 +61,7 @@ async function boot(): Promise<void> {
   const placeLabels = (v: View): void => {
     for (const [id, a] of labels) {
       // over its sign; if the sign leaves the host (narrow screens), the label sticks to the nearest edge: always visible and focusable
-      placeLabel(a, signBox(SIGNS[id]), v, { w: host.clientWidth, h: host.clientHeight }, LABEL_MARGIN);
+      placeLabel(a, signBox(zoneSigns(site)[id]), v, { w: host.clientWidth, h: host.clientHeight }, LABEL_MARGIN);
     }
   };
 
@@ -96,7 +99,7 @@ async function boot(): Promise<void> {
   // hover and click on the canvas: pointer → the sign under it, else the zone by geography
   const zoneUnder = (e: PointerEvent | MouseEvent): ZoneId => {
     const r = app.canvas.getBoundingClientRect();
-    return zoneAtScreen(camera.state, e.clientX - r.left, e.clientY - r.top);
+    return zoneAtScreen(camera.state, e.clientX - r.left, e.clientY - r.top, site);
   };
   app.canvas.style.cursor = "pointer";
   app.canvas.addEventListener("pointermove", (e) => { const z = zoneUnder(e); if (z !== hot) { hot = z; refreshFocus(); } });

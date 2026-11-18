@@ -4,14 +4,13 @@ import type { Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { HEADLAND_SHIFT, inHeadland } from "../map/geo";
-import { seaPlatformAt } from "./sign-platform";
 import { headlandZ, terrainAt } from "./terrain";
 
 /**
  * Blog, static part: the rock point with the lighthouse and the keeper's house, on the island's east coast, the reef, two buoys, and in the trench the wreck with its
  * buoy (Blog landmark): a coaster split in two with the bow and
- * the stern house sticking out. The Writing sign platform (sign-platform.ts) stands in the open sea
- * between the buoys; `sea()` builds it last (#390). The ships and the animated sea are in sea-anim.ts.
+ * the stern house sticking out. The Writing sign platform is not here: it is relocatable, so
+ * platformAnimator (platform-animator.ts) draws it (#427). The ships and the animated sea are in sea-anim.ts.
  * Spec §7.
  */
 export interface SeaScene { ground: Solid[]; solids: Solid[]; accents: Accent[]; lantern: Vec3; buoys: Vec3[]; neon: { gallery: Vec3[]; coast: Vec3[]; keeperSign: Accent } }
@@ -176,7 +175,6 @@ export function sea(rng: Rng): SeaScene {
   path(ground);
   rocks(solids, rng);
   const buoys = buoysAndWreck(solids, ground, accents);
-  seaPlatformAt(solids, accents); // #390: the Writing platform, last so the accents before it keep their order
   const gallery = Array.from({ length: GALLERY_POSTS }, (_, k) => { const a = (k / GALLERY_POSTS) * Math.PI * 2; return v3(LIGHTHOUSE.x + GALLERY_R * Math.cos(a), LIGHTHOUSE.y + GALLERY_R * Math.sin(a), GALLERY_LIGHT_Z); });
   return { ground, solids, accents, lantern, buoys, neon: { gallery, coast: COAST.map((p) => v3(p.x, p.y, COAST_Z)), keeperSign } };
 }

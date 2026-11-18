@@ -23,7 +23,7 @@ describe("assembleWorld", () => {
     expect(platform).not.toBeNull();
     expect(platform!.site).toBe("wide");
     expect(platform!.ids).toEqual(["platform.solid", "platform.lights"]);
-    const at = animators.indexOf(platform as (typeof animators)[number]);
+    const at = (animators as readonly unknown[]).indexOf(platform);
     expect(at).toBeGreaterThanOrEqual(0);
     expect(animators[at]!.zone).toBe("blog");
     expect(at).toBe(animators.findIndex((a) => a.ids.includes("sea.beam")) - 1);

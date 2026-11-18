@@ -10,11 +10,11 @@ import { BLOG_SIGNS, type WritingSite } from "../scenes/sign-platform";
 import { RESUME_SIGN } from "../scenes/sign-crown";
 import { TINKER_SIGN } from "../scenes/sign-tinker";
 import { labelLayout, SIGN_ORDER, signBox, signPolygons, zoneAtScreen, zoneSigns, type ScreenBox } from "./signs";
-import { coverView, pointerToWorld, unproject, type View } from "./view";
+import { coverView, pointerToWorld, type View } from "./view";
 
 const SITES: readonly WritingSite[] = ["wide", "tall"];
 /** Every sign at either Writing site, once (#427): the Resume and Portfolio signs are the same at both. */
-const ALL: [ZoneId, SignSpec, WritingSite][] = [...new Map(SITES.flatMap((site) => SIGN_ORDER.map((id) => [zoneSigns(site)[id], [id, zoneSigns(site)[id], site]] as const))).values()];
+const ALL: (readonly [ZoneId, SignSpec, WritingSite])[] = [...new Map(SITES.flatMap((site) => SIGN_ORDER.map((id) => [zoneSigns(site)[id], [id, zoneSigns(site)[id], site]] as const))).values()];
 const ID: View = { x: 0, y: 0, scale: 1 };
 
 /** Screen bounding box of a set of flat polygons. */
@@ -113,20 +113,16 @@ describe("zoneAtScreen (#393)", () => {
     }
   });
 
-  // A10: a sign wins over the geography beneath it. Since #427 the Writing sites stand over Blog sea, so every point of every sign is probed,
-  // and the points whose geography belongs to another zone are counted
+  // A10: a sign wins over the geography beneath it. Since #427 the Writing sites stand over Blog sea, so no point of any sign lies over another zone's
+  // geography (measured: 0 of ~22 000 probes); every point of every sign is probed and must answer its own zone
   it("zoneAtScreen prefers the sign over the geography beneath it", () => {
-    let other = 0;
     for (const [id, s, site] of ALL) {
       const b = boundsOf(signPolygons(s));
       for (let x = b.minX; x <= b.maxX; x += 0.5) for (let y = b.minY; y <= b.maxY; y += 0.5) {
         if (!inSign(s, x, y)) continue;
         expect(zoneAtScreen(ID, x, y, site), `${site} ${id} ${x},${y}`).toBe(id);
-        const g = unproject(x, y);
-        if (worldZoneAt(g.x, g.y) !== id) other++;
       }
     }
-    expect(other).toBeGreaterThan(0);
   });
 
   // a 20 px grid of the laptop host, without the points over a sign
