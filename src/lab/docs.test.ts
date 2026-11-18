@@ -8,8 +8,6 @@ import { TOWER } from "../scenes/city-grid";
 import { CROWN_SITE } from "../scenes/sign-crown";
 import { PLATFORM_DECK } from "../scenes/sign-platform";
 import { SHIPYARD_HALLS, TINKER_SITE } from "../scenes/sign-tinker";
-import { labelLayout, signBox, SIGN_ORDER, zoneSigns } from "../world/signs";
-import { coverView } from "../world/view";
 import { EXHIBITS } from "./exhibits";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
@@ -803,28 +801,22 @@ describe("zone signs integration (#394)", () => {
     const rows = { CROWN_SITE: at(CROWN_SITE), TINKER_SITE: at(TINKER_SITE), PLATFORM_SITE: "(392, 178)" };
     for (const [name, value] of Object.entries(rows)) expect(row(sites, `| \`${name}\` |`), name).toContain(value);
   });
-  it("§4 carries each sign's screen box and label mode on the laptop and the phone, as coverView and signBox compute them", () => {
+  // literals since #428: COVER_FOCUS_U moved to 0.39 and Writing has two sites, so the live boxes no longer match; the spec is history
+  it("§4 carries each sign's screen box and label mode on the laptop and the phone, as #394 measured them", () => {
     const framing = part(4);
-    for (const [label, w, h] of [["laptop", 1366, 657], ["teléfono", 390, 750]] as const) {
-      const v = coverView(w, h);
-      // the blog rows are literals since #427: the Writing sign left (392, 178), so its live box no longer matches the spec, which is history
-      const BLOG = { laptop: ["747.5..846.5 × 397.2..425.2", "sign"], "teléfono": ["463.2..567.8 × 447.6..477.1", "edge"] } as const;
-      for (const id of SIGN_ORDER) {
-        if (id === "blog") {
-          const [box, mode] = BLOG[label], line = row(framing, `| ${label} ${w}×${h} | \`blog\` |`);
-          expect(line, `${label} blog ${box}`).toContain(box);
-          expect(line, `${label} blog ${mode}`).toContain(`\`${mode}\``);
-          continue;
-        }
-        const b = signBox(zoneSigns("wide")[id]);
-        const px = (n: number, o: number) => (n * v.scale + o).toFixed(1);
-        const box = `${px(b.minX, v.x)}..${px(b.maxX, v.x)} × ${px(b.minY, v.y)}..${px(b.maxY, v.y)}`;
-        const mode = labelLayout(b, v, { w, h }, { hw: 0, hh: 0 }).mode;
-        const line = row(framing, `| ${label} ${w}×${h} | \`${id}\` |`);
-        expect(line, `${label} ${id}`).not.toBe("");
-        expect(line, `${label} ${id} ${box}`).toContain(box);
-        expect(line, `${label} ${id} ${mode}`).toContain(`\`${mode}\``);
-      }
+    const ROWS = [
+      ["laptop 1366×657", "portfolio", "600.1..688.3 × 69.6..86.1", "sign"],
+      ["laptop 1366×657", "cv", "393.7..466.7 × 236.7..251.0", "sign"],
+      ["laptop 1366×657", "blog", "747.5..846.5 × 397.2..425.2", "sign"],
+      ["teléfono 390×750", "portfolio", "307.4..400.6 × 101.5..118.9", "sign"],
+      ["teléfono 390×750", "cv", "89.4..166.5 × 278.0..293.1", "sign"],
+      ["teléfono 390×750", "blog", "463.2..567.8 × 447.6..477.1", "edge"],
+    ] as const;
+    for (const [screen, id, box, mode] of ROWS) {
+      const line = row(framing, `| ${screen} | \`${id}\` |`);
+      expect(line, `${screen} ${id}`).not.toBe("");
+      expect(line, `${screen} ${id} ${box}`).toContain(box);
+      expect(line, `${screen} ${id} ${mode}`).toContain(`\`${mode}\``);
     }
   });
   it("§5 carries the frame table before and after, the static polygons and the world accents", () => {
@@ -876,5 +868,26 @@ describe("Writing with two sites (#427)", () => {
     const b = readFileSync(`${ASSETS}${f}`);
     expect(b.subarray(1, 4).toString(), f).toBe("PNG");
     expect([b.readUInt32BE(16), b.readUInt32BE(20)]).toEqual([3200, 1800]);
+  });
+});
+
+describe("#app decides Writing's site (#428)", () => {
+  const glossary = readFileSync(`${ROOT}CONTEXT.md`, "utf8");
+  /** The CONTEXT.md entry `### <title>` up to the next `### `. */
+  const entry = (title: string) => { const at = glossary.indexOf(`### ${title}\n`); const rest = glossary.slice(at + title.length + 5); const next = rest.search(/^### /m); return at < 0 ? "" : next < 0 ? rest : rest.slice(0, next); };
+  it("CONTEXT.md Cover frame names COVER_FOCUS_U at 0.39", () => {
+    const e = entry("Cover frame");
+    expect(e).toContain("`COVER_FOCUS_U`");
+    expect(e).toContain("0.39");
+  });
+  it("CONTEXT.md Sign tells writingSite, WRITING_SITE_MARGIN and #app, and the site is no longer pinned", () => {
+    const e = entry("Sign");
+    for (const s of ["`writingSite`", "`WRITING_SITE_MARGIN`", "`#app`"]) expect(e, s).toContain(s);
+    expect(e).not.toContain("pinned to `wide`");
+  });
+  it("README's runtime paragraph tells writingSite and #app", () => {
+    const runtime = (readme.split(/\n\s*\n/).find((p) => p.includes("coverView(host)")) ?? "").replace(/\s+/g, " ");
+    for (const s of ["writingSite", "#app"]) expect(runtime, s).toContain(s);
+    expect(runtime).not.toContain("(Writing, on a phone)");
   });
 });

@@ -9,7 +9,7 @@ import { ZONE_IDS, type ZoneId } from "../map/zones";
 import { BLOG_SIGNS, type WritingSite } from "../scenes/sign-platform";
 import { RESUME_SIGN } from "../scenes/sign-crown";
 import { TINKER_SIGN } from "../scenes/sign-tinker";
-import { labelLayout, SIGN_ORDER, signBox, signPolygons, zoneAtScreen, zoneSigns, type ScreenBox } from "./signs";
+import { labelLayout, SIGN_ORDER, signBox, signPolygons, writingSite, zoneAtScreen, zoneSigns, type ScreenBox } from "./signs";
 import { coverView, pointerToWorld, type View } from "./view";
 
 const SITES: readonly WritingSite[] = ["wide", "tall"];
@@ -158,16 +158,11 @@ describe("labelLayout (#393)", () => {
     }
   });
 
-  // Writing at the wide site falls outside the phone window and sticks to its right edge (the tall site, its fix, is chosen in #428)
-  it("labelLayout at coverView(390, 750): RESUME and PORTFOLIO on their sign, Writing on the right edge", () => {
+  // with the focus at 0.39 and the host rule (#428) the phone shows Writing at the tall site, on its sign
+  it("labelLayout at coverView(390, 750) puts the three on their sign, Writing at writingSite(390, 750)", () => {
     const v = coverView(390, 750), host = { w: 390, h: 750 };
-    expect(labelLayout(signBox(RESUME_SIGN), v, host, PAD).mode).toBe("sign");
-    expect(labelLayout(signBox(TINKER_SIGN), v, host, PAD).mode).toBe("sign");
-    const w = labelLayout(signBox(BLOG_SIGNS.wide), v, host, PAD);
-    expect(w.mode).toBe("edge");
-    expect(w.x).toBe(390 - PAD.hw);
-    expect(w.y).toBeGreaterThanOrEqual(PAD.hh);
-    expect(w.y).toBeLessThanOrEqual(750 - PAD.hh);
+    expect(writingSite(390, 750)).toBe("tall");
+    for (const [id, s] of Object.entries(zoneSigns(writingSite(390, 750)))) expect(labelLayout(signBox(s), v, host, PAD).mode, id).toBe("sign");
   });
 
   // exactly half inside on both axes still counts as on the sign

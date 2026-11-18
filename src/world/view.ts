@@ -1,6 +1,8 @@
 import { BLEED, COVER_INSET, WORLD, type WorldZone } from "../map/geo";
-import { coverFrame, fitTransform, zoneFrame } from "./frame";
 import type { RenderItem } from "../iso/render-list";
+import { BLOG_SIGNS, type WritingSite } from "../scenes/sign-platform";
+import { coverFrame, fitTransform, zoneFrame } from "./frame";
+import { WRITING_SITE_MARGIN, signBox } from "./sign-box";
 
 /** Camera state of the world container: `screen = projected_world × scale + (x, y)`. Same as CameraState. */
 export interface View { x: number; y: number; scale: number }
@@ -30,8 +32,8 @@ export function viewCorners(v: View, w: number, h: number): { x: number; y: numb
 const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
 
 const COVER_ASPECT = 16 / 9;
-/** Fraction of the 16:9 cover's width, from its left edge, where narrow screens center the view. Chosen so the city, the factory and the island fit. */
-export const COVER_FOCUS_U = 0.35;
+/** Fraction of the 16:9 cover's width, from its left edge, where narrow screens center the view. Centered on the column of signs: with 0.35 PORTFOLIO was cut and the lighthouse did not fit at 390 px (#428). */
+export const COVER_FOCUS_U = 0.39;
 
 /**
  * Cover framing, no sky. At 16:9 or wider, the rectangle with the host's aspect inscribed in the
@@ -85,16 +87,29 @@ export function clampToCover(v: View, w: number, h: number): View {
   return Math.abs(x - v.x) < 1e-9 && Math.abs(y - v.y) < 1e-9 ? { ...v } : { x, y, scale: s };
 }
 
-function frameCenter(zone: WorldZone): { x: number; y: number } {
-  const [x0, x1, y0, y1] = frameBox(zoneFrame(zone));
+function frameCenter(zone: WorldZone, site: WritingSite): { x: number; y: number } {
+  const [x0, x1, y0, y1] = frameBox(zoneFrame(zone, site));
   return { x: (x0 + x1) / 2, y: (y0 + y1) / 2 };
 }
 
-/** The zone's box fitted with a 4 % margin; if that falls below cover × ZONE_MIN_ZOOM, that scale centered on the box. Inside the bleed, and inside the 16:9 cover on each axis it covers. */
-export function zoneView(zone: WorldZone, w: number, h: number): View {
+/** Per axis, the minimum shift that puts [lo, hi] at ≥ margin from 0 and size; none if it already fits or if it plus the margins does not fit. */
+function axisShift(lo: number, hi: number, size: number): number {
+  if (hi - lo + 2 * WRITING_SITE_MARGIN > size) return 0;
+  return lo < WRITING_SITE_MARGIN ? WRITING_SITE_MARGIN - lo : Math.min(0, size - WRITING_SITE_MARGIN - hi);
+}
+
+/** Shifts the view the minimum for the active Writing sign to sit ≥ WRITING_SITE_MARGIN px from the host edges (per axis, where it fits). */
+function keepSignInside(v: View, w: number, h: number, site: WritingSite): View {
+  const b = signBox(BLOG_SIGNS[site]), s = v.scale;
+  return { x: v.x + axisShift(b.minX * s + v.x, b.maxX * s + v.x, w), y: v.y + axisShift(b.minY * s + v.y, b.maxY * s + v.y, h), scale: s };
+}
+
+/** The zone's box fitted with a 4 % margin; if that falls below cover × ZONE_MIN_ZOOM, that scale centered on the box. Inside the bleed, and inside the 16:9 cover on each axis it covers. The Blog view also keeps the active Writing sign inside the host. */
+export function zoneView(zone: WorldZone, w: number, h: number, site: WritingSite = "wide"): View {
   const floor = coverView(w, h).scale * ZONE_MIN_ZOOM;
-  const fit = fitTransform(zoneFrame(zone), w, h, 0.04);
-  if (fit.scale >= floor) return clampToBleed(clampToCover(fit, w, h), w, h);
-  const c = frameCenter(zone);
-  return clampToBleed(clampToCover({ x: w / 2 - c.x * floor, y: h / 2 - c.y * floor, scale: floor }, w, h), w, h);
+  const fit = fitTransform(zoneFrame(zone, site), w, h, 0.04);
+  const inside = (v: View): View => clampToBleed(clampToCover(v, w, h), w, h);
+  let v = fit;
+  if (fit.scale < floor) { const c = frameCenter(zone, site); v = { x: w / 2 - c.x * floor, y: h / 2 - c.y * floor, scale: floor }; }
+  return zone === "blog" ? inside(keepSignInside(inside(v), w, h, site)) : inside(v);
 }

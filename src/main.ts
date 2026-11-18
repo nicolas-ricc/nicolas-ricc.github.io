@@ -17,7 +17,7 @@ import { afterFirstRender } from "./world/bloom";
 import { attachBloom, type BloomProbe } from "./world/bloom-runtime";
 import { buildStage } from "./world/stage";
 import type { WritingSite } from "./scenes/sign-platform";
-import { signBox, zoneAtScreen, zoneSigns } from "./world/signs";
+import { signBox, WRITING_SITE_MARGIN, writingSite, zoneAtScreen, zoneSigns } from "./world/signs";
 import { coverView, zoneView, type View } from "./world/view";
 
 const CONTENT: Record<ZoneId, ZoneContent> = {
@@ -25,9 +25,6 @@ const CONTENT: Record<ZoneId, ZoneContent> = {
   cv: cvJson as ZoneContent,
   blog: mergeBlogFeed(blogJson as ZoneContent, feed.items),
 };
-
-/** Minimum gap (px) between a label and the edge of the host. */
-const LABEL_MARGIN = 8;
 
 async function boot(): Promise<void> {
   const host = document.getElementById("canvas-host") as HTMLDivElement;
@@ -41,7 +38,9 @@ async function boot(): Promise<void> {
 
   const t0 = performance.now();
   const { scene, animators, platform } = assembleWorld(undefined, { reducedMotion: reduced });
-  const site: WritingSite = "wide"; // the host rule is wired by a later child (#428)
+  // the site is decided with #app (the page grid), not with the host: the host changes size when a zone opens and the platform must not move
+  const appEl = document.getElementById("app") as HTMLElement;
+  let site: WritingSite = writingSite(appEl.clientWidth, appEl.clientHeight);
   platform?.setSite(site);
   const stage = buildStage(scene, animators);
   app.stage.addChild(stage.container);
@@ -61,15 +60,23 @@ async function boot(): Promise<void> {
   const placeLabels = (v: View): void => {
     for (const [id, a] of labels) {
       // over its sign; if the sign leaves the host (narrow screens), the label sticks to the nearest edge: always visible and focusable
-      placeLabel(a, signBox(zoneSigns(site)[id]), v, { w: host.clientWidth, h: host.clientHeight }, LABEL_MARGIN);
+      placeLabel(a, signBox(zoneSigns(site)[id]), v, { w: host.clientWidth, h: host.clientHeight }, WRITING_SITE_MARGIN);
     }
   };
 
   const camera = new Camera((s) => { stage.container.position.set(s.x, s.y); stage.container.scale.set(s.scale); placeLabels(s); }, { reducedMotion: reduced });
 
+  const syncSite = (): void => {
+    const next = writingSite(appEl.clientWidth, appEl.clientHeight);
+    if (next === site) return;
+    site = next;
+    platform?.setSite(site);
+    placeLabels(camera.state);
+  };
+
   const targetFor = (id: ZoneId | null): View => {
     const w = host.clientWidth, h = host.clientHeight;
-    return id ? zoneView(id, w, h) : coverView(w, h);
+    return id ? zoneView(id, w, h, site) : coverView(w, h);
   };
 
   const refreshFocus = (): void => { stage.setFocus(current ?? hot); };
@@ -118,6 +125,7 @@ async function boot(): Promise<void> {
   // The host resizes through CSS during the transition: follow it frame by frame.
   new ResizeObserver(() => {
     app.resize();
+    syncSite();
     const t = targetFor(current);
     if (camera.isTweening) camera.retarget(t); else camera.jumpTo(t);
   }).observe(host);

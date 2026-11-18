@@ -12,7 +12,10 @@ import type { ZoneId } from "../map/zones";
 import { RESUME_SIGN } from "../scenes/sign-crown";
 import { BLOG_SIGNS, type WritingSite } from "../scenes/sign-platform";
 import { TINKER_SIGN } from "../scenes/sign-tinker";
-import { unproject, type View } from "./view";
+import { signBox, WRITING_SITE_MARGIN } from "./sign-box";
+import { coverView, unproject, type View } from "./view";
+
+export { signBox, WRITING_SITE_MARGIN } from "./sign-box";
 
 const bySite = new Map<WritingSite, Record<ZoneId, SignSpec>>();
 /** Sign of each zone with the Writing platform at `site` (#427). Memoized per site: `signBox`/`signPolygons` memoize by identity. */
@@ -28,7 +31,6 @@ export const SIGN_ORDER: readonly ZoneId[] = ["portfolio", "cv", "blog"];
 export type ScreenBox = ScreenBounds;
 
 const polygons = new WeakMap<SignSpec, number[][]>();
-const boxes = new WeakMap<SignSpec, ScreenBox>();
 
 /** Flat projected polygons of a sign: its tessellated backing faces, then one quad per glyph ink box. Memoized. */
 export function signPolygons(spec: SignSpec): number[][] {
@@ -47,16 +49,11 @@ export function signPolygons(spec: SignSpec): number[][] {
   return out;
 }
 
-/** Screen box of the projected glyph quads (the word itself). Memoized. */
-export function signBox(spec: SignSpec): ScreenBox {
-  let b = boxes.get(spec);
-  if (!b) {
-    const pts = spec.glyphs.flatMap((g) => g.quads.flat()).map(project);
-    const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
-    b = { minX: Math.min(...xs), minY: Math.min(...ys), maxX: Math.max(...xs), maxY: Math.max(...ys) };
-    boxes.set(spec, b);
-  }
-  return b;
+/** Writing's site for a host of `w`×`h`: "wide" if its word fits the host with `WRITING_SITE_MARGIN` under `coverView`, else "tall" (#428). */
+export function writingSite(w: number, h: number): WritingSite {
+  const v = coverView(w, h), b = signBox(BLOG_SIGNS.wide), m = WRITING_SITE_MARGIN;
+  const x0 = b.minX * v.scale + v.x, x1 = b.maxX * v.scale + v.x, y0 = b.minY * v.scale + v.y, y1 = b.maxY * v.scale + v.y;
+  return x0 >= m && y0 >= m && x1 <= w - m && y1 <= h - m ? "wide" : "tall";
 }
 
 /** Zone under a host point: a sign wins over the geography beneath it. */

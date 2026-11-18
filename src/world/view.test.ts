@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { v3 } from "../iso/geometry";
 import { project } from "../iso/project";
-import { BLEED, WORLD, inCoverQuad, type WorldZone } from "../map/geo";
-import { coverFrame, fitTransform } from "./frame";
-import { COVER_FOCUS_U, VIEW_INSET, clampToBleed, clampToCover, coverView, pointerToWorld, unproject, viewCorners, zoneView, type View } from "./view";
+import { BLEED, WORLD, ZONE_SPLIT_X, inCoverQuad, type WorldZone } from "../map/geo";
+import { boxFrame, coverFrame, fitTransform, zoneFrame, type Frame } from "./frame";
+import { BLOG_SIGNS, type WritingSite } from "../scenes/sign-platform";
+import { signBox, writingSite } from "./signs";
+import { COVER_FOCUS_U, VIEW_INSET, ZONE_MIN_ZOOM, clampToBleed, clampToCover, coverView, pointerToWorld, unproject, viewCorners, zoneView, type View } from "./view";
 
 const X0 = WORLD.x0 - BLEED.x, X1 = WORLD.x1 + BLEED.x, Y0 = WORLD.y0 - BLEED.y, Y1 = WORLD.y1 + BLEED.y;
 const insideBleed = (p: { x: number; y: number }, inset = 0, tol = 1e-6) =>
@@ -57,6 +59,10 @@ describe("coverView", () => {
   it.each([[2100, 900], [1920, 955]])("%i×%i: wider than 16:9 is unchanged", (w, h) => {
     expect(coverView(w, h)).toEqual(fitTransform(coverFrame(w / h), w, h, 0));
   });
+  it("COVER_FOCUS_U is 0.39: the phone window is centered on the column of signs (#428)", () => {
+    expect(COVER_FOCUS_U).toBe(0.39);
+  });
+  // since #428 the focus (0.39) centers the phone window on the column of signs: PORTFOLIO, RESUME and Writing fit
   it("390×750 centers on COVER_FOCUS_U of the 16:9 cover", () => {
     const v = coverView(390, 750);
     expect((QX0 + COVER_FOCUS_U * (QX1 - QX0)) * v.scale + v.x).toBeCloseTo(195, 6);
@@ -158,5 +164,35 @@ describe("zoneView", () => {
     const px = s.x * v.scale + v.x, py = s.y * v.scale + v.y;
     expect(px).toBeGreaterThan(0); expect(px).toBeLessThan(640);
     expect(py).toBeGreaterThan(0); expect(py).toBeLessThan(900);
+  });
+});
+
+describe("zoneFrame and zoneView with the Writing site (#428)", () => {
+  const SITES: WritingSite[] = ["wide", "tall"];
+  it("Blog's tall frame reaches y 440; every other frame, and the wide one, is unchanged", () => {
+    expect(zoneFrame("blog", "tall")).toEqual(boxFrame({ x0: ZONE_SPLIT_X, y0: WORLD.y0, x1: WORLD.x1, y1: 440 }));
+    expect(zoneFrame("blog", "wide")).toEqual(zoneFrame("blog"));
+    for (const f of ["all", "cover", "portfolio", "cv"] as Frame[]) for (const site of SITES) expect(zoneFrame(f, site), `${f} ${site}`).toEqual(zoneFrame(f));
+  });
+  it.each([[1920, 955], [768, 955], [390, 300]])("%i×%i: zoneView('blog', w, h, writingSite(w, h)) shows the whole Writing box", (w, h) => {
+    const site = writingSite(w, h), v = zoneView("blog", w, h, site), b = signBox(BLOG_SIGNS[site]);
+    expect(b.minX * v.scale + v.x).toBeGreaterThanOrEqual(0);
+    expect(b.maxX * v.scale + v.x).toBeLessThanOrEqual(w);
+    expect(b.minY * v.scale + v.y).toBeGreaterThanOrEqual(0);
+    expect(b.maxY * v.scale + v.y).toBeLessThanOrEqual(h);
+  });
+  it.each(ZONE_SIZES)("%i×%i: Blog at either site stays inside the bleed, and inside the 16:9 cover on each axis it covers", (w, h) => {
+    for (const site of SITES) {
+      const v = zoneView("blog", w, h, site);
+      for (const p of viewCorners(v, w, h)) expect(insideBleed(p, VIEW_INSET), site).toBe(true);
+      if ((QX1 - QX0) * v.scale >= w) expect(coversX(v, w), site).toBe(true);
+      if ((QY1 - QY0) * v.scale >= h) expect(coversY(v, h), site).toBe(true);
+    }
+  });
+  // where the wide sign already fits, the sign rule does not move the desktop camera
+  it.each([[1920, 955], [1600, 900]])("%i×%i: zoneView('blog', w, h, 'wide') is the plain zone fit", (w, h) => {
+    const floor = coverView(w, h).scale * ZONE_MIN_ZOOM, fit = fitTransform(zoneFrame("blog"), w, h, 0.04);
+    expect(fit.scale).toBeGreaterThanOrEqual(floor);
+    expect(zoneView("blog", w, h, "wide")).toEqual(clampToBleed(clampToCover(fit, w, h), w, h));
   });
 });
