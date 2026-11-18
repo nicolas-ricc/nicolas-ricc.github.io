@@ -22,7 +22,7 @@ const END = 6, DECK_W = 10, DECK_BACK = 5;
 
 /** The two places the Writing platform can stand: `wide` (open sea between the two buoys) and `tall`. */
 export type WritingSite = "wide" | "tall";
-export const PLATFORM_SITES: Record<WritingSite, Vec3> = { wide: v3(550, 125, 0), tall: v3(440, 400, 0) };
+export const PLATFORM_SITES: Record<WritingSite, Vec3> = { wide: v3(570, 105, 0), tall: v3(440, 400, 0) };
 
 const U = v3(Math.SQRT1_2, -Math.SQRT1_2, 0), N = v3(Math.SQRT1_2, Math.SQRT1_2, 0);
 /** Point `s` along u and `b` along n from the platform center `c` (the origin by default). */

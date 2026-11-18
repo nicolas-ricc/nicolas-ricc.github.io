@@ -450,7 +450,7 @@ describe("context exhibits (#376)", () => {
     expect(ids.indexOf("plataforma-escena")).toBe(ids.indexOf("plataforma") + 1);
     expect(ids.indexOf("plataforma-escena-angosta")).toBe(ids.indexOf("plataforma") + 2);
     const wide = contexts.find((x) => x.id === "plataforma-escena")!, tall = contexts.find((x) => x.id === "plataforma-escena-angosta")!;
-    expect(wide).toMatchObject({ title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 516, y0: 91, x1: 584, y1: 159 }, h: 24, sign: BLOG_SIGNS.wide, writingSite: "wide" });
+    expect(wide).toMatchObject({ title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 536, y0: 71, x1: 604, y1: 139 }, h: 24, sign: BLOG_SIGNS.wide, writingSite: "wide" });
     expect(tall).toMatchObject({ title: "Writing platform sign in its scene, tall site", zone: "blog", group: "sea", kind: "context", box: { x0: 406, y0: 366, x1: 474, y1: 434 }, h: 24, sign: BLOG_SIGNS.tall, writingSite: "tall" });
     for (const e of [wide, tall]) expect("build" in e, e.id).toBe(false);
   });

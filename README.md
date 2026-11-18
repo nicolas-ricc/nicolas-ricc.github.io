@@ -37,8 +37,11 @@ again (`rail.train`, `rail-anim.ts`). The three ships (Damen Combi
 Freighter 3850, Damen ASD Tug 2810 and a river pusher with a Jumbo barge)
 appear at the river mouth and run along two lanes, nearly straight: `LANE_OUT` goes down
 toward the lower-left of the screen until it leaves
-the cover and `LANE_BACK` returns to the river mouth, where they fade out ("coming
-into port"); they neither anchor nor turn in place. The fair's boat is a Tigre
+the cover, east of the lighthouse headland and of Writing's tall site, and `LANE_BACK`
+comes back west of the wide site to the river mouth, where they fade out ("coming
+into port"). The lanes pass between Writing's two sites. The headland is on the
+island's east coast, Blog's, with the lighthouse at its tip, (410, 290). The ships
+neither anchor nor turn in place. The fair's boat is a Tigre
 river bus and the wreck in the trench, a coaster split in two. The
 world has its origin at `(-60, -60)` and a terrain bleed around all
 the content, so that the *cover* camera never shows sky; on the
@@ -76,7 +79,7 @@ zone) and `view.ts` (pure camera: `coverView`, `zoneView`, `clampToBleed`,
 `clampToCover`, `unproject`). The site frames with `coverView(host)`: at 16:9 or
 wider, the cover rectangle with the real aspect ratio of `#canvas-host`;
 narrower, the 16:9 cover fills the host's height and the host is a window of
-it, centered on `COVER_FOCUS_U` and clamped to its edges (#351). `zoneView`
+it, centered on `COVER_FOCUS_U` (0.39, the column of signs) and clamped to its edges (#351, #428). `zoneView`
 stays inside the 16:9 cover on each axis it covers (`clampToCover`).
 The 3D zone signs are the navigation (`src/world/signs.ts`): `zoneAtScreen` hit-tests
 their polygons before the geography, the links are invisible over them, and
