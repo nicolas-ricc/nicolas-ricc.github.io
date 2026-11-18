@@ -6,7 +6,12 @@ import { COVER_LAPTOP, COVER_PHONE, layoutGaps, SIGN_FONT, signMetrics, staticCo
 import { counterClearance, letterGaps, measureText, rhythm } from "../kit/lettering";
 import { TOWER } from "../scenes/city-grid";
 import { CROWN_SITE } from "../scenes/sign-crown";
-import { PLATFORM_DECK } from "../scenes/sign-platform";
+import { PLATFORM_DECK, PLATFORM_SITES } from "../scenes/sign-platform";
+import { LANE_BACK, LANE_OUT } from "../scenes/sea-anim";
+import { HEADLAND_SHIFT } from "../map/geo";
+import { buildRenderList } from "../iso/render-list";
+import { assembleWorld } from "../world/assemble";
+import { COVER_FOCUS_U } from "../world/view";
 import { SHIPYARD_HALLS, TINKER_SITE } from "../scenes/sign-tinker";
 import { EXHIBITS } from "./exhibits";
 
@@ -530,8 +535,9 @@ describe("zone signs redesign documentation (#374)", () => {
     expect(report).not.toBe("");
     // the header cell is `✓/✗`: the verdict is the last cell of each metric row
     expect(report).not.toMatch(/\| ✗ \|$/m);
-    expect(report.match(/^\| (contraste|halo|OCR) \|.*\| ✓ \|$/gm)?.length ?? 0).toBe(18);
-    for (const id of CONTEXTS) for (const s of ["1.17", "0.83"]) expect(report).toMatch(new RegExp(`^## ${id} a ${s.replace(".", "\\.")}$`, "m"));
+    // 3 metrics × 2 scales × 4 contexts: plataforma-escena-angosta joined in #429
+    expect(report.match(/^\| (contraste|halo|OCR) \|.*\| ✓ \|$/gm)?.length ?? 0).toBe(24);
+    for (const id of [...CONTEXTS, "plataforma-escena-angosta"]) for (const s of ["1.17", "0.83"]) expect(report).toMatch(new RegExp(`^## ${id} a ${s.replace(".", "\\.")}$`, "m"));
     expect(report).toContain("Sin violaciones.");
   });
   it("the six level-3 crops are PNGs and the six scene captures are 3200×1800", () => {
@@ -889,5 +895,104 @@ describe("#app decides Writing's site (#428)", () => {
     const runtime = (readme.split(/\n\s*\n/).find((p) => p.includes("coverView(host)")) ?? "").replace(/\s+/g, " ");
     for (const s of ["writingSite", "#app"]) expect(runtime, s).toContain(s);
     expect(runtime).not.toContain("(Writing, on a phone)");
+  });
+});
+
+describe("#423 closing (#429)", () => {
+  const SPECS = `${ROOT}docs/superpowers/specs/`;
+  const AFTER = `${SPECS}assets/423-composicion-responsive/despues/`;
+  const read = (path: string) => (existsSync(path) ? readFileSync(path, "utf8") : "");
+  const png = (path: string) => {
+    expect(existsSync(path), path).toBe(true);
+    const b = readFileSync(path);
+    expect(b.subarray(1, 4).toString(), path).toBe("PNG");
+    return [b.readUInt32BE(16), b.readUInt32BE(20)];
+  };
+  /** `WxH` of a capture name such as `mapa-390x750.png`. */
+  const viewport = (name: string) => name.match(/(\d+)x(\d+)/)!.slice(1).map(Number);
+  const CAPTURES = [
+    ...["390x750", "430x932", "820x1180", "1024x768", "1366x1024", "1600x900", "1920x955"].map((s) => `mapa-${s}.png`),
+    "blog-1920x955.png", "blog-390x750.png", "boca-lab-1600x900.png", "rotacion-900x1440.png", "rotacion-1440x900.png",
+  ];
+  const glossary = read(`${ROOT}CONTEXT.md`);
+  const adr4 = read(`${ROOT}docs/adr/0004-writing-site-follows-the-host.md`);
+  const adr3 = read(`${ROOT}docs/adr/0003-signs-are-the-navigation.md`);
+  const spec = read(`${SPECS}2026-11-18-composicion-responsive-design.md`);
+  const at8 = spec.search(/^## 8\. Desvíos y medición$/m);
+  const dev = (at8 < 0 ? "" : spec.slice(at8)).replace(/\s+/g, " ");
+  /** A count as the spec writes it: thousands separated by a space. */
+  const count = (n: number) => n.toLocaleString("en").replace(/,/g, " ");
+
+  it.each(CAPTURES)("capture %s exists at 2W×2H", (name) => {
+    const [w, h] = viewport(name);
+    expect(png(`${AFTER}${name}`)).toEqual([2 * w!, 2 * h!]);
+  });
+  it("every PNG of despues/ is 2W×2H of the viewport in its name", () => {
+    for (const name of readdirSync(AFTER).filter((f) => f.endsWith(".png") && /\d+x\d+/.test(f))) {
+      const [w, h] = viewport(name);
+      expect(png(`${AFTER}${name}`), name).toEqual([2 * w!, 2 * h!]);
+    }
+  });
+  it("despues/README.md judges every capture on a line of its own and records the rotation", () => {
+    const lines = read(`${AFTER}README.md`).split("\n");
+    for (const name of CAPTURES) expect(lines.filter((l) => l.startsWith(`- \`${name}\``)), name).toHaveLength(1);
+    const text = lines.join("\n");
+    for (const s of ["transform", "900×1440", "1440×900", "sin recargar"]) expect(text, s).toContain(s);
+  });
+  it("REPORT.md has plataforma-escena-angosta at both scales, every row ok, and its four crops", () => {
+    const report = read(`${SPECS}assets/carteles-legibilidad/REPORT.md`);
+    for (const sc of ["1.17", "0.83"]) {
+      const sec = report.slice(report.indexOf(`## plataforma-escena-angosta a ${sc}\n`)).split(/\n(?=## )/)[0]!;
+      expect(report, sc).toContain(`## plataforma-escena-angosta a ${sc}\n`);
+      expect(sec.match(/^\| (contraste|halo|OCR) \|.*\| ✓ \|$/gm)?.length ?? 0, sc).toBe(3);
+    }
+    for (const s of ["117", "083", "117-ocr", "083-ocr"]) png(`${SPECS}assets/carteles-legibilidad/plataforma-escena-angosta-${s}.png`);
+  });
+  it("ADR 0004 exists with its title, the five parts in order and the story in its status", () => {
+    expect(adr4.split("\n")[0]).toBe("# 0004. The Writing site depends on the host");
+    const heads = ["## Status", "## Context", "## Decision", "## Consequences"].map((h) => adr4.search(new RegExp(`^${h}$`, "m")));
+    for (const i of heads) expect(i).toBeGreaterThan(0);
+    expect([...heads].sort((a, b) => a - b)).toEqual(heads);
+    expect(adr4.search(/^Sources: /m)).toBeGreaterThan(heads[3]!);
+    const status = adr4.slice(heads[0]!, heads[1]!);
+    for (const s of ["Accepted", "2026-11-18", "#423"]) expect(status, s).toContain(s);
+    for (const s of ["writingSite", "platformAnimator", "#app", "ResizeObserver", "seaPlatformAt", "ADR 0002", "zoneFrame"]) expect(adr4, s).toContain(s);
+  });
+  it("ADR 0003 says under Consequences that 0004 revises it", () => {
+    const cons = adr3.slice(adr3.search(/^## Consequences$/m));
+    expect(cons).toMatch(/^- Revised by 0004: /m);
+  });
+  it("the spec says implemented and §8 carries the final values, the threshold, the rotation and the counts", () => {
+    expect(spec.split("\n").find((l) => l.startsWith("**Estado:**"))).toContain("implementado (#423)");
+    expect(at8).toBeGreaterThan(spec.search(/^## 7\. /m));
+    const v = (p: { x: number; y: number }) => `(${p.x}, ${p.y})`;
+    const needles = [
+      "HEADLAND_SHIFT", `(+${HEADLAND_SHIFT.x}, +${HEADLAND_SHIFT.y})`,
+      "PLATFORM_SITES", v(PLATFORM_SITES.wide), v(PLATFORM_SITES.tall),
+      "COVER_FOCUS_U", String(COVER_FOCUS_U).replace(".", ","),
+      "LANE_OUT", "LANE_BACK", ...LANE_OUT.map(v), ...LANE_BACK.map(v),
+      "1,48", "900×1440", "1440×900", "46 481", "2 409",
+    ];
+    for (const s of needles) expect(dev, s).toContain(s);
+  });
+  it("§8 carries the static polygons and accents of the world after the story, as the budget tests count them", () => {
+    const w = assembleWorld(undefined, { reducedMotion: true }).scene;
+    const polys = buildRenderList([...w.terrain.ground, ...w.ground, ...w.solids]).length;
+    for (const n of [polys, w.accents.length]) expect(dev, String(n)).toContain(count(n));
+  });
+  it("README and CONTEXT.md name no old identifier, no 0.35 focus and no headland capping the shipyard", () => {
+    for (const [name, txt] of [["README.md", readme], ["CONTEXT.md", glossary]] as const) {
+      for (const re of [/\bPLATFORM_SITE\b/, /\bBLOG_SIGN\b/, /(?<![A-Za-z_])SIGNS\b/, /caps the shipyard/]) expect(txt, `${name} ${re}`).not.toMatch(re);
+      // the veil's ACCENT_DIM is 0.35 too: it is the only 0.35 allowed
+      expect(txt.replace("`ACCENT_DIM` (0.35)", ""), name).not.toMatch(/0[.,]35/);
+    }
+  });
+  it("README's runtime paragraph gives the focus, 0.39", () => {
+    const runtime = (readme.split(/\n\s*\n/).find((p) => p.includes("coverView(host)")) ?? "").replace(/\s+/g, " ");
+    expect(runtime).toContain("`COVER_FOCUS_U` (0.39");
+  });
+  it("README describes the headland on the island's east coast as Blog, and the lanes between the two Writing sites", () => {
+    const world = (readme.split(/\n\s*\n/).find((p) => p.includes("`LANE_OUT`")) ?? "").replace(/\s+/g, " ");
+    for (const s of ["east coast", "Blog", "tall site", "wide site"]) expect(world, s).toContain(s);
   });
 });
