@@ -4,8 +4,10 @@
 **Estado:** aprobado, listo para agente
 **Alcance:** recomponer la escena para que el recorte de pantallas angostas
 (celular, tablet vertical, 4:3, tablet horizontal) muestre los tres carteles y
-el faro sin generar nada propio de esas pantallas, salvo una excepción: el
-cartel de Writing, que tiene dos sitios y usa uno u otro según el host.
+el faro sin generar nada propio de esas pantallas. Para eso se muda el cabo
+entero del faro, como un bloque, y se corren los carriles. Hay una sola
+excepción: el cartel de Writing, que tiene dos sitios y usa uno u otro según el
+host.
 **Revisa:** la consecuencia de `docs/adr/0003-signs-are-the-navigation.md`
 ("en un celular vertical Writing queda fuera de la ventana… ningún
 `COVER_FOCUS_U` entra a los tres").
@@ -30,16 +32,19 @@ al medio, Writing abajo). Lo que no entra es el ancho: los carteles ocupan un
 
 Además:
 
-- El faro (`LIGHTHOUSE`, (396, 118), en la punta del cabo) queda fuera del
-  recorte en celular y en tablet vertical.
+- El faro (`LIGHTHOUSE`, (396, 118)) está en la punta del cabo (`HEADLAND`,
+  x 330..400, y 97..134, pegado al muelle de alistamiento del astillero).
+  Queda fuera del recorte en celular y en tablet vertical.
 - En escritorio Writing queda casi en el centro de la escena, y no debería:
   es un elemento secundario, abajo a la derecha.
 
 ## 2. Decisiones (tomadas con el dueño del sitio)
 
-1. **Un solo mundo para todas las pantallas.** Lo que se mueve en la escena
-   compartida es el faro y el tramo sur de los carriles de los barcos. Se
-   mueve para todas las pantallas a la vez, y el recorte hace el resto.
+1. **Un solo mundo para todas las pantallas.** En la escena compartida se
+   mueven **el cabo entero del faro** (la península: terreno, rocas, arrecife,
+   faro, casa del farero y neones; no solo la torre) y el tramo sur de los
+   carriles de los barcos. Se mueven para todas las pantallas a la vez, y el
+   recorte hace el resto. El cabo mudado pasa a ser zona **Blog**.
 2. **Excepción: el cartel de Writing tiene dos sitios.** Se mueve la
    plataforma entera (pilotes, cubierta, caseta, baliza, boyas propias si las
    tiene, cartel). Nunca hay dos plataformas a la vez. RESUME y PORTFOLIO no
@@ -76,23 +81,27 @@ Proyección del cálculo con 0,39 (centro de la palabra):
 
 | Host | RESUME | PORTFOLIO | Writing | Faro (linterna) |
 |---|---|---|---|---|
-| 1600×900 | 0,30, 0,42 | 0,47, 0,18 | ancho 0,79, 0,72 | 0,49, 0,65 |
-| 1440×900 | 0,33 | 0,52 | ancho 0,87, 0,72 | 0,54 |
-| 1366×1024 | 0,38 | 0,61 | angosto 0,58, 0,81 | 0,63 |
-| 1024×768 | 0,38 | 0,61 | angosto 0,58, 0,81 | 0,63 |
-| 820×1180 | 0,27 | 0,70 | angosto 0,66, 0,81 | 0,75 |
-| 390×750 | 0,19 | 0,77 | angosto 0,71, 0,81 | 0,83 |
-| 360×740 | 0,17 | 0,79 | angosto 0,72, 0,81 | 0,85 |
-| 430×932 | 0,15 | 0,81 | angosto 0,74, 0,81 | 0,87 |
+| 1600×900 | 0,30, 0,42 | 0,47, 0,18 | ancho 0,79, 0,72 | 0,50, 0,72 |
+| 1024×768 | 0,38 | 0,61 | angosto 0,55, 0,86 | 0,65 |
+| 820×1180 | 0,27 | 0,70 | angosto 0,60, 0,86 | 0,79 |
+| 390×750 | 0,19 | 0,77 | angosto 0,63, 0,86 | 0,89 |
+| 360×740 | 0,17 | 0,79 | angosto 0,64, 0,86 | 0,91 |
+| 430×932 | 0,15 | 0,81 | angosto 0,65, 0,86 | 0,93 |
+
+Con el cabo en el sitio de §3.4 y su punta en x ≈ 414, la linterna queda a la
+derecha de la ventana del celular. Con 0,39 entra en 360, 390 y 430 px (en
+0,93 en el peor caso). Si el cabo final queda más al este, se puede subir el
+foco a 0,40 mientras RESUME siga entrando entero.
 
 ### 3.2 Writing: dos sitios
 
 - **Sitio ancho** `PLATFORM_SITE_WIDE` ≈ (550, 125): en el agua oscura, al este
   del carril de vuelta. Es Blog por geografía.
-- **Sitio angosto** `PLATFORM_SITE_TALL` ≈ (422, 357): al sur de la isla, al
-  oeste del carril de salida. Es Blog por geografía (x ≥ 358 es mar de Blog en
-  esa latitud). Cae fuera de `WORLD` (y1 = 336), en el sangrado, que es mar y
-  se ve en el recorte.
+- **Sitio angosto** `PLATFORM_SITE_TALL` ≈ (440, 400): al sur de la isla y del
+  cabo mudado, al oeste del carril de salida. Es Blog por geografía. Cae fuera
+  de `WORLD` (y1 = 336), en el sangrado, que es mar y se ve en el recorte. Su
+  cubierta (x ≈ 413..467, y ≈ 373..427) queda a unas 55 u al sur de la orilla
+  del cabo.
 
 `PLATFORM_SITE` (392, 178) desaparece. `seaPlatformAt` recibe el sitio, y
 `BLOG_SIGN` pasa a ser uno por sitio (`blogSign(site)` o dos constantes), con
@@ -132,11 +141,13 @@ Se cambia solo el tramo sur de `LANE_OUT` y `LANE_BACK`, a partir de y ≈ 176.
 El tramo norte, de la boca a la punta del cabo, no cambia.
 
 - `LANE_OUT` deja de doblar hacia el sur-suroeste por (420, 232) → (377, 647).
-  En cambio, baja pasando **al este** del sitio angosto: a la altura de
-  y ≈ 357, x ≈ 470 o más.
+  En cambio, baja pasando **al este** de la punta del cabo mudado (x ≥ 440 a
+  la altura de y ≈ 290) y **al este** del sitio angosto (x ≥ 481 a la altura de
+  y ≈ 400).
 - `LANE_BACK` mantiene la separación de unas 42 u al este del carril de salida
-  (x ≈ 512 a la altura de y ≈ 357) y pasa **al oeste** del sitio ancho: a la
-  altura de y ≈ 125, x ≤ 500.
+  y pasa **al oeste** del sitio ancho: a la altura de y ≈ 125, x ≤ 500.
+- El tramo norte no tiene que esquivar más el cabo en su sitio viejo. Puede
+  quedar igual o enderezarse; da lo mismo mientras pase los tests.
 - Los dos siguen terminando en el sangrado, fuera del cuadro, con el fundido
   (`FADE_U`) en el sangrado.
 
@@ -149,26 +160,55 @@ de Writing**.
 Regla nueva: la cubierta de la plataforma queda a ≥ 14 u de los dos carriles
 en los dos sitios. #390 midió 14,7 u en (392, 178).
 
-### 3.4 Faro
+### 3.4 El cabo del faro se muda entero
 
-- Se muda la torre (`LIGHTHOUSE`), con su linterna y su haz, la casa del
-  farero (`KEEPER`, con su ventana y su cartelito) y los neones de la galería.
-  Va a la cabeza de una **escollera** corta que sale de la costa este de la
-  isla, x ≈ 344 a 350, hacia el este, con la torre cerca de **(360, 258)**.
-- En esa latitud, x ≥ 350 ya es mar de Blog (`worldZoneAt`), así que la torre y
-  su luz son Blog sin excepciones de geografía (ADR 0001). La raíz de la
-  escollera sobre la orilla (x < 350) queda en Resume. Es aceptable porque es
-  roca sin luces.
-- El cabo (`HEADLAND`) conserva su geografía, sus rocas y su arrecife. Si la
-  punta queda vacía, se puede dejar así o poner algo chico de roca; no hace
-  falta otro hito.
-- Si `LANDMARKS.blog` designa el faro (dice "lighthouse" en `CONTEXT.md`, pero
-  hoy vale (470, 160)), se alinea con la decisión que se tome. El test
+**Se muda la península entera, no solo el faro.** Es todo lo que hoy forma la
+punta: el polígono `HEADLAND` y su terreno (`headland`, la orilla y el
+`reef` alrededor, `distToHeadland`), las rocas y el sendero de roca, la torre
+(`LIGHTHOUSE`) con su linterna y su haz, la casa del farero (`KEEPER`) con su
+ventana y su cartelito, los neones de la galería y de la costa del cabo, y
+`headlandZ`. Todo se traslada como **un bloque rígido**, con la misma forma,
+la misma orientación y las mismas posiciones relativas. La única excepción es
+la base, que se ajusta para apoyarse en la costa nueva.
+
+- **Traslación de partida:** (+14, +172).
+  - La base, que hoy se apoya en el muelle de alistamiento (x 330..344,
+    y 97..134), pasa a apoyarse en la costa este de la isla (x = 344,
+    y ≈ 269..306). Esa costa es recta, en x = 344, entre y ≈ 160 y y ≈ 320.
+  - Los vértices de la base pasan de x = 330 a x = 344.
+  - La punta queda en x ≈ 414, y ≈ 286..294, y el faro cerca de (410, 290).
+- **Mejor como dato:** conviene que la traslación sea una constante, por
+  ejemplo `HEADLAND_SHIFT`, aplicada a `HEADLAND`, `LIGHTHOUSE`, `KEEPER` y los
+  demás puntos del cabo, en vez de reescribir cada coordenada a mano.
+- **El sitio viejo** (al este del muelle de alistamiento, en la boca) pasa a
+  ser mar. El muelle de alistamiento del astillero termina en el agua. Hay que
+  revisar con capturas que la boca y el astillero no queden con huecos ni con
+  terreno suelto.
+- **Zona: el cabo mudado es Blog.** Hoy `worldZoneAt` devuelve Portfolio para
+  el cabo, su arrecife y su orilla (`inHeadland || distToHeadland < SHORE_W`,
+  "el faro remata el astillero"). Esa regla cambia: el cabo pasa a ser
+  **Blog**.
+  - Cambian el clic, el hover y el velo de sus luces (ADR 0001: la luz sigue
+    a su posición).
+  - Hay que actualizar el comentario de `worldZoneAt`, la entrada *Zone* de
+    `CONTEXT.md` y los tests de geografía y de velo que fijan el cabo como
+    Portfolio.
+  - El astillero sigue siendo Portfolio.
+- **Restricciones:**
+  - El cabo no pisa sólidos de la isla (la costa del barrio costero, sus
+    faroles del malecón).
+  - Si un sólido de la isla queda dentro del polígono nuevo, se corre el cabo
+    unas unidades al norte o al sur, sin achicarlo.
+  - `terrain-classify.ts` y `city-grid` siguen leyendo `inHeadland` y
+    `distToHeadland`; sus tests se actualizan con la posición nueva.
+- **`LANDMARKS.blog`:** pasa a ser el faro en su posición nueva (hoy vale
+  (470, 160) y `CONTEXT.md` dice que es el faro). El test
   `worldZoneAt(LANDMARKS.blog)` = `blog` sigue pasando.
-- Se actualizan los exhibits `faro` y `plataforma-escena` del storybook. Hace
-  falta un exhibit de contexto por sitio de Writing: `plataforma-escena`
-  (ancho) y `plataforma-escena-angosta`, los dos bajo la compuerta de carteles
-  de `src/lab/signs.test.ts`.
+- **Storybook:** se actualizan los exhibits `faro` y `plataforma-escena`, más
+  los que encuadren el cabo o el muelle de alistamiento. Hace falta un
+  exhibit de contexto por sitio de Writing: `plataforma-escena` (ancho) y
+  `plataforma-escena-angosta`, los dos bajo la compuerta de carteles de
+  `src/lab/signs.test.ts`.
 
 ## 4. Lo que no cambia
 
@@ -187,15 +227,19 @@ Vitest, sobre funciones puras con `coverView` y `signBox`:
    360×740, las cajas de las tres palabras (con el sitio que elige
    `writingSite`) y la linterna del faro caen enteras dentro del host.
 2. Writing nunca queda en el centro. El centro de su palabra cumple
-   x ≥ 0,55·w e y ≥ 0,68·h en todos los tamaños de (1). En los de aspecto
+   x ≥ 0,52·w e y ≥ 0,68·h en todos los tamaños de (1). En los de aspecto
    ≥ 16:9 cumple además x ∈ [0,70, 0,88]·w.
 3. `writingSite` elige el sitio ancho para todo aspecto ≥ 16:9 y el angosto
    para todo aspecto < 1. Es estable: no oscila entre 1 y 16:9 al variar el
    ancho de a 1 px.
 4. Carriles: los tests de §3.3, con los dos sitios, y la separación ≥ 14 u
    entre la cubierta y los carriles.
-5. Faro: `worldZoneAt` de la torre es `blog`. La torre y la escollera están
-   sobre agua o costa (`terrainAt`) y no se cruzan con sólidos de la isla.
+5. Cabo: el cabo mudado conserva la forma (los vértices de `HEADLAND` menos
+   la traslación coinciden con los de hoy, salvo los de la base). El faro y
+   la casa del farero mantienen su posición relativa al cabo.
+   `worldZoneAt` es `blog` sobre el cabo, su arrecife y su orilla. Ningún
+   sólido de la isla queda dentro del polígono nuevo, y el sitio viejo
+   clasifica como mar.
 6. Compuerta de carteles (`signs.test.ts`): `checkSign` pasa para los dos
    exhibits de Writing a 1,17 y 0,83, contra los sólidos del mundo.
 7. Presupuestos del mundo (acentos estáticos, polígonos) sin subir: la
@@ -213,7 +257,10 @@ Verificación visual en el PR, con agent-browser (ver `CLAUDE.md`; usar
 
 Criterios de las capturas:
 
-- se ven los tres carteles y el faro;
+- se ven los tres carteles y el cabo con su faro;
+- en el sitio viejo del cabo (la boca, junto al muelle de alistamiento) no
+  quedan huecos ni terreno suelto: hace falta una captura de esa zona en
+  1920×955;
 - Writing está abajo a la derecha;
 - en 390×750 no hay ningún rótulo de emergencia pegado al borde;
 - en escritorio los barcos no pasan por encima de Writing ni lo tapan.
@@ -228,9 +275,10 @@ hacia el noreste (más arriba a la derecha en pantalla) y se anota en el PR.
 - **ADR 0004:** "El sitio de Writing depende del host". Es la excepción a "un
   solo mundo" y revisa la consecuencia de ADR 0003 sobre celulares. Explica la
   regla de 2.4 y por qué el sitio se decide con el host sin zona abierta.
+- El ADR 0004 registra también que el cabo mudado pasa de Portfolio a Blog.
 - `CONTEXT.md`: entradas *Sign* (dos sitios de Writing y `writingSite`),
-  *Lanes* (tramo sur nuevo), *Cover frame* (`COVER_FOCUS_U` 0,39) y *Zone* si
-  cambia algo de la geografía del faro.
+  *Lanes* (tramo sur nuevo), *Cover frame* (`COVER_FOCUS_U` 0,39) y *Zone*
+  (el cabo pasa a ser Blog y deja de "rematar el astillero").
 - README del storybook, si cambian los ids de los exhibits.
 
 ## 7. Fuera de alcance
