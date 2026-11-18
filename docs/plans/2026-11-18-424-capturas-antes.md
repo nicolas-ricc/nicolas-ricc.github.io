@@ -27,7 +27,7 @@
 
 ## Assumptions (supuestos técnicos, declarados)
 
-- El criterio "solo entran archivos bajo `.../antes/`" se lee junto con su condición, "`git diff origin/main --stat -- src` vacío": nada de código. El pipeline de agentes agrega dos artefactos fuera de la carpeta, como en hijos anteriores de este tipo (#86: `docs/plans/2026-10-17-86-inventario-barcos-antes.md` y `scripts/barcos-inventario.test.ts`): este plan y el eval `scripts/capturas-antes-423.test.ts`. No tocan `src/` ni cambian el comportamiento del sitio.
+- El criterio "solo entran archivos bajo `.../antes/`" se lee junto con su condición, "`git diff origin/main --stat -- src` vacío": nada de código. El pipeline de agentes agrega dos artefactos fuera de la carpeta, como en hijos anteriores de este tipo (#86: `docs/plans/2026-10-17-86-inventario-barcos-antes.md` y `scripts/barcos-inventario.test.ts`): este plan y el eval `scripts/capturas-423.test.ts`. No tocan `src/` ni cambian el comportamiento del sitio.
 - No hay ningún README en `docs/superpowers/specs/assets/*/` que sirva de plantilla. Los campos `**Fecha:**` y `**Commit:**` siguen el estilo de frontmatter de las specs (`**Fecha:**`, que `scripts/barcos-inventario.test.ts:39-41` ya exige); el issue pide "fecha, commit, viewport y escala". Alternativa descartada: frontmatter YAML, que ninguna spec usa.
 - El README registra además la secuencia de comandos de captura, para que el hijo de verificación (#429) repita el set "después" igual. Alternativa descartada: dejar el script solo en `.scratch/`, que no se versiona.
 - Guardia contra cuadros vacíos: el eval exige que cada PNG pese ≥ 50 KB (un cuadro liso de 780×1500 comprime a unos pocos KB); el umbral se contrasta con el peso real de la captura más chica en Task 1 y se anota. Alternativa descartada: decodificar píxeles, que pide escribir un decodificador (el repo solo tiene `scripts/png.ts`, que codifica) para un hijo sin código. El encuadre Portfolio del lab no tiene oráculo automático: lo confirma la lectura de la captura con Read (se ven la boca, el muelle de alistamiento y el cabo a mayor escala que en el mapa).
@@ -43,7 +43,7 @@
 
 ## Criterios de aceptación del issue (transcriptos)
 
-- [ ] Existen los 10 PNG con esos nombres y el README; cada PNG del mapa mide exactamente 2·W × 2·H. → Task 1 (capturas), Task 2 (README); eval `scripts/capturas-antes-423.test.ts`.
+- [ ] Existen los 10 PNG con esos nombres y el README; cada PNG del mapa mide exactamente 2·W × 2·H. → Task 1 (capturas), Task 2 (README); eval `scripts/capturas-423.test.ts`.
 - [ ] `git diff origin/main --stat -- src` vacío en el PR. → todas; comprobado al final de Task 2.
 - [ ] `npm test` y `npm run typecheck` en verde. → Task 2.
 
@@ -59,7 +59,7 @@
 
 ## File Structure
 
-- Create (stage 3 del pipeline, commit `test(#424): evals`): `scripts/capturas-antes-423.test.ts` — lee las dimensiones de cada PNG del IHDR (bytes 16–23) con `Buffer`, como `scripts/barcos-inventario.test.ts`. Exige: los diez archivos, firma PNG, 2·W × 2·H exactos, ≥ 50 KB cada uno, README con `**Fecha:**`, `**Commit:**` (con `6cbbe9e`), y los diez nombres citados.
+- Create (stage 3 del pipeline, commit `test(#424): evals`): `scripts/capturas-423.test.ts` — lee las dimensiones de cada PNG del IHDR (bytes 16–23) con `Buffer`, como `scripts/barcos-inventario.test.ts`. Exige: los diez archivos, firma PNG, 2·W × 2·H exactos, ≥ 50 KB cada uno, README con `**Fecha:**`, `**Commit:**` (con `6cbbe9e`), y los diez nombres citados.
 - Create: `docs/superpowers/specs/assets/423-composicion-responsive/antes/*.png` (Task 1).
 - Create: `docs/superpowers/specs/assets/423-composicion-responsive/antes/README.md` (Task 2).
 - Scratch, no versionado: `.scratch/` (en `.git/info/exclude`): `evals-424.md` y el script de captura.
@@ -74,7 +74,7 @@
 - Produces: los PNG que describe Task 2.
 
 - [ ] **Step 1:** `git diff origin/main --stat -- src` → vacío.
-- [ ] **Step 2:** Correr el eval: `npx vitest run scripts/capturas-antes-423.test.ts` → FAIL (faltan los PNG).
+- [ ] **Step 2:** Correr el eval: `npx vitest run scripts/capturas-423.test.ts` → FAIL (faltan los PNG).
 - [ ] **Step 3:** Agregar `.scratch/` a `.git/info/exclude`. Levantar `npm run dev -- --host --port 5173` y, para cada tamaño del mapa: `agent-browser set viewport W H 2`, `open http://localhost:5173/`, esperar según Global Constraints (`mapa-listo`, `[mapa] bloom:`, 3 s), `screenshot <ruta>`.
 - [ ] **Step 4:** Lo mismo para `/area/blog/` en 1920×955 y 390×750.
 - [ ] **Step 5:** `/lab/world.html` en 1600×900: esperar `[lab] bloom:`, `press 1`, esperar 3 s, capturar `boca-lab-1600x900.png`.
@@ -87,7 +87,7 @@
 - Create: `docs/superpowers/specs/assets/423-composicion-responsive/antes/README.md`
 
 - [ ] **Step 1:** Escribir el README: título, `**Fecha:** 2026-11-18`, `**Commit:** main 6cbbe9e`, viewport y escala (CSS W×H a escala 2, PNG 2W×2H; headless Chrome con agent-browser), cómo se esperó y la secuencia de comandos de captura, y una línea por captura con lo observado en Task 1.
-- [ ] **Step 2:** `npx vitest run scripts/capturas-antes-423.test.ts` → PASS.
+- [ ] **Step 2:** `npx vitest run scripts/capturas-423.test.ts` → PASS.
 - [ ] **Step 3:** `npm test` y `npm run typecheck` → verde; `git diff origin/main --stat -- src` vacío.
 - [ ] **Step 4:** Commit `docs(#424): capturas antes de recomponer`.
 
