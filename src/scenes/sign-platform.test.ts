@@ -20,6 +20,17 @@ const DECK = PLATFORM_DECK.flatMap((q) => [q.x, q.y]);
 /** True when the plan of `s` (its tessellated points) lies on the deck at the origin. */
 const onDeck = (s: Solid) => tessellateAll(s).every((f) => f.pts.every((p) => pointInPolygon(p.x, p.y, DECK)));
 
+/** Same JSON shape and keys, every number within 1e-9, every other leaf equal. */
+function expectClose(a: unknown, b: unknown, path = "$"): void {
+  if (typeof a === "number" && typeof b === "number") { expect(Math.abs(a - b), path).toBeLessThanOrEqual(1e-9); return; }
+  if (a !== null && b !== null && typeof a === "object" && typeof b === "object") {
+    expect(Object.keys(a).sort(), path).toEqual(Object.keys(b).sort());
+    for (const k of Object.keys(a)) expectClose((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k], `${path}.${k}`);
+    return;
+  }
+  expect(a, path).toEqual(b);
+}
+
 describe("sea platform (Writing, after #374)", () => {
   it("the deck is a strip along u = (1, −1)/√2, 2·DECK_HALF long and 10 deep, its top at z 1.6", () => {
     const decks = build().out.filter(isDeck);
@@ -182,8 +193,9 @@ describe.each(["wide", "tall"] as const)("Writing sign in Black Chancery, with i
   });
   it("seaPlatform is seaPlatformAt(site) moved by −PLATFORM_SITES[site], solid by solid and accent by accent", () => {
     const o = build(), s = site();
-    const r = (v: unknown) => JSON.parse(JSON.stringify(v, (_k, x: unknown) => (typeof x === "number" ? Math.round(x * 1e9) / 1e9 + 0 : x)));
-    expect(r(o.out)).toEqual(r(s.out.map((x) => translate(x, -SITE.x, -SITE.y))));
-    expect(r(o.accents)).toEqual(r(s.accents.map((x) => translateAccent(x, -SITE.x, -SITE.y))));
+    // compared with a tolerance: rounding to 1e-9 hit a boundary case (a value at x.xxxxxxxx5)
+    const r = (v: unknown) => JSON.parse(JSON.stringify(v)) as unknown;
+    expectClose(r(o.out), r(s.out.map((x) => translate(x, -SITE.x, -SITE.y))));
+    expectClose(r(o.accents), r(s.accents.map((x) => translateAccent(x, -SITE.x, -SITE.y))));
   });
 });
