@@ -108,3 +108,32 @@ Tasks 1–3 below are the same under options 1, 2 and 4. Task 4 (level 3 and doc
 
 - The sea surface as `backing`: §4.2 asks for "un sólido o plate propio del cartel u host (no el cielo)". The host of the platform is the sea, and it is the only thing behind the letters once the panel goes. It is modelled as a flat poly checked against the terrain, not built. Rejected alternative: building a water-coloured slab in the scene, which would cover the animated water and its glints.
 - `SIGN_MARGIN` 3 → 1.5 and `END` 6 → 4, instead of moving a site or a lane (see the spike).
+
+## Grilling
+
+Round 1 of at most 2. The griller (model: fable) read only this plan and asked 18 questions. Status: **blocked**.
+
+Answers by source: ISSUE 4, CODE 8, DOC 3, NO SOURCE 3 (Q1, Q2, Q3 → spec ambiguity).
+
+1. NO SOURCE → **spec ambiguity.** ISSUE: "`checkLayouts` / guardrails de legibilidad pasan sin aflojarlos (si la fuente es demasiado fina o gruesa, ajustar con el script, no las reglas)". DOC: spec 2026-11-15 §4.3 l.169: "1.17 tiene que devolver la palabra exacta". Nothing written accepts a documented ✗. Blocked.
+2. NO SOURCE → **spec ambiguity** (same question). Nothing rules out option 3. No task gets implemented before the answer.
+3. DOC: `scripts/marquee-word.py:17-18` ("erodes every face … to thin a heavy font into the legibility rules") and spec §8.2 l.335 (CNRGN Builder "la afina 0.0075"), so a weight change on the rendered word is precedent. A closing removes counters the designer drew, and no text extends the precedent to it: NO SOURCE → goes into the blocking question with Q1.
+4. CODE: `src/scenes/sign-platform.ts:36` — "two steel beams … frame the word and its backing panel (L = ink width + 2·SIGN_MARGIN)". The margin is the panel's. `END` only places the hut and the mast (`:21`, and the comment on `PLATFORM_DECK`). No spec or ADR fixes either value.
+5. ISSUE: "Revisar que el neón siga legible contra lo que tenga detrás en el mundo sin el fondo". DOC: §4.2 l.148 "un sólido o plate propio del cartel u host (no el cielo…)". The platform's host is the sea, which is not the sky. Technical assumption, recorded under Assumptions.
+6. CODE: `src/kit/legibility.ts` `contrastOf` uses `toneColor(f.mat, stepTone(f.tone, f.toneOffset))` of the nearest backing face, which is `top` for a flat poly. `src/scenes/terrain.ts:98` `waterCellMat` returns `WaterMat | null`, and nothing guarantees non-null; that is why the plan adds the grid test (Review Focus 2).
+7. CODE: as in 6. The grid test fails on any non-water cell. The tone is represented by the material's lightest step, `glow` (Review Focus 5), not by the centre cell.
+8. DOC: §4.3. Animated water and glints are measured on pixels by level 3 (`npm run legibility`, with bloom), not by level 2. That is Task 4.
+9. CODE: `scripts/marquee-word.py:72` (`erode`) already exits on pieces. Letters with parts and no closing keep the `parts` path. CI does not run the generator; that is the precedent for the other two words.
+10. Measured in the spike in that order (closing, then thin, then air: the script applies `thin` before `air`, `marquee-word.py:main`). The swapped order was not measured; the plan fixes the order.
+11. CODE: `src/kit/legibility.ts:51` `checkLayouts` uses `strokeRatio(size, width)` with the given `width`. Level 2 `signMetrics` uses `spec.stroke` (`:141`), not measured ink. Technical assumption: if the phone floor applies to the thinnest stem (0.1365), `LOSTWAGES_FACE` becomes 0.1365 and `WRITING_CAP` 9.5. Decided before Task 1 if the run resumes.
+12. CODE: the precedent is `sign-platform.ts` `sign()`, which copies `spec.backing[0]` ("copy: a consumer that mutates the scene must not reach BLOG_SIGNS"). The plan uses the same pattern: copies in `sign()`, tested with `toEqual`/`not.toBe`.
+13. CODE: `src/lab/exhibits.test.ts:457-461` asserts `toHaveLength(75)`. The new number is the count `seaPlatformAt` gives after Task 2: 74 (the panel goes) plus the change in piles and railing posts from `DECK_HALF` 38.85 against 38.77 (n = ceil(spans / step)). It gets derived and written in Task 2.
+14. CODE: `src/scenes/world-baseline.test.ts:7-15` holds per-piece `fingerprint` hashes (solids/accents) keyed by exhibit id. Only `plataforma` is re-recorded, with a note saying why, as the header asks.
+15. CODE: `src/lab/docs.test.ts:814` and `:843` ("literals since #428 / #427: … the spec is history") are the precedent. The value 1,54 is the threshold recorded in the 2026-11-18 spec §8.1.
+16. CODE: `grep -rl chancery` lists `CONTEXT.md`, the 2026-11-15 spec, `scripts/marquee-word.py`, `src/kit/chancery-writing.ts`, `src/kit/marquee.ts`, `src/scenes/sign-platform*.ts` and `src/scenes/world-baseline.test.ts`. README and ADR 0004 do not cite it. `npm test` is the gate.
+17. Technical assumption, for the resume: move the `marquee.ts` constant swap into Task 2 so that every commit typechecks. Nothing is committed beyond this plan.
+18. DOC: `scripts/marquee-word.py:27` asks for fontTools and shapely without versions. The spike used fontTools 4.68.0 and shapely 2.2.0 (Python 3.12.3); Task 1 adds them to the docstring.
+
+Assumptions (for the PR): the sea surface as backing (Q5), a stroke floor on the thinnest stem if asked (Q11), the constant swap moved into Task 2 (Q17).
+
+Issues opened: none.
