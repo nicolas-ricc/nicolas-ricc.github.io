@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ESTUARY_Y0, HEADLAND, MOUTH_Y, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, abyssX, distToHeadland, estuaryEast, estuaryInset, eastBank, inHeadland, inMouth, inStationLand, islandEastX, islandWestX, northCoastY, pointInPolygon, riverCenter, SEAM_CY, shoreWidth, worldZoneAt } from "./geo";
+import { ESTUARY_Y0, HEADLAND, HEADLAND_SHIFT, MOUTH_Y, RIVER_HALF, SHORE_W, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, abyssX, distToHeadland, estuaryEast, estuaryInset, eastBank, inHeadland, inMouth, inStationLand, islandEastX, islandWestX, northCoastY, pointInPolygon, riverCenter, SEAM_CY, shoreWidth, worldZoneAt } from "./geo";
 
 describe("world", () => {
   it("the content has a negative origin and sides that are multiples of 18", () => {
@@ -9,14 +9,19 @@ describe("world", () => {
     expect((WORLD.y1 - WORLD.y0) % 18).toBe(0);
   });
 
-  it("clickable zone: the headland and its shore are Portfolio, the seawall shore Resume, the open sea Blog", () => {
+  it("clickable zone: the moved headland, its reef and shore are Blog, the promenade and the seawall shore Resume, the open sea Blog", () => {
     expect(worldZoneAt(10, 10)).toBe("portfolio");
     expect(worldZoneAt(-30, -30)).toBe("portfolio");   // factory band
     expect(worldZoneAt(10, 200)).toBe("cv");
     expect(worldZoneAt(-30, 300)).toBe("cv");          // district
-    expect(worldZoneAt(380, 118)).toBe("portfolio");   // headland
-    expect(worldZoneAt(404, 118)).toBe("portfolio");   // reef
-    expect(worldZoneAt(350, 100)).toBe("portfolio");   // shipyard shore
+    expect(worldZoneAt(410, 290)).toBe("blog");        // headland (#426: moved to the east coast, Blog)
+    expect(worldZoneAt(386, 280)).toBe("blog");        // headland, the keeper's house
+    expect(worldZoneAt(420, 290)).toBe("blog");        // reef
+    expect(worldZoneAt(424, 300)).toBe("blog");        // headland shore
+    expect(worldZoneAt(340, 285)).toBe("cv");          // promenade, west of the headland base
+    expect(worldZoneAt(343.9, 285)).toBe("cv");        // promenade parapet, on the base's edge
+    expect(worldZoneAt(350, 100)).toBe("cv");          // jungle of the old site (ADR 0002)
+    expect(worldZoneAt(380, 118)).toBe("blog");        // the old site is open sea
     expect(worldZoneAt(350, 200)).toBe("cv");          // seawall shore
     expect(worldZoneAt(500, 200)).toBe("blog");
     expect(worldZoneAt(100, 80)).toBe("portfolio");    // shipyard, north of the seam
@@ -29,12 +34,18 @@ describe("world", () => {
     expect(worldZoneAt(290, 100)).toBe("cv");
     expect(worldZoneAt(400, 10)).toBe("blog");
     expect(worldZoneAt(400, 260)).toBe("blog");
-    for (let y = -60; y < 336; y += 6) expect(worldZoneAt(ZONE_SPLIT_X + shoreWidth(y) - 0.5, y)).not.toBe("blog");
+    // the seawall shore is never Blog, except where the moved headland's own shore (Blog, #426) takes it
+    for (let y = -60; y < 336; y += 6) {
+      const x = ZONE_SPLIT_X + shoreWidth(y) - 0.5;
+      if (!inHeadland(x, y) && distToHeadland(x, y) >= SHORE_W) expect(worldZoneAt(x, y), `${x},${y}`).not.toBe("blog");
+      else expect(worldZoneAt(x, y), `${x},${y}`).toBe("blog");
+    }
   });
 
   it("the trench starts at x ≈ 392 in the north, more than 30 u from the headland, and opens east toward the south", () => {
     expect(abyssX(-60)).toBeCloseTo(392 + 6 * Math.sin(-60 / 17), 6);
-    expect(abyssX(118) - 400).toBeGreaterThan(30);
+    const [tipX, tipY] = HEADLAND.reduce((a, b) => (b[0] > a[0] ? b : a));
+    expect(abyssX(tipY) - tipX).toBeGreaterThan(30); // from the moved headland's tip (#426)
     expect(abyssX(336)).toBeGreaterThan(abyssX(-60) + 90);
     expect(shoreWidth(0)).toBeGreaterThan(4);
   });
@@ -49,20 +60,23 @@ describe("world", () => {
     expect(inMouth(riverCenter(0) - RIVER_HALF - 1, 0)).toBe(false); // west of the river there is no mouth
   });
 
-  it("the headland starts at the fitting-out quay and reaches x≈400 with the lighthouse at the tip", () => {
-    expect(inHeadland(336, 115)).toBe(true);
-    expect(inHeadland(396, 118)).toBe(true);
-    expect(inHeadland(410, 118)).toBe(false);
-    expect(inHeadland(360, 90)).toBe(false);
-    expect(Math.min(...HEADLAND.map(([x]) => x))).toBeLessThanOrEqual(330);
-    expect(Math.max(...HEADLAND.map(([x]) => x))).toBe(400);
+  it("the headland is the old polygon moved by HEADLAND_SHIFT, resting on the island's east coast (#426)", () => {
+    const OLD = [[330, 100], [344, 97], [372, 104], [400, 114], [400, 122], [372, 132], [344, 134], [330, 130]];
+    expect(HEADLAND_SHIFT).toEqual({ x: 14, y: 172 });
+    expect(HEADLAND.map(([x, y]) => [x - HEADLAND_SHIFT.x, y - HEADLAND_SHIFT.y])).toEqual(OLD);
+    expect(inHeadland(410, 290)).toBe(true);
+    expect(inHeadland(350, 287)).toBe(true);
+    expect(inHeadland(380, 118)).toBe(false);
+    expect(inHeadland(340, 285)).toBe(false);
+    expect(Math.max(...HEADLAND.map(([x]) => x))).toBe(414);
+    expect(Math.min(...HEADLAND.map(([x]) => x))).toBe(ZONE_SPLIT_X); // the base sits on the straight coast, islandEastX = 344
   });
 
   it("distToHeadland is 0 inside and grows outside", () => {
-    expect(distToHeadland(380, 118)).toBe(0);
-    expect(distToHeadland(400, 118)).toBe(0);
-    expect(distToHeadland(410, 118)).toBeCloseTo(10, 1);
-    expect(distToHeadland(380, 80)).toBeGreaterThan(20);
+    expect(distToHeadland(380, 290)).toBe(0);
+    expect(distToHeadland(414, 290)).toBe(0);
+    expect(distToHeadland(424, 290)).toBeCloseTo(10, 1);
+    expect(distToHeadland(380, 252)).toBeGreaterThan(20);
   });
 
   it("pointInPolygon lives in geo", () => {

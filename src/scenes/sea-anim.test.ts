@@ -7,7 +7,7 @@ import { hullsIntersect, isBehind, overlaps, screenBounds, screenHull } from "..
 import { convexHull, polyline, v3, type Vec2 } from "../iso/geometry";
 import { project } from "../iso/project";
 import { bounds, hullRings, isFlat, type Bounds, type Solid } from "../iso/solids";
-import { WORLD, inCoverQuad, pointInPolygon, worldZoneAt } from "../map/geo";
+import { HEADLAND, WORLD, inCoverQuad, pointInPolygon, worldZoneAt } from "../map/geo";
 import { signBox, SIGN_ORDER, SIGNS } from "../world/signs";
 import { BEAM_INNER, BEAM_LEN, BEAM_PERIOD_MS, CYCLE_MS, FADE_U, FERRY_PAUSE_MS, FERRY_ROUTE, FERRY_SPEED, KEEPER_SIGN_MS, LANE_BACK, LANE_OUT, LANE_SPEED, NEON_STEP_MS, OFF_MS, PORT_MS, SHIPS, alphaAt, createSeaAnim, laneAt, laneLength, type ShipFrame } from "./sea-anim";
 import { SHIP_SPECS, ship, shipAt } from "./ships";
@@ -127,9 +127,9 @@ describe("two lanes", () => {
   });
 
   it("the lanes leave ≥ 14 u to the Writing decks at both sites and ≥ 14 u to the moved headland polygon (#423)", () => {
-    // the sites and the headland of #423; sign-platform.ts and geo.ts adopt them in later children
+    // the sites of #423 (sign-platform.ts adopts them in a later child) and the headland moved in #426
     const SITES: Vec2[] = [{ x: 550, y: 125 }, { x: 440, y: 400 }];
-    const MOVED_HEADLAND: Vec2[] = [[344, 272], [358, 269], [386, 276], [414, 286], [414, 294], [386, 304], [358, 306], [344, 302]].map(([x, y]) => ({ x: x!, y: y! }));
+    const MOVED_HEADLAND: Vec2[] = HEADLAND.map(([x, y]) => ({ x, y }));
     const decks = SITES.map((s) => PLATFORM_DECK.map((q) => ({ x: q.x + s.x, y: q.y + s.y })));
     const toSeg = (p: Vec2, a: Vec2, b: Vec2): number => {
       const dx = b.x - a.x, dy = b.y - a.y, t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy)));

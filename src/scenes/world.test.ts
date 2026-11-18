@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { buildRenderList } from "../iso/render-list";
 import { bounds, isFlat, type Solid } from "../iso/solids";
-import { BLEED, WORLD, worldZoneAt } from "../map/geo";
+import { BLEED, HEADLAND, WORLD, distToHeadland, pointInPolygon, worldZoneAt } from "../map/geo";
 import { allIsoColors } from "../map/palette-iso";
 import { STAIR_TOWER } from "./boiler-house";
 import { city } from "./city";
 import { PLANT } from "./factory";
+import { LIGHTHOUSE } from "./sea";
 import { TINKER_SITE, tinkerSign } from "./sign-tinker";
 import { SUBSTATION } from "./substation";
 import { LANDMARKS, world, zoneRng } from "./world";
@@ -139,10 +140,25 @@ describe("world", () => {
     }
   });
 
-  it("the Blog landmark falls in the trench and the bleed exists only with the whole world", () => {
+  it("the Blog landmark is the lighthouse (#426) and the bleed exists only with the whole world", () => {
+    expect(LANDMARKS.blog).toEqual({ x: LIGHTHOUSE.x, y: LIGHTHOUSE.y, z: 0 });
     expect(worldZoneAt(LANDMARKS.blog.x, LANDMARKS.blog.y)).toBe("blog");
     expect(world(7).terrain.bleed.length).toBeGreaterThan(0);
     expect(world(7, { zones: ["portfolio"] }).terrain.bleed).toEqual([]);
+  });
+
+  it("#426: only the sea's solids have a box corner inside the moved headland, and nothing else stands within 2.3 u of it", () => {
+    const w = world(7), own = new Set(w.sea!.solids), flat = HEADLAND.flat();
+    const inside: string[] = [], close: string[] = [];
+    for (const s of w.solids) {
+      if (own.has(s)) continue;
+      const b = bounds(s), corners = [[b.min.x, b.min.y], [b.max.x, b.min.y], [b.min.x, b.max.y], [b.max.x, b.max.y]] as const;
+      const where = `${s.kind} ${b.min.x.toFixed(1)},${b.min.y.toFixed(1)}`;
+      if (corners.some(([x, y]) => pointInPolygon(x, y, flat))) inside.push(where);
+      else if (Math.min(...corners.map(([x, y]) => distToHeadland(x, y))) < 2.3) close.push(where);
+    }
+    expect(inside).toEqual([]);
+    expect(close).toEqual([]); // the promenade lamps (x 341..341.6) are the nearest, at 2.4 u
   });
 
   it("Portfolio with factory exceeds 400 raised solids and the factory stays in the west column, the siding with the crane or the new region (#246)", () => {

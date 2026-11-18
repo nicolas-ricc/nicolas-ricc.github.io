@@ -4,7 +4,7 @@ import { spotOf } from "../iso/spot-fixtures";
 import type { Accent } from "../iso/accent";
 import { buildRenderList } from "../iso/render-list";
 import { bounds, isFlat, type Solid } from "../iso/solids";
-import { ZONE_SPLIT_X, abyssX, inHeadland, worldZoneAt } from "../map/geo";
+import { HEADLAND_SHIFT, ZONE_SPLIT_X, abyssX, inHeadland, worldZoneAt } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng } from "../map/seed";
 import { BUOYS, CAP_R, COAST, COAST_Z, GALLERY_DECK_R, GALLERY_LIGHT_Z, GALLERY_POSTS, GALLERY_R, KEEPER, LANTERN_R, LANTERN_Z, LIGHTHOUSE, POST_H, POST_W, WRECK, WRECK_BUOY, sea, type SeaScene } from "./sea";
@@ -40,7 +40,8 @@ describe("sea", () => {
     expect(top - LIGHTHOUSE.z).toBeCloseTo(29.6, 1);
     expect(s.lantern.z).toBeCloseTo(LIGHTHOUSE.z + 24 + 0.6 + 1.5, 6); // deliberate drift pin (#133): six drums of 4 + gallery 0.6 + half a lantern, in literals so changing a constant breaks here
     expect(s.lantern.z).toBe(LANTERN_Z);
-    expect(worldZoneAt(LIGHTHOUSE.x, LIGHTHOUSE.y)).toBe("portfolio"); // the lighthouse clicks through to Portfolio
+    expect(worldZoneAt(LIGHTHOUSE.x, LIGHTHOUSE.y)).toBe("blog"); // #426: the moved headland is Blog
+    expect(worldZoneAt(KEEPER.x, KEEPER.y)).toBe("blog");
   });
 
   it("lighthouse gallery: disc and posts with named measurements, not moving a bit (#27)", () => {
@@ -76,6 +77,15 @@ describe("sea", () => {
       expect(p.x).toBeCloseTo(posts[k]!.at.x + POST_W / 2, 9);
       expect(p.y).toBeCloseTo(posts[k]!.at.y + POST_W / 2, 9);
     });
+  });
+
+  it("#426: the lighthouse, the keeper's house and the coast beacons moved with the headland, as one block", () => {
+    expect(LIGHTHOUSE).toEqual({ x: 410, y: 290, z: 7 });
+    expect(KEEPER).toEqual({ x: 386, y: 280 });
+    expect([LIGHTHOUSE.x - HEADLAND_SHIFT.x, LIGHTHOUSE.y - HEADLAND_SHIFT.y]).toEqual([396, 118]);
+    expect([KEEPER.x - HEADLAND_SHIFT.x, KEEPER.y - HEADLAND_SHIFT.y]).toEqual([372, 108]);
+    const OLD_COAST = [[397.5, 99.5], [403, 101.5], [408, 104], [411.5, 108.5], [413, 114.5], [413, 120.5], [412, 126.5], [408.5, 131.5]];
+    expect(COAST.map((p) => [p.x - HEADLAND_SHIFT.x, p.y - HEADLAND_SHIFT.y])).toEqual(OLD_COAST);
   });
 
   it("keeper's house, stepped rock path over the point, outcrops, boulders and reef", () => {
@@ -127,7 +137,7 @@ describe("sea", () => {
     const bow = parts.find((x) => x.kind === "poly" && x.mat === "hull" && x.footprint.length === 5)!, house = parts.find((x) => x.kind === "poly" && x.mat === "whitewash" && x.facade)!;
     const bb = bounds(bow), hb = bounds(house);
     expect(Math.hypot((bb.min.x + bb.max.x) / 2 - (hb.min.x + hb.max.x) / 2, (bb.min.y + bb.max.y) / 2 - (hb.min.y + hb.max.y) / 2)).toBeGreaterThan(20); // split in two: the center is sunk
-    for (const x of s.solids) if (x.kind === "cylinder" || x.kind === "hull") if (bounds(x).min.x > ZONE_SPLIT_X + 60) expect(water.has(terrainAt(x.at.x, x.at.y))).toBe(true);
+    for (const x of s.solids) if (x.kind === "cylinder" || x.kind === "hull") if (bounds(x).min.x > ZONE_SPLIT_X + 60 && !inHeadland(x.at.x, x.at.y)) expect(water.has(terrainAt(x.at.x, x.at.y))).toBe(true);
   });
 
   it("neons: gallery of eight lights around the shaft, coast beacons in Blog and the keeper's cyan sign", () => {

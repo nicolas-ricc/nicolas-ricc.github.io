@@ -40,9 +40,10 @@ describe("geography of the seam at y 90 (#319)", () => {
     expect(inStationLand(197.9, 145.9)).toBe(true);
   });
 
-  it("worldZoneAt: station land is Portfolio, the new strip is Resume", () => {
-    for (const [x, y] of [[380, 118], [350, 100], [100, 80], [150, 130], [100, 95], [98, 120]] as const) expect(worldZoneAt(x, y), `${x},${y}`).toBe("portfolio");
-    for (const [x, y] of [[300, 120], [60, 95], [-30, 100], [290, 100]] as const) expect(worldZoneAt(x, y), `${x},${y}`).toBe("cv");
+  it("worldZoneAt: station land is Portfolio, the new strip is Resume, the moved headland and the old site are Blog", () => {
+    for (const [x, y] of [[100, 80], [150, 130], [100, 95], [98, 120]] as const) expect(worldZoneAt(x, y), `${x},${y}`).toBe("portfolio");
+    for (const [x, y] of [[300, 120], [60, 95], [-30, 100], [290, 100], [350, 100]] as const) expect(worldZoneAt(x, y), `${x},${y}`).toBe("cv");
+    for (const [x, y] of [[380, 118], [410, 290]] as const) expect(worldZoneAt(x, y), `${x},${y}`).toBe("blog"); // old site: open sea; the moved headland (#426)
   });
 
   it("CITY_EDGE.north 90, estuaryReaches anchored at ESTUARY_Y0, GREEN_BELT 116..158", () => {

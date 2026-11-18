@@ -1,6 +1,6 @@
 import { v3 } from "../iso/geometry";
 import type { Solid, Tri } from "../iso/solids";
-import { BLEED, CELL, CELL_BLEED, DOCK, TIP_BOX, WORLD, abyssX, worldZoneAt, type WorldZone } from "../map/geo";
+import { BLEED, CELL, CELL_BLEED, DOCK, HEADLAND_SHIFT, TIP_BOX, WORLD, abyssX, worldZoneAt, type WorldZone } from "../map/geo";
 import type { Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
 import { depthAt } from "./depth-map";
@@ -51,7 +51,7 @@ export function bleedZ(x: number, y: number): number {
   return 0.6 + HILL_H * hill;
 }
 
-const HEADLAND_BASE_Z = 1, HEADLAND_TOP_Z = 7, HEADLAND_RISE_X0 = 330, HEADLAND_RISE_X1 = 355;
+const HEADLAND_BASE_Z = 1, HEADLAND_TOP_Z = 7, HEADLAND_RISE_X0 = 330 + HEADLAND_SHIFT.x, HEADLAND_RISE_X1 = 355 + HEADLAND_SHIFT.x;
 /** The point rises from its base to the lighthouse: ramp in x, with the `headland` jitter on top. */
 export const headlandZ = (x: number): number => {
   const t = Math.min(1, Math.max(0, (x - HEADLAND_RISE_X0) / (HEADLAND_RISE_X1 - HEADLAND_RISE_X0)));
