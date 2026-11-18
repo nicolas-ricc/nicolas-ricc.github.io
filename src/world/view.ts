@@ -30,8 +30,8 @@ export function viewCorners(v: View, w: number, h: number): { x: number; y: numb
 const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
 
 const COVER_ASPECT = 16 / 9;
-/** Fraction of the 16:9 cover's width, from its left edge, where narrow screens center the view. Chosen so the city, the factory and the island fit. */
-export const COVER_FOCUS_U = 0.35;
+/** Fraction of the 16:9 cover's width, from its left edge, where narrow screens center the view. Centered on the column of signs: with 0.35 PORTFOLIO was cut and the lighthouse did not fit at 390 px (#428). */
+export const COVER_FOCUS_U = 0.39;
 
 /**
  * Cover framing, no sky. At 16:9 or wider, the rectangle with the host's aspect inscribed in the
