@@ -89,7 +89,8 @@ async function boot(): Promise<void> {
     moved = current === null && !sameView(camera.state, coverView(host.clientWidth, host.clientHeight));
     recenter.hidden = !moved;
   };
-  const pan = attachPan(app.canvas, {
+  // on the host, not the canvas: a drag may start on a sign link or the button over the canvas
+  const pan = attachPan(host, {
     // jumping to the current state ends any active tween, so the drag wins
     onStart: () => camera.jumpTo(camera.state),
     onPan: (dx, dy) => { camera.jumpTo(panView(camera.state, dx, dy, host.clientWidth, host.clientHeight)); syncMoved(); },
@@ -105,7 +106,11 @@ async function boot(): Promise<void> {
 
   function render(id: ZoneId | null, animate: boolean): void {
     pan.setEnabled(id === null);
-    if (id) { moved = false; recenter.hidden = true; }
+    // both branches aim at their main view (zoneView or coverView): nothing is moved any more
+    moved = false;
+    recenter.hidden = true;
+    // in a zone the host's drag and arrow controls are off: out of the tab order
+    host.tabIndex = id === null ? 0 : -1;
     if (id) {
       const prerendered = document.body.dataset.zone === id && document.getElementById("content")!.childElementCount > 0;
       showZone(id, zoneById(id).name, prerendered ? null : renderContent(CONTENT[id]));
@@ -136,15 +141,17 @@ async function boot(): Promise<void> {
   app.canvas.addEventListener("pointermove", (e) => { if (pan.dragging) return; const z = zoneUnder(e); if (z !== hot) { hot = z; refreshFocus(); } });
   app.canvas.addEventListener("pointerleave", () => { if (pan.dragging) return; hot = null; refreshFocus(); });
   app.canvas.addEventListener("click", (e) => { if (pan.consumeClick()) return; navigate(zoneUnder(e), true); });
-  recenter.addEventListener("click", recenterView);
+  recenter.addEventListener("click", () => { if (!pan.consumeClick()) recenterView(); });
 
   // the nav links are the accessible controls: focus or hover light up their zone
   for (const [id, a] of labels) {
-    a.addEventListener("mouseenter", () => { hot = id; refreshFocus(); });
+    // a native link drag would cancel the pointer: the map drag owns the gesture
+    a.draggable = false;
+    a.addEventListener("mouseenter", () => { if (pan.dragging) return; hot = id; refreshFocus(); });
     a.addEventListener("focus", () => { hot = id; refreshFocus(); });
-    a.addEventListener("mouseleave", () => { hot = null; refreshFocus(); });
+    a.addEventListener("mouseleave", () => { if (pan.dragging) return; hot = null; refreshFocus(); });
     a.addEventListener("blur", () => { hot = null; refreshFocus(); });
-    a.addEventListener("click", (e) => { e.preventDefault(); navigate(id, true); });
+    a.addEventListener("click", (e) => { e.preventDefault(); if (pan.consumeClick()) return; navigate(id, true); });
   }
 
   // The host resizes through CSS during the transition: follow it frame by frame.
@@ -204,7 +211,7 @@ boot().catch((e: unknown) => {
   // of .no-canvas reveals the <nav id="zonas"> and the prerendered content.
   console.error(e);
   document.documentElement.classList.add("no-canvas");
-  // no canvas: drop the host's tab stop and role, it would promise a drag that does not exist
-  document.getElementById("canvas-host")?.removeAttribute("tabindex");
-  document.getElementById("canvas-host")?.removeAttribute("role");
+  // no canvas: drop the host's tab stop, role and label, they would promise a drag that does not exist
+  const host = document.getElementById("canvas-host");
+  for (const attr of ["tabindex", "role", "aria-label"]) host?.removeAttribute(attr);
 });

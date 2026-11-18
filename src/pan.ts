@@ -36,17 +36,20 @@ export function attachPan(el: PanTarget, opts: PanOptions): Pan {
   el.addEventListener("pointerdown", (e) => {
     suppress = false;
     if (!enabled) return;
+    // the same id while one is down: its pointerup was lost, so start over instead of locking drags out
+    if (id === e.pointerId) end(false);
     if (id !== null || e.button !== 0) return;
     id = e.pointerId;
     startX = lastX = e.clientX;
     startY = lastY = e.clientY;
-    try { el.setPointerCapture(id); } catch { /* inactive or synthetic pointer: drag works while over the canvas */ }
   });
   el.addEventListener("pointermove", (e) => {
     if (!enabled || e.pointerId !== id) return;
     if (!dragging) {
       if (Math.hypot(e.clientX - startX, e.clientY - startY) < DRAG_THRESHOLD) return;
       dragging = true;
+      // captured only now: a plain click keeps its own target (a sign link, the canvas)
+      try { el.setPointerCapture(e.pointerId); } catch { /* inactive or synthetic pointer: the drag works while over the target */ }
       el.style.cursor = "grabbing";
       opts.onStart();
     }

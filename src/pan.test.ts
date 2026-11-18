@@ -61,14 +61,17 @@ describe("attachPan (#438)", () => {
     expect(onPan).not.toHaveBeenCalled();
     expect(pan.dragging).toBe(false);
     expect(pan.consumeClick()).toBe(false);
+    expect(el.setPointerCapture).not.toHaveBeenCalled();
   });
 
   it("crossing the threshold starts a drag with the whole offset", () => {
     const { el, pan, onStart, onPan } = setup();
     pan.setEnabled(true);
     el.fire("pointerdown", 10, 10);
-    expect(el.setPointerCapture).toHaveBeenCalledWith(1);
+    // captured only once it is a drag: a plain click keeps its own target (a sign link, the canvas)
+    expect(el.setPointerCapture).not.toHaveBeenCalled();
     el.fire("pointermove", 16, 10);
+    expect(el.setPointerCapture).toHaveBeenCalledWith(1);
     expect(onStart).toHaveBeenCalledTimes(1);
     expect(onPan).toHaveBeenLastCalledWith(6, 0);
     expect(pan.dragging).toBe(true);
@@ -132,6 +135,18 @@ describe("attachPan (#438)", () => {
     expect(onPan).toHaveBeenLastCalledWith(10, 0);
     el.fire("pointerup", 200, 200, 2);
     expect(pan.dragging).toBe(true);
+  });
+
+  it("a pointerdown from a stuck pointer id starts over", () => {
+    const { el, pan, onPan } = setup();
+    pan.setEnabled(true);
+    drag(el);
+    // the pointerup was lost (released outside the page without capture): the same mouse comes back
+    el.fire("pointerdown", 100, 100);
+    expect(pan.dragging).toBe(false);
+    onPan.mockClear();
+    el.fire("pointermove", 110, 100);
+    expect(onPan).toHaveBeenLastCalledWith(10, 0);
   });
 
   it("pointercancel ends the drag without suppressing a click", () => {

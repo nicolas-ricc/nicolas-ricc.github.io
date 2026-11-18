@@ -81,10 +81,11 @@ wider, the cover rectangle with the real aspect ratio of `#canvas-host`;
 narrower, the 16:9 cover fills the host's height and the host is a window of
 it, centered on `COVER_FOCUS_U` (0.39, the column of signs) and clamped to its edges (#351, #428). `zoneView`
 stays inside the 16:9 cover on each axis it covers (`clampToCover`).
-On the map the visitor can drag the scene (Pointer Events: mouse, touch, pen;
-arrow keys move it by 10 % of the host; `0` or `Home` recenters) with `panView`,
-always inside the bleed (`clampToBleed`), with no zoom and no inertia. A drag
-over 5 px does not navigate. The recenter button (`#recentrar`) tweens back to
+On the map the visitor can drag the scene (Pointer Events on `#canvas-host`, so a
+drag may start on a sign link too: mouse, touch, pen; arrow keys move it by 10 %
+of the host; `0` or `Home` recenters) with `panView`, always inside the bleed
+(`clampToBleed`), with no zoom and no inertia. A move of 5 px or more is a drag
+and does not navigate. The recenter button (`#recentrar`) tweens back to
 `coverView`. A resize keeps a moved view, clamped. In a zone the camera is
 fixed (`src/pan.ts`, #438).
 The 3D zone signs are the navigation (`src/world/signs.ts`): `zoneAtScreen` hit-tests

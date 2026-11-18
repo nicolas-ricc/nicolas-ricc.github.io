@@ -71,7 +71,7 @@ The largest 16:9 rectangle that fits inside the projected content plus bleed, pu
 Code: `src/map/geo.ts` (`coverQuad`, `inCoverQuad`, `COVER_INSET`), `src/world/frame.ts` (`coverFrame`), `src/world/view.ts` (`coverView`, `COVER_FOCUS_U`, `clampToCover`).
 
 ### Pan
-(Arrastre.) The visitor moving the map view by dragging (mouse, touch or pen), with the arrow keys, or `0`/`Home` to recenter; map only, never in a zone. The Main view is `coverView(w, h)`, the one the site opens with and the one the recenter button («Centrar vista») tweens back to. The view is Moved when it differs from the Main view (`sameView`); only then the button shows. A pan always stays inside the bleed, and a drag over `DRAG_THRESHOLD` does not navigate.
+(Arrastre.) The visitor moving the map view by dragging (mouse, touch or pen), with the arrow keys, or `0`/`Home` to recenter; map only, never in a zone. The Main view is `coverView(w, h)`, the one the map opens with and the one the recenter button («Centrar vista») tweens back to. The view is Moved when it differs from the Main view (`sameView`); only then the button shows. A pan always stays inside the bleed, and a move of at least `DRAG_THRESHOLD` px is a drag, which does not navigate, even when it starts on a sign link.
 Code: `src/world/view.ts` (`panView`, `sameView`, `clampToBleed`), `src/pan.ts` (`attachPan`, `keyPan`, `DRAG_THRESHOLD`, `KEY_STEP`), `src/main.ts`.
 
 ### Plinth
