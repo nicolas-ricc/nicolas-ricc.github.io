@@ -98,6 +98,8 @@ const ALLOW: Record<string, RegExp[]> = {
     /\*Desvío[^"*]*\*?/g,
     // the history note of the 2026-11-17 spec (#427), quoted whole
     /\*\*Superada en parte:\*\* #423[^"]*/g,
+    // the #423 closing (#429): the after-captures folder and a phrase its README must carry
+    /423-composicion-responsive\/despues\/|despues\/ is|sin recargar/g,
     /\| (Resume: tecnológico|Portfolio: astillero|Resume: ciudad|Blog: mar) \|/g,
     // old asset names of those specs: `<view>-antes`, `<view>-despues`, and their folders
     /[\w-]*-(antes|despues)\b|assets\/[\w.-]*(fabrica|barrio|estacion|costura)[\w.-]*\//g,
