@@ -272,7 +272,7 @@ letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2;
 | --- | --- | --- | --- | --- |
 | RESUME | 1.27 | 1.47 | 1.16 | 1.56 (`R`) |
 | PORTFOLIO | 1.19 | 1.19 | 1.01 | 1.19 (`P`) |
-| WRITING | 1.05 | 1.05 | 1.00 | 1.07 |
+| WRITING | 1.05 | 1.05 | 1.00 | 1.07 (`W`) |
 
 ### 8.2 Desvíos de la historia
 
