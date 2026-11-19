@@ -29,8 +29,8 @@ const PIECES: Record<string, string> = {
   "cartel-taller": "731f8dfa/1b320f27", // #403: marquee bulbs as spots
   // #363: plataforma replaces its placeholder (platform, railing, ladder, hut, beacon, Blog sign)
   // #376: the Blog sign uses SIGN_FONT, gains a backing panel and a raised frame, and is built at its site and then translated
-  // Writing (Black Chancery) replaces Blog: a deck strip along the sign, posts every ≤ 16, filled cyan letters
-  // #437: WRITING in LostWages on the frame, no panel (platform only): END 4, cap 9.4, shorter deck, posts behind the letters, 74 solids
+  // Writing replaces Blog: a deck strip along the sign, posts every ≤ 16, filled cyan letters
+  // #437: WRITING on the frame, no panel (platform only): END 4, cap 9.4, shorter deck, posts behind the letters, 74 solids
   // #441: WRITING in Chainsaw Carnage painted flat on a floating board
   plataforma: "46192742/4bb63b8b",
 };

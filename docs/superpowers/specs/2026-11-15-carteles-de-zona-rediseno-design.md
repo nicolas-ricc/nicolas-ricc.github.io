@@ -274,7 +274,9 @@ letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2;
 | --- | --- | --- | --- | --- |
 | RESUME | 1.27 | 1.47 | 1.16 | 1.56 (`R`) |
 | PORTFOLIO | 1.19 | 1.19 | 1.01 | 1.19 (`P`) |
-| WRITING | 1.08 | 1.08 | 1.00 | 2.07 |
+| WRITING | 1.08 | 1.08 | 1.00 | 2.07 (`R`) |
+
+Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage (caja alta 10.8); el texto de arriba describe el estado de #437.
 
 ### 8.2 Desvíos de la historia
 
@@ -419,6 +421,8 @@ cubierta, que desde la segunda vuelta se estira a lo largo del cartel
 | RESUME | 43.89 | 72.62 | `TOWER` 16 × 14 | 35.10 |
 | PORTFOLIO | 52.74 | 87.73 | galpón de montaje sur 90 × 16 (`SHIPYARD_HALLS[1]`) | 124.02 |
 | WRITING | 45.43 | 75.17 | tabla 48.6 × 33.7 (`PLATFORM_DECK`) | 80.46 |
+
+Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage (caja alta 10.8); el texto de arriba describe el estado de #437.
 
 ### 8.4 Capturas
 

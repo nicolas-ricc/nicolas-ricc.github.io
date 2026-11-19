@@ -79,8 +79,8 @@ export function seaPlatformAt(out: Solid[], accents: Accent[], site: WritingSite
 
 /** The floating board with its word at the origin (a relocatable piece): `seaPlatformAt("wide")` moved by −PLATFORM_SITES.wide. */
 export function seaPlatform(out: Solid[], accents: Accent[]): void {
-  const solids: Solid[] = [], dots: Accent[] = [], { x, y } = PLATFORM_SITES.wide;
-  seaPlatformAt(solids, dots, "wide");
+  const solids: Solid[] = [], paint: Accent[] = [], { x, y } = PLATFORM_SITES.wide;
+  seaPlatformAt(solids, paint, "wide");
   for (const s of solids) out.push(translate(s, -x, -y));
-  for (const d of dots) accents.push(translateAccent(d, -x, -y));
+  for (const d of paint) accents.push(translateAccent(d, -x, -y));
 }

@@ -128,7 +128,7 @@ describe("two lanes", () => {
     expect(laneAt("back", 0).heading).toBeCloseTo(Math.atan2(330 - 467, 548 - 564), 6);
   });
 
-  it("the lanes leave ≥ 14 u to the Writing decks at both sites and ≥ 14 u to the moved headland polygon (#423)", () => {
+  it("the lanes leave ≥ 14 u to the Writing boards at both sites and ≥ 14 u to the moved headland polygon (#423)", () => {
     // the two Writing sites (#427) and the headland moved in #426
     const SITES: Vec2[] = Object.values(PLATFORM_SITES);
     const MOVED_HEADLAND: Vec2[] = HEADLAND.map(([x, y]) => ({ x, y }));

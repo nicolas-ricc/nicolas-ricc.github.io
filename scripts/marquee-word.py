@@ -2,7 +2,7 @@
 
 The fonts' licenses do not let the repo distribute them, so no TTF is in the
 repo: download it and pass its path. What is committed is only the composed
-word, as artwork. The two words in use:
+word, as artwork. Two of the words in use:
 
     # Neon Light (Font Bundles): https://www.1001fonts.com/neon-light-font.html
     python3 -P scripts/marquee-word.py ~/Downloads/NeonLight-Regular.ttf RESUME MARQUEE_RESUME \
@@ -35,7 +35,7 @@ letter (0.13 caps of air keeps 2 px between faces) and its spatters and pits fal
       "Chainsaw Carnage (GGBotNet, SIL Open Font License)" \
       0 0.13 0 0.005 0.004 > src/kit/chainsaw-writing.ts
 
-Needs fontTools and, to erode, space or close, shapely (`pip install fonttools shapely`); tested with
+Needs fontTools and, to erode, space, close or simplify, shapely (`pip install fonttools shapely`); tested with
 fontTools 4.46.0 / shapely 2.0.3 and with 4.68.0 / 2.2.0.
 """
 import math
@@ -136,11 +136,10 @@ def main(path, word, name, credit, thin="0", air="0", close="0", speck="0", tol=
             else:
                 counters.append(c)
         bodies.sort(key=lambda c: -area(c))
-        body, parts = bodies[0], bodies[1:]
         if float(speck):
             keep = lambda c: abs(area(c)) >= float(speck) * cap * cap
             bodies, counters = bodies[:1] + [c for c in bodies[1:] if keep(c)], [c for c in counters if keep(c)]
-            body, parts = bodies[0], bodies[1:]
+        body, parts = bodies[0], bodies[1:]
         if float(close):
             body, counters = closing(bodies + counters, float(close) * cap)
             parts = []
