@@ -11,7 +11,8 @@ export type AnimLayer =
   // `heading`: frame the solids are aligned to, for depth sorting
   | { kind: "solid"; solids: Solid[]; alpha?: number; heading?: number }
   // `zone`: zone that veils every light of the layer (lights mounted on a ship); without it, each light is veiled with the zone of its position
-  | { kind: "accent"; accents: Accent[]; alpha?: number; zone?: WorldZone }
+  // `bloom: false`: the layer is left out of the bloom (no mirror in the stage's `bloomSlot`); only that literal, without it the layer blooms
+  | { kind: "accent"; accents: Accent[]; alpha?: number; zone?: WorldZone; bloom?: false }
   | { kind: "water"; water: Solid[]; alpha?: number };
 
 export interface Animator {
