@@ -6,7 +6,8 @@ import { COVER_LAPTOP, COVER_PHONE, layoutGaps, SIGN_FONT, signMetrics, staticCo
 import { counterClearance, letterGaps, measureText, rhythm } from "../kit/lettering";
 import { TOWER } from "../scenes/city-grid";
 import { CROWN_SITE } from "../scenes/sign-crown";
-import { PLATFORM_DECK, PLATFORM_SITES } from "../scenes/sign-platform";
+import { PLATFORM_DECK, PLATFORM_SITES, WRITING_CAP } from "../scenes/sign-platform";
+import { LOSTWAGES_FACE } from "../kit/marquee";
 import { LANE_BACK, LANE_OUT } from "../scenes/sea-anim";
 import { HEADLAND_SHIFT } from "../map/geo";
 import { buildRenderList } from "../iso/render-list";
@@ -508,7 +509,7 @@ describe("zone signs redesign documentation (#374)", () => {
   const CONTEXTS = ["cartel-torre-escena", "cartel-taller-escena", "plataforma-escena"];
   const SCALES = [["117", COVER_LAPTOP], ["083", COVER_PHONE]] as const;
   const DELETED = ["cartel-helipuerto", "grafiti"];
-  const WORDS = { RESUME: "cartel-torre-escena", PORTFOLIO: "cartel-taller-escena", Writing: "plataforma-escena" } as const;
+  const WORDS = { RESUME: "cartel-torre-escena", PORTFOLIO: "cartel-taller-escena", WRITING: "plataforma-escena" } as const;
   const f = (n: number) => n.toFixed(2);
   const report = read("assets/carteles-legibilidad/REPORT.md");
   const spec = read("2026-11-15-carteles-de-zona-rediseno-design.md");
@@ -529,15 +530,19 @@ describe("zone signs redesign documentation (#374)", () => {
   const HOSTS = {
     RESUME: rect(TOWER.x, TOWER.y, TOWER.x + TOWER.w, TOWER.y + TOWER.d),
     PORTFOLIO: rect(SHIPYARD_HALLS[1]!.x0, SHIPYARD_HALLS[1]!.y0, SHIPYARD_HALLS[1]!.x1, SHIPYARD_HALLS[1]!.y1),
-    Writing: PLATFORM_DECK.map((q) => ({ x: q.x, y: q.y, z: 0 })),
+    WRITING: PLATFORM_DECK.map((q) => ({ x: q.x, y: q.y, z: 0 })),
   };
 
-  it("REPORT.md exists, has every context at both scales and no failure mark", () => {
+  it("REPORT.md exists, has every context at both scales and no failure mark but the OCR exception of WRITING", () => {
     expect(report).not.toBe("");
     // the header cell is `✓/✗`: the verdict is the last cell of each metric row
     expect(report).not.toMatch(/\| ✗ \|$/m);
-    // 3 metrics × 2 scales × 4 contexts: plataforma-escena-angosta joined in #429
-    expect(report.match(/^\| (contraste|halo|OCR) \|.*\| ✓ \|$/gm)?.length ?? 0).toBe(24);
+    // 3 metrics × 2 scales × 4 contexts: plataforma-escena-angosta joined in #429; the 4 OCR rows of plataforma-escena* are the #437 exception
+    expect(report.match(/^\| (contraste|halo|OCR) \|.*\| ✓ \|$/gm)?.length ?? 0).toBe(20);
+    const excused = report.match(/^\| .* \| ✗ \(excepción, spec 2026-11-15 §8\.2\) \|$/gm) ?? [];
+    expect(excused).toHaveLength(4);
+    for (const l of excused) expect(l).toMatch(/^\| OCR \|/);
+    for (const sec of report.split(/\n(?=## )/).filter((x) => x.includes("✗"))) expect(sec).toMatch(/^## plataforma-escena(-angosta)? a /);
     for (const id of [...CONTEXTS, "plataforma-escena-angosta"]) for (const s of ["1.17", "0.83"]) expect(report).toMatch(new RegExp(`^## ${id} a ${s.replace(".", "\\.")}$`, "m"));
     expect(report).toContain("Sin violaciones.");
   });
@@ -924,8 +929,8 @@ describe("#423 closing (#429)", () => {
   const spec = read(`${SPECS}2026-11-18-composicion-responsive-design.md`);
   const at8 = spec.search(/^## 8\. Desvíos y medición$/m);
   const dev = (at8 < 0 ? "" : spec.slice(at8)).replace(/\s+/g, " ");
-  /** The measured aspect threshold of the Writing site at 900 px high, as the spec writes it (comma decimal). */
-  const threshold = () => { let w = 900; while (writingSite(w, 900) !== "wide") w++; return (w / 900).toFixed(2).replace(".", ","); };
+  // a literal since #437: WRITING in LostWages moved the threshold; this spec records #429's, the 2026-11-15 spec §8.2 the new one
+  const threshold = () => "1,54";
   /** A count as the spec writes it: thousands separated by a space. */
   const count = (n: number) => n.toLocaleString("en").replace(/,/g, " ");
 
@@ -945,12 +950,13 @@ describe("#423 closing (#429)", () => {
     const text = lines.join("\n");
     for (const s of ["transform", "900×1440", "1440×900", "sin recargar"]) expect(text, s).toContain(s);
   });
-  it("REPORT.md has plataforma-escena-angosta at both scales, every row ok, and its four crops", () => {
+  it("REPORT.md has plataforma-escena-angosta at both scales, contrast and halo ok, OCR the #437 exception, and its four crops", () => {
     const report = read(`${SPECS}assets/carteles-legibilidad/REPORT.md`);
     for (const sc of ["1.17", "0.83"]) {
       const sec = report.slice(report.indexOf(`## plataforma-escena-angosta a ${sc}\n`)).split(/\n(?=## )/)[0]!;
       expect(report, sc).toContain(`## plataforma-escena-angosta a ${sc}\n`);
-      expect(sec.match(/^\| (contraste|halo|OCR) \|.*\| ✓ \|$/gm)?.length ?? 0, sc).toBe(3);
+      expect(sec.match(/^\| (contraste|halo) \|.*\| ✓ \|$/gm)?.length ?? 0, sc).toBe(2);
+      expect(sec, sc).toMatch(/^\| OCR \|.*\| ✗ \(excepción, spec 2026-11-15 §8\.2\) \|$/m);
     }
     for (const s of ["117", "083", "117-ocr", "083-ocr"]) png(`${SPECS}assets/carteles-legibilidad/plataforma-escena-angosta-${s}.png`);
   });
@@ -1000,5 +1006,54 @@ describe("#423 closing (#429)", () => {
   it("README describes the headland on the island's east coast as Blog, and the lanes between the two Writing sites", () => {
     const world = (readme.split(/\n\s*\n/).find((p) => p.includes("`LANE_OUT`")) ?? "").replace(/\s+/g, " ");
     for (const s of ["east coast", "Blog", "tall site", "wide site"]) expect(world, s).toContain(s);
+  });
+});
+
+describe("WRITING in LostWages (#437)", () => {
+  const SPECS = `${ROOT}docs/superpowers/specs/`;
+  const read = (path: string) => (existsSync(path) ? readFileSync(path, "utf8") : "");
+  const spec = read(`${SPECS}2026-11-15-carteles-de-zona-rediseno-design.md`);
+  const report = read(`${SPECS}assets/carteles-legibilidad/REPORT.md`);
+  const dev = spec.slice(Math.max(0, spec.search(/^### 8\.2 /m)), Math.max(0, spec.search(/^### 8\.3 /m)));
+  const entry = (dev.split(/\n(?=- \*\*)/).find((b) => b.startsWith("- **WRITING en LostWages")) ?? "").replace(/\s+/g, " ");
+  /** The OCR reading REPORT.md gives `id` at `scale`, backticks included. */
+  const ocr = (id: string, scale: string) => {
+    const sec = report.slice(report.indexOf(`## ${id} a ${scale}\n`)).split(/\n(?=## )/)[0]!;
+    return sec.split("\n").find((l) => l.startsWith("| OCR |"))?.split("|")[2]?.trim() ?? "";
+  };
+  /** The aspect threshold of the Writing site at 900 px high, comma decimal. */
+  const threshold = () => { let w = 900; while (writingSite(w, 900) !== "wide") w++; return (w / 900).toFixed(2).replace(".", ","); };
+
+  it("§8.2 has a WRITING en LostWages entry after the Black Chancery one", () => {
+    expect(entry).not.toBe("");
+    expect(dev.indexOf("- **WRITING en LostWages")).toBeGreaterThan(dev.indexOf("- **Writing en Black Chancery"));
+  });
+  it("the entry names the font, its license and source, the word file, the generator and the sizes", () => {
+    for (const s of [
+      "https://www.1001fonts.com/lostwages-font.html", "Nick Curtis", "1001Fonts Free For Commercial Use", "`src/kit/lostwages-writing.ts`", "`scripts/marquee-word.py`",
+      `\`WRITING_CAP\` ${WRITING_CAP}`, `\`LOSTWAGES_FACE\` ${LOSTWAGES_FACE}`, "officeDark", threshold(),
+    ]) expect(entry, s).toContain(s);
+  });
+  it("the entry records the closing next to the erosion precedent, under the EULA's §3", () => {
+    for (const s of ["cierre", "erosión", "CNRGN Builder", "EULA", "§3"]) expect(entry, s).toContain(s);
+  });
+  it("the entry records the OCR exception with the readings of REPORT.md, only for plataforma-escena*", () => {
+    for (const id of ["plataforma-escena", "plataforma-escena-angosta"]) for (const sc of ["1.17", "0.83"]) {
+      const got = ocr(id, sc);
+      expect(got, `${id} ${sc}`).toMatch(/^`[A-Za-z]+`$/);
+      expect(got, `${id} ${sc}`).not.toBe("`WRITING`");
+      expect(entry, `${id} ${sc} ${got}`).toContain(got);
+    }
+    for (const s of ["OCR", "`plataforma-escena`", "`plataforma-escena-angosta`", "contraste", "halo"]) expect(entry, s).toContain(s);
+  });
+  it("the real-scale capture of the sign exists and §8.4 lists it", () => {
+    const b = readFileSync(`${SPECS}assets/374-carteles/plataforma-real.png`);
+    expect(b.subarray(1, 4).toString()).toBe("PNG");
+    expect(spec.slice(spec.search(/^### 8\.4 /m))).toContain("assets/374-carteles/plataforma-real.png");
+  });
+  it("CONTEXT.md names WRITING in LostWages and its word file, not Black Chancery", () => {
+    const glossary = read(`${ROOT}CONTEXT.md`);
+    for (const s of ["`WRITING`", "LostWages", "`src/kit/lostwages-writing.ts`"]) expect(glossary, s).toContain(s);
+    expect(glossary).not.toMatch(/Chancery/);
   });
 });
