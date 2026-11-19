@@ -34,9 +34,16 @@ describe("sign gate: levels 1 and 2 on every context exhibit", () => {
     // The crop above only holds what lies in the exhibit's box; the whole world (#394) also brings any solid
     // that crosses the letters on screen from outside it; a Writing exhibit adds the platform of its site (#427).
     const near = [...scene.solids, ...(e.writingSite ? platform(e.writingSite) : [])].filter((s) => overlaps(screenBounds(bounds(s)), grow(signBox(e.sign), 4)));
-    it("world solids besides the sign's own backing cross the letters' screen box", () => {
-      expect(near.length).toBeGreaterThan(e.sign.backing.length);
-    });
+    // the Writing board lies alone on open sea (#442): nothing but the board crosses its letters, a stronger statement than "something else does"
+    if (e.writingSite) {
+      it("nothing but the sign's own board crosses the letters' screen box", () => {
+        expect(near).toEqual(e.sign.backing);
+      });
+    } else {
+      it("world solids besides the sign's own backing cross the letters' screen box", () => {
+        expect(near.length).toBeGreaterThan(e.sign.backing.length);
+      });
+    }
     for (const scale of [COVER_LAPTOP, COVER_PHONE]) {
       it(`checkSign against the whole world at ${scale} = []`, () => {
         expect(checkSign(e.sign, scale, near)).toEqual([]);
