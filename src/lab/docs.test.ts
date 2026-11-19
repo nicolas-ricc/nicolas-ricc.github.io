@@ -6,14 +6,12 @@ import { COVER_LAPTOP, COVER_PHONE, layoutGaps, SIGN_FONT, signMetrics, staticCo
 import { counterClearance, letterGaps, measureText, rhythm } from "../kit/lettering";
 import { TOWER } from "../scenes/city-grid";
 import { CROWN_SITE } from "../scenes/sign-crown";
-import { PLATFORM_DECK, PLATFORM_SITES, WRITING_CAP } from "../scenes/sign-platform";
-import { LOSTWAGES_FACE } from "../kit/marquee";
+import { PLATFORM_DECK, PLATFORM_SITES } from "../scenes/sign-platform";
 import { LANE_BACK, LANE_OUT } from "../scenes/sea-anim";
 import { HEADLAND_SHIFT } from "../map/geo";
 import { buildRenderList } from "../iso/render-list";
 import { assembleWorld } from "../world/assemble";
 import { COVER_FOCUS_U } from "../world/view";
-import { writingSite } from "../world/signs";
 import { SHIPYARD_HALLS, TINKER_SITE } from "../scenes/sign-tinker";
 import { EXHIBITS } from "./exhibits";
 
@@ -1021,8 +1019,6 @@ describe("WRITING in LostWages (#437)", () => {
     const sec = report.slice(report.indexOf(`## ${id} a ${scale}\n`)).split(/\n(?=## )/)[0]!;
     return sec.split("\n").find((l) => l.startsWith("| OCR |"))?.split("|")[2]?.trim() ?? "";
   };
-  /** The aspect threshold of the Writing site at 900 px high, comma decimal. */
-  const threshold = () => { let w = 900; while (writingSite(w, 900) !== "wide") w++; return (w / 900).toFixed(2).replace(".", ","); };
 
   it("§8.2 has a WRITING en LostWages entry after the Black Chancery one", () => {
     expect(entry).not.toBe("");
@@ -1031,7 +1027,7 @@ describe("WRITING in LostWages (#437)", () => {
   it("the entry names the font, its license and source, the word file, the generator and the sizes", () => {
     for (const s of [
       "https://www.1001fonts.com/lostwages-font.html", "Nick Curtis", "1001Fonts Free For Commercial Use", "`src/kit/lostwages-writing.ts`", "`scripts/marquee-word.py`",
-      `\`WRITING_CAP\` ${WRITING_CAP}`, `\`LOSTWAGES_FACE\` ${LOSTWAGES_FACE}`, "officeDark", threshold(),
+      "`WRITING_CAP` 9.4", "`LOSTWAGES_FACE` 0.138", "officeDark", "1,55",
     ]) expect(entry, s).toContain(s);
   });
   it("the entry records the closing next to the erosion precedent, under the EULA's §3", () => {

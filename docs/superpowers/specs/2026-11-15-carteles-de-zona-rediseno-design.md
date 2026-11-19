@@ -260,8 +260,8 @@ las medidas del 2026-11-17.
 | `cartel-torre-escena` | 0.83 | 10.11 | 1.64 | 2.10 | 4.70 | 8.89:1 | 0.05 | `RESUME` |
 | `cartel-taller-escena` | 1.17 | 15.07 | 2.40 | 2.29 | 8.06 | 6.99:1 | 0.08 | `PORTFOLIO` |
 | `cartel-taller-escena` | 0.83 | 10.69 | 1.70 | 1.62 | 8.06 | 5.93:1 | 0.08 | `PORTFOLIO` |
-| `plataforma-escena` | 1.17 | 15.40 | 2.12 | 2.25 | 13.53 | 12.12:1 | 0.05 | `WRELENG` |
-| `plataforma-escena` | 0.83 | 10.92 | 1.51 | 1.60 | 13.53 | 11.46:1 | 0.03 | `WREFHNG` |
+| `plataforma-escena` | 1.17 | 13.62 | 2.12 | 2.32 | 8.08 | 12.12:1 | 0.05 | `WRELENG` |
+| `plataforma-escena` | 0.83 | 9.66 | 1.51 | 1.64 | 8.08 | 11.46:1 | 0.03 | `WREFHNG` |
 
 Nivel 1: aire mínimo y máximo entre letras, ritmo y la contraforma más
 ajustada, todo en w. Las tres palabras van en fuentes de exhibición (§8.2),
@@ -274,7 +274,7 @@ letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2;
 | --- | --- | --- | --- | --- |
 | RESUME | 1.27 | 1.47 | 1.16 | 1.56 (`R`) |
 | PORTFOLIO | 1.19 | 1.19 | 1.01 | 1.19 (`P`) |
-| WRITING | 1.05 | 1.05 | 1.00 | 1.07 (`W`) |
+| WRITING | 1.08 | 1.08 | 1.00 | 2.07 |
 
 ### 8.2 Desvíos de la historia
 
@@ -418,7 +418,7 @@ cubierta, que desde la segunda vuelta se estira a lo largo del cartel
 | --- | --- | --- | --- | --- |
 | RESUME | 43.89 | 72.62 | `TOWER` 16 × 14 | 35.10 |
 | PORTFOLIO | 52.74 | 87.73 | galpón de montaje sur 90 × 16 (`SHIPYARD_HALLS[1]`) | 124.02 |
-| WRITING | 66.80 | 110.53 | cubierta 77.8 × 10 a lo largo de u (`PLATFORM_DECK`) | 128.73 |
+| WRITING | 45.43 | 75.17 | tabla 48.6 × 33.7 (`PLATFORM_DECK`) | 80.46 |
 
 ### 8.4 Capturas
 

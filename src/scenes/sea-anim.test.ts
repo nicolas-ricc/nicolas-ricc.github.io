@@ -17,7 +17,7 @@ import { world } from "./world";
 
 const WATER = new Set(["water", "sea", "shore", "abyss"]);
 type Static = { b: Bounds; sb: ReturnType<typeof screenBounds>; sh: Vec2[] };
-/** The Writing platform's solids at both sites (#427): it left the static world for platformAnimator, and the lanes must clear it at either site. */
+/** The Writing board (#442: the one solid left of the platform) at both sites (#427): it left the static world for platformAnimator, and the lanes must clear it at either site. */
 const platforms = (): Solid[] => (["wide", "tall"] as const).flatMap((site) => { const out: Solid[] = []; seaPlatformAt(out, [], site); return out; });
 const staticsOf = (solids: Solid[]): Static[] => solids.map((s) => { const b = bounds(s); return { b, sb: screenBounds(b), sh: screenHull(b) }; });
 /** Alignment box of the freighter centered at `p` (z −1..13) and a check that no static solid overlapping it on screen covers it. */

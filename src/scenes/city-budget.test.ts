@@ -33,7 +33,7 @@ describe("Resume level 2 budget", () => {
 describe("world accents (#394)", () => {
   it("static accents of the whole world ≤ 2 600", () => {
     // 2 478 measured while planning #389: 1 222 of the world + 1 256 of the three signs (crown 238 poly + 164 dot,
-    // tinker 114 + 84, platform 654 + 2; the tinker's 19 lights in `tinker.lights` are animated, not static); ×1.05.
+    // tinker 114 + 84, platform 654 + 2; the tinker's 19 lights in `tinker.lights` are animated, not static); ×1.05. // since #442 the platform is one flat board: its piles, hut and posts are gone, so these figures describe the platform before it
     // Since #427 the platform's 656 lights are animated too (`platform.lights` of platformAnimator), not static.
     expect(assembleWorld(undefined, { reducedMotion: true }).scene.accents.length).toBeLessThanOrEqual(2600);
   });
