@@ -19,8 +19,8 @@ import { HALO_BASE, HALO_FALLBACK } from "./frame";
 import { BLOOM_FILTER, buildStage, nextHalo } from "./stage";
 import { ACCENT_DIM, WORLD_ZONES, focusAlphas } from "./veil";
 
-const build = (reducedMotion = true) => { const { scene, animators } = assembleWorld(undefined, { reducedMotion }); return buildStage(scene, animators); };
 const buildWorld = (reducedMotion = true) => { const { scene, animators } = assembleWorld(undefined, { reducedMotion }); return { stage: buildStage(scene, animators), animators }; };
+const build = (reducedMotion = true) => buildWorld(reducedMotion).stage;
 /** One flag per accentSlot child, in build order: the static ones (always bloomed), then per animated accent layer one per zone (one if it declares its zone), off when the layer declares `bloom: false`. */
 const bloomFlags = (animators: ZonedAnimator[]): boolean[] => [
   ...WORLD_ZONES.map(() => true),
@@ -284,9 +284,10 @@ describe("bloom: false layers (#443)", () => {
   };
   const toy = (table: Record<string, AnimLayer>): ZonedAnimator => ({ zone: "blog", ids: Object.keys(table), layer: (id) => table[id]!, tick: () => new Set(Object.keys(table)) });
   const stageWith = (a: ZonedAnimator) => buildStage(assembleWorld(["portfolio"], { reducedMotion: true }).scene, [a]);
-  // accentSlot: 3 static, 3 `lit` (indices 3–5), 3 `paint` (indices 6–8), one per zone in WORLD_ZONES order
-  const paintOf = (s: ReturnType<typeof buildStage>) => accentSlotOf(s.container).children.slice(6) as Graphics[];
-  const litOf = (s: ReturnType<typeof buildStage>) => accentSlotOf(s.container).children.slice(3, 6) as Graphics[];
+  // accentSlot: n static, n `lit`, n `paint` (n = 3 zones), one per zone in WORLD_ZONES order
+  const n = WORLD_ZONES.length;
+  const paintOf = (s: ReturnType<typeof buildStage>) => accentSlotOf(s.container).children.slice(2 * n) as Graphics[];
+  const litOf = (s: ReturnType<typeof buildStage>) => accentSlotOf(s.container).children.slice(n, 2 * n) as Graphics[];
   const mirrorContexts = (s: ReturnType<typeof buildStage>) => bloomSlotOf(s.container)!.children.map((m) => (m as Graphics).context);
 
   it("on mirrors only the layers in the bloom: 3 static + 3 lit, none with the context of a bloom: false Graphics", () => {
@@ -322,19 +323,17 @@ describe("bloom: false layers (#443)", () => {
     const s = stageWith(toy(layers));
     const paintFills = () => paintOf(s).reduce((n, g) => n + g.context.instructions.length, 0);
     const offFills = paintFills();
-    expect(() => {
-      s.setBloom("on");
-      const first = bloomSlotOf(s.container);
-      s.setBloom("off");
-      s.setBloom("on");
-      expect(bloomSlotOf(s.container)).toBe(first);
-      expect(mirrorContexts(s)).toHaveLength(6);
-      s.setBloom("fallback");
-      expect(paintFills()).toBeGreaterThan(offFills);
-      s.setBloom("on");
-      expect(bloomSlotOf(s.container)).toBe(first);
-      expect(mirrorContexts(s)).toHaveLength(6);
-    }).not.toThrow();
+    s.setBloom("on");
+    const first = bloomSlotOf(s.container);
+    s.setBloom("off");
+    s.setBloom("on");
+    expect(bloomSlotOf(s.container)).toBe(first);
+    expect(mirrorContexts(s)).toHaveLength(6);
+    s.setBloom("fallback");
+    expect(paintFills()).toBeGreaterThan(offFills);
+    s.setBloom("on");
+    expect(bloomSlotOf(s.container)).toBe(first);
+    expect(mirrorContexts(s)).toHaveLength(6);
   });
 
   it("destroy with a bloom: false layer frees the blur filter and the paint Graphics", () => {

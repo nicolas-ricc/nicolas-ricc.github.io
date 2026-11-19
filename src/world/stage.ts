@@ -113,7 +113,7 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[], opts: 
       redraw.set(id, () => { const l = a.layer(id) as AnimLayer & { kind: "solid" }; const items = buildRenderList(l.solids, l.heading, opts.clip); drawLayer(gs, items, "shadow"); drawLayer(gc, items, "shadowCore"); drawLayer(g, items, "solid"); const al = l.alpha ?? 1; gs.alpha = gc.alpha = g.alpha = al; });
     } else {
       // one Graphics per zone: each light is veiled with the zone it is in, unless the layer declares its own (ships)
-      const { zone: declared, bloom } = a.layer(id) as AnimLayer & { kind: "accent" };
+      const { zone: declared, bloom: inBloom } = a.layer(id) as AnimLayer & { kind: "accent" };
       const draw = (): void => {
         const l = a.layer(id) as AnimLayer & { kind: "accent" };
         const byZone = accentsByZone(l.accents, declared);
@@ -124,7 +124,7 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[], opts: 
         const g = new Graphics();
         g.blendMode = "add";
         accentSlot.addChild(g);
-        const e: AccentGraphics = { g, zone, base: 1, draw, bloom: bloom !== false };
+        const e: AccentGraphics = { g, zone, base: 1, draw, bloom: inBloom !== false };
         accents.push(e);
         return e;
       });
