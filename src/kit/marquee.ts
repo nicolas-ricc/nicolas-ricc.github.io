@@ -25,6 +25,12 @@ export const BUILDER_FACE = 0.159;
 /** Width of the thinnest stem of a LostWages letter as `LOSTWAGES_WRITING` holds it (slits closed, face grown), in cap heights. */
 export const LOSTWAGES_FACE = 0.138;
 
+/**
+ * Width of the main stems of a Chainsaw Carnage letter (the I and the R, between the notches) and the ink height of its shortest letter (the W, with its loose stroke), in
+ * cap heights: a capitals font whose letters bounce, so the "x-height" the legibility rules measure is the smallest letter.
+ */
+export const CHAINSAW_FACE = 0.12, CHAINSAW_X = 0.77;
+
 /** One quad `w` wide along each segment of the glyph's contours: a tube that outlines the letter. */
 export function contourQuads(g: GlyphLayout, w: number): Vec2[][] {
   return g.strokes.flatMap((s) => s.slice(1).map((b, j) => {
