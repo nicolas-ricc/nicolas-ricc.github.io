@@ -542,7 +542,7 @@ describe("zone signs redesign documentation (#374)", () => {
     const excused = report.match(/^\| .* \| ✗ \(excepción, spec 2026-11-15 §8\.2\) \|$/gm) ?? [];
     expect(excused).toHaveLength(4);
     for (const l of excused) expect(l).toMatch(/^\| OCR \|/);
-    for (const sec of report.split(/\n(?=## )/).filter((x) => x.includes("✗"))) expect(sec).toMatch(/^## plataforma-escena(-angosta)? a /);
+    for (const sec of report.split(/\n(?=## )/).filter((x) => /^\|.*\| ✗/m.test(x))) expect(sec).toMatch(/^## plataforma-escena(-angosta)? a /);
     for (const id of [...CONTEXTS, "plataforma-escena-angosta"]) for (const s of ["1.17", "0.83"]) expect(report).toMatch(new RegExp(`^## ${id} a ${s.replace(".", "\\.")}$`, "m"));
     expect(report).toContain("Sin violaciones.");
   });
