@@ -189,7 +189,10 @@ halo on the light points (`fallback`). In development the decision is logged, fo
 example `[mapa] bloom: average 9.9 ms over 60 frames (tick 6.4 + render
 3.5), budget 15 ms → on` (with the `[lab]` prefix in the
 lab). In the lab, `?bloom=` forces the mode without measuring and `6` rotates
-it.
+it. An animated accent layer that sets `bloom: false` (`AnimLayer`,
+`src/scenes/animator.ts`) stays out of the bloom: it is drawn additively like
+every light but gets no blurred mirror; the paint of the Writing board is that
+case.
 
 ## Tests
 
