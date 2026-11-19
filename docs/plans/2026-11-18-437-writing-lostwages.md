@@ -154,3 +154,5 @@ Decisions taken on resume (technical assumptions):
 - Q11: the stroke the oracle checks is the thinnest stem, not the dominant one. If the generated word's thinnest stem (I, T) is under `LOSTWAGES_FACE`, `thin` grows until it is not (adjusting the script, not the rules), and `WRITING_CAP` is re-derived so the phone stroke stays ≥ 1.5 px.
 - Q17: the `marquee.ts` constant swap moves into Task 2, so every commit typechecks.
 - Task 4: `REPORT.md` and the docs gate accept the OCR ✗ for `plataforma-escena*` only, as above.
+
+Measured on resume (fontTools 4.46.0, shapely 2.0.3, Python 3.12.3): with thin −0.0125 the I and T stems are 0.1365 cap (horizontal section at y 0.5), under the 0.138 face. Ruling (Q11): thin **−0.0133**. Then every stem is ≥ 0.1381 (I, T; W 0.1395). `LOSTWAGES_FACE` stays 0.138 and `WRITING_CAP` stays 9.4. Gaps are 1.05 w, counters 1.07 w, ink width 7.1065 cap (66.80 u), ink y −0.1748..1.0132 cap, and `checkLayouts` = []. The command in Task 1 becomes `... -0.0133 0.145 0.015`.

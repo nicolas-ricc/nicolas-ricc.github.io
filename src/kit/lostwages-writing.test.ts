@@ -34,7 +34,7 @@ describe("WRITING in LostWages (#437)", () => {
     const doc = read("scripts/marquee-word.py");
     for (const s of [
       "https://www.1001fonts.com/lostwages-font.html", "https://www.1001fonts.com/download/lostwages.zip",
-      "WRITING LOSTWAGES_WRITING", "-0.0125 0.145 0.015 > src/kit/lostwages-writing.ts",
+      "WRITING LOSTWAGES_WRITING", "-0.0133 0.145 0.015 > src/kit/lostwages-writing.ts",
     ]) expect(doc, s).toContain(s);
     expect(doc).not.toMatch(/Chancery/);
   });
