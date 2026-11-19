@@ -63,9 +63,9 @@ Las de #389 (agrupadas como las hereda #394):
 |---|---|---|---|
 | `CROWN_SITE` | `src/scenes/sign-crown.ts` | (129, 227, 30) | corona, sobre la ciudad |
 | `TINKER_SITE` | `src/scenes/sign-tinker.ts` | (60, −24, 13.5) | galpón de montaje sur del astillero |
-| `PLATFORM_SITE` | `src/scenes/sign-platform.ts` | (392, 178) | plataforma, agua libre |
+| `PLATFORM_SITE` | `src/scenes/sign-platform.ts` | (380, 178) | tabla flotante, agua libre |
 
-La plataforma no está donde la spec del 2026-11-15 (§5) la puso primero; ver §6.
+La plataforma no está donde la spec del 2026-11-15 (§5) la puso primero; ver §6. El 2026-11-19 pasa a ser una tabla flotante con `WRITING` pintado y se mueve a (380, 178) (spec del 2026-11-15, §8.2); las tablas de §4 y §5 tienen sus valores nuevos.
 
 ## 4. Encuadre
 
@@ -76,10 +76,10 @@ cover: laptop 1,1757; teléfono 1,2420.
 |---|---|---|---|---|
 | laptop 1366×657 | `portfolio` | PORTFOLIO | `600.1..688.3 × 69.6..86.1` | `sign` |
 | laptop 1366×657 | `cv` | RESUME | `393.7..466.7 × 236.7..251.0` | `sign` |
-| laptop 1366×657 | `blog` | Writing | `747.5..846.5 × 397.2..425.2` | `sign` |
+| laptop 1366×657 | `blog` | WRITING | `745.2..820.7 × 414.8..437.5` | `sign` |
 | teléfono 390×750 | `portfolio` | PORTFOLIO | `307.4..400.6 × 101.5..118.9` | `sign` |
 | teléfono 390×750 | `cv` | RESUME | `89.4..166.5 × 278.0..293.1` | `sign` |
-| teléfono 390×750 | `blog` | Writing | `463.2..567.8 × 447.6..477.1` | `edge` |
+| teléfono 390×750 | `blog` | WRITING | `460.7..540.5 × 466.1..490.1` | `edge` |
 
 En la laptop caben los tres. En el teléfono (390 px) no caben a ningún
 `COVER_FOCUS_U`: Writing queda fuera de la ventana y su rótulo cae al borde;
@@ -94,8 +94,8 @@ Cada cartel construido solo en su sitio:
 |---|---|---|---|---|
 | RESUME (corona) | `CROWN_SITE` (129, 227, 30) | 33 | 109 | 402 (238 poly + 164 dot) |
 | PORTFOLIO (tinker) | `TINKER_SITE` (60, −24, 13.5) | 154 | 417 | 198 (114 poly + 84 dot; + 19 animados en `tinker.lights`) |
-| Writing (plataforma) | `PLATFORM_SITE` (392, 178) | 75 | 224 | 656 (654 poly + 2 dot) |
-| Total | | 262 | 750 | 1 256 |
+| WRITING (tabla flotante) | `PLATFORM_SITE` (380, 178) | 1 | 6 | 382 (382 poly) |
+| Total | | 188 | 532 | 982 |
 
 Acentos estáticos del mundo: 1 222 antes (planificación de #389), 2 450
 después; 26 luces de la ciudad quedan ocultas tras la corona (#391). Tope
@@ -109,13 +109,13 @@ después (rama). agent-browser headless,
 | | antes | después |
 |---|---|---|
 | first draw (ms) | 1111.5 | 1096.5 |
-| polígonos estáticos | 45 309 | 46 481 |
+| polígonos estáticos | 45 309 | 46 111 |
 | bloom, promedio (ms) | 41.0 | 42.1 |
 | veredicto del bloom | `fallback` | `fallback` |
 | peor redibujo en 5 s (ms) | 65.20 | 54.80 |
-| acentos estáticos del mundo | 1 222 (plan de #389) | 2 409 |
+| acentos estáticos del mundo | 1 222 (plan de #389) | 2 135 |
 
-Polígonos y acentos estáticos recalculados al integrar #395 en `main` (lámparas industriales y dots fuera, pluma STS): la rama de #389 medía 46 576 y 2 450; los tiempos son los de esa medición.
+Polígonos y acentos estáticos recalculados al integrar #395 en `main` (lámparas industriales y dots fuera, pluma STS): la rama de #389 medía 46 576 y 2 450; los tiempos son los de esa medición. Recalculados otra vez con la tabla flotante de Writing (2026-11-19): 46 111 y 2 135 (era 46 481 y 2 409).
 
 Bloom, tick + render: antes 25,3 + 15,7; después 25,8 + 16,3. Primera corrida
 (fría): `main` first draw 2395,8, bloom 63,4 (37,6 + 25,9) `fallback`, peor

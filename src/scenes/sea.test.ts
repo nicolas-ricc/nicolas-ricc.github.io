@@ -157,10 +157,10 @@ describe("sea", () => {
     expect(Math.min(...zs)).toBeCloseTo(z + 4, 6); // resting on the eave
     for (const y of ys) expect(y).toBeCloseTo(KEEPER.y + 6.42, 6); // front of the box, on the south face
     expect(s.solids.some((x) => x.kind === "prism" && x.mat === "steel" && x.at.y === KEEPER.y + 6 && x.at.z <= z + 4 && x.at.z + x.h >= z + 5 && x.at.x <= Math.min(...xs) && x.at.x + x.w >= Math.max(...xs))).toBe(true); // dark box behind
-    // the static accents: keeper's window (poly) and wreck buoy (spot, a poly since #403), plus the Writing platform's hut and mast (dots) and one poly per sign triangle (#390)
+    // the static accents: keeper's window (poly) and wreck buoy (spot, a poly since #403), plus one poly per triangle of WRITING painted on its floating board (#390)
     const signTris = BLOG_SIGN.glyphs.flatMap((g) => g.quads).length;
-    expect(s.accents).toHaveLength(4 + signTris);
-    expect(s.accents.filter((a) => a.kind === "dot")).toHaveLength(2);
+    expect(s.accents).toHaveLength(2 + signTris);
+    expect(s.accents.filter((a) => a.kind === "dot")).toHaveLength(0);
     expect(s.accents.filter((a) => a.kind === "poly")).toHaveLength(2 + signTris);
   });
 

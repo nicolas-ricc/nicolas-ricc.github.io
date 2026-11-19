@@ -201,10 +201,11 @@ Sitios candidatos (constantes exportadas, para la historia de integración):
   la azotea de la torre corporativa real de Resume.
 - `TINKER_SITE` = (60, −24, 13.5), en `src/scenes/sign-tinker.ts`: la cumbrera
   del galpón de montaje sur del astillero.
-- `PLATFORM_SITE` = (392, 178), en `src/scenes/sign-platform.ts`: el mar
-  abierto entre las dos boyas (movida a (392, 178) en #389: a 8,2 u del
-  carril de salida fallaba la regla de oclusión de los barcos; #390 la
-  integra al mundo).
+- `PLATFORM_SITE` = (380, 178), en `src/scenes/sign-platform.ts`: el mar
+  abierto entre la costa y el carril de salida (movida a (392, 178) en #389:
+  a 8,2 u del carril de salida fallaba la regla de oclusión de los barcos;
+  #390 la integra al mundo; pasa a (380, 178) el 2026-11-19, cuando el
+  cartel se vuelve una tabla flotante, §8.2).
 
 ## 6. Criterios de aceptación
 
@@ -249,30 +250,30 @@ salen de los oráculos de `src/kit/` y de `REPORT.md`; los tests de
 Nivel 2 (`signMetrics`, `staticContrast`) y nivel 3 (`npm run legibility`,
 tal como lo escribe `REPORT.md`) de cada exhibit en contexto, a 1.17 y a
 0.83. Respaldo 1 y oclusión 0 en los seis casos. Base, verticales y error de
-aspecto: RESUME 0°, 0°, 0.010; PORTFOLIO 0.23°, 3.03°, 0.077; Writing 0°, 0°,
+aspecto: RESUME 0°, 0°, 0.010; PORTFOLIO 0.23°, 3.03°, 0.077; WRITING 0°, 0°,
 0.010.
 
 | Exhibit | Escala | Alto de x (px) | Trazo (px) | Aire (px) | Contraste estático | Contraste (px) | Halo | OCR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `cartel-torre-escena` | 1.17 | 14.25 | 2.31 | 2.95 | 4.70 | 10.13:1 | 0.06 | `RESUME` |
-| `cartel-torre-escena` | 0.83 | 10.11 | 1.64 | 2.10 | 4.70 | 8.89:1 | 0.05 | `RESUME` |
-| `cartel-taller-escena` | 1.17 | 15.07 | 2.40 | 2.29 | 8.06 | 6.99:1 | 0.08 | `PORTFOLIO` |
-| `cartel-taller-escena` | 0.83 | 10.69 | 1.70 | 1.62 | 8.06 | 5.93:1 | 0.08 | `PORTFOLIO` |
-| `plataforma-escena` | 1.17 | 12.20 | 2.57 | 2.96 | 13.26 | 11.79:1 | 0.07 | `Writing` |
-| `plataforma-escena` | 0.83 | 8.65 | 1.82 | 2.10 | 13.26 | 11.60:1 | 0.05 | `Writing` |
+| `cartel-torre-escena` | 1.17 | 14.25 | 2.31 | 2.95 | 4.70 | 10.44:1 | 0.05 | `RESUME` |
+| `cartel-torre-escena` | 0.83 | 10.11 | 1.64 | 2.10 | 4.70 | 9.58:1 | 0.04 | `RESUME` |
+| `cartel-taller-escena` | 1.17 | 15.07 | 2.40 | 2.29 | 8.06 | 6.60:1 | 0.08 | `PORTFOLIO` |
+| `cartel-taller-escena` | 0.83 | 10.69 | 1.70 | 1.62 | 8.06 | 5.75:1 | 0.08 | `PORTFOLIO` |
+| `plataforma-escena` | 1.17 | 13.62 | 2.12 | 2.32 | 8.08 | 7.31:1 | 0.15 | `WRITING` |
+| `plataforma-escena` | 0.83 | 9.66 | 1.51 | 1.64 | 8.08 | 7.12:1 | 0.13 | `WRITING` |
 
 Nivel 1: aire mínimo y máximo entre letras, ritmo y la contraforma más
 ajustada, todo en w. Las tres palabras van en fuentes de exhibición (§8.2),
 así que ya ninguna usa `SIGN_FONT` (tamaño 10.3, trazo 1.35 u): sus filas se
 miden con `checkLayouts` sobre sus propios glifos, con w = la cara de la
 letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2;
-1.57 u en Writing, el asta principal de Black Chancery, caja alta 11.2).
+1.30 u en WRITING, el asta principal de Chainsaw Carnage, caja alta 10.8).
 
 | Palabra | Aire mín. (w) | Aire máx. (w) | Ritmo | Contraforma más ajustada (w) |
 | --- | --- | --- | --- | --- |
 | RESUME | 1.27 | 1.47 | 1.16 | 1.56 (`R`) |
 | PORTFOLIO | 1.19 | 1.19 | 1.01 | 1.19 (`P`) |
-| Writing | 1.14 | 1.14 | 1.00 | 1.81 (`g`) |
+| WRITING | 1.08 | 1.08 | 1.00 | 2.07 (`R`) |
 
 ### 8.2 Desvíos de la historia
 
@@ -366,6 +367,24 @@ letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2;
   a 8,2 u del carril de salida fallaba la regla de oclusión de los barcos.
   `sea()` construye la plataforma ahí y `plataforma-escena` es un recorte
   del mundo (caja 358..426 × 144..212, sin `build`).
+- **Writing pasa a tabla flotante (2026-11-19).** A pedido del dueño, el
+  cartel deja de ser una marquesina sobre una plataforma con pilotes: es una
+  tabla `officeDark` que flota a ras del agua (de z −1 a `BOARD_TOP` −0.4,
+  la misma altura en toda su planta) con `WRITING` pintado en Chainsaw
+  Carnage (GGBotNet, SIL OFL) sobre su cara de arriba, sin relieve. La
+  palabra va en un plano `roofDiagonal`, estirado a lo largo de v para que
+  se lea derecha en pantalla; la tabla, la caja de tinta más 1.6 u por lado,
+  mide 48.6 × 33.7 u en planta. Fuera los pilotes, la baranda, la escalera,
+  la casilla, el mástil y sus dos luces. La fuente es en mayúsculas y sus
+  letras saltan: la altura de x que mide el oráculo es la de la letra más
+  baja (la W, 0.77 caja alta) y el trazo, 0.12 caja alta. El generador
+  descarta salpicaduras y poros de menos de 0.005 caja alta², simplifica los
+  contornos a 0.004 caja alta (de 1 474 a 382 triángulos) y separa las
+  letras por 0.13 caja alta de aire. Con la planta más honda, en (392, 178)
+  los barcos del carril de salida pasaban sobre las letras: `PLATFORM_SITE`
+  pasa a (380, 178), el único sitio de mar abierto sin barcos encima en la
+  grilla de 6 u, y `plataforma-escena` a la caja 346..414 × 144..212 con
+  h 4.
 - **Seguimiento: #382.** `strokePx` sigue la letra del issue (el lado más
   corto de cada cuad proyectado) y el punto de la `i` lo tensiona. Con
   `PORTFOLIO` en CNRGN Builder ya no hay punto de la `i` en ningún cartel.
@@ -374,15 +393,14 @@ letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2;
 
 Ancho de la palabra y del anfitrión en pantalla a 1.17 (extensión en x de la
 proyección por 1.17). Dato para la integración: el cartel de Resume es más del
-doble de ancho que su torre (`CROWN_SITE`); el de Writing cabe en su
-cubierta, que desde la segunda vuelta se estira a lo largo del cartel
-(`PLATFORM_SITE`); el de Portfolio cabe en el galpón (`TINKER_SITE`).
+doble de ancho que su torre (`CROWN_SITE`); el de WRITING cabe en su
+tabla flotante (`PLATFORM_SITE`); el de Portfolio cabe en el galpón (`TINKER_SITE`).
 
 | Cartel | Palabra (u) | Palabra (px a 1.17) | Anfitrión | Anfitrión (px a 1.17) |
 | --- | --- | --- | --- | --- |
 | RESUME | 43.89 | 72.62 | `TOWER` 16 × 14 | 35.10 |
 | PORTFOLIO | 52.74 | 87.73 | galpón de montaje sur 90 × 16 (`SHIPYARD_HALLS[1]`) | 124.02 |
-| Writing | 59.54 | 98.52 | cubierta 77.5 × 10 a lo largo de u (`PLATFORM_DECK`) | 128.30 |
+| WRITING | 45.43 | 75.17 | tabla 48.6 × 33.7 a lo largo de u y n (`PLATFORM_DECK`) | 80.46 |
 
 ### 8.4 Capturas
 

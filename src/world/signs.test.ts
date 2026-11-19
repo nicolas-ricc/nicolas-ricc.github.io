@@ -10,7 +10,7 @@ import { BLOG_SIGN } from "../scenes/sign-platform";
 import { RESUME_SIGN } from "../scenes/sign-crown";
 import { TINKER_SIGN } from "../scenes/sign-tinker";
 import { labelLayout, SIGN_ORDER, signBox, signPolygons, SIGNS, zoneAtScreen, type ScreenBox } from "./signs";
-import { coverView, pointerToWorld, unproject, type View } from "./view";
+import { coverView, pointerToWorld, type View } from "./view";
 
 const ALL = Object.entries(SIGNS) as [keyof typeof SIGNS, SignSpec][];
 const ID: View = { x: 0, y: 0, scale: 1 };
@@ -108,17 +108,18 @@ describe("zoneAtScreen (#393)", () => {
   });
 
   // A10: the Writing platform stands over ground that the geography gives to Resume
-  it("zoneAtScreen prefers the sign over the geography beneath it", () => {
-    const b = boundsOf(signPolygons(BLOG_SIGN));
-    let found: { x: number; y: number } | undefined;
-    for (let x = b.minX; x <= b.maxX && !found; x += 0.5) {
-      for (let y = b.minY; y <= b.maxY && !found; y += 0.5) {
-        const g = unproject(x, y);
-        if (inSign(BLOG_SIGN, x, y) && worldZoneAt(g.x, g.y) === "cv") found = { x, y };
+  it("zoneAtScreen answers the sign's zone on every point of its letters, before looking at the geography", () => {
+    // no sign covers another zone's ground on screen any more (the Writing board lies flat on its own sea), so this checks every letter point instead
+    for (const id of SIGN_ORDER) {
+      const b = boundsOf(signPolygons(SIGNS[id]));
+      let n = 0;
+      for (let x = b.minX; x <= b.maxX; x += 1) for (let y = b.minY; y <= b.maxY; y += 1) {
+        if (!inSign(SIGNS[id], x, y)) continue;
+        n++;
+        expect(zoneAtScreen(ID, x, y), id).toBe(id);
       }
+      expect(n, id).toBeGreaterThan(0);
     }
-    expect(found).toBeDefined();
-    expect(zoneAtScreen(ID, found!.x, found!.y)).toBe("blog");
   });
 
   // a 20 px grid of the laptop host, without the points over a sign

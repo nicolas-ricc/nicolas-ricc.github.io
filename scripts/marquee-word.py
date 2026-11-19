@@ -17,12 +17,16 @@ A letter may have more than one outer contour (the dot of an `i`): the largest i
 An optional fifth argument erodes every face by that many cap heights per side (shapely, mitred joins), to
 thin a heavy font into the legibility rules; PORTFOLIO uses 0.0075 (face 0.175 → 0.16 cap heights).
 An optional sixth argument spaces the letters by the air between their faces instead of the font's advances:
-each letter is moved so that its nearest distance to the one before is that many cap heights (shapely). Writing
-uses it because the swash of the W reaches under the r:
+each letter is moved so that its nearest distance to the one before is that many cap heights (shapely). An
+optional seventh argument drops the specks: holes and loose pieces smaller than that many square cap heights.
+WRITING, painted on the floating board, uses both: Chainsaw Carnage's spatters reach the next letter (0.13 caps
+of air keeps 2 px between faces) and its spatters and pits fall under a pixel at the sign's scale. An optional
+eighth argument simplifies every contour (Douglas–Peucker, that many cap heights): its jagged edges would otherwise
+cost thousands of accent triangles for detail under a pixel.
 
-    # Black Chancery (Doug Miles, public domain): https://www.1001fonts.com/blackchancery-font.html
-    python3 -P scripts/marquee-word.py ~/Downloads/BLKCHCRY.TTF Writing CHANCERY_WRITING \
-      "Black Chancery (Earl Allen and Doug Miles, public domain)" 0 0.16 > src/kit/chancery-writing.ts
+    # Chainsaw Carnage (GGBotNet, SIL Open Font License): https://www.1001fonts.com/chainsaw-carnage-font.html
+    python3 -P scripts/marquee-word.py ~/Downloads/ChainsawCarnage.ttf WRITING CHAINSAW_WRITING \
+      "Chainsaw Carnage (GGBotNet, SIL Open Font License)" 0 0.13 0.005 0.004 > src/kit/chainsaw-writing.ts
 
 Needs fontTools (`pip install fonttools`) and, to erode, shapely.
 """
@@ -77,7 +81,7 @@ def erode(body, counters, d):
     return out, [ring(i) for i in g.interiors]
 
 
-def main(path, word, name, credit, thin="0", air="0"):
+def main(path, word, name, credit, thin="0", air="0", speck="0", tol="0"):
     font = TTFont(path)
     glyphs, cmap = font.getGlyphSet(), font.getBestCmap()
     cap = getattr(font["OS/2"], "sCapHeight", 0)
@@ -107,7 +111,15 @@ def main(path, word, name, credit, thin="0", air="0"):
             else:
                 counters.append(c)
         bodies.sort(key=lambda c: -area(c))
+        if float(speck):
+            keep = lambda c: abs(area(c)) >= float(speck) * cap * cap
+            bodies, counters = bodies[:1] + [c for c in bodies[1:] if keep(c)], [c for c in counters if keep(c)]
         body, parts = bodies[0], bodies[1:]
+        if float(tol):
+            from shapely.geometry import Polygon
+
+            simple = lambda c: (lambda r: r if area(r) * area(c) > 0 else r[::-1])(list(Polygon(c).simplify(float(tol) * cap, preserve_topology=True).exterior.coords)[:-1])
+            body, parts, counters = simple(body), [simple(c) for c in parts], [simple(c) for c in counters]
         if float(thin):
             if parts:
                 raise SystemExit(f"{ch}: erode does not handle letters in pieces")
@@ -154,4 +166,4 @@ def main(path, word, name, credit, thin="0", air="0"):
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:7])
+    main(*sys.argv[1:9])

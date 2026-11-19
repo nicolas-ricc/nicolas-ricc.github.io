@@ -251,7 +251,7 @@ export const EXHIBITS: readonly Exhibit[] = [
     box: { x0: KEEPER.x - M, y0: KEEPER.y - M, x1: KEEPER.x + 8 + M, y1: KEEPER.y + 6 + M }, h: 13 }, // on the point, z ≈ 7
   // the two buoys of the shoal south of the point, 50 u apart
   { id: "boyas", title: "Buoys", zone: "blog", group: "sea", kind: "region",
-    box: { x0: Math.min(...buoysX) - 5, y0: Math.min(...buoysY) - 5, x1: Math.max(...buoysX) + 5, y1: Math.max(...buoysY) + 5 }, h: 24 }, // the Writing platform sign (top 23.21) falls in the box: h is the smallest integer above it
+    box: { x0: Math.min(...buoysX) - 5, y0: Math.min(...buoysY) - 5, x1: Math.max(...buoysX) + 5, y1: Math.max(...buoysY) + 5 }, h: 4 },
   // the hull is 40 u long at 30°: it reaches (WRECK.x + 35, WRECK.y + 20); the wreck's buoy is inside
   { id: "pecio", title: "Wreck", zone: "blog", group: "sea", kind: "region",
     box: { x0: WRECK.x - 5, y0: WRECK.y - 5, x1: WRECK.x + 38, y1: WRECK.y + 26 }, h: 9 },
@@ -263,8 +263,8 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "convoy", title: "Convoy with barge", zone: "blog", group: "sea", kind: "piece", build: vessel("barge"), pad: "water" },
   { id: "lancha", title: "Tigre river bus", zone: "blog", group: "sea", kind: "piece", build: vessel("ferry"), pad: "water" },
   { id: "plataforma", title: "Writing platform sign", zone: "blog", group: "sea", kind: "piece", build: seaPlatform, pad: "water" },
-  // h 24: the tallest solid in the box is the platform's sign (top ≈ 23.21, smallest integer above it); its accents (letters, hut and mast) reach no higher, and the crop cuts nothing taller. The platform and its sign come from the world: no `build`.
-  { id: "plataforma-escena", title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 358, y0: 144, x1: 426, y1: 212 }, h: 24, sign: BLOG_SIGN },
+  // the floating board around PLATFORM_SITE (380, 178): it lies flat at the water, so h only has to clear the buoys. The board and its word come from the world: no `build`.
+  { id: "plataforma-escena", title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 346, y0: 144, x1: 414, y1: 212 }, h: 4, sign: BLOG_SIGN },
 ];
 
 /** The exhibit of the hash (`#id` or `id`); empty or unknown, the first. */

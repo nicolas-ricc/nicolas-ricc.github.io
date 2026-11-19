@@ -449,7 +449,7 @@ describe("context exhibits (#376)", () => {
     const ids = EXHIBITS.map((e) => e.id);
     expect(ids.indexOf("plataforma-escena")).toBe(ids.indexOf("plataforma") + 1);
     const e = contexts.find((x) => x.id === "plataforma-escena")!;
-    expect(e).toMatchObject({ title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 358, y0: 144, x1: 426, y1: 212 }, sign: BLOG_SIGN });
+    expect(e).toMatchObject({ title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 346, y0: 144, x1: 414, y1: 212 }, sign: BLOG_SIGN });
     expect("build" in e).toBe(false);
   });
 });

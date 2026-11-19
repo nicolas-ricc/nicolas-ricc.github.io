@@ -30,7 +30,8 @@ const PIECES: Record<string, string> = {
   // #363: plataforma replaces its placeholder (platform, railing, ladder, hut, beacon, Blog sign)
   // #376: the Blog sign uses SIGN_FONT, gains a backing panel and a raised frame, and is built at its site and then translated
   // Writing (Black Chancery) replaces Blog: a deck strip along the sign, posts every ≤ 16, filled cyan letters
-  plataforma: "ebaa8a89/86e21d29",
+  // WRITING (Chainsaw Carnage) painted flat on a board floating on the water: no piles, rails, frame, hut or mast
+  plataforma: "46192742/4bb63b8b",
 };
 
 describe("render baseline (#194)", () => {
