@@ -11,7 +11,7 @@ import { PLANT, factory } from "../scenes/factory";
 import { BEAM_PERIOD_MS } from "../scenes/sea-anim";
 import { CROWN_SITE, RESUME_SIGN, towerCrown } from "../scenes/sign-crown";
 import { PIECE_AT, TINKER_SIGN, TINKER_SITE, tinkerSign } from "../scenes/sign-tinker";
-import { BLOG_SIGNS, seaPlatform, seaPlatformAt } from "../scenes/sign-platform";
+import { BLOG_SIGNS, isSeaPatch, seaPlatform, seaPlatformAt } from "../scenes/sign-platform";
 import { trainLen } from "../scenes/train";
 import { createRng } from "../map/seed";
 import { assembleWorld } from "../world/assemble";
@@ -428,8 +428,8 @@ describe("context exhibits (#376)", () => {
   });
   it("every solid of sign.backing is in the crop (#390), except the Writing sea patch: terrain the oracle sees, not a built solid (#437)", () => {
     for (const e of contexts) {
-      const solids = contextScene(scene, e).solids, writing = e.sign.text === "WRITING";
-      for (const s of writing ? e.sign.backing.slice(0, -1) : e.sign.backing) expect(solids, e.id).toContainEqual(s);
+      const solids = contextScene(scene, e).solids;
+      for (const s of e.sign.backing.filter((b) => !isSeaPatch(b))) expect(solids, e.id).toContainEqual(s);
     }
   });
   it("cartel-taller-escena (#379, #392): after cartel-taller, in the shipyard, the issue's box, a crop of the world with the sign and its animator", () => {

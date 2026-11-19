@@ -8,9 +8,12 @@ import { LOSTWAGES_FACE, marqueeLayout } from "../kit/marquee";
 import { LOSTWAGES_WRITING } from "../kit/lostwages-writing";
 import { VIEW_DIR } from "../iso/project";
 import { prism } from "./city-pieces";
-import { waterCellMat } from "./terrain";
+import { waterCellMat, WATER_MATS } from "./terrain";
 
-/** Cap height of "WRITING" in LostWages: capitals, so the x-height is the cap and 12 px at the laptop cover scale is reached with a margin. */
+/**
+ * Cap height of "WRITING" in LostWages: capitals, so the x-height is the cap (12 px at the laptop cover scale, with a margin). The binding rule is the
+ * phone stroke: LOSTWAGES_FACE · 9.4 projects to 1.507 px at 0.83 against the 1.5 floor, so a smaller cap or a thinner face fails level 2.
+ */
 export const WRITING_CAP = 9.4;
 export const DECK_TOP = 1.6, RAIL_POST = 0.15;
 const RAIL_H = 1.0, HANDRAIL_Z = 2.5, HANDRAIL = 0.1, RAIL_STEP = 5;
@@ -75,6 +78,9 @@ const sea = (c: Vec2, probe: Vec2 = c): Solid & { kind: "poly" } => {
   return { kind: "poly", footprint, z: WATER_Z - 0.1, h: 0.1, mat };
 };
 
+/** True for the sea patch of a Writing sign's backing: a water poly, which the oracle sees and the scene never builds. */
+export const isSeaPatch = (s: Solid): boolean => s.kind === "poly" && (WATER_MATS as readonly string[]).includes(s.mat);
+
 /** The frame's posts around the platform center `c`: 0.2² steel prisms from the deck to the upper beam. */
 const framePosts = (c: Vec2): Solid[] => FRAME.posts.map((s) => {
   const q = at(s, FRAME.postB, c);
@@ -96,7 +102,7 @@ const ORIGIN_SIGN = signAt("plataforma", ORIGIN, PLATFORM_SITES.wide);
 function sign(out: Solid[], accents: Accent[], c: Vec2, spec: SignSpec): void {
   const { L, upperZ } = FRAME, end = (s: number, z: number) => { const q = at(s, 0, c); return v3(q.x, q.y, z); };
   for (const z of [SIGN_Z, upperZ]) out.push({ kind: "beam", from: end(-L / 2, z), to: end(L / 2, z), w: SIGN_BEAM, h: SIGN_BEAM, mat: "steel" });
-  for (const p of spec.backing.slice(0, -1)) {
+  for (const p of spec.backing.filter((s) => !isSeaPatch(s))) {
     if (p.kind !== "prism") throw new Error("a frame post is a prism");
     out.push({ ...p, at: { ...p.at } }); // copy: a consumer that mutates the scene must not reach BLOG_SIGNS
   }

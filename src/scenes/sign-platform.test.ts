@@ -10,9 +10,9 @@ import { LOSTWAGES_FACE, marqueeLayout } from "../kit/marquee";
 import { LOSTWAGES_WRITING } from "../kit/lostwages-writing";
 import { project } from "../iso/project";
 import { ISO_COLORS, toneColor } from "../map/palette-iso";
-import { waterCellMat } from "./terrain";
+import { waterCellMat, WATER_MATS } from "./terrain";
 import { pointInPolygon } from "../map/geo";
-import { BLOG_SIGNS, DECK_HALF, PLATFORM_DECK, PLATFORM_SITES, WRITING_CAP, seaPlatform, seaPlatformAt, type WritingSite } from "./sign-platform";
+import { BLOG_SIGNS, DECK_HALF, isSeaPatch, PLATFORM_DECK, PLATFORM_SITES, WRITING_CAP, seaPlatform, seaPlatformAt, type WritingSite } from "./sign-platform";
 
 const build = () => { const out: Solid[] = [], accents: Accent[] = []; seaPlatform(out, accents); return { out, accents }; };
 const near = (a: number, b: number) => Math.abs(a - b) <= 1e-6;
@@ -186,6 +186,12 @@ describe.each(["wide", "tall"] as const)("WRITING sign in LostWages, no panel, %
   });
   it("cyan against the lightest tone of the sea patch's material stays ≥ 4.5 : 1", () => {
     expect(contrastRatio(ISO_COLORS.cyan, toneColor(sea().mat, "glow"))).toBeGreaterThanOrEqual(4.5);
+  });
+  it("…and of every water material, so the patch's single material sample cannot pick one that breaks it", () => {
+    for (const m of WATER_MATS) expect(contrastRatio(ISO_COLORS.cyan, toneColor(m, "glow")), m).toBeGreaterThanOrEqual(4.5);
+  });
+  it("isSeaPatch tells the sea patch from the posts", () => {
+    expect(BLOG_SIGN.backing.map(isSeaPatch)).toEqual([...BLOG_SIGN.backing.slice(0, -1).map(() => false), true]);
   });
   it("the sea patch lies under the word along the view: every glyph's ink box, grown by w, projects inside it", () => {
     const s = sea(), poly = s.footprint.map((q) => project({ x: q.x, y: q.y, z: s.z + s.h })).flatMap((q) => [q.x, q.y]), m = SIGN_FONT.width;

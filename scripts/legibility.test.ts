@@ -247,7 +247,7 @@ describe("report", () => {
 });
 
 describe("the OCR exception of WRITING in LostWages (#437, spec 2026-11-15 §8.2)", () => {
-  const row = (metric: string, ok: boolean): Row => ({ metric, value: "x", limit: "y", ok });
+  const row = (metric: string, ok: boolean, value = "`WRELENG`"): Row => ({ metric, value, limit: "y", ok });
   const entry = (id: string, rows: Row[]): ReportEntry => ({ id, text: "WRITING", scale: COVER_LAPTOP, rows, crop: `${id}-117.png`, ocrCrop: `${id}-117-ocr.png` });
   it("excused: only a failed OCR row of plataforma-escena or plataforma-escena-angosta", () => {
     for (const id of ["plataforma-escena", "plataforma-escena-angosta"]) {
@@ -257,6 +257,11 @@ describe("the OCR exception of WRITING in LostWages (#437, spec 2026-11-15 §8.2
       expect(excused(id, row("halo", false)), id).toBe(false);
     }
     for (const id of ["cartel-torre-escena", "cartel-taller-escena", "plataforma", "plataforma-escenas"]) expect(excused(id, row("OCR", false)), id).toBe(false);
+  });
+  it("excused: only the accepted misreading, WR + three letters + NG; a word that stops reading still fails", () => {
+    for (const v of ["`WRELENG`", "`WREFHNG`", "`WRETENG`", "`wrefeng`"]) expect(excused("plataforma-escena", row("OCR", false, v)), v).toBe(true);
+    for (const v of ["``", "`W`", "`WRITNG`", "`WRITINGS`", "`XRELENG`", "`WRELENX`", "WRELENG"]) expect(excused("plataforma-escena", row("OCR", false, v)), v).toBe(false);
+    expect(reportFails({ entries: [entry("plataforma-escena", [row("contraste", true), row("halo", true), row("OCR", false, "`WR`")])], violations: [] })).toBe(true);
   });
   it("an excused OCR ✗ is rendered as ✗ with the exception named, and does not fail the report", () => {
     const e = entry("plataforma-escena", [row("contraste", true), row("halo", true), { metric: "OCR", value: "`WRETENG`", limit: "= `WRITING`", ok: false }]);

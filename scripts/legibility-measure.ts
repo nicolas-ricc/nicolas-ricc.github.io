@@ -139,10 +139,12 @@ export function verdicts(m: Measures, ocr: string, text: string, scale: number):
 
 /**
  * True for the one row level 3 excuses (#437, spec 2026-11-15 §8.2): the OCR row of WRITING in LostWages, at the two
- * context exhibits of the Writing platform. tesseract reads LostWages' `I` as `E`, so it cannot spell the word; contrast
- * and halo still have to pass there, and no other sign inherits the exception.
+ * context exhibits of the Writing platform. tesseract reads LostWages' `I` as `E`, so it cannot spell the word; the excuse
+ * covers only that failure, a reading `WR` + three letters + `NG` (as `WRELENG`), so a word that stops reading at all still
+ * fails. Contrast and halo still have to pass there, and no other sign inherits the exception.
  */
-export const excused = (id: string, row: Row): boolean => row.metric === "OCR" && !row.ok && /^plataforma-escena(-angosta)?$/.test(id);
+export const excused = (id: string, row: Row): boolean =>
+  row.metric === "OCR" && !row.ok && /^plataforma-escena(-angosta)?$/.test(id) && /^`WR[A-Za-z]{3}NG`$/i.test(row.value);
 
 /** One sign at one scale in the report; file names are relative to the report. */
 export interface ReportEntry { id: string; text: string; scale: number; rows: Row[]; crop: string; ocrCrop: string }

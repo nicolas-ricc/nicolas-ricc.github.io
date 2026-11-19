@@ -249,8 +249,10 @@ salen de los oráculos de `src/kit/` y de `REPORT.md`; los tests de
 Nivel 2 (`signMetrics`, `staticContrast`) y nivel 3 (`npm run legibility`,
 tal como lo escribe `REPORT.md`) de cada exhibit en contexto, a 1.17 y a
 0.83. Respaldo 1 y oclusión 0 en los seis casos. Base, verticales y error de
-aspecto: RESUME 0°, 0°, 0.010; PORTFOLIO 0.23°, 3.03°, 0.077; Writing 0°, 0°,
-0.010.
+aspecto: RESUME 0°, 0°, 0.010; PORTFOLIO 0.23°, 3.03°, 0.077; WRITING 0°, 0°,
+0.010. Las filas de `plataforma-escena` se remidieron en #437 (2026-11-19,
+WRITING en LostWages); su OCR es la excepción de §8.2. Las demás conservan
+las medidas del 2026-11-17.
 
 | Exhibit | Escala | Alto de x (px) | Trazo (px) | Aire (px) | Contraste estático | Contraste (px) | Halo | OCR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -393,7 +395,9 @@ letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2;
   LostWages, un asta con un lazo abajo y una barra en la base, se lee como
   `E`. Se usa la `I` normal, no la `ı` sin punto. `legibility-measure.ts`
   marca esas cuatro filas como `✗ (excepción, spec 2026-11-15 §8.2)` y no
-  falla la corrida.
+  falla la corrida. La excepción cubre solo esa lectura errada: `WR`, tres
+  letras y `NG` (`excused`); si el OCR deja de leer la palabra, la fila
+  vuelve a fallar.
 - **Writing en el mundo (#390).** `PLATFORM_SITE` pasó a (392, 178) en #389:
   a 8,2 u del carril de salida fallaba la regla de oclusión de los barcos.
   `sea()` construye la plataforma ahí y `plataforma-escena` es un recorte
