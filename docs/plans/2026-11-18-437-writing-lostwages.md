@@ -41,6 +41,8 @@
 
 Tasks 1–3 below are the same under options 1, 2 and 4. Task 4 (level 3 and docs) depends on the answer.
 
+**Answered 2026-11-19 by the author (issue comment): option 1.** See "Resolution" at the end.
+
 ## Review Focus
 
 1. A letter split into pieces by the closing or the weight must stop the generator (`SystemExit`) instead of silently dropping a piece. The script raises "close: a letter split in pieces"; Task 1 runs it on the real font.
@@ -137,3 +139,18 @@ Answers by source: ISSUE 4, CODE 8, DOC 3, NO SOURCE 3 (Q1, Q2, Q3 → spec ambi
 Assumptions (for the PR): the sea surface as backing (Q5), a stroke floor on the thinnest stem if asked (Q11), the constant swap moved into Task 2 (Q17).
 
 Issues opened: none.
+
+## Resolution (2026-11-19)
+
+The author answered the blocking question on the issue: **option 1**.
+
+- Level 3 OCR: a documented exception for this sign only. The normal capital `I` stays (not the dotless `ı`); the expected OCR ✗ is `WRETENG` / `WREFENG`.
+- It is written down in spec 2026-11-15 §8.2 (deviations) and in `REPORT.md`, with the measured readings, the reason (the letterforms, not the weight) and a reference to the EULA's §3.
+- The docs gate ("no ✗") changes **only for `plataforma-escena*` and only for OCR**. Contrast and halo stay ✓; levels 1 and 2 (`checkLayouts`, `checkSign` at both sites) are not loosened. No other sign inherits the exception.
+- The morphological closing is accepted under the same criterion as CNRGN Builder's erosion: a treatment of the rasterised outline done by `marquee-word.py`; the font file is neither modified nor redistributed. §8.2 records it next to the erosion precedent.
+
+Decisions taken on resume (technical assumptions):
+
+- Q11: the stroke the oracle checks is the thinnest stem, not the dominant one. If the generated word's thinnest stem (I, T) is under `LOSTWAGES_FACE`, `thin` grows until it is not (adjusting the script, not the rules), and `WRITING_CAP` is re-derived so the phone stroke stays ≥ 1.5 px.
+- Q17: the `marquee.ts` constant swap moves into Task 2, so every commit typechecks.
+- Task 4: `REPORT.md` and the docs gate accept the OCR ✗ for `plataforma-escena*` only, as above.
