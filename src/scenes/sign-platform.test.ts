@@ -174,7 +174,8 @@ describe.each(["wide", "tall"] as const)("WRITING sign in LostWages, no panel, %
     expect(s.z + s.h).toBeCloseTo(-1, 9);
     const xs = s.footprint.map((q) => q.x), ys = s.footprint.map((q) => q.y), poly = s.footprint.flatMap((q) => [q.x, q.y]);
     let n = 0;
-    for (let x = Math.floor(Math.min(...xs)); x <= Math.max(...xs); x++) for (let y = Math.floor(Math.min(...ys)); y <= Math.max(...ys); y++) {
+    // one probe per 1-u cell, at its centre: x = 570 (WORLD.x1, the wide site) is the seam between world and bleed, which no rendered cell centre hits
+    for (let x = Math.floor(Math.min(...xs)) + 0.5; x <= Math.max(...xs); x++) for (let y = Math.floor(Math.min(...ys)) + 0.5; y <= Math.max(...ys); y++) {
       if (!pointInPolygon(x, y, poly)) continue;
       n++;
       expect(waterCellMat(x, y), `${x},${y}`).not.toBeNull();

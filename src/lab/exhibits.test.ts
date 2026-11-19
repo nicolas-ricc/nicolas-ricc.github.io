@@ -426,10 +426,10 @@ describe("context exhibits (#376)", () => {
   it("neighbors: no solid cut by the edge rises above h", () => {
     for (const e of contexts) expect(measureContext(e).neighbor, e.id).toBeLessThanOrEqual(e.h ?? FRAME_H);
   });
-  it("every solid of sign.backing is in the crop (#390)", () => {
+  it("every solid of sign.backing is in the crop (#390), except the Writing sea patch: terrain the oracle sees, not a built solid (#437)", () => {
     for (const e of contexts) {
-      const solids = contextScene(scene, e).solids;
-      for (const s of e.sign.backing) expect(solids, e.id).toContainEqual(s);
+      const solids = contextScene(scene, e).solids, writing = e.sign.text === "WRITING";
+      for (const s of writing ? e.sign.backing.slice(0, -1) : e.sign.backing) expect(solids, e.id).toContainEqual(s);
     }
   });
   it("cartel-taller-escena (#379, #392): after cartel-taller, in the shipyard, the issue's box, a crop of the world with the sign and its animator", () => {
@@ -454,17 +454,17 @@ describe("context exhibits (#376)", () => {
     expect(tall).toMatchObject({ title: "Writing platform sign in its scene, tall site", zone: "blog", group: "sea", kind: "context", box: { x0: 406, y0: 366, x1: 474, y1: 434 }, h: 24, sign: BLOG_SIGNS.tall, writingSite: "tall" });
     for (const e of [wide, tall]) expect("build" in e, e.id).toBe(false);
   });
-  it.each(["plataforma-escena", "plataforma-escena-angosta"])("%s shows the platform once: 75 platform solids, one deck, no platform animator (#427)", (id) => {
+  it.each(["plataforma-escena", "plataforma-escena-angosta"])("%s shows the platform once: 74 platform solids, one deck, no platform animator (#427)", (id) => {
     const e = contexts.find((x) => x.id === id)!;
     const own: Solid[] = [];
     seaPlatformAt(own, [], e.writingSite!);
-    expect(own).toHaveLength(75);
+    expect(own).toHaveLength(74);
     const cs = contextScene(scene, e), anims = contextAnimators(animators, e);
     expect(anims.some((a) => a.ids.includes("platform.solid"))).toBe(false);
     const layered = anims.flatMap((a) => a.ids.flatMap((lid) => { const l = a.layer(lid); return l.kind === "solid" ? l.solids : []; }));
     const all = [...cs.solids, ...layered];
     expect(all.filter((s) => s.kind === "poly" && s.mat === "deck")).toHaveLength(1);
-    expect(own.filter((p) => all.some((s) => JSON.stringify(s) === JSON.stringify(p)))).toHaveLength(75);
+    expect(own.filter((p) => all.some((s) => JSON.stringify(s) === JSON.stringify(p)))).toHaveLength(74);
     expect(readout(cs, anims).solids).toBe(all.length);
   });
 });
