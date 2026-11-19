@@ -25,6 +25,9 @@ export const BUILDER_FACE = 0.159;
 /** Width of the main stems of a Black Chancery letter and its x-height (the top of the `r`), in cap heights; the hairlines and swashes are thinner. */
 export const CHANCERY_FACE = 0.14, CHANCERY_X = 0.665;
 
+/** Width of the thinnest stem of a LostWages letter as `LOSTWAGES_WRITING` holds it (slits closed, face grown), in cap heights. */
+export const LOSTWAGES_FACE = 0.138;
+
 /** One quad `w` wide along each segment of the glyph's contours: a tube that outlines the letter. */
 export function contourQuads(g: GlyphLayout, w: number): Vec2[][] {
   return g.strokes.flatMap((s) => s.slice(1).map((b, j) => {
