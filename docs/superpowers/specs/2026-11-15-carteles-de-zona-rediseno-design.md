@@ -249,8 +249,10 @@ salen de los oráculos de `src/kit/` y de `REPORT.md`; los tests de
 Nivel 2 (`signMetrics`, `staticContrast`) y nivel 3 (`npm run legibility`,
 tal como lo escribe `REPORT.md`) de cada exhibit en contexto, a 1.17 y a
 0.83. Respaldo 1 y oclusión 0 en los seis casos. Base, verticales y error de
-aspecto: RESUME 0°, 0°, 0.010; PORTFOLIO 0.23°, 3.03°, 0.077; Writing 0°, 0°,
-0.010.
+aspecto: RESUME 0°, 0°, 0.010; PORTFOLIO 0.23°, 3.03°, 0.077; WRITING 0°, 0°,
+0.010. Las filas de `plataforma-escena` se remidieron en #437 (2026-11-19,
+WRITING en LostWages); su OCR es la excepción de §8.2. Las demás conservan
+las medidas del 2026-11-17.
 
 | Exhibit | Escala | Alto de x (px) | Trazo (px) | Aire (px) | Contraste estático | Contraste (px) | Halo | OCR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -258,21 +260,21 @@ aspecto: RESUME 0°, 0°, 0.010; PORTFOLIO 0.23°, 3.03°, 0.077; Writing 0°, 0
 | `cartel-torre-escena` | 0.83 | 10.11 | 1.64 | 2.10 | 4.70 | 8.89:1 | 0.05 | `RESUME` |
 | `cartel-taller-escena` | 1.17 | 15.07 | 2.40 | 2.29 | 8.06 | 6.99:1 | 0.08 | `PORTFOLIO` |
 | `cartel-taller-escena` | 0.83 | 10.69 | 1.70 | 1.62 | 8.06 | 5.93:1 | 0.08 | `PORTFOLIO` |
-| `plataforma-escena` | 1.17 | 12.20 | 2.57 | 2.96 | 13.26 | 11.79:1 | 0.07 | `Writing` |
-| `plataforma-escena` | 0.83 | 8.65 | 1.82 | 2.10 | 13.26 | 11.60:1 | 0.05 | `Writing` |
+| `plataforma-escena` | 1.17 | 15.40 | 2.12 | 2.25 | 13.53 | 12.12:1 | 0.05 | `WRELENG` |
+| `plataforma-escena` | 0.83 | 10.92 | 1.51 | 1.60 | 13.53 | 11.46:1 | 0.03 | `WREFHNG` |
 
 Nivel 1: aire mínimo y máximo entre letras, ritmo y la contraforma más
 ajustada, todo en w. Las tres palabras van en fuentes de exhibición (§8.2),
 así que ya ninguna usa `SIGN_FONT` (tamaño 10.3, trazo 1.35 u): sus filas se
 miden con `checkLayouts` sobre sus propios glifos, con w = la cara de la
 letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2;
-1.57 u en Writing, el asta principal de Black Chancery, caja alta 11.2).
+1.30 u en WRITING, la cara de LostWages, `LOSTWAGES_FACE` 0.138 cajas altas, caja alta 9.4).
 
 | Palabra | Aire mín. (w) | Aire máx. (w) | Ritmo | Contraforma más ajustada (w) |
 | --- | --- | --- | --- | --- |
 | RESUME | 1.27 | 1.47 | 1.16 | 1.56 (`R`) |
 | PORTFOLIO | 1.19 | 1.19 | 1.01 | 1.19 (`P`) |
-| Writing | 1.14 | 1.14 | 1.00 | 1.81 (`g`) |
+| WRITING | 1.05 | 1.05 | 1.00 | 1.07 (`W`) |
 
 ### 8.2 Desvíos de la historia
 
@@ -362,6 +364,40 @@ letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2;
   de x (0.665, la regla pide 0.68) ni los avances de minúsculas; los trazos
   finos y los remates de la caligrafía tampoco cuentan para el trazo, que es
   el asta principal.
+- **WRITING en LostWages (#437).** El cartel de la plataforma pasa a
+  `WRITING` en mayúsculas, con la fuente
+  [LostWages](https://www.1001fonts.com/lostwages-font.html) (Nick Curtis,
+  licencia *1001Fonts Free For Commercial Use*), en neón `cyan`. No se
+  versiona ningún TTF: solo la palabra compuesta,
+  `src/kit/lostwages-writing.ts`, generada por `scripts/marquee-word.py`
+  (la `Writing` de Black Chancery de arriba queda como historia). Caja alta
+  `WRITING_CAP` 9.4 y cara `LOSTWAGES_FACE` 0.138 cajas altas, con aire de
+  0.145. La fuente tiene los tubos dobles, con una ranura entre ellos: el
+  generador aplica un cierre morfológico de 0.015 cajas altas que la rellena
+  y un `thin` negativo (−0.0133, que engorda la cara) para que los trazos más
+  finos (`I`, `T`) lleguen a 0.138. Se fue el panel `officeDark` y se queda el
+  marco: el respaldo para el oráculo son los postes del marco más un parche
+  plano de mar. `SIGN_MARGIN` baja de 3 a 1.5 y `END` de 6 a 4, para que la
+  cubierta del sitio angosto (alto) deje libre el carril de salida. El umbral
+  de aspecto del sitio de Writing pasa de 1,54 (#429) a 1,55.
+  El cierre se acepta con el mismo criterio que la erosión de
+  CNRGN Builder (arriba): trata el contorno ya rasterizado en
+  `marquee-word.py`; el archivo de la fuente ni se modifica ni se
+  redistribuye. La EULA de LostWages (§3) prohíbe modificar o adaptar la
+  fuente, así que sus glifos no se pueden redibujar.
+  **Excepción de OCR (nivel 3).** Por decisión del autor, el OCR de
+  `plataforma-escena` y `plataforma-escena-angosta` falla, solo para este
+  cartel y solo en el OCR: el contraste y el halo siguen en ✓ y los niveles 1
+  y 2 no se aflojan. `REPORT.md` lee `WRELENG` a 1.17 y `WREFHNG` a 0.83 en
+  `plataforma-escena` (contraste 12.12:1 y 11.46:1, halo 0.05 y 0.03), y
+  `WRELENG` y `WREFHNG` en `plataforma-escena-angosta` (contraste 10.22:1 y
+  9.85:1, halo 0.08 y 0.05). La causa son las letras, no el peso: la `I` de
+  LostWages, un asta con un lazo abajo y una barra en la base, se lee como
+  `E`. Se usa la `I` normal, no la `ı` sin punto. `legibility-measure.ts`
+  marca esas cuatro filas como `✗ (excepción, spec 2026-11-15 §8.2)` y no
+  falla la corrida. La excepción cubre solo esa lectura errada: `WR`, tres
+  letras y `NG` (`excused`); si el OCR deja de leer la palabra, la fila
+  vuelve a fallar.
 - **Writing en el mundo (#390).** `PLATFORM_SITE` pasó a (392, 178) en #389:
   a 8,2 u del carril de salida fallaba la regla de oclusión de los barcos.
   `sea()` construye la plataforma ahí y `plataforma-escena` es un recorte
@@ -382,7 +418,7 @@ cubierta, que desde la segunda vuelta se estira a lo largo del cartel
 | --- | --- | --- | --- | --- |
 | RESUME | 43.89 | 72.62 | `TOWER` 16 × 14 | 35.10 |
 | PORTFOLIO | 52.74 | 87.73 | galpón de montaje sur 90 × 16 (`SHIPYARD_HALLS[1]`) | 124.02 |
-| Writing | 59.54 | 98.52 | cubierta 77.5 × 10 a lo largo de u (`PLATFORM_DECK`) | 128.30 |
+| WRITING | 66.80 | 110.53 | cubierta 77.8 × 10 a lo largo de u (`PLATFORM_DECK`) | 128.73 |
 
 ### 8.4 Capturas
 
@@ -392,7 +428,7 @@ Capturas (3200 × 1800; las seis `-escena` con bloom) en
 - `assets/374-carteles/cartel-torre-escena-117.png` y `assets/374-carteles/cartel-torre-escena-083.png`
 - `assets/374-carteles/cartel-taller-escena-117.png` y `assets/374-carteles/cartel-taller-escena-083.png`
 - `assets/374-carteles/plataforma-escena-117.png` y `assets/374-carteles/plataforma-escena-083.png`
-- `assets/374-carteles/cartel-torre-real.png` y `assets/374-carteles/cartel-taller-real.png` (escala real)
+- `assets/374-carteles/cartel-torre-real.png`, `assets/374-carteles/cartel-taller-real.png` y `assets/374-carteles/plataforma-real.png` (escala real)
 - `assets/374-carteles/cartel-taller-detalle.png`, `assets/374-carteles/cartel-taller-detalle-sinacentos.png`, `assets/374-carteles/cartel-taller-titila-a.png` y `assets/374-carteles/cartel-taller-titila-b.png`
 
 Recortes del nivel 3 y la imagen que vio el OCR (`-ocr`), con

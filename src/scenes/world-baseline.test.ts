@@ -30,7 +30,8 @@ const PIECES: Record<string, string> = {
   // #363: plataforma replaces its placeholder (platform, railing, ladder, hut, beacon, Blog sign)
   // #376: the Blog sign uses SIGN_FONT, gains a backing panel and a raised frame, and is built at its site and then translated
   // Writing (Black Chancery) replaces Blog: a deck strip along the sign, posts every ≤ 16, filled cyan letters
-  plataforma: "ebaa8a89/86e21d29",
+  // #437: WRITING in LostWages on the frame, no panel (platform only): END 4, cap 9.4, shorter deck, posts behind the letters, 74 solids
+  plataforma: "30642a16/939ef6df",
 };
 
 describe("render baseline (#194)", () => {

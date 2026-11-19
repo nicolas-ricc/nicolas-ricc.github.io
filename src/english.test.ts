@@ -111,6 +111,8 @@ const ALLOW: Record<string, RegExp[]> = {
     /2026-11-16-storybook-luces\/|faro-norte|Capturas antes y después/g,
     // the zone signs integration closing (#394): status line, framing row label and frame table rows of its spec
     /integración al sitio|teléfono|veredicto del bloom|bloom, promedio|polígonos estáticos|acentos estáticos del mundo/g,
+    // WRITING in LostWages (#437): the report's OCR exception mark and two words its §8.2 entry must carry
+    /excepción|"erosión"|"cierre"/g,
   ],
   "src/scenes/world-baseline.test.ts": [/"?[a-z-]+"?: "[0-9a-f]{8}\/[0-9a-f]{8}"/g],
 };

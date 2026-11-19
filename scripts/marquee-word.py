@@ -17,14 +17,20 @@ A letter may have more than one outer contour (the dot of an `i`): the largest i
 An optional fifth argument erodes every face by that many cap heights per side (shapely, mitred joins), to
 thin a heavy font into the legibility rules; PORTFOLIO uses 0.0075 (face 0.175 → 0.16 cap heights).
 An optional sixth argument spaces the letters by the air between their faces instead of the font's advances:
-each letter is moved so that its nearest distance to the one before is that many cap heights (shapely). Writing
-uses it because the swash of the W reaches under the r:
+each letter is moved so that its nearest distance to the one before is that many cap heights (shapely).
+An optional seventh argument closes each letter: its even-odd shape (every contour) gets `buffer(+d).buffer(-d)`
+(mitred joins), which must stay one polygon; the exterior is the outline, the holes the counters, and there are no
+parts. It runs before the erosion. Writing uses it for LostWages, which draws double tubes (two strokes with a
+slit of about 0.015-0.02 cap heights down the middle of each stem); the closing fills the slit. A negative
+`thin` grows the face:
 
-    # Black Chancery (Doug Miles, public domain): https://www.1001fonts.com/blackchancery-font.html
-    python3 -P scripts/marquee-word.py ~/Downloads/BLKCHCRY.TTF Writing CHANCERY_WRITING \
-      "Black Chancery (Earl Allen and Doug Miles, public domain)" 0 0.16 > src/kit/chancery-writing.ts
+    # LostWages (Nick Curtis, 1001Fonts Free For Commercial Use): https://www.1001fonts.com/lostwages-font.html
+    # download: https://www.1001fonts.com/download/lostwages.zip
+    python3 -P scripts/marquee-word.py ~/Downloads/LOSTWAGE.TTF WRITING LOSTWAGES_WRITING \
+      "LostWages (Nick Curtis, 1001Fonts Free For Commercial Use)" -0.0133 0.145 0.015 > src/kit/lostwages-writing.ts
 
-Needs fontTools (`pip install fonttools`) and, to erode, shapely.
+Needs fontTools and, to erode, space or close, shapely (`pip install fonttools shapely`); tested with
+fontTools 4.46.0 / shapely 2.0.3 and with 4.68.0 / 2.2.0.
 """
 import math
 import sys
@@ -77,7 +83,24 @@ def erode(body, counters, d):
     return out, [ring(i) for i in g.interiors]
 
 
-def main(path, word, name, credit, thin="0", air="0"):
+def closing(contours, d):
+    from shapely.geometry import Polygon
+
+    g = None
+    for c in contours:
+        p = Polygon(c).buffer(0)
+        g = p if g is None else g.symmetric_difference(p)  # even-odd
+    g = g.buffer(d, join_style="mitre", mitre_limit=4).buffer(-d, join_style="mitre", mitre_limit=4)
+    if g.geom_type != "Polygon":
+        raise SystemExit("close: a letter split in pieces")
+    ring = lambda r: list(r.coords)[:-1]
+    out = ring(g.exterior)
+    if area(out) < 0:
+        out.reverse()
+    return out, [ring(i) for i in g.interiors]
+
+
+def main(path, word, name, credit, thin="0", air="0", close="0"):
     font = TTFont(path)
     glyphs, cmap = font.getGlyphSet(), font.getBestCmap()
     cap = getattr(font["OS/2"], "sCapHeight", 0)
@@ -108,6 +131,9 @@ def main(path, word, name, credit, thin="0", air="0"):
                 counters.append(c)
         bodies.sort(key=lambda c: -area(c))
         body, parts = bodies[0], bodies[1:]
+        if float(close):
+            body, counters = closing(bodies + counters, float(close) * cap)
+            parts = []
         if float(thin):
             if parts:
                 raise SystemExit(f"{ch}: erode does not handle letters in pieces")
@@ -154,4 +180,4 @@ def main(path, word, name, credit, thin="0", air="0"):
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:7])
+    main(*sys.argv[1:8])
