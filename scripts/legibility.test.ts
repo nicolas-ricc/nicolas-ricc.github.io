@@ -246,7 +246,7 @@ describe("report", () => {
   });
 });
 
-describe("the OCR exception of WRITING in LostWages (#437, spec 2026-11-15 §8.2)", () => {
+describe("the OCR exception of the Writing platform (#437, spec 2026-11-15 §8.2)", () => {
   const row = (metric: string, ok: boolean, value = "`WRELENG`"): Row => ({ metric, value, limit: "y", ok });
   const entry = (id: string, rows: Row[]): ReportEntry => ({ id, text: "WRITING", scale: COVER_LAPTOP, rows, crop: `${id}-117.png`, ocrCrop: `${id}-117-ocr.png` });
   it("excused: only a failed OCR row of plataforma-escena or plataforma-escena-angosta", () => {

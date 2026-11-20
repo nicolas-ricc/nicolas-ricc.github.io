@@ -138,8 +138,8 @@ export function verdicts(m: Measures, ocr: string, text: string, scale: number):
 }
 
 /**
- * True for the one row level 3 excuses (#437, spec 2026-11-15 §8.2): the OCR row of WRITING in LostWages, at the two
- * context exhibits of the Writing platform. tesseract reads LostWages' `I` as `E`, so it cannot spell the word; the excuse
+ * True for the one row level 3 excuses (#437, spec 2026-11-15 §8.2): the OCR row of WRITING, at the two
+ * context exhibits of the Writing platform. tesseract read the `I` of #437's font as `E`, so it cannot spell the word; the excuse
  * covers only that failure, a reading `WR` + three letters + `NG` (as `WRELENG`), so a word that stops reading at all still
  * fails. Contrast and halo still have to pass there, and no other sign inherits the exception.
  */

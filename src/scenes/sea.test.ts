@@ -15,7 +15,7 @@ import { headlandZ, terrainAt } from "./terrain";
 const scene = (): SeaScene => sea(createRng(7));
 /** What `seaPlatformAt` builds on its own at `site`. */
 const platform = (site: WritingSite) => { const out: Solid[] = [], accents: Accent[] = []; seaPlatformAt(out, accents, site); return { out, accents }; };
-const SEA_MATS: readonly Material[] = ["rock", "whitewash", "rust", "steel", "glass", "hull", "deck", "foam", "leaf", "leafDark"]; // #427: the Writing platform (boxGrey hut, officeDark panel) left sea() for platformAnimator
+const SEA_MATS: readonly Material[] = ["rock", "whitewash", "rust", "steel", "glass", "hull", "deck", "foam", "leaf", "leafDark"]; // #427: the Writing platform (since #442 one officeDark board) left sea() for platformAnimator
 const water = new Set(["water", "sea", "shore", "abyss", "reef"]);
 type Cyl = Extract<Solid, { kind: "cylinder" }>;
 type Prism = Extract<Solid, { kind: "prism" }>;

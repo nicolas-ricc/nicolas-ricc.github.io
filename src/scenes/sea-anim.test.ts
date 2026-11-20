@@ -17,7 +17,7 @@ import { world } from "./world";
 
 const WATER = new Set(["water", "sea", "shore", "abyss"]);
 type Static = { b: Bounds; sb: ReturnType<typeof screenBounds>; sh: Vec2[] };
-/** The Writing platform's solids at both sites (#427): it left the static world for platformAnimator, and the lanes must clear it at either site. */
+/** The Writing board (#442: the one solid left of the platform) at both sites (#427): it left the static world for platformAnimator, and the lanes must clear it at either site. */
 const platforms = (): Solid[] => (["wide", "tall"] as const).flatMap((site) => { const out: Solid[] = []; seaPlatformAt(out, [], site); return out; });
 const staticsOf = (solids: Solid[]): Static[] => solids.map((s) => { const b = bounds(s); return { b, sb: screenBounds(b), sh: screenHull(b) }; });
 /** Alignment box of the freighter centered at `p` (z −1..13) and a check that no static solid overlapping it on screen covers it. */
@@ -128,7 +128,7 @@ describe("two lanes", () => {
     expect(laneAt("back", 0).heading).toBeCloseTo(Math.atan2(330 - 467, 548 - 564), 6);
   });
 
-  it("the lanes leave ≥ 14 u to the Writing decks at both sites and ≥ 14 u to the moved headland polygon (#423)", () => {
+  it("the lanes leave ≥ 14 u to the Writing boards at both sites and ≥ 14 u to the moved headland polygon (#423)", () => {
     // the two Writing sites (#427) and the headland moved in #426
     const SITES: Vec2[] = Object.values(PLATFORM_SITES);
     const MOVED_HEADLAND: Vec2[] = HEADLAND.map(([x, y]) => ({ x, y }));

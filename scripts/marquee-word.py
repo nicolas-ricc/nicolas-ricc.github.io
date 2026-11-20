@@ -2,7 +2,7 @@
 
 The fonts' licenses do not let the repo distribute them, so no TTF is in the
 repo: download it and pass its path. What is committed is only the composed
-word, as artwork. The two words in use:
+word, as artwork. Two of the words in use:
 
     # Neon Light (Font Bundles): https://www.1001fonts.com/neon-light-font.html
     python3 -P scripts/marquee-word.py ~/Downloads/NeonLight-Regular.ttf RESUME MARQUEE_RESUME \
@@ -20,16 +20,22 @@ An optional sixth argument spaces the letters by the air between their faces ins
 each letter is moved so that its nearest distance to the one before is that many cap heights (shapely).
 An optional seventh argument closes each letter: its even-odd shape (every contour) gets `buffer(+d).buffer(-d)`
 (mitred joins), which must stay one polygon; the exterior is the outline, the holes the counters, and there are no
-parts. It runs before the erosion. Writing uses it for LostWages, which draws double tubes (two strokes with a
-slit of about 0.015-0.02 cap heights down the middle of each stem); the closing fills the slit. A negative
-`thin` grows the face:
+parts. It runs before the erosion. It fills the slit of a font that draws double tubes (two strokes with a slit of about
+0.015-0.02 cap heights down the middle of each stem). A negative `thin` grows the face.
+An optional eighth argument drops the specks: holes and loose pieces smaller than that many square cap heights
+(the largest piece of a letter always stays). It runs before the closing.
+An optional ninth argument simplifies every contour (Douglas-Peucker, that many cap heights): a font with jagged
+edges would otherwise cost thousands of triangles for detail under a pixel. It runs after the closing and before the erosion.
+Writing, painted on the floating board, uses the spacing, `speck` and `tol`: Chainsaw Carnage's spatters reach the next
+letter (0.13 caps of air keeps 2 px between faces) and its spatters and pits fall under a pixel at the sign's scale.
 
-    # LostWages (Nick Curtis, 1001Fonts Free For Commercial Use): https://www.1001fonts.com/lostwages-font.html
-    # download: https://www.1001fonts.com/download/lostwages.zip
-    python3 -P scripts/marquee-word.py ~/Downloads/LOSTWAGE.TTF WRITING LOSTWAGES_WRITING \
-      "LostWages (Nick Curtis, 1001Fonts Free For Commercial Use)" -0.0133 0.145 0.015 > src/kit/lostwages-writing.ts
+    # Chainsaw Carnage (GGBotNet, SIL Open Font License): https://www.1001fonts.com/chainsaw-carnage-font.html
+    # download: https://www.1001fonts.com/download/chainsaw-carnage.zip
+    python3 -P scripts/marquee-word.py ~/Downloads/ChainsawCarnage.ttf WRITING CHAINSAW_WRITING \
+      "Chainsaw Carnage (GGBotNet, SIL Open Font License)" \
+      0 0.13 0 0.005 0.004 > src/kit/chainsaw-writing.ts
 
-Needs fontTools and, to erode, space or close, shapely (`pip install fonttools shapely`); tested with
+Needs fontTools and, to erode, space, close or simplify, shapely (`pip install fonttools shapely`); tested with
 fontTools 4.46.0 / shapely 2.0.3 and with 4.68.0 / 2.2.0.
 """
 import math
@@ -100,7 +106,7 @@ def closing(contours, d):
     return out, [ring(i) for i in g.interiors]
 
 
-def main(path, word, name, credit, thin="0", air="0", close="0"):
+def main(path, word, name, credit, thin="0", air="0", close="0", speck="0", tol="0"):
     font = TTFont(path)
     glyphs, cmap = font.getGlyphSet(), font.getBestCmap()
     cap = getattr(font["OS/2"], "sCapHeight", 0)
@@ -130,10 +136,18 @@ def main(path, word, name, credit, thin="0", air="0", close="0"):
             else:
                 counters.append(c)
         bodies.sort(key=lambda c: -area(c))
+        if float(speck):
+            keep = lambda c: abs(area(c)) >= float(speck) * cap * cap
+            bodies, counters = bodies[:1] + [c for c in bodies[1:] if keep(c)], [c for c in counters if keep(c)]
         body, parts = bodies[0], bodies[1:]
         if float(close):
             body, counters = closing(bodies + counters, float(close) * cap)
             parts = []
+        if float(tol):
+            from shapely.geometry import Polygon
+
+            simple = lambda c: (lambda r: r if area(r) * area(c) > 0 else r[::-1])(list(Polygon(c).simplify(float(tol) * cap, preserve_topology=True).exterior.coords)[:-1])
+            body, parts, counters = simple(body), [simple(c) for c in parts], [simple(c) for c in counters]
         if float(thin):
             if parts:
                 raise SystemExit(f"{ch}: erode does not handle letters in pieces")
@@ -180,4 +194,4 @@ def main(path, word, name, credit, thin="0", air="0", close="0"):
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:8])
+    main(*sys.argv[1:10])
