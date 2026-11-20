@@ -40,11 +40,11 @@ El plan de #451 fijó la caja alta en 20 con los pisos verticales de `SIGN_RULES
 
 ### 2.7 La pose rígida
 
-`RaftPose = { dz, pitch, roll }`, rotando alrededor de un centro fijo del sitio; el plano de texto se posa igual, así los cuadriláteros del oráculo y las calcomanías coinciden. `HEAVE` sigue (±0.15 u, 6700 ms); `PITCH` ±1.5° con periodo 9100 ms (alrededor de la normal de la balsa) y `ROLL` ±1.0° con periodo 7300 ms (alrededor de u). Los ángulos se cuantizan a `ANGLE_STEP` 0.1°; las tres fases arrancan en 0, así que t 0 es el reposo, y el reloj es periódico en `POSE_CYCLE_MS`. El animador guarda una pose por sitio (un memo de una entrada), solo reporta cuando cambia la pose cuantizada (a lo sumo 25 por segundo) y queda quieto con `reducedMotion`. `CYCLE_POSES` lista 17 poses (reposo, las 8 esquinas del cubo de poses y `poseAt(k · 7919)`), que muestrean el nivel 2 y la regla de barcos.
+`RaftPose = { dz, pitch, roll }`, rotando alrededor de un centro fijo del sitio; el plano de texto se posa igual, así los cuadriláteros del oráculo y las calcomanías coinciden. `HEAVE` sigue (±0.15 u, 6700 ms); `PITCH` ±1.5° con periodo 9100 ms (alrededor del eje transversal `RAFT_N`, horizontal y perpendicular a u) y `ROLL` ±1.0° con periodo 7300 ms (alrededor de u). Los ángulos se cuantizan a `ANGLE_STEP` 0.1°; las tres fases arrancan en 0, así que t 0 es el reposo, y el reloj es periódico en `POSE_CYCLE_MS`. El animador guarda una pose por sitio (un memo de una entrada), solo reporta cuando cambia la pose cuantizada (a lo sumo 250 veces en 10 s, 25 por segundo en promedio) y queda quieto con `reducedMotion`. `CYCLE_POSES` lista 17 poses (reposo, las 8 esquinas del cubo de poses y `poseAt(k · 7919)`), que muestrean el nivel 2 y la regla de barcos.
 
 ### 2.8 Carril y encuadre
 
-`LANE_OUT` corre 15 u al este en su tramo sur, para que la balsa más larga quepa en el sitio angosto con las reglas de los barcos: (486, 347) pasa a (501, 347), (500, 405) a (515, 405) y el extremo de mar a (522.7, 506.4), sobre la misma dirección. `LANE_BACK` no cambia. `zoneFrame("blog", "tall")` termina en y 450 (era 440).
+`LANE_OUT` corre 15 u al este en su tramo sur, para que la balsa más larga quepa en el sitio angosto con las reglas de los barcos: (486, 347) pasa a (501, 347), (500, 405) a (515, 405) y el extremo de mar a (522.7, 506.4), sobre la misma dirección. `LANE_BACK` no cambia. el `zoneFrame` de Blog en el sitio `tall` termina en y 450 (era 440).
 
 ### 2.9 Nivel 3 para carteles de suelo
 

@@ -23,7 +23,7 @@ Considered and rejected: option (a), keeping the vertical floors and a cap of 20
 ## Consequences
 
 - The word measures about 72.6 u and the raft 76.6 × 30.3 u. At 17.25 the x-height is 10.99 px at 1.17 and 7.80 px at 0.83 at rest, and 10.61 and 7.52 px in the worst pose of `CYCLE_POSES`.
-- The southern stretch of `LANE_OUT` is shifted 15 u east and `zoneFrame("blog", "tall")` ends at y 450, so the raft fits the narrow site under the ship rules.
+- The southern stretch of `LANE_OUT` is shifted 15 u east and Blog's `zoneFrame` at the `tall` site ends at y 450, so the raft fits the narrow site under the ship rules.
 - Level 3 is the safety net of the lower floors, and for a ground sign it changed: a symmetric halo, counters filled through the glyph's plane, and an OCR that sees only the backed area, so that the edge of the raft is not read as a letter. `npm run legibility -- --tick <ms>` repeats it at a pose of the pitch-and-roll cycle (`REPORT-t7919.md`, `REPORT-t15838.md`). It excuses no row.
 - Other ground signs can reuse the class; vertical signs are unaffected.
 
