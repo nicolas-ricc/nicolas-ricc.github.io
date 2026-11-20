@@ -26,7 +26,7 @@ import { ship as buildShip, shipAt, wake, type ShipKind } from "./ships";
 // y ≈ 86, where the lighthouse point stood until #426 moved it to the island's east coast (the site is open
 // water now; the vertices were left as they were). From (434, 176) it goes down east of the
 // moved headland (37 u from its tip) and of the narrow Writing site (25.7 u from its raft, `PLATFORM_DECK`, at d = 430; 88.7 u from the wide one): x ≥ 456 at y 290 and
-// x ≥ 515 at y 405. Turns on screen of 6°, 7°, 22°, 13°, −18°, 2°, −41°, 37.5° and 9°. In #427 (452, 290) moved to (456, 290) and (478, 350) to (486, 347):
+// x ≥ 515 at y 405. Turns on screen of 5.6°, 7.1°, 22.0°, 12.5°, −18.4°, 2.4°, −41.4°, 37.5° and 9.1°. In #427 (452, 290) moved to (456, 290) and (478, 350) to (486, 347):
 // with the platform drawn at both sites, a freighter at the old ones ended up behind the narrow site's deck on screen. In #454 (486, 347) → (501, 347) and (500, 405) → (515, 405):
 // the raft's world-axis bounds are 84 × 84 u (±42 u about the site), larger than the board it replaced, so the lane moved 15 u east to keep the ≥ 14 u to the deck that sea-anim.test.ts requires.
 //

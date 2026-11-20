@@ -89,14 +89,13 @@ const area = (pts: readonly Vec2[]): number => {
 /** The 6 faces of the prism r × [z0, z1] in the world, each wound so its normal points away from the prism's centre. */
 const prism = (plane: TextPlane, r: Rect, z0: number, z1: number, toneOffset: number): MeshFace[] => {
   const at = (a: number, b: number, z: number): Vec3 => { const q = toWorld(plane, a, b); return v3(q.x, q.y, z); };
-  const p = (a: number, b: number, z: number) => at(a, b, z);
   const quads: Vec3[][] = [
-    [p(r.a0, r.b0, z1), p(r.a0, r.b1, z1), p(r.a1, r.b1, z1), p(r.a1, r.b0, z1)],
-    [p(r.a0, r.b0, z0), p(r.a1, r.b0, z0), p(r.a1, r.b1, z0), p(r.a0, r.b1, z0)],
-    [p(r.a0, r.b0, z0), p(r.a0, r.b0, z1), p(r.a1, r.b0, z1), p(r.a1, r.b0, z0)],
-    [p(r.a1, r.b0, z0), p(r.a1, r.b0, z1), p(r.a1, r.b1, z1), p(r.a1, r.b1, z0)],
-    [p(r.a1, r.b1, z0), p(r.a1, r.b1, z1), p(r.a0, r.b1, z1), p(r.a0, r.b1, z0)],
-    [p(r.a0, r.b1, z0), p(r.a0, r.b1, z1), p(r.a0, r.b0, z1), p(r.a0, r.b0, z0)],
+    [at(r.a0, r.b0, z1), at(r.a0, r.b1, z1), at(r.a1, r.b1, z1), at(r.a1, r.b0, z1)],
+    [at(r.a0, r.b0, z0), at(r.a1, r.b0, z0), at(r.a1, r.b1, z0), at(r.a0, r.b1, z0)],
+    [at(r.a0, r.b0, z0), at(r.a0, r.b0, z1), at(r.a1, r.b0, z1), at(r.a1, r.b0, z0)],
+    [at(r.a1, r.b0, z0), at(r.a1, r.b0, z1), at(r.a1, r.b1, z1), at(r.a1, r.b1, z0)],
+    [at(r.a1, r.b1, z0), at(r.a1, r.b1, z1), at(r.a0, r.b1, z1), at(r.a0, r.b1, z0)],
+    [at(r.a0, r.b1, z0), at(r.a0, r.b1, z1), at(r.a0, r.b0, z1), at(r.a0, r.b0, z0)],
   ];
   const c = at((r.a0 + r.a1) / 2, (r.b0 + r.b1) / 2, (z0 + z1) / 2);
   return quads.map((pts) => {
@@ -107,8 +106,8 @@ const prism = (plane: TextPlane, r: Rect, z0: number, z1: number, toneOffset: nu
 
 /** The glyph triangles of WRITING cut to each plank's rectangle (text space), in plank order; slivers below 1e-9 are dropped. Cached: it does not depend on the site. */
 let decalMemo: Vec2[][][] | undefined;
-const decalsPerPlank = (planks: RaftPlan["planks"]): Vec2[][][] =>
-  (decalMemo ??= planks.map((p) => {
+const decalsPerPlank = (): Vec2[][][] =>
+  (decalMemo ??= buildRaft().planks.map((p) => {
     const out: Vec2[][] = [];
     for (const g of LAYOUT) for (const t of g.quads) {
       const piece = clipPolygon(t, { x0: p.a0, x1: p.a1, y0: p.b0, y1: p.b1 }, lerp2);
@@ -128,7 +127,7 @@ export function raftAt(site: WritingSite, pose: RaftPose = REST_POSE): Solid & {
   // The back sheet spans the plank block in b when it is longer than the sheet: the oracle's backing needs a visible face behind the margin row beyond the far plank edge, and the view ray crosses z −0.9 about 1 u further away.
   const sb0 = Math.min(s.b0, plan.planks.at(-1)!.b0), sb1 = Math.max(s.b1, plan.planks[0]!.b1);
   faces.push({ pts: [at(s.a0, sb0, DECK_Z), at(s.a0, sb1, DECK_Z), at(s.a1, sb1, DECK_Z), at(s.a1, sb0, DECK_Z)], toneOffset: -5 });
-  const decals = decalsPerPlank(plan.planks);
+  const decals = decalsPerPlank();
   plan.planks.forEach((p, k) => {
     faces.push(...prism(plane, p, DECK_Z, BOARD_TOP, p.tone));
     for (const piece of decals[k]!) {
