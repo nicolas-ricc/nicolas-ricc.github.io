@@ -66,7 +66,7 @@ describe.each(["wide", "tall"] as const)("Writing board at the %s site: a flat b
 
   it("BLOG_SIGNS[site]: WRITING in Chainsaw Carnage, cyan, filled, its shortest letter as x-height and its stem as stroke, backed by the board (copies)", () => {
     expect(SIGN).toMatchObject({ id: "plataforma", text: "WRITING", size: WRITING_CAP, width: SIGN_FONT.width, color: "cyan", xHeight: CHAINSAW_X * WRITING_CAP, stroke: CHAINSAW_FACE * WRITING_CAP });
-    expect(WRITING_CAP).toBe(10.8);
+    expect(WRITING_CAP).toBe(11.5);
     expect(SIGN.glyphs.map((g) => g.char).join("")).toBe("WRITING");
     const { out } = at(site);
     expect(SIGN.backing).toEqual(out);
