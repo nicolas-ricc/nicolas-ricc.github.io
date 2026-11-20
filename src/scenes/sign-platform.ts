@@ -23,7 +23,7 @@ const BOARD_PAD = 1.6;
 export const PAINT_LIFT = 0.02;
 
 /** The board heaves (up and down, no pitch or roll): amplitude in world units and period in ms. */
-export const HEAVE = { amp: 0.15, periodMs: 6700 };
+export const HEAVE: Readonly<{ amp: number; periodMs: number }> = Object.freeze({ amp: 0.15, periodMs: 6700 });
 /** The heave is quantized to multiples of this, so a pose can be cached (at most 31 per site). */
 export const HEAVE_STEP = 0.01;
 /** The heave offset at time `tMs`: a sine reduced modulo the period (so a long-running clock keeps its precision), rounded to HEAVE_STEP. */
@@ -82,12 +82,12 @@ export const BLOG_SIGNS: Record<WritingSite, SignSpec> = { wide: signAt("wide"),
 
 /** The floating board at a Writing site with WRITING painted on it (cyan faces of `signAt(site, dz)`), heaved by `dz`. */
 export function seaPlatformAt(out: Solid[], accents: Accent[], site: WritingSite, dz = 0): void {
-  const spec = signAt(site, dz); // a fresh spec: a consumer that mutates the scene must not reach BLOG_SIGNS
+  const spec = signAt(site, dz); // a fresh spec, never BLOG_SIGNS: a consumer that mutates the scene cannot reach it
   for (const s of spec.backing) {
     if (s.kind !== "poly") throw new Error("the Writing board is a poly");
-    out.push({ ...s, footprint: s.footprint.map((q) => ({ ...q })) });
+    out.push(s);
   }
-  for (const g of spec.glyphs) for (const q of g.quads) accents.push({ kind: "poly", pts: q.map((c) => ({ ...c })), color: "cyan", alpha: 0.85 });
+  for (const g of spec.glyphs) for (const q of g.quads) accents.push({ kind: "poly", pts: q, color: "cyan", alpha: 0.85 });
 }
 
 /** The floating board with its word at the origin (a relocatable piece): `seaPlatformAt("wide")` moved by −PLATFORM_SITES.wide. */

@@ -5,7 +5,7 @@ import { checkSign, checkSignFont, COVER_LAPTOP, COVER_PHONE } from "../kit/legi
 import { HEAVE, heaveAt, seaPlatformAt, signAt, type WritingSite } from "../scenes/sign-platform";
 import { assembleWorld } from "../world/assemble";
 import { signBox } from "../world/signs";
-import { contextScene, cropScene } from "./crop";
+import { contextScene, cropScene, cropSolids } from "./crop";
 import { EXHIBITS } from "./exhibits";
 
 // The sign gate (#376): every context exhibit passes level 1 (the font) and level 2 (the projected sign in its scene).
@@ -61,6 +61,10 @@ describe("sign gate: level 2 across the heave cycle of the Writing board (#444)"
   });
   describe.each(writing)("%s", (_id, e, site) => {
     const base = cropScene(scene, e.box).solids;
+    it("the exhibit's scene is this crop plus the rest board, so swapping in the posed board audits the same scene", () => {
+      expect(contextScene(scene, e).solids).toEqual([...base, ...cropSolids(platform(site), e.box)]);
+      expect(cropSolids(platform(site), e.box)).toEqual(platform(site));
+    });
     for (let k = 0; k < 8; k++) {
       const dz = heaveAt((k * HEAVE.periodMs) / 8), sign = signAt(site, dz), board = platform(site, dz);
       const near = [...scene.solids, ...board].filter((s) => overlaps(screenBounds(bounds(s)), grow(signBox(sign), 4)));

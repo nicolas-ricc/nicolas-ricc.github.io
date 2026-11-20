@@ -16,7 +16,7 @@ export interface PlatformAnimator extends Animator {
 /**
  * The sea platform at `opts.site` (default `"wide"`), heaving with `heaveAt` unless `opts.reducedMotion`, in which case it stays at its rest pose.
  * The board and its paint move as one body. Each `(site, step)` pose is built once and reused (at most 31 per site).
- * A layer is reported when the site or the quantized heave step changed since the previous tick, so at most about 12 times per second.
+ * A layer is reported when the site or the quantized heave step changed since the previous tick, about 9 times per second on average (14 at the fastest, the zero crossings).
  * Both layers are reported after a site change, even with `dtMs` of 0 or NaN (an invalid `dtMs` does not advance the clock).
  */
 export function platformAnimator(opts: { site?: WritingSite; reducedMotion: boolean }): PlatformAnimator {
