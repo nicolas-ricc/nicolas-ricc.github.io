@@ -429,11 +429,11 @@ describe("contextScene / contextAnimators (#376, #392)", () => {
     expect(scene.solids).toHaveLength(2);
   });
   it("with writingSite, the platform animator is dropped and the others stay", () => {
-    const platform = platformAnimator({ site: "tall" }), lit: ZonedAnimator = { ...toyAt(TALL_BOX), zone: "blog" };
+    const platform = platformAnimator({ site: "tall", reducedMotion: false }), lit: ZonedAnimator = { ...toyAt(TALL_BOX), zone: "blog" };
     const got = contextAnimators([tag(platform, "blog"), lit], tall);
     expect(got.some((a) => a.ids.includes("platform.solid"))).toBe(false);
     expect(got).toHaveLength(1);
     // without writingSite the platform animator is cropped like any other
-    expect(contextAnimators([tag(platformAnimator({ site: "tall" }), "blog")], { ...tall, writingSite: undefined }).some((a) => a.ids.includes("platform.solid"))).toBe(true);
+    expect(contextAnimators([tag(platformAnimator({ site: "tall", reducedMotion: false }), "blog")], { ...tall, writingSite: undefined }).some((a) => a.ids.includes("platform.solid"))).toBe(true);
   });
 });
