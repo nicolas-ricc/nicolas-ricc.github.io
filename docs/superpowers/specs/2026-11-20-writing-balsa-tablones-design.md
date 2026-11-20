@@ -44,7 +44,7 @@ El plan de #451 fijó la caja alta en 20 con los pisos verticales de `SIGN_RULES
 
 ### 2.8 Carril y encuadre
 
-`LANE_OUT` corre 15 u al este en su tramo sur, para que la balsa más larga quepa en el sitio angosto con las reglas de los barcos: (486, 347) pasa a (501, 347), (500, 405) a (515, 405) y el extremo de mar a (522.7, 506.4), sobre la misma dirección. `LANE_BACK` no cambia. el `zoneFrame` de Blog en el sitio `tall` termina en y 450 (era 440).
+`LANE_OUT` corre 15 u al este en su tramo sur, para que la balsa más larga quepa en el sitio angosto con las reglas de los barcos: (486, 347) pasa a (501, 347), (500, 405) a (515, 405) y el extremo de mar a (522.7, 506.4), sobre la misma dirección. `LANE_BACK` no cambia. El `zoneFrame` de Blog en el sitio `tall` termina en y 450 (era 440).
 
 ### 2.9 Nivel 3 para carteles de suelo
 
