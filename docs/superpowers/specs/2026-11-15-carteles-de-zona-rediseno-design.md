@@ -253,11 +253,12 @@ aspecto: RESUME 0°, 0°, 0.010; PORTFOLIO 0.23°, 3.03°, 0.077; WRITING 0°, 0
 0.010. Las filas de `plataforma-escena` se remidieron en #445 (2026-11-20,
 WRITING en Chainsaw Carnage sobre la tabla flotante, caja alta 11.5), con el
 OCR leyendo `WRITING`: desde #445 el nivel 3 no excusa ninguna fila. Las
-demás conservan las medidas del 2026-11-17. Desde #451, caja alta 20: las
+demás conservan las medidas del 2026-11-17. Desde #460, caja alta 17.25: las
 columnas de nivel 2 de `plataforma-escena` (alto de x, trazo, aire y contraste
-estático) son las de la balsa de tablones con WRITING en `navy` sobre `timber`;
-las de nivel 3 siguen siendo las de #445 hasta que `npm run legibility`
-vuelva a medirlas (§8.2, entrada de #451).
+estático) son las de la balsa de tablones con WRITING en `navy` sobre `timber`
+(con caja alta 20 medían 12.74, 2.48 y 3.59 a 1.17, y 9.04, 1.76 y 2.55 a
+0.83); las de nivel 3 siguen siendo las de #445 hasta que #457 regenere
+`REPORT.md` (la comprobación previa de #460 está en §8.2, entrada de #451).
 
 | Exhibit | Escala | Alto de x (px) | Trazo (px) | Aire (px) | Contraste estático | Contraste (px) | Halo | OCR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -265,15 +266,15 @@ vuelva a medirlas (§8.2, entrada de #451).
 | `cartel-torre-escena` | 0.83 | 10.11 | 1.64 | 2.10 | 4.70 | 8.89:1 | 0.05 | `RESUME` |
 | `cartel-taller-escena` | 1.17 | 15.07 | 2.40 | 2.29 | 8.06 | 6.99:1 | 0.08 | `PORTFOLIO` |
 | `cartel-taller-escena` | 0.83 | 10.69 | 1.70 | 1.62 | 8.06 | 5.93:1 | 0.08 | `PORTFOLIO` |
-| `plataforma-escena` | 1.17 | 12.74 | 2.48 | 3.59 | 8.04 | 14.18:1 | 0.06 | `WRITING` |
-| `plataforma-escena` | 0.83 | 9.04 | 1.76 | 2.55 | 8.04 | 12.41:1 | 0.06 | `WRITING` |
+| `plataforma-escena` | 1.17 | 10.99 | 2.14 | 3.10 | 8.04 | 14.18:1 | 0.06 | `WRITING` |
+| `plataforma-escena` | 0.83 | 7.80 | 1.52 | 2.20 | 8.04 | 12.41:1 | 0.06 | `WRITING` |
 
 Nivel 1: aire mínimo y máximo entre letras, ritmo y la contraforma más
 ajustada, todo en w. Las tres palabras van en fuentes de exhibición (§8.2),
 así que ya ninguna usa `SIGN_FONT` (tamaño 10.3, trazo 1.35 u): sus filas se
 miden con `checkLayouts` sobre sus propios glifos, con w = la cara de la
 letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2;
-1.38 u en WRITING, la cara de Chainsaw Carnage, `CHAINSAW_FACE` 0.12 cajas altas, caja alta 11.5; desde #451, caja alta 20, la cara es de 2.40 u). Los valores de la tabla son relativos a w, así que no cambian con la caja alta.
+1.38 u en WRITING, la cara de Chainsaw Carnage, `CHAINSAW_FACE` 0.12 cajas altas, caja alta 11.5; desde #460, caja alta 17.25, la cara es de 2.07 u). Los valores de la tabla son relativos a w, así que no cambian con la caja alta.
 
 | Palabra | Aire mín. (w) | Aire máx. (w) | Ritmo | Contraforma más ajustada (w) |
 | --- | --- | --- | --- | --- |
@@ -464,10 +465,35 @@ Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage, con
   pintada en `navy` como calcomanía en la pasada de sólidos, sobre el plano
   `groundDiagonal`. Una sola capa, `platform.solid`: la capa `platform.lights`
   ya no existe, y con ella la pintura como acento (la entrada de #441 queda
-  como historia). **`WRITING_CAP` 20.** Con la caja alta 20 la caja de x mide
-  12.74 px a 1.17 y 9.04 px a 0.83 en reposo (12.30 y 8.72 con el rolido de 1°
-  previsto); el piso es x ≥ 12 px a 1.17, con la v del plano proyectando 0.707
-  y con ese rolido.
+  como historia). **`WRITING_CAP` 17.25** (decisión del dueño, 2026-11-20,
+  #460; caja alta 17.25). Con la caja alta 20 la caja de x medía 12.74 px a 1.17
+  y 9.04 px a 0.83 en reposo (12.30 y 8.72 con el rolido de 1° previsto), con
+  piso x ≥ 12 px a 1.17. El dueño prefirió la palabra más chica y rebajar los
+  pisos solo para el cartel de suelo: `SIGN_RULES.ground`, que `checkSign`
+  aplica a los carteles `ground` en lugar de `SIGN_RULES` (los verticales
+  conservan los pisos por escala).
+
+  | Piso de `SIGN_RULES.ground` | Alto de x (px) | Trazo (px) | Aire (px) | Contraste |
+  | --- | --- | --- | --- | --- |
+  | 1.17 | 10.5 | 1.6 | 2 | 7:1 |
+  | 0.83 | 7.5 | 1.2 | 1.5 | 7:1 |
+
+  Con caja alta 17.25, medido por `signMetrics` en reposo y en la peor pose de
+  `CYCLE_POSES` (el mínimo de las 17 poses; es la misma cifra en `wide` y en
+  `tall`):
+
+  | Escala | Alto de x (px) reposo / peor | Trazo (px) reposo / peor | Aire (px) reposo / peor |
+  | --- | --- | --- | --- |
+  | 1.17 | 10.99 / 10.61 | 2.14 / 2.07 | 3.10 / 3.05 |
+  | 0.83 | 7.80 / 7.52 | 1.52 / 1.47 | 2.20 / 2.16 |
+
+  **Medida del trazo.** Como el cartel trae `stroke` y `bar`, el oráculo mide
+  el trazo como el menor entre la cara del asta (`CHAINSAW_FACE`, 0.12 cajas
+  altas) proyectada a lo largo de u y la barra (`CHAINSAW_BAR`, 0.15) a lo largo
+  de v; manda la barra: 0.15 · 17.25 · 0.707 · escala da 2.14 / 1.52 px en
+  reposo. El «≈ 1.71 / 1.21» del issue aplicaba la cara de 0.12 a lo largo de v.
+  No se cambió la medida, solo el piso, que a 0.83 queda en 1.2 px frente a los
+  1.47 px de la peor pose.
   **`CHAINSAW_BAR` 0.15.** Es el grosor de las barras horizontales como lo mide
   el oráculo, en cajas altas: la mediana de la corrida vertical de tinta en
   los brazos de la `G`, medida a 300 px por caja alta (`G` 0.150, `T` 0.173, `R`
@@ -480,7 +506,7 @@ Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage, con
   plano de suelo proyecta la palabra a la mitad de su aspecto plano
   (`Math.SQRT1_2 / Math.SQRT2`), así que el oráculo mide el error de aspecto de
   un cartel `ground` contra 0.5 y no contra 1. **Umbral de aspecto del sitio de
-  Writing.** Pasa a 1,57 (ancho 1416 px a 900 px de alto), medido como `docs.test.ts`
+  Writing.** Pasa a 1,56 (ancho 1404 px a 900 px de alto), medido como `docs.test.ts`
   lo calcula: el menor `w` con `writingSite(w, 900)` ancho. Depende de la caja
   alta porque `writingSite` lee `signBox(BLOG_SIGNS.wide)`. **`LANE_OUT`.** El
   tramo sur corre 15 u al este para dejar sitio a la balsa más larga: (486,
@@ -490,9 +516,32 @@ Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage, con
   `zoneFrame` de Blog en el sitio `tall` termina en y 450 (era 440). **Desvío.** La
   lámina de respaldo, bajo los tablones, abarca el bloque de tablones en b y no
   solo la tinta más `BOARD_PAD`: el respaldo del oráculo alcanza el margen
-  lejano solo a través de ella. La balsa acepta una pose rígida (`dz`, `pitch`, `roll`) y la
-  calcomanía y el plano la siguen; el animador solo usa `dz` (`HEAVE`). Nivel 2 en §8.1 y tamaños en §8.3, ambos con la nota «desde #451,
-  caja alta 20».
+  lejano solo a través de ella. **Desvío (#460).** `BOARD_PAD` pasa de 1.6 a
+  1.7: con caja alta 17.25 los extremos irregulares de los tablones (±0.3)
+  dejaban el respaldo del oráculo (margen `backingW` · ancho = 1.35) en
+  0.9796, con piso 1; con caja alta 20 pasaba solo por suerte. Una prueba fija
+  `BOARD_PAD` ≥ 1.35 + 0.3. La balsa acepta una pose rígida (`dz`, `pitch`, `roll`) y la
+  calcomanía y el plano la siguen; el animador usa `dz`, `pitch` y `roll` (`poseAt`, #456). Nivel 2 en §8.1 y
+  tamaños en §8.3, ambos con la nota «desde #460, caja alta 17.25».
+  **Comprobación previa de nivel 3 (#460)** (`npm run legibility -- --only …`,
+  2026-11-20, caja alta 17.25): `plataforma-escena` a 1.17, contraste 7.99:1 y
+  OCR `WRITING`; a 0.83, 7.52:1 y OCR `wWRiTinG` (falla).
+  `plataforma-escena-angosta` da los mismos valores. Con caja alta 20 la misma
+  corrida leía `WRITING` a 0.83 (7.11:1). Diagnóstico: recortando 2 px de
+  cada borde de `plataforma-escena-083-ocr.png` (6 px de la imagen ya
+  ampliada ×3) y pasándola por tesseract con los mismos parámetros (PSM 8,
+  lista blanca A–Z a–z, `scripts/tessdata`), el OCR lee `WRITING`; la `w` de
+  más es el borde de la balsa, que la binarización vuelve un marco en el
+  borde del recorte (`wordCrop` usa un margen fijo de
+  3 · ancho · `Z_SCALE` · `fit.scale`). El margen y `BOARD_PAD` no dependen
+  de la caja alta, así que el marco queda a la misma distancia en píxeles de
+  la `W` a caja 20 y a caja 17.25. Lo que cambia es el alto de la letra frente
+  a ese marco, y con la letra más chica tesseract segmenta el marco como una
+  letra; no se midió más que eso. La culpa no es el letrero. No se bajaron los
+  pisos: ni subir el contraste ni cambiar la palabra con el script ataca la
+  causa, así que #460 queda `ready-for-human`. La fila de halo falla (81.82)
+  en los dos sitios y a las dos escalas: la medida actual supone tinta clara y
+  pertenece a #457 (halo simétrico). `REPORT.md` no se reescribe (es de #457).
 - **Writing en el mundo (#390).** `PLATFORM_SITE` pasó a (392, 178) en #389:
   a 8,2 u del carril de salida fallaba la regla de oclusión de los barcos.
   `sea()` construye la plataforma ahí y `plataforma-escena` es un recorte
@@ -513,14 +562,16 @@ cubierta, que desde la segunda vuelta se estira a lo largo del cartel
 | --- | --- | --- | --- | --- |
 | RESUME | 43.89 | 72.62 | `TOWER` 16 × 14 | 35.10 |
 | PORTFOLIO | 52.74 | 87.73 | galpón de montaje sur 90 × 16 (`SHIPYARD_HALLS[1]`) | 124.02 |
-| WRITING | 84.13 | 139.20 | balsa de tablones 87.9 × 32.9 (`PLATFORM_DECK`, el sobre de `raftEnvelope`) | 145.49 |
+| WRITING | 72.56 | 120.06 | balsa de tablones 76.6 × 30.3 (`PLATFORM_DECK`, el sobre de `raftEnvelope`) | 126.68 |
 
-Desde #445 la fila de WRITING mide la tabla flotante en Chainsaw Carnage con caja alta 11.5 (10.8 en #442); la tabla de abajo son las medidas de #445. Desde #451, caja alta 20: la fila de WRITING mide la palabra a caja alta 20 sobre la balsa de tablones (`raftEnvelope`, el sobre de los tablones con vigas y bordes irregulares, que `PLATFORM_DECK` recorre).
+Desde #445 la fila de WRITING mide la tabla flotante en Chainsaw Carnage con caja alta 11.5 (10.8 en #442); la tabla de abajo son las medidas de #445. Desde #451 la fila de WRITING mide la palabra sobre la balsa de tablones (`raftEnvelope`, el sobre de los tablones con vigas y bordes irregulares, que `PLATFORM_DECK` recorre); desde #460, caja alta 17.25 (con caja alta 20 medía 84.13 u, 139.20 px y una balsa de 87.9 × 32.9, 145.49 px).
 
 ### 8.4 Capturas
 
 Capturas (3200 × 1800; las seis `-escena` con bloom) en
 `docs/superpowers/specs/assets/374-carteles/`:
+
+Las capturas de `plataforma-escena`, `plataforma-real`, `plataforma-escena-angosta` y `sitio-1600x900-ancho` siguen siendo las de #445 (la tabla flotante, caja alta 11.5): #457 las regenera con la balsa a caja alta 17.25.
 
 - `assets/374-carteles/cartel-torre-escena-117.png` y `assets/374-carteles/cartel-torre-escena-083.png`
 - `assets/374-carteles/cartel-taller-escena-117.png` y `assets/374-carteles/cartel-taller-escena-083.png`

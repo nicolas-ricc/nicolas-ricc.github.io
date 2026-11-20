@@ -72,17 +72,18 @@ export const checkSignFont = (spec: SignSpec): Violation[] =>
   spec.stroke !== undefined ? checkLayouts(spec.glyphs.map((g) => g.layout), spec.size, spec.stroke) : checkFont(spec.text, spec.size, spec.width);
 
 /** Cover scale of a 1366-wide laptop with browser chrome. */
-export const COVER_LAPTOP = 1.17;
+export const COVER_LAPTOP = 1.17 as const;
 /** Cover scale of a 390×750 phone. */
-export const COVER_PHONE = 0.83;
+export const COVER_PHONE = 0.83 as const;
 
 /** Expected aspect (projected over flat) of a ground sign: a word on the horizontal plane (`groundDiagonal`) projects at half its flat aspect, √½/√2. */
 export const GROUND_ASPECT = Math.SQRT1_2 / Math.SQRT2;
 
-/** Level-2 rules per cover scale (x-height, stroke and air in screen px, WCAG contrast), plus projection limits: baseline (facade apart), vertical and aspect tolerance, backing margin in w, occluded share. */
+/** Level-2 rules per cover scale (x-height, stroke and air in screen px, WCAG contrast), plus projection limits: baseline (facade apart), vertical and aspect tolerance, backing margin in w, occluded share. `ground`: x-height, stroke, air and contrast floors of a ground sign (#460), the owner's mix for WRITING at cap 17.25. */
 export const SIGN_RULES = {
   [COVER_LAPTOP]: { xHeightPx: 12, strokePx: 2, airPx: 2, contrast: 4.5 },
   [COVER_PHONE]: { xHeightPx: 8, strokePx: 1.5, airPx: 1.5, contrast: 3 },
+  ground: { [COVER_LAPTOP]: { xHeightPx: 10.5, strokePx: 1.6, airPx: 2, contrast: 7 }, [COVER_PHONE]: { xHeightPx: 7.5, strokePx: 1.2, airPx: 1.5, contrast: 7 } },
   baselineDeg: 3, facadeBaselineDeg: 27, verticalDeg: 4, aspectTol: 0.08, backingW: 1, occlusion: 0.05,
 } as const;
 
@@ -235,7 +236,7 @@ function occlusionOf(spec: SignSpec, front: Cover[]): number {
 
 /** Level-2 rules `spec` breaks at cover `scale` against `solids`; [] when it passes. Throws on a scale with no rules. */
 export function checkSign(spec: SignSpec, scale: number, solids: readonly Solid[]): Violation[] {
-  const R = SIGN_RULES, S = scale === COVER_LAPTOP || scale === COVER_PHONE ? R[scale] : undefined;
+  const R = SIGN_RULES, S = scale === COVER_LAPTOP || scale === COVER_PHONE ? (spec.ground ? R.ground : R)[scale] : undefined;
   if (!S) throw new Error(`legibility: no sign rules for scale ${scale}`);
   const m = signMetrics(spec, scale), out: Violation[] = [], bad = (rule: string, value: number, limit: string) => out.push({ rule, value, limit });
   const baseLimit = spec.facade ? R.facadeBaselineDeg : R.baselineDeg, back = covers(spec.backing), front = covers(solids);

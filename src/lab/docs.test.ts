@@ -2,11 +2,11 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { project } from "../iso/project";
-import { COVER_LAPTOP, COVER_PHONE, GROUND_ASPECT, layoutGaps, SIGN_FONT, signMetrics, staticContrast } from "../kit/legibility";
+import { COVER_LAPTOP, COVER_PHONE, GROUND_ASPECT, layoutGaps, SIGN_FONT, SIGN_RULES, signMetrics, staticContrast } from "../kit/legibility";
 import { counterClearance, letterGaps, measureText, rhythm } from "../kit/lettering";
 import { TOWER } from "../scenes/city-grid";
 import { CROWN_SITE } from "../scenes/sign-crown";
-import { BLOG_SIGNS, PLATFORM_DECK, PLATFORM_SITES, poseAt, WRITING_CAP } from "../scenes/sign-platform";
+import { BLOG_SIGNS, CYCLE_POSES, PLATFORM_DECK, PLATFORM_SITES, poseAt, signAt, WRITING_CAP } from "../scenes/sign-platform";
 import { ISO_TONES } from "../map/palette-iso";
 import { CHAINSAW_BAR } from "../kit/marquee";
 import { writingSite } from "../world/signs";
@@ -1090,11 +1090,28 @@ describe("WRITING on a floating board (#441)", () => {
     expect(staticContrast(BLOG_SIGNS.tall).toFixed(2)).toBe(contrast);
     for (const s of [
       `\`WRITING_CAP\` ${WRITING_CAP}`, `\`CHAINSAW_BAR\` ${CHAINSAW_BAR}`, "`timber`", "`navy`", hex(ISO_TONES.timber.top), hex(ISO_TONES.navy.top), "`staticContrast`", contrast,
-      `\`GROUND_ASPECT\` ${GROUND_ASPECT}`, threshold(), "`LANE_OUT`", ...LANE_OUT.slice(-3).map((p) => `(${p.x}, ${p.y})`), `\`zoneFrame\``, "450", "`platform.lights`", "caja alta 20",
+      `\`GROUND_ASPECT\` ${GROUND_ASPECT}`, threshold(), "`LANE_OUT`", ...LANE_OUT.slice(-3).map((p) => `(${p.x}, ${p.y})`), `\`zoneFrame\``, "450", "`platform.lights`", "caja alta 17.25",
     ]) expect(entry451, s).toContain(s);
     // the entry says the layer is gone, it does not list it as live
     expect(entry451).toMatch(/`platform\.lights`.{0,8}no existe/);
   });
+  it("the #451 entry records the owner's size decision, the ground floors and the values at cap 17.25 (#460)", () => {
+    for (const s of ["2026-11-20", "`SIGN_RULES.ground`", "#460"]) expect(entry451, s).toContain(s);
+    const keys = ["xHeightPx", "strokePx", "airPx"] as const;
+    const posed = { wide: CYCLE_POSES.map((p) => signAt("wide", p)), tall: CYCLE_POSES.map((p) => signAt("tall", p)) };
+    for (const sc of [COVER_LAPTOP, COVER_PHONE]) {
+      const f = SIGN_RULES.ground[sc];
+      for (const v of [f.xHeightPx, f.strokePx, f.airPx]) expect(entry451, `${sc} floor ${v}`).toContain(`${v}`);
+      expect(entry451).toContain(`${f.contrast}:1`);
+      const at = (site: "wide" | "tall") => {
+        const rest = signMetrics(BLOG_SIGNS[site], sc), all = posed[site].map((s) => signMetrics(s, sc));
+        return keys.flatMap((k) => [rest[k].toFixed(2), Math.min(...all.map((m) => m[k])).toFixed(2)]);
+      };
+      const wide = at("wide");
+      expect(at("tall"), `${sc}: one figure covers both sites`).toEqual(wide);
+      for (const v of wide) expect(entry451, `${sc} ${v}`).toContain(v);
+    }
+  }, 30_000);
   it("the entry carries the four level-3 readings of REPORT.md", () => {
     for (const id of WRITING_CONTEXTS) for (const sc of SCALES) for (const m of ["contraste", "halo", "OCR"]) {
       const v = cell(id, sc, m);
@@ -1130,7 +1147,7 @@ describe("WRITING on a floating board (#441)", () => {
   });
   it("CONTEXT.md Sign tells the heave, the paint out of the bloom and a level 3 with no exception, and no LostWages", () => {
     const at = glossary.indexOf("### Sign\n"), rest = glossary.slice(at + 9), sign = at < 0 ? "" : rest.slice(0, Math.max(0, rest.search(/^### /m)));
-    for (const s of ["`platformAnimator`", "`HEAVE`", "`reducedMotion`", "no row", "`timber`", "`navy`", "decal", "`groundDiagonal`", "`platform.solid`", "`WRITING_CAP` (20)",
+    for (const s of ["`platformAnimator`", "`HEAVE`", "`reducedMotion`", "no row", "`timber`", "`navy`", "decal", "`groundDiagonal`", "`platform.solid`", "`WRITING_CAP` (17.25)",
       "`PITCH`", "`ROLL`", "`ANGLE_STEP`", "`poseAt`", "`CYCLE_POSES`", "one pose"]) expect(sign, s).toContain(s);
     for (const re of [/PAINT_LIFT/, /officeDark/, /roofDiagonal/, /platform\.lights/]) expect(sign, String(re)).not.toMatch(re);
     expect(glossary).toContain("Chainsaw Carnage");
