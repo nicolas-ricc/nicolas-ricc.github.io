@@ -253,7 +253,11 @@ aspecto: RESUME 0°, 0°, 0.010; PORTFOLIO 0.23°, 3.03°, 0.077; WRITING 0°, 0
 0.010. Las filas de `plataforma-escena` se remidieron en #445 (2026-11-20,
 WRITING en Chainsaw Carnage sobre la tabla flotante, caja alta 11.5), con el
 OCR leyendo `WRITING`: desde #445 el nivel 3 no excusa ninguna fila. Las
-demás conservan las medidas del 2026-11-17.
+demás conservan las medidas del 2026-11-17. Desde #451, caja alta 20: las
+columnas de nivel 2 de `plataforma-escena` (alto de x, trazo, aire y contraste
+estático) son las de la balsa de tablones con WRITING en `navy` sobre `timber`;
+las de nivel 3 siguen siendo las de #445 hasta que `npm run legibility`
+vuelva a medirlas (§8.2, entrada de #451).
 
 | Exhibit | Escala | Alto de x (px) | Trazo (px) | Aire (px) | Contraste estático | Contraste (px) | Halo | OCR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -261,15 +265,15 @@ demás conservan las medidas del 2026-11-17.
 | `cartel-torre-escena` | 0.83 | 10.11 | 1.64 | 2.10 | 4.70 | 8.89:1 | 0.05 | `RESUME` |
 | `cartel-taller-escena` | 1.17 | 15.07 | 2.40 | 2.29 | 8.06 | 6.99:1 | 0.08 | `PORTFOLIO` |
 | `cartel-taller-escena` | 0.83 | 10.69 | 1.70 | 1.62 | 8.06 | 5.93:1 | 0.08 | `PORTFOLIO` |
-| `plataforma-escena` | 1.17 | 14.50 | 2.26 | 2.47 | 8.08 | 14.18:1 | 0.06 | `WRITING` |
-| `plataforma-escena` | 0.83 | 10.29 | 1.60 | 1.75 | 8.08 | 12.41:1 | 0.06 | `WRITING` |
+| `plataforma-escena` | 1.17 | 12.74 | 2.48 | 3.59 | 8.04 | 14.18:1 | 0.06 | `WRITING` |
+| `plataforma-escena` | 0.83 | 9.04 | 1.76 | 2.55 | 8.04 | 12.41:1 | 0.06 | `WRITING` |
 
 Nivel 1: aire mínimo y máximo entre letras, ritmo y la contraforma más
 ajustada, todo en w. Las tres palabras van en fuentes de exhibición (§8.2),
 así que ya ninguna usa `SIGN_FONT` (tamaño 10.3, trazo 1.35 u): sus filas se
 miden con `checkLayouts` sobre sus propios glifos, con w = la cara de la
 letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2;
-1.38 u en WRITING, la cara de Chainsaw Carnage, `CHAINSAW_FACE` 0.12 cajas altas, caja alta 11.5).
+1.38 u en WRITING, la cara de Chainsaw Carnage, `CHAINSAW_FACE` 0.12 cajas altas, caja alta 11.5; desde #451, caja alta 20, la cara es de 2.40 u). Los valores de la tabla son relativos a w, así que no cambian con la caja alta.
 
 | Palabra | Aire mín. (w) | Aire máx. (w) | Ritmo | Contraforma más ajustada (w) |
 | --- | --- | --- | --- | --- |
@@ -453,6 +457,42 @@ Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage, con
   halo 0.06, OCR `WRITING`; a 0.83: 12.41:1, 0.06, `WRITING`.
   `plataforma-escena-angosta` a 1.17: 11.93:1, 0.06, `WRITING`; a 0.83:
   11.35:1, 0.06, `WRITING`. Capturas del balanceo en §8.4.
+- **WRITING sobre la balsa de tablones (#451).** La tabla flotante de #441
+  se reemplaza por una balsa de tablones (`src/scenes/raft.ts`: `raftAt`,
+  `raftPlane`, `RAFT`, `REST_POSE`, `buildRaft`, `raftEnvelope`): tablones de
+  malla `timber`, tres vigas debajo y una lámina de respaldo, con `WRITING`
+  pintada en `navy` como calcomanía en la pasada de sólidos, sobre el plano
+  `groundDiagonal`. Una sola capa, `platform.solid`: la capa `platform.lights`
+  ya no existe, y con ella la pintura como acento (la entrada de #441 queda
+  como historia). **`WRITING_CAP` 20.** Con la caja alta 20 la caja de x mide
+  12.74 px a 1.17 y 9.04 px a 0.83 en reposo (12.30 y 8.73 con el rolido de 1°
+  previsto); el piso es x ≥ 12 px a 1.17, con la v del plano proyectando 0.707
+  y con ese rolido.
+  **`CHAINSAW_BAR` 0.15.** Es el grosor de las barras horizontales como lo mide
+  el oráculo, en cajas altas: la mediana de la corrida vertical de tinta en
+  los brazos de la `G`, medida a 300 px por caja alta (`G` 0.150, `T` 0.173, `R`
+  0.193, `N` 0.217, `W` 0.260; ver el JSDoc de `src/kit/marquee.ts`).
+  **Materiales.** `timber` (`top` 0xb0a78a) y `navy` (`top` 0x070c24), cada uno
+  una `cityLadder` de `BASE_TONES`; el contraste estático de la calcomanía
+  contra el tablón que la recibe, `staticContrast` de `BLOG_SIGNS.wide`, mide
+  8.04:1 (igual en `tall`), con piso 7.5 en `top` y en `up`. El tono de un
+  tablón es +0 o +1 de la escalera, nunca negativo. **`GROUND_ASPECT` 0.5.** El
+  plano de suelo proyecta la palabra a la mitad de su aspecto plano
+  (`Math.SQRT1_2 / Math.SQRT2`), así que el oráculo mide el error de aspecto de
+  un cartel `ground` contra 0.5 y no contra 1. **Umbral de aspecto del sitio de
+  Writing.** Pasa a 1,57 (ancho 1416 px a 900 px de alto), medido como `docs.test.ts`
+  lo calcula: el menor `w` con `writingSite(w, 900)` ancho. Depende de la caja
+  alta porque `writingSite` lee `signBox(BLOG_SIGNS.wide)`. **`LANE_OUT`.** El
+  tramo sur corre 15 u al este para dejar sitio a la balsa más larga: (486,
+  347) pasa a (501, 347), (500, 405) a (515, 405) y el extremo de mar a
+  (522.7, 506.4), sobre la misma dirección, de modo que el borde de la cubierta
+  siga cayendo `FADE_U` antes del final; `LANE_BACK` no cambia. **Marco.**
+  `zoneFrame` de Blog en el sitio `tall` termina en y 450 (era 440). **Desvío.** La
+  lámina de respaldo, bajo los tablones, abarca el bloque de tablones en b y no
+  solo la tinta más `BOARD_PAD`: el respaldo del oráculo alcanza el margen
+  lejano solo a través de ella. La balsa acepta una pose rígida (`dz`, `pitch`, `roll`) y la
+  calcomanía y el plano la siguen; el animador solo usa `dz` (`HEAVE`). Nivel 2 en §8.1 y tamaños en §8.3, ambos con la nota «desde #451,
+  caja alta 20».
 - **Writing en el mundo (#390).** `PLATFORM_SITE` pasó a (392, 178) en #389:
   a 8,2 u del carril de salida fallaba la regla de oclusión de los barcos.
   `sea()` construye la plataforma ahí y `plataforma-escena` es un recorte
@@ -473,9 +513,9 @@ cubierta, que desde la segunda vuelta se estira a lo largo del cartel
 | --- | --- | --- | --- | --- |
 | RESUME | 43.89 | 72.62 | `TOWER` 16 × 14 | 35.10 |
 | PORTFOLIO | 52.74 | 87.73 | galpón de montaje sur 90 × 16 (`SHIPYARD_HALLS[1]`) | 124.02 |
-| WRITING | 48.37 | 80.04 | tabla 51.6 × 35.5 (`PLATFORM_DECK`) | 85.34 |
+| WRITING | 84.13 | 139.20 | balsa de tablones 87.9 × 32.9 (`PLATFORM_DECK`, el sobre de `raftEnvelope`) | 145.49 |
 
-Desde #445 la fila de WRITING mide la tabla flotante en Chainsaw Carnage con caja alta 11.5 (10.8 en #442); la tabla de abajo son las medidas de #445.
+Desde #445 la fila de WRITING mide la tabla flotante en Chainsaw Carnage con caja alta 11.5 (10.8 en #442); la tabla de abajo son las medidas de #445. Desde #451, caja alta 20: la fila de WRITING mide la palabra a caja alta 20 sobre la balsa de tablones (`raftEnvelope`, el sobre de los tablones con vigas y bordes irregulares, que `PLATFORM_DECK` recorre).
 
 ### 8.4 Capturas
 

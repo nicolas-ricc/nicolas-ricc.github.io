@@ -199,7 +199,7 @@ describe("signs as the navigation (#394)", () => {
   });
   it("Sign and Animator tell the relocatable Writing platform (#427)", () => {
     const sign = section(glossary, "Sign"), animator = section(glossary, "Animator");
-    for (const s of ["platformAnimator", "platform.solid", "platform.lights", "setSite", "sea()"]) expect(sign, s).toContain(s);
+    for (const s of ["platformAnimator", "platform.solid", "setSite", "sea()"]) expect(sign, s).toContain(s);
     expect(codeRefs(sign).find((r) => r.file === "src/scenes/platform-animator.ts")?.idents).toEqual(expect.arrayContaining(["platformAnimator"]));
     for (const s of ["platform", "PlatformAnimator"]) expect(animator, s).toContain(s);
   });
