@@ -172,7 +172,7 @@ plus `#plataforma-escena-angosta` (Blog, tall site). The piece builds
 the sign at the origin (the crown and the tinker sign on a stand-in of their
 host); the one "in its scene" is a crop of the real world with its sign.
 Judge them at the cover scales with `c`. `npm run legibility` measures contrast,
-halo and OCR with a browser; it does not run in CI.
+halo and OCR with a browser, with no exceptions (every row must pass); it does not run in CI.
 
 The lab pages are also built and deployed with the site (every
 `lab/*.html` is a Vite input), so the storybook can be seen at
