@@ -34,6 +34,18 @@
 7. **The tasks run in order, and two of them leave tests red.** After Task 3, the docs tests (`src/lab/docs.test.ts`, `src/docs-glossary.test.ts`) are the only red files, and Task 4 fixes them. Task 2 does not touch any consumer.
 8. **The lane length pin changes.** The pin `|laneLength("out") − 560.7| < 5` in `sea-anim.test.ts` is re-pinned to the new length (rounded to 0.1) with a `// #451` comment, because moving two vertices 15 u east makes the lane about 8 u longer.
 
+9. **Captures outside the tree.** The issue says the captures are not versioned here (step 7), but the PR has to carry them. Two PNGs are pushed to an orphan branch `captures/454` and embedded in the PR body with their raw URLs. Rejected: committing them under `docs/` (the issue forbids it) and describing them only in text (fails the criterion "El PR lleva las dos capturas").
+10. **The sheet** is the ink box of `LAYOUT` (min and max over the glyph boxes) grown by `BOARD_PAD` on each side: [a0, a1] × [b0, b1]. It is one face at z −0.9 (`BOARD_TOP − PLANK_H`), which is also the top plane of the beams. The issue defines it as «Lámina = caja de tinta de `marqueeLayout(WRITING_CAP, 0, CHAINSAW_WRITING)` + `BOARD_PAD` por lado» and «Lámina de fondo: una cara en z −0.9».
+
+## Assumptions
+
+Each assumption is listed with the alternative it rejects. They also go into the PR description.
+- Decision 1, constants in `raft.ts`. Rejected: a third constants module, which would be one more file for six names.
+- Decision 2, the shape of `RAFT` and `buildRaft`. Rejected: `buildRaft(site, pose)` returning the mesh, which would duplicate `raftAt`.
+- Decision 6, the area test written as conservation. Rejected: equality to the triangles' area, which is false by construction, since the issue itself cuts every triangle at the joints.
+- Decision 7, red docs tests after Task 3. Rejected: folding the docs into Task 3, which makes the task too large for one review. Only the PR head runs CI, and the squash merge drops the intermediate state.
+- Decision 9, the orphan `captures/454` branch.
+
 ## Review Focus
 
 - **Joint points under the oracle.** A backing sample or a quad corner that falls inside a joint must have the sheet behind it and no plank side face in front. Covered by `src/lab/signs.test.ts` (backing = 1, occlusion ≤ 0.05), unchanged, at rest and in 8 heave phases.
@@ -85,6 +97,7 @@
   - "every decal lies inside its plank's rectangle (±1e-9)". Map each world decal point back to text space through the rest plane.
   - "decal area is conserved: decals plus joint parts equal the glyph's triangles (±1e-6)". See technical decision 6.
   - "every decal face's normal is +z at rest, and every mesh vertex is at z ≤ BOARD_TOP (+1e-9)".
+  - "under pitch 0.02 / roll 0.015 every decal's normal equals its plank top's normal (±1e-9)". Winding is fixed at rest, before `rigid`, which is a proper rotation.
   - "face order: beams (18 faces), sheet (1), then per plank, back to front: its 6 faces, then its decals". Each decal comes right after its plank's faces. The decal `mat` is `navy`, and its `toneOffset` equals the plank's. The sheet has `toneOffset` −5 and the beams −2.
   - "deterministic: two builds are equal".
   - "a pitch 0.02 / roll 0.015 pose keeps every vertex-to-vertex distance (±1e-9) and the posed plane has unit, perpendicular u′, v′".
@@ -121,7 +134,7 @@
   - `world-baseline.test.ts`: re-record the `plataforma` hash with `// #451: plank raft, WRITING as a navy decal`.
   - `city-budget.test.ts`: "the raft has ≤ 1200 faces", via `tessellateAll(raftAt("wide", REST_POSE)).length ≤ 1200`.
   - `veil.test.ts` and `sea.test.ts`: no platform accents.
-- [ ] **Step 2: Run** `npm test`. Expected: FAIL in those files.
+- [ ] **Step 2: Run** `npm test`. Expected: FAIL in those files. Also run `git grep -n "platform.lights\|PAINT_LIFT\|boardAt\|planeAt"` and update every hit in code and tests. Layer ids are strings, so typecheck does not catch them. Today the hits are `platform-animator.ts`, `sign-platform.ts`, their tests, `assemble.test.ts`, `city-budget.test.ts` (a comment), `docs.test.ts`, `docs-glossary.test.ts` and `CONTEXT.md`; the last three belong to Task 4.
 - [ ] **Step 3: Implement** `sign-platform.ts`. Delete `PAINT_LIFT`, `planeAt`, `boardAt` and the `roofDiagonal` import, and re-export from `raft.ts`. Implement `platform-animator.ts` with one layer, cached per `(site, step)` with a `Solid[]`.
 - [ ] **Step 4: Implement the lanes.** `LANE_OUT` gets the two shifted vertices. Solve the sea end `E = (515, 405) + t·d̂`, with d̂ the unit direction to (523, 510), by bisection on t, so that `L − d_c = FADE_U`. Here `d_c` is the arc length where `inCoverQuad` flips to false along the lane. Write E rounded to 0.1. Then check that `inCoverQuad(laneAt(d)) === (L − d > FADE_U)` holds at every integer d. If it does not, move t by 0.1 until it does. Rewrite the `LANE_OUT` comment: distances to the narrow site's raft envelope (measured), screen turns (measured) and the #454 shift.
 - [ ] **Step 5: Implement** `frame.ts` (450) and the exhibit boxes (computed once, written as literals with a comment on how they were derived). `crop.ts` stops collecting platform accents.
@@ -147,6 +160,14 @@
 
 ### Task 5: Level-3 probe and captures (information for the PR)
 
-- [ ] Start the dev server (`npm run dev -- --host --port 5173`), then run `npm run legibility -- --only plataforma-escena` in the foreground with a 10-minute timeout. Note the OCR and contrast it reads, then run `git checkout -- docs/superpowers/specs/assets/carteles-legibilidad`.
+- [ ] Add `.scratch/` to `.git/info/exclude`, so the captures cannot reach a commit.
+- [ ] Start the dev server (`npm run dev -- --host --port 5173`), then run `npm run legibility -- --only plataforma-escena` in the foreground with a 10-minute timeout. Note the OCR and contrast it reads, then run `git checkout -- docs/superpowers/specs/assets/carteles-legibilidad`, even if the run timed out or failed. Then check that `git status --porcelain` is empty. The probe gates nothing: the issue's step 6 says «no es criterio acá».
 - [ ] Take the captures `/lab/storybook.html?bloom=on&speed=0#plataforma` and `#plataforma-escena` at `__lab.setCoverScale(1.17)`, 1600×900 @2, into `.scratch/`. They are not committed. They are attached to the PR as information.
 - [ ] The PR has to carry the images even though they are not committed on this branch. They are pushed to an orphan branch `captures/454` (only those two PNGs) and the PR body embeds them with `raw.githubusercontent.com` URLs. This is technical decision 9.
+
+## Grilling
+
+- Rounds: 1 (the revisions were additions, not a new seam). Questions: 18.
+- Sources: ISSUE 9 (Q1, Q3, Q6 pivot, Q8, Q10, Q11, Q13, Q14, Q16), CODE 7 (Q4 `legibility.ts:168` covers via `tessellate`; Q5 `solids.ts:345` + `render-list.test.ts:113` + `solids.test.ts:1690`; Q6 `rigid.ts`; Q7 `clip.ts:27`; Q9 git grep; Q15 `world-baseline.test.ts:40` hashes piece exhibits only; Q11 `sea-anim.test.ts:47`), NO SOURCE → technical assumption 4 (Q2 captures, Q12 red intermediate commit, Q17 decal normals under a pose, Q18 `.scratch/` exclude).
+- Assumptions: see `## Assumptions` (decisions 1, 2, 6, 7, 9).
+- Issues opened: none. Spec ambiguities: none.
