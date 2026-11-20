@@ -116,12 +116,13 @@ const decalsPerPlank = (): Vec2[][][] =>
     return out;
   }));
 
-/**
- * The raft at a site, posed: one timber mesh of 3 beams (−2), the sheet (−5) and, back to front, each plank's 6 faces and its navy decals (the plank's tone).
- * Built at rest at the site, then every face goes through one `rigid` about (site, z −1). A decal is wound to face +z at rest, like the top it lies on.
- */
-export function raftAt(site: WritingSite, pose: RaftPose = REST_POSE): Solid & { kind: "mesh" } {
-  const plan = buildRaft(), plane = restPlane(site), faces: MeshFace[] = [], at = (a: number, b: number, z: number): Vec3 => { const q = toWorld(plane, a, b); return v3(q.x, q.y, z); };
+const restFaces = new Map<WritingSite, MeshFace[]>();
+/** The unposed faces of the raft at a site, built once. Private: `raftAt` never hands them out. */
+const restFacesAt = (site: WritingSite): MeshFace[] => {
+  let faces = restFaces.get(site);
+  if (faces) return faces;
+  const plan = buildRaft(), plane = restPlane(site), at = (a: number, b: number, z: number): Vec3 => { const q = toWorld(plane, a, b); return v3(q.x, q.y, z); };
+  faces = [];
   for (const b of plan.beams) faces.push(...prism(plane, b, BEAM_Z, DECK_Z, -2));
   const s = plan.sheet;
   // The back sheet spans the plank block in b when it is longer than the sheet: the oracle's backing needs a visible face behind the margin row beyond the far plank edge, and the view ray crosses z −0.9 about 1 u further away.
@@ -135,6 +136,16 @@ export function raftAt(site: WritingSite, pose: RaftPose = REST_POSE): Solid & {
       faces.push({ pts: polygonNormal(pts).z < 0 ? pts.reverse() : pts, mat: "navy", toneOffset: p.tone });
     }
   });
-  const c = centreOf(site);
-  return { kind: "mesh", mat: "timber", faces: faces.map((f) => ({ ...f, pts: rigid(f.pts, c, pose.pitch, pose.roll, pose.dz) })) };
+  restFaces.set(site, faces);
+  return faces;
+};
+
+/**
+ * The raft at a site, posed: one timber mesh of 3 beams (−2), the sheet (−5) and, back to front, each plank's 6 faces and its navy decals (the plank's tone).
+ * The unposed faces are built once per site; every call maps them through one `rigid` about (site, z −1) into fresh faces. A decal is wound to face +z at rest, like the top it lies on.
+ */
+export function raftAt(site: WritingSite, pose: RaftPose = REST_POSE): Solid & { kind: "mesh" } {
+  const rest = restFacesAt(site), posed = rigid(rest.flatMap((f) => f.pts), centreOf(site), pose.pitch, pose.roll, pose.dz); // one rigid call: the rotations are built once
+  let i = 0;
+  return { kind: "mesh", mat: "timber", faces: rest.map((f) => ({ ...f, pts: posed.slice(i, (i += f.pts.length)) })) };
 }

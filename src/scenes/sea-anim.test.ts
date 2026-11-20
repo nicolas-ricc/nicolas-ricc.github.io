@@ -12,7 +12,7 @@ import type { SignSpec } from "../kit/legibility";
 import { signBox, SIGN_ORDER, zoneSigns } from "../world/signs";
 import { BEAM_INNER, BEAM_LEN, BEAM_PERIOD_MS, CYCLE_MS, FADE_U, FERRY_PAUSE_MS, FERRY_ROUTE, FERRY_SPEED, KEEPER_SIGN_MS, LANE_BACK, LANE_OUT, LANE_SPEED, NEON_STEP_MS, OFF_MS, PORT_MS, SHIPS, alphaAt, createSeaAnim, laneAt, laneLength, type ShipFrame } from "./sea-anim";
 import { SHIP_SPECS, ship, shipAt } from "./ships";
-import { HEAVE, PLATFORM_DECK, PLATFORM_SITES, heaveAt, seaPlatformAt, signAt } from "./sign-platform";
+import { CYCLE_POSES, PLATFORM_DECK, PLATFORM_SITES, seaPlatformAt, signAt } from "./sign-platform";
 import { bleedTerrainAt, terrainAt } from "./terrain";
 import { world } from "./world";
 
@@ -529,15 +529,13 @@ describe("zone signs and the lanes (#390, #394)", () => {
     expect(samples).toBeGreaterThan(0);
     expect(bad).toEqual([]);
   }, 15_000); // ~1 s alone; the full parallel suite stretches it past the default 5 s
-  it("no ship piece or launch piece crosses the Writing word at any pose of the heave cycle, at either site (#444)", () => {
-    const signs = (["wide", "tall"] as const).flatMap((site) => Array.from({ length: 8 }, (_, k) => {
-      const dz = heaveAt((k * HEAVE.periodMs) / 8);
-      return [`${site} phase ${k}/8`, signAt(site, { dz, pitch: 0, roll: 0 })] as const;
-    }));
+  it("no ship piece or launch piece crosses the Writing word at any pose of CYCLE_POSES, at either site (#444, #456)", () => {
+    const signs = (["wide", "tall"] as const).flatMap((site) => CYCLE_POSES.map((pose, k) => [`${site} pose ${k}/17`, signAt(site, pose)] as const));
+    expect(signs).toHaveLength(34);
     const { samples, bad } = shipsCrossing(signs);
     expect(samples).toBeGreaterThan(0);
     expect(bad).toEqual([]);
-  }, 15_000);
+  }, 30_000);
   it("no ship piece's screen box reaches the box of the Writing word at the wide site (#429)", () => {
     // stricter than the hull test above: at (550, 125) the return cargo's masts entered the word's box and competed with it on screen
     const box = signBox(zoneSigns("wide").blog);
