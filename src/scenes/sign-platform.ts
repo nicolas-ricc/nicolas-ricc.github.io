@@ -19,7 +19,18 @@ const WATER_Z = -1;
  * Board beyond the ink of the word on every side, in text units. The paint sits PAINT_LIFT over the board's top face: the oracle needs the backing
  * strictly behind each glyph centre, and a coplanar paint would not be (static contrast 1).
  */
-const BOARD_PAD = 1.6, PAINT_LIFT = 0.02;
+const BOARD_PAD = 1.6;
+export const PAINT_LIFT = 0.02;
+
+/** The board heaves (up and down, no pitch or roll): amplitude in world units and period in ms. */
+export const HEAVE = { amp: 0.15, periodMs: 6700 };
+/** The heave is quantized to multiples of this, so a pose can be cached (at most 31 per site). */
+export const HEAVE_STEP = 0.01;
+/** The heave offset at time `tMs`: a sine reduced modulo the period (so a long-running clock keeps its precision), rounded to HEAVE_STEP. */
+export const heaveAt = (tMs: number): number => {
+  const phase = ((tMs % HEAVE.periodMs) + HEAVE.periodMs) % HEAVE.periodMs;
+  return Math.round((HEAVE.amp * Math.sin((2 * Math.PI * phase) / HEAVE.periodMs)) / HEAVE_STEP) * HEAVE_STEP;
+};
 
 /** The two places the Writing board can float: `wide` (open sea between the two buoys) and `tall`. */
 export type WritingSite = "wide" | "tall";
@@ -33,19 +44,20 @@ const SHEET_CENTRE = { a: (SHEET.a0 + SHEET.a1) / 2, b: (SHEET.b0 + SHEET.b1) / 
 
 /**
  * The word lies on the board's top face, stretched along the plane's v so it reads upright on screen (`roofDiagonal`, an anamorphosis like a painted
- * road sign): the plane's origin is placed so the board's center falls on the site `c`.
+ * road sign): the plane's origin is placed so the board's center falls on the site `c`. `dz` lifts the whole plane (heave): only z moves, the plan
+ * (x, y) is the one at rest.
  */
-const planeAt = (c: Vec2) => {
+const planeAt = (c: Vec2, dz = 0) => {
   const p = roofDiagonal(v3(0, 0, BOARD_TOP + PAINT_LIFT)), m = toWorld(p, SHEET_CENTRE.a, SHEET_CENTRE.b);
-  return roofDiagonal(v3(c.x - m.x, c.y - m.y, BOARD_TOP + PAINT_LIFT));
+  return roofDiagonal(v3(c.x - m.x, c.y - m.y, BOARD_TOP + PAINT_LIFT + dz));
 };
 
-/** The board at the site `c`: a dark slab whose plan is the sheet taken to the world, from the water to BOARD_TOP. */
-const boardAt = (c: Vec2): Solid & { kind: "poly" } => {
+/** The board at the site `c`, heaved by `dz`: a dark slab whose plan is the sheet taken to the world, from the water to BOARD_TOP (both plus `dz`). */
+const boardAt = (c: Vec2, dz = 0): Solid & { kind: "poly" } => {
   const plane = planeAt(c), corner = (a: number, b: number): Vec2 => { const q = toWorld(plane, a, b); return { x: q.x, y: q.y }; };
   return {
     kind: "poly", footprint: [corner(SHEET.a0, SHEET.b0), corner(SHEET.a1, SHEET.b0), corner(SHEET.a1, SHEET.b1), corner(SHEET.a0, SHEET.b1)],
-    z: WATER_Z, h: BOARD_TOP - WATER_Z, mat: "officeDark",
+    z: WATER_Z + dz, h: BOARD_TOP - WATER_Z, mat: "officeDark",
   };
 };
 
@@ -54,12 +66,13 @@ export const PLATFORM_DECK: readonly Vec2[] = boardAt({ x: 0, y: 0 }).footprint;
 
 /**
  * The Writing sign at a site, as the legibility oracle sees it: WRITING in Chainsaw Carnage (filled cyan faces) painted flat on the board, which backs
- * it. Its x-height is the height of its shortest letter (`CHAINSAW_X`); its stroke, the width of the main stems. A fresh spec on every call.
+ * it, heaved by `dz` (default 0, the rest pose). Its x-height is the height of its shortest letter (`CHAINSAW_X`); its stroke, the width of the main stems.
+ * A fresh spec on every call.
  */
-const signAt = (site: WritingSite): SignSpec => {
+export const signAt = (site: WritingSite, dz = 0): SignSpec => {
   const c = PLATFORM_SITES[site];
   return signSpec({
-    id: "plataforma", text: CHAINSAW_WRITING.text, size: WRITING_CAP, width: SIGN_FONT.width, color: "cyan", plane: planeAt(c), style: "fill", backing: [boardAt(c)],
+    id: "plataforma", text: CHAINSAW_WRITING.text, size: WRITING_CAP, width: SIGN_FONT.width, color: "cyan", plane: planeAt(c, dz), style: "fill", backing: [boardAt(c, dz)],
     layouts: LAYOUT, xHeight: CHAINSAW_X * WRITING_CAP, stroke: CHAINSAW_FACE * WRITING_CAP,
   });
 };
@@ -67,9 +80,9 @@ const signAt = (site: WritingSite): SignSpec => {
 /** The Writing sign of each site, for the legibility oracle. */
 export const BLOG_SIGNS: Record<WritingSite, SignSpec> = { wide: signAt("wide"), tall: signAt("tall") };
 
-/** The floating board at a Writing site with WRITING painted on it (cyan faces of `BLOG_SIGNS[site]`). */
-export function seaPlatformAt(out: Solid[], accents: Accent[], site: WritingSite): void {
-  const spec = BLOG_SIGNS[site]; // copies: a consumer that mutates the scene must not reach BLOG_SIGNS
+/** The floating board at a Writing site with WRITING painted on it (cyan faces of `signAt(site, dz)`), heaved by `dz`. */
+export function seaPlatformAt(out: Solid[], accents: Accent[], site: WritingSite, dz = 0): void {
+  const spec = signAt(site, dz); // a fresh spec: a consumer that mutates the scene must not reach BLOG_SIGNS
   for (const s of spec.backing) {
     if (s.kind !== "poly") throw new Error("the Writing board is a poly");
     out.push({ ...s, footprint: s.footprint.map((q) => ({ ...q })) });
