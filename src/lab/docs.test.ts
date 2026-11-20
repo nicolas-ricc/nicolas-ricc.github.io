@@ -1101,7 +1101,8 @@ describe("WRITING on a floating board (#441)", () => {
     for (const f of POSES) expect(caps, f).toContain(`assets/441-tabla-flotante/${f}`);
   });
   it("the 2026-11-18 spec §8.3 says the sign is the board and the OCR reads WRITING", () => {
-    const sec = next.slice(Math.max(0, next.search(/^### 8\.3 /m)), Math.max(0, next.search(/^### 8\.4 /m))).replace(/\s+/g, " ");
+    const at = next.search(/^### 8\.3 /m), rest = at < 0 ? "" : next.slice(at), end = rest.search(/\n#/);
+    const sec = (end < 0 ? rest : rest.slice(0, end)).replace(/\s+/g, " ");
     expect(sec).toContain("#441");
     expect(sec).toContain("`WRITING`");
     expect(sec).not.toMatch(/excepci|WRELENG|WREFHNG/);

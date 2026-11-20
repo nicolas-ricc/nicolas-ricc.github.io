@@ -355,10 +355,3 @@ las filas de la plataforma se remidieron en #445 y el nivel 3 no excusa ninguna.
 | `plataforma-escena` | 0.83 | 10.67:1 | 0.13 | `WRITING` |
 | `plataforma-escena-angosta` | 1.17 | 10.12:1 | 0.16 | `WRITING` |
 | `plataforma-escena-angosta` | 0.83 | 9.55:1 | 0.13 | `WRITING` |
-
-### 8.4 Capturas de la plataforma
-
-Desde #445 (la tabla flotante de #441) se regeneraron
-`assets/423-composicion-responsive/plataforma-escena-angosta-117.png` y
-`assets/423-composicion-responsive/sitio-1600x900-ancho.png`, y las del
-balanceo están en `assets/441-tabla-flotante/`.
