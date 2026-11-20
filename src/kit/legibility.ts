@@ -2,7 +2,7 @@ import { dot, type Vec2, type Vec3 } from "../iso/geometry";
 import { VIEW_DIR, project } from "../iso/project";
 import { tessellate, type Face, type Solid } from "../iso/solids";
 import { pointInPolygon } from "../map/geo";
-import { ISO_COLORS, stepTone, toneColor, type AccentColor } from "../map/palette-iso";
+import { ISO_COLORS, stepTone, toneColor, type AccentColor, type Material } from "../map/palette-iso";
 import { GRID, counterClearance, glyphPairs, layoutText, letterGaps, polygonDistance, rhythm, strokeRatio, toWorld, type GlyphLayout, type TextPlane } from "./lettering";
 
 /** The measure every sign shares: cap height and stroke width in text units. */
@@ -87,11 +87,12 @@ export const SIGN_RULES = {
 export interface SignGlyph { char: string; plane: TextPlane; layout: GlyphLayout; quads: Vec3[][]; counters: { at: Vec3; r: number }[] }
 
 /**
- * A sign to audit: text at `size` and `width`, accent `color`, per-glyph placement and the solids that back it. `facade` relaxes the baseline limit.
+ * A sign to audit: text at `size` and `width`, per-glyph placement and the solids that back it; exactly one of `color` (accent ink, measured against the face behind it)
+ * and `decal` (ink that is a material of the backing, measured against the coplanar face that receives it). `facade` relaxes the baseline limit.
  * `xHeight` (text units) replaces the font grid's x-height, for a word in capitals; `stroke` (text units) is the face width of filled letters,
  * whose quads are a triangulation rather than stroke segments.
  */
-export interface SignSpec { id: string; text: string; size: number; width: number; color: AccentColor; facade?: boolean; xHeight?: number; stroke?: number; glyphs: SignGlyph[]; backing: Solid[] }
+export interface SignSpec { id: string; text: string; size: number; width: number; color?: AccentColor; decal?: Material; facade?: boolean; xHeight?: number; stroke?: number; glyphs: SignGlyph[]; backing: Solid[] }
 
 /** The x-height of `spec` in text units: its own `xHeight`, else the font grid's at its size. */
 export const signXHeight = (spec: SignSpec): number => spec.xHeight ?? (GRID.xHeight * spec.size) / GRID.cap;
@@ -101,15 +102,16 @@ export const signXHeight = (spec: SignSpec): number => spec.xHeight ?? (GRID.xHe
  * the world. `layouts` replaces the stroke font's layout (marquee letters); `xHeight` and `stroke` go to the spec as they are.
  */
 export function signSpec(o: {
-  id: string; text: string; size: number; width: number; color: AccentColor; plane: TextPlane; style: "stroke" | "fill"; backing: Solid[]; facade?: boolean;
+  id: string; text: string; size: number; width: number; color?: AccentColor; decal?: Material; plane: TextPlane; style: "stroke" | "fill"; backing: Solid[]; facade?: boolean;
   glyphPlane?: (i: number, g: GlyphLayout) => TextPlane; layouts?: GlyphLayout[]; xHeight?: number; stroke?: number;
 }): SignSpec {
+  if ((o.color === undefined) === (o.decal === undefined)) throw new Error("legibility: a sign needs exactly one of color and decal");
   const glyphs = (o.layouts ?? layoutText(o.text, o.size, o.width)).map((layout, i): SignGlyph => {
     const plane = o.glyphPlane?.(i, layout) ?? o.plane, w = (c: Vec2) => toWorld(plane, c.x, c.y);
     return { char: layout.char, plane, layout, quads: (o.style === "stroke" ? layout.quads : layout.fill).map((q) => q.map(w)), counters: layout.counters.map((c) => ({ at: w(c.at), r: c.r })) };
   });
-  const { id, text, size, width, color, backing } = o;
-  return { id, text, size, width, color, ...(o.facade ? { facade: true } : {}), ...(o.xHeight === undefined ? {} : { xHeight: o.xHeight }), ...(o.stroke === undefined ? {} : { stroke: o.stroke }), glyphs, backing };
+  const { id, text, size, width, backing } = o;
+  return { id, text, size, width, ...(o.color === undefined ? {} : { color: o.color }), ...(o.decal === undefined ? {} : { decal: o.decal }), ...(o.facade ? { facade: true } : {}), ...(o.xHeight === undefined ? {} : { xHeight: o.xHeight }), ...(o.stroke === undefined ? {} : { stroke: o.stroke }), glyphs, backing };
 }
 
 const toSrgb = (c: number) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
@@ -165,14 +167,30 @@ const depth = (f: Face, p: Vec3) => dot(f.normal, { x: f.pts[0]!.x - p.x, y: f.p
 const hits = (cs: Cover[], p: Vec3) => { const r = project(p); return cs.filter((c) => pointInPolygon(r.x, r.y, c.poly)).map((c) => ({ face: c.face, t: depth(c.face, p) })); };
 const SAMPLES = 7;
 
-/** Min WCAG contrast of the sign color against the nearest backing face behind each glyph's ink-box center (1 with no face, Infinity with no glyphs). */
+/** Min WCAG contrast of the sign: a `color` against the nearest backing face behind each glyph's ink-box center (1 with no face, Infinity with no glyphs); a `decal` against its coplanar receiving face (1 with none). */
 export const staticContrast = (spec: SignSpec): number => contrastOf(spec, covers(spec.backing));
+/** Min over the `decal` faces of `back` of their contrast against the receiver: the largest-area face of another material that contains the decal centroid's projection and is coplanar with it (1 with no receiver or no decal face). */
+function decalContrast(decal: Material, back: Cover[]): number {
+  const area = (p: number[]) => Math.abs(p.reduce((s, _, i) => (i % 2 ? s : s + p[i]! * p[(i + 3) % p.length]! - p[(i + 2) % p.length]! * p[i + 1]!), 0)) / 2;
+  const tone = (f: Face) => toneColor(f.mat, stepTone(f.tone, f.toneOffset));
+  const vals = back.filter((c) => c.face.mat === decal).map((c) => {
+    const n = c.face.pts.length, m = { x: 0, y: 0, z: 0 };
+    for (const p of c.face.pts) { m.x += p.x / n; m.y += p.y / n; m.z += p.z / n; }
+    const r = project(m);
+    const rec = back.filter((b) => b.face.mat !== decal && pointInPolygon(r.x, r.y, b.poly) && Math.abs(depth(b.face, m)) <= 1e-6);
+    if (!rec.length) return 1;
+    const best = rec.reduce((a, b) => (area(b.poly) > area(a.poly) ? b : a));
+    return contrastRatio(tone(c.face), tone(best.face));
+  });
+  return vals.length ? Math.min(...vals) : 1;
+}
 function contrastOf(spec: SignSpec, back: Cover[]): number {
+  if (spec.decal) return decalContrast(spec.decal, back);
   return Math.min(Infinity, ...spec.glyphs.map((g) => {
     const { x0, y0, x1, y1 } = g.layout.box, behind = hits(back, toWorld(g.plane, (x0 + x1) / 2, (y0 + y1) / 2)).filter((h) => h.t < 0);
     if (!behind.length) return 1;
     const f = behind.reduce((a, b) => (b.t > a.t ? b : a)).face;
-    return contrastRatio(ISO_COLORS[spec.color], toneColor(f.mat, stepTone(f.tone, f.toneOffset)));
+    return contrastRatio(ISO_COLORS[spec.color!], toneColor(f.mat, stepTone(f.tone, f.toneOffset)));
   }));
 }
 
