@@ -104,8 +104,8 @@ const prism = (plane: TextPlane, r: Rect, z0: number, z1: number, toneOffset: nu
   });
 };
 
-/** The glyph triangles of WRITING cut to each plank's rectangle (text space), in plank order; slivers below 1e-9 are dropped. Cached: it does not depend on the site. */
 let decalMemo: Vec2[][][] | undefined;
+/** The glyph triangles of WRITING cut to each plank's rectangle (text space), in plank order; slivers below 1e-9 are dropped. Cached: it does not depend on the site. */
 const decalsPerPlank = (): Vec2[][][] =>
   (decalMemo ??= buildRaft().planks.map((p) => {
     const out: Vec2[][] = [];
