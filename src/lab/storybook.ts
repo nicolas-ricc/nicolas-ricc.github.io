@@ -46,7 +46,7 @@ declare global {
 
 mountStorybook(document, ({ host, nav, panel }) => {
   const log = import.meta.env.DEV;
-  const tickMs = tickFromSearch(location.search); // ?tick=<ms>: the Writing raft of a context exhibit is posed at that time (#457)
+  const tickMs = tickFromSearch(location.search);
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const { scene, animators } = assembleWorld(undefined, { reducedMotion });
 

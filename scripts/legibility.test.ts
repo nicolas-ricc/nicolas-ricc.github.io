@@ -2,9 +2,8 @@ import { crc32, inflateSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { v3 } from "../src/iso/geometry";
 import { diagonalWall, groundDiagonal, toWorld } from "../src/kit/lettering";
-import { project } from "../src/iso/project";
+import { project, Z_SCALE } from "../src/iso/project";
 import { COVER_LAPTOP, COVER_PHONE, relativeLuminance, SIGN_RULES, type SignSpec } from "../src/kit/legibility";
-import { Z_SCALE } from "../src/iso/project";
 import { EXHIBITS } from "../src/lab/exhibits";
 import { BLOG_SIGNS } from "../src/scenes/sign-platform";
 
