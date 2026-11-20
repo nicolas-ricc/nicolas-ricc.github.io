@@ -3,7 +3,6 @@ import type { ZoneId } from "./map/zones";
 const body = document.body;
 const content = (): HTMLElement => document.getElementById("content")!;
 const hud = (): HTMLElement => document.getElementById("hud")!;
-const title = (): HTMLElement => document.getElementById("zone-title")!;
 
 export function showMap(): void {
   body.dataset.zone = "";
@@ -19,6 +18,5 @@ export function showZone(id: ZoneId, name: string, html: string | null): void {
   if (html !== null) content().innerHTML = html;
   content().hidden = false;
   hud().hidden = false;
-  title().textContent = name;
   document.title = `${name} · Nicolás Riccomini`;
 }

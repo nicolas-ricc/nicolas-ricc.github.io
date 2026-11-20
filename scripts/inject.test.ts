@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { injectZone } from "./inject";
 
-const index = `<html><head><title>Nicolás Riccomini</title></head><body data-zone=""><div id="hud" hidden><a id="back" href="/">←</a><h1 id="zone-title" aria-hidden="true"></h1></div><main id="content" hidden></main></body></html>`;
+const index = `<html><head><title>Nicolás Riccomini</title></head><body data-zone=""><div id="hud" hidden><a id="back" href="/">←</a></div><main id="content" hidden></main></body></html>`;
 
 describe("injectZone", () => {
   const out = injectZone(index, "cv", "Resume", "<h1>Resume</h1>");
@@ -9,7 +9,7 @@ describe("injectZone", () => {
     expect(out).toContain('<body data-zone="cv" class="zone">');
     expect(out).toContain('<main id="content"><h1>Resume</h1></main>');
     expect(out).toContain('<div id="hud">');
-    expect(out).toContain('<h1 id="zone-title" aria-hidden="true">Resume</h1>');
+    expect(out).not.toContain("zone-title");
     expect(out).toContain("<title>Resume · Nicolás Riccomini</title>");
   });
   it("no toca el resto", () => {
