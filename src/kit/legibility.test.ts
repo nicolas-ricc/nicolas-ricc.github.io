@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { v3, type Vec3 } from "../iso/geometry";
 import { occluded, project } from "../iso/project";
+import { rigid } from "../iso/rigid";
 import { bounds, type Solid } from "../iso/solids";
 import { ISO_COLORS, ISO_TONES, toneColor, type Material } from "../map/palette-iso";
 import { RESUME_SIGN } from "../scenes/sign-crown";
@@ -444,6 +445,26 @@ describe("ground signs (#452)", () => {
   });
   it("bar is ignored without stroke", () => {
     expect(signMetrics(groundBlog({ bar: 100 }), COVER_LAPTOP).strokePx).toBeCloseTo(signMetrics(groundBlog(), COVER_LAPTOP).strokePx, 12);
+  });
+  it("a pitched and rolled ground sign's aspect counts the stretch of its box sides, not the tilt of its baseline (#456)", () => {
+    const [u, v] = rigid([G0.u, G0.v], v3(0, 0, 0), (1.5 * Math.PI) / 180, -Math.PI / 180, 0) as [Vec3, Vec3];
+    const plane = { origin: G0.origin, u, v }, cap = 20;
+    const s = signSpec({ id: "ground", text: "WRITING", size: cap, width: SIGN_FONT.width, color: "cyan", plane, style: "fill", backing: [], ground: true, layouts: marqueeLayout(cap, 0, CHAINSAW_WRITING), xHeight: CHAINSAW_X * cap, stroke: 2.4 });
+    const p = (q: Vec3) => project(q), o = p(v3(0, 0, 0)), up = p(u), vp = p(v);
+    const want = Math.abs(Math.hypot(vp.x - o.x, vp.y - o.y) / Math.hypot(up.x - o.x, up.y - o.y) / GROUND_ASPECT - 1);
+    const got = signMetrics(s, COVER_LAPTOP).aspectError;
+    expect(got).toBeCloseTo(want, 9);
+    expect(got).toBeGreaterThan(0.03);
+    expect(got).toBeLessThan(0.08);
+  });
+  it("a vertical sign keeps the bounding-box aspect (#456)", () => {
+    const s = signSpec({ id: "wall", text: "Blog", ...SIGN_FONT, color: "cyan", plane: { origin: v3(0, 0, 0), u: v3(0.8, -0.6, 0.1), v: v3(0, 0, 1) }, style: "stroke", backing: [] });
+    const want = Math.max(...s.glyphs.map((g) => {
+      const { x0, y0, x1, y1 } = g.layout.box, c = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(([a, b]) => project(toWorld(g.plane, a!, b!)));
+      const xs = c.map((q) => q.x), ys = c.map((q) => q.y);
+      return Math.abs((Math.max(...ys) - Math.min(...ys)) / (Math.max(...xs) - Math.min(...xs)) / ((y1 - y0) / (x1 - x0)) - 1);
+    }));
+    expect(signMetrics(s, COVER_LAPTOP).aspectError).toBeCloseTo(want, 12);
   });
   it("tracer: a Chainsaw Carnage ground sign at cap 20 on a flat backing passes at 1.17 and 0.83", () => {
     const s = tracer(20);

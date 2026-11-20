@@ -9,12 +9,14 @@ import { pointInPolygon } from "../map/geo";
 import { raftAt } from "./raft";
 import { waterCellMat } from "./terrain";
 import * as platform from "./sign-platform";
-import { BLOG_SIGNS, BOARD_TOP, HEAVE, HEAVE_STEP, PLATFORM_DECK, PLATFORM_SITES, REST_POSE, WRITING_CAP, heaveAt, seaPlatform, seaPlatformAt, signAt, type WritingSite } from "./sign-platform";
+import { dot, type Vec3 } from "../iso/geometry";
+import { raftPlane } from "./raft";
+import {
+  ANGLE_STEP, BLOG_SIGNS, BOARD_TOP, CYCLE_POSES, HEAVE, HEAVE_STEP, PITCH, PLATFORM_DECK, PLATFORM_SITES, POSE_CYCLE_MS, REST_POSE, ROLL, WRITING_CAP,
+  heaveAt, pitchAt, poseAt, rollAt, seaPlatform, seaPlatformAt, signAt, type RaftPose, type WritingSite,
+} from "./sign-platform";
 
-const pose = (dz: number) => ({ dz, pitch: 0, roll: 0 });
-const at = (site: WritingSite, dz = 0) => { const out: Solid[] = []; seaPlatformAt(out, site, pose(dz)); return out; };
-/** The 8 phases of the heave cycle the pose tests sample (#444). */
-const PHASES = Array.from({ length: 8 }, (_, k) => heaveAt((k * HEAVE.periodMs) / 8));
+const at = (site: WritingSite, p: RaftPose = REST_POSE) => { const out: Solid[] = []; seaPlatformAt(out, site, p); return out; };
 const meshOf = (out: readonly Solid[]): Solid & { kind: "mesh" } => { const b = out[0]!; if (b.kind !== "mesh") throw new Error("raft"); return b; };
 
 describe("Writing raft sites (#442, #454)", () => {
@@ -135,27 +137,115 @@ describe("heaveAt: the board's heave, a quantized slow sine (#444)", () => {
   });
 });
 
-describe.each(["wide", "tall"] as const)("Writing raft at the %s site across the heave cycle: one rigid body (#444, #454)", (site) => {
+describe("poseAt: heave, pitch and roll, three quantized sines (#456)", () => {
+  const fields = (p: RaftPose) => [p.dz, p.pitch, p.roll];
+
+  it("PITCH, ROLL, ANGLE_STEP and POSE_CYCLE_MS are pinned", () => {
+    expect(PITCH).toEqual({ amp: (1.5 * Math.PI) / 180, periodMs: 9100 });
+    expect(ROLL).toEqual({ amp: (1.0 * Math.PI) / 180, periodMs: 7300 });
+    expect(Object.isFrozen(PITCH)).toBe(true);
+    expect(Object.isFrozen(ROLL)).toBe(true);
+    expect(ANGLE_STEP).toBe((0.1 * Math.PI) / 180);
+    expect(POSE_CYCLE_MS).toBe(44_508_100);
+    expect(HEAVE).toEqual({ amp: 0.15, periodMs: 6700 });
+  });
+
+  it("poseAt(0) is REST_POSE", () => {
+    expect(poseAt(0)).toEqual(REST_POSE);
+  });
+
+  it("poseAt is { dz: heaveAt, pitch: pitchAt, roll: rollAt }", () => {
+    for (let t = 0; t < 20_000; t += 113) expect(poseAt(t)).toEqual({ dz: heaveAt(t), pitch: pitchAt(t), roll: rollAt(t) });
+  });
+
+  it("periodic in POSE_CYCLE_MS: 20 instants, the three fields within 1e-9", () => {
+    for (let k = 0; k < 20; k++) {
+      const t = k * 2_345_671, a = fields(poseAt(t)), b = fields(poseAt(t + POSE_CYCLE_MS));
+      a.forEach((v, i) => expect(Math.abs(v - b[i]!), `${t} ${i}`).toBeLessThanOrEqual(1e-9));
+    }
+  });
+
+  it("pitch and roll are bounded by their amp and multiples of ANGLE_STEP", () => {
+    for (let t = 0; t <= 20_000; t += 37) {
+      const { pitch, roll } = poseAt(t);
+      expect(Math.abs(pitch), `${t}`).toBeLessThanOrEqual(PITCH.amp + 1e-12);
+      expect(Math.abs(roll), `${t}`).toBeLessThanOrEqual(ROLL.amp + 1e-12);
+      for (const x of [pitch, roll]) expect(Math.abs(x / ANGLE_STEP - Math.round(x / ANGLE_STEP)), `${t}`).toBeLessThanOrEqual(1e-12);
+    }
+  });
+
+  it("pitch and roll each take at least 20 distinct values over their period sampled every 50 ms", () => {
+    const distinct = (f: (t: number) => number, period: number) => { const s = new Set<number>(); for (let t = 0; t < period; t += 50) s.add(Math.round(f(t) / ANGLE_STEP)); return s.size; };
+    expect(distinct(pitchAt, PITCH.periodMs)).toBeGreaterThanOrEqual(20);
+    expect(distinct(rollAt, ROLL.periodMs)).toBeGreaterThanOrEqual(20);
+  });
+
+  it("the three fields do not share a phase: some t has dz 0 and pitch ≠ 0, some t has pitch 0 and roll ≠ 0", () => {
+    let a = false, b = false;
+    for (let t = 0; t <= 10_000; t += 50) {
+      const p = poseAt(t);
+      if (p.dz === 0 && p.pitch !== 0) a = true;
+      if (p.pitch === 0 && p.roll !== 0) b = true;
+    }
+    expect(a).toBe(true);
+    expect(b).toBe(true);
+  });
+
+  it("a clock hours long keeps the cycle: pitchAt and rollAt at 1e6 periods + 1234 ms", () => {
+    expect(Math.abs(pitchAt(1e6 * PITCH.periodMs + 1234) - pitchAt(1234))).toBeLessThanOrEqual(1e-12);
+    expect(Math.abs(rollAt(1e6 * ROLL.periodMs + 1234) - rollAt(1234))).toBeLessThanOrEqual(1e-12);
+  });
+
+  it("CYCLE_POSES: rest, the 8 corners of the cube, then poseAt(k · 7919) for k 1..8", () => {
+    expect(CYCLE_POSES).toHaveLength(17);
+    expect(Object.isFrozen(CYCLE_POSES)).toBe(true);
+    expect(CYCLE_POSES[0]).toEqual(REST_POSE);
+    const corners = new Set(CYCLE_POSES.slice(1, 9).map((p) => JSON.stringify(fields(p))));
+    const want = new Set<string>();
+    for (const dz of [-1, 1]) for (const pitch of [-1, 1]) for (const roll of [-1, 1]) want.add(JSON.stringify([dz * HEAVE.amp, pitch * PITCH.amp, roll * ROLL.amp]));
+    expect(corners).toEqual(want);
+    expect(CYCLE_POSES.slice(9)).toEqual([1, 2, 3, 4, 5, 6, 7, 8].map((k) => poseAt(k * 7919)));
+  });
+});
+
+describe.each(["wide", "tall"] as const)("Writing raft at the %s site over CYCLE_POSES: one rigid body (#444, #456)", (site) => {
   const rest = meshOf(at(site));
+  const flat = (m: Solid & { kind: "mesh" }) => m.faces.flatMap((f) => f.pts);
+  const restPts = flat(rest), n = restPts.length;
+  const dist = (a: Vec3, b: Vec3) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+  const cross = (a: Vec3, b: Vec3): Vec3 => ({ x: a.y * b.z - a.z * b.y, y: a.z * b.x - a.x * b.z, z: a.x * b.y - a.y * b.x });
+  const unit = (v: Vec3) => { const l = Math.hypot(v.x, v.y, v.z); return { x: v.x / l, y: v.y / l, z: v.z / l }; };
 
   it("signAt(site, REST_POSE) is BLOG_SIGNS[site]", () => {
     expect(signAt(site, REST_POSE)).toEqual(BLOG_SIGNS[site]);
     expect(signAt(site)).toEqual(BLOG_SIGNS[site]);
   });
 
-  it.each(PHASES.map((dz, k) => [k, dz] as const))("phase %i/8: every vertex is the rest one raised by dz", (_k, dz) => {
-    const m = meshOf(at(site, dz));
+  it.each(CYCLE_POSES.map((p, i) => [i, p] as const))("pose %i/17: raftAt keeps the distances between its vertices (50 pairs, ±1e-9)", (_i, p) => {
+    const m = raftAt(site, p), pts = flat(m);
     expect(m.faces).toHaveLength(rest.faces.length);
-    m.faces.forEach((f, i) => f.pts.forEach((p, j) => {
-      const r = rest.faces[i]!.pts[j]!;
-      expect(Math.abs(p.x - r.x) + Math.abs(p.y - r.y)).toBeLessThanOrEqual(1e-9);
-      expect(Math.abs(p.z - (r.z + dz))).toBeLessThanOrEqual(1e-9);
-    }));
+    expect(pts).toHaveLength(n);
+    for (let k = 1; k <= 50; k++) {
+      const i = (k * 7919) % n, j = (k * 104729 + 1) % n;
+      expect(Math.abs(dist(pts[i]!, pts[j]!) - dist(restPts[i]!, restPts[j]!)), `${i},${j}`).toBeLessThanOrEqual(1e-9);
+    }
   });
 
-  it.each(PHASES.map((dz, k) => [k, dz] as const))("phase %i/8: signAt is backed by seaPlatformAt at the same pose, its plane raised by dz", (_k, dz) => {
-    const sign = signAt(site, pose(dz));
-    expect(sign.backing).toEqual(at(site, dz));
-    for (const g of sign.glyphs) expect(Math.abs(g.plane.origin.z - (BOARD_TOP + dz))).toBeLessThanOrEqual(1e-9);
+  it.each(CYCLE_POSES.map((p, i) => [i, p] as const))("pose %i/17: every decal vertex lies on the posed text plane, whose u′ and v′ are unit and perpendicular", (_i, p) => {
+    const plane = raftPlane(site, p), normal = unit(cross(plane.u, plane.v));
+    expect(Math.abs(Math.hypot(plane.u.x, plane.u.y, plane.u.z) - 1)).toBeLessThanOrEqual(1e-12);
+    expect(Math.abs(Math.hypot(plane.v.x, plane.v.y, plane.v.z) - 1)).toBeLessThanOrEqual(1e-12);
+    expect(Math.abs(dot(plane.u, plane.v))).toBeLessThanOrEqual(1e-12);
+    let decals = 0;
+    for (const f of raftAt(site, p).faces) if (f.mat === "navy") for (const q of f.pts) {
+      decals++;
+      expect(Math.abs(dot({ x: q.x - plane.origin.x, y: q.y - plane.origin.y, z: q.z - plane.origin.z }, normal))).toBeLessThanOrEqual(1e-9);
+    }
+    expect(decals).toBeGreaterThan(0);
+  });
+
+  it.each(CYCLE_POSES.map((p, i) => [i, p] as const))("pose %i/17: signAt(site, pose) is backed by raftAt(site, pose)", (_i, p) => {
+    expect(signAt(site, p).backing).toEqual([raftAt(site, p)]);
+    expect(at(site, p)).toEqual([raftAt(site, p)]);
   });
 });

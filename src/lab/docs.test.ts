@@ -6,7 +6,7 @@ import { COVER_LAPTOP, COVER_PHONE, GROUND_ASPECT, layoutGaps, SIGN_FONT, signMe
 import { counterClearance, letterGaps, measureText, rhythm } from "../kit/lettering";
 import { TOWER } from "../scenes/city-grid";
 import { CROWN_SITE } from "../scenes/sign-crown";
-import { BLOG_SIGNS, HEAVE, heaveAt, PLATFORM_DECK, PLATFORM_SITES, WRITING_CAP } from "../scenes/sign-platform";
+import { BLOG_SIGNS, PLATFORM_DECK, PLATFORM_SITES, poseAt, WRITING_CAP } from "../scenes/sign-platform";
 import { ISO_TONES } from "../map/palette-iso";
 import { CHAINSAW_BAR } from "../kit/marquee";
 import { writingSite } from "../world/signs";
@@ -1038,8 +1038,11 @@ describe("WRITING on a floating board (#441)", () => {
   const spec = read(`${SPECS}2026-11-15-carteles-de-zona-rediseno-design.md`);
   const next = read(`${SPECS}2026-11-18-composicion-responsive-design.md`);
   const glossary = read(`${ROOT}CONTEXT.md`);
-  const LAPSE = `${SPECS}assets/441-tabla-flotante/`;
-  const POSES = [1, 2, 3, 4].map((n) => `balanceo-${n}.png`);
+  // the #441 heave time-lapse is history (#456): only its folder is required; the live one is the pitch and roll time-lapse of #451
+  const OLD_LAPSE = `${SPECS}assets/441-tabla-flotante/`, OLD_POSES = [1, 2, 3, 4].map((n) => `balanceo-${n}.png`);
+  const LAPSE = `${SPECS}assets/451-balsa-tablones/balanceo/`;
+  const TIMES = [0, 1675, 3350, 5025, 7919, 15838];
+  const POSES = TIMES.map((_, k) => `balanceo-${k + 1}.png`);
   const dev = spec.slice(Math.max(0, spec.search(/^### 8\.2 /m)), Math.max(0, spec.search(/^### 8\.3 /m)));
   const TITLE = "- **WRITING en Chainsaw Carnage, tabla flotante (#441).**";
   const entry = (dev.split(/\n(?=- \*\*)/).find((b) => b.startsWith(TITLE)) ?? "").replace(/\s+/g, " ");
@@ -1057,8 +1060,9 @@ describe("WRITING on a floating board (#441)", () => {
   };
   /** The aspect threshold of the Writing site at 900 px high, comma decimal. */
   const threshold = () => { let w = 900; while (writingSite(w, 900) !== "wide") w++; return (w / 900).toFixed(2).replace(".", ","); };
-  /** A heave offset as the time-lapse README writes it: sign (U+2212 minus) and two decimals. */
-  const signed = (v: number) => `${v > 0 ? "+" : v < 0 ? "\u2212" : ""}${Math.abs(v).toFixed(2)}`;
+  /** A value as the time-lapse README writes it: `d` decimals, sign (U+2212 minus), no sign when it rounds to zero. */
+  const signed = (v: number, d: number) => { const s = Math.abs(v).toFixed(d), z = Number(s) === 0; return `${z ? "" : v > 0 ? "+" : "\u2212"}${s}`; };
+  const deg = (r: number) => (r * 180) / Math.PI;
 
   it("REPORT.md: the four Writing rows at ≥ 7:1, halo ok and OCR WRITING", () => {
     for (const id of WRITING_CONTEXTS) for (const sc of SCALES) {
@@ -1098,23 +1102,24 @@ describe("WRITING on a floating board (#441)", () => {
       expect(entry, `${id} ${sc} ${m} ${v}`).toContain(v);
     }
   });
-  it("the five regenerated captures and the four of the heave are 3200×1800", () => {
+  it("the five regenerated captures and the six of the pitch and roll time-lapse are 3200×1800; the #441 time-lapse folder stays", () => {
     for (const f of ["374-carteles/plataforma-escena-117.png", "374-carteles/plataforma-escena-083.png", "374-carteles/plataforma-real.png",
       "423-composicion-responsive/plataforma-escena-angosta-117.png", "423-composicion-responsive/sitio-1600x900-ancho.png"]) expect(png(`${SPECS}assets/${f}`), f).toEqual([3200, 1800]);
     for (const f of POSES) expect(png(`${LAPSE}${f}`), f).toEqual([3200, 1800]);
+    expect(existsSync(OLD_LAPSE), OLD_LAPSE).toBe(true);
   });
-  it("the heave README names each pose with its expected dz, heaveAt at a quarter period apart", () => {
+  it("the pitch and roll README names each capture with t and poseAt's dz, pitch and roll (#456)", () => {
     const lines = read(`${LAPSE}README.md`).split("\n");
     POSES.forEach((f, k) => {
-      const line = lines.filter((l) => l.startsWith(`- \`${f}\``));
+      const line = lines.filter((l) => l.startsWith(`- \`${f}\``)), t = TIMES[k]!, p = poseAt(t);
       expect(line, f).toHaveLength(1);
-      expect(line[0], f).toContain(signed(heaveAt((k * HEAVE.periodMs) / 4)));
+      for (const s of [`t = ${t} ms`, `dz ${signed(p.dz, 2)}`, `pitch ${signed(deg(p.pitch), 1)}°`, `roll ${signed(deg(p.roll), 1)}°`]) expect(line[0], `${f} ${s}`).toContain(s);
     });
-    expect(lines.join("\n")).toContain("heaveAt");
+    expect(lines.join("\n")).toContain("poseAt");
   });
   it("§8.4 lists the four heave captures", () => {
     const caps = spec.slice(Math.max(0, spec.search(/^### 8\.4 /m)));
-    for (const f of POSES) expect(caps, f).toContain(`assets/441-tabla-flotante/${f}`);
+    for (const f of OLD_POSES) expect(caps, f).toContain(`assets/441-tabla-flotante/${f}`);
   });
   it("the 2026-11-18 spec §8.3 says the sign is the board and the OCR reads WRITING", () => {
     const at = next.search(/^### 8\.3 /m), rest = at < 0 ? "" : next.slice(at), end = rest.search(/\n#/);
@@ -1125,7 +1130,8 @@ describe("WRITING on a floating board (#441)", () => {
   });
   it("CONTEXT.md Sign tells the heave, the paint out of the bloom and a level 3 with no exception, and no LostWages", () => {
     const at = glossary.indexOf("### Sign\n"), rest = glossary.slice(at + 9), sign = at < 0 ? "" : rest.slice(0, Math.max(0, rest.search(/^### /m)));
-    for (const s of ["`platformAnimator`", "`HEAVE`", "`reducedMotion`", "no row", "`timber`", "`navy`", "decal", "`groundDiagonal`", "`platform.solid`", "`WRITING_CAP` (20)"]) expect(sign, s).toContain(s);
+    for (const s of ["`platformAnimator`", "`HEAVE`", "`reducedMotion`", "no row", "`timber`", "`navy`", "decal", "`groundDiagonal`", "`platform.solid`", "`WRITING_CAP` (20)",
+      "`PITCH`", "`ROLL`", "`ANGLE_STEP`", "`poseAt`", "`CYCLE_POSES`", "one pose"]) expect(sign, s).toContain(s);
     for (const re of [/PAINT_LIFT/, /officeDark/, /roofDiagonal/, /platform\.lights/]) expect(sign, String(re)).not.toMatch(re);
     expect(glossary).toContain("Chainsaw Carnage");
     expect(glossary).not.toMatch(/LostWages/);
