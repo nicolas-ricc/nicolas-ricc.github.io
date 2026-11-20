@@ -103,7 +103,7 @@ export const signXHeight = (spec: SignSpec): number => spec.xHeight ?? (GRID.xHe
 
 /**
  * Builds a `SignSpec`: glyph `i` sits on `glyphPlane?.(i, g) ?? plane`; quads are the stroke quads (`stroke`) or the fill polygons (`fill`) taken to
- * the world. `layouts` replaces the stroke font's layout (marquee letters); `xHeight` and `stroke` go to the spec as they are.
+ * the world. `layouts` replaces the stroke font's layout (marquee letters); `xHeight`, `stroke`, `bar`, `ground`, `color` and `decal` go to the spec as they are (exactly one of `color` and `decal`, else it throws).
  */
 export function signSpec(o: {
   id: string; text: string; size: number; width: number; color?: AccentColor; decal?: Material; plane: TextPlane; style: "stroke" | "fill"; backing: Solid[]; facade?: boolean; ground?: true;
@@ -145,7 +145,7 @@ export function signMetrics(spec: SignSpec, scale: number): { xHeightPx: number;
   const proj = (g: SignGlyph) => g.quads.map((q) => q.map(project));
   const xHeightPx = Math.min(...G.map((g) => Math.hypot(at(g, 0, xH).x - at(g, 0, 0).x, at(g, 0, xH).y - at(g, 0, 0).y) * scale));
   const len = (g: SignGlyph, a: number, b: number) => Math.hypot(at(g, a, b).x - at(g, 0, 0).x, at(g, a, b).y - at(g, 0, 0).y) * scale;
-  const strokePx = spec.stroke !== undefined ? Math.min(...G.flatMap((g) => [Math.min(len(g, spec.stroke!, 0), len(g, 0, spec.bar ?? spec.stroke!))])) : Math.min(...G.flatMap(proj).flatMap((q) => q.map((c, i) => Math.hypot(c.x - q[(i + 1) % q.length]!.x, c.y - q[(i + 1) % q.length]!.y))).map((d) => d * scale));
+  const strokePx = spec.stroke !== undefined ? Math.min(...G.map((g) => Math.min(len(g, spec.stroke!, 0), len(g, 0, spec.bar ?? spec.stroke!)))) : Math.min(...G.flatMap(proj).flatMap((q) => q.map((c, i) => Math.hypot(c.x - q[(i + 1) % q.length]!.x, c.y - q[(i + 1) % q.length]!.y))).map((d) => d * scale));
   let airPx = Infinity;
   for (let i = 0; i + 1 < G.length; i++) for (const a of proj(G[i]!)) for (const b of proj(G[i + 1]!)) airPx = Math.min(airPx, polygonDistance(a, b) * scale);
   const pts = G.map((g) => at(g, g.layout.left, 0)), n = pts.length;
@@ -174,9 +174,14 @@ const SAMPLES = 7;
 
 /** Min WCAG contrast of the sign: a `color` against the nearest backing face behind each glyph's ink-box center (1 with no face, Infinity with no glyphs); a `decal` against its coplanar receiving face (1 with none). */
 export const staticContrast = (spec: SignSpec): number => contrastOf(spec, covers(spec.backing));
+/** Absolute shoelace area of a flat [x0, y0, x1, y1, …] polygon. */
+function polyArea(p: number[]): number {
+  let a = 0;
+  for (let i = 0; i < p.length; i += 2) { const j = (i + 2) % p.length; a += p[i]! * p[j + 1]! - p[j]! * p[i + 1]!; }
+  return Math.abs(a) / 2;
+}
 /** Min over the `decal` faces of `back` of their contrast against the receiver: the largest-area face of another material that contains the decal centroid's projection and is coplanar with it (1 with no receiver or no decal face). */
 function decalContrast(decal: Material, back: Cover[]): number {
-  const area = (p: number[]) => Math.abs(p.reduce((s, _, i) => (i % 2 ? s : s + p[i]! * p[(i + 3) % p.length]! - p[(i + 2) % p.length]! * p[i + 1]!), 0)) / 2;
   const tone = (f: Face) => toneColor(f.mat, stepTone(f.tone, f.toneOffset));
   const vals = back.filter((c) => c.face.mat === decal).map((c) => {
     const n = c.face.pts.length, m = { x: 0, y: 0, z: 0 };
@@ -184,7 +189,7 @@ function decalContrast(decal: Material, back: Cover[]): number {
     const r = project(m);
     const rec = back.filter((b) => b.face.mat !== decal && pointInPolygon(r.x, r.y, b.poly) && Math.abs(depth(b.face, m)) <= 1e-6);
     if (!rec.length) return 1;
-    const best = rec.reduce((a, b) => (area(b.poly) > area(a.poly) ? b : a));
+    const best = rec.reduce((a, b) => (polyArea(b.poly) > polyArea(a.poly) ? b : a));
     return contrastRatio(tone(c.face), tone(best.face));
   });
   return vals.length ? Math.min(...vals) : 1;

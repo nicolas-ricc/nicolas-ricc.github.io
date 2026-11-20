@@ -334,8 +334,8 @@ const decalBlog = (backing: Solid[]) => signSpec({ id: "decal", text: "Blog", ..
 
 describe("decal signs (#452)", () => {
   it("signSpec throws with neither color nor decal, and with both", () => {
-    expect(() => signSpec({ id: "x", text: "Blog", ...SIGN_FONT, plane: GPLANE, style: "stroke", backing: [] })).toThrow();
-    expect(() => signSpec({ id: "x", text: "Blog", ...SIGN_FONT, color: "cyan", decal: "officeDark", plane: GPLANE, style: "stroke", backing: [] })).toThrow();
+    expect(() => signSpec({ id: "x", text: "Blog", ...SIGN_FONT, plane: GPLANE, style: "stroke", backing: [] })).toThrow(/exactly one of color and decal/);
+    expect(() => signSpec({ id: "x", text: "Blog", ...SIGN_FONT, color: "cyan", decal: "officeDark", plane: GPLANE, style: "stroke", backing: [] })).toThrow(/exactly one of color and decal/);
   });
   it("a decal spec carries decal and no color", () => {
     const s = decalBlog([]);
@@ -366,11 +366,24 @@ describe("decal signs (#452)", () => {
     const s = decalBlog([groundSolid("whitewash", [tri(mid)]), groundSolid("foam", [tri(BIG)]), groundSolid("officeDark", [tri(SMALL)])]);
     expect(staticContrast(s)).toBeCloseTo(contrastRatio(ISO_TONES.officeDark.top, ISO_TONES.foam.top), 9);
   });
+  it("a coplanar face of the decal material is never the receiver, however large", () => {
+    const ww: [number, number][] = [[-6, -20], [6, -20], [0, 8]];
+    const s = decalBlog([groundSolid("officeDark", [tri(BIG)]), groundSolid("whitewash", [tri(ww)]), groundSolid("officeDark", [tri(SMALL)])]);
+    expect(staticContrast(s)).toBeCloseTo(contrastRatio(ISO_TONES.officeDark.top, ISO_TONES.whitewash.top), 9);
+  });
+  it("the result is the min over the decal faces: one without a receiver gives 1", () => {
+    const far = SMALL.map(([x, y]): [number, number] => [x + 200, y]);
+    expect(staticContrast(decalBlog([groundSolid("whitewash", [tri(BIG)]), groundSolid("officeDark", [tri(SMALL), tri(far)])]))).toBe(1);
+  });
+  it("the result is the min over the decal faces: the darker-contrast tone decides", () => {
+    const s = decalBlog([groundSolid("whitewash", [tri(BIG)]), groundSolid("officeDark", [tri(SMALL)], -3), groundSolid("officeDark", [tri(SMALL.map(([x, y]) => [x + 3, y]))])]);
+    expect(staticContrast(s)).toBeCloseTo(contrastRatio(ISO_TONES.officeDark.top, ISO_TONES.whitewash.top), 9);
+  });
   it("checkSign uses the decal contrast", () => {
     const s = decalBlog([groundSolid("whitewash", [tri(BIG)]), groundSolid("officeDark", [tri(SMALL)])]);
     expect(checkSign(s, COVER_LAPTOP, []).find((v) => v.rule === "contrast")?.value).toBeCloseTo(contrastRatio(ISO_TONES.officeDark.top, ISO_TONES.whitewash.top), 9);
   });
-  it("existing signs measure as before", () => {
+  it("existing signs measure as before (a deliberate pin: retuning a sign updates these values)", () => {
     const pinned = [
       { s: RESUME_SIGN, m: { xHeightPx: 14.2506, strokePx: 2.3085972, airPx: 2.9539114255064196, aspectError: 0.010050506338837972 }, c: 4.695562146225949 },
       { s: TINKER_SIGN, m: { xHeightPx: 15.069607494509299, strokePx: 2.396067591626975, airPx: 2.285331928448671, baselineDeg: 0.23067405316426817, verticalDeg: 3.0304011483583646, aspectError: 0.07731579344706507 }, c: 8.062398849377823 },
@@ -400,7 +413,7 @@ function tracer(cap: number) {
   return signSpec({
     id: "ground", text: CHAINSAW_WRITING.text, size: cap, width: SIGN_FONT.width, decal: "officeDark", plane: G0, style: "fill", ground: true,
     layouts, xHeight: CHAINSAW_X * cap, stroke: CHAINSAW_FACE * cap, bar: CHAINSAW_BAR * cap,
-    backing: [groundSolid("whitewash", rect(-0.5)), groundSolid("whitewash", rect(0)), groundSolid("officeDark", word, -3)],
+    backing: [groundSolid("whitewash", rect(-0.5)), groundSolid("whitewash", rect(0)), groundSolid("officeDark", word, -3)] /* officeDark.top on whitewash.top is 3.30 < 4.5: −3 steps the paint to dim (4.83); this test is about size */,
   });
 }
 

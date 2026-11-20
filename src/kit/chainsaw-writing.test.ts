@@ -19,6 +19,7 @@ function columnRuns(g: GlyphLayout, px = 300): { median: number; runs: number } 
       if (ink((i + 0.5) / px, (j + 0.5) / px)) n++;
       else { if (n / px > 0.03) runs.push(n / px); n = 0; }
     }
+    if (n / px > 0.03) runs.push(n / px);
   }
   runs.sort((a, b) => a - b);
   const k = runs.length >> 1;

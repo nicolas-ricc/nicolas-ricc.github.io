@@ -28,7 +28,7 @@ export const BUILDER_FACE = 0.159;
  */
 export const CHAINSAW_FACE = 0.12, CHAINSAW_X = 0.77;
 
-/** Thickness of the thinnest horizontal bar of a Chainsaw Carnage letter, in cap heights: median vertical ink run (columns, runs > 0.03 cap, 300 px per cap) of the T and the G; G 0.150, T 0.173, R 0.193, N 0.217, W 0.260. The horizontal runs (rows) give `CHAINSAW_FACE`. */
+/** Thickness of the thinnest horizontal bar of a Chainsaw Carnage letter (the arms of the G; the bar of the T measures 0.173), in cap heights: median vertical ink run (columns, runs > 0.03 cap, 300 px per cap) of the T and the G; G 0.150, T 0.173, R 0.193, N 0.217, W 0.260. The horizontal runs (rows) give `CHAINSAW_FACE`. */
 export const CHAINSAW_BAR = 0.15;
 
 /** One quad `w` wide along each segment of the glyph's contours: a tube that outlines the letter. */
