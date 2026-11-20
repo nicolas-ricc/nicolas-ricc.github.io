@@ -18,7 +18,7 @@ export const HEAVE: Readonly<{ amp: number; periodMs: number }> = Object.freeze(
 export const PITCH: Readonly<{ amp: number; periodMs: number }> = Object.freeze({ amp: (1.5 * Math.PI) / 180, periodMs: 9100 });
 /** The raft rolls (about `RAFT_U`): amplitude in radians (1°) and period in ms. */
 export const ROLL: Readonly<{ amp: number; periodMs: number }> = Object.freeze({ amp: (1.0 * Math.PI) / 180, periodMs: 7300 });
-/** The heave is quantized to multiples of this, so a pose can be cached (at most 31 per site). */
+/** The heave is quantized to multiples of this, so consecutive ticks often share a pose and reuse its mesh. */
 export const HEAVE_STEP = 0.01;
 /** Pitch and roll are quantized to multiples of this (0.1°). */
 export const ANGLE_STEP = (0.1 * Math.PI) / 180;
