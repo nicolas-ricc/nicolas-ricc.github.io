@@ -1067,7 +1067,6 @@ describe("WRITING on a plank raft (#451)", () => {
   // the three level-3 runs (#457): at rest, and at two instants of the pitch-and-roll cycle
   const REPORTS = [{ file: "REPORT.md", tick: null }, { file: "REPORT-t7919.md", tick: 7919 }, { file: "REPORT-t15838.md", tick: 15838 }] as const;
   const reports = Object.fromEntries(REPORTS.map((r) => [r.file, read(`${LEVEL3}${r.file}`)]));
-  const report = reports["REPORT.md"]!;
   const spec = read(`${SPECS}2026-11-15-carteles-de-zona-rediseno-design.md`);
   const next = read(`${SPECS}2026-11-18-composicion-responsive-design.md`);
   const story = read(`${SPECS}2026-11-20-writing-balsa-tablones-design.md`);
