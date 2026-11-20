@@ -2,12 +2,17 @@ import { describe, expect, it } from "vitest";
 import { v3, type Vec3 } from "../iso/geometry";
 import { occluded, project } from "../iso/project";
 import { bounds, type Solid } from "../iso/solids";
-import { ISO_COLORS, toneColor } from "../map/palette-iso";
+import { ISO_COLORS, ISO_TONES, toneColor, type Material } from "../map/palette-iso";
+import { RESUME_SIGN } from "../scenes/sign-crown";
+import { BLOG_SIGNS } from "../scenes/sign-platform";
+import { TINKER_SIGN } from "../scenes/sign-tinker";
+import { CHAINSAW_WRITING } from "./chainsaw-writing";
 import {
   backingMargin, checkFont, checkSign, contrastRatio, COVER_LAPTOP, COVER_PHONE, FONT_RULES, occlusionRatio, relativeLuminance, SIGN_FONT, SIGN_RULES,
-  signMetrics, signSpec, staticContrast,
+  GROUND_ASPECT, signMetrics, signSpec, signXHeight, staticContrast,
 } from "./legibility";
-import { counterClearance, diagonalWall, facade, glyphPairs, GRID, layoutText, letterGaps, overlapping, rhythm, strokeRatio, toWorld, xHeightPx } from "./lettering";
+import { CHAINSAW_BAR, CHAINSAW_FACE, CHAINSAW_X, marqueeLayout } from "./marquee";
+import { counterClearance, diagonalWall, facade, glyphPairs, GRID, groundDiagonal, layoutText, letterGaps, overlapping, rhythm, strokeRatio, toWorld, xHeightPx } from "./lettering";
 
 const WORDS = ["Resume", "Portfolio", "Blog"];
 const { size, width } = SIGN_FONT;
@@ -314,5 +319,137 @@ describe("projection used by the oracle", () => {
     const o = project(ORIGIN), pu = project(at(1, 0)), pv = project(at(0, 1));
     expect(pu.y - o.y).toBeCloseTo(0, 12);
     expect(pv.x - o.x).toBeCloseTo(0, 12);
+  });
+});
+
+// --- ground signs and decals (#452) ---
+
+const GZ = 0.3, GPLANE = groundDiagonal(v3(0, 0, GZ));
+/** A `kind: "ground"` solid of `mat` from world triangles, every tri with `toneOffset`. */
+const groundSolid = (mat: Material, tris: Vec3[][], toneOffset?: number): Solid =>
+  ({ kind: "ground", mat, tris: tris.map((t) => ({ pts: [t[0]!, t[1]!, t[2]!] as [Vec3, Vec3, Vec3], ...(toneOffset === undefined ? {} : { toneOffset }) })) });
+const tri = (pts: [number, number][], z = GZ): Vec3[] => pts.map(([x, y]) => v3(x, y, z));
+const BIG: [number, number][] = [[-50, -50], [50, -50], [0, 60]], SMALL: [number, number][] = [[-1, 0], [1, 0], [0, 1]];
+const decalBlog = (backing: Solid[]) => signSpec({ id: "decal", text: "Blog", ...SIGN_FONT, decal: "officeDark", plane: GPLANE, style: "stroke", backing });
+
+describe("decal signs (#452)", () => {
+  it("signSpec throws with neither color nor decal, and with both", () => {
+    expect(() => signSpec({ id: "x", text: "Blog", ...SIGN_FONT, plane: GPLANE, style: "stroke", backing: [] })).toThrow(/exactly one of color and decal/);
+    expect(() => signSpec({ id: "x", text: "Blog", ...SIGN_FONT, color: "cyan", decal: "officeDark", plane: GPLANE, style: "stroke", backing: [] })).toThrow(/exactly one of color and decal/);
+  });
+  it("a decal spec carries decal and no color", () => {
+    const s = decalBlog([]);
+    expect(s.decal).toBe("officeDark");
+    expect("color" in s).toBe(false);
+  });
+  it("decal contrast is decal against the coplanar receiving face", () => {
+    const s = decalBlog([groundSolid("whitewash", [tri(BIG)]), groundSolid("officeDark", [tri(SMALL)])]);
+    expect(staticContrast(s)).toBeCloseTo(contrastRatio(ISO_TONES.officeDark.top, ISO_TONES.whitewash.top), 9);
+  });
+  it("with toneOffset 1 on both triangles the up tones decide", () => {
+    const s = decalBlog([groundSolid("whitewash", [tri(BIG)], 1), groundSolid("officeDark", [tri(SMALL)], 1)]);
+    expect(staticContrast(s)).toBeCloseTo(contrastRatio(ISO_TONES.officeDark.up, ISO_TONES.whitewash.up), 9);
+  });
+  it("a decal with no receiver gives 1", () => {
+    const s = decalBlog([groundSolid("whitewash", [tri(BIG)]), groundSolid("officeDark", [tri(SMALL.map(([x, y]) => [x + 200, y]))])]);
+    expect(staticContrast(s)).toBe(1);
+  });
+  it("a decal spec with no decal face in the backing gives 1", () => {
+    expect(staticContrast(decalBlog([groundSolid("whitewash", [tri(BIG)])]))).toBe(1);
+  });
+  it("a receiver that is not coplanar is not the receiver", () => {
+    const s = decalBlog([groundSolid("whitewash", [tri(BIG, GZ - 0.5)]), groundSolid("officeDark", [tri(SMALL)])]);
+    expect(staticContrast(s)).toBe(1);
+  });
+  it("of several receivers the largest projected area decides", () => {
+    const mid: [number, number][] = [[-5, -5], [5, -5], [0, 6]];
+    const s = decalBlog([groundSolid("whitewash", [tri(mid)]), groundSolid("foam", [tri(BIG)]), groundSolid("officeDark", [tri(SMALL)])]);
+    expect(staticContrast(s)).toBeCloseTo(contrastRatio(ISO_TONES.officeDark.top, ISO_TONES.foam.top), 9);
+  });
+  it("a coplanar face of the decal material is never the receiver, however large", () => {
+    const ww: [number, number][] = [[-6, -20], [6, -20], [0, 8]];
+    const s = decalBlog([groundSolid("officeDark", [tri(BIG)]), groundSolid("whitewash", [tri(ww)]), groundSolid("officeDark", [tri(SMALL)])]);
+    expect(staticContrast(s)).toBeCloseTo(contrastRatio(ISO_TONES.officeDark.top, ISO_TONES.whitewash.top), 9);
+  });
+  it("the result is the min over the decal faces: one without a receiver gives 1", () => {
+    const far = SMALL.map(([x, y]): [number, number] => [x + 200, y]);
+    expect(staticContrast(decalBlog([groundSolid("whitewash", [tri(BIG)]), groundSolid("officeDark", [tri(SMALL), tri(far)])]))).toBe(1);
+  });
+  it("the result is the min over the decal faces: the darker-contrast tone decides", () => {
+    const s = decalBlog([groundSolid("whitewash", [tri(BIG)]), groundSolid("officeDark", [tri(SMALL)], -3), groundSolid("officeDark", [tri(SMALL.map(([x, y]) => [x + 3, y]))])]);
+    expect(staticContrast(s)).toBeCloseTo(contrastRatio(ISO_TONES.officeDark.top, ISO_TONES.whitewash.top), 9);
+  });
+  it("checkSign uses the decal contrast", () => {
+    const s = decalBlog([groundSolid("whitewash", [tri(BIG)]), groundSolid("officeDark", [tri(SMALL)])]);
+    expect(checkSign(s, COVER_LAPTOP, []).find((v) => v.rule === "contrast")?.value).toBeCloseTo(contrastRatio(ISO_TONES.officeDark.top, ISO_TONES.whitewash.top), 9);
+  });
+  it("existing signs measure as before (a deliberate pin: retuning a sign updates these values)", () => {
+    const pinned = [
+      { s: RESUME_SIGN, m: { xHeightPx: 14.2506, strokePx: 2.3085972, airPx: 2.9539114255064196, aspectError: 0.010050506338837972 }, c: 4.695562146225949 },
+      { s: TINKER_SIGN, m: { xHeightPx: 15.069607494509299, strokePx: 2.396067591626975, airPx: 2.285331928448671, baselineDeg: 0.23067405316426817, verticalDeg: 3.0304011483583646, aspectError: 0.07731579344706507 }, c: 8.062398849377823 },
+      { s: BLOG_SIGNS.wide, m: { xHeightPx: 14.50449, strokePx: 2.26044, airPx: 2.46687956357404, aspectError: 0.010050506338873166 }, c: 8.079749033163573 },
+      { s: BLOG_SIGNS.tall, m: { xHeightPx: 14.50449, strokePx: 2.26044, airPx: 2.46687956357404, aspectError: 0.010050506338873166 }, c: 8.079749033163573 },
+    ];
+    for (const { s, m, c } of pinned) {
+      const got = signMetrics(s, COVER_LAPTOP) as Record<string, number>;
+      for (const [k, v] of Object.entries(m)) expect(got[k], `${s.id} ${k}`).toBeCloseTo(v, 9);
+      expect(staticContrast(s), s.id).toBeCloseTo(c, 9);
+    }
+  });
+});
+
+const G0 = groundDiagonal(v3(0, 0, 0));
+const groundBlog = (o: { ground?: true; bar?: number } = {}) => signSpec({ id: "ground", text: "Blog", ...SIGN_FONT, color: "cyan", plane: G0, style: "stroke", backing: [], ...o });
+const chainsaw = (cap: number, o: { bar?: number } = {}) =>
+  signSpec({ id: "ground", text: "WRITING", size: cap, width: SIGN_FONT.width, color: "cyan", plane: G0, style: "fill", backing: [], ground: true, layouts: marqueeLayout(cap, 0, CHAINSAW_WRITING), xHeight: CHAINSAW_X * cap, stroke: 2.4, ...o });
+/** The size tracer: WRITING in Chainsaw Carnage at `cap`, a ground decal sign on a flat backing (sheet at z −0.5, coplanar receiver, the word's triangles). */
+function tracer(cap: number) {
+  const layouts = marqueeLayout(cap, 0, CHAINSAW_WRITING), m = 3;
+  const a0 = Math.min(...layouts.map((g) => g.box.x0)) - m, a1 = Math.max(...layouts.map((g) => g.box.x1)) + m;
+  const b0 = Math.min(...layouts.map((g) => g.box.y0)) - m, b1 = Math.max(...layouts.map((g) => g.box.y1)) + m;
+  const w = (a: number, b: number, dz = 0) => { const p = toWorld(G0, a, b); return v3(p.x, p.y, p.z + dz); };
+  const rect = (dz: number) => [[w(a0, b0, dz), w(a1, b0, dz), w(a1, b1, dz)], [w(a0, b0, dz), w(a1, b1, dz), w(a0, b1, dz)]];
+  const word = layouts.flatMap((g) => g.fill.map((t) => t.map((q) => w(q.x, q.y))));
+  return signSpec({
+    id: "ground", text: CHAINSAW_WRITING.text, size: cap, width: SIGN_FONT.width, decal: "officeDark", plane: G0, style: "fill", ground: true,
+    layouts, xHeight: CHAINSAW_X * cap, stroke: CHAINSAW_FACE * cap, bar: CHAINSAW_BAR * cap,
+    backing: [groundSolid("whitewash", rect(-0.5)), groundSolid("whitewash", rect(0)), groundSolid("officeDark", word, -3)] /* officeDark.top on whitewash.top is 3.30 < 4.5: −3 steps the paint to dim (4.83); this test is about size */,
+  });
+}
+
+describe("ground signs (#452)", () => {
+  it("GROUND_ASPECT is 0.5", () => {
+    expect(GROUND_ASPECT).toBeCloseTo(0.5, 12);
+  });
+  it("a ground spec on groundDiagonal: aspect error 0, baseline 0°, vertical 0°; the same spec without ground: aspect error 0.5", () => {
+    const g = signMetrics(groundBlog({ ground: true }), COVER_LAPTOP);
+    expect(g.aspectError).toBeLessThan(1e-9); expect(g.baselineDeg).toBeLessThan(1e-9); expect(g.verticalDeg).toBeLessThan(1e-9);
+    expect(signMetrics(groundBlog(), COVER_LAPTOP).aspectError).toBeCloseTo(0.5, 6);
+  });
+  it("a ground spec carries ground and bar", () => {
+    const s = groundBlog({ ground: true, bar: 2 });
+    expect([s.ground, s.bar]).toEqual([true, 2]);
+    expect("ground" in groundBlog() || "bar" in groundBlog()).toBe(false);
+  });
+  it("x-height of a ground spec at scale s is signXHeight·√½·s", () => {
+    const s = groundBlog({ ground: true });
+    for (const k of [COVER_LAPTOP, COVER_PHONE]) expect(signMetrics(s, k).xHeightPx).toBeCloseTo(signXHeight(s) * Math.SQRT1_2 * k, 9);
+  });
+  it("with bar the stroke is min(stroke·√2, bar·√½)·scale; without bar, stroke·√½·scale", () => {
+    const s = COVER_LAPTOP;
+    expect(signMetrics(chainsaw(20, { bar: 3 }), s).strokePx).toBeCloseTo(Math.min(2.4 * Math.SQRT2, 3 * Math.SQRT1_2) * s, 9);
+    expect(signMetrics(chainsaw(20, { bar: 5 }), s).strokePx).toBeCloseTo(Math.min(2.4 * Math.SQRT2, 5 * Math.SQRT1_2) * s, 9);
+    expect(signMetrics(chainsaw(20), s).strokePx).toBeCloseTo(2.4 * Math.SQRT1_2 * s, 9);
+  });
+  it("bar is ignored without stroke", () => {
+    expect(signMetrics(groundBlog({ bar: 100 }), COVER_LAPTOP).strokePx).toBeCloseTo(signMetrics(groundBlog(), COVER_LAPTOP).strokePx, 12);
+  });
+  it("tracer: a Chainsaw Carnage ground sign at cap 20 on a flat backing passes at 1.17 and 0.83", () => {
+    const s = tracer(20);
+    expect(checkSign(s, COVER_LAPTOP, [])).toEqual([]);
+    expect(checkSign(s, COVER_PHONE, [])).toEqual([]);
+  });
+  it("tracer: the same sign at cap 17 fails xHeight at 1.17", () => {
+    expect(checkSign(tracer(17), COVER_LAPTOP, []).map((v) => v.rule)).toEqual(["xHeight"]);
   });
 });

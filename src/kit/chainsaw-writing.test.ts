@@ -2,10 +2,29 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { pointInPolygon } from "../map/geo";
 import { WRITING_CAP } from "../scenes/sign-platform";
 import { checkLayouts } from "./legibility";
-import { CHAINSAW_FACE, CHAINSAW_X, marqueeLayout } from "./marquee";
+import type { GlyphLayout } from "./lettering";
+import { CHAINSAW_BAR, CHAINSAW_FACE, CHAINSAW_X, marqueeLayout } from "./marquee";
 import { CHAINSAW_WRITING } from "./chainsaw-writing";
+
+/** Median length, in cap heights, of the vertical ink runs (columns) longer than 0.03 cap, rasterizing `g` at `px` per cap; `runs` is how many. */
+function columnRuns(g: GlyphLayout, px = 300): { median: number; runs: number } {
+  const tris = g.fill.map((t) => t.flatMap((q) => [q.x, q.y])), ink = (x: number, y: number) => tris.some((t) => pointInPolygon(x, y, t));
+  const runs: number[] = [];
+  for (let i = Math.floor(g.box.x0 * px); i <= Math.ceil(g.box.x1 * px); i++) {
+    let n = 0;
+    for (let j = Math.floor(g.box.y0 * px) - 1; j <= Math.ceil(g.box.y1 * px) + 1; j++) {
+      if (ink((i + 0.5) / px, (j + 0.5) / px)) n++;
+      else { if (n / px > 0.03) runs.push(n / px); n = 0; }
+    }
+    if (n / px > 0.03) runs.push(n / px);
+  }
+  runs.sort((a, b) => a - b);
+  const k = runs.length >> 1;
+  return { median: runs.length % 2 ? runs[k]! : (runs[k - 1]! + runs[k]!) / 2, runs: runs.length };
+}
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const read = (rel: string) => readFileSync(`${ROOT}${rel}`, "utf8");
@@ -26,6 +45,15 @@ describe("WRITING in Chainsaw Carnage (#442)", () => {
   });
   it("CHAINSAW_X is the ink height of the shortest letter, within a hundredth of a cap", () => {
     expect(Math.min(...marqueeLayout(1, 0, CHAINSAW_WRITING).map((g) => g.box.y1 - g.box.y0))).toBeCloseTo(CHAINSAW_X, 2);
+  });
+  it("CHAINSAW_BAR is the thinnest horizontal bar: the median vertical ink run of the T and the G at 300 px per cap", () => {
+    const by = (c: string) => columnRuns(marqueeLayout(1, 0, CHAINSAW_WRITING).find((g) => g.char === c)!);
+    const t = by("T"), g = by("G");
+    expect(t.runs).toBeGreaterThan(0); expect(g.runs).toBeGreaterThan(0);
+    const m = Math.min(t.median, g.median);
+    expect(CHAINSAW_BAR).toBe(0.15);
+    expect(CHAINSAW_BAR).toBeGreaterThanOrEqual(m - 0.03);
+    expect(CHAINSAW_BAR).toBeLessThanOrEqual(m + 0.005);
   });
   it("the word holds 382 triangles", () => {
     expect(marqueeLayout(1, 0, CHAINSAW_WRITING).reduce((n, g) => n + g.quads.length, 0)).toBe(382);
