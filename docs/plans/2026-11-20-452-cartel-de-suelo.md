@@ -39,12 +39,36 @@
 
 ## Assumptions
 
-1. **Tracer-test fixture tone (contrast).** The issue's tracer has `officeDark` paint on a `whitewash` receiver and expects `checkSign(…, 1.17, [])` to give `[]`. But `contrastRatio(officeDark.top, whitewash.top)` is 3.30, below the 4.5 floor at 1.17. (Measured on the base branch: `top/top` 3.30, `dim/top` 4.83, `top/pale` 4.39, `top/glow` 4.69.) The floors are not loosened (inherited decision), and the materials stay the ones the issue names. So the word's triangles in the tracer carry `toneOffset: −2` (`officeDark` `dim`, 4.83:1). The test is about size ("bala trazadora del tamaño"); the real paint's contrast (`navy` on `timber`, ≥ 7:1) belongs to #454. Rejected: changing the receiver material (the issue names `whitewash`); expecting `[contrast]` at 1.17 (the criterion says it passes).
+1. **Tracer-test fixture tone (contrast).** The issue's tracer has `officeDark` paint on a `whitewash` receiver and expects `checkSign(…, 1.17, [])` to give `[]`. But `contrastRatio(officeDark.top, whitewash.top)` is 3.30, below the 4.5 floor at 1.17. (Measured on the base branch: `top/top` 3.30, `dim/top` 4.83, `top/pale` 4.39, `top/glow` 4.69.) The floors are not loosened (inherited decision), and the materials stay the ones the issue names. So the word's triangles in the tracer carry `toneOffset: −3`, which `stepTone` (`TONE_LADDER` deep, shade, dim, lit, down, **top**, …) takes from `top` to `dim`: 4.83:1. (−2 gives `lit`, 4.21: not enough.) The test is about size ("bala trazadora del tamaño"); the real paint's contrast (`navy` on `timber`, ≥ 7:1) belongs to #454. Rejected: changing the receiver material (the issue names `whitewash`); expecting `[contrast]` at 1.17 (the criterion says it passes).
 2. **`bar` without `stroke`.** `bar` only changes the `stroke !== undefined` branch of `strokePx`. A stroke-font sign (no `stroke`) ignores it. Rejected: making `signSpec` throw (nothing asks for it).
 3. **`signSpec` output.** `color`, `decal`, `ground` and `bar` are copied onto the spec only when given (the same `...(x === undefined ? {} : { x })` idiom as `xHeight`/`stroke`), so existing specs stay deep-equal to what they were.
 4. **The decal path ignores glyphs.** With `decal`, the contrast is computed from `spec.backing` alone, as the issue's algorithm says. A spec with no glyphs still gets that value, not `Infinity`.
 5. **Width of the tracer spec.** `width: SIGN_FONT.width` (1.35), as `sign-platform.ts` uses for `WRITING`. The backing margin (1·width) then fits inside the sheet's +3 u.
 6. **`CONTEXT.md`.** The Lettering and Legibility entries name `groundDiagonal` and the ground class (`ground`, `bar`, `decal`, `GROUND_ASPECT`) in a sentence each, so the glossary describes the present. The broader closing of the docs is #457's.
+7. **Equal-area receivers.** The issue fixes "la de mayor área proyectada". On a tie the first cover in `back` order wins (`reduce` keeps the first maximum). No test pins ties.
+8. **Every `mat === decal` face of the backing is paint.** This is the issue's algorithm verbatim ("para cada cara del respaldo … con `mat === spec.decal`"). A backing that has a structural solid in the decal's material with no receiver gets 1 and fails `contrast`. The builder of a decal sign (#454) keeps the paint material out of the rest of its backing. This is not tested here: it is a property of the algorithm the issue fixes.
+9. **Commit order.** Task 3 (`decal`) lands before Task 4 (`ground`). In between, a decal spec on a vertical plane is fully usable, and no sign in the tree uses either field yet, so each commit leaves a green, coherent oracle. They are split because a reviewer can judge the contrast rule apart from the metric rule.
+10. **Existing measures pinned.** The `sign-*` tests mostly assert `checkSign(...) === []`, which would let a metric drift that still clears its floor go unnoticed. So Task 3 adds a test to `legibility.test.ts` that pins `signMetrics(·, 1.17)` and `staticContrast` of `RESUME_SIGN`, `TINKER_SIGN` and `BLOG_SIGNS.wide/tall` to the values measured on the base branch (table below). Existing tests are not modified.
+
+## Measured on the base branch (scripts that only read)
+
+Tracer, cap 20, on `groundDiagonal` (stroke with `bar`, aspect with `ground`):
+
+| | 1.17 | floor | 0.83 | floor |
+| --- | --- | --- | --- | --- |
+| xHeight px | 12.74 | 12 | 9.04 | 8 |
+| stroke px = min(2.4·√2, 3·√½)·s | 2.48 | 2 | 1.76 | 1.5 |
+| air px | 3.59 | 2 | 2.55 | 1.5 |
+| baseline / vertical ° | 0 / 0 | 3 / 4 | 0 / 0 | |
+| aspect error (with ground) | 0 | 0.08 | 0 | |
+| contrast `officeDark.dim` / `whitewash.top` | 4.83 | 4.5 | 4.83 | 3 |
+
+Occlusion: `solids` is `[]`, so it is 0. Backing margin: the z −0.5 sheet is behind (t < 0), and the coplanar faces do not count as "front" (`h.t > 1e-6`, `legibility.ts` `marginOf`/`occlusionOf`). Cap 17 at 1.17: xHeight 10.83 (fails), stroke min(2.04·√2, 2.55·√½)·1.17 = 2.11 (passes), air 3.05.
+
+Existing signs, `signMetrics(·, 1.17)` and `staticContrast` (pin to 1e-9; the whole 64-bit value is taken from the probe output):
+- `RESUME_SIGN`: xHeight 14.2506, stroke 2.3085972, air 2.9539114255064196, aspect 0.010050506338837972, contrast 4.695562146225949.
+- `TINKER_SIGN`: xHeight 15.069607494509299, stroke 2.396067591626975, air 2.285331928448671, baseline 0.23067405316426817, vertical 3.0304011483583646, aspect 0.07731579344706507, contrast 8.062398849377823.
+- `BLOG_SIGNS.wide` / `.tall`: xHeight 14.50449, stroke 2.26044, air 2.46687956357404, aspect 0.010050506338873166, contrast 8.079749033163573.
 
 ---
 
@@ -72,7 +96,7 @@
 **Interfaces:**
 - Produces: `export const CHAINSAW_BAR = 0.15` (cap heights).
 
-- [ ] **Step 1: Write the failing test** `it("CHAINSAW_BAR is the thinnest horizontal bar: the median vertical ink run of the T and the G at 300 px per cap")`. A helper in the test, `columnRunMedian(g: GlyphLayout, px = 300): number`: for each pixel column i from `floor(box.x0·px)` to `ceil(box.x1·px)`, walk the rows j from `floor(box.y0·px) − 1` to `ceil(box.y1·px) + 1`. A pixel is ink when its centre `((i + .5)/px, (j + .5)/px)` lies in some triangle of `g.fill` (`pointInPolygon` from `src/map/geo`). Collect the lengths, in cap heights, of the runs of consecutive ink pixels longer than 0.03, and return their median (the mean of the two middle values for an even count). On `marqueeLayout(1, 0, CHAINSAW_WRITING)` take the glyphs `T` and `G`: `m = min(T, G)`. Expect `CHAINSAW_BAR` ≥ `m − 0.03` and ≤ `m + 0.005`, and `CHAINSAW_BAR` toBe `0.15`. Measured on the base branch: T 0.173, G 0.150 (≈ 0.1 s).
+- [ ] **Step 1: Write the failing test** `it("CHAINSAW_BAR is the thinnest horizontal bar: the median vertical ink run of the T and the G at 300 px per cap")`. A helper in the test, `columnRunMedian(g: GlyphLayout, px = 300): number`: for each pixel column i from `floor(box.x0·px)` to `ceil(box.x1·px)`, walk the rows j from `floor(box.y0·px) − 1` to `ceil(box.y1·px) + 1`. A pixel is ink when its centre `((i + .5)/px, (j + .5)/px)` lies in some triangle of `g.fill` (`pointInPolygon` from `src/map/geo`). Collect the lengths, in cap heights, of the runs of consecutive ink pixels longer than 0.03, and return their median (the mean of the two middle values for an even count). On `marqueeLayout(1, 0, CHAINSAW_WRITING)` take the glyphs `T` and `G`: `m = min(T, G)`. First assert that each glyph has at least one run (`runs.length > 0`, so no `NaN` median). Then expect `CHAINSAW_BAR` ≥ `m − 0.03` and ≤ `m + 0.005`, and `CHAINSAW_BAR` toBe `0.15`. Measured on the base branch: T 0.173, G 0.150 (≈ 0.1 s).
 - [ ] **Step 2:** `npx vitest run src/kit/chainsaw-writing.test.ts` → FAIL.
 - [ ] **Step 3:** Add the constant with the JSDoc from Global Constraints. It says how it was measured (median of the vertical ink runs, columns, > 0.03 cap, at 300 px per cap: G 0.150, T 0.173, R 0.193, N 0.217, W 0.260), and that the horizontal runs (rows) give `CHAINSAW_FACE`.
 - [ ] **Step 4:** → PASS.
@@ -97,7 +121,8 @@
   - «a decal spec with no decal face in the backing gives 1»: only the `whitewash` solid → 1.
   - «a receiver that is not coplanar is not the receiver»: the `whitewash` triangle at Z − 0.5 (the same x, y) → 1.
   - «of several receivers the largest projected area decides»: a `whitewash` triangle of medium size and a larger `foam` triangle, both coplanar and both containing the decal centroid → the `foam` contrast (`contrastRatio(officeDark.top, foam.top)`).
-  - «checkSign uses the decal contrast»: with the 3.30 pair at 1.17, `checkSign(spec, 1.17, [])` contains `{ rule: "contrast" }`, and its `value` ≈ the ratio above.
+  - «checkSign uses the decal contrast»: with the 3.30 pair at 1.17, `checkSign(spec, 1.17, []).find(v => v.rule === "contrast")?.value` ≈ the 3.30 ratio (`toBeCloseTo(…, 9)`). The value pins the decal reason, whatever other rules (aspect, before Task 4) also report.
+  - «existing signs measure as before»: assumption 10, the table under "Measured on the base branch". Use `toBeCloseTo(v, 9)` on each `signMetrics(·, 1.17)` field listed and on `staticContrast`.
   - «a color spec still measures against the nearest face behind the glyph»: a `diagonalWall`-type existing case. The test asserts that `staticContrast` on a `color: "cyan"` spec over an `officeDark` poly behind it equals `contrastRatio(ISO_COLORS.cyan, toneColor("officeDark", <tone of that face>))`. If the file already has this test, reuse it and do not add a duplicate.
 - [ ] **Step 2:** `npx vitest run src/kit/legibility.test.ts` → the new tests FAIL.
 - [ ] **Step 3: Implement.** `SignSpec` and `signSpec`'s options get `color?: AccentColor; decal?: Material` (import `Material`). In `signSpec`, `if ((o.color === undefined) === (o.decal === undefined)) throw new Error("legibility: a sign needs exactly one of color and decal")`, then copy whichever is given (assumption 3). `contrastOf(spec, back)`: if `spec.decal`, return `decalContrast(spec.decal, back)`. Otherwise use today's body with `ISO_COLORS[spec.color!]`. `decalContrast` follows the issue's algorithm:
@@ -132,7 +157,7 @@
   - «tracer: a Chainsaw Carnage ground sign at cap 20 on a flat backing passes at 1.17 and 0.83». Spec: `id: "ground"`, `text: "WRITING"`, `size: 20`, `width: SIGN_FONT.width`, `decal: "officeDark"`, `plane`, `style: "fill"`, `ground: true`, `layouts: marqueeLayout(20, 0, CHAINSAW_WRITING)`, `xHeight: CHAINSAW_X·20`, `stroke: CHAINSAW_FACE·20`, `bar: CHAINSAW_BAR·20`. The backing is three `kind: "ground"` solids. Let the ink box (union of `box`) grown by 3 u in text space be the rectangle a0..a1 × b0..b1, taken to the world as two triangles with `toWorld`:
     - (i) that rectangle in `whitewash` at z −0.5 (the points shifted in z);
     - (ii) the same two triangles in `whitewash` at z 0;
-    - (iii) every `fill` triangle of the layouts taken to the world in `officeDark`, `toneOffset: −2` (assumption 1).
+    - (iii) every `fill` triangle of the layouts taken to the world in `officeDark`, `toneOffset: −3` (assumption 1).
 
     Expect `checkSign(spec, 1.17, [])` toEqual `[]` and `checkSign(spec, 0.83, [])` toEqual `[]`.
   - «tracer: the same sign at cap 17 fails xHeight at 1.17»: `size`, `layouts`, `xHeight`, `stroke` and `bar` at 17, with the backing rebuilt the same way → `checkSign(spec, 1.17, []).map(v => v.rule)` toEqual `["xHeight"]` (measured: 10.83 px < 12).
@@ -144,3 +169,28 @@
   Update the `SignSpec` and `signMetrics` JSDocs: `ground` is a sign painted on a horizontal plane, whose expected aspect is `GROUND_ASPECT`; `bar` is the thickness of the horizontal strokes, measured along v. Then the two `CONTEXT.md` sentences.
 - [ ] **Step 4:** `npx vitest run src/kit` → PASS. Then `npm test` and `npm run typecheck` → green. `git diff --stat` shows no changes to `src/scenes/sign-*.test.ts` or `src/lab/signs.test.ts`.
 - [ ] **Step 5:** Commit `feat(#452): ground signs, GROUND_ASPECT and bar in signMetrics`.
+
+## Grilling
+
+One round, 16 questions (griller model: fable). No second round: the revision fixed one value and added one test and one guard. No step was added or removed, and no seam changed.
+
+| # | Answer | Source |
+| --- | --- | --- |
+| 1 | The issue does not mention a tone offset on the tracer, and the contrast fails as literally written: **technical assumption** (a test fixture; no user-visible product changes), assumption 1. `stepTone` clamps the index into `TONE_LADDER`: from `top`, −2 gives `lit` (4.21, not enough) and −3 gives `dim` (4.83). The plan used −2 by mistake; it is now −3. | CODE: `src/map/palette-iso.ts:119-125` (`TONE_LADDER`, `stepTone`); `src/iso/solids.ts:328-333` (a `ground` face gets `shadeTone(normal)` = `top` and `toneOffset` from the tri) |
+| 2 | Table "Measured on the base branch" (added). | Probe on `src/kit/legibility.ts` `signMetrics` as it is today |
+| 3 | Today's fill branch is already `Math.min(...G.flatMap((g) => [len(g, spec.stroke!, 0), len(g, 0, spec.stroke!)]))`. | CODE: `src/kit/legibility.ts` `signMetrics`, the `strokePx` line |
+| 4 | `grep -rn "\.color\b"` over `src` finds no `SignSpec.color` reader outside `legibility.ts`. The issue says the same. | ISSUE: "Todo el código que hoy lee `spec.color` (solo `contrastOf` en `legibility.ts`) se adapta; `src/lab/crop.ts` no lee `spec.color` (lee `accents`)." |
+| 5 | The issue's algorithm counts every face whose `mat === decal`: assumption 8. | ISSUE: "para cada cara del respaldo (`covers(spec.backing)`) con `mat === spec.decal` … una cara decal sin receptora vale 1" |
+| 6 | Occlusion and margin count only `h.t > 1e-6` as front, so coplanar faces do not count. Solids are `[]` in the tracer. | CODE: `src/kit/legibility.ts` `occlusionOf`, `marginOf` |
+| 7 | `depth(f: Face, p: Vec3)` exists: > 0 means in front of `p`, < 0 behind. | CODE: `src/kit/legibility.ts` (`const depth = …`, above `hits`) |
+| 8 | `Cover = { face: Face; poly: number[] }`; `pointInPolygon(x, y, flat)`. The fixture puts the centroid strictly inside, so edge behaviour does not matter. | CODE: `src/kit/legibility.ts` (`type Cover`, `covers`); `src/map/geo.ts` `pointInPolygon` |
+| 9 | The scene tests mostly assert `checkSign(...) === []`: assumption 10, a pin test (added). | CODE: `src/scenes/sign-*.test.ts` |
+| 10 | Three call sites, all with `color`: `sign-crown.ts:49`, `sign-platform.ts:73`, `sign-tinker.ts:108`. | CODE: `grep -rn "signSpec(" src` |
+| 11 | Largest area is the issue's rule. A tie keeps the first in `back` order: assumption 7. | ISSUE: "si hay varias, la de mayor área proyectada (shoelace sobre `poly`)" |
+| 12 | The window and the 0.03 filter come from the issue. A guard for runs > 0 is added. | ISSUE: "comprueba que `CHAINSAW_BAR` está en [min(T, G) − 0.03, min(T, G) + 0.005]"; "corridas … mayores de 0.03 caja" |
+| 13 | `GlyphLayout.fill: Vec2[][]` is in text units at `size`, since `marqueeLayout` scales by `size`. | CODE: `src/kit/lettering.ts:95` (`GlyphLayout`); `src/kit/marquee.ts` `marqueeLayout` (`s = q => (q.x … ) * size`) |
+| 14 | `CONTEXT.md` is in English. No ADR governs the oracle (0004 is about the site's placement), and ADR 0005 is #457's. | DOC: `CONTEXT.md` (English); story #451 plan D8 |
+| 15 | The test reads the value of the `contrast` violation (revised). | Plan Task 3 |
+| 16 | Assumption 9. | — |
+
+Assumptions: 1 (corrected), 7, 8, 9, 10 added. Spec ambiguities: none. Follow-up issues opened: none.
