@@ -19,7 +19,7 @@ import { world } from "./world";
 const WATER = new Set(["water", "sea", "shore", "abyss"]);
 type Static = { b: Bounds; sb: ReturnType<typeof screenBounds>; sh: Vec2[] };
 /** The Writing board (#442: the one solid left of the platform) at both sites (#427): it left the static world for platformAnimator, and the lanes must clear it at either site. */
-const platforms = (): Solid[] => (["wide", "tall"] as const).flatMap((site) => { const out: Solid[] = []; seaPlatformAt(out, [], site); return out; });
+const platforms = (): Solid[] => (["wide", "tall"] as const).flatMap((site) => { const out: Solid[] = []; seaPlatformAt(out, site); return out; });
 const staticsOf = (solids: Solid[]): Static[] => solids.map((s) => { const b = bounds(s); return { b, sb: screenBounds(b), sh: screenHull(b) }; });
 /** Alignment box of the freighter centered at `p` (z −1..13) and a check that no static solid overlapping it on screen covers it. */
 const expectNotBehind = (statics: Static[], p: { x: number; y: number }, heading: number): void => {
@@ -37,7 +37,7 @@ describe("route", () => {
     const end = LANE_OUT[LANE_OUT.length - 1]!;
     expect(inCoverQuad(end.x, end.y)).toBe(false);
     const L = laneLength("out");
-    expect(Math.abs(L - 560.7)).toBeLessThan(5); // slack to move vertices up to 4 u
+    expect(Math.abs(L - 563.1)).toBeLessThan(5); // #454: 560.7 → 563.1 with the two vertices moved 15 u east and the sea end re-solved; slack to move vertices up to 4 u
     for (let d = 0; d <= L; d += 1) {
       const p = laneAt("out", d);
       const t = inWorld(p.x, p.y) ? terrainAt(p.x, p.y) : bleedTerrainAt(p.x, p.y);
@@ -532,7 +532,7 @@ describe("zone signs and the lanes (#390, #394)", () => {
   it("no ship piece or launch piece crosses the Writing word at any pose of the heave cycle, at either site (#444)", () => {
     const signs = (["wide", "tall"] as const).flatMap((site) => Array.from({ length: 8 }, (_, k) => {
       const dz = heaveAt((k * HEAVE.periodMs) / 8);
-      return [`${site} phase ${k}/8`, signAt(site, dz)] as const;
+      return [`${site} phase ${k}/8`, signAt(site, { dz, pitch: 0, roll: 0 })] as const;
     }));
     const { samples, bad } = shipsCrossing(signs);
     expect(samples).toBeGreaterThan(0);

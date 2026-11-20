@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { spotOf } from "../iso/spot-fixtures";
-import type { Accent } from "../iso/accent";
 import { buildRenderList } from "../iso/render-list";
 import { bounds, isFlat, type Solid } from "../iso/solids";
 import { HEADLAND_SHIFT, ZONE_SPLIT_X, abyssX, inHeadland, worldZoneAt } from "../map/geo";
@@ -14,8 +13,8 @@ import { headlandZ, terrainAt } from "./terrain";
 
 const scene = (): SeaScene => sea(createRng(7));
 /** What `seaPlatformAt` builds on its own at `site`. */
-const platform = (site: WritingSite) => { const out: Solid[] = [], accents: Accent[] = []; seaPlatformAt(out, accents, site); return { out, accents }; };
-const SEA_MATS: readonly Material[] = ["rock", "whitewash", "rust", "steel", "glass", "hull", "deck", "foam", "leaf", "leafDark"]; // #427: the Writing platform (since #442 one officeDark board) left sea() for platformAnimator
+const platform = (site: WritingSite) => { const out: Solid[] = []; seaPlatformAt(out, site); return out; };
+const SEA_MATS: readonly Material[] = ["rock", "whitewash", "rust", "steel", "glass", "hull", "deck", "foam", "leaf", "leafDark"]; // #427: the Writing platform (since #454 one timber raft) left sea() for platformAnimator
 const water = new Set(["water", "sea", "shore", "abyss", "reef"]);
 type Cyl = Extract<Solid, { kind: "cylinder" }>;
 type Prism = Extract<Solid, { kind: "prism" }>;
@@ -108,11 +107,9 @@ describe("sea", () => {
   it("sea() no longer builds the Writing platform (#427): it lives in platformAnimator", () => {
     const s = scene(), w = world(7);
     for (const site of ["wide", "tall"] as const) {
-      const { out, accents } = platform(site);
-      for (const x of out) { expect(s.solids, site).not.toContainEqual(x); expect(w.solids, site).not.toContainEqual(x); }
-      for (const a of accents) { expect(s.accents, site).not.toContainEqual(a); expect(w.accents, site).not.toContainEqual(a); }
+      for (const x of platform(site)) { expect(s.solids, site).not.toContainEqual(x); expect(w.solids, site).not.toContainEqual(x); }
     }
-    expect(s.solids.some((x) => x.mat === "boxGrey" || x.mat === "officeDark")).toBe(false);
+    expect(s.solids.some((x) => x.mat === "boxGrey" || x.mat === "officeDark" || x.mat === "timber")).toBe(false);
   }, 30_000); // toContainEqual deep-compares every platform piece against every solid of the world: ~6 s
 
   it("buoys and wreck on the water; the wreck's buoy has a fixed light and a foam ring", () => {

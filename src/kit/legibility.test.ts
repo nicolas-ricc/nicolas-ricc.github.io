@@ -387,8 +387,9 @@ describe("decal signs (#452)", () => {
     const pinned = [
       { s: RESUME_SIGN, m: { xHeightPx: 14.2506, strokePx: 2.3085972, airPx: 2.9539114255064196, aspectError: 0.010050506338837972 }, c: 4.695562146225949 },
       { s: TINKER_SIGN, m: { xHeightPx: 15.069607494509299, strokePx: 2.396067591626975, airPx: 2.285331928448671, baselineDeg: 0.23067405316426817, verticalDeg: 3.0304011483583646, aspectError: 0.07731579344706507 }, c: 8.062398849377823 },
-      { s: BLOG_SIGNS.wide, m: { xHeightPx: 14.50449, strokePx: 2.26044, airPx: 2.46687956357404, aspectError: 0.010050506338873166 }, c: 8.079749033163573 },
-      { s: BLOG_SIGNS.tall, m: { xHeightPx: 14.50449, strokePx: 2.26044, airPx: 2.46687956357404, aspectError: 0.010050506338873166 }, c: 8.079749033163573 },
+      // #454: the raft's WRITING_CAP 20 as a navy decal on timber (the plain board at 11.5 measured 14.50 / 2.26 / 2.47 / contrast 8.08)
+      { s: BLOG_SIGNS.wide, m: { xHeightPx: 12.740649983419262, strokePx: 2.4819448019648016, airPx: 3.593354358337664, aspectError: 0 }, c: 8.040217301353456 },
+      { s: BLOG_SIGNS.tall, m: { xHeightPx: 12.740649983419262, strokePx: 2.4819448019648016, airPx: 3.593354358337664, aspectError: 0 }, c: 8.040217301353456 },
     ];
     for (const { s, m, c } of pinned) {
       const got = signMetrics(s, COVER_LAPTOP) as Record<string, number>;

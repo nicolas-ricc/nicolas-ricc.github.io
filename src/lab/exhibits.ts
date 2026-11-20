@@ -263,9 +263,9 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "convoy", title: "Convoy with barge", zone: "blog", group: "sea", kind: "piece", build: vessel("barge"), pad: "water" },
   { id: "lancha", title: "Tigre river bus", zone: "blog", group: "sea", kind: "piece", build: vessel("ferry"), pad: "water" },
   { id: "plataforma", title: "Writing platform sign", zone: "blog", group: "sea", kind: "piece", build: seaPlatform, pad: "water" },
-  // h 1 (both): the crop holds only the board, top −0.4: the least positive integer not below it. The board of `writingSite` and its paint are added by `contextScene`, and the world's platform animator is dropped (`contextAnimators`): no `build`.
-  { id: "plataforma-escena", title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 536, y0: 71, x1: 604, y1: 139 }, h: 1, sign: BLOG_SIGNS.wide, writingSite: "wide" },
-  { id: "plataforma-escena-angosta", title: "Writing platform sign in its scene, tall site", zone: "blog", group: "sea", kind: "context", box: { x0: 406, y0: 366, x1: 474, y1: 434 }, h: 1, sign: BLOG_SIGNS.tall, writingSite: "tall" },
+  // h 1 (both): the crop holds only the raft, top −0.4: the least positive integer not below it. Boxes: the plan of `bounds(raftAt(site, REST_POSE))` ± 3 u, rounded outward to integers (wide 528.1..611.9 × 63.1..146.9, tall 398.1..481.9 × 358.1..441.9). The raft of `writingSite` is added by `contextScene`, and the world's platform animator is dropped (`contextAnimators`): no `build`.
+  { id: "plataforma-escena", title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 525, y0: 60, x1: 615, y1: 150 }, h: 1, sign: BLOG_SIGNS.wide, writingSite: "wide" },
+  { id: "plataforma-escena-angosta", title: "Writing platform sign in its scene, tall site", zone: "blog", group: "sea", kind: "context", box: { x0: 395, y0: 355, x1: 485, y1: 445 }, h: 1, sign: BLOG_SIGNS.tall, writingSite: "tall" },
 ];
 
 /** The exhibit of the hash (`#id` or `id`); empty or unknown, the first. */

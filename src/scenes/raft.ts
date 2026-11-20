@@ -125,7 +125,9 @@ export function raftAt(site: WritingSite, pose: RaftPose = REST_POSE): Solid & {
   const plan = buildRaft(), plane = restPlane(site), faces: MeshFace[] = [], at = (a: number, b: number, z: number): Vec3 => { const q = toWorld(plane, a, b); return v3(q.x, q.y, z); };
   for (const b of plan.beams) faces.push(...prism(plane, b, BEAM_Z, DECK_Z, -2));
   const s = plan.sheet;
-  faces.push({ pts: [at(s.a0, s.b0, DECK_Z), at(s.a0, s.b1, DECK_Z), at(s.a1, s.b1, DECK_Z), at(s.a1, s.b0, DECK_Z)], toneOffset: -5 });
+  // The back sheet spans the plank block in b when it is longer than the sheet: the oracle's backing needs a visible face behind the margin row beyond the far plank edge, and the view ray crosses z −0.9 about 1 u further away.
+  const sb0 = Math.min(s.b0, plan.planks.at(-1)!.b0), sb1 = Math.max(s.b1, plan.planks[0]!.b1);
+  faces.push({ pts: [at(s.a0, sb0, DECK_Z), at(s.a0, sb1, DECK_Z), at(s.a1, sb1, DECK_Z), at(s.a1, sb0, DECK_Z)], toneOffset: -5 });
   const decals = decalsPerPlank(plan.planks);
   plan.planks.forEach((p, k) => {
     faces.push(...prism(plane, p, DECK_Z, BOARD_TOP, p.tone));

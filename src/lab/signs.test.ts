@@ -13,7 +13,7 @@ import { EXHIBITS } from "./exhibits";
 const contexts = EXHIBITS.flatMap((e) => (e.kind === "context" ? [e] : []));
 const { scene } = assembleWorld(undefined, { reducedMotion: false });
 /** The Writing platform at `site`: since #427 it is not in `scene.solids` but in platformAnimator. */
-const platform = (site: WritingSite, dz = 0): Solid[] => { const out: Solid[] = []; seaPlatformAt(out, [], site, dz); return out; };
+const platform = (site: WritingSite, dz = 0): Solid[] => { const out: Solid[] = []; seaPlatformAt(out, site, { dz, pitch: 0, roll: 0 }); return out; };
 /** `b` grown by `d` screen units (scale 1) on each side. */
 const grow = (b: ScreenBounds, d: number): ScreenBounds => ({ minX: b.minX - d, minY: b.minY - d, maxX: b.maxX + d, maxY: b.maxY + d });
 
@@ -66,7 +66,7 @@ describe("sign gate: level 2 across the heave cycle of the Writing board (#444)"
       expect(cropSolids(platform(site), e.box)).toEqual(platform(site));
     });
     for (let k = 0; k < 8; k++) {
-      const dz = heaveAt((k * HEAVE.periodMs) / 8), sign = signAt(site, dz), board = platform(site, dz);
+      const dz = heaveAt((k * HEAVE.periodMs) / 8), sign = signAt(site, { dz, pitch: 0, roll: 0 }), board = platform(site, dz);
       const near = [...scene.solids, ...board].filter((s) => overlaps(screenBounds(bounds(s)), grow(signBox(sign), 4)));
       for (const scale of [COVER_LAPTOP, COVER_PHONE]) {
         it(`phase ${k}/8 (dz ${dz.toFixed(2)}): checkSign at ${scale} = [] in the crop and against the whole world`, () => {

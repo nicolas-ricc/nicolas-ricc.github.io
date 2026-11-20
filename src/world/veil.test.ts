@@ -117,13 +117,12 @@ describe("accentsByZone", () => {
   });
 });
 
-describe("Writing platform accents (#390)", () => {
-  it.each(["wide", "tall"] as const)("every accent of the Writing board (the painted word's polys) is Blog at the %s site (#427, #442)", (site) => {
-    const out: Solid[] = [], accents: Accent[] = [];
-    seaPlatformAt(out, accents, site);
-    expect(accents.length).toBeGreaterThan(0);
-    expect(accents.every((a) => a.kind === "poly")).toBe(true);
-    for (const a of accents) expect(accentZone(a)).toBe("blog");
+describe("Writing raft accents (#390, #454)", () => {
+  it.each(["wide", "tall"] as const)("the Writing raft at the %s site adds no accent: its word is a navy decal of the mesh", (site) => {
+    const out: Solid[] = [];
+    seaPlatformAt(out, site);
+    expect(out).toHaveLength(1);
+    expect(out[0]!.kind).toBe("mesh");
   });
 });
 
