@@ -125,7 +125,7 @@ const restFacesAt = (site: WritingSite): MeshFace[] => {
   faces = [];
   for (const b of plan.beams) faces.push(...prism(plane, b, BEAM_Z, DECK_Z, -2));
   const s = plan.sheet;
-  // The back sheet spans the plank block in b when it is longer than the sheet: the oracle's backing needs a visible face behind the margin row beyond the far plank edge, and the view ray crosses z -0.9 about 1 u further away.
+  // The back sheet spans the plank block in b when it is longer than the sheet: the oracle's backing needs a visible face behind the margin row beyond the far plank edge, and the view ray crosses z −0.9 about 1 u further away.
   const sb0 = Math.min(s.b0, plan.planks.at(-1)!.b0), sb1 = Math.max(s.b1, plan.planks[0]!.b1);
   faces.push({ pts: [at(s.a0, sb0, DECK_Z), at(s.a0, sb1, DECK_Z), at(s.a1, sb1, DECK_Z), at(s.a1, sb0, DECK_Z)], toneOffset: -5 });
   const decals = decalsPerPlank();
@@ -141,8 +141,8 @@ const restFacesAt = (site: WritingSite): MeshFace[] => {
 };
 
 /**
- * The raft at a site, posed: one timber mesh of 3 beams (-2), the sheet (-5) and, back to front, each plank's 6 faces and its navy decals (the plank's tone).
- * The unposed faces are built once per site; every call maps them through one `rigid` about (site, z -1) into fresh faces. A decal is wound to face +z at rest, like the top it lies on.
+ * The raft at a site, posed: one timber mesh of 3 beams (−2), the sheet (−5) and, back to front, each plank's 6 faces and its navy decals (the plank's tone).
+ * The unposed faces are built once per site; every call maps them through one `rigid` about (site, z −1) into fresh faces. A decal is wound to face +z at rest, like the top it lies on.
  */
 export function raftAt(site: WritingSite, pose: RaftPose = REST_POSE): Solid & { kind: "mesh" } {
   const c = centreOf(site);

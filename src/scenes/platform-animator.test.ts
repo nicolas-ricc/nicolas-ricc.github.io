@@ -79,12 +79,12 @@ describe("platformAnimator heaves, pitches and rolls the raft (#444, #456)", () 
 
   it("tick(100) over 30 s reports the layer exactly when poseAt(clock) changes, and the layer is seaPlatformAt at poseAt(clock)", () => {
     const a = platformAnimator(MOVING);
-    let n = 0, prev = poseAt(0), last = solidsOf(a);
+    let n = 0, prev = poseAt(0), last: readonly unknown[] = solidsOf(a);
     for (let i = 1; i <= 300; i++) {
       const t = i * 100, now = poseAt(t), r = a.tick(100);
       expect(r.size > 0, `${t}`).toBe(!same(now, prev));
       // a deep compare of the ~1000-face mesh costs ~20 ms: every 10th report is compared in full, the others must be a new array
-      if (r.size > 0) { expect(r).toEqual(BOTH); if (n % 10 === 0) expect(pose(a), `${t}`).toEqual(at("wide", now)); else expect(solidsOf(a)).not.toBe(last); n++; }
+      if (r.size > 0) { expect(r).toEqual(BOTH); if (n % 10 === 0) expect(pose(a), `${t}`).toEqual(at("wide", now)); else { const m = solidsOf(a)[0], want = built("wide", now).solids[0]; expect(m).not.toBe(last[0]); if (m?.kind !== "mesh" || want?.kind !== "mesh") throw new Error("raft"); expect([m.faces[0], m.faces.at(-1)], `${t}`).toEqual([want.faces[0], want.faces.at(-1)]); } n++; }
       last = solidsOf(a);
       prev = now;
     }
