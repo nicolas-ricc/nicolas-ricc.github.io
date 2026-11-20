@@ -76,6 +76,9 @@ export const COVER_LAPTOP = 1.17;
 /** Cover scale of a 390×750 phone. */
 export const COVER_PHONE = 0.83;
 
+/** Expected aspect (projected over flat) of a ground sign: a word on the horizontal plane (`groundDiagonal`) projects at half its flat aspect, √½/√2. */
+export const GROUND_ASPECT = Math.SQRT1_2 / Math.SQRT2;
+
 /** Level-2 rules per cover scale (x-height, stroke and air in screen px, WCAG contrast), plus projection limits: baseline (facade apart), vertical and aspect tolerance, backing margin in w, occluded share. */
 export const SIGN_RULES = {
   [COVER_LAPTOP]: { xHeightPx: 12, strokePx: 2, airPx: 2, contrast: 4.5 },
@@ -90,9 +93,10 @@ export interface SignGlyph { char: string; plane: TextPlane; layout: GlyphLayout
  * A sign to audit: text at `size` and `width`, per-glyph placement and the solids that back it; exactly one of `color` (accent ink, measured against the face behind it)
  * and `decal` (ink that is a material of the backing, measured against the coplanar face that receives it). `facade` relaxes the baseline limit.
  * `xHeight` (text units) replaces the font grid's x-height, for a word in capitals; `stroke` (text units) is the face width of filled letters,
- * whose quads are a triangulation rather than stroke segments.
+ * whose quads are a triangulation rather than stroke segments. `ground` marks a sign painted on a horizontal plane, whose expected aspect is `GROUND_ASPECT`, not 1;
+ * `bar` (text units, with `stroke`) is the thickness of the horizontal strokes, measured along v.
  */
-export interface SignSpec { id: string; text: string; size: number; width: number; color?: AccentColor; decal?: Material; facade?: boolean; xHeight?: number; stroke?: number; glyphs: SignGlyph[]; backing: Solid[] }
+export interface SignSpec { id: string; text: string; size: number; width: number; color?: AccentColor; decal?: Material; facade?: boolean; ground?: true; xHeight?: number; stroke?: number; bar?: number; glyphs: SignGlyph[]; backing: Solid[] }
 
 /** The x-height of `spec` in text units: its own `xHeight`, else the font grid's at its size. */
 export const signXHeight = (spec: SignSpec): number => spec.xHeight ?? (GRID.xHeight * spec.size) / GRID.cap;
@@ -102,8 +106,8 @@ export const signXHeight = (spec: SignSpec): number => spec.xHeight ?? (GRID.xHe
  * the world. `layouts` replaces the stroke font's layout (marquee letters); `xHeight` and `stroke` go to the spec as they are.
  */
 export function signSpec(o: {
-  id: string; text: string; size: number; width: number; color?: AccentColor; decal?: Material; plane: TextPlane; style: "stroke" | "fill"; backing: Solid[]; facade?: boolean;
-  glyphPlane?: (i: number, g: GlyphLayout) => TextPlane; layouts?: GlyphLayout[]; xHeight?: number; stroke?: number;
+  id: string; text: string; size: number; width: number; color?: AccentColor; decal?: Material; plane: TextPlane; style: "stroke" | "fill"; backing: Solid[]; facade?: boolean; ground?: true;
+  glyphPlane?: (i: number, g: GlyphLayout) => TextPlane; layouts?: GlyphLayout[]; xHeight?: number; stroke?: number; bar?: number;
 }): SignSpec {
   if ((o.color === undefined) === (o.decal === undefined)) throw new Error("legibility: a sign needs exactly one of color and decal");
   const glyphs = (o.layouts ?? layoutText(o.text, o.size, o.width)).map((layout, i): SignGlyph => {
@@ -111,7 +115,7 @@ export function signSpec(o: {
     return { char: layout.char, plane, layout, quads: (o.style === "stroke" ? layout.quads : layout.fill).map((q) => q.map(w)), counters: layout.counters.map((c) => ({ at: w(c.at), r: c.r })) };
   });
   const { id, text, size, width, backing } = o;
-  return { id, text, size, width, ...(o.color === undefined ? {} : { color: o.color }), ...(o.decal === undefined ? {} : { decal: o.decal }), ...(o.facade ? { facade: true } : {}), ...(o.xHeight === undefined ? {} : { xHeight: o.xHeight }), ...(o.stroke === undefined ? {} : { stroke: o.stroke }), glyphs, backing };
+  return { id, text, size, width, ...(o.color === undefined ? {} : { color: o.color }), ...(o.decal === undefined ? {} : { decal: o.decal }), ...(o.facade ? { facade: true } : {}), ...(o.ground ? { ground: true as const } : {}), ...(o.xHeight === undefined ? {} : { xHeight: o.xHeight }), ...(o.stroke === undefined ? {} : { stroke: o.stroke }), ...(o.bar === undefined ? {} : { bar: o.bar }), glyphs, backing };
 }
 
 const toSrgb = (c: number) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
@@ -132,7 +136,8 @@ const deg = (rad: number) => (rad * 180) / Math.PI;
 
 /**
  * Projected metrics of a sign at a screen `scale`: x-height, stroke and air in px (minima), baseline and vertical angles in degrees, aspect error (maxima).
- * With `spec.stroke` the stroke is that face width projected along the plane's two axes, not the quads' sides.
+ * With `spec.stroke` the stroke is that face width projected along u and the horizontal-stroke thickness `spec.bar ?? spec.stroke` along v (the smaller of the two), not the quads' sides; `bar` is ignored without `stroke`.
+ * The aspect error is measured against `GROUND_ASPECT` for a `ground` sign, else against 1.
  */
 export function signMetrics(spec: SignSpec, scale: number): { xHeightPx: number; strokePx: number; airPx: number; baselineDeg: number; verticalDeg: number; aspectError: number } {
   const xH = signXHeight(spec), G = spec.glyphs;
@@ -140,7 +145,7 @@ export function signMetrics(spec: SignSpec, scale: number): { xHeightPx: number;
   const proj = (g: SignGlyph) => g.quads.map((q) => q.map(project));
   const xHeightPx = Math.min(...G.map((g) => Math.hypot(at(g, 0, xH).x - at(g, 0, 0).x, at(g, 0, xH).y - at(g, 0, 0).y) * scale));
   const len = (g: SignGlyph, a: number, b: number) => Math.hypot(at(g, a, b).x - at(g, 0, 0).x, at(g, a, b).y - at(g, 0, 0).y) * scale;
-  const strokePx = spec.stroke !== undefined ? Math.min(...G.flatMap((g) => [len(g, spec.stroke!, 0), len(g, 0, spec.stroke!)])) : Math.min(...G.flatMap(proj).flatMap((q) => q.map((c, i) => Math.hypot(c.x - q[(i + 1) % q.length]!.x, c.y - q[(i + 1) % q.length]!.y))).map((d) => d * scale));
+  const strokePx = spec.stroke !== undefined ? Math.min(...G.flatMap((g) => [Math.min(len(g, spec.stroke!, 0), len(g, 0, spec.bar ?? spec.stroke!))])) : Math.min(...G.flatMap(proj).flatMap((q) => q.map((c, i) => Math.hypot(c.x - q[(i + 1) % q.length]!.x, c.y - q[(i + 1) % q.length]!.y))).map((d) => d * scale));
   let airPx = Infinity;
   for (let i = 0; i + 1 < G.length; i++) for (const a of proj(G[i]!)) for (const b of proj(G[i + 1]!)) airPx = Math.min(airPx, polygonDistance(a, b) * scale);
   const pts = G.map((g) => at(g, g.layout.left, 0)), n = pts.length;
@@ -154,7 +159,7 @@ export function signMetrics(spec: SignSpec, scale: number): { xHeightPx: number;
   const aspectError = Math.max(...G.map((g) => {
     const { x0, y0, x1, y1 } = g.layout.box, c = [at(g, x0, y0), at(g, x1, y0), at(g, x1, y1), at(g, x0, y1)];
     const xs = c.map((q) => q.x), ys = c.map((q) => q.y);
-    return Math.abs((Math.max(...ys) - Math.min(...ys)) / (Math.max(...xs) - Math.min(...xs)) / ((y1 - y0) / (x1 - x0)) - 1);
+    return Math.abs((Math.max(...ys) - Math.min(...ys)) / (Math.max(...xs) - Math.min(...xs)) / ((y1 - y0) / (x1 - x0)) / (spec.ground ? GROUND_ASPECT : 1) - 1);
   }));
   return { xHeightPx, strokePx, airPx, baselineDeg, verticalDeg, aspectError };
 }
