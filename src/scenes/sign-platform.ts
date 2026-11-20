@@ -12,15 +12,40 @@ import { BOARD_TOP, LAYOUT, PLATFORM_SITES, REST_POSE, WRITING_CAP, raftAt, raft
 export { BOARD_TOP, PLATFORM_SITES, REST_POSE, WRITING_CAP };
 export type { RaftPose, WritingSite };
 
-/** The raft heaves (up and down, no pitch or roll): amplitude in world units and period in ms. */
+/** The raft heaves (up and down): amplitude in world units and period in ms. */
 export const HEAVE: Readonly<{ amp: number; periodMs: number }> = Object.freeze({ amp: 0.15, periodMs: 6700 });
+/** The raft pitches (about `RAFT_N`): amplitude in radians (1.5°) and period in ms. */
+export const PITCH: Readonly<{ amp: number; periodMs: number }> = Object.freeze({ amp: (1.5 * Math.PI) / 180, periodMs: 9100 });
+/** The raft rolls (about `RAFT_U`): amplitude in radians (1°) and period in ms. */
+export const ROLL: Readonly<{ amp: number; periodMs: number }> = Object.freeze({ amp: (1.0 * Math.PI) / 180, periodMs: 7300 });
 /** The heave is quantized to multiples of this, so a pose can be cached (at most 31 per site). */
 export const HEAVE_STEP = 0.01;
-/** The heave offset at time `tMs`: a sine reduced modulo the period (so a long-running clock keeps its precision), rounded to HEAVE_STEP. */
-export const heaveAt = (tMs: number): number => {
-  const phase = ((tMs % HEAVE.periodMs) + HEAVE.periodMs) % HEAVE.periodMs;
-  return Math.round((HEAVE.amp * Math.sin((2 * Math.PI * phase) / HEAVE.periodMs)) / HEAVE_STEP) * HEAVE_STEP;
+/** Pitch and roll are quantized to multiples of this (0.1°). */
+export const ANGLE_STEP = (0.1 * Math.PI) / 180;
+
+/** A sine of `wave` at phase 0, reduced modulo the period (so a long-running clock keeps its precision), rounded to multiples of `step`. */
+const quantizedSine = (wave: Readonly<{ amp: number; periodMs: number }>, step: number, tMs: number): number => {
+  const phase = ((tMs % wave.periodMs) + wave.periodMs) % wave.periodMs;
+  return Math.round((wave.amp * Math.sin((2 * Math.PI * phase) / wave.periodMs)) / step) * step;
 };
+
+/** The heave offset at time `tMs`, rounded to HEAVE_STEP. */
+export const heaveAt = (tMs: number): number => quantizedSine(HEAVE, HEAVE_STEP, tMs);
+/** The pitch at time `tMs`, rounded to ANGLE_STEP. */
+export const pitchAt = (tMs: number): number => quantizedSine(PITCH, ANGLE_STEP, tMs);
+/** The roll at time `tMs`, rounded to ANGLE_STEP. */
+export const rollAt = (tMs: number): number => quantizedSine(ROLL, ANGLE_STEP, tMs);
+/** The raft's pose at time `tMs`: heave, pitch and roll, all at rest at t = 0. */
+export const poseAt = (tMs: number): RaftPose => ({ dz: heaveAt(tMs), pitch: pitchAt(tMs), roll: rollAt(tMs) });
+/** The pose repeats every this many ms (the lcm of the three periods). */
+export const POSE_CYCLE_MS = 44_508_100;
+
+/** Poses to check over the cycle: rest, the 8 corners of the pose cube, then 8 instants of the motion. Frozen. */
+export const CYCLE_POSES: readonly Readonly<RaftPose>[] = Object.freeze([
+  REST_POSE,
+  ...([-1, 1] as const).flatMap((a) => ([-1, 1] as const).flatMap((b) => ([-1, 1] as const).map((c) => ({ dz: a * HEAVE.amp, pitch: b * PITCH.amp, roll: c * ROLL.amp })))),
+  ...[1, 2, 3, 4, 5, 6, 7, 8].map((k) => poseAt(k * 7919)),
+]);
 
 /** The raft's plan at the origin: the 4 corners of its envelope (planks with ragged ends and beam overhang) through the rest plane, moved to (0, 0). Order (a0, b0), (a1, b0), (a1, b1), (a0, b1). */
 export const PLATFORM_DECK: readonly Vec2[] = (() => {
