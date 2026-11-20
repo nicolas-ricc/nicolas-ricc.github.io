@@ -5,7 +5,6 @@ import type { MeshFace } from "../iso/solids";
 import { groundDiagonal } from "../kit/lettering";
 import { SIGN_RULES } from "../kit/legibility";
 import { BLOG_SIGNS } from "./sign-platform";
-import { waterCellMat } from "./terrain";
 import { BOARD_PAD, BOARD_TOP, LAYOUT, PLATFORM_SITES, RAFT, REST_POSE, WRITING_CAP, buildRaft, raftAt, raftEnvelope, raftPlane, type WritingSite } from "./raft";
 
 const SITES: WritingSite[] = ["wide", "tall"];
@@ -22,9 +21,9 @@ const area2 = (pts: readonly { x: number; y: number }[]) => {
   for (let i = 0; i < pts.length; i++) { const a = pts[i]!, b = pts[(i + 1) % pts.length]!; s += a.x * b.y - b.x * a.y; }
   return Math.abs(s) / 2;
 };
-/** The faces of the mesh, grouped, past the leading shadow and foam rings: beams, sheet and, per plank in list order, its 10 prism faces (then 2 grain and 6 nail faces, skipped) and its decals. */
+/** The faces of the mesh, grouped: beams, sheet and, per plank in list order, its 10 prism faces (then 2 grain and 6 nail faces, skipped) and its decals. */
 const groups = (faces: readonly MeshFace[]) => {
-  const first = faces.findIndex((f) => f.mat === undefined); // the first beam face: the rings carry their own material, the timber faces none
+  const first = faces.findIndex((f) => f.mat === undefined); // the first beam face (timber faces carry no material)
   const beams = faces.slice(first, first + 30), sheet = faces[first + 30]!, planks: { faces: MeshFace[]; decals: MeshFace[] }[] = [];
   let i = first + 31;
   while (i < faces.length) {
@@ -41,7 +40,7 @@ describe("raft (#454)", () => {
     expect(WRITING_CAP).toBe(17.25);
     expect(BOARD_TOP).toBe(-0.4);
     expect(BOARD_PAD).toBe(1.7);
-    expect(RAFT).toEqual({ plankW: 2.4, joint: 0.15, plankH: 0.5, ragged: 0.3, beamW: 1.4, beamH: 0.5, beamInset: 1.5, beamOverhang: 1.2, wetZ: -0.7, ringZ: -0.98, foamW: 1.0, shadowW: 2.0, segment: 4, grainW: 0.06, grainEdge: 0.2, nail: 0.12, nailDa: 0.35, nailDb: 0.6 });
+    expect(RAFT).toEqual({ plankW: 2.4, joint: 0.15, plankH: 0.5, ragged: 0.3, beamW: 1.4, beamH: 0.5, beamInset: 1.5, beamOverhang: 1.2, wetZ: -0.7, grainW: 0.06, grainEdge: 0.2, nail: 0.12, nailDa: 0.35, nailDb: 0.6 });
     expect(REST_POSE).toEqual({ dz: 0, pitch: 0, roll: 0 });
   });
   it("BOARD_PAD covers the oracle's backing margin past the ragged ends (#460)", () => {
@@ -114,7 +113,7 @@ describe("raft (#454)", () => {
     expect(raftPlane(site, REST_POSE)).toEqual(pl);
   });
 
-  it.each(SITES)("%s: one timber mesh; face order rings, beams (−2 / −5), sheet (−5), then per plank back to front its 10 prism faces and its navy decals", (site) => {
+  it.each(SITES)("%s: one timber mesh; face order beams (−2 / −5), sheet (−5), then per plank back to front its 10 prism faces and its navy decals", (site) => {
     const r = raftAt(site);
     expect(r).toMatchObject({ kind: "mesh", mat: "timber" });
     const { beams, sheet, planks } = groups(r.faces);
@@ -206,15 +205,13 @@ describe("raft (#454)", () => {
   });
 });
 
-describe("water contact and texture (#455)", () => {
+describe("water contact and texture (#455; no rings since 2026-11-20)", () => {
   const E = raftEnvelope();
-  const shadowMat = (site: WritingSite) => waterCellMat(PLATFORM_SITES[site].x, PLATFORM_SITES[site].y) ?? "water";
-  /** The final layout: shadow run, foam run, 3 × 10 beam faces, the sheet, then per plank 10 prism + 2 grain + 6 nail faces and its navy run. */
+  /** The final layout: 3 × 10 beam faces, the sheet, then per plank 10 prism + 2 grain + 6 nail faces and its navy run. */
   const layout = (site: WritingSite) => {
-    const faces = raftAt(site).faces, sm = shadowMat(site);
+    const faces = raftAt(site).faces;
     let i = 0;
     const run = (ok: (f: MeshFace) => boolean) => { const s = i; while (i < faces.length && ok(faces[i]!)) i++; return faces.slice(s, i); };
-    const shadow = run((f) => f.mat === sm), foam = run((f) => f.mat === "foam");
     const beams = faces.slice(i, i + 30); i += 30;
     const sheet = faces[i++]!, planks: { prism: MeshFace[]; grain: MeshFace[]; nails: MeshFace[]; decals: MeshFace[]; start: number }[] = [];
     while (i < faces.length) {
@@ -222,66 +219,28 @@ describe("water contact and texture (#455)", () => {
       i += 18;
       planks.push({ prism, grain, nails, decals: run((f) => f.mat === "navy"), start });
     }
-    return { faces, shadow, foam, beams, sheet, planks };
+    return { faces, beams, sheet, planks };
   };
   /** Per-axis (Chebyshev) distance of a text point outside the envelope; negative inside. */
   const axisDist = (q: { x: number; y: number }) => Math.max(E.a0 - q.x, q.x - E.a1, E.b0 - q.y, q.y - E.b1);
   const zs = (f: MeshFace) => [Math.min(...f.pts.map((p) => p.z)), Math.max(...f.pts.map((p) => p.z))];
   const rectOf = (f: MeshFace, site: WritingSite) => { const t = f.pts.map((q) => toText(q, site)); return { a0: Math.min(...t.map((q) => q.x)), a1: Math.max(...t.map((q) => q.x)), b0: Math.min(...t.map((q) => q.y)), b1: Math.max(...t.map((q) => q.y)) }; };
   const isSide = (f: MeshFace) => Math.abs(polygonNormal(f.pts).z) < 1e-9;
-  const segs = (L: number) => Math.max(1, Math.round(L / 4));
-  const ringCount = (d0: number, d1: number) => 2 * segs(E.a1 - E.a0 + 2 * d1) + 2 * segs(E.b1 - E.b0 + 2 * d0);
 
-  it.each(SITES)("%s: the layout consumes every face: shadow, foam, beams, sheet, planks (prism < grain < nails < decals)", (site) => {
+  it.each(SITES)("%s: the layout consumes every face: beams, sheet, planks (prism < grain < nails < decals)", (site) => {
     const l = layout(site);
-    expect(l.shadow).toHaveLength(ringCount(1, 3));
-    expect(l.foam).toHaveLength(ringCount(0, 1));
     expect(l.planks).toHaveLength(plan.planks.length);
     expect(l.planks.at(-1)!.start + 18 + l.planks.at(-1)!.decals.length).toBe(l.faces.length);
     for (const f of [...l.beams, l.sheet]) expect(f.mat ?? "timber").toBe("timber");
     for (const g of l.planks) for (const f of [...g.prism, ...g.grain, ...g.nails]) expect(f.mat ?? "timber").toBe("timber");
   });
 
-  it.each(SITES)("%s: shadow ring in the site's water material (waterCellMat ?? water) at −5; foam ring alternating 0 / −1", (site) => {
-    const l = layout(site);
-    for (const f of l.shadow) { expect(f.mat).toBe(shadowMat(site)); expect(f.toneOffset).toBe(-5); }
-    l.foam.forEach((f, k) => expect(f.toneOffset ?? 0).toBe(k % 2 ? -1 : 0));
-  });
-
-  it.each(SITES)("%s: ring faces are 4-point rectangles at z −0.98 facing up, segments 2..6 u long", (site) => {
-    const l = layout(site);
-    for (const f of [...l.shadow, ...l.foam]) {
-      expect(f.pts).toHaveLength(4);
-      for (const p of f.pts) expect(p.z).toBeCloseTo(-0.98, 9);
-      expect(polygonNormal(f.pts).z).toBeGreaterThan(0);
-      const r = rectOf(f, site), long = Math.max(r.a1 - r.a0, r.b1 - r.b0);
-      expect(long).toBeGreaterThanOrEqual(2);
-      expect(long).toBeLessThanOrEqual(6);
+  it.each(SITES)("%s: the raft sits straight on the water: no foam or shadow ring, every face timber or navy and inside raftEnvelope()", (site) => {
+    const faces = raftAt(site).faces;
+    for (const f of faces) {
+      expect(["timber", "navy"]).toContain(f.mat ?? "timber");
+      for (const q of f.pts) expect(axisDist(toText(q, site))).toBeLessThanOrEqual(1e-9);
     }
-  });
-
-  it.each(SITES)("%s: foam vertices at per-axis distance [0, 1] of raftEnvelope(), shadow vertices at [1, 3]", (site) => {
-    const l = layout(site);
-    const check = (fs: MeshFace[], lo: number, hi: number) => {
-      for (const f of fs) {
-        const ds = f.pts.map((q) => axisDist(toText(q, site)));
-        for (const d of ds) { expect(d).toBeGreaterThanOrEqual(lo - 1e-9); expect(d).toBeLessThanOrEqual(hi + 1e-9); }
-        expect(Math.min(...ds)).toBeCloseTo(lo, 9); // touches the inner edge of its ring
-      }
-    };
-    check(l.foam, 0, 1);
-    check(l.shadow, 1, 3);
-  });
-
-  it.each(SITES)("%s: ring faces are pairwise disjoint (overlap area ≤ 1e-9) and cover their rings", (site) => {
-    const l = layout(site), rs = [...l.shadow, ...l.foam].map((f) => rectOf(f, site));
-    for (let i = 0; i < rs.length; i++) for (let j = i + 1; j < rs.length; j++) {
-      const a = rs[i]!, b = rs[j]!, w = Math.min(a.a1, b.a1) - Math.max(a.a0, b.a0), h = Math.min(a.b1, b.b1) - Math.max(a.b0, b.b0);
-      expect(w > 0 && h > 0 ? w * h : 0).toBeLessThanOrEqual(1e-9);
-    }
-    const W = E.a1 - E.a0, H = E.b1 - E.b0, sum = (fs: MeshFace[]) => fs.reduce((s, f) => { const r = rectOf(f, site); return s + (r.a1 - r.a0) * (r.b1 - r.b0); }, 0);
-    expect(sum(l.foam)).toBeCloseTo((W + 2) * (H + 2) - W * H, 6);
-    expect(sum(l.shadow)).toBeCloseTo((W + 6) * (H + 6) - (W + 2) * (H + 2), 6);
   });
 
   it.each(SITES)("%s: beams, 10 faces each: sides split exactly at z −1 ([−1, −0.9] at −2, [−1.4, −1] at −5), top −2 at −0.9, bottom −5 at −1.4", (site) => {
