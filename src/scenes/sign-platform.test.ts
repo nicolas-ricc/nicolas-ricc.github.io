@@ -199,6 +199,7 @@ describe("poseAt: heave, pitch and roll, three quantized sines (#456)", () => {
   it("CYCLE_POSES: rest, the 8 corners of the cube, then poseAt(k · 7919) for k 1..8", () => {
     expect(CYCLE_POSES).toHaveLength(17);
     expect(Object.isFrozen(CYCLE_POSES)).toBe(true);
+    for (const p of CYCLE_POSES) expect(Object.isFrozen(p)).toBe(true);
     expect(CYCLE_POSES[0]).toEqual(REST_POSE);
     const corners = new Set(CYCLE_POSES.slice(1, 9).map((p) => JSON.stringify(fields(p))));
     const want = new Set<string>();

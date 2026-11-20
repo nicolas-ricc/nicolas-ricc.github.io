@@ -145,6 +145,7 @@ const restFacesAt = (site: WritingSite): MeshFace[] => {
  * The unposed faces are built once per site; every call maps them through one `rigid` about (site, z −1) into fresh faces. A decal is wound to face +z at rest, like the top it lies on.
  */
 export function raftAt(site: WritingSite, pose: RaftPose = REST_POSE): Solid & { kind: "mesh" } {
-  const c = centreOf(site);
-  return { kind: "mesh", mat: "timber", faces: restFacesAt(site).map((f) => ({ ...f, pts: rigid(f.pts, c, pose.pitch, pose.roll, pose.dz) })) };
+  const rest = restFacesAt(site), posed = rigid(rest.flatMap((f) => f.pts), centreOf(site), pose.pitch, pose.roll, pose.dz); // one rigid call: the rotations are built once
+  let i = 0;
+  return { kind: "mesh", mat: "timber", faces: rest.map((f) => ({ ...f, pts: posed.slice(i, (i += f.pts.length)) })) };
 }

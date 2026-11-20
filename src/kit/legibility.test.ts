@@ -465,6 +465,7 @@ describe("ground signs (#452)", () => {
       return Math.abs((Math.max(...ys) - Math.min(...ys)) / (Math.max(...xs) - Math.min(...xs)) / ((y1 - y0) / (x1 - x0)) - 1);
     }));
     expect(signMetrics(s, COVER_LAPTOP).aspectError).toBeCloseTo(want, 12);
+    expect(signMetrics(s, COVER_LAPTOP).aspectError).toBeCloseTo(0.018914801359428, 12); // the value before #456
   });
   it("tracer: a Chainsaw Carnage ground sign at cap 20 on a flat backing passes at 1.17 and 0.83", () => {
     const s = tracer(20);

@@ -45,7 +45,7 @@ export const CYCLE_POSES: readonly Readonly<RaftPose>[] = Object.freeze([
   REST_POSE,
   ...([-1, 1] as const).flatMap((a) => ([-1, 1] as const).flatMap((b) => ([-1, 1] as const).map((c) => ({ dz: a * HEAVE.amp, pitch: b * PITCH.amp, roll: c * ROLL.amp })))),
   ...[1, 2, 3, 4, 5, 6, 7, 8].map((k) => poseAt(k * 7919)),
-]);
+].map((p) => Object.freeze(p)));
 
 /** The raft's plan at the origin: the 4 corners of its envelope (planks with ragged ends and beam overhang) through the rest plane, moved to (0, 0). Order (a0, b0), (a1, b0), (a1, b1), (a0, b1). */
 export const PLATFORM_DECK: readonly Vec2[] = (() => {
