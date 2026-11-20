@@ -37,7 +37,8 @@ const PIECES: Record<string, string> = {
   // #451: plank raft, WRITING as a navy decal
   // #451: water contact and grain
   // #460: cap 17.25, BOARD_PAD 1.7
-  plataforma: "2c9e44bd/741638a5",
+  // 2026-11-20: no foam or contact-shadow ring, the raft sits straight on the water
+  plataforma: "ce5ee7cd/741638a5",
 };
 
 describe("render baseline (#194)", () => {

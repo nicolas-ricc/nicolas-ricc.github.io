@@ -5,9 +5,7 @@ import type { MeshFace, Solid } from "../iso/solids";
 import { CHAINSAW_WRITING } from "../kit/chainsaw-writing";
 import { groundDiagonal, toWorld, type TextPlane } from "../kit/lettering";
 import { marqueeLayout } from "../kit/marquee";
-import type { Material } from "../map/palette-iso";
 import { createRng, SEED } from "../map/seed";
-import { waterCellMat } from "./terrain";
 
 /**
  * Cap height of WRITING in Chainsaw Carnage, set by the level-3 OCR at the phone scale 0.83: at 10.8 it read `WRITHG`; 11.3..11.8 read `WRITING` at both sites.
@@ -31,8 +29,8 @@ export const REST_POSE: Readonly<RaftPose> = Object.freeze({ dz: 0, pitch: 0, ro
 /** The glyph layout of WRITING at `WRITING_CAP`, in text space. */
 export const LAYOUT = marqueeLayout(WRITING_CAP, 0, CHAINSAW_WRITING);
 
-/** The raft's constants, in text units: plank width and joint, plank and beam thickness, ragged ends, beam section, inset and overhang; the wet band's top z, the z of the foam and shadow rings and their widths, the ring segment length; the grain's width and edge margin, the nail's side and its offset along a and b from the beam centre / plank centre. */
-export const RAFT = Object.freeze({ plankW: 2.4, joint: 0.15, plankH: 0.5, ragged: 0.3, beamW: 1.4, beamH: 0.5, beamInset: 1.5, beamOverhang: 1.2, wetZ: -0.7, ringZ: -0.98, foamW: 1.0, shadowW: 2.0, segment: 4, grainW: 0.06, grainEdge: 0.2, nail: 0.12, nailDa: 0.35, nailDb: 0.6 });
+/** The raft's constants, in text units: plank width and joint, plank and beam thickness, ragged ends, beam section, inset and overhang; the wet band's top z; the grain's width and edge margin, the nail's side and its offset along a and b from the beam centre / plank centre. */
+export const RAFT = Object.freeze({ plankW: 2.4, joint: 0.15, plankH: 0.5, ragged: 0.3, beamW: 1.4, beamH: 0.5, beamInset: 1.5, beamOverhang: 1.2, wetZ: -0.7, grainW: 0.06, grainEdge: 0.2, nail: 0.12, nailDa: 0.35, nailDb: 0.6 });
 
 export interface Rect { a0: number; a1: number; b0: number; b1: number }
 export interface RaftPlan { sheet: Rect; planks: (Rect & { tone: number; grain: Rect[] })[]; beams: Rect[] }
@@ -129,26 +127,6 @@ const decalsPerPlank = (): Vec2[][][] =>
     return out;
   }));
 
-/** A ring around the envelope `E` between the offsets d0 and d1, as unshifted rectangles at RAFT.ringZ: 4 disjoint strips (b0 side with a increasing, a1 side with b increasing, b1 side with a decreasing, a0 side with b decreasing), each cut into max(1, round(L / segment)) equal segments. `tone` gets the segment's index across all strips in emission order. */
-const ring = (plane: TextPlane, E: Rect, d0: number, d1: number, mat: Material, tone: (k: number) => number): MeshFace[] => {
-  const strips: { r: Rect; alongA: boolean; up: boolean }[] = [
-    { r: { a0: E.a0 - d1, a1: E.a1 + d1, b0: E.b0 - d1, b1: E.b0 - d0 }, alongA: true, up: true },
-    { r: { a0: E.a1 + d0, a1: E.a1 + d1, b0: E.b0 - d0, b1: E.b1 + d0 }, alongA: false, up: true },
-    { r: { a0: E.a0 - d1, a1: E.a1 + d1, b0: E.b1 + d0, b1: E.b1 + d1 }, alongA: true, up: false },
-    { r: { a0: E.a0 - d1, a1: E.a0 - d0, b0: E.b0 - d0, b1: E.b1 + d0 }, alongA: false, up: false },
-  ];
-  const faces: MeshFace[] = [], pt = (a: number, b: number): Vec3 => { const w = toWorld(plane, a, b); return v3(w.x, w.y, RAFT.ringZ); };
-  for (const { r, alongA, up } of strips) {
-    const lo = alongA ? r.a0 : r.b0, len = alongA ? r.a1 - r.a0 : r.b1 - r.b0, n = Math.max(1, Math.round(len / RAFT.segment));
-    for (let i = 0; i < n; i++) {
-      const j = up ? i : n - 1 - i, x0 = lo + (len * j) / n, x1 = j === n - 1 ? lo + len : lo + (len * (j + 1)) / n;
-      const q = alongA ? { a0: x0, a1: x1, b0: r.b0, b1: r.b1 } : { a0: r.a0, a1: r.a1, b0: x0, b1: x1 };
-      faces.push({ pts: [pt(q.a0, q.b0), pt(q.a0, q.b1), pt(q.a1, q.b1), pt(q.a1, q.b0)], mat, toneOffset: tone(faces.length) });
-    }
-  }
-  return faces;
-};
-
 const restFaces = new Map<WritingSite, MeshFace[]>();
 /** The unposed faces of the raft at a site, built once. Private: `raftAt` never hands them out. */
 const restFacesAt = (site: WritingSite): MeshFace[] => {
@@ -156,9 +134,6 @@ const restFacesAt = (site: WritingSite): MeshFace[] => {
   if (faces) return faces;
   const plan = buildRaft(), plane = restPlane(site), at = (a: number, b: number, z: number): Vec3 => { const q = toWorld(plane, a, b); return v3(q.x, q.y, z); };
   faces = [];
-  const E = raftEnvelope();
-  faces.push(...ring(plane, E, RAFT.foamW, RAFT.foamW + RAFT.shadowW, waterCellMat(PLATFORM_SITES[site].x, PLATFORM_SITES[site].y) ?? "water", () => -5));
-  faces.push(...ring(plane, E, 0, RAFT.foamW, "foam", (k) => (k % 2 ? -1 : 0)));
   for (const b of plan.beams) faces.push(...prism(plane, b, BEAM_Z, DECK_Z, { top: -2, bottom: -5, upper: -2, lower: -5, split: WATER_Z }));
   const s = plan.sheet;
   // The back sheet spans the plank block in b when it is longer than the sheet: the oracle's backing needs a visible face behind the margin row beyond the far plank edge, and the view ray crosses z −0.9 about 1 u further away.
@@ -184,7 +159,7 @@ const restFacesAt = (site: WritingSite): MeshFace[] => {
 };
 
 /**
- * The raft at a site, posed: the contact shadow ring (water material, −5) and the foam ring (alternating 0 / −1) around the envelope, then one timber mesh of 3 beams (10 faces each, split at the waterline: −2 above, −5 below), the sheet (−5) and, back to front, each plank's 10 prism faces (wet part 2 darker), its 2 grain faces (tone − 1), its 6 nails (tone − 2) and its navy decals (the plank's tone).
+ * The raft at a site, posed, straight on the water (no foam or shadow ring around it): one timber mesh of 3 beams (10 faces each, split at the waterline: −2 above, −5 below), the sheet (−5) and, back to front, each plank's 10 prism faces (wet part 2 darker), its 2 grain faces (tone − 1), its 6 nails (tone − 2) and its navy decals (the plank's tone).
  * The unposed faces are built once per site; every call maps them through one `rigid` about (site, z −1) into fresh faces. A decal is wound to face +z at rest, like the top it lies on.
  */
 export function raftAt(site: WritingSite, pose: RaftPose = REST_POSE): Solid & { kind: "mesh" } {
