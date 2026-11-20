@@ -145,8 +145,8 @@ export const PREPROCESS = "Preproceso del OCR, igual para todos los carteles: lu
 export const scaleTag = (scale: number): string => String(Math.round(scale * 100)).padStart(3, "0");
 
 /** The whole REPORT.md. */
-export function renderReport(r: { date: string; viewport: string; entries: ReportEntry[]; violations: { id: string; scale: number; list: Violation[] }[] }): string {
-  const out = ["# Legibilidad, nivel 3", "", "Generado por `npm run legibility`; no se edita a mano.", "", `Fecha: ${r.date}`, "", `Viewport: ${r.viewport}`, "", PREPROCESS, ""];
+export function renderReport(r: { date: string; viewport: string; entries: ReportEntry[]; violations: { id: string; scale: number; list: Violation[] }[]; tick?: number | null }): string {
+  const out = ["# Legibilidad, nivel 3", "", "Generado por `npm run legibility`; no se edita a mano.", "", `Fecha: ${r.date}`, "", `Viewport: ${r.viewport}`, "", ...(r.tick == null ? [] : [`Tick: ${r.tick} ms`, ""]), PREPROCESS, ""];
   for (const e of r.entries) {
     out.push(`## ${e.id} a ${e.scale}`, "", "| Métrica | Valor | Umbral | ✓/✗ |", "| --- | --- | --- | --- |");
     for (const row of e.rows) out.push(`| ${row.metric} | ${row.value} | ${row.limit} | ${row.ok ? "✓" : "✗"} |`);
@@ -177,3 +177,18 @@ export function pickContexts(exhibits: readonly Exhibit[], argv: readonly string
   if (!hit.length) throw new Error(`legibility: unknown context "${id}"; choose one of: ${all.map((e) => e.id).join(", ")}`);
   return hit;
 }
+
+/** The number after `--tick` (ms of simulated time), or null without it; throws on a missing, non-numeric or negative one. */
+export function pickTick(argv: readonly string[]): number | null {
+  const i = argv.indexOf("--tick");
+  if (i < 0) return null;
+  const raw = argv[i + 1], n = raw === undefined || raw.trim() === "" ? NaN : Number(raw);
+  if (!Number.isFinite(n) || n < 0) throw new Error(`legibility: --tick needs a non-negative number of ms, got ${raw === undefined ? "nothing" : `"${raw}"`}`);
+  return n;
+}
+
+/** File-name tag of a tick: "" without it, "-t<ms>" with it. */
+export const tickTag = (tick: number | null): string => (tick === null ? "" : `-t${tick}`);
+
+/** Name of the report file: REPORT.md, or REPORT-t<ms>.md for a tick. */
+export const reportName = (tick: number | null): string => `REPORT${tickTag(tick)}.md`;
