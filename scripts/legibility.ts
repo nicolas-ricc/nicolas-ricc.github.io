@@ -60,7 +60,7 @@ async function main(): Promise<void> {
         const b64 = evalJson<string>(`window.__lab.pixels(${crop.x}, ${crop.y}, ${crop.w}, ${crop.h})`);
         const px = Buffer.from(b64, "base64"), w = crop.w * RES, h = crop.h * RES;
         if (px.length !== w * h * 4) throw new Error(`legibility: ${e.id} at ${scale}: got ${px.length} bytes, expected ${w * h * 4}`);
-        const m = measure(px, masks), img = ocrImage(px, w, h, m.core, m.ring);
+        const m = measure(px, masks), img = ocrImage(px, w, h, m.core, m.ring, e.sign.ground ? masks.backed : undefined);
         const ocrPng = encodePng(img.data, img.w, img.h), rawPng = encodePng(px, w, h);
         const text = (await worker.recognize(ocrPng)).data.text;
         const tag = `${e.id}-${scaleTag(scale)}`;
