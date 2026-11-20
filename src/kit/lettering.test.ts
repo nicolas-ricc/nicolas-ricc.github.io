@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { project, Z_SCALE } from "../iso/project";
-import { advances, counterClearance, diagonalWall, facade, fillText, glyphPairs, GLYPHS, GRID, KERN, layoutText, groundDiagonal, letterGaps, measureText, overlapping, rhythm, roofDiagonal, sizeForXHeight, strokeRatio, strokeText, toWorld, xHeightPx, type TextPlane } from "./lettering";
+import { advances, counterClearance, diagonalWall, facade, fillText, glyphPairs, GLYPHS, GRID, groundDiagonal, KERN, layoutText, letterGaps, measureText, overlapping, rhythm, roofDiagonal, sizeForXHeight, strokeRatio, strokeText, toWorld, xHeightPx, type TextPlane } from "./lettering";
 
 const WORDS = ["Portfolio", "Resume", "Blog"];
 const LETTERS = "PortfliResumBg";
