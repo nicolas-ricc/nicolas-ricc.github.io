@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { ISO_COLORS, ISO_TONES, allIsoColors } from "../map/palette-iso";
+import { ISO_COLORS, ISO_TONES, allIsoColors, stepTone, toneColor } from "../map/palette-iso";
 import { v3 } from "./geometry";
 import { project } from "./project";
 import { buildRenderList, type Layer } from "./render-list";
-import type { Solid } from "./solids";
+import { meshBox } from "./mesh-fixtures";
+import { tessellate, type Solid } from "./solids";
 
 const prism: Solid = { kind: "prism", at: v3(0, 0, 0), w: 2, d: 2, h: 2, mat: "concrete" };
 const slab: Solid = { kind: "ground", mat: "slab", tris: [{ pts: [v3(0, 0, 0), v3(10, 0, 0), v3(0, 10, 0)] }, { pts: [v3(10, 0, 0), v3(10, 10, 0), v3(0, 10, 0)], toneOffset: -1 }] };
@@ -100,5 +101,37 @@ describe("buildRenderList with clip (#399)", () => {
   it("the solid faces are not clipped", () => {
     const solids = (items: ReturnType<typeof buildRenderList>) => items.filter((i) => i.layer === "solid");
     expect(solids(buildRenderList([tall], undefined, clip))).toEqual(solids(buildRenderList([tall])));
+  });
+});
+
+describe("buildRenderList with a mesh", () => {
+  const raised: Solid = { kind: "mesh", mat: "concrete", faces: [
+    ...meshBox(v3(0, 0, 0), 2, 3, 4),
+    { pts: [v3(0.5, 0.5, 4), v3(1.5, 0.5, 4), v3(1, 2, 4)], mat: "steel", toneOffset: 1 },
+  ] };
+
+  it("emits one solid item per visible face, in list order, with toneColor(mat, stepTone(tone, toneOffset))", () => {
+    const items = buildRenderList([raised]).filter((i) => i.layer === "solid");
+    const vis = tessellate(raised);
+    expect(vis).toHaveLength(4);
+    expect(items).toHaveLength(vis.length);
+    items.forEach((it, k) => {
+      const f = vis[k]!;
+      expect(it.color).toBe(toneColor(f.mat, stepTone(f.tone, f.toneOffset)));
+      expect(it.pts).toEqual(f.pts.flatMap((p) => { const q = project(p); return [q.x, q.y]; }));
+    });
+    expect(items[items.length - 1]!.color).toBe(toneColor("steel", stepTone("top", 1)));
+  });
+
+  it("a mesh above the ground casts a shadow; one with every vertex at z <= 0 does not", () => {
+    expect(buildRenderList([raised]).filter((i) => i.layer === "shadow")).toHaveLength(1);
+    const sunk: Solid = { kind: "mesh", mat: "concrete", faces: meshBox(v3(0, 0, -1), 2, 3, 1) };
+    const items = buildRenderList([sunk]);
+    expect(items.filter((i) => i.layer === "shadow" || i.layer === "shadowCore")).toHaveLength(0);
+    expect(items.filter((i) => i.layer === "solid")).toHaveLength(3);
+  });
+
+  it("an empty mesh emits nothing", () => {
+    expect(buildRenderList([{ kind: "mesh", mat: "concrete", faces: [] }])).toEqual([]);
   });
 });
