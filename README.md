@@ -6,7 +6,7 @@ Personal site: a night-time isometric map with three zones (Portfolio, Resume, B
 - `npm test` — unit tests (Vitest).
 - `npm run build` — validates `content/*.json`, downloads the feed, builds and prerenders `/portfolio/`, `/cv/`, `/blog/`.
 - `npm run typecheck` — `tsc --noEmit`. In a fresh clone run `npm run feed` first: `content/blog.generated.json` is gitignored and `src/main.ts` imports it (`predev`/`prebuild` already do it for you).
-- `npm run legibility` — level 3 of the sign legibility guardrails: starts its own vite on 5179, opens every context exhibit in agent-browser at 1.17 and 0.83 with bloom, measures contrast, halo and OCR in pixels and writes `docs/superpowers/specs/assets/carteles-legibilidad/REPORT.md` with the crops. Needs agent-browser; not run in CI.
+- `npm run legibility` — level 3 of the sign legibility guardrails: starts its own vite on 5179, opens every context exhibit in agent-browser at 1.17 and 0.83 with bloom, measures contrast, halo and OCR in pixels and writes `docs/superpowers/specs/assets/carteles-legibilidad/REPORT.md` with the crops. `--tick <ms>` poses the Writing raft at `poseAt(ms)` (through the storybook's `?tick=`) and writes `REPORT-t<ms>.md` and `-t<ms>` crops instead. Needs agent-browser; not run in CI.
 - `npm run wreck-sweep` — sweeps the `#pecio` exhibit in agent-browser: 3 bloom modes × 2 phone/foldable layouts × 40 frames of `__lab.tick(250)`, and counts the non-sky pixels outside the content envelope. Starts its own vite on 5180, or uses `--origin`; `--hide` needs the PixiJS DevTools extension. Needs agent-browser; not run in CI.
 
 No public license: `private: true`, the `license` field (ISC) is a leftover of the scaffold and does not apply — the repo is not published to npm.
@@ -139,7 +139,8 @@ Specs in `docs/superpowers/specs/`
 `2026-11-11-carteles-de-zona-assets-design.md`,
 `2026-11-15-carteles-de-zona-rediseno-design.md`,
 `2026-11-16-storybook-luces-y-encuadre-design.md`,
-`2026-11-17-carteles-de-zona-integracion-design.md`).
+`2026-11-17-carteles-de-zona-integracion-design.md`,
+`2026-11-20-writing-balsa-tablones-design.md`).
 
 `/lab/storybook.html` is the structures storybook: it shows one building or
 structure at a time, cropped from the world by its box (or built alone at the
@@ -160,7 +161,7 @@ or `j`/`k` move to the next or the previous one; `g`, `h` and `a` hide or
 show ground, shadows and accents; `6` rotates the bloom; `c` cycles the exhibit
 scale (real, 1.17 and 0.83, the cover scales of a laptop and a phone); `?bloom=` forces the bloom and
 `?speed=` scales the animation clock up to 100 (`?speed=0`
-freezes it; above 100 it is 1). In dev, `__lab.tick` advances the stage and renders it,
+freezes it; above 100 it is 1); `?tick=<ms>` poses the Writing raft of a context exhibit at `poseAt(ms)` (rest by default). In dev, `__lab.tick` advances the stage and renders it,
 for headless time-lapses. The seam at 90 added ten exhibits:
 `#dique-flotante`, `#patio-contenedores` and `#grua-muelle` (shipyard),
 `#tren-fantasma`, `#casa-espejos`, `#tobogan` and `#tronco-acuatico` (fair),
@@ -172,7 +173,7 @@ plus `#plataforma-escena-angosta` (Blog, tall site). The piece builds
 the sign at the origin (the crown and the tinker sign on a stand-in of their
 host); the one "in its scene" is a crop of the real world with its sign.
 Judge them at the cover scales with `c`. `npm run legibility` measures contrast,
-halo and OCR with a browser, with no exceptions (every row must pass); it does not run in CI.
+halo and OCR with a browser, with no exceptions (every row must pass), at rest and, with `--tick`, at a pose of the raft's pitch-and-roll cycle (`REPORT-t<ms>.md`); it does not run in CI.
 
 The lab pages are also built and deployed with the site (every
 `lab/*.html` is a Vite input), so the storybook can be seen at
