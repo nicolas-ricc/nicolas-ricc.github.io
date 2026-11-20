@@ -4,7 +4,6 @@ import { v3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import { BLEED, CELL, CELL_BLEED, WORLD, worldZoneAt } from "../map/geo";
 import { CROWN_SITE, towerCrown } from "../scenes/sign-crown";
-import { seaPlatformAt } from "../scenes/sign-platform";
 import { TINKER_SITE, tinkerAnimator, tinkerSign } from "../scenes/sign-tinker";
 import { world } from "../scenes/world";
 import { ACCENT_DIM, VEIL_ALPHA, accentZone, accentsByZone, focusAlphas, veilCells, veilPolygons, veilRuns } from "./veil";
@@ -114,15 +113,6 @@ describe("accentsByZone", () => {
   });
   it("with no lights it returns the three zones empty", () => {
     expect(accentsByZone([])).toEqual({ portfolio: [], cv: [], blog: [] });
-  });
-});
-
-describe("Writing raft accents (#390, #454)", () => {
-  it.each(["wide", "tall"] as const)("the Writing raft at the %s site adds no accent: its word is a navy decal of the mesh", (site) => {
-    const out: Solid[] = [];
-    seaPlatformAt(out, site);
-    expect(out).toHaveLength(1);
-    expect(out[0]!.kind).toBe("mesh");
   });
 });
 

@@ -26,16 +26,16 @@ import { ship as buildShip, shipAt, wake, type ShipKind } from "./ships";
 // y ≈ 86, where the lighthouse point stood until #426 moved it to the island's east coast (the site is open
 // water now; the vertices were left as they were). From (434, 176) it goes down east of the
 // moved headland (37 u from its tip) and of the narrow Writing site (25.7 u from its raft, `PLATFORM_DECK`, at d = 430; 88.7 u from the wide one): x ≥ 456 at y 290 and
-// x ≥ 515 at y 405. Turns on screen of 6°, 7°, 22°, 13°, −18°, 2°, −41°, 38° and 9°. In #427 (452, 290) moved to (456, 290) and (478, 350) to (486, 347):
+// x ≥ 515 at y 405. Turns on screen of 6°, 7°, 22°, 13°, −18°, 2°, −41°, 37.5° and 9°. In #427 (452, 290) moved to (456, 290) and (478, 350) to (486, 347):
 // with the platform drawn at both sites, a freighter at the old ones ended up behind the narrow site's deck on screen. In #454 (486, 347) → (501, 347) and (500, 405) → (515, 405):
-// the raft (84 × 84 u of plan, ±42 u about the site) is larger than the board it replaced, so the lane moved 15 u east to keep ≥ 14 u from it.
+// the raft's world-axis bounds are 84 × 84 u (±42 u about the site), larger than the board it replaced, so the lane moved 15 u east to keep the ≥ 14 u to the deck that sea-anim.test.ts requires.
 //
 // The sea end (522.7, 506.4), on the line (515, 405) → (523, 510) (#454: it was (523, 510)), is set so the edge of the 16:9 cover (x + y ≈ 997) falls `FADE_U` from the
 // end: that fade happens in the bleed. The harbor-mouth one is visible, on purpose. Validated against water,
 // `depthAt` ≥ 6, `worldZoneAt === "blog"` for x ≥ 380, occlusion by static solids (projected
 // freighter hexagon against that of each solid, see sea-anim.test.ts), `coverQuad(16/9)` and the
 // launch (> 20 u). That is why the buoys and the wreck were moved in sea.ts: a ship west or north
-// of a solid that overlaps it on screen ends up behind. Do not move vertices more than 4 u without revalidating.
+// of a solid that overlaps it on screen ends up behind. Do not move vertices more than 4 u without revalidating (#454 moved two of them 15 u and revalidated them with the tests).
 export const LANE_OUT: readonly Readonly<Vec2>[] = [{ x: 362, y: -16 }, { x: 398, y: 40 }, { x: 424, y: 86 }, { x: 437, y: 114 }, { x: 440, y: 142 }, { x: 434, y: 176 }, { x: 446, y: 232 }, { x: 456, y: 290 }, { x: 501, y: 347 }, { x: 515, y: 405 }, { x: 522.7, y: 506.4 }];
 // Return lane, in the direction of travel (sea → harbor mouth): the northern leg is the outbound lane shifted about 42 u
 // east (40 u at y 144 since #427) and reversed; the southern one is not a copy: it passes east of the wreck (21.9 u from its bow since #427, in front of it

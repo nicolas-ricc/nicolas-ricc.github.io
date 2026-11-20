@@ -164,7 +164,7 @@ export function contextScene(scene: WorldScene, e: ContextExhibit): WorldScene {
   const cropped = cropScene(scene, e.box);
   if (!e.writingSite) return cropped;
   const p = platformAt(e.writingSite);
-  return { ...cropped, solids: [...cropped.solids, ...cropSolids(p, e.box)], accents: [...cropped.accents] };
+  return { ...cropped, solids: [...cropped.solids, ...cropSolids(p, e.box)] };
 }
 
 /** The context exhibit's animators: `cropAnimators` over its box; the sign's own animator comes from `assembleWorld`. With `writingSite`, the world's platform animator (`platform.solid`) is dropped: `contextScene` already carries the platform of that site, and the world's is at the other one. */

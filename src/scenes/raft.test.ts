@@ -48,6 +48,18 @@ describe("raft (#454)", () => {
     expect(plan.sheet.b1).toBeCloseTo(INK.b1 + BOARD_PAD, 9);
   });
 
+  it.each(SITES)("%s: the sheet face spans [sheet.a0, sheet.a1] × the plank block in b at z −0.9", (site) => {
+    // The oracle's backing reaches the far margin row of the last glyph only through this face: it must cover the whole plank block, not just the sheet.
+    const { sheet, planks } = plan, f = groups(raftAt(site, REST_POSE).faces).sheet, t = f.pts.map((q) => toText(q, site));
+    const lo = planks.at(-1)!.b0, hi = planks[0]!.b1;
+    expect(Math.min(...t.map((q) => q.x))).toBeCloseTo(sheet.a0, 9);
+    expect(Math.max(...t.map((q) => q.x))).toBeCloseTo(sheet.a1, 9);
+    expect(Math.min(...t.map((q) => q.y))).toBeCloseTo(Math.min(sheet.b0, lo), 9);
+    expect(Math.max(...t.map((q) => q.y))).toBeCloseTo(Math.max(sheet.b1, hi), 9);
+    expect(Math.min(sheet.b0, lo)).toBe(lo); // the block is the longer one
+    expect(Math.max(sheet.b1, hi)).toBe(hi);
+    for (const q of f.pts) expect(q.z).toBeCloseTo(BOARD_TOP - 0.5, 9);
+  });
   it("N planks at pitch 2.55, 2.4 wide, back to front, the block centred on the sheet", () => {
     const { sheet, planks } = plan, N = Math.ceil((sheet.b1 - sheet.b0 + 0.15) / 2.55);
     expect(planks).toHaveLength(N);
