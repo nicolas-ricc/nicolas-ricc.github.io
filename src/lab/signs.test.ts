@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { overlaps, screenBounds, type ScreenBounds } from "../iso/depth";
 import { bounds, type Solid } from "../iso/solids";
-import { checkSign, checkSignFont, COVER_LAPTOP, COVER_PHONE } from "../kit/legibility";
-import { HEAVE, heaveAt, seaPlatformAt, signAt, type WritingSite } from "../scenes/sign-platform";
+import { checkSign, checkSignFont, COVER_LAPTOP, COVER_PHONE, SIGN_RULES, signMetrics } from "../kit/legibility";
+import { CYCLE_POSES, REST_POSE, seaPlatformAt, signAt, type RaftPose, type WritingSite } from "../scenes/sign-platform";
 import { assembleWorld } from "../world/assemble";
 import { signBox } from "../world/signs";
 import { contextScene, cropScene, cropSolids } from "./crop";
@@ -13,7 +13,7 @@ import { EXHIBITS } from "./exhibits";
 const contexts = EXHIBITS.flatMap((e) => (e.kind === "context" ? [e] : []));
 const { scene } = assembleWorld(undefined, { reducedMotion: false });
 /** The Writing platform at `site`: since #427 it is not in `scene.solids` but in platformAnimator. */
-const platform = (site: WritingSite, dz = 0): Solid[] => { const out: Solid[] = []; seaPlatformAt(out, [], site, dz); return out; };
+const platform = (site: WritingSite, pose: RaftPose = REST_POSE): Solid[] => { const out: Solid[] = []; seaPlatformAt(out, site, pose); return out; };
 /** `b` grown by `d` screen units (scale 1) on each side. */
 const grow = (b: ScreenBounds, d: number): ScreenBounds => ({ minX: b.minX - d, minY: b.minY - d, maxX: b.maxX + d, maxY: b.maxY + d });
 
@@ -52,9 +52,9 @@ describe("sign gate: levels 1 and 2 on every context exhibit", () => {
   });
 });
 
-// The board heaves (#444): level 2 has to hold at every pose of the cycle, not only at rest. The exhibits show the rest pose;
-// here the crop keeps everything but the rest board (`cropScene`, which `contextScene` extends with it) and takes the posed board instead.
-describe("sign gate: level 2 across the heave cycle of the Writing board (#444)", () => {
+// The raft heaves, pitches and rolls (#444, #456): level 2 has to hold at every pose of CYCLE_POSES, not only at rest. The exhibits show the rest pose;
+// here the crop keeps everything but the rest raft (`cropScene`, which `contextScene` extends with it) and takes the posed raft instead.
+describe("sign gate: level 2 across the pose cycle of the Writing raft (#444, #456)", () => {
   const writing = contexts.flatMap((e) => (e.writingSite ? [[e.id, e, e.writingSite] as const] : []));
   it("both Writing sites have a context exhibit", () => {
     expect(writing.map(([, , site]) => site).sort()).toEqual(["tall", "wide"]);
@@ -65,15 +65,25 @@ describe("sign gate: level 2 across the heave cycle of the Writing board (#444)"
       expect(contextScene(scene, e).solids).toEqual([...base, ...cropSolids(platform(site), e.box)]);
       expect(cropSolids(platform(site), e.box)).toEqual(platform(site));
     });
-    for (let k = 0; k < 8; k++) {
-      const dz = heaveAt((k * HEAVE.periodMs) / 8), sign = signAt(site, dz), board = platform(site, dz);
+    const deg = (r: number) => ((r * 180) / Math.PI).toFixed(1);
+    CYCLE_POSES.forEach((pose, k) => {
+      const sign = signAt(site, pose), board = platform(site, pose);
       const near = [...scene.solids, ...board].filter((s) => overlaps(screenBounds(bounds(s)), grow(signBox(sign), 4)));
       for (const scale of [COVER_LAPTOP, COVER_PHONE]) {
-        it(`phase ${k}/8 (dz ${dz.toFixed(2)}): checkSign at ${scale} = [] in the crop and against the whole world`, () => {
+        it(`pose ${k}/17 (dz ${pose.dz.toFixed(2)}, pitch ${deg(pose.pitch)}°, roll ${deg(pose.roll)}°): checkSign at ${scale} = [] in the crop and against the whole world`, () => {
           expect(checkSign(sign, scale, [...base, ...board])).toEqual([]);
           expect(checkSign(sign, scale, near)).toEqual([]);
         });
       }
+    });
+  });
+});
+
+describe("Writing on the ground floors over the pose cycle (#460)", () => {
+  it.each(["wide", "tall"] as const)("%s: the worst x-height over CYCLE_POSES is ≥ the ground floor at 1.17 and 0.83", (site) => {
+    for (const scale of [COVER_LAPTOP, COVER_PHONE]) {
+      const worst = Math.min(...CYCLE_POSES.map((p) => signMetrics(signAt(site, p), scale).xHeightPx));
+      expect(worst, `${site} ${scale}`).toBeGreaterThanOrEqual(SIGN_RULES.ground[scale].xHeightPx);
     }
   });
 });

@@ -29,6 +29,13 @@ export function speedFromSearch(search: string): number {
   return Number.isFinite(n) && n >= 0 && n <= MAX_SPEED ? n + 0 : 1; // + 0 turns -0 into 0
 }
 
+/** `?tick=<ms>` poses the Writing raft of a context exhibit at that animation time (#457). Absent, empty, non-numeric, negative or infinite: 0 (rest). */
+export function tickFromSearch(search: string): number {
+  const v = new URLSearchParams(search).get("tick")?.trim();
+  const n = v ? Number(v) : NaN;
+  return Number.isFinite(n) && n >= 0 ? n + 0 : 0;
+}
+
 export function nextBloomMode(mode: BloomMode): BloomMode {
   return BLOOM_CYCLE[(BLOOM_CYCLE.indexOf(mode) + 1) % BLOOM_CYCLE.length]!;
 }

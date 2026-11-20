@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { buildRenderList } from "../iso/render-list";
-import { isFlat } from "../iso/solids";
+import { isFlat, tessellateAll } from "../iso/solids";
+import { raftAt, REST_POSE } from "./raft";
 import { SEED } from "../map/seed";
 import { assembleWorld } from "../world/assemble";
 import { city } from "./city";
@@ -35,7 +36,7 @@ describe("world accents (#394)", () => {
     // 2 478 measured while planning #389: 1 222 of the world + 1 256 of the three signs (crown 238 poly + 164 dot,
     // tinker 114 + 84, platform 654 + 2; the tinker's 19 lights in `tinker.lights` are animated, not static); ×1.05.
     // since #442 the platform is one flat board: its piles, hut and posts are gone, so these figures describe the platform before it
-    // Since #427 the platform's 656 lights are animated too (`platform.lights` of platformAnimator), not static.
+    // Since #427 the platform is animated, not static (`platform.solid` of platformAnimator); since #454 it has no lights at all.
     expect(assembleWorld(undefined, { reducedMotion: true }).scene.accents.length).toBeLessThanOrEqual(2600);
   });
   it("the platform's lights left the static world (#427): fewer than the 2 409 of feature/423 before it", () => {
@@ -57,4 +58,10 @@ describe("raised solids per scene (#328)", () => {
       expect(scene!.solids.filter((x) => !isFlat(x)).length).toBeLessThanOrEqual(cap);
     });
   }
+});
+
+describe("Writing raft budget (#454)", () => {
+  it("one raft tessellates to ≤ 1200 faces", () => {
+    expect(tessellateAll(raftAt("wide", REST_POSE)).length).toBeLessThanOrEqual(1200);
+  });
 });

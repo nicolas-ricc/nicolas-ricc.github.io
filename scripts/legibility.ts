@@ -11,21 +11,21 @@
  * median; the ink (the core side) ends up black on white. tesseract.js with the local `eng` 4.0.0_best_int data
  * (scripts/tessdata), page segmentation mode single word (PSM 8, SINGLE_WORD) and the whitelist A-Z a-z.
  *
- * Usage: npm run legibility [-- --only <context id>]. Exit code 1 when any row is a failure or level 2 lists a violation.
+ * Usage: npm run legibility [-- --only <context id>] [-- --tick <ms>]. With --tick the Writing raft is posed by the exhibit's ?tick= (page and oracle at poseAt(ms)); files and report get the -t<ms> tag. Exit code 1 when any row is a failure or level 2 lists a violation.
  */
 import type { ChildProcess } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createWorker, OEM, PSM } from "tesseract.js";
 import { COVER_LAPTOP, COVER_PHONE, checkSign } from "../src/kit/legibility";
-import { contextScene } from "../src/lab/crop";
+import { contextScene, contextSign } from "../src/lab/crop";
 import { EXHIBITS } from "../src/lab/exhibits";
 import type { Fit } from "../src/world/frame";
 import { assembleWorld } from "../src/world/assemble";
 import { encodePng } from "./png";
 import { agentBrowser, sleep, startVite } from "./lab-browser";
 import {
-  measure, ocrImage, OCR_WHITELIST, pickContexts, renderReport, reportFails, RES, scaleTag, signMasks, verdicts, wordCrop,
+  measure, ocrImage, OCR_WHITELIST, pickContexts, pickTick, renderReport, reportFails, reportName, RES, scaleTag, signMasks, tickTag, verdicts, wordCrop,
   type ReportEntry,
 } from "./legibility-measure";
 
@@ -33,7 +33,7 @@ const PORT = 5179, ORIGIN = `http://localhost:${PORT}`, ROOT = resolve(import.me
 const { ab, evalJson } = agentBrowser("legibility", "legibility");
 
 async function main(): Promise<void> {
-  const picked = pickContexts(EXHIBITS, process.argv.slice(2));
+  const argv = process.argv.slice(2), picked = pickContexts(EXHIBITS, argv), tick = pickTick(argv);
   try { ab("--version"); } catch { throw new Error("legibility: agent-browser not found on PATH"); }
   let vite: ChildProcess | null = null, worker: Awaited<ReturnType<typeof createWorker>> | null = null;
   try {
@@ -45,10 +45,10 @@ async function main(): Promise<void> {
     const { scene } = assembleWorld(undefined, { reducedMotion: false });
     const entries: ReportEntry[] = [], violations: { id: string; scale: number; list: ReturnType<typeof checkSign> }[] = [];
     for (const e of picked) {
-      ab("open", `${ORIGIN}/lab/storybook.html?bloom=on&speed=0#${e.id}`);
+      ab("open", `${ORIGIN}/lab/storybook.html?bloom=on&speed=0${tick !== null ? `&tick=${tick}` : ""}#${e.id}`);
       let ready = false, last = "";
       for (const t0 = Date.now(); Date.now() - t0 < 30_000 && !ready; ) {
-        try { ready = evalJson<boolean>(`window.__lab?.exhibitId === '${e.id}' && window.__lab.bloom === 'on'`); } catch (err) { last = String(err).split("\n")[0]!; } // page not ready
+        try { ready = evalJson<boolean>(`window.__lab?.exhibitId === '${e.id}' && window.__lab.bloom === 'on' && window.__lab.tickMs === ${tick ?? 0}`); } catch (err) { last = String(err).split("\n")[0]!; } // page not ready
         if (!ready) await sleep(500);
       }
       if (!ready) throw new Error(`legibility: window.__lab did not appear for ${e.id} in 30 s${last ? ` (last error: ${last})` : ""}`);
@@ -56,24 +56,24 @@ async function main(): Promise<void> {
         evalJson(`(window.__lab.setCoverScale(${scale}), true)`);
         const fit = evalJson<Fit | null>("window.__lab.fit()"), host = evalJson<{ w: number; h: number }>("window.__lab.hostSize()");
         if (!fit) throw new Error(`legibility: no fit for ${e.id}`);
-        const crop = wordCrop(e.sign, fit, host), masks = signMasks(e.sign, fit, crop);
+        const sign = contextSign(e, tick ?? 0), crop = wordCrop(sign, fit, host), masks = signMasks(sign, fit, crop);
         const b64 = evalJson<string>(`window.__lab.pixels(${crop.x}, ${crop.y}, ${crop.w}, ${crop.h})`);
         const px = Buffer.from(b64, "base64"), w = crop.w * RES, h = crop.h * RES;
         if (px.length !== w * h * 4) throw new Error(`legibility: ${e.id} at ${scale}: got ${px.length} bytes, expected ${w * h * 4}`);
-        const m = measure(px, masks), img = ocrImage(px, w, h, m.core, m.ring);
+        const m = measure(px, masks), img = ocrImage(px, w, h, m.core, m.ring, sign.ground ? masks.backed : undefined);
         const ocrPng = encodePng(img.data, img.w, img.h), rawPng = encodePng(px, w, h);
         const text = (await worker.recognize(ocrPng)).data.text;
-        const tag = `${e.id}-${scaleTag(scale)}`;
+        const tag = `${e.id}-${scaleTag(scale)}${tickTag(tick)}`;
         writeFileSync(resolve(OUT, `${tag}.png`), rawPng);
         writeFileSync(resolve(OUT, `${tag}-ocr.png`), ocrPng);
-        const rows = verdicts(m, text, e.sign.text, scale);
-        entries.push({ id: e.id, text: e.sign.text, scale, rows, crop: `${tag}.png`, ocrCrop: `${tag}-ocr.png` });
-        violations.push({ id: e.id, scale, list: checkSign(e.sign, scale, contextScene(scene, e).solids) });
+        const rows = verdicts(m, text, sign.text, scale);
+        entries.push({ id: e.id, text: sign.text, scale, rows, crop: `${tag}.png`, ocrCrop: `${tag}-ocr.png` });
+        violations.push({ id: e.id, scale, list: checkSign(sign, scale, contextScene(scene, e, tick ?? 0).solids) });
         console.log(`${e.id} at ${scale}: ${rows.map((r) => `${r.metric} ${r.value} ${r.ok ? "ok" : "FAIL"}`).join(", ")}`);
       }
     }
-    const report = { date: new Date().toISOString().slice(0, 10), viewport: "1600×900 @2", entries, violations };
-    writeFileSync(resolve(OUT, "REPORT.md"), renderReport(report));
+    const report = { date: new Date().toISOString().slice(0, 10), viewport: "1600×900 @2", tick, entries, violations };
+    writeFileSync(resolve(OUT, reportName(tick)), renderReport(report));
     process.exitCode = reportFails(report) ? 1 : 0;
   } finally {
     await worker?.terminate().catch(() => {});

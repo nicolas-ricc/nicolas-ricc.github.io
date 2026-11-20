@@ -312,7 +312,9 @@ legibilidad, en `assets/carteles-legibilidad/REPORT.md`.
 - Carriles, tal como quedaron en `src/scenes/sea-anim.ts` (no los borradores del
   comentario de la historia):
   - `LANE_OUT`: (362, -16), (398, 40), (424, 86), (437, 114), (440, 142),
-    (434, 176), (446, 232), (456, 290), (486, 347), (500, 405), (523, 510).
+    (434, 176), (446, 232), (456, 290), (501, 347), (515, 405), (522.7, 506.4).
+    Desde #451 (#454) el tramo sur corre 15 u al este: eran (486, 347), (500, 405)
+    y (523, 510).
   - `LANE_BACK`: (564, 467), (548, 330), (546, 262), (512, 200), (480, 144),
     (477, 102), (461, 66), (434, 18), (397, -39).
 - Umbral del sitio: medido con `writingSite(w, 900)`. El sitio ancho aparece
@@ -344,6 +346,7 @@ cambiaron respecto de 2026-11-17 porque cambió su entorno (cabo, carriles y
 sitios de la plataforma), y todos siguen en ✓. Desde #441 el cartel es la tabla
 flotante y el OCR lee `WRITING` en `plataforma-escena*` (spec 2026-11-15 §8.2);
 las filas de la plataforma se remidieron en #445 y el nivel 3 no excusa ninguna.
+Desde #451 el cartel es la balsa de tablones (`WRITING` en `navy` sobre `timber`, spec 2026-11-20): las filas de `plataforma-escena*` son las de `REPORT.md` de #457, con caja alta 17.25 y el OCR dentro del área respaldada; el OCR lee `WRITING` y las poses de balanceo medidas con `--tick` (t 7919 y t 15838) dan lo mismo.
 
 | Contexto | Escala | Contraste | Halo | OCR |
 |---|---|---|---|---|
@@ -351,7 +354,7 @@ las filas de la plataforma se remidieron en #445 y el nivel 3 no excusa ninguna.
 | `cartel-torre-escena` | 0.83 | 9.58:1 | 0.04 | `RESUME` |
 | `cartel-taller-escena` | 1.17 | 6.60:1 | 0.08 | `PORTFOLIO` |
 | `cartel-taller-escena` | 0.83 | 5.75:1 | 0.08 | `PORTFOLIO` |
-| `plataforma-escena` | 1.17 | 14.18:1 | 0.06 | `WRITING` |
-| `plataforma-escena` | 0.83 | 12.41:1 | 0.06 | `WRITING` |
-| `plataforma-escena-angosta` | 1.17 | 11.93:1 | 0.06 | `WRITING` |
-| `plataforma-escena-angosta` | 0.83 | 11.35:1 | 0.06 | `WRITING` |
+| `plataforma-escena` | 1.17 | 7.99:1 | 0.01 | `WRITING` |
+| `plataforma-escena` | 0.83 | 7.52:1 | 0.01 | `WRITING` |
+| `plataforma-escena-angosta` | 1.17 | 7.99:1 | 0.01 | `WRITING` |
+| `plataforma-escena-angosta` | 0.83 | 7.52:1 | 0.01 | `WRITING` |

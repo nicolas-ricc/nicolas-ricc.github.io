@@ -6,7 +6,7 @@ Fecha: 2026-11-20
 
 Viewport: 1600×900 @2
 
-Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) por píxel, escalado ×3 por vecino más cercano y umbral binario en el punto medio entre la mediana del núcleo y la del anillo; la tinta (el lado del núcleo) queda negra sobre blanco. tesseract.js con datos `eng` 4.0.0_best_int locales, modo de página palabra única (PSM 8) y lista blanca A–Z a–z.
+Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) por píxel, escalado ×3 por vecino más cercano y umbral binario en el punto medio entre la mediana del núcleo y la del anillo; la tinta (el lado del núcleo) queda negra sobre blanco. tesseract.js con datos `eng` 4.0.0_best_int locales, modo de página palabra única (PSM 8) y lista blanca A–Z a–z. En un cartel de suelo (`ground`) el OCR solo ve lo que el oráculo garantiza respaldado: los píxeles fuera de la caja de tinta de cada letra más el margen de respaldo (`backingW` · ancho, en su plano) quedan blancos, así el borde de la balsa no entra como un marco.
 
 ## cartel-taller-escena a 1.17
 
@@ -52,8 +52,8 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 14.18:1 | ≥ 4.5:1 | ✓ |
-| halo | 0.06 | ≤ 0.5 | ✓ |
+| contraste | 7.99:1 | ≥ 4.5:1 | ✓ |
+| halo | 0.01 | ≤ 0.5 | ✓ |
 | OCR | `WRITING` | = `WRITING` | ✓ |
 
 ![plataforma-escena 1.17](plataforma-escena-117.png) ![OCR](plataforma-escena-117-ocr.png)
@@ -62,8 +62,8 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 12.41:1 | ≥ 3:1 | ✓ |
-| halo | 0.06 | ≤ 0.5 | ✓ |
+| contraste | 7.52:1 | ≥ 3:1 | ✓ |
+| halo | 0.01 | ≤ 0.5 | ✓ |
 | OCR | `WRITING` | ≈ `WRITING` (sin mayúsculas) | ✓ |
 
 ![plataforma-escena 0.83](plataforma-escena-083.png) ![OCR](plataforma-escena-083-ocr.png)
@@ -72,8 +72,8 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 11.93:1 | ≥ 4.5:1 | ✓ |
-| halo | 0.06 | ≤ 0.5 | ✓ |
+| contraste | 7.99:1 | ≥ 4.5:1 | ✓ |
+| halo | 0.01 | ≤ 0.5 | ✓ |
 | OCR | `WRITING` | = `WRITING` | ✓ |
 
 ![plataforma-escena-angosta 1.17](plataforma-escena-angosta-117.png) ![OCR](plataforma-escena-angosta-117-ocr.png)
@@ -82,8 +82,8 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 11.35:1 | ≥ 3:1 | ✓ |
-| halo | 0.06 | ≤ 0.5 | ✓ |
+| contraste | 7.52:1 | ≥ 3:1 | ✓ |
+| halo | 0.01 | ≤ 0.5 | ✓ |
 | OCR | `WRITING` | ≈ `WRITING` (sin mayúsculas) | ✓ |
 
 ![plataforma-escena-angosta 0.83](plataforma-escena-angosta-083.png) ![OCR](plataforma-escena-angosta-083-ocr.png)

@@ -34,7 +34,10 @@ const PIECES: Record<string, string> = {
   // #441: WRITING in Chainsaw Carnage painted flat on a floating board
   // #445: WRITING_CAP 11.5 (the phone OCR), the board grows with the word
   // #445: the paint accents carry bloom: false (out of the bloom in the exhibits too, not only in the world)
-  plataforma: "37f51036/a32c7c2c",
+  // #451: plank raft, WRITING as a navy decal
+  // #451: water contact and grain
+  // #460: cap 17.25, BOARD_PAD 1.7
+  plataforma: "2c9e44bd/741638a5",
 };
 
 describe("render baseline (#194)", () => {

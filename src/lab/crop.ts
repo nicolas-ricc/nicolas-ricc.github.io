@@ -1,3 +1,4 @@
+import type { SignSpec } from "../kit/legibility";
 import type { Accent } from "../iso/accent";
 import { v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { clipPolygon, clipSegment, lerp2, lerp3 } from "../iso/clip";
@@ -6,7 +7,7 @@ import { bounds, type Bounds, type Solid, type Tri, tessellate } from "../iso/so
 import type { AccentColor, Material } from "../map/palette-iso";
 import type { Animator, AnimLayer } from "../scenes/animator";
 import { PLATFORM_LAYERS } from "../scenes/platform-animator";
-import { seaPlatformAt, type WritingSite } from "../scenes/sign-platform";
+import { poseAt, seaPlatformAt, signAt, type WritingSite } from "../scenes/sign-platform";
 import type { WorldScene } from "../scenes/world";
 import type { ZonedAnimator } from "../world/assemble";
 import type { Box } from "../world/frame";
@@ -150,23 +151,29 @@ export function cropAnimators(animators: readonly ZonedAnimator[], box: Box): Zo
   });
 }
 
-const platforms = new Map<WritingSite, { solids: Solid[]; accents: Accent[] }>();
+const platforms = new Map<WritingSite, { tMs: number; solids: Solid[] }>();
 
-function platformAt(site: WritingSite): { solids: Solid[]; accents: Accent[] } {
+/** The raft at a site posed at `tMs` (rest at 0): solids only (it has no accents since #454). One memo entry per site, like `platformAnimator`. */
+function platformAt(site: WritingSite, tMs: number): Solid[] {
   let p = platforms.get(site);
-  if (!p) { p = { solids: [], accents: [] }; seaPlatformAt(p.solids, p.accents, site); platforms.set(site, p); }
-  return p;
+  if (!p || p.tMs !== tMs) { p = { tMs, solids: [] }; seaPlatformAt(p.solids, site, poseAt(tMs)); platforms.set(site, p); }
+  return p.solids;
 }
 
-/** The context exhibit's scene: a crop of the world; with `writingSite`, plus the cropped Writing platform of that site (#427: the world carries it in an animator, not in `solids`). Fresh arrays: the world scene is never mutated. */
-export function contextScene(scene: WorldScene, e: ContextExhibit): WorldScene {
+/** The context exhibit's scene: a crop of the world; with `writingSite`, plus the cropped Writing platform of that site (#427: the world carries it in an animator, not in `solids`), static at `poseAt(tMs)` (rest by default; #457). Fresh arrays: the world scene is never mutated. */
+export function contextScene(scene: WorldScene, e: ContextExhibit, tMs = 0): WorldScene {
   const cropped = cropScene(scene, e.box);
   if (!e.writingSite) return cropped;
-  const p = platformAt(e.writingSite);
-  return { ...cropped, solids: [...cropped.solids, ...cropSolids(p.solids, e.box)], accents: [...cropped.accents, ...cropAccents(p.accents, e.box)] };
+  const p = platformAt(e.writingSite, tMs);
+  return { ...cropped, solids: [...cropped.solids, ...cropSolids(p, e.box)] };
 }
 
-/** The context exhibit's animators: `cropAnimators` over its box; the sign's own animator comes from `assembleWorld`. With `writingSite`, the world's platform animator (`platform.solid`) is dropped: `contextScene` already carries the platform of that site, and the world's is at the other one. */
+/** The sign the level-2/3 oracle checks for a context exhibit: for a Writing one, the sign on the raft posed at `tMs` (`signAt`); `e.sign` otherwise. */
+export function contextSign(e: ContextExhibit, tMs = 0): SignSpec {
+  return e.writingSite ? signAt(e.writingSite, poseAt(tMs)) : e.sign;
+}
+
+/** The context exhibit's animators: `cropAnimators` over its box; the sign's own animator comes from `assembleWorld`. With `writingSite`, the world's platform animator (`platform.solid`) is dropped: `contextScene` already carries the platform of that site (static, at rest or at `?tick=`), and the world's is at the other one; so `window.__lab.tick` cannot pose it. */
 export function contextAnimators(animators: readonly ZonedAnimator[], e: ContextExhibit): ZonedAnimator[] {
   return cropAnimators(e.writingSite ? animators.filter((a) => !a.ids.includes(PLATFORM_LAYERS.solid)) : animators, e.box);
 }

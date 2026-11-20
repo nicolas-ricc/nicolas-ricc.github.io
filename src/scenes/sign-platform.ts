@@ -1,98 +1,80 @@
 import type { Accent } from "../iso/accent";
-import { v3, type Vec2, type Vec3 } from "../iso/geometry";
+import type { Vec2 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
-import { translate, translateAccent } from "../iso/translate";
+import { translate } from "../iso/translate";
 import { SIGN_FONT, signSpec, type SignSpec } from "../kit/legibility";
-import { roofDiagonal, toWorld } from "../kit/lettering";
-import { CHAINSAW_FACE, CHAINSAW_X, marqueeLayout } from "../kit/marquee";
+import { toWorld } from "../kit/lettering";
+import { CHAINSAW_FACE, CHAINSAW_X, CHAINSAW_BAR } from "../kit/marquee";
 import { CHAINSAW_WRITING } from "../kit/chainsaw-writing";
+import { BOARD_TOP, LAYOUT, PLATFORM_SITES, REST_POSE, WRITING_CAP, raftAt, raftEnvelope, raftPlane, type RaftPose, type WritingSite } from "./raft";
 
-/**
- * Cap height of WRITING in Chainsaw Carnage, set by the level-3 OCR at the phone scale 0.83: at 10.8 it read `WRITHG`; 11.3..11.8 read `WRITING` at both sites. Its shortest letter (the W, `CHAINSAW_X` caps) clears 12 px at the laptop cover scale. At 11.5 the level-2 values are x-height 14.50 px at 1.17 and 10.29 px at 0.83, stroke 2.26 px and 1.60 px, air 2.47 px and 1.75 px. The binding level-2 rule is still the phone stroke: CHAINSAW_FACE · 11.5 projects to 1.60 px against the 1.5 floor.
- */
-export const WRITING_CAP = 11.5;
-/** The board floats: from the water (z −1) up to BOARD_TOP, the same height all over. */
-export const BOARD_TOP = -0.4;
-const WATER_Z = -1;
-/**
- * Board beyond the ink of the word on every side, in text units. The paint sits PAINT_LIFT over the board's top face: the oracle needs the backing
- * strictly behind each glyph centre, and a coplanar paint would not be (static contrast 1).
- */
-const BOARD_PAD = 1.6;
-export const PAINT_LIFT = 0.02;
+// The raft lives in raft.ts (it cannot import this file: BLOG_SIGNS is built at load and calls raftAt); re-exported so consumers keep their import path.
+export { BOARD_TOP, PLATFORM_SITES, REST_POSE, WRITING_CAP };
+export type { RaftPose, WritingSite };
 
-/** The board heaves (up and down, no pitch or roll): amplitude in world units and period in ms. */
+/** The raft heaves (up and down): amplitude in world units and period in ms. */
 export const HEAVE: Readonly<{ amp: number; periodMs: number }> = Object.freeze({ amp: 0.15, periodMs: 6700 });
-/** The heave is quantized to multiples of this, so a pose can be cached (at most 31 per site). */
+/** The raft pitches (about `RAFT_N`): amplitude in radians (1.5°) and period in ms. */
+export const PITCH: Readonly<{ amp: number; periodMs: number }> = Object.freeze({ amp: (1.5 * Math.PI) / 180, periodMs: 9100 });
+/** The raft rolls (about `RAFT_U`): amplitude in radians (1°) and period in ms. */
+export const ROLL: Readonly<{ amp: number; periodMs: number }> = Object.freeze({ amp: (1.0 * Math.PI) / 180, periodMs: 7300 });
+/** The heave is quantized to multiples of this, so consecutive ticks often share a pose and reuse its mesh. */
 export const HEAVE_STEP = 0.01;
-/** The heave offset at time `tMs`: a sine reduced modulo the period (so a long-running clock keeps its precision), rounded to HEAVE_STEP. */
-export const heaveAt = (tMs: number): number => {
-  const phase = ((tMs % HEAVE.periodMs) + HEAVE.periodMs) % HEAVE.periodMs;
-  return Math.round((HEAVE.amp * Math.sin((2 * Math.PI * phase) / HEAVE.periodMs)) / HEAVE_STEP) * HEAVE_STEP;
+/** Pitch and roll are quantized to multiples of this (0.1°). */
+export const ANGLE_STEP = (0.1 * Math.PI) / 180;
+
+/** A sine of `wave` at phase 0, reduced modulo the period (so a long-running clock keeps its precision), rounded to multiples of `step`. */
+const quantizedSine = (wave: Readonly<{ amp: number; periodMs: number }>, step: number, tMs: number): number => {
+  const phase = ((tMs % wave.periodMs) + wave.periodMs) % wave.periodMs;
+  return Math.round((wave.amp * Math.sin((2 * Math.PI * phase) / wave.periodMs)) / step) * step;
 };
 
-/** The two places the Writing board can float: `wide` (open sea between the two buoys) and `tall`. */
-export type WritingSite = "wide" | "tall";
-export const PLATFORM_SITES: Record<WritingSite, Vec3> = { wide: v3(570, 105, 0), tall: v3(440, 400, 0) };
+/** The heave offset at time `tMs`, rounded to HEAVE_STEP. */
+export const heaveAt = (tMs: number): number => quantizedSine(HEAVE, HEAVE_STEP, tMs);
+/** The pitch at time `tMs`, rounded to ANGLE_STEP. */
+export const pitchAt = (tMs: number): number => quantizedSine(PITCH, ANGLE_STEP, tMs);
+/** The roll at time `tMs`, rounded to ANGLE_STEP. */
+export const rollAt = (tMs: number): number => quantizedSine(ROLL, ANGLE_STEP, tMs);
+/** The raft's pose at time `tMs`: heave, pitch and roll, all at rest at t = 0. */
+export const poseAt = (tMs: number): RaftPose => ({ dz: heaveAt(tMs), pitch: pitchAt(tMs), roll: rollAt(tMs) });
+/** The pose repeats every this many ms (the lcm of the three periods). */
+export const POSE_CYCLE_MS = 44_508_100;
 
-const LAYOUT = marqueeLayout(WRITING_CAP, 0, CHAINSAW_WRITING);
-const INK = { x0: Math.min(...LAYOUT.map((g) => g.box.x0)), x1: Math.max(...LAYOUT.map((g) => g.box.x1)), y0: Math.min(...LAYOUT.map((g) => g.box.y0)), y1: Math.max(...LAYOUT.map((g) => g.box.y1)) };
-/** The board in text space: the word's ink box grown by BOARD_PAD. */
-const SHEET = { a0: INK.x0 - BOARD_PAD, a1: INK.x1 + BOARD_PAD, b0: INK.y0 - BOARD_PAD, b1: INK.y1 + BOARD_PAD };
-const SHEET_CENTRE = { a: (SHEET.a0 + SHEET.a1) / 2, b: (SHEET.b0 + SHEET.b1) / 2 };
+/** Poses to check over the cycle: rest, the 8 corners of the pose cube, then 8 instants of the motion. Frozen. */
+export const CYCLE_POSES: readonly Readonly<RaftPose>[] = Object.freeze([
+  REST_POSE,
+  ...([-1, 1] as const).flatMap((a) => ([-1, 1] as const).flatMap((b) => ([-1, 1] as const).map((c) => ({ dz: a * HEAVE.amp, pitch: b * PITCH.amp, roll: c * ROLL.amp })))),
+  ...[1, 2, 3, 4, 5, 6, 7, 8].map((k) => poseAt(k * 7919)),
+].map((p) => Object.freeze(p)));
+
+/** The raft's plan at the origin: the 4 corners of its envelope (planks with ragged ends and beam overhang) through the rest plane, moved to (0, 0). Order (a0, b0), (a1, b0), (a1, b1), (a0, b1). */
+export const PLATFORM_DECK: readonly Vec2[] = (() => {
+  const plane = raftPlane("wide"), e = raftEnvelope(), { x: sx, y: sy } = PLATFORM_SITES.wide;
+  return ([[e.a0, e.b0], [e.a1, e.b0], [e.a1, e.b1], [e.a0, e.b1]] as const).map(([a, b]): Vec2 => { const q = toWorld(plane, a, b); return { x: q.x - sx, y: q.y - sy }; });
+})();
 
 /**
- * The word lies on the board's top face, stretched along the plane's v so it reads upright on screen (`roofDiagonal`, an anamorphosis like a painted
- * road sign): the plane's origin is placed so the board's center falls on the site `c`. `dz` lifts the whole plane (heave): only z moves, the plan
- * (x, y) is the one at rest.
- */
-const planeAt = (c: Vec2, dz = 0) => {
-  const p = roofDiagonal(v3(0, 0, BOARD_TOP + PAINT_LIFT)), m = toWorld(p, SHEET_CENTRE.a, SHEET_CENTRE.b);
-  return roofDiagonal(v3(c.x - m.x, c.y - m.y, BOARD_TOP + PAINT_LIFT + dz));
-};
-
-/** The board at the site `c`, heaved by `dz`: a dark slab whose plan is the sheet taken to the world, from the water to BOARD_TOP (both plus `dz`). */
-const boardAt = (c: Vec2, dz = 0): Solid & { kind: "poly" } => {
-  const plane = planeAt(c), corner = (a: number, b: number): Vec2 => { const q = toWorld(plane, a, b); return { x: q.x, y: q.y }; };
-  return {
-    kind: "poly", footprint: [corner(SHEET.a0, SHEET.b0), corner(SHEET.a1, SHEET.b0), corner(SHEET.a1, SHEET.b1), corner(SHEET.a0, SHEET.b1)],
-    z: WATER_Z + dz, h: BOARD_TOP - WATER_Z, mat: "officeDark",
-  };
-};
-
-/** The board's plan at the origin. */
-export const PLATFORM_DECK: readonly Vec2[] = boardAt({ x: 0, y: 0 }).footprint;
-
-/**
- * The Writing sign at a site, as the legibility oracle sees it: WRITING in Chainsaw Carnage (filled cyan faces) painted flat on the board, which backs
- * it, heaved by `dz` (default 0, the rest pose). Its x-height is the height of its shortest letter (`CHAINSAW_X`); its stroke, the width of the main stems.
+ * The Writing sign at a site, as the legibility oracle sees it: WRITING in Chainsaw Carnage as a navy decal lying on the raft's planks, which back it
+ * (`raftAt(site, pose)`), posed by `pose` (default `REST_POSE`). Its x-height is the height of its shortest letter (`CHAINSAW_X`); its stroke, the width of the main stems.
  * A fresh spec on every call.
  */
-export const signAt = (site: WritingSite, dz = 0): SignSpec => {
-  const c = PLATFORM_SITES[site];
-  return signSpec({
-    id: "plataforma", text: CHAINSAW_WRITING.text, size: WRITING_CAP, width: SIGN_FONT.width, color: "cyan", plane: planeAt(c, dz), style: "fill", backing: [boardAt(c, dz)],
-    layouts: LAYOUT, xHeight: CHAINSAW_X * WRITING_CAP, stroke: CHAINSAW_FACE * WRITING_CAP,
+export const signAt = (site: WritingSite, pose: RaftPose = REST_POSE): SignSpec =>
+  signSpec({
+    id: "plataforma", text: CHAINSAW_WRITING.text, size: WRITING_CAP, width: SIGN_FONT.width, decal: "navy", ground: true, plane: raftPlane(site, pose), style: "fill", backing: [raftAt(site, pose)],
+    layouts: LAYOUT, xHeight: CHAINSAW_X * WRITING_CAP, stroke: CHAINSAW_FACE * WRITING_CAP, bar: CHAINSAW_BAR * WRITING_CAP,
   });
-};
 
 /** The Writing sign of each site, for the legibility oracle. */
 export const BLOG_SIGNS: Record<WritingSite, SignSpec> = { wide: signAt("wide"), tall: signAt("tall") };
 
-/** The floating board at a Writing site with WRITING painted on it (cyan faces of `signAt(site, dz)`, `bloom: false`: paint, not neon, wherever it is drawn), heaved by `dz`. */
-export function seaPlatformAt(out: Solid[], accents: Accent[], site: WritingSite, dz = 0): void {
-  const spec = signAt(site, dz); // a fresh spec, never BLOG_SIGNS: a consumer that mutates the scene cannot reach it
-  for (const s of spec.backing) {
-    if (s.kind !== "poly") throw new Error("the Writing board is a poly");
-    out.push(s);
-  }
-  for (const g of spec.glyphs) for (const q of g.quads) accents.push({ kind: "poly", pts: q, color: "cyan", alpha: 0.85, bloom: false });
+/** The floating raft at a Writing site, posed by `pose`: one timber mesh (WRITING is its navy decals). A fresh mesh on every call, never BLOG_SIGNS's. */
+export function seaPlatformAt(out: Solid[], site: WritingSite, pose: RaftPose = REST_POSE): void {
+  out.push(raftAt(site, pose));
 }
 
-/** The floating board with its word at the origin (a relocatable piece): `seaPlatformAt("wide")` moved by −PLATFORM_SITES.wide. */
-export function seaPlatform(out: Solid[], accents: Accent[]): void {
-  const solids: Solid[] = [], paint: Accent[] = [], { x, y } = PLATFORM_SITES.wide;
-  seaPlatformAt(solids, paint, "wide");
+/** The raft at the origin (a relocatable piece): `seaPlatformAt("wide")` moved by −PLATFORM_SITES.wide. It has no accents. */
+export function seaPlatform(out: Solid[], _accents: Accent[]): void {
+  const solids: Solid[] = [], { x, y } = PLATFORM_SITES.wide;
+  seaPlatformAt(solids, "wide");
   for (const s of solids) out.push(translate(s, -x, -y));
-  for (const d of paint) accents.push(translateAccent(d, -x, -y));
 }

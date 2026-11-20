@@ -1,7 +1,7 @@
 /** Pure parts of npm run legibility (level 3 of the sign guardrails): mapping, masks, metrics, OCR preprocess and report. scripts/legibility.ts drives the browser. */
 import type { Vec2, Vec3 } from "../src/iso/geometry";
 import { project, Z_SCALE } from "../src/iso/project";
-import { COVER_LAPTOP, COVER_PHONE, relativeLuminance, signXHeight, type SignSpec, type Violation } from "../src/kit/legibility";
+import { COVER_LAPTOP, COVER_PHONE, relativeLuminance, SIGN_RULES, signXHeight, type SignSpec, type Violation } from "../src/kit/legibility";
 import type { ContextExhibit, Exhibit } from "../src/lab/exhibits";
 import { toWorld } from "../src/kit/lettering";
 import type { Fit } from "../src/world/frame";
@@ -11,8 +11,8 @@ export const RES = 2;
 
 /** Crop of the host in CSS px, integers. */
 export interface Crop { x: number; y: number; w: number; h: number }
-/** Pixel masks of a crop (w·h, 1 = in): ink, the ring of background around it, and the holes (counters and air between letters). */
-export interface Masks { w: number; h: number; core: Uint8Array; ring: Uint8Array; holes: Uint8Array }
+/** Pixel masks of a crop (w·h, 1 = in): ink, the ring of background around it, the holes (counters and air between letters) and the backed area (every ink box grown by `backingW·width`). */
+export interface Masks { w: number; h: number; core: Uint8Array; ring: Uint8Array; holes: Uint8Array; backed: Uint8Array }
 
 /** World point → image px of the crop: project, fit, crop origin, RES. */
 export function toImage(p: Vec3, fit: Fit, crop: Crop): Vec2 {
@@ -46,25 +46,23 @@ export function fillPolygon(mask: Uint8Array, w: number, h: number, poly: Vec2[]
   }
 }
 
-/** Sets to 1 the pixels of `mask` (w×h) whose centers are within `r` of `c`. */
-export function fillDisc(mask: Uint8Array, w: number, h: number, c: Vec2, r: number): void {
-  for (let j = Math.max(0, Math.floor(c.y - r)); j <= Math.min(h - 1, Math.ceil(c.y + r)); j++) {
-    for (let i = Math.max(0, Math.floor(c.x - r)); i <= Math.min(w - 1, Math.ceil(c.x + r)); i++) if (Math.hypot(i + 0.5 - c.x, j + 0.5 - c.y) <= r) mask[j * w + i] = 1;
-  }
-}
-
 /** Masks of `sign` in the image of `crop`: core = quads; ring = ⋃(ink box + 3w) − ⋃(box + w) − core − holes; holes = (counters ∪ air between letters) − core. */
 export function signMasks(sign: SignSpec, fit: Fit, crop: Crop): Masks {
   const w = crop.w * RES, h = crop.h * RES, n = w * h, img = (p: Vec3) => toImage(p, fit, crop);
-  const core = new Uint8Array(n), holes = new Uint8Array(n), outer = new Uint8Array(n), inner = new Uint8Array(n);
+  const core = new Uint8Array(n), holes = new Uint8Array(n), outer = new Uint8Array(n), backed = new Uint8Array(n);
   const xH = signXHeight(sign), G = sign.glyphs;
   for (const g of G) for (const q of g.quads) fillPolygon(core, w, h, q.map(img));
   const grown = (g: (typeof G)[number], k: number) => {
     const { x0, y0, x1, y1 } = g.layout.box, m = k * sign.width;
     return [[x0 - m, y0 - m], [x1 + m, y0 - m], [x1 + m, y1 + m], [x0 - m, y1 + m]].map(([a, b]) => img(toWorld(g.plane, a!, b!)));
   };
-  for (const g of G) { fillPolygon(outer, w, h, grown(g, 3)); fillPolygon(inner, w, h, grown(g, 1)); }
-  for (const g of G) for (const c of g.counters) fillDisc(holes, w, h, img(c.at), c.r * Z_SCALE * fit.scale * RES);
+  for (const g of G) { fillPolygon(outer, w, h, grown(g, 3)); fillPolygon(backed, w, h, grown(g, SIGN_RULES.backingW)); }
+  for (const g of G) {
+    g.layout.counters.forEach((lc, i) => {
+      const r = g.counters[i]!.r;
+      fillPolygon(holes, w, h, Array.from({ length: 16 }, (_, k) => img(toWorld(g.plane, lc.at.x + r * Math.cos((2 * Math.PI * k) / 16), lc.at.y + r * Math.sin((2 * Math.PI * k) / 16)))));
+    });
+  }
   for (let i = 0; i + 1 < G.length; i++) {
     const a = G[i]!, b = G[i + 1]!;
     if (a.layout.box.x1 < b.layout.box.x0) fillPolygon(holes, w, h, [toWorld(a.plane, a.layout.box.x1, 0), toWorld(b.plane, b.layout.box.x0, 0), toWorld(b.plane, b.layout.box.x0, xH), toWorld(a.plane, a.layout.box.x1, xH)].map(img));
@@ -72,9 +70,9 @@ export function signMasks(sign: SignSpec, fit: Fit, crop: Crop): Masks {
   const ring = new Uint8Array(n);
   for (let i = 0; i < n; i++) {
     if (core[i]) holes[i] = 0;
-    ring[i] = outer[i] && !inner[i] && !core[i] && !holes[i] ? 1 : 0;
+    ring[i] = outer[i] && !backed[i] && !core[i] && !holes[i] ? 1 : 0;
   }
-  return { w, h, core, ring, holes };
+  return { w, h, core, ring, holes, backed };
 }
 
 /** Level-3 thresholds (§4.3): contrast per scale, halo ceiling. */
@@ -94,22 +92,22 @@ export function luminances(px: Uint8Array | Uint8ClampedArray, mask: Uint8Array)
   return out;
 }
 
-/** Median luminances of core, ring and holes; contrast = (lighter+.05)/(darker+.05) of core and ring, symmetric as WCAG; halo = holes/core, which assumes light ink (neon). */
+/** Median luminances of core, ring and holes; contrast = (lighter+.05)/(darker+.05) of core and ring, symmetric as WCAG; halo = the darker over the lighter of holes and core: with light ink it is holes/core; with dark ink it measures how much the holes darken. */
 export interface Measures { core: number; ring: number; holes: number; contrast: number; halo: number }
 
 /** Level-3 measures of the RGBA pixels `px` inside the masks `m`. */
 export function measure(px: Uint8Array | Uint8ClampedArray, m: Masks): Measures {
   const core = median(luminances(px, m.core)), ring = median(luminances(px, m.ring)), holes = median(luminances(px, m.holes));
-  return { core, ring, holes, contrast: (Math.max(core, ring) + 0.05) / (Math.min(core, ring) + 0.05), halo: holes / core };
+  return { core, ring, holes, contrast: (Math.max(core, ring) + 0.05) / (Math.min(core, ring) + 0.05), halo: Math.min(core, holes) / Math.max(core, holes) };
 }
 
-/** OCR input: RGBA ×3 nearest; pixels on the core side of (core+ring)/2 are black, the rest white. */
-export function ocrImage(px: Uint8Array | Uint8ClampedArray, w: number, h: number, core: number, ring: number): { data: Uint8Array; w: number; h: number } {
+/** OCR input: RGBA ×3 nearest; pixels on the core side of (core+ring)/2 are black, the rest white; with `keep`, pixels where it is 0 are white. */
+export function ocrImage(px: Uint8Array | Uint8ClampedArray, w: number, h: number, core: number, ring: number, keep?: Uint8Array): { data: Uint8Array; w: number; h: number } {
   const k = 3, W = w * k, H = h * k, t = (core + ring) / 2, data = new Uint8Array(W * H * 4);
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const s = (Math.floor(y / k) * w + Math.floor(x / k)) * 4;
-      const lum = relativeLuminance((px[s]! << 16) | (px[s + 1]! << 8) | px[s + 2]!), v = (lum - t) * (core - ring) > 0 ? 0 : 255, o = (y * W + x) * 4;
+      const lum = relativeLuminance((px[s]! << 16) | (px[s + 1]! << 8) | px[s + 2]!), v = (keep ? keep[s / 4] : 1) && (lum - t) * (core - ring) > 0 ? 0 : 255, o = (y * W + x) * 4;
       data[o] = data[o + 1] = data[o + 2] = v;
       data[o + 3] = 255;
     }
@@ -141,14 +139,14 @@ export function verdicts(m: Measures, ocr: string, text: string, scale: number):
 export interface ReportEntry { id: string; text: string; scale: number; rows: Row[]; crop: string; ocrCrop: string }
 
 /** The fixed OCR preprocess, as written in the report. */
-export const PREPROCESS = "Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) por píxel, escalado ×3 por vecino más cercano y umbral binario en el punto medio entre la mediana del núcleo y la del anillo; la tinta (el lado del núcleo) queda negra sobre blanco. tesseract.js con datos `eng` 4.0.0_best_int locales, modo de página palabra única (PSM 8) y lista blanca A–Z a–z.";
+export const PREPROCESS = "Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) por píxel, escalado ×3 por vecino más cercano y umbral binario en el punto medio entre la mediana del núcleo y la del anillo; la tinta (el lado del núcleo) queda negra sobre blanco. tesseract.js con datos `eng` 4.0.0_best_int locales, modo de página palabra única (PSM 8) y lista blanca A–Z a–z. En un cartel de suelo (`ground`) el OCR solo ve lo que el oráculo garantiza respaldado: los píxeles fuera de la caja de tinta de cada letra más el margen de respaldo (`backingW` · ancho, en su plano) quedan blancos, así el borde de la balsa no entra como un marco.";
 
 /** File-name tag of a scale: 1.17 → "117", 0.83 → "083". */
 export const scaleTag = (scale: number): string => String(Math.round(scale * 100)).padStart(3, "0");
 
 /** The whole REPORT.md. */
-export function renderReport(r: { date: string; viewport: string; entries: ReportEntry[]; violations: { id: string; scale: number; list: Violation[] }[] }): string {
-  const out = ["# Legibilidad, nivel 3", "", "Generado por `npm run legibility`; no se edita a mano.", "", `Fecha: ${r.date}`, "", `Viewport: ${r.viewport}`, "", PREPROCESS, ""];
+export function renderReport(r: { date: string; viewport: string; entries: ReportEntry[]; violations: { id: string; scale: number; list: Violation[] }[]; tick?: number | null }): string {
+  const out = ["# Legibilidad, nivel 3", "", "Generado por `npm run legibility`; no se edita a mano.", "", `Fecha: ${r.date}`, "", `Viewport: ${r.viewport}`, "", ...(r.tick == null ? [] : [`Tick: ${r.tick} ms`, ""]), PREPROCESS, ""];
   for (const e of r.entries) {
     out.push(`## ${e.id} a ${e.scale}`, "", "| Métrica | Valor | Umbral | ✓/✗ |", "| --- | --- | --- | --- |");
     for (const row of e.rows) out.push(`| ${row.metric} | ${row.value} | ${row.limit} | ${row.ok ? "✓" : "✗"} |`);
@@ -179,3 +177,19 @@ export function pickContexts(exhibits: readonly Exhibit[], argv: readonly string
   if (!hit.length) throw new Error(`legibility: unknown context "${id}"; choose one of: ${all.map((e) => e.id).join(", ")}`);
   return hit;
 }
+
+/** The number after `--tick` (ms of simulated time), or null without it; throws on a missing, non-numeric or negative one. */
+export function pickTick(argv: readonly string[]): number | null {
+  if (argv.some((a) => a.startsWith("--tick="))) throw new Error("legibility: write --tick <ms>, not --tick=<ms>");
+  const i = argv.indexOf("--tick");
+  if (i < 0) return null;
+  const raw = argv[i + 1];
+  if (raw === undefined || !/^\d+$/.test(raw)) throw new Error(`legibility: --tick needs a whole non-negative number of ms, got ${raw === undefined ? "nothing" : `"${raw}"`}`);
+  return Number(raw);
+}
+
+/** File-name tag of a tick: "" without it, "-t<ms>" with it. */
+export const tickTag = (tick: number | null): string => (tick === null ? "" : `-t${tick}`);
+
+/** Name of the report file: REPORT.md, or REPORT-t<ms>.md for a tick. */
+export const reportName = (tick: number | null): string => `REPORT${tickTag(tick)}.md`;

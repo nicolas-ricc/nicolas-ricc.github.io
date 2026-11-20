@@ -73,6 +73,7 @@ function mapZ(p: Piece, z: (n: number) => number, k: number): Piece {
       case "poly": return { ...s, z: z(s.z), h: s.h * k };
       case "strip": return { ...s, z: z(s.z) };
       case "ground": return { ...s, tris: s.tris.map((t) => ({ ...t, pts: [P(t.pts[0]), P(t.pts[1]), P(t.pts[2])] })) };
+      case "mesh": return { ...s, faces: s.faces.map((f) => ({ ...f, pts: f.pts.map(P) })) };
       case "wheel": return { ...s, at: P(s.at) };
       case "beam": return { ...s, from: P(s.from), to: P(s.to), h: s.from.z === s.to.z ? s.h * k : s.h };
       default: return { ...s, at: P(s.at), h: s.h * k };

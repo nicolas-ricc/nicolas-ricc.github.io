@@ -4,7 +4,6 @@ import { v3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import { BLEED, CELL, CELL_BLEED, WORLD, worldZoneAt } from "../map/geo";
 import { CROWN_SITE, towerCrown } from "../scenes/sign-crown";
-import { seaPlatformAt } from "../scenes/sign-platform";
 import { TINKER_SITE, tinkerAnimator, tinkerSign } from "../scenes/sign-tinker";
 import { world } from "../scenes/world";
 import { ACCENT_DIM, VEIL_ALPHA, accentZone, accentsByZone, focusAlphas, veilCells, veilPolygons, veilRuns } from "./veil";
@@ -114,16 +113,6 @@ describe("accentsByZone", () => {
   });
   it("with no lights it returns the three zones empty", () => {
     expect(accentsByZone([])).toEqual({ portfolio: [], cv: [], blog: [] });
-  });
-});
-
-describe("Writing platform accents (#390)", () => {
-  it.each(["wide", "tall"] as const)("every accent of the Writing board (the painted word's polys) is Blog at the %s site (#427, #442)", (site) => {
-    const out: Solid[] = [], accents: Accent[] = [];
-    seaPlatformAt(out, accents, site);
-    expect(accents.length).toBeGreaterThan(0);
-    expect(accents.every((a) => a.kind === "poly")).toBe(true);
-    for (const a of accents) expect(accentZone(a)).toBe("blog");
   });
 });
 

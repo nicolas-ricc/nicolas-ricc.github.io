@@ -45,3 +45,30 @@ export function clipPolygon<T extends Vec2>(pts: readonly T[], r: ClipRect, lerp
   }
   return cur.length < 3 ? [] : cur;
 }
+
+const ccw2 = (p: readonly Vec2[]): Vec2[] => (p.reduce((s, a, i) => { const b = p[(i + 1) % p.length]!; return s + a.x * b.y - b.x * a.y; }, 0) > 0 ? p.slice() : p.slice().reverse());
+const same2 = (a: Vec2, b: Vec2): boolean => Math.abs(a.x - b.x) < 1e-7 && Math.abs(a.y - b.y) < 1e-7;
+const isConvex2 = (p: readonly Vec2[]): boolean => p.every((o, i) => { const a = p[(i + 1) % p.length]!, b = p[(i + 2) % p.length]!; return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x) >= -1e-9; });
+/** The union of two CCW convex pieces across a shared (reversed) edge, or null if they share none or the union is concave. */
+function joinConvex(A: readonly Vec2[], B: readonly Vec2[]): Vec2[] | null {
+  for (let i = 0; i < A.length; i++) for (let j = 0; j < B.length; j++) {
+    if (!same2(A[i]!, B[(j + 1) % B.length]!) || !same2(A[(i + 1) % A.length]!, B[j]!)) continue;
+    const out = [...A.slice(i + 1), ...A.slice(0, i + 1)];
+    for (let k = 2; k < B.length; k++) out.push(B[(j + k) % B.length]!);
+    return isConvex2(out) ? out : null;
+  }
+  return null;
+}
+
+/** Greedily merges convex pieces (either winding) that share an edge and whose union stays convex; output CCW, same total area. Deterministic: always the first pair (i < j). */
+export function mergeConvex(pieces: readonly Vec2[][]): Vec2[][] {
+  const out = pieces.map(ccw2);
+  for (let again = true; again;) {
+    again = false;
+    for (let i = 0; i < out.length && !again; i++) for (let j = i + 1; j < out.length; j++) {
+      const m = joinConvex(out[i]!, out[j]!);
+      if (m) { out[i] = m; out.splice(j, 1); again = true; break; }
+    }
+  }
+  return out;
+}

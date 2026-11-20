@@ -23,6 +23,7 @@ export function translate(s: Solid, dx: number, dy: number): Solid {
     case "poly": return { ...s, footprint: s.footprint.map(p) };
     case "beam": return { ...s, from: p3(s.from), to: p3(s.to) };
     case "strip": return { ...s, path: s.path.map(p) };
+    case "mesh": return { ...s, faces: s.faces.map((f) => ({ ...f, pts: f.pts.map(p3) })) };
     case "ground": return { ...s, tris: s.tris.map((t) => ({ ...t, pts: [p3(t.pts[0]), p3(t.pts[1]), p3(t.pts[2])] })) };
   }
 }

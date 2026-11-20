@@ -53,6 +53,9 @@ export const BASE_TONES = {
   boxGreen:  { top: 0x4e6e4a, lit: 0x40512e, shade: 0x1f2e2c, up: 0x5a7b4b, down: 0x436146 },
   boxGrey:   { top: 0x707070, lit: 0x5c5345, shade: 0x2d2f43, up: 0x827d72, down: 0x606369 },
   boxOrange: { top: 0xb0703a, lit: 0x905324, shade: 0x462f23, up: 0xcc7d3b, down: 0x976337 },
+  // #451 raft: planks and the navy paint on them
+  timber:    { top: 0xfbefc5, lit: 0xceb17a, shade: 0x646476, up: 0xffffc9, down: 0xd8d2b9 },
+  navy:      { top: 0x0a1134, lit: 0x080d20, shade: 0x04071f, up: 0x0c1335, down: 0x090f31 },
 } as const;
 
 export const BASE_SHADOW = 0x2a1a3a;

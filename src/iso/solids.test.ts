@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import { facadeFaces } from "./facade";
 import { dot, v3, type Vec3 } from "./geometry";
 import { shadeTone } from "./light";
+import { meshBox } from "./mesh-fixtures";
 import { project } from "./project";
+import { rigid } from "./rigid";
 import { bounds, GABLE_RATIO, isFlat, tessellate, tessellateAll, WHEEL_NORMAL, WHEEL_U, type Face, type Plate, type PlateBox, type Solid } from "./solids";
 
 const prism: Solid = { kind: "prism", at: v3(0, 0, 0), w: 2, d: 3, h: 4, mat: "concrete" };
@@ -1652,5 +1654,91 @@ describe("cylinder plates and dome gores (#398)", () => {
     sides.forEach((f, k) => expect(f.mat, `face ${k}`).toBe(k % 2 ? "whitewash" : "signal"));
     const { alt: _alt, ...plain } = D as Solid & { alt?: string };
     for (const f of tessellateAll(plain as Solid)) expect(f.mat).toBe("signal");
+  });
+});
+
+describe("mesh", () => {
+  const box = (): Solid => ({ kind: "mesh", mat: "concrete", faces: meshBox(v3(0, 0, 0), 2, 3, 4) });
+  const DEG = Math.PI / 180;
+  const near = (a: Vec3, b: Vec3) => { expect(a.x).toBeCloseTo(b.x, 9); expect(a.y).toBeCloseTo(b.y, 9); expect(a.z).toBeCloseTo(b.z, 9); };
+
+  it("a box of six counter-clockwise faces: outward normals, tones by normal, three visible", () => {
+    const all = tessellateAll(box());
+    expect(all).toHaveLength(6);
+    [v3(0, 0, 1), v3(0, 0, -1), v3(1, 0, 0), v3(-1, 0, 0), v3(0, 1, 0), v3(0, -1, 0)].forEach((n, i) => near(all[i]!.normal, n));
+    for (const f of all) {
+      expect(f.tone).toBe(shadeTone(f.normal));
+      expect(f.mat).toBe("concrete");
+      expect(f.toneOffset).toBe(0);
+    }
+    expect(all[0]!.tone).toBe("top");
+    const vis = tessellate(box());
+    expect(vis).toHaveLength(3);
+    expect(vis.map((f) => f.normal)).toEqual([all[0]!.normal, all[2]!.normal, all[4]!.normal]);
+    expect(bounds(box())).toEqual({ min: v3(0, 0, 0), max: v3(2, 3, 4) });
+  });
+
+  it("a clockwise face keeps its inverted normal and is culled", () => {
+    const faces = meshBox(v3(0, 0, 0), 2, 3, 4);
+    faces[0] = { pts: [...faces[0]!.pts].reverse() };
+    const s: Solid = { kind: "mesh", mat: "concrete", faces };
+    near(tessellateAll(s)[0]!.normal, v3(0, 0, -1));
+    expect(tessellate(s).some((f) => f.pts.every((p) => p.z === 4))).toBe(false);
+    expect(tessellate(s)).toHaveLength(2);
+  });
+
+  it("a coplanar decal is emitted right after its face, with its normal and tone", () => {
+    const faces = meshBox(v3(0, 0, 0), 2, 3, 4);
+    const decal = { pts: [v3(0.5, 0.5, 4), v3(1.5, 0.5, 4), v3(1, 2, 4)], mat: "steel" as const };
+    const vis = tessellate({ kind: "mesh", mat: "concrete", faces: [...faces, decal] });
+    const top = vis.findIndex((f) => f.mat === "concrete" && f.tone === "top"), d = vis.findIndex((f) => f.mat === "steel");
+    expect(top).toBeGreaterThanOrEqual(0);
+    expect(d).toBeGreaterThan(top);
+    near(vis[d]!.normal, v3(0, 0, 1));
+    expect(vis[d]!.tone).toBe("top");
+    const lifted = tessellate({ kind: "mesh", mat: "concrete", faces: [{ ...faces[0]!, toneOffset: 1 }, ...faces.slice(1), { ...decal, toneOffset: 1 }] });
+    expect(lifted.find((f) => f.mat === "concrete" && f.tone === "top")!.toneOffset).toBe(1);
+    expect(lifted.find((f) => f.mat === "steel")!.toneOffset).toBe(1);
+  });
+
+  it("bounds includes the points of every face, visible or not", () => {
+    const below = { pts: [v3(0, 0, -2), v3(0, 9, -2), v3(5, 0, -2)] }; // clockwise from above: faces down
+    expect(bounds({ kind: "mesh", mat: "concrete", faces: [...meshBox(v3(0, 0, 0), 2, 3, 4), below] })).toEqual({ min: v3(0, 0, -2), max: v3(5, 9, 4) });
+  });
+
+  it("a box tilted by rigid keeps six unit normals and its tones", () => {
+    const flat = tessellateAll(box());
+    const centre = v3(1, 1.5, 0);
+    const tilted = tessellateAll({ kind: "mesh", mat: "concrete", faces: meshBox(v3(0, 0, 0), 2, 3, 4).map((f) => ({ ...f, pts: rigid(f.pts, centre, 1.5 * DEG, 1 * DEG, 0.1) })) });
+    expect(tilted).toHaveLength(6);
+    for (const f of tilted) expect(Math.hypot(f.normal.x, f.normal.y, f.normal.z)).toBeCloseTo(1, 9);
+    expect(tilted[0]!.normal.z).toBeGreaterThan(0.997);
+    tilted.forEach((f, i) => expect(shadeTone(f.normal), `face ${i}`).toBe(shadeTone(flat[i]!.normal)));
+  });
+
+  it("s.tone shifts every face's toneOffset", () => {
+    const faces = meshBox(v3(0, 0, 0), 2, 3, 4).map((f, i) => ({ ...f, toneOffset: i % 2 ? -2 : 0 }));
+    const toned = tessellateAll({ kind: "mesh", mat: "concrete", faces, tone: 1 });
+    expect(toned.map((f) => f.toneOffset)).toEqual([1, -1, 1, -1, 1, -1]);
+  });
+
+  it("a face's mat defaults to the solid's", () => {
+    const faces = meshBox(v3(0, 0, 0), 2, 3, 4);
+    faces[2] = { ...faces[2]!, mat: "glass" };
+    expect(tessellateAll({ kind: "mesh", mat: "concrete", faces }).map((f) => f.mat)).toEqual(["concrete", "concrete", "glass", "concrete", "concrete", "concrete"]);
+  });
+
+  it("a degenerate face is culled and does not throw", () => {
+    const line = { pts: [v3(0, 0, 5), v3(1, 1, 5), v3(2, 2, 5)] };
+    const s: Solid = { kind: "mesh", mat: "concrete", faces: [...meshBox(v3(0, 0, 0), 2, 3, 4), line] };
+    const f = tessellateAll(s)[6]!;
+    expect(f.normal).toEqual(v3(0, 0, 0));
+    expect(f.tone).toBe("shade");
+    expect(tessellate(s)).toHaveLength(3);
+    expect(bounds(s).max.z).toBe(5);
+  });
+
+  it("isFlat is false for a mesh", () => {
+    expect(isFlat(box())).toBe(false);
   });
 });

@@ -12,14 +12,14 @@ import type { SignSpec } from "../kit/legibility";
 import { signBox, SIGN_ORDER, zoneSigns } from "../world/signs";
 import { BEAM_INNER, BEAM_LEN, BEAM_PERIOD_MS, CYCLE_MS, FADE_U, FERRY_PAUSE_MS, FERRY_ROUTE, FERRY_SPEED, KEEPER_SIGN_MS, LANE_BACK, LANE_OUT, LANE_SPEED, NEON_STEP_MS, OFF_MS, PORT_MS, SHIPS, alphaAt, createSeaAnim, laneAt, laneLength, type ShipFrame } from "./sea-anim";
 import { SHIP_SPECS, ship, shipAt } from "./ships";
-import { HEAVE, PLATFORM_DECK, PLATFORM_SITES, heaveAt, seaPlatformAt, signAt } from "./sign-platform";
+import { CYCLE_POSES, PLATFORM_DECK, PLATFORM_SITES, seaPlatformAt, signAt } from "./sign-platform";
 import { bleedTerrainAt, terrainAt } from "./terrain";
 import { world } from "./world";
 
 const WATER = new Set(["water", "sea", "shore", "abyss"]);
 type Static = { b: Bounds; sb: ReturnType<typeof screenBounds>; sh: Vec2[] };
 /** The Writing board (#442: the one solid left of the platform) at both sites (#427): it left the static world for platformAnimator, and the lanes must clear it at either site. */
-const platforms = (): Solid[] => (["wide", "tall"] as const).flatMap((site) => { const out: Solid[] = []; seaPlatformAt(out, [], site); return out; });
+const platforms = (): Solid[] => (["wide", "tall"] as const).flatMap((site) => { const out: Solid[] = []; seaPlatformAt(out, site); return out; });
 const staticsOf = (solids: Solid[]): Static[] => solids.map((s) => { const b = bounds(s); return { b, sb: screenBounds(b), sh: screenHull(b) }; });
 /** Alignment box of the freighter centered at `p` (z −1..13) and a check that no static solid overlapping it on screen covers it. */
 const expectNotBehind = (statics: Static[], p: { x: number; y: number }, heading: number): void => {
@@ -37,7 +37,7 @@ describe("route", () => {
     const end = LANE_OUT[LANE_OUT.length - 1]!;
     expect(inCoverQuad(end.x, end.y)).toBe(false);
     const L = laneLength("out");
-    expect(Math.abs(L - 560.7)).toBeLessThan(5); // slack to move vertices up to 4 u
+    expect(Math.abs(L - 563.1)).toBeLessThan(5); // #454: 560.7 → 563.1 with the two vertices moved 15 u east and the sea end re-solved; slack to move vertices up to 4 u
     for (let d = 0; d <= L; d += 1) {
       const p = laneAt("out", d);
       const t = inWorld(p.x, p.y) ? terrainAt(p.x, p.y) : bleedTerrainAt(p.x, p.y);
@@ -529,15 +529,13 @@ describe("zone signs and the lanes (#390, #394)", () => {
     expect(samples).toBeGreaterThan(0);
     expect(bad).toEqual([]);
   }, 15_000); // ~1 s alone; the full parallel suite stretches it past the default 5 s
-  it("no ship piece or launch piece crosses the Writing word at any pose of the heave cycle, at either site (#444)", () => {
-    const signs = (["wide", "tall"] as const).flatMap((site) => Array.from({ length: 8 }, (_, k) => {
-      const dz = heaveAt((k * HEAVE.periodMs) / 8);
-      return [`${site} phase ${k}/8`, signAt(site, dz)] as const;
-    }));
+  it("no ship piece or launch piece crosses the Writing word at any pose of CYCLE_POSES, at either site (#444, #456)", () => {
+    const signs = (["wide", "tall"] as const).flatMap((site) => CYCLE_POSES.map((pose, k) => [`${site} pose ${k}/17`, signAt(site, pose)] as const));
+    expect(signs).toHaveLength(34);
     const { samples, bad } = shipsCrossing(signs);
     expect(samples).toBeGreaterThan(0);
     expect(bad).toEqual([]);
-  }, 15_000);
+  }, 30_000);
   it("no ship piece's screen box reaches the box of the Writing word at the wide site (#429)", () => {
     // stricter than the hull test above: at (550, 125) the return cargo's masts entered the word's box and competed with it on screen
     const box = signBox(zoneSigns("wide").blog);
@@ -550,4 +548,18 @@ describe("zone signs and the lanes (#390, #394)", () => {
     }
     expect(hits).toEqual([]);
   }, 15_000);
+});
+
+describe("LANE_OUT shifted east for the raft (#454)", () => {
+  it("(486, 347) → (501, 347) and (500, 405) → (515, 405); the vertices before them unchanged", () => {
+    expect(LANE_OUT.slice(0, 8)).toEqual([{ x: 362, y: -16 }, { x: 398, y: 40 }, { x: 424, y: 86 }, { x: 437, y: 114 }, { x: 440, y: 142 }, { x: 434, y: 176 }, { x: 446, y: 232 }, { x: 456, y: 290 }]);
+    expect(LANE_OUT[8]).toEqual({ x: 501, y: 347 });
+    expect(LANE_OUT[9]).toEqual({ x: 515, y: 405 });
+    expect(LANE_OUT).toHaveLength(11);
+  });
+  it("the sea end lies on the line (515, 405) → (523, 510), within 0.1 u", () => {
+    const e = LANE_OUT[10]!, dx = 523 - 515, dy = 510 - 405, len = Math.hypot(dx, dy);
+    expect(Math.abs(((e.x - 515) * dy - (e.y - 405) * dx) / len)).toBeLessThanOrEqual(0.1);
+    expect((e.x - 515) * dx + (e.y - 405) * dy).toBeGreaterThan(0);
+  });
 });
