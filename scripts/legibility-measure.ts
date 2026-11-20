@@ -160,7 +160,7 @@ export function renderReport(r: { date: string; viewport: string; entries: Repor
   return out.join("\n");
 }
 
-/** True when any table row is ✗ (no row is excused, at any context) or any level-2 violation exists. */
+/** True when any table row is ✗ or any level-2 violation exists. */
 export const reportFails = (r: { entries: ReportEntry[]; violations: { list: Violation[] }[] }): boolean =>
   r.entries.some((e) => e.rows.some((x) => !x.ok)) || r.violations.some((v) => v.list.length > 0);
 

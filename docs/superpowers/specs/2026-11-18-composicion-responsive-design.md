@@ -351,7 +351,7 @@ las filas de la plataforma se remidieron en #445 y el nivel 3 no excusa ninguna.
 | `cartel-torre-escena` | 0.83 | 9.58:1 | 0.04 | `RESUME` |
 | `cartel-taller-escena` | 1.17 | 6.60:1 | 0.08 | `PORTFOLIO` |
 | `cartel-taller-escena` | 0.83 | 5.75:1 | 0.08 | `PORTFOLIO` |
-| `plataforma-escena` | 1.17 | 12.51:1 | 0.16 | `WRITING` |
-| `plataforma-escena` | 0.83 | 10.67:1 | 0.13 | `WRITING` |
-| `plataforma-escena-angosta` | 1.17 | 10.12:1 | 0.16 | `WRITING` |
-| `plataforma-escena-angosta` | 0.83 | 9.55:1 | 0.13 | `WRITING` |
+| `plataforma-escena` | 1.17 | 14.18:1 | 0.06 | `WRITING` |
+| `plataforma-escena` | 0.83 | 12.41:1 | 0.06 | `WRITING` |
+| `plataforma-escena-angosta` | 1.17 | 11.93:1 | 0.06 | `WRITING` |
+| `plataforma-escena-angosta` | 0.83 | 11.35:1 | 0.06 | `WRITING` |

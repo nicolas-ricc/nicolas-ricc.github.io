@@ -52,8 +52,8 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 12.51:1 | ≥ 4.5:1 | ✓ |
-| halo | 0.16 | ≤ 0.5 | ✓ |
+| contraste | 14.18:1 | ≥ 4.5:1 | ✓ |
+| halo | 0.06 | ≤ 0.5 | ✓ |
 | OCR | `WRITING` | = `WRITING` | ✓ |
 
 ![plataforma-escena 1.17](plataforma-escena-117.png) ![OCR](plataforma-escena-117-ocr.png)
@@ -62,8 +62,8 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 10.67:1 | ≥ 3:1 | ✓ |
-| halo | 0.13 | ≤ 0.5 | ✓ |
+| contraste | 12.41:1 | ≥ 3:1 | ✓ |
+| halo | 0.06 | ≤ 0.5 | ✓ |
 | OCR | `WRITING` | ≈ `WRITING` (sin mayúsculas) | ✓ |
 
 ![plataforma-escena 0.83](plataforma-escena-083.png) ![OCR](plataforma-escena-083-ocr.png)
@@ -72,8 +72,8 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 10.12:1 | ≥ 4.5:1 | ✓ |
-| halo | 0.16 | ≤ 0.5 | ✓ |
+| contraste | 11.93:1 | ≥ 4.5:1 | ✓ |
+| halo | 0.06 | ≤ 0.5 | ✓ |
 | OCR | `WRITING` | = `WRITING` | ✓ |
 
 ![plataforma-escena-angosta 1.17](plataforma-escena-angosta-117.png) ![OCR](plataforma-escena-angosta-117-ocr.png)
@@ -82,8 +82,8 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 9.55:1 | ≥ 3:1 | ✓ |
-| halo | 0.13 | ≤ 0.5 | ✓ |
+| contraste | 11.35:1 | ≥ 3:1 | ✓ |
+| halo | 0.06 | ≤ 0.5 | ✓ |
 | OCR | `WRITING` | ≈ `WRITING` (sin mayúsculas) | ✓ |
 
 ![plataforma-escena-angosta 0.83](plataforma-escena-angosta-083.png) ![OCR](plataforma-escena-angosta-083-ocr.png)

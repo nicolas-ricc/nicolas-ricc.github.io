@@ -192,7 +192,8 @@ lab). In the lab, `?bloom=` forces the mode without measuring and `6` rotates
 it. An animated accent layer that sets `bloom: false` (`AnimLayer`,
 `src/scenes/animator.ts`) stays out of the bloom: it is drawn additively like
 every light but gets no blurred mirror; the paint of the Writing board is that
-case.
+case. A static `poly` accent with `bloom: false` (`Accent`, `src/iso/accent.ts`)
+does the same, so the board's paint stays out of the bloom in the storybook too.
 
 ## Tests
 

@@ -261,8 +261,8 @@ demás conservan las medidas del 2026-11-17.
 | `cartel-torre-escena` | 0.83 | 10.11 | 1.64 | 2.10 | 4.70 | 8.89:1 | 0.05 | `RESUME` |
 | `cartel-taller-escena` | 1.17 | 15.07 | 2.40 | 2.29 | 8.06 | 6.99:1 | 0.08 | `PORTFOLIO` |
 | `cartel-taller-escena` | 0.83 | 10.69 | 1.70 | 1.62 | 8.06 | 5.93:1 | 0.08 | `PORTFOLIO` |
-| `plataforma-escena` | 1.17 | 14.50 | 2.26 | 2.47 | 8.08 | 12.51:1 | 0.16 | `WRITING` |
-| `plataforma-escena` | 0.83 | 10.29 | 1.60 | 1.75 | 8.08 | 10.67:1 | 0.13 | `WRITING` |
+| `plataforma-escena` | 1.17 | 14.50 | 2.26 | 2.47 | 8.08 | 14.18:1 | 0.06 | `WRITING` |
+| `plataforma-escena` | 0.83 | 10.29 | 1.60 | 1.75 | 8.08 | 12.41:1 | 0.06 | `WRITING` |
 
 Nivel 1: aire mínimo y máximo entre letras, ritmo y la contraforma más
 ajustada, todo en w. Las tres palabras van en fuentes de exhibición (§8.2),
@@ -388,7 +388,7 @@ Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage, con
   `marquee-word.py`; el archivo de la fuente ni se modifica ni se
   redistribuye. La EULA de LostWages (§3) prohíbe modificar o adaptar la
   fuente, así que sus glifos no se pueden redibujar.
-  **Excepción de OCR (nivel 3).** Por decisión del autor, el OCR de
+  **Excepción de OCR (nivel 3, hasta #445).** Por decisión del autor, el OCR de
   `plataforma-escena` y `plataforma-escena-angosta` falla, solo para este
   cartel y solo en el OCR: el contraste y el halo siguen en ✓ y los niveles 1
   y 2 no se aflojan. `REPORT.md` lee `WRELENG` a 1.17 y `WREFHNG` a 0.83 en
@@ -412,8 +412,8 @@ Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage, con
   `src/kit/chainsaw-writing.ts`, generada por `scripts/marquee-word.py` con
   `speck` 0.005 y `tol` 0.004 (de 1 474 a 382 triángulos) y aire 0.13. La
   caja alta es `WRITING_CAP` 11.5, la cara `CHAINSAW_FACE` 0.12 cajas altas
-  y `CHAINSAW_X` 0.77 (las mayúsculas de la fuente saltan: el «alto de x» que mide el oráculo es el de la letra más baja, la `W` con su trazo suelto). Es la excepción de #437 la que se va: el OCR deja
-  de tener excepción y el nivel 3 no excusa ninguna fila.
+  y `CHAINSAW_X` 0.77 (las mayúsculas de la fuente saltan: el «alto de x» que mide
+  el oráculo es el de la letra más baja, la `W` con su trazo suelto).
   La tabla es un `poly` de `officeDark` desde el agua (z −1) hasta
   `BOARD_TOP` −0.4, cuyo plan es la caja de tinta de la palabra más
   `BOARD_PAD` 1.6 por cada lado, sobre un plano `roofDiagonal`: la palabra
@@ -427,23 +427,32 @@ Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage, con
   cuantizado a `HEAVE_STEP` 0.01), solo en altura: no hay cabeceo ni
   alabeo porque ningún sólido se puede inclinar. La pintura se mueve con la
   tabla como un solo cuerpo. Con `reducedMotion` la tabla queda quieta.
-  `platform.lights` declara `bloom: false`: la pintura no se refleja en el
-  bloom y se lee como pintura, no como neón.
+  La pintura queda fuera del bloom y se lee como pintura, no como neón:
+  `platform.lights` declara `bloom: false` (#443) y, desde #445, también
+  cada acento de la pintura (`Accent` `poly` con `bloom: false`, que el
+  stage respeta en los acentos estáticos). Así el storybook (la pieza y los
+  dos exhibits en contexto, que llevan la tabla como acentos estáticos) y
+  `npm run legibility` miden la misma pintura que muestra el sitio; antes
+  los exhibits la dibujaban con el espejo del bloom.
   **Por qué 11.5 y no 10.8.** Con 10.8, el OCR a 0.83 leía `WRITHG` en los
   dos sitios (tesseract funde `IN` en una `H`). Se probaron la tabla en
   `glass`, la pintura con alpha 0.9 y las dos juntas, también a 10.8: seguía
-  `WRITHG`. Barrido de la caja alta (a 0.83; a 1.17 se lee `WRITING` en
-  todas): 11.2 sigue fallando; de 11.3 a 11.8 lee `WRITING` en los dos
-  sitios, con contraste mínimo 8.87:1. 11.5 es el medio de la banda. La
+  `WRITHG`. Barrido de la caja alta, con la pintura fuera del bloom:
+  10.8 lee `WRITHG` a 0.83 y 11.2 lee `WRITE` a 1.17 y `WRITHG` a 0.83; 11.3,
+  11.5, 11.6 y 11.8 leen `WRITING` en los dos sitios y las dos escalas,
+  con contraste mínimo 11.35:1 (el primer barrido, con la pintura todavía
+  en el bloom de los exhibits, dio la misma banda, 11.3 a 11.8, con
+  contraste mínimo 8.87:1). 11.5 es el medio de la banda. La
   tabla sigue en `officeDark` y la pintura en alpha 0.85: no se tocó
   ninguno. Contraste estático 8.08:1; nivel 2 en §8.1.
   El umbral de aspecto del sitio de Writing pasa a 1,53 (ancho 1378 px a
   900 px de alto): depende de la caja alta, porque `writingSite` lee
   `signBox(BLOG_SIGNS.wide)`.
-  **Nivel 3.** `plataforma-escena` a 1.17: contraste 12.51:1, halo 0.16,
-  OCR `WRITING`; a 0.83: 10.67:1, 0.13, `WRITING`.
-  `plataforma-escena-angosta` a 1.17: 10.12:1, 0.16, `WRITING`; a 0.83:
-  9.55:1, 0.13, `WRITING`. Capturas del balanceo en §8.4.
+  **Nivel 3.** La excepción de OCR de #437 se eliminó: el nivel 3 no
+  excusa ninguna fila. `plataforma-escena` a 1.17: contraste 14.18:1,
+  halo 0.06, OCR `WRITING`; a 0.83: 12.41:1, 0.06, `WRITING`.
+  `plataforma-escena-angosta` a 1.17: 11.93:1, 0.06, `WRITING`; a 0.83:
+  11.35:1, 0.06, `WRITING`. Capturas del balanceo en §8.4.
 - **Writing en el mundo (#390).** `PLATFORM_SITE` pasó a (392, 178) en #389:
   a 8,2 u del carril de salida fallaba la regla de oclusión de los barcos.
   `sea()` construye la plataforma ahí y `plataforma-escena` es un recorte

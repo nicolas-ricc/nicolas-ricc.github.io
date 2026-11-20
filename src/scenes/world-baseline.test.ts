@@ -33,7 +33,8 @@ const PIECES: Record<string, string> = {
   // #437: WRITING on the frame, no panel (platform only): END 4, cap 9.4, shorter deck, posts behind the letters, 74 solids
   // #441: WRITING in Chainsaw Carnage painted flat on a floating board
   // #445: WRITING_CAP 11.5 (the phone OCR), the board grows with the word
-  plataforma: "37f51036/0ce1f3c4",
+  // #445: the paint accents carry bloom: false (out of the bloom in the exhibits too, not only in the world)
+  plataforma: "37f51036/a32c7c2c",
 };
 
 describe("render baseline (#194)", () => {

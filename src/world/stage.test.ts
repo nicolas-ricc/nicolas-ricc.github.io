@@ -392,3 +392,36 @@ describe("clip (#399)", () => {
     }
   });
 });
+
+describe("static bloom: false accents (#445)", () => {
+  const paint = (x: number, y: number): Accent => ({ kind: "poly", pts: [v3(x, y, 0), v3(x + 2, y, 0), v3(x + 2, y + 2, 0)], color: "cyan", alpha: 0.85, bloom: false });
+  const lamp = (x: number, y: number): Accent => ({ kind: "dot", at: v3(x, y, 1), r: 1, color: "amber" });
+  const stageWith = (accents: Accent[]) => { const { scene } = assembleWorld(["portfolio"], { reducedMotion: true }); return buildStage({ ...scene, accents: [...scene.accents, ...accents] }, []); };
+  const n = WORLD_ZONES.length;
+  const mirrorContexts = (s: ReturnType<typeof buildStage>) => bloomSlotOf(s.container)!.children.map((m) => (m as Graphics).context);
+
+  it("without any, the static accents keep one Graphics per zone, all mirrored", () => {
+    const s = stageWith([lamp(500, 200)]);
+    expect(accentSlotOf(s.container).children).toHaveLength(n);
+    s.setBloom("on");
+    expect(mirrorContexts(s)).toHaveLength(n);
+  });
+  it("static paint gets its own Graphics per zone, drawn but never mirrored; the lamps stay in the bloom", () => {
+    const s = stageWith([lamp(500, 200), paint(570, 105)]);
+    const kids = accentSlotOf(s.container).children as Graphics[];
+    expect(kids).toHaveLength(2 * n);
+    const [lit, flat] = [kids.slice(0, n), kids.slice(n)];
+    expect(flat.reduce((k, g) => k + g.context.instructions.length, 0)).toBeGreaterThan(0);
+    s.setBloom("on");
+    const ctxs = mirrorContexts(s);
+    expect(ctxs).toHaveLength(n);
+    for (const g of flat) expect(ctxs).not.toContain(g.context);
+    for (const g of lit) expect(ctxs).toContain(g.context);
+  });
+  it("static paint dims with the veil of its zone", () => {
+    const s = stageWith([paint(570, 105)]);
+    s.setFocus("portfolio"); s.tick(10_000);
+    // paint Graphics in WORLD_ZONES order: [portfolio, cv, blog]; (570, 105) is Blog
+    expect((accentSlotOf(s.container).children[n + 2] as Graphics).alpha).toBeCloseTo(ACCENT_DIM);
+  });
+});

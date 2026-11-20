@@ -2,10 +2,13 @@ import { ISO_COLORS, type AccentColor } from "../map/palette-iso";
 import { v3, type Vec3 } from "./geometry";
 import { project, Z_SCALE } from "./project";
 
-/** Artificial light: drawn on top of everything with "add" blend. A dot (lamp, with halo), a polygon (lit window, beam) or a spot (functional light, `spot()`: a haloless diamond poly). */
+/**
+ * Artificial light: drawn on top of everything with "add" blend. A dot (lamp, with halo), a polygon (lit window, beam) or a spot (functional light, `spot()`: a haloless diamond poly).
+ * A polygon with `bloom: false` gets no mirror in the stage's bloom (paint, not neon), like an `AnimLayer` with `bloom: false`.
+ */
 export type Accent =
   | { kind: "dot"; at: Vec3; r: number; color: AccentColor }
-  | { kind: "poly"; pts: Vec3[]; color: AccentColor; alpha?: number };
+  | { kind: "poly"; pts: Vec3[]; color: AccentColor; alpha?: number; bloom?: false };
 
 /** Haloless point light: a 4-point diamond poly of radius `r` around `at` (`drawAccents` halos only dots). Points: +x/−y, top, −x/+y, bottom. */
 export function spot(at: Vec3, r: number, color: AccentColor, alpha = 1): Accent {
