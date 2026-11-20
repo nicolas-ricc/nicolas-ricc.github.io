@@ -2,7 +2,7 @@
 
 Generado por `npm run legibility`; no se edita a mano.
 
-Fecha: 2026-11-19
+Fecha: 2026-11-20
 
 Viewport: 1600×900 @2
 
@@ -52,9 +52,9 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 12.12:1 | ≥ 4.5:1 | ✓ |
-| halo | 0.05 | ≤ 0.5 | ✓ |
-| OCR | `WRELENG` | = `WRITING` | ✗ (excepción, spec 2026-11-15 §8.2) |
+| contraste | 12.51:1 | ≥ 4.5:1 | ✓ |
+| halo | 0.16 | ≤ 0.5 | ✓ |
+| OCR | `WRITING` | = `WRITING` | ✓ |
 
 ![plataforma-escena 1.17](plataforma-escena-117.png) ![OCR](plataforma-escena-117-ocr.png)
 
@@ -62,9 +62,9 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 11.46:1 | ≥ 3:1 | ✓ |
-| halo | 0.03 | ≤ 0.5 | ✓ |
-| OCR | `WREFHNG` | ≈ `WRITING` (sin mayúsculas) | ✗ (excepción, spec 2026-11-15 §8.2) |
+| contraste | 10.67:1 | ≥ 3:1 | ✓ |
+| halo | 0.13 | ≤ 0.5 | ✓ |
+| OCR | `WRITING` | ≈ `WRITING` (sin mayúsculas) | ✓ |
 
 ![plataforma-escena 0.83](plataforma-escena-083.png) ![OCR](plataforma-escena-083-ocr.png)
 
@@ -72,9 +72,9 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 10.22:1 | ≥ 4.5:1 | ✓ |
-| halo | 0.08 | ≤ 0.5 | ✓ |
-| OCR | `WRELENG` | = `WRITING` | ✗ (excepción, spec 2026-11-15 §8.2) |
+| contraste | 10.12:1 | ≥ 4.5:1 | ✓ |
+| halo | 0.16 | ≤ 0.5 | ✓ |
+| OCR | `WRITING` | = `WRITING` | ✓ |
 
 ![plataforma-escena-angosta 1.17](plataforma-escena-angosta-117.png) ![OCR](plataforma-escena-angosta-117-ocr.png)
 
@@ -82,9 +82,9 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 9.85:1 | ≥ 3:1 | ✓ |
-| halo | 0.05 | ≤ 0.5 | ✓ |
-| OCR | `WREFHNG` | ≈ `WRITING` (sin mayúsculas) | ✗ (excepción, spec 2026-11-15 §8.2) |
+| contraste | 9.55:1 | ≥ 3:1 | ✓ |
+| halo | 0.13 | ≤ 0.5 | ✓ |
+| OCR | `WRITING` | ≈ `WRITING` (sin mayúsculas) | ✓ |
 
 ![plataforma-escena-angosta 0.83](plataforma-escena-angosta-083.png) ![OCR](plataforma-escena-angosta-083-ocr.png)
 
