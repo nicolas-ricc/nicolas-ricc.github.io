@@ -1,4 +1,4 @@
-# Capturas de la balsa de tablones (#451, #455)
+# Capturas de la balsa de tablones (#451, #455, #457)
 
 Storybook `npm run dev -- --host --port 5173`, agent-browser 1600×900 @2 (PNG 3200×1800), bloom on. Método: `CLAUDE.md`.
 
@@ -7,4 +7,4 @@ Storybook `npm run dev -- --host --port 5173`, agent-browser 1600×900 @2 (PNG 3
 - `escena-ancho-117.png`: `#plataforma-escena` con `__lab.setCoverScale(1.17)`. Mirar la balsa en el sitio ancho: entera sobre el agua, con sus anillos.
 - `escena-angosto-117.png`: `#plataforma-escena-angosta` con `__lab.setCoverScale(1.17)`. Lo mismo en el sitio angosto (sombra en `waterDeep`).
 
-La subcarpeta `balanceo/` la escribe #456.
+La subcarpeta `balanceo/` la escribió #456. #457 retomó las cuatro capturas de arriba y las del balanceo con la caja alta 17.25 (#460); antes mostraban la caja 20. Cada captura se tomó con una carga nueva de la página (`about:blank` antes de cada URL), para que la escala de la anterior no se arrastre por un cambio de hash.

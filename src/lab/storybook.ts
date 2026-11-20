@@ -12,7 +12,7 @@ import { fixedScaleFit, nextCoverScale } from "./cover-scale";
 import { contextAnimators, contextScene, cropAnimators, cropScene, pieceScene, readout, solidsBox } from "./crop";
 import { EXHIBITS, type Exhibit, GROUPS, pickExhibit, stepExhibit } from "./exhibits";
 import { contentFrame } from "./frame";
-import { bloomFromSearch, nextBloomMode, speedFromSearch } from "./page";
+import { bloomFromSearch, nextBloomMode, speedFromSearch, tickFromSearch } from "./page";
 import { buildIndex, markCurrent, mountStorybook, renderReadout } from "./storybook-ui";
 
 /**
@@ -21,21 +21,22 @@ import { buildIndex, markCurrent, mountStorybook, renderReadout } from "./storyb
  * a sign built whole in world coordinates when the world does not already
  * have it. The hash picks the exhibit; arrows and j/k only write the hash.
  * 6 rotates the bloom; ?bloom= forces it and ?speed= scales the clock up to
- * 100 (?speed=0 freezes it), as in page.ts. g, h and a
+ * 100 (?speed=0 freezes it), as in page.ts; ?tick=<ms> poses the Writing raft of a context exhibit at that
+ * animation time (static, rest when absent; the stage clock cannot pose it). g, h and a
  * hide or show ground, shadows and accents (with the bloom) and are remembered
  * across exhibits. c cycles the exhibit scale: real, 1.17 and 0.83, the cover scales
  * of a laptop and a phone. The frame is the projected bounds of what is drawn (contentFrame),
  * sampling the animation 16 times over 8 s, which moves the shared clock 8 s on each exhibit
  * change (accepted); it is computed once per show; resize, c and the cover scale reuse it.
  * In development the page publishes `window.__lab` (exhibit id, cover scale and its setter,
- * bloom mode, last fit, host size, `tick(dtMs)` to advance the stage and render, for
+ * bloom mode, `tickMs`, last fit, host size, `tick(dtMs)` to advance the stage and render, for
  * time-lapse checks in headless, and `pixels`, the stage's RGBA at resolution 2 with
  * filters) for `npm run legibility`.
  */
 /** The DEV page hook `npm run legibility` drives: `pixels` takes host CSS px and returns base64 RGBA at resolution 2. */
 export interface LabHook {
   readonly exhibitId: string | null; readonly coverScale: number | null; setCoverScale(s: number | null): void;
-  readonly bloom: BloomMode | null; fit(): Fit | null; hostSize(): { w: number; h: number };
+  readonly tickMs: number; readonly bloom: BloomMode | null; fit(): Fit | null; hostSize(): { w: number; h: number };
   tick(dtMs: number): void;
   pixels(x: number, y: number, w: number, h: number): Promise<string>;
 }
@@ -45,6 +46,7 @@ declare global {
 
 mountStorybook(document, ({ host, nav, panel }) => {
   const log = import.meta.env.DEV;
+  const tickMs = tickFromSearch(location.search);
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const { scene, animators } = assembleWorld(undefined, { reducedMotion });
 
@@ -83,7 +85,7 @@ mountStorybook(document, ({ host, nav, panel }) => {
         src = [cropScene(scene, e.box), cropAnimators(animators, e.box)];
         opts = { box: e.box, h: e.h, clip: e.box };
       } else if (e.kind === "context") {
-        src = [contextScene(scene, e), contextAnimators(animators, e)];
+        src = [contextScene(scene, e, tickMs), contextAnimators(animators, e)];
         opts = { box: e.box, h: e.h, clip: e.box };
       } else {
         const piece = pieceScene(e.build, e.pad);
@@ -115,6 +117,7 @@ mountStorybook(document, ({ host, nav, panel }) => {
         get exhibitId() { return current?.id ?? null; },
         get coverScale() { return coverScale; },
         setCoverScale(s) { coverScale = s; fit(); },
+        tickMs,
         get bloom() { return stage?.bloom ?? null; },
         fit: () => lastFit,
         tick(dtMs) { stage?.tick(dtMs); app.render(); },

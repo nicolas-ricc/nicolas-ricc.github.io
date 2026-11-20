@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { assembleWorld } from "../world/assemble";
 import type { BloomMode } from "../world/stage";
 import { EXHIBITS } from "./exhibits";
-import { bloomFromSearch, MAX_SPEED, nextBloomMode, speedFromSearch } from "./page";
+import { bloomFromSearch, MAX_SPEED, nextBloomMode, speedFromSearch, tickFromSearch } from "./page";
 
 describe("bloom in the lab", () => {
   it("?bloom= accepts the three modes", () => {
@@ -140,5 +140,13 @@ describe("?speed= with a cap (#128)", () => {
     const t0 = performance.now();
     for (let i = 0; i < 10; i++) for (const a of [...animators, ...pieces]) a.tick(dt);
     expect(performance.now() - t0).toBeLessThan(2000);
+  });
+});
+
+describe("?tick= in the lab (#457)", () => {
+  it("tickFromSearch: ?tick=<ms>, rest (0) when missing or invalid", () => {
+    expect(tickFromSearch("?bloom=on&speed=0&tick=7919")).toBe(7919);
+    expect(tickFromSearch("?tick=0")).toBe(0);
+    for (const s of ["", "?tick=", "?tick", "?tick=-5", "?tick=abc", "?tick=%20", "?tick=Infinity"]) expect(tickFromSearch(s), s).toBe(0);
   });
 });

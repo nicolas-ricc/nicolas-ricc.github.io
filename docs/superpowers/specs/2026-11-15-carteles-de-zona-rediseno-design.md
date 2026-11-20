@@ -257,8 +257,10 @@ demás conservan las medidas del 2026-11-17. Desde #460, caja alta 17.25: las
 columnas de nivel 2 de `plataforma-escena` (alto de x, trazo, aire y contraste
 estático) son las de la balsa de tablones con WRITING en `navy` sobre `timber`
 (con caja alta 20 medían 12.74, 2.48 y 3.59 a 1.17, y 9.04, 1.76 y 2.55 a
-0.83); las de nivel 3 siguen siendo las de #445 hasta que #457 regenere
-`REPORT.md` (la comprobación previa de #460 está en §8.2, entrada de #451).
+0.83). Desde #457, nivel 3 de la balsa: las de nivel 3 son las de `REPORT.md`
+regenerado (halo simétrico y OCR dentro del área respaldada; §8.2, entrada de
+#451), y las de las poses t 7919 y t 15838 están en `REPORT-t7919.md` y
+`REPORT-t15838.md`.
 
 | Exhibit | Escala | Alto de x (px) | Trazo (px) | Aire (px) | Contraste estático | Contraste (px) | Halo | OCR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -266,8 +268,8 @@ estático) son las de la balsa de tablones con WRITING en `navy` sobre `timber`
 | `cartel-torre-escena` | 0.83 | 10.11 | 1.64 | 2.10 | 4.70 | 8.89:1 | 0.05 | `RESUME` |
 | `cartel-taller-escena` | 1.17 | 15.07 | 2.40 | 2.29 | 8.06 | 6.99:1 | 0.08 | `PORTFOLIO` |
 | `cartel-taller-escena` | 0.83 | 10.69 | 1.70 | 1.62 | 8.06 | 5.93:1 | 0.08 | `PORTFOLIO` |
-| `plataforma-escena` | 1.17 | 10.99 | 2.14 | 3.10 | 8.04 | 14.18:1 | 0.06 | `WRITING` |
-| `plataforma-escena` | 0.83 | 7.80 | 1.52 | 2.20 | 8.04 | 12.41:1 | 0.06 | `WRITING` |
+| `plataforma-escena` | 1.17 | 10.99 | 2.14 | 3.10 | 8.04 | 7.99:1 | 0.01 | `WRITING` |
+| `plataforma-escena` | 0.83 | 7.80 | 1.52 | 2.20 | 8.04 | 7.52:1 | 0.01 | `WRITING` |
 
 Nivel 1: aire mínimo y máximo entre letras, ritmo y la contraforma más
 ajustada, todo en w. Las tres palabras van en fuentes de exhibición (§8.2),
@@ -542,6 +544,35 @@ Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage, con
   causa, así que #460 queda `ready-for-human`. La fila de halo falla (81.82)
   en los dos sitios y a las dos escalas: la medida actual supone tinta clara y
   pertenece a #457 (halo simétrico). `REPORT.md` no se reescribe (es de #457).
+  **Nivel 3 de la balsa (#457)** (`npm run legibility`, 2026-11-20, caja alta
+  17.25, tres corridas con salida 0). Cambios del script: el halo es simétrico,
+  min(núcleo, huecos) / max(núcleo, huecos), porque con tinta oscura el
+  cociente viejo huecos / núcleo daba 81.82; las contraformas se rellenan con
+  el círculo de 16 puntos llevado por el plano del glifo (una elipse sobre el
+  plano de suelo, el mismo disco en las paredes); y en un cartel `ground` el
+  OCR solo ve el área respaldada (la caja de tinta más `backingW` · ancho en
+  su plano; el resto, blanco). Esto último es el arreglo de recorte que pidió
+  el dueño y confirma el diagnóstico de #460: la entrada de 0.83 mostraba el
+  borde de la balsa como un marco negro (`wWRiTinG`), y con el área
+  respaldada lee `WRITING`. Lecturas (las dos plataformas dan lo mismo).
+  En reposo (`REPORT.md`): a 1.17, contraste 7.99:1, halo 0.01, OCR `WRITING`;
+  a 0.83, contraste 7.52:1, halo 0.01, OCR `WRITING`. En t 7919 y en t 15838
+  (`REPORT-t7919.md`, `REPORT-t15838.md`, poses de `poseAt`): a 1.17 y a
+  0.83, contraste 7.99:1, halo 0.01, OCR `WRITING`. RESUME y PORTFOLIO quedan
+  igual y en ✓. `--tick <ms>` escribe `REPORT-t<ms>.md` con la línea
+  `Tick: <ms> ms` y recortes `-t<ms>`. Desvío: `--tick` no llama a
+  `window.__lab.tick`; los exhibits de contexto de Writing dibujan la balsa
+  estática (`contextScene`) y sueltan su animador, así que un tick del
+  escenario no podría posarla (y `contentFrame` ya hace avanzar los
+  animadores 8 s al cargar). En su lugar el storybook lee `?tick=<ms>`
+  (`tickFromSearch`), `contextScene(scene, e, tMs)` construye la balsa en
+  `poseAt(tMs)`, `contextSign(e, tMs)` es el cartel del oráculo en esa pose,
+  `window.__lab.tickMs` devuelve el tick y el script lo espera. Movimiento:
+  `PITCH` ±1.5° con periodo 9100 ms y `ROLL` ±1.0° con periodo 7300 ms
+  (`ANGLE_STEP` 0.1°), y el ancho del tablón, `plankW` 2.4. No hizo falta un
+  barrido de la caja alta: 17.25 es decisión del dueño (#460) y el barrido de
+  20 a 22 del issue queda superado. Las capturas se regeneraron con caja alta
+  17.25 (§8.4).
 - **Writing en el mundo (#390).** `PLATFORM_SITE` pasó a (392, 178) en #389:
   a 8,2 u del carril de salida fallaba la regla de oclusión de los barcos.
   `sea()` construye la plataforma ahí y `plataforma-escena` es un recorte
@@ -564,20 +595,20 @@ cubierta, que desde la segunda vuelta se estira a lo largo del cartel
 | PORTFOLIO | 52.74 | 87.73 | galpón de montaje sur 90 × 16 (`SHIPYARD_HALLS[1]`) | 124.02 |
 | WRITING | 72.56 | 120.06 | balsa de tablones 76.6 × 30.3 (`PLATFORM_DECK`, el sobre de `raftEnvelope`) | 126.68 |
 
-Desde #445 la fila de WRITING mide la tabla flotante en Chainsaw Carnage con caja alta 11.5 (10.8 en #442); la tabla de abajo son las medidas de #445. Desde #451 la fila de WRITING mide la palabra sobre la balsa de tablones (`raftEnvelope`, el sobre de los tablones con vigas y bordes irregulares, que `PLATFORM_DECK` recorre); desde #460, caja alta 17.25 (con caja alta 20 medía 84.13 u, 139.20 px y una balsa de 87.9 × 32.9, 145.49 px).
+Desde #451 la fila de WRITING mide la palabra sobre la balsa de tablones (`raftEnvelope`, el sobre de los tablones con vigas y bordes irregulares, que `PLATFORM_DECK` recorre); desde #460, caja alta 17.25 (con caja alta 20 medía 84.13 u, 139.20 px y una balsa de 87.9 × 32.9, 145.49 px). Antes medía la tabla flotante en Chainsaw Carnage (caja alta 10.8 en #442 y 11.5 en #445).
 
 ### 8.4 Capturas
 
 Capturas (3200 × 1800; las seis `-escena` con bloom) en
 `docs/superpowers/specs/assets/374-carteles/`:
 
-Las capturas de `plataforma-escena`, `plataforma-real`, `plataforma-escena-angosta` y `sitio-1600x900-ancho` siguen siendo las de #445 (la tabla flotante, caja alta 11.5): #457 las regenera con la balsa a caja alta 17.25.
+Las capturas de `plataforma-escena`, `plataforma-real`, `plataforma-escena-angosta` y `sitio-1600x900-ancho` se regeneraron en #457 con la balsa de tablones a caja alta 17.25 (3200 × 1800, con bloom).
 
 - `assets/374-carteles/cartel-torre-escena-117.png` y `assets/374-carteles/cartel-torre-escena-083.png`
 - `assets/374-carteles/cartel-taller-escena-117.png` y `assets/374-carteles/cartel-taller-escena-083.png`
-- `assets/374-carteles/plataforma-escena-117.png` y `assets/374-carteles/plataforma-escena-083.png` (regeneradas en #445 con la tabla flotante)
-- `assets/374-carteles/cartel-torre-real.png`, `assets/374-carteles/cartel-taller-real.png` y `assets/374-carteles/plataforma-real.png` (escala real; la de la plataforma, regenerada en #445)
-- `assets/423-composicion-responsive/plataforma-escena-angosta-117.png` y `assets/423-composicion-responsive/sitio-1600x900-ancho.png` (regeneradas en #445 con la tabla flotante)
+- `assets/374-carteles/plataforma-escena-117.png` y `assets/374-carteles/plataforma-escena-083.png` (regeneradas en #457 con la balsa de tablones, caja alta 17.25)
+- `assets/374-carteles/cartel-torre-real.png`, `assets/374-carteles/cartel-taller-real.png` y `assets/374-carteles/plataforma-real.png` (escala real; la de la plataforma, regenerada en #457 con la balsa)
+- `assets/423-composicion-responsive/plataforma-escena-angosta-117.png` y `assets/423-composicion-responsive/sitio-1600x900-ancho.png` (regeneradas en #457 con la balsa de tablones, caja alta 17.25)
 - `assets/374-carteles/cartel-taller-detalle.png`, `assets/374-carteles/cartel-taller-detalle-sinacentos.png`, `assets/374-carteles/cartel-taller-titila-a.png` y `assets/374-carteles/cartel-taller-titila-b.png`
 
 Recortes del nivel 3 y la imagen que vio el OCR (`-ocr`), con
@@ -587,6 +618,9 @@ Recortes del nivel 3 y la imagen que vio el OCR (`-ocr`), con
 - `assets/carteles-legibilidad/cartel-torre-escena-117.png` y `assets/carteles-legibilidad/cartel-torre-escena-083.png` (más los `-ocr` de cada uno)
 - `assets/carteles-legibilidad/cartel-taller-escena-117.png` y `assets/carteles-legibilidad/cartel-taller-escena-083.png` (más los `-ocr` de cada uno)
 - `assets/carteles-legibilidad/plataforma-escena-117.png` y `assets/carteles-legibilidad/plataforma-escena-083.png` (más los `-ocr` de cada uno)
+- `assets/carteles-legibilidad/plataforma-escena-117-t7919.png`, `assets/carteles-legibilidad/plataforma-escena-083-t7919.png`, `assets/carteles-legibilidad/plataforma-escena-117-t15838.png` y `assets/carteles-legibilidad/plataforma-escena-083-t15838.png` (más los `-ocr`, y los de `plataforma-escena-angosta`, por ejemplo `assets/carteles-legibilidad/plataforma-escena-angosta-083-t15838.png`), con [`REPORT-t7919.md`](assets/carteles-legibilidad/REPORT-t7919.md) y [`REPORT-t15838.md`](assets/carteles-legibilidad/REPORT-t15838.md)
+
+Balsa de tablones (#451, #456, #457), pieza real, pieza a 0.83, escena ancha y angosta, y seis poses de balanceo (3200 × 1800, con bloom), con su [README](assets/451-balsa-tablones/README.md): `assets/451-balsa-tablones/` (`pieza-real.png`, `pieza-083.png`, `escena-ancho-117.png`, `escena-angosto-117.png` y `balanceo/balanceo-1.png` a `balanceo-6.png`).
 
 Balanceo de la tabla flotante (#441, #445), cuatro poses a un cuarto de periodo
 (3200 × 1800, con bloom), con su
