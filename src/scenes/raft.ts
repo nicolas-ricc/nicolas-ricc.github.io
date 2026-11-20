@@ -11,13 +11,14 @@ import { waterCellMat } from "./terrain";
 
 /**
  * Cap height of WRITING in Chainsaw Carnage, set by the level-3 OCR at the phone scale 0.83: at 10.8 it read `WRITHG`; 11.3..11.8 read `WRITING` at both sites.
- * The raft raises it to 20 so the ink reads over the plank joints.
+ * The raft raised it to 20 so the ink reads over the plank joints (#451, under the vertical floors).
+ * The owner's decision (2026-11-20) sets 17.25 with the ground-sign floors of `SIGN_RULES.ground` (#460).
  */
-export const WRITING_CAP = 20;
+export const WRITING_CAP = 17.25;
 /** The raft floats: its top face sits at this z, the same height all over. */
 export const BOARD_TOP = -0.4;
-/** Raft beyond the ink of the word on every side, in text units. */
-export const BOARD_PAD = 1.6;
+/** Raft beyond the ink of the word on every side, in text units. At least the oracle backing margin (backingW·SIGN_FONT.width) plus RAFT.ragged, so every plank end covers the margin (#460). */
+export const BOARD_PAD = 1.7;
 
 /** The two places the Writing raft can float: `wide` (open sea between the two buoys) and `tall`. */
 export type WritingSite = "wide" | "tall";
