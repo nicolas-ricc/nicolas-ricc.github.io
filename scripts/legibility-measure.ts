@@ -137,15 +137,6 @@ export function verdicts(m: Measures, ocr: string, text: string, scale: number):
   ];
 }
 
-/**
- * True for the one row level 3 excuses (#437, spec 2026-11-15 §8.2): the OCR row of WRITING in LostWages, at the two
- * context exhibits of the Writing platform. tesseract reads LostWages' `I` as `E`, so it cannot spell the word; the excuse
- * covers only that failure, a reading `WR` + three letters + `NG` (as `WRELENG`), so a word that stops reading at all still
- * fails. Contrast and halo still have to pass there, and no other sign inherits the exception.
- */
-export const excused = (id: string, row: Row): boolean =>
-  row.metric === "OCR" && !row.ok && /^plataforma-escena(-angosta)?$/.test(id) && /^`WR[A-Za-z]{3}NG`$/i.test(row.value);
-
 /** One sign at one scale in the report; file names are relative to the report. */
 export interface ReportEntry { id: string; text: string; scale: number; rows: Row[]; crop: string; ocrCrop: string }
 
@@ -160,7 +151,7 @@ export function renderReport(r: { date: string; viewport: string; entries: Repor
   const out = ["# Legibilidad, nivel 3", "", "Generado por `npm run legibility`; no se edita a mano.", "", `Fecha: ${r.date}`, "", `Viewport: ${r.viewport}`, "", PREPROCESS, ""];
   for (const e of r.entries) {
     out.push(`## ${e.id} a ${e.scale}`, "", "| Métrica | Valor | Umbral | ✓/✗ |", "| --- | --- | --- | --- |");
-    for (const row of e.rows) out.push(`| ${row.metric} | ${row.value} | ${row.limit} | ${row.ok ? "✓" : excused(e.id, row) ? "✗ (excepción, spec 2026-11-15 §8.2)" : "✗"} |`);
+    for (const row of e.rows) out.push(`| ${row.metric} | ${row.value} | ${row.limit} | ${row.ok ? "✓" : "✗"} |`);
     out.push("", `![${e.id} ${e.scale}](${e.crop}) ![OCR](${e.ocrCrop})`, "");
   }
   out.push("## Nivel 2 (checkSign)", "");
@@ -169,9 +160,9 @@ export function renderReport(r: { date: string; viewport: string; entries: Repor
   return out.join("\n");
 }
 
-/** True when any table row is ✗ (but the excused OCR rows) or any level-2 violation exists. */
+/** True when any table row is ✗ or any level-2 violation exists. */
 export const reportFails = (r: { entries: ReportEntry[]; violations: { list: Violation[] }[] }): boolean =>
-  r.entries.some((e) => e.rows.some((x) => !x.ok && !excused(e.id, x))) || r.violations.some((v) => v.list.length > 0);
+  r.entries.some((e) => e.rows.some((x) => !x.ok)) || r.violations.some((v) => v.list.length > 0);
 
 /** Parses `agent-browser eval` stdout (the JSON of the value); errors are prefixed `${label}:`. */
 export function parseEval<T>(stdout: string, label = "legibility"): T {

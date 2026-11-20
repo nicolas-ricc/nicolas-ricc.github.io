@@ -7,6 +7,7 @@ import { factory } from "./factory";
 import { factoryAnimator } from "./factory-animator";
 import { fair } from "./fair";
 import { fairAnimator } from "./fair-animator";
+import { platformAnimator } from "./platform-animator";
 import { railAnimator } from "./rail-animator";
 import { seaAnimator } from "./sea-animator";
 import { shipyard } from "./shipyard";
@@ -22,6 +23,7 @@ const animators: [string, () => Animator][] = [
   ["cityAnimator", () => cityAnimator(city(createRng(7), createRng(8), createRng(9)), createRng(3), opts)],
   ["factoryAnimator", () => factoryAnimator(factory(createRng(7)), createRng(3), opts)],
   ["fairAnimator", () => fairAnimator(fair(createRng(7)), opts)],
+  ["platformAnimator", () => platformAnimator(opts)],
   ["railAnimator", () => railAnimator(opts)],
   ["seaAnimator", () => seaAnimator(w.sea!, opts)],
   ["shipyardAnimator", () => shipyardAnimator(shipyard(createRng(7)), opts)],

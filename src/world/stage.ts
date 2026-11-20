@@ -1,4 +1,5 @@
 import { AlphaFilter, BlurFilter, type BlurFilterOptions, Container, Graphics } from "pixi.js";
+import type { Accent } from "../iso/accent";
 import { SHADOW_BAND_ALPHA, buildRenderList } from "../iso/render-list";
 import type { WorldZone } from "../map/geo";
 import { ISO_COLORS } from "../map/palette-iso";
@@ -36,7 +37,7 @@ export interface Stage {
 /** Time constant of the alpha lerp (veil and lights): min(1, dt / LERP_MS). */
 const LERP_MS = 120;
 
-interface AccentGraphics { g: Graphics; zone: WorldZone; base: number; draw: () => void; mirror?: Graphics }
+interface AccentGraphics { g: Graphics; zone: WorldZone; base: number; draw: () => void; bloom: boolean; mirror?: Graphics }
 
 /**
  * Builds the layers of a world scene. Order, bottom to top: bleed,
@@ -45,7 +46,7 @@ interface AccentGraphics { g: Graphics; zone: WorldZone; base: number; draw: () 
  * accents (one per zone) and, per animated accent layer, one Graphics per zone
  * (a single one if the layer declares its zone).
  * The bloom is lazy: it starts at `off`, without a `bloomSlot`; the first `setBloom("on")`
- * builds it (mirrors of the accents with a filter) and inserts it right below `accentSlot`.
+ * builds it (mirrors of the accents whose layer does not declare `bloom: false`, with a filter) and inserts it right below `accentSlot`.
  * A `bloomSlot` built after `setLayer("accents", false)` is born hidden.
  * `opts.clip` cuts the shadow hulls (static and animated solids) to that box.
  */
@@ -81,16 +82,21 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[], opts: 
     veilSlot.addChild(g);
   }
 
-  // static accents split by zone (worldZoneAt of their position)
+  // static accents split by zone (worldZoneAt of their position); those that declare `bloom: false` (paint) get their own Graphics per zone, with no mirror
   const accents: AccentGraphics[] = [];
-  const byZone = accentsByZone(scene.accents);
-  for (const z of WORLD_ZONES) {
-    const g = new Graphics();
-    g.blendMode = "add";
-    const draw = (): void => drawAccents(g, byZone[z], halo);
-    draw();
-    accentSlot.addChild(g);
-    accents.push({ g, zone: z, base: 1, draw });
+  const isPaint = (a: Accent): boolean => a.kind === "poly" && a.bloom === false;
+  const paint = scene.accents.filter(isPaint);
+  const groups: [Accent[], boolean][] = [[scene.accents.filter((a) => !isPaint(a)), true], ...(paint.length ? [[paint, false] as [Accent[], boolean]] : [])];
+  for (const [list, bloomed] of groups) {
+    const byZone = accentsByZone(list);
+    for (const z of WORLD_ZONES) {
+      const g = new Graphics();
+      g.blendMode = "add";
+      const draw = (): void => drawAccents(g, byZone[z], halo);
+      draw();
+      accentSlot.addChild(g);
+      accents.push({ g, zone: z, base: 1, draw, bloom: bloomed });
+    }
   }
 
   // static water: every body of water that no animator claims (fallback path)
@@ -113,7 +119,7 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[], opts: 
       redraw.set(id, () => { const l = a.layer(id) as AnimLayer & { kind: "solid" }; const items = buildRenderList(l.solids, l.heading, opts.clip); drawLayer(gs, items, "shadow"); drawLayer(gc, items, "shadowCore"); drawLayer(g, items, "solid"); const al = l.alpha ?? 1; gs.alpha = gc.alpha = g.alpha = al; });
     } else {
       // one Graphics per zone: each light is veiled with the zone it is in, unless the layer declares its own (ships)
-      const declared = (a.layer(id) as AnimLayer & { kind: "accent" }).zone;
+      const { zone: declared, bloom: inBloom } = a.layer(id) as AnimLayer & { kind: "accent" };
       const draw = (): void => {
         const l = a.layer(id) as AnimLayer & { kind: "accent" };
         const byZone = accentsByZone(l.accents, declared);
@@ -124,7 +130,7 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[], opts: 
         const g = new Graphics();
         g.blendMode = "add";
         accentSlot.addChild(g);
-        const e: AccentGraphics = { g, zone, base: 1, draw };
+        const e: AccentGraphics = { g, zone, base: 1, draw, bloom: inBloom !== false };
         accents.push(e);
         return e;
       });
@@ -146,6 +152,7 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[], opts: 
     slot.visible = accentsVisible;
     slot.filters = [new BlurFilter(BLOOM_FILTER)];
     for (const e of accents) {
+      if (!e.bloom) continue;
       const m = new Graphics({ context: e.g.context });
       m.blendMode = "add";
       slot.addChild(m);

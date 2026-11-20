@@ -8,16 +8,17 @@ import { convexHull, polyline, v3, type Vec2 } from "../iso/geometry";
 import { project } from "../iso/project";
 import { bounds, hullRings, isFlat, type Bounds, type Solid } from "../iso/solids";
 import { HEADLAND, WORLD, inCoverQuad, pointInPolygon, worldZoneAt } from "../map/geo";
+import type { SignSpec } from "../kit/legibility";
 import { signBox, SIGN_ORDER, zoneSigns } from "../world/signs";
 import { BEAM_INNER, BEAM_LEN, BEAM_PERIOD_MS, CYCLE_MS, FADE_U, FERRY_PAUSE_MS, FERRY_ROUTE, FERRY_SPEED, KEEPER_SIGN_MS, LANE_BACK, LANE_OUT, LANE_SPEED, NEON_STEP_MS, OFF_MS, PORT_MS, SHIPS, alphaAt, createSeaAnim, laneAt, laneLength, type ShipFrame } from "./sea-anim";
 import { SHIP_SPECS, ship, shipAt } from "./ships";
-import { PLATFORM_DECK, PLATFORM_SITES, seaPlatformAt } from "./sign-platform";
+import { HEAVE, PLATFORM_DECK, PLATFORM_SITES, heaveAt, seaPlatformAt, signAt } from "./sign-platform";
 import { bleedTerrainAt, terrainAt } from "./terrain";
 import { world } from "./world";
 
 const WATER = new Set(["water", "sea", "shore", "abyss"]);
 type Static = { b: Bounds; sb: ReturnType<typeof screenBounds>; sh: Vec2[] };
-/** The Writing platform's solids at both sites (#427): it left the static world for platformAnimator, and the lanes must clear it at either site. */
+/** The Writing board (#442: the one solid left of the platform) at both sites (#427): it left the static world for platformAnimator, and the lanes must clear it at either site. */
 const platforms = (): Solid[] => (["wide", "tall"] as const).flatMap((site) => { const out: Solid[] = []; seaPlatformAt(out, [], site); return out; });
 const staticsOf = (solids: Solid[]): Static[] => solids.map((s) => { const b = bounds(s); return { b, sb: screenBounds(b), sh: screenHull(b) }; });
 /** Alignment box of the freighter centered at `p` (z −1..13) and a check that no static solid overlapping it on screen covers it. */
@@ -128,7 +129,7 @@ describe("two lanes", () => {
     expect(laneAt("back", 0).heading).toBeCloseTo(Math.atan2(330 - 467, 548 - 564), 6);
   });
 
-  it("the lanes leave ≥ 14 u to the Writing decks at both sites and ≥ 14 u to the moved headland polygon (#423)", () => {
+  it("the lanes leave ≥ 14 u to the Writing boards at both sites and ≥ 14 u to the moved headland polygon (#423)", () => {
     // the two Writing sites (#427) and the headland moved in #426
     const SITES: Vec2[] = Object.values(PLATFORM_SITES);
     const MOVED_HEADLAND: Vec2[] = HEADLAND.map(([x, y]) => ({ x, y }));
@@ -487,38 +488,56 @@ describe("fair launch tick chunking", () => {
   });
 });
 
+/**
+ * Every ship piece and launch piece along the lanes (every 2 u, the three kinds) and the ferry route (both ways), probed against the
+ * screen box of each sign's letters: `bad` lists the crossings (`<id>: <what>`).
+ */
+function shipsCrossing(signs: readonly (readonly [string, SignSpec])[]): { samples: number; bad: string[] } {
+  const rects = signs.map(([id, sign]) => {
+    const box = signBox(sign), { minX: x0, minY: y0, maxX: x1, maxY: y1 } = box;
+    return { id, box, rect: [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }] as Vec2[] };
+  });
+  const bad: string[] = [];
+  const probe = (solids: Solid[], what: string) => {
+    const parts = solids.map(bounds).map((b) => ({ b, sb: screenBounds(b) }));
+    for (const { id, box, rect } of rects) if (parts.some((p) => overlaps(p.sb, box) && hullsIntersect(screenHull(p.b), rect))) bad.push(`${id}: ${what}`);
+  };
+  let samples = 0;
+  for (const lane of ["out", "back"] as const) for (const kind of new Set(SHIPS.map((s) => s.kind))) {
+    for (let d = 0; d <= laneLength(lane); d += 2) {
+      const p = laneAt(lane, d);
+      probe(ship(kind, shipAt(kind, p, p.heading), p.heading).solids, `${lane} ${kind} ${d}`);
+      samples++;
+    }
+  }
+  // the launch is built at its route point, heading along the leg, and reversed on the way back (createSeaAnim)
+  const route = polyline(FERRY_ROUTE);
+  for (let d = 0; d <= route.length; d += 2) {
+    const pt = route.at(d);
+    for (const heading of [pt.heading, pt.heading + Math.PI]) probe(ship("ferry", { x: pt.x, y: pt.y }, heading).solids, `ferry ${d}`);
+    samples++;
+  }
+  return { samples, bad };
+}
+
 describe("zone signs and the lanes (#390, #394)", () => {
   it("no ship piece or launch piece crosses the letters of any sign on screen", () => {
     // the letters are accents, drawn over every solid: a ship crossing them would show behind them
     // both Writing sites (#427); the Resume and Portfolio signs are the same at both, so they are probed once
     const signs = [...new Map((["wide", "tall"] as const).flatMap((site) => SIGN_ORDER.map((id) => [zoneSigns(site)[id], `${site} ${id}`] as const))).entries()];
-    const rects = signs.map(([sign, id]) => {
-      const box = signBox(sign), { minX: x0, minY: y0, maxX: x1, maxY: y1 } = box;
-      return { id, box, rect: [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }] as Vec2[] };
-    });
-    const bad: string[] = [];
-    const probe = (solids: Solid[], what: string) => {
-      const parts = solids.map(bounds).map((b) => ({ b, sb: screenBounds(b) }));
-      for (const { id, box, rect } of rects) if (parts.some((p) => overlaps(p.sb, box) && hullsIntersect(screenHull(p.b), rect))) bad.push(`${id}: ${what}`);
-    };
-    let samples = 0;
-    for (const lane of ["out", "back"] as const) for (const kind of new Set(SHIPS.map((s) => s.kind))) {
-      for (let d = 0; d <= laneLength(lane); d += 2) {
-        const p = laneAt(lane, d);
-        probe(ship(kind, shipAt(kind, p, p.heading), p.heading).solids, `${lane} ${kind} ${d}`);
-        samples++;
-      }
-    }
-    // the launch is built at its route point, heading along the leg, and reversed on the way back (createSeaAnim)
-    const route = polyline(FERRY_ROUTE);
-    for (let d = 0; d <= route.length; d += 2) {
-      const pt = route.at(d);
-      for (const heading of [pt.heading, pt.heading + Math.PI]) probe(ship("ferry", { x: pt.x, y: pt.y }, heading).solids, `ferry ${d}`);
-      samples++;
-    }
+    const { samples, bad } = shipsCrossing(signs.map(([sign, id]) => [id, sign] as const));
     expect(samples).toBeGreaterThan(0);
     expect(bad).toEqual([]);
   }, 15_000); // ~1 s alone; the full parallel suite stretches it past the default 5 s
+  it("no ship piece or launch piece crosses the Writing word at any pose of the heave cycle, at either site (#444)", () => {
+    const signs = (["wide", "tall"] as const).flatMap((site) => Array.from({ length: 8 }, (_, k) => {
+      const dz = heaveAt((k * HEAVE.periodMs) / 8);
+      return [`${site} phase ${k}/8`, signAt(site, dz)] as const;
+    }));
+    const { samples, bad } = shipsCrossing(signs);
+    expect(samples).toBeGreaterThan(0);
+    expect(bad).toEqual([]);
+  }, 15_000);
   it("no ship piece's screen box reaches the box of the Writing word at the wide site (#429)", () => {
     // stricter than the hull test above: at (550, 125) the return cargo's masts entered the word's box and competed with it on screen
     const box = signBox(zoneSigns("wide").blog);

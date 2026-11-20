@@ -172,7 +172,7 @@ plus `#plataforma-escena-angosta` (Blog, tall site). The piece builds
 the sign at the origin (the crown and the tinker sign on a stand-in of their
 host); the one "in its scene" is a crop of the real world with its sign.
 Judge them at the cover scales with `c`. `npm run legibility` measures contrast,
-halo and OCR with a browser; it does not run in CI.
+halo and OCR with a browser, with no exceptions (every row must pass); it does not run in CI.
 
 The lab pages are also built and deployed with the site (every
 `lab/*.html` is a Vite input), so the storybook can be seen at
@@ -189,7 +189,11 @@ halo on the light points (`fallback`). In development the decision is logged, fo
 example `[mapa] bloom: average 9.9 ms over 60 frames (tick 6.4 + render
 3.5), budget 15 ms → on` (with the `[lab]` prefix in the
 lab). In the lab, `?bloom=` forces the mode without measuring and `6` rotates
-it.
+it. An animated accent layer that sets `bloom: false` (`AnimLayer`,
+`src/scenes/animator.ts`) stays out of the bloom: it is drawn additively like
+every light but gets no blurred mirror; the paint of the Writing board is that
+case. A static `poly` accent with `bloom: false` (`Accent`, `src/iso/accent.ts`)
+does the same, so the board's paint stays out of the bloom in the storybook too.
 
 ## Tests
 

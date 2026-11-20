@@ -11,9 +11,10 @@ import { BLOG_SIGNS } from "../src/scenes/sign-platform";
 const BLOG_SIGN = BLOG_SIGNS.wide;
 import type { Fit } from "../src/world/frame";
 import {
-  excused, fillDisc, fillPolygon, LEVEL3, measure, median, normalizeOcr, ocrImage, parseEval, pickContexts, PREPROCESS, renderReport, reportFails,
+  fillDisc, fillPolygon, LEVEL3, measure, median, normalizeOcr, ocrImage, parseEval, pickContexts, PREPROCESS, renderReport, reportFails,
   RES, scaleTag, signMasks, toImage, verdicts, wordCrop, type Masks, type ReportEntry, type Row,
 } from "./legibility-measure";
+import * as measureModule from "./legibility-measure";
 import { encodePng } from "./png";
 
 const count = (m: Uint8Array) => m.reduce((n, b) => n + b, 0);
@@ -246,34 +247,20 @@ describe("report", () => {
   });
 });
 
-describe("the OCR exception of WRITING in LostWages (#437, spec 2026-11-15 §8.2)", () => {
-  const row = (metric: string, ok: boolean, value = "`WRELENG`"): Row => ({ metric, value, limit: "y", ok });
+describe("level 3 has no exception (#445)", () => {
+  const row = (metric: string, ok: boolean, value = "`WRELENG`"): Row => ({ metric, value, limit: "= `WRITING`", ok }); // the misreading #437 used to excuse
   const entry = (id: string, rows: Row[]): ReportEntry => ({ id, text: "WRITING", scale: COVER_LAPTOP, rows, crop: `${id}-117.png`, ocrCrop: `${id}-117-ocr.png` });
-  it("excused: only a failed OCR row of plataforma-escena or plataforma-escena-angosta", () => {
-    for (const id of ["plataforma-escena", "plataforma-escena-angosta"]) {
-      expect(excused(id, row("OCR", false)), id).toBe(true);
-      expect(excused(id, row("OCR", true)), id).toBe(false);
-      expect(excused(id, row("contraste", false)), id).toBe(false);
-      expect(excused(id, row("halo", false)), id).toBe(false);
+  it("an OCR ✗ fails the report at any context, plataforma-escena* included", () => {
+    for (const id of ["plataforma-escena", "plataforma-escena-angosta", "cartel-torre-escena", "cartel-taller-escena"]) {
+      expect(reportFails({ entries: [entry(id, [row("contraste", true), row("halo", true), row("OCR", false)])], violations: [] }), id).toBe(true);
     }
-    for (const id of ["cartel-torre-escena", "cartel-taller-escena", "plataforma", "plataforma-escenas"]) expect(excused(id, row("OCR", false)), id).toBe(false);
   });
-  it("excused: only the accepted misreading, WR + three letters + NG; a word that stops reading still fails", () => {
-    for (const v of ["`WRELENG`", "`WREFHNG`", "`WRETENG`", "`wrefeng`"]) expect(excused("plataforma-escena", row("OCR", false, v)), v).toBe(true);
-    for (const v of ["``", "`W`", "`WRITNG`", "`WRITINGS`", "`XRELENG`", "`WRELENX`", "WRELENG"]) expect(excused("plataforma-escena", row("OCR", false, v)), v).toBe(false);
-    expect(reportFails({ entries: [entry("plataforma-escena", [row("contraste", true), row("halo", true), row("OCR", false, "`WR`")])], violations: [] })).toBe(true);
+  it("renders a failed row as a bare ✗", () => {
+    const md = renderReport({ date: "d", viewport: "v", entries: [entry("plataforma-escena", [row("contraste", true), row("halo", true), row("OCR", false)])], violations: [] });
+    expect(md).toContain("| OCR | `WRELENG` | = `WRITING` | ✗ |");
+    expect(md).not.toMatch(/✗ \(/);
   });
-  it("an excused OCR ✗ is rendered as ✗ with the exception named, and does not fail the report", () => {
-    const e = entry("plataforma-escena", [row("contraste", true), row("halo", true), { metric: "OCR", value: "`WRETENG`", limit: "= `WRITING`", ok: false }]);
-    const md = renderReport({ date: "d", viewport: "v", entries: [e], violations: [] });
-    expect(md).toContain("| OCR | `WRETENG` | = `WRITING` | ✗ (excepción, spec 2026-11-15 §8.2) |");
-    expect(md).not.toMatch(/\| ✗ \|$/m);
-    expect(reportFails({ entries: [e], violations: [] })).toBe(false);
-  });
-  it("the exception covers nothing else: contrast or halo ✗ there, or OCR ✗ elsewhere, still fail", () => {
-    expect(reportFails({ entries: [entry("plataforma-escena", [row("contraste", false), row("halo", true), row("OCR", false)])], violations: [] })).toBe(true);
-    expect(reportFails({ entries: [entry("plataforma-escena-angosta", [row("contraste", true), row("halo", false), row("OCR", false)])], violations: [] })).toBe(true);
-    expect(reportFails({ entries: [entry("cartel-torre-escena", [row("contraste", true), row("halo", true), row("OCR", false)])], violations: [] })).toBe(true);
-    expect(reportFails({ entries: [entry("plataforma-escena", [row("OCR", false)])], violations: [{ list: [{ rule: "air", value: 1, limit: "x" }] }] })).toBe(true);
+  it("the excuse is gone from the module", () => {
+    expect("excused" in measureModule).toBe(false);
   });
 });

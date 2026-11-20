@@ -29,9 +29,12 @@ const PIECES: Record<string, string> = {
   "cartel-taller": "731f8dfa/1b320f27", // #403: marquee bulbs as spots
   // #363: plataforma replaces its placeholder (platform, railing, ladder, hut, beacon, Blog sign)
   // #376: the Blog sign uses SIGN_FONT, gains a backing panel and a raised frame, and is built at its site and then translated
-  // Writing (Black Chancery) replaces Blog: a deck strip along the sign, posts every ≤ 16, filled cyan letters
-  // #437: WRITING in LostWages on the frame, no panel (platform only): END 4, cap 9.4, shorter deck, posts behind the letters, 74 solids
-  plataforma: "30642a16/939ef6df",
+  // Writing replaces Blog: a deck strip along the sign, posts every ≤ 16, filled cyan letters
+  // #437: WRITING on the frame, no panel (platform only): END 4, cap 9.4, shorter deck, posts behind the letters, 74 solids
+  // #441: WRITING in Chainsaw Carnage painted flat on a floating board
+  // #445: WRITING_CAP 11.5 (the phone OCR), the board grows with the word
+  // #445: the paint accents carry bloom: false (out of the bloom in the exhibits too, not only in the world)
+  plataforma: "37f51036/a32c7c2c",
 };
 
 describe("render baseline (#194)", () => {
