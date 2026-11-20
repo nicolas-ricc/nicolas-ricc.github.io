@@ -85,7 +85,8 @@ describe.each(["wide", "tall"] as const)("Writing raft at the %s site: planks fl
   it("PLATFORM_DECK, moved to the site, holds every vertex of the raft in plan", () => {
     const deck = PLATFORM_DECK.flatMap((q) => [q.x + SITE.x, q.y + SITE.y]);
     expect(PLATFORM_DECK).toHaveLength(4);
-    for (const f of meshOf(at(site)).faces) for (const p of f.pts) {
+    // The foam and shadow rings are water decals past the raft's envelope: the deck holds the timber and the navy ink.
+    for (const f of meshOf(at(site)).faces.filter((g) => !g.mat || g.mat === "navy")) for (const p of f.pts) {
       const c = { x: p.x + (SITE.x - p.x) * 1e-9, y: p.y + (SITE.y - p.y) * 1e-9 }; // nudged inward: vertices on the envelope's edge count
       expect(pointInPolygon(c.x, c.y, deck), `${p.x},${p.y}`).toBe(true);
     }

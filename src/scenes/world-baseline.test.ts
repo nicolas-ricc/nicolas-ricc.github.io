@@ -35,7 +35,8 @@ const PIECES: Record<string, string> = {
   // #445: WRITING_CAP 11.5 (the phone OCR), the board grows with the word
   // #445: the paint accents carry bloom: false (out of the bloom in the exhibits too, not only in the world)
   // #451: plank raft, WRITING as a navy decal
-  plataforma: "93925095/741638a5",
+  // #451: water contact and grain
+  plataforma: "24c18aa5/741638a5",
 };
 
 describe("render baseline (#194)", () => {

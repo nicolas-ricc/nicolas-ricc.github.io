@@ -263,9 +263,9 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "convoy", title: "Convoy with barge", zone: "blog", group: "sea", kind: "piece", build: vessel("barge"), pad: "water" },
   { id: "lancha", title: "Tigre river bus", zone: "blog", group: "sea", kind: "piece", build: vessel("ferry"), pad: "water" },
   { id: "plataforma", title: "Writing platform sign", zone: "blog", group: "sea", kind: "piece", build: seaPlatform, pad: "water" },
-  // h 1 (both): the crop holds only the raft, top −0.4: the least positive integer not below it. Boxes: the plan of `bounds(raftAt(site, REST_POSE))` ± 3 u, rounded outward to integers (wide 528.1..611.9 × 63.1..146.9, tall 398.1..481.9 × 358.1..441.9). The raft of `writingSite` is added by `contextScene`, and the world's platform animator is dropped (`contextAnimators`): no `build`.
-  { id: "plataforma-escena", title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 525, y0: 60, x1: 615, y1: 150 }, h: 1, sign: BLOG_SIGNS.wide, writingSite: "wide" },
-  { id: "plataforma-escena-angosta", title: "Writing platform sign in its scene, tall site", zone: "blog", group: "sea", kind: "context", box: { x0: 395, y0: 355, x1: 485, y1: 445 }, h: 1, sign: BLOG_SIGNS.tall, writingSite: "tall" },
+  // h 1 (both): the crop holds only the raft, top −0.4: the least positive integer not below it. Boxes: the plan of `bounds(raftAt(site, REST_POSE))` ± 3 u, rounded outward to integers (wide x 523.056..616.944, y 58.056..151.944; tall x 393.056..486.944, y 353.056..446.944). The boxes grew (from 90 × 90 to 100 × 100) because the foam and contact-shadow rings (#455) extend 3 u past the envelope. The raft of `writingSite` is added by `contextScene`, and the world's platform animator is dropped (`contextAnimators`): no `build`.
+  { id: "plataforma-escena", title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 520, y0: 55, x1: 620, y1: 155 }, h: 1, sign: BLOG_SIGNS.wide, writingSite: "wide" },
+  { id: "plataforma-escena-angosta", title: "Writing platform sign in its scene, tall site", zone: "blog", group: "sea", kind: "context", box: { x0: 390, y0: 350, x1: 490, y1: 450 }, h: 1, sign: BLOG_SIGNS.tall, writingSite: "tall" },
 ];
 
 /** The exhibit of the hash (`#id` or `id`); empty or unknown, the first. */
