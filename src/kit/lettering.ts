@@ -19,6 +19,11 @@ export function roofDiagonal(at: Vec3): TextPlane {
   return { origin: at, u: v3(Math.SQRT1_2, -Math.SQRT1_2, 0), v: v3(-Z_SCALE, -Z_SCALE, 0) };
 }
 
+/** Real horizontal plane, unstretched (compare `roofDiagonal`): u runs along screen x, and the word projects at half its flat aspect. */
+export function groundDiagonal(at: Vec3): TextPlane {
+  return { origin: at, u: v3(Math.SQRT1_2, -Math.SQRT1_2, 0), v: v3(-Math.SQRT1_2, -Math.SQRT1_2, 0) };
+}
+
 /** Vertical plane over the segment a→b of the footprint, baseline at `z0`. */
 export function facade(a: Vec2, b: Vec2, z0: number): TextPlane {
   const len = Math.hypot(b.x - a.x, b.y - a.y);
