@@ -151,14 +151,13 @@ export function cropAnimators(animators: readonly ZonedAnimator[], box: Box): Zo
   });
 }
 
-const platforms = new Map<string, Solid[]>();
+const platforms = new Map<WritingSite, { tMs: number; solids: Solid[] }>();
 
-/** The raft at a site posed at `tMs` (rest at 0): solids only (it has no accents since #454). Memoized per site and time. */
+/** The raft at a site posed at `tMs` (rest at 0): solids only (it has no accents since #454). One memo entry per site, like `platformAnimator`. */
 function platformAt(site: WritingSite, tMs: number): Solid[] {
-  const key = `${site}@${tMs}`;
-  let p = platforms.get(key);
-  if (!p) { p = []; seaPlatformAt(p, site, poseAt(tMs)); platforms.set(key, p); }
-  return p;
+  let p = platforms.get(site);
+  if (!p || p.tMs !== tMs) { p = { tMs, solids: [] }; seaPlatformAt(p.solids, site, poseAt(tMs)); platforms.set(site, p); }
+  return p.solids;
 }
 
 /** The context exhibit's scene: a crop of the world; with `writingSite`, plus the cropped Writing platform of that site (#427: the world carries it in an animator, not in `solids`), static at `poseAt(tMs)` (rest by default; #457). Fresh arrays: the world scene is never mutated. */

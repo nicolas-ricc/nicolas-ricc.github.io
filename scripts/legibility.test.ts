@@ -323,6 +323,9 @@ describe("--tick (#457)", () => {
     expect(pickTick(["--only", "x"])).toBeNull();
     for (const bad of [["--tick"], ["--tick", "-1"], ["--tick", "abc"], ["--tick", "--only"], ["--tick", ""]]) expect(() => pickTick(bad), bad.join(" ")).toThrow(/--tick/);
   });
+  it("pickTick: whole ms in decimal digits only; --tick=<ms> throws instead of running at rest (#457 review)", () => {
+    for (const bad of [["--tick", "1.5"], ["--tick", "1e3"], ["--tick", "0x10"], ["--tick", " 7"], ["--tick=7919"]]) expect(() => pickTick(bad), bad.join(" ")).toThrow(/--tick/);
+  });
   it("tickTag and reportName", () => {
     expect(tickTag(null)).toBe("");
     expect(tickTag(7919)).toBe("-t7919");

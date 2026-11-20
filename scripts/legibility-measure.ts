@@ -180,11 +180,12 @@ export function pickContexts(exhibits: readonly Exhibit[], argv: readonly string
 
 /** The number after `--tick` (ms of simulated time), or null without it; throws on a missing, non-numeric or negative one. */
 export function pickTick(argv: readonly string[]): number | null {
+  if (argv.some((a) => a.startsWith("--tick="))) throw new Error("legibility: write --tick <ms>, not --tick=<ms>");
   const i = argv.indexOf("--tick");
   if (i < 0) return null;
-  const raw = argv[i + 1], n = raw === undefined || raw.trim() === "" ? NaN : Number(raw);
-  if (!Number.isFinite(n) || n < 0) throw new Error(`legibility: --tick needs a non-negative number of ms, got ${raw === undefined ? "nothing" : `"${raw}"`}`);
-  return n;
+  const raw = argv[i + 1];
+  if (raw === undefined || !/^\d+$/.test(raw)) throw new Error(`legibility: --tick needs a whole non-negative number of ms, got ${raw === undefined ? "nothing" : `"${raw}"`}`);
+  return Number(raw);
 }
 
 /** File-name tag of a tick: "" without it, "-t<ms>" with it. */

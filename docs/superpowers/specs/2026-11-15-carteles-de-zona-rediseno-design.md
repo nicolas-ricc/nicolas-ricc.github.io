@@ -595,7 +595,7 @@ cubierta, que desde la segunda vuelta se estira a lo largo del cartel
 | PORTFOLIO | 52.74 | 87.73 | galpón de montaje sur 90 × 16 (`SHIPYARD_HALLS[1]`) | 124.02 |
 | WRITING | 72.56 | 120.06 | balsa de tablones 76.6 × 30.3 (`PLATFORM_DECK`, el sobre de `raftEnvelope`) | 126.68 |
 
-Desde #445 la fila de WRITING mide la tabla flotante en Chainsaw Carnage con caja alta 11.5 (10.8 en #442); la fila de WRITING de la tabla mide la balsa de tablones con caja alta 17.25 (#460, #457). Desde #451 la fila de WRITING mide la palabra sobre la balsa de tablones (`raftEnvelope`, el sobre de los tablones con vigas y bordes irregulares, que `PLATFORM_DECK` recorre); desde #460, caja alta 17.25 (con caja alta 20 medía 84.13 u, 139.20 px y una balsa de 87.9 × 32.9, 145.49 px).
+Desde #451 la fila de WRITING mide la palabra sobre la balsa de tablones (`raftEnvelope`, el sobre de los tablones con vigas y bordes irregulares, que `PLATFORM_DECK` recorre); desde #460, caja alta 17.25 (con caja alta 20 medía 84.13 u, 139.20 px y una balsa de 87.9 × 32.9, 145.49 px). Antes medía la tabla flotante en Chainsaw Carnage (caja alta 10.8 en #442 y 11.5 en #445).
 
 ### 8.4 Capturas
 
