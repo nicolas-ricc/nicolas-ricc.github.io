@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { overlaps, screenBounds, type ScreenBounds } from "../iso/depth";
 import { bounds, type Solid } from "../iso/solids";
 import { checkSign, checkSignFont, COVER_LAPTOP, COVER_PHONE } from "../kit/legibility";
-import { seaPlatformAt, type WritingSite } from "../scenes/sign-platform";
+import { HEAVE, heaveAt, seaPlatformAt, signAt, type WritingSite } from "../scenes/sign-platform";
 import { assembleWorld } from "../world/assemble";
 import { signBox } from "../world/signs";
-import { contextScene } from "./crop";
+import { contextScene, cropScene } from "./crop";
 import { EXHIBITS } from "./exhibits";
 
 // The sign gate (#376): every context exhibit passes level 1 (the font) and level 2 (the projected sign in its scene).
@@ -13,7 +13,7 @@ import { EXHIBITS } from "./exhibits";
 const contexts = EXHIBITS.flatMap((e) => (e.kind === "context" ? [e] : []));
 const { scene } = assembleWorld(undefined, { reducedMotion: false });
 /** The Writing platform at `site`: since #427 it is not in `scene.solids` but in platformAnimator. */
-const platform = (site: WritingSite): Solid[] => { const out: Solid[] = []; seaPlatformAt(out, [], site); return out; };
+const platform = (site: WritingSite, dz = 0): Solid[] => { const out: Solid[] = []; seaPlatformAt(out, [], site, dz); return out; };
 /** `b` grown by `d` screen units (scale 1) on each side. */
 const grow = (b: ScreenBounds, d: number): ScreenBounds => ({ minX: b.minX - d, minY: b.minY - d, maxX: b.maxX + d, maxY: b.maxY + d });
 
@@ -48,6 +48,28 @@ describe("sign gate: levels 1 and 2 on every context exhibit", () => {
       it(`checkSign against the whole world at ${scale} = []`, () => {
         expect(checkSign(e.sign, scale, near)).toEqual([]);
       });
+    }
+  });
+});
+
+// The board heaves (#444): level 2 has to hold at every pose of the cycle, not only at rest. The exhibits show the rest pose;
+// here the crop keeps everything but the rest board (`cropScene`, which `contextScene` extends with it) and takes the posed board instead.
+describe("sign gate: level 2 across the heave cycle of the Writing board (#444)", () => {
+  const writing = contexts.flatMap((e) => (e.writingSite ? [[e.id, e, e.writingSite] as const] : []));
+  it("both Writing sites have a context exhibit", () => {
+    expect(writing.map(([, , site]) => site).sort()).toEqual(["tall", "wide"]);
+  });
+  describe.each(writing)("%s", (_id, e, site) => {
+    const base = cropScene(scene, e.box).solids;
+    for (let k = 0; k < 8; k++) {
+      const dz = heaveAt((k * HEAVE.periodMs) / 8), sign = signAt(site, dz), board = platform(site, dz);
+      const near = [...scene.solids, ...board].filter((s) => overlaps(screenBounds(bounds(s)), grow(signBox(sign), 4)));
+      for (const scale of [COVER_LAPTOP, COVER_PHONE]) {
+        it(`phase ${k}/8 (dz ${dz.toFixed(2)}): checkSign at ${scale} = [] in the crop and against the whole world`, () => {
+          expect(checkSign(sign, scale, [...base, ...board])).toEqual([]);
+          expect(checkSign(sign, scale, near)).toEqual([]);
+        });
+      }
     }
   });
 });

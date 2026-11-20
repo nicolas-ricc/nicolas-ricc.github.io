@@ -8,9 +8,11 @@ import { CHAINSAW_FACE, CHAINSAW_X, marqueeLayout } from "../kit/marquee";
 import { CHAINSAW_WRITING } from "../kit/chainsaw-writing";
 import { pointInPolygon } from "../map/geo";
 import { waterCellMat } from "./terrain";
-import { BLOG_SIGNS, BOARD_TOP, PLATFORM_DECK, PLATFORM_SITES, WRITING_CAP, seaPlatform, seaPlatformAt, type WritingSite } from "./sign-platform";
+import { BLOG_SIGNS, BOARD_TOP, HEAVE, HEAVE_STEP, PAINT_LIFT, PLATFORM_DECK, PLATFORM_SITES, WRITING_CAP, heaveAt, seaPlatform, seaPlatformAt, signAt, type WritingSite } from "./sign-platform";
 
-const at = (site: WritingSite) => { const out: Solid[] = [], accents: Accent[] = []; seaPlatformAt(out, accents, site); return { out, accents }; };
+const at = (site: WritingSite, dz = 0) => { const out: Solid[] = [], accents: Accent[] = []; seaPlatformAt(out, accents, site, dz); return { out, accents }; };
+/** The 8 phases of the heave cycle the pose tests sample (#444). */
+const PHASES = Array.from({ length: 8 }, (_, k) => heaveAt((k * HEAVE.periodMs) / 8));
 const build = () => { const out: Solid[] = [], accents: Accent[] = []; seaPlatform(out, accents); return { out, accents }; };
 const boardOf = (out: Solid[]): Solid & { kind: "poly" } => { const b = out[0]!; if (b.kind !== "poly") throw new Error("board"); return b; };
 
@@ -133,5 +135,74 @@ describe.each(["wide", "tall"] as const)("Writing board at the %s site: a flat b
 
   it("deterministic: two builds are equal", () => {
     expect(at(site)).toEqual(at(site));
+  });
+});
+
+describe("heaveAt: the board's heave, a quantized slow sine (#444)", () => {
+  const steps = (dz: number) => dz / HEAVE_STEP;
+  it("HEAVE is ±0.15 u over 6.7 s, quantized to 0.01 u", () => {
+    expect(HEAVE).toEqual({ amp: 0.15, periodMs: 6700 });
+    expect(HEAVE_STEP).toBe(0.01);
+  });
+
+  it("periodic, bounded by amp and always a multiple of HEAVE_STEP", () => {
+    for (let t = 0; t <= 2 * HEAVE.periodMs; t += 37) {
+      expect(Math.abs(heaveAt(t) - heaveAt(t + HEAVE.periodMs)), `${t}`).toBeLessThanOrEqual(1e-9);
+      expect(Math.abs(heaveAt(t)), `${t}`).toBeLessThanOrEqual(HEAVE.amp + 1e-12);
+      expect(Math.abs(steps(heaveAt(t)) - Math.round(steps(heaveAt(t)))), `${t}`).toBeLessThanOrEqual(1e-9);
+    }
+  });
+
+  it("starts at rest: heaveAt(0) === 0", () => {
+    expect(heaveAt(0)).toBe(0);
+  });
+
+  it("takes at least 20 distinct values over a period sampled every 50 ms", () => {
+    const seen = new Set<number>();
+    for (let t = 0; t < HEAVE.periodMs; t += 50) seen.add(Math.round(steps(heaveAt(t))));
+    expect(seen.size).toBeGreaterThanOrEqual(20);
+  });
+
+  it("a clock hours long keeps the cycle: heaveAt(1e9 · period + 1234) is heaveAt(1234)", () => {
+    expect(Math.abs(heaveAt(1e9 * HEAVE.periodMs + 1234) - heaveAt(1234))).toBeLessThanOrEqual(1e-9);
+  });
+});
+
+describe.each(["wide", "tall"] as const)("Writing board at the %s site across the heave cycle: one rigid body (#444)", (site) => {
+  const rest = at(site), restBoard = boardOf(rest.out);
+
+  it("signAt(site, 0) is BLOG_SIGNS[site]", () => {
+    expect(signAt(site, 0)).toEqual(BLOG_SIGNS[site]);
+    expect(signAt(site)).toEqual(BLOG_SIGNS[site]);
+  });
+
+  it.each(PHASES.map((dz, k) => [k, dz] as const))("phase %i/8: the board is raised by dz with the same thickness and plan", (_k, dz) => {
+    const b = boardOf(at(site, dz).out);
+    expect(Math.abs(b.z - (-1 + dz))).toBeLessThanOrEqual(1e-9);
+    expect(Math.abs(b.z + b.h - (BOARD_TOP + dz))).toBeLessThanOrEqual(1e-9);
+    expect(b.h).toBeCloseTo(restBoard.h, 12);
+    expect(b.footprint).toEqual(restBoard.footprint);
+    expect(b.mat).toBe("officeDark");
+  });
+
+  it.each(PHASES.map((dz, k) => [k, dz] as const))("phase %i/8: every paint vertex at BOARD_TOP + PAINT_LIFT + dz, inside the plan, at its rest (x, y)", (_k, dz) => {
+    const { out, accents } = at(site, dz), plan = boardOf(out).footprint.flatMap((q) => [q.x, q.y]);
+    expect(PAINT_LIFT).toBe(0.02);
+    expect(accents).toHaveLength(rest.accents.length);
+    accents.forEach((a, i) => {
+      const r = rest.accents[i]!;
+      if (a.kind !== "poly" || r.kind !== "poly") throw new Error(a.kind);
+      a.pts.forEach((p, j) => {
+        expect(Math.abs(p.z - (BOARD_TOP + PAINT_LIFT + dz))).toBeLessThanOrEqual(1e-9);
+        expect(pointInPolygon(p.x, p.y, plan)).toBe(true);
+        expect(p.x).toBe(r.pts[j]!.x); expect(p.y).toBe(r.pts[j]!.y);
+      });
+    });
+  });
+
+  it.each(PHASES.map((dz, k) => [k, dz] as const))("phase %i/8: signAt(site, dz) is backed by the posed board and paints what seaPlatformAt paints", (_k, dz) => {
+    const sign = signAt(site, dz), { out, accents } = at(site, dz);
+    expect(sign.backing).toEqual(out);
+    expect(accents).toEqual(sign.glyphs.flatMap((g) => g.quads).map((pts) => ({ kind: "poly", pts, color: "cyan", alpha: 0.85 })));
   });
 });
