@@ -341,9 +341,9 @@ Los dos bajan respecto del número de la issue (criterio 7 de §5, cumplido).
 Desde #429 las medidas vigentes de nivel 3 viven aquí; el §8.1 de la spec
 2026-11-15 conserva las del 2026-11-17. Los valores de los contextos viejos
 cambiaron respecto de 2026-11-17 porque cambió su entorno (cabo, carriles y
-sitios de la plataforma), y todos siguen en ✓, salvo el OCR de `plataforma-escena*`: esas
-lecturas (`WRELENG`, `WREFHNG`) son la excepción de #437 (spec 2026-11-15 §8.2), cuando
-el cartel pasó a `WRITING` en LostWages; su contraste y su halo siguen en ✓.
+sitios de la plataforma), y todos siguen en ✓. Desde #441 el cartel es la tabla
+flotante y el OCR lee `WRITING` en `plataforma-escena*` (spec 2026-11-15 §8.2);
+las filas de la plataforma se remidieron en #445 y el nivel 3 no excusa ninguna.
 
 | Contexto | Escala | Contraste | Halo | OCR |
 |---|---|---|---|---|
@@ -351,7 +351,7 @@ el cartel pasó a `WRITING` en LostWages; su contraste y su halo siguen en ✓.
 | `cartel-torre-escena` | 0.83 | 9.58:1 | 0.04 | `RESUME` |
 | `cartel-taller-escena` | 1.17 | 6.60:1 | 0.08 | `PORTFOLIO` |
 | `cartel-taller-escena` | 0.83 | 5.75:1 | 0.08 | `PORTFOLIO` |
-| `plataforma-escena` | 1.17 | 12.12:1 | 0.05 | `WRELENG` |
-| `plataforma-escena` | 0.83 | 11.46:1 | 0.03 | `WREFHNG` |
-| `plataforma-escena-angosta` | 1.17 | 10.22:1 | 0.08 | `WRELENG` |
-| `plataforma-escena-angosta` | 0.83 | 9.85:1 | 0.05 | `WREFHNG` |
+| `plataforma-escena` | 1.17 | 14.18:1 | 0.06 | `WRITING` |
+| `plataforma-escena` | 0.83 | 12.41:1 | 0.06 | `WRITING` |
+| `plataforma-escena-angosta` | 1.17 | 11.93:1 | 0.06 | `WRITING` |
+| `plataforma-escena-angosta` | 0.83 | 11.35:1 | 0.06 | `WRITING` |

@@ -1,4 +1,5 @@
 import { AlphaFilter, BlurFilter, type BlurFilterOptions, Container, Graphics } from "pixi.js";
+import type { Accent } from "../iso/accent";
 import { SHADOW_BAND_ALPHA, buildRenderList } from "../iso/render-list";
 import type { WorldZone } from "../map/geo";
 import { ISO_COLORS } from "../map/palette-iso";
@@ -81,16 +82,21 @@ export function buildStage(scene: WorldScene, animators: ZonedAnimator[], opts: 
     veilSlot.addChild(g);
   }
 
-  // static accents split by zone (worldZoneAt of their position)
+  // static accents split by zone (worldZoneAt of their position); those that declare `bloom: false` (paint) get their own Graphics per zone, with no mirror
   const accents: AccentGraphics[] = [];
-  const byZone = accentsByZone(scene.accents);
-  for (const z of WORLD_ZONES) {
-    const g = new Graphics();
-    g.blendMode = "add";
-    const draw = (): void => drawAccents(g, byZone[z], halo);
-    draw();
-    accentSlot.addChild(g);
-    accents.push({ g, zone: z, base: 1, draw, bloom: true });
+  const isPaint = (a: Accent): boolean => a.kind === "poly" && a.bloom === false;
+  const paint = scene.accents.filter(isPaint);
+  const groups: [Accent[], boolean][] = [[scene.accents.filter((a) => !isPaint(a)), true], ...(paint.length ? [[paint, false] as [Accent[], boolean]] : [])];
+  for (const [list, bloomed] of groups) {
+    const byZone = accentsByZone(list);
+    for (const z of WORLD_ZONES) {
+      const g = new Graphics();
+      g.blendMode = "add";
+      const draw = (): void => drawAccents(g, byZone[z], halo);
+      draw();
+      accentSlot.addChild(g);
+      accents.push({ g, zone: z, base: 1, draw, bloom: bloomed });
+    }
   }
 
   // static water: every body of water that no animator claims (fallback path)

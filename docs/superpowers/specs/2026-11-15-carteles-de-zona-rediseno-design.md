@@ -250,9 +250,10 @@ Nivel 2 (`signMetrics`, `staticContrast`) y nivel 3 (`npm run legibility`,
 tal como lo escribe `REPORT.md`) de cada exhibit en contexto, a 1.17 y a
 0.83. Respaldo 1 y oclusión 0 en los seis casos. Base, verticales y error de
 aspecto: RESUME 0°, 0°, 0.010; PORTFOLIO 0.23°, 3.03°, 0.077; WRITING 0°, 0°,
-0.010. Las filas de `plataforma-escena` se remidieron en #437 (2026-11-19,
-WRITING en LostWages); su OCR es la excepción de §8.2. Las demás conservan
-las medidas del 2026-11-17.
+0.010. Las filas de `plataforma-escena` se remidieron en #445 (2026-11-20,
+WRITING en Chainsaw Carnage sobre la tabla flotante, caja alta 11.5), con el
+OCR leyendo `WRITING`: desde #445 el nivel 3 no excusa ninguna fila. Las
+demás conservan las medidas del 2026-11-17.
 
 | Exhibit | Escala | Alto de x (px) | Trazo (px) | Aire (px) | Contraste estático | Contraste (px) | Halo | OCR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -260,15 +261,15 @@ las medidas del 2026-11-17.
 | `cartel-torre-escena` | 0.83 | 10.11 | 1.64 | 2.10 | 4.70 | 8.89:1 | 0.05 | `RESUME` |
 | `cartel-taller-escena` | 1.17 | 15.07 | 2.40 | 2.29 | 8.06 | 6.99:1 | 0.08 | `PORTFOLIO` |
 | `cartel-taller-escena` | 0.83 | 10.69 | 1.70 | 1.62 | 8.06 | 5.93:1 | 0.08 | `PORTFOLIO` |
-| `plataforma-escena` | 1.17 | 13.62 | 2.12 | 2.32 | 8.08 | 12.12:1 | 0.05 | `WRELENG` |
-| `plataforma-escena` | 0.83 | 9.66 | 1.51 | 1.64 | 8.08 | 11.46:1 | 0.03 | `WREFHNG` |
+| `plataforma-escena` | 1.17 | 14.50 | 2.26 | 2.47 | 8.08 | 14.18:1 | 0.06 | `WRITING` |
+| `plataforma-escena` | 0.83 | 10.29 | 1.60 | 1.75 | 8.08 | 12.41:1 | 0.06 | `WRITING` |
 
 Nivel 1: aire mínimo y máximo entre letras, ritmo y la contraforma más
 ajustada, todo en w. Las tres palabras van en fuentes de exhibición (§8.2),
 así que ya ninguna usa `SIGN_FONT` (tamaño 10.3, trazo 1.35 u): sus filas se
 miden con `checkLayouts` sobre sus propios glifos, con w = la cara de la
 letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2;
-1.30 u en WRITING, la cara de LostWages, `LOSTWAGES_FACE` 0.138 cajas altas, caja alta 9.4).
+1.38 u en WRITING, la cara de Chainsaw Carnage, `CHAINSAW_FACE` 0.12 cajas altas, caja alta 11.5).
 
 | Palabra | Aire mín. (w) | Aire máx. (w) | Ritmo | Contraforma más ajustada (w) |
 | --- | --- | --- | --- | --- |
@@ -276,7 +277,7 @@ letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2;
 | PORTFOLIO | 1.19 | 1.19 | 1.01 | 1.19 (`P`) |
 | WRITING | 1.08 | 1.08 | 1.00 | 2.07 (`R`) |
 
-Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage (caja alta 10.8); el texto de arriba describe el estado de #437.
+Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage, con caja alta 10.8 en #442 y 11.5 desde #445; las filas de la tabla de §8.1 son las de #445.
 
 ### 8.2 Desvíos de la historia
 
@@ -387,7 +388,7 @@ Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage (caj
   `marquee-word.py`; el archivo de la fuente ni se modifica ni se
   redistribuye. La EULA de LostWages (§3) prohíbe modificar o adaptar la
   fuente, así que sus glifos no se pueden redibujar.
-  **Excepción de OCR (nivel 3).** Por decisión del autor, el OCR de
+  **Excepción de OCR (nivel 3, hasta #445).** Por decisión del autor, el OCR de
   `plataforma-escena` y `plataforma-escena-angosta` falla, solo para este
   cartel y solo en el OCR: el contraste y el halo siguen en ✓ y los niveles 1
   y 2 no se aflojan. `REPORT.md` lee `WRELENG` a 1.17 y `WREFHNG` a 0.83 en
@@ -400,6 +401,58 @@ Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage (caj
   falla la corrida. La excepción cubre solo esa lectura errada: `WR`, tres
   letras y `NG` (`excused`); si el OCR deja de leer la palabra, la fila
   vuelve a fallar.
+- **WRITING en Chainsaw Carnage, tabla flotante (#441).** El cartel de la
+  plataforma pasa a ser una tabla plana que flota en el agua, con `WRITING`
+  pintada encima en la fuente
+  [Chainsaw Carnage](https://www.1001fonts.com/chainsaw-carnage-font.html)
+  de GGBotNet, con licencia SIL Open Font License (descarga:
+  https://www.1001fonts.com/download/chainsaw-carnage.zip). La licencia
+  permite derivar, así que la palabra se compone con las curvas de la
+  fuente. No se versiona ningún TTF: solo la palabra compuesta,
+  `src/kit/chainsaw-writing.ts`, generada por `scripts/marquee-word.py` con
+  `speck` 0.005 y `tol` 0.004 (de 1 474 a 382 triángulos) y aire 0.13. La
+  caja alta es `WRITING_CAP` 11.5, la cara `CHAINSAW_FACE` 0.12 cajas altas
+  y `CHAINSAW_X` 0.77 (las mayúsculas de la fuente saltan: el «alto de x» que mide
+  el oráculo es el de la letra más baja, la `W` con su trazo suelto).
+  La tabla es un `poly` de `officeDark` desde el agua (z −1) hasta
+  `BOARD_TOP` −0.4, cuyo plan es la caja de tinta de la palabra más
+  `BOARD_PAD` 1.6 por cada lado, sobre un plano `roofDiagonal`: la palabra
+  se pinta con la anamorfosis de ese plano. La pintura va plana sobre la
+  cara superior, a `PAINT_LIFT` 0.02 por encima, porque el oráculo necesita
+  que la cara de respaldo quede estrictamente detrás del centro de cada
+  glifo. El plan mide unas 51.6 × 35.5 u (`PLATFORM_DECK`; con caja alta
+  10.8 eran 48.6 × 33.7). Los dos sitios no cambian: validación de agua,
+  carriles de al menos 27 u y barcos a lo largo del ciclo del balanceo.
+  La tabla se balancea (`HEAVE`: amp 0.15 u, periodo 6700 ms,
+  cuantizado a `HEAVE_STEP` 0.01), solo en altura: no hay cabeceo ni
+  alabeo porque ningún sólido se puede inclinar. La pintura se mueve con la
+  tabla como un solo cuerpo. Con `reducedMotion` la tabla queda quieta.
+  La pintura queda fuera del bloom y se lee como pintura, no como neón:
+  `platform.lights` declara `bloom: false` (#443) y, desde #445, también
+  cada acento de la pintura (`Accent` `poly` con `bloom: false`, que el
+  stage respeta en los acentos estáticos). Así el storybook (la pieza y los
+  dos exhibits en contexto, que llevan la tabla como acentos estáticos) y
+  `npm run legibility` miden la misma pintura que muestra el sitio; antes
+  los exhibits la dibujaban con el espejo del bloom.
+  **Por qué 11.5 y no 10.8.** Con 10.8, el OCR a 0.83 leía `WRITHG` en los
+  dos sitios (tesseract funde `IN` en una `H`). Se probaron la tabla en
+  `glass`, la pintura con alpha 0.9 y las dos juntas, también a 10.8: seguía
+  `WRITHG`. Barrido de la caja alta, con la pintura fuera del bloom:
+  10.8 lee `WRITHG` a 0.83 y 11.2 lee `WRITE` a 1.17 y `WRITHG` a 0.83; 11.3,
+  11.5, 11.6 y 11.8 leen `WRITING` en los dos sitios y las dos escalas,
+  con contraste mínimo 11.35:1 (el primer barrido, con la pintura todavía
+  en el bloom de los exhibits, dio la misma banda, 11.3 a 11.8, con
+  contraste mínimo 8.87:1). 11.5 es el medio de la banda. La
+  tabla sigue en `officeDark` y la pintura en alpha 0.85: no se tocó
+  ninguno. Contraste estático 8.08:1; nivel 2 en §8.1.
+  El umbral de aspecto del sitio de Writing pasa a 1,53 (ancho 1378 px a
+  900 px de alto): depende de la caja alta, porque `writingSite` lee
+  `signBox(BLOG_SIGNS.wide)`.
+  **Nivel 3.** La excepción de OCR de #437 se eliminó: el nivel 3 no
+  excusa ninguna fila. `plataforma-escena` a 1.17: contraste 14.18:1,
+  halo 0.06, OCR `WRITING`; a 0.83: 12.41:1, 0.06, `WRITING`.
+  `plataforma-escena-angosta` a 1.17: 11.93:1, 0.06, `WRITING`; a 0.83:
+  11.35:1, 0.06, `WRITING`. Capturas del balanceo en §8.4.
 - **Writing en el mundo (#390).** `PLATFORM_SITE` pasó a (392, 178) en #389:
   a 8,2 u del carril de salida fallaba la regla de oclusión de los barcos.
   `sea()` construye la plataforma ahí y `plataforma-escena` es un recorte
@@ -420,9 +473,9 @@ cubierta, que desde la segunda vuelta se estira a lo largo del cartel
 | --- | --- | --- | --- | --- |
 | RESUME | 43.89 | 72.62 | `TOWER` 16 × 14 | 35.10 |
 | PORTFOLIO | 52.74 | 87.73 | galpón de montaje sur 90 × 16 (`SHIPYARD_HALLS[1]`) | 124.02 |
-| WRITING | 45.43 | 75.17 | tabla 48.6 × 33.7 (`PLATFORM_DECK`) | 80.46 |
+| WRITING | 48.37 | 80.04 | tabla 51.6 × 35.5 (`PLATFORM_DECK`) | 85.34 |
 
-Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage (caja alta 10.8); el texto de arriba describe el estado de #437.
+Desde #445 la fila de WRITING mide la tabla flotante en Chainsaw Carnage con caja alta 11.5 (10.8 en #442); la tabla de abajo son las medidas de #445.
 
 ### 8.4 Capturas
 
@@ -431,8 +484,9 @@ Capturas (3200 × 1800; las seis `-escena` con bloom) en
 
 - `assets/374-carteles/cartel-torre-escena-117.png` y `assets/374-carteles/cartel-torre-escena-083.png`
 - `assets/374-carteles/cartel-taller-escena-117.png` y `assets/374-carteles/cartel-taller-escena-083.png`
-- `assets/374-carteles/plataforma-escena-117.png` y `assets/374-carteles/plataforma-escena-083.png`
-- `assets/374-carteles/cartel-torre-real.png`, `assets/374-carteles/cartel-taller-real.png` y `assets/374-carteles/plataforma-real.png` (escala real)
+- `assets/374-carteles/plataforma-escena-117.png` y `assets/374-carteles/plataforma-escena-083.png` (regeneradas en #445 con la tabla flotante)
+- `assets/374-carteles/cartel-torre-real.png`, `assets/374-carteles/cartel-taller-real.png` y `assets/374-carteles/plataforma-real.png` (escala real; la de la plataforma, regenerada en #445)
+- `assets/423-composicion-responsive/plataforma-escena-angosta-117.png` y `assets/423-composicion-responsive/sitio-1600x900-ancho.png` (regeneradas en #445 con la tabla flotante)
 - `assets/374-carteles/cartel-taller-detalle.png`, `assets/374-carteles/cartel-taller-detalle-sinacentos.png`, `assets/374-carteles/cartel-taller-titila-a.png` y `assets/374-carteles/cartel-taller-titila-b.png`
 
 Recortes del nivel 3 y la imagen que vio el OCR (`-ocr`), con
@@ -442,3 +496,10 @@ Recortes del nivel 3 y la imagen que vio el OCR (`-ocr`), con
 - `assets/carteles-legibilidad/cartel-torre-escena-117.png` y `assets/carteles-legibilidad/cartel-torre-escena-083.png` (más los `-ocr` de cada uno)
 - `assets/carteles-legibilidad/cartel-taller-escena-117.png` y `assets/carteles-legibilidad/cartel-taller-escena-083.png` (más los `-ocr` de cada uno)
 - `assets/carteles-legibilidad/plataforma-escena-117.png` y `assets/carteles-legibilidad/plataforma-escena-083.png` (más los `-ocr` de cada uno)
+
+Balanceo de la tabla flotante (#441, #445), cuatro poses a un cuarto de periodo
+(3200 × 1800, con bloom), con su
+[README](assets/441-tabla-flotante/README.md):
+
+- `assets/441-tabla-flotante/balanceo-1.png` y `assets/441-tabla-flotante/balanceo-3.png` (reposo)
+- `assets/441-tabla-flotante/balanceo-2.png` (+`amp`) y `assets/441-tabla-flotante/balanceo-4.png` (−`amp`)

@@ -6,7 +6,9 @@ import { COVER_LAPTOP, COVER_PHONE, layoutGaps, SIGN_FONT, signMetrics, staticCo
 import { counterClearance, letterGaps, measureText, rhythm } from "../kit/lettering";
 import { TOWER } from "../scenes/city-grid";
 import { CROWN_SITE } from "../scenes/sign-crown";
-import { PLATFORM_DECK, PLATFORM_SITES } from "../scenes/sign-platform";
+import { BOARD_TOP, HEAVE, heaveAt, PLATFORM_DECK, PLATFORM_SITES, WRITING_CAP } from "../scenes/sign-platform";
+import { CHAINSAW_FACE, CHAINSAW_X } from "../kit/marquee";
+import { writingSite } from "../world/signs";
 import { LANE_BACK, LANE_OUT } from "../scenes/sea-anim";
 import { HEADLAND_SHIFT } from "../map/geo";
 import { buildRenderList } from "../iso/render-list";
@@ -531,16 +533,12 @@ describe("zone signs redesign documentation (#374)", () => {
     WRITING: PLATFORM_DECK.map((q) => ({ x: q.x, y: q.y, z: 0 })),
   };
 
-  it("REPORT.md exists, has every context at both scales and no failure mark but the OCR exception of WRITING", () => {
+  it("REPORT.md exists, has every context at both scales and no failure mark", () => {
     expect(report).not.toBe("");
-    // the header cell is `✓/✗`: the verdict is the last cell of each metric row
-    expect(report).not.toMatch(/\| ✗ \|$/m);
-    // 3 metrics × 2 scales × 4 contexts: plataforma-escena-angosta joined in #429; the 4 OCR rows of plataforma-escena* are the #437 exception
-    expect(report.match(/^\| (contraste|halo|OCR) \|.*\| ✓ \|$/gm)?.length ?? 0).toBe(20);
-    const excused = report.match(/^\| .* \| ✗ \(excepción, spec 2026-11-15 §8\.2\) \|$/gm) ?? [];
-    expect(excused).toHaveLength(4);
-    for (const l of excused) expect(l).toMatch(/^\| OCR \|/);
-    for (const sec of report.split(/\n(?=## )/).filter((x) => /^\|.*\| ✗/m.test(x))) expect(sec).toMatch(/^## plataforma-escena(-angosta)? a /);
+    // 3 metrics × 2 scales × 4 contexts (plataforma-escena-angosta joined in #429); since #445 no row is excused
+    expect(report.match(/^\| (contraste|halo|OCR) \|.*\| ✓ \|$/gm)?.length ?? 0).toBe(24);
+    // the only ✗ left is the `✓/✗` header cell of each table
+    for (const l of report.split("\n").filter((x) => x.includes("✗"))) expect(l).toMatch(/\| ✓\/✗ \|$/);
     for (const id of [...CONTEXTS, "plataforma-escena-angosta"]) for (const s of ["1.17", "0.83"]) expect(report).toMatch(new RegExp(`^## ${id} a ${s.replace(".", "\\.")}$`, "m"));
     expect(report).toContain("Sin violaciones.");
   });
@@ -948,13 +946,12 @@ describe("#423 closing (#429)", () => {
     const text = lines.join("\n");
     for (const s of ["transform", "900×1440", "1440×900", "sin recargar"]) expect(text, s).toContain(s);
   });
-  it("REPORT.md has plataforma-escena-angosta at both scales, contrast and halo ok, OCR the #437 exception, and its four crops", () => {
+  it("REPORT.md has plataforma-escena-angosta at both scales, every row ok, and its four crops", () => {
     const report = read(`${SPECS}assets/carteles-legibilidad/REPORT.md`);
     for (const sc of ["1.17", "0.83"]) {
       const sec = report.slice(report.indexOf(`## plataforma-escena-angosta a ${sc}\n`)).split(/\n(?=## )/)[0]!;
       expect(report, sc).toContain(`## plataforma-escena-angosta a ${sc}\n`);
-      expect(sec.match(/^\| (contraste|halo) \|.*\| ✓ \|$/gm)?.length ?? 0, sc).toBe(2);
-      expect(sec, sc).toMatch(/^\| OCR \|.*\| ✗ \(excepción, spec 2026-11-15 §8\.2\) \|$/m);
+      expect(sec.match(/^\| (contraste|halo|OCR) \|.*\| ✓ \|$/gm)?.length ?? 0, sc).toBe(3);
     }
     for (const s of ["117", "083", "117-ocr", "083-ocr"]) png(`${SPECS}assets/carteles-legibilidad/plataforma-escena-angosta-${s}.png`);
   });
@@ -1008,44 +1005,13 @@ describe("#423 closing (#429)", () => {
 });
 
 describe("WRITING in LostWages (#437)", () => {
-  const SPECS = `${ROOT}docs/superpowers/specs/`;
-  const read = (path: string) => (existsSync(path) ? readFileSync(path, "utf8") : "");
-  const spec = read(`${SPECS}2026-11-15-carteles-de-zona-rediseno-design.md`);
-  const report = read(`${SPECS}assets/carteles-legibilidad/REPORT.md`);
+  // history since #441: the LostWages entry stays in §8.2, the floating board's entry follows it
+  const spec = existsSync(`${ROOT}docs/superpowers/specs/2026-11-15-carteles-de-zona-rediseno-design.md`) ? readFileSync(`${ROOT}docs/superpowers/specs/2026-11-15-carteles-de-zona-rediseno-design.md`, "utf8") : "";
   const dev = spec.slice(Math.max(0, spec.search(/^### 8\.2 /m)), Math.max(0, spec.search(/^### 8\.3 /m)));
-  const entry = (dev.split(/\n(?=- \*\*)/).find((b) => b.startsWith("- **WRITING en LostWages")) ?? "").replace(/\s+/g, " ");
-  /** The OCR reading REPORT.md gives `id` at `scale`, backticks included. */
-  const ocr = (id: string, scale: string) => {
-    const sec = report.slice(report.indexOf(`## ${id} a ${scale}\n`)).split(/\n(?=## )/)[0]!;
-    return sec.split("\n").find((l) => l.startsWith("| OCR |"))?.split("|")[2]?.trim() ?? "";
-  };
 
   it("§8.2 has a WRITING en LostWages entry after the Black Chancery one", () => {
-    expect(entry).not.toBe("");
+    expect(dev.indexOf("- **WRITING en LostWages")).toBeGreaterThan(0);
     expect(dev.indexOf("- **WRITING en LostWages")).toBeGreaterThan(dev.indexOf("- **Writing en Black Chancery"));
-  });
-  it("the entry names the font, its license and source, the word file, the generator and the sizes", () => {
-    for (const s of [
-      "https://www.1001fonts.com/lostwages-font.html", "Nick Curtis", "1001Fonts Free For Commercial Use", "`src/kit/lostwages-writing.ts`", "`scripts/marquee-word.py`",
-      "`WRITING_CAP` 9.4", "`LOSTWAGES_FACE` 0.138", "officeDark", "1,55",
-    ]) expect(entry, s).toContain(s);
-  });
-  it("the entry records the closing next to the erosion precedent, under the EULA's §3", () => {
-    for (const s of ["cierre", "erosión", "CNRGN Builder", "EULA", "§3"]) expect(entry, s).toContain(s);
-  });
-  it("the entry records the OCR exception with the readings of REPORT.md, only for plataforma-escena*", () => {
-    for (const id of ["plataforma-escena", "plataforma-escena-angosta"]) for (const sc of ["1.17", "0.83"]) {
-      const got = ocr(id, sc);
-      expect(got, `${id} ${sc}`).toMatch(/^`[A-Za-z]+`$/);
-      expect(got, `${id} ${sc}`).not.toBe("`WRITING`");
-      expect(entry, `${id} ${sc} ${got}`).toContain(got);
-    }
-    for (const s of ["OCR", "`plataforma-escena`", "`plataforma-escena-angosta`", "contraste", "halo"]) expect(entry, s).toContain(s);
-  });
-  it("the real-scale capture of the sign exists and §8.4 lists it", () => {
-    const b = readFileSync(`${SPECS}assets/374-carteles/plataforma-real.png`);
-    expect(b.subarray(1, 4).toString()).toBe("PNG");
-    expect(spec.slice(spec.search(/^### 8\.4 /m))).toContain("assets/374-carteles/plataforma-real.png");
   });
 });
 
@@ -1055,5 +1021,100 @@ describe("WRITING in Chainsaw Carnage (#442)", () => {
     for (const s of ["`WRITING`", "Chainsaw Carnage", "`src/kit/chainsaw-writing.ts`"]) expect(glossary, s).toContain(s);
     expect(glossary).not.toMatch(/LostWages/);
     expect(glossary).not.toMatch(/Chancery/);
+  });
+});
+
+describe("WRITING on a floating board (#441)", () => {
+  const SPECS = `${ROOT}docs/superpowers/specs/`;
+  const read = (path: string) => (existsSync(path) ? readFileSync(path, "utf8") : "");
+  const png = (path: string) => {
+    expect(existsSync(path), path).toBe(true);
+    const b = readFileSync(path);
+    expect(b.subarray(1, 4).toString(), path).toBe("PNG");
+    return [b.readUInt32BE(16), b.readUInt32BE(20)];
+  };
+  const report = read(`${SPECS}assets/carteles-legibilidad/REPORT.md`);
+  const spec = read(`${SPECS}2026-11-15-carteles-de-zona-rediseno-design.md`);
+  const next = read(`${SPECS}2026-11-18-composicion-responsive-design.md`);
+  const glossary = read(`${ROOT}CONTEXT.md`);
+  const LAPSE = `${SPECS}assets/441-tabla-flotante/`;
+  const POSES = [1, 2, 3, 4].map((n) => `balanceo-${n}.png`);
+  const dev = spec.slice(Math.max(0, spec.search(/^### 8\.2 /m)), Math.max(0, spec.search(/^### 8\.3 /m)));
+  const TITLE = "- **WRITING en Chainsaw Carnage, tabla flotante (#441).**";
+  const entry = (dev.split(/\n(?=- \*\*)/).find((b) => b.startsWith(TITLE)) ?? "").replace(/\s+/g, " ");
+  const WRITING_CONTEXTS = ["plataforma-escena", "plataforma-escena-angosta"];
+  const SCALES = ["1.17", "0.83"];
+  /** The value cell of `metric` in the REPORT.md section of `id` at `scale` ("" when missing). */
+  const cell = (id: string, scale: string, metric: string) => {
+    const at = report.indexOf(`## ${id} a ${scale}\n`);
+    if (at < 0) return "";
+    const sec = report.slice(at).split(/\n(?=## )/)[0]!;
+    return sec.split("\n").find((l) => l.startsWith(`| ${metric} |`))?.split("|")[2]?.trim() ?? "";
+  };
+  /** The aspect threshold of the Writing site at 900 px high, comma decimal. */
+  const threshold = () => { let w = 900; while (writingSite(w, 900) !== "wide") w++; return (w / 900).toFixed(2).replace(".", ","); };
+  /** A heave offset as the time-lapse README writes it: sign (U+2212 minus) and two decimals. */
+  const signed = (v: number) => `${v > 0 ? "+" : v < 0 ? "\u2212" : ""}${Math.abs(v).toFixed(2)}`;
+
+  it("REPORT.md: the four Writing rows at ≥ 7:1, halo ok and OCR WRITING", () => {
+    for (const id of WRITING_CONTEXTS) for (const sc of SCALES) {
+      expect(parseFloat(cell(id, sc, "contraste")), `${id} ${sc}`).toBeGreaterThanOrEqual(7);
+      const sec = report.slice(report.indexOf(`## ${id} a ${sc}\n`)).split(/\n(?=## )/)[0]!;
+      expect(sec, `${id} ${sc}`).toMatch(/^\| halo \|.*\| ✓ \|$/m);
+      expect(sc === "1.17" ? ["`WRITING`"] : ["`WRITING`", "`writing`"], `${id} ${sc}`).toContain(cell(id, sc, "OCR"));
+    }
+  });
+  it("§8.2 has the floating board entry after the LostWages one", () => {
+    expect(entry).not.toBe("");
+    expect(dev.indexOf(TITLE)).toBeGreaterThan(dev.indexOf("- **WRITING en LostWages"));
+  });
+  it("the entry names the font, its license and source, the files and the live values", () => {
+    for (const s of [
+      "Chainsaw Carnage", "GGBotNet", "SIL Open Font License", "https://www.1001fonts.com/chainsaw-carnage-font.html", "https://www.1001fonts.com/download/chainsaw-carnage.zip",
+      "`src/kit/chainsaw-writing.ts`", "`scripts/marquee-word.py`", `\`WRITING_CAP\` ${WRITING_CAP}`, `\`CHAINSAW_FACE\` ${CHAINSAW_FACE}`, `\`CHAINSAW_X\` ${CHAINSAW_X}`,
+      `\`BOARD_TOP\` ${String(BOARD_TOP).replace("-", "\u2212")}`, "`HEAVE`", `amp ${HEAVE.amp}`, `${HEAVE.periodMs} ms`, "`reducedMotion`", "bloom", "`platform.lights`", "#437", threshold(),
+    ]) expect(entry, s).toContain(s);
+  });
+  it("the entry carries the four level-3 readings of REPORT.md", () => {
+    for (const id of WRITING_CONTEXTS) for (const sc of SCALES) for (const m of ["contraste", "halo", "OCR"]) {
+      const v = cell(id, sc, m);
+      expect(v, `${id} ${sc} ${m}`).not.toBe("");
+      expect(entry, `${id} ${sc} ${m} ${v}`).toContain(v);
+    }
+  });
+  it("the five regenerated captures and the four of the heave are 3200×1800", () => {
+    for (const f of ["374-carteles/plataforma-escena-117.png", "374-carteles/plataforma-escena-083.png", "374-carteles/plataforma-real.png",
+      "423-composicion-responsive/plataforma-escena-angosta-117.png", "423-composicion-responsive/sitio-1600x900-ancho.png"]) expect(png(`${SPECS}assets/${f}`), f).toEqual([3200, 1800]);
+    for (const f of POSES) expect(png(`${LAPSE}${f}`), f).toEqual([3200, 1800]);
+  });
+  it("the heave README names each pose with its expected dz, heaveAt at a quarter period apart", () => {
+    const lines = read(`${LAPSE}README.md`).split("\n");
+    POSES.forEach((f, k) => {
+      const line = lines.filter((l) => l.startsWith(`- \`${f}\``));
+      expect(line, f).toHaveLength(1);
+      expect(line[0], f).toContain(signed(heaveAt((k * HEAVE.periodMs) / 4)));
+    });
+    expect(lines.join("\n")).toContain("heaveAt");
+  });
+  it("§8.4 lists the four heave captures", () => {
+    const caps = spec.slice(Math.max(0, spec.search(/^### 8\.4 /m)));
+    for (const f of POSES) expect(caps, f).toContain(`assets/441-tabla-flotante/${f}`);
+  });
+  it("the 2026-11-18 spec §8.3 says the sign is the board and the OCR reads WRITING", () => {
+    const at = next.search(/^### 8\.3 /m), rest = at < 0 ? "" : next.slice(at), end = rest.search(/\n#/);
+    const sec = (end < 0 ? rest : rest.slice(0, end)).replace(/\s+/g, " ");
+    expect(sec).toContain("#441");
+    expect(sec).toContain("`WRITING`");
+    expect(sec).not.toMatch(/excepci|WRELENG|WREFHNG/);
+  });
+  it("CONTEXT.md Sign tells the heave, the paint out of the bloom and a level 3 with no exception, and no LostWages", () => {
+    const at = glossary.indexOf("### Sign\n"), rest = glossary.slice(at + 9), sign = at < 0 ? "" : rest.slice(0, Math.max(0, rest.search(/^### /m)));
+    for (const s of ["`platformAnimator`", "`HEAVE`", "`reducedMotion`", "`platform.lights`", "`bloom: false`", "no row"]) expect(sign, s).toContain(s);
+    expect(glossary).toContain("Chainsaw Carnage");
+    expect(glossary).not.toMatch(/LostWages/);
+  });
+  it("README's signs paragraph says npm run legibility has no exceptions", () => {
+    const p = (readme.split(/\n\s*\n/).find((x) => x.includes("zone signs of #374")) ?? "").replace(/\s+/g, " ");
+    expect(p).toContain("no exceptions");
   });
 });

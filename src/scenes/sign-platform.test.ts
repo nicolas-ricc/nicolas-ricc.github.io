@@ -66,7 +66,7 @@ describe.each(["wide", "tall"] as const)("Writing board at the %s site: a flat b
 
   it("BLOG_SIGNS[site]: WRITING in Chainsaw Carnage, cyan, filled, its shortest letter as x-height and its stem as stroke, backed by the board (copies)", () => {
     expect(SIGN).toMatchObject({ id: "plataforma", text: "WRITING", size: WRITING_CAP, width: SIGN_FONT.width, color: "cyan", xHeight: CHAINSAW_X * WRITING_CAP, stroke: CHAINSAW_FACE * WRITING_CAP });
-    expect(WRITING_CAP).toBe(10.8);
+    expect(WRITING_CAP).toBe(11.5);
     expect(SIGN.glyphs.map((g) => g.char).join("")).toBe("WRITING");
     const { out } = at(site);
     expect(SIGN.backing).toEqual(out);
@@ -112,9 +112,9 @@ describe.each(["wide", "tall"] as const)("Writing board at the %s site: a flat b
     expect(tessellate(SIGN.backing[0]!).some((f) => f.mat === "officeDark" && f.normal.z > 0.99)).toBe(true);
   });
 
-  it("seaPlatformAt paints the sign from BLOG_SIGNS[site]: its accents are the spec's triangles in cyan at 0.85, and nothing else (copies)", () => {
+  it("seaPlatformAt paints the sign from BLOG_SIGNS[site]: its accents are the spec's triangles in cyan at 0.85, out of the bloom, and nothing else (copies)", () => {
     const quads = SIGN.glyphs.flatMap((g) => g.quads), { accents } = at(site);
-    expect(accents).toEqual(quads.map((pts) => ({ kind: "poly", pts, color: "cyan", alpha: 0.85 })));
+    expect(accents).toEqual(quads.map((pts) => ({ kind: "poly", pts, color: "cyan", alpha: 0.85, bloom: false })));
     accents.forEach((a, i) => { if (a.kind === "poly") expect(a.pts[0]).not.toBe(quads[i]![0]); });
   });
 
@@ -203,6 +203,6 @@ describe.each(["wide", "tall"] as const)("Writing board at the %s site across th
   it.each(PHASES.map((dz, k) => [k, dz] as const))("phase %i/8: signAt(site, dz) is backed by the posed board and paints what seaPlatformAt paints", (_k, dz) => {
     const sign = signAt(site, dz), { out, accents } = at(site, dz);
     expect(sign.backing).toEqual(out);
-    expect(accents).toEqual(sign.glyphs.flatMap((g) => g.quads).map((pts) => ({ kind: "poly", pts, color: "cyan", alpha: 0.85 })));
+    expect(accents).toEqual(sign.glyphs.flatMap((g) => g.quads).map((pts) => ({ kind: "poly", pts, color: "cyan", alpha: 0.85, bloom: false })));
   });
 });
