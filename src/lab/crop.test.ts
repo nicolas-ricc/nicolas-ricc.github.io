@@ -6,9 +6,9 @@ import { bounds, type Solid, type Tri, tessellate } from "../iso/solids";
 import type { Animator } from "../scenes/animator";
 import type { WorldScene } from "../scenes/world";
 import { platformAnimator } from "../scenes/platform-animator";
-import { seaPlatformAt } from "../scenes/sign-platform";
+import { BLOG_SIGNS, poseAt, seaPlatformAt, signAt } from "../scenes/sign-platform";
 import { tag, type ZonedAnimator } from "../world/assemble";
-import { contextAnimators, contextScene, cropAccents, cropAnimators, cropSolids, cropScene, cropShared, cropSolid, isLongPrism, overlaps, pieceScene, readout, solidsBox } from "./crop";
+import { contextAnimators, contextScene, contextSign, cropAccents, cropAnimators, cropSolids, cropScene, cropShared, cropSolid, isLongPrism, overlaps, pieceScene, readout, solidsBox } from "./crop";
 import { EXHIBITS, type ContextExhibit } from "./exhibits";
 
 const box = { x0: 0, y0: 0, x1: 10, y1: 10 };
@@ -435,5 +435,34 @@ describe("contextScene / contextAnimators (#376, #392)", () => {
     expect(got).toHaveLength(1);
     // without writingSite the platform animator is cropped like any other
     expect(contextAnimators([tag(platformAnimator({ site: "tall", reducedMotion: false }), "blog")], { ...tall, writingSite: undefined }).some((a) => a.ids.includes("platform.solid"))).toBe(true);
+  });
+});
+
+describe("the Writing context exhibit at a tick (#457)", () => {
+  const scene = {
+    terrain: { ground: [], bleed: [], water: [], foam: { kind: "ground", mat: "foam", tris: [] } },
+    ground: [], solids: [prism(570, 105)], accents: [],
+    landmarks: { portfolio: v3(0, 0, 0), cv: v3(0, 0, 0), blog: v3(0, 0, 0) },
+    shipyard: null, city: null, factory: null, sea: null, hinterland: null, tech: null, fair: null,
+  } as unknown as WorldScene;
+  const byId = (id: string) => EXHIBITS.find((x): x is ContextExhibit => x.id === id && x.kind === "context")!;
+  const wide = byId("plataforma-escena"), tower = byId("cartel-torre-escena");
+  it("contextScene at a tick poses the Writing raft at poseAt(tMs)", () => {
+    const posed: Solid[] = [];
+    seaPlatformAt(posed, "wide", poseAt(15838));
+    const got = contextScene(scene, wide, 15838);
+    expect(got.solids).toEqual([...cropScene(scene, wide.box).solids, ...cropSolids(posed, wide.box)]);
+    expect(got.solids).not.toEqual(contextScene(scene, wide).solids);
+    expect(contextScene(scene, wide, 0)).toEqual(contextScene(scene, wide));
+  });
+  it("contextSign: the posed oracle sign of a Writing exhibit; e.sign otherwise", () => {
+    expect(contextSign(wide, 15838).glyphs[0]!.quads).toEqual(signAt("wide", poseAt(15838)).glyphs[0]!.quads);
+    expect(contextSign(wide, 15838).glyphs[0]!.quads).not.toEqual(BLOG_SIGNS.wide.glyphs[0]!.quads);
+    expect(contextSign(wide, 0)).toEqual(BLOG_SIGNS.wide);
+    expect(contextSign(wide)).toEqual(BLOG_SIGNS.wide);
+  });
+  it("a non-Writing context exhibit ignores the tick", () => {
+    expect(contextSign(tower, 15838)).toBe(tower.sign);
+    expect(contextScene(scene, tower, 15838)).toEqual(contextScene(scene, tower));
   });
 });

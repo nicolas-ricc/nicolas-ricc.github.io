@@ -6,7 +6,8 @@ import { COVER_LAPTOP, COVER_PHONE, GROUND_ASPECT, layoutGaps, SIGN_FONT, SIGN_R
 import { counterClearance, letterGaps, measureText, rhythm } from "../kit/lettering";
 import { TOWER } from "../scenes/city-grid";
 import { CROWN_SITE } from "../scenes/sign-crown";
-import { BLOG_SIGNS, CYCLE_POSES, PLATFORM_DECK, PLATFORM_SITES, poseAt, signAt, WRITING_CAP } from "../scenes/sign-platform";
+import { BLOG_SIGNS, CYCLE_POSES, PITCH, PLATFORM_DECK, PLATFORM_SITES, poseAt, ROLL, signAt, WRITING_CAP } from "../scenes/sign-platform";
+import { RAFT } from "../scenes/raft";
 import { ISO_TONES } from "../map/palette-iso";
 import { CHAINSAW_BAR } from "../kit/marquee";
 import { writingSite } from "../world/signs";
@@ -1026,52 +1027,14 @@ describe("WRITING in Chainsaw Carnage (#442)", () => {
 });
 
 describe("WRITING on a floating board (#441)", () => {
+  // history since #451: the entry, its heave captures in §8.4 and their folder; the live values are pinned by the #451 block
   const SPECS = `${ROOT}docs/superpowers/specs/`;
-  const read = (path: string) => (existsSync(path) ? readFileSync(path, "utf8") : "");
-  const png = (path: string) => {
-    expect(existsSync(path), path).toBe(true);
-    const b = readFileSync(path);
-    expect(b.subarray(1, 4).toString(), path).toBe("PNG");
-    return [b.readUInt32BE(16), b.readUInt32BE(20)];
-  };
-  const report = read(`${SPECS}assets/carteles-legibilidad/REPORT.md`);
-  const spec = read(`${SPECS}2026-11-15-carteles-de-zona-rediseno-design.md`);
-  const next = read(`${SPECS}2026-11-18-composicion-responsive-design.md`);
-  const glossary = read(`${ROOT}CONTEXT.md`);
-  // the #441 heave time-lapse is history (#456): only its folder is required; the live one is the pitch and roll time-lapse of #451
+  const spec = existsSync(`${SPECS}2026-11-15-carteles-de-zona-rediseno-design.md`) ? readFileSync(`${SPECS}2026-11-15-carteles-de-zona-rediseno-design.md`, "utf8") : "";
   const OLD_LAPSE = `${SPECS}assets/441-tabla-flotante/`, OLD_POSES = [1, 2, 3, 4].map((n) => `balanceo-${n}.png`);
-  const LAPSE = `${SPECS}assets/451-balsa-tablones/balanceo/`;
-  const TIMES = [0, 1675, 3350, 5025, 7919, 15838];
-  const POSES = TIMES.map((_, k) => `balanceo-${k + 1}.png`);
   const dev = spec.slice(Math.max(0, spec.search(/^### 8\.2 /m)), Math.max(0, spec.search(/^### 8\.3 /m)));
   const TITLE = "- **WRITING en Chainsaw Carnage, tabla flotante (#441).**";
   const entry = (dev.split(/\n(?=- \*\*)/).find((b) => b.startsWith(TITLE)) ?? "").replace(/\s+/g, " ");
-  // the title of the #451 entry, matched by its story number (the English guard reads this file)
-  const TITLE_451 = /^- \*\*WRITING [^*]*\(#451\)\.\*\*/m;
-  const entry451 = (dev.split(/\n(?=- \*\*)/).find((b) => TITLE_451.test(b)) ?? "").replace(/\s+/g, " ");
-  const WRITING_CONTEXTS = ["plataforma-escena", "plataforma-escena-angosta"];
-  const SCALES = ["1.17", "0.83"];
-  /** The value cell of `metric` in the REPORT.md section of `id` at `scale` ("" when missing). */
-  const cell = (id: string, scale: string, metric: string) => {
-    const at = report.indexOf(`## ${id} a ${scale}\n`);
-    if (at < 0) return "";
-    const sec = report.slice(at).split(/\n(?=## )/)[0]!;
-    return sec.split("\n").find((l) => l.startsWith(`| ${metric} |`))?.split("|")[2]?.trim() ?? "";
-  };
-  /** The aspect threshold of the Writing site at 900 px high, comma decimal. */
-  const threshold = () => { let w = 900; while (writingSite(w, 900) !== "wide") w++; return (w / 900).toFixed(2).replace(".", ","); };
-  /** A value as the time-lapse README writes it: `d` decimals, sign (U+2212 minus), no sign when it rounds to zero. */
-  const signed = (v: number, d: number) => { const s = Math.abs(v).toFixed(d), z = Number(s) === 0; return `${z ? "" : v > 0 ? "+" : "\u2212"}${s}`; };
-  const deg = (r: number) => (r * 180) / Math.PI;
 
-  it("REPORT.md: the four Writing rows at ≥ 7:1, halo ok and OCR WRITING", () => {
-    for (const id of WRITING_CONTEXTS) for (const sc of SCALES) {
-      expect(parseFloat(cell(id, sc, "contraste")), `${id} ${sc}`).toBeGreaterThanOrEqual(7);
-      const sec = report.slice(report.indexOf(`## ${id} a ${sc}\n`)).split(/\n(?=## )/)[0]!;
-      expect(sec, `${id} ${sc}`).toMatch(/^\| halo \|.*\| ✓ \|$/m);
-      expect(sc === "1.17" ? ["`WRITING`"] : ["`WRITING`", "`writing`"], `${id} ${sc}`).toContain(cell(id, sc, "OCR"));
-    }
-  });
   it("§8.2 has the floating board entry after the LostWages one", () => {
     expect(entry).not.toBe("");
     expect(dev.indexOf(TITLE)).toBeGreaterThan(dev.indexOf("- **WRITING en LostWages"));
@@ -1082,6 +1045,80 @@ describe("WRITING on a floating board (#441)", () => {
       "`src/kit/chainsaw-writing.ts`", "`scripts/marquee-word.py`", "`HEAVE`", "#437",
     ]) expect(entry, s).toContain(s);
   });
+  it("§8.4 lists the four heave captures and their folder stays", () => {
+    const caps = spec.slice(Math.max(0, spec.search(/^### 8\.4 /m)));
+    for (const f of OLD_POSES) {
+      expect(caps, f).toContain(`assets/441-tabla-flotante/${f}`);
+      expect(existsSync(`${OLD_LAPSE}${f}`), f).toBe(true);
+    }
+  });
+});
+
+describe("WRITING on a plank raft (#451)", () => {
+  const SPECS = `${ROOT}docs/superpowers/specs/`;
+  const read = (path: string) => (existsSync(path) ? readFileSync(path, "utf8") : "");
+  const png = (path: string) => {
+    expect(existsSync(path), path).toBe(true);
+    const b = readFileSync(path);
+    expect(b.subarray(1, 4).toString(), path).toBe("PNG");
+    return [b.readUInt32BE(16), b.readUInt32BE(20)];
+  };
+  const LEVEL3 = `${SPECS}assets/carteles-legibilidad/`;
+  // the three level-3 runs (#457): at rest, and at two instants of the pitch-and-roll cycle
+  const REPORTS = [{ file: "REPORT.md", tick: null }, { file: "REPORT-t7919.md", tick: 7919 }, { file: "REPORT-t15838.md", tick: 15838 }] as const;
+  const reports = Object.fromEntries(REPORTS.map((r) => [r.file, read(`${LEVEL3}${r.file}`)]));
+  const report = reports["REPORT.md"]!;
+  const spec = read(`${SPECS}2026-11-15-carteles-de-zona-rediseno-design.md`);
+  const next = read(`${SPECS}2026-11-18-composicion-responsive-design.md`);
+  const story = read(`${SPECS}2026-11-20-writing-balsa-tablones-design.md`);
+  const ADR5 = "0005-ground-signs-have-their-own-floors.md";
+  const adr5 = read(`${ROOT}docs/adr/${ADR5}`);
+  const glossary = read(`${ROOT}CONTEXT.md`);
+  const LAPSE = `${SPECS}assets/451-balsa-tablones/balanceo/`;
+  const TIMES = [0, 1675, 3350, 5025, 7919, 15838];
+  const POSES = TIMES.map((_, k) => `balanceo-${k + 1}.png`);
+  const dev = spec.slice(Math.max(0, spec.search(/^### 8\.2 /m)), Math.max(0, spec.search(/^### 8\.3 /m)));
+  const TITLE = "- **WRITING en Chainsaw Carnage, tabla flotante (#441).**";
+  // the title of the #451 entry, matched by its story number (the English guard reads this file)
+  const TITLE_451 = /^- \*\*WRITING [^*]*\(#451\)\.\*\*/m;
+  const entry451 = (dev.split(/\n(?=- \*\*)/).find((b) => TITLE_451.test(b)) ?? "").replace(/\s+/g, " ");
+  const WRITING_CONTEXTS = ["plataforma-escena", "plataforma-escena-angosta"];
+  const SCALES = ["1.17", "0.83"];
+  /** The value cell of `metric` in the section of `id` at `scale` of the report `md` ("" when missing). */
+  const cell = (md: string, id: string, scale: string, metric: string) => {
+    const at = md.indexOf(`## ${id} a ${scale}\n`);
+    if (at < 0) return "";
+    const sec = md.slice(at).split(/\n(?=## )/)[0]!;
+    return sec.split("\n").find((l) => l.startsWith(`| ${metric} |`))?.split("|")[2]?.trim() ?? "";
+  };
+  /** The aspect threshold of the Writing site at 900 px high, comma decimal. */
+  const threshold = () => { let w = 900; while (writingSite(w, 900) !== "wide") w++; return (w / 900).toFixed(2).replace(".", ","); };
+  /** A value as the time-lapse README writes it: `d` decimals, sign (U+2212 minus), no sign when it rounds to zero. */
+  const signed = (v: number, d: number) => { const s = Math.abs(v).toFixed(d), z = Number(s) === 0; return `${z ? "" : v > 0 ? "+" : "\u2212"}${s}`; };
+  const deg = (r: number) => (r * 180) / Math.PI;
+  /** Every file under `dir`, relative to it. */
+  const walk = (dir: string): string[] => (existsSync(dir) ? readdirSync(dir, { withFileTypes: true }).flatMap((d) => (d.isDirectory() ? walk(`${dir}${d.name}/`).map((f) => `${d.name}/${f}`) : [d.name])) : []);
+  const RAFT_PNGS = walk(`${SPECS}assets/451-balsa-tablones/`).filter((f) => f.endsWith(".png"));
+
+  it("the three reports: the four Writing rows at ≥ 7:1, halo ✓ and OCR WRITING; every row ✓", () => {
+    for (const { file, tick } of REPORTS) {
+      const md = reports[file]!;
+      expect(md, file).not.toBe("");
+      if (tick === null) expect(md, file).not.toMatch(/^Tick:/m);
+      else expect(md, file).toMatch(new RegExp(`^Viewport: .*\\n\\nTick: ${tick} ms$`, "m"));
+      expect(md.match(/^\| (contraste|halo|OCR) \|.*\| ✓ \|$/gm)?.length ?? 0, file).toBe(24);
+      for (const id of WRITING_CONTEXTS) for (const sc of SCALES) {
+        expect(parseFloat(cell(md, id, sc, "contraste")), `${file} ${id} ${sc}`).toBeGreaterThanOrEqual(7);
+        const sec = md.slice(md.indexOf(`## ${id} a ${sc}\n`)).split(/\n(?=## )/)[0]!;
+        expect(sec, `${file} ${id} ${sc}`).toMatch(/^\| halo \|.*\| ✓ \|$/m);
+        expect(sc === "1.17" ? ["`WRITING`"] : ["`WRITING`", "`writing`"], `${file} ${id} ${sc}`).toContain(cell(md, id, sc, "OCR"));
+      }
+      expect(md, file).toContain("Sin violaciones.");
+    }
+  });
+  it("the tick runs version their crops with the -t suffix", () => {
+    for (const t of [7919, 15838]) for (const id of WRITING_CONTEXTS) for (const sc of ["117", "083"]) for (const k of ["", "-ocr"]) png(`${LEVEL3}${id}-${sc}-t${t}${k}.png`);
+  });
   it("the #451 entry follows the #441 one and carries the live values of the raft", () => {
     expect(entry451).not.toBe("");
     expect(dev.search(TITLE_451)).toBeGreaterThan(dev.indexOf(TITLE));
@@ -1091,6 +1128,7 @@ describe("WRITING on a floating board (#441)", () => {
     for (const s of [
       `\`WRITING_CAP\` ${WRITING_CAP}`, `\`CHAINSAW_BAR\` ${CHAINSAW_BAR}`, "`timber`", "`navy`", hex(ISO_TONES.timber.top), hex(ISO_TONES.navy.top), "`staticContrast`", contrast,
       `\`GROUND_ASPECT\` ${GROUND_ASPECT}`, threshold(), "`LANE_OUT`", ...LANE_OUT.slice(-3).map((p) => `(${p.x}, ${p.y})`), `\`zoneFrame\``, "450", "`platform.lights`", "caja alta 17.25",
+      "`PITCH`", `${PITCH.periodMs} ms`, "`ROLL`", `${ROLL.periodMs} ms`, `\`plankW\` ${RAFT.plankW}`,
     ]) expect(entry451, s).toContain(s);
     // the entry says the layer is gone, it does not list it as live
     expect(entry451).toMatch(/`platform\.lights`.{0,8}no existe/);
@@ -1112,18 +1150,45 @@ describe("WRITING on a floating board (#441)", () => {
       for (const v of wide) expect(entry451, `${sc} ${v}`).toContain(v);
     }
   }, 30_000);
-  it("the entry carries the four level-3 readings of REPORT.md", () => {
-    for (const id of WRITING_CONTEXTS) for (const sc of SCALES) for (const m of ["contraste", "halo", "OCR"]) {
-      const v = cell(id, sc, m);
-      expect(v, `${id} ${sc} ${m}`).not.toBe("");
-      expect(entry, `${id} ${sc} ${m} ${v}`).toContain(v);
+  it("the #451 entry carries the level-3 readings of the three runs (#457)", () => {
+    for (const s of ["#457", "t 7919", "t 15838", "`--tick`"]) expect(entry451, s).toContain(s);
+    for (const { file } of REPORTS) for (const id of WRITING_CONTEXTS) for (const sc of SCALES) for (const m of ["contraste", "halo", "OCR"]) {
+      const v = cell(reports[file]!, id, sc, m);
+      expect(v, `${file} ${id} ${sc} ${m}`).not.toBe("");
+      expect(entry451, `${file} ${id} ${sc} ${m} ${v}`).toContain(v);
     }
   });
-  it("the five regenerated captures and the six of the pitch and roll time-lapse are 3200×1800; the #441 time-lapse folder stays", () => {
+  it("§8.4 lists the regenerated captures, the -t crops and the 451-balsa-tablones folder, with no pending note", () => {
+    const caps = spec.slice(Math.max(0, spec.search(/^### 8\.4 /m)));
+    for (const s of ["assets/carteles-legibilidad/plataforma-escena-117-t7919.png", "assets/carteles-legibilidad/plataforma-escena-angosta-083-t15838.png", "assets/451-balsa-tablones/", "REPORT-t7919.md", "REPORT-t15838.md"]) expect(caps, s).toContain(s);
+    expect(caps).not.toMatch(/#457 las regenera/);
+  });
+  it("the new spec exists and names the ground class, the materials, the motion, the lane, ADR 0005, every capture of 451-balsa-tablones and the children's plans", () => {
+    expect(story).not.toBe("");
+    for (const s of ["`groundDiagonal`", "`GROUND_ASPECT`", "`CHAINSAW_BAR`", "`timber`", "`navy`", "`PITCH`", "`ROLL`", "`LANE_OUT`", "`SIGN_RULES.ground`", "`--tick`", ADR5]) expect(story, s).toContain(s);
+    expect(RAFT_PNGS.length).toBeGreaterThanOrEqual(10);
+    for (const f of RAFT_PNGS) expect(story, f).toContain(`assets/451-balsa-tablones/${f}`);
+    for (const plan of ["452-cartel-de-suelo", "453-mesh-rigid", "454-balsa-tablones", "455-balsa-contacto-agua", "456-cabeceo-rolido", "460-cap-17-pisos-suelo", "457-nivel3-suelo-cierre"]) {
+      const path = `docs/plans/2026-11-20-${plan}.md`;
+      expect(existsSync(`${ROOT}${path}`), path).toBe(true);
+      expect(story, path).toContain(`2026-11-20-${plan}.md`);
+    }
+    for (const { file } of REPORTS) for (const id of WRITING_CONTEXTS) for (const sc of SCALES) expect(story, `${file} ${id} ${sc}`).toContain(cell(reports[file]!, id, sc, "contraste"));
+  });
+  it("ADR 0005 is Accepted and names SIGN_RULES and GROUND_ASPECT", () => {
+    expect(adr5.split("\n")[0]).toMatch(/^# 0005\. /);
+    const heads = ["## Status", "## Context", "## Decision", "## Consequences"].map((h) => adr5.search(new RegExp(`^${h}$`, "m")));
+    for (const i of heads) expect(i).toBeGreaterThan(0);
+    expect([...heads].sort((a, b) => a - b)).toEqual(heads);
+    expect(adr5.search(/^Sources: /m)).toBeGreaterThan(heads[3]!);
+    expect(adr5.slice(heads[0]!, heads[1]!)).toContain("Accepted");
+    for (const s of ["`SIGN_RULES`", "`SIGN_RULES.ground`", "`GROUND_ASPECT`", "#451", "#460"]) expect(adr5, s).toContain(s);
+  });
+  it("the five regenerated captures, the close captures and the six of the time-lapse are 3200×1800", () => {
     for (const f of ["374-carteles/plataforma-escena-117.png", "374-carteles/plataforma-escena-083.png", "374-carteles/plataforma-real.png",
       "423-composicion-responsive/plataforma-escena-angosta-117.png", "423-composicion-responsive/sitio-1600x900-ancho.png"]) expect(png(`${SPECS}assets/${f}`), f).toEqual([3200, 1800]);
-    for (const f of POSES) expect(png(`${LAPSE}${f}`), f).toEqual([3200, 1800]);
-    expect(existsSync(OLD_LAPSE), OLD_LAPSE).toBe(true);
+    for (const f of RAFT_PNGS) expect(png(`${SPECS}assets/451-balsa-tablones/${f}`), f).toEqual([3200, 1800]);
+    for (const f of POSES) expect(RAFT_PNGS, f).toContain(`balanceo/${f}`);
   });
   it("the pitch and roll README names each capture with t and poseAt's dz, pitch and roll (#456)", () => {
     const lines = read(`${LAPSE}README.md`).split("\n");
@@ -1134,27 +1199,32 @@ describe("WRITING on a floating board (#441)", () => {
     });
     expect(lines.join("\n")).toContain("poseAt");
   });
-  it("§8.4 lists the four heave captures", () => {
-    const caps = spec.slice(Math.max(0, spec.search(/^### 8\.4 /m)));
-    for (const f of OLD_POSES) expect(caps, f).toContain(`assets/441-tabla-flotante/${f}`);
-  });
-  it("the 2026-11-18 spec §8.3 says the sign is the board and the OCR reads WRITING", () => {
+  it("the 2026-11-18 spec §8.3 says the sign is the plank raft and the OCR reads WRITING", () => {
     const at = next.search(/^### 8\.3 /m), rest = at < 0 ? "" : next.slice(at), end = rest.search(/\n#/);
     const sec = (end < 0 ? rest : rest.slice(0, end)).replace(/\s+/g, " ");
-    expect(sec).toContain("#441");
-    expect(sec).toContain("`WRITING`");
+    for (const s of ["#451", "balsa de tablones", "`WRITING`"]) expect(sec, s).toContain(s);
     expect(sec).not.toMatch(/excepci|WRELENG|WREFHNG/);
   });
-  it("CONTEXT.md Sign tells the heave, the paint out of the bloom and a level 3 with no exception, and no LostWages", () => {
-    const at = glossary.indexOf("### Sign\n"), rest = glossary.slice(at + 9), sign = at < 0 ? "" : rest.slice(0, Math.max(0, rest.search(/^### /m)));
+  it("CONTEXT.md Sign tells the raft, its motion, the paint and level 3 with --tick, and no LostWages", () => {
+    const entryOf = (name: string) => { const at = glossary.indexOf(`### ${name}\n`), rest = glossary.slice(at + name.length + 5); return at < 0 ? "" : rest.slice(0, Math.max(0, rest.search(/^### /m)) || rest.length); };
+    const sign = entryOf("Sign");
     for (const s of ["`platformAnimator`", "`HEAVE`", "`reducedMotion`", "no row", "`timber`", "`navy`", "decal", "`groundDiagonal`", "`platform.solid`", "`WRITING_CAP` (17.25)",
-      "`PITCH`", "`ROLL`", "`ANGLE_STEP`", "`poseAt`", "`CYCLE_POSES`", "one pose"]) expect(sign, s).toContain(s);
+      "`PITCH`", "`ROLL`", "`ANGLE_STEP`", "`poseAt`", "`CYCLE_POSES`", "one pose", "`raftAt`", "`--tick`", "`?tick=`"]) expect(sign, s).toContain(s);
     for (const re of [/PAINT_LIFT/, /officeDark/, /roofDiagonal/, /platform\.lights/]) expect(sign, String(re)).not.toMatch(re);
     expect(glossary).toContain("Chainsaw Carnage");
     expect(glossary).not.toMatch(/LostWages/);
   });
-  it("README's signs paragraph says npm run legibility has no exceptions", () => {
+  it("CONTEXT.md has ### Raft and ### Decal; Lettering and Legibility tell the ground plane, the symmetric halo and --tick", () => {
+    const entryOf = (name: string) => { const at = glossary.indexOf(`### ${name}\n`), rest = glossary.slice(at + name.length + 5); return at < 0 ? "" : rest.slice(0, Math.max(0, rest.search(/^### /m)) || rest.length); };
+    const raft = entryOf("Raft"), decal = entryOf("Decal"), lettering = entryOf("Lettering"), legibility = entryOf("Legibility");
+    for (const s of ["(Balsa.)", "`raftAt`", "`RAFT`", "`PLATFORM_DECK`", "`buildRaft`", "`raftEnvelope`", "Code:"]) expect(raft, s).toContain(s);
+    for (const s of ["(Calcomanía.)", "bloom", "`staticContrast`", "Code:"]) expect(decal, s).toContain(s);
+    expect(lettering).toContain("`groundDiagonal`");
+    for (const s of ["`SIGN_RULES.ground`", "halo", "symmetric", "`--tick`", "backed"]) expect(legibility, s).toContain(s);
+  });
+  it("README lists the new spec, --tick, its reports and the storybook's ?tick=", () => {
+    for (const s of ["2026-11-20-writing-balsa-tablones-design.md", "`--tick", "REPORT-t", "`?tick=`"]) expect(readme, s).toContain(s);
     const p = (readme.split(/\n\s*\n/).find((x) => x.includes("zone signs of #374")) ?? "").replace(/\s+/g, " ");
-    expect(p).toContain("no exceptions");
+    for (const s of ["no exceptions", "`--tick`"]) expect(p, s).toContain(s);
   });
 });
