@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clipPolygon, clipSegment, lerp2, lerp3 } from "./clip";
+import { clipPolygon, clipSegment, lerp2, lerp3, mergeConvex } from "./clip";
 import { v3, type Vec2 } from "./geometry";
 
 const r = { x0: 0, y0: 0, x1: 10, y1: 10 };
@@ -76,5 +76,35 @@ describe("clipPolygon", () => {
     const out = clipPolygon(pts, r, lerp3);
     expect(out.length).toBeGreaterThanOrEqual(3);
     for (const p of out) { expect(inside(p)).toBe(true); expect(p.z).toBeCloseTo(z(p.x, p.y), 9); }
+  });
+});
+
+describe("mergeConvex (#455)", () => {
+  const P = (x: number, y: number): Vec2 => ({ x, y });
+  const area = (pts: readonly Vec2[]) => { let s = 0; for (let i = 0; i < pts.length; i++) { const a = pts[i]!, b = pts[(i + 1) % pts.length]!; s += a.x * b.y - b.x * a.y; } return s / 2; };
+  const convex = (pts: readonly Vec2[]) => pts.every((_, i) => { const o = pts[i]!, a = pts[(i + 1) % pts.length]!, b = pts[(i + 2) % pts.length]!; return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x) >= -1e-9; });
+
+  it("joins two triangles of a square into one quad", () => {
+    const out = mergeConvex([[P(0, 0), P(1, 0), P(1, 1)], [P(0, 0), P(1, 1), P(0, 1)]]);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toHaveLength(4);
+    expect(area(out[0]!)).toBeCloseTo(1, 12);
+  });
+
+  it("accepts either winding", () => {
+    expect(mergeConvex([[P(0, 0), P(1, 0), P(1, 1)], [P(0, 0), P(0, 1), P(1, 1)]])).toHaveLength(1);
+  });
+
+  it("keeps an L apart: every piece convex and CCW, the area unchanged", () => {
+    const L = [[P(0, 0), P(2, 0), P(2, 1)], [P(0, 0), P(2, 1), P(1, 1)], [P(0, 0), P(1, 1), P(1, 2)], [P(0, 0), P(1, 2), P(0, 2)]];
+    const out = mergeConvex(L);
+    expect(out.length).toBeGreaterThanOrEqual(2);
+    for (const q of out) { expect(convex(q)).toBe(true); expect(area(q)).toBeGreaterThan(0); }
+    expect(out.reduce((s, q) => s + area(q), 0)).toBeCloseTo(3, 12);
+  });
+
+  it("leaves pieces that share no edge untouched", () => {
+    expect(mergeConvex([[P(0, 0), P(1, 0), P(0, 1)], [P(5, 5), P(6, 5), P(5, 6)]])).toHaveLength(2);
+    expect(mergeConvex([])).toEqual([]);
   });
 });
