@@ -17,7 +17,7 @@ const samePose = (a: RaftPose, b: RaftPose) => a.dz === b.dz && a.pitch === b.pi
 /**
  * The sea platform at `opts.site` (default `"wide"`), heaving, pitching and rolling with `poseAt` unless `opts.reducedMotion`, in which case it stays at `REST_POSE`.
  * The raft is one timber mesh: its planks and the navy decals move as one body. The rest geometry is built once per site (in `raft.ts`); the animator keeps one memo per site, its last pose, rebuilt when `dz`, `pitch` or `roll` differs.
- * A layer is reported when the site or the quantized pose changed since the previous tick, at most 25 times per second.
+ * A layer is reported when the site or the quantized pose changed since the previous tick, at most 250 times in 10 s of 60 fps ticks (25 per second on average).
  * The layer is reported after a site change, even with `dtMs` of 0 or NaN (an invalid `dtMs` does not advance the clock).
  */
 export function platformAnimator(opts: { site?: WritingSite; reducedMotion: boolean }): PlatformAnimator {
