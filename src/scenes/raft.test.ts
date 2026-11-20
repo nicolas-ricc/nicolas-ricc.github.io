@@ -35,8 +35,8 @@ const groups = (faces: readonly MeshFace[]) => {
 };
 
 describe("raft (#454)", () => {
-  it("cap 20, BOARD_TOP −0.4, BOARD_PAD 1.6 and the raft constants", () => {
-    expect(WRITING_CAP).toBe(20);
+  it("cap 17.25, BOARD_TOP −0.4, BOARD_PAD 1.6 and the raft constants", () => {
+    expect(WRITING_CAP).toBe(17.25);
     expect(BOARD_TOP).toBe(-0.4);
     expect(BOARD_PAD).toBe(1.6);
     expect(RAFT).toEqual({ plankW: 2.4, joint: 0.15, plankH: 0.5, ragged: 0.3, beamW: 1.4, beamH: 0.5, beamInset: 1.5, beamOverhang: 1.2, wetZ: -0.7, ringZ: -0.98, foamW: 1.0, shadowW: 2.0, segment: 4, grainW: 0.06, grainEdge: 0.2, nail: 0.12, nailDa: 0.35, nailDb: 0.6 });

@@ -141,6 +141,10 @@ describe("cover scales and SIGN_RULES (#376)", () => {
     expect(SIGN_RULES[COVER_PHONE]).toEqual({ xHeightPx: 8, strokePx: 1.5, airPx: 1.5, contrast: 3 });
     expect(SIGN_RULES).toMatchObject({ baselineDeg: 3, facadeBaselineDeg: 27, verticalDeg: 4, aspectTol: 0.08, backingW: 1, occlusion: 0.05 });
   });
+  it("SIGN_RULES.ground: floors of ground signs (#460)", () => {
+    expect(SIGN_RULES.ground[COVER_LAPTOP]).toEqual({ xHeightPx: 10.5, strokePx: 1.6, airPx: 2, contrast: 7 });
+    expect(SIGN_RULES.ground[COVER_PHONE]).toEqual({ xHeightPx: 7.5, strokePx: 1.2, airPx: 1.5, contrast: 7 });
+  });
 });
 
 describe("signSpec", () => {
@@ -388,9 +392,9 @@ describe("decal signs (#452)", () => {
     const pinned = [
       { s: RESUME_SIGN, m: { xHeightPx: 14.2506, strokePx: 2.3085972, airPx: 2.9539114255064196, aspectError: 0.010050506338837972 }, c: 4.695562146225949 },
       { s: TINKER_SIGN, m: { xHeightPx: 15.069607494509299, strokePx: 2.396067591626975, airPx: 2.285331928448671, baselineDeg: 0.23067405316426817, verticalDeg: 3.0304011483583646, aspectError: 0.07731579344706507 }, c: 8.062398849377823 },
-      // #454: the raft's WRITING_CAP 20 as a navy decal on timber (the plain board at 11.5 measured 14.50 / 2.26 / 2.47 / contrast 8.08)
-      { s: BLOG_SIGNS.wide, m: { xHeightPx: 12.740649983419262, strokePx: 2.4819448019648016, airPx: 3.593354358337664, aspectError: 0 }, c: 8.040217301353456 },
-      { s: BLOG_SIGNS.tall, m: { xHeightPx: 12.740649983419262, strokePx: 2.4819448019648016, airPx: 3.593354358337664, aspectError: 0 }, c: 8.040217301353456 },
+      // #460: WRITING_CAP 17.25 as a navy decal on timber (cap 20 measured 12.74 / 2.48 / 3.59 / contrast 8.04; the plain board at 11.5, 14.50 / 2.26 / 2.47 / 8.08)
+      { s: BLOG_SIGNS.wide, m: { xHeightPx: 10.988810610699073, strokePx: 2.1406773916946134, airPx: 3.099268134066288, aspectError: 0 }, c: 8.040217301353456 },
+      { s: BLOG_SIGNS.tall, m: { xHeightPx: 10.988810610699073, strokePx: 2.1406773916946134, airPx: 3.0992681340662926, aspectError: 0 }, c: 8.040217301353456 },
     ];
     for (const { s, m, c } of pinned) {
       const got = signMetrics(s, COVER_LAPTOP) as Record<string, number>;
@@ -404,18 +408,23 @@ const G0 = groundDiagonal(v3(0, 0, 0));
 const groundBlog = (o: { ground?: true; bar?: number } = {}) => signSpec({ id: "ground", text: "Blog", ...SIGN_FONT, color: "cyan", plane: G0, style: "stroke", backing: [], ...o });
 const chainsaw = (cap: number, o: { bar?: number } = {}) =>
   signSpec({ id: "ground", text: "WRITING", size: cap, width: SIGN_FONT.width, color: "cyan", plane: G0, style: "fill", backing: [], ground: true, layouts: marqueeLayout(cap, 0, CHAINSAW_WRITING), xHeight: CHAINSAW_X * cap, stroke: 2.4, ...o });
-/** The size tracer: WRITING in Chainsaw Carnage at `cap`, a ground decal sign on a flat backing (sheet at z −0.5, coplanar receiver, the word's triangles). */
-function tracer(cap: number) {
+/**
+ * The size tracer: WRITING in Chainsaw Carnage at `cap`, a decal sign on a flat backing (sheet at z −0.5, coplanar receiver, the word's triangles).
+ * `backing` "timber" paints navy on timber (8.04:1); "whitewash" paints officeDark −3 on whitewash (4.83:1, between the vertical and the ground contrast floors).
+ * `ground` (default true) marks it a ground sign.
+ */
+function tracer(cap: number, o: { ground?: boolean; backing?: "timber" | "whitewash" } = {}) {
   const layouts = marqueeLayout(cap, 0, CHAINSAW_WRITING), m = 3;
   const a0 = Math.min(...layouts.map((g) => g.box.x0)) - m, a1 = Math.max(...layouts.map((g) => g.box.x1)) + m;
   const b0 = Math.min(...layouts.map((g) => g.box.y0)) - m, b1 = Math.max(...layouts.map((g) => g.box.y1)) + m;
   const w = (a: number, b: number, dz = 0) => { const p = toWorld(G0, a, b); return v3(p.x, p.y, p.z + dz); };
   const rect = (dz: number) => [[w(a0, b0, dz), w(a1, b0, dz), w(a1, b1, dz)], [w(a0, b0, dz), w(a1, b1, dz), w(a0, b1, dz)]];
   const word = layouts.flatMap((g) => g.fill.map((t) => t.map((q) => w(q.x, q.y))));
+  const [recv, paint, offset] = (o.backing ?? "timber") === "timber" ? (["timber", "navy", undefined] as const) : (["whitewash", "officeDark", -3] as const);
   return signSpec({
-    id: "ground", text: CHAINSAW_WRITING.text, size: cap, width: SIGN_FONT.width, decal: "officeDark", plane: G0, style: "fill", ground: true,
+    id: "ground", text: CHAINSAW_WRITING.text, size: cap, width: SIGN_FONT.width, decal: paint, plane: G0, style: "fill", ...(o.ground === false ? {} : { ground: true as const }),
     layouts, xHeight: CHAINSAW_X * cap, stroke: CHAINSAW_FACE * cap, bar: CHAINSAW_BAR * cap,
-    backing: [groundSolid("whitewash", rect(-0.5)), groundSolid("whitewash", rect(0)), groundSolid("officeDark", word, -3)] /* officeDark.top on whitewash.top is 3.30 < 4.5: −3 steps the paint to dim (4.83); this test is about size */,
+    backing: [groundSolid(recv, rect(-0.5)), groundSolid(recv, rect(0)), groundSolid(paint, word, offset)],
   });
 }
 
@@ -467,12 +476,29 @@ describe("ground signs (#452)", () => {
     expect(signMetrics(s, COVER_LAPTOP).aspectError).toBeCloseTo(want, 12);
     expect(signMetrics(s, COVER_LAPTOP).aspectError).toBeCloseTo(0.018914801359428, 12); // the value before #456
   });
-  it("tracer: a Chainsaw Carnage ground sign at cap 20 on a flat backing passes at 1.17 and 0.83", () => {
-    const s = tracer(20);
+  it("tracer: a Chainsaw Carnage ground sign at cap 17.25 on a flat backing passes at 1.17 and 0.83", () => {
+    const s = tracer(17.25);
     expect(checkSign(s, COVER_LAPTOP, [])).toEqual([]);
     expect(checkSign(s, COVER_PHONE, [])).toEqual([]);
   });
-  it("tracer: the same sign at cap 17 fails xHeight at 1.17", () => {
-    expect(checkSign(tracer(17), COVER_LAPTOP, []).map((v) => v.rule)).toEqual(["xHeight"]);
+  it("tracer: at cap 16 it fails xHeight at both scales (ground floors 10.5 / 7.5)", () => {
+    expect(checkSign(tracer(16), COVER_LAPTOP, []).map((v) => v.rule)).toEqual(["xHeight"]);
+    expect(checkSign(tracer(16), COVER_PHONE, []).map((v) => v.rule)).toEqual(["xHeight"]);
+  });
+  it("a ground sign uses the ground floors; the same sign without ground, the vertical ones (#460)", () => {
+    expect(checkSign(tracer(17.25), COVER_LAPTOP, [])).toEqual([]);
+    const rules = checkSign(tracer(17.25, { ground: false }), COVER_LAPTOP, []).map((v) => v.rule);
+    expect(rules).toContain("xHeight"); // 10.99 px < 12
+    expect(rules).toContain("aspect"); // measured against 1
+  });
+  it("ground contrast floor is 7:1, not 4.5 (#460)", () => {
+    const s = tracer(17.25, { backing: "whitewash" });
+    expect(staticContrast(s)).toBeGreaterThan(4.5);
+    expect(staticContrast(s)).toBeLessThan(7);
+    expect(checkSign(s, COVER_LAPTOP, []).map((v) => v.rule)).toEqual(["contrast"]);
+    expect(checkSign(s, COVER_PHONE, []).map((v) => v.rule)).toEqual(["contrast"]);
+  });
+  it("checkSign throws on a scale with no rules for a ground sign too", () => {
+    expect(() => checkSign(tracer(17.25), 1, [])).toThrow(/no sign rules/);
   });
 });

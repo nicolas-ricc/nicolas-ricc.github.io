@@ -49,9 +49,9 @@ describe.each(["wide", "tall"] as const)("Writing raft at the %s site: planks fl
     expect(def).toEqual(out);
   });
 
-  it("BLOG_SIGNS[site] is a ground sign: navy decal, bar, cap 20, Chainsaw Carnage measures, no colour, backed by the raft", () => {
+  it("BLOG_SIGNS[site] is a ground sign: navy decal, bar, cap 17.25, Chainsaw Carnage measures, no colour, backed by the raft", () => {
     expect(SIGN).toMatchObject({ id: "plataforma", text: "WRITING", size: WRITING_CAP, width: SIGN_FONT.width, decal: "navy", ground: true, xHeight: CHAINSAW_X * WRITING_CAP, stroke: CHAINSAW_FACE * WRITING_CAP, bar: CHAINSAW_BAR * WRITING_CAP });
-    expect(WRITING_CAP).toBe(20);
+    expect(WRITING_CAP).toBe(17.25);
     expect(SIGN.color).toBeUndefined();
     expect(SIGN.glyphs.map((g) => g.char).join("")).toBe("WRITING");
     expect(SIGN.backing).toEqual(at(site));

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { overlaps, screenBounds, type ScreenBounds } from "../iso/depth";
 import { bounds, type Solid } from "../iso/solids";
-import { checkSign, checkSignFont, COVER_LAPTOP, COVER_PHONE } from "../kit/legibility";
+import { checkSign, checkSignFont, COVER_LAPTOP, COVER_PHONE, SIGN_RULES, signMetrics } from "../kit/legibility";
 import { CYCLE_POSES, REST_POSE, seaPlatformAt, signAt, type RaftPose, type WritingSite } from "../scenes/sign-platform";
 import { assembleWorld } from "../world/assemble";
 import { signBox } from "../world/signs";
@@ -76,5 +76,14 @@ describe("sign gate: level 2 across the pose cycle of the Writing raft (#444, #4
         });
       }
     });
+  });
+});
+
+describe("Writing at cap 17.25 on the ground floors (#460)", () => {
+  it.each(["wide", "tall"] as const)("%s: the worst x-height over CYCLE_POSES is ≥ the ground floor at 1.17 and 0.83", (site) => {
+    for (const scale of [COVER_LAPTOP, COVER_PHONE]) {
+      const worst = Math.min(...CYCLE_POSES.map((p) => signMetrics(signAt(site, p), scale).xHeightPx));
+      expect(worst, `${site} ${scale}`).toBeGreaterThanOrEqual(SIGN_RULES.ground[scale].xHeightPx);
+    }
   });
 });
