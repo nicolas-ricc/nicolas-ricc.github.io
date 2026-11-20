@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { project, Z_SCALE } from "../iso/project";
-import { advances, counterClearance, diagonalWall, facade, fillText, glyphPairs, GLYPHS, GRID, KERN, layoutText, letterGaps, measureText, overlapping, rhythm, roofDiagonal, sizeForXHeight, strokeRatio, strokeText, toWorld, xHeightPx, type TextPlane } from "./lettering";
+import { advances, counterClearance, diagonalWall, facade, fillText, glyphPairs, GLYPHS, GRID, KERN, layoutText, groundDiagonal, letterGaps, measureText, overlapping, rhythm, roofDiagonal, sizeForXHeight, strokeRatio, strokeText, toWorld, xHeightPx, type TextPlane } from "./lettering";
 
 const WORDS = ["Portfolio", "Resume", "Blog"];
 const LETTERS = "PortfliResumBg";
@@ -139,6 +139,14 @@ describe("text planes", () => {
     expect(r.u.y).toBeCloseTo(-Math.SQRT1_2, 12);
     const aspect = (p: TextPlane) => { const s = screenAxes(p); return Math.hypot(s.b.x, s.b.y) / Math.hypot(s.a.x, s.a.y); };
     expect(Math.abs(aspect(r) / aspect(diagonalWall(v3(0, 0, 0))) - 1)).toBeLessThan(0.02);
+  });
+  it("groundDiagonal: a real horizontal plane, u to screen (√2, 0), v to screen (0, −√½)", () => {
+    const p = groundDiagonal(v3(3, 4, 0.5)), o = project(p.origin), a = project(toWorld(p, 1, 0)), b = project(toWorld(p, 0, 1));
+    expect(p.origin).toEqual(v3(3, 4, 0.5));
+    expect(a.x - o.x).toBeCloseTo(Math.SQRT2, 9); expect(a.y - o.y).toBeCloseTo(0, 9);
+    expect(b.x - o.x).toBeCloseTo(0, 9); expect(b.y - o.y).toBeCloseTo(-Math.SQRT1_2, 9);
+    expect(dot(p.u, p.v)).toBeCloseTo(0, 12);
+    expect([p.u.z, p.v.z]).toEqual([0, 0]);
   });
   it("facade with coincident points throws", () => {
     expect(() => facade({ x: 1, y: 1 }, { x: 1, y: 1 }, 0)).toThrow();
