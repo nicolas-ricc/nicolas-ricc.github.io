@@ -1047,8 +1047,11 @@ describe("WRITING in LostWages (#437)", () => {
     expect(b.subarray(1, 4).toString()).toBe("PNG");
     expect(spec.slice(spec.search(/^### 8\.4 /m))).toContain("assets/374-carteles/plataforma-real.png");
   });
-  it("CONTEXT.md names WRITING in Chainsaw Carnage and its word file, neither LostWages nor Black Chancery (#442)", () => {
-    const glossary = read(`${ROOT}CONTEXT.md`);
+});
+
+describe("WRITING in Chainsaw Carnage (#442)", () => {
+  it("CONTEXT.md names WRITING in Chainsaw Carnage and its word file, neither LostWages nor Black Chancery", () => {
+    const glossary = existsSync(`${ROOT}CONTEXT.md`) ? readFileSync(`${ROOT}CONTEXT.md`, "utf8") : "";
     for (const s of ["`WRITING`", "Chainsaw Carnage", "`src/kit/chainsaw-writing.ts`"]) expect(glossary, s).toContain(s);
     expect(glossary).not.toMatch(/LostWages/);
     expect(glossary).not.toMatch(/Chancery/);

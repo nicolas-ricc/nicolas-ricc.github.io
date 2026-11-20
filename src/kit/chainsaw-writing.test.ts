@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { WRITING_CAP } from "../scenes/sign-platform";
@@ -13,6 +13,8 @@ const git = (...args: string[]) => execFileSync("git", args, { cwd: ROOT });
 /** The branch the word was composed on (#441): absent in a shallow clone, so the byte-for-byte check skips there. */
 const OLD = "origin/feature/writing-tabla-flotante:src/kit/chainsaw-writing.ts";
 const hasOld = (() => { try { git("cat-file", "-e", OLD); return true; } catch { return false; } })();
+/** False in a tree without git (an exported copy): the tracked-files check skips there. */
+const hasGit = (() => { try { git("rev-parse", "--git-dir"); return true; } catch { return false; } })();
 
 describe("WRITING in Chainsaw Carnage (#442)", () => {
   it("the word is WRITING, seven letters", () => {
@@ -48,11 +50,12 @@ describe("WRITING in Chainsaw Carnage (#442)", () => {
     expect(read("src/kit/marquee.ts")).not.toMatch(/LOSTWAGES|CHANCERY/);
   });
   it("no code file under src/ or scripts/, nor CONTEXT.md, names a previous Writing font", () => {
-    const files = git("ls-files", "src", "scripts", "CONTEXT.md").toString().split("\n").filter((f) => f && !f.endsWith(".test.ts") && existsSync(`${ROOT}${f}`));
+    const walk = (dir: string): string[] => readdirSync(`${ROOT}${dir}`, { withFileTypes: true }).flatMap((d) => (d.isDirectory() ? walk(`${dir}/${d.name}`) : [`${dir}/${d.name}`]));
+    const files = [...walk("src"), ...walk("scripts"), "CONTEXT.md"].filter((f) => !f.endsWith(".test.ts"));
     expect(files.length).toBeGreaterThan(0);
     for (const f of files) expect(read(f), f).not.toMatch(/LostWages|LOSTWAGES|Black Chancery|CHANCERY/);
   });
-  it("no font file is tracked", () => {
+  it.skipIf(!hasGit)("no font file is tracked", () => {
     expect(git("ls-files").toString().split("\n").filter((f) => /\.(ttf|otf|woff2?)$/i.test(f))).toEqual([]);
   });
 });

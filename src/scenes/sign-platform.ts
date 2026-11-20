@@ -56,7 +56,7 @@ export const PLATFORM_DECK: readonly Vec2[] = boardAt({ x: 0, y: 0 }).footprint;
  * The Writing sign at a site, as the legibility oracle sees it: WRITING in Chainsaw Carnage (filled cyan faces) painted flat on the board, which backs
  * it. Its x-height is the height of its shortest letter (`CHAINSAW_X`); its stroke, the width of the main stems. A fresh spec on every call.
  */
-export const signAt = (site: WritingSite): SignSpec => {
+const signAt = (site: WritingSite): SignSpec => {
   const c = PLATFORM_SITES[site];
   return signSpec({
     id: "plataforma", text: CHAINSAW_WRITING.text, size: WRITING_CAP, width: SIGN_FONT.width, color: "cyan", plane: planeAt(c), style: "fill", backing: [boardAt(c)],
