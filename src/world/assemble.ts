@@ -33,7 +33,7 @@ export function assembleWorld(zones: readonly WorldZone[] | undefined, opts: { r
   if (scene.tech) animators.push(tag(techAnimator(scene.tech, createRng(SEED + 5), { reducedMotion }), "cv"));
   if (scene.fair) animators.push(tag(fairAnimator(scene.fair, { reducedMotion }), "portfolio"));
   // the Writing platform: relocatable (#427), so it lives in its own animator, right before the sea's
-  const platform = scene.sea ? platformAnimator() : null;
+  const platform = scene.sea ? platformAnimator({ reducedMotion }) : null;
   if (platform) animators.push(tag(platform, "blog"));
   if (scene.sea) animators.push(tag(seaAnimator(scene.sea, { reducedMotion }), "blog"));
   return { scene, animators, platform };
