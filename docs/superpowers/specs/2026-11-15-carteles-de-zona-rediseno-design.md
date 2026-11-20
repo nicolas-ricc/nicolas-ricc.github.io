@@ -487,9 +487,13 @@ Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage, con
   | 1.17 | 10.99 / 10.61 | 2.14 / 2.07 | 3.10 / 3.05 |
   | 0.83 | 7.80 / 7.52 | 1.52 / 1.47 | 2.20 / 2.16 |
 
-  **Medida del trazo.** El trazo sigue siendo el lado más corto de cada cuad
-  proyectado, como en #382; no se cambió la medida, solo el piso, que a 0.83
-  queda en 1.2 px frente a los 1.47 px de la peor pose.
+  **Medida del trazo.** Como el cartel trae `stroke` y `bar`, el oráculo mide
+  el trazo como el menor entre la cara del asta (`CHAINSAW_FACE`, 0.12 cajas
+  altas) proyectada a lo largo de u y la barra (`CHAINSAW_BAR`, 0.15) a lo largo
+  de v; manda la barra: 0.15 · 17.25 · 0.707 · escala da 2.14 / 1.52 px en
+  reposo. El «≈ 1.71 / 1.21» del issue aplicaba la cara de 0.12 a lo largo de v.
+  No se cambió la medida, solo el piso, que a 0.83 queda en 1.2 px frente a los
+  1.47 px de la peor pose.
   **`CHAINSAW_BAR` 0.15.** Es el grosor de las barras horizontales como lo mide
   el oráculo, en cajas altas: la mediana de la corrida vertical de tinta en
   los brazos de la `G`, medida a 300 px por caja alta (`G` 0.150, `T` 0.173, `R`
@@ -514,8 +518,8 @@ Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage, con
   solo la tinta más `BOARD_PAD`: el respaldo del oráculo alcanza el margen
   lejano solo a través de ella. **Desvío (#460).** `BOARD_PAD` pasa de 1.6 a
   1.7: con caja alta 17.25 los extremos irregulares de los tablones (±0.3)
-  dejaban el margen de respaldo del oráculo (`backingW` · ancho = 1.35) en
-  0.9796; con caja alta 20 pasaba solo por suerte. Una prueba fija
+  dejaban el respaldo del oráculo (margen `backingW` · ancho = 1.35) en
+  0.9796, con piso 1; con caja alta 20 pasaba solo por suerte. Una prueba fija
   `BOARD_PAD` ≥ 1.35 + 0.3. La balsa acepta una pose rígida (`dz`, `pitch`, `roll`) y la
   calcomanía y el plano la siguen; el animador usa `dz`, `pitch` y `roll` (`poseAt`, #456). Nivel 2 en §8.1 y
   tamaños en §8.3, ambos con la nota «desde #460, caja alta 17.25».
@@ -523,14 +527,21 @@ Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage, con
   2026-11-20, caja alta 17.25): `plataforma-escena` a 1.17, contraste 7.99:1 y
   OCR `WRITING`; a 0.83, 7.52:1 y OCR `wWRiTinG` (falla).
   `plataforma-escena-angosta` da los mismos valores. Con caja alta 20 la misma
-  corrida leía `WRITING` a 0.83 (7.11:1). Diagnóstico: recortando 2 px del
-  borde de la imagen del OCR a 0.83, el OCR lee `WRITING`; la `w` de más es el
-  borde de la balsa, que la binarización vuelve un marco en el borde del
-  recorte (`wordCrop` usa un margen fijo de 3·ancho·`Z_SCALE`). La culpa no es
-  el letrero. No se bajaron los pisos: el contraste y la escritura de la
-  palabra no atacan la causa, así que #460 queda `ready-for-human`. La fila de
-  halo falla (81.82): la medida actual supone tinta clara y pertenece a #457
-  (halo simétrico). `REPORT.md` no se reescribe (es de #457).
+  corrida leía `WRITING` a 0.83 (7.11:1). Diagnóstico: recortando 2 px de
+  cada borde de `plataforma-escena-083-ocr.png` (6 px de la imagen ya
+  ampliada ×3) y pasándola por tesseract con los mismos parámetros (PSM 8,
+  lista blanca A–Z a–z, `scripts/tessdata`), el OCR lee `WRITING`; la `w` de
+  más es el borde de la balsa, que la binarización vuelve un marco en el
+  borde del recorte (`wordCrop` usa un margen fijo de
+  3 · ancho · `Z_SCALE` · `fit.scale`). El margen y `BOARD_PAD` no dependen
+  de la caja alta, así que el marco queda a la misma distancia en píxeles de
+  la `W` a caja 20 y a caja 17.25. Lo que cambia es el alto de la letra frente
+  a ese marco, y con la letra más chica tesseract segmenta el marco como una
+  letra; no se midió más que eso. La culpa no es el letrero. No se bajaron los
+  pisos: ni subir el contraste ni cambiar la palabra con el script ataca la
+  causa, así que #460 queda `ready-for-human`. La fila de halo falla (81.82)
+  en los dos sitios y a las dos escalas: la medida actual supone tinta clara y
+  pertenece a #457 (halo simétrico). `REPORT.md` no se reescribe (es de #457).
 - **Writing en el mundo (#390).** `PLATFORM_SITE` pasó a (392, 178) en #389:
   a 8,2 u del carril de salida fallaba la regla de oclusión de los barcos.
   `sea()` construye la plataforma ahí y `plataforma-escena` es un recorte
@@ -560,7 +571,7 @@ Desde #445 la fila de WRITING mide la tabla flotante en Chainsaw Carnage con caj
 Capturas (3200 × 1800; las seis `-escena` con bloom) en
 `docs/superpowers/specs/assets/374-carteles/`:
 
-Las capturas de `plataforma-escena`, `plataforma-real`, `plataforma-escena-angosta` y `sitio-1600x900-ancho` siguen mostrando la balsa con caja alta 20: #457 las regenera con caja alta 17.25.
+Las capturas de `plataforma-escena`, `plataforma-real`, `plataforma-escena-angosta` y `sitio-1600x900-ancho` siguen siendo las de #445 (la tabla flotante, caja alta 11.5): #457 las regenera con la balsa a caja alta 17.25.
 
 - `assets/374-carteles/cartel-torre-escena-117.png` y `assets/374-carteles/cartel-torre-escena-083.png`
 - `assets/374-carteles/cartel-taller-escena-117.png` y `assets/374-carteles/cartel-taller-escena-083.png`

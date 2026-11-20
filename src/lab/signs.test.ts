@@ -79,7 +79,7 @@ describe("sign gate: level 2 across the pose cycle of the Writing raft (#444, #4
   });
 });
 
-describe("Writing at cap 17.25 on the ground floors (#460)", () => {
+describe("Writing on the ground floors over the pose cycle (#460)", () => {
   it.each(["wide", "tall"] as const)("%s: the worst x-height over CYCLE_POSES is ≥ the ground floor at 1.17 and 0.83", (site) => {
     for (const scale of [COVER_LAPTOP, COVER_PHONE]) {
       const worst = Math.min(...CYCLE_POSES.map((p) => signMetrics(signAt(site, p), scale).xHeightPx));

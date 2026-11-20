@@ -3,7 +3,8 @@ import { polygonNormal, type Vec3 } from "../iso/geometry";
 import { clipPolygon, lerp2 } from "../iso/clip";
 import type { MeshFace } from "../iso/solids";
 import { groundDiagonal } from "../kit/lettering";
-import { SIGN_FONT, SIGN_RULES } from "../kit/legibility";
+import { SIGN_RULES } from "../kit/legibility";
+import { BLOG_SIGNS } from "./sign-platform";
 import { waterCellMat } from "./terrain";
 import { BOARD_PAD, BOARD_TOP, LAYOUT, PLATFORM_SITES, RAFT, REST_POSE, WRITING_CAP, buildRaft, raftAt, raftEnvelope, raftPlane, type WritingSite } from "./raft";
 
@@ -44,7 +45,7 @@ describe("raft (#454)", () => {
     expect(REST_POSE).toEqual({ dz: 0, pitch: 0, roll: 0 });
   });
   it("BOARD_PAD covers the oracle's backing margin past the ragged ends (#460)", () => {
-    expect(BOARD_PAD).toBeGreaterThanOrEqual(SIGN_RULES.backingW * SIGN_FONT.width + RAFT.ragged);
+    expect(BOARD_PAD).toBeGreaterThanOrEqual(SIGN_RULES.backingW * BLOG_SIGNS.wide.width + RAFT.ragged);
   });
 
   it("the sheet is the ink box grown by BOARD_PAD on each side", () => {

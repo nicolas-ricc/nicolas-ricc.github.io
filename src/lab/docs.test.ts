@@ -1097,17 +1097,19 @@ describe("WRITING on a floating board (#441)", () => {
   });
   it("the #451 entry records the owner's size decision, the ground floors and the values at cap 17.25 (#460)", () => {
     for (const s of ["2026-11-20", "`SIGN_RULES.ground`", "#460"]) expect(entry451, s).toContain(s);
+    const keys = ["xHeightPx", "strokePx", "airPx"] as const;
+    const posed = { wide: CYCLE_POSES.map((p) => signAt("wide", p)), tall: CYCLE_POSES.map((p) => signAt("tall", p)) };
     for (const sc of [COVER_LAPTOP, COVER_PHONE]) {
       const f = SIGN_RULES.ground[sc];
       for (const v of [f.xHeightPx, f.strokePx, f.airPx]) expect(entry451, `${sc} floor ${v}`).toContain(`${v}`);
       expect(entry451).toContain(`${f.contrast}:1`);
-      const keys = ["xHeightPx", "strokePx", "airPx"] as const;
       const at = (site: "wide" | "tall") => {
-        const rest = signMetrics(BLOG_SIGNS[site], sc), all = CYCLE_POSES.map((p) => signMetrics(signAt(site, p), sc));
+        const rest = signMetrics(BLOG_SIGNS[site], sc), all = posed[site].map((s) => signMetrics(s, sc));
         return keys.flatMap((k) => [rest[k].toFixed(2), Math.min(...all.map((m) => m[k])).toFixed(2)]);
       };
-      expect(at("tall"), `${sc}: one figure covers both sites`).toEqual(at("wide"));
-      for (const v of at("wide")) expect(entry451, `${sc} ${v}`).toContain(v);
+      const wide = at("wide");
+      expect(at("tall"), `${sc}: one figure covers both sites`).toEqual(wide);
+      for (const v of wide) expect(entry451, `${sc} ${v}`).toContain(v);
     }
   }, 30_000);
   it("the entry carries the four level-3 readings of REPORT.md", () => {
