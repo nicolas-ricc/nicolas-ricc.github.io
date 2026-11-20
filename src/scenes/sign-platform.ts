@@ -8,10 +8,9 @@ import { CHAINSAW_FACE, CHAINSAW_X, marqueeLayout } from "../kit/marquee";
 import { CHAINSAW_WRITING } from "../kit/chainsaw-writing";
 
 /**
- * Cap height of WRITING in Chainsaw Carnage: its shortest letter (the W, `CHAINSAW_X` caps) reaches 12 px at the laptop cover scale, with a margin. The
- * binding rule is the phone stroke: CHAINSAW_FACE · 10.8 projects to 1.51 px against the 1.5 floor, so a smaller cap fails level 2.
+ * Cap height of WRITING in Chainsaw Carnage: its shortest letter (the W, `CHAINSAW_X` caps) reaches 12 px at the laptop cover scale, with a margin. It is the OCR's floor at the phone scale 0.83: at 10.8 the level-3 OCR read `WRITHG`; 11.3..11.8 read `WRITING` at both sites. At 11.5 the level-2 values are x-height 14.50 px at 1.17 and 10.29 px at 0.83, stroke 2.26 px and 1.60 px, air 2.47 px and 1.75 px. The binding level-2 rule is still the phone stroke: CHAINSAW_FACE · 11.5 projects to 1.60 px against the 1.5 floor.
  */
-export const WRITING_CAP = 10.8;
+export const WRITING_CAP = 11.5;
 /** The board floats: from the water (z −1) up to BOARD_TOP, the same height all over. */
 export const BOARD_TOP = -0.4;
 const WATER_Z = -1;
