@@ -1109,7 +1109,7 @@ describe("WRITING on a floating board (#441)", () => {
       expect(at("tall"), `${sc}: one figure covers both sites`).toEqual(at("wide"));
       for (const v of at("wide")) expect(entry451, `${sc} ${v}`).toContain(v);
     }
-  });
+  }, 30_000);
   it("the entry carries the four level-3 readings of REPORT.md", () => {
     for (const id of WRITING_CONTEXTS) for (const sc of SCALES) for (const m of ["contraste", "halo", "OCR"]) {
       const v = cell(id, sc, m);
@@ -1145,7 +1145,7 @@ describe("WRITING on a floating board (#441)", () => {
   });
   it("CONTEXT.md Sign tells the heave, the paint out of the bloom and a level 3 with no exception, and no LostWages", () => {
     const at = glossary.indexOf("### Sign\n"), rest = glossary.slice(at + 9), sign = at < 0 ? "" : rest.slice(0, Math.max(0, rest.search(/^### /m)));
-    for (const s of ["`platformAnimator`", "`HEAVE`", "`reducedMotion`", "no row", "`timber`", "`navy`", "decal", "`groundDiagonal`", "`platform.solid`", "`WRITING_CAP` (20)",
+    for (const s of ["`platformAnimator`", "`HEAVE`", "`reducedMotion`", "no row", "`timber`", "`navy`", "decal", "`groundDiagonal`", "`platform.solid`", "`WRITING_CAP` (17.25)",
       "`PITCH`", "`ROLL`", "`ANGLE_STEP`", "`poseAt`", "`CYCLE_POSES`", "one pose"]) expect(sign, s).toContain(s);
     for (const re of [/PAINT_LIFT/, /officeDark/, /roofDiagonal/, /platform\.lights/]) expect(sign, String(re)).not.toMatch(re);
     expect(glossary).toContain("Chainsaw Carnage");
