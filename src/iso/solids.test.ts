@@ -1662,7 +1662,7 @@ describe("mesh", () => {
   const DEG = Math.PI / 180;
   const near = (a: Vec3, b: Vec3) => { expect(a.x).toBeCloseTo(b.x, 9); expect(a.y).toBeCloseTo(b.y, 9); expect(a.z).toBeCloseTo(b.z, 9); };
 
-  it("a cube of six counter-clockwise faces: outward normals, tones by normal, three visible", () => {
+  it("a box of six counter-clockwise faces: outward normals, tones by normal, three visible", () => {
     const all = tessellateAll(box());
     expect(all).toHaveLength(6);
     [v3(0, 0, 1), v3(0, 0, -1), v3(1, 0, 0), v3(-1, 0, 0), v3(0, 1, 0), v3(0, -1, 0)].forEach((n, i) => near(all[i]!.normal, n));
@@ -1706,7 +1706,7 @@ describe("mesh", () => {
     expect(bounds({ kind: "mesh", mat: "concrete", faces: [...meshBox(v3(0, 0, 0), 2, 3, 4), below] })).toEqual({ min: v3(0, 0, -2), max: v3(5, 9, 4) });
   });
 
-  it("tilted by rigid it keeps six unit normals and its tones", () => {
+  it("a box tilted by rigid keeps six unit normals and its tones", () => {
     const flat = tessellateAll(box());
     const centre = v3(1, 1.5, 0);
     const tilted = tessellateAll({ kind: "mesh", mat: "concrete", faces: meshBox(v3(0, 0, 0), 2, 3, 4).map((f) => ({ ...f, pts: rigid(f.pts, centre, 1.5 * DEG, 1 * DEG, 0.1) })) });

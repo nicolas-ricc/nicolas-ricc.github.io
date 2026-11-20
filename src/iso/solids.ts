@@ -341,6 +341,14 @@ function ground(tris: Tri[], mat: Material): Face[] {
   });
 }
 
+/** Each face keeps its winding: the normal is `polygonNormal` as is, never flipped (unlike `ground`), and the list order is kept. */
+function mesh(faces: MeshFace[], mat: Material): Face[] {
+  return faces.map((f) => {
+    const normal = polygonNormal(f.pts);
+    return { pts: f.pts, normal, mat: f.mat ?? mat, tone: shadeTone(normal), toneOffset: f.toneOffset ?? 0 };
+  });
+}
+
 const SQ = Math.SQRT1_2;
 /** The wheel's plane: `u` is horizontal on screen (world (1, −1)); the normal faces the camera. */
 export const WHEEL_U: Vec3 = { x: SQ, y: -SQ, z: 0 };
@@ -433,7 +441,7 @@ function facesOf(s: Solid): Face[] {
     case "hull": return hull(s);
     case "strip": return strip(s.path, s.width, s.z, s.mat);
     case "ground": return ground(s.tris, s.mat);
-    case "mesh": return s.faces.map((f) => { const normal = polygonNormal(f.pts); return { pts: f.pts, normal, mat: f.mat ?? s.mat, tone: shadeTone(normal), toneOffset: f.toneOffset ?? 0 }; });
+    case "mesh": return mesh(s.faces, s.mat);
     case "wheel": return wheel(s);
   }
 }
