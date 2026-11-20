@@ -277,7 +277,7 @@ letra (1.41 u en RESUME, caja alta 8.7; 1.46 u en PORTFOLIO, caja alta 9.2;
 | PORTFOLIO | 1.19 | 1.19 | 1.01 | 1.19 (`P`) |
 | WRITING | 1.08 | 1.08 | 1.00 | 2.07 (`R`) |
 
-Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage, con caja alta 10.8 en #442 y 11.5 desde #445; el texto de arriba describe el estado de #437.
+Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage, con caja alta 10.8 en #442 y 11.5 desde #445; las filas de la tabla de §8.1 son las de #445.
 
 ### 8.2 Desvíos de la historia
 
@@ -412,7 +412,7 @@ Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage, con
   `src/kit/chainsaw-writing.ts`, generada por `scripts/marquee-word.py` con
   `speck` 0.005 y `tol` 0.004 (de 1 474 a 382 triángulos) y aire 0.13. La
   caja alta es `WRITING_CAP` 11.5, la cara `CHAINSAW_FACE` 0.12 cajas altas
-  y `CHAINSAW_X` 0.77. Es la excepción de #437 la que se va: el OCR deja
+  y `CHAINSAW_X` 0.77 (las mayúsculas de la fuente saltan: el «alto de x» que mide el oráculo es el de la letra más baja, la `W` con su trazo suelto). Es la excepción de #437 la que se va: el OCR deja
   de tener excepción y el nivel 3 no excusa ninguna fila.
   La tabla es un `poly` de `officeDark` desde el agua (z −1) hasta
   `BOARD_TOP` −0.4, cuyo plan es la caja de tinta de la palabra más
@@ -466,7 +466,7 @@ cubierta, que desde la segunda vuelta se estira a lo largo del cartel
 | PORTFOLIO | 52.74 | 87.73 | galpón de montaje sur 90 × 16 (`SHIPYARD_HALLS[1]`) | 124.02 |
 | WRITING | 48.37 | 80.04 | tabla 51.6 × 35.5 (`PLATFORM_DECK`) | 85.34 |
 
-Desde #445 la fila de WRITING mide la tabla flotante en Chainsaw Carnage con caja alta 11.5 (10.8 en #442); el texto de arriba describe el estado de #437.
+Desde #445 la fila de WRITING mide la tabla flotante en Chainsaw Carnage con caja alta 11.5 (10.8 en #442); la tabla de abajo son las medidas de #445.
 
 ### 8.4 Capturas
 
@@ -475,9 +475,9 @@ Capturas (3200 × 1800; las seis `-escena` con bloom) en
 
 - `assets/374-carteles/cartel-torre-escena-117.png` y `assets/374-carteles/cartel-torre-escena-083.png`
 - `assets/374-carteles/cartel-taller-escena-117.png` y `assets/374-carteles/cartel-taller-escena-083.png`
-- `assets/374-carteles/plataforma-escena-117.png` y `assets/374-carteles/plataforma-escena-083.png`
-- `assets/374-carteles/cartel-torre-real.png`, `assets/374-carteles/cartel-taller-real.png` y `assets/374-carteles/plataforma-real.png` (escala real)
-- `assets/374-carteles/plataforma-escena-117.png` y `plataforma-escena-083.png`, `plataforma-real.png`, `assets/423-composicion-responsive/plataforma-escena-angosta-117.png` y `assets/423-composicion-responsive/sitio-1600x900-ancho.png` se regeneraron en #445 con la tabla flotante.
+- `assets/374-carteles/plataforma-escena-117.png` y `assets/374-carteles/plataforma-escena-083.png` (regeneradas en #445 con la tabla flotante)
+- `assets/374-carteles/cartel-torre-real.png`, `assets/374-carteles/cartel-taller-real.png` y `assets/374-carteles/plataforma-real.png` (escala real; la de la plataforma, regenerada en #445)
+- `assets/423-composicion-responsive/plataforma-escena-angosta-117.png` y `assets/423-composicion-responsive/sitio-1600x900-ancho.png` (regeneradas en #445 con la tabla flotante)
 - `assets/374-carteles/cartel-taller-detalle.png`, `assets/374-carteles/cartel-taller-detalle-sinacentos.png`, `assets/374-carteles/cartel-taller-titila-a.png` y `assets/374-carteles/cartel-taller-titila-b.png`
 
 Recortes del nivel 3 y la imagen que vio el OCR (`-ocr`), con
