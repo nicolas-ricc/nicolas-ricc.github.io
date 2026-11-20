@@ -55,9 +55,9 @@ describe("site shell: the zone links over the signs (#393)", () => {
     for (const d of ["width: auto !important", "height: auto !important", "position: static"]) expect(b).toContain(d);
   });
 
-  // a visible edge label of another zone dims with it (the 0.35 of ACCENT_DIM), as .dim did
-  it("style.css dims the edge label of a zone that is not the active one", () => {
-    expect(block(CSS, 'body.zone #zonas a.on-edge:not([aria-current="page"])')).toContain("opacity: 0.35");
+  // with a zone open, the edge label of another zone hides (it floated as loose HTML text), except under keyboard focus
+  it("style.css hides the edge label of a zone that is not the active one", () => {
+    expect(block(CSS, 'body.zone #zonas a.on-edge:not([aria-current="page"]):not(:focus-visible)')).toContain("opacity: 0;");
   });
 
   // the opacity transition served .dim only

@@ -86,8 +86,9 @@ body.zone #content { opacity: 1; }
 /* no underline; brightness only on the visible edge label (over a sign, hover already lights up the zone on the map) */
 #zonas a.on-edge:hover, #zonas a.on-edge:focus-visible { filter: brightness(1.25); }
 #zonas a:focus-visible { outline: 2px solid var(--fg); outline-offset: 4px; }
-/* with a zone active, a visible edge label of another zone dims with it (ACCENT_DIM, see veil.ts) */
-body.zone #zonas a.on-edge:not([aria-current="page"]) { opacity: 0.35; }
+/* with a zone active, the edge labels of the other zones hide: they would float over the map as loose HTML text.
+   They stay in the tab order and show again when focused with the keyboard. */
+body.zone #zonas a.on-edge:not([aria-current="page"]):not(:focus-visible) { opacity: 0; }
 #titulo { position: absolute; left: 1rem; bottom: 0.75rem; margin: 0; z-index: 1; pointer-events: none; font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; color: #ffc457; text-shadow: 0 0 6px #000, 0 1px 2px #000; transition: opacity 200ms ease; }
 body.zone #titulo { opacity: 0; }
 .no-canvas, .no-canvas body { height: auto; overflow: auto; }
