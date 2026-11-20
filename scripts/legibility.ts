@@ -11,7 +11,7 @@
  * median; the ink (the core side) ends up black on white. tesseract.js with the local `eng` 4.0.0_best_int data
  * (scripts/tessdata), page segmentation mode single word (PSM 8, SINGLE_WORD) and the whitelist A-Z a-z.
  *
- * Usage: npm run legibility [-- --only <context id>]. Exit code 1 when any row is a failure (but the OCR row of plataforma-escena*, excused in #437) or level 2 lists a violation.
+ * Usage: npm run legibility [-- --only <context id>]. Exit code 1 when any row is a failure or level 2 lists a violation.
  */
 import type { ChildProcess } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
