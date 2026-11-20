@@ -341,7 +341,7 @@ function ground(tris: Tri[], mat: Material): Face[] {
   });
 }
 
-/** Each face keeps its winding: the normal is `polygonNormal` as is, never flipped (unlike `ground`), and the list order is kept. */
+/** Unlike `ground`, the normal is never flipped: each face keeps its winding. */
 function mesh(faces: MeshFace[], mat: Material): Face[] {
   return faces.map((f) => {
     const normal = polygonNormal(f.pts);
