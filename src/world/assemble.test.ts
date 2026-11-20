@@ -22,7 +22,7 @@ describe("assembleWorld", () => {
     const { animators, platform } = assembleWorld(undefined, { reducedMotion: true });
     expect(platform).not.toBeNull();
     expect(platform!.site).toBe("wide");
-    expect(platform!.ids).toEqual(["platform.solid", "platform.lights"]);
+    expect(platform!.ids).toEqual(["platform.solid"]);
     const at = (animators as readonly unknown[]).indexOf(platform);
     expect(at).toBeGreaterThanOrEqual(0);
     expect(animators[at]!.zone).toBe("blog");

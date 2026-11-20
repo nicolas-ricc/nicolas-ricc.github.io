@@ -551,3 +551,17 @@ describe("zone signs and the lanes (#390, #394)", () => {
     expect(hits).toEqual([]);
   }, 15_000);
 });
+
+describe("LANE_OUT shifted east for the raft (#454)", () => {
+  it("(486, 347) → (501, 347) and (500, 405) → (515, 405); the vertices before them unchanged", () => {
+    expect(LANE_OUT.slice(0, 8)).toEqual([{ x: 362, y: -16 }, { x: 398, y: 40 }, { x: 424, y: 86 }, { x: 437, y: 114 }, { x: 440, y: 142 }, { x: 434, y: 176 }, { x: 446, y: 232 }, { x: 456, y: 290 }]);
+    expect(LANE_OUT[8]).toEqual({ x: 501, y: 347 });
+    expect(LANE_OUT[9]).toEqual({ x: 515, y: 405 });
+    expect(LANE_OUT).toHaveLength(11);
+  });
+  it("the sea end lies on the line (515, 405) → (523, 510), within 0.1 u", () => {
+    const e = LANE_OUT[10]!, dx = 523 - 515, dy = 510 - 405, len = Math.hypot(dx, dy);
+    expect(Math.abs(((e.x - 515) * dy - (e.y - 405) * dx) / len)).toBeLessThanOrEqual(0.1);
+    expect((e.x - 515) * dx + (e.y - 405) * dy).toBeGreaterThan(0);
+  });
+});

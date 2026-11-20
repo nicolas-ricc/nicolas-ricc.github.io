@@ -83,3 +83,16 @@ describe("corrugated sheet and containers (#321)", () => {
     }
   });
 });
+
+describe("raft materials (#454)", () => {
+  const B = BASE_TONES as unknown as Record<string, Record<string, number>>, I = ISO_TONES as unknown as Record<string, Record<string, number>>;
+  it("timber and navy come from cityLadder and ISO_TONES darkens their top (0xb0a78a, 0x070c24)", () => {
+    for (const [m, top, iso] of [["timber", 0xfbefc5, 0xb0a78a], ["navy", 0x0a1134, 0x070c24]] as const) {
+      const want = cityLadder(top);
+      expect(B[m], m).toBeDefined();
+      for (const k of ["top", "lit", "shade", "up", "down"] as const) near(B[m]![k]!, want[k]);
+      expect(I[m]?.top, m).toBe(darken(top, DARKEN));
+      expect(I[m]?.top, m).toBe(iso);
+    }
+  });
+});

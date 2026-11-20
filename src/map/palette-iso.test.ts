@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { contrastRatio } from "../kit/legibility";
 import { ACCENT_COLORS, ISO_COLORS, ISO_TONES, TONE_LADDER, allIsoColors, stepTone, toneColor, type AccentColor, type Material } from "./palette-iso";
 import { BASE_SHADOW, BASE_SKY, BASE_TONES, DARKEN, darken, extendLadder } from "./palette-base";
 
@@ -173,5 +174,20 @@ describe("tile (#249)", () => {
     expect(r).toBeGreaterThan(b + 60);
     expect(r).toBeGreaterThan(g + 40);
     expect(ISO_TONES.tile.top).toBe(darken(t, DARKEN));
+  });
+});
+
+describe("raft materials (#454)", () => {
+  // keyed by string: the materials do not exist before #454, and the test must fail on values, not on types
+  const T = ISO_TONES as unknown as Record<string, Record<string, number>>;
+  it("navy paint on timber: ≥ 7.5:1 in top and in up", () => {
+    expect(contrastRatio(T.navy!.top!, T.timber!.top!)).toBeGreaterThanOrEqual(7.5);
+    expect(contrastRatio(T.navy!.up!, T.timber!.up!)).toBeGreaterThanOrEqual(7.5);
+  });
+  it("timber and navy are in the atlas, with the nine-step ladder", () => {
+    for (const m of ["timber", "navy"]) {
+      expect(Object.keys(T[m] ?? {}).sort(), m).toEqual([...TONE_LADDER].sort());
+      expect(allIsoColors().has(T[m]!.top!), m).toBe(true);
+    }
   });
 });

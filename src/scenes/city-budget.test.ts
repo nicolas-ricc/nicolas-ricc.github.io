@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { buildRenderList } from "../iso/render-list";
-import { isFlat } from "../iso/solids";
+import { isFlat, tessellateAll } from "../iso/solids";
+import { raftAt, REST_POSE } from "./raft";
 import { SEED } from "../map/seed";
 import { assembleWorld } from "../world/assemble";
 import { city } from "./city";
@@ -57,4 +58,10 @@ describe("raised solids per scene (#328)", () => {
       expect(scene!.solids.filter((x) => !isFlat(x)).length).toBeLessThanOrEqual(cap);
     });
   }
+});
+
+describe("Writing raft budget (#454)", () => {
+  it("one raft tessellates to ≤ 1200 faces", () => {
+    expect(tessellateAll(raftAt("wide", REST_POSE)).length).toBeLessThanOrEqual(1200);
+  });
 });
