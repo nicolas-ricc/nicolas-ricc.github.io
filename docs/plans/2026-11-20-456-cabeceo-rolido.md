@@ -29,6 +29,13 @@
 5. **The time-lapse is the controller's task (Task 4).** It needs the dev server, agent-browser and DevTools. The hook is the one from the #445 plan (technical decision 2): `/lab/blog.html?bloom=on&speed=0.000001`. Walk the app ticker's listeners and keep the one whose `String(_fn)` contains `stage.tick(`. Call it with `deltaMS = Δt / 0.000001`, where Δt is the step to the next capture time (0, 1675, 1675, 1675, 2894, 7919), then `renderer.render(stage)`, then take the screenshot.
 6. **Test runtime.** The level-2 cycle tests run 17 poses × 2 sites × 2 scales × (crop + world). Each `it` covers one pose and one scale, so no single test runs long. The ships test over `CYCLE_POSES` (34 signs) gets a 30 s timeout, up from 15 s.
 
+## Assumptions (from the grilling)
+
+- **A1. The oracle change is an engineering fix, not a product change.** Neither the issue nor the story authorizes rewriting `signMetrics`. But the acceptance criterion ("`checkSign` a 1.17 y 0.83 pasa en las 17 poses") and the inherited decision ("no subir las amplitudes") cannot both hold under the bounding-box measure. The issue's own expected value ("error de aspecto 0.035") is the one the box-side measure gives. Exact formula for a `ground` glyph with box `(x0, y0, x1, y1)` and `P(a, b) = project(toWorld(plane, a, b))`: `|(|P(x0,y1) − P(x0,y0)| / |P(x1,y0) − P(x0,y0)|) / ((y1 − y0) / (x1 − x0)) / GROUND_ASPECT − 1|`. `GROUND_ASPECT` is defined in `src/kit/legibility.ts:80`. Both sites use the same `groundDiagonal` u and v (`raft.ts` `restPlane`), so the one constant holds for both. Rejected alternatives: lowering the amplitudes (forbidden by the issue), widening `aspectTol` for every sign, and blocking on the owner. The story's final pull request is under human review (`Review: human` on #451), and that is where the owner sees this decision.
+- **A2. No ADR here.** The ground-sign ADR (0005) belongs to #457 (story D8). The PR flags the aspect measure for it.
+- **A3. `heaveAt` is refactored onto the shared `quantizedSine` helper** (DRY). Its tests are unchanged, so its behaviour is too. Rejected alternative: three copies of the same formula.
+- **A4. `reducedMotion` is read from `opts` on every tick, as it is today.** The site never changes it at runtime, so the issue specifies nothing for a live toggle.
+
 ## Review Focus
 
 - **A clock that wraps** (`tick(POSE_CYCLE_MS)` after 1 s of ticks) leaves the same pose and reports nothing. Task 3.
@@ -82,6 +89,7 @@
 - [ ] **Step 2: In `signs.test.ts`**, the describe "level 2 across the heave cycle" iterates `CYCLE_POSES` (index i, label `pose i/17 (dz, pitch°, roll°)`). Use `signAt(site, pose)` and `seaPlatformAt(…, pose)`, with `checkSign` at 1.17 and 0.83 = [] in the crop and against the world. Rename the describe to "… across the pose cycle … (#444, #456)". `platform(site, pose)` takes a `RaftPose`.
 - [ ] **Step 3: In `sea-anim.test.ts`**, "no ship piece … crosses the Writing word at any pose of the heave cycle" becomes "… at every pose of CYCLE_POSES, at either site (#444, #456)", with 34 signs and a 30 000 ms timeout. Drop the now-unused `HEAVE` and `heaveAt` imports.
 - [ ] **Step 4: Run** `npx vitest run src/kit/legibility.test.ts src/lab/signs.test.ts src/scenes/sea-anim.test.ts`. Expected: FAIL on `aspect` at the 8 roll −1° corners, and on the new legibility test.
+- [ ] **Step 4b:** The existing ground-sign tests of `legibility.test.ts` (#452, synthetic `groundDiagonal` planes at rest) must stay green unchanged: at rest the two measures coincide. WRITING is the only `ground` sign in `src/` (`src/scenes/sign-platform.ts:38`).
 - [ ] **Step 5: Implement** the aspect measure in `signMetrics`: for `spec.ground`, use the ratio of the projected lengths of the box's sides `(x0,y0)→(x0,y1)` and `(x0,y0)→(x1,y0)`. Otherwise keep the bounding-box ratio. Update the JSDoc line ("the aspect error is measured …").
 - [ ] **Step 6: Run** the three files plus `src/scenes/sign-platform.test.ts`. Expected: PASS.
 - [ ] **Step 7: Commit** `feat(#456): level 2 and the ships rule over CYCLE_POSES; ground aspect on the box sides`.
@@ -119,6 +127,7 @@
 
 - [ ] **Step 1:** `npm run dev -- --host --port 5173`. Launch agent-browser with the DevTools extension (`CLAUDE.md`) at viewport 1600×900 @2, then open `/lab/blog.html?bloom=on&speed=0.000001`.
 - [ ] **Step 2:** Hook the listener (Technical decision 5). Take `balanceo-1` before any call, then reach each next t with `deltaMS = Δt / 0.000001`, render, and screenshot.
+- [ ] **Step 2b:** Check the rendered pose. The listener passes `ticker.deltaMS * speed` to `stage.tick` (`src/lab/page.ts:88`), so the animator's clock is the floating-point sum of `(Δt / 1e-6) · 1e-6` plus the page's own frames (≈ 1e-4 ms each). In `.scratch/`, accumulate that sum exactly as the page does and assert that `poseAt` of the sum equals `poseAt(T)` for all six T. If it does not, the README states the pose of the sum.
 - [ ] **Step 3:** Get the raft's screen box: the corners of `PLATFORM_DECK` at the wide site, at z −1.4 and −0.2, projected and taken to pixels with the stage container's position and scale (from `__PIXI_DEVTOOLS_WRAPPER__.stage`). `.scratch/lapse-diff.mjs` checks that each PNG is 3200×1800 and that the mean absolute RGB difference inside that box between `balanceo-1` and each of the other five is > 1 level. Note the six values for the PR.
 - [ ] **Step 4:** Write the `README.md` (Spanish). Each line has the form ``- `balanceo-N.png` — t = T ms: dz D, pitch P°, roll R° (poseAt).``, with D, P and R formatted as in the Global Constraints. Then a "Cómo se tomaron" section with the method and the diff values.
 - [ ] **Step 5: Commit** `docs(#456): pitch and roll time-lapse`.
@@ -139,3 +148,11 @@
 - [ ] **Step 3: Update CONTEXT.md Sign:** `platformAnimator` poses the raft with `poseAt`: heave (`HEAVE`), pitch about n (`PITCH`, ±1.5°, 9.1 s) and roll about u (`ROLL`, ±1.0°, 7.3 s), quantized to `HEAVE_STEP` and `ANGLE_STEP` (0.1°), periodic in `POSE_CYCLE_MS`. It keeps the rest geometry once per site and a one-pose memo, it reports only when the quantized pose or the site changes, and it is still under `reducedMotion`. `CYCLE_POSES` lists the 17 poses that level 2 and the ships rule sample. Add the new names to the Code line.
 - [ ] **Step 4: Run** `npm test` and `npm run typecheck`. Expected: green.
 - [ ] **Step 5: Commit** `docs(#456): docs tests pin the pitch and roll time-lapse; CONTEXT.md Sign`.
+
+## Grilling
+
+- Rounds: 1 (griller model: fable). 19 questions.
+- Sources: ISSUE 9 (Q3, Q8, Q10, Q11, Q12, Q14 in part, Q16, Q17, Q1 for the 0.035 figure); CODE 10 (Q2 `sign-platform.ts:38`, Q4 `platform-animator.test.ts` "without it, the world's platform heaves", which counts reports ≥ 20 in 67 ticks; Q5/Q15 `src/lab/page.ts:84-88`; Q6 `src/iso/rigid.ts:5-6`, where `RAFT_N` is the cross axis in plan, z = 0, not the normal; Q7 `legibility.ts:150-156`, a baseline fit on the projected left-baseline points, which passed at every corner in the probe; Q13 `MeshFace { pts, mat?, toneOffset? }`, primitives only; Q18 `platform-animator.ts` tick; Q19 `src/english.test.ts:189-190`, which walks `src/` and `lab/` only; Q9 measured: `signs.test` plus `sea-anim.test` run in 21 s today, with no global `testTimeout`); NO SOURCE 3 (Q1 oracle authority → A1; Q19 ADR → A2; Q3 `heaveAt` refactor → A3).
+- Roll at 50 ms sampling gives 21 distinct values, pitch 31. `HEAVE.amp` 0.15 is 15 × `HEAVE_STEP`, so the dz corners are reachable.
+- Plan changes: Task 4 Step 2b (verify the rendered pose against the page's accumulated clock), Task 2 Step 4b (the #452 ground tests stay unchanged), and the Assumptions section.
+- Assumptions: A1–A4. Follow-up issues opened: none. Status: ok.
