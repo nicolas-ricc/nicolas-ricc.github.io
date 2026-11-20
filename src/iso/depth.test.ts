@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { v3, type Vec2 } from "./geometry";
 import { hides, hullsIntersect, hullsOverlap, isBehind, overlaps, screenBounds, screenHull, sortByDepth } from "./depth";
 import { createRng } from "../map/seed";
+import { meshBox } from "./mesh-fixtures";
 import { bounds, type Solid } from "./solids";
 
 const box = (x: number, y: number, z: number, w = 2, d = 2, h = 2): Solid => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat: "steel" });
@@ -276,5 +277,24 @@ describe("screenHull / hullsIntersect", () => {
     const long = { min: v3(0, 0, 0), max: v3(4, 80, 13) }, far = { min: v3(40, 40, 0), max: v3(42, 42, 2) };
     expect(overlaps(screenBounds(long), screenBounds(far))).toBe(true);
     expect(hullsIntersect(screenHull(long), screenHull(far))).toBe(false);
+  });
+});
+
+describe("sortByDepth with meshes", () => {
+  const mesh = (x: number, y: number, z: number): Solid => ({ kind: "mesh", mat: "steel", faces: meshBox(v3(x, y, z), 2, 2, 1) });
+  const minX = (s: Solid) => bounds(s).min.x;
+  const minZ = (s: Solid) => bounds(s).min.z;
+
+  it("two meshes separated in x sort like two equivalent prisms", () => {
+    for (const xs of [[0, 3], [3, 0]]) {
+      const meshes = sortByDepth(xs.map((x) => mesh(x, 0, 0))).map(minX);
+      const prisms = sortByDepth(xs.map((x) => box(x, 0, 0, 2, 2, 1))).map(minX);
+      expect(meshes).toEqual(prisms);
+      expect(meshes).toEqual([0, 3]);
+    }
+  });
+
+  it("a mesh above another is drawn after it", () => {
+    for (const zs of [[0, 2], [2, 0]]) expect(sortByDepth(zs.map((z) => mesh(0, 0, z))).map(minZ)).toEqual([0, 2]);
   });
 });

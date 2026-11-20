@@ -28,6 +28,11 @@ const SOLIDS: [string, Solid][] = [
     { pts: [v3(4, 0, 0.5), v3(4, 4, 1), v3(0, 4, 1.5)], baseTone: 2 },
   ] }],
   ["wheel with buckets and gondolas", { kind: "wheel", at: v3(3, 4, 8), r: 5, width: 0.5, mat: "steel", sides: 8, angle: 0.25, buckets: { n: 6, depth: 1, teeth: 2, mat: "steel" }, gondolas: { mat: "glass", w: 1, d: 1, h: 1 } }],
+  ["mesh with a decal", { kind: "mesh", mat: "concrete", faces: [
+    { pts: [v3(0, 0, 0.5), v3(4, 0, 0.5), v3(4, 2, 1), v3(0, 2, 1)], toneOffset: 1 },
+    { pts: [v3(1, 0.5, 0.625), v3(2, 0.5, 0.625), v3(1.5, 1.5, 0.875)], mat: "steel", toneOffset: 1 },
+    { pts: [v3(0, 0, 0.5), v3(0, 2, 1), v3(0, 2, -0.5)] },
+  ] }],
   ["wheel hollow", { kind: "wheel", at: v3(3, 4, 8), r: 5, width: 0.5, mat: "steel", sides: 8, angle: 0.25, hollow: true, slots: 4 }],
 ];
 
@@ -39,8 +44,8 @@ const ACCENTS: [string, Accent][] = [
 const byName = (name: string): Solid => SOLIDS.find(([n]) => n === name)![1];
 
 describe("translate", () => {
-  it("the fixtures cover the twelve kinds", () => {
-    expect(new Set(SOLIDS.map(([, s]) => s.kind)).size).toBe(12);
+  it("the fixtures cover the thirteen kinds", () => {
+    expect(new Set(SOLIDS.map(([, s]) => s.kind)).size).toBe(13);
   });
 
   for (const [name, s] of SOLIDS) {
@@ -117,6 +122,24 @@ describe("translate", () => {
     expect(tg.tris).not.toBe(ground.tris);
     expect(tg.tris[0]).not.toBe(ground.tris[0]);
     expect(tg.tris[0]!.pts[0]).not.toBe(ground.tris[0]!.pts[0]);
+  });
+
+  it("a mesh moves every point of every face in x, y, keeps z and does not mutate the original", () => {
+    const mesh = byName("mesh with a decal") as Solid & { kind: "mesh" };
+    const copy = structuredClone(mesh);
+    const t = translate(mesh, DX, DY) as typeof mesh;
+    expect(mesh).toEqual(copy);
+    expect(t.faces).toHaveLength(mesh.faces.length);
+    t.faces.forEach((f, i) => {
+      const o = mesh.faces[i]!;
+      expect(f).not.toBe(o);
+      expect(f.mat).toBe(o.mat);
+      expect(f.toneOffset).toBe(o.toneOffset);
+      f.pts.forEach((p, j) => {
+        expect(p).not.toBe(o.pts[j]);
+        expect(p).toEqual(v3(o.pts[j]!.x + DX, o.pts[j]!.y + DY, o.pts[j]!.z));
+      });
+    });
   });
 
   it("what does not depend on position is copied as is", () => {

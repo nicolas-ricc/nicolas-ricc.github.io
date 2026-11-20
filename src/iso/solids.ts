@@ -8,6 +8,9 @@ import { VIEW_DIR } from "./project";
 
 export type { Plate, PlateBox, PlatePoly } from "./plate";
 
+/** Planar face of a `mesh`: `mat` and `toneOffset` override the solid's. */
+export interface MeshFace { pts: Vec3[]; mat?: Material; toneOffset?: number }
+
 export interface Tri { pts: [Vec3, Vec3, Vec3]; toneOffset?: number; baseTone?: number }
 
 export type Solid = (
@@ -27,6 +30,11 @@ export type Solid = (
   | { kind: "hull"; at: Vec3; len: number; beam: number; h: number; mat: Material; topMat?: Material; heading?: number; sheer?: number }
   | { kind: "strip"; path: Vec2[]; width: number; z: number; mat: Material }
   | { kind: "ground"; tris: Tri[]; mat: Material }
+  /**
+   * Solid of arbitrary planar faces (a tilting raft). Faces are given counter-clockwise seen from outside: the normal is `polygonNormal` as is, never re-oriented,
+   * so a clockwise face is culled. Faces are emitted in list order, which is the painter's order inside the solid; a coplanar decal goes right after the face that receives it.
+   */
+  | { kind: "mesh"; faces: MeshFace[]; mat: Material }
   | { kind: "wheel"; at: Vec3; r: number; width: number; mat: Material; sides: number; angle: number; gondolas?: { mat: Material; w: number; d: number; h: number }; hollow?: boolean; slots?: number; buckets?: { n: number; depth: number; teeth: number; mat: Material } }
 ) & {
   tone?: number /* integer, −2..+2 */;
@@ -333,6 +341,14 @@ function ground(tris: Tri[], mat: Material): Face[] {
   });
 }
 
+/** Unlike `ground`, the normal is never flipped: each face keeps its winding. */
+function mesh(faces: MeshFace[], mat: Material): Face[] {
+  return faces.map((f) => {
+    const normal = polygonNormal(f.pts);
+    return { pts: f.pts, normal, mat: f.mat ?? mat, tone: shadeTone(normal), toneOffset: f.toneOffset ?? 0 };
+  });
+}
+
 const SQ = Math.SQRT1_2;
 /** The wheel's plane: `u` is horizontal on screen (world (1, −1)); the normal faces the camera. */
 export const WHEEL_U: Vec3 = { x: SQ, y: -SQ, z: 0 };
@@ -425,6 +441,7 @@ function facesOf(s: Solid): Face[] {
     case "hull": return hull(s);
     case "strip": return strip(s.path, s.width, s.z, s.mat);
     case "ground": return ground(s.tris, s.mat);
+    case "mesh": return mesh(s.faces, s.mat);
     case "wheel": return wheel(s);
   }
 }
