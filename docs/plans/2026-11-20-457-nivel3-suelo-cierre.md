@@ -44,10 +44,10 @@
 - [ ] **Step 1: Write the failing tests** (`scripts/legibility.test.ts`)
   - `"measure: symmetric halo; dark ink (core 0.4, holes 0.02) gives 0.05"`: core pixels gray `0xaaaaaa`, holes `0x272727` (luminances ≈ 0.402 and ≈ 0.0203). Assert `halo` equals `min/max` of those luminances (`toBeCloseTo`, 6), and that it is ≈ 0.05 within 0.002.
   - `"measure: light ink (core 0.8, holes 0.1) gives 0.125, as before"`: grays `0xe7e7e7` and `0x595959` give `holes / core` ≈ 0.125. Adjust the existing `"halo of holes over core"` test name to "symmetric halo".
-  - `"signMasks: a groundDiagonal counter is an ellipse 2·r·√2·s·RES wide and 2·r·√½·s·RES high (±1 px)"`: one glyph on `groundDiagonal(at)`, with an empty `quads` list and one counter (`r` 2, `at` the glyph centre). The fit has `scale` s = 2. Measure the bounding box of `holes`.
+  - `"signMasks: a groundDiagonal counter is an ellipse 2·r·√2·s·RES wide and 2·r·√½·s·RES high (±1 px)"`: one glyph on `groundDiagonal(at)` with a real `layout.box` (e.g. 0..10 × 0..10), an empty `quads` list and one counter (`r` 2, `at` the box centre). The fit has `scale` s = 2. Measure the bounding box of `holes`.
   - `"signMasks: a diagonalWall counter is still the r·Z_SCALE·s·RES disc (±1 px)"`: the same glyph on `diagonalWall`; width and height both ≈ 2·r·Z_SCALE·s·RES.
   - `"signMasks: backed is the ink box grown by backingW·width, and the ring lies outside it"`: on `BLOG_SIGN`, every `ring` pixel has `backed` 0, and the glyph-box centre has `backed` 1.
-  - `"ocrImage: without keep the output is unchanged; with keep, pixels outside it are white"`: a 2×1 image whose two pixels are both at the core luminance. With `keep = [1, 0]` the ×3 block of pixel 0 is black (0) and that of pixel 1 is white (255). Without `keep`, both are black.
+  - `"ocrImage: without keep the output is unchanged; with keep, pixels outside it are white"`: a 2×1 image whose two pixels are both at the core luminance. With `keep = [1, 0]` the ×3 block of pixel 0 is black (0) and that of pixel 1 is white (255). Without `keep`, both are black. On a pseudo-random 16×8 RGBA image, the output without `keep` deep-equals the output with an all-ones `keep`, and the existing `ocrImage` tests stay as they are.
   - `"PREPROCESS: a ground sign's OCR sees only its backed area"`: `PREPROCESS` contains `"cartel de suelo"` and `"margen de respaldo"`.
 - [ ] **Step 2: Run** `npx vitest run scripts/legibility.test.ts`. Expected: the new tests FAIL.
 - [ ] **Step 3: Implement**
@@ -85,7 +85,7 @@
 
 **Interfaces:**
 - Consumes: `poseAt`, `signAt`, `seaPlatformAt` (`src/scenes/sign-platform.ts`); Task 2's `pickTick`, `tickTag` and `reportName`.
-- Produces: `tickFromSearch(search: string): number`, where a missing or invalid (negative, non-numeric, empty) value gives 0. `contextScene(scene, e, tMs = 0): WorldScene`. `contextSign(e: ContextExhibit, tMs = 0): SignSpec`.
+- Produces: `window.__lab.tickMs: number` (dev only, the tick the page posed the raft at; `LabHook` type in `storybook.ts`). `tickFromSearch(search: string): number`, where a missing or invalid (negative, non-numeric, empty) value gives 0. `contextScene(scene, e, tMs = 0): WorldScene`. `contextSign(e: ContextExhibit, tMs = 0): SignSpec`.
 
 - [ ] **Step 1: Write the failing tests**
   - `"tickFromSearch: ?tick=<ms>, rest (0) when missing or invalid"`: `"?tick=7919"` gives 7919. `""`, `"?tick="`, `"?tick=-5"` and `"?tick=abc"` give 0.
@@ -94,13 +94,13 @@
 - [ ] **Step 2: Run** `npx vitest run src/lab/crop.test.ts src/lab/page.test.ts`. Expected: FAIL.
 - [ ] **Step 3: Implement**
   - `crop.ts`: memoize the raft per `${site}@${tMs}`. Update the JSDoc of `contextScene` and `contextAnimators`: the raft is static at `poseAt(tMs)` (rest by default), and the animator stays dropped.
-  - `storybook.ts`: `contextScene(scene, e, tickFromSearch(location.search))`. Its header JSDoc names `?tick=`.
+  - `storybook.ts`: `contextScene(scene, e, tickFromSearch(location.search))`, and `__lab.tickMs` returns that value. Its header JSDoc names `?tick=`.
   - `legibility.ts`:
-    - `const tick = pickTick(argv)`. The URL adds `&tick=${tick}` when `tick !== null`.
+    - `const tick = pickTick(argv)`. The URL adds `&tick=${tick}` before the `#<id>` when `tick !== null`. The readiness wait also requires `window.__lab.tickMs === ${tick ?? 0}`, so a page that did not pose at the requested tick times out with an error instead of being measured against a posed oracle.
     - Per exhibit, `sign = contextSign(e, tick ?? 0)` feeds `wordCrop`, `signMasks`, `ocrImage`'s ground check, `verdicts` and `checkSign(sign, scale, contextScene(scene, e, tick ?? 0).solids)`.
     - Files are `${id}-${scaleTag(scale)}${tickTag(tick)}.png` and `-ocr`. The report goes to `reportName(tick)` with `tick`.
     - The header JSDoc gets the usage `[-- --tick <ms>]` and says the Writing raft is posed by the exhibit's `?tick=`.
-- [ ] **Step 4: Run** `npx vitest run src/lab scripts && npm run typecheck`. Expected: PASS. Then run `npm run legibility -- --only plataforma-escena --tick 15838` once. Its crop must show the tilted raft, and its rows must pass. Then `git checkout -- docs/superpowers/specs/assets/carteles-legibilidad/` and delete the untracked `-t15838` files: Task 4 writes the real ones.
+- [ ] **Step 4: Run** `npx vitest run src/lab scripts && npm run typecheck`. Expected: PASS. Then run `npm run legibility -- --only plataforma-escena --tick 15838` once. Its crop must show the tilted raft, and its rows must pass. Then `git checkout -- docs/superpowers/specs/assets/carteles-legibilidad/ && git clean -fq -- docs/superpowers/specs/assets/carteles-legibilidad/` (the script writes `REPORT-t15838.md` and the crops into that folder, `scripts/legibility.ts` `OUT`), and check `git status --short` shows nothing there: Task 4 writes the real ones.
 - [ ] **Step 5: Commit** `feat(#457): pose the Writing context exhibit at a tick; npm run legibility --tick`
 
 ### Task 4 (controller): the three level-3 runs
@@ -187,4 +187,14 @@
 
 ## Assumptions
 
-(Filled by the plan review.)
+- **A1. The posed word stays inside the exhibit box and the crop.** The boxes are the rest envelope ± 3 u (`src/lab/exhibits.ts:266`); a 1.5° pitch over the ≈ 43 u half-length lifts an end by ≈ 1.1 u in z, inside that margin. `wordCrop` is recomputed from the posed sign. Rejected alternative: per-tick boxes.
+- **A2. Halo symmetry accepts counters brighter than the core.** With `min/max`, a holes/core ratio of 2.5 gives 0.4. This is the issue's inherited decision (verbatim formula). Every current halo cell of RESUME and PORTFOLIO is 0.04–0.08 (`REPORT.md`), far from either side. Rejected alternative: keeping holes/core for `color` signs and min/max for `decal` signs, which the issue does not ask for.
+- **A3. If an OCR fails in Task 4, the branch keeps Tasks 1–3.** Stages 5–10 still run, the PR goes up as a draft, and #457 gets `ready-for-human`, as the owner's comment asks. Nothing is reverted. Rejected alternative: reverting the instrument changes, which would hide the evidence.
+- **A4. The #451 close captures and the time-lapse are retaken**, under the issue's «`assets/451-balsa-tablones/` completa» and #451's acceptance («capturas … al día»). Only the per-capture lines of `balanceo/README.md` (t, dz, pitch, roll) are pinned by `docs.test.ts`. The pixel figures and the cap in the prose are not pinned, so Task 6 needs no new test for them. Rejected alternative: leaving cap-20 captures in a closed story.
+- **A5. `fillDisc` is removed with its test.** Its only call site is `signMasks` (`scripts/legibility-measure.ts:67`); the other hit is its own test (`scripts/legibility.test.ts:84`).
+
+## Grilling
+
+- Rounds: 1 (griller model: fable). 16 questions. The plan revisions were minor: a `__lab.tickMs` readback (Q3), a stronger `ocrImage` identity test (Q8), a real glyph box in the counter fixtures (Q15), and `git clean` of the report folder (Q16). No second round.
+- Sources (some answers cite more than one): ISSUE 5 (Q4, Q6, Q10, Q12 «REPORT solo lo escribe el script», Q1 stage-1 comment), CODE 11 (Q2 `src/kit/lettering.ts:23-25` + `src/iso/project.ts`; Q5 `src/lab/exhibits.ts:266`, `src/lab/signs.test.ts:56-65`; Q7 `scripts/legibility-measure.ts:61-66`; Q11 `src/lab/docs.test.ts:1123-1131`; Q12 `src/english.test.ts:189-190`; Q13 grep: no file references the ADR name; Q14 grep; Q15 `signMasks` uses `g.layout.box`; Q16 `scripts/legibility.ts:31,82`; Q4 `src/scenes/sign-platform.ts:47`), DOC 1 (Q4 #451 plan comment, `CYCLE_POSES`). NO SOURCE 4, all of them technical assumptions (A1–A3, A5). A4 also cites the issue.
+- Spec ambiguities: none. Follow-up issues opened: none.
