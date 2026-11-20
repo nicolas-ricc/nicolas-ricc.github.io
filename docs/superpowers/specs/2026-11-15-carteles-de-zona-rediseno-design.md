@@ -465,7 +465,7 @@ Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage, con
   `groundDiagonal`. Una sola capa, `platform.solid`: la capa `platform.lights`
   ya no existe, y con ella la pintura como acento (la entrada de #441 queda
   como historia). **`WRITING_CAP` 20.** Con la caja alta 20 la caja de x mide
-  12.74 px a 1.17 y 9.04 px a 0.83 en reposo (12.30 y 8.73 con el rolido de 1°
+  12.74 px a 1.17 y 9.04 px a 0.83 en reposo (12.30 y 8.72 con el rolido de 1°
   previsto); el piso es x ≥ 12 px a 1.17, con la v del plano proyectando 0.707
   y con ese rolido.
   **`CHAINSAW_BAR` 0.15.** Es el grosor de las barras horizontales como lo mide
