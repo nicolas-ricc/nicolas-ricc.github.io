@@ -1,39 +1,37 @@
 import { describe, expect, it } from "vitest";
-import type { Accent } from "../iso/accent";
 import type { Solid } from "../iso/solids";
 import { assembleWorld } from "../world/assemble";
 import { platformAnimator } from "./platform-animator";
 import { HEAVE, HEAVE_STEP, heaveAt, seaPlatformAt, type WritingSite } from "./sign-platform";
 
-const built = (site: WritingSite, dz = 0) => { const solids: Solid[] = [], accents: Accent[] = []; seaPlatformAt(solids, accents, site, dz); return { solids, accents }; };
+const built = (site: WritingSite, dz = 0) => { const solids: Solid[] = []; seaPlatformAt(solids, site, { dz, pitch: 0, roll: 0 }); return { solids }; };
 /** Still (reducedMotion) and moving options: the site-change tests run still, so only the site reports. */
 const STILL = { reducedMotion: true }, MOVING = { reducedMotion: false };
-const BOTH = new Set(["platform.solid", "platform.lights"]);
+const BOTH = new Set(["platform.solid"]);
 const solidsOf = (a: ReturnType<typeof platformAnimator>) => { const l = a.layer("platform.solid"); if (l.kind !== "solid") throw new Error(l.kind); return l.solids; };
 
 describe("platformAnimator (#427)", () => {
-  it("two layers, platform.solid and platform.lights; the site starts wide unless given", () => {
-    expect(platformAnimator(STILL).ids).toEqual(["platform.solid", "platform.lights"]);
+  it("one layer, platform.solid (#454: the paint is a decal of the raft, not an accent); the site starts wide unless given", () => {
+    expect(platformAnimator(STILL).ids).toEqual(["platform.solid"]);
+    expect(() => platformAnimator(STILL).layer("platform.lights")).toThrow(/platformAnimator/);
     expect(platformAnimator(STILL).site).toBe("wide");
     expect(platformAnimator({ site: "tall", ...STILL }).site).toBe("tall");
   });
 
-  it("the layers hold seaPlatformAt's solids and accents at the current site; the lights are paint (bloom: false) and declare no zone", () => {
-    const a = platformAnimator(STILL), { solids, accents } = built("wide");
+  it("the layer holds seaPlatformAt's raft at the current site", () => {
+    const a = platformAnimator(STILL), { solids } = built("wide");
     expect(a.layer("platform.solid")).toEqual({ kind: "solid", solids });
-    const lights = a.layer("platform.lights");
-    expect(lights).toEqual({ kind: "accent", accents, bloom: false });
-    expect("zone" in lights).toBe(false);
+    expect(solids).toHaveLength(1);
+    expect(solids[0]).toMatchObject({ kind: "mesh", mat: "timber" });
   });
 
-  it("tick reports both layers once after a site change, and nothing without one", () => {
+  it("tick reports the layer once after a site change, and nothing without one", () => {
     const a = platformAnimator(STILL);
     expect(a.tick(16)).toEqual(new Set());
     a.setSite("tall");
     expect(a.site).toBe("tall");
     expect(a.tick(16)).toEqual(BOTH);
     expect(solidsOf(a)).toEqual(built("tall").solids);
-    expect(a.layer("platform.lights")).toEqual({ kind: "accent", accents: built("tall").accents, bloom: false });
     expect(a.tick(16)).toEqual(new Set());
   });
 
@@ -72,14 +70,14 @@ describe("platformAnimator (#427)", () => {
 
 describe("platformAnimator heaves the board (#444)", () => {
   const step = (t: number) => Math.round(heaveAt(t) / HEAVE_STEP);
-  const pose = (a: ReturnType<typeof platformAnimator>) => ({ solid: a.layer("platform.solid"), lights: a.layer("platform.lights") });
-  const at = (site: WritingSite, dz: number) => { const { solids, accents } = built(site, dz); return { solid: { kind: "solid", solids }, lights: { kind: "accent", accents, bloom: false } }; };
+  const pose = (a: ReturnType<typeof platformAnimator>) => ({ solid: a.layer("platform.solid") });
+  const at = (site: WritingSite, dz: number) => ({ solid: { kind: "solid", solids: built(site, dz).solids } });
 
   it("before any tick the layers are the rest pose", () => {
     expect(pose(platformAnimator(MOVING))).toEqual(at("wide", 0));
   });
 
-  it("tick(100) over a period reports both layers at least 20 times and nothing else; each report is the pose at heaveAt(t)", () => {
+  it("tick(100) over a period reports the layer at least 20 times and nothing else; each report is the pose at heaveAt(t)", () => {
     const a = platformAnimator(MOVING);
     let n = 0;
     for (let t = 100; t <= HEAVE.periodMs; t += 100) {

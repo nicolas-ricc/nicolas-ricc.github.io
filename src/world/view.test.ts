@@ -169,8 +169,8 @@ describe("zoneView", () => {
 
 describe("zoneFrame and zoneView with the Writing site (#428)", () => {
   const SITES: WritingSite[] = ["wide", "tall"];
-  it("Blog's tall frame reaches y 440; every other frame, and the wide one, is unchanged", () => {
-    expect(zoneFrame("blog", "tall")).toEqual(boxFrame({ x0: ZONE_SPLIT_X, y0: WORLD.y0, x1: WORLD.x1, y1: 440 }));
+  it("Blog's tall frame reaches y 450 (#454: the raft reaches y ≈ 442); every other frame, and the wide one, is unchanged", () => {
+    expect(zoneFrame("blog", "tall")).toEqual(boxFrame({ x0: ZONE_SPLIT_X, y0: WORLD.y0, x1: WORLD.x1, y1: 450 }));
     expect(zoneFrame("blog", "wide")).toEqual(zoneFrame("blog"));
     for (const f of ["all", "cover", "portfolio", "cv"] as Frame[]) for (const site of SITES) expect(zoneFrame(f, site), `${f} ${site}`).toEqual(zoneFrame(f));
   });

@@ -450,16 +450,16 @@ describe("context exhibits (#376)", () => {
     expect(ids.indexOf("plataforma-escena")).toBe(ids.indexOf("plataforma") + 1);
     expect(ids.indexOf("plataforma-escena-angosta")).toBe(ids.indexOf("plataforma") + 2);
     const wide = contexts.find((x) => x.id === "plataforma-escena")!, tall = contexts.find((x) => x.id === "plataforma-escena-angosta")!;
-    expect(wide).toMatchObject({ title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 536, y0: 71, x1: 604, y1: 139 }, h: 1, sign: BLOG_SIGNS.wide, writingSite: "wide" });
-    expect(tall).toMatchObject({ title: "Writing platform sign in its scene, tall site", zone: "blog", group: "sea", kind: "context", box: { x0: 406, y0: 366, x1: 474, y1: 434 }, h: 1, sign: BLOG_SIGNS.tall, writingSite: "tall" });
+    expect(wide).toMatchObject({ title: "Writing platform sign in its scene", zone: "blog", group: "sea", kind: "context", box: { x0: 525, y0: 60, x1: 615, y1: 150 }, h: 1, sign: BLOG_SIGNS.wide, writingSite: "wide" });
+    expect(tall).toMatchObject({ title: "Writing platform sign in its scene, tall site", zone: "blog", group: "sea", kind: "context", box: { x0: 395, y0: 355, x1: 485, y1: 445 }, h: 1, sign: BLOG_SIGNS.tall, writingSite: "tall" });
     for (const e of [wide, tall]) expect("build" in e, e.id).toBe(false);
   });
-  it.each(["plataforma-escena", "plataforma-escena-angosta"])("%s shows the platform once: one solid, the officeDark board, no deck, no platform animator (#427, #442)", (id) => {
+  it.each(["plataforma-escena", "plataforma-escena-angosta"])("%s shows the platform once: one solid, the timber raft, no deck, no platform animator (#427, #442)", (id) => {
     const e = contexts.find((x) => x.id === id)!;
     const own: Solid[] = [];
-    seaPlatformAt(own, [], e.writingSite!);
+    seaPlatformAt(own, e.writingSite!);
     expect(own).toHaveLength(1);
-    expect(own[0]).toMatchObject({ kind: "poly", mat: "officeDark" });
+    expect(own[0]).toMatchObject({ kind: "mesh", mat: "timber" });
     const cs = contextScene(scene, e), anims = contextAnimators(animators, e);
     expect(anims.some((a) => a.ids.includes("platform.solid"))).toBe(false);
     const layered = anims.flatMap((a) => a.ids.flatMap((lid) => { const l = a.layer(lid); return l.kind === "solid" ? l.solids : []; }));

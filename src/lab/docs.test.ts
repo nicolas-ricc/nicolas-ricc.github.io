@@ -2,12 +2,13 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { project } from "../iso/project";
-import { COVER_LAPTOP, COVER_PHONE, layoutGaps, SIGN_FONT, signMetrics, staticContrast } from "../kit/legibility";
+import { COVER_LAPTOP, COVER_PHONE, GROUND_ASPECT, layoutGaps, SIGN_FONT, signMetrics, staticContrast } from "../kit/legibility";
 import { counterClearance, letterGaps, measureText, rhythm } from "../kit/lettering";
 import { TOWER } from "../scenes/city-grid";
 import { CROWN_SITE } from "../scenes/sign-crown";
-import { BOARD_TOP, HEAVE, heaveAt, PLATFORM_DECK, PLATFORM_SITES, WRITING_CAP } from "../scenes/sign-platform";
-import { CHAINSAW_FACE, CHAINSAW_X } from "../kit/marquee";
+import { BLOG_SIGNS, HEAVE, heaveAt, PLATFORM_DECK, PLATFORM_SITES, WRITING_CAP } from "../scenes/sign-platform";
+import { ISO_TONES } from "../map/palette-iso";
+import { CHAINSAW_BAR } from "../kit/marquee";
 import { writingSite } from "../world/signs";
 import { LANE_BACK, LANE_OUT } from "../scenes/sea-anim";
 import { HEADLAND_SHIFT } from "../map/geo";
@@ -1042,6 +1043,9 @@ describe("WRITING on a floating board (#441)", () => {
   const dev = spec.slice(Math.max(0, spec.search(/^### 8\.2 /m)), Math.max(0, spec.search(/^### 8\.3 /m)));
   const TITLE = "- **WRITING en Chainsaw Carnage, tabla flotante (#441).**";
   const entry = (dev.split(/\n(?=- \*\*)/).find((b) => b.startsWith(TITLE)) ?? "").replace(/\s+/g, " ");
+  // the title of the #451 entry, matched by its story number (the English guard reads this file)
+  const TITLE_451 = /^- \*\*WRITING [^*]*\(#451\)\.\*\*/m;
+  const entry451 = (dev.split(/\n(?=- \*\*)/).find((b) => TITLE_451.test(b)) ?? "").replace(/\s+/g, " ");
   const WRITING_CONTEXTS = ["plataforma-escena", "plataforma-escena-angosta"];
   const SCALES = ["1.17", "0.83"];
   /** The value cell of `metric` in the REPORT.md section of `id` at `scale` ("" when missing). */
@@ -1068,12 +1072,24 @@ describe("WRITING on a floating board (#441)", () => {
     expect(entry).not.toBe("");
     expect(dev.indexOf(TITLE)).toBeGreaterThan(dev.indexOf("- **WRITING en LostWages"));
   });
-  it("the entry names the font, its license and source, the files and the live values", () => {
+  it("the #441 entry keeps the font, its license and source and the files (history: it carries no live value)", () => {
     for (const s of [
       "Chainsaw Carnage", "GGBotNet", "SIL Open Font License", "https://www.1001fonts.com/chainsaw-carnage-font.html", "https://www.1001fonts.com/download/chainsaw-carnage.zip",
-      "`src/kit/chainsaw-writing.ts`", "`scripts/marquee-word.py`", `\`WRITING_CAP\` ${WRITING_CAP}`, `\`CHAINSAW_FACE\` ${CHAINSAW_FACE}`, `\`CHAINSAW_X\` ${CHAINSAW_X}`,
-      `\`BOARD_TOP\` ${String(BOARD_TOP).replace("-", "\u2212")}`, "`HEAVE`", `amp ${HEAVE.amp}`, `${HEAVE.periodMs} ms`, "`reducedMotion`", "bloom", "`platform.lights`", "#437", threshold(),
+      "`src/kit/chainsaw-writing.ts`", "`scripts/marquee-word.py`", "`HEAVE`", "#437",
     ]) expect(entry, s).toContain(s);
+  });
+  it("the #451 entry follows the #441 one and carries the live values of the raft", () => {
+    expect(entry451).not.toBe("");
+    expect(dev.search(TITLE_451)).toBeGreaterThan(dev.indexOf(TITLE));
+    const hex = (n: number) => `0x${n.toString(16).padStart(6, "0")}`;
+    const contrast = staticContrast(BLOG_SIGNS.wide).toFixed(2);
+    expect(staticContrast(BLOG_SIGNS.tall).toFixed(2)).toBe(contrast);
+    for (const s of [
+      `\`WRITING_CAP\` ${WRITING_CAP}`, `\`CHAINSAW_BAR\` ${CHAINSAW_BAR}`, "`timber`", "`navy`", hex(ISO_TONES.timber.top), hex(ISO_TONES.navy.top), "`staticContrast`", contrast,
+      `\`GROUND_ASPECT\` ${GROUND_ASPECT}`, threshold(), "`LANE_OUT`", ...LANE_OUT.slice(-3).map((p) => `(${p.x}, ${p.y})`), `\`zoneFrame\``, "450", "`platform.lights`", "caja alta 20",
+    ]) expect(entry451, s).toContain(s);
+    // the entry says the layer is gone, it does not list it as live
+    expect(entry451).toMatch(/`platform\.lights`.{0,8}no existe/);
   });
   it("the entry carries the four level-3 readings of REPORT.md", () => {
     for (const id of WRITING_CONTEXTS) for (const sc of SCALES) for (const m of ["contraste", "halo", "OCR"]) {
@@ -1109,7 +1125,8 @@ describe("WRITING on a floating board (#441)", () => {
   });
   it("CONTEXT.md Sign tells the heave, the paint out of the bloom and a level 3 with no exception, and no LostWages", () => {
     const at = glossary.indexOf("### Sign\n"), rest = glossary.slice(at + 9), sign = at < 0 ? "" : rest.slice(0, Math.max(0, rest.search(/^### /m)));
-    for (const s of ["`platformAnimator`", "`HEAVE`", "`reducedMotion`", "`platform.lights`", "`bloom: false`", "no row"]) expect(sign, s).toContain(s);
+    for (const s of ["`platformAnimator`", "`HEAVE`", "`reducedMotion`", "no row", "`timber`", "`navy`", "decal", "`groundDiagonal`", "`platform.solid`", "`WRITING_CAP` (20)"]) expect(sign, s).toContain(s);
+    for (const re of [/PAINT_LIFT/, /officeDark/, /roofDiagonal/, /platform\.lights/]) expect(sign, String(re)).not.toMatch(re);
     expect(glossary).toContain("Chainsaw Carnage");
     expect(glossary).not.toMatch(/LostWages/);
   });

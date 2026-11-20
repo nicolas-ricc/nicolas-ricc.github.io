@@ -150,11 +150,12 @@ export function cropAnimators(animators: readonly ZonedAnimator[], box: Box): Zo
   });
 }
 
-const platforms = new Map<WritingSite, { solids: Solid[]; accents: Accent[] }>();
+const platforms = new Map<WritingSite, Solid[]>();
 
-function platformAt(site: WritingSite): { solids: Solid[]; accents: Accent[] } {
+/** The raft at a site, at rest: solids only (it has no accents since #454). */
+function platformAt(site: WritingSite): Solid[] {
   let p = platforms.get(site);
-  if (!p) { p = { solids: [], accents: [] }; seaPlatformAt(p.solids, p.accents, site); platforms.set(site, p); }
+  if (!p) { p = []; seaPlatformAt(p, site); platforms.set(site, p); }
   return p;
 }
 
@@ -163,7 +164,7 @@ export function contextScene(scene: WorldScene, e: ContextExhibit): WorldScene {
   const cropped = cropScene(scene, e.box);
   if (!e.writingSite) return cropped;
   const p = platformAt(e.writingSite);
-  return { ...cropped, solids: [...cropped.solids, ...cropSolids(p.solids, e.box)], accents: [...cropped.accents, ...cropAccents(p.accents, e.box)] };
+  return { ...cropped, solids: [...cropped.solids, ...cropSolids(p, e.box)] };
 }
 
 /** The context exhibit's animators: `cropAnimators` over its box; the sign's own animator comes from `assembleWorld`. With `writingSite`, the world's platform animator (`platform.solid`) is dropped: `contextScene` already carries the platform of that site, and the world's is at the other one. */

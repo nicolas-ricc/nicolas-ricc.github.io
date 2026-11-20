@@ -419,12 +419,12 @@ describe("contextScene / contextAnimators (#376, #392)", () => {
   const toyAt = (b: typeof TALL_BOX): Animator => ({ ids: ["toy.lit"], layer: () => ({ kind: "solid", solids: [prism(b.x0 + 1, b.y0 + 1)] }), tick: () => new Set() });
   // #427: a Writing exhibit carries its site; the platform of that site joins the crop and the platform animator leaves it
   const tall: ContextExhibit = { ...e, id: "test-escena-angosta", box: TALL_BOX, writingSite: "tall" };
-  it("with writingSite, the crop of the world plus the cropped platform of that site", () => {
-    const solids: Solid[] = [], accents: Accent[] = [];
-    seaPlatformAt(solids, accents, "tall");
+  it("with writingSite, the crop of the world plus the cropped raft of that site (solids only)", () => {
+    const solids: Solid[] = [];
+    seaPlatformAt(solids, "tall");
     const base = cropScene(scene, TALL_BOX), got = contextScene(scene, tall);
     expect(got.solids).toEqual([...base.solids, ...cropSolids(solids, TALL_BOX)]);
-    expect(got.accents).toEqual([...base.accents, ...cropAccents(accents, TALL_BOX)]);
+    expect(got.accents).toEqual(base.accents); // the raft has no accents (#454)
     expect(got.solids.length).toBeGreaterThan(base.solids.length);
     expect(scene.solids).toHaveLength(2);
   });

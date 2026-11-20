@@ -312,7 +312,9 @@ legibilidad, en `assets/carteles-legibilidad/REPORT.md`.
 - Carriles, tal como quedaron en `src/scenes/sea-anim.ts` (no los borradores del
   comentario de la historia):
   - `LANE_OUT`: (362, -16), (398, 40), (424, 86), (437, 114), (440, 142),
-    (434, 176), (446, 232), (456, 290), (486, 347), (500, 405), (523, 510).
+    (434, 176), (446, 232), (456, 290), (501, 347), (515, 405), (522.7, 506.4).
+    Desde #451 (#454) el tramo sur corre 15 u al este: eran (486, 347), (500, 405)
+    y (523, 510).
   - `LANE_BACK`: (564, 467), (548, 330), (546, 262), (512, 200), (480, 144),
     (477, 102), (461, 66), (434, 18), (397, -39).
 - Umbral del sitio: medido con `writingSite(w, 900)`. El sitio ancho aparece
