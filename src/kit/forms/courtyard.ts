@@ -8,7 +8,7 @@ import { bench, patioTree } from "../props";
 import { CORNICE_H, HIP_ROOF_H, cornice, hipRoof } from "../roofs";
 import type { Lot, Piece, RecipeDef, Side, Slot, Style } from "../types";
 import { CAMERA_SIDES, neonRun } from "./lowrise";
-import { clipBody, clipToPoly, insidePoly, polyArea, polyCornice, polyFootprint } from "./porteno";
+import { clipBody, clipToPoly, insidePoly, polyArea, polyCornice, polyFootprint, treeFits } from "../polygon";
 
 /**
  * `courtyard` family: blocks with an interior courtyard (O with a passage, open U,
@@ -52,16 +52,6 @@ function wing(p: Piece, r: Rect, z: number, h: number, cols: number, style: Styl
   const f = { x: r.x + (flush === "w" ? 0.5 : 0), y: r.y, w: r.w - (flush ? 0.5 : 0), d: r.d, z: z + h };
   p.solids.push(...cornice(f, style.trim));
   return true;
-}
-
-/** Whether a tree of radius 1 centered at `c` stands inside `fp` (`fp` is the chamfered footprint of a parcel polygon). */
-export function treeFits(fp: Vec2[], c: { x: number; y: number }): boolean {
-  if (!insidePoly(fp, c)) return false;
-  return fp.every((a, i) => {
-    const b = fp[(i + 1) % fp.length]!, dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
-    const t = l2 < 1e-9 ? 0 : Math.max(0, Math.min(1, ((c.x - a.x) * dx + (c.y - a.y) * dy) / l2));
-    return Math.hypot(c.x - a.x - dx * t, c.y - a.y - dy * t) >= 1 - 1e-6;
-  });
 }
 
 /** Keeps the neon slots whose `pts` are all within `fp` + 0.5 (a slot on a clipped or dropped wall would float). */

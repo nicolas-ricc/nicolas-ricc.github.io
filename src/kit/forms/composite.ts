@@ -5,7 +5,7 @@ import { prism } from "../../scenes/city-pieces";
 import { SIGN_MIN_H, addBuilding, emptyPiece, floorsFor, recipeCap, shiftTone, southSign } from "../piece";
 import { ANTENNA_H, MACHINE_ROOM_H, WATER_TANK_H, antenna, beacon, machineRoom, waterTank } from "../props";
 import { CORNICE_H, cornice, offsetFootprint } from "../roofs";
-import { clipBody, insidePoly, polyCornice, polyArea, polyCentroid, polyFootprint } from "./porteno";
+import { clipBody, insidePoly, polyCornice, polyArea, polyCentroid, polyFootprint } from "../polygon";
 import type { Lot, Piece, RecipeDef, Side, Style } from "../types";
 
 /**

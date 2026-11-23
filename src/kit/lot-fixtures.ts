@@ -24,8 +24,11 @@ export function wedgeLot(lot: Lot, leg: number, corner: "southeast" | "northwest
   return { ...lot, poly };
 }
 
-/** The parcel lots of the contract: both lots cut at the southeast, and the lab lot cut at the northwest. */
-export const WEDGE_LOTS: Lot[] = [wedgeLot(L0, 7.5), wedgeLot(L1, 9), wedgeLot(L1, 9, "northwest")];
+/**
+ * The parcel lots of the contract: both lots cut at the southeast, the lab lot cut at the northwest, and the city lot
+ * with a short cut whose diagonal (6.5) is long enough for a 2 chamfer but not for a 2.4 one.
+ */
+export const WEDGE_LOTS: Lot[] = [wedgeLot(L0, 7.5), wedgeLot(L1, 9), wedgeLot(L1, 9, "northwest"), wedgeLot(L0, 6)];
 
 /** A parcel that leaves only a strip 0.5..1.5 deep along the north edge. */
 export const SLIVER_LOT: Lot = { ...L1, poly: [{ x: 0, y: 0 }, { x: 24, y: 0 }, { x: 24, y: 0.5 }, { x: 0, y: 1.5 }] };

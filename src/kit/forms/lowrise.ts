@@ -8,8 +8,7 @@ import { jungle } from "../../scenes/flora";
 import { RECIPE_MAX_H, addBuilding, emptyPiece, interlock } from "../piece";
 import { awning, patioTree } from "../props";
 import { HIP_ROOF_H, cornice, hipRoof } from "../roofs";
-import { treeFits } from "./courtyard";
-import { clipBody, polyArea, polyCornice, polyFootprint } from "./porteno";
+import { clipBody, polyArea, polyCornice, polyFootprint, treeFits } from "../polygon";
 import type { Lot, Piece, RecipeDef, Side, Slot, Style } from "../types";
 
 /**

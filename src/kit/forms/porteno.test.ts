@@ -6,7 +6,8 @@ import { RECIPES, recipe } from "../index";
 import { L0, L1, SLIVER_LOT, WEDGE_LOTS, groundPlans, obliqueCorners, outsideConvex, signedArea, triangleOverlap, wedgeLot } from "../lot-fixtures";
 import { STYLES } from "../styles";
 import type { Lot, Piece } from "../types";
-import { chamferPoly, clipConvex, clipHalf, clipToPoly, frustum, insidePoly, polyFootprint } from "./porteno";
+import { treeFits } from "../polygon";
+import { chamferPoly, clipBody, clipConvex, clipHalf, clipToPoly, frustum, insetPoly, insidePoly, polyCornice, polyFootprint } from "./porteno";
 
 const STYLE_IDS = ["downtown", "bars", "residential", "civic"] as const;
 const SEEDS = Array.from({ length: 20 }, (_, i) => i + 1);
@@ -110,6 +111,49 @@ describe("polygon helpers", () => {
     expect(outsideConvex(w, wedge, 1e-9)).toEqual([]);
   });
 
+  it("polyCornice: overhangs 0.5 with mitered right corners, and bevels an acute corner instead of a long spike", () => {
+    const sq = polyCornice(square, 3, "stone");
+    if (sq.kind !== "poly") throw new Error("not a poly");
+    expect(sq.interlocks).toBe(true);
+    expect(sq.footprint).toHaveLength(4);
+    expect(bounds(sq)).toMatchObject({ min: { x: -0.5, y: -0.5, z: 3 }, max: { x: 10.5, y: 10.5 } });
+    const spike = [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 0, y: 4 }]; // 11° at (20, 0)
+    const c = polyCornice(spike, 0, "stone");
+    if (c.kind !== "poly") throw new Error("not a poly");
+    expect(c.footprint.length).toBeGreaterThan(spike.length);
+    for (const q of c.footprint) expect(Math.min(...spike.map((v) => Math.hypot(q.x - v.x, q.y - v.y)))).toBeLessThanOrEqual(0.5 * 1.6 + 1e-9);
+  });
+
+  it("insetPoly: an inward offset, or null when it would vanish or fold", () => {
+    const q = insetPoly(square, 2);
+    expect(q).not.toBeNull();
+    expect(area(q!)).toBeCloseTo(36, 9);
+    expect(insetPoly(square, 4.5)).toBeNull(); // area 1 < 4
+    expect(insetPoly(square, 6)).toBeNull(); // flips
+  });
+
+  it("clipBody: clipped to the footprint, oblique corners cut, null below area 4", () => {
+    const fp = polyFootprint(wedgeLot(L1, 9), 0, 2, "oblique");
+    const body = clipBody({ x: 10, y: 4, w: 14, d: 14 }, fp);
+    expect(body).not.toBeNull();
+    expect(outsideConvex(body!, fp, 1e-9)).toEqual([]);
+    expect(clipBody({ x: 23, y: 17, w: 1, d: 1 }, fp)).toBeNull();
+    expect(clipBody({ x: 1, y: 1, w: 1, d: 3 }, fp)).toBeNull(); // area 3
+  });
+
+  it("insidePoly: inside, outside, and on the boundary within eps", () => {
+    expect(insidePoly(square, { x: 5, y: 5 })).toBe(true);
+    expect(insidePoly(square, { x: 11, y: 5 })).toBe(false);
+    expect(insidePoly(square, { x: 10, y: 5 })).toBe(true);
+    expect(insidePoly(square, { x: 10.1, y: 5 }, 0.2)).toBe(true);
+  });
+
+  it("treeFits: the crown's box (√2 from every edge) stays inside", () => {
+    expect(treeFits(square, { x: 5, y: 5 })).toBe(true);
+    expect(treeFits(square, { x: 1.2, y: 5 })).toBe(false);
+    expect(treeFits(square, { x: 1.5, y: 5 })).toBe(true);
+  });
+
   it("frustum: a mesh whose faces all point away from its centre, top face up", () => {
     const top = [{ x: 2, y: 2 }, { x: 8, y: 2 }, { x: 8, y: 8 }, { x: 2, y: 8 }];
     const m = frustum(square, top, 5, 7, "terracotta");
@@ -191,6 +235,14 @@ describe("porteno family", () => {
         const pt = { x: s.at.x + s.r * Math.cos((i * Math.PI) / 8), y: s.at.y + s.r * Math.sin((i * Math.PI) / 8) };
         expect(wings.some((w) => insidePoly(w, pt)), `seed ${seed} sample ${i}`).toBe(true);
       }
+    }
+  });
+
+  it("cornerCupola keeps its cupola at the casco's cap (maxH 8.5), over a single floor", () => {
+    for (const lot of [L0, L1, ...WEDGE_LOTS]) for (const seed of SEEDS) {
+      const p = recipe("cornerCupola")({ ...lot, maxH: 8.5 }, createRng(seed), STYLES.downtown);
+      expect(domes(p)).toHaveLength(1);
+      for (const s of [...p.solids, ...p.ground]) expect(bounds(s).max.z).toBeLessThanOrEqual(lot.z + 8.5 + 1e-9);
     }
   });
 

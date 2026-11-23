@@ -8,7 +8,7 @@ import { towerCrane } from "../../scenes/pieces";
 import { LANDMARK_MAX_H, SIGN_MIN_H, addBuilding, emptyPiece, interlock, southSign } from "../piece";
 import { beacon, clock, container, fence, helipad, sign, table } from "../props";
 import { gableRoof, greenRoof, offsetFootprint } from "../roofs";
-import { clipBody, insetPoly, insidePoly, polyCentroid, polyFootprint } from "./porteno";
+import { clipBody, insetPoly, insidePoly, polyCentroid, polyFootprint } from "../polygon";
 import type { Lot, Piece, RecipeDef, Style } from "../types";
 
 /**
