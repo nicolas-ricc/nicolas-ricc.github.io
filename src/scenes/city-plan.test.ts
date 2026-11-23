@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Vec2 } from "../iso/geometry";
-import { CITY_EDGE, TOWER } from "./city-grid";
+import { CITY_EDGE } from "./city-grid";
 import {
-  AXES, BRIDGE_LANDING, CITY_BOUNDS, HOTEL_LOT, LAND, PLAN_BOUNDS, PLAZA_CENTER, PLAZA_MAYOR, TOWER_ISLAND,
+  AXES, BRIDGE_LANDING, CITY_BOUNDS, HOTEL_LOT, LAND, PLAN_BOUNDS, PLAZA_CENTER, PLAZA_MAYOR,
   axisBand, barrioAt, crossingPlazas, intersectionArea, parcels, pointInPoly, polyArea, polyPerimeter,
 } from "./city-plan";
 
@@ -90,7 +90,6 @@ describe("city-plan parcels (#472)", () => {
     ...AXES.map((a) => ({ name: `axis ${a.id}`, poly: axisBand(a) })),
     { name: "PLAZA_MAYOR", poly: rectPoly(PLAZA_MAYOR) },
     ...crossingPlazas().map((poly, i) => ({ name: `crossing plaza ${i}`, poly })),
-    { name: "TOWER_ISLAND", poly: rectPoly(TOWER_ISLAND) },
   ];
 
   it("every parcel is a simple polygon of ≥ 3 vertices, area ≥ 70, radius ≥ 3.4 and smaller box side ≥ 9", () => {
@@ -106,18 +105,8 @@ describe("city-plan parcels (#472)", () => {
     }
   });
 
-  it("no parcel intersects an axis band, PLAZA_MAYOR, a crossing plaza or TOWER_ISLAND", () => {
-    // HOTEL_LOT and TOWER_ISLAND are both literal in #472; their 7 u² overlap (x 120..127, y 234..235) lives until #474 removes the island
-    const hotel = (p: { rect: { x: number; y: number } }) => p.rect.x === HOTEL_LOT.x && p.rect.y === HOTEL_LOT.y;
-    for (const p of all) for (const h of holes) {
-      if (hotel(p) && h.name === "TOWER_ISLAND") continue;
-      expect(intersectionArea(p.poly, h.poly), `${p.cell.col},${p.cell.row} × ${h.name}`).toBeLessThan(1e-6);
-    }
-  });
-
-  it("the HOTEL_LOT parcel overlaps TOWER_ISLAND only in the strip x 120..127, y 234..235", () => {
-    const hotel = parcels(CITY_BOUNDS).find((p) => p.rect.x === HOTEL_LOT.x && p.rect.y === HOTEL_LOT.y)!;
-    expect(intersectionArea(hotel.poly, rectPoly(TOWER_ISLAND))).toBeCloseTo(7, 6);
+  it("no parcel intersects an axis band, PLAZA_MAYOR, or a crossing plaza", () => {
+    for (const p of all) for (const h of holes) expect(intersectionArea(p.poly, h.poly), `${p.cell.col},${p.cell.row} × ${h.name}`).toBeLessThan(1e-6);
   });
 
   it("HOTEL_LOT is exactly one parcel and no other parcel touches it", () => {
@@ -157,7 +146,7 @@ describe("city-plan parcels (#472)", () => {
 
   it("parcel counts: 55..75 over the cover north of 318, 100..130 down to y 475, 33 in CITY_BOUNDS", () => {
     // Measured while planning: 63 and 111 over the whole cover width (PLAN_BOUNDS), the parent's measure 1;
-    // CITY_BOUNDS stops at CITY_EDGE.west (−54): only the columns −47 and −17 lie west of the boulevard, so 33.
+    // CITY_BOUNDS stops at CITY_EDGE.west (−54): only the columns −47 and −17 lie west of the boulevard, so 33. Re-measured in #474 without TOWER_ISLAND: still 33.
     expect(parcels(PLAN_BOUNDS).length).toBeGreaterThanOrEqual(55);
     expect(parcels(PLAN_BOUNDS).length).toBeLessThanOrEqual(75);
     expect(parcels(SOUTH_BOUNDS).length).toBeGreaterThanOrEqual(100);
@@ -187,11 +176,7 @@ describe("city-plan constants (#472)", () => {
   it("CITY_BOUNDS starts at CITY_EDGE.west and ends at the Avenida del Sur", () => {
     expect(CITY_BOUNDS).toEqual({ x0: CITY_EDGE.west, y0: 164, x1: 184, y1: 318 });
   });
-  it("the tower stands inside TOWER_ISLAND, and the bridge landing inside the plaza", () => {
-    expect(TOWER.x).toBeGreaterThanOrEqual(TOWER_ISLAND.x);
-    expect(TOWER.y).toBeGreaterThanOrEqual(TOWER_ISLAND.y);
-    expect(TOWER.x + TOWER.w).toBeLessThanOrEqual(TOWER_ISLAND.x + TOWER_ISLAND.w);
-    expect(TOWER.y + TOWER.d).toBeLessThanOrEqual(TOWER_ISLAND.y + TOWER_ISLAND.d);
+  it("the bridge landing stands inside the plaza", () => {
     expect(intersectionArea(rectPoly(BRIDGE_LANDING), rectPoly(PLAZA_MAYOR))).toBeCloseTo(54 * 10, 6);
   });
 });

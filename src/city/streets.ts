@@ -8,7 +8,7 @@ import { lamp, streetTree, trafficLight } from "../kit/props";
 import { placeLit, type FixedLight } from "./lights";
 import { PLINTH_H, prism } from "../scenes/city-pieces";
 import { builtParcels, neighborhoodOfParcel } from "./zoning";
-import { AXES, BLOCK, CITY_BOUNDS, GRID_ORIGIN, HOTEL_LOT, LAND, PITCH, TOWER_ISLAND, axis, axisBand, clipSeg, inCrossingPlaza, inPlazaMayor, inRect, onAxis, pointInPoly } from "../scenes/city-plan";
+import { AXES, BLOCK, CITY_BOUNDS, GRID_ORIGIN, HOTEL_LOT, LAND, PITCH, axis, axisBand, clipSeg, inCrossingPlaza, inPlazaMayor, inRect, onAxis, pointInPoly } from "../scenes/city-plan";
 
 /**
  * Resume streets: lanes, avenue with dashed lanes and crosswalks,
@@ -41,8 +41,8 @@ type Stop = (x: number, y: number) => boolean;
 export const inPlaza = (x: number, y: number): boolean => inPlazaMayor(x, y) || inCrossingPlaza(x, y);
 /** The strip and the east lines stop at craters and plazas. */
 const flatStop: Stop = (x, y) => inCrater(x, y) || inPlaza(x, y);
-/** An ordinary street of the grid also stops at an axis, the hotel lot and the tower island. */
-const streetStop: Stop = (x, y) => flatStop(x, y) || onAxis(x, y) || inRect(HOTEL_LOT, x, y) || inRect(TOWER_ISLAND, x, y);
+/** An ordinary street of the grid also stops at an axis and the hotel lot. */
+const streetStop: Stop = (x, y) => flatStop(x, y) || onAxis(x, y) || inRect(HOTEL_LOT, x, y);
 
 /**
  * Continuous center line of 0.3 along a straight street (any direction): a `strip`
@@ -66,7 +66,7 @@ function centerLine(out: Solid[], from: Vec2, to: Vec2, stop: Stop = flatStop): 
   flush();
 }
 
-/** One center line per axis: `from → to` clipped to the land (the quay-side axis, east of it, only to y 164), broken by the cover, the city's edges (x < CITY_EDGE.west, y > 318: tech's and the suburb's ground, #478 paints the south avenues there), the plazas, craters, the tower island and the other axes' bands. */
+/** One center line per axis: `from → to` clipped to the land (the quay-side axis, east of it, only to y 164), broken by the cover, the city's edges (x < CITY_EDGE.west, y > 318: tech's and the suburb's ground, #478 paints the south avenues there), the plazas, craters, the hotel lot and the other axes' bands. */
 function axisLines(ground: Solid[]): void {
   for (const a of AXES) {
     // deliberate: the costanera runs at x 188, east of LAND.x1, so clipSeg drops it; it is clipped on y along LAND.x1 and drawn back at its own x
@@ -74,7 +74,7 @@ function axisLines(ground: Solid[]): void {
     if (!seg) continue;
     const [p, q] = a.kind === "costanera" ? [{ x: a.from.x, y: seg[0].y }, { x: a.from.x, y: seg[1].y }] : seg;
     const foreign = AXES.filter((o) => o !== a).map(axisBand);
-    centerLine(ground, p, q, (x, y) => x < CITY_EDGE.west || y > CITY_BOUNDS.y1 || !inCoverQuad(x, y, 16 / 9, COVER_MARGIN) || flatStop(x, y) || inRect(TOWER_ISLAND, x, y) || foreign.some((b) => pointInPoly(x, y, b)));
+    centerLine(ground, p, q, (x, y) => x < CITY_EDGE.west || y > CITY_BOUNDS.y1 || !inCoverQuad(x, y, 16 / 9, COVER_MARGIN) || flatStop(x, y) || foreign.some((b) => pointInPoly(x, y, b)));
   }
 }
 

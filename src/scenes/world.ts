@@ -35,10 +35,10 @@ export interface WorldScene {
 const ALL_ZONES: readonly WorldZone[] = ["portfolio", "cv", "blog"];
 const ZONE_INDEX: Record<WorldZone, number> = { portfolio: 1, cv: 2, blog: 3 };
 
-/** Gantry crane, office tower, lighthouse. World coordinates; the reintegration projects with project(). */
+/** Gantry crane, hotel, lighthouse. World coordinates; the reintegration projects with project(). */
 export const LANDMARKS: Record<WorldZone, Vec3> = {
   portfolio: v3(150, 50, 0),
-  cv: v3(129, 227, 0),
+  cv: v3(100, 259.5, 0),
   blog: v3(LIGHTHOUSE.x, LIGHTHOUSE.y, 0),
 };
 

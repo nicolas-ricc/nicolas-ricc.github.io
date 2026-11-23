@@ -252,7 +252,7 @@ tal como lo escribe `REPORT.md`) de cada exhibit en contexto, a 1.17 y a
 aspecto: RESUME 0°, 0°, 0.010; PORTFOLIO 0.23°, 3.03°, 0.077; WRITING 0°, 0°,
 0.010. Las filas de `plataforma-escena` se remidieron en #445 (2026-11-20,
 WRITING en Chainsaw Carnage sobre la tabla flotante, caja alta 11.5), con el
-OCR leyendo `WRITING`: desde #445 el nivel 3 no excusa ninguna fila. Las
+OCR leyendo `WRITING`: desde #445 el nivel 3 no excusa ninguna fila. Desde #474 las filas de `cartel-torre-escena` llevan los valores de nivel 2 del hotel, mientras que sus celdas de nivel 3 (contraste en px, halo, OCR) siguen siendo las de la corona hasta #475. Las
 demás conservan las medidas del 2026-11-17. Desde #460, caja alta 17.25: las
 columnas de nivel 2 de `plataforma-escena` (alto de x, trazo, aire y contraste
 estático) son las de la balsa de tablones con WRITING en `navy` sobre `timber`
@@ -264,8 +264,8 @@ regenerado (halo simétrico y OCR dentro del área respaldada; §8.2, entrada de
 
 | Exhibit | Escala | Alto de x (px) | Trazo (px) | Aire (px) | Contraste estático | Contraste (px) | Halo | OCR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `cartel-torre-escena` | 1.17 | 14.25 | 2.31 | 2.95 | 4.70 | 10.13:1 | 0.06 | `RESUME` |
-| `cartel-torre-escena` | 0.83 | 10.11 | 1.64 | 2.10 | 4.70 | 8.89:1 | 0.05 | `RESUME` |
+| `cartel-torre-escena` | 1.17 | 19.66 | 3.18 | 4.07 | 4.70 | 10.13:1 | 0.06 | `RESUME` |
+| `cartel-torre-escena` | 0.83 | 13.94 | 2.26 | 2.89 | 4.70 | 8.89:1 | 0.05 | `RESUME` |
 | `cartel-taller-escena` | 1.17 | 15.07 | 2.40 | 2.29 | 8.06 | 6.99:1 | 0.08 | `PORTFOLIO` |
 | `cartel-taller-escena` | 0.83 | 10.69 | 1.70 | 1.62 | 8.06 | 5.93:1 | 0.08 | `PORTFOLIO` |
 | `plataforma-escena` | 1.17 | 10.99 | 2.14 | 3.10 | 8.04 | 7.99:1 | 0.01 | `WRITING` |
@@ -580,6 +580,18 @@ Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage, con
 - **Seguimiento: #382.** `strokePx` sigue la letra del issue (el lado más
   corto de cada cuad proyectado) y el punto de la `i` lo tensiona. Con
   `PORTFOLIO` en CNRGN Builder ya no hay punto de la `i` en ningún cartel.
+- **RESUME en la fachada del hotel (#471).** El cartel deja la corona
+  de la torre y pasa a la fachada sureste del hotel de la plaza (`hotel`,
+  `src/scenes/sign-hotel.ts`, construido por `city()`): un panel de vidrio
+  oscuro (`glass`) de 64 × 16.8 (`SIGN_PANEL`) pegado a la losa, con las letras
+  en `diagonalWall` a `n` = 4.66 y centradas en la losa, en `SIGN_SITE`.
+  La caja alta es `HOTEL_CAP` = 12, el piso que fija la spec 2026-11-22
+  §7.3 y a la vez lo que cabe: el panel mide lo que la losa (`PANEL_L` = 64) y la palabra (60.54 de
+  tinta) deja 1.73 por lado, más que `backingW` · `SIGN_FONT.width` = 1.35,
+  el aire de respaldo que exige el nivel 2; con una caja alta de 13 la
+  palabra mediría 65.6 y se saldría del panel. El id `cartel-torre` y la URL no
+  cambian. `CROWN_SITE` (129, 227, 30) queda como historia de esta
+  spec.
 
 ### 8.3 Tamaño frente al host
 
@@ -591,9 +603,11 @@ cubierta, que desde la segunda vuelta se estira a lo largo del cartel
 
 | Cartel | Palabra (u) | Palabra (px a 1.17) | Anfitrión | Anfitrión (px a 1.17) |
 | --- | --- | --- | --- | --- |
-| RESUME | 43.89 | 72.62 | `TOWER` 16 × 14 | 35.10 |
+| RESUME | 60.54 | 100.16 | losa del hotel 64 × 8 (`slabFootprint`) | 105.90 |
 | PORTFOLIO | 52.74 | 87.73 | galpón de montaje sur 90 × 16 (`SHIPYARD_HALLS[1]`) | 124.02 |
 | WRITING | 72.56 | 120.06 | balsa de tablones 76.6 × 30.3 (`PLATFORM_DECK`, el sobre de `raftEnvelope`) | 126.68 |
+
+Desde #474 la fila de RESUME mide la palabra en la fachada del hotel (caja alta 12, `HOTEL_CAP`) contra la losa de oficinas (`slabFootprint`, 64 × 8, a lo largo de (1, −1)); antes medía 43.89 u, 72.62 px y la `TOWER` de 16 × 14, 35.10 px. Las columnas de nivel 2 de `cartel-torre-escena` de §8.1 son las del hotel; el contraste estático sigue en 4.70 (el panel `glass` y `greenMid` no cambian) y las de nivel 3 (contraste en px, halo, OCR) siguen siendo las de la corona hasta #475.
 
 Desde #451 la fila de WRITING mide la palabra sobre la balsa de tablones (`raftEnvelope`, el sobre de los tablones con vigas y bordes irregulares, que `PLATFORM_DECK` recorre); desde #460, caja alta 17.25 (con caja alta 20 medía 84.13 u, 139.20 px y una balsa de 87.9 × 32.9, 145.49 px). Antes medía la tabla flotante en Chainsaw Carnage (caja alta 10.8 en #442 y 11.5 en #445).
 

@@ -1,70 +1,35 @@
-import type { Accent } from "../iso/accent";
-import { facadeAccents, windowPatches, type Facade } from "../iso/facade";
-import { centroid, v3, type Vec2, type Vec3 } from "../iso/geometry";
-import { bounds, visibleWalls, type Solid } from "../iso/solids";
+import type { Facade } from "../iso/facade";
+import { v3, type Vec2, type Vec3 } from "../iso/geometry";
+import { bounds, type Solid } from "../iso/solids";
 import type { Rng } from "../map/seed";
 import { ESTUARY_Y0, QUAY_X, islandWestX } from "../map/geo";
-import { AVENUE, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROW_Y, EAST_COLS, EAST_RING, FALLEN_BLOCK, FREIGHT_ROW, LIT_FLOOR, PROMENADE, ROWS, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, inCrater, type Rect } from "../scenes/city-grid";
-import { BRIDGE_LANDING, CITY_BOUNDS, HOTEL_LOT, PLAZA_CENTER, PLAZA_MAYOR, TOWER_ISLAND, inCrossingPlaza, inParcel, inPlazaMayor, inRect, onAxis } from "../scenes/city-plan";
+import { AVENUE, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROW_Y, EAST_COLS, EAST_RING, FALLEN_BLOCK, FREIGHT_ROW, PROMENADE, ROWS, STREET, WEST_QUAY, blocks, estuaryEast, inCrater, type Rect } from "../scenes/city-grid";
+import { BRIDGE_LANDING, CITY_BOUNDS, HOTEL_LOT, PLAZA_CENTER, PLAZA_MAYOR, inCrossingPlaza, inParcel, inPlazaMayor, inRect, onAxis } from "../scenes/city-plan";
 import { builtParcels } from "./zoning";
 import { jungle, type Rails } from "../scenes/flora";
-import { CAR, awning, bench, bollard, car, chair, dockCrane, fountain, garland, kiosk, lamp, puddle, stoneArch, table } from "../kit/props";
+import { CAR, awning, bench, bollard, car, chair, dockCrane, fountain, garland, kiosk, lamp, stoneArch, table } from "../kit/props";
 import { fixedLights, placeLit, type FixedLight } from "./lights";
 import { PLINTH_H, plazaTone, prism, tiles } from "../scenes/city-pieces";
 
-// ---------------------------------------------------------------- plaza and tower
+// ---------------------------------------------------------------- plaza
 
-/** Windows of the lit floor and the paper window: city-anim animates them. */
-export interface TowerLights { litWindows: Accent[]; paperWindow: Vec3 }
-
-/** Lit windows and paper window from the raw visible walls of the tower, so `tone` does not matter. */
-export function towerWindows(tower: Solid, facade: Facade): { litWindows: Accent[]; paperWindow: Vec3 } {
-  const walls = visibleWalls(tower);
-  const litWindows = facadeAccents(walls, facade, "amber");
-  const east = walls.find((f) => f.normal.x > 0.5)!;
-  const paperWindow = centroid(windowPatches(east, facade, facade.litFloor!)[facade.cols - 1]!);
-  return { litWindows, paperWindow };
-}
-
-export function plazaAndTower(solids: Solid[], ground: Solid[], lights: FixedLight[], rng: Rng): TowerLights {
-  const P = PLAZA_MAYOR, I = TOWER_ISLAND, L = BRIDGE_LANDING, x1 = P.x + P.w, y1 = P.y + P.d;
-  // the Plaza Mayor minus the tower island and the bridge landing: three strips of tiles (the 1 u strip north of the landing is all curb)
-  const iy1 = I.y + I.d, ix1 = I.x + I.w, ly1 = L.y + L.d;
-  for (const r of [{ x: P.x, y: ly1, w: P.w, d: I.y - ly1 }, { x: ix1, y: I.y, w: x1 - ix1, d: I.d }, { x: P.x, y: iy1, w: P.w, d: y1 - iy1 }]) ground.push(tiles(rng, r, 0.05, "plaza", plazaTone));
+export function plazaMayor(solids: Solid[], ground: Solid[], lights: FixedLight[], rng: Rng): void {
+  const P = PLAZA_MAYOR, L = BRIDGE_LANDING, x1 = P.x + P.w, y1 = P.y + P.d, ly1 = L.y + L.d;
+  // the Plaza Mayor minus the bridge landing: one strip of tiles south of the landing (the 1 u strip north of it is all curb)
+  ground.push(tiles(rng, { x: P.x, y: ly1, w: P.w, d: y1 - ly1 }, 0.05, "plaza", plazaTone));
   ground.push(tiles(rng, L, 0.05, "paving", plazaTone)); // the landing of the bridge: paving, no curb
   // curb: a band of `paving` 1.2 wide on the four sides, wide so the outline reads at world zoom; north it is 1 u (the landing starts at y 207),
-  // east only south of the landing (the bridge lands at y 207..217), west cut by the island and by the landing's edge (the Diagonal Norte comes in there)
+  // east only south of the landing (the bridge lands at y 207..217), west from the landing's south edge to the south end (the Diagonal Norte comes in at the landing)
   const curb = 1.2;
   solids.push(prism(P.x, P.y, 0, P.w, L.y - P.y, PLINTH_H, "paving"), prism(P.x, y1 - curb, 0, P.w, curb, PLINTH_H, "paving"));
-  solids.push(prism(x1 - curb, ly1, 0, curb, y1 - ly1, PLINTH_H, "paving"));
-  solids.push(prism(P.x, L.y + L.d, 0, curb, I.y - ly1, PLINTH_H, "paving"), prism(P.x, iy1, 0, curb, y1 - iy1, PLINTH_H, "paving"));
-
-  const facade: Facade = { floors: TOWER_FLOORS, cols: 4, litFloor: LIT_FLOOR, base: "portico" };
-  const tower = prism(TOWER.x, TOWER.y, 0, TOWER.w, TOWER.d, TOWER_H, "officeDark", { facade });
-  solids.push(tower);
-  solids.push(prism(TOWER.x - 0.5, TOWER.y - 0.5, TOWER_H, TOWER.w + 1, TOWER.d + 1, 0.4, "office"));       // cornice
-  solids.push(prism(TOWER.x + 5, TOWER.y + 5, TOWER_H + 0.4, 6, 4, 2.5, "officeDark"));                     // machine room
-  // climbing jungle: cones at the base and two thin prisms on the northwest and southeast edges
-  for (const [dx, dy] of [[-1.5, -1.5], [TOWER.w + 1.5, -1.5], [TOWER.w + 1.5, TOWER.d + 1.5], [-1.5, TOWER.d + 1.5]] as const) solids.push({ kind: "cone", at: v3(TOWER.x + dx, TOWER.y + dy, 0.05), r: 2.5, h: 6, mat: "leaf" });
-  solids.push(prism(TOWER.x - 0.6, TOWER.y - 0.6, 0, 0.6, 0.6, 12, "leaf"), prism(TOWER.x + TOWER.w, TOWER.y + TOWER.d, 0, 0.6, 0.6, 12, "leaf"));
-  // lit-floor windows, only on the walls the camera sees (east and south)
-  const { litWindows, paperWindow } = towerWindows(tower, facade);
-  // light spill: flat puddles on the tiles, only in the east strip of
-  // the plaza (between the tower's east wall and the curb), which is the part
-  // the camera sees free of walls, roofs and trees.
-  // deviation from the brief: the free strip of the plaza (without the east wall, the
-  // corner cones and the roofs of the row opposite) is this diagonal,
-  // not the very foot of the wall; the two puddles overlap and read as a
-  // single spill stretched toward the east.
-  for (const [x, y] of [[TOWER.x + TOWER.w + 6.5, TOWER.y + 2], [TOWER.x + TOWER.w + 9, TOWER.y + 4]] as const) lights.push(...fixedLights(puddle(x, y, "amberBleed")));
-  // benches 4 in from the curb at the four corners; the north pair sits just south of the landing and clear of the island (the west one east of it)
-  for (const [x, y] of [[I.x + I.w + 3.5, 222], [x1 - 6, 222], [P.x + 4, y1 - 4.6], [x1 - 6, y1 - 4.6]] as const) solids.push(...bench(v3(x, y, 0.05)));
+  solids.push(prism(x1 - curb, ly1, 0, curb, y1 - ly1, PLINTH_H, "paving"), prism(P.x, ly1, 0, curb, y1 - ly1, PLINTH_H, "paving"));
+  // benches 4 in from the curb at the four corners; the north pair sits just south of the landing
+  for (const [x, y] of [[P.x + 4, 222], [x1 - 6, 222], [P.x + 4, y1 - 4.6], [x1 - 6, y1 - 4.6]] as const) solids.push(...bench(v3(x, y, 0.05)));
   placeLit(solids, lights, fountain(v3(PLAZA_CENTER.x, PLAZA_CENTER.y, 0.05)));
-  // kiosks at the north corners: just south of the landing (y 217.4), the west one east of the island and of the tower's corner cone, the east one inside the curb
-  for (const x of [I.x + I.w + 3.5, x1 - 4.2]) solids.push(...kiosk(v3(x, ly1 + 0.4, 0.05)));
+  // kiosks at the north corners: just south of the landing (y 217.4), the east one inside the curb
+  for (const x of [P.x + 3.5, x1 - 4.2]) solids.push(...kiosk(v3(x, ly1 + 0.4, 0.05)));
   placeLit(solids, lights, lamp(v3(P.x + 2, 248.5, 0.05)));
   placeLit(solids, lights, lamp(v3(P.x + P.w - 2.6, 248.5, 0.05)));
-  return { litWindows, paperWindow };
 }
 
 // ---------------------------------------------------------------- bridge, west quay and promenade
@@ -218,7 +183,7 @@ export function cars(solids: Solid[], rng: Rng): void {
       // west of the quay (the strip included: its cars fall clear of the axes and parcels) the layout decides; the corners count (a wedge's `poly` reaches past its `rect`)
       if (x < CITY_BOUNDS.x1 + 8 && y < CITY_BOUNDS.y1 + 8) {
         const corners = [[x, y], [x + CAR.w, y], [x + CAR.w, y + CAR.d], [x, y + CAR.d]] as const;
-        if (corners.some(([cx, cy]) => onAxis(cx, cy) || inPlazaMayor(cx, cy) || inCrossingPlaza(cx, cy) || inRect(HOTEL_LOT, cx, cy) || inRect(TOWER_ISLAND, cx, cy) || inParcel(cx, cy))) continue;
+        if (corners.some(([cx, cy]) => onAxis(cx, cy) || inPlazaMayor(cx, cy) || inCrossingPlaza(cx, cy) || inRect(HOTEL_LOT, cx, cy) || inParcel(cx, cy))) continue;
       }
       if (placed.some((p) => rectsOverlap(x, y, CAR.w, CAR.d, p.x, p.y, CAR.w, CAR.d, 1))) continue; // no car overlaps another, with 1 u of margin
       placed.push({ x, y });

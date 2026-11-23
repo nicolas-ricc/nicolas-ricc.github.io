@@ -4,6 +4,7 @@ import { project } from "../iso/project";
 import { BLEED, WORLD, ZONE_SPLIT_X, inCoverQuad, type WorldZone } from "../map/geo";
 import { boxFrame, coverFrame, fitTransform, zoneFrame, type Frame } from "./frame";
 import { BLOG_SIGNS, type WritingSite } from "../scenes/sign-platform";
+import { RESUME_SIGN } from "../scenes/sign-hotel";
 import { signBox, writingSite } from "./signs";
 import { COVER_FOCUS_U, VIEW_INSET, ZONE_MIN_ZOOM, clampToBleed, clampToCover, coverView, panView, pointerToWorld, sameView, unproject, viewCorners, zoneView, type View } from "./view";
 
@@ -160,10 +161,21 @@ describe("zoneView", () => {
   });
   it("in the narrow column (640×900) the zone's landmark stays visible", () => {
     const v = zoneView("cv", 640, 900);
-    const s = project(v3(129, 227, 0)); // office tower
+    const s = project(v3(100, 259.5, 0)); // the hotel (#474)
     const px = s.x * v.scale + v.x, py = s.y * v.scale + v.y;
     expect(px).toBeGreaterThan(0); expect(px).toBeLessThan(640);
     expect(py).toBeGreaterThan(0); expect(py).toBeLessThan(900);
+  });
+});
+
+describe("zoneView('cv') and the hotel's RESUME sign (#474)", () => {
+  // 50×900 is narrower than the word (≈ 86 screen u) at any zone scale: no view can hold it
+  it.each(ZONE_SIZES.filter(([w]) => w > 50))("%i×%i: the whole sign, 8 px inside the host", (w, h) => {
+    const v = zoneView("cv", w, h), b = signBox(RESUME_SIGN);
+    expect(b.minX * v.scale + v.x).toBeGreaterThanOrEqual(8);
+    expect(b.maxX * v.scale + v.x).toBeLessThanOrEqual(w - 8);
+    expect(b.minY * v.scale + v.y).toBeGreaterThanOrEqual(8);
+    expect(b.maxY * v.scale + v.y).toBeLessThanOrEqual(h - 8);
   });
 });
 

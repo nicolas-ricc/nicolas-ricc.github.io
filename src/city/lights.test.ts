@@ -80,13 +80,13 @@ for (const [name, make, isWorld] of SEEDS) {
       }
     });
 
-    it("the windows belong to their piece, warm or cool, and the plaza tower doesn't count", () => {
+    it("the windows belong to their piece, warm or cool, and the hotel's rooms don't count", () => {
       for (const w of l.windows) {
         expect(s.placed[w.owner]!.piece.windows).toContain(w.window);
         expect(["windowWarm", "windowCool"]).toContain(w.color);
       }
-      const towerWindows = new Set(s.tower.litWindows.map((a) => (a.kind === "poly" ? JSON.stringify(a.pts) : "")));
-      expect(l.windows.some((w) => towerWindows.has(JSON.stringify(w.window.pts)))).toBe(false);
+      const rooms = new Set(s.hotel.rooms.map((a) => (a.kind === "poly" ? JSON.stringify(a.pts) : "")));
+      expect(l.windows.some((w) => rooms.has(JSON.stringify(w.window.pts)))).toBe(false);
     });
 
     it(`there are at most ${MAX_ANIMABLE} animatable ones and all from downtown or residential`, () => {

@@ -12,8 +12,8 @@ import { MOUTH_Y, QUAY_X, type WorldZone } from "../map/geo";
 import type { Material } from "../map/palette-iso";
 import { createRng, SEED } from "../map/seed";
 import type { Animator } from "../scenes/animator";
-import { BLOCK_W, BRIDGE, COLLAPSED, EAST_COLS, PROMENADE, ROWS, TOWER, TOWER_H, WEST_COLS } from "../scenes/city-grid";
-import { CITY_BOUNDS, PLAZA_MAYOR, parcels } from "../scenes/city-plan";
+import { BLOCK_W, BRIDGE, COLLAPSED, EAST_COLS, PROMENADE, ROWS, WEST_COLS } from "../scenes/city-grid";
+import { CITY_BOUNDS, HOTEL_LOT, PLAZA_MAYOR, parcels } from "../scenes/city-plan";
 import { STAIR_TOWER } from "../scenes/boiler-house";
 import { excavator, excavatorBox, excavatorWheel } from "../scenes/excavator";
 import { COOLING as FACTORY_COOLING, PLANT, RAIL_YARD_X, STACK_BASE_H, STACKS } from "../scenes/factory";
@@ -27,7 +27,7 @@ import { pieceTrain, trainPieceAnimator } from "../scenes/rail-animator";
 import { BUOYS, DRUM_R0, KEEPER, LANTERN_Z, LIGHTHOUSE, WRECK } from "../scenes/sea";
 import { BEAM_LEN } from "../scenes/sea-anim";
 import { ship, shipAt, type ShipKind } from "../scenes/ships";
-import { RESUME_SIGN, towerCrown, towerStandIn } from "../scenes/sign-crown";
+import { HOTEL_SLAB, hotelSign, hotelStandIn, RESUME_SIGN } from "../scenes/sign-hotel";
 import { BLOG_SIGNS, seaPlatform, type WritingSite } from "../scenes/sign-platform";
 import { hallStandIn, PIECE_AT, STAND_IN_HALL, TINKER_SIGN, tinkerAnimator, tinkerSign } from "../scenes/sign-tinker";
 import { BLOCK_D, SUBURB_COLS } from "../scenes/sprawl-grid";
@@ -182,13 +182,12 @@ export const EXHIBITS: readonly Exhibit[] = [
   // the trough top is z 6, the water prism 6.05 (logs 6.75 in the animator, neighbors up to 2.7); the 6 splash dots are inside the box
   { id: "tronco-acuatico", title: "Log flume", zone: "portfolio", group: "fair", kind: "region",
     box: { x0: 158, y0: -300, x1: 226, y1: -290 }, h: 7 },
-  // the office tower is at the center of the plaza: it stays inside
-  // h 51: the Resume crown (#391) tops out at z ≈ 50.2; smallest integer that passes framing and neighbors
+  // PLAZA_MAYOR ± 3; h 17 (#474): smallest integer that passes; measured inside 5.05, accents 16.12, cut neighbor 13.3
   { id: "plaza", title: "Plaza", zone: "cv", group: "city", kind: "region",
-    box: { x0: PLAZA_MAYOR.x - M, y0: PLAZA_MAYOR.y - M, x1: PLAZA_MAYOR.x + PLAZA_MAYOR.w + M, y1: PLAZA_MAYOR.y + PLAZA_MAYOR.d + M }, h: 51 }, // measured 49.8 solids, 43.3 accents; the crown on the tower inside peaks at 50.2
-  // h 51: the Resume crown (#391) tops out at z ≈ 50.2; smallest integer that passes framing and neighbors
-  { id: "torre", title: "Office tower", zone: "cv", group: "city", kind: "region",
-    box: { x0: TOWER.x - M, y0: TOWER.y - M, x1: TOWER.x + TOWER.w + M, y1: TOWER.y + TOWER.d + M }, h: 51 },
+    box: { x0: PLAZA_MAYOR.x - M, y0: PLAZA_MAYOR.y - M, x1: PLAZA_MAYOR.x + PLAZA_MAYOR.w + M, y1: PLAZA_MAYOR.y + PLAZA_MAYOR.d + M }, h: 17 },
+  // HOTEL_LOT ± 3; h 53: smallest integer that passes; measured inside 52.5 (machine room, z 51 + 1.5), accents 22.65, cut neighbor 0.02
+  { id: "hotel", title: "Hotel with the Resume sign", zone: "cv", group: "city", kind: "region",
+    box: { x0: HOTEL_LOT.x - M, y0: HOTEL_LOT.y - M, x1: HOTEL_LOT.x + HOTEL_LOT.w + M, y1: HOTEL_LOT.y + HOTEL_LOT.d + M }, h: 53 },
   // from ramp to ramp; to the west and east flush with the neighboring blocks (buildings up to 10.7), to the north the riverside trees
   { id: "puente", title: "Bridge", zone: "cv", group: "city", kind: "region",
     box: { x0: WEST_COLS[WEST_COLS.length - 1]! + BLOCK_W + 0.5, y0: BRIDGE.y0 - 1, x1: EAST_COLS[0]! + 1, y1: BRIDGE.y1 + M }, h: 8 },
@@ -206,8 +205,8 @@ export const EXHIBITS: readonly Exhibit[] = [
   // the warehouse strip and the freight railyard: x -54..98, west of the station; h is the smallest integer that passes framing and neighbors (measured with the `measure` of exhibits.test.ts); galpones (#325, warehouses and freight lots): h 12; playa-carga (#325, freight yard): the lamps top out at 5, so h 5
   { id: "galpones", title: "Warehouse strip", zone: "cv", group: "city", kind: "region", box: { x0: -54, y0: 90, x1: 98, y1: 130 }, h: 12 },
   { id: "playa-carga", title: "Freight railyard", zone: "cv", group: "city", kind: "region", box: { x0: -54, y0: 126, x1: 98, y1: 160 }, h: 5 },
-  // the dock inlet of #326 (x 276..306, east bank): measured the same way, inside 7.3, accents 0, cut neighbor 1.2, so h 8
-  { id: "mercado-pescado", title: "Fish market and dock inlet", zone: "cv", group: "city", kind: "region", box: { x0: 276, y0: 92, x1: 306, y1: 160 }, h: 8 },
+  // the dock inlet of #326 (x 276..306, east bank): measured the same way, inside 7.3, accents 0, cut neighbor 9.4 since #474 (belt trees: the Plaza Mayor draws fewer tiles without the tower island, so the city rng re-rolls greenery and cars downstream; 1.2 before), so h 10
+  { id: "mercado-pescado", title: "Fish market and dock inlet", zone: "cv", group: "city", kind: "region", box: { x0: 276, y0: 92, x1: 306, y1: 160 }, h: 10 },
   // `campus` recipe of the kit on a district block; the piece's ground goes to `out` with the solids
   { id: "campus", title: "Campus", zone: "cv", group: "city", kind: "piece",
     build: (out, accents) => {
@@ -216,10 +215,11 @@ export const EXHIBITS: readonly Exhibit[] = [
       accents.push(...p.accents);
     } },
   { id: "selva", title: "Jungle", zone: "cv", group: "city", kind: "piece", build: (out) => jungle(out, createRng(SEED), { x0: -12, x1: 12, y0: -12, y1: 12 }, 14, 0) },
-  { id: "cartel-torre", title: "Resume tower crown with helipad", zone: "cv", group: "city", kind: "piece",
-    build: (out, accents) => { towerStandIn(out, accents); towerCrown(out, accents, v3(0, 0, TOWER_H)); } },
-  // h 51: the tallest solid in the crop of the world is ≈ 50.2 u; framing needs h ≥ that, so 51 is the smallest integer that passes. The crown comes from the world (city() builds it, #391): no `build`.
-  { id: "cartel-torre-escena", title: "Resume tower crown in its scene", zone: "cv", group: "city", kind: "context", box: { x0: 108, y0: 206, x1: 150, y1: 248 }, h: 51, sign: RESUME_SIGN },
+  { id: "cartel-torre", title: "Resume sign on the hotel facade", zone: "cv", group: "city", kind: "piece",
+    build: (out, accents) => { hotelStandIn(out, accents); hotelSign(out, accents, v3(-HOTEL_SLAB.center.x, -HOTEL_SLAB.center.y, 0)); } },
+  // h 53: smallest integer that passes; measured inside 52.5 (machine room, z 51 + 1.5), accents 22.65, cut neighbor 0.02. The hotel and its sign come from the world (city() builds them): no `build`.
+  { id: "cartel-torre-escena", title: "Resume sign in its scene", zone: "cv", group: "city", kind: "context", h: 53, sign: RESUME_SIGN,
+    box: { x0: HOTEL_LOT.x - M, y0: HOTEL_LOT.y - M, x1: HOTEL_LOT.x + HOTEL_LOT.w + M, y1: HOTEL_LOT.y + HOTEL_LOT.d + M } },
   // tech district: each structure takes one block BLOCK_W × BLOCK_D
   { id: "mastil", title: "Telecom mast", zone: "cv", group: "tech", kind: "region",
     box: { x0: TELECOM.x - M, y0: TELECOM.y - M, x1: TELECOM.x + BLOCK_W + M, y1: TELECOM.y + BLOCK_D + M }, h: 26 },

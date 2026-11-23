@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { v3 } from "../iso/geometry";
 import { project } from "../iso/project";
 import { LANTERN_Z, LIGHTHOUSE } from "../scenes/sea";
-import { signBox, writingSite, zoneSigns, type ScreenBox } from "./signs";
+import { labelLayout, signBox, writingSite, zoneSigns, type ScreenBox } from "./signs";
 import { coverView, type View } from "./view";
 
 /** The 14 hosts of spec 2026-11-18 §5.1, from desktop to phone. */
@@ -13,10 +13,16 @@ const SIZES: [number, number][] = [
 const toHost = (b: ScreenBox, v: View): ScreenBox =>
   ({ minX: b.minX * v.scale + v.x, minY: b.minY * v.scale + v.y, maxX: b.maxX * v.scale + v.x, maxY: b.maxY * v.scale + v.y });
 
-describe("the cover shows the three signs and the lighthouse (#428)", () => {
-  it.each(SIZES)("%i×%i: RESUME, PORTFOLIO, Writing at writingSite and the lantern fall inside the host", (w, h) => {
+/** The three phones where RESUME, on the hotel facade since #474, does not fit beside PORTFOLIO (D10 of #471): the label goes to the host edge. */
+const NARROW = new Set(["430×932", "390×750", "360×740"]);
+const PAD = { hw: 50, hh: 20 };
+const M = 8; // px of margin to the host edge
+
+describe("the cover shows the three signs and the lighthouse (#428, #474)", () => {
+  it.each(SIZES)("%i×%i: PORTFOLIO, Writing at writingSite and the lantern fall inside the host", (w, h) => {
     const v = coverView(w, h), signs = zoneSigns(writingSite(w, h));
     for (const [id, s] of Object.entries(signs)) {
+      if (id === "cv") continue;
       const b = toHost(signBox(s), v);
       expect(b.minX, `${id} left`).toBeGreaterThanOrEqual(0);
       expect(b.maxX, `${id} right`).toBeLessThanOrEqual(w);
@@ -27,6 +33,24 @@ describe("the cover shows the three signs and the lighthouse (#428)", () => {
     const lx = l.x * v.scale + v.x, ly = l.y * v.scale + v.y;
     expect(lx).toBeGreaterThanOrEqual(0); expect(lx).toBeLessThanOrEqual(w);
     expect(ly).toBeGreaterThanOrEqual(0); expect(ly).toBeLessThanOrEqual(h);
+  });
+
+  it.each(SIZES.filter(([w]) => w >= 640))("%i×%i: RESUME is whole, 8 px inside the host", (w, h) => {
+    const b = toHost(signBox(zoneSigns(writingSite(w, h)).cv), coverView(w, h));
+    expect(b.minX).toBeGreaterThanOrEqual(M); expect(b.maxX).toBeLessThanOrEqual(w - M);
+    expect(b.minY).toBeGreaterThanOrEqual(M); expect(b.maxY).toBeLessThanOrEqual(h - M);
+  });
+
+  it.each(SIZES.filter(([w, h]) => NARROW.has(`${w}×${h}`)))("%i×%i: RESUME is at least a quarter visible and its label sits on the host edge", (w, h) => {
+    const v = coverView(w, h), raw = signBox(zoneSigns(writingSite(w, h)).cv), b = toHost(raw, v);
+    const visible = (Math.min(b.maxX, w) - Math.max(b.minX, 0)) / (b.maxX - b.minX);
+    expect(visible).toBeGreaterThanOrEqual(0.25);
+    expect(b.minY).toBeGreaterThanOrEqual(0); expect(b.maxY).toBeLessThanOrEqual(h);
+    expect(labelLayout(raw, v, { w, h }, PAD).mode).toBe("edge");
+  });
+
+  it("the narrow hosts are the only ones below 640 px in the list", () => {
+    expect(SIZES.filter(([w]) => w < 640).map(([w, h]) => `${w}×${h}`)).toEqual([...NARROW]);
   });
 
   it.each(SIZES)("%i×%i: Writing's word center is low and right, never in the middle", (w, h) => {

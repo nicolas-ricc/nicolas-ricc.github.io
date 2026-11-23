@@ -24,9 +24,6 @@ export const FREIGHT_ROW = { y: 116, d: 13 } as const;
 export const RAIL_LANDS = { y0: 129, y1: 158 } as const;
 /** North edge of the east ring street. */
 export const RING_Y0 = 120;
-/** The tower with the lit floor: here (no rng) so src/city/zoning.ts computes its box without importing city.ts. */
-export const TOWER_H = 30, TOWER_FLOORS = 8, LIT_FLOOR = 5;
-
 export const AVENUE = { y0: 206, y1: 218 } as const;
 export const BOULEVARD = { y0: 210, y1: 214 } as const;
 export const WEST_QUAY = { x0: 192, x1: QUAY_X } as const;   // retaining wall of the west bank
@@ -41,7 +38,6 @@ export const HARBOR = { x0: EAST_RING.x0, x1: 306, y0: ZONE_SPLIT_Y, y1: ESTUARY
 /** Water inlet (#326) cut into the harbor strip, open to the river on its west side. Half-open: x0 <= x < x1, y0 <= y < y1. */
 export const DARSENA = { x0: 282, x1: 300, y0: 96, y1: 114 } as const;
 
-export const TOWER: Rect = { x: 121, y: 220, w: 16, d: 14 }; // centered at (129, 227)
 export const BRIDGE = { x0: 192, x1: 276, y0: 207, y1: 217, z: 1.2, deckH: 0.6 } as const;
 export const PROMENADE = { x0: 334, x1: 344, y0: 158, y1: 326, z: 0.6 } as const;
 export const COLLAPSED: Rect = { x: 280, y: 242, w: 24, d: 18 }; // the estuary already reaches x ≈ 281 at y 260

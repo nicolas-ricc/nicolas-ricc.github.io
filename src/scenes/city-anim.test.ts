@@ -3,7 +3,8 @@ import type { Accent } from "../iso/accent";
 import { createRng } from "../map/seed";
 import { WINDOW_ALPHA } from "../city/lights";
 import { city, type CityScene } from "./city";
-import { type CityAnim, BLINK_GAP_MS, FLICKER_ALPHA, FLICKER_GAP_MS, PROMENADE_STEP_MS, NEON_STEP_MS, PAPER_RANGE, PAPER_SIDE, PAPER_SPEED, SIGN_GAP_MS, WINDOW_GAP_MS, createCityAnim } from "./city-anim";
+import { HOTEL_SLAB } from "./sign-hotel";
+import { type CityAnim, BLINK_GAP_MS, PAPER_DRIFT, ROOMS_BAND, FLICKER_ALPHA, FLICKER_GAP_MS, PROMENADE_STEP_MS, NEON_STEP_MS, PAPER_RANGE, PAPER_SIDE, PAPER_SPEED, SIGN_GAP_MS, WINDOW_GAP_MS, createCityAnim } from "./city-anim";
 
 /** Sign accents injected by hand: since #472 the city makes no district signs (the modern belt lies west of the city edge), but city-anim still animates `neon.signs`. */
 const SIGNS: Accent[] = [["cyan", 0], ["magenta", 10], ["cyan", 20], ["magenta", 30], ["cyan", 40], ["magenta", 50]].map(([color, x]) => ({
@@ -13,7 +14,7 @@ const SIGNS: Accent[] = [["cyan", 0], ["magenta", 10], ["cyan", 20], ["magenta",
 const withSigns = (scene: CityScene): CityScene => ({ ...scene, neon: { ...scene.neon, signs: SIGNS } });
 const setup = (reducedMotion = false) => {
   const scene = withSigns(city(createRng(7), createRng(8), createRng(9)));
-  return { scene, tower: scene.tower, anim: createCityAnim(scene, createRng(3), { reducedMotion }) };
+  return { scene, hotel: scene.hotel, anim: createCityAnim(scene, createRng(3), { reducedMotion }) };
 };
 /** Removes the street neon accents from a `neon()` layer (it copies them with another alpha when flickering, but keeps `pts`). */
 const withoutStreet = (scene: CityScene, a: Accent[]): Accent[] => {
@@ -34,10 +35,11 @@ const signsOf = (a: Accent[]) => a.filter((x): x is Kind<"poly"> => x.kind === "
 const dot = (a: Accent): Extract<Accent, { kind: "dot" }> => { if (a.kind !== "dot") throw new Error("expected dot"); return a; };
 
 describe("city-anim", () => {
-  it("frame 0: lit floor, papers staggered from the window", () => {
-    const { tower, anim } = setup();
-    const w = tower.paperWindow;
-    expect(anim.lit()).toEqual(tower.litWindows);
+  it("frame 0: some rooms lit, papers staggered from the window", () => {
+    const { hotel, anim } = setup();
+    const w = hotel.paperWindow;
+    expect(anim.lit().length).toBeGreaterThan(0);
+    expect(anim.lit().length).toBeLessThan(hotel.rooms.length);
     expect(anim.papers().length).toBeGreaterThanOrEqual(5);
     expect(anim.papers().length).toBeLessThanOrEqual(8);
     // the trail starts at the window and stretches: one is exactly there and none passes PAPER_RANGE
@@ -50,43 +52,45 @@ describe("city-anim", () => {
     }
   });
 
-  it("the floor goes off one tick at a time, never two in a row, and goes off at least 5 times in 60 s", () => {
+  it("one room toggles at a time, and at least 5 toggles happen in 60 s", () => {
     const { anim } = setup();
-    let offs = 0, prevOff = false;
+    const roomKey = (x: Accent) => (x.kind === "poly" ? JSON.stringify(x.pts) : "");
+    let toggles = 0, prev = new Set(anim.lit().map(roomKey));
     for (let t = 0; t < 60000; t += 33) {
       anim.tick(33);
-      const off = anim.lit().length === 0;
-      expect(off && prevOff).toBe(false);
-      if (off) offs++;
-      prevOff = off;
+      const now = new Set(anim.lit().map(roomKey));
+      const diff = [...now].filter((k) => !prev.has(k)).length + [...prev].filter((k) => !now.has(k)).length;
+      expect(diff).toBeLessThanOrEqual(1);
+      toggles += diff;
+      prev = now;
     }
-    expect(offs).toBeGreaterThanOrEqual(5);
-    expect(offs).toBeLessThanOrEqual(16);
+    expect(toggles).toBeGreaterThanOrEqual(5);
+    expect(toggles).toBeLessThanOrEqual(16);
   });
 
-  it("the papers never get farther than PAPER_RANGE from the window and drift to the NNE", () => {
-    const { tower, anim } = setup();
-    let driftedNNE = false;
+  it("the papers never get farther than PAPER_RANGE from the window and drift along PAPER_DRIFT", () => {
+    const { hotel, anim } = setup();
+    let drifted = false;
     for (let t = 0; t < 20000; t += 33) {
       const c = anim.tick(33);
       expect(c.papers).toBe(true);
       for (const p of anim.papers()) {
         const d = dot(p);
-        expect(Math.hypot(d.at.x - tower.paperWindow.x, d.at.y - tower.paperWindow.y)).toBeLessThanOrEqual(PAPER_RANGE + 2);
-        expect(d.at.y).toBeLessThanOrEqual(tower.paperWindow.y + 2); // never goes down toward the south
+        expect(Math.hypot(d.at.x - hotel.paperWindow.x, d.at.y - hotel.paperWindow.y)).toBeLessThanOrEqual(PAPER_RANGE + 2);
+        expect(d.at.y).toBeLessThanOrEqual(hotel.paperWindow.y + 2); // never goes down toward the south
         expect(d.r).toBeGreaterThanOrEqual(0.12 - 1e-6);
         expect(d.r).toBeLessThanOrEqual(0.4 + 1e-6);
-        if (d.at.x > tower.paperWindow.x + 10 && d.at.y < tower.paperWindow.y - 10) driftedNNE = true;
+        if (d.at.x > hotel.paperWindow.x + 10 && d.at.y < hotel.paperWindow.y - 5) drifted = true;
       }
     }
-    expect(driftedNNE).toBe(true);
+    expect(drifted).toBe(true);
   });
 
   it("with reduced-motion nothing changes", () => {
-    const { tower, anim } = setup(true);
-    const before = JSON.stringify(anim.papers());
+    const { anim } = setup(true);
+    const before = JSON.stringify(anim.papers()), rooms = JSON.stringify(anim.lit());
     for (let t = 0; t < 5000; t += 33) expect(anim.tick(33)).toEqual({ lit: false, papers: false, neon: false, windows: false });
-    expect(anim.lit()).toEqual(tower.litWindows);
+    expect(JSON.stringify(anim.lit())).toBe(rooms);
     expect(JSON.stringify(anim.papers())).toBe(before); // the trail stays frozen where it started
   });
 
@@ -271,12 +275,12 @@ describe("city-anim", () => {
     }
   });
 
-  it("fired counts the floor blackouts and the sign events", () => {
+  it("fired counts the room toggles and the sign events", () => {
     const { anim } = setup();
     expect(anim.fired()).toEqual({ lit: 0, neon: 0, papers: 0, windows: 0, flicker: 0 });
-    let offs = 0;
-    for (let t = 0; t < 60000; t += 33) { anim.tick(33); if (anim.lit().length === 0) offs++; }
-    expect(anim.fired().lit).toBe(offs); // at 33 ms each firing is one tick off
+    let toggles = 0, prev = anim.lit().length;
+    for (let t = 0; t < 60000; t += 33) { anim.tick(33); const n = anim.lit().length; toggles += Math.abs(n - prev); prev = n; }
+    expect(anim.fired().lit).toBe(toggles); // at 33 ms each firing is one toggle, and a toggle moves the lit count by one
     expect(anim.fired().neon).toBeGreaterThanOrEqual(60000 / 7000 - 1);
     expect(anim.fired().neon).toBeLessThanOrEqual(60000 / 3000);
   });
@@ -294,28 +298,32 @@ describe("city-anim", () => {
     expect(anim.fired()).toEqual({ lit: 0, neon: 0, papers: 0, windows: 0, flicker: 0 });
   });
 
-  it("blink: tick(7000) and seven tick(1000) fire the same, and so do 60 s in one or in 60", () => {
+  it("blink: tick(7000) and seven tick(1000) toggle the same, and so do 60 s in one or in 60", () => {
     expect(chunked([7000]).fired().lit).toBe(chunked(repeat(7, 1000)).fired().lit);
     expect(chunked([60000]).fired().lit).toBe(chunked(repeat(60, 1000)).fired().lit);
     expect(chunked([60000]).fired().lit).toBe(chunked(repeat(60000 / 25, 25)).fired().lit);
   });
 
-  it("blink: one 10 min tick fires many blackouts, like 600 of 1 s", () => {
+  it("blink: one 10 min tick toggles many rooms, like 600 of 1 s", () => {
     const long = chunked([600000]).fired().lit;
     expect(long).toBeGreaterThanOrEqual(600000 / BLINK_GAP_MS[1] - 1);
     expect(long).toBeLessThanOrEqual(600000 / BLINK_GAP_MS[0]);
     expect(long).toBe(chunked(repeat(600, 1000)).fired().lit);
   });
 
-  it("blink: after a long tick that turns the floor off, the next short tick turns it on", () => {
-    const { tower, anim } = setup();
-    anim.tick(BLINK_GAP_MS[1]); // the first pause surely expires within this tick
-    expect(anim.lit()).toEqual([]);
-    anim.tick(33);
-    expect(anim.lit()).toEqual(tower.litWindows);
+  it("blink: a long tick and the same time in short ticks leave the same lit rooms", () => {
+    const rooms = (a: CityAnim) => JSON.stringify(a.lit());
+    for (const seed of [1, 2, 3]) {
+      expect(rooms(chunked([BLINK_GAP_MS[1]], seed))).toBe(rooms(chunked(repeat(BLINK_GAP_MS[1] / 100, 100), seed)));
+      expect(rooms(chunked([600000], seed))).toBe(rooms(chunked(repeat(600, 1000), seed)));
+    }
   });
 
-  it("tick(7000) and seven tick(1000) with the same seed leave the same floor and neon counters", () => {
+  it("blink: after 10 min the lit-room count is within ROOMS_BAND of the initial one", () => {
+    for (const seed of [1, 2, 3]) expect(Math.abs(chunked([600000], seed).lit().length - chunked([], seed).lit().length)).toBeLessThanOrEqual(ROOMS_BAND);
+  });
+
+  it("tick(7000) and seven tick(1000) with the same seed leave the same room and neon counters", () => {
     // in 7 s each timer fires at most once (pauses ≥ 4000 and ≥ 3000 ms), so this case
     // also gave the same result with the old reset; the 60 s and 10 min ones are what tell them apart
     for (let seed = 0; seed < 50; seed++) expect(chunked([7000], seed).fired()).toEqual(chunked(repeat(7, 1000), seed).fired());
@@ -365,7 +373,7 @@ describe("city-anim: papers with wall time (#124, #125)", () => {
     same(chunked(dts), chunked([dts.reduce((s, x) => s + x, 0)]));
   });
   it("papers: after 10 min at once they are still within the path", () => {
-    const { tower } = setup(), w = tower.paperWindow;
+    const w = setup().hotel.paperWindow;
     const anim = chunked([600000]), n = anim.papers().length;
     expect(anim.fired().papers).toBeGreaterThanOrEqual(n * 600000 / (PAPER_RANGE / (PAPER_SPEED * 0.8)) - n); // minimum speed: each paper recycles at least once every PAPER_RANGE / (PAPER_SPEED · 0.8) ms
     for (const p of anim.papers().map(dot)) expect(Math.hypot(p.at.x - w.x, p.at.y - w.y)).toBeLessThanOrEqual(PAPER_RANGE + PAPER_SIDE);
@@ -443,5 +451,62 @@ describe("city-anim: windows and street neon with wall time (#192)", () => {
       if (anim.fired().flicker === n) { expect(frontOf(chunkedScene!, anim.neon())).toMatchObject({ alpha: 1 }); restored++; }
     }
     expect(restored).toBeGreaterThan(0);
+  });
+});
+
+describe("city-anim: the hotel rooms and the papers along the facade (#474)", () => {
+  const build = (reducedMotion = false) => { const scene = withSigns(city(createRng(7), createRng(8), createRng(9))); return { scene, anim: createCityAnim(scene, createRng(3), { reducedMotion }) }; };
+  const key = (a: Accent) => (a.kind === "poly" ? JSON.stringify(a.pts) : "");
+  const R2 = Math.SQRT1_2, C = HOTEL_SLAB.center;
+  /** Inside `slabFootprint()` grown by 0.5: |t| ≤ half + 0.5 along U and |n| ≤ thick/2 + 0.5 along N. */
+  const inSlab = (p: { x: number; y: number; z: number }) => {
+    const t = (p.x - C.x) * R2 - (p.y - C.y) * R2, n = (p.x - C.x) * R2 + (p.y - C.y) * R2;
+    return Math.abs(t) <= HOTEL_SLAB.half + 0.5 && Math.abs(n) <= HOTEL_SLAB.thick / 2 + 0.5 && p.z < HOTEL_SLAB.z1;
+  };
+
+  it("frame 0 shows the initial lit rooms: a subset of scene.hotel.rooms, about 40 % of them", () => {
+    const { scene, anim } = build(), rooms = new Set(scene.hotel.rooms.map(key)), lit = anim.lit();
+    expect(lit.length).toBeGreaterThan(0);
+    for (const a of lit) expect(rooms.has(key(a))).toBe(true);
+    expect(lit.length / scene.hotel.rooms.length).toBeGreaterThan(0.25);
+    expect(lit.length / scene.hotel.rooms.length).toBeLessThan(0.55);
+  });
+
+  it("in 60 s at least 5 rooms change and the lit set stays within ±5 rooms of the initial one", () => {
+    const { anim } = build(), n0 = anim.lit().length;
+    let changes = 0, prev = new Set(anim.lit().map(key));
+    for (let t = 0; t < 60000; t += 100) {
+      anim.tick(100);
+      const now = new Set(anim.lit().map(key));
+      changes += [...now].filter((k) => !prev.has(k)).length + [...prev].filter((k) => !now.has(k)).length;
+      expect(Math.abs(now.size - n0)).toBeLessThanOrEqual(5);
+      prev = now;
+    }
+    expect(changes).toBeGreaterThanOrEqual(5);
+    expect(anim.fired().lit).toBeGreaterThanOrEqual(5);
+  });
+
+  it("with reduced-motion the rooms do not change", () => {
+    const { anim } = build(true), before = anim.lit().map(key);
+    for (let t = 0; t < 20000; t += 100) anim.tick(100);
+    expect(anim.lit().map(key)).toEqual(before);
+  });
+
+  it("PAPER_DRIFT is (0.88, −0.47): the papers drift along it, out of the hotel's slab", () => {
+    expect(PAPER_DRIFT).toEqual({ x: 0.88, y: -0.47 });
+    const { scene, anim } = build(), w = scene.hotel.paperWindow;
+    let drifted = false;
+    for (let t = 0; t < 60000; t += 100) {
+      anim.tick(100);
+      for (const p of anim.papers().map(dot)) {
+        expect(inSlab(p.at), JSON.stringify(p.at)).toBe(false);
+        const dx = p.at.x - w.x, dy = p.at.y - w.y, dist = Math.hypot(dx, dy);
+        if (dist > 10) {
+          expect((dx * PAPER_DRIFT.x + dy * PAPER_DRIFT.y) / dist / Math.hypot(PAPER_DRIFT.x, PAPER_DRIFT.y)).toBeGreaterThan(0.9);
+          drifted = true;
+        }
+      }
+    }
+    expect(drifted).toBe(true);
   });
 });

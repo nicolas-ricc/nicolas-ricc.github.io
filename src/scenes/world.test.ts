@@ -7,6 +7,7 @@ import { STAIR_TOWER } from "./boiler-house";
 import { city } from "./city";
 import { PLANT } from "./factory";
 import { LIGHTHOUSE } from "./sea";
+import { HOTEL_SLAB, hotel } from "./sign-hotel";
 import { TINKER_SITE, tinkerSign } from "./sign-tinker";
 import { SUBSTATION } from "./substation";
 import { LANDMARKS, world, zoneRng } from "./world";
@@ -51,13 +52,15 @@ describe("world", () => {
     expect(b.solids.length).toBeGreaterThanOrEqual(80);
   });
 
-  it("the whole world brings shipyard and city, and the Resume landmark falls on the tower", () => {
+  it("the whole world brings shipyard and city, and the Resume landmark falls on the hotel", () => {
     const w = world(7);
     expect(w.city).not.toBeNull();
     expect(w.solids.length).toBeGreaterThan(900);
     expect(w.solids.filter((s) => !isFlat(s) && worldZoneAt(bounds(s).min.x, bounds(s).min.y) === "cv").length).toBeGreaterThan(450);
-    const tower = w.solids.find((s) => s.kind === "prism" && s.h === 30)!;
-    const b = bounds(tower);
+    const own: Solid[] = [];
+    hotel(own, [], []);
+    const slab = w.solids.find((s) => s.kind === "poly" && s.mat === "office" && s.z === HOTEL_SLAB.z0 && own.some((o) => JSON.stringify(o) === JSON.stringify(s)))!;
+    const b = bounds(slab);
     expect(LANDMARKS.cv.x).toBeGreaterThan(b.min.x); expect(LANDMARKS.cv.x).toBeLessThan(b.max.x);
     expect(LANDMARKS.cv.y).toBeGreaterThan(b.min.y); expect(LANDMARKS.cv.y).toBeLessThan(b.max.y);
   });
