@@ -2,6 +2,7 @@ import { convexHull, v3, type Vec2 } from "../../iso/geometry";
 import type { MeshFace, Solid } from "../../iso/solids";
 import type { Material } from "../../map/palette-iso";
 import type { Rect } from "../../scenes/city-grid";
+import { offsetFootprint } from "../roofs";
 import type { Lot } from "../types";
 
 /** Chamfer thresholds (decision T1): a corner with |cos| below RIGHT_COS is "right" (ochava class); above FLAT_COS the edges are nearly collinear. */
@@ -97,4 +98,24 @@ export function frustum(bottom: Vec2[], top: Vec2[], z0: number, z1: number, mat
     faces.push({ pts: [v3(b[i]!.x, b[i]!.y, z0), v3(b[j]!.x, b[j]!.y, z0), v3(t[j]!.x, t[j]!.y, z1), v3(t[i]!.x, t[i]!.y, z1)] });
   }
   return { kind: "mesh", faces, mat };
+}
+
+/** Whether `pt` is inside `poly` or within `eps` of its boundary. */
+export function insidePoly(poly: Vec2[], pt: Vec2, eps = 1e-6): boolean {
+  let inside = false;
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i]!, b = poly[(i + 1) % poly.length]!, dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
+    const t = l2 < EPS ? 0 : Math.max(0, Math.min(1, ((pt.x - a.x) * dx + (pt.y - a.y) * dy) / l2));
+    if (Math.hypot(pt.x - a.x - dx * t, pt.y - a.y - dy * t) <= eps) return true;
+    if ((a.y > pt.y) !== (b.y > pt.y) && pt.x < a.x + ((pt.y - a.y) / dy) * dx) inside = !inside;
+  }
+  return inside;
+}
+
+/** `fp` offset inward by `m`, or `null` if it flips winding, has area < 4, leaves `fp` or stops being convex while `fp` is (a mitered short chamfer folds over); the tier is then skipped. */
+export function insetPoly(fp: Vec2[], m: number): Vec2[] | null {
+  const q = offsetFootprint(fp, -m);
+  if (q.some((p) => !Number.isFinite(p.x + p.y)) || Math.sign(area2(q)) !== Math.sign(area2(fp)) || polyArea(q) < 4) return null;
+  if (convexHull(fp).length === fp.length && convexHull(q).length !== q.length) return null;
+  return q.every((p) => insidePoly(fp, p)) ? q : null;
 }
