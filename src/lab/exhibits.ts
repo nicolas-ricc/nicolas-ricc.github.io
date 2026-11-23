@@ -199,9 +199,9 @@ export const EXHIBITS: readonly Exhibit[] = [
   // the fallen slab reaches x − 16; flush to the south, the jungle
   { id: "manzana-derrumbada", title: "Collapsed block", zone: "cv", group: "city", kind: "region",
     box: { x0: COLLAPSED.x - 16 - M, y0: COLLAPSED.y - M, x1: COLLAPSED.x + COLLAPSED.w + M, y1: COLLAPSED.y + COLLAPSED.d + 1 }, h: 6 },
-  // the largest parcel of cell (−17, 171): both parcels of the cell are built (transicion, residential) but their lots (14×6.1 and 10×4.9) are `tooSmall`, so they get a plinth only: measured inside 0 and neighbor 0.3 give h 1
+  // the largest parcel of cell (−17, 171): both parcels of the cell are built (transicion, residential) but their lots (14×6.1 and 10×4.9) are `tooSmall`, so they get a plinth only; the traffic lights and lamps of the axes (#473) bring inside 5.3, so h 6
   { id: "manzana-distrito", title: "District block", zone: "cv", group: "city", kind: "region",
-    box: { x0: DISTRICT_PARCEL.x - M, y0: DISTRICT_PARCEL.y - M, x1: DISTRICT_PARCEL.x + DISTRICT_PARCEL.w + M, y1: DISTRICT_PARCEL.y + DISTRICT_PARCEL.d + M }, h: 1 },
+    box: { x0: DISTRICT_PARCEL.x - M, y0: DISTRICT_PARCEL.y - M, x1: DISTRICT_PARCEL.x + DISTRICT_PARCEL.w + M, y1: DISTRICT_PARCEL.y + DISTRICT_PARCEL.d + M }, h: 6 },
   // the south point: x 270..380, y 300..400; it needs the world with no zone filter (the storybook builds it with `assembleWorld(undefined, …)`); h is the smallest integer that passes framing and neighbors (measured with the `measure` of exhibits.test.ts)
   { id: "punta-sur", title: "South point of the island", zone: "cv", group: "city", kind: "region", box: { x0: 270, y0: 300, x1: 380, y1: 400 }, h: 10 },
   // the warehouse strip and the freight railyard: x -54..98, west of the station; h is the smallest integer that passes framing and neighbors (measured with the `measure` of exhibits.test.ts); galpones (#325, warehouses and freight lots): h 12; playa-carga (#325, freight yard): the lamps top out at 5, so h 5

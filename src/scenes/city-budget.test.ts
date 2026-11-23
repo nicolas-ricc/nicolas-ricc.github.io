@@ -11,14 +11,14 @@ import { world, zoneRng } from "./world";
 const resume = () => city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3));
 
 describe("Resume level 2 budget", () => {
-  it("raised solids ≤ 2 900, strip ≤ 190, static accents ≤ 1 300", () => {
+  it("raised solids ≤ 2 900, strip ≤ 380, static accents ≤ 900", () => {
     const s = resume();
     expect(s.solids.filter((x) => !isFlat(x)).length).toBeLessThanOrEqual(2900);
-    expect(s.ground.filter((g) => g.kind === "strip").length).toBeLessThanOrEqual(190);
     // measured with the hotel (#474), real seed: 992 raised solids, 95 strip ground, 788 static accents (514 poly + 274 dot).
     // The accents were 1 165 with the crown (#391: 789 before, + its 402 = 238 poly + 164 dot, − 26 hidden city lights); the hotel replaced the
-    // tower and the crown, and no cap is exceeded, so none moves (the accents' was 1 165 ×1.1 rounded to the hundred)
-    expect(s.accents.length).toBeLessThanOrEqual(1300);
+    // tower and the crown.
+    expect(s.ground.filter((g) => g.kind === "strip").length).toBeLessThanOrEqual(380); // measured (#473): 347 strips, ×1.1 rounded to the ten
+    expect(s.accents.length).toBeLessThanOrEqual(900); // measured (#473): 815 accents, ×1.1 rounded to the ten
   });
 
   it("static polygons of the world ≤ 56 000 (same computation as stage.staticCount)", () => {

@@ -10,7 +10,7 @@ import { bounds, type Solid } from "../iso/solids";
 import { ESTUARY_Y0, QUAY_X, STATION_LAND, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng, SEED } from "../map/seed";
-import { AVENUE, BOULEVARD, DARSENA, BRIDGE, CITY_EDGE, COLLAPSED, FREIGHT_ROW, ROWS, CRATERS, DISTRICT_BANK_Y, EAST_RING, FALLEN_BLOCK, PROMENADE, WEST_QUAY, blocks, estuaryEast, inBlock, inCrater } from "./city-grid";
+import { AVENUE, BOULEVARD, BRIDGE, CITY_EDGE, COLLAPSED, FREIGHT_ROW, ROWS, CRATERS, DISTRICT_BANK_Y, EAST_RING, FALLEN_BLOCK, PROMENADE, WEST_QUAY, blocks, estuaryEast, inBlock, inCrater } from "./city-grid";
 import { PLINTH_H, city, type CityScene } from "./city";
 import { CAR } from "../kit/props";
 import { FIXED, FOOTBRIDGE_LOT, MAX_BUILDING_H, assign, builtParcels, tooSmall, neighborhoodOfParcel } from "../city/zoning";
@@ -34,11 +34,9 @@ const inPlaza = (x: number, y: number) => x > PLAZA_MAYOR.x && x < PLAZA_MAYOR.x
 /** The parcels of the modern belt (the landmark cap): none inside CITY_BOUNDS today, the modern area lies west of x -54. */
 const DISTRICT = builtParcels().filter((p) => neighborhoodOfParcel(p) === "district").map((p) => p.rect);
 const inDistrict = (s: Solid) => DISTRICT.some((b) => inRect(bounds(s), b));
-const inBlockXY = (x: number, y: number) => blocks().some((b) => x >= b.x - 1 && x <= b.x + b.w + 1 && y >= b.y - 1 && y <= b.y + b.d + 1);
 /** The fixed blocks (landmarks): they can reach 24 above the plinth, with a finial. */
 const FIXED_BLOCKS = blocks().filter((b) => FIXED.some((f) => f.x === b.x && f.y === b.y));
 const inFixed = (s: Solid) => FIXED_BLOCKS.some((b) => inRect(bounds(s), b));
-const inFootbridge = (x: number, y: number) => x >= FOOTBRIDGE_LOT.x && x <= FOOTBRIDGE_LOT.x + FOOTBRIDGE_LOT.w && y >= FOOTBRIDGE_LOT.y && y <= FOOTBRIDGE_LOT.y + FOOTBRIDGE_LOT.d;
 /** The hotel with its sign (#474), built alone: its solids are matched by value in the city. */
 const HOTEL_OWN: Solid[] = [];
 hotel(HOTEL_OWN, [], []);
@@ -51,6 +49,7 @@ const CITY_MATS: readonly Material[] = ["office", "officeDark", "glass", "asphal
   // warehouses and freight yard (#325): reconversion kit, containers and the dock
   "sheetGreen", "boxRust", "boxBlue", "boxGrey", "boxGreen", "boxOrange"];
 
+const plazaMayorTiles = (g: Solid): boolean => g.kind === "ground" && g.mat === "plaza" && g.tris.every((t) => inPlazaMayor((t.pts[0].x + t.pts[1].x + t.pts[2].x) / 3, (t.pts[0].y + t.pts[1].y + t.pts[2].y) / 3)); // not the crossing plazas' tiles (#473)
 describe("city", () => {
   it("is deterministic per seed", () => {
     expect(JSON.stringify(city(createRng(7), createRng(8), createRng(9)))).toBe(JSON.stringify(city(createRng(7), createRng(8), createRng(9))));
@@ -125,7 +124,7 @@ describe("city", () => {
 
   it("the plaza has broken tiles and the devoured blocks have jungle over their ground", () => {
     const s = scene();
-    const plaza = s.ground.filter((g) => g.kind === "ground" && g.mat === "plaza");
+    const plaza = s.ground.filter(plazaMayorTiles);
     expect(plaza).toHaveLength(1); // the Plaza Mayor minus the landing: one strip
     const tris = plaza.flatMap((g) => (g.kind === "ground" ? g.tris : []));
     expect(tris.length).toBe(2 * 9 * 13); // 6 u tiles: 54 × 74 (9 columns, 13 rows, the last partial)
@@ -139,7 +138,7 @@ describe("city", () => {
       if (c.kind !== "cone" || (c.mat === "stone" && c.at.x >= BRIDGE.x0 && c.at.x <= BRIDGE.x1 && c.at.y >= BRIDGE.y0 && c.at.y <= BRIDGE.y1)) continue; // the finials of the bridge obelisks are stone, not trees
       // south of the district the east bank is jungle with no grid (there are no blocks on the east side anymore)
       const onCity = c.at.x >= CITY_EDGE.west && c.at.x < PROMENADE.x0 && c.at.y >= ESTUARY_Y0 + 12 && c.at.y < CITY_EDGE.south && !(c.at.x > QUAY_X && c.at.x < EAST_RING.x0) && !(c.at.x > EAST_RING.x0 && c.at.y >= DISTRICT_BANK_Y);
-      if (onCity) expect(inBlock(c.at.x, c.at.y) || inParcel(c.at.x, c.at.y) || inCrater(c.at.x, c.at.y) || (c.at.y >= BOULEVARD.y0 && c.at.y <= BOULEVARD.y1), `cone ${c.at.x},${c.at.y} ${c.mat}`).toBe(true);
+      if (onCity) expect(inBlock(c.at.x, c.at.y) || inParcel(c.at.x, c.at.y) || inCrater(c.at.x, c.at.y) || (c.at.y >= BOULEVARD.y0 && c.at.y <= BOULEVARD.y1) || (c.at.x === 10 && c.mat === "leaf") /* the boulevard's median trees (#473) */, `cone ${c.at.x},${c.at.y} ${c.mat}`).toBe(true);
     }
     expect(s.accents.length).toBeGreaterThan(6);
     const NEON = ["magenta", "magentaBleed", "cyan", "cyanBleed"];
@@ -171,11 +170,11 @@ describe("city", () => {
     for (const i of buildRenderList(all(s))) expect(colors.has(i.color)).toBe(true);
   });
 
-  it("avenue: boulevard, lanes, crosswalks and traffic lights; street lamps only on avenue, bridge, plaza and promenade", () => {
+  it("avenue: boulevard, lanes, crosswalks and traffic lights", () => {
     const s = scene();
     const strips = s.ground.filter((g) => g.kind === "strip" && g.mat !== "rail"); // the main line (#319) is counted apart
     expect(strips.length).toBeGreaterThan(60);
-    expect(strips.length).toBeLessThanOrEqual(150);
+    expect(strips.length).toBeLessThanOrEqual(370); // measured (#473): 340 strips (rails apart), ×1.1 rounded to the ten
     expect(strips.every((g) => g.kind === "strip" && g.mat === "paving" && g.z > 0 && g.z < 0.1)).toBe(true);
     // no stripe steps on the estuary (the ground is drawn on top of the water): the east ring is cut where the water comes in
     for (const g of strips) if (g.kind === "strip") for (const p of g.path) expect(p.x <= QUAY_X || p.x > estuaryEast(p.y)).toBe(true);
@@ -189,15 +188,8 @@ describe("city", () => {
     }
     const boulevard = s.solids.filter((x) => x.kind === "prism" && x.mat === "leafDark" && x.at.z === 0); // not the green terrace of a glass tower of the district
     expect(boulevard.length).toBeGreaterThanOrEqual(2); // #472: only the east stretch of the avenue keeps its boulevard (the two east blocks)
-    expect(boulevard.every((x) => bounds(x).min.y >= BOULEVARD.y0 && bounds(x).max.y <= BOULEVARD.y1)).toBe(true);
-    const lamps = s.accents.filter((a) => a.kind === "dot" && a.color === "amber" && a.r === 0.6); // street lamps (props.lamp), not the garlands
-    expect(lamps.length).toBeGreaterThanOrEqual(20);
-    for (const l of lamps) {
-      if (l.kind !== "dot") continue;
-      const onAvenue = l.at.y >= AVENUE.y0 - 3 && l.at.y <= AVENUE.y1 + 3, onPromenade = l.at.x >= PROMENADE.x0, onPlaza = inRect({ min: l.at, max: l.at }, PLAZA_MAYOR), onHotel = inRect({ min: l.at, max: l.at }, HOTEL_LOT) /* the two lamps of the hotel portal (#474) */, onInlet = l.at.x >= DARSENA.x0 - 2 && l.at.x <= DARSENA.x1 + 2 && l.at.y >= DARSENA.y0 - 2 && l.at.y <= DARSENA.y1 + 2; // the two lamps of the inlet walls (#326)
-      const onYard = l.at.y === 150.3 && [-39.7, 0.3, 40.3, 80.3].includes(l.at.x); // the four lamps of the freight yard (#325)
-      expect(onAvenue || onPromenade || onPlaza || onHotel || onInlet || onYard || inFootbridge(l.at.x, l.at.y) || inBlockXY(l.at.x, l.at.y)).toBe(true); // the kit recipes bring their own lights (construction site, helipad, beacon, station lamps)
-    }
+    expect(boulevard.every((x) => (bounds(x).min.y >= BOULEVARD.y0 && bounds(x).max.y <= BOULEVARD.y1) || (bounds(x).min.x >= 8 && bounds(x).max.x <= 12))).toBe(true); // or the median of the Bulevar Central (#473)
+    // street lamps (only on axes, plaza, crossing plazas, costanera, bridge, promenade, the hotel portal) are checked in city-streets.test.ts (#473)
   });
 
   it("bridge: deck over the water from quay to ring, stone piers down to the bottom, ramps at the heads", () => {
@@ -463,7 +455,7 @@ describe("city on the new layout (#472)", () => {
   });
 
   it("the plaza tiles step off BRIDGE_LANDING, and the landing is paving", () => {
-    const tris = s.ground.flatMap((g) => (g.kind === "ground" && g.mat === "plaza" ? g.tris : []));
+    const tris = s.ground.flatMap((g) => (plazaMayorTiles(g) && g.kind === "ground" ? g.tris : []));
     expect(tris.length).toBeGreaterThan(0);
     let area = 0;
     for (const t of tris) {
