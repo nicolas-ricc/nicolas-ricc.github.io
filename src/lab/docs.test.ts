@@ -1265,8 +1265,8 @@ describe("hotel sign level 3 and docs closing (#475)", () => {
   it("the three reports are dated 2026-11-23 or later, with cartel-torre-escena ✓ at both scales and OCR RESUME", () => {
     for (const file of REPORTS) {
       const md = read(`${LEVEL3}${file}`);
-      expect(md.match(/^Fecha: (\d{4}-\d{2}-\d{2})$/m)?.[1] ?? "", file).toMatch(/./);
-      expect(md.match(/^Fecha: (\d{4}-\d{2}-\d{2})$/m)![1]! >= "2026-11-23", file).toBe(true);
+      const date = md.match(/^Fecha: (\d{4}-\d{2}-\d{2})$/m)?.[1] ?? "";
+      expect(date >= "2026-11-23", file).toBe(true);
       for (const sc of ["1.17", "0.83"]) {
         const sec = section(md, ID, sc);
         for (const m of ["contraste", "halo", "OCR"]) expect(sec, `${file} ${sc} ${m}`).toMatch(new RegExp(`^\\| ${m} \\|.*\\| ✓ \\|$`, "m"));
