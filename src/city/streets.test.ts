@@ -317,4 +317,16 @@ describe("the streets reach the edge of the view (#479)", () => {
     for (const x of [...ground, ...solids]) expect(bounds(x).min.x, `${x.kind} ${x.mat}`).toBeGreaterThanOrEqual(WORLD.x0 - 1e-6);
     for (const l of lights) expect(l.at.x).toBeGreaterThanOrEqual(WORLD.x0);
   });
+
+  it("with a finite west every light's own range still maps to the solids that hold its bulb", () => {
+    const ground: Solid[] = [], solids: Solid[] = [], lights: Parameters<typeof streets>[2] = [];
+    streets(ground, solids, lights, WORLD.x0);
+    expect(lights.length).toBeGreaterThan(0);
+    for (const l of lights) {
+      expect(l.own[1], `${l.at.x},${l.at.y}`).toBeLessThanOrEqual(solids.length);
+      expect(l.own[1] - l.own[0], `${l.at.x},${l.at.y} has own solids`).toBeGreaterThan(0);
+      const near = solids.slice(l.own[0], l.own[1]).some((x) => { const b = bounds(x); return l.at.x >= b.min.x - 0.5 && l.at.x <= b.max.x + 0.5 && l.at.y >= b.min.y - 0.5 && l.at.y <= b.max.y + 0.5; });
+      expect(near, `light at ${l.at.x},${l.at.y}`).toBe(true);
+    }
+  });
 });

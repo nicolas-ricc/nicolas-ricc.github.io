@@ -307,9 +307,9 @@ export function axisLampPosts(): readonly { a: Axis; at: Vec2 }[] {
     const place = (t: number): Vec2 => (ew ? { x: t, y: p.y + n.y * k } : { x: p.x + u.x * t + n.x * k, y: p.y + u.y * t + n.y * k });
     const ok = (at: Vec2): boolean => postFree(a, at, 0.3, LAMP_W / 2) && lights.every((l) => Math.hypot(l.x - at.x, l.y - at.y) >= LAMP_MIN_GAP);
     const mine: Vec2[] = [];
-    for (const [i, t] of lampXs(range, a.id === "vias" ? BAR_FRONTS : []).entries()) {
+    for (const t of lampXs(range, a.id === "vias" ? BAR_FRONTS : [])) {
       let at = place(t);
-      if (inWestDistrict(at) && i % 2 === 1) continue; // west district: a lamp every 24, not 12 (#479 budget moved, not raised)
+      if (inWestDistrict(at) && Math.round((t - range[0] - 6) / 12) % 2 === 1) continue; // west district: a lamp every 24, not 12 (#479 budget moved, not raised)
       if (onOrdinaryStreet(at, 0.3)) {
         const shifts = Array.from({ length: 2 * STREET_SHIFT / 0.5 }, (_, i) => (i % 2 ? 1 : -1) * 0.5 * Math.ceil((i + 1) / 2)); // −0.5, 0.5, −1, 1, …
         const s = shifts.find((d) => ok(place(t + d)) && mine.every((m) => Math.hypot(m.x - place(t + d).x, m.y - place(t + d).y) >= LAMP_MIN_GAP));
@@ -403,6 +403,14 @@ export function streets(ground: Solid[], solids: Solid[], lights: FixedLight[], 
   if (west === -Infinity) return;
   const g = ground.splice(g0), s = solids.splice(s0), l = lights.splice(l0);
   for (const x of g) { const c = x.kind === "strip" ? clipStrip(x, west) : bounds(x).min.x >= west - 1e-6 ? x : null; if (c) ground.push(c); }
-  for (const x of s) if (bounds(x).min.x >= west - 1e-6) solids.push(x);
-  for (const x of l) if (x.at.x >= west) lights.push(x);
+  // `own` is an absolute [from, to) range into `solids`: the kept solids are renumbered and a light goes with its own solids
+  const newAt: number[] = [];
+  for (const [i, x] of s.entries()) { newAt[i] = solids.length; if (bounds(x).min.x >= west - 1e-6) solids.push(x); else newAt[i] = -1; }
+  newAt[s.length] = solids.length;
+  for (const x of l) {
+    const [from, to] = [x.own[0] - s0, x.own[1] - s0];
+    const own = Array.from({ length: Math.max(0, to - from) }, (_, k) => newAt[from + k]);
+    if (x.at.x < west || own.some((i) => i === -1)) continue;
+    lights.push({ ...x, own: own.length ? [own[0]!, own[0]! + own.length] : [newAt[from] ?? solids.length, newAt[from] ?? solids.length] });
+  }
 }
