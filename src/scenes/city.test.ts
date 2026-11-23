@@ -17,7 +17,7 @@ import { FIXED, FIXED_PARCELS, FOOTBRIDGE_LOT, MAX_BUILDING_H, WATER_TOWER_CELL,
 import { zoneRng } from "./world";
 import { MARKET_SCALE } from "../city/harbor";
 import { fingerprint } from "../iso/fingerprint";
-import { BRIDGE_LANDING, CITY_BOUNDS, HOTEL_LOT, PLAZA_MAYOR, barrioAt, inCrossingPlaza, inParcel, inPlazaMayor, onAxis, parcels, polyBox } from "./city-plan";
+import { BRIDGE_LANDING, CITY_BOUNDS, HOTEL_LOT, PLAZA_MAYOR, inCrossingPlaza, inParcel, inPlazaMayor, onAxis, parcels, polyBox } from "./city-plan";
 import { RESUME_SIGN, SIGN_PANEL, SIGN_SITE, hotel } from "./sign-hotel";
 import { signBox } from "../world/sign-box";
 import { zoneView } from "../world/view";
@@ -613,7 +613,7 @@ describe("the city owns the west (#479)", () => {
   it("TELECOM sits on a moderno parcel", () => {
     const q = w.placed.find((x) => x.placed.parcel?.cell.col === telecomCell.col && x.placed.parcel.cell.row === telecomCell.row);
     expect(q).toBeDefined();
-    expect(barrioAt(q!.placed.parcel!.c)).toBe("moderno");
+    expect(neighborhoodOfParcel(q!.placed.parcel!)).toBe("moderno");
     const r = q!.placed.parcel!.rect, inside = (x: Solid) => inRect(bounds(x), r);
     expect(w.solids.filter((x) => x.kind === "prism" && x.mat === "steel" && x.h === 20 && inside(x))).toHaveLength(1);
     expect(w.solids.filter((x) => x.kind === "cylinder" && x.mat === "steel" && x.h === 0.4 && inside(x))).toHaveLength(3);

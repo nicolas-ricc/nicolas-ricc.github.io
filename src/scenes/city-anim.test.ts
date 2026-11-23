@@ -535,7 +535,7 @@ describe("city-anim: the TELECOM mast (#479)", () => {
     expect(seen.size).toBe(3);
   });
 
-  it("the tip light breathes: r = 0.8 + 0.3·(1 + sin(clock / 1200)), amber", () => {
+  it("the tip light breathes: r = 0.8 + 0.3·(1 + sine of clock / 1200), amber", () => {
     const anim = createCityAnim(mast(base, true), createRng(3), { reducedMotion: false });
     expect(tipDot(anim.neon())?.r).toBeCloseTo(1.1, 9);
     anim.tick(1000);
