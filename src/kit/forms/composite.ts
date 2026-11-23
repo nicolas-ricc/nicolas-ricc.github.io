@@ -5,7 +5,7 @@ import { prism } from "../../scenes/city-pieces";
 import { SIGN_MIN_H, addBuilding, emptyPiece, interlock, floorsFor, recipeCap, shiftTone, southSign } from "../piece";
 import { ANTENNA_H, MACHINE_ROOM_H, WATER_TANK_H, antenna, beacon, machineRoom, waterTank } from "../props";
 import { CORNICE_H, cornice, offsetFootprint } from "../roofs";
-import { chamferPoly, clipConvex, clipToPoly, insidePoly, polyArea, polyCentroid, polyFootprint } from "./porteno";
+import { clipBody, insidePoly, polyArea, polyCentroid, polyFootprint } from "./porteno";
 import type { Lot, Piece, RecipeDef, Side, Style } from "../types";
 
 /**
@@ -38,15 +38,15 @@ export function podiumTower(lot: Lot, rng: Rng, style: Style): Piece {
   const towerAt = (c: number): { x: number; y: number } => ({ x: c === 1 || c === 2 ? x + w - 1 - size : x + 1, y: c >= 2 ? y + d - 1 - size : y + 1 });
   let { x: tx, y: ty } = towerAt(corner), towerFp: Vec2[] | null = null;
   if (podium) {
-    const clipTower = (t: { x: number; y: number }): Vec2[] => chamferPoly(clipToPoly({ x: t.x, y: t.y, w: size, d: size }, podium), 2, "oblique");
+    const clipTower = (t: { x: number; y: number }): Vec2[] | null => clipBody({ x: t.x, y: t.y, w: size, d: size }, podium);
     towerFp = clipTower({ x: tx, y: ty });
-    if (polyArea(towerFp) < (size * size) / 2) { ({ x: tx, y: ty } = towerAt((corner + 2) % 4)); towerFp = clipTower({ x: tx, y: ty }); }
+    if (!towerFp || polyArea(towerFp) < (size * size) / 2) { ({ x: tx, y: ty } = towerAt((corner + 2) % 4)); towerFp = clipTower({ x: tx, y: ty }); }
   }
   const tank = rng.chance(0.5);
   const total = Math.min(rng.int(12, 18), recipeCap(lot) - (tank ? WATER_TANK_H : MACHINE_ROOM_H));
   const base = ph + CORNICE_H, th = total - base;
   const tf: Facade = { floors: floorsFor(th, style), cols: rng.int(3, 4) };
-  if (towerFp && polyArea(towerFp) < 4) return p; // no room for the tower: the podium alone
+  if (podium && !towerFp) return p; // no room for the tower: the podium alone
   addBuilding(p, towerFp ? { kind: "poly", footprint: towerFp, z: z + base, h: th, mat: style.mat, facade: tf, tone: shiftTone(style.tone, 1) } : prism(tx, ty, z + base, size, size, th, style.mat, { facade: tf, tone: shiftTone(style.tone, 1) }), tf);
   const top = z + total, c = towerFp ? polyCentroid(towerFp) : { x: tx + size / 2, y: ty + size / 2 }, cx = c.x, cy = c.y;
   p.solids.push(...(tank ? waterTank(v3(cx, cy, top)) : machineRoom(v3(cx - 2, cy - 1.5, top))));
@@ -94,9 +94,9 @@ export function decoStepped(lot: Lot, rng: Rng, style: Style): Piece {
     const th = body * share, s = s0 - 2 * TIER_INSET * k, f: Facade = { floors: floorsFor(th, style), cols: 2 };
     let footprint = chamferedRect(x + (w - s) / 2, y + (d - s) / 2, s, s, CHAMFER);
     if (fpLot) {
-      footprint = chamferPoly(clipConvex(footprint, fpLot), 2, "oblique");
-      if (polyArea(footprint) < 4) break; // a tier too small ends the stack
-      last = footprint;
+      const clipped = clipBody(footprint, fpLot);
+      if (!clipped) break; // a tier too small ends the stack
+      footprint = last = clipped;
     }
     addBuilding(p, { kind: "poly", footprint, z: zt, h: th, mat: style.mat, facade: f, tone: shiftTone(style.tone, k - 1) }, f);
     zt += th;
@@ -136,8 +136,9 @@ export function chamfer(lot: Lot, rng: Rng, style: Style): Piece {
   const bx = x + 1, by = y + 1, bw = w - 2, bd = d - 2;
   let fp = cutCorner(bx, by, bw, bd, chamferCorner(lot.open), CHAMFER_CUT);
   if (lot.poly) {
-    fp = chamferPoly(clipConvex(fp, polyFootprint(lot, 0, 2, "oblique")), 2, "oblique");
-    if (polyArea(fp) < 4) return p;
+    const clipped = clipBody(fp, polyFootprint(lot, 0, 2, "oblique"));
+    if (!clipped) return p;
+    fp = clipped;
   }
   const f: Facade = { floors: floorsFor(h, style), cols: 3 };
   addBuilding(p, { kind: "poly", footprint: fp, z, h, mat: style.mat, facade: f, tone: style.tone }, f);

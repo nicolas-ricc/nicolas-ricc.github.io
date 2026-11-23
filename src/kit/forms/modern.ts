@@ -8,7 +8,7 @@ import { towerCrane } from "../../scenes/pieces";
 import { LANDMARK_MAX_H, SIGN_MIN_H, addBuilding, emptyPiece, interlock, southSign } from "../piece";
 import { beacon, clock, container, fence, helipad, sign, table } from "../props";
 import { gableRoof, greenRoof, offsetFootprint } from "../roofs";
-import { chamferPoly, clipToPoly, insetPoly, insidePoly, polyArea, polyCentroid, polyFootprint } from "./porteno";
+import { clipBody, insetPoly, insidePoly, polyCentroid, polyFootprint } from "./porteno";
 import type { Lot, Piece, RecipeDef, Style } from "../types";
 
 /**
@@ -91,9 +91,9 @@ export function classic(lot: Lot, rng: Rng, style: Style): Piece {
 /** `classic` on a parcel polygon: the body is clipped to the chamfered lot footprint; pilasters, crown, clock and sign stay only where they still fit. */
 function classicOnPoly(lot: Lot, rng: Rng, style: Style, g: { bx: number; by: number; bw: number; bd: number; h: number; fh: number; facade: Facade; cols: number }): Piece {
   const p = emptyPiece(), { bx, by, bw, bd, h, fh, facade, cols } = g, fpLot = polyFootprint(lot, 0, 2, "oblique");
-  const fp = chamferPoly(clipToPoly({ x: bx, y: by, w: bw, d: bd }, fpLot), 2, "oblique");
+  const fp = clipBody({ x: bx, y: by, w: bw, d: bd }, fpLot);
   rng.chance(0.5); // the roof branch is drawn as without poly; both build the stepped crown
-  if (polyArea(fp) < 4) return p;
+  if (!fp) return p;
   addBuilding(p, { kind: "poly", footprint: fp, z: lot.z, h, mat: "stone", facade, tone: style.tone }, facade);
   const pil = (px: number, py: number, inner: { x: number; y: number }): void => { // the 0.4 box must stand in the lot footprint and lean on the body
     const box = [{ x: px, y: py }, { x: px + 0.4, y: py }, { x: px + 0.4, y: py + 0.4 }, { x: px, y: py + 0.4 }];

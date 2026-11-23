@@ -2,7 +2,8 @@ import { convexHull, v3, type Vec2 } from "../../iso/geometry";
 import type { MeshFace, Solid } from "../../iso/solids";
 import type { Material } from "../../map/palette-iso";
 import type { Rect } from "../../scenes/city-grid";
-import { offsetFootprint } from "../roofs";
+import { interlock } from "../piece";
+import { CORNICE_H, offsetFootprint } from "../roofs";
 import type { Lot } from "../types";
 
 /** Chamfer thresholds (decision T1): a corner with |cos| below RIGHT_COS is "right" (ochava class); above FLAT_COS the edges are nearly collinear. */
@@ -85,6 +86,19 @@ export function polyFootprint(lot: Lot, inset: number, chamfer: number, corners:
   const r = { x: lot.x + inset, y: lot.y + inset, w: lot.w - 2 * inset, d: lot.d - 2 * inset };
   const base = lot.poly ? clipToPoly(r, lot.poly) : [{ x: r.x, y: r.y }, { x: r.x + r.w, y: r.y }, { x: r.x + r.w, y: r.y + r.d }, { x: r.x, y: r.y + r.d }];
   return chamferPoly(base, chamfer, corners);
+}
+
+/** A body shape (rectangle or polygon) clipped to the lot footprint `fp` and with its own oblique corners chamfered 2; `null` below area 4. */
+export function clipBody(subject: Rect | Vec2[], fp: Vec2[]): Vec2[] | null {
+  const clipped = Array.isArray(subject) ? clipConvex(subject, fp) : clipToPoly(subject, fp), out = chamferPoly(clipped, 2, "oblique");
+  return polyArea(out) < 4 ? null : out;
+}
+
+/** Interlocked `poly` cornice of body footprint `fp` (offset 0.5), its vertices held within the lot + 0.7: the miter of an acute corner would shoot out of it. */
+export function polyCornice(fp: Vec2[], lot: Lot, z: number, mat: Material): Solid {
+  const clamp = (v: number, lo: number, hi: number): number => Math.max(lo - 0.7, Math.min(hi + 0.7, v));
+  const footprint = offsetFootprint(fp, 0.5).map((q) => ({ x: clamp(q.x, lot.x, lot.x + lot.w), y: clamp(q.y, lot.y, lot.y + lot.d) }));
+  return interlock({ kind: "poly", footprint, z, h: CORNICE_H, mat });
 }
 
 /** Mesh between two same-length rings (`bottom` at z0, `top` at z1; `top` must have the same vertex count and winding as `bottom`): a top face and one quad per edge, outward-facing. */
