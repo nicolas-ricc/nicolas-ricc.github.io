@@ -176,7 +176,7 @@ describe("city", () => {
     const s = scene();
     const strips = s.ground.filter((g) => g.kind === "strip" && g.mat !== "rail"); // the main line (#319) is counted apart
     expect(strips.length).toBeGreaterThan(60);
-    expect(strips.length).toBeLessThanOrEqual(370); // measured (#473): 340 strips (rails apart), ×1.1 rounded to the ten
+    expect(strips.length).toBeLessThanOrEqual(570); // measured (#473): 340 strips (rails apart), ×1.1 rounded to the ten; with the west on the city grid (#479, seeds 7/8/9): 513 strips (rails apart), ×1.1 = 564, rounded up to the ten
     expect(strips.every((g) => g.kind === "strip" && g.mat === "paving" && g.z > 0 && g.z < 0.1)).toBe(true);
     // no stripe steps on the estuary (the ground is drawn on top of the water): the east ring is cut where the water comes in
     for (const g of strips) if (g.kind === "strip") for (const p of g.path) expect(p.x <= QUAY_X || p.x > estuaryEast(p.y)).toBe(true);

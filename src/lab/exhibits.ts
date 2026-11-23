@@ -62,14 +62,15 @@ export type ContextExhibit = Extract<Exhibit, { kind: "context" }>;
 const M = 3; // margin: sidewalks, street lamps and short shadows
 /** Box of the south parcel of a city-plan cell, with the margin. */
 const cellBox = (c: { col: number; row: number }) => { const { x, y, w, d } = southParcels().find((p) => p.cell.col === c.col && p.cell.row === c.row)!.rect; return { x0: x - M, y0: y - M, x1: x + w + M, y1: y + d + M }; };
-/** Plan parcel (−77, 201): the tower-zone parcel nearest the city, rectangular (`d` 227). No built parcel is `moderno` yet (#479), so the district block is a piece on its lot. */
+/** Plan parcel (−77, 201): a `moderno` parcel of the west, rectangular (`d` 227); the piece below rebuilds its tower alone on the lot. */
 const TOWER_PARCEL = parcels(PLAN_BOUNDS).find((q) => q.cell.col === -77 && q.cell.row === 201)!.rect;
 
-/** Rect ± M of the largest city parcel of a grid cell, for the region exhibits that frame one parcel. */
+/** Rect ± M of the plan parcels of the given grid cells (the union), for the exhibits over the west. */
 const planBox = (...cells: (readonly [number, number])[]): Box => {
   const rs = cells.map(([col, row]) => parcels(PLAN_BOUNDS).find((q) => q.cell.col === col && q.cell.row === row)!.rect);
   return { x0: Math.min(...rs.map((r) => r.x)) - M, y0: Math.min(...rs.map((r) => r.y)) - M, x1: Math.max(...rs.map((r) => r.x + r.w)) + M, y1: Math.max(...rs.map((r) => r.y + r.d)) + M };
 };
+/** Rect ± M of the largest city parcel of a grid cell, for the region exhibits that frame one parcel. */
 const parcelBox = (col: number, row: number): Box => {
   const r = parcels(CITY_BOUNDS).filter((q) => q.cell.col === col && q.cell.row === row).sort((a, b) => b.area - a.area)[0]!.rect;
   return { x0: r.x - M, y0: r.y - M, x1: r.x + r.w + M, y1: r.y + r.d + M };
@@ -251,9 +252,9 @@ export const EXHIBITS: readonly Exhibit[] = [
     box: cellBox(ARENA), h: 15 },
   { id: "auditorio", title: "Auditorium", zone: "cv", group: "tech", kind: "region",
     box: cellBox(AUDITORIUM), h: 14 },
-  // the plan parcels of cells (−107, 171) and (−77, 171); the city builds them (#479, Task 5 finalizes); the height comes from the rng: the test watches it
+  // the parcels of cells (−107, 171) and (−77, 171), built by the city (#479); south of the train track they are capped at ≈ 26.9 (A2: y_min − 1.4·z_max ≥ 134.5), so h 19: the smallest integer that passes exhibits.test.ts (structure measured 18.3)
   { id: "torres", title: "Tech district towers", zone: "cv", group: "tech", kind: "region",
-    box: planBox([-107, 171], [-77, 171]), h: 22 },
+    box: planBox([-107, 171], [-77, 171]), h: 19 },
   { id: "monoblock", title: "Monoblock", zone: "cv", group: "tech", kind: "region",
     box: cellBox({ col: 133, row: 441 }), h: 23.6 }, // the monoblock parcel of cell (133, 441), 24 × 24
   { id: "casas", title: "Houses with tile roofs", zone: "cv", group: "tech", kind: "region",
