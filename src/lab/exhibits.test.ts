@@ -480,11 +480,11 @@ describe("context exhibits (#376)", () => {
 });
 
 describe("cartel-torre-escena (#378, #474)", () => {
-  it("after cartel-torre, in the city, the hotel lot ± 3 at h 52, a crop of the world (no build), signed RESUME_SIGN", () => {
+  it("after cartel-torre, in the city, the hotel lot ± 3 at h 53, a crop of the world (no build), signed RESUME_SIGN", () => {
     const ids = EXHIBITS.map((e) => e.id);
     expect(ids.indexOf("cartel-torre-escena")).toBe(ids.indexOf("cartel-torre") + 1);
     const e = contexts.find((x) => x.id === "cartel-torre-escena")!;
-    expect(e).toMatchObject({ title: "Resume sign in its scene", zone: "cv", group: "city", kind: "context", h: 52, sign: RESUME_SIGN,
+    expect(e).toMatchObject({ title: "Resume sign in its scene", zone: "cv", group: "city", kind: "context", h: 53, sign: RESUME_SIGN,
       box: { x0: HOTEL_LOT.x - 3, y0: HOTEL_LOT.y - 3, x1: HOTEL_LOT.x + HOTEL_LOT.w + 3, y1: HOTEL_LOT.y + HOTEL_LOT.d + 3 } });
     expect("build" in e).toBe(false);
     const c: Solid[] = [], d: Accent[] = [], l: FixedLight[] = [], cs = contextScene(scene, e);
@@ -540,12 +540,13 @@ import { CITY_BOUNDS as PLAN_CITY_BOUNDS, HOTEL_LOT, PLAZA_MAYOR, parcels as pla
 
 describe("city exhibits on the new layout (#472)", () => {
   const byId = (id: string) => regions.find((e) => e.id === id);
-  it("plaza frames PLAZA_MAYOR ± 3 at h 52", () => {
+  it("plaza frames PLAZA_MAYOR ± 3 at h 17", () => {
     expect(byId("plaza")!.box).toEqual({ x0: PLAZA_MAYOR.x - 3, y0: PLAZA_MAYOR.y - 3, x1: PLAZA_MAYOR.x + PLAZA_MAYOR.w + 3, y1: PLAZA_MAYOR.y + PLAZA_MAYOR.d + 3 });
-    expect(byId("plaza")!.h).toBe(52);
+    expect(byId("plaza")!.h).toBe(17); // smallest integer that passes framing: accents 16.12 (#474);
   });
-  it("hotel (#474) frames HOTEL_LOT ± 3 at h 52, titled 'Hotel with the Resume sign'; torre is retired", () => {
-    expect(byId("hotel")).toMatchObject({ title: "Hotel with the Resume sign", zone: "cv", group: "city", h: 52,
+  it("hotel (#474) frames HOTEL_LOT ± 3 at h 53, titled 'Hotel with the Resume sign'; torre is retired", () => {
+    // h 53: smallest integer that passes framing; inside 52.5 (machine room z 51 + 1.5), accents 22.65
+    expect(byId("hotel")).toMatchObject({ title: "Hotel with the Resume sign", zone: "cv", group: "city", h: 53,
       box: { x0: HOTEL_LOT.x - 3, y0: HOTEL_LOT.y - 3, x1: HOTEL_LOT.x + HOTEL_LOT.w + 3, y1: HOTEL_LOT.y + HOTEL_LOT.d + 3 } });
     expect(EXHIBITS.some((e) => e.id === "torre")).toBe(false);
   });

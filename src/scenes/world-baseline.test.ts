@@ -20,9 +20,9 @@ const PIECES: Record<string, string> = {
   // #360: the four sign placeholders are new pieces; the earlier twelve did not move
   // #362: grafiti replaces its placeholder; the other pieces did not move
   // #375: gap 2 and KERN respace the words of the four signs (and the platform posts move in)
-  // #378: cartel-torre (tower crown with helipad) replaces the two cartel-helipuerto placeholders
+  // #378: cartel-torre (tower crown with helipad) replaces the two cartel-helipuerto placeholders (#474: now the hotel stand-in and its sign)
   // RESUME in Neon Light: greenMid marquee faces and warm bulbs on a glass panel replace the stroke-font "Resume" (panel and frame follow the new cap height)
-  "cartel-torre": "65afa18c/8c310d6c",
+  "cartel-torre": "934ee990/f68dd77a",
   // #379: the tinker sign (cartel-taller, on its hall stand-in) replaces grafiti; re-recorded after the ladder fix and the closed-bowl bulbs (stage 6)
   // PORTFOLIO in CNRGN Builder: filled block letters (marquee bulbs, neon tube and welded frame follow the contours)
   // #401: floodlight removed
