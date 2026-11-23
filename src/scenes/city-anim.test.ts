@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
-import { createRng } from "../map/seed";
-import { WINDOW_ALPHA } from "../city/lights";
+import { SEED, createRng } from "../map/seed";
+import { zoneRng } from "./world";
+import { ANIMABLE_BARRIOS, MAX_ANIMABLE, WINDOW_ALPHA } from "../city/lights";
 import { city, type CityScene } from "./city";
 import { HOTEL_SLAB } from "./sign-hotel";
 import { type CityAnim, BLINK_GAP_MS, PAPER_DRIFT, ROOMS_BAND, FLICKER_ALPHA, FLICKER_GAP_MS, PROMENADE_STEP_MS, NEON_STEP_MS, PAPER_RANGE, PAPER_SIDE, PAPER_SPEED, SIGN_GAP_MS, WINDOW_GAP_MS, createCityAnim } from "./city-anim";
@@ -558,5 +559,17 @@ describe("city-anim: the TELECOM mast (#479)", () => {
     const withMast = createCityAnim(mast(base, true), createRng(3), { reducedMotion: false });
     expect(withMast.tick(TELECOM_STEP_MS).neon).toBe(true);
     expect(anim.tick(Math.min(RING_STEP_MS, TELECOM_STEP_MS)).neon).toBe(false);
+  });
+});
+
+describe("city-anim: animatable windows over the world seed (#480)", () => {
+  it("40 animatable windows split among the barrios (≥ 1 per barrio with candidates)", () => {
+    const scene = city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3)), l = scene.lights;
+    const animable = l.windows.filter((w) => w.animable), nb = (w: (typeof animable)[number]) => scene.placed[w.owner]!.placed.neighborhood;
+    expect(animable).toHaveLength(MAX_ANIMABLE);
+    for (const b of ANIMABLE_BARRIOS) if (l.counts[b].candidates > 0) expect(animable.filter((w) => nb(w) === b).length, b).toBeGreaterThanOrEqual(1);
+    const frame0 = createCityAnim(scene, createRng(SEED + 2), { reducedMotion: false }).windows();
+    expect(frame0).toEqual(animable.filter((w) => w.on).map((w) => ({ kind: "poly", pts: w.window.pts, color: w.color, alpha: WINDOW_ALPHA })));
+    expect(new Set(animable.filter((w) => w.on).map(nb)).size).toBeGreaterThan(1);
   });
 });

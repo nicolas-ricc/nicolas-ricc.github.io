@@ -1342,3 +1342,27 @@ describe("hotel sign level 3 and docs closing (#475)", () => {
     for (const s of ["`HOTEL_CAP`", "12", "`backingW`", "`SIGN_SITE`", site, box, "28 %", "48 %", "37 %", "430×932", "390×750", "360×740", "`COVER_FOCUS_U`", "`labelLayout`"]) expect(dev, s).toContain(s);
   });
 });
+
+describe("the centro costero spec is closed (#480)", () => {
+  const spec = readFileSync(`${ROOT}docs/superpowers/specs/2026-11-22-resume-centro-costero-design.md`, "utf8");
+  const at = spec.indexOf("## 12. Desvíos y medición"), s12 = at < 0 ? "" : spec.slice(at);
+  const CAPTURES = [["sitio.png", 1600], ["sitio-velo-cv.png", 1600], ["sitio-velo-cv-hover.png", 1600], ["lab-world-bloom.png", 1600], ["sitio-390x750.png", 390], ["sitio-820x1180.png", 820]] as const;
+  it("README lists the centro costero spec among the specs", () => {
+    expect(readme).toContain("2026-11-22-resume-centro-costero-design.md");
+  });
+  it("the spec is implemented and has §12", () => {
+    expect(spec).toContain("**Estado:** implementado (#471; rama feature/471-resume-centro-costero)");
+    expect(at).toBeGreaterThan(0);
+  });
+  it("§12 records the deviations and the measurement", () => {
+    for (const s of ["`HOTEL_CAP` 12", "28 %", "48 %", "37 %", "430×932", "390×750", "360×740", "lado < 9", "(−107, 231)", "TELECOM", "MAX_ANIMABLE", "16.80", "16.37", "RenderTexture", ...CAPTURES.map(([f]) => f)]) expect(s12, s).toContain(s);
+  });
+  it("every closing capture exists, is cited in §12 and is 2×", () => {
+    for (const [f, w] of CAPTURES) {
+      const rel = `assets/2026-11-22-resume-centro-costero/cierre/${f}`, path = `${ROOT}docs/superpowers/specs/${rel}`;
+      expect(existsSync(path), f).toBe(true);
+      expect(s12, f).toContain(rel);
+      expect(readFileSync(path).readUInt32BE(16), f).toBe(2 * w);
+    }
+  });
+});

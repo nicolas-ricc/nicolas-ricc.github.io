@@ -1,7 +1,7 @@
 # Resume: centro costero con plaza, avenidas y cartel en el hotel — diseño
 
 **Fecha:** 2026-11-22
-**Estado:** borrador para aprobar
+**Estado:** implementado (#471; rama feature/471-resume-centro-costero)
 **Antecede:** `2026-09-14-resume-ciudad-design.md` (grilla y piezas fijas),
 `2026-10-15-resume-nivel-2-kit-zonificacion-luces-design.md` (kit, zonificación,
 luces), `2026-10-27-barrio-costero-design.md` (barrio del sur),
@@ -401,3 +401,110 @@ cada uno dejando el sitio andando:
 - Las recetas concretas y sus pesos dentro de cada barrio.
 - Cómo termina el barrio contra el sangrado, al sur de `y 475`.
 - La técnica de caché, si el presupuesto la pide.
+
+## 12. Desvíos y medición
+
+Cierre de #471 (#480). Lo que la implementación hizo distinto de lo escrito
+arriba, y lo que se midió al final. Las cifras de presupuesto y de cuadros por
+segundo son del 2026-11-23.
+
+### 12.1 Desvíos
+
+- **(a) Cap del cartel.** `HOTEL_CAP` 12, no 12.7. La regla `backingW` del
+  oráculo deja 1.35 u de respaldo a cada lado de la tinta sobre una fachada de
+  64: con 12.7 la tinta mide 64.07 y con 12, 60.54. Está en §7.5.
+- **(b) Móviles verticales.** RESUME se ve al 28 % en 430×932, al 48 % en
+  390×750 y al 37 % en 360×740. Su enlace usa el modo de borde de
+  `labelLayout`. Es la decisión D10 de #471 (§7.5).
+- **(c) Regla de lado.** Las parcelas cuya caja envolvente tiene un lado < 9 se descartan
+  aunque pasen el área ≥ 70 y el cociente 2A/perímetro ≥ 3.4. Al planificar
+  #471 eran 8 piezas: 2 al norte de la plaza (astillas de 5 de ancho, `y 201..206`)
+  y 6 en el sur.
+- **(d) Celdas de las piezas singulares.** Leídas del código, no del plano.
+  `FIXED_PARCELS` (`src/city/zoning.ts`): palacio cívico (163, 291), teatro
+  (133, 291), biblioteca `LIBRARY_CELL` (73, 201) (no (103, 201) del plano: esa
+  celda es una cuña de 21 × 5), obra `constructionSite` (43, 261), torre de agua
+  `WATER_TOWER_CELL` (13, 291) y `TELECOM_CELL` (−107, 231). En
+  `src/scenes/tech-zoning.ts`: `ARENA` (103, 411), `AUDITORIUM` (13, 351),
+  `SCHOOL` (103, 501), `CLUB` (133, 531) y `PLAZAS` (133, 471) y (73, 441).
+- **(e) TELECOM.** La torre de telecomunicaciones está en `(−107, 231)`, una
+  parcela moderna del oeste. La construye `city()` (`fixed.ts`); no es receta
+  del kit.
+- **(f) El oeste.** Sin piso encendido ni coronas de neón en sus torres: son
+  recetas `district` y moderno del kit, con ventanas del kit y neones del
+  catálogo. El anillo del mástil de TELECOM se conserva, a cargo de `city-anim`.
+- **(g) Luces.** `MAX_ANIMABLE` 40 se reparte entre los cuatro barrios (`ANIMABLE_BARRIOS`),
+  en proporción a sus candidatas; bajo no tiene candidatas en la ciudad. Lo hace `animableQuota` (`src/city/lights.ts`).
+  Candidatas en la semilla del mundo: clasico 60, transicion 527, moderno 720,
+  bajo 0 (las ventanas del bajo del sur son `homes` de tech, ámbar, es decir
+  cálidas). Cupo: clasico 3, transicion 16, bajo 0, moderno 21. Antes:
+  transicion 36, clasico 4, moderno 0. El hotel tiene 96 cuartos con
+  `ROOMS_LIT` 0.4.
+
+### 12.2 Presupuesto, antes y después
+
+`main` es origin/main c9df1fa (antes de #471); final, esta rama tras 49efcf6.
+Regla de los topes: lo medido × 1.1, redondeado a la centena (a la decena en
+`strip` y en `FACE_CAPS`).
+
+| Cifra | main | final | Tope (final) |
+| --- | --- | --- | --- |
+| Sólidos elevados: astillero | 686 | 686 | 800 |
+| Sólidos elevados: fábrica | 770 | 770 | 800 |
+| Sólidos elevados: ciudad (Resume) | 1 454 | 1 518 | 1 700 |
+| Sólidos elevados: feria | 565 | 565 | 600 |
+| Sólidos elevados: tierra adentro | 453 | 453 | 500 |
+| Sólidos elevados: tech | 1 490 | 1 136 | 1 200 |
+| Franja de Resume (suelo `strip`) | 152 | 522 | 570 |
+| Acentos estáticos de Resume | 1 165 | 1 280 | 1 400 |
+| Polígonos estáticos del mundo (`stage.staticCount`) | 46 146 | 43 546 | 47 900 (era 56 000) |
+| Acentos estáticos del mundo | 1 753 | 1 833 | 2 000 (era 2 600) |
+
+Topes de caras de tech (medido final → tope): low 98 → 110, houses 61 → 70,
+plaza 58 → 60, school 86 → 90, club 80 → 90, waterfront 331 → 360, monoblock
+105 (el tope sigue en 115: es un límite de la generación), `ACCENT_CAP` 568 →
+600. Caras del distrito 5 245, región 1 444.
+
+### 12.3 Cuadros por segundo
+
+Agent-browser headless, 1600×900×1. La línea `[mapa] bloom:` es la media de
+60 cuadros de `tick + render`; tres cargas por lado, intercaladas. `main` se
+sirvió desde un worktree en :5174 y la rama en :5173, con los mismos
+`node_modules`.
+
+| Medición | Lado | `tick` (ms) | `render` (ms) | `tick + render` (ms) |
+| --- | --- | --- | --- | --- |
+| Planificación (HEAD 343ed5e) | main | 12.0 / 12.0 / 11.2 → 11.73 | 5.1 / 4.8 / 5.3 → 5.07 | 16.80 |
+| Planificación (HEAD 343ed5e) | rama | 11.4 / 11.2 / 11.4 → 11.33 | 4.9 / 5.1 / 5.1 → 5.03 | 16.37 |
+| Final (HEAD 49efcf6) | main | 11.4 / 11.8 / 11.6 → 11.60 | 5.2 / 5.1 / 5.1 → 5.13 | 16.73 |
+| Final (HEAD 49efcf6) | rama | 12.3 / 11.1 / 12.1 → 11.83 | 5.1 / 5.1 / 5.0 → 5.07 | 16.90 |
+
+La diferencia es −0.43 ms en la planificación y +0.17 ms al final. No llega al
+umbral de +2 ms, así que no hay caché estático: no se agregó ningún
+`RenderTexture` con las capas estáticas de Resume, `stage.ts` no cambió y no
+existe `stage.staticDraws`. En headless la página corre a unos 2 fps y el
+veredicto del bloom es `fallback` de los dos lados (presupuesto 15 ms): la cifra
+que importa es `tick`, la de CPU. Si un caché hiciera falta, cambiaría cómo se
+dibujan los cuadros, no la geometría que cuentan los topes: las cifras de §12.2
+no quedarían viejas.
+
+### 12.4 Capturas
+
+Todas a 2×, en `assets/2026-11-22-resume-centro-costero/cierre/`.
+
+- [`sitio.png`](assets/2026-11-22-resume-centro-costero/cierre/sitio.png):
+  `/`, 1600×900. El sitio es un mapa nocturno y no tiene modo día; "de día" es
+  el sitio sin zona en foco.
+- [`sitio-velo-cv.png`](assets/2026-11-22-resume-centro-costero/cierre/sitio-velo-cv.png):
+  `/area/resume/`, 1600×900, con el velo sobre las otras zonas y el panel del CV
+  abierto. El ticket decía `/area/cv/`, que no es una ruta (`src/map/zones.ts`
+  tiene `area/resume`).
+- [`sitio-velo-cv-hover.png`](assets/2026-11-22-resume-centro-costero/cierre/sitio-velo-cv-hover.png):
+  `/`, 1600×900, con el puntero sobre el enlace RESUME: el mismo velo sobre
+  Portfolio y Writing, sin el panel del CV, para ver la ciudad entera.
+- [`lab-world-bloom.png`](assets/2026-11-22-resume-centro-costero/cierre/lab-world-bloom.png):
+  `/lab/world.html`, 1600×900, tecla 6 (bloom encendido).
+- [`sitio-390x750.png`](assets/2026-11-22-resume-centro-costero/cierre/sitio-390x750.png):
+  `/`, 390×750, con el enlace RESUME en modo de borde.
+- [`sitio-820x1180.png`](assets/2026-11-22-resume-centro-costero/cierre/sitio-820x1180.png):
+  `/`, 820×1180.

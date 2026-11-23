@@ -25,7 +25,7 @@ chimneys with marker bands, an outdoor substation and a bucket-wheel
 excavator with an animated wheel, `factory.wheel`), `city.ts`
 (the Resume orchestrator: the Plaza Mayor and, on its west side, the hotel with the RESUME sign on its facade) and `sea.ts` (point, lighthouse and ships of Blog). The pieces of
 Resume live in `src/city/` (`zoning.ts` neighborhoods, `fixed.ts` fixed pieces,
-`streets.ts` streets (lanes, crosswalks, median, lamps, traffic lights, crossing plazas, costanera), `lights.ts` windows, neon signs, washed facades and the box occlusion of the fixed pieces' lights) and in the
+`streets.ts` streets (lanes, crosswalks, median, lamps, traffic lights, crossing plazas, costanera), `lights.ts` windows, neon signs, washed facades and the box occlusion of the fixed pieces' lights; its 40 animatable windows, `MAX_ANIMABLE`, are split among the four barrios by `animableQuota`) and in the
 kit `src/kit/` (explored in `lab/kit.html`); the west bank's plan (axes, Plaza Mayor, parcels and barrios) is
 `src/scenes/city-plan.ts`, which zoning and streets read. At the end
 of the west track, where the shipyard's boiler shop used to be, stands the
@@ -142,7 +142,8 @@ Specs in `docs/superpowers/specs/`
 `2026-11-15-carteles-de-zona-rediseno-design.md`,
 `2026-11-16-storybook-luces-y-encuadre-design.md`,
 `2026-11-17-carteles-de-zona-integracion-design.md`,
-`2026-11-20-writing-balsa-tablones-design.md`).
+`2026-11-20-writing-balsa-tablones-design.md`,
+`2026-11-22-resume-centro-costero-design.md`).
 
 `/lab/storybook.html` is the structures storybook: it shows one building or
 structure at a time, cropped from the world by its box (or built alone at the

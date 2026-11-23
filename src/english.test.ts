@@ -80,8 +80,10 @@ const ALLOW: Record<string, RegExp[]> = {
   "src/city/axis-streets.test.ts": [/Avenida del (?:Sur|Barrio)/g, /\bcostanera\b/gi, /\bbarrio\b/g],
   "src/city/zoning.ts": [/\b[Bb]arrios?\b/g, /\bresidencial\b/g, /\bBARRIO_STEP\b/g, /\bCityBarrio\b/g], // Barrio ids of city-plan are layout data (#477: `residencial` too)
   "src/scenes/city.test.ts": [/const MAIN = \[(?:"[0-9a-f]{8}",? ?)+\]/g], // fingerprints of the pinned plinth pieces (a hash may spell a stem)
-  "src/city/lights.test.ts": [/\b[Bb]arrios?\b/g],
-  "src/docs-glossary.test.ts": [/\b[Bb]arrios?\b/g, /Resume: ciudad/g], // barrio ids and the Resume: ciudad row of the storybook index (#477)
+  "src/city/lights.ts": [/\b[Bb]arrios?\b/g, /\bANIMABLE_BARRIOS\b/g], // barrio ids of city-plan are layout data (#480)
+  "src/city/lights.test.ts": [/\b[Bb]arrios?\b/g, /\bANIMABLE_BARRIOS\b/g],
+  "src/scenes/city-anim.test.ts": [/\b[Bb]arrios?\b/g, /\bANIMABLE_BARRIOS\b/g], // barrio ids of city-plan are layout data (#480)
+  "src/docs-glossary.test.ts": [/\b[Bb]arrios?\b/g, /Resume: ciudad/g, /\bbarrioAt\b/g], // barrio ids and the Resume: ciudad row of the storybook index (#477); the barrioAt identifier (#480)
   "src/kit/kit.test.ts": [/\b[Bb]arrios?\b/g], // barrio ids of the plan (#477)
   "src/city/zoning.test.ts": [/\b[Bb]arrios?\b/g, /\bresidencial\b/g, /\bcostanera\b/g, /\bBARRIO_STEP\b/g, /\bCityBarrio\b/g],
   // proper noun: the Fábrica de Luz is the real power station the boiler hall models (decision 2c)
@@ -112,6 +114,8 @@ const ALLOW: Record<string, RegExp[]> = {
   // the docs test pins prose of the Spanish specs in `docs/superpowers/specs/` (the old ones stay untouched, decision 3; the sign spec is
   // closed by #364): each entry is a literal of one of those specs (status line, headings, deviation notes, table rows, log text, exhibit names) or an exhibit id
   "src/lab/docs.test.ts": [
+    // the centro costero closing (#480): its status line, §12 heading and the name of its spec and asset folder
+    /centro[- ]costero|implementado \(#471; rama feature\/471-resume-centro-costero\)/g,
     /casas con techo de teja|plaza de barrio|barrio costero|estación|paso a nivel|peor redibujo( en 5 s)?/g,
     EXHIBIT_IDS,
     // the zone signs closing (#364): its status line and an exhibit name of the storybook table
