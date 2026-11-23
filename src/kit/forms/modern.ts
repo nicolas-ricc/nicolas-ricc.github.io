@@ -172,7 +172,7 @@ export function constructionSite(lot: Lot, _rng: Rng, _style: Style): Piece {
 
 export const MODERN: readonly RecipeDef[] = [
   { name: "glassTower", recipe: glassTower, family: "modern", landmark: true },
-  { name: "classic", recipe: classic, family: "modern", landmark: true },
+  { name: "classic", recipe: classic, family: "modern", landmark: true, poly: true },
   { name: "campus", recipe: campus, family: "modern" },
   { name: "constructionSite", recipe: constructionSite, family: "modern", landmark: true },
 ];

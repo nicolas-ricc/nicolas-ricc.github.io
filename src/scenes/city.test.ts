@@ -13,11 +13,11 @@ import { createRng, SEED } from "../map/seed";
 import { AVENUE, BOULEVARD, BRIDGE, CITY_EDGE, COLLAPSED, FREIGHT_ROW, ROWS, CRATERS, DISTRICT_BANK_Y, EAST_RING, FALLEN_BLOCK, PROMENADE, WEST_QUAY, blocks, estuaryEast, inBlock, inCrater } from "./city-grid";
 import { PLINTH_H, city, type CityScene } from "./city";
 import { CAR } from "../kit/props";
-import { FIXED, FOOTBRIDGE_LOT, MAX_BUILDING_H, assign, builtParcels, tooSmall, neighborhoodOfParcel } from "../city/zoning";
+import { FIXED, FIXED_PARCELS, FOOTBRIDGE_LOT, MAX_BUILDING_H, WATER_TOWER_CELL, assign, builtParcels, tooSmall, neighborhoodOfParcel } from "../city/zoning";
 import { zoneRng } from "./world";
 import { MARKET_SCALE } from "../city/harbor";
 import { fingerprint } from "../iso/fingerprint";
-import { BRIDGE_LANDING, CITY_BOUNDS, HOTEL_LOT, PLAZA_MAYOR, inCrossingPlaza, inParcel, inPlazaMayor, onAxis, parcels } from "./city-plan";
+import { BRIDGE_LANDING, CITY_BOUNDS, HOTEL_LOT, PLAZA_MAYOR, inCrossingPlaza, inParcel, inPlazaMayor, onAxis, parcels, polyBox } from "./city-plan";
 import { RESUME_SIGN, SIGN_PANEL, SIGN_SITE, hotel } from "./sign-hotel";
 import { signBox } from "../world/sign-box";
 import { zoneView } from "../world/view";
@@ -32,11 +32,13 @@ const inRect = (b: { min: { x: number; y: number }; max: { x: number; y: number 
 /** Strict interior of the Plaza Mayor: a crosswalk that ends exactly on the edge does not step on it. */
 const inPlaza = (x: number, y: number) => x > PLAZA_MAYOR.x && x < PLAZA_MAYOR.x + PLAZA_MAYOR.w && y > PLAZA_MAYOR.y && y < PLAZA_MAYOR.y + PLAZA_MAYOR.d;
 /** The parcels of the modern belt (the landmark cap): none inside CITY_BOUNDS today, the modern area lies west of x -54. */
-const DISTRICT = builtParcels().filter((p) => neighborhoodOfParcel(p) === "district").map((p) => p.rect);
-const inDistrict = (s: Solid) => DISTRICT.some((b) => inRect(bounds(s), b));
+const DISTRICT = builtParcels().filter((p) => neighborhoodOfParcel(p) === "moderno").map((p) => p.rect);
+const inDistrict = (s: Solid) => DISTRICT.some((b) => inRect(bounds(s), b)); // #477: "moderno" replaces "district"; none is built until #479
 /** The fixed blocks (landmarks): they can reach 24 above the plinth, with a finial. */
 const FIXED_BLOCKS = blocks().filter((b) => FIXED.some((f) => f.x === b.x && f.y === b.y));
 const inFixed = (s: Solid) => FIXED_BLOCKS.some((b) => inRect(bounds(s), b));
+/** The parcels of the singular pieces (#477): a piece lifted onto the plinth reaches its cap (21 above its lot, A3) 0.3 above street level. */
+const FIXED_RECTS = builtParcels().filter((p) => FIXED_PARCELS.some((f) => f.cell.col === p.cell.col && f.cell.row === p.cell.row)).map((p) => p.rect);
 /** The hotel with its sign (#474), built alone: its solids are matched by value in the city. */
 const HOTEL_OWN: Solid[] = [];
 hotel(HOTEL_OWN, [], []);
@@ -76,7 +78,7 @@ describe("city", () => {
     expect(s.solids.filter((x) => x.kind === "prism" && x.mat === "paving" && x.h === PLINTH_H && x.at.z === 0 && x.w === 24 && x.d === 18)).toHaveLength(13); // measured: the strip and the east bank keep their 24 × 18 plinths
     const buildings = s.solids.filter((x) => (x.kind === "prism" || x.kind === "poly" || x.kind === "cylinder") && x.facade !== undefined);
     expect(buildings.length).toBeGreaterThanOrEqual(30);
-    const rects = parcels(CITY_BOUNDS).map((p) => p.rect);
+    const rects = parcels(CITY_BOUNDS).map((p) => polyBox(p.poly)); // the bounding box holds the inset polygon lots (#477)
     for (const b of buildings) {
       if (isHotelPiece(b)) continue;
       if (b.kind === "prism" && b.mat === "paving" && b.at.z === -1) continue; // the promenade walls carry an arcade, they are not buildings
@@ -117,7 +119,7 @@ describe("city", () => {
   it("nothing but the hotel's own solids exceeds 21", () => {
     const s = scene();
     expect(s.solids.filter(isHotelPiece)).toHaveLength(HOTEL_OWN.length); // the exemption matches the hotel and nothing else
-    for (const x of s.solids) if (!isHotelPiece(x)) expect(bounds(x).max.z).toBeLessThanOrEqual(inDistrict(x) || inFixed(x) ? 25 : 21); // the district and the landmarks reach 24 above the plinth, with a finial
+    for (const x of s.solids) if (!isHotelPiece(x)) expect(bounds(x).max.z).toBeLessThanOrEqual(inDistrict(x) || inFixed(x) ? 25 : FIXED_RECTS.some((r) => inRect(bounds(x), r)) ? 21 + PLINTH_H : 21); // the singular pieces on a plinth reach 21 above their lot (A3); the district and the landmarks reach 24 above the plinth, with a finial
   });
 
   // the old "in front of the tower no building exceeds 10" pinned the row south of the old plaza (y 242): that row is now Plaza Mayor tiles and the zoning's parcels (#472)
@@ -129,7 +131,7 @@ describe("city", () => {
     const tris = plaza.flatMap((g) => (g.kind === "ground" ? g.tris : []));
     expect(tris.length).toBe(2 * 9 * 13); // 6 u tiles: 54 × 74 (9 columns, 13 rows, the last partial)
     expect(tris.some((t) => (t.toneOffset ?? 0) !== 0)).toBe(true);
-    expect(s.ground.filter((g) => g.kind === "ground" && g.mat === "leafDark").length).toBeGreaterThanOrEqual(3);
+    expect(s.ground.filter((g) => g.kind === "ground" && g.mat === "leafDark").length).toBeGreaterThanOrEqual(1); // measured 1 at #477: the west bank no longer deals eatenRuin (it was residential's), the east bank keeps one (was 3 or more)
   });
 
   it("no cone steps on asphalt outside craters, blocks and the riverbank; the accents are amber, windows or neons with their Bleed", () => {
@@ -335,9 +337,12 @@ describe("city", () => {
   // #152: the interlocks mark enters the JSON; shopRow, tankGroup, constructionSite and derelictHall change geometry; all five re-recorded once.
   // #165: gallery, courtyardO and patioResidential now publish neon slots (no rng): seeds 2..5 re-recorded once.
   // #472: the west bank is dealt on the parcels of the city plan: all five re-recorded once.
+  // #477: the barrio neighbourhoods deal other recipes and rng streams: all five re-recorded once (Task 2; later tasks re-record again).
+  // #477 Task 3: the parcel lots carry the inset polygon and the ochavas: all five re-recorded again.
+  // #477 Task 4: the civic palace, theatre, library, obra and tank host stand on their named parcels: all five re-recorded again.
   // That lifting equals running the recipe PLINTH_H higher is checked per recipe in piece.test.
   it("pieces without ground are identical to the pinned plinth pieces (860a582; re-recorded at #143, #56, #152 and #165)", () => {
-    const MAIN = ["5e1121c0", "d8dfd64c", "a1841b17", "9635b05d", "d0ae663d"];
+    const MAIN = ["463dcb4d", "c540539a", "e9c5b4f5", "4dd4c753", "d0ee13e9"];
     for (let s = 1; s <= 5; s++) {
       const c = city(createRng(s), createRng(s + 1), createRng(s + 2));
       const plain = c.placed.filter((q) => q.piece.ground.length === 0).map((q) => q.piece);
@@ -435,22 +440,14 @@ describe("city on the new layout (#472)", () => {
     }
   });
 
-  it("sliver parcels (lot side < 7, R5) keep their plinth and build nothing; there are 8 in the world seed", () => {
-    // measured at #472: cells (−17,171) ×2, (13,171), (43,171), (103,201), (43,291), (73,291), (103,291); #476 brings polygon lots for them
+  it("sliver parcels (lot side < 7, R5) keep their plinth and build nothing; there are 3 in the world seed", () => {
+    // measured at #472: 8 (the inscribed-rect lots); at #477 the polygon lots (bounding box of the inset) leave cells (−17,171) ×2 and (43,291)
     const world = city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3));
     const bare = world.placed.filter((pp) => pp.placed.parcel && tooSmall(pp.placed.lot));
-    expect(bare).toHaveLength(8);
+    expect(bare).toHaveLength(3);
     for (const pp of bare) {
       expect(pp.piece.solids).toEqual([]);
       expect(world.solids.filter((x) => x.kind === "poly" && x.mat === "paving" && x.h === PLINTH_H && samePoly(x.footprint, pp.placed.parcel!.poly))).toHaveLength(1);
-    }
-  });
-
-  it("no solid of a parcel piece leaves rect ± 0.8", () => {
-    for (const pp of s.placed) {
-      const parcel = pp.placed.parcel;
-      if (!parcel) continue;
-      for (const x of [...pp.piece.solids, ...pp.piece.ground]) expect(within(bounds(x), parcel.rect, 0.8), `${parcel.cell.col},${parcel.cell.row} ${pp.placed.recipe} ${x.kind}`).toBe(true);
     }
   });
 
@@ -548,5 +545,54 @@ describe("the hotel and its RESUME sign in the city (#474)", () => {
     expect(b.maxX * v.scale + v.x).toBeLessThanOrEqual(w);
     expect(b.minY * v.scale + v.y).toBeGreaterThanOrEqual(0);
     expect(b.maxY * v.scale + v.y).toBeLessThanOrEqual(h);
+  });
+});
+
+describe("singular pieces back on named parcels (#477)", () => {
+  const world = () => city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3));
+  const s = world();
+  const at = (col: number, row: number) => s.placed.find((q) => q.placed.parcel?.cell.col === col && q.placed.parcel.cell.row === row && FIXED_PARCELS.some((f) => f.cell.col === col && f.cell.row === row))!;
+
+  it("the water tower stands on the courtyard of (13, 291)", () => {
+    const host = at(WATER_TOWER_CELL.col, WATER_TOWER_CELL.row);
+    expect(host.placed.recipe).toBe("patioResidential");
+    const court = host.piece.courtyard!;
+    expect(court).toBeDefined();
+    const tanks = s.solids.filter((x) => x.kind === "cylinder" && x.r === 2.2 && x.sides === 8);
+    expect(tanks).toHaveLength(1);
+    const t = tanks[0]!;
+    if (t.kind !== "cylinder") throw new Error("unreachable");
+    expect(t.at.x).toBeGreaterThanOrEqual(court.x);
+    expect(t.at.x).toBeLessThanOrEqual(court.x + court.w);
+    expect(t.at.y).toBeGreaterThanOrEqual(court.y);
+    expect(t.at.y).toBeLessThanOrEqual(court.y + court.d);
+    expect(t.at.z).toBeGreaterThanOrEqual(host.placed.lot.z);
+  });
+
+  it("the construction site stands on (43, 261)", () => {
+    const q = at(43, 261);
+    expect(q.placed.recipe).toBe("constructionSite");
+    const r = q.placed.parcel!.rect;
+    for (const x of q.piece.solids) {
+      const b = bounds(x);
+      expect(b.min.x >= r.x - 0.8 && b.max.x <= r.x + r.w + 0.8 && b.min.y >= r.y - 0.8 && b.max.y <= r.y + r.d + 0.8).toBe(true);
+    }
+  });
+
+  it("the three civic pieces are bathed, and only their walls", () => {
+    const civic = s.placed.filter((q) => q.placed.neighborhood === "civic");
+    expect(civic.map((q) => q.placed.recipe).sort()).toEqual(["civicPalace", "library", "theatre"]);
+    expect(s.lights.bathed.length).toBeGreaterThan(0);
+    const walls = civic.flatMap((q) => q.piece.walls);
+    for (const a of s.lights.bathed) {
+      if (a.kind !== "poly") throw new Error("bathed accents are polys");
+      const [p0, p1] = a.pts;
+      expect(walls.some((w) => Math.hypot(w.pts[0]!.x + w.normal.x * 0.05 - p0!.x, w.pts[0]!.y + w.normal.y * 0.05 - p0!.y) < 1e-6 && Math.hypot(w.pts[1]!.x + w.normal.x * 0.05 - p1!.x, w.pts[1]!.y + w.normal.y * 0.05 - p1!.y) < 1e-6)).toBe(true);
+    }
+  });
+
+  it("is deterministic with the singular pieces", () => {
+    expect(fingerprint(world().solids)).toBe(fingerprint(s.solids));
+    expect(JSON.stringify(world().placed.map((q) => [q.placed.recipe, q.placed.neighborhood, q.placed.lot]))).toBe(JSON.stringify(s.placed.map((q) => [q.placed.recipe, q.placed.neighborhood, q.placed.lot])));
   });
 });

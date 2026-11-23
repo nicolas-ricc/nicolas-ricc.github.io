@@ -17,6 +17,9 @@ import { raftAt, REST_POSE } from "../scenes/raft";
 import { trainLen } from "../scenes/train";
 import { createRng } from "../map/seed";
 import { assembleWorld } from "../world/assemble";
+import { city } from "../scenes/city";
+import { zoneRng } from "../scenes/world";
+import { SEED } from "../map/seed";
 import { type Box, FRAME_H, HALO_BASE } from "../world/frame";
 import { PLINTH_H } from "../scenes/city-pieces";
 import { contextAnimators, contextScene, cropAnimators, cropScene, isLongPrism, readout } from "./crop";
@@ -30,7 +33,7 @@ const CATALOG: Record<GroupId, string[]> = {
   shipyard: ["gradas", "darsena", "grua-portico", "calle-faroles", "naves", "punta-norte", "estacion", "paso-a-nivel", "dique-flotante", "patio-contenedores"],
   hinterland: ["central-termica", "tanques", "silos", "alta-tension", "playa-contenedores"],
   fair: ["noria", "montana-rusa", "torre-caida", "carrusel", "arcade", "autitos-chocadores", "muelle", "tren-fantasma", "casa-espejos", "tobogan", "tronco-acuatico"],
-  city: ["plaza", "hotel", "puente", "malecon", "manzana-derrumbada", "manzana-distrito", "punta-sur", "galpones", "playa-carga", "mercado-pescado"],
+  city: ["plaza", "hotel", "puente", "malecon", "manzana-derrumbada", "manzana-casco", "manzana-transicion", "obra", "punta-sur", "galpones", "playa-carga", "mercado-pescado"],
   tech: ["mastil", "arena", "auditorio", "torres", "monoblock", "casas", "escuela", "club", "plaza-barrio", "costanera", "barrio"],
   sea: ["faro", "casa-farero", "boyas", "pecio"],
 };
@@ -204,10 +207,10 @@ describe("selection by hash", () => {
 const pieces = EXHIBITS.flatMap((e) => (e.kind === "piece" ? [e] : []));
 
 describe("piece exhibits", () => {
-  it("the fifteen pieces, each in its zone", () => {
+  it("the sixteen pieces, each in its zone", () => {
     expect(Object.fromEntries(pieces.map((e) => [e.id, e.zone]))).toEqual({
       "tanque-agua": "portfolio", "grua-muelle": "portfolio", "grua-torre": "portfolio", "farol": "portfolio", "tren": "portfolio", "cartel-taller": "portfolio",
-      "campus": "cv", "selva": "cv", "cartel-torre": "cv",
+      "manzana-distrito": "cv", "campus": "cv", "selva": "cv", "cartel-torre": "cv",
       "viga": "blog", "carguero": "blog", "remolcador": "blog", "convoy": "blog", "lancha": "blog", "plataforma": "blog",
     });
   });
@@ -536,7 +539,7 @@ describe("clean crops (#399)", () => {
   });
 });
 
-import { CITY_BOUNDS as PLAN_CITY_BOUNDS, HOTEL_LOT, PLAZA_MAYOR, parcels as planParcels } from "../scenes/city-plan";
+import { HOTEL_LOT, PLAZA_MAYOR } from "../scenes/city-plan";
 
 describe("city exhibits on the new layout (#472)", () => {
   const byId = (id: string) => regions.find((e) => e.id === id);
@@ -550,11 +553,34 @@ describe("city exhibits on the new layout (#472)", () => {
       box: { x0: HOTEL_LOT.x - 3, y0: HOTEL_LOT.y - 3, x1: HOTEL_LOT.x + HOTEL_LOT.w + 3, y1: HOTEL_LOT.y + HOTEL_LOT.d + 3 } });
     expect(EXHIBITS.some((e) => e.id === "torre")).toBe(false);
   });
-  it("manzana-distrito frames the largest parcel of cell (−17, 171), rect ± 3", () => {
-    const p = planParcels(PLAN_CITY_BOUNDS).filter((q) => q.cell.col === -17 && q.cell.row === 171).sort((a, b) => b.area - a.area)[0]!;
-    expect(byId("manzana-distrito")!.box).toEqual({ x0: p.rect.x - 3, y0: p.rect.y - 3, x1: p.rect.x + p.rect.w + 3, y1: p.rect.y + p.rect.d + 3 });
+});
+
+describe("barrio exhibits (#477)", () => {
+  const ex = (id: string) => EXHIBITS.find((e) => e.id === id)!;
+  const placed = city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3)).placed.filter((q) => q.placed.parcel);
+  const framed = (id: string) => {
+    const e = ex(id);
+    if (e.kind !== "region") throw new Error(`${id} is not a region`);
+    return placed.filter((q) => { const r = q.placed.parcel!.rect; return r.x - 3 === e.box.x0 && r.y - 3 === e.box.y0 && r.x + r.w + 3 === e.box.x1 && r.y + r.d + 3 === e.box.y1; });
+  };
+  it("obra frames the (43, 261) parcel ± 3, with the construction site", () => {
+    const q = framed("obra");
+    expect(q.map((p) => `${p.placed.parcel!.cell.col},${p.placed.parcel!.cell.row} ${p.placed.recipe}`)).toEqual(["43,261 constructionSite"]);
+    expect(ex("obra").title).toBe("Construction site");
   });
-  it("obra is retired", () => {
-    expect(EXHIBITS.some((e) => e.id === "obra")).toBe(false);
+  it("manzana-casco frames a clasico parcel with a corner cupola; manzana-transicion a transicion parcel", () => {
+    expect(framed("manzana-casco").map((p) => [p.placed.neighborhood, p.placed.recipe])).toEqual([["clasico", "cornerCupola"]]);
+    expect(ex("manzana-casco").title).toBe("Classic block");
+    expect(framed("manzana-transicion").map((p) => p.placed.neighborhood)).toEqual(["transicion"]);
+    expect(ex("manzana-transicion").title).toBe("Transition block");
+  });
+  it("manzana-distrito is a moderno glass tower piece taller than 21", () => {
+    const e = ex("manzana-distrito");
+    expect(e.kind).toBe("piece");
+    if (e.kind !== "piece") return;
+    const out: Solid[] = [];
+    e.build(out, []);
+    expect(Math.max(...out.map((s) => bounds(s).max.z))).toBeGreaterThan(21); // glassTower is a landmark (cap 24); a common recipe stops at 18
+    // the style and the lot are pinned by the piece hash of world-baseline.test.ts (PIECES["manzana-distrito"]): glassTower paints its bodies curtain under any style
   });
 });

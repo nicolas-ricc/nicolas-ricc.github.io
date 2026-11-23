@@ -235,3 +235,25 @@ describe("signs as the navigation (#394)", () => {
     });
   }
 });
+
+describe("glossary: barrio styles and parcel lots (#477)", () => {
+  const glossary = read("CONTEXT.md");
+  it("Style names the four barrio styles", () => {
+    const sec = section(glossary, "Style");
+    for (const id of ["clasico", "transicion", "moderno", "bajo"]) expect(sec, id).toContain(`\`${id}\``);
+  });
+  it("Lot says a parcel's lot carries its polygon (inset by the sidewalk) and the ochava", () => {
+    const sec = section(glossary, "Lot");
+    expect(sec).toMatch(/inset/);
+    expect(sec).toMatch(/ochava/);
+    expect(sec).toContain("`parcelLot`");
+  });
+});
+
+describe("storybook index: barrio exhibits (#477)", () => {
+  it("the Resume: ciudad row names manzana-casco and manzana-transicion", () => {
+    const story = read("docs/superpowers/specs/2026-10-17-storybook-estructuras-design.md");
+    const row = story.split("\n").find((l) => l.startsWith("| Resume: ciudad |")) ?? "";
+    for (const id of ["manzana-casco", "manzana-transicion"]) expect(row, id).toContain(`\`${id}\``);
+  });
+});

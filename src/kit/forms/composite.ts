@@ -176,9 +176,9 @@ export function lTower(lot: Lot, rng: Rng, style: Style): Piece {
 }
 
 export const COMPOSITE: readonly RecipeDef[] = [
-  { name: "podiumTower", recipe: podiumTower, family: "composite" },
+  { name: "podiumTower", recipe: podiumTower, family: "composite", poly: true },
   { name: "twinTowers", recipe: twinTowers, family: "composite" },
-  { name: "decoStepped", recipe: decoStepped, family: "composite" },
-  { name: "chamfer", recipe: chamfer, family: "composite" },
+  { name: "decoStepped", recipe: decoStepped, family: "composite", poly: true },
+  { name: "chamfer", recipe: chamfer, family: "composite", poly: true },
   { name: "lTower", recipe: lTower, family: "composite" },
 ];

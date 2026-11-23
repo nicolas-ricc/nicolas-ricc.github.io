@@ -130,8 +130,8 @@ export function patioResidential(lot: Lot, rng: Rng, style: Style): Piece {
 }
 
 export const COURTYARD: readonly RecipeDef[] = [
-  { name: "courtyardO", recipe: courtyardO, family: "courtyard" },
-  { name: "courtyardU", recipe: courtyardU, family: "courtyard" },
+  { name: "courtyardO", recipe: courtyardO, family: "courtyard", poly: true },
+  { name: "courtyardU", recipe: courtyardU, family: "courtyard", poly: true },
   { name: "courtyardC", recipe: courtyardC, family: "courtyard" },
-  { name: "patioResidential", recipe: patioResidential, family: "courtyard" },
+  { name: "patioResidential", recipe: patioResidential, family: "courtyard", poly: true },
 ];

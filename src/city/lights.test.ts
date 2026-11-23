@@ -89,11 +89,11 @@ for (const [name, make, isWorld] of SEEDS) {
       expect(l.windows.some((w) => rooms.has(JSON.stringify(w.window.pts)))).toBe(false);
     });
 
-    it(`there are at most ${MAX_ANIMABLE} animatable ones and all from downtown or residential`, () => {
+    it(`there are at most ${MAX_ANIMABLE} animatable ones and all from downtown, residential or the warm barrios (#477)`, () => {
       const anim = l.windows.filter((w) => w.animable);
       expect(anim.length).toBeLessThanOrEqual(MAX_ANIMABLE);
       expect(anim.length).toBeGreaterThan(0);
-      for (const w of anim) expect(["downtown", "residential"]).toContain(s.placed[w.owner]!.placed.neighborhood);
+      for (const w of anim) expect(["downtown", "residential", "clasico", "transicion", "bajo"]).toContain(s.placed[w.owner]!.placed.neighborhood);
     });
 
     it("neons: only in capped neighborhoods (bars ≤ 24, warehouses ≤ 10), open frontage, one per shop, z 2.4..3.6 above the lot, colors with their halos and puddle", () => {
@@ -140,8 +140,7 @@ for (const [name, make, isWorld] of SEEDS) {
     it("bathed: only ground-floor bands of walls of civic pieces, amberBleed alpha 0.5", () => {
       const civicWalls = s.placed.filter((p) => p.placed.neighborhood === "civic").flatMap((p) => p.piece.walls);
       expect(l.bathed.length).toBe(civicWalls.length);
-      // The civic pieces left the city with the new layout and return in #477: until then nothing is bathed. The checks below run again as soon as there is one.
-      expect(l.bathed.length).toBe(0);
+      expect(l.bathed.length).toBeGreaterThan(0); // the palace, theatre and library are back (#477)
       l.bathed.forEach((a, i) => {
         const w = civicWalls[i]!;
         expect(a).toMatchObject({ kind: "poly", color: "amberBleed", alpha: 0.5 });
@@ -394,5 +393,32 @@ describe("fixed lights", () => {
     const dots = garland([v3(0, 0, 3), v3(0, 3, 3)]);
     expect(fixedLights(dots)).toHaveLength(dots.length);
     expect(fixedLights(dots).map((l) => l.accents)).toEqual(dots.map((d) => [d]));
+  });
+});
+
+describe("barrio quotas (#477)", () => {
+  /** One piece with `n` free windows on its south face, nothing in front. */
+  const windowed = (n: number): Piece => {
+    const p = emptyPiece();
+    p.solids.push(prism(0, 0, 0, 4 * n, 10, 10));
+    for (let i = 0; i < n; i++) p.windows.push({ pts: quad(4 * i + 1, 4 * i + 3, 10, 2, 4), floor: 0, wall: v3(0, 1, 0), building: 0 });
+    return p;
+  };
+  for (const [b, warm] of [["clasico", 5], ["transicion", 3], ["moderno", 1], ["bajo", 6]] as const) {
+    it(`${b}: the quota follows CATALOGUE.${b}.lights exactly`, () => {
+      const l = lights({ solids: windowed(10).solids, placed: [placedAt(b, windowed(10), 0)] }, createRng(1));
+      const { on } = CATALOGUE[b].lights;
+      expect(l.counts[b]).toEqual({ candidates: 10, on: Math.round(on * 10), warm });
+      expect(l.windows.filter((w) => w.on)).toHaveLength(Math.round(on * 10));
+    });
+  }
+  it("the world seed lights the west bank with the barrio quotas", () => {
+    const s = city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3));
+    for (const b of ["clasico", "transicion"] as const) {
+      const c = s.lights.counts[b], { on, warm } = CATALOGUE[b].lights;
+      expect(c.candidates, b).toBeGreaterThan(30);
+      expect(c.on, b).toBe(Math.round(on * c.candidates));
+      expect(c.warm, b).toBe(Math.round(warm * c.on));
+    }
   });
 });
