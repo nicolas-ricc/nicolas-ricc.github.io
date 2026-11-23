@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { bounds, type Solid } from "../iso/solids";
 import { createRng, SEED } from "../map/seed";
 import type { HomeWindow } from "./neighborhood";
-import { blockAt, faces, newCtx } from "./neighborhood-fixtures";
+import { blockAt, faces, inside, newCtx } from "./neighborhood-fixtures";
 import { houses } from "./neighborhood-houses";
 import { suburbBlocks, type SprawlBlock } from "./sprawl-grid";
 import { tech } from "./tech";
@@ -150,24 +150,52 @@ describe("houses of Ciudad Jardín (#251), over the world", () => {
   it("within the face cap", () => each((b) => expect(facesIn(everything, blockRect(b)), `${b.x},${b.y}`).toBeLessThanOrEqual(FACE_CAPS.houses)));
 });
 
-describe("houses of Ciudad Jardín (#251), loose seeds", () => {
-  const b0 = blockAt(132, 520), b1 = blockAt(102, 520);
-  it("the two test blocks have different parity", () => expect(blockParity(b0)).not.toBe(blockParity(b1)));
-  for (const b of [b0, b1]) for (const seed of [1, 7, 11]) {
-    it(`(${b.x},${b.y}) seed ${seed}: no overlaps and within the cap`, () => {
-      const ctx = newCtx(createRng(seed));
-      houses(ctx, b);
+describe("houses of Ciudad Jardín (#251), direct call on any rect ≥ 20 × 20 (#478)", () => {
+  const fixed = blockAt(133, 471), other = blockAt(103, 471);
+  const rect = (x: number, w: number, d: number): SprawlBlock => ({ x, y: 441, w, d, dist: 200 });
+  const rects = [fixed, other, ...[[24, 24], [21, 24], [20, 20]].flatMap(([w, d]) => [rect(103, w!, d!), rect(133, w!, d!)])];
+  const run = (b: SprawlBlock, seed: number) => { const ctx = newCtx(createRng(seed)); houses(ctx, b); return ctx; };
+  it("the test blocks cover both parities and the three sizes", () => {
+    expect(new Set(rects.map(blockParity))).toEqual(new Set([0, 1]));
+    expect(rects.map((b) => [b.w, b.d])).toEqual(expect.arrayContaining([[24, 24], [21, 24], [20, 20]]));
+  });
+  for (const b of rects) for (const seed of [1, 7, 11]) {
+    const at = `(${b.x},${b.y}) ${b.w} × ${b.d}${b.parcel ? " parcel" : ""} seed ${seed}`;
+    it(`${at}: no overlaps, inside rect ± 2.5 and within the cap`, () => {
+      const ctx = run(b, seed);
       expect(overlaps(ctx.solids)).toEqual([]);
+      for (const s of [...ctx.solids, ...ctx.ground]) expect(inside(s, b, 2.5), JSON.stringify(bounds(s))).toBe(true);
       expect(faces(ctx)).toBeLessThanOrEqual(FACE_CAPS.houses);
     });
+    it(`${at}: widths ≤ pitch − 2, the wing touches the next lot without crossing it, offsets from b.d and b.w`, () => {
+      const ctx = run(b, seed), p = parts(ctx.solids), pitch = b.w / 3;
+      expect(p.houses.length).toBeGreaterThanOrEqual(4);
+      for (const h of p.houses) { expect(h.w).toBeLessThanOrEqual(pitch - 2 + EPS); expect(h.w >= h.d).toBe(blockParity(b) === 0); expect([h.at.x - b.x - 2].map((u) => Math.abs(u / pitch - Math.round(u / pitch)) < 1e-9)[0]).toBe(true); }
+      for (const w of p.wing) { const lotEnd = b.x + 2 + pitch * (Math.floor((w.at.x - b.x - 2) / pitch) + 1); expect(w.at.x + w.w).toBeLessThanOrEqual(lotEnd + EPS); }
+      expect(bounds(p.drive[0]!).max.y).toBeCloseTo(b.y + b.d, 9);
+      expect(p.walls).toHaveLength(2);
+      for (const w of p.walls) expect(w.at.y).toBeCloseTo(b.y + b.d - 0.5, 9);
+      expect(p.walls[1]!.at.x + p.walls[1]!.w).toBeCloseTo(b.x + b.w, 9);
+      expect(p.trees.filter((t) => t.at.y >= b.y + b.d).length).toBeGreaterThanOrEqual(3);
+      expect(p.lamps).toHaveLength(2);
+      for (const l of p.lamps) expect([[b.x + b.w - 1, b.y + b.d + 0.6], [b.x + b.w + 0.6, b.y + 4]].some(([x, y]) => Math.abs(l.at.x - x!) < 1e-9 && Math.abs(l.at.y - y!) < 1e-9)).toBe(true);
+    });
+    it(`${at}: heights by kind of block (T4: ≤ 4.2 on a parcel)`, () => {
+      const ctx = run(b, seed), hs = parts(ctx.solids).houses.map((h) => h.h);
+      for (const h of hs) expect(b.parcel ? [3, 4.2] : [3, 5.5]).toContain(h);
+      if (b.parcel) for (const w of ctx.homes) { const z = w.pts[0]!.z; if (z > 1.9) expect(z).toBeCloseTo(0.05 + 2.6, 9); }
+    });
   }
+  it("a parcel block: the lawn is the parcel polygon", () => {
+    expect(run(fixed, 1).solids[0]).toEqual({ kind: "poly", footprint: fixed.parcel!.poly, z: 0, h: 0.05, mat: "leafDark" });
+  });
   it("the 5×5 plan exists in parity 0 and never in parity 1", () => {
-    const squares = (b: SprawlBlock) => Array.from({ length: 20 }, (_, s) => { const ctx = newCtx(createRng(s + 1)); houses(ctx, b); return parts(ctx.solids).houses.filter((h) => h.w === h.d).length; }).reduce((x, y) => x + y, 0);
-    const [even, odd] = blockParity(b0) === 0 ? [b0, b1] : [b1, b0];
+    const squares = (b: SprawlBlock) => Array.from({ length: 20 }, (_, s) => parts(run(b, s + 1).solids).houses.filter((h) => h.w === h.d).length).reduce((x, y) => x + y, 0);
+    const [even, odd] = blockParity(rect(103, 24, 24)) === 0 ? [rect(103, 24, 24), rect(133, 24, 24)] : [rect(133, 24, 24), rect(103, 24, 24)];
     expect(squares(even)).toBeGreaterThan(0); expect(squares(odd)).toBe(0);
   });
   it("the wing appears in some runs and not in others", () => {
-    const withWing = Array.from({ length: 20 }, (_, s) => { const ctx = newCtx(createRng(s + 1)); houses(ctx, b0); return parts(ctx.solids).wing.length; });
+    const withWing = Array.from({ length: 20 }, (_, s) => parts(run(rect(103, 24, 24), s + 1).solids).wing.length);
     expect(withWing.some((n) => n === 1)).toBe(true); expect(withWing.some((n) => n === 0)).toBe(true);
   });
 });

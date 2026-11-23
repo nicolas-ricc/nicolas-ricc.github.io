@@ -5,10 +5,10 @@ import { prism } from "./city-pieces";
 import type { SprawlBlock } from "./sprawl-grid";
 import { blockParity } from "./tech-zoning";
 
-/** Two diagonal paving paths (northwest to southeast and southwest to northeast), as flat polygons that stick out 1 u onto the sidewalk. */
+/** Two diagonal paving paths from corner to corner of the block (northwest to southeast and southwest to northeast), as flat polygons that stick out 1 u onto the sidewalk. */
 function paths(ctx: NeighborhoodCtx, b: SprawlBlock): void {
   const { x, y } = b;
-  ctx.solids.push({ kind: "poly", footprint: [{ x: x - 1, y }, { x: x + 1, y }, { x: x + 25, y: y + 18 }, { x: x + 23, y: y + 18 }], z: 0.05, h: 0.03, mat: "paving" }, { kind: "poly", footprint: [{ x: x - 1, y: y + 18 }, { x: x + 23, y }, { x: x + 25, y }, { x: x + 1, y: y + 18 }], z: 0.05, h: 0.03, mat: "paving" });
+  ctx.solids.push({ kind: "poly", footprint: [{ x: x - 1, y }, { x: x + 1, y }, { x: x + b.w + 1, y: y + b.d }, { x: x + b.w - 1, y: y + b.d }], z: 0.05, h: 0.03, mat: "paving" }, { kind: "poly", footprint: [{ x: x - 1, y: y + b.d }, { x: x + b.w - 1, y }, { x: x + b.w + 1, y }, { x: x + 1, y: y + b.d }], z: 0.05, h: 0.03, mat: "paving" });
 }
 
 /** Footprint box of `cx ± hx`, `cy ± hy`. */
@@ -40,9 +40,9 @@ const crosses = (a: Box, c: Box): boolean => a.x0 < c.x1 && c.x0 < a.x1 && a.y0 
 
 /** Two cement benches in the west and east triangles; returns their footprint boxes. */
 function benches(ctx: NeighborhoodCtx, b: SprawlBlock): Box[] {
-  const xs = [b.x + 8.4, b.x + 14];
-  ctx.solids.push(...xs.map((bx) => prism(bx, b.y + 8.75, 0.05, 1.6, 0.5, 0.45, "concrete")));
-  return xs.map((bx): Box => ({ x0: bx, y0: b.y + 8.75, x1: bx + 1.6, y1: b.y + 9.25 }));
+  const xs = [b.x + b.w * 7 / 20, b.x + b.w * 7 / 12], y = b.y + b.d / 2 - 0.25;
+  ctx.solids.push(...xs.map((bx) => prism(bx, y, 0.05, 1.6, 0.5, 0.45, "concrete")));
+  return xs.map((bx): Box => ({ x0: bx, y0: y, x1: bx + 1.6, y1: y + 0.5 }));
 }
 
 /** Two conical trees (west and east), off the paths and `taken`; up to 10 attempts each. */
@@ -51,8 +51,8 @@ function trees(ctx: NeighborhoodCtx, b: SprawlBlock, taken: Box[]): void {
   for (const west of [true, false]) {
     const r = 1.5 + 0.5 * rng.next(), h = 4 + 1.5 * rng.next();
     for (let i = 0; i < 10; i++) {
-      const u = r + (4.5 - r) * rng.next(), px = west ? x + u : x + 24 - u, py = y + 8 + 2 * rng.next();
-      const clear = Math.min(Math.abs(18 * (px - x) - 24 * (py - y)), Math.abs(18 * (px - x) + 24 * (py - y - 18))) / 30;
+      const u = r + (4.5 - r) * rng.next(), px = west ? x + u : x + b.w - u, py = y + b.d / 2 - 1 + 2 * rng.next();
+      const clear = Math.min(Math.abs(b.d * (px - x) - b.w * (py - y)), Math.abs(b.d * (px - x) + b.w * (py - y - b.d))) / Math.hypot(b.w, b.d);
       const box = around(px, py, r, r);
       if (clear < r + 0.6 || taken.some((t) => crosses(box, t))) continue;
       ctx.solids.push({ kind: "cone", at: v3(px, py, 0.05), r, h, mat: "leaf", sides: 6 });
@@ -67,7 +67,7 @@ export function plaza(ctx: NeighborhoodCtx, b: SprawlBlock): void {
   lawn(ctx, b);
   paths(ctx, b);
   const { x, y } = b, even = blockParity(b) === 0, jitter = () => 2 * ctx.rng.next() - 1;
-  const [ne, nw, se, sw] = [[x + 15.5, y + 2], [x + 8.5, y + 2], [x + 15.5, y + 16], [x + 8.5, y + 16]] as const;
+  const [fe, fw] = [b.w * 31 / 48, b.w * 17 / 48], [ne, nw, se, sw] = [[x + fe, y + 2], [x + fw, y + 2], [x + fe, y + b.d - 2], [x + fw, y + b.d - 2]] as const;
   const [cc, sc] = even ? [ne, sw] : [sw, ne];
   const taken = [carousel(ctx, cc[0], cc[1]), swings(ctx, sc[0], sc[1])];
   const [sx, nx] = [se[0] + jitter(), nw[0] + jitter()];

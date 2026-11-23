@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { bounds, isFlat, type Solid } from "../iso/solids";
 import { occluded } from "../iso/project";
 import { SEED, createRng } from "../map/seed";
-import { newCtx } from "./neighborhood-fixtures";
+import { blockAt, faces, inside, newCtx } from "./neighborhood-fixtures";
 import { monoblock } from "./neighborhood-monoblock";
-import { suburbBlocks } from "./sprawl-grid";
+import { suburbBlocks, type SprawlBlock } from "./sprawl-grid";
 import { tech } from "./tech";
 import { FACE_CAPS, blockRect, facesIn, insideInflated } from "./tech-budget";
 import { blockParity, zoneKinds } from "./tech-zoning";
@@ -171,5 +171,45 @@ describe("monoblocks of the Simón Bolívar neighborhood (#250)", () => {
     expect(cones.length).toBeGreaterThanOrEqual(4);
     for (const t of cones) { const r = bounds(t); expect(r.min.y).toBeGreaterThanOrEqual(b.y - 1e-9); expect(r.max.y).toBeLessThanOrEqual(b.y + 10.7 + 1e-9); }
     expect(ctx.ground.some((s) => s.kind === "strip" && s.path.every((p) => p.y === b.y + 10.2))).toBe(true);
+  });
+});
+
+describe("monoblocks on any rect ≥ 20 × 20 (#478)", () => {
+  const rect = (x: number, w: number, d: number): SprawlBlock => ({ x, y: 441, w, d, dist: 200 });
+  const rects = [blockAt(133, 471), blockAt(103, 471), ...[[24, 24], [21, 24], [20, 20]].flatMap(([w, d]) => [rect(103, w!, d!), rect(133, w!, d!)])];
+  const run = (b: SprawlBlock, seed: number) => { const ctx = newCtx(createRng(seed)); monoblock(ctx, b); return ctx; };
+  const slabsOf = (ctx: ReturnType<typeof run>, b: SprawlBlock) => ctx.solids.filter((s): s is Prism => s.kind === "prism" && s.w === b.w - 4 && s.d === 5 && s.h >= 3);
+  it("the test blocks cover both parities", () => expect(new Set(rects.map(blockParity))).toEqual(new Set([0, 1])));
+  for (const b of rects) for (const seed of [1, 7, 11]) {
+    const at = `(${b.x},${b.y}) ${b.w} × ${b.d}${b.parcel ? " parcel" : ""} seed ${seed}`;
+    it(`${at}: no overlaps, inside rect ± 2.5, within the cap`, () => {
+      const ctx = run(b, seed), bodies = slabsOf(ctx, b), rest = ctx.solids.filter((s) => !bodies.includes(s as Prism));
+      for (const s of [...ctx.solids, ...ctx.ground]) expect(inside(s, b, 2.5), JSON.stringify(bounds(s))).toBe(true);
+      const bound = rest.filter((s) => s.kind === "cone" || (s.kind === "prism" && s.mat === "paving" && s.h === 0.3));
+      for (const body of bodies) for (const o of bound) expect(overlap(body, o), `${JSON.stringify(bounds(body))} × ${JSON.stringify(bounds(o))}`).toBe(false);
+      for (let i = 0; i < bodies.length; i++) for (let j = i + 1; j < bodies.length; j++) expect(overlap(bodies[i]!, bodies[j]!)).toBe(false);
+      expect(facesIn([...ctx.solids, ...ctx.ground], blockRect(b)), at).toBeLessThanOrEqual(FACE_CAPS.monoblock);
+      expect(faces(ctx)).toBeGreaterThan(0);
+    });
+    it(`${at}: slabs of length b.w − 4 at y + 2 / y + b.d − 7, heights by kind of block, free band for trees`, () => {
+      const ctx = run(b, seed), bodies = slabsOf(ctx, b);
+      expect(bodies.length).toBeGreaterThanOrEqual(1); expect(bodies.length).toBeLessThanOrEqual(2);
+      for (const p of bodies) {
+        expect(p.at.x).toBeCloseTo(b.x + 2, 9); expect([b.y + 2, b.y + b.d - 7].some((y) => Math.abs(p.at.y - y) < 1e-9)).toBe(true);
+        expect(b.parcel ? [9, 12] : [12, 15, 18]).toContain(p.h);
+        if (b.parcel) expect(p.at.z + p.h).toBeLessThanOrEqual(13);
+      }
+      if (bodies.length === 2) { expect(bodies[0]!.h).not.toBe(bodies[1]!.h); expect(bodies[1]!.at.y - (bodies[0]!.at.y + 5)).toBeCloseTo(b.d - 14, 9); }
+      for (const t of ctx.solids.filter((x) => x.kind === "cone")) for (const body of bodies) expect(overlap(t, body)).toBe(false);
+      expect(ctx.ground.some((g) => g.kind === "strip" && g.path.every((q) => Math.abs(q.x - (b.x + b.w - 0.8)) < 1e-9) && Math.max(...g.path.map((q) => q.y)) === b.y + b.d)).toBe(true);
+    });
+  }
+  it("a parcel block: the lawn is the parcel polygon", () => {
+    const b = blockAt(133, 471);
+    expect(run(b, 1).solids[0]).toEqual({ kind: "poly", footprint: b.parcel!.poly, z: 0, h: 0.05, mat: "leafDark" });
+  });
+  it("a parcel block: heights 9 and 12 both appear over the seeds", () => {
+    const hs = new Set(Array.from({ length: 20 }, (_, k) => slabsOf(run(rects[0]!, k + 1), rects[0]!).map((p) => p.h)).flat());
+    expect(hs).toEqual(new Set([9, 12]));
   });
 });
