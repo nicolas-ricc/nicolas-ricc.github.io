@@ -1,0 +1,866 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head><body>
+<title>Plano de Resume</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one blueprint sheet. Option tabs on top, the plan on a canvas, the option's card beside it. Single deliberate dark look (cyanotype). */
+:root {
+  color-scheme: dark;
+  --paper: #0b2340;
+  --paper-2: #10305a;
+  --line: #24497a;
+  --ink: #dbe9f7;
+  --ink-dim: #86a6c8;
+  --avenue: #f2c26b;
+  --park: #6fcf97;
+  --water: #2a6299;
+  --classic: #ecb98a;
+  --transition: #8fc4ec;
+  --modern: #b8a0f4;
+  --fixed: #ff8f7e;
+  --resid: #e48f6c;
+  --neon: #9df5c4;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 15px;
+  line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+.wrap { max-width: 1400px; margin: 0 auto; display: grid; gap: 18px; }
+header { display: grid; gap: 6px; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
+.eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-dim); }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 4vw, 44px); line-height: 1; margin: 0; letter-spacing: .02em; text-transform: uppercase; text-wrap: balance; }
+header p { margin: 0; max-width: 72ch; color: var(--ink-dim); }
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.tab {
+  font-family: var(--display); font-size: 18px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+  background: transparent; color: var(--ink-dim); border: 1px solid var(--line); padding: 6px 14px; cursor: pointer;
+  display: flex; gap: 10px; align-items: baseline;
+}
+.tab .k { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); }
+.tab[aria-selected="true"] { color: var(--paper); background: var(--ink); border-color: var(--ink); }
+.tab[aria-selected="true"] .k { color: var(--paper); }
+.tab:focus-visible, .seg button:focus-visible, .chip:focus-visible { outline: 2px solid var(--avenue); outline-offset: 2px; }
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 18px; align-items: start; }
+@media (max-width: 960px) { .stage { grid-template-columns: 1fr; } }
+.board { border: 1px solid var(--line); min-width: 0; background: var(--paper); }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.seg { display: inline-flex; border: 1px solid var(--line); }
+.seg button, .chip {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  background: transparent; color: var(--ink-dim); border: 0; padding: 5px 10px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--line); color: var(--ink); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); }
+.chip[aria-pressed="true"] { color: var(--ink); border-color: var(--ink-dim); }
+.chip[aria-pressed="false"] { text-decoration: line-through; opacity: .7; }
+.zoom { margin-left: auto; display: inline-flex; gap: 4px; }
+canvas { display: block; width: 100%; aspect-ratio: 16 / 10; max-width: 100%; touch-action: none; cursor: grab; }
+canvas.drag { cursor: grabbing; }
+.hint { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); padding: 6px 10px; border-top: 1px solid var(--line); }
+.panel { display: grid; gap: 16px; min-width: 0; }
+.card { border: 1px solid var(--line); padding: 16px; display: grid; gap: 12px; }
+.card h2 { font-family: var(--display); font-size: 30px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; margin: 0; line-height: 1; }
+.card .kicker { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--avenue); }
+.card p { margin: 0; }
+.card h3 { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-dim); margin: 0 0 4px; font-weight: 500; }
+.card ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.pros li::marker { content: "+  "; color: var(--park); }
+.cons li::marker { content: "−  "; color: var(--fixed); }
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; font-family: var(--mono); font-size: 12px; }
+.stats div { display: grid; gap: 0; border-top: 1px solid var(--line); padding-top: 6px; }
+.stats b { font-family: var(--display); font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); }
+.stats span { color: var(--ink-dim); }
+.legend { display: grid; gap: 6px; font-size: 13px; }
+.legend div { display: flex; gap: 8px; align-items: center; }
+.sw { width: 22px; height: 12px; flex: none; border: 1px solid currentColor; }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+.notes section { border-top: 1px solid var(--line); padding-top: 12px; }
+.notes h2 { font-family: var(--display); text-transform: uppercase; font-size: 22px; margin: 0 0 8px; letter-spacing: .03em; }
+.notes ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--ink-dim); }
+.notes li b { color: var(--ink); font-weight: 500; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Zona Resume · plano de estudio · coordenadas del mundo, grilla de 30 u</div>
+    <h1>Plano de Resume</h1>
+    <p>Tres trazados para el centro de una ciudad costera, más el de hoy para comparar. Un parque central del que salen las avenidas principales, el casco clásico porteño alrededor y torres hacia afuera. El terreno es el real: vías y estación al norte, el muelle del estuario al este y el barrio costero al sur.</p>
+  </header>
+
+  <div class="tabs" role="tablist" id="tabs"></div>
+
+  <div class="stage">
+    <div class="board">
+      <div class="toolbar">
+        <div class="seg" role="group" aria-label="Vista">
+          <button id="v-iso" aria-pressed="true">Isométrica</button>
+          <button id="v-plan" aria-pressed="false">Planta</button>
+        </div>
+        <div class="chips" id="layers"></div>
+        <div class="zoom">
+          <button class="chip" id="z-in" aria-label="Acercar">+</button>
+          <button class="chip" id="z-out" aria-label="Alejar">−</button>
+          <button class="chip" id="z-reset">Encuadrar</button>
+        </div>
+      </div>
+      <div class="toolbar" id="a-controls">
+        <span class="eyebrow">Cartel RESUME</span>
+        <div class="seg" role="group" aria-label="Tamaño del cartel RESUME" id="sign-seg">
+          <button data-size="new" aria-pressed="true">Tamaño nuevo · ×1,5</button>
+          <button data-size="today" aria-pressed="false">Tamaño de hoy</button>
+        </div>
+        <span class="eyebrow">Borde sur</span>
+        <div class="seg" role="group" aria-label="Borde con el barrio costero" id="south-seg">
+          <button data-south="cut" aria-pressed="false">Corte</button>
+          <button data-south="blend" aria-pressed="true">Continuidad</button>
+        </div>
+      </div>
+      <canvas id="cv" aria-label="Plano isométrico de la opción elegida"></canvas>
+      <div class="hint">Arrastrá para mover · rueda o +/− para acercar · la línea punteada vertical es el borde izquierdo de la vista del sitio</div>
+    </div>
+    <aside class="panel">
+      <div class="card" id="signcard"></div>
+      <div class="card" id="card"></div>
+      <div class="card">
+        <h3>Referencias</h3>
+        <div class="legend">
+          <div><span class="sw" style="background:color-mix(in srgb,var(--avenue) 55%,transparent);color:var(--avenue)"></span>Avenida, diagonal o bulevar</div>
+          <div><span class="sw" style="background:color-mix(in srgb,var(--park) 35%,transparent);color:var(--park)"></span>Parque o plaza</div>
+          <div><span class="sw" style="background:color-mix(in srgb,var(--classic) 40%,transparent);color:var(--classic)"></span>Casco clásico: ochavas, cúpulas en esquina, pulmón de manzana</div>
+          <div><span class="sw" style="background:color-mix(in srgb,var(--transition) 35%,transparent);color:var(--transition)"></span>Transición: edificios de renta, 8 a 14 pisos</div>
+          <div><span class="sw" style="background:color-mix(in srgb,var(--modern) 40%,transparent);color:var(--modern)"></span>Moderno: basamento y torre de oficinas</div>
+          <div><span class="sw" style="background:color-mix(in srgb,var(--resid) 22%,transparent);color:var(--resid)"></span>Bajo: PH y casas chorizo, 2 a 3 pisos, fachada corrida</div>
+          <div><span class="sw" style="background:color-mix(in srgb,var(--resid) 45%,transparent);color:var(--resid)"></span>Barrio costero: casas de teja por lote, algún monoblock</div>
+          <div><span class="sw" style="background:var(--paper);color:var(--neon)"></span>Cartel RESUME sobre la fachada del hotel</div>
+          <div><span class="sw" style="background:transparent;color:var(--fixed);border-style:dashed"></span>Fijo: vías, estación, puente, muelle</div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="notes">
+    <section>
+      <h2>Igual en las tres</h2>
+      <ul>
+        <li><b>Manzanas cuadradas de 24 × 24</b> con calles de 6, en vez de las 24 × 18 de hoy. Ochava en cada esquina del casco clásico y de la transición.</li>
+        <li><b>La altura sube con la distancia al parque:</b> clásico bajo y parejo, transición media, torres afuera.</li>
+        <li><b>No se tocan</b> las vías, la estación (Portfolio), el puente, el muelle ni el barrio costero del sur (salvo en la A con "Continuidad").</li>
+        <li><b>Costanera</b> sobre el muelle en todas: paseo con faroles de x 184 a 192.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Por decidir</h2>
+      <ul>
+        <li><b>El cartel RESUME (A):</b> va sobre la fachada de un hotel en placa frente a la plaza, un 50% más grande que hoy. Se puede comparar con el tamaño de hoy arriba del plano. Hoy está en (129, 227), sobre un helipuerto.</li>
+        <li><b>Borde sur (A):</b> con "Continuidad" la grilla de la ciudad sigue dentro del barrio costero y baja de a escalones: clásico, PH y casas chorizo al sur de la Avenida del Sur, y casas de teja y monoblocks al sur de la Avenida del Barrio. Las torres quedan sólo al noroeste. El costo es rehacer el barrio costero sobre la grilla nueva.</li>
+        <li><b>El puente:</b> se mantiene en y 207–217. La A y la B lo hacen llegar al centro; mover el puente cambia mucho la escena del estuario.</li>
+        <li><b>Diagonales a 45°:</b> en pantalla se ven perfectamente verticales u horizontales. Hay que decidir si eso es el recurso o el problema.</li>
+      </ul>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ---------- geometry ----------
+  const PITCH = 30, BLK = 24;
+  // Redesign land: y 164..338 (rails to the north, coastal barrio to the south), x <= 184 (costanera), x - y >= -415 (left edge of the site's view).
+  const LAND_CUT = [[0, -1, -164], [1, 0, 184], [-1, 1, 415], [0, 1, 338]];
+  const LAND_BLEND = [[0, -1, -164], [1, 0, 184], [-1, 1, 415], [0, 1, 470]];
+  let LAND = LAND_CUT;
+  const eb = y => 241 + 0.35 * (y - 146); // east bank of the estuary
+  const hash = (x, y, s = 0) => { const v = Math.sin(x * 12.9898 + y * 78.233 + s * 37.719) * 43758.5453; return v - Math.floor(v); };
+
+  function clipHalf(poly, a, b, c) { // keep a x + b y <= c
+    const out = [];
+    for (let i = 0; i < poly.length; i++) {
+      const P = poly[i], Q = poly[(i + 1) % poly.length];
+      const fp = a * P[0] + b * P[1] - c, fq = a * Q[0] + b * Q[1] - c;
+      if (fp <= 0) out.push(P);
+      if ((fp < 0 && fq > 0) || (fp > 0 && fq < 0)) { const t = fp / (fp - fq); out.push([P[0] + t * (Q[0] - P[0]), P[1] + t * (Q[1] - P[1])]); }
+    }
+    return out;
+  }
+  function clipLand(poly) { let p = poly; for (const [a, b, c] of LAND) { p = clipHalf(p, a, b, c); if (p.length < 3) return []; } return p; }
+  function area(p) { let s = 0; for (let i = 0; i < p.length; i++) { const a = p[i], b = p[(i + 1) % p.length]; s += a[0] * b[1] - b[0] * a[1]; } return Math.abs(s) / 2; }
+  function perim(p) { let s = 0; for (let i = 0; i < p.length; i++) { const a = p[i], b = p[(i + 1) % p.length]; s += Math.hypot(b[0] - a[0], b[1] - a[1]); } return s; }
+  function centroid(p) { let x = 0, y = 0; for (const q of p) { x += q[0]; y += q[1]; } return [x / p.length, y / p.length]; }
+  function bbox(p) { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of p) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); } return [x0, y0, x1, y1]; }
+  function overlap(a, b) { const A = bbox(a), B = bbox(b); return A[0] < B[2] && B[0] < A[2] && A[1] < B[3] && B[1] < A[3]; }
+  function halfOf(conv, i, m) {
+    const p = conv[i], q = conv[(i + 1) % conv.length];
+    let a = q[1] - p[1], b = -(q[0] - p[0]), c = a * p[0] + b * p[1];
+    if (a * m[0] + b * m[1] > c) { a = -a; b = -b; c = -c; }
+    return [a, b, c];
+  }
+  function subtract(piece, conv) {
+    if (!overlap(piece, conv)) return [piece];
+    const out = [], m = centroid(conv);
+    let rest = piece;
+    for (let i = 0; i < conv.length; i++) {
+      const [a, b, c] = halfOf(conv, i, m);
+      const outside = clipHalf(rest, -a, -b, -c);
+      if (outside.length >= 3 && area(outside) > 0.5) out.push(outside);
+      rest = clipHalf(rest, a, b, c);
+      if (rest.length < 3 || area(rest) < 0.01) break;
+    }
+    return out;
+  }
+  const rect = (x, y, w, d) => [[x, y], [x + w, y], [x + w, y + d], [x, y + d]];
+  function segRect(p, q, w) {
+    const dx = q[0] - p[0], dy = q[1] - p[1], L = Math.hypot(dx, dy), nx = -dy / L * w / 2, ny = dx / L * w / 2;
+    return [[p[0] + nx, p[1] + ny], [q[0] + nx, q[1] + ny], [q[0] - nx, q[1] - ny], [p[0] - nx, p[1] - ny]];
+  }
+  function ngon(cx, cy, r, n, rot = 0) { const out = []; for (let i = 0; i < n; i++) { const a = rot + i * 2 * Math.PI / n; out.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } return out; }
+  function scaleAbout(p, k, c = centroid(p)) { return p.map(q => [c[0] + (q[0] - c[0]) * k, c[1] + (q[1] - c[1]) * k]); }
+  function chamfer(p, k) {
+    const out = [], n = p.length;
+    for (let i = 0; i < n; i++) {
+      const A = p[(i - 1 + n) % n], B = p[i], C = p[(i + 1) % n];
+      const u = [A[0] - B[0], A[1] - B[1]], v = [C[0] - B[0], C[1] - B[1]];
+      const lu = Math.hypot(u[0], u[1]), lv = Math.hypot(v[0], v[1]);
+      const cos = (u[0] * v[0] + u[1] * v[1]) / (lu * lv);
+      if (lu > 3 * k && lv > 3 * k && Math.abs(cos) < 0.35) {
+        out.push([B[0] + u[0] / lu * k, B[1] + u[1] / lu * k]);
+        out.push([B[0] + v[0] / lv * k, B[1] + v[1] / lv * k]);
+      } else out.push(B);
+    }
+    return out;
+  }
+  function clipSeg(p, q) { // Liang–Barsky against LAND; returns [p', q'] or null
+    let t0 = 0, t1 = 1;
+    for (const [a, b, c] of LAND) {
+      const fp = a * p[0] + b * p[1] - c, fq = a * q[0] + b * q[1] - c;
+      if (fp > 0 && fq > 0) return null;
+      if (fp > 0) t0 = Math.max(t0, fp / (fp - fq));
+      else if (fq > 0) t1 = Math.min(t1, fp / (fp - fq));
+    }
+    if (t1 <= t0) return null;
+    const at = t => [p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1])];
+    return [at(t0), at(t1)];
+  }
+  function segX(p1, p2, p3, p4) {
+    const d = (p2[0] - p1[0]) * (p4[1] - p3[1]) - (p2[1] - p1[1]) * (p4[0] - p3[0]);
+    if (Math.abs(d) < 1e-9) return null;
+    const t = ((p3[0] - p1[0]) * (p4[1] - p3[1]) - (p3[1] - p1[1]) * (p4[0] - p3[0])) / d;
+    const u = ((p3[0] - p1[0]) * (p2[1] - p1[1]) - (p3[1] - p1[1]) * (p2[0] - p1[0])) / d;
+    if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+    return [p1[0] + t * (p2[0] - p1[0]), p1[1] + t * (p2[1] - p1[1])];
+  }
+  const inLand = ([x, y]) => LAND.every(([a, b, c]) => a * x + b * y <= c);
+  const ray = (o, deg, r0, len = 700) => { const a = deg * Math.PI / 180, d = [Math.cos(a), Math.sin(a)]; return [[o[0] + d[0] * r0, o[1] + d[1] * r0], [o[0] + d[0] * len, o[1] + d[1] * len]]; };
+
+  // ---------- options ----------
+  const COAST = { p: [188, 160], q: [188, 480], w: 8, kind: "costanera", name: "Costanera" };
+  // The RESUME sign of option A: on the face of a hotel slab at the plaza's northwest corner.
+  // LOT = the superblock (two by two blocks, the inner streets gone). The slab runs along the screen-horizontal diagonal (u = (1,-1)/√2),
+  // so its southeast face looks straight at the camera across the plaza, the same plane the sign uses today (diagonalWall).
+  const R2 = Math.SQRT1_2;
+  const HOTEL = {
+    lot: [73, 234, 54, 51], podium: 10, top: 51, half: 32, thick: 8,
+    // sign on the southeast face: today cap 8.7 on a 49.9 × 14.1 panel; new cap 12.7 (×1.46) spread across the whole face
+    signs: { new: { half: 31.5, z0: 31.5, z1: 49, cap: 12.7 }, today: { half: 24.95, z0: 33.2, z1: 47.3, cap: 8.7 } },
+    name: "Hotel frente a la plaza",
+    desc: "Una placa alta y ancha, al estilo de los hoteles de cadena de los setenta frente a Plaza San Martín: un basamento clásico de 3 pisos que llena una supermanzana sobre el lado oeste de la plaza, al sur del eje y, encima, una placa de 8 u de espesor y 64 de largo hasta z 51. La placa corre en la diagonal de la pantalla, así su fachada sureste mira de frente a la cámara por encima de la plaza. El cartel va apoyado contra esa fachada, de punta a punta, entre z 31 y 49.",
+    pros: ["Nada alto delante: la plaza queda abierta entre el cartel y la cámara.", "Mismo plano que el cartel de hoy (de frente a la cámara): la prueba de legibilidad se adapta sin cambiar de método.", "Sin helipuerto ni estructura en la azotea: la silueta es una placa limpia."],
+    cons: ["Para que entre un cartel 50% más grande, la fachada tiene que medir unas 64 u: eso pide una supermanzana de 2 × 2 y no una manzana.", "La plaza se alarga hacia el sur por la costanera (de 44 a 85 de largo) para que el hotel la tenga delante. La Diagonal Sur pasa a salir de la nueva esquina suroeste.", "La cima (z 51) tapa en pantalla parte de las vías. No llega a la estación de Portfolio, pero hay que verificarlo con el encuadre real."],
+  };
+  const OPTIONS = [
+    {
+      id: "hoy", key: "0", name: "Hoy", kicker: "Estado actual, aproximado",
+      summary: "Damero parejo de manzanas de 24 × 18 con una sola avenida, la que cruza el puente. No hay centro: la torre de la corona RESUME está en una plaza a mitad de cuadra, y la altura y el estilo de los edificios no cambian con la distancia.",
+      screen: "Todas las calles siguen las dos direcciones de la grilla y ninguna se destaca: la vista se lee como un tablero.",
+      pros: [], cons: ["Sin jerarquía de calles ni barrios.", "El estilo de los edificios no cambia con la distancia."],
+      today: true,
+      avenues: [{ p: [192, 212], q: [-430, 212], w: 12, kind: "avenue", name: "Avenida del puente", label: .55 }],
+      parks: [{ poly: rect(102, 218, 54, 18), kind: "plaza" }],
+      center: [129, 227],
+    },
+    {
+      id: "a", key: "A", name: "Plaza en la costa", kicker: "Modelo porteño: plaza fundacional frente al río",
+      summary: "La plaza mayor queda contra la costanera y el puente desemboca en ella. Hacia tierra salen en abanico tres avenidas: el eje de la plaza y dos diagonales abiertas. Un bulevar ancho, paralelo a la costa, marca dónde termina el casco clásico.",
+      screen: "El eje sube hacia la izquierda y la Diagonal Sur se ve casi horizontal. La plaza se alarga por la costanera y el hotel, sobre su lado oeste, mira de frente a la cámara por encima de ella. El bulevar corre paralelo al muelle.",
+      pros: ["El centro queda pegado al agua y al puente.", "El cartel RESUME queda frente a la plaza, sobre la fachada del hotel.", "Abanico angosto: pocas manzanas triangulares."],
+      cons: ["Las avenidas sólo salen hacia el oeste: es medio abanico, no una estrella.", "La Diagonal Norte choca enseguida con las vías: termina en la Avenida de las Vías."],
+      grid: { gx: 13, gy: 21 },
+      center: [159, 248], R: [105, 205], crossingPlazas: true, chosen: true,
+      avenues: [
+        COAST,
+        { p: [132, 228], q: [-440, 228], w: 12, kind: "avenue", name: "Avenida de la Plaza", label: .45 },
+        { p: [132, 210], q: [-14, 166], w: 10, kind: "diagonal", name: "Diagonal Norte", label: .8 },
+        { p: [132, 291], q: [-420, 522], w: 10, kind: "diagonal", name: "Diagonal Sur", label: .62 },
+        { p: [10, 160], q: [10, 480], w: 20, kind: "boulevard", name: "Bulevar Central", label: .55 },
+        { p: [184, 318], q: [-440, 318], w: 10, kind: "avenue", name: "Avenida del Sur", label: .45 },
+        { p: [184, 378], q: [-440, 378], w: 10, kind: "avenue", name: "Avenida del Barrio", label: .55 },
+        { p: [184, 169], q: [-440, 169], w: 10, kind: "avenue", name: "Avenida de las Vías", label: .6 },
+      ],
+      // The plaza runs south along the costanera (rows 231 and 261 absorbed): the hotel on its west side looks across it.
+      parks: [{ poly: rect(132, 206, 54, 85), kind: "park", name: "Plaza Mayor" }],
+    },
+    {
+      id: "b", key: "B", name: "Damero platense", kicker: "Modelo La Plata: parque central, diagonales y avenidas cada cuatro cuadras",
+      summary: "Un parque cuadrado en el medio del damero, cruzado por dos ejes y dos diagonales a 45°. Avenidas cada cuatro cuadras y una plaza en cada cruce de diagonal con avenida. La avenida del puente entra hasta el parque.",
+      screen: "Las diagonales a 45° se ven exactamente vertical y horizontal: cortan la grilla isométrica en cruz. Es el trazado que más se lee como plano.",
+      pros: ["La jerarquía más clara: cada avenida se ve de punta a punta.", "Entre avenidas la grilla isométrica queda intacta."],
+      cons: ["El parque queda a unas 150 u de la costa: el centro no toca el agua.", "Más avenidas, menos manzanas, y muchas triangulares sobre las diagonales."],
+      grid: { gx: 13, gy: 5 },
+      center: [40, 242], R: [95, 190], crossingPlazas: true,
+      avenues: [
+        COAST,
+        { p: [70, 242], q: [-440, 242], w: 14, kind: "avenue", name: "Avenida Central", label: .35 },
+        { p: [184, 242], q: [70, 242], w: 14, kind: "avenue", name: "", label: 0 },
+        { p: [40, 160], q: [40, 342], w: 14, kind: "avenue", name: "Avenida del Parque", label: .78 },
+        { p: [130, 152], q: [-70, 352], w: 10, kind: "diagonal", name: "Diagonal 79", label: .2 },
+        { p: [-50, 152], q: [150, 352], w: 10, kind: "diagonal", name: "Diagonal 73", label: .82 },
+        { p: [-80, 160], q: [-80, 342], w: 10, kind: "avenue", name: "Avenida 1", label: .5 },
+        { p: [-200, 160], q: [-200, 342], w: 10, kind: "avenue", name: "Avenida 31", label: .5 },
+        { p: [160, 160], q: [160, 342], w: 10, kind: "avenue", name: "Avenida 7", label: .75 },
+        { p: [192, 212], q: [-440, 212], w: 12, kind: "avenue", name: "Avenida del Puente", label: .2 },
+        { p: [184, 302], q: [-440, 302], w: 10, kind: "avenue", name: "Avenida 60", label: .45 },
+      ],
+      parks: [{ poly: rect(10, 212, 60, 60), kind: "park", name: "Parque Central" }],
+    },
+    {
+      id: "c", key: "C", name: "Estrella y ronda", kicker: "Plaza circular, ocho avenidas y un bulevar de ronda",
+      summary: "Un parque redondo del que salen ocho avenidas en estrella. Un bulevar de ronda octogonal encierra el casco clásico; afuera vienen la transición y las torres. El puente entra por una avenida propia hasta la ronda.",
+      screen: "La estrella mezcla líneas de la grilla con verticales y horizontales. Es la lectura más fuerte desde arriba y la que más rompe la grilla.",
+      pros: ["El anillo hace visible el límite entre lo clásico y lo moderno.", "La figura más reconocible a cualquier zoom."],
+      cons: ["La mayor cantidad de manzanas irregulares: más modelado.", "La ronda se corta contra las vías al norte y contra la costa."],
+      grid: { gx: 3, gy: 14 },
+      center: [60, 251], R: [84, 170], ring: 88,
+      avenues: (() => {
+        const c = [60, 251], out = [COAST];
+        const names = { 0: "Avenida del Este", 180: "Avenida del Oeste", 90: "Avenida Sur", 270: "Avenida Norte", 135: "Diagonal Sudoeste", 315: "Diagonal Noreste" };
+        for (let k = 0; k < 8; k++) {
+          const deg = k * 45, [p, q] = ray(c, deg, 22);
+          out.push({ p, q, w: deg % 90 === 0 ? 14 : 10, kind: deg % 90 === 0 ? "avenue" : "diagonal", name: names[deg] || "", label: deg === 180 ? .25 : .55 });
+        }
+        const R = 88 / Math.cos(Math.PI / 8), oct = ngon(c[0], c[1], R, 8, Math.PI / 8);
+        for (let i = 0; i < 8; i++) out.push({ p: oct[i], q: oct[(i + 1) % 8], w: 12, kind: "boulevard", name: i === 3 ? "Bulevar de Ronda" : "", label: .5 });
+        out.push({ p: [192, 212], q: [138, 212], w: 12, kind: "avenue", name: "Av. del Puente", label: .5 });
+        return out;
+      })(),
+      parks: [{ poly: ngon(60, 251, 24, 16), kind: "park", name: "Parque Redondo" }],
+    },
+  ];
+
+  // ---------- build ----------
+  function build(opt) {
+    const blend = !!opt.chosen && state.south === "blend";
+    LAND = blend ? LAND_BLEND : LAND_CUT;
+    const avenues = opt.avenues.filter(a => a.kind !== "none");
+    const parks = opt.parks.slice();
+    if (opt.crossingPlazas) {
+      const diags = avenues.filter(a => a.kind === "diagonal"), others = avenues.filter(a => a.kind === "avenue" || a.kind === "boulevard");
+      const placed = [];
+      for (const d of diags) for (const o of others) {
+        const x = segX(d.p, d.q, o.p, o.q);
+        if (!x || !inLand(x)) continue;
+        if (Math.hypot(x[0] - opt.center[0], x[1] - opt.center[1]) < 50) continue;
+        if (placed.some(p => Math.hypot(p[0] - x[0], p[1] - x[1]) < 26)) continue;
+        placed.push(x);
+        parks.push({ poly: ngon(x[0], x[1], 11, 8, Math.PI / 8), kind: "plaza" });
+      }
+    }
+    const holes = [...avenues.map(a => segRect(a.p, a.q, a.w)), ...parks.map(p => p.poly)];
+    const pieces = [];
+    const keep = (p, extra) => {
+      const A = area(p);
+      if (A < 70 || 2 * A / perim(p) < 3.4) return;
+      pieces.push(Object.assign({ poly: p, area: A }, extra));
+    };
+    if (opt.today) {
+      const rows = [164, 188, 218, 242, 272, 302], cols = [];
+      for (let x = -288; x <= 162; x += 30) cols.push(x);
+      for (const y of rows) for (const x of cols) {
+        if (y === 218 && x >= 102 && x < 156) continue;
+        let r = clipLand(rect(x, y, 24, 18)); if (r.length < 3) continue;
+        let ps = [r];
+        for (const h of holes) { const nx = []; for (const p of ps) nx.push(...subtract(p, h)); ps = nx; }
+        for (const p of ps) keep(p, {});
+      }
+    } else {
+      const { gx, gy } = opt.grid;
+      for (let x = gx + PITCH * Math.floor((-340 - gx) / PITCH); x < 192; x += PITCH)
+        for (let y = gy + PITCH * Math.floor((150 - gy) / PITCH); y < (blend ? 475 : 345); y += PITCH) {
+          const r = clipLand(rect(x, y, BLK, BLK)); if (r.length < 3) continue;
+          let ps = [r];
+          for (const h of holes) { const nx = []; for (const p of ps) nx.push(...subtract(p, h)); ps = nx; if (!ps.length) break; }
+          for (const p of ps) keep(p, {});
+        }
+    }
+    for (const pc of pieces) {
+      const c = centroid(pc.poly), d = Math.hypot(c[0] - opt.center[0], c[1] - opt.center[1]);
+      pc.c = c; pc.d = d;
+      pc.irregular = pc.poly.some((q, i) => { const n = pc.poly[(i + 1) % pc.poly.length]; return Math.abs(n[0] - q[0]) > 0.05 && Math.abs(n[1] - q[1]) > 0.05; });
+      const h1 = hash(c[0], c[1]), h2 = hash(c[0], c[1], 1);
+      if (opt.today) { pc.district = "today"; pc.h = 7 + h1 * 8; continue; }
+      // South of the Avenida del Sur the city steps down toward the coastal barrio instead of ending.
+      pc.district = d < opt.R[0] ? "classic" : blend && c[1] > 380 ? "resid" : blend && c[1] > 318 ? "low" : d < opt.R[1] ? "transition" : "modern";
+      if (blend && pc.district === "classic" && c[1] > 318) pc.district = "low";
+      if (blend && pc.district === "modern" && c[1] > 290) pc.district = "transition";
+      if (pc.district === "resid") {
+        if (h2 < 0.09) { parks.push({ poly: pc.poly, kind: "plaza" }); pc.drop = true; continue; }
+        const [bx0, by0, bx1, by1] = bbox(pc.poly), m = centroid(pc.poly);
+        const inside = cell => { let p = cell; for (let i = 0; i < pc.poly.length; i++) { const [a, b, cc] = halfOf(pc.poly, i, m); p = clipHalf(p, a, b, cc); if (p.length < 3) return []; } return p; };
+        if (h2 > 0.84 && pc.area > 350) { // monoblock: two long slabs
+          pc.slabs = [inside(rect(bx0 + 3, by0 + 3, bx1 - bx0 - 6, 5)), inside(rect(bx0 + 3, by1 - 8, bx1 - bx0 - 6, 5))].filter(s => s.length >= 3 && area(s) > 20);
+          pc.h = 13;
+        } else {
+          pc.lots = [];
+          const mid = (by0 + by1) / 2;
+          for (let x = bx0; x < bx1 - 1; x += 5) for (const [ya, yb] of [[by0, mid], [mid, by1]]) {
+            const lot = inside(rect(x, ya, 5, yb - ya)); if (lot.length < 3 || area(lot) < 8) continue;
+            if (hash(x, ya, 9) < 0.14) continue; // empty lot / back garden
+            const front = ya === by0 ? rect(x + .6, ya + .6, 3.8, Math.min(7, yb - ya - 1)) : rect(x + .6, yb - Math.min(7, yb - ya - 1) - .6, 3.8, Math.min(7, yb - ya - 1));
+            const house = inside(front); if (house.length >= 3) pc.lots.push({ poly: house, h: 2.4 + hash(x, ya, 10) * 1.8 });
+          }
+        }
+        pc.foot = pc.poly;
+        continue;
+      }
+      if (pc.district === "low") { pc.h = 3.5 + h1 * 2.5; pc.foot = chamfer(pc.poly, 2); continue; }
+      if (pc.district === "classic") {
+        pc.h = 5.5 + h1 * 3;
+        pc.foot = chamfer(pc.poly, 2.4);
+        if (h2 > 0.45) { // corner cupola on the corner facing the park
+          let best = pc.foot[0], bd = 1e9;
+          for (const q of pc.foot) { const dd = Math.hypot(q[0] - opt.center[0], q[1] - opt.center[1]); if (dd < bd) { bd = dd; best = q; } }
+          pc.cupola = scaleAbout(pc.foot, 0, best).length ? [best[0] + (pc.c[0] - best[0]) * 0.16, best[1] + (pc.c[1] - best[1]) * 0.16] : null;
+        }
+      } else if (pc.district === "transition") {
+        pc.h = 10 + h1 * 6;
+        pc.foot = chamfer(pc.poly, 2);
+      } else {
+        pc.foot = pc.poly;
+        if (pc.area > 300) { pc.h = 3.5; pc.tower = scaleAbout(pc.poly, 0.52); pc.th = 24 + h1 * 26; }
+        else pc.h = 13 + h1 * 8;
+      }
+    }
+    // coastal barrio (kept): low houses south of the redesign
+    const houses = [];
+    if (!blend) for (let y = 346; y < 470; y += 10) for (let x = -120; x < 186; x += 10) {
+      if (x - y < -415 || hash(x, y, 3) < 0.3) continue;
+      houses.push(rect(x + 1.5, y + 1.5, 6, 6));
+    }
+    const kept = pieces.filter(p => !p.drop);
+    let sign = null, out = kept;
+    if (opt.chosen) {
+      const [lx, ly, lw, ld] = HOTEL.lot, inLot = c => c[0] > lx && c[0] < lx + lw && c[1] > ly && c[1] < ly + ld;
+      out = kept.filter(p => !inLot(p.c));
+      const lot = rect(lx, ly, lw, ld), c = [lx + lw / 2, ly + ld / 2];
+      const at = (t, n) => [c[0] + R2 * t + R2 * n, c[1] - R2 * t + R2 * n]; // t along u = (1,-1)/√2, n toward the camera (1,1)/√2
+      const h = HOTEL.half, k = HOTEL.thick / 2;
+      out.push({ poly: lot, foot: chamfer(lot, 2.4), area: area(lot), c, d: Math.hypot(c[0] - opt.center[0], c[1] - opt.center[1]), district: "classic", landmark: "hotel",
+        slab: [at(-h, -k), at(h, -k), at(h, k), at(-h, k)] });
+      sign = { at, k };
+    }
+    return { opt, avenues, parks, pieces: out, houses, sign, blend };
+  }
+
+  // ---------- render ----------
+  const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+  const state = { opt: 1, view: "iso", size: "new", south: "blend", layers: { volumes: true, districts: true, avenues: true, fixed: true, names: true }, cam: null };
+  const LAYER_LABELS = { volumes: "Volúmenes", districts: "Barrios", avenues: "Avenidas", fixed: "Fijos", names: "Nombres" };
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  let C = {};
+  function readColors() { for (const k of ["paper", "paper-2", "line", "ink", "ink-dim", "avenue", "park", "water", "classic", "transition", "modern", "fixed", "resid", "neon"]) C[k] = css("--" + k); C.today = C["ink-dim"]; C.low = mix(C.resid, C.classic, .5).replace(/rgb\((\d+),(\d+),(\d+)\)/, (_, r, g, b) => "#" + [r, g, b].map(v => (+v).toString(16).padStart(2, "0")).join("")); }
+  function hexRgb(h) { h = h.replace("#", ""); return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)); }
+  function mix(a, b, t) { const A = hexRgb(a), B = hexRgb(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(",")})`; }
+  function rgba(h, a) { const [r, g, b] = hexRgb(h); return `rgba(${r},${g},${b},${a})`; }
+
+  const P = (x, y, z = 0) => {
+    const sx = x - y, sy = state.view === "iso" ? (x + y) / 2 - 1.4 * z : (x + y);
+    return [state.cam.ox + sx * state.cam.s, state.cam.oy + sy * state.cam.s];
+  };
+  function path(poly, z = 0) { ctx.beginPath(); poly.forEach((q, i) => { const [X, Y] = P(q[0], q[1], z); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }); ctx.closePath(); }
+  function hatch(poly, color, gap = 7, width = 1) {
+    ctx.save(); path(poly); ctx.clip();
+    ctx.strokeStyle = color; ctx.lineWidth = width; ctx.beginPath();
+    const W = cv.width, H = cv.height;
+    for (let k = -H; k < W; k += gap * devicePixelRatio) { ctx.moveTo(k, 0); ctx.lineTo(k + H, H); }
+    ctx.stroke(); ctx.restore();
+  }
+  const EXTENT = [[-262, 150], [198, 150], [250, 200], [220, 390], [-30, 390], [-262, 160]];
+  const EXTENT_BLEND = [[-262, 150], [198, 150], [250, 200], [215, 470], [51, 470], [-262, 160]];
+  function fit() {
+    const dpr = devicePixelRatio || 1, W = cv.width, H = cv.height, pad = 24 * dpr;
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (const [x, y] of (model && model.blend ? EXTENT_BLEND : EXTENT)) for (const z of state.view === "iso" ? [0, 50] : [0]) {
+      const sx = x - y, sy = state.view === "iso" ? (x + y) / 2 - 1.4 * z : x + y;
+      x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy);
+    }
+    const s = Math.min((W - 2 * pad) / (x1 - x0), (H - 2 * pad) / (y1 - y0));
+    state.cam = { s, ox: (W - (x1 - x0) * s) / 2 - x0 * s, oy: (H - (y1 - y0) * s) / 2 - y0 * s };
+  }
+
+  function prism(poly, z0, z1, col, floors) {
+    const c = centroid(poly), top = mix(C.paper, col, .36), L = mix(C.paper, col, .22), R = mix(C.paper, col, .13), st = mix(C.paper, col, .9);
+    ctx.lineWidth = Math.max(.6, state.cam.s * .18); ctx.lineJoin = "round";
+    for (let i = 0; i < poly.length; i++) {
+      const A = poly[i], B = poly[(i + 1) % poly.length];
+      let nx = B[1] - A[1], ny = -(B[0] - A[0]);
+      const mx = (A[0] + B[0]) / 2 - c[0], my = (A[1] + B[1]) / 2 - c[1];
+      if (nx * mx + ny * my < 0) { nx = -nx; ny = -ny; }
+      if (nx + ny <= 1e-6) continue;
+      ctx.beginPath();
+      let p = P(A[0], A[1], z0); ctx.moveTo(p[0], p[1]);
+      p = P(B[0], B[1], z0); ctx.lineTo(p[0], p[1]);
+      p = P(B[0], B[1], z1); ctx.lineTo(p[0], p[1]);
+      p = P(A[0], A[1], z1); ctx.lineTo(p[0], p[1]);
+      ctx.closePath();
+      ctx.fillStyle = nx > ny ? R : L; ctx.fill();
+      ctx.strokeStyle = st; ctx.stroke();
+      if (floors && state.cam.s > 0.9) {
+        ctx.save(); ctx.strokeStyle = rgba(col.startsWith("#") ? col : "#86a6c8", .28); ctx.lineWidth = .7; ctx.beginPath();
+        for (let z = z0 + floors; z < z1 - .5; z += floors) { const a = P(A[0], A[1], z), b = P(B[0], B[1], z); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); }
+        ctx.stroke(); ctx.restore();
+      }
+    }
+    path(poly, z1); ctx.fillStyle = top; ctx.fill(); ctx.strokeStyle = st; ctx.stroke();
+  }
+  function cupola(pt, z, col) {
+    const sq = rect(pt[0] - 1.4, pt[1] - 1.4, 2.8, 2.8);
+    prism(sq, z, z + 2.2, col, 0);
+    const [X, Y] = P(pt[0], pt[1], z + 2.2), r = 1.9 * state.cam.s;
+    ctx.beginPath();
+    if (state.view === "iso") ctx.ellipse(X, Y, r, r * 1.25, 0, Math.PI, 0); else ctx.arc(X, Y, r, 0, 2 * Math.PI);
+    ctx.closePath(); ctx.fillStyle = mix(C.paper, col, .55); ctx.fill(); ctx.strokeStyle = col; ctx.stroke();
+    if (state.view === "iso") { const t = P(pt[0], pt[1], z + 2.2 + 3.6); ctx.beginPath(); ctx.moveTo(X, Y - r * 1.2); ctx.lineTo(t[0], t[1]); ctx.stroke(); }
+  }
+  function landmark(pc, vol) {
+    const f = pc.foot, dpr = devicePixelRatio || 1;
+    if (!vol) {
+      path(f); ctx.fillStyle = mix(C.paper, C.classic, .35); ctx.fill(); ctx.strokeStyle = C.classic; ctx.lineWidth = 1 * dpr; ctx.stroke();
+      if (pc.slab) { path(pc.slab); ctx.fillStyle = mix(C.paper, C.transition, .5); ctx.fill(); ctx.strokeStyle = C.neon; ctx.lineWidth = 1.4 * dpr; ctx.stroke(); }
+      return;
+    }
+    if (pc.landmark === "hotel") { // classic podium filling the superblock + tall slab on the screen diagonal
+      prism(f, 0, 4.2, C.classic, 0);
+      prism(scaleAbout(f, .985), 4.2, HOTEL.podium, C.classic, 3);
+      prism(pc.slab, HOTEL.podium, HOTEL.top, C.transition, 2.6);
+      prism(scaleAbout(pc.slab, .9), HOTEL.top, HOTEL.top + 1.6, C.transition, 0); // machine room, flush and low: no crown on the roof
+      return;
+    }
+    if (pc.landmark === "deco") { // stepped art-deco tower
+      prism(f, 0, 12, C.classic, 3);
+      prism(scaleAbout(f, .66), 12, 30, C.classic, 3);
+      prism(scaleAbout(f, .48), 30, 40, C.classic, 3);
+      prism(scaleAbout(f, .3), 40, 46, C.classic, 3);
+    } else if (pc.landmark === "palace") {
+      prism(f, 0, 11, C.classic, 3.6);
+      const c = centroid(f);
+      prism(rect(c[0] - 4, c[1] - 4, 8, 8), 11, 15, C.classic, 0);
+      const [X, Y] = P(c[0], c[1], 15), r = 5 * state.cam.s;
+      ctx.beginPath(); ctx.ellipse(X, Y, r, r * 1.5, 0, Math.PI, 0); ctx.closePath();
+      ctx.fillStyle = mix(C.paper, C.classic, .55); ctx.fill(); ctx.strokeStyle = C.classic; ctx.stroke();
+      prism(rect(c[0] - 1, c[1] - 1, 2, 2), 19.5, 22, C.classic, 0);
+    } else {
+      prism(f, 0, 5, C.modern, 2.5);
+      prism(scaleAbout(f, .6), 5, 60, C.modern, 3.2);
+      prism(scaleAbout(f, .4), 60, 64, C.modern, 0);
+    }
+  }
+  // The sign flat against the slab's southeast face. That face is the diagonal plane, so on screen it is an upright rectangle.
+  function drawSign(sg, iso) {
+    const S = HOTEL.signs[state.size], dpr = devicePixelRatio || 1, n = sg.k + .15;
+    const A = sg.at(-S.half, n), B = sg.at(S.half, n);
+    const p0 = P(A[0], A[1], iso ? S.z0 : 0), p1 = P(B[0], B[1], iso ? S.z1 : 0);
+    const x0 = Math.min(p0[0], p1[0]), x1 = Math.max(p0[0], p1[0]), y0 = Math.min(p0[1], p1[1]), y1 = Math.max(p0[1], p1[1]);
+    ctx.save();
+    if (!iso) { ctx.strokeStyle = C.neon; ctx.lineWidth = 3 * dpr; ctx.shadowColor = C.neon; ctx.shadowBlur = 8 * dpr; ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.lineTo(p1[0], p1[1]); ctx.stroke(); ctx.restore(); return; }
+    ctx.fillStyle = "#06131f"; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+    ctx.strokeStyle = rgba(C.neon, .5); ctx.lineWidth = 1 * dpr; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+    const capPx = S.cap * 1.4 * state.cam.s, fontPx = capPx / .7;
+    ctx.font = `700 ${fontPx}px "Barlow Condensed", "Arial Narrow", sans-serif`;
+    try { ctx.letterSpacing = `${fontPx * .06}px`; } catch (e) {}
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    const wTxt = ctx.measureText("RESUME").width, fit = Math.min(1.6, ((x1 - x0) * .94) / wTxt);
+    ctx.translate((x0 + x1) / 2, (y0 + y1) / 2 + capPx / 2); ctx.scale(fit, 1);
+    ctx.shadowColor = C.neon; ctx.shadowBlur = 12 * dpr; ctx.fillStyle = C.neon; ctx.fillText("RESUME", 0, 0);
+    ctx.restore();
+  }
+  function label(text, x, y, angle, color, size = 10) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(angle);
+    const dpr = devicePixelRatio || 1;
+    ctx.font = `500 ${size * dpr}px "IBM Plex Mono", ui-monospace, monospace`;
+    try { ctx.letterSpacing = `${dpr}px`; } catch (e) {}
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.lineWidth = 4 * dpr; ctx.strokeStyle = C.paper; ctx.lineJoin = "round"; ctx.strokeText(text, 0, 0);
+    ctx.fillStyle = color; ctx.fillText(text, 0, 0); ctx.restore();
+  }
+  function segLabel(a) {
+    const s = clipSeg(a.p, a.q); if (!s || !a.name) return;
+    const t = a.label ?? .5, x = s[0][0] + (s[1][0] - s[0][0]) * t, y = s[0][1] + (s[1][1] - s[0][1]) * t;
+    const A = P(s[0][0], s[0][1]), B = P(s[1][0], s[1][1]);
+    let ang = Math.atan2(B[1] - A[1], B[0] - A[0]);
+    if (ang > Math.PI / 2) ang -= Math.PI; if (ang < -Math.PI / 2) ang += Math.PI;
+    const [X, Y] = P(x, y); label(a.name.toUpperCase(), X, Y, ang, C.avenue);
+  }
+
+  let model = null;
+  function draw() {
+    const dpr = devicePixelRatio || 1, W = cv.width, H = cv.height, L = state.layers, iso = state.view === "iso";
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = C.paper; ctx.fillRect(0, 0, W, H);
+    // iso grid backdrop
+    ctx.strokeStyle = rgba(C["ink-dim"], .09); ctx.lineWidth = 1; ctx.beginPath();
+    for (let k = -360; k <= 360; k += 30) { let a = P(k, 30), b = P(k, 500); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); a = P(-360, k + 120); b = P(360, k + 120); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); }
+    ctx.stroke();
+
+    // context: Portfolio north, rails, station
+    const north = [[-330, 40], [344, 40], [344, 90], [198, 90], [198, 146], [96, 146], [96, 158], [-330, 158]];
+    ctx.save(); path(north); ctx.fillStyle = rgba(C["ink-dim"], .07); ctx.fill(); ctx.restore();
+    hatch(north, rgba(C["ink-dim"], .13), 9);
+    // water + east bank
+    const water = [[198, 146], [198, 470], [eb(470), 470], [eb(146), 146]];
+    path(water); ctx.fillStyle = rgba(C.water, .45); ctx.fill(); hatch(water, rgba("#9fd0ff", .12), 5);
+    const east = [[eb(146), 146], [eb(470), 470], [344, 470], [344, 146]];
+    path(east); ctx.fillStyle = rgba(C["ink-dim"], .07); ctx.fill(); hatch(east, rgba(C["ink-dim"], .12), 9);
+    // redesign land
+    const land = clipLand(rect(-400, 150, 600, 200));
+    path(land); ctx.fillStyle = C["paper-2"]; ctx.fill();
+    ctx.strokeStyle = rgba(C.ink, .25); ctx.lineWidth = 1; ctx.stroke();
+    // coastal barrio ground
+    const south = [[-77, 338], [192, 338], [192, 470], [51, 470]];
+    if (!model.blend) { path(south); ctx.fillStyle = rgba(C["ink-dim"], .06); ctx.fill(); }
+    // quay
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 2 * dpr * .8; ctx.beginPath(); let a = P(195, 146), b = P(195, 470); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+
+    // avenues
+    const avColor = L.avenues ? C.avenue : C["ink-dim"];
+    for (const av of model.avenues) {
+      const poly = clipLand(segRect(av.p, av.q, av.w)); if (poly.length < 3) continue;
+      path(poly); ctx.fillStyle = rgba(avColor, av.kind === "costanera" ? .22 : (L.avenues ? .42 : .14)); ctx.fill();
+      if (L.avenues) { ctx.strokeStyle = rgba(avColor, .8); ctx.lineWidth = .8 * dpr; ctx.stroke(); }
+      const s = clipSeg(av.p, av.q); if (!s) continue;
+      if (av.kind === "boulevard") { // tree median
+        const len = Math.hypot(s[1][0] - s[0][0], s[1][1] - s[0][1]);
+        ctx.strokeStyle = rgba(C.park, .8); ctx.lineWidth = Math.max(1, av.w * .25 * state.cam.s); ctx.beginPath();
+        let A = P(...s[0]), B = P(...s[1]); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.stroke();
+        ctx.fillStyle = C.park;
+        for (let t = 3; t < len; t += 6) { const q = [s[0][0] + (s[1][0] - s[0][0]) * t / len, s[0][1] + (s[1][1] - s[0][1]) * t / len]; const [X, Y] = P(q[0], q[1]); ctx.beginPath(); ctx.arc(X, Y, Math.max(1.2, 1.3 * state.cam.s), 0, 7); ctx.fill(); }
+      } else if (av.kind === "costanera") {
+        const len = s[1][1] - s[0][1]; ctx.fillStyle = C.avenue;
+        for (let t = 4; t < len; t += 9) { const [X, Y] = P(191, s[0][1] + t); ctx.beginPath(); ctx.arc(X, Y, Math.max(1, .9 * state.cam.s), 0, 7); ctx.fill(); }
+      } else if (state.cam.s > .7) {
+        ctx.setLineDash([4 * dpr, 4 * dpr]); ctx.strokeStyle = rgba(C.paper, .7); ctx.lineWidth = dpr;
+        ctx.beginPath(); let A = P(...s[0]), B = P(...s[1]); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.stroke(); ctx.setLineDash([]);
+      }
+    }
+    // parks
+    for (const pk of model.parks) {
+      const poly = clipLand(pk.poly); if (poly.length < 3) continue;
+      path(poly); ctx.fillStyle = rgba(C.park, .26); ctx.fill(); ctx.strokeStyle = rgba(C.park, .9); ctx.lineWidth = dpr; ctx.stroke();
+      const c = centroid(poly);
+      ctx.save(); path(poly); ctx.clip();
+      ctx.strokeStyle = rgba(C.ink, .45); ctx.lineWidth = .8 * dpr; ctx.setLineDash([3 * dpr, 3 * dpr]); ctx.beginPath();
+      for (const q of poly) { const A = P(...c), B = P(...q); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); }
+      ctx.stroke(); ctx.setLineDash([]);
+      const [bx0, by0, bx1, by1] = bbox(poly); ctx.fillStyle = rgba(C.park, .85);
+      for (let x = bx0 + 3; x < bx1; x += 5) for (let y = by0 + 3; y < by1; y += 5) {
+        if (hash(x, y, 5) < .35) continue;
+        const [X, Y] = P(x + hash(x, y, 6) * 2, y + hash(x, y, 7) * 2); ctx.beginPath(); ctx.arc(X, Y, Math.max(1.2, 1.4 * state.cam.s), 0, 7); ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // buildings
+    const items = [];
+    const colOf = d => L.districts ? C[d] : C["ink-dim"];
+    for (const pc of model.pieces) {
+      const col = colOf(pc.district);
+      if (pc.landmark) { items.push({ k: pc.c[0] + pc.c[1], f: () => landmark(pc, iso && L.volumes) }); continue; }
+      if (pc.lots || pc.slabs) {
+        const parts = pc.lots ? pc.lots : pc.slabs.map(s => ({ poly: s, h: pc.h }));
+        for (const lt of parts) { const c = centroid(lt.poly); items.push({ k: c[0] + c[1], f: () => {
+          if (iso && L.volumes) prism(lt.poly, 0, lt.h, col, pc.slabs ? 2.6 : 0);
+          else { path(lt.poly); ctx.fillStyle = mix(C.paper, col, .45); ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = .7 * dpr; ctx.stroke(); }
+        } }); }
+        items.push({ k: -1e4, f: () => { path(pc.poly); ctx.strokeStyle = rgba(col, .35); ctx.lineWidth = .7 * dpr; ctx.stroke(); } });
+        continue;
+      }
+      items.push({ k: pc.c[0] + pc.c[1], f: () => {
+        if (iso && L.volumes) {
+          prism(pc.foot || pc.poly, 0, pc.h, col, 3);
+          if (pc.district === "classic" || pc.district === "low") { path(scaleAbout(pc.foot, .42), pc.h); ctx.setLineDash([2 * dpr, 2 * dpr]); ctx.strokeStyle = rgba(col, .7); ctx.stroke(); ctx.setLineDash([]); }
+          if (pc.tower) prism(pc.tower, pc.h, pc.h + pc.th, col, 3.2);
+          if (pc.cupola) cupola(pc.cupola, pc.h, col);
+        } else {
+          path(pc.foot || pc.poly); ctx.fillStyle = mix(C.paper, col, .3); ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = .9 * dpr; ctx.stroke();
+          if (pc.district === "classic") { path(scaleAbout(pc.foot, .42)); ctx.setLineDash([2 * dpr, 2 * dpr]); ctx.strokeStyle = rgba(col, .8); ctx.stroke(); ctx.setLineDash([]); }
+          if (pc.tower) { path(pc.tower); ctx.fillStyle = mix(C.paper, col, .55); ctx.fill(); ctx.strokeStyle = col; ctx.stroke(); }
+          if (pc.cupola) { const [X, Y] = P(...pc.cupola); ctx.beginPath(); ctx.arc(X, Y, 1.8 * state.cam.s, 0, 7); ctx.fillStyle = col; ctx.fill(); }
+        }
+      } });
+    }
+    for (const h of model.houses) {
+      const c = centroid(h);
+      items.push({ k: c[0] + c[1], f: () => { if (iso && L.volumes) prism(h, 0, 2.6 + hash(c[0], c[1]) * 1.2, C["ink-dim"], 0); else { path(h); ctx.strokeStyle = rgba(C["ink-dim"], .6); ctx.lineWidth = .7 * dpr; ctx.stroke(); } } });
+    }
+    if (model.opt.today) {
+      const t = rect(121, 220, 16, 14);
+      items.push({ k: 129 + 227, f: () => iso && L.volumes ? prism(t, 0, 30, C.ink, 3) : (path(t), ctx.fillStyle = mix(C.paper, C.ink, .4), ctx.fill()) });
+    }
+    // monuments in parks
+    for (const pk of model.parks) if (pk.kind === "park") {
+      const c = centroid(pk.poly), m = rect(c[0] - 1.5, c[1] - 1.5, 3, 3);
+      items.push({ k: c[0] + c[1] + 1, f: () => { if (iso && L.volumes) prism(m, 0, 14, C.ink, 0); } });
+    }
+    // bridge deck
+    const bridge = rect(192, 207, eb(212) - 192, 10);
+    items.push({ k: 212 + 212 - 400, f: () => {
+      if (iso && L.volumes) prism(bridge, .6, 1.8, L.fixed ? C.fixed : C["ink-dim"], 0);
+      else { path(bridge); ctx.strokeStyle = L.fixed ? C.fixed : C["ink-dim"]; ctx.lineWidth = 1.2 * dpr; ctx.stroke(); }
+    } });
+    items.sort((p, q) => p.k - q.k).forEach(i => i.f());
+
+    // fixed overlays
+    if (L.fixed) {
+      ctx.strokeStyle = C.fixed; ctx.lineWidth = 1.3 * dpr; ctx.setLineDash([5 * dpr, 4 * dpr]);
+      path(rect(96, 90, 102, 56)); ctx.stroke();
+      ctx.beginPath(); for (const y of [131, 134]) { const A = P(-330, y), B = P(96, y); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); } ctx.stroke();
+      ctx.setLineDash([2 * dpr, 6 * dpr]); ctx.strokeStyle = rgba(C.fixed, .8);
+      ctx.beginPath(); let A = P(-329, 90), B = P(51, 470); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.stroke();
+      ctx.setLineDash([]);
+      // RESUME crown today
+      const [X, Y] = P(129, 227, iso ? 30 : 0); ctx.beginPath(); ctx.arc(X, Y, 9 * dpr, 0, 7); ctx.strokeStyle = C.fixed; ctx.lineWidth = 1.5 * dpr; ctx.stroke();
+    }
+    if (L.names) {
+      const dim = C["ink-dim"];
+      let p = P(150, 98); label("ESTACIÓN · PORTFOLIO", p[0], p[1], 0, L.fixed ? C.fixed : dim);
+      p = P(-120, 112); label("PLAYAS FERROVIARIAS (FIJO)", p[0], p[1], 0, L.fixed ? C.fixed : dim);
+      p = P(-80, 30); label("PORTFOLIO", p[0], p[1], 0, dim, 12);
+      p = P(232, 330); label("ESTUARIO", p[0], p[1], 0, "#9fd0ff", 12);
+      p = P(300, 260); label("COSTA ESTE · SIN CAMBIOS", p[0], p[1], 0, dim);
+      p = P(80, 420); label(model.blend ? "BARRIO COSTERO · MISMA GRILLA" : "BARRIO COSTERO (SE CONSERVA)", p[0], p[1], 0, model.blend ? C.resid : dim);
+      p = P(230, 202, iso ? 2 : 0); label("PUENTE", p[0], p[1], 0, L.fixed ? C.fixed : dim);
+      if (L.fixed) { p = P(129, 227, iso ? 30 : 0); label("CORONA RESUME HOY", p[0] + 62 * dpr, p[1] + 14 * dpr, 0, C.fixed); }
+      for (const av of model.avenues) segLabel(av);
+      for (const pk of model.parks) if (pk.name) { const c = centroid(pk.poly), q = P(c[0], c[1], iso ? 17 : 0); label(pk.name.toUpperCase(), q[0], q[1] - 8 * dpr, 0, C.park, 11); }
+    }
+    if (model.opt.chosen && model.sign) drawSign(model.sign, iso);
+  }
+
+  // ---------- UI ----------
+  const tabs = document.getElementById("tabs"), card = document.getElementById("card"), layersEl = document.getElementById("layers");
+  OPTIONS.forEach((o, i) => {
+    const b = document.createElement("button");
+    b.className = "tab"; b.role = "tab"; b.id = "tab-" + o.id;
+    b.innerHTML = `<span class="k">${o.key}</span>${o.name}${o.chosen ? ` <span class="k">· elegida</span>` : ""}`;
+    b.addEventListener("click", () => select(i));
+    tabs.appendChild(b);
+  });
+  Object.keys(state.layers).forEach(k => {
+    const b = document.createElement("button"); b.className = "chip"; b.id = "layer-" + k; b.textContent = LAYER_LABELS[k];
+    b.setAttribute("aria-pressed", "true");
+    b.addEventListener("click", () => { state.layers[k] = !state.layers[k]; b.setAttribute("aria-pressed", String(state.layers[k])); draw(); });
+    layersEl.appendChild(b);
+  });
+  function stats(m) {
+    const n = m.pieces.length, irr = m.pieces.filter(p => p.irregular).length;
+    let len = 0, count = 0;
+    for (const a of m.avenues) { if (a.kind === "costanera") continue; const s = clipSeg(a.p, a.q); if (s) { len += Math.hypot(s[1][0] - s[0][0], s[1][1] - s[0][1]); if (a.name) count++; } }
+    const by = d => m.pieces.filter(p => p.district === d).length;
+    return { n, irr, len: Math.round(len), count, classic: by("classic"), transition: by("transition"), modern: by("modern"), low: by("low"), resid: by("resid") };
+  }
+  function renderCard(o, m) {
+    const s = stats(m), list = (arr, cls) => arr.length ? `<ul class="${cls}">${arr.map(x => `<li>${x}</li>`).join("")}</ul>` : "";
+    card.innerHTML = `
+      <div class="kicker">${o.kicker}</div>
+      <h2>${o.key === "0" ? "" : o.key + " · "}${o.name}</h2>
+      <p>${o.summary}</p>
+      <div><h3>En pantalla</h3><p>${o.screen}</p></div>
+      ${o.pros.length ? `<div><h3>A favor</h3>${list(o.pros, "pros")}</div>` : ""}
+      ${o.cons.length ? `<div><h3>En contra</h3>${list(o.cons, "cons")}</div>` : ""}
+      <div class="stats">
+        <div><b>${s.n}</b><span>manzanas</span></div>
+        <div><b>${s.irr}</b><span>irregulares</span></div>
+        <div><b>${s.count}</b><span>avenidas con nombre</span></div>
+        <div><b>${s.len}</b><span>u de avenida</span></div>
+        ${o.today ? "" : `<div><b>${s.classic} · ${s.transition} · ${s.modern}</b><span>clásico · transición · moderno</span></div>`}
+        ${m.blend ? `<div><b>${s.low} · ${s.resid}</b><span>bajo · barrio costero</span></div>` : ""}
+      </div>`;
+  }
+  const signcard = document.getElementById("signcard"), aControls = document.getElementById("a-controls");
+  function renderSignCard() {
+    const S = HOTEL, list = (arr, cls) => `<ul class="${cls}">${arr.map(x => `<li>${x}</li>`).join("")}</ul>`;
+    const cmp = state.size === "new" ? "Tamaño nuevo: letras de 12,7 de alto (hoy 8,7), de punta a punta de la fachada." : "Tamaño de hoy, sobre la misma fachada, para comparar: letras de 8,7 en un panel de 50 × 14.";
+    signcard.innerHTML = `
+      <div class="kicker">Cartel RESUME · lugar 1, elegido</div>
+      <h2>${S.name}</h2>
+      <p>${S.desc}</p>
+      <p style="color:var(--ink-dim)">${cmp}</p>
+      <div><h3>A favor</h3>${list(S.pros, "pros")}</div>
+      <div><h3>En contra</h3>${list(S.cons, "cons")}</div>`;
+  }
+  function rebuild(refit) {
+    const o = OPTIONS[state.opt], wasBlend = model && model.blend;
+    model = build(o);
+    aControls.hidden = !o.chosen; signcard.hidden = !o.chosen;
+    if (o.chosen) renderSignCard();
+    renderCard(o, model);
+    if (refit || wasBlend !== model.blend) fit();
+    draw();
+  }
+  function select(i) {
+    state.opt = i;
+    [...tabs.children].forEach((b, j) => b.setAttribute("aria-selected", String(i === j)));
+    rebuild(false);
+  }
+  document.querySelectorAll("#sign-seg button").forEach(b => b.addEventListener("click", () => {
+    state.size = b.dataset.size;
+    document.querySelectorAll("#sign-seg button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    rebuild(false);
+  }));
+  document.querySelectorAll("#south-seg button").forEach(b => b.addEventListener("click", () => {
+    state.south = b.dataset.south;
+    document.querySelectorAll("#south-seg button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    rebuild(true);
+  }));
+  function setView(v) {
+    state.view = v;
+    document.getElementById("v-iso").setAttribute("aria-pressed", String(v === "iso"));
+    document.getElementById("v-plan").setAttribute("aria-pressed", String(v === "plan"));
+    fit(); draw();
+  }
+  document.getElementById("v-iso").addEventListener("click", () => setView("iso"));
+  document.getElementById("v-plan").addEventListener("click", () => setView("plan"));
+  function zoomAt(f, X, Y) { const c = state.cam; c.ox = X - (X - c.ox) * f; c.oy = Y - (Y - c.oy) * f; c.s *= f; draw(); }
+  document.getElementById("z-in").addEventListener("click", () => zoomAt(1.3, cv.width / 2, cv.height / 2));
+  document.getElementById("z-out").addEventListener("click", () => zoomAt(1 / 1.3, cv.width / 2, cv.height / 2));
+  document.getElementById("z-reset").addEventListener("click", () => { fit(); draw(); });
+  cv.addEventListener("wheel", e => { e.preventDefault(); const r = cv.getBoundingClientRect(), d = devicePixelRatio || 1; zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, (e.clientX - r.left) * d, (e.clientY - r.top) * d); }, { passive: false });
+  let drag = null;
+  cv.addEventListener("pointerdown", e => { drag = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); cv.classList.add("drag"); });
+  cv.addEventListener("pointermove", e => { if (!drag) return; const d = devicePixelRatio || 1; state.cam.ox += (e.clientX - drag.x) * d; state.cam.oy += (e.clientY - drag.y) * d; drag = { x: e.clientX, y: e.clientY }; draw(); });
+  const end = () => { drag = null; cv.classList.remove("drag"); };
+  cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
+  cv.addEventListener("dblclick", () => { fit(); draw(); });
+
+  function resize() {
+    const d = devicePixelRatio || 1, r = cv.getBoundingClientRect();
+    const w = Math.max(300, Math.round(r.width * d)), h = Math.round(w * 10 / 16);
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; fit(); if (model) draw(); }
+  }
+  readColors();
+  new ResizeObserver(resize).observe(cv);
+  resize();
+  select(1);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => draw());
+})();
+</script>
+</body></html>
