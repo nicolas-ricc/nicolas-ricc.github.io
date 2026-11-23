@@ -15,13 +15,15 @@ describe("Resume level 2 budget", () => {
     const s = resume();
     expect(s.solids.filter((x) => !isFlat(x)).length).toBeLessThanOrEqual(2900);
     expect(s.ground.filter((g) => g.kind === "strip").length).toBeLessThanOrEqual(190);
-    // accents: 1 165 measured (#391): 789 before, + the crown's 402 (238 poly + 164 dot), − 26 city lights the crown now hides from the camera
-    // (2 avenue lamps and lit windows behind its panel); ×1.1 rounded to the hundred
+    // measured with the hotel (#474), real seed: 992 raised solids, 95 strip ground, 788 static accents (514 poly + 274 dot).
+    // The accents were 1 165 with the crown (#391: 789 before, + its 402 = 238 poly + 164 dot, − 26 hidden city lights); the hotel replaced the
+    // tower and the crown, and no cap is exceeded, so none moves (the accents' was 1 165 ×1.1 rounded to the hundred)
     expect(s.accents.length).toBeLessThanOrEqual(1300);
   });
 
   it("static polygons of the world ≤ 56 000 (same computation as stage.staticCount)", () => {
     const w = assembleWorld(undefined, { reducedMotion: true }).scene;
+    // 42 749 measured with the hotel (#474); the cap stays
     expect(buildRenderList([...w.terrain.ground, ...w.ground, ...w.solids]).length).toBeLessThanOrEqual(56000);
   });
 
@@ -37,6 +39,7 @@ describe("world accents (#394)", () => {
     // tinker 114 + 84, platform 654 + 2; the tinker's 19 lights in `tinker.lights` are animated, not static); ×1.05.
     // since #442 the platform is one flat board: its piles, hut and posts are gone, so these figures describe the platform before it
     // Since #427 the platform is animated, not static (`platform.solid` of platformAnimator); since #454 it has no lights at all.
+    // 1 376 measured with the hotel (#474), real seed: the Resume sign's accents are inside the city's 788 and the crown's 402 are gone; the cap stays
     expect(assembleWorld(undefined, { reducedMotion: true }).scene.accents.length).toBeLessThanOrEqual(2600);
   });
   it("the platform's lights left the static world (#427): fewer than the 2 409 of feature/423 before it", () => {
@@ -48,6 +51,7 @@ describe("raised solids per scene (#328)", () => {
   // Measured 2026-11-08 with world(SEED) after #319..#327 and the cuts of #328 (spec 2026-10-15 §12.2): shipyard 543, factory 775,
   // city 1 431, fair 452, hinterland 456, tech 1 514. Caps are measured ×1.1 rounded to the nearest hundred; fair re-measured 549 on 2026-11-17 after #398 (helter skelter).
   // shipyard: 543 + the tinker sign's 154 = 697 (#392), ×1.1 rounded to the hundred
+  // measured with the hotel (#474), real seed: shipyard 686, city 992, factory 770, fair 565, hinterland 453, tech 1 490; none exceeds its cap, so none moves
   const CAPS = { shipyard: 800, factory: 900, city: 1600, fair: 600, hinterland: 500, tech: 1700 } as const;
   let w: ReturnType<typeof world>;
   beforeAll(() => { w = world(SEED); });
