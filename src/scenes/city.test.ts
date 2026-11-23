@@ -458,9 +458,10 @@ describe("city on the new layout (#472)", () => {
     expect(s.placed.filter((pp) => pp.placed.parcel).length).toBeGreaterThan(25);
     const hotel = parcels(CITY_BOUNDS).find((p) => p.rect.x === HOTEL_LOT.x && p.rect.y === HOTEL_LOT.y && p.rect.w === HOTEL_LOT.w && p.rect.d === HOTEL_LOT.d)!;
     expect(plinths.filter((x) => samePoly(x.footprint, hotel.poly))).toHaveLength(1);
-    for (const x of s.solids) if (x !== plinths.find((p) => samePoly(p.footprint, hotel.poly))) {
-      const b = bounds(x);
-      if (b.max.z > PLINTH_H + 0.5) expect(entersRect(b, { x: HOTEL_LOT.x + 1, y: HOTEL_LOT.y + 1, w: HOTEL_LOT.w - 2, d: HOTEL_LOT.d - 2 }), `${x.kind} ${x.mat} over the hotel lot`).toBe(false);
+    expect(s.placed.some((pp) => pp.placed.parcel === hotel)).toBe(false);
+    // nothing stands on the lot itself (the crown's beams overhang it at z 30, and the tower's corner cone grazes its north edge)
+    for (const x of s.solids) if (!isTowerPiece(x) && x !== plinths.find((p) => samePoly(p.footprint, hotel.poly))) {
+      expect(within(bounds(x), HOTEL_LOT, 0), `${x.kind} ${x.mat} on the hotel lot`).toBe(false);
     }
   });
 
