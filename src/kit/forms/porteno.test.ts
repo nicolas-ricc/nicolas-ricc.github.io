@@ -232,7 +232,7 @@ describe("porteno family", () => {
   });
 
   it("portalBase has a portal gap under a stone lintel between two columns, and at least one neon slot", () => {
-    for (const lot of [L0, L1, ...WEDGE_LOTS, { ...L1, open: [] }]) for (const id of STYLE_IDS) for (const seed of SEEDS) {
+    for (const lot of [L0, L1, ...WEDGE_LOTS, { ...L1, open: [] }, { ...L1, open: ["w" as const] }, { ...L1, open: ["n" as const] }, { ...L1, open: ["n" as const, "e" as const] }]) for (const id of STYLE_IDS) for (const seed of SEEDS) {
       const p = recipe("portalBase")(lot, createRng(seed), STYLES[id]);
       const lintel = p.solids.find((s) => s.kind === "prism" && s.mat === "stone" && Math.abs(bounds(s).min.z - (lot.z + 4)) < 1e-6);
       expect(lintel, `${id} seed ${seed}`).toBeDefined();
@@ -243,7 +243,8 @@ describe("porteno family", () => {
       }
       const cols = p.solids.filter((s) => s.kind === "cylinder" && s.mat === "stone" && Math.abs(bounds(s).max.z - (lot.z + 4)) < 1e-6);
       expect(cols).toHaveLength(2);
-      expect(p.slots.filter((s) => s.kind === "neon").length).toBeGreaterThanOrEqual(1);
+      for (const s of [lintel!, ...cols]) { const b = bounds(s); expect(b.min.x).toBeGreaterThanOrEqual(lot.x - 1e-6); expect(b.max.x).toBeLessThanOrEqual(lot.x + lot.w + 1e-6); expect(b.min.y).toBeGreaterThanOrEqual(lot.y - 1e-6); expect(b.max.y).toBeLessThanOrEqual(lot.y + lot.d + 1e-6); }
+      if (lot.open.length === 0 || lot.open.some((o) => o === "s" || o === "e")) expect(p.slots.filter((s) => s.kind === "neon").length).toBeGreaterThanOrEqual(1);
     }
   });
 });

@@ -176,11 +176,10 @@ export function cornerCupola(lot: Lot, rng: Rng, style: Style): Piece {
   }
   if (roofed && !c) { // the walk met a wedge or the patio: the point of a 0.25 grid nearest to the corner
     const xs = fp.map((v) => v.x), ys = fp.map((v) => v.y);
-    let best = Infinity;
-    for (let x = Math.min(...xs); x <= Math.max(...xs); x += 0.25) for (let y = Math.min(...ys); y <= Math.max(...ys); y += 0.25) {
-      const g = { x, y }, dd = Math.hypot(x - q.x, y - q.y);
-      if (dd < best && onWings(g)) { best = dd; c = g; }
-    }
+    const grid: { g: Vec2; dd: number }[] = []; // nearest to the corner first (stable: ties keep x, y order)
+    const x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    for (let x = Math.min(...xs); x <= x1; x += 0.25) for (let y = y0; y <= y1; y += 0.25) grid.push({ g: { x, y }, dd: Math.hypot(x - q.x, y - q.y) });
+    c = grid.sort((m, n) => m.dd - n.dd).find((e) => insidePoly(fp, e.g) && onWings(e.g))?.g ?? null;
   }
   const top = z + h;
   if (c) p.solids.push(
@@ -197,7 +196,7 @@ const DORMER = { along: 1.4, deep: 0.8, h: 1.6 };
 /** Mansard block: 4..5 floors, cornice, a frustum roof inset 0.8 to 2, and 3 dormers on each south or east edge of 6 or more (decision T5). */
 export function mansard(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { z } = lot, floors = rng.int(4, 5);
-  const fp = lot.poly ? clipConvex(polyFootprint(lot, 1, 2.4), polyFootprint(lot, 0, 2.4)) : polyFootprint(lot, 1, 2.4); // inset 1 would leave a short wedge edge's chamfer short of the lot-level cut
+  const fp = insetFootprint(lot, 1, 2.4);
   if (fp.length < 3 || polyArea(fp) < 4) return p;
   const roofed = recipeCap(lot) - CORNICE_H - 2.2 >= 3, h = Math.min(floors * style.floorH, recipeCap(lot) - CORNICE_H - (roofed ? 2.2 : 0)), f: Facade = { floors: floorsFor(h, style), cols: 3 };
   addBuilding(p, { kind: "poly", footprint: fp, z, h, mat: style.mat, facade: f, tone: style.tone }, f);
@@ -205,12 +204,11 @@ export function mansard(lot: Lot, rng: Rng, style: Style): Piece {
   const top = z + h + CORNICE_H, base = insetPoly(fp, 0.8), tip = insetPoly(fp, 2);
   if (!roofed || !base || !tip) return fitToCap(p, lot);
   p.solids.push(frustum(base, tip, top, top + 2.2, style.roof));
-  const s = area2(fp) > 0 ? 1 : -1, d: Facade = { floors: 1, cols: 1 };
+  const d: Facade = { floors: 1, cols: 1 };
   fp.forEach((a, i) => {
-    const b = fp[(i + 1) % fp.length]!, dx = b.x - a.x, dy = b.y - a.y, l = Math.hypot(dx, dy);
-    if (l < 6 || (dx !== 0 && dy !== 0)) return;
-    const nx = (s * dy) / l, ny = (-s * dx) / l; // outward normal
-    if (ny !== 1 && nx !== 1) return; // south or east only
+    const b = fp[(i + 1) % fp.length]!, dx = b.x - a.x, dy = b.y - a.y, n = axisNormal(fp, a, b);
+    if (!n || Math.hypot(dx, dy) < 6 || (n.y !== 1 && n.x !== 1)) return; // axis-aligned, south or east only
+    const ny = n.y;
     for (const t of [0.25, 0.5, 0.75]) {
       const cx = a.x + dx * t, cy = a.y + dy * t;
       const [w, dd] = ny === 1 ? [DORMER.along, DORMER.deep] : [DORMER.deep, DORMER.along];
@@ -265,13 +263,13 @@ export function balconyBlock(lot: Lot, rng: Rng, style: Style): Piece {
 
 const PORTAL = { w: 3, h: 4, deep: 2 }, UPPER_BAND = 0.6;
 
-/** Shopfront base with a 3 × 4 × 2 portal (stone lintel on two columns) on the front face, a marked cornice, an upper body with vertical windows and neon runs on the base's front faces. */
+/** Shopfront base (front = first open camera side, else the first open side, else south) with a 3 × 4 × 2 portal (stone lintel on two columns) on the front face, a marked cornice, an upper body with vertical windows and neon runs on the base's front faces. */
 export function portalBase(lot: Lot, rng: Rng, style: Style): Piece {
-  const p = emptyPiece(), { z } = lot, fp = insetFootprint(lot, 1, 2.4), front = lot.open[0] ?? "s";
+  const p = emptyPiece(), { z } = lot, fp = insetFootprint(lot, 1, 2.4), front = lot.open.find((o) => CAMERA_SIDES.includes(o)) ?? lot.open[0] ?? "s";
   if (fp.length < 3 || polyArea(fp) < 4) return p;
   const baseH = 2 * style.floorH, nf = NORMAL[front];
   const cols = Math.max(2, Math.round(Math.max(...fp.map((a, i) => { const b = fp[(i + 1) % fp.length]!; return Math.hypot(b.x - a.x, b.y - a.y); })) / 2));
-  const f: Facade = { floors: 2, cols, base: "glass", window: { w: 0.3, h: 1.4 / style.floorH } };
+  const f: Facade = { floors: 2, cols, base: "glass" };
   const base = (shape: Vec2[]): void => { if (shape.length >= 3 && polyArea(shape) >= 1) addBuilding(p, { kind: "poly", footprint: shape, z, h: baseH, mat: style.mat, facade: f, tone: style.tone }, f); };
   const ux = nf.x !== 0 ? 0 : 1, uy = nf.x !== 0 ? 1 : 0; // tangent axis of the front face
   let edge: [Vec2, Vec2] | null = null;
@@ -281,23 +279,23 @@ export function portalBase(lot: Lot, rng: Rng, style: Style): Piece {
   });
   if (!edge) base(fp);
   else {
-    const [a, b] = edge as [Vec2, Vec2], cu = ((a.x + b.x) * ux + (a.y + b.y) * uy) / 2, face = a.x * nf.x + a.y * nf.y, u0 = a.x * ux + a.y * uy, u1 = b.x * ux + b.y * uy;
+    const [a, b] = edge as [Vec2, Vec2], cu = ((a.x + b.x) * ux + (a.y + b.y) * uy) / 2, face = a.x * nf.x + a.y * nf.y, fc = nf.x !== 0 ? a.x : a.y, u0 = a.x * ux + a.y * uy, u1 = b.x * ux + b.y * uy;
     const lo = cu - PORTAL.w / 2, hi = cu + PORTAL.w / 2;
     const before = clipHalf(fp, ux, uy, lo), after = clipHalf(fp, -ux, -uy, -hi);
     base(before); base(after);
     base(clipHalf(clipHalf(clipHalf(fp, -ux, -uy, -lo), ux, uy, hi), nf.x, nf.y, face - PORTAL.deep));
     // gap box: tangent lo..hi, depth face - deep..face
-    const gx = nf.x !== 0 ? Math.min(face, face - nf.x * PORTAL.deep) : lo, gy = nf.x !== 0 ? lo : Math.min(face, face - nf.y * PORTAL.deep);
+    const back = (nf.x + nf.y > 0 ? fc - PORTAL.deep : fc), gx = nf.x !== 0 ? back : lo, gy = nf.x !== 0 ? lo : back;
     const [gw, gd] = nf.x !== 0 ? [PORTAL.deep, PORTAL.w] : [PORTAL.w, PORTAL.deep];
     p.solids.push(prism(gx, gy, z + PORTAL.h, gw, gd, baseH - PORTAL.h, "stone"));
     for (const t of [lo + 0.3, hi - 0.3]) {
-      const d = face - 0.3 * (nf.x + nf.y); // column centre, 0.3 inside the face
+      const d = fc - 0.3 * (nf.x + nf.y); // column centre, 0.3 inside the face
       p.solids.push({ kind: "cylinder", at: v3(nf.x !== 0 ? d : t, nf.x !== 0 ? t : d, z), r: 0.3, h: PORTAL.h, mat: "stone" });
     }
     if (CAMERA_SIDES.includes(front)) {
       const seg = (s0: number, s1: number): Rect => {
         const tan = s0, len = s1 - s0, dep = 1;
-        return nf.x !== 0 ? { x: nf.x > 0 ? face - dep : face, y: tan, w: dep, d: len } : { x: tan, y: nf.y > 0 ? face - dep : face, w: len, d: dep };
+        return nf.x !== 0 ? { x: nf.x > 0 ? fc - dep : fc, y: tan, w: dep, d: len } : { x: tan, y: nf.y > 0 ? fc - dep : fc, w: len, d: dep };
       };
       let shop = 0;
       for (const [s0, s1] of [[Math.min(u0, u1), lo], [hi, Math.max(u0, u1)]] as const) {
@@ -311,7 +309,7 @@ export function portalBase(lot: Lot, rng: Rng, style: Style): Piece {
   p.solids.push(interlock({ kind: "poly", footprint: offsetFootprint(fp, 0.6), z: band, h: UPPER_BAND, mat: style.trim }));
   const upperH = Math.min(rng.int(2, 4) * style.floorH, roomH);
   if (upperH >= 1) {
-    const uf = floorsFor(upperH, style), g: Facade = { floors: uf, cols, window: f.window };
+    const uf = floorsFor(upperH, style), g: Facade = { floors: uf, cols, window: { w: 0.3, h: 1.4 / style.floorH } };
     addBuilding(p, { kind: "poly", footprint: fp, z: top, h: upperH, mat: style.mat, facade: g, tone: style.tone }, g);
     p.solids.push(polyCornice(fp, top + upperH, style.trim));
   }
