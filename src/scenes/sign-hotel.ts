@@ -13,7 +13,6 @@ import { lamp } from "../kit/props";
 import { SIDEWALK } from "./city-grid";
 import { prism } from "./city-pieces";
 import { HOTEL_LOT } from "./city-plan";
-
 import { HOTEL_CAP, HOTEL_SLAB, HOTEL_TRACKING, N, PANEL_GAP, PANEL_T, PANEL_Z1, SIGN_MARGIN, SIGN_PANEL, SIGN_Z0, U, on, panelAt, slabFootprint } from "./hotel-plan";
 
 export { HOTEL_CAP, HOTEL_SLAB, HOTEL_TRACKING, PANEL_GAP, PANEL_L, PANEL_T, SIGN_MARGIN, SIGN_PANEL, SIGN_Z0, slabFootprint } from "./hotel-plan";
