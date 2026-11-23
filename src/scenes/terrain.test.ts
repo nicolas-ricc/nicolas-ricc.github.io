@@ -85,7 +85,7 @@ describe("classification", () => {
     expect(terrainAt(255, 200)).toBe("water");                 // estuary
     expect(terrainAt(268, 200)).toBe("jungle");                // east bank, before the ring
     expect(terrainAt(290, 200)).toBe("asphalt");               // city to the east
-    expect(terrainAt(60, 185)).toBe("jungle");                 // crater
+    expect(terrainAt(40, 198)).toBe("jungle");                 // west crater of the new grid
     expect(terrainAt(50, 200)).toBe("asphalt");
     expect(terrainAt(340, 200)).toBe("asphalt");               // under the seawall
     expect(terrainAt(ZONE_SPLIT_X, 200)).toBe("shore");        // the east seam is still sea

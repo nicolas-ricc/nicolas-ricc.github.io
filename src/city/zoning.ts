@@ -5,7 +5,7 @@ import { LANDMARK_MAX_H } from "../kit/piece";
 import type { Lot, Side, StyleId } from "../kit/types";
 import type { Rng } from "../map/seed";
 import { PLINTH_H } from "../scenes/city-pieces";
-import { AVENUE, BLOCK_D, BLOCK_W, EAST_COLS, FREIGHT_ROW, LIT_FLOOR, PLAZA, ROWS, SIDEWALK, SITE, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, type Block, type Rect } from "../scenes/city-grid";
+import { AVENUE, BLOCK_W, EAST_COLS, FREIGHT_ROW, LIT_FLOOR, PLAZA, ROWS, SIDEWALK, SITE, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, type Block, type Rect } from "../scenes/city-grid";
 
 /**
  * Resume zoning: which neighborhood each block belongs to, which recipes
@@ -121,6 +121,7 @@ function pick(rng: Rng, recipes: readonly { name: string; weight: number }[]): s
   for (const r of recipes) { t -= r.weight; if (t < 0) return r.name; }
   return recipes[recipes.length - 1]!.name;
 }
+const BLOCK_D = 18; // depth of the strip and east blocks (city-grid keeps it private)
 const adjacent = (a: Block, b: Block): boolean => Math.abs(a.x - b.x) <= BLOCK_W + STREET && Math.abs(a.y - b.y) <= BLOCK_D + STREET;
 
 /** A block with its neighborhood, recipe, assembled lot and tone. */

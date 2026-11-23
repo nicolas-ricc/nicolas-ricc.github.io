@@ -1,3 +1,4 @@
+import { inParcel } from "./city-plan";
 import { ESTUARY_FLARE, ESTUARY_Y0, QUAY_X, SEAM_CY, STATION_LAND, ZONE_SPLIT_Y, eastBank, estuaryEast } from "../map/geo";
 export { ESTUARY_FLARE, estuaryEast };
 
@@ -9,7 +10,8 @@ export { ESTUARY_FLARE, estuaryEast };
  */
 export interface Rect { x: number; y: number; w: number; d: number }
 
-export const BLOCK_W = 24, BLOCK_D = 18, STREET = 6;
+export const BLOCK_W = 24, STREET = 6;
+const BLOCK_D = 18; // depth of the strip and east-bank blocks (the suburb blocks have their own, in sprawl-grid)
 export const SIDEWALK = 1.5; // free sidewalk inside the plinth
 
 export const WEST_COLS = [-48, -18, 12, 42, 72, 102, 132, 162] as const;
@@ -49,26 +51,23 @@ export const PROMENADE = { x0: 334, x1: 344, y0: 158, y1: 326, z: 0.6 } as const
 export const COLLAPSED: Rect = { x: 280, y: 242, w: 24, d: 18 }; // the estuary already reaches x ≈ 281 at y 260
 /** The fourth block of the collapse, fallen into the street in front of the promenade: `collapsed()` draws it and the cars dodge it. */
 export const FALLEN_BLOCK: Rect = { x: PROMENADE.x0 - 8, y: 237.5, w: 6, d: 3 };
-export const CRATERS: readonly { x: number; y: number; r: number }[] = [{ x: 60, y: 185, r: 5 }, { x: 150, y: 239, r: 6 }, { x: 307, y: 224, r: 5 }];
+/** Two craters on ordinary street crossings of the new west grid (off the axes and the parcels) and the east one. */
+export const CRATERS: readonly { x: number; y: number; r: number }[] = [{ x: 40, y: 198, r: 5 }, { x: -20, y: 258, r: 6 }, { x: 307, y: 224, r: 5 }];
 
 /** Inverse of estuaryEast south of ESTUARY_Y0: at which y the east bank reaches x (less than ESTUARY_Y0 if it never reaches it to the north). */
 export const estuaryReaches = (x: number): number => ESTUARY_Y0 + (x - eastBank(SEAM_CY)) / ESTUARY_FLARE;
 
-export type BlockKind = "block" | "plaza" | "collapsed" | "district" | "site" | "freight";
+export type BlockKind = "block" | "parcel" | "plaza" | "collapsed" | "district" | "site" | "freight";
 export interface Block extends Rect { bank: "west" | "east"; row: number; kind: BlockKind }
 
 export function blocks(): Block[] {
   const out: Block[] = [];
-  const isDistrict = (x: number, y: number) => y !== ROWS[0] && ((DISTRICT_COLS as readonly number[]).includes(x) || (DISTRICT_ROWS as readonly number[]).includes(y));
   ROWS.forEach((y, row) => {
-    for (const x of WEST_COLS) {
-      if (y === ROWS[0] && x + BLOCK_W > STATION_LAND.x0) continue; // the station land stays Portfolio
-      if (y === PLAZA.y && x >= PLAZA.x && x < PLAZA.x + PLAZA.w) continue; // the plaza joins those two
-      const kind: BlockKind = x === SITE.x && y === SITE.y ? "site" : isDistrict(x, y) ? "district" : "block";
-      out.push({ x, y, w: BLOCK_W, d: BLOCK_D, bank: "west", row, kind });
+    if (y === ROWS[0]) {
+      for (const x of WEST_COLS) if (x + BLOCK_W <= STATION_LAND.x0) out.push({ x, y, w: BLOCK_W, d: BLOCK_D, bank: "west", row, kind: "block" }); // the station land stays Portfolio
+      return; // the east of the strip is the two blocks below
     }
-    if (y === ROWS[0]) return; // the east of the strip is the two blocks below
-    if (y >= DISTRICT_ROWS[0]) return; // south of the old avenue the east bank is jungle and promenade
+    if (y >= 272) return; // south of the old avenue the east bank is jungle and promenade; the west bank is the city plan's (city-plan.ts)
     for (const x of EAST_COLS) {
       const kind: BlockKind = x === COLLAPSED.x && y === COLLAPSED.y ? "collapsed" : "block";
       out.push({ x, y, w: BLOCK_W, d: BLOCK_D, bank: "east", row, kind });
@@ -78,7 +77,6 @@ export function blocks(): Block[] {
   // 116 is the freight row; 140 is the second east row of the strip, a street (6) south of 134.
   for (const y of [FREIGHT_ROW.y, 140]) out.push({ x: EAST_COLS[0], y, w: BLOCK_W, d: BLOCK_D, bank: "east", row: -1, kind: "block" });
   for (const x of WEST_COLS) if (x + BLOCK_W <= STATION_LAND.x0) out.push({ x, y: FREIGHT_ROW.y, w: BLOCK_W, d: FREIGHT_ROW.d, bank: "west", row: -1, kind: "freight" });
-  out.push({ ...PLAZA, bank: "west", row: 3, kind: "plaza" });
   return out;
 }
 
@@ -87,5 +85,5 @@ export function inCrater(x: number, y: number): boolean {
 }
 
 export function inBlock(x: number, y: number): boolean {
-  return blocks().some((b) => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.d);
+  return blocks().some((b) => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.d) || inParcel(x, y);
 }

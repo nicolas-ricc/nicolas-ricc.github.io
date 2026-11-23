@@ -1,5 +1,5 @@
 import { CELL_BLEED, COVER_MARGIN, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, inCoverQuad, islandEastX, islandWestX, riverCenter } from "../map/geo";
-import { BLOCK_D, BLOCK_W, CITY_EDGE, ROWS, WEST_COLS, type Rect } from "./city-grid";
+import { BLOCK_W, CITY_EDGE, ROWS, WEST_COLS, type Rect } from "./city-grid";
 
 /**
  * Geography of the margins: which part of the bleed is built land and of
@@ -8,6 +8,9 @@ import { BLOCK_D, BLOCK_W, CITY_EDGE, ROWS, WEST_COLS, type Rect } from "./city-
  * share it, so the asphalt and the blocks cannot drift out of alignment.
  * Spec: docs/superpowers/specs/2026-09-15-margenes-urbanos-design.md §3.
  */
+/** Depth of a suburb block (the width is the city's `BLOCK_W`). */
+export const BLOCK_D = 18;
+
 export type Built = "industrial" | "urban" | "fair";
 
 /** How far the built land reaches from the edge of the content, per side. Multiples of CELL_BLEED. */
