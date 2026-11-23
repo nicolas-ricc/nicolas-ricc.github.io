@@ -8,7 +8,7 @@ import { lamp, streetTree, trafficLight } from "../kit/props";
 import { placeLit, type FixedLight } from "./lights";
 import { PLINTH_H, TILE, plazaTone, prism } from "../scenes/city-pieces";
 import { createRng, type Rng } from "../map/seed";
-import { builtParcels, neighborhoodOfParcel } from "./zoning";
+import { WEST_DISTRICT_X, builtParcels, neighborhoodOfParcel } from "./zoning";
 import { AXES, type Axis, CITY_BOUNDS, HOTEL_LOT, LAND, axis, axisBand, clipHalf, crossingPlazas, inCrossingPlaza, inParcel, inPlazaMayor, inRect, onAxis, polyCentroid } from "../scenes/city-plan";
 import { ORDINARY_X, ORDINARY_Y, axisFree, axisSpan, blocked, coverWest, crossings, crosswalks, inDomain, onOrdinaryStreet, unit } from "./crossings";
 
@@ -257,6 +257,8 @@ const onQuayStairs = (p: Vec2, half: number): boolean => p.x + half > WEST_QUAY.
 /** A post point on the west bank's ground: in the domain and `LAND`, off the plaza, lots, craters (by the post's whole footprint), any axis band and the ordinary streets (padded by `pad`). */
 const postFree = (a: Axis, p: Vec2, pad: number, half: number): boolean => inDomain(p) && p.y >= LAND.y0 && p.x <= landX(a) && ![[-1, -1], [1, -1], [1, 1], [-1, 1]].some(([i, j]) => blocked({ x: p.x + i! * half, y: p.y + j! * half })) && !onAxis(p.x, p.y) && !onOrdinaryStreet(p, pad) && !onQuayStairs(p, half);
 
+const inWestDistrict = (p: Vec2): boolean => p.x < WEST_DISTRICT_X;
+
 /**
  * Centers of the traffic light posts: at each crossing (axis x axis once, axis x street once) the corners
  * `at + s1 (half + 0.5) u + s2 (w/2 + 0.8) n`, stepping outward along u (`half + 0.5 + 0.5k`, k 0..12) to the first free post at least `LAMP_MIN_GAP` from the posts already placed; the diagonal pair (+,+)/(-,-) if both are free, else (+,-)/(-,+), else any two free ones.
@@ -266,6 +268,7 @@ export function trafficLightPosts(): readonly Vec2[] {
   for (const c of crossings()) {
     const key = c.other ? [c.a.id, c.other.id].sort().join("-") : `${c.a.id}:${c.otherId}`;
     if (seen.has(key)) continue;
+    if (c.other === null && inWestDistrict(c.at)) continue; // west district: no signals at ordinary crossings (#479 budget moved, not raised)
     seen.add(key);
     const u = unitOf(c.a), n = { x: -u.y, y: u.x };
     // per corner, the along offset steps outward (half + 0.5 + 0.5k, k 0..12) to the first post that is free: on an oblique crossing the first try falls on the street

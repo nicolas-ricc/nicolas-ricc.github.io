@@ -118,7 +118,7 @@ describe("traffic lights and lamps (#473)", () => {
   const posts = trafficLightPosts();
   const uniq = (() => {
     const seen = new Set<string>();
-    return crossings().filter((c) => { const k = c.other ? [c.a.id, c.other.id].sort().join("–") : `${c.a.id}:${c.otherId}`; if (seen.has(k)) return false; seen.add(k); return true; });
+    return crossings().filter((c) => { if (!c.other && c.at.x < -54) return false; /* west district: no signals at ordinary crossings (#479 budget moved, not raised) */ const k = c.other ? [c.a.id, c.other.id].sort().join("–") : `${c.a.id}:${c.otherId}`; if (seen.has(k)) return false; seen.add(k); return true; });
   })();
   const free = (c: (typeof uniq)[number], p: Vec2) => {
     const sq = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([i, j]) => ({ x: p.x + i! * 0.15, y: p.y + j! * 0.15 }));
@@ -136,6 +136,11 @@ describe("traffic lights and lamps (#473)", () => {
     }
     return out;
   };
+
+  it("the west district has no traffic light at an ordinary crossing, only the axis × axis ones (#479)", () => {
+    expect(crossings().some((c) => !c.other && c.at.x < -54)).toBe(true);
+    expect(posts.filter((p) => p.x < -54)).toHaveLength(0); // measured on agent/479: no axis × axis crossing lies west of x −54 (diagonalNorte × vias is at x −14)
+  });
 
   it("every crossing has two traffic lights", () => {
     const short: string[] = [], placed: Vec2[] = [];

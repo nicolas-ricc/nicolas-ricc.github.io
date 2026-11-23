@@ -5,7 +5,7 @@ import type { Rng } from "../map/seed";
 import { ESTUARY_Y0, QUAY_X, islandWestX } from "../map/geo";
 import { AVENUE, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROW_Y, EAST_COLS, EAST_RING, FALLEN_BLOCK, FREIGHT_ROW, PROMENADE, ROWS, STREET, WEST_QUAY, blocks, estuaryEast, inCrater, type Rect } from "../scenes/city-grid";
 import { BRIDGE_LANDING, CITY_BOUNDS, HOTEL_LOT, PLAZA_CENTER, PLAZA_MAYOR, inCrossingPlaza, inParcel, inPlazaMayor, inRect, onAxis } from "../scenes/city-plan";
-import { builtParcels } from "./zoning";
+import { WEST_DISTRICT_X, builtParcels } from "./zoning";
 import { crosswalks } from "./crossings";
 import { jungle, type Rails } from "../scenes/flora";
 import { CAR, awning, bench, bollard, car, chair, dockCrane, fountain, garland, kiosk, lamp, stoneArch, table } from "../kit/props";
@@ -163,13 +163,13 @@ const rectsOverlap = (x0: number, y0: number, w0: number, d0: number, x1: number
 
 export function cars(solids: Solid[], rng: Rng, west = -Infinity): void {
   const placed: { x: number; y: number }[] = [];
-  const lots: (Rect & { grid: boolean })[] = [
+  const lots: (Rect & { grid: boolean; west?: boolean })[] = [
     ...blocks().filter((b) => b.kind !== "freight").map((b) => ({ x: b.x, y: b.y, w: b.w, d: b.d, grid: true })),
-    ...builtParcels(west).map((pc) => ({ ...pc.rect, grid: false })), // the lab (`west` = WORLD.x0) has no cars on the cut parcels
+    ...builtParcels(west).map((pc) => ({ ...pc.rect, grid: false, west: pc.c.x < WEST_DISTRICT_X })), // the lab (`west` = WORLD.x0) has no cars on the cut parcels
   ];
   const walkBoxes = crosswalks().flatMap((w) => w.strips.map(([p, q]) => ({ x: Math.min(p.x, q.x) - 0.4, y: Math.min(p.y, q.y) - 0.4, w: Math.abs(p.x - q.x) + 0.8, d: Math.abs(p.y - q.y) + 0.8 })));
   for (const b of lots) {
-    const n = rng.int(1, 3);
+    const drawn = rng.int(1, 3), n = b.west ? Math.min(drawn, 1) : drawn; // west district: one car per lot at most (#479 budget moved, not raised); its lots come last, so the east's draws stay
     for (let i = 0; i < n; i++) {
       const x = b.x + rng.int(2, Math.max(2, Math.floor(b.w) - 5));
       const y = rng.chance(0.5) ? b.y + b.d + 0.4 : b.y - 1.9; // south or north sidewalk of the lot
