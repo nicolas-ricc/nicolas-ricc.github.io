@@ -1,5 +1,6 @@
 import { CELL_BLEED, COVER_MARGIN, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, inCoverQuad, islandEastX, islandWestX, riverCenter } from "../map/geo";
-import { BLOCK_W, CITY_EDGE, ROWS, WEST_COLS, type Rect } from "./city-grid";
+import { BLOCK_W, CITY_EDGE, ROWS, type Rect } from "./city-grid";
+import { LAND, parcels, type Parcel } from "./city-plan";
 
 /**
  * Geography of the margins: which part of the bleed is built land and of
@@ -74,11 +75,11 @@ export function urbanAt(x: number, y: number): boolean {
   return x < CITY_EDGE.west || y >= CITY_EDGE.south; // the city edges that turned to asphalt
 }
 
-export interface SprawlBlock extends Rect { dist: number }
+/** A tech block: a west block (`rect` of the old grid) or a south parcel of the city plan (`parcel` set, `rect` = the parcel's). */
+export interface SprawlBlock extends Rect { dist: number; parcel?: Parcel }
 
-/** Columns of the tech district west of the city (every 30 from −84, like `WEST_COLS`) and rows south of the city (every 24 from 328). */
+/** Columns of the tech district west of the city (every 30 from −84, like `WEST_COLS`). */
 export const SUBURB_COLS = [-84, -114, -144, -174, -204, -234, -264] as const;
-export const SUBURB_ROWS = [328, 352, 376, 400, 424, 448, 472, 496, 520, 544, 568, 592, 616, 640] as const;
 
 export { COVER_MARGIN } from "../map/geo";
 
@@ -89,13 +90,32 @@ const blockAt = (x: number, y: number): SprawlBlock | null => {
   return { x, y, w, d, dist: Math.max(0, WORLD.x0 - (x + w), y - WORLD.y1) };
 };
 
-/** Blocks of the tech district: the western ones follow the rows of the city (and respect the avenue), the southern ones add the columns of the city. No rng. */
+/** Blocks of the tech district west of the city: they follow the rows of the city (and respect the avenue). No rng. */
 export function suburbBlocks(): SprawlBlock[] {
   const out: SprawlBlock[] = [];
   for (const y of ROWS.slice(1)) for (const x of SUBURB_COLS) { const b = blockAt(x, y); if (b) out.push(b); }
-  for (const y of SUBURB_ROWS) for (const x of [...SUBURB_COLS, ...WEST_COLS]) { const b = blockAt(x, y); if (b) out.push(b); }
   return out;
 }
+
+let south: Parcel[] | undefined;
+/**
+ * Parcels of the city plan south of y 318 (centroid y > 318), on urban ground at the centroid and the four corners of
+ * `rect` and inside the cover. The 318..324 strip is asphalt, not a hole: `urbanAt` is asked at `max(y, CITY_EDGE.south)`, so the
+ * row right south of the avenue stays; the estuary and the bleed (they only exist for y > WORLD.y1) still decide. Memoized.
+ */
+export function southParcels(): Parcel[] {
+  return south ??= parcels({ x0: -Infinity, y0: 318, x1: LAND.x1, y1: 650 }).filter((p) => {
+    if (p.c.y <= 318 || !inCoverQuad(p.c.x, p.c.y, 16 / 9, COVER_MARGIN)) return false;
+    const { x, y, w, d } = p.rect;
+    return ([[p.c.x, p.c.y], [x, y], [x + w, y], [x + w, y + d], [x, y + d]] as const).every(([px, py]) => urbanAt(px, Math.max(py, CITY_EDGE.south)));
+  });
+}
+
+/** The block of a south parcel. */
+export const parcelBlock = (p: Parcel): SprawlBlock => ({ ...p.rect, dist: Math.max(0, p.c.y - WORLD.y1), parcel: p });
+
+/** Every block of the tech district: the west ones first, then one per south parcel. */
+export const techBlocks = (): SprawlBlock[] => [...suburbBlocks(), ...southParcels().map(parcelBlock)];
 
 /** Distance from the point to the edge of the built land toward the north or the west (the sides behind the camera), 0 on top of it. */
 export function beyondBuilt(x: number, y: number): number {
