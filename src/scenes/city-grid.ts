@@ -11,7 +11,7 @@ export { ESTUARY_FLARE, estuaryEast };
 export interface Rect { x: number; y: number; w: number; d: number }
 
 export const BLOCK_W = 24, STREET = 6;
-const BLOCK_D = 18; // depth of the strip and east-bank blocks (the suburb blocks have their own, in sprawl-grid)
+const BLOCK_D = 18; // depth of the strip and east-bank blocks (the plan's parcels are 24 × 24, in city-plan)
 export const SIDEWALK = 1.5; // free sidewalk inside the plinth
 
 export const WEST_COLS = [-48, -18, 12, 42, 72, 102, 132, 162] as const;

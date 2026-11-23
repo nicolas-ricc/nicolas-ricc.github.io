@@ -51,7 +51,8 @@ to the north and west of the factory, with its power plant) and
 `tech.ts` (Resume's coastal residential neighborhood south of the southern avenue, on
 the estuary: monoblocks, houses with tile roofs, a school, a club, plazas and an
 illuminated waterfront on the pier; the city itself reaches the edge of the
-view, its west district built by `city.ts`), separated by a green belt; `fair.ts` is the beach fair on the
+view, its west district built by `city.ts`, which a green belt separates from
+the hinterland); `fair.ts` is the beach fair on the
 bay, north of the factory; the estuary and the sea continue south until they
 meet. The factory takes the place the shipyard sheds had,
 between the rail yard and the transfer street, in front of the siding, with the

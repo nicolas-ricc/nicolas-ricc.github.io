@@ -13,7 +13,7 @@ import { createRng, SEED } from "../map/seed";
 import { AVENUE, BOULEVARD, BRIDGE, CITY_EDGE, COLLAPSED, FREIGHT_ROW, ROWS, CRATERS, DISTRICT_BANK_Y, EAST_RING, FALLEN_BLOCK, PROMENADE, WEST_QUAY, blocks, estuaryEast, inBlock, inCrater } from "./city-grid";
 import { PLINTH_H, city, type CityScene } from "./city";
 import { CAR } from "../kit/props";
-import { FIXED, FIXED_PARCELS, FOOTBRIDGE_LOT, MAX_BUILDING_H, WATER_TOWER_CELL, assign, builtParcels, tooSmall, neighborhoodOfParcel } from "../city/zoning";
+import { FIXED, FIXED_PARCELS, FOOTBRIDGE_LOT, MAX_BUILDING_H, WATER_TOWER_CELL, WEST_DISTRICT_X, assign, builtParcels, tooSmall, neighborhoodOfParcel } from "../city/zoning";
 import { zoneRng } from "./world";
 import { MARKET_SCALE } from "../city/harbor";
 import { fingerprint } from "../iso/fingerprint";
@@ -606,7 +606,7 @@ describe("the city owns the west (#479)", () => {
 
   it("city builds every parcel north of y 318 inside the view, west of x −54 included", () => {
     const placedCells = new Set(w.placed.flatMap((q) => (q.placed.parcel ? [`${q.placed.parcel.cell.col},${q.placed.parcel.cell.row}:${q.placed.parcel.rect.x},${q.placed.parcel.rect.y}`] : [])));
-    expect(w.placed.some((q) => q.placed.parcel && q.placed.parcel.c.x < -54)).toBe(true);
+    expect(w.placed.some((q) => q.placed.parcel && q.placed.parcel.c.x < WEST_DISTRICT_X)).toBe(true);
     for (const p of parcels({ ...CITY_BOUNDS, x0: -Infinity }).filter((q) => q.c.y < 318)) {
       if (p.rect.x === HOTEL_LOT.x && p.rect.y === HOTEL_LOT.y) continue;
       expect(placedCells.has(`${p.cell.col},${p.cell.row}:${p.rect.x},${p.rect.y}`), `${p.cell.col},${p.cell.row}`).toBe(true);
@@ -624,7 +624,7 @@ describe("the city owns the west (#479)", () => {
 
   it("the STATION_LAND rule also covers the west: west solids are in the scene and none taller than 10 overlaps it", () => {
     const land = screenHull({ min: v3(STATION_LAND.x0, STATION_LAND.y0, 0), max: v3(STATION_LAND.x1, STATION_LAND.y1, 0) });
-    const west = w.solids.filter((x) => bounds(x).max.x < -54 && bounds(x).max.z > 10);
+    const west = w.solids.filter((x) => bounds(x).max.x < WEST_DISTRICT_X && bounds(x).max.z > 10);
     expect(west.length).toBeGreaterThan(0);
     for (const x of west) expect(hullsOverlap(screenHull(bounds(x)), land), JSON.stringify(bounds(x))).toBe(false);
   });

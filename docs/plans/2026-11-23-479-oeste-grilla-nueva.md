@@ -125,6 +125,7 @@ Decided while answering the plan review; each is an engineering choice any reaso
 - **A6. `CityScene.telecom: Vec3 | null`.** It is `null` when the TELECOM parcel is cut off (lab filter), and then `mastRing` is `[]`. The issue writes `telecom: Vec3`, which cannot hold when the parcel is not built.
 - **A7. `opts` defaults to `{ west: -Infinity }`.** `city()` has a single non-test caller (`world.ts:62`); the tests call it with three arguments.
 - **A8. Budget fallback.** A prototype of the move measured city 1 522 + tech 1 136 = 2 658, the limit exactly, before TELECOM (which replaces one `moderno` recipe with 6 solids) and before the train cap (which lowers row 171). If the real sum exceeds 2 658, the implementer stops and reports the figures. Raising a cap is not allowed (spec §9: "no es una suba").
+- **A9. The west district keeps the budget (rulings during Task 3).** With the streets reaching the edge of the view the sum came out at 2 761. Inside the west district (x < `WEST_DISTRICT_X`, −54): no traffic lights at axis × ordinary-street crossings, no parked cars (their rng draws are kept, so nothing else moves), and axis lamps every 24 instead of 12. Final sum 2 654 ≤ 2 658. Rejected: raising a cap (spec §9: "no es una suba"), or changing the `moderno` catalogue (D12). Cost: a visible step in street furniture density at x −54.
 
 ## Grilling
 

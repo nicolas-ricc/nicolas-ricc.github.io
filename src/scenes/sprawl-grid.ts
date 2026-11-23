@@ -62,7 +62,7 @@ export function builtAt(x: number, y: number): Built | null {
 /** The fair: strip of sand in the north bleed, between the factory and the bay. */
 export const fairAt = (x: number, y: number): boolean => builtAt(x, y) === "fair";
 
-/** Green belt west of the content, y 116..158: jungle between the hinterland (rail yard, Portfolio) and the tech district; no built land and no urban ground. */
+/** Green belt west of the content, y 116..158: jungle between the hinterland (rail yard, Portfolio) and the city's west district; no built land and no urban ground. */
 export const GREEN_BELT = { y0: 116, y1: 158 } as const;
 
 /** Urban ground at a point, inside or outside the content: the tech district builds blocks only where this holds at the four corners and the center. Inside the content only the south counts (the west is the city's, #479). */

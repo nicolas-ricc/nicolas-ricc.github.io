@@ -250,10 +250,10 @@ export function assign(rng: Rng, districtRng: Rng, west = -Infinity): Placed[] {
     out.push({ block: b, neighborhood, recipe, lot, tone: rng.int(-1, 1) });
   }
   // the neighbour rule runs over every parcel, so a cut (`west`) does not change the neighborhood of those that remain
-  const all = builtParcels(), allNs = parcelNeighborhoods(all), built = builtParcels(west);
+  const all = builtParcels(), ns = parcelNeighborhoods(all), allNs = new Map(all.map((p, i) => [p, ns[i]!])), built = builtParcels(west);
   for (const f of FIXED_PARCELS) if (!all.some((p) => fixedParcel(p) === f)) throw new Error(`missing fixed parcel ${f.cell.col},${f.cell.row}`);
   built.forEach((p) => {
-    const neighborhood = allNs[all.indexOf(p)]!, isWest = p.c.x < WEST_DISTRICT_X, r = isWest || neighborhood === "moderno" ? districtRng : rng, fixed = fixedParcel(p), cat = catalogueFor(neighborhood, p);
+    const neighborhood = allNs.get(p)!, isWest = p.c.x < WEST_DISTRICT_X, r = isWest || neighborhood === "moderno" ? districtRng : rng, fixed = fixedParcel(p), cat = catalogueFor(neighborhood, p);
     let recipe = fixed?.recipe ?? pick(r, cat);
     if (!fixed && (neighborhood === "clasico" || neighborhood === "transicion" || neighborhood === "bajo")) {
       for (let k = 0; k < 5 && out.some((q) => rectsAdjacent(q.block, p.rect) && q.recipe === recipe); k++) recipe = pick(r, cat);

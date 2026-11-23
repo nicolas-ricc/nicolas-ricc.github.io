@@ -11,6 +11,7 @@ import { southStreets } from "../scenes/tech-streets";
 import { axisSpan, crossings, crosswalks, inDomain, onOrdinaryStreet } from "./crossings";
 import { BAR_FRONTS, COSTANERA_LAMP_Y, LAMP_MIN_GAP, axisLampPosts, lampSide, lampXs, laneOffsets, postZ, streets, trafficLightPosts } from "./streets";
 import type { FixedLight } from "./lights";
+import { WEST_DISTRICT_X } from "./zoning";
 
 type Strip = Solid & { kind: "strip" };
 type Prism = Solid & { kind: "prism" };
@@ -118,7 +119,7 @@ describe("traffic lights and lamps (#473)", () => {
   const posts = trafficLightPosts();
   const uniq = (() => {
     const seen = new Set<string>();
-    return crossings().filter((c) => { if (!c.other && c.at.x < -54) return false; /* west district: no signals at ordinary crossings (#479 budget moved, not raised) */ const k = c.other ? [c.a.id, c.other.id].sort().join("–") : `${c.a.id}:${c.otherId}`; if (seen.has(k)) return false; seen.add(k); return true; });
+    return crossings().filter((c) => { if (!c.other && c.at.x < WEST_DISTRICT_X) return false; /* west district: no signals at ordinary crossings (#479 budget moved, not raised) */ const k = c.other ? [c.a.id, c.other.id].sort().join("–") : `${c.a.id}:${c.otherId}`; if (seen.has(k)) return false; seen.add(k); return true; });
   })();
   const free = (c: (typeof uniq)[number], p: Vec2) => {
     const sq = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([i, j]) => ({ x: p.x + i! * 0.15, y: p.y + j! * 0.15 }));
@@ -138,8 +139,8 @@ describe("traffic lights and lamps (#473)", () => {
   };
 
   it("the west district has no traffic light at an ordinary crossing, only the axis × axis ones (#479)", () => {
-    expect(crossings().some((c) => !c.other && c.at.x < -54)).toBe(true);
-    expect(posts.filter((p) => p.x < -54)).toHaveLength(0); // measured on agent/479: no axis × axis crossing lies west of x −54 (diagonalNorte × vias is at x −14)
+    expect(crossings().some((c) => !c.other && c.at.x < WEST_DISTRICT_X)).toBe(true);
+    expect(posts.filter((p) => p.x < WEST_DISTRICT_X)).toHaveLength(0); // measured on agent/479: no axis × axis crossing lies west of x −54 (diagonalNorte × vias is at x −14)
   });
 
   it("every crossing has two traffic lights", () => {
@@ -179,7 +180,7 @@ describe("traffic lights and lamps (#473)", () => {
       };
       const ideal = lampXs(range, []);
       for (const [i, t] of ideal.entries()) {
-        if (at(t).x < -54 && i % 2 === 1) continue; // west district: a lamp every 24 (#479 budget moved, not raised)
+        if (at(t).x < WEST_DISTRICT_X && i % 2 === 1) continue; // west district: a lamp every 24 (#479 budget moved, not raised)
         const c = at(t), has = mine.some((l) => Math.hypot(l.at.x - c.x, l.at.y - c.y) < 0.01);
         if (!has) expect(excuse(c, t), `${a.id} missing lamp at ${t}`).not.toBeNull();
       }

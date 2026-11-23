@@ -21,7 +21,7 @@ export const blockParity = (b: SprawlBlock | Rect): 0 | 1 => {
   const p = "parcel" in b ? b.parcel : undefined;
   return (p ? ((p.cell.col - 13) / 30 + (p.cell.row - 21) / 30) & 1 : (Math.round((b.x + 84) / 30) + rowStep(b.y)) & 1) as 0 | 1;
 };
-/** Row step of a west block: every 24 from 328 to the south; in the city rows (`ROWS`, with steps of 24 and 30) it counts rows backwards from 328, so the checkerboard also alternates there. */
+/** Row step of a plain rect (no parcel): every 24 from 328 to the south; in the city rows (`ROWS`, with steps of 24 and 30) it counts rows backwards from 328, so the checkerboard also alternates there. */
 const rowStep = (y: number): number => { const k = ROWS.indexOf(y as (typeof ROWS)[number]); return y < 328 && k >= 0 ? k - ROWS.length : Math.round((y - 328) / 24); };
 
 /** Is the block the south parcel of this cell? */

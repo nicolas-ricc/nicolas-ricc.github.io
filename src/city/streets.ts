@@ -380,7 +380,7 @@ function streetFurniture(solids: Solid[], lights: FixedLight[]): void {
   axisFurniture(solids, lights);
 }
 
-/** A strip clipped to x >= west (its end caps included, so the box stays east of it); null if what is left is shorter than 1. Other solids: dropped when their plan bounds start west of it. */
+/** A strip clipped to x >= west (its lateral half-width included, so the box stays east of it); null if what is left is shorter than 1. Other solids: dropped when their plan bounds start west of it. */
 function clipStrip(s: Solid & { kind: "strip" }, west: number): Solid | null {
   const [p, q] = s.path;
   if (s.path.length !== 2 || !p || !q) return bounds(s).min.x >= west - 1e-6 ? s : null;
