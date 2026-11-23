@@ -23,10 +23,11 @@ The site (the root of myxomatosis.xyz; the zones live under `/area/` because `/b
 of the Fábrica de Luz, Mistley's maltings and a water tank on legs, three
 chimneys with marker bands, an outdoor substation and a bucket-wheel
 excavator with an animated wheel, `factory.wheel`), `city.ts`
-(the Resume orchestrator) and `sea.ts` (point, lighthouse and ships of Blog). The pieces of
+(the Resume orchestrator: the Plaza Mayor and, on its west side, the hotel with the RESUME sign on its facade) and `sea.ts` (point, lighthouse and ships of Blog). The pieces of
 Resume live in `src/city/` (`zoning.ts` neighborhoods, `fixed.ts` fixed pieces,
-`streets.ts` streets, `lights.ts` windows, neon signs, washed facades and the box occlusion of the fixed pieces' lights) and in the
-kit `src/kit/` (explored in `lab/kit.html`). At the end
+`streets.ts` streets (lanes, crosswalks, median, lamps, traffic lights, crossing plazas, costanera), `lights.ts` windows, neon signs, washed facades and the box occlusion of the fixed pieces' lights; its 40 animatable windows, `MAX_ANIMABLE`, are split among the four barrios by `animableQuota`) and in the
+kit `src/kit/` (explored in `lab/kit.html`); the west bank's plan (axes, Plaza Mayor, parcels and barrios) is
+`src/scenes/city-plan.ts`, which zoning and streets read. At the end
 of the west track, where the shipyard's boiler shop used to be, stands the
 terminal station (`station.ts`, modeled on Tigre Station of the Mitre
 Line: a brick building with tile roofs, clock tower, platforms with
@@ -47,10 +48,11 @@ world has its origin at `(-60, -60)` and a terrain bleed around all
 the content, so that the *cover* camera never shows sky; on the
 bleed live the built margins, `hinterland.ts` (Portfolio's industry
 to the north and west of the factory, with its power plant) and
-`tech.ts` (Resume's tech district west of the city and, to the south,
-on the estuary, a coastal residential neighborhood: monoblocks, houses with tile
-roofs, a school, a club, plazas and an illuminated waterfront on the pier),
-separated by a green belt; `fair.ts` is the beach fair on the
+`tech.ts` (Resume's coastal residential neighborhood south of the southern avenue, on
+the estuary: monoblocks, houses with tile roofs, a school, a club, plazas and an
+illuminated waterfront on the pier; the city itself reaches the edge of the
+view, its west district built by `city.ts`, which a green belt separates from
+the hinterland); `fair.ts` is the beach fair on the
 bay, north of the factory; the estuary and the sea continue south until they
 meet. The factory takes the place the shipyard sheds had,
 between the rail yard and the transfer street, in front of the siding, with the
@@ -96,7 +98,7 @@ the size of `#app` to `writingSite`, which picks the Writing site: the wide one
 when its sign fits, else the tall one; there is no external font, the lettering
 is drawn by the kit.
 In Resume, `city-anim.ts` adds the `city.windows` layer (up to 40 windows of
-downtown and the residential area that switch on and off keeping the percentage
+downtown, the residential area and the casco, transition and low-rise barrios that switch on and off keeping the percentage
 ±5 %) and, inside `city.neon`, the flickering neon sign of a bar on the pier or a brewery of row 92; the
 rest of the windows and neon signs go to the static accents.
 
@@ -113,7 +115,7 @@ off, Portfolio, Resume and Blog; `6` rotates the lights' bloom among
 The keys frame; they do not crop: when focusing a zone the neighboring ones peek in
 at the edge. `/lab/kit.html` shows every recipe of the kit
 (`src/kit/`) on a grid, one row per family (`modern`, `courtyard`,
-`lowrise`, `composite`, `curved`, `landmarks`, `industrial`, `reconversion` and `harbor`, see
+`lowrise`, `composite`, `curved`, `landmarks`, `industrial`, `reconversion`, `harbor` and `porteno`, see
 `src/kit/forms/`); key `s` changes the seed and `1..4` the style (downtown,
 bars, residential, civic), except on the `industrial` and `harbor` rows, which always
 use their own style, and on the `reconversion` row, which always uses the
@@ -140,7 +142,8 @@ Specs in `docs/superpowers/specs/`
 `2026-11-15-carteles-de-zona-rediseno-design.md`,
 `2026-11-16-storybook-luces-y-encuadre-design.md`,
 `2026-11-17-carteles-de-zona-integracion-design.md`,
-`2026-11-20-writing-balsa-tablones-design.md`).
+`2026-11-20-writing-balsa-tablones-design.md`,
+`2026-11-22-resume-centro-costero-design.md`).
 
 `/lab/storybook.html` is the structures storybook: it shows one building or
 structure at a time, cropped from the world by its box (or built alone at the
@@ -167,11 +170,10 @@ for headless time-lapses. The seam at 90 added ten exhibits:
 `#tren-fantasma`, `#casa-espejos`, `#tobogan` and `#tronco-acuatico` (fair),
 and `#galpones`, `#playa-carga` and `#mercado-pescado` (city).
 The zone signs of #374 are three pairs of exhibits: `#cartel-torre` and
-`#cartel-torre-escena` (Resume), `#cartel-taller` and `#cartel-taller-escena`
+`#cartel-torre-escena` (Resume: `#cartel-torre` is the Resume sign on the hotel facade, on a stand-in of the slab), `#cartel-taller` and `#cartel-taller-escena`
 (Portfolio) and `#plataforma` and `#plataforma-escena` (Blog, wide site),
 plus `#plataforma-escena-angosta` (Blog, tall site). The piece builds
-the sign at the origin (the crown and the tinker sign on a stand-in of their
-host); the one "in its scene" is a crop of the real world with its sign.
+the sign at the origin (the tinker sign on a stand-in of its host); the one "in its scene" is a crop of the real world with its sign.
 Judge them at the cover scales with `c`. `npm run legibility` measures contrast,
 halo and OCR with a browser, with no exceptions (every row must pass), at rest and, with `--tick`, at a pose of the raft's pitch-and-roll cycle (`REPORT-t<ms>.md`); it does not run in CI.
 

@@ -3,7 +3,8 @@ import type { Accent } from "../iso/accent";
 import { v3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import { BLEED, CELL, CELL_BLEED, WORLD, worldZoneAt } from "../map/geo";
-import { CROWN_SITE, towerCrown } from "../scenes/sign-crown";
+import { hotel } from "../scenes/sign-hotel";
+import type { FixedLight } from "../city/lights";
 import { TINKER_SITE, tinkerAnimator, tinkerSign } from "../scenes/sign-tinker";
 import { world } from "../scenes/world";
 import { ACCENT_DIM, VEIL_ALPHA, accentZone, accentsByZone, focusAlphas, veilCells, veilPolygons, veilRuns } from "./veil";
@@ -116,12 +117,15 @@ describe("accentsByZone", () => {
   });
 });
 
-describe("Resume crown accents (#391)", () => {
-  it("every accent of the crown at CROWN_SITE (dots and polys) is Resume", () => {
-    const out: Solid[] = [], accents: Accent[] = [];
-    towerCrown(out, accents, CROWN_SITE);
+describe("hotel accents (#474)", () => {
+  it("every accent of hotel() (sign dots and polys, rooms, the lamps' lights) is Resume", () => {
+    const out: Solid[] = [], accents: Accent[] = [], lights: FixedLight[] = [];
+    const lit = hotel(out, accents, lights);
+    const all = [...accents, ...lit.rooms, ...lights.flatMap((l) => l.accents)];
     expect(accents.some((a) => a.kind === "dot") && accents.some((a) => a.kind === "poly")).toBe(true);
-    for (const a of accents) expect(accentZone(a)).toBe("cv");
+    expect(lit.rooms.length).toBeGreaterThan(0);
+    expect(lights.length).toBeGreaterThan(0);
+    for (const a of all) expect(accentZone(a)).toBe("cv");
   });
 });
 

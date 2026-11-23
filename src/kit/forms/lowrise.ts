@@ -8,6 +8,7 @@ import { jungle } from "../../scenes/flora";
 import { RECIPE_MAX_H, addBuilding, emptyPiece, interlock } from "../piece";
 import { awning, patioTree } from "../props";
 import { HIP_ROOF_H, cornice, hipRoof } from "../roofs";
+import { clipBody, polyArea, polyCornice, polyFootprint, treeFits } from "../polygon";
 import type { Lot, Piece, RecipeDef, Side, Slot, Style } from "../types";
 
 /**
@@ -140,16 +141,24 @@ export function rowHouses(lot: Lot, rng: Rng, style: Style): Piece {
   const floors = 2 * style.floorH + HIP_ROOF_H <= cap ? 2 : 1, h = floors * style.floorH;
   const facade: Facade = { floors, cols: 1, base: "portico" }; // the door: dark ground floor
   let s = (len - ws.reduce((a, b) => a + b, 0)) / 2;
-  const starts: number[] = [];
+  const starts: number[] = [], fp = lot.poly ? polyFootprint(lot, 0, 2, "oblique") : undefined;
   for (const hw of ws) {
     starts.push(s);
     const r = frontRect(lot, front, s, s + hw, HOUSE_BACK), tone = style.tone + rng.int(-1, 1);
+    s += hw;
+    const clipped = fp ? clipBody(r, fp) : null;
+    if (fp && !clipped) continue; // below area 4: no house
+    if (clipped && Math.abs(polyArea(clipped) - r.w * r.d) > 1e-6) { // cut by the parcel: a poly body with a poly cornice instead of the hip roof
+      addBuilding(p, { kind: "poly", footprint: clipped, z: lot.z, h, mat: style.mat, facade, tone }, facade);
+      p.solids.push(...toned([polyCornice(clipped, lot.z + h, style.trim)], tone));
+      continue;
+    }
     addBuilding(p, prism(r.x, r.y, lot.z, r.w, r.d, h, style.mat, { facade, tone }), facade);
     p.solids.push(...toned(hipRoof({ ...r, z: lot.z + h }, style.roof), tone));
-    s += hw;
   }
   for (let j = 0; j + 1 < n; j += 2) {
     const c = backPoint(lot, front, (starts[j]! + starts[j + 1]! + ws[j + 1]!) / 2, HOUSE_BACK / 2);
+    if (fp && !treeFits(fp, c)) continue;
     p.solids.push(...patioTree(v3(c.x, c.y, lot.z)));
   }
   return p;
@@ -170,6 +179,6 @@ export function eatenRuin(lot: Lot, rng: Rng, _style: Style): Piece {
 
 export const LOWRISE: readonly RecipeDef[] = [
   { name: "shopRow", recipe: shopRow, family: "lowrise" },
-  { name: "rowHouses", recipe: rowHouses, family: "lowrise" },
+  { name: "rowHouses", recipe: rowHouses, family: "lowrise", poly: true },
   { name: "eatenRuin", recipe: eatenRuin, family: "lowrise" },
 ];

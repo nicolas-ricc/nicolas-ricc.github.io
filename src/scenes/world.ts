@@ -1,7 +1,7 @@
 import type { Accent } from "../iso/accent";
 import { v3, type Vec3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
-import type { WorldZone } from "../map/geo";
+import { WORLD, type WorldZone } from "../map/geo";
 import { createRng, type Rng } from "../map/seed";
 import { city, type CityScene } from "./city";
 import { factory, type FactoryScene } from "./factory";
@@ -35,10 +35,10 @@ export interface WorldScene {
 const ALL_ZONES: readonly WorldZone[] = ["portfolio", "cv", "blog"];
 const ZONE_INDEX: Record<WorldZone, number> = { portfolio: 1, cv: 2, blog: 3 };
 
-/** Gantry crane, office tower, lighthouse. World coordinates; the reintegration projects with project(). */
+/** Gantry crane, hotel, lighthouse. World coordinates; the reintegration projects with project(). */
 export const LANDMARKS: Record<WorldZone, Vec3> = {
   portfolio: v3(150, 50, 0),
-  cv: v3(129, 227, 0),
+  cv: v3(100, 259.5, 0),
   blog: v3(LIGHTHOUSE.x, LIGHTHOUSE.y, 0),
 };
 
@@ -59,7 +59,7 @@ export function world(seed: number, opts: { zones?: readonly WorldZone[] } = {})
     for (const sc of [sy, fa]) { ground.push(...sc.ground); solids.push(...sc.solids); accents.push(...sc.accents); }
   }
   if (zones.includes("cv")) {
-    ct = city(zoneRng(seed, "cv"), zoneRng(seed, "cv", 1), zoneRng(seed, "cv", 3));
+    ct = city(zoneRng(seed, "cv"), zoneRng(seed, "cv", 1), zoneRng(seed, "cv", 3), { west: opts.zones ? WORLD.x0 : -Infinity });
     ground.push(...ct.ground); solids.push(...ct.solids); accents.push(...ct.accents);
   }
   let se: SeaScene | null = null;

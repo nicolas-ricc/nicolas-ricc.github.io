@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { ESTUARY_Y0, QUAY_X, SHORE_W, STATION_LAND, ZONE_SPLIT_X, ZONE_SPLIT_Y, distToHeadland, eastBank } from "../map/geo";
-import { AVENUE, BLOCK_D, BLOCK_W, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_COLS, DISTRICT_ROWS, EAST_RING, FREIGHT_ROW, HARBOR, PROMENADE, PLAZA, RAIL_LANDS, RING_Y0, ROWS, STREET, TOWER, WEST_QUAY, blocks, estuaryEast, estuaryReaches, inBlock, inCrater } from "./city-grid";
+import { AVENUE, BLOCK_W, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, EAST_RING, FREIGHT_ROW, HARBOR, PROMENADE, RAIL_LANDS, RING_Y0, ROWS, STREET, WEST_QUAY, blocks, estuaryEast, estuaryReaches, inBlock, inCrater } from "./city-grid";
 
+const BLOCK_D = 18; // depth of the strip and east blocks
 const overlaps = (a: { x: number; y: number; w: number; d: number }, b: { x: number; y: number; w: number; d: number }) =>
   a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.d && b.y < a.y + a.d;
 
 describe("city-grid", () => {
-  it("there are at least 30 blocks, one plaza and one collapse, and none overlaps another", () => {
+  it("there are at least 18 blocks and one collapse, and none overlaps another", () => {
     const bs = blocks();
-    expect(bs.length).toBeGreaterThanOrEqual(30);
-    expect(bs.filter((b) => b.kind === "plaza")).toHaveLength(1);
+    expect(bs.length).toBeGreaterThanOrEqual(18);
     expect(bs.filter((b) => b.kind === "collapsed")).toHaveLength(1);
     for (let i = 0; i < bs.length; i++) for (let j = i + 1; j < bs.length; j++) expect(overlaps(bs[i]!, bs[j]!)).toBe(false);
   });
@@ -40,7 +40,7 @@ describe("city-grid", () => {
     expect(COLLAPSED.x).toBeLessThan(estuaryEast(COLLAPSED.y + COLLAPSED.d) + STREET);
   });
 
-  it("the avenue separates rows 2 and 3 and the bridge crosses it from quay to ring", () => {
+  it("the bridge crosses the avenue from quay to ring", () => {
     expect(ROWS[2] + BLOCK_D).toBe(AVENUE.y0);
     expect(ROWS[3]).toBe(AVENUE.y1);
     expect(BRIDGE.x0).toBe(WEST_QUAY.x0);
@@ -50,22 +50,13 @@ describe("city-grid", () => {
     expect(estuaryEast(BRIDGE.y1)).toBeLessThan(BRIDGE.x1); // the bridge reaches land
   });
 
-  it("the plaza and the tower are in place and the tower fits inside the plaza", () => {
-    expect(blocks().find((b) => b.kind === "plaza")).toMatchObject(PLAZA);
-    expect(PLAZA.y).toBe(AVENUE.y1);
-    expect(overlaps(TOWER, PLAZA)).toBe(true);
-    expect(TOWER.x).toBeGreaterThan(PLAZA.x); expect(TOWER.x + TOWER.w).toBeLessThan(PLAZA.x + PLAZA.w);
-    expect(TOWER.y).toBeGreaterThan(PLAZA.y); expect(TOWER.y + TOWER.d).toBeLessThan(PLAZA.y + PLAZA.d);
-  });
-
-  it("the craters are on streets, not on blocks", () => {
+  it("the craters are on streets, not on blocks or parcels", () => {
     expect(CRATERS).toHaveLength(3);
     for (const c of CRATERS) {
       expect(inBlock(c.x, c.y)).toBe(false);
       expect(inCrater(c.x, c.y)).toBe(true);
       expect(inCrater(c.x + c.r + 1, c.y)).toBe(false);
     }
-    expect(inBlock(PLAZA.x + 1, PLAZA.y + 1)).toBe(true);
   });
 
   it("the estuary inherits the channel at the seam and opens toward the south", () => {
@@ -78,15 +69,9 @@ describe("city-grid", () => {
     expect(BLOCK_W).toBe(24);
   });
 
-  it("district: two columns to the west and two rows to the south, west bank only, 24 blocks with one construction site; the promenade reaches 326", () => {
-    const d = blocks().filter((b) => b.kind === "district" || b.kind === "site");
-    expect(d).toHaveLength(24);
-    expect(d.filter((b) => b.kind === "site")).toHaveLength(1);
-    expect(d.every((b) => b.bank === "west")).toBe(true);
-    expect(d.every((b) => (DISTRICT_COLS as readonly number[]).includes(b.x) || (DISTRICT_ROWS as readonly number[]).includes(b.y))).toBe(true);
-    expect(blocks().filter((b) => b.bank === "east").every((b) => b.y < DISTRICT_ROWS[0])).toBe(true);
-    expect(blocks().filter((b) => b.y === ROWS[0]).every((b) => b.kind === "block")).toBe(true); // row 92 is not district, even in DISTRICT_COLS
-    expect(blocks().filter((b) => b.kind === "block")).toHaveLength(36); // the 30 old blocks minus the collapsed one, plus row 92 (5) and the two new east blocks (#320)
+  it("the west bank south of the strip is not blocks; the east bank stays; the promenade reaches 326", () => {
+    expect(blocks().filter((b) => b.bank === "east" && b.y >= ROWS[1]).map((b) => `${b.x},${b.y}`)).toEqual(["280,164", "310,164", "280,188", "310,188", "280,218", "310,218", "280,242", "310,242"]);
+    expect(blocks().filter((b) => b.kind === "block")).toHaveLength(14); // row 92 (5) + the two east of the strip + the east bank minus the collapsed one (7)
     expect(CITY_EDGE).toEqual({ west: -54, north: 90, south: 324 });
     expect(PROMENADE.y1).toBe(326);
   });
@@ -94,10 +79,8 @@ describe("city-grid", () => {
   describe("the new strip y 90..158 (#320)", () => {
     const at = (x: number, y: number) => blocks().filter((b) => b.x === x && b.y === y);
 
-    it("ROWS starts at row 92 and the plaza block is row 3", () => {
+    it("ROWS starts at row 92", () => {
       expect(ROWS).toEqual([92, 164, 188, 218, 242, 272, 302]);
-      expect(ROWS[3]).toBe(PLAZA.y);
-      expect(blocks().find((b) => b.kind === "plaza")!.row).toBe(3);
     });
 
     it("row 92: five west blocks west of the station land", () => {
@@ -142,5 +125,35 @@ describe("city-grid", () => {
         expect(RAIL_LANDS.y0 + 0.5 - (b.y + b.d)).toBe(0.5);
       }
     });
+  });
+});
+
+// ---------------------------------------------------------------- #472: the west bank leaves the old grid
+import { CITY_BOUNDS as PLAN_CITY_BOUNDS, PLAZA_CENTER as PLAN_CENTER, onAxis as onPlanAxis, inParcel as inPlanParcel, parcels as planParcels } from "./city-plan";
+
+describe("city-grid after the new layout (#472)", () => {
+  it("blocks() has no west block south of the strip", () => {
+    for (const b of blocks()) if (b.bank === "west") expect(b.y, `${b.x},${b.y}`).toBeLessThan(164);
+    expect(blocks().some((b) => (b.kind as string) === "plaza" || (b.kind as string) === "district" || (b.kind as string) === "site")).toBe(false);
+  });
+
+  it("CRATERS are the two west crossings and the east one", () => {
+    expect(CRATERS).toEqual([{ x: 40, y: 198, r: 5 }, { x: -20, y: 258, r: 6 }, { x: 307, y: 224, r: 5 }]);
+  });
+
+  it("the two west craters sit on crossings of ordinary streets, off the axes and the parcels", () => {
+    for (const c of CRATERS.slice(0, 2)) {
+      expect(((c.x - 40) % 30 + 30) % 30, `${c.x}`).toBe(0);
+      expect(((c.y - 48) % 30 + 30) % 30, `${c.y}`).toBe(0);
+      expect(onPlanAxis(c.x, c.y)).toBe(false);
+      expect(inPlanParcel(c.x, c.y)).toBe(false);
+    }
+  });
+
+  it("inBlock is true inside a parcel and false on the plaza and on an axis band", () => {
+    expect(inBlock(PLAN_CENTER.x, PLAN_CENTER.y)).toBe(false);
+    expect(inBlock(10, 250)).toBe(false); // the boulevard
+    const p = planParcels(PLAN_CITY_BOUNDS).find((q) => q.rect.w > 12)!;
+    expect(inBlock(p.rect.x + p.rect.w / 2, p.rect.y + p.rect.d / 2)).toBe(true);
   });
 });

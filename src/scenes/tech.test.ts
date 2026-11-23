@@ -4,26 +4,29 @@ import { RAIL_Y } from "./shipyard";
 import { WORLD, ZONE_SPLIT_Y, worldZoneAt } from "../map/geo";
 import type { Material } from "../map/palette-iso";
 import { createRng, SEED } from "../map/seed";
-import { GREEN_BELT, suburbBlocks, type SprawlBlock } from "./sprawl-grid";
-import { ARENA, AUDITORIUM, MAX_TECH_H, TECH_MATS, TELECOM, tech } from "./tech";
+import { GREEN_BELT, techBlocks, type SprawlBlock } from "./sprawl-grid";
+import { ARENA, AUDITORIUM, MAX_TECH_H, TECH_MATS, tech } from "./tech";
 import { techAnimator } from "./tech-animator";
 import { ACCENT_CAP, NEIGHBORHOOD_REGION, WATERFRONT_RECT, FACE_CAPS, REGION_FACES_BEFORE, TECH_FACES_BEFORE, blockRect, facesIn, insideInflated } from "./tech-budget";
-import { inNeighborhood, zoneKinds, type Kind } from "./tech-zoning";
+import { inNeighborhood, isCell, zoneKinds, type Kind } from "./tech-zoning";
+import { southStreets } from "./tech-streets";
 import { zoneRng } from "./world";
 import { bleedTerrainAt, terrainAt } from "./terrain";
 
 const scene = () => tech(createRng(7));
 const groundAt = (x: number, y: number) => (x >= WORLD.x0 && x < WORLD.x1 && y >= WORLD.y0 && y < WORLD.y1 ? terrainAt(x, y) : bleedTerrainAt(x, y));
-const inBlock = (x: Solid, b: { x: number; y: number }) => { const bb = bounds(x); return bb.min.x >= b.x - 0.5 && bb.max.x <= b.x + 24.5 && bb.min.y >= b.y - 0.5 && bb.max.y <= b.y + 18.5; };
+const inBlock = (x: Solid, b: { x: number; y: number; w?: number; d?: number }) => { const bb = bounds(x); return bb.min.x >= b.x - 0.5 && bb.max.x <= b.x + (b.w ?? 24) + 0.5 && bb.min.y >= b.y - 0.5 && bb.max.y <= b.y + (b.d ?? 18) + 0.5; };
+/** The parcel block of a fixed cell (arena, auditorium). */
+const cellBlock = (c: { col: number; row: number }): SprawlBlock => techBlocks().find((b) => isCell(b, c))!;
 
 describe("tech", () => {
   it("is deterministic, falls in Resume with district materials and within budget", () => {
     expect(JSON.stringify(scene())).toBe(JSON.stringify(scene()));
     const s = scene();
     const raised = s.solids.filter((x) => !isFlat(x));
-    // cap = measured × 1.10, rounded up to the next hundred. Measured 1524 after merging main in #291 (main measured 1505, #256):
-    // the kit campus brings 1 more raised solid than main's (18 → 19 in five samples) × 19 campuses = +19; 1524 × 1.10 = 1676 → 1700
-    expect(raised.length).toBeGreaterThan(400); expect(raised.length).toBeLessThan(1700);
+    // cap = measured × 1.10, rounded up to the next hundred. Measured 1120 raised solids with tech(createRng(7)) on agent/479 without the west
+    // (#479; it was 1524 with the west and the south): 1120 × 1.10 = 1232 → 1300
+    expect(raised.length).toBeGreaterThan(400); expect(raised.length).toBeLessThan(1300);
     for (const x of s.solids) {
       const b = bounds(x);
       expect(b.min.y).toBeGreaterThanOrEqual(ZONE_SPLIT_Y);
@@ -47,65 +50,37 @@ describe("tech", () => {
     }
   });
 
-  it("every office building has windows: each prism of h ≥ 3 and w,d ≥ 4 of curtain, office, officeDark or glass carries a facade", () => {
+  it("the blocks are the south parcels, far from the content; the signs are amber", () => {
     const s = scene();
-    const buildings = s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism" && x.h >= 3 && x.w >= 4 && x.d >= 4 && (["curtain", "office", "officeDark", "glass"] as Material[]).includes(x.mat));
-    expect(buildings.length).toBeGreaterThan(80);
-    for (const b of buildings) expect(b.facade).toBeDefined();
-  });
-
-  it("towers near the content, campuses in the middle, neighborhood far away; parks", () => {
-    const s = scene();
-    const near = suburbBlocks().filter((b) => b.dist < 60), far = suburbBlocks().filter((b) => b.dist >= 160);
-    expect(near.length).toBeGreaterThan(5); expect(far.length).toBeGreaterThan(5);
-    expect(s.towers.length).toBeGreaterThanOrEqual(near.length * 0.6);
-    for (const t of s.towers) { expect(t.box.mat).toBe("curtain"); expect(t.box.h).toBeGreaterThanOrEqual(12); expect(t.box.h).toBeLessThanOrEqual(MAX_TECH_H); }
-    // beacon of the tallest towers (h >= 18): with seed 7 it already appears; if it ever stopped showing up, it is enough that it appears in some seed.
-    expect(s.accents.some((a) => a.kind === "dot" && a.color === "amberMid" && a.at.z > 18)).toBe(true);
-    expect(s.solids.some((x) => x.kind === "prism" && x.mat === "officeDark" && x.h === 5 && x.w === 20 && x.d === 13)).toBe(false); // no laboratory halls
-    expect(s.solids.some((x) => x.kind === "prism" && x.mat === "curtain" && x.w === 9 && x.d === 13)).toBe(false); // no atriums
-    expect(s.ground.filter((g) => g.kind === "ground" && g.mat === "leafDark").length).toBeGreaterThan(5); // parks and campuses
-    expect(s.signs.length).toBeGreaterThan(10);
+    expect(techBlocks().filter((b) => b.dist >= 160).length).toBeGreaterThan(5);
+    expect(s.signs.length).toBeGreaterThan(0); // the auditorium's
     for (const a of s.signs) expect(a.kind === "poly" && a.color).toBe("amber");
   });
 
-  it("landmarks: telecommunications tower with three dishes, arena with light towers, glass auditorium with copper roof; avenue and bank wall", () => {
+  it("landmarks: arena with light towers, glass auditorium with copper roof; bank wall", () => {
     const s = scene();
-    expect(s.solids.filter((x) => x.kind === "cylinder" && x.mat === "steel" && x.h === 0.4 && inBlock(x, TELECOM))).toHaveLength(3);
-    expect(s.telecom.z).toBeGreaterThan(20);
-    expect(s.solids.some((x) => x.kind === "poly" && x.mat === "stone" && inBlock(x, ARENA))).toBe(true);
-    expect(s.solids.filter((x) => x.kind === "prism" && x.h === 12 && x.mat === "steel" && inBlock(x, ARENA))).toHaveLength(4);
-    expect(s.solids.some((x) => x.kind === "cylinder" && x.mat === "curtain" && x.sides === 12 && inBlock(x, AUDITORIUM))).toBe(true);
-    expect(s.solids.some((x) => x.kind === "cone" && x.mat === "copper" && inBlock(x, AUDITORIUM))).toBe(true);
+    const arena = cellBlock(ARENA), auditorium = cellBlock(AUDITORIUM);
+    expect(s.solids.some((x) => x.kind === "poly" && x.mat === "stone" && inBlock(x, arena))).toBe(true);
+    expect(s.solids.filter((x) => x.kind === "prism" && x.h === 12 && x.mat === "steel" && inBlock(x, arena))).toHaveLength(4);
+    expect(s.solids.some((x) => x.kind === "cylinder" && x.mat === "curtain" && x.sides === 12 && inBlock(x, auditorium))).toBe(true);
+    expect(s.solids.some((x) => x.kind === "cone" && x.mat === "copper" && inBlock(x, auditorium))).toBe(true);
     expect(s.solids.some((x) => x.kind === "prism" && x.mat === "plaza" && x.at.z === -1 && x.d > 200)).toBe(true);
-    expect(s.solids.filter((x) => x.kind === "prism" && x.mat === "leafDark" && x.h === 0.3 && x.w === 24).length).toBeGreaterThanOrEqual(5);
-  });
-
-  it("neons: one crown per tower on its south face under the cornice, at the height of the sign; three lights on the mast", () => {
-    const s = scene();
-    expect(s.neon.crowns).toHaveLength(s.towers.length);
-    s.neon.crowns.forEach((c, k) => {
-      expect(c).toMatchObject({ kind: "poly", color: k % 2 === 0 ? "cyan" : "magenta", alpha: 1 });
-      if (c.kind !== "poly") return;
-      const ys = new Set(c.pts.map((p) => p.y)), zs = c.pts.map((p) => p.z), xs = c.pts.map((p) => p.x);
-      expect(ys.size).toBe(1);
-      const y = c.pts[0]!.y, top = Math.max(...zs), x0 = Math.min(...xs), x1 = Math.max(...xs);
-      expect(top - Math.min(...zs)).toBeCloseTo(0.6);
-      // same y as the rooftop sign of its tower (centered on the tower)
-      expect(s.signs.some((a) => a.kind === "poly" && Math.abs(a.pts[0]!.y - y) < 1e-9 && Math.abs((a.pts[0]!.x + a.pts[1]!.x) / 2 - (x0 + x1) / 2) < 1e-9)).toBe(true);
-      // attached to the top edge of the curtain wall body the sign sits on, 0.4 inset per side
-      const body = s.solids.find((x) => x.kind === "prism" && x.mat === "curtain" && Math.abs(x.at.z + x.h - top) < 1e-9 && Math.abs(x.at.y + x.d + 0.02 - y) < 1e-9 && Math.abs(x.at.x + 0.4 - x0) < 1e-9 && Math.abs(x.at.x + x.w - 0.4 - x1) < 1e-9);
-      expect(body).toBeDefined();
-    });
-    expect(s.neon.mastRing).toEqual([3, 6, 9].map((dz) => ({ x: s.telecom.x, y: s.telecom.y + 0.6, z: s.telecom.z - dz })));
   });
 });
 
 // the real world: the zone rng and the kind of each block according to the pre-pass
 const worldScene = tech(zoneRng(SEED, "cv", 2));
-const worldBlocks = suburbBlocks(), worldKinds = zoneKinds(zoneRng(SEED, "cv", 2), worldBlocks);
+const worldBlocks = techBlocks(), worldKinds = zoneKinds(zoneRng(SEED, "cv", 2), worldBlocks);
 const everything = [...worldScene.solids, ...worldScene.ground];
-const neighbors = (a: SprawlBlock, b: SprawlBlock) => (a.y === b.y && Math.abs(a.x - b.x) === 30) || (a.x === b.x && Math.abs(a.y - b.y) > 0 && Math.abs(a.y - b.y) <= 30);
+/** `everything` without the south street furniture (multiset by JSON): lamps and trees on a sidewalk fall inside the neighboring blockRect. */
+const furniture = southStreets();
+const withoutFurniture = ((): Solid[] => {
+  const left = new Map<string, number>();
+  for (const s of [...furniture.solids, ...furniture.ground]) { const k = JSON.stringify(s); left.set(k, (left.get(k) ?? 0) + 1); }
+  return everything.filter((s) => { const k = JSON.stringify(s), n = left.get(k) ?? 0; if (n > 0) { left.set(k, n - 1); return false; } return true; });
+})();
+// neighbors by cell: the south parcels sit on a 30-unit lattice
+const neighbors = (a: SprawlBlock, b: SprawlBlock) => { const p = a.parcel, q = b.parcel; return !!p && !!q && ((p.cell.row === q.cell.row && Math.abs(p.cell.col - q.cell.col) === 30) || (p.cell.col === q.cell.col && Math.abs(p.cell.row - q.cell.row) === 30)); };
 const homesOf = (kind: Kind) => worldScene.homes.filter((w) => worldBlocks.some((b, i) => { const r = blockRect(b); return worldKinds[i] === kind && w.pts.every((p) => p.x >= r.x0 && p.x <= r.x1 && p.y >= r.y0 && p.y <= r.y1); }));
 
 describe("coastal neighborhood (#249)", () => {
@@ -169,7 +144,7 @@ describe("face and accent budget (#249)", () => {
   it("each new block and the waterfront within its cap", () => {
     worldBlocks.forEach((b, i) => {
       const k = worldKinds[i]!;
-      if (k === "monoblock" || k === "houses" || k === "plaza" || k === "school" || k === "club") expect(facesIn(everything, blockRect(b)), `${k} ${b.x},${b.y}`).toBeLessThanOrEqual(FACE_CAPS[k]);
+      if (k === "monoblock" || k === "houses" || k === "plaza" || k === "school" || k === "club" || k === "low") expect(facesIn(withoutFurniture, blockRect(b)), `${k} ${b.x},${b.y}`).toBeLessThanOrEqual(FACE_CAPS[k]);
     });
     expect(facesIn(everything, WATERFRONT_RECT)).toBeLessThanOrEqual(FACE_CAPS.waterfront);
   });
@@ -177,5 +152,24 @@ describe("face and accent budget (#249)", () => {
     const a = techAnimator(worldScene, createRng(SEED + 5), { reducedMotion: false });
     const layers = a.ids.reduce((n, id) => { const l = a.layer(id); return n + (l.kind === "accent" ? l.accents.length : 0); }, 0);
     expect(worldScene.accents.length + layers).toBeLessThanOrEqual(ACCENT_CAP);
+  });
+});
+
+describe("tech without the west (#479)", () => {
+  const s = tech(zoneRng(SEED, "cv", 2));
+  const beltCone = (x: Solid) => x.kind === "cone" && x.at.x < WORLD.x0 && x.at.y >= GREEN_BELT.y0 && x.at.y < GREEN_BELT.y1;
+
+  it("tech builds nothing north of y 318 but the green belt's jungle", () => {
+    for (const x of [...s.solids, ...s.ground]) if (bounds(x).max.y < 318) expect(beltCone(x), `${x.kind} ${x.mat} ${JSON.stringify(bounds(x))}`).toBe(true);
+  });
+
+  it("no west towers or campus: no curtain-wall solid north of y 318", () => {
+    expect(s.solids.some((x) => x.mat === "curtain" && bounds(x).min.y < 318)).toBe(false);
+  });
+
+  it("TechScene has no mastRing, telecom or towers", () => {
+    expect(s).not.toHaveProperty("telecom");
+    expect(s).not.toHaveProperty("towers");
+    expect(s).not.toHaveProperty("neon");
   });
 });

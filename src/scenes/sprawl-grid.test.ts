@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BLEED, CELL, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, coverQuad, inCoverQuad, pointInPolygon, riverCenter } from "../map/geo";
 import { CITY_EDGE, estuaryEast } from "./city-grid";
-import { GREEN_BELT, REACH, bayShoreX, builtAt, fairAt, reachAt, suburbBlocks, urbanAt } from "./sprawl-grid";
+import { GREEN_BELT, REACH, bayShoreX, builtAt, fairAt, reachAt, parcelBlock, southParcels, techBlocks, urbanAt } from "./sprawl-grid";
 import { bleedTerrainAt, bleedZ, terrainAt } from "./terrain";
 
 describe("green belt", () => {
@@ -39,26 +39,35 @@ describe("sprawl-grid", () => {
     expect(bayShoreX(-300)).toBe(riverCenter(-300) - RIVER_HALF);
   });
 
-  it("urbanAt covers the city edges that turned to asphalt and the urban bleed", () => {
+  it("urbanAt: inside the content it holds for x < QUAY_X and y ≥ LAND.y0 (the west is no longer special, #479); the urban bleed outside", () => {
     expect(urbanAt(-57, 200)).toBe(true);
     expect(urbanAt(100, 330)).toBe(true);
     expect(urbanAt(-100, 200)).toBe(true);
-    expect(urbanAt(100, 200)).toBe(false);  // old city
+    expect(urbanAt(100, 200)).toBe(true);   // inside the content, south of LAND.y0
+    expect(urbanAt(100, 150)).toBe(false);  // north of LAND.y0
     expect(urbanAt(-57, 150)).toBe(false);  // green belt
+    expect(urbanAt(QUAY_X, 200)).toBe(false); // east of the quay
     expect(urbanAt(250, 400)).toBe(false);  // estuary
   });
 
-  it("the blocks of the tech district fall entirely on urban ground inside the cover, and there are more than 100", () => {
-    const blocks = suburbBlocks();
-    expect(blocks.length).toBeGreaterThan(100);
-    for (const b of blocks) {
-      for (const [x, y] of [[b.x, b.y], [b.x + b.w, b.y], [b.x + b.w, b.y + b.d], [b.x, b.y + b.d]] as const) expect(urbanAt(x, y)).toBe(true);
-      expect(inCoverQuad(b.x + b.w / 2, b.y + b.d / 2, 16 / 9, 30)).toBe(true);
-      expect(b.x + b.w).toBeLessThanOrEqual(QUAY_X - 6); // they never step on the bank wall
-      expect(b.dist).toBeGreaterThanOrEqual(0);
+  it("southParcels: more than 40 parcels, all on urban land inside the cover", () => {
+    const ps = southParcels(), urban = (x: number, y: number) => urbanAt(x, Math.max(y, CITY_EDGE.south));
+    expect(ps.length).toBeGreaterThan(40);
+    expect(southParcels()).toBe(ps); // memoized
+    for (const p of ps) {
+      expect(p.c.y).toBeGreaterThan(318);
+      expect(urban(p.c.x, p.c.y)).toBe(true);
+      for (const [x, y] of [[p.rect.x, p.rect.y], [p.rect.x + p.rect.w, p.rect.y], [p.rect.x + p.rect.w, p.rect.y + p.rect.d], [p.rect.x, p.rect.y + p.rect.d]] as const) expect(urban(x, y)).toBe(true);
+      expect(inCoverQuad(p.c.x, p.c.y, 16 / 9, 30)).toBe(true);
     }
-    expect(blocks.some((b) => b.dist === 0)).toBe(true);
-    expect(blocks.some((b) => b.dist > 160)).toBe(true);
+  });
+
+  it("techBlocks: one block per south parcel", () => {
+    const all = techBlocks(), ps = southParcels();
+    expect(all.length).toBeGreaterThan(40);
+    expect(all).toEqual(ps.map(parcelBlock));
+    const b = parcelBlock(ps[0]!);
+    expect(b).toEqual({ ...ps[0]!.rect, dist: Math.max(0, ps[0]!.c.y - WORLD.y1), parcel: ps[0] });
   });
 
   it("inside the 16:9 cover the jungle (with rock) is at most 7 % of the bleed and 6 % of the total", () => {

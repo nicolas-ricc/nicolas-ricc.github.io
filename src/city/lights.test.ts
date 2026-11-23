@@ -9,7 +9,10 @@ import { city, type CityScene, type PlacedPiece } from "../scenes/city";
 import { zoneRng } from "../scenes/world";
 import { SEED } from "../map/seed";
 import { garland, lamp, puddle } from "../kit/props";
-import { fixedLights, lightBox, lights, placeLit, solidBoxes, visibleLights, MAX_ANIMABLE, NEON_CAPS, WINDOW_ALPHA, type FixedLight } from "./lights";
+import { createCityAnim } from "../scenes/city-anim";
+import { tech } from "../scenes/tech";
+import { createTechAnim } from "../scenes/tech-anim";
+import { ANIMABLE_BARRIOS, animableQuota, fixedLights, lightBox, lights, placeLit, solidBoxes, visibleLights, MAX_ANIMABLE, NEON_CAPS, WINDOW_ALPHA, type FixedLight } from "./lights";
 import { CATALOGUE, type Neighborhood } from "./zoning";
 
 const NEIGHBORHOODS = Object.keys(CATALOGUE) as Neighborhood[];
@@ -17,7 +20,7 @@ const CAPPED = Object.keys(NEON_CAPS) as Neighborhood[];
 const prism = (x: number, y: number, z: number, w: number, d: number, h: number): Solid => ({ kind: "prism", at: v3(x, y, z), w, d, h, mat: "plaster" });
 const quad = (x0: number, x1: number, y: number, z0: number, z1: number): Vec3[] => [v3(x0, y, z0), v3(x1, y, z0), v3(x1, y, z1), v3(x0, y, z1)];
 const emptyPiece = (): Piece => ({ solids: [], ground: [], accents: [], windows: [], slots: [], walls: [] });
-const BLOCK = blocks().find((b) => b.kind !== "plaza")!;
+const BLOCK = blocks()[0]!; // a strip block: the fixture only needs some Block to hang the synthetic lots on
 
 /** A synthetic piece placed in `neighborhood`, with its lot at `z = 0.3` and an open south frontage. */
 function placedAt(neighborhood: Neighborhood, piece: Piece, solidOffset: number, open: ("n" | "s" | "e" | "w")[] = ["s"]): PlacedPiece {
@@ -80,25 +83,26 @@ for (const [name, make, isWorld] of SEEDS) {
       }
     });
 
-    it("the windows belong to their piece, warm or cool, and the plaza tower doesn't count", () => {
+    it("the windows belong to their piece, warm or cool, and the hotel's rooms don't count", () => {
       for (const w of l.windows) {
         expect(s.placed[w.owner]!.piece.windows).toContain(w.window);
         expect(["windowWarm", "windowCool"]).toContain(w.color);
       }
-      const towerWindows = new Set(s.tower.litWindows.map((a) => (a.kind === "poly" ? JSON.stringify(a.pts) : "")));
-      expect(l.windows.some((w) => towerWindows.has(JSON.stringify(w.window.pts)))).toBe(false);
+      const rooms = new Set(s.hotel.rooms.map((a) => (a.kind === "poly" ? JSON.stringify(a.pts) : "")));
+      expect(l.windows.some((w) => rooms.has(JSON.stringify(w.window.pts)))).toBe(false);
     });
 
-    it(`there are at most ${MAX_ANIMABLE} animatable ones and all from downtown or residential`, () => {
+    it(`there are at most ${MAX_ANIMABLE} animatable ones, all from the four barrios (#480)`, () => {
       const anim = l.windows.filter((w) => w.animable);
       expect(anim.length).toBeLessThanOrEqual(MAX_ANIMABLE);
       expect(anim.length).toBeGreaterThan(0);
-      for (const w of anim) expect(["downtown", "residential"]).toContain(s.placed[w.owner]!.placed.neighborhood);
+      for (const w of anim) expect(ANIMABLE_BARRIOS as readonly string[]).toContain(s.placed[w.owner]!.placed.neighborhood);
     });
 
     it("neons: only in capped neighborhoods (bars ≤ 24, warehouses ≤ 10), open frontage, one per shop, z 2.4..3.6 above the lot, colors with their halos and puddle", () => {
       for (const b of NEIGHBORHOODS) expect(l.neons.filter((n) => s.placed[n.owner]!.placed.neighborhood === b).length, b).toBeLessThanOrEqual(NEON_CAPS[b] ?? 0);
-      if (isWorld) expect(l.neons.length).toBeGreaterThanOrEqual(8);
+      // The new west bank has two bar parcels, both fronting an axis to the north (their walls face away from the camera) or east: one neon survives, not the 8 of the old bar street.
+      if (isWorld) expect(l.neons.length).toBeGreaterThanOrEqual(1);
       const seen = new Set<string>();
       for (const n of l.neons) {
         const p = s.placed[n.owner]!;
@@ -120,9 +124,13 @@ for (const [name, make, isWorld] of SEEDS) {
       }
     });
 
-    if (isWorld) it("world seed: the bar street shows neons from more than shopRow (#165)", () => {
+    // #165 guarded that the bar street mixed recipes. The new layout has two bar parcels (shopRow on the world seed), so pin: the world seed
+    // still shows bar neons, all from a recipe of the bars catalogue. The mix returns to be measurable when the barrio has more parcels.
+    if (isWorld) it("world seed: the bar street shows neons, from the bars catalogue recipes (#165)", () => {
       const bars = l.neons.filter((n) => s.placed[n.owner]!.placed.neighborhood === "bars");
-      expect(bars.some((n) => s.placed[n.owner]!.placed.recipe !== "shopRow")).toBe(true);
+      expect(bars.length).toBeGreaterThan(0);
+      const names = CATALOGUE.bars.recipes.map((r) => r.name as string);
+      for (const n of bars) expect(names).toContain(s.placed[n.owner]!.placed.recipe);
     });
 
     it("no neon puddle is hidden (brute-force oracle)", () => {
@@ -135,7 +143,7 @@ for (const [name, make, isWorld] of SEEDS) {
     it("bathed: only ground-floor bands of walls of civic pieces, amberBleed alpha 0.5", () => {
       const civicWalls = s.placed.filter((p) => p.placed.neighborhood === "civic").flatMap((p) => p.piece.walls);
       expect(l.bathed.length).toBe(civicWalls.length);
-      expect(l.bathed.length).toBeGreaterThan(0);
+      expect(l.bathed.length).toBeGreaterThan(0); // the palace, theatre and library are back (#477)
       l.bathed.forEach((a, i) => {
         const w = civicWalls[i]!;
         expect(a).toMatchObject({ kind: "poly", color: "amberBleed", alpha: 0.5 });
@@ -388,5 +396,87 @@ describe("fixed lights", () => {
     const dots = garland([v3(0, 0, 3), v3(0, 3, 3)]);
     expect(fixedLights(dots)).toHaveLength(dots.length);
     expect(fixedLights(dots).map((l) => l.accents)).toEqual(dots.map((d) => [d]));
+  });
+});
+
+describe("barrio quotas (#477)", () => {
+  /** One piece with `n` free windows on its south face, nothing in front. */
+  const windowed = (n: number): Piece => {
+    const p = emptyPiece();
+    p.solids.push(prism(0, 0, 0, 4 * n, 10, 10));
+    for (let i = 0; i < n; i++) p.windows.push({ pts: quad(4 * i + 1, 4 * i + 3, 10, 2, 4), floor: 0, wall: v3(0, 1, 0), building: 0 });
+    return p;
+  };
+  for (const [b, warm] of [["clasico", 5], ["transicion", 3], ["moderno", 1], ["bajo", 6]] as const) {
+    it(`${b}: the quota follows CATALOGUE.${b}.lights exactly`, () => {
+      const l = lights({ solids: windowed(10).solids, placed: [placedAt(b, windowed(10), 0)] }, createRng(1));
+      const { on } = CATALOGUE[b].lights;
+      expect(l.counts[b]).toEqual({ candidates: 10, on: Math.round(on * 10), warm });
+      expect(l.windows.filter((w) => w.on)).toHaveLength(Math.round(on * 10));
+    });
+  }
+  it("the world seed lights the west bank with the barrio quotas", () => {
+    const s = city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3));
+    for (const b of ["clasico", "transicion"] as const) {
+      const c = s.lights.counts[b], { on, warm } = CATALOGUE[b].lights;
+      expect(c.candidates, b).toBeGreaterThan(30);
+      expect(c.on, b).toBe(Math.round(on * c.candidates));
+      expect(c.warm, b).toBe(Math.round(warm * c.on));
+    }
+  });
+});
+
+describe("animatable windows per barrio (#480)", () => {
+  it("animableQuota splits 40 in proportion with at least 1 per barrio with candidates", () => {
+    expect(animableQuota({ clasico: 60, transicion: 527, bajo: 0, moderno: 720 })).toEqual({ clasico: 3, transicion: 16, bajo: 0, moderno: 21 });
+  });
+  it("animableQuota: a barrio with no candidates gets 0 and the rest still sums to 40", () => {
+    expect(animableQuota({ clasico: 1, transicion: 0, bajo: 0, moderno: 500 })).toEqual({ clasico: 1, transicion: 0, bajo: 0, moderno: 39 });
+  });
+  it("animableQuota: with fewer than 40 candidates every one is animatable", () => {
+    const c = { clasico: 3, transicion: 5, bajo: 2, moderno: 10 };
+    expect(animableQuota(c)).toEqual(c);
+  });
+  it("animableQuota: max 0 gives 0 everywhere", () => {
+    expect(animableQuota({ clasico: 5, transicion: 5, bajo: 5, moderno: 5 }, 0)).toEqual({ clasico: 0, transicion: 0, bajo: 0, moderno: 0 });
+  });
+  it("animableQuota: with max below the barrio count the largest barrios win", () => {
+    expect(animableQuota({ clasico: 5, transicion: 9, bajo: 9, moderno: 1 }, 2)).toEqual({ clasico: 0, transicion: 1, bajo: 1, moderno: 0 });
+  });
+
+  const s = city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3)), l = s.lights;
+  const of = (b: Neighborhood) => l.windows.filter((w) => s.placed[w.owner]!.placed.neighborhood === b);
+
+  it("world seed: 40 animatable windows split among the barrios, at least 1 per barrio with candidates", () => {
+    const want = animableQuota(Object.fromEntries(ANIMABLE_BARRIOS.map((b) => [b, l.counts[b].candidates])) as Parameters<typeof animableQuota>[0]);
+    for (const b of ANIMABLE_BARRIOS) {
+      expect(of(b).filter((w) => w.animable).length, b).toBe(want[b]);
+      if (l.counts[b].candidates > 0) expect(want[b], b).toBeGreaterThanOrEqual(1);
+    }
+    expect(l.windows.filter((w) => w.animable)).toHaveLength(MAX_ANIMABLE);
+    expect(want.moderno).toBeGreaterThanOrEqual(1);
+  });
+
+  it("classic and bajo windows warm, moderno cool", () => {
+    for (const b of ["clasico", "bajo", "moderno"] as const) {
+      const on = of(b).filter((w) => w.on), warm = on.filter((w) => w.color === "windowWarm").length;
+      expect(on.length, b).toBe(l.counts[b].on);
+      expect(warm, b).toBe(l.counts[b].warm);
+      if (on.length === 0) continue;
+      // the exact invariant is `warm === counts.warm` above; the fractions hold on the world seed (moderno 43/288), where round(0.15 · on) rounds down
+      if (b === "moderno") expect(warm / on.length, b).toBeLessThanOrEqual(0.15);
+      else expect(warm / on.length, b).toBeGreaterThanOrEqual(0.9);
+    }
+    expect(l.counts.clasico.on).toBeGreaterThan(0);
+    expect(l.counts.moderno.on).toBeGreaterThan(0);
+    // the south's bajo is tech.ts: its windows are `homes`, always drawn warm (amber)
+    const homes = createTechAnim(tech(zoneRng(SEED, "cv", 2)), createRng(SEED + 5), { reducedMotion: true }).homes();
+    expect(homes.length).toBeGreaterThan(0);
+    for (const h of homes) expect(h.color).toBe("amber");
+  });
+
+  it("hotel shows lit rooms", () => {
+    // the rng assembleWorld hands to cityAnimator
+    expect(createCityAnim(s, createRng(SEED + 2), { reducedMotion: false }).lit().length).toBeGreaterThanOrEqual(6);
   });
 });

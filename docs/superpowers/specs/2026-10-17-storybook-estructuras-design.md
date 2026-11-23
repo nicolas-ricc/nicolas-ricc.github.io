@@ -73,8 +73,8 @@ Lista inicial, agrupada por zona (el orden es el del índice):
 | Portfolio: astillero | gradas, dársena, grúa pórtico, calle de faroles, naves, punta norte, estación, paso a nivel, dique flotante, patio de contenedores | grúa torre, farol, tren, grúa de muelle, cartel del taller (`cartel-taller`; en escena, `cartel-taller-escena`) |
 | Portfolio: hinterland | central térmica y torre de enfriamiento, tanques, silos, línea de torres de alta tensión, playa de contenedores | — |
 | Portfolio: feria | noria, montaña rusa, torre de caída, carrusel, arcade, autitos chocadores, muelle, tren fantasma, casa de espejos, tobogán, tronco acuático | — |
-| Resume: ciudad | plaza, torre, puente, malecón, manzana derrumbada, manzana del distrito, obra, punta sur, galpones, playa de carga, mercado de pescado | campus, selva, corona de la torre (`cartel-torre`; en escena, `cartel-torre-escena`) |
-| Resume: tecnológico | mástil de telecomunicaciones, arena, auditorio, torres, monoblock, casas con techo de teja, escuela, club, plaza de barrio, costanera, barrio costero | — |
+| Resume: ciudad | plaza, hotel, puente, malecón, manzana derrumbada, manzana del casco (`manzana-casco`), manzana de transición (`manzana-transicion`), obra, punta sur, galpones, playa de carga, mercado de pescado | manzana del distrito (`manzana-distrito`; pieza desde #477: ninguna parcela construida es `moderno` todavía), campus, selva, el cartel de Resume en la fachada del hotel (`cartel-torre`; en escena, `cartel-torre-escena`, su recorte del mundo) |
+| Resume: tecnológico | el oeste moderno (`mastil`, `torres`) y el barrio costero: mástil de telecomunicaciones, arena, auditorio, torres, monoblock, casas con techo de teja, escuela, club, plaza de barrio, costanera, barrio costero | — |
 | Blog: mar | faro, casa del farero, boyas, pecio | carguero, remolcador, convoy con barcaza, lancha colectiva, plataforma con cartel (`plataforma`; en escena, `plataforma-escena`) |
 
 El catálogo es dato: agregar una estructura nueva al mundo es agregar una

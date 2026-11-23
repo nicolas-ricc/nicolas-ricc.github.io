@@ -97,7 +97,11 @@ describe("sign vocabulary (#360)", () => {
     const lettering = section(glossary, "Lettering"), sign = section(glossary, "Sign");
     for (const id of ["TextPlane", "diagonalWall", "roofDiagonal", "facade", "strokeText", "fillText", "measureText", "GLYPHS"]) expect(lettering).toContain(id);
     for (const id of ["gap 2", "KERN", "layoutText", "letterGaps", "rhythm", "counterClearance", "probe"]) expect(lettering, id).toContain(id);
-    for (const id of ["cartel-torre", "cartel-torre-escena", "cartel-taller", "cartel-taller-escena", "plataforma", "plataforma-escena", "src/scenes/sign-", "src/scenes/sign-crown.ts", "towerCrown", "RESUME_SIGN", "CROWN_SITE"]) expect(sign).toContain(id);
+    for (const id of ["cartel-torre", "cartel-torre-escena", "cartel-taller", "cartel-taller-escena", "plataforma", "plataforma-escena", "src/scenes/sign-", "src/scenes/sign-hotel.ts", "hotel", "hotelStandIn", "RESUME_SIGN", "SIGN_SITE", "HOTEL_SLAB", "HOTEL_CAP", "city()"]) expect(sign).toContain(id);
+    // #474: the tower and its crown are gone
+    expect(sign).not.toContain("towerCrown");
+    expect(sign).not.toMatch(/\bCROWN_SITE\b/);
+    expect(sign).not.toContain("sign-crown");
     for (const id of ["TINKER_SITE", "PLATFORM_SITES", "BLOG_SIGNS", "plataforma-escena-angosta", "src/lab/signs.test.ts", "npm run legibility"]) expect(sign, id).toContain(id);
     // #427: one site became two
     expect(sign).not.toMatch(/\bPLATFORM_SITE\b/);
@@ -230,4 +234,48 @@ describe("signs as the navigation (#394)", () => {
       }
     });
   }
+});
+
+describe("glossary: barrio styles and parcel lots (#477)", () => {
+  const glossary = read("CONTEXT.md");
+  it("Style names the four barrio styles", () => {
+    const sec = section(glossary, "Style");
+    for (const id of ["clasico", "transicion", "moderno", "bajo"]) expect(sec, id).toContain(`\`${id}\``);
+  });
+  it("Lot says a parcel's lot carries its polygon (inset by the sidewalk) and the ochava", () => {
+    const sec = section(glossary, "Lot");
+    expect(sec).toMatch(/inset/);
+    expect(sec).toMatch(/ochava/);
+    expect(sec).toContain("`parcelLot`");
+  });
+});
+
+describe("storybook index: barrio exhibits (#477)", () => {
+  it("the Resume: ciudad row names manzana-casco and manzana-transicion", () => {
+    const story = read("docs/superpowers/specs/2026-10-17-storybook-estructuras-design.md");
+    const row = story.split("\n").find((l) => l.startsWith("| Resume: ciudad |")) ?? "";
+    for (const id of ["manzana-casco", "manzana-transicion"]) expect(row, id).toContain(`\`${id}\``);
+  });
+});
+
+describe("city plan vocabulary (#480)", () => {
+  const glossary = read("CONTEXT.md");
+  it("defines Parcel and Axis", () => {
+    for (const t of ["Parcel", "Axis"]) expect(glossary).toMatch(new RegExp(`^### ${t}$`, "m"));
+  });
+  for (const term of ["Parcel", "Axis"]) {
+    it(`${term}: every Code: file exists and names identifiers it holds`, () => {
+      const refs = codeRefs(section(glossary, term));
+      expect(refs.length).toBeGreaterThan(0);
+      for (const { file, idents } of refs) {
+        expect(existsSync(`${ROOT}${file}`), file).toBe(true);
+        for (const id of idents) expect(hasIdent(read(file), id), `${id} in ${file}`).toBe(true);
+      }
+    });
+  }
+  it("Parcel names city-plan.ts, parcels, barrioAt, inscribedRect and Lot.poly; Axis names AXES, AxisKind and crossingPlazas", () => {
+    const parcel = section(glossary, "Parcel"), axis = section(glossary, "Axis");
+    for (const s of ["src/scenes/city-plan.ts", "parcels", "barrioAt", "inscribedRect", "Lot.poly"]) expect(parcel, s).toContain(s);
+    for (const s of ["src/scenes/city-plan.ts", "AXES", "AxisKind", "crossingPlazas"]) expect(axis, s).toContain(s);
+  });
 });

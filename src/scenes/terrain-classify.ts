@@ -36,7 +36,7 @@ export function cityTerrainAt(x: number, y: number): Terrain {
     return x < EAST_RING.x0 ? "jungle" : x < 306 ? "asphalt" : "jungle"; // east bank of the channel
   }
   if (y >= DISTRICT_BANK_Y && x > QUAY_X) return x >= PROMENADE_STREET_X ? "asphalt" : "jungle"; // east bank of the district: jungle, and the promenade street
-  if (y >= CITY_EDGE.south || x < CITY_EDGE.west) return "asphalt"; // west and south edges: the bleed's tech district continues straight on from the city
+  if (y >= CITY_EDGE.south) return "asphalt"; // south edge: the bleed's tech district continues straight on from the city
   if (x > QUAY_X && x < EAST_RING.x0) return "jungle";
   if (inCrater(x, y)) return "jungle";
   return "asphalt";

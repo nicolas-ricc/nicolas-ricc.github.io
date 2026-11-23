@@ -11,18 +11,20 @@ import { world, zoneRng } from "./world";
 const resume = () => city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3));
 
 describe("Resume level 2 budget", () => {
-  it("raised solids ≤ 2 900, strip ≤ 190, static accents ≤ 1 300", () => {
+  it("raised solids ≤ 1 700, strip ≤ 570, static accents ≤ 1 400", () => {
     const s = resume();
-    expect(s.solids.filter((x) => !isFlat(x)).length).toBeLessThanOrEqual(2900);
-    expect(s.ground.filter((g) => g.kind === "strip").length).toBeLessThanOrEqual(190);
-    // accents: 1 165 measured (#391): 789 before, + the crown's 402 (238 poly + 164 dot), − 26 city lights the crown now hides from the camera
-    // (2 avenue lamps and lit windows behind its panel); ×1.1 rounded to the hundred
-    expect(s.accents.length).toBeLessThanOrEqual(1300);
+    // measured 2026-11-23 (#480), city(...) of the world seed, raised = !isFlat: 1 518 × 1.1 = 1 669.8 → 1 700. before: 2 900 (#474)
+    expect(s.solids.filter((x) => !isFlat(x)).length).toBeLessThanOrEqual(1700);
+    // measured 2026-11-23 (#480), ground.filter(kind === "strip"): 522 × 1.1 = 574.2 → 570 (nearest ten). before: 580
+    expect(s.ground.filter((g) => g.kind === "strip").length).toBeLessThanOrEqual(570);
+    // measured 2026-11-23 (#480), accents.length: 1 280 × 1.1 = 1 408 → 1 400. before: 1 500
+    expect(s.accents.length).toBeLessThanOrEqual(1400);
   });
 
-  it("static polygons of the world ≤ 56 000 (same computation as stage.staticCount)", () => {
+  it("static polygons of the world ≤ 47 900 (same computation as stage.staticCount)", () => {
     const w = assembleWorld(undefined, { reducedMotion: true }).scene;
-    expect(buildRenderList([...w.terrain.ground, ...w.ground, ...w.solids]).length).toBeLessThanOrEqual(56000);
+    // measured 2026-11-23 (#480), buildRenderList([...terrain.ground, ...ground, ...solids]).length of assembleWorld(undefined, { reducedMotion: true }): 43 546 × 1.1 = 47 900.6 → 47 900. before: 56 000
+    expect(buildRenderList([...w.terrain.ground, ...w.ground, ...w.solids]).length).toBeLessThanOrEqual(47900);
   });
 
   it("the Writing platform left the static world (#427): static polygons drop below the 46 518 of feature/423 before it", () => {
@@ -32,12 +34,9 @@ describe("Resume level 2 budget", () => {
 });
 
 describe("world accents (#394)", () => {
-  it("static accents of the whole world ≤ 2 600", () => {
-    // 2 478 measured while planning #389: 1 222 of the world + 1 256 of the three signs (crown 238 poly + 164 dot,
-    // tinker 114 + 84, platform 654 + 2; the tinker's 19 lights in `tinker.lights` are animated, not static); ×1.05.
-    // since #442 the platform is one flat board: its piles, hut and posts are gone, so these figures describe the platform before it
-    // Since #427 the platform is animated, not static (`platform.solid` of platformAnimator); since #454 it has no lights at all.
-    expect(assembleWorld(undefined, { reducedMotion: true }).scene.accents.length).toBeLessThanOrEqual(2600);
+  it("static accents of the whole world ≤ 2 000", () => {
+    // measured 2026-11-23 (#480), assembleWorld(undefined, { reducedMotion: true }).scene.accents.length: 1 833 × 1.1 = 2 016.3 → 2 000. before: 2 600
+    expect(assembleWorld(undefined, { reducedMotion: true }).scene.accents.length).toBeLessThanOrEqual(2000);
   });
   it("the platform's lights left the static world (#427): fewer than the 2 409 of feature/423 before it", () => {
     expect(assembleWorld(undefined, { reducedMotion: true }).scene.accents.length).toBeLessThan(2409);
@@ -45,10 +44,10 @@ describe("world accents (#394)", () => {
 });
 
 describe("raised solids per scene (#328)", () => {
-  // Measured 2026-11-08 with world(SEED) after #319..#327 and the cuts of #328 (spec 2026-10-15 §12.2): shipyard 543, factory 775,
-  // city 1 431, fair 452, hinterland 456, tech 1 514. Caps are measured ×1.1 rounded to the nearest hundred; fair re-measured 549 on 2026-11-17 after #398 (helter skelter).
-  // shipyard: 543 + the tinker sign's 154 = 697 (#392), ×1.1 rounded to the hundred
-  const CAPS = { shipyard: 800, factory: 900, city: 1600, fair: 600, hinterland: 500, tech: 1700 } as const;
+  // measured 2026-11-23 (#480), raised solids (!isFlat) of world(SEED).<scene>, × 1.1 rounded to the nearest hundred (up if below the figure):
+  // shipyard 686 × 1.1 = 754.6 → 800; factory 770 × 1.1 = 847 → 800; city 1 518 × 1.1 = 1 669.8 → 1 700; fair 565 × 1.1 = 621.5 → 600; hinterland 453 × 1.1 = 498.3 → 500; tech 1 136 × 1.1 = 1 249.6 → 1 200
+  // before: shipyard 800, factory 900, city 1 700, fair 600, hinterland 500, tech 1 200
+  const CAPS = { shipyard: 800, factory: 800, city: 1700, fair: 600, hinterland: 500, tech: 1200 } as const;
   let w: ReturnType<typeof world>;
   beforeAll(() => { w = world(SEED); });
   for (const [name, cap] of Object.entries(CAPS)) {
@@ -63,5 +62,19 @@ describe("raised solids per scene (#328)", () => {
 describe("Writing raft budget (#454)", () => {
   it("one raft tessellates to ≤ 1200 faces", () => {
     expect(tessellateAll(raftAt("wide", REST_POSE)).length).toBeLessThanOrEqual(1200);
+  });
+});
+
+describe("the west moves from tech to the city (#479)", () => {
+  // Measured on feature/471 at 3cff5a7 (before #479), world(SEED), raised solids (!isFlat): city 1 209, tech 1 449.
+  const BEFORE = { city: 1209, tech: 1449 } as const;
+  // Measured on HEAD of agent/479 (after #479), world(SEED), raised solids: city 1 518, tech 1 136, sum 2 654 ≤ 2 658. A record: the test asserts ≤, never exact.
+  // The move stayed ≤ 2 658 thanks to three west rulings: no traffic lights at axis × ordinary-street crossings, no parked cars (all three west of WEST_DISTRICT_X, x −54), axis lamps every 24 (not 12).
+  it("budget moved, not raised", () => {
+    const w = world(SEED), raised = (s: { solids: Parameters<typeof isFlat>[0][] }) => s.solids.filter((x) => !isFlat(x)).length;
+    const after = { city: raised(w.city!), tech: raised(w.tech!) };
+    expect(after.tech).toBeLessThan(BEFORE.tech); // the west left tech
+    expect(after.city).toBeGreaterThan(BEFORE.city); // and arrived in the city
+    expect(after.city + after.tech).toBeLessThanOrEqual(BEFORE.city + BEFORE.tech);
   });
 });

@@ -6,15 +6,16 @@ import type { CityScene } from "./city";
 import { chase } from "./neon";
 
 /**
- * The city animations, without Pixi and with their own state: the lit floor
- * blinks (it goes off for one tick every 4..9 s), papers fly out of a window
- * toward the NNE and the district neons change: a
+ * The city animations, without Pixi and with their own state: the hotel rooms
+ * (40 % lit at frame 0) toggle one at a time every 4..9 s, always within ±5 of
+ * the initial lit count; papers fly out of a window of the hotel along its
+ * facade (PAPER_DRIFT) and the district neons change: a
  * sign every 3..7 s changes color or goes off for a step, and two lights run
  * along the promenade. Also, windows of the buildings turn on and off, and a
  * street neon on the quay flickers. Pauses are measured in wall time, not in
  * ticks; the paper that reaches the end is reborn at the window and continues
- * with the leftover time. Frame 0 = everything still and on; with
- * reduced-motion it stays there.
+ * with the leftover time. Frame 0 = the initial rooms and everything
+ * else on, all still; with reduced-motion it stays there.
  */
 export const BLINK_GAP_MS: [number, number] = [4000, 9000];
 export const PAPER_SPEED = 4 / 1000; // u per ms
@@ -33,24 +34,31 @@ export const WINDOW_GAP_MS: [number, number] = [300, 900]; // between one window
 export const FLICKER_GAP_MS: [number, number] = [1000, 3000]; // between one flicker of the street neon and the next
 export const FLICKER_ALPHA = 0.3; // halo and front of the street neon while it flickers
 export const PROMENADE_R = 0.35;
+export const RING_STEP_MS = 200, TELECOM_STEP_MS = 100, RING_R = 0.5; // the TELECOM mast: ring chase and tip breathing
+const TELECOM_R = 0.8, TELECOM_PULSE = 0.3, TELECOM_PERIOD = 1200;
 const SEED_MAX = 2 ** 32 - 1; // seed of a derived Rng (no 0x… literal: the palette guard would take it for a color)
-const NNE = { x: 0.45, y: -0.893 }; // unit: north-northeast (y grows to the south); on screen it goes up to the right
-const PERP = { x: -NNE.y, y: NNE.x }; // perpendicular to the drift: opens the fan
+export const PAPER_DRIFT = { x: 0.88, y: -0.47 }; // along the hotel's long axis, toward the NE (y grows to the south); on screen it goes up to the right
+export const ROOMS_LIT = 0.4; // fraction of the rooms lit at frame 0
+export const ROOMS_BAND = 5; // the lit count stays within initial ± this
+const PERP = { x: -PAPER_DRIFT.y, y: PAPER_DRIFT.x }; // perpendicular to the drift: opens the fan
 
+/** `lit`: a hotel room toggled during the tick. */
 export interface CityAnimChanges { lit: boolean; papers: boolean; neon: boolean; windows: boolean }
 export interface CityAnim { lit(): Accent[]; papers(): Accent[]; neon(): Accent[]; windows(): Accent[]; tick(dtMs: number): CityAnimChanges; fired(): { lit: number; neon: number; papers: number; windows: number; flicker: number } }
 
 const NONE: CityAnimChanges = { lit: false, papers: false, neon: false, windows: false };
 
-export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights">, rng: Rng, opts: { reducedMotion: boolean }): CityAnim {
-  const { tower, neon } = scene;
-  const w = tower.paperWindow;
+export function createCityAnim(scene: Pick<CityScene, "hotel" | "neon" | "lights" | "telecom">, rng: Rng, opts: { reducedMotion: boolean }): CityAnim {
+  const { hotel, neon } = scene;
+  const w = hotel.paperWindow;
   // own stream: sharing `rng` with the papers would make the drawn pause depend on the chunking
   const blinkRng = createRng(rng.int(0, SEED_MAX));
   const nextGap = (): number => blinkRng.int(BLINK_GAP_MS[0], BLINK_GAP_MS[1]);
 
   let clock = 0;
-  let off = false;
+  // rooms: drawn right after blinkRng is created, so the shared `rng` does not move
+  const rooms = hotel.rooms.map((a) => ({ a, on: blinkRng.chance(ROOMS_LIT) }));
+  const roomsTarget = rooms.filter((r) => r.on).length;
   let blinkTimer = nextGap();
   interface Paper { dist: number; phase: number; side: number; speed: number }
   const respawn = (p: Paper, r: Rng): void => {
@@ -73,7 +81,7 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
   const signRng = createRng(rng.int(0, SEED_MAX)); // own stream, for the same reason as blinkRng
   let signTimer = signRng.int(SIGN_GAP_MS[0], SIGN_GAP_MS[1]);
   const paperRngs = papers.map(() => createRng(rng.int(0, SEED_MAX))); // one per paper, last: the recycling does not depend on the chunking
-  let promenadeStep = 0;
+  let promenadeStep = 0, ringStep = 0, telecomStep = 0; // derived from clock, no rng
   let blinks = 0, signEvents = 0, recycled = 0; // firings since construction, for fired()
   // windows: after papers and signs so as not to reorder their draws
   const wins = scene.lights.windows.filter((x) => x.animable).map((x) => ({ w: x, on: x.on }));
@@ -94,14 +102,14 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
     const fade = Math.max(0, p.dist / PAPER_RANGE - PAPER_FADE_FROM) / (1 - PAPER_FADE_FROM);
     return {
       kind: "dot",
-      at: v3(w.x + NNE.x * p.dist + PERP.x * lateral, w.y + NNE.y * p.dist + PERP.y * lateral, w.z + wave + p.dist * PAPER_LIFT),
+      at: v3(w.x + PAPER_DRIFT.x * p.dist + PERP.x * lateral, w.y + PAPER_DRIFT.y * p.dist + PERP.y * lateral, w.z + wave + p.dist * PAPER_LIFT),
       r: PAPER_R + (PAPER_R_END - PAPER_R) * Math.min(1, fade),
       color: "amberMid",
     };
   };
 
   return {
-    lit: () => (off ? [] : [...tower.litWindows]), // copy: the consumer cannot touch the scene
+    lit: () => rooms.filter((r) => r.on).map((r) => ({ ...r.a })), // copies: the consumer cannot touch the scene
     papers: () => papers.map(paperAt),
     neon: () => {
       const on = signs.filter((s) => s.offUntil <= clock).map((s) => ({ ...s.a, color: s.color }));
@@ -109,20 +117,30 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
       const lights = neon.promenade.filter((_, k) => !lit || lit[k]).map((at): Accent => ({ kind: "dot", at, r: PROMENADE_R, color: "cyanMid" }));
       const dim = flickerUntil > clock; // halo and front (the first two); the puddle does not change
       const st = street ? street.accents.map((a, k): Accent => (dim && k < 2 && a.kind === "poly" ? { ...a, alpha: FLICKER_ALPHA } : a)) : [];
-      return [...on, ...lights, ...st];
+      const ringOn = ringStep === 0 ? neon.mastRing.map(() => true) : chase(neon.mastRing.length, ringStep, 1); // step 0 = frame 0: all on
+      const ring = neon.mastRing.filter((_, k) => ringOn[k]).map((at): Accent => ({ kind: "dot", at, r: RING_R, color: "magentaMid" }));
+      const tip: Accent[] = scene.telecom ? [{ kind: "dot", at: v3(scene.telecom.x, scene.telecom.y, scene.telecom.z), r: TELECOM_R + TELECOM_PULSE * (1 + Math.sin(clock / TELECOM_PERIOD)), color: "amber" }] : [];
+      return [...on, ...lights, ...st, ...ring, ...tip];
     },
     windows: () => wins.filter((x) => x.on).map(({ w: lw }): Accent => ({ kind: "poly", pts: lw.window.pts, color: lw.color, alpha: WINDOW_ALPHA })),
     fired: () => ({ lit: blinks, neon: signEvents, papers: recycled, windows: windowEvents, flicker: flickers }),
     tick(dtMs) {
       if (opts.reducedMotion || !Number.isFinite(dtMs) || dtMs <= 0) return NONE; // NaN or Infinity would hang the while loops
       clock += dtMs;
+      blinkTimer -= dtMs;
       const c: CityAnimChanges = { lit: false, papers: true, neon: false, windows: false };
 
-      // blink: one tick off (two in a row only with ticks ≥ 4 s); the next pause counts from the
-      // firing, and a long tick can fire several
-      if (off) { off = false; c.lit = true; }
-      blinkTimer -= dtMs;
-      while (blinkTimer <= 0) { blinkTimer += nextGap(); blinks++; off = true; c.lit = true; }
+      // blink: one room toggles; if that takes the lit count out of the band, one of the other state toggles
+      // instead. The next pause counts from the firing, and a long tick can fire several
+      while (blinkTimer <= 0 && rooms.length > 0) {
+        let r = rooms[blinkRng.int(0, rooms.length - 1)]!;
+        const lit = rooms.filter((x) => x.on).length;
+        if (Math.abs(lit + (r.on ? -1 : 1) - roomsTarget) > ROOMS_BAND) { const other = rooms.filter((x) => x.on !== r.on); r = other[blinkRng.int(0, other.length - 1)]!; }
+        r.on = !r.on;
+        blinkTimer += nextGap();
+        blinks++;
+        c.lit = true;
+      }
 
       papers.forEach((p, i) => { // by time, not by distance: the speed changes when recycling
         let left = dtMs;
@@ -145,6 +163,11 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
       }
       const mStep = Math.floor(clock / PROMENADE_STEP_MS);
       if (mStep !== promenadeStep) { promenadeStep = mStep; c.neon = true; }
+
+      if (scene.telecom) {
+        const rs = Math.floor(clock / RING_STEP_MS); if (rs !== ringStep) { ringStep = rs; c.neon = true; }
+        const ts = Math.floor(clock / TELECOM_STEP_MS); if (ts !== telecomStep) { telecomStep = ts; c.neon = true; }
+      }
 
       // windows: one turns on or off; if that takes the count out of the band, one of the other state changes
       windowTimer -= dtMs;

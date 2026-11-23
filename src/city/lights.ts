@@ -10,7 +10,7 @@ import { CATALOGUE, type Neighborhood } from "./zoning";
 
 /**
  * Resume lights (spec §7, issue #45): which windows light up (with an exact
- * quota per neighborhood), which are animatable, the neons of the bar street and the breweries (capped per neighborhood) and
+ * quota per neighborhood), which are animatable (40 split among the four barrios, #480), the neons of the bar street and the breweries (capped per neighborhood) and
  * the bathed facades of the civic buildings; and which lights of the fixed pieces
  * (lamps, obelisks, garlands, puddles) are visible (#171). Pure module: city.ts pours the result.
  * What is hidden is decided with `hides` (silhouette on screen); what is covered (centroid
@@ -21,6 +21,25 @@ export interface StreetNeon { accents: Accent[]; color: "amber" | "magenta" | "c
 export interface CityLights { windows: LitWindow[]; neons: StreetNeon[]; flicker: number | null; bathed: Accent[]; counts: Record<Neighborhood, { candidates: number; on: number; warm: number }> }
 
 export const MAX_ANIMABLE = 40;
+/** The barrios whose windows can animate (#480); the other neighborhoods do not. Order breaks ties. */
+export const ANIMABLE_BARRIOS = ["clasico", "transicion", "bajo", "moderno"] as const satisfies readonly Neighborhood[];
+type AnimableKey = (typeof ANIMABLE_BARRIOS)[number];
+
+/** Animatable windows per barrio: `min(max, Σ candidates)` split with 1 per barrio with candidates, the rest by remaining capacity (largest remainder). */
+export function animableQuota(candidates: Record<AnimableKey, number>, max = MAX_ANIMABLE): Record<AnimableKey, number> {
+  const total = Math.min(max, ANIMABLE_BARRIOS.reduce((n, b) => n + candidates[b], 0));
+  const quota = Object.fromEntries(ANIMABLE_BARRIOS.map((b) => [b, 0])) as Record<AnimableKey, number>;
+  // 1 each to the barrios with candidates (the largest first if `total` falls short; stable sort keeps ANIMABLE_BARRIOS order on ties)
+  const nonEmpty = ANIMABLE_BARRIOS.filter((b) => candidates[b] > 0).sort((a, b) => candidates[b] - candidates[a]);
+  for (const b of nonEmpty.slice(0, total)) quota[b] = 1;
+  const rest = total - Math.min(total, nonEmpty.length), cap = ANIMABLE_BARRIOS.map((b) => candidates[b] - quota[b]), capSum = cap.reduce((n, c) => n + c, 0);
+  if (rest === 0 || capSum === 0) return quota;
+  const parts = ANIMABLE_BARRIOS.map((b, i) => ({ b, whole: Math.floor((rest * cap[i]!) / capSum), frac: (rest * cap[i]!) % capSum }));
+  let left = rest - parts.reduce((n, p) => n + p.whole, 0);
+  for (const p of parts) quota[p.b] += p.whole;
+  for (const p of [...parts].sort((a, b) => b.frac - a.frac)) if (left > 0 && p.frac > 0) { quota[p.b]++; left--; }
+  return quota;
+}
 /** Neon cap per neighborhood; only these neighborhoods carry neons. Key order is the sampling order. */
 export const NEON_CAPS: Partial<Record<Neighborhood, number>> = { bars: 24, warehouses: 10 };
 export const WINDOW_ALPHA = 0.85;
@@ -125,7 +144,8 @@ export function lights(scene: Pick<CityScene, "solids" | "placed">, rng: Rng, so
     });
     counts[b] = { candidates: n, on: nOn, warm: nWarmOn };
   }
-  for (const w of sample(windows.filter((w) => ["downtown", "residential"].includes(scene.placed[w.owner]!.placed.neighborhood)), MAX_ANIMABLE, rng)) w.animable = true;
+  const quota = animableQuota(Object.fromEntries(ANIMABLE_BARRIOS.map((b) => [b, counts[b].candidates])) as Record<AnimableKey, number>);
+  for (const b of ANIMABLE_BARRIOS) for (const w of sample(windows.filter((w) => scene.placed[w.owner]!.placed.neighborhood === b), quota[b], rng)) w.animable = true;
 
   // Neons of the capped neighborhoods (NEON_CAPS): open frontage facing the camera, 2.4..3.6 above the lot, in view and one per shop
   // (deduplicated after occlusion: if the front of a corner shop is hidden, its other side counts).

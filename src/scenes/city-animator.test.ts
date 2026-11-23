@@ -16,13 +16,13 @@ describe("city-animator", () => {
     const a = cityAnimator(city(createRng(7), createRng(8), createRng(9)), createRng(3), { reducedMotion: true });
     expect(a.tick(1000).size).toBe(0);
   });
-  it("city.neon is a cyan/magenta accent layer (plus the street neon) that changes as the clock advances", () => {
+  it("city.neon is a cyan/magenta accent layer (plus the street neon and the amber TELECOM tip) that changes as the clock advances", () => {
     const scene = city(createRng(7), createRng(8), createRng(9));
     const a = cityAnimator(scene, createRng(3), { reducedMotion: false });
     const street = new Set(scene.lights.neons.flatMap((n) => n.accents.flatMap((x) => (x.kind === "poly" ? [x.pts] : []))));
     const l0 = a.layer("city.neon");
     expect(l0.kind).toBe("accent");
-    if (l0.kind === "accent") for (const x of l0.accents) if (x.kind !== "poly" || !street.has(x.pts)) expect(x.color).toMatch(/^(cyan|magenta)/);
+    if (l0.kind === "accent") for (const x of l0.accents) if ((x.kind !== "poly" || !street.has(x.pts)) && x.color !== "amber") expect(x.color).toMatch(/^(cyan|magenta)/);
     let seen = false;
     for (let i = 0; i < 20; i++) if (a.tick(100).has("city.neon")) seen = true;
     expect(seen).toBe(true);

@@ -59,9 +59,9 @@ describe("assembleWorld", () => {
     const { animators } = assembleWorld(["portfolio"], { reducedMotion: true });
     expect(animators.some((x) => x.ids.includes("rail.train"))).toBe(true);
   });
-  it("the tech.neon layer lives in a Resume animator and is dimmed by the veil", () => {
+  it("the tech.signs layer lives in a Resume animator and is dimmed by the veil", () => {
     const { animators } = assembleWorld(undefined, { reducedMotion: true });
-    const a = animators.find((x) => x.ids.includes("tech.neon"));
+    const a = animators.find((x) => x.ids.includes("tech.signs"));
     expect(a?.zone).toBe("cv");
     expect(focusAlphas("blog").cv.accents).toBe(ACCENT_DIM);
     expect(focusAlphas("portfolio").cv.accents).toBe(ACCENT_DIM);

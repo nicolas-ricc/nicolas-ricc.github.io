@@ -2,12 +2,13 @@ import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { bounds, type Solid } from "../iso/solids";
 import { createRng, SEED } from "../map/seed";
-import { blockAt, faces, newCtx } from "./neighborhood-fixtures";
+import { blockAt, faces, inside, newCtx } from "./neighborhood-fixtures";
 import { plaza } from "./neighborhood-plaza";
-import { suburbBlocks, type SprawlBlock } from "./sprawl-grid";
+import { techBlocks, type SprawlBlock } from "./sprawl-grid";
 import { MAX_TECH_H, tech } from "./tech";
 import { FACE_CAPS, blockRect, facesIn, insideInflated } from "./tech-budget";
 import { PLAZAS, blockParity, zoneKinds } from "./tech-zoning";
+import { southStreets } from "./tech-streets";
 import { zoneRng } from "./world";
 
 type Prism = Solid & { kind: "prism" };
@@ -50,11 +51,11 @@ type Parts = ReturnType<typeof parts>;
 /** Quadrant (in local coordinates) of the footprint center of a set of solids. */
 function quadrant(b: SprawlBlock, ss: readonly Solid[]): string {
   const bs = ss.map(bounds), cx = (Math.min(...bs.map((q) => q.min.x)) + Math.max(...bs.map((q) => q.max.x))) / 2 - b.x, cy = (Math.min(...bs.map((q) => q.min.y)) + Math.max(...bs.map((q) => q.max.y))) / 2 - b.y;
-  return (cy < 9 ? "N" : "S") + (cx > 12 ? "E" : "W");
+  return (cy < b.d / 2 ? "N" : "S") + (cx > b.w / 2 ? "E" : "W");
 }
 
 /** Signed distances from a point to the axes of the two paths (NW→SE and SW→NE). */
-const axes = (b: SprawlBlock, px: number, py: number): [number, number] => [(3 * (px - b.x) - 4 * (py - b.y)) / 5, (3 * (px - b.x) + 4 * (py - b.y) - 72) / 5];
+const axes = (b: SprawlBlock, px: number, py: number): [number, number] => { const h = Math.hypot(b.w, b.d); return [(b.d * (px - b.x) - b.w * (py - b.y)) / h, (b.d * (px - b.x) + b.w * (py - b.y) - b.w * b.d) / h]; };
 /** The four corners of the footprint box on the same side of each axis and at ≥ 0.6 from it (outside the 1.2 path). */
 function offPaths(b: SprawlBlock, s: Solid): boolean {
   const q = bounds(s), corners = [[q.min.x, q.min.y], [q.max.x, q.min.y], [q.min.x, q.max.y], [q.max.x, q.max.y]] as const;
@@ -70,8 +71,8 @@ function checkPlay(b: SprawlBlock, p: Parts): void {
   expect(p.strips, at).toHaveLength(0);
   expect(p.paths, at).toHaveLength(2);
   const fps = p.paths.map((s) => { expect(s.z, at).toBeCloseTo(0.05, 9); return s.footprint.map((q) => [+(q.x - x).toFixed(6), +(q.y - y).toFixed(6)]); });
-  expect(fps, at).toContainEqual([[-1, 0], [1, 0], [25, 18], [23, 18]]);
-  expect(fps, at).toContainEqual([[-1, 18], [23, 0], [25, 0], [1, 18]]);
+  expect(fps, at).toContainEqual([[-1, 0], [1, 0], [b.w + 1, b.d], [b.w - 1, b.d]]);
+  expect(fps, at).toContainEqual([[-1, b.d], [b.w - 1, 0], [b.w + 1, 0], [1, b.d]]);
 
   const ring = one(p.ring, `carousel ${at}`), roof = one(p.roof, `roof ${at}`);
   expect([ring.r, ring.h, ring.at.z]).toEqual([1.6, 0.4, 0.05]);
@@ -112,29 +113,33 @@ function checkRest(b: SprawlBlock, p: Parts, dots: readonly (Accent & { kind: "d
   for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) expect(apart(all[i]!, all[j]!), `${at} ${JSON.stringify(bounds(all[i]!))} × ${JSON.stringify(bounds(all[j]!))}`).toBe(true);
 }
 
-// synthetic blocks: (36, 328) parity 0, (6, 328) parity 1; plus the two fixed plazas
-const base = blockAt(PLAZAS[0].x, PLAZAS[0].y);
-const synth = [{ ...base, x: 36, y: 328 }, { ...base, x: 6, y: 328 }, base, blockAt(PLAZAS[1].x, PLAZAS[1].y)];
+// the two fixed plazas (parcels of 24 × 24: parity 1 and 0) and synthetic rects 24 × 24, 21 × 24 and 20 × 20 of both parities
+const base = blockAt(PLAZAS[0].col, PLAZAS[0].row);
+const synth: SprawlBlock[] = [base, blockAt(PLAZAS[1].col, PLAZAS[1].row), ...[[24, 24], [21, 24], [20, 20]].flatMap(([w, d]) => [{ x: 103, y: 441, w: w!, d: d!, dist: 200 }, { x: 133, y: 441, w: w!, d: d!, dist: 200 }])];
 const build = (b: SprawlBlock, seed = 7) => { const ctx = newCtx(createRng(seed)); plaza(ctx, b); return ctx; };
 const dotsOf = (accents: readonly Accent[]) => accents.filter((a): a is Accent & { kind: "dot" } => a.kind === "dot");
 
 describe("neighborhood plaza (#254), direct call", () => {
   it("the synthetic ones cover both parities and so do the fixed ones", () => {
-    expect(synth.map(blockParity)).toEqual([0, 1, 0, 1]);
+    expect(new Set(synth.map(blockParity))).toEqual(new Set([0, 1]));
+    expect(synth.map((b) => [b.w, b.d])).toEqual(expect.arrayContaining([[24, 24], [21, 24], [20, 20]]));
   });
 
   for (const b of synth) {
-    it(`(${b.x},${b.y}) parity ${blockParity(b)}: diagonal paths and play structures in their quadrant`, () => {
+    it(`(${b.x},${b.y}) ${b.w} × ${b.d}: everything inside rect ± 2.5 (seeds 1, 7, 11)`, () => {
+      for (const seed of [1, 7, 11]) for (const s of [...build(b, seed).solids, ...build(b, seed).ground]) expect(inside(s, b, 2.5), `${seed} ${JSON.stringify(bounds(s))}`).toBe(true);
+    });
+    it(`(${b.x},${b.y}) ${b.w} × ${b.d} parity ${blockParity(b)}: diagonal paths and play structures in their quadrant`, () => {
       for (const seed of [1, 2, 3]) checkPlay(b, parts(build(b, seed).solids));
     });
-    it(`(${b.x},${b.y}): play structures off the paths and without overlapping`, () => {
+    it(`(${b.x},${b.y}) ${b.w} × ${b.d}: play structures off the paths and without overlapping`, () => {
       for (const seed of [1, 2, 3]) {
         const p = parts(build(b, seed).solids), play = groups(p).slice(0, 4);
         for (const g of play) for (const s of g) expect(offPaths(b, s), JSON.stringify(bounds(s))).toBe(true);
         for (let i = 0; i < play.length; i++) for (let j = i + 1; j < play.length; j++) for (const a of play[i]!) for (const c of play[j]!) expect(apart(a, c)).toBe(true);
       }
     });
-    it(`(${b.x},${b.y}): benches, trees and street lamps; within the cap`, () => {
+    it(`(${b.x},${b.y}) ${b.w} × ${b.d}: benches, trees and street lamps; within the cap`, () => {
       for (const seed of [1, 2, 3, 4, 5]) {
         const ctx = build(b, seed);
         checkRest(b, parts(ctx.solids), dotsOf(ctx.accents));
@@ -151,16 +156,23 @@ describe("neighborhood plaza (#254), direct call", () => {
 
 // the real world: the `plaza` blocks according to the pre-pass
 const scene = tech(zoneRng(SEED, "cv", 2));
-const everything = [...scene.solids, ...scene.ground];
-const blocks = suburbBlocks(), kinds = zoneKinds(zoneRng(SEED, "cv", 2), blocks);
+// the south street furniture (lamps, trees on the sidewalk) falls inside a block's rect: take it out as a multiset (#478)
+const furniture = southStreets();
+const minus = (solids: readonly Solid[], drop: readonly Solid[]): Solid[] => {
+  const left = new Map<string, number>();
+  for (const s of drop) { const k = JSON.stringify(s); left.set(k, (left.get(k) ?? 0) + 1); }
+  return solids.filter((s) => { const k = JSON.stringify(s), n = left.get(k) ?? 0; if (n > 0) { left.set(k, n - 1); return false; } return true; });
+};
+const everything = minus([...scene.solids, ...scene.ground], [...furniture.solids, ...furniture.ground]);
+const blocks = techBlocks(), kinds = zoneKinds(zoneRng(SEED, "cv", 2), blocks);
 const plazaBlocks = blocks.filter((_, i) => kinds[i] === "plaza");
 const own = (b: SprawlBlock) => everything.filter((s) => insideInflated(s, blockRect(b)));
 const dotsIn = (b: SprawlBlock) => { const r = blockRect(b); return dotsOf(scene.accents).filter((d) => d.at.x >= r.x0 && d.at.x <= r.x1 && d.at.y >= r.y0 && d.at.y <= r.y1); };
 
 describe("neighborhood plaza (#254), over the world", () => {
-  it("there are 7 plazas, including the two fixed ones", () => {
-    expect(plazaBlocks).toHaveLength(7);
-    for (const p of PLAZAS) expect(plazaBlocks.some((b) => b.x === p.x && b.y === p.y)).toBe(true);
+  it("there are 8 plazas (2 fixed + 6 drawn; two narrow parcels that drew a plaza are low), including the two fixed ones", () => {
+    expect(plazaBlocks).toHaveLength(8); // measured on agent/479 without the west (#479): the rng shift redrew the south; it was 5
+    for (const p of PLAZAS) expect(plazaBlocks.some((b) => b.parcel?.cell.col === p.col && b.parcel.cell.row === p.row)).toBe(true);
   });
 
   it("each plaza: paths, play structures by parity, benches, trees and street lamps, no overlaps and nothing on the paths", () => {

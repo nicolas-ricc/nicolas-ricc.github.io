@@ -1,5 +1,5 @@
 import { v3 } from "../iso/geometry";
-import { homeWindow, wallWindow, type NeighborhoodCtx } from "./neighborhood";
+import { base, homeWindow, wallWindow, type NeighborhoodCtx } from "./neighborhood";
 import { lamp, place } from "../kit/props";
 import { prism } from "./city-pieces";
 import type { Plate } from "../iso/plate";
@@ -42,11 +42,11 @@ function courtyard(ctx: NeighborhoodCtx, b: SprawlBlock): void {
 
 /** School: plinth, classroom block, courtyard, two trees, street lamps and lit staircase. */
 export function school(ctx: NeighborhoodCtx, b: SprawlBlock): void {
-  ctx.solids.push(prism(b.x, b.y, 0, b.w, b.d, Z, "paving"));
+  base(ctx, b, Z, "paving");
   classrooms(ctx, b);
   courtyard(ctx, b);
-  for (const ty of [3, 15]) ctx.solids.push({ kind: "cone", at: v3(b.x + 24.8, b.y + ty, 0), r: 1.4, h: 4, mat: "leaf", sides: 6 });
-  place(ctx.solids, ctx.accents, lamp(v3(b.x + 23, b.y + 18.6, 0)));
+  for (const ty of [3, b.d - 3]) ctx.solids.push({ kind: "cone", at: v3(b.x + b.w + 0.8, b.y + ty, 0), r: 1.4, h: 4, mat: "leaf", sides: 6 });
+  place(ctx.solids, ctx.accents, lamp(v3(b.x + b.w - 1, b.y + b.d + 0.6, 0)));
   ctx.accents.push({ kind: "dot", at: v3(b.x + 11.2, b.y + 9, 3.2), r: 0.5, color: "amber" });
   for (const [z0, z1] of [[4.5, 6.1], [7, 8.6]] as const) homeWindow(ctx, wallWindow({ x: b.x + 11 }, b.y + 11, b.y + 12, z0, z1), true, "school-staircase");
 }

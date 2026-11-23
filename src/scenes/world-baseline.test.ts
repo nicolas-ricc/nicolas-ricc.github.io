@@ -13,6 +13,8 @@ const hash = (v: unknown): string => fingerprint(v as Solid[]);
 // keyed by exhibit id (kept in Spanish: it is the storybook URL hash); value is solids/accents
 const PIECES: Record<string, string> = {
   "tanque-agua": "d0fbfe32/741638a5", "grua-torre": "1b24d1ba/b6ded264", farol: "af0034c3/b3c5d09b", tren: "acc6e446/741638a5",
+  // #477: manzana-distrito becomes a piece (glassTower, moderno, on the lot of plan parcel (−77, 201)); new, so no earlier hash moved
+  "manzana-distrito": "6e7d0baa/741638a5",
   campus: "b68f62d8/dcd2e4b1", selva: "97e30e40/741638a5", viga: "9f08a4fc/741638a5", carguero: "2eeb07a8/89ab3362",
   remolcador: "98fd0f53/687d5415", convoy: "63361eab/35f8cf27", lancha: "8a99e66f/f2a9b6e3",
   // #402: STS boom (3 behind to 8 ahead, rising 1.7), taller mast, two stays, no light housing; the piece passes light: false, so its accents are empty
@@ -20,9 +22,9 @@ const PIECES: Record<string, string> = {
   // #360: the four sign placeholders are new pieces; the earlier twelve did not move
   // #362: grafiti replaces its placeholder; the other pieces did not move
   // #375: gap 2 and KERN respace the words of the four signs (and the platform posts move in)
-  // #378: cartel-torre (tower crown with helipad) replaces the two cartel-helipuerto placeholders
+  // #378: cartel-torre (tower crown with helipad) replaces the two cartel-helipuerto placeholders (#474: now the hotel stand-in and its sign)
   // RESUME in Neon Light: greenMid marquee faces and warm bulbs on a glass panel replace the stroke-font "Resume" (panel and frame follow the new cap height)
-  "cartel-torre": "65afa18c/8c310d6c",
+  "cartel-torre": "934ee990/f68dd77a",
   // #379: the tinker sign (cartel-taller, on its hall stand-in) replaces grafiti; re-recorded after the ladder fix and the closed-bowl bulbs (stage 6)
   // PORTFOLIO in CNRGN Builder: filled block letters (marquee bulbs, neon tube and welded frame follow the contours)
   // #401: floodlight removed

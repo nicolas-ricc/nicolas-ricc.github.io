@@ -12,4 +12,8 @@ export const STYLES: Record<StyleId, Style> = {
   warehouses: { id: "warehouses", mat: "brick", trim: "steel", roof: "sheetGreen", tone: 0, floorH: 3.5, window: "windowWarm" },
   freight: { id: "freight", mat: "sheetGreen", trim: "steel", roof: "sheetTeal", tone: 0, floorH: 3, window: "windowCool" },
   harbor: { id: "harbor", mat: "brick", trim: "copper", roof: "sheetTeal", tone: 0, floorH: 3, window: "windowWarm" },
+  clasico: { id: "clasico", mat: "plaster", trim: "stone", roof: "copper", tone: 0, floorH: 3, window: "windowWarm" },
+  transicion: { id: "transicion", mat: "office", trim: "stone", roof: "officeDark", tone: 0, floorH: 3.2, window: "windowWarm" },
+  moderno: { id: "moderno", mat: "curtain", trim: "officeDark", roof: "copper", tone: 0, floorH: 3, window: "windowCool" },
+  bajo: { id: "bajo", mat: "plaster", trim: "terracotta", roof: "terracotta", tone: 0, floorH: 2.8, window: "windowWarm" },
 };

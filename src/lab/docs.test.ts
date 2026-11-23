@@ -1,11 +1,11 @@
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { project } from "../iso/project";
 import { COVER_LAPTOP, COVER_PHONE, GROUND_ASPECT, layoutGaps, SIGN_FONT, SIGN_RULES, signMetrics, staticContrast } from "../kit/legibility";
 import { counterClearance, letterGaps, measureText, rhythm } from "../kit/lettering";
-import { TOWER } from "../scenes/city-grid";
-import { CROWN_SITE } from "../scenes/sign-crown";
+import { RESUME_SIGN, SIGN_SITE, slabFootprint } from "../scenes/sign-hotel";
 import { BLOG_SIGNS, CYCLE_POSES, PITCH, PLATFORM_DECK, PLATFORM_SITES, poseAt, ROLL, signAt, WRITING_CAP } from "../scenes/sign-platform";
 import { RAFT } from "../scenes/raft";
 import { ISO_TONES } from "../map/palette-iso";
@@ -13,8 +13,6 @@ import { CHAINSAW_BAR } from "../kit/marquee";
 import { writingSite } from "../world/signs";
 import { LANE_BACK, LANE_OUT } from "../scenes/sea-anim";
 import { HEADLAND_SHIFT } from "../map/geo";
-import { buildRenderList } from "../iso/render-list";
-import { assembleWorld } from "../world/assemble";
 import { COVER_FOCUS_U } from "../world/view";
 import { SHIPYARD_HALLS, TINKER_SITE } from "../scenes/sign-tinker";
 import { EXHIBITS } from "./exhibits";
@@ -152,16 +150,18 @@ describe("coastal neighborhood documentation (#256)", () => {
   const png = (n: string) => readFileSync(`${ROOT}docs/superpowers/specs/assets/2026-10-27-barrio/${n}.png`);
   const size = (b: Buffer) => [b.readUInt32BE(16), b.readUInt32BE(20)];
 
-  it("the world paragraph tells of the coastal neighborhood and leaves the tech district to the west", () => {
+  it("the world paragraph tells of the coastal neighborhood and the city reaching the edge of the view", () => {
     for (const re of [/coastal residential neighborhood/, /monoblocks/, /houses with tile roofs/, /school/, /club/, /plazas/, /illuminated waterfront on the pier/]) expect(world).toMatch(re);
-    expect(world).toMatch(/tech district west of the city/);
+    expect(world).toMatch(/`tech\.ts` \(Resume's coastal residential neighborhood south of the southern avenue/);
+    expect(world).toMatch(/the city itself reaches the edge of the view/);
+    expect(world).not.toMatch(/tech district west of the city/);
     expect(world).not.toMatch(/west and south of the city/);
   });
   it("README lists the neighborhood spec among the specs", () => {
     expect(lab).toContain("2026-10-27-barrio-costero-design.md");
   });
   it("the docstring of tech.ts describes the neighborhood and points to its spec", () => {
-    const end = techSrc.indexOf("export interface Tower");
+    const end = techSrc.indexOf("export interface TechScene");
     expect(end).toBeGreaterThan(0);
     const doc = techSrc.slice(0, end);
     expect(doc).toMatch(/coastal residential neighborhood/);
@@ -530,7 +530,7 @@ describe("zone signs redesign documentation (#374)", () => {
   const xExtent = (pts: { x: number; y: number; z: number }[]) => { const xs = pts.map((p) => project(p).x); return Math.max(...xs) - Math.min(...xs); };
   const rect = (x0: number, y0: number, x1: number, y1: number) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(([x, y]) => ({ x: x!, y: y!, z: 0 }));
   const HOSTS = {
-    RESUME: rect(TOWER.x, TOWER.y, TOWER.x + TOWER.w, TOWER.y + TOWER.d),
+    RESUME: slabFootprint().map((q) => ({ x: q.x, y: q.y, z: 0 })), // the hotel slab since #474 (64 × 8)
     PORTFOLIO: rect(SHIPYARD_HALLS[1]!.x0, SHIPYARD_HALLS[1]!.y0, SHIPYARD_HALLS[1]!.x1, SHIPYARD_HALLS[1]!.y1),
     WRITING: PLATFORM_DECK.map((q) => ({ x: q.x, y: q.y, z: 0 })),
   };
@@ -561,7 +561,8 @@ describe("zone signs redesign documentation (#374)", () => {
     // built from the constants, with the spec's U+2212 minus, so a moved site fails here; the platform's is a literal since #427
     // (it left PLATFORM_SITE for two sites, PLATFORM_SITES, and this spec records the site of its time)
     const at = (v: { x: number; y: number; z: number }) => `(${[v.x, v.y, v.z].join(", ").replace(/-/g, "−")})`;
-    for (const s of ["CROWN_SITE", at(CROWN_SITE), "TINKER_SITE", at(TINKER_SITE), "PLATFORM_SITE", "(392, 178)"]) expect(sites, s).toContain(s);
+    // the crown's site is a literal since #474 (the sign moved to the hotel, SIGN_SITE)
+    for (const s of ["CROWN_SITE", "(129, 227, 30)", "TINKER_SITE", at(TINKER_SITE), "PLATFORM_SITE", "(392, 178)"]) expect(sites, s).toContain(s);
   });
   it("§8 exists after §7 with its four parts and names the report, the font, the contexts and the sites", () => {
     expect(spec.search(/^## 8\. Desvíos y medición$/m)).toBeGreaterThan(spec.search(/^## 7\. /m));
@@ -811,7 +812,8 @@ describe("zone signs integration (#394)", () => {
   it("§3 carries the final site of each sign, as the constants say", () => {
     const sites = part(3);
     // the platform's row is a literal since #427: the spec is history, and the platform now has two sites (PLATFORM_SITES)
-    const rows = { CROWN_SITE: at(CROWN_SITE), TINKER_SITE: at(TINKER_SITE), PLATFORM_SITE: "(392, 178)" };
+    // the crown's row is a literal since #474: the spec is history and the sign lives on the hotel (SIGN_SITE)
+    const rows = { CROWN_SITE: "(129, 227, 30)", TINKER_SITE: at(TINKER_SITE), PLATFORM_SITE: "(392, 178)" };
     for (const [name, value] of Object.entries(rows)) expect(row(sites, `| \`${name}\` |`), name).toContain(value);
   });
   // literals since #428: COVER_FOCUS_U moved to 0.39 and Writing has two sites, so the live boxes no longer match; the spec is history
@@ -985,9 +987,8 @@ describe("#423 closing (#429)", () => {
     for (const s of needles) expect(dev, s).toContain(s);
   });
   it("§8 carries the static polygons and accents of the world after the story, as the budget tests count them", () => {
-    const w = assembleWorld(undefined, { reducedMotion: true }).scene;
-    const polys = buildRenderList([...w.terrain.ground, ...w.ground, ...w.solids]).length;
-    for (const n of [polys, w.accents.length]) expect(dev, String(n)).toContain(count(n));
+    // literals since #472: the spec records the world of its time (46 146 polygons, 1 753 accents) and the new west bank changes the live counts
+    for (const n of [46_146, 1_753]) expect(dev, String(n)).toContain(count(n));
   });
   it("README and CONTEXT.md name no old identifier, no 0.35 focus and no headland capping the shipyard", () => {
     for (const [name, txt] of [["README.md", readme], ["CONTEXT.md", glossary]] as const) {
@@ -1225,5 +1226,143 @@ describe("WRITING on a plank raft (#451)", () => {
     for (const s of ["2026-11-20-writing-balsa-tablones-design.md", "`--tick", "REPORT-t", "`?tick=`"]) expect(readme, s).toContain(s);
     const p = (readme.split(/\n\s*\n/).find((x) => x.includes("zone signs of #374")) ?? "").replace(/\s+/g, " ");
     for (const s of ["no exceptions", "`--tick`"]) expect(p, s).toContain(s);
+  });
+});
+
+describe("hotel sign level 3 and docs closing (#475)", () => {
+  const SPECS = `${ROOT}docs/superpowers/specs/`;
+  const read = (path: string) => (existsSync(path) ? readFileSync(path, "utf8") : "");
+  const sha = (path: string) => createHash("sha256").update(readFileSync(path)).digest("hex");
+  const png = (path: string) => {
+    const b = readFileSync(path);
+    expect(b.subarray(1, 4).toString(), path).toBe("PNG");
+    return [b.readUInt32BE(16), b.readUInt32BE(20)];
+  };
+  const LEVEL3 = `${SPECS}assets/carteles-legibilidad/`;
+  const REPORTS = ["REPORT.md", "REPORT-t7919.md", "REPORT-t15838.md"];
+  const ID = "cartel-torre-escena";
+  /** The section of `id` at `scale` in the report `md` ("" when missing). */
+  const section = (md: string, id: string, scale: string) => { const at = md.indexOf(`## ${id} a ${scale}\n`); return at < 0 ? "" : md.slice(at).split(/\n(?=## )/)[0]!; };
+  const cell = (md: string, id: string, scale: string, metric: string) =>
+    section(md, id, scale).split("\n").find((l) => l.startsWith(`| ${metric} |`))?.split("|")[2]?.trim() ?? "";
+  // the crown's level-3 crops of 2026-11-20 (the rest and tick runs wrote the same bytes)
+  const CROWN_CROPS = [
+    "b0e4599c105bd20aedd51d8dac34f9f481b5d2491f1a5629a231197de1f101cf", "e04814f97578cf21ff72a0f049b21411b7fadba836ad5b39aba475e08121fbbf",
+    "a7dc0d07cb2b612333397abb1fd841e9c24405af3116e2330e5951ab5f219140", "0678eb52d42bfa710e4e4988cec41a2bce759c6b9f632ac8ce2d637193002288",
+  ];
+  // the crown's scene captures of #378
+  const CROWN_SCENES = { "117": "3236612d57b4f6868edc4eca75b4c66546170c09400a4e375630a7d550f846de", "083": "482fd4d8ceceaf5b755e01c0f6c7b83cb9b5c3c5e9afe2c424f93091bd46cf51" };
+  const between = (txt: string, from: RegExp, to?: RegExp) => {
+    const i = txt.search(from);
+    if (i < 0) return "";
+    // the end is searched after the heading line, so a `to` that matches the heading itself does not cut it
+    const rest = txt.slice(i), nl = rest.indexOf("\n") + 1, j = to && nl > 0 ? rest.slice(nl).search(to) : -1;
+    return j < 0 ? rest : rest.slice(0, nl + j);
+  };
+  const flat = (txt: string) => txt.replace(/\s+/g, " ");
+  const minus = (v: number, d: number) => v.toFixed(d).replace(/^-/, "\u2212");
+  const glossary = read(`${ROOT}CONTEXT.md`);
+  const entryOf = (name: string) => { const at = glossary.indexOf(`### ${name}\n`), rest = glossary.slice(at + name.length + 5); return at < 0 ? "" : rest.slice(0, Math.max(0, rest.search(/^### /m)) || rest.length); };
+
+  it("the three reports are dated 2026-11-23 or later, with cartel-torre-escena ✓ at both scales and OCR RESUME", () => {
+    for (const file of REPORTS) {
+      const md = read(`${LEVEL3}${file}`);
+      const date = md.match(/^Fecha: (\d{4}-\d{2}-\d{2})$/m)?.[1] ?? "";
+      expect(date >= "2026-11-23", file).toBe(true);
+      for (const sc of ["1.17", "0.83"]) {
+        const sec = section(md, ID, sc);
+        for (const m of ["contraste", "halo", "OCR"]) expect(sec, `${file} ${sc} ${m}`).toMatch(new RegExp(`^\\| ${m} \\|.*\\| ✓ \\|$`, "m"));
+        expect(sc === "1.17" ? ["`RESUME`"] : ["`RESUME`", "`resume`"], `${file} ${sc}`).toContain(cell(md, ID, sc, "OCR"));
+      }
+    }
+  });
+  it("the twelve cartel-torre-escena crops and the two scene captures are no longer the crown's", () => {
+    for (const s of ["117", "083"]) for (const t of ["", "-t7919", "-t15838"]) for (const k of ["", "-ocr"]) {
+      const path = `${LEVEL3}${ID}-${s}${t}${k}.png`;
+      expect(existsSync(path), path).toBe(true);
+      expect(CROWN_CROPS, path).not.toContain(sha(path));
+    }
+    for (const [s, old] of Object.entries(CROWN_SCENES)) {
+      const path = `${SPECS}assets/374-carteles/${ID}-${s}.png`;
+      expect(png(path), path).toEqual([3200, 1800]);
+      expect(sha(path), path).not.toBe(old);
+    }
+  });
+  it("the 2026-11-18 spec §8.3 says the sign is the hotel's since #471", () => {
+    const next = read(`${SPECS}2026-11-18-composicion-responsive-design.md`);
+    expect(flat(between(next, /^### 8\.3 /m, /^#/m))).toContain("Desde #471 el cartel es el del hotel (cap 12)");
+  });
+  it("the 2026-11-15 spec closes the #474 notes: the §8.1 level-3 cells of cartel-torre-escena are REPORT.md's", () => {
+    const spec = read(`${SPECS}2026-11-15-carteles-de-zona-rediseno-design.md`), report = read(`${LEVEL3}REPORT.md`);
+    expect(spec).not.toMatch(/hasta #475/);
+    const measures = between(spec, /^### 8\.1 /m, /^### 8\.2 /m);
+    for (const sc of ["1.17", "0.83"]) {
+      const line = measures.split("\n").find((l) => l.startsWith(`| \`${ID}\` | ${sc} |`)) ?? "";
+      for (const m of ["contraste", "halo", "OCR"]) {
+        const v = cell(report, ID, sc, m);
+        expect(v, `${sc} ${m}`).not.toBe("");
+        expect(line, `${sc} ${m} ${v}`).toContain(v);
+      }
+    }
+  });
+  it("the storybook index's Resume row lists hotel and tells the sign on the hotel facade", () => {
+    const story = read(`${SPECS}2026-10-17-storybook-estructuras-design.md`);
+    const cols = (story.split("\n").find((l) => l.startsWith("| Resume: ciudad |")) ?? "").split("|").map((c) => c.trim());
+    const regions = cols[2] ?? "", pieces = cols.at(-2) ?? "";
+    expect(regions.split(", ")).toContain("hotel");
+    expect(regions.split(", ")).not.toContain("torre");
+    for (const s of ["el cartel de Resume en la fachada del hotel", "`cartel-torre`", "`cartel-torre-escena`", "recorte del mundo"]) expect(pieces, s).toContain(s);
+    expect(pieces).not.toMatch(/corona|helipuerto/);
+  });
+  it("README's world and storybook paragraphs name the hotel and its sign, not the tower crown or the helipad", () => {
+    const paragraphs = readme.split(/\n\s*\n/).map(flat);
+    const world = paragraphs.find((p) => p.includes("`city.ts`")) ?? "", story = paragraphs.find((p) => p.includes("/lab/storybook.html")) ?? "";
+    expect(world).toContain("hotel with the RESUME sign on its facade");
+    for (const [name, p] of Object.entries({ world, story })) {
+      expect(p, name).toContain("hotel");
+      expect(p, name).not.toMatch(/helipad|crown|office tower/i);
+    }
+  });
+  it("CONTEXT.md Landmark names the hotel; Landmark, Zone and Parcel do not name the tower", () => {
+    expect(entryOf("Landmark")).toContain("the hotel for Resume");
+    for (const name of ["Landmark", "Zone", "Parcel"]) {
+      expect(entryOf(name), name).not.toBe("");
+      expect(entryOf(name), name).not.toMatch(/\btower\b(?! crane)/i);
+    }
+  });
+  it("the 2026-11-22 spec §7.5 has a deviations table with cap 12, SIGN_SITE, the screen box and the phones", () => {
+    const spec = read(`${SPECS}2026-11-22-resume-centro-costero-design.md`);
+    const seven = between(spec, /^## 7\. /m, /^## 8\. /m), dev = flat(between(seven, /^### 7\.5 Desvíos$/m));
+    expect(dev).not.toBe("");
+    expect(between(seven, /^### 7\.5 /m).split("\n").some((l) => l.startsWith("| "))).toBe(true);
+    const pts = RESUME_SIGN.glyphs.flatMap((g) => g.quads.flat()).map(project);
+    const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
+    const box = `${minus(Math.min(...xs), 1)}..${minus(Math.max(...xs), 1)} × ${minus(Math.min(...ys), 1)}..${minus(Math.max(...ys), 1)}`;
+    const site = `(${[SIGN_SITE.x, SIGN_SITE.y, SIGN_SITE.z].map((v) => minus(v, 2)).join(", ")})`;
+    for (const s of ["`HOTEL_CAP`", "12", "`backingW`", "`SIGN_SITE`", site, box, "28 %", "48 %", "37 %", "430×932", "390×750", "360×740", "`COVER_FOCUS_U`", "`labelLayout`"]) expect(dev, s).toContain(s);
+  });
+});
+
+describe("the centro costero spec is closed (#480)", () => {
+  const spec = readFileSync(`${ROOT}docs/superpowers/specs/2026-11-22-resume-centro-costero-design.md`, "utf8");
+  const at = spec.indexOf("## 12. Desvíos y medición"), s12 = at < 0 ? "" : spec.slice(at);
+  const CAPTURES = [["sitio.png", 1600], ["sitio-velo-cv.png", 1600], ["sitio-velo-cv-hover.png", 1600], ["lab-world-bloom.png", 1600], ["sitio-390x750.png", 390], ["sitio-820x1180.png", 820]] as const;
+  it("README lists the centro costero spec among the specs", () => {
+    expect(readme).toContain("2026-11-22-resume-centro-costero-design.md");
+  });
+  it("the spec is implemented and has §12", () => {
+    expect(spec).toContain("**Estado:** implementado (#471; rama feature/471-resume-centro-costero)");
+    expect(at).toBeGreaterThan(0);
+  });
+  it("§12 records the deviations and the measurement", () => {
+    for (const s of ["`HOTEL_CAP` 12", "28 %", "48 %", "37 %", "430×932", "390×750", "360×740", "lado < 9", "(−107, 231)", "TELECOM", "MAX_ANIMABLE", "16.80", "16.37", "RenderTexture", ...CAPTURES.map(([f]) => f)]) expect(s12, s).toContain(s);
+  });
+  it("every closing capture exists, is cited in §12 and is 2×", () => {
+    for (const [f, w] of CAPTURES) {
+      const rel = `assets/2026-11-22-resume-centro-costero/cierre/${f}`, path = `${ROOT}docs/superpowers/specs/${rel}`;
+      expect(existsSync(path), f).toBe(true);
+      expect(s12, f).toContain(rel);
+      expect(readFileSync(path).readUInt32BE(16), f).toBe(2 * w);
+    }
   });
 });

@@ -226,6 +226,14 @@ Vitest, sobre funciones puras con `coverView` y `signBox`:
    1024×768, 1000×1000, 900×1000, 820×1180, 768×1024, 430×932, 390×750 y
    360×740, las cajas de las tres palabras (con el sitio que elige
    `writingSite`) y la linterna del faro caen enteras dentro del host.
+
+   *Desvío (2026-11-23, #474):* desde #471 RESUME vive en la fachada del hotel
+   (`SIGN_SITE`), más ancho que la corona de la torre. Con `COVER_FOCUS_U` en 0.39
+   (decisión D10 de #471) la palabra ya no cabe entera en los tres teléfonos:
+   medido con `coverView` y `signBox` (ancho visible sobre ancho del cartel), se
+   ve el 27.7 % en 430×932, el 48.4 % en 390×750 y el 36.5 % en 360×740 (la
+   historia calculó 28, 48 y 37 %), y su etiqueta pasa al modo `edge`. Todo host
+   de 640 px de ancho o más lo muestra entero, con 8 px de margen.
 2. Writing nunca queda en el centro. El centro de su palabra cumple
    x ≥ 0,52·w e y ≥ 0,68·h en todos los tamaños de (1). En los de aspecto
    ≥ 16:9 cumple además x ∈ [0,70, 0,88]·w.
@@ -264,6 +272,11 @@ Criterios de las capturas:
 - Writing está abajo a la derecha;
 - en 390×750 no hay ningún rótulo de emergencia pegado al borde;
 - en escritorio los barcos no pasan por encima de Writing ni lo tapan.
+
+*Desvío (2026-11-23, #474):* en las capturas de 430×932, 390×750 y 360×740 el
+cartel de RESUME queda cortado por el borde del host (27.7 %, 48.4 % y 36.5 %
+visibles): es el efecto de #471 que registra el desvío de §5.1, no un defecto de
+la captura. Su etiqueta de emergencia pegada al borde es esperada ahí.
 
 Si cruzan el cartel o compiten con él a simple vista, se corre el sitio ancho
 hacia el noreste (más arriba a la derecha en pantalla) y se anota en el PR.
@@ -347,11 +360,12 @@ sitios de la plataforma), y todos siguen en ✓. Desde #441 el cartel es la tabl
 flotante y el OCR lee `WRITING` en `plataforma-escena*` (spec 2026-11-15 §8.2);
 las filas de la plataforma se remidieron en #445 y el nivel 3 no excusa ninguna.
 Desde #451 el cartel es la balsa de tablones (`WRITING` en `navy` sobre `timber`, spec 2026-11-20): las filas de `plataforma-escena*` son las de `REPORT.md` de #457, con caja alta 17.25 y el OCR dentro del área respaldada; el OCR lee `WRITING` y las poses de balanceo medidas con `--tick` (t 7919 y t 15838) dan lo mismo.
+Desde #471 el cartel es el del hotel (cap 12): las filas de `cartel-torre-escena` son las de `REPORT.md` de #475.
 
 | Contexto | Escala | Contraste | Halo | OCR |
 |---|---|---|---|---|
-| `cartel-torre-escena` | 1.17 | 10.44:1 | 0.05 | `RESUME` |
-| `cartel-torre-escena` | 0.83 | 9.58:1 | 0.04 | `RESUME` |
+| `cartel-torre-escena` | 1.17 | 8.08:1 | 0.08 | `RESUME` |
+| `cartel-torre-escena` | 0.83 | 7.05:1 | 0.06 | `RESUME` |
 | `cartel-taller-escena` | 1.17 | 6.60:1 | 0.08 | `PORTFOLIO` |
 | `cartel-taller-escena` | 0.83 | 5.75:1 | 0.08 | `PORTFOLIO` |
 | `plataforma-escena` | 1.17 | 7.99:1 | 0.01 | `WRITING` |

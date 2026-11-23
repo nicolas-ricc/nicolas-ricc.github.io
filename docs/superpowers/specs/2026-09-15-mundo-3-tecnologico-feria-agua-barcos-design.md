@@ -327,6 +327,8 @@ Líneas de consola crudas (tres corridas):
 
 ## 3. Distrito tecnológico (`src/scenes/tech.ts`, `tech-anim.ts`, `tech-animator.ts`)
 
+> Desvío (#479): desde #479 el distrito del oeste ya no lo construye `tech.ts`: es parte de la ciudad (`city.ts`), con los barrios `moderno` y `transicion` sobre la grilla nueva hasta el borde de la vista. El mástil de telecomunicaciones (TELECOM) está en la `cell (−107, 231)`. `tech.ts` construye solo el barrio costero al sur. Lo que sigue describe el diseño original.
+
 Reemplaza `suburb.ts` (se borra) sobre la misma grilla: `suburbBlocks()`,
 `SUBURB_COLS`, `SUBURB_ROWS`, `COVER_MARGIN` y `DENSE_D = 60`, `ROWS_D = 160`
 (renombrado `CAMPUS_D`) no cambian. La avenida y el muro de ribera se

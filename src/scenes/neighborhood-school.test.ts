@@ -19,9 +19,10 @@ const apart = (a: Solid, b: Solid): boolean => {
 };
 const near = (a: number, b: number): boolean => Math.abs(a - b) < 1e-6;
 
-// the real world: the SCHOOL block as tech() builds it with the zone rng
-const scene = tech(zoneRng(SEED, "cv", 2));
-const b = blockAt(SCHOOL.x, SCHOOL.y), x = b.x, y = b.y, rect = blockRect(b);
+// the SCHOOL parcel block (24 × 24), built directly
+const b = blockAt(SCHOOL.col, SCHOOL.row), x = b.x, y = b.y, rect = blockRect(b);
+const scene = newCtx();
+school(scene, b);
 const everything = [...scene.solids, ...scene.ground];
 const own = everything.filter((s) => insideInflated(s, rect));
 const prisms = own.filter(isPrism);
@@ -38,9 +39,10 @@ const lampPost = find((s) => s.mat === "steel" && s.w === 0.6 && s.d === 0.6 && 
 const plates = (s: Prism | undefined, wall: number, f: (p: PlateBox) => boolean = () => true): PlateBox[] => (s?.plates ?? []).filter(isBox).filter((p) => p.wall === wall && f(p));
 const inRect = (a: Accent): boolean => { const p = a.kind === "dot" ? a.at : a.pts[0]!; return p.x >= rect.x0 && p.x <= rect.x1 && p.y >= rect.y0 && p.y <= rect.y1; };
 
-describe("Ameghino school (#252), over the world", () => {
-  it("block plinth paving 24×18×0.3", () => {
-    expect(own).toContainEqual({ kind: "prism", at: { x, y, z: 0 }, w: 24, d: 18, h: 0.3, mat: "paving" });
+describe("Ameghino school (#252), direct call on the 24 × 24 parcel", () => {
+  it("block base: paving poly of the parcel, h 0.3, and the block is 24 deep", () => {
+    expect(b.d).toBe(24);
+    expect(own).toContainEqual({ kind: "poly", footprint: b.parcel!.poly, z: 0, h: 0.3, mat: "paving" });
   });
 
   it("classroom block whitewash 6×16×5.6 at (x + 2, y + 1) above the plinth", () => {
@@ -165,8 +167,9 @@ describe("Ameghino school (#252), over the world", () => {
   it("sidewalk: two leaf trees r 1.4 h 4 and a street lamp", () => {
     expect(trees).toHaveLength(2);
     for (const t of trees) { expect(t.r).toBe(1.4); expect(t.h).toBe(4); expect(t.at.x).toBeCloseTo(x + 24.8); }
-    expect(trees.map((t) => t.at.y - y).sort((a, c) => a - c)).toEqual([3, 15]);
+    expect(trees.map((t) => t.at.y - y).sort((a, c) => a - c)).toEqual([3, b.d - 3]);
     expect(lampPost).toHaveLength(1);
+    expect(lampPost[0]!.at.y).toBeCloseTo(b.y + b.d + 0.6, 6);
   });
 
   it("nothing overlaps: block ↔ towers, towers ↔ covered patio, mast ↔ covered patio, trees ↔ street lamp", () => {
@@ -181,13 +184,20 @@ describe("Ameghino school (#252), over the world", () => {
   });
 
   it("no pair of raised pieces overlaps (the paving and plaza floors do not count)", () => {
-    const raised = own.filter((s) => !(isPrism(s) && (s.mat === "paving" || s.mat === "plaza") && s.h <= 0.3));
+    const raised = own.filter((s) => !((isPrism(s) || s.kind === "poly") && (s.mat === "paving" || s.mat === "plaza") && s.h <= 0.3));
     for (let i = 0; i < raised.length; i++) for (let j = i + 1; j < raised.length; j++) expect(apart(raised[i]!, raised[j]!), `${JSON.stringify(bounds(raised[i]!))} × ${JSON.stringify(bounds(raised[j]!))}`).toBe(true);
   });
 
   it("within the face cap and nothing taller than 21.5", () => {
     expect(facesIn(everything, rect)).toBeLessThanOrEqual(FACE_CAPS.school);
     for (const s of own) expect(bounds(s).max.z).toBeLessThanOrEqual(21.5);
+  });
+});
+
+describe("school, over the world", () => {
+  it("tech builds the school base on the parcel polygon", () => {
+    const w = tech(zoneRng(SEED, "cv", 2));
+    expect(w.solids).toContainEqual({ kind: "poly", footprint: b.parcel!.poly, z: 0, h: 0.3, mat: "paving" });
   });
 });
 
