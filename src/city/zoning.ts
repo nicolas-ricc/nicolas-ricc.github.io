@@ -5,7 +5,8 @@ import { LANDMARK_MAX_H } from "../kit/piece";
 import type { Lot, Side, StyleId } from "../kit/types";
 import type { Rng } from "../map/seed";
 import { PLINTH_H } from "../scenes/city-pieces";
-import { AVENUE, BLOCK_W, EAST_COLS, FREIGHT_ROW, LIT_FLOOR, PLAZA, ROWS, SIDEWALK, SITE, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, type Block, type Rect } from "../scenes/city-grid";
+import { AVENUE, BLOCK_W, EAST_COLS, FREIGHT_ROW, LIT_FLOOR, PLAZA, ROWS, SIDEWALK, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, CITY_EDGE, blocks, estuaryEast, type Block, type Rect } from "../scenes/city-grid";
+import { CITY_BOUNDS, HOTEL_LOT, inCrossingPlaza, inPlazaMayor, onAxis, parcels, polyBox, type Parcel } from "../scenes/city-plan";
 
 /**
  * Resume zoning: which neighborhood each block belongs to, which recipes
@@ -35,12 +36,7 @@ export function maxDistrictHeight(b: Rect): number {
 
 export const MAX_BUILDING_H = 18;
 
-const BARS_X: readonly number[] = [102, 132, 162], BARS_Y: readonly number[] = [164, 188];
-const CIVIC = [[72, 218], [162, 218], [42, 242]] as const;
-const DOWNTOWN = [[72, 164], [72, 188], [42, 218], [72, 242], [102, 242], [132, 242], [162, 242]] as const;
-const isAt = (b: Block, cells: readonly (readonly [number, number])[]): boolean => cells.some(([x, y]) => b.x === x && b.y === y);
-
-/** Neighborhood of a block: district and construction site, civic plaza, freight lots, row 92 warehouses, harbor (the two east blocks beside the dock inlet), east bank (collapse included: fixed.ts draws it), dock, civic, downtown and the rest residential. */
+/** Neighborhood of a block: district and construction site, civic plaza, freight lots, row 92 warehouses, harbor (the two east blocks beside the dock inlet), east bank (collapse included: fixed.ts draws it) and the rest residential. The west bank is zoned by parcel (`neighborhoodOfParcel`). */
 export function neighborhoodOf(b: Block): Neighborhood {
   if (b.kind === "district" || b.kind === "site") return "district";
   if (b.kind === "plaza") return "civic";
@@ -48,9 +44,6 @@ export function neighborhoodOf(b: Block): Neighborhood {
   if (b.y === ROWS[0]) return "warehouses";
   if (b.bank === "east" && b.row === -1) return "harbor";
   if (b.bank === "east") return "riverside";
-  if (BARS_X.includes(b.x) && BARS_Y.includes(b.y)) return "bars";
-  if (isAt(b, CIVIC)) return "civic";
-  if (isAt(b, DOWNTOWN)) return "downtown";
   return "residential";
 }
 
@@ -70,15 +63,11 @@ export const CATALOGUE = {
   harbor: { recipes: [], style: "harbor", lights: { on: 0.6, warm: 0.85 } },
 } as const satisfies Record<Neighborhood, Catalogue>;
 
-/** Water-tower block: a residential courtyard to which fixed.ts adds the tower. */
-export const WATER_TOWER_BLOCK = { x: 12, y: 164 } as const;
 /** Covered market block: fixed, its front toward the station street (east). */
 export const COVERED_MARKET_BLOCK = { x: 72, y: ROWS[0] } as const;
-/** Blocks with a fixed recipe (markets, fish market, food hall, station, civic buildings and the construction site). */
+/** Blocks with a fixed recipe: the east bank markets, the fish market, the food hall and the covered market. */
 export const FIXED: readonly { x: number; y: number; recipe: string }[] = [
-  { x: -18, y: 188, recipe: "station" }, { x: 280, y: 188, recipe: "market" }, { x: 280, y: 116, recipe: "fishMarket" }, { x: 280, y: 140, recipe: "foodHall" }, { x: 72, y: 218, recipe: "theatre" },
-  { x: 162, y: 218, recipe: "civicPalace" }, { x: 42, y: 242, recipe: "library" }, { x: SITE.x, y: SITE.y, recipe: "constructionSite" },
-  { ...WATER_TOWER_BLOCK, recipe: "patioResidential" }, { ...COVERED_MARKET_BLOCK, recipe: "coveredMarket" },
+  { x: 280, y: 188, recipe: "market" }, { x: 280, y: 116, recipe: "fishMarket" }, { x: 280, y: 140, recipe: "foodHall" }, { ...COVERED_MARKET_BLOCK, recipe: "coveredMarket" },
 ];
 
 /** Harbor block with no fixed recipe: it gets only the plinth (city.ts), no building. */
@@ -123,9 +112,38 @@ function pick(rng: Rng, recipes: readonly { name: string; weight: number }[]): s
 }
 const BLOCK_D = 18; // depth of the strip and east blocks (city-grid keeps it private)
 const adjacent = (a: Block, b: Block): boolean => Math.abs(a.x - b.x) <= BLOCK_W + STREET && Math.abs(a.y - b.y) <= BLOCK_D + STREET;
+/** Two rects are adjacent when the gap between them is at most one street on both axes. */
+const rectsAdjacent = (a: Rect, b: Rect): boolean => Math.max(a.x - (b.x + b.w), b.x - (a.x + a.w), 0) <= STREET && Math.max(a.y - (b.y + b.d), b.y - (a.y + a.d), 0) <= STREET;
 
-/** A block with its neighborhood, recipe, assembled lot and tone. */
-export interface Placed { block: Block; neighborhood: Neighborhood; recipe: string; lot: Lot; tone: number }
+/** Neighborhood of a parcel by its barrio (classic = downtown, modern = district, the rest residential); the two parcels north of the plaza are bars. */
+export function neighborhoodOfParcel(p: Parcel): Neighborhood {
+  if (p.c.y < 206 && p.rect.x + p.rect.w >= 157) return "bars";
+  return p.barrio === "clasico" ? "downtown" : p.barrio === "moderno" ? "district" : "residential";
+}
+
+/** Smallest lot side the kit recipes are safe on (below it courtyards and chamfers spill past the lot or give NaN); on a smaller lot city.ts keeps the plinth and builds nothing. */
+export const MIN_LOT_SIDE = 7;
+export const tooSmall = (lot: Lot): boolean => Math.min(lot.w, lot.d) < MIN_LOT_SIDE;
+
+/** The parcel that holds the hotel (plinth only, no building). */
+export const isHotelLot = (p: Parcel): boolean => p.rect.x === HOTEL_LOT.x && p.rect.y === HOTEL_LOT.y && p.rect.w === HOTEL_LOT.w && p.rect.d === HOTEL_LOT.d;
+
+/** Sides of a parcel's bounding box that face an open space (axis band, Plaza Mayor or crossing plaza): a point 0.5 outside the edge, at 1/4, 1/2 or 3/4, is in one. */
+export function parcelOpenSides(p: Parcel): Side[] {
+  const b = polyBox(p.poly), out: Side[] = [];
+  const open = (x: number, y: number): boolean => onAxis(x, y) || inPlazaMayor(x, y) || inCrossingPlaza(x, y);
+  for (const t of [0.25, 0.5, 0.75]) {
+    const x = b.x + b.w * t, y = b.y + b.d * t;
+    if (open(x, b.y - 0.5) && !out.includes("n")) out.push("n");
+    if (open(x, b.y + b.d + 0.5) && !out.includes("s")) out.push("s");
+    if (open(b.x - 0.5, y) && !out.includes("w")) out.push("w");
+    if (open(b.x + b.w + 0.5, y) && !out.includes("e")) out.push("e");
+  }
+  return out;
+}
+
+/** A block (or parcel: `parcel` set, `block` is its rect) with its neighborhood, recipe, assembled lot and tone. */
+export interface Placed { parcel?: Parcel; block: Block; neighborhood: Neighborhood; recipe: string; lot: Lot; tone: number }
 
 /**
  * Assigns a recipe to each block in the order of `blocks()`. Skips the plaza and the
@@ -152,6 +170,16 @@ export function assign(rng: Rng, districtRng: Rng): Placed[] {
       maxH: Math.min(maxHeightFor(b, top), maxDistrictHeight(b)),
     };
     out.push({ block: b, neighborhood, recipe, lot, tone: rng.int(-1, 1) });
+  }
+  for (const p of parcels(CITY_BOUNDS)) {
+    if (!(p.c.x > CITY_EDGE.west && p.c.y < 318) || isHotelLot(p)) continue;
+    const neighborhood = neighborhoodOfParcel(p), r = neighborhood === "district" ? districtRng : rng;
+    let recipe = pick(r, CATALOGUE[neighborhood].recipes);
+    if (neighborhood === "residential") {
+      for (let i = 0; i < 5 && out.some((q) => rectsAdjacent(q.block, p.rect) && q.recipe === recipe); i++) recipe = pick(r, CATALOGUE[neighborhood].recipes);
+    }
+    const lot: Lot = { x: p.rect.x + SIDEWALK, y: p.rect.y + SIDEWALK, w: p.rect.w - 2 * SIDEWALK, d: p.rect.d - 2 * SIDEWALK, z: 0, open: parcelOpenSides(p), maxH: neighborhood === "district" ? LANDMARK_MAX_H : MAX_BUILDING_H };
+    out.push({ parcel: p, block: { ...p.rect, bank: "west", row: -2, kind: "parcel" }, neighborhood, recipe, lot, tone: rng.int(-1, 1) });
   }
   return out;
 }

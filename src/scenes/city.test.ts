@@ -11,7 +11,7 @@ import { createRng, SEED } from "../map/seed";
 import { AVENUE, BOULEVARD, DARSENA, BRIDGE, CITY_EDGE, COLLAPSED, FREIGHT_ROW, ROWS, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROWS, EAST_RING, FALLEN_BLOCK, PROMENADE, PLAZA, TOWER, WEST_QUAY, blocks, estuaryEast, inBlock, inCrater } from "./city-grid";
 import { PLINTH_H, TOWER_H, city, type CityScene } from "./city";
 import { CAR } from "../kit/props";
-import { FIXED, FOOTBRIDGE_LOT, MAX_BUILDING_H, WATER_TOWER_BLOCK, assign } from "../city/zoning";
+import { FIXED, FOOTBRIDGE_LOT, MAX_BUILDING_H, assign } from "../city/zoning";
 import { zoneRng } from "./world";
 import { MARKET_SCALE } from "../city/harbor";
 import { fingerprint } from "../iso/fingerprint";
@@ -368,17 +368,9 @@ describe("city", () => {
     }
   });
 
-  it("water tower in the courtyard of (12, 164) and stone footbridge over the estuary", () => {
+  // the water tower left with its host block (#472); it comes back in #477
+  it("stone footbridge over the estuary", () => {
     const s = scene();
-    const host = s.placed.find((p) => p.placed.block.x === WATER_TOWER_BLOCK.x && p.placed.block.y === WATER_TOWER_BLOCK.y)!;
-    expect(host.placed.recipe).toBe("patioResidential");
-    expect(host.placed.lot.z).toBe(PLINTH_H); // the host brings no ground: it stays on its plinth, and so does the tower
-    const court = host.piece.courtyard!;
-    const tank = s.solids.find((x) => x.kind === "dome" && x.mat === "copper" && x.r === 2.2);
-    expect(tank).toBeDefined();
-    if (tank?.kind !== "dome") throw new Error("no dome of the water tower");
-    expect(tank.at.x).toBeCloseTo(court.x + court.w / 2, 6);
-    expect(tank.at.y).toBeCloseTo(court.y + court.d / 2, 6);
     const deck = s.solids.find((x) => x.kind === "prism" && x.mat === "stone" && x.at.x === FOOTBRIDGE_LOT.x && x.w === FOOTBRIDGE_LOT.w);
     expect(deck).toBeDefined();
     const b = bounds(deck!);
