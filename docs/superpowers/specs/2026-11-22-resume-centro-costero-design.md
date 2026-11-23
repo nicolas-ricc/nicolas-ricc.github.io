@@ -499,6 +499,9 @@ Todas a 2×, en `assets/2026-11-22-resume-centro-costero/cierre/`.
   `/area/resume/`, 1600×900, con el velo sobre las otras zonas y el panel del CV
   abierto. El ticket decía `/area/cv/`, que no es una ruta (`src/map/zones.ts`
   tiene `area/resume`).
+- [`sitio-velo-cv-hover.png`](assets/2026-11-22-resume-centro-costero/cierre/sitio-velo-cv-hover.png):
+  `/`, 1600×900, con el puntero sobre el enlace RESUME: el mismo velo sobre
+  Portfolio y Writing, sin el panel del CV, para ver la ciudad entera.
 - [`lab-world-bloom.png`](assets/2026-11-22-resume-centro-costero/cierre/lab-world-bloom.png):
   `/lab/world.html`, 1600×900, tecla 6 (bloom encendido).
 - [`sitio-390x750.png`](assets/2026-11-22-resume-centro-costero/cierre/sitio-390x750.png):

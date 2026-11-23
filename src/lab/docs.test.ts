@@ -1346,7 +1346,7 @@ describe("hotel sign level 3 and docs closing (#475)", () => {
 describe("the centro costero spec is closed (#480)", () => {
   const spec = readFileSync(`${ROOT}docs/superpowers/specs/2026-11-22-resume-centro-costero-design.md`, "utf8");
   const at = spec.indexOf("## 12. Desvíos y medición"), s12 = at < 0 ? "" : spec.slice(at);
-  const CAPTURES = [["sitio.png", 1600], ["sitio-velo-cv.png", 1600], ["lab-world-bloom.png", 1600], ["sitio-390x750.png", 390], ["sitio-820x1180.png", 820]] as const;
+  const CAPTURES = [["sitio.png", 1600], ["sitio-velo-cv.png", 1600], ["sitio-velo-cv-hover.png", 1600], ["lab-world-bloom.png", 1600], ["sitio-390x750.png", 390], ["sitio-820x1180.png", 820]] as const;
   it("README lists the centro costero spec among the specs", () => {
     expect(readme).toContain("2026-11-22-resume-centro-costero-design.md");
   });

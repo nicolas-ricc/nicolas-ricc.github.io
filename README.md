@@ -25,9 +25,9 @@ chimneys with marker bands, an outdoor substation and a bucket-wheel
 excavator with an animated wheel, `factory.wheel`), `city.ts`
 (the Resume orchestrator: the Plaza Mayor and, on its west side, the hotel with the RESUME sign on its facade) and `sea.ts` (point, lighthouse and ships of Blog). The pieces of
 Resume live in `src/city/` (`zoning.ts` neighborhoods, `fixed.ts` fixed pieces,
-`streets.ts` streets (lanes, crosswalks, median, lamps, traffic lights, crossing plazas, costanera), `lights.ts` windows, neon signs, washed facades and the box occlusion of the fixed pieces' lights) and in the
+`streets.ts` streets (lanes, crosswalks, median, lamps, traffic lights, crossing plazas, costanera), `lights.ts` windows, neon signs, washed facades and the box occlusion of the fixed pieces' lights; its 40 animatable windows, `MAX_ANIMABLE`, are split among the four barrios by `animableQuota`) and in the
 kit `src/kit/` (explored in `lab/kit.html`); the west bank's plan (axes, Plaza Mayor, parcels and barrios) is
-`src/scenes/city-plan.ts`, which zoning and streets read. The 40 animatable windows (`MAX_ANIMABLE`) are split among the four barrios (`animableQuota`). At the end
+`src/scenes/city-plan.ts`, which zoning and streets read. At the end
 of the west track, where the shipyard's boiler shop used to be, stands the
 terminal station (`station.ts`, modeled on Tigre Station of the Mitre
 Line: a brick building with tile roofs, clock tower, platforms with
