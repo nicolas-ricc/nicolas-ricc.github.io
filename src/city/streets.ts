@@ -9,7 +9,7 @@ import { placeLit, type FixedLight } from "./lights";
 import { PLINTH_H, prism } from "../scenes/city-pieces";
 import { builtParcels, neighborhoodOfParcel } from "./zoning";
 import { COVER_MARGIN, inCoverQuad } from "../map/geo";
-import { AXES, BLOCK, GRID_ORIGIN, HOTEL_LOT, LAND, PITCH, TOWER_ISLAND, axisBand, clipSeg, inCrossingPlaza, inPlazaMayor, inRect, onAxis, pointInPoly } from "../scenes/city-plan";
+import { AXES, BLOCK, CITY_BOUNDS, GRID_ORIGIN, HOTEL_LOT, LAND, PITCH, TOWER_ISLAND, axis, axisBand, clipSeg, inCrossingPlaza, inPlazaMayor, inRect, onAxis, pointInPoly } from "../scenes/city-plan";
 
 /**
  * Resume streets: lanes, avenue with dashed lanes and crosswalks,
@@ -67,14 +67,14 @@ function centerLine(out: Solid[], from: Vec2, to: Vec2, stop: Stop = flatStop): 
   flush();
 }
 
-/** One center line per axis: `from → to` clipped to the land (the quay-side axis, east of it, only to y 164), broken by the cover, the plazas, craters, the tower island and the other axes' bands. */
+/** One center line per axis: `from → to` clipped to the land (the quay-side axis, east of it, only to y 164), broken by the cover, the city's edges (x < CITY_EDGE.west, y > 318: tech's and the suburb's ground, #478 paints the south avenues there), the plazas, craters, the tower island and the other axes' bands. */
 function axisLines(ground: Solid[]): void {
   for (const a of AXES) {
     const seg = clipSeg(a.from, a.to) ?? (a.kind === "costanera" ? clipSeg({ x: LAND.x1, y: a.from.y }, { x: LAND.x1, y: a.to.y }) : null);
     if (!seg) continue;
     const [p, q] = a.kind === "costanera" ? [{ x: a.from.x, y: seg[0].y }, { x: a.from.x, y: seg[1].y }] : seg;
     const foreign = AXES.filter((o) => o !== a).map(axisBand);
-    centerLine(ground, p, q, (x, y) => !inCoverQuad(x, y, 16 / 9, COVER_MARGIN) || flatStop(x, y) || inRect(TOWER_ISLAND, x, y) || foreign.some((b) => pointInPoly(x, y, b)));
+    centerLine(ground, p, q, (x, y) => x < CITY_EDGE.west || y > CITY_BOUNDS.y1 || !inCoverQuad(x, y, 16 / 9, COVER_MARGIN) || flatStop(x, y) || inRect(TOWER_ISLAND, x, y) || foreign.some((b) => pointInPoly(x, y, b)));
   }
 }
 
@@ -145,8 +145,10 @@ const LAMP_W = 0.6;
 /** Free stretch `[x0, x1]` of a bar block on the avenue, and the two x of its corner posts (the east one at `x1`, clear of the traffic light at `b.x + 23.5`). */
 export interface BarFront { x0: number; x1: number; corners: readonly [number, number] }
 
+/** The bars parcels that face the vias axis (their north edge is the band's south edge). No lamp row consumes it in the scene until #473. */
+const VIAS_SOUTH = Math.max(...axisBand(axis("vias")).map((p) => p.y));
 export const BAR_FRONTS: readonly BarFront[] = builtParcels()
-  .filter((p) => neighborhoodOfParcel(p) === "bars")
+  .filter((p) => neighborhoodOfParcel(p) === "bars" && p.rect.y === VIAS_SOUTH)
   .map((p) => p.rect)
   .sort((a, b) => a.x - b.x)
   .map((r) => ({ x0: r.x + SIDEWALK, x1: r.x + r.w - SIDEWALK, corners: [r.x, r.x + r.w - SIDEWALK] as const }));

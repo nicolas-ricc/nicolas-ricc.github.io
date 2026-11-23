@@ -193,7 +193,7 @@ describe("avenue lamps around the bars (#165)", () => {
 // ---------------------------------------------------------------- #472: center lines on the new grid and on the axes
 import { fingerprint } from "../iso/fingerprint";
 import { SIDEWALK } from "../scenes/city-grid";
-import { AXES, BLOCK as PLAN_BLOCK, GRID_ORIGIN, HOTEL_LOT, LAND, PITCH, PLAZA_MAYOR, STREET as PLAN_STREET, TOWER_ISLAND, axisBand, crossingPlazas, inCrossingPlaza, onAxis, pointInPoly } from "../scenes/city-plan";
+import { AXES, BLOCK as PLAN_BLOCK, CITY_BOUNDS, GRID_ORIGIN, HOTEL_LOT, LAND, PITCH, PLAZA_MAYOR, STREET as PLAN_STREET, TOWER_ISLAND, axisBand, crossingPlazas, inCrossingPlaza, onAxis, pointInPoly } from "../scenes/city-plan";
 
 describe("streets on the new layout (#472)", () => {
   const ground: Solid[] = [], solids: Solid[] = [];
@@ -212,11 +212,11 @@ describe("streets on the new layout (#472)", () => {
     for (let t = 0.3; t < len - 0.3; t += 0.5) out.push({ x: a.x + ((b.x - a.x) * t) / len, y: a.y + ((b.y - a.y) * t) / len });
     return out;
   };
-  const onLine = (p: Vec2, a: (typeof AXES)[number]) => {
+  const collinear = (p: Vec2, a: (typeof AXES)[number]) => {
     const dx = a.to.x - a.from.x, dy = a.to.y - a.from.y;
     return Math.abs((p.x - a.from.x) * dy - (p.y - a.from.y) * dx) / Math.hypot(dx, dy) < 1e-6;
   };
-  const axisOf = (s: Strip) => AXES.find((a) => onLine(s.path[0]!, a) && onLine(s.path[1]!, a));
+  const axisOf = (s: Strip) => AXES.find((a) => collinear(s.path[0]!, a) && collinear(s.path[1]!, a));
 
   it("the grid streets are x 40 + 30k and y 48 + 30k", () => {
     expect(ordinaryX).toEqual([-50, -20, 40, 70, 100, 130, 160]);
@@ -229,7 +229,16 @@ describe("streets on the new layout (#472)", () => {
   });
 
   it("each axis has a center line", () => {
-    for (const a of AXES) expect(lines.some((s) => axisOf(s) === a), a.id).toBe(true);
+    // R7: the south avenues are painted inside the suburb by #478
+    const inCity = (a: (typeof AXES)[number]) => axisBand(a).some((p) => p.x >= CITY_EDGE.west && p.y <= CITY_BOUNDS.y1);
+    for (const a of AXES) expect(lines.some((s) => axisOf(s) === a), a.id).toBe(inCity(a)); // barrio (y 378) has none
+  });
+
+  it("no center line leaves the city's ground, except the strip and the east lines", () => {
+    for (const s of lines) {
+      if (s.path[0]!.x > WEST_QUAY.x0 || s.path[0]!.y < LAND.y0) continue;
+      for (const p of s.path) { expect(p.x).toBeGreaterThanOrEqual(CITY_EDGE.west - 1e-6); expect(p.y).toBeLessThanOrEqual(318 + 1e-6); }
+    }
   });
 
   it("no line runs into a foreign axis band, the plaza, a crossing plaza, a crater, HOTEL_LOT or TOWER_ISLAND", () => {

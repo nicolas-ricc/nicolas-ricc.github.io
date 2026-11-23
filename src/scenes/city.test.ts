@@ -56,7 +56,6 @@ describe("city", () => {
   it("everything falls in the Resume zone except the cones, and uses only city materials", () => {
     for (const s of all(scene())) {
       const b = bounds(s);
-      if (s.kind === "strip" && s.width === 0.3) continue; // #472: the axes' center lines run to the cover, past the world's south and west edges (the southernmost axis is at y 378)
       expect(b.min.x).toBeGreaterThanOrEqual(WORLD.x0 - 3); expect(b.max.x).toBeLessThanOrEqual(ZONE_SPLIT_X + 1); // the district grows up to the west edge of the world
       expect(b.max.y).toBeLessThanOrEqual(WORLD.y1 + 1);
       if (s.kind !== "cone") expect(b.min.y).toBeGreaterThanOrEqual(ZONE_SPLIT_Y - 1);
