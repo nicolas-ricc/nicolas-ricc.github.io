@@ -30,7 +30,7 @@ import { ship, shipAt, type ShipKind } from "../scenes/ships";
 import { HOTEL_SLAB, hotelSign, hotelStandIn, RESUME_SIGN } from "../scenes/sign-hotel";
 import { BLOG_SIGNS, seaPlatform, type WritingSite } from "../scenes/sign-platform";
 import { hallStandIn, PIECE_AT, STAND_IN_HALL, TINKER_SIGN, tinkerAnimator, tinkerSign } from "../scenes/sign-tinker";
-import { BLOCK_D, SUBURB_COLS } from "../scenes/sprawl-grid";
+import { BLOCK_D, SUBURB_COLS, southParcels } from "../scenes/sprawl-grid";
 import { SUBSTATION } from "../scenes/substation";
 import { ARENA, AUDITORIUM, TELECOM } from "../scenes/tech";
 import { CLUB, PLAZAS, SCHOOL } from "../scenes/tech-zoning";
@@ -59,6 +59,8 @@ export type Exhibit = { id: string; title: string; zone: WorldZone; group: Group
 export type ContextExhibit = Extract<Exhibit, { kind: "context" }>;
 
 const M = 3; // margin: sidewalks, street lamps and short shadows
+/** Box of the south parcel of a city-plan cell, with the margin. */
+const cellBox = (c: { col: number; row: number }) => { const { x, y, w, d } = southParcels().find((p) => p.cell.col === c.col && p.cell.row === c.row)!.rect; return { x0: x - M, y0: y - M, x1: x + w + M, y1: y + d + M }; };
 /** The largest parcel of cell (−17, 171): the district block exhibit frames its rect. */
 const DISTRICT_PARCEL = parcels(CITY_BOUNDS).filter((q) => q.cell.col === -17 && q.cell.row === 171).sort((a, b) => b.area - a.area)[0]!.rect;
 
@@ -224,26 +226,26 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "mastil", title: "Telecom mast", zone: "cv", group: "tech", kind: "region",
     box: { x0: TELECOM.x - M, y0: TELECOM.y - M, x1: TELECOM.x + BLOCK_W + M, y1: TELECOM.y + BLOCK_D + M }, h: 26 },
   { id: "arena", title: "Arena", zone: "cv", group: "tech", kind: "region",
-    box: { x0: ARENA.x - M, y0: ARENA.y - M, x1: ARENA.x + BLOCK_W + M, y1: ARENA.y + BLOCK_D + M }, h: 15 },
+    box: cellBox(ARENA), h: 15 },
   { id: "auditorio", title: "Auditorium", zone: "cv", group: "tech", kind: "region",
-    box: { x0: AUDITORIUM.x - M, y0: AUDITORIUM.y - M, x1: AUDITORIUM.x + BLOCK_W + M, y1: AUDITORIUM.y + BLOCK_D + M }, h: 14 },
+    box: cellBox(AUDITORIUM), h: 14 },
   // the two towers of row ROWS[2], columns SUBURB_COLS[1] and [0]; the height comes from the rng: the test watches it
   { id: "torres", title: "Tech district towers", zone: "cv", group: "tech", kind: "region",
     box: { x0: SUBURB_COLS[1] - M, y0: ROWS[2] - M, x1: SUBURB_COLS[0] + BLOCK_W + M, y1: ROWS[2] + BLOCK_D + M }, h: 22 },
   { id: "monoblock", title: "Monoblock", zone: "cv", group: "tech", kind: "region",
-    box: { x0: 132 - M, y0: 448 - M, x1: 132 + BLOCK_W + M, y1: 448 + BLOCK_D + M }, h: 23.6 },
+    box: cellBox({ col: 133, row: 441 }), h: 23.6 }, // the monoblock parcel of cell (133, 441), 24 × 24
   { id: "casas", title: "Houses with tile roofs", zone: "cv", group: "tech", kind: "region",
-    box: { x0: 132 - M, y0: 520 - M, x1: 132 + BLOCK_W + M, y1: 520 + BLOCK_D + M }, h: 8 },
+    box: cellBox({ col: 103, row: 471 }), h: 8 }, // the houses parcel of cell (103, 471), 24 × 24
   { id: "escuela", title: "School", zone: "cv", group: "tech", kind: "region",
-    box: { x0: SCHOOL.x - M, y0: SCHOOL.y - M, x1: SCHOOL.x + BLOCK_W + M, y1: SCHOOL.y + BLOCK_D + M }, h: 11 },
+    box: cellBox(SCHOOL), h: 11 },
   { id: "club", title: "Club", zone: "cv", group: "tech", kind: "region",
-    box: { x0: CLUB.x - M, y0: CLUB.y - M, x1: CLUB.x + BLOCK_W + M, y1: CLUB.y + BLOCK_D + M }, h: 10 },
+    box: cellBox(CLUB), h: 10 },
   { id: "plaza-barrio", title: "Neighborhood plaza", zone: "cv", group: "tech", kind: "region",
-    box: { x0: PLAZAS[0].x - M, y0: PLAZAS[0].y - M, x1: PLAZAS[0].x + BLOCK_W + M, y1: PLAZAS[0].y + BLOCK_D + M }, h: 5.6 },
+    box: cellBox(PLAZAS[0]), h: 5.6 },
   { id: "costanera", title: "Waterfront", zone: "cv", group: "tech", kind: "region",
     box: { x0: 184, y0: 480, x1: 199, y1: 568 }, h: 8 },
   { id: "barrio", title: "Coastal neighborhood", zone: "cv", group: "tech", kind: "region",
-    box: { x0: 40, y0: 470, x1: 199, y1: 612 }, h: 11 },
+    box: { x0: 40, y0: 438, x1: 199, y1: 623 }, h: 18 }, // h 18: tallest solid inside measures 17.6 (smallest integer that frames it); NEIGHBORHOOD_REGION (43..186 × 441..620) plus the margin and the costanera
   // the beam starts at the lantern and rotates: pointing north its tip rises BEAM_LEN/√2 on screen, and the box's north vertex is already DRUM_R0 + M above the lighthouse
   { id: "faro", title: "Lighthouse", zone: "blog", group: "sea", kind: "region",
     box: { x0: LIGHTHOUSE.x - DRUM_R0 - M, y0: LIGHTHOUSE.y - DRUM_R0 - M, x1: LIGHTHOUSE.x + DRUM_R0 + M, y1: LIGHTHOUSE.y + DRUM_R0 + M },

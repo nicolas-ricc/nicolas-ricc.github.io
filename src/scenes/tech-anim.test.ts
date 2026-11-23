@@ -195,13 +195,13 @@ describe("tech-anim: raw walls whatever the tone (#52)", () => {
     const make = (tone: number) => createTechAnim(withTone(tone), createRng(3), { reducedMotion: false });
     const flat = make(0);
     const others = [-1, 1].map(make);
-    expect(flat.windows()).toHaveLength(374);
+    expect(flat.windows()).toHaveLength(100); // #478: the south towers are gone, only the west ones remain (was 374)
     for (const a of others) expect(a.windows()).toEqual(flat.windows());
     for (let i = 0; i < 100; i++) for (const a of [flat, ...others]) a.tick(100);
     for (const a of others) expect(a.windows()).toEqual(flat.windows());
   });
   // fingerprint recorded on 5f893d9, before #52: a mismatch means the windows moved, so find what changed
   it("windows at frame 0 unchanged since the #52 baseline", () => {
-    expect(fingerprint(setup().anim.windows() as unknown as Solid[])).toBe("b5014007");
+    expect(fingerprint(setup().anim.windows() as unknown as Solid[])).toBe("a5fdf201"); // re-pinned in #478: the tech district no longer has the south towers (was b5014007)
   });
 });

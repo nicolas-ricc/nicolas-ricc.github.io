@@ -49,10 +49,10 @@ describe("world accents (#394)", () => {
 
 describe("raised solids per scene (#328)", () => {
   // Measured 2026-11-08 with world(SEED) after #319..#327 and the cuts of #328 (spec 2026-10-15 §12.2): shipyard 543, factory 775,
-  // city 1 431, fair 452, hinterland 456, tech 1 514. Caps are measured ×1.1 rounded to the nearest hundred; fair re-measured 549 on 2026-11-17 after #398 (helter skelter).
+  // city 1 431, fair 452, hinterland 456, tech 1 514 (1 449 since #478: the south on 24 × 24 parcels, measured raised solids of world(SEED).tech; 1 449 × 1.1 = 1 594 → 1 600). Caps are measured ×1.1 rounded to the nearest hundred; fair re-measured 549 on 2026-11-17 after #398 (helter skelter).
   // shipyard: 543 + the tinker sign's 154 = 697 (#392), ×1.1 rounded to the hundred
-  // measured with the hotel (#474), real seed: shipyard 686, city 992, factory 770, fair 565, hinterland 453, tech 1 490; none exceeds its cap, so none moves
-  const CAPS = { shipyard: 800, factory: 900, city: 1600, fair: 600, hinterland: 500, tech: 1700 } as const;
+  // measured with the hotel (#474), real seed: shipyard 686, city 992, factory 770, fair 565, hinterland 453, tech 1 490 (before #478); none exceeds its cap, so none moves
+  const CAPS = { shipyard: 800, factory: 900, city: 1600, fair: 600, hinterland: 500, tech: 1600 } as const;
   let w: ReturnType<typeof world>;
   beforeAll(() => { w = world(SEED); });
   for (const [name, cap] of Object.entries(CAPS)) {

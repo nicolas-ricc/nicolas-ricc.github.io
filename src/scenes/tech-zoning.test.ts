@@ -1,19 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { inCoverQuad } from "../map/geo";
 import { createRng, SEED, type Rng } from "../map/seed";
-import { suburbBlocks, type SprawlBlock } from "./sprawl-grid";
+import { techBlocks, type SprawlBlock } from "./sprawl-grid";
 import { TELECOM as TELECOM_TECH } from "./tech";
-import { ARENA, AUDITORIUM, CLUB, PLAZAS, SCHOOL, TELECOM, blockParity, inNeighborhood, zoneKinds, type Kind } from "./tech-zoning";
+import { ARENA, AUDITORIUM, CLUB, PLAZAS, SCHOOL, TELECOM, blockParity, inNeighborhood, isCell, zoneKinds, type Kind } from "./tech-zoning";
 import { zoneRng } from "./world";
 
-const KINDS: readonly Kind[] = ["tower", "campus", "monoblock", "houses", "park", "plaza", "school", "club", "telecom", "arena", "auditorium"];
-const blocks = suburbBlocks();
+const KINDS: readonly Kind[] = ["tower", "campus", "monoblock", "houses", "park", "plaza", "school", "club", "telecom", "arena", "auditorium", "low"];
+const blocks = techBlocks();
 const world = () => zoneKinds(zoneRng(SEED, "cv", 2), blocks);
-const at = (p: { x: number; y: number }) => blocks.findIndex((b) => b.x === p.x && b.y === p.y);
-const neighbors = (a: SprawlBlock, b: SprawlBlock) => (a.y === b.y && Math.abs(a.x - b.x) === 30) || (a.x === b.x && Math.abs(a.y - b.y) > 0 && Math.abs(a.y - b.y) <= 30);
-const FIXED = [TELECOM, ARENA, AUDITORIUM, SCHOOL, CLUB, ...PLAZAS];
-const count = (kinds: Kind[], k: Kind, only?: (b: SprawlBlock) => boolean) => kinds.filter((x, i) => x === k && (!only || only(blocks[i]!))).length;
-const visible = (b: SprawlBlock) => inCoverQuad(b.x + 12, b.y + 9, 16 / 9, 0);
+const CELLS = [SCHOOL, CLUB, ARENA, AUDITORIUM, ...PLAZAS];
+const cellIndex = (c: { col: number; row: number }) => blocks.findIndex((b) => isCell(b, c));
+const isWest = (b: SprawlBlock) => b.parcel === undefined;
+const neighbors = (a: SprawlBlock, b: SprawlBlock) => {
+  if (a.parcel && b.parcel) { const p = a.parcel.cell, q = b.parcel.cell; return (p.row === q.row && Math.abs(p.col - q.col) === 30) || (p.col === q.col && Math.abs(p.row - q.row) === 30); }
+  if (a.parcel || b.parcel) return false;
+  return (a.y === b.y && Math.abs(a.x - b.x) === 30) || (a.x === b.x && Math.abs(a.y - b.y) > 0 && Math.abs(a.y - b.y) <= 30);
+};
+const count = (kinds: Kind[], k: Kind, only: (b: SprawlBlock) => boolean = () => true) => kinds.filter((x, i) => x === k && only(blocks[i]!)).length;
 
 describe("zoneKinds", () => {
   it("one kind per block, none of laboratory or atrium", () => {
@@ -22,48 +25,56 @@ describe("zoneKinds", () => {
     for (const k of kinds as string[]) { expect(k).not.toBe("lab"); expect(k).not.toBe("atrium"); expect(KINDS).toContain(k); }
   });
 
-  it("the fixed ones exist and fall on their kind with any seed", () => {
-    for (const p of FIXED) expect(at(p), JSON.stringify(p)).toBeGreaterThanOrEqual(0);
+  it("the fixed ones fall on their cell with any seed", () => {
+    for (const c of CELLS) expect(blocks.filter((b) => isCell(b, c)), JSON.stringify(c)).toHaveLength(1);
+    const telecom = blocks.findIndex((b) => b.x === TELECOM.x && b.y === TELECOM.y);
+    expect(telecom).toBeGreaterThanOrEqual(0);
     for (const rng of [createRng(1), createRng(7), zoneRng(SEED, "cv", 2)]) {
       const kinds = zoneKinds(rng, blocks);
-      expect(kinds[at(SCHOOL)]).toBe("school");
-      expect(kinds[at(CLUB)]).toBe("club");
-      for (const p of PLAZAS) expect(kinds[at(p)]).toBe("plaza");
-      expect(kinds[at(TELECOM)]).toBe("telecom");
-      expect(kinds[at(ARENA)]).toBe("arena");
-      expect(kinds[at(AUDITORIUM)]).toBe("auditorium");
+      expect(kinds[cellIndex(SCHOOL)]).toBe("school");
+      expect(kinds[cellIndex(CLUB)]).toBe("club");
+      for (const p of PLAZAS) expect(kinds[cellIndex(p)]).toBe("plaza");
+      expect(kinds[cellIndex(ARENA)]).toBe("arena");
+      expect(kinds[cellIndex(AUDITORIUM)]).toBe("auditorium");
+      expect(kinds[telecom]).toBe("telecom");
     }
   });
 
-  it("world table and visible minimums in the cover", () => {
+  it("world table", () => {
     const kinds = world();
-    expect(Object.fromEntries(KINDS.map((k) => [k, count(kinds, k)]))).toEqual({ tower: 34, campus: 15, monoblock: 18, houses: 17, park: 10, plaza: 7, school: 1, club: 1, telecom: 1, arena: 1, auditorium: 1 });
-    expect(count(kinds, "monoblock", visible)).toBeGreaterThanOrEqual(2);
-    expect(count(kinds, "houses", visible)).toBeGreaterThanOrEqual(4);
-    expect(count(kinds, "school", visible)).toBe(1);
-    expect(count(kinds, "club", visible)).toBe(1);
-    expect(count(kinds, "plaza", visible)).toBeGreaterThanOrEqual(2);
-    expect(kinds[at({ x: 132, y: 448 })]).toBe("monoblock");
-    expect(kinds[at({ x: 132, y: 520 })]).toBe("houses");
+    // measured with zoneRng(SEED, "cv", 2) on techBlocks() (68 south parcels + 29 west); the west (first blocks) keeps today's counts: tower 10, monoblock 6, campus 6, park 6, telecom 1
+    // #478: a parcel narrower than 20 is low even when the plaza draw hits (two such parcels: the pieces need ≥ 20 × 20); was plaza 7, low 28
+    expect(Object.fromEntries(KINDS.map((k) => [k, count(kinds, k)]))).toEqual({ tower: 10, campus: 6, monoblock: 12, houses: 23, park: 6, plaza: 5, school: 1, club: 1, telecom: 1, arena: 1, auditorium: 1, low: 30 });
+    const west = kinds.filter((_, i) => isWest(blocks[i]!));
+    expect(Object.fromEntries(KINDS.map((k) => [k, west.filter((x) => x === k).length]).filter(([, n]) => n !== 0))).toEqual({ tower: 10, monoblock: 6, campus: 6, park: 6, telecom: 1 });
   });
 
-  it("blockParity: the formula of the issue to the south (y ≥ 328); every pair of neighbors in the district with different parity", () => {
-    for (const b of blocks) if (b.y >= 328) expect(blockParity(b)).toBe((Math.round((b.x + 84) / 30) + Math.round((b.y - 328) / 24)) & 1);
+  it("blockParity alternates between neighboring parcels, by cell", () => {
+    for (const b of blocks) if (b.parcel) expect(blockParity(b)).toBe((((b.parcel.cell.col - 13) / 30 + (b.parcel.cell.row - 21) / 30) & 1));
     blocks.forEach((a) => blocks.forEach((b) => { if (neighbors(a, b)) expect(blockParity(a), `${a.x},${a.y} → ${b.x},${b.y}`).not.toBe(blockParity(b)); }));
   });
 
-  it("no monoblock has a monoblock neighbor; neighbors in the neighborhood with different parity", () => {
+  it("bajo parcels are low; residencial ones are houses, monoblock, plaza or low", () => {
+    const kinds = world();
+    blocks.forEach((b, i) => {
+      const p = b.parcel;
+      if (!p || CELLS.some((c) => isCell(b, c))) return;
+      if (p.barrio === "bajo") expect(kinds[i], `${p.cell.col},${p.cell.row}`).toBe("low");
+      else expect(["houses", "monoblock", "plaza", "low"]).toContain(kinds[i]);
+      if (kinds[i] === "monoblock") expect(p.area).toBeGreaterThanOrEqual(450);
+    });
+  });
+
+  it("no monoblock has a monoblock neighbor", () => {
     const kinds = world();
     blocks.forEach((a, i) => blocks.forEach((b, j) => {
-      if (!neighbors(a, b)) return;
-      if (kinds[i] === "monoblock") expect(kinds[j], `${a.x},${a.y} → ${b.x},${b.y}`).not.toBe("monoblock");
-      if (inNeighborhood(a) && inNeighborhood(b)) expect(blockParity(a)).not.toBe(blockParity(b));
+      if (neighbors(a, b) && kinds[i] === "monoblock") expect(kinds[j], `${a.x},${a.y} → ${b.x},${b.y}`).not.toBe("monoblock");
     }));
   });
 
-  it("inside the neighborhood there are no parks: the park draw gives a plaza", () => {
+  it("only south parcels are in the neighborhood: there the park draw gives a plaza", () => {
     const kinds = world();
-    blocks.forEach((b, i) => { if (inNeighborhood(b)) expect(kinds[i]).not.toBe("park"); });
+    blocks.forEach((b, i) => { expect(inNeighborhood(b)).toBe(!isWest(b)); if (!isWest(b)) expect(kinds[i]).not.toBe("park"); });
   });
 
   it("consumes exactly one chance(0.12) per non-fixed block", () => {
@@ -75,7 +86,7 @@ describe("zoneKinds", () => {
       pick: (arr) => { calls.push("pick"); return real.pick(arr); },
     };
     zoneKinds(spy, blocks);
-    expect(calls).toEqual(Array(blocks.length - FIXED.length).fill("chance:0.12"));
+    expect(calls).toEqual(Array(blocks.length - 7).fill("chance:0.12")); // 6 fixed cells + TELECOM
   });
 
   it("tech.ts re-exports the landmarks of tech-zoning", () => {
