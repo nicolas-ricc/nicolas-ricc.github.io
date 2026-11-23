@@ -8,6 +8,7 @@ import { techBlocks, type SprawlBlock } from "./sprawl-grid";
 import { MAX_TECH_H, tech } from "./tech";
 import { FACE_CAPS, blockRect, facesIn, insideInflated } from "./tech-budget";
 import { PLAZAS, blockParity, zoneKinds } from "./tech-zoning";
+import { southStreets } from "./tech-streets";
 import { zoneRng } from "./world";
 
 type Prism = Solid & { kind: "prism" };
@@ -155,7 +156,14 @@ describe("neighborhood plaza (#254), direct call", () => {
 
 // the real world: the `plaza` blocks according to the pre-pass
 const scene = tech(zoneRng(SEED, "cv", 2));
-const everything = [...scene.solids, ...scene.ground];
+// the south street furniture (lamps, trees on the sidewalk) falls inside a block's rect: take it out as a multiset (#478)
+const furniture = southStreets();
+const minus = (solids: readonly Solid[], drop: readonly Solid[]): Solid[] => {
+  const left = new Map<string, number>();
+  for (const s of drop) { const k = JSON.stringify(s); left.set(k, (left.get(k) ?? 0) + 1); }
+  return solids.filter((s) => { const k = JSON.stringify(s), n = left.get(k) ?? 0; if (n > 0) { left.set(k, n - 1); return false; } return true; });
+};
+const everything = minus([...scene.solids, ...scene.ground], [...furniture.solids, ...furniture.ground]);
 const blocks = techBlocks(), kinds = zoneKinds(zoneRng(SEED, "cv", 2), blocks);
 const plazaBlocks = blocks.filter((_, i) => kinds[i] === "plaza");
 const own = (b: SprawlBlock) => everything.filter((s) => insideInflated(s, blockRect(b)));

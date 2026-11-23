@@ -22,6 +22,7 @@ import { school } from "./neighborhood-school";
 import { monoblock } from "./neighborhood-monoblock";
 import { plaza } from "./neighborhood-plaza";
 import { waterfront } from "./waterfront";
+import { southStreets } from "./tech-streets";
 import { RAIL_Y } from "./shipyard";
 import { TRAIN_CLEAR } from "./station";
 import { ARENA, AUDITORIUM, TELECOM, TOWER_D, zoneKinds } from "./tech-zoning";
@@ -178,6 +179,8 @@ export function tech(rng: Rng): TechScene {
   });
   avenue(ground, solids, accents);
   waterfront(ctx);
+  const south = southStreets();
+  ground.push(...south.ground); solids.push(...south.solids); accents.push(...south.accents);
   // the green belt west of the content, around the west line: no cones in front of the train (#280)
   jungle(solids, rng, { x0: -238, x1: WORLD.x0 - 2, y0: GREEN_BELT.y0 + 2, y1: GREEN_BELT.y1 - 2 }, 48, 0.4, { y: RAIL_Y, train: TRAIN_CLEAR });
   return { ground, solids, accents, towers, signs, homes, telecom: telecomTop, neon: { crowns, mastRing: [3, 6, 9].map((dz) => v3(telecomTop.x, telecomTop.y + 0.6, telecomTop.z - dz)) } };

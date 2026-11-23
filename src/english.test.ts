@@ -68,6 +68,7 @@ const ALLOW: Record<string, RegExp[]> = {
   "src/scenes/city-plan.test.ts": [/Avenida (?:de la Plaza|de las Vías|del Sur|del Barrio)/g, /\bcostanera\b/gi, /\b[Bb]arrios?(?:At)?\b/g, /\bresidencial\b/g],
   "src/city/streets.test.ts": [/Avenida de las Vías/g], // axis name of the plan (#472), as city-plan.test.ts
   "src/city/streets.ts": [/\bcostanera\b/g], // axis kind of the plan (#472)
+  "src/city/axis-streets.ts": [/\bcostanera\b/gi], // axis kind of city-plan is layout data
   "src/city/zoning.ts": [/\b[Bb]arrios?\b/g], // Barrio ids of city-plan are layout data
   "src/city/zoning.test.ts": [/\b[Bb]arrios?\b/g, /\bresidencial\b/g],
   // #478: the south neighborhood zones by the barrio ids and paints the axes of the plan
