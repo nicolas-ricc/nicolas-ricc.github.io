@@ -8,7 +8,7 @@ import { CITY_EDGE } from "./city-grid";
 import { LAND, crossingPlazas, inCrossingPlaza, onAxis, polyCentroid } from "./city-plan";
 import { urbanAt } from "./sprawl-grid";
 
-export const SOUTH_BOUNDS = { x0: -Infinity, y0: 318, x1: LAND.x1, y1: 650 };
+const SOUTH_BOUNDS = { x0: -Infinity, y0: 318, x1: LAND.x1, y1: 650 };
 
 /** Nothing is painted off urban ground (T1's clamp: the 318..324 strip is asphalt) or outside the cover. */
 const stop = (x: number, y: number): boolean => !urbanAt(x, Math.max(y, CITY_EDGE.south)) || !inCoverQuad(x, y, 16 / 9, COVER_MARGIN);
@@ -51,4 +51,3 @@ export function southStreets(): { ground: Solid[]; solids: Solid[]; accents: Acc
   for (let k = 0; k <= 10; k++) centerLine(ground, { x: -440, y: 348 + 30 * k }, { x: SOUTH_BOUNDS.x1, y: 348 + 30 * k });
   return { ground, solids, accents };
 }
-
