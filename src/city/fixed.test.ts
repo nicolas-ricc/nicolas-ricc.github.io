@@ -9,7 +9,8 @@ import { AVENUE, BRIDGE, COLLAPSED, EAST_RING, PROMENADE, ROWS, STREET, WEST_QUA
 import { plazaTone, tiles } from "../scenes/city-pieces";
 import { BRIDGE_LANDING, PLAZA_CENTER, inParcel, PLAZA_MAYOR } from "../scenes/city-plan";
 import type { FixedLight } from "./lights";
-import { bridge, collapsed, greenery, promenade, plazaMayor, westQuay } from "./fixed";
+import { PLINTH_H } from "../scenes/city-pieces";
+import { bridge, collapsed, greenery, promenade, plazaMayor, telecom, westQuay } from "./fixed";
 
 const EPS = 1e-6;
 /** Strict box overlap: two solids that only touch (one resting on the other) don't count. */
@@ -354,5 +355,17 @@ describe("plazaMayor", () => {
     tiles(b, { x: P.x, y: ly1, w: P.w, d: P.y + P.d - ly1 }, 0.05, "plaza", plazaTone);
     tiles(b, L, 0.05, "paving", plazaTone);
     expect(a.next()).toBe(b.next());
+  });
+});
+
+describe("telecom (#479)", () => {
+  const r = { x: -120, y: 220, w: 30, d: 24 };
+  it("a concrete base, a 20 u steel mast and three dishes centered on the rect, no plinth; returns the tip", () => {
+    const solids: Solid[] = [], tip = telecom(solids, r), cx = r.x + r.w / 2, cy = r.y + r.d / 2;
+    expect(solids).toHaveLength(5);
+    expect(solids.filter((x) => x.kind === "prism" && x.mat === "steel" && x.h === 20)).toHaveLength(1);
+    expect(solids.filter((x) => x.kind === "cylinder" && x.mat === "steel" && x.h === 0.4)).toHaveLength(3);
+    expect(solids.some((x) => x.kind === "prism" && x.mat === "paving")).toBe(false);
+    expect(tip).toEqual(v3(cx, cy, PLINTH_H + 22.2));
   });
 });

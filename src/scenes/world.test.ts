@@ -27,7 +27,8 @@ describe("world", () => {
     expect(w.terrain.water.reduce((n, s) => n + (s.kind === "ground" ? s.tris.length : 0), 0) > 300).toBe(true);
     for (const s of [...w.shipyard!.solids, ...w.factory!.solids, ...w.city!.solids, ...w.sea!.solids]) {
       const b = bounds(s);
-      expect(b.min.x).toBeGreaterThanOrEqual(WORLD.x0 - 2); expect(b.max.x).toBeLessThanOrEqual(WORLD.x1 + 1); // the district grows up to the west edge of the world
+      // the city's west (#479) reaches the edge of the view, over the bleed; every other piece stays inside the world
+      expect(b.min.x).toBeGreaterThanOrEqual(w.city!.solids.includes(s) ? WORLD.x0 - BLEED.x : WORLD.x0 - 2); expect(b.max.x).toBeLessThanOrEqual(WORLD.x1 + 1); // the district grows up to the west edge of the world
       expect(b.min.y).toBeGreaterThanOrEqual(WORLD.y0 - 1); expect(b.max.y).toBeLessThanOrEqual(WORLD.y1 + 1);
     }
     for (const s of w.solids) { // the built margins live on the bleed
@@ -184,6 +185,6 @@ describe("world", () => {
   it("the city lights come from zoneRng(seed, \"cv\", 3)", () => {
     const w = world(7, { zones: ["cv"] });
     expect(w.city!.lights.windows.length).toBeGreaterThan(0);
-    expect(JSON.stringify(w.city!.lights)).toBe(JSON.stringify(city(zoneRng(7, "cv"), zoneRng(7, "cv", 1), zoneRng(7, "cv", 3)).lights));
+    expect(JSON.stringify(w.city!.lights)).toBe(JSON.stringify(city(zoneRng(7, "cv"), zoneRng(7, "cv", 1), zoneRng(7, "cv", 3), { west: WORLD.x0 }).lights)); // with a zone filter the lab cuts the west (#479)
   });
 });

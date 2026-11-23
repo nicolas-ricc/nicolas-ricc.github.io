@@ -40,21 +40,21 @@ const overlap = (a: Solid, b: Solid) => {
 
 
 describe("monoblocks of the Simón Bolívar neighborhood (#250)", () => {
-  it("there are monoblock blocks in the world", () => expect(monos.length).toBe(12)); // measured: 6 on the old west blocks + 6 on the south parcels (#478); there were 18 before the south moved to the parcel grid
+  it("there are monoblock blocks in the world", () => expect(monos.length).toBe(5)); // measured on agent/479 without the west (#479): all on south parcels; it was 12 (6 west + 6 south) before, and the rng shift redrew the south
 
-  it("each block: 1 or 2 bodies (b.w − 4)×5 of h ∈ {9, 12} on a parcel, {12, 15, 18} on the west, different if there are two, of light plaster on a plinth", () => {
+  it("each block: 1 or 2 bodies (b.w − 4)×5 of h ∈ {9, 12}, different if there are two, of light plaster on a plinth", () => {
     for (const b of monos) {
       const { bodies, plinths } = of(b);
       expect(bodies.length, `${b.x},${b.y}`).toBeGreaterThanOrEqual(1); expect(bodies.length).toBeLessThanOrEqual(2);
-      for (const p of bodies) { expect(b.parcel ? [9, 12] : [12, 15, 18]).toContain(p.h); expect(["whitewash", "stone"]).toContain(p.mat); expect(p.at.z).toBeCloseTo(0.3); }
+      for (const p of bodies) { expect([9, 12]).toContain(p.h); expect(["whitewash", "stone"]).toContain(p.mat); expect(p.at.z).toBeCloseTo(0.3); }
       if (bodies.length === 2) expect(bodies[0]!.h).not.toBe(bodies[1]!.h);
       expect(plinths).toHaveLength(bodies.length);
     }
   });
 
-  it("in the whole neighborhood the three heights, the two plasters and a brick ground floor on some slabs appear", () => {
+  it("in the whole neighborhood the two heights, the two plasters and a brick ground floor on some slabs appear", () => {
     const bodies = monos.flatMap((b) => of(b).bodies);
-    expect(new Set(bodies.map((p) => p.h))).toEqual(new Set([9, 12, 15, 18]));
+    expect(new Set(bodies.map((p) => p.h))).toEqual(new Set([9, 12]));
     expect(new Set(bodies.map((p) => p.mat))).toEqual(new Set(["whitewash", "stone"]));
     const brick = bodies.filter((p) => p.plates?.some((q) => q.mat === "brick"));
     expect(brick.length).toBeGreaterThan(0); expect(brick.length).toBeLessThan(bodies.length);
@@ -162,15 +162,15 @@ describe("monoblocks of the Simón Bolívar neighborhood (#250)", () => {
     }
   });
 
-  it("with parity 1 and a single slab: it goes at the back (y + 11), trees north of its plinth, E–W path at y + 10.2", () => {
+  it("with parity 1 and a single slab: it goes at the back (y + d − 7), trees north of its plinth, E–W path at y + d − 7.8", () => {
     const b = blocks.find((x) => blockParity(x) === 1)!;
     const ctx = Array.from({ length: 40 }, (_, k) => { const c = newCtx(createRng(k + 1)); monoblock(c, b); return c; }).find((c) => c.solids.filter((s) => s.kind === "prism" && s.w === 20 && s.d === 5).length === 1)!;
     expect(ctx).toBeDefined();
-    expect(ctx.solids.find((s) => s.kind === "prism" && s.w === 20 && s.d === 5)).toMatchObject({ at: { x: b.x + 2, y: b.y + 11 } });
+    expect(ctx.solids.find((s) => s.kind === "prism" && s.w === 20 && s.d === 5)).toMatchObject({ at: { x: b.x + 2, y: b.y + b.d - 7 } });
     const cones = ctx.solids.filter((s) => s.kind === "cone");
     expect(cones.length).toBeGreaterThanOrEqual(4);
-    for (const t of cones) { const r = bounds(t); expect(r.min.y).toBeGreaterThanOrEqual(b.y - 1e-9); expect(r.max.y).toBeLessThanOrEqual(b.y + 10.7 + 1e-9); }
-    expect(ctx.ground.some((s) => s.kind === "strip" && s.path.every((p) => p.y === b.y + 10.2))).toBe(true);
+    for (const t of cones) { const r = bounds(t); expect(r.min.y).toBeGreaterThanOrEqual(b.y - 1e-9); expect(r.max.y).toBeLessThanOrEqual(b.y + b.d - 7.3 + 1e-9); }
+    expect(ctx.ground.some((s) => s.kind === "strip" && s.path.every((p) => p.y === b.y + b.d - 7.8))).toBe(true);
   });
 });
 

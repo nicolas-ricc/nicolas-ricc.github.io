@@ -1,5 +1,5 @@
 import { CELL_BLEED, COVER_MARGIN, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, inCoverQuad, islandEastX, islandWestX, riverCenter } from "../map/geo";
-import { BLOCK_W, CITY_EDGE, ROWS, type Rect } from "./city-grid";
+import { CITY_EDGE, type Rect } from "./city-grid";
 import { LAND, parcels, type Parcel } from "./city-plan";
 
 /**
@@ -9,9 +9,6 @@ import { LAND, parcels, type Parcel } from "./city-plan";
  * share it, so the asphalt and the blocks cannot drift out of alignment.
  * Spec: docs/superpowers/specs/2026-09-15-margenes-urbanos-design.md §3.
  */
-/** Depth of a suburb block (the width is the city's `BLOCK_W`). */
-export const BLOCK_D = 18;
-
 export type Built = "industrial" | "urban" | "fair";
 
 /** How far the built land reaches from the edge of the content, per side. Multiples of CELL_BLEED. */
@@ -65,37 +62,19 @@ export function builtAt(x: number, y: number): Built | null {
 /** The fair: strip of sand in the north bleed, between the factory and the bay. */
 export const fairAt = (x: number, y: number): boolean => builtAt(x, y) === "fair";
 
-/** Green belt west of the content, y 116..158: jungle between the hinterland (rail yard, Portfolio) and the tech district; no built land and no urban ground. */
+/** Green belt west of the content, y 116..158: jungle between the hinterland (rail yard, Portfolio) and the city's west district; no built land and no urban ground. */
 export const GREEN_BELT = { y0: 116, y1: 158 } as const;
 
-/** Urban ground at a point, inside or outside the content: the tech district builds blocks only where this holds at the four corners and the center. */
+/** Urban ground at a point, inside or outside the content: the tech district builds blocks only where this holds at the four corners and the center. Inside the content only the south counts (the west is the city's, #479). */
 export function urbanAt(x: number, y: number): boolean {
   if (x < WORLD.x0 || y > WORLD.y1) return builtAt(x, y) === "urban";
-  if (x >= QUAY_X || y < CITY_EDGE.north || (x < CITY_EDGE.west && y >= GREEN_BELT.y0 && y < GREEN_BELT.y1)) return false;
-  return x < CITY_EDGE.west || y >= CITY_EDGE.south; // the city edges that turned to asphalt
+  return x < QUAY_X && y >= LAND.y0;
 }
 
-/** A tech block: a west block (`rect` of the old grid) or a south parcel of the city plan (`parcel` set, `rect` = the parcel's). */
+/** A tech block: a south parcel of the city plan (`rect` = the parcel's; `parcel` is set for every block `techBlocks` returns). */
 export interface SprawlBlock extends Rect { dist: number; parcel?: Parcel }
 
-/** Columns of the tech district west of the city (every 30 from −84, like `WEST_COLS`). */
-export const SUBURB_COLS = [-84, -114, -144, -174, -204, -234, -264] as const;
-
 export { COVER_MARGIN } from "../map/geo";
-
-const blockAt = (x: number, y: number): SprawlBlock | null => {
-  const w = BLOCK_W, d = BLOCK_D;
-  if (!inCoverQuad(x + w / 2, y + d / 2, 16 / 9, COVER_MARGIN)) return null;
-  for (const [px, py] of [[x, y], [x + w, y], [x + w, y + d], [x, y + d], [x + w / 2, y + d / 2]] as const) if (!urbanAt(px, py)) return null;
-  return { x, y, w, d, dist: Math.max(0, WORLD.x0 - (x + w), y - WORLD.y1) };
-};
-
-/** Blocks of the tech district west of the city: they follow the rows of the city (and respect the avenue). No rng. */
-export function suburbBlocks(): SprawlBlock[] {
-  const out: SprawlBlock[] = [];
-  for (const y of ROWS.slice(1)) for (const x of SUBURB_COLS) { const b = blockAt(x, y); if (b) out.push(b); }
-  return out;
-}
 
 let south: Parcel[] | undefined;
 /**
@@ -114,8 +93,7 @@ export function southParcels(): Parcel[] {
 /** The block of a south parcel. */
 export const parcelBlock = (p: Parcel): SprawlBlock => ({ ...p.rect, dist: Math.max(0, p.c.y - WORLD.y1), parcel: p });
 
-/** Every block of the tech district: the west ones first, then one per south parcel. */
-export const techBlocks = (): SprawlBlock[] => [...suburbBlocks(), ...southParcels().map(parcelBlock)];
+export const techBlocks = (): SprawlBlock[] => southParcels().map(parcelBlock);
 
 /** Distance from the point to the edge of the built land toward the north or the west (the sides behind the camera), 0 on top of it. */
 export function beyondBuilt(x: number, y: number): number {

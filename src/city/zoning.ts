@@ -8,8 +8,9 @@ import { polygonDistance } from "../kit/lettering";
 import type { Lot, Side, StyleId } from "../kit/types";
 import type { Rng } from "../map/seed";
 import { PLINTH_H } from "../scenes/city-pieces";
-import { AVENUE, BLOCK_W, EAST_COLS, FREIGHT_ROW, ROWS, SIDEWALK, STREET, WEST_QUAY, CITY_EDGE, blocks, estuaryEast, type Block, type Rect } from "../scenes/city-grid";
+import { AVENUE, BLOCK_W, EAST_COLS, FREIGHT_ROW, ROWS, SIDEWALK, STREET, WEST_QUAY, blocks, estuaryEast, type Block, type Rect } from "../scenes/city-grid";
 import { SIGN_PANEL } from "../scenes/hotel-plan";
+import { TRAIN_CLEAR } from "../scenes/station";
 import { CITY_BOUNDS, HOTEL_LOT, PITCH, inCrossingPlaza, inPlazaMayor, onAxis, parcels, polyBox, type Parcel } from "../scenes/city-plan";
 
 /**
@@ -106,6 +107,10 @@ export const MODERNO_SLAB = [{ name: "campus", weight: 50 }, { name: "classic", 
 /** The cell of the water tower host (`patioResidential`, the tower on its courtyard) and of the library (A4: `(103, 201)` is a 21 x 5 wedge, so the nearest parcel that fronts the plaza or the axis). */
 export const WATER_TOWER_CELL = { col: 13, row: 291 } as const;
 export const LIBRARY_CELL = { col: 73, row: 201 } as const;
+/** The cell of the telecommunications tower: a `moderno` parcel of the west; `city()` builds it (`fixed.ts`, `telecom`), it is no kit recipe. */
+export const TELECOM_CELL = { col: -107, row: 231 } as const;
+/** Parcels with `c.x` below this are "the west" (#479): they come after the east in `assign` and `builtParcels`, and draw only from `districtRng`, so the east keeps the draws it had before. */
+export const WEST_DISTRICT_X = -54;
 /** Singular pieces by grid cell; `civic` ones take the `civic` neighborhood. */
 export const FIXED_PARCELS: readonly { cell: { col: number; row: number }; recipe: string; civic?: true }[] = [
   { cell: { col: 163, row: 291 }, recipe: "civicPalace", civic: true },
@@ -113,6 +118,7 @@ export const FIXED_PARCELS: readonly { cell: { col: number; row: number }; recip
   { cell: LIBRARY_CELL, recipe: "library", civic: true },
   { cell: { col: 43, row: 261 }, recipe: "constructionSite" },
   { cell: WATER_TOWER_CELL, recipe: "patioResidential" },
+  { cell: TELECOM_CELL, recipe: "telecom" },
 ];
 const cellKey = (c: { col: number; row: number }): string => `${c.col},${c.row}`;
 let largestArea: Map<string, number> | undefined; // area of the largest built parcel per cell, computed once (`builtParcels()` never changes)
@@ -128,6 +134,11 @@ export const towerZone = (p: Parcel): boolean => p.c.y < 290 && p.d >= 205;
 
 /** Cap of a neighborhood's buildings on a parcel (the sign rule `maxHeightFor` still applies on top). Fixed pieces: `LANDMARK_MAX_H`, 21 outside the tower zone. */
 export function maxHFor(n: Neighborhood, p: Parcel): number {
+  return Math.min(neighborhoodCap(n, p), trainCap(p));
+}
+/** Train rule (station.ts): south of the track a solid needs `y_min - 1.4 z_max >= 134.5`, so a parcel there is capped at `(y - 134.5) / 1.4` minus the plinth and 1 u for the roof props that rise above the lot cap. */
+const trainCap = (p: Parcel): number => p.rect.y > TRAIN_CLEAR.y1 ? (p.rect.y - 134.5) / 1.4 - PLINTH_H - 1 : Infinity;
+function neighborhoodCap(n: Neighborhood, p: Parcel): number {
   if (fixedParcel(p)) return towerZone(p) ? LANDMARK_MAX_H : TOWER_FREE_H;
   return n === "clasico" ? 8.5 : n === "transicion" ? 16 : n === "moderno" ? (towerZone(p) ? 50 : TOWER_FREE_H) : n === "bajo" ? 6 : MAX_BUILDING_H;
 }
@@ -161,8 +172,17 @@ export function parcelNeighborhoods(ps: readonly Parcel[]): Neighborhood[] {
 export const MIN_LOT_SIDE = 7;
 export const tooSmall = (lot: Lot): boolean => Math.min(lot.w, lot.d) < MIN_LOT_SIDE;
 
-/** The parcels that get a building: those of `CITY_BOUNDS` inside the city (east of its west edge, north of y 318), the hotel lot excluded (plinth only). */
-export const builtParcels = (): Parcel[] => parcels(CITY_BOUNDS).filter((p) => p.c.x > CITY_EDGE.west && p.c.y < 318 && !isHotelLot(p));
+/** The parcels that get a building: those of `CITY_BOUNDS` with `c.x > west` (default: all) north of y 318, the hotel lot excluded (plinth only). The east ones (`c.x >= WEST_DISTRICT_X`) come first in `parcels()` order, then the west ones in the same order. Memoized per `west`. */
+const builtCache = new Map<number, Parcel[]>();
+export function builtParcels(west = -Infinity): Parcel[] {
+  let out = builtCache.get(west);
+  if (!out) {
+    const ps = parcels(CITY_BOUNDS).filter((p) => p.c.x > west && p.c.y < 318 && !isHotelLot(p));
+    out = [...ps.filter((p) => p.c.x >= WEST_DISTRICT_X), ...ps.filter((p) => p.c.x < WEST_DISTRICT_X)];
+    builtCache.set(west, out);
+  }
+  return out;
+}
 /** The parcel that holds the hotel (plinth only, no building). */
 export const isHotelLot = (p: Parcel): boolean => p.rect.x === HOTEL_LOT.x && p.rect.y === HOTEL_LOT.y && p.rect.w === HOTEL_LOT.w && p.rect.d === HOTEL_LOT.d;
 
@@ -207,11 +227,11 @@ export interface Placed { parcel?: Parcel; block: Block; neighborhood: Neighborh
  * rest with `rng`. Residential retries up to 5 times if it repeats the recipe
  * of an already assigned adjacent block. Then the parcels of `builtParcels()`: neighborhood by
  * `parcelNeighborhoods`, a `FIXED_PARCELS` recipe or one drawn from `catalogueFor` (`moderno` with
- * `districtRng`; clasico, transicion and bajo retry like residential), cap `maxHFor` and lot `parcelLot`.
+ * `districtRng`; clasico, transicion and bajo retry like residential; every parcel west of `WEST_DISTRICT_X` draws pick, retries and tone from `districtRng` and comes after the east ones; `west` cuts the parcels by centroid, the lab's), cap `maxHFor` and lot `parcelLot`.
  * The lot is at street level (`z: 0`):
  * `city()` seats it (`seat`), lifting it onto the plinth unless the piece brings `ground`.
  */
-export function assign(rng: Rng, districtRng: Rng): Placed[] {
+export function assign(rng: Rng, districtRng: Rng, west = -Infinity): Placed[] {
   const out: Placed[] = [];
   for (const b of blocks()) {
     if (b.kind === "collapsed" || isBare(b)) continue;
@@ -229,17 +249,18 @@ export function assign(rng: Rng, districtRng: Rng): Placed[] {
     };
     out.push({ block: b, neighborhood, recipe, lot, tone: rng.int(-1, 1) });
   }
-  const built = builtParcels(), ns = parcelNeighborhoods(built);
-  for (const f of FIXED_PARCELS) if (!built.some((p) => fixedParcel(p) === f)) throw new Error(`missing fixed parcel ${f.cell.col},${f.cell.row}`);
-  built.forEach((p, i) => {
-    const neighborhood = ns[i]!, r = neighborhood === "moderno" ? districtRng : rng, fixed = fixedParcel(p), cat = catalogueFor(neighborhood, p);
+  // the neighbour rule runs over every parcel, so a cut (`west`) does not change the neighborhood of those that remain
+  const all = builtParcels(), ns = parcelNeighborhoods(all), allNs = new Map(all.map((p, i) => [p, ns[i]!])), built = builtParcels(west);
+  for (const f of FIXED_PARCELS) if (!all.some((p) => fixedParcel(p) === f)) throw new Error(`missing fixed parcel ${f.cell.col},${f.cell.row}`);
+  built.forEach((p) => {
+    const neighborhood = allNs.get(p)!, isWest = p.c.x < WEST_DISTRICT_X, r = isWest || neighborhood === "moderno" ? districtRng : rng, fixed = fixedParcel(p), cat = catalogueFor(neighborhood, p);
     let recipe = fixed?.recipe ?? pick(r, cat);
     if (!fixed && (neighborhood === "clasico" || neighborhood === "transicion" || neighborhood === "bajo")) {
       for (let k = 0; k < 5 && out.some((q) => rectsAdjacent(q.block, p.rect) && q.recipe === recipe); k++) recipe = pick(r, cat);
     }
     const top = maxHFor(neighborhood, p);
     const lot = parcelLot(p, neighborhood, recipe, fixed !== undefined, parcelOpenSides(p), Math.min(top, maxHeightFor(p.rect, top)));
-    out.push({ parcel: p, block: { ...p.rect, bank: "west", row: -2, kind: "parcel" }, neighborhood, recipe, lot, tone: rng.int(-1, 1) });
+    out.push({ parcel: p, block: { ...p.rect, bank: "west", row: -2, kind: "parcel" }, neighborhood, recipe, lot, tone: (isWest ? districtRng : rng).int(-1, 1) });
   });
   return out;
 }

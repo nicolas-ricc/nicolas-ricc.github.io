@@ -11,14 +11,14 @@ import { world, zoneRng } from "./world";
 const resume = () => city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3));
 
 describe("Resume level 2 budget", () => {
-  it("raised solids ≤ 2 900, strip ≤ 380, static accents ≤ 1 000", () => {
+  it("raised solids ≤ 2 900, strip ≤ 580, static accents ≤ 1 500", () => {
     const s = resume();
     expect(s.solids.filter((x) => !isFlat(x)).length).toBeLessThanOrEqual(2900);
     // measured with the hotel (#474), real seed: 992 raised solids, 95 strip ground, 788 static accents (514 poly + 274 dot).
     // The accents were 1 165 with the crown (#391: 789 before, + its 402 = 238 poly + 164 dot, − 26 hidden city lights); the hotel replaced the
     // tower and the crown.
-    expect(s.ground.filter((g) => g.kind === "strip").length).toBeLessThanOrEqual(380); // measured (#473): 347 strips, ×1.1 rounded to the ten
-    expect(s.accents.length).toBeLessThanOrEqual(1000); // measured (#473): 815 accents; with the barrios of #477, 903 (585 poly): ×1.1 = 993, rounded up to the hundred
+    expect(s.ground.filter((g) => g.kind === "strip").length).toBeLessThanOrEqual(580); // measured (#473): 347 strips, ×1.1 rounded to the ten; with the west on the city grid (#479, HEAD of agent/479): 522 strips, ×1.1 = 574, rounded up to the ten
+    expect(s.accents.length).toBeLessThanOrEqual(1500); // measured on HEAD of agent/479 with the west (#479): 1 274 static accents (the west's windows were animated tower floors, now static kit windows), ×1.1 = 1 401, rounded up to the hundred. Before: (#473): 815 accents; with the barrios of #477, 903 (585 poly): ×1.1 = 993, rounded up to the hundred
   });
 
   it("static polygons of the world ≤ 56 000 (same computation as stage.staticCount)", () => {
@@ -52,7 +52,8 @@ describe("raised solids per scene (#328)", () => {
   // city 1 431, fair 452, hinterland 456, tech 1 514 (1 449 since #478: the south on 24 × 24 parcels, measured raised solids of world(SEED).tech; 1 449 × 1.1 = 1 594 → 1 600). Caps are measured ×1.1 rounded to the nearest hundred; fair re-measured 549 on 2026-11-17 after #398 (helter skelter).
   // shipyard: 543 + the tinker sign's 154 = 697 (#392), ×1.1 rounded to the hundred
   // measured with the hotel (#474), real seed: shipyard 686, city 992, factory 770, fair 565, hinterland 453, tech 1 490 (before #478); none exceeds its cap, so none moves; with the barrios (#477, over #473 and #478): city 1 209, tech 1 449, the rest unchanged
-  const CAPS = { shipyard: 800, factory: 900, city: 1600, fair: 600, hinterland: 500, tech: 1600 } as const;
+  // with the west moved to the city (#479), world(SEED): city 1 518 (×1.1 = 1 670 → 1 700), tech 1 136 (×1.1 = 1 250 → 1 200, the nearest hundred); the rest unchanged
+  const CAPS = { shipyard: 800, factory: 900, city: 1700, fair: 600, hinterland: 500, tech: 1200 } as const;
   let w: ReturnType<typeof world>;
   beforeAll(() => { w = world(SEED); });
   for (const [name, cap] of Object.entries(CAPS)) {
@@ -67,5 +68,19 @@ describe("raised solids per scene (#328)", () => {
 describe("Writing raft budget (#454)", () => {
   it("one raft tessellates to ≤ 1200 faces", () => {
     expect(tessellateAll(raftAt("wide", REST_POSE)).length).toBeLessThanOrEqual(1200);
+  });
+});
+
+describe("the west moves from tech to the city (#479)", () => {
+  // Measured on feature/471 at 3cff5a7 (before #479), world(SEED), raised solids (!isFlat): city 1 209, tech 1 449.
+  const BEFORE = { city: 1209, tech: 1449 } as const;
+  // Measured on HEAD of agent/479 (after #479), world(SEED), raised solids: city 1 518, tech 1 136, sum 2 654 ≤ 2 658. A record: the test asserts ≤, never exact.
+  // The move stayed ≤ 2 658 thanks to three west rulings: no traffic lights at axis × ordinary-street crossings, no parked cars (all three west of WEST_DISTRICT_X, x −54), axis lamps every 24 (not 12).
+  it("budget moved, not raised", () => {
+    const w = world(SEED), raised = (s: { solids: Parameters<typeof isFlat>[0][] }) => s.solids.filter((x) => !isFlat(x)).length;
+    const after = { city: raised(w.city!), tech: raised(w.tech!) };
+    expect(after.tech).toBeLessThan(BEFORE.tech); // the west left tech
+    expect(after.city).toBeGreaterThan(BEFORE.city); // and arrived in the city
+    expect(after.city + after.tech).toBeLessThanOrEqual(BEFORE.city + BEFORE.tech);
   });
 });

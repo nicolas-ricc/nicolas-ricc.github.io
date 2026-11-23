@@ -150,16 +150,18 @@ describe("coastal neighborhood documentation (#256)", () => {
   const png = (n: string) => readFileSync(`${ROOT}docs/superpowers/specs/assets/2026-10-27-barrio/${n}.png`);
   const size = (b: Buffer) => [b.readUInt32BE(16), b.readUInt32BE(20)];
 
-  it("the world paragraph tells of the coastal neighborhood and leaves the tech district to the west", () => {
+  it("the world paragraph tells of the coastal neighborhood and the city reaching the edge of the view", () => {
     for (const re of [/coastal residential neighborhood/, /monoblocks/, /houses with tile roofs/, /school/, /club/, /plazas/, /illuminated waterfront on the pier/]) expect(world).toMatch(re);
-    expect(world).toMatch(/tech district west of the city/);
+    expect(world).toMatch(/`tech\.ts` \(Resume's coastal residential neighborhood south of the southern avenue/);
+    expect(world).toMatch(/the city itself reaches the edge of the view/);
+    expect(world).not.toMatch(/tech district west of the city/);
     expect(world).not.toMatch(/west and south of the city/);
   });
   it("README lists the neighborhood spec among the specs", () => {
     expect(lab).toContain("2026-10-27-barrio-costero-design.md");
   });
   it("the docstring of tech.ts describes the neighborhood and points to its spec", () => {
-    const end = techSrc.indexOf("export interface Tower");
+    const end = techSrc.indexOf("export interface TechScene");
     expect(end).toBeGreaterThan(0);
     const doc = techSrc.slice(0, end);
     expect(doc).toMatch(/coastal residential neighborhood/);

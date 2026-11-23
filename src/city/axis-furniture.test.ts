@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { Vec2 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import { createRng } from "../map/seed";
-import { CITY_EDGE, EAST_RING, inCrater } from "../scenes/city-grid";
+import { COVER_MARGIN, inCoverQuad } from "../map/geo";
+import { EAST_RING, inCrater } from "../scenes/city-grid";
 import { PLINTH_H } from "../scenes/city-pieces";
 import { AXES, HOTEL_LOT, LAND, PLAZA_MAYOR, axis, axisBand, crossingPlazas, inCrossingPlaza, onAxis, pointInPoly, polyCentroid, type Axis } from "../scenes/city-plan";
 import { city } from "../scenes/city";
@@ -10,6 +11,7 @@ import { southStreets } from "../scenes/tech-streets";
 import { axisSpan, crossings, crosswalks, inDomain, onOrdinaryStreet } from "./crossings";
 import { BAR_FRONTS, COSTANERA_LAMP_Y, LAMP_MIN_GAP, axisLampPosts, lampSide, lampXs, laneOffsets, postZ, streets, trafficLightPosts } from "./streets";
 import type { FixedLight } from "./lights";
+import { WEST_DISTRICT_X } from "./zoning";
 
 type Strip = Solid & { kind: "strip" };
 type Prism = Solid & { kind: "prism" };
@@ -117,7 +119,7 @@ describe("traffic lights and lamps (#473)", () => {
   const posts = trafficLightPosts();
   const uniq = (() => {
     const seen = new Set<string>();
-    return crossings().filter((c) => { const k = c.other ? [c.a.id, c.other.id].sort().join("–") : `${c.a.id}:${c.otherId}`; if (seen.has(k)) return false; seen.add(k); return true; });
+    return crossings().filter((c) => { if (!c.other && c.at.x < WEST_DISTRICT_X) return false; /* west district: no signals at ordinary crossings (#479 budget moved, not raised) */ const k = c.other ? [c.a.id, c.other.id].sort().join("–") : `${c.a.id}:${c.otherId}`; if (seen.has(k)) return false; seen.add(k); return true; });
   })();
   const free = (c: (typeof uniq)[number], p: Vec2) => {
     const sq = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([i, j]) => ({ x: p.x + i! * 0.15, y: p.y + j! * 0.15 }));
@@ -135,6 +137,11 @@ describe("traffic lights and lamps (#473)", () => {
     }
     return out;
   };
+
+  it("the west district has no traffic light at an ordinary crossing, only the axis × axis ones (#479)", () => {
+    expect(crossings().some((c) => !c.other && c.at.x < WEST_DISTRICT_X)).toBe(true);
+    expect(posts.filter((p) => p.x < WEST_DISTRICT_X)).toHaveLength(0); // measured on agent/479: no axis × axis crossing lies west of x −54 (diagonalNorte × vias is at x −14)
+  });
 
   it("every crossing has two traffic lights", () => {
     const short: string[] = [], placed: Vec2[] = [];
@@ -157,7 +164,8 @@ describe("traffic lights and lamps (#473)", () => {
       if (a.kind === "costanera") continue;
       const [p, q] = axisSpan(a)!, ew = a.from.y === a.to.y;
       const mine = lamps.filter((l) => l.a === a);
-      const range = ew ? [Math.min(p.x, q.x), Math.max(p.x, q.x)] as const : [0, Math.hypot(q.x - p.x, q.y - p.y)] as const;
+      const x0 = Math.min(p.x, q.x), range = ew ? [-54 - 12 * Math.floor((-54 - x0) / 12), Math.max(p.x, q.x)] as const : // an E-W axis's posts keep the phase of the city's old west edge (x −54, every 12 from −48): the east does not move (#479)
+         [0, Math.hypot(q.x - p.x, q.y - p.y)] as const;
       const u = dir(a), n = { x: -u.y, y: u.x }, k = lampSide(a) * (a.w / 2 + 1);
       const at = (t: number): Vec2 => ew ? { x: t, y: p.y + n.y * k } : { x: p.x + u.x * t + n.x * k, y: p.y + u.y * t + n.y * k };
       const excuse = (c: Vec2, t: number): string | null => {
@@ -171,7 +179,8 @@ describe("traffic lights and lamps (#473)", () => {
         return null;
       };
       const ideal = lampXs(range, []);
-      for (const t of ideal) {
+      for (const [i, t] of ideal.entries()) {
+        if (at(t).x < WEST_DISTRICT_X && i % 2 === 1) continue; // west district: a lamp every 24 (#479 budget moved, not raised)
         const c = at(t), has = mine.some((l) => Math.hypot(l.at.x - c.x, l.at.y - c.y) < 0.01);
         if (!has) expect(excuse(c, t), `${a.id} missing lamp at ${t}`).not.toBeNull();
       }
@@ -238,8 +247,8 @@ describe("crossing plazas (#473)", () => {
   });
 });
 
-describe("west edge (#473)", () => {
-  it("nothing of the axes is west of the city edge", () => {
-    for (const s of strips.filter((s) => s.width === 0.4 || s.width === 0.8)) for (const p of s.path) if (p.y >= LAND.y0) expect(p.x).toBeGreaterThanOrEqual(CITY_EDGE.west - 1e-6);
+describe("west edge (#473, #479)", () => {
+  it("nothing of the axes is outside the cover (the cover is the west bound)", () => {
+    for (const s of strips.filter((s) => s.width === 0.4 || s.width === 0.8)) for (const p of s.path) if (p.y >= LAND.y0) expect(inCoverQuad(p.x, p.y, 16 / 9, COVER_MARGIN), `${p.x},${p.y}`).toBe(true);
   });
 });

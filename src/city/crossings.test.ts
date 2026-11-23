@@ -13,12 +13,12 @@ const pair = (a: string, b: string) => [a, b].sort().join("–");
 describe("axis spans (#473)", () => {
   const SPANS: Record<string, [Vec2, Vec2]> = {
     costanera: [{ x: 188, y: 164 }, { x: 188, y: 318 }],
-    plaza: [{ x: 132, y: 228 }, { x: -54, y: 228 }],
+    plaza: [{ x: 132, y: 228 }, { x: -440, y: 228 }], // the axis's own end: the cover bounds the domain, not the span (#479)
     diagonalNorte: [{ x: 132, y: 210 }, { x: -14, y: 169 }],
     diagonalSur: [{ x: 132, y: 291 }, { x: 132 - (27 * 552) / 231, y: 318 }],
     bulevar: [{ x: 10, y: 164 }, { x: 10, y: 318 }],
-    vias: [{ x: 184, y: 169 }, { x: -54, y: 169 }],
-    sur: [{ x: 184, y: 318 }, { x: -54, y: 318 }],
+    vias: [{ x: 184, y: 169 }, { x: -440, y: 169 }],
+    sur: [{ x: 184, y: 318 }, { x: -440, y: 318 }],
   };
 
   it("axis spans match the city part of each axis", () => {
@@ -27,7 +27,7 @@ describe("axis spans (#473)", () => {
       expect(s, id).not.toBeNull();
       expect(near(s![0], p), `${id} start ${JSON.stringify(s![0])}`).toBe(true);
       expect(near(s![1], q), `${id} end ${JSON.stringify(s![1])}`).toBe(true);
-      expect(inDomain(s![0]) && inDomain(s![1]), id).toBe(true);
+      expect(inDomain(s![0]), id).toBe(true); // the far west end of an E-W axis lies outside the cover: only points inside it are in the domain
     }
     expect(axisSpan(axis("barrio"))).toBeNull();
   });
@@ -62,15 +62,16 @@ describe("crossings (#473)", () => {
     const got = crossings().filter((c) => c.other === null).map((c) => `${c.a.id}:${c.otherId}`).sort();
     const want = [
       "costanera:y198",
-      ...["x-50", "x-20", "x40", "x70", "x100", "x130"].map((s) => `plaza:${s}`), // x 130: the tower island left with #474
+      ...["x-230", "x-200", "x-170", "x-140", "x-110", "x-80", "x-50", "x-20", "x40", "x70", "x100", "x130"].map((s) => `plaza:${s}`), // x 130: the tower island left with #474; x −80 and west: #479 (measured on agent/479 with the west streets)
       ...["x40", "x70", "x100", "x130", "y198"].map((s) => `diagonalNorte:${s}`),
       ...["x100", "x130"].map((s) => `diagonalSur:${s}`),
       ...["y198", "y258", "y288"].map((s) => `bulevar:${s}`),
-      ...["x-50", "x-20", "x40", "x70", "x100", "x130", "x160"].map((s) => `vias:${s}`),
-      ...["x-50", "x-20", "x40", "x100", "x130", "x160"].map((s) => `sur:${s}`),
+      ...["x-290", "x-260", "x-230", "x-200", "x-170", "x-140", "x-110", "x-80", "x-50", "x-20", "x40", "x70", "x100", "x130", "x160"].map((s) => `vias:${s}`),
+      ...["x-140", "x-110", "x-80", "x-50", "x-20", "x40", "x100", "x130", "x160"].map((s) => `sur:${s}`),
     ].sort();
     expect(got).toEqual(want);
-    expect(got).toHaveLength(30);
+    expect(got).toHaveLength(47); // 30 east of x −54 (as before #479) + 17 west of it, measured on agent/479 with the west streets
+    expect(got.filter((g) => !/:x-/.test(g) || Number(g.split(":x")[1]) >= -54)).toHaveLength(30);
   });
 });
 
@@ -129,7 +130,7 @@ describe("crosswalks (#473)", () => {
   });
 
   it("crosswalks: 37 measured", () => {
-    expect(crosswalks()).toHaveLength(37); // measured (#473): the prototype's 37, + plaza × x100 (strict hotel edge), − costanera × vias (terraces), − diagonalNorte × y198 (T5), + plaza × x130 (the tower island left with #474)
+    expect(crosswalks()).toHaveLength(54); // measured on agent/479 with the west streets: 37 east of x −54 (unchanged) + 17 west of it. The 37 measured (#473): the prototype's 37, + plaza × x100 (strict hotel edge), − costanera × vias (terraces), − diagonalNorte × y198 (T5), + plaza × x130 (the tower island left with #474)
   });
 
   it("QUAY_TERRACES covers westQuay's terrace tables", () => {

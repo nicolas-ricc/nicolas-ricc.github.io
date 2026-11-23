@@ -1,18 +1,18 @@
 import type { Vec2 } from "../iso/geometry";
 import { COVER_MARGIN, inCoverQuad } from "../map/geo";
-import { BRIDGE, CITY_EDGE, QUAY_TERRACES, WEST_QUAY, inCrater, type Rect } from "../scenes/city-grid";
+import { BRIDGE, QUAY_TERRACES, WEST_QUAY, inCrater, type Rect } from "../scenes/city-grid";
 import { AXES, BLOCK, CITY_BOUNDS, GRID_ORIGIN, HOTEL_LOT, LAND, PITCH, PLAZA_MAYOR, STREET, type Axis, axisBand, clipSeg, inCrossingPlaza, onAxis, pointInPoly, segX } from "../scenes/city-plan";
 
 /** Axes × axes and axes × ordinary streets: where the crossings and the zebra crosswalks of the west bank go (#473). */
 
-/** The city's domain: east of its west edge, north of its south edge, inside the cover. */
+/** The city's domain: north of its south edge, inside the cover (`COVER_MARGIN`): the cover is the only west bound (#479). */
 // 1e-9: a centroid computed on the south edge (the crossing plaza at y 318) lands a few ulps past it
-export const inDomain = (p: Vec2): boolean => p.x >= CITY_EDGE.west && p.y <= CITY_BOUNDS.y1 + 1e-9 && inCoverQuad(p.x, p.y, 16 / 9, COVER_MARGIN);
+export const inDomain = (p: Vec2): boolean => p.y <= CITY_BOUNDS.y1 + 1e-9 && inCoverQuad(p.x, p.y, 16 / 9, COVER_MARGIN);
 
 const strictlyIn = (r: Rect, p: Vec2): boolean => p.x > r.x && p.x < r.x + r.w && p.y > r.y && p.y < r.y + r.d;
 
 const spans = new Map<string, readonly [Vec2, Vec2] | null>();
-/** The axis center segment in the city: inside `LAND` (the costanera clipped on y only, at its own x) and cut exactly at x = CITY_EDGE.west and y = 318. */
+/** The axis center segment in the city: inside `LAND` (the costanera clipped on y only, at its own x) and cut exactly at y = 318 (its west end is the cover's: `inDomain` decides). */
 export function axisSpan(a: Axis): readonly [Vec2, Vec2] | null {
   const hit = spans.get(a.id);
   if (hit !== undefined) return hit;
@@ -22,8 +22,8 @@ export function axisSpan(a: Axis): readonly [Vec2, Vec2] | null {
   if (seg) {
     const [p, q] = a.kind === "costanera" ? [{ x: a.from.x, y: seg[0].y }, { x: a.from.x, y: seg[1].y }] : seg;
     let t0 = 0, t1 = 1;
-    // half-planes a·x + b·y <= c: x >= west, y <= south
-    for (const [h, k, c] of [[-1, 0, -CITY_EDGE.west], [0, 1, CITY_BOUNDS.y1]] as const) {
+    // half-plane a·x + b·y <= c: y <= south
+    for (const [h, k, c] of [[0, 1, CITY_BOUNDS.y1]] as const) {
       const fp = h * p.x + k * p.y - c, fq = h * q.x + k * q.y - c;
       if (fp > 0 && fq > 0) { t1 = t0; break; }
       if (fp > 0) t0 = Math.max(t0, fp / (fp - fq));
@@ -38,13 +38,27 @@ export function axisSpan(a: Axis): readonly [Vec2, Vec2] | null {
   return span;
 }
 
+/** The cover's west edge (margin `COVER_MARGIN`) on row y, or null if the row misses it: the cover is convex, so the first inside sample is bracketed and bisected. */
+export function coverWest(y: number): number | null {
+  const inside = (x: number): boolean => inCoverQuad(x, y, 16 / 9, COVER_MARGIN);
+  for (let x = -2000; x <= LAND.x1; x += 4) {
+    if (!inside(x)) continue;
+    let out = x - 4, inn = x;
+    for (let i = 0; i < 40; i++) { const m = (out + inn) / 2; if (inside(m)) inn = m; else out = m; }
+    return inn;
+  }
+  return null;
+}
+/** Some point of the column x on y in [LAND.y0, 318] is inside the cover. */
+const columnInCover = (x: number): boolean => { for (let y = LAND.y0; y <= CITY_BOUNDS.y1; y++) if (inCoverQuad(x, y, 16 / 9, COVER_MARGIN)) return true; return false; };
+
 /** Ordinary street centers, by the rule `gridLines` follows: those that run along an axis are the axis. */
 function ordinary(horizontal: boolean): number[] {
   const along = (c: number): boolean => AXES.some((a) => (horizontal ? a.from.y === a.to.y : a.from.x === a.to.x) && Math.abs((horizontal ? a.from.y : a.from.x) - c) < a.w / 2);
   const out: number[] = [];
-  for (let k = -5; k < 10; k++) {
+  for (let k = -20; k < 10; k++) {
     const c = horizontal ? GRID_ORIGIN.y + BLOCK + STREET / 2 + PITCH * k : GRID_ORIGIN.x + BLOCK + STREET / 2 + PITCH * k;
-    if (horizontal ? c > LAND.y0 && c < CITY_BOUNDS.y1 : c > CITY_EDGE.west && c < LAND.x1) if (!along(c)) out.push(c);
+    if (horizontal ? c > LAND.y0 && c < CITY_BOUNDS.y1 : c < LAND.x1 && columnInCover(c)) if (!along(c)) out.push(c);
   }
   return out;
 }
@@ -59,7 +73,7 @@ export const blocked = (p: Vec2): boolean =>
 export function onOrdinaryStreet(p: Vec2, pad = 0): boolean {
   const h = STREET / 2 + pad;
   const x = LAND.y0 <= p.y && p.y <= CITY_BOUNDS.y1 && ORDINARY_X.some((c) => Math.abs(p.x - c) < h);
-  const y = CITY_EDGE.west <= p.x && p.x <= LAND.x1 && ORDINARY_Y.some((c) => Math.abs(p.y - c) < h);
+  const y = p.x <= LAND.x1 && inCoverQuad(p.x, p.y, 16 / 9, COVER_MARGIN) && ORDINARY_Y.some((c) => Math.abs(p.y - c) < h);
   return (x || y) && !onAxis(p.x, p.y);
 }
 
@@ -84,7 +98,7 @@ export function crossings(): readonly Crossing[] {
   const lines: Line[] = [
     ...AXES.map((a): Line => ({ id: a.id, axis: a, from: a.from, to: a.to, w: a.w })),
     ...ORDINARY_X.map((x): Line => ({ id: `x${x}`, axis: null, from: { x, y: LAND.y0 }, to: { x, y: CITY_BOUNDS.y1 }, w: STREET })),
-    ...ORDINARY_Y.map((y): Line => ({ id: `y${y}`, axis: null, from: { x: CITY_EDGE.west, y }, to: { x: LAND.x1, y }, w: STREET })),
+    ...ORDINARY_Y.map((y): Line => ({ id: `y${y}`, axis: null, from: { x: coverWest(y) ?? LAND.x1, y }, to: { x: LAND.x1, y }, w: STREET })),
   ];
   const out: Crossing[] = [];
   for (const a of AXES) {

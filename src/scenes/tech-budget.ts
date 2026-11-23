@@ -19,10 +19,11 @@ export const blockRect = (b: Rect): Box => ({ x0: b.x - 2, y0: b.y - 2, x1: b.x 
 export const NEIGHBORHOOD_REGION: Box = { x0: 43, y0: 441, x1: 186, y1: 620 };
 export const WATERFRONT_RECT: Box = { x0: 186, y0: 324, x1: 198.5, y1: 624 };
 
-// Measured at 2b637a4 (feature/471 before #478) with tech(zoneRng(SEED, "cv", 2)): solids + ground, facesIn.
+// Measured on agent/479 without the west (#479) with tech(zoneRng(SEED, "cv", 2)): solids + ground, facesIn. Removing the west blocks shifts the rng, so the south changed too
+// (it was 9189 and 1849 at 2b637a4, feature/471 before #478, with the west).
 // The district and region checks count the whole scene, street furniture included.
-export const TECH_FACES_BEFORE = 9189; // the whole district
-export const REGION_FACES_BEFORE = 1849; // NEIGHBORHOOD_REGION
+export const TECH_FACES_BEFORE = 5245; // the whole district
+export const REGION_FACES_BEFORE = 1444; // NEIGHBORHOOD_REGION
 
 // low: measured max facesIn over the world's low parcels' blockRect (street furniture subtracted) = 102, × 1.1 = 112.2, up to the ten (#478; the 70 of the issue cannot hold, see T8).
 export const FACE_CAPS: Record<"monoblock" | "houses" | "plaza" | "school" | "club" | "waterfront" | "low", number> = { monoblock: 115, houses: 64, plaza: 60, school: 120, club: 150, waterfront: 350, low: 120 };

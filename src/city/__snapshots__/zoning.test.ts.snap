@@ -1,0 +1,38 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`the west does not move the east (#479) > the east parcels keep their pre-#479 recipe, neighborhood and tone 1`] = `
+[
+  "-47,171 -47,174 transicion chamfer 0",
+  "-17,171 -17,185.90240088502142 transicion decoStepped 1",
+  "-17,171 -16,178 transicion balconyBlock 1",
+  "13,171 20,188 transicion decoStepped 1",
+  "43,171 44,174 transicion chamfer 1",
+  "73,171 73,174 clasico classic 0",
+  "103,171 103,174 clasico mansard 0",
+  "133,171 133,174 bars gallery -1",
+  "163,171 163,174 bars shopRow -1",
+  "-47,201 -47,201 transicion courtyardO 0",
+  "-17,201 -17,201 transicion courtyardO 1",
+  "13,201 20,201 transicion balconyBlock 1",
+  "43,201 43,201 transicion courtyardO -1",
+  "73,201 73,206 civic library -1",
+  "103,201 103,214 clasico portalBase -1",
+  "-47,231 -47,234 transicion chamfer -1",
+  "-17,231 -17,234 transicion courtyardO 1",
+  "13,231 20,234 transicion decoStepped -1",
+  "43,231 43,234 clasico cornerCupola -1",
+  "-47,261 -47,261 transicion balconyBlock 1",
+  "-17,261 -17,261 transicion decoStepped 0",
+  "13,261 20,261 transicion chamfer 0",
+  "43,261 43,261 transicion constructionSite 0",
+  "-47,291 -47,291 transicion chamfer -1",
+  "-17,291 -17,291 transicion courtyardO 0",
+  "13,291 20,291 transicion patioResidential -1",
+  "43,291 43,291 transicion decoStepped 1",
+  "43,291 57.31784462289532,291 transicion chamfer 0",
+  "73,291 81,291 clasico mansard -1",
+  "103,291 107,307 clasico mansard -1",
+  "133,291 134,296 civic theatre -1",
+  "163,291 163,291 civic civicPalace 0",
+]
+`;

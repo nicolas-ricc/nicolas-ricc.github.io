@@ -8,9 +8,9 @@ import { lamp, streetTree, trafficLight } from "../kit/props";
 import { placeLit, type FixedLight } from "./lights";
 import { PLINTH_H, TILE, plazaTone, prism } from "../scenes/city-pieces";
 import { createRng, type Rng } from "../map/seed";
-import { builtParcels, neighborhoodOfParcel } from "./zoning";
+import { WEST_DISTRICT_X, builtParcels, neighborhoodOfParcel } from "./zoning";
 import { AXES, type Axis, CITY_BOUNDS, HOTEL_LOT, LAND, axis, axisBand, clipHalf, crossingPlazas, inCrossingPlaza, inParcel, inPlazaMayor, inRect, onAxis, polyCentroid } from "../scenes/city-plan";
-import { ORDINARY_X, ORDINARY_Y, axisFree, axisSpan, blocked, crossings, crosswalks, inDomain, onOrdinaryStreet, unit } from "./crossings";
+import { ORDINARY_X, ORDINARY_Y, axisFree, axisSpan, blocked, coverWest, crossings, crosswalks, inDomain, onOrdinaryStreet, unit } from "./crossings";
 
 /**
  * Resume streets: lanes, avenue with dashed lanes and crosswalks,
@@ -68,10 +68,14 @@ function centerLine(out: Solid[], from: Vec2, to: Vec2, stop: Stop = flatStop): 
   flush();
 }
 
-/** Ordinary grid streets (`ORDINARY_X` / `ORDINARY_Y`): x from the land's north edge to y 318, y from the city's west edge to the land's east edge. */
+/** Ordinary grid streets (`ORDINARY_X` / `ORDINARY_Y`): x from the land's north edge to y 318, y from the cover's west edge to the land's east edge. */
 function gridLines(ground: Solid[]): void {
   for (const x of ORDINARY_X) centerLine(ground, { x, y: LAND.y0 }, { x, y: CITY_BOUNDS.y1 }, streetStop);
-  for (const y of ORDINARY_Y) centerLine(ground, { x: CITY_EDGE.west, y }, { x: LAND.x1, y }, streetStop);
+  for (const y of ORDINARY_Y) {
+    const edge = coverWest(y);
+    // the center line samples every `SAMPLE` from its start: it starts on the same phase as when it began at x -54, so the east pieces keep their ends
+    if (edge !== null) centerLine(ground, { x: CITY_EDGE.west - SAMPLE * Math.floor((CITY_EDGE.west - edge) / SAMPLE), y }, { x: LAND.x1, y }, streetStop);
+  }
 }
 
 /** Offsets of an axis's two carriageway lanes from its center line, along the normal n = (−u.y, u.x). */
@@ -253,6 +257,8 @@ const onQuayStairs = (p: Vec2, half: number): boolean => p.x + half > WEST_QUAY.
 /** A post point on the west bank's ground: in the domain and `LAND`, off the plaza, lots, craters (by the post's whole footprint), any axis band and the ordinary streets (padded by `pad`). */
 const postFree = (a: Axis, p: Vec2, pad: number, half: number): boolean => inDomain(p) && p.y >= LAND.y0 && p.x <= landX(a) && ![[-1, -1], [1, -1], [1, 1], [-1, 1]].some(([i, j]) => blocked({ x: p.x + i! * half, y: p.y + j! * half })) && !onAxis(p.x, p.y) && !onOrdinaryStreet(p, pad) && !onQuayStairs(p, half);
 
+const inWestDistrict = (p: Vec2): boolean => p.x < WEST_DISTRICT_X;
+
 /**
  * Centers of the traffic light posts: at each crossing (axis x axis once, axis x street once) the corners
  * `at + s1 (half + 0.5) u + s2 (w/2 + 0.8) n`, stepping outward along u (`half + 0.5 + 0.5k`, k 0..12) to the first free post at least `LAMP_MIN_GAP` from the posts already placed; the diagonal pair (+,+)/(-,-) if both are free, else (+,-)/(-,+), else any two free ones.
@@ -262,6 +268,7 @@ export function trafficLightPosts(): readonly Vec2[] {
   for (const c of crossings()) {
     const key = c.other ? [c.a.id, c.other.id].sort().join("-") : `${c.a.id}:${c.otherId}`;
     if (seen.has(key)) continue;
+    if (c.other === null && inWestDistrict(c.at)) continue; // west district: no signals at ordinary crossings (#479 budget moved, not raised)
     seen.add(key);
     const u = unitOf(c.a), n = { x: -u.y, y: u.x };
     // per corner, the along offset steps outward (half + 0.5 + 0.5k, k 0..12) to the first post that is free: on an oblique crossing the first try falls on the street
@@ -295,12 +302,14 @@ export function axisLampPosts(): readonly { a: Axis; at: Vec2 }[] {
     const span = axisSpan(a);
     if (!span || a.kind === "costanera") continue;
     const [p, q] = span, u = unitOf(a), n = { x: -u.y, y: u.x }, k = lampSide(a) * (a.w / 2 + 1), ew = a.from.y === a.to.y;
-    const range = ew ? ([Math.min(p.x, q.x), Math.max(p.x, q.x)] as const) : ([0, Math.hypot(q.x - p.x, q.y - p.y)] as const);
+    // an E-W axis's posts keep the phase they had when the city ended at x -54 (every 12 from -48): the span now goes on west, so its start is moved by whole pitches
+    const x0 = Math.min(p.x, q.x), range = ew ? ([CITY_EDGE.west - 12 * Math.floor((CITY_EDGE.west - x0) / 12), Math.max(p.x, q.x)] as const) : ([0, Math.hypot(q.x - p.x, q.y - p.y)] as const);
     const place = (t: number): Vec2 => (ew ? { x: t, y: p.y + n.y * k } : { x: p.x + u.x * t + n.x * k, y: p.y + u.y * t + n.y * k });
     const ok = (at: Vec2): boolean => postFree(a, at, 0.3, LAMP_W / 2) && lights.every((l) => Math.hypot(l.x - at.x, l.y - at.y) >= LAMP_MIN_GAP);
     const mine: Vec2[] = [];
     for (const t of lampXs(range, a.id === "vias" ? BAR_FRONTS : [])) {
       let at = place(t);
+      if (inWestDistrict(at) && Math.round((t - range[0] - 6) / 12) % 2 === 1) continue; // west district: a lamp every 24, not 12 (#479 budget moved, not raised)
       if (onOrdinaryStreet(at, 0.3)) {
         const shifts = Array.from({ length: 2 * STREET_SHIFT / 0.5 }, (_, i) => (i % 2 ? 1 : -1) * 0.5 * Math.ceil((i + 1) / 2)); // −0.5, 0.5, −1, 1, …
         const s = shifts.find((d) => ok(place(t + d)) && mine.every((m) => Math.hypot(m.x - place(t + d).x, m.y - place(t + d).y) >= LAMP_MIN_GAP));
@@ -371,11 +380,37 @@ function streetFurniture(solids: Solid[], lights: FixedLight[]): void {
   axisFurniture(solids, lights);
 }
 
-/** Lanes, avenue and avenue furniture. Goes after the plaza: the ground is painted in insertion order. */
-export function streets(ground: Solid[], solids: Solid[], lights: FixedLight[]): void {
+/** A strip clipped to x >= west (its lateral half-width included, so the box stays east of it); null if what is left is shorter than 1. Other solids: dropped when their plan bounds start west of it. */
+function clipStrip(s: Solid & { kind: "strip" }, west: number): Solid | null {
+  const [p, q] = s.path;
+  if (s.path.length !== 2 || !p || !q) return bounds(s).min.x >= west - 1e-6 ? s : null;
+  const len = Math.hypot(q.x - p.x, q.y - p.y), ux = (q.x - p.x) / len, uy = (q.y - p.y) / len, edge = west + s.width / 2 * Math.abs(uy);
+  if (Math.min(p.x, q.x) >= edge) return s;
+  if (Math.abs(ux) < 1e-9 || Math.max(p.x, q.x) < edge) return null; // a N-S strip across the cut, or wholly west of it
+  const [w, e] = p.x < q.x ? [p, q] : [q, p], t = (edge - w.x) / (e.x - w.x);
+  const cut = { x: edge, y: w.y + t * (e.y - w.y) };
+  return Math.hypot(e.x - cut.x, e.y - cut.y) < 1 ? null : { ...s, path: [cut, e] };
+}
+
+/** Lanes, avenue and avenue furniture. Goes after the plaza: the ground is painted in insertion order. With a finite `west` nothing of it lies west of `west` (the lab, #479); the rail-lands strip (y < 164) keeps `CITY_EDGE.west`. */
+export function streets(ground: Solid[], solids: Solid[], lights: FixedLight[], west = -Infinity): void {
+  const g0 = ground.length, s0 = solids.length, l0 = lights.length; // axisFurniture's `clear` reads the solids already built: the streets write in place and the cut filters their tail
   crossingPlazaPieces(ground, solids, lights);
   lanes(ground);
   avenue(ground, solids);
   streetFurniture(solids, lights);
   boulevardMedian(solids);
+  if (west === -Infinity) return;
+  const g = ground.splice(g0), s = solids.splice(s0), l = lights.splice(l0);
+  for (const x of g) { const c = x.kind === "strip" ? clipStrip(x, west) : bounds(x).min.x >= west - 1e-6 ? x : null; if (c) ground.push(c); }
+  // `own` is an absolute [from, to) range into `solids`: the kept solids are renumbered and a light goes with its own solids
+  const newAt: number[] = [];
+  for (const [i, x] of s.entries()) { newAt[i] = solids.length; if (bounds(x).min.x >= west - 1e-6) solids.push(x); else newAt[i] = -1; }
+  newAt[s.length] = solids.length;
+  for (const x of l) {
+    const [from, to] = [x.own[0] - s0, x.own[1] - s0];
+    const own = Array.from({ length: Math.max(0, to - from) }, (_, k) => newAt[from + k]);
+    if (x.at.x < west || own.some((i) => i === -1)) continue;
+    lights.push({ ...x, own: own.length ? [own[0]!, own[0]! + own.length] : [newAt[from] ?? solids.length, newAt[from] ?? solids.length] });
+  }
 }
