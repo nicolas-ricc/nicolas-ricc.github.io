@@ -534,7 +534,6 @@ describe("clean crops (#399)", () => {
   });
 });
 
-// ---------------------------------------------------------------- #472
 import { CITY_BOUNDS as PLAN_CITY_BOUNDS, PLAZA_MAYOR, parcels as planParcels } from "../scenes/city-plan";
 
 describe("city exhibits on the new layout (#472)", () => {

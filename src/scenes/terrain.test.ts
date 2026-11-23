@@ -330,7 +330,6 @@ describe("clearOfWater", () => {
   });
 });
 
-// ---------------------------------------------------------------- #472
 import { cityTerrainAt } from "./terrain-classify";
 import { inCrater } from "./city-grid";
 

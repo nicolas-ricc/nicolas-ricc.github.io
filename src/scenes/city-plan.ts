@@ -187,9 +187,7 @@ export const axis = (id: string): Axis => {
   return a;
 };
 const bands = AXES.map((a) => segRect(a.from, a.to, a.w));
-/** The street surface of an axis: a rectangle of width `w` around its segment. */
 export const axisBand = (a: Axis): Vec2[] => segRect(a.from, a.to, a.w);
-/** The point lies on some axis band. */
 export const onAxis = (x: number, y: number): boolean => bands.some((b) => pointInPoly(x, y, b));
 
 let plazasMemo: Vec2[][] | null = null;
