@@ -87,7 +87,6 @@ export function classic(lot: Lot, rng: Rng, style: Style): Piece {
   return p;
 }
 
-
 /** `classic` on a parcel polygon: the body is clipped to the chamfered lot footprint; pilasters, crown, clock and sign stay only where they still fit. */
 function classicOnPoly(lot: Lot, rng: Rng, style: Style, g: { bx: number; by: number; bw: number; bd: number; h: number; fh: number; facade: Facade; cols: number }): Piece {
   const p = emptyPiece(), { bx, by, bw, bd, h, fh, facade, cols } = g, fpLot = polyFootprint(lot, 0, 2, "oblique");

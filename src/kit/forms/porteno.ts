@@ -95,9 +95,6 @@ export function mansard(lot: Lot, rng: Rng, style: Style): Piece {
   return fitToCap(p, lot);
 }
 
-
-
-
 const NORMAL: Record<Side, Vec2> = { n: { x: 0, y: -1 }, s: { x: 0, y: 1 }, e: { x: 1, y: 0 }, w: { x: -1, y: 0 } };
 const sideOf = (n: Vec2): Side => (n.y === 1 ? "s" : n.y === -1 ? "n" : n.x === 1 ? "e" : "w");
 const RAIL = { w: 0.1, h: 0.9 }, SLAB = { deep: 1, h: 0.25 };
@@ -142,14 +139,13 @@ export function portalBase(lot: Lot, rng: Rng, style: Style): Piece {
   const f: Facade = { floors: 2, cols, base: "glass" };
   const base = (shape: Vec2[]): void => { if (shape.length >= 3 && polyArea(shape) >= 1) addBuilding(p, { kind: "poly", footprint: shape, z, h: baseH, mat: style.mat, facade: f, tone: style.tone }, f); };
   const ux = nf.x !== 0 ? 0 : 1, uy = nf.x !== 0 ? 1 : 0; // tangent axis of the front face
-  let edge: [Vec2, Vec2] | null = null;
-  fp.forEach((a, i) => {
-    const b = fp[(i + 1) % fp.length]!, n = axisNormal(fp, a, b);
-    if (n && n.x === nf.x && n.y === nf.y && Math.hypot(b.x - a.x, b.y - a.y) >= 5 && (!edge || Math.hypot(b.x - a.x, b.y - a.y) > Math.hypot(edge[1].x - edge[0].x, edge[1].y - edge[0].y))) edge = [a, b];
-  });
+  const len = ([a, b]: readonly [Vec2, Vec2]): number => Math.hypot(b.x - a.x, b.y - a.y);
+  const edge = fp.map((a, i): [Vec2, Vec2] => [a, fp[(i + 1) % fp.length]!])
+    .filter(([a, b]) => { const n = axisNormal(fp, a, b); return !!n && n.x === nf.x && n.y === nf.y && len([a, b]) >= 5; })
+    .reduce<[Vec2, Vec2] | null>((best, e) => (!best || len(e) > len(best) ? e : best), null);
   if (!edge) base(fp);
   else {
-    const [a, b] = edge as [Vec2, Vec2], cu = ((a.x + b.x) * ux + (a.y + b.y) * uy) / 2, face = a.x * nf.x + a.y * nf.y, fc = nf.x !== 0 ? a.x : a.y, u0 = a.x * ux + a.y * uy, u1 = b.x * ux + b.y * uy;
+    const [a, b] = edge, cu = ((a.x + b.x) * ux + (a.y + b.y) * uy) / 2, face = a.x * nf.x + a.y * nf.y, fc = nf.x !== 0 ? a.x : a.y, u0 = a.x * ux + a.y * uy, u1 = b.x * ux + b.y * uy;
     const lo = cu - PORTAL.w / 2, hi = cu + PORTAL.w / 2;
     const before = clipHalf(fp, ux, uy, lo), after = clipHalf(fp, -ux, -uy, -hi);
     base(before); base(after);
