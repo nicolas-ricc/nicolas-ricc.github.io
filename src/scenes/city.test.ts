@@ -503,8 +503,6 @@ describe("the hotel and its RESUME sign in the city (#474)", () => {
   const s = scene();
   const own: Solid[] = [], ownAccents: Accent[] = [], ownLights: FixedLight[] = [];
   const lit = hotel(own, ownAccents, ownLights);
-  const ownKeys = new Set(own.map((x) => JSON.stringify(x)));
-  const isHotelPiece = (x: Solid) => ownKeys.has(JSON.stringify(x));
   const panel = bounds(SIGN_PANEL), panelScreen = screenBounds(panel);
   /** On screen the panel's bottom edge is horizontal (a diagonal wall): the largest sy of its bottom corners. */
   const bottomSy = Math.max(...SIGN_PANEL.footprint.map((p) => project(v3(p.x, p.y, SIGN_PANEL.z)).y));

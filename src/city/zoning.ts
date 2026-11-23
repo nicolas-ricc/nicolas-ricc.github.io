@@ -6,7 +6,7 @@ import type { Lot, Side, StyleId } from "../kit/types";
 import type { Rng } from "../map/seed";
 import { PLINTH_H } from "../scenes/city-pieces";
 import { AVENUE, BLOCK_W, EAST_COLS, FREIGHT_ROW, ROWS, SIDEWALK, STREET, WEST_QUAY, CITY_EDGE, blocks, estuaryEast, type Block, type Rect } from "../scenes/city-grid";
-import { SIGN_PANEL } from "../scenes/sign-hotel";
+import { SIGN_PANEL } from "../scenes/hotel-plan";
 import { CITY_BOUNDS, HOTEL_LOT, inCrossingPlaza, inPlazaMayor, onAxis, parcels, polyBox, type Parcel } from "../scenes/city-plan";
 
 /**
@@ -58,7 +58,6 @@ export const isBare = (b: Block): boolean => neighborhoodOf(b) === "harbor" && !
 
 /** Cap of a parcel in front of the hotel's sign: a rect that, built to its tallest, would cover the glass panel on screen while standing in front of it is limited to `FRONT_CAP_H`; anywhere else `top`. */
 export function maxHeightFor(r: Rect, top = MAX_BUILDING_H): number {
-  // SIGN_PANEL is read here, not at module load: zoning → sign-hotel → city/lights → zoning is a cycle that only works while the read is lazy
   const box: Bounds = { min: v3(r.x, r.y, 0), max: v3(r.x + r.w, r.y + r.d, MAX_BUILDING_H + PLINTH_H) }, panel = bounds(SIGN_PANEL);
   return overlaps(screenBounds(box), screenBounds(panel)) && isBehind(panel, box) ? FRONT_CAP_H : top;
 }

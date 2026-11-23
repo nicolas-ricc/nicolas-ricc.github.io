@@ -14,33 +14,17 @@ import { SIDEWALK } from "./city-grid";
 import { prism } from "./city-pieces";
 import { HOTEL_LOT } from "./city-plan";
 
-const R2 = Math.SQRT1_2, BULB_R = 0.35;
-const U = v3(R2, -R2, 0), N = v3(R2, R2, 0); // along the slab, toward the camera
+import { HOTEL_CAP, HOTEL_SLAB, HOTEL_TRACKING, N, PANEL_GAP, PANEL_T, PANEL_Z1, SIGN_MARGIN, SIGN_PANEL, SIGN_Z0, U, on, panelAt, slabFootprint } from "./hotel-plan";
 
-/** The hotel's office slab: center of its axis on the lot, half length along U, thickness along N, and its z span. */
-export const HOTEL_SLAB = { center: { x: 100, y: 259.5 }, half: 32, thick: 8, z0: 10, z1: 51 };
-/** Cap height of the marquee word and the tracking that opens its air; the sign's margin, panel gap, thickness, length and bottom z. */
-export const HOTEL_CAP = 12, HOTEL_TRACKING = 0.07, SIGN_MARGIN = 2.4, PANEL_GAP = 0.06, PANEL_T = 0.6, PANEL_L = 64, SIGN_Z0 = 31.5;
+export { HOTEL_CAP, HOTEL_SLAB, HOTEL_TRACKING, PANEL_GAP, PANEL_L, PANEL_T, SIGN_MARGIN, SIGN_PANEL, SIGN_Z0, slabFootprint } from "./hotel-plan";
 
+const BULB_R = 0.35;
 const C = HOTEL_SLAB.center, T2 = HOTEL_SLAB.thick / 2, LETTER_N = T2 + PANEL_T + PANEL_GAP, BASELINE = SIGN_Z0 + SIGN_MARGIN;
 const LAYOUT = marqueeLayout(HOTEL_CAP, HOTEL_TRACKING), INK_X0 = LAYOUT[0]!.box.x0, W = LAYOUT.at(-1)!.box.x1 - INK_X0; // ink width
-const BASE_H = 10, CORNICE_H = 0.4, CORNICE_GROW = 0.3, CHAMFER = 2.4, PANEL_Z1 = SIGN_Z0 + HOTEL_CAP + 2 * SIGN_MARGIN;
-
-/** Point at `t` along U and `n` along N from the slab's axis center. */
-const on = (t: number, n: number, z: number, d: Vec3 = v3(0, 0, 0)): Vec3 => v3(C.x + U.x * t + N.x * n + d.x, C.y + U.y * t + N.y * n + d.y, z + d.z);
-
-/** The slab's footprint: center ± half·U ± (thick/2)·N. */
-export const slabFootprint = (): Vec2[] => [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => { const p = on(a! * HOTEL_SLAB.half, b! * T2, 0); return { x: p.x, y: p.y }; });
+const BASE_H = 10, CORNICE_H = 0.4, CORNICE_GROW = 0.3, CHAMFER = 2.4;
 
 /** Where the sign stands: the center of the baseline on the letter plane. */
 export const SIGN_SITE: Vec3 = on(0, LETTER_N, BASELINE);
-
-/** The dark glass panel behind the word, flush against the slab's southeast face, displaced by `d`. */
-function panelAt(d: Vec3): Solid & { kind: "poly" } {
-  const P = (t: number, n: number) => { const p = on(t, n, 0, d); return { x: p.x, y: p.y }; };
-  return { kind: "poly", footprint: [P(-PANEL_L / 2, T2), P(PANEL_L / 2, T2), P(PANEL_L / 2, T2 + PANEL_T), P(-PANEL_L / 2, T2 + PANEL_T)], z: SIGN_Z0 + d.z, h: PANEL_Z1 - SIGN_Z0, mat: "glass" };
-}
-export const SIGN_PANEL = panelAt(v3(0, 0, 0));
 
 /** The Resume sign as the legibility oracle sees it: RESUME in marquee letters on the diagonal plane in front of the slab's face, backed by the glass panel. */
 export const RESUME_SIGN: SignSpec = signSpec({
@@ -80,25 +64,25 @@ function body(out: Solid[], lights: FixedLight[], d: Vec2, real: boolean): Solid
 
 export interface HotelLights { rooms: Accent[]; paperWindow: Vec3 }
 
-/** The hotel on its lot, displaced by `at` from the real site; returns the amber rooms of its lower floors and the window the paper drifts from. */
-export function hotel(out: Solid[], accents: Accent[], lights: FixedLight[], at: Vec3 = v3(0, 0, 0)): HotelLights {
-  const slab = body(out, lights, { x: at.x, y: at.y }, true);
-  hotelSign(out, accents, at);
-  const se = visibleWalls(slab).find((f) => f.normal.x * N.x + f.normal.y * N.y > 0.9)!, facade = SLAB_FACADE;
+/** The hotel on its lot, displaced by `at` on the ground from the real site; returns the amber rooms of its lower floors and the window the paper drifts from. */
+export function hotel(out: Solid[], accents: Accent[], lights: FixedLight[], at: Vec2 = { x: 0, y: 0 }): HotelLights {
+  const slab = body(out, lights, at, true);
+  hotelSign(out, accents, v3(at.x, at.y, 0));
+  const se = visibleWalls(slab).find((f) => f.normal.x * N.x + f.normal.y * N.y > 0.9)!;
   const rooms: Accent[] = [];
-  for (let floor = 0; floor < facade.floors; floor++) {
-    for (const pts of windowPatches(se, facade, floor)) {
+  for (let floor = 0; floor < SLAB_FACADE.floors; floor++) {
+    for (const pts of windowPatches(se, SLAB_FACADE, floor)) {
       const zs = pts.map((p) => p.z);
-      if (Math.max(...zs) < SIGN_Z0 + at.z - 0.5 || Math.min(...zs) > PANEL_Z1 + at.z + 0.5) rooms.push({ kind: "poly", pts, color: "amber", alpha: 1 });
+      if (Math.max(...zs) < SIGN_Z0 - 0.5 || Math.min(...zs) > PANEL_Z1 + 0.5) rooms.push({ kind: "poly", pts, color: "amber", alpha: 1 });
     }
   }
-  const row = windowPatches(se, facade, 4).map((pts) => ({ pts, t: pts.reduce((s, p) => s + (p.x - C.x - at.x) * U.x + (p.y - C.y - at.y) * U.y, 0) / pts.length }));
+  const row = windowPatches(se, SLAB_FACADE, 4).map((pts) => ({ pts, t: pts.reduce((s, p) => s + (p.x - C.x - at.x) * U.x + (p.y - C.y - at.y) * U.y, 0) / pts.length }));
   const e = row.reduce((a, b) => (b.t > a.t ? b : a)), n = e.pts.length;
   const c = v3(e.pts.reduce((s, p) => s + p.x, 0) / n, e.pts.reduce((s, p) => s + p.y, 0) / n, e.pts.reduce((s, p) => s + p.z, 0) / n);
   return { rooms, paperWindow: v3(c.x + 0.6 * N.x, c.y + 0.6 * N.y, c.z) };
 }
 
 /** The hotel as the sign was audited on it: base and slab centered at the origin, no facade, no lights. */
-export function hotelStandIn(out: Solid[], _accents: Accent[]): void {
+export function hotelStandIn(out: Solid[], _accents: Accent[]): void { // `_accents`: the exhibit `build` shape; the stand-in has none
   body(out, [], { x: -C.x, y: -C.y }, false);
 }
