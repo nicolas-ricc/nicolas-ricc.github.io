@@ -20,7 +20,7 @@ import { clipBody, clipToPoly, insidePoly, polyArea, polyCornice, polyFootprint 
 const PASSAGE = 3;
 
 /** Wings of width `t` on `r` on the requested sides: north and south across the full width, east and west between them. Disjoint prisms, never a ring. */
-function ring(r: Rect, t: number, sides: readonly Side[]) {
+export function ring(r: Rect, t: number, sides: readonly Side[]) {
   const has = (s: Side) => sides.includes(s);
   const y0 = r.y + (has("n") ? t : 0), y1 = r.y + r.d - (has("s") ? t : 0);
   const x0 = r.x + (has("w") ? t : 0), x1 = r.x + r.w - (has("e") ? t : 0);

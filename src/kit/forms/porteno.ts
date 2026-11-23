@@ -1,10 +1,15 @@
 import { convexHull, v3, type Vec2 } from "../../iso/geometry";
+import type { Facade } from "../../iso/facade";
 import type { MeshFace, Solid } from "../../iso/solids";
 import type { Material } from "../../map/palette-iso";
+import type { Rng } from "../../map/seed";
 import type { Rect } from "../../scenes/city-grid";
-import { interlock } from "../piece";
+import { prism } from "../../scenes/city-pieces";
+import { addBuilding, emptyPiece, fitToCap, floorsFor, interlock, recipeCap } from "../piece";
 import { CORNICE_H, offsetFootprint } from "../roofs";
-import type { Lot } from "../types";
+import type { Lot, Piece, RecipeDef, Style } from "../types";
+import { chamferCorner } from "./composite";
+import { ring } from "./courtyard";
 
 /** Chamfer thresholds (decision T1): a corner with |cos| below RIGHT_COS is "right" (ochava class); above FLAT_COS the edges are nearly collinear. */
 export const RIGHT_COS = 0.35;
@@ -141,3 +146,78 @@ export function insetPoly(fp: Vec2[], m: number): Vec2[] | null {
   if (convexHull(fp).length === fp.length && convexHull(q).length !== q.length) return null;
   return q.every((p) => insidePoly(fp, p)) ? q : null;
 }
+
+const CUPOLA_H = 2.5 + 2 + 1.2, CUPOLA_R = 2, WING_T = 5;
+
+/** Distance from `c` to the nearest edge of `poly`. */
+function edgeDist(poly: Vec2[], c: Vec2): number {
+  return Math.min(...poly.map((a, i) => {
+    const b = poly[(i + 1) % poly.length]!, dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
+    const t = l2 < EPS ? 0 : Math.max(0, Math.min(1, ((c.x - a.x) * dx + (c.y - a.y) * dy) / l2));
+    return Math.hypot(c.x - a.x - dx * t, c.y - a.y - dy * t);
+  }));
+}
+
+/** Corner block: a ring of wings clipped to the parcel, stacked floors with trim slabs, and a copper-domed turret over the open corner (decision T4). */
+export function cornerCupola(lot: Lot, rng: Rng, style: Style): Piece {
+  const p = emptyPiece(), { z } = lot, fp = polyFootprint(lot, 0, 2.4);
+  const h = Math.min(5.5 + 3 * rng.next(), recipeCap(lot) - CUPOLA_H), floors = floorsFor(h, style), fh = h / floors;
+  const { wings, patio } = ring(lot, WING_T, ["n", "s", "w", "e"]);
+  for (const { rect } of wings) {
+    const wing = clipToPoly(rect, fp), cols = rng.int(3, 4), f: Facade = { floors: 1, cols };
+    if (wing.length < 3 || polyArea(wing) < 4) continue;
+    for (let k = 0; k < floors; k++) {
+      const zk = z + k * fh;
+      addBuilding(p, { kind: "poly", footprint: wing, z: zk, h: fh - 0.15, mat: style.mat, facade: f, tone: style.tone }, f);
+      p.solids.push(interlock({ kind: "poly", footprint: offsetFootprint(wing, 0.25), z: zk + fh - 0.15, h: 0.15, mat: style.trim }));
+    }
+  }
+  const corner = chamferCorner(lot.open), q = { x: corner[1] === "e" ? lot.x + lot.w : lot.x, y: corner[0] === "s" ? lot.y + lot.d : lot.y };
+  const mid = polyCentroid(fp), len = Math.hypot(mid.x - q.x, mid.y - q.y), r2 = CUPOLA_R + 0.2;
+  let c = mid;
+  for (let t = 0; t <= len; t += 0.1) {
+    const s = { x: q.x + ((mid.x - q.x) * t) / len, y: q.y + ((mid.y - q.y) * t) / len };
+    if (insidePoly(fp, s) && edgeDist(fp, s) >= r2) { c = s; break; }
+  }
+  const top = z + h;
+  p.solids.push(
+    { kind: "cylinder", at: v3(c.x, c.y, top), r: CUPOLA_R, h: 2.5, mat: style.mat },
+    { kind: "dome", at: v3(c.x, c.y, top + 2.5), r: r2, h: 2, mat: "copper" },
+    { kind: "cone", at: v3(c.x, c.y, top + 4.5), r: 0.3, h: 1.2, mat: style.trim },
+  );
+  p.courtyard = patio;
+  return fitToCap(p, lot);
+}
+
+const DORMER = { along: 1.4, deep: 0.8, h: 1.6 };
+
+/** Mansard block: 4..5 floors, cornice, a frustum roof inset 0.8 to 2, and 3 dormers on each south or east edge of 6 or more (decision T5). */
+export function mansard(lot: Lot, rng: Rng, style: Style): Piece {
+  const p = emptyPiece(), { z } = lot, floors = rng.int(4, 5);
+  const fp = lot.poly ? clipConvex(polyFootprint(lot, 1, 2.4), polyFootprint(lot, 0, 2.4)) : polyFootprint(lot, 1, 2.4); // inset 1 would leave a short wedge edge's chamfer short of the lot-level cut
+  if (fp.length < 3 || polyArea(fp) < 4) return p;
+  const h = Math.min(floors * style.floorH, recipeCap(lot) - CORNICE_H - 2.2), f: Facade = { floors: floorsFor(h, style), cols: 3 };
+  addBuilding(p, { kind: "poly", footprint: fp, z, h, mat: style.mat, facade: f, tone: style.tone }, f);
+  p.solids.push({ kind: "poly", footprint: offsetFootprint(fp, 0.4), z: z + h, h: CORNICE_H, mat: style.trim });
+  const top = z + h + CORNICE_H, base = insetPoly(fp, 0.8), tip = insetPoly(fp, 2);
+  if (!base || !tip) return fitToCap(p, lot);
+  p.solids.push(frustum(base, tip, top, top + 2.2, style.roof));
+  const s = area2(fp) > 0 ? 1 : -1, d: Facade = { floors: 1, cols: 1 };
+  fp.forEach((a, i) => {
+    const b = fp[(i + 1) % fp.length]!, dx = b.x - a.x, dy = b.y - a.y, l = Math.hypot(dx, dy);
+    if (l < 6 || (dx !== 0 && dy !== 0)) return;
+    const nx = (s * dy) / l, ny = (-s * dx) / l; // outward normal
+    if (ny !== 1 && nx !== 1) return; // south or east only
+    for (const t of [0.25, 0.5, 0.75]) {
+      const cx = a.x + dx * t, cy = a.y + dy * t;
+      const [w, dd] = ny === 1 ? [DORMER.along, DORMER.deep] : [DORMER.deep, DORMER.along];
+      addBuilding(p, prism(ny === 1 ? cx - w / 2 : a.x - w, ny === 1 ? a.y - dd : cy - dd / 2, top, w, dd, DORMER.h, style.mat, { facade: d }), d);
+    }
+  });
+  return fitToCap(p, lot);
+}
+
+export const PORTENO: readonly RecipeDef[] = [
+  { name: "cornerCupola", recipe: cornerCupola, family: "porteno" },
+  { name: "mansard", recipe: mansard, family: "porteno" },
+];
