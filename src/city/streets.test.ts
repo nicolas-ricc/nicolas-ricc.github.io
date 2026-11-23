@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Vec2 } from "../iso/geometry";
+import { PLINTH_H } from "../scenes/city-pieces";
 import { bounds, type Solid } from "../iso/solids";
 import { ESTUARY_Y0, STATION_LAND, eastBank } from "../map/geo";
 import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, EAST_COLS, EAST_RING, HARBOR, RING_Y0, ROWS, STREET, WEST_COLS, WEST_QUAY, inCrater } from "../scenes/city-grid";
-import { BAR_FRONTS, LAMP_MIN_GAP, lampXs, streets, type BarFront } from "./streets";
+import { BAR_FRONTS, COSTANERA_LAMP_Y, LAMP_MIN_GAP, lampXs, laneOffsets, streets, type BarFront } from "./streets";
+import { crosswalks } from "./crossings";
 
 type Strip = Solid & { kind: "strip" };
 
@@ -25,11 +27,18 @@ const RING_X = EAST_RING.x0 + STREET / 2;
 const CROSSINGS = [RING_X, EAST_COLS[0] + BLOCK_W + STREET / 2]; // the west crosswalks went with the old west avenue (#472)
 const CARRIAGEWAYS = [(AVENUE.y0 + BOULEVARD.y0) / 2, (BOULEVARD.y1 + AVENUE.y1) / 2];
 
+const unitOf = (a: Axis): Vec2 => { const L = Math.hypot(a.to.x - a.from.x, a.to.y - a.from.y); return { x: (a.to.x - a.from.x) / L, y: (a.to.y - a.from.y) / L }; };
+const offsetOf = (a: Axis, p: Vec2): number => { const u = unitOf(a); return (p.x - a.from.x) * -u.y + (p.y - a.from.y) * u.x; };
+/** A 0.4 strip that lies on one of an axis's lane offsets and runs parallel to it. */
+const axisLane = (s: Strip): boolean => AXES.some((a) => {
+  const u = unitOf(a), [p, q] = s.path as [Vec2, Vec2];
+  return Math.abs((q.x - p.x) * u.y - (q.y - p.y) * u.x) < 1e-6 && laneOffsets(a).some((o) => s.path.every((e) => Math.abs(offsetOf(a, e) - o) < 1e-6));
+});
+
 describe("streets", () => {
-  it("leaves between 80 and 150 strips, all paving flush with the ground", () => {
+  it("leaves a measured number of strips, all paving flush with the ground", () => {
     const strips = scene();
-    expect(strips.length).toBeGreaterThanOrEqual(80);
-    expect(strips.length).toBeLessThanOrEqual(150); // measured on the new layout (#472): 97 ground pieces, inside the band
+    expect(strips.length).toBe(340); // measured (#473): 88 lines and east lanes, 111 crosswalk strips, the costanera's promenade, the rest axis dashes (they stop at the zebras)
     for (const s of strips) {
       expect(s.mat).toBe("paving");
       expect(s.z).toBeGreaterThan(0);
@@ -37,15 +46,12 @@ describe("streets", () => {
     }
   });
 
-  it("each center line is a two-point strip of at least 1, horizontal or vertical unless it runs along a diagonal axis", () => {
+  it("each center line is a two-point strip of at least 1, horizontal or vertical", () => {
     const lines = ofWidth(0.3);
     expect(lines.length).toBeGreaterThan(0);
     for (const s of lines) {
       expect(s.path).toHaveLength(2);
-      if (!isVertical(s) && !isHorizontal(s)) {
-        const [a, b] = s.path as [Vec2, Vec2];
-        expect(AXES.some((x) => x.kind === "diagonal" && Math.abs((a.x - x.from.x) * (x.to.y - x.from.y) - (a.y - x.from.y) * (x.to.x - x.from.x)) < 1e-6 * 400 && Math.abs((b.x - x.from.x) * (x.to.y - x.from.y) - (b.y - x.from.y) * (x.to.x - x.from.x)) < 1e-6 * 400), `${a.x},${a.y}`).toBe(true);
-      }
+      expect(isVertical(s) || isHorizontal(s), `${s.path[0]!.x},${s.path[0]!.y}`).toBe(true);
       expect(length(s)).toBeGreaterThanOrEqual(1);
     }
   });
@@ -106,14 +112,14 @@ describe("streets", () => {
     for (const s of ofWidth(0.3).filter((s) => isVertical(s) && WEST_LANE_X.includes(s.path[0]!.x))) expect(s.path[1]!.y).toBeLessThanOrEqual(LAND.y0);
   });
 
-  it("the dashed lanes only go on the avenue's two carriageways and on the east ring", () => {
+  it("the dashed lanes only go on the avenue's two carriageways, the east ring and the axis lanes", () => {
     const dashes = ofWidth(0.4);
     expect(dashes.length).toBeGreaterThan(0);
     for (const s of dashes) {
       expect(length(s)).toBeCloseTo(5, 6);
-      const onAvenue = isHorizontal(s) && CARRIAGEWAYS.includes(s.path[0]!.y);
+      const onAvenue = isHorizontal(s) && CARRIAGEWAYS.includes(s.path[0]!.y) && s.path[0]!.x >= EAST_RING.x0;
       const onRing = isVertical(s) && s.path[0]!.x === RING_X;
-      expect(onAvenue || onRing).toBe(true);
+      expect(onAvenue || onRing || axisLane(s), `${s.path[0]!.x},${s.path[0]!.y}`).toBe(true);
     }
     for (const y of CARRIAGEWAYS) expect(dashes.some((s) => isHorizontal(s) && s.path[0]!.y === y)).toBe(true);
     expect(dashes.some((s) => isVertical(s) && s.path[0]!.x === RING_X)).toBe(true);
@@ -126,8 +132,8 @@ describe("streets", () => {
     }
   });
 
-  it("each avenue crossing has a crosswalk of 3 strips of 0.8, except under the bridge", () => {
-    const zebras = ofWidth(0.8);
+  it("each avenue crossing of the east stretch has a crosswalk of 3 strips of 0.8, except under the bridge", () => {
+    const zebras = ofWidth(0.8).filter((s) => s.path[0]!.x > EAST_RING.x0);
     for (const cx of CROSSINGS) {
       const here = zebras.filter((s) => Math.abs(s.path[0]!.x - cx) <= 2);
       if (cx === RING_X) { expect(here).toHaveLength(0); continue; }
@@ -138,7 +144,6 @@ describe("streets", () => {
       }
     }
     expect(zebras).toHaveLength((CROSSINGS.length - 1) * 3);
-    for (const s of zebras) expect(s.path[0]!.x).toBeGreaterThan(EAST_RING.x0);
   });
 });
 
@@ -193,7 +198,7 @@ describe("avenue lamps around the bars (#165)", () => {
 // ---------------------------------------------------------------- #472: center lines on the new grid and on the axes
 import { fingerprint } from "../iso/fingerprint";
 import { SIDEWALK } from "../scenes/city-grid";
-import { AXES, BLOCK as PLAN_BLOCK, CITY_BOUNDS, GRID_ORIGIN, HOTEL_LOT, LAND, PITCH, PLAZA_MAYOR, STREET as PLAN_STREET, axisBand, crossingPlazas, inCrossingPlaza, onAxis, pointInPoly } from "../scenes/city-plan";
+import { AXES, type Axis, BLOCK as PLAN_BLOCK, GRID_ORIGIN, HOTEL_LOT, LAND, PITCH, PLAZA_MAYOR, STREET as PLAN_STREET, axisBand, crossingPlazas, inCrossingPlaza, onAxis, pointInPoly } from "../scenes/city-plan";
 
 describe("streets on the new layout (#472)", () => {
   const ground: Solid[] = [], solids: Solid[] = [];
@@ -228,12 +233,6 @@ describe("streets on the new layout (#472)", () => {
     for (const y of ordinaryY) expect(lines.some((s) => s.path[0]!.y === y && s.path[1]!.y === y && Math.min(s.path[0]!.x, s.path[1]!.x) >= CITY_EDGE.west - 1e-6), `y ${y}`).toBe(true);
   });
 
-  it("each axis has a center line", () => {
-    // R7: the south avenues are painted inside the suburb by #478
-    const inCity = (a: (typeof AXES)[number]) => axisBand(a).some((p) => p.x >= CITY_EDGE.west && p.y <= CITY_BOUNDS.y1);
-    for (const a of AXES) expect(lines.some((s) => axisOf(s) === a), a.id).toBe(inCity(a)); // barrio (y 378) has none
-  });
-
   it("no center line leaves the city's ground, except the strip and the east lines", () => {
     for (const s of lines) {
       if (s.path[0]!.x > WEST_QUAY.x0 || s.path[0]!.y < LAND.y0) continue;
@@ -259,9 +258,21 @@ describe("streets on the new layout (#472)", () => {
     expect(crossingPlazas()).toHaveLength(3);
   });
 
-  it("no lane, crosswalk, boulevard, lamp or traffic light of the old west avenue is left", () => {
-    for (const s of ground) if (s.kind === "strip" && s.width !== 0.3) expect(s.path.every((p) => p.x >= EAST_RING.x0 || p.y < LAND.y0), `strip ${s.width} at ${s.path[0]!.x},${s.path[0]!.y}`).toBe(true);
-    for (const x of solids) expect(bounds(x).min.x, `${x.kind} ${x.mat}`).toBeGreaterThanOrEqual(EAST_RING.x0 - 1); // eval fix: the ring's traffic light stands at x 269.4..269.5, 1 u west of the ring edge, in the east stretch of the old code too
+  it("west of the ring, every 0.4 strip is an axis lane and every 0.8 strip a crosswalk of crossings()", () => {
+    const walks = crosswalks().flatMap((w) => w.strips);
+    for (const s of ground) {
+      if (s.kind !== "strip" || s.path[0]!.x >= EAST_RING.x0 || s.path[0]!.y < LAND.y0) continue;
+      if (s.width === 0.4) expect(axisLane(s), `lane at ${s.path[0]!.x},${s.path[0]!.y}`).toBe(true);
+      if (s.width === 0.8) expect(walks.some(([p, q]) => s.path.length === 2 && Math.hypot(s.path[0]!.x - p.x, s.path[0]!.y - p.y) < 1e-6 && Math.hypot(s.path[1]!.x - q.x, s.path[1]!.y - q.y) < 1e-6), `crosswalk at ${s.path[0]!.x},${s.path[0]!.y}`).toBe(true);
+    }
+    const post = (x: Solid) => x.kind === "prism" && (x.mat === "steel" && x.w <= 0.6 || x.mat === "officeDark"); // a car is a steel prism too
+    const curb = (x: Solid) => x.kind === "poly" && x.mat === "paving" && x.h === PLINTH_H; // the crossing plazas' curbs
+    for (const x of solids.filter((x) => bounds(x).min.x < EAST_RING.x0 - 1)) {
+      expect(bounds(x).min.x, `${x.kind} ${x.mat}`).toBeGreaterThanOrEqual(CITY_EDGE.west - 1);
+      const median = x.kind === "prism" && x.mat === "leafDark" && x.at.x === 8, tree = x.kind === "cone" && x.at.x === 10;
+      expect(median || tree || post(x) || curb(x), `${x.kind} ${x.mat}`).toBe(true); // only the boulevard median and its trees, and the traffic lights, lamps and plaza curbs (#473) stand west of the ring
+      if (!(x.kind === "prism" && x.at.x === 190.5 && COSTANERA_LAMP_Y.includes(x.at.y))) expect(bounds(x).min.y, `${x.kind} ${x.mat}`).toBeGreaterThanOrEqual(LAND.y0 - 1); // the costanera's lamp at y 160 is the exception
+    }
   });
 
   it("the east stretch of the avenue keeps its lanes, crosswalks, boulevard, traffic lights and lamps (fingerprint of feature/471)", () => {
@@ -275,3 +286,4 @@ describe("streets on the new layout (#472)", () => {
     expect(BAR_FRONTS.map((f) => [f.x0, f.x1])).toEqual([[133 + SIDEWALK, 157 - SIDEWALK], [163 + SIDEWALK, 184 - SIDEWALK]]);
   });
 });
+

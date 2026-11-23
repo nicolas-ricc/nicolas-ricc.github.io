@@ -66,8 +66,12 @@ const ALLOW: Record<string, RegExp[]> = {
   // #472: the axis names and barrio ids are the place names of the layout (spec 2026-11-22), data like the exhibit ids
   "src/scenes/city-plan.ts": [/Avenida (?:de la Plaza|de las Vías|del Sur|del Barrio)/g, /\bcostanera\b/gi, /\b[Bb]arrios?(?:At)?\b/g, /\bresidencial\b/g],
   "src/scenes/city-plan.test.ts": [/Avenida (?:de la Plaza|de las Vías|del Sur|del Barrio)/g, /\bcostanera\b/gi, /\b[Bb]arrios?(?:At)?\b/g, /\bresidencial\b/g],
-  "src/city/streets.test.ts": [/Avenida de las Vías/g], // axis name of the plan (#472), as city-plan.test.ts
-  "src/city/streets.ts": [/\bcostanera\b/g], // axis kind of the plan (#472)
+  "src/city/streets.test.ts": [/Avenida de las Vías/g, /\bcostanera\b/gi, /\bCOSTANERA_LAMP_Y\b/g], // axis name of the plan (#472), as city-plan.test.ts; axis kind and lamp stations of the costanera (#473)
+  "src/city/streets.ts": [/\bcostanera\b/gi, /\bCOSTANERA_LAMP_Y\b/g], // axis kind of the plan (#472); the lamp stations of its row (#473)
+  "src/city/crossings.ts": [/\bcostanera\b/g], // axis kind of the plan (#473)
+  "src/city/crossings.test.ts": [/\bcostanera\b/g, /\bbarrio\b/g], // axis ids of the plan (#473)
+  "src/city/axis-furniture.test.ts": [/\bcostanera\b/gi, /\bCOSTANERA_LAMP_Y\b/g, /Avenida de la Plaza/g], // axis kind and name of the plan (#473)
+  "src/scenes/city-streets.test.ts": [/\bcostanera\b/g], // axis kind of the plan (#473)
   "src/city/axis-streets.ts": [/\bcostanera\b/gi], // axis kind of city-plan is layout data
   "src/city/zoning.ts": [/\b[Bb]arrios?\b/g], // Barrio ids of city-plan are layout data
   "src/city/zoning.test.ts": [/\b[Bb]arrios?\b/g, /\bresidencial\b/g],

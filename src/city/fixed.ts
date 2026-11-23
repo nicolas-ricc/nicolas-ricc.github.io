@@ -6,6 +6,7 @@ import { ESTUARY_Y0, QUAY_X, islandWestX } from "../map/geo";
 import { AVENUE, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROW_Y, EAST_COLS, EAST_RING, FALLEN_BLOCK, FREIGHT_ROW, PROMENADE, ROWS, STREET, WEST_QUAY, blocks, estuaryEast, inCrater, type Rect } from "../scenes/city-grid";
 import { BRIDGE_LANDING, CITY_BOUNDS, HOTEL_LOT, PLAZA_CENTER, PLAZA_MAYOR, inCrossingPlaza, inParcel, inPlazaMayor, inRect, onAxis } from "../scenes/city-plan";
 import { builtParcels } from "./zoning";
+import { crosswalks } from "./crossings";
 import { jungle, type Rails } from "../scenes/flora";
 import { CAR, awning, bench, bollard, car, chair, dockCrane, fountain, garland, kiosk, lamp, stoneArch, table } from "../kit/props";
 import { fixedLights, placeLit, type FixedLight } from "./lights";
@@ -166,6 +167,7 @@ export function cars(solids: Solid[], rng: Rng): void {
     ...blocks().filter((b) => b.kind !== "freight").map((b) => ({ x: b.x, y: b.y, w: b.w, d: b.d, grid: true })),
     ...builtParcels().map((pc) => ({ ...pc.rect, grid: false })),
   ];
+  const walkBoxes = crosswalks().flatMap((w) => w.strips.map(([p, q]) => ({ x: Math.min(p.x, q.x) - 0.4, y: Math.min(p.y, q.y) - 0.4, w: Math.abs(p.x - q.x) + 0.8, d: Math.abs(p.y - q.y) + 0.8 })));
   for (const b of lots) {
     const n = rng.int(1, 3);
     for (let i = 0; i < n; i++) {
@@ -186,6 +188,7 @@ export function cars(solids: Solid[], rng: Rng): void {
         if (corners.some(([cx, cy]) => onAxis(cx, cy) || inPlazaMayor(cx, cy) || inCrossingPlaza(cx, cy) || inRect(HOTEL_LOT, cx, cy) || inParcel(cx, cy))) continue;
       }
       if (placed.some((p) => rectsOverlap(x, y, CAR.w, CAR.d, p.x, p.y, CAR.w, CAR.d, 1))) continue; // no car overlaps another, with 1 u of margin
+      if (walkBoxes.some((k) => rectsOverlap(x, y, CAR.w, CAR.d, k.x, k.y, k.w, k.d, 3))) continue; // keep 3 u clear of every crosswalk strip (#473)
       placed.push({ x, y });
       solids.push(...car(v3(x, y, 0), rng.chance(0.6) ? "steel" : "rust"));
     }
