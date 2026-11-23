@@ -1,4 +1,4 @@
-import { CELL_BLEED, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, inCoverQuad, islandEastX, islandWestX, riverCenter } from "../map/geo";
+import { CELL_BLEED, COVER_MARGIN, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, inCoverQuad, islandEastX, islandWestX, riverCenter } from "../map/geo";
 import { BLOCK_D, BLOCK_W, CITY_EDGE, ROWS, WEST_COLS, type Rect } from "./city-grid";
 
 /**
@@ -77,8 +77,7 @@ export interface SprawlBlock extends Rect { dist: number }
 export const SUBURB_COLS = [-84, -114, -144, -174, -204, -234, -264] as const;
 export const SUBURB_ROWS = [328, 352, 376, 400, 424, 448, 472, 496, 520, 544, 568, 592, 616, 640] as const;
 
-/** A block whose center lies farther than this from the 16:9 cover is not built: the site camera never shows it. */
-export const COVER_MARGIN = 30;
+export { COVER_MARGIN } from "../map/geo";
 
 const blockAt = (x: number, y: number): SprawlBlock | null => {
   const w = BLOCK_W, d = BLOCK_D;

@@ -53,6 +53,8 @@ export function coverQuad(aspect: number, inset = COVER_INSET): [number, number]
 export function inCoverQuad(x: number, y: number, aspect = 16 / 9, margin = 0): boolean {
   return pointInPolygon(x, y, coverQuad(aspect, COVER_INSET - margin).flat());
 }
+/** A block whose center lies farther than this from the 16:9 cover is not built: the site camera never shows it. */
+export const COVER_MARGIN = 30;
 /** Blog is everything east of ZONE_SPLIT_X (visually); Resume, what is south of ZONE_SPLIT_Y on the west side, except the station land, which stays Portfolio. */
 export const ZONE_SPLIT_X = 344;
 export const ZONE_SPLIT_Y = 90;
