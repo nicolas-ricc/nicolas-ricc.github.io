@@ -1253,8 +1253,9 @@ describe("hotel sign level 3 and docs closing (#475)", () => {
   const between = (txt: string, from: RegExp, to?: RegExp) => {
     const i = txt.search(from);
     if (i < 0) return "";
-    const rest = txt.slice(i), j = to ? rest.slice(1).search(to) : -1;
-    return j < 0 ? rest : rest.slice(0, j + 1);
+    // the end is searched after the heading line, so a `to` that matches the heading itself does not cut it
+    const rest = txt.slice(i), nl = rest.indexOf("\n") + 1, j = to && nl > 0 ? rest.slice(nl).search(to) : -1;
+    return j < 0 ? rest : rest.slice(0, nl + j);
   };
   const flat = (txt: string) => txt.replace(/\s+/g, " ");
   const minus = (v: number, d: number) => v.toFixed(d).replace(/^-/, "\u2212");
