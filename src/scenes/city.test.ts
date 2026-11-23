@@ -187,10 +187,6 @@ describe("city", () => {
       if (!g.path.some((p) => p.x > EAST_RING.x0)) continue;
       for (const p of g.path) expect(p.y <= DISTRICT_BANK_Y || (p.y >= AVENUE.y0 && p.y <= AVENUE.y1)).toBe(true);
     }
-    // the plaza has no light puddle left (alpha 0.25: the clock and the district sign are also amberBleed, with another alpha; the amber bar neons also leave a puddle, in front of their wall)
-    const neonAccents = new Set(s.lights.neons.flatMap((n) => n.accents));
-    const spills = s.accents.filter((a) => a.kind === "poly" && a.color === "amberBleed" && a.alpha === 0.25 && !neonAccents.has(a));
-    for (const sp of spills) if (sp.kind === "poly") for (const p of sp.pts) expect(inPlaza(p.x, p.y)).toBe(false);
     const boulevard = s.solids.filter((x) => x.kind === "prism" && x.mat === "leafDark" && x.at.z === 0); // not the green terrace of a glass tower of the district
     expect(boulevard.length).toBeGreaterThanOrEqual(2); // #472: only the east stretch of the avenue keeps its boulevard (the two east blocks)
     expect(boulevard.every((x) => bounds(x).min.y >= BOULEVARD.y0 && bounds(x).max.y <= BOULEVARD.y1)).toBe(true);

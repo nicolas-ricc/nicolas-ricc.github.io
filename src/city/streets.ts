@@ -41,7 +41,7 @@ type Stop = (x: number, y: number) => boolean;
 export const inPlaza = (x: number, y: number): boolean => inPlazaMayor(x, y) || inCrossingPlaza(x, y);
 /** The strip and the east lines stop at craters and plazas. */
 const flatStop: Stop = (x, y) => inCrater(x, y) || inPlaza(x, y);
-/** An ordinary street of the grid also stops at an axis, the hotel lot and the tower island. */
+/** An ordinary street of the grid also stops at an axis and the hotel lot. */
 const streetStop: Stop = (x, y) => flatStop(x, y) || onAxis(x, y) || inRect(HOTEL_LOT, x, y);
 
 /**
@@ -66,7 +66,7 @@ function centerLine(out: Solid[], from: Vec2, to: Vec2, stop: Stop = flatStop): 
   flush();
 }
 
-/** One center line per axis: `from → to` clipped to the land (the quay-side axis, east of it, only to y 164), broken by the cover, the city's edges (x < CITY_EDGE.west, y > 318: tech's and the suburb's ground, #478 paints the south avenues there), the plazas, craters, the tower island and the other axes' bands. */
+/** One center line per axis: `from → to` clipped to the land (the quay-side axis, east of it, only to y 164), broken by the cover, the city's edges (x < CITY_EDGE.west, y > 318: tech's and the suburb's ground, #478 paints the south avenues there), the plazas, craters, the hotel lot and the other axes' bands. */
 function axisLines(ground: Solid[]): void {
   for (const a of AXES) {
     // deliberate: the costanera runs at x 188, east of LAND.x1, so clipSeg drops it; it is clipped on y along LAND.x1 and drawn back at its own x
