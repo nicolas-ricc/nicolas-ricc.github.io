@@ -11,7 +11,7 @@ import { createRng, SEED } from "../map/seed";
 import { AVENUE, BOULEVARD, DARSENA, BRIDGE, CITY_EDGE, COLLAPSED, FREIGHT_ROW, ROWS, CRATERS, DISTRICT_BANK_Y, EAST_RING, FALLEN_BLOCK, PROMENADE, TOWER, WEST_QUAY, blocks, estuaryEast, inBlock, inCrater } from "./city-grid";
 import { PLINTH_H, TOWER_H, city, type CityScene } from "./city";
 import { CAR } from "../kit/props";
-import { FIXED, FOOTBRIDGE_LOT, MAX_BUILDING_H, assign } from "../city/zoning";
+import { FIXED, FOOTBRIDGE_LOT, MAX_BUILDING_H, assign, builtParcels, neighborhoodOfParcel } from "../city/zoning";
 import { zoneRng } from "./world";
 import { MARKET_SCALE } from "../city/harbor";
 import { fingerprint } from "../iso/fingerprint";
@@ -24,11 +24,12 @@ const inRect = (b: { min: { x: number; y: number }; max: { x: number; y: number 
   b.min.x >= r.x - 1e-6 && b.max.x <= r.x + r.w + 1e-6 && b.min.y >= r.y - 1e-6 && b.max.y <= r.y + r.d + 1e-6;
 /** Strict interior of the Plaza Mayor: a crosswalk that ends exactly on the edge does not step on it. */
 const inPlaza = (x: number, y: number) => x > PLAZA_MAYOR.x && x < PLAZA_MAYOR.x + PLAZA_MAYOR.w && y > PLAZA_MAYOR.y && y < PLAZA_MAYOR.y + PLAZA_MAYOR.d;
-const DISTRICT = blocks().filter((b) => b.kind === "district" || b.kind === "site");
+/** The parcels of the modern belt (the landmark cap): none inside CITY_BOUNDS today, the modern area lies west of x -54. */
+const DISTRICT = builtParcels().filter((p) => neighborhoodOfParcel(p) === "district").map((p) => p.rect);
 const inDistrict = (s: Solid) => DISTRICT.some((b) => inRect(bounds(s), b));
 const inBlockXY = (x: number, y: number) => blocks().some((b) => x >= b.x - 1 && x <= b.x + b.w + 1 && y >= b.y - 1 && y <= b.y + b.d + 1);
 /** The fixed blocks (landmarks): they can reach 24 above the plinth, with a finial. */
-const FIXED_BLOCKS = blocks().filter((b) => b.kind !== "plaza" && FIXED.some((f) => f.x === b.x && f.y === b.y));
+const FIXED_BLOCKS = blocks().filter((b) => FIXED.some((f) => f.x === b.x && f.y === b.y));
 const inFixed = (s: Solid) => FIXED_BLOCKS.some((b) => inRect(bounds(s), b));
 const inFootbridge = (x: number, y: number) => x >= FOOTBRIDGE_LOT.x && x <= FOOTBRIDGE_LOT.x + FOOTBRIDGE_LOT.w && y >= FOOTBRIDGE_LOT.y && y <= FOOTBRIDGE_LOT.y + FOOTBRIDGE_LOT.d;
 /** The Resume crown on the tower roof (#391), built alone: its solids are matched by value in the city. */

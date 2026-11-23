@@ -12,7 +12,8 @@ import { MOUTH_Y, QUAY_X, type WorldZone } from "../map/geo";
 import type { Material } from "../map/palette-iso";
 import { createRng, SEED } from "../map/seed";
 import type { Animator } from "../scenes/animator";
-import { BLOCK_W, BRIDGE, COLLAPSED, DISTRICT_COLS, DISTRICT_ROWS, EAST_COLS, PROMENADE, PLAZA, ROWS, SITE, TOWER, TOWER_H, WEST_COLS } from "../scenes/city-grid";
+import { BLOCK_W, BRIDGE, COLLAPSED, EAST_COLS, PROMENADE, ROWS, TOWER, TOWER_H, WEST_COLS } from "../scenes/city-grid";
+import { CITY_BOUNDS, PLAZA_MAYOR, parcels } from "../scenes/city-plan";
 import { STAIR_TOWER } from "../scenes/boiler-house";
 import { excavator, excavatorBox, excavatorWheel } from "../scenes/excavator";
 import { COOLING as FACTORY_COOLING, PLANT, RAIL_YARD_X, STACK_BASE_H, STACKS } from "../scenes/factory";
@@ -58,6 +59,8 @@ export type Exhibit = { id: string; title: string; zone: WorldZone; group: Group
 export type ContextExhibit = Extract<Exhibit, { kind: "context" }>;
 
 const M = 3; // margin: sidewalks, street lamps and short shadows
+/** The largest parcel of cell (−17, 171): the district block exhibit frames its rect. */
+const DISTRICT_PARCEL = parcels(CITY_BOUNDS).filter((q) => q.cell.col === -17 && q.cell.row === 171).sort((a, b) => b.area - a.area)[0]!.rect;
 
 const stacksX = STACKS.map((s) => s.x), stacksY = STACKS.map((s) => s.y), stackR = Math.max(...STACKS.map((s) => s.r));
 const tanksX = TANKS.map((t) => t.x), tanksY = TANKS.map((t) => t.y);
@@ -182,23 +185,22 @@ export const EXHIBITS: readonly Exhibit[] = [
   // the office tower is at the center of the plaza: it stays inside
   // h 51: the Resume crown (#391) tops out at z ≈ 50.2; smallest integer that passes framing and neighbors
   { id: "plaza", title: "Plaza", zone: "cv", group: "city", kind: "region",
-    box: { x0: PLAZA.x - M, y0: PLAZA.y - M, x1: PLAZA.x + PLAZA.w + M, y1: PLAZA.y + PLAZA.d + M }, h: 51 },
+    box: { x0: PLAZA_MAYOR.x - M, y0: PLAZA_MAYOR.y - M, x1: PLAZA_MAYOR.x + PLAZA_MAYOR.w + M, y1: PLAZA_MAYOR.y + PLAZA_MAYOR.d + M }, h: 51 }, // measured 49.8 solids, 43.3 accents; the crown on the tower inside peaks at 50.2
   // h 51: the Resume crown (#391) tops out at z ≈ 50.2; smallest integer that passes framing and neighbors
   { id: "torre", title: "Office tower", zone: "cv", group: "city", kind: "region",
     box: { x0: TOWER.x - M, y0: TOWER.y - M, x1: TOWER.x + TOWER.w + M, y1: TOWER.y + TOWER.d + M }, h: 51 },
   // from ramp to ramp; to the west and east flush with the neighboring blocks (buildings up to 10.7), to the north the riverside trees
   { id: "puente", title: "Bridge", zone: "cv", group: "city", kind: "region",
     box: { x0: WEST_COLS[WEST_COLS.length - 1]! + BLOCK_W + 0.5, y0: BRIDGE.y0 - 1, x1: EAST_COLS[0]! + 1, y1: BRIDGE.y1 + M }, h: 8 },
-  // whole, 168 u: thin framing. Flush to the west and 2 u inside to the north; h 9 for the belt trees that peek out (up to 8.4)
+  // whole, 168 u: thin framing. Flush to the west and 2 u inside to the north; h 10 for the belt trees that peek out (up to 9.4 measured since #472, before 8.4)
   { id: "malecon", title: "Seawall", zone: "cv", group: "city", kind: "region",
-    box: { x0: PROMENADE.x0 - 1, y0: PROMENADE.y0 + 2, x1: PROMENADE.x1 + M, y1: PROMENADE.y1 + M }, h: 9 },
+    box: { x0: PROMENADE.x0 - 1, y0: PROMENADE.y0 + 2, x1: PROMENADE.x1 + M, y1: PROMENADE.y1 + M }, h: 10 },
   // the fallen slab reaches x − 16; flush to the south, the jungle
   { id: "manzana-derrumbada", title: "Collapsed block", zone: "cv", group: "city", kind: "region",
     box: { x0: COLLAPSED.x - 16 - M, y0: COLLAPSED.y - M, x1: COLLAPSED.x + COLLAPSED.w + M, y1: COLLAPSED.y + COLLAPSED.d + 1 }, h: 6 },
+  // the largest parcel of cell (−17, 171), the modern barrio's block of the new plan (Decision T3). The parcel lies west of the city edge (x −54): only plinth and ground, so measured inside 0 and neighbor 0.3 give h 1
   { id: "manzana-distrito", title: "District block", zone: "cv", group: "city", kind: "region",
-    box: { x0: DISTRICT_COLS[0] - M, y0: DISTRICT_ROWS[1] - M, x1: DISTRICT_COLS[0] + BLOCK_W + M, y1: DISTRICT_ROWS[1] + BLOCK_D + M }, h: 20 },
-  { id: "obra", title: "Construction site", zone: "cv", group: "city", kind: "region",
-    box: { x0: SITE.x - M, y0: SITE.y - M, x1: SITE.x + SITE.w + M, y1: SITE.y + SITE.d + M }, h: 25 },
+    box: { x0: DISTRICT_PARCEL.x - M, y0: DISTRICT_PARCEL.y - M, x1: DISTRICT_PARCEL.x + DISTRICT_PARCEL.w + M, y1: DISTRICT_PARCEL.y + DISTRICT_PARCEL.d + M }, h: 1 },
   // the south point: x 270..380, y 300..400; it needs the world with no zone filter (the storybook builds it with `assembleWorld(undefined, …)`); h is the smallest integer that passes framing and neighbors (measured with the `measure` of exhibits.test.ts)
   { id: "punta-sur", title: "South point of the island", zone: "cv", group: "city", kind: "region", box: { x0: 270, y0: 300, x1: 380, y1: 400 }, h: 10 },
   // the warehouse strip and the freight railyard: x -54..98, west of the station; h is the smallest integer that passes framing and neighbors (measured with the `measure` of exhibits.test.ts); galpones (#325, warehouses and freight lots): h 12; playa-carga (#325, freight yard): the lamps top out at 5, so h 5

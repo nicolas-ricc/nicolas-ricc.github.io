@@ -5,7 +5,7 @@ import { LANDMARK_MAX_H } from "../kit/piece";
 import type { Lot, Side, StyleId } from "../kit/types";
 import type { Rng } from "../map/seed";
 import { PLINTH_H } from "../scenes/city-pieces";
-import { AVENUE, BLOCK_W, EAST_COLS, FREIGHT_ROW, LIT_FLOOR, PLAZA, ROWS, SIDEWALK, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, CITY_EDGE, blocks, estuaryEast, type Block, type Rect } from "../scenes/city-grid";
+import { AVENUE, BLOCK_W, EAST_COLS, FREIGHT_ROW, LIT_FLOOR, ROWS, SIDEWALK, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, CITY_EDGE, blocks, estuaryEast, type Block, type Rect } from "../scenes/city-grid";
 import { CITY_BOUNDS, HOTEL_LOT, inCrossingPlaza, inPlazaMayor, onAxis, parcels, polyBox, type Parcel } from "../scenes/city-plan";
 
 /**
@@ -36,10 +36,8 @@ export function maxDistrictHeight(b: Rect): number {
 
 export const MAX_BUILDING_H = 18;
 
-/** Neighborhood of a block: district and construction site, civic plaza, freight lots, row 92 warehouses, harbor (the two east blocks beside the dock inlet), east bank (collapse included: fixed.ts draws it) and the rest residential. The west bank is zoned by parcel (`neighborhoodOfParcel`). */
+/** Neighborhood of a block: freight lots, row 92 warehouses, harbor (the two east blocks beside the dock inlet), east bank (collapse included: fixed.ts draws it) and the rest residential. The west bank is zoned by parcel (`neighborhoodOfParcel`). */
 export function neighborhoodOf(b: Block): Neighborhood {
-  if (b.kind === "district" || b.kind === "site") return "district";
-  if (b.kind === "plaza") return "civic";
   if (b.kind === "freight") return "freight";
   if (b.y === ROWS[0]) return "warehouses";
   if (b.bank === "east" && b.row === -1) return "harbor";
@@ -73,20 +71,7 @@ export const FIXED: readonly { x: number; y: number; recipe: string }[] = [
 /** Harbor block with no fixed recipe: it gets only the plinth (city.ts), no building. */
 export const isBare = (b: Block): boolean => neighborhoodOf(b) === "harbor" && !FIXED.some((f) => f.x === b.x && f.y === b.y);
 
-/** Cap of the row facing the plaza: a tall building there would hide the tower's lit floor or the fountain (fixed.ts). */
-export const maxHeightFor = (b: Block, top = MAX_BUILDING_H): number => (b.y === PLAZA.y + PLAZA.d + STREET && b.x >= 96 && b.x + b.w <= 186 ? FRONT_CAP_H : top);
-
-/** Side of `b` that faces `r` across a street, if they overlap on the other axis. */
-function facing(b: Rect, r: Rect): Side | undefined {
-  const overlapX = b.x < r.x + r.w && r.x < b.x + b.w, overlapY = b.y < r.y + r.d && r.y < b.y + b.d;
-  if (overlapY && r.x - (b.x + b.w) === STREET) return "e";
-  if (overlapY && b.x - (r.x + r.w) === STREET) return "w";
-  if (overlapX && r.y - (b.y + b.d) === STREET) return "s";
-  if (overlapX && b.y - (r.y + r.d) === STREET) return "n";
-  return undefined;
-}
-
-/** Sides of the block that face an open space (avenue, dock, east bank or plaza): there the recipe may open courtyards and shop windows. */
+/** Sides of the block that face an open space (avenue, dock or east bank): there the recipe may open courtyards and shop windows. */
 export function openSides(b: Block): Side[] {
   const out: Side[] = [];
   if (b.y + b.d === AVENUE.y0) out.push("s");
@@ -97,8 +82,6 @@ export function openSides(b: Block): Side[] {
   if (b.kind === "freight" && !out.includes("s")) out.push("s");                             // freight lots face the main line
   if (b.x + b.w + STREET === WEST_QUAY.x0) out.push("e");
   if (b.bank === "east" && b.x === EAST_COLS[0]) out.push("w");
-  const plaza = facing(b, PLAZA);
-  if (plaza && !out.includes(plaza)) out.push(plaza);
   return out;
 }
 
@@ -158,7 +141,7 @@ export interface Placed { parcel?: Parcel; block: Block; neighborhood: Neighborh
 export function assign(rng: Rng, districtRng: Rng): Placed[] {
   const out: Placed[] = [];
   for (const b of blocks()) {
-    if (b.kind === "plaza" || b.kind === "collapsed" || isBare(b)) continue;
+    if (b.kind === "collapsed" || isBare(b)) continue;
     const neighborhood = neighborhoodOf(b), fixed = FIXED.find((f) => f.x === b.x && f.y === b.y);
     const r = neighborhood === "district" ? districtRng : rng;
     let recipe = fixed?.recipe ?? pick(r, CATALOGUE[neighborhood].recipes);
@@ -169,7 +152,7 @@ export function assign(rng: Rng, districtRng: Rng): Placed[] {
     const lot: Lot = {
       x: b.x + SIDEWALK, y: b.y + SIDEWALK, w: b.w - 2 * SIDEWALK, d: b.d - 2 * SIDEWALK,
       z: 0, open: openSides(b),
-      maxH: Math.min(maxHeightFor(b, top), maxDistrictHeight(b)),
+      maxH: Math.min(top, maxDistrictHeight(b)),
     };
     out.push({ block: b, neighborhood, recipe, lot, tone: rng.int(-1, 1) });
   }
