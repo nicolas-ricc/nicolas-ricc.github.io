@@ -107,7 +107,7 @@ describe("city-plan parcels (#472)", () => {
   });
 
   it("no parcel intersects an axis band, PLAZA_MAYOR, a crossing plaza or TOWER_ISLAND", () => {
-    // HOTEL_LOT and TOWER_ISLAND are both literal in #472; their 1 u overlap lives until #474 removes the island
+    // HOTEL_LOT and TOWER_ISLAND are both literal in #472; their 7 u² overlap (x 120..127, y 234..235) lives until #474 removes the island
     const hotel = (p: { rect: { x: number; y: number } }) => p.rect.x === HOTEL_LOT.x && p.rect.y === HOTEL_LOT.y;
     for (const p of all) for (const h of holes) {
       if (hotel(p) && h.name === "TOWER_ISLAND") continue;

@@ -1,14 +1,13 @@
 import { v3, type Vec2 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
-import { ESTUARY_Y0, STATION_LAND, eastBank } from "../map/geo";
+import { COVER_MARGIN, ESTUARY_Y0, STATION_LAND, eastBank, inCoverQuad } from "../map/geo";
 import { CROSSING_GAP } from "./rail-lands";
-import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, DISTRICT_BANK_Y, EAST_COLS, EAST_RING, HARBOR, PROMENADE, RING_Y0, ROWS, SIDEWALK, STREET, WEST_COLS, estuaryEast, estuaryReaches, inBlock, inCrater } from "../scenes/city-grid";
+import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, DISTRICT_BANK_Y, DISTRICT_ROW_Y, EAST_COLS, EAST_RING, HARBOR, PROMENADE, RING_Y0, ROWS, SIDEWALK, STREET, WEST_COLS, estuaryEast, estuaryReaches, inBlock, inCrater } from "../scenes/city-grid";
 import { lamp, streetTree, trafficLight } from "../kit/props";
 import { placeLit, type FixedLight } from "./lights";
 import { PLINTH_H, prism } from "../scenes/city-pieces";
 import { builtParcels, neighborhoodOfParcel } from "./zoning";
-import { COVER_MARGIN, inCoverQuad } from "../map/geo";
 import { AXES, BLOCK, CITY_BOUNDS, GRID_ORIGIN, HOTEL_LOT, LAND, PITCH, TOWER_ISLAND, axis, axisBand, clipSeg, inCrossingPlaza, inPlazaMayor, inRect, onAxis, pointInPoly } from "../scenes/city-plan";
 
 /**
@@ -70,6 +69,7 @@ function centerLine(out: Solid[], from: Vec2, to: Vec2, stop: Stop = flatStop): 
 /** One center line per axis: `from → to` clipped to the land (the quay-side axis, east of it, only to y 164), broken by the cover, the city's edges (x < CITY_EDGE.west, y > 318: tech's and the suburb's ground, #478 paints the south avenues there), the plazas, craters, the tower island and the other axes' bands. */
 function axisLines(ground: Solid[]): void {
   for (const a of AXES) {
+    // deliberate: the costanera runs at x 188, east of LAND.x1, so clipSeg drops it; it is clipped on y along LAND.x1 and drawn back at its own x
     const seg = clipSeg(a.from, a.to) ?? (a.kind === "costanera" ? clipSeg({ x: LAND.x1, y: a.from.y }, { x: LAND.x1, y: a.to.y }) : null);
     if (!seg) continue;
     const [p, q] = a.kind === "costanera" ? [{ x: a.from.x, y: seg[0].y }, { x: a.from.x, y: seg[1].y }] : seg;
@@ -116,7 +116,7 @@ function lanes(ground: Solid[]): void {
   }
   const rowsY = [...ROWS.slice(2).map((y) => y - STREET / 2), CITY_EDGE.south - 2].filter((y) => y < AVENUE.y0 || y > AVENUE.y1); // 185, 239, 269, 299, 322 (the south street is 4 wide)
   for (const cy of rowsY) {
-    if (cy < ROWS[5]! - STREET) centerLine(ground, { x: Math.max(EAST_RING.x0, Math.ceil(cy < ESTUARY_Y0 ? eastBank(cy) : estuaryEast(cy)) + 1), y: cy }, { x: PROMENADE.x0, y: cy }); // ROWS[5] = 272, the district's first row; starts on land; south of the district the east bank is jungle; eastBank north of the estuary is defensive (every cy here is ≥ 185 today)
+    if (cy < DISTRICT_ROW_Y - STREET) centerLine(ground, { x: Math.max(EAST_RING.x0, Math.ceil(cy < ESTUARY_Y0 ? eastBank(cy) : estuaryEast(cy)) + 1), y: cy }, { x: PROMENADE.x0, y: cy }); // starts on land; south of the district the east bank is jungle; eastBank north of the estuary is defensive (every cy here is ≥ 185 today)
   }
   centerLine(ground, { x: CITY_EDGE.west, y: 113 }, { x: STATION_LAND.x0, y: 113 }); // north of the railyard, west of the station
   centerLine(ground, { x: Math.ceil(eastBank(137)) + 1, y: 137 }, { x: HARBOR.x1 - 2, y: 137 }); // between the east blocks

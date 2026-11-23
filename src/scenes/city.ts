@@ -45,7 +45,7 @@ export interface CityScene {
 /** Plinth of a parcel: its polygon, raised PLINTH_H, in paving. */
 const parcelPlinth = (pc: Parcel): Solid => ({ kind: "poly", footprint: pc.poly, z: 0, h: PLINTH_H, mat: "paving" });
 
-const EMPTY_PIECE = (): Piece => ({ solids: [], ground: [], accents: [], windows: [], slots: [], walls: [] });
+const emptyPiece = (): Piece => ({ solids: [], ground: [], accents: [], windows: [], slots: [], walls: [] });
 
 export function city(rng: Rng, districtRng: Rng, lightsRng: Rng): CityScene {
   const fixed: FixedLight[] = [], ground: Solid[] = [], solids: Solid[] = [], accents: Accent[] = [], signs: Accent[] = [], placed: PlacedPiece[] = [];
@@ -53,7 +53,7 @@ export function city(rng: Rng, districtRng: Rng, lightsRng: Rng): CityScene {
   for (const p of assign(rng, districtRng)) {
     const b = p.block, r = p.neighborhood === "district" ? districtRng : rng;
     const empty = p.parcel !== undefined && tooSmall(p.lot); // a sliver parcel: plinth, no building
-    const { piece, lot, plinth } = empty ? { piece: EMPTY_PIECE(), lot: p.lot, plinth: true } : seat(recipe(p.recipe), p.lot, r, { ...STYLES[p.neighborhood], tone: p.tone });
+    const { piece, lot, plinth } = empty ? { piece: emptyPiece(), lot: p.lot, plinth: true } : seat(recipe(p.recipe), p.lot, r, { ...STYLES[p.neighborhood], tone: p.tone });
     if (plinth) solids.push(p.parcel ? parcelPlinth(p.parcel) : prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
     placed.push({ placed: { ...p, lot }, piece, solidOffset: solids.length });
     add(piece);

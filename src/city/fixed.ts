@@ -4,7 +4,7 @@ import { centroid, v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { bounds, visibleWalls, type Solid } from "../iso/solids";
 import type { Rng } from "../map/seed";
 import { ESTUARY_Y0, QUAY_X, islandWestX } from "../map/geo";
-import { AVENUE, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, EAST_COLS, EAST_RING, FALLEN_BLOCK, FREIGHT_ROW, LIT_FLOOR, PROMENADE, ROWS, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, inCrater, type Rect } from "../scenes/city-grid";
+import { AVENUE, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, DISTRICT_ROW_Y, EAST_COLS, EAST_RING, FALLEN_BLOCK, FREIGHT_ROW, LIT_FLOOR, PROMENADE, ROWS, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, inCrater, type Rect } from "../scenes/city-grid";
 import { BRIDGE_LANDING, CITY_BOUNDS, HOTEL_LOT, PLAZA_CENTER, PLAZA_MAYOR, TOWER_ISLAND, inCrossingPlaza, inParcel, inPlazaMayor, inRect, onAxis } from "../scenes/city-plan";
 import { builtParcels } from "./zoning";
 import { jungle, type Rails } from "../scenes/flora";
@@ -184,7 +184,7 @@ export function greenery(solids: Solid[], rng: Rng): void {
     if (x1 - x0 >= 2) jungleOnLand(solids, rng, { x0, x1, y0: y, y1: y + 6 }, rng.int(1, 2));
   }
   // east bank of the district: jungle between the estuary and the promenade, south of the old avenue
-  jungleOnLand(solids, rng, { x0: Math.ceil(islandWestX(ROWS[5] /* 272: the district's first row, kept here until the constant goes (#472) */)) + 2, x1: PROMENADE.x0 - 3, y0: DISTRICT_BANK_Y, y1: PROMENADE.y1 - 2 }, 10);
+  jungleOnLand(solids, rng, { x0: Math.ceil(islandWestX(DISTRICT_ROW_Y)) + 2, x1: PROMENADE.x0 - 3, y0: DISTRICT_BANK_Y, y1: PROMENADE.y1 - 2 }, 10);
   for (const c of CRATERS) { // inscribed square (0.7·r): every cone stays inside the circle
     const k = Math.floor(c.r * 0.7);
     jungle(solids, rng, { x0: c.x - k, x1: c.x + k, y0: c.y - k, y1: c.y + k }, rng.int(4, 6), 0.2);
@@ -215,7 +215,7 @@ export function cars(solids: Solid[], rng: Rng): void {
       if (inCrater(x + 1.5, y + 0.75) || CRATERS.some((c) => Math.hypot(x + 1.5 - c.x, y + 0.75 - c.y) <= c.r + 2)) continue;
       if (x > QUAY_X && x <= estuaryEast(y) + 1) continue;    // over the estuary there is no sidewalk where to leave a car
       if (rectsOverlap(x, y, CAR.w, CAR.d, FALLEN_BLOCK.x, FALLEN_BLOCK.y, FALLEN_BLOCK.w, FALLEN_BLOCK.d)) continue;
-      // only the west bank has axes, plazas and parcels; the corners decide (a wedge's `poly` reaches past its `rect`)
+      // west of the quay (the strip included: its cars fall clear of the axes and parcels) the layout decides; the corners count (a wedge's `poly` reaches past its `rect`)
       if (x < CITY_BOUNDS.x1 + 8 && y < CITY_BOUNDS.y1 + 8) {
         const corners = [[x, y], [x + CAR.w, y], [x + CAR.w, y + CAR.d], [x, y + CAR.d]] as const;
         if (corners.some(([cx, cy]) => onAxis(cx, cy) || inPlazaMayor(cx, cy) || inCrossingPlaza(cx, cy) || inRect(HOTEL_LOT, cx, cy) || inRect(TOWER_ISLAND, cx, cy) || inParcel(cx, cy))) continue;

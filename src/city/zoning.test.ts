@@ -46,7 +46,7 @@ describe("zoning", () => {
   it("assign puts each fixed one on its block and every civic block is fixed", () => {
     const placed = sceneAssign();
     for (const f of FIXED) expect(placed.find((p) => key(p.block) === key(f))?.recipe).toBe(f.recipe);
-    for (const b of blocks()) if (neighborhoodOf(b) === "civic") expect(FIXED.some((f) => key(f) === key(b))).toBe(true); // vacuous: no civic block is left
+    expect(blocks().filter((b) => neighborhoodOf(b) === "civic")).toEqual([]); // no civic block is left since #472; the civic pieces return in #477
   });
 
   it("catalogues: weights from the issue, registered recipes and lights policy", () => {

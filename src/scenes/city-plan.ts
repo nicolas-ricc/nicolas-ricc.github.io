@@ -1,4 +1,4 @@
-import { COVER_MARGIN, inCoverQuad } from "../map/geo";
+import { BLEED, COVER_MARGIN, WORLD, inCoverQuad } from "../map/geo";
 import type { Vec2 } from "../iso/geometry";
 import type { Rect } from "./city-grid";
 
@@ -190,8 +190,7 @@ const bands = AXES.map((a) => segRect(a.from, a.to, a.w));
 /** The street surface of an axis: a rectangle of width `w` around its segment. */
 export const axisBand = (a: Axis): Vec2[] => segRect(a.from, a.to, a.w);
 /** The point lies on some axis band. */
-export const onAxis = (x: number, y: number): boolean => bands.some((b) => intersectionAreaPoint(b, x, y));
-const intersectionAreaPoint = (band: readonly Vec2[], x: number, y: number): boolean => pointInPoly(x, y, band);
+export const onAxis = (x: number, y: number): boolean => bands.some((b) => pointInPoly(x, y, b));
 
 let plazasMemo: Vec2[][] | null = null;
 /** Octagonal plazas where a diagonal crosses an avenue or the boulevard, inside the land and the plain cover (margin 0), clear of the Plaza Mayor and of each other. */
@@ -262,7 +261,7 @@ export function parcels(bounds: Bounds2): Parcel[] {
   const out: Parcel[] = [];
   let hotel = false;
   const j0 = Math.floor((bounds.y0 - BLOCK / 2 - GRID_ORIGIN.y) / PITCH), j1 = Math.ceil((bounds.y1 - BLOCK / 2 - GRID_ORIGIN.y) / PITCH);
-  const i0 = Number.isFinite(bounds.x0) ? Math.floor((bounds.x0 - BLOCK / 2 - GRID_ORIGIN.x) / PITCH) : Math.floor((-1000 - GRID_ORIGIN.x) / PITCH);
+  const i0 = Number.isFinite(bounds.x0) ? Math.floor((bounds.x0 - BLOCK / 2 - GRID_ORIGIN.x) / PITCH) : Math.floor((WORLD.x0 - BLEED.x - GRID_ORIGIN.x) / PITCH) /* no cover point lies west of the bleed */;
   const i1 = Math.ceil((bounds.x1 - BLOCK / 2 - GRID_ORIGIN.x) / PITCH);
   for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
     const col = GRID_ORIGIN.x + PITCH * i, row = GRID_ORIGIN.y + PITCH * j, cx = col + BLOCK / 2, cy = row + BLOCK / 2;

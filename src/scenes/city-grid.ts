@@ -33,6 +33,7 @@ export const WEST_QUAY = { x0: 192, x1: QUAY_X } as const;   // retaining wall o
 export const EAST_RING = { x0: 270, x1: 276 } as const;      // street along the east bank; x0 a multiple of CELL (classifies terrain)
 export const CITY_EDGE = { west: -54, north: 90, south: 324 } as const; // the city starts at the seam (ZONE_SPLIT_Y); beyond west and south, asphalt; south a multiple of CELL (classifies terrain)
 export const DISTRICT_BANK_Y = 264; // east bank of the district from here; a multiple of CELL (classifies terrain)
+export const DISTRICT_ROW_Y = 272; // first row of the old district: the east bank south of it is jungle and promenade (blocks, greenery, east lines)
 export const PROMENADE_STREET_X = 336; // promenade street; a multiple of CELL (classifies terrain)
 
 /** Harbor strip (#326): from the east ring to x 306, between the seam and the estuary. Asphalt, except the inlet. */
@@ -62,7 +63,7 @@ export function blocks(): Block[] {
       for (const x of WEST_COLS) if (x + BLOCK_W <= STATION_LAND.x0) out.push({ x, y, w: BLOCK_W, d: BLOCK_D, bank: "west", row, kind: "block" }); // the station land stays Portfolio
       return; // the east of the strip is the two blocks below
     }
-    if (y >= 272) return; // south of the old avenue the east bank is jungle and promenade; the west bank is the city plan's (city-plan.ts)
+    if (y >= DISTRICT_ROW_Y) return; // south of the old avenue the east bank is jungle and promenade; the west bank is the city plan's (city-plan.ts)
     for (const x of EAST_COLS) {
       const kind: BlockKind = x === COLLAPSED.x && y === COLLAPSED.y ? "collapsed" : "block";
       out.push({ x, y, w: BLOCK_W, d: BLOCK_D, bank: "east", row, kind });

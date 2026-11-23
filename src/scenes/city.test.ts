@@ -11,7 +11,7 @@ import { createRng, SEED } from "../map/seed";
 import { AVENUE, BOULEVARD, DARSENA, BRIDGE, CITY_EDGE, COLLAPSED, FREIGHT_ROW, ROWS, CRATERS, DISTRICT_BANK_Y, EAST_RING, FALLEN_BLOCK, PROMENADE, TOWER, WEST_QUAY, blocks, estuaryEast, inBlock, inCrater } from "./city-grid";
 import { PLINTH_H, TOWER_H, city, type CityScene } from "./city";
 import { CAR } from "../kit/props";
-import { FIXED, FOOTBRIDGE_LOT, MAX_BUILDING_H, assign, builtParcels, neighborhoodOfParcel } from "../city/zoning";
+import { FIXED, FOOTBRIDGE_LOT, MAX_BUILDING_H, assign, builtParcels, tooSmall, neighborhoodOfParcel } from "../city/zoning";
 import { zoneRng } from "./world";
 import { MARKET_SCALE } from "../city/harbor";
 import { fingerprint } from "../iso/fingerprint";
@@ -459,6 +459,17 @@ describe("city on the new layout (#472)", () => {
     // nothing stands on the lot itself (the crown's beams overhang it at z 30, and the tower's corner cone grazes its north edge)
     for (const x of s.solids) if (!isTowerPiece(x) && x !== plinths.find((p) => samePoly(p.footprint, hotel.poly))) {
       expect(within(bounds(x), HOTEL_LOT, 0), `${x.kind} ${x.mat} on the hotel lot`).toBe(false);
+    }
+  });
+
+  it("sliver parcels (lot side < 7, R5) keep their plinth and build nothing; there are 8 in the world seed", () => {
+    // measured at #472: cells (−17,171) ×2, (13,171), (43,171), (103,201), (43,291), (73,291), (103,291); #476 brings polygon lots for them
+    const world = city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3));
+    const bare = world.placed.filter((pp) => pp.placed.parcel && tooSmall(pp.placed.lot));
+    expect(bare).toHaveLength(8);
+    for (const pp of bare) {
+      expect(pp.piece.solids).toEqual([]);
+      expect(world.solids.filter((x) => x.kind === "poly" && x.mat === "paving" && x.h === PLINTH_H && samePoly(x.footprint, pp.placed.parcel!.poly))).toHaveLength(1);
     }
   });
 
