@@ -89,6 +89,17 @@ describe("polygon helpers", () => {
     for (const o of obliqueCorners(pent)) expect(cut.some((q) => near(q, o.v))).toBe(false);
   });
 
+  it("chamferPoly: nearly flat vertices are left, acute ones with long edges are cut", () => {
+    const flat = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 20 }, { x: 0, y: 20 }];
+    const c = chamferPoly(flat, 2);
+    expect(c).toHaveLength(9); // four cut corners (2 each) + the collinear vertex
+    expect(c.some((q) => near(q, { x: 10, y: 0 }))).toBe(true);
+    const r = (10 * Math.PI) / 180, obtuse = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10 + 10 * Math.cos(r), y: 10 * Math.sin(r) }, { x: 20, y: 30 }, { x: 0, y: 30 }];
+    expect(chamferPoly(obtuse, 2).some((q) => near(q, obtuse[1]!))).toBe(true);
+    const tri = [{ x: 0, y: 0 }, { x: 30, y: 0 }, { x: 0, y: 8 }];
+    expect(chamferPoly(tri, 2).some((q) => near(q, tri[1]!))).toBe(false);
+  });
+
   it("polyFootprint: without poly, the lot minus the inset; with poly, clipped and chamfered", () => {
     const fp = polyFootprint(L1, 1, 2, "oblique");
     expect(fp).toHaveLength(4);

@@ -47,7 +47,7 @@ export function clipConvex(subject: Vec2[], clip: Vec2[]): Vec2[] {
   let out = subject;
   for (let i = 0; i < hull.length && out.length >= 3; i++) {
     const p = hull[i]!, q = hull[(i + 1) % hull.length]!;
-    // hull is counter-clockwise in math axes (negative shoelace here with y down): inside is the left of p→q
+    // convexHull is canonical (positive shoelace, y down): the inside is where cross(q − p, x − p) ≥ 0
     const dx = q.x - p.x, dy = q.y - p.y, a = dy, b = -dx;
     out = clipHalf(out, a, b, a * p.x + b * p.y);
   }
@@ -65,6 +65,7 @@ export function clipToPoly(rect: Rect, poly: Vec2[]): Vec2[] {
  * `"oblique"` also leaves the near-right corners alone.
  */
 export function chamferPoly(poly: Vec2[], k: number, corners: "all" | "oblique" = "all"): Vec2[] {
+  if (k <= 0) return poly;
   const n = poly.length, out: Vec2[] = [];
   poly.forEach((v, i) => {
     const p = poly[(i + n - 1) % n]!, q = poly[(i + 1) % n]!;
@@ -72,7 +73,7 @@ export function chamferPoly(poly: Vec2[], k: number, corners: "all" | "oblique" 
     if (l1 <= 3 * k || l2 <= 3 * k) { out.push(v); return; }
     const e1 = { x: (p.x - v.x) / l1, y: (p.y - v.y) / l1 }, e2 = { x: (q.x - v.x) / l2, y: (q.y - v.y) / l2 };
     const cos = e1.x * e2.x + e1.y * e2.y;
-    if (cos > FLAT_COS || (corners === "oblique" && Math.abs(cos) < RIGHT_COS)) { out.push(v); return; }
+    if (cos < -FLAT_COS || (corners === "oblique" && Math.abs(cos) < RIGHT_COS)) { out.push(v); return; }
     out.push({ x: v.x + e1.x * k, y: v.y + e1.y * k }, { x: v.x + e2.x * k, y: v.y + e2.y * k });
   });
   return out;
@@ -85,7 +86,7 @@ export function polyFootprint(lot: Lot, inset: number, chamfer: number, corners:
   return chamferPoly(base, chamfer, corners);
 }
 
-/** Mesh between two same-length rings (`bottom` at z0, `top` at z1): a top face and one quad per edge, outward-facing. */
+/** Mesh between two same-length rings (`bottom` at z0, `top` at z1; `top` must have the same vertex count and winding as `bottom`): a top face and one quad per edge, outward-facing. */
 export function frustum(bottom: Vec2[], top: Vec2[], z0: number, z1: number, mat: Material): Solid {
   const flip = area2(bottom) < 0, idx = bottom.map((_, i) => i);
   if (flip) idx.reverse(); // canonical order: positive shoelace
