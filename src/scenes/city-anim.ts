@@ -34,6 +34,8 @@ export const WINDOW_GAP_MS: [number, number] = [300, 900]; // between one window
 export const FLICKER_GAP_MS: [number, number] = [1000, 3000]; // between one flicker of the street neon and the next
 export const FLICKER_ALPHA = 0.3; // halo and front of the street neon while it flickers
 export const PROMENADE_R = 0.35;
+export const RING_STEP_MS = 200, TELECOM_STEP_MS = 100, RING_R = 0.5; // the TELECOM mast: ring chase and tip breathing
+const TELECOM_R = 0.8, TELECOM_PULSE = 0.3, TELECOM_PERIOD = 1200;
 const SEED_MAX = 2 ** 32 - 1; // seed of a derived Rng (no 0x… literal: the palette guard would take it for a color)
 export const PAPER_DRIFT = { x: 0.88, y: -0.47 }; // along the hotel's long axis, toward the NE (y grows to the south); on screen it goes up to the right
 export const ROOMS_LIT = 0.4; // fraction of the rooms lit at frame 0
@@ -46,7 +48,7 @@ export interface CityAnim { lit(): Accent[]; papers(): Accent[]; neon(): Accent[
 
 const NONE: CityAnimChanges = { lit: false, papers: false, neon: false, windows: false };
 
-export function createCityAnim(scene: Pick<CityScene, "hotel" | "neon" | "lights">, rng: Rng, opts: { reducedMotion: boolean }): CityAnim {
+export function createCityAnim(scene: Pick<CityScene, "hotel" | "neon" | "lights" | "telecom">, rng: Rng, opts: { reducedMotion: boolean }): CityAnim {
   const { hotel, neon } = scene;
   const w = hotel.paperWindow;
   // own stream: sharing `rng` with the papers would make the drawn pause depend on the chunking
@@ -79,7 +81,7 @@ export function createCityAnim(scene: Pick<CityScene, "hotel" | "neon" | "lights
   const signRng = createRng(rng.int(0, SEED_MAX)); // own stream, for the same reason as blinkRng
   let signTimer = signRng.int(SIGN_GAP_MS[0], SIGN_GAP_MS[1]);
   const paperRngs = papers.map(() => createRng(rng.int(0, SEED_MAX))); // one per paper, last: the recycling does not depend on the chunking
-  let promenadeStep = 0;
+  let promenadeStep = 0, ringStep = 0, telecomStep = 0; // derived from clock, no rng
   let blinks = 0, signEvents = 0, recycled = 0; // firings since construction, for fired()
   // windows: after papers and signs so as not to reorder their draws
   const wins = scene.lights.windows.filter((x) => x.animable).map((x) => ({ w: x, on: x.on }));
@@ -115,7 +117,10 @@ export function createCityAnim(scene: Pick<CityScene, "hotel" | "neon" | "lights
       const lights = neon.promenade.filter((_, k) => !lit || lit[k]).map((at): Accent => ({ kind: "dot", at, r: PROMENADE_R, color: "cyanMid" }));
       const dim = flickerUntil > clock; // halo and front (the first two); the puddle does not change
       const st = street ? street.accents.map((a, k): Accent => (dim && k < 2 && a.kind === "poly" ? { ...a, alpha: FLICKER_ALPHA } : a)) : [];
-      return [...on, ...lights, ...st];
+      const ringOn = ringStep === 0 ? neon.mastRing.map(() => true) : chase(neon.mastRing.length, ringStep, 1); // step 0 = frame 0: all on
+      const ring = neon.mastRing.filter((_, k) => ringOn[k]).map((at): Accent => ({ kind: "dot", at, r: RING_R, color: "magentaMid" }));
+      const tip: Accent[] = scene.telecom ? [{ kind: "dot", at: v3(scene.telecom.x, scene.telecom.y, scene.telecom.z), r: TELECOM_R + TELECOM_PULSE * (1 + Math.sin(clock / TELECOM_PERIOD)), color: "amber" }] : [];
+      return [...on, ...lights, ...st, ...ring, ...tip];
     },
     windows: () => wins.filter((x) => x.on).map(({ w: lw }): Accent => ({ kind: "poly", pts: lw.window.pts, color: lw.color, alpha: WINDOW_ALPHA })),
     fired: () => ({ lit: blinks, neon: signEvents, papers: recycled, windows: windowEvents, flicker: flickers }),
@@ -158,6 +163,11 @@ export function createCityAnim(scene: Pick<CityScene, "hotel" | "neon" | "lights
       }
       const mStep = Math.floor(clock / PROMENADE_STEP_MS);
       if (mStep !== promenadeStep) { promenadeStep = mStep; c.neon = true; }
+
+      if (scene.telecom) {
+        const rs = Math.floor(clock / RING_STEP_MS); if (rs !== ringStep) { ringStep = rs; c.neon = true; }
+        const ts = Math.floor(clock / TELECOM_STEP_MS); if (ts !== telecomStep) { telecomStep = ts; c.neon = true; }
+      }
 
       // windows: one turns on or off; if that takes the count out of the band, one of the other state changes
       windowTimer -= dtMs;
