@@ -55,6 +55,8 @@ const ALLOW: Record<string, RegExp[]> = {
   // (only a line whose string text is nothing but corner ids is stripped, so a Spanish "se" in a comment is still caught)
   "src/kit/forms/composite.ts": [/^\s*(?:(?:nw|ne|se|sw|n|s|e|w)\s+)*se(?:\s+(?:nw|ne|se|sw|n|s|e|w))*\s*$/g],
   // the test name says "SE without open" (the corner id)
+  "src/kit/forms/porteno.ts": [/^\s*(?:(?:nw|ne|se|sw|n|s|e|w)\s+)*se(?:\s+(?:nw|ne|se|sw|n|s|e|w))*\s*$/g],
+  "src/kit/forms/porteno.test.ts": [/^\s*(?:(?:nw|ne|se|sw|n|s|e|w)\s+)*se(?:\s+(?:nw|ne|se|sw|n|s|e|w))*\s*$/g],
   "src/kit/forms/composite.test.ts": [/\bSE without open/g, /^\s*(?:(?:nw|ne|se|sw|n|s|e|w)\s+)*se(?:\s+(?:nw|ne|se|sw|n|s|e|w))*\s*$/g],
   // proper nouns of the real places the neighborhood pieces model (decision 2c)
   "src/scenes/neighborhood-houses.ts": [/Ciudad Jardín/g],

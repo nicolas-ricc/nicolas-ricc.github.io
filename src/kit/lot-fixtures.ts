@@ -14,18 +14,18 @@ export const L1: Lot = { x: 0, y: 0, w: 24, d: 18, z: 0, open: ["s", "e"], maxH:
 
 /**
  * `lot` minus the corner triangle cut by the line `x + 0.42·y = c`: the southeast corner (keeps `≤ c`) or the
- * northwest one (keeps `≥ c`), with `c` chosen so the cut runs `leg` along the east (se) or west (nw) edge.
+ * northwest one (keeps `≥ c`), with `c` chosen so the cut runs `leg` along the east edge (southeast) or the west edge (northwest).
  */
-export function wedgeLot(lot: Lot, leg: number, corner: "se" | "nw" = "se"): Lot {
+export function wedgeLot(lot: Lot, leg: number, corner: "southeast" | "northwest" = "southeast"): Lot {
   const x0 = lot.x, y0 = lot.y, x1 = lot.x + lot.w, y1 = lot.y + lot.d;
-  const poly: Vec2[] = corner === "se"
+  const poly: Vec2[] = corner === "southeast"
     ? [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 - leg }, { x: x1 - SLOPE * leg, y: y1 }, { x: x0, y: y1 }]
     : [{ x: x0 + SLOPE * leg, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }, { x: x0, y: y0 + leg }];
   return { ...lot, poly };
 }
 
 /** The parcel lots of the contract: both lots cut at the southeast, and the lab lot cut at the northwest. */
-export const WEDGE_LOTS: Lot[] = [wedgeLot(L0, 7.5), wedgeLot(L1, 9), wedgeLot(L1, 9, "nw")];
+export const WEDGE_LOTS: Lot[] = [wedgeLot(L0, 7.5), wedgeLot(L1, 9), wedgeLot(L1, 9, "northwest")];
 
 /** A parcel that leaves only a strip 0.5..1.5 deep along the north edge. */
 export const SLIVER_LOT: Lot = { ...L1, poly: [{ x: 0, y: 0 }, { x: 24, y: 0 }, { x: 24, y: 0.5 }, { x: 0, y: 1.5 }] };
