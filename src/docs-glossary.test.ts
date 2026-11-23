@@ -97,7 +97,11 @@ describe("sign vocabulary (#360)", () => {
     const lettering = section(glossary, "Lettering"), sign = section(glossary, "Sign");
     for (const id of ["TextPlane", "diagonalWall", "roofDiagonal", "facade", "strokeText", "fillText", "measureText", "GLYPHS"]) expect(lettering).toContain(id);
     for (const id of ["gap 2", "KERN", "layoutText", "letterGaps", "rhythm", "counterClearance", "probe"]) expect(lettering, id).toContain(id);
-    for (const id of ["cartel-torre", "cartel-torre-escena", "cartel-taller", "cartel-taller-escena", "plataforma", "plataforma-escena", "src/scenes/sign-", "src/scenes/sign-crown.ts", "towerCrown", "RESUME_SIGN", "CROWN_SITE"]) expect(sign).toContain(id);
+    for (const id of ["cartel-torre", "cartel-torre-escena", "cartel-taller", "cartel-taller-escena", "plataforma", "plataforma-escena", "src/scenes/sign-", "src/scenes/sign-hotel.ts", "hotel", "hotelStandIn", "RESUME_SIGN", "SIGN_SITE", "HOTEL_SLAB", "HOTEL_CAP", "city()"]) expect(sign).toContain(id);
+    // #474: the tower and its crown are gone
+    expect(sign).not.toContain("towerCrown");
+    expect(sign).not.toMatch(/\bCROWN_SITE\b/);
+    expect(sign).not.toContain("sign-crown");
     for (const id of ["TINKER_SITE", "PLATFORM_SITES", "BLOG_SIGNS", "plataforma-escena-angosta", "src/lab/signs.test.ts", "npm run legibility"]) expect(sign, id).toContain(id);
     // #427: one site became two
     expect(sign).not.toMatch(/\bPLATFORM_SITE\b/);

@@ -7,7 +7,7 @@ import type { SignSpec } from "../kit/legibility";
 import { pointInPolygon, worldZoneAt } from "../map/geo";
 import { ZONE_IDS, type ZoneId } from "../map/zones";
 import { BLOG_SIGNS, type WritingSite } from "../scenes/sign-platform";
-import { RESUME_SIGN } from "../scenes/sign-crown";
+import { RESUME_SIGN, SIGN_SITE } from "../scenes/sign-hotel";
 import { TINKER_SIGN } from "../scenes/sign-tinker";
 import { labelLayout, SIGN_ORDER, signBox, signPolygons, writingSite, zoneAtScreen, zoneSigns, type ScreenBox } from "./signs";
 import { coverView, pointerToWorld, type View } from "./view";
@@ -103,6 +103,24 @@ describe("signBox (#393)", () => {
   });
 });
 
+describe("the hotel's RESUME sign as the zone link (#474)", () => {
+  it("zoneAtScreen on the center of each glyph of the hotel sign returns cv", () => {
+    for (const v of [ID, coverView(1366, 657), coverView(1600, 900)]) {
+      for (const g of RESUME_SIGN.glyphs) {
+        const pts = g.quads.flat().map(project), cx = pts.reduce((a, p) => a + p.x, 0) / pts.length, cy = pts.reduce((a, p) => a + p.y, 0) / pts.length;
+        expect(zoneAtScreen(v, cx * v.scale + v.x, cy * v.scale + v.y, "wide"), `${g.char} at scale ${v.scale}`).toBe("cv");
+      }
+    }
+  });
+
+  it("the zone link hitbox follows SIGN_SITE", () => {
+    const b = signBox(RESUME_SIGN), p = project(SIGN_SITE);
+    expect(p.x).toBeGreaterThanOrEqual(b.minX); expect(p.x).toBeLessThanOrEqual(b.maxX);
+    expect(p.y).toBeGreaterThanOrEqual(b.minY); expect(p.y).toBeLessThanOrEqual(b.maxY);
+    expect(zoneAtScreen(ID, p.x, p.y - 1, "wide")).toBe("cv");
+  });
+});
+
 describe("zoneAtScreen (#393)", () => {
   it("zoneAtScreen on the center of each word returns its zone", () => {
     for (const v of [ID, coverView(1366, 657)]) {
@@ -158,11 +176,18 @@ describe("labelLayout (#393)", () => {
     }
   });
 
-  // with the focus at 0.39 and the host rule (#428) the phone shows Writing at the tall site, on its sign
-  it("labelLayout at coverView(390, 750) puts the three on their sign, Writing at writingSite(390, 750)", () => {
+  // with the focus at 0.39 and the host rule (#428) the phone shows Writing at the tall site, on its sign; since #474 RESUME stands on the hotel
+  // facade, 48 % of it inside the phone (D10 of #471): its label goes to the host edge
+  it("labelLayout at coverView(390, 750) puts portfolio and blog on their sign and cv on the edge, Writing at writingSite(390, 750)", () => {
     const v = coverView(390, 750), host = { w: 390, h: 750 };
     expect(writingSite(390, 750)).toBe("tall");
-    for (const [id, s] of Object.entries(zoneSigns(writingSite(390, 750)))) expect(labelLayout(signBox(s), v, host, PAD).mode, id).toBe("sign");
+    const want: Record<string, string> = { portfolio: "sign", cv: "edge", blog: "sign" };
+    for (const [id, s] of Object.entries(zoneSigns(writingSite(390, 750)))) expect(labelLayout(signBox(s), v, host, PAD).mode, id).toBe(want[id]);
+  });
+
+  it("labelLayout at coverView(820, 1180) puts the three on their sign", () => {
+    const v = coverView(820, 1180), host = { w: 820, h: 1180 };
+    for (const [id, s] of Object.entries(zoneSigns(writingSite(820, 1180)))) expect(labelLayout(signBox(s), v, host, PAD).mode, id).toBe("sign");
   });
 
   // exactly half inside on both axes still counts as on the sign

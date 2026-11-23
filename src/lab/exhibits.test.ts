@@ -9,7 +9,8 @@ import { WATER_TOWER, waterTower } from "../scenes/maltings";
 import { createFactoryAnim } from "../scenes/factory-anim";
 import { PLANT, factory } from "../scenes/factory";
 import { BEAM_PERIOD_MS } from "../scenes/sea-anim";
-import { CROWN_SITE, RESUME_SIGN, towerCrown } from "../scenes/sign-crown";
+import { RESUME_SIGN, hotel } from "../scenes/sign-hotel";
+import type { FixedLight } from "../city/lights";
 import { PIECE_AT, TINKER_SIGN, TINKER_SITE, tinkerSign } from "../scenes/sign-tinker";
 import { BLOG_SIGNS, seaPlatform, seaPlatformAt } from "../scenes/sign-platform";
 import { raftAt, REST_POSE } from "../scenes/raft";
@@ -29,11 +30,11 @@ const CATALOG: Record<GroupId, string[]> = {
   shipyard: ["gradas", "darsena", "grua-portico", "calle-faroles", "naves", "punta-norte", "estacion", "paso-a-nivel", "dique-flotante", "patio-contenedores"],
   hinterland: ["central-termica", "tanques", "silos", "alta-tension", "playa-contenedores"],
   fair: ["noria", "montana-rusa", "torre-caida", "carrusel", "arcade", "autitos-chocadores", "muelle", "tren-fantasma", "casa-espejos", "tobogan", "tronco-acuatico"],
-  city: ["plaza", "torre", "puente", "malecon", "manzana-derrumbada", "manzana-distrito", "punta-sur", "galpones", "playa-carga", "mercado-pescado"],
+  city: ["plaza", "hotel", "puente", "malecon", "manzana-derrumbada", "manzana-distrito", "punta-sur", "galpones", "playa-carga", "mercado-pescado"],
   tech: ["mastil", "arena", "auditorio", "torres", "monoblock", "casas", "escuela", "club", "plaza-barrio", "costanera", "barrio"],
   sea: ["faro", "casa-farero", "boyas", "pecio"],
 };
-const ANIMATED = ["chimeneas", "excavadora", "noria", "torre", "faro", "estacion", "paso-a-nivel", "playa-carga", "tronco-acuatico"];
+const ANIMATED = ["chimeneas", "excavadora", "noria", "hotel", "faro", "estacion", "paso-a-nivel", "playa-carga", "tronco-acuatico"];
 const SLACK = 8; // any taller than this above the structure and it looks small in the frame
 
 const { scene, animators } = assembleWorld(undefined, { reducedMotion: false });
@@ -218,7 +219,7 @@ describe("piece exhibits", () => {
     const get = (id: string) => pieces.find((e) => e.id === id)!;
     expect(get("cartel-taller")).toMatchObject({ title: "Portfolio tinker sign", zone: "portfolio", group: "shipyard", kind: "piece", pad: "concrete" });
     expect(get("cartel-taller").animate).toBeDefined();
-    expect(get("cartel-torre")).toMatchObject({ title: "Resume tower crown with helipad", zone: "cv", group: "city", kind: "piece" });
+    expect(get("cartel-torre")).toMatchObject({ title: "Resume sign on the hotel facade", zone: "cv", group: "city", kind: "piece" });
     expect(get("cartel-torre").pad).toBeUndefined();
     expect(ids).not.toContain("cartel-helipuerto");
     expect(ids).not.toContain("cartel-helipuerto-b");
@@ -478,15 +479,16 @@ describe("context exhibits (#376)", () => {
   });
 });
 
-describe("cartel-torre-escena (#378)", () => {
-  it("after cartel-torre, in the city, the issue's box, a crop of the world (no build), signed RESUME_SIGN", () => {
+describe("cartel-torre-escena (#378, #474)", () => {
+  it("after cartel-torre, in the city, the hotel lot ± 3 at h 52, a crop of the world (no build), signed RESUME_SIGN", () => {
     const ids = EXHIBITS.map((e) => e.id);
     expect(ids.indexOf("cartel-torre-escena")).toBe(ids.indexOf("cartel-torre") + 1);
     const e = contexts.find((x) => x.id === "cartel-torre-escena")!;
-    expect(e).toMatchObject({ title: "Resume tower crown in its scene", zone: "cv", group: "city", kind: "context", box: { x0: 108, y0: 206, x1: 150, y1: 248 }, sign: RESUME_SIGN });
+    expect(e).toMatchObject({ title: "Resume sign in its scene", zone: "cv", group: "city", kind: "context", h: 52, sign: RESUME_SIGN,
+      box: { x0: HOTEL_LOT.x - 3, y0: HOTEL_LOT.y - 3, x1: HOTEL_LOT.x + HOTEL_LOT.w + 3, y1: HOTEL_LOT.y + HOTEL_LOT.d + 3 } });
     expect("build" in e).toBe(false);
-    const c: Solid[] = [], d: Accent[] = [], cs = contextScene(scene, e);
-    towerCrown(c, d, CROWN_SITE);
+    const c: Solid[] = [], d: Accent[] = [], l: FixedLight[] = [], cs = contextScene(scene, e);
+    hotel(c, d, l);
     for (const s of c) expect(cs.solids).toContainEqual(s);
     for (const a of d) expect(cs.accents).toContainEqual(a);
   });
@@ -534,13 +536,18 @@ describe("clean crops (#399)", () => {
   });
 });
 
-import { CITY_BOUNDS as PLAN_CITY_BOUNDS, PLAZA_MAYOR, parcels as planParcels } from "../scenes/city-plan";
+import { CITY_BOUNDS as PLAN_CITY_BOUNDS, HOTEL_LOT, PLAZA_MAYOR, parcels as planParcels } from "../scenes/city-plan";
 
 describe("city exhibits on the new layout (#472)", () => {
   const byId = (id: string) => regions.find((e) => e.id === id);
-  it("plaza frames PLAZA_MAYOR ± 3 at h 51", () => {
+  it("plaza frames PLAZA_MAYOR ± 3 at h 52", () => {
     expect(byId("plaza")!.box).toEqual({ x0: PLAZA_MAYOR.x - 3, y0: PLAZA_MAYOR.y - 3, x1: PLAZA_MAYOR.x + PLAZA_MAYOR.w + 3, y1: PLAZA_MAYOR.y + PLAZA_MAYOR.d + 3 });
-    expect(byId("plaza")!.h).toBe(51);
+    expect(byId("plaza")!.h).toBe(52);
+  });
+  it("hotel (#474) frames HOTEL_LOT ± 3 at h 52, titled 'Hotel with the Resume sign'; torre is retired", () => {
+    expect(byId("hotel")).toMatchObject({ title: "Hotel with the Resume sign", zone: "cv", group: "city", h: 52,
+      box: { x0: HOTEL_LOT.x - 3, y0: HOTEL_LOT.y - 3, x1: HOTEL_LOT.x + HOTEL_LOT.w + 3, y1: HOTEL_LOT.y + HOTEL_LOT.d + 3 } });
+    expect(EXHIBITS.some((e) => e.id === "torre")).toBe(false);
   });
   it("manzana-distrito frames the largest parcel of cell (−17, 171), rect ± 3", () => {
     const p = planParcels(PLAN_CITY_BOUNDS).filter((q) => q.cell.col === -17 && q.cell.row === 171).sort((a, b) => b.area - a.area)[0]!;

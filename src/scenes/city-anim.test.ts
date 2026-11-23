@@ -3,7 +3,8 @@ import type { Accent } from "../iso/accent";
 import { createRng } from "../map/seed";
 import { WINDOW_ALPHA } from "../city/lights";
 import { city, type CityScene } from "./city";
-import { type CityAnim, BLINK_GAP_MS, FLICKER_ALPHA, FLICKER_GAP_MS, PROMENADE_STEP_MS, NEON_STEP_MS, PAPER_RANGE, PAPER_SIDE, PAPER_SPEED, SIGN_GAP_MS, WINDOW_GAP_MS, createCityAnim } from "./city-anim";
+import { HOTEL_SLAB } from "./sign-hotel";
+import { type CityAnim, BLINK_GAP_MS, PAPER_DRIFT, FLICKER_ALPHA, FLICKER_GAP_MS, PROMENADE_STEP_MS, NEON_STEP_MS, PAPER_RANGE, PAPER_SIDE, PAPER_SPEED, SIGN_GAP_MS, WINDOW_GAP_MS, createCityAnim } from "./city-anim";
 
 /** Sign accents injected by hand: since #472 the city makes no district signs (the modern belt lies west of the city edge), but city-anim still animates `neon.signs`. */
 const SIGNS: Accent[] = [["cyan", 0], ["magenta", 10], ["cyan", 20], ["magenta", 30], ["cyan", 40], ["magenta", 50]].map(([color, x]) => ({
@@ -443,5 +444,62 @@ describe("city-anim: windows and street neon with wall time (#192)", () => {
       if (anim.fired().flicker === n) { expect(frontOf(chunkedScene!, anim.neon())).toMatchObject({ alpha: 1 }); restored++; }
     }
     expect(restored).toBeGreaterThan(0);
+  });
+});
+
+describe("city-anim: the hotel rooms and the papers along the facade (#474)", () => {
+  const build = (reducedMotion = false) => { const scene = withSigns(city(createRng(7), createRng(8), createRng(9))); return { scene, anim: createCityAnim(scene, createRng(3), { reducedMotion }) }; };
+  const key = (a: Accent) => (a.kind === "poly" ? JSON.stringify(a.pts) : "");
+  const R2 = Math.SQRT1_2, C = HOTEL_SLAB.center;
+  /** Inside `slabFootprint()` grown by 0.5: |t| ≤ half + 0.5 along U and |n| ≤ thick/2 + 0.5 along N. */
+  const inSlab = (p: { x: number; y: number; z: number }) => {
+    const t = (p.x - C.x) * R2 - (p.y - C.y) * R2, n = (p.x - C.x) * R2 + (p.y - C.y) * R2;
+    return Math.abs(t) <= HOTEL_SLAB.half + 0.5 && Math.abs(n) <= HOTEL_SLAB.thick / 2 + 0.5 && p.z < HOTEL_SLAB.z1;
+  };
+
+  it("frame 0 shows the initial lit rooms: a subset of scene.hotel.rooms, about 40 % of them", () => {
+    const { scene, anim } = build(), rooms = new Set(scene.hotel.rooms.map(key)), lit = anim.lit();
+    expect(lit.length).toBeGreaterThan(0);
+    for (const a of lit) expect(rooms.has(key(a))).toBe(true);
+    expect(lit.length / scene.hotel.rooms.length).toBeGreaterThan(0.25);
+    expect(lit.length / scene.hotel.rooms.length).toBeLessThan(0.55);
+  });
+
+  it("in 60 s at least 5 rooms change and the lit set stays within ±5 rooms of the initial one", () => {
+    const { anim } = build(), n0 = anim.lit().length;
+    let changes = 0, prev = new Set(anim.lit().map(key));
+    for (let t = 0; t < 60000; t += 100) {
+      anim.tick(100);
+      const now = new Set(anim.lit().map(key));
+      changes += [...now].filter((k) => !prev.has(k)).length + [...prev].filter((k) => !now.has(k)).length;
+      expect(Math.abs(now.size - n0)).toBeLessThanOrEqual(5);
+      prev = now;
+    }
+    expect(changes).toBeGreaterThanOrEqual(5);
+    expect(anim.fired().lit).toBeGreaterThanOrEqual(5);
+  });
+
+  it("with reduced-motion the rooms do not change", () => {
+    const { anim } = build(true), before = anim.lit().map(key);
+    for (let t = 0; t < 20000; t += 100) anim.tick(100);
+    expect(anim.lit().map(key)).toEqual(before);
+  });
+
+  it("PAPER_DRIFT is (0.88, −0.47): the papers drift along it, out of the hotel's slab", () => {
+    expect(PAPER_DRIFT).toEqual({ x: 0.88, y: -0.47 });
+    const { scene, anim } = build(), w = scene.hotel.paperWindow;
+    let drifted = false;
+    for (let t = 0; t < 60000; t += 100) {
+      anim.tick(100);
+      for (const p of anim.papers().map(dot)) {
+        expect(inSlab(p.at), JSON.stringify(p.at)).toBe(false);
+        const dx = p.at.x - w.x, dy = p.at.y - w.y, dist = Math.hypot(dx, dy);
+        if (dist > 10) {
+          expect((dx * PAPER_DRIFT.x + dy * PAPER_DRIFT.y) / dist / Math.hypot(PAPER_DRIFT.x, PAPER_DRIFT.y)).toBeGreaterThan(0.9);
+          drifted = true;
+        }
+      }
+    }
+    expect(drifted).toBe(true);
   });
 });

@@ -1,11 +1,13 @@
 import { readFileSync } from "node:fs";
 import type { Accent } from "../iso/accent";
-import { hides, screenHull } from "../iso/depth";
+import { hides, hullsOverlap, isBehind, screenBounds, screenHull } from "../iso/depth";
+import { v3 } from "../iso/geometry";
+import { project } from "../iso/project";
 import { lightBox, type FixedLight } from "../city/lights";
 import { describe, expect, it } from "vitest";
 import { buildRenderList } from "../iso/render-list";
 import { bounds, type Solid } from "../iso/solids";
-import { ESTUARY_Y0, QUAY_X, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y } from "../map/geo";
+import { ESTUARY_Y0, QUAY_X, STATION_LAND, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng, SEED } from "../map/seed";
 import { AVENUE, BOULEVARD, DARSENA, BRIDGE, CITY_EDGE, COLLAPSED, FREIGHT_ROW, ROWS, CRATERS, DISTRICT_BANK_Y, EAST_RING, FALLEN_BLOCK, PROMENADE, TOWER, WEST_QUAY, blocks, estuaryEast, inBlock, inCrater } from "./city-grid";
@@ -17,6 +19,12 @@ import { MARKET_SCALE } from "../city/harbor";
 import { fingerprint } from "../iso/fingerprint";
 import { BRIDGE_LANDING, CITY_BOUNDS, HOTEL_LOT, PLAZA_MAYOR, TOWER_ISLAND, inCrossingPlaza, inParcel, inPlazaMayor, onAxis, parcels } from "./city-plan";
 import { CROWN_SITE, towerCrown } from "./sign-crown";
+import { RESUME_SIGN, SIGN_PANEL, SIGN_SITE, hotel } from "./sign-hotel";
+import { signBox } from "../world/sign-box";
+import { zoneView } from "../world/view";
+
+/** The hosts of `src/world/view.test.ts` ZONE_SIZES but 50×900, narrower than the word (≈ 86 screen u) at any zone scale. */
+const ZONE_SIZES: [number, number][] = [[1600, 900], [1200, 900], [390, 693], [2100, 900], [640, 900], [390, 338], [390, 750], [820, 1180], [900, 900], [1280, 900], [768, 955], [390, 300], [1920, 955]];
 
 const scene = (): CityScene => city(createRng(7), createRng(8), createRng(9));
 const all = (s: CityScene): Solid[] => [...s.ground, ...s.solids];
@@ -536,5 +544,67 @@ describe("city on the new layout (#472)", () => {
       const a = cars[i]!, b = cars[j]!;
       expect(a.at.x < b.at.x + b.w && a.at.x + a.w > b.at.x && a.at.y < b.at.y + b.d && a.at.y + a.d > b.at.y).toBe(false);
     }
+  });
+});
+
+describe("the hotel and its RESUME sign in the city (#474)", () => {
+  const s = scene();
+  const own: Solid[] = [], ownAccents: Accent[] = [], ownLights: FixedLight[] = [];
+  const lit = hotel(own, ownAccents, ownLights);
+  const ownKeys = new Set(own.map((x) => JSON.stringify(x)));
+  const isHotelPiece = (x: Solid) => ownKeys.has(JSON.stringify(x));
+  const panel = bounds(SIGN_PANEL), panelScreen = screenBounds(panel);
+  /** On screen the panel's bottom edge is horizontal (a diagonal wall): the largest sy of its bottom corners. */
+  const bottomSy = Math.max(...SIGN_PANEL.footprint.map((p) => project(v3(p.x, p.y, SIGN_PANEL.z)).y));
+
+  it("city() builds the hotel on HOTEL_LOT: hotel()'s solids, inside HOTEL_LOT ± 0.5, and publishes its lights", () => {
+    for (const x of own) expect(s.solids).toContainEqual(x);
+    for (const x of own) {
+      const b = bounds(x);
+      expect(b.min.x >= HOTEL_LOT.x - 0.5 && b.max.x <= HOTEL_LOT.x + HOTEL_LOT.w + 0.5 && b.min.y >= HOTEL_LOT.y - 0.5 && b.max.y <= HOTEL_LOT.y + HOTEL_LOT.d + 0.5, `${x.kind} ${x.mat}`).toBe(true);
+    }
+    expect(s.hotel).toEqual(lit);
+  });
+
+  it("the sign stands at SIGN_SITE: the panel and every letter quad of RESUME_SIGN are in the city", () => {
+    expect(s.solids).toContainEqual(SIGN_PANEL);
+    const quads = new Set(s.accents.flatMap((a) => (a.kind === "poly" && a.color === "greenMid" ? [JSON.stringify(a.pts)] : [])));
+    for (const q of RESUME_SIGN.glyphs.flatMap((g) => g.quads)) expect(quads.has(JSON.stringify(q))).toBe(true);
+    const base = RESUME_SIGN.glyphs[0]!.plane.origin;
+    expect(base.z).toBeCloseTo(SIGN_SITE.z, 9);
+  });
+
+  it("nothing of the tower is left: no officeDark prism 30 high, no concrete cylinder of radius 7", () => {
+    expect(s.solids.filter((x) => x.kind === "prism" && x.mat === "officeDark" && x.h === 30)).toEqual([]);
+    expect(s.solids.filter((x) => x.kind === "cylinder" && x.mat === "concrete" && x.r === 7)).toEqual([]);
+    expect(s).not.toHaveProperty("tower");
+  });
+
+  it("no solid in front of the sign rises above its bottom edge on screen", () => {
+    for (const x of s.solids) {
+      if (isHotelPiece(x)) continue;
+      const b = bounds(x), sb = screenBounds(b);
+      if (!isBehind(panel, b) || sb.maxX <= panelScreen.minX || sb.minX >= panelScreen.maxX) continue;
+      expect(sb.minY, `${x.kind} ${x.mat} ${JSON.stringify(b)}`).toBeGreaterThanOrEqual(bottomSy - 1e-6);
+    }
+  });
+
+  // STATION_LAND projects to a parallelogram: its screen box over-reaches it by whole triangles (a bars roof north of the plaza, #472, falls
+  // in the box and off the land), so the test compares the projected land with each solid's screen hull (screenHull, hullsOverlap)
+  it("no Resume solid taller than 10 overlaps STATION_LAND on screen", () => {
+    const land = screenHull({ min: v3(STATION_LAND.x0, STATION_LAND.y0, 0), max: v3(STATION_LAND.x1, STATION_LAND.y1, 0) });
+    for (const x of s.solids) {
+      const b = bounds(x);
+      if (b.max.z <= 10) continue;
+      expect(hullsOverlap(screenHull(b), land), `${x.kind} ${x.mat} ${JSON.stringify(b)}`).toBe(false);
+    }
+  });
+
+  it.each(ZONE_SIZES)("%i×%i: zoneView('cv') shows the whole sign", (w, h) => {
+    const v = zoneView("cv", w, h), b = signBox(RESUME_SIGN);
+    expect(b.minX * v.scale + v.x).toBeGreaterThanOrEqual(0);
+    expect(b.maxX * v.scale + v.x).toBeLessThanOrEqual(w);
+    expect(b.minY * v.scale + v.y).toBeGreaterThanOrEqual(0);
+    expect(b.maxY * v.scale + v.y).toBeLessThanOrEqual(h);
   });
 });
