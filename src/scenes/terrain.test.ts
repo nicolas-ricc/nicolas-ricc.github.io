@@ -329,3 +329,19 @@ describe("clearOfWater", () => {
     expect(clearOfWater(271, 60, 272, 61, 3)).toBe(false); // but within 3 u there is water
   });
 });
+
+// ---------------------------------------------------------------- #472
+import { cityTerrainAt } from "./terrain-classify";
+import { inCrater } from "./city-grid";
+
+describe("west bank terrain on the new layout (#472)", () => {
+  it("the west bank is asphalt except the two west craters, which are jungle", () => {
+    for (let x = -50; x < 190; x += 3) for (let y = 164; y < 318; y += 3) {
+      expect(cityTerrainAt(x, y), `${x},${y}`).toBe(inCrater(x, y) ? "jungle" : "asphalt");
+    }
+    expect(cityTerrainAt(40, 198)).toBe("jungle");
+    expect(cityTerrainAt(-20, 258)).toBe("jungle");
+    expect(cityTerrainAt(60, 185)).toBe("asphalt"); // the old crater
+    expect(cityTerrainAt(150, 239)).toBe("asphalt"); // the old crater, now the Plaza Mayor
+  });
+});

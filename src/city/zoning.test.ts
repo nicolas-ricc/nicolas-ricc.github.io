@@ -214,3 +214,65 @@ describe("zoning", () => {
     expect(FOOTBRIDGE_LOT.x + FOOTBRIDGE_LOT.w).toBeGreaterThan(estuaryEast(178)); // rests on the east bank, doesn't end in the water
   });
 });
+
+// ---------------------------------------------------------------- #472: zoning over the parcels of city-plan
+import { CITY_BOUNDS, HOTEL_LOT, axisBand, AXES, parcels, type Parcel } from "../scenes/city-plan";
+import { CITY_EDGE } from "../scenes/city-grid";
+
+describe("zoning over parcels (#472)", () => {
+  const sameRect = (a: { x: number; y: number; w: number; d: number }, b: { x: number; y: number; w: number; d: number }) => a.x === b.x && a.y === b.y && a.w === b.w && a.d === b.d;
+  const isHotel = (p: Parcel) => sameRect(p.rect, HOTEL_LOT);
+  const built = parcels(CITY_BOUNDS).filter((p) => p.c.x > CITY_EDGE.west && p.c.y < 318);
+  const placedParcels = (): Placed[] => worldAssign().filter((p) => p.parcel);
+
+  it("every parcel of CITY_BOUNDS gets exactly one Placed, except HOTEL_LOT", () => {
+    const placed = placedParcels();
+    for (const p of built) expect(placed.filter((q) => q.parcel === p).length, `${p.cell.col},${p.cell.row}`).toBe(isHotel(p) ? 0 : 1);
+    expect(placed).toHaveLength(built.filter((p) => !isHotel(p)).length);
+    for (const q of placed) expect(q.parcel!.c.x > CITY_EDGE.west && q.parcel!.c.y < 318).toBe(true);
+  });
+
+  it("a parcel's block is its rect, west bank, row −2, kind parcel; its lot is the rect minus the sidewalk at z 0", () => {
+    for (const q of placedParcels()) {
+      const r = q.parcel!.rect;
+      expect(q.block).toEqual({ ...r, bank: "west", row: -2, kind: "parcel" });
+      expect(q.lot.x).toBeCloseTo(r.x + SIDEWALK, 9);
+      expect(q.lot.y).toBeCloseTo(r.y + SIDEWALK, 9);
+      expect(q.lot.w).toBeCloseTo(r.w - 2 * SIDEWALK, 9);
+      expect(q.lot.d).toBeCloseTo(r.d - 2 * SIDEWALK, 9);
+      expect(q.lot.z).toBe(0);
+      expect(q.lot.maxH).toBe(q.neighborhood === "district" ? LANDMARK_MAX_H : MAX_BUILDING_H);
+    }
+  });
+
+  it("barrio → neighborhood: clasico downtown, transicion residential, moderno district, bajo and residencial residential; bars north of the plaza", () => {
+    const map = { clasico: "downtown", transicion: "residential", moderno: "district", bajo: "residential", residencial: "residential" } as const;
+    for (const q of placedParcels()) {
+      const p = q.parcel!;
+      const bars = p.c.y < 206 && p.rect.x + p.rect.w >= 157;
+      expect(q.neighborhood, `${p.cell.col},${p.cell.row}`).toBe(bars ? "bars" : map[p.barrio]);
+    }
+  });
+
+  it("bars are exactly the two parcels north of the plaza (columns 133 and 163)", () => {
+    const bars = placedParcels().filter((q) => q.neighborhood === "bars").map((q) => q.parcel!.cell).sort((a, b) => a.col - b.col);
+    expect(bars).toEqual([{ col: 133, row: 171 }, { col: 163, row: 171 }]);
+  });
+
+  it("the open sides of a parcel touching the plaza axis include the side that touches it", () => {
+    const band = axisBand(AXES.find((a) => a.id === "plaza")!);
+    const y0 = Math.min(...band.map((q) => q.y)), y1 = Math.max(...band.map((q) => q.y)); // 222..234
+    const placed = placedParcels();
+    const north = placed.filter((q) => Math.abs(q.parcel!.rect.y + q.parcel!.rect.d - y0) < 1e-6 && Math.abs(Math.max(...q.parcel!.poly.map((v) => v.y)) - y0) < 1e-6);
+    const south = placed.filter((q) => Math.abs(q.parcel!.rect.y - y1) < 1e-6 && Math.abs(Math.min(...q.parcel!.poly.map((v) => v.y)) - y1) < 1e-6);
+    expect(north.length).toBeGreaterThan(0);
+    expect(south.length).toBeGreaterThan(0);
+    for (const q of north) expect(q.lot.open, `${q.parcel!.cell.col},${q.parcel!.cell.row}`).toContain("s");
+    for (const q of south) expect(q.lot.open, `${q.parcel!.cell.col},${q.parcel!.cell.row}`).toContain("n");
+  });
+
+  it("FIXED names no west block of rows ≥ 164", () => {
+    for (const f of FIXED) expect(f.x < 192 && f.y >= 164, `${f.recipe} ${f.x},${f.y}`).toBe(false);
+    expect(FIXED.map((f) => f.recipe).sort()).toEqual(["coveredMarket", "fishMarket", "foodHall", "market"]);
+  });
+});

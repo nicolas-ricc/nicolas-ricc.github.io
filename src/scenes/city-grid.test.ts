@@ -144,3 +144,33 @@ describe("city-grid", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------- #472: the west bank leaves the old grid
+import { CITY_BOUNDS as PLAN_CITY_BOUNDS, PLAZA_CENTER as PLAN_CENTER, onAxis as onPlanAxis, inParcel as inPlanParcel, parcels as planParcels } from "./city-plan";
+
+describe("city-grid after the new layout (#472)", () => {
+  it("blocks() has no west block south of the strip", () => {
+    for (const b of blocks()) if (b.bank === "west") expect(b.y, `${b.x},${b.y}`).toBeLessThan(164);
+    expect(blocks().some((b) => (b.kind as string) === "plaza" || (b.kind as string) === "district" || (b.kind as string) === "site")).toBe(false);
+  });
+
+  it("CRATERS are the two west crossings and the east one", () => {
+    expect(CRATERS).toEqual([{ x: 40, y: 198, r: 5 }, { x: -20, y: 258, r: 6 }, { x: 307, y: 224, r: 5 }]);
+  });
+
+  it("the two west craters sit on crossings of ordinary streets, off the axes and the parcels", () => {
+    for (const c of CRATERS.slice(0, 2)) {
+      expect(((c.x - 40) % 30 + 30) % 30, `${c.x}`).toBe(0);
+      expect(((c.y - 48) % 30 + 30) % 30, `${c.y}`).toBe(0);
+      expect(onPlanAxis(c.x, c.y)).toBe(false);
+      expect(inPlanParcel(c.x, c.y)).toBe(false);
+    }
+  });
+
+  it("inBlock is true inside a parcel and false on the plaza and on an axis band", () => {
+    expect(inBlock(PLAN_CENTER.x, PLAN_CENTER.y)).toBe(false);
+    expect(inBlock(10, 250)).toBe(false); // the boulevard
+    const p = planParcels(PLAN_CITY_BOUNDS).find((q) => q.rect.w > 12)!;
+    expect(inBlock(p.rect.x + p.rect.w / 2, p.rect.y + p.rect.d / 2)).toBe(true);
+  });
+});

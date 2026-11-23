@@ -181,3 +181,81 @@ describe("avenue lamps around the bars (#165)", () => {
     expect(lampXs(RANGE, [])).toEqual(regular());
   });
 });
+
+// ---------------------------------------------------------------- #472: center lines on the new grid and on the axes
+import { fingerprint } from "../iso/fingerprint";
+import { SIDEWALK } from "../scenes/city-grid";
+import { AXES, BLOCK as PLAN_BLOCK, GRID_ORIGIN, HOTEL_LOT, LAND, PITCH, PLAZA_MAYOR, STREET as PLAN_STREET, TOWER_ISLAND, axisBand, crossingPlazas, inCrossingPlaza, onAxis, pointInPoly } from "../scenes/city-plan";
+
+describe("streets on the new layout (#472)", () => {
+  const ground: Solid[] = [], solids: Solid[] = [];
+  streets(ground, solids, []);
+  const lines = ground.filter((g): g is Strip => g.kind === "strip" && g.width === 0.3);
+  const strictIn = (r: { x: number; y: number; w: number; d: number }, p: Vec2) => p.x > r.x + 1e-6 && p.x < r.x + r.w - 1e-6 && p.y > r.y + 1e-6 && p.y < r.y + r.d - 1e-6;
+  const street = (k: number) => GRID_ORIGIN.x + PLAN_BLOCK + PLAN_STREET / 2 + PITCH * k;
+  const streetY = (k: number) => GRID_ORIGIN.y + PLAN_BLOCK + PLAN_STREET / 2 + PITCH * k;
+  const XS: number[] = [], YS: number[] = [];
+  for (let k = -5; k < 10; k++) { const x = street(k), y = streetY(k); if (x > CITY_EDGE.west && x < LAND.x1) XS.push(x); if (y > LAND.y0 && y < 318) YS.push(y); }
+  /** A street of the grid that runs along an axis center is the axis, not an ordinary street. */
+  const ordinaryX = XS.filter((x) => !AXES.some((a) => a.from.x === a.to.x && Math.abs(a.from.x - x) < a.w / 2));
+  const ordinaryY = YS.filter((y) => !AXES.some((a) => a.from.y === a.to.y && Math.abs(a.from.y - y) < a.w / 2));
+  const samples = (s: Strip): Vec2[] => {
+    const [a, b] = [s.path[0]!, s.path[1]!], len = Math.hypot(b.x - a.x, b.y - a.y), out: Vec2[] = [];
+    for (let t = 0.3; t < len - 0.3; t += 0.5) out.push({ x: a.x + ((b.x - a.x) * t) / len, y: a.y + ((b.y - a.y) * t) / len });
+    return out;
+  };
+  const onLine = (p: Vec2, a: (typeof AXES)[number]) => {
+    const dx = a.to.x - a.from.x, dy = a.to.y - a.from.y;
+    return Math.abs((p.x - a.from.x) * dy - (p.y - a.from.y) * dx) / Math.hypot(dx, dy) < 1e-6;
+  };
+  const axisOf = (s: Strip) => AXES.find((a) => onLine(s.path[0]!, a) && onLine(s.path[1]!, a));
+
+  it("the grid streets are x 40 + 30k and y 48 + 30k", () => {
+    expect(ordinaryX).toEqual([-50, -20, 40, 70, 100, 130, 160]);
+    expect(ordinaryY).toEqual([198, 258, 288]);
+  });
+
+  it("each ordinary street of the new grid has at least one center-line stretch", () => {
+    for (const x of ordinaryX) expect(lines.some((s) => s.path[0]!.x === x && s.path[1]!.x === x && s.path[0]!.y >= LAND.y0 - 1e-6 && s.path[1]!.y <= 318 + 1e-6), `x ${x}`).toBe(true);
+    for (const y of ordinaryY) expect(lines.some((s) => s.path[0]!.y === y && s.path[1]!.y === y && Math.min(s.path[0]!.x, s.path[1]!.x) >= CITY_EDGE.west - 1e-6), `y ${y}`).toBe(true);
+  });
+
+  it("each axis has a center line", () => {
+    for (const a of AXES) expect(lines.some((s) => axisOf(s) === a), a.id).toBe(true);
+  });
+
+  it("no line runs into a foreign axis band, the plaza, a crossing plaza, a crater, HOTEL_LOT or TOWER_ISLAND", () => {
+    const bands = AXES.map((a) => ({ a, band: axisBand(a) }));
+    for (const s of lines) {
+      if (s.path[0]!.x > WEST_QUAY.x0 || s.path[0]!.y < LAND.y0 - 1e-6) continue; // the strip and the east bank keep their lines
+      const own = axisOf(s);
+      for (const p of samples(s)) {
+        const tag = `${own?.id ?? "street"} at ${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+        for (const { a, band } of bands) if (a !== own) expect(pointInPoly(p.x, p.y, band), `${tag} in ${a.id}`).toBe(false);
+        if (!own) expect(onAxis(p.x, p.y), tag).toBe(false);
+        expect(strictIn(PLAZA_MAYOR, p), `${tag} in the plaza`).toBe(false);
+        expect(inCrossingPlaza(p.x, p.y), `${tag} in a crossing plaza`).toBe(false);
+        expect(inCrater(p.x, p.y), `${tag} in a crater`).toBe(false);
+        expect(strictIn(HOTEL_LOT, p), `${tag} in the hotel lot`).toBe(false);
+        expect(strictIn(TOWER_ISLAND, p), `${tag} in the tower island`).toBe(false);
+      }
+    }
+    expect(crossingPlazas()).toHaveLength(3);
+  });
+
+  it("no lane, crosswalk, boulevard, lamp or traffic light of the old west avenue is left", () => {
+    for (const s of ground) if (s.kind === "strip" && s.width !== 0.3) expect(s.path.every((p) => p.x >= EAST_RING.x0 || p.y < LAND.y0), `strip ${s.width} at ${s.path[0]!.x},${s.path[0]!.y}`).toBe(true);
+    for (const x of solids) expect(bounds(x).min.x, `${x.kind} ${x.mat}`).toBeGreaterThanOrEqual(EAST_RING.x0);
+  });
+
+  it("the east stretch of the avenue keeps its lanes, crosswalks, boulevard, traffic lights and lamps (fingerprint of feature/471)", () => {
+    const east = (x: Solid) => bounds(x).min.x >= EAST_RING.x0;
+    expect(ground.filter(east)).toHaveLength(30);
+    expect(solids.filter(east)).toHaveLength(18);
+    expect(fingerprint([...ground.filter(east), ...solids.filter(east)])).toBe("a7c7d100");
+  });
+
+  it("BAR_FRONTS come from the two bars parcels, on the side facing the Avenida de las Vías", () => {
+    expect(BAR_FRONTS.map((f) => [f.x0, f.x1])).toEqual([[133 + SIDEWALK, 157 - SIDEWALK], [163 + SIDEWALK, 184 - SIDEWALK]]);
+  });
+});

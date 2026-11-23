@@ -438,3 +438,100 @@ describe("fixed lights (world seed, #171)", () => {
     for (const p of s.placed) for (const a of p.piece.accents) expect(published.has(a)).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------- #472: the west bank on the new layout
+import { BRIDGE_LANDING, CITY_BOUNDS, HOTEL_LOT, PLAZA_MAYOR, TOWER_ISLAND, inCrossingPlaza, inParcel, inPlazaMayor, onAxis, parcels } from "./city-plan";
+
+describe("city on the new layout (#472)", () => {
+  const s = scene();
+  const within = (b: { min: { x: number; y: number }; max: { x: number; y: number } }, r: { x: number; y: number; w: number; d: number }, m: number) =>
+    b.min.x >= r.x - m - 1e-6 && b.max.x <= r.x + r.w + m + 1e-6 && b.min.y >= r.y - m - 1e-6 && b.max.y <= r.y + r.d + m + 1e-6;
+  const entersRect = (b: { min: { x: number; y: number }; max: { x: number; y: number } }, r: { x: number; y: number; w: number; d: number }) =>
+    b.min.x < r.x + r.w - 1e-6 && b.max.x > r.x + 1e-6 && b.min.y < r.y + r.d - 1e-6 && b.max.y > r.y + 1e-6;
+  const inR = (r: { x: number; y: number; w: number; d: number }, x: number, y: number) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.d;
+  const samePoly = (a: readonly { x: number; y: number }[], b: readonly { x: number; y: number }[]) =>
+    a.length === b.length && a.every((p, i) => Math.abs(p.x - b[i]!.x) < 1e-9 && Math.abs(p.y - b[i]!.y) < 1e-9);
+  const plinths = s.solids.filter((x): x is Solid & { kind: "poly" } => x.kind === "poly" && x.mat === "paving" && x.h === PLINTH_H && x.z === 0);
+
+  it("is deterministic", () => {
+    expect(JSON.stringify(city(createRng(7), createRng(8), createRng(9)))).toBe(JSON.stringify(scene()));
+  });
+
+  it("one plinth per built parcel, with the parcel's footprint (the hotel lot included, with nothing on it)", () => {
+    for (const pp of s.placed) {
+      const parcel = pp.placed.parcel;
+      if (!parcel || pp.piece.ground.length > 0) continue;
+      expect(plinths.filter((x) => samePoly(x.footprint, parcel.poly)).length, `${parcel.cell.col},${parcel.cell.row}`).toBe(1);
+    }
+    expect(s.placed.filter((pp) => pp.placed.parcel).length).toBeGreaterThan(25);
+    const hotel = parcels(CITY_BOUNDS).find((p) => p.rect.x === HOTEL_LOT.x && p.rect.y === HOTEL_LOT.y && p.rect.w === HOTEL_LOT.w && p.rect.d === HOTEL_LOT.d)!;
+    expect(plinths.filter((x) => samePoly(x.footprint, hotel.poly))).toHaveLength(1);
+    for (const x of s.solids) if (x !== plinths.find((p) => samePoly(p.footprint, hotel.poly))) {
+      const b = bounds(x);
+      if (b.max.z > PLINTH_H + 0.5) expect(entersRect(b, { x: HOTEL_LOT.x + 1, y: HOTEL_LOT.y + 1, w: HOTEL_LOT.w - 2, d: HOTEL_LOT.d - 2 }), `${x.kind} ${x.mat} over the hotel lot`).toBe(false);
+    }
+  });
+
+  it("no solid of a parcel piece leaves rect ± 0.8", () => {
+    for (const pp of s.placed) {
+      const parcel = pp.placed.parcel;
+      if (!parcel) continue;
+      for (const x of [...pp.piece.solids, ...pp.piece.ground]) expect(within(bounds(x), parcel.rect, 0.8), `${parcel.cell.col},${parcel.cell.row} ${pp.placed.recipe} ${x.kind}`).toBe(true);
+    }
+  });
+
+  it("no solid but the tower's and the crown's enters TOWER_ISLAND", () => {
+    const towerOwn = (x: Solid) => isTowerPiece(x) || (x.kind === "cone" && x.mat === "leaf" && within(bounds(x), TOWER, 4.5)) || (x.mat === "leaf" && within(bounds(x), TOWER, 0.7));
+    for (const x of [...s.solids, ...s.ground]) {
+      if (towerOwn(x)) continue;
+      if (x.kind === "ground") { for (const t of x.tris) { const cx = (t.pts[0].x + t.pts[1].x + t.pts[2].x) / 3, cy = (t.pts[0].y + t.pts[1].y + t.pts[2].y) / 3; expect(inR(TOWER_ISLAND, cx, cy), `${x.mat} tile in the island`).toBe(false); } continue; }
+      if (x.kind === "strip") { for (const p of x.path) expect(inR(TOWER_ISLAND, p.x, p.y) && p.x > TOWER_ISLAND.x && p.y > TOWER_ISLAND.y, "strip in the island").toBe(false); continue; }
+      expect(entersRect(bounds(x), TOWER_ISLAND), `${x.kind} ${x.mat} in the island`).toBe(false);
+    }
+  });
+
+  it("the tower and the crown stay as they were: the tower prism on TOWER, towerCrown at CROWN_SITE", () => {
+    const tower = s.solids.find((x): x is Solid & { kind: "prism" } => x.kind === "prism" && x.h === TOWER_H)!;
+    expect({ x: tower.at.x, y: tower.at.y, w: tower.w, d: tower.d }).toEqual({ x: TOWER.x, y: TOWER.y, w: TOWER.w, d: TOWER.d });
+    for (const x of CROWN) expect(s.solids).toContainEqual(x);
+    for (const a of CROWN_ACCENTS) expect(s.accents).toContainEqual(a);
+  });
+
+  it("the plaza tiles step on neither TOWER_ISLAND nor BRIDGE_LANDING, and the landing is paving", () => {
+    const tris = s.ground.flatMap((g) => (g.kind === "ground" && g.mat === "plaza" ? g.tris : []));
+    expect(tris.length).toBeGreaterThan(0);
+    let area = 0;
+    for (const t of tris) {
+      const [a, b, c] = t.pts, cx = (a.x + b.x + c.x) / 3, cy = (a.y + b.y + c.y) / 3;
+      expect(inR(PLAZA_MAYOR, cx, cy)).toBe(true);
+      expect(inR(TOWER_ISLAND, cx, cy)).toBe(false);
+      expect(inR(BRIDGE_LANDING, cx, cy)).toBe(false);
+      area += Math.abs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y)) / 2;
+    }
+    // 54 × 85, minus the landing (54 × 10), the island inside the plaza (6 × 16) and the 1 u curb strip north of the landing
+    expect(area).toBeCloseTo(54 * 85 - 54 * 10 - 6 * 16 - 54, 6);
+    const landing = s.ground.flatMap((g) => (g.kind === "ground" && g.mat === "paving" ? g.tris : [])).filter((t) => inR(BRIDGE_LANDING, (t.pts[0].x + t.pts[1].x + t.pts[2].x) / 3, (t.pts[0].y + t.pts[1].y + t.pts[2].y) / 3));
+    expect(landing.length).toBeGreaterThan(0);
+  });
+
+  it("no car falls on an axis band, a plaza, a crater, the hotel lot, the island, a parcel nor on another car", () => {
+    const cars = s.solids.filter((x): x is Solid & { kind: "prism" } => x.kind === "prism" && (x.mat === "steel" || x.mat === "rust") && x.h === 1.2 && x.w === CAR.w && x.d === CAR.d);
+    expect(cars.length).toBeGreaterThanOrEqual(20);
+    for (const c of cars) {
+      const corners = [[c.at.x, c.at.y], [c.at.x + c.w, c.at.y], [c.at.x + c.w, c.at.y + c.d], [c.at.x, c.at.y + c.d]] as const;
+      const mx = c.at.x + c.w / 2, my = c.at.y + c.d / 2, tag = `car ${c.at.x},${c.at.y}`;
+      for (const [x, y] of corners) {
+        expect(onAxis(x, y), `${tag} on an axis`).toBe(false);
+        expect(inPlazaMayor(x, y) || inCrossingPlaza(x, y), `${tag} on a plaza`).toBe(false);
+        expect(inR(HOTEL_LOT, x, y), `${tag} on the hotel lot`).toBe(false);
+        expect(inR(TOWER_ISLAND, x, y), `${tag} on the island`).toBe(false);
+        expect(inParcel(x, y), `${tag} on a parcel`).toBe(false);
+      }
+      expect(CRATERS.some((k) => Math.hypot(mx - k.x, my - k.y) <= k.r + 2), `${tag} by a crater`).toBe(false);
+    }
+    for (let i = 0; i < cars.length; i++) for (let j = i + 1; j < cars.length; j++) {
+      const a = cars[i]!, b = cars[j]!;
+      expect(a.at.x < b.at.x + b.w && a.at.x + a.w > b.at.x && a.at.y < b.at.y + b.d && a.at.y + a.d > b.at.y).toBe(false);
+    }
+  });
+});
