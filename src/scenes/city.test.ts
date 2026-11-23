@@ -7,7 +7,7 @@ import { lightBox, type FixedLight } from "../city/lights";
 import { describe, expect, it } from "vitest";
 import { buildRenderList } from "../iso/render-list";
 import { bounds, type Solid } from "../iso/solids";
-import { ESTUARY_Y0, QUAY_X, STATION_LAND, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y } from "../map/geo";
+import { BLEED, ESTUARY_Y0, QUAY_X, STATION_LAND, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y } from "../map/geo";
 import { allIsoColors, type Material } from "../map/palette-iso";
 import { createRng, SEED } from "../map/seed";
 import { AVENUE, BOULEVARD, BRIDGE, CITY_EDGE, COLLAPSED, FREIGHT_ROW, ROWS, CRATERS, DISTRICT_BANK_Y, EAST_RING, FALLEN_BLOCK, PROMENADE, WEST_QUAY, blocks, estuaryEast, inBlock, inCrater } from "./city-grid";
@@ -61,7 +61,7 @@ describe("city", () => {
   it("everything falls in the Resume zone except the cones, and uses only city materials", () => {
     for (const s of all(scene())) {
       const b = bounds(s);
-      expect(b.min.x).toBeGreaterThanOrEqual(WORLD.x0 - 3); expect(b.max.x).toBeLessThanOrEqual(ZONE_SPLIT_X + 1); // the district grows up to the west edge of the world
+      expect(b.min.x).toBeGreaterThanOrEqual(WORLD.x0 - BLEED.x); expect(b.max.x).toBeLessThanOrEqual(ZONE_SPLIT_X + 1); // the west of the city (#479) reaches the edge of the view, over the bleed
       expect(b.max.y).toBeLessThanOrEqual(WORLD.y1 + 1);
       if (s.kind !== "cone") expect(b.min.y).toBeGreaterThanOrEqual(ZONE_SPLIT_Y - 1);
       expect(CITY_MATS).toContain(s.mat);
@@ -251,12 +251,12 @@ describe("city", () => {
     expect(rails.some((g) => g.kind === "strip" && g.width === 5)).toBe(true);
   });
 
-  it("jungle: east bank and craters, more than 60 cones (the west and south edges belong to the tech district)", () => {
+  it("jungle: east bank and craters, more than 60 cones (the south edge belongs to the tech district; the west has only kit trees, #479)", () => {
     const s = scene();
     const cones = s.solids.filter((x) => x.kind === "cone" && (x.mat === "leaf" || x.mat === "leafDark"));
     expect(cones.length).toBeGreaterThan(60);
     for (const c of cones) if (c.kind === "cone" && c.at.y < ROWS[1]! && c.at.x < QUAY_X) expect(inBlock(c.at.x, c.at.y), `${c.at.x},${c.at.y}`).toBe(true); // no seam belt since #319: in the new strip only the courtyard trees of its blocks (#320)
-    expect(cones.some((c) => c.kind === "cone" && c.at.x < CITY_EDGE.west)).toBe(false);        // west edge: asphalt of the tech district
+    for (const c of cones) if (c.kind === "cone" && c.at.x < CITY_EDGE.west) expect(inParcel(c.at.x, c.at.y), `${c.at.x},${c.at.y}`).toBe(true); // west of x −54 (#479): only the trees of the kit pieces, inside their parcels
     expect(cones.some((c) => c.kind === "cone" && c.at.x > QUAY_X && c.at.x < EAST_RING.x0)).toBe(true); // east bank
     for (const cr of CRATERS) expect(cones.some((c) => c.kind === "cone" && inCrater(c.at.x, c.at.y) && Math.hypot(c.at.x - cr.x, c.at.y - cr.y) <= cr.r)).toBe(true);
   });
@@ -274,10 +274,10 @@ describe("city", () => {
   it("neon: the signs that exist are coplanar in y, and a light over each street lamp of the promenade", () => {
     const worldCity = city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3)); // the real seed of the world
     const c = scene();
-    // no district parcel in CITY_BOUNDS since #472 (the modern belt is west of −54, tech's until #479): the district signs come back with it
-    expect(c.neon.signs).toHaveLength(0);
-    expect(worldCity.neon.signs).toHaveLength(0);
-    for (const s of [...c.neon.signs, ...worldCity.neon.signs]) { // kept for when they return
+    // the district signs are back with the west (#479): the moderno parcels west of −54 carry them (measured on agent/479: 18 with seeds 7/8/9, 17 with the world seed)
+    expect(c.neon.signs.length).toBeGreaterThan(0);
+    expect(worldCity.neon.signs.length).toBeGreaterThan(0);
+    for (const s of [...c.neon.signs, ...worldCity.neon.signs]) {
       if (s.kind !== "poly") throw new Error("sign not poly");
       expect(s.pts).toHaveLength(4);
       expect(new Set(s.pts.map((p) => p.y)).size).toBe(1);
@@ -340,13 +340,16 @@ describe("city", () => {
   // #477: the barrio neighbourhoods deal other recipes and rng streams: all five re-recorded once (Task 2; later tasks re-record again).
   // #477 Task 3: the parcel lots carry the inset polygon and the ochavas: all five re-recorded again.
   // #477 Task 4: the civic palace, theatre, library, obra and tank host stand on their named parcels: all five re-recorded again.
+  // #479: the west adds its pieces (and the telecom): all five re-recorded once with the whole city; the east alone (`opts.west = -54`) keeps the old fingerprints (EAST).
   // That lifting equals running the recipe PLINTH_H higher is checked per recipe in piece.test.
   it("pieces without ground are identical to the pinned plinth pieces (860a582; re-recorded at #143, #56, #152 and #165)", () => {
-    const MAIN = ["463dcb4d", "c540539a", "e9c5b4f5", "4dd4c753", "d0ee13e9"];
+    const EAST = ["463dcb4d", "c540539a", "e9c5b4f5", "4dd4c753", "d0ee13e9"], MAIN = ["ac4094bd", "037bf2d3", "ebae98df", "4fb3f9eb", "f851b786"];
     for (let s = 1; s <= 5; s++) {
-      const c = city(createRng(s), createRng(s + 1), createRng(s + 2));
-      const plain = c.placed.filter((q) => q.piece.ground.length === 0).map((q) => q.piece);
-      expect(fingerprint(plain as unknown as Solid[]), `seed ${s}`).toBe(MAIN[s - 1]);
+      for (const [west, pinned] of [[-54, EAST], [-Infinity, MAIN]] as const) {
+        const c = city(createRng(s), createRng(s + 1), createRng(s + 2), { west });
+        const plain = c.placed.filter((q) => q.piece.ground.length === 0).map((q) => q.piece);
+        expect(fingerprint(plain as unknown as Solid[]), `seed ${s} west ${west}`).toBe(pinned[s - 1]);
+      }
     }
   });
 

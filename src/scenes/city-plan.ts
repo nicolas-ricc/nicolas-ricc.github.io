@@ -19,8 +19,8 @@ export const BRIDGE_LANDING: Rect = { x: 132, y: 207, w: 54, d: 10 };
 export const CROSSING_PLAZA_R = 11;
 
 export interface Bounds2 { x0: number; y0: number; x1: number; y1: number }
-/** The city builds parcels inside these. `x0` is the literal of `CITY_EDGE.west` (a test guards it; importing it would close a cycle). */
-export const CITY_BOUNDS: Bounds2 = { x0: -54, y0: LAND.y0, x1: LAND.x1, y1: 318 };
+/** The city builds parcels inside these. `x0 = -Infinity` since #479: the city owns the west to the edge of the view (the lab cuts it with `city()`'s `opts.west`). */
+export const CITY_BOUNDS: Bounds2 = { x0: -Infinity, y0: LAND.y0, x1: LAND.x1, y1: 318 };
 /** The whole cover width, to the southern avenue (y 318). */
 export const PLAN_BOUNDS: Bounds2 = { x0: -Infinity, y0: LAND.y0, x1: LAND.x1, y1: 318 };
 

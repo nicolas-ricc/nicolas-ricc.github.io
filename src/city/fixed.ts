@@ -161,11 +161,11 @@ export function greenery(solids: Solid[], rng: Rng): void {
 const rectsOverlap = (x0: number, y0: number, w0: number, d0: number, x1: number, y1: number, w1: number, d1: number, gap = 0): boolean =>
   x0 - gap < x1 + w1 && x0 + w0 + gap > x1 && y0 - gap < y1 + d1 && y0 + d0 + gap > y1;
 
-export function cars(solids: Solid[], rng: Rng): void {
+export function cars(solids: Solid[], rng: Rng, west = -Infinity): void {
   const placed: { x: number; y: number }[] = [];
   const lots: (Rect & { grid: boolean })[] = [
     ...blocks().filter((b) => b.kind !== "freight").map((b) => ({ x: b.x, y: b.y, w: b.w, d: b.d, grid: true })),
-    ...builtParcels().map((pc) => ({ ...pc.rect, grid: false })),
+    ...builtParcels(west).map((pc) => ({ ...pc.rect, grid: false })), // the lab (`west` = WORLD.x0) has no cars on the cut parcels
   ];
   const walkBoxes = crosswalks().flatMap((w) => w.strips.map(([p, q]) => ({ x: Math.min(p.x, q.x) - 0.4, y: Math.min(p.y, q.y) - 0.4, w: Math.abs(p.x - q.x) + 0.8, d: Math.abs(p.y - q.y) + 0.8 })));
   for (const b of lots) {
@@ -193,4 +193,14 @@ export function cars(solids: Solid[], rng: Rng): void {
       solids.push(...car(v3(x, y, 0), rng.chance(0.6) ? "steel" : "rust"));
     }
   }
+}
+
+// ---------------------------------------------------------------- telecom (#479)
+
+/** Telecommunications tower (the landmark of the west, on the `moderno` parcel `TELECOM_CELL`): concrete base, slender mast and three dishes, centered on the parcel's rect `r`; the plinth is the parcel's (`city()`). Returns the tip, where the light goes. */
+export function telecom(solids: Solid[], r: Rect): Vec3 {
+  const cx = r.x + r.w / 2, cy = r.y + r.d / 2;
+  solids.push(prism(cx - 2, cy - 2, PLINTH_H, 4, 4, 2, "concrete"), prism(cx - 0.5, cy - 0.5, PLINTH_H + 2, 1, 1, 20, "steel"));
+  for (const z of [10, 14, 18]) solids.push({ kind: "cylinder", at: v3(cx + 1.2, cy, PLINTH_H + z), r: 1.2, h: 0.4, mat: "steel", sides: 8 });
+  return v3(cx, cy, PLINTH_H + 22.2);
 }

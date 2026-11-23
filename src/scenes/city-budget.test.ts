@@ -17,8 +17,8 @@ describe("Resume level 2 budget", () => {
     // measured with the hotel (#474), real seed: 992 raised solids, 95 strip ground, 788 static accents (514 poly + 274 dot).
     // The accents were 1 165 with the crown (#391: 789 before, + its 402 = 238 poly + 164 dot, − 26 hidden city lights); the hotel replaced the
     // tower and the crown.
-    expect(s.ground.filter((g) => g.kind === "strip").length).toBeLessThanOrEqual(380); // measured (#473): 347 strips, ×1.1 rounded to the ten
-    expect(s.accents.length).toBeLessThanOrEqual(1000); // measured (#473): 815 accents; with the barrios of #477, 903 (585 poly): ×1.1 = 993, rounded up to the hundred
+    expect(s.ground.filter((g) => g.kind === "strip").length).toBeLessThanOrEqual(400); // measured (#473): 347 strips, ×1.1 rounded to the ten; with the west (#479, measured on agent/479): 357 strips, ×1.1 = 393, rounded up to the ten
+    expect(s.accents.length).toBeLessThanOrEqual(1400); // measured on agent/479 with the west (#479): 1 265 accents, ×1.1 = 1 392, rounded up to the hundred. Before: (#473): 815 accents; with the barrios of #477, 903 (585 poly): ×1.1 = 993, rounded up to the hundred
   });
 
   it("static polygons of the world ≤ 56 000 (same computation as stage.staticCount)", () => {

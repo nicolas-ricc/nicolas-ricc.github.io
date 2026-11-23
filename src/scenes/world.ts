@@ -1,7 +1,7 @@
 import type { Accent } from "../iso/accent";
 import { v3, type Vec3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
-import type { WorldZone } from "../map/geo";
+import { WORLD, type WorldZone } from "../map/geo";
 import { createRng, type Rng } from "../map/seed";
 import { city, type CityScene } from "./city";
 import { factory, type FactoryScene } from "./factory";
@@ -59,7 +59,7 @@ export function world(seed: number, opts: { zones?: readonly WorldZone[] } = {})
     for (const sc of [sy, fa]) { ground.push(...sc.ground); solids.push(...sc.solids); accents.push(...sc.accents); }
   }
   if (zones.includes("cv")) {
-    ct = city(zoneRng(seed, "cv"), zoneRng(seed, "cv", 1), zoneRng(seed, "cv", 3));
+    ct = city(zoneRng(seed, "cv"), zoneRng(seed, "cv", 1), zoneRng(seed, "cv", 3), { west: opts.zones ? WORLD.x0 : -Infinity });
     ground.push(...ct.ground); solids.push(...ct.solids); accents.push(...ct.accents);
   }
   let se: SeaScene | null = null;

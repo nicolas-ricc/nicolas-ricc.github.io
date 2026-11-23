@@ -6,7 +6,7 @@ import { PLINTH_H } from "../scenes/city-pieces";
 import { ROWS, SIDEWALK, STREET, WEST_QUAY, blocks, estuaryEast, type Block } from "../scenes/city-grid";
 import { zoneRng } from "../scenes/world";
 import { SEED } from "../map/seed";
-import { CATALOGUE, FIXED, FRONT_CAP_H, FOOTBRIDGE_LOT, MAX_BUILDING_H, assign, builtParcels, isBare, neighborhoodOf, maxHeightFor, neighborhoodOfParcel, parcelOpenSides, tooSmall, openSides, waterTowerLot, type Neighborhood, type Placed } from "./zoning";
+import { CATALOGUE, FIXED, FRONT_CAP_H, WEST_DISTRICT_X, TELECOM_CELL, FOOTBRIDGE_LOT, MAX_BUILDING_H, assign, builtParcels, isBare, neighborhoodOf, maxHeightFor, neighborhoodOfParcel, parcelOpenSides, tooSmall, openSides, waterTowerLot, type Neighborhood, type Placed } from "./zoning";
 
 const key = (b: { x: number; y: number }): string => `${b.x},${b.y}`;
 const blockAt = (x: number, y: number): Block => blocks().find((b) => b.x === x && b.y === y)!;
@@ -171,9 +171,11 @@ describe("zoning", () => {
     expect(tooSmall({ x: 0, y: 0, w: 7, d: 9, z: 0, open: [], maxH: 18 })).toBe(false);
   });
 
-  it("the tone comes from rng and does not depend on districtRng", () => {
-    const tones = (d: number) => assign(createRng(7), createRng(d)).map((p) => p.tone);
-    expect(tones(8)).toEqual(tones(9));
+  it("the tone of the blocks and of the east parcels comes from rng and does not depend on districtRng; the west's comes from districtRng (#479)", () => {
+    const tones = (d: number, west: boolean) => assign(createRng(7), createRng(d)).filter((p) => (p.parcel !== undefined && p.parcel.c.x < WEST_DISTRICT_X) === west).map((p) => p.tone);
+    expect(tones(8, false)).toEqual(tones(9, false));
+    expect(tones(8, true)).toHaveLength(tones(9, true).length);
+    expect(tones(8, true)).not.toEqual(tones(9, true));
   });
 
   it("with the world seed ≥ 14 distinct recipes are used", () => {
@@ -207,19 +209,18 @@ describe("zoning", () => {
 
 // ---------------------------------------------------------------- #472: zoning over the parcels of city-plan
 import { CITY_BOUNDS, HOTEL_LOT, axisBand, AXES, parcels, type Parcel } from "../scenes/city-plan";
-import { CITY_EDGE } from "../scenes/city-grid";
 
 describe("zoning over parcels (#472)", () => {
   const sameRect = (a: { x: number; y: number; w: number; d: number }, b: { x: number; y: number; w: number; d: number }) => a.x === b.x && a.y === b.y && a.w === b.w && a.d === b.d;
   const isHotel = (p: Parcel) => sameRect(p.rect, HOTEL_LOT);
-  const built = parcels(CITY_BOUNDS).filter((p) => p.c.x > CITY_EDGE.west && p.c.y < 318);
+  const built = parcels(CITY_BOUNDS).filter((p) => p.c.y < 318); // CITY_BOUNDS.x0 = -Infinity since #479: the west is built
   const placedParcels = (): Placed[] => worldAssign().filter((p) => p.parcel);
 
   it("every parcel of CITY_BOUNDS gets exactly one Placed, except HOTEL_LOT", () => {
     const placed = placedParcels();
     for (const p of built) expect(placed.filter((q) => q.parcel === p).length, `${p.cell.col},${p.cell.row}`).toBe(isHotel(p) ? 0 : 1);
     expect(placed).toHaveLength(built.filter((p) => !isHotel(p)).length);
-    for (const q of placed) expect(q.parcel!.c.x > CITY_EDGE.west && q.parcel!.c.y < 318).toBe(true);
+    for (const q of placed) expect(q.parcel!.c.y < 318).toBe(true);
   });
 
   it("a parcel's block is its rect, west bank, row −2, kind parcel; its lot is the rect minus the sidewalk at z 0 (the bounding box of the inset polygon on oblique polygon lots)", () => {
@@ -477,7 +478,7 @@ describe("barrios (#477)", () => {
 
   it("every fixed parcel is built, on a lot the kit can use", () => {
     expect(FIXED_PARCELS.map((f) => `${f.recipe} ${f.cell.col},${f.cell.row}${f.civic ? " civic" : ""}`)).toEqual([
-      "civicPalace 163,291 civic", "theatre 133,291 civic", `library ${LIBRARY_CELL.col},${LIBRARY_CELL.row} civic`, "constructionSite 43,261", `patioResidential ${WATER_TOWER_CELL.col},${WATER_TOWER_CELL.row}`,
+      "civicPalace 163,291 civic", "theatre 133,291 civic", `library ${LIBRARY_CELL.col},${LIBRARY_CELL.row} civic`, "constructionSite 43,261", `patioResidential ${WATER_TOWER_CELL.col},${WATER_TOWER_CELL.row}`, `telecom ${TELECOM_CELL.col},${TELECOM_CELL.row}`,
     ]);
     expect(WATER_TOWER_CELL).toEqual({ col: 13, row: 291 });
     for (const f of FIXED_PARCELS) {
@@ -485,7 +486,7 @@ describe("barrios (#477)", () => {
       expect(hits, `${f.recipe}`).toHaveLength(1);
       expect(hits[0]!.placed.recipe).toBe(f.recipe);
       expect(tooSmall(hits[0]!.placed.lot), f.recipe).toBe(false);
-      expect(hits[0]!.placed.neighborhood).toBe(f.civic ? "civic" : "transicion");
+      expect(hits[0]!.placed.neighborhood).toBe(f.civic ? "civic" : f.recipe === "telecom" ? "moderno" : "transicion"); // the TELECOM parcel is in the moderno barrio (#479)
     }
   });
 
@@ -529,5 +530,25 @@ describe("the west does not move the east (#479)", () => {
     const east = assign(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1)).filter((p) => p.parcel && p.parcel.c.x >= -54)
       .map((p) => `${p.parcel!.cell.col},${p.parcel!.cell.row} ${p.parcel!.rect.x},${p.parcel!.rect.y} ${p.neighborhood} ${p.recipe} ${p.tone}`);
     expect(east).toMatchSnapshot();
+  });
+
+  it("row 171 parcels respect the train rule: every lot south of the track is capped so y - 1.4 z >= 134.5", () => {
+    const south = worldAssign().filter((p) => p.parcel && p.parcel.rect.y > 134.2);
+    expect(south.length).toBeGreaterThan(0);
+    for (const p of south) expect(p.lot.maxH, `${p.parcel!.cell.col},${p.parcel!.cell.row}`).toBeLessThanOrEqual((p.parcel!.rect.y - 134.5) / 1.4 - PLINTH_H);
+  });
+
+  it("the west comes after the east and its parcels are all west of WEST_DISTRICT_X", () => {
+    const ps = builtParcels(), first = ps.findIndex((p) => p.c.x < WEST_DISTRICT_X);
+    expect(first).toBeGreaterThan(0);
+    for (const [i, p] of ps.entries()) expect(p.c.x < WEST_DISTRICT_X, `${i}`).toBe(i >= first);
+  });
+
+  it("builtParcels(west) cuts by centroid and TELECOM_CELL is a fixed parcel", () => {
+    expect(builtParcels(-60).every((p) => p.c.x > -60)).toBe(true);
+    expect(builtParcels(-60).length).toBeLessThan(builtParcels().length);
+    expect(builtParcels()).toBe(builtParcels());
+    expect(TELECOM_CELL).toEqual({ col: -107, row: 231 });
+    expect(() => assign(createRng(1), createRng(2), -60)).not.toThrow();
   });
 });

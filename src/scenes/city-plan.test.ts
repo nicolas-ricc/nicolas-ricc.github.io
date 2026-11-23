@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import type { Vec2 } from "../iso/geometry";
-import { CITY_EDGE } from "./city-grid";
 import {
   AXES, BRIDGE_LANDING, CITY_BOUNDS, HOTEL_LOT, LAND, PLAN_BOUNDS, PLAZA_CENTER, PLAZA_MAYOR,
   axisBand, barrioAt, crossingPlazas, intersectionArea, parcels, pointInPoly, polyArea, polyPerimeter,
@@ -144,14 +143,15 @@ describe("city-plan parcels (#472)", () => {
     for (const p of parcels(CITY_BOUNDS)) expect(Math.min(p.rect.w, p.rect.d), `${p.cell.col},${p.cell.row}`).toBeGreaterThanOrEqual(6);
   });
 
-  it("parcel counts: 55..75 over the cover north of 318, 100..130 down to y 475, 33 in CITY_BOUNDS", () => {
+  it("parcel counts: 55..75 over the cover north of 318, 100..130 down to y 475, the same 63 in CITY_BOUNDS", () => {
     // Measured while planning: 63 and 111 over the whole cover width (PLAN_BOUNDS), the parent's measure 1;
-    // CITY_BOUNDS stops at CITY_EDGE.west (−54): only the columns −47 and −17 lie west of the boulevard, so 33. Re-measured in #474 without TOWER_ISLAND: still 33.
+    // CITY_BOUNDS had stopped at CITY_EDGE.west (−54) with 33; since #479 its x0 is −Infinity and it holds the whole cover width: 63 (measured on agent/479).
     expect(parcels(PLAN_BOUNDS).length).toBeGreaterThanOrEqual(55);
     expect(parcels(PLAN_BOUNDS).length).toBeLessThanOrEqual(75);
     expect(parcels(SOUTH_BOUNDS).length).toBeGreaterThanOrEqual(100);
     expect(parcels(SOUTH_BOUNDS).length).toBeLessThanOrEqual(130);
-    expect(parcels(CITY_BOUNDS)).toHaveLength(33);
+    expect(parcels(CITY_BOUNDS)).toHaveLength(63);
+    expect(parcels(CITY_BOUNDS)).toBe(parcels(PLAN_BOUNDS)); // same bounds, same memo
   });
 
   it("parcels are memoized per bounds, and different bounds do not collide", () => {
@@ -173,8 +173,8 @@ describe("city-plan parcels (#472)", () => {
 });
 
 describe("city-plan constants (#472)", () => {
-  it("CITY_BOUNDS starts at CITY_EDGE.west and ends at the Avenida del Sur", () => {
-    expect(CITY_BOUNDS).toEqual({ x0: CITY_EDGE.west, y0: 164, x1: 184, y1: 318 });
+  it("CITY_BOUNDS has no west edge (#479) and ends at the Avenida del Sur", () => {
+    expect(CITY_BOUNDS).toEqual({ x0: -Infinity, y0: 164, x1: 184, y1: 318 });
   });
   it("the bridge landing stands inside the plaza", () => {
     expect(intersectionArea(rectPoly(BRIDGE_LANDING), rectPoly(PLAZA_MAYOR))).toBeCloseTo(54 * 10, 6);

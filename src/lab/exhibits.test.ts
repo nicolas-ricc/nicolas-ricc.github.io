@@ -146,14 +146,11 @@ describe("exhibit catalog", () => {
     it("has the spec's regions, in order", () => {
       expect(mine.map((e) => e.id)).toEqual(CATALOG[group]);
     });
-    // TODO(#479 Task 2): mastil and torres point at plan parcels the city will build (TELECOM, two towers); until then the area is empty or lower than h
-    const pendingCity = new Set(["mastil", "torres"]);
     it("non-empty: against the real world every region crops at least one solid", () => {
-      for (const e of mine) if (!pendingCity.has(e.id)) expect(cropScene(scene, e.box).solids.length, e.id).toBeGreaterThan(0);
+      for (const e of mine) expect(cropScene(scene, e.box).solids.length, e.id).toBeGreaterThan(0);
     });
     it("framing: h covers the structure and its accents and exceeds them by no more than SLACK", () => {
       for (const e of mine) {
-        if (pendingCity.has(e.id)) continue; // TODO(#479 Task 2)
         const h = e.h ?? FRAME_H, m = measured.get(e)!;
         expect(h, e.id).toBeGreaterThanOrEqual(Math.max(m.inside, m.accents));
         expect(h, e.id).toBeLessThanOrEqual(Math.max(m.withAnim, m.accents) + SLACK);
