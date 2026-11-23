@@ -55,6 +55,7 @@ None of them exceeds 56 000 / 2 600, so issue step 2 does not trigger step 3.
 - Test: `src/city/lights.test.ts`, `src/scenes/city-anim.test.ts`
 
 **Interfaces:**
+- Consumes: `CityLights.counts` (`src/city/lights.ts:20`, `Record<Neighborhood, { candidates; on; warm }>`, already returned by `lights()`), `sample` (`lights.ts`, returns exactly `min(k, xs.length)` items), `CityBarrio` (`src/city/zoning.ts`).
 - Produces: `export const ANIMABLE_BARRIOS = ["clasico", "transicion", "bajo", "moderno"] as const satisfies readonly Neighborhood[]` and `export function animableQuota(candidates: Record<(typeof ANIMABLE_BARRIOS)[number], number>, max = MAX_ANIMABLE): Record<(typeof ANIMABLE_BARRIOS)[number], number>`, both in `src/city/lights.ts`.
 
 **Rule (decided here).** The pool is every visible window whose piece's neighborhood is one of `ANIMABLE_BARRIOS`; other neighborhoods (bars, civic, riverside, warehouses, freight, harbor, and the old downtown/residential, which have 0 candidates on the world seed) do not animate. `animableQuota`: `total = min(max, Σ candidates)`. Each barrio with candidates gets 1 (if `total` is smaller than the number of non-empty barrios, the barrios with the most candidates get 1 each, ties broken by `ANIMABLE_BARRIOS` order). The rest, `total − Σ ones`, is split in proportion to each barrio's remaining capacity (`candidates − ones`) with the largest-remainder method (ties by `ANIMABLE_BARRIOS` order); since `total ≤ Σ candidates`, no barrio exceeds its candidates. Then in `lights()`, for each barrio in `ANIMABLE_BARRIOS` order, `sample(windowsOfBarrio, quota[b], rng)`. It still uses the same `rng` and runs at the same point, after the quotas and before the neons.
@@ -67,6 +68,7 @@ In `src/city/lights.test.ts`:
     - `animableQuota splits 40 in proportion with at least 1 per barrio with candidates`: `animableQuota({ clasico: 60, transicion: 527, bajo: 0, moderno: 720 })` equals `{ clasico: 3, transicion: 16, bajo: 0, moderno: 21 }`.
     - `animableQuota: a barrio with no candidates gets 0 and the rest still sums to 40`: `animableQuota({ clasico: 1, transicion: 0, bajo: 0, moderno: 500 })` equals `{ clasico: 1, transicion: 0, bajo: 0, moderno: 39 }`.
     - `animableQuota: with fewer than 40 candidates every one is animatable`: `animableQuota({ clasico: 3, transicion: 5, bajo: 2, moderno: 10 })` equals the input.
+    - `animableQuota: max 0 gives 0 everywhere`: `animableQuota({ clasico: 5, transicion: 5, bajo: 5, moderno: 5 }, 0)` is all zeros.
     - `animableQuota: with max below the barrio count the largest barrios win`: `animableQuota({ clasico: 5, transicion: 9, bajo: 9, moderno: 1 }, 2)` equals `{ clasico: 0, transicion: 1, bajo: 1, moderno: 0 }`.
     - `world seed: 40 animatable windows split among the barrios, at least 1 per barrio with candidates`: on the world-seed city, the count of animatable windows per barrio equals `animableQuota` of `counts[b].candidates`, the total is 40 and `moderno ≥ 1`.
     - `classic and bajo windows warm, moderno cool`: on the world-seed city, for `clasico` and `bajo` with `counts[b].on > 0`, `warm/on ≥ 0.9`; for `moderno`, `warm/on ≤ 0.15`; for each, the lit windows with `color === "windowWarm"` number exactly `counts[b].warm` and the lit ones exactly `counts[b].on`; `clasico.on > 0` and `moderno.on > 0`. Plus the south's bajo: `tech(zoneRng(SEED, "cv", 2))` through `createTechAnim(scene, createRng(SEED + 5), { reducedMotion: true }).homes()` draws every home `amber` (warm), and there is at least one.
@@ -81,12 +83,14 @@ Expected: FAIL. `animableQuota` is not exported, and on the world seed moderno h
 
 - [ ] **Step 3: Implement `ANIMABLE_BARRIOS` and `animableQuota`, and use them in `lights()`**
 
+`src/english.test.ts` treats `barrios` as a Spanish stem. Add an `ALLOW` entry for `src/city/lights.ts` (and for `src/scenes/city-anim.test.ts`, if it names it) with `/\b[Bb]arrios?\b/g` and `/\bANIMABLE_BARRIOS\b/g`, as `src/city/zoning.ts` already has for `BARRIO_STEP`/`CityBarrio`.
+
 The docstring at the top of `lights.ts` names the rule ("animatable: 40 split among the four barrios, #480").
 
 - [ ] **Step 4: Run the tests and check that they pass**
 
 Run: `npx vitest run src/city/lights.test.ts src/scenes/city-anim.test.ts src/city/axis-furniture.test.ts src/city/axis-streets.test.ts`, then `npm test`.
-Expected: PASS. A world-seed test elsewhere that pins one specific neon or window may move, because the rng draws after the animatable sampling change. Such a test is updated to the new value, with a comment that names #480.
+Expected: PASS. The tests that assert `animable` today are `lights.test.ts:92` (replaced), `city-anim.test.ts:158–210, 411` (seed 7/8/9: the pool there has transicion and moderno windows) and `city.test.ts:155` (some animatable window): all structural, and they must hold unchanged. A world-seed test elsewhere that pins one specific neon or window may move, because the rng draws after the animatable sampling change. Such a test is updated to the new value, with a comment that names #480. A test that asserts an invariant (occlusion, quotas, caps, counts) is never updated: if one fails, that is a bug.
 
 - [ ] **Step 5: Commit** `feat(#480): animatable windows split among the four barrios`
 
@@ -100,7 +104,7 @@ Expected: PASS. A world-seed test elsewhere that pins one specific neon or windo
 - Consumes: Task 1, because it moves window accents between static and animated, so measure after it.
 - Produces: nothing new. The names (`CAPS`, `FACE_CAPS`, `ACCENT_CAP`, `TECH_FACES_BEFORE`, `REGION_FACES_BEFORE`) stay.
 
-- [ ] **Step 1: Measure.** One-off `npx tsx` script outside the repo, using the same expressions as the tests. Raised solids `!isFlat` per scene of `world(SEED)`. Strip and accents of the world-seed `city(...)`. `buildRenderList([...terrain.ground, ...ground, ...solids]).length` and `accents.length` of `assembleWorld(undefined, { reducedMotion: true }).scene`. Tech: the district, `NEIGHBORHOOD_REGION`, `WATERFRONT_RECT`, and the max `facesIn(withoutFurniture, blockRect(b))` per kind, exactly as `tech.test.ts` builds them; plus the max of each `FACE_CAPS` key over the synthetic contexts the `neighborhood-*.test.ts` and `waterfront.test.ts` assert (Review Focus 4); plus `ACCENT_CAP`'s sum. Expected, before Task 1: the figures above.
+- [ ] **Step 1: Measure.** One-off `npx tsx` script outside the repo, using the same expressions as the tests. Raised solids `!isFlat` per scene of `world(SEED)`. Strip and accents of the world-seed `city(...)`. `buildRenderList([...terrain.ground, ...ground, ...solids]).length` and `accents.length` of `assembleWorld(undefined, { reducedMotion: true }).scene`. Tech: the district, `NEIGHBORHOOD_REGION`, `WATERFRONT_RECT`, and the max `facesIn(withoutFurniture, blockRect(b))` per kind, exactly as `tech.test.ts` builds them; plus `ACCENT_CAP`'s sum. The scripts import the repo's `src/` with relative paths (no aliases; `npx tsx` ran them while planning). The fixtures of `neighborhood-*.test.ts` and `waterfront.test.ts` live inside test files: they are not measured by script. Run `npx vitest run src/scenes` once the caps are written, and if a fixture fails, read its figure from the failure message (Review Focus 4). Each cap comment names the expression it measures, so it can be measured again. Expected, before Task 1: the figures above.
 - [ ] **Step 2: Rewrite each cap** as `measured × 1.1` rounded (Global Constraints), with `// measured 2026-11-23 (#480), world(SEED): <figure> × 1.1 = <x> → <cap>` comments. Where a cap shrinks, that is fine: it is a ceiling over a measured figure. The history in the old comments can be shortened to one line (`before: …`). Concretely:
   - `"raised solids ≤ 2 900, strip ≤ 580, static accents ≤ 1 500"` gets the new figures, and its title follows them (city raised = the `CAPS.city` value).
   - `static polygons of the world ≤ 56 000` becomes `≤ <cap>` (expected ~47 900), with the title updated.
@@ -142,7 +146,7 @@ Expected: PASS. A world-seed test elsewhere that pins one specific neon or windo
   - `src/lab/docs.test.ts`, `describe("the centro costero spec is closed (#480)")`:
     - `README lists the centro costero spec among the specs`: the README contains `2026-11-22-resume-centro-costero-design.md`.
     - `the spec is implemented and has §12`: the spec contains `**Estado:** implementado (#471; rama feature/471-resume-centro-costero)` and the heading `## 12. Desvíos y medición`.
-    - `§12 records the deviations and the measurement`: the §12 text (from the heading to the end) contains `HOTEL_CAP`, `12`, `28`, `48`, `37`, `430×932`, `390×750`, `360×740`, `< 9`, `(−107, 231)`, `TELECOM`, `tick`, `render`, `RenderTexture` (the cache decision) and every capture file name of Task 3.
+    - `§12 records the deviations and the measurement`: the §12 text (from its heading to the end of the file) contains these exact strings: `` `HOTEL_CAP` 12 ``, `28 %`, `48 %`, `37 %`, `430×932`, `390×750`, `360×740`, `lado < 9`, `(−107, 231)`, `TELECOM`, `MAX_ANIMABLE`, `16.80`, `16.37` (the planning means of `tick + render`), `RenderTexture`, and every capture file name of Task 3. The checks run on the §12 slice only, never on the whole spec, so the heading and the date cannot satisfy them.
     - `every closing capture exists, is cited in §12 and is 2×`: for each of the five files, the file exists, §12 cites `assets/2026-11-22-resume-centro-costero/cierre/<name>`, and the PNG width is 2 × the viewport width (3200, 780 or 1640).
 - [ ] **Step 2: Run** `npx vitest run src/lab/docs.test.ts src/docs-glossary.test.ts`. Expected: FAIL (no Axis entry, no §12, no README line).
 - [ ] **Step 3: Write the docs.**
@@ -166,6 +170,28 @@ Expected: PASS. A world-seed test elsewhere that pins one specific neon or windo
 - [ ] **Step 4: Run** `npx vitest run src/lab/docs.test.ts src/docs-glossary.test.ts src/english.test.ts`, then `npm test` and `npm run typecheck`. Expected: PASS.
 - [ ] **Step 5: Commit** `docs(#480): spec 2026-11-22 implemented, §12, README and glossary`
 
+## Assumptions
+
+Technical decisions, sourced where possible, recorded for the PR:
+
+- **Animation pool.** The pool is the four barrios only. downtown and residential leave it.
+  - Source: the issue (`MAX_ANIMABLE se reparte entre clasico, transicion, bajo y moderno`).
+  - On the world seed and on seed 7/8/9 they have 0 candidates.
+  - Rejected: keeping them in the pool, which would leave a quota with no owner.
+- **Rounding.** Caps use the nearest hundred (ten for `strip` and tech `FACE_CAPS`), with round-up if the result falls below the measured figure.
+  - Source: the rule written in `CAPS` (`city-budget.test.ts`).
+  - Rejected: always rounding up, which would raise fair (600 → 700) and tech (1 200 → 1 300) for no reason.
+- **`FACE_CAPS.monoblock` stays 115.** `neighborhood-monoblock.ts:79` is the only generation code that reads a cap (grep of `FACE_CAPS|ACCENT_CAP|FACES_BEFORE` outside tests).
+  - Rejected: 120 (105 × 1.1 = 115.5 → nearest ten), which would move the trim of the south's monoblocks.
+- **"De día" capture.** It is the plain site, with no focus.
+  - Source: CONTEXT.md, "The site is an isometric night map"; there is no day mode.
+  - Rejected: inventing a day mode, which is out of scope.
+- **FPS reading.** One `[mapa] bloom:` line is the mean of 60 frames of `tick + render` (`BLOOM_SAMPLE_FRAMES`, `src/world/bloom.ts`).
+  - Three loads per side, as the issue asks.
+  - Both servers ran with the same `node_modules` (the `main` worktree symlinks it; `package-lock.json` has no diff between `main` and the branch) and were started cold together.
+- **Cache vs. caps.** If a cache were ever needed, it changes how frames are drawn, not the geometry counted by the caps: Task 2's figures would not go stale.
+- **`animableQuota` inputs.** Its input type is `Record` of the four keys, so TypeScript enforces the shape. Counts are non-negative integers from `lights()`. No runtime validation is added.
+
 ## Self-review
 
 - Coverage against the issue:
@@ -177,3 +203,15 @@ Expected: PASS. A world-seed test elsewhere that pins one specific neon or windo
   - Each acceptance criterion maps to a named test, except the PR citing the captures (manual, stage 8).
 - The cache is conditional. The measurement says no. If the final HEAD disagrees, Task 3 step 1 turns it into a task.
 - Types: `ANIMABLE_BARRIOS` and `animableQuota` are used under the same names in Tasks 1 and 4.
+
+## Grilling
+
+- **Rounds:** 1 (griller model: fable). The plan changed only in clarifications: sources, one more quota test, the exact §12 strings, and the `english.test.ts` allowlist. No step was added or removed, so there was no second round.
+- **Questions:** 18.
+  - ISSUE: 5 (FPS criterion and log, base branch and spec status, ×1.1 caps, four barrios "con candidatas", the hotel ≥ 6).
+  - CODE: 6 (`CityLights.counts`, `sample` exactness, `FACE_CAPS` readers, the synthetic scenes and `animable` assertions, the PNG IHDR reader in `docs.test.ts`, the `english.test.ts` stems).
+  - DOC: 1 (CONTEXT.md: a night map, so no day mode).
+  - Plan defect fixed: 1 (the §12 substrings would have passed on an empty section; they are now exact strings, checked on the §12 slice).
+  - NO SOURCE: 5, all technical assumptions (see `## Assumptions`): which world-seed tests may move, the measuring procedure, cache vs. caps, the FPS environment, and `animableQuota` input validation.
+- **Spec ambiguities:** none.
+- **Issues opened:** none.
