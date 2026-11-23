@@ -178,7 +178,8 @@ describe("traffic lights and lamps (#473)", () => {
         return null;
       };
       const ideal = lampXs(range, []);
-      for (const t of ideal) {
+      for (const [i, t] of ideal.entries()) {
+        if (at(t).x < -54 && i % 2 === 1) continue; // west district: a lamp every 24 (#479 budget moved, not raised)
         const c = at(t), has = mine.some((l) => Math.hypot(l.at.x - c.x, l.at.y - c.y) < 0.01);
         if (!has) expect(excuse(c, t), `${a.id} missing lamp at ${t}`).not.toBeNull();
       }

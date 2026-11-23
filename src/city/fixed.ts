@@ -169,7 +169,7 @@ export function cars(solids: Solid[], rng: Rng, west = -Infinity): void {
   ];
   const walkBoxes = crosswalks().flatMap((w) => w.strips.map(([p, q]) => ({ x: Math.min(p.x, q.x) - 0.4, y: Math.min(p.y, q.y) - 0.4, w: Math.abs(p.x - q.x) + 0.8, d: Math.abs(p.y - q.y) + 0.8 })));
   for (const b of lots) {
-    const drawn = rng.int(1, 3), n = b.west ? Math.min(drawn, 1) : drawn; // west district: one car per lot at most (#479 budget moved, not raised); its lots come last, so the east's draws stay
+    const n = rng.int(1, 3); // the west district's lots draw as every lot does but park no car (#479 budget moved, not raised); they come last, so the east's draws stay
     for (let i = 0; i < n; i++) {
       const x = b.x + rng.int(2, Math.max(2, Math.floor(b.w) - 5));
       const y = rng.chance(0.5) ? b.y + b.d + 0.4 : b.y - 1.9; // south or north sidewalk of the lot
@@ -190,7 +190,8 @@ export function cars(solids: Solid[], rng: Rng, west = -Infinity): void {
       if (placed.some((p) => rectsOverlap(x, y, CAR.w, CAR.d, p.x, p.y, CAR.w, CAR.d, 1))) continue; // no car overlaps another, with 1 u of margin
       if (walkBoxes.some((k) => rectsOverlap(x, y, CAR.w, CAR.d, k.x, k.y, k.w, k.d, 3))) continue; // keep 3 u clear of every crosswalk strip (#473)
       placed.push({ x, y });
-      solids.push(...car(v3(x, y, 0), rng.chance(0.6) ? "steel" : "rust"));
+      const mat = rng.chance(0.6) ? "steel" : "rust";
+      if (!b.west) solids.push(...car(v3(x, y, 0), mat));
     }
   }
 }

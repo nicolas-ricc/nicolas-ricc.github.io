@@ -307,8 +307,9 @@ export function axisLampPosts(): readonly { a: Axis; at: Vec2 }[] {
     const place = (t: number): Vec2 => (ew ? { x: t, y: p.y + n.y * k } : { x: p.x + u.x * t + n.x * k, y: p.y + u.y * t + n.y * k });
     const ok = (at: Vec2): boolean => postFree(a, at, 0.3, LAMP_W / 2) && lights.every((l) => Math.hypot(l.x - at.x, l.y - at.y) >= LAMP_MIN_GAP);
     const mine: Vec2[] = [];
-    for (const t of lampXs(range, a.id === "vias" ? BAR_FRONTS : [])) {
+    for (const [i, t] of lampXs(range, a.id === "vias" ? BAR_FRONTS : []).entries()) {
       let at = place(t);
+      if (inWestDistrict(at) && i % 2 === 1) continue; // west district: a lamp every 24, not 12 (#479 budget moved, not raised)
       if (onOrdinaryStreet(at, 0.3)) {
         const shifts = Array.from({ length: 2 * STREET_SHIFT / 0.5 }, (_, i) => (i % 2 ? 1 : -1) * 0.5 * Math.ceil((i + 1) / 2)); // −0.5, 0.5, −1, 1, …
         const s = shifts.find((d) => ok(place(t + d)) && mine.every((m) => Math.hypot(m.x - place(t + d).x, m.y - place(t + d).y) >= LAMP_MIN_GAP));
