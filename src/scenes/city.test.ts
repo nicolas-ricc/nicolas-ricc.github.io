@@ -56,6 +56,7 @@ describe("city", () => {
   it("everything falls in the Resume zone except the cones, and uses only city materials", () => {
     for (const s of all(scene())) {
       const b = bounds(s);
+      if (s.kind === "strip" && s.width === 0.3) continue; // #472: the axes' center lines run to the cover, past the world's south and west edges (the southernmost axis is at y 378)
       expect(b.min.x).toBeGreaterThanOrEqual(WORLD.x0 - 3); expect(b.max.x).toBeLessThanOrEqual(ZONE_SPLIT_X + 1); // the district grows up to the west edge of the world
       expect(b.max.y).toBeLessThanOrEqual(WORLD.y1 + 1);
       if (s.kind !== "cone") expect(b.min.y).toBeGreaterThanOrEqual(ZONE_SPLIT_Y - 1);
@@ -204,7 +205,7 @@ describe("city", () => {
     expect(spills.length).toBeGreaterThanOrEqual(2);
     for (const sp of spills) if (sp.kind === "poly") for (const p of sp.pts) expect(inPlaza(p.x, p.y)).toBe(true);
     const boulevard = s.solids.filter((x) => x.kind === "prism" && x.mat === "leafDark" && x.at.z === 0); // not the green terrace of a glass tower of the district
-    expect(boulevard.length).toBeGreaterThanOrEqual(8);
+    expect(boulevard.length).toBeGreaterThanOrEqual(2); // #472: only the east stretch of the avenue keeps its boulevard (the two east blocks)
     expect(boulevard.every((x) => bounds(x).min.y >= BOULEVARD.y0 && bounds(x).max.y <= BOULEVARD.y1)).toBe(true);
     const lamps = s.accents.filter((a) => a.kind === "dot" && a.color === "amber" && a.r === 0.6); // street lamps (props.lamp), not the garlands
     expect(lamps.length).toBeGreaterThanOrEqual(20);
@@ -283,10 +284,12 @@ describe("city", () => {
     for (const cr of CRATERS) expect(cones.some((c) => c.kind === "cone" && inCrater(c.at.x, c.at.y) && Math.hypot(c.at.x - cr.x, c.at.y - cr.y) <= cr.r)).toBe(true);
   });
 
-  it("the avenue reaches the new west edge and the promenade goes down to 326", () => {
+  it("the avenue keeps only its east stretch (#472) and the promenade goes down to 326", () => {
     const s = scene();
     const carriageways = [(AVENUE.y0 + BOULEVARD.y0) / 2, (BOULEVARD.y1 + AVENUE.y1) / 2];
-    expect(s.ground.some((g) => g.kind === "strip" && g.mat === "paving" && g.width === 0.4 && g.path[0]!.x <= CITY_EDGE.west + 4 && carriageways.includes(g.path[0]!.y))).toBe(true);
+    const dashes = s.ground.filter((g) => g.kind === "strip" && g.mat === "paving" && g.width === 0.4 && carriageways.includes(g.path[0]!.y));
+    expect(dashes.length).toBeGreaterThan(0);
+    expect(dashes.every((g) => g.kind === "strip" && g.path[0]!.x >= EAST_RING.x1)).toBe(true);
     expect(s.solids.some((x) => x.kind === "prism" && x.mat === "paving" && x.at.x === PROMENADE.x0 && x.at.y + x.d >= PROMENADE.y1)).toBe(true);
   });
 

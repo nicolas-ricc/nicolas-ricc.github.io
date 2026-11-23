@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Vec2 } from "../iso/geometry";
 import { bounds, type Solid } from "../iso/solids";
 import { ESTUARY_Y0, STATION_LAND, eastBank } from "../map/geo";
-import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, EAST_COLS, EAST_RING, HARBOR, PLAZA, RING_Y0, ROWS, STREET, WEST_COLS, WEST_QUAY, inCrater } from "../scenes/city-grid";
+import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, EAST_COLS, EAST_RING, HARBOR, RING_Y0, ROWS, STREET, WEST_COLS, WEST_QUAY, inCrater } from "../scenes/city-grid";
 import { BAR_FRONTS, LAMP_MIN_GAP, lampXs, streets, type BarFront } from "./streets";
 
 type Strip = Solid & { kind: "strip" };
@@ -17,19 +17,19 @@ const isVertical = (s: Strip): boolean => s.path[0]!.x === s.path[1]!.x;
 const isHorizontal = (s: Strip): boolean => s.path[0]!.y === s.path[1]!.y;
 const length = (s: Strip): number => Math.hypot(s.path[1]!.x - s.path[0]!.x, s.path[1]!.y - s.path[0]!.y);
 const mid = (s: Strip): Vec2 => ({ x: (s.path[0]!.x + s.path[1]!.x) / 2, y: (s.path[0]!.y + s.path[1]!.y) / 2 });
-/** Strict interior of the plaza: an endpoint exactly on the edge doesn't step on it. */
-const inPlazaStrict = (p: Vec2): boolean => p.x > PLAZA.x && p.x < PLAZA.x + PLAZA.w && p.y > PLAZA.y && p.y < PLAZA.y + PLAZA.d;
+/** Strict interior of the Plaza Mayor: an endpoint exactly on the edge doesn't step on it. */
+const inPlazaStrict = (p: Vec2): boolean => p.x > PLAZA_MAYOR.x && p.x < PLAZA_MAYOR.x + PLAZA_MAYOR.w && p.y > PLAZA_MAYOR.y && p.y < PLAZA_MAYOR.y + PLAZA_MAYOR.d;
 
 const WEST_LANE_X = WEST_COLS.map((x) => x + BLOCK_W + STREET / 2);
 const RING_X = EAST_RING.x0 + STREET / 2;
-const CROSSINGS = [...WEST_LANE_X, RING_X, EAST_COLS[0] + BLOCK_W + STREET / 2];
+const CROSSINGS = [RING_X, EAST_COLS[0] + BLOCK_W + STREET / 2]; // the west crosswalks went with the old west avenue (#472)
 const CARRIAGEWAYS = [(AVENUE.y0 + BOULEVARD.y0) / 2, (BOULEVARD.y1 + AVENUE.y1) / 2];
 
 describe("streets", () => {
   it("leaves between 80 and 150 strips, all paving flush with the ground", () => {
     const strips = scene();
     expect(strips.length).toBeGreaterThanOrEqual(80);
-    expect(strips.length).toBeLessThanOrEqual(150);
+    expect(strips.length).toBeLessThanOrEqual(150); // measured on the new layout (#472): 97 ground pieces, inside the band
     for (const s of strips) {
       expect(s.mat).toBe("paving");
       expect(s.z).toBeGreaterThan(0);
@@ -37,12 +37,15 @@ describe("streets", () => {
     }
   });
 
-  it("each center line is a two-point strip, horizontal or vertical, of at least 1", () => {
+  it("each center line is a two-point strip of at least 1, horizontal or vertical unless it runs along a diagonal axis", () => {
     const lines = ofWidth(0.3);
     expect(lines.length).toBeGreaterThan(0);
     for (const s of lines) {
       expect(s.path).toHaveLength(2);
-      expect(isVertical(s) || isHorizontal(s)).toBe(true);
+      if (!isVertical(s) && !isHorizontal(s)) {
+        const [a, b] = s.path as [Vec2, Vec2];
+        expect(AXES.some((x) => x.kind === "diagonal" && Math.abs((a.x - x.from.x) * (x.to.y - x.from.y) - (a.y - x.from.y) * (x.to.x - x.from.x)) < 1e-6 * 400 && Math.abs((b.x - x.from.x) * (x.to.y - x.from.y) - (b.y - x.from.y) * (x.to.x - x.from.x)) < 1e-6 * 400), `${a.x},${a.y}`).toBe(true);
+      }
       expect(length(s)).toBeGreaterThanOrEqual(1);
     }
   });
@@ -94,9 +97,13 @@ describe("streets", () => {
     for (const s of scene().filter(isHorizontal)) expect(s.path[0]!.y).toBeGreaterThanOrEqual(ROWS[0]!);
   });
 
-  it("every west N-S street has a center line", () => {
+  it("every N-S street of the strip has a center line", () => {
     const lines = ofWidth(0.3).filter(isVertical);
-    for (const x of WEST_LANE_X) expect(lines.some((s) => s.path[0]!.x === x)).toBe(true);
+    for (const x of WEST_LANE_X) expect(lines.some((s) => s.path[0]!.x === x && s.path[1]!.y <= LAND.y0)).toBe(true);
+  });
+
+  it("the old west N-S streets end at y 164, where the land begins", () => {
+    for (const s of ofWidth(0.3).filter((s) => isVertical(s) && WEST_LANE_X.includes(s.path[0]!.x))) expect(s.path[1]!.y).toBeLessThanOrEqual(LAND.y0);
   });
 
   it("the dashed lanes only go on the avenue's two carriageways and on the east ring", () => {
@@ -131,17 +138,18 @@ describe("streets", () => {
       }
     }
     expect(zebras).toHaveLength((CROSSINGS.length - 1) * 3);
+    for (const s of zebras) expect(s.path[0]!.x).toBeGreaterThan(EAST_RING.x0);
   });
 });
 
 describe("avenue lamps around the bars (#165)", () => {
-  const RANGE = [CITY_EDGE.west, WEST_QUAY.x0] as const;
+  const RANGE = [96, 186] as const; // the bar fronts of the new layout (x 133..157 and 163..184)
   const regular = (): number[] => { const out: number[] = []; for (let x = RANGE[0] + 6; x < RANGE[1] - 6; x += 12) out.push(x); return out; };
   const crosses = (x: number, f: BarFront): boolean => x + 0.6 > f.x0 && x < f.x1;
 
-  it("BAR_FRONTS are the three bar blocks on the avenue", () => {
-    expect(BAR_FRONTS.map((f) => f.x0)).toEqual([103.5, 133.5, 163.5]);
-    for (const f of BAR_FRONTS) expect(f.x1 - f.x0).toBeCloseTo(BLOCK_W - 3);
+  it("BAR_FRONTS are the bars parcels, sorted by x and inset by the sidewalk", () => {
+    expect(BAR_FRONTS.map((f) => f.x0)).toEqual([134.5, 164.5]);
+    for (const f of BAR_FRONTS) expect(f.corners[1]).toBe(f.x1);
   });
 
   it("no lamp post crosses a bar front", () => {
@@ -159,9 +167,9 @@ describe("avenue lamps around the bars (#165)", () => {
     }
   });
 
-  it("matches today's layout", () => {
-    const xs = lampXs(RANGE, BAR_FRONTS).filter((x) => x >= 96 && x <= 186);
-    const want = [96, 102, 124.5, 132, 156, 162, 184.5];
+  it("matches the new layout", () => {
+    const xs = lampXs(RANGE, BAR_FRONTS);
+    const want = [102, 114, 126, 133, 155.5, 162, 182.5];
     expect(xs).toHaveLength(want.length);
     xs.forEach((x, i) => expect(x).toBeCloseTo(want[i]!));
   });
@@ -245,7 +253,7 @@ describe("streets on the new layout (#472)", () => {
 
   it("no lane, crosswalk, boulevard, lamp or traffic light of the old west avenue is left", () => {
     for (const s of ground) if (s.kind === "strip" && s.width !== 0.3) expect(s.path.every((p) => p.x >= EAST_RING.x0 || p.y < LAND.y0), `strip ${s.width} at ${s.path[0]!.x},${s.path[0]!.y}`).toBe(true);
-    for (const x of solids) expect(bounds(x).min.x, `${x.kind} ${x.mat}`).toBeGreaterThanOrEqual(EAST_RING.x0);
+    for (const x of solids) expect(bounds(x).min.x, `${x.kind} ${x.mat}`).toBeGreaterThanOrEqual(EAST_RING.x0 - 1); // eval fix: the ring's traffic light stands at x 269.4..269.5, 1 u west of the ring edge, in the east stretch of the old code too
   });
 
   it("the east stretch of the avenue keeps its lanes, crosswalks, boulevard, traffic lights and lamps (fingerprint of feature/471)", () => {
