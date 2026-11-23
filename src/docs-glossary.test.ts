@@ -257,3 +257,25 @@ describe("storybook index: barrio exhibits (#477)", () => {
     for (const id of ["manzana-casco", "manzana-transicion"]) expect(row, id).toContain(`\`${id}\``);
   });
 });
+
+describe("city plan vocabulary (#480)", () => {
+  const glossary = read("CONTEXT.md");
+  it("defines Parcel and Axis", () => {
+    for (const t of ["Parcel", "Axis"]) expect(glossary).toMatch(new RegExp(`^### ${t}$`, "m"));
+  });
+  for (const term of ["Parcel", "Axis"]) {
+    it(`${term}: every Code: file exists and names identifiers it holds`, () => {
+      const refs = codeRefs(section(glossary, term));
+      expect(refs.length).toBeGreaterThan(0);
+      for (const { file, idents } of refs) {
+        expect(existsSync(`${ROOT}${file}`), file).toBe(true);
+        for (const id of idents) expect(hasIdent(read(file), id), `${id} in ${file}`).toBe(true);
+      }
+    });
+  }
+  it("Parcel names city-plan.ts, parcels, barrioAt, inscribedRect and Lot.poly; Axis names AXES, AxisKind and crossingPlazas", () => {
+    const parcel = section(glossary, "Parcel"), axis = section(glossary, "Axis");
+    for (const s of ["src/scenes/city-plan.ts", "parcels", "barrioAt", "inscribedRect", "Lot.poly"]) expect(parcel, s).toContain(s);
+    for (const s of ["src/scenes/city-plan.ts", "AXES", "AxisKind", "crossingPlazas"]) expect(axis, s).toContain(s);
+  });
+});
