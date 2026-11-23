@@ -95,10 +95,10 @@ describe("signBox (#393)", () => {
         maxX: Math.max(...pts.map((p) => p.x)), maxY: Math.max(...pts.map((p) => p.y)),
       });
     }
-    // measured in the issue: the words at the laptop cover, in host px
+    // measured: the words at the laptop cover, in host px; RESUME on the hotel facade (#474, 100 x 20 host px; TINKER unchanged)
     const v = coverView(1366, 657);
     const r = (b: ScreenBox): number[] => [b.minX, b.maxX, b.minY, b.maxY].map(Math.round);
-    expect(r(toHost(signBox(RESUME_SIGN), v))).toEqual([394, 467, 237, 251]);
+    expect(r(toHost(signBox(RESUME_SIGN), v))).toEqual([308, 408, 237, 257]);
     expect(r(toHost(signBox(TINKER_SIGN), v))).toEqual([600, 688, 70, 86]);
   });
 });
