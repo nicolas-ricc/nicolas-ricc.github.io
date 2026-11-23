@@ -23,10 +23,11 @@ const apart = (a: Solid, b: Solid): boolean => {
   return p.max.x <= q.min.x + EPS || q.max.x <= p.min.x + EPS || p.max.y <= q.min.y + EPS || q.max.y <= p.min.y + EPS || p.max.z <= q.min.z + EPS || q.max.z <= p.min.z + EPS;
 };
 
-// the real world: the CLUB block inside the `tech` scene
-const scene = tech(zoneRng(SEED, "cv", 2));
+// the CLUB parcel block (24 × 24), built directly
+const b = blockAt(CLUB.col, CLUB.row), x = b.x, y = b.y, rect = blockRect(b);
+const scene = newCtx();
+club(scene, b);
 const everything = [...scene.solids, ...scene.ground];
-const b = blockAt(CLUB.x, CLUB.y), x = b.x, y = b.y, rect = blockRect(b);
 const own = everything.filter((s) => insideInflated(s, rect));
 const homes = scene.homes.filter((w) => w.pts.every((q) => q.x >= rect.x0 && q.x <= rect.x1 && q.y >= rect.y0 && q.y <= rect.y1));
 const dots = scene.accents.filter((a): a is Accent & { kind: "dot" } => a.kind === "dot" && a.at.x >= rect.x0 && a.at.x <= rect.x1 && a.at.y >= rect.y0 && a.at.y <= rect.y1);
@@ -46,10 +47,15 @@ const wires = () => own.filter((s): s is Beam => s.kind === "beam" && s.mat === 
 const towers = () => prisms("steel", 0.3, 0.3, 8);
 const trees = () => own.filter((s): s is Cone => s.kind === "cone" && s.mat === "leaf" && near(s.r, 1.4) && near(s.h, 4));
 
-describe("Pedro Echagüe club (#253), over the world", () => {
+describe("Pedro Echagüe club (#253), direct call on the 24 × 24 parcel", () => {
+  it("base: paving poly of the parcel, h 0.3, and the block is 24 deep", () => {
+    expect(b.d).toBe(24);
+    expect(own).toContainEqual({ kind: "poly", footprint: b.parcel!.poly, z: 0, h: 0.3, mat: "paving" });
+  });
+
   it("stone front 10×6 h 9 with blue and yellow sign and staircase window on the south wall", () => {
     const f = front(), ps = (f.plates ?? []).filter(isBox);
-    expect(f.at.x).toBeCloseTo(x + 2, 9); expect(f.at.y).toBeCloseTo(y + 11, 9); expect(f.at.z).toBeCloseTo(0.3, 9);
+    expect(f.at.x).toBeCloseTo(x + 2, 9); expect(f.at.y).toBeCloseTo(y + b.d - 7, 9); expect(f.at.z).toBeCloseTo(0.3, 9);
     const blue = ps.findIndex((p) => p.wall === 2 && p.mat === "hullBlue" && near(p.u0, 0.08) && near(p.u1, 0.72) && near(p.z0, 7.3) && near(p.z1, 8.7));
     const yellow = ps.findIndex((p) => p.wall === 2 && p.mat === "safety" && near(p.u0, 0.14) && near(p.u1, 0.66) && near(p.z0, 7.55) && near(p.z1, 8.45));
     expect(blue).toBeGreaterThanOrEqual(0); expect(yellow).toBeGreaterThan(blue);
@@ -76,7 +82,7 @@ describe("Pedro Echagüe club (#253), over the world", () => {
     const stair = homes.filter((w) => w.group === "club-staircase"), hall = homes.filter((w) => w.group === "club-gym");
     expect(stair.length).toBeGreaterThan(0); expect(hall.length).toBeGreaterThan(0);
     for (const w of stair) {
-      for (const q of w.pts) expect(q.y).toBeCloseTo(y + 17, 9);
+      for (const q of w.pts) expect(q.y).toBeCloseTo(y + b.d - 1, 9);
       expect(Math.min(...w.pts.map((q) => q.z))).toBeCloseTo(0.6, 9); expect(Math.max(...w.pts.map((q) => q.z))).toBeCloseTo(8.4, 9);
     }
     for (const w of hall) {
@@ -118,8 +124,9 @@ describe("Pedro Echagüe club (#253), over the world", () => {
     }
   });
 
-  it("sidewalk street lamp and tree", () => {
-    expect(prisms("steel", 0.6, 0.6, 5)).toHaveLength(1);
+  it("sidewalk street lamp (south of the block, by b.d) and tree", () => {
+    const lamp = one(prisms("steel", 0.6, 0.6, 5), "lamp");
+    expect(lamp.at.y).toBeCloseTo(y + b.d + 0.6, 6);
     expect(trees()).toHaveLength(1);
   });
 
@@ -139,6 +146,11 @@ describe("Pedro Echagüe club (#253), over the world", () => {
       const slender = (s.kind === "prism" && Math.min(s.w, s.d) <= 3) || (s.kind === "cylinder" && s.r <= 3);
       if (!slender) expect(bounds(s).max.z).toBeLessThanOrEqual(MAX_TECH_H + 1.5);
     }
+  });
+
+  it("over the world: tech builds the club base on the parcel polygon", () => {
+    const w = tech(zoneRng(SEED, "cv", 2));
+    expect(w.solids).toContainEqual({ kind: "poly", footprint: b.parcel!.poly, z: 0, h: 0.3, mat: "paving" });
   });
 
   it("the geometry does not depend on the seed", () => {

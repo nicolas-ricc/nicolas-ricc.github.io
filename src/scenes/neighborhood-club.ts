@@ -15,8 +15,8 @@ function front(ctx: NeighborhoodCtx, b: SprawlBlock): void {
   for (const f of [1, 2]) for (const c of [0.2, 0.45, 0.7]) plates.push(rect(2, c - 0.06, c + 0.06, 0.3 + 3 * f + 0.9, 0.3 + 3 * f + 2.3, "glass", -1));
   plates.push(rect(2, 0.15, 0.3, 0.3, 2.8, "officeDark", -2), rect(2, 0.82, 0.94, 0.6, 8.4, "glass"), rect(2, 0.08, 0.72, 7.3, 8.7, "hullBlue"), rect(2, 0.14, 0.66, 7.55, 8.45, "safety"));
   for (let f = 0; f < 3; f++) plates.push(rect(1, 0.4, 0.6, 0.3 + 3 * f + 0.9, 0.3 + 3 * f + 2.3, "glass", -1));
-  ctx.solids.push({ ...prism(b.x + 2, b.y + 11, 0.3, 10, 6, 9, "stone"), plates });
-  homeWindow(ctx, wallWindow({ y: b.y + 17 }, b.x + 2.6, b.x + 3.8, 0.6, 8.4), true, "club-staircase");
+  ctx.solids.push({ ...prism(b.x + 2, b.y + b.d - 7, 0.3, 10, 6, 9, "stone"), plates });
+  homeWindow(ctx, wallWindow({ y: b.y + b.d - 1 }, b.x + 2.6, b.x + 3.8, 0.6, 8.4), true, "club-staircase");
 }
 
 /** Gym 14×9×5 with a high glass band, two-ramp vault with a ridge, and fixed lights of the band (east and visible stretch of the south). */
@@ -43,13 +43,13 @@ function court(ctx: NeighborhoodCtx, b: SprawlBlock): void {
 
 /** Sidewalk: street lamp at the south corner and conical tree to the east. */
 function sidewalk(ctx: NeighborhoodCtx, b: SprawlBlock): void {
-  place(ctx.solids, ctx.accents, lamp(v3(b.x + 1, b.y + 18.6, 0)));
-  ctx.solids.push({ kind: "cone", at: v3(b.x + 24.8, b.y + 9, 0), r: 1.4, h: 4, mat: "leaf", sides: 6 });
+  place(ctx.solids, ctx.accents, lamp(v3(b.x + 1, b.y + b.d + 0.6, 0)));
+  ctx.solids.push({ kind: "cone", at: v3(b.x + 24.8, b.y + b.d / 2, 0), r: 1.4, h: 4, mat: "leaf", sides: 6 });
 }
 
 /** Club Pedro Echagüe: plinth, stone front with sign, gym with vault, court with hoops, fence and light towers, and sidewalk with street lamp and tree. */
 export function club(ctx: NeighborhoodCtx, b: SprawlBlock): void {
-  ctx.solids.push(prism(b.x, b.y, 0, b.w, b.d, 0.3, "paving"));
+  ctx.solids.push(b.parcel ? { kind: "poly", footprint: b.parcel.poly, z: 0, h: 0.3, mat: "paving" } : prism(b.x, b.y, 0, b.w, b.d, 0.3, "paving"));
   front(ctx, b);
   gym(ctx, b);
   court(ctx, b);
