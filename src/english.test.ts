@@ -72,6 +72,8 @@ const ALLOW: Record<string, RegExp[]> = {
   "src/city/zoning.test.ts": [/\b[Bb]arrios?\b/g, /\bresidencial\b/g],
   // #478: the south neighborhood zones by the barrio ids and paints the axes of the plan
   "src/scenes/tech-south.test.ts": [/Avenida del (?:Sur|Barrio)/g, /\bcostanera\b/gi, /\b[Bb]arrios?\b/g, /\bresidencial\b/g, /\bbajo\b/g, /\bbulevar\b/g, /\bescuela\b/g, /\bauditorio\b/g, /\bcasas\b/g],
+  "src/scenes/tech-zoning.ts": [/\bbajo\b/g, /\bresidencial\b/g, /\b[Bb]arrios?\b/g], // barrio ids of city-plan are layout data
+  "src/scenes/tech-zoning.test.ts": [/\bbajo\b/g, /\bresidencial\b/g, /\b[Bb]arrios?\b/g],
   "src/city/axis-streets.test.ts": [/Avenida del (?:Sur|Barrio)/g, /\bcostanera\b/gi, /\bbarrio\b/g],
   // proper noun: the Fábrica de Luz is the real power station the boiler hall models (decision 2c)
   "src/scenes/boiler-house.ts": [/Fábrica de Luz/g],
