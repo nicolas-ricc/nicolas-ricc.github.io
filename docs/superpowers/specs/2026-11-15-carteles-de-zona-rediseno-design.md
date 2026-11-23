@@ -264,8 +264,8 @@ regenerado (halo simétrico y OCR dentro del área respaldada; §8.2, entrada de
 
 | Exhibit | Escala | Alto de x (px) | Trazo (px) | Aire (px) | Contraste estático | Contraste (px) | Halo | OCR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `cartel-torre-escena` | 1.17 | 19.66 | 3.18 | 4.07 | 4.70 | 8.16:1 | 0.08 | `RESUME` |
-| `cartel-torre-escena` | 0.83 | 13.94 | 2.26 | 2.89 | 4.70 | 6.97:1 | 0.07 | `RESUME` |
+| `cartel-torre-escena` | 1.17 | 19.66 | 3.18 | 4.07 | 4.70 | 8.08:1 | 0.08 | `RESUME` |
+| `cartel-torre-escena` | 0.83 | 13.94 | 2.26 | 2.89 | 4.70 | 7.05:1 | 0.06 | `RESUME` |
 | `cartel-taller-escena` | 1.17 | 15.07 | 2.40 | 2.29 | 8.06 | 6.99:1 | 0.08 | `PORTFOLIO` |
 | `cartel-taller-escena` | 0.83 | 10.69 | 1.70 | 1.62 | 8.06 | 5.93:1 | 0.08 | `PORTFOLIO` |
 | `plataforma-escena` | 1.17 | 10.99 | 2.14 | 3.10 | 8.04 | 7.99:1 | 0.01 | `WRITING` |

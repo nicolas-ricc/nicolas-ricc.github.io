@@ -364,8 +364,8 @@ Desde #471 el cartel es el del hotel (cap 12): las filas de `cartel-torre-escena
 
 | Contexto | Escala | Contraste | Halo | OCR |
 |---|---|---|---|---|
-| `cartel-torre-escena` | 1.17 | 8.16:1 | 0.08 | `RESUME` |
-| `cartel-torre-escena` | 0.83 | 6.97:1 | 0.07 | `RESUME` |
+| `cartel-torre-escena` | 1.17 | 8.08:1 | 0.08 | `RESUME` |
+| `cartel-torre-escena` | 0.83 | 7.05:1 | 0.06 | `RESUME` |
 | `cartel-taller-escena` | 1.17 | 6.60:1 | 0.08 | `PORTFOLIO` |
 | `cartel-taller-escena` | 0.83 | 5.75:1 | 0.08 | `PORTFOLIO` |
 | `plataforma-escena` | 1.17 | 7.99:1 | 0.01 | `WRITING` |
