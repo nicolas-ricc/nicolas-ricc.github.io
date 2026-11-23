@@ -4,9 +4,9 @@ import { centroid, v3, type Vec2, type Vec3 } from "../iso/geometry";
 import { bounds, visibleWalls, type Solid } from "../iso/solids";
 import type { Rng } from "../map/seed";
 import { ESTUARY_Y0, QUAY_X, islandWestX } from "../map/geo";
-import { AVENUE, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, EAST_COLS, EAST_RING, FALLEN_BLOCK, FREIGHT_ROW, LIT_FLOOR, PROMENADE, ROWS, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, inCrater } from "../scenes/city-grid";
-import { BRIDGE_LANDING, CITY_BOUNDS, HOTEL_LOT, PLAZA_CENTER, PLAZA_MAYOR, TOWER_ISLAND, inCrossingPlaza, inParcel, inPlazaMayor, inRect, onAxis, parcels } from "../scenes/city-plan";
-import type { Rect } from "../scenes/city-grid";
+import { AVENUE, BRIDGE, CITY_EDGE, COLLAPSED, CRATERS, DISTRICT_BANK_Y, EAST_COLS, EAST_RING, FALLEN_BLOCK, FREIGHT_ROW, LIT_FLOOR, PROMENADE, ROWS, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, blocks, estuaryEast, inCrater, type Rect } from "../scenes/city-grid";
+import { BRIDGE_LANDING, CITY_BOUNDS, HOTEL_LOT, PLAZA_CENTER, PLAZA_MAYOR, TOWER_ISLAND, inCrossingPlaza, inParcel, inPlazaMayor, inRect, onAxis } from "../scenes/city-plan";
+import { builtParcels } from "./zoning";
 import { jungle, type Rails } from "../scenes/flora";
 import { CAR, awning, bench, bollard, car, chair, dockCrane, fountain, garland, kiosk, lamp, puddle, stoneArch, table } from "../kit/props";
 import { fixedLights, placeLit, type FixedLight } from "./lights";
@@ -33,11 +33,11 @@ export function plazaAndTower(solids: Solid[], ground: Solid[], lights: FixedLig
   for (const r of [{ x: P.x, y: ly1, w: P.w, d: I.y - ly1 }, { x: ix1, y: I.y, w: x1 - ix1, d: I.d }, { x: P.x, y: iy1, w: P.w, d: y1 - iy1 }]) ground.push(tiles(rng, r, 0.05, "plaza", plazaTone));
   ground.push(tiles(rng, L, 0.05, "paving", plazaTone)); // the landing of the bridge: paving, no curb
   // curb: a band of `paving` 1.2 wide on the four sides, wide so the outline reads at world zoom; north it is 1 u (the landing starts at y 207),
-  // east only south of the landing (the bridge lands at y 207..217), west cut by the island
+  // east only south of the landing (the bridge lands at y 207..217), west cut by the island and by the landing's edge (the Diagonal Norte comes in there)
   const curb = 1.2;
   solids.push(prism(P.x, P.y, 0, P.w, L.y - P.y, PLINTH_H, "paving"), prism(P.x, y1 - curb, 0, P.w, curb, PLINTH_H, "paving"));
   solids.push(prism(x1 - curb, ly1, 0, curb, y1 - ly1, PLINTH_H, "paving"));
-  solids.push(prism(P.x, P.y, 0, curb, I.y - P.y, PLINTH_H, "paving"), prism(P.x, iy1, 0, curb, y1 - iy1, PLINTH_H, "paving"));
+  solids.push(prism(P.x, L.y + L.d, 0, curb, I.y - ly1, PLINTH_H, "paving"), prism(P.x, iy1, 0, curb, y1 - iy1, PLINTH_H, "paving"));
 
   const facade: Facade = { floors: TOWER_FLOORS, cols: 4, litFloor: LIT_FLOOR, base: "portico" };
   const tower = prism(TOWER.x, TOWER.y, 0, TOWER.w, TOWER.d, TOWER_H, "officeDark", { facade });
@@ -195,21 +195,18 @@ export function greenery(solids: Solid[], rng: Rng): void {
 const rectsOverlap = (x0: number, y0: number, w0: number, d0: number, x1: number, y1: number, w1: number, d1: number, gap = 0): boolean =>
   x0 - gap < x1 + w1 && x0 + w0 + gap > x1 && y0 - gap < y1 + d1 && y0 + d0 + gap > y1;
 
-/** Parcels that get a car curb: the built ones (zoning's filter), not the hotel lot. */
-const carParcels = (): Rect[] => parcels(CITY_BOUNDS).filter((p) => p.c.x > CITY_EDGE.west && p.c.y < 318 && !(p.rect.x === HOTEL_LOT.x && p.rect.y === HOTEL_LOT.y && p.rect.w === HOTEL_LOT.w && p.rect.d === HOTEL_LOT.d)).map((p) => p.rect);
-
 export function cars(solids: Solid[], rng: Rng): void {
   const placed: { x: number; y: number }[] = [];
-  const lots: (Rect & { strip: boolean })[] = [
-    ...blocks().filter((b) => b.kind !== "plaza" && b.kind !== "freight").map((b) => ({ x: b.x, y: b.y, w: b.w, d: b.d, strip: true })),
-    ...carParcels().map((r) => ({ ...r, strip: false })),
+  const lots: (Rect & { grid: boolean })[] = [
+    ...blocks().filter((b) => b.kind !== "freight").map((b) => ({ x: b.x, y: b.y, w: b.w, d: b.d, grid: true })),
+    ...builtParcels().map((pc) => ({ ...pc.rect, grid: false })),
   ];
   for (const b of lots) {
     const n = rng.int(1, 3);
     for (let i = 0; i < n; i++) {
       const x = b.x + rng.int(2, Math.max(2, Math.floor(b.w) - 5));
       const y = rng.chance(0.5) ? b.y + b.d + 0.4 : b.y - 1.9; // south or north sidewalk of the lot
-      if (b.strip) {
+      if (b.grid) { // the grid blocks of the strip and the east bank; the parcels have no such rules
         if (b.x === EAST_COLS[0] && b.y === FREIGHT_ROW.y && y < b.y) continue; // its north sidewalk is the south wall of the dock inlet (#326)
         if (b.y === ROWS[0] && y < b.y) continue;              // row 92 has the seam fence to the north, not a street
         if (y >= AVENUE.y0 - 2 && y <= AVENUE.y1) continue;    // the avenue has no cars at the curb

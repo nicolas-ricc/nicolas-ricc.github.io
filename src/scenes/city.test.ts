@@ -70,6 +70,7 @@ describe("city", () => {
     const s = scene();
     const plinths = s.solids.filter((x) => x.kind === "poly" && x.mat === "paving" && x.h === PLINTH_H && x.z === 0);
     expect(plinths.length).toBeGreaterThanOrEqual(25);
+    expect(s.solids.filter((x) => x.kind === "prism" && x.mat === "paving" && x.h === PLINTH_H && x.at.z === 0 && x.w === 24 && x.d === 18)).toHaveLength(13); // measured: the strip and the east bank keep their 24 × 18 plinths
     const buildings = s.solids.filter((x) => (x.kind === "prism" || x.kind === "poly" || x.kind === "cylinder") && x.facade !== undefined);
     expect(buildings.length).toBeGreaterThanOrEqual(30);
     const rects = parcels(CITY_BOUNDS).map((p) => p.rect);
@@ -149,7 +150,7 @@ describe("city", () => {
       if (c.kind !== "cone" || (c.mat === "stone" && c.at.x >= BRIDGE.x0 && c.at.x <= BRIDGE.x1 && c.at.y >= BRIDGE.y0 && c.at.y <= BRIDGE.y1)) continue; // the finials of the bridge obelisks are stone, not trees
       // south of the district the east bank is jungle with no grid (there are no blocks on the east side anymore)
       const onCity = c.at.x >= CITY_EDGE.west && c.at.x < PROMENADE.x0 && c.at.y >= ESTUARY_Y0 + 12 && c.at.y < CITY_EDGE.south && !(c.at.x > QUAY_X && c.at.x < EAST_RING.x0) && !(c.at.x > EAST_RING.x0 && c.at.y >= DISTRICT_BANK_Y);
-      if (onCity) expect(inBlock(c.at.x, c.at.y) || inParcel(c.at.x, c.at.y) || inPlazaMayor(c.at.x, c.at.y) || (c.at.x >= TOWER.x - 4.5 && c.at.x <= TOWER.x + TOWER.w + 4.5 && c.at.y >= TOWER.y - 4.5 && c.at.y <= TOWER.y + TOWER.d + 4.5) /* the tower's corner cones */ || inCrater(c.at.x, c.at.y) || (c.at.y >= BOULEVARD.y0 && c.at.y <= BOULEVARD.y1), `cone ${c.at.x},${c.at.y} ${c.mat}`).toBe(true);
+      if (onCity) expect(inBlock(c.at.x, c.at.y) || inParcel(c.at.x, c.at.y) || (c.at.x >= TOWER.x - 4.5 && c.at.x <= TOWER.x + TOWER.w + 4.5 && c.at.y >= TOWER.y - 4.5 && c.at.y <= TOWER.y + TOWER.d + 4.5) /* the tower's corner cones */ || inCrater(c.at.x, c.at.y) || (c.at.y >= BOULEVARD.y0 && c.at.y <= BOULEVARD.y1), `cone ${c.at.x},${c.at.y} ${c.mat}`).toBe(true);
     }
     expect(s.accents.length).toBeGreaterThan(6);
     const NEON = ["magenta", "magentaBleed", "cyan", "cyanBleed"];
@@ -293,7 +294,10 @@ describe("city", () => {
   it("neon: the signs that exist are coplanar in y, and a light over each street lamp of the promenade", () => {
     const worldCity = city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3)); // the real seed of the world
     const c = scene();
-    for (const s of [...c.neon.signs, ...worldCity.neon.signs]) {
+    // no district parcel in CITY_BOUNDS since #472 (the modern belt is west of −54, tech's until #479): the district signs come back with it
+    expect(c.neon.signs).toHaveLength(0);
+    expect(worldCity.neon.signs).toHaveLength(0);
+    for (const s of [...c.neon.signs, ...worldCity.neon.signs]) { // kept for when they return
       if (s.kind !== "poly") throw new Error("sign not poly");
       expect(s.pts).toHaveLength(4);
       expect(new Set(s.pts.map((p) => p.y)).size).toBe(1);

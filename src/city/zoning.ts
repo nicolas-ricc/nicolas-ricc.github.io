@@ -126,6 +126,8 @@ export const MIN_LOT_SIDE = 7;
 export const tooSmall = (lot: Lot): boolean => Math.min(lot.w, lot.d) < MIN_LOT_SIDE;
 
 /** The parcel that holds the hotel (plinth only, no building). */
+/** The parcels that get a building: those of `CITY_BOUNDS` inside the city (east of its west edge, north of y 318), the hotel lot excluded (plinth only). */
+export const builtParcels = (): Parcel[] => parcels(CITY_BOUNDS).filter((p) => p.c.x > CITY_EDGE.west && p.c.y < 318 && !isHotelLot(p));
 export const isHotelLot = (p: Parcel): boolean => p.rect.x === HOTEL_LOT.x && p.rect.y === HOTEL_LOT.y && p.rect.w === HOTEL_LOT.w && p.rect.d === HOTEL_LOT.d;
 
 /** Sides of a parcel's bounding box that face an open space (axis band, Plaza Mayor or crossing plaza): a point 0.5 outside the edge, at 1/4, 1/2 or 3/4, is in one. */
@@ -171,8 +173,7 @@ export function assign(rng: Rng, districtRng: Rng): Placed[] {
     };
     out.push({ block: b, neighborhood, recipe, lot, tone: rng.int(-1, 1) });
   }
-  for (const p of parcels(CITY_BOUNDS)) {
-    if (!(p.c.x > CITY_EDGE.west && p.c.y < 318) || isHotelLot(p)) continue;
+  for (const p of builtParcels()) {
     const neighborhood = neighborhoodOfParcel(p), r = neighborhood === "district" ? districtRng : rng;
     let recipe = pick(r, CATALOGUE[neighborhood].recipes);
     if (neighborhood === "residential") {

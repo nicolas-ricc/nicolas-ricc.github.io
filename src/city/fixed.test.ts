@@ -7,8 +7,8 @@ import { awning, dockCrane } from "../kit/props";
 import { ESTUARY_Y0, QUAY_X } from "../map/geo";
 import { createRng } from "../map/seed";
 import { AVENUE, BRIDGE, COLLAPSED, EAST_RING, PROMENADE, ROWS, STREET, TOWER, TOWER_H, WEST_QUAY, estuaryEast } from "../scenes/city-grid";
-import { PLINTH_H, plazaTone, tiles } from "../scenes/city-pieces";
-import { BRIDGE_LANDING, PLAZA_CENTER, PLAZA_MAYOR, TOWER_ISLAND } from "../scenes/city-plan";
+import { plazaTone, tiles } from "../scenes/city-pieces";
+import { BRIDGE_LANDING, PLAZA_CENTER, inParcel, PLAZA_MAYOR, TOWER_ISLAND } from "../scenes/city-plan";
 import type { FixedLight } from "./lights";
 import { bridge, collapsed, greenery, promenade, plazaAndTower, towerWindows, westQuay } from "./fixed";
 
@@ -246,6 +246,7 @@ describe("westQuay", () => {
     for (const s of terrace) {
       const b = bounds(s);
       expect(b.min.x).toBeGreaterThanOrEqual(185 - EPS);
+      for (const [x, y] of [[b.min.x, b.min.y], [b.max.x, b.min.y], [b.max.x, b.max.y], [b.min.x, b.max.y]] as const) expect(inParcel(x, y), `terrace corner ${x},${y} on a parcel`).toBe(false);
       expect(b.min.y).toBeGreaterThanOrEqual(174);   // facing the bars parcel of column 163 (y 174..195)
       expect(b.max.y).toBeLessThan(195);
     }
@@ -310,7 +311,7 @@ describe("plazaAndTower", () => {
   it("no furniture of the plaza enters TOWER_ISLAND or BRIDGE_LANDING", () => {
     const { solids } = built(), tower = solids.find((s) => s.kind === "prism" && s.h === TOWER_H)!;
     for (const s of solids) {
-      if (s === tower || s.mat === "leaf" || s.mat === "office" || (s.mat === "paving" && s.kind === "prism" && s.h === PLINTH_H) || (s.mat === "officeDark" && bounds(s).min.z >= TOWER_H)) continue; // the tower, its vines, cornice and machine room, and the curb (the west one runs along the landing's edge)
+      if (s === tower || s.mat === "leaf" || s.mat === "office" || (s.mat === "officeDark" && bounds(s).min.z >= TOWER_H)) continue; // the tower, its vines, cornice and machine room
       const b = bounds(s);
       for (const r of [TOWER_ISLAND, BRIDGE_LANDING]) expect(b.min.x < r.x + r.w - EPS && b.max.x > r.x + EPS && b.min.y < r.y + r.d - EPS && b.max.y > r.y + EPS, `${s.kind} ${s.mat}`).toBe(false);
     }
