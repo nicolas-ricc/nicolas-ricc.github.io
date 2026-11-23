@@ -43,7 +43,8 @@ describe("zoneKinds", () => {
   it("world table", () => {
     const kinds = world();
     // measured with zoneRng(SEED, "cv", 2) on techBlocks() (68 south parcels + 29 west); the west (first blocks) keeps today's counts: tower 10, monoblock 6, campus 6, park 6, telecom 1
-    expect(Object.fromEntries(KINDS.map((k) => [k, count(kinds, k)]))).toEqual({ tower: 10, campus: 6, monoblock: 12, houses: 23, park: 6, plaza: 7, school: 1, club: 1, telecom: 1, arena: 1, auditorium: 1, low: 28 });
+    // #478: a parcel narrower than 20 is low even when the plaza draw hits (two such parcels: the pieces need ≥ 20 × 20); was plaza 7, low 28
+    expect(Object.fromEntries(KINDS.map((k) => [k, count(kinds, k)]))).toEqual({ tower: 10, campus: 6, monoblock: 12, houses: 23, park: 6, plaza: 5, school: 1, club: 1, telecom: 1, arena: 1, auditorium: 1, low: 30 });
     const west = kinds.filter((_, i) => isWest(blocks[i]!));
     expect(Object.fromEntries(KINDS.map((k) => [k, west.filter((x) => x === k).length]).filter(([, n]) => n !== 0))).toEqual({ tower: 10, monoblock: 6, campus: 6, park: 6, telecom: 1 });
   });

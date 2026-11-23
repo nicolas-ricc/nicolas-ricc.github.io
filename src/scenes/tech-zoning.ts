@@ -50,8 +50,8 @@ export function zoneKinds(rng: Rng, blocks: readonly SprawlBlock[]): Kind[] {
     const draw = rng.chance(0.12), p = b.parcel;
     if (p) {
       if (p.barrio === "bajo") return "low";
+      if (Math.min(b.w, b.d) < 20) return "low"; // too narrow for the pieces (≥ 20 × 20), plaza included; the draw is already taken
       if (draw) return "plaza";
-      if (Math.min(b.w, b.d) < 20) return "low"; // too narrow for the pieces (≥ 20 × 20)
       return p.area >= 450 && blockParity(b) === 0 && p.c.y < WORLD.y1 + MONOBLOCK_D ? "monoblock" : "houses";
     }
     if (draw) return "park";

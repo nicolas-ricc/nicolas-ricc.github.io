@@ -124,7 +124,8 @@ describe("tech on the south parcels (#478)", () => {
     for (const c of [ARENA, AUDITORIUM]) {
       const { p } = fixedOf(c), mine = own(p, 0.5).filter((s) => !isFlat(s));
       expect(mine.length).toBeGreaterThan(3);
-      for (const s of pieces.filter((s) => !isFlat(s) && within(s, p.rect, 6))) expect(within(s, p.rect, 0.5), JSON.stringify(bounds(s))).toBe(true);
+      // a neighbor's corner lamp (steel, h 5) may stand within 6
+      for (const s of pieces.filter((s) => !isFlat(s) && !(s.kind === "prism" && s.mat === "steel" && s.h === 5) && within(s, p.rect, 6))) expect(within(s, p.rect, 0.5), JSON.stringify(bounds(s))).toBe(true);
       expect(onAxis(p.rect.x + p.rect.w / 2, p.rect.y + p.rect.d / 2)).toBe(false);
     }
     expect(pieces.some((s) => s.kind === "cylinder" && s.mat === "curtain" && within(s, fixedOf(AUDITORIUM).p.rect, 0.5))).toBe(true);

@@ -4,7 +4,7 @@ import { bounds, type Solid } from "../iso/solids";
 import { createRng, SEED } from "../map/seed";
 import { blockAt, faces, inside, newCtx } from "./neighborhood-fixtures";
 import { plaza } from "./neighborhood-plaza";
-import { suburbBlocks, type SprawlBlock } from "./sprawl-grid";
+import { techBlocks, type SprawlBlock } from "./sprawl-grid";
 import { MAX_TECH_H, tech } from "./tech";
 import { FACE_CAPS, blockRect, facesIn, insideInflated } from "./tech-budget";
 import { PLAZAS, blockParity, zoneKinds } from "./tech-zoning";
@@ -156,14 +156,14 @@ describe("neighborhood plaza (#254), direct call", () => {
 // the real world: the `plaza` blocks according to the pre-pass
 const scene = tech(zoneRng(SEED, "cv", 2));
 const everything = [...scene.solids, ...scene.ground];
-const blocks = suburbBlocks(), kinds = zoneKinds(zoneRng(SEED, "cv", 2), blocks);
+const blocks = techBlocks(), kinds = zoneKinds(zoneRng(SEED, "cv", 2), blocks);
 const plazaBlocks = blocks.filter((_, i) => kinds[i] === "plaza");
 const own = (b: SprawlBlock) => everything.filter((s) => insideInflated(s, blockRect(b)));
 const dotsIn = (b: SprawlBlock) => { const r = blockRect(b); return dotsOf(scene.accents).filter((d) => d.at.x >= r.x0 && d.at.x <= r.x1 && d.at.y >= r.y0 && d.at.y <= r.y1); };
 
 describe("neighborhood plaza (#254), over the world", () => {
-  it("there are 7 plazas, including the two fixed ones", () => {
-    expect(plazaBlocks).toHaveLength(7);
+  it("there are 5 plazas (2 fixed + 3 drawn; two narrow parcels that drew a plaza are low), including the two fixed ones", () => {
+    expect(plazaBlocks).toHaveLength(5);
     for (const p of PLAZAS) expect(plazaBlocks.some((b) => b.parcel?.cell.col === p.col && b.parcel.cell.row === p.row)).toBe(true);
   });
 

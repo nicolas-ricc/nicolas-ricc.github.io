@@ -4,7 +4,7 @@ import { occluded } from "../iso/project";
 import { SEED, createRng } from "../map/seed";
 import { blockAt, faces, inside, newCtx } from "./neighborhood-fixtures";
 import { monoblock } from "./neighborhood-monoblock";
-import { suburbBlocks, type SprawlBlock } from "./sprawl-grid";
+import { techBlocks, type SprawlBlock } from "./sprawl-grid";
 import { tech } from "./tech";
 import { FACE_CAPS, blockRect, facesIn, insideInflated } from "./tech-budget";
 import { blockParity, zoneKinds } from "./tech-zoning";
@@ -15,14 +15,14 @@ type Prism = Solid & { kind: "prism" };
 
 // the real world: monoblock blocks according to the pre-pass
 const scene = tech(zoneRng(SEED, "cv", 2));
-const blocks = suburbBlocks(), kinds = zoneKinds(zoneRng(SEED, "cv", 2), blocks);
+const blocks = techBlocks(), kinds = zoneKinds(zoneRng(SEED, "cv", 2), blocks);
 const monos = blocks.filter((_, i) => kinds[i] === "monoblock");
 const everything = [...scene.solids, ...scene.ground];
 const of = (b: (typeof monos)[number]) => {
   const r = blockRect(b), solids = scene.solids.filter((s) => insideInflated(s, r)), ground = scene.ground.filter((s) => insideInflated(s, r));
   const prisms = solids.filter((s): s is Prism => s.kind === "prism");
-  const bodies = prisms.filter((p) => p.w === 20 && p.d === 5 && p.h >= 3);
-  const plinths = prisms.filter((p) => p.mat === "paving" && p.w === 20.6 && p.d === 5.6 && p.h === 0.3);
+  const bodies = prisms.filter((p) => p.w === b.w - 4 && p.d === 5 && p.h >= 3);
+  const plinths = prisms.filter((p) => p.mat === "paving" && p.w === b.w - 3.4 && p.d === 5.6 && p.h === 0.3);
   const tanks = prisms.filter((p) => p.mat === "concrete" && p.w === 2 && p.d === 2);
   const antennas = prisms.filter((p) => p.mat === "steel" && p.w === 0.2 && p.d === 0.2);
   const trees = solids.filter((s) => s.kind === "cone" && s.mat === "leaf");
@@ -40,13 +40,13 @@ const overlap = (a: Solid, b: Solid) => {
 
 
 describe("monoblocks of the Simón Bolívar neighborhood (#250)", () => {
-  it("there are monoblock blocks in the world", () => expect(monos.length).toBe(18));
+  it("there are monoblock blocks in the world", () => expect(monos.length).toBe(12)); // measured: 6 on the old west blocks + 6 on the south parcels (#478); there were 18 before the south moved to the parcel grid
 
-  it("each block: 1 or 2 bodies 20×5 of h ∈ {12, 15, 18}, different if there are two, of light plaster on a plinth", () => {
+  it("each block: 1 or 2 bodies (b.w − 4)×5 of h ∈ {9, 12} on a parcel, {12, 15, 18} on the west, different if there are two, of light plaster on a plinth", () => {
     for (const b of monos) {
       const { bodies, plinths } = of(b);
       expect(bodies.length, `${b.x},${b.y}`).toBeGreaterThanOrEqual(1); expect(bodies.length).toBeLessThanOrEqual(2);
-      for (const p of bodies) { expect([12, 15, 18]).toContain(p.h); expect(["whitewash", "stone"]).toContain(p.mat); expect(p.at.z).toBeCloseTo(0.3); }
+      for (const p of bodies) { expect(b.parcel ? [9, 12] : [12, 15, 18]).toContain(p.h); expect(["whitewash", "stone"]).toContain(p.mat); expect(p.at.z).toBeCloseTo(0.3); }
       if (bodies.length === 2) expect(bodies[0]!.h).not.toBe(bodies[1]!.h);
       expect(plinths).toHaveLength(bodies.length);
     }
@@ -54,7 +54,7 @@ describe("monoblocks of the Simón Bolívar neighborhood (#250)", () => {
 
   it("in the whole neighborhood the three heights, the two plasters and a brick ground floor on some slabs appear", () => {
     const bodies = monos.flatMap((b) => of(b).bodies);
-    expect(new Set(bodies.map((p) => p.h))).toEqual(new Set([12, 15, 18]));
+    expect(new Set(bodies.map((p) => p.h))).toEqual(new Set([9, 12, 15, 18]));
     expect(new Set(bodies.map((p) => p.mat))).toEqual(new Set(["whitewash", "stone"]));
     const brick = bodies.filter((p) => p.plates?.some((q) => q.mat === "brick"));
     expect(brick.length).toBeGreaterThan(0); expect(brick.length).toBeLessThan(bodies.length);
@@ -93,7 +93,7 @@ describe("monoblocks of the Simón Bolívar neighborhood (#250)", () => {
   it("park: lawn, ≥ 4 trees, 2 paving paths, 2 street lamps; no parking", () => {
     for (const b of monos) {
       const { solids, ground, trees, lamps } = of(b);
-      expect(solids.some((s) => s.kind === "prism" && s.mat === "leafDark" && s.w === b.w && s.d === b.d)).toBe(true);
+      expect(solids.some((s) => s.mat === "leafDark" && (s.kind === "poly" ? JSON.stringify(s.footprint) === JSON.stringify(b.parcel!.poly) : s.kind === "prism" && s.w === b.w && s.d === b.d))).toBe(true);
       expect(trees.length, `${b.x},${b.y}`).toBeGreaterThanOrEqual(4); expect(trees.length).toBeLessThanOrEqual(6);
       expect(ground.filter((s) => s.kind === "strip" && s.mat === "paving")).toHaveLength(2);
       expect(lamps).toHaveLength(2);
@@ -113,7 +113,7 @@ describe("monoblocks of the Simón Bolívar neighborhood (#250)", () => {
       const { bodies, homes } = of(b);
       expect(homes.length).toBeGreaterThan(0);
       for (const w of homes) {
-        const on = bodies.some((p) => (w.pts.every((q) => q.y === p.at.y + 5 && q.x >= p.at.x && q.x <= p.at.x + 20)) || (w.pts.every((q) => q.x === p.at.x + 20 && q.y >= p.at.y && q.y <= p.at.y + 5)));
+        const on = bodies.some((p) => (w.pts.every((q) => q.y === p.at.y + 5 && q.x >= p.at.x && q.x <= p.at.x + p.w)) || (w.pts.every((q) => q.x === p.at.x + p.w && q.y >= p.at.y && q.y <= p.at.y + 5)));
         expect(on, `${b.x},${b.y} ${w.group}`).toBe(true);
         expect(w.pts.every((q) => q.z >= 0.3)).toBe(true);
       }

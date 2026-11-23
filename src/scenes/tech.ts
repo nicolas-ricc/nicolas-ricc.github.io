@@ -11,8 +11,11 @@ import { beacon, helipad, lamp, place, rooftopGarden, sign, streetTree } from ".
 import { STYLES } from "../kit/styles";
 import { PLINTH_H, brokenTone, prism, tiles } from "./city-pieces";
 import { jungle } from "./flora";
-import { GREEN_BELT, SUBURB_COLS, suburbBlocks, type SprawlBlock } from "./sprawl-grid";
-import type { NeighborhoodCtx, HomeWindow } from "./neighborhood";
+import { recipe } from "../kit";
+import { seat } from "../kit/piece";
+import { parcelOpenSides, tooSmall } from "../city/zoning";
+import { GREEN_BELT, SUBURB_COLS, techBlocks, type SprawlBlock } from "./sprawl-grid";
+import { base, type NeighborhoodCtx, type HomeWindow } from "./neighborhood";
 import { houses } from "./neighborhood-houses";
 import { club } from "./neighborhood-club";
 import { school } from "./neighborhood-school";
@@ -39,7 +42,7 @@ export interface TechScene { ground: Solid[]; solids: Solid[]; accents: Accent[]
 
 export { ARENA, AUDITORIUM, TELECOM, TOWER_D };
 export const MAX_TECH_H = 20;
-export const TECH_MATS: readonly Material[] = ["office", "officeDark", "glass", "curtain", "paving", "plaza", "stone", "copper", "concrete", "leaf", "leafDark", "steel", "rust", "tile", "brick", "whitewash", "signal", "safety", "hullBlue", "sand"];
+export const TECH_MATS: readonly Material[] = ["office", "officeDark", "glass", "curtain", "paving", "plaza", "stone", "copper", "concrete", "leaf", "leafDark", "steel", "rust", "tile", "brick", "whitewash", "signal", "safety", "hullBlue", "sand", "plaster", "terracotta", "asphalt"];
 const CURTAIN_WINDOW = { w: 0.85, h: 0.8 } as const;
 
 const strip = (path: Vec2[], width: number, z: number, mat: Material): Solid => ({ kind: "strip", path, width, z, mat });
@@ -97,8 +100,9 @@ function telecom(out: Solid[], b: SprawlBlock): Vec3 {
 const octagon = (cx: number, cy: number, rx: number, ry: number): Vec2[] => Array.from({ length: 8 }, (_, i) => { const a = ((i + 0.5) / 8) * Math.PI * 2; return { x: cx + rx * Math.cos(a), y: cy + ry * Math.sin(a) }; });
 
 /** Arena: octagonal stone ring with the lawn on top and four light towers. */
-function arena(out: Solid[], accents: Accent[], b: SprawlBlock): void {
-  out.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
+function arena(ctx: NeighborhoodCtx, b: SprawlBlock): void {
+  const { solids: out, accents } = ctx;
+  base(ctx, b, PLINTH_H, "paving");
   const cx = b.x + b.w / 2, cy = b.y + b.d / 2, h = 5;
   out.push({ kind: "poly", footprint: octagon(cx, cy, 11, 8), z: PLINTH_H, h, mat: "stone" });
   out.push({ kind: "poly", footprint: octagon(cx, cy, 8.5, 5.8), z: PLINTH_H + h, h: 0.3, mat: "leafDark" });
@@ -109,14 +113,32 @@ function arena(out: Solid[], accents: Accent[], b: SprawlBlock): void {
 }
 
 /** Auditorium: curtain wall drum with a copper roof, canopy on two columns and a sign. */
-function auditorium(out: Solid[], signs: Accent[], b: SprawlBlock): void {
-  out.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
+function auditorium(ctx: NeighborhoodCtx, signs: Accent[], b: SprawlBlock): void {
+  const out = ctx.solids;
+  base(ctx, b, PLINTH_H, "paving");
   const cx = b.x + b.w / 2, cy = b.y + 8;
   out.push({ kind: "cylinder", at: v3(cx, cy, PLINTH_H), r: 8, h: 8, mat: "curtain", sides: 12 });
   out.push({ kind: "cone", at: v3(cx, cy, PLINTH_H + 8), r: 8.5, h: 2.5, mat: "copper", sides: 12 });
   for (const dx of [-4, 4]) out.push(prism(cx + dx - 0.3, b.y + b.d - 2.3, PLINTH_H, 0.6, 0.6, 3, "steel"));
   out.push(prism(cx - 5, b.y + b.d - 4, PLINTH_H + 3, 10, 3, 0.4, "officeDark"));
   place(out, signs, sign(v3(cx - 3, b.y + b.d - 1.4, PLINTH_H + 3.4), 6, 1.2));
+}
+
+const LOW_RECIPES = [["rowHouses", 40], ["patioResidential", 35], ["courtyardU", 25]] as const;
+const LOW_MAX_H = 6;
+
+/** Low residential parcel: a kit recipe on the lot (the rect minus the sidewalk), plinth on the parcel polygon, windows in one `homes` group. */
+function low(ctx: NeighborhoodCtx, b: SprawlBlock): void {
+  const pc = b.parcel!, roll = ctx.rng.next() * 100;
+  let acc = 0;
+  const name = (LOW_RECIPES.find(([, w]) => roll < (acc += w)) ?? LOW_RECIPES[0])[0];
+  const lot = { x: b.x + SIDEWALK, y: b.y + SIDEWALK, w: b.w - 2 * SIDEWALK, d: b.d - 2 * SIDEWALK, z: 0, open: parcelOpenSides(pc), maxH: LOW_MAX_H };
+  if (tooSmall(lot)) { base(ctx, b, PLINTH_H, "paving"); return; }
+  const { piece, plinth } = seat(recipe(name), lot, ctx.rng, STYLES.residential);
+  if (plinth) base(ctx, b, PLINTH_H, "paving");
+  ctx.solids.push(...piece.solids); ctx.ground.push(...piece.ground); ctx.accents.push(...piece.accents);
+  const group = `${pc.rect.x},${pc.rect.y}:low`, lit = ctx.rng.chance(0.55);
+  for (const w of piece.windows) ctx.homes.push({ pts: w.pts, lit, group });
 }
 
 /** The avenue of the district continues to the west: curbs, central planter with trees and street lamps. */
@@ -132,7 +154,7 @@ function avenue(ground: Solid[], solids: Solid[], accents: Accent[]): void {
 
 export function tech(rng: Rng): TechScene {
   const ground: Solid[] = [], solids: Solid[] = [], accents: Accent[] = [], towers: Tower[] = [], signs: Accent[] = [], crowns: Accent[] = [], homes: HomeWindow[] = [];
-  const blocks = suburbBlocks(), kinds = zoneKinds(rng, blocks), ctx: NeighborhoodCtx = { solids, ground, accents, homes, rng };
+  const blocks = techBlocks(), kinds = zoneKinds(rng, blocks), ctx: NeighborhoodCtx = { solids, ground, accents, homes, rng };
   let telecomTop = v3(TELECOM.x, TELECOM.y, 0);
   blocks.forEach((b, i) => {
     switch (kinds[i]) {
@@ -148,9 +170,10 @@ export function tech(rng: Rng): TechScene {
       case "club": club(ctx, b); break;
       case "plaza": plaza(ctx, b); break;
       case "park": park(solids, ground, rng, b); break;
+      case "low": low(ctx, b); break;
       case "telecom": telecomTop = telecom(solids, b); break;
-      case "arena": arena(solids, accents, b); break;
-      case "auditorium": auditorium(solids, signs, b); break;
+      case "arena": arena(ctx, b); break;
+      case "auditorium": auditorium(ctx, signs, b); break;
     }
   });
   avenue(ground, solids, accents);

@@ -1,7 +1,7 @@
 import { v3 } from "../iso/geometry";
 import type { Plate } from "../iso/plate";
 import type { Solid } from "../iso/solids";
-import { homeWindow, wallWindow, type NeighborhoodCtx } from "./neighborhood";
+import { base, homeWindow, wallWindow, type NeighborhoodCtx } from "./neighborhood";
 import { lamp, place } from "../kit/props";
 import { prism } from "./city-pieces";
 import type { SprawlBlock } from "./sprawl-grid";
@@ -49,7 +49,7 @@ function sidewalk(ctx: NeighborhoodCtx, b: SprawlBlock): void {
 
 /** Club Pedro Echagüe: plinth, stone front with sign, gym with vault, court with hoops, fence and light towers, and sidewalk with street lamp and tree. */
 export function club(ctx: NeighborhoodCtx, b: SprawlBlock): void {
-  ctx.solids.push(b.parcel ? { kind: "poly", footprint: b.parcel.poly, z: 0, h: 0.3, mat: "paving" } : prism(b.x, b.y, 0, b.w, b.d, 0.3, "paving"));
+  base(ctx, b, 0.3, "paving");
   front(ctx, b);
   gym(ctx, b);
   court(ctx, b);

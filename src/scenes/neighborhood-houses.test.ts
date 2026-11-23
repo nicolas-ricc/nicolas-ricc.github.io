@@ -4,7 +4,7 @@ import { createRng, SEED } from "../map/seed";
 import type { HomeWindow } from "./neighborhood";
 import { blockAt, faces, inside, newCtx } from "./neighborhood-fixtures";
 import { houses } from "./neighborhood-houses";
-import { suburbBlocks, type SprawlBlock } from "./sprawl-grid";
+import { techBlocks, type SprawlBlock } from "./sprawl-grid";
 import { tech } from "./tech";
 import { FACE_CAPS, blockRect, facesIn, insideInflated } from "./tech-budget";
 import { blockParity, zoneKinds } from "./tech-zoning";
@@ -53,7 +53,7 @@ function overlaps(solids: readonly Solid[]): string[] {
 // the real world: the zone rng and the kind of each block according to the pre-pass
 const scene = tech(zoneRng(SEED, "cv", 2));
 const everything = [...scene.solids, ...scene.ground];
-const blocks = suburbBlocks(), kinds = zoneKinds(zoneRng(SEED, "cv", 2), blocks);
+const blocks = techBlocks(), kinds = zoneKinds(zoneRng(SEED, "cv", 2), blocks);
 const houseBlocks = blocks.filter((_, i) => kinds[i] === "houses");
 const own = (b: SprawlBlock) => everything.filter((s) => insideInflated(s, blockRect(b)));
 const homesIn = (b: SprawlBlock): HomeWindow[] => { const r = blockRect(b); return scene.homes.filter((w) => w.pts.every((q) => q.x >= r.x0 && q.x <= r.x1 && q.y >= r.y0 && q.y <= r.y1)); };
@@ -68,7 +68,7 @@ describe("houses of Ciudad Jardín (#251), over the world", () => {
     expect(p.gables.length, at).toBeGreaterThanOrEqual(4); expect(p.gables.length, at).toBeLessThanOrEqual(6);
     for (const g of p.gables) { expect(g.roofMat, at).toBe("tile"); expect(["whitewash", "brick"], at).toContain(g.mat); }
     for (const h of p.houses) {
-      expect([3, 5.5], at).toContain(h.h);
+      expect(b.parcel ? [3, 4.2] : [3, 5.5], at).toContain(h.h);
       expect(h.w).toBeGreaterThanOrEqual(4); expect(h.w).toBeLessThanOrEqual(6); expect(h.d).toBeGreaterThanOrEqual(4); expect(h.d).toBeLessThanOrEqual(6);
     }
   }));
@@ -103,7 +103,7 @@ describe("houses of Ciudad Jardín (#251), over the world", () => {
     expect(r.at.x).toBeLessThanOrEqual(g.at.x + EPS); expect(r.at.x + r.w).toBeGreaterThanOrEqual(g.at.x + g.w - EPS);
     expect(r.at.y).toBeLessThanOrEqual(g.at.y + EPS); expect(r.at.y + r.d).toBeGreaterThanOrEqual(g.at.y + g.d - EPS);
     expect(d.width).toBe(2.5);
-    expect(db.max.y).toBeCloseTo(b.y + 18, 9); expect(db.min.y).toBeCloseTo(g.at.y + 3.5, 9);
+    expect(db.max.y).toBeCloseTo(b.y + b.d, 9); expect(db.min.y).toBeCloseTo(g.at.y + 3.5, 9);
     expect(db.min.x).toBeGreaterThanOrEqual(g.at.x - EPS); expect(db.max.x).toBeLessThanOrEqual(g.at.x + 3 + EPS);
   }));
 
@@ -111,7 +111,7 @@ describe("houses of Ciudad Jardín (#251), over the world", () => {
     const at = `${b.x},${b.y}`;
     expect(p.walls, at).toHaveLength(2);
     for (const w of p.walls) {
-      expect(w.at.y).toBeCloseTo(b.y + 17.5, 9);
+      expect(w.at.y).toBeCloseTo(b.y + b.d - 0.5, 9);
       expect(w.plates?.some((q) => q.wall === 2 && q.mat === "officeDark" && q.toneOffset === -2), at).toBe(true);
     }
     const [w0, w1] = p.walls as [Prism, Prism], gap0 = w0.at.x + w0.w, gap1 = w1.at.x, db = bounds(p.drive[0]!);
@@ -121,7 +121,7 @@ describe("houses of Ciudad Jardín (#251), over the world", () => {
 
   it("sidewalk trees on the south street and two street lamps, without stepping on the driveway or the street lamps", () => each((b, p) => {
     const at = `${b.x},${b.y}`;
-    expect(p.trees.filter((t) => t.at.y >= b.y + 18).length, at).toBeGreaterThanOrEqual(3);
+    expect(p.trees.filter((t) => t.at.y >= b.y + b.d).length, at).toBeGreaterThanOrEqual(3);
     expect(p.lamps, at).toHaveLength(2);
     for (const t of p.trees) for (const o of [...p.drive, ...p.lamps]) expect(crossXY(t, o), at).toBe(false);
   }));

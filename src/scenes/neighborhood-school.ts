@@ -1,5 +1,5 @@
 import { v3 } from "../iso/geometry";
-import { homeWindow, wallWindow, type NeighborhoodCtx } from "./neighborhood";
+import { base, homeWindow, wallWindow, type NeighborhoodCtx } from "./neighborhood";
 import { lamp, place } from "../kit/props";
 import { prism } from "./city-pieces";
 import type { Plate } from "../iso/plate";
@@ -42,7 +42,7 @@ function courtyard(ctx: NeighborhoodCtx, b: SprawlBlock): void {
 
 /** School: plinth, classroom block, courtyard, two trees, street lamps and lit staircase. */
 export function school(ctx: NeighborhoodCtx, b: SprawlBlock): void {
-  ctx.solids.push(b.parcel ? { kind: "poly", footprint: b.parcel.poly, z: 0, h: Z, mat: "paving" } : prism(b.x, b.y, 0, b.w, b.d, Z, "paving"));
+  base(ctx, b, Z, "paving");
   classrooms(ctx, b);
   courtyard(ctx, b);
   for (const ty of [3, b.d - 3]) ctx.solids.push({ kind: "cone", at: v3(b.x + 24.8, b.y + ty, 0), r: 1.4, h: 4, mat: "leaf", sides: 6 });

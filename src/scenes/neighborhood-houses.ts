@@ -49,6 +49,7 @@ function trees(ctx: NeighborhoodCtx, b: SprawlBlock, cx: number): void {
     const r = 1.3 + 0.3 * ctx.rng.next(), h = 3.5 + ctx.rng.next();
     let x = b.x + 3 + pitch * i + 2 * ctx.rng.next();
     if (Math.abs(x - cx) < 1.25 + r) x = cx + (x < cx ? -1 : 1) * (1.25 + r);
+    x = Math.min(x, b.x + b.w - 1 - r - 0.05); // the corner lamp stands at b.x + b.w − 1 (narrow blocks reach it)
     ctx.solids.push({ kind: "cone", at: v3(x, b.y + b.d + 0.8, 0), r, h, mat: "leaf", sides: 6 });
   }
 }
