@@ -2,7 +2,7 @@
 
 Generado por `npm run legibility`; no se edita a mano.
 
-Fecha: 2026-11-20
+Fecha: 2026-11-23
 
 Viewport: 1600×900 @2
 
@@ -32,8 +32,8 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 10.44:1 | ≥ 4.5:1 | ✓ |
-| halo | 0.05 | ≤ 0.5 | ✓ |
+| contraste | 8.16:1 | ≥ 4.5:1 | ✓ |
+| halo | 0.08 | ≤ 0.5 | ✓ |
 | OCR | `RESUME` | = `RESUME` | ✓ |
 
 ![cartel-torre-escena 1.17](cartel-torre-escena-117.png) ![OCR](cartel-torre-escena-117-ocr.png)
@@ -42,8 +42,8 @@ Preproceso del OCR, igual para todos los carteles: luminancia relativa (WCAG) po
 
 | Métrica | Valor | Umbral | ✓/✗ |
 | --- | --- | --- | --- |
-| contraste | 9.58:1 | ≥ 3:1 | ✓ |
-| halo | 0.04 | ≤ 0.5 | ✓ |
+| contraste | 6.97:1 | ≥ 3:1 | ✓ |
+| halo | 0.07 | ≤ 0.5 | ✓ |
 | OCR | `RESUME` | ≈ `RESUME` (sin mayúsculas) | ✓ |
 
 ![cartel-torre-escena 0.83](cartel-torre-escena-083.png) ![OCR](cartel-torre-escena-083-ocr.png)
