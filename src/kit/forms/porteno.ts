@@ -149,23 +149,16 @@ export function insetPoly(fp: Vec2[], m: number): Vec2[] | null {
 
 const CUPOLA_H = 2.5 + 2 + 1.2, CUPOLA_R = 2, WING_T = 5;
 
-/** Distance from `c` to the nearest edge of `poly`. */
-function edgeDist(poly: Vec2[], c: Vec2): number {
-  return Math.min(...poly.map((a, i) => {
-    const b = poly[(i + 1) % poly.length]!, dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
-    const t = l2 < EPS ? 0 : Math.max(0, Math.min(1, ((c.x - a.x) * dx + (c.y - a.y) * dy) / l2));
-    return Math.hypot(c.x - a.x - dx * t, c.y - a.y - dy * t);
-  }));
-}
-
 /** Corner block: a ring of wings clipped to the parcel, stacked floors with trim slabs, and a copper-domed turret over the open corner (decision T4). */
 export function cornerCupola(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { z } = lot, fp = polyFootprint(lot, 0, 2.4);
-  const h = Math.min(5.5 + 3 * rng.next(), recipeCap(lot) - CUPOLA_H), floors = floorsFor(h, style), fh = h / floors;
-  const { wings, patio } = ring(lot, WING_T, ["n", "s", "w", "e"]);
+  const turretH = recipeCap(lot) - CUPOLA_H, hr = 5.5 + 3 * rng.next(), roofed = turretH >= 3; // under one floor of body the turret is dropped
+  const h = Math.min(hr, roofed ? turretH : recipeCap(lot)), floors = floorsFor(h, style), fh = h / floors;
+  const { wings, patio } = ring(lot, WING_T, ["n", "s", "w", "e"]), built: Vec2[][] = [];
   for (const { rect } of wings) {
     const wing = clipToPoly(rect, fp), cols = rng.int(3, 4), f: Facade = { floors: 1, cols };
     if (wing.length < 3 || polyArea(wing) < 4) continue;
+    built.push(wing);
     for (let k = 0; k < floors; k++) {
       const zk = z + k * fh;
       addBuilding(p, { kind: "poly", footprint: wing, z: zk, h: fh - 0.15, mat: style.mat, facade: f, tone: style.tone }, f);
@@ -174,13 +167,22 @@ export function cornerCupola(lot: Lot, rng: Rng, style: Style): Piece {
   }
   const corner = chamferCorner(lot.open), q = { x: corner[1] === "e" ? lot.x + lot.w : lot.x, y: corner[0] === "s" ? lot.y + lot.d : lot.y };
   const mid = polyCentroid(fp), len = Math.hypot(mid.x - q.x, mid.y - q.y), r2 = CUPOLA_R + 0.2;
-  let c = mid;
-  for (let t = 0; t <= len; t += 0.1) {
+  const onWings = (c: Vec2): boolean => Array.from({ length: 16 }, (_, i) => ({ x: c.x + CUPOLA_R * Math.cos((i * Math.PI) / 8), y: c.y + CUPOLA_R * Math.sin((i * Math.PI) / 8) })).every((pt) => built.some((w) => insidePoly(w, pt)));
+  let c: Vec2 | null = null; // the turret stands only where its whole disk is over the wings
+  for (let t = 0; roofed && len > 0 && t <= len && !c; t += 0.1) {
     const s = { x: q.x + ((mid.x - q.x) * t) / len, y: q.y + ((mid.y - q.y) * t) / len };
-    if (insidePoly(fp, s) && edgeDist(fp, s) >= r2) { c = s; break; }
+    if (onWings(s)) c = s;
+  }
+  if (roofed && !c) { // the walk met a wedge or the patio: the point of a 0.25 grid nearest to the corner
+    const xs = fp.map((v) => v.x), ys = fp.map((v) => v.y);
+    let best = Infinity;
+    for (let x = Math.min(...xs); x <= Math.max(...xs); x += 0.25) for (let y = Math.min(...ys); y <= Math.max(...ys); y += 0.25) {
+      const g = { x, y }, dd = Math.hypot(x - q.x, y - q.y);
+      if (dd < best && onWings(g)) { best = dd; c = g; }
+    }
   }
   const top = z + h;
-  p.solids.push(
+  if (c) p.solids.push(
     { kind: "cylinder", at: v3(c.x, c.y, top), r: CUPOLA_R, h: 2.5, mat: style.mat },
     { kind: "dome", at: v3(c.x, c.y, top + 2.5), r: r2, h: 2, mat: "copper" },
     { kind: "cone", at: v3(c.x, c.y, top + 4.5), r: 0.3, h: 1.2, mat: style.trim },
@@ -196,11 +198,11 @@ export function mansard(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { z } = lot, floors = rng.int(4, 5);
   const fp = lot.poly ? clipConvex(polyFootprint(lot, 1, 2.4), polyFootprint(lot, 0, 2.4)) : polyFootprint(lot, 1, 2.4); // inset 1 would leave a short wedge edge's chamfer short of the lot-level cut
   if (fp.length < 3 || polyArea(fp) < 4) return p;
-  const h = Math.min(floors * style.floorH, recipeCap(lot) - CORNICE_H - 2.2), f: Facade = { floors: floorsFor(h, style), cols: 3 };
+  const roofed = recipeCap(lot) - CORNICE_H - 2.2 >= 3, h = Math.min(floors * style.floorH, recipeCap(lot) - CORNICE_H - (roofed ? 2.2 : 0)), f: Facade = { floors: floorsFor(h, style), cols: 3 };
   addBuilding(p, { kind: "poly", footprint: fp, z, h, mat: style.mat, facade: f, tone: style.tone }, f);
   p.solids.push({ kind: "poly", footprint: offsetFootprint(fp, 0.4), z: z + h, h: CORNICE_H, mat: style.trim });
   const top = z + h + CORNICE_H, base = insetPoly(fp, 0.8), tip = insetPoly(fp, 2);
-  if (!base || !tip) return fitToCap(p, lot);
+  if (!roofed || !base || !tip) return fitToCap(p, lot);
   p.solids.push(frustum(base, tip, top, top + 2.2, style.roof));
   const s = area2(fp) > 0 ? 1 : -1, d: Facade = { floors: 1, cols: 1 };
   fp.forEach((a, i) => {

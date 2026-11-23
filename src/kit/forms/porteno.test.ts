@@ -6,7 +6,7 @@ import { RECIPES, recipe } from "../index";
 import { L0, L1, SLIVER_LOT, WEDGE_LOTS, groundPlans, obliqueCorners, outsideConvex, signedArea, triangleOverlap, wedgeLot } from "../lot-fixtures";
 import { STYLES } from "../styles";
 import type { Lot, Piece } from "../types";
-import { chamferPoly, clipConvex, clipHalf, clipToPoly, frustum, polyFootprint } from "./porteno";
+import { chamferPoly, clipConvex, clipHalf, clipToPoly, frustum, insidePoly, polyFootprint } from "./porteno";
 
 const STYLE_IDS = ["downtown", "bars", "residential", "civic"] as const;
 const SEEDS = Array.from({ length: 20 }, (_, i) => i + 1);
@@ -176,6 +176,21 @@ describe("porteno family", () => {
       }
       expect(p.solids.some((s) => s.kind === "cylinder")).toBe(true);
       expect(p.courtyard).toBeDefined();
+    }
+  });
+
+  it("cornerCupola on a sliver parcel places no turret outside its wings", () => {
+    for (const seed of SEEDS) {
+      const p = recipe("cornerCupola")(SLIVER_LOT, createRng(seed), STYLES.downtown);
+      expect(p.solids.filter((s) => s.kind === "dome" || s.kind === "cylinder")).toEqual([]);
+    }
+    for (const lot of [L0, L1, ...WEDGE_LOTS]) for (const seed of SEEDS) {
+      const p = recipe("cornerCupola")(lot, createRng(seed), STYLES.downtown);
+      const wings = p.solids.filter((s) => s.kind === "poly" && !!s.facade && s.z === lot.z).map((s) => (s.kind === "poly" ? s.footprint : []));
+      for (const s of p.solids) if (s.kind === "cylinder") for (let i = 0; i < 16; i++) {
+        const pt = { x: s.at.x + s.r * Math.cos((i * Math.PI) / 8), y: s.at.y + s.r * Math.sin((i * Math.PI) / 8) };
+        expect(wings.some((w) => insidePoly(w, pt)), `seed ${seed} sample ${i}`).toBe(true);
+      }
     }
   });
 
