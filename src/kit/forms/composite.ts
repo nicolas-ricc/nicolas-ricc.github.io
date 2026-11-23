@@ -2,10 +2,10 @@ import { v3, type Vec2 } from "../../iso/geometry";
 import type { Facade } from "../../iso/facade";
 import type { Rng } from "../../map/seed";
 import { prism } from "../../scenes/city-pieces";
-import { SIGN_MIN_H, addBuilding, emptyPiece, interlock, floorsFor, recipeCap, shiftTone, southSign } from "../piece";
+import { SIGN_MIN_H, addBuilding, emptyPiece, floorsFor, recipeCap, shiftTone, southSign } from "../piece";
 import { ANTENNA_H, MACHINE_ROOM_H, WATER_TANK_H, antenna, beacon, machineRoom, waterTank } from "../props";
 import { CORNICE_H, cornice, offsetFootprint } from "../roofs";
-import { clipBody, insidePoly, polyArea, polyCentroid, polyFootprint } from "./porteno";
+import { clipBody, insidePoly, polyCornice, polyArea, polyCentroid, polyFootprint } from "./porteno";
 import type { Lot, Piece, RecipeDef, Side, Style } from "../types";
 
 /**
@@ -28,7 +28,7 @@ export function podiumTower(lot: Lot, rng: Rng, style: Style): Piece {
   if (podium) {
     if (polyArea(podium) < 4) return p;
     addBuilding(p, { kind: "poly", footprint: podium, z, h: ph, mat: style.mat, facade: pf, tone: style.tone }, pf);
-    p.solids.push(interlock({ kind: "poly", footprint: offsetFootprint(podium, 0.5), z: z + ph, h: CORNICE_H, mat: style.trim }));
+    p.solids.push(polyCornice(podium, z + ph, style.trim));
   } else {
     addBuilding(p, prism(x, y, z, w, d, ph, style.mat, { facade: pf, tone: style.tone }), pf);
     p.solids.push(...cornice({ x, y, w, d, z: z + ph }, style.trim));
@@ -142,7 +142,7 @@ export function chamfer(lot: Lot, rng: Rng, style: Style): Piece {
   }
   const f: Facade = { floors: floorsFor(h, style), cols: 3 };
   addBuilding(p, { kind: "poly", footprint: fp, z, h, mat: style.mat, facade: f, tone: style.tone }, f);
-  p.solids.push({ kind: "poly", footprint: offsetFootprint(fp, 0.5), z: z + h, h: CORNICE_H, mat: style.trim });
+  p.solids.push(lot.poly ? polyCornice(fp, z + h, style.trim) : { kind: "poly", footprint: offsetFootprint(fp, 0.5), z: z + h, h: CORNICE_H, mat: style.trim });
   const c = lot.poly ? polyCentroid(fp) : { x: bx + bw / 2, y: by + bd / 2 };
   p.solids.push(...machineRoom(v3(c.x - 2, c.y - 1.5, z + h + CORNICE_H)));
   return p;

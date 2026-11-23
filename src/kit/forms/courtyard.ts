@@ -36,14 +36,14 @@ function ring(r: Rect, t: number, sides: readonly Side[]) {
  * Wing with a `style.mat` facade and cornice, or a `style.roof` `hipRoof` with `hip`; `flush` leaves the cornice without overhang on that side (edge of the passage).
  * With `fp` (the chamfered footprint of a parcel polygon) the wing is clipped to it: dropped below area 4 (returns `false`), kept as is if it fits, otherwise a `poly` body with a `poly` cornice in place of the hip roof.
  */
-function wing(p: Piece, lot: Lot, r: Rect, z: number, h: number, cols: number, style: Style, { hip = false, flush, fp }: { hip?: boolean; flush?: "e" | "w"; fp?: Vec2[] } = {}): boolean {
+function wing(p: Piece, r: Rect, z: number, h: number, cols: number, style: Style, { hip = false, flush, fp }: { hip?: boolean; flush?: "e" | "w"; fp?: Vec2[] } = {}): boolean {
   const facade: Facade = { floors: Math.max(1, Math.round(h / style.floorH)), cols };
   if (fp) {
     const clipped = clipBody(r, fp);
     if (!clipped) return false;
     if (Math.abs(polyArea(clipped) - r.w * r.d) > 1e-6) {
       addBuilding(p, { kind: "poly", footprint: clipped, z, h, mat: style.mat, facade, tone: style.tone }, facade);
-      p.solids.push(polyCornice(clipped, lot, z + h, style.trim));
+      p.solids.push(polyCornice(clipped, z + h, style.trim));
       return true;
     }
   }
@@ -55,7 +55,7 @@ function wing(p: Piece, lot: Lot, r: Rect, z: number, h: number, cols: number, s
 }
 
 /** Whether a tree of radius 1 centered at `c` stands inside `fp` (`fp` is the chamfered footprint of a parcel polygon). */
-function treeFits(fp: Vec2[], c: { x: number; y: number }): boolean {
+export function treeFits(fp: Vec2[], c: { x: number; y: number }): boolean {
   if (!insidePoly(fp, c)) return false;
   return fp.every((a, i) => {
     const b = fp[(i + 1) % fp.length]!, dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
@@ -81,17 +81,17 @@ export function courtyardO(lot: Lot, rng: Rng, style: Style): Piece {
   const { wings, patio } = ring(lot, 5, ["n", "s", "w", "e"]), fp = lot.poly ? polyFootprint(lot, 0, 2, "oblique") : undefined;
   for (const { side, rect } of wings) {
     const cols = rng.int(3, 4);
-    if (side !== "s") { wing(p, lot, rect, lot.z, h, cols, style, { fp }); continue; }
+    if (side !== "s") { wing(p, rect, lot.z, h, cols, style, { fp }); continue; }
     const half = (rect.w - PASSAGE) / 2; // centered passage: the back is the courtyard
     const west = { ...rect, w: half }, east = { ...rect, x: rect.x + half + PASSAGE, w: half };
-    const built = [wing(p, lot, west, lot.z, h, cols, style, { flush: "e", fp }), wing(p, lot, east, lot.z, h, cols, style, { flush: "w", fp })];
+    const built = [wing(p, west, lot.z, h, cols, style, { flush: "e", fp }), wing(p, east, lot.z, h, cols, style, { flush: "w", fp })];
     if (lot.open.includes("s")) [west, east].forEach((r, k) => { if (built[k]) p.slots.push(...slotsIn(neonRun(r, "s", lot.z, p.slots.length), fp)); });
   }
   if (lot.open.includes("e")) p.slots.push(...slotsIn(neonRun(lot, "e", lot.z, p.slots.length), fp));
   const paved = rng.chance(0.5);
   if (fp) {
     const slab = clipToPoly(patio, fp); // the floor is the leafDark slab whichever branch is drawn
-    if (slab.length >= 3) p.solids.push({ kind: "poly", footprint: slab, z: lot.z, h: 0.3, mat: "leafDark" });
+    if (polyArea(slab) >= 4) p.solids.push({ kind: "poly", footprint: slab, z: lot.z, h: 0.3, mat: "leafDark" });
     if (!paved) patioTrees(p, rng, patio, rng.int(2, 3), lot.z + 0.3, fp);
   } else if (paved) p.ground.push(tiles(rng, patio, lot.z + 0.05, "paving", brokenTone, 2));
   else { p.solids.push(prism(patio.x, patio.y, lot.z, patio.w, patio.d, 0.3, "leafDark")); patioTrees(p, rng, patio, rng.int(2, 3), lot.z + 0.3); }
@@ -103,7 +103,7 @@ export function courtyardU(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), cap = Math.min(lot.maxH, RECIPE_MAX_H), open = lot.open[0] ?? "s";
   const h = Math.min(rng.int(6, 10), Math.floor(cap - CORNICE_H));
   const { wings, patio } = ring(lot, 5, (["n", "s", "w", "e"] as const).filter((s) => s !== open)), fp = lot.poly ? polyFootprint(lot, 0, 2, "oblique") : undefined;
-  for (const { rect } of wings) wing(p, lot, rect, lot.z, h, rng.int(3, 4), style, { fp });
+  for (const { rect } of wings) wing(p, rect, lot.z, h, rng.int(3, 4), style, { fp });
   // bench in the center and a tree on each side, splitting the courtyard along its long axis, so no tree falls on the bench
   const cx = patio.x + patio.w / 2, cy = patio.y + patio.d / 2;
   const halves: Rect[] = patio.w >= patio.d
@@ -122,8 +122,8 @@ export function courtyardC(lot: Lot, rng: Rng, style: Style): Piece {
   const h = Math.min(rng.int(6, 9), Math.floor(cap - CORNICE_H));
   const cd = Math.min(5, d / 3), t = (d - cd) / 4, side = 5;
   const bars: Rect[] = [{ x, y, w, d: t }, { x, y: y + 2 * t, w, d: cd }, { x, y: y + d - t, w, d: t }];
-  for (const r of bars) wing(p, lot, r, z, h, rng.int(3, 4), style);
-  for (const r of [{ x, y: y + t, w: side, d: t }, { x, y: y + 2 * t + cd, w: side, d: t }]) wing(p, lot, r, z, h, 2, style);
+  for (const r of bars) wing(p, r, z, h, rng.int(3, 4), style);
+  for (const r of [{ x, y: y + t, w: side, d: t }, { x, y: y + 2 * t + cd, w: side, d: t }]) wing(p, r, z, h, 2, style);
   p.courtyard = { x: x + side, y: y + 2 * t + cd, w: w - side, d: t };
   return p;
 }
@@ -132,7 +132,7 @@ export function patioResidential(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), cap = Math.min(lot.maxH, RECIPE_MAX_H);
   const h = Math.min(rng.int(6, 9), Math.floor(cap - HIP_ROOF_H));
   const { wings, patio } = ring(lot, 4.5, ["n", "s", "w", "e"]), fp = lot.poly ? polyFootprint(lot, 0, 2, "oblique") : undefined;
-  for (const { rect } of wings) wing(p, lot, rect, lot.z, h, rng.int(2, 3), style, { hip: true, fp });
+  for (const { rect } of wings) wing(p, rect, lot.z, h, rng.int(2, 3), style, { hip: true, fp });
   patioTrees(p, rng, patio, rng.int(2, 4), lot.z, fp);
   for (const side of CAMERA_SIDES) if (lot.open.includes(side)) p.slots.push(...slotsIn(neonRun(lot, side, lot.z, p.slots.length), fp));
   p.courtyard = patio;

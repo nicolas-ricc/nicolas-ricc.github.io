@@ -8,7 +8,8 @@ import { jungle } from "../../scenes/flora";
 import { RECIPE_MAX_H, addBuilding, emptyPiece, interlock } from "../piece";
 import { awning, patioTree } from "../props";
 import { HIP_ROOF_H, cornice, hipRoof } from "../roofs";
-import { clipBody, insidePoly, polyArea, polyCornice, polyFootprint } from "./porteno";
+import { treeFits } from "./courtyard";
+import { clipBody, polyArea, polyCornice, polyFootprint } from "./porteno";
 import type { Lot, Piece, RecipeDef, Side, Slot, Style } from "../types";
 
 /**
@@ -150,7 +151,7 @@ export function rowHouses(lot: Lot, rng: Rng, style: Style): Piece {
     if (fp && !clipped) continue; // below area 4: no house
     if (clipped && Math.abs(polyArea(clipped) - r.w * r.d) > 1e-6) { // cut by the parcel: a poly body with a poly cornice instead of the hip roof
       addBuilding(p, { kind: "poly", footprint: clipped, z: lot.z, h, mat: style.mat, facade, tone }, facade);
-      p.solids.push(...toned([polyCornice(clipped, lot, lot.z + h, style.trim)], tone));
+      p.solids.push(...toned([polyCornice(clipped, lot.z + h, style.trim)], tone));
       continue;
     }
     addBuilding(p, prism(r.x, r.y, lot.z, r.w, r.d, h, style.mat, { facade, tone }), facade);
@@ -158,7 +159,7 @@ export function rowHouses(lot: Lot, rng: Rng, style: Style): Piece {
   }
   for (let j = 0; j + 1 < n; j += 2) {
     const c = backPoint(lot, front, (starts[j]! + starts[j + 1]! + ws[j + 1]!) / 2, HOUSE_BACK / 2);
-    if (fp && ![[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dy]) => insidePoly(fp, { x: c.x + dx!, y: c.y + dy! }))) continue; // tree of radius 1
+    if (fp && !treeFits(fp, c)) continue;
     p.solids.push(...patioTree(v3(c.x, c.y, lot.z)));
   }
   return p;

@@ -94,10 +94,18 @@ export function clipBody(subject: Rect | Vec2[], fp: Vec2[]): Vec2[] | null {
   return polyArea(out) < 4 ? null : out;
 }
 
-/** Interlocked `poly` cornice of body footprint `fp` (offset 0.5), its vertices held within the lot + 0.7: the miter of an acute corner would shoot out of it. */
-export function polyCornice(fp: Vec2[], lot: Lot, z: number, mat: Material): Solid {
-  const clamp = (v: number, lo: number, hi: number): number => Math.max(lo - 0.7, Math.min(hi + 0.7, v));
-  const footprint = offsetFootprint(fp, 0.5).map((q) => ({ x: clamp(q.x, lot.x, lot.x + lot.w), y: clamp(q.y, lot.y, lot.y + lot.d) }));
+/** Miter limit of `polyCornice`: past this ratio (miter length / overhang) a vertex is bevelled, so an acute corner cannot shoot a spike out of the lot. */
+const MITER_LIMIT = 1.6;
+
+/** Interlocked `poly` cornice of body footprint `fp`, overhanging 0.5: like `offsetFootprint`, but a vertex whose miter exceeds `MITER_LIMIT` becomes two bevel vertices (a bevel of a convex corner stays convex). */
+export function polyCornice(fp: Vec2[], z: number, mat: Material): Solid {
+  const m = 0.5, s = area2(fp) > 0 ? 1 : -1, n = fp.length, footprint: Vec2[] = [];
+  const normal = (a: Vec2, b: Vec2): Vec2 => { const l = Math.hypot(b.x - a.x, b.y - a.y); return { x: (s * (b.y - a.y)) / l, y: (s * (a.x - b.x)) / l }; };
+  fp.forEach((p, i) => {
+    const n1 = normal(fp[(i + n - 1) % n]!, p), n2 = normal(p, fp[(i + 1) % n]!), dot = n1.x * n2.x + n1.y * n2.y;
+    if (1 / Math.sqrt((1 + dot) / 2) > MITER_LIMIT) footprint.push({ x: p.x + n1.x * m, y: p.y + n1.y * m }, { x: p.x + n2.x * m, y: p.y + n2.y * m });
+    else { const k = m / (1 + dot); footprint.push({ x: p.x + (n1.x + n2.x) * k, y: p.y + (n1.y + n2.y) * k }); }
+  });
   return interlock({ kind: "poly", footprint, z, h: CORNICE_H, mat });
 }
 
