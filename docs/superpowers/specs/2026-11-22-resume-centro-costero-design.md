@@ -416,7 +416,7 @@ segundo son del 2026-11-23.
 - **(b) Móviles verticales.** RESUME se ve al 28 % en 430×932, al 48 % en
   390×750 y al 37 % en 360×740. Su enlace usa el modo de borde de
   `labelLayout`. Es la decisión D10 de #471 (§7.5).
-- **(c) Regla de lado.** Las parcelas cuya caja tiene un lado < 9 se descartan
+- **(c) Regla de lado.** Las parcelas cuya caja envolvente tiene un lado < 9 se descartan
   aunque pasen el área ≥ 70 y el cociente 2A/perímetro ≥ 3.4. Al planificar
   #471 eran 8 piezas: 2 al norte de la plaza (astillas de 5 de ancho, `y 201..206`)
   y 6 en el sur.
@@ -424,7 +424,7 @@ segundo son del 2026-11-23.
   `FIXED_PARCELS` (`src/city/zoning.ts`): palacio cívico (163, 291), teatro
   (133, 291), biblioteca `LIBRARY_CELL` (73, 201) (no (103, 201) del plano: esa
   celda es una cuña de 21 × 5), obra `constructionSite` (43, 261), torre de agua
-  `WATER_TOWER_CELL` (13, 291) y `TELECOM` (−107, 231). En
+  `WATER_TOWER_CELL` (13, 291) y `TELECOM_CELL` (−107, 231). En
   `src/scenes/tech-zoning.ts`: `ARENA` (103, 411), `AUDITORIUM` (13, 351),
   `SCHOOL` (103, 501), `CLUB` (133, 531) y `PLAZAS` (133, 471) y (73, 441).
 - **(e) TELECOM.** La torre de telecomunicaciones está en `(−107, 231)`, una
@@ -433,8 +433,8 @@ segundo son del 2026-11-23.
 - **(f) El oeste.** Sin piso encendido ni coronas de neón en sus torres: son
   recetas `district` y moderno del kit, con ventanas del kit y neones del
   catálogo. El anillo del mástil de TELECOM se conserva, a cargo de `city-anim`.
-- **(g) Luces.** `MAX_ANIMABLE` 40 se reparte entre los cuatro barrios con
-  candidatas, con `animableQuota` (`src/city/lights.ts`, `ANIMABLE_BARRIOS`).
+- **(g) Luces.** `MAX_ANIMABLE` 40 se reparte entre los cuatro barrios (`ANIMABLE_BARRIOS`),
+  en proporción a sus candidatas; bajo no tiene candidatas en la ciudad. Lo hace `animableQuota` (`src/city/lights.ts`).
   Candidatas en la semilla del mundo: clasico 60, transicion 527, moderno 720,
   bajo 0 (las ventanas del bajo del sur son `homes` de tech, ámbar, es decir
   cálidas). Cupo: clasico 3, transicion 16, bajo 0, moderno 21. Antes:
@@ -484,7 +484,7 @@ umbral de +2 ms, así que no hay caché estático: no se agregó ningún
 `RenderTexture` con las capas estáticas de Resume, `stage.ts` no cambió y no
 existe `stage.staticDraws`. En headless la página corre a unos 2 fps y el
 veredicto del bloom es `fallback` de los dos lados (presupuesto 15 ms): la cifra
-que importa es `tick`, la de CPU. Si una caché hiciera falta, cambia cómo se
+que importa es `tick`, la de CPU. Si un caché hiciera falta, cambiaría cómo se
 dibujan los cuadros, no la geometría que cuentan los topes: las cifras de §12.2
 no quedarían viejas.
 
