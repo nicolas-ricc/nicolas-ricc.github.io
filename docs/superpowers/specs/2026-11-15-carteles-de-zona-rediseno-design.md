@@ -252,7 +252,7 @@ tal como lo escribe `REPORT.md`) de cada exhibit en contexto, a 1.17 y a
 aspecto: RESUME 0°, 0°, 0.010; PORTFOLIO 0.23°, 3.03°, 0.077; WRITING 0°, 0°,
 0.010. Las filas de `plataforma-escena` se remidieron en #445 (2026-11-20,
 WRITING en Chainsaw Carnage sobre la tabla flotante, caja alta 11.5), con el
-OCR leyendo `WRITING`: desde #445 el nivel 3 no excusa ninguna fila. Las
+OCR leyendo `WRITING`: desde #445 el nivel 3 no excusa ninguna fila. Desde #474 las filas de `cartel-torre-escena` llevan los valores de nivel 2 del hotel, mientras que sus celdas de nivel 3 (contraste en px, halo, OCR) siguen siendo las de la corona hasta #475. Las
 demás conservan las medidas del 2026-11-17. Desde #460, caja alta 17.25: las
 columnas de nivel 2 de `plataforma-escena` (alto de x, trazo, aire y contraste
 estático) son las de la balsa de tablones con WRITING en `navy` sobre `timber`
@@ -580,7 +580,7 @@ Desde #442 las filas de WRITING miden la tabla flotante en Chainsaw Carnage, con
 - **Seguimiento: #382.** `strokePx` sigue la letra del issue (el lado más
   corto de cada cuad proyectado) y el punto de la `i` lo tensiona. Con
   `PORTFOLIO` en CNRGN Builder ya no hay punto de la `i` en ningún cartel.
-- **RESUME en la fachada del hotel (#471, #474).** El cartel deja la corona
+- **RESUME en la fachada del hotel (#471).** El cartel deja la corona
   de la torre y pasa a la fachada sureste del hotel de la plaza (`hotel`,
   `src/scenes/sign-hotel.ts`, construido por `city()`): un panel de vidrio
   oscuro (`glass`) de 64 × 16.8 (`SIGN_PANEL`) pegado a la losa, con las letras

@@ -227,14 +227,13 @@ Vitest, sobre funciones puras con `coverView` y `signBox`:
    360×740, las cajas de las tres palabras (con el sitio que elige
    `writingSite`) y la linterna del faro caen enteras dentro del host.
 
-*Desvío (2026-11-23, #474):* desde #471 RESUME vive en la fachada del hotel
-(`SIGN_SITE`), más ancho que la corona de la torre. Con `COVER_FOCUS_U` en 0.39
-(decisión D10 de #471) la palabra ya no cabe entera en los tres teléfonos:
-medido con `coverView` y `signBox` (ancho visible sobre ancho del cartel), se
-ve el 27.7 % en 430×932, el 48.4 % en 390×750 y el 36.5 % en 360×740 (la
-historia calculó 28, 48 y 37 %), y su etiqueta pasa al modo `edge`. Todo host
-de 640 px de ancho o más lo muestra entero, con 8 px de margen.
-
+   *Desvío (2026-11-23, #474):* desde #471 RESUME vive en la fachada del hotel
+   (`SIGN_SITE`), más ancho que la corona de la torre. Con `COVER_FOCUS_U` en 0.39
+   (decisión D10 de #471) la palabra ya no cabe entera en los tres teléfonos:
+   medido con `coverView` y `signBox` (ancho visible sobre ancho del cartel), se
+   ve el 27.7 % en 430×932, el 48.4 % en 390×750 y el 36.5 % en 360×740 (la
+   historia calculó 28, 48 y 37 %), y su etiqueta pasa al modo `edge`. Todo host
+   de 640 px de ancho o más lo muestra entero, con 8 px de margen.
 2. Writing nunca queda en el centro. El centro de su palabra cumple
    x ≥ 0,52·w e y ≥ 0,68·h en todos los tamaños de (1). En los de aspecto
    ≥ 16:9 cumple además x ∈ [0,70, 0,88]·w.
