@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { Vec2 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import { createRng } from "../map/seed";
-import { CITY_EDGE, EAST_RING, inCrater } from "../scenes/city-grid";
+import { COVER_MARGIN, inCoverQuad } from "../map/geo";
+import { EAST_RING, inCrater } from "../scenes/city-grid";
 import { PLINTH_H } from "../scenes/city-pieces";
 import { AXES, HOTEL_LOT, LAND, PLAZA_MAYOR, axis, axisBand, crossingPlazas, inCrossingPlaza, onAxis, pointInPoly, polyCentroid, type Axis } from "../scenes/city-plan";
 import { city } from "../scenes/city";
@@ -157,7 +158,8 @@ describe("traffic lights and lamps (#473)", () => {
       if (a.kind === "costanera") continue;
       const [p, q] = axisSpan(a)!, ew = a.from.y === a.to.y;
       const mine = lamps.filter((l) => l.a === a);
-      const range = ew ? [Math.min(p.x, q.x), Math.max(p.x, q.x)] as const : [0, Math.hypot(q.x - p.x, q.y - p.y)] as const;
+      const x0 = Math.min(p.x, q.x), range = ew ? [-54 - 12 * Math.floor((-54 - x0) / 12), Math.max(p.x, q.x)] as const : // an E-W axis's posts keep the phase of the city's old west edge (x −54, every 12 from −48): the east does not move (#479)
+         [0, Math.hypot(q.x - p.x, q.y - p.y)] as const;
       const u = dir(a), n = { x: -u.y, y: u.x }, k = lampSide(a) * (a.w / 2 + 1);
       const at = (t: number): Vec2 => ew ? { x: t, y: p.y + n.y * k } : { x: p.x + u.x * t + n.x * k, y: p.y + u.y * t + n.y * k };
       const excuse = (c: Vec2, t: number): string | null => {
@@ -238,8 +240,8 @@ describe("crossing plazas (#473)", () => {
   });
 });
 
-describe("west edge (#473)", () => {
-  it("nothing of the axes is west of the city edge", () => {
-    for (const s of strips.filter((s) => s.width === 0.4 || s.width === 0.8)) for (const p of s.path) if (p.y >= LAND.y0) expect(p.x).toBeGreaterThanOrEqual(CITY_EDGE.west - 1e-6);
+describe("west edge (#473, #479)", () => {
+  it("nothing of the axes is outside the cover (the cover is the west bound)", () => {
+    for (const s of strips.filter((s) => s.width === 0.4 || s.width === 0.8)) for (const p of s.path) if (p.y >= LAND.y0) expect(inCoverQuad(p.x, p.y, 16 / 9, COVER_MARGIN), `${p.x},${p.y}`).toBe(true);
   });
 });

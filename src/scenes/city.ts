@@ -79,7 +79,7 @@ export function city(rng: Rng, districtRng: Rng, lightsRng: Rng, opts: { west: n
   if (!host?.piece.courtyard) throw new Error("the water tower host has no courtyard");
   add(recipe("waterTower")(waterTowerLot(host.piece.courtyard, host.placed.lot.z), rng, STYLES.residential));
   add(recipe("footbridge")(FOOTBRIDGE_LOT, rng, STYLES.residential));
-  streets(ground, solids, fixed);
+  streets(ground, solids, fixed, opts.west);
   railLands(ground, solids);
   bridge(solids, fixed);
   westQuay(solids, fixed);

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Vec2 } from "../iso/geometry";
 import { PLINTH_H } from "../scenes/city-pieces";
 import { bounds, type Solid } from "../iso/solids";
-import { ESTUARY_Y0, STATION_LAND, WORLD, eastBank } from "../map/geo";
+import { COVER_MARGIN, ESTUARY_Y0, STATION_LAND, WORLD, eastBank, inCoverQuad } from "../map/geo";
 import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, EAST_COLS, EAST_RING, HARBOR, RING_Y0, ROWS, STREET, WEST_COLS, WEST_QUAY, inCrater } from "../scenes/city-grid";
 import { BAR_FRONTS, COSTANERA_LAMP_Y, LAMP_MIN_GAP, axisLampPosts, lampXs, laneOffsets, streets, type BarFront } from "./streets";
 import { ORDINARY_Y, crosswalks } from "./crossings";
@@ -38,7 +38,8 @@ const axisLane = (s: Strip): boolean => AXES.some((a) => {
 describe("streets", () => {
   it("leaves a measured number of strips, all paving flush with the ground", () => {
     const strips = scene();
-    expect(strips.length).toBe(340); // measured (#473): 88 lines and east lanes, 111 crosswalk strips, the costanera's promenade, the rest axis dashes (they stop at the zebras)
+    expect(strips.length).toBe(505); // measured on agent/479 with the west streets: the 340 of #473 (88 lines and east lanes, 111 crosswalk strips, the costanera's promenade, the rest axis dashes, which stop at the zebras) + 165 west of x −54
+    expect(strips.filter((s) => bounds(s).min.x >= -54)).toHaveLength(337); // the east is as it was: of the 340, the three ordinary E-W lines (y 198, 258, 288) now run on west past x −54 as one strip each
     for (const s of strips) {
       expect(s.mat).toBe("paving");
       expect(s.z).toBeGreaterThan(0);
@@ -208,7 +209,9 @@ describe("streets on the new layout (#472)", () => {
   const street = (k: number) => GRID_ORIGIN.x + PLAN_BLOCK + PLAN_STREET / 2 + PITCH * k;
   const streetY = (k: number) => GRID_ORIGIN.y + PLAN_BLOCK + PLAN_STREET / 2 + PITCH * k;
   const XS: number[] = [], YS: number[] = [];
-  for (let k = -5; k < 10; k++) { const x = street(k), y = streetY(k); if (x > CITY_EDGE.west && x < LAND.x1) XS.push(x); if (y > LAND.y0 && y < 318) YS.push(y); }
+  const inCover = (x: number, y: number): boolean => inCoverQuad(x, y, 16 / 9, COVER_MARGIN);
+  const columnInCover = (x: number): boolean => { for (let y = LAND.y0; y <= 318; y++) if (inCover(x, y)) return true; return false; };
+  for (let k = -20; k < 10; k++) { const x = street(k), y = streetY(k); if (x < LAND.x1 && columnInCover(x)) XS.push(x); if (y > LAND.y0 && y < 318) YS.push(y); }
   /** A street of the grid that runs along an axis center is the axis, not an ordinary street. */
   const ordinaryX = XS.filter((x) => !AXES.some((a) => a.from.x === a.to.x && Math.abs(a.from.x - x) < a.w / 2));
   const ordinaryY = YS.filter((y) => !AXES.some((a) => a.from.y === a.to.y && Math.abs(a.from.y - y) < a.w / 2));
@@ -224,19 +227,19 @@ describe("streets on the new layout (#472)", () => {
   const axisOf = (s: Strip) => AXES.find((a) => collinear(s.path[0]!, a) && collinear(s.path[1]!, a));
 
   it("the grid streets are x 40 + 30k and y 48 + 30k", () => {
-    expect(ordinaryX).toEqual([-50, -20, 40, 70, 100, 130, 160]);
+    expect(ordinaryX).toEqual([-290, -260, -230, -200, -170, -140, -110, -80, -50, -20, 40, 70, 100, 130, 160]); // every one inside the cover somewhere on y 164..318 (#479)
     expect(ordinaryY).toEqual([198, 258, 288]);
   });
 
   it("each ordinary street of the new grid has at least one center-line stretch", () => {
     for (const x of ordinaryX) expect(lines.some((s) => s.path[0]!.x === x && s.path[1]!.x === x && s.path[0]!.y >= LAND.y0 - 1e-6 && s.path[1]!.y <= 318 + 1e-6), `x ${x}`).toBe(true);
-    for (const y of ordinaryY) expect(lines.some((s) => s.path[0]!.y === y && s.path[1]!.y === y && Math.min(s.path[0]!.x, s.path[1]!.x) >= CITY_EDGE.west - 1e-6), `y ${y}`).toBe(true);
+    for (const y of ordinaryY) expect(lines.some((s) => s.path[0]!.y === y && s.path[1]!.y === y && inCover(s.path[0]!.x, y) && inCover(s.path[1]!.x, y)), `y ${y}`).toBe(true);
   });
 
   it("no center line leaves the city's ground, except the strip and the east lines", () => {
     for (const s of lines) {
       if (s.path[0]!.x > WEST_QUAY.x0 || s.path[0]!.y < LAND.y0) continue;
-      for (const p of s.path) { expect(p.x).toBeGreaterThanOrEqual(CITY_EDGE.west - 1e-6); expect(p.y).toBeLessThanOrEqual(318 + 1e-6); }
+      for (const p of s.path) { if (isHorizontal(s)) expect(inCover(p.x, p.y), `${p.x},${p.y} outside the cover`).toBe(true); expect(p.y).toBeLessThanOrEqual(318 + 1e-6); }
     }
   });
 
@@ -268,7 +271,7 @@ describe("streets on the new layout (#472)", () => {
     const post = (x: Solid) => x.kind === "prism" && (x.mat === "steel" && x.w <= 0.6 || x.mat === "officeDark"); // a car is a steel prism too
     const curb = (x: Solid) => x.kind === "poly" && x.mat === "paving" && x.h === PLINTH_H; // the crossing plazas' curbs
     for (const x of solids.filter((x) => bounds(x).min.x < EAST_RING.x0 - 1)) {
-      expect(bounds(x).min.x, `${x.kind} ${x.mat}`).toBeGreaterThanOrEqual(CITY_EDGE.west - 1);
+      const b = bounds(x); expect(inCover((b.min.x + b.max.x) / 2, (b.min.y + b.max.y) / 2), `${x.kind} ${x.mat} at ${b.min.x},${b.min.y} outside the cover`).toBe(true);
       const median = x.kind === "prism" && x.mat === "leafDark" && x.at.x === 8, tree = x.kind === "cone" && x.at.x === 10;
       expect(median || tree || post(x) || curb(x), `${x.kind} ${x.mat}`).toBe(true); // only the boulevard median and its trees, and the traffic lights, lamps and plaza curbs (#473) stand west of the ring
       if (!(x.kind === "prism" && x.at.x === 190.5 && COSTANERA_LAMP_Y.includes(x.at.y))) expect(bounds(x).min.y, `${x.kind} ${x.mat}`).toBeGreaterThanOrEqual(LAND.y0 - 1); // the costanera's lamp at y 160 is the exception
