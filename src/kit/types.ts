@@ -11,7 +11,7 @@ import type { Rect } from "../scenes/city-grid";
  * walls and windows that face the camera and the slots for signs/neons.
  */
 export type Side = "n" | "s" | "e" | "w";
-export type StyleId = "downtown" | "bars" | "residential" | "civic" | "riverside" | "district" | "industrial" | "warehouses" | "freight" | "harbor";
+export type StyleId = "clasico" | "transicion" | "moderno" | "bajo" | "downtown" | "bars" | "residential" | "civic" | "riverside" | "district" | "industrial" | "warehouses" | "freight" | "harbor";
 /**
  * `open`: sides with an open frontage (avenue, water, plaza). `maxH`: height cap above `lot.z`.
  * `poly`: the parcel polygon in world coordinates, inside the rectangle (a wedge cut by a diagonal); the recipes
@@ -27,4 +27,4 @@ export interface Slot { pts: Vec3[]; wall: Vec3; side: Side; kind: "neon" | "sig
 export interface Wall { pts: Vec3[]; normal: Vec3; floorH: number; building: number }
 export interface Piece { solids: Solid[]; ground: Solid[]; accents: Accent[]; windows: Window[]; slots: Slot[]; walls: Wall[]; courtyard?: Rect; landmarkTop?: Vec3 }
 export type Recipe = (lot: Lot, rng: Rng, style: Style) => Piece;
-export interface RecipeDef { name: string; recipe: Recipe; family: "modern" | "courtyard" | "composite" | "curved" | "lowrise" | "landmarks" | "industrial" | "reconversion" | "harbor" | "porteno"; landmark?: boolean }
+export interface RecipeDef { name: string; recipe: Recipe; family: "modern" | "courtyard" | "composite" | "curved" | "lowrise" | "landmarks" | "industrial" | "reconversion" | "harbor" | "porteno"; landmark?: boolean; poly?: true }

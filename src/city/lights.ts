@@ -125,7 +125,7 @@ export function lights(scene: Pick<CityScene, "solids" | "placed">, rng: Rng, so
     });
     counts[b] = { candidates: n, on: nOn, warm: nWarmOn };
   }
-  for (const w of sample(windows.filter((w) => ["downtown", "residential"].includes(scene.placed[w.owner]!.placed.neighborhood)), MAX_ANIMABLE, rng)) w.animable = true;
+  for (const w of sample(windows.filter((w) => ["downtown", "residential", "clasico", "transicion", "bajo"].includes(scene.placed[w.owner]!.placed.neighborhood)), MAX_ANIMABLE, rng)) w.animable = true;
 
   // Neons of the capped neighborhoods (NEON_CAPS): open frontage facing the camera, 2.4..3.6 above the lot, in view and one per shop
   // (deduplicated after occlusion: if the front of a corner shop is hidden, its other side counts).

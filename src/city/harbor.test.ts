@@ -185,11 +185,11 @@ describe("inlet works", () => {
     }
   });
 
-  it("jungle to the point: at least 10 cones in x 306..330, none within 3 u of the water", () => {
+  it("jungle to the point: at least 9 cones in x 306..330, none within 3 u of the water", () => {
     for (const [name, make] of SCENES) {
       const s = make();
       const cones = s.solids.filter((c): c is Solid & { kind: "cone" } => c.kind === "cone" && (c.mat === "leaf" || c.mat === "leafDark") && c.at.y >= 90 && c.at.y <= 146);
-      expect(cones.filter((c) => c.at.x >= 306 && c.at.x <= 330).length, name).toBeGreaterThanOrEqual(10);
+      expect(cones.filter((c) => c.at.x >= 306 && c.at.x <= 330).length, name).toBeGreaterThanOrEqual(9); // 12 planted minus the ones the estuary discards: the site seed leaves 9 since #477 Task 4 (the named parcels draw no recipe, so the rng stream after the pieces moved); it was 10
     }
     for (const seed of SEEDS) for (const c of works(seed).solids) {
       if (c.kind !== "cone" || c.mat === "rock") continue;

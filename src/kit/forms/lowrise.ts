@@ -179,6 +179,6 @@ export function eatenRuin(lot: Lot, rng: Rng, _style: Style): Piece {
 
 export const LOWRISE: readonly RecipeDef[] = [
   { name: "shopRow", recipe: shopRow, family: "lowrise" },
-  { name: "rowHouses", recipe: rowHouses, family: "lowrise" },
+  { name: "rowHouses", recipe: rowHouses, family: "lowrise", poly: true },
   { name: "eatenRuin", recipe: eatenRuin, family: "lowrise" },
 ];

@@ -21,7 +21,7 @@ const STEMS = new Set(("barrio barrios costanera escuela casa casas fila filas a
 /** Content JSON keys (decision 2a): the TS fields that mirror `content/*.json`. */
 const CONTENT_KEYS = /\b(titulo|subtitulo|descripcion|nombre|proyectos|articulos|secciones)\b/g;
 /** The ids of the storybook exhibits (the URL hash), as whole tokens; `tren.lights` is the id of the train animator's light layer. */
-const EXHIBIT_IDS = /(?<=["'`#])(planta|tanque-agua|chimeneas|subestacion|playa-camiones|playa-vias|excavadora|gradas|darsena|grua-portico|calle-faroles|naves|punta-norte|estacion|paso-a-nivel|dique-flotante|patio-contenedores|grua-muelle|grua-torre|farol|tren(\.lights)?|central-termica|tanques|silos|alta-tension|playa-contenedores|noria|montana-rusa|torre-caida|carrusel|arcade|autitos-chocadores|muelle|tren-fantasma|casa-espejos|tobogan|tronco-acuatico|plaza|hotel|puente|malecon|manzana-derrumbada|manzana-distrito|obra|punta-sur|galpones|playa-carga|mercado-pescado|campus|selva|cartel-helipuerto(-b)?|grafiti|plataforma(-escena(-angosta)?)?|cartel-torre(-escena)?|cartel-taller(-escena)?|mastil|arena|auditorio|torres|monoblock|casas|escuela|club|plaza-barrio|costanera|barrio|faro|casa-farero|boyas|pecio|viga|carguero|remolcador|convoy|lancha)(?=["'`.\]),\s:])/g;
+const EXHIBIT_IDS = /(?<=["'`#])(planta|tanque-agua|chimeneas|subestacion|playa-camiones|playa-vias|excavadora|gradas|darsena|grua-portico|calle-faroles|naves|punta-norte|estacion|paso-a-nivel|dique-flotante|patio-contenedores|grua-muelle|grua-torre|farol|tren(\.lights)?|central-termica|tanques|silos|alta-tension|playa-contenedores|noria|montana-rusa|torre-caida|carrusel|arcade|autitos-chocadores|muelle|tren-fantasma|casa-espejos|tobogan|tronco-acuatico|plaza|hotel|puente|malecon|manzana-derrumbada|manzana-distrito|manzana-casco|manzana-transicion|obra|punta-sur|galpones|playa-carga|mercado-pescado|campus|selva|cartel-helipuerto(-b)?|grafiti|plataforma(-escena(-angosta)?)?|cartel-torre(-escena)?|cartel-taller(-escena)?|mastil|arena|auditorio|torres|monoblock|casas|escuela|club|plaza-barrio|costanera|barrio|faro|casa-farero|boyas|pecio|viga|carguero|remolcador|convoy|lancha)(?=["'`.\]),\s:])/g;
 /** Strings shown to the visitor or kept as data. */
 const ALLOW: Record<string, RegExp[]> = {
   "*": [/Nicolás Riccomini/g, /\[mapa\]/g],
@@ -73,13 +73,17 @@ const ALLOW: Record<string, RegExp[]> = {
   "src/city/axis-furniture.test.ts": [/\bcostanera\b/gi, /\bCOSTANERA_LAMP_Y\b/g, /Avenida de la Plaza/g], // axis kind and name of the plan (#473)
   "src/scenes/city-streets.test.ts": [/\bcostanera\b/g], // axis kind of the plan (#473)
   "src/city/axis-streets.ts": [/\bcostanera\b/gi], // axis kind of city-plan is layout data
-  "src/city/zoning.ts": [/\b[Bb]arrios?\b/g], // Barrio ids of city-plan are layout data
-  "src/city/zoning.test.ts": [/\b[Bb]arrios?\b/g, /\bresidencial\b/g],
   // #478: the south neighborhood zones by the barrio ids and paints the axes of the plan
   "src/scenes/tech-south.test.ts": [/Avenida del (?:Sur|Barrio)/g, /\bcostanera\b/gi, /\b[Bb]arrios?\b/g, /\bresidencial\b/g, /\bbajo\b/g, /\bbulevar\b/g, /\bescuela\b/g, /\bauditorio\b/g, /\bcasas\b/g],
   "src/scenes/tech-zoning.ts": [/\bbajo\b/g, /\bresidencial\b/g, /\b[Bb]arrios?\b/g], // barrio ids of city-plan are layout data
   "src/scenes/tech-zoning.test.ts": [/\bbajo\b/g, /\bresidencial\b/g, /\b[Bb]arrios?\b/g],
   "src/city/axis-streets.test.ts": [/Avenida del (?:Sur|Barrio)/g, /\bcostanera\b/gi, /\bbarrio\b/g],
+  "src/city/zoning.ts": [/\b[Bb]arrios?\b/g, /\bresidencial\b/g, /\bBARRIO_STEP\b/g, /\bCityBarrio\b/g], // Barrio ids of city-plan are layout data (#477: `residencial` too)
+  "src/scenes/city.test.ts": [/const MAIN = \[(?:"[0-9a-f]{8}",? ?)+\]/g], // fingerprints of the pinned plinth pieces (a hash may spell a stem)
+  "src/city/lights.test.ts": [/\b[Bb]arrios?\b/g],
+  "src/docs-glossary.test.ts": [/\b[Bb]arrios?\b/g, /Resume: ciudad/g], // barrio ids and the Resume: ciudad row of the storybook index (#477)
+  "src/kit/kit.test.ts": [/\b[Bb]arrios?\b/g], // barrio ids of the plan (#477)
+  "src/city/zoning.test.ts": [/\b[Bb]arrios?\b/g, /\bresidencial\b/g, /\bcostanera\b/g, /\bBARRIO_STEP\b/g, /\bCityBarrio\b/g],
   // proper noun: the Fábrica de Luz is the real power station the boiler hall models (decision 2c)
   "src/scenes/boiler-house.ts": [/Fábrica de Luz/g],
   "src/scenes/factory.ts": [/Fábrica de Luz/g],

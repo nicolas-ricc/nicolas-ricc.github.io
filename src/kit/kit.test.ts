@@ -385,3 +385,17 @@ describe("kit: modern family", () => {
     }
   });
 });
+
+describe("kit: barrio styles and the poly flag (#477)", () => {
+  it("the four barrio styles of #477", () => {
+    expect(STYLES.clasico).toEqual({ id: "clasico", mat: "plaster", trim: "stone", roof: "copper", tone: 0, floorH: 3, window: "windowWarm" });
+    expect(STYLES.transicion).toEqual({ id: "transicion", mat: "office", trim: "stone", roof: "officeDark", tone: 0, floorH: 3.2, window: "windowWarm" });
+    expect(STYLES.moderno).toEqual({ id: "moderno", mat: "curtain", trim: "officeDark", roof: "copper", tone: 0, floorH: 3, window: "windowCool" });
+    expect(STYLES.bajo).toEqual({ id: "bajo", mat: "plaster", trim: "terracotta", roof: "terracotta", tone: 0, floorH: 2.8, window: "windowWarm" });
+  });
+  it("poly-aware recipes carry the poly flag", () => {
+    expect(RECIPES.filter((r) => r.poly).map((r) => r.name).sort()).toEqual(
+      ["balconyBlock", "chamfer", "classic", "cornerCupola", "courtyardO", "courtyardU", "decoStepped", "mansard", "patioResidential", "podiumTower", "portalBase", "rowHouses"]);
+    expect(RECIPES.filter((r) => r.poly && r.family !== "porteno").map((r) => r.name).sort()).toEqual(["classic", "chamfer", "decoStepped", "podiumTower", "courtyardO", "courtyardU", "patioResidential", "rowHouses"].sort());
+  });
+});

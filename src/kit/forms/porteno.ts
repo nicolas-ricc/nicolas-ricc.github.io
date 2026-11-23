@@ -183,8 +183,8 @@ export function portalBase(lot: Lot, rng: Rng, style: Style): Piece {
 }
 
 export const PORTENO: readonly RecipeDef[] = [
-  { name: "cornerCupola", recipe: cornerCupola, family: "porteno" },
-  { name: "mansard", recipe: mansard, family: "porteno" },
-  { name: "balconyBlock", recipe: balconyBlock, family: "porteno" },
-  { name: "portalBase", recipe: portalBase, family: "porteno" },
+  { name: "cornerCupola", recipe: cornerCupola, family: "porteno", poly: true },
+  { name: "mansard", recipe: mansard, family: "porteno", poly: true },
+  { name: "balconyBlock", recipe: balconyBlock, family: "porteno", poly: true },
+  { name: "portalBase", recipe: portalBase, family: "porteno", poly: true },
 ];

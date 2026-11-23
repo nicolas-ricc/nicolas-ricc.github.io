@@ -97,7 +97,7 @@ the size of `#app` to `writingSite`, which picks the Writing site: the wide one
 when its sign fits, else the tall one; there is no external font, the lettering
 is drawn by the kit.
 In Resume, `city-anim.ts` adds the `city.windows` layer (up to 40 windows of
-downtown and the residential area that switch on and off keeping the percentage
+downtown, the residential area and the casco, transition and low-rise barrios that switch on and off keeping the percentage
 ±5 %) and, inside `city.neon`, the flickering neon sign of a bar on the pier or a brewery of row 92; the
 rest of the windows and neon signs go to the static accents.
 
