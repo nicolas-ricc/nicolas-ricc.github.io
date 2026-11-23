@@ -4,8 +4,7 @@ import { describe, expect, it } from "vitest";
 import { project } from "../iso/project";
 import { COVER_LAPTOP, COVER_PHONE, GROUND_ASPECT, layoutGaps, SIGN_FONT, SIGN_RULES, signMetrics, staticContrast } from "../kit/legibility";
 import { counterClearance, letterGaps, measureText, rhythm } from "../kit/lettering";
-import { TOWER } from "../scenes/city-grid";
-import { CROWN_SITE } from "../scenes/sign-crown";
+import { slabFootprint } from "../scenes/sign-hotel";
 import { BLOG_SIGNS, CYCLE_POSES, PITCH, PLATFORM_DECK, PLATFORM_SITES, poseAt, ROLL, signAt, WRITING_CAP } from "../scenes/sign-platform";
 import { RAFT } from "../scenes/raft";
 import { ISO_TONES } from "../map/palette-iso";
@@ -528,7 +527,7 @@ describe("zone signs redesign documentation (#374)", () => {
   const xExtent = (pts: { x: number; y: number; z: number }[]) => { const xs = pts.map((p) => project(p).x); return Math.max(...xs) - Math.min(...xs); };
   const rect = (x0: number, y0: number, x1: number, y1: number) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(([x, y]) => ({ x: x!, y: y!, z: 0 }));
   const HOSTS = {
-    RESUME: rect(TOWER.x, TOWER.y, TOWER.x + TOWER.w, TOWER.y + TOWER.d),
+    RESUME: slabFootprint().map((q) => ({ x: q.x, y: q.y, z: 0 })), // the hotel slab since #474 (64 × 8)
     PORTFOLIO: rect(SHIPYARD_HALLS[1]!.x0, SHIPYARD_HALLS[1]!.y0, SHIPYARD_HALLS[1]!.x1, SHIPYARD_HALLS[1]!.y1),
     WRITING: PLATFORM_DECK.map((q) => ({ x: q.x, y: q.y, z: 0 })),
   };
@@ -559,7 +558,8 @@ describe("zone signs redesign documentation (#374)", () => {
     // built from the constants, with the spec's U+2212 minus, so a moved site fails here; the platform's is a literal since #427
     // (it left PLATFORM_SITE for two sites, PLATFORM_SITES, and this spec records the site of its time)
     const at = (v: { x: number; y: number; z: number }) => `(${[v.x, v.y, v.z].join(", ").replace(/-/g, "−")})`;
-    for (const s of ["CROWN_SITE", at(CROWN_SITE), "TINKER_SITE", at(TINKER_SITE), "PLATFORM_SITE", "(392, 178)"]) expect(sites, s).toContain(s);
+    // the crown's site is a literal since #474 (the sign moved to the hotel, SIGN_SITE)
+    for (const s of ["CROWN_SITE", "(129, 227, 30)", "TINKER_SITE", at(TINKER_SITE), "PLATFORM_SITE", "(392, 178)"]) expect(sites, s).toContain(s);
   });
   it("§8 exists after §7 with its four parts and names the report, the font, the contexts and the sites", () => {
     expect(spec.search(/^## 8\. Desvíos y medición$/m)).toBeGreaterThan(spec.search(/^## 7\. /m));
@@ -809,7 +809,8 @@ describe("zone signs integration (#394)", () => {
   it("§3 carries the final site of each sign, as the constants say", () => {
     const sites = part(3);
     // the platform's row is a literal since #427: the spec is history, and the platform now has two sites (PLATFORM_SITES)
-    const rows = { CROWN_SITE: at(CROWN_SITE), TINKER_SITE: at(TINKER_SITE), PLATFORM_SITE: "(392, 178)" };
+    // the crown's row is a literal since #474: the spec is history and the sign lives on the hotel (SIGN_SITE)
+    const rows = { CROWN_SITE: "(129, 227, 30)", TINKER_SITE: at(TINKER_SITE), PLATFORM_SITE: "(392, 178)" };
     for (const [name, value] of Object.entries(rows)) expect(row(sites, `| \`${name}\` |`), name).toContain(value);
   });
   // literals since #428: COVER_FOCUS_U moved to 0.39 and Writing has two sites, so the live boxes no longer match; the spec is history

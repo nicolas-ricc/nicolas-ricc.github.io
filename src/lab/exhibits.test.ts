@@ -542,7 +542,7 @@ describe("city exhibits on the new layout (#472)", () => {
   const byId = (id: string) => regions.find((e) => e.id === id);
   it("plaza frames PLAZA_MAYOR ± 3 at h 17", () => {
     expect(byId("plaza")!.box).toEqual({ x0: PLAZA_MAYOR.x - 3, y0: PLAZA_MAYOR.y - 3, x1: PLAZA_MAYOR.x + PLAZA_MAYOR.w + 3, y1: PLAZA_MAYOR.y + PLAZA_MAYOR.d + 3 });
-    expect(byId("plaza")!.h).toBe(17); // smallest integer that passes framing: accents 16.12 (#474);
+    expect(byId("plaza")!.h).toBe(17); // smallest integer that passes framing: accents 16.12 (#474)
   });
   it("hotel (#474) frames HOTEL_LOT ± 3 at h 53, titled 'Hotel with the Resume sign'; torre is retired", () => {
     // h 53: smallest integer that passes framing; inside 52.5 (machine room z 51 + 1.5), accents 22.65
