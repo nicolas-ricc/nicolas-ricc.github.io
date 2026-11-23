@@ -80,7 +80,9 @@ const ALLOW: Record<string, RegExp[]> = {
   "src/city/axis-streets.test.ts": [/Avenida del (?:Sur|Barrio)/g, /\bcostanera\b/gi, /\bbarrio\b/g],
   "src/city/zoning.ts": [/\b[Bb]arrios?\b/g, /\bresidencial\b/g, /\bBARRIO_STEP\b/g, /\bCityBarrio\b/g], // Barrio ids of city-plan are layout data (#477: `residencial` too)
   "src/scenes/city.test.ts": [/const MAIN = \[(?:"[0-9a-f]{8}",? ?)+\]/g], // fingerprints of the pinned plinth pieces (a hash may spell a stem)
-  "src/city/lights.test.ts": [/\b[Bb]arrios?\b/g],
+  "src/city/lights.ts": [/\b[Bb]arrios?\b/g, /\bANIMABLE_BARRIOS\b/g], // barrio ids of city-plan are layout data (#480)
+  "src/city/lights.test.ts": [/\b[Bb]arrios?\b/g, /\bANIMABLE_BARRIOS\b/g],
+  "src/scenes/city-anim.test.ts": [/\b[Bb]arrios?\b/g, /\bANIMABLE_BARRIOS\b/g], // barrio ids of city-plan are layout data (#480)
   "src/docs-glossary.test.ts": [/\b[Bb]arrios?\b/g, /Resume: ciudad/g], // barrio ids and the Resume: ciudad row of the storybook index (#477)
   "src/kit/kit.test.ts": [/\b[Bb]arrios?\b/g], // barrio ids of the plan (#477)
   "src/city/zoning.test.ts": [/\b[Bb]arrios?\b/g, /\bresidencial\b/g, /\bcostanera\b/g, /\bBARRIO_STEP\b/g, /\bCityBarrio\b/g],
