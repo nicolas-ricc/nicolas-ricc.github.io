@@ -5,7 +5,7 @@ import { COVER_MARGIN, inCoverQuad } from "../map/geo";
 import { axisCrosswalks, axisLampSpots, axisLanes, boulevardPlanter, crossingPlaza } from "../city/axis-streets";
 import { lamp, place } from "../kit/props";
 import { CITY_EDGE } from "./city-grid";
-import { LAND, crossingPlazas, inCrossingPlaza, onAxis } from "./city-plan";
+import { LAND, crossingPlazas, inCrossingPlaza, onAxis, polyCentroid } from "./city-plan";
 import { urbanAt } from "./sprawl-grid";
 
 export const SOUTH_BOUNDS = { x0: -Infinity, y0: 318, x1: LAND.x1, y1: 650 };
@@ -39,17 +39,16 @@ function centerLine(ground: Solid[], from: Vec2, to: Vec2): void {
 export function southStreets(): { ground: Solid[]; solids: Solid[]; accents: Accent[] } {
   const ground: Solid[] = [], solids: Solid[] = [], accents: Accent[] = [];
   for (const plaza of crossingPlazas()) {
-    if (!(centerOf(plaza).y > SOUTH_BOUNDS.y0 + 1e-6)) continue;
+    if (!(polyCentroid(plaza).y > SOUTH_BOUNDS.y0 + 1e-6)) continue;
     const c = crossingPlaza(ground, solids, plaza);
     place(solids, accents, lamp(v3(c.x - 0.3, c.y - 0.3, 0)));
   }
   axisLanes(ground, SOUTH_BOUNDS, stop);
   axisCrosswalks(ground, solids, SOUTH_BOUNDS, stop);
   boulevardPlanter(solids, SOUTH_BOUNDS, stop);
-  for (const p of axisLampSpots(SOUTH_BOUNDS, stop)) place(solids, accents, lamp(v3(p.x, p.y, 0)));
+  for (const p of axisLampSpots(SOUTH_BOUNDS, stop)) place(solids, accents, lamp(v3(p.x - 0.3, p.y - 0.3, 0)));
   for (let k = -16; k <= 4; k++) centerLine(ground, { x: 40 + 30 * k, y: SOUTH_BOUNDS.y0 }, { x: 40 + 30 * k, y: SOUTH_BOUNDS.y1 });
   for (let k = 0; k <= 10; k++) centerLine(ground, { x: -440, y: 348 + 30 * k }, { x: SOUTH_BOUNDS.x1, y: 348 + 30 * k });
   return { ground, solids, accents };
 }
 
-const centerOf = (poly: readonly Vec2[]): Vec2 => ({ x: poly.reduce((s, p) => s + p.x, 0) / poly.length, y: poly.reduce((s, p) => s + p.y, 0) / poly.length });

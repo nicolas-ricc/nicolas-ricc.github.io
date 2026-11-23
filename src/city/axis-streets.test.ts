@@ -51,6 +51,19 @@ describe("axis-streets", () => {
     expect(acrossAvenue[1]! - acrossAvenue[0]!).toBeCloseTo(1.6, 6);
     expect(s.length).toBeGreaterThan(0);
   });
+  it("axisCrosswalks: no strip touches another axis band, at the right angle and at the oblique crossing", () => {
+    for (const [b, at] of [[B, { x: 10, y: 378 }], [{ x0: -100, y0: 330, x1: 60, y1: 420 }, { x: -75.9, y: 378 }]] as const) {
+      const g: Solid[] = [], s: Solid[] = [];
+      axisCrosswalks(g, s, b, never);
+      const z = g.filter((x): x is Solid & { kind: "strip" } => x.kind === "strip" && x.width === 0.8 && x.path.every((q) => Math.hypot(q.x - at.x, q.y - at.y) < 45));
+      expect(z.length, `strips at ${at.x}`).toBeGreaterThanOrEqual(6);
+      for (const x of z) {
+        const [p, q] = x.path as [{ x: number; y: number }, { x: number; y: number }];
+        const own = ["barrio", "bulevar", "diagonalSur"].filter((id) => [p, q, { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 }].every((m) => onBand(id, m.x, m.y)));
+        expect(own.length, JSON.stringify(x.path)).toBe(1); // each strip lies on exactly one axis: never in the junction
+      }
+    }
+  });
   it("axisLampSpots: every 12, on the north side of E–W axes and the west side of N–S axes, inside the band", () => {
     const spots = axisLampSpots(B, never);
     const barrio = spots.filter((p) => onBand("barrio", p.x, p.y)).sort((a, b) => a.x - b.x);

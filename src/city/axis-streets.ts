@@ -99,15 +99,15 @@ export function axisCrosswalks(ground: Solid[], solids: Solid[], bounds: Bounds2
     const here = as.filter((a) => pointInPoly(c.x, c.y, axisBand(a)));
     for (const a of here) for (const o of here) {
       if (a === o) continue;
-      const { ux, uy } = unit(a), nx = -uy, ny = ux;
-      for (const side of [-1, 1]) {
-        const d = o.w / 2 + 1.5, px = c.x + ux * d * side, py = c.y + uy * d * side;
-        if (!pointInPoly(px, py, axisBand(a))) continue;
-        for (const k of [-1, 0, 1]) {
-          const mx = px + ux * 1.6 * k, my = py + uy * 1.6 * k;
-          const p0 = { x: mx - nx * a.w / 2, y: my - ny * a.w / 2 }, p1 = { x: mx + nx * a.w / 2, y: my + ny * a.w / 2 };
-          if (ok(p0.x, p0.y) && ok(p1.x, p1.y)) ground.push(strip([p0, p1], 0.8, "paving"));
-        }
+      const { ux, uy } = unit(a), nx = -uy, ny = ux, ou = unit(o);
+      // the strips must clear the other band whatever the angle: the nearest strip's whole length stays beyond its edge
+      const sin = Math.abs(ux * -ou.uy + uy * ou.ux), cos = Math.abs(ux * ou.ux + uy * ou.uy);
+      const inner = (o.w / 2 + 0.5 + (a.w / 2) * cos) / sin + 0.4;
+      for (const side of [-1, 1]) for (const k of [0, 1, 2]) {
+        const d = inner + 1.6 * k, mx = c.x + ux * d * side, my = c.y + uy * d * side;
+        if (!pointInPoly(mx, my, axisBand(a))) continue;
+        const p0 = { x: mx - nx * a.w / 2, y: my - ny * a.w / 2 }, p1 = { x: mx + nx * a.w / 2, y: my + ny * a.w / 2 };
+        if ([{ x: mx, y: my }, p0, p1].every((q) => ok(q.x, q.y) && !onOtherBand(a, q.x, q.y))) ground.push(strip([p0, p1], 0.8, "paving"));
       }
     }
     const [a, b] = here;
