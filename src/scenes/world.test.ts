@@ -72,11 +72,11 @@ describe("world", () => {
     // deck: level-crossing planks (#277) and terraces of the Resume pier (#190);
     // brick: factory/station walls, the harbor buildings of the Resume (#326) and the reconversion kit of the warehouses strip (#325); sheetTeal: fitting-out sheds of the shipyard (#323) and vaults of the harbor buildings (#326);
     // concrete: walls of the Resume inlet (#326), the freight dock (#325) and the factory/shipyard buildings; hull: fishing boats of the Resume inlet (#326) and the ships of the shipyard;
-    // boxBlue/boxGreen/boxRust: containers of the freight lot recipes and of the freight yard (#325; which box colours appear depends on the draw) (stackContainers, shared with the shipyard's container yard); whitewash: reconversion kit (#325), also used by the factory;
+    // boxBlue/boxGreen/boxRust: containers of the freight lot recipes and of the freight yard (#325; which box colours appear depends on the draw) (stackContainers, shared with the shipyard's container yard; since #472 the city draws changed and with seed 7 boxGrey and boxOrange appear too: same container palette, same rule); whitewash: reconversion kit (#325), also used by the factory;
     // sheetGreen left the list with the budget cut of #328: the service strip keeps one storeroom, and with seed 7 it is not green.
     // glass: the panel of the Resume crown on the tower (#391); the city's other glass is facade faces, not the mat of a solid.
     // officeDark: panels of the tinker sign on the south hall (#392) and offices of the city.
-    const sharedWithCity = ["asphalt", "boxBlue", "boxGreen", "boxRust", "brick", "concrete", "deck", "glass", "hull", "office", "officeDark", "paving", "rust", "sheetTeal", "steel", "stone", "whitewash"];
+    const sharedWithCity = ["asphalt", "boxBlue", "boxGreen", "boxGrey", "boxOrange", "boxRust", "brick", "concrete", "deck", "glass", "hull", "office", "officeDark", "paving", "rust", "sheetTeal", "steel", "stone", "whitewash"];
     expect([...portfolio].filter((m) => cv.has(m)).sort()).toEqual([...sharedWithCity].sort());
     const sharedWithBlog = ["steel", "rust", "hull", "rock", "glass", "whitewash", "deck", "boxGrey", "officeDark"]; // boxGrey, officeDark: hut and sign panel of the Writing platform in the sea (#390); glass: the lighthouse lantern (spec §7); whitewash: porcelain and finials of the factory (#207); deck: level-crossing planks (#277), ship decks and terraces of the Resume pier (#190)
     for (const other of [portfolio, cv]) for (const m of blog) if (other.has(m)) expect(sharedWithBlog).toContain(m);

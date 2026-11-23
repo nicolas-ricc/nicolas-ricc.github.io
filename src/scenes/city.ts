@@ -8,13 +8,14 @@ import { STYLES } from "../kit/styles";
 import type { Piece } from "../kit/types";
 import { prism, PLINTH_H } from "./city-pieces";
 import { blocks } from "./city-grid";
+import { CITY_BOUNDS, parcels, type Parcel } from "./city-plan";
 import { lights, solidBoxes, visibleLights, WINDOW_ALPHA, type CityLights, type FixedLight } from "../city/lights";
 import { streets } from "../city/streets";
 import { freightYard, railLands } from "../city/rail-lands";
 import { harbor } from "../city/harbor";
 import { bridge, collapsed, cars, greenery, promenade, plazaAndTower, westQuay, type TowerLights } from "../city/fixed";
 import { CROWN_SITE, towerCrown } from "./sign-crown";
-import { FOOTBRIDGE_LOT, WATER_TOWER_BLOCK, assign, isBare, waterTowerLot, type Placed } from "../city/zoning";
+import { FOOTBRIDGE_LOT, assign, isBare, isHotelLot, tooSmall, type Placed } from "../city/zoning";
 
 /**
  * Resume: orchestrator of the city. The zoning (src/city/zoning.ts) assigns
@@ -41,24 +42,28 @@ export interface CityScene {
   lights: CityLights;
 }
 
+/** Plinth of a parcel: its polygon, raised PLINTH_H, in paving. */
+const parcelPlinth = (pc: Parcel): Solid => ({ kind: "poly", footprint: pc.poly, z: 0, h: PLINTH_H, mat: "paving" });
+
+const emptyPiece = (): Piece => ({ solids: [], ground: [], accents: [], windows: [], slots: [], walls: [] });
+
 export function city(rng: Rng, districtRng: Rng, lightsRng: Rng): CityScene {
   const fixed: FixedLight[] = [], ground: Solid[] = [], solids: Solid[] = [], accents: Accent[] = [], signs: Accent[] = [], placed: PlacedPiece[] = [];
   const add = (piece: Piece): void => { solids.push(...piece.solids); ground.push(...piece.ground); accents.push(...piece.accents); };
   for (const p of assign(rng, districtRng)) {
     const b = p.block, r = p.neighborhood === "district" ? districtRng : rng;
-    const { piece, lot, plinth } = seat(recipe(p.recipe), p.lot, r, { ...STYLES[p.neighborhood], tone: p.tone });
-    if (plinth) solids.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
+    const empty = p.parcel !== undefined && tooSmall(p.lot); // a sliver parcel: plinth, no building
+    const { piece, lot, plinth } = empty ? { piece: emptyPiece(), lot: p.lot, plinth: true } : seat(recipe(p.recipe), p.lot, r, { ...STYLES[p.neighborhood], tone: p.tone });
+    if (plinth) solids.push(p.parcel ? parcelPlinth(p.parcel) : prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
     placed.push({ placed: { ...p, lot }, piece, solidOffset: solids.length });
     add(piece);
     // the sign consumes the rng after the recipe, so the recipe draws do not depend on how many slots there are
     if (p.neighborhood === "district") for (const s of piece.slots) if (s.kind === "sign") signs.push({ kind: "poly", pts: s.pts, color: districtRng.chance(0.5) ? "cyan" : "magenta", alpha: 1 });
   }
   for (const b of blocks()) if (isBare(b)) solids.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
+  for (const pc of parcels(CITY_BOUNDS)) if (isHotelLot(pc)) solids.push(parcelPlinth(pc)); // the hotel lot: plinth only
   const tower = plazaAndTower(solids, ground, fixed, rng);
   towerCrown(solids, accents, CROWN_SITE);
-  const host = placed.find((q) => q.placed.block.x === WATER_TOWER_BLOCK.x && q.placed.block.y === WATER_TOWER_BLOCK.y);
-  if (!host?.piece.courtyard) throw new Error("the water tower block has no courtyard");
-  add(recipe("waterTower")(waterTowerLot(host.piece.courtyard, host.placed.lot.z), rng, STYLES.residential));
   add(recipe("footbridge")(FOOTBRIDGE_LOT, rng, STYLES.residential));
   streets(ground, solids, fixed);
   railLands(ground, solids);

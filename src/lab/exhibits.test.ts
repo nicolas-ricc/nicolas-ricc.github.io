@@ -29,7 +29,7 @@ const CATALOG: Record<GroupId, string[]> = {
   shipyard: ["gradas", "darsena", "grua-portico", "calle-faroles", "naves", "punta-norte", "estacion", "paso-a-nivel", "dique-flotante", "patio-contenedores"],
   hinterland: ["central-termica", "tanques", "silos", "alta-tension", "playa-contenedores"],
   fair: ["noria", "montana-rusa", "torre-caida", "carrusel", "arcade", "autitos-chocadores", "muelle", "tren-fantasma", "casa-espejos", "tobogan", "tronco-acuatico"],
-  city: ["plaza", "torre", "puente", "malecon", "manzana-derrumbada", "manzana-distrito", "obra", "punta-sur", "galpones", "playa-carga", "mercado-pescado"],
+  city: ["plaza", "torre", "puente", "malecon", "manzana-derrumbada", "manzana-distrito", "punta-sur", "galpones", "playa-carga", "mercado-pescado"],
   tech: ["mastil", "arena", "auditorio", "torres", "monoblock", "casas", "escuela", "club", "plaza-barrio", "costanera", "barrio"],
   sea: ["faro", "casa-farero", "boyas", "pecio"],
 };
@@ -531,5 +531,22 @@ describe("clean crops (#399)", () => {
     let n = 0;
     for (const m of meshes) if (m.kind === "ground") for (const t of m.tris) for (const p of t.pts) { n++; expect(inside(p, b), `${id} ${m.mat} ${JSON.stringify(p)}`).toBe(true); }
     expect(n, id).toBeGreaterThan(0);
+  });
+});
+
+import { CITY_BOUNDS as PLAN_CITY_BOUNDS, PLAZA_MAYOR, parcels as planParcels } from "../scenes/city-plan";
+
+describe("city exhibits on the new layout (#472)", () => {
+  const byId = (id: string) => regions.find((e) => e.id === id);
+  it("plaza frames PLAZA_MAYOR ± 3 at h 51", () => {
+    expect(byId("plaza")!.box).toEqual({ x0: PLAZA_MAYOR.x - 3, y0: PLAZA_MAYOR.y - 3, x1: PLAZA_MAYOR.x + PLAZA_MAYOR.w + 3, y1: PLAZA_MAYOR.y + PLAZA_MAYOR.d + 3 });
+    expect(byId("plaza")!.h).toBe(51);
+  });
+  it("manzana-distrito frames the largest parcel of cell (−17, 171), rect ± 3", () => {
+    const p = planParcels(PLAN_CITY_BOUNDS).filter((q) => q.cell.col === -17 && q.cell.row === 171).sort((a, b) => b.area - a.area)[0]!;
+    expect(byId("manzana-distrito")!.box).toEqual({ x0: p.rect.x - 3, y0: p.rect.y - 3, x1: p.rect.x + p.rect.w + 3, y1: p.rect.y + p.rect.d + 3 });
+  });
+  it("obra is retired", () => {
+    expect(EXHIBITS.some((e) => e.id === "obra")).toBe(false);
   });
 });

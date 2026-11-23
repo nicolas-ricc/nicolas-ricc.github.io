@@ -5,8 +5,14 @@ import { WINDOW_ALPHA } from "../city/lights";
 import { city, type CityScene } from "./city";
 import { type CityAnim, BLINK_GAP_MS, FLICKER_ALPHA, FLICKER_GAP_MS, PROMENADE_STEP_MS, NEON_STEP_MS, PAPER_RANGE, PAPER_SIDE, PAPER_SPEED, SIGN_GAP_MS, WINDOW_GAP_MS, createCityAnim } from "./city-anim";
 
+/** Sign accents injected by hand: since #472 the city makes no district signs (the modern belt lies west of the city edge), but city-anim still animates `neon.signs`. */
+const SIGNS: Accent[] = [["cyan", 0], ["magenta", 10], ["cyan", 20], ["magenta", 30], ["cyan", 40], ["magenta", 50]].map(([color, x]) => ({
+  kind: "poly", color: color as string, alpha: 1,
+  pts: [{ x: x as number, y: 0, z: 2 }, { x: (x as number) + 4, y: 0, z: 2 }, { x: (x as number) + 4, y: 0, z: 3.6 }, { x: x as number, y: 0, z: 3.6 }],
+} as Accent));
+const withSigns = (scene: CityScene): CityScene => ({ ...scene, neon: { ...scene.neon, signs: SIGNS } });
 const setup = (reducedMotion = false) => {
-  const scene = city(createRng(7), createRng(8), createRng(9));
+  const scene = withSigns(city(createRng(7), createRng(8), createRng(9)));
   return { scene, tower: scene.tower, anim: createCityAnim(scene, createRng(3), { reducedMotion }) };
 };
 /** Removes the street neon accents from a `neon()` layer (it copies them with another alpha when flickering, but keeps `pts`). */
@@ -16,7 +22,7 @@ const withoutStreet = (scene: CityScene, a: Accent[]): Accent[] => {
 };
 let chunkedScene: CityScene | undefined; // city() is expensive: a single scene for all the chunkings
 const chunked = (dts: number[], seed = 3) => {
-  const scene = (chunkedScene ??= city(createRng(7), createRng(8), createRng(9)));
+  const scene = (chunkedScene ??= withSigns(city(createRng(7), createRng(8), createRng(9))));
   const anim = createCityAnim(scene, createRng(seed), { reducedMotion: false });
   for (const dt of dts) anim.tick(dt);
   return anim;

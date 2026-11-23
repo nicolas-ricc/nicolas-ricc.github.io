@@ -6,8 +6,9 @@ import { bounds, type Bounds, type Solid } from "../iso/solids";
 import { awning, dockCrane } from "../kit/props";
 import { ESTUARY_Y0, QUAY_X } from "../map/geo";
 import { createRng } from "../map/seed";
-import { AVENUE, BLOCK_W, BRIDGE, COLLAPSED, EAST_RING, PROMENADE, PLAZA, ROWS, SIDEWALK, STREET, TOWER, TOWER_H, WEST_QUAY, blocks, estuaryEast } from "../scenes/city-grid";
+import { AVENUE, BRIDGE, COLLAPSED, EAST_RING, PROMENADE, ROWS, STREET, TOWER, TOWER_H, WEST_QUAY, estuaryEast } from "../scenes/city-grid";
 import { plazaTone, tiles } from "../scenes/city-pieces";
+import { BRIDGE_LANDING, PLAZA_CENTER, inParcel, PLAZA_MAYOR, TOWER_ISLAND } from "../scenes/city-plan";
 import type { FixedLight } from "./lights";
 import { bridge, collapsed, greenery, promenade, plazaAndTower, towerWindows, westQuay } from "./fixed";
 
@@ -234,38 +235,39 @@ describe("westQuay", () => {
     }
   });
 
-  it("terraces: at least six tables and twelve chairs on the quay street, before the avenue, without entering the wall or a block", () => {
+  it("terraces: at least three tables and six chairs on the quay street (rows 177, 183, 189), before the avenue, without entering the wall", () => {
     const { solids } = built();
     const tables = prisms(solids).filter((s) => s.mat === "paving" && s.w === 1 && s.d === 1 && s.h === 0.7);
     const chairs = prisms(solids).filter((s) => s.mat === "paving" && s.w === 0.5 && s.d === 0.5 && s.h === 0.5);
-    expect(tables.length).toBeGreaterThanOrEqual(6);
-    expect(chairs.length).toBeGreaterThanOrEqual(12);
-    const terrace = solids.filter((s) => bounds(s).max.x <= x0 + EPS && s.mat !== "awning"); // the awnings hang from the lot wall, over the block's sidewalk
+    expect(tables.length).toBeGreaterThanOrEqual(3);
+    expect(chairs.length).toBeGreaterThanOrEqual(6);
+    const terrace = solids.filter((s) => bounds(s).max.x <= x0 + EPS && s.mat === "paving" && s.kind === "prism"); // tables and chairs (not the garland posts nor the awnings)
     expect(terrace.length).toBeGreaterThanOrEqual(tables.length + chairs.length);
     for (const s of terrace) {
       const b = bounds(s);
-      expect(b.min.x).toBeGreaterThanOrEqual(186 - EPS);
-      expect(b.max.y).toBeLessThan(AVENUE.y0);
-      expect(blocks().some((k) => b.min.x < k.x + k.w - EPS && b.max.x > k.x + EPS && b.min.y < k.y + k.d - EPS && b.max.y > k.y + EPS)).toBe(false);
+      expect(b.min.x).toBeGreaterThanOrEqual(185 - EPS);
+      for (const [x, y] of [[b.min.x, b.min.y], [b.max.x, b.min.y], [b.max.x, b.max.y], [b.min.x, b.max.y]] as const) expect(inParcel(x, y), `terrace corner ${x},${y} on a parcel`).toBe(false);
+      expect(b.min.y).toBeGreaterThanOrEqual(174);   // facing the bars parcel of column 163 (y 174..195)
+      expect(b.max.y).toBeLessThan(195);
     }
   });
 
-  it("awnings against the lot wall (x 184.5, the 1.5 sidewalk inside the block), facing the street, and a garland between posts", () => {
+  it("awnings against the parcel wall (x 182.5), facing the street, and a garland between posts", () => {
     const { solids, accents } = built();
     const awnings = solids.filter((s) => s.kind === "ramp" && s.mat === "awning");
-    expect(awnings.length).toBeGreaterThanOrEqual(6);
-    for (const a of awnings) expect(a.kind === "ramp" && a.dir === "e" && a.at.x === 162 + BLOCK_W - SIDEWALK).toBe(true);
+    expect(awnings.length).toBeGreaterThanOrEqual(3);
+    for (const a of awnings) expect(a.kind === "ramp" && a.dir === "e" && a.at.x === 182.5).toBe(true);
     const posts = prisms(solids).filter((s) => s.mat === "steel" && s.w === 0.3 && s.d === 0.3 && s.h === 3);
     expect(posts.length).toBeGreaterThanOrEqual(2);
-    const lights = dots(accents).filter((a) => a.color === "amber" && a.r === 0.25 && a.at.x >= 186 && a.at.x <= x0 && a.at.y < AVENUE.y0);
+    const lights = dots(accents).filter((a) => a.color === "amber" && a.r === 0.25 && a.at.x >= 185 && a.at.x <= x0 && a.at.y < AVENUE.y0);
     expect(lights.length).toBeGreaterThanOrEqual(6);
   });
 
   it("a table facing a shop window that already has an awning doesn't add another on top", () => {
-    const solids: Solid[] = [...awning(v3(184.5, 166, 2.3), 5, "e")], lights: FixedLight[] = [];
+    const solids: Solid[] = [...awning(v3(182.5, 175, 2.3), 5, "e")], lights: FixedLight[] = [];
     westQuay(solids, lights);
     const awnings = solids.filter((s) => s.kind === "ramp" && s.mat === "awning");
-    expect(awnings).toHaveLength(6); // the shop window's plus five of the six tables
+    expect(awnings).toHaveLength(3); // the shop window's covers the first table (y 176..179): the other two keep their own
     expect(overlapping(awnings)).toEqual([]);
   });
 
@@ -282,26 +284,52 @@ describe("plazaAndTower", () => {
   const fountainOf = (solids: Solid[]) => solids.filter((s): s is Solid & { kind: "cylinder" } => s.kind === "cylinder" && s.mat === "marble" && s.r === 3);
   const kiosksOf = (solids: Solid[]) => prisms(solids).filter((s) => s.mat === "officeDark" && s.w === 2 && s.d === 2 && s.h === 2.4);
 
-  it("a marble fountain r 3 centered at (150, 227) with its puddle alpha 0.35", () => {
+  it("a marble fountain r 3 centered at PLAZA_CENTER with its puddle alpha 0.35", () => {
     const { solids, accents } = built();
     const f = fountainOf(solids);
     expect(f).toHaveLength(1);
-    expect(f[0]!.at.x).toBe(150);
-    expect(f[0]!.at.y).toBe(227);
+    expect(f[0]!.at.x).toBe(PLAZA_CENTER.x);
+    expect(f[0]!.at.y).toBe(PLAZA_CENTER.y);
     expect(accents.filter((a) => a.kind === "poly" && a.color === "amberBleed" && a.alpha === 0.35)).toHaveLength(3);
   });
 
-  it("two kiosks inside the plaza, at the north corners", () => {
-    const { solids } = built();
-    const ks = kiosksOf(solids);
+  it("two kiosks at the north corners, just south of the landing, inside the plaza and clear of the island and the landing", () => {
+    const ks = kiosksOf(built().solids);
     expect(ks).toHaveLength(2);
+    const P = PLAZA_MAYOR, ly1 = BRIDGE_LANDING.y + BRIDGE_LANDING.d;
     for (const k of ks) {
       const b = bounds(k);
-      expect(b.min.x >= PLAZA.x && b.max.x <= PLAZA.x + PLAZA.w && b.min.y >= PLAZA.y && b.max.y <= PLAZA.y + PLAZA.d).toBe(true);
-      expect(b.min.y).toBeLessThan(PLAZA.y + 3);
+      expect(b.min.x >= P.x && b.max.x <= P.x + P.w && b.max.y <= P.y + P.d).toBe(true);
+      expect(b.min.y).toBeGreaterThanOrEqual(ly1);
+      expect(b.min.y).toBeLessThan(ly1 + 3);
+      expect(b.min.x < TOWER_ISLAND.x + TOWER_ISLAND.w - EPS && b.max.x > TOWER_ISLAND.x + EPS && b.min.y < TOWER_ISLAND.y + TOWER_ISLAND.d - EPS && b.max.y > TOWER_ISLAND.y + EPS).toBe(false);
     }
-    expect(Math.min(...ks.map((k) => k.at.x))).toBeLessThan(PLAZA.x + 6);
-    expect(Math.max(...ks.map((k) => k.at.x))).toBeGreaterThan(PLAZA.x + PLAZA.w - 6);
+    expect(Math.min(...ks.map((k) => k.at.x))).toBeLessThan(P.x + 12);
+    expect(Math.max(...ks.map((k) => k.at.x))).toBeGreaterThan(P.x + P.w - 6);
+  });
+
+  it("no furniture of the plaza enters TOWER_ISLAND or BRIDGE_LANDING", () => {
+    const { solids } = built(), tower = solids.find((s) => s.kind === "prism" && s.h === TOWER_H)!;
+    for (const s of solids) {
+      if (s === tower || s.mat === "leaf" || s.mat === "office" || (s.mat === "officeDark" && bounds(s).min.z >= TOWER_H)) continue; // the tower, its vines, cornice and machine room
+      const b = bounds(s);
+      for (const r of [TOWER_ISLAND, BRIDGE_LANDING]) expect(b.min.x < r.x + r.w - EPS && b.max.x > r.x + EPS && b.min.y < r.y + r.d - EPS && b.max.y > r.y + EPS, `${s.kind} ${s.mat}`).toBe(false);
+    }
+  });
+
+  it("the tiles partition the plaza: with the island and the landing they add up to 54 × 85, pairwise without overlap", () => {
+    const { ground } = built();
+    const plaza = ground.filter((g) => g.kind === "ground" && g.mat === "plaza"), landing = ground.filter((g) => g.kind === "ground" && g.mat === "paving");
+    expect(plaza).toHaveLength(3);
+    expect(landing).toHaveLength(1);
+    const area = (g: Solid) => g.kind === "ground" ? g.tris.reduce((a, t) => a + Math.abs((t.pts[1].x - t.pts[0].x) * (t.pts[2].y - t.pts[0].y) - (t.pts[2].x - t.pts[0].x) * (t.pts[1].y - t.pts[0].y)) / 2, 0) : 0;
+    const I = TOWER_ISLAND, P = PLAZA_MAYOR, inside = (I.x + I.w - P.x) * I.d;
+    expect([...plaza, ...landing].reduce((a, g) => a + area(g), 0) + inside + P.w).toBeCloseTo(P.w * P.d, 6); // + the 1 u strip north of the landing (all curb)
+    const boxes = [...plaza, ...landing].map((g) => g.kind === "ground" ? { x0: Math.min(...g.tris.flatMap((t) => t.pts.map((p) => p.x))), x1: Math.max(...g.tris.flatMap((t) => t.pts.map((p) => p.x))), y0: Math.min(...g.tris.flatMap((t) => t.pts.map((p) => p.y))), y1: Math.max(...g.tris.flatMap((t) => t.pts.map((p) => p.y))) } : null).filter((b) => b !== null);
+    for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+      const a = boxes[i]!, b = boxes[j]!;
+      expect(a.x0 < b.x1 - EPS && a.x1 > b.x0 + EPS && a.y0 < b.y1 - EPS && a.y1 > b.y0 + EPS).toBe(false);
+    }
   });
 
   it("the tower: 8 lit windows, the paper window on the east wall and no antenna", () => {
@@ -347,7 +375,10 @@ describe("plazaAndTower", () => {
   it("the tower's two puddles keep alpha 0.25 and the rng is consumed as today", () => {
     expect(built().accents.filter((a) => a.kind === "poly" && a.color === "amberBleed" && a.alpha === 0.25)).toHaveLength(6);
     const a = createRng(7), b = createRng(7);
-    plazaAndTower([], [], [], a); tiles(b, PLAZA, 0.05, "plaza", plazaTone);
+    plazaAndTower([], [], [], a);
+    const P = PLAZA_MAYOR, I = TOWER_ISLAND, L = BRIDGE_LANDING, ly1 = L.y + L.d;
+    for (const r of [{ x: P.x, y: ly1, w: P.w, d: I.y - ly1 }, { x: I.x + I.w, y: I.y, w: P.x + P.w - I.x - I.w, d: I.d }, { x: P.x, y: I.y + I.d, w: P.w, d: P.y + P.d - I.y - I.d }]) tiles(b, r, 0.05, "plaza", plazaTone);
+    tiles(b, L, 0.05, "paving", plazaTone);
     expect(a.next()).toBe(b.next());
   });
 });

@@ -3,14 +3,16 @@ import { createRng } from "../map/seed";
 import { RECIPES } from "../kit/index";
 import { LANDMARK_MAX_H } from "../kit/piece";
 import { PLINTH_H } from "../scenes/city-pieces";
-import { BLOCK_D, BLOCK_W, ROWS, SIDEWALK, SITE, STREET, TOWER, WEST_QUAY, blocks, estuaryEast, type Block } from "../scenes/city-grid";
+import { ROWS, SIDEWALK, STREET, TOWER, WEST_QUAY, blocks, estuaryEast, type Block } from "../scenes/city-grid";
 import { zoneRng } from "../scenes/world";
 import { SEED } from "../map/seed";
-import { CATALOGUE, FIXED, FRONT_CAP_H, FOOTBRIDGE_LOT, MAX_BUILDING_H, MAX_DISTRICT_H, WATER_TOWER_BLOCK, assign, isBare, neighborhoodOf, maxDistrictHeight, maxHeightFor, openSides, waterTowerLot, type Neighborhood, type Placed } from "./zoning";
+import { CATALOGUE, FIXED, FRONT_CAP_H, FOOTBRIDGE_LOT, MAX_BUILDING_H, MAX_DISTRICT_H, assign, isBare, neighborhoodOf, maxDistrictHeight, maxHeightFor, neighborhoodOfParcel, parcelOpenSides, tooSmall, openSides, waterTowerLot, type Neighborhood, type Placed } from "./zoning";
 
 const key = (b: { x: number; y: number }): string => `${b.x},${b.y}`;
-const blockAt = (x: number, y: number): Block => blocks().find((b) => b.x === x && b.y === y && b.kind !== "plaza")!;
-const cells = (neighborhood: Neighborhood): string[] => blocks().filter((b) => b.kind !== "plaza" && neighborhoodOf(b) === neighborhood).map(key).sort();
+/** A synthetic west block, to pin the functions that kept the tower rule (the west bank has no such blocks since #472). */
+const westBlock = (x: number, y: number): Block => ({ x, y, w: 24, d: 18, bank: "west", row: 0, kind: "block" });
+const blockAt = (x: number, y: number): Block => blocks().find((b) => b.x === x && b.y === y)!;
+const cells = (neighborhood: Neighborhood): string[] => blocks().filter((b) => neighborhoodOf(b) === neighborhood).map(key).sort();
 const sorted = (xs: [number, number][]): string[] => xs.map(([x, y]) => key({ x, y })).sort();
 const worldAssign = (): Placed[] => assign(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1));
 const sceneAssign = (): Placed[] => assign(createRng(7), createRng(8));
@@ -24,40 +26,27 @@ describe("zoning", () => {
     expect(union.map((b) => `${key(b)},${b.kind}`).sort()).toEqual(all.map((b) => `${key(b)},${b.kind}`).sort());
   });
 
-  it("bars are exactly the six blocks of the quay", () => {
-    expect(cells("bars")).toEqual(sorted([[102, 164], [132, 164], [162, 164], [102, 188], [132, 188], [162, 188]]));
-  });
-
-  it("downtown, residential, civic, riverside and district according to the table", () => {
-    expect(cells("downtown")).toEqual(sorted([[72, 164], [72, 188], [42, 218], [72, 242], [102, 242], [132, 242], [162, 242]]));
-    expect(cells("residential")).toEqual(sorted([[12, 164], [12, 188], [12, 218], [12, 242], [42, 164], [42, 188]]));
-    expect(cells("civic")).toEqual(sorted([[72, 218], [162, 218], [42, 242]]));
-    expect(neighborhoodOf(blocks().find((b) => b.kind === "plaza")!)).toBe("civic");
+  it("the blocks of the grid hold no west-bank neighborhood: downtown, bars, civic, district and residential belong to the parcels now", () => {
+    for (const z of ["downtown", "bars", "residential", "civic", "district"] as const) expect(cells(z), z).toEqual([]);
     expect(cells("riverside")).toEqual(blocks().filter((b) => b.bank === "east" && b.row !== -1).map(key).sort());
     expect(cells("harbor")).toEqual(["280,116", "280,140"]); // the two east blocks of the strip, by the inlet (#326)
     expect(neighborhoodOf(blocks().find((b) => b.kind === "collapsed")!)).toBe("riverside");
-    expect(cells("district")).toEqual(blocks().filter((b) => b.kind === "district" || b.kind === "site").map(key).sort());
-    expect(cells("district")).toHaveLength(24);
   });
 
   it("the fixed ones are where the table says and exist in the kit", () => {
     const at = (recipe: string) => FIXED.filter((f) => f.recipe === recipe).map(key);
-    expect(at("station")).toEqual(["-18,188"]);
     expect(at("market")).toEqual(["280,188"]);
-    expect(at("theatre")).toEqual(["72,218"]);
-    expect(at("civicPalace")).toEqual(["162,218"]);
-    expect(at("library")).toEqual(["42,242"]);
-    expect(at("constructionSite")).toEqual([key(SITE)]);
     expect(at("fishMarket")).toEqual(["280,116"]);
     expect(at("foodHall")).toEqual(["280,140"]);
-    expect(FIXED.find((f) => key(f) === key(WATER_TOWER_BLOCK))?.recipe).toBe("patioResidential");
+    expect(at("coveredMarket")).toEqual(["72,92"]);
+    expect(FIXED).toHaveLength(4);
     for (const f of FIXED) expect(RECIPES.some((r) => r.name === f.recipe)).toBe(true);
   });
 
-  it("assign puts each fixed one on its block and every civic block that isn't the plaza is fixed", () => {
+  it("assign puts each fixed one on its block and every civic block is fixed", () => {
     const placed = sceneAssign();
     for (const f of FIXED) expect(placed.find((p) => key(p.block) === key(f))?.recipe).toBe(f.recipe);
-    for (const b of blocks()) if (b.kind !== "plaza" && neighborhoodOf(b) === "civic") expect(FIXED.some((f) => key(f) === key(b))).toBe(true);
+    expect(blocks().filter((b) => neighborhoodOf(b) === "civic")).toEqual([]); // no civic block is left since #472; the civic pieces return in #477
   });
 
   it("catalogues: weights from the issue, registered recipes and lights policy", () => {
@@ -86,41 +75,33 @@ describe("zoning", () => {
   });
 
   it("maxHeightFor caps the row facing the tower and the plaza fountain at 10", () => {
-    expect(maxHeightFor(blockAt(102, 242))).toBe(10);
-    expect(maxHeightFor(blockAt(132, 242))).toBe(10);
-    expect(maxHeightFor(blockAt(132, 242), LANDMARK_MAX_H)).toBe(10);
-    expect(maxHeightFor(blockAt(72, 242))).toBe(MAX_BUILDING_H);
-    expect(maxHeightFor(blockAt(162, 242))).toBe(10); // in front of the fountain (150, 227): anything taller hides it and its puddle floats above the roof
-    expect(maxHeightFor(blockAt(72, 242), LANDMARK_MAX_H)).toBe(LANDMARK_MAX_H);
+    expect(maxHeightFor(westBlock(102, 242))).toBe(10);
+    expect(maxHeightFor(westBlock(132, 242))).toBe(10);
+    expect(maxHeightFor(westBlock(132, 242), LANDMARK_MAX_H)).toBe(10);
+    expect(maxHeightFor(westBlock(72, 242))).toBe(MAX_BUILDING_H);
+    expect(maxHeightFor(westBlock(162, 242))).toBe(10); // in front of the fountain (150, 227): anything taller hides it and its puddle floats above the roof
+    expect(maxHeightFor(westBlock(72, 242), LANDMARK_MAX_H)).toBe(LANDMARK_MAX_H);
+    expect(maxHeightFor(westBlock(102, 242))).toBe(FRONT_CAP_H);
+    expect(maxHeightFor(blockAt(42, 92))).toBe(MAX_BUILDING_H);
   });
 
   it("maxDistrictHeight keeps the lit-floor guard", () => {
     expect(maxDistrictHeight({ x: TOWER.x + 20, y: TOWER.y + 20, w: 24, d: 18 })).toBe(10); // on screen it overlaps the lit floor and stands in front
-    expect(maxDistrictHeight(SITE)).toBe(MAX_DISTRICT_H);
-    expect(blocks().filter((b) => maxDistrictHeight(b) < MAX_DISTRICT_H).map(key)).toEqual(["132,242"]); // already capped at 10 by maxHeightFor
+    expect(maxDistrictHeight(westBlock(72, 164))).toBe(MAX_DISTRICT_H);
+    expect(blocks().filter((b) => maxDistrictHeight(b) < MAX_DISTRICT_H).map(key)).toEqual([]); // no block of the grid stands in front of the lit floor
   });
 
-  it("open: avenue, quay, bank and plaza", () => {
-    expect(openSides(blockAt(102, 188))).toEqual(["s"]);
-    expect(openSides(blockAt(162, 164))).toEqual(["e"]);
-    expect(openSides(blockAt(162, 188))).toEqual(["s", "e"]);
-    expect(openSides(blockAt(102, 242))).toEqual(["n"]);
-    expect(openSides(blockAt(72, 218))).toContain("e");
-    expect(openSides(blockAt(72, 218))).toContain("n");
-    expect(openSides(blockAt(162, 218))).toContain("w");
+  it("open: east bank", () => {
     expect(openSides(blockAt(280, 164))).toEqual(["w"]);
     expect(openSides(blockAt(310, 164))).toEqual([]);
-    expect(openSides(blockAt(12, 164))).toEqual([]);
   });
 
-  it("new strip (#320): row 92 opens south, (280, 116) north and west; the plaza-front cap goes by y", () => {
+  it("new strip (#320): row 92 opens south, (280, 116) north and west", () => {
     for (const b of blocks().filter((x) => x.y === ROWS[0])) expect(openSides(b), key(b)).toContain("s");
     expect(openSides(blockAt(12, 92))).toEqual(["s"]);
     expect(openSides(blockAt(280, 116))).toEqual(expect.arrayContaining(["n", "w"]));
     expect(openSides(blockAt(280, 116))).toHaveLength(2);
     expect(openSides(blockAt(280, 140))).toEqual(["w"]);
-    expect(maxHeightFor(blockAt(102, 242))).toBe(FRONT_CAP_H);
-    expect(maxHeightFor(blockAt(42, 92))).toBe(MAX_BUILDING_H);
   });
 
   describe("warehouses, freight and harbor (#325)", () => {
@@ -163,11 +144,12 @@ describe("zoning", () => {
     });
   });
 
-  it("assign is deterministic, skips plaza and collapse, and builds street-level lots with sidewalk and cap", () => {
+  it("assign is deterministic, skips the collapse, and builds street-level lots with sidewalk and cap", () => {
     expect(JSON.stringify(sceneAssign())).toBe(JSON.stringify(sceneAssign()));
-    const placed = sceneAssign();
-    expect(placed.map((p) => `${key(p.block)},${p.block.kind}`)).toEqual(blocks().filter((b) => b.kind !== "plaza" && b.kind !== "collapsed" && !isBare(b)).map((b) => `${key(b)},${b.kind}`));
-    for (const p of placed) {
+    const placed = sceneAssign(), onBlocks = placed.filter((p) => !p.parcel);
+    expect(onBlocks.map((p) => `${key(p.block)},${p.block.kind}`)).toEqual(blocks().filter((b) => b.kind !== "collapsed" && !isBare(b)).map((b) => `${key(b)},${b.kind}`));
+    expect(placed.slice(0, onBlocks.length)).toEqual(onBlocks); // blocks first, parcels after
+    for (const p of onBlocks) {
       const b = p.block, fixed = FIXED.some((f) => key(f) === key(b));
       expect(p.neighborhood).toBe(neighborhoodOf(b));
       if (!fixed) expect(CATALOGUE[p.neighborhood].recipes.map((r) => r.name)).toContain(p.recipe);
@@ -177,10 +159,17 @@ describe("zoning", () => {
       const top = fixed || p.neighborhood === "district" ? LANDMARK_MAX_H : MAX_BUILDING_H;
       expect(p.lot.maxH).toBe(Math.min(maxHeightFor(b, top), maxDistrictHeight(b)));
     }
-    expect(placed.find((p) => key(p.block) === "102,242")!.lot.maxH).toBe(10);
-    expect(placed.find((p) => key(p.block) === "72,242")!.lot.maxH).toBe(MAX_BUILDING_H);
-    expect(placed.find((p) => key(p.block) === "72,218")!.lot.maxH).toBe(LANDMARK_MAX_H);
+    for (const p of placed.filter((q) => q.parcel)) {
+      expect(p.neighborhood).toBe(neighborhoodOfParcel(p.parcel!));
+      expect(CATALOGUE[p.neighborhood].recipes.map((r) => r.name)).toContain(p.recipe);
+      expect(p.lot.open).toEqual(parcelOpenSides(p.parcel!));
+    }
     expect(JSON.stringify(sceneAssign())).not.toBe(JSON.stringify(assign(createRng(9), createRng(8))));
+  });
+
+  it("parcels too small for the kit (lot side < MIN_LOT_SIDE) are flagged by tooSmall", () => {
+    expect(tooSmall({ x: 0, y: 0, w: 20, d: 3, z: 0, open: [], maxH: 18 })).toBe(true);
+    expect(tooSmall({ x: 0, y: 0, w: 7, d: 9, z: 0, open: [], maxH: 18 })).toBe(false);
   });
 
   it("the tone comes from rng and does not depend on districtRng", () => {
@@ -192,11 +181,13 @@ describe("zoning", () => {
     expect(new Set(worldAssign().map((p) => p.recipe)).size).toBeGreaterThanOrEqual(14);
   });
 
-  it("residential doesn't repeat a recipe on adjacent blocks", () => {
+  // the retry draws only 5 times: with parcels a repeat is rare but possible, so the pin is on the seeds used here
+  it("residential doesn't repeat a recipe on adjacent blocks or parcels", () => {
     for (const placed of [worldAssign(), sceneAssign()]) {
       const res = placed.filter((p) => p.neighborhood === "residential");
       for (const a of res) for (const b of res) {
-        if (a === b || Math.abs(a.block.x - b.block.x) > BLOCK_W + STREET || Math.abs(a.block.y - b.block.y) > BLOCK_D + STREET) continue;
+        const gap = (u: number, uw: number, v: number, vw: number) => Math.max(u - (v + vw), v - (u + uw), 0);
+        if (a === b || gap(a.block.x, a.block.w, b.block.x, b.block.w) > STREET || gap(a.block.y, a.block.d, b.block.y, b.block.d) > STREET) continue;
         expect(b.recipe, `${key(a.block)} and ${key(b.block)}`).not.toBe(a.recipe);
       }
     }
@@ -212,5 +203,67 @@ describe("zoning", () => {
     expect(FOOTBRIDGE_LOT).toMatchObject({ x: WEST_QUAY.x1, y: 174, d: 4, z: -1, open: [], maxH: LANDMARK_MAX_H });
     expect(FOOTBRIDGE_LOT.x + FOOTBRIDGE_LOT.w).toBe(Math.ceil(estuaryEast(176)) + 1);
     expect(FOOTBRIDGE_LOT.x + FOOTBRIDGE_LOT.w).toBeGreaterThan(estuaryEast(178)); // rests on the east bank, doesn't end in the water
+  });
+});
+
+// ---------------------------------------------------------------- #472: zoning over the parcels of city-plan
+import { CITY_BOUNDS, HOTEL_LOT, axisBand, AXES, parcels, type Parcel } from "../scenes/city-plan";
+import { CITY_EDGE } from "../scenes/city-grid";
+
+describe("zoning over parcels (#472)", () => {
+  const sameRect = (a: { x: number; y: number; w: number; d: number }, b: { x: number; y: number; w: number; d: number }) => a.x === b.x && a.y === b.y && a.w === b.w && a.d === b.d;
+  const isHotel = (p: Parcel) => sameRect(p.rect, HOTEL_LOT);
+  const built = parcels(CITY_BOUNDS).filter((p) => p.c.x > CITY_EDGE.west && p.c.y < 318);
+  const placedParcels = (): Placed[] => worldAssign().filter((p) => p.parcel);
+
+  it("every parcel of CITY_BOUNDS gets exactly one Placed, except HOTEL_LOT", () => {
+    const placed = placedParcels();
+    for (const p of built) expect(placed.filter((q) => q.parcel === p).length, `${p.cell.col},${p.cell.row}`).toBe(isHotel(p) ? 0 : 1);
+    expect(placed).toHaveLength(built.filter((p) => !isHotel(p)).length);
+    for (const q of placed) expect(q.parcel!.c.x > CITY_EDGE.west && q.parcel!.c.y < 318).toBe(true);
+  });
+
+  it("a parcel's block is its rect, west bank, row −2, kind parcel; its lot is the rect minus the sidewalk at z 0", () => {
+    for (const q of placedParcels()) {
+      const r = q.parcel!.rect;
+      expect(q.block).toEqual({ ...r, bank: "west", row: -2, kind: "parcel" });
+      expect(q.lot.x).toBeCloseTo(r.x + SIDEWALK, 9);
+      expect(q.lot.y).toBeCloseTo(r.y + SIDEWALK, 9);
+      expect(q.lot.w).toBeCloseTo(r.w - 2 * SIDEWALK, 9);
+      expect(q.lot.d).toBeCloseTo(r.d - 2 * SIDEWALK, 9);
+      expect(q.lot.z).toBe(0);
+      expect(q.lot.maxH).toBe(q.neighborhood === "district" ? LANDMARK_MAX_H : MAX_BUILDING_H);
+    }
+  });
+
+  it("barrio → neighborhood: clasico downtown, transicion residential, moderno district, bajo and residencial residential; bars north of the plaza", () => {
+    const map = { clasico: "downtown", transicion: "residential", moderno: "district", bajo: "residential", residencial: "residential" } as const;
+    for (const q of placedParcels()) {
+      const p = q.parcel!;
+      const bars = p.c.y < 206 && p.rect.x + p.rect.w >= 157;
+      expect(q.neighborhood, `${p.cell.col},${p.cell.row}`).toBe(bars ? "bars" : map[p.barrio]);
+    }
+  });
+
+  it("bars are exactly the two parcels north of the plaza (columns 133 and 163)", () => {
+    const bars = placedParcels().filter((q) => q.neighborhood === "bars").map((q) => q.parcel!.cell).sort((a, b) => a.col - b.col);
+    expect(bars).toEqual([{ col: 133, row: 171 }, { col: 163, row: 171 }]);
+  });
+
+  it("the open sides of a parcel touching the plaza axis include the side that touches it", () => {
+    const band = axisBand(AXES.find((a) => a.id === "plaza")!);
+    const y0 = Math.min(...band.map((q) => q.y)), y1 = Math.max(...band.map((q) => q.y)); // 222..234
+    const placed = placedParcels();
+    const north = placed.filter((q) => Math.abs(q.parcel!.rect.y + q.parcel!.rect.d - y0) < 1e-6 && Math.abs(Math.max(...q.parcel!.poly.map((v) => v.y)) - y0) < 1e-6);
+    const south = placed.filter((q) => Math.abs(q.parcel!.rect.y - y1) < 1e-6 && Math.abs(Math.min(...q.parcel!.poly.map((v) => v.y)) - y1) < 1e-6);
+    expect(north.length).toBeGreaterThan(0);
+    expect(south.length).toBeGreaterThan(0);
+    for (const q of north) expect(q.lot.open, `${q.parcel!.cell.col},${q.parcel!.cell.row}`).toContain("s");
+    for (const q of south) expect(q.lot.open, `${q.parcel!.cell.col},${q.parcel!.cell.row}`).toContain("n");
+  });
+
+  it("FIXED names no west block of rows ≥ 164", () => {
+    for (const f of FIXED) expect(f.x < 192 && f.y >= 164, `${f.recipe} ${f.x},${f.y}`).toBe(false);
+    expect(FIXED.map((f) => f.recipe).sort()).toEqual(["coveredMarket", "fishMarket", "foodHall", "market"]);
   });
 });

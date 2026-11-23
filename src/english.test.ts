@@ -61,6 +61,13 @@ const ALLOW: Record<string, RegExp[]> = {
   "src/scenes/neighborhood-houses.test.ts": [/Ciudad Jardín/g],
   "src/scenes/neighborhood-monoblock.ts": [/Simón Bolívar/g],
   "src/scenes/neighborhood-monoblock.test.ts": [/Simón Bolívar/g],
+  // #472: the axis names and barrio ids are the place names of the layout (spec 2026-11-22), data like the exhibit ids
+  "src/scenes/city-plan.ts": [/Avenida (?:de la Plaza|de las Vías|del Sur|del Barrio)/g, /\bcostanera\b/gi, /\b[Bb]arrios?(?:At)?\b/g, /\bresidencial\b/g],
+  "src/scenes/city-plan.test.ts": [/Avenida (?:de la Plaza|de las Vías|del Sur|del Barrio)/g, /\bcostanera\b/gi, /\b[Bb]arrios?(?:At)?\b/g, /\bresidencial\b/g],
+  "src/city/streets.test.ts": [/Avenida de las Vías/g], // axis name of the plan (#472), as city-plan.test.ts
+  "src/city/streets.ts": [/\bcostanera\b/g], // axis kind of the plan (#472)
+  "src/city/zoning.ts": [/\b[Bb]arrios?\b/g], // Barrio ids of city-plan are layout data
+  "src/city/zoning.test.ts": [/\b[Bb]arrios?\b/g, /\bresidencial\b/g],
   // proper noun: the Fábrica de Luz is the real power station the boiler hall models (decision 2c)
   "src/scenes/boiler-house.ts": [/Fábrica de Luz/g],
   "src/scenes/factory.ts": [/Fábrica de Luz/g],

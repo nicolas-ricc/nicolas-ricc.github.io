@@ -74,12 +74,16 @@ Code: `src/map/geo.ts` (`coverQuad`, `inCoverQuad`, `COVER_INSET`), `src/world/f
 (Arrastre.) The visitor moving the map view by dragging (mouse, touch or pen), with the arrow keys, or `0`/`Home` to recenter; map only, never in a zone. The Main view is `coverView(w, h)`, the one the map opens with and the one the recenter button («Centrar vista») tweens back to. The view is Moved when it differs from the Main view (`sameView`); only then the button shows. A pan always stays inside the bleed, and a move of at least `DRAG_THRESHOLD` px is a drag, which does not navigate, even when it starts on a sign link.
 Code: `src/world/view.ts` (`panView`, `sameView`, `clampToBleed`), `src/pan.ts` (`attachPan`, `keyPan`, `DRAG_THRESHOLD`, `KEY_STEP`), `src/main.ts`.
 
+### Parcel
+(Parcela.) A piece of the west bank's city plan: a grid block cut by the axes, the Plaza Mayor, the crossing plazas and the tower island, kept only if it passes the filter (area at least 70 and inradius-like ratio 2·area/perimeter at least 3.4, so no slivers; the smaller side of its bounding box at least 9), and only if its centroid lies inside the cover (margin 30). The hotel lot (`HOTEL_LOT`) is a single parcel of its own. Each carries its barrio (`Barrio`, by distance to the Plaza Mayor and the south bands: clasico, transicion, moderno, bajo, residencial), which the zoning turns into a neighborhood, and `rect`, the largest rectangle inscribed in its polygon. The parcel's plinth is its polygon; its lot is `rect` minus the sidewalk (`SIDEWALK`). The strip and the east bank still use `Block`s.
+Code: `src/scenes/city-plan.ts` (`Parcel`, `parcels`, `inscribedRect`, `barrioAt`), `src/city/zoning.ts` (`Placed`).
+
 ### Plinth
-(Zócalo.) The `PLINTH_H` (0.3) paving prism under a city block. A recipe rests on it unless its piece brings `ground` (painted before every solid, the plinth would hide it): `seat` runs the recipe once at street level and lifts the piece `PLINTH_H` when it has no ground.
+(Zócalo.) The `PLINTH_H` (0.3) paving prism under a city block; under a parcel it is the parcel's polygon, not a rectangle. A recipe rests on it unless its piece brings `ground` (painted before every solid, the plinth would hide it): `seat` runs the recipe once at street level and lifts the piece `PLINTH_H` when it has no ground.
 Code: `src/kit/piece.ts` (`seat`, `liftPiece`), `src/scenes/city-pieces.ts` (`PLINTH_H`), `src/scenes/city.ts`, `src/lab/kit-scene.ts`.
 
 ### Lot
-(Lote.) The rectangle a recipe draws inside: `x y w d`, the surface height `z` it rests on, the `open` sides (`Side`: `n`, `s`, `e`, `w`; avenue, water or plaza frontage) and `maxH`, the height cap above `z`. The zoning hands out one per block (`Placed.lot`); `waterTowerLot` and `FOOTBRIDGE_LOT` are their own lots. The lab uses 24 x 18 lots (`KIT_LOT`), or the `LAB_LOTS` size for the recipes that need one.
+(Lote.) The rectangle a recipe draws inside: `x y w d`, the surface height `z` it rests on, the `open` sides (`Side`: `n`, `s`, `e`, `w`; avenue, water or plaza frontage) and `maxH`, the height cap above `z`. The zoning hands out one per block or parcel (`Placed.lot`; a parcel's lot is its `rect` minus the sidewalk); `waterTowerLot` and `FOOTBRIDGE_LOT` are their own lots. The lab uses 24 x 18 lots (`KIT_LOT`), or the `LAB_LOTS` size for the recipes that need one.
 Code: `src/kit/types.ts` (`Lot`, `Side`), `src/city/zoning.ts` (`Placed`, `waterTowerLot`, `FOOTBRIDGE_LOT`), `src/lab/kit-scene.ts` (`KIT_LOT`).
 
 ### Piece
