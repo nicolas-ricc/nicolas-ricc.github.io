@@ -17,7 +17,7 @@ import { FIXED, FIXED_PARCELS, FOOTBRIDGE_LOT, MAX_BUILDING_H, WATER_TOWER_CELL,
 import { zoneRng } from "./world";
 import { MARKET_SCALE } from "../city/harbor";
 import { fingerprint } from "../iso/fingerprint";
-import { BRIDGE_LANDING, CITY_BOUNDS, HOTEL_LOT, PLAZA_MAYOR, inCrossingPlaza, inParcel, inPlazaMayor, onAxis, parcels, polyBox } from "./city-plan";
+import { BRIDGE_LANDING, CITY_BOUNDS, HOTEL_LOT, PLAZA_MAYOR, barrioAt, inCrossingPlaza, inParcel, inPlazaMayor, onAxis, parcels, polyBox } from "./city-plan";
 import { RESUME_SIGN, SIGN_PANEL, SIGN_SITE, hotel } from "./sign-hotel";
 import { signBox } from "../world/sign-box";
 import { zoneView } from "../world/view";
@@ -594,5 +594,41 @@ describe("singular pieces back on named parcels (#477)", () => {
   it("is deterministic with the singular pieces", () => {
     expect(fingerprint(world().solids)).toBe(fingerprint(s.solids));
     expect(JSON.stringify(world().placed.map((q) => [q.placed.recipe, q.placed.neighborhood, q.placed.lot]))).toBe(JSON.stringify(s.placed.map((q) => [q.placed.recipe, q.placed.neighborhood, q.placed.lot])));
+  });
+});
+
+describe("the city owns the west (#479)", () => {
+  const w = city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3));
+  const telecomCell = { col: -107, row: 231 };
+
+  it("city builds every parcel north of y 318 inside the view, west of x −54 included", () => {
+    const placedCells = new Set(w.placed.flatMap((q) => (q.placed.parcel ? [`${q.placed.parcel.cell.col},${q.placed.parcel.cell.row}:${q.placed.parcel.rect.x},${q.placed.parcel.rect.y}`] : [])));
+    expect(w.placed.some((q) => q.placed.parcel && q.placed.parcel.c.x < -54)).toBe(true);
+    for (const p of parcels({ ...CITY_BOUNDS, x0: -Infinity }).filter((q) => q.c.y < 318)) {
+      if (p.rect.x === HOTEL_LOT.x && p.rect.y === HOTEL_LOT.y) continue;
+      expect(placedCells.has(`${p.cell.col},${p.cell.row}:${p.rect.x},${p.rect.y}`), `${p.cell.col},${p.cell.row}`).toBe(true);
+    }
+  });
+
+  it("TELECOM sits on a moderno parcel", () => {
+    const q = w.placed.find((x) => x.placed.parcel?.cell.col === telecomCell.col && x.placed.parcel.cell.row === telecomCell.row);
+    expect(q).toBeDefined();
+    expect(barrioAt(q!.placed.parcel!.c)).toBe("moderno");
+    const r = q!.placed.parcel!.rect, inside = (x: Solid) => inRect(bounds(x), r);
+    expect(w.solids.filter((x) => x.kind === "prism" && x.mat === "steel" && x.h === 20 && inside(x))).toHaveLength(1);
+    expect(w.solids.filter((x) => x.kind === "cylinder" && x.mat === "steel" && x.h === 0.4 && inside(x))).toHaveLength(3);
+  });
+
+  it("the STATION_LAND rule also covers the west: west solids are in the scene and none taller than 10 overlaps it", () => {
+    const land = screenHull({ min: v3(STATION_LAND.x0, STATION_LAND.y0, 0), max: v3(STATION_LAND.x1, STATION_LAND.y1, 0) });
+    const west = w.solids.filter((x) => bounds(x).max.x < -54 && bounds(x).max.z > 10);
+    expect(west.length).toBeGreaterThan(0);
+    for (const x of west) expect(hullsOverlap(screenHull(bounds(x)), land), JSON.stringify(bounds(x))).toBe(false);
+  });
+
+  it("with opts.west = WORLD.x0 no Placed lies west of x −60 and no solid starts west of it", () => {
+    const lab = city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3), { west: WORLD.x0 });
+    for (const q of lab.placed) if (q.placed.parcel) expect(q.placed.parcel.c.x).toBeGreaterThanOrEqual(WORLD.x0);
+    for (const x of [...lab.solids, ...lab.ground]) expect(bounds(x).min.x, `${x.kind} ${x.mat}`).toBeGreaterThanOrEqual(WORLD.x0 - 1e-6);
   });
 });

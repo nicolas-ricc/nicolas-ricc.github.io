@@ -510,3 +510,52 @@ describe("city-anim: the hotel rooms and the papers along the facade (#474)", ()
     expect(drifted).toBe(true);
   });
 });
+
+describe("city-anim: the TELECOM mast (#479)", () => {
+  const tip = { x: -95, y: 244.5, z: 22.5 };
+  const ring = [3, 6, 9].map((dz) => ({ x: tip.x, y: tip.y + 0.6, z: tip.z - dz }));
+  const base = city(createRng(7), createRng(8), createRng(9));
+  const mast = (s: CityScene, on: boolean) => ({ ...s, telecom: on ? tip : null, neon: { ...s.neon, signs: [], mastRing: on ? ring : [] } }) as CityScene;
+  const ringDots = (a: Accent[]) => lights(a).filter((d) => d.color === "magentaMid" && ring.some((p) => p.x === d.at.x && p.y === d.at.y && p.z === d.at.z));
+  const tipDot = (a: Accent[]) => lights(a).find((d) => d.color === "amber" && d.at.x === tip.x && d.at.y === tip.y && d.at.z === tip.z);
+
+  it("the mast ring runs one light per step from step 1, all on at frame 0", async () => {
+    const { RING_STEP_MS } = await import("./city-anim");
+    expect(RING_STEP_MS).toBe(200);
+    const anim = createCityAnim(mast(base, true), createRng(3), { reducedMotion: false });
+    expect(ringDots(anim.neon())).toHaveLength(3);
+    for (const d of ringDots(anim.neon())) expect(d.r).toBe(0.5);
+    const seen = new Set<number>();
+    for (let k = 1; k <= 6; k++) {
+      anim.tick(RING_STEP_MS);
+      const on = ringDots(anim.neon());
+      expect(on, `step ${k}`).toHaveLength(1);
+      seen.add(on[0]!.at.z);
+    }
+    expect(seen.size).toBe(3);
+  });
+
+  it("the tip light breathes: r = 0.8 + 0.3·(1 + sin(clock / 1200)), amber", () => {
+    const anim = createCityAnim(mast(base, true), createRng(3), { reducedMotion: false });
+    expect(tipDot(anim.neon())?.r).toBeCloseTo(1.1, 9);
+    anim.tick(1000);
+    expect(tipDot(anim.neon())?.r).toBeCloseTo(0.8 + 0.3 * (1 + Math.sin(1000 / 1200)), 9);
+  });
+
+  it("with reduced motion the ring stays all on and the tip at r 1.1", () => {
+    const anim = createCityAnim(mast(base, true), createRng(3), { reducedMotion: true });
+    for (let i = 0; i < 5; i++) anim.tick(250);
+    expect(ringDots(anim.neon())).toHaveLength(3);
+    expect(tipDot(anim.neon())?.r).toBeCloseTo(1.1, 9);
+  });
+
+  it("without TELECOM there is no ring or tip, and neon changes only on the existing steps", async () => {
+    const { RING_STEP_MS, TELECOM_STEP_MS } = await import("./city-anim");
+    const anim = createCityAnim(mast(base, false), createRng(3), { reducedMotion: false });
+    expect(ringDots(anim.neon())).toHaveLength(0);
+    expect(tipDot(anim.neon())).toBeUndefined();
+    const withMast = createCityAnim(mast(base, true), createRng(3), { reducedMotion: false });
+    expect(withMast.tick(TELECOM_STEP_MS).neon).toBe(true);
+    expect(anim.tick(Math.min(RING_STEP_MS, TELECOM_STEP_MS)).neon).toBe(false);
+  });
+});

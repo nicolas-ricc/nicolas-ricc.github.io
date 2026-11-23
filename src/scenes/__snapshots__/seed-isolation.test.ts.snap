@@ -1,0 +1,36 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`seed isolation (#479) > Portfolio and Writing solids snapshot unchanged 1`] = `
+{
+  "factory": {
+    "accents": 11,
+    "ground": 10,
+    "sha256": "bf0988b874d9c48b1e76da4cb0dfba738d011c311ec6c99147b71c35b3f228fe",
+    "solids": 770,
+  },
+  "fair": {
+    "accents": 137,
+    "ground": 0,
+    "sha256": "cb2a039e3bc89752583b83e8be8683ec01ac66074c3d9722951b05f1575a9b80",
+    "solids": 567,
+  },
+  "hinterland": {
+    "accents": 19,
+    "ground": 19,
+    "sha256": "0ffe72a1cc2eac81ea58fe9c9314f267b997a7273da82f839d51230968585160",
+    "solids": 453,
+  },
+  "sea": {
+    "accents": 2,
+    "ground": 13,
+    "sha256": "55ee8607ffe1d7cb82d502d2725ef3532f35be19854a49957c9bf9c7ea760547",
+    "solids": 97,
+  },
+  "shipyard": {
+    "accents": 243,
+    "ground": 19,
+    "sha256": "a2c6092f88b11f0307e522d4a696b33269749009f7c0b12c2343818a88394569",
+    "solids": 686,
+  },
+}
+`;

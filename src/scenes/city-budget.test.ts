@@ -69,3 +69,15 @@ describe("Writing raft budget (#454)", () => {
     expect(tessellateAll(raftAt("wide", REST_POSE)).length).toBeLessThanOrEqual(1200);
   });
 });
+
+describe("the west moves from tech to the city (#479)", () => {
+  // Measured on feature/471 at 3cff5a7 (before #479), world(SEED), raised solids (!isFlat): city 1 209, tech 1 449.
+  const BEFORE = { city: 1209, tech: 1449 } as const;
+  it("budget moved, not raised", () => {
+    const w = world(SEED), raised = (s: { solids: Parameters<typeof isFlat>[0][] }) => s.solids.filter((x) => !isFlat(x)).length;
+    const after = { city: raised(w.city!), tech: raised(w.tech!) };
+    expect(after.tech).toBeLessThan(BEFORE.tech); // the west left tech
+    expect(after.city).toBeGreaterThan(BEFORE.city); // and arrived in the city
+    expect(after.city + after.tech).toBeLessThanOrEqual(BEFORE.city + BEFORE.tech);
+  });
+});

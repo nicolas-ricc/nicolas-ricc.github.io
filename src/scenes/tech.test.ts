@@ -192,3 +192,22 @@ describe("face and accent budget (#249)", () => {
     expect(worldScene.accents.length + layers).toBeLessThanOrEqual(ACCENT_CAP);
   });
 });
+
+describe("tech without the west (#479)", () => {
+  const s = tech(zoneRng(SEED, "cv", 2));
+  const beltCone = (x: Solid) => x.kind === "cone" && x.at.x < WORLD.x0 && x.at.y >= GREEN_BELT.y0 && x.at.y < GREEN_BELT.y1;
+
+  it("tech builds nothing north of y 318 but the green belt's jungle", () => {
+    for (const x of [...s.solids, ...s.ground]) if (bounds(x).max.y < 318) expect(beltCone(x), `${x.kind} ${x.mat} ${JSON.stringify(bounds(x))}`).toBe(true);
+  });
+
+  it("no west towers or campus: no curtain-wall solid north of y 318", () => {
+    expect(s.solids.some((x) => x.mat === "curtain" && bounds(x).min.y < 318)).toBe(false);
+  });
+
+  it("TechScene has no mastRing, telecom or towers", () => {
+    expect(s).not.toHaveProperty("telecom");
+    expect(s).not.toHaveProperty("towers");
+    expect(s).not.toHaveProperty("neon");
+  });
+});

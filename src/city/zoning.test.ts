@@ -523,3 +523,11 @@ describe("barrios (#477)", () => {
     expect(LIBRARY_CELL).toEqual({ col: 73, row: 201 });
   });
 });
+
+describe("the west does not move the east (#479)", () => {
+  it("the east parcels keep their pre-#479 recipe, neighborhood and tone", () => {
+    const east = assign(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1)).filter((p) => p.parcel && p.parcel.c.x >= -54)
+      .map((p) => `${p.parcel!.cell.col},${p.parcel!.cell.row} ${p.parcel!.rect.x},${p.parcel!.rect.y} ${p.neighborhood} ${p.recipe} ${p.tone}`);
+    expect(east).toMatchSnapshot();
+  });
+});

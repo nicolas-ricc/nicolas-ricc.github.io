@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { Vec2 } from "../iso/geometry";
 import { PLINTH_H } from "../scenes/city-pieces";
 import { bounds, type Solid } from "../iso/solids";
-import { ESTUARY_Y0, STATION_LAND, eastBank } from "../map/geo";
+import { ESTUARY_Y0, STATION_LAND, WORLD, eastBank } from "../map/geo";
 import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, EAST_COLS, EAST_RING, HARBOR, RING_Y0, ROWS, STREET, WEST_COLS, WEST_QUAY, inCrater } from "../scenes/city-grid";
-import { BAR_FRONTS, COSTANERA_LAMP_Y, LAMP_MIN_GAP, lampXs, laneOffsets, streets, type BarFront } from "./streets";
-import { crosswalks } from "./crossings";
+import { BAR_FRONTS, COSTANERA_LAMP_Y, LAMP_MIN_GAP, axisLampPosts, lampXs, laneOffsets, streets, type BarFront } from "./streets";
+import { ORDINARY_Y, crosswalks } from "./crossings";
 
 type Strip = Solid & { kind: "strip" };
 
@@ -287,3 +287,31 @@ describe("streets on the new layout (#472)", () => {
   });
 });
 
+
+describe("the streets reach the edge of the view (#479)", () => {
+  const full = { ground: [] as Solid[], solids: [] as Solid[], lights: [] as Parameters<typeof streets>[2] };
+  streets(full.ground, full.solids, full.lights);
+  const strips = full.ground.filter((g): g is Solid & { kind: "strip" } => g.kind === "strip");
+  const plazaY = 228;
+
+  it("the plaza avenue keeps its lanes and lamps west of x −54", () => {
+    const lanes = strips.filter((s) => s.width === 0.4 && s.path.every((p) => Math.abs(p.y - plazaY) < 6));
+    expect(lanes.some((s) => s.path.some((p) => p.x < -54))).toBe(true);
+    expect(lanes.some((s) => s.path.some((p) => p.x < -200))).toBe(true);
+    const lamps = axisLampPosts().filter((l) => l.a.id === "plaza");
+    expect(lamps.some((l) => l.at.x < -54)).toBe(true);
+    expect(lamps.some((l) => l.at.x < -200)).toBe(true);
+  });
+
+  it("ordinary streets continue west of x −54", () => {
+    expect(ORDINARY_Y).toContain(258);
+    expect(strips.some((s) => s.width === 0.3 && s.path.every((p) => p.y === 258) && s.path.some((p) => p.x < -150))).toBe(true);
+  });
+
+  it("with west = WORLD.x0 nothing of the streets lies west of it", () => {
+    const ground: Solid[] = [], solids: Solid[] = [], lights: Parameters<typeof streets>[2] = [];
+    streets(ground, solids, lights, WORLD.x0);
+    for (const x of [...ground, ...solids]) expect(bounds(x).min.x, `${x.kind} ${x.mat}`).toBeGreaterThanOrEqual(WORLD.x0 - 1e-6);
+    for (const l of lights) expect(l.at.x).toBeGreaterThanOrEqual(WORLD.x0);
+  });
+});

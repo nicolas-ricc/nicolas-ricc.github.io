@@ -205,3 +205,11 @@ describe("tech-anim: raw walls whatever the tone (#52)", () => {
     expect(fingerprint(setup().anim.windows() as unknown as Solid[])).toBe("a5fdf201"); // re-pinned in #478: the tech district no longer has the south towers (was b5014007)
   });
 });
+
+describe("tech-anim without the west (#479)", () => {
+  it("techAnimator exposes only tech.signs and tech.homes", async () => {
+    const { techAnimator } = await import("./tech-animator");
+    const a = techAnimator(tech(createRng(7)), createRng(1), { reducedMotion: false });
+    expect([...a.ids].sort()).toEqual(["tech.homes", "tech.signs"]);
+  });
+});
