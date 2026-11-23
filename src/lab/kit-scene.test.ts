@@ -87,6 +87,13 @@ describe("kit lab scene", () => {
     expect(body?.mat).toBe("brick");
   });
 
+  it("the porteno row (#476): the four recipes in one row", () => {
+    const { lots } = kitScene(7, "downtown");
+    const row = lots.filter((_, i) => RECIPES[i]!.family === "porteno");
+    expect(row.map((l) => l.name)).toEqual(["cornerCupola", "mansard", "balconyBlock", "portalBase"]);
+    expect(new Set(row.map((l) => l.y)).size).toBe(1);
+  });
+
   it("the seed and the style change the scene; the same pair repeats it", () => {
     const a = JSON.stringify(kitScene(7, "downtown"));
     expect(JSON.stringify(kitScene(7, "downtown"))).toBe(a);

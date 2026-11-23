@@ -7,7 +7,8 @@ import { PLINTH_H, prism, tiles } from "../../scenes/city-pieces";
 import { towerCrane } from "../../scenes/pieces";
 import { LANDMARK_MAX_H, SIGN_MIN_H, addBuilding, emptyPiece, interlock, southSign } from "../piece";
 import { beacon, clock, container, fence, helipad, sign, table } from "../props";
-import { gableRoof, greenRoof } from "../roofs";
+import { gableRoof, greenRoof, offsetFootprint } from "../roofs";
+import { clipBody, insetPoly, insidePoly, polyCentroid, polyFootprint } from "../polygon";
 import type { Lot, Piece, RecipeDef, Style } from "../types";
 
 /**
@@ -69,6 +70,7 @@ export function classic(lot: Lot, rng: Rng, style: Style): Piece {
   const bx = x + (w - bw) / 2, by = y + (d - bd) / 2;
   const floors = Math.max(2, Math.round(h / 3.5)), cols = rng.int(4, 5), fh = h / floors;
   const facade: Facade = { floors, cols, base: "portico" };
+  if (lot.poly) return classicOnPoly(lot, rng, style, { bx, by, bw, bd, h, fh, facade, cols });
   addBuilding(p, prism(bx, by, lot.z, bw, bd, h, "stone", { facade, tone: style.tone }), facade);
   for (let k = 0; k <= cols; k++) { // ground-floor pilasters on the visible faces (east and south)
     p.solids.push(interlock(prism(bx + bw, by + (bd * k) / cols - 0.2, lot.z, 0.4, 0.4, fh, "stone"))); // the corner pair (k = cols) overlaps
@@ -82,6 +84,37 @@ export function classic(lot: Lot, rng: Rng, style: Style): Piece {
   p.accents.push(clock(cx, by + bd, cz));
   if (h >= SIGN_MIN_H) p.slots.push(southSign(bx, by + bd, bw, lot.z + h / 2 - 0.8));
   p.landmarkTop = v3(cx, by + bd / 2, top + 1);
+  return p;
+}
+
+/** `classic` on a parcel polygon: the body is clipped to the chamfered lot footprint; pilasters, crown, clock and sign stay only where they still fit. */
+function classicOnPoly(lot: Lot, rng: Rng, style: Style, g: { bx: number; by: number; bw: number; bd: number; h: number; fh: number; facade: Facade; cols: number }): Piece {
+  const p = emptyPiece(), { bx, by, bw, bd, h, fh, facade, cols } = g, fpLot = polyFootprint(lot, 0, 2, "oblique");
+  const fp = clipBody({ x: bx, y: by, w: bw, d: bd }, fpLot);
+  rng.chance(0.5); // the roof branch is drawn as without poly; both build the stepped crown
+  if (!fp) return p;
+  addBuilding(p, { kind: "poly", footprint: fp, z: lot.z, h, mat: "stone", facade, tone: style.tone }, facade);
+  const pil = (px: number, py: number, inner: { x: number; y: number }): void => { // the 0.4 box must stand in the lot footprint and lean on the body
+    const box = [{ x: px, y: py }, { x: px + 0.4, y: py }, { x: px + 0.4, y: py + 0.4 }, { x: px, y: py + 0.4 }];
+    if (box.every((q) => insidePoly(fpLot, q)) && insidePoly(fp, inner)) p.solids.push(interlock(prism(px, py, lot.z, 0.4, 0.4, fh, "stone")));
+  };
+  for (let k = 0; k <= cols; k++) {
+    const ey = by + (bd * k) / cols, sx = bx + (bw * k) / cols;
+    pil(bx + bw, ey - 0.2, { x: bx + bw - 0.01, y: ey });
+    pil(sx - 0.2, by + bd, { x: sx, y: by + bd - 0.01 });
+  }
+  const top = lot.z + h;
+  p.solids.push({ kind: "poly", footprint: offsetFootprint(fp, 0.8), z: top, h: 1, mat: style.trim });
+  const t1 = insetPoly(fp, 2), t2 = t1 && insetPoly(fp, 4);
+  if (t1) p.solids.push({ kind: "poly", footprint: t1, z: top + 1, h: 2, mat: "stone" });
+  if (t1 && t2) p.solids.push({ kind: "poly", footprint: t2, z: top + 3, h: 1.5, mat: "stone" });
+  const south = fp.some((a, i) => { const b = fp[(i + 1) % fp.length]!; return Math.abs(a.y - (by + bd)) < 1e-6 && Math.abs(b.y - (by + bd)) < 1e-6 && Math.abs(a.x - b.x) >= bw - 1e-6; });
+  if (south) {
+    p.accents.push(clock(bx + bw / 2, by + bd, top - fh / 2));
+    if (h >= SIGN_MIN_H) p.slots.push(southSign(bx, by + bd, bw, lot.z + h / 2 - 0.8));
+  }
+  const c = polyCentroid(fp);
+  p.landmarkTop = v3(c.x, c.y, top + 1);
   return p;
 }
 
