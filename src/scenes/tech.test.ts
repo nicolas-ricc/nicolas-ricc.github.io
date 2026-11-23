@@ -9,6 +9,7 @@ import { ARENA, AUDITORIUM, MAX_TECH_H, TECH_MATS, TELECOM, tech } from "./tech"
 import { techAnimator } from "./tech-animator";
 import { ACCENT_CAP, NEIGHBORHOOD_REGION, WATERFRONT_RECT, FACE_CAPS, REGION_FACES_BEFORE, TECH_FACES_BEFORE, blockRect, facesIn, insideInflated } from "./tech-budget";
 import { inNeighborhood, isCell, zoneKinds, type Kind } from "./tech-zoning";
+import { southStreets } from "./tech-streets";
 import { zoneRng } from "./world";
 import { bleedTerrainAt, terrainAt } from "./terrain";
 
@@ -109,6 +110,13 @@ describe("tech", () => {
 const worldScene = tech(zoneRng(SEED, "cv", 2));
 const worldBlocks = techBlocks(), worldKinds = zoneKinds(zoneRng(SEED, "cv", 2), worldBlocks);
 const everything = [...worldScene.solids, ...worldScene.ground];
+/** `everything` without the south street furniture (multiset by JSON): lamps and trees on a sidewalk fall inside the neighboring blockRect. */
+const furniture = southStreets();
+const withoutFurniture = ((): Solid[] => {
+  const left = new Map<string, number>();
+  for (const s of [...furniture.solids, ...furniture.ground]) { const k = JSON.stringify(s); left.set(k, (left.get(k) ?? 0) + 1); }
+  return everything.filter((s) => { const k = JSON.stringify(s), n = left.get(k) ?? 0; if (n > 0) { left.set(k, n - 1); return false; } return true; });
+})();
 // neighbors by cell: the south parcels sit on a 30-unit lattice
 const neighbors = (a: SprawlBlock, b: SprawlBlock) => { const p = a.parcel, q = b.parcel; return !!p && !!q && ((p.cell.row === q.cell.row && Math.abs(p.cell.col - q.cell.col) === 30) || (p.cell.col === q.cell.col && Math.abs(p.cell.row - q.cell.row) === 30)); };
 const homesOf = (kind: Kind) => worldScene.homes.filter((w) => worldBlocks.some((b, i) => { const r = blockRect(b); return worldKinds[i] === kind && w.pts.every((p) => p.x >= r.x0 && p.x <= r.x1 && p.y >= r.y0 && p.y <= r.y1); }));
@@ -174,7 +182,7 @@ describe("face and accent budget (#249)", () => {
   it("each new block and the waterfront within its cap", () => {
     worldBlocks.forEach((b, i) => {
       const k = worldKinds[i]!;
-      if (k === "monoblock" || k === "houses" || k === "plaza" || k === "school" || k === "club") expect(facesIn(everything, blockRect(b)), `${k} ${b.x},${b.y}`).toBeLessThanOrEqual(FACE_CAPS[k]);
+      if (k === "monoblock" || k === "houses" || k === "plaza" || k === "school" || k === "club" || k === "low") expect(facesIn(withoutFurniture, blockRect(b)), `${k} ${b.x},${b.y}`).toBeLessThanOrEqual(FACE_CAPS[k]);
     });
     expect(facesIn(everything, WATERFRONT_RECT)).toBeLessThanOrEqual(FACE_CAPS.waterfront);
   });

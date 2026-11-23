@@ -31,8 +31,9 @@ import { ARENA, AUDITORIUM, TELECOM, TOWER_D, zoneKinds } from "./tech-zoning";
  * Tech district of Resume: the city continues to the west and south of the
  * district on the same grid, like an office and campus park: curtain wall
  * towers near the content, monoblocks and startup campuses after that
- * and, to the south, a coastal residential neighborhood (monoblocks, houses, school, club,
- * plazas and waterfront). Three landmarks: telecommunications tower, arena, auditorium.
+ * and, to the south of y 318, a coastal residential neighborhood built on the city-plan
+ * parcels (`southParcels`, 24 × 24; the city builds those north of 318) with the avenues
+ * continuing through it (monoblocks, houses, low rows, school, club, plazas and waterfront). Three landmarks: telecommunications tower, arena, auditorium.
  * Every office building has a facade; the windows of the neighborhood are accents (`homes`).
  * It only exists with the whole world (it lives over the bleed).
  * Spec: docs/superpowers/specs/2026-09-15-mundo-3-tecnologico-feria-agua-barcos-design.md §3

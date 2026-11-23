@@ -233,9 +233,9 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "torres", title: "Tech district towers", zone: "cv", group: "tech", kind: "region",
     box: { x0: SUBURB_COLS[1] - M, y0: ROWS[2] - M, x1: SUBURB_COLS[0] + BLOCK_W + M, y1: ROWS[2] + BLOCK_D + M }, h: 22 },
   { id: "monoblock", title: "Monoblock", zone: "cv", group: "tech", kind: "region",
-    box: { x0: 132 - M, y0: 448 - M, x1: 132 + BLOCK_W + M, y1: 448 + BLOCK_D + M }, h: 23.6 },
+    box: cellBox({ col: 133, row: 441 }), h: 23.6 }, // the monoblock parcel of cell (133, 441), 24 × 24
   { id: "casas", title: "Houses with tile roofs", zone: "cv", group: "tech", kind: "region",
-    box: { x0: 132 - M, y0: 520 - M, x1: 132 + BLOCK_W + M, y1: 520 + BLOCK_D + M }, h: 8 },
+    box: cellBox({ col: 103, row: 471 }), h: 8 }, // the houses parcel of cell (103, 471), 24 × 24
   { id: "escuela", title: "School", zone: "cv", group: "tech", kind: "region",
     box: cellBox(SCHOOL), h: 11 },
   { id: "club", title: "Club", zone: "cv", group: "tech", kind: "region",
@@ -245,7 +245,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "costanera", title: "Waterfront", zone: "cv", group: "tech", kind: "region",
     box: { x0: 184, y0: 480, x1: 199, y1: 568 }, h: 8 },
   { id: "barrio", title: "Coastal neighborhood", zone: "cv", group: "tech", kind: "region",
-    box: { x0: 40, y0: 470, x1: 199, y1: 612 }, h: 11 },
+    box: { x0: 40, y0: 438, x1: 199, y1: 623 }, h: 18 }, // h 18: tallest solid inside measures 17.6 (smallest integer that frames it); NEIGHBORHOOD_REGION (43..186 × 441..620) plus the margin and the costanera
   // the beam starts at the lantern and rotates: pointing north its tip rises BEAM_LEN/√2 on screen, and the box's north vertex is already DRUM_R0 + M above the lighthouse
   { id: "faro", title: "Lighthouse", zone: "blog", group: "sea", kind: "region",
     box: { x0: LIGHTHOUSE.x - DRUM_R0 - M, y0: LIGHTHOUSE.y - DRUM_R0 - M, x1: LIGHTHOUSE.x + DRUM_R0 + M, y1: LIGHTHOUSE.y + DRUM_R0 + M },

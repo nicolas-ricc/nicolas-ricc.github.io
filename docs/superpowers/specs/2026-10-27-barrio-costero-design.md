@@ -18,6 +18,10 @@ un **barrio residencial costero** que se entienda de un vistazo:
 
 ## 1. Situación actual
 
+> Nota (#471/#478): desde entonces el barrio vive sobre la grilla de `city-plan.ts`
+> (parcelas de 24 × 24 al sur de y 318, construidas por `tech` con `southParcels`);
+> las filas de 24×18 (`SUBURB_ROWS`) descritas abajo son históricas.
+
 El área la genera **`src/scenes/tech.ts`** (`tech(zoneRng(seed, "cv", 2))`,
 `world.ts:73`) sobre la grilla de **`src/scenes/sprawl-grid.ts`**:
 
