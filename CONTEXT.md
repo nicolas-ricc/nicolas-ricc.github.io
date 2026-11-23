@@ -59,7 +59,7 @@ Code: `src/scenes/sea-anim.ts` (`LANE_OUT`, `LANE_BACK`, `LANE_SPEED`, `shipStat
 Code: `src/lab/exhibits.ts` (`Exhibit`, `EXHIBITS`, `GROUPS`, `pickExhibit`, `stepExhibit`), `src/lab/crop.ts` (`contextScene`, `contextAnimators`), `src/lab/frame.ts` (`contentFrame`), `src/lab/storybook.ts`.
 
 ### Landmark
-The one reference point per zone used to frame it: the gantry crane for Portfolio, the office tower for Resume and the lighthouse for Blog (at (410, 290) since #426), in world coordinates. Not to be confused with a landmark recipe (see Landmark recipe).
+The one reference point per zone used to frame it: the gantry crane for Portfolio, the hotel for Resume (the center of its slab, (100, 259.5), since #474) and the lighthouse for Blog (at (410, 290) since #426), in world coordinates. Not to be confused with a landmark recipe (see Landmark recipe).
 Code: `src/scenes/world.ts` (`LANDMARKS`, `WorldScene.landmarks`).
 
 ### Bleed
@@ -75,7 +75,7 @@ Code: `src/map/geo.ts` (`coverQuad`, `inCoverQuad`, `COVER_INSET`), `src/world/f
 Code: `src/world/view.ts` (`panView`, `sameView`, `clampToBleed`), `src/pan.ts` (`attachPan`, `keyPan`, `DRAG_THRESHOLD`, `KEY_STEP`), `src/main.ts`.
 
 ### Parcel
-(Parcela.) A piece of the west bank's city plan: a grid block cut by the axes, the Plaza Mayor, the crossing plazas and the tower island, kept only if it passes the filter (area at least 70 and inradius-like ratio 2·area/perimeter at least 3.4, so no slivers; the smaller side of its bounding box at least 9), and only if its centroid lies inside the cover (margin 30). The hotel lot (`HOTEL_LOT`) is a single parcel of its own. Each carries its barrio (`Barrio`, by distance to the Plaza Mayor and the south bands: clasico, transicion, moderno, bajo, residencial), which the zoning turns into a neighborhood, and `rect`, the largest rectangle inscribed in its polygon. The parcel's plinth is its polygon; its lot is `rect` minus the sidewalk (`SIDEWALK`). The strip and the east bank still use `Block`s. The city builds the parcels north of y 318; tech builds those south of it (`southParcels`, `src/scenes/sprawl-grid.ts`), the coastal neighborhood on 24 × 24 parcels.
+(Parcela.) A piece of the west bank's city plan: a grid block cut by the axes, the Plaza Mayor and the crossing plazas, kept only if it passes the filter (area at least 70 and inradius-like ratio 2·area/perimeter at least 3.4, so no slivers; the smaller side of its bounding box at least 9), and only if its centroid lies inside the cover (margin 30). The hotel lot (`HOTEL_LOT`) is a single parcel of its own. Each carries its barrio (`Barrio`, by distance to the Plaza Mayor and the south bands: clasico, transicion, moderno, bajo, residencial), which the zoning turns into a neighborhood, and `rect`, the largest rectangle inscribed in its polygon. The parcel's plinth is its polygon; its lot is `rect` minus the sidewalk (`SIDEWALK`). The strip and the east bank still use `Block`s. The city builds the parcels north of y 318; tech builds those south of it (`southParcels`, `src/scenes/sprawl-grid.ts`), the coastal neighborhood on 24 × 24 parcels.
 Code: `src/scenes/city-plan.ts` (`Parcel`, `parcels`, `inscribedRect`, `barrioAt`), `src/city/zoning.ts` (`Placed`).
 
 ### Plinth

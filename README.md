@@ -23,7 +23,7 @@ The site (the root of myxomatosis.xyz; the zones live under `/area/` because `/b
 of the Fábrica de Luz, Mistley's maltings and a water tank on legs, three
 chimneys with marker bands, an outdoor substation and a bucket-wheel
 excavator with an animated wheel, `factory.wheel`), `city.ts`
-(the Resume orchestrator) and `sea.ts` (point, lighthouse and ships of Blog). The pieces of
+(the Resume orchestrator: the Plaza Mayor and, on its west side, the hotel with the RESUME sign on its facade) and `sea.ts` (point, lighthouse and ships of Blog). The pieces of
 Resume live in `src/city/` (`zoning.ts` neighborhoods, `fixed.ts` fixed pieces,
 `streets.ts` streets (lanes, crosswalks, median, lamps, traffic lights, crossing plazas, costanera), `lights.ts` windows, neon signs, washed facades and the box occlusion of the fixed pieces' lights) and in the
 kit `src/kit/` (explored in `lab/kit.html`); the west bank's plan (axes, Plaza Mayor, parcels and barrios) is

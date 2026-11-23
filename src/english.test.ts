@@ -132,6 +132,8 @@ const ALLOW: Record<string, RegExp[]> = {
     /integración al sitio|teléfono|veredicto del bloom|bloom, promedio|polígonos estáticos|acentos estáticos del mundo/g,
     // the plank raft closing (#457): the pending note it drops, the 2026-11-18 §8.3 phrase, and the glossary's Spanish name of Decal
     /#457 las regenera|balsa de tablones|\(Calcomanía\.\)/g,
+    // the hotel sign closing (#475): the crown's sha256 digests (any 64-hex literal of this file), its §8.3 line, the storybook cell phrases and the #474 note it closes
+    /\b[0-9a-f]{64}\b|Desde #471 el cartel es el del hotel|el cartel de Resume en la fachada del hotel|recorte del mundo|hasta #475/g,
   ],
   "src/scenes/world-baseline.test.ts": [/"?[a-z-]+"?: "[0-9a-f]{8}\/[0-9a-f]{8}"/g],
 };
