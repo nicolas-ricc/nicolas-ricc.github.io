@@ -83,4 +83,15 @@ describe("axis-streets", () => {
     for (const t of tiles) for (const q of t.footprint) expect(pointInPoly(q.x, q.y, oct)).toBe(true);
     expect([...g, ...s].filter((x) => x.kind === "poly" && x.mat === "paving").length).toBe(8);
   });
+  it("the crossing on the Avenida del Sur (10, 318) belongs to the bounds north of it, and its crosswalks reach across the avenue", () => {
+    const north: Bounds2 = { x0: -30, y0: 164, x1: 60, y1: 318 }, south: Bounds2 = { x0: -30, y0: 318, x1: 60, y1: 420 };
+    const at318 = (cs: { x: number; y: number }[]) => cs.some((c) => Math.abs(c.x - 10) < 1e-6 && Math.abs(c.y - 318) < 1e-6);
+    expect(at318(axisCrossings(north, never))).toBe(true);
+    expect(at318(axisCrossings(south, never))).toBe(false);
+    const g: Solid[] = [], s: Solid[] = [];
+    axisCrosswalks(g, s, north, never);
+    const acrossSur = g.filter((x): x is Solid & { kind: "strip" } => x.kind === "strip" && x.width === 0.8 && x.path.every((q) => onBand("sur", q.x, q.y) && Math.abs(q.x - 10) < 25));
+    expect(acrossSur.length).toBeGreaterThanOrEqual(6);
+    expect(s.some((x) => { const q = bounds(x); return Math.hypot(q.min.x - 10, q.min.y - 318) < 15; })).toBe(true);
+  });
 });

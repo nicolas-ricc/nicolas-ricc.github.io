@@ -44,7 +44,7 @@ export interface TechScene { ground: Solid[]; solids: Solid[]; accents: Accent[]
 
 export { ARENA, AUDITORIUM, TELECOM, TOWER_D };
 export const MAX_TECH_H = 20;
-export const TECH_MATS: readonly Material[] = ["office", "officeDark", "glass", "curtain", "paving", "plaza", "stone", "copper", "concrete", "leaf", "leafDark", "steel", "rust", "tile", "brick", "whitewash", "signal", "safety", "hullBlue", "sand", "plaster", "terracotta", "asphalt"];
+export const TECH_MATS: readonly Material[] = ["office", "officeDark", "glass", "curtain", "paving", "plaza", "stone", "copper", "concrete", "leaf", "leafDark", "steel", "rust", "tile", "brick", "whitewash", "signal", "safety", "hullBlue", "sand", "plaster", "terracotta"];
 const CURTAIN_WINDOW = { w: 0.85, h: 0.8 } as const;
 
 const strip = (path: Vec2[], width: number, z: number, mat: Material): Solid => ({ kind: "strip", path, width, z, mat });
@@ -133,7 +133,7 @@ const LOW_MAX_H = 6;
 function low(ctx: NeighborhoodCtx, b: SprawlBlock): void {
   const pc = b.parcel!, roll = ctx.rng.next() * 100;
   let acc = 0;
-  const name = (LOW_RECIPES.find(([, w]) => roll < (acc += w)) ?? LOW_RECIPES[0])[0];
+  const name = LOW_RECIPES.find(([, w]) => roll < (acc += w))![0];
   const lot = { x: b.x + SIDEWALK, y: b.y + SIDEWALK, w: b.w - 2 * SIDEWALK, d: b.d - 2 * SIDEWALK, z: 0, open: parcelOpenSides(pc), maxH: LOW_MAX_H };
   if (tooSmall(lot)) { base(ctx, b, PLINTH_H, "paving"); return; }
   const { piece, plinth } = seat(recipe(name), lot, ctx.rng, STYLES.residential);

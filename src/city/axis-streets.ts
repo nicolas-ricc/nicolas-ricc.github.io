@@ -16,6 +16,8 @@ const DASH = 5, GAP = 5;
 const SAMPLE = 0.5;
 const LAMP_EVERY = 12, LAMP_INSET = 0.7;
 const TREE_EVERY = 8;
+/** How far past `bounds` the crosswalks and lights of an owned crossing may reach: the widest band plus the three strips. */
+const CROSSING_REACH = Math.max(...AXES.map((a) => a.w)) / 2 + 6;
 const strip = (path: Vec2[], width: number, mat: "paving"): Solid => ({ kind: "strip", path, width, z: 0.02, mat });
 
 /** The axes that get street furniture: the costanera south of 324 is the waterfront's promenade, unchanged. */
@@ -45,7 +47,7 @@ export function axisLanes(ground: Solid[], bounds: Bounds2, stop: Stop): void {
   }
 }
 
-/** Planter of the boulevard (4 wide, 0.3 high, on its center line) cut 1 u short of other bands and plazas, with a tree every 8. */
+/** Planter of the boulevard (4 wide, 0.3 high, on its center line) cut 1 u short of other bands and plazas, with a tree every 8. Assumes a N–S boulevard, the only one of the plan. */
 export function boulevardPlanter(solids: Solid[], bounds: Bounds2, stop: Stop): void {
   for (const a of furnished()) {
     if (a.kind !== "boulevard") continue;
@@ -79,7 +81,7 @@ export function boulevardPlanter(solids: Solid[], bounds: Bounds2, stop: Stop): 
   }
 }
 
-/** Where two axes cross inside `bounds` (a crossing on the south edge belongs to the bounds beyond it), outside the crossing plazas. */
+/** Where two axes cross inside `bounds`, outside the crossing plazas. A crossing on the north edge (`y0`) belongs to the bounds north of it: the city (`y1` 318) owns the crossings on the y 318 avenue, the south (`y0` 318) does not. */
 export function axisCrossings(bounds: Bounds2, stop: Stop): Vec2[] {
   const out: Vec2[] = [], as = furnished();
   for (let i = 0; i < as.length; i++) for (let j = i + 1; j < as.length; j++) {
@@ -93,7 +95,8 @@ export function axisCrossings(bounds: Bounds2, stop: Stop): Vec2[] {
 
 /** Crosswalks across each axis on both sides of every crossing (3 strips of 0.8, 1.6 apart) and two traffic lights (off) at opposite corners. */
 export function axisCrosswalks(ground: Solid[], solids: Solid[], bounds: Bounds2, stop: Stop): void {
-  const ok = (x: number, y: number): boolean => inBounds(bounds, x, y) && !stop(x, y);
+  // the furniture of a crossing owned by these bounds may straddle their edge (the crossings on the y 318 avenue sit on it)
+  const ok = (x: number, y: number): boolean => inBounds(bounds, x, y, -CROSSING_REACH) && !stop(x, y);
   const as = furnished();
   for (const c of axisCrossings(bounds, stop)) {
     const here = as.filter((a) => pointInPoly(c.x, c.y, axisBand(a)));
@@ -117,7 +120,7 @@ export function axisCrosswalks(ground: Solid[], solids: Solid[], bounds: Bounds2
     const uBnA = B.ux * nA.x + B.uy * nA.y, uAnB = A.ux * nB.x + A.uy * nB.y;
     if (Math.abs(uBnA) < 1e-6 || Math.abs(uAnB) < 1e-6) continue;
     for (const sg of [-1, 1]) {
-      const tA = sg * (a.w / 2 + 0.8), tB = sg * (b.w / 2 + 0.8);
+      const tA = sg * (a.w / 2 - LAMP_INSET), tB = sg * (b.w / 2 - LAMP_INSET); // at the curb inside both bands, on asphalt, like the lamps
       const al = tB / uAnB, be = tA / uBnA;
       const x = c.x + al * A.ux + be * B.ux, y = c.y + al * A.uy + be * B.uy;
       if (ok(x, y)) solids.push(...trafficLight(v3(x, y, 0)));

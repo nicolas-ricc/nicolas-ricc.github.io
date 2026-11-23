@@ -44,7 +44,7 @@ function court(ctx: NeighborhoodCtx, b: SprawlBlock): void {
 /** Sidewalk: street lamp at the south corner and conical tree to the east. */
 function sidewalk(ctx: NeighborhoodCtx, b: SprawlBlock): void {
   place(ctx.solids, ctx.accents, lamp(v3(b.x + 1, b.y + b.d + 0.6, 0)));
-  ctx.solids.push({ kind: "cone", at: v3(b.x + 24.8, b.y + b.d / 2, 0), r: 1.4, h: 4, mat: "leaf", sides: 6 });
+  ctx.solids.push({ kind: "cone", at: v3(b.x + b.w + 0.8, b.y + b.d / 2, 0), r: 1.4, h: 4, mat: "leaf", sides: 6 });
 }
 
 /** Club Pedro Echagüe: plinth, stone front with sign, gym with vault, court with hoops, fence and light towers, and sidewalk with street lamp and tree. */
