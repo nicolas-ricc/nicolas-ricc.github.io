@@ -4,7 +4,7 @@ import { createRng } from "../map/seed";
 import { WINDOW_ALPHA } from "../city/lights";
 import { city, type CityScene } from "./city";
 import { HOTEL_SLAB } from "./sign-hotel";
-import { type CityAnim, BLINK_GAP_MS, PAPER_DRIFT, FLICKER_ALPHA, FLICKER_GAP_MS, PROMENADE_STEP_MS, NEON_STEP_MS, PAPER_RANGE, PAPER_SIDE, PAPER_SPEED, SIGN_GAP_MS, WINDOW_GAP_MS, createCityAnim } from "./city-anim";
+import { type CityAnim, BLINK_GAP_MS, PAPER_DRIFT, ROOMS_BAND, FLICKER_ALPHA, FLICKER_GAP_MS, PROMENADE_STEP_MS, NEON_STEP_MS, PAPER_RANGE, PAPER_SIDE, PAPER_SPEED, SIGN_GAP_MS, WINDOW_GAP_MS, createCityAnim } from "./city-anim";
 
 /** Sign accents injected by hand: since #472 the city makes no district signs (the modern belt lies west of the city edge), but city-anim still animates `neon.signs`. */
 const SIGNS: Accent[] = [["cyan", 0], ["magenta", 10], ["cyan", 20], ["magenta", 30], ["cyan", 40], ["magenta", 50]].map(([color, x]) => ({
@@ -317,6 +317,10 @@ describe("city-anim", () => {
       expect(rooms(chunked([BLINK_GAP_MS[1]], seed))).toBe(rooms(chunked(repeat(BLINK_GAP_MS[1] / 100, 100), seed)));
       expect(rooms(chunked([600000], seed))).toBe(rooms(chunked(repeat(600, 1000), seed)));
     }
+  });
+
+  it("blink: after 10 min the lit-room count is within ROOMS_BAND of the initial one", () => {
+    for (const seed of [1, 2, 3]) expect(Math.abs(chunked([600000], seed).lit().length - chunked([], seed).lit().length)).toBeLessThanOrEqual(ROOMS_BAND);
   });
 
   it("tick(7000) and seven tick(1000) with the same seed leave the same room and neon counters", () => {

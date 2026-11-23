@@ -14,8 +14,8 @@ import { chase } from "./neon";
  * along the promenade. Also, windows of the buildings turn on and off, and a
  * street neon on the quay flickers. Pauses are measured in wall time, not in
  * ticks; the paper that reaches the end is reborn at the window and continues
- * with the leftover time. Frame 0 = everything still and on; with
- * reduced-motion it stays there.
+ * with the leftover time. Frame 0 = the initial rooms and everything
+ * else on, all still; with reduced-motion it stays there.
  */
 export const BLINK_GAP_MS: [number, number] = [4000, 9000];
 export const PAPER_SPEED = 4 / 1000; // u per ms
@@ -40,7 +40,7 @@ export const ROOMS_LIT = 0.4; // fraction of the rooms lit at frame 0
 export const ROOMS_BAND = 5; // the lit count stays within initial ± this
 const PERP = { x: -PAPER_DRIFT.y, y: PAPER_DRIFT.x }; // perpendicular to the drift: opens the fan
 
-/** `lit`: a hotel room toggled during the tick (it used to be the lit floor going off). */
+/** `lit`: a hotel room toggled during the tick. */
 export interface CityAnimChanges { lit: boolean; papers: boolean; neon: boolean; windows: boolean }
 export interface CityAnim { lit(): Accent[]; papers(): Accent[]; neon(): Accent[]; windows(): Accent[]; tick(dtMs: number): CityAnimChanges; fired(): { lit: number; neon: number; papers: number; windows: number; flicker: number } }
 
