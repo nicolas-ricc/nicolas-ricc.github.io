@@ -1,11 +1,12 @@
 import { isBehind, overlaps, screenBounds } from "../iso/depth";
 import { v3 } from "../iso/geometry";
-import type { Bounds } from "../iso/solids";
+import { bounds, type Bounds } from "../iso/solids";
 import { LANDMARK_MAX_H } from "../kit/piece";
 import type { Lot, Side, StyleId } from "../kit/types";
 import type { Rng } from "../map/seed";
 import { PLINTH_H } from "../scenes/city-pieces";
-import { AVENUE, BLOCK_W, EAST_COLS, FREIGHT_ROW, LIT_FLOOR, ROWS, SIDEWALK, STREET, TOWER, TOWER_FLOORS, TOWER_H, WEST_QUAY, CITY_EDGE, blocks, estuaryEast, type Block, type Rect } from "../scenes/city-grid";
+import { AVENUE, BLOCK_W, EAST_COLS, FREIGHT_ROW, ROWS, SIDEWALK, STREET, WEST_QUAY, CITY_EDGE, blocks, estuaryEast, type Block, type Rect } from "../scenes/city-grid";
+import { SIGN_PANEL } from "../scenes/sign-hotel";
 import { CITY_BOUNDS, HOTEL_LOT, inCrossingPlaza, inPlazaMayor, onAxis, parcels, polyBox, type Parcel } from "../scenes/city-plan";
 
 /**
@@ -16,23 +17,7 @@ import { CITY_BOUNDS, HOTEL_LOT, inCrossingPlaza, inPlazaMayor, onAxis, parcels,
  */
 export type Neighborhood = StyleId;
 
-export const MAX_DISTRICT_H = 24;
 export const FRONT_CAP_H = 10;
-
-/** Box of the tower's lit floor (city.ts places the tower; here only where it ends up is needed). */
-const LIT: Bounds = { min: v3(TOWER.x, TOWER.y, LIT_FLOOR * (TOWER_H / TOWER_FLOORS)), max: v3(TOWER.x + TOWER.w, TOWER.y + TOWER.d, (LIT_FLOOR + 1) * (TOWER_H / TOWER_FLOORS)) };
-
-/**
- * Lit-floor rule: if a 24-high building on this block would
- * overlap the lit floor on screen while standing in front of it, the
- * block is limited to 10. With the current grid no block of the district
- * ends up in front (all are west or south of the tower); it is a guard
- * in case the district gains closer rows in the future.
- */
-export function maxDistrictHeight(b: Rect): number {
-  const box: Bounds = { min: v3(b.x, b.y, 0), max: v3(b.x + b.w, b.y + b.d, MAX_DISTRICT_H + PLINTH_H + 1) };
-  return overlaps(screenBounds(box), screenBounds(LIT)) && isBehind(LIT, box) ? FRONT_CAP_H : MAX_DISTRICT_H;
-}
 
 export const MAX_BUILDING_H = 18;
 
@@ -71,10 +56,11 @@ export const FIXED: readonly { x: number; y: number; recipe: string }[] = [
 /** Harbor block with no fixed recipe: it gets only the plinth (city.ts), no building. */
 export const isBare = (b: Block): boolean => neighborhoodOf(b) === "harbor" && !FIXED.some((f) => f.x === b.x && f.y === b.y);
 
-/** Y of the west row that faced the old plaza (218 + 18 + 6): kept for `maxHeightFor` until #474. */
-const PLAZA_FRONT_ROW_Y = 242;
-/** Cap of the row facing the plaza: a tall building there would hide the tower's lit floor or the fountain (fixed.ts). */
-export const maxHeightFor = (b: Block, top = MAX_BUILDING_H): number => (b.y === PLAZA_FRONT_ROW_Y && b.x >= 96 && b.x + b.w <= 186 ? FRONT_CAP_H : top);
+/** Cap of a parcel in front of the hotel's sign: a rect that, built to its tallest, would cover the glass panel on screen while standing in front of it is limited to `FRONT_CAP_H`; anywhere else `top`. */
+export function maxHeightFor(r: Rect, top = MAX_BUILDING_H): number {
+  const box: Bounds = { min: v3(r.x, r.y, 0), max: v3(r.x + r.w, r.y + r.d, MAX_BUILDING_H + PLINTH_H) }, panel = bounds(SIGN_PANEL);
+  return overlaps(screenBounds(box), screenBounds(panel)) && isBehind(panel, box) ? FRONT_CAP_H : top;
+}
 
 /** Sides of the block that face an open space (avenue, dock or east bank): there the recipe may open courtyards and shop windows. */
 export function openSides(b: Block): Side[] {
@@ -157,7 +143,7 @@ export function assign(rng: Rng, districtRng: Rng): Placed[] {
     const lot: Lot = {
       x: b.x + SIDEWALK, y: b.y + SIDEWALK, w: b.w - 2 * SIDEWALK, d: b.d - 2 * SIDEWALK,
       z: 0, open: openSides(b),
-      maxH: Math.min(maxHeightFor(b, top), maxDistrictHeight(b)),
+      maxH: top,
     };
     out.push({ block: b, neighborhood, recipe, lot, tone: rng.int(-1, 1) });
   }
@@ -167,7 +153,8 @@ export function assign(rng: Rng, districtRng: Rng): Placed[] {
     if (neighborhood === "residential") {
       for (let i = 0; i < 5 && out.some((q) => rectsAdjacent(q.block, p.rect) && q.recipe === recipe); i++) recipe = pick(r, CATALOGUE[neighborhood].recipes);
     }
-    const lot: Lot = { x: p.rect.x + SIDEWALK, y: p.rect.y + SIDEWALK, w: p.rect.w - 2 * SIDEWALK, d: p.rect.d - 2 * SIDEWALK, z: 0, open: parcelOpenSides(p), maxH: neighborhood === "district" ? LANDMARK_MAX_H : MAX_BUILDING_H };
+    const top = neighborhood === "district" ? LANDMARK_MAX_H : MAX_BUILDING_H;
+    const lot: Lot = { x: p.rect.x + SIDEWALK, y: p.rect.y + SIDEWALK, w: p.rect.w - 2 * SIDEWALK, d: p.rect.d - 2 * SIDEWALK, z: 0, open: parcelOpenSides(p), maxH: Math.min(top, maxHeightFor(p.rect, top)) };
     out.push({ parcel: p, block: { ...p.rect, bank: "west", row: -2, kind: "parcel" }, neighborhood, recipe, lot, tone: rng.int(-1, 1) });
   }
   return out;

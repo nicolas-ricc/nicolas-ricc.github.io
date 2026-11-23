@@ -9,7 +9,7 @@ import { toWorld } from "../kit/lettering";
 import type { SignSpec } from "../kit/legibility";
 import { pointInPolygon, worldZoneAt } from "../map/geo";
 import type { ZoneId } from "../map/zones";
-import { RESUME_SIGN } from "../scenes/sign-crown";
+import { RESUME_SIGN } from "../scenes/sign-hotel";
 import { BLOG_SIGNS, type WritingSite } from "../scenes/sign-platform";
 import { TINKER_SIGN } from "../scenes/sign-tinker";
 import { signBox, WRITING_SITE_MARGIN } from "./sign-box";

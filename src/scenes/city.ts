@@ -13,20 +13,19 @@ import { lights, solidBoxes, visibleLights, WINDOW_ALPHA, type CityLights, type 
 import { streets } from "../city/streets";
 import { freightYard, railLands } from "../city/rail-lands";
 import { harbor } from "../city/harbor";
-import { bridge, collapsed, cars, greenery, promenade, plazaAndTower, westQuay, type TowerLights } from "../city/fixed";
-import { CROWN_SITE, towerCrown } from "./sign-crown";
+import { bridge, collapsed, cars, greenery, promenade, plazaMayor, westQuay } from "../city/fixed";
+import { hotel, type HotelLights } from "./sign-hotel";
 import { FOOTBRIDGE_LOT, assign, isBare, isHotelLot, tooSmall, type Placed } from "../city/zoning";
 
 /**
  * Resume: orchestrator of the city. The zoning (src/city/zoning.ts) assigns
  * neighborhood, recipe, lot and tone per block; here each piece is built with
- * the kit, the fixed pieces are added (plaza and tower, crowned by the Resume sign of src/scenes/sign-crown.ts; bridge, riverside,
+ * the kit, the fixed pieces are added (plaza, the hotel with the Resume sign of src/scenes/sign-hotel.ts; bridge, riverside,
  * promenade, collapse, jungle, cars; src/city/fixed.ts; the inlet works, src/city/harbor.ts) and the streets. The
  * terrain (terrain.ts) is the asphalt.
  * Spec: docs/superpowers/specs/2026-10-15-resume-nivel-2-kit-zonificacion-luces-design.md §6.
  */
 export { PLINTH_H } from "./city-pieces";
-export { TOWER_H } from "./city-grid";
 
 /** A placed piece: `solidOffset` is the index of its first solid in `scene.solids`. */
 export interface PlacedPiece { placed: Placed; piece: Piece; solidOffset: number }
@@ -34,9 +33,9 @@ export interface PlacedPiece { placed: Placed; piece: Piece; solidOffset: number
 export interface CityScene {
   ground: Solid[];   // plaza tiles, ground of devoured blocks, lanes
   solids: Solid[];
-  accents: Accent[]; // kit accents, visible lights of the fixed pieces (street lamps, plaza, garlands, puddles), the crown's letters, bulbs and lights, fixed lit windows, bar neons and bathed facades of lights(); the animatable windows, the flickering neon (lights().flicker) and the lit floor of the tower are animated by city-anim
+  accents: Accent[]; // kit accents, visible lights of the fixed pieces (street lamps, plaza, garlands, puddles), the sign's letters and bulbs, fixed lit windows, bar neons and bathed facades of lights(); the animatable windows, the flickering neon (lights().flicker) and the hotel's rooms are animated by city-anim
   fixedLights: FixedLight[]; // every light of the fixed pieces, hidden ones included; `accents` has only those `visibleLights` lets through
-  tower: TowerLights;
+  hotel: HotelLights;
   neon: { signs: Accent[]; promenade: Vec3[] }; // signs of the district and lights of the promenade; city-anim animates them
   placed: PlacedPiece[];
   lights: CityLights;
@@ -62,8 +61,8 @@ export function city(rng: Rng, districtRng: Rng, lightsRng: Rng): CityScene {
   }
   for (const b of blocks()) if (isBare(b)) solids.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
   for (const pc of parcels(CITY_BOUNDS)) if (isHotelLot(pc)) solids.push(parcelPlinth(pc)); // the hotel lot: plinth only
-  const tower = plazaAndTower(solids, ground, fixed, rng);
-  towerCrown(solids, accents, CROWN_SITE);
+  const hotelLights = hotel(solids, accents, fixed);
+  plazaMayor(solids, ground, fixed, rng);
   add(recipe("footbridge")(FOOTBRIDGE_LOT, rng, STYLES.residential));
   streets(ground, solids, fixed);
   railLands(ground, solids);
@@ -81,5 +80,5 @@ export function city(rng: Rng, districtRng: Rng, lightsRng: Rng): CityScene {
   for (const w of lit.windows) if (w.on && !w.animable) accents.push({ kind: "poly", pts: w.window.pts, color: w.color, alpha: WINDOW_ALPHA });
   lit.neons.forEach((n, i) => { if (i !== lit.flicker) accents.push(...n.accents); });
   accents.push(...lit.bathed);
-  return { ground, solids, accents, fixedLights: fixed, tower, neon: { signs, promenade: promenadeLights }, placed, lights: lit };
+  return { ground, solids, accents, fixedLights: fixed, hotel: hotelLights, neon: { signs, promenade: promenadeLights }, placed, lights: lit };
 }

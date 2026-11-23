@@ -42,9 +42,9 @@ export interface CityAnim { lit(): Accent[]; papers(): Accent[]; neon(): Accent[
 
 const NONE: CityAnimChanges = { lit: false, papers: false, neon: false, windows: false };
 
-export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights">, rng: Rng, opts: { reducedMotion: boolean }): CityAnim {
-  const { tower, neon } = scene;
-  const w = tower.paperWindow;
+export function createCityAnim(scene: Pick<CityScene, "hotel" | "neon" | "lights">, rng: Rng, opts: { reducedMotion: boolean }): CityAnim {
+  const { hotel, neon } = scene;
+  const w = hotel.paperWindow;
   // own stream: sharing `rng` with the papers would make the drawn pause depend on the chunking
   const blinkRng = createRng(rng.int(0, SEED_MAX));
   const nextGap = (): number => blinkRng.int(BLINK_GAP_MS[0], BLINK_GAP_MS[1]);
@@ -101,7 +101,7 @@ export function createCityAnim(scene: Pick<CityScene, "tower" | "neon" | "lights
   };
 
   return {
-    lit: () => (off ? [] : [...tower.litWindows]), // copy: the consumer cannot touch the scene
+    lit: () => (off ? [] : [...hotel.rooms]), // copy: the consumer cannot touch the scene
     papers: () => papers.map(paperAt),
     neon: () => {
       const on = signs.filter((s) => s.offUntil <= clock).map((s) => ({ ...s.a, color: s.color }));

@@ -4,7 +4,7 @@ import { occluded, project } from "../iso/project";
 import { rigid } from "../iso/rigid";
 import { bounds, type Solid } from "../iso/solids";
 import { ISO_COLORS, ISO_TONES, toneColor, type Material } from "../map/palette-iso";
-import { RESUME_SIGN } from "../scenes/sign-crown";
+import { RESUME_SIGN } from "../scenes/sign-hotel";
 import { BLOG_SIGNS } from "../scenes/sign-platform";
 import { TINKER_SIGN } from "../scenes/sign-tinker";
 import { CHAINSAW_WRITING } from "./chainsaw-writing";
@@ -390,7 +390,8 @@ describe("decal signs (#452)", () => {
   });
   it("existing signs measure as before (a deliberate pin: retuning a sign updates these values)", () => {
     const pinned = [
-      { s: RESUME_SIGN, m: { xHeightPx: 14.2506, strokePx: 2.3085972, airPx: 2.9539114255064196, aspectError: 0.010050506338837972 }, c: 4.695562146225949 },
+      // #474: the hotel sign, cap 12 on the slab's face (the crown measured 14.2506 / 2.3085972 / 2.9539114255064196)
+      { s: RESUME_SIGN, m: { xHeightPx: 19.656000000000013, strokePx: 3.1842720000000275, airPx: 4.0743605869054, aspectError: 0.010050506338832865 }, c: 4.695562146225949 },
       { s: TINKER_SIGN, m: { xHeightPx: 15.069607494509299, strokePx: 2.396067591626975, airPx: 2.285331928448671, baselineDeg: 0.23067405316426817, verticalDeg: 3.0304011483583646, aspectError: 0.07731579344706507 }, c: 8.062398849377823 },
       // #460: WRITING_CAP 17.25 as a navy decal on timber (cap 20 measured 12.74 / 2.48 / 3.59 / contrast 8.04; the plain board at 11.5, 14.50 / 2.26 / 2.47 / 8.08)
       { s: BLOG_SIGNS.wide, m: { xHeightPx: 10.988810610699073, strokePx: 2.1406773916946134, airPx: 3.099268134066288, aspectError: 0 }, c: 8.040217301353456 },

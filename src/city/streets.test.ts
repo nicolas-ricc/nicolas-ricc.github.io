@@ -193,7 +193,7 @@ describe("avenue lamps around the bars (#165)", () => {
 // ---------------------------------------------------------------- #472: center lines on the new grid and on the axes
 import { fingerprint } from "../iso/fingerprint";
 import { SIDEWALK } from "../scenes/city-grid";
-import { AXES, BLOCK as PLAN_BLOCK, CITY_BOUNDS, GRID_ORIGIN, HOTEL_LOT, LAND, PITCH, PLAZA_MAYOR, STREET as PLAN_STREET, TOWER_ISLAND, axisBand, crossingPlazas, inCrossingPlaza, onAxis, pointInPoly } from "../scenes/city-plan";
+import { AXES, BLOCK as PLAN_BLOCK, CITY_BOUNDS, GRID_ORIGIN, HOTEL_LOT, LAND, PITCH, PLAZA_MAYOR, STREET as PLAN_STREET, axisBand, crossingPlazas, inCrossingPlaza, onAxis, pointInPoly } from "../scenes/city-plan";
 
 describe("streets on the new layout (#472)", () => {
   const ground: Solid[] = [], solids: Solid[] = [];
@@ -241,7 +241,7 @@ describe("streets on the new layout (#472)", () => {
     }
   });
 
-  it("no line runs into a foreign axis band, the plaza, a crossing plaza, a crater, HOTEL_LOT or TOWER_ISLAND", () => {
+  it("no line runs into a foreign axis band, the plaza, a crossing plaza, a crater or HOTEL_LOT", () => {
     const bands = AXES.map((a) => ({ a, band: axisBand(a) }));
     for (const s of lines) {
       if (s.path[0]!.x > WEST_QUAY.x0 || s.path[0]!.y < LAND.y0 - 1e-6) continue; // the strip and the east bank keep their lines
@@ -254,7 +254,6 @@ describe("streets on the new layout (#472)", () => {
         expect(inCrossingPlaza(p.x, p.y), `${tag} in a crossing plaza`).toBe(false);
         expect(inCrater(p.x, p.y), `${tag} in a crater`).toBe(false);
         expect(strictIn(HOTEL_LOT, p), `${tag} in the hotel lot`).toBe(false);
-        expect(strictIn(TOWER_ISLAND, p), `${tag} in the tower island`).toBe(false);
       }
     }
     expect(crossingPlazas()).toHaveLength(3);

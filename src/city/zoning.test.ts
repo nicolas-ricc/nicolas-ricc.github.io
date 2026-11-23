@@ -3,14 +3,12 @@ import { createRng } from "../map/seed";
 import { RECIPES } from "../kit/index";
 import { LANDMARK_MAX_H } from "../kit/piece";
 import { PLINTH_H } from "../scenes/city-pieces";
-import { ROWS, SIDEWALK, STREET, TOWER, WEST_QUAY, blocks, estuaryEast, type Block } from "../scenes/city-grid";
+import { ROWS, SIDEWALK, STREET, WEST_QUAY, blocks, estuaryEast, type Block } from "../scenes/city-grid";
 import { zoneRng } from "../scenes/world";
 import { SEED } from "../map/seed";
-import { CATALOGUE, FIXED, FRONT_CAP_H, FOOTBRIDGE_LOT, MAX_BUILDING_H, MAX_DISTRICT_H, assign, isBare, neighborhoodOf, maxDistrictHeight, maxHeightFor, neighborhoodOfParcel, parcelOpenSides, tooSmall, openSides, waterTowerLot, type Neighborhood, type Placed } from "./zoning";
+import { CATALOGUE, FIXED, FRONT_CAP_H, FOOTBRIDGE_LOT, MAX_BUILDING_H, assign, builtParcels, isBare, neighborhoodOf, maxHeightFor, neighborhoodOfParcel, parcelOpenSides, tooSmall, openSides, waterTowerLot, type Neighborhood, type Placed } from "./zoning";
 
 const key = (b: { x: number; y: number }): string => `${b.x},${b.y}`;
-/** A synthetic west block, to pin the functions that kept the tower rule (the west bank has no such blocks since #472). */
-const westBlock = (x: number, y: number): Block => ({ x, y, w: 24, d: 18, bank: "west", row: 0, kind: "block" });
 const blockAt = (x: number, y: number): Block => blocks().find((b) => b.x === x && b.y === y)!;
 const cells = (neighborhood: Neighborhood): string[] => blocks().filter((b) => neighborhoodOf(b) === neighborhood).map(key).sort();
 const sorted = (xs: [number, number][]): string[] => xs.map(([x, y]) => key({ x, y })).sort();
@@ -74,21 +72,16 @@ describe("zoning", () => {
     }
   });
 
-  it("maxHeightFor caps the row facing the tower and the plaza fountain at 10", () => {
-    expect(maxHeightFor(westBlock(102, 242))).toBe(10);
-    expect(maxHeightFor(westBlock(132, 242))).toBe(10);
-    expect(maxHeightFor(westBlock(132, 242), LANDMARK_MAX_H)).toBe(10);
-    expect(maxHeightFor(westBlock(72, 242))).toBe(MAX_BUILDING_H);
-    expect(maxHeightFor(westBlock(162, 242))).toBe(10); // in front of the fountain (150, 227): anything taller hides it and its puddle floats above the roof
-    expect(maxHeightFor(westBlock(72, 242), LANDMARK_MAX_H)).toBe(LANDMARK_MAX_H);
-    expect(maxHeightFor(westBlock(102, 242))).toBe(FRONT_CAP_H);
-    expect(maxHeightFor(blockAt(42, 92))).toBe(MAX_BUILDING_H);
+  it("maxHeightFor caps a rect in front of the sign's panel at 10 and leaves one behind it or off its screen span at `top`", () => {
+    expect(maxHeightFor({ x: 81, y: 291, w: 16, d: 9 })).toBe(FRONT_CAP_H); // south of the hotel, in front of the glass: tall there would cover the word
+    expect(maxHeightFor({ x: 81, y: 291, w: 16, d: 9 }, LANDMARK_MAX_H)).toBe(FRONT_CAP_H);
+    expect(maxHeightFor({ x: 60, y: 200, w: 24, d: 18 })).toBe(MAX_BUILDING_H); // behind the slab
+    expect(maxHeightFor({ x: 60, y: 200, w: 24, d: 18 }, LANDMARK_MAX_H)).toBe(LANDMARK_MAX_H);
+    expect(maxHeightFor(blockAt(42, 92))).toBe(MAX_BUILDING_H); // off the panel's screen span
   });
 
-  it("maxDistrictHeight keeps the lit-floor guard", () => {
-    expect(maxDistrictHeight({ x: TOWER.x + 20, y: TOWER.y + 20, w: 24, d: 18 })).toBe(10); // on screen it overlaps the lit floor and stands in front
-    expect(maxDistrictHeight(westBlock(72, 164))).toBe(MAX_DISTRICT_H);
-    expect(blocks().filter((b) => maxDistrictHeight(b) < MAX_DISTRICT_H).map(key)).toEqual([]); // no block of the grid stands in front of the lit floor
+  it("no parcel but the one at (73, 291) is in front of the sign's panel", () => {
+    expect(builtParcels().filter((p) => maxHeightFor(p.rect) < MAX_BUILDING_H).map((p) => `${p.cell.col},${p.cell.row}`)).toEqual(["73,291"]);
   });
 
   it("open: east bank", () => {
@@ -157,12 +150,14 @@ describe("zoning", () => {
       expect(p.lot).toMatchObject({ x: b.x + SIDEWALK, y: b.y + SIDEWALK, w: b.w - 2 * SIDEWALK, d: b.d - 2 * SIDEWALK, open: openSides(b) });
       expect(p.lot.z).toBe(0); // street level: city() decides the plinth (seat)
       const top = fixed || p.neighborhood === "district" ? LANDMARK_MAX_H : MAX_BUILDING_H;
-      expect(p.lot.maxH).toBe(Math.min(maxHeightFor(b, top), maxDistrictHeight(b)));
+      expect(p.lot.maxH).toBe(top); // the blocks (strip and east bank) keep `top`
     }
     for (const p of placed.filter((q) => q.parcel)) {
       expect(p.neighborhood).toBe(neighborhoodOfParcel(p.parcel!));
       expect(CATALOGUE[p.neighborhood].recipes.map((r) => r.name)).toContain(p.recipe);
       expect(p.lot.open).toEqual(parcelOpenSides(p.parcel!));
+      const top = p.neighborhood === "district" ? LANDMARK_MAX_H : MAX_BUILDING_H;
+      expect(p.lot.maxH).toBe(Math.min(top, maxHeightFor(p.parcel!.rect, top)));
     }
     expect(JSON.stringify(sceneAssign())).not.toBe(JSON.stringify(assign(createRng(9), createRng(8))));
   });
@@ -232,7 +227,8 @@ describe("zoning over parcels (#472)", () => {
       expect(q.lot.w).toBeCloseTo(r.w - 2 * SIDEWALK, 9);
       expect(q.lot.d).toBeCloseTo(r.d - 2 * SIDEWALK, 9);
       expect(q.lot.z).toBe(0);
-      expect(q.lot.maxH).toBe(q.neighborhood === "district" ? LANDMARK_MAX_H : MAX_BUILDING_H);
+      const top = q.neighborhood === "district" ? LANDMARK_MAX_H : MAX_BUILDING_H;
+      expect(q.lot.maxH).toBe(Math.min(top, maxHeightFor(r, top))); // the parcel in front of the sign gets FRONT_CAP_H
     }
   });
 

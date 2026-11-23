@@ -16,7 +16,6 @@ export const PLAZA_MAYOR: Rect = { x: 132, y: 206, w: 54, d: 85 };
 export const PLAZA_CENTER: Vec2 = { x: 159, y: 248 };
 export const HOTEL_LOT: Rect = { x: 73, y: 234, w: 54, d: 51 };
 export const BRIDGE_LANDING: Rect = { x: 132, y: 207, w: 54, d: 10 };
-export const TOWER_ISLAND: Rect = { x: 120, y: 219, w: 18, d: 16 };
 export const CROSSING_PLAZA_R = 11;
 
 export interface Bounds2 { x0: number; y0: number; x1: number; y1: number }
@@ -250,12 +249,12 @@ const passes = (p: readonly Vec2[], area: number): boolean => {
   const b = bbox(p);
   return Math.min(b.x1 - b.x0, b.y1 - b.y0) >= 9;
 };
-/** Grid blocks (center in `bounds`) minus axes, Plaza Mayor, crossing plazas and the tower island; the pieces that pass the filter. Memoized per bounds. */
+/** Grid blocks (center in `bounds`) minus axes, Plaza Mayor, crossing plazas; the pieces that pass the filter. Memoized per bounds. */
 export function parcels(bounds: Bounds2): Parcel[] {
   const key = `${bounds.x0},${bounds.y0},${bounds.x1},${bounds.y1}`;
   const hit = parcelMemo.get(key);
   if (hit) return hit;
-  const holes = [...bands, rectPoly(PLAZA_MAYOR), ...crossingPlazas(), rectPoly(TOWER_ISLAND)];
+  const holes = [...bands, rectPoly(PLAZA_MAYOR), ...crossingPlazas()];
   const out: Parcel[] = [];
   let hotel = false;
   const j0 = Math.floor((bounds.y0 - BLOCK / 2 - GRID_ORIGIN.y) / PITCH), j1 = Math.ceil((bounds.y1 - BLOCK / 2 - GRID_ORIGIN.y) / PITCH);

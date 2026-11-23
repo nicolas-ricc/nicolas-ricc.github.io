@@ -8,7 +8,7 @@ import { lamp, streetTree, trafficLight } from "../kit/props";
 import { placeLit, type FixedLight } from "./lights";
 import { PLINTH_H, prism } from "../scenes/city-pieces";
 import { builtParcels, neighborhoodOfParcel } from "./zoning";
-import { AXES, BLOCK, CITY_BOUNDS, GRID_ORIGIN, HOTEL_LOT, LAND, PITCH, TOWER_ISLAND, axis, axisBand, clipSeg, inCrossingPlaza, inPlazaMayor, inRect, onAxis, pointInPoly } from "../scenes/city-plan";
+import { AXES, BLOCK, CITY_BOUNDS, GRID_ORIGIN, HOTEL_LOT, LAND, PITCH, axis, axisBand, clipSeg, inCrossingPlaza, inPlazaMayor, inRect, onAxis, pointInPoly } from "../scenes/city-plan";
 
 /**
  * Resume streets: lanes, avenue with dashed lanes and crosswalks,
@@ -42,7 +42,7 @@ export const inPlaza = (x: number, y: number): boolean => inPlazaMayor(x, y) || 
 /** The strip and the east lines stop at craters and plazas. */
 const flatStop: Stop = (x, y) => inCrater(x, y) || inPlaza(x, y);
 /** An ordinary street of the grid also stops at an axis, the hotel lot and the tower island. */
-const streetStop: Stop = (x, y) => flatStop(x, y) || onAxis(x, y) || inRect(HOTEL_LOT, x, y) || inRect(TOWER_ISLAND, x, y);
+const streetStop: Stop = (x, y) => flatStop(x, y) || onAxis(x, y) || inRect(HOTEL_LOT, x, y);
 
 /**
  * Continuous center line of 0.3 along a straight street (any direction): a `strip`
@@ -74,7 +74,7 @@ function axisLines(ground: Solid[]): void {
     if (!seg) continue;
     const [p, q] = a.kind === "costanera" ? [{ x: a.from.x, y: seg[0].y }, { x: a.from.x, y: seg[1].y }] : seg;
     const foreign = AXES.filter((o) => o !== a).map(axisBand);
-    centerLine(ground, p, q, (x, y) => x < CITY_EDGE.west || y > CITY_BOUNDS.y1 || !inCoverQuad(x, y, 16 / 9, COVER_MARGIN) || flatStop(x, y) || inRect(TOWER_ISLAND, x, y) || foreign.some((b) => pointInPoly(x, y, b)));
+    centerLine(ground, p, q, (x, y) => x < CITY_EDGE.west || y > CITY_BOUNDS.y1 || !inCoverQuad(x, y, 16 / 9, COVER_MARGIN) || flatStop(x, y) || foreign.some((b) => pointInPoly(x, y, b)));
   }
 }
 

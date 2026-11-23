@@ -1,16 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
-import { fingerprint } from "../iso/fingerprint";
 import { v3 } from "../iso/geometry";
 import { bounds, type Bounds, type Solid } from "../iso/solids";
 import { awning, dockCrane } from "../kit/props";
 import { ESTUARY_Y0, QUAY_X } from "../map/geo";
 import { createRng } from "../map/seed";
-import { AVENUE, BRIDGE, COLLAPSED, EAST_RING, PROMENADE, ROWS, STREET, TOWER, TOWER_H, WEST_QUAY, estuaryEast } from "../scenes/city-grid";
+import { AVENUE, BRIDGE, COLLAPSED, EAST_RING, PROMENADE, ROWS, STREET, WEST_QUAY, estuaryEast } from "../scenes/city-grid";
 import { plazaTone, tiles } from "../scenes/city-pieces";
-import { BRIDGE_LANDING, PLAZA_CENTER, inParcel, PLAZA_MAYOR, TOWER_ISLAND } from "../scenes/city-plan";
+import { BRIDGE_LANDING, PLAZA_CENTER, inParcel, PLAZA_MAYOR } from "../scenes/city-plan";
 import type { FixedLight } from "./lights";
-import { bridge, collapsed, greenery, promenade, plazaAndTower, towerWindows, westQuay } from "./fixed";
+import { bridge, collapsed, greenery, promenade, plazaMayor, westQuay } from "./fixed";
 
 const EPS = 1e-6;
 /** Strict box overlap: two solids that only touch (one resting on the other) don't count. */
@@ -279,8 +278,8 @@ describe("westQuay", () => {
   });
 });
 
-describe("plazaAndTower", () => {
-  const built = () => { const solids: Solid[] = [], ground: Solid[] = [], lights: FixedLight[] = []; const tower = plazaAndTower(solids, ground, lights, createRng(7)); return { solids, ground, accents: lights.flatMap((l) => l.accents), tower }; };
+describe("plazaMayor", () => {
+  const built = () => { const solids: Solid[] = [], ground: Solid[] = [], lights: FixedLight[] = []; plazaMayor(solids, ground, lights, createRng(7)); return { solids, ground, accents: lights.flatMap((l) => l.accents) }; };
   const fountainOf = (solids: Solid[]) => solids.filter((s): s is Solid & { kind: "cylinder" } => s.kind === "cylinder" && s.mat === "marble" && s.r === 3);
   const kiosksOf = (solids: Solid[]) => prisms(solids).filter((s) => s.mat === "officeDark" && s.w === 2 && s.d === 2 && s.h === 2.4);
 
@@ -293,7 +292,7 @@ describe("plazaAndTower", () => {
     expect(accents.filter((a) => a.kind === "poly" && a.color === "amberBleed" && a.alpha === 0.35)).toHaveLength(3);
   });
 
-  it("two kiosks at the north corners, just south of the landing, inside the plaza and clear of the island and the landing", () => {
+  it("two kiosks at the north corners, just south of the landing, inside the plaza and clear of the landing", () => {
     const ks = kiosksOf(built().solids);
     expect(ks).toHaveLength(2);
     const P = PLAZA_MAYOR, ly1 = BRIDGE_LANDING.y + BRIDGE_LANDING.d;
@@ -302,29 +301,26 @@ describe("plazaAndTower", () => {
       expect(b.min.x >= P.x && b.max.x <= P.x + P.w && b.max.y <= P.y + P.d).toBe(true);
       expect(b.min.y).toBeGreaterThanOrEqual(ly1);
       expect(b.min.y).toBeLessThan(ly1 + 3);
-      expect(b.min.x < TOWER_ISLAND.x + TOWER_ISLAND.w - EPS && b.max.x > TOWER_ISLAND.x + EPS && b.min.y < TOWER_ISLAND.y + TOWER_ISLAND.d - EPS && b.max.y > TOWER_ISLAND.y + EPS).toBe(false);
     }
     expect(Math.min(...ks.map((k) => k.at.x))).toBeLessThan(P.x + 12);
     expect(Math.max(...ks.map((k) => k.at.x))).toBeGreaterThan(P.x + P.w - 6);
   });
 
-  it("no furniture of the plaza enters TOWER_ISLAND or BRIDGE_LANDING", () => {
-    const { solids } = built(), tower = solids.find((s) => s.kind === "prism" && s.h === TOWER_H)!;
-    for (const s of solids) {
-      if (s === tower || s.mat === "leaf" || s.mat === "office" || (s.mat === "officeDark" && bounds(s).min.z >= TOWER_H)) continue; // the tower, its vines, cornice and machine room
-      const b = bounds(s);
-      for (const r of [TOWER_ISLAND, BRIDGE_LANDING]) expect(b.min.x < r.x + r.w - EPS && b.max.x > r.x + EPS && b.min.y < r.y + r.d - EPS && b.max.y > r.y + EPS, `${s.kind} ${s.mat}`).toBe(false);
+  it("no furniture of the plaza enters BRIDGE_LANDING", () => {
+    for (const s of built().solids) {
+      const b = bounds(s), r = BRIDGE_LANDING;
+      expect(b.min.x < r.x + r.w - EPS && b.max.x > r.x + EPS && b.min.y < r.y + r.d - EPS && b.max.y > r.y + EPS, `${s.kind} ${s.mat}`).toBe(false);
     }
   });
 
-  it("the tiles partition the plaza: with the island and the landing they add up to 54 × 85, pairwise without overlap", () => {
+  it("the tiles partition the plaza: with the landing they add up to 54 × 85, pairwise without overlap", () => {
     const { ground } = built();
     const plaza = ground.filter((g) => g.kind === "ground" && g.mat === "plaza"), landing = ground.filter((g) => g.kind === "ground" && g.mat === "paving");
-    expect(plaza).toHaveLength(3);
+    expect(plaza).toHaveLength(1);
     expect(landing).toHaveLength(1);
     const area = (g: Solid) => g.kind === "ground" ? g.tris.reduce((a, t) => a + Math.abs((t.pts[1].x - t.pts[0].x) * (t.pts[2].y - t.pts[0].y) - (t.pts[2].x - t.pts[0].x) * (t.pts[1].y - t.pts[0].y)) / 2, 0) : 0;
-    const I = TOWER_ISLAND, P = PLAZA_MAYOR, inside = (I.x + I.w - P.x) * I.d;
-    expect([...plaza, ...landing].reduce((a, g) => a + area(g), 0) + inside + P.w).toBeCloseTo(P.w * P.d, 6); // + the 1 u strip north of the landing (all curb)
+    const P = PLAZA_MAYOR;
+    expect([...plaza, ...landing].reduce((a, g) => a + area(g), 0) + P.w).toBeCloseTo(P.w * P.d, 6); // + the 1 u strip north of the landing (all curb)
     const boxes = [...plaza, ...landing].map((g) => g.kind === "ground" ? { x0: Math.min(...g.tris.flatMap((t) => t.pts.map((p) => p.x))), x1: Math.max(...g.tris.flatMap((t) => t.pts.map((p) => p.x))), y0: Math.min(...g.tris.flatMap((t) => t.pts.map((p) => p.y))), y1: Math.max(...g.tris.flatMap((t) => t.pts.map((p) => p.y))) } : null).filter((b) => b !== null);
     for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
       const a = boxes[i]!, b = boxes[j]!;
@@ -332,34 +328,13 @@ describe("plazaAndTower", () => {
     }
   });
 
-  it("the tower: 8 lit windows, the paper window on the east wall and no antenna", () => {
-    const { tower, solids } = built();
-    expect(tower.litWindows).toHaveLength(8);
-    expect(tower.paperWindow.x).toBeCloseTo(TOWER.x + TOWER.w, 6);
-    expect(tower).not.toHaveProperty("antenna");
-    expect(solids.some((s) => s.kind === "cylinder" && s.mat === "steel" && bounds(s).min.z >= TOWER_H)).toBe(false); // no steel cylinder on the roof (#391)
+  it("no tower, no tower jungle and no puddle of the floor: the plaza has no cone, no leaf and no 0.25 puddle", () => {
+    const { solids, accents } = built();
+    expect(solids.some((s) => s.kind === "cone" || s.mat === "leaf" || s.mat === "officeDark" && s.kind === "prism" && s.h > 5)).toBe(false);
+    expect(accents.filter((a) => a.kind === "poly" && a.color === "amberBleed" && a.alpha === 0.25)).toHaveLength(0);
   });
 
-  const towerOf = (solids: Solid[]) => prisms(solids).find((s) => s.mat === "officeDark" && s.facade)!;
-
-  it("towerWindows: tone −1, 0 and 1 give the same windows", () => {
-    const t = towerOf(built().solids), flat = towerWindows(t, t.facade!);
-    for (const tone of [-1, 0, 1]) {
-      const got = towerWindows({ ...t, tone }, t.facade!);
-      expect(got.litWindows).toHaveLength(8);
-      expect(got).toEqual(flat);
-    }
-  });
-
-  // fingerprint and paper window recorded on 5f893d9, before #52: a mismatch means the windows moved, so find what changed
-  it("towerWindows with tone 0 is what plazaAndTower publishes, unchanged since the #52 baseline", () => {
-    const { solids, tower } = built(), t = towerOf(solids), got = towerWindows(t, t.facade!);
-    expect(got).toEqual({ litWindows: tower.litWindows, paperWindow: tower.paperWindow });
-    expect(fingerprint(got.litWindows as unknown as Solid[])).toBe("9f80b655");
-    expect(got.paperWindow).toEqual({ x: 137, y: 232.25, z: 20.625 });
-  });
-
-  it("the new items don't exceed 5 nor overlap benches, street lamps, curb or tower", () => {
+  it("the new items don't exceed 5 nor overlap benches, street lamps or curb", () => {
     const { solids } = built();
     const kioskBodies = new Set<Solid>(kiosksOf(solids));
     const fresh = solids.filter((s) => s.mat === "marble" || s.mat === "terracotta" || kioskBodies.has(s));
@@ -372,12 +347,11 @@ describe("plazaAndTower", () => {
     }
   });
 
-  it("the tower's two puddles keep alpha 0.25 and the rng is consumed as today", () => {
-    expect(built().accents.filter((a) => a.kind === "poly" && a.color === "amberBleed" && a.alpha === 0.25)).toHaveLength(6);
+  it("the rng is consumed by the plaza strip and the landing, in that order", () => {
     const a = createRng(7), b = createRng(7);
-    plazaAndTower([], [], [], a);
-    const P = PLAZA_MAYOR, I = TOWER_ISLAND, L = BRIDGE_LANDING, ly1 = L.y + L.d;
-    for (const r of [{ x: P.x, y: ly1, w: P.w, d: I.y - ly1 }, { x: I.x + I.w, y: I.y, w: P.x + P.w - I.x - I.w, d: I.d }, { x: P.x, y: I.y + I.d, w: P.w, d: P.y + P.d - I.y - I.d }]) tiles(b, r, 0.05, "plaza", plazaTone);
+    plazaMayor([], [], [], a);
+    const P = PLAZA_MAYOR, L = BRIDGE_LANDING, ly1 = L.y + L.d;
+    tiles(b, { x: P.x, y: ly1, w: P.w, d: P.y + P.d - ly1 }, 0.05, "plaza", plazaTone);
     tiles(b, L, 0.05, "paving", plazaTone);
     expect(a.next()).toBe(b.next());
   });
