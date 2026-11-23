@@ -1,10 +1,11 @@
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { project } from "../iso/project";
 import { COVER_LAPTOP, COVER_PHONE, GROUND_ASPECT, layoutGaps, SIGN_FONT, SIGN_RULES, signMetrics, staticContrast } from "../kit/legibility";
 import { counterClearance, letterGaps, measureText, rhythm } from "../kit/lettering";
-import { slabFootprint } from "../scenes/sign-hotel";
+import { RESUME_SIGN, SIGN_SITE, slabFootprint } from "../scenes/sign-hotel";
 import { BLOG_SIGNS, CYCLE_POSES, PITCH, PLATFORM_DECK, PLATFORM_SITES, poseAt, ROLL, signAt, WRITING_CAP } from "../scenes/sign-platform";
 import { RAFT } from "../scenes/raft";
 import { ISO_TONES } from "../map/palette-iso";
@@ -1223,5 +1224,118 @@ describe("WRITING on a plank raft (#451)", () => {
     for (const s of ["2026-11-20-writing-balsa-tablones-design.md", "`--tick", "REPORT-t", "`?tick=`"]) expect(readme, s).toContain(s);
     const p = (readme.split(/\n\s*\n/).find((x) => x.includes("zone signs of #374")) ?? "").replace(/\s+/g, " ");
     for (const s of ["no exceptions", "`--tick`"]) expect(p, s).toContain(s);
+  });
+});
+
+describe("hotel sign level 3 and docs closing (#475)", () => {
+  const SPECS = `${ROOT}docs/superpowers/specs/`;
+  const read = (path: string) => (existsSync(path) ? readFileSync(path, "utf8") : "");
+  const sha = (path: string) => createHash("sha256").update(readFileSync(path)).digest("hex");
+  const png = (path: string) => {
+    const b = readFileSync(path);
+    expect(b.subarray(1, 4).toString(), path).toBe("PNG");
+    return [b.readUInt32BE(16), b.readUInt32BE(20)];
+  };
+  const LEVEL3 = `${SPECS}assets/carteles-legibilidad/`;
+  const REPORTS = ["REPORT.md", "REPORT-t7919.md", "REPORT-t15838.md"];
+  const ID = "cartel-torre-escena";
+  /** The section of `id` at `scale` in the report `md` ("" when missing). */
+  const section = (md: string, id: string, scale: string) => { const at = md.indexOf(`## ${id} a ${scale}\n`); return at < 0 ? "" : md.slice(at).split(/\n(?=## )/)[0]!; };
+  const cell = (md: string, id: string, scale: string, metric: string) =>
+    section(md, id, scale).split("\n").find((l) => l.startsWith(`| ${metric} |`))?.split("|")[2]?.trim() ?? "";
+  // the crown's level-3 crops of 2026-11-20 (the rest and tick runs wrote the same bytes)
+  const CROWN_CROPS = [
+    "b0e4599c105bd20aedd51d8dac34f9f481b5d2491f1a5629a231197de1f101cf", "e04814f97578cf21ff72a0f049b21411b7fadba836ad5b39aba475e08121fbbf",
+    "a7dc0d07cb2b612333397abb1fd841e9c24405af3116e2330e5951ab5f219140", "0678eb52d42bfa710e4e4988cec41a2bce759c6b9f632ac8ce2d637193002288",
+  ];
+  // the crown's scene captures of #378
+  const CROWN_SCENES = { "117": "3236612d57b4f6868edc4eca75b4c66546170c09400a4e375630a7d550f846de", "083": "482fd4d8ceceaf5b755e01c0f6c7b83cb9b5c3c5e9afe2c424f93091bd46cf51" };
+  const between = (txt: string, from: RegExp, to?: RegExp) => {
+    const i = txt.search(from);
+    if (i < 0) return "";
+    const rest = txt.slice(i), j = to ? rest.slice(1).search(to) : -1;
+    return j < 0 ? rest : rest.slice(0, j + 1);
+  };
+  const flat = (txt: string) => txt.replace(/\s+/g, " ");
+  const minus = (v: number, d: number) => v.toFixed(d).replace(/^-/, "\u2212");
+  const glossary = read(`${ROOT}CONTEXT.md`);
+  const entryOf = (name: string) => { const at = glossary.indexOf(`### ${name}\n`), rest = glossary.slice(at + name.length + 5); return at < 0 ? "" : rest.slice(0, Math.max(0, rest.search(/^### /m)) || rest.length); };
+
+  it("the three reports are dated 2026-11-23 or later, with cartel-torre-escena ✓ at both scales and OCR RESUME", () => {
+    for (const file of REPORTS) {
+      const md = read(`${LEVEL3}${file}`);
+      expect(md.match(/^Fecha: (\d{4}-\d{2}-\d{2})$/m)?.[1] ?? "", file).toMatch(/./);
+      expect(md.match(/^Fecha: (\d{4}-\d{2}-\d{2})$/m)![1]! >= "2026-11-23", file).toBe(true);
+      for (const sc of ["1.17", "0.83"]) {
+        const sec = section(md, ID, sc);
+        for (const m of ["contraste", "halo", "OCR"]) expect(sec, `${file} ${sc} ${m}`).toMatch(new RegExp(`^\\| ${m} \\|.*\\| ✓ \\|$`, "m"));
+        expect(sc === "1.17" ? ["`RESUME`"] : ["`RESUME`", "`resume`"], `${file} ${sc}`).toContain(cell(md, ID, sc, "OCR"));
+      }
+    }
+  });
+  it("the twelve cartel-torre-escena crops and the two scene captures are no longer the crown's", () => {
+    for (const s of ["117", "083"]) for (const t of ["", "-t7919", "-t15838"]) for (const k of ["", "-ocr"]) {
+      const path = `${LEVEL3}${ID}-${s}${t}${k}.png`;
+      expect(existsSync(path), path).toBe(true);
+      expect(CROWN_CROPS, path).not.toContain(sha(path));
+    }
+    for (const [s, old] of Object.entries(CROWN_SCENES)) {
+      const path = `${SPECS}assets/374-carteles/${ID}-${s}.png`;
+      expect(png(path), path).toEqual([3200, 1800]);
+      expect(sha(path), path).not.toBe(old);
+    }
+  });
+  it("the 2026-11-18 spec §8.3 says the sign is the hotel's since #471", () => {
+    const next = read(`${SPECS}2026-11-18-composicion-responsive-design.md`);
+    expect(flat(between(next, /^### 8\.3 /m, /^#/m))).toContain("Desde #471 el cartel es el del hotel (cap 12)");
+  });
+  it("the 2026-11-15 spec closes the #474 notes: the §8.1 level-3 cells of cartel-torre-escena are REPORT.md's", () => {
+    const spec = read(`${SPECS}2026-11-15-carteles-de-zona-rediseno-design.md`), report = read(`${LEVEL3}REPORT.md`);
+    expect(spec).not.toMatch(/hasta #475/);
+    const measures = between(spec, /^### 8\.1 /m, /^### 8\.2 /m);
+    for (const sc of ["1.17", "0.83"]) {
+      const line = measures.split("\n").find((l) => l.startsWith(`| \`${ID}\` | ${sc} |`)) ?? "";
+      for (const m of ["contraste", "halo", "OCR"]) {
+        const v = cell(report, ID, sc, m);
+        expect(v, `${sc} ${m}`).not.toBe("");
+        expect(line, `${sc} ${m} ${v}`).toContain(v);
+      }
+    }
+  });
+  it("the storybook index's Resume row lists hotel and tells the sign on the hotel facade", () => {
+    const story = read(`${SPECS}2026-10-17-storybook-estructuras-design.md`);
+    const cols = (story.split("\n").find((l) => l.startsWith("| Resume: ciudad |")) ?? "").split("|").map((c) => c.trim());
+    const regions = cols[2] ?? "", pieces = cols.at(-2) ?? "";
+    expect(regions.split(", ")).toContain("hotel");
+    expect(regions.split(", ")).not.toContain("torre");
+    for (const s of ["el cartel de Resume en la fachada del hotel", "`cartel-torre`", "`cartel-torre-escena`", "recorte del mundo"]) expect(pieces, s).toContain(s);
+    expect(pieces).not.toMatch(/corona|helipuerto/);
+  });
+  it("README's world and storybook paragraphs name the hotel and its sign, not the tower crown or the helipad", () => {
+    const paragraphs = readme.split(/\n\s*\n/).map(flat);
+    const world = paragraphs.find((p) => p.includes("`city.ts`")) ?? "", story = paragraphs.find((p) => p.includes("/lab/storybook.html")) ?? "";
+    expect(world).toContain("hotel with the RESUME sign on its facade");
+    for (const [name, p] of Object.entries({ world, story })) {
+      expect(p, name).toContain("hotel");
+      expect(p, name).not.toMatch(/helipad|crown|office tower/i);
+    }
+  });
+  it("CONTEXT.md Landmark names the hotel; Landmark, Zone and Parcel do not name the tower", () => {
+    expect(entryOf("Landmark")).toContain("the hotel for Resume");
+    for (const name of ["Landmark", "Zone", "Parcel"]) {
+      expect(entryOf(name), name).not.toBe("");
+      expect(entryOf(name), name).not.toMatch(/\btower\b(?! crane)/i);
+    }
+  });
+  it("the 2026-11-22 spec §7.5 has a deviations table with cap 12, SIGN_SITE, the screen box and the phones", () => {
+    const spec = read(`${SPECS}2026-11-22-resume-centro-costero-design.md`);
+    const seven = between(spec, /^## 7\. /m, /^## 8\. /m), dev = flat(between(seven, /^### 7\.5 Desvíos$/m));
+    expect(dev).not.toBe("");
+    expect(between(seven, /^### 7\.5 /m).split("\n").some((l) => l.startsWith("| "))).toBe(true);
+    const pts = RESUME_SIGN.glyphs.flatMap((g) => g.quads.flat()).map(project);
+    const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
+    const box = `${minus(Math.min(...xs), 1)}..${minus(Math.max(...xs), 1)} × ${minus(Math.min(...ys), 1)}..${minus(Math.max(...ys), 1)}`;
+    const site = `(${[SIGN_SITE.x, SIGN_SITE.y, SIGN_SITE.z].map((v) => minus(v, 2)).join(", ")})`;
+    for (const s of ["`HOTEL_CAP`", "12", "`backingW`", "`SIGN_SITE`", site, box, "28 %", "48 %", "37 %", "430×932", "390×750", "360×740", "`COVER_FOCUS_U`", "`labelLayout`"]) expect(dev, s).toContain(s);
   });
 });
