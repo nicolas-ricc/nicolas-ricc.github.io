@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { convexHull, type Vec2 } from "../iso/geometry";
 import { prism } from "../scenes/city-pieces";
@@ -5,6 +6,7 @@ import { bounds, type Solid } from "../iso/solids";
 import { createRng } from "../map/seed";
 import { LAB_LOTS, RECIPES, recipe } from "./index";
 import { LANDMARK_MAX_H, RECIPE_MAX_H, interlock } from "./piece";
+import { WEDGE_LOTS } from "./lot-fixtures";
 import { cornice, hipRoof } from "./roofs";
 import { STYLES } from "./styles";
 import type { Lot, Piece } from "./types";
@@ -14,10 +16,10 @@ const LOTS: Lot[] = [
   { x: 1.5, y: 1.5, w: 21, d: 15, z: 0, open: ["s"], maxH: 24 },
   { x: 0, y: 0, w: 24, d: 18, z: 0, open: ["s", "e"], maxH: 24 },
 ];
-/** The contract's lots: the city's and the lab's, or the own lot from LAB_LOTS in those two positions. */
+/** The contract's lots: the city's and the lab's plus the parcel wedges (#476), or the own lot from LAB_LOTS in the first two positions. */
 const lotsFor = (name: string): Lot[] => {
   const own = LAB_LOTS[name];
-  return own ? LOTS.map((l) => ({ ...l, w: own.w, d: own.d, z: own.z ?? 0 })) : LOTS;
+  return own ? LOTS.map((l) => ({ ...l, w: own.w, d: own.d, z: own.z ?? 0 })) : [...LOTS, ...WEDGE_LOTS];
 };
 const STYLE_IDS = ["downtown", "bars", "residential", "civic"] as const;
 const SEEDS = Array.from({ length: 20 }, (_, i) => i + 1);
@@ -249,6 +251,19 @@ describe("kit: contract of every registered recipe", () => {
       });
     });
   }
+});
+
+describe("kit: recipes without poly build what they built before #476", () => {
+  // the hashes were written from the code before #476; never regenerate them (`-u`): a mismatch is a regression of the no-poly path
+  const POLY_AWARE = ["classic", "chamfer", "decoStepped", "podiumTower", "courtyardO", "courtyardU", "patioResidential", "rowHouses"];
+  it("the eight poly-aware recipes match their snapshot", () => {
+    const hashes = Object.fromEntries(POLY_AWARE.map((name) => {
+      const h = createHash("sha256");
+      for (const lot of LOTS) for (const id of STYLE_IDS) for (const seed of SEEDS) h.update(JSON.stringify(recipe(name)(lot, createRng(seed), STYLES[id])));
+      return [name, h.digest("hex")];
+    }));
+    expect(hashes).toMatchSnapshot();
+  });
 });
 
 describe("kit: modern family", () => {

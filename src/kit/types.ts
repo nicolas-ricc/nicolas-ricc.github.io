@@ -1,5 +1,5 @@
 import type { Accent } from "../iso/accent";
-import type { Vec3 } from "../iso/geometry";
+import type { Vec2, Vec3 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import type { Material } from "../map/palette-iso";
 import type { Rng } from "../map/seed";
@@ -12,8 +12,12 @@ import type { Rect } from "../scenes/city-grid";
  */
 export type Side = "n" | "s" | "e" | "w";
 export type StyleId = "downtown" | "bars" | "residential" | "civic" | "riverside" | "district" | "industrial" | "warehouses" | "freight" | "harbor";
-/** `open`: sides with an open frontage (avenue, water, plaza). `maxH`: height cap above `lot.z`. */
-export interface Lot { x: number; y: number; w: number; d: number; z: number; open: Side[]; maxH: number }
+/**
+ * `open`: sides with an open frontage (avenue, water, plaza). `maxH`: height cap above `lot.z`.
+ * `poly`: the parcel polygon in world coordinates, inside the rectangle (a wedge cut by a diagonal); the recipes
+ * that support it clip their bodies to it and chamfer its oblique corners, the rest ignore it.
+ */
+export interface Lot { x: number; y: number; w: number; d: number; z: number; open: Side[]; maxH: number; poly?: Vec2[] }
 export interface Style { id: StyleId; mat: Material; trim: Material; roof: Material; tone: number; floorH: number; window: "windowWarm" | "windowCool" }
 /** `wall`: wall normal. `building`: index of the solid in `Piece.solids`. */
 export interface Window { pts: Vec3[]; floor: number; wall: Vec3; building: number }
@@ -23,4 +27,4 @@ export interface Slot { pts: Vec3[]; wall: Vec3; side: Side; kind: "neon" | "sig
 export interface Wall { pts: Vec3[]; normal: Vec3; floorH: number; building: number }
 export interface Piece { solids: Solid[]; ground: Solid[]; accents: Accent[]; windows: Window[]; slots: Slot[]; walls: Wall[]; courtyard?: Rect; landmarkTop?: Vec3 }
 export type Recipe = (lot: Lot, rng: Rng, style: Style) => Piece;
-export interface RecipeDef { name: string; recipe: Recipe; family: "modern" | "courtyard" | "composite" | "curved" | "lowrise" | "landmarks" | "industrial" | "reconversion" | "harbor"; landmark?: boolean }
+export interface RecipeDef { name: string; recipe: Recipe; family: "modern" | "courtyard" | "composite" | "curved" | "lowrise" | "landmarks" | "industrial" | "reconversion" | "harbor" | "porteno"; landmark?: boolean }

@@ -1,0 +1,14 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`kit: recipes without poly build what they built before #476 > the eight poly-aware recipes match their snapshot 1`] = `
+{
+  "chamfer": "004970454943371606bc0ae4c9e18800380cb63904d6d1bb64dd85adeb8b7958",
+  "classic": "58e0036b32b78ed2b9e6c6a9961b706ec9bf3c72c438595fa4af9d12e42bcf17",
+  "courtyardO": "a6275170da8bcf39103948e3b464cce473d75f51fd0d52dfb6e48b4e7505c056",
+  "courtyardU": "36691ee2954762dfa61219b88ca40b8deb122a72ed67df56b8837c8c93fca787",
+  "decoStepped": "f973a3fd8c9691d6b001d545be11fa26c7bda86d96606e0a20c8eddf1fed1939",
+  "patioResidential": "d70fbd59c5ae5fdfff74a1a5a5e163e89372b37653e6cee92e954005df65ae17",
+  "podiumTower": "b9764ad3582fcc88007bb67b5cd56a4e07ebe9a3fb6588f231e1fbe4416db0b7",
+  "rowHouses": "3545c6714b52ab9af48785a5ee49ccd6839e13769aab3c9fe2a675d5799f4cdb",
+}
+`;
