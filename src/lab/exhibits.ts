@@ -71,7 +71,6 @@ const parcelBox = (col: number, row: number): Box => {
   const r = parcels(CITY_BOUNDS).filter((q) => q.cell.col === col && q.cell.row === row).sort((a, b) => b.area - a.area)[0]!.rect;
   return { x0: r.x - M, y0: r.y - M, x1: r.x + r.w + M, y1: r.y + r.d + M };
 };
-/** The union of two boxes. */
 const union = (a: Box, b: Box): Box => ({ x0: Math.min(a.x0, b.x0), y0: Math.min(a.y0, b.y0), x1: Math.max(a.x1, b.x1), y1: Math.max(a.y1, b.y1) });
 
 const stacksX = STACKS.map((s) => s.x), stacksY = STACKS.map((s) => s.y), stackR = Math.max(...STACKS.map((s) => s.r));

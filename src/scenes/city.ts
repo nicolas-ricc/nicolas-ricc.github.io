@@ -95,5 +95,6 @@ export function city(rng: Rng, districtRng: Rng, lightsRng: Rng, opts: { west: n
   for (const w of lit.windows) if (w.on && !w.animable) accents.push({ kind: "poly", pts: w.window.pts, color: w.color, alpha: WINDOW_ALPHA });
   lit.neons.forEach((n, i) => { if (i !== lit.flicker) accents.push(...n.accents); });
   accents.push(...lit.bathed);
-  return { ground, solids, accents, fixedLights: fixed, hotel: hotelLights, neon: { signs, promenade: promenadeLights, mastRing: telecomTip ? [3, 6, 9].map((dz) => v3(telecomTip!.x, telecomTip!.y + 0.6, telecomTip!.z - dz)) : [] }, placed, lights: lit, telecom: telecomTip };
+  const tip = telecomTip;
+  return { ground, solids, accents, fixedLights: fixed, hotel: hotelLights, neon: { signs, promenade: promenadeLights, mastRing: tip ? [3, 6, 9].map((dz) => v3(tip.x, tip.y + 0.6, tip.z - dz)) : [] }, placed, lights: lit, telecom: telecomTip };
 }

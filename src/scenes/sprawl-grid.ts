@@ -93,7 +93,6 @@ export function southParcels(): Parcel[] {
 /** The block of a south parcel. */
 export const parcelBlock = (p: Parcel): SprawlBlock => ({ ...p.rect, dist: Math.max(0, p.c.y - WORLD.y1), parcel: p });
 
-/** Every block of the tech district: one per south parcel. */
 export const techBlocks = (): SprawlBlock[] => southParcels().map(parcelBlock);
 
 /** Distance from the point to the edge of the built land toward the north or the west (the sides behind the camera), 0 on top of it. */
