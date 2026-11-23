@@ -290,6 +290,15 @@ verificarlo con el encuadre real del sitio en los aspectos que soporta
   torre manda el menor valor entre su rango (24 a 50) y la altura que deja
   libre la estación.
 
+### 7.5 Desvíos
+
+| Tema | Spec | Implementado | Motivo |
+| --- | --- | --- | --- |
+| Cap | 12.7 | `HOTEL_CAP` 12 | La regla `backingW` del oráculo deja 1.35 u de respaldo a cada lado de la tinta, sobre una fachada de 64: con 12.7 la tinta mide 64.07 y con 12, 60.54. |
+| Sitio | centro de la base en la cara sureste | `SIGN_SITE` (103.30, 262.80, 33.90) | Es el centro de la base del cartel en la cara sureste. |
+| Caja en pantalla | la de la corona, `−129.0..−67.0 × 118.4..130.6` | `−202.3..−116.7 × 118.8..135.6` | Es la caja proyectada de los quads del cartel; antes era la de la corona. |
+| Móviles verticales | RESUME entero | `COVER_FOCUS_U` sigue en 0.39 y el hotel donde lo pone §7.1; RESUME se ve al 28 % (430×932), 48 % (390×750) y 37 % (360×740) (en #474 se midió 27.7 / 48.4 / 36.5 %) | Su enlace usa el modo de borde de `labelLayout`. Está entero en todo anfitrión de al menos 640 px de ancho y siempre entero en `zoneView("cv")`. Es la decisión D10 de #471. |
+
 ## 8. Continuidad con el barrio costero
 
 - La grilla del §5.1 sigue al sur hasta `y ≈ 475`, dentro de lo que hoy es el

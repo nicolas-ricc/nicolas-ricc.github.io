@@ -359,12 +359,13 @@ cambiaron respecto de 2026-11-17 porque cambió su entorno (cabo, carriles y
 sitios de la plataforma), y todos siguen en ✓. Desde #441 el cartel es la tabla
 flotante y el OCR lee `WRITING` en `plataforma-escena*` (spec 2026-11-15 §8.2);
 las filas de la plataforma se remidieron en #445 y el nivel 3 no excusa ninguna.
+Desde #471 el cartel es el del hotel (cap 12): las filas de `cartel-torre-escena` son las de `REPORT.md` de #475.
 Desde #451 el cartel es la balsa de tablones (`WRITING` en `navy` sobre `timber`, spec 2026-11-20): las filas de `plataforma-escena*` son las de `REPORT.md` de #457, con caja alta 17.25 y el OCR dentro del área respaldada; el OCR lee `WRITING` y las poses de balanceo medidas con `--tick` (t 7919 y t 15838) dan lo mismo.
 
 | Contexto | Escala | Contraste | Halo | OCR |
 |---|---|---|---|---|
-| `cartel-torre-escena` | 1.17 | 10.44:1 | 0.05 | `RESUME` |
-| `cartel-torre-escena` | 0.83 | 9.58:1 | 0.04 | `RESUME` |
+| `cartel-torre-escena` | 1.17 | 8.16:1 | 0.08 | `RESUME` |
+| `cartel-torre-escena` | 0.83 | 6.97:1 | 0.07 | `RESUME` |
 | `cartel-taller-escena` | 1.17 | 6.60:1 | 0.08 | `PORTFOLIO` |
 | `cartel-taller-escena` | 0.83 | 5.75:1 | 0.08 | `PORTFOLIO` |
 | `plataforma-escena` | 1.17 | 7.99:1 | 0.01 | `WRITING` |

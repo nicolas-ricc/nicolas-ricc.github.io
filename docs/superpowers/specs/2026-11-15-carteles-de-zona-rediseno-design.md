@@ -252,7 +252,7 @@ tal como lo escribe `REPORT.md`) de cada exhibit en contexto, a 1.17 y a
 aspecto: RESUME 0°, 0°, 0.010; PORTFOLIO 0.23°, 3.03°, 0.077; WRITING 0°, 0°,
 0.010. Las filas de `plataforma-escena` se remidieron en #445 (2026-11-20,
 WRITING en Chainsaw Carnage sobre la tabla flotante, caja alta 11.5), con el
-OCR leyendo `WRITING`: desde #445 el nivel 3 no excusa ninguna fila. Desde #474 las filas de `cartel-torre-escena` llevan los valores de nivel 2 del hotel, mientras que sus celdas de nivel 3 (contraste en px, halo, OCR) siguen siendo las de la corona hasta #475. Las
+OCR leyendo `WRITING`: desde #445 el nivel 3 no excusa ninguna fila. Desde #474 las filas de `cartel-torre-escena` llevan los valores de nivel 2 del hotel, y sus celdas de nivel 3 (contraste en px, halo, OCR) son las del hotel desde #475. Las
 demás conservan las medidas del 2026-11-17. Desde #460, caja alta 17.25: las
 columnas de nivel 2 de `plataforma-escena` (alto de x, trazo, aire y contraste
 estático) son las de la balsa de tablones con WRITING en `navy` sobre `timber`
@@ -264,8 +264,8 @@ regenerado (halo simétrico y OCR dentro del área respaldada; §8.2, entrada de
 
 | Exhibit | Escala | Alto de x (px) | Trazo (px) | Aire (px) | Contraste estático | Contraste (px) | Halo | OCR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `cartel-torre-escena` | 1.17 | 19.66 | 3.18 | 4.07 | 4.70 | 10.13:1 | 0.06 | `RESUME` |
-| `cartel-torre-escena` | 0.83 | 13.94 | 2.26 | 2.89 | 4.70 | 8.89:1 | 0.05 | `RESUME` |
+| `cartel-torre-escena` | 1.17 | 19.66 | 3.18 | 4.07 | 4.70 | 8.16:1 | 0.08 | `RESUME` |
+| `cartel-torre-escena` | 0.83 | 13.94 | 2.26 | 2.89 | 4.70 | 6.97:1 | 0.07 | `RESUME` |
 | `cartel-taller-escena` | 1.17 | 15.07 | 2.40 | 2.29 | 8.06 | 6.99:1 | 0.08 | `PORTFOLIO` |
 | `cartel-taller-escena` | 0.83 | 10.69 | 1.70 | 1.62 | 8.06 | 5.93:1 | 0.08 | `PORTFOLIO` |
 | `plataforma-escena` | 1.17 | 10.99 | 2.14 | 3.10 | 8.04 | 7.99:1 | 0.01 | `WRITING` |
@@ -607,7 +607,7 @@ cubierta, que desde la segunda vuelta se estira a lo largo del cartel
 | PORTFOLIO | 52.74 | 87.73 | galpón de montaje sur 90 × 16 (`SHIPYARD_HALLS[1]`) | 124.02 |
 | WRITING | 72.56 | 120.06 | balsa de tablones 76.6 × 30.3 (`PLATFORM_DECK`, el sobre de `raftEnvelope`) | 126.68 |
 
-Desde #474 la fila de RESUME mide la palabra en la fachada del hotel (caja alta 12, `HOTEL_CAP`) contra la losa de oficinas (`slabFootprint`, 64 × 8, a lo largo de (1, −1)); antes medía 43.89 u, 72.62 px y la `TOWER` de 16 × 14, 35.10 px. Las columnas de nivel 2 de `cartel-torre-escena` de §8.1 son las del hotel; el contraste estático sigue en 4.70 (el panel `glass` y `greenMid` no cambian) y las de nivel 3 (contraste en px, halo, OCR) siguen siendo las de la corona hasta #475.
+Desde #474 la fila de RESUME mide la palabra en la fachada del hotel (caja alta 12, `HOTEL_CAP`) contra la losa de oficinas (`slabFootprint`, 64 × 8, a lo largo de (1, −1)); antes medía 43.89 u, 72.62 px y la `TOWER` de 16 × 14, 35.10 px. Las columnas de nivel 2 de `cartel-torre-escena` de §8.1 son las del hotel; el contraste estático sigue en 4.70 (el panel `glass` y `greenMid` no cambian) y las de nivel 3 (contraste en px, halo, OCR) son las del hotel desde #475.
 
 Desde #451 la fila de WRITING mide la palabra sobre la balsa de tablones (`raftEnvelope`, el sobre de los tablones con vigas y bordes irregulares, que `PLATFORM_DECK` recorre); desde #460, caja alta 17.25 (con caja alta 20 medía 84.13 u, 139.20 px y una balsa de 87.9 × 32.9, 145.49 px). Antes medía la tabla flotante en Chainsaw Carnage (caja alta 10.8 en #442 y 11.5 en #445).
 
