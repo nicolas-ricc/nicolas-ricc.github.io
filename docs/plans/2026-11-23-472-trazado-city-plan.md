@@ -44,7 +44,7 @@
 **Files:**
 - Create: `src/scenes/city-plan.ts`
 - Modify: `src/map/geo.ts` (gains `export const COVER_MARGIN = 30` with the doc comment of `sprawl-grid.ts`), `src/scenes/sprawl-grid.ts` (`export { COVER_MARGIN } from "../map/geo"` instead of its own const; nothing else)
-- Test: `src/scenes/city-plan.test.ts` (stage-3 evals, already failing; extend with TDD)
+- Test: `src/scenes/city-plan.test.ts` (written in pipeline stage 3, before Task 1, failing; extend with TDD)
 
 **Interfaces:**
 - Consumes: `inCoverQuad`, `COVER_MARGIN` (`src/map/geo.ts`); `type Vec2` (`src/iso/geometry.ts`); `type Rect` (`src/scenes/city-grid.ts`, type-only import).
@@ -77,9 +77,10 @@ Expected: FAIL (module not found).
 For each grid block `(col, row) = (13 + 30i, 21 + 30j)` whose center `(col + 12, row + 12)` lies in `bounds` (inclusive): clip the 24 × 24 square to `LAND`; subtract, in this order, every `axisBand` (AXES order), `PLAZA_MAYOR`, every crossing plaza, `TOWER_ISLAND`; keep each piece passing the Global filter. Pieces whose centroid is strictly inside `HOTEL_LOT` are replaced by one parcel `HOTEL_LOT` (`poly` its rectangle, `c` its center (100, 259.5), `cell { col: 73, row: 231 }`), emitted at the position of its first piece. Sort by `cell.row`, then `cell.col`, stable (the subtract order breaks ties). `d = |c − PLAZA_CENTER|`, `barrio = barrioAt(c)`.
 `inscribedRect(poly)`: search on the 1 u lattice of the bounding box (corners at `floor/ceil` of the box, plus the exact box edges) for the axis-aligned rectangle of largest area whose four corners and edge midpoints lie in `poly` (`pointInPoly` with a 1e-6 tolerance on the boundary); a rectangular parcel returns itself exactly.
 
-- [ ] **Step 6: Run** `npx vitest run src/scenes/city-plan.test.ts` — PASS (every criterion of the issue's first bullet, with Decisions T1/T2).
+- [ ] **Step 6: Extra tests (from the plan review)**: `HOTEL_LOT is exactly one parcel and no other parcel touches it` (intersection area < 1e-6); `TOWER lies inside TOWER_ISLAND`; `CITY_BOUNDS.x0 === CITY_EDGE.west` (the test imports both; guards the literal); `the rect of every CITY_BOUNDS parcel is at least 6 on each side` (measured minimum 6, so the lot minus sidewalks is ≥ 3); `parcels(PLAN_BOUNDS) and parcels({ ...PLAN_BOUNDS, y1: 475 }) are different arrays` (memo key is the template string of the four numbers, `-Infinity` included); `plaza tiles, island and landing partition PLAZA_MAYOR` lives in Task 4.
+- [ ] **Step 7: Run** `npx vitest run src/scenes/city-plan.test.ts` — PASS (every criterion of the issue's first bullet, with Decisions T1/T2).
 
-- [ ] **Step 7: Commit** `feat(#472): city-plan layout module`.
+- [ ] **Step 8: Commit** `feat(#472): city-plan layout module`.
 
 ### Task 2: `city-grid.ts` keeps the strip and the east; terrain and craters
 
@@ -123,11 +124,11 @@ For each grid block `(col, row) = (13 + 30i, 21 + 30j)` whose center `(col + 12,
 **Interfaces:**
 - Consumes: `PLAZA_MAYOR`, `PLAZA_CENTER`, `TOWER_ISLAND`, `BRIDGE_LANDING`, `HOTEL_LOT`, `onAxis`, `inPlazaMayor`, `inCrossingPlaza`, `parcels`, `CITY_BOUNDS`, `inRect` (Task 1); `assign` output shape (Task 3).
 - Produces: `plazaAndTower(solids, ground, lights, rng): TowerLights` with the same signature. Tiles: `tiles(rng, r, 0.05, "plaza", plazaTone)` over the four sub-rectangles of `PLAZA_MAYOR` minus `TOWER_ISLAND` and `BRIDGE_LANDING`: `y 217..219` full width, `x 138..186 × y 219..235` (east of the island), `y 235..291` full width (the 1 u strip `y 206..207` north of the landing is all curb); the landing is one `tiles(rng, BRIDGE_LANDING, 0.05, "paving", plazaTone)` with no curb; curb 1.2 `paving` prisms on the four sides of `PLAZA_MAYOR`: north side the strip `y 206..207` (1 u, it cannot be 1.2 without stepping on the landing), east side only south of the landing (`y 217..291`, the bridge lands at `y 207..217`), south side full, west side cut by the island (`y 206..219` and `y 235..291`); tower, cornice, machine room, jungle and the two lit-floor puddles exactly as today (`TOWER`); fountain at `PLAZA_CENTER`; benches at the four corners 4 in from the curb; kiosks at the north corners (south of the landing, so they do not stand on it); lamps at `(PLAZA_MAYOR.x + 2, 248.5)` and `(PLAZA_MAYOR.x + PLAZA_MAYOR.w − 2.6, 248.5)`.
-- `cars(solids, rng)`: over `blocks()` (minus `freight`) and over the built parcels (`rect`), 1..3 cars on the north or south sidewalk of the rect, rejected on an axis band, `PLAZA_MAYOR`, a crossing plaza, a crater (+2), `HOTEL_LOT`, the water or another car (+1); the strip rules stay.
+- `cars(solids, rng)`: over `blocks()` (minus `freight`) and over the built parcels (`rect`), 1..3 cars on the north or south sidewalk of the rect, rejected on an axis band, `PLAZA_MAYOR`, a crossing plaza, a crater (+2), `HOTEL_LOT`, `TOWER_ISLAND`, a parcel polygon (any of the car's four corners `inParcel`: a wedge's `poly` reaches past its `rect`), the water or another car (+1); the strip rules stay. Test: `no car stands on a parcel plinth`.
 - `greenery`: craters as data (new values come from Task 2); the east-bank jungle unchanged.
 - `westQuay`: terraces facing the bars parcel of column 163 (`y 174..195`): tables at `x 186`, awning against `x 182.5`, rows `y 177, 183, 189`; chairs either side of the table as today; sheds, bollards, crane, garland unchanged.
 
-- [ ] **Step 1: Stage-3 evals** (`plaza tiles do not step on TOWER_ISLAND nor BRIDGE_LANDING`; `no solid but the tower's and the crown's enters TOWER_ISLAND`; `tower and crown unchanged`; `no car falls on an axis band, plaza, crater, hotel lot nor on another car`) plus `fixed.test.ts` rewritten where it pinned `PLAZA` — run, expected FAIL.
+- [ ] **Step 1: Stage-3 evals** (`plaza tiles, TOWER_ISLAND and BRIDGE_LANDING partition PLAZA_MAYOR` — tile areas + island∩plaza + landing = 54 × 85, pairwise overlap 0; `plaza tiles do not step on TOWER_ISLAND nor BRIDGE_LANDING`; `no solid but the tower's and the crown's enters TOWER_ISLAND`; `tower and crown unchanged`; `no car falls on an axis band, plaza, crater, hotel lot nor on another car`) plus `fixed.test.ts` rewritten where it pinned `PLAZA` — run, expected FAIL.
 - [ ] **Step 2: Implement.**
 - [ ] **Step 3: Run** `npx vitest run src/city/fixed.test.ts src/scenes/city.test.ts` — PASS.
 - [ ] **Step 4: Commit** `feat(#472): Plaza Mayor, cars and quay terraces on the new layout`.
@@ -166,3 +167,22 @@ For each grid block `(col, row) = (13 + 30i, 21 + 30j)` whose center `(col + 12,
 ### Task 7 (orchestrator, not an implementer): screenshots
 
 - [ ] `npm run dev -- --host --port 5173`; agent-browser at 1600 × 900, scale 2, of `http://localhost:5173/` and `http://localhost:5173/lab/resume.html`; save as `docs/superpowers/specs/assets/2026-11-22-resume-centro-costero/trazado/sitio.png` and `.../trazado/lab-resume.png`; check by eye that the Plaza Mayor against the costanera, the plaza axis, both diagonals and the boulevard read as continuous gaps between plinths (`.scratch/evals-472.md`). Commit `docs(#472): layout screenshots`.
+
+## Assumptions
+
+Technical decisions taken without a source (plan review, round 1). Each lists the rejected alternative.
+
+- **A1 (T1).** Crossing plazas are filtered by the plain cover, `inCoverQuad(x, y, 16/9)`. Rejected: margin 30. It adds a 4th octagon at (−75.9, 378), which contradicts the issue's "con estos ejes salen tres" and its criterion "crossingPlazas() devuelve 3 octógonos". That point lies south of 318, so nothing this child builds or paints changes; #478 can revisit it.
+- **A2 (T2).** The issue's count bands (55..75, 100..130) are asserted over `PLAN_BOUNDS` (`x0 = −Infinity`), where they measure 63 and 111. The parent's measure 1 was taken over the full cover. `parcels(CITY_BOUNDS)` is pinned at its measured 33. Rejected: extending the city west of −54 to reach 55..75. That breaks "tech no cambia en este hijo" and "la ciudad construye c.x > CITY_EDGE.west".
+- **A3 (T3).** `manzana-distrito` frames the largest parcel of `cell (−17, 171)`. That cell has two pieces, both transición. Rejected: moving the exhibit to another cell. The issue names this cell.
+- **A4.** Intermediate task commits may leave suites outside the task red. The full suite must be green at the end of Task 6 (pipeline stage 4) and before the PR. Rejected: one giant task. It would defeat the per-task review.
+- **A5.** The `parcels` memo key is `${x0},${y0},${x1},${y1}`.
+- **A6.** `CITY_BOUNDS.x0` is the literal −54, guarded by a test against `CITY_EDGE.west`. Rejected: importing it. That would close the cycle `city-grid → city-plan → city-grid` at value level.
+- **A7.** Cars also avoid `TOWER_ISLAND` and every parcel polygon. Rejected: the issue's shorter list. A wedge's `poly` reaches past its `rect`, so a car on the "sidewalk" of the rect could stand on a plinth.
+- **A8.** Open sides follow the issue's bounding-box rule. A wedge whose only frontage is a diagonal may get no open side. Accepted: that is the rule as written (`open` = "lados cuya arista de la caja envolvente queda a ≤ 0.5 de la banda de un eje…").
+
+## Grilling
+
+- Rounds: 1 (the revisions added tests, not tasks or seams). Questions: 18.
+- Sources: ISSUE 9 (Q3, Q4, Q7, Q11, Q12 partly, Q13, Q16, Q18, Q10 via the pipeline), CODE 4 (Q12 `src/scenes/city-grid.ts` TOWER (121, 220, 16 × 14) ⊂ island; Q15 `inPlaza` is only used inside `streets.ts`, `city.test.ts` has its own local copy; Q17 `sprawl-grid.ts` reads `WEST_COLS`, `ROWS`, `CITY_EDGE`, never `blocks()`; Q2 measured), NO SOURCE → technical assumption 6 (A1, A2, A4..A7). Q5 and Q6 were plan wording or test gaps, fixed inline.
+- Spec ambiguities: none. Out of scope: none. Issues opened: none.
