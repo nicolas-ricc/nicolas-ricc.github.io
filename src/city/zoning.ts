@@ -71,6 +71,11 @@ export const FIXED: readonly { x: number; y: number; recipe: string }[] = [
 /** Harbor block with no fixed recipe: it gets only the plinth (city.ts), no building. */
 export const isBare = (b: Block): boolean => neighborhoodOf(b) === "harbor" && !FIXED.some((f) => f.x === b.x && f.y === b.y);
 
+/** Y of the west row that faced the old plaza (218 + 18 + 6): kept for `maxHeightFor` until #474. */
+const PLAZA_FRONT_ROW_Y = 242;
+/** Cap of the row facing the plaza: a tall building there would hide the tower's lit floor or the fountain (fixed.ts). */
+export const maxHeightFor = (b: Block, top = MAX_BUILDING_H): number => (b.y === PLAZA_FRONT_ROW_Y && b.x >= 96 && b.x + b.w <= 186 ? FRONT_CAP_H : top);
+
 /** Sides of the block that face an open space (avenue, dock or east bank): there the recipe may open courtyards and shop windows. */
 export function openSides(b: Block): Side[] {
   const out: Side[] = [];
@@ -131,7 +136,7 @@ export function parcelOpenSides(p: Parcel): Side[] {
 export interface Placed { parcel?: Parcel; block: Block; neighborhood: Neighborhood; recipe: string; lot: Lot; tone: number }
 
 /**
- * Assigns a recipe to each block in the order of `blocks()`. Skips the plaza and the
+ * Assigns a recipe to each block in the order of `blocks()`. Skips the
  * collapse (fixed.ts draws them) and the bare blocks (`isBare`: city.ts gives them only a plinth). Fixed ones take their recipe without drawing; the
  * district draws with `districtRng` (its sequence doesn't change if another neighborhood's does) and the
  * rest with `rng`. Residential retries up to 5 times if it repeats the recipe
@@ -152,7 +157,7 @@ export function assign(rng: Rng, districtRng: Rng): Placed[] {
     const lot: Lot = {
       x: b.x + SIDEWALK, y: b.y + SIDEWALK, w: b.w - 2 * SIDEWALK, d: b.d - 2 * SIDEWALK,
       z: 0, open: openSides(b),
-      maxH: Math.min(top, maxDistrictHeight(b)),
+      maxH: Math.min(maxHeightFor(b, top), maxDistrictHeight(b)),
     };
     out.push({ block: b, neighborhood, recipe, lot, tone: rng.int(-1, 1) });
   }
