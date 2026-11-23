@@ -13,7 +13,7 @@ import { MOUTH_Y, QUAY_X, type WorldZone } from "../map/geo";
 import type { Material } from "../map/palette-iso";
 import { createRng, SEED } from "../map/seed";
 import type { Animator } from "../scenes/animator";
-import { BLOCK_W, BRIDGE, COLLAPSED, EAST_COLS, PROMENADE, ROWS, SIDEWALK, WEST_COLS } from "../scenes/city-grid";
+import { BLOCK_W, BRIDGE, COLLAPSED, EAST_COLS, PROMENADE, SIDEWALK, WEST_COLS } from "../scenes/city-grid";
 import { CITY_BOUNDS, HOTEL_LOT, PLAN_BOUNDS, PLAZA_MAYOR, parcels } from "../scenes/city-plan";
 import { STAIR_TOWER } from "../scenes/boiler-house";
 import { excavator, excavatorBox, excavatorWheel } from "../scenes/excavator";
@@ -31,9 +31,9 @@ import { ship, shipAt, type ShipKind } from "../scenes/ships";
 import { HOTEL_SLAB, hotelSign, hotelStandIn, RESUME_SIGN } from "../scenes/sign-hotel";
 import { BLOG_SIGNS, seaPlatform, type WritingSite } from "../scenes/sign-platform";
 import { hallStandIn, PIECE_AT, STAND_IN_HALL, TINKER_SIGN, tinkerAnimator, tinkerSign } from "../scenes/sign-tinker";
-import { BLOCK_D, SUBURB_COLS, southParcels } from "../scenes/sprawl-grid";
+import { southParcels } from "../scenes/sprawl-grid";
 import { SUBSTATION } from "../scenes/substation";
-import { ARENA, AUDITORIUM, TELECOM } from "../scenes/tech";
+import { ARENA, AUDITORIUM } from "../scenes/tech";
 import { CLUB, PLAZAS, SCHOOL } from "../scenes/tech-zoning";
 import type { Box } from "../world/frame";
 
@@ -66,6 +66,10 @@ const cellBox = (c: { col: number; row: number }) => { const { x, y, w, d } = so
 const TOWER_PARCEL = parcels(PLAN_BOUNDS).find((q) => q.cell.col === -77 && q.cell.row === 201)!.rect;
 
 /** Rect ± M of the largest city parcel of a grid cell, for the region exhibits that frame one parcel. */
+const planBox = (...cells: (readonly [number, number])[]): Box => {
+  const rs = cells.map(([col, row]) => parcels(PLAN_BOUNDS).find((q) => q.cell.col === col && q.cell.row === row)!.rect);
+  return { x0: Math.min(...rs.map((r) => r.x)) - M, y0: Math.min(...rs.map((r) => r.y)) - M, x1: Math.max(...rs.map((r) => r.x + r.w)) + M, y1: Math.max(...rs.map((r) => r.y + r.d)) + M };
+};
 const parcelBox = (col: number, row: number): Box => {
   const r = parcels(CITY_BOUNDS).filter((q) => q.cell.col === col && q.cell.row === row).sort((a, b) => b.area - a.area)[0]!.rect;
   return { x0: r.x - M, y0: r.y - M, x1: r.x + r.w + M, y1: r.y + r.d + M };
@@ -240,16 +244,16 @@ export const EXHIBITS: readonly Exhibit[] = [
   // h 53: smallest integer that passes; measured inside 52.5 (machine room, z 51 + 1.5), accents 22.65, cut neighbor 0.02. The hotel and its sign come from the world (city() builds them): no `build`.
   { id: "cartel-torre-escena", title: "Resume sign in its scene", zone: "cv", group: "city", kind: "context", h: 53, sign: RESUME_SIGN,
     box: { x0: HOTEL_LOT.x - M, y0: HOTEL_LOT.y - M, x1: HOTEL_LOT.x + HOTEL_LOT.w + M, y1: HOTEL_LOT.y + HOTEL_LOT.d + M } },
-  // tech district: each structure takes one block BLOCK_W × BLOCK_D
+  // tech district: each structure takes one parcel
   { id: "mastil", title: "Telecom mast", zone: "cv", group: "tech", kind: "region",
-    box: { x0: TELECOM.x - M, y0: TELECOM.y - M, x1: TELECOM.x + BLOCK_W + M, y1: TELECOM.y + BLOCK_D + M }, h: 26 },
+    box: planBox([-107, 231]), h: 26 },
   { id: "arena", title: "Arena", zone: "cv", group: "tech", kind: "region",
     box: cellBox(ARENA), h: 15 },
   { id: "auditorio", title: "Auditorium", zone: "cv", group: "tech", kind: "region",
     box: cellBox(AUDITORIUM), h: 14 },
-  // the two towers of row ROWS[2], columns SUBURB_COLS[1] and [0]; the height comes from the rng: the test watches it
+  // the plan parcels of cells (−107, 171) and (−77, 171); the city builds them (#479, Task 5 finalizes); the height comes from the rng: the test watches it
   { id: "torres", title: "Tech district towers", zone: "cv", group: "tech", kind: "region",
-    box: { x0: SUBURB_COLS[1] - M, y0: ROWS[2] - M, x1: SUBURB_COLS[0] + BLOCK_W + M, y1: ROWS[2] + BLOCK_D + M }, h: 22 },
+    box: planBox([-107, 171], [-77, 171]), h: 22 },
   { id: "monoblock", title: "Monoblock", zone: "cv", group: "tech", kind: "region",
     box: cellBox({ col: 133, row: 441 }), h: 23.6 }, // the monoblock parcel of cell (133, 441), 24 × 24
   { id: "casas", title: "Houses with tile roofs", zone: "cv", group: "tech", kind: "region",

@@ -159,7 +159,7 @@ describe("coastal neighborhood documentation (#256)", () => {
     expect(lab).toContain("2026-10-27-barrio-costero-design.md");
   });
   it("the docstring of tech.ts describes the neighborhood and points to its spec", () => {
-    const end = techSrc.indexOf("export interface Tower");
+    const end = techSrc.indexOf("export interface TechScene");
     expect(end).toBeGreaterThan(0);
     const doc = techSrc.slice(0, end);
     expect(doc).toMatch(/coastal residential neighborhood/);

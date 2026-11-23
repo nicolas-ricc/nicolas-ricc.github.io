@@ -10,7 +10,7 @@ import { newCtx, blockAt } from "./neighborhood-fixtures";
 import { houses } from "./neighborhood-houses";
 import { monoblock } from "./neighborhood-monoblock";
 import { plaza } from "./neighborhood-plaza";
-import { parcelBlock, southParcels, suburbBlocks, techBlocks, urbanAt, type SprawlBlock } from "./sprawl-grid";
+import { parcelBlock, southParcels, techBlocks, urbanAt, type SprawlBlock } from "./sprawl-grid";
 import { tech } from "./tech";
 import { southStreets } from "./tech-streets";
 import { ARENA, AUDITORIUM, CLUB, PLAZAS, SCHOOL, blockParity, inNeighborhood, isCell, zoneKinds, type Kind } from "./tech-zoning";
@@ -51,11 +51,9 @@ describe("south parcels (#478)", () => {
   it("the row right south of the Avenida del Sur is built (the 318..324 strip is asphalt, not a hole)", () => {
     for (const col of [103, 133, 163]) expect(southParcels().some((p) => p.cell.col === col && p.cell.row === 321), `${col}`).toBe(true);
   });
-  it("techBlocks(): the old west blocks first, then one block per south parcel", () => {
-    const west = suburbBlocks();
-    expect(west.every((b) => b.y < 328 && b.x + b.w <= CITY_EDGE.west && !b.parcel)).toBe(true);
-    expect(blocks.slice(0, west.length)).toEqual(west);
-    expect(blocks.slice(west.length)).toEqual(southParcels().map(parcelBlock));
+  it("techBlocks(): one block per south parcel", () => {
+    expect(blocks).toEqual(southParcels().map(parcelBlock));
+    expect(blocks.every((b) => b.parcel !== undefined)).toBe(true);
   });
 });
 
@@ -75,7 +73,7 @@ describe("zoning of the south (#478)", () => {
     const real = zoneRng(SEED, "cv", 2), calls: string[] = [];
     const spy: Rng = { next: () => { calls.push("next"); return real.next(); }, int: (a, b) => { calls.push("int"); return real.int(a, b); }, chance: (p) => { calls.push(`chance:${p}`); return real.chance(p); }, pick: (arr) => { calls.push("pick"); return real.pick(arr); } };
     zoneKinds(spy, blocks);
-    expect(calls).toEqual(Array(blocks.length - 7).fill("chance:0.12")); // 6 fixed cells + TELECOM
+    expect(calls).toEqual(Array(blocks.length - 6).fill("chance:0.12")); // 6 fixed cells
   });
   it("bajo parcels are low; residencial ones are houses, monoblock, plaza or low; every south parcel is in the neighborhood", () => {
     for (const { b, k, p } of south) {
@@ -86,7 +84,6 @@ describe("zoning of the south (#478)", () => {
       else expect(["houses", "monoblock", "plaza", "low"]).toContain(k);
       if (k === "monoblock") expect(p.area).toBeGreaterThanOrEqual(450);
     }
-    for (const b of suburbBlocks()) expect(inNeighborhood(b)).toBe(false);
   });
   it("no monoblock has a monoblock neighbor", () => {
     for (const a of south) for (const c of south) if (a.k === "monoblock" && neighbors(a.p, c.p)) expect(c.k).not.toBe("monoblock");
@@ -94,12 +91,11 @@ describe("zoning of the south (#478)", () => {
 });
 
 describe("tech on the south parcels (#478)", () => {
-  it("tech builds only parcels south of y 318: nothing of tech east of the city's west edge reaches north of 318; the old west stays west of it", () => {
+  it("tech builds only parcels south of y 318: nothing of tech east of the city's west edge reaches north of 318", () => {
     for (const s of scene.solids) {
       const q = bounds(s);
       if (q.min.x >= CITY_EDGE.west) expect(q.min.y, JSON.stringify(q)).toBeGreaterThanOrEqual(318);
     }
-    for (const b of suburbBlocks()) expect(b.x + b.w).toBeLessThan(CITY_EDGE.west);
     for (const { p } of south) expect(p.c.y).toBeGreaterThan(318);
   });
 
@@ -139,14 +135,6 @@ describe("tech on the south parcels (#478)", () => {
       if (k === "houses") for (const s of mine) if (s.kind === "prism" && s.roof === "gable") expect(s.h, at).toBeLessThanOrEqual(4.2);
       if (k === "monoblock") for (const s of mine) if (s.kind === "prism" && s.d === 5 && s.h >= 3) expect(s.at.z + s.h, at).toBeLessThanOrEqual(13);
     }
-  });
-
-  it("the west keeps its program: kinds and monoblock heights", () => {
-    const west = suburbBlocks(), ks = kinds.slice(0, west.length), table: Record<string, number> = {};
-    for (const k of ks) table[k] = (table[k] ?? 0) + 1;
-    expect(table).toEqual({ tower: 10, monoblock: 6, campus: 6, park: 6, telecom: 1 });
-    const heights = new Set(west.flatMap((b, i) => ks[i] === "monoblock" ? pieces.filter((s): s is Solid & { kind: "prism" } => s.kind === "prism" && s.d === 5 && s.h >= 3 && within(s, b, 0.5)).map((s) => s.h) : []));
-    for (const h of heights) expect([12, 15, 18]).toContain(h);
   });
 
   it("variety: two neighboring residencial parcels never have the same signature", () => {
