@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
 import { bounds, type Solid } from "../iso/solids";
@@ -112,13 +111,5 @@ describe("Bulevar Central and Costanera to the south edge (#493)", () => {
     expect(bleedTerrainAt(10, 700)).toBe("urban");
     expect(builtAt(60, 700)).not.toBe("urban");
     expect(builtAt(200, 700)).not.toBe("urban");
-  });
-});
-
-describe("glossary (#493)", () => {
-  it("the Parcel entry names the coastal cut", () => {
-    const parcel = readFileSync("CONTEXT.md", "utf8").split("### Parcel")[1]!.split("###")[0]!;
-    expect(parcel).toContain("COASTAL_CUT_Y");
-    expect(parcel).not.toContain("north of y 318");
   });
 });

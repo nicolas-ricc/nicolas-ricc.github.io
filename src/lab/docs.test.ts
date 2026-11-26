@@ -1366,3 +1366,15 @@ describe("the centro costero spec is closed (#480)", () => {
     }
   });
 });
+
+describe("glossary for the coastal cut (#493)", () => {
+  const glossary = readFileSync(`${ROOT}CONTEXT.md`, "utf8");
+  const entryOf = (name: string) => { const at = glossary.indexOf(`### ${name}\n`), rest = glossary.slice(at + name.length + 5); return at < 0 ? "" : rest.slice(0, Math.max(0, rest.search(/^### /m)) || rest.length); };
+  for (const name of ["Parcel", "Axis"]) {
+    it(`the ${name} entry names COASTAL_CUT_Y and not the old y 318`, () => {
+      expect(entryOf(name), name).not.toBe("");
+      expect(entryOf(name), name).toContain("COASTAL_CUT_Y");
+      expect(entryOf(name), name).not.toMatch(/\b318\b/);
+    });
+  }
+});
