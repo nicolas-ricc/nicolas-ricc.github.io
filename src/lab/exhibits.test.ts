@@ -222,7 +222,7 @@ describe("piece exhibits", () => {
     const get = (id: string) => pieces.find((e) => e.id === id)!;
     expect(get("cartel-taller")).toMatchObject({ title: "Portfolio tinker sign", zone: "portfolio", group: "shipyard", kind: "piece", pad: "concrete" });
     expect(get("cartel-taller").animate).toBeDefined();
-    expect(get("cartel-torre")).toMatchObject({ title: "Resume sign on the hotel facade", zone: "cv", group: "city", kind: "piece" });
+    expect(get("cartel-torre")).toMatchObject({ title: "Resume sign on the hotel roof", zone: "cv", group: "city", kind: "piece" });
     expect(get("cartel-torre").pad).toBeUndefined();
     expect(ids).not.toContain("cartel-helipuerto");
     expect(ids).not.toContain("cartel-helipuerto-b");
@@ -483,11 +483,11 @@ describe("context exhibits (#376)", () => {
 });
 
 describe("cartel-torre-escena (#378, #474)", () => {
-  it("after cartel-torre, in the city, the hotel lot ± 3 at h 53, a crop of the world (no build), signed RESUME_SIGN", () => {
+  it("after cartel-torre, in the city, the hotel lot ± 3 at h 75, a crop of the world (no build), signed RESUME_SIGN", () => {
     const ids = EXHIBITS.map((e) => e.id);
     expect(ids.indexOf("cartel-torre-escena")).toBe(ids.indexOf("cartel-torre") + 1);
     const e = contexts.find((x) => x.id === "cartel-torre-escena")!;
-    expect(e).toMatchObject({ title: "Resume sign in its scene", zone: "cv", group: "city", kind: "context", h: 53, sign: RESUME_SIGN,
+    expect(e).toMatchObject({ title: "Resume sign in its scene", zone: "cv", group: "city", kind: "context", h: 75, sign: RESUME_SIGN,
       box: { x0: HOTEL_LOT.x - 3, y0: HOTEL_LOT.y - 3, x1: HOTEL_LOT.x + HOTEL_LOT.w + 3, y1: HOTEL_LOT.y + HOTEL_LOT.d + 3 } });
     expect("build" in e).toBe(false);
     const c: Solid[] = [], d: Accent[] = [], l: FixedLight[] = [], cs = contextScene(scene, e);
@@ -543,13 +543,13 @@ import { HOTEL_LOT, PLAZA_MAYOR } from "../scenes/city-plan";
 
 describe("city exhibits on the new layout (#472)", () => {
   const byId = (id: string) => regions.find((e) => e.id === id);
-  it("plaza frames PLAZA_MAYOR ± 3 at h 17", () => {
+  it("plaza frames PLAZA_MAYOR ± 3 at h 23", () => {
     expect(byId("plaza")!.box).toEqual({ x0: PLAZA_MAYOR.x - 3, y0: PLAZA_MAYOR.y - 3, x1: PLAZA_MAYOR.x + PLAZA_MAYOR.w + 3, y1: PLAZA_MAYOR.y + PLAZA_MAYOR.d + 3 });
-    expect(byId("plaza")!.h).toBe(17); // smallest integer that passes framing: accents 16.12 (#474)
+    expect(byId("plaza")!.h).toBe(23); // smallest integer that passes framing: inside 22.30 (the taller hotel block, #494)
   });
-  it("hotel (#474) frames HOTEL_LOT ± 3 at h 53, titled 'Hotel with the Resume sign'; torre is retired", () => {
-    // h 53: smallest integer that passes framing; inside 52.5 (machine room z 51 + 1.5), accents 22.65
-    expect(byId("hotel")).toMatchObject({ title: "Hotel with the Resume sign", zone: "cv", group: "city", h: 53,
+  it("hotel (#474) frames HOTEL_LOT ± 3 at h 75, titled 'Hotel with the Resume sign'; torre is retired", () => {
+    // h 75: smallest integer that passes framing; inside 75 (lattice), before: h 53 (#474)
+    expect(byId("hotel")).toMatchObject({ title: "Hotel with the Resume sign", zone: "cv", group: "city", h: 75,
       box: { x0: HOTEL_LOT.x - 3, y0: HOTEL_LOT.y - 3, x1: HOTEL_LOT.x + HOTEL_LOT.w + 3, y1: HOTEL_LOT.y + HOTEL_LOT.d + 3 } });
     expect(EXHIBITS.some((e) => e.id === "torre")).toBe(false);
   });

@@ -170,7 +170,7 @@ for headless time-lapses. The seam at 90 added ten exhibits:
 `#tren-fantasma`, `#casa-espejos`, `#tobogan` and `#tronco-acuatico` (fair),
 and `#galpones`, `#playa-carga` and `#mercado-pescado` (city).
 The zone signs of #374 are three pairs of exhibits: `#cartel-torre` and
-`#cartel-torre-escena` (Resume: `#cartel-torre` is the Resume sign on the hotel facade, on a stand-in of the slab), `#cartel-taller` and `#cartel-taller-escena`
+`#cartel-torre-escena` (Resume: `#cartel-torre` is the Resume sign on the hotel roof, on a stand-in of the block), `#cartel-taller` and `#cartel-taller-escena`
 (Portfolio) and `#plataforma` and `#plataforma-escena` (Blog, wide site),
 plus `#plataforma-escena-angosta` (Blog, tall site). The piece builds
 the sign at the origin (the tinker sign on a stand-in of its host); the one "in its scene" is a crop of the real world with its sign.

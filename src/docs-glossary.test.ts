@@ -97,7 +97,8 @@ describe("sign vocabulary (#360)", () => {
     const lettering = section(glossary, "Lettering"), sign = section(glossary, "Sign");
     for (const id of ["TextPlane", "diagonalWall", "roofDiagonal", "facade", "strokeText", "fillText", "measureText", "GLYPHS"]) expect(lettering).toContain(id);
     for (const id of ["gap 2", "KERN", "layoutText", "letterGaps", "rhythm", "counterClearance", "probe"]) expect(lettering, id).toContain(id);
-    for (const id of ["cartel-torre", "cartel-torre-escena", "cartel-taller", "cartel-taller-escena", "plataforma", "plataforma-escena", "src/scenes/sign-", "src/scenes/sign-hotel.ts", "hotel", "hotelStandIn", "RESUME_SIGN", "SIGN_SITE", "HOTEL_SLAB", "HOTEL_CAP", "city()"]) expect(sign).toContain(id);
+    for (const id of ["cartel-torre", "cartel-torre-escena", "cartel-taller", "cartel-taller-escena", "plataforma", "plataforma-escena", "src/scenes/sign-", "src/scenes/sign-hotel.ts", "hotel", "hotelStandIn", "RESUME_SIGN", "SIGN_SITE", "HOTEL_BLOCK", "SIGN_BACKING", "HOTEL_CAP", "city()"]) expect(sign).toContain(id);
+    expect(sign).not.toContain("HOTEL_SLAB"); // #494: the slab is the block
     // #474: the tower and its crown are gone
     expect(sign).not.toContain("towerCrown");
     expect(sign).not.toMatch(/\bCROWN_SITE\b/);

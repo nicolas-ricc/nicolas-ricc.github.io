@@ -11,10 +11,10 @@ import { world, zoneRng } from "./world";
 const resume = () => city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3));
 
 describe("Resume level 2 budget", () => {
-  it("raised solids ≤ 1 700, strip ≤ 570, static accents ≤ 1 600", () => {
+  it("raised solids ≤ 1 900, strip ≤ 570, static accents ≤ 1 600", () => {
     const s = resume();
-    // measured 2026-11-23 (#480), city(...) of the world seed, raised = !isFlat: 1 518 × 1.1 = 1 669.8 → 1 700. before: 2 900 (#474)
-    expect(s.solids.filter((x) => !isFlat(x)).length).toBeLessThanOrEqual(1700);
+    // measured 2026-11-26 (#494), city(...) of the world seed, raised = !isFlat: 1 748 × 1.1 = 1 922.8 → 1 900 (the hotel's sign: extruded letters, lattice, walkway). before: 1 700 (#480: 1 518 × 1.1 = 1 669.8; #474: 2 900)
+    expect(s.solids.filter((x) => !isFlat(x)).length).toBeLessThanOrEqual(1900);
     // measured 2026-11-23 (#480), ground.filter(kind === "strip"): 522 × 1.1 = 574.2 → 570 (nearest ten). before: 580
     expect(s.ground.filter((g) => g.kind === "strip").length).toBeLessThanOrEqual(570);
     // measured 2026-11-26 (#493): 1 497 × 1.1 = 1 646.7 → 1 600. before: 1 400 (#480: 1 280 × 1.1 = 1 408)
@@ -47,8 +47,9 @@ describe("raised solids per scene (#328)", () => {
   // measured 2026-11-23 (#480), raised solids (!isFlat) of world(SEED).<scene>, × 1.1 rounded to the nearest hundred (up if below the figure):
   // shipyard 686 × 1.1 = 754.6 → 800; factory 770 × 1.1 = 847 → 800; city 1 518 × 1.1 = 1 669.8 → 1 700; fair 565 × 1.1 = 621.5 → 600; hinterland 453 × 1.1 = 498.3 → 500; tech 1 136 × 1.1 = 1 249.6 → 1 200
   // #493 (2026-11-26): city 1 700 (was 1 518), tech 962 (was 1 136); the caps hold
+  // #494 (2026-11-26): city 1 748 (was 1 700) × 1.1 = 1 922.8 → 1 900; the rest hold
   // before: shipyard 800, factory 900, city 1 700, fair 600, hinterland 500, tech 1 200
-  const CAPS = { shipyard: 800, factory: 800, city: 1700, fair: 600, hinterland: 500, tech: 1200 } as const;
+  const CAPS = { shipyard: 800, factory: 800, city: 1900, fair: 600, hinterland: 500, tech: 1200 } as const;
   let w: ReturnType<typeof world>;
   beforeAll(() => { w = world(SEED); });
   for (const [name, cap] of Object.entries(CAPS)) {
@@ -72,11 +73,12 @@ describe("the west moves from tech to the city (#479)", () => {
   // Measured on HEAD of agent/479 (after #479), world(SEED), raised solids: city 1 518, tech 1 136, sum 2 654 ≤ 2 658. A record: the test asserts ≤, never exact.
   // The move stayed ≤ 2 658 thanks to three west rulings: no traffic lights at axis × ordinary-street crossings, no parked cars (all three west of WEST_DISTRICT_X, x −54), axis lamps every 24 (not 12).
   // #493: the 348..378 row moves from tech to the city: measured city 1 700 + tech 962 = 2 662 (was 2 658)
+  // #494: the hotel's sign adds 48 raised solids to the city (city 1 748 + tech 962 = 2 710, was 2 662)
   it("budget moved, not raised", () => {
     const w = world(SEED), raised = (s: { solids: Parameters<typeof isFlat>[0][] }) => s.solids.filter((x) => !isFlat(x)).length;
     const after = { city: raised(w.city!), tech: raised(w.tech!) };
     expect(after.tech).toBeLessThan(BEFORE.tech); // the west left tech
     expect(after.city).toBeGreaterThan(BEFORE.city); // and arrived in the city
-    expect(after.city + after.tech).toBeLessThanOrEqual(2662);
+    expect(after.city + after.tech).toBeLessThanOrEqual(2710);
   });
 });
