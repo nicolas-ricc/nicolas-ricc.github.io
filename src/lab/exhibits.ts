@@ -28,7 +28,7 @@ import { pieceTrain, trainPieceAnimator } from "../scenes/rail-animator";
 import { BUOYS, DRUM_R0, KEEPER, LANTERN_Z, LIGHTHOUSE, WRECK } from "../scenes/sea";
 import { BEAM_LEN } from "../scenes/sea-anim";
 import { ship, shipAt, type ShipKind } from "../scenes/ships";
-import { HOTEL_SLAB, hotelSign, hotelStandIn, RESUME_SIGN } from "../scenes/sign-hotel";
+import { HOTEL_CENTER, hotelSign, hotelStandIn, RESUME_SIGN } from "../scenes/sign-hotel";
 import { BLOG_SIGNS, seaPlatform, type WritingSite } from "../scenes/sign-platform";
 import { hallStandIn, PIECE_AT, STAND_IN_HALL, TINKER_SIGN, tinkerAnimator, tinkerSign } from "../scenes/sign-tinker";
 import { southParcels } from "../scenes/sprawl-grid";
@@ -238,7 +238,7 @@ export const EXHIBITS: readonly Exhibit[] = [
     } },
   { id: "selva", title: "Jungle", zone: "cv", group: "city", kind: "piece", build: (out) => jungle(out, createRng(SEED), { x0: -12, x1: 12, y0: -12, y1: 12 }, 14, 0) },
   { id: "cartel-torre", title: "Resume sign on the hotel facade", zone: "cv", group: "city", kind: "piece",
-    build: (out, accents) => { hotelStandIn(out, accents); hotelSign(out, accents, v3(-HOTEL_SLAB.center.x, -HOTEL_SLAB.center.y, 0)); } },
+    build: (out, accents) => { hotelStandIn(out, accents); hotelSign(out, accents, v3(-HOTEL_CENTER.x, -HOTEL_CENTER.y, 0)); } },
   // h 53: smallest integer that passes; measured inside 52.5 (machine room, z 51 + 1.5), accents 22.65, cut neighbor 0.02. The hotel and its sign come from the world (city() builds them): no `build`.
   { id: "cartel-torre-escena", title: "Resume sign in its scene", zone: "cv", group: "city", kind: "context", h: 53, sign: RESUME_SIGN,
     box: { x0: HOTEL_LOT.x - M, y0: HOTEL_LOT.y - M, x1: HOTEL_LOT.x + HOTEL_LOT.w + M, y1: HOTEL_LOT.y + HOTEL_LOT.d + M } },
