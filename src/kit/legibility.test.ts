@@ -12,7 +12,7 @@ import {
   backingMargin, checkFont, checkSign, contrastRatio, COVER_LAPTOP, COVER_PHONE, FONT_RULES, occlusionRatio, relativeLuminance, SIGN_FONT, SIGN_RULES,
   GROUND_ASPECT, signMetrics, signSpec, signXHeight, staticContrast,
 } from "./legibility";
-import { CHAINSAW_BAR, CHAINSAW_FACE, CHAINSAW_X, marqueeLayout } from "./marquee";
+import { CHAINSAW_BAR, CHAINSAW_FACE, CHAINSAW_X, MARQUEE_FACE, marqueeLayout } from "./marquee";
 import { counterClearance, diagonalWall, facade, glyphPairs, GRID, groundDiagonal, layoutText, letterGaps, overlapping, rhythm, strokeRatio, toWorld, xHeightPx } from "./lettering";
 
 const WORDS = ["Resume", "Portfolio", "Blog"];
@@ -305,6 +305,13 @@ describe("checkSign", () => {
     const mk = (f?: boolean) => signSpec({ id: "t", text: "Blog", ...SIGN_FONT, color: "cyan", plane, style: "stroke", backing: [], ...(f ? { facade: true } : {}) });
     expect(checkSign(mk(), COVER_LAPTOP, []).map((v) => v.rule)).toContain("baseline");
     expect(checkSign(mk(true), COVER_LAPTOP, []).map((v) => v.rule)).not.toContain("baseline");
+  });
+  it("a facade sign's aspect is measured on the projected sides of its glyph boxes (#494)", () => {
+    const mk = (k: number) => signSpec({ id: "t", text: "RESUME", size: 12, width: SIGN_FONT.width, color: "greenMid", plane: facade({ x: 123, y: 300 }, { x: 123, y: 200 }, 61.4, k), style: "fill", backing: [], layouts: marqueeLayout(12, 0.07), xHeight: 12, stroke: MARQUEE_FACE * 12, facade: true });
+    expect(signMetrics(mk(1), COVER_LAPTOP).aspectError).toBeCloseTo(0.2522, 3);
+    expect(signMetrics(mk(1.17), COVER_LAPTOP).aspectError).toBeCloseTo(0.0703, 3);
+    expect(checkSign(mk(1.17), COVER_LAPTOP, []).map((v) => v.rule)).not.toContain("aspect");
+    expect(signMetrics(mk(1.4 / Math.hypot(1, 0.5)), COVER_PHONE).aspectError).toBeLessThan(0.001);
   });
   it("violations carry value and a readable limit; only known rule names", () => {
     const known = new Set(["xHeight", "stroke", "air", "baseline", "vertical", "aspect", "contrast", "backing", "occlusion"]);
