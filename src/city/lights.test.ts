@@ -463,9 +463,10 @@ describe("animatable windows per barrio (#480)", () => {
       expect(on.length, b).toBe(l.counts[b].on);
       expect(warm, b).toBe(l.counts[b].warm);
       if (on.length === 0) continue;
-      // the exact invariant is `warm === counts.warm` above; the fractions hold on the world seed (moderno 43/288), where round(0.15 · on) rounds down
-      if (b === "moderno") expect(warm / on.length, b).toBeLessThanOrEqual(0.15);
-      else expect(warm / on.length, b).toBeGreaterThanOrEqual(0.9);
+      // the warm quota is round(warm · on) of the catalogue: moderno 0.15, clasico and bajo ≥ 0.9 (#493: moderno 50/333, where round(0.15 · on) rounds up)
+      expect(warm, b).toBe(Math.round(CATALOGUE[b].lights.warm * on.length));
+      if (b === "moderno") expect(CATALOGUE[b].lights.warm, b).toBeLessThanOrEqual(0.15);
+      else expect(CATALOGUE[b].lights.warm, b).toBeGreaterThanOrEqual(0.9);
     }
     expect(l.counts.clasico.on).toBeGreaterThan(0);
     expect(l.counts.moderno.on).toBeGreaterThan(0);
