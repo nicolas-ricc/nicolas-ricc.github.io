@@ -548,7 +548,7 @@ describe("city exhibits on the new layout (#472)", () => {
     expect(byId("plaza")!.h).toBe(23); // smallest integer that passes framing: accents 22.30 (the taller hotel block, #494)
   });
   it("hotel (#474) frames HOTEL_LOT ± 3 at h 75, titled 'Hotel with the Resume sign'; torre is retired", () => {
-    // h 75: smallest integer that passes framing; inside 75 (lattice), before: h 53 (#474)
+    // h 75: smallest integer that passes framing; inside 75 (lattice)
     expect(byId("hotel")).toMatchObject({ title: "Hotel with the Resume sign", zone: "cv", group: "city", h: 75,
       box: { x0: HOTEL_LOT.x - 3, y0: HOTEL_LOT.y - 3, x1: HOTEL_LOT.x + HOTEL_LOT.w + 3, y1: HOTEL_LOT.y + HOTEL_LOT.d + 3 } });
     expect(EXHIBITS.some((e) => e.id === "torre")).toBe(false);

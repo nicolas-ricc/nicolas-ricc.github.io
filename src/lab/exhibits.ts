@@ -193,10 +193,10 @@ export const EXHIBITS: readonly Exhibit[] = [
   // the trough top is z 6, the water prism 6.05 (logs 6.75 in the animator, neighbors up to 2.7); the 6 splash dots are inside the box
   { id: "tronco-acuatico", title: "Log flume", zone: "portfolio", group: "fair", kind: "region",
     box: { x0: 158, y0: -300, x1: 226, y1: -290 }, h: 7 },
-  // PLAZA_MAYOR ± 3; h 23 (#494): smallest integer that passes; accents 22.30, inside 5.2, cut neighbor 15.33 (the region now frames the taller hotel block, z 60); before: h 17 (#474: inside 5.05, accents 16.12, cut neighbor 13.3)
+  // PLAZA_MAYOR ± 3; h 23 (#494): smallest integer that passes; accents 22.30, inside 5.2, cut neighbor 15.33 (the region frames the hotel block, z 60)
   { id: "plaza", title: "Plaza", zone: "cv", group: "city", kind: "region",
     box: { x0: PLAZA_MAYOR.x - M, y0: PLAZA_MAYOR.y - M, x1: PLAZA_MAYOR.x + PLAZA_MAYOR.w + M, y1: PLAZA_MAYOR.y + PLAZA_MAYOR.d + M }, h: 23 },
-  // HOTEL_LOT ± 3; h 75: smallest integer that passes; inside 75 (lattice), accents 51.16, cut neighbor 0.02; before: h 53 (#474: machine room z 51 + 1.5)
+  // HOTEL_LOT ± 3; h 75: smallest integer that passes; inside 75 (lattice), accents 51.16, cut neighbor 0.02
   { id: "hotel", title: "Hotel with the Resume sign", zone: "cv", group: "city", kind: "region",
     box: { x0: HOTEL_LOT.x - M, y0: HOTEL_LOT.y - M, x1: HOTEL_LOT.x + HOTEL_LOT.w + M, y1: HOTEL_LOT.y + HOTEL_LOT.d + M }, h: 75 },
   // from ramp to ramp; to the west and east flush with the neighboring blocks (buildings up to 10.7), to the north the riverside trees
@@ -239,7 +239,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "selva", title: "Jungle", zone: "cv", group: "city", kind: "piece", build: (out) => jungle(out, createRng(SEED), { x0: -12, x1: 12, y0: -12, y1: 12 }, 14, 0) },
   { id: "cartel-torre", title: "Resume sign on the hotel roof", zone: "cv", group: "city", kind: "piece",
     build: (out, accents) => { hotelStandIn(out, accents); hotelSign(out, accents, v3(-HOTEL_CENTER.x, -HOTEL_CENTER.y, 0)); } },
-  // h 75: smallest integer that passes; inside 75 (lattice), accents 51.16, cut neighbor 0.02; before: h 53 (#474: machine room z 51 + 1.5). The hotel and its sign come from the world (city() builds them): no `build`.
+  // h 75: smallest integer that passes; inside 75 (lattice), accents 51.16, cut neighbor 0.02. The hotel and its sign come from the world (city() builds them): no `build`.
   { id: "cartel-torre-escena", title: "Resume sign in its scene", zone: "cv", group: "city", kind: "context", h: 75, sign: RESUME_SIGN,
     box: { x0: HOTEL_LOT.x - M, y0: HOTEL_LOT.y - M, x1: HOTEL_LOT.x + HOTEL_LOT.w + M, y1: HOTEL_LOT.y + HOTEL_LOT.d + M } },
   // tech district: each structure takes one parcel
