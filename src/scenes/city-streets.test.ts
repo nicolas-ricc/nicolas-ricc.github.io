@@ -13,8 +13,7 @@ import { zoneRng } from "./world";
 import { inPlaza } from "../city/streets";
 import { PLINTH_H } from "./city-pieces";
 
-// #493: seeds (8, 9, 10), was (7, 8, 9): with the new layout the rng draws shifted and seed 7's jungle of the crater (40, 198) puts a r 4 cone 0.1 u into the traffic light at (43.4, 191.1); a latent seed coupling, not a layout rule (see the task report)
-const s = city(createRng(8), createRng(9), createRng(10));
+const s = city(createRng(7), createRng(8), createRng(9));
 
 describe("city streets (#473)", () => {
   it("no parked car within 3 of a crosswalk", () => {
