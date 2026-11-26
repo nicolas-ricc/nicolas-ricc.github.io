@@ -12,8 +12,10 @@ export const LANDMARK_MAX_H = 24;
 /** Height from which a tower carries a sign on its south face. */
 export const SIGN_MIN_H = 12;
 
-/** Height cap of a common recipe on this lot. */
-export const recipeCap = (lot: Lot): number => Math.min(lot.maxH, RECIPE_MAX_H);
+/** Height cap of a common recipe on this lot; a banded lot is capped by `maxH` alone. */
+export const recipeCap = (lot: Lot): number => (lot.band ? lot.maxH : Math.min(lot.maxH, RECIPE_MAX_H));
+/** The recipe's draw `v` (in `lo..hi`) mapped onto the lot's band; `v` itself without a band, the top of the band when `hi <= lo`. */
+export const banded = (lot: Lot, v: number, lo: number, hi: number): number => (lot.band ? lot.band.lo + (hi <= lo ? 1 : (v - lo) / (hi - lo)) * (lot.band.hi - lot.band.lo) : v);
 /** Floors of a body of height `h` with the style's floor height; at least one. */
 export const floorsFor = (h: number, style: Style): number => Math.max(1, Math.round(h / style.floorH));
 
@@ -42,14 +44,14 @@ export const interlock = <S extends Solid>(s: S): S => ({ ...s, interlocks: true
 export const shiftTone = (t: number, k: number): number => Math.max(-2, Math.min(2, t + k));
 
 /**
- * If the piece exceeds the cap `min(lot.maxH, LANDMARK_MAX_H)`, it flattens it in z
+ * If the piece exceeds the cap `min(lot.maxH, LANDMARK_MAX_H)` (`lot.maxH` on a banded lot), it flattens it in z
  * (relative to `lot.z`) so it fits exactly: a landmark of fixed dimensions
  * thus respects a capped block. Normals don't change, nor do the measures
  * that aren't heights (the radius of `wheel`, the sheer of `hull`). A horizontal beam
  * resting flush on a solid stays flush: its section `h` is flattened too.
  */
 export function fitToCap(p: Piece, lot: Lot): Piece {
-  const cap = Math.min(lot.maxH, LANDMARK_MAX_H);
+  const cap = lot.band ? lot.maxH : Math.min(lot.maxH, LANDMARK_MAX_H);
   const top = Math.max(...[...p.solids, ...p.ground].map((s) => bounds(s).max.z)) - lot.z;
   if (top <= cap) return p;
   const k = cap / top;

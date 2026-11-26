@@ -2,7 +2,7 @@ import { v3, type Vec2 } from "../../iso/geometry";
 import type { Facade } from "../../iso/facade";
 import type { Rng } from "../../map/seed";
 import { prism } from "../../scenes/city-pieces";
-import { SIGN_MIN_H, addBuilding, emptyPiece, floorsFor, recipeCap, shiftTone, southSign } from "../piece";
+import { SIGN_MIN_H, addBuilding, banded, emptyPiece, floorsFor, recipeCap, shiftTone, southSign } from "../piece";
 import { ANTENNA_H, MACHINE_ROOM_H, WATER_TANK_H, antenna, beacon, machineRoom, waterTank } from "../props";
 import { CORNICE_H, cornice, offsetFootprint } from "../roofs";
 import { clipBody, insidePoly, polyCornice, polyArea, polyCentroid, polyFootprint } from "../polygon";
@@ -43,7 +43,7 @@ export function podiumTower(lot: Lot, rng: Rng, style: Style): Piece {
     if (!towerFp || polyArea(towerFp) < (size * size) / 2) { ({ x: tx, y: ty } = towerAt((corner + 2) % 4)); towerFp = clipTower({ x: tx, y: ty }); }
   }
   const tank = rng.chance(0.5);
-  const total = Math.min(rng.int(12, 18), recipeCap(lot) - (tank ? WATER_TANK_H : MACHINE_ROOM_H));
+  const total = Math.min(banded(lot, rng.int(12, 18), 12, 18), recipeCap(lot) - (tank ? WATER_TANK_H : MACHINE_ROOM_H));
   const base = ph + CORNICE_H, th = total - base;
   const tf: Facade = { floors: floorsFor(th, style), cols: rng.int(3, 4) };
   if (podium && !towerFp) return p; // no room for the tower: the podium alone
@@ -61,7 +61,7 @@ const TWIN_GAP = 3, BRIDGE_W = 3, BRIDGE_H = 2;
 export function twinTowers(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;
   const hMax = recipeCap(lot) - CORNICE_H - ANTENNA_H;
-  const h1 = Math.min(rng.int(12, 16), hMax), h2 = Math.min(h1 + rng.int(-1, 1), hMax);
+  const h1 = Math.min(banded(lot, rng.int(12, 16), 12, 16), hMax), h2 = Math.min(h1 + rng.int(-1, 1), hMax);
   const tw = Math.min(8, (w - TWIN_GAP) / 2), td = Math.min(10, d - 2);
   const x0 = x + (w - 2 * tw - TWIN_GAP) / 2, y0 = y + (d - td) / 2;
   const cols = rng.int(3, 4);
@@ -87,7 +87,7 @@ export const chamferedRect = (x: number, y: number, w: number, d: number, c: num
 /** Stepped deco: three concentric chamfered bodies (0.5, 0.3 and 0.2 of the height without the spire), tone increasing from one less than the style's, four-sided spire. */
 export function decoStepped(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;
-  const body = Math.min(rng.int(12, 18), recipeCap(lot)) - SPIRE_H, s0 = Math.min(w, d) - 2;
+  const body = Math.min(banded(lot, rng.int(12, 18), 12, 18), recipeCap(lot)) - SPIRE_H, s0 = Math.min(w, d) - 2;
   let zt = z, last: Vec2[] | null = null;
   const fpLot = lot.poly ? polyFootprint(lot, 0, 2, "oblique") : null;
   for (const [k, share] of [0.5, 0.3, 0.2].entries()) {
@@ -132,7 +132,7 @@ const CHAMFER_CUT = 4;
 /** Chamfer: one corner cut 4 toward the street, facade on all walls, cornice enlarged by 0.5 and a machine room. */
 export function chamfer(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;
-  const h = Math.min(rng.int(8, 14), recipeCap(lot) - CORNICE_H - MACHINE_ROOM_H);
+  const h = Math.min(banded(lot, rng.int(8, 14), 8, 14), recipeCap(lot) - CORNICE_H - MACHINE_ROOM_H);
   const bx = x + 1, by = y + 1, bw = w - 2, bd = d - 2;
   let fp = cutCorner(bx, by, bw, bd, chamferCorner(lot.open), CHAMFER_CUT);
   if (lot.poly) {

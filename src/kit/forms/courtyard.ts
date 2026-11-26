@@ -3,7 +3,7 @@ import type { Facade } from "../../iso/facade";
 import type { Rng } from "../../map/seed";
 import type { Rect } from "../../scenes/city-grid";
 import { brokenTone, prism, tiles } from "../../scenes/city-pieces";
-import { RECIPE_MAX_H, addBuilding, emptyPiece } from "../piece";
+import { RECIPE_MAX_H, addBuilding, banded, emptyPiece, recipeCap } from "../piece";
 import { bench, patioTree } from "../props";
 import { CORNICE_H, HIP_ROOF_H, cornice, hipRoof } from "../roofs";
 import type { Lot, Piece, RecipeDef, Side, Slot, Style } from "../types";
@@ -66,8 +66,8 @@ function patioTrees(p: Piece, rng: Rng, r: Rect, n: number, z: number, fp?: Vec2
 }
 
 export function courtyardO(lot: Lot, rng: Rng, style: Style): Piece {
-  const p = emptyPiece(), cap = Math.min(lot.maxH, RECIPE_MAX_H);
-  const h = Math.min(rng.int(7, 12), Math.floor(cap - CORNICE_H));
+  const p = emptyPiece(), cap = recipeCap(lot);
+  const h = Math.min(banded(lot, rng.int(7, 12), 7, 12), Math.floor(cap - CORNICE_H));
   const { wings, patio } = ring(lot, 5, ["n", "s", "w", "e"]), fp = lot.poly ? polyFootprint(lot, 0, 2, "oblique") : undefined;
   for (const { side, rect } of wings) {
     const cols = rng.int(3, 4);
