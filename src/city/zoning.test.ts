@@ -320,7 +320,7 @@ describe("barrios (#477)", () => {
     const weights = (z: Neighborhood) => Object.fromEntries(CATALOGUE[z].recipes.map((r) => [r.name, r.weight]));
     expect(weights("clasico")).toEqual({ cornerCupola: 30, mansard: 25, classic: 20, portalBase: 15, chamfer: 10 });
     expect(weights("transicion")).toEqual({ balconyBlock: 35, decoStepped: 25, chamfer: 20, courtyardO: 20 });
-    expect(weights("moderno")).toEqual({ podiumTower: 40, glassTower: 25, twinTowers: 15, campus: 20 });
+    expect(weights("moderno")).toEqual({ podiumTower: 45, glassTower: 30, twinTowers: 25 }); // towers only, no campus (#495)
     expect(weights("bajo")).toEqual({ rowHouses: 40, patioResidential: 35, courtyardU: 25 });
     expect(weights("bars")).toEqual({ shopRow: 50, gallery: 20, patioResidential: 20, courtyardO: 10, portalBase: 30 });
     expect(CATALOGUE.clasico.lights).toEqual({ on: 0.5, warm: 0.95 });
@@ -384,7 +384,8 @@ describe("barrios (#477)", () => {
   it("towers only north of y 320", () => {
     for (const q of onParcels) {
       const p = q.placed.parcel!;
-      if (pieceH(q) > TOWER_FREE_H + 1e-6) expect(p.c.y < 320 && p.d >= 150, `${cellKey(p)} ${q.placed.recipe} h ${pieceH(q)}`).toBe(true);
+      // the other barrios rise to their own band (#495): the tower zone is the moderno one
+      if (q.placed.neighborhood === "moderno" && pieceH(q) > TOWER_FREE_H + 1e-6) expect(p.c.y < 320 && p.d >= 150, `${cellKey(p)} ${q.placed.recipe} h ${pieceH(q)}`).toBe(true);
     }
     // the plan beyond the city (built from #479): every tower-zone parcel is moderno and the rest of the moderno ones are off it
     const plan = parcels(PLAN_BOUNDS);
@@ -533,6 +534,7 @@ describe("barrios (#477)", () => {
 });
 
 describe("the west does not move the east (#479)", () => {
+  // #495: re-recorded once: moderno draws towers only (campus left its catalogue), so the picks of its parcels and the retries after them redealt; only parcel lines move.
   it("the east parcels keep their pre-#479 recipe, neighborhood and tone", () => {
     const east = assign(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1)).filter((p) => p.parcel && p.parcel.c.x >= -54)
       .map((p) => `${p.parcel!.cell.col},${p.parcel!.cell.row} ${p.parcel!.rect.x},${p.parcel!.rect.y} ${p.neighborhood} ${p.recipe} ${p.tone}`);

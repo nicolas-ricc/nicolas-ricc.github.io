@@ -49,7 +49,7 @@ export const CATALOGUE = {
   harbor: { recipes: [], style: "harbor", lights: { on: 0.6, warm: 0.85 } },
   clasico: { recipes: [{ name: "cornerCupola", weight: 30 }, { name: "mansard", weight: 25 }, { name: "classic", weight: 20 }, { name: "portalBase", weight: 15 }, { name: "chamfer", weight: 10 }], style: "clasico", lights: { on: 0.5, warm: 0.95 } },
   transicion: { recipes: [{ name: "balconyBlock", weight: 35 }, { name: "decoStepped", weight: 25 }, { name: "chamfer", weight: 20 }, { name: "courtyardO", weight: 20 }], style: "transicion", lights: { on: 0.5, warm: 0.6 } },
-  moderno: { recipes: [{ name: "podiumTower", weight: 40 }, { name: "glassTower", weight: 25 }, { name: "twinTowers", weight: 15 }, { name: "campus", weight: 20 }], style: "moderno", lights: { on: 0.4, warm: 0.15 } },
+  moderno: { recipes: [{ name: "podiumTower", weight: 45 }, { name: "glassTower", weight: 30 }, { name: "twinTowers", weight: 25 }], style: "moderno", lights: { on: 0.4, warm: 0.15 } },
   bajo: { recipes: [{ name: "rowHouses", weight: 40 }, { name: "patioResidential", weight: 35 }, { name: "courtyardU", weight: 25 }], style: "bajo", lights: { on: 0.55, warm: 0.95 } },
 } as const satisfies Record<Neighborhood, Catalogue>;
 
@@ -236,6 +236,7 @@ export interface Placed { parcel?: Parcel; block: Block; neighborhood: Neighborh
  * of an already assigned adjacent block. Then the parcels of `builtParcels()`: neighborhood by
  * `parcelNeighborhoods`, a `FIXED_PARCELS` recipe or one drawn from `catalogueFor` (`moderno` with
  * `districtRng`; clasico, transicion and bajo retry like residential; every parcel west of `WEST_DISTRICT_X` draws pick, retries and tone from `districtRng` and comes after the east ones; `west` cuts the parcels by centroid, the lab's), cap `maxHFor` and lot `parcelLot`.
+ * A parcel that is not fixed and draws from its barrio's `CATALOGUE` recipes (so not a `moderno` slab) gets `lot.band = { min(lo, maxH), maxH }` (#495): the barrio's recipes build within it; `band.hi` is the final cap.
  * The lot is at street level (`z: 0`):
  * `city()` seats it (`seat`), lifting it onto the plinth unless the piece brings `ground`.
  */
@@ -266,8 +267,9 @@ export function assign(rng: Rng, districtRng: Rng, west = -Infinity): Placed[] {
     if (!fixed && (neighborhood === "clasico" || neighborhood === "transicion" || neighborhood === "bajo")) {
       for (let k = 0; k < 5 && out.some((q) => rectsAdjacent(q.block, p.rect) && q.recipe === recipe); k++) recipe = pick(r, cat);
     }
-    const top = maxHFor(neighborhood, p);
-    const lot = parcelLot(p, neighborhood, recipe, fixed !== undefined, parcelOpenSides(p), Math.min(top, maxHeightFor(p.rect, top)));
+    const top = maxHFor(neighborhood, p), maxH = Math.min(top, maxHeightFor(p.rect, top));
+    const lot = parcelLot(p, neighborhood, recipe, fixed !== undefined, parcelOpenSides(p), maxH);
+    if (!fixed && cat === CATALOGUE[neighborhood].recipes && neighborhood in BARRIO_HEIGHTS) lot.band = { lo: Math.min(BARRIO_HEIGHTS[neighborhood as CityBarrio].lo, maxH), hi: maxH };
     out.push({ parcel: p, block: { ...p.rect, bank: "west", row: -2, kind: "parcel" }, neighborhood, recipe, lot, tone: (isWest ? districtRng : rng).int(-1, 1) });
   });
   return out;

@@ -2,9 +2,9 @@
 
 exports[`the west does not move the east (#479) > the east parcels keep their pre-#479 recipe, neighborhood and tone 1`] = `
 [
-  "-47,171 -47,174 moderno glassTower 0",
+  "-47,171 -47,174 moderno podiumTower 0",
   "-17,171 -17,185.90240088502142 moderno glassTower 0",
-  "-17,171 -16,178 moderno campus 0",
+  "-17,171 -16,178 moderno twinTowers 0",
   "13,171 20,188 transicion courtyardO 0",
   "43,171 44,174 transicion balconyBlock 1",
   "73,171 73,174 transicion decoStepped 1",
@@ -18,7 +18,7 @@ exports[`the west does not move the east (#479) > the east parcels keep their pr
   "73,201 73,206 civic library 0",
   "103,201 103,214 clasico mansard 1",
   "-47,231 -47,234 moderno glassTower 0",
-  "-17,231 -17,234 moderno twinTowers 0",
+  "-17,231 -17,234 moderno glassTower 0",
   "13,231 20,234 transicion courtyardO 1",
   "43,231 43,234 transicion decoStepped -1",
   "-47,261 -47,261 moderno podiumTower 1",
@@ -26,7 +26,7 @@ exports[`the west does not move the east (#479) > the east parcels keep their pr
   "13,261 20,261 transicion balconyBlock -1",
   "43,261 43,261 transicion constructionSite 1",
   "-47,291 -47,291 moderno glassTower -1",
-  "-17,291 -17,291 moderno campus 1",
+  "-17,291 -17,291 moderno twinTowers 1",
   "13,291 20,291 transicion patioResidential -1",
   "43,291 43,291 transicion courtyardO 1",
   "-47,321 -47,321 transicion decoStepped -1",

@@ -78,11 +78,12 @@ describe("city", () => {
     expect(s.solids.filter((x) => x.kind === "prism" && x.mat === "paving" && x.h === PLINTH_H && x.at.z === 0 && x.w === 24 && x.d === 18)).toHaveLength(13); // measured: the strip and the east bank keep their 24 × 18 plinths
     const buildings = s.solids.filter((x) => (x.kind === "prism" || x.kind === "poly" || x.kind === "cylinder") && x.facade !== undefined);
     expect(buildings.length).toBeGreaterThanOrEqual(30);
+    const banded = s.placed.filter((q) => q.placed.parcel && q.placed.lot.band).map((q) => polyBox(q.placed.parcel!.poly)); // up to 50 on a banded parcel (#495)
     const rects = parcels(PLAN_BOUNDS).map((p) => polyBox(p.poly)); // the bounding box holds the inset polygon lots (#477)
     for (const b of buildings) {
       if (isHotelPiece(b)) continue;
       if (b.kind === "prism" && b.mat === "paving" && b.at.z === -1) continue; // the promenade walls carry an arcade, they are not buildings
-      expect(b.kind !== "prism" || b.h <= (inDistrict(b) || inFixed(b) ? 24 : MAX_BUILDING_H)).toBe(true);
+      expect(b.kind !== "prism" || b.h <= (banded.some((r) => inRect(bounds(b), r)) ? 50 : inDistrict(b) || inFixed(b) ? 24 : MAX_BUILDING_H)).toBe(true);
       expect(blocks().some((blk) => inRect(bounds(b), blk)) || rects.some((r) => inRect(bounds(b), { x: r.x - 0.8, y: r.y - 0.8, w: r.w + 1.6, d: r.d + 1.6 }))).toBe(true); // inside a block or a parcel
     }
   });
@@ -119,7 +120,8 @@ describe("city", () => {
   it("nothing but the hotel's own solids exceeds 21", () => {
     const s = scene();
     expect(s.solids.filter(isHotelPiece)).toHaveLength(HOTEL_OWN.length); // the exemption matches the hotel and nothing else
-    for (const x of s.solids) if (!isHotelPiece(x)) expect(bounds(x).max.z).toBeLessThanOrEqual(inDistrict(x) || inFixed(x) ? 25 : FIXED_RECTS.some((r) => inRect(bounds(x), r)) ? 21 + PLINTH_H : 21); // the singular pieces on a plinth reach 21 above their lot (A3); the district and the landmarks reach 24 above the plinth, with a finial
+    const banded = s.placed.filter((q) => q.placed.parcel && q.placed.lot.band).map((q) => polyBox(q.placed.parcel!.poly)); // the barrio parcels build within their band, up to 50 above the plinth (#495); the bounding box of the poly, as the oblique parcels' rect does not hold it
+    for (const x of s.solids) if (!isHotelPiece(x)) expect(bounds(x).max.z).toBeLessThanOrEqual(banded.some((r) => inRect(bounds(x), r)) ? 50 + PLINTH_H : inDistrict(x) || inFixed(x) ? 25 : FIXED_RECTS.some((r) => inRect(bounds(x), r)) ? 21 + PLINTH_H : 21); // the singular pieces on a plinth reach 21 above their lot (A3); the district and the landmarks reach 24 above the plinth, with a finial
   });
 
   // the old "in front of the tower no building exceeds 10" pinned the row south of the old plaza (y 242): that row is now Plaza Mayor tiles and the zoning's parcels (#472)
@@ -347,7 +349,9 @@ describe("city", () => {
     // Was EAST ["463dcb4d", "c540539a", "e9c5b4f5", "4dd4c753", "d0ee13e9"], MAIN ["ac4094bd", "037bf2d3", "ebae98df", "4fb3f9eb", "f851b786"].
     // #495: all ten re-recorded once: the barrio limits moved to 80 / 150 and 320 (barrios, recipes and rng streams redealt); the pieces still draw the old recipes (Task 2 changes the kit).
     // Was EAST ["fbb992cc", "eca3f9d2", "a8758203", "9d25c97a", "a9fb2445"], MAIN ["725780d1", "38f5096f", "f9e8b51d", "54c2aa76", "6e7e59be"].
-    const EAST = ["d1add971", "c169b9a0", "d80f107a", "b6f3b0ae", "88e836d9"], MAIN = ["3efcf955", "1700073b", "b38f30d9", "5e664eb5", "6a942db8"];
+    // #495 Task 3: all ten re-recorded again: the barrio parcels hand the band to their recipes (heights) and moderno draws towers only; the blocks and the fixed parcels keep their pieces.
+    // Was EAST ["d1add971", "c169b9a0", "d80f107a", "b6f3b0ae", "88e836d9"], MAIN ["3efcf955", "1700073b", "b38f30d9", "5e664eb5", "6a942db8"].
+    const EAST = ["e660df32", "7631ba67", "75bc4d59", "b2344efe", "8e033abd"], MAIN = ["3f99ad82", "1d79b853", "9d9d5384", "7f980ff4", "05e46e24"];
     for (let s = 1; s <= 5; s++) {
       for (const [west, pinned] of [[-54, EAST], [-Infinity, MAIN]] as const) {
         const c = city(createRng(s), createRng(s + 1), createRng(s + 2), { west });
