@@ -1,0 +1,495 @@
+<title>Resume en 2.5D</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one cyanotype blueprint sheet, the same look as the study plan of #471. Tabs Hoy / Propuesta, a big iso board, the hotel close-up and the change sheet beside it. Single deliberate dark look. */
+:root {
+  color-scheme: dark;
+  --paper: #0b2340;
+  --paper-2: #10305a;
+  --line: #24497a;
+  --ink: #dbe9f7;
+  --ink-dim: #86a6c8;
+  --avenue: #f2c26b;
+  --park: #6fcf97;
+  --water: #1d4f84;
+  --classic: #ecb98a;
+  --transition: #8fc4ec;
+  --modern: #b8a0f4;
+  --fixed: #ff8f7e;
+  --resid: #e48f6c;
+  --neon: #9df5c4;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+body {
+  background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 48px;
+}
+.wrap { max-width: 1440px; margin: 0 auto; display: grid; gap: 18px; }
+header { display: grid; gap: 6px; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
+.eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-dim); }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 4vw, 44px); line-height: 1; margin: 0; letter-spacing: .02em; text-transform: uppercase; text-wrap: balance; }
+header p { margin: 0; max-width: 78ch; color: var(--ink-dim); }
+.bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); flex-wrap: wrap; }
+.seg button {
+  font-family: var(--display); font-size: 18px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+  background: transparent; color: var(--ink-dim); border: 0; padding: 6px 14px; cursor: pointer;
+}
+.seg.small button { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; padding: 6px 10px; }
+.seg button[aria-pressed="true"] { color: var(--paper); background: var(--ink); }
+.seg button:focus-visible { outline: 2px solid var(--avenue); outline-offset: 2px; }
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 18px; align-items: start; }
+@media (max-width: 1000px) { .stage { grid-template-columns: 1fr; } }
+.board { border: 1px solid var(--line); min-width: 0; }
+.board .cap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+canvas { display: block; width: 100%; max-width: 100%; }
+#city { aspect-ratio: 16 / 9; }
+#hotel { aspect-ratio: 4 / 3; }
+.hint { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); padding: 6px 10px; border-top: 1px solid var(--line); }
+.panel { display: grid; gap: 16px; min-width: 0; }
+.card { border: 1px solid var(--line); padding: 16px; display: grid; gap: 12px; }
+.card h2 { font-family: var(--display); font-size: 28px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; margin: 0; line-height: 1; }
+.kicker { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--avenue); }
+.card p { margin: 0; color: var(--ink-dim); }
+.card ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--ink-dim); }
+.card li b { color: var(--ink); font-weight: 500; }
+.legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; font-size: 13px; }
+.legend div { display: flex; gap: 8px; align-items: center; }
+.sw { width: 20px; height: 12px; flex: none; border: 1px solid currentColor; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 5px 6px; border-top: 1px solid var(--line); }
+th { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); font-weight: 500; }
+td.now { color: var(--ink-dim); }
+td.new { color: var(--ink); font-weight: 600; }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+.notes section { border-top: 1px solid var(--line); padding-top: 12px; }
+.notes h2 { font-family: var(--display); text-transform: uppercase; font-size: 22px; margin: 0 0 8px; letter-spacing: .03em; }
+.notes ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--ink-dim); }
+.notes li b { color: var(--ink); font-weight: 500; }
+</style>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Zona Resume · blueprint · proyección del sitio (sx = x − y, sy = (x + y)/2 − 1.4 z)</div>
+    <h1>Resume en 2.5D</h1>
+    <p>Cómo quedaría la zona con el hotel alineado a la grilla y más alto, RESUME parado en su azotea con letras de volumen, la plaza y el hotel estirados sobre la costanera, el barrio bajo achicado, las alturas subidas a ciudad de oficinas y la franja que se ve al arrastrar llena hasta el borde. Las parcelas de "Hoy" salen del código actual; las de "Propuesta", del mismo código con las constantes nuevas. Las alturas de cada edificio son ilustrativas dentro del tope de su barrio.</p>
+  </header>
+  <div class="bar">
+    <div class="seg" role="group" aria-label="Escenario">
+      <button id="s-hoy" aria-pressed="false">Hoy</button>
+      <button id="s-prop" aria-pressed="true">Propuesta</button>
+    </div>
+    <div class="seg small" role="group" aria-label="Vista">
+      <button id="v-iso" aria-pressed="true">Volumen</button>
+      <button id="v-plan" aria-pressed="false">Planta</button>
+    </div>
+    <div class="seg small" role="group" aria-label="Tope de las torres" id="tower-seg">
+      <button id="t-51" aria-pressed="true">Torres ≤ 50 (hotel arriba)</button>
+      <button id="t-66" aria-pressed="false">Torres hasta 66</button>
+    </div>
+  </div>
+  <div class="stage">
+    <div class="panel">
+      <div class="board">
+        <div class="cap"><span class="eyebrow" id="city-title">Propuesta · volumen</span><span class="eyebrow" id="city-count"></span></div>
+        <canvas id="city" role="img" aria-label="Vista isométrica de la zona Resume"></canvas>
+        <div class="hint">Punteada: borde izquierdo del encuadre 16:9 (x − y = −419). Rayas: lo más lejos que se ve arrastrando, medido con <code>clampToBleed</code> en 9 tamaños de pantalla, inicio y zona Resume abierta: x − y = −710 y x = −394, hasta el borde sur (y 711). En "Hoy", lo rayado entre ambas es lo que hoy queda vacío. En "Propuesta", fuera del encuadre los barrios se mezclan: un campo suave de "cuán urbano" (más alto al norte, más ruido de dos escalas) elige el barrio de cada parcela, así aparecen manchas de torres, medianos y casas que se meten unas en otras. Dentro del encuadre no cambia nada; la mezcla entra de a poco entre x − y = −400 y −470.</div>
+      </div>
+      <div class="board">
+        <div class="cap"><span class="eyebrow" id="hotel-title">El hotel de cerca</span><span class="eyebrow">misma escala en las dos</span></div>
+        <canvas id="hotel" role="img" aria-label="El hotel con el cartel RESUME de cerca, hoy y propuesto"></canvas>
+        <div class="hint">Izquierda: hoy, placa girada 45°, su cara se ve de frente y el cartel es una calcomanía plana. Derecha: sin placa; la manzana entera sube como un solo bloque en el estilo de la base (revoque claro, pórtico abajo, cornisa arriba) hasta la azotea en z 60, y RESUME parado sobre la azotea con letras de 1.2 u de espesor, una pasarela adelante y el reticulado de acero atrás.</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="card">
+        <div class="kicker">Qué cambia</div>
+        <h2>Trazado</h2>
+        <table>
+          <tr><th></th><th>Hoy</th><th>Propuesta</th></tr>
+          <tr><td>Plaza Mayor</td><td class="now">y 206–291</td><td class="new">y 206–320</td></tr>
+          <tr><td>Lote del hotel</td><td class="now">54 × 51</td><td class="new">54 × 81</td></tr>
+          <tr><td>Diagonal Sur nace en</td><td class="now">(132, 291)</td><td class="new">(132, 320)</td></tr>
+          <tr><td>Avenida del Sur</td><td class="now">y 318</td><td class="new">y 348</td></tr>
+          <tr><td>Barrio bajo empieza en</td><td class="now">y 318</td><td class="new">y 378</td></tr>
+          <tr><td>Casas bajas (costero)</td><td class="now">desde y 328</td><td class="new">desde y 410</td></tr>
+          <tr><td>Bulevar y Costanera hasta</td><td class="now">y 480</td><td class="new">borde sur (y 711+)</td></tr>
+          <tr><td>Ciudad al oeste hasta</td><td class="now">encuadre</td><td class="new">x − y = −710</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="kicker">Topes de altura</div>
+        <h2>Ciudad de oficinas</h2>
+        <table>
+          <tr><th>Barrio</th><th>Hoy</th><th>Propuesta</th></tr>
+          <tr><td>Clásico (d &lt; 80)</td><td class="now">8.5</td><td class="new">14–22</td></tr>
+          <tr><td>Transición (80–150)</td><td class="now">16</td><td class="new">24–34</td></tr>
+          <tr><td>Moderno (d ≥ 150)</td><td class="now">21 · 50 lejos</td><td class="new" id="tw-cell">40–50</td></tr>
+          <tr><td>Bajo</td><td class="now">6</td><td class="new">6–8</td></tr>
+          <tr><td>Hotel</td><td class="now">51</td><td class="new">60 + cartel → 75</td></tr>
+        </table>
+        <p>Las torres llegan hasta unas 2 cuadras de la plaza (hoy, 205 u). Encima de todo sigue la regla de las vías: <b>y<sub>min</sub> − 1.4 z ≥ 134.5</b>, que deja la fila de y 171 en unos 25 y es lo que impide tapar la estación.</p>
+      </div>
+      <div class="card">
+        <div class="kicker">Cartel</div>
+        <h2>RESUME en la azotea</h2>
+        <ul>
+          <li><b>Sin placa:</b> la manzana entera es el hotel, un solo bloque de 51 × 78 en el estilo de la base (revoque claro, pórtico en planta baja, cornisa que corona) hasta la azotea en z 60 (hoy la placa llega a 51).</li>
+          <li><b>RESUME parado en la azotea</b>, de cara a la plaza, cap 12 (como hoy), de z 62 a 74, sobre un reticulado de acero hasta z 75.</li>
+          <li>El tope de 75 lo pone la regla de las vías (y<sub>min</sub> 241 − 1.4·75 = 136 ≥ 134.5). El bloque en sí podría llegar a 72, pero cada metro que sube se lo saca al cartel.</li>
+          <li>En pantalla la palabra sube hacia la derecha (26.6°) y se recorta contra el fondo, por encima de las torres de ≤ 50.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="kicker">Referencias</div>
+        <div class="legend">
+          <div style="color:var(--classic)"><span class="sw" style="background:color-mix(in srgb, var(--classic) 40%, transparent)"></span>Clásico</div>
+          <div style="color:var(--transition)"><span class="sw" style="background:color-mix(in srgb, var(--transition) 40%, transparent)"></span>Transición</div>
+          <div style="color:var(--modern)"><span class="sw" style="background:color-mix(in srgb, var(--modern) 40%, transparent)"></span>Moderno / torres</div>
+          <div style="color:var(--resid)"><span class="sw" style="background:color-mix(in srgb, var(--resid) 40%, transparent)"></span>Bajo / costero</div>
+          <div style="color:var(--fixed)"><span class="sw" style="background:color-mix(in srgb, var(--fixed) 40%, transparent)"></span>Cívico / fijo</div>
+          <div style="color:var(--park)"><span class="sw" style="background:color-mix(in srgb, var(--park) 40%, transparent)"></span>Plazas</div>
+          <div style="color:var(--avenue)"><span class="sw" style="background:color-mix(in srgb, var(--avenue) 40%, transparent)"></span>Avenidas</div>
+          <div style="color:var(--neon)"><span class="sw" style="background:color-mix(in srgb, var(--neon) 40%, transparent)"></span>Hotel y cartel</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <section><h2>Tickets</h2><ul>
+      <li><b>1 · Trazado.</b> Plaza, lote del hotel, Diagonal Sur y Avenida del Sur 30 u al sur; el barrio bajo y el costero empiezan más abajo.</li>
+      <li><b>2 · Hotel y cartel en 2.5D.</b> La manzana entera sube como un bloque hasta z 60; RESUME parado en la azotea con letras de volumen y reticulado. Depende del 1.</li>
+      <li><b>3 · Alturas.</b> Topes nuevos por barrio, zona de torres más cerca, presupuesto y FPS medidos.</li>
+      <li><b>4 · Oeste y sur.</b> Llenar la franja que se ve arrastrando: unos 290 de ancho a la izquierda del encuadre, hasta el borde sur. Independiente.</li>
+    </ul></section>
+    <section><h2>Reglas que siguen</h2><ul>
+      <li><b>Escalón de un barrio</b> entre vecinos: moderno → transición → clásico → bajo. En la franja mezclada se aplica después del campo, para limar saltos de dos escalones.</li>
+      <li><b>Nada delante del cartel</b> lo tapa (<code>maxHeightFor</code>).</li>
+      <li><b>Regla de las vías</b> (<code>trainCap</code>): ningún edificio tapa el tren ni la estación de Portfolio.</li>
+    </ul></section>
+    <section><h2>Abierto</h2><ul>
+      <li><b>¿Torres por encima del hotel?</b> Probá el selector de arriba: con 66 el cartel queda recortado contra torres encendidas.</li>
+      <li><b>Presupuesto:</b> la franja suma 114 parcelas de ciudad y unas 80 casas bajas, más las torres altas. El tope de 2 900 sólidos tiene que moverse y hay que medir FPS.</li>
+    </ul></section>
+  </div>
+</div>
+<script>
+const DATA = {"hoy":{"parcels":[{"poly":[[-23,174],[-23,195],[-47,195],[-47,174]],"n":"transicion","cap":16,"d":204.1,"y0":174},{"poly":[[0,195],[-17,195],[-17,185.9],[0,185.9]],"n":"transicion","cap":16,"d":177.1,"y0":185.9},{"poly":[[-17,185.9],[-17,179.7],[-15.4,174],[-14.7,174],[-2.8,177.3],[0,180.1],[0,185.9]],"n":"transicion","cap":16,"d":181.9,"y0":178},{"poly":[[37,188.5],[37,195],[20,195],[20,183.7]],"n":"transicion","cap":16,"d":142.6,"y0":188},{"poly":[[67,174],[67,186.6],[43,179.8],[43,174]],"n":"transicion","cap":16,"d":125,"y0":174},{"poly":[[97,174],[97,195],[73,188.2],[73,174]],"n":"clasico","cap":8.5,"d":98.6,"y0":174},{"poly":[[127,174],[127,195],[103,195],[103,174]],"n":"clasico","cap":8.5,"d":77.3,"y0":174},{"poly":[[157,174],[157,195],[133,195],[133,174]],"n":"bars","cap":18,"d":65,"y0":174},{"poly":[[184,174],[184,195],[163,195],[163,174]],"n":"bars","cap":18,"d":65.1,"y0":174},{"poly":[[-47,201],[-23,201],[-23,222],[-47,222]],"n":"transicion","cap":16,"d":197.4,"y0":201},{"poly":[[-17,201],[0,201],[0,222],[-17,222]],"n":"transicion","cap":16,"d":171.4,"y0":201},{"poly":[[20,201],[37,201],[37,222],[20,222]],"n":"transicion","cap":16,"d":135.5,"y0":201},{"poly":[[43,201],[67,201],[67,222],[43,222]],"n":"transicion","cap":16,"d":110.2,"y0":201},{"poly":[[73,201],[81.5,201],[97,205.4],[97,222],[73,222]],"n":"civic","cap":21,"d":83.7,"y0":206},{"poly":[[127,213.8],[127,222],[103,222],[103,207]],"n":"clasico","cap":8.5,"d":54.3,"y0":214},{"poly":[[-23,234],[-23,255],[-47,255],[-47,234]],"n":"transicion","cap":16,"d":194,"y0":234},{"poly":[[0,255],[-17,255],[-17,234],[0,234]],"n":"transicion","cap":16,"d":167.5,"y0":234},{"poly":[[37,234],[37,255],[20,255],[20,234]],"n":"transicion","cap":16,"d":130.5,"y0":234},{"poly":[[67,234],[67,255],[43,255],[43,234]],"n":"clasico","cap":8.5,"d":104.1,"y0":234},{"poly":[[-47,261],[-23,261],[-23,285],[-47,285]],"n":"transicion","cap":16,"d":195.6,"y0":261},{"poly":[[-17,261],[0,261],[0,285],[-17,285]],"n":"transicion","cap":16,"d":169.4,"y0":261},{"poly":[[20,261],[37,261],[37,285],[20,285]],"n":"transicion","cap":16,"d":132.9,"y0":261},{"poly":[[43,261],[67,261],[67,285],[43,285]],"n":"transicion","cap":21,"d":107,"y0":261},{"poly":[[-47,291],[-23,291],[-23,313],[-47,313]],"n":"transicion","cap":16,"d":201.4,"y0":291},{"poly":[[-17,291],[0,291],[0,313],[-17,313]],"n":"transicion","cap":16,"d":176,"y0":291},{"poly":[[20,291],[37,291],[37,313],[20,313]],"n":"transicion","cap":21,"d":141.2,"y0":291},{"poly":[[43,291],[57.3,291],[57.3,313],[48.1,313],[43,307.9]],"n":"transicion","cap":16,"d":122.4,"y0":291},{"poly":[[57.3,291],[67,291],[67,304.1],[58.1,313],[57.3,313]],"n":"transicion","cap":16,"d":111.8,"y0":291},{"poly":[[80.1,291],[97,291],[97,300.2],[78.8,307.8],[73,307.8],[73,298.1]],"n":"clasico","cap":8.5,"d":91.6,"y0":291},{"poly":[[127,298.5],[127,313],[103,313],[103,308.6]],"n":"clasico","cap":8.5,"d":74.6,"y0":307},{"poly":[[145,291],[157,291],[157,313],[133,313],[133,296]],"n":"civic","cap":21,"d":54.6,"y0":296},{"poly":[[163,291],[184,291],[184,313],[163,313]],"n":"civic","cap":21,"d":55.9,"y0":291},{"poly":[[-263,174],[-263,195],[-287,195],[-287,174]],"n":"moderno","cap":26.9,"d":438.6,"y0":174},{"poly":[[-233,174],[-233,195],[-257,195],[-257,174]],"n":"moderno","cap":26.9,"d":409,"y0":174},{"poly":[[-203,174],[-203,195],[-227,195],[-227,174]],"n":"moderno","cap":26.9,"d":379.4,"y0":174},{"poly":[[-173,174],[-173,195],[-197,195],[-197,174]],"n":"moderno","cap":26.9,"d":349.8,"y0":174},{"poly":[[-143,174],[-143,195],[-167,195],[-167,174]],"n":"moderno","cap":26.9,"d":320.4,"y0":174},{"poly":[[-113,174],[-113,195],[-137,195],[-137,174]],"n":"moderno","cap":26.9,"d":291,"y0":174},{"poly":[[-83,174],[-83,195],[-107,195],[-107,174]],"n":"moderno","cap":26.9,"d":261.8,"y0":174},{"poly":[[-53,174],[-53,195],[-77,195],[-77,174]],"n":"moderno","cap":26.9,"d":232.8,"y0":174},{"poly":[[-257,201],[-233,201],[-233,222],[-257,222]],"n":"moderno","cap":46.2,"d":405.6,"y0":201},{"poly":[[-227,201],[-203,201],[-203,222],[-227,222]],"n":"moderno","cap":46.2,"d":375.8,"y0":201},{"poly":[[-197,201],[-173,201],[-173,222],[-197,222]],"n":"moderno","cap":46.2,"d":345.9,"y0":201},{"poly":[[-167,201],[-143,201],[-143,222],[-167,222]],"n":"moderno","cap":46.2,"d":316.1,"y0":201},{"poly":[[-137,201],[-113,201],[-113,222],[-137,222]],"n":"moderno","cap":46.2,"d":286.3,"y0":201},{"poly":[[-107,201],[-83,201],[-83,222],[-107,222]],"n":"moderno","cap":46.2,"d":256.6,"y0":201},{"poly":[[-77,201],[-53,201],[-53,222],[-77,222]],"n":"moderno","cap":46.2,"d":227,"y0":201},{"poly":[[-203,234],[-203,255],[-227,255],[-227,234]],"n":"moderno","cap":50,"d":374,"y0":234},{"poly":[[-173,234],[-173,255],[-197,255],[-197,234]],"n":"moderno","cap":50,"d":344,"y0":234},{"poly":[[-143,234],[-143,255],[-167,255],[-167,234]],"n":"moderno","cap":50,"d":314,"y0":234},{"poly":[[-113,234],[-113,255],[-137,255],[-137,234]],"n":"moderno","cap":50,"d":284,"y0":234},{"poly":[[-83,234],[-83,255],[-107,255],[-107,234]],"n":"moderno","cap":24,"d":254,"y0":234},{"poly":[[-53,234],[-53,255],[-77,255],[-77,234]],"n":"moderno","cap":50,"d":224,"y0":234},{"poly":[[-197,261],[-173,261],[-173,285],[-197,285]],"n":"moderno","cap":50,"d":344.9,"y0":261},{"poly":[[-167,261],[-143,261],[-143,285],[-167,285]],"n":"moderno","cap":50,"d":315,"y0":261},{"poly":[[-137,261],[-113,261],[-113,285],[-137,285]],"n":"moderno","cap":50,"d":285.1,"y0":261},{"poly":[[-107,261],[-83,261],[-83,285],[-107,285]],"n":"moderno","cap":50,"d":255.2,"y0":261},{"poly":[[-77,261],[-53,261],[-53,285],[-77,285]],"n":"moderno","cap":50,"d":225.4,"y0":261},{"poly":[[-167,291],[-143,291],[-143,313],[-167,313]],"n":"transicion","cap":16,"d":318.6,"y0":291},{"poly":[[-137,291],[-113,291],[-113,313],[-137,313]],"n":"transicion","cap":16,"d":289.1,"y0":291},{"poly":[[-107,291],[-83,291],[-83,313],[-107,313]],"n":"transicion","cap":16,"d":259.7,"y0":291},{"poly":[[-77,291],[-53,291],[-53,313],[-77,313]],"n":"transicion","cap":16,"d":230.4,"y0":291}],"axes":[{"id":"costanera","name":"Costanera","band":[[184,160],[184,480],[192,480],[192,160]],"kind":"costanera"},{"id":"plaza","name":"Avenida de la Plaza","band":[[132,222],[-440,222],[-440,234],[132,234]],"kind":"avenue"},{"id":"diagonalNorte","name":"Diagonal Norte","band":[[133.4,205.2],[-12.6,164.2],[-15.4,173.8],[130.6,214.8]],"kind":"diagonal"},{"id":"diagonalSur","name":"Diagonal Sur","band":[[130.1,286.4],[-421.9,517.4],[-418.1,526.6],[133.9,295.6]],"kind":"diagonal"},{"id":"bulevar","name":"Bulevar Central","band":[[0,160],[0,480],[20,480],[20,160]],"kind":"boulevard"},{"id":"vias","name":"Avenida de las Vías","band":[[184,164],[-440,164],[-440,174],[184,174]],"kind":"avenue"},{"id":"sur","name":"Avenida del Sur","band":[[184,313],[-440,313],[-440,323],[184,323]],"kind":"avenue"},{"id":"barrio","name":"Avenida del Barrio","band":[[184,373],[-440,373],[-440,383],[184,383]],"kind":"avenue"}],"plaza":{"x":132,"y":206,"w":54,"d":85},"hotel":{"x":73,"y":234,"w":54,"d":51},"crossings":[[[20.2,179.9],[14.2,185.9],[5.8,185.9],[-0.2,179.9],[-0.2,171.5],[5.8,165.6],[14.2,165.6],[20.2,171.5]],[[20.2,346.3],[14.2,352.2],[5.8,352.2],[-0.2,346.3],[-0.2,337.8],[5.8,331.9],[14.2,331.9],[20.2,337.8]],[[77.6,322.2],[71.7,328.2],[63.3,328.2],[57.3,322.2],[57.3,313.8],[63.3,307.8],[71.7,307.8],[77.6,313.8]]]},"prop":{"parcels":[{"poly":[[-383,174],[-383,195],[-407,195],[-407,174]],"c":[-395,184.5],"d":559.5,"y0":174},{"poly":[[-353,174],[-353,195],[-377,195],[-377,174]],"c":[-365,184.5],"d":529.8,"y0":174},{"poly":[[-323,174],[-323,195],[-347,195],[-347,174]],"c":[-335,184.5],"d":500.2,"y0":174},{"poly":[[-293,174],[-293,195],[-317,195],[-317,174]],"c":[-305,184.5],"d":470.6,"y0":174},{"poly":[[-263,174],[-263,195],[-287,195],[-287,174]],"c":[-275,184.5],"d":441,"y0":174},{"poly":[[-233,174],[-233,195],[-257,195],[-257,174]],"c":[-245,184.5],"d":411.6,"y0":174},{"poly":[[-203,174],[-203,195],[-227,195],[-227,174]],"c":[-215,184.5],"d":382.1,"y0":174},{"poly":[[-173,174],[-173,195],[-197,195],[-197,174]],"c":[-185,184.5],"d":352.8,"y0":174},{"poly":[[-143,174],[-143,195],[-167,195],[-167,174]],"c":[-155,184.5],"d":323.7,"y0":174},{"poly":[[-113,174],[-113,195],[-137,195],[-137,174]],"c":[-125,184.5],"d":294.6,"y0":174},{"poly":[[-83,174],[-83,195],[-107,195],[-107,174]],"c":[-95,184.5],"d":265.9,"y0":174},{"poly":[[-53,174],[-53,195],[-77,195],[-77,174]],"c":[-65,184.5],"d":237.4,"y0":174},{"poly":[[-23,174],[-23,195],[-47,195],[-47,174]],"c":[-35,184.5],"d":209.3,"y0":174},{"poly":[[0,195],[-17,195],[-17,185.9],[0,185.9]],"c":[-8.5,190.5],"d":182.5,"y0":185.9},{"poly":[[-17,185.9],[-17,179.7],[-15.4,174],[-14.7,174],[-2.8,177.3],[0,180.1],[0,185.9]],"c":[-9.6,179.6],"d":188.1,"y0":174},{"poly":[[37,188.5],[37,195],[20,195],[20,183.7]],"c":[28.5,190.6],"d":149.3,"y0":183.7},{"poly":[[67,174],[67,186.6],[43,179.8],[43,174]],"c":[55,178.6],"d":133.9,"y0":174},{"poly":[[97,174],[97,195],[73,188.2],[73,174]],"c":[85,182.8],"d":109.1,"y0":174},{"poly":[[127,174],[127,195],[103,195],[103,174]],"c":[115,184.5],"d":90,"y0":174},{"poly":[[157,174],[157,195],[133,195],[133,174]],"c":[145,184.5],"d":79.7,"y0":174},{"poly":[[184,174],[184,195],[163,195],[163,174]],"c":[173.5,184.5],"d":79.8,"y0":174},{"poly":[[-407,201],[-383,201],[-383,222],[-407,222]],"c":[-395,211.5],"d":556.4,"y0":201},{"poly":[[-377,201],[-353,201],[-353,222],[-377,222]],"c":[-365,211.5],"d":526.5,"y0":201},{"poly":[[-347,201],[-323,201],[-323,222],[-347,222]],"c":[-335,211.5],"d":496.7,"y0":201},{"poly":[[-317,201],[-293,201],[-293,222],[-317,222]],"c":[-305,211.5],"d":466.8,"y0":201},{"poly":[[-287,201],[-263,201],[-263,222],[-287,222]],"c":[-275,211.5],"d":437,"y0":201},{"poly":[[-257,201],[-233,201],[-233,222],[-257,222]],"c":[-245,211.5],"d":407.3,"y0":201},{"poly":[[-227,201],[-203,201],[-203,222],[-227,222]],"c":[-215,211.5],"d":377.5,"y0":201},{"poly":[[-197,201],[-173,201],[-173,222],[-197,222]],"c":[-185,211.5],"d":347.8,"y0":201},{"poly":[[-167,201],[-143,201],[-143,222],[-167,222]],"c":[-155,211.5],"d":318.2,"y0":201},{"poly":[[-137,201],[-113,201],[-113,222],[-137,222]],"c":[-125,211.5],"d":288.6,"y0":201},{"poly":[[-107,201],[-83,201],[-83,222],[-107,222]],"c":[-95,211.5],"d":259.2,"y0":201},{"poly":[[-77,201],[-53,201],[-53,222],[-77,222]],"c":[-65,211.5],"d":229.8,"y0":201},{"poly":[[-47,201],[-23,201],[-23,222],[-47,222]],"c":[-35,211.5],"d":200.7,"y0":201},{"poly":[[-17,201],[0,201],[0,222],[-17,222]],"c":[-8.5,211.5],"d":175.2,"y0":201},{"poly":[[20,201],[37,201],[37,222],[20,222]],"c":[28.5,211.5],"d":140.3,"y0":201},{"poly":[[43,201],[67,201],[67,222],[43,222]],"c":[55,211.5],"d":116.1,"y0":201},{"poly":[[73,201],[81.5,201],[97,205.4],[97,222],[73,222]],"c":[84.3,210.3],"d":91.4,"y0":201},{"poly":[[127,213.8],[127,222],[103,222],[103,207]],"c":[115,216.2],"d":64.2,"y0":207},{"poly":[[-383,234],[-383,255],[-407,255],[-407,234]],"c":[-395,244.5],"d":554.3,"y0":234},{"poly":[[-353,234],[-353,255],[-377,255],[-377,234]],"c":[-365,244.5],"d":524.3,"y0":234},{"poly":[[-323,234],[-323,255],[-347,255],[-347,234]],"c":[-335,244.5],"d":494.3,"y0":234},{"poly":[[-293,234],[-293,255],[-317,255],[-317,234]],"c":[-305,244.5],"d":464.4,"y0":234},{"poly":[[-263,234],[-263,255],[-287,255],[-287,234]],"c":[-275,244.5],"d":434.4,"y0":234},{"poly":[[-233,234],[-233,255],[-257,255],[-257,234]],"c":[-245,244.5],"d":404.4,"y0":234},{"poly":[[-203,234],[-203,255],[-227,255],[-227,234]],"c":[-215,244.5],"d":374.5,"y0":234},{"poly":[[-173,234],[-173,255],[-197,255],[-197,234]],"c":[-185,244.5],"d":344.5,"y0":234},{"poly":[[-143,234],[-143,255],[-167,255],[-167,234]],"c":[-155,244.5],"d":314.5,"y0":234},{"poly":[[-113,234],[-113,255],[-137,255],[-137,234]],"c":[-125,244.5],"d":284.6,"y0":234},{"poly":[[-83,234],[-83,255],[-107,255],[-107,234]],"c":[-95,244.5],"d":254.7,"y0":234},{"poly":[[-53,234],[-53,255],[-77,255],[-77,234]],"c":[-65,244.5],"d":224.8,"y0":234},{"poly":[[-23,234],[-23,255],[-47,255],[-47,234]],"c":[-35,244.5],"d":194.9,"y0":234},{"poly":[[0,255],[-17,255],[-17,234],[0,234]],"c":[-8.5,244.5],"d":168.5,"y0":234},{"poly":[[37,234],[37,255],[20,255],[20,234]],"c":[28.5,244.5],"d":131.8,"y0":234},{"poly":[[67,234],[67,255],[43,255],[43,234]],"c":[55,244.5],"d":105.6,"y0":234},{"poly":[[73,234],[127,234],[127,315],[73,315]],"c":[100,274.5],"d":60.1,"y0":234},{"poly":[[-407,261],[-383,261],[-383,285],[-407,285]],"c":[-395,273],"d":554.1,"y0":261},{"poly":[[-377,261],[-353,261],[-353,285],[-377,285]],"c":[-365,273],"d":524.1,"y0":261},{"poly":[[-347,261],[-323,261],[-323,285],[-347,285]],"c":[-335,273],"d":494.1,"y0":261},{"poly":[[-317,261],[-293,261],[-293,285],[-317,285]],"c":[-305,273],"d":464.1,"y0":261},{"poly":[[-287,261],[-263,261],[-263,285],[-287,285]],"c":[-275,273],"d":434.1,"y0":261},{"poly":[[-257,261],[-233,261],[-233,285],[-257,285]],"c":[-245,273],"d":404.1,"y0":261},{"poly":[[-227,261],[-203,261],[-203,285],[-227,285]],"c":[-215,273],"d":374.1,"y0":261},{"poly":[[-197,261],[-173,261],[-173,285],[-197,285]],"c":[-185,273],"d":344.1,"y0":261},{"poly":[[-167,261],[-143,261],[-143,285],[-167,285]],"c":[-155,273],"d":314.2,"y0":261},{"poly":[[-137,261],[-113,261],[-113,285],[-137,285]],"c":[-125,273],"d":284.2,"y0":261},{"poly":[[-107,261],[-83,261],[-83,285],[-107,285]],"c":[-95,273],"d":254.2,"y0":261},{"poly":[[-77,261],[-53,261],[-53,285],[-77,285]],"c":[-65,273],"d":224.2,"y0":261},{"poly":[[-47,261],[-23,261],[-23,285],[-47,285]],"c":[-35,273],"d":194.3,"y0":261},{"poly":[[-17,261],[0,261],[0,285],[-17,285]],"c":[-8.5,273],"d":167.8,"y0":261},{"poly":[[20,261],[37,261],[37,285],[20,285]],"c":[28.5,273],"d":130.9,"y0":261},{"poly":[[43,261],[67,261],[67,285],[43,285]],"c":[55,273],"d":104.5,"y0":261},{"poly":[[-407,291],[-383,291],[-383,315],[-407,315]],"c":[-395,303],"d":555.4,"y0":291},{"poly":[[-377,291],[-353,291],[-353,315],[-377,315]],"c":[-365,303],"d":525.5,"y0":291},{"poly":[[-347,291],[-323,291],[-323,315],[-347,315]],"c":[-335,303],"d":495.6,"y0":291},{"poly":[[-317,291],[-293,291],[-293,315],[-317,315]],"c":[-305,303],"d":465.7,"y0":291},{"poly":[[-287,291],[-263,291],[-263,315],[-287,315]],"c":[-275,303],"d":435.8,"y0":291},{"poly":[[-257,291],[-233,291],[-233,315],[-257,315]],"c":[-245,303],"d":406,"y0":291},{"poly":[[-227,291],[-203,291],[-203,315],[-227,315]],"c":[-215,303],"d":376.1,"y0":291},{"poly":[[-197,291],[-173,291],[-173,315],[-197,315]],"c":[-185,303],"d":346.3,"y0":291},{"poly":[[-167,291],[-143,291],[-143,315],[-167,315]],"c":[-155,303],"d":316.5,"y0":291},{"poly":[[-137,291],[-113,291],[-113,315],[-137,315]],"c":[-125,303],"d":286.8,"y0":291},{"poly":[[-107,291],[-83,291],[-83,315],[-107,315]],"c":[-95,303],"d":257.1,"y0":291},{"poly":[[-77,291],[-53,291],[-53,315],[-77,315]],"c":[-65,303],"d":227.5,"y0":291},{"poly":[[-47,291],[-23,291],[-23,315],[-47,315]],"c":[-35,303],"d":198.1,"y0":291},{"poly":[[-17,291],[0,291],[0,315],[-17,315]],"c":[-8.5,303],"d":172.2,"y0":291},{"poly":[[20,291],[37,291],[37,315],[20,315]],"c":[28.5,303],"d":136.5,"y0":291},{"poly":[[43,291],[67,291],[67,315],[43,315]],"c":[55,303],"d":111.4,"y0":291},{"poly":[[-407,321],[-383,321],[-383,343],[-407,343]],"c":[-395,332],"d":558.3,"y0":321},{"poly":[[-377,321],[-353,321],[-353,343],[-377,343]],"c":[-365,332],"d":528.5,"y0":321},{"poly":[[-347,321],[-323,321],[-323,343],[-347,343]],"c":[-335,332],"d":498.8,"y0":321},{"poly":[[-317,321],[-293,321],[-293,343],[-317,343]],"c":[-305,332],"d":469.1,"y0":321},{"poly":[[-287,321],[-263,321],[-263,343],[-287,343]],"c":[-275,332],"d":439.5,"y0":321},{"poly":[[-257,321],[-233,321],[-233,343],[-257,343]],"c":[-245,332],"d":409.8,"y0":321},{"poly":[[-227,321],[-203,321],[-203,343],[-227,343]],"c":[-215,332],"d":380.3,"y0":321},{"poly":[[-197,321],[-173,321],[-173,343],[-197,343]],"c":[-185,332],"d":350.9,"y0":321},{"poly":[[-167,321],[-143,321],[-143,343],[-167,343]],"c":[-155,332],"d":321.5,"y0":321},{"poly":[[-137,321],[-113,321],[-113,343],[-137,343]],"c":[-125,332],"d":292.3,"y0":321},{"poly":[[-107,321],[-83,321],[-83,343],[-107,343]],"c":[-95,332],"d":263.2,"y0":321},{"poly":[[-77,321],[-53,321],[-53,343],[-77,343]],"c":[-65,332],"d":234.4,"y0":321},{"poly":[[-47,321],[-23,321],[-23,343],[-47,343]],"c":[-35,332],"d":205.9,"y0":321},{"poly":[[-17,321],[0,321],[0,343],[-17,343]],"c":[-8.5,332],"d":181.2,"y0":321},{"poly":[[20,321],[37,321],[37,343],[20,343]],"c":[28.5,332],"d":147.6,"y0":321},{"poly":[[43,321],[54.9,321],[54.9,343],[45.7,343],[43,340.3]],"c":[48.3,333.7],"d":131.3,"y0":321},{"poly":[[54.9,321],[67,321],[67,331.7],[55.7,343],[54.9,343]],"c":[59.9,331.9],"d":120.7,"y0":321},{"poly":[[77.7,321],[97,321],[97,329.2],[76.4,337.8],[73,337.8],[73,325.7]],"c":[82.4,328.8],"d":101,"y0":321},{"poly":[[127,327.5],[127,343],[103,343],[103,337.6]],"c":[115,337.8],"d":86.8,"y0":327.5},{"poly":[[142.6,321],[157,321],[157,343],[133,343],[133,325]],"c":[144.5,330.6],"d":69.1,"y0":321},{"poly":[[163,321],[184,321],[184,343],[163,343]],"c":[173.5,332],"d":70.5,"y0":321},{"poly":[[-383,353],[-383,373],[-407,373],[-407,353]],"c":[-395,363],"d":563,"y0":353},{"poly":[[-353,353],[-353,373],[-377,373],[-377,353]],"c":[-365,363],"d":533.5,"y0":353},{"poly":[[-323,353],[-323,373],[-347,373],[-347,353]],"c":[-335,363],"d":504,"y0":353},{"poly":[[-293,353],[-293,373],[-317,373],[-317,353]],"c":[-305,363],"d":474.7,"y0":353},{"poly":[[-263,353],[-263,373],[-287,373],[-287,353]],"c":[-275,363],"d":445.4,"y0":353},{"poly":[[-233,353],[-233,373],[-257,373],[-257,353]],"c":[-245,363],"d":416.2,"y0":353},{"poly":[[-203,353],[-203,373],[-227,373],[-227,353]],"c":[-215,363],"d":387.1,"y0":353},{"poly":[[-173,353],[-173,373],[-197,373],[-197,353]],"c":[-185,363],"d":358.2,"y0":353},{"poly":[[-143,353],[-143,373],[-167,373],[-167,353]],"c":[-155,363],"d":329.5,"y0":353},{"poly":[[-113,353],[-113,373],[-137,373],[-137,353]],"c":[-125,363],"d":301.1,"y0":353},{"poly":[[-83,353],[-83,373],[-107,373],[-107,353]],"c":[-95,363],"d":273,"y0":353},{"poly":[[-53,353],[-53,373],[-77,373],[-77,353]],"c":[-65,363],"d":245.3,"y0":353},{"poly":[[-23,353],[-23,373],[-47,373],[-47,353]],"c":[-35,363],"d":218.3,"y0":353},{"poly":[[-4,371.5],[-7.6,373],[-17,373],[-17,358.4]],"c":[-11.4,369],"d":200.7,"y0":358.4},{"poly":[[-0.2,369.9],[-4,371.5],[-17,358.4],[-17,353],[-0.2,353]],"c":[-7.7,361.2],"d":193.4,"y0":353},{"poly":[[67,360.5],[67,373],[54.5,373]],"c":[62.8,368.8],"d":143,"y0":360.5},{"poly":[[67,358.2],[67,360.5],[54.5,373],[43,373],[43,362.7],[53.8,358.2]],"c":[54.7,364.2],"d":145.4,"y0":358.2},{"poly":[[97,353],[97,373],[73,373],[73,354.5],[74.5,353]],"c":[82.9,361.3],"d":124.3,"y0":353},{"poly":[[127,353],[127,373],[103,373],[103,353]],"c":[115,363],"d":109.3,"y0":353},{"poly":[[157,353],[157,373],[133,373],[133,353]],"c":[145,363],"d":101,"y0":353},{"poly":[[184,353],[184,373],[163,373],[163,353]],"c":[173.5,363],"d":101,"y0":353},{"poly":[[-383,383],[-383,405],[-407,405],[-407,383]],"c":[-395,394],"d":569.3,"y0":383},{"poly":[[-353,383],[-353,405],[-377,405],[-377,383]],"c":[-365,394],"d":540.1,"y0":383},{"poly":[[-323,383],[-323,405],[-347,405],[-347,383]],"c":[-335,394],"d":511.1,"y0":383},{"poly":[[-293,383],[-293,405],[-317,405],[-317,383]],"c":[-305,394],"d":482.1,"y0":383},{"poly":[[-263,383],[-263,405],[-287,405],[-287,383]],"c":[-275,394],"d":453.3,"y0":383},{"poly":[[-233,383],[-233,405],[-257,405],[-257,383]],"c":[-245,394],"d":424.7,"y0":383},{"poly":[[-203,383],[-203,405],[-227,405],[-227,383]],"c":[-215,394],"d":396.3,"y0":383},{"poly":[[-173,383],[-173,405],[-197,405],[-197,383]],"c":[-185,394],"d":368.1,"y0":383},{"poly":[[-143,383],[-143,405],[-167,405],[-167,383]],"c":[-155,394],"d":340.2,"y0":383},{"poly":[[-113,383],[-113,405],[-137,405],[-137,383]],"c":[-125,394],"d":312.8,"y0":383},{"poly":[[-83,383],[-83,404.6],[-84.1,405],[-107,405],[-107,383]],"c":[-92.8,396.1],"d":284.8,"y0":383},{"poly":[[-53,383],[-53,392],[-77,402],[-77,383]],"c":[-65,390],"d":257.5,"y0":383},{"poly":[[-23,390.3],[-23,405],[-47,405],[-47,400.3]],"c":[-35,400.2],"d":237.6,"y0":390.3},{"poly":[[0,383],[0,405],[-17,405],[-17,387.8],[-5.6,383]],"c":[-7.9,392.8],"d":211.4,"y0":383},{"poly":[[37,383],[37,405],[20,405],[20,383]],"c":[28.5,394],"d":184.9,"y0":383},{"poly":[[67,383],[67,405],[43,405],[43,383]],"c":[55,394],"d":167.3,"y0":383},{"poly":[[97,383],[97,405],[73,405],[73,383]],"c":[85,394],"d":150.5,"y0":383},{"poly":[[127,383],[127,405],[103,405],[103,383]],"c":[115,394],"d":138.2,"y0":383},{"poly":[[157,383],[157,405],[133,405],[133,383]],"c":[145,394],"d":131.7,"y0":383},{"poly":[[184,383],[184,405],[163,405],[163,383]],"c":[173.5,394],"d":131.8,"y0":383},{"poly":[[-407,411],[-383,411],[-383,435],[-407,435]],"c":[-395,423],"d":576.6,"y0":411},{"poly":[[-377,411],[-353,411],[-353,435],[-377,435]],"c":[-365,423],"d":547.9,"y0":411},{"poly":[[-347,411],[-323,411],[-323,435],[-347,435]],"c":[-335,423],"d":519.3,"y0":411},{"poly":[[-317,411],[-293,411],[-293,435],[-317,435]],"c":[-305,423],"d":490.8,"y0":411},{"poly":[[-287,411],[-263,411],[-263,435],[-287,435]],"c":[-275,423],"d":462.6,"y0":411},{"poly":[[-257,411],[-233,411],[-233,435],[-257,435]],"c":[-245,423],"d":434.5,"y0":411},{"poly":[[-227,411],[-203,411],[-203,435],[-227,435]],"c":[-215,423],"d":406.8,"y0":411},{"poly":[[-197,411],[-173,411],[-173,435],[-197,435]],"c":[-185,423],"d":379.4,"y0":411},{"poly":[[-167,411],[-143,411],[-143,429.7],[-155.8,435],[-167,435]],"c":[-155.2,424.3],"d":353.2,"y0":411},{"poly":[[-137,411],[-113,411],[-113,417.1],[-137,427.2]],"c":[-125,416.6],"d":322.9,"y0":411},{"poly":[[-83,415.4],[-83,435],[-107,435],[-107,425.4]],"c":[-95,427.7],"d":302.7,"y0":415.4},{"poly":[[-72.5,411],[-53,411],[-53,435],[-77,435],[-77,412.9]],"c":[-66.5,421],"d":275.3,"y0":411},{"poly":[[-47,411],[-23,411],[-23,435],[-47,435]],"c":[-35,423],"d":251.5,"y0":411},{"poly":[[-17,411],[0,411],[0,435],[-17,435]],"c":[-8.5,423],"d":231.6,"y0":411},{"poly":[[20,411],[37,411],[37,435],[20,435]],"c":[28.5,423],"d":206.5,"y0":411},{"poly":[[43,411],[67,411],[67,435],[43,435]],"c":[55,423],"d":190.8,"y0":411},{"poly":[[73,411],[97,411],[97,435],[73,435]],"c":[85,423],"d":176.3,"y0":411},{"poly":[[103,411],[127,411],[127,435],[103,435]],"c":[115,423],"d":165.9,"y0":411},{"poly":[[133,411],[157,411],[157,435],[133,435]],"c":[145,423],"d":160.6,"y0":411},{"poly":[[163,411],[184,411],[184,435],[163,435]],"c":[173.5,423],"d":160.7,"y0":411},{"poly":[[-407,441],[-383,441],[-383,465],[-407,465]],"c":[-395,453],"d":585.7,"y0":441},{"poly":[[-377,441],[-353,441],[-353,465],[-377,465]],"c":[-365,453],"d":557.4,"y0":441},{"poly":[[-347,441],[-323,441],[-323,465],[-347,465]],"c":[-335,453],"d":529.3,"y0":441},{"poly":[[-317,441],[-293,441],[-293,465],[-317,465]],"c":[-305,453],"d":501.4,"y0":441},{"poly":[[-287,441],[-263,441],[-263,465],[-287,465]],"c":[-275,453],"d":473.8,"y0":441},{"poly":[[-257,441],[-233,441],[-233,465],[-257,465]],"c":[-245,453],"d":446.4,"y0":441},{"poly":[[-227,441],[-203,441],[-203,454.8],[-227,464.8]],"c":[-215,450.4],"d":418.3,"y0":441},{"poly":[[-197,441],[-173,441],[-173,442.2],[-197,452.3]],"c":[-185,444.1],"d":388.8,"y0":441},{"poly":[[-173,453.1],[-173,465],[-197,465],[-197,463.1]],"c":[-185,461.5],"d":397.2,"y0":453.1},{"poly":[[-144.2,441],[-143,441],[-143,465],[-167,465],[-167,450.5]],"c":[-152.8,452.5],"d":364.9,"y0":441},{"poly":[[-137,441],[-113,441],[-113,465],[-137,465]],"c":[-125,453],"d":341.7,"y0":441},{"poly":[[-107,441],[-83,441],[-83,465],[-107,465]],"c":[-95,453],"d":317.2,"y0":441},{"poly":[[-77,441],[-53,441],[-53,465],[-77,465]],"c":[-65,453],"d":293.7,"y0":441},{"poly":[[-47,441],[-23,441],[-23,465],[-47,465]],"c":[-35,453],"d":271.5,"y0":441},{"poly":[[-17,441],[0,441],[0,465],[-17,465]],"c":[-8.5,453],"d":253.3,"y0":441},{"poly":[[20,441],[37,441],[37,465],[20,465]],"c":[28.5,453],"d":230.5,"y0":441},{"poly":[[43,441],[67,441],[67,465],[43,465]],"c":[55,453],"d":216.6,"y0":441},{"poly":[[73,441],[97,441],[97,465],[73,465]],"c":[85,453],"d":203.9,"y0":441},{"poly":[[103,441],[127,441],[127,465],[103,465]],"c":[115,453],"d":195,"y0":441},{"poly":[[133,441],[157,441],[157,465],[133,465]],"c":[145,453],"d":190.5,"y0":441},{"poly":[[163,441],[184,441],[184,465],[163,465]],"c":[173.5,453],"d":190.6,"y0":441}],"axes":[{"id":"costanera","name":"Costanera","band":[[184,160],[184,720],[192,720],[192,160]],"kind":"costanera"},{"id":"plaza","name":"Avenida de la Plaza","band":[[132,222],[-440,222],[-440,234],[132,234]],"kind":"avenue"},{"id":"diagonalNorte","name":"Diagonal Norte","band":[[133.4,205.2],[-12.6,164.2],[-15.4,173.8],[130.6,214.8]],"kind":"diagonal"},{"id":"diagonalSur","name":"Diagonal Sur","band":[[130.1,315.4],[-421.9,546.4],[-418.1,555.6],[133.9,324.6]],"kind":"diagonal"},{"id":"bulevar","name":"Bulevar Central","band":[[0,160],[0,720],[20,720],[20,160]],"kind":"boulevard"},{"id":"vias","name":"Avenida de las Vías","band":[[184,164],[-440,164],[-440,174],[184,174]],"kind":"avenue"},{"id":"sur","name":"Avenida del Sur","band":[[184,343],[-440,343],[-440,353],[184,353]],"kind":"avenue"},{"id":"barrio","name":"Avenida del Barrio","band":[[184,373],[-440,373],[-440,383],[184,383]],"kind":"avenue"}],"plaza":{"x":132,"y":206,"w":54,"d":114},"hotel":{"x":73,"y":234,"w":54,"d":81},"crossings":[[[20.2,179.9],[14.2,185.9],[5.8,185.9],[-0.2,179.9],[-0.2,171.5],[5.8,165.6],[14.2,165.6],[20.2,171.5]],[[20.2,375.3],[14.2,381.2],[5.8,381.2],[-0.2,375.3],[-0.2,366.8],[5.8,360.9],[14.2,360.9],[20.2,366.8]],[[75.3,352.2],[69.3,358.2],[60.9,358.2],[54.9,352.2],[54.9,343.8],[60.9,337.8],[69.3,337.8],[75.3,343.8]]]},"cover":[[-315.3,104.5],[221.5,-432.3],[825.3,171.5],[288.5,708.3]],"bleed":{"x0":-402,"y0":-438,"x1":912,"y1":714}};
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const C = { paper: css("--paper"), paper2: css("--paper-2"), line: css("--line"), ink: css("--ink"), dim: css("--ink-dim"), avenue: css("--avenue"), park: css("--park"), water: css("--water"),
+  clasico: css("--classic"), transicion: css("--transition"), moderno: css("--modern"), fixed: css("--fixed"), bajo: css("--resid"), neon: css("--neon") };
+const state = { scen: "prop", view: "iso", towers: 50 };
+
+// ------------------------------------------------------------ helpers
+const hash = (x, y) => { let h = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453; return h - Math.floor(h); };
+const centroid = (p) => { let x = 0, y = 0; for (const q of p) { x += q[0]; y += q[1]; } return [x / p.length, y / p.length]; };
+const area2 = (p) => { let s = 0; for (let i = 0; i < p.length; i++) { const a = p[i], b = p[(i + 1) % p.length]; s += a[0] * b[1] - b[0] * a[1]; } return s; };
+const inset = (p, k) => { const [cx, cy] = centroid(p); return p.map(([x, y]) => { const dx = x - cx, dy = y - cy, L = Math.hypot(dx, dy) || 1; const f = Math.max(0.15, 1 - k / L); return [cx + dx * f, cy + dy * f]; }); };
+const rect = (x, y, w, d) => [[x, y], [x + w, y], [x + w, y + d], [x, y + d]];
+const mix = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
+const shade = (hex, f) => { const n = parseInt(hex.slice(1), 16); const c = [n >> 16, (n >> 8) & 255, n & 255].map((v) => Math.round(v * f)); return `rgb(${c[0]},${c[1]},${c[2]})`; };
+const trainCap = (y0) => (y0 - 134.5) / 1.4 - 1.3;
+
+// ------------------------------------------------------------ scenarios → prisms
+const HOY_SLAB = { c: [100, 259.5], half: 32, thick: 8 };
+const ROOF = 60; // the whole block rises: 235.5 − 1.4·60 ≥ 134.5
+const PROP_SLAB = { x0: 117.5, x1: 125.5, y0: 241, y1: 308 }; // the sign's span on the roof: 241 − 1.4·75 ≥ 134.5 → sign ≤ 75
+function inLot(c, lot) { return c[0] > lot.x && c[0] < lot.x + lot.w && c[1] > lot.y && c[1] < lot.y + lot.d; }
+
+function scenario(which) {
+  const S = DATA[which], prisms = [];
+  const plaza = S.plaza, lot = S.hotel;
+  if (which === "hoy") {
+    for (const p of S.parcels) {
+      const c = centroid(p.poly); if (inLot(c, lot)) continue;
+      const n = p.n, col = n === "civic" || n === "bars" ? C.fixed : C[n] || C.dim;
+      const r = hash(c[0], c[1]), h = Math.max(3, p.cap * (0.65 + 0.35 * r));
+      const tower = n === "moderno" && p.cap > 30;
+      if (tower) { prisms.push({ poly: p.poly, z: 0, h: 6, col }); prisms.push({ poly: inset(p.poly, 6), z: 6, h: h - 6, col, win: true }); }
+      else prisms.push({ poly: inset(p.poly, 1.5), z: 0, h, col, win: h > 10 });
+    }
+    costero(prisms, 328, 640, -449);
+  } else {
+    const PC = [plaza.x + plaza.w / 2, plaza.y + plaza.d / 2];
+    for (const p of S.parcels) {
+      const c = p.c; if (inLot(c, lot) || c[0] - c[1] < -715) continue; // only what a drag can reach
+      const d = Math.hypot(c[0] - PC[0], c[1] - PC[1]), r = hash(c[0], c[1]);
+      let n, lo, hi;
+      if (c[1] > 378) { n = "bajo"; lo = 5; hi = 8; }
+      else if (c[1] > 348) { n = "clasico"; lo = 12; hi = 18; }
+      else if (d < 80) { n = "clasico"; lo = 14; hi = 22; }
+      else if (d < 150) { n = "transicion"; lo = 24; hi = 34; }
+      else { n = "moderno"; lo = 40; hi = state.towers; }
+      if (c[1] > 320 && c[0] > 126 && n !== "bajo") { hi = Math.min(hi, 22); lo = Math.min(lo, 16); } // in front of the sign
+      if (hash(c[0] + 91, c[1] - 37) < stripW(c[0], c[1])) [n, lo, hi] = mixKind(c[0], c[1]); // off the cover: barrios mixed by a smooth field
+      const cap = Math.min(hi, trainCap(p.y0));
+      const h = Math.max(4, Math.min(cap, lo + (hi - lo) * r));
+      const col = C[n];
+      if (n === "bajo") { houses(prisms, p.poly); continue; }
+      if (n === "moderno" && h > 28) {
+        prisms.push({ poly: p.poly.map((q) => q), z: 0, h: 7, col });
+        const tw = inset(p.poly, 5 + 2 * r);
+        if (r > 0.72 && Math.abs(area2(tw)) > 300) { // twin towers
+          const xs = tw.map((q) => q[0]), ys = tw.map((q) => q[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+          const hor = x1 - x0 > y1 - y0, g = 2;
+          const A = hor ? rect(x0, y0, (x1 - x0) / 2 - g, y1 - y0) : rect(x0, y0, x1 - x0, (y1 - y0) / 2 - g);
+          const B = hor ? rect((x0 + x1) / 2 + g, y0, (x1 - x0) / 2 - g, y1 - y0) : rect(x0, (y0 + y1) / 2 + g, x1 - x0, (y1 - y0) / 2 - g);
+          prisms.push({ poly: A, z: 7, h: h - 7, col, win: true }, { poly: B, z: 7, h: (h - 7) * 0.82, col, win: true });
+        } else prisms.push({ poly: tw, z: 7, h: h - 7, col, win: true });
+      } else prisms.push({ poly: inset(p.poly, 1.5), z: 0, h, col, win: h > 10 });
+    }
+    costero(prisms, 471, 711, -715, true);
+  }
+  return prisms;
+}
+// Off the cover the barrios mix: a smooth field of "how urban" (higher to the north, plus two octaves of value noise) picks the barrio,
+// so towers, mid-rises and houses come in patches that bleed into each other instead of bands. Inside the cover nothing changes.
+const STRIP_IN = -400, STRIP_OUT = -470;
+function stripW(x, y) { return Math.min(1, Math.max(0, (STRIP_IN - (x - y)) / (STRIP_IN - STRIP_OUT))); }
+function vnoise(x, y, P) {
+  const gx = Math.floor(x / P), gy = Math.floor(y / P), fx = x / P - gx, fy = y / P - gy, s = (t) => t * t * (3 - 2 * t);
+  const v = (i, j) => hash((gx + i) * 13.7 + 5.1, (gy + j) * 7.3 - 2.9), a = s(fx), b = s(fy);
+  return (v(0, 0) * (1 - a) + v(1, 0) * a) * (1 - b) + (v(0, 1) * (1 - a) + v(1, 1) * a) * b;
+}
+function urban(x, y) { const base = y < 330 ? 0.7 : 0.7 - ((y - 330) / 380) * 0.55; return base + (vnoise(x, y, 110) - 0.5) * 0.85 + (vnoise(x + 31, y - 17, 45) - 0.5) * 0.4; }
+// A low parcel as houses: its box cut in two to four lots, each a house of its own size with a yard, some with a shed.
+function houses(out, poly) {
+  const xs = poly.map((q) => q[0]), ys = poly.map((q) => q[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const nx = x1 - x0 > 18 ? 2 : 1, ny = y1 - y0 > 18 ? 2 : 1, cw = (x1 - x0) / nx, cd = (y1 - y0) / ny;
+  for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
+    const ax = x0 + i * cw, ay = y0 + j * cd, r = hash(ax + 1.3, ay - 2.1);
+    if (r < 0.1) continue;
+    const w = cw * (0.55 + 0.3 * hash(ax, ay + 4)), d = cd * (0.55 + 0.3 * hash(ax + 6, ay)), ox = (cw - w - 2) * hash(ax + 2, ay + 8) + 1, oy = (cd - d - 2) * hash(ax + 9, ay + 1) + 1;
+    out.push({ poly: rect(ax + ox, ay + oy, w, d), z: 0, h: 3 + 4 * r, col: C.bajo, low: true });
+  }
+}
+function mixKind(x, y) {
+  const I = urban(x, y);
+  return I > 0.72 ? ["moderno", 40, state.towers] : I > 0.52 ? ["transicion", 24, 34] : I > 0.34 ? ["clasico", 12, 20] : ["bajo", 4, 8];
+}
+function costero(out, y0, y1, westSx, mix = false) {
+  for (let y = y0; y < y1; y += 24) for (let x = 172; x > -402; x -= 30) {
+    if (x - 22 - y < westSx || x - 22 < -394) continue;
+    if (mix && x - 26 < 22 && x > -2) continue; // the Bulevar Central runs on to the south edge
+    const r = hash(x, y), cx = x - 12, cy = y + 8;
+    if (mix && hash(cx - 5, cy + 3) < stripW(cx, cy)) {
+      const [n, lo, hi] = mixKind(cx, cy);
+      if (n !== "bajo") { // a mid-rise or a tower among the houses: it takes the whole cell
+        const h = Math.max(6, Math.min(hi, lo + (hi - lo) * r));
+        out.push({ poly: rect(x - 26, y - 2, 26, 22), z: 0, h, col: C[n], win: h > 10 });
+        continue;
+      }
+      if (r < 0.12) continue; // an empty lot or a yard
+      const w = 14 + 8 * hash(x + 3, y), d = 11 + 7 * hash(x, y + 5), ox = (22 - w) * hash(x + 7, y + 1), oy = (18 - d) * hash(x + 1, y + 9);
+      out.push({ poly: rect(x - 24 + ox, y + oy - 1, w, d), z: 0, h: 3 + 4 * r, col: C.bajo, low: true });
+      if (hash(x - 9, y + 4) > 0.7) out.push({ poly: rect(x - 24 + (ox > 4 ? 0 : 22 - 8), y + 1, 7, 7), z: 0, h: 2.5 + 2 * r, col: C.bajo, low: true }); // a shed
+      continue;
+    }
+    out.push({ poly: rect(x - 22, y, 20, 16), z: 0, h: 3.5 + 2.5 * r, col: C.bajo, low: true });
+  }
+}
+
+// ------------------------------------------------------------ drawing
+function fit(canvas) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1), w = canvas.clientWidth, h = canvas.clientHeight;
+  canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+  const ctx = canvas.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); return { ctx, w, h };
+}
+function projector(k, ox, oy) { return (x, y, z = 0) => [(x - y) * k + ox, ((x + y) / 2 - 1.4 * z) * k + oy]; }
+function poly(ctx, pts, P, z = 0) { ctx.beginPath(); pts.forEach(([x, y], i) => { const [a, b] = P(x, y, z); i ? ctx.lineTo(a, b) : ctx.moveTo(a, b); }); ctx.closePath(); }
+
+function drawPrism(ctx, P, pr, k) {
+  let pts = pr.poly; if (area2(pts) < 0) pts = pts.slice().reverse(); // ccw in a y-down world → clockwise on paper; normals below
+  const z0 = pr.z, z1 = pr.z + pr.h, n = pts.length;
+  for (let i = 0; i < n; i++) {
+    const a = pts[i], b = pts[(i + 1) % n], ex = b[0] - a[0], ey = b[1] - a[1];
+    const nx = ey, ny = -ex; // outward for positive signed area in y-down coords
+    if (nx + ny <= 0.01) continue;
+    const L = Math.hypot(nx, ny), lit = nx / L > ny / L ? 0.62 : 0.42;
+    ctx.beginPath(); const p1 = P(a[0], a[1], z0), p2 = P(b[0], b[1], z0), p3 = P(b[0], b[1], z1), p4 = P(a[0], a[1], z1);
+    ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.lineTo(...p3); ctx.lineTo(...p4); ctx.closePath();
+    ctx.fillStyle = shade(pr.col, lit * 0.62); ctx.fill();
+    ctx.strokeStyle = mix(pr.col, 0.55); ctx.lineWidth = 0.6; ctx.stroke();
+    if (pr.win && k > 0.9) { // window rows
+      const floors = Math.floor(pr.h / 3.4), len = Math.hypot(ex, ey), cols = Math.floor(len / 3.2);
+      ctx.fillStyle = mix(pr.col === C.moderno ? "#cfe6ff" : "#ffd98a", 0.5);
+      for (let f = 1; f < floors; f++) for (let c = 1; c < cols; c++) {
+        if (hash(a[0] + c * 7 + f, a[1] + f * 3) < 0.55) continue;
+        const t = c / cols, z = z0 + f * 3.4; const [sx, sy] = P(a[0] + ex * t, a[1] + ey * t, z);
+        ctx.fillRect(sx - 0.6 * k, sy - 0.9 * k, 1.2 * k, 1.5 * k);
+      }
+    }
+  }
+  poly(ctx, pts, P, z1); ctx.fillStyle = shade(pr.col, pr.low ? 0.55 : 0.78); ctx.fill(); ctx.strokeStyle = mix(pr.col, 0.9); ctx.lineWidth = 0.7; ctx.stroke();
+}
+
+// Hotel: returns prisms (base, cornice, slab) and a sign painter
+function hotelParts(which) {
+  const lot = DATA[which].hotel, sw = 1.5, base = rect(lot.x + sw, lot.y + sw, lot.w - 2 * sw, lot.d - 2 * sw);
+  const parts = [{ poly: base, z: 0, h: 10, col: "#c9b48f", win: true, key: lot.x + lot.y }];
+  if (which === "hoy") {
+    const { c, half, thick } = HOY_SLAB, u = [Math.SQRT1_2, -Math.SQRT1_2], nn = [Math.SQRT1_2, Math.SQRT1_2];
+    const at = (t, s) => [c[0] + u[0] * t + nn[0] * s, c[1] + u[1] * t + nn[1] * s];
+    parts.push({ poly: [at(-half, -thick / 2), at(half, -thick / 2), at(half, thick / 2), at(-half, thick / 2)], z: 10, h: 41, col: "#8e9cc2", win: true, slab: true });
+  } else {
+    parts[0].h = ROOF; // one block in the base's style, from the ground to the roof
+    parts.push({ poly: rect(lot.x + sw - 0.4, lot.y + sw - 0.4, lot.w - 2 * sw + 0.8, lot.d - 2 * sw + 0.8), z: ROOF, h: 0.6, col: "#b39b72" }); // crowning cornice
+  }
+  return parts;
+}
+function drawSign(ctx, P, k, which) {
+  ctx.save();
+  if (which === "hoy") {
+    const { c, half, thick } = HOY_SLAB, u = [Math.SQRT1_2, -Math.SQRT1_2], nn = [Math.SQRT1_2, Math.SQRT1_2], f = thick / 2 + 0.6;
+    const at = (t, z) => P(c[0] + u[0] * t + nn[0] * f, c[1] + u[1] * t + nn[1] * f, z);
+    // dark glass panel, flat
+    ctx.beginPath(); ctx.moveTo(...at(-32, 31.5)); ctx.lineTo(...at(32, 31.5)); ctx.lineTo(...at(32, 48.3)); ctx.lineTo(...at(-32, 48.3)); ctx.closePath();
+    ctx.fillStyle = "#0a1428"; ctx.fill();
+    const o = at(-30, 33.9), ex = at(-29, 33.9), ey = at(-30, 34.9);
+    ctx.setTransform(...baseT(ctx), 0, 0); // reset to dpr
+    glyphs(ctx, o, [ex[0] - o[0], ex[1] - o[1]], [o[0] - ey[0], o[1] - ey[1]], 12, 60, 0, null);
+  } else {
+    const s = PROP_SLAB, D = 1.2, FX = s.x1 - 1.6, BX = s.x1 - 4.2, Z0 = ROOF, TOP = 75;
+    const L = (x, y, z) => P(x, y, z);
+    ctx.lineWidth = Math.max(0.7, 0.28 * k); ctx.strokeStyle = "#a9b4c8";
+    const line = (a, b) => { ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); };
+    // lattice frame behind the letters: chords, posts, diagonals, raked legs to the roof
+    for (const z of [Z0 + 1.2, Z0 + 7.5, TOP - 0.6]) line(L(BX, s.y1 - 1, z), L(BX, s.y0 + 1, z));
+    for (let y = s.y0 + 1, i = 0; y <= s.y1 - 1 + 1e-6; y += 6, i++) {
+      line(L(BX, y, Z0), L(BX, y, TOP - 0.6));
+      if (y + 6 <= s.y1 - 1 + 1e-6) { line(L(BX, y, Z0 + 1.2), L(BX, y + 6, Z0 + 7.5)); line(L(BX, y + 6, Z0 + 7.5), L(BX, y, TOP - 0.6)); }
+      line(L(BX - 3, y, Z0), L(BX, y, Z0 + 7.5)); // raked leg
+    }
+    // catwalk in front of the letters, with its rail
+    drawPrism(ctx, P, { poly: [[FX + D, s.y1 - 1], [s.x1, s.y1 - 1], [s.x1, s.y0 + 1], [FX + D, s.y0 + 1]], z: Z0, h: 0.5, col: "#7d8aa0" }, k);
+    line(L(s.x1, s.y1 - 1, Z0 + 1.6), L(s.x1, s.y0 + 1, Z0 + 1.6));
+    for (let y = s.y0 + 1; y <= s.y1 - 1; y += 4) line(L(s.x1, y, Z0 + 0.5), L(s.x1, y, Z0 + 1.6));
+    // letters standing on the roof: text axis along −y, up along z, 1.2 deep toward +x
+    const y0 = s.y1 - 2, z0 = Z0 + 1.8;
+    const o = L(FX + D, y0, z0), ex = L(FX + D, y0 - 1, z0), ey = L(FX + D, y0, z0 + 1), back = L(FX, y0, z0);
+    ctx.setTransform(...baseT(ctx), 0, 0);
+    glyphs(ctx, o, [ex[0] - o[0], ex[1] - o[1]], [o[0] - ey[0], o[1] - ey[1]], 12, 64, D, [back[0] - o[0], back[1] - o[1]]);
+  }
+  ctx.restore();
+}
+let DPR = 1; const baseT = () => [DPR, 0, 0, DPR];
+// Draws RESUME with origin o (baseline left), per-unit text axes ex (right) and ey (down, = −up); depth: screen offset of the back face.
+function glyphs(ctx, o, ex, ey, cap, width, D, back) {
+  const fs = cap / 0.7; ctx.font = `700 ${fs}px "Barlow Condensed", "Arial Narrow", sans-serif`;
+  const raw = ctx.measureText("RESUME").width, sx = width / raw;
+  const T = (dx, dy) => ctx.setTransform(DPR * ex[0] * sx, DPR * ex[1] * sx, DPR * ey[0], DPR * ey[1], DPR * (o[0] + dx), DPR * (o[1] + dy));
+  if (back) { // extruded sides: stacked copies from the back face to the front
+    const steps = 10;
+    for (let i = steps; i >= 1; i--) { const t = i / steps; T(back[0] * t, back[1] * t); ctx.fillStyle = shade("#3f8f68", 0.55 + 0.35 * (1 - t)); ctx.fillText("RESUME", 0, 0); }
+  }
+  T(0, 0); ctx.shadowColor = mix("#9df5c4", 0.9); ctx.shadowBlur = 10 * DPR; ctx.fillStyle = C.neon; ctx.fillText("RESUME", 0, 0);
+  ctx.shadowBlur = 0; ctx.lineWidth = 0.15; ctx.strokeStyle = "#e9fff3"; ctx.strokeText("RESUME", 0, 0);
+}
+
+// ------------------------------------------------------------ city board
+function ground(ctx, P, which, k) {
+  const S = DATA[which];
+  // water east of the quay
+  poly(ctx, [[192, 150], [330, 150], [330, 711], [192, 711]], P); ctx.fillStyle = C.water; ctx.fill();
+  // station land and the track
+  poly(ctx, [[96, 90], [198, 90], [198, 146], [96, 146]], P); ctx.fillStyle = mix(C.dim, 0.18); ctx.fill(); ctx.strokeStyle = mix(C.dim, 0.6); ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+  poly(ctx, [[-402, 130.8], [198, 130.8], [198, 134.2], [-402, 134.2]], P); ctx.fillStyle = mix(C.ink, 0.35); ctx.fill();
+  label(ctx, P(150, 112), "ESTACIÓN PORTFOLIO", C.dim, 11);
+  // axes, plazas
+  for (const a of S.axes) { poly(ctx, a.band, P); ctx.fillStyle = a.kind === "costanera" ? mix(C.ink, 0.25) : mix(C.avenue, a.kind === "diagonal" ? 0.55 : 0.4); ctx.fill(); }
+  poly(ctx, rect(S.plaza.x, S.plaza.y, S.plaza.w, S.plaza.d), P); ctx.fillStyle = mix(C.park, 0.45); ctx.fill(); ctx.strokeStyle = C.park; ctx.lineWidth = 1; ctx.stroke();
+  for (const c of S.crossings) { poly(ctx, c, P); ctx.fillStyle = mix(C.park, 0.4); ctx.fill(); }
+}
+function label(ctx, [x, y], text, color, size = 12, rot = 0) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.font = `600 ${size}px "Barlow Condensed", sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.lineWidth = 3; ctx.strokeStyle = mix(C.paper, 0.85); ctx.strokeText(text, 0, 0); ctx.fillStyle = color; ctx.fillText(text, 0, 0); ctx.restore();
+}
+const AX_LABELS = { hoy: { plaza: [-30, 228], diagonalNorte: [5, 174], diagonalSur: [20, 337], sur: [-150, 318], bulevar: [10, 280], vias: [-150, 169], costanera: [188, 300] },
+  prop: { plaza: [-30, 228], diagonalNorte: [5, 174], diagonalSur: [20, 366], sur: [-150, 348], bulevar: [10, 280], vias: [-150, 169], costanera: [188, 300] } };
+
+function drawCity() {
+  const cv = document.getElementById("city"), { ctx, w, h } = fit(cv); DPR = Math.min(2, window.devicePixelRatio || 1);
+  ctx.fillStyle = C.paper; ctx.fillRect(0, 0, w, h);
+  // frame: sx from −870 to 300, sy from −190 to 360 (screen units, towers included)
+  const SX0 = -740, SX1 = 230, SY0 = -165, SY1 = 420;
+  const k = Math.min(w / (SX1 - SX0), h / (SY1 - SY0)), ox = -SX0 * k + (w - (SX1 - SX0) * k) / 2, oy = -SY0 * k + (h - (SY1 - SY0) * k) / 2;
+  const P = projector(k, ox, oy), which = state.scen;
+  // grid
+  ctx.strokeStyle = mix(C.line, 0.6); ctx.lineWidth = 0.5;
+  for (let x = -420; x <= 330; x += 30) { ctx.beginPath(); ctx.moveTo(...P(x, 60)); ctx.lineTo(...P(x, 720)); ctx.stroke(); }
+  for (let y = 60; y <= 720; y += 30) { ctx.beginPath(); ctx.moveTo(...P(-420, y)); ctx.lineTo(...P(330, y)); ctx.stroke(); }
+  ctx.save();
+  if (which === "hoy") { // the city stops at the cover's west edge (+ margin)
+    ctx.beginPath(); const a = P(-449 + 60, 60), b = P(-449 + 760, 760); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(w * 3, b[1]); ctx.lineTo(w * 3, -h); ctx.lineTo(a[0], -h); ctx.closePath(); ctx.clip();
+  }
+  ground(ctx, P, which, k);
+  ctx.restore();
+  // empty zone hatching (hoy)
+  if (which === "hoy") {
+    ctx.save(); poly(ctx, [[-394, 25], [-394, 316], [1, 711], [292, 711]], P); ctx.clip();
+    ctx.strokeStyle = mix(C.fixed, 0.35); ctx.lineWidth = 1; for (let i = -h; i < w + h; i += 9) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + h, h); ctx.stroke(); }
+    ctx.restore(); label(ctx, P(-360, 260), "VACÍO AL ARRASTRAR", C.fixed, 14);
+  }
+  const prisms = scenario(which), parts = hotelParts(which);
+  const items = [...prisms.map((p) => ({ p, key: centroid(p.poly).reduce((s, v) => s + v, 0) + p.z * 0.01 })),
+    ...parts.map((p, i) => ({ p, key: centroid(p.poly).reduce((s, v) => s + v, 0) + i * 0.05, hotel: i === parts.length - 1 }))];
+  items.sort((a, b) => a.key - b.key);
+  for (const it of items) {
+    if (state.view === "plan") { poly(ctx, it.p.poly, P); ctx.fillStyle = mix(it.p.col, it.p.z > 0 ? 0.25 : 0.4); ctx.fill(); ctx.strokeStyle = mix(it.p.col, 0.8); ctx.lineWidth = 0.6; ctx.stroke(); continue; }
+    drawPrism(ctx, P, it.p, k);
+    if (it.hotel) { drawSign(ctx, P, k, which); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); }
+  }
+  if (state.view === "plan") { poly(ctx, DATA[which].hotel ? rect(DATA[which].hotel.x, DATA[which].hotel.y, DATA[which].hotel.w, DATA[which].hotel.d) : [], P); ctx.strokeStyle = C.neon; ctx.lineWidth = 1.5; ctx.stroke(); label(ctx, P(DATA[which].hotel.x + 27, DATA[which].hotel.y + DATA[which].hotel.d / 2), "HOTEL", C.neon, 13); }
+  // labels
+  for (const [id, at] of Object.entries(AX_LABELS[which])) { const a = DATA[which].axes.find((x) => x.id === id); if (!a) continue; label(ctx, P(at[0], at[1], state.view === "iso" ? 0 : 0), a.name.toUpperCase(), C.avenue, 11); }
+  label(ctx, P(159, which === "hoy" ? 270 : 290), "PLAZA MAYOR", C.park, 13);
+  label(ctx, P(-60, which === "hoy" ? 420 : 470), which === "hoy" ? "BARRIO BAJO + COSTERO" : "BARRIO BAJO (1 FILA) + COSTERO", C.bajo, 12);
+  // edges: cover west edge (x − y = −419), drag limit (x = −402)
+  ctx.setLineDash([2, 4]); ctx.strokeStyle = C.ink; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(...P(-419 + 60, 60)); ctx.lineTo(...P(-419 + 720, 720)); ctx.stroke();
+  ctx.setLineDash([8, 5]); ctx.strokeStyle = C.fixed; ctx.beginPath(); ctx.moveTo(...P(-394, 25)); ctx.lineTo(...P(-394, 316)); ctx.lineTo(...P(1, 711)); ctx.lineTo(...P(292, 711)); ctx.stroke(); ctx.setLineDash([]);
+  label(ctx, P(-419 + 120, 120), "BORDE DEL ENCUADRE", C.ink, 10); label(ctx, P(-394, 200), "LÍMITE DEL ARRASTRE", C.fixed, 10);
+  document.getElementById("city-title").textContent = `${which === "hoy" ? "Hoy" : "Propuesta"} · ${state.view === "iso" ? "volumen" : "planta"}`;
+  document.getElementById("city-count").textContent = `${prisms.filter((p) => !p.low).length} sólidos de ciudad · ${prisms.filter((p) => p.low).length} casas bajas`;
+}
+
+// ------------------------------------------------------------ hotel close-up
+function drawHotel() {
+  const cv = document.getElementById("hotel"), { ctx, w, h } = fit(cv); DPR = Math.min(2, window.devicePixelRatio || 1);
+  ctx.fillStyle = C.paper; ctx.fillRect(0, 0, w, h);
+  const half = w / 2;
+  for (const [i, which] of [[0, "hoy"], [1, "prop"]]) {
+    const lot = DATA[which].hotel, cx = lot.x + lot.w / 2, cy = lot.y + lot.d / 2;
+    const k = Math.min(half / 130, h / 130), sxC = cx - cy, syC = (cx + cy) / 2 - 1.4 * 24;
+    const P = projector(k, half * i + half / 2 - sxC * k, h * 0.44 - syC * k);
+    ctx.save(); ctx.beginPath(); ctx.rect(half * i, 0, half, h); ctx.clip();
+    // plaza in front, lot plinth
+    poly(ctx, rect(DATA[which].plaza.x, DATA[which].plaza.y, DATA[which].plaza.w, DATA[which].plaza.d), P); ctx.fillStyle = mix(C.park, 0.3); ctx.fill();
+    poly(ctx, rect(lot.x, lot.y, lot.w, lot.d), P); ctx.fillStyle = mix(C.ink, 0.12); ctx.fill(); ctx.strokeStyle = mix(C.ink, 0.4); ctx.stroke();
+    // grid reference: the lot's streets
+    ctx.setLineDash([3, 3]); ctx.strokeStyle = mix(C.avenue, 0.6);
+    ctx.beginPath(); ctx.moveTo(...P(lot.x - 20, lot.y)); ctx.lineTo(...P(lot.x + lot.w + 20, lot.y)); ctx.moveTo(...P(lot.x + lot.w, lot.y - 20)); ctx.lineTo(...P(lot.x + lot.w, lot.y + lot.d + 20)); ctx.stroke(); ctx.setLineDash([]);
+    const parts = hotelParts(which);
+    for (const p of parts) drawPrism(ctx, P, p, k);
+    drawSign(ctx, P, k, which); ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.restore();
+    label(ctx, [half * i + half / 2, 22], which === "hoy" ? "HOY · PLACA A 45°, CARTEL PLANO" : "PROPUESTA · HOTEL MÁS ALTO, CARTEL EN LA AZOTEA", which === "hoy" ? C.dim : C.neon, 14);
+  }
+  ctx.strokeStyle = C.line; ctx.beginPath(); ctx.moveTo(half, 0); ctx.lineTo(half, h); ctx.stroke();
+}
+
+function render() { drawCity(); drawHotel(); }
+function press(ids, on) { for (const id of ids) document.getElementById(id).setAttribute("aria-pressed", String(id === on)); }
+document.getElementById("s-hoy").onclick = () => { state.scen = "hoy"; press(["s-hoy", "s-prop"], "s-hoy"); render(); };
+document.getElementById("s-prop").onclick = () => { state.scen = "prop"; press(["s-hoy", "s-prop"], "s-prop"); render(); };
+document.getElementById("v-iso").onclick = () => { state.view = "iso"; press(["v-iso", "v-plan"], "v-iso"); render(); };
+document.getElementById("v-plan").onclick = () => { state.view = "plan"; press(["v-iso", "v-plan"], "v-plan"); render(); };
+document.getElementById("t-51").onclick = () => { state.towers = 50; press(["t-51", "t-66"], "t-51"); document.getElementById("tw-cell").textContent = "40–50"; render(); };
+document.getElementById("t-66").onclick = () => { state.towers = 66; press(["t-51", "t-66"], "t-66"); document.getElementById("tw-cell").textContent = "40–66"; render(); };
+let raf = 0; window.addEventListener("resize", () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(render); });
+render();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
+</script>
