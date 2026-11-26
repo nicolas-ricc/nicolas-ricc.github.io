@@ -82,22 +82,22 @@ describe("axis lanes (#473)", () => {
 describe("boulevard (#473)", () => {
   const median = solids.filter((s): s is Prism => s.kind === "prism" && s.mat === "leafDark" && s.at.z === 0 && s.at.x === 8 && s.w === 4 && s.h === 0.3);
   const trees = solids.filter((s): s is Solid & { kind: "cone" } => s.kind === "cone" && s.r === 1.5 && s.h === 4 && s.at.x === 10 && s.at.z === 0.3);
-  const yExtent = (poly: Vec2[]) => { const ys: number[] = []; for (let x = 8; x <= 12; x += 0.25) for (let y = 150; y <= 330; y += 0.25) if (pointInPoly(x, y, poly)) ys.push(y); return ys.length ? [Math.min(...ys), Math.max(...ys)] as const : null; };
+  const yExtent = (poly: Vec2[]) => { const ys: number[] = []; for (let x = 8; x <= 12; x += 0.25) for (let y = 150; y <= 350; y += 0.25) if (pointInPoly(x, y, poly)) ys.push(y); return ys.length ? [Math.min(...ys), Math.max(...ys)] as const : null; };
   const cuts = [...["vias", "plaza", "sur", "diagonalNorte", "diagonalSur"].map((id) => yExtent(axisBand(axis(id)))), ...crossingPlazas().map(yExtent)].filter((e): e is readonly [number, number] => e !== null);
 
-  it("boulevard: 4 median prisms and 6 trees in the city (T2)", () => {
-    // the issue's ≥ 6 / ≥ 20 count the whole axis (y 160..480); the city part (y ≤ 318) gives these, #478 paints the south with the same rule
-    expect(median).toHaveLength(4);
-    expect(trees).toHaveLength(6); // measured (#473): y 205 | 244 | 265, 273 | 295, 303
+  it("boulevard: 5 median prisms and 8 trees in the city (T2)", () => {
+    // the issue's ≥ 6 / ≥ 20 count the whole axis (y 160..480); the city part (y ≤ 348) gives these, #478 paints the south with the same rule
+    expect(median).toHaveLength(5); // #493: 5 (was 4): the city part now runs to y 348
+    expect(trees).toHaveLength(8); // measured (#473): y 205 | 244 | 265, 273 | 295, 303; #493: 8 (was 6), two more south of y 318, in the city part that now runs to y 348
   });
 
   it("the boulevard median is cut 6 around each transversal axis, the crossing plaza and the Diagonal, and at each street and crosswalk", () => {
     const across = crosswalks().filter((w) => w.a.id === "bulevar").flatMap((w) => w.strips.flatMap((s) => s.map((p) => p.y)));
     for (const m of median) {
       const y0 = m.at.y, y1 = m.at.y + m.d;
-      expect(y0).toBeGreaterThanOrEqual(164); expect(y1).toBeLessThanOrEqual(318);
+      expect(y0).toBeGreaterThanOrEqual(164); expect(y1).toBeLessThanOrEqual(348); // #493: the city's street domain ends at y 348
       for (const [c0, c1] of cuts) expect(y1 <= c0 - 6 + 0.25 || y0 >= c1 + 6 - 0.25, `median ${y0}..${y1} vs ${c0}..${c1}`).toBe(true);
-      for (const y of [198, 258, 288]) expect(y1 <= y - 3 + 1e-6 || y0 >= y + 3 - 1e-6, `median ${y0}..${y1} vs street ${y}`).toBe(true);
+      for (const y of [198, 258, 288, 318]) expect(y1 <= y - 3 + 1e-6 || y0 >= y + 3 - 1e-6, `median ${y0}..${y1} vs street ${y}`).toBe(true);
       for (const y of across) expect(y > y0 + 1e-6 && y < y1 - 1e-6, `median ${y0}..${y1} vs crosswalk ${y}`).toBe(false);
     }
   });
@@ -215,20 +215,20 @@ describe("costanera (#473)", () => {
   it("the costanera has its promenade and lamps at x 190.5", () => {
     const promenade = strips.filter((s) => s.width === 3 && s.mat === "paving" && s.path[0]!.x === 187.5 && s.path[1]!.x === 187.5);
     expect(promenade).toHaveLength(1);
-    expect(promenade[0]!.path.map((p) => p.y).sort((a, b) => a - b)).toEqual([164, 318]);
-    expect(COSTANERA_LAMP_Y).toEqual([160, 172, 196, 292, 304]); // T2: the issue's rule gives five, not the "≥ 8" it counts
+    expect(promenade[0]!.path.map((p) => p.y).sort((a, b) => a - b)).toEqual([164, 348]); // #493: to y 348
+    expect(COSTANERA_LAMP_Y).toEqual([160, 172, 196, 328, 340]); // #493: the plaza ends at y 320 and the city at 348 (was [160, 172, 196, 292, 304]) // T2: the issue's rule gives five, not the "≥ 8" it counts
     const ys = lampPrisms.filter((s) => s.at.x === 190.5).map((s) => s.at.y).sort((a, b) => a - b);
-    expect(ys).toEqual([160, 172, 196, 292, 304]);
-    for (const y of ys) expect((y >= 206 && y <= 291) || (y >= 174 && y <= 195)).toBe(false);
+    expect(ys).toEqual([160, 172, 196, 328, 340]);
+    for (const y of ys) expect((y >= 206 && y <= 320) || (y >= 174 && y <= 195)).toBe(false);
   });
 });
 
 describe("crossing plazas (#473)", () => {
-  const inside = crossingPlazas().filter((p) => { const c = polyCentroid(p); return inDomain({ x: c.x, y: c.y - 1e-6 }); }); // (67.5, 318) has y 318 + 6e-14
+  const inside = crossingPlazas().filter((p) => { const c = polyCentroid(p); return inDomain({ x: c.x, y: c.y - 1e-6 }); }); // (65.1, 348) has y 348 + 6e-14
   const inOct = (poly: Vec2[], p: Vec2) => pointInPoly(p.x, p.y, poly);
 
   it("two crossing plazas are in the city", () => {
-    expect(inside.map(polyCentroid).map((c) => [Math.round(c.x * 10) / 10, Math.round(c.y * 10) / 10])).toEqual([[10, 175.7], [67.5, 318]]);
+    expect(inside.map(polyCentroid).map((c) => [Math.round(c.x * 10) / 10, Math.round(c.y * 10) / 10])).toEqual([[10, 175.7], [65.1, 348]]); // #493: the Diagonal Sur meets the avenue at (65.1, 348)
   });
 
   it("each crossing plaza has tiles, a curb and a lit lamp", () => {

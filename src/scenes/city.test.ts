@@ -17,7 +17,7 @@ import { FIXED, FIXED_PARCELS, FOOTBRIDGE_LOT, MAX_BUILDING_H, WATER_TOWER_CELL,
 import { zoneRng } from "./world";
 import { MARKET_SCALE } from "../city/harbor";
 import { fingerprint } from "../iso/fingerprint";
-import { BRIDGE_LANDING, CITY_BOUNDS, HOTEL_LOT, PLAZA_MAYOR, inCrossingPlaza, inParcel, inPlazaMayor, onAxis, parcels, polyBox } from "./city-plan";
+import { BRIDGE_LANDING, COASTAL_CUT_Y, HOTEL_LOT, PLAN_BOUNDS, PLAZA_MAYOR, inCrossingPlaza, inParcel, inPlazaMayor, onAxis, parcels, polyBox } from "./city-plan";
 import { RESUME_SIGN, SIGN_PANEL, SIGN_SITE, hotel } from "./sign-hotel";
 import { signBox } from "../world/sign-box";
 import { zoneView } from "../world/view";
@@ -62,7 +62,7 @@ describe("city", () => {
     for (const s of all(scene())) {
       const b = bounds(s);
       expect(b.min.x).toBeGreaterThanOrEqual(WORLD.x0 - BLEED.x); expect(b.max.x).toBeLessThanOrEqual(ZONE_SPLIT_X + 1); // the west of the city (#479) reaches the edge of the view, over the bleed
-      expect(b.max.y).toBeLessThanOrEqual(WORLD.y1 + 1);
+      expect(b.max.y).toBeLessThanOrEqual(COASTAL_CUT_Y + 1); // #493: the city builds the 348..378 row, over the bleed (was WORLD.y1 + 1)
       if (s.kind !== "cone") expect(b.min.y).toBeGreaterThanOrEqual(ZONE_SPLIT_Y - 1);
       expect(CITY_MATS).toContain(s.mat);
       if (s.mat === "steel" || s.mat === "rust") expect(["prism", "cylinder", "vault", "beam"]).toContain(s.kind); // only furniture, cars, the quay sheds and the derelict hall's trusses
@@ -78,7 +78,7 @@ describe("city", () => {
     expect(s.solids.filter((x) => x.kind === "prism" && x.mat === "paving" && x.h === PLINTH_H && x.at.z === 0 && x.w === 24 && x.d === 18)).toHaveLength(13); // measured: the strip and the east bank keep their 24 × 18 plinths
     const buildings = s.solids.filter((x) => (x.kind === "prism" || x.kind === "poly" || x.kind === "cylinder") && x.facade !== undefined);
     expect(buildings.length).toBeGreaterThanOrEqual(30);
-    const rects = parcels(CITY_BOUNDS).map((p) => polyBox(p.poly)); // the bounding box holds the inset polygon lots (#477)
+    const rects = parcels(PLAN_BOUNDS).map((p) => polyBox(p.poly)); // the bounding box holds the inset polygon lots (#477)
     for (const b of buildings) {
       if (isHotelPiece(b)) continue;
       if (b.kind === "prism" && b.mat === "paving" && b.at.z === -1) continue; // the promenade walls carry an arcade, they are not buildings
@@ -129,7 +129,7 @@ describe("city", () => {
     const plaza = s.ground.filter(plazaMayorTiles);
     expect(plaza).toHaveLength(1); // the Plaza Mayor minus the landing: one strip
     const tris = plaza.flatMap((g) => (g.kind === "ground" ? g.tris : []));
-    expect(tris.length).toBe(2 * 9 * 13); // 6 u tiles: 54 × 74 (9 columns, 13 rows, the last partial)
+    expect(tris.length).toBe(2 * 9 * 18); // #493: 6 u tiles: 54 × 104 (9 columns, 18 rows, the last partial); was 54 × 74, 13 rows
     expect(tris.some((t) => (t.toneOffset ?? 0) !== 0)).toBe(true);
     expect(s.ground.filter((g) => g.kind === "ground" && g.mat === "leafDark").length).toBeGreaterThanOrEqual(1); // measured 1 at #477: the west bank no longer deals eatenRuin (it was residential's), the east bank keeps one (was 3 or more)
   });
@@ -325,7 +325,8 @@ describe("city", () => {
         if ((q.placed.recipe === "courtyardO" || q.placed.recipe === "library") && ground) seen[q.placed.recipe]++;
       }
     }
-    expect(seen.courtyardO).toBeGreaterThan(0);
+    // #493: no courtyardO with ground in seeds 1..5 (it has ground only on a lot without `poly`, i.e. the bars parcels: 10/160 of their draws; seeds 15 and 38 have one): the sample is the library, which always has ground
+    expect(seen.library).toBeGreaterThan(0);
     // the library recipe is not dealt in the new layout (seeds 1..5): only courtyardO is pinned (#472)
   });
 
@@ -343,7 +344,9 @@ describe("city", () => {
   // #479: the west adds its pieces (and the telecom): all five re-recorded once with the whole city; the east alone (`opts.west = -54`) keeps the old fingerprints (EAST).
   // That lifting equals running the recipe PLINTH_H higher is checked per recipe in piece.test.
   it("pieces without ground are identical to the pinned plinth pieces (860a582; re-recorded at #143, #56, #152 and #165)", () => {
-    const EAST = ["463dcb4d", "c540539a", "e9c5b4f5", "4dd4c753", "d0ee13e9"], MAIN = ["ac4094bd", "037bf2d3", "ebae98df", "4fb3f9eb", "f851b786"];
+    // #493: all ten re-recorded once: the plaza centre moved 15 u south (barrios and recipes redealt) and the city builds the 348..378 row.
+    // Was EAST ["463dcb4d", "c540539a", "e9c5b4f5", "4dd4c753", "d0ee13e9"], MAIN ["ac4094bd", "037bf2d3", "ebae98df", "4fb3f9eb", "f851b786"].
+    const EAST = ["fbb992cc", "eca3f9d2", "a8758203", "9d25c97a", "a9fb2445"], MAIN = ["725780d1", "38f5096f", "f9e8b51d", "54c2aa76", "6e7e59be"];
     for (let s = 1; s <= 5; s++) {
       for (const [west, pinned] of [[-54, EAST], [-Infinity, MAIN]] as const) {
         const c = city(createRng(s), createRng(s + 1), createRng(s + 2), { west });
@@ -434,7 +437,7 @@ describe("city on the new layout (#472)", () => {
       expect(plinths.filter((x) => samePoly(x.footprint, parcel.poly)).length, `${parcel.cell.col},${parcel.cell.row}`).toBe(1);
     }
     expect(s.placed.filter((pp) => pp.placed.parcel).length).toBeGreaterThan(25);
-    const hotel = parcels(CITY_BOUNDS).find((p) => p.rect.x === HOTEL_LOT.x && p.rect.y === HOTEL_LOT.y && p.rect.w === HOTEL_LOT.w && p.rect.d === HOTEL_LOT.d)!;
+    const hotel = parcels(PLAN_BOUNDS).find((p) => p.rect.x === HOTEL_LOT.x && p.rect.y === HOTEL_LOT.y && p.rect.w === HOTEL_LOT.w && p.rect.d === HOTEL_LOT.d)!;
     expect(plinths.filter((x) => samePoly(x.footprint, hotel.poly))).toHaveLength(1);
     expect(s.placed.some((pp) => pp.placed.parcel === hotel)).toBe(false);
     // nothing stands on the lot itself but the hotel
@@ -443,11 +446,11 @@ describe("city on the new layout (#472)", () => {
     }
   });
 
-  it("sliver parcels (lot side < 7, R5) keep their plinth and build nothing; there are 3 in the world seed", () => {
+  it("sliver parcels (lot side < 7, R5) keep their plinth and build nothing; there are 2 in the world seed", () => {
     // measured at #472: 8 (the inscribed-rect lots); at #477 the polygon lots (bounding box of the inset) leave cells (−17,171) ×2 and (43,291)
     const world = city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3));
     const bare = world.placed.filter((pp) => pp.placed.parcel && tooSmall(pp.placed.lot));
-    expect(bare).toHaveLength(3);
+    expect(bare).toHaveLength(2); // #493: 2 (was 3): the cell (43, 291) is no sliver on the new plaza length; (−17, 171) ×2 remain
     for (const pp of bare) {
       expect(pp.piece.solids).toEqual([]);
       expect(world.solids.filter((x) => x.kind === "poly" && x.mat === "paving" && x.h === PLINTH_H && samePoly(x.footprint, pp.placed.parcel!.poly))).toHaveLength(1);
@@ -464,8 +467,8 @@ describe("city on the new layout (#472)", () => {
       expect(inR(BRIDGE_LANDING, cx, cy)).toBe(false);
       area += Math.abs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y)) / 2;
     }
-    // 54 × 85, minus the landing (54 × 10) and the 1 u curb strip north of the landing
-    expect(area).toBeCloseTo(54 * 85 - 54 * 10 - 54, 6);
+    // 54 × 114 (#493: was 85), minus the landing (54 × 10) and the 1 u curb strip north of the landing
+    expect(area).toBeCloseTo(54 * 114 - 54 * 10 - 54, 6);
     const landing = s.ground.flatMap((g) => (g.kind === "ground" && g.mat === "paving" ? g.tris : [])).filter((t) => inR(BRIDGE_LANDING, (t.pts[0].x + t.pts[1].x + t.pts[2].x) / 3, (t.pts[0].y + t.pts[1].y + t.pts[2].y) / 3));
     expect(landing.length).toBeGreaterThan(0);
   });
@@ -604,10 +607,10 @@ describe("the city owns the west (#479)", () => {
   const w = city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3));
   const telecomCell = { col: -107, row: 231 };
 
-  it("city builds every parcel north of y 318 inside the view, west of x −54 included", () => {
+  it("city builds every parcel north of the coastal cut (y 378) inside the view, west of x −54 included", () => {
     const placedCells = new Set(w.placed.flatMap((q) => (q.placed.parcel ? [`${q.placed.parcel.cell.col},${q.placed.parcel.cell.row}:${q.placed.parcel.rect.x},${q.placed.parcel.rect.y}`] : [])));
     expect(w.placed.some((q) => q.placed.parcel && q.placed.parcel.c.x < WEST_DISTRICT_X)).toBe(true);
-    for (const p of parcels({ ...CITY_BOUNDS, x0: -Infinity }).filter((q) => q.c.y < 318)) {
+    for (const p of parcels({ ...PLAN_BOUNDS, x0: -Infinity }).filter((q) => q.c.y < COASTAL_CUT_Y)) {
       if (p.rect.x === HOTEL_LOT.x && p.rect.y === HOTEL_LOT.y) continue;
       expect(placedCells.has(`${p.cell.col},${p.cell.row}:${p.rect.x},${p.rect.y}`), `${p.cell.col},${p.cell.row}`).toBe(true);
     }

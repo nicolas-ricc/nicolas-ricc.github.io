@@ -38,8 +38,8 @@ const axisLane = (s: Strip): boolean => AXES.some((a) => {
 describe("streets", () => {
   it("leaves a measured number of strips, all paving flush with the ground", () => {
     const strips = scene();
-    expect(strips.length).toBe(505); // measured on agent/479 with the west streets: the 340 of #473 (88 lines and east lanes, 111 crosswalk strips, the costanera's promenade, the rest axis dashes, which stop at the zebras) + 165 west of x −54
-    expect(strips.filter((s) => bounds(s).min.x >= -54)).toHaveLength(337); // the east is as it was: of the 340, the three ordinary E-W lines (y 198, 258, 288) now run on west past x −54 as one strip each
+    expect(strips.length).toBe(514); // #493: 514 (was 505): the city's streets now run to the avenue at y 348 (ordinary street y 318, longer axes and costanera, new crosswalks). Was: measured on agent/479 with the west streets: the 340 of #473 (88 lines and east lanes, 111 crosswalk strips, the costanera's promenade, the rest axis dashes, which stop at the zebras) + 165 west of x −54
+    expect(strips.filter((s) => bounds(s).min.x >= -54)).toHaveLength(351); // #493: 351 (was 337): the 30 u of new east street, east of x −54. Was: the east is as it was: of the 340, the three ordinary E-W lines (y 198, 258, 288) now run on west past x −54 as one strip each
     for (const s of strips) {
       expect(s.mat).toBe("paving");
       expect(s.z).toBeGreaterThan(0);
@@ -211,7 +211,7 @@ describe("streets on the new layout (#472)", () => {
   const XS: number[] = [], YS: number[] = [];
   const inCover = (x: number, y: number): boolean => inCoverQuad(x, y, 16 / 9, COVER_MARGIN);
   const columnInCover = (x: number): boolean => { for (let y = LAND.y0; y <= 318; y++) if (inCover(x, y)) return true; return false; };
-  for (let k = -20; k < 10; k++) { const x = street(k), y = streetY(k); if (x < LAND.x1 && columnInCover(x)) XS.push(x); if (y > LAND.y0 && y < 318) YS.push(y); }
+  for (let k = -20; k < 10; k++) { const x = street(k), y = streetY(k); if (x < LAND.x1 && columnInCover(x)) XS.push(x); if (y > LAND.y0 && y < 348) YS.push(y); } // #493: the grid streets run to the avenue at y 348
   /** A street of the grid that runs along an axis center is the axis, not an ordinary street. */
   const ordinaryX = XS.filter((x) => !AXES.some((a) => a.from.x === a.to.x && Math.abs(a.from.x - x) < a.w / 2));
   const ordinaryY = YS.filter((y) => !AXES.some((a) => a.from.y === a.to.y && Math.abs(a.from.y - y) < a.w / 2));
@@ -227,19 +227,19 @@ describe("streets on the new layout (#472)", () => {
   const axisOf = (s: Strip) => AXES.find((a) => collinear(s.path[0]!, a) && collinear(s.path[1]!, a));
 
   it("the grid streets are x 40 + 30k and y 48 + 30k", () => {
-    expect(ordinaryX).toEqual([-290, -260, -230, -200, -170, -140, -110, -80, -50, -20, 40, 70, 100, 130, 160]); // every one inside the cover somewhere on y 164..318 (#479)
-    expect(ordinaryY).toEqual([198, 258, 288]);
+    expect(ordinaryX).toEqual([-290, -260, -230, -200, -170, -140, -110, -80, -50, -20, 40, 70, 100, 130, 160]); // every one inside the cover somewhere on y 164..348 (#479, #493)
+    expect(ordinaryY).toEqual([198, 258, 288, 318]); // #493: y 318 is an ordinary street now inside the city
   });
 
   it("each ordinary street of the new grid has at least one center-line stretch", () => {
-    for (const x of ordinaryX) expect(lines.some((s) => s.path[0]!.x === x && s.path[1]!.x === x && s.path[0]!.y >= LAND.y0 - 1e-6 && s.path[1]!.y <= 318 + 1e-6), `x ${x}`).toBe(true);
+    for (const x of ordinaryX) expect(lines.some((s) => s.path[0]!.x === x && s.path[1]!.x === x && s.path[0]!.y >= LAND.y0 - 1e-6 && s.path[1]!.y <= 348 + 1e-6), `x ${x}`).toBe(true);
     for (const y of ordinaryY) expect(lines.some((s) => s.path[0]!.y === y && s.path[1]!.y === y && inCover(s.path[0]!.x, y) && inCover(s.path[1]!.x, y)), `y ${y}`).toBe(true);
   });
 
   it("no center line leaves the city's ground, except the strip and the east lines", () => {
     for (const s of lines) {
       if (s.path[0]!.x > WEST_QUAY.x0 || s.path[0]!.y < LAND.y0) continue;
-      for (const p of s.path) { if (isHorizontal(s)) expect(inCover(p.x, p.y), `${p.x},${p.y} outside the cover`).toBe(true); expect(p.y).toBeLessThanOrEqual(318 + 1e-6); }
+      for (const p of s.path) { if (isHorizontal(s)) expect(inCover(p.x, p.y), `${p.x},${p.y} outside the cover`).toBe(true); expect(p.y).toBeLessThanOrEqual(348 + 1e-6); } // #493: the city's street domain ends at y 348
     }
   });
 

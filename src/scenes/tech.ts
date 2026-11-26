@@ -27,8 +27,8 @@ import { ARENA, AUDITORIUM, zoneKinds } from "./tech-zoning";
 
 /**
  * Tech district of Resume: a coastal residential neighborhood to the south of
- * y 318, built on the city-plan parcels (`southParcels`; the city builds
- * those north of 318) with the avenues continuing through it (monoblocks,
+ * the coastal cut (`COASTAL_CUT_Y`, y 378), built on the city-plan parcels (`southParcels`; the city builds
+ * those north of it) with the avenues continuing through it (monoblocks,
  * houses, low rows, school, club, plazas and waterfront). Two landmarks: arena and auditorium.
  * The windows of the neighborhood are accents (`homes`). The west of the map is the city's (#479).
  * It only exists with the whole world (it lives over the bleed).

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Vec2 } from "../iso/geometry";
 import {
-  AXES, BRIDGE_LANDING, CITY_BOUNDS, HOTEL_LOT, LAND, PLAN_BOUNDS, PLAZA_CENTER, PLAZA_MAYOR,
+  AXES, BRIDGE_LANDING, CITY_BOUNDS, COASTAL_CUT_Y, HOTEL_LOT, LAND, PLAN_BOUNDS, PLAZA_CENTER, PLAZA_MAYOR,
   axisBand, barrioAt, crossingPlazas, intersectionArea, parcels, pointInPoly, polyArea, polyPerimeter,
 } from "./city-plan";
 
@@ -28,7 +28,7 @@ const isSimple = (p: readonly Vec2[]): boolean => {
   }
   return true;
 };
-const SOUTH_BOUNDS = { ...PLAN_BOUNDS, y1: 475 };
+const SOUTH_BOUNDS = { ...PLAN_BOUNDS, y0: COASTAL_CUT_Y, y1: 475 }; // #493: the coastal parcels start at the cut; the 348..378 row is in PLAN_BOUNDS
 
 describe("city-plan axes (#472)", () => {
   it("AXES match the table, exact values, in that order", () => {
@@ -36,10 +36,10 @@ describe("city-plan axes (#472)", () => {
       { id: "costanera", name: "Costanera", from: { x: 188, y: 160 }, to: { x: 188, y: 480 }, w: 8, kind: "costanera" },
       { id: "plaza", name: "Avenida de la Plaza", from: { x: 132, y: 228 }, to: { x: -440, y: 228 }, w: 12, kind: "avenue" },
       { id: "diagonalNorte", name: "Diagonal Norte", from: { x: 132, y: 210 }, to: { x: -14, y: 169 }, w: 10, kind: "diagonal" },
-      { id: "diagonalSur", name: "Diagonal Sur", from: { x: 132, y: 291 }, to: { x: -420, y: 522 }, w: 10, kind: "diagonal" },
+      { id: "diagonalSur", name: "Diagonal Sur", from: { x: 132, y: 320 }, to: { x: -420, y: 551 }, w: 10, kind: "diagonal" },  // #493: 30 u south
       { id: "bulevar", name: "Bulevar Central", from: { x: 10, y: 160 }, to: { x: 10, y: 480 }, w: 20, kind: "boulevard" },
       { id: "vias", name: "Avenida de las Vías", from: { x: 184, y: 169 }, to: { x: -440, y: 169 }, w: 10, kind: "avenue" },
-      { id: "sur", name: "Avenida del Sur", from: { x: 184, y: 318 }, to: { x: -440, y: 318 }, w: 10, kind: "avenue" },
+      { id: "sur", name: "Avenida del Sur", from: { x: 184, y: 348 }, to: { x: -440, y: 348 }, w: 10, kind: "avenue" },  // #493: y 348
       { id: "barrio", name: "Avenida del Barrio", from: { x: 184, y: 378 }, to: { x: -440, y: 378 }, w: 10, kind: "avenue" },
     ]);
   });
@@ -59,10 +59,10 @@ describe("city-plan crossing plazas (#472)", () => {
   const plazas = crossingPlazas();
   const centers = plazas.map((p) => ({ x: p.reduce((s, q) => s + q.x, 0) / p.length, y: p.reduce((s, q) => s + q.y, 0) / p.length }));
 
-  it("three octagons, at (10, 175.7), (10, 342.1) and (67.5, 318)", () => {
+  it("three octagons, at (10, 175.7), (10, 371.05) and (65.1, 348)", () => {
     expect(plazas).toHaveLength(3);
     for (const p of plazas) expect(p).toHaveLength(8);
-    const want = [{ x: 10, y: 175.7 }, { x: 10, y: 342.1 }, { x: 67.5, y: 318 }];
+    const want = [{ x: 10, y: 175.7 }, { x: 10, y: 371.05 }, { x: 65.1, y: 348 }]; // #493: the Diagonal Sur moved 30 u south (was (10, 342.1) and (67.5, 318))
     for (const w of want) expect(centers.some((c) => Math.hypot(c.x - w.x, c.y - w.y) < 0.2), `${w.x}, ${w.y}`).toBe(true);
   });
 
@@ -84,7 +84,7 @@ describe("city-plan barrios (#472)", () => {
 });
 
 describe("city-plan parcels (#472)", () => {
-  const all = [...parcels(CITY_BOUNDS), ...parcels(SOUTH_BOUNDS)];
+  const all = [...parcels(PLAN_BOUNDS), ...parcels(SOUTH_BOUNDS)]; // #493: PLAN_BOUNDS (to y 378) replaces CITY_BOUNDS, so the 348..378 row is checked against bands, plaza, crossing plazas
   const holes: { name: string; poly: Vec2[] }[] = [
     ...AXES.map((a) => ({ name: `axis ${a.id}`, poly: axisBand(a) })),
     { name: "PLAZA_MAYOR", poly: rectPoly(PLAZA_MAYOR) },
@@ -140,18 +140,19 @@ describe("city-plan parcels (#472)", () => {
   });
 
   it("the rect of every CITY_BOUNDS parcel is at least 6 on each side (lot minus sidewalks ≥ 3)", () => {
-    for (const p of parcels(CITY_BOUNDS)) expect(Math.min(p.rect.w, p.rect.d), `${p.cell.col},${p.cell.row}`).toBeGreaterThanOrEqual(6);
+    for (const p of parcels(PLAN_BOUNDS)) expect(Math.min(p.rect.w, p.rect.d), `${p.cell.col},${p.cell.row}`).toBeGreaterThanOrEqual(6);
   });
 
-  it("parcel counts: 55..75 over the cover north of 318, 100..130 down to y 475, the same 63 in CITY_BOUNDS", () => {
+  it("parcel counts: 70..95 over the cover north of the cut (378), 20..30 coastal ones down to y 475, 70 in CITY_BOUNDS", () => {
     // Measured while planning: 63 and 111 over the whole cover width (PLAN_BOUNDS), the parent's measure 1;
     // CITY_BOUNDS had stopped at CITY_EDGE.west (−54) with 33; since #479 its x0 is −Infinity and it holds the whole cover width: 63 (measured on agent/479).
-    expect(parcels(PLAN_BOUNDS).length).toBeGreaterThanOrEqual(55);
-    expect(parcels(PLAN_BOUNDS).length).toBeLessThanOrEqual(75);
-    expect(parcels(SOUTH_BOUNDS).length).toBeGreaterThanOrEqual(100);
-    expect(parcels(SOUTH_BOUNDS).length).toBeLessThanOrEqual(130);
-    expect(parcels(CITY_BOUNDS)).toHaveLength(63);
-    expect(parcels(CITY_BOUNDS)).toBe(parcels(PLAN_BOUNDS)); // same bounds, same memo
+    expect(parcels(PLAN_BOUNDS).length).toBeGreaterThanOrEqual(70); // #493: 81 in PLAN_BOUNDS (was 63): the 70 of CITY_BOUNDS plus the 11 of the 348..378 row
+    expect(parcels(PLAN_BOUNDS).length).toBeLessThanOrEqual(95);
+    expect(parcels(SOUTH_BOUNDS).length).toBeGreaterThanOrEqual(20); // #493: SOUTH_BOUNDS starts at the cut: 24 coastal parcels down to y 475 (the old 111 counted the whole cover from y 164)
+    expect(parcels(SOUTH_BOUNDS).length).toBeLessThanOrEqual(30);
+    expect(parcels(CITY_BOUNDS)).toHaveLength(70); // #493: ends at y 348 (was 63 at 318)
+    expect(parcels(PLAN_BOUNDS)).toHaveLength(81);
+    expect(parcels(CITY_BOUNDS)).not.toBe(parcels(PLAN_BOUNDS)); // #493: different y1, different memo
   });
 
   it("parcels are memoized per bounds, and different bounds do not collide", () => {
@@ -174,7 +175,7 @@ describe("city-plan parcels (#472)", () => {
 
 describe("city-plan constants (#472)", () => {
   it("CITY_BOUNDS has no west edge (#479) and ends at the Avenida del Sur", () => {
-    expect(CITY_BOUNDS).toEqual({ x0: -Infinity, y0: 164, x1: 184, y1: 318 });
+    expect(CITY_BOUNDS).toEqual({ x0: -Infinity, y0: 164, x1: 184, y1: 348 }); // #493: 348
   });
   it("the bridge landing stands inside the plaza", () => {
     expect(intersectionArea(rectPoly(BRIDGE_LANDING), rectPoly(PLAZA_MAYOR))).toBeCloseTo(54 * 10, 6);

@@ -5,12 +5,12 @@ import { COVER_MARGIN, inCoverQuad } from "../map/geo";
 import { axisCrosswalks, axisLampSpots, axisLanes, boulevardPlanter, crossingPlaza } from "../city/axis-streets";
 import { lamp, place } from "../kit/props";
 import { CITY_EDGE } from "./city-grid";
-import { LAND, crossingPlazas, inCrossingPlaza, onAxis, polyCentroid } from "./city-plan";
+import { CITY_BOUNDS, LAND, crossingPlazas, inCrossingPlaza, onAxis, polyCentroid } from "./city-plan";
 import { urbanAt } from "./sprawl-grid";
 
-const SOUTH_BOUNDS = { x0: -Infinity, y0: 318, x1: LAND.x1, y1: 650 };
+const SOUTH_BOUNDS = { x0: -Infinity, y0: CITY_BOUNDS.y1, x1: LAND.x1, y1: 650 };
 
-/** Nothing is painted off urban ground (T1's clamp: the 318..324 strip is asphalt) or outside the cover. */
+/** Nothing is painted off urban ground (T1's clamp: the strip up to `CITY_EDGE.south` is asphalt) or outside the cover. */
 const stop = (x: number, y: number): boolean => !urbanAt(x, Math.max(y, CITY_EDGE.south)) || !inCoverQuad(x, y, 16 / 9, COVER_MARGIN);
 
 const SAMPLE = 0.5;

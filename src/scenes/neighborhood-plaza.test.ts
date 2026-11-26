@@ -170,8 +170,8 @@ const own = (b: SprawlBlock) => everything.filter((s) => insideInflated(s, block
 const dotsIn = (b: SprawlBlock) => { const r = blockRect(b); return dotsOf(scene.accents).filter((d) => d.at.x >= r.x0 && d.at.x <= r.x1 && d.at.y >= r.y0 && d.at.y <= r.y1); };
 
 describe("neighborhood plaza (#254), over the world", () => {
-  it("there are 8 plazas (2 fixed + 6 drawn; two narrow parcels that drew a plaza are low), including the two fixed ones", () => {
-    expect(plazaBlocks).toHaveLength(8); // measured on agent/479 without the west (#479): the rng shift redrew the south; it was 5
+  it("there are 10 plazas (2 fixed + 8 drawn), including the two fixed ones", () => {
+    expect(plazaBlocks).toHaveLength(10); // #493: 10 (was 8): the neighborhood starts at the cut y 378, so the south parcels and their rng draws changed (zoneKinds world table). Was: measured on agent/479 without the west (#479): the rng shift redrew the south; it was 5
     for (const p of PLAZAS) expect(plazaBlocks.some((b) => b.parcel?.cell.col === p.col && b.parcel.cell.row === p.row)).toBe(true);
   });
 

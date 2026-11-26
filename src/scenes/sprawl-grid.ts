@@ -1,6 +1,6 @@
 import { CELL_BLEED, COVER_MARGIN, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, inCoverQuad, islandEastX, islandWestX, riverCenter } from "../map/geo";
 import { CITY_EDGE, type Rect } from "./city-grid";
-import { LAND, parcels, type Parcel } from "./city-plan";
+import { COASTAL_CUT_Y, LAND, parcels, type Parcel } from "./city-plan";
 
 /**
  * Geography of the margins: which part of the bleed is built land and of
@@ -78,13 +78,12 @@ export { COVER_MARGIN } from "../map/geo";
 
 let south: Parcel[] | undefined;
 /**
- * Parcels of the city plan south of y 318 (centroid y > 318), on urban ground at the centroid and the four corners of
- * `rect` and inside the cover. The 318..324 strip is asphalt, not a hole: `urbanAt` is asked at `max(y, CITY_EDGE.south)`, so the
- * row right south of the avenue stays; the estuary and the bleed (they only exist for y > WORLD.y1) still decide. Memoized.
+ * Parcels of the city plan south of the coastal cut (centroid y > `COASTAL_CUT_Y`, 378; #493), on urban ground at the centroid and the four corners of
+ * `rect` and inside the cover. `urbanAt` is asked at `max(y, CITY_EDGE.south)` (the strip up to CITY_EDGE.south is asphalt, not a hole); the estuary and the bleed (they only exist for y > WORLD.y1) still decide. Memoized.
  */
 export function southParcels(): Parcel[] {
-  return south ??= parcels({ x0: -Infinity, y0: 318, x1: LAND.x1, y1: 650 }).filter((p) => {
-    if (p.c.y <= 318 || !inCoverQuad(p.c.x, p.c.y, 16 / 9, COVER_MARGIN)) return false;
+  return south ??= parcels({ x0: -Infinity, y0: COASTAL_CUT_Y, x1: LAND.x1, y1: 650 }).filter((p) => {
+    if (p.c.y <= COASTAL_CUT_Y || !inCoverQuad(p.c.x, p.c.y, 16 / 9, COVER_MARGIN)) return false;
     const { x, y, w, d } = p.rect;
     return ([[p.c.x, p.c.y], [x, y], [x + w, y], [x + w, y + d], [x, y + d]] as const).every(([px, py]) => urbanAt(px, Math.max(py, CITY_EDGE.south)));
   });

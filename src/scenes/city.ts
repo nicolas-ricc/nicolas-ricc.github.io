@@ -8,7 +8,7 @@ import { STYLES } from "../kit/styles";
 import type { Piece } from "../kit/types";
 import { prism, PLINTH_H } from "./city-pieces";
 import { blocks } from "./city-grid";
-import { CITY_BOUNDS, parcels, type Parcel } from "./city-plan";
+import { PLAN_BOUNDS, parcels, type Parcel } from "./city-plan";
 import { lights, solidBoxes, visibleLights, WINDOW_ALPHA, type CityLights, type FixedLight } from "../city/lights";
 import { streets } from "../city/streets";
 import { freightYard, railLands } from "../city/rail-lands";
@@ -71,7 +71,7 @@ export function city(rng: Rng, districtRng: Rng, lightsRng: Rng, opts: { west: n
     if (p.neighborhood === "district" || p.neighborhood === "moderno") for (const s of piece.slots) if (s.kind === "sign") signs.push({ kind: "poly", pts: s.pts, color: districtRng.chance(0.5) ? "cyan" : "magenta", alpha: 1 });
   }
   for (const b of blocks()) if (isBare(b)) solids.push(prism(b.x, b.y, 0, b.w, b.d, PLINTH_H, "paving"));
-  for (const pc of parcels(CITY_BOUNDS)) if (isHotelLot(pc)) solids.push(parcelPlinth(pc)); // the hotel lot: plinth only
+  for (const pc of parcels(PLAN_BOUNDS)) if (isHotelLot(pc)) solids.push(parcelPlinth(pc)); // the hotel lot: plinth only
   const hotelLights = hotel(solids, accents, fixed);
   plazaMayor(solids, ground, fixed, rng);
   // the tank goes after the placed loop (as before #472): it needs its host's courtyard, and its draws come after every piece's

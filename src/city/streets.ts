@@ -9,7 +9,7 @@ import { placeLit, type FixedLight } from "./lights";
 import { PLINTH_H, TILE, plazaTone, prism } from "../scenes/city-pieces";
 import { createRng, type Rng } from "../map/seed";
 import { WEST_DISTRICT_X, builtParcels, neighborhoodOfParcel } from "./zoning";
-import { AXES, type Axis, CITY_BOUNDS, HOTEL_LOT, LAND, axis, axisBand, clipHalf, crossingPlazas, inCrossingPlaza, inParcel, inPlazaMayor, inRect, onAxis, polyCentroid } from "../scenes/city-plan";
+import { AXES, type Axis, CITY_BOUNDS, HOTEL_LOT, LAND, PLAZA_MAYOR, axis, axisBand, clipHalf, crossingPlazas, inCrossingPlaza, inParcel, inPlazaMayor, inRect, onAxis, polyCentroid } from "../scenes/city-plan";
 import { ORDINARY_X, ORDINARY_Y, axisFree, axisSpan, blocked, coverWest, crossings, crosswalks, inDomain, onOrdinaryStreet, unit } from "./crossings";
 
 /**
@@ -68,7 +68,7 @@ function centerLine(out: Solid[], from: Vec2, to: Vec2, stop: Stop = flatStop): 
   flush();
 }
 
-/** Ordinary grid streets (`ORDINARY_X` / `ORDINARY_Y`): x from the land's north edge to y 318, y from the cover's west edge to the land's east edge. */
+/** Ordinary grid streets (`ORDINARY_X` / `ORDINARY_Y`): x from the land's north edge to `CITY_BOUNDS.y1` (348), y from the cover's west edge to the land's east edge. */
 function gridLines(ground: Solid[]): void {
   for (const x of ORDINARY_X) centerLine(ground, { x, y: LAND.y0 }, { x, y: CITY_BOUNDS.y1 }, streetStop);
   for (const y of ORDINARY_Y) {
@@ -96,7 +96,7 @@ function axisLanes(ground: Solid[]): void {
       const fits = (s: number): boolean => {
         if (walks.some((w) => s < w + CROSSWALK_REACH && s + DASH > w - CROSSWALK_REACH)) return false; // the lane stops at the zebra
         for (let t = 0; t <= DASH + 1e-9; t += SAMPLE) {
-          if (!inDomain({ x: s0.x + ux * (s + t), y: s0.y + uy * (s + t) }) || ![-0.2, 0, 0.2].every((e) => { const q = at(s + t, e); return q.y <= CITY_BOUNDS.y1 && axisFree(a, q); })) return false; // south of y 318 the south's streets paint the lanes (#478)
+          if (!inDomain({ x: s0.x + ux * (s + t), y: s0.y + uy * (s + t) }) || ![-0.2, 0, 0.2].every((e) => { const q = at(s + t, e); return q.y <= CITY_BOUNDS.y1 && axisFree(a, q); })) return false; // south of y 348 the south's streets paint the lanes (#478)
         }
         return true;
       };
@@ -163,7 +163,7 @@ function boulevardMedian(solids: Solid[]): void {
 
 const QUAY_TOP = 0.6; // the west quay's deck (`westQuay`: z −1, h 1.6)
 /** Rests each post on the real ground below: plaza tile, block plinth, quay deck or asphalt. */
-export const postZ = (x: number, y: number): number => (inPlaza(x, y) ? 0.05 : inBlock(x, y) || inParcel(x, y) ? PLINTH_H : x >= WEST_QUAY.x0 && x <= WEST_QUAY.x1 ? QUAY_TOP : 0);
+export const postZ = (x: number, y: number): number => (inPlaza(x, y) ? 0.05 : inBlock(x, y) || inParcel(x, y) ? PLINTH_H : x >= WEST_QUAY.x0 && x <= WEST_QUAY.x1 && y <= CITY_EDGE.south ? QUAY_TOP : 0); // #493: the quay deck ends at CITY_EDGE.south (324), the city's streets run to 348
 
 const WEST_LANE_X = WEST_COLS.map((x) => x + BLOCK_W + STREET / 2);              // centers of the old N-S streets of the strip (-21..189); south of y 164 the grid has its own
 const RING_X = EAST_RING.x0 + STREET / 2;                                        // 273
@@ -323,8 +323,8 @@ export function axisLampPosts(): readonly { a: Axis; at: Vec2 }[] {
   return out;
 }
 
-/** Costanera lamps (x 190.5): every 12 from y 160 up to 312 less the quay terraces (y 174..195) and the bridge (y 206..291). */
-export const COSTANERA_LAMP_Y: readonly number[] = Array.from({ length: 13 }, (_, k) => 160 + 12 * k).filter((y) => y <= 312 && !(y >= 206 && y <= 291) && !(y >= QUAY_TERRACES.y && y <= QUAY_TERRACES.y + QUAY_TERRACES.d));
+/** Costanera lamps (x 190.5): every 12 from y 160 up to `CITY_BOUNDS.y1` − 6 less the quay terraces (y 174..195) and the bridge, the Plaza Mayor's whole length (y 206..320, #493). */
+export const COSTANERA_LAMP_Y: readonly number[] = Array.from({ length: 16 }, (_, k) => 160 + 12 * k).filter((y) => y <= CITY_BOUNDS.y1 - 6 && !(y >= PLAZA_MAYOR.y && y <= PLAZA_MAYOR.y + PLAZA_MAYOR.d) && !(y >= QUAY_TERRACES.y && y <= QUAY_TERRACES.y + QUAY_TERRACES.d));
 
 export const CROSSING_TILE_SEED = 473; // each crossing plaza tiles with its own rng: the city's streams stay as they were
 const CURB_W = 1.2;
