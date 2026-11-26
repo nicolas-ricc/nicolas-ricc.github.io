@@ -37,7 +37,8 @@ const SIDES: Vec3[][] = RESUME_SIGN.glyphs.flatMap((g) => g.layout.strokes.flatM
   const area = ring.reduce((s, p, i) => { const q = ring[(i + 1) % ring.length]!; return s + p.x * q.y - q.x * p.y; }, 0), right = (k === 0) === (area > 0); // the outward normal is the right of p→q: an outline wound counterclockwise, or a clockwise counter
   return ring.slice(1).flatMap((q, j): Vec3[][] => {
     const p = ring[j]!, dx = q.x - p.x, dy = q.y - p.y, nx = right ? dy : -dy, ny = right ? -dx : dx;
-    const n = v3(g.plane.u.x * nx + g.plane.v.x * ny, g.plane.u.y * nx + g.plane.v.y * ny, g.plane.u.z * nx + g.plane.v.z * ny);
+    const uu = dot(g.plane.u, g.plane.u), a = nx / uu; // the normal of a mapped line goes through the inverse transpose: u is stretched, so u·nx would not be perpendicular to the world segment
+    const n = v3(g.plane.u.x * a + g.plane.v.x * ny, g.plane.u.y * a + g.plane.v.y * ny, g.plane.u.z * a + g.plane.v.z * ny);
     if (dot(n, VIEW_DIR) <= 1e-9) return [];
     const f = (c: Vec2) => toWorld(g.plane, c.x, c.y), back = (c: Vec3) => v3(c.x - LETTER_DEPTH, c.y, c.z), fp = f(p), fq = f(q);
     return [[fp, fq, back(fq), back(fp)]];

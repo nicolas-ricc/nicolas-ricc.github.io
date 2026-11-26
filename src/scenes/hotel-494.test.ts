@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Accent } from "../iso/accent";
-import { dot, v3 } from "../iso/geometry";
-import { VIEW_DIR } from "../iso/project";
+import { v3 } from "../iso/geometry";
 import { bounds, type Solid } from "../iso/solids";
 import type { FixedLight } from "../city/lights";
 import { checkSign, checkSignFont, COVER_LAPTOP, COVER_PHONE, signMetrics } from "../kit/legibility";
 import { MARQUEE_FACE } from "../kit/marquee";
 import { SIDEWALK } from "./city-grid";
 import { HOTEL_LOT } from "./city-plan";
+import { sideKeys, visibleKeys } from "./sides-oracle";
 import { HOTEL_BLOCK, HOTEL_ROOF, RESUME_SIGN, SIGN_BACKING, SIGN_SITE, hotel, hotelSign } from "./sign-hotel";
 
 // Acceptance criteria of #494: the hotel as one block to z 60 and RESUME standing on its roof, on the grid, under the train rule.
@@ -122,13 +122,9 @@ describe("on the grid and under the train rule (#494)", () => {
   it("every solid of the hotel and its sign keeps y_min − 1.4·z_max ≥ 134.5", () => {
     for (const s of all) { const b = bounds(s); expect(b.min.y - 1.4 * b.max.z, `${s.kind} ${s.mat} ${JSON.stringify(b)}`).toBeGreaterThanOrEqual(134.5 - 1e-9); }
   });
-  it("the sides of the letters face the camera", () => {
-    for (const s of signOnly.accents) {
-      if (s.kind !== "poly" || s.color !== "greenBleed") continue;
-      const [a, b, c] = s.pts as [ReturnType<typeof v3>, ReturnType<typeof v3>, ReturnType<typeof v3>];
-      const n = { x: (b.y - a.y) * (c.z - a.z) - (b.z - a.z) * (c.y - a.y), y: (b.z - a.z) * (c.x - a.x) - (b.x - a.x) * (c.z - a.z), z: (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x) };
-      expect(Math.abs(n.x)).toBeLessThan(1e-6); // a side contains the x direction
-      expect(Math.abs(dot(n, VIEW_DIR))).toBeGreaterThan(0);
-    }
+  it("the sides of the letters face the camera: exactly the segments whose outward normal has a positive dot with VIEW_DIR", () => {
+    const sides = signOnly.accents.flatMap((a) => (a.kind === "poly" && a.color === "greenBleed" ? [a.pts] : []));
+    expect(sides.length).toBeGreaterThan(0);
+    expect(sideKeys(sides)).toEqual(visibleKeys(RESUME_SIGN));
   });
 });

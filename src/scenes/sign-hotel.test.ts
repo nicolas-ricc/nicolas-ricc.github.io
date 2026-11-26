@@ -6,10 +6,10 @@ import { chamferedRect } from "../kit/forms/composite";
 import type { FixedLight } from "../city/lights";
 import { SIDEWALK } from "./city-grid";
 import { HOTEL_LOT } from "./city-plan";
-import { dot, v3 } from "../iso/geometry";
-import { VIEW_DIR } from "../iso/project";
+import { v3 } from "../iso/geometry";
 import { COVER_LAPTOP, COVER_PHONE, checkSign, checkSignFont, signMetrics } from "../kit/legibility";
-import { MARQUEE_FACE } from "../kit/marquee";
+import { sideKeys, visibleKeys } from "./sides-oracle";
+import { MARQUEE_FACE, marqueeLayout } from "../kit/marquee";
 import { HOTEL_BLOCK, HOTEL_CENTER, HOTEL_FACADE, HOTEL_ROOF, RESUME_SIGN, SIGN_BACKING, SIGN_SITE, blockFootprint, hotel, hotelSign, hotelStandIn } from "./sign-hotel";
 
 const EPS = 1e-6, CHAMFER = 2.4, FH = (HOTEL_ROOF - 0.4) / 14;
@@ -185,25 +185,26 @@ describe("sign-hotel: RESUME on the roof (#494)", () => {
       expect(a.bloom).toBe(false); expect(a.alpha).toBe(1);
       const xs = a.pts.map((p) => p.x).sort((p, q) => p - q);
       expect(xs[0]).toBeCloseTo(121.8, 9); expect(xs[1]).toBeCloseTo(121.8, 9); expect(xs[2]).toBeCloseTo(123, 9); expect(xs[3]).toBeCloseTo(123, 9);
-      const [p, q, , r] = a.pts as [ReturnType<typeof v3>, ReturnType<typeof v3>, ReturnType<typeof v3>, ReturnType<typeof v3>];
-      const e = v3(q.x - p.x, q.y - p.y, q.z - p.z), x = v3(r.x - p.x, r.y - p.y, r.z - p.z); // the quad's two edges: along the contour, along −x
-      const n = v3(e.y * x.z - e.z * x.y, e.z * x.x - e.x * x.z, e.x * x.y - e.y * x.x);
-      expect(Math.abs(dot(n, VIEW_DIR))).toBeGreaterThan(0);
     }
+    // the oracle decides the facing on its own (fill triangles, world displacement): the sides are exactly the visible segments
+    expect(sideKeys(sides.map((a) => (a.kind === "poly" ? a.pts : [])))).toEqual(visibleKeys(RESUME_SIGN));
     const dots = S.accents.filter((a) => a.kind === "dot");
-    expect(dots.length).toBeGreaterThan(0);
+    expect(dots).toHaveLength(marqueeLayout(12, 0.07).flatMap((g) => g.bulbs).length);
     for (const d of dots) if (d.kind === "dot") { expect(d.color).toBe("windowWarm"); expect(d.at.x).toBeCloseTo(123.05, 9); }
   });
 
   it("the plate comes first and no glass; the lattice is steel beams behind the letters up to z 75", () => {
     expect(S.out[0]).toEqual(SIGN_BACKING);
     expect(S.out.some((s) => s.mat === "glass")).toBe(false);
-    const lattice = beams.filter((b) => b.w === 0.3 && b.h === 0.3 && bounds(b).max.x <= 121.3 + 1e-9);
+    const lattice = beams.filter((b) => b.w === 0.3 && b.h === 0.3);
+    for (const b of lattice) expect(bounds(b).max.x, JSON.stringify(b)).toBeLessThanOrEqual(121.3 + 1e-9);
     expect(lattice.every((b) => b.mat === "steel" && b.interlocks === true)).toBe(true);
     expect(Math.max(...lattice.map((b) => bounds(b).max.z))).toBeCloseTo(75, 9);
     const uprights = lattice.filter((b) => b.from.x === b.to.x && b.from.y === b.to.y);
+    expect(uprights).toHaveLength(13);
     expect(new Set(uprights.map((b) => Math.round(b.from.y * 1000) / 1000))).toEqual(new Set(Array.from({ length: 13 }, (_, k) => 240.5 + 6 * k)));
     const chords = lattice.filter((b) => b.from.z === b.to.z && b.from.x === b.to.x && b.from.y !== b.to.y);
+    expect(chords).toHaveLength(2);
     expect(new Set(chords.map((b) => b.from.z))).toEqual(new Set([60.15, 74.85]));
     const diag = lattice.filter((b) => b.from.y !== b.to.y && b.from.z !== b.to.z && b.from.x === b.to.x);
     expect(diag).toHaveLength(12);
