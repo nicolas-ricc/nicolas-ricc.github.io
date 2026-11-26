@@ -36,9 +36,11 @@ describe("axis-streets", () => {
     const gaps = trees.slice(1).map((y, i) => y - trees[i]!);
     expect(gaps.some((g) => Math.abs(g - 8) < 1e-6)).toBe(true);
   });
-  it("axisCrossings: Avenida del Barrio × Bulevar at (10, 378); none inside a crossing plaza", () => {
+  it("axisCrossings: Avenida del Sur × Bulevar at (10, 348) and Avenida del Barrio × Diagonal Sur at (-6.6, 378); none inside a crossing plaza", () => {
+    // #493: the Diagonal Sur crosses the boulevard at (10, 371.05), so the crossing plaza swallows the Avenida del Barrio × Bulevar crossing (10, 378)
     const cs = axisCrossings(B, never);
-    expect(cs.some((c) => Math.abs(c.x - 10) < 1e-6 && Math.abs(c.y - 378) < 1e-6)).toBe(true);
+    expect(cs.some((c) => Math.abs(c.x - 10) < 1e-6 && Math.abs(c.y - 348) < 1e-6)).toBe(true);
+    expect(cs.some((c) => Math.abs(c.x + 6.5974) < 1e-3 && Math.abs(c.y - 378) < 1e-6)).toBe(true);
     for (const c of cs) for (const p of crossingPlazas()) expect(pointInPoly(c.x, c.y, p)).toBe(false);
   });
   it("axisCrosswalks: 3 strips of 0.8, 1.6 apart, across each axis at the crossing; traffic lights", () => {
@@ -46,20 +48,22 @@ describe("axis-streets", () => {
     axisCrosswalks(g, s, B, never);
     const z = g.filter((x): x is Solid & { kind: "strip" } => x.kind === "strip" && x.width === 0.8);
     expect(z.length).toBeGreaterThanOrEqual(12); // 2 × 3 across the avenue, 2 × 3 across the boulevard
-    const acrossAvenue = z.filter((x) => x.path.every((q) => onBand("barrio", q.x, q.y))).map((x) => x.path[0]!.x).sort((a, b) => a - b);
+    // #493: the crosswalks across the avenue are those of the Avenida del Sur × Bulevar crossing (10, 348): the Barrio × Bulevar one is inside the crossing plaza
+    const acrossAvenue = z.filter((x) => x.path.every((q) => onBand("sur", q.x, q.y) && Math.abs(q.x - 10) < 25)).map((x) => x.path[0]!.x).sort((a, b) => a - b);
     expect(acrossAvenue.length).toBeGreaterThanOrEqual(6);
     expect(acrossAvenue[1]! - acrossAvenue[0]!).toBeCloseTo(1.6, 6);
     expect(s.length).toBeGreaterThan(0);
   });
   it("axisCrosswalks: no strip touches another axis band, at the right angle and at the oblique crossing", () => {
-    for (const [b, at] of [[B, { x: 10, y: 378 }], [{ x0: -100, y0: 330, x1: 60, y1: 420 }, { x: -75.9, y: 378 }]] as const) {
+    // #493: right angle at Sur × Bulevar (10, 348), oblique at Barrio × Diagonal Sur (−6.6, 378)
+    for (const [b, at] of [[B, { x: 10, y: 348 }], [{ x0: -100, y0: 330, x1: 60, y1: 420 }, { x: -6.6, y: 378 }]] as const) {
       const g: Solid[] = [], s: Solid[] = [];
       axisCrosswalks(g, s, b, never);
       const z = g.filter((x): x is Solid & { kind: "strip" } => x.kind === "strip" && x.width === 0.8 && x.path.every((q) => Math.hypot(q.x - at.x, q.y - at.y) < 45));
       expect(z.length, `strips at ${at.x}`).toBeGreaterThanOrEqual(6);
       for (const x of z) {
         const [p, q] = x.path as [{ x: number; y: number }, { x: number; y: number }];
-        const own = ["barrio", "bulevar", "diagonalSur"].filter((id) => [p, q, { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 }].every((m) => onBand(id, m.x, m.y)));
+        const own = ["sur", "barrio", "bulevar", "diagonalSur"].filter((id) => [p, q, { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 }].every((m) => onBand(id, m.x, m.y)));
         expect(own.length, JSON.stringify(x.path)).toBe(1); // each strip lies on exactly one axis: never in the junction
       }
     }
@@ -74,24 +78,24 @@ describe("axis-streets", () => {
     for (const p of spots) { expect(p.x).toBeGreaterThanOrEqual(B.x0); expect(p.x).toBeLessThanOrEqual(B.x1); expect(p.y).toBeGreaterThanOrEqual(B.y0); expect(p.y).toBeLessThanOrEqual(B.y1); }
   });
   it("crossingPlaza: plaza tiles inside the octagon, a paving curb, returns the center", () => {
-    const oct = crossingPlazas().find((p) => pointInPoly(10, 342.1, p))!;
+    const oct = crossingPlazas().find((p) => pointInPoly(10, 371.05, p))!; // #493: Bulevar × Diagonal Sur moved to (10, 371.05)
     const g: Solid[] = [], s: Solid[] = [];
     const c = crossingPlaza(g, s, oct);
-    expect(Math.hypot(c.x - 10, c.y - 342.05)).toBeLessThan(0.2);
+    expect(Math.hypot(c.x - 10, c.y - 371.05)).toBeLessThan(0.2);
     const tiles = [...g, ...s].filter((x): x is Solid & { kind: "poly" } => x.kind === "poly" && x.mat === "plaza");
     expect(tiles.length).toBeGreaterThan(0);
     for (const t of tiles) for (const q of t.footprint) expect(pointInPoly(q.x, q.y, oct)).toBe(true);
     expect([...g, ...s].filter((x) => x.kind === "poly" && x.mat === "paving").length).toBe(8);
   });
-  it("the crossing on the Avenida del Sur (10, 318) belongs to the bounds north of it, and its crosswalks reach across the avenue", () => {
-    const north: Bounds2 = { x0: -30, y0: 164, x1: 60, y1: 318 }, south: Bounds2 = { x0: -30, y0: 318, x1: 60, y1: 420 };
-    const at318 = (cs: { x: number; y: number }[]) => cs.some((c) => Math.abs(c.x - 10) < 1e-6 && Math.abs(c.y - 318) < 1e-6);
-    expect(at318(axisCrossings(north, never))).toBe(true);
-    expect(at318(axisCrossings(south, never))).toBe(false);
+  it("the crossing on the Avenida del Sur (10, 348) belongs to the bounds north of it, and its crosswalks reach across the avenue", () => {
+    const north: Bounds2 = { x0: -30, y0: 164, x1: 60, y1: 348 }, south: Bounds2 = { x0: -30, y0: 348, x1: 60, y1: 420 }; // #493: the avenue is at y 348
+    const at348 = (cs: { x: number; y: number }[]) => cs.some((c) => Math.abs(c.x - 10) < 1e-6 && Math.abs(c.y - 348) < 1e-6);
+    expect(at348(axisCrossings(north, never))).toBe(true);
+    expect(at348(axisCrossings(south, never))).toBe(false);
     const g: Solid[] = [], s: Solid[] = [];
     axisCrosswalks(g, s, north, never);
     const acrossSur = g.filter((x): x is Solid & { kind: "strip" } => x.kind === "strip" && x.width === 0.8 && x.path.every((q) => onBand("sur", q.x, q.y) && Math.abs(q.x - 10) < 25));
     expect(acrossSur.length).toBeGreaterThanOrEqual(6);
-    expect(s.some((x) => { const q = bounds(x); return Math.hypot(q.min.x - 10, q.min.y - 318) < 15; })).toBe(true);
+    expect(s.some((x) => { const q = bounds(x); return Math.hypot(q.min.x - 10, q.min.y - 348) < 15; })).toBe(true);
   });
 });

@@ -14,7 +14,7 @@ import type { Material } from "../map/palette-iso";
 import { createRng, SEED } from "../map/seed";
 import type { Animator } from "../scenes/animator";
 import { BLOCK_W, BRIDGE, COLLAPSED, EAST_COLS, PROMENADE, SIDEWALK, WEST_COLS } from "../scenes/city-grid";
-import { CITY_BOUNDS, HOTEL_LOT, PLAN_BOUNDS, PLAZA_MAYOR, parcels } from "../scenes/city-plan";
+import { HOTEL_LOT, PLAN_BOUNDS, PLAZA_MAYOR, parcels } from "../scenes/city-plan";
 import { STAIR_TOWER } from "../scenes/boiler-house";
 import { excavator, excavatorBox, excavatorWheel } from "../scenes/excavator";
 import { COOLING as FACTORY_COOLING, PLANT, RAIL_YARD_X, STACK_BASE_H, STACKS } from "../scenes/factory";
@@ -68,7 +68,7 @@ const TOWER_PARCEL = parcels(PLAN_BOUNDS).find((q) => q.cell.col === -77 && q.ce
 
 /** Rect ± M of the largest city parcel of a grid cell, for the region exhibits that frame one parcel. */
 const parcelBox = (col: number, row: number): Box => {
-  const r = parcels(CITY_BOUNDS).filter((q) => q.cell.col === col && q.cell.row === row).sort((a, b) => b.area - a.area)[0]!.rect;
+  const r = parcels(PLAN_BOUNDS).filter((q) => q.cell.col === col && q.cell.row === row).sort((a, b) => b.area - a.area)[0]!.rect;
   return { x0: r.x - M, y0: r.y - M, x1: r.x + r.w + M, y1: r.y + r.d + M };
 };
 const union = (a: Box, b: Box): Box => ({ x0: Math.min(a.x0, b.x0), y0: Math.min(a.y0, b.y0), x1: Math.max(a.x1, b.x1), y1: Math.max(a.y1, b.y1) });
@@ -208,9 +208,9 @@ export const EXHIBITS: readonly Exhibit[] = [
   // the fallen slab reaches x − 16; flush to the south, the jungle; h 8: the neighbour measured 7.4 once the singular pieces sat on their named parcels (#477)
   { id: "manzana-derrumbada", title: "Collapsed block", zone: "cv", group: "city", kind: "region",
     box: { x0: COLLAPSED.x - 16 - M, y0: COLLAPSED.y - M, x1: COLLAPSED.x + COLLAPSED.w + M, y1: COLLAPSED.y + COLLAPSED.d + 1 }, h: 8 },
-  // clasico parcel (43, 231), rect y 234, 24 × 21, whole and rectangular, whose world-seed recipe is `cornerCupola` (city() with zoneRng(SEED, "cv"), (…, 1), (…, 3)); the eval pins it. h 9 (A9): smallest integer that passes; measured inside 8.8, accents 0, cut neighbor 0.02
-  { id: "manzana-casco", title: "Classic block", zone: "cv", group: "city", kind: "region", box: parcelBox(43, 231), h: 9 },
-  // transicion parcel (13, 201): rectangular and not fixed, whose world-seed recipe is `balconyBlock`, the barrio's own (h 15.6); the eval pins the barrio. h 16 (A9): smallest integer that passes; measured inside 15.9, no cut neighbor above it
+  // clasico parcel (133, 351), rect y 353, 24 × 20, whole and rectangular, in the 348..378 row (#493: (43, 231) became transicion when the plaza centre moved, so the exhibit moved here); its world-seed recipe is `cornerCupola` (city() with zoneRng(SEED, "cv"), (…, 1), (…, 3)); the eval pins it. h 9 (A9): smallest integer that passes on (43, 231); kept on the new parcel, where it still passes (not re-measured)
+  { id: "manzana-casco", title: "Classic block", zone: "cv", group: "city", kind: "region", box: parcelBox(133, 351), h: 9 },
+  // transicion parcel (13, 201): rectangular and not fixed, whose world-seed recipe is `chamfer` since #493 (was `balconyBlock`), the barrio's own; the eval pins the barrio. h 16 (A9): smallest integer that passes; measured inside 15.9, no cut neighbor above it
   { id: "manzana-transicion", title: "Transition block", zone: "cv", group: "city", kind: "region", box: parcelBox(13, 201), h: 16 },
   // FIXED parcel (43, 261) ± 3: the construction site with its crane and fence. h 22 (A9): smallest integer that passes; measured inside 21.3 (crane), accents 14.02, cut neighbor 0.02
   { id: "obra", title: "Construction site", zone: "cv", group: "city", kind: "region", box: parcelBox(43, 261), h: 22 },
@@ -253,7 +253,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   { id: "torres", title: "Tech district towers", zone: "cv", group: "tech", kind: "region",
     box: union(parcelBox(-107, 171), parcelBox(-77, 171)), h: 19 },
   { id: "monoblock", title: "Monoblock", zone: "cv", group: "tech", kind: "region",
-    box: cellBox({ col: 133, row: 441 }), h: 23.6 }, // the monoblock parcel of cell (133, 441), 24 × 24
+    box: cellBox({ col: 133, row: 441 }), h: 14.7 }, // the monoblock parcel of cell (133, 441), 24 × 24; #493: h 14.7 (was 23.6, measured 14.6 inside): the south rng draws shifted, the parcel redrew a lower slab
   { id: "casas", title: "Houses with tile roofs", zone: "cv", group: "tech", kind: "region",
     box: cellBox({ col: 103, row: 471 }), h: 8 }, // the houses parcel of cell (103, 471), 24 × 24
   { id: "escuela", title: "School", zone: "cv", group: "tech", kind: "region",

@@ -40,7 +40,7 @@ const overlap = (a: Solid, b: Solid) => {
 
 
 describe("monoblocks of the Simón Bolívar neighborhood (#250)", () => {
-  it("there are monoblock blocks in the world", () => expect(monos.length).toBe(5)); // measured on agent/479 without the west (#479): all on south parcels; it was 12 (6 west + 6 south) before, and the rng shift redrew the south
+  it("there are monoblock blocks in the world", () => expect(monos.length).toBe(3)); // #493: 3 (was 5): the neighborhood starts at the cut y 378, so the south parcels and their rng draws changed (zoneKinds world table). Was: measured on agent/479 without the west (#479): all on south parcels; it was 12 (6 west + 6 south) before, and the rng shift redrew the south
 
   it("each block: 1 or 2 bodies (b.w − 4)×5 of h ∈ {9, 12}, different if there are two, of light plaster on a plinth", () => {
     for (const b of monos) {
@@ -163,7 +163,7 @@ describe("monoblocks of the Simón Bolívar neighborhood (#250)", () => {
   });
 
   it("with parity 1 and a single slab: it goes at the back (y + d − 7), trees north of its plinth, E–W path at y + d − 7.8", () => {
-    const b = blocks.find((x) => blockParity(x) === 1)!;
+    const b = blocks.find((x) => blockParity(x) === 1 && x.w === 24)!; // #493: the slab asserted below is 20 wide: a block 24 wide (the first parity-1 block is no longer one)
     const ctx = Array.from({ length: 40 }, (_, k) => { const c = newCtx(createRng(k + 1)); monoblock(c, b); return c; }).find((c) => c.solids.filter((s) => s.kind === "prism" && s.w === 20 && s.d === 5).length === 1)!;
     expect(ctx).toBeDefined();
     expect(ctx.solids.find((s) => s.kind === "prism" && s.w === 20 && s.d === 5)).toMatchObject({ at: { x: b.x + 2, y: b.y + b.d - 7 } });

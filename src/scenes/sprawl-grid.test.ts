@@ -55,7 +55,7 @@ describe("sprawl-grid", () => {
     expect(ps.length).toBeGreaterThan(40);
     expect(southParcels()).toBe(ps); // memoized
     for (const p of ps) {
-      expect(p.c.y).toBeGreaterThan(318);
+      expect(p.c.y).toBeGreaterThan(378); // #493: the coastal cut (was 318)
       expect(urban(p.c.x, p.c.y)).toBe(true);
       for (const [x, y] of [[p.rect.x, p.rect.y], [p.rect.x + p.rect.w, p.rect.y], [p.rect.x + p.rect.w, p.rect.y + p.rect.d], [p.rect.x, p.rect.y + p.rect.d]] as const) expect(urban(x, y)).toBe(true);
       expect(inCoverQuad(p.c.x, p.c.y, 16 / 9, 30)).toBe(true);

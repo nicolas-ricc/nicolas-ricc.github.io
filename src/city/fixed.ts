@@ -151,9 +151,17 @@ export function greenery(solids: Solid[], rng: Rng): void {
   }
   // east bank of the district: jungle between the estuary and the promenade, south of the old avenue
   jungleOnLand(solids, rng, { x0: Math.ceil(islandWestX(DISTRICT_ROW_Y)) + 2, x1: PROMENADE.x0 - 3, y0: DISTRICT_BANK_Y, y1: PROMENADE.y1 - 2 }, 10);
+  const posts = solids.filter((p) => p.kind === "prism" && p.mat === "steel").map(bounds);
   for (const c of CRATERS) { // inscribed square (0.7·r): every cone stays inside the circle
     const k = Math.floor(c.r * 0.7);
-    jungle(solids, rng, { x0: c.x - k, x1: c.x + k, y0: c.y - k, y1: c.y + k }, rng.int(4, 6), 0.2);
+    const tmp: Solid[] = [];
+    jungle(tmp, rng, { x0: c.x - k, x1: c.x + k, y0: c.y - k, y1: c.y + k }, rng.int(4, 6), 0.2);
+    // #493: the draws stay (same rng stream), but a cone whose box touches a steel prism already placed (street lamps and traffic lights among them) is dropped: a cone has radius up to 4, the crater's square only 3
+    for (const t of tmp) {
+      const b = bounds(t);
+      if (t.kind === "cone" && posts.some((q) => b.min.x < q.max.x && q.min.x < b.max.x && b.min.y < q.max.y && q.min.y < b.max.y)) continue;
+      solids.push(t);
+    }
   }
 }
 

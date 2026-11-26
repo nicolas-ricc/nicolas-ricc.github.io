@@ -11,7 +11,7 @@ import { PLINTH_H } from "../scenes/city-pieces";
 import { AVENUE, BLOCK_W, EAST_COLS, FREIGHT_ROW, ROWS, SIDEWALK, STREET, WEST_QUAY, blocks, estuaryEast, type Block, type Rect } from "../scenes/city-grid";
 import { SIGN_PANEL } from "../scenes/hotel-plan";
 import { TRAIN_CLEAR } from "../scenes/station";
-import { CITY_BOUNDS, HOTEL_LOT, PITCH, inCrossingPlaza, inPlazaMayor, onAxis, parcels, polyBox, type Parcel } from "../scenes/city-plan";
+import { COASTAL_CUT_Y, HOTEL_LOT, PITCH, PLAN_BOUNDS, inCrossingPlaza, inPlazaMayor, onAxis, parcels, polyBox, type Parcel } from "../scenes/city-plan";
 
 /**
  * Resume zoning: which neighborhood each block belongs to, which recipes
@@ -113,8 +113,8 @@ export const TELECOM_CELL = { col: -107, row: 231 } as const;
 export const WEST_DISTRICT_X = -54;
 /** Singular pieces by grid cell; `civic` ones take the `civic` neighborhood. */
 export const FIXED_PARCELS: readonly { cell: { col: number; row: number }; recipe: string; civic?: true }[] = [
-  { cell: { col: 163, row: 291 }, recipe: "civicPalace", civic: true },
-  { cell: { col: 133, row: 291 }, recipe: "theatre", civic: true },
+  { cell: { col: 163, row: 321 }, recipe: "civicPalace", civic: true },
+  { cell: { col: 133, row: 321 }, recipe: "theatre", civic: true },
   { cell: LIBRARY_CELL, recipe: "library", civic: true },
   { cell: { col: 43, row: 261 }, recipe: "constructionSite" },
   { cell: WATER_TOWER_CELL, recipe: "patioResidential" },
@@ -172,12 +172,12 @@ export function parcelNeighborhoods(ps: readonly Parcel[]): Neighborhood[] {
 export const MIN_LOT_SIDE = 7;
 export const tooSmall = (lot: Lot): boolean => Math.min(lot.w, lot.d) < MIN_LOT_SIDE;
 
-/** The parcels that get a building: those of `CITY_BOUNDS` with `c.x > west` (default: all) north of y 318, the hotel lot excluded (plinth only). The east ones (`c.x >= WEST_DISTRICT_X`) come first in `parcels()` order, then the west ones in the same order. Memoized per `west`. */
+/** The parcels that get a building: those of `PLAN_BOUNDS` with `c.x > west` (default: all) north of `COASTAL_CUT_Y` (378), the hotel lot excluded (plinth only). The east ones (`c.x >= WEST_DISTRICT_X`) come first in `parcels()` order, then the west ones in the same order. Memoized per `west`. */
 const builtCache = new Map<number, Parcel[]>();
 export function builtParcels(west = -Infinity): Parcel[] {
   let out = builtCache.get(west);
   if (!out) {
-    const ps = parcels(CITY_BOUNDS).filter((p) => p.c.x > west && p.c.y < 318 && !isHotelLot(p));
+    const ps = parcels(PLAN_BOUNDS).filter((p) => p.c.x > west && p.c.y < COASTAL_CUT_Y && !isHotelLot(p));
     out = [...ps.filter((p) => p.c.x >= WEST_DISTRICT_X), ...ps.filter((p) => p.c.x < WEST_DISTRICT_X)];
     builtCache.set(west, out);
   }
@@ -186,16 +186,22 @@ export function builtParcels(west = -Infinity): Parcel[] {
 /** The parcel that holds the hotel (plinth only, no building). */
 export const isHotelLot = (p: Parcel): boolean => p.rect.x === HOTEL_LOT.x && p.rect.y === HOTEL_LOT.y && p.rect.w === HOTEL_LOT.w && p.rect.d === HOTEL_LOT.d;
 
-/** Sides of a parcel's bounding box that face an open space (axis band, Plaza Mayor or crossing plaza): a point 0.5 outside the edge, at 1/4, 1/2 or 3/4, is in one. */
+/** How far outside a parcel's edge `parcelOpenSides` looks: 0.5 for an axis band or a crossing plaza; 1.1 for the Plaza Mayor (#493: it ends at y 320 and the grid row of the palace and the theatre starts at 321, a 1 u gap). */
+const OPEN_PROBE = 0.5, PLAZA_PROBE = 1.1;
+/** Sides of a parcel's bounding box that face an open space (axis band, Plaza Mayor or crossing plaza): a point `OPEN_PROBE` (`PLAZA_PROBE` for the Plaza Mayor) outside the edge, at 1/4, 1/2 or 3/4, is in one. */
 export function parcelOpenSides(p: Parcel): Side[] {
   const b = polyBox(p.poly), out: Side[] = [];
-  const open = (x: number, y: number): boolean => onAxis(x, y) || inPlazaMayor(x, y) || inCrossingPlaza(x, y);
+  // the edge point and its outward direction: open if the near probe meets a band or a crossing plaza, or the far one meets the Plaza Mayor
+  const open = (x: number, y: number, dx: number, dy: number): boolean => {
+    const nx = x + dx * OPEN_PROBE, ny = y + dy * OPEN_PROBE;
+    return onAxis(nx, ny) || inCrossingPlaza(nx, ny) || inPlazaMayor(x + dx * PLAZA_PROBE, y + dy * PLAZA_PROBE);
+  };
   for (const t of [0.25, 0.5, 0.75]) {
     const x = b.x + b.w * t, y = b.y + b.d * t;
-    if (open(x, b.y - 0.5) && !out.includes("n")) out.push("n");
-    if (open(x, b.y + b.d + 0.5) && !out.includes("s")) out.push("s");
-    if (open(b.x - 0.5, y) && !out.includes("w")) out.push("w");
-    if (open(b.x + b.w + 0.5, y) && !out.includes("e")) out.push("e");
+    if (open(x, b.y, 0, -1) && !out.includes("n")) out.push("n");
+    if (open(x, b.y + b.d, 0, 1) && !out.includes("s")) out.push("s");
+    if (open(b.x, y, -1, 0) && !out.includes("w")) out.push("w");
+    if (open(b.x + b.w, y, 1, 0) && !out.includes("e")) out.push("e");
   }
   return out;
 }

@@ -12,17 +12,19 @@ export const PITCH = 30, BLOCK = 24, STREET = 6;
 export const GRID_ORIGIN = { x: 13, y: 21 } as const;
 /** The land ends north at y 164 and east at x 184 (the quay side). */
 export const LAND = { y0: 164, x1: 184 } as const;
-export const PLAZA_MAYOR: Rect = { x: 132, y: 206, w: 54, d: 85 };
-export const PLAZA_CENTER: Vec2 = { x: 159, y: 248 };
-export const HOTEL_LOT: Rect = { x: 73, y: 234, w: 54, d: 51 };
+export const PLAZA_MAYOR: Rect = { x: 132, y: 206, w: 54, d: 114 };
+export const PLAZA_CENTER: Vec2 = { x: 159, y: 263 };
+export const HOTEL_LOT: Rect = { x: 73, y: 234, w: 54, d: 81 };
 export const BRIDGE_LANDING: Rect = { x: 132, y: 207, w: 54, d: 10 };
 export const CROSSING_PLAZA_R = 11;
 
 export interface Bounds2 { x0: number; y0: number; x1: number; y1: number }
 /** The city builds parcels inside these. `x0 = -Infinity` since #479: the city owns the west to the edge of the view (the lab cuts it with `city()`'s `opts.west`). */
-export const CITY_BOUNDS: Bounds2 = { x0: -Infinity, y0: LAND.y0, x1: LAND.x1, y1: 318 };
-/** The whole cover width, to the southern avenue (y 318). */
-export const PLAN_BOUNDS: Bounds2 = { x0: -Infinity, y0: LAND.y0, x1: LAND.x1, y1: 318 };
+export const CITY_BOUNDS: Bounds2 = { x0: -Infinity, y0: LAND.y0, x1: LAND.x1, y1: 348 }; // #493: the city's street domain ends at the Avenida del Sur (y 348)
+/** The city / coastal cut: the Avenida del Barrio. The city builds parcels north of it, the coastal neighbourhood (`southParcels`) south of it. #493: one constant (was 318 in many places). */
+export const COASTAL_CUT_Y = 378;
+/** The whole cover width, to the city / coastal cut: the domain of the parcels the city builds (#493: includes the 348..378 row). */
+export const PLAN_BOUNDS: Bounds2 = { x0: -Infinity, y0: LAND.y0, x1: LAND.x1, y1: COASTAL_CUT_Y };
 
 // ---------------------------------------------------------------- geometry
 
@@ -171,13 +173,13 @@ export type AxisKind = "costanera" | "avenue" | "diagonal" | "boulevard";
 export interface Axis { id: string; name: string; from: Vec2; to: Vec2; w: number; kind: AxisKind }
 /** The street axes that cut the grid, in drawing order. */
 export const AXES: readonly Axis[] = [
-  { id: "costanera", name: "Costanera", from: { x: 188, y: 160 }, to: { x: 188, y: 480 }, w: 8, kind: "costanera" },
+  { id: "costanera", name: "Costanera", from: { x: 188, y: 160 }, to: { x: 188, y: WORLD.y1 + BLEED.y }, w: 8, kind: "costanera" },
   { id: "plaza", name: "Avenida de la Plaza", from: { x: 132, y: 228 }, to: { x: -440, y: 228 }, w: 12, kind: "avenue" },
   { id: "diagonalNorte", name: "Diagonal Norte", from: { x: 132, y: 210 }, to: { x: -14, y: 169 }, w: 10, kind: "diagonal" },
-  { id: "diagonalSur", name: "Diagonal Sur", from: { x: 132, y: 291 }, to: { x: -420, y: 522 }, w: 10, kind: "diagonal" },
-  { id: "bulevar", name: "Bulevar Central", from: { x: 10, y: 160 }, to: { x: 10, y: 480 }, w: 20, kind: "boulevard" },
+  { id: "diagonalSur", name: "Diagonal Sur", from: { x: 132, y: 320 }, to: { x: -420, y: 551 }, w: 10, kind: "diagonal" },
+  { id: "bulevar", name: "Bulevar Central", from: { x: 10, y: 160 }, to: { x: 10, y: WORLD.y1 + BLEED.y }, w: 20, kind: "boulevard" },
   { id: "vias", name: "Avenida de las Vías", from: { x: 184, y: 169 }, to: { x: -440, y: 169 }, w: 10, kind: "avenue" },
-  { id: "sur", name: "Avenida del Sur", from: { x: 184, y: 318 }, to: { x: -440, y: 318 }, w: 10, kind: "avenue" },
+  { id: "sur", name: "Avenida del Sur", from: { x: 184, y: 348 }, to: { x: -440, y: 348 }, w: 10, kind: "avenue" },
   { id: "barrio", name: "Avenida del Barrio", from: { x: 184, y: 378 }, to: { x: -440, y: 378 }, w: 10, kind: "avenue" },
 ];
 export const axis = (id: string): Axis => {
@@ -213,7 +215,8 @@ export type Barrio = "clasico" | "transicion" | "moderno" | "bajo" | "residencia
 export function barrioAt(c: Vec2): Barrio {
   const d = Math.hypot(c.x - PLAZA_CENTER.x, c.y - PLAZA_CENTER.y);
   let b: Barrio = d < 105 ? "clasico" : d < 205 ? "transicion" : "moderno";
-  if (c.y > 318) b = "bajo";
+  if (c.y > CITY_BOUNDS.y1) b = "clasico"; // #493: the 348..378 row is city, clasico barrio
+  if (c.y > COASTAL_CUT_Y) b = "bajo";
   if (c.y > 380) b = "residencial";
   if (b === "moderno" && c.y > 290) b = "transicion";
   return b;
@@ -287,5 +290,5 @@ export function parcels(bounds: Bounds2): Parcel[] {
   parcelMemo.set(key, out);
   return out;
 }
-/** The point lies inside a parcel polygon (default: those of `CITY_BOUNDS`). */
-export const inParcel = (x: number, y: number, ps: readonly Parcel[] = parcels(CITY_BOUNDS)): boolean => ps.some((p) => pointInPoly(x, y, p.poly));
+/** The point lies inside a parcel polygon (default: those of `PLAN_BOUNDS`, so furniture also avoids the 348..378 row, #493). */
+export const inParcel = (x: number, y: number, ps: readonly Parcel[] = parcels(PLAN_BOUNDS)): boolean => ps.some((p) => pointInPoly(x, y, p.poly));

@@ -5,6 +5,7 @@ import { BLEED, HEADLAND, WORLD, distToHeadland, pointInPolygon, worldZoneAt } f
 import { allIsoColors } from "../map/palette-iso";
 import { STAIR_TOWER } from "./boiler-house";
 import { city } from "./city";
+import { COASTAL_CUT_Y } from "./city-plan";
 import { PLANT } from "./factory";
 import { LIGHTHOUSE } from "./sea";
 import { HOTEL_SLAB, hotel } from "./sign-hotel";
@@ -29,7 +30,7 @@ describe("world", () => {
       const b = bounds(s);
       // the city's west (#479) reaches the edge of the view, over the bleed; every other piece stays inside the world
       expect(b.min.x).toBeGreaterThanOrEqual(w.city!.solids.includes(s) ? WORLD.x0 - BLEED.x : WORLD.x0 - 2); expect(b.max.x).toBeLessThanOrEqual(WORLD.x1 + 1); // the district grows up to the west edge of the world
-      expect(b.min.y).toBeGreaterThanOrEqual(WORLD.y0 - 1); expect(b.max.y).toBeLessThanOrEqual(WORLD.y1 + 1);
+      expect(b.min.y).toBeGreaterThanOrEqual(WORLD.y0 - 1); expect(b.max.y).toBeLessThanOrEqual(w.city!.solids.includes(s) ? COASTAL_CUT_Y + 1 : WORLD.y1 + 1); // #493: the city builds the 348..378 row, over the bleed
     }
     for (const s of w.solids) { // the built margins live on the bleed
       const b = bounds(s);

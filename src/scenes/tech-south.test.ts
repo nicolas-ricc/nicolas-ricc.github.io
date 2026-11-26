@@ -38,18 +38,19 @@ const fixedOf = (c: { col: number; row: number }) => { const xs = south.filter((
 const neighbors = (a: Parcel, b: Parcel) => (a.cell.row === b.cell.row && Math.abs(a.cell.col - b.cell.col) === 30) || (a.cell.col === b.cell.col && Math.abs(a.cell.row - b.cell.row) === 30);
 
 describe("south parcels (#478)", () => {
-  it("southParcels(): more than 40 parcels, all south of y 318 on urban land inside the cover", () => {
+  it("southParcels(): more than 40 parcels, all south of the coastal cut (y 378) on urban land inside the cover", () => {
     const ps = southParcels();
     expect(ps.length).toBeGreaterThan(40);
     for (const p of ps) {
-      expect(p.c.y).toBeGreaterThan(318);
+      expect(p.c.y).toBeGreaterThan(378); // #493: the cut moved from 318 to COASTAL_CUT_Y
       expect(southUrban(p.c.x, p.c.y)).toBe(true);
       for (const [x, y] of rectCorners(p.rect)) expect(southUrban(x, y), `${p.cell.col},${p.cell.row}`).toBe(true);
       expect(inCoverQuad(p.c.x, p.c.y, 16 / 9, COVER_MARGIN)).toBe(true);
     }
   });
-  it("the row right south of the Avenida del Sur is built (the 318..324 strip is asphalt, not a hole)", () => {
-    for (const col of [103, 133, 163]) expect(southParcels().some((p) => p.cell.col === col && p.cell.row === 321), `${col}`).toBe(true);
+  it("the row right south of the Avenida del Barrio (the cut, y 378) is built", () => {
+    // #493: was the row 321 south of the Avenida del Sur; that row is now city
+    for (const col of [103, 133, 163]) expect(southParcels().some((p) => p.cell.col === col && p.cell.row === 381), `${col}`).toBe(true);
   });
   it("techBlocks(): one block per south parcel", () => {
     expect(blocks).toEqual(southParcels().map(parcelBlock));
@@ -91,12 +92,12 @@ describe("zoning of the south (#478)", () => {
 });
 
 describe("tech on the south parcels (#478)", () => {
-  it("tech builds only parcels south of y 318: nothing of tech east of the city's west edge reaches north of 318", () => {
+  it("tech builds only parcels south of the city: nothing of tech east of the city's west edge reaches north of y 318", () => {
     for (const s of scene.solids) {
       const q = bounds(s);
-      if (q.min.x >= CITY_EDGE.west) expect(q.min.y, JSON.stringify(q)).toBeGreaterThanOrEqual(318);
+      if (q.min.x >= CITY_EDGE.west) expect(q.min.y, JSON.stringify(q)).toBeGreaterThanOrEqual(318); // #493: the waterfront (quay from 324, its first bollard at 323.75) is the northmost; the parcels start past the Avenida del Sur (y 348)
     }
-    for (const { p } of south) expect(p.c.y).toBeGreaterThan(318);
+    for (const { p } of south) expect(p.c.y).toBeGreaterThan(378); // #493: the cut moved from 318 to COASTAL_CUT_Y
   });
 
   it("the base of every built parcel follows its polygon (a low piece that brings its own ground stays at street level, as in the city)", () => {
@@ -113,7 +114,7 @@ describe("tech on the south parcels (#478)", () => {
     for (const c of PLAZAS) expect(fixedOf(c).k).toBe("plaza");
     expect(count("monoblock")).toBeGreaterThanOrEqual(3);
     expect(count("houses")).toBeGreaterThanOrEqual(5);
-    expect(count("low")).toBeGreaterThanOrEqual(10);
+    expect(count("low")).toBeGreaterThanOrEqual(9); // #493: the longer bands cut one narrow parcel off
   });
 
   it("auditorium and arena sit on parcels, not on an axis", () => {
@@ -192,11 +193,12 @@ describe("south avenues (#478)", () => {
     expect(all.filter((s) => s.kind === "prism" && s.mat === "steel" && s.h === 6.5 && s.at.y > 330).length, "costanera lamps").toBeGreaterThan(10);
   });
 
-  it("crossing plaza (10, 342.1) with tiles and one lamp; crosswalks and traffic lights at Avenida del Barrio × Bulevar", () => {
-    expect(furniture.ground.concat(furniture.solids).some((s) => s.kind === "poly" && s.mat === "plaza" && pointInPoly(10, 342.1, s.footprint))).toBe(true);
-    expect(lamps.some((l) => Math.hypot(l.at.x + 0.3 - 10, l.at.y + 0.3 - 342.1) < 1)).toBe(true);
+  it("crossing plaza (10, 371.05) with tiles and one lamp; crosswalks and traffic lights at Avenida del Barrio", () => {
+    expect(furniture.ground.concat(furniture.solids).some((s) => s.kind === "poly" && s.mat === "plaza" && pointInPoly(10, 371.05, s.footprint))).toBe(true);
+    expect(lamps.some((l) => Math.hypot(l.at.x + 0.3 - 10, l.at.y + 0.3 - 371.05) < 1)).toBe(true);
     const zebra = furniture.ground.filter((s): s is Solid & { kind: "strip" } => s.kind === "strip" && s.width === 0.8 && s.path.every((q) => Math.hypot(q.x - 10, q.y - 378) < 25));
-    expect(zebra.length).toBeGreaterThanOrEqual(6);
+    // #493: the Barrio × Bulevar crossing (10, 378) is inside the crossing plaza (10, 371.05), which has no zebras of its own (was ≥ 6): the two within 25 u (x 21.6 and 23.2) are the Barrio × Diagonal Sur crosswalks
+    expect(zebra.length).toBeGreaterThanOrEqual(2);
   });
 
   it("south street furniture stays off the lots and on urban ground", () => {

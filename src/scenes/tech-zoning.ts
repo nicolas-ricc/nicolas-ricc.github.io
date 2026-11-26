@@ -2,6 +2,7 @@ import { WORLD } from "../map/geo";
 import type { Rng } from "../map/seed";
 import { ROWS, type Rect } from "./city-grid";
 import type { SprawlBlock } from "./sprawl-grid";
+import { COASTAL_CUT_Y } from "./city-plan";
 
 /** Zoning of the tech district: decides the kind of each block in a pre-pass, before building anything. */
 export type Kind = "monoblock" | "houses" | "plaza" | "school" | "club" | "arena" | "auditorium" | "low";
@@ -10,12 +11,12 @@ export type Kind = "monoblock" | "houses" | "plaza" | "school" | "club" | "arena
 export const MONOBLOCK_D = 130;
 /** Fixed parcels of the neighborhood, by cell of the city plan. */
 export const ARENA = { col: 103, row: 411 } as const;
-export const AUDITORIUM = { col: 13, row: 351 } as const;
+export const AUDITORIUM = { col: 43, row: 381 } as const;
 export const SCHOOL = { col: 103, row: 501 } as const, CLUB = { col: 133, row: 531 } as const;
 export const PLAZAS = [{ col: 133, row: 471 }, { col: 73, row: 441 }] as const;
 
-/** Is the block a south parcel of the neighborhood (centroid south of y 318)? */
-export const inNeighborhood = (b: SprawlBlock): boolean => b.parcel !== undefined && b.parcel.c.y > 318;
+/** Is the block a south parcel of the neighborhood (centroid south of the coastal cut, `COASTAL_CUT_Y`)? */
+export const inNeighborhood = (b: SprawlBlock): boolean => b.parcel !== undefined && b.parcel.c.y > COASTAL_CUT_Y;
 /** Checkerboard parity of the block: a parcel by its cell, a west block by the old grid; immediate neighbors alternate 0/1. */
 export const blockParity = (b: SprawlBlock | Rect): 0 | 1 => {
   const p = "parcel" in b ? b.parcel : undefined;

@@ -46,7 +46,7 @@ describe("waterfront", () => {
   it("quay without bollards", () => {
     const pier = prisms.filter((p) => p.mat === "plaza" && p.at.z === -1);
     expect(pier).toHaveLength(1);
-    expect(bounds(pier[0]!)).toMatchObject({ min: { x: 192, y: 324 }, max: { x: 198, y: 624 } });
+    expect(bounds(pier[0]!)).toMatchObject({ min: { x: 192, y: 324 }, max: { x: 198, y: 714 } }); // #493: to the south edge;
     expect(own.some((s) => s.kind === "cylinder" && s.mat === "rust")).toBe(false);
   });
 
@@ -56,18 +56,18 @@ describe("waterfront", () => {
       const hit = strips.filter((s) => s.mat === mat && near(s.width, width) && near(s.z, z) && s.path.every((p) => near(p.x, x)));
       expect(hit, mat).toHaveLength(1);
       const ys = hit[0]!.path.map((p) => p.y);
-      expect(Math.min(...ys), mat).toBe(324); expect(Math.max(...ys), mat).toBe(624);
+      expect(Math.min(...ys), mat).toBe(324); expect(Math.max(...ys), mat).toBe(714);
     }
   });
 
   it("tipu trees", () => {
-    expect(tipuTrees).toHaveLength(12);
+    expect(tipuTrees).toHaveLength(16); // #493: every 24 from 336 to 696
     for (const t of tipuTrees) { expect(t.sides).toBe(6); expect(t.r).toBe(2.2); expect(t.h).toBe(4.5); }
-    expect(tipuTrees.map((t) => t.at.y).sort((a, b) => a - b)).toEqual(Array.from({ length: 12 }, (_, k) => 336 + 24 * k));
+    expect(tipuTrees.map((t) => t.at.y).sort((a, b) => a - b)).toEqual(Array.from({ length: 16 }, (_, k) => 336 + 24 * k));
   });
 
   it("railing: pierced panels", () => {
-    expect(panels).toHaveLength(27);
+    expect(panels).toHaveLength(35); // #493: 33 panels to y 714, three accesses
     for (const p of panels) {
       expect(p.d).toBeGreaterThanOrEqual(0.15);
       expect(p.at.z).toBe(0.6);
@@ -77,7 +77,7 @@ describe("waterfront", () => {
 
   it("continuous railing except at ACCESSES", () => {
     const spans = panels.map((p) => [p.at.y, p.at.y + p.d] as const).sort((a, b) => a[0] - b[0]);
-    const gaps: [number, number][] = [[324, spans[0]![0]], ...spans.slice(1).map((s, i) => [spans[i]![1], s[0]] as [number, number]), [spans[spans.length - 1]![1], 624]];
+    const gaps: [number, number][] = [[324, spans[0]![0]], ...spans.slice(1).map((s, i) => [spans[i]![1], s[0]] as [number, number]), [spans[spans.length - 1]![1], 714]];
     const holes = gaps.filter(([a, b]) => b - a > 0.5);
     expect(holes).toHaveLength(ACCESSES.length);
     for (const [a, b] of holes) expect(b - a).toBeLessThanOrEqual(2.2);
@@ -87,8 +87,8 @@ describe("waterfront", () => {
   });
 
   it("posts with capital every 24 u from y 324", () => {
-    expect(posts).toHaveLength(13); expect(capitals).toHaveLength(13);
-    for (let k = 0; k <= 12; k++) {
+    expect(posts).toHaveLength(17); expect(capitals).toHaveLength(17);
+    for (let k = 0; k <= 16; k++) { // #493: to y 708
       const y = 324 + 24 * k;
       const post = posts.find((p) => near(center(p).x, 197.6) && near(center(p).y, y));
       expect(post, `post ${y}`).toBeDefined();
@@ -101,8 +101,8 @@ describe("waterfront", () => {
 
   it("street lamps every ≤ 16 u along the whole length", () => {
     const ys = lamps.map((p) => bounds(p).min.y).sort((a, b) => a - b);
-    expect(ys).toHaveLength(20);
-    expect(ys[0]).toBeLessThanOrEqual(340); expect(ys[ys.length - 1]).toBeGreaterThanOrEqual(608);
+    expect(ys).toHaveLength(26); // #493: every 15 from 330 to 705
+    expect(ys[0]).toBeLessThanOrEqual(340); expect(ys[ys.length - 1]).toBeGreaterThanOrEqual(700);
     for (let i = 1; i < ys.length; i++) expect(ys[i]! - ys[i - 1]!).toBeLessThanOrEqual(16);
     for (const p of lamps) {
       const b = bounds(p);

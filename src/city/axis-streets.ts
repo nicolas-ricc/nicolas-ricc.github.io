@@ -81,7 +81,7 @@ export function boulevardPlanter(solids: Solid[], bounds: Bounds2, stop: Stop): 
   }
 }
 
-/** Where two axes cross inside `bounds`, outside the crossing plazas. A crossing on the north edge (`y0`) belongs to the bounds north of it: the city (`y1` 318) owns the crossings on the y 318 avenue, the south (`y0` 318) does not. */
+/** Where two axes cross inside `bounds`, outside the crossing plazas. A crossing on the north edge (`y0`) belongs to the bounds north of it: the city (`y1` 348) owns the crossings on the y 348 avenue, the south (`y0` 348) does not. */
 export function axisCrossings(bounds: Bounds2, stop: Stop): Vec2[] {
   const out: Vec2[] = [], as = furnished();
   for (let i = 0; i < as.length; i++) for (let j = i + 1; j < as.length; j++) {
@@ -95,7 +95,7 @@ export function axisCrossings(bounds: Bounds2, stop: Stop): Vec2[] {
 
 /** Crosswalks across each axis on both sides of every crossing (3 strips of 0.8, 1.6 apart) and two traffic lights (off) at opposite corners. */
 export function axisCrosswalks(ground: Solid[], solids: Solid[], bounds: Bounds2, stop: Stop): void {
-  // the furniture of a crossing owned by these bounds may straddle their edge (the crossings on the y 318 avenue sit on it)
+  // the furniture of a crossing owned by these bounds may straddle their edge (the crossings on the y 348 avenue sit on it)
   const ok = (x: number, y: number): boolean => inBounds(bounds, x, y, -CROSSING_REACH) && !stop(x, y);
   const as = furnished();
   for (const c of axisCrossings(bounds, stop)) {

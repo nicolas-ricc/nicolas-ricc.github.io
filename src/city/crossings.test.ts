@@ -12,13 +12,13 @@ const pair = (a: string, b: string) => [a, b].sort().join("–");
 
 describe("axis spans (#473)", () => {
   const SPANS: Record<string, [Vec2, Vec2]> = {
-    costanera: [{ x: 188, y: 164 }, { x: 188, y: 318 }],
+    costanera: [{ x: 188, y: 164 }, { x: 188, y: 348 }], // #493: the city's street domain ends at y 348 (CITY_BOUNDS.y1)
     plaza: [{ x: 132, y: 228 }, { x: -440, y: 228 }], // the axis's own end: the cover bounds the domain, not the span (#479)
     diagonalNorte: [{ x: 132, y: 210 }, { x: -14, y: 169 }],
-    diagonalSur: [{ x: 132, y: 291 }, { x: 132 - (27 * 552) / 231, y: 318 }],
-    bulevar: [{ x: 10, y: 164 }, { x: 10, y: 318 }],
+    diagonalSur: [{ x: 132, y: 320 }, { x: 132 - (28 * 552) / 231, y: 348 }], // #493: from (132, 320) to the cut at y 348
+    bulevar: [{ x: 10, y: 164 }, { x: 10, y: 348 }],
     vias: [{ x: 184, y: 169 }, { x: -440, y: 169 }],
-    sur: [{ x: 184, y: 318 }, { x: -440, y: 318 }],
+    sur: [{ x: 184, y: 348 }, { x: -440, y: 348 }],
   };
 
   it("axis spans match the city part of each axis", () => {
@@ -39,9 +39,9 @@ describe("crossings (#473)", () => {
     for (const c of crossings()) if (c.other) found.set(pair(c.a.id, c.other.id), c.at);
     const want: Record<string, Vec2> = {
       [pair("costanera", "vias")]: { x: 188, y: 169 },
-      [pair("costanera", "sur")]: { x: 188, y: 318 },
+      [pair("costanera", "sur")]: { x: 188, y: 348 }, // #493: the avenue at y 348
       [pair("plaza", "bulevar")]: { x: 10, y: 228 },
-      [pair("bulevar", "sur")]: { x: 10, y: 318 },
+      [pair("bulevar", "sur")]: { x: 10, y: 348 },
       [pair("diagonalNorte", "vias")]: { x: -14, y: 169 },
     };
     expect([...found.keys()].sort()).toEqual(Object.keys(want).sort());
@@ -65,13 +65,13 @@ describe("crossings (#473)", () => {
       ...["x-230", "x-200", "x-170", "x-140", "x-110", "x-80", "x-50", "x-20", "x40", "x70", "x100", "x130"].map((s) => `plaza:${s}`), // x 130: the tower island left with #474; x −80 and west: #479 (measured on agent/479 with the west streets)
       ...["x40", "x70", "x100", "x130", "y198"].map((s) => `diagonalNorte:${s}`),
       ...["x100", "x130"].map((s) => `diagonalSur:${s}`),
-      ...["y198", "y258", "y288"].map((s) => `bulevar:${s}`),
+      ...["y198", "y258", "y288", "y318"].map((s) => `bulevar:${s}`),
       ...["x-290", "x-260", "x-230", "x-200", "x-170", "x-140", "x-110", "x-80", "x-50", "x-20", "x40", "x70", "x100", "x130", "x160"].map((s) => `vias:${s}`),
-      ...["x-140", "x-110", "x-80", "x-50", "x-20", "x40", "x100", "x130", "x160"].map((s) => `sur:${s}`),
+      ...["x-110", "x-80", "x-50", "x-20", "x40", "x100", "x130", "x160"].map((s) => `sur:${s}`), // #493: the avenue is at y 348: y 318 is now an ordinary street inside the city (bulevar:y318), and x −140 leaves the cover at y 348 (sur:x-140 gone)
     ].sort();
     expect(got).toEqual(want);
     expect(got).toHaveLength(47); // 30 east of x −54 (as before #479) + 17 west of it, measured on agent/479 with the west streets
-    expect(got.filter((g) => !/:x-/.test(g) || Number(g.split(":x")[1]) >= -54)).toHaveLength(30);
+    expect(got.filter((g) => !/:x-/.test(g) || Number(g.split(":x")[1]) >= -54)).toHaveLength(31); // #493: +1 east (bulevar:y318), −1 west (sur:x-140)
   });
 });
 

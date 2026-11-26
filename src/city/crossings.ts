@@ -6,13 +6,13 @@ import { AXES, BLOCK, CITY_BOUNDS, GRID_ORIGIN, HOTEL_LOT, LAND, PITCH, PLAZA_MA
 /** Axes × axes and axes × ordinary streets: where the crossings and the zebra crosswalks of the west bank go (#473). */
 
 /** The city's domain: north of its south edge, inside the cover (`COVER_MARGIN`): the cover is the only west bound (#479). */
-// 1e-9: a centroid computed on the south edge (the crossing plaza at y 318) lands a few ulps past it
+// 1e-9: a centroid computed on the south edge (the crossing plaza at y 348) lands a few ulps past it
 export const inDomain = (p: Vec2): boolean => p.y <= CITY_BOUNDS.y1 + 1e-9 && inCoverQuad(p.x, p.y, 16 / 9, COVER_MARGIN);
 
 const strictlyIn = (r: Rect, p: Vec2): boolean => p.x > r.x && p.x < r.x + r.w && p.y > r.y && p.y < r.y + r.d;
 
 const spans = new Map<string, readonly [Vec2, Vec2] | null>();
-/** The axis center segment in the city: inside `LAND` (the costanera clipped on y only, at its own x) and cut exactly at y = 318 (its west end is the cover's: `inDomain` decides). */
+/** The axis center segment in the city: inside `LAND` (the costanera clipped on y only, at its own x) and cut exactly at y = 348 (`CITY_BOUNDS.y1`) (its west end is the cover's: `inDomain` decides). */
 export function axisSpan(a: Axis): readonly [Vec2, Vec2] | null {
   const hit = spans.get(a.id);
   if (hit !== undefined) return hit;
@@ -49,7 +49,7 @@ export function coverWest(y: number): number | null {
   }
   return null;
 }
-/** Some point of the column x on y in [LAND.y0, 318] is inside the cover. */
+/** Some point of the column x on y in [LAND.y0, CITY_BOUNDS.y1] is inside the cover. */
 const columnInCover = (x: number): boolean => { for (let y = LAND.y0; y <= CITY_BOUNDS.y1; y++) if (inCoverQuad(x, y, 16 / 9, COVER_MARGIN)) return true; return false; };
 
 /** Ordinary street centers, by the rule `gridLines` follows: those that run along an axis are the axis. */

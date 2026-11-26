@@ -39,7 +39,9 @@ describe("zoneKinds", () => {
     const kinds = world();
     // measured with zoneRng(SEED, "cv", 2) on techBlocks() on agent/479 without the west (#479): 68 south parcels, no west blocks
     // (#478 had measured tower 10, campus 6, monoblock 12, houses 23, park 6, plaza 5, school 1, club 1, telecom 1, arena 1, auditorium 1, low 30 with 29 west blocks first)
-    expect(Object.fromEntries(KINDS.map((k) => [k, count(kinds, k)]))).toEqual({ monoblock: 5, houses: 21, plaza: 8, school: 1, club: 1, arena: 1, auditorium: 1, low: 30 });
+    expect(Object.fromEntries(KINDS.map((k) => [k, count(kinds, k)]))).toEqual({ monoblock: 3, houses: 18, plaza: 10, school: 1, club: 1, arena: 1, auditorium: 1, low: 9 });
+    // #493: measured (was monoblock 5, houses 21, plaza 8, low 30): the neighborhood starts at the cut y 378, so the two old rows 321 and 351 are city and the "bajo" barrio (c.y 318..380) is gone: no south parcel has 378 < c.y <= 380, all are residencial, `low` only by the neighbour rule
+    // #493 (Task 2): low 10 → 9: the bulevar and costanera bands now reach y 714 and cut one narrow parcel (a `low` by the narrow rule) off the tail of the list
   });
 
   it("blockParity alternates between neighboring parcels, by cell", () => {

@@ -81,8 +81,9 @@ describe("zoning", () => {
     expect(maxHeightFor(blockAt(42, 92))).toBe(MAX_BUILDING_H); // off the panel's screen span
   });
 
-  it("no parcel but the one at (73, 291) is in front of the sign's panel", () => {
-    expect(builtParcels().filter((p) => maxHeightFor(p.rect) < MAX_BUILDING_H).map((p) => `${p.cell.col},${p.cell.row}`)).toEqual(["73,291"]);
+  it("no built parcel is in front of the sign's panel", () => {
+    // #493: the longer hotel lot (73, 234, 54 × 81) now covers the cell (73, 291), the only parcel that was in front of the panel
+    expect(builtParcels().filter((p) => maxHeightFor(p.rect) < MAX_BUILDING_H).map((p) => `${p.cell.col},${p.cell.row}`)).toEqual([]);
   });
 
   it("open: east bank", () => {
@@ -208,19 +209,19 @@ describe("zoning", () => {
 });
 
 // ---------------------------------------------------------------- #472: zoning over the parcels of city-plan
-import { CITY_BOUNDS, HOTEL_LOT, axisBand, AXES, parcels, type Parcel } from "../scenes/city-plan";
+import { COASTAL_CUT_Y, PLAN_BOUNDS, HOTEL_LOT, axisBand, AXES, parcels, type Parcel } from "../scenes/city-plan";
 
 describe("zoning over parcels (#472)", () => {
   const sameRect = (a: { x: number; y: number; w: number; d: number }, b: { x: number; y: number; w: number; d: number }) => a.x === b.x && a.y === b.y && a.w === b.w && a.d === b.d;
   const isHotel = (p: Parcel) => sameRect(p.rect, HOTEL_LOT);
-  const built = parcels(CITY_BOUNDS).filter((p) => p.c.y < 318); // CITY_BOUNDS.x0 = -Infinity since #479: the west is built
+  const built = parcels(PLAN_BOUNDS).filter((p) => p.c.y < COASTAL_CUT_Y); // #493: the city builds PLAN_BOUNDS parcels (to the cut y 378)
   const placedParcels = (): Placed[] => worldAssign().filter((p) => p.parcel);
 
-  it("every parcel of CITY_BOUNDS gets exactly one Placed, except HOTEL_LOT", () => {
+  it("every parcel of PLAN_BOUNDS gets exactly one Placed, except HOTEL_LOT", () => {
     const placed = placedParcels();
     for (const p of built) expect(placed.filter((q) => q.parcel === p).length, `${p.cell.col},${p.cell.row}`).toBe(isHotel(p) ? 0 : 1);
     expect(placed).toHaveLength(built.filter((p) => !isHotel(p)).length);
-    for (const q of placed) expect(q.parcel!.c.y < 318).toBe(true);
+    for (const q of placed) expect(q.parcel!.c.y < COASTAL_CUT_Y).toBe(true);
   });
 
   it("a parcel's block is its rect, west bank, row −2, kind parcel; its lot is the rect minus the sidewalk at z 0 (the bounding box of the inset polygon on oblique polygon lots)", () => {
@@ -249,12 +250,12 @@ describe("zoning over parcels (#472)", () => {
 
   it("barrio → neighborhood: each barrio keeps its own (residencial = bajo), bars north of the plaza; the neighbour rule only lowers", () => {
     const map = { clasico: "clasico", transicion: "transicion", moderno: "moderno", bajo: "bajo", residencial: "bajo" } as const;
-    const ps = placedParcels().map((q) => q.parcel!), ns = parcelNeighborhoods(ps);
+    const placed = placedParcels(), ps = placed.map((q) => q.parcel!), ns = parcelNeighborhoods(ps); // #493: `placed` hoisted out of the loop (the 81 parcels made the repeated call time out at 5 s)
     ps.forEach((p, i) => {
       const bars = p.c.y < 206 && p.rect.x + p.rect.w >= 157;
       const civic = fixedParcel(p)?.civic === true; // the three civic pieces take no part in the barrios
       expect(neighborhoodOfParcel(p), `${p.cell.col},${p.cell.row}`).toBe(bars ? "bars" : civic ? "civic" : map[p.barrio]);
-      expect(placedParcels()[i]!.neighborhood).toBe(ns[i]);
+      expect(placed[i]!.neighborhood).toBe(ns[i]);
       if (!bars && !civic) expect(BARRIO_STEP[ns[i] as CityBarrio], `${p.cell.col},${p.cell.row}`).toBeLessThanOrEqual(BARRIO_STEP[map[p.barrio]]);
     });
   });
@@ -288,7 +289,7 @@ import { polygonDistance } from "../kit/lettering";
 import { chamferPoly, insetPoly } from "../kit/polygon";
 import { outsideConvex, triangleOverlap } from "../kit/lot-fixtures";
 import { CRATERS } from "../scenes/city-grid";
-import { PITCH as GRID_PITCH, PLAN_BOUNDS, PLAZA_MAYOR, axis, inPlazaMayor, onAxis, pointInPoly, polyBox } from "../scenes/city-plan";
+import { PITCH as GRID_PITCH, PLAZA_MAYOR, axis, inPlazaMayor, onAxis, pointInPoly, polyBox } from "../scenes/city-plan";
 import type { Side } from "../kit/types";
 import { city } from "../scenes/city";
 import {
@@ -446,13 +447,14 @@ describe("barrios (#477)", () => {
     expect(ochava([{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 6.5 }, { x: 0, y: 6.5 }], 2.4)).toEqual(chamferPoly(chamferPoly([{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 6.5 }, { x: 0, y: 6.5 }], 2.4), 2));
 
     const wedges = builtParcels().filter((p) => p.poly.some((a, i) => { const b = p.poly[(i + 1) % p.poly.length]!; return Math.abs(a.x - b.x) > 1e-6 && Math.abs(a.y - b.y) > 1e-6; }));
-    const w = wedges.find((p) => p.cell.col === 73 && p.cell.row === 291)!;
+    const w = wedges.find((p) => p.cell.col === 73 && p.cell.row === 201)!; // #493: the wedge (73, 291) is now inside the hotel lot; (73, 201), clasico, is cut by the Diagonal Norte
     const inset = insetPoly(w.poly, SIDEWALK)!, box = { x: Math.min(...inset.map((v) => v.x)), y: Math.min(...inset.map((v) => v.y)) };
     const c = parcelLot(w, "clasico", "classic", false, [], 8.5);
     expect(c.poly).toEqual(ochava(inset, 2.4));
     expect(c.x).toBeCloseTo(box.x, 9);
     expect(c.y).toBeCloseTo(box.y, 9);
-    expect(c.poly!.some((v) => Math.hypot(v.x - 95.5, v.y - 292.5) < 1e-6)).toBe(false); // the short-edged right corner is cut by the second pass
+    const cut = inset.find((v) => Math.abs(v.x - 95.5) < 1e-6 && v.y < 207)!; // #493: the inset corner of the diagonal edge and x 95.5
+    expect(c.poly!.some((v) => Math.hypot(v.x - cut.x, v.y - cut.y) < 1e-6)).toBe(false); // the short-edged right corner is cut by the second pass
     const shop = parcelLot(w, "bars", "shopRow", false, [], 18);
     expect(shop).toMatchObject({ x: w.rect.x + SIDEWALK, y: w.rect.y + SIDEWALK, w: w.rect.w - 2 * SIDEWALK, d: w.rect.d - 2 * SIDEWALK });
     expect(shop.poly).toBeUndefined();
@@ -478,7 +480,7 @@ describe("barrios (#477)", () => {
 
   it("every fixed parcel is built, on a lot the kit can use", () => {
     expect(FIXED_PARCELS.map((f) => `${f.recipe} ${f.cell.col},${f.cell.row}${f.civic ? " civic" : ""}`)).toEqual([
-      "civicPalace 163,291 civic", "theatre 133,291 civic", `library ${LIBRARY_CELL.col},${LIBRARY_CELL.row} civic`, "constructionSite 43,261", `patioResidential ${WATER_TOWER_CELL.col},${WATER_TOWER_CELL.row}`, `telecom ${TELECOM_CELL.col},${TELECOM_CELL.row}`,
+      "civicPalace 163,321 civic", "theatre 133,321 civic", `library ${LIBRARY_CELL.col},${LIBRARY_CELL.row} civic`, "constructionSite 43,261", `patioResidential ${WATER_TOWER_CELL.col},${WATER_TOWER_CELL.row}`, `telecom ${TELECOM_CELL.col},${TELECOM_CELL.row}`,
     ]);
     expect(WATER_TOWER_CELL).toEqual({ col: 13, row: 291 });
     for (const f of FIXED_PARCELS) {
@@ -486,25 +488,24 @@ describe("barrios (#477)", () => {
       expect(hits, `${f.recipe}`).toHaveLength(1);
       expect(hits[0]!.placed.recipe).toBe(f.recipe);
       expect(tooSmall(hits[0]!.placed.lot), f.recipe).toBe(false);
-      expect(hits[0]!.placed.neighborhood).toBe(f.civic ? "civic" : f.recipe === "telecom" ? "moderno" : "transicion"); // the TELECOM parcel is in the moderno barrio (#479)
+      expect(hits[0]!.placed.neighborhood).toBe(f.civic ? "civic" : f.recipe === "telecom" ? "moderno" : f.recipe === "constructionSite" ? "clasico" : "transicion"); // the TELECOM parcel is in the moderno barrio (#479); #493: the plaza centre moved 15 u south, so the construction site (centroid ~ (55, 273)) is now 104.5 u from it (< 105): clasico
     }
   });
 
   it("civic palace, theatre and library front the plaza or the axis", () => {
     const band = axisBand(axis("plaza"));
+    // #493: the plaza ends at y 320 (114 deep) and the grid row of the palace and theatre starts at 321: the plaza is probed 1.1 out, the band 0.5 (as before)
     const fronts = (p: Parcel, open: Side[]) => {
       const b = polyBox(p.poly);
-      return open.some((s) => [0.25, 0.5, 0.75].some((t) => {
-        const x = s === "w" ? b.x - 0.5 : s === "e" ? b.x + b.w + 0.5 : b.x + b.w * t, y = s === "n" ? b.y - 0.5 : s === "s" ? b.y + b.d + 0.5 : b.y + b.d * t;
-        return inPlazaMayor(x, y) || pointInPoly(x, y, band);
-      }));
+      const at = (s: Side, t: number, G: number) => ({ x: s === "w" ? b.x - G : s === "e" ? b.x + b.w + G : b.x + b.w * t, y: s === "n" ? b.y - G : s === "s" ? b.y + b.d + G : b.y + b.d * t });
+      return open.some((s) => [0.25, 0.5, 0.75].some((t) => { const q = at(s, t, 1.1), r = at(s, t, 0.5); return inPlazaMayor(q.x, q.y) || pointInPoly(r.x, r.y, band); }));
     };
     for (const name of ["civicPalace", "theatre", "library"]) {
       const q = onParcels.find((r) => r.placed.recipe === name)!;
       expect(q, name).toBeDefined();
       expect(fronts(q.placed.parcel!, q.placed.lot.open), name).toBe(true);
     }
-    expect(PLAZA_MAYOR).toEqual({ x: 132, y: 206, w: 54, d: 85 });
+    expect(PLAZA_MAYOR).toEqual({ x: 132, y: 206, w: 54, d: 114 }); // #493: 30 u longer
   });
 
   it("the library falls back from (103, 201) to the nearest parcel that fronts the plaza or the axis", () => {

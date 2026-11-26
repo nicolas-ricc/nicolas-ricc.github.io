@@ -1,6 +1,6 @@
-import { CELL_BLEED, COVER_MARGIN, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, inCoverQuad, islandEastX, islandWestX, riverCenter } from "../map/geo";
+import { BLEED, CELL_BLEED, COVER_MARGIN, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, inCoverQuad, islandEastX, islandWestX, riverCenter } from "../map/geo";
 import { CITY_EDGE, type Rect } from "./city-grid";
-import { LAND, parcels, type Parcel } from "./city-plan";
+import { AXES, COASTAL_CUT_Y, LAND, axisBand, parcels, type Parcel } from "./city-plan";
 
 /**
  * Geography of the margins: which part of the bleed is built land and of
@@ -38,6 +38,20 @@ export const bayWater = (x: number, y: number): boolean => y < WORLD.y0 && x >= 
 /** South of the content the estuary continues until it joins the sea, wrapping around the south tip of the island (it rounds off and ends at y ≈ 380; after that it is all water). */
 export const estuaryWater = (x: number, y: number): boolean => y > WORLD.y1 && x >= QUAY_X && x < ZONE_SPLIT_X && (x <= islandWestX(y) || x >= islandEastX(y));
 
+let corridor: [number, number][] | undefined;
+/**
+ * True when `x` lies in the closed x-range of the 18 u bleed cells (anchored at `WORLD.x0 - BLEED.x`) that the band of an axis running to the bleed edge
+ * crosses (the boulevard: x −6..30; the waterfront promenade: 174..192, #493). Closed: the vertex columns on the outer cell edges are asphalt too, so the cells are flat.
+ */
+export function southAxisCorridor(x: number): boolean {
+  const o = WORLD.x0 - BLEED.x;
+  corridor ??= AXES.filter((a) => a.to.y >= WORLD.y1 + BLEED.y).map((a) => {
+    const xs = axisBand(a).map((q) => q.x);
+    return [o + CELL_BLEED * Math.floor((Math.min(...xs) - o) / CELL_BLEED), o + CELL_BLEED * Math.ceil((Math.max(...xs) - o) / CELL_BLEED)] as [number, number];
+  });
+  return corridor.some(([lo, hi]) => x >= lo && x <= hi);
+}
+
 /**
  * Built land at a point outside the content, or null if it is jungle, hill
  * or water. Industrial to the north and west of Portfolio (`y < ZONE_SPLIT_Y`, 90),
@@ -51,7 +65,7 @@ export function builtAt(x: number, y: number): Built | null {
   if (y > WORLD.y1 && x >= QUAY_X) return null; // to the south, from the quay eastward: estuary, the tongue of jungle between it and the sea, and the sea
   if (x < WORLD.x0 && y >= GREEN_BELT.y0 && y < GREEN_BELT.y1) return null; // the green belt between the factory and the city continues to the west
   const s = southDist(y), w = westDist(x), n = northDist(y);
-  if (s > 0 && s > reachAt("s", x)) return null;
+  if (s > 0 && s > reachAt("s", x) && !southAxisCorridor(x)) return null; // the Bulevar and the Costanera run on asphalt to the bleed edge (#493)
   if (w > 0 && w > reachAt("w", y)) return null;
   if (n > 0 && n > reachAt("n", x)) return null;
   if (s <= 0 && w <= 0 && n <= 0) return null; // inside the content
@@ -78,13 +92,12 @@ export { COVER_MARGIN } from "../map/geo";
 
 let south: Parcel[] | undefined;
 /**
- * Parcels of the city plan south of y 318 (centroid y > 318), on urban ground at the centroid and the four corners of
- * `rect` and inside the cover. The 318..324 strip is asphalt, not a hole: `urbanAt` is asked at `max(y, CITY_EDGE.south)`, so the
- * row right south of the avenue stays; the estuary and the bleed (they only exist for y > WORLD.y1) still decide. Memoized.
+ * Parcels of the city plan south of the coastal cut (centroid y > `COASTAL_CUT_Y`, 378; #493), on urban ground at the centroid and the four corners of
+ * `rect` and inside the cover. `urbanAt` is asked at `max(y, CITY_EDGE.south)` (the strip up to CITY_EDGE.south is asphalt, not a hole); the estuary and the bleed (they only exist for y > WORLD.y1) still decide. Memoized.
  */
 export function southParcels(): Parcel[] {
-  return south ??= parcels({ x0: -Infinity, y0: 318, x1: LAND.x1, y1: 650 }).filter((p) => {
-    if (p.c.y <= 318 || !inCoverQuad(p.c.x, p.c.y, 16 / 9, COVER_MARGIN)) return false;
+  return south ??= parcels({ x0: -Infinity, y0: COASTAL_CUT_Y, x1: LAND.x1, y1: 650 }).filter((p) => {
+    if (p.c.y <= COASTAL_CUT_Y || !inCoverQuad(p.c.x, p.c.y, 16 / 9, COVER_MARGIN)) return false;
     const { x, y, w, d } = p.rect;
     return ([[p.c.x, p.c.y], [x, y], [x + w, y], [x + w, y + d], [x, y + d]] as const).every(([px, py]) => urbanAt(px, Math.max(py, CITY_EDGE.south)));
   });
