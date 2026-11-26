@@ -61,8 +61,8 @@ describe("world", () => {
     expect(w.solids.filter((s) => !isFlat(s) && worldZoneAt(bounds(s).min.x, bounds(s).min.y) === "cv").length).toBeGreaterThan(450);
     const own: Solid[] = [];
     hotel(own, [], []);
-    const slab = w.solids.find((s) => s.kind === "poly" && s.mat === "plaster" && s.z === 0 && own.some((o) => JSON.stringify(o) === JSON.stringify(s)))!;
-    const b = bounds(slab);
+    const block = w.solids.find((s) => s.kind === "poly" && s.mat === "plaster" && s.z === 0 && own.some((o) => JSON.stringify(o) === JSON.stringify(s)))!;
+    const b = bounds(block);
     expect([b.min.x, b.min.y, b.max.x, b.max.y]).toEqual([HOTEL_BLOCK.x0, HOTEL_BLOCK.y0, HOTEL_BLOCK.x1, HOTEL_BLOCK.y1]);
     expect(LANDMARKS.cv.x).toBeGreaterThan(b.min.x); expect(LANDMARKS.cv.x).toBeLessThan(b.max.x);
     expect(LANDMARKS.cv.y).toBeGreaterThan(b.min.y); expect(LANDMARKS.cv.y).toBeLessThan(b.max.y);

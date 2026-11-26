@@ -3,7 +3,7 @@ import type { Solid } from "../iso/solids";
 import { chamferedRect } from "../kit/forms/composite";
 
 /**
- * Where the hotel's block stands, and (until #494's sign lands) where the RESUME sign's panel stood: pure geometry, no scene, so `src/city/zoning.ts` can read the panel
+ * Where the hotel's block stands, and (until #494's sign lands) where the RESUME sign's panel stood: pure geometry, no kit or scene (only the `chamferedRect` form), so `src/city/zoning.ts` can read the panel
  * without importing the hotel's building (`sign-hotel.ts` reaches `city/lights.ts`, which imports zoning).
  */
 

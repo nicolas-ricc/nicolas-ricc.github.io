@@ -109,13 +109,18 @@ describe("sign-hotel: the block (#494)", () => {
     expect(w.y).toBeCloseTo(minY, 6);
   });
 
-  it("hotelStandIn builds the building's solids displaced by −HOTEL_CENTER, with no facade", () => {
-    const own: Solid[] = [];
-    hotel(own, [], []);
-    expect(stand.out.length).toBeGreaterThan(0);
-    const blocks = stand.out.filter((s) => poly(s) && s.mat === "plaster" && s.z === 0);
-    expect(blocks).toHaveLength(1);
-    expect(same((blocks[0] as Solid & { kind: "poly" }).footprint, blockFootprint({ x: -HOTEL_CENTER.x, y: -HOTEL_CENTER.y }))).toBe(true);
+  it("hotelStandIn builds the same building solids as hotel (no sign), displaced by −HOTEL_CENTER, with no facade", () => {
+    const d = { x: -HOTEL_CENTER.x, y: -HOTEL_CENTER.y };
+    const shift = (s: Solid): Solid => {
+      if (s.kind === "poly") { const { facade: _f, ...r } = s; return { ...r, footprint: s.footprint.map((p) => ({ x: p.x + d.x, y: p.y + d.y })) }; }
+      if (s.kind === "prism") return { ...s, at: { ...s.at, x: s.at.x + d.x, y: s.at.y + d.y } };
+      throw new Error(`unexpected ${s.kind} in the building`);
+    };
+    const building = H.out.slice(0, stand.out.length); // `body` pushes before the sign: the building is the leading solids
+    expect(building.some((s) => s.mat === "glass")).toBe(false);
+    expect(stand.out).toHaveLength(building.length);
+    const key = (s: Solid) => JSON.stringify(s, (_k, v) => (typeof v === "number" ? Math.round(v * 1e6) / 1e6 : v)); // float noise of the displacement
+    expect(stand.out.map(key)).toEqual(building.map((s) => key(shift(s))));
     for (const s of stand.out) expect("facade" in s && s.facade !== undefined, `${s.kind} ${s.mat}`).toBe(false);
     expect(stand.accents).toEqual([]);
   });

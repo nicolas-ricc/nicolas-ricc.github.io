@@ -461,7 +461,7 @@ describe("city-anim: the hotel rooms and the papers along the facade (#474)", ()
   const key = (a: Accent) => (a.kind === "poly" ? JSON.stringify(a.pts) : "");
   const BF = blockFootprint(), BX0 = Math.min(...BF.map((p) => p.x)) - 0.5, BX1 = Math.max(...BF.map((p) => p.x)) + 0.5, BY0 = Math.min(...BF.map((p) => p.y)) - 0.5, BY1 = Math.max(...BF.map((p) => p.y)) + 0.5;
   /** Inside the block's footprint grown 0.5 and under its roof. */
-  const inSlab = (p: { x: number; y: number; z: number }) => p.x >= BX0 && p.x <= BX1 && p.y >= BY0 && p.y <= BY1 && p.z < HOTEL_ROOF;
+  const inBlock = (p: { x: number; y: number; z: number }) => p.x >= BX0 && p.x <= BX1 && p.y >= BY0 && p.y <= BY1 && p.z < HOTEL_ROOF;
 
   it("frame 0 shows the initial lit rooms: a subset of scene.hotel.rooms, about 40 % of them", () => {
     const { scene, anim } = build(), rooms = new Set(scene.hotel.rooms.map(key)), lit = anim.lit();
@@ -498,7 +498,7 @@ describe("city-anim: the hotel rooms and the papers along the facade (#474)", ()
     for (let t = 0; t < 60000; t += 100) {
       anim.tick(100);
       for (const p of anim.papers().map(dot)) {
-        expect(inSlab(p.at), JSON.stringify(p.at)).toBe(false);
+        expect(inBlock(p.at), JSON.stringify(p.at)).toBe(false);
         const dx = p.at.x - w.x, dy = p.at.y - w.y, dist = Math.hypot(dx, dy);
         if (dist > 10) {
           expect((dx * PAPER_DRIFT.x + dy * PAPER_DRIFT.y) / dist / Math.hypot(PAPER_DRIFT.x, PAPER_DRIFT.y)).toBeGreaterThan(0.9);

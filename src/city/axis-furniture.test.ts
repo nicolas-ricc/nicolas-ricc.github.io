@@ -3,6 +3,9 @@ import type { Vec2 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import { createRng } from "../map/seed";
 import { COVER_MARGIN, inCoverQuad } from "../map/geo";
+import { occluded } from "../iso/project";
+import { bounds } from "../iso/solids";
+import { HOTEL_BLOCK, HOTEL_ROOF } from "../scenes/hotel-plan";
 import { EAST_RING, inCrater } from "../scenes/city-grid";
 import { PLINTH_H } from "../scenes/city-pieces";
 import { AXES, HOTEL_LOT, LAND, PLAZA_MAYOR, axis, axisBand, crossingPlazas, inCrossingPlaza, onAxis, pointInPoly, polyCentroid, type Axis } from "../scenes/city-plan";
@@ -242,8 +245,16 @@ describe("crossing plazas (#473)", () => {
       const lamp = lampPrisms.find((s) => Math.hypot(center(s).x - c.x, center(s).y - c.y) < 1e-6);
       expect(lamp, `lamp ${c.x}`).toBeDefined();
       const bulb = { x: lamp!.at.x + 0.3, y: lamp!.at.y + 0.3 };
-      expect(c0.accents.some((a) => a.kind === "dot" && a.color === "amber" && Math.hypot(a.at.x - bulb.x, a.at.y - bulb.y) < 1e-6), `lit ${c.x}`).toBe(true);
+      const at = { x: bulb.x, y: bulb.y, z: lamp!.at.z + lamp!.h };
+      const hidden = c0.solids.some((s) => { const b = bounds(s); return occluded(at, b.min, b.max); });
+      if (!hidden) expect(c0.accents.some((a) => a.kind === "dot" && a.color === "amber" && Math.hypot(a.at.x - bulb.x, a.at.y - bulb.y) < 1e-6), `lit ${c.x}`).toBe(true);
     }
+  });
+
+  it("the plaza lamp at (10, 175.7) is dark because the 60-high hotel block hides its bulb", () => {
+    const c = polyCentroid(inside[0]!), lamp = lampPrisms.find((s) => Math.hypot(center(s).x - c.x, center(s).y - c.y) < 1e-6)!; // inside[0] is the one at (10, 175.7)
+    expect(lamp).toBeDefined();
+    expect(occluded({ x: lamp.at.x + 0.3, y: lamp.at.y + 0.3, z: lamp.at.z + lamp.h }, { x: HOTEL_BLOCK.x0, y: HOTEL_BLOCK.y0, z: 0 }, { x: HOTEL_BLOCK.x1, y: HOTEL_BLOCK.y1, z: HOTEL_ROOF })).toBe(true);
   });
 });
 

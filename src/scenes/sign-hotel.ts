@@ -70,8 +70,8 @@ export function hotel(out: Solid[], accents: Accent[], lights: FixedLight[], at:
   const rooms: Accent[] = [];
   for (const w of walls) for (let floor = 1; floor < HOTEL_FACADE.floors; floor++) for (const pts of windowPatches(w, HOTEL_FACADE, floor)) rooms.push({ kind: "poly", pts, color: "amber", alpha: 1 });
   const east = walls.find((w) => w.normal.x > 0.9)!, row = windowPatches(east, HOTEL_FACADE, 7);
-  const ymin = (pts: Vec3[]) => pts.reduce((s, p) => s + p.y, 0) / pts.length, e = row.reduce((a, b) => (ymin(b) < ymin(a) ? b : a)), n = e.length;
-  return { rooms, paperWindow: v3(e.reduce((s, p) => s + p.x, 0) / n + 0.6, ymin(e), e.reduce((s, p) => s + p.z, 0) / n) };
+  const meanY = (pts: Vec3[]) => pts.reduce((s, p) => s + p.y, 0) / pts.length, e = row.reduce((a, b) => (meanY(b) < meanY(a) ? b : a)), n = e.length;
+  return { rooms, paperWindow: v3(e.reduce((s, p) => s + p.x, 0) / n + 0.6, meanY(e), e.reduce((s, p) => s + p.z, 0) / n) };
 }
 
 /** The hotel as the sign was audited on it: the block centered at the origin, no facade, no lights. */
