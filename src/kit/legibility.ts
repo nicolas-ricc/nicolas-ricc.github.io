@@ -92,7 +92,7 @@ export interface SignGlyph { char: string; plane: TextPlane; layout: GlyphLayout
 
 /**
  * A sign to audit: text at `size` and `width`, per-glyph placement and the solids that back it; exactly one of `color` (accent ink, measured against the face behind it)
- * and `decal` (ink that is a material of the backing, measured against the coplanar face that receives it). `facade` relaxes the baseline limit.
+ * and `decal` (ink that is a material of the backing, measured against the coplanar face that receives it). `facade` relaxes the baseline limit and is measured on its projected sides.
  * `xHeight` (text units) replaces the font grid's x-height, for a word in capitals; `stroke` (text units) is the face width of filled letters,
  * whose quads are a triangulation rather than stroke segments. `ground` marks a sign painted on a horizontal plane, whose expected aspect is `GROUND_ASPECT`, not 1;
  * `bar` (text units, with `stroke`) is the thickness of the horizontal strokes, measured along v.
@@ -138,7 +138,7 @@ const deg = (rad: number) => (rad * 180) / Math.PI;
 /**
  * Projected metrics of a sign at a screen `scale`: x-height, stroke and air in px (minima), baseline and vertical angles in degrees, aspect error (maxima).
  * With `spec.stroke` the stroke is that face width projected along u and the horizontal-stroke thickness `spec.bar ?? spec.stroke` along v (the smaller of the two), not the quads' sides; `bar` is ignored without `stroke`.
- * The aspect error is measured against 1 on the screen bounding box of each glyph box; for a `ground` sign, against `GROUND_ASPECT` on the projected lengths of the box's v and u sides, so a pitch tilt of the baseline (the baseline rule's job) is not counted again as stretch (#456).
+ * The aspect error is measured against 1 on the screen bounding box of each glyph box; for a `ground` sign (against `GROUND_ASPECT`) and a `facade` sign (against 1), on the projected lengths of the box's v and u sides, so a pitch tilt of the baseline (the baseline rule's job) is not counted again as stretch (#456).
  */
 export function signMetrics(spec: SignSpec, scale: number): { xHeightPx: number; strokePx: number; airPx: number; baselineDeg: number; verticalDeg: number; aspectError: number } {
   const xH = signXHeight(spec), G = spec.glyphs;
@@ -160,7 +160,7 @@ export function signMetrics(spec: SignSpec, scale: number): { xHeightPx: number;
   const aspectError = Math.max(...G.map((g) => {
     const { x0, y0, x1, y1 } = g.layout.box, c = [at(g, x0, y0), at(g, x1, y0), at(g, x1, y1), at(g, x0, y1)];
     const xs = c.map((q) => q.x), ys = c.map((q) => q.y);
-    if (spec.ground) return Math.abs(Math.hypot(c[3]!.x - c[0]!.x, c[3]!.y - c[0]!.y) / Math.hypot(c[1]!.x - c[0]!.x, c[1]!.y - c[0]!.y) / ((y1 - y0) / (x1 - x0)) / GROUND_ASPECT - 1);
+    if (spec.ground || spec.facade) return Math.abs(Math.hypot(c[3]!.x - c[0]!.x, c[3]!.y - c[0]!.y) / Math.hypot(c[1]!.x - c[0]!.x, c[1]!.y - c[0]!.y) / ((y1 - y0) / (x1 - x0)) / (spec.ground ? GROUND_ASPECT : 1) - 1);
     return Math.abs((Math.max(...ys) - Math.min(...ys)) / (Math.max(...xs) - Math.min(...xs)) / ((y1 - y0) / (x1 - x0)) - 1);
   }));
   return { xHeightPx, strokePx, airPx, baselineDeg, verticalDeg, aspectError };

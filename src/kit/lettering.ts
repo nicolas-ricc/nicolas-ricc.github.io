@@ -24,11 +24,11 @@ export function groundDiagonal(at: Vec3): TextPlane {
   return { origin: at, u: v3(Math.SQRT1_2, -Math.SQRT1_2, 0), v: v3(-Math.SQRT1_2, -Math.SQRT1_2, 0) };
 }
 
-/** Vertical plane over the segment a→b of the footprint, baseline at `z0`. */
-export function facade(a: Vec2, b: Vec2, z0: number): TextPlane {
+/** Vertical plane over the segment a→b of the footprint, baseline at `z0`. `stretch` scales u only, to compensate the foreshortening of the projection. */
+export function facade(a: Vec2, b: Vec2, z0: number, stretch = 1): TextPlane {
   const len = Math.hypot(b.x - a.x, b.y - a.y);
   if (len === 0) throw new Error("lettering: facade needs two distinct points");
-  return { origin: v3(a.x, a.y, z0), u: v3((b.x - a.x) / len, (b.y - a.y) / len, 0), v: v3(0, 0, 1) };
+  return { origin: v3(a.x, a.y, z0), u: v3(stretch * (b.x - a.x) / len, stretch * (b.y - a.y) / len, 0), v: v3(0, 0, 1) };
 }
 
 /** Font grid in text units: cap height, x-height, descender, gap between characters and width of a space. */
