@@ -117,7 +117,7 @@ describe("city", () => {
     }
   });
 
-  it("nothing but the hotel's own solids exceeds 21", () => {
+  it("nothing but the hotel's own solids exceeds 21, except banded west-bank parcels (50 + PLINTH_H, #495)", () => {
     const s = scene();
     expect(s.solids.filter(isHotelPiece)).toHaveLength(HOTEL_OWN.length); // the exemption matches the hotel and nothing else
     const banded = s.placed.filter((q) => q.placed.parcel && q.placed.lot.band).map((q) => polyBox(q.placed.parcel!.poly)); // the barrio parcels build within their band, up to 50 above the plinth (#495); the bounding box of the poly, as the oblique parcels' rect does not hold it

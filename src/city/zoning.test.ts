@@ -534,7 +534,7 @@ describe("barrios (#477)", () => {
 });
 
 describe("the west does not move the east (#479)", () => {
-  // #495: re-recorded once: moderno draws towers only (campus left its catalogue), so the picks of its parcels and the retries after them redealt; only parcel lines move.
+  // #495: re-recorded once: moderno draws towers only (campus left its catalogue), so the picks of its parcels and the retries after them redealt (Task 1 had already moved moderno parcels to districtRng): lines whose barrio did not change moved too, through the shared rng.
   it("the east parcels keep their pre-#479 recipe, neighborhood and tone", () => {
     const east = assign(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1)).filter((p) => p.parcel && p.parcel.c.x >= -54)
       .map((p) => `${p.parcel!.cell.col},${p.parcel!.cell.row} ${p.parcel!.rect.x},${p.parcel!.rect.y} ${p.neighborhood} ${p.recipe} ${p.tone}`);

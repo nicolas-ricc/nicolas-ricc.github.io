@@ -80,7 +80,7 @@ const ALLOW: Record<string, RegExp[]> = {
   "src/scenes/tech-zoning.ts": [/\bbajo\b/g, /\bresidencial\b/g, /\b[Bb]arrios?\b/g], // barrio ids of city-plan are layout data
   "src/scenes/tech-zoning.test.ts": [/\bbajo\b/g, /\bresidencial\b/g, /\b[Bb]arrios?\b/g],
   "src/city/axis-streets.test.ts": [/Avenida del (?:Sur|Barrio)/g, /\bcostanera\b/gi, /\bbarrio\b/g],
-  "src/city/zoning.ts": [/\b[Bb]arrios?\b/g, /\bresidencial\b/g, /\bBARRIO_STEP\b/g, /\bBARRIO_HEIGHTS\b/g, /\bCityBarrio\b/g], // Barrio ids of city-plan are layout data (#477: `residencial` too)
+  "src/city/zoning.ts": [/\b[Bb]arrios?\b/g, /\bresidencial\b/g, /\bBARRIO_STEP\b/g, /\bBARRIO_HEIGHTS\b/g, /\bCityBarrio\b/g, /\bisCityBarrio\b/g], // Barrio ids of city-plan are layout data (#477: `residencial` too)
   "src/scenes/city.test.ts": [/const MAIN = \[(?:"[0-9a-f]{8}",? ?)+\]/g], // fingerprints of the pinned plinth pieces (a hash may spell a stem)
   "src/city/lights.ts": [/\b[Bb]arrios?\b/g, /\bANIMABLE_BARRIOS\b/g], // barrio ids of city-plan are layout data (#480)
   "src/city/lights.test.ts": [/\b[Bb]arrios?\b/g, /\bANIMABLE_BARRIOS\b/g],

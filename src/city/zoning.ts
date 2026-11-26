@@ -100,6 +100,7 @@ const rectsAdjacent = (a: Rect, b: Rect): boolean => Math.max(a.x - (b.x + b.w),
 /** Barrios of the west bank by height step: a neighbour may differ by one step at most. */
 export type CityBarrio = "bajo" | "clasico" | "transicion" | "moderno";
 export const BARRIO_STEP: Record<CityBarrio, number> = { bajo: 0, clasico: 1, transicion: 2, moderno: 3 };
+const isCityBarrio = (n: Neighborhood): n is CityBarrio => n in BARRIO_STEP;
 /** Height range per barrio, the issue's table: totals above the lot (plinth excluded); the top is the cap (#495). */
 export const BARRIO_HEIGHTS: Record<CityBarrio, { lo: number; hi: number }> = { bajo: { lo: 6, hi: 8 }, clasico: { lo: 14, hi: 22 }, transicion: { lo: 24, hi: 34 }, moderno: { lo: 40, hi: 50 } };
 /** Cap of a `moderno` tower outside the tower zone. */
@@ -269,7 +270,7 @@ export function assign(rng: Rng, districtRng: Rng, west = -Infinity): Placed[] {
     }
     const top = maxHFor(neighborhood, p), maxH = Math.min(top, maxHeightFor(p.rect, top));
     const lot = parcelLot(p, neighborhood, recipe, fixed !== undefined, parcelOpenSides(p), maxH);
-    if (!fixed && cat === CATALOGUE[neighborhood].recipes && neighborhood in BARRIO_HEIGHTS) lot.band = { lo: Math.min(BARRIO_HEIGHTS[neighborhood as CityBarrio].lo, maxH), hi: maxH };
+    if (!fixed && cat === CATALOGUE[neighborhood].recipes && isCityBarrio(neighborhood)) lot.band = { lo: Math.min(BARRIO_HEIGHTS[neighborhood].lo, maxH), hi: maxH };
     out.push({ parcel: p, block: { ...p.rect, bank: "west", row: -2, kind: "parcel" }, neighborhood, recipe, lot, tone: (isWest ? districtRng : rng).int(-1, 1) });
   });
   return out;

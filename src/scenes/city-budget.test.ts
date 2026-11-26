@@ -8,6 +8,8 @@ import { city } from "./city";
 import { world, zoneRng } from "./world";
 
 // Count caps of the 2026-10-15 spec §9, over the real world seed.
+// What #495 (office heights) added to the static world on purpose, by measurement: polygons 44 748 → 52 442, accents 2 153 → 2 796. The #427 tests subtract it to keep the platform's drop.
+const GROWTH_495 = { polygons: 7694, accents: 643 } as const;
 const resume = () => city(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1), zoneRng(SEED, "cv", 3));
 
 describe("Resume level 2 budget", () => {
@@ -32,7 +34,7 @@ describe("Resume level 2 budget", () => {
   it("the Writing platform left the static world (#427): static polygons drop below the 46 518 of feature/423 before it", () => {
     const w = assembleWorld(undefined, { reducedMotion: true }).scene;
     // #495 grew the city's static polygons on purpose, by measurement: 44 748 → 52 442 (+7 694); the assertion keeps the platform's drop net of that growth
-    expect(buildRenderList([...w.terrain.ground, ...w.ground, ...w.solids]).length - 7694).toBeLessThan(46518);
+    expect(buildRenderList([...w.terrain.ground, ...w.ground, ...w.solids]).length - GROWTH_495.polygons).toBeLessThan(46518);
   });
 });
 
@@ -44,7 +46,7 @@ describe("world accents (#394)", () => {
   });
   it("the platform's lights left the static world (#427): fewer than the 2 409 of feature/423 before it", () => {
     // #495 grew the world's static accents on purpose, by measurement: 2 153 → 2 796 (+643); the assertion keeps the platform's drop net of that growth
-    expect(assembleWorld(undefined, { reducedMotion: true }).scene.accents.length - 643).toBeLessThan(2409);
+    expect(assembleWorld(undefined, { reducedMotion: true }).scene.accents.length - GROWTH_495.accents).toBeLessThan(2409);
   });
 });
 

@@ -24,7 +24,7 @@ function insetFootprint(lot: Lot, inset: number, chamfer: number): Vec2[] {
   return lot.poly ? clipConvex(clipConvex(fp, polyFootprint(lot, 0, chamfer)), polyFootprint(lot, 0, 2, "oblique")) : fp;
 }
 
-/** `MIN_BODY_H`: the least body under the turret, so the casco cap (8.5) still gets its cupola over one floor. */
+/** `MIN_BODY_H`: the least body under the turret, so a low cap (the casco's was 8.5 before #495) still gets its cupola over one floor. */
 const CUPOLA_H = 2.5 + 2 + 1.2, CUPOLA_R = 2, WING_T = 5, MIN_BODY_H = 2.5;
 
 /** Corner block: a ring of wings clipped to the parcel, stacked floors with trim slabs, and a copper-domed turret over the open corner (decision T4). */
