@@ -240,6 +240,13 @@ En la conversación salieron, además:
 - Se mide presupuesto y FPS (método de #480) y se ajustan los topes si hace
   falta, con los números en el PR.
 
+### 7.1 Desvíos (#495)
+
+- **Las recetas, no los topes, limitaban la altura.** El kit cortaba toda receta común en 18 (`RECIPE_MAX_H`) y todo hito en 24 (`LANDMARK_MAX_H`), con sorteos fijos (`rng.int(12, 18)`…): con tope 50 las torres llegaban a ~22. Se agregó `Lot.band` (`{ lo, hi }`): en un lote con banda el tope es `lot.maxH` y las once recetas de clásico, transición y moderno llevan su sorteo a la banda (`banded`), sin cambiar la secuencia del rng. Un lote sin banda construye lo mismo que antes (el este, el kit, el laboratorio).
+- **Los barrios se miden con los límites de la tabla:** `barrioAt` pasa de 105 / 205 a 80 / 150, y el moderno llega hasta `y 320` (antes 290), igual que `towerZone`.
+- **`campus` sale del catálogo moderno** (tres cuerpos de 6–8 no se leen como 40–50): podiumTower 45, glassTower 30, twinTowers 25.
+- **Presupuesto medido** (semilla del mundo): sólidos elevados de la ciudad 1 882 (tope 1 900, sin cambio), acentos estáticos de la ciudad 2 227 → tope 2 400, polígonos estáticos del mundo 52 442 → 57 700, acentos del mundo 2 796 → 3 100. `tick + render` contra `main`, 8 cargas intercaladas a 1600×900×1: 31.1 ms contra 31.7 ms de media (diferencia mediana por par +0.45 ms, por debajo de los +2 ms).
+
 ## 8. Franja de arrastre (ticket 4, independiente)
 
 **Dónde.** Medido con `clampToBleed` en 9 configuraciones (inicio en 1920×1080,

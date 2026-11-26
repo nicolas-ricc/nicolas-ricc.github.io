@@ -9,7 +9,7 @@ import { SIGN_BACKING } from "../scenes/hotel-plan";
 import { screenBounds } from "../iso/depth";
 import { v3 } from "../iso/geometry";
 import { SEED } from "../map/seed";
-import { CATALOGUE, FIXED, WEST_DISTRICT_X, TELECOM_CELL, FOOTBRIDGE_LOT, MAX_BUILDING_H, assign, builtParcels, isBare, neighborhoodOf, maxHeightFor, neighborhoodOfParcel, parcelOpenSides, tooSmall, openSides, waterTowerLot, type Neighborhood, type Placed } from "./zoning";
+import { BARRIO_HEIGHTS, CATALOGUE, FIXED, WEST_DISTRICT_X, TELECOM_CELL, FOOTBRIDGE_LOT, MAX_BUILDING_H, assign, builtParcels, isBare, neighborhoodOf, maxHeightFor, neighborhoodOfParcel, parcelOpenSides, tooSmall, openSides, waterTowerLot, type Neighborhood, type Placed } from "./zoning";
 
 const key = (b: { x: number; y: number }): string => `${b.x},${b.y}`;
 const blockAt = (x: number, y: number): Block => blocks().find((b) => b.x === x && b.y === y)!;
@@ -320,7 +320,7 @@ describe("barrios (#477)", () => {
     const weights = (z: Neighborhood) => Object.fromEntries(CATALOGUE[z].recipes.map((r) => [r.name, r.weight]));
     expect(weights("clasico")).toEqual({ cornerCupola: 30, mansard: 25, classic: 20, portalBase: 15, chamfer: 10 });
     expect(weights("transicion")).toEqual({ balconyBlock: 35, decoStepped: 25, chamfer: 20, courtyardO: 20 });
-    expect(weights("moderno")).toEqual({ podiumTower: 40, glassTower: 25, twinTowers: 15, campus: 20 });
+    expect(weights("moderno")).toEqual({ podiumTower: 45, glassTower: 30, twinTowers: 25 }); // towers only, no campus (#495)
     expect(weights("bajo")).toEqual({ rowHouses: 40, patioResidential: 35, courtyardU: 25 });
     expect(weights("bars")).toEqual({ shopRow: 50, gallery: 20, patioResidential: 20, courtyardO: 10, portalBase: 30 });
     expect(CATALOGUE.clasico.lights).toEqual({ on: 0.5, warm: 0.95 });
@@ -335,20 +335,20 @@ describe("barrios (#477)", () => {
   it("heights per barrio stay in the spec ranges", () => {
     for (const q of onParcels) {
       const p = q.placed.parcel!, n = q.placed.neighborhood;
-      const cap = isFixed(p) ? LANDMARK_MAX_H : n === "clasico" ? 8.5 : n === "transicion" ? 16 : n === "moderno" ? (towerZone(p) ? 50 : 21) : n === "bajo" ? 6 : MAX_BUILDING_H;
+      const cap = isFixed(p) ? LANDMARK_MAX_H : n === "clasico" || n === "transicion" || n === "bajo" ? BARRIO_HEIGHTS[n].hi : n === "moderno" ? (towerZone(p) ? BARRIO_HEIGHTS.moderno.hi : 21) : MAX_BUILDING_H;
       for (const s of q.piece.solids) expect(solidBounds(s).max.z, `${cellKey(p)} ${q.placed.recipe}`).toBeLessThanOrEqual(cap + PLINTH_H + 0.5);
     }
   });
 
   it("maxHFor and catalogueFor follow the table and the tower zone", () => {
-    const north = square(-100, 230, "moderno", { x: -88, y: 250 }, 230), south = square(-100, 290, "moderno", { x: -88, y: 300 }, 230), near = square(-100, 230, "moderno", { x: -88, y: 250 }, 200);
+    const north = square(-100, 230, "moderno", { x: -88, y: 250 }, 230), south = square(-100, 320, "moderno", { x: -88, y: 330 }, 230), near = square(-100, 230, "moderno", { x: -88, y: 250 }, 140);
     expect([towerZone(north), towerZone(south), towerZone(near)]).toEqual([true, false, false]);
     expect(maxHFor("moderno", north)).toBe(50);
     expect(maxHFor("moderno", south)).toBe(TOWER_FREE_H);
     expect(TOWER_FREE_H).toBe(21);
-    expect(maxHFor("clasico", north)).toBe(8.5);
-    expect(maxHFor("transicion", north)).toBe(16);
-    expect(maxHFor("bajo", north)).toBe(6);
+    expect(maxHFor("clasico", north)).toBe(BARRIO_HEIGHTS.clasico.hi);
+    expect(maxHFor("transicion", north)).toBe(BARRIO_HEIGHTS.transicion.hi);
+    expect(maxHFor("bajo", north)).toBe(BARRIO_HEIGHTS.bajo.hi);
     expect(maxHFor("bars", north)).toBe(MAX_BUILDING_H);
     expect(catalogueFor("moderno", north)).toEqual(CATALOGUE.moderno.recipes);
     expect(catalogueFor("moderno", south)).toEqual(MODERNO_SLAB);
@@ -381,10 +381,11 @@ describe("barrios (#477)", () => {
     expect(polygonDistance(square(0, 0, "clasico").poly, square(24, 0, "clasico").poly)).toBe(0);
   });
 
-  it("towers only north of y 290", () => {
+  it("towers only north of y 320", () => {
     for (const q of onParcels) {
       const p = q.placed.parcel!;
-      if (pieceH(q) > TOWER_FREE_H + 1e-6) expect(p.c.y < 290 && p.d >= 205, `${cellKey(p)} ${q.placed.recipe} h ${pieceH(q)}`).toBe(true);
+      // the other barrios rise to their own band (#495): the tower zone is the moderno one
+      if (q.placed.neighborhood === "moderno" && pieceH(q) > TOWER_FREE_H + 1e-6) expect(p.c.y < 320 && p.d >= 150, `${cellKey(p)} ${q.placed.recipe} h ${pieceH(q)}`).toBe(true);
     }
     // the plan beyond the city (built from #479): every tower-zone parcel is moderno and the rest of the moderno ones are off it
     const plan = parcels(PLAN_BOUNDS);
@@ -494,7 +495,7 @@ describe("barrios (#477)", () => {
       expect(hits, `${f.recipe}`).toHaveLength(1);
       expect(hits[0]!.placed.recipe).toBe(f.recipe);
       expect(tooSmall(hits[0]!.placed.lot), f.recipe).toBe(false);
-      expect(hits[0]!.placed.neighborhood).toBe(f.civic ? "civic" : f.recipe === "telecom" ? "moderno" : f.recipe === "constructionSite" ? "clasico" : "transicion"); // the TELECOM parcel is in the moderno barrio (#479); #493: the plaza centre moved 15 u south, so the construction site (centroid ~ (55, 273)) is now 104.5 u from it (< 105): clasico
+      expect(hits[0]!.placed.neighborhood).toBe(f.civic ? "civic" : f.recipe === "telecom" ? "moderno" : "transicion"); // the TELECOM parcel is in the moderno barrio (#479); #493: the plaza centre moved 15 u south, so the construction site (centroid ~ (55, 273)) is 104.5 u from it: clasico, and since #495 (clasico < 80) transicion
     }
   });
 
@@ -533,6 +534,7 @@ describe("barrios (#477)", () => {
 });
 
 describe("the west does not move the east (#479)", () => {
+  // #495: re-recorded once: moderno draws towers only (campus left its catalogue), so the picks of its parcels and the retries after them redealt (Task 1 had already moved moderno parcels to districtRng): lines whose barrio did not change moved too, through the shared rng.
   it("the east parcels keep their pre-#479 recipe, neighborhood and tone", () => {
     const east = assign(zoneRng(SEED, "cv"), zoneRng(SEED, "cv", 1)).filter((p) => p.parcel && p.parcel.c.x >= -54)
       .map((p) => `${p.parcel!.cell.col},${p.parcel!.cell.row} ${p.parcel!.rect.x},${p.parcel!.rect.y} ${p.neighborhood} ${p.recipe} ${p.tone}`);

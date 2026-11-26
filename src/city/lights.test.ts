@@ -45,7 +45,7 @@ for (const [name, make, isWorld] of SEEDS) {
       const on = l.windows.filter((w) => w.on);
       expect(on.length).toBeGreaterThan(100);
       for (const w of on) expect(hidden(lightBox(w.window.pts), bs, hs, ownSolid(w))).toBe(false);
-    }, 20_000); // ~1.9 s alone since the strip blocks of #320 and the warehouses of #325; the full parallel suite stretched it past 10 s
+    }, 60_000); // ~1.9 s alone since the strip blocks of #320 and the warehouses of #325; the full parallel suite stretched it past 10 s. #495 (office heights, more windows): ~5 s alone, 17.6 s in the full parallel suite
 
     it("no lit window sits on the face of another solid (centroid in its x/y range, strictly inside its z)", () => {
       const E = 1e-6;
@@ -136,7 +136,10 @@ for (const [name, make, isWorld] of SEEDS) {
     it("no neon puddle is hidden (brute-force oracle)", () => {
       for (const n of l.neons) {
         const ring = n.accents.find((a) => a.kind === "poly" && a.pts.length === 8);
-        if (ring?.kind === "poly") expect(hidden(lightBox([centroid(ring.pts)]), bs, hs)).toBe(false);
+        // a solid of the owner piece does not hide its puddle (see "a solid of the owner piece does not hide its puddle"): the oracle skips the owner's own range (#495: the re-zone shifted the neon draw and exposed a brewery prism that hides its own puddle on the other seed)
+        if (ring?.kind !== "poly") continue;
+        const p = s.placed[n.owner]!, box = lightBox([centroid(ring.pts)]);
+        expect(bs.some((b, i) => (i < p.solidOffset || i >= p.solidOffset + p.piece.solids.length) && hides(box, b, { back: screenHull(box), front: hs[i]! }))).toBe(false);
       }
     });
 
@@ -171,9 +174,11 @@ for (const [name, make, isWorld] of SEEDS) {
     });
 
     it("the static lit windows, the neons except the flickering one and the bathed ones go to scene.accents", () => {
-      for (const w of l.windows.filter((x) => x.on && !x.animable)) expect(s.accents).toContainEqual({ kind: "poly", pts: w.window.pts, color: w.color, alpha: WINDOW_ALPHA });
-      l.neons.forEach((n, i) => { if (i !== l.flicker) for (const a of n.accents) expect(s.accents).toContain(a); });
-      for (const a of l.bathed) expect(s.accents).toContain(a);
+      // keyed lookups, not toContainEqual / toContain over the whole list: the office heights (#495) carry ~2 200 accents and the scan went quadratic
+      const byValue = new Set(s.accents.map((a) => JSON.stringify(a))), byRef = new Set(s.accents);
+      for (const w of l.windows.filter((x) => x.on && !x.animable)) expect(byValue.has(JSON.stringify({ kind: "poly", pts: w.window.pts, color: w.color, alpha: WINDOW_ALPHA })), JSON.stringify(w.window.pts)).toBe(true);
+      l.neons.forEach((n, i) => { if (i !== l.flicker) for (const a of n.accents) expect(byRef.has(a)).toBe(true); });
+      for (const a of l.bathed) expect(byRef.has(a)).toBe(true);
       const off = new Set(l.windows.filter((x) => !x.on).map((x) => x.window.pts));
       expect(s.accents.some((a) => a.kind === "poly" && off.has(a.pts))).toBe(false);
     });

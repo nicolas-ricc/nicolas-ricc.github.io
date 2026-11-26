@@ -49,7 +49,7 @@ export const CATALOGUE = {
   harbor: { recipes: [], style: "harbor", lights: { on: 0.6, warm: 0.85 } },
   clasico: { recipes: [{ name: "cornerCupola", weight: 30 }, { name: "mansard", weight: 25 }, { name: "classic", weight: 20 }, { name: "portalBase", weight: 15 }, { name: "chamfer", weight: 10 }], style: "clasico", lights: { on: 0.5, warm: 0.95 } },
   transicion: { recipes: [{ name: "balconyBlock", weight: 35 }, { name: "decoStepped", weight: 25 }, { name: "chamfer", weight: 20 }, { name: "courtyardO", weight: 20 }], style: "transicion", lights: { on: 0.5, warm: 0.6 } },
-  moderno: { recipes: [{ name: "podiumTower", weight: 40 }, { name: "glassTower", weight: 25 }, { name: "twinTowers", weight: 15 }, { name: "campus", weight: 20 }], style: "moderno", lights: { on: 0.4, warm: 0.15 } },
+  moderno: { recipes: [{ name: "podiumTower", weight: 45 }, { name: "glassTower", weight: 30 }, { name: "twinTowers", weight: 25 }], style: "moderno", lights: { on: 0.4, warm: 0.15 } },
   bajo: { recipes: [{ name: "rowHouses", weight: 40 }, { name: "patioResidential", weight: 35 }, { name: "courtyardU", weight: 25 }], style: "bajo", lights: { on: 0.55, warm: 0.95 } },
 } as const satisfies Record<Neighborhood, Catalogue>;
 
@@ -100,6 +100,9 @@ const rectsAdjacent = (a: Rect, b: Rect): boolean => Math.max(a.x - (b.x + b.w),
 /** Barrios of the west bank by height step: a neighbour may differ by one step at most. */
 export type CityBarrio = "bajo" | "clasico" | "transicion" | "moderno";
 export const BARRIO_STEP: Record<CityBarrio, number> = { bajo: 0, clasico: 1, transicion: 2, moderno: 3 };
+const isCityBarrio = (n: Neighborhood): n is CityBarrio => n in BARRIO_STEP;
+/** Height range per barrio, the issue's table: totals above the lot (plinth excluded); the top is the cap (#495). */
+export const BARRIO_HEIGHTS: Record<CityBarrio, { lo: number; hi: number }> = { bajo: { lo: 6, hi: 8 }, clasico: { lo: 14, hi: 22 }, transicion: { lo: 24, hi: 34 }, moderno: { lo: 40, hi: 50 } };
 /** Cap of a `moderno` tower outside the tower zone. */
 export const TOWER_FREE_H = 21;
 /** What a `moderno` parcel outside the tower zone draws: slabs, no towers. */
@@ -129,8 +132,8 @@ export function fixedParcel(p: Parcel): (typeof FIXED_PARCELS)[number] | undefin
   if (!largestArea) { largestArea = new Map(); for (const q of builtParcels()) largestArea.set(cellKey(q.cell), Math.max(largestArea.get(cellKey(q.cell)) ?? 0, q.area)); }
   return p.area >= (largestArea.get(cellKey(p.cell)) ?? 0) ? f : undefined;
 }
-/** Towers rise only north of y 290 and from the Plaza Mayor's 205 u out. */
-export const towerZone = (p: Parcel): boolean => p.c.y < 290 && p.d >= 205;
+/** Towers rise only north of y 320 and from the Plaza Mayor's 150 u out (#495). */
+export const towerZone = (p: Parcel): boolean => p.c.y < 320 && p.d >= 150;
 
 /** Cap of a neighborhood's buildings on a parcel (the sign rule `maxHeightFor` still applies on top). Fixed pieces: `LANDMARK_MAX_H`, 21 outside the tower zone. */
 export function maxHFor(n: Neighborhood, p: Parcel): number {
@@ -140,7 +143,7 @@ export function maxHFor(n: Neighborhood, p: Parcel): number {
 const trainCap = (p: Parcel): number => p.rect.y > TRAIN_CLEAR.y1 ? (p.rect.y - 134.5) / 1.4 - PLINTH_H - 1 : Infinity;
 function neighborhoodCap(n: Neighborhood, p: Parcel): number {
   if (fixedParcel(p)) return towerZone(p) ? LANDMARK_MAX_H : TOWER_FREE_H;
-  return n === "clasico" ? 8.5 : n === "transicion" ? 16 : n === "moderno" ? (towerZone(p) ? 50 : TOWER_FREE_H) : n === "bajo" ? 6 : MAX_BUILDING_H;
+  return n === "clasico" || n === "transicion" || n === "bajo" ? BARRIO_HEIGHTS[n].hi : n === "moderno" ? (towerZone(p) ? BARRIO_HEIGHTS.moderno.hi : TOWER_FREE_H) : MAX_BUILDING_H;
 }
 /** Recipes of a neighborhood on a parcel: `moderno` off the tower zone draws slabs. */
 export const catalogueFor = (n: Neighborhood, p: Parcel): readonly { name: string; weight: number }[] => n === "moderno" && !towerZone(p) ? MODERNO_SLAB : CATALOGUE[n].recipes;
@@ -234,6 +237,7 @@ export interface Placed { parcel?: Parcel; block: Block; neighborhood: Neighborh
  * of an already assigned adjacent block. Then the parcels of `builtParcels()`: neighborhood by
  * `parcelNeighborhoods`, a `FIXED_PARCELS` recipe or one drawn from `catalogueFor` (`moderno` with
  * `districtRng`; clasico, transicion and bajo retry like residential; every parcel west of `WEST_DISTRICT_X` draws pick, retries and tone from `districtRng` and comes after the east ones; `west` cuts the parcels by centroid, the lab's), cap `maxHFor` and lot `parcelLot`.
+ * A parcel that is not fixed and draws from its barrio's `CATALOGUE` recipes (so not a `moderno` slab) gets `lot.band = { min(lo, maxH), maxH }` (#495): the barrio's recipes build within it; `band.hi` is the final cap.
  * The lot is at street level (`z: 0`):
  * `city()` seats it (`seat`), lifting it onto the plinth unless the piece brings `ground`.
  */
@@ -264,8 +268,9 @@ export function assign(rng: Rng, districtRng: Rng, west = -Infinity): Placed[] {
     if (!fixed && (neighborhood === "clasico" || neighborhood === "transicion" || neighborhood === "bajo")) {
       for (let k = 0; k < 5 && out.some((q) => rectsAdjacent(q.block, p.rect) && q.recipe === recipe); k++) recipe = pick(r, cat);
     }
-    const top = maxHFor(neighborhood, p);
-    const lot = parcelLot(p, neighborhood, recipe, fixed !== undefined, parcelOpenSides(p), Math.min(top, maxHeightFor(p.rect, top)));
+    const top = maxHFor(neighborhood, p), maxH = Math.min(top, maxHeightFor(p.rect, top));
+    const lot = parcelLot(p, neighborhood, recipe, fixed !== undefined, parcelOpenSides(p), maxH);
+    if (!fixed && cat === CATALOGUE[neighborhood].recipes && isCityBarrio(neighborhood)) lot.band = { lo: Math.min(BARRIO_HEIGHTS[neighborhood].lo, maxH), hi: maxH };
     out.push({ parcel: p, block: { ...p.rect, bank: "west", row: -2, kind: "parcel" }, neighborhood, recipe, lot, tone: (isWest ? districtRng : rng).int(-1, 1) });
   });
   return out;

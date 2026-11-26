@@ -568,8 +568,8 @@ describe("barrio exhibits (#477)", () => {
     expect(q.map((p) => `${p.placed.parcel!.cell.col},${p.placed.parcel!.cell.row} ${p.placed.recipe}`)).toEqual(["43,261 constructionSite"]);
     expect(ex("obra").title).toBe("Construction site");
   });
-  it("manzana-casco frames a clasico parcel with a corner cupola; manzana-transicion a transicion parcel", () => {
-    expect(framed("manzana-casco").map((p) => [p.placed.neighborhood, p.placed.recipe])).toEqual([["clasico", "cornerCupola"]]);
+  it("manzana-casco frames a clasico parcel (a portal base since #495); manzana-transicion a transicion parcel", () => {
+    expect(framed("manzana-casco").map((p) => [p.placed.neighborhood, p.placed.recipe])).toEqual([["clasico", "portalBase"]]);
     expect(ex("manzana-casco").title).toBe("Classic block");
     expect(framed("manzana-transicion").map((p) => p.placed.neighborhood)).toEqual(["transicion"]);
     expect(ex("manzana-transicion").title).toBe("Transition block");

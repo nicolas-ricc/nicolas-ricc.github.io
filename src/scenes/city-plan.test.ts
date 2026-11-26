@@ -79,7 +79,8 @@ describe("city-plan barrios (#472)", () => {
     expect(barrioAt(PLAZA_CENTER)).toBe("clasico");
     expect(barrioAt({ x: 100, y: 400 })).toBe("residencial");
     expect(barrioAt({ x: -200, y: 200 })).toBe("moderno");
-    expect(barrioAt({ x: -200, y: 300 })).toBe("transicion");
+    expect(barrioAt({ x: -200, y: 300 })).toBe("moderno");
+    expect(barrioAt({ x: -200, y: 330 })).toBe("transicion");
   });
 });
 

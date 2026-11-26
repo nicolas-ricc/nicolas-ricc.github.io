@@ -211,14 +211,14 @@ export const inPlazaMayor = (x: number, y: number): boolean => inRect(PLAZA_MAYO
 // ---------------------------------------------------------------- barrios
 
 export type Barrio = "clasico" | "transicion" | "moderno" | "bajo" | "residencial";
-/** Barrio by distance to the Plaza Mayor, then by the south bands. */
+/** Barrio by distance to the Plaza Mayor (clasico under 80, transicion under 150, moderno beyond; #495), then by the south bands; moderno south of y 320 is transicion. */
 export function barrioAt(c: Vec2): Barrio {
   const d = Math.hypot(c.x - PLAZA_CENTER.x, c.y - PLAZA_CENTER.y);
-  let b: Barrio = d < 105 ? "clasico" : d < 205 ? "transicion" : "moderno";
+  let b: Barrio = d < 80 ? "clasico" : d < 150 ? "transicion" : "moderno";
   if (c.y > CITY_BOUNDS.y1) b = "clasico"; // #493: the 348..378 row is city, clasico barrio
   if (c.y > COASTAL_CUT_Y) b = "bajo";
   if (c.y > 380) b = "residencial";
-  if (b === "moderno" && c.y > 290) b = "transicion";
+  if (b === "moderno" && c.y > 320) b = "transicion";
   return b;
 }
 

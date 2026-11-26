@@ -3,7 +3,7 @@ import type { Facade } from "../../iso/facade";
 import type { Rng } from "../../map/seed";
 import type { Rect } from "../../scenes/city-grid";
 import { prism } from "../../scenes/city-pieces";
-import { addBuilding, emptyPiece, fitToCap, floorsFor, interlock, recipeCap } from "../piece";
+import { addBuilding, banded, emptyPiece, fitToCap, floorsFor, interlock, recipeCap } from "../piece";
 import { axisNormal, clipConvex, clipHalf, clipToPoly, frustum, insetPoly, insidePoly, polyArea, polyCentroid, polyCornice, polyFootprint } from "../polygon";
 import { CORNICE_H, offsetFootprint } from "../roofs";
 import type { Lot, Piece, RecipeDef, Side, Style } from "../types";
@@ -24,13 +24,13 @@ function insetFootprint(lot: Lot, inset: number, chamfer: number): Vec2[] {
   return lot.poly ? clipConvex(clipConvex(fp, polyFootprint(lot, 0, chamfer)), polyFootprint(lot, 0, 2, "oblique")) : fp;
 }
 
-/** `MIN_BODY_H`: the least body under the turret, so the casco cap (8.5) still gets its cupola over one floor. */
+/** `MIN_BODY_H`: the least body under the turret, so a low cap (the casco's was 8.5 before #495) still gets its cupola over one floor. */
 const CUPOLA_H = 2.5 + 2 + 1.2, CUPOLA_R = 2, WING_T = 5, MIN_BODY_H = 2.5;
 
 /** Corner block: a ring of wings clipped to the parcel, stacked floors with trim slabs, and a copper-domed turret over the open corner (decision T4). */
 export function cornerCupola(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { z } = lot, fp = insetFootprint(lot, 0, 2.4);
-  const turretH = recipeCap(lot) - CUPOLA_H, hr = 5.5 + 3 * rng.next(), roofed = turretH >= MIN_BODY_H; // with less body than that the turret is dropped
+  const turretH = recipeCap(lot) - CUPOLA_H, hr = banded(lot, 5.5 + 3 * rng.next(), 5.5, 8.5) - (lot.band ? CUPOLA_H : 0), roofed = turretH >= MIN_BODY_H; // with less body than that the turret is dropped
   const h = Math.min(hr, roofed ? turretH : recipeCap(lot)), floors = floorsFor(h, style), fh = h / floors;
   const { wings, patio } = ring(lot, WING_T, ["n", "s", "w", "e"]), built: Vec2[][] = [];
   for (const { rect } of wings) {
@@ -75,7 +75,7 @@ export function mansard(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { z } = lot, floors = rng.int(4, 5);
   const fp = insetFootprint(lot, 1, 2.4);
   if (fp.length < 3 || polyArea(fp) < 4) return p;
-  const roofed = recipeCap(lot) - CORNICE_H - 2.2 >= 3, h = Math.min(floors * style.floorH, recipeCap(lot) - CORNICE_H - (roofed ? 2.2 : 0)), f: Facade = { floors: floorsFor(h, style), cols: 3 };
+  const roofed = recipeCap(lot) - CORNICE_H - 2.2 >= 3, h = Math.min(lot.band ? banded(lot, floors, 4, 5) - CORNICE_H - 2.2 : floors * style.floorH, recipeCap(lot) - CORNICE_H - (roofed ? 2.2 : 0)), f: Facade = { floors: floorsFor(h, style), cols: 3 };
   addBuilding(p, { kind: "poly", footprint: fp, z, h, mat: style.mat, facade: f, tone: style.tone }, f);
   p.solids.push({ kind: "poly", footprint: offsetFootprint(fp, 0.4), z: z + h, h: CORNICE_H, mat: style.trim });
   const top = z + h + CORNICE_H, base = insetPoly(fp, 0.8), tip = insetPoly(fp, 2);
@@ -103,7 +103,8 @@ const RAIL = { w: 0.1, h: 0.9 }, SLAB = { deep: 1, h: 0.25 };
 export function balconyBlock(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { z } = lot, fp = insetFootprint(lot, 1, 2);
   if (fp.length < 3 || polyArea(fp) < 4) return p;
-  const floors = rng.int(3, 5), h = Math.min(Math.max(10, 3.2 * floors), 16, recipeCap(lot) - CORNICE_H), fh = h / floors, m = floors - 1;
+  const drawn = rng.int(3, 5), h = lot.band ? Math.min(banded(lot, drawn, 3, 5), recipeCap(lot) - CORNICE_H) : Math.min(Math.max(10, 3.2 * drawn), 16, recipeCap(lot) - CORNICE_H);
+  const floors = lot.band ? Math.max(3, Math.round(h / 3.2)) : drawn, fh = h / floors, m = floors - 1; // banded: the floors follow the zoned height
   const f: Facade = { floors: m, cols: 3, base: "glass" };
   addBuilding(p, { kind: "poly", footprint: fp, z, h: m * fh, mat: style.mat, facade: f, tone: style.tone }, f);
   p.solids.push(interlock({ kind: "poly", footprint: offsetFootprint(fp, 0.3), z: z + m * fh, h: 0.3, mat: style.trim }));
@@ -173,7 +174,7 @@ export function portalBase(lot: Lot, rng: Rng, style: Style): Piece {
   }
   const band = z + baseH, top = band + UPPER_BAND, roomH = recipeCap(lot) - top + z - CORNICE_H;
   p.solids.push({ kind: "poly", footprint: offsetFootprint(fp, 0.6), z: band, h: UPPER_BAND, mat: style.trim });
-  const upperH = Math.min(rng.int(2, 4) * style.floorH, roomH);
+  const upperH = Math.min(lot.band ? banded(lot, rng.int(2, 4), 2, 4) - (top - z) - CORNICE_H : rng.int(2, 4) * style.floorH, roomH);
   if (upperH >= 1) {
     const uf = floorsFor(upperH, style), g: Facade = { floors: uf, cols, window: { w: 0.3, h: 1.4 / style.floorH } };
     addBuilding(p, { kind: "poly", footprint: fp, z: top, h: upperH, mat: style.mat, facade: g, tone: style.tone }, g);

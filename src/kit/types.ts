@@ -16,8 +16,10 @@ export type StyleId = "clasico" | "transicion" | "moderno" | "bajo" | "downtown"
  * `open`: sides with an open frontage (avenue, water, plaza). `maxH`: height cap above `lot.z`.
  * `poly`: the parcel polygon in world coordinates, inside the rectangle (a wedge cut by a diagonal); the recipes
  * that support it clip their bodies to it and chamfer its oblique corners, the rest ignore it.
+ * `band`: height band above `lot.z` that the zoning gives the lot (office city, #495); the recipes of the clasico, transicion and moderno catalogues map their draws onto it (`banded`) and the kit caps stop at `maxH`
+ * instead of 18 / 24. Without it a lot builds as always.
  */
-export interface Lot { x: number; y: number; w: number; d: number; z: number; open: Side[]; maxH: number; poly?: Vec2[] }
+export interface Lot { x: number; y: number; w: number; d: number; z: number; open: Side[]; maxH: number; poly?: Vec2[]; band?: { lo: number; hi: number } }
 export interface Style { id: StyleId; mat: Material; trim: Material; roof: Material; tone: number; floorH: number; window: "windowWarm" | "windowCool" }
 /** `wall`: wall normal. `building`: index of the solid in `Piece.solids`. */
 export interface Window { pts: Vec3[]; floor: number; wall: Vec3; building: number }

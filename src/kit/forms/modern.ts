@@ -5,7 +5,7 @@ import { GABLE_RATIO } from "../../iso/solids";
 import type { Rng } from "../../map/seed";
 import { PLINTH_H, prism, tiles } from "../../scenes/city-pieces";
 import { towerCrane } from "../../scenes/pieces";
-import { LANDMARK_MAX_H, SIGN_MIN_H, addBuilding, emptyPiece, interlock, southSign } from "../piece";
+import { LANDMARK_MAX_H, SIGN_MIN_H, addBuilding, banded, emptyPiece, interlock, southSign } from "../piece";
 import { beacon, clock, container, fence, helipad, sign, table } from "../props";
 import { gableRoof, greenRoof, offsetFootprint } from "../roofs";
 import { clipBody, insetPoly, insidePoly, polyCentroid, polyFootprint } from "../polygon";
@@ -35,9 +35,9 @@ function glassMaxH(cap: number, tiers: readonly number[]): number {
 
 export function glassTower(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d } = lot;
-  const cap = Math.min(lot.maxH, LANDMARK_MAX_H), threeFit = glassFits(3, 3, cap);
+  const cap = lot.band ? lot.maxH : Math.min(lot.maxH, LANDMARK_MAX_H), threeFit = glassFits(3, 3, cap);
   const hMax = glassMaxH(cap, threeFit ? [2, 3] : [2]);
-  const h = hMax < 16 ? hMax : rng.int(16, hMax);
+  const h = hMax < 16 ? hMax : Math.min(hMax, banded(lot, rng.int(16, hMax), 16, hMax));
   const bw = rng.int(12, 14), bd = rng.int(10, 12);
   const bx = x + (w - bw) / 2, by = y + (d - bd) / 2;
   const drawn = rng.int(2, 3);
@@ -64,8 +64,8 @@ const CLASSIC_CROWN = 1 + 3 * (1 + GABLE_RATIO); // heavy cornice + gable of 3, 
 
 export function classic(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d } = lot;
-  const hMax = Math.min(MAX_CLASSIC_H, Math.floor(Math.min(lot.maxH, LANDMARK_MAX_H) - CLASSIC_CROWN));
-  const h = hMax < 12 ? hMax : rng.int(12, hMax);
+  const hMax = lot.band ? Math.floor(lot.maxH - CLASSIC_CROWN) : Math.min(MAX_CLASSIC_H, Math.floor(Math.min(lot.maxH, LANDMARK_MAX_H) - CLASSIC_CROWN));
+  const h = hMax < 12 ? hMax : Math.min(hMax, banded(lot, rng.int(12, hMax), 12, hMax));
   const bw = rng.int(14, 17), bd = rng.int(11, 13);
   const bx = x + (w - bw) / 2, by = y + (d - bd) / 2;
   const floors = Math.max(2, Math.round(h / 3.5)), cols = rng.int(4, 5), fh = h / floors;
