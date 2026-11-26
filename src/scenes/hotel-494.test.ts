@@ -7,7 +7,7 @@ import { checkSign, checkSignFont, COVER_LAPTOP, COVER_PHONE, signMetrics } from
 import { MARQUEE_FACE } from "../kit/marquee";
 import { SIDEWALK } from "./city-grid";
 import { HOTEL_LOT } from "./city-plan";
-import { sideKeys, visibleKeys } from "./sides-oracle";
+import { sideKeys, visibleKeys } from "./sides-fixtures";
 import { HOTEL_BLOCK, HOTEL_ROOF, RESUME_SIGN, SIGN_BACKING, SIGN_SITE, hotel, hotelSign } from "./sign-hotel";
 
 // Acceptance criteria of #494: the hotel as one block to z 60 and RESUME standing on its roof, on the grid, under the train rule.

@@ -8,7 +8,7 @@ import { SIDEWALK } from "./city-grid";
 import { HOTEL_LOT } from "./city-plan";
 import { v3 } from "../iso/geometry";
 import { COVER_LAPTOP, COVER_PHONE, checkSign, checkSignFont, signMetrics } from "../kit/legibility";
-import { sideKeys, visibleKeys } from "./sides-oracle";
+import { sideKeys, visibleKeys } from "./sides-fixtures";
 import { MARQUEE_FACE, marqueeLayout } from "../kit/marquee";
 import { HOTEL_BLOCK, HOTEL_CENTER, HOTEL_FACADE, HOTEL_ROOF, RESUME_SIGN, SIGN_BACKING, SIGN_SITE, blockFootprint, hotel, hotelSign, hotelStandIn } from "./sign-hotel";
 

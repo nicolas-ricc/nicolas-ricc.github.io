@@ -17,8 +17,8 @@ const TOWER_MIN_H = 3;
 /**
  * Podium that covers the lot with a shop window and cornice; off-center tower in a
  * corner, 1 inside the podium. With a low cap the podium is lowered to leave the
- * tower TOWER_MIN_H of body; assumes `maxH` ≥ 10 (the lowest cap in the
- * city, `maxHeightFor` in src/city/zoning.ts).
+ * tower TOWER_MIN_H of body; assumes `maxH` ≥ 10: `maxHeightFor` (src/city/zoning.ts) can cut lower,
+ * but caps no built parcel (held by "no built parcel is capped by the sign" in src/city/zoning.test.ts).
  */
 export function podiumTower(lot: Lot, rng: Rng, style: Style): Piece {
   const p = emptyPiece(), { x, y, w, d, z } = lot;

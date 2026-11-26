@@ -43,7 +43,7 @@ const FIXED_RECTS = builtParcels().filter((p) => FIXED_PARCELS.some((f) => f.cel
 const HOTEL_OWN: Solid[] = [];
 hotel(HOTEL_OWN, [], []);
 const HOTEL_KEYS = new Set(HOTEL_OWN.map((s) => JSON.stringify(s)));
-/** The pieces that can exceed 21: the hotel's own solids (slab, machine room, sign panel). */
+/** The pieces that can exceed 21: the hotel's own solids (block, crown, machine room, sign plate, lattice). */
 const isHotelPiece = (s: Solid) => HOTEL_KEYS.has(JSON.stringify(s));
 
 const CITY_MATS: readonly Material[] = ["office", "officeDark", "glass", "asphalt", "paving", "plaza", "curtain", "stone", "copper", "leaf", "leafDark", "water", "steel", "rust", "plaster", "terracotta", "marble", "awning", "deck", "rail", "navy", // navy: the hotel sign's plate (#494)

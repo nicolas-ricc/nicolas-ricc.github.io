@@ -65,9 +65,9 @@ export const isBare = (b: Block): boolean => neighborhoodOf(b) === "harbor" && !
 
 /** Cap of a parcel in front of the roof sign: a rect whose box `r × [0, top + PLINTH_H]` overlaps the plate's screen bounds while standing in front of it is cut so its screen top stays at the plate's bottom (floored at 0); anywhere else `top`. */
 export function maxHeightFor(r: Rect, top = MAX_BUILDING_H): number {
-  const box: Bounds = { min: v3(r.x, r.y, 0), max: v3(r.x + r.w, r.y + r.d, top + PLINTH_H) }, plate = bounds(SIGN_BACKING), plateBottom = screenBounds(plate).maxY;
-  if (!overlaps(screenBounds(box), screenBounds(plate)) || !isBehind(plate, box)) return top;
-  return Math.min(top, Math.max(0, ((r.x + r.y) / 2 - plateBottom) / Z_SCALE - PLINTH_H));
+  const box: Bounds = { min: v3(r.x, r.y, 0), max: v3(r.x + r.w, r.y + r.d, top + PLINTH_H) }, plate = bounds(SIGN_BACKING), plateScreen = screenBounds(plate);
+  if (!overlaps(screenBounds(box), plateScreen) || !isBehind(plate, box)) return top;
+  return Math.min(top, Math.max(0, ((r.x + r.y) / 2 - plateScreen.maxY) / Z_SCALE - PLINTH_H));
 }
 
 /** Sides of the block that face an open space (avenue, dock or east bank): there the recipe may open courtyards and shop windows. */
