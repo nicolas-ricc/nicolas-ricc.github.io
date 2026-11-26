@@ -173,11 +173,11 @@ export type AxisKind = "costanera" | "avenue" | "diagonal" | "boulevard";
 export interface Axis { id: string; name: string; from: Vec2; to: Vec2; w: number; kind: AxisKind }
 /** The street axes that cut the grid, in drawing order. */
 export const AXES: readonly Axis[] = [
-  { id: "costanera", name: "Costanera", from: { x: 188, y: 160 }, to: { x: 188, y: 480 }, w: 8, kind: "costanera" },
+  { id: "costanera", name: "Costanera", from: { x: 188, y: 160 }, to: { x: 188, y: WORLD.y1 + BLEED.y }, w: 8, kind: "costanera" },
   { id: "plaza", name: "Avenida de la Plaza", from: { x: 132, y: 228 }, to: { x: -440, y: 228 }, w: 12, kind: "avenue" },
   { id: "diagonalNorte", name: "Diagonal Norte", from: { x: 132, y: 210 }, to: { x: -14, y: 169 }, w: 10, kind: "diagonal" },
   { id: "diagonalSur", name: "Diagonal Sur", from: { x: 132, y: 320 }, to: { x: -420, y: 551 }, w: 10, kind: "diagonal" },
-  { id: "bulevar", name: "Bulevar Central", from: { x: 10, y: 160 }, to: { x: 10, y: 480 }, w: 20, kind: "boulevard" },
+  { id: "bulevar", name: "Bulevar Central", from: { x: 10, y: 160 }, to: { x: 10, y: WORLD.y1 + BLEED.y }, w: 20, kind: "boulevard" },
   { id: "vias", name: "Avenida de las Vías", from: { x: 184, y: 169 }, to: { x: -440, y: 169 }, w: 10, kind: "avenue" },
   { id: "sur", name: "Avenida del Sur", from: { x: 184, y: 348 }, to: { x: -440, y: 348 }, w: 10, kind: "avenue" },
   { id: "barrio", name: "Avenida del Barrio", from: { x: 184, y: 378 }, to: { x: -440, y: 378 }, w: 10, kind: "avenue" },

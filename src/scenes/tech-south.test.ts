@@ -114,7 +114,7 @@ describe("tech on the south parcels (#478)", () => {
     for (const c of PLAZAS) expect(fixedOf(c).k).toBe("plaza");
     expect(count("monoblock")).toBeGreaterThanOrEqual(3);
     expect(count("houses")).toBeGreaterThanOrEqual(5);
-    expect(count("low")).toBeGreaterThanOrEqual(10);
+    expect(count("low")).toBeGreaterThanOrEqual(9); // #493: the longer bands cut one narrow parcel off
   });
 
   it("auditorium and arena sit on parcels, not on an axis", () => {

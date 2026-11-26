@@ -1,17 +1,19 @@
 import type { Accent } from "../iso/accent";
 import { v3, type Vec2 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
-import { COVER_MARGIN, inCoverQuad } from "../map/geo";
+import { BLEED, COVER_MARGIN, WORLD, inCoverQuad } from "../map/geo";
 import { axisCrosswalks, axisLampSpots, axisLanes, boulevardPlanter, crossingPlaza } from "../city/axis-streets";
 import { lamp, place } from "../kit/props";
 import { CITY_EDGE } from "./city-grid";
-import { CITY_BOUNDS, LAND, crossingPlazas, inCrossingPlaza, onAxis, polyCentroid } from "./city-plan";
+import { CITY_BOUNDS, LAND, axis, axisBand, crossingPlazas, inCrossingPlaza, onAxis, pointInPoly, polyCentroid } from "./city-plan";
 import { urbanAt } from "./sprawl-grid";
 
-const SOUTH_BOUNDS = { x0: -Infinity, y0: CITY_BOUNDS.y1, x1: LAND.x1, y1: 650 };
+const SOUTH_BOUNDS = { x0: -Infinity, y0: CITY_BOUNDS.y1, x1: LAND.x1, y1: WORLD.y1 + BLEED.y };
 
-/** Nothing is painted off urban ground (T1's clamp: the strip up to `CITY_EDGE.south` is asphalt) or outside the cover. */
-const stop = (x: number, y: number): boolean => !urbanAt(x, Math.max(y, CITY_EDGE.south)) || !inCoverQuad(x, y, 16 / 9, COVER_MARGIN);
+const bulevarBand = axisBand(axis("bulevar"));
+
+/** Nothing is painted off urban ground (T1's clamp: the strip up to `CITY_EDGE.south` is asphalt) or outside the cover; the Bulevar Central's band is exempt from the cover so it runs to the bleed edge (#493). */
+const stop = (x: number, y: number): boolean => !urbanAt(x, Math.max(y, CITY_EDGE.south)) || (!inCoverQuad(x, y, 16 / 9, COVER_MARGIN) && !pointInPoly(x, y, bulevarBand));
 
 const SAMPLE = 0.5;
 /** Center line of 0.3 along a straight street, broken by the bands, the crossing plazas, `stop` and the bounds. */

@@ -1,6 +1,6 @@
-import { CELL_BLEED, COVER_MARGIN, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, inCoverQuad, islandEastX, islandWestX, riverCenter } from "../map/geo";
+import { BLEED, CELL_BLEED, COVER_MARGIN, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, ZONE_SPLIT_Y, inCoverQuad, islandEastX, islandWestX, riverCenter } from "../map/geo";
 import { CITY_EDGE, type Rect } from "./city-grid";
-import { COASTAL_CUT_Y, LAND, parcels, type Parcel } from "./city-plan";
+import { AXES, COASTAL_CUT_Y, LAND, axisBand, parcels, type Parcel } from "./city-plan";
 
 /**
  * Geography of the margins: which part of the bleed is built land and of
@@ -38,6 +38,14 @@ export const bayWater = (x: number, y: number): boolean => y < WORLD.y0 && x >= 
 /** South of the content the estuary continues until it joins the sea, wrapping around the south tip of the island (it rounds off and ends at y ≈ 380; after that it is all water). */
 export const estuaryWater = (x: number, y: number): boolean => y > WORLD.y1 && x >= QUAY_X && x < ZONE_SPLIT_X && (x <= islandWestX(y) || x >= islandEastX(y));
 
+let corridor: [number, number][] | undefined;
+/** True when the 18 u bleed cell holding `x` (anchored at `WORLD.x0 - BLEED.x`) overlaps the x-range of the band of an axis that runs to the bleed edge (the boulevard and the waterfront promenade, #493). */
+export function southAxisCorridor(x: number): boolean {
+  corridor ??= AXES.filter((a) => a.to.y >= WORLD.y1 + BLEED.y).map((a) => { const xs = axisBand(a).map((q) => q.x); return [Math.min(...xs), Math.max(...xs)] as [number, number]; });
+  const lo = WORLD.x0 - BLEED.x + CELL_BLEED * Math.floor((x - (WORLD.x0 - BLEED.x)) / CELL_BLEED), hi = lo + CELL_BLEED;
+  return corridor.some(([a, b]) => hi > a && lo < b);
+}
+
 /**
  * Built land at a point outside the content, or null if it is jungle, hill
  * or water. Industrial to the north and west of Portfolio (`y < ZONE_SPLIT_Y`, 90),
@@ -51,7 +59,7 @@ export function builtAt(x: number, y: number): Built | null {
   if (y > WORLD.y1 && x >= QUAY_X) return null; // to the south, from the quay eastward: estuary, the tongue of jungle between it and the sea, and the sea
   if (x < WORLD.x0 && y >= GREEN_BELT.y0 && y < GREEN_BELT.y1) return null; // the green belt between the factory and the city continues to the west
   const s = southDist(y), w = westDist(x), n = northDist(y);
-  if (s > 0 && s > reachAt("s", x)) return null;
+  if (s > 0 && s > reachAt("s", x) && !southAxisCorridor(x)) return null; // the Bulevar and the Costanera run on asphalt to the bleed edge (#493)
   if (w > 0 && w > reachAt("w", y)) return null;
   if (n > 0 && n > reachAt("n", x)) return null;
   if (s <= 0 && w <= 0 && n <= 0) return null; // inside the content

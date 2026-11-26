@@ -31,13 +31,13 @@ const isSimple = (p: readonly Vec2[]): boolean => {
 const SOUTH_BOUNDS = { ...PLAN_BOUNDS, y0: COASTAL_CUT_Y, y1: 475 }; // #493: the coastal parcels start at the cut; the 348..378 row is in PLAN_BOUNDS
 
 describe("city-plan axes (#472)", () => {
-  it("AXES match the table, exact values, in that order", () => {
+  it("AXES match the table, exact values, in that order", () => { // #493: bulevar and costanera end at 714 (WORLD.y1 + BLEED.y)
     expect(AXES.map((a) => ({ id: a.id, name: a.name, from: a.from, to: a.to, w: a.w, kind: a.kind }))).toEqual([
-      { id: "costanera", name: "Costanera", from: { x: 188, y: 160 }, to: { x: 188, y: 480 }, w: 8, kind: "costanera" },
+      { id: "costanera", name: "Costanera", from: { x: 188, y: 160 }, to: { x: 188, y: 714 }, w: 8, kind: "costanera" },
       { id: "plaza", name: "Avenida de la Plaza", from: { x: 132, y: 228 }, to: { x: -440, y: 228 }, w: 12, kind: "avenue" },
       { id: "diagonalNorte", name: "Diagonal Norte", from: { x: 132, y: 210 }, to: { x: -14, y: 169 }, w: 10, kind: "diagonal" },
       { id: "diagonalSur", name: "Diagonal Sur", from: { x: 132, y: 320 }, to: { x: -420, y: 551 }, w: 10, kind: "diagonal" },  // #493: 30 u south
-      { id: "bulevar", name: "Bulevar Central", from: { x: 10, y: 160 }, to: { x: 10, y: 480 }, w: 20, kind: "boulevard" },
+      { id: "bulevar", name: "Bulevar Central", from: { x: 10, y: 160 }, to: { x: 10, y: 714 }, w: 20, kind: "boulevard" },
       { id: "vias", name: "Avenida de las Vías", from: { x: 184, y: 169 }, to: { x: -440, y: 169 }, w: 10, kind: "avenue" },
       { id: "sur", name: "Avenida del Sur", from: { x: 184, y: 348 }, to: { x: -440, y: 348 }, w: 10, kind: "avenue" },  // #493: y 348
       { id: "barrio", name: "Avenida del Barrio", from: { x: 184, y: 378 }, to: { x: -440, y: 378 }, w: 10, kind: "avenue" },

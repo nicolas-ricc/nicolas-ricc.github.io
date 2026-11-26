@@ -17,7 +17,7 @@ export function facesIn(solids: readonly Solid[], r: Box): number {
 export const blockRect = (b: Rect): Box => ({ x0: b.x - 2, y0: b.y - 2, x1: b.x + b.w + 2, y1: b.y + b.d + 2 });
 
 export const NEIGHBORHOOD_REGION: Box = { x0: 43, y0: 441, x1: 186, y1: 620 };
-export const WATERFRONT_RECT: Box = { x0: 186, y0: 324, x1: 198.5, y1: 624 };
+export const WATERFRONT_RECT: Box = { x0: 186, y0: 324, x1: 198.5, y1: 714 }; // #493: to the south edge of the bleed
 
 // measured 2026-11-23 (#480) with tech(zoneRng(SEED, "cv", 2)): solids + ground, facesIn. before: 5 245 and 1 444 (#479)
 // The district and region checks count the whole scene, street furniture included.
