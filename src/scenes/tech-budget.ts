@@ -26,8 +26,9 @@ export const REGION_FACES_BEFORE = 1444; // NEIGHBORHOOD_REGION
 
 // measured 2026-11-23 (#480), max facesIn(withoutFurniture, blockRect(b)) per kind over the world's tech blocks, × 1.1 rounded to the nearest ten (up if below the figure):
 // low 98 → 107.8 → 110; houses 61 → 67.1 → 70 (neighborhood-houses.test.ts asserts it with the furniture in: 62 → 68.2 → 70, same cap); plaza 58 → 63.8 → 60; school 86 → 94.6 → 90; club 80 → 88 → 90; waterfront (facesIn WATERFRONT_RECT) 331 → 364.1 → 360;
+// #493: measured 2026-11-26, waterfront (facesIn WATERFRONT_RECT, y to 714) 405 × 1.1 = 445.5 → 450. before: 360
 // monoblock stays 115: generation limit read by neighborhood-monoblock.ts, measured 105 (× 1.1 = 115.5).
 // before: monoblock 115, houses 64, plaza 60, school 120, club 150, waterfront 350, low 120
-export const FACE_CAPS: Record<"monoblock" | "houses" | "plaza" | "school" | "club" | "waterfront" | "low", number> = { monoblock: 115, houses: 70, plaza: 60, school: 90, club: 90, waterfront: 360, low: 110 };
+export const FACE_CAPS: Record<"monoblock" | "houses" | "plaza" | "school" | "club" | "waterfront" | "low", number> = { monoblock: 115, houses: 70, plaza: 60, school: 90, club: 90, waterfront: 450, low: 110 };
 // measured 2026-11-23 (#480), ACCENT_CAP's sum (tech.ts): 568 × 1.1 = 624.8 → 600. before: 1 300
 export const ACCENT_CAP = 600;
