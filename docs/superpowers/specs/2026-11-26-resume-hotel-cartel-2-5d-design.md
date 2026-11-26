@@ -212,9 +212,9 @@ En la conversación salieron, además:
 |---|---|---|
 | Plano del cartel | `facade`, sin estirar | `facade` con estiramiento anamórfico K 1.17 (`SIGN_STRETCH`) |
 | Tramo en y | `~241` a `~308` | tinta y 242.03..312.86 (placa 239.1..313.3) |
-| Línea de base | sobre la azotea | z 61.6 (tope 73.6) |
+| Línea de base | z ≈ 62..74 (plan 61.4 / 73.4) | z 61.6 (tope 73.6) |
 | Respaldo | sin vidrio; reticulado o placa fina | placa fina `navy` (no vidrio), `SIGN_BACKING` |
-| Aspecto en el oráculo | medido como cartel de pared | los carteles `facade` se miden sobre los lados proyectados (como los de suelo); límite 0.08 sin cambios |
+| Aspecto en el oráculo | medido como cartel de pared | los carteles `facade` se miden sobre los lados proyectados (como los de suelo); aspecto 0.0703 ≤ 0.08, límite sin cambios |
 | `FRONT_CAP_H` | adaptado | reemplazado por un tope derivado de la placa (`maxHeightFor`) |
 
 ## 7. Alturas de ciudad de oficinas (ticket 3, depende del 1 y del 2)

@@ -73,7 +73,7 @@ describe("the west moves from tech to the city (#479)", () => {
   // Measured on HEAD of agent/479 (after #479), world(SEED), raised solids: city 1 518, tech 1 136, sum 2 654 ≤ 2 658. A record: the test asserts ≤, never exact.
   // The move stayed ≤ 2 658 thanks to three west rulings: no traffic lights at axis × ordinary-street crossings, no parked cars (all three west of WEST_DISTRICT_X, x −54), axis lamps every 24 (not 12).
   // #493: the 348..378 row moves from tech to the city: measured city 1 700 + tech 962 = 2 662 (was 2 658)
-  // #494: the hotel's sign adds 48 raised solids to the city (city 1 748 + tech 962 = 2 710, was 2 662)
+  // #494 raised this sum on purpose, by measurement (the test name is historical; the assertion is still ≤): the hotel's sign adds 48 raised solids to the city (city 1 748 + tech 962 = 2 710, was 2 662)
   it("budget moved, not raised", () => {
     const w = world(SEED), raised = (s: { solids: Parameters<typeof isFlat>[0][] }) => s.solids.filter((x) => !isFlat(x)).length;
     const after = { city: raised(w.city!), tech: raised(w.tech!) };
