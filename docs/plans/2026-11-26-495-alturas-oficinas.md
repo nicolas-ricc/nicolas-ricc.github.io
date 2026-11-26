@@ -41,10 +41,37 @@
 - **D7. Budget.** City static accents are at 1 584 / 1 600 and taller buildings carry more lit windows, so the caps will very likely rise. That rise goes through measurement (× 1.1) plus FPS against `main` (Task 4). If the branch is more than 2 ms slower, the floor stacking of `cornerCupola` and `balconyBlock` on banded lots is thinned first (a trim slab every second floor). If it is still slower, the run stops and comments on the issue.
 - **D8. Captures** before (a `git worktree` of `origin/main` on port 5174) and after (the branch on 5173): the start view at 1920×1080 and 390×750, and the Resume zone view. They go in the PR, not in the repo.
 
+## Acceptance criteria → tasks
+
+| Criterion (issue #495) | Task |
+|---|---|
+| Topes y `towerZone` como arriba, con tests | 1 (caps, limits) + 2–3 (recipes reach the range) |
+| Ningún edificio supera 50 ni viola `trainCap`; el cartel no queda tapado en inicio ni en zona | 3 (tests) + 4 (captures) |
+| Regla de escalón de un barrio entre vecinos intacta | 3 (existing `zoning.test.ts` test kept green) |
+| Presupuesto respetado, o topes × 1.1 con FPS / `stage.tick` contra `main` | 4 |
+| Capturas antes y después de inicio (1920×1080 y 390×750) y zona | 4 |
+| Tests y typecheck en verde | 4 Step 5 |
+
+## Assumptions (from the grilling, technical)
+
+- **A1. Where the barrio limits come from.** Issue table rows "Clásico (d < 80 de `PLAZA_CENTER`)", "Transición (80–150)", "Moderno (d ≥ 150)". Spec §7: "Las distancias del gradiente se miden desde el `PLAZA_CENTER` nuevo". The plano computes its proposal the same way (`plano.html:224-225`, `d < 80` / `d < 150`). Rejected: keeping 105 / 205 and applying only the heights. Then no parcel between d 150 and 205 would be moderno, so "torres … desde d 150" would build nothing.
+- **A2. The stage-3 evals** (`src/city/office-heights.test.ts`, `src/kit/office-band.test.ts`) are written and committed failing in the pipeline's stage 3, before Task 1. They are created there, not by any task. Each task's Step 1 runs its own describe block.
+- **A3. `CityBarrio`** has exactly four members (`src/city/zoning.ts:101`). `residencial` never reaches the zoning as such: `neighborhoodOfParcel` maps it to `bajo` (`zoning.ts:152`).
+- **A4. rng.** The recipes draw from the shared stream that `city.ts` passes to `seat`. No recipe adapted here draws per floor: the `cornerCupola` draws are per wing, and `balconyBlock`'s floors draw nothing. So the geometry draws of the east city stay in sequence. `lights()` draws one `rng.next()` per visible window (`src/city/lights.ts:130`), so which windows are lit will change once the west has more windows. That is accepted, and the lights tests are guards, not pins.
+- **A5. The caps inside each recipe today:** `twinTowers` `hMax = recipeCap − CORNICE_H − ANTENNA_H` (`composite.ts:63`); `chamfer` and `decoStepped` use `recipeCap` (`composite.ts:90,135`); `portalBase` `roomH = recipeCap − top + z − CORNICE_H` (porteno.ts, `portalBase`); `courtyardO` has a local `min(lot.maxH, RECIPE_MAX_H)` that becomes `recipeCap`. `mansard` facades already use `floorsFor(h)`, so window rows follow the banded height.
+- **A6. `rng.int(lo, hi)` with `hi < lo`** is never reached. `classic` draws only when `hMax ≥ 12`, and `glassTower` only when `hMax ≥ 16` (`modern.ts:40,68`). Below that they take `hMax`, and a band of 26.9..26.9 lands there. `office-band.test.ts` covers a band of 26.9..26.9.
+- **A7. Small lots.** `tooSmall` (`MIN_LOT_SIDE` 7, `zoning.ts`) already skips lots below 7. The band changes no footprint, only heights. The guard is finite bounds, and the heights are checked against the band.
+- **A8. The rewritten "nothing but the hotel's own solids exceeds 21"** (`city.test.ts:119`) lets a solid reach 50 + `PLINTH_H` when it lies inside the rect of a built parcel whose placed lot has a `band` (the same `inRect` test as `FIXED_RECTS`, `city.test.ts:41`). Everything else keeps today's limits.
+- **A9. Re-recorded pins and the check behind each.** The `zoning.test.ts` snapshot "east parcels keep their pre-#479 recipe…": every changed line must be a cell whose `barrioAt` changed (checked from the diff, cell by cell). `city.test.ts` pinned plinth pieces (west −54 includes the re-zoned −17 / −47 columns) are re-recorded with a comment naming #495. `seed-isolation` hashes only the other zones (shipyard, factory, fair, hinterland, sea) and **must not change**: that is the proof that nothing outside Resume moves.
+- **A10. Test time.** The new city-level evals build the city once in `beforeAll` and pass a 60 000 ms timeout per test, as `city-budget.test.ts` uses `beforeAll`.
+- **A11. ADRs.** None of 0001–0005 covers the kit/city boundary. `Lot.maxH` already carries a zoning cap into the kit (`src/kit/types.ts:16`), and `band` is the same kind of field. No new ADR.
+- **A12. Reversibility.** If the FPS gate fails after D7's fallback, the commits stay on the pushed branch, unmerged, and the issue gets a comment naming the stage, as the pipeline prescribes. To catch that early, Task 3 Step 4 already prints the budget figures: if static accents more than double, stop there.
+- **A13. Worktree for `main`.** `git worktree add /tmp/main-495 origin/main`, `ln -s /work/node_modules /tmp/main-495/node_modules`, and `npm run feed` there (or copy `content/blog.generated.json`). `.scratch/` is in `.git/info/exclude`.
+
 ## Review Focus
 
 - **The station and the train seen behind taller row-171/201 pieces.** Row y 171 near x 103..127 goes from clásico 8.5 to transición, up to 26.9. Owner: Task 3, which keeps `city.test.ts` "no Resume solid taller than 10 overlaps STATION_LAND on screen" green. If it fails, add a station cap in `maxHFor` next to `trainCap`, not an exemption.
-- **Tiny and wedge lots with a band** (lots of 14 × 6, 9 × 9 and 7 × 7 exist): a band must not turn an empty piece into NaN or into a sliver tower. Owner: Task 2 test "banded recipes on a 7 × 7 lot give finite bounds", and Task 3 test "every banded piece has finite bounds".
+- **Tiny and wedge lots with a band** (lots of 14 × 6, 9 × 9 and 7 × 7 exist): a band must not turn an empty piece into NaN Owner: Task 2 test "banded recipes on a 7 × 7 lot give finite bounds", and Task 3 test "every banded piece has finite bounds".
 - **Lab exhibits framed with a fixed `h`** that may now cut a taller neighbour. Owner: Task 3 runs `src/lab/exhibits.test.ts` "neighbors: no solid cut by the edge rises above h". If it fails, raise that exhibit's `h` from the measurement and leave a comment.
 - **The sign covered from the start view or the zone view.** Owner: Task 3 keeps `city.test.ts` "no solid in front of the sign rises above its bottom edge on screen" and adds "no west-bank parcel solid rises above 50 + PLINTH_H". The Task 4 captures check it by eye.
 - **Lit windows and animatable quotas when there are more windows.** Owner: Task 3 keeps `lights.test.ts` green (`animableQuota`, `MAX_ANIMABLE` 40). Task 4 measures the accents.
@@ -113,6 +140,7 @@ Per recipe: keep the existing rng call where it is, and wrap only its value. The
 - Produces: in every `Placed` of a non-fixed barrio parcel, `lot.band = { lo: min(BARRIO_HEIGHTS[n].lo, lot.maxH), hi: lot.maxH }`.
 
 - [ ] **Step 1:** Run `npx vitest run src/city/office-heights.test.ts -t "built city"`. Expected: FAIL (no band on the lots, heights stop at 22).
+- [ ] **Step 1b:** The "built city" evals include "no west-bank parcel solid rises above 50 + PLINTH_H" and the train rule over the parcel solids (`y_min − 1.4·z_max ≥ 134.5` south of `TRAIN_CLEAR.y1`).
 - [ ] **Step 2:** In `assign`, set `band` on the lot of a parcel that is not fixed, whose neighborhood is in `BARRIO_HEIGHTS` and whose catalogue is `CATALOGUE[n].recipes`. Update `assign`'s doc comment.
 - [ ] **Step 3:** Set `CATALOGUE.moderno.recipes` to `podiumTower 45, glassTower 30, twinTowers 25`.
 - [ ] **Step 4:** Run `npx vitest run src/city src/scenes src/lab`. Update the tests listed under Files to the new heights, keeping their intent. For each pinned record, check that the diff is heights or recipes of west-bank parcels before re-recording. Keep green: "no solid in front of the sign rises above its bottom edge on screen", "no Resume solid taller than 10 overlaps STATION_LAND on screen", the train rule tests, "no two neighbouring parcels differ by more than one barrio step", and the lights tests. If a guard fails, fix the cause (Review Focus), not the guard.
@@ -130,3 +158,10 @@ Per recipe: keep the existing rng call where it is, and wrap only its value. The
 - [ ] **Step 3:** Captures before (5174) and after (5173): start view at 1920×1080 and 390×750, and the Resume zone view. Save them under `.scratch/captures-495/`. Check by eye that no tower covers the sign and that the train and station stay clear.
 - [ ] **Step 4:** Docs: `CONTEXT.md` and spec §7.1. Run `npx vitest run src/docs-glossary.test.ts src/english.test.ts src/lab/docs.test.ts`. Expected: PASS.
 - [ ] **Step 5:** Full suite `npm test` and `npm run typecheck`. Commit `chore(#495): budget measured, docs and spec §7.1`.
+
+## Grilling
+
+- Rounds: 1 (the revision added assumptions and a mapping, not a different seam, so there is no second round). Griller model: fable.
+- Questions: 18. Sources: ISSUE 2 (Q1, Q3), CODE 12 (Q4–Q8, Q10, Q11, Q14, Q15, Q17), DOC 1 (Q16), NO SOURCE → technical assumption 5 (Q2, Q9, Q12, Q13, Q18). Q14 is answered by the code: `parcelNeighborhoods` only lowers until stable (`zoning.ts`), and the y 321..343 row is transición (y > 320), so between the moderno rows and the forced-clásico 348 row.
+- Assumptions: A1–A13 above.
+- Spec ambiguities: none. Follow-up issues opened: none.
