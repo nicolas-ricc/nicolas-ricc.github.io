@@ -148,6 +148,16 @@ describe("text planes", () => {
     expect(dot(p.u, p.v)).toBeCloseTo(0, 12);
     expect([p.u.z, p.v.z]).toEqual([0, 0]);
   });
+  it("facade stretch scales u only (#494)", () => {
+    const f = facade({ x: 0, y: 0 }, { x: 0, y: -10 }, 5, 1.17);
+    expect(f.origin).toEqual(v3(0, 0, 5));
+    expect(f.u.x).toBeCloseTo(0, 12);
+    expect(f.u.y).toBeCloseTo(-1.17, 12);
+    expect(f.u.z).toBe(0);
+    expect(f.v).toEqual(v3(0, 0, 1));
+    const d = facade({ x: 0, y: 0 }, { x: 0, y: -10 }, 5);
+    expect(Math.hypot(d.u.x, d.u.y, d.u.z)).toBeCloseTo(1, 12);
+  });
   it("facade with coincident points throws", () => {
     expect(() => facade({ x: 1, y: 1 }, { x: 1, y: 1 }, 0)).toThrow();
   });

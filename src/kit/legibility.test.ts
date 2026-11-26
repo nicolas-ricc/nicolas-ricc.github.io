@@ -12,7 +12,7 @@ import {
   backingMargin, checkFont, checkSign, contrastRatio, COVER_LAPTOP, COVER_PHONE, FONT_RULES, occlusionRatio, relativeLuminance, SIGN_FONT, SIGN_RULES,
   GROUND_ASPECT, signMetrics, signSpec, signXHeight, staticContrast,
 } from "./legibility";
-import { CHAINSAW_BAR, CHAINSAW_FACE, CHAINSAW_X, marqueeLayout } from "./marquee";
+import { CHAINSAW_BAR, CHAINSAW_FACE, CHAINSAW_X, MARQUEE_FACE, marqueeLayout } from "./marquee";
 import { counterClearance, diagonalWall, facade, glyphPairs, GRID, groundDiagonal, layoutText, letterGaps, overlapping, rhythm, strokeRatio, toWorld, xHeightPx } from "./lettering";
 
 const WORDS = ["Resume", "Portfolio", "Blog"];
@@ -306,6 +306,13 @@ describe("checkSign", () => {
     expect(checkSign(mk(), COVER_LAPTOP, []).map((v) => v.rule)).toContain("baseline");
     expect(checkSign(mk(true), COVER_LAPTOP, []).map((v) => v.rule)).not.toContain("baseline");
   });
+  it("a facade sign's aspect is measured on the projected sides of its glyph boxes (#494)", () => {
+    const mk = (k: number) => signSpec({ id: "t", text: "RESUME", size: 12, width: SIGN_FONT.width, color: "greenMid", plane: facade({ x: 123, y: 300 }, { x: 123, y: 200 }, 61.4, k), style: "fill", backing: [], layouts: marqueeLayout(12, 0.07), xHeight: 12, stroke: MARQUEE_FACE * 12, facade: true });
+    expect(signMetrics(mk(1), COVER_LAPTOP).aspectError).toBeCloseTo(0.2522, 3);
+    expect(signMetrics(mk(1.17), COVER_LAPTOP).aspectError).toBeCloseTo(0.0703, 3);
+    expect(checkSign(mk(1.17), COVER_LAPTOP, []).map((v) => v.rule)).not.toContain("aspect");
+    expect(signMetrics(mk(1.4 / Math.hypot(1, 0.5)), COVER_PHONE).aspectError).toBeLessThan(0.001);
+  });
   it("violations carry value and a readable limit; only known rule names", () => {
     const known = new Set(["xHeight", "stroke", "air", "baseline", "vertical", "aspect", "contrast", "backing", "occlusion"]);
     for (const v of checkSign(blog([]), COVER_PHONE, [])) {
@@ -390,8 +397,8 @@ describe("decal signs (#452)", () => {
   });
   it("existing signs measure as before (a deliberate pin: retuning a sign updates these values)", () => {
     const pinned = [
-      // #474: the hotel sign, cap 12 on the slab's face (the crown measured 14.2506 / 2.3085972 / 2.9539114255064196)
-      { s: RESUME_SIGN, m: { xHeightPx: 19.656000000000013, strokePx: 3.1842720000000275, airPx: 4.0743605869054, aspectError: 0.010050506338832865 }, c: 4.695562146225949 },
+      // #494: the hotel sign, cap 12 on the roof, extruded (on the slab face of #474 it measured 19.656 / 3.1842720000000275 / 4.0743605869054 / 0.010050506338832865 / contrast 4.695562146225949; the crown measured 14.2506 / 2.3085972 / 2.9539114255064196)
+      { s: RESUME_SIGN, m: { xHeightPx: 19.656000000000013, strokePx: 2.975246757676269, airPx: 3.3707793600000096, aspectError: 0.0702547584614408 }, c: 5.067200184378698 },
       { s: TINKER_SIGN, m: { xHeightPx: 15.069607494509299, strokePx: 2.396067591626975, airPx: 2.285331928448671, baselineDeg: 0.23067405316426817, verticalDeg: 3.0304011483583646, aspectError: 0.07731579344706507 }, c: 8.062398849377823 },
       // #460: WRITING_CAP 17.25 as a navy decal on timber (cap 20 measured 12.74 / 2.48 / 3.59 / contrast 8.04; the plain board at 11.5, 14.50 / 2.26 / 2.47 / 8.08)
       { s: BLOG_SIGNS.wide, m: { xHeightPx: 10.988810610699073, strokePx: 2.1406773916946134, airPx: 3.099268134066288, aspectError: 0 }, c: 8.040217301353456 },

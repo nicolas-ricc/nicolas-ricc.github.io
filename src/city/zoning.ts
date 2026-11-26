@@ -1,3 +1,4 @@
+import { Z_SCALE } from "../iso/project";
 import { isBehind, overlaps, screenBounds } from "../iso/depth";
 import { v3, type Vec2 } from "../iso/geometry";
 import { bounds, type Bounds } from "../iso/solids";
@@ -9,7 +10,7 @@ import type { Lot, Side, StyleId } from "../kit/types";
 import type { Rng } from "../map/seed";
 import { PLINTH_H } from "../scenes/city-pieces";
 import { AVENUE, BLOCK_W, EAST_COLS, FREIGHT_ROW, ROWS, SIDEWALK, STREET, WEST_QUAY, blocks, estuaryEast, type Block, type Rect } from "../scenes/city-grid";
-import { SIGN_PANEL } from "../scenes/hotel-plan";
+import { SIGN_BACKING } from "../scenes/hotel-plan";
 import { TRAIN_CLEAR } from "../scenes/station";
 import { COASTAL_CUT_Y, HOTEL_LOT, PITCH, PLAN_BOUNDS, inCrossingPlaza, inPlazaMayor, onAxis, parcels, polyBox, type Parcel } from "../scenes/city-plan";
 
@@ -20,8 +21,6 @@ import { COASTAL_CUT_Y, HOTEL_LOT, PITCH, PLAN_BOUNDS, inCrossingPlaza, inPlazaM
  * It does not import city.ts (avoids the cycle).
  */
 export type Neighborhood = StyleId;
-
-export const FRONT_CAP_H = 10;
 
 export const MAX_BUILDING_H = 18;
 
@@ -64,10 +63,11 @@ export const FIXED: readonly { x: number; y: number; recipe: string }[] = [
 /** Harbor block with no fixed recipe: it gets only the plinth (city.ts), no building. */
 export const isBare = (b: Block): boolean => neighborhoodOf(b) === "harbor" && !FIXED.some((f) => f.x === b.x && f.y === b.y);
 
-/** Cap of a parcel in front of the hotel's sign: a rect that, built to its tallest, would cover the glass panel on screen while standing in front of it is limited to `FRONT_CAP_H`; anywhere else `top`. */
+/** Cap of a parcel in front of the roof sign: a rect whose box `r × [0, top + PLINTH_H]` overlaps the plate's screen bounds while standing in front of it is cut so its screen top stays at the plate's bottom (floored at 0); anywhere else `top`. */
 export function maxHeightFor(r: Rect, top = MAX_BUILDING_H): number {
-  const box: Bounds = { min: v3(r.x, r.y, 0), max: v3(r.x + r.w, r.y + r.d, MAX_BUILDING_H + PLINTH_H) }, panel = bounds(SIGN_PANEL);
-  return overlaps(screenBounds(box), screenBounds(panel)) && isBehind(panel, box) ? FRONT_CAP_H : top;
+  const box: Bounds = { min: v3(r.x, r.y, 0), max: v3(r.x + r.w, r.y + r.d, top + PLINTH_H) }, plate = bounds(SIGN_BACKING), plateScreen = screenBounds(plate);
+  if (!overlaps(screenBounds(box), plateScreen) || !isBehind(plate, box)) return top;
+  return Math.min(top, Math.max(0, ((r.x + r.y) / 2 - plateScreen.maxY) / Z_SCALE - PLINTH_H));
 }
 
 /** Sides of the block that face an open space (avenue, dock or east bank): there the recipe may open courtyards and shop windows. */

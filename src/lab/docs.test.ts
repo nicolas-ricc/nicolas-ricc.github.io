@@ -5,7 +5,6 @@ import { describe, expect, it } from "vitest";
 import { project } from "../iso/project";
 import { COVER_LAPTOP, COVER_PHONE, GROUND_ASPECT, layoutGaps, SIGN_FONT, SIGN_RULES, signMetrics, staticContrast } from "../kit/legibility";
 import { counterClearance, letterGaps, measureText, rhythm } from "../kit/lettering";
-import { RESUME_SIGN, SIGN_SITE, slabFootprint } from "../scenes/sign-hotel";
 import { BLOG_SIGNS, CYCLE_POSES, PITCH, PLATFORM_DECK, PLATFORM_SITES, poseAt, ROLL, signAt, WRITING_CAP } from "../scenes/sign-platform";
 import { RAFT } from "../scenes/raft";
 import { ISO_TONES } from "../map/palette-iso";
@@ -530,7 +529,7 @@ describe("zone signs redesign documentation (#374)", () => {
   const xExtent = (pts: { x: number; y: number; z: number }[]) => { const xs = pts.map((p) => project(p).x); return Math.max(...xs) - Math.min(...xs); };
   const rect = (x0: number, y0: number, x1: number, y1: number) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(([x, y]) => ({ x: x!, y: y!, z: 0 }));
   const HOSTS = {
-    RESUME: slabFootprint().map((q) => ({ x: q.x, y: q.y, z: 0 })), // the hotel slab since #474 (64 × 8)
+    RESUME: [{ x: 74.5441558772843, y: 279.2989898732233 }, { x: 119.79898987322333, y: 234.04415587728428 }, { x: 125.4558441227157, y: 239.70101012677665 }, { x: 80.20101012677667, y: 284.95584412271575 }].map((q) => ({ ...q, z: 0 })), // the hotel slab of #474 (64 × 8), a literal since #494
     PORTFOLIO: rect(SHIPYARD_HALLS[1]!.x0, SHIPYARD_HALLS[1]!.y0, SHIPYARD_HALLS[1]!.x1, SHIPYARD_HALLS[1]!.y1),
     WRITING: PLATFORM_DECK.map((q) => ({ x: q.x, y: q.y, z: 0 })),
   };
@@ -573,7 +572,9 @@ describe("zone signs redesign documentation (#374)", () => {
     for (const id of CONTEXTS) for (const [tag, s] of SCALES) {
       const line = row(measures, `| \`${id}\` | ${s} |`), m = signMetrics(context(id).sign, s);
       expect(line, `${id} ${tag}`).not.toBe("");
-      for (const v of [m.xHeightPx, m.strokePx, m.airPx, staticContrast(context(id).sign)]) expect(line, `${id} ${tag} ${f(v)}`).toContain(f(v));
+      // RESUME row: literals since #494, the spec records the slab's sign
+      const vals = id === "cartel-torre-escena" ? (tag === "117" ? [19.66, 3.18, 4.07, 4.70] : [13.94, 2.26, 2.89, 4.70]) : [m.xHeightPx, m.strokePx, m.airPx, staticContrast(context(id).sign)];
+      for (const v of vals) expect(line, `${id} ${tag} ${f(v)}`).toContain(f(v));
     }
   });
   // since #429 the current level-3 measures live in the 2026-11-18 spec §8; the 2026-11-15 §8.1 keeps those of 2026-11-17
@@ -595,6 +596,8 @@ describe("zone signs redesign documentation (#374)", () => {
     for (const [word, id] of Object.entries(WORDS)) {
       const sign = context(id).sign, line = row(measures, `| ${word} |`);
       expect(line, word).not.toBe("");
+      // RESUME row: literals since #494, the spec records the slab's sign
+      if (word === "RESUME") { for (const v of ["1.27", "1.47", "1.16", "1.56"]) expect(line, `${word} ${v}`).toContain(v); continue; }
       // a marquee word (RESUME, Neon Light) is measured on its own layouts, with its face as w
       const vals = sign.stroke !== undefined
         ? (() => {
@@ -614,7 +617,8 @@ describe("zone signs redesign documentation (#374)", () => {
       expect(line, word).not.toBe("");
       const sign = context(id).sign, box = sign.glyphs.map((g) => g.layout.box);
       const width = sign.stroke !== undefined ? box.at(-1)!.x1 - box[0]!.x0 : measureText(word, SIGN_FONT.size).width;
-      const vals = [width, xExtent(quads) * COVER_LAPTOP, xExtent(HOSTS[word as keyof typeof HOSTS]) * COVER_LAPTOP];
+      // RESUME row: literals since #494, the spec records the slab's sign (host: HOSTS.RESUME)
+      const vals = word === "RESUME" ? [60.54, 100.16, xExtent(HOSTS.RESUME) * COVER_LAPTOP] : [width, xExtent(quads) * COVER_LAPTOP, xExtent(HOSTS[word as keyof typeof HOSTS]) * COVER_LAPTOP];
       for (const v of vals) expect(line, `${word} ${f(v)}`).toContain(f(v));
     }
   });
@@ -1260,7 +1264,6 @@ describe("hotel sign level 3 and docs closing (#475)", () => {
     return j < 0 ? rest : rest.slice(0, nl + j);
   };
   const flat = (txt: string) => txt.replace(/\s+/g, " ");
-  const minus = (v: number, d: number) => v.toFixed(d).replace(/^-/, "\u2212");
   const glossary = read(`${ROOT}CONTEXT.md`);
   const entryOf = (name: string) => { const at = glossary.indexOf(`### ${name}\n`), rest = glossary.slice(at + name.length + 5); return at < 0 ? "" : rest.slice(0, Math.max(0, rest.search(/^### /m)) || rest.length); };
 
@@ -1335,10 +1338,8 @@ describe("hotel sign level 3 and docs closing (#475)", () => {
     const seven = between(spec, /^## 7\. /m, /^## 8\. /m), dev = flat(between(seven, /^### 7\.5 Desvíos$/m));
     expect(dev).not.toBe("");
     expect(between(seven, /^### 7\.5 /m).split("\n").some((l) => l.startsWith("| "))).toBe(true);
-    const pts = RESUME_SIGN.glyphs.flatMap((g) => g.quads.flat()).map(project);
-    const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
-    const box = `${minus(Math.min(...xs), 1)}..${minus(Math.max(...xs), 1)} × ${minus(Math.min(...ys), 1)}..${minus(Math.max(...ys), 1)}`;
-    const site = `(${[SIGN_SITE.x, SIGN_SITE.y, SIGN_SITE.z].map((v) => minus(v, 2)).join(", ")})`;
+    // literals since #494: the spec records the slab's sign
+    const site = "(103.30, 262.80, 33.90)", box = "\u2212202.3..\u2212116.7 × 118.8..135.6";
     for (const s of ["`HOTEL_CAP`", "12", "`backingW`", "`SIGN_SITE`", site, box, "28 %", "48 %", "37 %", "430×932", "390×750", "360×740", "`COVER_FOCUS_U`", "`labelLayout`"]) expect(dev, s).toContain(s);
   });
 });

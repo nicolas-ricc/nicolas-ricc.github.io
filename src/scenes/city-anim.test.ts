@@ -4,7 +4,7 @@ import { SEED, createRng } from "../map/seed";
 import { zoneRng } from "./world";
 import { ANIMABLE_BARRIOS, MAX_ANIMABLE, WINDOW_ALPHA } from "../city/lights";
 import { city, type CityScene } from "./city";
-import { HOTEL_SLAB } from "./sign-hotel";
+import { HOTEL_ROOF, blockFootprint } from "./sign-hotel";
 import { type CityAnim, BLINK_GAP_MS, PAPER_DRIFT, ROOMS_BAND, FLICKER_ALPHA, FLICKER_GAP_MS, PROMENADE_STEP_MS, NEON_STEP_MS, PAPER_RANGE, PAPER_SIDE, PAPER_SPEED, SIGN_GAP_MS, WINDOW_GAP_MS, createCityAnim } from "./city-anim";
 
 /** Sign accents injected by hand: since #472 the city makes no district signs (the modern belt lies west of the city edge), but city-anim still animates `neon.signs`. */
@@ -459,12 +459,9 @@ describe("city-anim: windows and street neon with wall time (#192)", () => {
 describe("city-anim: the hotel rooms and the papers along the facade (#474)", () => {
   const build = (reducedMotion = false) => { const scene = withSigns(city(createRng(7), createRng(8), createRng(9))); return { scene, anim: createCityAnim(scene, createRng(3), { reducedMotion }) }; };
   const key = (a: Accent) => (a.kind === "poly" ? JSON.stringify(a.pts) : "");
-  const R2 = Math.SQRT1_2, C = HOTEL_SLAB.center;
-  /** Inside `slabFootprint()` grown by 0.5: |t| ≤ half + 0.5 along U and |n| ≤ thick/2 + 0.5 along N. */
-  const inSlab = (p: { x: number; y: number; z: number }) => {
-    const t = (p.x - C.x) * R2 - (p.y - C.y) * R2, n = (p.x - C.x) * R2 + (p.y - C.y) * R2;
-    return Math.abs(t) <= HOTEL_SLAB.half + 0.5 && Math.abs(n) <= HOTEL_SLAB.thick / 2 + 0.5 && p.z < HOTEL_SLAB.z1;
-  };
+  const BF = blockFootprint(), BX0 = Math.min(...BF.map((p) => p.x)) - 0.5, BX1 = Math.max(...BF.map((p) => p.x)) + 0.5, BY0 = Math.min(...BF.map((p) => p.y)) - 0.5, BY1 = Math.max(...BF.map((p) => p.y)) + 0.5;
+  /** Inside the block's footprint grown 0.5 and under its roof. */
+  const inBlock = (p: { x: number; y: number; z: number }) => p.x >= BX0 && p.x <= BX1 && p.y >= BY0 && p.y <= BY1 && p.z < HOTEL_ROOF;
 
   it("frame 0 shows the initial lit rooms: a subset of scene.hotel.rooms, about 40 % of them", () => {
     const { scene, anim } = build(), rooms = new Set(scene.hotel.rooms.map(key)), lit = anim.lit();
@@ -501,7 +498,7 @@ describe("city-anim: the hotel rooms and the papers along the facade (#474)", ()
     for (let t = 0; t < 60000; t += 100) {
       anim.tick(100);
       for (const p of anim.papers().map(dot)) {
-        expect(inSlab(p.at), JSON.stringify(p.at)).toBe(false);
+        expect(inBlock(p.at), JSON.stringify(p.at)).toBe(false);
         const dx = p.at.x - w.x, dy = p.at.y - w.y, dist = Math.hypot(dx, dy);
         if (dist > 10) {
           expect((dx * PAPER_DRIFT.x + dy * PAPER_DRIFT.y) / dist / Math.hypot(PAPER_DRIFT.x, PAPER_DRIFT.y)).toBeGreaterThan(0.9);

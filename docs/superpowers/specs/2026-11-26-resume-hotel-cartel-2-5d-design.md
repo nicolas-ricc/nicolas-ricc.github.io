@@ -206,6 +206,17 @@ En la conversación salieron, además:
   nuevo; como el cartel está más arriba, probablemente se puedan aflojar los
   topes delante.
 
+### 6.1 Desvíos (#494)
+
+| Punto | Spec | Construido |
+|---|---|---|
+| Plano del cartel | `facade`, sin estirar | `facade` con estiramiento anamórfico K 1.17 (`SIGN_STRETCH`) |
+| Tramo en y | `~241` a `~308` | tinta y 242.03..312.86 (placa 239.1..313.3) |
+| Línea de base | z ≈ 62..74 (plan 61.4 / 73.4) | z 61.6 (tope 73.6) |
+| Respaldo | sin vidrio; reticulado o placa fina | placa fina `navy` (no vidrio), `SIGN_BACKING` |
+| Aspecto en el oráculo | medido como cartel de pared | los carteles `facade` se miden sobre los lados proyectados (como los de suelo); aspecto 0.0703 ≤ 0.08, límite sin cambios |
+| `FRONT_CAP_H` | adaptado | reemplazado por un tope derivado de la placa (`maxHeightFor`) |
+
 ## 7. Alturas de ciudad de oficinas (ticket 3, depende del 1 y del 2)
 
 | Barrio | Hoy | Propuesta |

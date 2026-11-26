@@ -19,14 +19,15 @@ import { HALO_BASE, HALO_FALLBACK } from "./frame";
 import { BLOOM_FILTER, buildStage, nextHalo } from "./stage";
 import { ACCENT_DIM, WORLD_ZONES, focusAlphas } from "./veil";
 
-const buildWorld = (reducedMotion = true) => { const { scene, animators } = assembleWorld(undefined, { reducedMotion }); return { stage: buildStage(scene, animators), animators }; };
+const buildWorld = (reducedMotion = true) => { const { scene, animators } = assembleWorld(undefined, { reducedMotion }); return { stage: buildStage(scene, animators), animators, scene }; };
 const build = (reducedMotion = true) => buildWorld(reducedMotion).stage;
-/** One flag per accentSlot child, in build order: the static ones (always bloomed), then per animated accent layer one per zone (one if it declares its zone), off when the layer declares `bloom: false`. */
-const bloomFlags = (animators: ZonedAnimator[]): boolean[] => [
+/** One flag per accentSlot child, in build order: the static ones (bloomed), then the static paint ones (`bloom: false`, #494's letter sides) when the scene has any, then per animated accent layer one per zone (one if it declares its zone), off when the layer declares `bloom: false`. */
+const bloomFlags = (animators: ZonedAnimator[], scene?: WorldScene): boolean[] => [
   ...WORLD_ZONES.map(() => true),
+  ...(scene?.accents.some((a) => a.kind === "poly" && a.bloom === false) ? WORLD_ZONES.map(() => false) : []),
   ...animators.flatMap((a) => a.ids.map((id) => a.layer(id)).flatMap((l) => l.kind !== "accent" ? [] : Array<boolean>(l.zone ? 1 : WORLD_ZONES.length).fill(l.bloom !== false))),
 ];
-const bloomedOf = (c: Container, animators: ZonedAnimator[]) => { const flags = bloomFlags(animators); return accentSlotOf(c).children.filter((_, i) => flags[i]) as Graphics[]; };
+const bloomedOf = (c: Container, animators: ZonedAnimator[], scene?: WorldScene) => { const flags = bloomFlags(animators, scene); return accentSlotOf(c).children.filter((_, i) => flags[i]) as Graphics[]; };
 const accentSlotOf = (c: Container) => c.children[c.children.length - 1] as Container;
 const bloomSlotOf = (c: Container) => c.children.find((k) => (k.filters as readonly unknown[] | null)?.some((f) => (f as { options?: unknown }).options === BLOOM_FILTER)) as Container | undefined;
 const fills = (c: Container) => accentSlotOf(c).children.reduce((n, g) => n + (g as Graphics).context.instructions.length, 0);
@@ -49,7 +50,7 @@ describe("Stage bloom modes", () => {
   });
 
   it("on adds a bloomSlot with a filter right below accentSlot, with one mirror per accent Graphics in the bloom", () => {
-    const { stage: s, animators } = buildWorld();
+    const { stage: s, animators, scene } = buildWorld();
     const accentSlot = accentSlotOf(s.container);
     s.setBloom("on");
     expect(s.bloom).toBe("on");
@@ -60,8 +61,8 @@ describe("Stage bloom modes", () => {
     expect(bloom.filters).toHaveLength(1);
     // the last blur pass composes with the filter's blendMode, not the container's
     expect(BLOOM_FILTER.blendMode).toBe("add");
-    expect(bloomFlags(animators)).toHaveLength(accentSlot.children.length);
-    const bloomed = bloomedOf(s.container, animators);
+    expect(bloomFlags(animators, scene)).toHaveLength(accentSlot.children.length);
+    const bloomed = bloomedOf(s.container, animators, scene);
     expect(bloom.children).toHaveLength(bloomed.length);
     bloom.children.forEach((m, i) => expect((m as Graphics).context).toBe(bloomed[i]!.context));
     expect(accentSlot.filters ?? []).toHaveLength(0);
@@ -110,11 +111,11 @@ describe("Stage bloom modes", () => {
   });
 
   it("the mirrors copy the alpha of their original when the focus changes", () => {
-    const { stage: s, animators } = buildWorld();
+    const { stage: s, animators, scene } = buildWorld();
     s.setBloom("on");
     s.setFocus("blog");
     for (let i = 0; i < 20; i++) s.tick(100);
-    const accentSlot = accentSlotOf(s.container), bloom = bloomSlotOf(s.container)!, bloomed = bloomedOf(s.container, animators);
+    const accentSlot = accentSlotOf(s.container), bloom = bloomSlotOf(s.container)!, bloomed = bloomedOf(s.container, animators, scene);
     expect(accentSlot.children.some((g) => g.alpha < 1)).toBe(true);
     bloom.children.forEach((m, i) => expect(m.alpha).toBeCloseTo(bloomed[i]!.alpha));
   });

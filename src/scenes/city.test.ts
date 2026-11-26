@@ -18,7 +18,7 @@ import { zoneRng } from "./world";
 import { MARKET_SCALE } from "../city/harbor";
 import { fingerprint } from "../iso/fingerprint";
 import { BRIDGE_LANDING, COASTAL_CUT_Y, HOTEL_LOT, PLAN_BOUNDS, PLAZA_MAYOR, inCrossingPlaza, inParcel, inPlazaMayor, onAxis, parcels, polyBox } from "./city-plan";
-import { RESUME_SIGN, SIGN_PANEL, SIGN_SITE, hotel } from "./sign-hotel";
+import { RESUME_SIGN, SIGN_BACKING, SIGN_SITE, hotel } from "./sign-hotel";
 import { signBox } from "../world/sign-box";
 import { zoneView } from "../world/view";
 
@@ -43,10 +43,10 @@ const FIXED_RECTS = builtParcels().filter((p) => FIXED_PARCELS.some((f) => f.cel
 const HOTEL_OWN: Solid[] = [];
 hotel(HOTEL_OWN, [], []);
 const HOTEL_KEYS = new Set(HOTEL_OWN.map((s) => JSON.stringify(s)));
-/** The pieces that can exceed 21: the hotel's own solids (slab, machine room, sign panel). */
+/** The pieces that can exceed 21: the hotel's own solids (block, crown, machine room, sign plate, lattice). */
 const isHotelPiece = (s: Solid) => HOTEL_KEYS.has(JSON.stringify(s));
 
-const CITY_MATS: readonly Material[] = ["office", "officeDark", "glass", "asphalt", "paving", "plaza", "curtain", "stone", "copper", "leaf", "leafDark", "water", "steel", "rust", "plaster", "terracotta", "marble", "awning", "deck", "rail",
+const CITY_MATS: readonly Material[] = ["office", "officeDark", "glass", "asphalt", "paving", "plaza", "curtain", "stone", "copper", "leaf", "leafDark", "water", "steel", "rust", "plaster", "terracotta", "marble", "awning", "deck", "rail", "navy", // navy: the hotel sign's plate (#494)
   "brick", "sheetTeal", "concrete", "hull", "whitewash", "rock", // dock inlet (#326)
   // warehouses and freight yard (#325): reconversion kit, containers and the dock
   "sheetGreen", "boxRust", "boxBlue", "boxGrey", "boxGreen", "boxOrange"];
@@ -144,8 +144,8 @@ describe("city", () => {
     }
     expect(s.accents.length).toBeGreaterThan(6);
     const NEON = ["magenta", "magentaBleed", "cyan", "cyanBleed"];
-    // greenMid: RESUME letters of the hotel sign (#474)
-    expect(s.accents.every((a) => a.color.startsWith("amber") || a.color === "windowWarm" || a.color === "windowCool" || a.color === "greenMid" || NEON.includes(a.color))).toBe(true);
+    // greenMid, greenBleed: RESUME letters and their sides on the hotel's roof (#474, #494)
+    expect(s.accents.every((a) => a.color.startsWith("amber") || a.color === "windowWarm" || a.color === "windowCool" || a.color === "greenMid" || a.color === "greenBleed" || NEON.includes(a.color))).toBe(true);
     expect(s.accents.filter((a) => a.color === "windowWarm" || a.color === "windowCool").length).toBeGreaterThanOrEqual(100);
   });
 
@@ -497,9 +497,9 @@ describe("the hotel and its RESUME sign in the city (#474)", () => {
   const s = scene();
   const own: Solid[] = [], ownAccents: Accent[] = [], ownLights: FixedLight[] = [];
   const lit = hotel(own, ownAccents, ownLights);
-  const panel = bounds(SIGN_PANEL), panelScreen = screenBounds(panel);
-  /** On screen the panel's bottom edge is horizontal (a diagonal wall): the largest sy of its bottom corners. */
-  const bottomSy = Math.max(...SIGN_PANEL.footprint.map((p) => project(v3(p.x, p.y, SIGN_PANEL.z)).y));
+  const panel = bounds(SIGN_BACKING), panelScreen = screenBounds(panel);
+  /** The plate's bottom edge on screen: the largest sy of its bottom corners at its base z. */
+  const bottomSy = Math.max(...[panel.min.x, panel.max.x].flatMap((x) => [panel.min.y, panel.max.y].map((y) => project(v3(x, y, panel.min.z)).y)));
 
   it("city() builds the hotel on HOTEL_LOT: hotel()'s solids, inside HOTEL_LOT ± 0.5, and publishes its lights", () => {
     for (const x of own) expect(s.solids).toContainEqual(x);
@@ -510,8 +510,8 @@ describe("the hotel and its RESUME sign in the city (#474)", () => {
     expect(s.hotel).toEqual(lit);
   });
 
-  it("the sign stands at SIGN_SITE: the panel and every letter quad of RESUME_SIGN are in the city", () => {
-    expect(s.solids).toContainEqual(SIGN_PANEL);
+  it("the sign stands at SIGN_SITE: the plate and every letter quad of RESUME_SIGN are in the city", () => {
+    expect(s.solids).toContainEqual(SIGN_BACKING);
     const quads = new Set(s.accents.flatMap((a) => (a.kind === "poly" && a.color === "greenMid" ? [JSON.stringify(a.pts)] : [])));
     for (const q of RESUME_SIGN.glyphs.flatMap((g) => g.quads)) expect(quads.has(JSON.stringify(q))).toBe(true);
     const base = RESUME_SIGN.glyphs[0]!.plane.origin;

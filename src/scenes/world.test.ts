@@ -8,7 +8,7 @@ import { city } from "./city";
 import { COASTAL_CUT_Y } from "./city-plan";
 import { PLANT } from "./factory";
 import { LIGHTHOUSE } from "./sea";
-import { HOTEL_SLAB, hotel } from "./sign-hotel";
+import { HOTEL_BLOCK, hotel } from "./sign-hotel";
 import { TINKER_SITE, tinkerSign } from "./sign-tinker";
 import { SUBSTATION } from "./substation";
 import { LANDMARKS, world, zoneRng } from "./world";
@@ -61,8 +61,9 @@ describe("world", () => {
     expect(w.solids.filter((s) => !isFlat(s) && worldZoneAt(bounds(s).min.x, bounds(s).min.y) === "cv").length).toBeGreaterThan(450);
     const own: Solid[] = [];
     hotel(own, [], []);
-    const slab = w.solids.find((s) => s.kind === "poly" && s.mat === "office" && s.z === HOTEL_SLAB.z0 && own.some((o) => JSON.stringify(o) === JSON.stringify(s)))!;
-    const b = bounds(slab);
+    const block = w.solids.find((s) => s.kind === "poly" && s.mat === "plaster" && s.z === 0 && own.some((o) => JSON.stringify(o) === JSON.stringify(s)))!;
+    const b = bounds(block);
+    expect([b.min.x, b.min.y, b.max.x, b.max.y]).toEqual([HOTEL_BLOCK.x0, HOTEL_BLOCK.y0, HOTEL_BLOCK.x1, HOTEL_BLOCK.y1]);
     expect(LANDMARKS.cv.x).toBeGreaterThan(b.min.x); expect(LANDMARKS.cv.x).toBeLessThan(b.max.x);
     expect(LANDMARKS.cv.y).toBeGreaterThan(b.min.y); expect(LANDMARKS.cv.y).toBeLessThan(b.max.y);
   });
@@ -79,9 +80,9 @@ describe("world", () => {
     // concrete: walls of the Resume inlet (#326), the freight dock (#325) and the factory/shipyard buildings; hull: fishing boats of the Resume inlet (#326) and the ships of the shipyard;
     // boxBlue/boxGreen/boxRust: containers of the freight lot recipes and of the freight yard (#325; which box colours appear depends on the draw) (stackContainers, shared with the shipyard's container yard; since #472 the city draws changed and with seed 7 boxGrey and boxOrange appear too: same container palette, same rule); whitewash: reconversion kit (#325), also used by the factory;
     // sheetGreen left the list with the budget cut of #328: the service strip keeps one storeroom, and with seed 7 it is not green.
-    // glass: the panel of the Resume crown on the tower (#391); the city's other glass is facade faces, not the mat of a solid.
+    // glass left the list with #494: the sign's glass panel is now a navy plate; the city's glass is facade faces, not the mat of a solid.
     // officeDark: panels of the tinker sign on the south hall (#392) and offices of the city.
-    const sharedWithCity = ["asphalt", "boxBlue", "boxGreen", "boxGrey", "boxOrange", "boxRust", "brick", "concrete", "deck", "glass", "hull", "office", "officeDark", "paving", "rust", "sheetTeal", "steel", "stone", "whitewash"];
+    const sharedWithCity = ["asphalt", "boxBlue", "boxGreen", "boxGrey", "boxOrange", "boxRust", "brick", "concrete", "deck", "hull", "office", "officeDark", "paving", "rust", "sheetTeal", "steel", "stone", "whitewash"];
     expect([...portfolio].filter((m) => cv.has(m)).sort()).toEqual([...sharedWithCity].sort());
     const sharedWithBlog = ["steel", "rust", "hull", "rock", "glass", "whitewash", "deck", "boxGrey", "officeDark"]; // boxGrey, officeDark: hut and sign panel of the Writing platform in the sea (#390); glass: the lighthouse lantern (spec §7); whitewash: porcelain and finials of the factory (#207); deck: level-crossing planks (#277), ship decks and terraces of the Resume pier (#190)
     for (const other of [portfolio, cv]) for (const m of blog) if (other.has(m)) expect(sharedWithBlog).toContain(m);

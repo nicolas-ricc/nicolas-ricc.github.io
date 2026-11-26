@@ -5,8 +5,11 @@ import { LANDMARK_MAX_H } from "../kit/piece";
 import { PLINTH_H } from "../scenes/city-pieces";
 import { ROWS, SIDEWALK, STREET, WEST_QUAY, blocks, estuaryEast, type Block } from "../scenes/city-grid";
 import { zoneRng } from "../scenes/world";
+import { SIGN_BACKING } from "../scenes/hotel-plan";
+import { screenBounds } from "../iso/depth";
+import { v3 } from "../iso/geometry";
 import { SEED } from "../map/seed";
-import { CATALOGUE, FIXED, FRONT_CAP_H, WEST_DISTRICT_X, TELECOM_CELL, FOOTBRIDGE_LOT, MAX_BUILDING_H, assign, builtParcels, isBare, neighborhoodOf, maxHeightFor, neighborhoodOfParcel, parcelOpenSides, tooSmall, openSides, waterTowerLot, type Neighborhood, type Placed } from "./zoning";
+import { CATALOGUE, FIXED, WEST_DISTRICT_X, TELECOM_CELL, FOOTBRIDGE_LOT, MAX_BUILDING_H, assign, builtParcels, isBare, neighborhoodOf, maxHeightFor, neighborhoodOfParcel, parcelOpenSides, tooSmall, openSides, waterTowerLot, type Neighborhood, type Placed } from "./zoning";
 
 const key = (b: { x: number; y: number }): string => `${b.x},${b.y}`;
 const blockAt = (x: number, y: number): Block => blocks().find((b) => b.x === x && b.y === y)!;
@@ -73,17 +76,20 @@ describe("zoning", () => {
     }
   });
 
-  it("maxHeightFor caps a rect in front of the sign's panel at 10 and leaves one behind it or off its screen span at `top`", () => {
-    expect(maxHeightFor({ x: 81, y: 291, w: 16, d: 9 })).toBe(FRONT_CAP_H); // south of the hotel, in front of the glass: tall there would cover the word
-    expect(maxHeightFor({ x: 81, y: 291, w: 16, d: 9 }, LANDMARK_MAX_H)).toBe(FRONT_CAP_H);
-    expect(maxHeightFor({ x: 60, y: 200, w: 24, d: 18 })).toBe(MAX_BUILDING_H); // behind the slab
+  it("maxHeightFor caps a rect in front of the sign's plate below the plate's screen bottom", () => {
+    const plateBottom = screenBounds(solidBounds(SIGN_BACKING)).maxY;
+    const r = { x: 118, y: 316, w: 12, d: 20 }, h = maxHeightFor(r, 100);
+    expect(h).toBeLessThan(100);
+    expect(h).toBeGreaterThan(0);
+    expect(screenBounds({ min: v3(r.x, r.y, 0), max: v3(r.x + r.w, r.y + r.d, h + PLINTH_H) }).minY).toBeGreaterThanOrEqual(plateBottom - 1e-9);
+    expect(maxHeightFor({ x: 115, y: 316, w: 15, d: 20 }, 100)).toBeLessThan(100); // straddles the plate in x, south of it: in front
+    expect(maxHeightFor({ x: 60, y: 200, w: 24, d: 18 })).toBe(MAX_BUILDING_H); // behind the block
     expect(maxHeightFor({ x: 60, y: 200, w: 24, d: 18 }, LANDMARK_MAX_H)).toBe(LANDMARK_MAX_H);
-    expect(maxHeightFor(blockAt(42, 92))).toBe(MAX_BUILDING_H); // off the panel's screen span
+    expect(maxHeightFor(blockAt(42, 92))).toBe(MAX_BUILDING_H); // off the plate's screen span
   });
 
-  it("no built parcel is in front of the sign's panel", () => {
-    // #493: the longer hotel lot (73, 234, 54 × 81) now covers the cell (73, 291), the only parcel that was in front of the panel
-    expect(builtParcels().filter((p) => maxHeightFor(p.rect) < MAX_BUILDING_H).map((p) => `${p.cell.col},${p.cell.row}`)).toEqual([]);
+  it("no built parcel is capped by the sign", () => {
+    expect(builtParcels().filter((p) => maxHeightFor(p.rect, 50) < 50).map((p) => `${p.cell.col},${p.cell.row}`)).toEqual([]);
   });
 
   it("open: east bank", () => {
@@ -244,7 +250,7 @@ describe("zoning over parcels (#472)", () => {
       }
       expect(q.lot.z).toBe(0);
       const top = maxHFor(q.neighborhood, q.parcel!);
-      expect(q.lot.maxH).toBe(Math.min(top, maxHeightFor(r, top))); // the parcel in front of the sign gets FRONT_CAP_H
+      expect(q.lot.maxH).toBe(Math.min(top, maxHeightFor(r, top)));
     }
   });
 
