@@ -105,6 +105,7 @@ describe("Bulevar Central and Costanera to the south edge (#493)", () => {
   it("costanera: promenade to the edge and lamps past y 700", () => {
     expect(all.some((s) => s.kind === "strip" && s.path.every((q) => q.x >= 184 && q.x <= 192) && Math.max(...s.path.map((q) => q.y)) >= EDGE), "promenade").toBe(true);
     expect(all.some((s) => s.kind === "prism" && s.mat === "steel" && s.h === 6.5 && s.at.y > 700), "lamps").toBe(true);
+    expect(all.some((s) => s.kind === "cone" && s.mat === "leaf" && s.at.x === 186.6 && s.at.y > 690), "trees").toBe(true); // last tipu at 696 (every 24 from 336, y <= 708)
   });
   it("the ground under both axes is asphalt to the edge; the estuary stays water", () => {
     for (const [x, y] of [[10, 700], [-5, 710], [29, 710], [188, 710]] as const) expect(builtAt(x, y), `${x},${y}`).toBe("urban");

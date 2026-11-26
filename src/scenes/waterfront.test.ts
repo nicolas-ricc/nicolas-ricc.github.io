@@ -61,9 +61,9 @@ describe("waterfront", () => {
   });
 
   it("tipu trees", () => {
-    expect(tipuTrees).toHaveLength(12);
+    expect(tipuTrees).toHaveLength(16); // #493: every 24 from 336 to 696
     for (const t of tipuTrees) { expect(t.sides).toBe(6); expect(t.r).toBe(2.2); expect(t.h).toBe(4.5); }
-    expect(tipuTrees.map((t) => t.at.y).sort((a, b) => a - b)).toEqual(Array.from({ length: 12 }, (_, k) => 336 + 24 * k));
+    expect(tipuTrees.map((t) => t.at.y).sort((a, b) => a - b)).toEqual(Array.from({ length: 16 }, (_, k) => 336 + 24 * k));
   });
 
   it("railing: pierced panels", () => {
