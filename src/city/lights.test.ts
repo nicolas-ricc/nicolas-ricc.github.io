@@ -136,7 +136,10 @@ for (const [name, make, isWorld] of SEEDS) {
     it("no neon puddle is hidden (brute-force oracle)", () => {
       for (const n of l.neons) {
         const ring = n.accents.find((a) => a.kind === "poly" && a.pts.length === 8);
-        if (ring?.kind === "poly") expect(hidden(lightBox([centroid(ring.pts)]), bs, hs)).toBe(false);
+        // a solid of the owner piece does not hide its puddle (see "a solid of the owner piece does not hide its puddle"): the oracle skips the owner's own range (#495: the re-zone shifted the neon draw and exposed a brewery prism that hides its own puddle on the other seed)
+        if (ring?.kind !== "poly") continue;
+        const p = s.placed[n.owner]!, box = lightBox([centroid(ring.pts)]);
+        expect(bs.some((b, i) => (i < p.solidOffset || i >= p.solidOffset + p.piece.solids.length) && hides(box, b, { back: screenHull(box), front: hs[i]! }))).toBe(false);
       }
     });
 

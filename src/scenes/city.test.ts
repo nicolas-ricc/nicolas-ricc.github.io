@@ -345,7 +345,9 @@ describe("city", () => {
   it("pieces without ground are identical to the pinned plinth pieces (860a582; re-recorded at #143, #56, #152 and #165)", () => {
     // #493: all ten re-recorded once: the plaza centre moved 15 u south (barrios and recipes redealt) and the city builds the 348..378 row.
     // Was EAST ["463dcb4d", "c540539a", "e9c5b4f5", "4dd4c753", "d0ee13e9"], MAIN ["ac4094bd", "037bf2d3", "ebae98df", "4fb3f9eb", "f851b786"].
-    const EAST = ["fbb992cc", "eca3f9d2", "a8758203", "9d25c97a", "a9fb2445"], MAIN = ["725780d1", "38f5096f", "f9e8b51d", "54c2aa76", "6e7e59be"];
+    // #495: all ten re-recorded once: the barrio limits moved to 80 / 150 and 320 (barrios, recipes and rng streams redealt); the pieces still draw the old recipes (Task 2 changes the kit).
+    // Was EAST ["fbb992cc", "eca3f9d2", "a8758203", "9d25c97a", "a9fb2445"], MAIN ["725780d1", "38f5096f", "f9e8b51d", "54c2aa76", "6e7e59be"].
+    const EAST = ["d1add971", "c169b9a0", "d80f107a", "b6f3b0ae", "88e836d9"], MAIN = ["3efcf955", "1700073b", "b38f30d9", "5e664eb5", "6a942db8"];
     for (let s = 1; s <= 5; s++) {
       for (const [west, pinned] of [[-54, EAST], [-Infinity, MAIN]] as const) {
         const c = city(createRng(s), createRng(s + 1), createRng(s + 2), { west });

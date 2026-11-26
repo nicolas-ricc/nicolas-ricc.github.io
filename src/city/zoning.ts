@@ -100,6 +100,8 @@ const rectsAdjacent = (a: Rect, b: Rect): boolean => Math.max(a.x - (b.x + b.w),
 /** Barrios of the west bank by height step: a neighbour may differ by one step at most. */
 export type CityBarrio = "bajo" | "clasico" | "transicion" | "moderno";
 export const BARRIO_STEP: Record<CityBarrio, number> = { bajo: 0, clasico: 1, transicion: 2, moderno: 3 };
+/** Height range per barrio, the issue's table: totals above the lot (plinth excluded); the top is the cap (#495). */
+export const BARRIO_HEIGHTS: Record<CityBarrio, { lo: number; hi: number }> = { bajo: { lo: 6, hi: 8 }, clasico: { lo: 14, hi: 22 }, transicion: { lo: 24, hi: 34 }, moderno: { lo: 40, hi: 50 } };
 /** Cap of a `moderno` tower outside the tower zone. */
 export const TOWER_FREE_H = 21;
 /** What a `moderno` parcel outside the tower zone draws: slabs, no towers. */
@@ -129,8 +131,8 @@ export function fixedParcel(p: Parcel): (typeof FIXED_PARCELS)[number] | undefin
   if (!largestArea) { largestArea = new Map(); for (const q of builtParcels()) largestArea.set(cellKey(q.cell), Math.max(largestArea.get(cellKey(q.cell)) ?? 0, q.area)); }
   return p.area >= (largestArea.get(cellKey(p.cell)) ?? 0) ? f : undefined;
 }
-/** Towers rise only north of y 290 and from the Plaza Mayor's 205 u out. */
-export const towerZone = (p: Parcel): boolean => p.c.y < 290 && p.d >= 205;
+/** Towers rise only north of y 320 and from the Plaza Mayor's 150 u out (#495). */
+export const towerZone = (p: Parcel): boolean => p.c.y < 320 && p.d >= 150;
 
 /** Cap of a neighborhood's buildings on a parcel (the sign rule `maxHeightFor` still applies on top). Fixed pieces: `LANDMARK_MAX_H`, 21 outside the tower zone. */
 export function maxHFor(n: Neighborhood, p: Parcel): number {
@@ -140,7 +142,7 @@ export function maxHFor(n: Neighborhood, p: Parcel): number {
 const trainCap = (p: Parcel): number => p.rect.y > TRAIN_CLEAR.y1 ? (p.rect.y - 134.5) / 1.4 - PLINTH_H - 1 : Infinity;
 function neighborhoodCap(n: Neighborhood, p: Parcel): number {
   if (fixedParcel(p)) return towerZone(p) ? LANDMARK_MAX_H : TOWER_FREE_H;
-  return n === "clasico" ? 8.5 : n === "transicion" ? 16 : n === "moderno" ? (towerZone(p) ? 50 : TOWER_FREE_H) : n === "bajo" ? 6 : MAX_BUILDING_H;
+  return n === "clasico" || n === "transicion" || n === "bajo" ? BARRIO_HEIGHTS[n].hi : n === "moderno" ? (towerZone(p) ? BARRIO_HEIGHTS.moderno.hi : TOWER_FREE_H) : MAX_BUILDING_H;
 }
 /** Recipes of a neighborhood on a parcel: `moderno` off the tower zone draws slabs. */
 export const catalogueFor = (n: Neighborhood, p: Parcel): readonly { name: string; weight: number }[] => n === "moderno" && !towerZone(p) ? MODERNO_SLAB : CATALOGUE[n].recipes;
