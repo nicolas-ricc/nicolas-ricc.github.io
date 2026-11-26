@@ -186,18 +186,22 @@ export function builtParcels(west = -Infinity): Parcel[] {
 /** The parcel that holds the hotel (plinth only, no building). */
 export const isHotelLot = (p: Parcel): boolean => p.rect.x === HOTEL_LOT.x && p.rect.y === HOTEL_LOT.y && p.rect.w === HOTEL_LOT.w && p.rect.d === HOTEL_LOT.d;
 
-/** How far outside a parcel's edge `parcelOpenSides` looks. #493: 1.1 (was 0.5), because the plaza ends at y 320 and the grid row of the palace and the theatre starts at 321 (a 1 u gap). */
-const OPEN_PROBE = 1.1;
-/** Sides of a parcel's bounding box that face an open space (axis band, Plaza Mayor or crossing plaza): a point `OPEN_PROBE` outside the edge, at 1/4, 1/2 or 3/4, is in one. */
+/** How far outside a parcel's edge `parcelOpenSides` looks: 0.5 for an axis band or a crossing plaza; 1.1 for the Plaza Mayor (#493: it ends at y 320 and the grid row of the palace and the theatre starts at 321, a 1 u gap). */
+const OPEN_PROBE = 0.5, PLAZA_PROBE = 1.1;
+/** Sides of a parcel's bounding box that face an open space (axis band, Plaza Mayor or crossing plaza): a point `OPEN_PROBE` (`PLAZA_PROBE` for the Plaza Mayor) outside the edge, at 1/4, 1/2 or 3/4, is in one. */
 export function parcelOpenSides(p: Parcel): Side[] {
   const b = polyBox(p.poly), out: Side[] = [];
-  const open = (x: number, y: number): boolean => onAxis(x, y) || inPlazaMayor(x, y) || inCrossingPlaza(x, y);
+  // the edge point and its outward direction: open if the near probe meets a band or a crossing plaza, or the far one meets the Plaza Mayor
+  const open = (x: number, y: number, dx: number, dy: number): boolean => {
+    const nx = x + dx * OPEN_PROBE, ny = y + dy * OPEN_PROBE;
+    return onAxis(nx, ny) || inCrossingPlaza(nx, ny) || inPlazaMayor(x + dx * PLAZA_PROBE, y + dy * PLAZA_PROBE);
+  };
   for (const t of [0.25, 0.5, 0.75]) {
     const x = b.x + b.w * t, y = b.y + b.d * t;
-    if (open(x, b.y - OPEN_PROBE) && !out.includes("n")) out.push("n");
-    if (open(x, b.y + b.d + OPEN_PROBE) && !out.includes("s")) out.push("s");
-    if (open(b.x - OPEN_PROBE, y) && !out.includes("w")) out.push("w");
-    if (open(b.x + b.w + OPEN_PROBE, y) && !out.includes("e")) out.push("e");
+    if (open(x, b.y, 0, -1) && !out.includes("n")) out.push("n");
+    if (open(x, b.y + b.d, 0, 1) && !out.includes("s")) out.push("s");
+    if (open(b.x, y, -1, 0) && !out.includes("w")) out.push("w");
+    if (open(b.x + b.w, y, 1, 0) && !out.includes("e")) out.push("e");
   }
   return out;
 }

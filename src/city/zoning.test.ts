@@ -494,13 +494,11 @@ describe("barrios (#477)", () => {
 
   it("civic palace, theatre and library front the plaza or the axis", () => {
     const band = axisBand(axis("plaza"));
-    const G = 1.1; // #493: the plaza ends at y 320 (114 deep) and the grid row of the palace and theatre starts at 321: 1 u gap (was 0.5)
+    // #493: the plaza ends at y 320 (114 deep) and the grid row of the palace and theatre starts at 321: the plaza is probed 1.1 out, the band 0.5 (as before)
     const fronts = (p: Parcel, open: Side[]) => {
       const b = polyBox(p.poly);
-      return open.some((s) => [0.25, 0.5, 0.75].some((t) => {
-        const x = s === "w" ? b.x - G : s === "e" ? b.x + b.w + G : b.x + b.w * t, y = s === "n" ? b.y - G : s === "s" ? b.y + b.d + G : b.y + b.d * t;
-        return inPlazaMayor(x, y) || pointInPoly(x, y, band);
-      }));
+      const at = (s: Side, t: number, G: number) => ({ x: s === "w" ? b.x - G : s === "e" ? b.x + b.w + G : b.x + b.w * t, y: s === "n" ? b.y - G : s === "s" ? b.y + b.d + G : b.y + b.d * t });
+      return open.some((s) => [0.25, 0.5, 0.75].some((t) => { const q = at(s, t, 1.1), r = at(s, t, 0.5); return inPlazaMayor(q.x, q.y) || pointInPoly(r.x, r.y, band); }));
     };
     for (const name of ["civicPalace", "theatre", "library"]) {
       const q = onParcels.find((r) => r.placed.recipe === name)!;

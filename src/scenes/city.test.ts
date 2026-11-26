@@ -325,9 +325,8 @@ describe("city", () => {
         if ((q.placed.recipe === "courtyardO" || q.placed.recipe === "library") && ground) seen[q.placed.recipe]++;
       }
     }
-    // #493: no courtyardO with ground in seeds 1..5 (it has ground only on a lot without `poly`, i.e. the bars parcels: 10/160 of their draws; seeds 15 and 38 have one): the sample is the library, which always has ground
+    // #493: no courtyardO with ground in seeds 1..5 (it has ground only on a lot without `poly`, i.e. the bars parcels: 10/160 of their draws; seeds 15 and 38 have one): the sample is the library, which always has ground: the no-plinth branch stays exercised
     expect(seen.library).toBeGreaterThan(0);
-    // the library recipe is not dealt in the new layout (seeds 1..5): only courtyardO is pinned (#472)
   });
 
   // Fingerprints measured on 860a582, before #142: lifting must reproduce the plinth pieces of then.

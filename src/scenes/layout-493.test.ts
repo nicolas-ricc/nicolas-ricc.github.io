@@ -5,8 +5,7 @@ import { BLEED, WORLD } from "../map/geo";
 import { SEED } from "../map/seed";
 import type { FixedLight } from "../city/lights";
 import { FIXED_PARCELS, builtParcels } from "../city/zoning";
-import * as plan from "./city-plan";
-import { AXES, CITY_BOUNDS, HOTEL_LOT, PLAN_BOUNDS, PLAZA_CENTER, PLAZA_MAYOR, axis, axisBand, barrioAt, crossingPlazas, intersectionArea, parcels, pointInPoly } from "./city-plan";
+import { AXES, CITY_BOUNDS, COASTAL_CUT_Y, HOTEL_LOT, PLAN_BOUNDS, PLAZA_CENTER, PLAZA_MAYOR, axis, axisBand, barrioAt, crossingPlazas, intersectionArea, parcels, pointInPoly } from "./city-plan";
 import { hotel } from "./sign-hotel";
 import { builtAt, southParcels } from "./sprawl-grid";
 import { tech } from "./tech";
@@ -16,7 +15,6 @@ import { zoneRng } from "./world";
 
 // Acceptance criteria of #493: the layout 30 u south, one city / coastal cut at y 378, the Bulevar Central and the Costanera to the south edge.
 
-const COASTAL_CUT_Y = (plan as Record<string, unknown>).COASTAL_CUT_Y as number;
 const EDGE = WORLD.y1 + BLEED.y; // 714, the south edge of the bleed
 const rect = (r: { x: number; y: number; w: number; d: number }) => [{ x: r.x, y: r.y }, { x: r.x + r.w, y: r.y }, { x: r.x + r.w, y: r.y + r.d }, { x: r.x, y: r.y + r.d }];
 
@@ -111,5 +109,10 @@ describe("Bulevar Central and Costanera to the south edge (#493)", () => {
     expect(bleedTerrainAt(10, 700)).toBe("urban");
     expect(builtAt(60, 700)).not.toBe("urban");
     expect(builtAt(200, 700)).not.toBe("urban");
+  });
+  it("the corridor cells are flat: their edge vertex columns are asphalt too, past the urban reach to the edge", () => {
+    for (const x of [-6, 12, 30, 174, 192]) for (let y = 630; y <= EDGE; y += 18) expect(bleedTerrainAt(x, y), `${x},${y}`).toBe("urban");
+    expect(builtAt(48, 700)).not.toBe("urban");
+    expect(builtAt(156, 700)).not.toBe("urban");
   });
 });

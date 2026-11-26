@@ -92,10 +92,10 @@ describe("zoning of the south (#478)", () => {
 });
 
 describe("tech on the south parcels (#478)", () => {
-  it("tech builds only parcels south of y 318: nothing of tech east of the city's west edge reaches north of 318", () => {
+  it("tech builds only parcels south of the city: nothing of tech east of the city's west edge reaches north of y 318", () => {
     for (const s of scene.solids) {
       const q = bounds(s);
-      if (q.min.x >= CITY_EDGE.west) expect(q.min.y, JSON.stringify(q)).toBeGreaterThanOrEqual(318);
+      if (q.min.x >= CITY_EDGE.west) expect(q.min.y, JSON.stringify(q)).toBeGreaterThanOrEqual(318); // #493: the waterfront (quay from 324, its first bollard at 323.75) is the northmost; the parcels start past the Avenida del Sur (y 348)
     }
     for (const { p } of south) expect(p.c.y).toBeGreaterThan(378); // #493: the cut moved from 318 to COASTAL_CUT_Y
   });
@@ -197,7 +197,7 @@ describe("south avenues (#478)", () => {
     expect(furniture.ground.concat(furniture.solids).some((s) => s.kind === "poly" && s.mat === "plaza" && pointInPoly(10, 371.05, s.footprint))).toBe(true);
     expect(lamps.some((l) => Math.hypot(l.at.x + 0.3 - 10, l.at.y + 0.3 - 371.05) < 1)).toBe(true);
     const zebra = furniture.ground.filter((s): s is Solid & { kind: "strip" } => s.kind === "strip" && s.width === 0.8 && s.path.every((q) => Math.hypot(q.x - 10, q.y - 378) < 25));
-    // #493: the Barrio × Bulevar crossing (10, 378) is inside the crossing plaza (10, 371.05), which has no zebras of its own (was ≥ 6): the two across the avenue at x 21.6 and 23.2 remain
+    // #493: the Barrio × Bulevar crossing (10, 378) is inside the crossing plaza (10, 371.05), which has no zebras of its own (was ≥ 6): the two within 25 u (x 21.6 and 23.2) are the Barrio × Diagonal Sur crosswalks
     expect(zebra.length).toBeGreaterThanOrEqual(2);
   });
 

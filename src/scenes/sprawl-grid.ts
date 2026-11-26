@@ -39,11 +39,17 @@ export const bayWater = (x: number, y: number): boolean => y < WORLD.y0 && x >= 
 export const estuaryWater = (x: number, y: number): boolean => y > WORLD.y1 && x >= QUAY_X && x < ZONE_SPLIT_X && (x <= islandWestX(y) || x >= islandEastX(y));
 
 let corridor: [number, number][] | undefined;
-/** True when the 18 u bleed cell holding `x` (anchored at `WORLD.x0 - BLEED.x`) overlaps the x-range of the band of an axis that runs to the bleed edge (the boulevard and the waterfront promenade, #493). */
+/**
+ * True when `x` lies in the closed x-range of the 18 u bleed cells (anchored at `WORLD.x0 - BLEED.x`) that the band of an axis running to the bleed edge
+ * crosses (the boulevard: x −6..30; the waterfront promenade: 174..192, #493). Closed: the vertex columns on the outer cell edges are asphalt too, so the cells are flat.
+ */
 export function southAxisCorridor(x: number): boolean {
-  corridor ??= AXES.filter((a) => a.to.y >= WORLD.y1 + BLEED.y).map((a) => { const xs = axisBand(a).map((q) => q.x); return [Math.min(...xs), Math.max(...xs)] as [number, number]; });
-  const lo = WORLD.x0 - BLEED.x + CELL_BLEED * Math.floor((x - (WORLD.x0 - BLEED.x)) / CELL_BLEED), hi = lo + CELL_BLEED;
-  return corridor.some(([a, b]) => hi > a && lo < b);
+  const o = WORLD.x0 - BLEED.x;
+  corridor ??= AXES.filter((a) => a.to.y >= WORLD.y1 + BLEED.y).map((a) => {
+    const xs = axisBand(a).map((q) => q.x);
+    return [o + CELL_BLEED * Math.floor((Math.min(...xs) - o) / CELL_BLEED), o + CELL_BLEED * Math.ceil((Math.max(...xs) - o) / CELL_BLEED)] as [number, number];
+  });
+  return corridor.some(([lo, hi]) => x >= lo && x <= hi);
 }
 
 /**

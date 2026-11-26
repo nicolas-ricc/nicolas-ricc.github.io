@@ -208,7 +208,7 @@ export const EXHIBITS: readonly Exhibit[] = [
   // the fallen slab reaches x − 16; flush to the south, the jungle; h 8: the neighbour measured 7.4 once the singular pieces sat on their named parcels (#477)
   { id: "manzana-derrumbada", title: "Collapsed block", zone: "cv", group: "city", kind: "region",
     box: { x0: COLLAPSED.x - 16 - M, y0: COLLAPSED.y - M, x1: COLLAPSED.x + COLLAPSED.w + M, y1: COLLAPSED.y + COLLAPSED.d + 1 }, h: 8 },
-  // clasico parcel (133, 351), rect y 353, 24 × 20, whole and rectangular, in the 348..378 row (#493: (43, 231) became transicion when the plaza centre moved, so the exhibit moved here); its world-seed recipe is `cornerCupola` (city() with zoneRng(SEED, "cv"), (…, 1), (…, 3)); the eval pins it. h 9 (A9): smallest integer that passes; measured inside 8.8, accents 0, cut neighbor 0.02
+  // clasico parcel (133, 351), rect y 353, 24 × 20, whole and rectangular, in the 348..378 row (#493: (43, 231) became transicion when the plaza centre moved, so the exhibit moved here); its world-seed recipe is `cornerCupola` (city() with zoneRng(SEED, "cv"), (…, 1), (…, 3)); the eval pins it. h 9 (A9): smallest integer that passes on (43, 231); kept on the new parcel, where it still passes (not re-measured)
   { id: "manzana-casco", title: "Classic block", zone: "cv", group: "city", kind: "region", box: parcelBox(133, 351), h: 9 },
   // transicion parcel (13, 201): rectangular and not fixed, whose world-seed recipe is `chamfer` since #493 (was `balconyBlock`), the barrio's own; the eval pins the barrio. h 16 (A9): smallest integer that passes; measured inside 15.9, no cut neighbor above it
   { id: "manzana-transicion", title: "Transition block", zone: "cv", group: "city", kind: "region", box: parcelBox(13, 201), h: 16 },
