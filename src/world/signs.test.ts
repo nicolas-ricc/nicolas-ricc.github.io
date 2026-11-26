@@ -95,10 +95,10 @@ describe("signBox (#393)", () => {
         maxX: Math.max(...pts.map((p) => p.x)), maxY: Math.max(...pts.map((p) => p.y)),
       });
     }
-    // measured: the words at the laptop cover, in host px; RESUME on the hotel facade (#474, 100 x 20 host px; TINKER unchanged)
+    // measured: the words at the laptop cover, in host px; RESUME on the hotel roof (#494; TINKER unchanged)
     const v = coverView(1366, 657);
     const r = (b: ScreenBox): number[] => [b.minX, b.maxX, b.minY, b.maxY].map(Math.round);
-    expect(r(toHost(signBox(RESUME_SIGN), v))).toEqual([308, 408, 237, 257]);
+    expect(r(toHost(signBox(RESUME_SIGN), v))).toEqual([322, 405, 191, 252]);
     expect(r(toHost(signBox(TINKER_SIGN), v))).toEqual([600, 688, 70, 86]);
   });
 });
@@ -176,12 +176,12 @@ describe("labelLayout (#393)", () => {
     }
   });
 
-  // with the focus at 0.39 and the host rule (#428) the phone shows Writing at the tall site, on its sign; since #474 RESUME stands on the hotel
-  // facade, 48 % of it inside the phone (D10 of #471): its label goes to the host edge
-  it("labelLayout at coverView(390, 750) puts portfolio and blog on their sign and cv on the edge, Writing at writingSite(390, 750)", () => {
+  // with the focus at 0.39 and the host rule (#428) the phone shows Writing at the tall site, on its sign; since #474 RESUME stands on the hotel;
+  // on the roof (#494) it is more than half inside the phone and its label stays on the sign (on the facade, 48 % was inside and it went to the host edge)
+  it("labelLayout at coverView(390, 750) puts the three on their sign, Writing at writingSite(390, 750)", () => {
     const v = coverView(390, 750), host = { w: 390, h: 750 };
     expect(writingSite(390, 750)).toBe("tall");
-    const want: Record<string, string> = { portfolio: "sign", cv: "edge", blog: "sign" };
+    const want: Record<string, string> = { portfolio: "sign", cv: "sign", blog: "sign" };
     for (const [id, s] of Object.entries(zoneSigns(writingSite(390, 750)))) expect(labelLayout(signBox(s), v, host, PAD).mode, id).toBe(want[id]);
   });
 

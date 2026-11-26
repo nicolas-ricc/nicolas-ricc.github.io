@@ -41,12 +41,12 @@ describe("the cover shows the three signs and the lighthouse (#428, #474)", () =
     expect(b.minY).toBeGreaterThanOrEqual(M); expect(b.maxY).toBeLessThanOrEqual(h - M);
   });
 
-  it.each(SIZES.filter(([w, h]) => NARROW.has(`${w}×${h}`)))("%i×%i: RESUME is at least a quarter visible and its label sits on the host edge", (w, h) => {
+  it.each(SIZES.filter(([w, h]) => NARROW.has(`${w}×${h}`)))("%i×%i: RESUME is at least a quarter visible and its label is on the sign at 390×750 and on the host edge at the others", (w, h) => {
     const v = coverView(w, h), raw = signBox(zoneSigns(writingSite(w, h)).cv), b = toHost(raw, v);
     const visible = (Math.min(b.maxX, w) - Math.max(b.minX, 0)) / (b.maxX - b.minX);
     expect(visible).toBeGreaterThanOrEqual(0.25);
     expect(b.minY).toBeGreaterThanOrEqual(0); expect(b.maxY).toBeLessThanOrEqual(h);
-    expect(labelLayout(raw, v, { w, h }, PAD).mode).toBe("edge");
+    expect(labelLayout(raw, v, { w, h }, PAD).mode).toBe(w === 390 ? "sign" : "edge"); // #494: on the roof RESUME is more than half inside the 390×750 phone, so its label stays on the sign (on the facade it went to the edge, #474); the others still go to the edge
   });
 
   it("the narrow hosts are the only ones below 640 px in the list", () => {

@@ -1,42 +1,74 @@
 import type { Accent } from "../iso/accent";
 import { windowPatches } from "../iso/facade";
-import { v3, type Vec2, type Vec3 } from "../iso/geometry";
+import { dot, v3, type Vec2, type Vec3 } from "../iso/geometry";
+import { VIEW_DIR } from "../iso/project";
 import { visibleWalls, type Solid } from "../iso/solids";
 import { placeLit, type FixedLight } from "../city/lights";
 import { chamferedRect } from "../kit/forms/composite";
 import { SIGN_FONT, signSpec, type SignSpec } from "../kit/legibility";
-import { diagonalWall, toWorld } from "../kit/lettering";
+import { facade, toWorld } from "../kit/lettering";
 import { MARQUEE_FACE, marqueeLayout } from "../kit/marquee";
 import { MARQUEE_RESUME } from "../kit/marquee-resume";
 import { interlock } from "../kit/piece";
 import { lamp } from "../kit/props";
 import { prism } from "./city-pieces";
-import { BLOCK_CHAMFER, HOTEL_BLOCK, HOTEL_CAP, HOTEL_CENTER, HOTEL_ROOF, HOTEL_TRACKING, PANEL_GAP, PANEL_T, SIGN_MARGIN, SIGN_PANEL, SIGN_Z0, blockFootprint, panelAt, signOn } from "./hotel-plan";
+import { BLOCK_CHAMFER, HOTEL_BLOCK, HOTEL_CAP, HOTEL_CENTER, HOTEL_ROOF, HOTEL_TRACKING, LETTER_DEPTH, SIGN_BACKING, SIGN_FRONT_X, SIGN_INK_S, SIGN_STRETCH, SIGN_TOP, SIGN_Z0, blockFootprint } from "./hotel-plan";
 
-export { HOTEL_BLOCK, HOTEL_CAP, HOTEL_CENTER, HOTEL_ROOF, HOTEL_TRACKING, PANEL_GAP, PANEL_L, PANEL_T, SIGN_MARGIN, SIGN_PANEL, SIGN_Z0, blockFootprint } from "./hotel-plan";
+export { HOTEL_BLOCK, HOTEL_CAP, HOTEL_CENTER, HOTEL_ROOF, HOTEL_TRACKING, LETTER_DEPTH, SIGN_BACKING, SIGN_FRONT_X, SIGN_INK_S, SIGN_STRETCH, SIGN_TOP, SIGN_Z0, blockFootprint } from "./hotel-plan";
 
-const BULB_R = 0.35;
-const LETTER_N = 4 + PANEL_T + PANEL_GAP, BASELINE = SIGN_Z0 + SIGN_MARGIN;
+const BULB_R = 0.35, BULB_X = 0.05;
 const LAYOUT = marqueeLayout(HOTEL_CAP, HOTEL_TRACKING), INK_X0 = LAYOUT[0]!.box.x0, W = LAYOUT.at(-1)!.box.x1 - INK_X0; // ink width
 const CORNICE_H = 0.4, CORNICE_GROW = 0.3;
 
-/** Where the sign stands: the center of the baseline on the letter plane. */
-export const SIGN_SITE: Vec3 = signOn(0, LETTER_N, BASELINE);
+/** Where the sign stands: the center of the ink in y, on the baseline, on the letters' front plane. */
+export const SIGN_SITE: Vec3 = v3(SIGN_FRONT_X, SIGN_INK_S - (W * SIGN_STRETCH) / 2, SIGN_Z0);
 
-/** The Resume sign as the legibility oracle sees it: RESUME in marquee letters on the diagonal plane in front of the slab's face, backed by the glass panel. */
+/** The Resume sign as the legibility oracle sees it: RESUME in extruded marquee letters standing on the roof, reading along −y (south to north) on the east side, backed by the navy plate. */
 export const RESUME_SIGN: SignSpec = signSpec({
-  id: "cartel-torre", text: MARQUEE_RESUME.text, size: HOTEL_CAP, width: SIGN_FONT.width, color: "greenMid", plane: diagonalWall(signOn(-W / 2 - INK_X0, LETTER_N, BASELINE)),
-  style: "fill", backing: [SIGN_PANEL], layouts: LAYOUT, xHeight: HOTEL_CAP, stroke: MARQUEE_FACE * HOTEL_CAP,
+  id: "cartel-torre", text: MARQUEE_RESUME.text, size: HOTEL_CAP, width: SIGN_FONT.width, color: "greenMid", plane: facade({ x: SIGN_FRONT_X, y: SIGN_INK_S + INK_X0 * SIGN_STRETCH }, { x: SIGN_FRONT_X, y: SIGN_INK_S + INK_X0 * SIGN_STRETCH - 1 }, SIGN_Z0, SIGN_STRETCH),
+  style: "fill", backing: [SIGN_BACKING], layouts: LAYOUT, xHeight: HOTEL_CAP, stroke: MARQUEE_FACE * HOTEL_CAP, facade: true,
 });
 
 /** The bulbs of the marquee letters in the world at the site, just in front of the faces. */
 const BULBS = LAYOUT.flatMap((g, i) => g.bulbs.map((b) => toWorld(RESUME_SIGN.glyphs[i]!.plane, b.x, b.y)));
 
-/** The sign (panel, letters, bulbs) displaced by `at` from the real site. */
+/** The sides of the letters that face the camera: for each contour segment, the quad from the face back by `LETTER_DEPTH` along −x. The outward normal points away from the filled side (the outline's inside, a counter's outside). */
+const SIDES: Vec3[][] = RESUME_SIGN.glyphs.flatMap((g) => g.layout.strokes.flatMap((ring, k) => {
+  const area = ring.reduce((s, p, i) => { const q = ring[(i + 1) % ring.length]!; return s + p.x * q.y - q.x * p.y; }, 0), right = (k === 0) === (area > 0); // the outward normal is the right of p→q: an outline wound counterclockwise, or a clockwise counter
+  return ring.slice(1).flatMap((q, j): Vec3[][] => {
+    const p = ring[j]!, dx = q.x - p.x, dy = q.y - p.y, nx = right ? dy : -dy, ny = right ? -dx : dx;
+    const n = v3(g.plane.u.x * nx + g.plane.v.x * ny, g.plane.u.y * nx + g.plane.v.y * ny, g.plane.u.z * nx + g.plane.v.z * ny);
+    if (dot(n, VIEW_DIR) <= 1e-9) return [];
+    const f = (c: Vec2) => toWorld(g.plane, c.x, c.y), back = (c: Vec3) => v3(c.x - LETTER_DEPTH, c.y, c.z), fp = f(p), fq = f(q);
+    return [[fp, fq, back(fq), back(fp)]];
+  });
+}));
+
+const BAY = 6, K_END = 12, LATTICE_X = 121, LATTICE_Y0 = 240.5, LATTICE_B = 0.3, CHORD_LO = 60.15, CHORD_HI = SIGN_TOP - 0.15, LEG_TOP = 72, LEG_FOOT_X = 114;
+const DECK = { x: 123.3, w: 1.9, y0: 242, y1: 311, z: HOTEL_ROOF, h: 0.2 }, RAIL_X = 125.05, RAIL_Z = 61.2, RAIL_B = 0.1;
+
+/** The steel lattice behind the plate (uprights, two chords, a diagonal per bay, legs to the roof at every other upright) and the walkway in front of the letters (deck, rail, posts). */
+function frame(at: Vec3): Solid[] {
+  const out: Solid[] = [], beam = (from: Vec3, to: Vec3, w: number) => out.push({ kind: "beam", from: v3(from.x + at.x, from.y + at.y, from.z + at.z), to: v3(to.x + at.x, to.y + at.y, to.z + at.z), w, h: w, mat: "steel", interlocks: true });
+  const y = (k: number) => LATTICE_Y0 + BAY * k;
+  for (let k = 0; k <= K_END; k++) beam(v3(LATTICE_X, y(k), HOTEL_ROOF), v3(LATTICE_X, y(k), SIGN_TOP), LATTICE_B);
+  for (const z of [CHORD_LO, CHORD_HI]) beam(v3(LATTICE_X, y(0), z), v3(LATTICE_X, y(K_END), z), LATTICE_B);
+  for (let k = 0; k < K_END; k++) beam(v3(LATTICE_X, y(k), CHORD_LO), v3(LATTICE_X, y(k + 1), CHORD_HI), LATTICE_B);
+  for (let k = 0; k <= K_END; k += 2) beam(v3(LATTICE_X, y(k), LEG_TOP), v3(LEG_FOOT_X, y(k), HOTEL_ROOF), LATTICE_B);
+  out.push({ kind: "prism", at: v3(DECK.x + at.x, DECK.y0 + at.y, DECK.z + at.z), w: DECK.w, d: DECK.y1 - DECK.y0, h: DECK.h, mat: "steel", interlocks: true });
+  beam(v3(RAIL_X, DECK.y0, RAIL_Z), v3(RAIL_X, DECK.y1, RAIL_Z), RAIL_B);
+  for (let py = DECK.y0; py < DECK.y1 + 1e-9; py += BAY) beam(v3(RAIL_X, py, DECK.z + DECK.h), v3(RAIL_X, py, RAIL_Z), RAIL_B);
+  beam(v3(RAIL_X, DECK.y1, DECK.z + DECK.h), v3(RAIL_X, DECK.y1, RAIL_Z), RAIL_B);
+  return out;
+}
+
+/** The sign (plate, lattice, walkway, then sides, letters and bulbs as accents) displaced by `at` from the real site. */
 export function hotelSign(out: Solid[], accents: Accent[], at: Vec3 = v3(0, 0, 0)): void {
-  out.push(panelAt(at)); // a fresh panel: a consumer that mutates the scene does not reach RESUME_SIGN's backing
-  for (const g of RESUME_SIGN.glyphs) for (const q of g.quads) accents.push({ kind: "poly", pts: q.map((c) => v3(c.x + at.x, c.y + at.y, c.z + at.z)), color: "greenMid", alpha: 1 });
-  for (const b of BULBS) accents.push({ kind: "dot", at: v3(b.x + at.x, b.y + at.y, b.z + at.z), r: BULB_R, color: "windowWarm" });
+  const m = (c: Vec3) => v3(c.x + at.x, c.y + at.y, c.z + at.z);
+  out.push({ ...SIGN_BACKING, at: m(SIGN_BACKING.at) }, ...frame(at)); // a fresh plate: a consumer that mutates the scene does not reach RESUME_SIGN's backing
+  for (const q of SIDES) accents.push({ kind: "poly", pts: q.map(m), color: "greenBleed", alpha: 1, bloom: false });
+  for (const g of RESUME_SIGN.glyphs) for (const q of g.quads) accents.push({ kind: "poly", pts: q.map(m), color: "greenMid", alpha: 1 });
+  for (const b of BULBS) accents.push({ kind: "dot", at: m(v3(b.x + BULB_X, b.y, b.z)), r: BULB_R, color: "windowWarm" });
 }
 
 /** The block's facade: 14 floors of 12 columns over a portico ground floor. */
