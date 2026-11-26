@@ -45,11 +45,13 @@
 - **A6. `FRONT_CAP_H` goes away.** `maxHeightFor` caps a rect in front of the plate at the height where its screen top meets the plate's screen bottom (minus `PLINTH_H`, floored at 0). On today's parcels it caps nothing, which the spec expected ("probablemente se puedan aflojar los topes delante").
 - **A7. Historical doc tests become literals.** `src/lab/docs.test.ts` checks older specs against live constants (`slabFootprint`, `SIGN_SITE`, `RESUME_SIGN`'s screen box). Those specs record their own time, so the values are frozen as literals, the same as the crown's site in #474.
 - **A8. Level 3** (`npm run legibility`) is run as a check but not committed. The committed `REPORT.md` is cross-checked against several specs by `docs.test.ts`, and re-recording it is outside this issue.
+- **A10. FPS fallback.** If the branch is more than 2 ms slower than `main` (Task 5 Step 3), the lattice is thinned first: uprights every 12 u and no diagonals. If it is still slower, the run stops and comments on the issue, as the pipeline prescribes.
+- **A11. Lattice beams carry `interlocks: true`**, as the tinker sign's bars do (`src/scenes/sign-tinker.ts:130`). The kit's interpenetration gate does not run on the hotel (`Solid.interlocks` in `src/iso/solids.ts:41`: kit test metadata), but the marking states intent.
 - **A9. Rooms** are the windows of floors 1..13 on the two long visible walls (+x, 78 u, and +y, 51 u): 2 × 13 × 12 = 312 animated accents, against 96 today. They are animated (city-anim), not static accents.
 
 ## Review Focus
 
-- The sign seen from the home view on a portrait phone (390×750): the stretched word still has more than half its box inside the host (`labelLayout`), and the link hitbox follows the letters. Pinned in Task 3 (`signs.test.ts`, the measured host box) and Task 5 (captures).
+- The sign seen from the home view on a portrait phone (390×750). Today `labelLayout` puts cv on the edge there (`src/world/signs.test.ts:181`). Task 3 re-runs that test and records the mode it gives with the new box. If the mode changes, the expectation is updated with a comment, and the PR says so. The link hitbox follows the letters (`signs.test.ts` "zoneAtScreen on the center of each glyph").
 - Something in front of the letters at their bottom edge, such as the walkway railing or a future tower (#495): Task 3 runs the oracle against the whole world, and Task 4 makes the cap derive from the sign, not from a constant.
 - The paper animation starting inside the block: Task 2 updates `city-anim.test.ts` "never inside the hotel" to the block's footprint.
 - Zone view at every `ZONE_SIZES` showing the taller sign whole: Task 3 keeps `city.test.ts` "zoneView('cv') shows the whole sign".
@@ -77,6 +79,7 @@
   - Update the doc comments: `SignSpec`'s says "`facade` relaxes the baseline limit and is measured on its projected sides", and `signMetrics`'s names both classes.
 - [ ] **Step 4: Freeze the history in `src/lab/docs.test.ts`.**
   - `HOSTS.RESUME` becomes the literal four points of `slabFootprint()` listed in the Measurements, with `z: 0` and the comment `// the hotel slab of #474 (64 × 8), a literal since #494`.
+  - Every `docs.test.ts` assertion that compares an older spec's text with the live `cartel-torre-escena` sign gets the same treatment. Those are §8.1 "level-2 measures" (~572), "font measures" (~593) and §8.3 "word vs host" (~605), for the RESUME row only. Each RESUME value becomes the literal the spec already carries, so the specs keep their own time. Run `npx vitest run src/lab/docs.test.ts` after Task 3 to find them all; this step freezes them before the sign changes.
   - "the 2026-11-22 spec §7.5" uses the literals `site = "(103.30, 262.80, 33.90)"` and `box = "−202.3..−116.7 × 118.8..135.6"` (U+2212 minus), with the comment `// literals since #494: the spec records the slab's sign`.
   - Drop the `RESUME_SIGN`, `SIGN_SITE` and `slabFootprint` imports where they become unused.
 - [ ] **Step 5:** `npx vitest run src/kit src/lab/docs.test.ts src/lab/signs.test.ts && npm run typecheck`. Expected: PASS. The live `RESUME_SIGN` is on `diagonalWall`, without `facade`, so nothing else moves.
@@ -101,7 +104,7 @@
   - The crown cornice is an `office` poly on the footprint grown 0.3, from z 59.6 to 60.
   - No solid of the building has its top between 10.5 and 59 except the block. There is no 0.4-high cornice at z 10.
   - Portico (`officeDark` 0.6 × 8 × 6 plus the `stone` lintel) and two lamps, centred on the +x face (x 125.5).
-  - Machine room: an `officeDark` prism standing on z 60, with max x ≤ 118 (west of the lattice) and inside the block.
+  - Machine room: an `officeDark` prism standing on z 60, with max x ≤ 110 (west of the lattice legs, which land at x 114) and inside the block.
   - "No 45° anywhere": every `poly` footprint edge of the building is axis-aligned or a 45° chamfer of length 2.4·√2 (±1e-6). Every `prism` is axis-aligned by type.
   - Rooms: every room is an `amber` poly on the +x wall (all x = 125.5) or the +y wall (all y = 313.5). There are 312 of them (A9), and none on floor 0.
   - `paperWindow`: 0.6 in front of the +x wall (x 126.1). With the floor height `fh = (HOTEL_ROOF − 0.4) / 14`, its z is between `7·fh` and `8·fh`, and it is at the smallest y of that floor's windows.
@@ -110,7 +113,7 @@
   - Update `city-anim.test.ts`'s "inside the hotel" helper to `blockFootprint()` grown 0.5 and z < `HOTEL_ROOF`. Update `world.test.ts:~64` to find the block (`mat === "plaster" && z === 0` with the block's footprint). Update `layout-493.test.ts` "today's hotel stays inside the longer lot", which still holds with the new geometry: keep its bounds assertion and drop any slab reference.
 - [ ] **Step 2:** `npx vitest run src/scenes/sign-hotel.test.ts`. Expected: FAIL.
 - [ ] **Step 3: Implement.**
-  - `body` builds: block, crown cornice (`interlock`), portico and lamps as today, and the machine room (`officeDark` prism 4 × 3 × 1.5 at x 110..114, y 273..276, z 60).
+  - `body` builds: block, crown cornice (`interlock`), portico and lamps as today, and the machine room (`officeDark` prism 4 × 3 × 1.5 at x 100..104, y 273..276, z 60: clear of the lattice legs, which land at x 114).
   - `hotel` takes the rooms from `visibleWalls(block)`, the walls with normal (1, 0) and (0, 1), through `windowPatches` for floors 1..13. `paperWindow` is the window of floor 7 on the +x wall with the smallest y, moved 0.6 along +x.
   - The old sign (slab panel and decal, at z 31.5..48.3) would end up inside the block, so Task 3 must follow straight away. Between the two commits, the old sign's oracle and placement tests (`sign-hotel.test.ts` "RESUME_SIGN"/"the panel", `city.test.ts` "#474", `signs.test.ts`, `src/lab/signs.test.ts`) may be red. Keep `SIGN_PANEL`, `RESUME_SIGN` and `SIGN_SITE` compiling: express their site in the absolute numbers of today (`SIGN_SITE` and the `diagonalWall` origin), with no reference to the removed slab helpers.
 - [ ] **Step 4:** `npx vitest run src/scenes/sign-hotel.test.ts src/scenes/city-anim.test.ts src/scenes/world.test.ts src/scenes/layout-493.test.ts && npm run typecheck`. Expected: the block tests PASS. The only red tests are the old sign tests listed above and `city-budget.test.ts` (Task 5).
@@ -136,7 +139,7 @@
 - [ ] **Step 1: Failing tests in `sign-hotel.test.ts`**, "sign-hotel: RESUME on the roof (#494)":
   - `RESUME_SIGN` matches `{ id: "cartel-torre", text: "RESUME", size: 12, color: "greenMid", xHeight: 12, stroke: MARQUEE_FACE*12, facade: true }`, and `backing` equals `[SIGN_BACKING]`.
   - Each glyph's plane has `u` ≈ (0, −1.17, 0), `v` (0, 0, 1) and `origin.x` = 123. The ink's y extent is 242.03..312.86 (±0.01), and its z extent is 61.4..73.4.
-  - `checkSignFont(RESUME_SIGN)` is `[]`. `checkSign` at both scales against `hotel()`'s solids is `[]`.
+  - `checkSignFont(RESUME_SIGN)` is `[]`. `checkSign` at both scales against `hotel()`'s solids is `[]`, and `signMetrics(RESUME_SIGN, s).aspectError` is ≤ 0.075 at both scales: an independent margin, not a copied literal. The check against the whole world (every world solid whose screen box crosses the letters, walkway included) is the existing gate `src/lab/signs.test.ts` "checkSign against the whole world", which runs on every context exhibit.
   - `hotelSign` accents, in order: first `greenBleed` polys with `bloom: false` (the sides), then `greenMid` polys equal to `RESUME_SIGN`'s quads, then `windowWarm` dots (one per marquee bulb, at x 123 + 0.05).
   - Every side quad has two points at x 121.8 and two at x 123, and its outward normal has a positive dot with `VIEW_DIR`. There is at least one side per glyph.
   - Solids of `hotelSign`, besides `SIGN_BACKING`:
@@ -174,6 +177,7 @@
   - "maxHeightFor caps a rect in front of the sign's plate below the plate's screen bottom":
     - `maxHeightFor({x:118,y:316,w:12,d:20}, 100)` is < 100 and > 0. The box at that height plus `PLINTH_H` has screen minY ≥ the plate's screen maxY − 1e-9.
     - `maxHeightFor({x:60,y:200,w:24,d:18})` is `MAX_BUILDING_H`, and with `LANDMARK_MAX_H` it is `LANDMARK_MAX_H`.
+    - A rect that straddles the plate's depth in x but lies south of it (`{x:115,y:316,w:15,d:20}`) is in front (`isBehind` separates on y, `src/iso/depth.ts:45`) and gets the same kind of cap: < 100 at top 100.
     - `blockAt(42, 92)` gets `MAX_BUILDING_H`.
   - "no built parcel is capped by the sign": `builtParcels().filter(p => maxHeightFor(p.rect, 50) < 50)` is `[]`.
   - Remove `FRONT_CAP_H` from imports and comments. The tests at ~165 and ~247 keep `Math.min(top, maxHeightFor(r, top))`.
@@ -203,3 +207,23 @@
   - Copy the files into `…/hotel/`.
 - [ ] **Step 5:** `npm test && npm run typecheck`. Expected: PASS.
 - [ ] **Step 6: Commit** `test(#494): budget measured, lab, glossary and captures`.
+
+## Grilling
+
+- Rounds: 1 (griller model: fable). Questions: 18.
+- Sources:
+  - ISSUE: 4 (Q1: "Actualizar `RESUME_SIGN`, `hotelSign`, `hotelStandIn`, la exhibición del lab y `FRONT_CAP_H` / `maxHeightFor` para el cartel nuevo"; the walkway, lattice legs and machine room are in "Qué hay que hacer"; Q2: "El oráculo de legibilidad da verde a `RESUME_SIGN` en su plano nuevo", "sin aflojar reglas"; Q15: "Presupuesto … respetado o subido con medición").
+  - CODE: 11 (Q4 `sign-hotel.ts:22` INK_X0; Q7 `zoning.test.ts:84-87`, no built parcel capped today; Q8 `docs.test.ts:572-603`; Q9 `legibility.ts:238`, checkSign sees solids only; Q11 `solids.ts:268-283`, beam in any direction, and `solids.ts:41`; Q13 `sign-hotel.ts` imports `visibleWalls`, `windowPatches`, `chamferedRect`, `toWorld`, and `depth.ts:45` `isBehind`; Q14 `signs.test.ts:181`; Q17 `depth.ts:45`; Q18 `city.ts:36`, rooms are animated, not in `scene.accents`; Q3 `src/lab/signs.test.ts:43-49`).
+  - DOC: 3 (Q6: plan `docs/plans/2026-11-26-493-trazado-corte-378.md` A6, red intermediate commits on a branch pushed only at stage 8; Q16: `docs.test.ts:564`, "the crown's site is a literal since #474"; Q2: `legibility.ts:140`, ground measured on its sides "so a pitch tilt of the baseline (the baseline rule's job) is not counted again as stretch (#456)", and ADR 0005).
+  - NO SOURCE: Q5, Q10, Q12, all technical assumptions.
+- Answers that changed the plan:
+  - Q5: A10 (FPS fallback).
+  - Q8: A7 extended to the live RESUME cross-checks in `docs.test.ts`.
+  - Q10: A5 stands as a plan decision. ADR 0003 only says that accents draw over everything. The sides are accents so that they sit in the same layer as the faces.
+  - Q11: A11.
+  - Q12: machine room moved to x 100..104.
+  - Q14: Review Focus corrected. cv is on the edge at 390×750 today.
+  - Q15: the aspect margin is asserted as ≤ 0.075, not as a copied literal. The lab `h` is checked by the framing test itself.
+  - Q17: a straddle case was added.
+- Assumptions: A1–A11.
+- Issues opened: none.
