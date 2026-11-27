@@ -46,6 +46,8 @@
 | Tests and typecheck green | Task 2, last step |
 | Desktop and narrow screenshots in the PR | browser script, attached to the PR |
 
+The browser script is not a task of this plan. The pipeline's stage 3 writes it to `.scratch/evals-499.md` (git-excluded), and stage 4 runs it against `npm run dev -- --host --port 5173` once both tasks are in. Desktop is 1600×900 and narrow is 390×750. The controls are shown without touching `main.ts`: `#hud` by opening a zone (`/area/resume/`, which `src/views.ts:20` unhides), and `#recentrar` by pressing an arrow key on the focused `#canvas-host` (`src/main.ts:86-90`, `syncMoved`).
+
 ## Shared test helper
 
 In `src/site-shell.test.ts`, next to `block`:
@@ -55,7 +57,11 @@ In `src/site-shell.test.ts`, next to `block`:
 function element(html: string, open: string, tag: string): string
 ```
 
-It fails with `missing element <open>` if `open` is absent. Task 1 adds it. Task 2 reuses it.
+It takes the first occurrence of `open` and slices up to the first `</tag>` after it (the two controls are not nested in an element of their own tag, so the first close is theirs). It asserts `open` is present with ``expect(at, `missing element ${open}`).toBeGreaterThanOrEqual(0)``, the same way `block` does (`src/site-shell.test.ts:11-15`). Task 1 adds it. Task 2 reuses it.
+
+## English guard
+
+`src/english.test.ts` scans every `src/**/*.ts` and `.css` file (not `index.html`, `src/english.test.ts:85-86`), and `al` is one of its Spanish `WORDS`. The visitor-facing labels in the shell test are allowlisted the way the map host's label already is (`src/english.test.ts:42-43`). Task 1 extends that entry to `[/Mapa: arrastrá o usá las flechas para recorrerlo/g, /Centrar vista/g, /Volver al mapa/g]`. The test *names* stay English ("named by its aria-label") and never quote the labels.
 
 ---
 
@@ -72,7 +78,7 @@ It fails with `missing element <open>` if `open` is absent. Task 1 adds it. Task
 - [ ] **Step 1: Write the failing tests.** Replace "the recenter button starts hidden inside the host" with:
 
 ```ts
-it("the recenter button starts hidden inside the host and is an icon named Centrar vista", () => {
+it("the recenter button starts hidden inside the host and is an icon named by its aria-label", () => {
   const open = `<button id="recentrar" type="button" aria-label="Centrar vista" title="Centrar vista" hidden>`;
   const btn = HTML.indexOf(open);
   expect(btn).toBeGreaterThan(HTML.indexOf(`id="canvas-host"`));
@@ -93,11 +99,11 @@ expect(block(CSS, "#recentrar[hidden]")).toContain("display: none");
 
 - [ ] **Step 2: Run and see them fail.** `npx vitest run src/site-shell.test.ts`. Expected: FAIL, `missing element <button id="recentrar" …` and `missing rule #recentrar[hidden]`.
 
-- [ ] **Step 3: Implement.** In `index.html`, the button gets `aria-label="Centrar vista" title="Centrar vista"` before `hidden`, and its content becomes the D1 crosshair `<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false" …>`. In `src/style.css`, the `#recentrar` rule keeps `position`, `inset`, `z-index`, `color`, `background: none`, `border: 0`, `cursor: pointer`, and replaces `font`, `font-size`, `text-shadow` and `padding` with `display: inline-flex; align-items: center; justify-content: center; min-width: 2rem; min-height: 2rem; padding: 0; filter: drop-shadow(0 1px 2px #000);`. Add `#recentrar[hidden] { display: none; }` right after it. Update the comment above to say it is an icon button like `#back`.
+- [ ] **Step 3: Implement.** In `index.html`, the button gets `aria-label="Centrar vista" title="Centrar vista"` before `hidden`, and its content becomes the D1 crosshair `<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false" …>`. In `src/style.css`, the `#recentrar` rule keeps `position`, `inset`, `z-index`, `color`, `background: none`, `border: 0`, `cursor: pointer`, and replaces `font`, `font-size`, `text-shadow` and `padding` with `display: inline-flex; align-items: center; justify-content: center; min-width: 2rem; min-height: 2rem; padding: 0; filter: drop-shadow(0 1px 2px #000);`. Add `#recentrar[hidden] { display: none; }` right after it. Update the comment above to say it is an icon button like `#back`. In `src/english.test.ts`, extend the `"src/site-shell.test.ts"` entry of `ALLOW` as in "English guard" above.
 
-- [ ] **Step 4: Run and see them pass.** `npx vitest run src/site-shell.test.ts src/map/palette-guard.test.ts`. Expected: PASS.
+- [ ] **Step 4: Run and see them pass.** `npx vitest run src/site-shell.test.ts src/map/palette-guard.test.ts src/english.test.ts`. Expected: PASS.
 
-- [ ] **Step 5: Commit.** `git add index.html src/style.css src/site-shell.test.ts && git commit -m "feat(#499): recenter button as a crosshair icon"`
+- [ ] **Step 5: Commit.** `git add index.html src/style.css src/site-shell.test.ts src/english.test.ts && git commit -m "feat(#499): recenter button as a crosshair icon"`
 
 ### Task 2: the back link shows a left arrow
 
@@ -112,7 +118,7 @@ expect(block(CSS, "#recentrar[hidden]")).toContain("display: none");
 - [ ] **Step 1: Write the failing tests.** Add:
 
 ```ts
-it("the back link is an icon named Volver al mapa inside the hidden hud", () => {
+it("the back link is an icon named by its aria-label inside the hidden hud", () => {
   const open = `<a id="back" href="/" aria-label="Volver al mapa" title="Volver al mapa">`;
   expect(HTML.indexOf(open)).toBeGreaterThan(HTML.indexOf(`<div id="hud" hidden>`));
   const el = element(HTML, open, "a");
@@ -133,8 +139,28 @@ it("style.css gives the back link the same icon box as the button", () => {
 
 - [ ] **Step 3: Implement.** In `index.html`, `<a id="back" href="/" aria-label="Volver al mapa" title="Volver al mapa">` with the D1 arrow `<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false" …>` as its only content (the «←» and the text go). In `src/style.css`, `#hud a` keeps `color: var(--fg); text-decoration: none;` and replaces `font-size: 0.9rem` with `display: inline-flex; align-items: center; justify-content: center; min-width: 2rem; min-height: 2rem; filter: drop-shadow(0 1px 2px #000);`. `#hud` stays as it is (D3).
 
-- [ ] **Step 4: Run and see them pass.** `npx vitest run src/site-shell.test.ts src/map/palette-guard.test.ts`. Expected: PASS.
+- [ ] **Step 4: Run and see them pass.** `npx vitest run src/site-shell.test.ts src/map/palette-guard.test.ts src/english.test.ts`. Expected: PASS.
 
 - [ ] **Step 5: Full gate.** `npm test` and `npm run typecheck`. Expected: both green.
 
 - [ ] **Step 6: Commit.** `git add index.html src/style.css src/site-shell.test.ts && git commit -m "feat(#499): back link as a left-arrow icon"`
+
+## Assumptions
+
+From the grilling. Each one is technical: any option satisfies the issue.
+
+- **A1. `main.ts` and `views.ts` only toggle `hidden`.** `src/main.ts:89,101,110` set `recenter.hidden`, `src/main.ts:143,166` add the click listeners, and `src/views.ts:11,20` set `hud().hidden`. Nothing writes `textContent`, `innerHTML` or `style.display` on `#back`, `#hud` or `#recentrar` (`innerHTML` only on `#content`, `src/views.ts:18`). So the SVG survives and the D2 guard holds.
+- **A2. Selectors quoted from `src/style.css` at `e5278c9`.** `#hud` is at line 40 (`position: absolute; inset: 1rem auto auto 1rem; z-index: 2; text-shadow: 0 1px 2px #000; cursor: default;`, no `display`). `#hud a` is at line 41. `#recentrar` is at line 43 and already has `color: var(--fg)`. `#recentrar:focus-visible` is at line 44. `.no-canvas #canvas-host canvas, .no-canvas #hud, .no-canvas #titulo` is at line 97, and `.no-canvas #recentrar` at line 98, already pinned by `site-shell.test.ts:97-99`. The line numbers in the tasks were taken on this branch's base, after #497, #498 and #500.
+- **A3. No formatter or HTML validator.** `package.json` has no prettier, husky or lint-staged, and CI runs `npm ci`, `feed`, `typecheck`, `test`, `build` (`.github/workflows/deploy.yml:22-28`). Single-line attributes in the written order stay as written. `focusable="false"` is not checked by anything. It is kept because the issue requires it.
+- **A4. `1rem` = 16 px.** `src/style.css` has no `html { font-size }` and sets `font: 16px/1.5` on `html, body` (line 8). `2rem` is 32 px. Rejected: `min-width: 32px`, which ignores the user's font scaling.
+- **A5. Palette guard.** `#000` is in `STYLE_CSS_ALLOWLIST` (`src/map/palette-guard.test.ts:81`). The guard reads `src/style.css` only, so `currentColor` and `none` in `index.html` are outside it.
+- **A6. Visibility of `#back`'s focus ring.** It is the browser default today, and the issue says not to change it. The stage-3 browser script tabs to it and screenshots it. If the ring cannot be seen, that goes in the PR as a finding. No ring is added.
+- **A7. Intermediate state.** After Task 1, `#recentrar` is an icon and `#back` is still text. Both are valid sites with a green suite. Undoing Task 1 means reverting its single commit. Rejected: one combined task, because the two controls can be rejected separately.
+
+## Grilling
+
+- Rounds: 1. The revision added no task and no seam: it added the English-guard edit inside Task 1's steps and clarified sources.
+- Questions: 14. Sources: CODE 11 (main.ts/views.ts, english.test.ts, style.css, palette-guard.test.ts, package.json/deploy.yml, site-shell.test.ts). The other 3 (Q2, Q13, Q14, about the browser script and task granularity) are answered from the pipeline's stage 3/4 definition and declared as technical assumptions A6 and A7.
+- Finding that changed the plan: Q3. `al` in «Volver al mapa» trips `src/english.test.ts`. Fixed with the `ALLOW` entry and English test names.
+- Spec ambiguities: none. Follow-up issues opened: none.
+- Status: ok.
