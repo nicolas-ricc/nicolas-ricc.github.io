@@ -1,7 +1,7 @@
 import type { Accent } from "../iso/accent";
 import { v3, type Vec2 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
-import { BLEED, COVER_MARGIN, WORLD, inCoverQuad } from "../map/geo";
+import { BLEED, WORLD, inBuildRegion } from "../map/geo";
 import { axisCrosswalks, axisLampSpots, axisLanes, boulevardPlanter, crossingPlaza } from "../city/axis-streets";
 import { lamp, place } from "../kit/props";
 import { CITY_EDGE } from "./city-grid";
@@ -12,8 +12,8 @@ const SOUTH_BOUNDS = { x0: -Infinity, y0: CITY_BOUNDS.y1, x1: LAND.x1, y1: WORLD
 
 const bulevarBand = axisBand(axis("bulevar"));
 
-/** Nothing is painted off urban ground (T1's clamp: the strip up to `CITY_EDGE.south` is asphalt) or outside the cover; the Bulevar Central's band is exempt from the cover so it runs to the bleed edge (#493). */
-const stop = (x: number, y: number): boolean => !urbanAt(x, Math.max(y, CITY_EDGE.south)) || (!inCoverQuad(x, y, 16 / 9, COVER_MARGIN) && !pointInPoly(x, y, bulevarBand));
+/** Nothing is painted off urban ground (T1's clamp: the strip up to `CITY_EDGE.south` is asphalt) or outside the build region (#496: the cover plus the strip a pan shows); the Bulevar Central's band is exempt so it runs to the bleed edge (#493). */
+const stop = (x: number, y: number): boolean => !urbanAt(x, Math.max(y, CITY_EDGE.south)) || (!inBuildRegion(x, y) && !pointInPoly(x, y, bulevarBand));
 
 const SAMPLE = 0.5;
 /** Center line of 0.3 along a straight street, broken by the bands, the crossing plazas, `stop` and the bounds. */
@@ -50,6 +50,6 @@ export function southStreets(): { ground: Solid[]; solids: Solid[]; accents: Acc
   boulevardPlanter(solids, SOUTH_BOUNDS, stop);
   for (const p of axisLampSpots(SOUTH_BOUNDS, stop)) place(solids, accents, lamp(v3(p.x - 0.3, p.y - 0.3, 0)));
   for (let k = -16; k <= 4; k++) centerLine(ground, { x: 40 + 30 * k, y: SOUTH_BOUNDS.y0 }, { x: 40 + 30 * k, y: SOUTH_BOUNDS.y1 });
-  for (let k = 0; k <= 10; k++) centerLine(ground, { x: -440, y: 348 + 30 * k }, { x: SOUTH_BOUNDS.x1, y: 348 + 30 * k });
+  for (let k = 0; k <= 12; k++) centerLine(ground, { x: -440, y: 348 + 30 * k }, { x: SOUTH_BOUNDS.x1, y: 348 + 30 * k });
   return { ground, solids, accents };
 }

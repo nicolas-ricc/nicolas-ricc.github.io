@@ -1,4 +1,4 @@
-import { BLEED, COVER_MARGIN, WORLD, inCoverQuad } from "../map/geo";
+import { BLEED, WORLD, inBuildRegion, inCoverQuad } from "../map/geo";
 import type { Vec2 } from "../iso/geometry";
 import type { Rect } from "./city-grid";
 
@@ -39,8 +39,8 @@ export function clipHalf(poly: readonly Vec2[], a: number, b: number, c: number)
   }
   return out;
 }
-/** `LAND` as half-planes `a x + b y <= c`: y >= 164, x <= 184. */
-const LAND_HALVES: readonly (readonly [number, number, number])[] = [[0, -1, -LAND.y0], [1, 0, LAND.x1]];
+/** `LAND` as half-planes `a x + b y <= c`: y >= 164, x <= 184, and x >= the bleed's west edge (#496: the strip's last column is cut where the terrain ends). */
+const LAND_HALVES: readonly (readonly [number, number, number])[] = [[0, -1, -LAND.y0], [1, 0, LAND.x1], [-1, 0, -(WORLD.x0 - BLEED.x)]];
 const clipLand = (poly: readonly Vec2[]): Vec2[] => {
   let p = poly as Vec2[];
   for (const [a, b, c] of LAND_HALVES) { p = clipHalf(p, a, b, c); if (p.length < 3) return []; }
@@ -228,7 +228,10 @@ export interface Parcel { poly: Vec2[]; c: Vec2; area: number; d: number; barrio
 
 /** Largest axis-aligned rectangle (1 u lattice of the box, plus its exact edges) whose corners and edge midpoints lie in `poly`. */
 export function inscribedRect(poly: readonly Vec2[]): Rect {
-  const b = bbox(poly), ticks = (lo: number, hi: number): number[] => {
+  const b = bbox(poly);
+  // an axis-aligned rectangle is its own answer (the search would end on its bounding box): most strip parcels are whole blocks (#496)
+  if (poly.length === 4 && poly.every((p) => (p.x === b.x0 || p.x === b.x1) && (p.y === b.y0 || p.y === b.y1))) return { x: b.x0, y: b.y0, w: b.x1 - b.x0, d: b.y1 - b.y0 };
+  const ticks = (lo: number, hi: number): number[] => {
     const t: number[] = [];
     for (let v = Math.ceil(lo); v <= Math.floor(hi); v++) t.push(v);
     t.push(lo, hi);
@@ -274,7 +277,7 @@ export function parcels(bounds: Bounds2): Parcel[] {
       const area = polyArea(poly);
       if (!passes(poly, area)) continue;
       const c = polyCentroid(poly);
-      if (!inCoverQuad(c.x, c.y, 16 / 9, COVER_MARGIN)) continue;
+      if (!inBuildRegion(c.x, c.y)) continue; // the cover plus the strip a pan shows west of it (#496)
       if (strictlyInRect(HOTEL_LOT, c.x, c.y)) {
         if (!hotel) {
           hotel = true;

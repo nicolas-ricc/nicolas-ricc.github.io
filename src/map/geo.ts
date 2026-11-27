@@ -55,6 +55,22 @@ export function inCoverQuad(x: number, y: number, aspect = 16 / 9, margin = 0): 
 }
 /** A block whose center lies farther than this from the 16:9 cover is not built: the site camera never shows it. */
 export const COVER_MARGIN = 30;
+/**
+ * The Resume-zone pan reach (#496): the farthest southwest `x − y` a pan can show, over the nine measured configurations (start view at 1920×1080, 1440×900,
+ * 1280×1024, 2560×1080, 390×750, 820×1180; zone "cv" at 770×1080, 1920×1080, 390×750). The tightest is "cv" 1920×1080 at −711.1, rounded out to a whole unit.
+ * Verified by `world/pan-reach.test.ts`, not derived: `world/view.ts` imports scene modules, which the pure geometry layer cannot.
+ */
+export const PAN_REACH_SX = -712;
+/** The point is inside what a pan can show: on the world plus bleed rectangle (the terrain) and east of the `PAN_REACH_SX` diagonal widened `margin` units (the margin never takes it off the terrain). */
+export function inPanReach(x: number, y: number, margin = 0): boolean {
+  return x - y >= PAN_REACH_SX - margin
+    && x >= WORLD.x0 - BLEED.x && x <= WORLD.x1 + BLEED.x
+    && y >= WORLD.y0 - BLEED.y && y <= WORLD.y1 + BLEED.y;
+}
+/** The core: what the city built before #496, the 16:9 cover with its margin. */
+export const inCore = (x: number, y: number): boolean => inCoverQuad(x, y, 16 / 9, COVER_MARGIN);
+/** Where the city and the south build: the core plus the strip a pan can show west of the cover. */
+export const inBuildRegion = (x: number, y: number): boolean => inCore(x, y) || inPanReach(x, y, COVER_MARGIN);
 /** Blog is everything east of ZONE_SPLIT_X (visually); Resume, what is south of ZONE_SPLIT_Y on the west side, except the station land, which stays Portfolio. */
 export const ZONE_SPLIT_X = 344;
 export const ZONE_SPLIT_Y = 90;

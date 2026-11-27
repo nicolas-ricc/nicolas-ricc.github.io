@@ -21,7 +21,8 @@ export const WATERFRONT_RECT: Box = { x0: 186, y0: 324, x1: 198.5, y1: 714 }; //
 
 // measured 2026-11-23 (#480) with tech(zoneRng(SEED, "cv", 2)): solids + ground, facesIn. before: 5 245 and 1 444 (#479)
 // The district and region checks count the whole scene, street furniture included.
-export const TECH_FACES_BEFORE = 5245; // the whole district
+// measured 2026-11-26 (#496, the strip west and south of the cover): the whole district 8 103 after #493 (region 1 527, unchanged cap). before: 5 245
+export const TECH_FACES_BEFORE = 8103; // the whole district
 export const REGION_FACES_BEFORE = 1444; // NEIGHBORHOOD_REGION
 
 // measured 2026-11-23 (#480), max facesIn(withoutFurniture, blockRect(b)) per kind over the world's tech blocks, × 1.1 rounded to the nearest ten (up if below the figure):
@@ -30,5 +31,5 @@ export const REGION_FACES_BEFORE = 1444; // NEIGHBORHOOD_REGION
 // monoblock stays 115: generation limit read by neighborhood-monoblock.ts, measured 105 (× 1.1 = 115.5).
 // before: monoblock 115, houses 64, plaza 60, school 120, club 150, waterfront 350, low 120
 export const FACE_CAPS: Record<"monoblock" | "houses" | "plaza" | "school" | "club" | "waterfront" | "low", number> = { monoblock: 115, houses: 70, plaza: 60, school: 90, club: 90, waterfront: 450, low: 110 };
-// measured 2026-11-23 (#480), ACCENT_CAP's sum (tech.ts): 568 × 1.1 = 624.8 → 600. before: 1 300
-export const ACCENT_CAP = 600;
+// measured 2026-11-26 (#496, the strip's windows, after #493), ACCENT_CAP's sum (tech.ts): 1 481 × 1.1 = 1 629.1 → 1 600. before: 600 (#480: 568 × 1.1)
+export const ACCENT_CAP = 1600;

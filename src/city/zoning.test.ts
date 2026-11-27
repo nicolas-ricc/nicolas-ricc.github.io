@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { COVER_MARGIN, inCoverQuad } from "../map/geo";
 import { createRng } from "../map/seed";
 import { RECIPES } from "../kit/index";
 import { LANDMARK_MAX_H } from "../kit/piece";
@@ -9,7 +10,7 @@ import { SIGN_BACKING } from "../scenes/hotel-plan";
 import { screenBounds } from "../iso/depth";
 import { v3 } from "../iso/geometry";
 import { SEED } from "../map/seed";
-import { BARRIO_HEIGHTS, CATALOGUE, FIXED, WEST_DISTRICT_X, TELECOM_CELL, FOOTBRIDGE_LOT, MAX_BUILDING_H, assign, builtParcels, isBare, neighborhoodOf, maxHeightFor, neighborhoodOfParcel, parcelOpenSides, tooSmall, openSides, waterTowerLot, type Neighborhood, type Placed } from "./zoning";
+import { BARRIO_HEIGHTS, CATALOGUE, FIXED, WEST_DISTRICT_X, TELECOM_CELL, FOOTBRIDGE_LOT, MAX_BUILDING_H, assign, builtParcels, isBare, isStrip, stripZoning, neighborhoodOf, maxHeightFor, neighborhoodOfParcel, parcelOpenSides, tooSmall, openSides, waterTowerLot, type Neighborhood, type Placed } from "./zoning";
 
 const key = (b: { x: number; y: number }): string => `${b.x},${b.y}`;
 const blockAt = (x: number, y: number): Block => blocks().find((b) => b.x === x && b.y === y)!;
@@ -162,7 +163,7 @@ describe("zoning", () => {
     }
     const onParcels = placed.filter((q) => q.parcel), ruled = parcelNeighborhoods(builtParcels());
     for (const [i, p] of onParcels.entries()) {
-      expect(p.neighborhood).toBe(ruled[i]); // neighborhoodOfParcel plus the neighbour rule (#477)
+      expect(p.neighborhood).toBe(isStrip(p.parcel!) ? stripZoning().get(p.parcel!) : ruled[i]); // neighborhoodOfParcel plus the neighbour rule (#477); the strip by its field (#496)
       expect(p.lot.open).toEqual(parcelOpenSides(p.parcel!));
       const top = maxHFor(p.neighborhood, p.parcel!);
       const named = fixedParcel(p.parcel!);
@@ -261,7 +262,7 @@ describe("zoning over parcels (#472)", () => {
       const bars = p.c.y < 206 && p.rect.x + p.rect.w >= 157;
       const civic = fixedParcel(p)?.civic === true; // the three civic pieces take no part in the barrios
       expect(neighborhoodOfParcel(p), `${p.cell.col},${p.cell.row}`).toBe(bars ? "bars" : civic ? "civic" : map[p.barrio]);
-      expect(placed[i]!.neighborhood).toBe(ns[i]);
+      if (!isStrip(p)) expect(placed[i]!.neighborhood).toBe(ns[i]); // #496: the strip is zoned by the field (stripZoning), not by this rule
       if (!bars && !civic) expect(BARRIO_STEP[ns[i] as CityBarrio], `${p.cell.col},${p.cell.row}`).toBeLessThanOrEqual(BARRIO_STEP[map[p.barrio]]);
     });
   });
@@ -559,5 +560,14 @@ describe("the west does not move the east (#479)", () => {
     expect(builtParcels()).toBe(builtParcels());
     expect(TELECOM_CELL).toEqual({ col: -107, row: 231 });
     expect(() => assign(createRng(1), createRng(2), -60)).not.toThrow();
+  });
+});
+
+describe("the strip does not move the core (#496)", () => {
+  it("the core keeps its pre-#496 parcels, neighborhoods, recipes and tones", () => {
+    const core = worldAssign().filter((p) => p.parcel && inCoverQuad(p.parcel.c.x, p.parcel.c.y, 16 / 9, COVER_MARGIN))
+      .map((p) => `${p.parcel!.cell.col},${p.parcel!.cell.row} ${p.parcel!.rect.x},${p.parcel!.rect.y} ${p.parcel!.barrio} ${p.neighborhood} ${p.recipe} ${p.tone} ${p.lot.maxH.toFixed(3)}`);
+    expect(core.length).toBeGreaterThan(50);
+    expect(core).toMatchSnapshot();
   });
 });

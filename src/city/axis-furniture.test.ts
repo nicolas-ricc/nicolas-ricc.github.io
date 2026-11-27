@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Vec2 } from "../iso/geometry";
 import type { Solid } from "../iso/solids";
 import { createRng } from "../map/seed";
-import { COVER_MARGIN, inCoverQuad } from "../map/geo";
+import { inBuildRegion } from "../map/geo";
 import { occluded } from "../iso/project";
 import { bounds } from "../iso/solids";
 import { HOTEL_BLOCK, HOTEL_ROOF } from "../scenes/hotel-plan";
@@ -260,6 +260,6 @@ describe("crossing plazas (#473)", () => {
 
 describe("west edge (#473, #479)", () => {
   it("nothing of the axes is outside the cover (the cover is the west bound)", () => {
-    for (const s of strips.filter((s) => s.width === 0.4 || s.width === 0.8)) for (const p of s.path) if (p.y >= LAND.y0) expect(inCoverQuad(p.x, p.y, 16 / 9, COVER_MARGIN), `${p.x},${p.y}`).toBe(true);
+    for (const s of strips.filter((s) => s.width === 0.4 || s.width === 0.8)) for (const p of s.path) if (p.y >= LAND.y0) expect(inBuildRegion(p.x, p.y), `${p.x},${p.y}`).toBe(true);
   });
 });

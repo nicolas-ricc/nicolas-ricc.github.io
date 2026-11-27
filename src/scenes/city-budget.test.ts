@@ -31,7 +31,7 @@ describe("Resume level 2 budget", () => {
     expect(buildRenderList([...w.terrain.ground, ...w.ground, ...w.solids]).length).toBeLessThanOrEqual(57700);
   });
 
-  it("the Writing platform left the static world (#427): static polygons drop below the 46 518 of feature/423 before it", () => {
+  it("the Writing platform left the static world (#427): static polygons drop below the 46 518 of feature/423 before it, plus the strip of #496", () => {
     const w = assembleWorld(undefined, { reducedMotion: true }).scene;
     // #495 grew the city's static polygons on purpose, by measurement: 44 748 → 52 442 (+7 694); the assertion keeps the platform's drop net of that growth
     expect(buildRenderList([...w.terrain.ground, ...w.ground, ...w.solids]).length - GROWTH_495.polygons).toBeLessThan(46518);

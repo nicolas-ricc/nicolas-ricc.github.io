@@ -15,7 +15,7 @@ import { freightYard, railLands } from "../city/rail-lands";
 import { harbor } from "../city/harbor";
 import { bridge, collapsed, cars, greenery, promenade, plazaMayor, telecom, westQuay } from "../city/fixed";
 import { hotel, type HotelLights } from "./sign-hotel";
-import { FOOTBRIDGE_LOT, WATER_TOWER_CELL, WEST_DISTRICT_X, assign, fixedParcel, isBare, isHotelLot, tooSmall, waterTowerLot, type Placed } from "../city/zoning";
+import { FOOTBRIDGE_LOT, WATER_TOWER_CELL, WEST_DISTRICT_X, assign, fixedParcel, isBare, isHotelLot, isStrip, parcelRng, tooSmall, waterTowerLot, type Placed } from "../city/zoning";
 
 /**
  * Resume: orchestrator of the city. The zoning (src/city/zoning.ts) assigns
@@ -53,7 +53,7 @@ export function city(rng: Rng, districtRng: Rng, lightsRng: Rng, opts: { west: n
   let telecomTip: Vec3 | null = null;
   for (const p of assign(rng, districtRng, opts.west)) {
     // the west (every parcel west of WEST_DISTRICT_X, transicion included) seats with districtRng, so rng's later consumers keep their draws
-    const b = p.block, r = (p.neighborhood === "district" || p.neighborhood === "moderno" || (p.parcel && p.parcel.c.x < WEST_DISTRICT_X)) ? districtRng : rng;
+    const b = p.block, r = p.parcel && isStrip(p.parcel) ? parcelRng(p.parcel, 1) : (p.neighborhood === "district" || p.neighborhood === "moderno" || (p.parcel && p.parcel.c.x < WEST_DISTRICT_X)) ? districtRng : rng;
     const empty = p.parcel !== undefined && tooSmall(p.lot); // a sliver parcel: plinth, no building
     if (p.recipe === "telecom") { // not a kit recipe: the parcel plinth and the tower of fixed.ts
       const piece = emptyPiece();

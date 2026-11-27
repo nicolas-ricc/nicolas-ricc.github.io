@@ -7,9 +7,12 @@ import { LANDMARK_MAX_H } from "../kit/piece";
 import { chamferPoly, insetPoly } from "../kit/polygon";
 import { polygonDistance } from "../kit/lettering";
 import type { Lot, Side, StyleId } from "../kit/types";
-import type { Rng } from "../map/seed";
+import { inCore } from "../map/geo";
+import { fieldKind, mixes } from "./strip-mix";
+import { createRng, type Rng } from "../map/seed";
 import { PLINTH_H } from "../scenes/city-pieces";
 import { AVENUE, BLOCK_W, EAST_COLS, FREIGHT_ROW, ROWS, SIDEWALK, STREET, WEST_QUAY, blocks, estuaryEast, type Block, type Rect } from "../scenes/city-grid";
+import { isSouthCore, southParcels } from "../scenes/sprawl-grid";
 import { SIGN_BACKING } from "../scenes/hotel-plan";
 import { TRAIN_CLEAR } from "../scenes/station";
 import { COASTAL_CUT_Y, HOTEL_LOT, PITCH, PLAN_BOUNDS, inCrossingPlaza, inPlazaMayor, onAxis, parcels, polyBox, type Parcel } from "../scenes/city-plan";
@@ -85,7 +88,7 @@ export function openSides(b: Block): Side[] {
 }
 
 /** Weighted recipe with a single draw from `rng`. */
-function pick(rng: Rng, recipes: readonly { name: string; weight: number }[]): string {
+export function pick(rng: Rng, recipes: readonly { name: string; weight: number }[]): string {
   if (recipes.length === 0) throw new Error("empty catalogue");
   const total = recipes.reduce((s, r) => s + r.weight, 0);
   let t = rng.next() * total;
@@ -155,33 +158,103 @@ export function neighborhoodOfParcel(p: Parcel): Neighborhood {
   return p.barrio === "residencial" ? "bajo" : p.barrio;
 }
 
-/** Neighborhoods of `ps` after the neighbour rule: a parcel more than one step above its lowest neighbour (polygons ≤ STREET + 1 apart, or cells one pitch apart) drops to that step + 1; repeats in order until stable. Bars and civic take no part. */
+const polyBoxes = new WeakMap<Parcel, { x0: number; y0: number; x1: number; y1: number }>();
+const boxOf = (p: Parcel): { x0: number; y0: number; x1: number; y1: number } => {
+  let b = polyBoxes.get(p);
+  if (!b) { b = { x0: Math.min(...p.poly.map((v) => v.x)), y0: Math.min(...p.poly.map((v) => v.y)), x1: Math.max(...p.poly.map((v) => v.x)), y1: Math.max(...p.poly.map((v) => v.y)) }; polyBoxes.set(p, b); }
+  return b;
+};
+/** Parcels are neighbours when their cells are one pitch apart or their polygons ≤ STREET + 1 apart. The cell rule first, then the polygon bounding boxes (their gap on an axis is a lower bound of `polygonDistance`, so a pair further apart than that is rejected exactly), then the polygon distance. */
+const nearParcels = (a: Parcel, b: Parcel): boolean => {
+  if (Math.abs(a.cell.col - b.cell.col) <= PITCH && Math.abs(a.cell.row - b.cell.row) <= PITCH) return true;
+  const p = boxOf(a), q = boxOf(b);
+  return Math.max(p.x0 - q.x1, q.x0 - p.x1, p.y0 - q.y1, q.y0 - p.y1) <= STREET + 1 && polygonDistance(a.poly, b.poly) <= STREET + 1;
+};
+const stepOf = (n: Neighborhood): number => BARRIO_STEP[n as CityBarrio];
+const joinsRule = (n: Neighborhood): boolean => n in BARRIO_STEP;
+const neighborhoodOfStep = (k: number): CityBarrio => (Object.keys(BARRIO_STEP) as CityBarrio[]).find((b) => BARRIO_STEP[b] === k)!;
+
+/** Neighborhoods of `ps` after the neighbour rule: a parcel more than one step above its lowest neighbour (`nearParcels`) drops to that step + 1; repeats in order until stable. Bars and civic take no part. */
 export function parcelNeighborhoods(ps: readonly Parcel[]): Neighborhood[] {
-  const out = ps.map(neighborhoodOfParcel), step = (n: Neighborhood): number => BARRIO_STEP[n as CityBarrio];
-  const joins = (i: number): boolean => out[i]! in BARRIO_STEP;
-  const near = ps.map((a, i) => joins(i) ? ps.flatMap((b, j) => j !== i && joins(j) && (polygonDistance(a.poly, b.poly) <= STREET + 1 || (Math.abs(a.cell.col - b.cell.col) <= PITCH && Math.abs(a.cell.row - b.cell.row) <= PITCH)) ? [j] : []) : []);
+  const out = ps.map(neighborhoodOfParcel);
+  const near = ps.map((a, i) => joinsRule(out[i]!) ? ps.flatMap((b, j) => j !== i && joinsRule(out[j]!) && nearParcels(a, b) ? [j] : []) : []);
   for (let changed = true; changed;) {
     changed = false;
     for (let i = 0; i < ps.length; i++) {
       if (near[i]!.length === 0) continue;
-      const low = Math.min(...near[i]!.map((j) => step(out[j]!)));
-      if (step(out[i]!) > low + 1) { out[i] = (Object.keys(BARRIO_STEP) as CityBarrio[]).find((b) => BARRIO_STEP[b] === low + 1)!; changed = true; }
+      const low = Math.min(...near[i]!.map((j) => stepOf(out[j]!)));
+      if (stepOf(out[i]!) > low + 1) { out[i] = neighborhoodOfStep(low + 1); changed = true; }
     }
   }
   return out;
+}
+
+/**
+ * Neighborhoods of the strip (#496) after the one-step rule, with `base` as each parcel's own. Core parcels (`coreNs`, their neighborhoods) are fixed;
+ * neighbours are `nearParcels`; bars and civic take no part. A strip parcel with core neighbours is first clamped into `[max(core) - 1, min(core) + 1]`
+ * (empty: the upper bound wins). Then two phases settle strip-strip pairs differing by more than one:
+ * 1. drops: the higher drops to the lower + 1, but never under its core lower bound `max(core) - 1` (it is pinned from below);
+ * 2. rises: the lower of a pair still apart rises to the higher - 1 (this is the pinned case).
+ * Termination: phase 1 only lowers steps and each step is bounded below by its parcel's lower bound (>= 0), so it ends in at most 3 * n lowerings; phase 2
+ * only raises steps and no step exceeds the maximum present after phase 1 (a raise sets s_j = s_i - 1 < max), so it ends in at most 3 * n raisings. At the fixed point of
+ * phase 2 every strip-strip pair is within one step (no pair has s_i > s_j + 1), and every strip parcel is within one step of its core neighbours; the one case
+ * the rule cannot hold is the empty clamp (a parcel with both a bajo and a moderno core neighbour): geometry then decides, never the rule.
+ */
+export function stripNeighborhoods(strip: readonly Parcel[], core: readonly Parcel[], coreNs: readonly Neighborhood[], base: (p: Parcel) => Neighborhood): Neighborhood[] {
+  const out = strip.map(base), s = out.map(stepOf);
+  const coreNear = strip.map((a, i) => joinsRule(out[i]!) ? core.flatMap((b, j) => joinsRule(coreNs[j]!) && nearParcels(a, b) ? [stepOf(coreNs[j]!)] : []) : []);
+  const near = strip.map((a, i) => joinsRule(out[i]!) ? strip.flatMap((b, j) => j !== i && joinsRule(out[j]!) && nearParcels(a, b) ? [j] : []) : []);
+  const lower = coreNear.map((c) => c.length ? Math.max(...c) - 1 : 0);
+  strip.forEach((_, i) => { if (coreNear[i]!.length) s[i] = Math.max(0, Math.min(Math.max(s[i]!, lower[i]!), Math.min(...coreNear[i]!) + 1)); });
+  for (let changed = true; changed;) { // phase 1: drops
+    changed = false;
+    for (let i = 0; i < strip.length; i++) {
+      if (near[i]!.length === 0) continue;
+      const to = Math.min(...near[i]!.map((j) => s[j]!)) + 1;
+      const down = Math.max(to, lower[i]!);
+      if (s[i]! > down) { s[i] = down; changed = true; }
+    }
+  }
+  for (let changed = true; changed;) { // phase 2: rises
+    changed = false;
+    for (let i = 0; i < strip.length; i++) {
+      for (const j of near[i]!) if (s[j]! < s[i]! - 1) { s[j] = s[i]! - 1; changed = true; }
+    }
+  }
+  return out.map((n, i) => joinsRule(n) ? neighborhoodOfStep(s[i]!) : n);
+}
+let stripMemo: Map<Parcel, Neighborhood> | undefined;
+/** Neighborhood of every strip parcel of the city (north of `COASTAL_CUT_Y`) and of the coastal neighborhood (south), by the mixing field (`strip-mix.ts`; where it does not mix, by `neighborhoodOfParcel`) and the step rule against the core (the south core counts as `bajo`). Memoized. */
+export function stripZoning(): Map<Parcel, Neighborhood> {
+  if (stripMemo) return stripMemo;
+  const cityCore = builtParcels().filter((p) => !isStrip(p)), south = southParcels(), strip = [...builtParcels().filter(isStrip), ...south.filter(isStrip)];
+  const core = [...cityCore, ...south.filter((p) => !isStrip(p))], coreNs = [...parcelNeighborhoods(cityCore), ...south.filter((p) => !isStrip(p)).map((): Neighborhood => "bajo")];
+  const ns = stripNeighborhoods(strip, core, coreNs, (p) => mixes(p.c) ? fieldKind(p.c.x, p.c.y) : neighborhoodOfParcel(p));
+  return stripMemo = new Map(strip.map((p, i) => [p, ns[i]!]));
 }
 
 /** Smallest lot side the kit recipes are safe on (below it courtyards and chamfers spill past the lot or give NaN); on a smaller lot city.ts keeps the plinth and builds nothing. */
 export const MIN_LOT_SIDE = 7;
 export const tooSmall = (lot: Lot): boolean => Math.min(lot.w, lot.d) < MIN_LOT_SIDE;
 
-/** The parcels that get a building: those of `PLAN_BOUNDS` with `c.x > west` (default: all) north of `COASTAL_CUT_Y` (378), the hotel lot excluded (plinth only). The east ones (`c.x >= WEST_DISTRICT_X`) come first in `parcels()` order, then the west ones in the same order. Memoized per `west`. */
+/** The strip (#496): a parcel outside the core (the cover plus `COVER_MARGIN`), built because a pan shows it. Core parcels keep everything they had; strip parcels come after them and draw only from `parcelRng`. */
+export const isStrip = (p: Parcel): boolean => p.c.y > COASTAL_CUT_Y ? !isSouthCore(p) : !inCore(p.c.x, p.c.y);
+/** Recipe of a strip parcel: `bajo` builds houses (`scatterHouses`), any other neighborhood draws from its catalogue. */
+export const stripRecipe = (n: Neighborhood, p: Parcel, rng: Rng): string => n === "bajo" ? "scatterHouses" : pick(rng, catalogueFor(n, p));
+/** Rng of one parcel: a 32-bit mix of its cell, its rect origin and `salt` (0 recipe and tone, 1 seat). City and south parcels come from one grid, so cell + rect identify a parcel. */
+export function parcelRng(p: Parcel, salt: number): Rng {
+  let h = 2654435769 ^ salt;
+  for (const v of [p.cell.col, p.cell.row, Math.round(8 * p.rect.x), Math.round(8 * p.rect.y), salt]) h = Math.imul(h ^ v, 2246822507) ^ (h >>> 15);
+  return createRng(h >>> 0);
+}
+
+/** The parcels that get a building: those of `PLAN_BOUNDS` with `c.x > west` (default: all) north of `COASTAL_CUT_Y` (378), the hotel lot excluded (plinth only). The core east (`c.x >= WEST_DISTRICT_X`) comes first in `parcels()` order, then the core west, then the strip (#496) in the same order. Memoized per `west`. */
 const builtCache = new Map<number, Parcel[]>();
 export function builtParcels(west = -Infinity): Parcel[] {
   let out = builtCache.get(west);
   if (!out) {
-    const ps = parcels(PLAN_BOUNDS).filter((p) => p.c.x > west && p.c.y < COASTAL_CUT_Y && !isHotelLot(p));
-    out = [...ps.filter((p) => p.c.x >= WEST_DISTRICT_X), ...ps.filter((p) => p.c.x < WEST_DISTRICT_X)];
+    const ps = parcels(PLAN_BOUNDS).filter((p) => p.c.x > west && p.c.y < COASTAL_CUT_Y && !isHotelLot(p)), core = ps.filter((p) => !isStrip(p));
+    out = [...core.filter((p) => p.c.x >= WEST_DISTRICT_X), ...core.filter((p) => p.c.x < WEST_DISTRICT_X), ...ps.filter(isStrip)];
     builtCache.set(west, out);
   }
   return out;
@@ -260,18 +333,20 @@ export function assign(rng: Rng, districtRng: Rng, west = -Infinity): Placed[] {
     out.push({ block: b, neighborhood, recipe, lot, tone: rng.int(-1, 1) });
   }
   // the neighbour rule runs over every parcel, so a cut (`west`) does not change the neighborhood of those that remain
-  const all = builtParcels(), ns = parcelNeighborhoods(all), allNs = new Map(all.map((p, i) => [p, ns[i]!])), built = builtParcels(west);
+  const all = builtParcels().filter((p) => !isStrip(p)), ns = parcelNeighborhoods(all), allNs = new Map(all.map((p, i) => [p, ns[i]!])), built = builtParcels(west), zones = stripZoning();
   for (const f of FIXED_PARCELS) if (!all.some((p) => fixedParcel(p) === f)) throw new Error(`missing fixed parcel ${f.cell.col},${f.cell.row}`);
   built.forEach((p) => {
-    const neighborhood = allNs.get(p)!, isWest = p.c.x < WEST_DISTRICT_X, r = isWest || neighborhood === "moderno" ? districtRng : rng, fixed = fixedParcel(p), cat = catalogueFor(neighborhood, p);
-    let recipe = fixed?.recipe ?? pick(r, cat);
-    if (!fixed && (neighborhood === "clasico" || neighborhood === "transicion" || neighborhood === "bajo")) {
-      for (let k = 0; k < 5 && out.some((q) => rectsAdjacent(q.block, p.rect) && q.recipe === recipe); k++) recipe = pick(r, cat);
+    const strip = isStrip(p), neighborhood = strip ? zones.get(p)! : allNs.get(p)!, isWest = p.c.x < WEST_DISTRICT_X, own = strip ? parcelRng(p, 0) : undefined;
+    const r = own ?? (isWest || neighborhood === "moderno" ? districtRng : rng), fixed = fixedParcel(p), cat = catalogueFor(neighborhood, p), houses = strip && neighborhood === "bajo"; // a strip `bajo` parcel builds houses, not blocks
+    let recipe = fixed?.recipe ?? (strip ? stripRecipe(neighborhood, p, r) : pick(r, cat));
+    if (!fixed && !houses && (neighborhood === "clasico" || neighborhood === "transicion" || neighborhood === "bajo")) {
+      // a strip parcel only retries against strip parcels, so its draws do not depend on the core's recipes
+      for (let k = 0; k < 5 && out.some((q) => (!strip || (q.parcel && isStrip(q.parcel))) && rectsAdjacent(q.block, p.rect) && q.recipe === recipe); k++) recipe = pick(r, cat);
     }
     const top = maxHFor(neighborhood, p), maxH = Math.min(top, maxHeightFor(p.rect, top));
     const lot = parcelLot(p, neighborhood, recipe, fixed !== undefined, parcelOpenSides(p), maxH);
-    if (!fixed && cat === CATALOGUE[neighborhood].recipes && isCityBarrio(neighborhood)) lot.band = { lo: Math.min(BARRIO_HEIGHTS[neighborhood].lo, maxH), hi: maxH };
-    out.push({ parcel: p, block: { ...p.rect, bank: "west", row: -2, kind: "parcel" }, neighborhood, recipe, lot, tone: (isWest ? districtRng : rng).int(-1, 1) });
+    if (!fixed && !houses && cat === CATALOGUE[neighborhood].recipes && isCityBarrio(neighborhood)) lot.band = { lo: Math.min(BARRIO_HEIGHTS[neighborhood].lo, maxH), hi: maxH };
+    out.push({ parcel: p, block: { ...p.rect, bank: "west", row: -2, kind: "parcel" }, neighborhood, recipe, lot, tone: (own ?? (isWest ? districtRng : rng)).int(-1, 1) });
   });
   return out;
 }

@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { createRng, SEED, type Rng } from "../map/seed";
+import { isStrip } from "../city/zoning";
 import { techBlocks, type SprawlBlock } from "./sprawl-grid";
 import { ARENA, AUDITORIUM, CLUB, PLAZAS, SCHOOL, blockParity, inNeighborhood, isCell, zoneKinds, type Kind } from "./tech-zoning";
 import { zoneRng } from "./world";
 
 const KINDS: readonly Kind[] = ["monoblock", "houses", "plaza", "school", "club", "arena", "auditorium", "low"];
-const blocks = techBlocks();
+// #496: tech() zones the core only; the strip is built by stripBlock
+const blocks = techBlocks().filter((b) => !isStrip(b.parcel!));
 const world = () => zoneKinds(zoneRng(SEED, "cv", 2), blocks);
 const CELLS = [SCHOOL, CLUB, ARENA, AUDITORIUM, ...PLAZAS];
 const cellIndex = (c: { col: number; row: number }) => blocks.findIndex((b) => isCell(b, c));

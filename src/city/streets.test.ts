@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Vec2 } from "../iso/geometry";
 import { PLINTH_H } from "../scenes/city-pieces";
 import { bounds, type Solid } from "../iso/solids";
-import { COVER_MARGIN, ESTUARY_Y0, STATION_LAND, WORLD, eastBank, inCoverQuad } from "../map/geo";
+import { ESTUARY_Y0, STATION_LAND, WORLD, eastBank, inBuildRegion } from "../map/geo";
 import { AVENUE, BLOCK_W, BOULEVARD, CITY_EDGE, EAST_COLS, EAST_RING, HARBOR, RING_Y0, ROWS, STREET, WEST_COLS, WEST_QUAY, inCrater } from "../scenes/city-grid";
 import { BAR_FRONTS, COSTANERA_LAMP_Y, LAMP_MIN_GAP, axisLampPosts, lampXs, laneOffsets, streets, type BarFront } from "./streets";
 import { ORDINARY_Y, crosswalks } from "./crossings";
@@ -38,7 +38,7 @@ const axisLane = (s: Strip): boolean => AXES.some((a) => {
 describe("streets", () => {
   it("leaves a measured number of strips, all paving flush with the ground", () => {
     const strips = scene();
-    expect(strips.length).toBe(514); // #493: 514 (was 505): the city's streets now run to the avenue at y 348 (ordinary street y 318, longer axes and costanera, new crosswalks). Was: measured on agent/479 with the west streets: the 340 of #473 (88 lines and east lanes, 111 crosswalk strips, the costanera's promenade, the rest axis dashes, which stop at the zebras) + 165 west of x −54
+    expect(strips.length).toBe(650); // #496: 650, + 136 on the streets of the strip (measured). #493: 514 (was 505): the city's streets now run to the avenue at y 348 (ordinary street y 318, longer axes and costanera, new crosswalks). Was: measured on agent/479 with the west streets: the 340 of #473 (88 lines and east lanes, 111 crosswalk strips, the costanera's promenade, the rest axis dashes, which stop at the zebras) + 165 west of x −54
     expect(strips.filter((s) => bounds(s).min.x >= -54)).toHaveLength(351); // #493: 351 (was 337): the 30 u of new east street, east of x −54. Was: the east is as it was: of the 340, the three ordinary E-W lines (y 198, 258, 288) now run on west past x −54 as one strip each
     for (const s of strips) {
       expect(s.mat).toBe("paving");
@@ -209,7 +209,7 @@ describe("streets on the new layout (#472)", () => {
   const street = (k: number) => GRID_ORIGIN.x + PLAN_BLOCK + PLAN_STREET / 2 + PITCH * k;
   const streetY = (k: number) => GRID_ORIGIN.y + PLAN_BLOCK + PLAN_STREET / 2 + PITCH * k;
   const XS: number[] = [], YS: number[] = [];
-  const inCover = (x: number, y: number): boolean => inCoverQuad(x, y, 16 / 9, COVER_MARGIN);
+  const inCover = (x: number, y: number): boolean => inBuildRegion(x, y); // #496: the build region, not the cover
   const columnInCover = (x: number): boolean => { for (let y = LAND.y0; y <= 318; y++) if (inCover(x, y)) return true; return false; };
   for (let k = -20; k < 10; k++) { const x = street(k), y = streetY(k); if (x < LAND.x1 && columnInCover(x)) XS.push(x); if (y > LAND.y0 && y < 348) YS.push(y); } // #493: the grid streets run to the avenue at y 348
   /** A street of the grid that runs along an axis center is the axis, not an ordinary street. */
@@ -227,7 +227,7 @@ describe("streets on the new layout (#472)", () => {
   const axisOf = (s: Strip) => AXES.find((a) => collinear(s.path[0]!, a) && collinear(s.path[1]!, a));
 
   it("the grid streets are x 40 + 30k and y 48 + 30k", () => {
-    expect(ordinaryX).toEqual([-290, -260, -230, -200, -170, -140, -110, -80, -50, -20, 40, 70, 100, 130, 160]); // every one inside the cover somewhere on y 164..348 (#479, #493)
+    expect(ordinaryX).toEqual([-380, -350, -320, -290, -260, -230, -200, -170, -140, -110, -80, -50, -20, 40, 70, 100, 130, 160]); // every one inside the build region somewhere on y 164..348 (#479, #493; #496: the pan reach adds −380..−320, −410 is off the terrain)
     expect(ordinaryY).toEqual([198, 258, 288, 318]); // #493: y 318 is an ordinary street now inside the city
   });
 

@@ -4,6 +4,7 @@ import { occluded } from "../iso/project";
 import { SEED, createRng } from "../map/seed";
 import { blockAt, faces, inside, newCtx } from "./neighborhood-fixtures";
 import { monoblock } from "./neighborhood-monoblock";
+import { isStrip } from "../city/zoning";
 import { techBlocks, type SprawlBlock } from "./sprawl-grid";
 import { tech } from "./tech";
 import { FACE_CAPS, blockRect, facesIn, insideInflated } from "./tech-budget";
@@ -15,7 +16,8 @@ type Prism = Solid & { kind: "prism" };
 
 // the real world: monoblock blocks according to the pre-pass
 const scene = tech(zoneRng(SEED, "cv", 2));
-const blocks = techBlocks(), kinds = zoneKinds(zoneRng(SEED, "cv", 2), blocks);
+// #496: tech() zones the core only; the strip is built by stripBlock
+const blocks = techBlocks().filter((b) => !isStrip(b.parcel!)), kinds = zoneKinds(zoneRng(SEED, "cv", 2), blocks);
 const monos = blocks.filter((_, i) => kinds[i] === "monoblock");
 const everything = [...scene.solids, ...scene.ground];
 const of = (b: (typeof monos)[number]) => {

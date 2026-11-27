@@ -107,12 +107,12 @@ describe("Bulevar Central and Costanera to the south edge (#493)", () => {
   it("the ground under both axes is asphalt to the edge; the estuary stays water", () => {
     for (const [x, y] of [[10, 700], [-5, 710], [29, 710], [188, 710]] as const) expect(builtAt(x, y), `${x},${y}`).toBe("urban");
     expect(bleedTerrainAt(10, 700)).toBe("urban");
-    expect(builtAt(60, 700)).not.toBe("urban");
+    // #496: the whole south is urban as far as a pan reaches (x − y ≥ −766 with the margin), so the corridor shows only beyond it; east of the quay stays the estuary
+    expect(builtAt(-300, 700)).not.toBe("urban");
     expect(builtAt(200, 700)).not.toBe("urban");
   });
   it("the corridor cells are flat: their edge vertex columns are asphalt too, past the urban reach to the edge", () => {
     for (const x of [-6, 12, 30, 174, 192]) for (let y = 630; y <= EDGE; y += 18) expect(bleedTerrainAt(x, y), `${x},${y}`).toBe("urban");
-    expect(builtAt(48, 700)).not.toBe("urban");
-    expect(builtAt(156, 700)).not.toBe("urban");
+    expect(builtAt(-120, 700)).not.toBe("urban"); // #496: off the corridors only beyond the pan reach (x − y < −766)
   });
 });

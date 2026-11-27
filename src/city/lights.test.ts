@@ -45,7 +45,7 @@ for (const [name, make, isWorld] of SEEDS) {
       const on = l.windows.filter((w) => w.on);
       expect(on.length).toBeGreaterThan(100);
       for (const w of on) expect(hidden(lightBox(w.window.pts), bs, hs, ownSolid(w))).toBe(false);
-    }, 60_000); // ~1.9 s alone since the strip blocks of #320 and the warehouses of #325; the full parallel suite stretched it past 10 s. #495 (office heights, more windows): ~5 s alone, 17.6 s in the full parallel suite
+    }, 60_000); // ~1.9 s alone since the strip blocks of #320 and the warehouses of #325; the full parallel suite stretched it past 10 s. #495 (office heights, more windows): ~5 s alone, 17.6 s in the full parallel suite; #496's strip (towers west of the cover) brings the other seed to ~5–13 s alone
 
     it("no lit window sits on the face of another solid (centroid in its x/y range, strictly inside its z)", () => {
       const E = 1e-6;
