@@ -78,7 +78,7 @@ const STYLE_CSS_ALLOWLIST: ReadonlySet<string> = new Set<string>([
   "#e6edf3", // --fg: UI text
   "#9aa7b2", // --muted: secondary UI text
   "#22303c", // border under #content h2
-  "#000", // text-shadow behind #hud and #titulo
+  "#000", // text-shadow behind #titulo, drop-shadow of the #back and #recentrar icons
 ]);
 
 function styleCssOffenders(text: string): string[] {

@@ -24,7 +24,7 @@
 
 - **D1. Icons.** Back: a left arrow, 24×24 viewBox, `fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`, paths `M19 12H5` and `M12 19l-7-7 7-7`. Recenter: a crosshair in the same style: `<circle cx="12" cy="12" r="7"/>` plus the four ticks `M12 2v4`, `M12 18v4`, `M2 12h4`, `M18 12h4`, and a centre dot `<circle cx="12" cy="12" r="1.5" fill="currentColor"/>`.
 - **D2. The `hidden` guard.** The 32×32 box centres the icon with `display: inline-flex`. An author `display` beats the UA `[hidden] { display: none }`, which would show the button on load. So the plan adds an explicit `#recentrar[hidden] { display: none; }`. `#hud` keeps its own `hidden`. Nothing sets `display` on `#hud`, only on `#hud a`, so `#hud` needs no guard.
-- **D3. `#hud`'s `text-shadow` stays.** It is part of the `#hud` rule (position, z-index) and does nothing to an SVG. The icon's shadow is the `filter` on `#hud a` and on `#recentrar`. `#recentrar` drops `text-shadow`, `font-size` and the `0.25rem 0` padding, which only served the text.
+- **D3. `#hud` drops its `text-shadow`** (stage-6 review: with only an SVG inside, it painted nothing). The icon shadow is the `filter` on `#hud a` and on `#recentrar`. `#recentrar` drops `text-shadow`, `font-size` and the `0.25rem 0` padding, which only served the text.
 - **D4. No focus ring is added to `#back`.** Today it has no `:focus-visible` rule and uses the browser's ring. "No cambiar … el focus ring" means it stays that way.
 
 ## Review Focus

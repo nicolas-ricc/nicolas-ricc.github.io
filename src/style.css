@@ -37,7 +37,7 @@ body.zone #content { opacity: 1; }
 #content .pdf-download:hover, #content .pdf-download:focus-visible { filter: brightness(1.25); }
 #content .pdf-download:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
 #content .pdf-embed { display: block; width: 100%; aspect-ratio: 210 / 297; border: 1px solid #5a3d14; }
-#hud { position: absolute; inset: 1rem auto auto 1rem; z-index: 2; text-shadow: 0 1px 2px #000; cursor: default; }
+#hud { position: absolute; inset: 1rem auto auto 1rem; z-index: 2; cursor: default; }
 #hud a { color: var(--fg); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; min-width: 2rem; min-height: 2rem; filter: drop-shadow(0 1px 2px #000); }
 /* Recenter button: top-right of the map host, an icon button like #back; hidden until the view moves. */
 #recentrar { position: absolute; inset: 1rem 1rem auto auto; z-index: 2; color: var(--fg); display: inline-flex; align-items: center; justify-content: center; min-width: 2rem; min-height: 2rem; padding: 0; filter: drop-shadow(0 1px 2px #000); background: none; border: 0; cursor: pointer; }
