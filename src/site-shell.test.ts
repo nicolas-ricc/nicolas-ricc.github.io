@@ -14,6 +14,20 @@ function block(css: string, selector: string): string {
   return css.slice(at + selector.length + 3, css.indexOf("}", at));
 }
 
+/** The markup from the opening tag that starts with `open` to its closing `</tag>`. */
+function element(html: string, open: string, tag: string): string {
+  const at = html.indexOf(open);
+  expect(at, `missing element ${open}`).toBeGreaterThanOrEqual(0);
+  return html.slice(at, html.indexOf(`</${tag}>`, at) + tag.length + 3);
+}
+
+/** An icon control: an aria-hidden, unfocusable svg drawn in currentColor, and no visible text. */
+function expectIconOnly(el: string): void {
+  expect(el).toMatch(/<svg [^>]*aria-hidden="true"[^>]*focusable="false"/);
+  expect(el.replace(/<svg[\s\S]*<\/svg>/, "").replace(/<[^>]+>/g, "").trim()).toBe("");
+  for (const m of el.matchAll(/(?:fill|stroke)="([^"]+)"/g)) expect(["currentColor", "none"]).toContain(m[1]);
+}
+
 describe("site shell: the zone links over the signs (#393)", () => {
   it("index.html loads no external font", () => {
     expect(HTML).not.toMatch(/Rubik|fonts\.googleapis|fonts\.gstatic|preconnect/);
@@ -76,16 +90,35 @@ describe("site shell: navigable map (#438)", () => {
     expect(HTML).toContain(`<div id="canvas-host" role="region" tabindex="0" aria-label="Mapa: arrastrá o usá las flechas para recorrerlo">`);
   });
 
-  it("the recenter button starts hidden inside the host", () => {
-    const btn = HTML.indexOf(`<button id="recentrar" type="button" hidden>Centrar vista</button>`);
+  // #499: the controls are icons, named by aria-label and title
+  it("the recenter button starts hidden inside the host and is an icon named by its aria-label", () => {
+    const open = `<button id="recentrar" type="button" aria-label="Centrar vista" title="Centrar vista" hidden>`;
+    const btn = HTML.indexOf(open);
     expect(btn).toBeGreaterThan(HTML.indexOf(`id="canvas-host"`));
     expect(btn).toBeLessThan(HTML.indexOf(`<main id="content"`));
+    expectIconOnly(element(HTML, open, "button"));
+  });
+
+  it("the back link is an icon named by its aria-label inside the hidden hud", () => {
+    const open = `<a id="back" href="/" aria-label="Volver al mapa" title="Volver al mapa">`;
+    expect(HTML.indexOf(open)).toBeGreaterThan(HTML.indexOf(`<div id="hud" hidden>`));
+    expectIconOnly(element(HTML, open, "a"));
   });
 
   it("style.css puts the button in the top-right corner with a focus ring", () => {
     const b = block(CSS, "#recentrar");
     for (const d of ["position: absolute", "inset: 1rem 1rem auto auto", "z-index: 2"]) expect(b).toContain(d);
+    for (const d of ["color: var(--fg)", "filter: drop-shadow(0 1px 2px #000)", "min-width: 2rem", "min-height: 2rem"]) expect(b).toContain(d);
     expect(block(CSS, "#recentrar:focus-visible")).toContain("outline: 2px solid var(--fg)");
+    // an author display beats the UA [hidden] rule: the button must still start hidden
+    expect(block(CSS, "#recentrar[hidden]")).toContain("display: none");
+  });
+
+  it("style.css gives the back link the same icon box as the button", () => {
+    const b = block(CSS, "#hud a");
+    for (const d of ["color: var(--fg)", "filter: drop-shadow(0 1px 2px #000)", "min-width: 2rem", "min-height: 2rem", "display: inline-flex"]) expect(b).toContain(d);
+    for (const d of ["position: absolute", "inset: 1rem auto auto 1rem", "z-index: 2"]) expect(block(CSS, "#hud")).toContain(d);
+    expect(block(CSS, ".no-canvas #canvas-host canvas, .no-canvas #hud, .no-canvas #titulo")).toContain("display: none");
   });
 
   it("style.css gives the focused host an inset ring", () => {
