@@ -10,7 +10,7 @@ import { PLINTH_H, TILE, plazaTone, prism } from "../scenes/city-pieces";
 import { createRng, type Rng } from "../map/seed";
 import { WEST_DISTRICT_X, builtParcels, neighborhoodOfParcel } from "./zoning";
 import { AXES, type Axis, CITY_BOUNDS, HOTEL_LOT, LAND, PLAZA_MAYOR, axis, axisBand, clipHalf, crossingPlazas, inCrossingPlaza, inParcel, inPlazaMayor, inRect, onAxis, polyCentroid } from "../scenes/city-plan";
-import { ORDINARY_X, ORDINARY_Y, axisFree, axisSpan, blocked, coverWest, crossings, crosswalks, inDomain, onOrdinaryStreet, unit } from "./crossings";
+import { ORDINARY_X, ORDINARY_Y, axisFree, axisSpan, blocked, domainWest, crossings, crosswalks, inDomain, onOrdinaryStreet, unit } from "./crossings";
 
 /**
  * Resume streets: lanes, avenue with dashed lanes and crosswalks,
@@ -68,11 +68,11 @@ function centerLine(out: Solid[], from: Vec2, to: Vec2, stop: Stop = flatStop): 
   flush();
 }
 
-/** Ordinary grid streets (`ORDINARY_X` / `ORDINARY_Y`): x from the land's north edge to `CITY_BOUNDS.y1` (348), y from the cover's west edge to the land's east edge. */
+/** Ordinary grid streets (`ORDINARY_X` / `ORDINARY_Y`): x from the land's north edge to `CITY_BOUNDS.y1` (348), y from the build region's west edge to the land's east edge. */
 function gridLines(ground: Solid[]): void {
   for (const x of ORDINARY_X) centerLine(ground, { x, y: LAND.y0 }, { x, y: CITY_BOUNDS.y1 }, streetStop);
   for (const y of ORDINARY_Y) {
-    const edge = coverWest(y);
+    const edge = domainWest(y);
     // the center line samples every `SAMPLE` from its start: it starts on the same phase as when it began at x -54, so the east pieces keep their ends
     if (edge !== null) centerLine(ground, { x: CITY_EDGE.west - SAMPLE * Math.floor((CITY_EDGE.west - edge) / SAMPLE), y }, { x: LAND.x1, y }, streetStop);
   }

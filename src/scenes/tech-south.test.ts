@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { bounds, isFlat, type Solid } from "../iso/solids";
-import { COVER_MARGIN, WORLD, inCoverQuad } from "../map/geo";
+import { COVER_MARGIN, WORLD, inBuildRegion, inCoverQuad } from "../map/geo";
 import { createRng, SEED, type Rng } from "../map/seed";
+import { isStrip } from "../city/zoning";
+import { fingerprint } from "../iso/fingerprint";
+import type { Box } from "../world/frame";
+import { WATERFRONT_RECT, blockRect, insideInflated } from "./tech-budget";
 import { EXHIBITS } from "../lab/exhibits";
 import { CITY_EDGE } from "./city-grid";
 import { PLINTH_H } from "./city-pieces";
@@ -10,7 +14,7 @@ import { newCtx, blockAt } from "./neighborhood-fixtures";
 import { houses } from "./neighborhood-houses";
 import { monoblock } from "./neighborhood-monoblock";
 import { plaza } from "./neighborhood-plaza";
-import { parcelBlock, southParcels, techBlocks, urbanAt, type SprawlBlock } from "./sprawl-grid";
+import { GREEN_BELT, parcelBlock, southParcels, techBlocks, urbanAt, type SprawlBlock } from "./sprawl-grid";
 import { tech } from "./tech";
 import { southStreets } from "./tech-streets";
 import { ARENA, AUDITORIUM, CLUB, PLAZAS, SCHOOL, blockParity, inNeighborhood, isCell, zoneKinds, type Kind } from "./tech-zoning";
@@ -20,7 +24,8 @@ import { bleedTerrainAt, terrainAt } from "./terrain";
 // Acceptance criteria of #478 (the coastal neighborhood on the city-plan grid south of the Avenida del Sur).
 
 const scene = tech(zoneRng(SEED, "cv", 2));
-const blocks = techBlocks(), kinds = zoneKinds(zoneRng(SEED, "cv", 2), blocks);
+// #496: tech() zones the core only (the strip is built by stripBlock), so this model of its zoning takes the core blocks
+const blocks = techBlocks().filter((b) => !isStrip(b.parcel!)), kinds = zoneKinds(zoneRng(SEED, "cv", 2), blocks);
 const south = blocks.map((b, i) => ({ b, k: kinds[i]!, p: b.parcel })).filter((x): x is { b: SprawlBlock; k: Kind; p: Parcel } => x.p !== undefined);
 const rectCorners = (r: { x: number; y: number; w: number; d: number }) => [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.d], [r.x, r.y + r.d]] as const;
 const southUrban = (x: number, y: number) => urbanAt(x, Math.max(y, CITY_EDGE.south));
@@ -45,7 +50,7 @@ describe("south parcels (#478)", () => {
       expect(p.c.y).toBeGreaterThan(378); // #493: the cut moved from 318 to COASTAL_CUT_Y
       expect(southUrban(p.c.x, p.c.y)).toBe(true);
       for (const [x, y] of rectCorners(p.rect)) expect(southUrban(x, y), `${p.cell.col},${p.cell.row}`).toBe(true);
-      expect(inCoverQuad(p.c.x, p.c.y, 16 / 9, COVER_MARGIN)).toBe(true);
+      expect(isStrip(p) ? inBuildRegion(p.c.x, p.c.y) : inCoverQuad(p.c.x, p.c.y, 16 / 9, COVER_MARGIN)).toBe(true); // #496: core parcels inside the cover, strip ones in the build region
     }
   });
   it("the row right south of the Avenida del Barrio (the cut, y 378) is built", () => {
@@ -53,8 +58,8 @@ describe("south parcels (#478)", () => {
     for (const col of [103, 133, 163]) expect(southParcels().some((p) => p.cell.col === col && p.cell.row === 381), `${col}`).toBe(true);
   });
   it("techBlocks(): one block per south parcel", () => {
-    expect(blocks).toEqual(southParcels().map(parcelBlock));
-    expect(blocks.every((b) => b.parcel !== undefined)).toBe(true);
+    expect(techBlocks()).toEqual(southParcels().map(parcelBlock));
+    expect(techBlocks().every((b) => b.parcel !== undefined)).toBe(true);
   });
 });
 
@@ -242,5 +247,22 @@ describe("exhibits of the south (#478)", () => {
       const b = box(id)!;
       expect(south.some((x) => x.k === k && x.p.rect.x >= b.x0 && x.p.rect.y >= b.y0 && x.p.rect.x + x.p.rect.w <= b.x1 && x.p.rect.y + x.p.rect.d <= b.y1), id).toBe(true);
     }
+  });
+});
+
+describe("the strip does not move the core of the coastal neighborhood (#496)", () => {
+  // both snapshots were checked equal to main (cc2c664), block by block: the 68 core blocks, their kinds and their geometry
+  it("core blocks and their kinds keep their pre-#496 cell, rect and kind", () => {
+    const core = techBlocks().filter((b) => !isStrip(b.parcel!));
+    const kinds = zoneKinds(zoneRng(SEED, "cv", 2), core);
+    expect(core.length).toBeGreaterThan(40);
+    expect(core.map((b, i) => `${b.parcel!.cell.col},${b.parcel!.cell.row} ${b.x},${b.y},${b.w},${b.d} ${kinds[i]}`)).toMatchSnapshot();
+  });
+  // #496 D3: the strip draws from its own streams, so everything the core drew keeps its geometry: one fingerprint per core block (solids + ground inside its rect), the green-belt cones and the waterfront
+  it("tech() keeps the geometry of every core block, the green-belt jungle and the waterfront", () => {
+    const all = [...scene.solids, ...scene.ground], inside = (r: Box) => all.filter((x) => insideInflated(x, r));
+    const perBlock = Object.fromEntries(blocks.map((b) => [`${b.parcel!.cell.col},${b.parcel!.cell.row}`, fingerprint(inside(blockRect(b)))]));
+    const belt = scene.solids.filter((x) => x.kind === "cone" && x.at.x < WORLD.x0 && x.at.y >= GREEN_BELT.y0 && x.at.y < GREEN_BELT.y1);
+    expect({ perBlock, belt: [belt.length, fingerprint(belt)], waterfront: fingerprint(inside(WATERFRONT_RECT)) }).toMatchSnapshot();
   });
 });

@@ -1,6 +1,6 @@
 import { v3, type Vec2, type Vec3 } from "../../iso/geometry";
 import type { Facade } from "../../iso/facade";
-import type { Solid } from "../../iso/solids";
+import { GABLE_RATIO, type Solid } from "../../iso/solids";
 import type { Rng } from "../../map/seed";
 import type { Rect } from "../../scenes/city-grid";
 import { PLINTH_H, prism, tiles } from "../../scenes/city-pieces";
@@ -177,8 +177,38 @@ export function eatenRuin(lot: Lot, rng: Rng, _style: Style): Piece {
   return p;
 }
 
+const HOUSE_MIN_H = 3.5, SHED_GAP = 0.3, YARD_FLAT = () => 0;
+
+/**
+ * Strip houses (#496): the lot's box is cut into `nx × ny` cells (two per axis past 18 u); per cell one roll `r`: under 0.12 (or with maxH < 3.5) an empty yard (lawn),
+ * otherwise a gabled house of 0.55..0.85 of the cell at a random offset (margin 1), height `min(maxH, 3 + 4r)` roof included (the prism's `h` is the eave), and 30% a shed in a free corner.
+ */
+export function scatterHouses(lot: Lot, rng: Rng, _style: Style): Piece {
+  const p = emptyPiece(), nx = lot.w > 18 ? 2 : 1, ny = lot.d > 18 ? 2 : 1, cw = lot.w / nx, cd = lot.d / ny;
+  for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
+    const cx = lot.x + i * cw, cy = lot.y + j * cd, r = rng.next();
+    if (r < 0.12 || lot.maxH < HOUSE_MIN_H) { p.ground.push(tiles(rng, { x: cx, y: cy, w: cw, d: cd }, lot.z + 0.05, "leafDark", YARD_FLAT)); continue; }
+    const h = Math.min(lot.maxH, 3 + 4 * r), mat = rng.chance(0.6) ? "whitewash" : "brick", wantShed = rng.chance(0.3);
+    let hw = cw * (0.55 + 0.3 * rng.next()), hd = cd * (0.55 + 0.3 * rng.next()), x0 = cx + 1, y0 = cy + 1, w1 = cw - 2, d1 = cd - 2; // the house's free room in the cell
+    if (wantShed) { // the shed takes a corner; the house is squeezed into the opposite side along x or y
+      const sw = 3 + rng.next(), sd = 3 + rng.next(), sh = Math.min(2.5 + 0.5 * rng.next(), lot.maxH), east = rng.chance(0.5), south = rng.chance(0.5), alongX = rng.chance(0.5);
+      const room = (alongX ? w1 - sw : d1 - sd) - SHED_GAP;
+      if (room >= 3.5 && (alongX ? d1 : w1) >= (alongX ? sd : sw)) {
+        if (alongX) { w1 = room; x0 = east ? cx + 1 : cx + 1 + sw + SHED_GAP; } else { d1 = room; y0 = south ? cy + 1 : cy + 1 + sd + SHED_GAP; }
+        p.solids.push(prism(east ? cx + cw - 1 - sw : cx + 1, south ? cy + cd - 1 - sd : cy + 1, lot.z, sw, sd, sh, "brick"));
+      }
+    }
+    hw = Math.min(hw, w1); hd = Math.min(hd, d1);
+    const hx = x0 + rng.next() * (w1 - hw), hy = y0 + rng.next() * (d1 - hd);
+    const facade: Facade = { floors: 1, cols: Math.max(1, Math.round(hw / 2.5)) };
+    addBuilding(p, prism(hx, hy, lot.z, hw, hd, h / (1 + GABLE_RATIO), mat, { roof: "gable", roofMat: "tile", facade }), facade);
+  }
+  return p;
+}
+
 export const LOWRISE: readonly RecipeDef[] = [
   { name: "shopRow", recipe: shopRow, family: "lowrise" },
   { name: "rowHouses", recipe: rowHouses, family: "lowrise", poly: true },
   { name: "eatenRuin", recipe: eatenRuin, family: "lowrise" },
+  { name: "scatterHouses", recipe: scatterHouses, family: "lowrise" },
 ];

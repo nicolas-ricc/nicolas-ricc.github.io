@@ -13,7 +13,7 @@ import { createRng, SEED } from "../map/seed";
 import { AVENUE, BOULEVARD, BRIDGE, CITY_EDGE, COLLAPSED, FREIGHT_ROW, ROWS, CRATERS, DISTRICT_BANK_Y, EAST_RING, FALLEN_BLOCK, PROMENADE, WEST_QUAY, blocks, estuaryEast, inBlock, inCrater } from "./city-grid";
 import { PLINTH_H, city, type CityScene } from "./city";
 import { CAR } from "../kit/props";
-import { FIXED, FIXED_PARCELS, FOOTBRIDGE_LOT, MAX_BUILDING_H, WATER_TOWER_CELL, WEST_DISTRICT_X, assign, builtParcels, tooSmall, neighborhoodOfParcel } from "../city/zoning";
+import { FIXED, FIXED_PARCELS, FOOTBRIDGE_LOT, MAX_BUILDING_H, WATER_TOWER_CELL, WEST_DISTRICT_X, assign, builtParcels, isStrip, tooSmall, neighborhoodOfParcel } from "../city/zoning";
 import { zoneRng } from "./world";
 import { MARKET_SCALE } from "../city/harbor";
 import { fingerprint } from "../iso/fingerprint";
@@ -178,7 +178,7 @@ describe("city", () => {
     const s = scene();
     const strips = s.ground.filter((g) => g.kind === "strip" && g.mat !== "rail"); // the main line (#319) is counted apart
     expect(strips.length).toBeGreaterThan(60);
-    expect(strips.length).toBeLessThanOrEqual(570); // measured (#473): 340 strips (rails apart), ×1.1 rounded to the ten; with the west on the city grid (#479, seeds 7/8/9): 513 strips (rails apart), ×1.1 = 564, rounded up to the ten
+    expect(strips.length).toBeLessThanOrEqual(750); // #496: 683 strips with the strip of the pan reach (measured 2026-11-26), ×1.1 = 751, nearest ten 750. Before: measured (#473): 340 strips (rails apart), ×1.1 rounded to the ten; with the west on the city grid (#479, seeds 7/8/9): 513 strips (rails apart), ×1.1 = 564, rounded up to the ten
     expect(strips.every((g) => g.kind === "strip" && g.mat === "paving" && g.z > 0 && g.z < 0.1)).toBe(true);
     // no stripe steps on the estuary (the ground is drawn on top of the water): the east ring is cut where the water comes in
     for (const g of strips) if (g.kind === "strip") for (const p of g.path) expect(p.x <= QUAY_X || p.x > estuaryEast(p.y)).toBe(true);
@@ -343,6 +343,7 @@ describe("city", () => {
   // #477 Task 3: the parcel lots carry the inset polygon and the ochavas: all five re-recorded again.
   // #477 Task 4: the civic palace, theatre, library, obra and tank host stand on their named parcels: all five re-recorded again.
   // #479: the west adds its pieces (and the telecom): all five re-recorded once with the whole city; the east alone (`opts.west = -54`) keeps the old fingerprints (EAST).
+  // #496: the strip of the pan reach adds its parcels to the whole city: MAIN re-recorded as the strip changed (last: its west column clipped to the bleed); with the strip filtered out the pieces keep main's (cc2c664) fingerprints, checked; the east alone keeps EAST.
   // That lifting equals running the recipe PLINTH_H higher is checked per recipe in piece.test.
   it("pieces without ground are identical to the pinned plinth pieces (860a582; re-recorded at #143, #56, #152 and #165)", () => {
     // #493: all ten re-recorded once: the plaza centre moved 15 u south (barrios and recipes redealt) and the city builds the 348..378 row.
@@ -351,7 +352,8 @@ describe("city", () => {
     // Was EAST ["fbb992cc", "eca3f9d2", "a8758203", "9d25c97a", "a9fb2445"], MAIN ["725780d1", "38f5096f", "f9e8b51d", "54c2aa76", "6e7e59be"].
     // #495 Task 3: all ten re-recorded again: the barrio parcels hand the band to their recipes (heights) and moderno draws towers only; the blocks and the fixed parcels keep their pieces.
     // Was EAST ["d1add971", "c169b9a0", "d80f107a", "b6f3b0ae", "88e836d9"], MAIN ["3efcf955", "1700073b", "b38f30d9", "5e664eb5", "6a942db8"].
-    const EAST = ["e660df32", "7631ba67", "75bc4d59", "b2344efe", "8e033abd"], MAIN = ["3f99ad82", "1d79b853", "9d9d5384", "7f980ff4", "05e46e24"];
+    // #496 (rebased on #495): MAIN re-recorded with the strip; with the strip filtered out the pieces keep main's (1188e7d) MAIN ["3f99ad82", "1d79b853", "9d9d5384", "7f980ff4", "05e46e24"], checked.
+    const EAST = ["e660df32", "7631ba67", "75bc4d59", "b2344efe", "8e033abd"], MAIN = ["24aaeff0", "dd283ed7", "86b16b76", "d90201a6", "d070ac96"];
     for (let s = 1; s <= 5; s++) {
       for (const [west, pinned] of [[-54, EAST], [-Infinity, MAIN]] as const) {
         const c = city(createRng(s), createRng(s + 1), createRng(s + 2), { west });
@@ -374,15 +376,15 @@ describe("city", () => {
   });
 
   it("district signs: opaque cyan or magenta, 1.6 tall, 0.4 in front of the south face of a district building", () => {
-    const s = scene();
+    const s = scene(), stripRects = s.placed.filter((q) => q.placed.parcel && isStrip(q.placed.parcel) && q.placed.neighborhood === "moderno").map((q) => q.placed.block);
     for (const sign of s.neon.signs) {
       if (sign.kind !== "poly") throw new Error("sign not poly");
       expect(["cyan", "magenta"]).toContain(sign.color);
       expect(sign.alpha).toBe(1);
       const zs = sign.pts.map((p) => p.z), y = sign.pts[0]!.y;
       expect(Math.max(...zs) - Math.min(...zs)).toBeCloseTo(1.6, 6);
-      const wall = s.solids.find((w) => w.kind === "prism" && !!w.facade && inDistrict(w) && Math.abs(w.at.y + w.d + 0.4 - y) < 1e-6);
-      expect(wall).toBeDefined();
+      const wall = s.solids.find((w) => w.kind === "prism" && !!w.facade && (inDistrict(w) || stripRects.some((r) => inRect(bounds(w), r))) && Math.abs(w.at.y + w.d + 0.4 - y) < 1e-6);
+      expect(wall).toBeDefined(); // #496: core signs stay in DISTRICT; a `moderno` strip parcel carries signs too, outside it
     }
   });
 });

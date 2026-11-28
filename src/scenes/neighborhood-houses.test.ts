@@ -4,6 +4,7 @@ import { createRng, SEED } from "../map/seed";
 import type { HomeWindow } from "./neighborhood";
 import { blockAt, faces, inside, newCtx } from "./neighborhood-fixtures";
 import { houses } from "./neighborhood-houses";
+import { isStrip } from "../city/zoning";
 import { techBlocks, type SprawlBlock } from "./sprawl-grid";
 import { tech } from "./tech";
 import { FACE_CAPS, blockRect, facesIn, insideInflated } from "./tech-budget";
@@ -53,7 +54,8 @@ function overlaps(solids: readonly Solid[]): string[] {
 // the real world: the zone rng and the kind of each block according to the pre-pass
 const scene = tech(zoneRng(SEED, "cv", 2));
 const everything = [...scene.solids, ...scene.ground];
-const blocks = techBlocks(), kinds = zoneKinds(zoneRng(SEED, "cv", 2), blocks);
+// #496: tech() zones the core only; the strip is built by stripBlock
+const blocks = techBlocks().filter((b) => !isStrip(b.parcel!)), kinds = zoneKinds(zoneRng(SEED, "cv", 2), blocks);
 const houseBlocks = blocks.filter((_, i) => kinds[i] === "houses");
 const own = (b: SprawlBlock) => everything.filter((s) => insideInflated(s, blockRect(b)));
 const homesIn = (b: SprawlBlock): HomeWindow[] => { const r = blockRect(b); return scene.homes.filter((w) => w.pts.every((q) => q.x >= r.x0 && q.x <= r.x1 && q.y >= r.y0 && q.y <= r.y1)); };

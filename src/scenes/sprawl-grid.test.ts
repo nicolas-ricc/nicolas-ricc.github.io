@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { BLEED, CELL, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, coverQuad, inCoverQuad, pointInPolygon, riverCenter } from "../map/geo";
+import { BLEED, CELL, QUAY_X, RIVER_HALF, WORLD, ZONE_SPLIT_X, coverQuad, inBuildRegion, inCoverQuad, pointInPolygon, riverCenter } from "../map/geo";
 import { CITY_EDGE, estuaryEast } from "./city-grid";
+import { isStrip } from "../city/zoning";
 import { GREEN_BELT, REACH, bayShoreX, builtAt, fairAt, reachAt, parcelBlock, southParcels, techBlocks, urbanAt } from "./sprawl-grid";
 import { bleedTerrainAt, bleedZ, terrainAt } from "./terrain";
 
@@ -58,7 +59,7 @@ describe("sprawl-grid", () => {
       expect(p.c.y).toBeGreaterThan(378); // #493: the coastal cut (was 318)
       expect(urban(p.c.x, p.c.y)).toBe(true);
       for (const [x, y] of [[p.rect.x, p.rect.y], [p.rect.x + p.rect.w, p.rect.y], [p.rect.x + p.rect.w, p.rect.y + p.rect.d], [p.rect.x, p.rect.y + p.rect.d]] as const) expect(urban(x, y)).toBe(true);
-      expect(inCoverQuad(p.c.x, p.c.y, 16 / 9, 30)).toBe(true);
+      expect(isStrip(p) ? inBuildRegion(p.c.x, p.c.y) : inCoverQuad(p.c.x, p.c.y, 16 / 9, 30)).toBe(true); // #496: core parcels inside the cover, strip ones in the build region
     }
   });
 

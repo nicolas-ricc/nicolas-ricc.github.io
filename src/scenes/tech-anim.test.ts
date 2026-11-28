@@ -61,7 +61,9 @@ describe("tech-anim: neighborhood windows (#249)", () => {
     const { scene, anim } = setup();
     const fixed = scene.homes.filter((h) => ALWAYS_LIT.has(h.group)).map((h) => key(h.pts));
     expect(fixed.length).toBeGreaterThanOrEqual(2);
-    for (let i = 0; i < 1200; i++) { anim.tick(100); const lit = litKeys(anim); for (const k of fixed) expect(lit.has(k)).toBe(true); }
+    // the lit set only changes on a tick that reports `homes` (#496: recomputing it every tick made the test slow with the strip's windows)
+    for (const k of fixed) expect(litKeys(anim).has(k)).toBe(true);
+    for (let i = 0; i < 1200; i++) { if (!anim.tick(100).homes) continue; const lit = litKeys(anim); for (const k of fixed) expect(lit.has(k)).toBe(true); }
   }, 10_000);
   it("with reduced-motion or an invalid dt nothing changes", () => {
     const r = setup(true);

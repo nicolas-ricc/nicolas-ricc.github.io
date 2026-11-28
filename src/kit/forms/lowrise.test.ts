@@ -17,9 +17,9 @@ const faced = (p: Piece): Solid[] => p.solids.filter((s) => "facade" in s && s.f
 const cones = (p: Piece): Solid[] => p.solids.filter((s) => s.kind === "cone");
 
 describe("kit: lowrise family", () => {
-  it("registers shop row, row houses and eaten ruin, none a landmark", () => {
+  it("registers shop row, row houses, eaten ruin and scatter houses, none a landmark", () => {
     const defs = RECIPES.filter((r) => r.family === "lowrise");
-    expect(defs.map((r) => r.name)).toEqual(["shopRow", "rowHouses", "eatenRuin"]);
+    expect(defs.map((r) => r.name)).toEqual(["shopRow", "rowHouses", "eatenRuin", "scatterHouses"]);
     expect(defs.some((r) => r.landmark)).toBe(false);
   });
 
@@ -226,6 +226,39 @@ describe("kit: neon runs (#165)", () => {
       expect(south).toHaveLength(1);
       expect(south[0]!.shop).toBe(Math.max(...slots.map((s) => s.shop)));
       for (const q of south[0]!.pts) expect(Math.abs(q.y - (LOT.y + LOT.d))).toBeLessThanOrEqual(TOL);
+    }
+  });
+});
+
+describe("scatterHouses (#496)", () => {
+  const lot = (k: number, w = 21, d = 21): Lot => ({ x: 1.5 + k * 40, y: 1.5, w, d, z: 0, open: [], maxH: 6 });
+  const scatter = (k: number, w?: number, d?: number): Piece => recipe("scatterHouses")(lot(k, w, d), createRng(k + 1), STYLES.bajo);
+  it("varies per lot: sizes, positions, some sheds, some empty cells", () => {
+    const sizes = new Set<string>();
+    let sheds = 0, empty = 0;
+    for (let k = 0; k < 40; k++) {
+      const L = lot(k), p = scatter(k), houses = p.solids.filter((s) => bounds(s).max.z - bounds(s).min.z > 3.2), small = p.solids.filter((s) => bounds(s).max.z - bounds(s).min.z <= 3.2);
+      for (const s of p.solids) {
+        const b = bounds(s);
+        expect(b.min.x).toBeGreaterThanOrEqual(L.x - TOL); expect(b.max.x).toBeLessThanOrEqual(L.x + L.w + TOL);
+        expect(b.min.y).toBeGreaterThanOrEqual(L.y - TOL); expect(b.max.y).toBeLessThanOrEqual(L.y + L.d + TOL);
+        expect(b.max.z).toBeLessThanOrEqual(L.z + L.maxH + TOL);
+      }
+      for (const s of houses) { const b = bounds(s); sizes.add(`${(Math.round((b.max.x - b.min.x) * 2) / 2)}x${Math.round((b.max.y - b.min.y) * 2) / 2}`); }
+      sheds += small.length;
+      if (p.ground.length > 0) empty++;
+      if (houses.length > 0) expect(p.windows.length).toBeGreaterThan(0);
+    }
+    expect(sizes.size).toBeGreaterThanOrEqual(5);
+    expect(sheds).toBeGreaterThanOrEqual(1);
+    expect(empty).toBeGreaterThanOrEqual(1);
+  });
+  it("on a narrow lot (w 10) it makes a single column", () => {
+    for (let k = 0; k < 10; k++) {
+      const p = scatter(k, 10, 21), L = lot(k, 10, 21);
+      for (const s of p.solids) { const b = bounds(s); expect(b.max.x - b.min.x).toBeLessThanOrEqual(L.w); }
+      const hs = p.solids.filter((s) => bounds(s).max.z > 3.2).map(bounds); // one column: the houses' x ranges overlap pairwise
+      for (const a of hs) for (const c of hs) expect(Math.min(a.max.x, c.max.x) - Math.max(a.min.x, c.min.x)).toBeGreaterThan(0);
     }
   });
 });

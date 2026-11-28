@@ -89,6 +89,7 @@ const ALLOW: Record<string, RegExp[]> = {
   "src/kit/kit.test.ts": [/\b[Bb]arrios?\b/g], // barrio ids of the plan (#477)
   "src/city/office-heights.test.ts": [/\b[Bb]arrios?(?:At)?\b/g, /\bBARRIOS\b/g, /\bisBarrio\b/g, /\bBARRIO_HEIGHTS\b/g], // barrio ids of city-plan are layout data (#495)
   "src/kit/office-band.test.ts": [/\b[Bb]arrios?\b/g], // barrio ids of city-plan are layout data (#495)
+  "src/city/strip.test.ts": [/\bBARRIO_STEP\b/g, /\bCityBarrio\b/g], // the step table of zoning.ts (#496)
   "src/city/zoning.test.ts": [/\b[Bb]arrios?\b/g, /\bresidencial\b/g, /\bcostanera\b/g, /\bBARRIO_STEP\b/g, /\bBARRIO_HEIGHTS\b/g, /\bCityBarrio\b/g],
   // proper noun: the Fábrica de Luz is the real power station the boiler hall models (decision 2c)
   "src/scenes/boiler-house.ts": [/Fábrica de Luz/g],

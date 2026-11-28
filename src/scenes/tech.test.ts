@@ -4,6 +4,7 @@ import { RAIL_Y } from "./shipyard";
 import { WORLD, ZONE_SPLIT_Y, worldZoneAt } from "../map/geo";
 import type { Material } from "../map/palette-iso";
 import { createRng, SEED } from "../map/seed";
+import { isStrip } from "../city/zoning";
 import { GREEN_BELT, techBlocks, type SprawlBlock } from "./sprawl-grid";
 import { ARENA, AUDITORIUM, MAX_TECH_H, TECH_MATS, tech } from "./tech";
 import { techAnimator } from "./tech-animator";
@@ -26,7 +27,8 @@ describe("tech", () => {
     const raised = s.solids.filter((x) => !isFlat(x));
     // cap = measured × 1.10, rounded up to the next hundred. Measured 1120 raised solids with tech(createRng(7)) on agent/479 without the west
     // (#479; it was 1524 with the west and the south): 1120 × 1.10 = 1232 → 1300
-    expect(raised.length).toBeGreaterThan(400); expect(raised.length).toBeLessThan(1300);
+    // measured 2026-11-27 (#496, the strip, on main 1188e7d): 1599 × 1.10 = 1758.9 → 1800
+    expect(raised.length).toBeGreaterThan(400); expect(raised.length).toBeLessThan(1800);
     for (const x of s.solids) {
       const b = bounds(x);
       expect(b.min.y).toBeGreaterThanOrEqual(ZONE_SPLIT_Y);
@@ -70,7 +72,8 @@ describe("tech", () => {
 
 // the real world: the zone rng and the kind of each block according to the pre-pass
 const worldScene = tech(zoneRng(SEED, "cv", 2));
-const worldBlocks = techBlocks(), worldKinds = zoneKinds(zoneRng(SEED, "cv", 2), worldBlocks);
+// #496: tech() zones the core only; the strip (stripBlock) is not part of this pre-pass model
+const worldBlocks = techBlocks().filter((b) => !isStrip(b.parcel!)), worldKinds = zoneKinds(zoneRng(SEED, "cv", 2), worldBlocks);
 const everything = [...worldScene.solids, ...worldScene.ground];
 /** `everything` without the south street furniture (multiset by JSON): lamps and trees on a sidewalk fall inside the neighboring blockRect. */
 const furniture = southStreets();

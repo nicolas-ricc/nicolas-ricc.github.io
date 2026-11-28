@@ -139,7 +139,8 @@ describe("classification", () => {
     expect(bleedTerrainAt(-100, 400)).toBe("urban");        // SW corner
     expect(bleedTerrainAt(-300, 100)).toBe("jungle");       // beyond the west reach
     expect(bleedTerrainAt(100, -400)).toBe("jungle");       // beyond the north reach (now up to y −348 plus the reach, with the fair in between)
-    expect(bleedTerrainAt(100, 700)).toBe("jungle");        // beyond the south reach
+    expect(bleedTerrainAt(100, 1000)).toBe("jungle");      // beyond the south reach (#496: (100, 700) is now urban, inside the pan reach plus 3 bleed cells)
+    expect(bleedTerrainAt(100, 700)).toBe("urban");         // #496: urban up to the pan reach, whatever reachAt("s") says
     expect(bleedTerrainAt(250, 400)).toBe("river");         // the estuary continues
     expect(bleedTerrainAt(330, 340)).toBe("jungle");        // the base of the south point, between the estuary and the sea
     expect(bleedTerrainAt(325, 370)).toBe("jungle");        // near the end of the south point (at y 370 the land runs from x 317 to 338; it ends at y 380)

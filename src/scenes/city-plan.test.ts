@@ -144,15 +144,15 @@ describe("city-plan parcels (#472)", () => {
     for (const p of parcels(PLAN_BOUNDS)) expect(Math.min(p.rect.w, p.rect.d), `${p.cell.col},${p.cell.row}`).toBeGreaterThanOrEqual(6);
   });
 
-  it("parcel counts: 70..95 over the cover north of the cut (378), 20..30 coastal ones down to y 475, 70 in CITY_BOUNDS", () => {
+  it("parcel counts: 110..145 over the build region north of the cut (378), 45..60 coastal ones down to y 475, 109 in CITY_BOUNDS", () => {
     // Measured while planning: 63 and 111 over the whole cover width (PLAN_BOUNDS), the parent's measure 1;
     // CITY_BOUNDS had stopped at CITY_EDGE.west (−54) with 33; since #479 its x0 is −Infinity and it holds the whole cover width: 63 (measured on agent/479).
-    expect(parcels(PLAN_BOUNDS).length).toBeGreaterThanOrEqual(70); // #493: 81 in PLAN_BOUNDS (was 63): the 70 of CITY_BOUNDS plus the 11 of the 348..378 row
-    expect(parcels(PLAN_BOUNDS).length).toBeLessThanOrEqual(95);
-    expect(parcels(SOUTH_BOUNDS).length).toBeGreaterThanOrEqual(20); // #493: SOUTH_BOUNDS starts at the cut: 24 coastal parcels down to y 475 (the old 111 counted the whole cover from y 164)
-    expect(parcels(SOUTH_BOUNDS).length).toBeLessThanOrEqual(30);
-    expect(parcels(CITY_BOUNDS)).toHaveLength(70); // #493: ends at y 348 (was 63 at 318)
-    expect(parcels(PLAN_BOUNDS)).toHaveLength(81);
+    expect(parcels(PLAN_BOUNDS).length).toBeGreaterThanOrEqual(110); // #493: 81 in PLAN_BOUNDS (was 63): the 70 of CITY_BOUNDS plus the 11 of the 348..378 row
+    expect(parcels(PLAN_BOUNDS).length).toBeLessThanOrEqual(145); // #496: the strip of the pan reach lifts 81 to 129
+    expect(parcels(SOUTH_BOUNDS).length).toBeGreaterThanOrEqual(45); // #493: SOUTH_BOUNDS starts at the cut: 24 coastal parcels down to y 475 (the old 111 counted the whole cover from y 164)
+    expect(parcels(SOUTH_BOUNDS).length).toBeLessThanOrEqual(60); // #496: the strip lifts 24 to 52
+    expect(parcels(CITY_BOUNDS)).toHaveLength(109); // #496: 70 in the cover + 39 of the strip; #493: ends at y 348 (was 63 at 318)
+    expect(parcels(PLAN_BOUNDS)).toHaveLength(129); // #496: 81 + 48 of the strip
     expect(parcels(CITY_BOUNDS)).not.toBe(parcels(PLAN_BOUNDS)); // #493: different y1, different memo
   });
 

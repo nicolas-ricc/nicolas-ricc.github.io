@@ -11,7 +11,7 @@ import { PLINTH_H, prism } from "./city-pieces";
 import { jungle } from "./flora";
 import { recipe } from "../kit";
 import { seat } from "../kit/piece";
-import { parcelOpenSides, tooSmall } from "../city/zoning";
+import { CATALOGUE, isStrip, maxHFor, parcelLot, parcelOpenSides, parcelRng, stripRecipe, stripZoning, tooSmall, type Neighborhood } from "../city/zoning";
 import { GREEN_BELT, techBlocks, type SprawlBlock } from "./sprawl-grid";
 import { base, type NeighborhoodCtx, type HomeWindow } from "./neighborhood";
 import { houses } from "./neighborhood-houses";
@@ -85,9 +85,29 @@ function low(ctx: NeighborhoodCtx, b: SprawlBlock): void {
   for (const w of piece.windows) ctx.homes.push({ pts: w.pts, lit, group });
 }
 
+/**
+ * A parcel of the strip (#496, what a pan shows outside the cover): `bajo` is `scatterHouses` (houses with sheds and yards, some lots empty),
+ * any other neighborhood a recipe of its `CATALOGUE` (`catalogueFor`) at its height cap. Lot by `parcelLot`, seated with the neighborhood's style,
+ * plinth on the parcel like `low()`; a sliver is plinth only. Windows to `homes` in one group.
+ */
+export function stripBlock(ctx: NeighborhoodCtx, b: SprawlBlock, n: Neighborhood): void {
+  const pc = b.parcel!, name = stripRecipe(n, pc, ctx.rng);
+  const lot = parcelLot(pc, n, name, false, parcelOpenSides(pc), maxHFor(n, pc));
+  if (tooSmall(lot)) { base(ctx, b, PLINTH_H, "paving"); return; }
+  const { piece, plinth } = seat(recipe(name), lot, ctx.rng, STYLES[n]);
+  if (plinth) base(ctx, b, PLINTH_H, "paving");
+  ctx.solids.push(...piece.solids); ctx.ground.push(...piece.ground); ctx.accents.push(...piece.accents);
+  // #496: a chamfered or oblique wall carries windows on a diagonal; `homes` are flat on an axis wall, so those are left out.
+  // The houses light as one group (lit by the catalogue's fraction, like `low()`); a taller block, like the city, lights window by window: each is kept
+  // with the catalogue's fraction and its group starts lit
+  const group = `${pc.rect.x},${pc.rect.y}:strip`, lit = n === "bajo" ? ctx.rng.chance(CATALOGUE[n].lights.on) : true;
+  const keep = (): boolean => n === "bajo" || ctx.rng.chance(CATALOGUE[n].lights.on);
+  for (const w of piece.windows) if ((w.pts.every((p) => p.x === w.pts[0]!.x) || w.pts.every((p) => p.y === w.pts[0]!.y)) && keep()) ctx.homes.push({ pts: w.pts, lit, group });
+}
+
 export function tech(rng: Rng): TechScene {
   const ground: Solid[] = [], solids: Solid[] = [], accents: Accent[] = [], signs: Accent[] = [], homes: HomeWindow[] = [];
-  const blocks = techBlocks(), kinds = zoneKinds(rng, blocks), ctx: NeighborhoodCtx = { solids, ground, accents, homes, rng };
+  const all = techBlocks(), blocks = all.filter((b) => !isStrip(b.parcel!)), kinds = zoneKinds(rng, blocks), ctx: NeighborhoodCtx = { solids, ground, accents, homes, rng };
   blocks.forEach((b, i) => {
     switch (kinds[i]) {
       case "monoblock": monoblock(ctx, b); break;
@@ -105,5 +125,7 @@ export function tech(rng: Rng): TechScene {
   ground.push(...south.ground); solids.push(...south.solids); accents.push(...south.accents);
   // the green belt west of the content, around the west line: no cones in front of the train (#280)
   jungle(solids, rng, { x0: -238, x1: WORLD.x0 - 2, y0: GREEN_BELT.y0 + 2, y1: GREEN_BELT.y1 - 2 }, 48, 0.4, { y: RAIL_Y, train: TRAIN_CLEAR });
+  // the strip (outside the cover) after everything that draws from the shared rng, each block from its own stream: the core does not move (#496)
+  for (const b of all) if (isStrip(b.parcel!)) stripBlock({ ...ctx, rng: parcelRng(b.parcel!, 2) }, b, stripZoning().get(b.parcel!) ?? "bajo");
   return { ground, solids, accents, signs, homes };
 }
