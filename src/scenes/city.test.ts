@@ -352,7 +352,8 @@ describe("city", () => {
     // Was EAST ["fbb992cc", "eca3f9d2", "a8758203", "9d25c97a", "a9fb2445"], MAIN ["725780d1", "38f5096f", "f9e8b51d", "54c2aa76", "6e7e59be"].
     // #495 Task 3: all ten re-recorded again: the barrio parcels hand the band to their recipes (heights) and moderno draws towers only; the blocks and the fixed parcels keep their pieces.
     // Was EAST ["d1add971", "c169b9a0", "d80f107a", "b6f3b0ae", "88e836d9"], MAIN ["3efcf955", "1700073b", "b38f30d9", "5e664eb5", "6a942db8"].
-    const EAST = ["e660df32", "7631ba67", "75bc4d59", "b2344efe", "8e033abd"], MAIN = ["3f99ad82", "1d79b853", "9d9d5384", "7f980ff4", "05e46e24"];
+    // #496 (rebased on #495): MAIN re-recorded with the strip; with the strip filtered out the pieces keep main's (1188e7d) MAIN ["3f99ad82", "1d79b853", "9d9d5384", "7f980ff4", "05e46e24"], checked.
+    const EAST = ["e660df32", "7631ba67", "75bc4d59", "b2344efe", "8e033abd"], MAIN = ["24aaeff0", "dd283ed7", "86b16b76", "d90201a6", "d070ac96"];
     for (let s = 1; s <= 5; s++) {
       for (const [west, pinned] of [[-54, EAST], [-Infinity, MAIN]] as const) {
         const c = city(createRng(s), createRng(s + 1), createRng(s + 2), { west });

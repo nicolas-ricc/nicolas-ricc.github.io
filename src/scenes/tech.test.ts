@@ -27,7 +27,7 @@ describe("tech", () => {
     const raised = s.solids.filter((x) => !isFlat(x));
     // cap = measured × 1.10, rounded up to the next hundred. Measured 1120 raised solids with tech(createRng(7)) on agent/479 without the west
     // (#479; it was 1524 with the west and the south): 1120 × 1.10 = 1232 → 1300
-    // measured 2026-11-26 (#496, the strip, after #493): 1559 × 1.10 = 1714.9 → 1800
+    // measured 2026-11-27 (#496, the strip, on main 1188e7d): 1599 × 1.10 = 1758.9 → 1800
     expect(raised.length).toBeGreaterThan(400); expect(raised.length).toBeLessThan(1800);
     for (const x of s.solids) {
       const b = bounds(x);

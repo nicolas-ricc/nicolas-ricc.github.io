@@ -83,8 +83,9 @@ describe("built city", () => {
     }
   }, 60000);
 
-  it("moderno draws towers only (no campus)", () => {
-    expect(onParcels().filter((q) => q.placed.neighborhood === "moderno" && q.placed.recipe === "campus")).toEqual([]);
+  it("moderno draws towers only (no campus) in the tower zone", () => {
+    // a #496 strip parcel can be moderno off the tower zone (y ≥ 320): it draws MODERNO_SLAB, campus included
+    expect(onParcels().filter((q) => q.placed.neighborhood === "moderno" && towerZone(q.placed.parcel!) && q.placed.recipe === "campus")).toEqual([]);
   }, 60000);
 
   it("no west-bank parcel solid rises above 50 + PLINTH_H", () => {
